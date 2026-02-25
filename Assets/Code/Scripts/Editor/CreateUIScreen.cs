@@ -2,9 +2,11 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.UI;
 using TMPro;
+using System.Reflection;
 
 /// <summary>
-/// Editor tool that creates the full GOLFIN UI scene hierarchy.
+/// Editor tool that creates the full GOLFIN UI scene hierarchy
+/// AND auto-wires all component references. No manual Inspector linking needed.
 /// Usage: Unity menu → Tools → Create GOLFIN UI Scene
 /// </summary>
 public class CreateUIScreen
@@ -12,17 +14,17 @@ public class CreateUIScreen
     [MenuItem("Tools/Create GOLFIN UI Scene")]
     public static void CreateUI()
     {
-        // Scene Root
+        // ─── Scene Root ──────────────────────────────────────────
         GameObject root = new GameObject("Scene Root");
 
-        // Managers
+        // ─── Managers ────────────────────────────────────────────
         GameObject managers = new GameObject("Managers");
         managers.transform.SetParent(root.transform, false);
-        managers.AddComponent<LocalizationManager>();
-        managers.AddComponent<ScreenManager>();
-        managers.AddComponent<GameBootstrap>();
+        var locManager = managers.AddComponent<LocalizationManager>();
+        var screenManager = managers.AddComponent<ScreenManager>();
+        var bootstrap = managers.AddComponent<GameBootstrap>();
 
-        // Canvas
+        // ─── Canvas ──────────────────────────────────────────────
         GameObject canvasGO = new GameObject("Canvas");
         canvasGO.transform.SetParent(root.transform, false);
         Canvas canvas = canvasGO.AddComponent<Canvas>();
@@ -33,12 +35,17 @@ public class CreateUIScreen
         scaler.matchWidthOrHeight = 0.5f;
         canvasGO.AddComponent<GraphicRaycaster>();
 
-        // Create Screens
-        CreateLogoScreen(canvasGO.transform);
-        CreateLoadingScreen(canvasGO.transform);
-        CreateSplashScreen(canvasGO.transform);
+        // ─── Create Screens ──────────────────────────────────────
+        var logoScreen = CreateLogoScreen(canvasGO.transform);
+        var loadingScreen = CreateLoadingScreen(canvasGO.transform);
+        var splashScreen = CreateSplashScreen(canvasGO.transform);
 
-        // EventSystem (if not already in scene)
+        // ─── Wire GameBootstrap ──────────────────────────────────
+        SetPrivateField(bootstrap, "logoScreen", logoScreen);
+        SetPrivateField(bootstrap, "loadingScreen", loadingScreen);
+        SetPrivateField(bootstrap, "splashScreen", splashScreen);
+
+        // ─── EventSystem ─────────────────────────────────────────
         if (!Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>())
         {
             GameObject es = new GameObject("EventSystem");
@@ -48,65 +55,111 @@ public class CreateUIScreen
         }
 
         Selection.activeGameObject = root;
-        Debug.Log("[GOLFIN] UI Scene hierarchy created successfully!");
+        Debug.Log("[GOLFIN] UI Scene hierarchy created & wired successfully! ✅");
     }
 
-    // ─── Logo Screen ────────────────────────────────────────────
-    static void CreateLogoScreen(Transform parent)
+    // ─── Logo Screen ─────────────────────────────────────────────
+    static LogoScreen CreateLogoScreen(Transform parent)
     {
         GameObject screen = CreateScreenPanel("LogoScreen", parent);
+        var component = screen.AddComponent<LogoScreen>();
+
         CreateImage("Background", screen.transform, Color.black, stretch: true);
         CreateImage("Logo", screen.transform, Color.white, stretch: false);
+
+        return component;
     }
 
-    // ─── Loading Screen ─────────────────────────────────────────
-    static void CreateLoadingScreen(Transform parent)
+    // ─── Loading Screen ──────────────────────────────────────────
+    static LoadingScreen CreateLoadingScreen(Transform parent)
     {
         GameObject screen = CreateScreenPanel("LoadingScreen", parent);
+        var component = screen.AddComponent<LoadingScreen>();
+
         CreateImage("Background", screen.transform, Color.gray, stretch: true);
 
         // Pro Tip Card
-        GameObject tipCard = CreateContainer("ProTipCard", screen.transform);
-        CreateTMP("Header", tipCard.transform, "PRO TIP");
-        CreateImage("Divider", tipCard.transform, new Color(0.85f, 0.65f, 0.13f), stretch: false); // gold
-        CreateTMP("TipText", tipCard.transform, "Tip goes here...");
-        CreateImage("TipImage", tipCard.transform, Color.white, stretch: false);
-        CreateTMP("TapNextText", tipCard.transform, "TAP FOR NEXT TIP");
+        GameObject tipCardGO = CreateContainer("ProTipCard", screen.transform);
+        var tipCard = tipCardGO.AddComponent<ProTipCard>();
 
-        // Loading UI
-        CreateTMP("NowLoadingText", screen.transform, "Loading...");
+        var header = CreateTMP("Header", tipCardGO.transform, "PRO TIP");
+        AddLocalizedText(header, "tip_header");
 
+        CreateImage("Divider", tipCardGO.transform, new Color(0.85f, 0.65f, 0.13f), stretch: false);
+
+        var tipText = CreateTMP("TipText", tipCardGO.transform, "Tip goes here...");
+        // No LocalizedText on TipText — ProTipCard manages it dynamically
+
+        GameObject tipImageGO = CreateImage("TipImage", tipCardGO.transform, Color.white, stretch: false);
+
+        var tapNext = CreateTMP("TapNextText", tipCardGO.transform, "TAP FOR NEXT TIP");
+        AddLocalizedText(tapNext, "tip_next");
+
+        // Wire ProTipCard references
+        SetPrivateField(tipCard, "headerText", header.GetComponent<TextMeshProUGUI>());
+        SetPrivateField(tipCard, "tipText", tipText.GetComponent<TextMeshProUGUI>());
+        SetPrivateField(tipCard, "tapNextText", tapNext.GetComponent<TextMeshProUGUI>());
+        SetPrivateField(tipCard, "tipImages", new Image[] { tipImageGO.GetComponent<Image>() });
+
+        // Loading text
+        var nowLoading = CreateTMP("NowLoadingText", screen.transform, "Loading...");
+        AddLocalizedText(nowLoading, "loading_text");
+
+        // Loading bar
         GameObject barBG = CreateImage("LoadingBarBG", screen.transform, new Color(0.1f, 0.16f, 0.29f), stretch: false);
+        var loadingBar = barBG.AddComponent<LoadingBar>();
+
         GameObject barFill = CreateImage("LoadingBarFill", barBG.transform, new Color(0.2f, 0.4f, 0.8f), stretch: true);
         barFill.GetComponent<Image>().type = Image.Type.Filled;
         barFill.GetComponent<Image>().fillMethod = Image.FillMethod.Horizontal;
-        CreateImage("LoadingBarGlow", barBG.transform, new Color(1f, 1f, 1f, 0.3f), stretch: false);
 
-        CreateTMP("DownloadProgress", screen.transform, "0 / 0 MB");
+        GameObject barGlow = CreateImage("LoadingBarGlow", barBG.transform, new Color(1f, 1f, 1f, 0.3f), stretch: false);
+
+        // Wire LoadingBar references
+        SetPrivateField(loadingBar, "fillImage", barFill.GetComponent<Image>());
+        SetPrivateField(loadingBar, "glowImage", barGlow.GetComponent<Image>());
+
+        // Download progress
+        var downloadProgress = CreateTMP("DownloadProgress", screen.transform, "0 / 0 MB");
+
+        // Wire LoadingScreen references
+        SetPrivateField(component, "loadingBar", loadingBar);
+        SetPrivateField(component, "proTipCard", tipCard);
+        SetPrivateField(component, "nowLoadingText", nowLoading.GetComponent<TextMeshProUGUI>());
+        SetPrivateField(component, "downloadProgressText", downloadProgress.GetComponent<TextMeshProUGUI>());
+
+        return component;
     }
 
-    // ─── Splash Screen ──────────────────────────────────────────
-    static void CreateSplashScreen(Transform parent)
+    // ─── Splash Screen ───────────────────────────────────────────
+    static SplashScreen CreateSplashScreen(Transform parent)
     {
         GameObject screen = CreateScreenPanel("SplashScreen", parent);
-        CreateImage("Background", screen.transform, new Color(0.1f, 0.3f, 0.15f), stretch: true); // dark green
+        var component = screen.AddComponent<SplashScreen>();
+
+        CreateImage("Background", screen.transform, new Color(0.1f, 0.3f, 0.15f), stretch: true);
 
         // Title Area
         GameObject titleArea = CreateContainer("TitleArea", screen.transform);
-        CreateTMP("PresentsText", titleArea.transform, "GOLFIN presents");
+        var presents = CreateTMP("PresentsText", titleArea.transform, "GOLFIN presents");
+        AddLocalizedText(presents, "splash_presents");
         CreateImage("ShieldLogo", titleArea.transform, Color.white, stretch: false);
-        CreateTMP("SubtitleText", titleArea.transform, "The Invitational");
+        var subtitle = CreateTMP("SubtitleText", titleArea.transform, "The Invitational");
+        AddLocalizedText(subtitle, "splash_subtitle");
 
-        // Buttons
-        CreateButton("StartButton", screen.transform, "START");
-        CreateButton("CreateAccountButton", screen.transform, "CREATE ACCOUNT");
+        // Buttons with PressableButton
+        GameObject startBtn = CreateButtonWithPressable("StartButton", screen.transform, "START", "btn_start");
+        GameObject createBtn = CreateButtonWithPressable("CreateAccountButton", screen.transform, "CREATE ACCOUNT", "btn_create_account");
+
+        // Wire SplashScreen references
+        SetPrivateField(component, "startButton", startBtn.GetComponent<PressableButton>());
+        SetPrivateField(component, "createAccountButton", createBtn.GetComponent<PressableButton>());
+
+        return component;
     }
 
     // ─── Helpers ─────────────────────────────────────────────────
 
-    /// <summary>
-    /// Creates a screen-level panel: full-stretch, CanvasGroup, transparent Image.
-    /// </summary>
     static GameObject CreateScreenPanel(string name, Transform parent)
     {
         GameObject panel = new GameObject(name);
@@ -114,15 +167,11 @@ public class CreateUIScreen
         RectTransform rt = panel.AddComponent<RectTransform>();
         StretchFull(rt);
         panel.AddComponent<CanvasGroup>();
-        // Transparent image so raycasts work but nothing blocks visually
         Image img = panel.AddComponent<Image>();
         img.color = Color.clear;
         return panel;
     }
 
-    /// <summary>
-    /// Creates an empty container (RectTransform only, no visuals).
-    /// </summary>
     static GameObject CreateContainer(string name, Transform parent)
     {
         GameObject go = new GameObject(name);
@@ -155,14 +204,23 @@ public class CreateUIScreen
         return go;
     }
 
-    static GameObject CreateButton(string name, Transform parent, string label)
+    static GameObject CreateButtonWithPressable(string name, Transform parent, string label, string locKey)
     {
         GameObject buttonGO = CreateImage(name, parent, Color.white, stretch: false);
         buttonGO.AddComponent<Button>();
-        // TODO: Replace with PressableButton once component is ready
-        CreateTMP("Text", buttonGO.transform, label);
-        buttonGO.transform.GetComponentInChildren<TextMeshProUGUI>().color = Color.black;
+        buttonGO.AddComponent<PressableButton>();
+
+        GameObject textGO = CreateTMP("Text", buttonGO.transform, label);
+        textGO.GetComponent<TextMeshProUGUI>().color = Color.black;
+        AddLocalizedText(textGO, locKey);
+
         return buttonGO;
+    }
+
+    static void AddLocalizedText(GameObject go, string key)
+    {
+        var loc = go.AddComponent<LocalizedText>();
+        SetPrivateField(loc, "localizationKey", key);
     }
 
     static void StretchFull(RectTransform rt)
@@ -171,5 +229,25 @@ public class CreateUIScreen
         rt.anchorMax = Vector2.one;
         rt.offsetMin = Vector2.zero;
         rt.offsetMax = Vector2.zero;
+    }
+
+    /// <summary>
+    /// Sets a private [SerializeField] via reflection.
+    /// This lets us auto-wire references that are normally set in Inspector.
+    /// </summary>
+    static void SetPrivateField<T>(object target, string fieldName, T value)
+    {
+        var field = target.GetType().GetField(fieldName,
+            BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Public);
+
+        if (field != null)
+        {
+            field.SetValue(target, value);
+            EditorUtility.SetDirty(target as Object);
+        }
+        else
+        {
+            Debug.LogWarning($"[GOLFIN] Field '{fieldName}' not found on {target.GetType().Name}");
+        }
     }
 }

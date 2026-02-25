@@ -12,7 +12,7 @@ public class LocalizationManager : MonoBehaviour
     public static LocalizationManager Instance { get; private set; }
     
     [Header("Settings")]
-    [SerializeField] private string csvFileName = "localization";
+    [SerializeField] private string csvFileName = "Data/localization";
     [SerializeField] private string defaultLanguage = "en";
     
     public string CurrentLanguage { get; private set; }
