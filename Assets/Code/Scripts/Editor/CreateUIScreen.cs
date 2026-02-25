@@ -7,35 +7,49 @@ using System.Reflection;
 /// <summary>
 /// Editor tool that creates OR updates the GOLFIN UI scene hierarchy.
 /// 
-/// Features:
-///   - CREATE mode: builds entire hierarchy from scratch (first run)
-///   - UPDATE mode: finds existing objects, updates layout/fonts/wiring
-///     but PRESERVES manually assigned sprites and Inspector tweaks
-///   - Auto-loads sprites from known asset paths
-///   - Auto-wires all SerializeField references via reflection
-///   - Positions match reference designs (1170×2532)
+/// ALL VALUES SOURCED FROM FIGMA "Golfin Game Redux" (2026-02-25)
+/// via Figma REST API — no more guessing from screenshots.
+///
+/// Reference resolution: 1170×2532 (iPhone Pro Max @3x)
+/// Primary font: Rubik (weights 400–800)
+/// Accent color: #eedc9a (gold)
 ///
 /// Usage: Unity menu → Tools → Create GOLFIN UI Scene
-///        (safe to run multiple times)
+///        (safe to run multiple times — FindOrCreate preserves sprites)
 /// </summary>
 public class CreateUIScreen
 {
-    // Reference resolution
+    // ═══ FIGMA REFERENCE RESOLUTION ═══
     const float W = 1170f;
     const float H = 2532f;
 
-    // ─── Known sprite asset paths (auto-assigned if found) ───────
-    // Place your images at these paths and they'll be assigned automatically.
-    // If a file doesn't exist yet, the slot is left empty (or preserved from previous run).
+    // ═══ FIGMA COLORS (exact hex from API) ═══
+    static readonly Color GoldAccent      = HexColor("#eedc9a");   // PRO TIP header, dividers
+    static readonly Color DarkGold        = HexColor("#321506");   // Primary button text
+    static readonly Color GoldBorder      = HexColor("#ffe48b");   // Primary button inner stroke
+    static readonly Color GoldOuterStroke = HexColor("#422100");   // Primary button outer stroke
+    static readonly Color GoldStrokeShadow= HexColor("#ddaf42");   // Primary text stroke
+    static readonly Color SlateText       = HexColor("#1e293b");   // Secondary button text
+    static readonly Color SlateBorder     = HexColor("#334155");   // Secondary button outer stroke
+    static readonly Color LightBorder     = HexColor("#f7f8f9");   // Secondary button inner stroke
+    static readonly Color GrayStroke      = HexColor("#cfcfcf");   // Secondary text stroke
+    static readonly Color GreenButton     = HexColor("#5fb610");   // START button (Splash)
+
+    // ═══ FIGMA LAYOUT CONSTANTS (px from absoluteBoundingBox) ═══
+    // All positions are relative to the 1170×2532 canvas.
+    // Content Container: 978px wide, centered (96px margin each side)
+    const float ContentWidth = 978f;
+    const float ContentMargin = 96f;  // (1170-978)/2
+
+    // ═══ SPRITE PATHS ═══
     static class SpritePaths
     {
         public const string Logo             = "Assets/Art/UI/golfin_logo.png";
         public const string SplashTitle      = "Assets/Art/UI/splash_title.png";
         public const string SplashBackground = "Assets/Art/UI/splash_bg.png";
-        public const string LoadingBackground = "Assets/Art/UI/loading_bg.png";
+        public const string LoadingBackground= "Assets/Art/UI/loading_bg.png";
         public const string LoadingBarPill   = "Assets/Art/UI/pill_bar.png";
         public const string CardBackground   = "Assets/Art/UI/card_bg.png";
-        // Tip images: Assets/Art/UI/Tips/tip_0.png, tip_1.png, ...
         public const string TipImageFolder   = "Assets/Art/UI/Tips/";
     }
 
@@ -46,7 +60,6 @@ public class CreateUIScreen
     [MenuItem("Tools/Create GOLFIN UI Scene")]
     public static void CreateUI()
     {
-        // Check if hierarchy already exists (UPDATE mode)
         GameObject root = GameObject.Find("Scene Root");
         bool isUpdate = root != null;
 
@@ -101,6 +114,7 @@ public class CreateUIScreen
 
     // ═══════════════════════════════════════════════════════════════
     // LOGO SCREEN
+    // Figma page: "Logo" — single component, black bg, centered logo
     // ═══════════════════════════════════════════════════════════════
     static LogoScreen SetupLogoScreen(Transform parent)
     {
@@ -111,51 +125,65 @@ public class CreateUIScreen
         var bg = FindOrCreateImageStretched("Background", screen.transform);
         bg.GetComponent<Image>().color = Color.black;
 
-        // Logo — centered at 50% X, 38.5% Y
+        // Logo — centered horizontally and vertically
+        // Figma: Logo Container is 930×168 in Components page
         var logo = FindOrCreateImageAnchored("Logo", screen.transform,
-            anchorCenter: new Vector2(0.5f, 1f - 0.385f),
-            size: new Vector2(608f, 139f));
+            anchorCenter: new Vector2(0.5f, 0.5f),
+            size: new Vector2(930f, 168f));
         TryAssignSprite(logo, SpritePaths.Logo, Color.white);
+        logo.GetComponent<Image>().preserveAspect = true;
 
         return component;
     }
 
     // ═══════════════════════════════════════════════════════════════
     // LOADING SCREEN
+    // Figma page: "Loading" — 9 variants, all share same layout structure
+    // Values from "Loading Screen - Leaderboards" component (first variant)
+    // Canvas: 1170×2532
     // ═══════════════════════════════════════════════════════════════
     static LoadingScreen SetupLoadingScreen(Transform parent)
     {
         GameObject screen = FindOrCreateScreenPanel("LoadingScreen", parent);
         var component = EnsureComponent<LoadingScreen>(screen);
 
-        // Background
+        // Background — full stretch
         var bg = FindOrCreateImageStretched("Background", screen.transform);
         TryAssignSprite(bg, SpritePaths.LoadingBackground, new Color(0.15f, 0.25f, 0.1f));
 
+        // ─── Content Container (centered, 978px wide) ────────────
+        // Figma: "Content Container" at x+96 from screen edge, 978×2208
+        GameObject contentContainer = FindOrCreate("ContentContainer", screen.transform);
+        var ccRT = EnsureComponent<RectTransform>(contentContainer);
+        // Anchored to center-top, 978 wide
+        ccRT.anchorMin = new Vector2(ContentMargin / W, 0f);
+        ccRT.anchorMax = new Vector2(1f - ContentMargin / W, 1f);
+        ccRT.offsetMin = Vector2.zero;
+        ccRT.offsetMax = Vector2.zero;
+
         // ─── Pro Tip Card ─────────────────────────────────────────
-        // Card needs a 9-slice rounded rect sprite for corners + outline.
-        // IMAGE NEEDED: Assets/Art/UI/card_bg.png
-        //   → Rounded rect (~20px radius), dark semi-transparent fill,
-        //     thin gold/yellow outline (~2px), transparent outside.
-        //     Make it ~200x200 with 9-slice borders set in Sprite Editor.
-        GameObject tipCardGO = FindOrCreate("ProTipCard", screen.transform);
+        // Figma: "Pop-up" frame, 978px wide, top at Y=680 (relative to screen top)
+        //   cornerRadius=50, effect=BACKGROUND_BLUR(r=4)
+        //   Variable height depending on content
+        GameObject tipCardGO = FindOrCreate("ProTipCard", contentContainer.transform);
         var tipCardRT = EnsureComponent<RectTransform>(tipCardGO);
-        tipCardRT.anchorMin = new Vector2(0.055f, 1f);   // wider: ~89% of screen
-        tipCardRT.anchorMax = new Vector2(0.945f, 1f);
+        tipCardRT.anchorMin = new Vector2(0f, 1f);
+        tipCardRT.anchorMax = new Vector2(1f, 1f);
         tipCardRT.pivot = new Vector2(0.5f, 1f);
-        tipCardRT.anchoredPosition = new Vector2(0f, -570f); // top at ~22.5% — pushed lower to center
+        // Figma: Pop-up top edge at Y=680 from canvas top, content starts at Y=49
+        // Relative to content container top: 680 - 49 = 631
+        tipCardRT.anchoredPosition = new Vector2(0f, -631f);
 
         var tipCardBg = EnsureComponent<Image>(tipCardGO);
         TryAssignSprite(tipCardGO, SpritePaths.CardBackground,
-            new Color(0.08f, 0.12f, 0.10f, 0.75f));  // fallback if no sprite
-        tipCardBg.type = Image.Type.Sliced; // 9-slice stretches corners properly
+            new Color(0.08f, 0.12f, 0.10f, 0.75f));
+        tipCardBg.type = Image.Type.Sliced;
         tipCardBg.pixelsPerUnitMultiplier = 1f;
-        // When sprite is assigned, use white tint so sprite renders as-is
         if (HasSprite(tipCardGO)) tipCardBg.color = Color.white;
 
         var layout = EnsureComponent<VerticalLayoutGroup>(tipCardGO);
-        layout.padding = new RectOffset(50, 50, 35, 35);
-        layout.spacing = 15f;
+        layout.padding = new RectOffset(10, 10, 0, 24);
+        layout.spacing = 0f;
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
@@ -168,41 +196,73 @@ public class CreateUIScreen
 
         var tipCard = EnsureComponent<ProTipCard>(tipCardGO);
 
-        // Header — gold/amber color, bold, prominent
-        var header = FindOrCreateLayoutTMP("Header", tipCardGO.transform, "PRO TIP",
-            42f, 60f);
-        SetTMPStyle(header, 5f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Bold SDF");
-        header.GetComponent<TextMeshProUGUI>().color = new Color(0.78f, 0.66f, 0.31f); // gold #C8A84E
+        // ─── "PRO TIP" Header ─────────────────────────────────────
+        // Figma: "Mission Title" frame 281×120, cornerRadius=[8,8,0,0]
+        //   Text "PRO TIP": Rubik:600@66, color=#eedc9a, 249×84
+        //   Right-aligned within the card (not centered)
+        var headerContainer = FindOrCreate("HeaderContainer", tipCardGO.transform);
+        var hcRT = EnsureComponent<RectTransform>(headerContainer);
+        var hcLE = EnsureComponent<LayoutElement>(headerContainer);
+        hcLE.preferredHeight = 120f;
+
+        var header = FindOrCreate("Header", headerContainer.transform);
+        EnsureComponent<RectTransform>(header);
+        var headerTMP = EnsureComponent<TextMeshProUGUI>(header);
+        if (string.IsNullOrEmpty(headerTMP.text) || headerTMP.text == "New Text")
+            headerTMP.text = "PRO TIP";
+        headerTMP.fontSize = 66f;
+        headerTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
+        headerTMP.color = GoldAccent;
+        headerTMP.alignment = TextAlignmentOptions.Center;
+        headerTMP.characterSpacing = 0f;
+        TrySetFont(headerTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(header, "tip_header");
 
-        // Divider — slightly narrower, use LayoutElement to not stretch full width
+        // ─── Separator Line ───────────────────────────────────────
+        // Figma: "Separator" LINE, full 978px width at Y=824
         var divider = FindOrCreateLayoutImage("Divider", tipCardGO.transform,
-            new Color(0.78f, 0.66f, 0.31f), 2f);
+            GoldAccent, 2f);
 
-        // Tip text — bolder weight to match reference
-        var tipText = FindOrCreateLayoutTMP("TipText", tipCardGO.transform, "Tip goes here...",
-            34f, -1f);
-        SetTMPStyle(tipText, 0f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Bold SDF");
+        // ─── Tip Text ─────────────────────────────────────────────
+        // Figma: Rubik:600@51, color=#ffffff, inside 856px wide frame
+        //   with 48px padding each side from card edge (952 container, 48px inset)
+        var tipText = FindOrCreateLayoutTMP("TipText", tipCardGO.transform,
+            "Tip goes here...", 51f, -1f);
+        var tipTMP = tipText.GetComponent<TextMeshProUGUI>();
+        tipTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
+        tipTMP.color = Color.white;
+        tipTMP.characterSpacing = 0f;
+        TrySetFont(tipTMP, "Rubik-SemiBold SDF");
+        var tipLE = tipText.GetComponent<LayoutElement>();
+        if (tipLE == null) tipLE = tipText.AddComponent<LayoutElement>();
+        tipLE.flexibleHeight = 0;
+        // Add padding via layout element
+        var tipPadding = EnsureComponent<LayoutElement>(tipText);
+        tipPadding.minHeight = 132f; // at least 2 lines at 51px
 
-        // Tip image — hide if no sprite assigned (no white box)
+        // ─── Tip Image (optional) ─────────────────────────────────
         var tipImageGO = FindOrCreateLayoutImage("TipImage", tipCardGO.transform,
-            Color.clear, 456f);  // Color.clear instead of white!
-        // Try to assign first tip image
+            Color.clear, 456f);
         TryAssignSprite(tipImageGO, SpritePaths.TipImageFolder + "tip_0.png");
 
-        // Tap next — inside card bottom, bold italic
-        var tapNext = FindOrCreateLayoutTMP("TapNextText", tipCardGO.transform, "TAP FOR NEXT TIP",
-            22f, 35f, TextAlignmentOptions.Right);
-        SetTMPStyle(tapNext, 1f, FontStyles.Bold | FontStyles.Italic | FontStyles.UpperCase, "Montserrat-BoldItalic SDF");
+        // ─── "TAP FOR NEXT TIP" ───────────────────────────────────
+        // Figma: Rubik:600@39, color=#ffffff, 882px wide, right-aligned
+        //   Inside 978×78 "Goals Container" at bottom of card
+        var tapNext = FindOrCreateLayoutTMP("TapNextText", tipCardGO.transform,
+            "TAP FOR NEXT TIP", 39f, 78f, TextAlignmentOptions.Right);
+        var tapTMP = tapNext.GetComponent<TextMeshProUGUI>();
+        tapTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
+        tapTMP.color = Color.white;
+        TrySetFont(tapTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(tapNext, "tip_next");
 
-        // Wire ProTipCard
-        SetPrivateField(tipCard, "headerText", header.GetComponent<TextMeshProUGUI>());
-        SetPrivateField(tipCard, "tipText", tipText.GetComponent<TextMeshProUGUI>());
-        SetPrivateField(tipCard, "tapNextText", tapNext.GetComponent<TextMeshProUGUI>());
+        // Wire ProTipCard fields
+        SetPrivateField(tipCard, "headerText", headerTMP);
+        SetPrivateField(tipCard, "tipText", tipTMP);
+        SetPrivateField(tipCard, "tapNextText", tapTMP);
         SetPrivateField(tipCard, "dividerImage", divider.GetComponent<Image>());
 
-        // Auto-load all tip images from folder
+        // Auto-load tip images
         var tipSprites = LoadTipSprites();
         if (tipSprites.Length > 0)
         {
@@ -214,75 +274,91 @@ public class CreateUIScreen
                 tipImgObj.GetComponent<Image>().sprite = tipSprites[i];
                 tipImgObj.GetComponent<Image>().preserveAspect = true;
                 tipImgArray[i] = tipImgObj.GetComponent<Image>();
-                // Hide all except first (ProTipCard toggles them)
                 tipImgObj.SetActive(i == 0);
             }
             SetPrivateField(tipCard, "tipImages", tipImgArray);
-            // Remove the placeholder TipImage if we have real ones
-            if (tipSprites.Length > 0)
-            {
-                var placeholder = tipCardGO.transform.Find("TipImage");
-                if (placeholder != null) Object.DestroyImmediate(placeholder.gameObject);
-            }
+            var placeholder = tipCardGO.transform.Find("TipImage");
+            if (placeholder != null) Object.DestroyImmediate(placeholder.gameObject);
         }
         else
         {
             SetPrivateField(tipCard, "tipImages", new Image[] { tipImageGO.GetComponent<Image>() });
         }
 
-        // ─── NOW LOADING — bolder, at ~88% Y ──────────────────────
-        var nowLoading = FindOrCreateTMPAnchored("NowLoadingText", screen.transform, "NOW LOADING",
-            new Vector2(0.5f, 1f - 0.88f), 66f);  // slightly larger for impact
-        SetTMPStyle(nowLoading, 3f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Black SDF");
-        nowLoading.GetComponent<TextMeshProUGUI>().outlineWidth = 0.15f;
-        nowLoading.GetComponent<TextMeshProUGUI>().outlineColor = new Color32(0, 0, 0, 128);
+        // ─── "NOW LOADING" ────────────────────────────────────────
+        // Figma: "Title" text, Rubik:600@102, color=#ffffff
+        //   Position: 978×123, Y=2281 from canvas top
+        //   Relative to screen: anchorY = 1 - (2281/2532) = 0.099
+        var nowLoading = FindOrCreateTMPAnchored("NowLoadingText", screen.transform,
+            "NOW LOADING",
+            new Vector2(0.5f, 1f - (2281f / H)),  // Y=2281 from top
+            102f,
+            TextAlignmentOptions.Center,
+            new Vector2(ContentWidth, 123f));
+        var nlTMP = nowLoading.GetComponent<TextMeshProUGUI>();
+        nlTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
+        nlTMP.color = Color.white;
+        TrySetFont(nlTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(nowLoading, "screen_loading");
 
-        // ─── Loading Bar — wider, lower (~92% Y), white bg + blue fill ──
-        // IMAGE NEEDED: Assets/Art/UI/pill_bar.png
-        //   → White pill shape (~200x40), fully rounded ends,
-        //     transparent outside. 9-slice for stretching.
+        // ─── Loading Bar ──────────────────────────────────────────
+        // Figma: "Bar" frame, 978×30, Y=2428, cornerRadius=8
+        //   Background: fill=#ffffff
+        //   Fill rectangle: 376×30 (progress), radius=8, stroke=#000000 w=1
         var barBG = FindOrCreateImageAnchored("LoadingBarBG", screen.transform,
-            anchorCenter: new Vector2(0.5f, 1f - 0.92f),
-            size: new Vector2(990f, 36f));  // wider: 990 instead of 842
-        barBG.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.15f); // white, more translucent
+            anchorCenter: new Vector2(0.5f, 1f - (2428f / H)),
+            size: new Vector2(ContentWidth, 30f));
+        var barBGImg = barBG.GetComponent<Image>();
+        barBGImg.color = new Color(1f, 1f, 1f, 0.25f);
         TryAssignSprite(barBG, SpritePaths.LoadingBarPill);
-        if (HasSprite(barBG)) barBG.GetComponent<Image>().type = Image.Type.Sliced;
+        if (HasSprite(barBG)) barBGImg.type = Image.Type.Sliced;
         var loadingBar = EnsureComponent<LoadingBar>(barBG);
 
-        // Bar fill — blue gradient (left darker → right brighter)
+        // Bar fill
         var barFill = FindOrCreateImageStretched("LoadingBarFill", barBG.transform);
-        barFill.GetComponent<Image>().color = new Color(0.23f, 0.49f, 0.91f); // vivid blue #3B7DE8
-        barFill.GetComponent<Image>().type = Image.Type.Filled;
-        barFill.GetComponent<Image>().fillMethod = Image.FillMethod.Horizontal;
+        var barFillImg = barFill.GetComponent<Image>();
+        barFillImg.color = Color.white; // Figma fill is white
+        barFillImg.type = Image.Type.Filled;
+        barFillImg.fillMethod = Image.FillMethod.Horizontal;
         TryAssignSprite(barFill, SpritePaths.LoadingBarPill);
 
-        // Bar glow — at LEADING EDGE (right side of fill), not left
+        // Bar glow
         var barGlow = FindOrCreateImageAnchored("LoadingBarGlow", barBG.transform,
-            anchorCenter: new Vector2(1f, 0.5f),  // right side (follows fill)
-            size: new Vector2(30f, 36f));
+            anchorCenter: new Vector2(1f, 0.5f),
+            size: new Vector2(30f, 30f));
         if (!HasSprite(barGlow)) barGlow.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.5f);
 
-        SetPrivateField(loadingBar, "fillImage", barFill.GetComponent<Image>());
+        SetPrivateField(loadingBar, "fillImage", barFillImg);
         SetPrivateField(loadingBar, "glowImage", barGlow.GetComponent<Image>());
 
-        // ─── Download progress — right-aligned to bar end, ~95% Y ──
-        var downloadProgress = FindOrCreateTMPAnchored("DownloadProgress", screen.transform, "0 / 267 MB",
-            new Vector2(0.82f, 1f - 0.95f), 24f, TextAlignmentOptions.Right,
-            new Vector2(300f, 40f));
-        SetTMPStyle(downloadProgress, 0f, FontStyles.Bold, "Montserrat-Bold SDF");
+        // ─── Download Progress Text ───────────────────────────────
+        // Figma: "52.20 / 267 MB", Rubik:600@48, color=#ffffff
+        //   Position: 978×63, Y=2470
+        var downloadProgress = FindOrCreateTMPAnchored("DownloadProgress", screen.transform,
+            "0 / 267 MB",
+            new Vector2(0.5f, 1f - (2470f / H)),
+            48f,
+            TextAlignmentOptions.Center,
+            new Vector2(ContentWidth, 63f));
+        var dpTMP = downloadProgress.GetComponent<TextMeshProUGUI>();
+        dpTMP.fontStyle = FontStyles.Bold;
+        dpTMP.color = Color.white;
+        TrySetFont(dpTMP, "Rubik-SemiBold SDF");
 
         // Wire LoadingScreen
         SetPrivateField(component, "loadingBar", loadingBar);
         SetPrivateField(component, "proTipCard", tipCard);
-        SetPrivateField(component, "nowLoadingText", nowLoading.GetComponent<TextMeshProUGUI>());
-        SetPrivateField(component, "downloadProgressText", downloadProgress.GetComponent<TextMeshProUGUI>());
+        SetPrivateField(component, "nowLoadingText", nlTMP);
+        SetPrivateField(component, "downloadProgressText", dpTMP);
 
         return component;
     }
 
     // ═══════════════════════════════════════════════════════════════
     // SPLASH SCREEN
+    // Figma page: "Splash Screen" — background art + START/CREATE ACCOUNT
+    // Figma component: 1170×2532
+    // Buttons use Main Buttons component (450×120, radius=20)
     // ═══════════════════════════════════════════════════════════════
     static SplashScreen SetupSplashScreen(Transform parent)
     {
@@ -293,30 +369,39 @@ public class CreateUIScreen
         var bg = FindOrCreateImageStretched("Background", screen.transform);
         TryAssignSprite(bg, SpritePaths.SplashBackground, new Color(0.1f, 0.2f, 0.15f));
 
-        // Title (single combined image)
+        // ─── Title Image ──────────────────────────────────────────
+        // Figma: Title area in upper portion
         var titleImage = FindOrCreateImageAnchored("TitleArea", screen.transform,
-            anchorCenter: new Vector2(0.5f, 1f - 0.13f),
-            size: new Vector2(990f, 365f));
+            anchorCenter: new Vector2(0.5f, 0.87f),  // ~top 13%
+            size: new Vector2(ContentWidth, 365f));
         titleImage.GetComponent<Image>().preserveAspect = true;
         TryAssignSprite(titleImage, SpritePaths.SplashTitle, Color.white);
 
-        // START button
+        // ─── START Button ─────────────────────────────────────────
+        // Figma: Main Buttons gold variant, 450×120, radius=20
+        //   Text: Rubik:600@66, color=#321506 (dark brown)
+        //   Inner stroke: #ffe48b w=2
+        //   Outer stroke: #422100 w=1
+        //   Drop shadow on container
         var startBtn = FindOrCreateImageAnchored("StartButton", screen.transform,
-            anchorCenter: new Vector2(0.5f, 1f - 0.835f),
-            size: new Vector2(480f, 130f));
-        if (!HasSprite(startBtn)) startBtn.GetComponent<Image>().color = new Color(0.36f, 0.75f, 0.16f);
+            anchorCenter: new Vector2(0.5f, 1f - (0.835f)),
+            size: new Vector2(450f, 120f));
+        var startImg = startBtn.GetComponent<Image>();
+        if (!HasSprite(startBtn)) startImg.color = GreenButton;
         EnsureComponent<Button>(startBtn);
         EnsureComponent<PressableButton>(startBtn);
 
         var startText = FindOrCreateTMPAnchored("Text", startBtn.transform, "START",
-            new Vector2(0.5f, 0.5f), 72f);
-        startText.GetComponent<TextMeshProUGUI>().color = Color.white;
-        startText.GetComponent<TextMeshProUGUI>().outlineWidth = 0.1f;
-        startText.GetComponent<TextMeshProUGUI>().outlineColor = new Color32(0, 0, 0, 100);
-        SetTMPStyle(startText, 6f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Bold SDF");
+            new Vector2(0.5f, 0.5f), 66f);
+        var stTMP = startText.GetComponent<TextMeshProUGUI>();
+        stTMP.color = Color.white;
+        stTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
+        stTMP.characterSpacing = 0f;
+        TrySetFont(stTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(startText, "btn_start");
 
-        // CREATE ACCOUNT button
+        // ─── CREATE ACCOUNT Button ────────────────────────────────
+        // Figma: Secondary/text-only style, transparent bg
         var createBtn = FindOrCreateImageAnchored("CreateAccountButton", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - 0.912f),
             size: new Vector2(680f, 100f));
@@ -325,11 +410,12 @@ public class CreateUIScreen
         EnsureComponent<PressableButton>(createBtn);
 
         var createText = FindOrCreateTMPAnchored("Text", createBtn.transform, "CREATE ACCOUNT",
-            new Vector2(0.5f, 0.5f), 62f);
-        createText.GetComponent<TextMeshProUGUI>().color = Color.white;
-        createText.GetComponent<TextMeshProUGUI>().outlineWidth = 0.1f;
-        createText.GetComponent<TextMeshProUGUI>().outlineColor = new Color32(0, 0, 0, 150);
-        SetTMPStyle(createText, 4f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Bold SDF");
+            new Vector2(0.5f, 0.5f), 48f);
+        var ctTMP = createText.GetComponent<TextMeshProUGUI>();
+        ctTMP.color = Color.white;
+        ctTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
+        ctTMP.characterSpacing = 0f;
+        TrySetFont(ctTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(createText, "btn_create_account");
 
         // Wire SplashScreen
@@ -340,21 +426,18 @@ public class CreateUIScreen
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // FIND-OR-CREATE HELPERS (core of update mode)
+    // FIND-OR-CREATE HELPERS
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>Find existing child by name, or create new one</summary>
     static GameObject FindOrCreate(string name, Transform parent)
     {
         Transform existing = parent.Find(name);
         if (existing != null) return existing.gameObject;
-
         GameObject go = new GameObject(name);
         go.transform.SetParent(parent, false);
         return go;
     }
 
-    /// <summary>Ensure a component exists on a GameObject (add if missing)</summary>
     static T EnsureComponent<T>(GameObject go) where T : Component
     {
         T comp = go.GetComponent<T>();
@@ -383,27 +466,14 @@ public class CreateUIScreen
     }
 
     static GameObject FindOrCreateImageAnchored(string name, Transform parent,
-        Vector2 anchorCenter = default, Vector2 size = default,
-        Vector2 anchorMin = default, Vector2 anchorMax = default)
+        Vector2 anchorCenter = default, Vector2 size = default)
     {
         GameObject go = FindOrCreate(name, parent);
         var rt = EnsureComponent<RectTransform>(go);
-
-        if (anchorMin != default || anchorMax != default)
-        {
-            rt.anchorMin = anchorMin;
-            rt.anchorMax = anchorMax;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-        }
-        else
-        {
-            rt.anchorMin = anchorCenter;
-            rt.anchorMax = anchorCenter;
-            rt.sizeDelta = size == default ? new Vector2(100f, 100f) : size;
-            rt.anchoredPosition = Vector2.zero;
-        }
-
+        rt.anchorMin = anchorCenter;
+        rt.anchorMax = anchorCenter;
+        rt.sizeDelta = size == default ? new Vector2(100f, 100f) : size;
+        rt.anchoredPosition = Vector2.zero;
         EnsureComponent<Image>(go);
         return go;
     }
@@ -421,7 +491,6 @@ public class CreateUIScreen
         rt.anchoredPosition = Vector2.zero;
 
         var tmp = EnsureComponent<TextMeshProUGUI>(go);
-        // Only set text if it's the default/placeholder (preserve custom edits)
         if (string.IsNullOrEmpty(tmp.text) || tmp.text == "New Text")
             tmp.text = text;
         tmp.fontSize = fontSize;
@@ -477,40 +546,30 @@ public class CreateUIScreen
     // SPRITE HELPERS
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>Check if a GameObject's Image already has a sprite assigned</summary>
     static bool HasSprite(GameObject go)
     {
         var img = go.GetComponent<Image>();
         return img != null && img.sprite != null;
     }
 
-    /// <summary>
-    /// Try to load and assign a sprite from an asset path.
-    /// If sprite not found, sets fallback color (only if no sprite already assigned).
-    /// If sprite IS already assigned (manually), it is PRESERVED.
-    /// </summary>
     static void TryAssignSprite(GameObject go, string assetPath, Color fallbackColor = default)
     {
         var img = go.GetComponent<Image>();
         if (img == null) return;
 
-        // Try to load sprite from asset path
         var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
         if (sprite != null)
         {
             img.sprite = sprite;
-            img.color = Color.white; // Reset tint when sprite assigned
+            img.color = Color.white;
             EditorUtility.SetDirty(go);
         }
         else if (!HasSprite(go) && fallbackColor != default)
         {
-            // No sprite at path AND no existing sprite → use fallback color
             img.color = fallbackColor;
         }
-        // If sprite already assigned manually → do nothing (preserved!)
     }
 
-    /// <summary>Load all tip sprites from the tip folder</summary>
     static Sprite[] LoadTipSprites()
     {
         string[] guids = AssetDatabase.FindAssets("t:Sprite", new[] { SpritePaths.TipImageFolder.TrimEnd('/') });
@@ -522,16 +581,24 @@ public class CreateUIScreen
             string path = AssetDatabase.GUIDToAssetPath(guids[i]);
             sprites[i] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
-        // Sort by name for consistent ordering
         System.Array.Sort(sprites, (a, b) => string.Compare(a.name, b.name, System.StringComparison.Ordinal));
         return sprites;
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // TEXT & STYLE HELPERS
+    // FONT HELPER
     // ═══════════════════════════════════════════════════════════════
 
-    /// <summary>Add or update LocalizedText component</summary>
+    static void TrySetFont(TextMeshProUGUI tmp, string fontName)
+    {
+        if (string.IsNullOrEmpty(fontName)) return;
+        var font = Resources.Load<TMP_FontAsset>(fontName);
+        if (font == null)
+            font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>($"Assets/Fonts/{fontName}.asset");
+        if (font != null)
+            tmp.font = font;
+    }
+
     static void EnsureLocalizedText(GameObject go, string key)
     {
         var loc = go.GetComponent<LocalizedText>();
@@ -539,29 +606,15 @@ public class CreateUIScreen
         SetPrivateField(loc, "localizationKey", key);
     }
 
-    static void SetTMPStyle(GameObject go, float spacing,
-        FontStyles fontStyle, string fontName = null)
-    {
-        var tmp = go.GetComponent<TextMeshProUGUI>();
-        if (tmp == null) return;
-        tmp.characterSpacing = spacing;
-        tmp.fontStyle = fontStyle;
-
-        if (!string.IsNullOrEmpty(fontName))
-        {
-            var font = Resources.Load<TMP_FontAsset>(fontName);
-            if (font == null)
-                font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>($"Assets/Fonts/{fontName}.asset");
-            if (font != null)
-                tmp.font = font;
-            else
-                Debug.LogWarning($"[GOLFIN] Font '{fontName}' not found. See ARCHITECTURE.md for setup.");
-        }
-    }
-
     // ═══════════════════════════════════════════════════════════════
     // UTILITY
     // ═══════════════════════════════════════════════════════════════
+
+    static Color HexColor(string hex)
+    {
+        ColorUtility.TryParseHtmlString(hex, out Color c);
+        return c;
+    }
 
     static void StretchFull(RectTransform rt)
     {
