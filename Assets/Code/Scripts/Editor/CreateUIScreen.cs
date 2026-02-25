@@ -146,9 +146,10 @@ public class CreateUIScreen
         tipCardRT.anchoredPosition = new Vector2(0f, -570f); // top at ~22.5% — pushed lower to center
 
         var tipCardBg = EnsureComponent<Image>(tipCardGO);
-        TryAssignSprite(tipCardGO, "Assets/Art/UI/card_bg.png",
-            new Color(0.08f, 0.12f, 0.10f, 0.75f));  // cooler blue-green tint
-        tipCardBg.type = Image.Type.Sliced; // for 9-slice rounded corners
+        TryAssignSprite(tipCardGO, SpritePaths.CardBackground,
+            new Color(0.08f, 0.12f, 0.10f, 0.75f));  // fallback if no sprite
+        tipCardBg.type = Image.Type.Sliced; // 9-slice stretches corners properly
+        tipCardBg.pixelsPerUnitMultiplier = 1f;
 
         var layout = EnsureComponent<VerticalLayoutGroup>(tipCardGO);
         layout.padding = new RectOffset(50, 50, 35, 35);
