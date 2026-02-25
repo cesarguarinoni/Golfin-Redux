@@ -139,50 +139,82 @@ public class CreateUIScreen
     // ═══════════════════════════════════════════════════════════════
     // LOADING SCREEN
     // Figma page: "Loading" — 9 variants, all share same layout structure
-    // Values from "Loading Screen - Leaderboards" component (first variant)
+    // Values from Figma API + visual comparison (2026-02-26)
     // Canvas: 1170×2532
+    //
+    // Figma structure (from API):
+    //   Screen (1170×2532)
+    //     └─ Background (stretched)
+    //     └─ BottomGradient (dark vignette at bottom for text legibility)
+    //     └─ Game Screen Content (1170×2532)
+    //         └─ Content Container (978×2208, x=96, y=24)
+    //             └─ Pop-up (978×variable, y=680, radius=50, BACKGROUND_BLUR r=4)
+    //                 └─ Mission Title (281×120, radius=[8,8,0,0])
+    //                     └─ "PRO TIP" (Rubik:600@66, #eedc9a)
+    //                 └─ Separator (978×0 line)
+    //                 └─ Goals Container (952×variable)
+    //                     └─ Tip text (856×variable, Rubik:600@51, #ffffff)
+    //                 └─ Image (806×variable, tip illustrations)
+    //                 └─ Goals Container (978×78)
+    //                     └─ "TAP FOR NEXT TIP" (882×54, Rubik:600@39, #ffffff)
+    //         └─ "NOW LOADING" (978×123, y=2281, Rubik:600@102, #ffffff)
+    //         └─ Bar + Size (978×105, y=2428)
+    //             └─ Bar (978×30, radius=8, fill=#ffffff)
+    //                 └─ Fill (376×30, radius=8, stroke=#000000 w=1)
+    //             └─ "52.20 / 267 MB" (978×63, Rubik:600@48, #ffffff)
     // ═══════════════════════════════════════════════════════════════
     static LoadingScreen SetupLoadingScreen(Transform parent)
     {
         GameObject screen = FindOrCreateScreenPanel("LoadingScreen", parent);
         var component = EnsureComponent<LoadingScreen>(screen);
 
-        // Background — full stretch
+        // ─── Background — full stretch ────────────────────────────
         var bg = FindOrCreateImageStretched("Background", screen.transform);
         TryAssignSprite(bg, SpritePaths.LoadingBackground, new Color(0.15f, 0.25f, 0.1f));
 
+        // ─── Bottom Gradient Overlay ──────────────────────────────
+        // Dark vignette at bottom for text legibility (missing in previous build)
+        var bottomGrad = FindOrCreate("BottomGradient", screen.transform);
+        var bgRT = EnsureComponent<RectTransform>(bottomGrad);
+        bgRT.anchorMin = new Vector2(0f, 0f);
+        bgRT.anchorMax = new Vector2(1f, 0.25f); // bottom 25% of screen
+        bgRT.offsetMin = Vector2.zero;
+        bgRT.offsetMax = Vector2.zero;
+        var bgImg = EnsureComponent<Image>(bottomGrad);
+        // Solid dark overlay; for proper gradient use a gradient sprite
+        bgImg.color = new Color(0f, 0f, 0f, 0.3f);
+
         // ─── Content Container (centered, 978px wide) ────────────
-        // Figma: "Content Container" at x+96 from screen edge, 978×2208
+        // Figma: x=96 from left edge, 978px wide, 2208px tall, y=24 from top
         GameObject contentContainer = FindOrCreate("ContentContainer", screen.transform);
         var ccRT = EnsureComponent<RectTransform>(contentContainer);
-        // Anchored to center-top, 978 wide
         ccRT.anchorMin = new Vector2(ContentMargin / W, 0f);
         ccRT.anchorMax = new Vector2(1f - ContentMargin / W, 1f);
         ccRT.offsetMin = Vector2.zero;
         ccRT.offsetMax = Vector2.zero;
 
-        // ─── Pro Tip Card ─────────────────────────────────────────
-        // Figma: "Pop-up" frame, 978px wide, top at Y=680 (relative to screen top)
-        //   cornerRadius=50, effect=BACKGROUND_BLUR(r=4)
-        //   Variable height depending on content
+        // ─── Pro Tip Card (Pop-up) ────────────────────────────────
+        // Figma: 978px wide (full content container width), radius=50
+        //   BACKGROUND_BLUR effect (r=4)
+        //   Top edge at Y=680 from canvas top
+        //   Y relative to content container: 680 - 24 = 656
         GameObject tipCardGO = FindOrCreate("ProTipCard", contentContainer.transform);
         var tipCardRT = EnsureComponent<RectTransform>(tipCardGO);
         tipCardRT.anchorMin = new Vector2(0f, 1f);
-        tipCardRT.anchorMax = new Vector2(1f, 1f);
+        tipCardRT.anchorMax = new Vector2(1f, 1f);  // FULL WIDTH of content container
         tipCardRT.pivot = new Vector2(0.5f, 1f);
-        // Figma: Pop-up top edge at Y=680 from canvas top, content starts at Y=49
-        // Relative to content container top: 680 - 49 = 631
-        tipCardRT.anchoredPosition = new Vector2(0f, -631f);
+        tipCardRT.anchoredPosition = new Vector2(0f, -656f);
 
         var tipCardBg = EnsureComponent<Image>(tipCardGO);
         TryAssignSprite(tipCardGO, SpritePaths.CardBackground,
-            new Color(0.08f, 0.12f, 0.10f, 0.75f));
+            new Color(0.06f, 0.10f, 0.08f, 0.80f));  // slightly more opaque than before
         tipCardBg.type = Image.Type.Sliced;
         tipCardBg.pixelsPerUnitMultiplier = 1f;
         if (HasSprite(tipCardGO)) tipCardBg.color = Color.white;
 
         var layout = EnsureComponent<VerticalLayoutGroup>(tipCardGO);
-        layout.padding = new RectOffset(10, 10, 0, 24);
+        // Figma: content starts ~10px in from card edge, generous vertical padding
+        layout.padding = new RectOffset(48, 48, 0, 24);  // 48px horizontal = (978-882)/2
         layout.spacing = 0f;
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = true;
@@ -198,61 +230,72 @@ public class CreateUIScreen
 
         // ─── "PRO TIP" Header ─────────────────────────────────────
         // Figma: "Mission Title" frame 281×120, cornerRadius=[8,8,0,0]
-        //   Text "PRO TIP": Rubik:600@66, color=#eedc9a, 249×84
-        //   Right-aligned within the card (not centered)
+        //   Text: "PRO TIP", Rubik:600@66, color=#eedc9a, 249×84
+        //   MUST be single line — container needs enough width
         var headerContainer = FindOrCreate("HeaderContainer", tipCardGO.transform);
-        var hcRT = EnsureComponent<RectTransform>(headerContainer);
+        EnsureComponent<RectTransform>(headerContainer);
         var hcLE = EnsureComponent<LayoutElement>(headerContainer);
         hcLE.preferredHeight = 120f;
+        hcLE.minWidth = 300f; // ensure PRO TIP doesn't wrap
 
         var header = FindOrCreate("Header", headerContainer.transform);
-        EnsureComponent<RectTransform>(header);
+        var headerRT = EnsureComponent<RectTransform>(header);
+        // Stretch to fill the container so text doesn't wrap
+        headerRT.anchorMin = Vector2.zero;
+        headerRT.anchorMax = Vector2.one;
+        headerRT.offsetMin = Vector2.zero;
+        headerRT.offsetMax = Vector2.zero;
         var headerTMP = EnsureComponent<TextMeshProUGUI>(header);
         if (string.IsNullOrEmpty(headerTMP.text) || headerTMP.text == "New Text")
             headerTMP.text = "PRO TIP";
         headerTMP.fontSize = 66f;
         headerTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
-        headerTMP.color = GoldAccent;
+        headerTMP.color = GoldAccent;  // #eedc9a
         headerTMP.alignment = TextAlignmentOptions.Center;
-        headerTMP.characterSpacing = 0f;
+        headerTMP.characterSpacing = 3f;  // slightly wider tracking
+        headerTMP.enableWordWrapping = false;  // PREVENT wrapping to 2 lines
         TrySetFont(headerTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(header, "tip_header");
 
         // ─── Separator Line ───────────────────────────────────────
-        // Figma: "Separator" LINE, full 978px width at Y=824
+        // Figma: "Separator" LINE, full 978px width
         var divider = FindOrCreateLayoutImage("Divider", tipCardGO.transform,
             GoldAccent, 2f);
 
         // ─── Tip Text ─────────────────────────────────────────────
-        // Figma: Rubik:600@51, color=#ffffff, inside 856px wide frame
-        //   with 48px padding each side from card edge (952 container, 48px inset)
+        // Figma: Rubik:600@51, color=#ffffff, CENTER-aligned
+        //   Inside 856px wide frame (952 container, ~48px inset each side)
+        //   Supports {gold}KEYWORD{/gold} highlighting via ProTipCard
         var tipText = FindOrCreateLayoutTMP("TipText", tipCardGO.transform,
-            "Tip goes here...", 51f, -1f);
+            "Tip goes here...", 51f, -1f, TextAlignmentOptions.Center);
         var tipTMP = tipText.GetComponent<TextMeshProUGUI>();
         tipTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
         tipTMP.color = Color.white;
+        tipTMP.alignment = TextAlignmentOptions.Center;  // was left-aligned, Figma is centered
         tipTMP.characterSpacing = 0f;
         TrySetFont(tipTMP, "Rubik-SemiBold SDF");
-        var tipLE = tipText.GetComponent<LayoutElement>();
-        if (tipLE == null) tipLE = tipText.AddComponent<LayoutElement>();
-        tipLE.flexibleHeight = 0;
-        // Add padding via layout element
         var tipPadding = EnsureComponent<LayoutElement>(tipText);
-        tipPadding.minHeight = 132f; // at least 2 lines at 51px
+        tipPadding.minHeight = 156f;  // ~3 lines at 51px with spacing
+        tipPadding.flexibleHeight = 0;
 
-        // ─── Tip Image (optional) ─────────────────────────────────
+        // ─── Tip Image (optional per-tip illustrations) ───────────
+        // Figma: "Image" frame, 806px wide, variable height (~578px)
+        //   Contains per-tip tutorial graphics
         var tipImageGO = FindOrCreateLayoutImage("TipImage", tipCardGO.transform,
-            Color.clear, 456f);
+            Color.clear, 578f);  // increased from 456 to match Figma
+        var tipImgComponent = tipImageGO.GetComponent<Image>();
+        tipImgComponent.preserveAspect = true;
         TryAssignSprite(tipImageGO, SpritePaths.TipImageFolder + "tip_0.png");
 
         // ─── "TAP FOR NEXT TIP" ───────────────────────────────────
-        // Figma: Rubik:600@39, color=#ffffff, 882px wide, right-aligned
+        // Figma: Rubik:600@39, color=#ffffff, 882×54, RIGHT-aligned
         //   Inside 978×78 "Goals Container" at bottom of card
         var tapNext = FindOrCreateLayoutTMP("TapNextText", tipCardGO.transform,
             "TAP FOR NEXT TIP", 39f, 78f, TextAlignmentOptions.Right);
         var tapTMP = tapNext.GetComponent<TextMeshProUGUI>();
         tapTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
         tapTMP.color = Color.white;
+        tapTMP.characterSpacing = 1.5f;  // slightly wider tracking per reference
         TrySetFont(tapTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(tapNext, "tip_next");
 
@@ -270,7 +313,7 @@ public class CreateUIScreen
             for (int i = 0; i < tipSprites.Length; i++)
             {
                 var tipImgObj = FindOrCreateLayoutImage($"TipImage_{i}", tipCardGO.transform,
-                    Color.white, 456f);
+                    Color.white, 578f);
                 tipImgObj.GetComponent<Image>().sprite = tipSprites[i];
                 tipImgObj.GetComponent<Image>().preserveAspect = true;
                 tipImgArray[i] = tipImgObj.GetComponent<Image>();
@@ -287,44 +330,49 @@ public class CreateUIScreen
 
         // ─── "NOW LOADING" ────────────────────────────────────────
         // Figma: "Title" text, Rubik:600@102, color=#ffffff
-        //   Position: 978×123, Y=2281 from canvas top
-        //   Relative to screen: anchorY = 1 - (2281/2532) = 0.099
+        //   978×123, Y=2281 from canvas top
+        //   anchorY = 1 - (2281/2532) = ~0.099
         var nowLoading = FindOrCreateTMPAnchored("NowLoadingText", screen.transform,
             "NOW LOADING",
-            new Vector2(0.5f, 1f - (2281f / H)),  // Y=2281 from top
+            new Vector2(0.5f, 1f - (2281f / H)),
             102f,
             TextAlignmentOptions.Center,
             new Vector2(ContentWidth, 123f));
         var nlTMP = nowLoading.GetComponent<TextMeshProUGUI>();
         nlTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
         nlTMP.color = Color.white;
+        nlTMP.characterSpacing = 4f;  // wider tracking per visual comparison
         TrySetFont(nlTMP, "Rubik-SemiBold SDF");
+        // Add subtle drop shadow via TMP outline
+        nlTMP.outlineWidth = 0.08f;
+        nlTMP.outlineColor = new Color32(0, 0, 0, 80);
         EnsureLocalizedText(nowLoading, "screen_loading");
 
         // ─── Loading Bar ──────────────────────────────────────────
         // Figma: "Bar" frame, 978×30, Y=2428, cornerRadius=8
-        //   Background: fill=#ffffff
-        //   Fill rectangle: 376×30 (progress), radius=8, stroke=#000000 w=1
+        //   Background: fill=#ffffff (semi-transparent track)
+        //   Fill: 376×30 (progress), radius=8, stroke=#000000 w=1
         var barBG = FindOrCreateImageAnchored("LoadingBarBG", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - (2428f / H)),
             size: new Vector2(ContentWidth, 30f));
         var barBGImg = barBG.GetComponent<Image>();
-        barBGImg.color = new Color(1f, 1f, 1f, 0.25f);
+        barBGImg.color = new Color(1f, 1f, 1f, 0.30f);  // Figma: white track, semi-transparent
         TryAssignSprite(barBG, SpritePaths.LoadingBarPill);
         if (HasSprite(barBG)) barBGImg.type = Image.Type.Sliced;
         var loadingBar = EnsureComponent<LoadingBar>(barBG);
 
-        // Bar fill
+        // Bar fill — starts at 0 (LoadingScreen.cs animates it)
         var barFill = FindOrCreateImageStretched("LoadingBarFill", barBG.transform);
         var barFillImg = barFill.GetComponent<Image>();
-        barFillImg.color = Color.white; // Figma fill is white
+        barFillImg.color = Color.white;
         barFillImg.type = Image.Type.Filled;
         barFillImg.fillMethod = Image.FillMethod.Horizontal;
+        barFillImg.fillAmount = 0f;  // FIX: start at 0 (was showing partial fill)
         TryAssignSprite(barFill, SpritePaths.LoadingBarPill);
 
-        // Bar glow
+        // Bar glow — follows fill edge
         var barGlow = FindOrCreateImageAnchored("LoadingBarGlow", barBG.transform,
-            anchorCenter: new Vector2(1f, 0.5f),
+            anchorCenter: new Vector2(0f, 0.5f),  // starts at left, LoadingBar.cs moves it
             size: new Vector2(30f, 30f));
         if (!HasSprite(barGlow)) barGlow.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.5f);
 
@@ -333,7 +381,8 @@ public class CreateUIScreen
 
         // ─── Download Progress Text ───────────────────────────────
         // Figma: "52.20 / 267 MB", Rubik:600@48, color=#ffffff
-        //   Position: 978×63, Y=2470
+        //   978×63, Y=2470 from canvas top
+        //   Figma shows full-width centered text
         var downloadProgress = FindOrCreateTMPAnchored("DownloadProgress", screen.transform,
             "0 / 267 MB",
             new Vector2(0.5f, 1f - (2470f / H)),
