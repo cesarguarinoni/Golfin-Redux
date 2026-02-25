@@ -41,13 +41,16 @@ public class LoadingBar : MonoBehaviour
             fillImage.color = Color.Lerp(fillColorStart, fillColorEnd, _currentProgress);
         }
         
-        // Move glow to the fill edge
+        // Move glow to the leading edge (right side of fill)
         if (glowImage != null && _barRect != null && _glowRect != null)
         {
             float barWidth = _barRect.rect.width;
-            float xPos = barWidth * _currentProgress - (barWidth * 0.5f);
+            // Position glow at the right edge of the filled portion
+            float xPos = (barWidth * _currentProgress) - (barWidth * 0.5f);
             _glowRect.anchoredPosition = new Vector2(xPos, 0f);
-            glowImage.gameObject.SetActive(_currentProgress > 0.01f && _currentProgress < 0.99f);
+            _glowRect.anchorMin = new Vector2(0.5f, 0f);
+            _glowRect.anchorMax = new Vector2(0.5f, 1f);
+            glowImage.gameObject.SetActive(_currentProgress > 0.02f && _currentProgress < 0.98f);
         }
     }
     
