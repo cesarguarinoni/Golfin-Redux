@@ -373,7 +373,7 @@ public class CreateUIScreen
         tmp.fontSize = fontSize;
         tmp.alignment = alignment;
         tmp.color = Color.white;
-        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
         tmp.overflowMode = TextOverflowModes.Ellipsis;
 
         return go;
@@ -402,7 +402,7 @@ public class CreateUIScreen
         tmp.fontSize = fontSize;
         tmp.alignment = alignment;
         tmp.color = Color.white;
-        tmp.enableWordWrapping = true;
+        tmp.textWrappingMode = TextWrappingModes.Normal;
         tmp.overflowMode = TextOverflowModes.Ellipsis;
 
         var le = go.AddComponent<LayoutElement>();
