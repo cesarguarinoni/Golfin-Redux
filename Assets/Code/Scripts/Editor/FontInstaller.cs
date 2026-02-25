@@ -159,7 +159,7 @@ public class FontInstaller
             // Character set: ASCII printable range (32-126) + common extended
             string charSet = "";
             for (int c = 32; c <= 126; c++) charSet += (char)c;
-            charSet += "ÁÉÍÓÚÑáéíóúñ€£¥©®™…–—''""";
+            charSet += "AEIOUNaeioun";
 
             int atlasSize = 512;
             int samplingSize = 48;
