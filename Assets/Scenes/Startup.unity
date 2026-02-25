@@ -731,6 +731,7 @@ GameObject:
   - component: {fileID: 469497860}
   - component: {fileID: 469497862}
   - component: {fileID: 469497861}
+  - component: {fileID: 469497863}
   m_Layer: 5
   m_Name: TipText
   m_TagString: Untagged
@@ -857,6 +858,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 469497859}
   m_CullTransparentMesh: 1
+--- !u!114 &469497863
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 469497859}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5be303ec7f2e1d04d802fe45897e272b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  localizationKey: 
+  highlightColor: {r: 0.78, g: 0.72, b: 0.19, a: 1}
 --- !u!1 &636320312
 GameObject:
   m_ObjectHideFlags: 0
@@ -943,7 +958,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5be303ec7f2e1d04d802fe45897e272b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  localizationKey: 
+  localizationKey: 'tip_header '
   highlightColor: {r: 0.78, g: 0.72, b: 0.19, a: 1}
 --- !u!114 &698889793
 MonoBehaviour:
@@ -1859,10 +1874,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00f58e8bb64c9dd4f890a2a6efe1571d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProTipCard
-  headerText: {fileID: 0}
-  tipText: {fileID: 0}
-  tapNextText: {fileID: 0}
+  headerText: {fileID: 698889793}
+  tipText: {fileID: 469497861}
+  tapNextText: {fileID: 1828759615}
   tipImages: []
+  tipKeys:
+  - tip_first
+  - tip_flick
+  - tip_forecast
+  - tip_leaderboards
+  - tip_map
+  - tip_accuracy
+  - tip_perfect
+  - tip_swap
+  - tip_wind
   autoCycleInterval: 8
   textFadeDuration: 0.3
   goldColor: {r: 0.78, g: 0.72, b: 0.19, a: 1}
@@ -2473,7 +2498,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5be303ec7f2e1d04d802fe45897e272b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  localizationKey: 
+  localizationKey: 'tip_next '
   highlightColor: {r: 0.78, g: 0.72, b: 0.19, a: 1}
 --- !u!114 &1828759615
 MonoBehaviour:

@@ -16,6 +16,13 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
     [SerializeField] private TextMeshProUGUI tapNextText;   // "TAP FOR NEXT TIP"
     [SerializeField] private Image[] tipImages;             // Optional tip illustrations
     
+    [Header("Tip Keys (from localization CSV)")]
+    [SerializeField] private string[] tipKeys = new string[]
+    {
+        "tip_first", "tip_flick", "tip_forecast", "tip_leaderboards",
+        "tip_map", "tip_accuracy", "tip_perfect", "tip_swap", "tip_wind"
+    };
+    
     [Header("Settings")]
     [SerializeField] private float autoCycleInterval = 8f;
     [SerializeField] private float textFadeDuration = 0.3f;
@@ -39,10 +46,17 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
         }
     }
     
-    /// <summary>Initialize with an array of localization keys</summary>
-    public void Initialize(string[] tipKeys)
+    private void Start()
     {
-        _tipKeys = tipKeys;
+        // Auto-initialize with Inspector keys if not initialized externally
+        if (_tipKeys == null || _tipKeys.Length == 0)
+            Initialize(tipKeys);
+    }
+    
+    /// <summary>Initialize with an array of localization keys (or uses Inspector defaults)</summary>
+    public void Initialize(string[] keys)
+    {
+        _tipKeys = keys;
         _currentTipIndex = 0;
         
         // Localize static elements
