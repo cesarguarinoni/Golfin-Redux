@@ -34,6 +34,7 @@ public class CreateUIScreen
         public const string SplashBackground = "Assets/Art/UI/splash_bg.png";
         public const string LoadingBackground = "Assets/Art/UI/loading_bg.png";
         public const string LoadingBarPill   = "Assets/Art/UI/pill_bar.png";
+        public const string CardBackground   = "Assets/Art/UI/card_bg.png";
         // Tip images: Assets/Art/UI/Tips/tip_0.png, tip_1.png, ...
         public const string TipImageFolder   = "Assets/Art/UI/Tips/";
     }
@@ -132,19 +133,26 @@ public class CreateUIScreen
         TryAssignSprite(bg, SpritePaths.LoadingBackground, new Color(0.15f, 0.25f, 0.1f));
 
         // ─── Pro Tip Card ─────────────────────────────────────────
+        // Card needs a 9-slice rounded rect sprite for corners + outline.
+        // IMAGE NEEDED: Assets/Art/UI/card_bg.png
+        //   → Rounded rect (~20px radius), dark semi-transparent fill,
+        //     thin gold/yellow outline (~2px), transparent outside.
+        //     Make it ~200x200 with 9-slice borders set in Sprite Editor.
         GameObject tipCardGO = FindOrCreate("ProTipCard", screen.transform);
         var tipCardRT = EnsureComponent<RectTransform>(tipCardGO);
-        tipCardRT.anchorMin = new Vector2(0.077f, 1f);
-        tipCardRT.anchorMax = new Vector2(0.923f, 1f);
+        tipCardRT.anchorMin = new Vector2(0.055f, 1f);   // wider: ~89% of screen
+        tipCardRT.anchorMax = new Vector2(0.945f, 1f);
         tipCardRT.pivot = new Vector2(0.5f, 1f);
-        tipCardRT.anchoredPosition = new Vector2(0f, -375f);
+        tipCardRT.anchoredPosition = new Vector2(0f, -443f); // top at ~17.5% of 2532
 
         var tipCardBg = EnsureComponent<Image>(tipCardGO);
-        if (!HasSprite(tipCardGO)) tipCardBg.color = new Color(0.12f, 0.16f, 0.14f, 0.7f);
+        TryAssignSprite(tipCardGO, "Assets/Art/UI/card_bg.png",
+            new Color(0.08f, 0.12f, 0.10f, 0.75f));  // cooler blue-green tint
+        tipCardBg.type = Image.Type.Sliced; // for 9-slice rounded corners
 
         var layout = EnsureComponent<VerticalLayoutGroup>(tipCardGO);
-        layout.padding = new RectOffset(40, 40, 40, 40);
-        layout.spacing = 20f;
+        layout.padding = new RectOffset(50, 50, 35, 35);
+        layout.spacing = 15f;
         layout.childAlignment = TextAnchor.UpperCenter;
         layout.childControlWidth = true;
         layout.childControlHeight = true;
@@ -157,31 +165,31 @@ public class CreateUIScreen
 
         var tipCard = EnsureComponent<ProTipCard>(tipCardGO);
 
-        // Header
+        // Header — smaller font, tighter tracking to match reference
         var header = FindOrCreateLayoutTMP("Header", tipCardGO.transform, "PRO TIP",
-            52f, 70f);
-        SetTMPStyle(header, 8f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Bold SDF");
+            40f, 55f);
+        SetTMPStyle(header, 4f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Bold SDF");
         EnsureLocalizedText(header, "tip_header");
 
-        // Divider
+        // Divider — slightly narrower, use LayoutElement to not stretch full width
         var divider = FindOrCreateLayoutImage("Divider", tipCardGO.transform,
-            new Color(0.78f, 0.66f, 0.31f), 3f);
+            new Color(0.78f, 0.66f, 0.31f), 2f);
 
-        // Tip text
+        // Tip text — bolder weight to match reference
         var tipText = FindOrCreateLayoutTMP("TipText", tipCardGO.transform, "Tip goes here...",
-            38f, -1f);
-        SetTMPStyle(tipText, 0f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-SemiBold SDF");
+            34f, -1f);
+        SetTMPStyle(tipText, 0f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Bold SDF");
 
-        // Tip image
+        // Tip image — hide if no sprite assigned (no white box)
         var tipImageGO = FindOrCreateLayoutImage("TipImage", tipCardGO.transform,
-            Color.white, 456f);
+            Color.clear, 456f);  // Color.clear instead of white!
         // Try to assign first tip image
         TryAssignSprite(tipImageGO, SpritePaths.TipImageFolder + "tip_0.png");
 
-        // Tap next
+        // Tap next — inside card bottom, bold italic
         var tapNext = FindOrCreateLayoutTMP("TapNextText", tipCardGO.transform, "TAP FOR NEXT TIP",
-            24f, 40f, TextAlignmentOptions.Right);
-        SetTMPStyle(tapNext, 2f, FontStyles.Italic | FontStyles.UpperCase, "Montserrat-Italic SDF");
+            22f, 35f, TextAlignmentOptions.Right);
+        SetTMPStyle(tapNext, 1f, FontStyles.Bold | FontStyles.Italic | FontStyles.UpperCase, "Montserrat-BoldItalic SDF");
         EnsureLocalizedText(tapNext, "tip_next");
 
         // Wire ProTipCard
@@ -218,40 +226,46 @@ public class CreateUIScreen
             SetPrivateField(tipCard, "tipImages", new Image[] { tipImageGO.GetComponent<Image>() });
         }
 
-        // ─── NOW LOADING ──────────────────────────────────────────
+        // ─── NOW LOADING — pushed lower to ~88% Y ──────────────────
         var nowLoading = FindOrCreateTMPAnchored("NowLoadingText", screen.transform, "NOW LOADING",
-            new Vector2(0.5f, 1f - 0.825f), 72f);
-        SetTMPStyle(nowLoading, 4f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Black SDF");
+            new Vector2(0.5f, 1f - 0.88f), 60f);  // smaller: 60 instead of 72
+        SetTMPStyle(nowLoading, 3f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Black SDF");
         nowLoading.GetComponent<TextMeshProUGUI>().outlineWidth = 0.15f;
         nowLoading.GetComponent<TextMeshProUGUI>().outlineColor = new Color32(0, 0, 0, 128);
         EnsureLocalizedText(nowLoading, "screen_loading");
 
-        // ─── Loading Bar ──────────────────────────────────────────
+        // ─── Loading Bar — wider, lower (~92% Y), white bg + blue fill ──
+        // IMAGE NEEDED: Assets/Art/UI/pill_bar.png
+        //   → White pill shape (~200x40), fully rounded ends,
+        //     transparent outside. 9-slice for stretching.
         var barBG = FindOrCreateImageAnchored("LoadingBarBG", screen.transform,
-            anchorCenter: new Vector2(0.5f, 1f - 0.875f),
-            size: new Vector2(842f, 32f));
-        if (!HasSprite(barBG)) barBG.GetComponent<Image>().color = new Color(0.08f, 0.12f, 0.16f, 0.7f);
+            anchorCenter: new Vector2(0.5f, 1f - 0.92f),
+            size: new Vector2(990f, 36f));  // wider: 990 instead of 842
+        barBG.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.25f); // white semi-transparent
         TryAssignSprite(barBG, SpritePaths.LoadingBarPill);
+        if (HasSprite(barBG)) barBG.GetComponent<Image>().type = Image.Type.Sliced;
         var loadingBar = EnsureComponent<LoadingBar>(barBG);
 
+        // Bar fill — blue gradient (left darker → right brighter)
         var barFill = FindOrCreateImageStretched("LoadingBarFill", barBG.transform);
-        barFill.GetComponent<Image>().color = new Color(0.23f, 0.38f, 0.85f);
+        barFill.GetComponent<Image>().color = new Color(0.23f, 0.49f, 0.91f); // vivid blue #3B7DE8
         barFill.GetComponent<Image>().type = Image.Type.Filled;
         barFill.GetComponent<Image>().fillMethod = Image.FillMethod.Horizontal;
         TryAssignSprite(barFill, SpritePaths.LoadingBarPill);
 
+        // Bar glow — at LEADING EDGE (right side of fill), not left
         var barGlow = FindOrCreateImageAnchored("LoadingBarGlow", barBG.transform,
-            anchorCenter: new Vector2(0f, 0.5f),
-            size: new Vector2(20f, 25f));
-        if (!HasSprite(barGlow)) barGlow.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.3f);
+            anchorCenter: new Vector2(1f, 0.5f),  // right side (follows fill)
+            size: new Vector2(30f, 36f));
+        if (!HasSprite(barGlow)) barGlow.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.5f);
 
         SetPrivateField(loadingBar, "fillImage", barFill.GetComponent<Image>());
         SetPrivateField(loadingBar, "glowImage", barGlow.GetComponent<Image>());
 
-        // ─── Download progress ────────────────────────────────────
+        // ─── Download progress — lower (~95% Y), smaller font ─────
         var downloadProgress = FindOrCreateTMPAnchored("DownloadProgress", screen.transform, "0 / 267 MB",
-            new Vector2(0.6f, 1f - 0.90f), 28f, TextAlignmentOptions.Right,
-            new Vector2(400f, 50f));
+            new Vector2(0.6f, 1f - 0.95f), 24f, TextAlignmentOptions.Right,
+            new Vector2(400f, 40f));
         SetTMPStyle(downloadProgress, 0f, FontStyles.Bold, "Montserrat-Bold SDF");
 
         // Wire LoadingScreen
