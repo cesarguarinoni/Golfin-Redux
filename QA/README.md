@@ -1,64 +1,98 @@
-# GOLFIN Visual QA Pipeline
+# GOLFIN Visual QA Workflow
 
-Automated visual comparison between Unity builds and Figma designs.
+Step-by-step guide for keeping Unity screens matched to Figma.
 
-## Setup
+---
 
+## First Time Setup (once)
+
+### Step 1 — Install Python dependencies
 ```bash
 pip install requests Pillow numpy
 ```
 
-## Workflow
+### Step 2 — Install fonts in Unity
+In Unity Editor: **Tools → Install Figma Fonts**
 
-### 1. Export Figma reference screenshots
+This auto-downloads Rubik + Arapey from Google Fonts and creates TMP SDF assets. You'll see the results in `Assets/Fonts/`. If any fail, it'll tell you which to download manually.
+
+### Step 3 — Store your Figma token
+Create `QA/.figma_token` with your token (already gitignored):
+```
+figd_YOUR_TOKEN_HERE
+```
+
+---
+
+## Every Time You Change a Screen
+
+### Step 1 — Build the UI in Unity
+Run **Tools → Create GOLFIN UI Scene** to apply the latest code changes.
+
+### Step 2 — Capture Unity screenshots
+Run **Tools → QA → Capture All Screens**
+
+Screenshots save to `QA/Screenshots/Unity/`.
+
+### Step 3 — Export Figma references
 ```bash
 cd QA
 python3 visual_qa.py --export-figma
 ```
-This exports all screens from Figma as PNGs to `QA/Screenshots/Figma/`.
+Downloads PNGs of each Figma screen to `QA/Screenshots/Figma/`.
 
-### 2. Capture Unity screenshots
-In Unity Editor: **Tools → QA → Capture All Screens**
-
-This saves screenshots to `QA/Screenshots/Unity/`.
-
-### 3. Run comparison
+### Step 4 — Run the comparison
 ```bash
 python3 visual_qa.py --compare
 ```
 
-### 4. Or do everything at once
-```bash
-python3 visual_qa.py --full
+**Output:**
+- Terminal shows match % per screen (✅ >95% | 🟡 80-95% | 🔴 <80%)
+- `QA/Reports/diff_*.png` — visual diff images (mismatches highlighted)
+- `QA/Reports/qa_report_latest.md` — readable summary
+
+### Step 5 — AI deep analysis (if needed)
+For anything the pixel diff can't explain, upload both screenshots (Unity + Figma) to the **GOLFIN<>dev** Telegram chat and tag @aikenken_bot. You'll get:
+- Exact element-by-element diff
+- Specific fix instructions with pixel values
+- Updated code pushed directly to the repo
+
+---
+
+## Quick Commands
+
+| What | Where | Command |
+|------|-------|---------|
+| Install fonts | Unity | Tools → Install Figma Fonts |
+| Check fonts | Unity | Tools → Check Figma Fonts |
+| Build screens | Unity | Tools → Create GOLFIN UI Scene |
+| Capture screenshots | Unity | Tools → QA → Capture All Screens |
+| Export Figma PNGs | Terminal | `python3 QA/visual_qa.py --export-figma` |
+| Compare | Terminal | `python3 QA/visual_qa.py --compare` |
+| Full pipeline | Terminal | `python3 QA/visual_qa.py --full` |
+| Single screen | Terminal | `python3 QA/visual_qa.py --compare --screen LoadingScreen` |
+| Design tokens | Terminal | `python3 QA/visual_qa.py --tokens` |
+
+---
+
+## Adding New Screens
+
+1. Add the screen to `SCREEN_MAP` in `visual_qa.py`:
+```python
+SCREEN_MAP = {
+    ...
+    "HomeScreen": {"page": "Home Screen", "node_id": "2098:3766"},
+}
 ```
 
-### 5. Compare a specific screen
-```bash
-python3 visual_qa.py --compare --screen LoadingScreen
-```
+2. Node ID is the Figma page ID (visible in the URL or via the API).
 
-## Output
+---
 
-- `QA/Reports/qa_report_latest.json` — Machine-readable report
-- `QA/Reports/qa_report_latest.md` — Human-readable markdown
-- `QA/Reports/diff_*.png` — Visual diff images (differences highlighted)
+## Troubleshooting
 
-## Screen Map
+**"Rate limit exceeded"** — Figma free tier limits API calls. Wait 15-30 min and retry.
 
-| Unity Name | Figma Page | Node ID |
-|-----------|------------|---------|
-| LogoScreen | Logo | 2622:843 |
-| SplashScreen | Splash Screen | 2032:327 |
-| LoadingScreen | Loading | 4096:1181 |
+**Font not found in Unity** — Run Tools → Check Figma Fonts to see what's missing, then Tools → Install Figma Fonts.
 
-Add new screens to `SCREEN_MAP` in `visual_qa.py`.
-
-## AI-Powered Deep Analysis
-
-For detailed UI/UX analysis beyond pixel diff:
-1. Upload both Unity + Figma screenshots to the Telegram dev chat
-2. Ask Kai to compare them — it'll return a structured diff with exact fix instructions
-
-## Figma Token
-
-Store your token in `QA/.figma_token` (gitignored) or set `FIGMA_TOKEN` env var.
+**Screenshots are black** — Make sure at least one screen has its CanvasGroup alpha=1 before capturing.
