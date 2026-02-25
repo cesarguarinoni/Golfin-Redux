@@ -25,3 +25,7 @@ Thumbs.db
 
 # Crashlytics
 crashlytics-build.properties
+QA/.figma_token
+QA/.cache/
+QA/Screenshots/
+QA/Reports/
