@@ -125,30 +125,30 @@ public class CreateUIScreen
 
         var tipCard = tipCardGO.AddComponent<ProTipCard>();
 
-        // "PRO TIP" header
+        // "PRO TIP" header — Montserrat Bold, wide tracked
         var header = CreateLayoutTMP("Header", tipCardGO.transform, "PRO TIP",
             fontSize: 52f, preferredHeight: 70f);
-        SetTMPStyle(header, spacing: 4f, fontStyle: FontStyles.Bold);
+        SetTMPStyle(header, spacing: 8f, fontStyle: FontStyles.Bold | FontStyles.UpperCase, fontName: "Montserrat-Bold SDF");
         AddLocalizedText(header, "tip_header");
 
         // Gold divider
         var divider = CreateLayoutImage("Divider", tipCardGO.transform,
             new Color(0.78f, 0.66f, 0.31f), preferredHeight: 3f);
 
-        // Tip text (auto-height based on content)
+        // Tip text — Montserrat SemiBold, uppercase
         var tipText = CreateLayoutTMP("TipText", tipCardGO.transform, "Tip goes here...",
-            fontSize: 38f, preferredHeight: -1f);  // -1 = no fixed height, auto-size
-        SetTMPStyle(tipText, fontStyle: FontStyles.Bold);
+            fontSize: 38f, preferredHeight: -1f);
+        SetTMPStyle(tipText, fontStyle: FontStyles.Bold | FontStyles.UpperCase, fontName: "Montserrat-SemiBold SDF");
 
         // Tip image
         var tipImageGO = CreateLayoutImage("TipImage", tipCardGO.transform,
             Color.white, preferredHeight: 456f);
 
-        // "TAP FOR NEXT TIP"
+        // "TAP FOR NEXT TIP" — Montserrat Italic
         var tapNext = CreateLayoutTMP("TapNextText", tipCardGO.transform, "TAP FOR NEXT TIP",
             fontSize: 24f, preferredHeight: 40f,
             alignment: TextAlignmentOptions.Right);
-        SetTMPStyle(tapNext, spacing: 1f, fontStyle: FontStyles.Italic);
+        SetTMPStyle(tapNext, spacing: 2f, fontStyle: FontStyles.Italic | FontStyles.UpperCase, fontName: "Montserrat-Italic SDF");
         AddLocalizedText(tapNext, "tip_next");
 
         // Wire ProTipCard
@@ -158,11 +158,14 @@ public class CreateUIScreen
         SetPrivateField(tipCard, "tipImages", new Image[] { tipImageGO.GetComponent<Image>() });
         SetPrivateField(tipCard, "dividerImage", divider.GetComponent<Image>());
 
-        // ─── NOW LOADING text — centered, Y ~82.5% ───────────────
+        // ─── NOW LOADING — Montserrat Black/ExtraBold, Y ~82.5% ───
         var nowLoading = CreateTMPAnchored("NowLoadingText", screen.transform, "NOW LOADING",
             anchorCenter: new Vector2(0.5f, 1f - 0.825f),
             fontSize: 72f, alignment: TextAlignmentOptions.Center);
-        SetTMPStyle(nowLoading, spacing: 3f, fontStyle: FontStyles.Bold);
+        SetTMPStyle(nowLoading, spacing: 4f, fontStyle: FontStyles.Bold | FontStyles.UpperCase, fontName: "Montserrat-Black SDF");
+        // Add outline for readability over background
+        nowLoading.GetComponent<TextMeshProUGUI>().outlineWidth = 0.15f;
+        nowLoading.GetComponent<TextMeshProUGUI>().outlineColor = new Color32(0, 0, 0, 128);
         AddLocalizedText(nowLoading, "screen_loading");
 
         // ─── Loading Bar BG — centered, Y ~87.5%, 72% width ──────
@@ -188,12 +191,12 @@ public class CreateUIScreen
         SetPrivateField(loadingBar, "fillImage", barFill.GetComponent<Image>());
         SetPrivateField(loadingBar, "glowImage", barGlow.GetComponent<Image>());
 
-        // ─── Download progress — right of center, Y ~90% ─────────
+        // ─── Download progress — Montserrat Bold, Y ~90% ──────────
         var downloadProgress = CreateTMPAnchored("DownloadProgress", screen.transform, "0 / 267 MB",
             anchorCenter: new Vector2(0.6f, 1f - 0.90f),
             fontSize: 28f, alignment: TextAlignmentOptions.Right,
             size: new Vector2(400f, 50f));
-        SetTMPStyle(downloadProgress, fontStyle: FontStyles.Bold);
+        SetTMPStyle(downloadProgress, fontStyle: FontStyles.Bold, fontName: "Montserrat-Bold SDF");
 
         // Wire LoadingScreen
         SetPrivateField(component, "loadingBar", loadingBar);
@@ -215,36 +218,14 @@ public class CreateUIScreen
         // Background (golf course art)
         CreateImageStretched("Background", screen.transform, new Color(0.1f, 0.2f, 0.15f));
 
-        // ─── Title Area ───────────────────────────────────────────
-        GameObject titleArea = new GameObject("TitleArea");
-        titleArea.transform.SetParent(screen.transform, false);
-        RectTransform titleRT = titleArea.AddComponent<RectTransform>();
-        // Title area spans top portion: 5.9% → 20.3% Y
-        titleRT.anchorMin = new Vector2(0.15f, 1f - 0.203f);
-        titleRT.anchorMax = new Vector2(0.85f, 1f - 0.059f);
-        titleRT.offsetMin = Vector2.zero;
-        titleRT.offsetMax = Vector2.zero;
-
-        // "GOLFIN presents" — Y ~6.5%
-        var presents = CreateTMPAnchored("PresentsText", titleArea.transform, "GOLFIN presents",
-            anchorCenter: new Vector2(0.5f, 0.85f),
-            fontSize: 58f, alignment: TextAlignmentOptions.Center,
-            size: new Vector2(820f, 120f));
-        SetTMPStyle(presents, spacing: 4f, fontStyle: FontStyles.Bold);
-        AddLocalizedText(presents, "splash_presents");
-
-        // Shield logo — centered at ~24% X, ~16.2% Y of screen
-        CreateImageAnchored("ShieldLogo", titleArea.transform, Color.white,
-            anchorCenter: new Vector2(0.15f, 0.55f),
-            size: new Vector2(175f, 200f));
-
-        // "The Invitational" — Y ~13%
-        var subtitle = CreateTMPAnchored("SubtitleText", titleArea.transform, "The Invitational",
-            anchorCenter: new Vector2(0.55f, 0.25f),
-            fontSize: 100f, alignment: TextAlignmentOptions.Center,
-            size: new Vector2(810f, 210f));
-        SetTMPStyle(subtitle, fontStyle: FontStyles.Italic);
-        AddLocalizedText(subtitle, "splash_subtitle");
+        // ─── Title Area — single combined image ──────────────────
+        // "GOLFIN presents", shield logo, and "The Invitational" as one image
+        // Place in Assets/Art/UI/splash_title.png (export from design file)
+        // Spans from Y ~5.9% to ~20.3%, centered horizontally
+        var titleImage = CreateImageAnchored("TitleArea", screen.transform, Color.white,
+            anchorCenter: new Vector2(0.5f, 1f - 0.13f),  // centered at ~13% Y
+            size: new Vector2(990f, 365f));                // full title block
+        titleImage.GetComponent<Image>().preserveAspect = true;
 
         // ─── Dark gradient overlay at bottom ──────────────────────
         var gradient = CreateImageAnchored("BottomGradient", screen.transform,
@@ -264,7 +245,9 @@ public class CreateUIScreen
             anchorCenter: new Vector2(0.5f, 0.5f),
             fontSize: 72f, alignment: TextAlignmentOptions.Center);
         startText.GetComponent<TextMeshProUGUI>().color = Color.white;
-        SetTMPStyle(startText, spacing: 6f, fontStyle: FontStyles.Bold);
+        startText.GetComponent<TextMeshProUGUI>().outlineWidth = 0.1f;
+        startText.GetComponent<TextMeshProUGUI>().outlineColor = new Color32(0, 0, 0, 100);
+        SetTMPStyle(startText, spacing: 6f, fontStyle: FontStyles.Bold | FontStyles.UpperCase, fontName: "Montserrat-Bold SDF");
         AddLocalizedText(startText, "btn_start");
 
         // ─── CREATE ACCOUNT — centered, Y ~91.2%, text only ──────
@@ -279,7 +262,9 @@ public class CreateUIScreen
             anchorCenter: new Vector2(0.5f, 0.5f),
             fontSize: 62f, alignment: TextAlignmentOptions.Center);
         createText.GetComponent<TextMeshProUGUI>().color = Color.white;
-        SetTMPStyle(createText, spacing: 4f, fontStyle: FontStyles.Bold);
+        createText.GetComponent<TextMeshProUGUI>().outlineWidth = 0.1f;
+        createText.GetComponent<TextMeshProUGUI>().outlineColor = new Color32(0, 0, 0, 150);
+        SetTMPStyle(createText, spacing: 4f, fontStyle: FontStyles.Bold | FontStyles.UpperCase, fontName: "Montserrat-Bold SDF");
         AddLocalizedText(createText, "btn_create_account");
 
         // Wire SplashScreen
@@ -380,12 +365,25 @@ public class CreateUIScreen
     }
 
     static void SetTMPStyle(GameObject go, float spacing = 0f,
-        FontStyles fontStyle = FontStyles.Normal)
+        FontStyles fontStyle = FontStyles.Normal, string fontName = null)
     {
         var tmp = go.GetComponent<TextMeshProUGUI>();
         if (tmp == null) return;
         tmp.characterSpacing = spacing;
         tmp.fontStyle = fontStyle;
+
+        // Try to load a specific TMP font asset if provided
+        // Fonts should be in Assets/Fonts/ as TMP Font Assets
+        if (!string.IsNullOrEmpty(fontName))
+        {
+            var font = Resources.Load<TMP_FontAsset>(fontName);
+            if (font == null)
+                font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>($"Assets/Fonts/{fontName}.asset");
+            if (font != null)
+                tmp.font = font;
+            else
+                Debug.LogWarning($"[GOLFIN] Font '{fontName}' not found. Using default. See ARCHITECTURE.md for recommended fonts.");
+        }
     }
 
     /// <summary>TMP child for VerticalLayoutGroup with LayoutElement</summary>

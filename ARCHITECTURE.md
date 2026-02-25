@@ -244,6 +244,38 @@ Scene Root
 
 ---
 
+## Fonts
+
+The reference designs use a geometric sans-serif throughout. **Montserrat** (Google Fonts, free) is the closest match.
+
+### Required Font Assets
+
+Download [Montserrat from Google Fonts](https://fonts.google.com/specimen/Montserrat), then create TMP Font Assets:
+
+| Font File | TMP Asset Name | Used For |
+|-----------|---------------|----------|
+| `Montserrat-Black.ttf` | `Montserrat-Black SDF` | "NOW LOADING" (72px) |
+| `Montserrat-Bold.ttf` | `Montserrat-Bold SDF` | "PRO TIP", buttons, download text |
+| `Montserrat-SemiBold.ttf` | `Montserrat-SemiBold SDF` | Tip body text |
+| `Montserrat-Italic.ttf` | `Montserrat-Italic SDF` | "TAP FOR NEXT TIP" |
+
+### Setup Steps
+
+1. Download Montserrat family from Google Fonts
+2. In Unity: **Window → TextMeshPro → Font Asset Creator**
+3. Source Font: drag in each `.ttf` file
+4. Atlas Resolution: 2048×2048
+5. Character Set: Extended ASCII (or Unicode if JP needed)
+6. Click **Generate Font Atlas** → **Save** to `Assets/Fonts/`
+7. Name each asset exactly as above (e.g. `Montserrat-Bold SDF`)
+8. The `CreateUIScreen` tool will auto-assign them
+
+**Note:** If fonts aren't found, the script falls back to TMP default with a warning in Console.
+
+For Japanese text, create a separate JP font asset (e.g. Noto Sans JP) and set it as the fallback font in each Montserrat asset.
+
+---
+
 ## Open Questions
 
 1. **Monetization model** — Gacha removed, replacement TBD (biggest risk)
@@ -251,7 +283,7 @@ Scene Root
 3. **Stamina/energy system** — Keep or remove?
 4. **Gear system** — Simplify or cut?
 5. **NFT integration** — Status TBD
-6. **Font selection** — Need premium sans-serif + italic serif for UI
+6. **Font selection** — Montserrat chosen as primary; need Noto Sans JP for Japanese fallback
 
 ---
 
@@ -264,3 +296,4 @@ Scene Root
 | 2025-02-25 | Auto-wiring editor script |
 | 2025-02-25 | Exact layout positions from reference designs |
 | 2025-02-25 | ProTipCard auto-resize with VerticalLayoutGroup |
+| 2025-02-25 | TitleArea → single image, Montserrat fonts on all text |
