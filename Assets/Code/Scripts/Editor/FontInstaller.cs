@@ -151,13 +151,48 @@ public class FontInstaller
                 continue;
             }
 
-            // Create TMP Font Asset
-            // Using TMP's built-in font asset creator
-            TMP_FontAsset tmpFont = TMP_FontAsset.CreateFontAsset(ttfFont);
+            // Create TMP Font Asset with atlas generation
+            // CreateFontAsset alone doesn't generate the atlas texture,
+            // causing "m_AtlasTextures not assigned" errors at runtime.
+            // We need to populate it with characters to force atlas creation.
+            int atlasSize = 1024;
+            TMP_FontAsset tmpFont = TMP_FontAsset.CreateFontAsset(
+                ttfFont, 
+                42,                                          // sampling size
+                5,                                           // padding
+                UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,
+                atlasSize, atlasSize,
+                AtlasPopulationMode.Dynamic,
+                true                                         // enable multi-atlas
+            );
+
             if (tmpFont != null)
             {
+                // Force-populate ASCII + common chars so the atlas is usable
+                tmpFont.TryAddCharacters(
+                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" +
+                    "0123456789 !@#$%^&*()-_=+[]{}|;:',.<>?/\"\\…–—" +
+                    "ÁÉÍÓÚÑáéíóúñ"  // common accented chars
+                );
+
                 AssetDatabase.CreateAsset(tmpFont, tmpPath);
-                Debug.Log($"[Fonts] ✅ Created {font.FileName} SDF.asset");
+
+                // Also save the atlas texture as a sub-asset
+                if (tmpFont.atlasTexture != null)
+                {
+                    tmpFont.atlasTexture.name = $"{font.FileName} Atlas";
+                    AssetDatabase.AddObjectToAsset(tmpFont.atlasTexture, tmpFont);
+                }
+
+                // Save material as sub-asset
+                if (tmpFont.material != null)
+                {
+                    tmpFont.material.name = $"{font.FileName} Material";
+                    AssetDatabase.AddObjectToAsset(tmpFont.material, tmpFont);
+                }
+
+                EditorUtility.SetDirty(tmpFont);
+                Debug.Log($"[Fonts] ✅ Created {font.FileName} SDF.asset (atlas {atlasSize}x{atlasSize})");
                 converted++;
             }
             else
