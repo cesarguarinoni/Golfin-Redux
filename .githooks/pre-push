@@ -1,0 +1,71 @@
+#!/bin/bash
+# GOLFIN Pre-Push Hook — catches common C# errors before they hit the repo
+# Install: git config core.hooksPath .githooks
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo -e "${YELLOW}[GOLFIN] Running pre-push checks...${NC}"
+
+ERRORS=0
+
+# Get list of staged/changed .cs files
+CS_FILES=$(git diff --name-only HEAD~1 HEAD -- '*.cs' 2>/dev/null || git diff --name-only --cached -- '*.cs')
+
+if [ -z "$CS_FILES" ]; then
+    echo -e "${GREEN}[GOLFIN] No C# files changed. ✅${NC}"
+    exit 0
+fi
+
+echo "[GOLFIN] Checking $(echo "$CS_FILES" | wc -l | tr -d ' ') C# file(s)..."
+
+for f in $CS_FILES; do
+    [ ! -f "$f" ] && continue
+
+    # 1. Unicode/smart quotes (cause CS1002/CS1525)
+    if grep -Pn '[\x{2018}\x{2019}\x{201C}\x{201D}]' "$f" 2>/dev/null; then
+        echo -e "${RED}  ❌ $f: Contains smart quotes ('' or ""). Use straight quotes.${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # 2. Non-ASCII in string literals that might break (BOM, zero-width chars)
+    if grep -Pn '[\x{FEFF}\x{200B}\x{200C}\x{200D}]' "$f" 2>/dev/null; then
+        echo -e "${RED}  ❌ $f: Contains invisible Unicode characters (BOM/zero-width).${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # 3. Deprecated TMP APIs
+    if grep -n 'enableWordWrapping' "$f" 2>/dev/null; then
+        echo -e "${YELLOW}  ⚠️  $f: Uses deprecated 'enableWordWrapping'. Use 'textWrappingMode' instead.${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # 4. Missing semicolons after common patterns (rough check)
+    if grep -Pn '^\s*(public|private|protected|internal)\s+\w+\s+\w+\s*=[^;{]*$' "$f" 2>/dev/null | grep -v '//' | head -3; then
+        echo -e "${YELLOW}  ⚠️  $f: Possible missing semicolon on assignment.${NC}"
+    fi
+
+    # 5. Unbalanced braces (simple count check)
+    OPEN=$(grep -o '{' "$f" | wc -l)
+    CLOSE=$(grep -o '}' "$f" | wc -l)
+    if [ "$OPEN" -ne "$CLOSE" ]; then
+        echo -e "${RED}  ❌ $f: Unbalanced braces (open=$OPEN close=$CLOSE).${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # 6. Common typos in Unity API
+    if grep -n 'Destory\|GetCompoent\|AddCompoent\|SetActve\|gameObect' "$f" 2>/dev/null; then
+        echo -e "${YELLOW}  ⚠️  $f: Possible Unity API typo.${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+done
+
+if [ $ERRORS -gt 0 ]; then
+    echo -e "${RED}[GOLFIN] ❌ $ERRORS issue(s) found. Fix before pushing.${NC}"
+    exit 1
+else
+    echo -e "${GREEN}[GOLFIN] All checks passed. ✅${NC}"
+    exit 0
+fi
