@@ -151,53 +151,63 @@ public class FontInstaller
                 continue;
             }
 
-            // Create TMP Font Asset with atlas generation
-            // CreateFontAsset alone doesn't generate the atlas texture,
-            // causing "m_AtlasTextures not assigned" errors at runtime.
-            // We need to populate it with characters to force atlas creation.
-            int atlasSize = 1024;
-            TMP_FontAsset tmpFont = TMP_FontAsset.CreateFontAsset(
-                ttfFont, 
-                42,                                          // sampling size
-                5,                                           // padding
+            // Generate TMP Font Asset using the Font Asset Creator pipeline.
+            // We use the TMPro editor internals to properly generate the SDF atlas,
+            // which handles atlas texture creation, material setup, and glyph packing.
+            Debug.Log($"[Fonts] Generating SDF atlas for {font.FileName}...");
+
+            // Character set: ASCII printable range (32-126) + common extended
+            string charSet = "";
+            for (int c = 32; c <= 126; c++) charSet += (char)c;
+            charSet += "ÁÉÍÓÚÑáéíóúñ€£¥©®™…–—''""";
+
+            int atlasSize = 512;
+            int samplingSize = 48;
+            int padding = 5;
+
+            // Use the static TMP_FontAsset creator that generates atlas inline
+            var tmpFont = TMP_FontAsset.CreateFontAsset(
+                ttfFont,
+                samplingSize,
+                padding,
                 UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,
-                atlasSize, atlasSize,
-                AtlasPopulationMode.Dynamic,
-                true                                         // enable multi-atlas
+                atlasSize, atlasSize
             );
 
-            if (tmpFont != null)
+            if (tmpFont != null && tmpFont.atlasTexture != null)
             {
-                // Force-populate ASCII + common chars so the atlas is usable
-                tmpFont.TryAddCharacters(
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" +
-                    "0123456789 !@#$%^&*()-_=+[]{}|;:',.<>?/\"\\…–—" +
-                    "ÁÉÍÓÚÑáéíóúñ"  // common accented chars
-                );
+                tmpFont.name = $"{font.FileName} SDF";
 
+                // Save the font asset
                 AssetDatabase.CreateAsset(tmpFont, tmpPath);
 
-                // Also save the atlas texture as a sub-asset
-                if (tmpFont.atlasTexture != null)
-                {
-                    tmpFont.atlasTexture.name = $"{font.FileName} Atlas";
-                    AssetDatabase.AddObjectToAsset(tmpFont.atlasTexture, tmpFont);
-                }
+                // Save atlas texture as sub-asset
+                tmpFont.atlasTexture.name = $"{font.FileName} Atlas";
+                AssetDatabase.AddObjectToAsset(tmpFont.atlasTexture, tmpPath);
 
                 // Save material as sub-asset
                 if (tmpFont.material != null)
                 {
                     tmpFont.material.name = $"{font.FileName} Material";
-                    AssetDatabase.AddObjectToAsset(tmpFont.material, tmpFont);
+                    AssetDatabase.AddObjectToAsset(tmpFont.material, tmpPath);
                 }
 
                 EditorUtility.SetDirty(tmpFont);
-                Debug.Log($"[Fonts] ✅ Created {font.FileName} SDF.asset (atlas {atlasSize}x{atlasSize})");
+                Debug.Log($"[Fonts] ✅ Created {font.FileName} SDF.asset ({tmpFont.characterTable.Count} glyphs)");
                 converted++;
+            }
+            else if (tmpFont != null && tmpFont.atlasTexture == null)
+            {
+                // Atlas failed — fall back to manual instructions
+                Debug.LogWarning($"[Fonts] ⚠️ {font.FileName}: Atlas generation failed. " +
+                    "Create manually: Window → TextMeshPro → Font Asset Creator → " +
+                    $"Source: {font.FileName}.ttf, Size: Auto, Padding: 5, Atlas: 512×512 → Generate");
+                Object.DestroyImmediate(tmpFont);
             }
             else
             {
-                Debug.LogWarning($"[Fonts] Failed to create TMP asset for {font.FileName}");
+                Debug.LogWarning($"[Fonts] ❌ Failed to create TMP asset for {font.FileName}. " +
+                    "Create manually via Window → TextMeshPro → Font Asset Creator");
             }
         }
 
