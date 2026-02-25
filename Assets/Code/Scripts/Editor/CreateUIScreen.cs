@@ -150,6 +150,8 @@ public class CreateUIScreen
             new Color(0.08f, 0.12f, 0.10f, 0.75f));  // fallback if no sprite
         tipCardBg.type = Image.Type.Sliced; // 9-slice stretches corners properly
         tipCardBg.pixelsPerUnitMultiplier = 1f;
+        // When sprite is assigned, use white tint so sprite renders as-is
+        if (HasSprite(tipCardGO)) tipCardBg.color = Color.white;
 
         var layout = EnsureComponent<VerticalLayoutGroup>(tipCardGO);
         layout.padding = new RectOffset(50, 50, 35, 35);
