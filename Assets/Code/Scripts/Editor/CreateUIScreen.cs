@@ -143,7 +143,7 @@ public class CreateUIScreen
         tipCardRT.anchorMin = new Vector2(0.055f, 1f);   // wider: ~89% of screen
         tipCardRT.anchorMax = new Vector2(0.945f, 1f);
         tipCardRT.pivot = new Vector2(0.5f, 1f);
-        tipCardRT.anchoredPosition = new Vector2(0f, -443f); // top at ~17.5% of 2532
+        tipCardRT.anchoredPosition = new Vector2(0f, -570f); // top at ~22.5% — pushed lower to center
 
         var tipCardBg = EnsureComponent<Image>(tipCardGO);
         TryAssignSprite(tipCardGO, "Assets/Art/UI/card_bg.png",
@@ -165,10 +165,11 @@ public class CreateUIScreen
 
         var tipCard = EnsureComponent<ProTipCard>(tipCardGO);
 
-        // Header — smaller font, tighter tracking to match reference
+        // Header — gold/amber color, bold, prominent
         var header = FindOrCreateLayoutTMP("Header", tipCardGO.transform, "PRO TIP",
-            40f, 55f);
-        SetTMPStyle(header, 4f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Bold SDF");
+            42f, 60f);
+        SetTMPStyle(header, 5f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Bold SDF");
+        header.GetComponent<TextMeshProUGUI>().color = new Color(0.78f, 0.66f, 0.31f); // gold #C8A84E
         EnsureLocalizedText(header, "tip_header");
 
         // Divider — slightly narrower, use LayoutElement to not stretch full width
@@ -226,9 +227,9 @@ public class CreateUIScreen
             SetPrivateField(tipCard, "tipImages", new Image[] { tipImageGO.GetComponent<Image>() });
         }
 
-        // ─── NOW LOADING — pushed lower to ~88% Y ──────────────────
+        // ─── NOW LOADING — bolder, at ~88% Y ──────────────────────
         var nowLoading = FindOrCreateTMPAnchored("NowLoadingText", screen.transform, "NOW LOADING",
-            new Vector2(0.5f, 1f - 0.88f), 60f);  // smaller: 60 instead of 72
+            new Vector2(0.5f, 1f - 0.88f), 66f);  // slightly larger for impact
         SetTMPStyle(nowLoading, 3f, FontStyles.Bold | FontStyles.UpperCase, "Montserrat-Black SDF");
         nowLoading.GetComponent<TextMeshProUGUI>().outlineWidth = 0.15f;
         nowLoading.GetComponent<TextMeshProUGUI>().outlineColor = new Color32(0, 0, 0, 128);
@@ -241,7 +242,7 @@ public class CreateUIScreen
         var barBG = FindOrCreateImageAnchored("LoadingBarBG", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - 0.92f),
             size: new Vector2(990f, 36f));  // wider: 990 instead of 842
-        barBG.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.25f); // white semi-transparent
+        barBG.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.15f); // white, more translucent
         TryAssignSprite(barBG, SpritePaths.LoadingBarPill);
         if (HasSprite(barBG)) barBG.GetComponent<Image>().type = Image.Type.Sliced;
         var loadingBar = EnsureComponent<LoadingBar>(barBG);
@@ -262,10 +263,10 @@ public class CreateUIScreen
         SetPrivateField(loadingBar, "fillImage", barFill.GetComponent<Image>());
         SetPrivateField(loadingBar, "glowImage", barGlow.GetComponent<Image>());
 
-        // ─── Download progress — lower (~95% Y), smaller font ─────
+        // ─── Download progress — right-aligned to bar end, ~95% Y ──
         var downloadProgress = FindOrCreateTMPAnchored("DownloadProgress", screen.transform, "0 / 267 MB",
-            new Vector2(0.6f, 1f - 0.95f), 24f, TextAlignmentOptions.Right,
-            new Vector2(400f, 40f));
+            new Vector2(0.82f, 1f - 0.95f), 24f, TextAlignmentOptions.Right,
+            new Vector2(300f, 40f));
         SetTMPStyle(downloadProgress, 0f, FontStyles.Bold, "Montserrat-Bold SDF");
 
         // Wire LoadingScreen
