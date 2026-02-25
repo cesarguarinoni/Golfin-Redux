@@ -89,6 +89,18 @@ SCREEN_MAP = {
 
 ---
 
+## Preserving Your Manual Changes
+
+When you tweak fonts, positions, or sizes directly in the Unity Inspector:
+
+1. **Tools → QA → Export Scene Values** — saves all current values to `Assets/Code/Data/screen_values.json`
+2. **Commit & push** — Kai reads this file and updates `CreateUIScreen.cs` to match
+3. Next time `Create GOLFIN UI Scene` runs, your tweaks are preserved
+
+**Tools → QA → Show Scene Changes** — shows what you've changed since last export (without overwriting).
+
+---
+
 ## Troubleshooting
 
 **"Rate limit exceeded"** — Figma free tier limits API calls. Wait 15-30 min and retry.
