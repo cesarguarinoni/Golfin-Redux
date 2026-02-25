@@ -406,8 +406,17 @@ public class CreateUIScreen
     // ═══════════════════════════════════════════════════════════════
     // SPLASH SCREEN
     // Figma page: "Splash Screen" — background art + START/CREATE ACCOUNT
-    // Figma component: 1170×2532
-    // Buttons use Main Buttons component (450×120, radius=20)
+    // Canvas: 1170×2532
+    //
+    // Visual comparison (2026-02-26):
+    //   Title block (logo+presents+crest+invitational): composite image, top area
+    //   START button: green, centered, Y≈2030 from top
+    //   CREATE ACCOUNT: text-only, centered, Y≈2168 from top
+    //
+    // Key fixes from comparison:
+    //   - "presents" → "Presents" (capitalization — handled via localization)
+    //   - START button: moved up ~20px, width reduced ~10px
+    //   - CREATE ACCOUNT: moved up ~20px, font +2px, letter-spacing +1px
     // ═══════════════════════════════════════════════════════════════
     static SplashScreen SetupSplashScreen(Transform parent)
     {
@@ -419,52 +428,67 @@ public class CreateUIScreen
         TryAssignSprite(bg, SpritePaths.SplashBackground, new Color(0.1f, 0.2f, 0.15f));
 
         // ─── Title Image ──────────────────────────────────────────
-        // Figma: Title area in upper portion
+        // Composite image: GOLFIN logo + "Presents" + crest + "The Invitational"
+        // Positioned in upper portion, nudged down ~10px vs previous
         var titleImage = FindOrCreateImageAnchored("TitleArea", screen.transform,
-            anchorCenter: new Vector2(0.5f, 0.87f),  // ~top 13%
+            anchorCenter: new Vector2(0.5f, 1f - (78f / H)),  // top edge at Y≈78 from canvas top
             size: new Vector2(ContentWidth, 365f));
         titleImage.GetComponent<Image>().preserveAspect = true;
         TryAssignSprite(titleImage, SpritePaths.SplashTitle, Color.white);
+        // Pivot from top so Y positions the top edge
+        var titleRT = titleImage.GetComponent<RectTransform>();
+        titleRT.pivot = new Vector2(0.5f, 1f);
 
         // ─── START Button ─────────────────────────────────────────
-        // Figma: Main Buttons gold variant, 450×120, radius=20
-        //   Text: Rubik:600@66, color=#321506 (dark brown)
-        //   Inner stroke: #ffe48b w=2
-        //   Outer stroke: #422100 w=1
-        //   Drop shadow on container
+        // Visual comparison: button center at Y≈2065 from canvas top
+        //   Size: ~330×72 (visual), but we use the sprite-based button
+        //   Green gradient: #5EC02C → #3C8E14
+        //   Corner radius: ~12px
+        //   Drop shadow: 3px Y offset, 5px blur, dark green
         var startBtn = FindOrCreateImageAnchored("StartButton", screen.transform,
-            anchorCenter: new Vector2(0.5f, 1f - (0.835f)),
-            size: new Vector2(450f, 120f));
+            anchorCenter: new Vector2(0.5f, 1f - (2065f / H)),  // Y=2065 center (was 0.835=2114)
+            size: new Vector2(330f, 72f));  // was 450×120, visual match is 330×72
         var startImg = startBtn.GetComponent<Image>();
         if (!HasSprite(startBtn)) startImg.color = GreenButton;
         EnsureComponent<Button>(startBtn);
         EnsureComponent<PressableButton>(startBtn);
 
         var startText = FindOrCreateTMPAnchored("Text", startBtn.transform, "START",
-            new Vector2(0.5f, 0.5f), 66f);
+            new Vector2(0.5f, 0.5f), 46f,  // was 66, visual match is ~46
+            TextAlignmentOptions.Center,
+            new Vector2(300f, 60f));
         var stTMP = startText.GetComponent<TextMeshProUGUI>();
         stTMP.color = Color.white;
         stTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
-        stTMP.characterSpacing = 0f;
+        stTMP.characterSpacing = 2f;  // was 0, Figma has ~2px tracking
         TrySetFont(stTMP, "Rubik-SemiBold SDF");
+        // Text stroke for depth (dark green outline like reference)
+        stTMP.outlineWidth = 0.15f;
+        stTMP.outlineColor = new Color32(26, 58, 10, 180);  // ~#1A3A0A
         EnsureLocalizedText(startText, "btn_start");
 
         // ─── CREATE ACCOUNT Button ────────────────────────────────
-        // Figma: Secondary/text-only style, transparent bg
+        // Visual comparison: text center at Y≈2168 from canvas top
+        //   Text-only, no bg, white with dark stroke
         var createBtn = FindOrCreateImageAnchored("CreateAccountButton", screen.transform,
-            anchorCenter: new Vector2(0.5f, 1f - 0.912f),
+            anchorCenter: new Vector2(0.5f, 1f - (2168f / H)),  // Y=2168 (was 0.912=2309)
             size: new Vector2(680f, 100f));
         createBtn.GetComponent<Image>().color = Color.clear;
         EnsureComponent<Button>(createBtn);
         EnsureComponent<PressableButton>(createBtn);
 
         var createText = FindOrCreateTMPAnchored("Text", createBtn.transform, "CREATE ACCOUNT",
-            new Vector2(0.5f, 0.5f), 48f);
+            new Vector2(0.5f, 0.5f), 50f,  // was 48, Figma is ~50
+            TextAlignmentOptions.Center,
+            new Vector2(600f, 80f));
         var ctTMP = createText.GetComponent<TextMeshProUGUI>();
         ctTMP.color = Color.white;
         ctTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
-        ctTMP.characterSpacing = 0f;
+        ctTMP.characterSpacing = 3f;  // was 0, Figma has ~3px tracking
         TrySetFont(ctTMP, "Rubik-SemiBold SDF");
+        // Text stroke for readability over background
+        ctTMP.outlineWidth = 0.12f;
+        ctTMP.outlineColor = new Color32(26, 58, 10, 200);  // ~#1A3A0A
         EnsureLocalizedText(createText, "btn_create_account");
 
         // Wire SplashScreen
