@@ -282,17 +282,6 @@ public class CreateUIScreen
         titleImage.GetComponent<Image>().preserveAspect = true;
         TryAssignSprite(titleImage, SpritePaths.SplashTitle, Color.white);
 
-        // Bottom gradient
-        var gradient = FindOrCreate("BottomGradient", screen.transform);
-        EnsureComponent<RectTransform>(gradient);
-        var gradRT = gradient.GetComponent<RectTransform>();
-        gradRT.anchorMin = new Vector2(0f, 0f);
-        gradRT.anchorMax = new Vector2(1f, 1f - 0.731f);
-        gradRT.offsetMin = Vector2.zero;
-        gradRT.offsetMax = Vector2.zero;
-        var gradImg = EnsureComponent<Image>(gradient);
-        if (!HasSprite(gradient)) gradImg.color = new Color(0f, 0f, 0f, 0.7f);
-
         // START button
         var startBtn = FindOrCreateImageAnchored("StartButton", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - 0.835f),
