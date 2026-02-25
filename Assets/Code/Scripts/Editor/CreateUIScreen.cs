@@ -253,7 +253,7 @@ public class CreateUIScreen
         headerTMP.color = GoldAccent;  // #eedc9a
         headerTMP.alignment = TextAlignmentOptions.Center;
         headerTMP.characterSpacing = 3f;  // slightly wider tracking
-        headerTMP.enableWordWrapping = false;  // PREVENT wrapping to 2 lines
+        headerTMP.textWrappingMode = TextWrappingModes.NoWrap;  // PREVENT wrapping to 2 lines
         TrySetFont(headerTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(header, "tip_header");
 
