@@ -93,44 +93,61 @@ public class CreateUIScreen
         // Background (full bleed golf course image)
         CreateImageStretched("Background", screen.transform, new Color(0.15f, 0.25f, 0.1f));
 
-        // ─── Pro Tip Card ─────────────────────────────────────────
-        // Card: centered X, top 17.5% → bottom 58%, width 84.6%
-        GameObject tipCardGO = CreateImageAnchored("ProTipCard", screen.transform,
-            new Color(0.12f, 0.16f, 0.14f, 0.7f),  // semi-transparent dark
-            anchorMin: new Vector2(0.077f, 1f - 0.58f),
-            anchorMax: new Vector2(0.923f, 1f - 0.148f));
+        // ─── Pro Tip Card (auto-resizing with VerticalLayoutGroup) ──
+        // Anchored at top-center, width 84.6%, height driven by content
+        GameObject tipCardGO = new GameObject("ProTipCard");
+        tipCardGO.transform.SetParent(screen.transform, false);
+        RectTransform tipCardRT = tipCardGO.AddComponent<RectTransform>();
+        // Anchor at top-center, stretch horizontally with margins
+        tipCardRT.anchorMin = new Vector2(0.077f, 1f);  // will grow downward
+        tipCardRT.anchorMax = new Vector2(0.923f, 1f);
+        tipCardRT.pivot = new Vector2(0.5f, 1f);        // pivot top-center
+        tipCardRT.anchoredPosition = new Vector2(0f, -375f); // top at ~14.8% of 2532
+        // Width driven by anchors, height driven by ContentSizeFitter
+
+        Image tipCardBg = tipCardGO.AddComponent<Image>();
+        tipCardBg.color = new Color(0.12f, 0.16f, 0.14f, 0.7f);
+
+        // Layout: vertical stack with padding
+        var layout = tipCardGO.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(40, 40, 40, 40);
+        layout.spacing = 20f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        // ContentSizeFitter to auto-resize height
+        var fitter = tipCardGO.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
         var tipCard = tipCardGO.AddComponent<ProTipCard>();
 
-        // "PRO TIP" header — centered X, Y ~19.8%
-        var header = CreateTMPAnchored("Header", tipCardGO.transform, "PRO TIP",
-            anchorCenter: new Vector2(0.5f, 1f - NormalizeY(501f, 375f, 1469f)),
-            fontSize: 52f, alignment: TextAlignmentOptions.Center);
+        // "PRO TIP" header
+        var header = CreateLayoutTMP("Header", tipCardGO.transform, "PRO TIP",
+            fontSize: 52f, preferredHeight: 70f);
         SetTMPStyle(header, spacing: 4f, fontStyle: FontStyles.Bold);
         AddLocalizedText(header, "tip_header");
 
-        // Gold divider — centered X, Y ~21.2%, width 70% of screen
-        CreateImageAnchored("Divider", tipCardGO.transform,
-            new Color(0.78f, 0.66f, 0.31f),  // #C8A84E gold
-            anchorCenter: new Vector2(0.5f, 1f - NormalizeY(537f, 375f, 1469f)),
-            size: new Vector2(819f, 3f));
+        // Gold divider
+        var divider = CreateLayoutImage("Divider", tipCardGO.transform,
+            new Color(0.78f, 0.66f, 0.31f), preferredHeight: 3f);
 
-        // Tip text — centered, Y ~26.5%
-        var tipText = CreateTMPAnchored("TipText", tipCardGO.transform, "Tip goes here...",
-            anchorCenter: new Vector2(0.5f, 1f - NormalizeY(671f, 375f, 1469f)),
-            fontSize: 38f, alignment: TextAlignmentOptions.Center,
-            size: new Vector2(866f, 177f));
+        // Tip text (auto-height based on content)
+        var tipText = CreateLayoutTMP("TipText", tipCardGO.transform, "Tip goes here...",
+            fontSize: 38f, preferredHeight: -1f);  // -1 = no fixed height, auto-size
         SetTMPStyle(tipText, fontStyle: FontStyles.Bold);
 
-        // Tip image — centered, Y ~42%
-        var tipImageGO = CreateImageAnchored("TipImage", tipCardGO.transform, Color.white,
-            anchorCenter: new Vector2(0.5f, 1f - NormalizeY(1063f, 375f, 1469f)),
-            size: new Vector2(491f, 456f));
+        // Tip image
+        var tipImageGO = CreateLayoutImage("TipImage", tipCardGO.transform,
+            Color.white, preferredHeight: 456f);
 
-        // "TAP FOR NEXT TIP" — right aligned, Y ~57%
-        var tapNext = CreateTMPAnchored("TapNextText", tipCardGO.transform, "TAP FOR NEXT TIP",
-            anchorCenter: new Vector2(0.8f, 1f - NormalizeY(1443f, 375f, 1469f)),
-            fontSize: 24f, alignment: TextAlignmentOptions.Right,
-            size: new Vector2(400f, 40f));
+        // "TAP FOR NEXT TIP"
+        var tapNext = CreateLayoutTMP("TapNextText", tipCardGO.transform, "TAP FOR NEXT TIP",
+            fontSize: 24f, preferredHeight: 40f,
+            alignment: TextAlignmentOptions.Right);
         SetTMPStyle(tapNext, spacing: 1f, fontStyle: FontStyles.Italic);
         AddLocalizedText(tapNext, "tip_next");
 
@@ -139,6 +156,7 @@ public class CreateUIScreen
         SetPrivateField(tipCard, "tipText", tipText.GetComponent<TextMeshProUGUI>());
         SetPrivateField(tipCard, "tapNextText", tapNext.GetComponent<TextMeshProUGUI>());
         SetPrivateField(tipCard, "tipImages", new Image[] { tipImageGO.GetComponent<Image>() });
+        SetPrivateField(tipCard, "dividerImage", divider.GetComponent<Image>());
 
         // ─── NOW LOADING text — centered, Y ~82.5% ───────────────
         var nowLoading = CreateTMPAnchored("NowLoadingText", screen.transform, "NOW LOADING",
@@ -368,6 +386,54 @@ public class CreateUIScreen
         if (tmp == null) return;
         tmp.characterSpacing = spacing;
         tmp.fontStyle = fontStyle;
+    }
+
+    /// <summary>TMP child for VerticalLayoutGroup with LayoutElement</summary>
+    static GameObject CreateLayoutTMP(string name, Transform parent, string text,
+        float fontSize = 36f, float preferredHeight = -1f,
+        TextAlignmentOptions alignment = TextAlignmentOptions.Center)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.AddComponent<RectTransform>();
+
+        TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        tmp.fontSize = fontSize;
+        tmp.alignment = alignment;
+        tmp.color = Color.white;
+        tmp.enableWordWrapping = true;
+        tmp.overflowMode = TextOverflowModes.Ellipsis;
+
+        var le = go.AddComponent<LayoutElement>();
+        if (preferredHeight > 0)
+        {
+            le.preferredHeight = preferredHeight;
+        }
+        else
+        {
+            // Let TMP drive the height
+            le.flexibleHeight = 0;
+        }
+
+        return go;
+    }
+
+    /// <summary>Image child for VerticalLayoutGroup with LayoutElement</summary>
+    static GameObject CreateLayoutImage(string name, Transform parent, Color color,
+        float preferredHeight = 100f)
+    {
+        GameObject go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.AddComponent<RectTransform>();
+
+        Image img = go.AddComponent<Image>();
+        img.color = color;
+
+        var le = go.AddComponent<LayoutElement>();
+        le.preferredHeight = preferredHeight;
+
+        return go;
     }
 
     static void AddLocalizedText(GameObject go, string key)

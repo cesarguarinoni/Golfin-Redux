@@ -7,6 +7,7 @@ using System.Collections;
 /// <summary>
 /// Glassmorphism Pro Tip card that displays localized tips.
 /// Auto-cycles through tips on a timer. Tap to advance immediately.
+/// Uses VerticalLayoutGroup + ContentSizeFitter to auto-resize with content.
 /// </summary>
 public class ProTipCard : MonoBehaviour, IPointerClickHandler
 {
@@ -15,6 +16,7 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
     [SerializeField] private TextMeshProUGUI tipText;       // Main tip content
     [SerializeField] private TextMeshProUGUI tapNextText;   // "TAP FOR NEXT TIP"
     [SerializeField] private Image[] tipImages;             // Optional tip illustrations
+    [SerializeField] private Image dividerImage;            // Gold divider line
     
     [Header("Tip Keys (from localization CSV)")]
     [SerializeField] private string[] tipKeys = new string[]
