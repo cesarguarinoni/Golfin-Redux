@@ -91,6 +91,24 @@ public class DebugPanel : EditorWindow
             var home = Object.FindAnyObjectByType<HomeScreen>();
             if (home != null) { ScreenManager.Instance.TransitionTo(home); Debug.Log("[Debug] Switched to Home"); }
         });
+
+        // Save system debug
+        RegisterAction("Print Save Data", () => {
+            Debug.Log($"[Debug] Save: {SaveManager.ExportJson()}");
+        });
+
+        RegisterAction("Reset Save Data", () => {
+            SaveManager.Reset();
+            Debug.Log("[Debug] Save data reset");
+        });
+
+        RegisterAction("Add 1000 Currency", () => {
+            SaveManager.Data.currency += 1000;
+            SaveManager.Save();
+            var home = Object.FindAnyObjectByType<HomeScreen>();
+            if (home != null) home.SetCurrency(SaveManager.Data.currency);
+            Debug.Log($"[Debug] Currency: {SaveManager.Data.currency}");
+        });
     }
 
     void OnGUI()

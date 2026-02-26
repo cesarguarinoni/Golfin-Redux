@@ -50,16 +50,31 @@ public class HomeScreen : ScreenBase
 
     public override void OnScreenEnter()
     {
-        // Random character on each entry
-        RandomizeCharacter();
+        // Load saved data
+        var save = SaveManager.Data;
 
-        // Set initial currency
+        // Character: use saved index or random
+        if (save.selectedCharacterIndex >= 0 && characterSprites != null
+            && save.selectedCharacterIndex < characterSprites.Length)
+        {
+            if (characterImage != null)
+            {
+                characterImage.sprite = characterSprites[save.selectedCharacterIndex];
+                characterImage.preserveAspect = true;
+            }
+        }
+        else
+        {
+            RandomizeCharacter();
+        }
+
+        // Currency from save
         if (currencyText != null)
-            currencyText.text = startingCurrency.ToString();
+            currencyText.text = save.currency.ToString();
 
-        // Set username placeholder
-        if (usernameText != null && string.IsNullOrEmpty(usernameText.text))
-            usernameText.text = "USERNAME";
+        // Username from save
+        if (usernameText != null)
+            usernameText.text = save.username;
 
         // Show first announcement
         _currentAnnouncement = 0;
