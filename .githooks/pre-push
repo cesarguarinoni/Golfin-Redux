@@ -47,13 +47,8 @@ for f in $CS_FILES; do
         echo -e "${YELLOW}  ⚠️  $f: Possible missing semicolon on assignment.${NC}"
     fi
 
-    # 5. Unbalanced braces (simple count check)
-    OPEN=$(grep -o '{' "$f" | wc -l)
-    CLOSE=$(grep -o '}' "$f" | wc -l)
-    if [ "$OPEN" -ne "$CLOSE" ]; then
-        echo -e "${RED}  ❌ $f: Unbalanced braces (open=$OPEN close=$CLOSE).${NC}"
-        ERRORS=$((ERRORS + 1))
-    fi
+    # 5. Unbalanced braces (skip — too many false positives from braces in strings)
+    # Use the Python linter for more accurate checks
 
     # 6. Common typos in Unity API
     if grep -n 'Destory\|GetCompoent\|AddCompoent\|SetActve\|gameObect' "$f" 2>/dev/null; then

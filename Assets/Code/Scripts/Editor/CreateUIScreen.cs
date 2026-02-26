@@ -107,9 +107,152 @@ public class CreateUIScreen
             EnsureComponent<UnityEngine.EventSystems.StandaloneInputModule>(es);
         }
 
+        // ─── Apply overrides from screen_values.json ─────────────
+        ApplySceneValueOverrides(canvasGO.transform);
+
         Selection.activeGameObject = root;
         string mode = isUpdate ? "Updated" : "Created";
         Debug.Log($"[GOLFIN] {mode} UI scene successfully! ✅");
+    }
+
+    /// <summary>
+    /// Reads Assets/Code/Data/screen_values.json (exported via Tools → QA → Export Scene Values)
+    /// and applies saved values back to matching components.
+    /// This preserves Cesar's manual Inspector tweaks across rebuilds.
+    /// </summary>
+    static void ApplySceneValueOverrides(Transform canvasRoot)
+    {
+        string path = "Assets/Code/Data/screen_values.json";
+        if (!System.IO.File.Exists(path))
+        {
+            Debug.Log("[GOLFIN] No screen_values.json found — using code defaults.");
+            return;
+        }
+
+        string json = System.IO.File.ReadAllText(path);
+        int applied = 0;
+
+        // Parse each "key": value line
+        foreach (Transform screenT in canvasRoot)
+        {
+            ApplyOverridesToNode(screenT, screenT.name, json, ref applied);
+        }
+
+        if (applied > 0)
+            Debug.Log($"[GOLFIN] Applied {applied} override(s) from screen_values.json ✅");
+    }
+
+    static void ApplyOverridesToNode(Transform t, string nodePath, string json, ref int applied)
+    {
+        // Try to find and apply overrides for this node
+        var rt = t.GetComponent<RectTransform>();
+        if (rt != null)
+        {
+            if (TryGetJsonVector2(json, nodePath, "anchoredPosition", out var pos))
+                { rt.anchoredPosition = pos; applied++; }
+            if (TryGetJsonVector2(json, nodePath, "sizeDelta", out var size))
+                { rt.sizeDelta = size; applied++; }
+            if (TryGetJsonVector2(json, nodePath, "anchorMin", out var amin))
+                { rt.anchorMin = amin; applied++; }
+            if (TryGetJsonVector2(json, nodePath, "anchorMax", out var amax))
+                { rt.anchorMax = amax; applied++; }
+            if (TryGetJsonVector2(json, nodePath, "pivot", out var piv))
+                { rt.pivot = piv; applied++; }
+        }
+
+        var tmp = t.GetComponent<TextMeshProUGUI>();
+        if (tmp != null)
+        {
+            if (TryGetJsonFloat(json, nodePath, "fontSize", out float fs))
+                { tmp.fontSize = fs; applied++; }
+            if (TryGetJsonFloat(json, nodePath, "characterSpacing", out float cs))
+                { tmp.characterSpacing = cs; applied++; }
+            if (TryGetJsonFloat(json, nodePath, "lineSpacing", out float ls))
+                { tmp.lineSpacing = ls; applied++; }
+            if (TryGetJsonFloat(json, nodePath, "outlineWidth", out float ow))
+                { tmp.outlineWidth = ow; applied++; }
+            if (TryGetJsonColor(json, nodePath, "color", out var col))
+                { tmp.color = col; applied++; }
+            if (TryGetJsonColor(json, nodePath, "outlineColor", out var ocol))
+                { tmp.outlineColor = ocol; applied++; }
+            if (TryGetJsonString(json, nodePath, "font", out string fontName))
+                { TrySetFont(tmp, fontName); applied++; }
+        }
+
+        var img = t.GetComponent<Image>();
+        if (img != null)
+        {
+            if (TryGetJsonColor(json, nodePath, "imageColor", out var ic))
+                { img.color = ic; applied++; }
+        }
+
+        // Recurse
+        foreach (Transform child in t)
+        {
+            string childPath = $"{nodePath}/{child.name}";
+            ApplyOverridesToNode(child, childPath, json, ref applied);
+        }
+    }
+
+    // ═══ JSON PARSING HELPERS (simple regex, no dependency) ═══
+
+    static bool TryGetJsonVector2(string json, string nodePath, string prop, out Vector2 result)
+    {
+        result = Vector2.zero;
+        string key = $"\"{nodePath}.{prop}\"";
+        int idx = json.IndexOf(key);
+        if (idx < 0) return false;
+        int bracketStart = json.IndexOf('[', idx);
+        int bracketEnd = json.IndexOf(']', bracketStart);
+        if (bracketStart < 0 || bracketEnd < 0) return false;
+        string inner = json.Substring(bracketStart + 1, bracketEnd - bracketStart - 1);
+        string[] parts = inner.Split(',');
+        if (parts.Length != 2) return false;
+        if (float.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out float x) &&
+            float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out float y))
+        {
+            result = new Vector2(x, y);
+            return true;
+        }
+        return false;
+    }
+
+    static bool TryGetJsonFloat(string json, string nodePath, string prop, out float result)
+    {
+        result = 0f;
+        string key = $"\"{nodePath}.{prop}\"";
+        int idx = json.IndexOf(key);
+        if (idx < 0) return false;
+        int colonIdx = json.IndexOf(':', idx + key.Length);
+        if (colonIdx < 0) return false;
+        int endIdx = json.IndexOfAny(new[] { ',', '\n', '}' }, colonIdx + 1);
+        if (endIdx < 0) endIdx = json.Length;
+        string val = json.Substring(colonIdx + 1, endIdx - colonIdx - 1).Trim().Trim('"');
+        return float.TryParse(val, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out result);
+    }
+
+    static bool TryGetJsonString(string json, string nodePath, string prop, out string result)
+    {
+        result = null;
+        string key = $"\"{nodePath}.{prop}\"";
+        int idx = json.IndexOf(key);
+        if (idx < 0) return false;
+        int firstQuote = json.IndexOf('"', json.IndexOf(':', idx + key.Length) + 1);
+        if (firstQuote < 0) return false;
+        int secondQuote = json.IndexOf('"', firstQuote + 1);
+        if (secondQuote < 0) return false;
+        result = json.Substring(firstQuote + 1, secondQuote - firstQuote - 1);
+        return true;
+    }
+
+    static bool TryGetJsonColor(string json, string nodePath, string prop, out Color result)
+    {
+        result = Color.white;
+        if (!TryGetJsonString(json, nodePath, prop, out string hex)) return false;
+        return ColorUtility.TryParseHtmlString(hex, out result);
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -364,19 +507,26 @@ public class CreateUIScreen
             anchorCenter: new Vector2(0.5f, 1f - (2428f / H)),
             size: new Vector2(ContentWidth, 30f));
         var barBGImg = barBG.GetComponent<Image>();
-        barBGImg.color = Color.white;  // Figma: solid white track
+        barBGImg.color = Color.white;  // Figma: solid white track (full bar visible)
         TryAssignSprite(barBG, SpritePaths.LoadingBarPill);
         if (HasSprite(barBG)) barBGImg.type = Image.Type.Sliced;
+        EditorUtility.SetDirty(barBGImg);
         var loadingBar = EnsureComponent<LoadingBar>(barBG);
 
-        // Bar fill — starts at 0 (LoadingScreen.cs animates it)
+        // Bar fill — blue, starts at 0, fills left-to-right over white track
         var barFill = FindOrCreateImageStretched("LoadingBarFill", barBG.transform);
         var barFillImg = barFill.GetComponent<Image>();
-        barFillImg.color = new Color(0.13f, 0.50f, 0.88f);  // Figma: bright blue #2080E0
+        barFillImg.color = new Color(0.13f, 0.50f, 0.88f, 1f);  // blue #2080E0
         barFillImg.type = Image.Type.Filled;
         barFillImg.fillMethod = Image.FillMethod.Horizontal;
-        barFillImg.fillAmount = 0f;  // FIX: start at 0 (was showing partial fill)
+        barFillImg.fillOrigin = 0; // 0 = fill from LEFT
+        barFillImg.fillAmount = 0f;  // starts empty — LoadingBar.cs fills it
         TryAssignSprite(barFill, SpritePaths.LoadingBarPill);
+        EditorUtility.SetDirty(barFillImg);
+
+        // Also force-write colors on LoadingBar component
+        SetPrivateField(loadingBar, "fillColorStart", new Color(0.13f, 0.50f, 0.88f));
+        SetPrivateField(loadingBar, "fillColorEnd", new Color(0.25f, 0.63f, 1f));
 
         // Bar glow — follows fill edge
         var barGlow = FindOrCreateImageAnchored("LoadingBarGlow", barBG.transform,
