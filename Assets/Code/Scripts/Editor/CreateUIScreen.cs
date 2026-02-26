@@ -364,7 +364,7 @@ public class CreateUIScreen
             anchorCenter: new Vector2(0.5f, 1f - (2428f / H)),
             size: new Vector2(ContentWidth, 30f));
         var barBGImg = barBG.GetComponent<Image>();
-        barBGImg.color = new Color(1f, 1f, 1f, 0.30f);  // Figma: white track, semi-transparent
+        barBGImg.color = Color.white;  // Figma: solid white track
         TryAssignSprite(barBG, SpritePaths.LoadingBarPill);
         if (HasSprite(barBG)) barBGImg.type = Image.Type.Sliced;
         var loadingBar = EnsureComponent<LoadingBar>(barBG);
@@ -372,7 +372,7 @@ public class CreateUIScreen
         // Bar fill — starts at 0 (LoadingScreen.cs animates it)
         var barFill = FindOrCreateImageStretched("LoadingBarFill", barBG.transform);
         var barFillImg = barFill.GetComponent<Image>();
-        barFillImg.color = Color.white;
+        barFillImg.color = new Color(0.13f, 0.50f, 0.88f);  // Figma: bright blue #2080E0
         barFillImg.type = Image.Type.Filled;
         barFillImg.fillMethod = Image.FillMethod.Horizontal;
         barFillImg.fillAmount = 0f;  // FIX: start at 0 (was showing partial fill)
