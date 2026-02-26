@@ -1156,17 +1156,20 @@ public class CreateUIScreen
         return component;
     }
 
-    /// <summary>Load all sprites from a folder path</summary>
+    /// <summary>Load all sprites from a folder path, ensuring each is imported as Sprite/Single</summary>
     static Sprite[] LoadSpritesFromFolder(string folderPath)
     {
-        string[] guids = AssetDatabase.FindAssets("t:Sprite", new[] { folderPath });
-        var sprites = new Sprite[guids.Length];
+        string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { folderPath.TrimEnd('/') });
+        var list = new System.Collections.Generic.List<Sprite>();
         for (int i = 0; i < guids.Length; i++)
         {
             string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-            sprites[i] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            EnsureSpriteImport(path);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite != null) list.Add(sprite);
         }
-        return sprites;
+        list.Sort((a, b) => string.Compare(a.name, b.name, System.StringComparison.Ordinal));
+        return list.ToArray();
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1296,11 +1299,37 @@ public class CreateUIScreen
         return img != null && img.sprite != null;
     }
 
+    /// <summary>
+    /// Ensures the texture at assetPath is imported as Sprite (2D and UI), SpriteMode=Single.
+    /// Must be called before LoadAssetAtPath&lt;Sprite&gt; for PNGs that haven't been configured.
+    /// </summary>
+    static void EnsureSpriteImport(string assetPath)
+    {
+        var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer == null) return;
+        bool dirty = false;
+        if (importer.textureType != TextureImporterType.Sprite)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            dirty = true;
+        }
+        if (importer.spriteImportMode != SpriteImportMode.Single)
+        {
+            importer.spriteImportMode = SpriteImportMode.Single;
+            dirty = true;
+        }
+        if (dirty)
+        {
+            importer.SaveAndReimport();
+        }
+    }
+
     static void TryAssignSprite(GameObject go, string assetPath, Color fallbackColor = default)
     {
         var img = go.GetComponent<Image>();
         if (img == null) return;
 
+        EnsureSpriteImport(assetPath);
         var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
         if (sprite != null)
         {
@@ -1316,17 +1345,7 @@ public class CreateUIScreen
 
     static Sprite[] LoadTipSprites()
     {
-        string[] guids = AssetDatabase.FindAssets("t:Sprite", new[] { SpritePaths.TipImageFolder.TrimEnd('/') });
-        if (guids.Length == 0) return new Sprite[0];
-
-        Sprite[] sprites = new Sprite[guids.Length];
-        for (int i = 0; i < guids.Length; i++)
-        {
-            string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-            sprites[i] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
-        }
-        System.Array.Sort(sprites, (a, b) => string.Compare(a.name, b.name, System.StringComparison.Ordinal));
-        return sprites;
+        return LoadSpritesFromFolder(SpritePaths.TipImageFolder);
     }
 
     // ═══════════════════════════════════════════════════════════════
