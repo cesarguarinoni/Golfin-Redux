@@ -177,6 +177,25 @@ public class CreateUIScreen
                 { tmp.outlineColor = ocol; applied++; }
             if (TryGetJsonString(json, nodePath, "font", out string fontName))
                 { TrySetFont(tmp, fontName); applied++; }
+            if (TryGetJsonString(json, nodePath, "fontStyle", out string styleStr))
+            {
+                if (System.Enum.TryParse<FontStyles>(styleStr, out var style))
+                    { tmp.fontStyle = style; applied++; }
+            }
+            if (TryGetJsonString(json, nodePath, "alignment", out string alignStr))
+            {
+                if (System.Enum.TryParse<TextAlignmentOptions>(alignStr, out var align))
+                    { tmp.alignment = align; applied++; }
+            }
+            if (TryGetJsonString(json, nodePath, "textWrappingMode", out string wrapStr))
+            {
+                if (System.Enum.TryParse<TextWrappingModes>(wrapStr, out var wrap))
+                    { tmp.textWrappingMode = wrap; applied++; }
+            }
+            if (TryGetJsonFloat(json, nodePath, "wordSpacing", out float ws))
+                { tmp.wordSpacing = ws; applied++; }
+            if (TryGetJsonFloat(json, nodePath, "paragraphSpacing", out float ps))
+                { tmp.paragraphSpacing = ps; applied++; }
         }
 
         var img = t.GetComponent<Image>();
@@ -507,26 +526,32 @@ public class CreateUIScreen
             anchorCenter: new Vector2(0.5f, 1f - (2428f / H)),
             size: new Vector2(ContentWidth, 30f));
         var barBGImg = barBG.GetComponent<Image>();
-        barBGImg.color = Color.white;  // Figma: solid white track (full bar visible)
+        barBGImg.color = Color.white;  // Figma: solid white track
         TryAssignSprite(barBG, SpritePaths.LoadingBarPill);
         if (HasSprite(barBG)) barBGImg.type = Image.Type.Sliced;
         EditorUtility.SetDirty(barBGImg);
         var loadingBar = EnsureComponent<LoadingBar>(barBG);
 
-        // Bar fill — blue, starts at 0, fills left-to-right over white track
-        var barFill = FindOrCreateImageStretched("LoadingBarFill", barBG.transform);
-        var barFillImg = barFill.GetComponent<Image>();
+        // Bar fill — blue rect that grows from left via RectTransform anchors
+        // NOT using Image.fillAmount (doesn't work without sprites)
+        var barFill = FindOrCreate("LoadingBarFill", barBG.transform);
+        var barFillRT = EnsureComponent<RectTransform>(barFill);
+        // Start at 0 width: anchored to left, zero width
+        barFillRT.anchorMin = new Vector2(0f, 0f);
+        barFillRT.anchorMax = new Vector2(0f, 1f);  // 0 width = empty bar
+        barFillRT.offsetMin = Vector2.zero;
+        barFillRT.offsetMax = Vector2.zero;
+        var barFillImg = EnsureComponent<Image>(barFill);
         barFillImg.color = new Color(0.13f, 0.50f, 0.88f, 1f);  // blue #2080E0
-        barFillImg.type = Image.Type.Filled;
-        barFillImg.fillMethod = Image.FillMethod.Horizontal;
-        barFillImg.fillOrigin = 0; // 0 = fill from LEFT
-        barFillImg.fillAmount = 0f;  // starts empty — LoadingBar.cs fills it
         TryAssignSprite(barFill, SpritePaths.LoadingBarPill);
+        if (HasSprite(barFill)) barFillImg.type = Image.Type.Sliced;
         EditorUtility.SetDirty(barFillImg);
+        EditorUtility.SetDirty(barFillRT);
 
-        // Also force-write colors on LoadingBar component
-        SetPrivateField(loadingBar, "fillColorStart", new Color(0.13f, 0.50f, 0.88f));
-        SetPrivateField(loadingBar, "fillColorEnd", new Color(0.25f, 0.63f, 1f));
+        // Wire LoadingBar — uses RectTransform scaling, not fillAmount
+        SetPrivateField(loadingBar, "fillRect", barFillRT);
+        SetPrivateField(loadingBar, "fillImage", barFillImg);
+        SetPrivateField(loadingBar, "fillColor", new Color(0.13f, 0.50f, 0.88f));
 
         // Bar glow — follows fill edge
         var barGlow = FindOrCreateImageAnchored("LoadingBarGlow", barBG.transform,
