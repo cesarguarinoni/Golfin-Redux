@@ -302,6 +302,9 @@ public class CreateUIScreen
         var tipImgLE = EnsureComponent<LayoutElement>(tipImageGO);
         tipImageGO.SetActive(false); // hidden until a sprite is assigned at runtime
 
+        // Ensure image is before tap-next in sibling order (VerticalLayoutGroup)
+        tipImageGO.transform.SetAsLastSibling();
+
         // ─── "TAP FOR NEXT TIP" ───────────────────────────────────
         // Figma: Rubik:600@39, color=#ffffff, 882×54, RIGHT-aligned
         var tapNext = FindOrCreateLayoutTMP("TapNextText", tipCardGO.transform,
@@ -312,6 +315,7 @@ public class CreateUIScreen
         tapTMP.characterSpacing = 1.5f;
         TrySetFont(tapTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(tapNext, "tip_next");
+        tapNext.transform.SetAsLastSibling(); // ensure it's BELOW the tip image
 
         // Wire ProTipCard fields
         SetPrivateField(tipCard, "headerText", headerTMP);
