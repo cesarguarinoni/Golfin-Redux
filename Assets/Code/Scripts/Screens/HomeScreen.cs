@@ -55,7 +55,7 @@ public class HomeScreen : ScreenBase
 
         // Set initial currency
         if (currencyText != null)
-            currencyText.text = startingCurrency.ToString("N0");
+            currencyText.text = startingCurrency.ToString();
 
         // Set username placeholder
         if (usernameText != null && string.IsNullOrEmpty(usernameText.text))
@@ -106,7 +106,7 @@ public class HomeScreen : ScreenBase
     public void SetCurrency(int amount)
     {
         if (currencyText != null)
-            currencyText.text = amount.ToString("N0");
+            currencyText.text = amount.ToString();
     }
 
     public void SetUsername(string name)

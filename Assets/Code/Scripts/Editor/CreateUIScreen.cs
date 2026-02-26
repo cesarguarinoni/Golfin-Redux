@@ -746,28 +746,34 @@ public class CreateUIScreen
         topGradImg.color = new Color(0.04f, 0.08f, 0.16f, 0.7f);
         topGradImg.raycastTarget = false;
 
-        // ─── Bottom Dark Gradient ─────────────────────────────────
-        var bottomGrad = FindOrCreate("BottomGradient", screen.transform);
-        var bottomGradRT = EnsureComponent<RectTransform>(bottomGrad);
-        bottomGradRT.anchorMin = new Vector2(0f, 0f);
-        bottomGradRT.anchorMax = new Vector2(1f, 1f - (1800f / H));
-        bottomGradRT.offsetMin = Vector2.zero;
-        bottomGradRT.offsetMax = Vector2.zero;
-        var bottomGradImg = EnsureComponent<Image>(bottomGrad);
-        bottomGradImg.color = new Color(0.04f, 0.10f, 0.18f, 0.9f);
-        bottomGradImg.raycastTarget = false;
+        // ─── REMOVED: Bottom Dark Gradient (per Cesar's request) ──
+        // Clean up old BottomGradient if it exists
+        var oldBottomGrad = screen.transform.Find("BottomGradient");
+        if (oldBottomGrad != null) Object.DestroyImmediate(oldBottomGrad.gameObject);
 
         // ─── Currency Display (Top-Left) ──────────────────────────
-        // Figma: Y=115, coin icon 62×62 + text "50000"
+        // Pill-style container: dark semi-transparent bg with coin icon + text
         var currencyGroup = FindOrCreate("CurrencyGroup", screen.transform);
         var cgRT = EnsureComponent<RectTransform>(currencyGroup);
         cgRT.anchorMin = new Vector2(0f, 1f);
         cgRT.anchorMax = new Vector2(0f, 1f);
         cgRT.pivot = new Vector2(0f, 1f);
         cgRT.anchoredPosition = new Vector2(30f, -115f);
-        cgRT.sizeDelta = new Vector2(230f, 65f);
+        cgRT.sizeDelta = new Vector2(250f, 62f);
+
+        // Pill background for currency
+        var currPillImg = EnsureComponent<Image>(currencyGroup);
+        currPillImg.color = new Color(0.04f, 0.06f, 0.13f, 0.5f);
+        // Use card_bg for consistent slicing if available
+        TryAssignSprite(currencyGroup, SpritePaths.CardBackground, new Color(0.04f, 0.06f, 0.13f, 0.5f));
+        if (HasSprite(currencyGroup))
+        {
+            currPillImg.type = Image.Type.Sliced;
+            currPillImg.color = new Color(0.04f, 0.06f, 0.13f, 0.5f);
+        }
 
         var hlg = EnsureComponent<HorizontalLayoutGroup>(currencyGroup);
+        hlg.padding = new RectOffset(4, 16, 4, 4);
         hlg.spacing = 8f;
         hlg.childAlignment = TextAnchor.MiddleLeft;
         hlg.childControlWidth = false;
@@ -777,16 +783,16 @@ public class CreateUIScreen
 
         var coinIcon = FindOrCreate("CoinIcon", currencyGroup.transform);
         var coinRT = EnsureComponent<RectTransform>(coinIcon);
-        coinRT.sizeDelta = new Vector2(62f, 62f);
+        coinRT.sizeDelta = new Vector2(54f, 54f);
         var coinImg = EnsureComponent<Image>(coinIcon);
         TryAssignSprite(coinIcon, SpritePaths.CoinGold, HexColor("#D4A017"));
         SetPrivateField(component, "currencyIcon", coinImg);
 
         var currencyText = FindOrCreate("CurrencyText", currencyGroup.transform);
         var currTextRT = EnsureComponent<RectTransform>(currencyText);
-        currTextRT.sizeDelta = new Vector2(150f, 50f);
+        currTextRT.sizeDelta = new Vector2(160f, 50f);
         var currTMP = EnsureComponent<TextMeshProUGUI>(currencyText);
-        currTMP.text = "50,000";
+        currTMP.text = "50000";  // No comma — raw number, backend-driven
         currTMP.fontSize = 36f;
         currTMP.fontStyle = FontStyles.Bold;
         currTMP.color = Color.white;
@@ -802,14 +808,14 @@ public class CreateUIScreen
         EnsureComponent<Button>(settingsBtn);
 
         // ─── Username Banner (Center-Top) ─────────────────────────
-        // Figma: Y=155, 660×55, centered, trapezoidal gold-bordered
+        // Gold-bordered banner, dark fill, centered text
         var userBanner = FindOrCreateImageAnchored("UsernameBanner", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - (182f / H)),
             size: new Vector2(660f, 55f));
         TryAssignSprite(userBanner, SpritePaths.UsernameBanner,
             new Color(0.06f, 0.11f, 0.21f, 0.7f));
         var userBannerImg = userBanner.GetComponent<Image>();
-        userBannerImg.type = Image.Type.Sliced;
+        if (HasSprite(userBanner)) userBannerImg.type = Image.Type.Sliced;
 
         var usernameText = FindOrCreateTMPAnchored("UsernameText", userBanner.transform,
             "USERNAME",
@@ -825,14 +831,18 @@ public class CreateUIScreen
         SetPrivateField(component, "usernameText", userTMP);
 
         // ─── Announcement Card ────────────────────────────────────
-        // Figma: Y=240, 1010×290, light gray, speech bubble
+        // Use card_bg for slicing consistency (same as ProTipCard)
         var annoCard = FindOrCreateImageAnchored("AnnouncementCard", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - (385f / H)),
             size: new Vector2(1010f, 290f));
-        TryAssignSprite(annoCard, SpritePaths.AnnouncementCard,
+        TryAssignSprite(annoCard, SpritePaths.CardBackground,
             new Color(0.85f, 0.87f, 0.90f, 0.9f));
         var annoCardImg = annoCard.GetComponent<Image>();
-        annoCardImg.type = Image.Type.Sliced;
+        if (HasSprite(annoCard))
+        {
+            annoCardImg.type = Image.Type.Sliced;
+            annoCardImg.color = new Color(0.85f, 0.87f, 0.90f, 0.95f);
+        }
 
         var annoTitle = FindOrCreateTMPAnchored("AnnouncementTitle", annoCard.transform,
             "MAINTENANCE NOTICE",
@@ -841,7 +851,7 @@ public class CreateUIScreen
             new Vector2(900f, 48f));
         var annoTitleTMP = annoTitle.GetComponent<TextMeshProUGUI>();
         annoTitleTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
-        annoTitleTMP.color = HexColor("#2C3E5A");
+        annoTitleTMP.color = GoldAccent;  // Gold title per reference (#eedc9a)
         TrySetFont(annoTitleTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(annoTitle, "home_maintenance_title");
         SetPrivateField(component, "announcementTitle", annoTitleTMP);
@@ -859,7 +869,6 @@ public class CreateUIScreen
         SetPrivateField(component, "announcementBody", annoBodyTMP);
 
         // ─── Page Indicator Dots ──────────────────────────────────
-        // Figma: Y=540, 3 dots, 16px each, 12px spacing
         var dotContainer = FindOrCreate("DotContainer", screen.transform);
         var dotContRT = EnsureComponent<RectTransform>(dotContainer);
         dotContRT.anchorMin = new Vector2(0.5f, 1f - (540f / H));
@@ -887,10 +896,9 @@ public class CreateUIScreen
         SetPrivateField(component, "dotContainer", dotContainer.transform);
 
         // ─── Central Character ────────────────────────────────────
-        // Figma: Y=420 to Y=1650, ~900×1230, centered
         // NOT part of background — random selection on load
         var character = FindOrCreateImageAnchored("CharacterDisplay", screen.transform,
-            anchorCenter: new Vector2(0.48f, 1f - (1035f / H)),  // slight left offset
+            anchorCenter: new Vector2(0.48f, 1f - (1035f / H)),
             size: new Vector2(900f, 1230f));
         var charImg = character.GetComponent<Image>();
         charImg.preserveAspect = true;
@@ -904,13 +912,12 @@ public class CreateUIScreen
             SetPrivateField(component, "characterSprites", charSprites);
 
         // ─── GOLFIN GPS Banner ────────────────────────────────────
-        // Figma: Y=1560, 1010×200
         var gpsBanner = FindOrCreateImageAnchored("GpsBanner", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - (1660f / H)),
             size: new Vector2(1010f, 200f));
         TryAssignSprite(gpsBanner, SpritePaths.GpsBanner,
             new Color(0.10f, 0.13f, 0.19f, 0.85f));
-        gpsBanner.GetComponent<Image>().type = Image.Type.Sliced;
+        if (HasSprite(gpsBanner)) gpsBanner.GetComponent<Image>().type = Image.Type.Sliced;
 
         // GPS Pin icon
         var gpsPin = FindOrCreate("GpsPinIcon", gpsBanner.transform);
@@ -920,6 +927,7 @@ public class CreateUIScreen
         gpsPinRT.pivot = new Vector2(0f, 0.5f);
         gpsPinRT.anchoredPosition = new Vector2(370f, 30f);
         gpsPinRT.sizeDelta = new Vector2(50f, 60f);
+        var gpsPinImg = EnsureComponent<Image>(gpsPin);
         TryAssignSprite(gpsPin, SpritePaths.GpsPin, HexColor("#4CAF50"));
 
         // GPS Title
@@ -948,7 +956,7 @@ public class CreateUIScreen
         EnsureLocalizedText(gpsSub, "home_gps_subtitle");
         SetPrivateField(component, "gpsSubtitleText", gpsSubTMP);
 
-        // GPS Description (multi-color handled at runtime)
+        // GPS Description
         var gpsDesc = FindOrCreateTMPAnchored("GpsDescText", gpsBanner.transform,
             "EARN MORE POINTS TO POWER UP!",
             new Vector2(0.5f, 0.15f), 30f,
@@ -963,23 +971,29 @@ public class CreateUIScreen
         SetPrivateField(component, "gpsDescText", gpsDescTMP);
 
         // ─── Next Hole Panel ──────────────────────────────────────
-        // Figma: Y=1810, 1010×320
+        // Use card_bg for consistent slicing
+        // Panel is taller to fit rewards row + PLAY button without overlap
         var nextHolePanel = FindOrCreateImageAnchored("NextHolePanel", screen.transform,
-            anchorCenter: new Vector2(0.5f, 1f - (1970f / H)),
-            size: new Vector2(1010f, 320f));
-        TryAssignSprite(nextHolePanel, SpritePaths.NextHolePanel,
+            anchorCenter: new Vector2(0.5f, 1f - (2010f / H)),
+            size: new Vector2(1010f, 400f));  // was 320, now 400 for proper spacing
+        TryAssignSprite(nextHolePanel, SpritePaths.CardBackground,
             new Color(0.06f, 0.09f, 0.19f, 0.8f));
-        nextHolePanel.GetComponent<Image>().type = Image.Type.Sliced;
+        var nhPanelImg = nextHolePanel.GetComponent<Image>();
+        if (HasSprite(nextHolePanel))
+        {
+            nhPanelImg.type = Image.Type.Sliced;
+            nhPanelImg.color = new Color(0.06f, 0.09f, 0.19f, 0.85f);
+        }
 
-        // Next Hole Header
+        // Next Hole Header — gold color per reference
         var nhHeader = FindOrCreateTMPAnchored("NextHoleHeader", nextHolePanel.transform,
             "NEXT HOLE",
-            new Vector2(0.5f, 0.85f), 42f,
+            new Vector2(0.5f, 0.88f), 42f,
             TextAlignmentOptions.Center,
-            new Vector2(320f, 48f));
+            new Vector2(400f, 48f));
         var nhHeaderTMP = nhHeader.GetComponent<TextMeshProUGUI>();
         nhHeaderTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
-        nhHeaderTMP.color = Color.white;
+        nhHeaderTMP.color = GoldAccent;  // Gold title (#eedc9a) per reference
         TrySetFont(nhHeaderTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(nhHeader, "home_next_hole");
         SetPrivateField(component, "nextHoleHeader", nhHeaderTMP);
@@ -987,7 +1001,7 @@ public class CreateUIScreen
         // Course name
         var courseName = FindOrCreateTMPAnchored("CourseNameText", nextHolePanel.transform,
             "Lomond Country Club  - Hole 5",
-            new Vector2(0.5f, 0.66f), 36f,
+            new Vector2(0.5f, 0.74f), 36f,
             TextAlignmentOptions.Center,
             new Vector2(900f, 44f));
         var courseNameTMP = courseName.GetComponent<TextMeshProUGUI>();
@@ -999,24 +1013,26 @@ public class CreateUIScreen
         // Separator line
         var nhSeparator = FindOrCreate("NextHoleSeparator", nextHolePanel.transform);
         var nhSepRT = EnsureComponent<RectTransform>(nhSeparator);
-        nhSepRT.anchorMin = new Vector2(0.05f, 0.5f);
-        nhSepRT.anchorMax = new Vector2(0.95f, 0.5f);
+        nhSepRT.anchorMin = new Vector2(0.05f, 0.62f);
+        nhSepRT.anchorMax = new Vector2(0.95f, 0.62f);
         nhSepRT.sizeDelta = new Vector2(0f, 2f);
         nhSepRT.anchoredPosition = Vector2.zero;
         var nhSepImg = EnsureComponent<Image>(nhSeparator);
         nhSepImg.color = new Color(0.23f, 0.31f, 0.44f, 0.5f);
 
-        // Reward icons row
+        // ─── Reward icons row ─────────────────────────────────────
+        // Each reward: Image icon (36×36) + TMP "x10"
+        // Reward icons are proper Image components (not TMP-only)
         var rewardsRow = FindOrCreate("RewardsRow", nextHolePanel.transform);
         var rewardsRT = EnsureComponent<RectTransform>(rewardsRow);
-        rewardsRT.anchorMin = new Vector2(0.5f, 0.32f);
-        rewardsRT.anchorMax = new Vector2(0.5f, 0.32f);
+        rewardsRT.anchorMin = new Vector2(0.5f, 0.46f);
+        rewardsRT.anchorMax = new Vector2(0.5f, 0.46f);
         rewardsRT.pivot = new Vector2(0.5f, 0.5f);
-        rewardsRT.sizeDelta = new Vector2(640f, 50f);
+        rewardsRT.sizeDelta = new Vector2(700f, 50f);
         rewardsRT.anchoredPosition = Vector2.zero;
 
         var rewardsHLG = EnsureComponent<HorizontalLayoutGroup>(rewardsRow);
-        rewardsHLG.spacing = 40f;
+        rewardsHLG.spacing = 30f;
         rewardsHLG.childAlignment = TextAnchor.MiddleCenter;
         rewardsHLG.childControlWidth = false;
         rewardsHLG.childControlHeight = false;
@@ -1027,45 +1043,55 @@ public class CreateUIScreen
         {
             var rewardGroup = FindOrCreate($"Reward_{i}", rewardsRow.transform);
             var rgRT = EnsureComponent<RectTransform>(rewardGroup);
-            rgRT.sizeDelta = new Vector2(100f, 50f);
+            rgRT.sizeDelta = new Vector2(120f, 50f);
 
             var rgHLG = EnsureComponent<HorizontalLayoutGroup>(rewardGroup);
-            rgHLG.spacing = 4f;
-            rgHLG.childAlignment = TextAnchor.MiddleLeft;
+            rgHLG.spacing = 6f;
+            rgHLG.childAlignment = TextAnchor.MiddleCenter;
             rgHLG.childControlWidth = false;
             rgHLG.childControlHeight = false;
 
+            // Reward icon — proper Image component
             var rIcon = FindOrCreate($"RewardIcon_{i}", rewardGroup.transform);
             var riRT = EnsureComponent<RectTransform>(rIcon);
             riRT.sizeDelta = new Vector2(36f, 36f);
+            var riImg = EnsureComponent<Image>(rIcon);
+            riImg.preserveAspect = true;
+            riImg.raycastTarget = false;
             TryAssignSprite(rIcon, rewardSprites[i], Color.white);
 
+            // Reward text
             var rText = FindOrCreate($"RewardText_{i}", rewardGroup.transform);
             var rtRT = EnsureComponent<RectTransform>(rText);
-            rtRT.sizeDelta = new Vector2(56f, 40f);
+            rtRT.sizeDelta = new Vector2(64f, 40f);
             var rtTMP = EnsureComponent<TextMeshProUGUI>(rText);
             rtTMP.text = "x10";
             rtTMP.fontSize = 32f;
             rtTMP.fontStyle = FontStyles.Bold;
             rtTMP.color = Color.white;
+            rtTMP.alignment = TextAlignmentOptions.MidlineLeft;
             TrySetFont(rtTMP, "Rubik-SemiBold SDF");
             rewardTMPs[i] = rtTMP;
         }
         SetPrivateField(component, "rewardTexts", rewardTMPs);
 
-        // Chevron arrow
-        var chevron = FindOrCreateTMPAnchored("Chevron", rewardsRow.transform,
-            ">", new Vector2(0.5f, 0.5f), 40f,
-            TextAlignmentOptions.Center, new Vector2(24f, 40f));
-        var chevronTMP = chevron.GetComponent<TextMeshProUGUI>();
+        // Chevron arrow ">"
+        var chevron = FindOrCreate("Chevron", rewardsRow.transform);
+        var chevronRT = EnsureComponent<RectTransform>(chevron);
+        chevronRT.sizeDelta = new Vector2(40f, 40f);
+        var chevronTMP = EnsureComponent<TextMeshProUGUI>(chevron);
+        chevronTMP.text = ">";
+        chevronTMP.fontSize = 36f;
+        chevronTMP.fontStyle = FontStyles.Bold;
         chevronTMP.color = HexColor("#8090A8");
+        chevronTMP.alignment = TextAlignmentOptions.Center;
 
-        // PLAY button
+        // PLAY button — positioned with enough space below rewards
         var playBtn = FindOrCreateImageAnchored("PlayButton", nextHolePanel.transform,
-            anchorCenter: new Vector2(0.5f, 0.12f),
+            anchorCenter: new Vector2(0.5f, 0.18f),  // was 0.12, moved down for spacing
             size: new Vector2(450f, 120f));
         TryAssignSprite(playBtn, SpritePaths.PlayButton, GreenButton);
-        playBtn.GetComponent<Image>().type = Image.Type.Sliced;
+        if (HasSprite(playBtn)) playBtn.GetComponent<Image>().type = Image.Type.Sliced;
         EnsureComponent<Button>(playBtn);
         var playPressable = EnsureComponent<PressableButton>(playBtn);
 
@@ -1083,65 +1109,64 @@ public class CreateUIScreen
         SetPrivateField(component, "playButton", playPressable);
 
         // ─── Bottom Navigation Bar ────────────────────────────────
-        // Figma: Y=2332, full width, 200px tall
+        // Icon-only buttons (no text labels per reference)
+        // Center tab (Play/GPS) is raised
         var bottomNav = FindOrCreate("BottomNavBar", screen.transform);
         var bnRT = EnsureComponent<RectTransform>(bottomNav);
         bnRT.anchorMin = new Vector2(0f, 0f);
         bnRT.anchorMax = new Vector2(1f, 0f);
         bnRT.pivot = new Vector2(0.5f, 0f);
-        bnRT.sizeDelta = new Vector2(0f, 200f);
+        bnRT.sizeDelta = new Vector2(0f, 180f);
         bnRT.anchoredPosition = Vector2.zero;
 
         var bnBg = EnsureComponent<Image>(bottomNav);
         TryAssignSprite(bottomNav, SpritePaths.BottomNavBg, new Color(0.03f, 0.06f, 0.12f, 0.96f));
 
         var bnHLG = EnsureComponent<HorizontalLayoutGroup>(bottomNav);
-        bnHLG.padding = new RectOffset(40, 40, 20, 60);  // bottom padding for safe area
+        bnHLG.padding = new RectOffset(60, 60, 10, 50);  // safe area bottom
         bnHLG.spacing = 0f;
         bnHLG.childAlignment = TextAnchor.MiddleCenter;
         bnHLG.childControlWidth = true;
-        bnHLG.childControlHeight = true;
+        bnHLG.childControlHeight = false;
         bnHLG.childForceExpandWidth = true;
         bnHLG.childForceExpandHeight = false;
 
         string[] navNames = { "Home", "Shop", "Play", "Bag", "More" };
         string[] navSprites = { SpritePaths.NavHome, SpritePaths.NavShop, SpritePaths.NavPlay, SpritePaths.NavBag, SpritePaths.NavMore };
-        string[] navLocKeys = { "home_nav_home", "home_nav_shop", "home_nav_play", "home_nav_bag", "home_nav_more" };
         PressableButton[] navButtons = new PressableButton[5];
 
         for (int i = 0; i < 5; i++)
         {
             var navItem = FindOrCreate($"Nav_{navNames[i]}", bottomNav.transform);
             var niRT = EnsureComponent<RectTransform>(navItem);
-            niRT.sizeDelta = new Vector2(0f, 120f);
+
+            bool isCenter = (i == 2);
+            // Center button is larger and raised
+            float iconSize = isCenter ? 100f : 70f;
+            niRT.sizeDelta = new Vector2(0f, isCenter ? 120f : 80f);
 
             var niLayout = EnsureComponent<LayoutElement>(navItem);
             niLayout.flexibleWidth = 1f;
 
-            var niVLG = EnsureComponent<VerticalLayoutGroup>(navItem);
-            niVLG.spacing = 4f;
-            niVLG.childAlignment = TextAnchor.MiddleCenter;
-            niVLG.childControlWidth = false;
-            niVLG.childControlHeight = false;
-            niVLG.childForceExpandWidth = false;
-            niVLG.childForceExpandHeight = false;
-
+            // Icon only — no text label, just a Button with Image
             var navIcon = FindOrCreate($"NavIcon_{navNames[i]}", navItem.transform);
             var niconRT = EnsureComponent<RectTransform>(navIcon);
-            niconRT.sizeDelta = new Vector2(60f, 60f);
+            niconRT.anchorMin = new Vector2(0.5f, 0.5f);
+            niconRT.anchorMax = new Vector2(0.5f, 0.5f);
+            niconRT.pivot = new Vector2(0.5f, 0.5f);
+            niconRT.sizeDelta = new Vector2(iconSize, iconSize);
+            niconRT.anchoredPosition = isCenter ? new Vector2(0f, 20f) : Vector2.zero;  // raised
+            var niconImg = EnsureComponent<Image>(navIcon);
+            niconImg.preserveAspect = true;
             TryAssignSprite(navIcon, navSprites[i], HexColor("#8090A8"));
 
-            var navLabel = FindOrCreate($"NavLabel_{navNames[i]}", navItem.transform);
-            var nlRT = EnsureComponent<RectTransform>(navLabel);
-            nlRT.sizeDelta = new Vector2(100f, 30f);
-            var nlTMP = EnsureComponent<TextMeshProUGUI>(navLabel);
-            nlTMP.text = navNames[i].ToUpper();
-            nlTMP.fontSize = 24f;
-            nlTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
-            nlTMP.color = i == 0 ? Color.white : HexColor("#8090A8");
-            nlTMP.alignment = TextAlignmentOptions.Center;
-            TrySetFont(nlTMP, "Rubik-SemiBold SDF");
-            EnsureLocalizedText(navLabel, navLocKeys[i]);
+            // Remove old text labels if they exist
+            var oldLabel = navItem.transform.Find($"NavLabel_{navNames[i]}");
+            if (oldLabel != null) Object.DestroyImmediate(oldLabel.gameObject);
+
+            // Remove VerticalLayoutGroup if present (no longer needed without labels)
+            var oldVLG = navItem.GetComponent<VerticalLayoutGroup>();
+            if (oldVLG != null) Object.DestroyImmediate(oldVLG);
 
             EnsureComponent<Button>(navItem);
             navButtons[i] = EnsureComponent<PressableButton>(navItem);
