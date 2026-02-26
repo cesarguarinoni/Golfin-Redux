@@ -15,14 +15,18 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
     [SerializeField] private TextMeshProUGUI headerText;   // "PRO TIP"
     [SerializeField] private TextMeshProUGUI tipText;       // Main tip content
     [SerializeField] private TextMeshProUGUI tapNextText;   // "TAP FOR NEXT TIP"
-    [SerializeField] private Image[] tipImages;             // Optional tip illustrations
     [SerializeField] private Image dividerImage;            // Gold divider line
+
+    [Header("Tip Images (optional — one per tip, matched by index)")]
+    [Tooltip("Assign sprites here. Index 0 = first tip key, Index 1 = second, etc. Leave empty slots for text-only tips.")]
+    [SerializeField] private Sprite[] tipSprites;           // Drag sprites here in Inspector
+    [SerializeField] private Image tipImageDisplay;         // Single Image component to show current tip's sprite
     
     [Header("Tip Keys (from localization CSV)")]
     [SerializeField] private string[] tipKeys = new string[]
     {
-        "tip_first", "tip_flick", "tip_forecast", "tip_leaderboards",
-        "tip_map", "tip_accuracy", "tip_perfect", "tip_swap", "tip_wind"
+        "tip_club_bag", "tip_forecast", "tip_rarities", "tip_swing",
+        "tip_accuracy", "tip_leaderboard", "tip_timing", "tip_view_switch"
     };
     
     [Header("Settings")]
@@ -50,7 +54,15 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
     
     private void Start()
     {
-        // Auto-initialize with Inspector keys if not initialized externally
+        // Only auto-initialize if not already initialized by LoadingScreen.OnScreenEnter()
+        // Use a frame delay to let external Initialize() calls happen first
+        if (_tipKeys == null || _tipKeys.Length == 0)
+            StartCoroutine(DelayedAutoInit());
+    }
+
+    private IEnumerator DelayedAutoInit()
+    {
+        yield return null; // wait one frame for external Initialize() calls
         if (_tipKeys == null || _tipKeys.Length == 0)
             Initialize(tipKeys);
     }
@@ -90,14 +102,15 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
             tipText.text = ProcessGoldTags(raw);
         }
         
-        // Show/hide tip images if assigned
-        if (tipImages != null)
+        // Show tip image if a sprite is assigned for this index
+        if (tipImageDisplay != null)
         {
-            for (int i = 0; i < tipImages.Length; i++)
-            {
-                if (tipImages[i] != null)
-                    tipImages[i].gameObject.SetActive(i == _currentTipIndex);
-            }
+            Sprite sprite = null;
+            if (tipSprites != null && _currentTipIndex < tipSprites.Length)
+                sprite = tipSprites[_currentTipIndex];
+            
+            tipImageDisplay.sprite = sprite;
+            tipImageDisplay.gameObject.SetActive(sprite != null);
         }
     }
     

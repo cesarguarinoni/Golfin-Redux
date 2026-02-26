@@ -278,24 +278,24 @@ public class CreateUIScreen
         tipPadding.minHeight = 156f;  // ~3 lines at 51px with spacing
         tipPadding.flexibleHeight = 0;
 
-        // ─── Tip Image (optional per-tip illustrations) ───────────
+        // ─── Tip Image Display (single Image, swapped per tip) ──────
         // Figma: "Image" frame, 806px wide, variable height (~578px)
-        //   Contains per-tip tutorial graphics
-        var tipImageGO = FindOrCreateLayoutImage("TipImage", tipCardGO.transform,
-            Color.clear, 578f);  // increased from 456 to match Figma
+        // ProTipCard uses a single Image component + Sprite[] array
+        // Assign sprites in Inspector: ProTipCard → Tip Sprites (one per tip key)
+        var tipImageGO = FindOrCreateLayoutImage("TipImageDisplay", tipCardGO.transform,
+            Color.clear, 578f);
         var tipImgComponent = tipImageGO.GetComponent<Image>();
         tipImgComponent.preserveAspect = true;
-        TryAssignSprite(tipImageGO, SpritePaths.TipImageFolder + "tip_0.png");
+        tipImageGO.SetActive(false); // hidden until a sprite is assigned
 
         // ─── "TAP FOR NEXT TIP" ───────────────────────────────────
         // Figma: Rubik:600@39, color=#ffffff, 882×54, RIGHT-aligned
-        //   Inside 978×78 "Goals Container" at bottom of card
         var tapNext = FindOrCreateLayoutTMP("TapNextText", tipCardGO.transform,
             "TAP FOR NEXT TIP", 39f, 78f, TextAlignmentOptions.Right);
         var tapTMP = tapNext.GetComponent<TextMeshProUGUI>();
         tapTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
         tapTMP.color = Color.white;
-        tapTMP.characterSpacing = 1.5f;  // slightly wider tracking per reference
+        tapTMP.characterSpacing = 1.5f;
         TrySetFont(tapTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(tapNext, "tip_next");
 
@@ -304,29 +304,12 @@ public class CreateUIScreen
         SetPrivateField(tipCard, "tipText", tipTMP);
         SetPrivateField(tipCard, "tapNextText", tapTMP);
         SetPrivateField(tipCard, "dividerImage", divider.GetComponent<Image>());
+        SetPrivateField(tipCard, "tipImageDisplay", tipImgComponent);
 
-        // Auto-load tip images
-        var tipSprites = LoadTipSprites();
-        if (tipSprites.Length > 0)
-        {
-            Image[] tipImgArray = new Image[tipSprites.Length];
-            for (int i = 0; i < tipSprites.Length; i++)
-            {
-                var tipImgObj = FindOrCreateLayoutImage($"TipImage_{i}", tipCardGO.transform,
-                    Color.white, 578f);
-                tipImgObj.GetComponent<Image>().sprite = tipSprites[i];
-                tipImgObj.GetComponent<Image>().preserveAspect = true;
-                tipImgArray[i] = tipImgObj.GetComponent<Image>();
-                tipImgObj.SetActive(i == 0);
-            }
-            SetPrivateField(tipCard, "tipImages", tipImgArray);
-            var placeholder = tipCardGO.transform.Find("TipImage");
-            if (placeholder != null) Object.DestroyImmediate(placeholder.gameObject);
-        }
-        else
-        {
-            SetPrivateField(tipCard, "tipImages", new Image[] { tipImageGO.GetComponent<Image>() });
-        }
+        // Auto-load tip sprites from folder if available
+        var loadedSprites = LoadTipSprites();
+        if (loadedSprites.Length > 0)
+            SetPrivateField(tipCard, "tipSprites", loadedSprites);
 
         // ─── "NOW LOADING" ────────────────────────────────────────
         // Figma: "Title" text, Rubik:600@102, color=#ffffff
