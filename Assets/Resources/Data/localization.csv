@@ -12,3 +12,19 @@ tip_accuracy,{gold}FLICKER{/gold} THROUGH THE BALL FOR PERFECT ACCURACY,ボー�
 tip_leaderboard,LOOK FOR THESE ICONS IN {gold}LEADERBOARDS{/gold} FOR LONGEST SHOTS,{gold}リーダーボード{/gold}でこのアイコンを探そう,BUSCA ESTOS ÍCONOS EN LA {gold}TABLA DE CLASIFICACIÓN{/gold}
 tip_timing,HIT THE BALL WHEN {gold}HIGHLIGHTED{/gold} FOR A PERFECT SHOT,{gold}ハイライト{/gold}時にボールを打てばパーフェクトショット,GOLPEA CUANDO ESTÉ {gold}ILUMINADO{/gold} PARA UN TIRO PERFECTO
 tip_view_switch,{gold}DOUBLE TAP{/gold} TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW,{gold}ダブルタップ{/gold}でショットビューとマップビュー切替,{gold}DOBLE TOQUE{/gold} PARA CAMBIAR ENTRE VISTA DE TIRO Y MAPA
+home_currency_label,COINS,コイン,MONEDAS
+home_username,USERNAME,ユーザー名,NOMBRE
+home_maintenance_title,MAINTENANCE NOTICE,メンテナンスのお知らせ,AVISO DE MANTENIMIENTO
+home_maintenance_body,"Scheduled server maintenance: 2025/12/31\nThe game will not be available for a short time\nduring maintenance.",サーバーメンテナンス予定: 2025/12/31\nメンテナンス中はゲームをご利用いただけません。,Mantenimiento programado: 2025/12/31\nEl juego no estará disponible durante el mantenimiento.
+home_gps_title,GOLFIN·GPS,GOLFIN·GPS,GOLFIN·GPS
+home_gps_subtitle,CHECK-IN WITH GPS,GPSでチェックイン,CHECK-IN CON GPS
+home_gps_desc,EARN MORE POINTS TO POWER UP!,もっとポイントを貯めてパワーアップ！,¡GANA MÁS PUNTOS PARA MEJORAR!
+home_next_hole,NEXT HOLE,次のホール,SIGUIENTE HOYO
+home_course_name,Lomond Country Club  - Hole 5,ロモンドカントリークラブ - ホール5,Lomond Country Club  - Hoyo 5
+home_play,PLAY,プレイ,JUGAR
+home_nav_home,HOME,ホーム,INICIO
+home_nav_shop,SHOP,ショップ,TIENDA
+home_nav_play,PLAY,プレイ,JUGAR
+home_nav_bag,BAG,バッグ,BOLSA
+home_nav_more,MORE,もっと,MÁS
+home_settings,SETTINGS,設定,AJUSTES
