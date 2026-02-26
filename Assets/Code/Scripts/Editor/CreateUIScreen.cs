@@ -200,10 +200,12 @@ public class CreateUIScreen
         //   Y relative to content container: 680 - 24 = 656
         GameObject tipCardGO = FindOrCreate("ProTipCard", contentContainer.transform);
         var tipCardRT = EnsureComponent<RectTransform>(tipCardGO);
-        tipCardRT.anchorMin = new Vector2(0f, 1f);
-        tipCardRT.anchorMax = new Vector2(1f, 1f);  // FULL WIDTH of content container
-        tipCardRT.pivot = new Vector2(0.5f, 1f);
-        tipCardRT.anchoredPosition = new Vector2(0f, -656f);
+        tipCardRT.anchorMin = new Vector2(0f, 0.5f);
+        tipCardRT.anchorMax = new Vector2(1f, 0.5f);  // FULL WIDTH, vertically centered anchor
+        tipCardRT.pivot = new Vector2(0.5f, 0.5f);    // center pivot — card grows from center
+        // Figma: card center is roughly at Y=1100 from top → offset from screen center
+        // Screen center = 2532/2 = 1266, content center ≈ 1100 → offset = +166 upward
+        tipCardRT.anchoredPosition = new Vector2(0f, 166f);
 
         var tipCardBg = EnsureComponent<Image>(tipCardGO);
         TryAssignSprite(tipCardGO, SpritePaths.CardBackground,

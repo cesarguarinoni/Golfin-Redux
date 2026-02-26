@@ -130,20 +130,26 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
             {
                 tipImageDisplay.sprite = sprite;
                 tipImageDisplay.gameObject.SetActive(true);
+                tipImageDisplay.SetNativeSize(); // respect original image dimensions
 
-                // Size image to match its native aspect ratio
-                // LayoutElement preferred height is calculated from sprite dimensions
-                // relative to the available width (card width minus padding)
-                float aspect = (float)sprite.texture.width / sprite.texture.height;
-                if (_imageAspectFitter != null)
-                    _imageAspectFitter.aspectRatio = aspect;
-
-                // Let the layout system determine height from aspect ratio
+                // Calculate preferred height based on native aspect ratio
+                // scaled to fit the card's available width
                 if (_imageLayoutElement != null)
                 {
-                    _imageLayoutElement.preferredHeight = -1; // auto
-                    _imageLayoutElement.flexibleWidth = 1;
+                    RectTransform cardRT = GetComponent<RectTransform>();
+                    VerticalLayoutGroup vlg = GetComponent<VerticalLayoutGroup>();
+                    float availableWidth = cardRT.rect.width;
+                    if (vlg != null) availableWidth -= vlg.padding.left + vlg.padding.right;
+                    if (availableWidth <= 0) availableWidth = 882f; // fallback: 978 - 2*48 padding
+
+                    float aspect = (float)sprite.texture.width / sprite.texture.height;
+                    float scaledHeight = availableWidth / aspect;
+                    _imageLayoutElement.preferredHeight = scaledHeight;
+                    _imageLayoutElement.preferredWidth = -1; // fill available width
                 }
+
+                if (_imageAspectFitter != null)
+                    _imageAspectFitter.aspectRatio = (float)sprite.texture.width / sprite.texture.height;
             }
             else
             {
