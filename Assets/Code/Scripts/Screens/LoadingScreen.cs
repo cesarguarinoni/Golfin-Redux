@@ -42,7 +42,7 @@ public class LoadingScreen : ScreenBase
         _loadProgress = 0f;
         
         if (proTipCard != null)
-            proTipCard.Initialize(tipKeys);
+            proTipCard.Initialize();
         
         StartCoroutine(SimulateLoading());
     }

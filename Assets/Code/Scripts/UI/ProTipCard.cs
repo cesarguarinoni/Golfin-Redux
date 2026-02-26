@@ -41,7 +41,6 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
     private Coroutine _autoCycleCoroutine;
     private CanvasGroup _tipTextCanvasGroup;
     private LayoutElement _imageLayoutElement;
-    private AspectRatioFitter _imageAspectFitter;
 
     private void Awake()
     {
@@ -52,17 +51,11 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
                 _tipTextCanvasGroup = tipText.gameObject.AddComponent<CanvasGroup>();
         }
 
-        // Setup image display for proper sizing
         if (tipImageDisplay != null)
         {
             _imageLayoutElement = tipImageDisplay.GetComponent<LayoutElement>();
             if (_imageLayoutElement == null)
                 _imageLayoutElement = tipImageDisplay.gameObject.AddComponent<LayoutElement>();
-
-            _imageAspectFitter = tipImageDisplay.GetComponent<AspectRatioFitter>();
-            if (_imageAspectFitter == null)
-                _imageAspectFitter = tipImageDisplay.gameObject.AddComponent<AspectRatioFitter>();
-            _imageAspectFitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
         }
     }
 
@@ -130,26 +123,23 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
             {
                 tipImageDisplay.sprite = sprite;
                 tipImageDisplay.gameObject.SetActive(true);
-                tipImageDisplay.SetNativeSize(); // respect original image dimensions
 
-                // Calculate preferred height based on native aspect ratio
-                // scaled to fit the card's available width
+                // Use the sprite's native pixel dimensions directly
+                float nativeW = sprite.rect.width;
+                float nativeH = sprite.rect.height;
+
                 if (_imageLayoutElement != null)
                 {
-                    RectTransform cardRT = GetComponent<RectTransform>();
-                    VerticalLayoutGroup vlg = GetComponent<VerticalLayoutGroup>();
-                    float availableWidth = cardRT.rect.width;
-                    if (vlg != null) availableWidth -= vlg.padding.left + vlg.padding.right;
-                    if (availableWidth <= 0) availableWidth = 882f; // fallback: 978 - 2*48 padding
-
-                    float aspect = (float)sprite.texture.width / sprite.texture.height;
-                    float scaledHeight = availableWidth / aspect;
-                    _imageLayoutElement.preferredHeight = scaledHeight;
-                    _imageLayoutElement.preferredWidth = -1; // fill available width
+                    _imageLayoutElement.preferredWidth = nativeW;
+                    _imageLayoutElement.preferredHeight = nativeH;
                 }
 
-                if (_imageAspectFitter != null)
-                    _imageAspectFitter.aspectRatio = (float)sprite.texture.width / sprite.texture.height;
+                // Also set sizeDelta as fallback
+                var imgRT = tipImageDisplay.GetComponent<RectTransform>();
+                if (imgRT != null)
+                    imgRT.sizeDelta = new Vector2(nativeW, nativeH);
+
+                tipImageDisplay.preserveAspect = true;
             }
             else
             {

@@ -298,10 +298,8 @@ public class CreateUIScreen
         tipImgComponent.color = Color.white;
         tipImgComponent.preserveAspect = true;
         tipImgComponent.raycastTarget = false;
-        // LayoutElement so it participates in the VerticalLayoutGroup
+        // LayoutElement — ProTipCard.ShowTip() sets preferredWidth/Height from sprite native size
         var tipImgLE = EnsureComponent<LayoutElement>(tipImageGO);
-        tipImgLE.preferredHeight = 578f;
-        tipImgLE.flexibleWidth = 1f;
         tipImageGO.SetActive(false); // hidden until a sprite is assigned at runtime
 
         // ─── "TAP FOR NEXT TIP" ───────────────────────────────────
