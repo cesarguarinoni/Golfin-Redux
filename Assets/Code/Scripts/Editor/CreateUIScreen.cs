@@ -345,9 +345,6 @@ public class CreateUIScreen
         var bgImg = EnsureComponent<Image>(bottomGrad);
         // Solid dark overlay; for proper gradient use a gradient sprite
         bgImg.color = new Color(0f, 0f, 0f, 0.3f);
-        bgImg.raycastTarget = false;
-        // Ensure gradient stays behind text/bar (sibling index 1, right after Background)
-        bottomGrad.transform.SetSiblingIndex(1);
 
         // ─── Content Container (centered, 978px wide) ────────────
         // Figma: x=96 from left edge, 978px wide, 2208px tall, y=24 from top
@@ -513,12 +510,12 @@ public class CreateUIScreen
             new Vector2(ContentWidth, 123f));
         var nlTMP = nowLoading.GetComponent<TextMeshProUGUI>();
         nlTMP.fontStyle = FontStyles.Bold | FontStyles.UpperCase;
-        nlTMP.color = new Color(1f, 1f, 1f, 1f);  // pure white, full alpha
-        nlTMP.characterSpacing = 4f;
+        nlTMP.color = Color.white;
+        nlTMP.characterSpacing = 4f;  // wider tracking per visual comparison
         TrySetFont(nlTMP, "Rubik-SemiBold SDF");
-        // No outline — was causing gray appearance
-        nlTMP.outlineWidth = 0f;
-        nlTMP.outlineColor = new Color32(0, 0, 0, 0);
+        // Add subtle drop shadow via TMP outline
+        nlTMP.outlineWidth = 0.08f;
+        nlTMP.outlineColor = new Color32(0, 0, 0, 80);
         EnsureLocalizedText(nowLoading, "screen_loading");
 
         // ─── Loading Bar ──────────────────────────────────────────
@@ -529,7 +526,7 @@ public class CreateUIScreen
             anchorCenter: new Vector2(0.5f, 1f - (2428f / H)),
             size: new Vector2(ContentWidth, 30f));
         var barBGImg = barBG.GetComponent<Image>();
-        barBGImg.color = new Color(1f, 1f, 1f, 1f);  // Figma: solid white track, explicit full alpha
+        barBGImg.color = Color.white;  // Figma: solid white track
         TryAssignSprite(barBG, SpritePaths.LoadingBarPill);
         if (HasSprite(barBG)) barBGImg.type = Image.Type.Sliced;
         EditorUtility.SetDirty(barBGImg);
@@ -574,7 +571,7 @@ public class CreateUIScreen
             new Vector2(ContentWidth, 63f));
         var dpTMP = downloadProgress.GetComponent<TextMeshProUGUI>();
         dpTMP.fontStyle = FontStyles.Bold;
-        dpTMP.color = new Color(1f, 1f, 1f, 1f);  // pure white, full alpha
+        dpTMP.color = Color.white;
         TrySetFont(dpTMP, "Rubik-SemiBold SDF");
 
         // Wire LoadingScreen
