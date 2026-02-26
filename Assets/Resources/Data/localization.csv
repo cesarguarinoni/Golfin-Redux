@@ -4,11 +4,11 @@ btn_start,START,スタート,INICIAR
 btn_create_account,CREATE ACCOUNT,アカウント作成,CREAR CUENTA
 tip_header,PRO TIP,プロのコツ,CONSEJO PRO
 tip_next,TAP FOR NEXT TIP,タップで次のコツ,TOCA PARA SIGUIENTE
-tip_club_bag,"{gold}HOLD{/gold} THE CLUB BALL BUTTON TO ENTER YOUR BAGS IN-GAME","{gold}長押し{/gold}でバッグに入る","{gold}MANTÉN{/gold} EL BOTÓN DEL PALO PARA ACCEDER A TU BOLSA"
-tip_forecast,"LANDING {gold}FORECAST{/gold} DOES NOT FACTOR THE BALL'S RUN OR WIND. COMPENSATE ACCORDINGLY","着地{gold}予測{/gold}はランや風を含まない。調整すること","EL {gold}PRONÓSTICO{/gold} NO CONSIDERA EL RECORRIDO NI EL VIENTO"
-tip_rarities,"DIFFERENT {gold}RARITIES{/gold} BESTOW DIFFERENT {gold}INITIAL STATS{/gold} AND MAX LEVEL","{gold}レアリティ{/gold}によって{gold}初期ステータス{/gold}と最大レベルが異なる","DIFERENTES {gold}RAREZAS{/gold} OTORGAN DISTINTAS {gold}ESTADÍSTICAS{/gold} INICIALES"
-tip_swing,"{gold}PULL{/gold} THE CLUB BACK THEN {gold}FLICK{/gold} IT FORWARD TO SWING","クラブを{gold}引いて{/gold}から{gold}フリック{/gold}でスイング","{gold}TIRA{/gold} EL PALO HACIA ATRÁS Y {gold}DESLÍZALO{/gold} HACIA ADELANTE"
-tip_accuracy,"{gold}FLICK{/gold} THROUGH THE BALL FOR PERFECT ACCURACY","ボールを通して{gold}フリック{/gold}で完璧な精度","{gold}DESLIZA{/gold} A TRAVÉS DE LA BOLA PARA MÁXIMA PRECISIÓN"
-tip_leaderboard,"LOOK FOR THESE ICONS IN {gold}LEADERBOARDS{/gold} FOR LONGEST SHOTS","{gold}リーダーボード{/gold}でこのアイコンを探そう","BUSCA ESTOS ÍCONOS EN LA {gold}TABLA DE CLASIFICACIÓN{/gold}"
-tip_timing,"HIT THE BALL WHEN {gold}HIGHLIGHTED{/gold} FOR A PERFECT SHOT","{gold}ハイライト{/gold}時にボールを打てばパーフェクトショット","GOLPEA CUANDO ESTÉ {gold}ILUMINADO{/gold} PARA UN TIRO PERFECTO"
-tip_view_switch,"{gold}DOUBLE TAP{/gold} TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW","{gold}ダブルタップ{/gold}でショットビューとマップビュー切替","{gold}DOBLE TOQUE{/gold} PARA CAMBIAR ENTRE VISTA DE TIRO Y MAPA"
+tip_club_bag,{gold}HOLD{/gold} THE CLUB BALL BUTTON TO ENTER YOUR BAGS IN-GAME,{gold}長押し{/gold}でバッグに入る,{gold}MANTÉN{/gold} EL BOTÓN DEL PALO PARA ACCEDER A TU BOLSA
+tip_forecast,LANDING {gold}FORECAST{/gold} DOES NOT FACTOR THE BALL'S RUN OR WIND. COMPENSATE ACCORDINGLY,着地{gold}予測{/gold}はランや風を含まない。調整すること,EL {gold}PRONÓSTICO{/gold} NO CONSIDERA EL RECORRIDO NI EL VIENTO
+tip_rarities,DIFFERENT {gold}RARITIES{/gold} BESTOW DIFFERENT {gold}INITIAL STATS{/gold} AND MAX LEVEL,{gold}レアリティ{/gold}によって{gold}初期ステータス{/gold}と最大レベルが異なる,DIFERENTES {gold}RAREZAS{/gold} OTORGAN DISTINTAS {gold}ESTADÍSTICAS{/gold} INICIALES
+tip_swing,{gold}PULL{/gold} THE CLUB BACK THEN {gold}FLICK{/gold} IT FORWARD TO SWING,クラブを{gold}引いて{/gold}から{gold}フリック{/gold}でスイング,{gold}TIRA{/gold} EL PALO HACIA ATRÁS Y {gold}DESLÍZALO{/gold} HACIA ADELANTE
+tip_accuracy,{gold}FLICKER{/gold} THROUGH THE BALL FOR PERFECT ACCURACY,ボールを通して{gold}フリック{/gold}で完璧な精度,{gold}DESLIZA{/gold} A TRAVÉS DE LA BOLA PARA MÁXIMA PRECISIÓN
+tip_leaderboard,LOOK FOR THESE ICONS IN {gold}LEADERBOARDS{/gold} FOR LONGEST SHOTS,{gold}リーダーボード{/gold}でこのアイコンを探そう,BUSCA ESTOS ÍCONOS EN LA {gold}TABLA DE CLASIFICACIÓN{/gold}
+tip_timing,HIT THE BALL WHEN {gold}HIGHLIGHTED{/gold} FOR A PERFECT SHOT,{gold}ハイライト{/gold}時にボールを打てばパーフェクトショット,GOLPEA CUANDO ESTÉ {gold}ILUMINADO{/gold} PARA UN TIRO PERFECTO
+tip_view_switch,{gold}DOUBLE TAP{/gold} TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW,{gold}ダブルタップ{/gold}でショットビューとマップビュー切替,{gold}DOBLE TOQUE{/gold} PARA CAMBIAR ENTRE VISTA DE TIRO Y MAPA
