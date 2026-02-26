@@ -835,14 +835,11 @@ public class CreateUIScreen
         var annoCard = FindOrCreateImageAnchored("AnnouncementCard", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - (385f / H)),
             size: new Vector2(1010f, 290f));
-        TryAssignSprite(annoCard, SpritePaths.CardBackground,
+        TryAssignSprite(annoCard, SpritePaths.AnnouncementCard,
             new Color(0.85f, 0.87f, 0.90f, 0.9f));
         var annoCardImg = annoCard.GetComponent<Image>();
-        if (HasSprite(annoCard))
-        {
-            annoCardImg.type = Image.Type.Sliced;
-            annoCardImg.color = new Color(0.85f, 0.87f, 0.90f, 0.95f);
-        }
+        annoCardImg.type = Image.Type.Sliced;
+        if (HasSprite(annoCard)) annoCardImg.color = Color.white;
 
         var annoTitle = FindOrCreateTMPAnchored("AnnouncementTitle", annoCard.transform,
             "MAINTENANCE NOTICE",
@@ -976,14 +973,11 @@ public class CreateUIScreen
         var nextHolePanel = FindOrCreateImageAnchored("NextHolePanel", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - (2010f / H)),
             size: new Vector2(1010f, 400f));  // was 320, now 400 for proper spacing
-        TryAssignSprite(nextHolePanel, SpritePaths.CardBackground,
+        TryAssignSprite(nextHolePanel, SpritePaths.NextHolePanel,
             new Color(0.06f, 0.09f, 0.19f, 0.8f));
         var nhPanelImg = nextHolePanel.GetComponent<Image>();
-        if (HasSprite(nextHolePanel))
-        {
-            nhPanelImg.type = Image.Type.Sliced;
-            nhPanelImg.color = new Color(0.06f, 0.09f, 0.19f, 0.85f);
-        }
+        nhPanelImg.type = Image.Type.Sliced;
+        if (HasSprite(nextHolePanel)) nhPanelImg.color = Color.white;
 
         // Next Hole Header — gold color per reference
         var nhHeader = FindOrCreateTMPAnchored("NextHoleHeader", nextHolePanel.transform,
