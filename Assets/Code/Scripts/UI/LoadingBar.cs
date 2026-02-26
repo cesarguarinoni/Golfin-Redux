@@ -2,68 +2,86 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Animated loading bar with pill shape and glow effect.
-/// Uses a fill Image (Image Type = Filled, Fill Method = Horizontal).
+/// Loading bar: white track (background) with blue fill that grows left-to-right.
+/// Fill works by scaling the fill RectTransform width, NOT Image.fillAmount.
+/// This works with or without sprites assigned.
 /// </summary>
 public class LoadingBar : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private Image fillImage;
-    [SerializeField] private Image glowImage; // Optional glow that follows fill edge
-    
+    [SerializeField] private RectTransform fillRect;   // The blue fill bar
+    [SerializeField] private Image fillImage;           // For color control
+    [SerializeField] private Image glowImage;           // Optional glow at fill edge
+
     [Header("Settings")]
     [SerializeField] private float smoothSpeed = 3f;
-    
+
     [Header("Colors")]
-    [SerializeField] private Color fillColorStart = new Color(0.13f, 0.50f, 0.88f); // #2080E0
-    [SerializeField] private Color fillColorEnd = new Color(0.25f, 0.63f, 1f);       // #40A0FF
-    
+    [SerializeField] private Color fillColor = new Color(0.13f, 0.50f, 0.88f); // #2080E0
+
     private float _targetProgress;
     private float _currentProgress;
     private RectTransform _barRect;
-    private RectTransform _glowRect;
-    
+
     private void Awake()
     {
-        _barRect = fillImage?.GetComponent<RectTransform>();
-        _glowRect = glowImage?.GetComponent<RectTransform>();
+        _barRect = GetComponent<RectTransform>();
+
+        // If fillRect not assigned, try to find child
+        if (fillRect == null && fillImage != null)
+            fillRect = fillImage.GetComponent<RectTransform>();
     }
-    
+
+    private void Start()
+    {
+        // Set initial color
+        if (fillImage != null)
+            fillImage.color = fillColor;
+
+        // Ensure fill starts at 0
+        UpdateFillVisual(0f);
+    }
+
     private void Update()
     {
-        // Smooth progress toward target
         _currentProgress = Mathf.MoveTowards(_currentProgress, _targetProgress, Time.deltaTime * smoothSpeed);
-        
-        if (fillImage != null)
+        UpdateFillVisual(_currentProgress);
+    }
+
+    private void UpdateFillVisual(float progress)
+    {
+        if (fillRect == null || _barRect == null) return;
+
+        // Scale fill width as percentage of track width
+        // Anchor fill to left side, stretch vertically
+        fillRect.anchorMin = new Vector2(0f, 0f);
+        fillRect.anchorMax = new Vector2(progress, 1f);
+        fillRect.offsetMin = Vector2.zero;
+        fillRect.offsetMax = Vector2.zero;
+
+        // Glow follows the right edge of the fill
+        if (glowImage != null)
         {
-            fillImage.fillAmount = _currentProgress;
-            // Gradient effect via color lerp
-            fillImage.color = Color.Lerp(fillColorStart, fillColorEnd, _currentProgress);
-        }
-        
-        // Move glow to the leading edge (right side of fill)
-        if (glowImage != null && _barRect != null && _glowRect != null)
-        {
-            float barWidth = _barRect.rect.width;
-            // Position glow at the right edge of the filled portion
-            float xPos = (barWidth * _currentProgress) - (barWidth * 0.5f);
-            _glowRect.anchoredPosition = new Vector2(xPos, 0f);
-            _glowRect.anchorMin = new Vector2(0.5f, 0f);
-            _glowRect.anchorMax = new Vector2(0.5f, 1f);
-            glowImage.gameObject.SetActive(_currentProgress > 0.02f && _currentProgress < 0.98f);
+            var glowRT = glowImage.GetComponent<RectTransform>();
+            if (glowRT != null)
+            {
+                float barWidth = _barRect.rect.width;
+                float xPos = barWidth * progress - barWidth * 0.5f;
+                glowRT.anchoredPosition = new Vector2(xPos, 0f);
+            }
+            glowImage.gameObject.SetActive(progress > 0.02f && progress < 0.98f);
         }
     }
-    
-    /// <summary>Set the target progress (0-1)</summary>
+
     public void SetProgress(float progress)
     {
         _targetProgress = Mathf.Clamp01(progress);
     }
-    
-    /// <summary>Set progress immediately without smoothing</summary>
+
     public void SetProgressImmediate(float progress)
     {
         _targetProgress = Mathf.Clamp01(progress);
         _currentProgress = _targetProgress;
+        UpdateFillVisual(_currentProgress);
     }
 }
