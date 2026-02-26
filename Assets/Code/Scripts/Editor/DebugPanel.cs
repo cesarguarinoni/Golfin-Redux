@@ -58,7 +58,13 @@ public class DebugPanel : EditorWindow
 
         RegisterAction("Reload Localization", () => {
             var lm = Object.FindAnyObjectByType<LocalizationManager>();
-            if (lm != null) { lm.LoadCSV(); Debug.Log("[Debug] Localization reloaded"); }
+            if (lm != null)
+            {
+                // LoadCSV is private — invoke via reflection to avoid modifying LocalizationManager
+                var method = lm.GetType().GetMethod("LoadCSV", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (method != null) { method.Invoke(lm, null); Debug.Log("[Debug] Localization reloaded"); }
+                else Debug.LogWarning("[Debug] LoadCSV method not found");
+            }
         });
 
         RegisterAction("Export Scene Values", SceneToCodeSync.ExportSceneValues);
