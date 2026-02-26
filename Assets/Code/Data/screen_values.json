@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-02-26 12:31:55",
+  "exported_at": "2026-02-26 12:39:32",
   "resolution": [1170, 2532],
   "screens": {
     "LogoScreen": {
@@ -229,15 +229,6 @@
       "LoadingScreen/LoadingBarBG/LoadingBarFill.imageType": "Filled",
       "LoadingScreen/LoadingBarBG/LoadingBarFill.preserveAspect": False,
       "LoadingScreen/LoadingBarBG/LoadingBarFill.raycastTarget": True,
-      "LoadingScreen/LoadingBarBG/LoadingBarGlow.anchorMin": [0.0000, 0.5000],
-      "LoadingScreen/LoadingBarBG/LoadingBarGlow.anchorMax": [0.0000, 0.5000],
-      "LoadingScreen/LoadingBarBG/LoadingBarGlow.anchoredPosition": [0.0, 0.0],
-      "LoadingScreen/LoadingBarBG/LoadingBarGlow.sizeDelta": [30.0, 30.0],
-      "LoadingScreen/LoadingBarBG/LoadingBarGlow.pivot": [0.50, 0.50],
-      "LoadingScreen/LoadingBarBG/LoadingBarGlow.imageColor": "#FFFFFF80",
-      "LoadingScreen/LoadingBarBG/LoadingBarGlow.imageType": "Simple",
-      "LoadingScreen/LoadingBarBG/LoadingBarGlow.preserveAspect": False,
-      "LoadingScreen/LoadingBarBG/LoadingBarGlow.raycastTarget": True,
       "LoadingScreen/DownloadProgress.anchorMin": [0.5000, 0.0245],
       "LoadingScreen/DownloadProgress.anchorMax": [0.5000, 0.0245],
       "LoadingScreen/DownloadProgress.anchoredPosition": [0.0, 12.0],
