@@ -59,6 +59,7 @@ public class CreateUIScreen
         public const string NextHolePanel      = "Assets/Art/UI/Home/next_hole_panel.png";
         public const string BottomNavBg        = "Assets/Art/UI/Home/bottom_nav_bg.png";
         public const string PlayButton         = "Assets/Art/UI/Home/play_button.png";
+        public const string TopBarBg            = "Assets/Art/UI/Home/top_bar_bg.png";
         public const string SettingsGear       = "Assets/Art/UI/Icons/settings_gear.png";
         public const string CoinGold           = "Assets/Art/UI/Icons/coin_gold.png";
         public const string GpsPin             = "Assets/Art/UI/Icons/gps_pin.png";
@@ -745,7 +746,9 @@ public class CreateUIScreen
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             var img = EnsureComponent<Image>(topGrad);
-            img.color = new Color(0.04f, 0.08f, 0.16f, 0.7f);
+            TryAssignSprite(topGrad, SpritePaths.TopBarBg, new Color(0.04f, 0.08f, 0.16f, 0.7f));
+            if (HasSprite(topGrad)) img.color = Color.white;
+            img.preserveAspect = false;
             img.raycastTarget = false;
         });
         // Ensure components exist even if not new
@@ -770,7 +773,7 @@ public class CreateUIScreen
             TryAssignSprite(currencyGroup, SpritePaths.CardBackground, new Color(0.04f, 0.06f, 0.13f, 0.5f));
             if (HasSprite(currencyGroup))
             {
-                pillImg.type = Image.Type.Sliced;
+                pillImg.type = Image.Type.Simple; pillImg.preserveAspect = true;
                 pillImg.color = new Color(0.04f, 0.06f, 0.13f, 0.5f);
             }
         });
@@ -834,7 +837,7 @@ public class CreateUIScreen
             rt.sizeDelta = new Vector2(660f, 55f);
             var img = EnsureComponent<Image>(userBanner);
             TryAssignSprite(userBanner, SpritePaths.UsernameBanner, new Color(0.06f, 0.11f, 0.21f, 0.7f));
-            if (HasSprite(userBanner)) img.type = Image.Type.Sliced;
+            img.type = Image.Type.Simple; img.preserveAspect = true;
         });
         EnsureComponent<RectTransform>(userBanner);
         EnsureComponent<Image>(userBanner);
@@ -869,7 +872,8 @@ public class CreateUIScreen
             rt.sizeDelta = new Vector2(1010f, 290f);
             var img = EnsureComponent<Image>(annoCard);
             TryAssignSprite(annoCard, SpritePaths.AnnouncementCard, new Color(0.85f, 0.87f, 0.90f, 0.9f));
-            img.type = Image.Type.Sliced;
+            img.type = Image.Type.Simple;
+            img.preserveAspect = true;
             if (HasSprite(annoCard)) img.color = Color.white;
         });
         EnsureComponent<RectTransform>(annoCard);
@@ -971,7 +975,8 @@ public class CreateUIScreen
             rt.sizeDelta = new Vector2(1010f, 200f);
             var img = EnsureComponent<Image>(gpsBanner);
             TryAssignSprite(gpsBanner, SpritePaths.GpsBanner, new Color(0.10f, 0.13f, 0.19f, 0.85f));
-            if (HasSprite(gpsBanner)) img.type = Image.Type.Sliced;
+            img.type = Image.Type.Simple;
+            img.preserveAspect = true;
         });
         EnsureComponent<RectTransform>(gpsBanner);
         EnsureComponent<Image>(gpsBanner);
@@ -1057,7 +1062,8 @@ public class CreateUIScreen
             rt.sizeDelta = new Vector2(1010f, 400f);
             var img = EnsureComponent<Image>(nextHolePanel);
             TryAssignSprite(nextHolePanel, SpritePaths.NextHolePanel, new Color(0.06f, 0.09f, 0.19f, 0.8f));
-            img.type = Image.Type.Sliced;
+            img.type = Image.Type.Simple;
+            img.preserveAspect = true;
             if (HasSprite(nextHolePanel)) img.color = Color.white;
         });
         EnsureComponent<RectTransform>(nextHolePanel);
@@ -1188,7 +1194,7 @@ public class CreateUIScreen
             rt.sizeDelta = new Vector2(450f, 120f);
             var img = EnsureComponent<Image>(playBtn);
             TryAssignSprite(playBtn, SpritePaths.PlayButton, GreenButton);
-            if (HasSprite(playBtn)) img.type = Image.Type.Sliced;
+            img.type = Image.Type.Simple; img.preserveAspect = true;
         });
         EnsureComponent<Button>(playBtn);
         var playPressable = EnsureComponent<PressableButton>(playBtn);
