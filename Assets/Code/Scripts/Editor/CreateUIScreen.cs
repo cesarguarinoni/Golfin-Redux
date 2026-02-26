@@ -553,11 +553,14 @@ public class CreateUIScreen
         SetPrivateField(loadingBar, "fillImage", barFillImg);
         SetPrivateField(loadingBar, "fillColor", new Color(0.13f, 0.50f, 0.88f));
 
-        // Remove any leftover glow object
-        var oldGlow = barBG.transform.Find("LoadingBarGlow");
-        if (oldGlow != null) Object.DestroyImmediate(oldGlow.gameObject);
+        // Bar glow — follows fill edge
+        var barGlow = FindOrCreateImageAnchored("LoadingBarGlow", barBG.transform,
+            anchorCenter: new Vector2(0f, 0.5f),  // starts at left, LoadingBar.cs moves it
+            size: new Vector2(30f, 30f));
+        if (!HasSprite(barGlow)) barGlow.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.5f);
 
-        SetPrivateField(loadingBar, "glowImage", (Image)null);
+        SetPrivateField(loadingBar, "fillImage", barFillImg);
+        SetPrivateField(loadingBar, "glowImage", barGlow.GetComponent<Image>());
 
         // ─── Download Progress Text ───────────────────────────────
         // Figma: "52.20 / 267 MB", Rubik:600@48, color=#ffffff
@@ -710,10 +713,7 @@ public class CreateUIScreen
         GameObject panel = FindOrCreate(name, parent);
         var rt = EnsureComponent<RectTransform>(panel);
         StretchFull(rt);
-        var cg = EnsureComponent<CanvasGroup>(panel);
-        cg.alpha = 1f;
-        cg.interactable = true;
-        cg.blocksRaycasts = true;
+        EnsureComponent<CanvasGroup>(panel);
         var img = EnsureComponent<Image>(panel);
         if (!HasSprite(panel)) img.color = Color.clear;
         return panel;
