@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections;
 
 /// <summary>
-/// Entry point. Manages the startup flow: Logo → Loading → Splash.
+/// Entry point. Manages the startup flow: Logo → Loading → Splash → Home.
 /// Attach to a root GameObject in the scene.
 /// </summary>
 public class GameBootstrap : MonoBehaviour
@@ -11,6 +11,7 @@ public class GameBootstrap : MonoBehaviour
     [SerializeField] private LogoScreen logoScreen;
     [SerializeField] private LoadingScreen loadingScreen;
     [SerializeField] private SplashScreen splashScreen;
+    [SerializeField] private HomeScreen homeScreen;
     
     [Header("Timing")]
     [SerializeField] private float logoDisplayTime = 3f;
@@ -21,6 +22,7 @@ public class GameBootstrap : MonoBehaviour
         logoScreen.Hide();
         loadingScreen.Hide();
         splashScreen.Hide();
+        homeScreen.Hide();
         
         StartCoroutine(StartupSequence());
     }
@@ -34,10 +36,19 @@ public class GameBootstrap : MonoBehaviour
         // Phase 2: Loading with tips
         ScreenManager.Instance.TransitionTo(loadingScreen);
         
-        // Wait for loading to complete (LoadingScreen signals when done)
+        // Wait for loading to complete
         yield return new WaitUntil(() => loadingScreen.IsLoadingComplete);
         
         // Phase 3: Splash with Start button
         ScreenManager.Instance.TransitionTo(splashScreen);
+        
+        // Wire Start button → Home screen
+        splashScreen.OnStartPressed.RemoveAllListeners();
+        splashScreen.OnStartPressed.AddListener(GoToHome);
+    }
+    
+    private void GoToHome()
+    {
+        ScreenManager.Instance.TransitionTo(homeScreen);
     }
 }

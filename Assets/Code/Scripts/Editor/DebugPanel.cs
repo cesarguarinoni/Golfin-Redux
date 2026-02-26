@@ -75,6 +75,22 @@ public class DebugPanel : EditorWindow
             var tip = Object.FindAnyObjectByType<ProTipCard>();
             if (tip != null) { tip.NextTip(); Debug.Log("[Debug] Next tip"); }
         });
+
+        // Home Screen debug actions
+        RegisterAction("Randomize Character", () => {
+            var home = Object.FindAnyObjectByType<HomeScreen>();
+            if (home != null) { home.RandomizeCharacter(); Debug.Log("[Debug] Character randomized"); }
+        });
+
+        RegisterAction("Next Announcement", () => {
+            var home = Object.FindAnyObjectByType<HomeScreen>();
+            if (home != null) { home.NextAnnouncement(); Debug.Log("[Debug] Next announcement"); }
+        });
+
+        RegisterAction("Go To Home Screen", () => {
+            var home = Object.FindAnyObjectByType<HomeScreen>();
+            if (home != null) { ScreenManager.Instance.TransitionTo(home); Debug.Log("[Debug] Switched to Home"); }
+        });
     }
 
     void OnGUI()
