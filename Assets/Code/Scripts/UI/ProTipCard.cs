@@ -5,124 +5,164 @@ using TMPro;
 using System.Collections;
 
 /// <summary>
-/// Glassmorphism Pro Tip card that displays localized tips.
-/// Auto-cycles through tips on a timer. Tap to advance immediately.
-/// Uses VerticalLayoutGroup + ContentSizeFitter to auto-resize with content.
+/// Pro Tip card for the Loading Screen.
+/// Cycles through localized tips with optional images.
+/// Card auto-resizes via VerticalLayoutGroup + ContentSizeFitter.
 /// </summary>
 public class ProTipCard : MonoBehaviour, IPointerClickHandler
 {
     [Header("References")]
-    [SerializeField] private TextMeshProUGUI headerText;   // "PRO TIP"
-    [SerializeField] private TextMeshProUGUI tipText;       // Main tip content
-    [SerializeField] private TextMeshProUGUI tapNextText;   // "TAP FOR NEXT TIP"
-    [SerializeField] private Image dividerImage;            // Gold divider line
+    [SerializeField] private TextMeshProUGUI headerText;
+    [SerializeField] private TextMeshProUGUI tipText;
+    [SerializeField] private TextMeshProUGUI tapNextText;
+    [SerializeField] private Image dividerImage;
 
-    [Header("Tip Images (optional — one per tip, matched by index)")]
-    [Tooltip("Assign sprites here. Index 0 = first tip key, Index 1 = second, etc. Leave empty slots for text-only tips.")]
-    [SerializeField] private Sprite[] tipSprites;           // Drag sprites here in Inspector
-    [SerializeField] private Image tipImageDisplay;         // Single Image component to show current tip's sprite
-    
-    [Header("Tip Keys (from localization CSV)")]
+    [Header("Tip Images")]
+    [Tooltip("One sprite per tip key (matched by index). Empty = text-only tip.")]
+    [SerializeField] private Sprite[] tipSprites;
+    [SerializeField] private Image tipImageDisplay;
+
+    [Header("Tip Keys (localization CSV keys)")]
     [SerializeField] private string[] tipKeys = new string[]
     {
         "tip_club_bag", "tip_forecast", "tip_rarities", "tip_swing",
         "tip_accuracy", "tip_leaderboard", "tip_timing", "tip_view_switch"
     };
-    
+
     [Header("Settings")]
     [SerializeField] private float autoCycleInterval = 8f;
     [SerializeField] private float textFadeDuration = 0.3f;
-    
+
     [Header("Highlight Color")]
     [SerializeField] private Color goldColor = new Color(0.78f, 0.72f, 0.19f);
-    
-    private string[] _tipKeys;
+
     private int _currentTipIndex;
+    private bool _initialized;
     private Coroutine _autoCycleCoroutine;
     private CanvasGroup _tipTextCanvasGroup;
-    
+    private LayoutElement _imageLayoutElement;
+    private AspectRatioFitter _imageAspectFitter;
+
     private void Awake()
     {
-        // Add CanvasGroup for fading tip text
         if (tipText != null)
         {
             _tipTextCanvasGroup = tipText.gameObject.GetComponent<CanvasGroup>();
             if (_tipTextCanvasGroup == null)
                 _tipTextCanvasGroup = tipText.gameObject.AddComponent<CanvasGroup>();
         }
-    }
-    
-    private void Start()
-    {
-        // Only auto-initialize if not already initialized by LoadingScreen.OnScreenEnter()
-        // Use a frame delay to let external Initialize() calls happen first
-        if (_tipKeys == null || _tipKeys.Length == 0)
-            StartCoroutine(DelayedAutoInit());
+
+        // Setup image display for proper sizing
+        if (tipImageDisplay != null)
+        {
+            _imageLayoutElement = tipImageDisplay.GetComponent<LayoutElement>();
+            if (_imageLayoutElement == null)
+                _imageLayoutElement = tipImageDisplay.gameObject.AddComponent<LayoutElement>();
+
+            _imageAspectFitter = tipImageDisplay.GetComponent<AspectRatioFitter>();
+            if (_imageAspectFitter == null)
+                _imageAspectFitter = tipImageDisplay.gameObject.AddComponent<AspectRatioFitter>();
+            _imageAspectFitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
+        }
     }
 
-    private IEnumerator DelayedAutoInit()
+    private void Start()
     {
-        yield return null; // wait one frame for external Initialize() calls
-        if (_tipKeys == null || _tipKeys.Length == 0)
+        if (!_initialized)
             Initialize(tipKeys);
     }
-    
-    /// <summary>Initialize with an array of localization keys (or uses Inspector defaults)</summary>
-    public void Initialize(string[] keys)
+
+    /// <summary>
+    /// Initialize with tip keys. If null/empty, uses the Inspector tipKeys.
+    /// Call from LoadingScreen to override keys at runtime.
+    /// </summary>
+    public void Initialize(string[] keys = null)
     {
-        _tipKeys = keys;
+        if (keys != null && keys.Length > 0)
+            tipKeys = keys;
+
         _currentTipIndex = 0;
-        
-        // Localize static elements
+        _initialized = true;
+
+        // Localize static text
         if (headerText != null)
         {
-            var locHeader = headerText.GetComponent<LocalizedText>();
-            if (locHeader != null) locHeader.SetKey("tip_header");
+            var loc = headerText.GetComponent<LocalizedText>();
+            if (loc != null) loc.SetKey("tip_header");
         }
         if (tapNextText != null)
         {
-            var locTap = tapNextText.GetComponent<LocalizedText>();
-            if (locTap != null) locTap.SetKey("tip_next");
+            var loc = tapNextText.GetComponent<LocalizedText>();
+            if (loc != null) loc.SetKey("tip_next");
         }
-        
+
         ShowTip(0);
         RestartAutoCycle();
     }
-    
-    /// <summary>Display a specific tip by index</summary>
+
+    /// <summary>Display a specific tip by index.</summary>
     public void ShowTip(int index)
     {
-        if (_tipKeys == null || _tipKeys.Length == 0) return;
-        
-        _currentTipIndex = index % _tipKeys.Length;
-        
-        if (tipText != null && LocalizationManager.Instance != null)
+        if (tipKeys == null || tipKeys.Length == 0) return;
+
+        _currentTipIndex = index % tipKeys.Length;
+
+        // Set tip text from localization
+        if (tipText != null)
         {
-            string raw = LocalizationManager.Instance.GetText(_tipKeys[_currentTipIndex]);
-            tipText.text = ProcessGoldTags(raw);
+            string text;
+            if (LocalizationManager.Instance != null)
+                text = LocalizationManager.Instance.GetText(tipKeys[_currentTipIndex]);
+            else
+                text = tipKeys[_currentTipIndex]; // fallback: show the key itself
+
+            tipText.text = ProcessGoldTags(text);
         }
-        
-        // Show tip image if a sprite is assigned for this index
+
+        // Set tip image
         if (tipImageDisplay != null)
         {
             Sprite sprite = null;
             if (tipSprites != null && _currentTipIndex < tipSprites.Length)
                 sprite = tipSprites[_currentTipIndex];
-            
-            tipImageDisplay.sprite = sprite;
-            tipImageDisplay.gameObject.SetActive(sprite != null);
+
+            if (sprite != null)
+            {
+                tipImageDisplay.sprite = sprite;
+                tipImageDisplay.gameObject.SetActive(true);
+
+                // Size image to match its native aspect ratio
+                // LayoutElement preferred height is calculated from sprite dimensions
+                // relative to the available width (card width minus padding)
+                float aspect = (float)sprite.texture.width / sprite.texture.height;
+                if (_imageAspectFitter != null)
+                    _imageAspectFitter.aspectRatio = aspect;
+
+                // Let the layout system determine height from aspect ratio
+                if (_imageLayoutElement != null)
+                {
+                    _imageLayoutElement.preferredHeight = -1; // auto
+                    _imageLayoutElement.flexibleWidth = 1;
+                }
+            }
+            else
+            {
+                tipImageDisplay.gameObject.SetActive(false);
+            }
         }
+
+        // Force layout rebuild so card resizes to fit content
+        LayoutRebuilder.ForceRebuildLayoutImmediate(GetComponent<RectTransform>());
     }
-    
-    /// <summary>Advance to the next tip with a crossfade</summary>
+
     public void NextTip()
     {
-        StartCoroutine(CrossfadeToTip((_currentTipIndex + 1) % _tipKeys.Length));
+        if (tipKeys == null || tipKeys.Length == 0) return;
+        StartCoroutine(CrossfadeToTip((_currentTipIndex + 1) % tipKeys.Length));
     }
-    
+
     private IEnumerator CrossfadeToTip(int index)
     {
-        // Fade out
         if (_tipTextCanvasGroup != null)
         {
             float elapsed = 0f;
@@ -133,10 +173,9 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
                 yield return null;
             }
         }
-        
+
         ShowTip(index);
-        
-        // Fade in
+
         if (_tipTextCanvasGroup != null)
         {
             float elapsed = 0f;
@@ -149,19 +188,19 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
             _tipTextCanvasGroup.alpha = 1f;
         }
     }
-    
+
     public void OnPointerClick(PointerEventData eventData)
     {
         NextTip();
         RestartAutoCycle();
     }
-    
+
     private void RestartAutoCycle()
     {
         if (_autoCycleCoroutine != null) StopCoroutine(_autoCycleCoroutine);
         _autoCycleCoroutine = StartCoroutine(AutoCycleRoutine());
     }
-    
+
     private IEnumerator AutoCycleRoutine()
     {
         while (true)
@@ -170,8 +209,7 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
             NextTip();
         }
     }
-    
-    /// <summary>Replace {gold}text{/gold} with TMP color tags</summary>
+
     private string ProcessGoldTags(string input)
     {
         string hex = ColorUtility.ToHtmlStringRGB(goldColor);
@@ -179,7 +217,7 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
             .Replace("{gold}", $"<color=#{hex}>")
             .Replace("{/gold}", "</color>");
     }
-    
+
     private void OnDisable()
     {
         if (_autoCycleCoroutine != null) StopCoroutine(_autoCycleCoroutine);

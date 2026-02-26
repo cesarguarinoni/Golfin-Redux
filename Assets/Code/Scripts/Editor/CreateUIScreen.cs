@@ -306,6 +306,13 @@ public class CreateUIScreen
         SetPrivateField(tipCard, "dividerImage", divider.GetComponent<Image>());
         SetPrivateField(tipCard, "tipImageDisplay", tipImgComponent);
 
+        // Force-write the correct tip keys (overrides stale serialized values)
+        string[] correctTipKeys = new string[] {
+            "tip_club_bag", "tip_forecast", "tip_rarities", "tip_swing",
+            "tip_accuracy", "tip_leaderboard", "tip_timing", "tip_view_switch"
+        };
+        SetPrivateField(tipCard, "tipKeys", correctTipKeys);
+
         // Auto-load tip sprites from folder if available
         var loadedSprites = LoadTipSprites();
         if (loadedSprites.Length > 0)
@@ -382,6 +389,13 @@ public class CreateUIScreen
         SetPrivateField(component, "proTipCard", tipCard);
         SetPrivateField(component, "nowLoadingText", nlTMP);
         SetPrivateField(component, "downloadProgressText", dpTMP);
+
+        // Force-write correct tip keys on LoadingScreen too
+        string[] loadingTipKeys = new string[] {
+            "tip_club_bag", "tip_forecast", "tip_rarities", "tip_swing",
+            "tip_accuracy", "tip_leaderboard", "tip_timing", "tip_view_switch"
+        };
+        SetPrivateField(component, "tipKeys", loadingTipKeys);
 
         return component;
     }
