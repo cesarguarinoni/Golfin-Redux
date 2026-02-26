@@ -2395,10 +2395,18 @@ MonoBehaviour:
   tipText: {fileID: 1993017529}
   tapNextText: {fileID: 1961955852}
   tipImages:
+  - {fileID: 737697473}
+  - {fileID: 1236146993}
+  - {fileID: 1236146993}
+  - {fileID: 1236146993}
+  - {fileID: 1236146993}
+  - {fileID: 1236146993}
+  - {fileID: 1236146993}
+  - {fileID: 1236146993}
   - {fileID: 1236146993}
   dividerImage: {fileID: 1035782201}
   tipKeys:
-  - tip_flick
+  - 'tip_forecast '
   - tip_flick
   - tip_forecast
   - tip_leaderboards
