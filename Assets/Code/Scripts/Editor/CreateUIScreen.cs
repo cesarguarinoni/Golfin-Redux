@@ -279,14 +279,28 @@ public class CreateUIScreen
         tipPadding.flexibleHeight = 0;
 
         // ─── Tip Image Display (single Image, swapped per tip) ──────
-        // Figma: "Image" frame, 806px wide, variable height (~578px)
-        // ProTipCard uses a single Image component + Sprite[] array
-        // Assign sprites in Inspector: ProTipCard → Tip Sprites (one per tip key)
-        var tipImageGO = FindOrCreateLayoutImage("TipImageDisplay", tipCardGO.transform,
-            Color.clear, 578f);
-        var tipImgComponent = tipImageGO.GetComponent<Image>();
+        // IMPORTANT: This must be a SEPARATE child GameObject, not the card itself.
+        // The card's own Image is the background. This is the tip illustration.
+
+        // Clean up old stale image objects from previous builds
+        foreach (string oldName in new[] { "TipImage", "TipImage_0", "TipImage_1", "TipImage_2",
+            "TipImage_3", "TipImage_4", "TipImage_5", "TipImage_6", "TipImage_7" })
+        {
+            var old = tipCardGO.transform.Find(oldName);
+            if (old != null) Object.DestroyImmediate(old.gameObject);
+        }
+
+        var tipImageGO = FindOrCreate("TipImageDisplay", tipCardGO.transform);
+        var tipImageRT = EnsureComponent<RectTransform>(tipImageGO);
+        var tipImgComponent = EnsureComponent<Image>(tipImageGO);
+        tipImgComponent.color = Color.white;
         tipImgComponent.preserveAspect = true;
-        tipImageGO.SetActive(false); // hidden until a sprite is assigned
+        tipImgComponent.raycastTarget = false;
+        // LayoutElement so it participates in the VerticalLayoutGroup
+        var tipImgLE = EnsureComponent<LayoutElement>(tipImageGO);
+        tipImgLE.preferredHeight = 578f;
+        tipImgLE.flexibleWidth = 1f;
+        tipImageGO.SetActive(false); // hidden until a sprite is assigned at runtime
 
         // ─── "TAP FOR NEXT TIP" ───────────────────────────────────
         // Figma: Rubik:600@39, color=#ffffff, 882×54, RIGHT-aligned
