@@ -585,7 +585,7 @@ public class CreateUIScreen
         tmp.alignment = alignment;
         tmp.color = Color.white;
         tmp.textWrappingMode = TextWrappingModes.Normal;
-        tmp.overflowMode = TextOverflowModes.Ellipsis;
+        tmp.overflowMode = TextOverflowModes.Truncate;
 
         return go;
     }
@@ -604,7 +604,7 @@ public class CreateUIScreen
         tmp.alignment = alignment;
         tmp.color = Color.white;
         tmp.textWrappingMode = TextWrappingModes.Normal;
-        tmp.overflowMode = TextOverflowModes.Ellipsis;
+        tmp.overflowMode = TextOverflowModes.Truncate;
 
         var le = EnsureComponent<LayoutElement>(go);
         if (preferredHeight > 0)
