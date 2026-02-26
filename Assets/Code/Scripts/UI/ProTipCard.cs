@@ -124,26 +124,20 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
                 tipImageDisplay.sprite = sprite;
                 tipImageDisplay.gameObject.SetActive(true);
 
-                // Use native aspect ratio but cap height so card doesn't overflow
+                // Use the sprite's native pixel dimensions directly
                 float nativeW = sprite.rect.width;
                 float nativeH = sprite.rect.height;
-                float maxW = 882f;  // card content width (978 - 48*2 padding)
-                float maxH = 400f;  // cap to prevent card from covering bottom UI
-
-                // Scale down to fit within max bounds while preserving aspect ratio
-                float scale = Mathf.Min(maxW / nativeW, maxH / nativeH, 1f);
-                float finalW = nativeW * scale;
-                float finalH = nativeH * scale;
 
                 if (_imageLayoutElement != null)
                 {
-                    _imageLayoutElement.preferredWidth = finalW;
-                    _imageLayoutElement.preferredHeight = finalH;
+                    _imageLayoutElement.preferredWidth = nativeW;
+                    _imageLayoutElement.preferredHeight = nativeH;
                 }
 
+                // Also set sizeDelta as fallback
                 var imgRT = tipImageDisplay.GetComponent<RectTransform>();
                 if (imgRT != null)
-                    imgRT.sizeDelta = new Vector2(finalW, finalH);
+                    imgRT.sizeDelta = new Vector2(nativeW, nativeH);
 
                 tipImageDisplay.preserveAspect = true;
             }
