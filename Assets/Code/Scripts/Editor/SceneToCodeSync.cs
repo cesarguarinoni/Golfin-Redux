@@ -98,12 +98,26 @@ public class SceneToCodeSync
             data[$"{path}.fontSize"] = tmp.fontSize;
             data[$"{path}.color"] = $"\"#{ColorUtility.ToHtmlStringRGBA(tmp.color)}\"";
             data[$"{path}.fontStyle"] = $"\"{tmp.fontStyle}\"";
+            data[$"{path}.fontWeight"] = $"\"{tmp.fontWeight}\"";
             data[$"{path}.characterSpacing"] = tmp.characterSpacing;
+            data[$"{path}.lineSpacing"] = tmp.lineSpacing;
+            data[$"{path}.paragraphSpacing"] = tmp.paragraphSpacing;
+            data[$"{path}.wordSpacing"] = tmp.wordSpacing;
             data[$"{path}.alignment"] = $"\"{tmp.alignment}\"";
+            data[$"{path}.textWrappingMode"] = $"\"{tmp.textWrappingMode}\"";
             if (tmp.font != null)
+            {
                 data[$"{path}.font"] = $"\"{tmp.font.name}\"";
+                data[$"{path}.fontAssetPath"] = $"\"{UnityEditor.AssetDatabase.GetAssetPath(tmp.font)}\"";
+            }
             data[$"{path}.outlineWidth"] = tmp.outlineWidth;
             data[$"{path}.outlineColor"] = $"\"#{ColorUtility.ToHtmlStringRGBA(tmp.outlineColor)}\"";
+            data[$"{path}.enableAutoSizing"] = tmp.enableAutoSizing;
+            if (tmp.enableAutoSizing)
+            {
+                data[$"{path}.fontSizeMin"] = tmp.fontSizeMin;
+                data[$"{path}.fontSizeMax"] = tmp.fontSizeMax;
+            }
             data[$"{path}.text"] = $"\"{EscapeJson(tmp.text)}\"";
         }
 
@@ -114,6 +128,45 @@ public class SceneToCodeSync
             if (img.sprite != null)
                 data[$"{path}.sprite"] = $"\"{img.sprite.name}\"";
             data[$"{path}.imageType"] = $"\"{img.type}\"";
+            data[$"{path}.preserveAspect"] = img.preserveAspect;
+            data[$"{path}.raycastTarget"] = img.raycastTarget;
+        }
+
+        // Button component
+        var btn = t.GetComponent<UnityEngine.UI.Button>();
+        if (btn != null)
+        {
+            data[$"{path}.buttonInteractable"] = btn.interactable;
+            var nav = btn.navigation;
+            data[$"{path}.buttonNavMode"] = $"\"{nav.mode}\"";
+        }
+
+        // PressableButton (custom)
+        var pressable = t.GetComponent<PressableButton>();
+        if (pressable != null)
+        {
+            data[$"{path}.hasPressableButton"] = true;
+        }
+
+        // LayoutElement
+        var le = t.GetComponent<UnityEngine.UI.LayoutElement>();
+        if (le != null)
+        {
+            data[$"{path}.layoutPreferredWidth"] = le.preferredWidth;
+            data[$"{path}.layoutPreferredHeight"] = le.preferredHeight;
+            data[$"{path}.layoutMinWidth"] = le.minWidth;
+            data[$"{path}.layoutMinHeight"] = le.minHeight;
+            data[$"{path}.layoutFlexibleWidth"] = le.flexibleWidth;
+            data[$"{path}.layoutFlexibleHeight"] = le.flexibleHeight;
+        }
+
+        // CanvasGroup
+        var cg = t.GetComponent<CanvasGroup>();
+        if (cg != null)
+        {
+            data[$"{path}.canvasGroupAlpha"] = cg.alpha;
+            data[$"{path}.canvasGroupInteractable"] = cg.interactable;
+            data[$"{path}.canvasGroupBlocksRaycasts"] = cg.blocksRaycasts;
         }
 
         // Recurse children
