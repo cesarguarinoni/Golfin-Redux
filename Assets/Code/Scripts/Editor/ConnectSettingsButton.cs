@@ -20,11 +20,43 @@ public class ConnectSettingsButton
             return;
         }
 
-        // Find Settings Screen in scene  
-        SettingsScreen settingsScreen = Object.FindAnyObjectByType<SettingsScreen>();
+        // Find Settings Screen - check BOTH active and inactive objects
+        SettingsScreen settingsScreen = null;
+        
+        // Method 1: Try to find by component (active objects only)
+        settingsScreen = Object.FindAnyObjectByType<SettingsScreen>();
+        
+        // Method 2: If not found, search all objects including inactive
+        if (settingsScreen == null)
+        {
+            GameObject settingsGO = GameObject.Find("SettingsScreen");
+            if (settingsGO != null)
+            {
+                settingsScreen = settingsGO.GetComponent<SettingsScreen>();
+                Debug.Log("[GOLFIN] Found inactive SettingsScreen GameObject");
+            }
+        }
+        
+        // Method 3: Search all objects in scene including inactive
+        if (settingsScreen == null)
+        {
+            SettingsScreen[] allSettings = Resources.FindObjectsOfTypeAll<SettingsScreen>();
+            foreach (var settings in allSettings)
+            {
+                // Make sure it's a scene object, not a prefab
+                if (settings.gameObject.scene.name != null)
+                {
+                    settingsScreen = settings;
+                    Debug.Log("[GOLFIN] Found SettingsScreen in scene (inactive objects search)");
+                    break;
+                }
+            }
+        }
+        
         if (settingsScreen == null)
         {
             Debug.LogError("[GOLFIN] SettingsScreen not found! Generate it first using Tools → GOLFIN → Generate Settings Screen");
+            Debug.LogError("[GOLFIN] Make sure the SettingsScreen GameObject is named 'SettingsScreen' and has SettingsScreen component");
             return;
         }
 
@@ -35,6 +67,7 @@ public class ConnectSettingsButton
         if (navMoreButton == null)
         {
             Debug.LogError("[GOLFIN] navMore button not found or not assigned in HomeScreen!");
+            Debug.LogError("[GOLFIN] Make sure navMore button is assigned in HomeScreen Inspector");
             return;
         }
 
@@ -49,17 +82,12 @@ public class ConnectSettingsButton
             GameObject settingsGO = settingsScreen.gameObject;
             settingsGO.SetActive(true);
             
-            // Trigger Settings Screen enter logic
+            // Trigger Settings Screen enter logic with proper fade-in
             settingsScreen.OnScreenEnter();
-            
-            // Optionally use ScreenManager for proper transition
-            if (ScreenManager.Instance != null)
-            {
-                ScreenManager.Instance.TransitionTo(settingsScreen);
-            }
         });
 
         Debug.Log("[GOLFIN] ✅ navMore button successfully connected to Settings Screen!");
+        Debug.Log("[GOLFIN] Settings Screen found: " + settingsScreen.name + " (Active: " + settingsScreen.gameObject.activeInHierarchy + ")");
         Debug.Log("[GOLFIN] Test: Press the 'More' button in the bottom navigation to open Settings");
     }
 
@@ -80,6 +108,34 @@ public class ConnectSettingsButton
         {
             navMoreButton.onClick.RemoveAllListeners();
             Debug.Log("[GOLFIN] navMore button listeners cleared");
+        }
+    }
+    
+    [MenuItem("Tools/GOLFIN/Debug Settings Screen")]
+    public static void DebugSettingsScreen()
+    {
+        Debug.Log("[GOLFIN] === SETTINGS SCREEN DEBUG INFO ===");
+        
+        // Search for SettingsScreen objects
+        SettingsScreen[] allSettings = Resources.FindObjectsOfTypeAll<SettingsScreen>();
+        Debug.Log("[GOLFIN] Found " + allSettings.Length + " SettingsScreen objects total");
+        
+        foreach (var settings in allSettings)
+        {
+            bool isSceneObject = settings.gameObject.scene.name != null;
+            Debug.Log("[GOLFIN] - " + settings.name + " | Active: " + settings.gameObject.activeInHierarchy + " | Scene: " + isSceneObject);
+        }
+        
+        // Search for SettingsScreen GameObject by name
+        GameObject settingsGO = GameObject.Find("SettingsScreen");
+        if (settingsGO != null)
+        {
+            SettingsScreen component = settingsGO.GetComponent<SettingsScreen>();
+            Debug.Log("[GOLFIN] GameObject 'SettingsScreen' found | Has component: " + (component != null) + " | Active: " + settingsGO.activeInHierarchy);
+        }
+        else
+        {
+            Debug.Log("[GOLFIN] GameObject 'SettingsScreen' not found");
         }
     }
 }
