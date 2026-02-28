@@ -12373,6 +12373,7 @@ GameObject:
   - component: {fileID: 1985270840}
   - component: {fileID: 1985270839}
   - component: {fileID: 1985270838}
+  - component: {fileID: 1985270841}
   m_Layer: 0
   m_Name: SettingsButton
   m_TagString: Untagged
@@ -12481,6 +12482,25 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1985270836}
   m_CullTransparentMesh: 1
+--- !u!114 &1985270841
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1985270836}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3d1053431e3bc248935e45179f375eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PressableButton
+  pressedScale: 0.95
+  pressedTint: {r: 0.85, g: 0.85, b: 0.85, a: 1}
+  transitionSpeed: 15
+  pressSound: {fileID: 0}
+  onClick:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1993017526
 GameObject:
   m_ObjectHideFlags: 0
