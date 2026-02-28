@@ -11,10 +11,10 @@ using System.Collections.Generic;
 public class SettingsScreen : ScreenBase
 {
     [Header("Settings Screen UI")]
-    [SerializeField] private CanvasGroup canvasGroup;
-    [SerializeField] private ScrollRect scrollRect;
-    [SerializeField] private Transform contentContainer;
-    [SerializeField] private PressableButton closeButton;
+    [SerializeField] private CanvasGroup settingsCanvasGroup; // ✅ Renamed to avoid parent class conflict
+    [SerializeField] private ScrollRect settingsScrollRect;
+    [SerializeField] private Transform settingsContentContainer;
+    [SerializeField] private PressableButton settingsCloseButton;
 
     [Header("Accordion Sections")]
     [SerializeField] private SettingsSection userProfileSection;
@@ -59,9 +59,9 @@ public class SettingsScreen : ScreenBase
 
     private void StartFadeInAnimation()
     {
-        if (canvasGroup != null)
+        if (settingsCanvasGroup != null) // ✅ Updated field name
         {
-            canvasGroup.alpha = 0f;
+            settingsCanvasGroup.alpha = 0f;
             fadeCoroutine = StartCoroutine(FadeIn());
         }
     }
@@ -73,17 +73,17 @@ public class SettingsScreen : ScreenBase
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsed / duration);
+            settingsCanvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsed / duration); // ✅ Updated field name
             yield return null;
         }
-        canvasGroup.alpha = 1f;
+        settingsCanvasGroup.alpha = 1f; // ✅ Updated field name
     }
 
     private void SetupButtons()
     {
-        if (closeButton != null)
+        if (settingsCloseButton != null) // ✅ Updated field name
         {
-            closeButton.onClick.AddListener(OnCloseButtonClicked);
+            settingsCloseButton.onClick.AddListener(OnCloseButtonClicked);
         }
 
         if (logoutButton != null)

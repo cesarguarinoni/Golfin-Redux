@@ -266,17 +266,17 @@ public class SettingsScreenGenerator
   
     private static void AssignSettingsScreenReferences(SettingsScreen settingsScreen, GameObject settingsGO, CanvasGroup canvasGroup, ScrollRect scrollRect, Transform contentContainer)  
     {  
-        // Use reflection to assign private fields  
-        var canvasGroupField = typeof(SettingsScreen).GetField("canvasGroup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);  
+        // ✅ Use updated field names to avoid parent class conflicts
+        var canvasGroupField = typeof(SettingsScreen).GetField("settingsCanvasGroup", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);  
         canvasGroupField?.SetValue(settingsScreen, canvasGroup);  
   
-        var scrollRectField = typeof(SettingsScreen).GetField("scrollRect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);  
+        var scrollRectField = typeof(SettingsScreen).GetField("settingsScrollRect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);  
         scrollRectField?.SetValue(settingsScreen, scrollRect);  
   
-        var contentField = typeof(SettingsScreen).GetField("contentContainer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);  
+        var contentField = typeof(SettingsScreen).GetField("settingsContentContainer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);  
         contentField?.SetValue(settingsScreen, contentContainer);  
   
-        var closeButtonField = typeof(SettingsScreen).GetField("closeButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);  
+        var closeButtonField = typeof(SettingsScreen).GetField("settingsCloseButton", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);  
         PressableButton closeBtn = settingsGO.transform.Find("CloseButton")?.GetComponent<PressableButton>();  
         closeButtonField?.SetValue(settingsScreen, closeBtn);  
   
