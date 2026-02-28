@@ -804,7 +804,7 @@ public class CreateUIScreen
         SetIfNew(currencyText, () => {
             EnsureComponent<RectTransform>(currencyText).sizeDelta = new Vector2(160f, 50f);
             var tmp = EnsureComponent<TextMeshProUGUI>(currencyText);
-            tmp.text = "50000";
+            tmp.text = component.startingCurrency.ToString();
             tmp.fontSize = 36f;
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = Color.white;
@@ -1097,7 +1097,7 @@ public class CreateUIScreen
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(900f, 44f);
             var tmp = EnsureComponent<TextMeshProUGUI>(courseName);
-            tmp.text = "Lomond Country Club  - Hole 5";
+            tmp.text = "COURSE NAME - HOLE 1";
             tmp.fontSize = 36f;
             tmp.color = HexColor("#D0D8E4");
             tmp.alignment = TextAlignmentOptions.Center;
@@ -1550,3 +1550,12 @@ public class CreateUIScreen
         }
     }
 }
+  
+    [MenuItem(\"Tools/GOLFIN/Create Updated UI Scene\")]  
+    public static void CreateUpdatedGolfinUIScene()  
+    {  
+        Debug.Log(\"Creating updated GOLFIN UI scene matching current HomeScreen...\");  
+        CreateUI();  
+        Debug.Log(\"Updated GOLFIN UI scene created successfully!\");  
+    }  
+} 
