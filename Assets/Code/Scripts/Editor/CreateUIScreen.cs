@@ -804,7 +804,7 @@ public class CreateUIScreen
         SetIfNew(currencyText, () => {
             EnsureComponent<RectTransform>(currencyText).sizeDelta = new Vector2(160f, 50f);
             var tmp = EnsureComponent<TextMeshProUGUI>(currencyText);
-            tmp.text = component.startingCurrency.ToString();
+            tmp.text = "50000"; // Default currency amount
             tmp.fontSize = 36f;
             tmp.fontStyle = FontStyles.Bold;
             tmp.color = Color.white;
