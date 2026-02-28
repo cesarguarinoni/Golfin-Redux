@@ -1,1 +1,0 @@
-"SSH automation restored"  
