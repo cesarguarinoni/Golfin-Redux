@@ -23,6 +23,8 @@ public class SettingsScreenGenerator
   
         GameObject settingsScreenGO = CreateSettingsScreen(canvas.transform);  
         ConnectToHomeScreenButton();  
+        
+        Debug.Log("[GOLFIN] Settings Screen generated successfully and hidden by default");
     }
 
     private static GameObject CreateSettingsScreen(Transform parent)  
@@ -38,9 +40,11 @@ public class SettingsScreenGenerator
         settingsRT.offsetMin = Vector2.zero;  
         settingsRT.offsetMax = Vector2.zero;  
   
-        // Add CanvasGroup for fade animation  
+        // Add CanvasGroup for fade animation - START HIDDEN
         CanvasGroup canvasGroup = settingsGO.AddComponent<CanvasGroup>();  
-        canvasGroup.alpha = 1f;  
+        canvasGroup.alpha = 0f;  // ✅ Hidden by default
+        canvasGroup.interactable = false;  // ✅ No interaction when hidden
+        canvasGroup.blocksRaycasts = false;  // ✅ Don't block clicks when hidden
   
         // Add background  
         Image backgroundImg = settingsGO.AddComponent<Image>();  
@@ -93,6 +97,9 @@ public class SettingsScreenGenerator
         // Add SettingsScreen component and assign references  
         SettingsScreen settingsScreen = settingsGO.AddComponent<SettingsScreen>();  
         AssignSettingsScreenReferences(settingsScreen, settingsGO, canvasGroup, scrollRect, contentGO.transform);  
+        
+        // ✅ START HIDDEN - Settings Screen should not appear until triggered
+        settingsGO.SetActive(false);  // Hidden by default
   
         return settingsGO;  
     } 
@@ -195,6 +202,13 @@ public class SettingsScreenGenerator
         // Add close text  
         GameObject closeTextGO = new GameObject("Text");  
         closeTextGO.transform.SetParent(closeButtonGO.transform, false);  
+        
+        RectTransform closeTextRT = closeTextGO.AddComponent<RectTransform>();
+        closeTextRT.anchorMin = Vector2.zero;
+        closeTextRT.anchorMax = Vector2.one;
+        closeTextRT.offsetMin = Vector2.zero;
+        closeTextRT.offsetMax = Vector2.zero;
+        
         TextMeshProUGUI closeText = closeTextGO.AddComponent<TextMeshProUGUI>();  
         closeText.text = "Close";  
         closeText.fontSize = 18f;  
@@ -217,6 +231,13 @@ public class SettingsScreenGenerator
   
         GameObject logoutTextGO = new GameObject("Text");  
         logoutTextGO.transform.SetParent(logoutGO.transform, false);  
+        
+        RectTransform logoutTextRT = logoutTextGO.AddComponent<RectTransform>();
+        logoutTextRT.anchorMin = Vector2.zero;
+        logoutTextRT.anchorMax = Vector2.one;
+        logoutTextRT.offsetMin = Vector2.zero;
+        logoutTextRT.offsetMax = Vector2.zero;
+        
         TextMeshProUGUI logoutText = logoutTextGO.AddComponent<TextMeshProUGUI>();  
         logoutText.text = "Log Out";  
         logoutText.fontSize = 16f;  
@@ -229,6 +250,13 @@ public class SettingsScreenGenerator
         // Add placeholder content - will be replaced with Figma assets  
         GameObject placeholderGO = new GameObject("PlaceholderContent");  
         placeholderGO.transform.SetParent(parent, false);  
+        
+        RectTransform placeholderRT = placeholderGO.AddComponent<RectTransform>();
+        placeholderRT.anchorMin = Vector2.zero;
+        placeholderRT.anchorMax = Vector2.one;
+        placeholderRT.offsetMin = Vector2.zero;
+        placeholderRT.offsetMax = Vector2.zero;
+        
         TextMeshProUGUI placeholder = placeholderGO.AddComponent<TextMeshProUGUI>();  
         placeholder.text = "Content for " + sectionName + " will be added here.";  
         placeholder.fontSize = 14f;  
@@ -262,10 +290,10 @@ public class SettingsScreenGenerator
         HomeScreen homeScreen = Object.FindAnyObjectByType<HomeScreen>();  
         if (homeScreen == null)  
         {  
-            Debug.LogWarning("[GOLFIN] HomeScreen not found.");  
+            Debug.LogWarning("[GOLFIN] HomeScreen not found - Settings Screen ready but not connected.");  
             return;  
         }  
   
-        Debug.Log("[GOLFIN] Settings Screen ready for connection to SettingsButton");  
+        Debug.Log("[GOLFIN] Settings Screen ready. Connect SettingsButton manually or via ScreenManager.");  
     }  
 } 
