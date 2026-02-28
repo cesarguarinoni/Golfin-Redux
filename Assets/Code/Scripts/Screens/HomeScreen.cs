@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 using TMPro;
 using System.Collections;
 
@@ -43,8 +44,14 @@ public class HomeScreen : ScreenBase
     [SerializeField] private PressableButton navBag;
     [SerializeField] private PressableButton navMore;
 
+    [Header("Settings Button")]
+    [SerializeField] private PressableButton settingsButton;  // Drag SettingsButton here in Inspector
+
     [Header("Settings")]
     [SerializeField] private int startingCurrency = 50000;
+    
+    [Header("Settings Events")]
+    public UnityEvent OnSettingsPressed;  // Configure in Inspector to open Settings
 
     private int _currentAnnouncement;
 
@@ -79,6 +86,23 @@ public class HomeScreen : ScreenBase
         // Show first announcement
         _currentAnnouncement = 0;
         UpdateAnnouncementDots();
+        
+        // Connect Settings button (same pattern as SplashScreen Start button)
+        if (settingsButton != null)
+            settingsButton.onClick.AddListener(HandleSettings);
+    }
+
+    public override void OnScreenExit()
+    {
+        // Clean up Settings button listener (same pattern as SplashScreen)
+        if (settingsButton != null)
+            settingsButton.onClick.RemoveListener(HandleSettings);
+    }
+
+    private void HandleSettings()
+    {
+        Debug.Log("[HomeScreen] SETTINGS pressed");
+        OnSettingsPressed?.Invoke();  // UnityEvent handles the transition (configure in Inspector)
     }
 
     public void RandomizeCharacter()
