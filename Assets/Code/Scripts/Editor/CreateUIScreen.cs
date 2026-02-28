@@ -1230,7 +1230,7 @@ public class CreateUIScreen
             EnsureComponent<Image>(bottomNav);
             TryAssignSprite(bottomNav, SpritePaths.BottomNavBg, new Color(0.03f, 0.06f, 0.12f, 0.96f));
             var bnHLG = EnsureComponent<HorizontalLayoutGroup>(bottomNav);
-            bnHLG.padding = new RectOffset(60, 60, 10, 50);
+            bnHLG.padding = new RectOffset(60, 60, 40, 20);
             bnHLG.spacing = 0f;
             bnHLG.childAlignment = TextAnchor.MiddleCenter;
             bnHLG.childControlWidth = true;
