@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 using UnityEngine.UI;
 using TMPro;
@@ -8,22 +8,22 @@ using System.Reflection;
 /// Editor tool that creates OR updates the GOLFIN UI scene hierarchy.
 /// 
 /// ALL VALUES SOURCED FROM FIGMA "Golfin Game Redux" (2026-02-25)
-/// via Figma REST API — no more guessing from screenshots.
+/// via Figma REST API â€” no more guessing from screenshots.
 ///
-/// Reference resolution: 1170×2532 (iPhone Pro Max @3x)
-/// Primary font: Rubik (weights 400–800)
+/// Reference resolution: 1170Ã—2532 (iPhone Pro Max @3x)
+/// Primary font: Rubik (weights 400â€“800)
 /// Accent color: #eedc9a (gold)
 ///
-/// Usage: Unity menu → Tools → Create GOLFIN UI Scene
-///        (safe to run multiple times — FindOrCreate preserves sprites)
+/// Usage: Unity menu â†’ Tools â†’ Create GOLFIN UI Scene
+///        (safe to run multiple times â€” FindOrCreate preserves sprites)
 /// </summary>
 public class CreateUIScreen
 {
-    // ═══ FIGMA REFERENCE RESOLUTION ═══
+    // â•â•â• FIGMA REFERENCE RESOLUTION â•â•â•
     const float W = 1170f;
     const float H = 2532f;
 
-    // ═══ FIGMA COLORS (exact hex from API) ═══
+    // â•â•â• FIGMA COLORS (exact hex from API) â•â•â•
     static readonly Color GoldAccent      = HexColor("#eedc9a");   // PRO TIP header, dividers
     static readonly Color DarkGold        = HexColor("#321506");   // Primary button text
     static readonly Color GoldBorder      = HexColor("#ffe48b");   // Primary button inner stroke
@@ -35,13 +35,13 @@ public class CreateUIScreen
     static readonly Color GrayStroke      = HexColor("#cfcfcf");   // Secondary text stroke
     static readonly Color GreenButton     = HexColor("#5fb610");   // START button (Splash)
 
-    // ═══ FIGMA LAYOUT CONSTANTS (px from absoluteBoundingBox) ═══
-    // All positions are relative to the 1170×2532 canvas.
+    // â•â•â• FIGMA LAYOUT CONSTANTS (px from absoluteBoundingBox) â•â•â•
+    // All positions are relative to the 1170Ã—2532 canvas.
     // Content Container: 978px wide, centered (96px margin each side)
     const float ContentWidth = 978f;
     const float ContentMargin = 96f;  // (1170-978)/2
 
-    // ═══ SPRITE PATHS ═══
+    // â•â•â• SPRITE PATHS â•â•â•
     static class SpritePaths
     {
         public const string Logo             = "Assets/Art/UI/golfin_logo.png";
@@ -74,9 +74,9 @@ public class CreateUIScreen
         public const string NavMore            = "Assets/Art/UI/Icons/nav_more.png";
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // MAIN ENTRY POINT
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     [MenuItem("Tools/Create GOLFIN UI Scene")]
     public static void CreateUI()
@@ -95,13 +95,13 @@ public class CreateUIScreen
             Debug.Log("[GOLFIN] Updating existing UI scene (sprites preserved)...");
         }
 
-        // ─── Managers ────────────────────────────────────────────
+        // â”€â”€â”€ Managers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         GameObject managers = FindOrCreate("Managers", root.transform);
         var locManager = EnsureComponent<LocalizationManager>(managers);
         var screenManager = EnsureComponent<ScreenManager>(managers);
         var bootstrap = EnsureComponent<GameBootstrap>(managers);
 
-        // ─── Canvas ──────────────────────────────────────────────
+        // â”€â”€â”€ Canvas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         GameObject canvasGO = FindOrCreate("Canvas", root.transform);
         var canvas = EnsureComponent<Canvas>(canvasGO);
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -111,19 +111,19 @@ public class CreateUIScreen
         scaler.matchWidthOrHeight = 0.5f;
         EnsureComponent<GraphicRaycaster>(canvasGO);
 
-        // ─── Create/Update Screens ───────────────────────────────
+        // â”€â”€â”€ Create/Update Screens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var logoScreen = SetupLogoScreen(canvasGO.transform);
         var loadingScreen = SetupLoadingScreen(canvasGO.transform);
         var splashScreen = SetupSplashScreen(canvasGO.transform);
         var homeScreen = SetupHomeScreen(canvasGO.transform);
 
-        // ─── Wire GameBootstrap ──────────────────────────────────
+        // â”€â”€â”€ Wire GameBootstrap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         SetPrivateField(bootstrap, "logoScreen", logoScreen);
         SetPrivateField(bootstrap, "loadingScreen", loadingScreen);
         SetPrivateField(bootstrap, "splashScreen", splashScreen);
         SetPrivateField(bootstrap, "homeScreen", homeScreen);
 
-        // ─── EventSystem ─────────────────────────────────────────
+        // â”€â”€â”€ EventSystem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (!Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>())
         {
             GameObject es = FindOrCreate("EventSystem", root.transform);
@@ -131,16 +131,16 @@ public class CreateUIScreen
             EnsureComponent<UnityEngine.EventSystems.StandaloneInputModule>(es);
         }
 
-        // ─── Apply overrides from screen_values.json ─────────────
+        // â”€â”€â”€ Apply overrides from screen_values.json â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ApplySceneValueOverrides(canvasGO.transform);
 
         Selection.activeGameObject = root;
         string mode = isUpdate ? "Updated" : "Created";
-        Debug.Log($"[GOLFIN] {mode} UI scene successfully! ✅");
+        Debug.Log($"[GOLFIN] {mode} UI scene successfully! âœ…");
     }
 
     /// <summary>
-    /// Reads Assets/Code/Data/screen_values.json (exported via Tools → QA → Export Scene Values)
+    /// Reads Assets/Code/Data/screen_values.json (exported via Tools â†’ QA â†’ Export Scene Values)
     /// and applies saved values back to matching components.
     /// This preserves Cesar's manual Inspector tweaks across rebuilds.
     /// </summary>
@@ -149,7 +149,7 @@ public class CreateUIScreen
         string path = "Assets/Code/Data/screen_values.json";
         if (!System.IO.File.Exists(path))
         {
-            Debug.Log("[GOLFIN] No screen_values.json found — using code defaults.");
+            Debug.Log("[GOLFIN] No screen_values.json found â€” using code defaults.");
             return;
         }
 
@@ -163,7 +163,7 @@ public class CreateUIScreen
         }
 
         if (applied > 0)
-            Debug.Log($"[GOLFIN] Applied {applied} override(s) from screen_values.json ✅");
+            Debug.Log($"[GOLFIN] Applied {applied} override(s) from screen_values.json âœ…");
     }
 
     static void ApplyOverridesToNode(Transform t, string nodePath, string json, ref int applied)
@@ -237,7 +237,7 @@ public class CreateUIScreen
         }
     }
 
-    // ═══ JSON PARSING HELPERS (simple regex, no dependency) ═══
+    // â•â•â• JSON PARSING HELPERS (simple regex, no dependency) â•â•â•
 
     static bool TryGetJsonVector2(string json, string nodePath, string prop, out Vector2 result)
     {
@@ -298,10 +298,10 @@ public class CreateUIScreen
         return ColorUtility.TryParseHtmlString(hex, out result);
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // LOGO SCREEN
-    // Figma page: "Logo" — single component, black bg, centered logo
-    // ═══════════════════════════════════════════════════════════════
+    // Figma page: "Logo" â€” single component, black bg, centered logo
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     static LogoScreen SetupLogoScreen(Transform parent)
     {
         GameObject screen = FindOrCreateScreenPanel("LogoScreen", parent);
@@ -311,8 +311,8 @@ public class CreateUIScreen
         var bg = FindOrCreateImageStretched("Background", screen.transform);
         bg.GetComponent<Image>().color = Color.black;
 
-        // Logo — centered horizontally and vertically
-        // Figma: Logo Container is 930×168 in Components page
+        // Logo â€” centered horizontally and vertically
+        // Figma: Logo Container is 930Ã—168 in Components page
         var logo = FindOrCreateImageAnchored("Logo", screen.transform,
             anchorCenter: new Vector2(0.5f, 0.5f),
             size: new Vector2(930f, 168f));
@@ -322,43 +322,43 @@ public class CreateUIScreen
         return component;
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // LOADING SCREEN
-    // Figma page: "Loading" — 9 variants, all share same layout structure
+    // Figma page: "Loading" â€” 9 variants, all share same layout structure
     // Values from Figma API + visual comparison (2026-02-26)
-    // Canvas: 1170×2532
+    // Canvas: 1170Ã—2532
     //
     // Figma structure (from API):
-    //   Screen (1170×2532)
-    //     └─ Background (stretched)
-    //     └─ BottomGradient (dark vignette at bottom for text legibility)
-    //     └─ Game Screen Content (1170×2532)
-    //         └─ Content Container (978×2208, x=96, y=24)
-    //             └─ Pop-up (978×variable, y=680, radius=50, BACKGROUND_BLUR r=4)
-    //                 └─ Mission Title (281×120, radius=[8,8,0,0])
-    //                     └─ "PRO TIP" (Rubik:600@66, #eedc9a)
-    //                 └─ Separator (978×0 line)
-    //                 └─ Goals Container (952×variable)
-    //                     └─ Tip text (856×variable, Rubik:600@51, #ffffff)
-    //                 └─ Image (806×variable, tip illustrations)
-    //                 └─ Goals Container (978×78)
-    //                     └─ "TAP FOR NEXT TIP" (882×54, Rubik:600@39, #ffffff)
-    //         └─ "NOW LOADING" (978×123, y=2281, Rubik:600@102, #ffffff)
-    //         └─ Bar + Size (978×105, y=2428)
-    //             └─ Bar (978×30, radius=8, fill=#ffffff)
-    //                 └─ Fill (376×30, radius=8, stroke=#000000 w=1)
-    //             └─ "52.20 / 267 MB" (978×63, Rubik:600@48, #ffffff)
-    // ═══════════════════════════════════════════════════════════════
+    //   Screen (1170Ã—2532)
+    //     â””â”€ Background (stretched)
+    //     â””â”€ BottomGradient (dark vignette at bottom for text legibility)
+    //     â””â”€ Game Screen Content (1170Ã—2532)
+    //         â””â”€ Content Container (978Ã—2208, x=96, y=24)
+    //             â””â”€ Pop-up (978Ã—variable, y=680, radius=50, BACKGROUND_BLUR r=4)
+    //                 â””â”€ Mission Title (281Ã—120, radius=[8,8,0,0])
+    //                     â””â”€ "PRO TIP" (Rubik:600@66, #eedc9a)
+    //                 â””â”€ Separator (978Ã—0 line)
+    //                 â””â”€ Goals Container (952Ã—variable)
+    //                     â””â”€ Tip text (856Ã—variable, Rubik:600@51, #ffffff)
+    //                 â””â”€ Image (806Ã—variable, tip illustrations)
+    //                 â””â”€ Goals Container (978Ã—78)
+    //                     â””â”€ "TAP FOR NEXT TIP" (882Ã—54, Rubik:600@39, #ffffff)
+    //         â””â”€ "NOW LOADING" (978Ã—123, y=2281, Rubik:600@102, #ffffff)
+    //         â””â”€ Bar + Size (978Ã—105, y=2428)
+    //             â””â”€ Bar (978Ã—30, radius=8, fill=#ffffff)
+    //                 â””â”€ Fill (376Ã—30, radius=8, stroke=#000000 w=1)
+    //             â””â”€ "52.20 / 267 MB" (978Ã—63, Rubik:600@48, #ffffff)
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     static LoadingScreen SetupLoadingScreen(Transform parent)
     {
         GameObject screen = FindOrCreateScreenPanel("LoadingScreen", parent);
         var component = EnsureComponent<LoadingScreen>(screen);
 
-        // ─── Background — full stretch ────────────────────────────
+        // â”€â”€â”€ Background â€” full stretch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var bg = FindOrCreateImageStretched("Background", screen.transform);
         TryAssignSprite(bg, SpritePaths.LoadingBackground, new Color(0.15f, 0.25f, 0.1f));
 
-        // ─── Bottom Gradient Overlay ──────────────────────────────
+        // â”€â”€â”€ Bottom Gradient Overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Dark vignette at bottom for text legibility (missing in previous build)
         var bottomGrad = FindOrCreate("BottomGradient", screen.transform);
         var bgRT = EnsureComponent<RectTransform>(bottomGrad);
@@ -370,7 +370,7 @@ public class CreateUIScreen
         // Solid dark overlay; for proper gradient use a gradient sprite
         bgImg.color = new Color(0f, 0f, 0f, 0.3f);
 
-        // ─── Content Container (centered, 978px wide) ────────────
+        // â”€â”€â”€ Content Container (centered, 978px wide) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Figma: x=96 from left edge, 978px wide, 2208px tall, y=24 from top
         GameObject contentContainer = FindOrCreate("ContentContainer", screen.transform);
         var ccRT = EnsureComponent<RectTransform>(contentContainer);
@@ -379,7 +379,7 @@ public class CreateUIScreen
         ccRT.offsetMin = Vector2.zero;
         ccRT.offsetMax = Vector2.zero;
 
-        // ─── Pro Tip Card (Pop-up) ────────────────────────────────
+        // â”€â”€â”€ Pro Tip Card (Pop-up) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Figma: 978px wide (full content container width), radius=50
         //   BACKGROUND_BLUR effect (r=4)
         //   Top edge at Y=680 from canvas top
@@ -388,9 +388,9 @@ public class CreateUIScreen
         var tipCardRT = EnsureComponent<RectTransform>(tipCardGO);
         tipCardRT.anchorMin = new Vector2(0f, 0.5f);
         tipCardRT.anchorMax = new Vector2(1f, 0.5f);  // FULL WIDTH, vertically centered anchor
-        tipCardRT.pivot = new Vector2(0.5f, 0.5f);    // center pivot — card grows from center
-        // Figma: card center is roughly at Y=1100 from top → offset from screen center
-        // Screen center = 2532/2 = 1266, content center ≈ 1100 → offset = +166 upward
+        tipCardRT.pivot = new Vector2(0.5f, 0.5f);    // center pivot â€” card grows from center
+        // Figma: card center is roughly at Y=1100 from top â†’ offset from screen center
+        // Screen center = 2532/2 = 1266, content center â‰ˆ 1100 â†’ offset = +166 upward
         tipCardRT.anchoredPosition = new Vector2(0f, 166f);
 
         var tipCardBg = EnsureComponent<Image>(tipCardGO);
@@ -416,10 +416,10 @@ public class CreateUIScreen
 
         var tipCard = EnsureComponent<ProTipCard>(tipCardGO);
 
-        // ─── "PRO TIP" Header ─────────────────────────────────────
-        // Figma: "Mission Title" frame 281×120, cornerRadius=[8,8,0,0]
-        //   Text: "PRO TIP", Rubik:600@66, color=#eedc9a, 249×84
-        //   MUST be single line — container needs enough width
+        // â”€â”€â”€ "PRO TIP" Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Figma: "Mission Title" frame 281Ã—120, cornerRadius=[8,8,0,0]
+        //   Text: "PRO TIP", Rubik:600@66, color=#eedc9a, 249Ã—84
+        //   MUST be single line â€” container needs enough width
         var headerContainer = FindOrCreate("HeaderContainer", tipCardGO.transform);
         EnsureComponent<RectTransform>(headerContainer);
         var hcLE = EnsureComponent<LayoutElement>(headerContainer);
@@ -445,12 +445,12 @@ public class CreateUIScreen
         TrySetFont(headerTMP, "Rubik-SemiBold SDF");
         EnsureLocalizedText(header, "tip_header");
 
-        // ─── Separator Line ───────────────────────────────────────
+        // â”€â”€â”€ Separator Line â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Figma: "Separator" LINE, full 978px width
         var divider = FindOrCreateLayoutImage("Divider", tipCardGO.transform,
             GoldAccent, 2f);
 
-        // ─── Tip Text ─────────────────────────────────────────────
+        // â”€â”€â”€ Tip Text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Figma: Rubik:600@51, color=#ffffff, CENTER-aligned
         //   Inside 856px wide frame (952 container, ~48px inset each side)
         //   Supports {gold}KEYWORD{/gold} highlighting via ProTipCard
@@ -466,7 +466,7 @@ public class CreateUIScreen
         tipPadding.minHeight = 156f;  // ~3 lines at 51px with spacing
         tipPadding.flexibleHeight = 0;
 
-        // ─── Tip Image Display (single Image, swapped per tip) ──────
+        // â”€â”€â”€ Tip Image Display (single Image, swapped per tip) â”€â”€â”€â”€â”€â”€
         // IMPORTANT: This must be a SEPARATE child GameObject, not the card itself.
         // The card's own Image is the background. This is the tip illustration.
 
@@ -484,15 +484,15 @@ public class CreateUIScreen
         tipImgComponent.color = Color.white;
         tipImgComponent.preserveAspect = true;
         tipImgComponent.raycastTarget = false;
-        // LayoutElement — ProTipCard.ShowTip() sets preferredWidth/Height from sprite native size
+        // LayoutElement â€” ProTipCard.ShowTip() sets preferredWidth/Height from sprite native size
         var tipImgLE = EnsureComponent<LayoutElement>(tipImageGO);
         tipImageGO.SetActive(false); // hidden until a sprite is assigned at runtime
 
         // Ensure image is before tap-next in sibling order (VerticalLayoutGroup)
         tipImageGO.transform.SetAsLastSibling();
 
-        // ─── "TAP FOR NEXT TIP" ───────────────────────────────────
-        // Figma: Rubik:600@39, color=#ffffff, 882×54, RIGHT-aligned
+        // â”€â”€â”€ "TAP FOR NEXT TIP" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Figma: Rubik:600@39, color=#ffffff, 882Ã—54, RIGHT-aligned
         var tapNext = FindOrCreateLayoutTMP("TapNextText", tipCardGO.transform,
             "TAP FOR NEXT TIP", 39f, 78f, TextAlignmentOptions.Right);
         var tapTMP = tapNext.GetComponent<TextMeshProUGUI>();
@@ -522,9 +522,9 @@ public class CreateUIScreen
         if (loadedSprites.Length > 0)
             SetPrivateField(tipCard, "tipSprites", loadedSprites);
 
-        // ─── "NOW LOADING" ────────────────────────────────────────
+        // â”€â”€â”€ "NOW LOADING" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Figma: "Title" text, Rubik:600@102, color=#ffffff
-        //   978×123, Y=2281 from canvas top
+        //   978Ã—123, Y=2281 from canvas top
         //   anchorY = 1 - (2281/2532) = ~0.099
         var nowLoading = FindOrCreateTMPAnchored("NowLoadingText", screen.transform,
             "NOW LOADING",
@@ -542,10 +542,10 @@ public class CreateUIScreen
         nlTMP.outlineColor = new Color32(0, 0, 0, 80);
         EnsureLocalizedText(nowLoading, "screen_loading");
 
-        // ─── Loading Bar ──────────────────────────────────────────
-        // Figma: "Bar" frame, 978×30, Y=2428, cornerRadius=8
+        // â”€â”€â”€ Loading Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Figma: "Bar" frame, 978Ã—30, Y=2428, cornerRadius=8
         //   Background: fill=#ffffff (semi-transparent track)
-        //   Fill: 376×30 (progress), radius=8, stroke=#000000 w=1
+        //   Fill: 376Ã—30 (progress), radius=8, stroke=#000000 w=1
         var barBG = FindOrCreateImageAnchored("LoadingBarBG", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - (2428f / H)),
             size: new Vector2(ContentWidth, 30f));
@@ -556,7 +556,7 @@ public class CreateUIScreen
         EditorUtility.SetDirty(barBGImg);
         var loadingBar = EnsureComponent<LoadingBar>(barBG);
 
-        // Bar fill — blue rect that grows from left via RectTransform anchors
+        // Bar fill â€” blue rect that grows from left via RectTransform anchors
         // NOT using Image.fillAmount (doesn't work without sprites)
         var barFill = FindOrCreate("LoadingBarFill", barBG.transform);
         var barFillRT = EnsureComponent<RectTransform>(barFill);
@@ -572,12 +572,12 @@ public class CreateUIScreen
         EditorUtility.SetDirty(barFillImg);
         EditorUtility.SetDirty(barFillRT);
 
-        // Wire LoadingBar — uses RectTransform scaling, not fillAmount
+        // Wire LoadingBar â€” uses RectTransform scaling, not fillAmount
         SetPrivateField(loadingBar, "fillRect", barFillRT);
         SetPrivateField(loadingBar, "fillImage", barFillImg);
         SetPrivateField(loadingBar, "fillColor", new Color(0.13f, 0.50f, 0.88f));
 
-        // Bar glow — follows fill edge
+        // Bar glow â€” follows fill edge
         var barGlow = FindOrCreateImageAnchored("LoadingBarGlow", barBG.transform,
             anchorCenter: new Vector2(0f, 0.5f),  // starts at left, LoadingBar.cs moves it
             size: new Vector2(30f, 30f));
@@ -586,9 +586,9 @@ public class CreateUIScreen
         SetPrivateField(loadingBar, "fillImage", barFillImg);
         SetPrivateField(loadingBar, "glowImage", barGlow.GetComponent<Image>());
 
-        // ─── Download Progress Text ───────────────────────────────
+        // â”€â”€â”€ Download Progress Text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Figma: "52.20 / 267 MB", Rubik:600@48, color=#ffffff
-        //   978×63, Y=2470 from canvas top
+        //   978Ã—63, Y=2470 from canvas top
         //   Figma shows full-width centered text
         var downloadProgress = FindOrCreateTMPAnchored("DownloadProgress", screen.transform,
             "0 / 267 MB",
@@ -617,21 +617,21 @@ public class CreateUIScreen
         return component;
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // SPLASH SCREEN
-    // Figma page: "Splash Screen" — background art + START/CREATE ACCOUNT
-    // Canvas: 1170×2532
+    // Figma page: "Splash Screen" â€” background art + START/CREATE ACCOUNT
+    // Canvas: 1170Ã—2532
     //
     // Visual comparison (2026-02-26):
     //   Title block (logo+presents+crest+invitational): composite image, top area
-    //   START button: green, centered, Y≈2030 from top
-    //   CREATE ACCOUNT: text-only, centered, Y≈2168 from top
+    //   START button: green, centered, Yâ‰ˆ2030 from top
+    //   CREATE ACCOUNT: text-only, centered, Yâ‰ˆ2168 from top
     //
     // Key fixes from comparison:
-    //   - "presents" → "Presents" (capitalization — handled via localization)
+    //   - "presents" â†’ "Presents" (capitalization â€” handled via localization)
     //   - START button: moved up ~20px, width reduced ~10px
     //   - CREATE ACCOUNT: moved up ~20px, font +2px, letter-spacing +1px
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     static SplashScreen SetupSplashScreen(Transform parent)
     {
         GameObject screen = FindOrCreateScreenPanel("SplashScreen", parent);
@@ -641,11 +641,11 @@ public class CreateUIScreen
         var bg = FindOrCreateImageStretched("Background", screen.transform);
         TryAssignSprite(bg, SpritePaths.SplashBackground, new Color(0.1f, 0.2f, 0.15f));
 
-        // ─── Title Image ──────────────────────────────────────────
+        // â”€â”€â”€ Title Image â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Composite image: GOLFIN logo + "Presents" + crest + "The Invitational"
         // Positioned in upper portion, nudged down ~10px vs previous
         var titleImage = FindOrCreateImageAnchored("TitleArea", screen.transform,
-            anchorCenter: new Vector2(0.5f, 1f - (78f / H)),  // top edge at Y≈78 from canvas top
+            anchorCenter: new Vector2(0.5f, 1f - (78f / H)),  // top edge at Yâ‰ˆ78 from canvas top
             size: new Vector2(ContentWidth, 365f));
         titleImage.GetComponent<Image>().preserveAspect = true;
         TryAssignSprite(titleImage, SpritePaths.SplashTitle, Color.white);
@@ -653,15 +653,15 @@ public class CreateUIScreen
         var titleRT = titleImage.GetComponent<RectTransform>();
         titleRT.pivot = new Vector2(0.5f, 1f);
 
-        // ─── START Button ─────────────────────────────────────────
-        // Visual comparison: button center at Y≈2065 from canvas top
-        //   Size: ~330×72 (visual), but we use the sprite-based button
-        //   Green gradient: #5EC02C → #3C8E14
+        // â”€â”€â”€ START Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Visual comparison: button center at Yâ‰ˆ2065 from canvas top
+        //   Size: ~330Ã—72 (visual), but we use the sprite-based button
+        //   Green gradient: #5EC02C â†’ #3C8E14
         //   Corner radius: ~12px
         //   Drop shadow: 3px Y offset, 5px blur, dark green
         var startBtn = FindOrCreateImageAnchored("StartButton", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - (2065f / H)),  // Y=2065 center (was 0.835=2114)
-            size: new Vector2(330f, 72f));  // was 450×120, visual match is 330×72
+            size: new Vector2(330f, 72f));  // was 450Ã—120, visual match is 330Ã—72
         var startImg = startBtn.GetComponent<Image>();
         if (!HasSprite(startBtn)) startImg.color = GreenButton;
         EnsureComponent<Button>(startBtn);
@@ -681,8 +681,8 @@ public class CreateUIScreen
         stTMP.outlineColor = new Color32(26, 58, 10, 180);  // ~#1A3A0A
         EnsureLocalizedText(startText, "btn_start");
 
-        // ─── CREATE ACCOUNT Button ────────────────────────────────
-        // Visual comparison: text center at Y≈2168 from canvas top
+        // â”€â”€â”€ CREATE ACCOUNT Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Visual comparison: text center at Yâ‰ˆ2168 from canvas top
         //   Text-only, no bg, white with dark stroke
         var createBtn = FindOrCreateImageAnchored("CreateAccountButton", screen.transform,
             anchorCenter: new Vector2(0.5f, 1f - (2168f / H)),  // Y=2168 (was 0.912=2309)
@@ -712,14 +712,14 @@ public class CreateUIScreen
         return component;
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // HOME SCREEN
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //
-    // Reference: home_screen_ref.png (1170×2532)
+    // Reference: home_screen_ref.png (1170Ã—2532)
     // Layout (top to bottom):
     //   Y=0:     Background (full bleed dark navy + golf course scene)
-    //   Y=115:   Top bar — currency (left), settings gear (right)
+    //   Y=115:   Top bar â€” currency (left), settings gear (right)
     //   Y=155:   Username banner (centered)
     //   Y=240:   Announcement card (centered, paginated)
     //   Y=540:   Page dots
@@ -727,17 +727,17 @@ public class CreateUIScreen
     //   Y=1560:  GOLFIN GPS banner
     //   Y=1810:  Next Hole panel
     //   Y=2332:  Bottom navigation bar (5 tabs)
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     static HomeScreen SetupHomeScreen(Transform parent)
     {
         GameObject screen = FindOrCreateScreenPanel("HomeScreen", parent);
         var component = EnsureComponent<HomeScreen>(screen);
 
-        // ─── Background ───────────────────────────────────────────
+        // â”€â”€â”€ Background â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var bg = FindOrCreateImageStretched("Background", screen.transform);
         SetIfNew(bg, () => TryAssignSprite(bg, SpritePaths.HomeBackground, HexColor("#0A1628")));
 
-        // ─── Top Dark Gradient ────────────────────────────────────
+        // â”€â”€â”€ Top Dark Gradient â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var topGrad = FindOrCreate("TopGradient", screen.transform);
         SetIfNew(topGrad, () => {
             var rt = EnsureComponent<RectTransform>(topGrad);
@@ -755,11 +755,11 @@ public class CreateUIScreen
         EnsureComponent<RectTransform>(topGrad);
         EnsureComponent<Image>(topGrad);
 
-        // ─── REMOVED: Bottom Dark Gradient ────────────────────────
+        // â”€â”€â”€ REMOVED: Bottom Dark Gradient â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var oldBottomGrad = screen.transform.Find("BottomGradient");
         if (oldBottomGrad != null) Object.DestroyImmediate(oldBottomGrad.gameObject);
 
-        // ─── Currency Display (Top-Left) ──────────────────────────
+        // â”€â”€â”€ Currency Display (Top-Left) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var currencyGroup = FindOrCreate("CurrencyGroup", screen.transform);
         SetIfNew(currencyGroup, () => {
             var rt = EnsureComponent<RectTransform>(currencyGroup);
@@ -813,7 +813,7 @@ public class CreateUIScreen
         });
         SetPrivateField(component, "currencyText", EnsureComponent<TextMeshProUGUI>(currencyText));
 
-        // ─── Settings Gear (Top-Right) ────────────────────────────
+        // â”€â”€â”€ Settings Gear (Top-Right) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var settingsBtn = FindOrCreate("SettingsButton", screen.transform);
         SetIfNew(settingsBtn, () => {
             var rt = EnsureComponent<RectTransform>(settingsBtn);
@@ -827,7 +827,7 @@ public class CreateUIScreen
         EnsureComponent<Image>(settingsBtn);
         EnsureComponent<Button>(settingsBtn);
 
-        // ─── Username Banner (Center-Top) ─────────────────────────
+        // â”€â”€â”€ Username Banner (Center-Top) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var userBanner = FindOrCreate("UsernameBanner", screen.transform);
         SetIfNew(userBanner, () => {
             var rt = EnsureComponent<RectTransform>(userBanner);
@@ -862,7 +862,7 @@ public class CreateUIScreen
         EnsureLocalizedText(usernameText, "home_username");
         SetPrivateField(component, "usernameText", userTMP);
 
-        // ─── Announcement Card ────────────────────────────────────
+        // â”€â”€â”€ Announcement Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var annoCard = FindOrCreate("AnnouncementCard", screen.transform);
         SetIfNew(annoCard, () => {
             var rt = EnsureComponent<RectTransform>(annoCard);
@@ -915,7 +915,7 @@ public class CreateUIScreen
         EnsureLocalizedText(annoBody, "home_maintenance_body");
         SetPrivateField(component, "announcementBody", EnsureComponent<TextMeshProUGUI>(annoBody));
 
-        // ─── Page Indicator Dots ──────────────────────────────────
+        // â”€â”€â”€ Page Indicator Dots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var dotContainer = FindOrCreate("DotContainer", screen.transform);
         SetIfNew(dotContainer, () => {
             var rt = EnsureComponent<RectTransform>(dotContainer);
@@ -944,7 +944,7 @@ public class CreateUIScreen
         }
         SetPrivateField(component, "dotContainer", dotContainer.transform);
 
-        // ─── Central Character ────────────────────────────────────
+        // â”€â”€â”€ Central Character â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var character = FindOrCreate("CharacterDisplay", screen.transform);
         SetIfNew(character, () => {
             var rt = EnsureComponent<RectTransform>(character);
@@ -965,7 +965,7 @@ public class CreateUIScreen
         if (charSprites.Length > 0)
             SetPrivateField(component, "characterSprites", charSprites);
 
-        // ─── GOLFIN GPS Banner ────────────────────────────────────
+        // â”€â”€â”€ GOLFIN GPS Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var gpsBanner = FindOrCreate("GpsBanner", screen.transform);
         SetIfNew(gpsBanner, () => {
             var rt = EnsureComponent<RectTransform>(gpsBanner);
@@ -1052,7 +1052,7 @@ public class CreateUIScreen
         EnsureLocalizedText(gpsDesc, "home_gps_desc");
         SetPrivateField(component, "gpsDescText", EnsureComponent<TextMeshProUGUI>(gpsDesc));
 
-        // ─── Next Hole Panel ──────────────────────────────────────
+        // â”€â”€â”€ Next Hole Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var nextHolePanel = FindOrCreate("NextHolePanel", screen.transform);
         SetIfNew(nextHolePanel, () => {
             var rt = EnsureComponent<RectTransform>(nextHolePanel);
@@ -1117,7 +1117,7 @@ public class CreateUIScreen
             EnsureComponent<Image>(nhSeparator).color = new Color(0.23f, 0.31f, 0.44f, 0.5f);
         });
 
-        // ─── Reward icons row ─────────────────────────────────────
+        // â”€â”€â”€ Reward icons row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var rewardsRow = FindOrCreate("RewardsRow", nextHolePanel.transform);
         SetIfNew(rewardsRow, () => {
             var rt = EnsureComponent<RectTransform>(rewardsRow);
@@ -1218,7 +1218,7 @@ public class CreateUIScreen
         EnsureLocalizedText(playText, "home_play");
         SetPrivateField(component, "playButton", playPressable);
 
-        // ─── Bottom Navigation Bar ────────────────────────────────
+        // â”€â”€â”€ Bottom Navigation Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         var bottomNav = FindOrCreate("BottomNavBar", screen.transform);
         SetIfNew(bottomNav, () => {
             var rt = EnsureComponent<RectTransform>(bottomNav);
@@ -1303,9 +1303,9 @@ public class CreateUIScreen
         return list.ToArray();
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // FIND-OR-CREATE HELPERS
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     // Track which objects were just created (vs found existing) this run
     static readonly System.Collections.Generic.HashSet<int> _newlyCreated =
@@ -1437,9 +1437,9 @@ public class CreateUIScreen
         return go;
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // SPRITE HELPERS
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     static bool HasSprite(GameObject go)
     {
@@ -1496,9 +1496,9 @@ public class CreateUIScreen
         return LoadSpritesFromFolder(SpritePaths.TipImageFolder);
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // FONT HELPER
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     static void TrySetFont(TextMeshProUGUI tmp, string fontName)
     {
@@ -1517,9 +1517,9 @@ public class CreateUIScreen
         SetPrivateField(loc, "localizationKey", key);
     }
 
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // UTILITY
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     static Color HexColor(string hex)
     {
@@ -1550,12 +1550,3 @@ public class CreateUIScreen
         }
     }
 }
-  
-    [MenuItem(\"Tools/GOLFIN/Create Updated UI Scene\")]  
-    public static void CreateUpdatedGolfinUIScene()  
-    {  
-        Debug.Log(\"Creating updated GOLFIN UI scene matching current HomeScreen...\");  
-        CreateUI();  
-        Debug.Log(\"Updated GOLFIN UI scene created successfully!\");  
-    }  
-} 
