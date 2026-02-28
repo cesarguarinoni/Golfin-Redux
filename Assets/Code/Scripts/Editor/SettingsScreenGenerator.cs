@@ -23,8 +23,8 @@ public class SettingsScreenGenerator
   
         GameObject settingsScreenGO = CreateSettingsScreen(canvas.transform);  
         ConnectToHomeScreenButton();  
-  
-  
+    }
+
     private static GameObject CreateSettingsScreen(Transform parent)  
     {  
         // Create main SettingsScreen GameObject  
