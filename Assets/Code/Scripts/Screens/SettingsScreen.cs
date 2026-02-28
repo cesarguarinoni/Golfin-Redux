@@ -108,10 +108,14 @@ public class SettingsScreen : ScreenBase
     {
         SaveSettings();
 
-        ScreenManager screenManager = Object.FindAnyObjectByType<ScreenManager>();
-        if (screenManager != null)
+        // Return to HomeScreen using correct ScreenManager API
+        if (ScreenManager.Instance != null)
         {
-            screenManager.ShowScreen<HomeScreen>();
+            HomeScreen homeScreen = Object.FindAnyObjectByType<HomeScreen>();
+            if (homeScreen != null)
+            {
+                ScreenManager.Instance.TransitionTo(homeScreen);
+            }
         }
     }
 
@@ -120,10 +124,14 @@ public class SettingsScreen : ScreenBase
         PlayerPrefs.DeleteAll();
         PlayerPrefs.Save();
 
-        ScreenManager screenManager = Object.FindAnyObjectByType<ScreenManager>();
-        if (screenManager != null)
+        // Return to HomeScreen after logout
+        if (ScreenManager.Instance != null)
         {
-            screenManager.ShowScreen<HomeScreen>();
+            HomeScreen homeScreen = Object.FindAnyObjectByType<HomeScreen>();
+            if (homeScreen != null)
+            {
+                ScreenManager.Instance.TransitionTo(homeScreen);
+            }
         }
     }
 
