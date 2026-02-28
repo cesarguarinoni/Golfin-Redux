@@ -7,7 +7,7 @@ public class HomeScreenSpacingFix
     public static void FixVerticalSpacing()  
     {  
         Debug.Log("[GOLFIN] Looking for HomeScreen objects...");  
-        HomeScreen[] homeScreens = FindObjectsOfType<HomeScreen>();  
+        HomeScreen[] homeScreens = Object.FindObjectsByType<HomeScreen>(FindObjectsSortMode.None);  
         foreach (var homeScreen in homeScreens)  
         {  
             Transform nextHole = homeScreen.transform.Find("NextHolePanel");  
