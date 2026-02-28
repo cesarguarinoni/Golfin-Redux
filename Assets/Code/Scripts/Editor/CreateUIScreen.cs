@@ -1056,7 +1056,7 @@ public class CreateUIScreen
         var nextHolePanel = FindOrCreate("NextHolePanel", screen.transform);
         SetIfNew(nextHolePanel, () => {
             var rt = EnsureComponent<RectTransform>(nextHolePanel);
-            rt.anchorMin = new Vector2(0.5f, 1f - (2010f / H));
+            rt.anchorMin = new Vector2(0.5f, 1f - (2030f / H));
             rt.anchorMax = rt.anchorMin;
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(1010f, 400f);
