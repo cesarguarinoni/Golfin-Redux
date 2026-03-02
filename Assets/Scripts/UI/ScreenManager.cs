@@ -19,22 +19,35 @@ namespace GolfinRedux.UI
     {
         [SerializeField] private ScreenId _initialScreen = ScreenId.Logo;
 
+        [Header("Screen Containers")]
+        [SerializeField] private GameObject _logoScreen;
+        [SerializeField] private GameObject _splashScreen;
+        [SerializeField] private GameObject _loadingScreen;
+        [SerializeField] private GameObject _homeScreen;
+        [SerializeField] private GameObject _settingsScreen;
+
         private ScreenId _currentScreen;
 
         private void Start()
         {
-            // TODO: Wire up references to per-screen controllers and perform
-            // an initial transition to _initialScreen.
-            _currentScreen = _initialScreen;
+            // Simple initial show without animation; can be extended to use fades/slides.
+            ShowScreen(_initialScreen, instant: true);
         }
 
-        public void ShowScreen(ScreenId screenId)
+        public void ShowScreen(ScreenId screenId, bool instant = false)
         {
-            if (_currentScreen == screenId)
+            if (_currentScreen == screenId && !instant)
                 return;
 
-            // TODO: Implement transitions (fade/slide) between _currentScreen and screenId.
             _currentScreen = screenId;
+
+            if (_logoScreen != null) _logoScreen.SetActive(screenId == ScreenId.Logo);
+            if (_splashScreen != null) _splashScreen.SetActive(screenId == ScreenId.Splash);
+            if (_loadingScreen != null) _loadingScreen.SetActive(screenId == ScreenId.Loading);
+            if (_homeScreen != null) _homeScreen.SetActive(screenId == ScreenId.Home);
+            if (_settingsScreen != null) _settingsScreen.SetActive(screenId == ScreenId.Settings);
+
+            // TODO: Replace instant toggles with fade/slide transitions.
         }
     }
 }
