@@ -1220,6 +1220,8 @@ MonoBehaviour:
   characterImage: {fileID: 630126969}
   characterSprites:
   - {fileID: 21300000, guid: 28ce274216ec6b24a8f02c2de23e207a, type: 3}
+  - {fileID: 21300000, guid: 306bad9871b76804f960483facaddf31, type: 3}
+  - {fileID: 21300000, guid: 738b1d6ad796a2e489ee7bf67b8c2976, type: 3}
   gpsTitleText: {fileID: 0}
   gpsSubtitleText: {fileID: 0}
   gpsDescText: {fileID: 0}
@@ -1235,7 +1237,11 @@ MonoBehaviour:
   navPlay: {fileID: 1572581986}
   navBag: {fileID: 1470750023}
   navMore: {fileID: 210740483}
+  settingsButton: {fileID: 0}
   startingCurrency: 50000
+  OnSettingsPressed:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &208279502
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7260,85 +7266,6 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
---- !u!1 &1177433028
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1177433032}
-  - component: {fileID: 1177433031}
-  - component: {fileID: 1177433030}
-  - component: {fileID: 1177433029}
-  m_Layer: 0
-  m_Name: Managers
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1177433029
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1177433028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0c09163f9dae03a49b5fa177659579eb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameBootstrap
-  logoScreen: {fileID: 0}
-  loadingScreen: {fileID: 0}
-  splashScreen: {fileID: 0}
-  homeScreen: {fileID: 0}
-  logoDisplayTime: 3
---- !u!114 &1177433030
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1177433028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 812e5bf96f77b5449935704221a2edaf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ScreenManager
-  fadeDuration: 0.5
-  backgroundColor: {r: 0, g: 0, b: 0, a: 1}
---- !u!114 &1177433031
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1177433028}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 123ed1f307e46c6478ba8585dabd2611, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizationManager
-  csvFileName: localization
-  defaultLanguage: en
---- !u!4 &1177433032
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1177433028}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1182405825
 GameObject:
   m_ObjectHideFlags: 0
@@ -12443,19 +12370,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1985270839}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1927231649}
-        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
-        m_MethodName: SetActive
-        m_Mode: 6
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &1985270839
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13544,5 +13459,4 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 778375364}
-  - {fileID: 1177433032}
   - {fileID: 472639914}
