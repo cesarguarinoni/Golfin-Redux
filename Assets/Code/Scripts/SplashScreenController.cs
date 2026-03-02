@@ -15,9 +15,6 @@ namespace GolfinRedux.UI
         {
             _screenManager = FindObjectOfType<ScreenManager>();
 
-            if (_startButton != null)
-                _startButton.onClick.AddListener(OnStartClicked);
-
             if (_createAccountButton != null)
                 _createAccountButton.onClick.AddListener(OnCreateAccountClicked);
 
@@ -25,10 +22,13 @@ namespace GolfinRedux.UI
                 _loginButton.onClick.AddListener(OnLoginClicked);
         }
 
-        private void OnStartClicked()
+        public void OnStartClicked()
         {
+            Debug.Log("START clicked – attempting to show Loading");
             if (_screenManager != null)
                 _screenManager.ShowScreen(ScreenId.Loading, instant: true);
+            else
+                Debug.LogError("ScreenManager not found");
         }
 
         private void OnCreateAccountClicked()
