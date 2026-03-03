@@ -4,7 +4,7 @@
 PlayerSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 28
-  productGUID: 080b03a0e229aad4f9e4ddc9c1e4151c
+  productGUID: 092174d623491584499c76fc9065b8ae
   AndroidProfiler: 0
   AndroidFilterTouchesWhenObscured: 0
   AndroidEnableSustainedPerformanceMode: 0
@@ -13,7 +13,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
-  productName: Golfin Redux
+  productName: RE2
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -846,14 +846,14 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: Golfin Redux
+  metroPackageName: RE2
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: Golfin Redux
+  metroApplicationDescription: RE2
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -924,10 +924,10 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 1
   windowsGamepadBackendHint: 0
-  cloudProjectId: f589a1d6-f949-4b21-a3c5-1fb1373ebc23
+  cloudProjectId: 22781218-46b7-4e8b-a981-072769b70e48
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: Golfin Redux
+  projectName: RE2
   organizationId: unity_f38a40c9fe4d05e0dfdb
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

@@ -1,0 +1,107 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0de699fa35246e84993212229665b7e5, type: 3}
+  m_Name: LocalizationTextTable
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizationTextTable
+  rows:
+  - key: BTN_LOADING
+    english: NOW LOADING
+    japanese: JAP1
+  - key: BTN_START
+    english: TEST
+    japanese: JAP2
+  - key: BTN_CREATE
+    english: CREATE ACCOUNT
+    japanese: JAP3
+  - key: BTN_LOGIN
+    english: LOGIN
+    japanese: 
+  - key: TIP_HEADER
+    english: PRO TIP
+    japanese: 
+  - key: TIP_NEXT
+    english: TAP FOR NEXT TIP
+    japanese: 
+  - key: TIP_CLUB
+    english: HOLD THE CLUB BALL BUTTON TO ENTER YOUR BAGS IN-GAME
+    japanese: 
+  - key: TIP_FORECAST
+    english: LANDINGFORECAST  DOES NOT FACTOR THE BALL'S RUN OR WIND. COMPENSATE
+      ACCORDINGLY
+    japanese: 
+  - key: TIP_RARITIES
+    english: DIFFERENT RARITIES  BESTOW DIFFERENT INITIAL STATS  AND MAX LEVEL
+    japanese: 
+  - key: TIP_SWING
+    english: PULL  THE CLUB BACK THEN FLICK  IT FORWARD TO SWING
+    japanese: 
+  - key: TIP_ACCURACY
+    english: FLICKER  THROUGH THE BALL FOR PERFECT ACCURACY
+    japanese: 
+  - key: TIP_LEADERBOARD
+    english: LOOK FOR THESE ICONS IN LEADERBOARDS  FOR LONGEST SHOTS
+    japanese: 
+  - key: TIP_TIMING
+    english: HIT THE BALL WHEN HIGHLIGHTED  FOR A PERFECT SHOT
+    japanese: 
+  - key: TIP_VIEW
+    english: DOUBLE TAP TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW
+    japanese: 
+  - key: HOME_CURRENCY_LABEL
+    english: COINS
+    japanese: 
+  - key: HOME_USERNAME
+    english: USERNAME
+    japanese: 
+  - key: HOME_MAINTENANCE_TITLE
+    english: MAINTENANCE NOTICE
+    japanese: 
+  - key: HOME_MAINTENANCE_BODY
+    english: 'Scheduled server maintenance: 2025/12/31\nThe game will not be available
+      for a short time\nduring maintenance.'
+    japanese: 
+  - key: HOME_GPS_TITLE
+    english: "GOLFIN\xB7GPS"
+    japanese: 
+  - key: HOME_GPS_SUBTITLE
+    english: CHECK-IN WITH GPS
+    japanese: 
+  - key: HOME_GPS_DESC
+    english: EARN MORE POINTS TO POWER UP!
+    japanese: 
+  - key: HOME_NEXT_HOLE
+    english: NEXT HOLE
+    japanese: 
+  - key: HOME_COURSE_NAME
+    english: Lomond Country Club  - Hole 5
+    japanese: 
+  - key: HOME_PLAY
+    english: PLAY
+    japanese: ???
+  - key: HOME_NAV_HOME
+    english: HOME
+    japanese: 
+  - key: HOME_NAV_SHOP
+    english: SHOP
+    japanese: 
+  - key: HOME_NAV_PLAY
+    english: PLAY
+    japanese: 
+  - key: HOME_NAV_BAG
+    english: BAG
+    japanese: 
+  - key: HOME_NAV_MORE
+    english: MORE
+    japanese: 
+  - key: HOME_SETTINGS
+    english: SETTINGS
+    japanese: 

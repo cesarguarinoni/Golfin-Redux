@@ -1,31 +1,62 @@
-# Unity
+# =========================
+# Unity Generated Folders
+# =========================
+
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
 [Bb]uild/
 [Bb]uilds/
 [Ll]ogs/
-[Uu]ser[Ss]ettings/
-[Mm]emoryCaptures/
-[Rr]ecordings/
+UserSettings/
 
-# IDE
+# =========================
+# Memory Captures
+# =========================
+
+MemoryCaptures/
+
+# =========================
+# Visual Studio / Rider
+# =========================
+
 .vs/
-.vscode/
 *.csproj
+*.unityproj
 *.sln
 *.suo
+*.tmp
 *.user
+*.userprefs
 *.pidb
 *.booproj
+*.svd
+*.pdb
 
-# OS
+# =========================
+# OS Files
+# =========================
+
 .DS_Store
 Thumbs.db
 
-# Crashlytics
-crashlytics-build.properties
-QA/.figma_token
-QA/.cache/
-QA/Screenshots/
-QA/Reports/
+# =========================
+# Addressables
+# =========================
+
+ServerData/
+
+# =========================
+# Crash Reports
+# =========================
+
+sysinfo.txt
+
+# =========================
+# Android / iOS Builds
+# =========================
+
+.gradle/
+*.apk
+*.aab
+*.keystore
