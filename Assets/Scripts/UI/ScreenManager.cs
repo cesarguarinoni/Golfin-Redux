@@ -7,13 +7,14 @@ namespace GolfinRedux.UI
         Logo,
         Splash,
         Loading,
-        Home,
-        Settings
+        Home
+        // Settings removed - it's an overlay, not a screen
     }
 
     /// <summary>
-    /// Central controller for shell UI screens (Logo, Splash, Loading, Home, Settings).
+    /// Central controller for shell UI screens (Logo, Splash, Loading, Home).
     /// Uses FadeController (if present) to fade to/from black when switching screens.
+    /// Note: Settings is an overlay managed by SettingsController, not a screen.
     /// </summary>
     public class ScreenManager : MonoBehaviour
     {
@@ -24,7 +25,7 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _splashScreen;
         [SerializeField] private GameObject _loadingScreen;
         [SerializeField] private GameObject _homeScreen;
-        [SerializeField] private GameObject _settingsScreen;
+        // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         private ScreenId _currentScreen;
 
@@ -72,7 +73,7 @@ namespace GolfinRedux.UI
             if (_splashScreen != null) _splashScreen.SetActive(screenId == ScreenId.Splash);
             if (_loadingScreen != null) _loadingScreen.SetActive(screenId == ScreenId.Loading);
             if (_homeScreen != null) _homeScreen.SetActive(screenId == ScreenId.Home);
-            if (_settingsScreen != null) _settingsScreen.SetActive(screenId == ScreenId.Settings);
+            // Settings is an overlay (SettingsController), not managed here
         }
     }
 }
