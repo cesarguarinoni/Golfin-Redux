@@ -59,13 +59,17 @@ namespace Golfin.UI
 
         private void Awake()
         {
+            Debug.Log("[SettingsController] Awake() called");
+            
             if (Instance != null && Instance != this)
             {
+                Debug.Log("[SettingsController] Duplicate instance - destroying");
                 Destroy(gameObject);
                 return;
             }
 
             Instance = this;
+            Debug.Log("[SettingsController] Singleton initialized");
             InitializeButtons();
         }
 
@@ -117,10 +121,16 @@ namespace Golfin.UI
 
         public void OpenSettings()
         {
+            Debug.Log("[SettingsController] OpenSettings() called");
+            
             if (settingsPanel != null)
             {
+                Debug.Log($"[SettingsController] Activating settings panel: {settingsPanel.name}");
                 settingsPanel.SetActive(true);
-                Debug.Log("Settings panel opened");
+            }
+            else
+            {
+                Debug.LogError("[SettingsController] settingsPanel is NULL! Not assigned in Inspector?");
             }
         }
 

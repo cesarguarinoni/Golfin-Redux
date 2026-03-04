@@ -131,8 +131,18 @@ namespace Golfin.UI
 
         private void OnSettingsButtonClick()
         {
+            Debug.Log("[PersistentUI] Settings button clicked!");
+            
             // Open Settings Screen
-            SettingsController.Instance?.OpenSettings();
+            if (SettingsController.Instance == null)
+            {
+                Debug.LogError("[PersistentUI] SettingsController.Instance is NULL! Is SettingsCanvas in the scene?");
+            }
+            else
+            {
+                Debug.Log("[PersistentUI] Calling SettingsController.Instance.OpenSettings()");
+                SettingsController.Instance.OpenSettings();
+            }
         }
 
         public void NavigateTo(Screen screen)
