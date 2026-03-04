@@ -6,9 +6,9 @@ namespace GolfinRedux.UI
     {
         public void OnStartClicked()
         {
-            Debug.Log("START clicked – attempting to show Loading");
+            Debug.Log("START clicked ï¿½ attempting to show Loading");
 
-            var manager = FindObjectOfType<ScreenManager>();
+            var manager = FindFirstObjectByType<ScreenManager>();
             if (manager != null)
                 manager.ShowScreen(ScreenId.Loading);
             else

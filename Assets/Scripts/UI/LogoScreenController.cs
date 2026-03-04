@@ -52,7 +52,7 @@ namespace GolfinRedux.UI
             _canvasGroup.alpha = 0f;
 
             // Switch to Splash
-            var manager = FindObjectOfType<ScreenManager>();
+            var manager = FindFirstObjectByType<ScreenManager>();
             if (manager != null)
                 manager.ShowScreen(ScreenId.Splash, true);
             else
