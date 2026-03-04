@@ -75,11 +75,18 @@ namespace Golfin.UI
 
         private void Start()
         {
+            Debug.Log("[SettingsController] Start() called - Instance still valid");
+            
             // Start with settings panel closed
             if (settingsPanel != null)
             {
                 settingsPanel.SetActive(false);
             }
+        }
+
+        private void OnDestroy()
+        {
+            Debug.LogWarning("[SettingsController] OnDestroy() called - Instance being destroyed!");
         }
 
         private void InitializeButtons()

@@ -90,10 +90,17 @@ namespace Golfin.UI
 
         private void InitializeButtons()
         {
+            Debug.Log("[PersistentUI] InitializeButtons() called");
+            
             // Settings button
             if (settingsButton != null)
             {
+                Debug.Log($"[PersistentUI] Settings button found: {settingsButton.name}, adding click listener");
                 settingsButton.onClick.AddListener(OnSettingsButtonClick);
+            }
+            else
+            {
+                Debug.LogWarning("[PersistentUI] Settings button is NULL! Not assigned in Inspector?");
             }
 
             // Bottom nav buttons
@@ -132,11 +139,25 @@ namespace Golfin.UI
         private void OnSettingsButtonClick()
         {
             Debug.Log("[PersistentUI] Settings button clicked!");
+            Debug.Log($"[PersistentUI] SettingsController type exists: {(typeof(SettingsController) != null)}");
+            Debug.Log($"[PersistentUI] SettingsController.Instance value: {SettingsController.Instance}");
             
             // Open Settings Screen
             if (SettingsController.Instance == null)
             {
                 Debug.LogError("[PersistentUI] SettingsController.Instance is NULL! Is SettingsCanvas in the scene?");
+                
+                // Try to find it manually
+                var controller = GameObject.FindObjectOfType<SettingsController>();
+                if (controller != null)
+                {
+                    Debug.LogWarning($"[PersistentUI] Found SettingsController manually on GameObject: {controller.gameObject.name}");
+                    controller.OpenSettings();
+                }
+                else
+                {
+                    Debug.LogError("[PersistentUI] Could not find SettingsController anywhere in scene!");
+                }
             }
             else
             {
