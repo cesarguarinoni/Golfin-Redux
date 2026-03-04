@@ -121,16 +121,29 @@ namespace Golfin.UI
             }
         }
 
+        /// <summary>
+        /// Update the username display (alias for SetUsername for Phase 2 compatibility)
+        /// </summary>
+        public void UpdateUsername(string username)
+        {
+            SetUsername(username);
+            Debug.Log($"[PersistentUI] Username updated: {username}");
+        }
+
         private void OnSettingsButtonClick()
         {
-            // Open Settings Screen
-            if (SettingsController.Instance != null)
+            // Open Settings Screen (support both Phase 1 and Phase 2 controllers)
+            if (SettingsControllerPhase2.Instance != null)
+            {
+                SettingsControllerPhase2.Instance.OpenSettings();
+            }
+            else if (SettingsController.Instance != null)
             {
                 SettingsController.Instance.OpenSettings();
             }
             else
             {
-                Debug.LogWarning("[PersistentUI] SettingsController.Instance is NULL - cannot open settings");
+                Debug.LogWarning("[PersistentUI] No SettingsController instance found - cannot open settings");
             }
         }
 
