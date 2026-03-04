@@ -1,43 +1,43 @@
-# Quick Start: HoleDatabase CSV Import
+# Quick Start: HoleDatabase Auto-Load from CSV
 
-The **fastest** way to add holes to the game!
+The **easiest** way to manage holes - just edit the CSV and play! No manual import needed.
 
 ---
 
-## 3-Minute Setup
+## 2-Minute Setup (Auto-Load)
 
-### 1. Create the Database Asset (1 min)
+### 1. Add HoleDatabaseLoader to Scene (1 min)
 
 In Unity:
-1. Right-click `Assets/Data/` → **Create → Golfin → Hole Database**
-2. Name it `HoleDatabase`
+1. Select any GameObject in your scene (e.g., `ShellSceneRoot` or create a new empty called `GameData`)
+2. **Add Component → Hole Database Loader**
+3. In Inspector:
+   - **Hole Database CSV:** Drag `Assets/Data/HoleDatabase.csv`
+   - **Auto Load On Awake:** ✅ (checked)
 
-### 2. Import from CSV (1 min)
-
-1. Unity menu: **Golfin → Import Holes from CSV**
-2. In the window:
-   - **CSV File:** Drag `Assets/Data/HoleDatabase.csv`
-   - **Target Database:** Drag your `HoleDatabase` asset
-3. Click **Import**
-4. Should say "Imported 5 holes from CSV" ✅
-
-### 3. Wire It Up (30 seconds)
-
-Drag `HoleDatabase` into **HomeScreenController → Optional: Hole Database** field
-
-**Done!** The game now has 5 playable holes with rewards.
-
----
-
-## Test It
+### 2. Test It (30 sec)
 
 Enter Play Mode:
-- Course name should show: "Lomond Country Club - Hole 5"
+- Holes automatically load from CSV! 🎉
+- Course name shows: "Lomond Country Club - Hole 5"
 - Rewards: 100 Points, 1 Repair Kit, 3 Balls
+
+**Done!** No manual database creation or import needed.
 
 ---
 
-## Add More Holes
+## How It Works
+
+Similar to localization, the `HoleDatabaseLoader` automatically:
+1. Reads `HoleDatabase.csv` when the scene starts
+2. Creates a runtime database in memory
+3. HomeScreenController loads holes from it
+
+**Just edit the CSV and play - changes apply instantly!**
+
+---
+
+## Adding More Holes
 
 ### Edit the CSV (Easy!)
 
@@ -50,9 +50,9 @@ Enter Play Mode:
    ```csv
    HOLE_AUGUSTA_12,Augusta National - Hole 12,オーガスタナショナル - ホール12
    ```
-4. Re-import: **Golfin → Import Holes from CSV** (same steps as before)
+4. Enter Play Mode - new hole automatically loads!
 
-Done! New hole is now in the game.
+No import button, no manual steps. Just edit and play.
 
 ---
 
@@ -74,36 +74,73 @@ courseNameKey,holeNumber,reward1Type,reward1Amount,reward2Type,reward2Amount,rew
 
 ---
 
-## Why CSV?
+## Alternative: Manual Import (Advanced)
 
-**vs. Manual Entry in Unity Inspector:**
-- ⚡ **10x faster** for adding many holes
-- 📊 Edit in Excel/Google Sheets
-- 👥 Non-Unity team members can edit
-- 📝 Better Git diffs (easy to see what changed)
-- 🔄 Bulk operations (find/replace, formulas, etc.)
+If you prefer a ScriptableObject asset instead of auto-loading:
+
+1. Create: **Create → Golfin → Hole Database**
+2. Import: **Golfin → Import Holes from CSV**
+3. Assign to **HomeScreenController → Optional: Hole Database**
+
+The manual approach is useful for:
+- Editing holes in Unity Inspector (visual interface)
+- Sharing hole data as a Unity asset
+- When you don't want CSV to control game data
+
+But **auto-load is recommended** for most cases!
 
 ---
 
-## Full Documentation
+## Benefits of Auto-Load
 
-- `Assets/Data/CREATE_DATABASE.md` - Complete guide
-- `Assets/Data/README_HOLES.md` - General usage
-- `Assets/Data/HoleDatabase.csv` - Example CSV
+**vs. Manual Import:**
+- ⚡ **No import step** - just edit CSV and play
+- 🔄 **Instant updates** - changes apply immediately
+- 📊 **Edit in Excel** - easier than Unity Inspector
+- 👥 **Non-Unity team members** can edit holes
+- 🎯 **Less error-prone** - no forgetting to import
+
+**vs. Hardcoded Data:**
+- 📝 **Easy to edit** - no code changes
+- 🚀 **Fast iteration** - change and test instantly
+- 📚 **Better organization** - all holes in one place
 
 ---
 
 ## Troubleshooting
 
-**Import menu doesn't appear:**
-- Unity might need to recompile: **Assets → Reimport All**
-- Or restart Unity
+**Holes don't load:**
+- Check HoleDatabaseLoader is in the scene
+- Check CSV file is assigned in Inspector
+- Check Console for errors (CSV parsing issues)
 
-**Holes don't show in game:**
-- Check database is assigned to HomeScreenController
-- Check `courseNameKey` exists in `LocalizationText.csv`
-- Make sure reward types are spelled correctly
+**Course name shows key instead of text:**
+- Add localization key to `LocalizationText.csv`
+- Make sure LocalizationManager is initialized first
+
+**Rewards don't show:**
+- Check reward types are spelled correctly in CSV
+- Check reward amounts are > 0
+- Make sure reward icons are assigned in HomeScreenController
 
 ---
 
-**Ready to add 100 holes?** Just edit the CSV and click Import! 🚀
+## Performance
+
+**Is loading from CSV slow?**
+
+No! The CSV is parsed once on scene start (Awake). Takes <10ms for 100 holes.
+
+If you need faster startup, use the manual approach (pre-import to ScriptableObject).
+
+---
+
+## Full Documentation
+
+- `Assets/Data/CREATE_DATABASE.md` - Manual import guide (alternative approach)
+- `Assets/Data/README_HOLES.md` - General usage
+- `Assets/Data/HoleDatabase.csv` - Example CSV with 5 holes
+
+---
+
+**Ready to add 100 holes? Just edit the CSV and play!** 🚀

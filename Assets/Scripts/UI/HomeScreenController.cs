@@ -253,6 +253,17 @@ namespace GolfinRedux.UI
                 }
             }
 
+            // Try runtime database (auto-loaded from CSV)
+            if (HoleDatabaseLoader.RuntimeDatabase != null)
+            {
+                HoleData hole = HoleDatabaseLoader.GetHole(currentHoleIndex);
+                if (hole != null)
+                {
+                    SetNextHoleFromData(hole);
+                    return;
+                }
+            }
+
             // Fallback: Use hardcoded stub data
             SetNextHole("HOLE_LOMOND_5", 100, RewardType.RepairKit, 1, RewardType.Ball, 3);
         }
