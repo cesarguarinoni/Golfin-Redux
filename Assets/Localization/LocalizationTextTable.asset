@@ -17,7 +17,7 @@ MonoBehaviour:
     english: NOW LOADING
     japanese: JAP1
   - key: BTN_START
-    english: TEST
+    english: PLAY
     japanese: JAP2
   - key: BTN_CREATE
     english: CREATE ACCOUNT
