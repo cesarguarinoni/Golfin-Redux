@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.UI;
 
 namespace GolfinRedux.UI
 {
@@ -117,6 +118,12 @@ namespace GolfinRedux.UI
         private void OnEnable()
         {
             // Initial UI state when Home screen becomes active
+
+            // Show PersistentUI (Top Bar + Bottom Nav)
+            if (PersistentUIManager.Instance != null)
+            {
+                PersistentUIManager.Instance.ShowBars();
+            }
 
             // Top bar: placeholder values for now
             if (rewardPointsText != null)
