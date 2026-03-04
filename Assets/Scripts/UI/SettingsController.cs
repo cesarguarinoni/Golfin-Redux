@@ -76,12 +76,19 @@ namespace Golfin.UI
         private void Start()
         {
             Debug.Log("[SettingsController] Start() called - Instance still valid");
+            Debug.Log($"[SettingsController] SettingsCanvas.activeSelf at Start: {gameObject.activeSelf}");
             
             // Start with settings panel closed
             if (settingsPanel != null)
             {
                 settingsPanel.SetActive(false);
             }
+        }
+
+        private void OnDisable()
+        {
+            Debug.LogWarning("[SettingsController] OnDisable() called - SettingsCanvas is being deactivated!");
+            Debug.LogWarning($"[SettingsController] Stack trace: {System.Environment.StackTrace}");
         }
 
         private void OnDestroy()
@@ -136,6 +143,13 @@ namespace Golfin.UI
                 Debug.Log($"[SettingsController] settingsPanel path: {GetGameObjectPath(settingsPanel)}");
                 Debug.Log($"[SettingsController] settingsPanel.activeSelf BEFORE: {settingsPanel.activeSelf}");
                 Debug.Log($"[SettingsController] settingsPanel.activeInHierarchy BEFORE: {settingsPanel.activeInHierarchy}");
+                
+                // Make sure SettingsCanvas (parent) is active too
+                if (gameObject.activeSelf == false)
+                {
+                    Debug.LogWarning("[SettingsController] SettingsCanvas was inactive! Activating it now.");
+                    gameObject.SetActive(true);
+                }
                 
                 settingsPanel.SetActive(true);
                 
