@@ -46,15 +46,19 @@ namespace Golfin.UI
 
         private void Awake()
         {
+            Debug.Log("[PersistentUI] Awake() called");
+            
             // Singleton pattern
             if (Instance != null && Instance != this)
             {
+                Debug.Log("[PersistentUI] Duplicate instance found - destroying this one");
                 Destroy(gameObject);
                 return;
             }
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            Debug.Log("[PersistentUI] Singleton initialized, moved to DontDestroyOnLoad");
 
             // Hide by default (show when HomeScreen loads)
             HideBars();
@@ -79,6 +83,7 @@ namespace Golfin.UI
         /// </summary>
         public void HideBars()
         {
+            Debug.Log("[PersistentUI] HideBars() called");
             ShowTopBar(false);
             ShowBottomNav(false);
         }
@@ -189,12 +194,14 @@ namespace Golfin.UI
 
         public void ShowTopBar(bool show)
         {
+            Debug.Log($"[PersistentUI] ShowTopBar({show}) - topBarPanel: {(topBarPanel != null ? topBarPanel.name : "NULL")}");
             if (topBarPanel != null)
                 topBarPanel.SetActive(show);
         }
 
         public void ShowBottomNav(bool show)
         {
+            Debug.Log($"[PersistentUI] ShowBottomNav({show}) - bottomNavPanel: {(bottomNavPanel != null ? bottomNavPanel.name : "NULL")}");
             if (bottomNavPanel != null)
                 bottomNavPanel.SetActive(show);
         }
