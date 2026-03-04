@@ -1,19 +1,35 @@
 
 ---
 
-## 🎉 LATEST: Screen Deactivator Added!
+## 🎉 LATEST: Settings Screen Phase 2 Complete!
+
+**Phase 2 - Accordion Behavior + Submenus**
+- ✅ Accordion expand/collapse (only one section open at a time)
+- ✅ Smooth animations with arrow rotation (0.3s expand, 0.2s collapse)
+- ✅ Sound Settings submenu (Music + SFX volume sliders, 0-100%)
+- ✅ Language submenu (English/Japanese toggle with checkmarks)
+- ✅ User Profile submenu (username editing with real-time validation)
+- ✅ Auto-saves to PlayerPrefs (volumes, language, username)
+
+**New Scripts:**
+- `SettingsMenuItem.cs` - Accordion item with animation
+- `SettingsControllerPhase2.cs` - Accordion management
+- `SoundSettingsSubmenu.cs` - Volume controls
+- `LanguageSubmenu.cs` - Language selection
+- `UserProfileSubmenu.cs` - Username editing + account linking placeholders
+
+**Setup:** See `Docs/SETTINGS_PHASE2_GUIDE.md` for complete guide (~1 hour setup)
+
+**Commit:** 839c43a - "Add Settings Screen Phase 2: Accordion behavior + Submenus"
+
+---
+
+## Previous: Screen Deactivator Added!
 
 **Screen Deactivator** - Automatically deactivates unnecessary screens before runtime!
 - ✅ Auto-runs before Play mode in Unity Editor
 - ✅ Future-proof detection (auto-finds new screens by naming pattern)
 - ✅ GUI configuration via **GOLFIN → Screen Deactivator Settings**
-- ✅ Prevents multiple screens from being active at startup
-
-**New Scripts Added:**
-- `ScreenDeactivator.cs` - Main component with auto-detection
-- `ScreenDeactivatorEditor.cs` - Editor window for easy configuration
-
-**Setup:** See `Docs/SCREEN_DEACTIVATOR.md` for full guide.
 
 **Commit:** 94775d5 - "Add Screen Deactivator utility"
 
@@ -183,12 +199,22 @@ Docs/
 - 🚧 **Missing:** Rewards display (3 reward slots)
 - 🚧 **Missing:** Notice Panel carousel functionality (swipe/auto-cycle)
 
-**Settings Screen - Phase 1 (Static UI)**
+**Settings Screen - Phase 1 (Static UI)** ✅
 - Created `PersistentUIManager.cs` - Singleton for Top Bar + Bottom Nav (persists across scenes)
 - Created `SettingsController.cs` - Settings panel with 9 menu items
 - Created `PersistentUI.prefab` - YAML hierarchy with GameObjects (components need to be added in Unity)
 - Created `SettingsCanvas.prefab` - YAML hierarchy with GameObjects (components need to be added in Unity)
 - Documented architecture, implementation guide, prefab structure
+
+**Settings Screen - Phase 2 (Accordion Behavior)** ✅
+- Created `SettingsMenuItem.cs` - Individual accordion item with expand/collapse animation
+- Created `SettingsControllerPhase2.cs` - Updated controller managing accordion state
+- Created `SoundSettingsSubmenu.cs` - Music + SFX volume sliders (0-100%, saves to PlayerPrefs)
+- Created `LanguageSubmenu.cs` - English/Japanese toggle with visual indicators
+- Created `UserProfileSubmenu.cs` - Username editing (3-16 chars) with real-time validation
+- Smooth animations: 0.3s expand, 0.2s collapse, arrow rotation
+- Only one section open at a time (automatic collapse)
+- Complete setup guide: `Docs/SETTINGS_PHASE2_GUIDE.md` (~1 hour integration)
 
 **Commits:**
 - c12dd21: Add Settings Screen Phase 1 scripts + docs
@@ -218,12 +244,13 @@ Docs/
 
 ### 📋 Planned (Immediate Next Steps)
 
-**Settings Screen - Phase 2 (Accordion Behavior)**
-- Expand/collapse animation for User Profile, Sound Settings, Language
-- Music Volume + SFX Volume sliders
-- Language selection screen (English/Japanese)
-- Only one section open at a time
-- DOTween or Unity Animator for smooth transitions
+**Settings Screen - Phase 3 (Full Functionality)**
+- Integrate SoundSettingsSubmenu with AudioManager (actual audio control)
+- Integrate LanguageSubmenu with LocalizationManager (UI language switching)
+- Webview integration for Terms/Privacy/FAQ/Contact (UniWebView or Vuplex)
+- Account linking (Google, Apple, Twitter via Cognito)
+- Log out confirmation modal with session clear
+- About screen modal with app version + licenses
 
 **Other Screens (From Redux PDF):**
 - Create Account Screen
@@ -571,11 +598,12 @@ Docs/
 - `Docs/SETTINGS_BUILD_GUIDE.md` - Settings screen complete build guide (Phase 1)
 - `Docs/UI_AUTO_WIRE_GUIDE.md` - UI auto-wire utility (no more manual Inspector dragging)
 
-**Settings Screen (Phase 1):**
-- `Docs/SettingsScreen/README.md` - Overview + quick start
+**Settings Screen:**
+- `Docs/SETTINGS_PHASE2_GUIDE.md` - **Phase 2 setup guide** (accordion + submenus, ~1 hour)
+- `Docs/SettingsScreen/README.md` - Phase 1 overview + quick start
 - `Docs/SettingsScreen/ARCHITECTURE.md` - System architecture with diagrams
 - `Docs/SettingsScreen/PREFAB_STRUCTURE.md` - Complete Unity hierarchy
-- `Docs/SettingsScreen/IMPLEMENTATION_GUIDE.md` - Step-by-step setup guide
+- `Docs/SettingsScreen/IMPLEMENTATION_GUIDE.md` - Phase 1 step-by-step setup
 
 ### Design References
 - `Assets/References/Settings/` - Mockups for Settings Screen
@@ -612,6 +640,21 @@ Docs/
 ---
 
 ## Change Log
+
+### 2026-03-05 07:00 JST
+- **SETTINGS SCREEN PHASE 2 COMPLETE!** 🎉
+- Added accordion expand/collapse behavior (only one section open at a time)
+- Added `SettingsMenuItem.cs` - Individual accordion item with smooth animation
+- Added `SettingsControllerPhase2.cs` - Accordion management + singleton
+- Added `SoundSettingsSubmenu.cs` - Music + SFX volume sliders (0-100%)
+- Added `LanguageSubmenu.cs` - English/Japanese toggle with checkmarks
+- Added `UserProfileSubmenu.cs` - Username editing with real-time validation
+- Created `Docs/SETTINGS_PHASE2_GUIDE.md` - Complete setup guide (~1 hour)
+- Animation: 0.3s expand, 0.2s collapse, arrow rotation (0° → 90°)
+- Auto-saves: Volume levels, language preference, username (PlayerPrefs)
+- Phase 3 placeholders: Account linking, AudioManager, LocalizationManager, Webview
+- Ready for Unity integration and testing
+- Commit: 839c43a
 
 ### 2026-03-05 06:43 JST
 - **DOCUMENTATION SYNC:** Kai has read all project documentation
