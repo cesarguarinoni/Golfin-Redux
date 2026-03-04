@@ -46,19 +46,15 @@ namespace Golfin.UI
 
         private void Awake()
         {
-            Debug.Log("[PersistentUI] Awake() called");
-            
             // Singleton pattern
             if (Instance != null && Instance != this)
             {
-                Debug.Log("[PersistentUI] Duplicate instance found - destroying this one");
                 Destroy(gameObject);
                 return;
             }
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            Debug.Log("[PersistentUI] Singleton initialized, moved to DontDestroyOnLoad");
 
             // Hide by default (show when HomeScreen loads)
             HideBars();
@@ -71,9 +67,6 @@ namespace Golfin.UI
         /// </summary>
         public void ShowBars()
         {
-            Debug.Log("[PersistentUI] ShowBars() called");
-            Debug.Log($"[PersistentUI] topBarPanel: {(topBarPanel != null ? topBarPanel.name : "NULL")}");
-            Debug.Log($"[PersistentUI] bottomNavPanel: {(bottomNavPanel != null ? bottomNavPanel.name : "NULL")}");
             ShowTopBar(true);
             ShowBottomNav(true);
         }
@@ -83,24 +76,16 @@ namespace Golfin.UI
         /// </summary>
         public void HideBars()
         {
-            Debug.Log("[PersistentUI] HideBars() called");
             ShowTopBar(false);
             ShowBottomNav(false);
         }
 
         private void InitializeButtons()
         {
-            Debug.Log("[PersistentUI] InitializeButtons() called");
-            
             // Settings button
             if (settingsButton != null)
             {
-                Debug.Log($"[PersistentUI] Settings button found: {settingsButton.name}, adding click listener");
                 settingsButton.onClick.AddListener(OnSettingsButtonClick);
-            }
-            else
-            {
-                Debug.LogWarning("[PersistentUI] Settings button is NULL! Not assigned in Inspector?");
             }
 
             // Bottom nav buttons
@@ -138,31 +123,14 @@ namespace Golfin.UI
 
         private void OnSettingsButtonClick()
         {
-            Debug.Log("[PersistentUI] Settings button clicked!");
-            Debug.Log($"[PersistentUI] SettingsController type exists: {(typeof(SettingsController) != null)}");
-            Debug.Log($"[PersistentUI] SettingsController.Instance value: {SettingsController.Instance}");
-            
             // Open Settings Screen
-            if (SettingsController.Instance == null)
+            if (SettingsController.Instance != null)
             {
-                Debug.LogError("[PersistentUI] SettingsController.Instance is NULL! Is SettingsCanvas in the scene?");
-                
-                // Try to find it manually
-                var controller = GameObject.FindObjectOfType<SettingsController>();
-                if (controller != null)
-                {
-                    Debug.LogWarning($"[PersistentUI] Found SettingsController manually on GameObject: {controller.gameObject.name}");
-                    controller.OpenSettings();
-                }
-                else
-                {
-                    Debug.LogError("[PersistentUI] Could not find SettingsController anywhere in scene!");
-                }
+                SettingsController.Instance.OpenSettings();
             }
             else
             {
-                Debug.Log("[PersistentUI] Calling SettingsController.Instance.OpenSettings()");
-                SettingsController.Instance.OpenSettings();
+                Debug.LogWarning("[PersistentUI] SettingsController.Instance is NULL - cannot open settings");
             }
         }
 
@@ -172,25 +140,7 @@ namespace Golfin.UI
             UpdateScreenHighlight();
 
             // Handle screen navigation
-            switch (screen)
-            {
-                case Screen.Home:
-                    // Load Home Scene or activate Home Panel
-                    Debug.Log("Navigate to Home");
-                    break;
-                case Screen.Gacha:
-                    Debug.Log("Navigate to Gacha");
-                    break;
-                case Screen.MainPlay:
-                    Debug.Log("Navigate to Main Play");
-                    break;
-                case Screen.Inventory:
-                    Debug.Log("Navigate to Inventory");
-                    break;
-                case Screen.Characters:
-                    Debug.Log("Navigate to Characters");
-                    break;
-            }
+            // TODO: Implement actual screen switching logic
         }
 
         private void UpdateScreenHighlight()
@@ -225,14 +175,12 @@ namespace Golfin.UI
 
         public void ShowTopBar(bool show)
         {
-            Debug.Log($"[PersistentUI] ShowTopBar({show}) - topBarPanel: {(topBarPanel != null ? topBarPanel.name : "NULL")}");
             if (topBarPanel != null)
                 topBarPanel.SetActive(show);
         }
 
         public void ShowBottomNav(bool show)
         {
-            Debug.Log($"[PersistentUI] ShowBottomNav({show}) - bottomNavPanel: {(bottomNavPanel != null ? bottomNavPanel.name : "NULL")}");
             if (bottomNavPanel != null)
                 bottomNavPanel.SetActive(show);
         }

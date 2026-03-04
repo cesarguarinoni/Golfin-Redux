@@ -118,18 +118,11 @@ namespace GolfinRedux.UI
         private void OnEnable()
         {
             // Initial UI state when Home screen becomes active
-
-            Debug.Log("[HomeScreen] OnEnable called");
             
             // Show PersistentUI (Top Bar + Bottom Nav)
             if (PersistentUIManager.Instance != null)
             {
-                Debug.Log("[HomeScreen] Calling PersistentUIManager.ShowBars()");
                 PersistentUIManager.Instance.ShowBars();
-            }
-            else
-            {
-                Debug.LogWarning("[HomeScreen] PersistentUIManager.Instance is NULL!");
             }
 
             // Top bar: placeholder values for now
@@ -177,10 +170,6 @@ namespace GolfinRedux.UI
             if (SettingsController.Instance != null)
             {
                 SettingsController.Instance.OpenSettings();
-            }
-            else
-            {
-                Debug.LogWarning("[HomeScreen] SettingsController.Instance is null - can't open settings");
             }
         }
 

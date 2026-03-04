@@ -60,25 +60,18 @@ namespace Golfin.UI
 
         private void Awake()
         {
-            Debug.Log("[SettingsController] Awake() called");
-            
             if (Instance != null && Instance != this)
             {
-                Debug.Log("[SettingsController] Duplicate instance - destroying");
                 Destroy(gameObject);
                 return;
             }
 
             Instance = this;
-            Debug.Log("[SettingsController] Singleton initialized");
             InitializeButtons();
         }
 
         private void Start()
         {
-            Debug.Log("[SettingsController] Start() called - Instance still valid");
-            Debug.Log($"[SettingsController] SettingsCanvas.activeSelf at Start: {gameObject.activeSelf}");
-            
             // Start with settings closed (hide both background and panel)
             if (background != null)
             {
@@ -89,17 +82,6 @@ namespace Golfin.UI
             {
                 settingsPanel.SetActive(false);
             }
-        }
-
-        private void OnDisable()
-        {
-            Debug.LogWarning("[SettingsController] OnDisable() called - SettingsCanvas is being deactivated!");
-            Debug.LogWarning($"[SettingsController] Stack trace: {System.Environment.StackTrace}");
-        }
-
-        private void OnDestroy()
-        {
-            Debug.LogWarning("[SettingsController] OnDestroy() called - Instance being destroyed!");
         }
 
         private void InitializeButtons()
@@ -141,54 +123,17 @@ namespace Golfin.UI
 
         public void OpenSettings()
         {
-            Debug.Log("[SettingsController] OpenSettings() called");
-            
             // Show background (semi-transparent overlay)
             if (background != null)
             {
                 background.SetActive(true);
             }
-            else
-            {
-                Debug.LogWarning("[SettingsController] background is NULL! Not assigned in Inspector?");
-            }
             
             // Show settings panel
             if (settingsPanel != null)
             {
-                Debug.Log($"[SettingsController] settingsPanel reference: {settingsPanel.name}");
-                Debug.Log($"[SettingsController] settingsPanel path: {GetGameObjectPath(settingsPanel)}");
-                Debug.Log($"[SettingsController] settingsPanel.activeSelf BEFORE: {settingsPanel.activeSelf}");
-                Debug.Log($"[SettingsController] settingsPanel.activeInHierarchy BEFORE: {settingsPanel.activeInHierarchy}");
-                
-                // Make sure SettingsCanvas (parent) is active too
-                if (gameObject.activeSelf == false)
-                {
-                    Debug.LogWarning("[SettingsController] SettingsCanvas was inactive! Activating it now.");
-                    gameObject.SetActive(true);
-                }
-                
                 settingsPanel.SetActive(true);
-                
-                Debug.Log($"[SettingsController] settingsPanel.activeSelf AFTER: {settingsPanel.activeSelf}");
-                Debug.Log($"[SettingsController] settingsPanel.activeInHierarchy AFTER: {settingsPanel.activeInHierarchy}");
             }
-            else
-            {
-                Debug.LogError("[SettingsController] settingsPanel is NULL! Not assigned in Inspector?");
-            }
-        }
-
-        private string GetGameObjectPath(GameObject obj)
-        {
-            string path = obj.name;
-            Transform parent = obj.transform.parent;
-            while (parent != null)
-            {
-                path = parent.name + "/" + path;
-                parent = parent.parent;
-            }
-            return path;
         }
 
         public void CloseSettings()
@@ -197,7 +142,6 @@ namespace Golfin.UI
             if (settingsPanel != null)
             {
                 settingsPanel.SetActive(false);
-                Debug.Log("Settings panel closed");
             }
             
             // Hide background overlay
