@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0, type: 3}
+  m_Name: HoleDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.HoleDatabase
+  holes:
+  - courseNameKey: HOLE_LOMOND_5
+    holeNumber: 5
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 1
+    - type: 2
+      amount: 3
+  - courseNameKey: HOLE_RIVERSIDE_1
+    holeNumber: 1
+    rewards:
+    - type: 0
+      amount: 50
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_HIGHLAND_3
+    holeNumber: 3
+    rewards:
+    - type: 0
+      amount: 150
+    - type: 1
+      amount: 2
+    - type: 2
+      amount: 5
+  - courseNameKey: HOLE_LOMOND_6
+    holeNumber: 6
+    rewards:
+    - type: 0
+      amount: 200
+    - type: 1
+      amount: 3
+  - courseNameKey: HOLE_RIVERSIDE_2
+    holeNumber: 2
+    rewards:
+    - type: 0
+      amount: 75
+    - type: 2
+      amount: 3

@@ -1,6 +1,6 @@
 courseNameKey,holeNumber,reward1Type,reward1Amount,reward2Type,reward2Amount,reward3Type,reward3Amount
-HOLE_LOMOND_5,5,Points,100,RepairKit,1,Ball,3
-HOLE_RIVERSIDE_1,1,Points,50,Ball,2,,
-HOLE_HIGHLAND_3,3,Points,150,RepairKit,2,Ball,5
-HOLE_LOMOND_6,6,Points,200,RepairKit,3,,
-HOLE_RIVERSIDE_2,2,Points,75,Ball,3,,
+HOLE_LOMOND_5,5,Points,100,RepairKit,10,Ball,30
+HOLE_RIVERSIDE_1,1,Points,50,Ball,20,,
+HOLE_HIGHLAND_3,3,Points,150,RepairKit,20,Ball,5
+HOLE_LOMOND_6,6,Points,200,RepairKit,30,,
+HOLE_RIVERSIDE_2,2,Points,75,Ball,30,,
