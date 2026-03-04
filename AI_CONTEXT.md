@@ -1,19 +1,30 @@
 
 ---
 
-## 🎉 LATEST: Home Screen Complete!
+## 🎉 LATEST: Screen Deactivator Added!
+
+**Screen Deactivator** - Automatically deactivates unnecessary screens before runtime!
+- ✅ Auto-runs before Play mode in Unity Editor
+- ✅ Future-proof detection (auto-finds new screens by naming pattern)
+- ✅ GUI configuration via **GOLFIN → Screen Deactivator Settings**
+- ✅ Prevents multiple screens from being active at startup
+
+**New Scripts Added:**
+- `ScreenDeactivator.cs` - Main component with auto-detection
+- `ScreenDeactivatorEditor.cs` - Editor window for easy configuration
+
+**Setup:** See `Docs/SCREEN_DEACTIVATOR.md` for full guide.
+
+**Commit:** [Pending] - "Add Screen Deactivator utility"
+
+---
+
+## Previous: Home Screen Complete!
 
 **Home Screen is now fully functional** with all 3 missing features implemented:
 - ✅ Localization for Next Hole name (uses CSV keys like `HOLE_LOMOND_5`)
 - ✅ Rewards display (3 slots with icon support for Points, Repair Kit, Ball)
 - ✅ Notice Panel carousel (auto-cycle every 5s + swipe left/right)
-
-**New Scripts Added:**
-- `SwipeDetector.cs` - Swipe gesture detection for news panel
-- `HoleData.cs` - Data structures for holes/rewards + HoleDatabase ScriptableObject
-- Updated `HomeScreenController.cs` - Full localization, auto-cycle, reward icons
-
-**Setup Required:** See `Docs/HOME_SCREEN_SETUP.md` for 5-10 minute setup guide.
 
 **Commit:** 0a5c152 - "Complete Home Screen: Localization, Rewards, and News Carousel"
 
@@ -550,10 +561,13 @@ Docs/
 
 ### Workflow
 1. Cesar works on screens/features (with Cortana's help)
-2. Cesar updates Kai when ready for next phase
+2. Cesar updates Kai when ready for next phase or requests new features
 3. Kai provides architecture, scripts, documentation
-4. Cesar implements in Unity Editor
-5. Repeat
+4. **Kai pushes code directly to GitHub** (no manual copying needed)
+5. Cesar pulls changes and implements in Unity Editor
+6. Repeat
+
+**Note:** Kai can clone, commit, and push to the repository. Scripts and documentation are committed directly to the repo.
 
 ### Communication
 - Telegram group: GOLFIN<>dev
@@ -562,6 +576,16 @@ Docs/
 ---
 
 ## Change Log
+
+### 2026-03-05 06:36 JST
+- **NEW FEATURE:** Screen Deactivator utility added
+- Added `ScreenDeactivator.cs` - Auto-deactivates screens before Play mode
+- Added `ScreenDeactivatorEditor.cs` - GUI configuration window
+- Created `Docs/SCREEN_DEACTIVATOR.md` - Complete documentation
+- Updated workflow: Kai now pushes directly to GitHub (no manual copying)
+- Purpose: Prevents multiple screens from being active at startup
+- Auto-detects screens by name pattern (Screen/Panel/Canvas)
+- Future-proof: automatically finds new screens as they're added
 
 ### 2026-03-04 13:00 JST
 - **MAJOR UPDATE:** Read both PDF docs (Original GOLFIN 1202 pages + Redux 9 pages)
