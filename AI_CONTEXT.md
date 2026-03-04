@@ -613,4 +613,14 @@ When you finish a feature or make significant progress, update this file with:
 - Ready to use: drag HoleDatabase.asset into HomeScreenController inspector
 - Fully extendable in Unity (click + to add more holes)
 - Commits: f134e61, 2188c3f
+### 2026-03-04 14:39 JST
+- **AUTO-LOAD FROM CSV!** 🎉
+- Created HoleDatabaseLoader.cs - auto-loads holes from CSV on scene start
+- No manual import needed! Just edit CSV and play
+- Similar workflow to localization (automatic runtime loading)
+- Updated HomeScreenController to use runtime database as fallback
+- Setup: Add HoleDatabaseLoader component, assign CSV, done!
+- Updated QUICK_START_HOLES.md with auto-load guide
+- Commits: fb0f0a1 (fix ScriptableObject), 0054c06 (auto-load)
+
 
