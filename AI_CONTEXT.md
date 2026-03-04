@@ -604,3 +604,13 @@ When you finish a feature or make significant progress, update this file with:
 - Created Docs/HOME_SCREEN_SETUP.md with complete setup guide
 - All 3 missing features now implemented
 - Commit: 0a5c152
+### 2026-03-04 14:05 JST
+- **HOLEDATABASE ASSET CREATED!**
+- Added Assets/Data/HoleDatabase.asset with 5 example holes
+- Each hole includes courseNameKey, holeNumber, and 1-3 rewards
+- Added Assets/Data/README_HOLES.md with complete usage guide
+- Updated LocalizationText.csv with HOLE_LOMOND_6 and HOLE_RIVERSIDE_2
+- Ready to use: drag HoleDatabase.asset into HomeScreenController inspector
+- Fully extendable in Unity (click + to add more holes)
+- Commits: f134e61, 2188c3f
+
