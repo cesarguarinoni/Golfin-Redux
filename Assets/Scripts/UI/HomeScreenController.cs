@@ -119,10 +119,17 @@ namespace GolfinRedux.UI
         {
             // Initial UI state when Home screen becomes active
 
+            Debug.Log("[HomeScreen] OnEnable called");
+            
             // Show PersistentUI (Top Bar + Bottom Nav)
             if (PersistentUIManager.Instance != null)
             {
+                Debug.Log("[HomeScreen] Calling PersistentUIManager.ShowBars()");
                 PersistentUIManager.Instance.ShowBars();
+            }
+            else
+            {
+                Debug.LogWarning("[HomeScreen] PersistentUIManager.Instance is NULL!");
             }
 
             // Top bar: placeholder values for now

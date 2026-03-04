@@ -67,6 +67,9 @@ namespace Golfin.UI
         /// </summary>
         public void ShowBars()
         {
+            Debug.Log("[PersistentUI] ShowBars() called");
+            Debug.Log($"[PersistentUI] topBarPanel: {(topBarPanel != null ? topBarPanel.name : "NULL")}");
+            Debug.Log($"[PersistentUI] bottomNavPanel: {(bottomNavPanel != null ? bottomNavPanel.name : "NULL")}");
             ShowTopBar(true);
             ShowBottomNav(true);
         }
