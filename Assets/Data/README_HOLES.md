@@ -1,10 +1,20 @@
 # Hole Database
 
-This folder contains the HoleDatabase ScriptableObject asset which stores all hole data for the game.
+This folder is where the HoleDatabase ScriptableObject asset will be created.
 
-## HoleDatabase.asset
+## Creating the Database (2 minutes in Unity)
 
-The main database containing all holes. Each hole has:
+**You need to create this in Unity Editor**, not as a text file:
+
+1. Right-click in this folder → **Create → Golfin → Hole Database**
+2. Name it `HoleDatabase`
+3. Add holes in the Inspector (see CREATE_DATABASE.md for examples)
+
+**Full instructions:** See `CREATE_DATABASE.md` in this folder.
+
+## HoleDatabase Structure
+
+Each hole has:
 - **courseNameKey**: Localization key (must exist in LocalizationText.csv)
 - **holeNumber**: Hole number (1-18 typically)
 - **rewards**: List of rewards (1-3 per hole)
@@ -16,30 +26,28 @@ The `type` field uses numeric values:
 - `1` = **Repair Kit** (item to fix clubs)
 - `2` = **Ball** (consumable item)
 
-### Example Hole Entry
+In Unity Inspector, these appear as a dropdown: Points/RepairKit/Ball
 
-```yaml
-- courseNameKey: HOLE_LOMOND_5
-  holeNumber: 5
-  rewards:
-  - type: 0      # Points
-    amount: 100
-  - type: 1      # Repair Kit
-    amount: 1
-  - type: 2      # Ball
-    amount: 3
+## Example Hole Data
+
+```
+Course Name Key: HOLE_LOMOND_5
+Hole Number: 5
+Rewards:
+  - Type: Points, Amount: 100
+  - Type: RepairKit, Amount: 1
+  - Type: Ball, Amount: 3
 ```
 
-## Adding New Holes
+## Adding Holes in Unity
 
-### In Unity Editor:
 1. Select `HoleDatabase.asset` in Project window
 2. In Inspector, expand **Holes** list
 3. Click **+** to add a new hole
 4. Set **Course Name Key** (e.g., `HOLE_AUGUSTA_12`)
 5. Set **Hole Number**
 6. Click **+** in **Rewards** to add rewards
-7. Choose **Type** (Points/RepairKit/Ball) and **Amount**
+7. Choose **Type** (dropdown) and **Amount**
 
 ### Don't Forget:
 Add the localization key to `Assets/Localization/LocalizationText.csv`:
@@ -47,21 +55,15 @@ Add the localization key to `Assets/Localization/LocalizationText.csv`:
 HOLE_AUGUSTA_12,Augusta National - Hole 12,オーガスタナショナル - ホール12
 ```
 
-## Editing Manually (Advanced)
+## Using the Database
 
-You can also edit `HoleDatabase.asset` directly in a text editor:
-1. Make sure Unity is closed
-2. Edit the YAML file
-3. Reopen Unity to see changes
+After creating it:
+1. Drag `HoleDatabase.asset` into **HomeScreenController → Optional: Hole Database** field
+2. Game will load hole data from database instead of hardcoded fallback
 
-## Current Holes
+## Example Holes to Add
 
-The database ships with 5 example holes:
-1. **Lomond CC - Hole 5**: 100 Points, 1 Repair Kit, 3 Balls
-2. **Riverside GC - Hole 1**: 50 Points, 2 Balls
-3. **Highland Hills - Hole 3**: 150 Points, 2 Repair Kits, 5 Balls
-4. **Lomond CC - Hole 6**: 200 Points, 3 Repair Kits
-5. **Riverside GC - Hole 2**: 75 Points, 3 Balls
+See CREATE_DATABASE.md for 5 pre-configured example holes ready to copy.
 
 ## Future Extensions
 
