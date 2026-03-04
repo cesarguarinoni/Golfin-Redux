@@ -11,7 +11,8 @@ namespace Golfin.UI
         public static SettingsController Instance { get; private set; }
 
         [Header("Settings Panel")]
-        public GameObject settingsPanel;
+        public GameObject background;           // Semi-transparent overlay
+        public GameObject settingsPanel;        // The actual settings panel
         public Button closeButton;
 
         [Header("Settings Menu Items")]
@@ -78,7 +79,12 @@ namespace Golfin.UI
             Debug.Log("[SettingsController] Start() called - Instance still valid");
             Debug.Log($"[SettingsController] SettingsCanvas.activeSelf at Start: {gameObject.activeSelf}");
             
-            // Start with settings panel closed
+            // Start with settings closed (hide both background and panel)
+            if (background != null)
+            {
+                background.SetActive(false);
+            }
+            
             if (settingsPanel != null)
             {
                 settingsPanel.SetActive(false);
@@ -137,6 +143,17 @@ namespace Golfin.UI
         {
             Debug.Log("[SettingsController] OpenSettings() called");
             
+            // Show background (semi-transparent overlay)
+            if (background != null)
+            {
+                background.SetActive(true);
+            }
+            else
+            {
+                Debug.LogWarning("[SettingsController] background is NULL! Not assigned in Inspector?");
+            }
+            
+            // Show settings panel
             if (settingsPanel != null)
             {
                 Debug.Log($"[SettingsController] settingsPanel reference: {settingsPanel.name}");
@@ -176,10 +193,17 @@ namespace Golfin.UI
 
         public void CloseSettings()
         {
+            // Hide settings panel
             if (settingsPanel != null)
             {
                 settingsPanel.SetActive(false);
                 Debug.Log("Settings panel closed");
+            }
+            
+            // Hide background overlay
+            if (background != null)
+            {
+                background.SetActive(false);
             }
         }
 
