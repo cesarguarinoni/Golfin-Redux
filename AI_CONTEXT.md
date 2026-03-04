@@ -1,20 +1,38 @@
 # AI Context - GOLFIN Redux Project
 
-**Last Updated:** 2026-03-04 10:21 JST  
+**Last Updated:** 2026-03-04 13:00 JST  
 **Updated By:** Kai (Aikenken Bot)
 
 ---
 
 ## Project Overview
 
-**GOLFIN Redux** is a Unity-based mobile golf game with a shared point system integrated with the Golfin app ecosystem.
+**GOLFIN Redux** is a **simplified** Unity-based mobile golf game derived from the original GOLFIN project. It uses a shared point system integrated with the Golfin app ecosystem.
 
 ### Key Facts
 - **Platform:** Unity (iOS/Android)
-- **Language:** C# + Unity UI (no NFTs)
-- **Monetization:** Shared point system with Golfin app
+- **Language:** C# + Unity UI
+- **Monetization:** Shared point system with Golfin app (no NFTs)
 - **Stage:** Core UI development phase
-- **Team:** Cesar (lead dev), Ken (founder), Kai (AI assistant)
+- **Team:** Cesar (lead dev), Ken (founder), Kai (AI assistant), Cortana (Cesar's local AI)
+
+### Original GOLFIN vs GOLFIN Redux
+
+**Original GOLFIN (1202 pages of documentation):**
+- Complex gameplay systems: Missions, Tournaments, 1v1 PvP, Driving Range
+- Club & Ball customization with durability, repair kits, leveling
+- Gear system, stamina system, character traits
+- GPS location-based features
+- NFT marketplace integration
+- Rankings, leaderboards, matchmaking
+- Multiple game modes and progression systems
+
+**GOLFIN Redux (9 pages of documentation):**
+- **Simplified core loop:** Select hole → Play → Get rewards → Progress
+- **No NFTs:** Simple shared point system
+- **No complex gear/durability:** Straightforward progression
+- **Focus on accessibility:** Easy onboarding, clear UI
+- **Scope:** Logo → Splash → Loading → Home → Settings → Gameplay
 
 ---
 
@@ -25,40 +43,88 @@
 - **UI:** Unity UI (Canvas-based)
 - **Text:** TextMeshPro
 - **Architecture Pattern:** Singleton managers + Scene-based controllers
+- **Localization:** CSV-based system (English/Japanese)
 
 ### Folder Structure
 ```
 Assets/
+├── Art/
+│   └── Characters/
+│       ├── Camila.png
+│       ├── James.png
+│       └── Olivia.png
+├── Fonts/
+│   └── Rubik-SemiBold SDF.asset
+├── Localization/
+│   ├── LocalizationText.csv
+│   └── LocalizationTextTable.asset
 ├── Prefabs/
 │   └── UI/
-│       ├── PersistentUI.prefab         (Top Bar + Bottom Nav)
-│       └── SettingsCanvas.prefab       (Settings Screen overlay)
+│       ├── HomeScreen.prefab          (✅ Built by Cesar)
+│       ├── PersistentUI.prefab        (YAML hierarchy, needs components)
+│       └── SettingsCanvas.prefab      (YAML hierarchy, needs components)
 ├── Scripts/
 │   └── UI/
-│       ├── PersistentUIManager.cs      (Singleton, DontDestroyOnLoad)
-│       ├── SettingsController.cs       (Settings panel controller)
-│       ├── HomeScreenController.cs     (Existing)
-│       ├── LoadingScreenController.cs  (Existing)
-│       ├── ScreenManager.cs            (Existing)
-│       └── [other UI controllers]
+│       ├── PersistentUIManager.cs     (Singleton, DontDestroyOnLoad)
+│       ├── SettingsController.cs      (Settings panel controller)
+│       ├── HomeScreenController.cs    (Existing)
+│       ├── LoadingScreenController.cs (Existing)
+│       ├── ScreenManager.cs           (Existing)
+│       ├── ProTipCard.cs              (Loading screen tips)
+│       ├── LoadingBar.cs              (Loading progress)
+│       └── FadeController.cs          (Screen transitions)
 ├── References/
-│   └── Settings/                       (Design mockups for Settings Screen)
+│   └── Settings/                      (Design mockups for Settings Screen)
 └── Scenes/
-    └── [game scenes]
+    ├── ShellScene.unity               (Main UI scenes: Logo/Splash/Loading/Home)
+    └── GameplayScene.unity            (Actual golf gameplay)
 
 Docs/
-└── SettingsScreen/
-    ├── README.md
-    ├── ARCHITECTURE.md
-    ├── PREFAB_STRUCTURE.md
-    └── IMPLEMENTATION_GUIDE.md
+├── SettingsScreen/
+│   ├── README.md
+│   ├── ARCHITECTURE.md
+│   ├── PREFAB_STRUCTURE.md
+│   └── IMPLEMENTATION_GUIDE.md
+├── Golfin - Confluence.pdf            (Original project - 1202 pages)
+└── Golfin Redux. - Current screens.pdf (Redux screens - 9 pages)
 ```
 
 ---
 
 ## Current Status
 
-### ✅ Completed (Phase 1)
+### ✅ Completed
+
+**Logo Screen**
+- Black background with logo
+- Fades in/out animation
+- Transitions to Splash Screen
+
+**Splash Screen**
+- Background image
+- Logo with shield & text
+- START button → Loading Screen
+- CREATE ACCOUNT button → Create Account Screen (not built yet)
+- LOGIN button → Login Screen (not built yet)
+
+**Loading Screen**
+- Background image
+- Pro Tip Panel with rotating tips (from CSV)
+- Loading bar with smooth animation
+- Progress text (0-100%)
+- Transitions to Home Screen
+
+**Home Screen (✅ Built by Cesar - mostly complete)**
+- ✅ Canvas background
+- ✅ Top Bar: Reward Points Icon, Amount, Settings Button, Username
+- ✅ News Panel (Maintenance notice)
+- ✅ Promo Banner (GPS banner)
+- ✅ Random Character (Camila/James/Olivia)
+- ✅ Next Hole Panel with PLAY button
+- ✅ Bottom Navigation Bar (5 buttons with highlight)
+- 🚧 **Missing:** Localization for Next Hole name
+- 🚧 **Missing:** Rewards display (3 reward slots)
+- 🚧 **Missing:** Notice Panel carousel functionality (swipe/auto-cycle)
 
 **Settings Screen - Phase 1 (Static UI)**
 - Created `PersistentUIManager.cs` - Singleton for Top Bar + Bottom Nav (persists across scenes)
@@ -67,27 +133,20 @@ Docs/
 - Created `SettingsCanvas.prefab` - YAML hierarchy with GameObjects (components need to be added in Unity)
 - Documented architecture, implementation guide, prefab structure
 
-**What Works:**
-- Top Bar: Reward Points display, Settings button, Username display
-- Bottom Nav: 5 buttons (Home, Gacha, Main Play, Inventory, Characters) with highlight system
-- Settings Panel: 9 menu items (User Profile, Sound Settings, Language, Terms of Use, Privacy Policy, FAQ, About, Contact, Log Out)
-- All buttons log to Console on click
-
-**What's Still Needed:**
-- Add UI components (Button, Image, TextMeshProUGUI) to prefab GameObjects in Unity Editor
-- Wire up inspector references in PersistentUIManager and SettingsController
-- Add prefabs to scene and test
-
 **Commits:**
 - c12dd21: Add Settings Screen Phase 1 scripts + docs
 - fa45fc5: Add prefab YAML hierarchies for PersistentUI and SettingsCanvas
+- 3b4c3bc: Add AI_CONTEXT.md knowledge base
+- 7e31377: Cesar's Home Screen implementation + character art
 
 ### 🚧 In Progress
 
-**UI Screens (Cesar working on):**
-- [Cesar is building out additional screens - details TBD]
+**Home Screen (Cesar finishing):**
+- [ ] Add localization for Next Hole name (read from CSV)
+- [ ] Display 3 rewards (icon + amount) for Next Hole
+- [ ] Implement Notice Panel carousel (swipe left/right + auto-timer)
 
-### 📋 Planned (Future Phases)
+### 📋 Planned (Immediate Next Steps)
 
 **Settings Screen - Phase 2 (Accordion Behavior)**
 - Expand/collapse animation for User Profile, Sound Settings, Language
@@ -96,11 +155,206 @@ Docs/
 - Only one section open at a time
 - DOTween or Unity Animator for smooth transitions
 
+**Other Screens (From Redux PDF):**
+- Create Account Screen
+- Login Screen
+- Gacha Screen
+- Select Hole Screen
+- Inventory Screen
+- Characters Screen
+
 **Settings Screen - Phase 3 (Full Functionality)**
 - Webview integration for Terms/Privacy/FAQ/Contact
 - User profile editing + account linking (Cognito)
 - Log out confirmation modal + session clear
 - About screen (app version, licenses)
+
+---
+
+## Screen Specifications (From Redux PDF)
+
+### Logo Screen
+**Elements:**
+- Black background
+- Logo (Image)
+
+**Logic:**
+- Logo fades in and out
+- Transition to Splash Screen
+
+---
+
+### Splash Screen
+**Elements:**
+- Background (Image)
+- Shield & Text Logo (Image)
+- START Button (Button Background + Label)
+- CREATE ACCOUNT Text Button (TextMeshPro + Button)
+- LOGIN Text Button (TextMeshPro + Button)
+
+**Logic:**
+- START → Loading Screen
+- CREATE ACCOUNT → Create Account Screen (not built yet)
+- LOGIN → Login Screen (not built yet)
+
+---
+
+### Loading Screen
+**Elements:**
+- Canvas Background (Image)
+- Pro Tip Panel:
+  - "PRO TIP" Title (TextMeshPro)
+  - Divider Line (Image)
+  - Instruction Text (TextMeshPro)
+  - Tip Card (Image)
+  - "TAP FOR NEXT TIP" Text (TextMeshPro + Button)
+- "NOW LOADING" Text (TextMeshPro)
+- Loading Bar Background (Image)
+- Loading Bar Fill (Image)
+- Loading Progress Text (TextMeshPro)
+
+**Logic:**
+- Shows tips from an array, cycling on timer and when user taps
+- Tips and images are localized (read from CSV)
+- Loading bar fills smoothly
+- Progress text shows real loading amount (0-100%)
+- After loading, go to Home Screen
+
+---
+
+### Home Screen
+**Elements:**
+
+**Canvas Background (Image)**
+
+**Top Bar (Panel):**
+- Reward Points Icon (Image)
+- Reward Points Amount (TextMeshPro)
+- Settings Button (Button + Image)
+- Username Text (TextMeshPro)
+
+**News Panel (Image):**
+- Maintenance Title (TextMeshPro)
+- Divider Line (Image)
+- Maintenance Description Text (TextMeshPro)
+- Page Indicator Dots (Images)
+
+**Promo Banner (Button):**
+- Banner Background (Image)
+- Banner Text (TextMeshPro)
+- GPS Icon (Image)
+
+**Character (Image):**
+- Randomly loaded from array (Camila, James, Olivia)
+- Appears behind Next Hole Panel but over background
+
+**Next Hole Panel (Image):**
+- "NEXT HOLE" Title (TextMeshPro)
+- Course Name Text (TextMeshPro)
+- Reward Icon 1 (Image)
+- Reward Amount 1 (TextMeshPro)
+- Reward Icon 2 (Image)
+- Reward Amount 2 (TextMeshPro)
+- Reward Icon 3 (Image)
+- Reward Amount 3 (TextMeshPro)
+- PLAY Button (Button Background + Label)
+
+**Bottom Navigation Bar (Panel):**
+- Home Button (Button + Image)
+- Gacha Button (Button + Image)
+- Tee/Main Play Button (Button + Image)
+- Inventory Button (Button + Image)
+- Characters Button (Button + Image)
+
+**Logic:**
+
+**Top Bar:**
+- Present in almost all screens
+- Keep constant instead of reloading (DontDestroyOnLoad)
+
+**Reward Points:**
+- Display user's total points (read from backend, local for now)
+- Update dynamically as points are earned/spent
+
+**Settings Button:**
+- Opens Settings screen
+
+**Username:**
+- Editable in Unity or Settings
+- Font auto-adjusts to fit up to 16 characters
+
+**News Panel:**
+- Works as a carousel
+- Multiple announcements can be loaded
+- Cycle with timer or swipe left/right
+- Read from localization file
+
+**Character:**
+- Loads randomly from array (customizable)
+- Behind Next Hole Panel, over background
+
+**Next Hole Panel:**
+- Shows latest available hole info
+- Title: Name of the hole (from CSV/server)
+- Rewards: 1-3 rewards (Points, Repair Kits, Balls)
+  - Icon + Amount (e.g., "Icon x 100")
+  - Set up for each hole in CSV (local now, server later)
+  - Finishing hole within par grants full rewards
+  - Replaying gives lesser rewards (customizable)
+
+**PLAY Button:**
+- Starts next hole based on user progression
+
+**Bottom Navigation Bar:**
+- Present in almost all screens
+- Keep constant instead of reloading
+- Quick-access: Home, Gacha, Select Hole, Inventory, Characters
+- Highlight current section
+
+---
+
+### Settings Screen
+**Elements:**
+
+**Canvas Background (Image)**
+
+**Top Bar (Panel):** (same as Home Screen)
+
+**Settings Panel (Main Container):**
+
+**Each Row (Reusable Structure):**
+- Button (full row clickable)
+- Left Icon (Image)
+- Label (TextMeshPro)
+- Right Arrow (Image)
+
+**Close Button:**
+- Background (Image)
+- "CLOSE" Label (TextMeshPro)
+
+**Bottom Navigation Bar (Panel):** (same as Home Screen)
+
+**Logic:**
+
+**Settings Panel:**
+- All items behave like drop-downs
+- Pressing arrow expands/collapses section
+- Only one section open at a time
+- All start closed
+
+**Menu Items:**
+1. **User Profile:** Opens submenu (edit name, account linking)
+2. **Sound Settings:** Opens submenu (Music Volume, SFX Volume)
+3. **Language:** Opens language selection screen, updates localization
+4. **Terms of Use:** Opens webview/modal with legal document
+5. **Privacy Policy:** Opens webview/modal with privacy text
+6. **FAQ:** Opens webview/modal with FAQ screen
+7. **About:** App version & licenses
+8. **Contact Form:** Opens webview/modal with contact screen
+9. **Log Out:** (Disregard for now) Confirmation modal → Clear session → Login screen
+
+**Close Button:**
+- Returns to previous screen
 
 ---
 
@@ -115,13 +369,34 @@ Docs/
   - No backdrop click to close (only Close button)
 - **Singleton Pattern:** `PersistentUIManager` and `SettingsController` use singleton pattern for global access
 
+### Localization
+- CSV-based system (`LocalizationText.csv`)
+- English and Japanese initially
+- Key-based lookup (e.g., `HOME_COURSE_NAME`)
+- All UI text reads from CSV
+
+### Rewards System
+- 3 reward types: Points, Repair Kits, Balls
+- Displayed as Icon + Amount (e.g., "Icon x 100")
+- Full rewards for finishing hole within par
+- Lesser rewards for replaying (customizable)
+- Stored in CSV (local) → Server (future)
+
+### Character System
+- Random selection from array (Camila, James, Olivia)
+- Customizable array
+- Appears behind Next Hole Panel
+
+### Notice Panel / News Carousel
+- Multiple announcements
+- Auto-cycle with timer
+- Swipe left/right for manual navigation
+- Page indicator dots show current position
+- Read from localization CSV
+
 ### Sound Settings
 - Sliders for Music and SFX volume (not preset levels)
 - Phase 2 feature
-
-### Language Support
-- English and Japanese initially
-- Expandable to more languages later
 
 ### Account Linking
 - Tied to Cognito server
@@ -145,6 +420,7 @@ Docs/
 - Controllers: `[Screen]Controller.cs` (e.g., `HomeScreenController.cs`)
 - Managers: `[Purpose]Manager.cs` (e.g., `PersistentUIManager.cs`)
 - Prefabs: PascalCase (e.g., `PersistentUI.prefab`)
+- Localization Keys: SCREAMING_SNAKE_CASE (e.g., `HOME_COURSE_NAME`)
 
 ### Comments
 - XML summary comments for public classes and methods
@@ -170,14 +446,21 @@ Docs/
 - Make sure `settingsPanel` reference is assigned in inspector
 - Verify `settingsPanel.SetActive(true)` is being called
 
+### Issue: Localization not working
+**Solution:**
+- Check `LocalizationText.csv` has the key
+- Verify `LocalizationTextTable.asset` is updated
+- Make sure TextMeshPro component is using localization system
+
 ---
 
 ## Next Steps
 
 ### Immediate (Cesar's Work)
-- [ ] Build out additional screens
-- [ ] Update project with latest changes
-- [ ] Let Kai know when ready for next phase
+- [x] Build Home Screen UI
+- [ ] Add localization for Next Hole name
+- [ ] Display 3 rewards for Next Hole
+- [ ] Implement Notice Panel carousel functionality
 
 ### Phase 2 (Settings Screen Accordion)
 - [ ] Create `SettingsMenuItem.cs` for expand/collapse logic
@@ -186,7 +469,15 @@ Docs/
 - [ ] Implement Music/SFX volume sliders
 - [ ] Implement language selection screen
 
-### Phase 3 (Settings Screen Full Functionality)
+### Phase 3 (Other Screens)
+- [ ] Create Account Screen
+- [ ] Login Screen
+- [ ] Gacha Screen
+- [ ] Select Hole Screen
+- [ ] Inventory Screen
+- [ ] Characters Screen
+
+### Phase 4 (Settings Screen Full Functionality)
 - [ ] Integrate webview plugin (UniWebView or Vuplex)
 - [ ] Implement user profile editing
 - [ ] Implement Cognito account linking
@@ -198,6 +489,8 @@ Docs/
 ## Resources
 
 ### Documentation
+- `Docs/Golfin - Confluence.pdf` - Original project (1202 pages)
+- `Docs/Golfin Redux. - Current screens.pdf` - Redux screens (9 pages)
 - `Docs/SettingsScreen/README.md` - Overview + quick start
 - `Docs/SettingsScreen/ARCHITECTURE.md` - System architecture with diagrams
 - `Docs/SettingsScreen/PREFAB_STRUCTURE.md` - Complete Unity hierarchy
@@ -206,7 +499,7 @@ Docs/
 ### Design References
 - `Assets/References/Settings/` - Mockups for Settings Screen
 
-### External Libraries (for Phase 2/3)
+### External Libraries (for Phase 2+)
 - **DOTween:** Smooth animations - https://dotween.demigiant.com/
 - **UniWebView:** In-app webviews - https://uniwebview.com/
 - **Vuplex:** Cross-platform webviews - https://store.vuplex.com/
@@ -219,9 +512,10 @@ Docs/
 - **Cesar Guarinoni:** Lead developer, Unity implementation
 - **Ken Komatsu (kenken):** Founder, product direction
 - **Kai (Aikenken Bot):** AI assistant, architecture + documentation
+- **Cortana:** Cesar's local AI assistant (separate channel)
 
 ### Workflow
-1. Cesar works on screens/features
+1. Cesar works on screens/features (with Cortana's help)
 2. Cesar updates Kai when ready for next phase
 3. Kai provides architecture, scripts, documentation
 4. Cesar implements in Unity Editor
@@ -235,6 +529,16 @@ Docs/
 
 ## Change Log
 
+### 2026-03-04 13:00 JST
+- **MAJOR UPDATE:** Read both PDF docs (Original GOLFIN 1202 pages + Redux 9 pages)
+- Added comprehensive screen specifications from Redux PDF
+- Documented Cesar's Home Screen implementation
+- Identified missing Home Screen features (localization, rewards, carousel)
+- Clarified project simplification (Redux vs Original)
+- Updated folder structure with new assets (characters, localization)
+- Added detailed logic for each screen
+- Note: Cesar is working with Cortana (local AI) in parallel
+
 ### 2026-03-04 10:21 JST
 - Created AI_CONTEXT.md as living knowledge base
 - Documented Settings Screen Phase 1 completion
@@ -245,3 +549,10 @@ Docs/
 
 **Note to Future AI Assistants:**
 This file is your source of truth. Read it first before working on the project. Update it whenever you learn something new or make significant changes. Keep it concise but comprehensive.
+
+**Note to Cesar:**
+When you finish a feature or make significant progress, update this file with:
+- What's been completed
+- What's still missing
+- Any new decisions or changes
+- Updated commit hashes
