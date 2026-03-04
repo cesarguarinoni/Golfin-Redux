@@ -224,3 +224,40 @@ Then in HoleDatabase:
 **Total time:** ~5-10 minutes
 
 Everything is backward-compatible - if you don't wire up icons/database, it uses fallback data and still works!
+
+---
+
+## HoleDatabase Asset (Included!)
+
+A ready-to-use **HoleDatabase.asset** is now included at `Assets/Data/HoleDatabase.asset` with 5 example holes:
+
+1. **Lomond CC - Hole 5**: 100 Points, 1 Repair Kit, 3 Balls
+2. **Riverside GC - Hole 1**: 50 Points, 2 Balls
+3. **Highland Hills - Hole 3**: 150 Points, 2 Repair Kits, 5 Balls
+4. **Lomond CC - Hole 6**: 200 Points, 3 Repair Kits
+5. **Riverside GC - Hole 2**: 75 Points, 3 Balls
+
+### Quick Setup:
+1. In Unity, select `Assets/Data/HoleDatabase.asset`
+2. Drag it into **HomeScreenController → Optional: Hole Database** field
+3. Done! Game will now cycle through these holes
+
+### Adding More Holes:
+1. Select `HoleDatabase.asset` in Project window
+2. In Inspector, expand **Holes** list
+3. Click **+** to add a new hole
+4. Set **Course Name Key**, **Hole Number**, and **Rewards**
+5. Don't forget to add the localization key to `LocalizationText.csv`!
+
+**Full guide:** `Assets/Data/README_HOLES.md`
+
+---
+
+## Reward Types Reference
+
+When adding rewards in the database:
+- **Type 0** = Points (main currency)
+- **Type 1** = Repair Kit (item)
+- **Type 2** = Ball (consumable)
+
+In Unity Inspector, it shows as a dropdown (Points/RepairKit/Ball) for easier selection.
