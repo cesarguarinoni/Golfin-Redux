@@ -56,7 +56,28 @@ namespace Golfin.UI
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
+            // Hide by default (show when HomeScreen loads)
+            HideBars();
+
             InitializeButtons();
+        }
+
+        /// <summary>
+        /// Show Top Bar and Bottom Nav (call from HomeScreen onwards)
+        /// </summary>
+        public void ShowBars()
+        {
+            ShowTopBar(true);
+            ShowBottomNav(true);
+        }
+
+        /// <summary>
+        /// Hide Top Bar and Bottom Nav (for Logo, Splash, Loading screens)
+        /// </summary>
+        public void HideBars()
+        {
+            ShowTopBar(false);
+            ShowBottomNav(false);
         }
 
         private void InitializeButtons()
