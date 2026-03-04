@@ -32,8 +32,9 @@
 
 # AI Context - GOLFIN Redux Project
 
-**Last Updated:** 2026-03-04 13:00 JST  
-**Updated By:** Kai (Aikenken Bot)
+**Last Updated:** 2026-03-05 06:43 JST  
+**Updated By:** Kai (Aikenken Bot)  
+**Documentation Status:** ✅ All docs read and synced
 
 ---
 
@@ -47,6 +48,30 @@
 - **Monetization:** Shared point system with Golfin app (no NFTs)
 - **Stage:** Core UI development phase
 - **Team:** Cesar (lead dev), Ken (founder), Kai (AI assistant), Cortana (Cesar's local AI)
+
+### 🤖 Quick Reference for AI Assistants
+
+**First time working on this project? Read these first:**
+1. This file (AI_CONTEXT.md) - Complete project overview
+2. `Docs/Golfin Redux. - Current screens.pdf` (9 pages) - Screen designs and specs
+
+**Working on a specific feature? Reference these:**
+- **Home Screen:** `Docs/HOME_SCREEN_SETUP.md` + `Docs/QUICK_START_HOLES.md`
+- **Settings Screen:** `Docs/SettingsScreen/README.md` (then dive into ARCHITECTURE/IMPLEMENTATION_GUIDE)
+- **Screen Management:** `Docs/SCREEN_DEACTIVATOR.md`
+- **UI Development:** `Docs/UI_AUTO_WIRE_GUIDE.md` (for new screens only!)
+- **Full Build Guide:** `Docs/SETTINGS_BUILD_GUIDE.md`
+
+**Architecture patterns used:**
+- Singleton managers (PersistentUIManager, SettingsController)
+- CSV-based data (Localization, HoleDatabase) with auto-load
+- Persistent UI (DontDestroyOnLoad for Top Bar + Bottom Nav)
+- Overlay pattern (Settings on top, Sort Order: 100)
+- Namespace: `Golfin.UI`
+
+**Don't know the original GOLFIN project?** Don't read the 1202-page PDF unless specifically needed. This is a **simplified** version!
+
+---
 
 ### Original GOLFIN vs GOLFIN Redux
 
@@ -534,8 +559,19 @@ Docs/
 ## Resources
 
 ### Documentation
+
+**Core References:**
 - `Docs/Golfin - Confluence.pdf` - Original project (1202 pages)
 - `Docs/Golfin Redux. - Current screens.pdf` - Redux screens (9 pages)
+
+**Feature Guides:**
+- `Docs/HOME_SCREEN_SETUP.md` - Home screen final setup (localization, rewards, carousel)
+- `Docs/QUICK_START_HOLES.md` - HoleDatabase auto-load from CSV (2-min setup)
+- `Docs/SCREEN_DEACTIVATOR.md` - Screen deactivator usage and setup
+- `Docs/SETTINGS_BUILD_GUIDE.md` - Settings screen complete build guide (Phase 1)
+- `Docs/UI_AUTO_WIRE_GUIDE.md` - UI auto-wire utility (no more manual Inspector dragging)
+
+**Settings Screen (Phase 1):**
 - `Docs/SettingsScreen/README.md` - Overview + quick start
 - `Docs/SettingsScreen/ARCHITECTURE.md` - System architecture with diagrams
 - `Docs/SettingsScreen/PREFAB_STRUCTURE.md` - Complete Unity hierarchy
@@ -576,6 +612,15 @@ Docs/
 ---
 
 ## Change Log
+
+### 2026-03-05 06:43 JST
+- **DOCUMENTATION SYNC:** Kai has read all project documentation
+- Read: HOME_SCREEN_SETUP.md, QUICK_START_HOLES.md, SCREEN_DEACTIVATOR.md
+- Read: SETTINGS_BUILD_GUIDE.md, UI_AUTO_WIRE_GUIDE.md
+- Read: All SettingsScreen docs (README, ARCHITECTURE, IMPLEMENTATION_GUIDE, PREFAB_STRUCTURE)
+- Status: Fully synced with project context and architecture
+- Updated documentation list in Resources section
+- Ready for next development phase
 
 ### 2026-03-05 06:36 JST
 - **NEW FEATURE:** Screen Deactivator utility added
