@@ -173,8 +173,15 @@ namespace GolfinRedux.UI
 
         private void OnSettingsClicked()
         {
-            if (screenManager != null)
-                screenManager.ShowScreen(ScreenId.Settings);
+            // Settings is now an overlay managed by SettingsController, not ScreenManager
+            if (SettingsController.Instance != null)
+            {
+                SettingsController.Instance.OpenSettings();
+            }
+            else
+            {
+                Debug.LogWarning("[HomeScreen] SettingsController.Instance is null - can't open settings");
+            }
         }
 
         // ---------- News Panel ----------
