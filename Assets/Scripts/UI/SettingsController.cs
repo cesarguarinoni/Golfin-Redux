@@ -132,13 +132,32 @@ namespace Golfin.UI
             
             if (settingsPanel != null)
             {
-                Debug.Log($"[SettingsController] Activating settings panel: {settingsPanel.name}");
+                Debug.Log($"[SettingsController] settingsPanel reference: {settingsPanel.name}");
+                Debug.Log($"[SettingsController] settingsPanel path: {GetGameObjectPath(settingsPanel)}");
+                Debug.Log($"[SettingsController] settingsPanel.activeSelf BEFORE: {settingsPanel.activeSelf}");
+                Debug.Log($"[SettingsController] settingsPanel.activeInHierarchy BEFORE: {settingsPanel.activeInHierarchy}");
+                
                 settingsPanel.SetActive(true);
+                
+                Debug.Log($"[SettingsController] settingsPanel.activeSelf AFTER: {settingsPanel.activeSelf}");
+                Debug.Log($"[SettingsController] settingsPanel.activeInHierarchy AFTER: {settingsPanel.activeInHierarchy}");
             }
             else
             {
                 Debug.LogError("[SettingsController] settingsPanel is NULL! Not assigned in Inspector?");
             }
+        }
+
+        private string GetGameObjectPath(GameObject obj)
+        {
+            string path = obj.name;
+            Transform parent = obj.transform.parent;
+            while (parent != null)
+            {
+                path = parent.name + "/" + path;
+                parent = parent.parent;
+            }
+            return path;
         }
 
         public void CloseSettings()
