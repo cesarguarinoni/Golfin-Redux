@@ -1,3 +1,24 @@
+
+---
+
+## 🎉 LATEST: Home Screen Complete!
+
+**Home Screen is now fully functional** with all 3 missing features implemented:
+- ✅ Localization for Next Hole name (uses CSV keys like `HOLE_LOMOND_5`)
+- ✅ Rewards display (3 slots with icon support for Points, Repair Kit, Ball)
+- ✅ Notice Panel carousel (auto-cycle every 5s + swipe left/right)
+
+**New Scripts Added:**
+- `SwipeDetector.cs` - Swipe gesture detection for news panel
+- `HoleData.cs` - Data structures for holes/rewards + HoleDatabase ScriptableObject
+- Updated `HomeScreenController.cs` - Full localization, auto-cycle, reward icons
+
+**Setup Required:** See `Docs/HOME_SCREEN_SETUP.md` for 5-10 minute setup guide.
+
+**Commit:** 0a5c152 - "Complete Home Screen: Localization, Rewards, and News Carousel"
+
+---
+
 # AI Context - GOLFIN Redux Project
 
 **Last Updated:** 2026-03-04 13:00 JST  
@@ -138,13 +159,26 @@ Docs/
 - fa45fc5: Add prefab YAML hierarchies for PersistentUI and SettingsCanvas
 - 3b4c3bc: Add AI_CONTEXT.md knowledge base
 - 7e31377: Cesar's Home Screen implementation + character art
+- 0a5c152: Complete Home Screen (localization, rewards, carousel)
 
-### 🚧 In Progress
+- 0a5c152: Complete Home Screen (localization, rewards, carousel) - 2026-03-04 13:16
 
-**Home Screen (Cesar finishing):**
-- [ ] Add localization for Next Hole name (read from CSV)
-- [ ] Display 3 rewards (icon + amount) for Next Hole
-- [ ] Implement Notice Panel carousel (swipe left/right + auto-timer)
+### ✅ Home Screen - COMPLETE!
+
+**All features implemented:**
+- ✅ Localization for Next Hole name (uses CSV keys)
+- ✅ Rewards display (3 slots with icon support)
+- ✅ Notice Panel carousel (auto-cycle + swipe)
+
+**New Scripts:**
+- `SwipeDetector.cs` - Swipe left/right detection
+- `HoleData.cs` - Hole/reward data structures + ScriptableObject
+- Updated `HomeScreenController.cs` - Full localization + auto-cycle + reward icons
+
+**Setup Guide:** `Docs/HOME_SCREEN_SETUP.md` (5-10 min to wire up in Unity)
+
+### 📋 Planned (Immediate Next Steps)
+
 
 ### 📋 Planned (Immediate Next Steps)
 
@@ -556,3 +590,17 @@ When you finish a feature or make significant progress, update this file with:
 - What's still missing
 - Any new decisions or changes
 - Updated commit hashes
+
+### 2026-03-04 13:16 JST
+- **HOME SCREEN COMPLETE!** 🎉
+- Added SwipeDetector.cs for news carousel swipe gestures
+- Added HoleData.cs with reward structures and HoleDatabase ScriptableObject
+- Updated HomeScreenController.cs with:
+  - Localization support for course names (reads from CSV)
+  - Auto-cycle timer for news panel (configurable, default 5s)
+  - Reward type support with icon slots (Points, Repair Kit, Ball)
+  - Integration with HoleData structure
+- Updated LocalizationText.csv with hole name keys
+- Created Docs/HOME_SCREEN_SETUP.md with complete setup guide
+- All 3 missing features now implemented
+- Commit: 0a5c152
