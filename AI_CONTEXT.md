@@ -15,7 +15,7 @@
 
 **Setup:** See `Docs/SCREEN_DEACTIVATOR.md` for full guide.
 
-**Commit:** [Pending] - "Add Screen Deactivator utility"
+**Commit:** 94775d5 - "Add Screen Deactivator utility"
 
 ---
 
