@@ -183,3 +183,9 @@ MonoBehaviour:
   - key: SETTINGS_CLOSE
     english: CLOSE
     japanese: "\u9589\u3058\u308B"
+  - key: SETTINGS_ABOUT_APP_VERSION
+    english: APP VERSION
+    japanese: 
+  - key: SETTINGS_ABOUT_LICENCES
+    english: LICENCES
+    japanese: 
