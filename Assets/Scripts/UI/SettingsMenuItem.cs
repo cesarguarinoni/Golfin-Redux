@@ -121,7 +121,11 @@ namespace Golfin.UI
         /// </summary>
         public void Expand()
         {
-            if (_isExpanded) return;
+            if (_isExpanded)
+            {
+                Debug.LogWarning($"[SettingsMenuItem] Expand called on {gameObject.name} but already expanded!");
+                return;
+            }
             
             _isExpanded = true;
             _animationProgress = 0f;
@@ -139,7 +143,7 @@ namespace Golfin.UI
             
             OnExpanded?.Invoke(this);
             
-            Debug.Log($"[SettingsMenuItem] Expanded: {gameObject.name} - Target height: {_targetHeight}");
+            Debug.Log($"[SettingsMenuItem] Expanded: {gameObject.name} - Target height: {_targetHeight}, _isExpanded now = {_isExpanded}");
         }
 
         /// <summary>
@@ -147,14 +151,18 @@ namespace Golfin.UI
         /// </summary>
         public void Collapse()
         {
-            if (!_isExpanded) return;
+            if (!_isExpanded)
+            {
+                Debug.LogWarning($"[SettingsMenuItem] Collapse called on {gameObject.name} but already collapsed! (state already false)");
+                return;
+            }
             
             _isExpanded = false;
             _animationProgress = 0f;
             
             OnCollapsed?.Invoke(this);
             
-            Debug.Log($"[SettingsMenuItem] Collapsed: {gameObject.name}");
+            Debug.Log($"[SettingsMenuItem] Collapsed: {gameObject.name}, _isExpanded now = {_isExpanded}");
         }
 
         private void Update()
@@ -199,6 +207,8 @@ namespace Golfin.UI
         /// </summary>
         public void ForceCollapse()
         {
+            Debug.Log($"[SettingsMenuItem] ForceCollapse called on {gameObject.name}, current _isExpanded = {_isExpanded}");
+            
             _isExpanded = false;
             _animationProgress = 0f;
             _currentHeight = 0f;
@@ -223,6 +233,8 @@ namespace Golfin.UI
             {
                 submenuContainer.SetActive(false);
             }
+            
+            Debug.Log($"[SettingsMenuItem] Force Collapsed complete: {gameObject.name}, _isExpanded now = {_isExpanded}");
         }
 
 #if UNITY_EDITOR
