@@ -437,7 +437,38 @@ Docs/
 
 ## Current Status
 
-### ✅ Completed
+### ✅ Roster System - Phase 1 Complete!
+
+**Data Architecture (CSV-Driven):**
+- CharacterLevelUpDatabase loads `CharacterLevelUpCosts.csv` at runtime
+- All economy data: level costs, SP rewards, stat caps
+- QueryAPI: GetLevelUpCost(), GetSPReward(), GetStatCap()
+- Sample data: 4 characters (Elizabeth, Shae, James, Olivia)
+
+**SP Allocation System (Strategy Pattern):**
+- Abstract: `StatAllocationStrategy` base class
+- Manual (current): `ManualSPAllocation` - Player allocates via [+] buttons
+- Automatic (future): `AutomaticStatAllocation` - System distributes (4 formulas)
+- Easy swap: 1 line change `SetAllocationStrategy()`
+
+**Managers (Singletons + DontDestroyOnLoad):**
+- `CharacterManager` - Level-up, SP allocation, roster management
+- `RewardPointsManager` - R currency, persistence via PlayerPrefs
+- `CharacterLevelUpDatabase` - CSV loader + query engine
+- `CharacterDatabase` - Base character templates (ScriptableObjects)
+
+**Data Models:**
+- `PlayerCharacterData` - Tracks owned character (level, SP, stats)
+- `CharacterLevelUpData` - Single CSV row (cost, reward, caps)
+- `CharacterData` - Character template (name, rarity, base stats, portraits)
+
+**Status:** ✅ Ready for Phase 2 (UI Hierarchy)  
+**Commit:** 1afc631  
+**Docs:** ROSTER_PHASE1_SUMMARY.md
+
+---
+
+### ✅ Completed (Previous Phases)
 
 **Logo Screen**
 - Black background with logo
@@ -512,7 +543,32 @@ Docs/
 
 ### 📋 Planned (Immediate Next Steps)
 
-**Settings Screen - Phase 3 (Full Functionality)** ← NEXT
+**Roster Screen - Phase 2 (UI Hierarchy)** ← NEXT
+- [ ] Build CharacterThumbnail prefab (carousel card)
+- [ ] Build StatBar prefab (reusable stat display)
+- [ ] Build complete RosterScreen hierarchy
+  - Header (R display, ROSTER title, Settings, Filter)
+  - CharacterCarousel (left/right arrows, pagination)
+  - DetailPanel (portrait, stats, bio, buttons)
+  - LevelUpModal (cost, SP allocation, [+] buttons)
+  - CompareView (split panel)
+  - BottomNav (persistent)
+- [ ] RosterScreenController (carousel navigation, selection)
+- [ ] CharacterDetailPanel (portrait, stats, buttons)
+- [ ] LevelUpModal (SP allocation UI)
+- Est. Time: 8 hours
+
+**Roster Screen - Phase 3 (Integration & Polish)** ← AFTER PHASE 2
+- [ ] Connect to CharacterManager
+- [ ] Reward Points UI integration
+- [ ] Level-up flow (modal, SP allocation, confirm)
+- [ ] Character compare & swap
+- [ ] Localization keys (30+ strings)
+- [ ] Audio (level-up, success, warning sounds)
+- [ ] Visual polish (animations, colors, feedback)
+- Est. Time: 6 hours
+
+**Settings Screen - Phase 3 (Full Functionality)** ← AFTER ROSTER
 - Integrate SoundSettingsSubmenu with AudioManager (actual audio control)
 - Integrate LanguageSubmenu with LocalizationManager (runtime UI language switching)
 - Webview integration for Terms/Privacy/FAQ/Contact (UniWebView or Vuplex)
@@ -951,6 +1007,42 @@ Docs/
 ---
 
 ## Change Log
+
+### 2026-03-06 07:30 JST
+- **ROSTER SYSTEM - PHASE 1 COMPLETE!** 🎉 Core data structures & managers ready
+- **CharacterLevelUpDatabase.cs** - CSV-driven economy (load at runtime)
+  - Queries: GetLevelUpCost, GetSPReward, GetStatCap
+  - Validates CSV format, logs loading status
+  - Used by all level-up operations
+- **StatAllocationStrategy (Abstract)** - Swappable SP allocation
+  - ManualSPAllocation.cs (current) - Player allocates via [+] buttons
+  - AutomaticStatAllocation.cs (future) - System auto-distributes SP
+  - Strategy pattern allows swap without changing other code
+- **CharacterManager.cs** - Central hub
+  - LevelUp(), AllocatePendingSP(), ConfirmSPAllocation()
+  - SelectCharacter(), SwapCharacters()
+  - Coordinates with RewardPointsManager + CharacterLevelUpDatabase
+  - Events: OnCharacterLeveledUp, OnCharacterSelected, OnRosterChanged
+- **RewardPointsManager.cs** - R currency
+  - SpendPoints(), EarnPoints(), CanAfford()
+  - Persistent (PlayerPrefs), event-driven
+- **CharacterDatabase.cs** - Base character templates (ScriptableObjects)
+  - CharacterData: name, rarity, base stats, portraits, audio
+  - CharacterRarity enum with color mappings
+  - Rarity colors: C=Gray, U=Blue, R=Green, M=Yellow, L=Red, S=Purple
+- **PlayerCharacterData.cs** - Player-owned character state
+  - Tracks level, SP earned/spent, current stats
+  - AllocatePendingSP(), ConfirmPendingSP(), ResetPendingSP()
+- **CharacterLevelUpData.cs** - Single CSV row
+  - economydata: cost_r, sp_reward, stat_caps
+- **Sample CSV:** CharacterLevelUpCosts.csv (4 characters)
+  - Elizabeth/James/Olivia (Common/Uncommon/Rare): stat caps 25-30
+  - Shae (Legendary): stat caps 40
+  - Cost progression: 100 → 150 → 225 → 350 → 525 → 800 → 1200...
+  - Editable by Cesar (all economy numbers here, no hardcoding)
+- Commit: 1afc631
+- Status: Ready for Phase 2 (UI Hierarchy)
+- Docs: ROSTER_PHASE1_SUMMARY.md
 
 ### 2026-03-05 16:40 JST
 - **PHASE 3 COMPLETE!** 🎉 Core features fully integrated
