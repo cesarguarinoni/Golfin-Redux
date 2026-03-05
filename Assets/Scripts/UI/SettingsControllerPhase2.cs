@@ -119,11 +119,15 @@ namespace Golfin.UI
         /// </summary>
         private void OnMenuItemExpanded(SettingsMenuItem expandedItem)
         {
+            Debug.Log($"[SettingsController] OnMenuItemExpanded called for: {expandedItem.gameObject.name}");
+            Debug.Log($"[SettingsController] Total accordion items: {_accordionItems.Count}");
+            
             // Collapse all other items
             foreach (var item in _accordionItems)
             {
                 if (item != expandedItem && item.IsExpanded)
                 {
+                    Debug.Log($"[SettingsController] Auto-collapsing: {item.gameObject.name}");
                     item.ForceCollapse();
                 }
             }
