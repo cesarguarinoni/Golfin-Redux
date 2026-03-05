@@ -63,29 +63,18 @@ namespace Golfin.UI
 
         /// <summary>
         /// Get the licenses text.
-        /// For now, hardcoded. Can be loaded from a file later.
+        /// Simple list format matching reference design.
         /// </summary>
         private string GetLicensesText()
         {
             var sb = new StringBuilder();
             
-            sb.AppendLine("Third-Party Licenses:");
+            // Simple license list (matching reference image format)
+            sb.AppendLine("MIT License");
+            sb.AppendLine("GPL (GNU General Public License)");
+            sb.AppendLine("Apache License 2.0");
+            sb.AppendLine("BSD License");
             sb.AppendLine();
-            
-            // Unity
-            sb.AppendLine("Unity Technologies");
-            sb.AppendLine("© Unity Technologies");
-            sb.AppendLine();
-            
-            // TextMeshPro
-            sb.AppendLine("TextMesh Pro");
-            sb.AppendLine("© Unity Technologies");
-            sb.AppendLine();
-            
-            // Add your actual licenses here
-            sb.AppendLine("[Other libraries as needed]");
-            sb.AppendLine();
-            
             sb.Append($"© 2024-{System.DateTime.Now.Year} Wonderwall Inc.");
             
             return sb.ToString();

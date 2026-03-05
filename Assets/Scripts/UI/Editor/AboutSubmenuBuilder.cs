@@ -111,6 +111,8 @@ namespace Golfin.UI
             TMP_Text versionText = versionTextGO.GetComponent<TMP_Text>();
             versionText.alignment = TextAlignmentOptions.Left;
             versionText.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+            versionText.enableWordWrapping = true;
+            versionText.overflowMode = TextOverflowModes.Overflow;
             
             LayoutElement versionLayout = versionTextGO.AddComponent<LayoutElement>();
             versionLayout.preferredHeight = 50;
@@ -120,13 +122,15 @@ namespace Golfin.UI
             AddLocalizedTextAuto(licensesSectionGO, "Settings", "About", "Licences");
             
             // Licenses Text (will be populated by AboutSubmenu)
-            GameObject licensesTextGO = CreateText(submenuGO.transform, "LicensesText", "Unity Technologies\nTextMesh Pro\nWonderwall Inc.", 14);
+            GameObject licensesTextGO = CreateText(submenuGO.transform, "LicensesText", "MIT License\nGPL\nApache License\nBSD License", 14);
             TMP_Text licensesText = licensesTextGO.GetComponent<TMP_Text>();
             licensesText.alignment = TextAlignmentOptions.TopLeft;
             licensesText.color = new Color(0.7f, 0.7f, 0.7f, 1f);
+            licensesText.enableWordWrapping = true;
+            licensesText.overflowMode = TextOverflowModes.Overflow;
             
             LayoutElement licensesLayout = licensesTextGO.AddComponent<LayoutElement>();
-            licensesLayout.preferredHeight = 120;
+            licensesLayout.preferredHeight = 140;
 
             // Wire up AboutSubmenu component using SerializedObject
             SerializedObject serializedAbout = new SerializedObject(aboutSubmenu);
