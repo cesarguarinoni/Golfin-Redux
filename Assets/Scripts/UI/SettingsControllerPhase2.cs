@@ -1,12 +1,14 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using Golfin.UI.Modals;
 
 namespace Golfin.UI
 {
     /// <summary>
     /// Controller for the Settings Screen - Phase 2 with Accordion Behavior
     /// Manages expand/collapse of menu items and ensures only one is open at a time.
+    /// Phase 3: Includes modal integration (About, Log Out).
     /// </summary>
     public class SettingsControllerPhase2 : MonoBehaviour
     {
@@ -34,6 +36,10 @@ namespace Golfin.UI
         public UserProfileSubmenu userProfileSubmenu;
         public SoundSettingsSubmenu soundSettingsSubmenu;
         public LanguageSubmenu languageSubmenu;
+        
+        [Header("Modals (Phase 3)")]
+        public AboutModal aboutModal;
+        public ModalController logOutModal;
 
         private List<SettingsMenuItem> _accordionItems = new List<SettingsMenuItem>();
         private SettingsMenuItem _currentlyExpandedItem;
@@ -191,8 +197,17 @@ namespace Golfin.UI
 
         private void OnAboutClick()
         {
-            Debug.Log("[SettingsController] About clicked - TODO: Show version modal");
-            // Phase 3: Show app version + licenses
+            Debug.Log("[SettingsController] About clicked");
+            
+            // Show About modal
+            if (aboutModal != null)
+            {
+                aboutModal.Show();
+            }
+            else
+            {
+                Debug.LogWarning("[SettingsController] About modal not assigned!");
+            }
         }
 
         private void OnContactClick()
