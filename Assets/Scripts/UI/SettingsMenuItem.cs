@@ -200,6 +200,20 @@ namespace Golfin.UI
                     submenuContainer.SetActive(false);
                 }
             }
+            else if (_layoutElement != null)
+            {
+                // DIAGNOSTIC: Detect unexpected height changes
+                float expectedHeight = _baseRowHeight + (_isExpanded ? _targetHeight : 0f);
+                if (!Mathf.Approximately(_layoutElement.preferredHeight, expectedHeight))
+                {
+                    Debug.LogWarning($"[SettingsMenuItem] {gameObject.name} HEIGHT DESYNC! " +
+                        $"Expected: {expectedHeight}, Actual: {_layoutElement.preferredHeight}, " +
+                        $"_isExpanded: {_isExpanded}, _animationProgress: {_animationProgress}");
+                    
+                    // Force correction
+                    _layoutElement.preferredHeight = expectedHeight;
+                }
+            }
         }
 
         /// <summary>
