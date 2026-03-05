@@ -102,12 +102,16 @@ namespace Golfin.UI
         /// </summary>
         public void ToggleExpansion()
         {
+            Debug.Log($"[SettingsMenuItem] ToggleExpansion called on {gameObject.name}, current state: {(_isExpanded ? "Expanded" : "Collapsed")}");
+            
             if (_isExpanded)
             {
+                Debug.Log($"[SettingsMenuItem] Collapsing {gameObject.name}");
                 Collapse();
             }
             else
             {
+                Debug.Log($"[SettingsMenuItem] Expanding {gameObject.name}");
                 Expand();
             }
         }
