@@ -210,8 +210,31 @@ namespace Golfin.UI
                         $"Expected: {expectedHeight}, Actual: {_layoutElement.preferredHeight}, " +
                         $"_isExpanded: {_isExpanded}, _animationProgress: {_animationProgress}");
                     
-                    // Force correction
+                    // Force complete visual correction
                     _layoutElement.preferredHeight = expectedHeight;
+                    
+                    // Also fix submenu visuals
+                    if (_submenuRect != null)
+                    {
+                        float targetSubmenuHeight = _isExpanded ? _targetHeight : 0f;
+                        _submenuRect.sizeDelta = new Vector2(_submenuRect.sizeDelta.x, targetSubmenuHeight);
+                        _currentHeight = targetSubmenuHeight;
+                    }
+                    
+                    // Fix arrow rotation
+                    if (arrowIcon != null)
+                    {
+                        float targetRotation = _isExpanded ? 90f : 0f;
+                        arrowIcon.localRotation = Quaternion.Euler(0f, 0f, -targetRotation);
+                    }
+                    
+                    // Fix submenu visibility
+                    if (submenuContainer != null)
+                    {
+                        submenuContainer.SetActive(_isExpanded);
+                    }
+                    
+                    Debug.Log($"[SettingsMenuItem] Visual state corrected for {gameObject.name}");
                 }
             }
         }
