@@ -25,6 +25,8 @@ namespace Golfin.UI
         private float _currentHeight = 0f;
         private float _animationProgress = 0f;
         private RectTransform _submenuRect;
+        private LayoutElement _layoutElement;
+        private float _baseRowHeight = 80f; // Base height of the row without submenu
         
         public bool IsExpanded => _isExpanded;
         public event System.Action<SettingsMenuItem> OnExpanded;
@@ -32,6 +34,13 @@ namespace Golfin.UI
 
         private void Awake()
         {
+            // Get or add LayoutElement for dynamic height control
+            _layoutElement = GetComponent<LayoutElement>();
+            if (_layoutElement != null)
+            {
+                _baseRowHeight = _layoutElement.preferredHeight;
+            }
+
             if (submenuContainer != null)
             {
                 _submenuRect = submenuContainer.GetComponent<RectTransform>();
@@ -116,6 +125,12 @@ namespace Golfin.UI
                 _currentHeight = _targetHeight * curveValue;
                 _submenuRect.sizeDelta = new Vector2(_submenuRect.sizeDelta.x, _currentHeight);
                 
+                // Update LayoutElement height to notify layout system
+                if (_layoutElement != null)
+                {
+                    _layoutElement.preferredHeight = _baseRowHeight + _currentHeight;
+                }
+                
                 // Rotate arrow
                 if (arrowIcon != null)
                 {
@@ -143,6 +158,12 @@ namespace Golfin.UI
             if (_submenuRect != null)
             {
                 _submenuRect.sizeDelta = new Vector2(_submenuRect.sizeDelta.x, 0f);
+            }
+            
+            // Reset LayoutElement height
+            if (_layoutElement != null)
+            {
+                _layoutElement.preferredHeight = _baseRowHeight;
             }
             
             if (arrowIcon != null)
