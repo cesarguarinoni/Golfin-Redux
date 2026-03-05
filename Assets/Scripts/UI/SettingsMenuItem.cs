@@ -19,6 +19,7 @@ namespace Golfin.UI
         [SerializeField] private float expandDuration = 0.3f;
         [SerializeField] private float collapseDuration = 0.2f;
         [SerializeField] private AnimationCurve expandCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+        [SerializeField] private float submenuHeight = 0f; // 0 = auto-detect from container
         
         private bool _isExpanded = false;
         private float _targetHeight = 0f;
@@ -46,7 +47,22 @@ namespace Golfin.UI
                 _submenuRect = submenuContainer.GetComponent<RectTransform>();
                 if (_submenuRect != null)
                 {
-                    _targetHeight = _submenuRect.rect.height;
+                    // Use custom height if set, otherwise read from RectTransform
+                    if (submenuHeight > 0f)
+                    {
+                        _targetHeight = submenuHeight;
+                    }
+                    else
+                    {
+                        // Read the configured height (should be 300 in your case)
+                        _targetHeight = _submenuRect.sizeDelta.y;
+                        if (_targetHeight == 0f)
+                        {
+                            _targetHeight = _submenuRect.rect.height;
+                        }
+                    }
+                    
+                    // Force start at 0 height (collapsed)
                     _currentHeight = 0f;
                     _submenuRect.sizeDelta = new Vector2(_submenuRect.sizeDelta.x, 0f);
                 }
@@ -56,6 +72,28 @@ namespace Golfin.UI
             if (button != null)
             {
                 button.onClick.AddListener(ToggleExpansion);
+            }
+            
+            Debug.Log($"[SettingsMenuItem] {gameObject.name} initialized. Target height: {_targetHeight}, Base row height: {_baseRowHeight}");
+        }
+
+        private void Start()
+        {
+            // Ensure LayoutElement starts with base height (no submenu)
+            if (_layoutElement != null)
+            {
+                _layoutElement.preferredHeight = _baseRowHeight;
+            }
+            
+            // Disable ContentSizeFitter on submenu if it exists (we control size manually)
+            if (_submenuRect != null)
+            {
+                var sizeFitter = _submenuRect.GetComponent<ContentSizeFitter>();
+                if (sizeFitter != null)
+                {
+                    sizeFitter.enabled = false;
+                    Debug.Log($"[SettingsMenuItem] Disabled ContentSizeFitter on {_submenuRect.name}");
+                }
             }
         }
 
@@ -87,11 +125,17 @@ namespace Golfin.UI
             if (submenuContainer != null)
             {
                 submenuContainer.SetActive(true);
+                
+                // Ensure submenu starts at 0 height
+                if (_submenuRect != null)
+                {
+                    _submenuRect.sizeDelta = new Vector2(_submenuRect.sizeDelta.x, 0f);
+                }
             }
             
             OnExpanded?.Invoke(this);
             
-            Debug.Log($"[SettingsMenuItem] Expanded: {gameObject.name}");
+            Debug.Log($"[SettingsMenuItem] Expanded: {gameObject.name} - Target height: {_targetHeight}");
         }
 
         /// <summary>
