@@ -181,10 +181,77 @@ public static void BuildScreen() {
     var parent = CreateChild(parentTransform, "MyScreen");
     var label = CreateTextMeshPro(parent, "Label", "Text", 20);
     SetRectTransform(label.transform, AnchorPreset.TopLeft, ...);
+    
+    // 🌐 IMPORTANT: Add localization to all text!
+    AddLocalizedText(label, "MY_SCREEN_LABEL");
+    
     // Wire up script references
     screenScript.myLabel = label;
 }
 ```
+
+### 🌐 Localization System (MANDATORY for all text!)
+
+**System:** CSV-based localization with `LocalizedText` component  
+**Location:** `Assets/Localization/`
+
+**Core Components:**
+- `LocalizationText.csv` - All translations (English, Japanese)
+- `LocalizationManager.cs` - Runtime manager, `Get(key)` method
+- `LocalizedText.cs` - Component for TextMeshPro, auto-updates on language change
+
+**IMPORTANT RULE: Always add LocalizedText to TextMeshPro objects!**
+
+When creating UI via Editor Scripts:
+1. Create TextMeshProUGUI as usual
+2. **Immediately add LocalizedText component**
+3. Set the localization key
+4. Add key + translations to CSV
+
+**Helper Method Pattern (add to all editor scripts):**
+```csharp
+private void AddLocalizedText(GameObject textObject, string key)
+{
+    var localizedText = textObject.AddComponent<LocalizedText>();
+    
+    // Set the key using SerializedObject (key is private field)
+    SerializedObject serializedObject = new SerializedObject(localizedText);
+    SerializedProperty keyProperty = serializedObject.FindProperty("key");
+    
+    if (keyProperty != null)
+    {
+        keyProperty.stringValue = key;
+        serializedObject.ApplyModifiedProperties();
+    }
+    
+    EditorUtility.SetDirty(textObject);
+}
+```
+
+**Key Naming Convention:**
+- Settings Screen: `SETTINGS_*`
+- Home Screen: `HOME_*`
+- Loading Screen: `BTN_*` or `TIP_*`
+- Pattern: `SCREEN_SECTION_ELEMENT` in SCREAMING_SNAKE_CASE
+
+**Automatic Localization Tool:**
+- Tool: `Tools → GOLFIN → Localize Settings Screen`
+- Scans existing UI, generates CSV, adds LocalizedText automatically
+- Use for retrofitting or batch operations
+- See: `Docs/SETTINGS_LOCALIZATION_GUIDE.md`
+
+**Workflow for New Screens:**
+1. Create UI hierarchy with Editor Script
+2. Add `LocalizedText` to all TextMeshPro objects (use helper method)
+3. Generate CSV entries (manually or with tool)
+4. Add translations to `LocalizationText.csv`
+5. Test language switching in Play Mode
+
+**Benefits:**
+- Language switching works automatically (OnLanguageChanged event)
+- No hard-coded strings in UI
+- Easy to add more languages (just add CSV column)
+- Consistent translation keys across project
 
 ### Folder Structure
 ```
@@ -526,10 +593,15 @@ Docs/
 - **Singleton Pattern:** `PersistentUIManager` and `SettingsController` use singleton pattern for global access
 
 ### Localization
-- CSV-based system (`LocalizationText.csv`)
-- English and Japanese initially
-- Key-based lookup (e.g., `HOME_COURSE_NAME`)
-- All UI text reads from CSV
+- **System:** CSV-based with `LocalizedText` component (`Assets/Localization/`)
+- **Languages:** English and Japanese initially (easy to add more)
+- **Key format:** SCREAMING_SNAKE_CASE (e.g., `HOME_COURSE_NAME`, `SETTINGS_MENU_USER_PROFILE`)
+- **Component:** `LocalizedText.cs` - Attach to all TextMeshProUGUI objects
+- **Manager:** `LocalizationManager.cs` - Provides `Get(key)` and `OnLanguageChanged` event
+- **Auto-refresh:** Text updates automatically when user changes language
+- **MANDATORY:** All UI text must use LocalizedText (no hard-coded strings!)
+- **Editor Tool:** `Tools → GOLFIN → Localize Settings Screen` for batch operations
+- **Reference:** `Docs/SETTINGS_LOCALIZATION_GUIDE.md`
 
 ### Rewards System
 - 3 reward types: Points, Repair Kits, Balls
@@ -735,6 +807,32 @@ Docs/
 ---
 
 ## Change Log
+
+### 2026-03-05 14:36 JST
+- **LOCALIZATION SYSTEM DOCUMENTED** 🌐 Now mandatory for all future work
+- Added comprehensive localization section to AI_CONTEXT.md
+- Documented `LocalizedText` component pattern for editor scripts
+- Helper method pattern for adding localization to text objects
+- Key naming conventions (SCREEN_SECTION_ELEMENT)
+- Reference to existing tools and guides
+- **NEW RULE:** All TextMeshPro objects created via editor scripts MUST have LocalizedText component
+- Commits: Updated AI_CONTEXT.md with localization best practices
+
+### 2026-03-05 14:22 JST
+- **LOCALIZATION TOOL CREATED** ⚡ Auto-generates keys + adds components
+- Created `LocalizeSettingsScreen.cs` - One-click localization setup tool
+- Menu: Tools → GOLFIN → Localize Settings Screen
+- Features:
+  - Scans all TextMeshPro in Settings Panel
+  - Auto-generates localization keys (SETTINGS_* format)
+  - Creates CSV with English + Japanese translations
+  - **Auto-adds LocalizedText component to all texts**
+  - **Auto-assigns keys using SerializedObject**
+- Pre-loaded translations for common terms (9 menu items, buttons, sound/language settings)
+- Integration with existing LocalizedText system (Assets/Localization/)
+- One-click setup: Drag panel → Click button → Done!
+- Created `Docs/SETTINGS_LOCALIZATION_GUIDE.md` - Complete usage guide
+- Commits: 020658c (tool), 23def2c (guide), cc529c9 (LocalizedText integration), cea3c95 (updated docs)
 
 ### 2026-03-05 14:05 JST
 - **PHASE 2 FULLY WORKING!** 🎉 All layout issues resolved
