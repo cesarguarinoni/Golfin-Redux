@@ -1,11 +1,13 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.Audio;
 
 namespace Golfin.UI
 {
     /// <summary>
     /// Sound Settings submenu with Music and SFX volume controls.
+    /// Integrates with AudioManager to apply volume changes in real-time.
     /// </summary>
     public class SoundSettingsSubmenu : MonoBehaviour
     {
@@ -16,12 +18,6 @@ namespace Golfin.UI
         [Header("SFX Volume")]
         [SerializeField] private Slider sfxVolumeSlider;
         [SerializeField] private TextMeshProUGUI sfxVolumeText;
-        
-        [Header("Settings")]
-        [SerializeField] private bool saveToPlayerPrefs = true;
-        
-        private const string MUSIC_VOLUME_KEY = "Settings_MusicVolume";
-        private const string SFX_VOLUME_KEY = "Settings_SFXVolume";
 
         private void Awake()
         {
@@ -43,32 +39,46 @@ namespace Golfin.UI
         }
 
         /// <summary>
-        /// Load volume settings from PlayerPrefs.
+        /// Load volume settings from AudioManager.
         /// </summary>
         private void LoadSettings()
         {
-            if (saveToPlayerPrefs)
+            if (AudioManager.Instance != null)
             {
-                float musicVolume = PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, 0.8f);
-                float sfxVolume = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 0.8f);
+                // Get values from AudioManager (0-100 scale)
+                float musicVolume = AudioManager.Instance.GetMusicVolume();
+                float sfxVolume = AudioManager.Instance.GetSFXVolume();
                 
+                // Convert to slider range (0-1) and update sliders
                 if (musicVolumeSlider != null)
                 {
-                    musicVolumeSlider.value = musicVolume;
+                    musicVolumeSlider.value = musicVolume / 100f;
                 }
                 
                 if (sfxVolumeSlider != null)
                 {
-                    sfxVolumeSlider.value = sfxVolume;
+                    sfxVolumeSlider.value = sfxVolume / 100f;
                 }
                 
-                Debug.Log($"[SoundSettings] Loaded: Music={musicVolume:F2}, SFX={sfxVolume:F2}");
+                // Update text displays
+                if (musicVolumeText != null)
+                {
+                    musicVolumeText.text = Mathf.RoundToInt(musicVolume).ToString();
+                }
+                
+                if (sfxVolumeText != null)
+                {
+                    sfxVolumeText.text = Mathf.RoundToInt(sfxVolume).ToString();
+                }
+                
+                Debug.Log($"[SoundSettings] Loaded from AudioManager: Music={musicVolume}%, SFX={sfxVolume}%");
             }
             else
             {
-                // Default values
-                if (musicVolumeSlider != null) musicVolumeSlider.value = 0.8f;
-                if (sfxVolumeSlider != null) sfxVolumeSlider.value = 0.8f;
+                // Fallback if AudioManager not ready yet
+                Debug.LogWarning("[SoundSettings] AudioManager not found! Using default values.");
+                if (musicVolumeSlider != null) musicVolumeSlider.value = 0.7f;
+                if (sfxVolumeSlider != null) sfxVolumeSlider.value = 0.7f;
             }
         }
 
@@ -77,23 +87,24 @@ namespace Golfin.UI
         /// </summary>
         private void OnMusicVolumeChanged(float value)
         {
+            // Convert slider value (0-1) to percentage (0-100)
+            float volumePercent = value * 100f;
+            
             // Update text display
             if (musicVolumeText != null)
             {
-                musicVolumeText.text = Mathf.RoundToInt(value * 100f).ToString();
+                musicVolumeText.text = Mathf.RoundToInt(volumePercent).ToString();
             }
             
-            // Save to PlayerPrefs
-            if (saveToPlayerPrefs)
+            // Apply to AudioManager (this also saves to PlayerPrefs)
+            if (AudioManager.Instance != null)
             {
-                PlayerPrefs.SetFloat(MUSIC_VOLUME_KEY, value);
-                PlayerPrefs.Save();
+                AudioManager.Instance.SetMusicVolume(volumePercent);
             }
-            
-            // TODO Phase 3: Apply to AudioManager
-            // AudioManager.Instance?.SetMusicVolume(value);
-            
-            Debug.Log($"[SoundSettings] Music volume changed: {value:F2} ({Mathf.RoundToInt(value * 100)}%)");
+            else
+            {
+                Debug.LogWarning("[SoundSettings] AudioManager not available!");
+            }
         }
 
         /// <summary>
@@ -101,50 +112,54 @@ namespace Golfin.UI
         /// </summary>
         private void OnSFXVolumeChanged(float value)
         {
+            // Convert slider value (0-1) to percentage (0-100)
+            float volumePercent = value * 100f;
+            
             // Update text display
             if (sfxVolumeText != null)
             {
-                sfxVolumeText.text = Mathf.RoundToInt(value * 100f).ToString();
+                sfxVolumeText.text = Mathf.RoundToInt(volumePercent).ToString();
             }
             
-            // Save to PlayerPrefs
-            if (saveToPlayerPrefs)
+            // Apply to AudioManager (this also saves to PlayerPrefs)
+            if (AudioManager.Instance != null)
             {
-                PlayerPrefs.SetFloat(SFX_VOLUME_KEY, value);
-                PlayerPrefs.Save();
+                AudioManager.Instance.SetSFXVolume(volumePercent);
             }
-            
-            // TODO Phase 3: Apply to AudioManager
-            // AudioManager.Instance?.SetSFXVolume(value);
-            
-            Debug.Log($"[SoundSettings] SFX volume changed: {value:F2} ({Mathf.RoundToInt(value * 100)}%)");
+            else
+            {
+                Debug.LogWarning("[SoundSettings] AudioManager not available!");
+            }
         }
 
         /// <summary>
-        /// Reset both volumes to default (80%).
+        /// Reset both volumes to default (70%).
         /// </summary>
         public void ResetToDefaults()
         {
-            if (musicVolumeSlider != null) musicVolumeSlider.value = 0.8f;
-            if (sfxVolumeSlider != null) sfxVolumeSlider.value = 0.8f;
+            // Set sliders to default (0.7 = 70%)
+            if (musicVolumeSlider != null) musicVolumeSlider.value = 0.7f;
+            if (sfxVolumeSlider != null) sfxVolumeSlider.value = 0.7f;
             
-            Debug.Log("[SoundSettings] Reset to defaults");
+            // Slider onValueChanged will trigger AudioManager updates
+            
+            Debug.Log("[SoundSettings] Reset to defaults (70%)");
         }
 
         /// <summary>
-        /// Get current music volume (0-1).
+        /// Get current music volume (0-100).
         /// </summary>
         public float GetMusicVolume()
         {
-            return musicVolumeSlider != null ? musicVolumeSlider.value : 0.8f;
+            return AudioManager.Instance != null ? AudioManager.Instance.GetMusicVolume() : 70f;
         }
 
         /// <summary>
-        /// Get current SFX volume (0-1).
+        /// Get current SFX volume (0-100).
         /// </summary>
         public float GetSFXVolume()
         {
-            return sfxVolumeSlider != null ? sfxVolumeSlider.value : 0.8f;
+            return AudioManager.Instance != null ? AudioManager.Instance.GetSFXVolume() : 70f;
         }
     }
 }
