@@ -4,12 +4,31 @@
 
 This guide explains how to add localization to all text in the Settings Screen using the auto-generation tool.
 
-**Time Required:** ~10 minutes  
-**Tool:** `Tools → GOLFIN → Localize Settings Screen`
+**Time Required:** ~5 minutes (one-click setup!)  
+**Tool:** `Tools → GOLFIN → Localize Settings Screen`  
+**Integration:** Uses existing `LocalizedText` component system
+
+### How It Works
+
+The tool integrates with your existing localization system:
+
+1. **Uses `LocalizedText` component** (from `Assets/Localization/LocalizedText.cs`)
+   - Automatically adds it to TextMeshPro objects
+   - Sets the `key` field for each text
+
+2. **Auto-refreshes on language change**
+   - Listens to `LocalizationManager.OnLanguageChanged`
+   - Updates text via `LocalizationManager.Get(key)`
+
+3. **Generates CSV for your review**
+   - English + Japanese translations
+   - Merge into `LocalizationText.csv`
+
+**Result:** One-click localization setup! No manual component adding needed.
 
 ---
 
-## Step 1: Generate Localization Keys
+## Step 1: Generate Localization Keys + Add Components
 
 ### In Unity Editor:
 
@@ -20,13 +39,21 @@ This guide explains how to add localization to all text in the Settings Screen u
    - Drag the `SettingsPanel` GameObject into the "Settings Panel" field
    - This is usually found under: `Canvas/SettingsCanvas/SettingsPanel`
 
-3. **Generate:**
-   - Click **"Generate Localization Keys"** button
-   - Tool will scan all TextMeshProUGUI components
-   - Generates a CSV file: `Assets/Localization/SettingsKeys_Generated.csv`
+3. **Enable auto-wiring:**
+   - Make sure **"Add LocalizedText Component"** is checked ✅
+   - This will automatically add `LocalizedText` to all texts and assign keys
 
-4. **Review output:**
-   - Check Console for summary report
+4. **Generate:**
+   - Click **"Generate Keys + Localize"** button
+   - Tool will:
+     - Scan all TextMeshProUGUI components
+     - Generate localization keys
+     - Add `LocalizedText` component to each text
+     - Assign the correct key to each component
+     - Create CSV file: `Assets/Localization/SettingsKeys_Generated.csv`
+
+5. **Review output:**
+   - Check Console for summary report (shows how many components added)
    - Click **"Open Generated CSV"** to view the file
 
 ---
@@ -124,31 +151,7 @@ SETTINGS_CUSTOM_BUTTON,Tap Here,ここをタップ
 
 ---
 
-## Step 5: Add Localization Component to TextMeshPro
-
-### Method 1: Manual (Small Number of Texts)
-
-For each TextMeshProUGUI component:
-
-1. Select the GameObject in Hierarchy
-2. In Inspector, find the **TextMeshPro - Text (UI)** component
-3. Click **Add Component**
-4. Search for your localization component (e.g., `LocalizedText` or Unity's `Localize String Event`)
-5. Assign the corresponding key from the CSV
-
-### Method 2: Scripted (Large Number of Texts)
-
-**Coming soon:** Auto-wire tool to add localization components automatically.
-
-For now, if you have a custom localization script (like `LocalizedText.cs`), you can:
-
-1. Add the component to each TextMeshProUGUI
-2. Set the `key` field to the corresponding `SETTINGS_*` key
-3. The component will read from `LocalizationText.csv` at runtime
-
----
-
-## Step 6: Test Language Switching
+## Step 5: Test Language Switching (That's It!)
 
 ### In Play Mode:
 
@@ -290,13 +293,16 @@ After localization is complete:
 
 ## Summary Checklist
 
-- [ ] Generate keys with tool
+- [ ] Open tool: `Tools → GOLFIN → Localize Settings Screen`
+- [ ] Drag Settings Panel, enable "Add LocalizedText Component"
+- [ ] Click "Generate Keys + Localize" ✅ **One-click setup!**
 - [ ] Review CSV output
-- [ ] Adjust translations for unknown strings
+- [ ] Adjust translations for unknown strings (if any)
 - [ ] Merge into `LocalizationText.csv`
-- [ ] Add localization component to each text
 - [ ] Test language switching in Play Mode
 - [ ] Commit changes to repository
+
+**Time:** ~5 minutes total!
 
 ---
 
