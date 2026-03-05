@@ -994,11 +994,16 @@ Docs/
 1. Cesar works on screens/features (with Cortana's help)
 2. Cesar updates Kai when ready for next phase or requests new features
 3. Kai provides architecture, scripts, documentation
-4. **Kai pushes code directly to GitHub** (no manual copying needed)
+4. **Kai's Git Workflow (IMPORTANT):**
+   - **Step 1:** `git pull origin main` (always pull first!)
+   - **Step 2:** Create/edit files
+   - **Step 3:** `git add -A && git commit -m "..."`
+   - **Step 4:** `git push origin main`
+   - **Why:** Prevent conflicts with remote changes
 5. Cesar pulls changes and implements in Unity Editor
 6. Repeat
 
-**Note:** Kai can clone, commit, and push to the repository. Scripts and documentation are committed directly to the repo.
+**Note:** Kai can clone, commit, and push to the repository. Scripts and documentation are committed directly to the repo. Always pull before committing to avoid merge conflicts.
 
 ### Communication
 - Telegram group: GOLFIN<>dev
