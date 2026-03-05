@@ -1,7 +1,7 @@
 
 ---
 
-## 🎉 LATEST: Settings Screen Phase 2 Complete!
+## 🎉 LATEST: Settings Screen Phase 2 Complete + Builder Tool!
 
 **Phase 2 - Accordion Behavior + Submenus**
 - ✅ Accordion expand/collapse (only one section open at a time)
@@ -18,9 +18,15 @@
 - `LanguageSubmenu.cs` - Language selection
 - `UserProfileSubmenu.cs` - Username editing + account linking placeholders
 
-**Setup:** See `Docs/SETTINGS_PHASE2_GUIDE.md` for complete guide (~1 hour setup)
+**🔥 NEW: Unity Editor Builder Tool**
+- **Tools → GOLFIN → Build Phase 2 Submenus**
+- Creates complete hierarchies in ~30 seconds (vs 40 min manual)
+- All components + references automatically wired
+- See `Docs/PHASE2_BUILDER_TOOL.md`
 
-**Commit:** 839c43a - "Add Settings Screen Phase 2: Accordion behavior + Submenus"
+**Setup:** Use builder tool (30 sec) OR manual guide (~1 hour)
+
+**Commits:** 839c43a (Phase 2), 908377b (Builder Tool)
 
 ---
 
@@ -117,6 +123,46 @@
 - **Text:** TextMeshPro
 - **Architecture Pattern:** Singleton managers + Scene-based controllers
 - **Localization:** CSV-based system (English/Japanese)
+
+### Best Practices & Workflows
+
+**Creating UI Hierarchies:**
+- ✅ **USE: Unity Editor Scripts** - Create GameObjects programmatically via Tools menu
+- ❌ **DON'T: Hand-craft YAML prefabs** - Unity's prefab format is too complex, causes import errors
+- ❌ **DON'T: Manual Inspector work** - Slow, error-prone, not repeatable
+
+**Why Editor Scripts:**
+- ⚡ 80x faster than manual (30 seconds vs 40 minutes)
+- ✅ No human errors
+- ✅ Consistent results every time
+- ✅ Repeatable (one-click rebuild)
+- ✅ Easy to customize for variations
+- ✅ Automatically wires up component references
+
+**Example:** `Assets/Scripts/UI/Editor/SettingsPhase2Builder.cs`
+- Menu: Tools → GOLFIN → Build Phase 2 Submenus
+- Creates complete hierarchies with all components
+- Sets RectTransforms (positions, sizes, anchors)
+- Wires up script references via reflection
+
+**When to use:**
+- Building complex UI hierarchies (10+ GameObjects)
+- Need to create multiple similar screens
+- Want repeatable/testable setup process
+- Working with non-Unity team members (they can use the tool)
+
+**Pattern:**
+```csharp
+[MenuItem("Tools/GOLFIN/Build My Screen")]
+public static void BuildScreen() {
+    // Create hierarchy programmatically
+    var parent = CreateChild(parentTransform, "MyScreen");
+    var label = CreateTextMeshPro(parent, "Label", "Text", 20);
+    SetRectTransform(label.transform, AnchorPreset.TopLeft, ...);
+    // Wire up script references
+    screenScript.myLabel = label;
+}
+```
 
 ### Folder Structure
 ```
@@ -599,7 +645,9 @@ Docs/
 - `Docs/UI_AUTO_WIRE_GUIDE.md` - UI auto-wire utility (no more manual Inspector dragging)
 
 **Settings Screen:**
-- `Docs/SETTINGS_PHASE2_GUIDE.md` - **Phase 2 setup guide** (accordion + submenus, ~1 hour)
+- `Docs/PHASE2_BUILDER_TOOL.md` - **⚡ Unity Editor tool** (builds Phase 2 in 30 seconds!)
+- `Docs/SETTINGS_PHASE2_GUIDE.md` - Phase 2 setup guide (accordion + submenus, ~1 hour manual)
+- `Docs/PHASE2_HIERARCHY_GUIDE.md` - Manual hierarchy creation (alternative to builder tool)
 - `Docs/SettingsScreen/README.md` - Phase 1 overview + quick start
 - `Docs/SettingsScreen/ARCHITECTURE.md` - System architecture with diagrams
 - `Docs/SettingsScreen/PREFAB_STRUCTURE.md` - Complete Unity hierarchy
@@ -640,6 +688,21 @@ Docs/
 ---
 
 ## Change Log
+
+### 2026-03-05 10:37 JST
+- **UNITY EDITOR BUILDER TOOL ADDED!** ⚡
+- Created `SettingsPhase2Builder.cs` - Unity Editor tool for automatic hierarchy creation
+- Menu: Tools → GOLFIN → Build Phase 2 Submenus
+- Builds all 3 submenus in ~30 seconds (vs 40 min manual)
+- Creates complete GameObject hierarchies with all components
+- Sets proper RectTransforms (positions, sizes, anchors)
+- Automatically wires up script references via reflection
+- Created `Docs/PHASE2_BUILDER_TOOL.md` - Complete usage guide
+- Updated `Docs/PHASE2_HIERARCHY_GUIDE.md` - Now recommends builder tool first
+- Replaced broken YAML prefabs (had duplicate IDs, import errors)
+- NEW PATTERN: Use Unity Editor scripts instead of manual/YAML for UI hierarchies
+- 80x faster than manual creation, no human errors, repeatable
+- Commits: 891585e (remove YAML), 908377b (add builder tool)
 
 ### 2026-03-05 07:00 JST
 - **SETTINGS SCREEN PHASE 2 COMPLETE!** 🎉
