@@ -1,6 +1,32 @@
-# Phase 2 - Manual Hierarchy Creation Guide
+# Phase 2 - Submenu Creation Guide
 
-Since YAML prefabs had issues, here's a step-by-step guide to create the hierarchies manually. **Much more reliable!**
+## 🎯 Recommended: Use the Builder Tool!
+
+**The fastest way:** Use the Unity Editor tool to build everything automatically!
+
+### How to Use:
+1. In Unity, go to **Tools → GOLFIN → Build Phase 2 Submenus**
+2. Drag your row GameObjects into the fields:
+   - User Profile Row
+   - Sound Settings Row
+   - Language Row
+3. Click **"Build All Submenus"**
+4. Done! ✅
+
+**Time:** ~30 seconds (vs 40 minutes manual)
+
+The tool creates:
+- ✅ Complete GameObject hierarchy
+- ✅ All components (TextMeshPro, Sliders, Buttons)
+- ✅ Proper RectTransforms (positions, anchors, sizes)
+- ✅ Script references automatically wired up
+- ✅ Default values configured
+
+---
+
+## Alternative: Manual Creation
+
+If you prefer to build manually or want to customize, follow the guide below.
 
 Copy-paste GameObject names directly from this doc to avoid typos.
 
