@@ -1,32 +1,54 @@
 
 ---
 
-## 🎉 LATEST: Settings Screen Phase 2 Complete + Builder Tool!
+## 🎉 LATEST: Settings Screen Phase 2 FULLY WORKING!
 
-**Phase 2 - Accordion Behavior + Submenus**
+**Phase 2 - Accordion Behavior + Submenus + Layout Fixes** ✅ COMPLETE
 - ✅ Accordion expand/collapse (only one section open at a time)
+- ✅ Click open row to close it (toggle behavior)
 - ✅ Smooth animations with arrow rotation (0.3s expand, 0.2s collapse)
 - ✅ Sound Settings submenu (Music + SFX volume sliders, 0-100%)
 - ✅ Language submenu (English/Japanese toggle with checkmarks)
 - ✅ User Profile submenu (username editing with real-time validation)
 - ✅ Auto-saves to PlayerPrefs (volumes, language, username)
+- ✅ **ALL LAYOUT ISSUES RESOLVED** (row content positioning, height desync auto-correction)
 
-**New Scripts:**
-- `SettingsMenuItem.cs` - Accordion item with animation
-- `SettingsControllerPhase2.cs` - Accordion management
+**Core Scripts:**
+- `SettingsMenuItem.cs` - Accordion item with animation + height desync auto-fix
+- `SettingsControllerPhase2.cs` - Accordion management with debug logging
 - `SoundSettingsSubmenu.cs` - Volume controls
 - `LanguageSubmenu.cs` - Language selection
 - `UserProfileSubmenu.cs` - Username editing + account linking placeholders
 
-**🔥 NEW: Unity Editor Builder Tool**
+**Diagnostic Tools Created:**
+- `FixRowChildAnchors.cs` - Anchors row content to top (prevents shift-down on expand)
+- `DiagnoseLayoutIssue.cs` - Checks layout components for common issues
+- `VerifyButtonWiring.cs` - Verifies button assignments and interactivity
+- `VerifyAccordionSetup.cs` - Checks SettingsControllerPhase2 menu item assignments
+- `FixSubmenuPositioning.cs` - Fixes submenu anchor relative to parent row
+- `FixSettingsLayoutV2.cs` - Adds VerticalLayoutGroup + LayoutElement to rows
+
+**🔥 Unity Editor Builder Tool**
 - **Tools → GOLFIN → Build Phase 2 Submenus**
 - Creates complete hierarchies in ~30 seconds (vs 40 min manual)
 - All components + references automatically wired
 - See `Docs/PHASE2_BUILDER_TOOL.md`
 
-**Setup:** Use builder tool (30 sec) OR manual guide (~1 hour)
+**Key Fixes Applied:**
+1. **Row content anchoring** - All children (Button, Icon, Label, Arrow) anchored to TOP of row so they stay in place when row expands
+2. **Height desync auto-correction** - Detects when external components manipulate height and auto-corrects full visual state (height, arrow, visibility)
+3. **Accordion event wiring** - Menu items properly assigned to controller for auto-collapse behavior
 
-**Commits:** 839c43a (Phase 2), 908377b (Builder Tool)
+**Setup:** Use builder tool (30 sec) + apply fixes via Tools menu
+
+**Latest Commits:** 
+- 16cb769: Fix row child anchors (prevents content shift)
+- fc58598: Debug accordion behavior (event logging)
+- f3664a7: Enhanced state desync tracking
+- b894475: Height desync detection
+- e1d1878: Comprehensive visual state correction (THE FIX!)
+
+**Status:** Phase 2 fully working and tested! Ready for Phase 3.
 
 ---
 
@@ -287,30 +309,21 @@ Docs/
 
 ### 📋 Planned (Immediate Next Steps)
 
-
-### 📋 Planned (Immediate Next Steps)
-
-**Settings Screen - Phase 3 (Full Functionality)**
+**Settings Screen - Phase 3 (Full Functionality)** ← NEXT
 - Integrate SoundSettingsSubmenu with AudioManager (actual audio control)
-- Integrate LanguageSubmenu with LocalizationManager (UI language switching)
+- Integrate LanguageSubmenu with LocalizationManager (runtime UI language switching)
 - Webview integration for Terms/Privacy/FAQ/Contact (UniWebView or Vuplex)
-- Account linking (Google, Apple, Twitter via Cognito)
-- Log out confirmation modal with session clear
-- About screen modal with app version + licenses
+- Account linking UI (Google, Apple, Twitter via AWS Cognito)
+- Log out confirmation modal with session clear + transition to Login screen
+- About screen modal with app version info + licenses list
 
 **Other Screens (From Redux PDF):**
 - Create Account Screen
-- Login Screen
+- Login Screen  
 - Gacha Screen
 - Select Hole Screen
 - Inventory Screen
 - Characters Screen
-
-**Settings Screen - Phase 3 (Full Functionality)**
-- Webview integration for Terms/Privacy/FAQ/Contact
-- User profile editing + account linking (Cognito)
-- Log out confirmation modal + session clear
-- About screen (app version, licenses)
 
 ---
 
@@ -595,6 +608,40 @@ Docs/
 - Verify `LocalizationTextTable.asset` is updated
 - Make sure TextMeshPro component is using localization system
 
+### Issue: Row content shifts to middle when expanding (Phase 2 accordion)
+**Symptom:** When row expands from 80px to 380px, button/icon/label move to middle, leaving empty space above
+**Root Cause:** Row children anchored to middle/center of parent
+**Solution:** Use **Tools → GOLFIN → Fix Row Child Anchors**
+- Anchors all children to TOP of row (anchor Y=1, pivot Y=1)
+- Content stays at top when row height changes
+- Button/Icon/Label remain at Y=0-80, submenu appears at Y=80-380
+
+### Issue: Submenu stays visible after collapse (Phase 2 accordion)
+**Symptom:** Click to collapse → Height corrects but submenu content stays visible, arrow stays rotated
+**Root Cause:** Height desync - external component (LayoutGroup/LayoutElement) forcing height back
+**Solution:** Auto-corrected in `SettingsMenuItem.Update()` with comprehensive visual fix:
+- Detects when `LayoutElement.preferredHeight` doesn't match expected value
+- Logs `HEIGHT DESYNC` warning
+- Auto-corrects ALL visual elements: height, submenu visibility, arrow rotation, internal state
+- No manual fix needed - happens automatically every frame until external interference stops
+
+### Issue: Accordion doesn't auto-collapse other rows
+**Symptom:** Click Row B while Row A is open → Row A stays open instead of auto-collapsing
+**Root Cause:** Menu items not assigned in `SettingsControllerPhase2` Inspector
+**Solution:** 
+1. Use **Tools → GOLFIN → Verify Accordion Setup** to check assignments
+2. Select GameObject with `SettingsControllerPhase2` component
+3. In Inspector, find "Menu Items with Accordion" section
+4. Assign: UserProfileItem → UserProfileRow, SoundSettingsItem → SoundSettingsRow, etc.
+
+### Issue: Click open row doesn't collapse it
+**Symptom:** First click expands, second click does nothing or re-expands immediately
+**Possible Causes:**
+1. **Button blocked by submenu** - Disable Raycast Target on non-interactive submenu elements
+2. **Duplicate listeners** - Check Button component On Click() section, remove any persistent listeners (runtime listener in Awake() is enough)
+3. **State desync** - Height desync auto-fix should handle this (see above)
+**Debug:** Check Console for `[SettingsMenuItem] ToggleExpansion` logs when clicking
+
 ---
 
 ## Next Steps
@@ -688,6 +735,46 @@ Docs/
 ---
 
 ## Change Log
+
+### 2026-03-05 14:05 JST
+- **PHASE 2 FULLY WORKING!** 🎉 All layout issues resolved
+- **Issue #1: Row content shifting down** - When row expanded, button/icon/label moved to middle of expanded space
+  - Root cause: Row children anchored to middle/center of parent row
+  - Fix: Created `FixRowChildAnchors.cs` - Anchors all row children to TOP (Y=1)
+  - Result: Content stays at top when row expands from 80px to 380px
+  - Commit: 16cb769
+- **Issue #2: Accordion not auto-collapsing** - Clicking Row B didn't collapse Row A
+  - Root cause: Menu items not assigned in SettingsControllerPhase2 Inspector
+  - Debug: Created `VerifyAccordionSetup.cs` to check assignments
+  - Enhanced logging in `OnMenuItemExpanded()` to track accordion behavior
+  - Commit: fc58598
+- **Issue #3: Click-to-collapse broken (state desync)** - Clicking open row caused visual re-expansion
+  - Sequence: Click → Collapse → Mysteriously re-expands → State desync (_isExpanded=false but visually expanded)
+  - Pattern B identified: Something re-expanding WITHOUT calling Expand()
+  - Root cause: External component (LayoutElement/LayoutGroup) forcing height back after collapse
+  - Fix Part 1: Added height desync detection in Update() - logs warning when mismatch detected
+  - Fix Part 2: Comprehensive auto-correction of ALL visual elements:
+    - LayoutElement.preferredHeight (container size)
+    - Submenu RectTransform.sizeDelta (content height)
+    - Arrow rotation (0° collapsed, 90° expanded)
+    - Submenu visibility (show/hide)
+    - _currentHeight sync (internal state)
+  - Commits: f3664a7 (enhanced logging), b894475 (desync detection), e1d1878 (comprehensive fix)
+- **Diagnostic tools created today:**
+  - `DiagnoseLayoutIssue.cs` - Checks VerticalLayoutGroup alignment, ContentSizeFitter, pivots, LayoutElements
+  - `VerifyButtonWiring.cs` - Checks button assignments, interactivity, target graphics
+  - `VerifyAccordionSetup.cs` - Checks menu item assignments in controller
+  - `FixRowChildAnchors.cs` - Anchors row children to top of parent
+  - (Previous tools: FixSubmenuPositioning, FixSettingsLayoutV2, VerifySubmenuParenting)
+- **Result:** Phase 2 accordion behavior works perfectly:
+  - Click row → Expands smoothly ✅
+  - Click same row → Collapses and STAYS collapsed ✅
+  - Click different row → Previous auto-collapses ✅
+  - Submenu content appears/disappears correctly ✅
+  - Arrow rotates correctly ✅
+  - Height desync auto-corrects in real-time ✅
+- **Status:** Ready for Phase 3 (AudioManager, LocalizationManager, Webview, Account linking)
+- Cesar going to lunch, will return for Phase 3
 
 ### 2026-03-05 10:37 JST
 - **UNITY EDITOR BUILDER TOOL ADDED!** ⚡
