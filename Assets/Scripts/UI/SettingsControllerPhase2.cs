@@ -23,12 +23,12 @@ namespace Golfin.UI
         public SettingsMenuItem userProfileItem;
         public SettingsMenuItem soundSettingsItem;
         public SettingsMenuItem languageItem;
+        public SettingsMenuItem aboutItem;
 
         [Header("Simple Menu Buttons (No Accordion)")]
         public Button termsOfUseButton;
         public Button privacyPolicyButton;
         public Button faqButton;
-        public Button aboutButton;
         public Button contactButton;
         public Button logOutButton;
 
@@ -36,9 +36,9 @@ namespace Golfin.UI
         public UserProfileSubmenu userProfileSubmenu;
         public SoundSettingsSubmenu soundSettingsSubmenu;
         public LanguageSubmenu languageSubmenu;
+        public AboutSubmenu aboutSubmenu;
         
         [Header("Modals (Phase 3)")]
-        public AboutModal aboutModal;
         public ModalController logOutModal;
 
         private List<SettingsMenuItem> _accordionItems = new List<SettingsMenuItem>();
@@ -87,6 +87,12 @@ namespace Golfin.UI
                 _accordionItems.Add(languageItem);
                 languageItem.OnExpanded += OnMenuItemExpanded;
             }
+
+            if (aboutItem != null)
+            {
+                _accordionItems.Add(aboutItem);
+                aboutItem.OnExpanded += OnMenuItemExpanded;
+            }
         }
 
         /// <summary>
@@ -109,14 +115,13 @@ namespace Golfin.UI
             if (faqButton != null)
                 faqButton.onClick.AddListener(OnFaqClick);
 
-            if (aboutButton != null)
-                aboutButton.onClick.AddListener(OnAboutClick);
-
             if (contactButton != null)
                 contactButton.onClick.AddListener(OnContactClick);
 
             if (logOutButton != null)
                 logOutButton.onClick.AddListener(OnLogOutClick);
+            
+            // Note: About is now an accordion item (aboutItem), not a simple button
         }
 
         /// <summary>
@@ -195,20 +200,8 @@ namespace Golfin.UI
             OpenWebView("https://golfin.io/faq");
         }
 
-        private void OnAboutClick()
-        {
-            Debug.Log("[SettingsController] About clicked");
-            
-            // Show About modal
-            if (aboutModal != null)
-            {
-                aboutModal.Show();
-            }
-            else
-            {
-                Debug.LogWarning("[SettingsController] About modal not assigned!");
-            }
-        }
+        // Note: About is now handled as an accordion item (aboutItem + AboutSubmenu)
+        // No OnAboutClick needed - the SettingsMenuItem handles expansion automatically
 
         private void OnContactClick()
         {
