@@ -6,6 +6,7 @@ namespace Golfin.UI
 {
     /// <summary>
     /// Language selection submenu with toggle buttons for each language.
+    /// Integrates with LocalizationManager to update all UI text in real-time.
     /// </summary>
     public class LanguageSubmenu : MonoBehaviour
     {
@@ -21,7 +22,6 @@ namespace Golfin.UI
         [SerializeField] private Color selectedColor = new Color(0.2f, 0.6f, 1f, 1f);
         [SerializeField] private Color unselectedColor = new Color(0.5f, 0.5f, 0.5f, 1f);
         
-        private string _currentLanguage = "English";
         private const string LANGUAGE_KEY = "Settings_Language";
 
         private void Awake()
@@ -29,13 +29,25 @@ namespace Golfin.UI
             // Wire up button events
             if (englishButton != null)
             {
-                englishButton.onClick.AddListener(() => OnLanguageSelected("English"));
+                englishButton.onClick.AddListener(() => OnLanguageSelected(Language.English));
             }
             
             if (japaneseButton != null)
             {
-                japaneseButton.onClick.AddListener(() => OnLanguageSelected("Japanese"));
+                japaneseButton.onClick.AddListener(() => OnLanguageSelected(Language.Japanese));
             }
+        }
+
+        private void OnEnable()
+        {
+            // Subscribe to language change events
+            LocalizationManager.OnLanguageChanged += OnLanguageChangedExternally;
+        }
+
+        private void OnDisable()
+        {
+            // Unsubscribe from language change events
+            LocalizationManager.OnLanguageChanged -= OnLanguageChangedExternally;
         }
 
         private void Start()
@@ -45,36 +57,58 @@ namespace Golfin.UI
         }
 
         /// <summary>
-        /// Load the saved language preference.
+        /// Called when language changes externally (e.g., from another script or startup).
+        /// </summary>
+        private void OnLanguageChangedExternally()
+        {
+            UpdateUI();
+            Debug.Log($"[LanguageSubmenu] Language changed externally to: {LocalizationManager.CurrentLanguage}");
+        }
+
+        /// <summary>
+        /// Load the saved language preference and apply it.
         /// </summary>
         private void LoadLanguagePreference()
         {
-            _currentLanguage = PlayerPrefs.GetString(LANGUAGE_KEY, "English");
-            Debug.Log($"[LanguageSubmenu] Loaded language: {_currentLanguage}");
+            // Load from PlayerPrefs (default to current language or English)
+            string savedLanguage = PlayerPrefs.GetString(LANGUAGE_KEY, Language.English.ToString());
+            
+            if (System.Enum.TryParse<Language>(savedLanguage, out Language language))
+            {
+                // Apply to LocalizationManager if different from current
+                if (LocalizationManager.CurrentLanguage != language)
+                {
+                    LocalizationManager.SetLanguage(language);
+                }
+                Debug.Log($"[LanguageSubmenu] Loaded language: {language}");
+            }
+            else
+            {
+                Debug.LogWarning($"[LanguageSubmenu] Invalid saved language: {savedLanguage}, defaulting to English");
+                LocalizationManager.SetLanguage(Language.English);
+            }
         }
 
         /// <summary>
         /// Called when a language button is clicked.
         /// </summary>
-        private void OnLanguageSelected(string language)
+        private void OnLanguageSelected(Language language)
         {
-            if (_currentLanguage == language)
+            if (LocalizationManager.CurrentLanguage == language)
             {
                 Debug.Log($"[LanguageSubmenu] Language already selected: {language}");
                 return;
             }
             
-            _currentLanguage = language;
-            
             // Save preference
-            PlayerPrefs.SetString(LANGUAGE_KEY, language);
+            PlayerPrefs.SetString(LANGUAGE_KEY, language.ToString());
             PlayerPrefs.Save();
             
-            // Update UI
-            UpdateUI();
-            
             // Apply language change to LocalizationManager
-            ApplyLanguageChange();
+            // This will fire OnLanguageChanged event, which updates all LocalizedText components
+            LocalizationManager.SetLanguage(language);
+            
+            // UI will update via OnLanguageChangedExternally callback
             
             Debug.Log($"[LanguageSubmenu] Language changed to: {language}");
         }
@@ -84,7 +118,8 @@ namespace Golfin.UI
         /// </summary>
         private void UpdateUI()
         {
-            bool isEnglish = _currentLanguage == "English";
+            Language currentLanguage = LocalizationManager.CurrentLanguage;
+            bool isEnglish = currentLanguage == Language.English;
             
             // Update checkmarks
             if (englishCheckmark != null)
@@ -117,28 +152,11 @@ namespace Golfin.UI
         }
 
         /// <summary>
-        /// Apply the language change to the LocalizationManager.
-        /// </summary>
-        private void ApplyLanguageChange()
-        {
-            // TODO: Integrate with your LocalizationManager
-            // Example:
-            // if (LocalizationManager.Instance != null)
-            // {
-            //     LocalizationManager.Instance.SetLanguage(_currentLanguage);
-            // }
-            
-            Debug.Log($"[LanguageSubmenu] TODO: Apply language change to LocalizationManager: {_currentLanguage}");
-            
-            // For Phase 2, just log. Phase 3 will integrate with actual localization system.
-        }
-
-        /// <summary>
         /// Get the currently selected language.
         /// </summary>
-        public string GetCurrentLanguage()
+        public Language GetCurrentLanguage()
         {
-            return _currentLanguage;
+            return LocalizationManager.CurrentLanguage;
         }
 
         /// <summary>
@@ -146,7 +164,7 @@ namespace Golfin.UI
         /// </summary>
         public bool IsEnglish()
         {
-            return _currentLanguage == "English";
+            return LocalizationManager.CurrentLanguage == Language.English;
         }
 
         /// <summary>
@@ -154,7 +172,7 @@ namespace Golfin.UI
         /// </summary>
         public bool IsJapanese()
         {
-            return _currentLanguage == "Japanese";
+            return LocalizationManager.CurrentLanguage == Language.Japanese;
         }
     }
 }
