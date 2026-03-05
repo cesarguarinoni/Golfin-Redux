@@ -124,10 +124,14 @@ namespace Golfin.UI
         /// <summary>
         /// Update the username display (alias for SetUsername for Phase 2 compatibility)
         /// </summary>
-        public void UpdateUsername(string username)
+        public void UpdateUsername(string newUsername)
         {
-            SetUsername(username);
-            Debug.Log($"[PersistentUI] Username updated: {username}");
+            if (usernameText != null)
+            {
+                usernameText.text = newUsername;
+            }
+
+            Debug.Log($"[PersistentUI] Username updated: {newUsername}");
         }
 
         private void OnSettingsButtonClick()
