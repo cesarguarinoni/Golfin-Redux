@@ -4,17 +4,19 @@ using TMPro;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Reflection;
 
 namespace Golfin.UI
 {
     /// <summary>
     /// Auto-localizes all TextMeshPro components in Settings Screen
-    /// Adds localization keys and generates CSV entries
+    /// Uses existing LocalizedText component and generates CSV entries
     /// </summary>
     public class LocalizeSettingsScreen : EditorWindow
     {
         private Transform settingsPanel;
         private string csvOutputPath = "Assets/Localization/SettingsKeys_Generated.csv";
+        private bool addLocalizedTextComponent = true;
         
         // Predefined translations for common Settings terms
         private Dictionary<string, (string english, string japanese)> commonTranslations = new Dictionary<string, (string, string)>()
@@ -73,7 +75,7 @@ namespace Golfin.UI
                 "1. Find all TextMeshPro components in Settings Screen\n" +
                 "2. Generate localization keys (SETTINGS_ITEM_NAME format)\n" +
                 "3. Create a CSV file with English/Japanese translations\n" +
-                "4. (Optional) Add localization component to each text",
+                "4. Add LocalizedText component + assign keys (if enabled)",
                 MessageType.Info
             );
 
@@ -83,12 +85,15 @@ namespace Golfin.UI
             
             EditorGUILayout.Space();
             csvOutputPath = EditorGUILayout.TextField("CSV Output Path", csvOutputPath);
+            
+            EditorGUILayout.Space();
+            addLocalizedTextComponent = EditorGUILayout.Toggle("Add LocalizedText Component", addLocalizedTextComponent);
 
             EditorGUILayout.Space();
 
             using (new EditorGUI.DisabledScope(settingsPanel == null))
             {
-                if (GUILayout.Button("Generate Localization Keys", GUILayout.Height(40)))
+                if (GUILayout.Button("Generate Keys + Localize", GUILayout.Height(40)))
                 {
                     GenerateKeys();
                 }
@@ -136,6 +141,8 @@ namespace Golfin.UI
             report.AppendLine("Generated Localization Keys:\n");
 
             int count = 0;
+            int componentsAdded = 0;
+            
             foreach (var text in allTexts)
             {
                 // Skip if text is empty or just whitespace
@@ -149,11 +156,30 @@ namespace Golfin.UI
                 // Add to CSV
                 csvBuilder.AppendLine($"{key},{english},{japanese}");
 
+                // Add LocalizedText component if enabled
+                if (addLocalizedTextComponent)
+                {
+                    var localizedText = text.GetComponent<LocalizedText>();
+                    if (localizedText == null)
+                    {
+                        localizedText = text.gameObject.AddComponent<LocalizedText>();
+                        componentsAdded++;
+                    }
+                    
+                    // Set the key using reflection (it's a private SerializeField)
+                    SetLocalizedTextKey(localizedText, key);
+                    EditorUtility.SetDirty(text.gameObject);
+                }
+
                 // Add to report
                 report.AppendLine($"{text.gameObject.name}:");
                 report.AppendLine($"  Key: {key}");
                 report.AppendLine($"  EN: {english}");
                 report.AppendLine($"  JP: {japanese}");
+                if (addLocalizedTextComponent)
+                {
+                    report.AppendLine($"  ✅ LocalizedText component added/updated");
+                }
                 report.AppendLine();
 
                 count++;
@@ -167,11 +193,17 @@ namespace Golfin.UI
                 
                 report.AppendLine($"Generated {count} localization keys!");
                 report.AppendLine($"CSV saved to: {csvOutputPath}");
+                
+                if (addLocalizedTextComponent)
+                {
+                    report.AppendLine($"Added LocalizedText to {componentsAdded} objects");
+                }
+                
                 report.AppendLine("\nNext steps:");
                 report.AppendLine("1. Review the generated CSV");
                 report.AppendLine("2. Adjust Japanese translations if needed");
                 report.AppendLine("3. Merge into main LocalizationText.csv");
-                report.AppendLine("4. Add localization component to TextMeshPro objects");
+                report.AppendLine("4. Test language switching in Play Mode");
 
                 Debug.Log(report.ToString());
                 EditorUtility.DisplayDialog("Success", report.ToString(), "OK");
@@ -235,6 +267,23 @@ namespace Golfin.UI
 
             // For unknown strings, return romanized placeholder
             return $"[{english}]";
+        }
+
+        private void SetLocalizedTextKey(LocalizedText localizedText, string key)
+        {
+            // Use SerializedObject to set private field
+            SerializedObject serializedObject = new SerializedObject(localizedText);
+            SerializedProperty keyProperty = serializedObject.FindProperty("key");
+            
+            if (keyProperty != null)
+            {
+                keyProperty.stringValue = key;
+                serializedObject.ApplyModifiedProperties();
+            }
+            else
+            {
+                Debug.LogWarning($"Could not find 'key' field on LocalizedText component for {localizedText.gameObject.name}");
+            }
         }
     }
 }
