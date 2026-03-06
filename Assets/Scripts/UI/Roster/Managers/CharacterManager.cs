@@ -65,15 +65,41 @@ namespace Golfin.Roster
         
         private void InitializeWithSampleCharacters()
         {
-            string[] sampleIds = { "char_elizabeth", "char_shae", "char_james", "char_olivia" };
-            
-            foreach (var id in sampleIds)
+            // Try to load from CSV database first
+            if (CharacterDatabaseCSV.Instance != null)
             {
-                if (!ownedCharacters.ContainsKey(id))
+                var allCharacters = CharacterDatabaseCSV.Instance.GetAllCharacters();
+                Debug.Log($"[CharacterManager] Found {allCharacters.Count} characters in CSV database");
+                
+                // Give player first 4 characters from CSV
+                int count = 0;
+                foreach (var csvChar in allCharacters)
                 {
-                    var playerChar = new PlayerCharacterData(id);
-                    playerChar.currentLevel = 1;
-                    ownedCharacters[id] = playerChar;
+                    if (count >= 4) break;
+                    
+                    if (!ownedCharacters.ContainsKey(csvChar.characterId))
+                    {
+                        var playerChar = new PlayerCharacterData(csvChar.characterId);
+                        playerChar.currentLevel = 1;
+                        ownedCharacters[csvChar.characterId] = playerChar;
+                        count++;
+                    }
+                }
+            }
+            else
+            {
+                // Fallback: Use hardcoded IDs
+                Debug.LogWarning("[CharacterManager] CharacterDatabaseCSV not found, using fallback IDs");
+                string[] sampleIds = { "char_elizabeth", "char_shae", "char_james", "char_olivia" };
+                
+                foreach (var id in sampleIds)
+                {
+                    if (!ownedCharacters.ContainsKey(id))
+                    {
+                        var playerChar = new PlayerCharacterData(id);
+                        playerChar.currentLevel = 1;
+                        ownedCharacters[id] = playerChar;
+                    }
                 }
             }
             
@@ -89,16 +115,50 @@ namespace Golfin.Roster
         
         /// <summary>
         /// Get base character template data
+        /// Tries CSV database first, falls back to ScriptableObject database
         /// </summary>
         public CharacterData? GetCharacter(string characterId)
         {
-            if (characterDatabase == null)
+            // Try CSV database first (preferred)
+            if (CharacterDatabaseCSV.Instance != null)
             {
-                Debug.LogError("[CharacterManager] CharacterDatabase not assigned!");
-                return null;
+                var csvChar = CharacterDatabaseCSV.Instance.GetCharacter(characterId);
+                if (csvChar != null)
+                {
+                    // Convert CSV character to CharacterData for compatibility
+                    // This is a temporary bridge until we fully migrate
+                    return ConvertCSVToCharacterData(csvChar);
+                }
             }
             
-            return characterDatabase.GetCharacter(characterId);
+            // Fallback to ScriptableObject database
+            if (characterDatabase != null)
+            {
+                return characterDatabase.GetCharacter(characterId);
+            }
+            
+            Debug.LogError($"[CharacterManager] Character {characterId} not found in any database!");
+            return null;
+        }
+        
+        /// <summary>
+        /// Convert CSV runtime data to CharacterData for compatibility
+        /// </summary>
+        private CharacterData ConvertCSVToCharacterData(CharacterDataRuntime csvChar)
+        {
+            var charData = ScriptableObject.CreateInstance<CharacterData>();
+            charData.characterId = csvChar.characterId;
+            charData.characterName = csvChar.characterName;
+            charData.characterNickname = csvChar.characterName; // Use name as nickname for now
+            charData.rarity = csvChar.rarity;
+            charData.baseStrength = csvChar.baseStrength;
+            charData.baseClubControl = csvChar.baseClubControl;
+            charData.baseRecovery = csvChar.baseRecovery;
+            charData.baseStamina = csvChar.baseStamina;
+            charData.portraitThumbnail = csvChar.portraitSprite;
+            charData.portraitFull = csvChar.portraitSprite; // Use same sprite for both for now
+            charData.rarityColor = csvChar.GetRarityColor();
+            return charData;
         }
         
         /// <summary>

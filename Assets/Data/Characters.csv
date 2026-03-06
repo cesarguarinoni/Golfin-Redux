@@ -1,0 +1,13 @@
+id,name,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,portraitSprite,maxLevel
+char_elizabeth,Elizabeth,Rare,8,10,7,9,Elizabeth,199
+char_shae,Shae,Legendary,12,8,15,10,Shae,199
+char_james,James,Common,6,7,6,6,James,199
+char_olivia,Olivia,Uncommon,7,8,6,7,Olivia,199
+char_camila,Camila,Rare,9,9,8,8,Camila,199
+char_alejandro,Alejandro,Mythic,10,11,9,12,Alejandro,199
+char_ean,Ean,Uncommon,7,7,7,7,Ean,199
+char_freda,Freda,Supreme,15,12,18,14,Freda,199
+char_johan,Johan,Rare,8,10,7,10,Johan,199
+char_mike,Mike,Common,6,6,7,7,Mike,199
+char_richard,Richard,Mythic,11,10,10,11,Richard,199
+char_roshana,Roshana,Legendary,13,9,14,11,Roshana,199
