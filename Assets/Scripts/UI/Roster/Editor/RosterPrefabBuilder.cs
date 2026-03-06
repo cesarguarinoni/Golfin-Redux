@@ -31,6 +31,13 @@ namespace Golfin.Roster.Editor
             var rect = card.AddComponent<RectTransform>();
             rect.sizeDelta = new Vector2(150, 200);
             
+            // LayoutElement - tells HorizontalLayoutGroup the preferred size
+            var layoutElement = card.AddComponent<UnityEngine.UI.LayoutElement>();
+            layoutElement.preferredWidth = 150;
+            layoutElement.preferredHeight = 200;
+            layoutElement.flexibleWidth = 0;
+            layoutElement.flexibleHeight = 0;
+            
             // Button component
             var button = card.AddComponent<Button>();
             var buttonImage = card.AddComponent<Image>();
