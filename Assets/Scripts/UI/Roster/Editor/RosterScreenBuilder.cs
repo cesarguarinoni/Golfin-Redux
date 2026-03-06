@@ -287,11 +287,13 @@ namespace Golfin.Roster.Editor
             vpRect.sizeDelta = Vector2.zero;
             vpRect.anchoredPosition = Vector2.zero;
             
-            var mask = viewport.AddComponent<Mask>();
-            mask.showMaskGraphic = false;
+            // RectMask2D for clipping (better performance than Mask)
+            viewport.AddComponent<RectMask2D>();
             
+            // Image needed for RectMask2D but must be transparent
             var vpImage = viewport.AddComponent<Image>();
-            vpImage.color = Color.clear;
+            vpImage.color = new Color(0, 0, 0, 0); // Fully transparent
+            vpImage.raycastTarget = false; // Don't block input
             
             scrollRect.viewport = vpRect;
             
