@@ -49,16 +49,23 @@ namespace GolfinRedux.UI
         /// </summary>
         public void ShowScreen(ScreenId screenId, bool instant = false)
         {
+            Debug.Log($"[ScreenManager] ShowScreen called: {screenId} (current: {_currentScreen}, instant: {instant})");
+            
             if (_currentScreen == screenId && !instant)
+            {
+                Debug.Log($"[ScreenManager] Already on {screenId}, ignoring");
                 return;
+            }
 
             // If no fade system, or caller requests instant, just swap
             if (instant || FadeController.Instance == null)
             {
+                Debug.Log($"[ScreenManager] Applying screen immediately: {screenId}");
                 ApplyScreen(screenId);
             }
             else
             {
+                Debug.Log($"[ScreenManager] Fading to {screenId}");
                 // Fade to black, swap at midpoint, fade back in
                 FadeController.Instance.FadeOutThenIn(() => ApplyScreen(screenId));
             }
@@ -69,13 +76,24 @@ namespace GolfinRedux.UI
         /// </summary>
         private void ApplyScreen(ScreenId screenId)
         {
+            Debug.Log($"[ScreenManager] ApplyScreen: {screenId}");
             _currentScreen = screenId;
 
             if (_logoScreen != null) _logoScreen.SetActive(screenId == ScreenId.Logo);
             if (_splashScreen != null) _splashScreen.SetActive(screenId == ScreenId.Splash);
             if (_loadingScreen != null) _loadingScreen.SetActive(screenId == ScreenId.Loading);
             if (_homeScreen != null) _homeScreen.SetActive(screenId == ScreenId.Home);
-            if (_rosterScreen != null) _rosterScreen.SetActive(screenId == ScreenId.Roster);
+            
+            if (_rosterScreen != null)
+            {
+                bool shouldBeActive = (screenId == ScreenId.Roster);
+                Debug.Log($"[ScreenManager] RosterScreen: {(shouldBeActive ? "ACTIVATING" : "deactivating")}");
+                _rosterScreen.SetActive(shouldBeActive);
+            }
+            else
+            {
+                Debug.LogWarning("[ScreenManager] _rosterScreen is NULL!");
+            }
             // Settings is an overlay (SettingsController), not managed here
         }
     }

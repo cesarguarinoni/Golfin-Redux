@@ -414,9 +414,15 @@ namespace GolfinRedux.UI
 
         private void OnNavClicked(ScreenId target)
         {
+            Debug.Log($"[HomeScreenController] OnNavClicked: {target}");
+            
             SetActiveNav(target);
 
-            if (screenManager == null) return;
+            if (screenManager == null)
+            {
+                Debug.LogError("[HomeScreenController] ScreenManager is null! Cannot show screen.");
+                return;
+            }
 
             switch (target)
             {
@@ -427,6 +433,7 @@ namespace GolfinRedux.UI
                     screenManager.ShowScreen(ScreenId.Loading);
                     break;
                 case ScreenId.Roster:
+                    Debug.Log("[HomeScreenController] Showing Roster screen...");
                     screenManager.ShowScreen(ScreenId.Roster);
                     break;
                 // For now other tabs just keep you on Home or are TODO
