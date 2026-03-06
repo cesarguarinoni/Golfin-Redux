@@ -1,6 +1,7 @@
 #nullable enable
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using System.Collections.Generic;
 
 namespace Golfin.Roster
@@ -55,7 +56,7 @@ namespace Golfin.Roster
         /// <summary>
         /// Populate carousel with owned characters
         /// 
-        /// Phase 2a: Shows only owned characters
+        /// Phase 2a: Shows only owned characters (prefab optional for testing)
         /// Phase 2b: Will extend to show locked characters (separate visual state, non-interactive)
         /// </summary>
         private void PopulateCarousel()
@@ -79,7 +80,18 @@ namespace Golfin.Roster
                 return;
             }
             
-            // Create card for each character
+            // Check if prefab is assigned
+            if (characterCardPrefab == null)
+            {
+                Debug.LogWarning("[CarouselController] characterCardPrefab not assigned - skipping card creation (assign in Phase 2b)");
+                Debug.Log($"[CarouselController] {ownedCharacters.Count} characters would be created once prefab is assigned");
+                
+                // For Phase 2a testing: Create placeholder cards without the prefab
+                CreatePlaceholderCards(ownedCharacters);
+                return;
+            }
+            
+            // Create card for each character using prefab
             foreach (var playerChar in ownedCharacters)
             {
                 var cardGO = Instantiate(characterCardPrefab, contentParent);
@@ -102,6 +114,49 @@ namespace Golfin.Roster
             }
             
             Debug.Log($"[CarouselController] Populated with {cards.Count} cards");
+        }
+        
+        /// <summary>
+        /// Create placeholder cards for Phase 2a testing (when prefab not yet created)
+        /// </summary>
+        private void CreatePlaceholderCards(System.Collections.Generic.List<PlayerCharacterData> characters)
+        {
+            Debug.Log("[CarouselController] Creating placeholder cards for Phase 2a testing");
+            
+            foreach (var playerChar in characters)
+            {
+                var placeholderGO = new GameObject($"Card_{playerChar.characterId}");
+                placeholderGO.transform.SetParent(contentParent);
+                
+                var placeholderButton = placeholderGO.AddComponent<Button>();
+                var placeholderImage = placeholderGO.AddComponent<Image>();
+                placeholderImage.color = new Color(0.2f, 0.2f, 0.3f, 1f);
+                
+                var rect = placeholderGO.GetComponent<RectTransform>();
+                rect.sizeDelta = new Vector2(150, 200);
+                
+                // Add label
+                var labelGO = new GameObject("Label");
+                labelGO.transform.SetParent(placeholderGO.transform);
+                var labelText = labelGO.AddComponent<TextMeshProUGUI>();
+                labelText.text = playerChar.characterId;
+                labelText.alignment = TextAlignmentOptions.Center;
+                labelText.fontSize = 4;
+                
+                var labelRect = labelGO.GetComponent<RectTransform>();
+                labelRect.anchorMin = Vector2.zero;
+                labelRect.anchorMax = Vector2.one;
+                labelRect.offsetMin = Vector2.zero;
+                labelRect.offsetMax = Vector2.zero;
+                
+                // Make button clickable
+                var characterId = playerChar.characterId;
+                placeholderButton.onClick.AddListener(() => SelectCharacter(characterId));
+                
+                Debug.Log($"[CarouselController] Created placeholder card for {playerChar.characterId}");
+            }
+            
+            Debug.Log($"[CarouselController] Populated with {characters.Count} placeholder cards for testing");
         }
         
         /// <summary>
