@@ -28,6 +28,22 @@ namespace Golfin.Roster.Editor
             Debug.Log("🧪 ROSTER PHASE 1 - TEST RUNNER");
             Debug.Log("========================================\n");
             
+            // Check if in play mode
+            if (!EditorApplication.isPlaying)
+            {
+                EditorUtility.DisplayDialog(
+                    "Play Mode Required",
+                    "Phase 1 tests must run in Play Mode.\n\n" +
+                    "Steps:\n" +
+                    "1. Click Play button\n" +
+                    "2. Open Console (Window → General → Console)\n" +
+                    "3. Run: Tools → GOLFIN → Test Roster Phase 1\n\n" +
+                    "Tests will run when play mode is active.",
+                    "OK"
+                );
+                return;
+            }
+            
             testsPassed = 0;
             testsFailed = 0;
             
@@ -37,7 +53,9 @@ namespace Golfin.Roster.Editor
                 EditorUtility.DisplayDialog(
                     "Test Failed",
                     "Managers not found in scene!\n\n" +
-                    "Run: Tools → GOLFIN → Setup Roster System (Phase 1) first",
+                    "1. Run: Tools → GOLFIN → Setup Roster System (Phase 1)\n" +
+                    "2. Click Play\n" +
+                    "3. Try tests again",
                     "OK"
                 );
                 return;
@@ -119,11 +137,19 @@ namespace Golfin.Roster.Editor
                 return;
             }
             
+            // Verify characters are loaded
+            var allChars = charManager.GetAllOwnedCharacters();
+            if (allChars.Count == 0)
+            {
+                Fail("No characters loaded - did managers initialize? Make sure RosterSystemSetupTool ran first.");
+                return;
+            }
+            
             // Test GetPlayerCharacter
             var playerChar = charManager.GetPlayerCharacter("char_elizabeth");
             if (playerChar == null)
             {
-                Fail("Elizabeth not found");
+                Fail($"Elizabeth not found (available: {allChars.Count} chars)");
                 return;
             }
             
@@ -145,8 +171,7 @@ namespace Golfin.Roster.Editor
                 Fail($"Expected 0 SP, got {playerChar.totalSPEarned}");
             }
             
-            // Test GetAllOwnedCharacters
-            var allChars = charManager.GetAllOwnedCharacters();
+            // Already got allChars above, verify count
             if (allChars.Count == 4)
             {
                 Pass($"Owned Characters: {allChars.Count} ✅");
