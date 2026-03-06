@@ -107,7 +107,7 @@ namespace Golfin.Roster.Editor
                 return;
             }
             
-            RewardPointsManager.Instance.AddPoints(100000);
+            RewardPointsManager.Instance.EarnPoints(100000);
             Debug.Log("[Roster] Granted 100000 R");
         }
     }

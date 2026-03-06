@@ -105,10 +105,10 @@ namespace Golfin.Roster.Editor
                 var csvField = so.FindProperty("levelUpCostsCsv");
                 if (csvField != null && csvField.objectReferenceValue == null)
                 {
-                    var csv = FindCSVAsset();
-                    if (csv != null)
+                    var csvAsset = FindCSVAsset();
+                    if (csvAsset != null)
                     {
-                        csvField.objectReferenceValue = csv;
+                        csvField.objectReferenceValue = csvAsset;
                         so.ApplyModifiedProperties();
                         EditorUtility.SetDirty(existing);
                         Debug.Log("[RosterSystemSetupTool] ✓ CSV assigned to existing CharacterLevelUpDatabase");
