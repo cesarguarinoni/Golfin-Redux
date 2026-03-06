@@ -1003,6 +1003,11 @@ Docs/
 5. Cesar pulls changes and implements in Unity Editor
 6. Repeat
 
+**Communication Format (for easy searching):**
+- Commits: `🔗 c92a51a` - Makes them searchable with hash
+- Docs: `📝 ROSTER_PHASE2A_SUMMARY.md` - Filename in backticks
+- Scripts: `CarouselController.cs` - Backticks for code references
+
 **Note:** Kai can clone, commit, and push to the repository. Scripts and documentation are committed directly to the repo. Always pull before committing to avoid merge conflicts.
 
 ### Communication
