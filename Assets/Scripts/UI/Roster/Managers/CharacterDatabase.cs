@@ -165,19 +165,19 @@ namespace Golfin.Roster
         
         /// <summary>
         /// Get rarity badge text color for CharacterThumbnailCardGlowUp
-        /// Base: #ABC9F5, variations per rarity
+        /// Optimized for contrast with rarity background images
         /// </summary>
         public static Color GetRarityBadgeTextColor(CharacterRarity rarity)
         {
             return rarity switch
             {
-                CharacterRarity.Common => new Color(0.67f, 0.79f, 0.96f, 1f),    // #ABC9F5 (light blue-gray)
-                CharacterRarity.Uncommon => new Color(0.53f, 0.81f, 0.98f, 1f),  // Brighter blue
-                CharacterRarity.Rare => new Color(0.53f, 0.95f, 0.76f, 1f),      // Light green
-                CharacterRarity.Mythic => new Color(1f, 0.92f, 0.53f, 1f),       // Light yellow
-                CharacterRarity.Legendary => new Color(1f, 0.65f, 0.65f, 1f),    // Light red
-                CharacterRarity.Supreme => new Color(0.85f, 0.65f, 0.95f, 1f),   // Light purple
-                _ => new Color(0.67f, 0.79f, 0.96f, 1f) // Default
+                CharacterRarity.Common => new Color(0.49f, 0.52f, 0.54f, 1f),    // #7E848A (dark gray)
+                CharacterRarity.Uncommon => new Color(0.67f, 0.79f, 0.96f, 1f),  // #ABC9F5 (light blue)
+                CharacterRarity.Rare => new Color(0.75f, 0.92f, 0.79f, 1f),      // #C0EAC9 (light green)
+                CharacterRarity.Mythic => new Color(1f, 0.96f, 0.83f, 1f),       // #FFF5D3 (light yellow)
+                CharacterRarity.Legendary => new Color(0.93f, 0.71f, 0.64f, 1f), // #ECB5A3 (light red-orange)
+                CharacterRarity.Supreme => new Color(0.78f, 0.72f, 0.87f, 1f),   // #C6B8DE (light purple)
+                _ => new Color(0.67f, 0.79f, 0.96f, 1f) // Default: Uncommon
             };
         }
     }
