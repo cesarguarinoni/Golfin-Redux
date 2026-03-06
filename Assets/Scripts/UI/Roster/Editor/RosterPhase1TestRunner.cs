@@ -47,6 +47,9 @@ namespace Golfin.Roster.Editor
             testsPassed = 0;
             testsFailed = 0;
             
+            // Reset state for clean tests
+            ResetTestState();
+            
             // Verify managers exist
             if (!VerifyManagers())
             {
@@ -69,6 +72,17 @@ namespace Golfin.Roster.Editor
             
             // Summary
             PrintSummary();
+        }
+        
+        private static void ResetTestState()
+        {
+            // Reset reward points to default
+            var rpManager = Object.FindObjectOfType<RewardPointsManager>();
+            if (rpManager != null)
+            {
+                rpManager.ResetToDefault();
+                Debug.Log("[RosterPhase1TestRunner] Reset Reward Points to 50000");
+            }
         }
         
         private static bool VerifyManagers()
@@ -295,24 +309,24 @@ namespace Golfin.Roster.Editor
             
             // Test all levels loaded
             var allLevels = levelUpDB.GetAllLevels();
-            if (allLevels.Count > 40)
+            if (allLevels.Count >= 40)
             {
                 Pass($"Levels in CSV: {allLevels.Count} ✅");
             }
             else
             {
-                Fail($"Expected 40+ levels, got {allLevels.Count}");
+                Fail($"Expected 40+, got {allLevels.Count}");
             }
             
             // Test max level
             int maxLevel = levelUpDB.GetMaxLevel();
-            if (maxLevel >= 199)
+            if (maxLevel == 199)
             {
                 Pass($"Max Level: {maxLevel} ✅");
             }
             else
             {
-                Fail($"Expected 199+, got {maxLevel}");
+                Fail($"Expected 199, got {maxLevel}");
             }
         }
         
