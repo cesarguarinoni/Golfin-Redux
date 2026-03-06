@@ -88,6 +88,20 @@ namespace Golfin.Roster
         }
         
         /// <summary>
+        /// Get base character template data
+        /// </summary>
+        public CharacterData? GetCharacter(string characterId)
+        {
+            if (characterDatabase == null)
+            {
+                Debug.LogError("[CharacterManager] CharacterDatabase not assigned!");
+                return null;
+            }
+            
+            return characterDatabase.GetCharacter(characterId);
+        }
+        
+        /// <summary>
         /// Get a specific player-owned character
         /// </summary>
         public PlayerCharacterData? GetPlayerCharacter(string characterId)
