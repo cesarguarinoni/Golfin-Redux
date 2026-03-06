@@ -13,6 +13,9 @@ namespace Golfin.Roster
     /// - Rarity badge (C/U/R/M/L/S)
     /// - Level badge (Lv X)
     /// - Selection highlight
+    /// 
+    /// Phase 2a: Owned characters only
+    /// Phase 2b: Will add locked character state (grayed out, lock icon, "LOCKED" label)
     /// </summary>
     public class CharacterThumbnailCard : MonoBehaviour
     {

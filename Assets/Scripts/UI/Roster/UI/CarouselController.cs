@@ -54,6 +54,9 @@ namespace Golfin.Roster
         
         /// <summary>
         /// Populate carousel with owned characters
+        /// 
+        /// Phase 2a: Shows only owned characters
+        /// Phase 2b: Will extend to show locked characters (separate visual state, non-interactive)
         /// </summary>
         private void PopulateCarousel()
         {
@@ -67,6 +70,7 @@ namespace Golfin.Roster
             }
             
             // Get owned characters from CharacterManager
+            // TODO (Phase 2b): Filter for both owned AND locked, display with different states
             var ownedCharacters = CharacterManager.Instance.GetAllOwnedCharacters();
             
             if (ownedCharacters.Count == 0)

@@ -51,6 +51,9 @@ namespace Golfin.Roster
         public bool isSelected;                     // Currently active for gameplay
         
         [SerializeField]
+        public bool isOwned = true;                 // Is this character owned by player? (Phase 2b: false = locked)
+        
+        [SerializeField]
         public DateTime acquiredDate;
         
         // Temporary SP allocation (during level-up modal, before confirm)

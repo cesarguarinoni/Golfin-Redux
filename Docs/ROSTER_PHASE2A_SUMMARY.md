@@ -243,6 +243,14 @@ Same event flow → Detail panel updates automatically
 
 ## What's Not Yet (Phase 2b & beyond)
 
+❌ **Locked Character System** (Phase 2b)
+- Display locked characters in carousel
+- Lock icon overlay on locked cards
+- "LOCKED" label instead of character name
+- Grayed out styling for locked cards
+- Disable selection/interaction on locked cards
+- Integrate with Gacha system (unlock mechanism)
+
 ❌ CharacterThumbnailCard visual details
 - Portrait images
 - Selection highlight styling

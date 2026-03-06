@@ -220,11 +220,15 @@ Debug.Log($"Elizabeth: Lv {card.currentLevel}, SP {card.totalSPEarned}");
 - ❌ Smooth scroll smoothness tuning
 
 **Phase 2b will add:**
+- 🔒 **Locked Character System** (new!)
+  - Show both owned + locked characters
+  - Lock icon overlay, grayed out styling
+  - "LOCKED" label, non-interactive
 - Detail panel (shows selected character stats, bio, buttons)
 - Level-up modal
 - Complete prefab template for CharacterThumbnailCard
 
-**For now:** Carousel core logic is solid and modular. Can test navigation without visuals.
+**For now:** Carousel core logic is solid and modular. Can test navigation without visuals. All characters are owned (Phase 2b will add locked state).
 
 ---
 
