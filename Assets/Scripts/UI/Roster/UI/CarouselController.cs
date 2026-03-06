@@ -39,10 +39,15 @@ namespace Golfin.Roster
         
         private void Awake()
         {
-            scrollRect = GetComponent<ScrollRect>();
+            // ScrollRect is on the ScrollView child, not on this GameObject
+            scrollRect = GetComponentInChildren<ScrollRect>();
             if (scrollRect == null)
             {
-                Debug.LogError("[CarouselController] ScrollRect component not found on parent!");
+                Debug.LogError("[CarouselController] ScrollRect component not found! Make sure ScrollView exists with ScrollRect component.");
+            }
+            else
+            {
+                Debug.Log("[CarouselController] Found ScrollRect component");
             }
         }
         
