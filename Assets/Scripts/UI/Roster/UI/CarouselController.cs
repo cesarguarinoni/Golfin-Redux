@@ -55,7 +55,16 @@ namespace Golfin.Roster
         {
             PopulateCarousel();
             SetupArrowButtons();
-            UpdatePaginationDots();
+            
+            // Pagination dots are optional
+            if (paginationDotPrefab != null && paginationDotsParent != null)
+            {
+                UpdatePaginationDots();
+            }
+            else
+            {
+                Debug.Log("[CarouselController] Pagination dots disabled (prefab not assigned)");
+            }
         }
         
         /// <summary>
@@ -244,6 +253,12 @@ namespace Golfin.Roster
         /// </summary>
         private void UpdatePaginationDots()
         {
+            // Safety check
+            if (paginationDotPrefab == null || paginationDotsParent == null)
+            {
+                return;
+            }
+            
             // Clear existing dots
             paginationDots.Clear();
             foreach (Transform child in paginationDotsParent)
