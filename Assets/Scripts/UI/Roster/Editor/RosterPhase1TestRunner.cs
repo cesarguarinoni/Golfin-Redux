@@ -2,7 +2,6 @@
 #if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
-using UnityEditor.SceneHierarchy;
 using Golfin.Roster;
 
 namespace Golfin.Roster.Editor
