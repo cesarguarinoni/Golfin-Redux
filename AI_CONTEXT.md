@@ -1,8 +1,8 @@
 # GOLFIN Redux - AI Context
 
-**Last Updated:** 2026-03-06 14:37 JST  
-**Phase:** 2a COMPLETE, 2b/2c Ready  
-**Next Session:** Visual polish + Detail Panel
+**Last Updated:** 2026-03-06 16:25 JST  
+**Phase:** 2a COMPLETE (Visual Polish Done), 2b Ready  
+**Next Session:** Detail Panel
 
 ---
 
@@ -16,11 +16,14 @@
 - CharacterThumbnailCard prefab functional
 - All character data loading from CSV
 
-### 🎨 **Current Work: Visual Polish (Cesar)**
-Cesar is polishing CharacterThumbnailCard prefab visuals:
-- Adjusting sizes, colors, layouts
-- Using rarity background sprites from `Assets/Art/Rarities/`
-- Experimenting with badges, highlights, effects
+### ✅ **Visual Polish: COMPLETE (2026-03-06 16:25)**
+Created **CharacterThumbnailCardGlowUp** prefab with polished design:
+- **Size:** 170x343 (was 150x200) - taller, better proportions
+- **Font:** Rubik-SemiBold throughout
+- **Rarity backgrounds:** Uses actual rarity sprites from `Assets/Art/Rarities/`
+- **Rarity badge colors:** Optimized for contrast with backgrounds
+- **Outline effect:** Added visual depth
+- **Currently active:** Assigned to CarouselController
 
 ### 📋 **Next: Phase 2b (Detail Panel)**
 - Create CharacterDetailPanel UI
@@ -43,7 +46,8 @@ Assets/
 │
 ├── Sprites/Characters/ ⭐ (12 character portraits)
 │   ├── Elizabeth.png, Shae.png, James.png, Olivia.png
-│   └── Camila, Alejandro, Ean, Freda, Johan, Mike, Richard, Roshana
+│   └── Camila, Ean, Freda, Guillermo, Johan, Mike, Rashonda, Richard, Roshana
+│   Note: Alejandro removed, Guillermo & Rashonda added (2026-03-06)
 │
 ├── Art/Rarities/ ⭐ (6 rarity background sprites)
 │   ├── Common.png
@@ -54,7 +58,8 @@ Assets/
 │   └── Supreme - New.png
 │
 ├── Prefabs/UI/Roster/
-│   ├── CharacterThumbnailCard.prefab ⭐ (auto-wired)
+│   ├── CharacterThumbnailCard.prefab (original, 150x200)
+│   ├── CharacterThumbnailCardGlowUp.prefab ⭐ (polished, 170x343, ACTIVE)
 │   └── StatBar.prefab (created but not used yet)
 │
 └── Scripts/UI/Roster/
@@ -133,6 +138,93 @@ Mythic:    35/35/25/32
 Legendary: 40/40/40/40
 Supreme:   50/50/50/50
 ```
+
+### **Rarity Badge Text Colors (Roster Cards Only):**
+Optimized for contrast with rarity background images:
+```
+Common:    #7E848A (dark gray)
+Uncommon:  #ABC9F5 (light blue)
+Rare:      #C0EAC9 (light green)
+Mythic:    #FFF5D3 (light yellow)
+Legendary: #ECB5A3 (light peach)
+Supreme:   #C6B8DE (light purple)
+```
+
+**Note:** These colors are ONLY for roster card badges. Detail panel and descriptions will use different colors.
+
+---
+
+## 🎴 CharacterThumbnailCardGlowUp Specifications
+
+**Prefab:** `Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab`  
+**Status:** Active (assigned to CarouselController)
+
+### **Dimensions:**
+- **Card Size:** 170x343 (RectTransform + LayoutElement)
+- **Aspect Ratio:** ~1:2 (portrait orientation)
+
+### **Components & Settings:**
+
+**Background:**
+- Size: 170x343
+- Anchor: Middle Center (0.5, 0.5)
+- Pivot: 0, 0, 0
+- Source Image: Rarity-specific sprite (Common.png, Uncommon - New.png, etc.)
+- Set at runtime by CharacterThumbnailCard.Initialize()
+
+**Portrait:**
+- Size: 170x343
+- Anchor: Middle Center
+- Pivot: 0, 0, 0
+- Source Image: Character sprite (Elizabeth.png, Shae.png, etc.)
+- Set at runtime from CSV data
+
+**NameLabel:**
+- Font: Rubik-SemiBold SDF
+- Font Size: 30
+- Anchor: Bottom Center
+- Pivot: 0, 48, 0
+- Color: White
+- Underlay: Offset Y -1, Dilate 1 (drop shadow effect)
+
+**RarityBadge/Text:**
+- Font: Rubik-SemiBold SDF
+- Font Size: 20
+- Anchor: Stretch Stretch
+- Pivot: 0, 0, 0
+- Color: Rarity-specific (see Rarity Badge Text Colors above)
+- Text: C/U/R/M/L/S (single letter)
+
+**LevelBadge:**
+- Font: Rubik-SemiBold SDF
+- Font Size: 20
+- Anchor: Stretch Stretch
+- Pivot: 0, 0, 0
+- Text: "Lv X/199"
+
+**Outline:**
+- Image component
+- Anchor: Middle Center
+- Position: 0, -3.55, 0
+- Size: 178x351 (slightly larger than card)
+- Provides visual border/depth
+
+### **Runtime Behavior:**
+
+**Initialize() Method:**
+1. Gets character data from CharacterManager (CSV)
+2. Sets portrait sprite from characterPortraits array
+3. Sets name from CSV (characterName field)
+4. Sets rarity badge letter (C/U/R/M/L/S)
+5. Applies rarity badge text color (contrast-optimized)
+6. Sets level text ("Lv 1/199")
+7. Sets background to rarity sprite (Common.png, etc.)
+8. Applies rarity color tint if needed
+
+**Images in Prefab:**
+- Prefab has placeholder images assigned (for visual editing)
+- All images are **overwritten at runtime** with actual character data
+- This is intentional and best practice - allows visual design without breaking functionality
 
 ---
 
@@ -355,19 +447,27 @@ Tools → GOLFIN → Roster
 
 ## 📝 Session Summary (2026-03-06)
 
-### **Accomplishments:**
+### **Morning/Afternoon: Phase 2a Foundation (~4.5 hours)**
 - ✅ Created CSV-based character system (12 characters)
 - ✅ Built RosterScreen hierarchy (header, carousel, detail panel stub)
 - ✅ Integrated with ScreenManager (navigation working)
 - ✅ Created CharacterThumbnailCard prefab (fully auto-wired)
 - ✅ Characters displaying with portraits, names, rarity, levels
 - ✅ Fixed 8+ critical bugs (ScrollRect, LayoutElement, Viewport Image, etc.)
-- ✅ Completed Phase 2a
 
-### **Time Spent:** ~4.5 hours (debugging + building)
+### **Evening: Visual Polish (~1.5 hours)**
+- ✅ Created CharacterThumbnailCardGlowUp prefab (170x343, polished design)
+- ✅ Applied Rubik-SemiBold font throughout
+- ✅ Integrated rarity background sprites (6 rarities)
+- ✅ Optimized badge text colors for contrast (6 unique colors)
+- ✅ Added outline effect for visual depth
+- ✅ Updated character roster (removed Alejandro, added Guillermo & Rashonda)
+- ✅ GlowUp prefab assigned to CarouselController (ACTIVE)
 
-### **Commits Today:** 20+ commits
-- CSV system, prefab builders, bug fixes, documentation
+### **Total Time:** ~6 hours (building + debugging + polish)
+
+### **Commits Today:** 25+ commits
+- CSV system, prefab builders, bug fixes, visual polish, documentation
 
 ### **Next Session Goals:**
 1. Cesar polishes CharacterThumbnailCard visuals (using rarity backgrounds)
