@@ -31,17 +31,18 @@ namespace Golfin.Roster.Editor
             var rect = card.AddComponent<RectTransform>();
             rect.sizeDelta = new Vector2(150, 200);
             
+            // Button component (must be before LayoutElement to be proper hierarchy)
+            var button = card.AddComponent<Button>();
+            var buttonImage = card.AddComponent<Image>();
+            buttonImage.color = Color.white;
+            
             // LayoutElement - tells HorizontalLayoutGroup the preferred size
-            var layoutElement = card.AddComponent<UnityEngine.UI.LayoutElement>();
+            var layoutElement = card.AddComponent<LayoutElement>();
             layoutElement.preferredWidth = 150;
             layoutElement.preferredHeight = 200;
             layoutElement.flexibleWidth = 0;
             layoutElement.flexibleHeight = 0;
-            
-            // Button component
-            var button = card.AddComponent<Button>();
-            var buttonImage = card.AddComponent<Image>();
-            buttonImage.color = Color.white;
+            Debug.Log("[PrefabBuilder] Added LayoutElement to card");
             
             // Background
             var background = new GameObject("Background");
@@ -178,12 +179,17 @@ namespace Golfin.Roster.Editor
             
             // Save as prefab
             string prefabPath = PREFAB_PATH + "CharacterThumbnailCard.prefab";
-            PrefabUtility.SaveAsPrefabAsset(card, prefabPath);
+            var prefabAsset = PrefabUtility.SaveAsPrefabAsset(card, prefabPath);
             
             // Clean up
             Object.DestroyImmediate(card);
             
+            // Force Unity to save and refresh
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            
             Debug.Log($"[PrefabBuilder] ✓ Created CharacterThumbnailCard prefab at {prefabPath}");
+            Debug.Log($"[PrefabBuilder] ✓ Prefab saved and refreshed");
             
             EditorUtility.DisplayDialog("Prefab Created",
                 "CharacterThumbnailCard prefab created!\n\n" +
