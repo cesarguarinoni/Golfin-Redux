@@ -66,6 +66,7 @@ namespace Golfin.Roster
             // Set rarity
             var rarityColor = RarityHelper.GetRarityColor(baseData.rarity);
             var rarityLabel = RarityHelper.GetRarityLabel(baseData.rarity);
+            var rarityBadgeTextColor = RarityHelper.GetRarityBadgeTextColor(baseData.rarity);
             
             if (rarityBadgeImage != null)
             {
@@ -75,7 +76,7 @@ namespace Golfin.Roster
             if (rarityLabelText != null)
             {
                 rarityLabelText.text = rarityLabel;
-                rarityLabelText.color = Color.white;
+                rarityLabelText.color = rarityBadgeTextColor; // Use rarity-specific color
             }
             
             // Set level

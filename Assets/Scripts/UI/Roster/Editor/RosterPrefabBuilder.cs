@@ -29,7 +29,7 @@ namespace Golfin.Roster.Editor
             var card = new GameObject("CharacterThumbnailCard");
             
             var rect = card.AddComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(150, 200);
+            rect.sizeDelta = new Vector2(170, 343); // Updated for GlowUp design
             
             // Button component (must be before LayoutElement to be proper hierarchy)
             var button = card.AddComponent<Button>();
@@ -38,8 +38,8 @@ namespace Golfin.Roster.Editor
             
             // LayoutElement - tells HorizontalLayoutGroup the preferred size
             var layoutElement = card.AddComponent<LayoutElement>();
-            layoutElement.preferredWidth = 150;
-            layoutElement.preferredHeight = 200;
+            layoutElement.preferredWidth = 170; // Updated for GlowUp design
+            layoutElement.preferredHeight = 343; // Updated for GlowUp design
             layoutElement.flexibleWidth = 0;
             layoutElement.flexibleHeight = 0;
             Debug.Log("[PrefabBuilder] Added LayoutElement to card");
