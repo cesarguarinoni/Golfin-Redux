@@ -100,6 +100,20 @@ namespace Golfin.Roster.Editor
             if (existing != null)
             {
                 Debug.LogWarning("[RosterSystemSetupTool] CharacterLevelUpDatabase already exists in scene");
+                // Still try to assign CSV if missing
+                var so = new SerializedObject(existing);
+                var csvField = so.FindProperty("levelUpCostsCsv");
+                if (csvField != null && csvField.objectReferenceValue == null)
+                {
+                    var csv = FindCSVAsset();
+                    if (csv != null)
+                    {
+                        csvField.objectReferenceValue = csv;
+                        so.ApplyModifiedProperties();
+                        EditorUtility.SetDirty(existing);
+                        Debug.Log("[RosterSystemSetupTool] ✓ CSV assigned to existing CharacterLevelUpDatabase");
+                    }
+                }
                 return;
             }
             
@@ -107,7 +121,7 @@ namespace Golfin.Roster.Editor
             var go = new GameObject("CharacterLevelUpDatabase");
             var database = go.AddComponent<CharacterLevelUpDatabase>();
             
-            // Find CSV asset
+            // Find and assign CSV asset
             var csv = FindCSVAsset();
             if (csv != null)
             {
@@ -115,14 +129,15 @@ namespace Golfin.Roster.Editor
                 var csvField = so.FindProperty("levelUpCostsCsv");
                 
                 if (csvField != null)
+                {
                     csvField.objectReferenceValue = csv;
-                
-                so.ApplyModifiedProperties();
-                Debug.Log("[RosterSystemSetupTool] ✓ CSV assigned to CharacterLevelUpDatabase");
+                    so.ApplyModifiedProperties();
+                    Debug.Log("[RosterSystemSetupTool] ✓ CSV assigned to CharacterLevelUpDatabase");
+                }
             }
             else
             {
-                Debug.LogWarning("[RosterSystemSetupTool] CharacterLevelUpCosts.csv not found! You need to assign it manually.");
+                Debug.LogError("[RosterSystemSetupTool] LevelUpCosts.csv not found! Please check Assets/Data/LevelUpCosts.csv exists.");
             }
             
             EditorUtility.SetDirty(database);
@@ -182,15 +197,25 @@ namespace Golfin.Roster.Editor
         
         private static TextAsset? FindCSVAsset()
         {
-            var guids = AssetDatabase.FindAssets("CharacterLevelUpCosts t:TextAsset");
+            // Try exact filename first
+            var csv = AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Data/LevelUpCosts.csv");
+            if (csv != null)
+            {
+                Debug.Log($"[RosterSystemSetupTool] Found CSV at Assets/Data/LevelUpCosts.csv");
+                return csv;
+            }
+            
+            // Fallback: search by name
+            var guids = AssetDatabase.FindAssets("LevelUpCosts t:TextAsset");
             if (guids.Length > 0)
             {
                 var path = AssetDatabase.GUIDToAssetPath(guids[0]);
-                var csv = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+                csv = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
                 Debug.Log($"[RosterSystemSetupTool] Found CSV at {path}");
                 return csv;
             }
             
+            Debug.LogError("[RosterSystemSetupTool] LevelUpCosts.csv not found!");
             return null;
         }
         
