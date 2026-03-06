@@ -141,7 +141,7 @@ namespace Golfin.Roster
             if (playerChar == null) return false;
             
             int nextLevel = playerChar.currentLevel + 1;
-            int cost = levelUpDatabase.GetLevelUpCost(characterId, nextLevel);
+            int cost = levelUpDatabase.GetLevelUpCost(nextLevel);
             
             return RewardPointsManager.Instance.CanAfford(cost);
         }
@@ -193,8 +193,8 @@ namespace Golfin.Roster
             }
             
             int nextLevel = playerChar.currentLevel + 1;
-            int cost = levelUpDatabase.GetLevelUpCost(characterId, nextLevel);
-            int spReward = levelUpDatabase.GetSPReward(characterId, nextLevel);
+            int cost = levelUpDatabase.GetLevelUpCost(nextLevel);
+            int spReward = levelUpDatabase.GetSPReward(nextLevel);
             
             // Spend Reward Points
             if (!RewardPointsManager.Instance.SpendPoints(cost))
