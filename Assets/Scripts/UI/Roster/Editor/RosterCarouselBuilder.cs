@@ -47,37 +47,59 @@ namespace Golfin.Roster.Editor
             
             try
             {
-                // Create root carousel GameObject
-                var carouselGO = new GameObject("RosterScreen");
-                var canvasGroup = carouselGO.AddComponent<CanvasGroup>();
+                // Find Canvas (same as Home/Logo screens)
+                var canvas = FindCanvasParent();
+                if (canvas == null)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Build Failed",
+                        "Canvas not found in ShellScene!\n\n" +
+                        "Make sure ShellScene has a Canvas GameObject.",
+                        "OK"
+                    );
+                    return;
+                }
+                
+                // Create RosterScreen as child of Canvas
+                var rosterScreenGO = new GameObject("RosterScreen");
+                rosterScreenGO.transform.SetParent(canvas.transform, false);
+                
+                var canvasGroup = rosterScreenGO.AddComponent<CanvasGroup>();
                 
                 // Header panel
-                CreateHeader(carouselGO.transform);
+                CreateHeader(rosterScreenGO.transform);
                 
                 // Main carousel with ScrollRect
-                var carouselPanel = CreateCarouselPanel(carouselGO.transform);
+                var carouselPanel = CreateCarouselPanel(rosterScreenGO.transform);
                 
                 // Navigation arrows
-                CreateLeftArrow(carouselGO.transform);
-                CreateRightArrow(carouselGO.transform);
+                CreateLeftArrow(rosterScreenGO.transform);
+                CreateRightArrow(rosterScreenGO.transform);
                 
                 // Pagination dots
-                CreatePaginationDots(carouselGO.transform);
+                CreatePaginationDots(rosterScreenGO.transform);
                 
                 // Add controllers
-                var rosterController = carouselGO.AddComponent<RosterScreenController>();
+                var rosterController = rosterScreenGO.AddComponent<RosterScreenController>();
                 var carouselController = carouselPanel.AddComponent<CarouselController>();
                 
                 // Wire up references via SerializedObject
-                WireCarouselReferences(carouselGO, carouselPanel, carouselController);
+                WireCarouselReferences(rosterScreenGO, carouselPanel, carouselController);
+                
+                // Wire ScreenManager reference
+                WireScreenManager(rosterScreenGO);
                 
                 EditorUtility.DisplayDialog(
                     "Carousel Built",
-                    SETUP_COMPLETE_MESSAGE,
+                    SETUP_COMPLETE_MESSAGE + "\n\n" +
+                    "IMPORTANT:\n" +
+                    "1. Assign RosterScreen to ScreenManager._rosterScreen in ShellSceneRoot\n" +
+                    "2. Run: Tools → GOLFIN → Deactivate Unnecessary Screens",
                     "OK"
                 );
                 
                 Debug.Log("[RosterCarouselBuilder] ✅ Carousel built successfully!");
+                Debug.Log("[RosterCarouselBuilder] ⚠️ Remember to assign RosterScreen to ScreenManager!");
             }
             catch (System.Exception e)
             {
@@ -87,6 +109,36 @@ namespace Golfin.Roster.Editor
                     $"Error: {e.Message}",
                     "OK"
                 );
+            }
+        }
+        
+        private static Canvas FindCanvasParent()
+        {
+            var canvas = GameObject.Find("Canvas");
+            if (canvas != null)
+                return canvas.GetComponent<Canvas>();
+            
+            return Object.FindObjectOfType<Canvas>();
+        }
+        
+        private static void WireScreenManager(GameObject rosterScreenGO)
+        {
+            var screenManager = Object.FindObjectOfType<GolfinRedux.UI.ScreenManager>();
+            if (screenManager == null)
+            {
+                Debug.LogWarning("[RosterCarouselBuilder] ScreenManager not found - you'll need to assign it manually");
+                return;
+            }
+            
+            var so = new SerializedObject(screenManager);
+            var rosterScreenField = so.FindProperty("_rosterScreen");
+            
+            if (rosterScreenField != null)
+            {
+                rosterScreenField.objectReferenceValue = rosterScreenGO;
+                so.ApplyModifiedProperties();
+                EditorUtility.SetDirty(screenManager);
+                Debug.Log("[RosterCarouselBuilder] ✓ RosterScreen auto-wired to ScreenManager");
             }
         }
         

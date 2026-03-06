@@ -109,10 +109,10 @@ namespace GolfinRedux.UI
 
             // Bottom nav
             if (navHomeButton != null)       navHomeButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));
-            if (navGachaButton != null)      navGachaButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));     // TODO: Gacha
-            if (navTeeButton != null)        navTeeButton.onClick.AddListener(() => OnNavClicked(ScreenId.Loading));    // TODO: Hole select
-            if (navInventoryButton != null)  navInventoryButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home)); // TODO: Inventory
-            if (navCharactersButton != null) navCharactersButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home)); // TODO: Characters
+            if (navGachaButton != null)      navGachaButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));      // TODO: Gacha
+            if (navTeeButton != null)        navTeeButton.onClick.AddListener(() => OnNavClicked(ScreenId.Loading));     // TODO: Hole select
+            if (navInventoryButton != null)  navInventoryButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));  // TODO: Inventory
+            if (navCharactersButton != null) navCharactersButton.onClick.AddListener(() => OnNavClicked(ScreenId.Roster)); // Roster Screen
         }
 
         private void OnEnable()
@@ -426,6 +426,9 @@ namespace GolfinRedux.UI
                 case ScreenId.Loading:
                     screenManager.ShowScreen(ScreenId.Loading);
                     break;
+                case ScreenId.Roster:
+                    screenManager.ShowScreen(ScreenId.Roster);
+                    break;
                 // For now other tabs just keep you on Home or are TODO
                 default:
                     screenManager.ShowScreen(ScreenId.Home);
@@ -444,7 +447,7 @@ namespace GolfinRedux.UI
             if (navInventoryIcon != null)
                 navInventoryIcon.color = navNormalColor;
             if (navCharactersIcon != null)
-                navCharactersIcon.color = navNormalColor;
+                navCharactersIcon.color = active == ScreenId.Roster ? navActiveColor : navNormalColor;
         }
     }
 }

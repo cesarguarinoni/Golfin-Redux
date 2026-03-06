@@ -20,7 +20,7 @@ namespace Golfin.UI
         {
             "LogoScreen",
             "LoadingScreen"
-            // Add more screen names here as needed
+            // RosterScreen is managed by ScreenManager, doesn't need to be active at start
         };
 
         [Header("Search Settings")]

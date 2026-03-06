@@ -7,7 +7,8 @@ namespace GolfinRedux.UI
         Logo,
         Splash,
         Loading,
-        Home
+        Home,
+        Roster
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -25,6 +26,7 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _splashScreen;
         [SerializeField] private GameObject _loadingScreen;
         [SerializeField] private GameObject _homeScreen;
+        [SerializeField] private GameObject _rosterScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         private ScreenId _currentScreen;
@@ -73,6 +75,7 @@ namespace GolfinRedux.UI
             if (_splashScreen != null) _splashScreen.SetActive(screenId == ScreenId.Splash);
             if (_loadingScreen != null) _loadingScreen.SetActive(screenId == ScreenId.Loading);
             if (_homeScreen != null) _homeScreen.SetActive(screenId == ScreenId.Home);
+            if (_rosterScreen != null) _rosterScreen.SetActive(screenId == ScreenId.Roster);
             // Settings is an overlay (SettingsController), not managed here
         }
     }
