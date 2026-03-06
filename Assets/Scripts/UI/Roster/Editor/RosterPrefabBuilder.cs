@@ -157,6 +157,18 @@ namespace Golfin.Roster.Editor
             // Add CharacterThumbnailCard script
             var cardScript = card.AddComponent<CharacterThumbnailCard>();
             
+            // Wire references using SerializedObject
+            var so = new SerializedObject(cardScript);
+            so.FindProperty("portraitImage").objectReferenceValue = portraitImage;
+            so.FindProperty("nameText").objectReferenceValue = nameText;
+            so.FindProperty("rarityBadgeImage").objectReferenceValue = rarityBg;
+            so.FindProperty("rarityLabelText").objectReferenceValue = rarityTMP;
+            so.FindProperty("levelText").objectReferenceValue = levelTMP;
+            so.FindProperty("selectionHighlight").objectReferenceValue = highlightImage;
+            so.FindProperty("backgroundImage").objectReferenceValue = bgImage;
+            so.FindProperty("cardButton").objectReferenceValue = button;
+            so.ApplyModifiedProperties();
+            
             // Save as prefab
             string prefabPath = PREFAB_PATH + "CharacterThumbnailCard.prefab";
             PrefabUtility.SaveAsPrefabAsset(card, prefabPath);
