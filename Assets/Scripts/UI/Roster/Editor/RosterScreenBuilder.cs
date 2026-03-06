@@ -20,19 +20,20 @@ namespace Golfin.Roster.Editor
         {
             Debug.Log("[RosterBuilder] Starting complete Roster Screen build...");
             
-            // 1. Find Canvas
-            var canvas = FindCanvas();
-            if (canvas == null)
+            // 1. Find ScreensRoot
+            var screensRoot = FindScreensRoot();
+            if (screensRoot == null)
             {
                 EditorUtility.DisplayDialog("Error", 
-                    "Canvas not found in scene!\n\n" +
-                    "Make sure you're in ShellScene with Canvas GameObject.",
+                    "ScreensRoot not found in scene!\n\n" +
+                    "Make sure you're in ShellScene.\n" +
+                    "Expected hierarchy: Canvas → ScreensRoot",
                     "OK");
                 return;
             }
             
             // 2. Delete existing RosterScreen if it exists
-            var existing = canvas.transform.Find("RosterScreen");
+            var existing = screensRoot.Find("RosterScreen");
             if (existing != null)
             {
                 if (!EditorUtility.DisplayDialog("Replace Existing?",
@@ -47,7 +48,7 @@ namespace Golfin.Roster.Editor
             }
             
             // 3. Create RosterScreen root
-            var rosterScreen = CreateRosterScreenRoot(canvas.transform);
+            var rosterScreen = CreateRosterScreenRoot(screensRoot);
             
             // 4. Create Header
             CreateHeader(rosterScreen.transform);
@@ -74,7 +75,7 @@ namespace Golfin.Roster.Editor
             
             EditorUtility.DisplayDialog("Success!",
                 "Roster Screen created successfully!\n\n" +
-                "✓ Hierarchy created under Canvas\n" +
+                "✓ Hierarchy created under ScreensRoot\n" +
                 "✓ All components added\n" +
                 "✓ References auto-wired\n" +
                 "✓ ScreenManager linked\n\n" +
@@ -87,10 +88,15 @@ namespace Golfin.Roster.Editor
             Debug.Log("[RosterBuilder] ✓ Roster Screen build complete!");
         }
         
-        private static Canvas FindCanvas()
+        private static Transform FindScreensRoot()
         {
-            var canvasGO = GameObject.Find("Canvas");
-            return canvasGO != null ? canvasGO.GetComponent<Canvas>() : null;
+            // Find Canvas first
+            var canvas = GameObject.Find("Canvas");
+            if (canvas == null) return null;
+            
+            // Find ScreensRoot under Canvas
+            var screensRoot = canvas.transform.Find("ScreensRoot");
+            return screensRoot;
         }
         
         private static GameObject CreateRosterScreenRoot(Transform parent)
