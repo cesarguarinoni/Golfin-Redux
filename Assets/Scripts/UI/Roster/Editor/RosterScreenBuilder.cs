@@ -213,8 +213,9 @@ namespace Golfin.Roster.Editor
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
             
-            // Add CarouselController
+            // Add CarouselController and wire references
             var controller = carouselSection.AddComponent<CarouselController>();
+            WireCarouselController(controller, carouselSection.transform, scrollView.transform, leftArrow.GetComponent<Button>(), rightArrow.GetComponent<Button>(), dotsContainer.transform);
             
             Debug.Log("[RosterBuilder] ✓ Created Carousel Section");
         }
@@ -349,6 +350,48 @@ namespace Golfin.Roster.Editor
             phText.color = Color.gray;
             
             Debug.Log("[RosterBuilder] ✓ Created Detail Panel (placeholder)");
+        }
+        
+        private static void WireCarouselController(CarouselController controller, Transform carouselRoot, Transform scrollViewRoot, Button leftArrow, Button rightArrow, Transform dotsContainer)
+        {
+            var so = new SerializedObject(controller);
+            
+            // Find Content (inside ScrollView/Viewport/Content)
+            var content = scrollViewRoot.Find("Viewport/Content");
+            if (content != null)
+            {
+                var contentProp = so.FindProperty("contentParent");
+                if (contentProp != null)
+                {
+                    contentProp.objectReferenceValue = content;
+                }
+            }
+            
+            // Wire arrow buttons
+            var leftProp = so.FindProperty("leftArrowButton");
+            if (leftProp != null && leftArrow != null)
+            {
+                leftProp.objectReferenceValue = leftArrow;
+            }
+            
+            var rightProp = so.FindProperty("rightArrowButton");
+            if (rightProp != null && rightArrow != null)
+            {
+                rightProp.objectReferenceValue = rightArrow;
+            }
+            
+            // Wire pagination dots parent
+            var dotsProp = so.FindProperty("paginationDotsParent");
+            if (dotsProp != null && dotsContainer != null)
+            {
+                dotsProp.objectReferenceValue = dotsContainer;
+            }
+            
+            // Note: characterCardPrefab will be assigned manually or via another tool
+            // paginationDotPrefab will also be assigned manually
+            
+            so.ApplyModifiedProperties();
+            Debug.Log("[RosterBuilder] ✓ Wired CarouselController references");
         }
         
         private static void WireRosterScreenController(RosterScreenController controller, Transform root)
