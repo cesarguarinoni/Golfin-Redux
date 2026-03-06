@@ -151,6 +151,12 @@ namespace Golfin.Roster
         /// </summary>
         public int GetLevelUpCost(string characterId)
         {
+            if (levelUpDatabase == null)
+            {
+                Debug.LogError("[CharacterManager] CharacterLevelUpDatabase not assigned!");
+                return 0;
+            }
+            
             var playerChar = GetPlayerCharacter(characterId);
             if (playerChar == null) return 0;
             

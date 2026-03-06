@@ -33,6 +33,9 @@ namespace Golfin.Roster.Editor
                 CreateCharacterLevelUpDatabase();
                 CreateRewardPointsManager();
                 
+                // Wire references
+                WireManagerReferences();
+                
                 // Load CSV
                 LoadAndAssignCSV();
                 
@@ -75,10 +78,9 @@ namespace Golfin.Roster.Editor
             // Find or create CharacterDatabase
             var database = FindOrCreateCharacterDatabase();
             
-            // Assign via SerializedObject
+            // Assign CharacterDatabase via SerializedObject
             var so = new SerializedObject(manager);
             var dbField = so.FindProperty("characterDatabase");
-            var levelUpDbField = so.FindProperty("levelUpDatabase");
             
             if (dbField != null)
                 dbField.objectReferenceValue = database;
@@ -190,6 +192,32 @@ namespace Golfin.Roster.Editor
             }
             
             return null;
+        }
+        
+        private static void WireManagerReferences()
+        {
+            Debug.Log("[RosterSystemSetupTool] Wiring manager references...");
+            
+            var charManager = Object.FindObjectOfType<CharacterManager>();
+            var levelUpDb = Object.FindObjectOfType<CharacterLevelUpDatabase>();
+            
+            if (charManager == null || levelUpDb == null)
+            {
+                Debug.LogWarning("[RosterSystemSetupTool] Could not wire managers - not all found");
+                return;
+            }
+            
+            // Assign levelUpDatabase to CharacterManager
+            var so = new SerializedObject(charManager);
+            var levelUpDbField = so.FindProperty("levelUpDatabase");
+            
+            if (levelUpDbField != null)
+            {
+                levelUpDbField.objectReferenceValue = levelUpDb;
+                so.ApplyModifiedProperties();
+                EditorUtility.SetDirty(charManager);
+                Debug.Log("[RosterSystemSetupTool] ✓ CharacterLevelUpDatabase assigned to CharacterManager");
+            }
         }
         
         private static void LoadAndAssignCSV()
