@@ -6,14 +6,16 @@ using System.Linq;
 namespace Golfin.Roster
 {
     /// <summary>
-    /// Loads and manages character level-up economy data from CSV
-    /// Singleton pattern - use CharacterLevelUpDatabase.Instance
+    /// Loads universal level-up progression from CSV
+    /// All characters share the same level costs and SP rewards
+    /// Stat caps are determined by rarity (see RarityStatCaps.cs)
     /// 
-    /// CSV Format:
-    /// characterId,level,cost_r,sp_reward,str_cap,ctrl_cap,rec_cap,stam_cap
-    /// char_elizabeth,1,100,1,30,30,20,27
-    /// char_elizabeth,2,100,1,30,30,20,27
+    /// CSV Format (LevelUpCosts.csv):
+    /// level,cost_r,sp_reward
+    /// 1,100,1
+    /// 2,100,1
     /// ...
+    /// 199,300000,1
     /// </summary>
     public class CharacterLevelUpDatabase : MonoBehaviour
     {
@@ -21,8 +23,8 @@ namespace Golfin.Roster
         
         [SerializeField] private TextAsset levelUpCostsCsv;
         
-        private Dictionary<(string characterId, int level), CharacterLevelUpData> levelData = 
-            new Dictionary<(string, int), CharacterLevelUpData>();
+        private Dictionary<int, CharacterLevelUpData> levelData = 
+            new Dictionary<int, CharacterLevelUpData>();
         
         private bool isLoaded = false;
         
@@ -47,7 +49,7 @@ namespace Golfin.Roster
         }
         
         /// <summary>
-        /// Load level-up data from CSV content
+        /// Load level-up progression from CSV content
         /// </summary>
         public void LoadFromCSV(string csvContent)
         {
@@ -69,7 +71,7 @@ namespace Golfin.Roster
             }
             
             // Validate required columns
-            string[] requiredColumns = { "characterId", "level", "cost_r", "sp_reward", "str_cap", "ctrl_cap", "rec_cap", "stam_cap" };
+            string[] requiredColumns = { "level", "cost_r", "sp_reward" };
             foreach (var col in requiredColumns)
             {
                 if (!headerDict.ContainsKey(col))
@@ -96,17 +98,12 @@ namespace Golfin.Roster
                 try
                 {
                     var data = new CharacterLevelUpData(
-                        characterId: values[headerDict["characterId"]].Trim(),
                         level: int.Parse(values[headerDict["level"]].Trim()),
                         cost_r: int.Parse(values[headerDict["cost_r"]].Trim()),
-                        sp_reward: int.Parse(values[headerDict["sp_reward"]].Trim()),
-                        str_cap: int.Parse(values[headerDict["str_cap"]].Trim()),
-                        ctrl_cap: int.Parse(values[headerDict["ctrl_cap"]].Trim()),
-                        rec_cap: int.Parse(values[headerDict["rec_cap"]].Trim()),
-                        stam_cap: int.Parse(values[headerDict["stam_cap"]].Trim())
+                        sp_reward: int.Parse(values[headerDict["sp_reward"]].Trim())
                     );
                     
-                    levelData[(data.characterId, data.level)] = data;
+                    levelData[data.level] = data;
                     rowCount++;
                 }
                 catch (System.Exception e)
@@ -120,9 +117,9 @@ namespace Golfin.Roster
         }
         
         /// <summary>
-        /// Get level-up data for a character at a specific level
+        /// Get level-up data for a specific level
         /// </summary>
-        public CharacterLevelUpData? GetLevelUpData(string characterId, int level)
+        public CharacterLevelUpData? GetLevelUpData(int level)
         {
             if (!isLoaded)
             {
@@ -130,63 +127,47 @@ namespace Golfin.Roster
                 return null;
             }
             
-            if (levelData.TryGetValue((characterId, level), out var data))
+            if (levelData.TryGetValue(level, out var data))
             {
                 return data;
             }
             
-            Debug.LogWarning($"[CharacterLevelUpDatabase] No data found for {characterId} at level {level}");
+            Debug.LogWarning($"[CharacterLevelUpDatabase] No data found for level {level}");
             return null;
         }
         
         /// <summary>
-        /// Get the cost to level up a character
+        /// Get the cost to level up to a specific level
         /// </summary>
-        public int GetLevelUpCost(string characterId, int toLevel)
+        public int GetLevelUpCost(int toLevel)
         {
-            var data = GetLevelUpData(characterId, toLevel);
+            var data = GetLevelUpData(toLevel);
             return data?.cost_r ?? 0;
         }
         
         /// <summary>
-        /// Get SP reward for leveling up
+        /// Get SP reward for leveling up to a specific level
         /// </summary>
-        public int GetSPReward(string characterId, int toLevel)
+        public int GetSPReward(int toLevel)
         {
-            var data = GetLevelUpData(characterId, toLevel);
+            var data = GetLevelUpData(toLevel);
             return data?.sp_reward ?? 0;
         }
         
         /// <summary>
-        /// Get stat cap at a specific level
+        /// Get all loaded levels
         /// </summary>
-        public int GetStatCap(string characterId, int level, string statName)
+        public List<int> GetAllLevels()
         {
-            var data = GetLevelUpData(characterId, level);
-            if (data == null) return 0;
-            
-            return data.GetStatCap(statName);
+            return levelData.Keys.OrderBy(k => k).ToList();
         }
         
         /// <summary>
-        /// Get all levels for a character
+        /// Get max level (typically 199)
         /// </summary>
-        public List<int> GetCharacterLevels(string characterId)
+        public int GetMaxLevel()
         {
-            return levelData
-                .Where(kvp => kvp.Key.characterId == characterId)
-                .Select(kvp => kvp.Key.level)
-                .OrderBy(l => l)
-                .ToList();
-        }
-        
-        /// <summary>
-        /// Get max level for a character (typically 199)
-        /// </summary>
-        public int GetMaxLevel(string characterId)
-        {
-            var levels = GetCharacterLevels(characterId);
-            return levels.Count > 0 ? levels.Last() : 1;
+            return levelData.Count > 0 ? levelData.Keys.Max() : 1;
         }
     }
 }

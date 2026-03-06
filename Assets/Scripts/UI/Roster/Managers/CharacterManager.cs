@@ -161,15 +161,15 @@ namespace Golfin.Roster
             if (playerChar == null) return 0;
             
             int nextLevel = playerChar.currentLevel + 1;
-            return levelUpDatabase.GetLevelUpCost(characterId, nextLevel);
+            return levelUpDatabase.GetLevelUpCost(nextLevel);
         }
         
         /// <summary>
-        /// Get max level for a character
+        /// Get max level (universal for all characters)
         /// </summary>
         public int GetMaxLevel(string characterId)
         {
-            return levelUpDatabase.GetMaxLevel(characterId);
+            return levelUpDatabase.GetMaxLevel();
         }
         
         /// <summary>
@@ -257,6 +257,7 @@ namespace Golfin.Roster
         
         /// <summary>
         /// Refresh current stat values based on base + SP allocation
+        /// Stat caps are determined by rarity (fixed, not per-level)
         /// </summary>
         public void RefreshStatValues(string characterId)
         {
@@ -266,19 +267,20 @@ namespace Golfin.Roster
             var baseData = characterDatabase?.GetCharacter(characterId);
             if (baseData == null) return;
             
-            // Get current stat caps for this level
-            int strCap = levelUpDatabase.GetStatCap(characterId, playerChar.currentLevel, "Strength");
-            int ctrlCap = levelUpDatabase.GetStatCap(characterId, playerChar.currentLevel, "ClubControl");
-            int recCap = levelUpDatabase.GetStatCap(characterId, playerChar.currentLevel, "Recovery");
-            int stamCap = levelUpDatabase.GetStatCap(characterId, playerChar.currentLevel, "Stamina");
+            // Get stat caps for this character's rarity (same regardless of level)
+            var rarityStatCaps = RarityStatCaps.GetStatCaps(baseData.rarity);
+            int strCap = rarityStatCaps.strengthCap;
+            int ctrlCap = rarityStatCaps.clubControlCap;
+            int recCap = rarityStatCaps.recoveryCap;
+            int stamCap = rarityStatCaps.staminaCap;
             
-            // Update current values (clamped to caps)
+            // Update current values (clamped to rarity-based caps)
             playerChar.currentStrength = Mathf.Min(baseData.baseStrength + playerChar.spentStrength, strCap);
             playerChar.currentClubControl = Mathf.Min(baseData.baseClubControl + playerChar.spentClubControl, ctrlCap);
             playerChar.currentRecovery = Mathf.Min(baseData.baseRecovery + playerChar.spentRecovery, recCap);
             playerChar.currentStamina = Mathf.Min(baseData.baseStamina + playerChar.spentStamina, stamCap);
             
-            Debug.Log($"[CharacterManager] Refreshed stats for {characterId}: STR={playerChar.currentStrength} CTRL={playerChar.currentClubControl} REC={playerChar.currentRecovery} STAM={playerChar.currentStamina}");
+            Debug.Log($"[CharacterManager] Refreshed stats for {characterId} ({baseData.rarity}): STR={playerChar.currentStrength}/{strCap} CTRL={playerChar.currentClubControl}/{ctrlCap} REC={playerChar.currentRecovery}/{recCap} STAM={playerChar.currentStamina}/{stamCap}");
         }
         
         /// <summary>

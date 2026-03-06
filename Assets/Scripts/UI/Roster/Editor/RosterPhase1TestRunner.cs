@@ -240,7 +240,7 @@ namespace Golfin.Roster.Editor
         
         private static void TestCSVDataValidation()
         {
-            Debug.Log("\n--- Test 4: CSV Data Validation ---");
+            Debug.Log("\n--- Test 4: CSV Data & Rarity Validation ---");
             
             var levelUpDB = Object.FindObjectOfType<CharacterLevelUpDatabase>();
             if (levelUpDB == null)
@@ -249,11 +249,11 @@ namespace Golfin.Roster.Editor
                 return;
             }
             
-            // Test Elizabeth Lv10 cost
-            int cost = levelUpDB.GetLevelUpCost("char_elizabeth", 10);
+            // Test Lv10 cost (universal for all characters)
+            int cost = levelUpDB.GetLevelUpCost(10);
             if (cost == 150)
             {
-                Pass($"Elizabeth Lv10 Cost: {cost}R ✅");
+                Pass($"Level 10 Cost (universal): {cost}R ✅");
             }
             else
             {
@@ -261,36 +261,58 @@ namespace Golfin.Roster.Editor
             }
             
             // Test SP reward
-            int spReward = levelUpDB.GetSPReward("char_elizabeth", 10);
+            int spReward = levelUpDB.GetSPReward(10);
             if (spReward == 1)
             {
-                Pass($"Elizabeth Lv10 SP Reward: {spReward} ✅");
+                Pass($"Level 10 SP Reward: {spReward} ✅");
             }
             else
             {
                 Fail($"Expected 1 SP, got {spReward}");
             }
             
-            // Test Shae (Legendary) stat cap
-            int strayCap = levelUpDB.GetStatCap("char_shae", 1, "Strength");
-            if (strayCap == 40)
+            // Test Rare stat caps (from Elizabeth)
+            int rareStrengthCap = RarityStatCaps.GetStatCap(CharacterRarity.Rare, "Strength");
+            if (rareStrengthCap == 30)
             {
-                Pass($"Shae (Legendary) Strength Cap: {strayCap} ✅");
+                Pass($"Rare Strength Cap: {rareStrengthCap} ✅");
             }
             else
             {
-                Fail($"Expected 40, got {strayCap}");
+                Fail($"Expected 30, got {rareStrengthCap}");
             }
             
-            // Test all character levels exist
-            var elizabethLevels = levelUpDB.GetCharacterLevels("char_elizabeth");
-            if (elizabethLevels.Count > 0)
+            // Test Legendary stat caps (from Shae)
+            int legendaryStrengthCap = RarityStatCaps.GetStatCap(CharacterRarity.Legendary, "Strength");
+            if (legendaryStrengthCap == 40)
             {
-                Pass($"Elizabeth Levels in CSV: {elizabethLevels.Count} rows ✅");
+                Pass($"Legendary Strength Cap: {legendaryStrengthCap} ✅");
             }
             else
             {
-                Fail("No Elizabeth levels found in CSV");
+                Fail($"Expected 40, got {legendaryStrengthCap}");
+            }
+            
+            // Test all levels loaded
+            var allLevels = levelUpDB.GetAllLevels();
+            if (allLevels.Count > 40)
+            {
+                Pass($"Levels in CSV: {allLevels.Count} ✅");
+            }
+            else
+            {
+                Fail($"Expected 40+ levels, got {allLevels.Count}");
+            }
+            
+            // Test max level
+            int maxLevel = levelUpDB.GetMaxLevel();
+            if (maxLevel >= 199)
+            {
+                Pass($"Max Level: {maxLevel} ✅");
+            }
+            else
+            {
+                Fail($"Expected 199+, got {maxLevel}");
             }
         }
         
