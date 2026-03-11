@@ -21,6 +21,9 @@ namespace Golfin.Roster
             new Dictionary<string, PlayerCharacterData>();
         
         private string selectedCharacterId = "";
+
+// Ensure there are no duplicate methods defined in this class
+// Add other necessary and unique method definitions below
         private StatAllocationStrategy allocationStrategy;
         
         // Events
