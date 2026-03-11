@@ -9,7 +9,10 @@ namespace Golfin.Roster
     {
         [Header("UI References")]
         [SerializeField] private Image characterImage;       // UI Image for character
-        [SerializeField] private TextMeshProUGUI characterStats; // UI Text for character stats
+        [SerializeField] private TextMeshProUGUI characterRarity; // UI Text for character rarity
+[SerializeField] private TextMeshProUGUI characterStats; // UI Text for character stats
+[SerializeField] private TextMeshProUGUI characterLevel; // UI Text for character level
+[SerializeField] private TextMeshProUGUI bioText; // UI Text for character bio
         [SerializeField] private Button levelUpButton;       // Level Up button
         [SerializeField] private Button selectButton;        // Select button
 
