@@ -36,7 +36,7 @@ namespace Golfin.Roster
         private string selectedCharacterId = "";
         
         // Events
-        public System.Action<string> OnCharacterSelected;
+        public event System.Action<string> OnCharacterSelected; // Change to event
         
         private void Awake()
         {
