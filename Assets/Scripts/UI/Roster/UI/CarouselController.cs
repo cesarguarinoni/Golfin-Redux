@@ -18,7 +18,8 @@ namespace Golfin.Roster
     {
         [Header("UI References")]
         [SerializeField] private Transform contentParent;           // Horizontal Layout Group container
-        [SerializeField] private GameObject characterCardPrefab;    // CharacterThumbnailCard prefab
+        [SerializeField] private GameObject characterCardPrefab;
+[SerializeField] private CharacterDetailPanel detailPanel; // Reference to the DetailPanel    // CharacterThumbnailCard prefab
         [SerializeField] private Button leftArrowButton;
         [SerializeField] private Button rightArrowButton;
         [SerializeField] private Transform paginationDotsParent;
