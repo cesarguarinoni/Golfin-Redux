@@ -17,8 +17,7 @@ namespace Golfin.Roster
         [SerializeField] private CharacterDatabase characterDatabase;
         [SerializeField] private CharacterLevelUpDatabase levelUpDatabase;
         
-        private Dictionary<string, PlayerCharacterData> ownedCharacters = 
-            new Dictionary<string, PlayerCharacterData>();
+        private Dictionary<string, PlayerCharacterData> ownedCharacters = new Dictionary<string, PlayerCharacterData>();
         
         private string selectedCharacterId = "";
 
