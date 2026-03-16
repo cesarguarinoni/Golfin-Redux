@@ -88,9 +88,10 @@ namespace Golfin.Roster
         [Header("Identity")]
         [SerializeField] public string characterId = "char_";
         [SerializeField] public string characterName = "Character Name";
+        [SerializeField] public string characterLastName = "";
         [SerializeField] public string characterNickname = "Nickname";
         [SerializeField] public CharacterRarity rarity = CharacterRarity.Common;
-        
+
         [Header("Base Stats (at Level 1)")]
         [SerializeField] public int baseStrength = 10;
         [SerializeField] public int baseClubControl = 10;
@@ -105,6 +106,7 @@ namespace Golfin.Roster
         [Header("Localization")]
         [SerializeField] public string nameKey = "CHAR_NAME_";    // e.g., CHAR_NAME_ELIZABETH
         [SerializeField] public string bioKey = "CHAR_BIO_";       // e.g., CHAR_BIO_ELIZABETH
+        [SerializeField] [TextArea(3, 6)] public string bioFallbackText = "";  // Used when localization unavailable
         
         [Header("Audio")]
         [SerializeField] public AudioClip levelUpSound;
