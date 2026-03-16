@@ -52,9 +52,28 @@ namespace Golfin.Roster
         
         [SerializeField]
         public bool isOwned = true;                 // Is this character owned by player? (Phase 2b: false = locked)
-        
+
         [SerializeField]
         public DateTime acquiredDate;
+
+        /// <summary>
+        /// Current stamina energy (depletes as character plays holes).
+        /// Separate from the stamina STAT which is leveled via SP.
+        /// Drives red stamina bar indicator and low-stamina bolt icon.
+        /// </summary>
+        [System.NonSerialized]
+        public float currentStaminaEnergy = 100f;
+
+        [System.NonSerialized]
+        public float maxStaminaEnergy = 100f;
+
+        /// <summary>
+        /// Check if stamina energy is below threshold (0.0 to 1.0)
+        /// </summary>
+        public bool IsStaminaLow(float threshold = 0.25f)
+        {
+            return maxStaminaEnergy > 0 && (currentStaminaEnergy / maxStaminaEnergy) < threshold;
+        }
         
         // Temporary SP allocation (during level-up modal, before confirm)
         [System.NonSerialized]

@@ -49,7 +49,56 @@ namespace Golfin.Roster
         private void LoadRoster()
         {
             ownedCharacters.Clear();
-            // Logic to load characters or initialize
+
+            // Load from CSV database (primary data source)
+            var csvDb = CharacterDatabaseCSV.Instance;
+            if (csvDb != null)
+            {
+                var allChars = csvDb.GetAllCharacters();
+                foreach (var charTemplate in allChars)
+                {
+                    var playerData = new PlayerCharacterData(charTemplate.characterId);
+                    playerData.currentLevel = 1;
+                    playerData.currentStrength = charTemplate.baseStrength;
+                    playerData.currentClubControl = charTemplate.baseClubControl;
+                    playerData.currentRecovery = charTemplate.baseRecovery;
+                    playerData.currentStamina = charTemplate.baseStamina;
+                    ownedCharacters[charTemplate.characterId] = playerData;
+                }
+
+                Debug.Log($"[CharacterManager] Loaded {ownedCharacters.Count} characters from CSV");
+            }
+            else if (characterDatabase != null)
+            {
+                // Fallback: load from ScriptableObject database
+                var allChars = characterDatabase.GetAllCharacters();
+                foreach (var charTemplate in allChars)
+                {
+                    var playerData = new PlayerCharacterData(charTemplate.characterId);
+                    playerData.currentLevel = 1;
+                    playerData.currentStrength = charTemplate.baseStrength;
+                    playerData.currentClubControl = charTemplate.baseClubControl;
+                    playerData.currentRecovery = charTemplate.baseRecovery;
+                    playerData.currentStamina = charTemplate.baseStamina;
+                    ownedCharacters[charTemplate.characterId] = playerData;
+                }
+
+                Debug.Log($"[CharacterManager] Loaded {ownedCharacters.Count} characters from ScriptableObject DB");
+            }
+            else
+            {
+                Debug.LogWarning("[CharacterManager] No character data source available!");
+            }
+
+            // Select first character by default
+            if (ownedCharacters.Count > 0)
+            {
+                var firstId = ownedCharacters.Keys.First();
+                selectedCharacterId = firstId;
+                ownedCharacters[firstId].isSelected = true;
+            }
+
+            OnRosterChanged?.Invoke();
         }
 
         // Return type updated to exactly match the dictionary value type
@@ -67,6 +116,145 @@ namespace Golfin.Roster
             return ownedCharacters.Values.ToList();
         }
 
+        /// <summary>
+        /// Select a character by ID and fire OnCharacterSelected event
+        /// </summary>
+        public void SelectCharacter(string characterId)
+        {
+            if (!ownedCharacters.ContainsKey(characterId))
+            {
+                Debug.LogWarning($"[CharacterManager] Cannot select unknown character: {characterId}");
+                return;
+            }
+
+            // Deselect previous
+            if (!string.IsNullOrEmpty(selectedCharacterId) && ownedCharacters.TryGetValue(selectedCharacterId, out var prev))
+            {
+                prev.isSelected = false;
+            }
+
+            selectedCharacterId = characterId;
+            ownedCharacters[characterId].isSelected = true;
+            OnCharacterSelected?.Invoke(characterId);
+
+            Debug.Log($"[CharacterManager] Selected character: {characterId}");
+        }
+
+        /// <summary>
+        /// Get the base CharacterData template from the database
+        /// </summary>
+        public CharacterData? GetCharacterTemplate(string characterId)
+        {
+            if (characterDatabase == null)
+            {
+                Debug.LogError("[CharacterManager] characterDatabase not assigned!");
+                return null;
+            }
+            return characterDatabase.GetCharacter(characterId);
+        }
+
+        /// <summary>
+        /// Alias for GetCharacterData (thumbnail card calls it by this name)
+        /// </summary>
+        public PlayerCharacterData? GetPlayerCharacter(string characterId)
+            => GetCharacterData(characterId);
+
+        /// <summary>
+        /// Alias for GetCharacterTemplate (thumbnail card calls it by this name)
+        /// </summary>
+        public CharacterData? GetCharacter(string characterId)
+            => GetCharacterTemplate(characterId);
+
+        /// <summary>
+        /// Get max level based on rarity
+        /// </summary>
+        public int GetMaxLevel(string characterId)
+        {
+            var template = GetCharacterTemplate(characterId);
+            if (template == null) return 199;
+            // All characters share the same max level (199) for now
+            return 199;
+        }
+
+        /// <summary>
+        /// Get the cost to level up a character to the next level
+        /// </summary>
+        public int GetLevelUpCost(string characterId)
+        {
+            var playerChar = GetCharacterData(characterId);
+            if (playerChar == null) return 0;
+
+            int nextLevel = playerChar.currentLevel + 1;
+            return levelUpDatabase.GetLevelUpCost(nextLevel);
+        }
+
+        /// <summary>
+        /// Level up a character: deduct RP, increment level, earn SP
+        /// Returns SP earned (0 if failed)
+        /// </summary>
+        public int LevelUp(string characterId)
+        {
+            var playerChar = GetCharacterData(characterId);
+            if (playerChar == null)
+            {
+                Debug.LogError($"[CharacterManager] LevelUp failed: character {characterId} not found");
+                return 0;
+            }
+
+            int nextLevel = playerChar.currentLevel + 1;
+            int maxLevel = GetMaxLevel(characterId);
+            if (nextLevel > maxLevel)
+            {
+                Debug.LogWarning($"[CharacterManager] {characterId} already at max level {maxLevel}");
+                return 0;
+            }
+
+            int cost = levelUpDatabase.GetLevelUpCost(nextLevel);
+            if (!RewardPointsManager.Instance.CanAfford(cost))
+            {
+                Debug.LogWarning($"[CharacterManager] Cannot afford level-up: need {cost}R");
+                return 0;
+            }
+
+            RewardPointsManager.Instance.SpendPoints(cost);
+
+            playerChar.currentLevel = nextLevel;
+            int spReward = levelUpDatabase.GetSPReward(nextLevel);
+            playerChar.totalSPEarned += spReward;
+
+            OnCharacterLeveledUp?.Invoke(characterId);
+
+            Debug.Log($"[CharacterManager] {characterId} leveled up to {nextLevel}, earned {spReward} SP");
+            return spReward;
+        }
+
+        /// <summary>
+        /// Recalculate current stat values from base stats + SP allocation
+        /// </summary>
+        public void RefreshStatValues(string characterId)
+        {
+            var playerChar = GetCharacterData(characterId);
+            var template = GetCharacterTemplate(characterId);
+            if (playerChar == null || template == null) return;
+
+            playerChar.currentStrength = template.baseStrength + playerChar.spentStrength;
+            playerChar.currentClubControl = template.baseClubControl + playerChar.spentClubControl;
+            playerChar.currentRecovery = template.baseRecovery + playerChar.spentRecovery;
+            playerChar.currentStamina = template.baseStamina + playerChar.spentStamina;
+
+            // Clamp to rarity caps
+            var caps = RarityStatCaps.GetStatCaps(template.rarity);
+            playerChar.currentStrength = Mathf.Min(playerChar.currentStrength, caps.strengthCap);
+            playerChar.currentClubControl = Mathf.Min(playerChar.currentClubControl, caps.clubControlCap);
+            playerChar.currentRecovery = Mathf.Min(playerChar.currentRecovery, caps.recoveryCap);
+            playerChar.currentStamina = Mathf.Min(playerChar.currentStamina, caps.staminaCap);
+        }
+
+        /// <summary>
+        /// Get the currently selected character ID
+        /// </summary>
+        public string GetSelectedCharacterId() => selectedCharacterId;
+
         // Singleton cleanup to prevent Domain Reload bugs
         private void OnDestroy()
         {
@@ -75,7 +263,5 @@ namespace Golfin.Roster
                 Instance = null!;
             }
         }
-
-        // Additional methods as needed...
     }
 }
