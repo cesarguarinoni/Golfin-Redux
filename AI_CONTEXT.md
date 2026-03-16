@@ -1,8 +1,8 @@
 # GOLFIN Redux - AI Context
 
-**Last Updated:** 2026-03-06 16:25 JST  
-**Phase:** 2a COMPLETE (Visual Polish Done), 2b Ready  
-**Next Session:** Detail Panel
+**Last Updated:** 2026-03-16 JST  
+**Phase:** 2b IN PROGRESS (Detail Panel Data Binding)  
+**Next Session:** Continue Phase 2b implementation with Claude Code
 
 ---
 
@@ -11,493 +11,270 @@
 ### ✅ **Phase 2a: COMPLETE (2026-03-06)**
 - Roster screen structure created and integrated
 - CSV-driven character system (12 characters)
-- Character carousel displaying 4 characters
+- Character carousel displaying characters
 - Navigation working (Characters button → Roster)
-- CharacterThumbnailCard prefab functional
+- CharacterThumbnailCardGlowUp prefab functional
 - All character data loading from CSV
 
-### ✅ **Visual Polish: COMPLETE (2026-03-06 16:25)**
-Created **CharacterThumbnailCardGlowUp** prefab with polished design:
-- **Size:** 170x343 (was 150x200) - taller, better proportions
-- **Font:** Rubik-SemiBold throughout
-- **Rarity backgrounds:** Uses actual rarity sprites from `Assets/Art/Rarities/`
-- **Rarity badge colors:** Optimized for contrast with backgrounds
-- **Outline effect:** Added visual depth
-- **Currently active:** Assigned to CarouselController
+### ✅ **Visual Polish: COMPLETE (2026-03-06)**
+- CharacterThumbnailCardGlowUp prefab (170x343, polished design)
+- Rubik-SemiBold font throughout
+- Rarity background sprites integrated
+- Badge text colors optimized for contrast
 
-### 📋 **Next: Phase 2b (Detail Panel)**
-- Create CharacterDetailPanel UI
-- Wire carousel selection → detail panel
-- Display full stats (4 stat bars)
-- Add Level Up button (opens modal placeholder)
-- Add Select button (marks character as selected)
+### ✅ **Detail Panel Hierarchy: BUILT (2026-03-16)**
+- Full DetailPanel UI hierarchy manually created in Unity
+- Layout matches visual references (Roster_Screen.png)
+- Left panel: full-body character portrait
+- Right panel: name, rarity/level, 4 stat rows, buttons, bio, compare, select
+- Stat icons assigned (IconStrenght, etc.)
+- Full-body portraits manually assigned
+- **NOT yet data-bound** — shows placeholder values (999/999)
+
+### 🔧 **Compilation Errors: FIXED (2026-03-16)**
+Claude Code fixed missing methods on CharacterManager that previous AIs referenced but never implemented:
+- `SelectCharacter(string)` — added
+- `GetPlayerCharacter(string)` — alias for GetCharacterData()
+- `GetCharacter(string)` — alias for GetCharacterTemplate()
+- `GetCharacterTemplate(string)` — new, delegates to characterDatabase
+- `GetMaxLevel(string)` — new, returns 199 (rarity-based future)
+- `LoadRoster()` — needs implementation (currently empty, ownedCharacters never populated)
+
+### 📋 **Next: Phase 2b (Detail Panel Data Binding)**
+Spec is written and ready: `Docs/PHASE_2B_DETAIL_PANEL_SPEC.md` + `Docs/PHASE_2B_API_CORRECTIONS.md`
+
+Remaining work:
+- [ ] Implement `LoadRoster()` so ownedCharacters gets populated from CSV
+- [ ] Add `lastName` and `bio` columns to Characters.csv
+- [ ] Update CharacterDatabaseCSV.cs to parse new columns
+- [ ] Add `characterLastName` field to CharacterData.cs
+- [ ] Add stamina energy fields to PlayerCharacterData.cs (currentStaminaEnergy, maxStaminaEnergy, IsStaminaLow)
+- [ ] Full rewrite of CharacterDetailPanel.cs (see spec for complete code)
+- [ ] Wire all serialized fields in Unity Inspector
+- [ ] Test carousel → detail panel data binding
+- [ ] Wire Select button
+- [ ] Add status icons (eye=selected, bolt=low stamina) if sprites available
+- [ ] Button placeholders (Level Up, Boost, Compare log to console)
 
 ---
 
 ## 🗂️ Project Structure
 
-### **Key Files Created Today:**
+### **Key Files:**
 
 ```
 Assets/
 ├── Data/
-│   ├── Characters.csv ⭐ (12 characters, all stats)
+│   ├── Characters.csv ⭐ (12 characters — NEEDS lastName, bio columns)
 │   └── LevelUpCosts.csv (199 levels, universal costs)
 │
-├── Sprites/Characters/ ⭐ (12 character portraits)
-│   ├── Elizabeth.png, Shae.png, James.png, Olivia.png
-│   └── Camila, Ean, Freda, Guillermo, Johan, Mike, Rashonda, Richard, Roshana
-│   Note: Alejandro removed, Guillermo & Rashonda added (2026-03-06)
-│
-├── Art/Rarities/ ⭐ (6 rarity background sprites)
-│   ├── Common.png
-│   ├── Uncommon - New.png
-│   ├── Rare -New.png
-│   ├── Mythic - New.png
-│   ├── Legendary - New.png
-│   └── Supreme - New.png
+├── Sprites/Characters/ (12 character portraits — thumbnails)
+├── Art/Rarities/ (6 rarity background sprites)
 │
 ├── Prefabs/UI/Roster/
-│   ├── CharacterThumbnailCard.prefab (original, 150x200)
-│   ├── CharacterThumbnailCardGlowUp.prefab ⭐ (polished, 170x343, ACTIVE)
-│   └── StatBar.prefab (created but not used yet)
+│   ├── CharacterThumbnailCard.prefab (original)
+│   ├── CharacterThumbnailCardGlowUp.prefab ⭐ (ACTIVE)
+│   └── StatBar.prefab (created but not used — stat rows are raw hierarchy)
 │
-└── Scripts/UI/Roster/
-    ├── Managers/
-    │   ├── CharacterManager.cs (loads from CSV first, then ScriptableObjects)
-    │   ├── CharacterDatabase.cs (ScriptableObject system, legacy)
-    │   ├── CharacterDatabaseCSV.cs ⭐ (CSV loader, preferred)
-    │   ├── RewardPointsManager.cs
-    │   └── CharacterLevelUpDatabase.cs
+└── Scripts/
+    ├── CharacterManager.cs ⭐ (Singleton, roster hub — LoadRoster empty!)
     │
-    ├── UI/
-    │   ├── RosterScreenController.cs
-    │   ├── CarouselController.cs ⭐ (horizontal scroll, pagination optional)
-    │   ├── CharacterThumbnailCard.cs ⭐ (card display logic)
-    │   └── StatBar.cs (stat display component)
+    ├── UI/Roster/
+    │   ├── Managers/
+    │   │   ├── CharacterDatabaseCSV.cs (CSV loader — needs lastName, bio parsing)
+    │   │   ├── CharacterDatabase.cs (ScriptableObject DB + CharacterData + RarityHelper)
+    │   │   └── RewardPointsManager.cs
+    │   │
+    │   ├── UI/
+    │   │   ├── RosterScreenController.cs
+    │   │   ├── CarouselController.cs (fires OnCharacterSelected)
+    │   │   ├── CharacterDetailPanel.cs ⭐ (STUB — needs full rewrite per spec)
+    │   │   ├── CharacterThumbnailCard.cs
+    │   │   └── StatBar.cs (functional but not attached to hierarchy stat rows)
+    │   │
+    │   └── Data/
+    │       ├── PlayerCharacterData.cs (has pending SP system — needs stamina energy)
+    │       ├── RarityStatCaps.cs
+    │       ├── CharacterLevelUpData.cs
+    │       └── StatAllocationStrategy.cs
     │
-    ├── Data/
-    │   ├── PlayerCharacterData.cs
-    │   ├── RarityStatCaps.cs (rarity-based stat caps)
-    │   ├── CharacterLevelUpData.cs
-    │   └── StatAllocationStrategy.cs (Manual/Automatic SP)
-    │
-    └── Editor/
-        ├── RosterScreenBuilder.cs ⭐ (one-click hierarchy builder)
-        ├── RosterPrefabBuilder.cs ⭐ (creates prefabs programmatically)
-        ├── RosterMenuCleanup.cs (menu organization)
-        └── RosterSystemSetupTool.cs (Phase 1 setup)
+    ├── Audio/AudioManager.cs
+    ├── UI/ScreenManager.cs
+    ├── UI/FadeController.cs
+    ├── UI/PersistentUIManager.cs
+    └── UI/Modals/ModalController.cs (base class for modals)
+```
+
+### **Docs (for AI handoff):**
+```
+Docs/
+├── PHASE_2B_DETAIL_PANEL_SPEC.md ⭐ (implementation spec v2)
+├── PHASE_2B_API_CORRECTIONS.md ⭐ (fixes for CharacterManager API gaps)
+├── AI_CONTEXT.md (this file)
+└── ARCHITECTURE_AUDIT.md (31 MonoBehaviours, dependency graph)
 ```
 
 ---
 
-## 📊 Character Data (CSV-Driven)
+## 🏗️ Unity Hierarchy (Roster Screen)
 
-### **Characters.csv Structure:**
+```
+Canvas > ScreensRoot > RosterScreen
+├── CarouselSection
+│   ├── LeftArrow / RightArrow
+│   ├── ScrollView → Viewport → PaginationDots
+│   └── DetailPanel ⭐
+│       ├── LeftPanel
+│       │   └── Character (Image: full-body portrait)
+│       └── RightPanel
+│           ├── CharacterNamePanel → CharacterNameText (single TMP, use \n)
+│           ├── RarityPanel → RarityRow (3 TMP fields: rarity, current lv, max lv)
+│           ├── CharacterStatsPanel
+│           │   ├── CharacterStats1 (Strength: StatIcon + Name+Bar/StatsName/Bar + StatNumber)
+│           │   ├── CharacterStats2 (Club Control: same structure)
+│           │   ├── CharacterStats3 (Recovery: same structure)
+│           │   └── CharacterStats4 (Stamina: same structure)
+│           ├── ButtonsPanel → LevelUpButton / BoostButton
+│           ├── BioPanel → BioHeader / BioText
+│           ├── CompareButton → Text (TMP)
+│           └── SelectButton → Text (TMP) / Rim
+```
+
+**Stat row internal structure (all 4 identical):**
+```
+CharacterStatsN
+├── StatIcon          ← Image (already has sprite assigned, e.g., IconStrenght)
+├── Name+Bar
+│   ├── StatsName     ← TMP ("STRENGHT", "CLUB CONTROL", etc.)
+│   └── Bar           ← Image (use fillAmount for progress)
+└── StatNumber        ← TMP ("12/30")
+```
+
+---
+
+## 📊 Character Data
+
+### **Characters.csv Structure (current):**
 ```csv
 id,name,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,portraitSprite,maxLevel
-char_elizabeth,Elizabeth,Rare,8,10,7,9,Elizabeth,199
-char_shae,Shae,Legendary,12,8,15,10,Shae,199
-char_james,James,Common,6,7,6,6,James,199
-char_olivia,Olivia,Uncommon,7,8,6,7,Olivia,199
-char_camila,Camila,Rare,9,9,8,8,Camila,199
-char_alejandro,Alejandro,Mythic,10,11,9,12,Alejandro,199
-char_ean,Ean,Uncommon,7,7,7,7,Ean,199
-char_freda,Freda,Supreme,15,12,18,14,Freda,199
-char_johan,Johan,Rare,8,10,7,10,Johan,199
-char_mike,Mike,Common,6,6,7,7,Mike,199
-char_richard,Richard,Mythic,11,10,10,11,Richard,199
-char_roshana,Roshana,Legendary,13,9,14,11,Roshana,199
 ```
 
-### **Current Player Roster:**
-- First 4 characters from CSV (Elizabeth, Shae, James, Olivia)
-- All start at Level 1
-- Elizabeth selected by default
+### **Characters.csv Structure (needed for Phase 2b):**
+```csv
+id,name,lastName,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,portraitSprite,maxLevel,bio
+```
+
+### **12 Characters:**
+Elizabeth, Shae, James, Olivia, Camila, Alejandro, Ean, Freda, Johan, Mike, Richard, Roshana
+(Note: Alejandro removed from sprites, Guillermo & Rashonda added per 2026-03-06 session)
 
 ---
 
-## 🎨 Rarity System
+## 🎨 Design Reference Summary
 
-### **6 Rarity Tiers:**
-```
-Common    (C) - Gray   #808080 - Background: Common.png
-Uncommon  (U) - Blue   #4A90E2 - Background: Uncommon - New.png
-Rare      (R) - Green  #2ECC71 - Background: Rare -New.png
-Mythic    (M) - Yellow #F1C40F - Background: Mythic - New.png
-Legendary (L) - Red    #E74C3C - Background: Legendary - New.png
-Supreme   (S) - Purple #9B59B6 - Background: Supreme - New.png
-```
+### **Visual References Available:** `Assets/References/Roster Screen/`
+- `Roster_Screen.png` — Elizabeth detail panel (SELECT state)
+- `Roster_Screen_Shae.png` — Shae detail panel (SELECTED state)
+- `Character_Level_Up.png` — Level Up modal (before level up, 0 SP)
+- `Character_Level_Up-1.png` — Level Up modal (after level up, 1 SP available)
+- `Character_Level_Up-2.png` — Level Up modal (SP allocated to Strength +1)
+- `Character_Compare_Empty.png` — Compare mode, right side empty
+- `Character_Compare.png` — Compare mode, both characters shown
+- `Character_Swap.png` — Swap view (same as compare with SWAP button)
 
-### **Stat Caps by Rarity:**
-```
-Common:    25/25/18/22
-Uncommon:  28/28/19/25
-Rare:      30/30/20/27
-Mythic:    35/35/25/32
-Legendary: 40/40/40/40
-Supreme:   50/50/50/50
-```
+### **Key Design Details (from visual analysis):**
+- **Name display:** First name + last name on two lines, single TMP field with \n
+- **Rarity row:** 3 separate TMP fields (rarity label colored, current level, /maxLevel smaller)
+- **Stat bars:** Blue = normal, Green = maxed, Red = low stamina ENERGY (runtime), Orange = pending SP allocation (Level Up modal only)
+- **Status icons (top-right of info panel):** Eye = currently selected character, Lightning bolt = low stamina energy
+- **Action button:** Gold "SELECTED" when active, Gold "SELECT" when not
+- **BOOST button:** Opens experience booster item selection (future)
 
-### **Rarity Badge Text Colors (Roster Cards Only):**
-Optimized for contrast with rarity background images:
-```
-Common:    #7E848A (dark gray)
-Uncommon:  #ABC9F5 (light blue)
-Rare:      #C0EAC9 (light green)
-Mythic:    #FFF5D3 (light yellow)
-Legendary: #ECB5A3 (light peach)
-Supreme:   #C6B8DE (light purple)
-```
-
-**Note:** These colors are ONLY for roster card badges. Detail panel and descriptions will use different colors.
-
----
-
-## 🎴 CharacterThumbnailCardGlowUp Specifications
-
-**Prefab:** `Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab`  
-**Status:** Active (assigned to CarouselController)
-
-### **Dimensions:**
-- **Card Size:** 170x343 (RectTransform + LayoutElement)
-- **Aspect Ratio:** ~1:2 (portrait orientation)
-
-### **Components & Settings:**
-
-**Background:**
-- Size: 170x343
-- Anchor: Middle Center (0.5, 0.5)
-- Pivot: 0, 0, 0
-- Source Image: Rarity-specific sprite (Common.png, Uncommon - New.png, etc.)
-- Set at runtime by CharacterThumbnailCard.Initialize()
-
-**Portrait:**
-- Size: 170x343
-- Anchor: Middle Center
-- Pivot: 0, 0, 0
-- Source Image: Character sprite (Elizabeth.png, Shae.png, etc.)
-- Set at runtime from CSV data
-
-**NameLabel:**
-- Font: Rubik-SemiBold SDF
-- Font Size: 30
-- Anchor: Bottom Center
-- Pivot: 0, 48, 0
-- Color: White
-- Underlay: Offset Y -1, Dilate 1 (drop shadow effect)
-
-**RarityBadge/Text:**
-- Font: Rubik-SemiBold SDF
-- Font Size: 20
-- Anchor: Stretch Stretch
-- Pivot: 0, 0, 0
-- Color: Rarity-specific (see Rarity Badge Text Colors above)
-- Text: C/U/R/M/L/S (single letter)
-
-**LevelBadge:**
-- Font: Rubik-SemiBold SDF
-- Font Size: 20
-- Anchor: Stretch Stretch
-- Pivot: 0, 0, 0
-- Text: "Lv X/199"
-
-**Outline:**
-- Image component
-- Anchor: Middle Center
-- Position: 0, -3.55, 0
-- Size: 178x351 (slightly larger than card)
-- Provides visual border/depth
-
-### **Runtime Behavior:**
-
-**Initialize() Method:**
-1. Gets character data from CharacterManager (CSV)
-2. Sets portrait sprite from characterPortraits array
-3. Sets name from CSV (characterName field)
-4. Sets rarity badge letter (C/U/R/M/L/S)
-5. Applies rarity badge text color (contrast-optimized)
-6. Sets level text ("Lv 1/199")
-7. Sets background to rarity sprite (Common.png, etc.)
-8. Applies rarity color tint if needed
-
-**Images in Prefab:**
-- Prefab has placeholder images assigned (for visual editing)
-- All images are **overwritten at runtime** with actual character data
-- This is intentional and best practice - allows visual design without breaking functionality
-
----
-
-## 🏗️ Scene Structure
-
-### **Hierarchy (ShellScene):**
-```
-Canvas
-└── ScreensRoot
-    ├── LogoScreen
-    ├── SplashScreen
-    ├── LoadingScreen
-    ├── HomeScreen
-    └── RosterScreen ⭐
-        ├── Header
-        │   ├── RewardPointsDisplay (R 50000)
-        │   └── TitleText ("ROSTER")
-        │
-        ├── CarouselSection (has CarouselController)
-        │   ├── LeftArrow (Button)
-        │   ├── ScrollView (has ScrollRect)
-        │   │   ├── Viewport (RectMask2D, Image MUST be transparent!)
-        │   │   │   └── Content (HorizontalLayoutGroup + ContentSizeFitter)
-        │   │   │       └── [CharacterThumbnailCard clones spawn here]
-        │   ├── RightArrow (Button)
-        │   └── PaginationDots (optional, currently disabled)
-        │
-        └── DetailPanel (placeholder text for now)
-```
-
-### **GameObject Requirements:**
-1. **CharacterDatabaseCSV** (singleton in scene root)
-   - Assign `Characters.csv` to `charactersCSV` field
-   - Assign all 12 character sprites to `Character Portraits` array
-
-2. **Viewport Image Component:**
-   - **CRITICAL:** Must be transparent (alpha = 0) or disabled
-   - Bug: If visible, it blocks character cards from displaying
-
-3. **HomeScreenController:**
-   - Must have `navCharactersButton` field assigned
-   - Already wired to call `ShowScreen(ScreenId.Roster)`
-
----
-
-## 🔧 Tools Menu Structure
-
-```
-Tools → GOLFIN → Roster
-├── Build Complete Roster Screen ⭐ (one-click hierarchy builder)
-├── Build Character Thumbnail Prefab ⭐ (creates card prefab)
-├── Build StatBar Prefab
-├── Test Phase 1 (Data)
-├── Debug: List All Characters
-├── Debug: Validate References
-└── Data: Reset Player Progress
-```
-
-### **Key Builder Features:**
-- **RosterScreenBuilder:** Creates complete hierarchy under ScreensRoot
-- **RosterPrefabBuilder:** Creates prefabs with all references auto-wired
-- All builders log success/failure to Console
-- Force AssetDatabase save/refresh to ensure changes persist
-
----
-
-## 🐛 Known Issues & Solutions
-
-### **Issue 1: Cards Not Visible**
-**Symptom:** Carousel empty, no characters show  
-**Common Causes:**
-1. **Viewport Image blocking** - Make Image transparent (alpha = 0) or disable
-2. **Prefab not assigned** - Assign CharacterThumbnailCard.prefab to CarouselController
-3. **No LayoutElement** - Cards need LayoutElement component (preferredWidth: 150, preferredHeight: 200)
-4. **CharacterDatabaseCSV missing** - Create GameObject, assign CSV + sprites
-
-### **Issue 2: Navigation Not Working**
-**Symptom:** Characters button does nothing, no logs  
-**Solution:** `navCharactersButton` field empty in HomeScreenController Inspector  
-**Fix:** Assign button from `Canvas → PersistentUI → BottomNavBar → [Characters button]`
-
-### **Issue 3: Characters Load as null**
-**Symptom:** Cards created but no portraits/data  
-**Solution:** CharacterDatabaseCSV singleton not initialized  
-**Fix:** Ensure CharacterDatabaseCSV GameObject exists in scene root (not under Canvas)
-
-### **Issue 4: Content Width Locked**
-**Symptom:** Content width stuck at 660, cards positioned off-screen  
-**Solution:** Missing ContentSizeFitter or HorizontalLayoutGroup misconfigured  
-**Fix:** Content needs ContentSizeFitter (Horizontal Fit: Preferred Size)
-
----
-
-## 📋 Phase Completion Checklist
-
-### **✅ Phase 1: Data Architecture**
-- [x] CSV economy system (LevelUpCosts.csv)
-- [x] Rarity-based stat caps (RarityStatCaps.cs)
-- [x] SP allocation strategy pattern
-- [x] Character managers (CharacterManager, RewardPointsManager)
-- [x] Automated tests + editor tools
-
-### **✅ Phase 2a: Carousel + Navigation**
-- [x] RosterScreen structure created under ScreensRoot
-- [x] ScreenManager integration (Characters button works)
-- [x] CSV character database (12 characters)
-- [x] CharacterThumbnailCard prefab (auto-wired with LayoutElement)
-- [x] Carousel displays 4 characters with portraits
-- [x] Rarity colors, level badges, names showing
-- [x] Navigation: Home ↔ Roster screen switching
-
-### **⏳ Phase 2b: Detail Panel (Next)**
-- [ ] CharacterDetailPanel UI structure
-- [ ] StatBar prefab instances (4 stats)
-- [ ] Wire carousel selection → detail panel update
-- [ ] Level Up button (opens modal placeholder)
-- [ ] Select button (marks character as selected)
-- [ ] Bio section (localized text)
-
-### **⏳ Phase 2c: Level-Up Modal (Future)**
-- [ ] Level-Up Modal UI (overlay)
-- [ ] SP allocation ([+] buttons per stat)
-- [ ] Reset / Confirm / Cancel flow
-- [ ] Reward Points spending
-- [ ] Level-up VFX + SFX
-
-### **⏳ Phase 2d: Character Compare (Future)**
-- [ ] Split-panel comparison view
-- [ ] Side-by-side stat comparison
-- [ ] Swap functionality
-- [ ] Highlight stat differences
+### **Stat Bar Color Rules:**
+- Blue (#3399FF) — normal stat value
+- Green — stat equals its rarity cap (maxed)
+- Red — stamina bar ONLY, when currentStaminaEnergy is low (runtime energy, NOT the stat value)
+- Orange — Level Up modal ONLY, shows the +N pending SP allocation preview segment
 
 ---
 
 ## 🎯 Design Decisions & Patterns
 
 ### **1. CSV-First Architecture**
-**Decision:** Character data in CSV, not ScriptableObjects  
-**Rationale:** Easy to edit/balance, no Unity Editor needed for data entry  
-**Implementation:** CharacterDatabaseCSV loads CSV at runtime, converts to runtime objects  
-**Fallback:** CharacterManager tries CSV first, falls back to ScriptableObject database
+Character data in CSV, not ScriptableObjects. CharacterDatabaseCSV loads at runtime.
+CharacterManager tries CSV first, falls back to ScriptableObject database.
 
-### **2. Universal Level Costs**
-**Decision:** One cost table for ALL characters (LevelUpCosts.csv)  
-**Rationale:** Eliminates duplication, easier to balance economy  
-**Implementation:** CharacterLevelUpDatabase queries by level only, not character ID
+### **2. Dual Data Model**
+- `CharacterData` (ScriptableObject) = base template (rarity, base stats, portraits, bio key)
+- `PlayerCharacterData` (plain C#) = player instance (level, SP spent, selection state, stamina energy)
 
-### **3. Rarity-Based Stat Caps**
-**Decision:** Stat caps determined by rarity tier, hardcoded in RarityStatCaps.cs  
-**Rationale:** Easy to tune balance without CSV edits, clear progression tiers  
-**Implementation:** CharacterManager.GetMaxStat() queries RarityStatCaps by character rarity
+### **3. Event-Driven UI**
+- `CarouselController.OnCharacterSelected` → static Action<string>
+- `CharacterManager.OnCharacterLeveledUp/OnCharacterSelected/OnRosterChanged`
+- UI subscribes in OnEnable, unsubscribes in OnDisable
 
-### **4. Strategy Pattern for SP Allocation**
-**Decision:** Swappable allocation strategy (Manual vs Automatic)  
-**Rationale:** Future-proof for different game modes, testable  
-**Implementation:** CharacterManager.SetAllocationStrategy() - one line to switch
+### **4. Existing Utilities to USE (don't duplicate):**
+- `RarityHelper.GetRarityColor(CharacterRarity)` — in CharacterDatabase.cs
+- `RarityHelper.GetRarityLabel(CharacterRarity)` — single letter labels
+- `RarityHelper.GetRarityBadgeTextColor(CharacterRarity)` — card badge colors
+- `RarityStatCaps.GetCap(rarity, statName)` — stat maximums by rarity
+- `ModalController` — base class for modal dialogs (use for Level Up modal in Phase 2c)
 
-### **5. Roster = Main Screen (Not Overlay)**
-**Decision:** Roster managed by ScreenManager like Home/Logo, not separate overlay  
-**Rationale:** Consistent navigation pattern, proper screen lifecycle  
-**Implementation:** ScreenId.Roster enum, ShowScreen(ScreenId.Roster) hides other screens
+### **5. Stat Rows are Raw Hierarchy (not StatBar prefab)**
+The 4 stat displays in DetailPanel are built as manual hierarchy objects (CharacterStats1-4), NOT using the StatBar.cs component. Access child elements via Transform.Find:
+- `statRow.transform.Find("Name+Bar/Bar")` → Image.fillAmount
+- `statRow.transform.Find("StatNumber")` → TMP text
 
-### **6. Pagination Dots Optional**
-**Decision:** Carousel works without pagination dots prefab  
-**Rationale:** Avoids blocking functionality if prefab not ready, can add later  
-**Implementation:** CarouselController checks if paginationDotPrefab != null before using
+### **6. Roster = Main Screen (Not Overlay)**
+Managed by ScreenManager like Home/Logo. ScreenId.Roster enum.
 
 ---
 
-## 🔍 Debugging Tips
+## 🔑 Critical Issues to Resolve
 
-### **When Cards Don't Appear:**
-1. Check Console for `[CarouselController] Populating carousel`
-2. Check Console for `[CharacterManager] Initialized with X sample characters`
-3. Verify Content has 4 child GameObjects (the card clones)
-4. Select one card clone, check if LayoutElement exists
-5. Check Viewport Image component - should be transparent or disabled
-6. Scene view: Can you see cards there? If yes, it's a rendering/masking issue
+### **ISSUE: LoadRoster() is Empty**
+`CharacterManager.LoadRoster()` never populates `ownedCharacters`. This means `GetCharacterData()` returns null for everything. Must be implemented before detail panel can work.
 
-### **When Navigation Broken:**
-1. Check Console for `[HomeScreenController] OnNavClicked: Roster`
-2. If no logs, navCharactersButton field is empty
-3. If logs but no screen change, check ScreenManager._rosterScreen is assigned
-4. Verify RosterScreen is under ScreensRoot, not Canvas root
+**Investigate:** How does CarouselController currently get character data? Does it bypass CharacterManager and read from CharacterDatabaseCSV directly?
 
-### **When CSV Fails to Load:**
-1. Check Console for `[CharacterDatabaseCSV] Loaded X characters from CSV`
-2. If 0 characters, CSV format is wrong or file not assigned
-3. Check sprite names in CSV match actual sprite names in Project
-4. Verify all 12 sprites assigned to Character Portraits array
+### **ISSUE: Dual Database Systems**
+Both `CharacterDatabase` (ScriptableObject) and `CharacterDatabaseCSV` exist. CSV is preferred per architecture decisions. Need to ensure CharacterManager reads from CSV and creates PlayerCharacterData instances.
 
 ---
 
-## 💡 Common Workflows
+## 📋 Phase Roadmap
 
-### **Adding a New Character:**
-1. Add sprite to `Assets/Sprites/Characters/` (e.g., `NewChar.png`)
-2. Edit `Characters.csv`, add new row with stats
-3. Assign new sprite to CharacterDatabaseCSV in Inspector
-4. Play Mode → character automatically loads
-
-### **Changing Character Stats:**
-1. Edit `Characters.csv` (change numbers)
-2. Save file
-3. Play Mode → changes take effect immediately (no Unity rebuild needed)
-
-### **Adjusting Card Visuals:**
-1. Open `CharacterThumbnailCard.prefab` in Project panel
-2. Edit child objects (Background, Portrait, Badges, etc.)
-3. Save prefab (Ctrl+S)
-4. Exit Prefab Mode
-5. Play Mode → all cards show new visuals
-
-### **Testing Visual Changes (3 Methods):**
-- **Method 1 (Fast Iteration):** Exit Play → Edit Prefab → Save → Exit Prefab → Play → Check
-- **Method 3 (Test Instance):** Create TestCard GameObject, drag prefab as child, edit prefab, delete TestCard when done
-- **Method 4 (Canvas Preview):** Select Canvas in 2D Scene view, zoom to fit, edit prefab, see at game resolution
+### ✅ Phase 1: Data Architecture
+### ✅ Phase 2a: Carousel + Navigation  
+### ⏳ Phase 2b: Detail Panel Data Binding (IN PROGRESS)
+### ⏳ Phase 2c: Level-Up Modal
+### ⏳ Phase 2d: Character Compare + Swap
+### ⏳ Phase 3: Gameplay Mechanics (Shot system, physics, courses)
 
 ---
 
-## 📝 Session Summary (2026-03-06)
+## 🤖 AI Workflow
 
-### **Morning/Afternoon: Phase 2a Foundation (~4.5 hours)**
-- ✅ Created CSV-based character system (12 characters)
-- ✅ Built RosterScreen hierarchy (header, carousel, detail panel stub)
-- ✅ Integrated with ScreenManager (navigation working)
-- ✅ Created CharacterThumbnailCard prefab (fully auto-wired)
-- ✅ Characters displaying with portraits, names, rarity, levels
-- ✅ Fixed 8+ critical bugs (ScrollRect, LayoutElement, Viewport Image, etc.)
+### **Claude (claude.ai) — Architect**
+- Analyzes visual references → produces implementation specs
+- Reviews code architecture → identifies gaps and patterns
+- Writes spec documents (PHASE_2B_*.md) for Claude Code to implement
+- Cannot access repo directly — needs file uploads or copy/paste
 
-### **Evening: Visual Polish (~1.5 hours)**
-- ✅ Created CharacterThumbnailCardGlowUp prefab (170x343, polished design)
-- ✅ Applied Rubik-SemiBold font throughout
-- ✅ Integrated rarity background sprites (6 rarities)
-- ✅ Optimized badge text colors for contrast (6 unique colors)
-- ✅ Added outline effect for visual depth
-- ✅ Updated character roster (removed Alejandro, added Guillermo & Rashonda)
-- ✅ GlowUp prefab assigned to CarouselController (ACTIVE)
+### **Claude Code — Implementer**
+- Has full filesystem access to Unity project
+- Reads spec documents from Docs/ folder
+- Implements, compiles, tests
+- Updates AI_CONTEXT.md after completing work
 
-### **Total Time:** ~6 hours (building + debugging + polish)
-
-### **Commits Today:** 25+ commits
-- CSV system, prefab builders, bug fixes, visual polish, documentation
-
-### **Next Session Goals:**
-1. Cesar polishes CharacterThumbnailCard visuals (using rarity backgrounds)
-2. Create CharacterDetailPanel UI
-3. Wire carousel selection → detail panel
-4. Add StatBar instances (4 stats)
-5. Add Level Up + Select buttons
+### **Handoff Process:**
+1. Claude (architect) produces spec → downloads as .md file
+2. User drops .md into project Docs/ folder
+3. User tells Claude Code: "Read Docs/PHASE_2B_*.md and implement"
+4. Claude Code implements, resolves any ambiguities by checking actual code
+5. After session, update AI_CONTEXT.md
 
 ---
 
-## 🎯 Handoff Notes for Next Developer
-
-### **Quick Start:**
-1. Pull latest from GitHub
-2. Open ShellScene in Unity
-3. Check CharacterDatabaseCSV GameObject is in scene root
-4. Verify 12 sprites assigned to Character Portraits array
-5. Play Mode → Click Characters button → Should see 4 character cards
-
-### **If Characters Don't Show:**
-1. Select Viewport in Hierarchy
-2. Disable Image component OR set alpha to 0
-3. Save scene, Play Mode again
-
-### **To Continue Development:**
-- Start with Phase 2b: CharacterDetailPanel
-- Reference: `Docs/ROSTER_PHASE_ANALYSIS_2026_03_06.md`
-- Reference images: `Assets/References/Roster Screen/`
-
----
-
-**Last Modified:** 2026-03-06 14:37 JST by Kai  
+**Last Modified:** 2026-03-16 by Claude (Architect)  
 **Next Update:** After Phase 2b completion
