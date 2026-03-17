@@ -1576,6 +1576,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Roster.CarouselController
   contentParent: {fileID: 402904748}
   characterCardPrefab: {fileID: 1245704479376207732, guid: 1feae2335c8842c4aaacde3075ae0e54, type: 3}
+  detailPanel: {fileID: 0}
   leftArrowButton: {fileID: 541752747}
   rightArrowButton: {fileID: 676366848}
   paginationDotsParent: {fileID: 260263712}
