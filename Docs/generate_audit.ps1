@@ -178,10 +178,10 @@ foreach ($method in $calledMethods) {
 
 $missingCount = ($calledMethods | Where-Object { $_ -notin $definedMethods }).Count
 if ($missingCount -eq 0) {
-    Write-Output "All clear — no missing methods detected."
+    Write-Output 'All clear - no missing methods detected.'
 }
 
 Write-Output '```'
-Write-Output ""
-Write-Output "---"
-Write-Output "End of audit."
+Write-Output ''
+Write-Output '---'
+Write-Output 'End of audit.'
