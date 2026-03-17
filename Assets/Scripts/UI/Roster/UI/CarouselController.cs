@@ -34,6 +34,7 @@ namespace Golfin.Roster
         private ScrollRect scrollRect;
         private int currentPage = 0;
         private string selectedCharacterId = "";
+        private bool viewportExpanded = false;
         
         // Events
         public event System.Action<string> OnCharacterSelected; // Change to event
@@ -77,7 +78,36 @@ namespace Golfin.Roster
         private void PopulateCarousel()
         {
             Debug.Log("[CarouselController] Populating carousel");
-            
+
+            // Ensure Content's HorizontalLayoutGroup doesn't stretch cards
+            var layoutGroup = contentParent.GetComponent<HorizontalLayoutGroup>();
+            if (layoutGroup != null)
+            {
+                layoutGroup.childForceExpandWidth = false;
+                layoutGroup.childForceExpandHeight = false;
+            }
+            else
+            {
+                Debug.LogWarning("[CarouselController] contentParent has no HorizontalLayoutGroup — cards may not lay out correctly");
+            }
+
+            // Ensure Content expands horizontally to fit all cards (required for ScrollRect to scroll)
+            var sizeFitter = contentParent.GetComponent<ContentSizeFitter>();
+            if (sizeFitter == null)
+                sizeFitter = contentParent.gameObject.AddComponent<ContentSizeFitter>();
+            sizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            sizeFitter.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+            // Expand Viewport rect once so the 5% scale-up on selected cards isn't clipped
+            if (!viewportExpanded && scrollRect != null && scrollRect.viewport != null)
+            {
+                var vp = scrollRect.viewport;
+                float overflow = 9f; // ~5% of 170px card width
+                vp.offsetMin -= new Vector2(overflow, overflow);   // extend left + bottom
+                vp.offsetMax += new Vector2(overflow, overflow);   // extend right + top
+                viewportExpanded = true;
+            }
+
             // Clear existing cards
             cards.Clear();
             foreach (Transform child in contentParent)
@@ -87,6 +117,11 @@ namespace Golfin.Roster
             
             // Get owned characters from CharacterManager
             // TODO (Phase 2b): Filter for both owned AND locked, display with different states
+            if (CharacterManager.Instance == null)
+            {
+                Debug.LogWarning("[CarouselController] CharacterManager not ready yet");
+                return;
+            }
             var ownedCharacters = CharacterManager.Instance.GetAllOwnedCharacters();
             
             if (ownedCharacters.Count == 0)
@@ -110,14 +145,19 @@ namespace Golfin.Roster
             foreach (var playerChar in ownedCharacters)
             {
                 var cardGO = Instantiate(characterCardPrefab, contentParent);
+
+                // Ensure each card holds its preferred size against the layout group
+                var le = cardGO.GetComponent<LayoutElement>() ?? cardGO.AddComponent<LayoutElement>();
+                le.preferredWidth = 170f;
+                le.preferredHeight = 343f;
+
                 var card = cardGO.GetComponent<CharacterThumbnailCard>();
-                
                 if (card != null)
                 {
                     card.Initialize(playerChar.characterId);
                     card.OnClicked += () => SelectCharacter(playerChar.characterId);
                     cards.Add(card);
-                    
+
                     Debug.Log($"[CarouselController] Created card for {playerChar.characterId}");
                 }
             }

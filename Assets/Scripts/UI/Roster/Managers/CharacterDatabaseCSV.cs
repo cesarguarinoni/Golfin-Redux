@@ -18,7 +18,8 @@ namespace Golfin.Roster
         [SerializeField] private TextAsset charactersCSV;
 
         [Header("Sprites")]
-        [SerializeField] private Sprite[] characterPortraits;  // Assign in Inspector
+        [SerializeField] private Sprite[] characterPortraits;    // Thumbnail sprites — assign in Inspector
+        [SerializeField] private Sprite[] fullBodyPortraits;     // Full-body detail panel sprites — assign in Inspector
 
         private Dictionary<string, CharacterDataRuntime> characterMap = new Dictionary<string, CharacterDataRuntime>();
         private List<CharacterDataRuntime> allCharacters = new List<CharacterDataRuntime>();
@@ -151,12 +152,14 @@ namespace Golfin.Roster
                     baseRecovery = GetIntField("baseRecovery", 10),
                     baseStamina = GetIntField("baseStamina", 10),
                     portraitSpriteName = GetField("portraitSprite"),
+                    portraitFullSpriteName = GetField("portraitFull"),
                     maxLevel = GetIntField("maxLevel", 199),
                     bio = GetField("bio")
                 };
 
-                // Find sprite by name
+                // Find sprites by name
                 character.portraitSprite = FindSpriteByName(character.portraitSpriteName);
+                character.portraitFullSprite = FindFullBodySpriteByName(character.portraitFullSpriteName);
 
                 return character;
             }
@@ -201,6 +204,23 @@ namespace Golfin.Roster
             return null;
         }
 
+        private Sprite? FindFullBodySpriteByName(string spriteName)
+        {
+            if (string.IsNullOrEmpty(spriteName)) return null;
+
+            if (fullBodyPortraits != null)
+            {
+                foreach (var sprite in fullBodyPortraits)
+                {
+                    if (sprite != null && sprite.name == spriteName)
+                        return sprite;
+                }
+            }
+
+            Debug.LogWarning($"[CharacterDatabaseCSV] Full-body sprite '{spriteName}' not found in fullBodyPortraits array");
+            return null;
+        }
+
         /// <summary>
         /// Get character data by ID
         /// </summary>
@@ -238,6 +258,8 @@ namespace Golfin.Roster
         public int baseStamina = 10;
         public string portraitSpriteName = "";
         public Sprite? portraitSprite = null;
+        public string portraitFullSpriteName = "";
+        public Sprite? portraitFullSprite = null;
         public int maxLevel = 199;
         public string bio = "";
 

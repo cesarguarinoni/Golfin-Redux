@@ -93,7 +93,7 @@ Claude (claude.ai) acts as architect and produces spec files in `Docs/`. When sp
 ## Build & Development
 
 This is a Unity project — there are no custom CLI build commands. Development workflow:
-- Open in Unity Editor via `Golfin Redux.sln` or by opening the project folder in Unity Hub
+- Open in Unity Editor via `GolfinRedux.sln` or by opening the project folder in Unity Hub
 - Main scene: `Assets/Scenes/ShellScene.unity` (all UI screens live here)
 - Gameplay scene: `Assets/Scenes/GameplayScene.unity`
 - Editor tools for building UI hierarchies are in `Assets/Scripts/UI/Roster/Editor/`

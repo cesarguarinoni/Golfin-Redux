@@ -29,6 +29,11 @@ namespace Golfin.Roster
             Debug.Log("[RosterScreenController] Initializing Roster Screen");
             
             // Get first owned character
+            if (CharacterManager.Instance == null)
+            {
+                Debug.LogWarning("[RosterScreenController] CharacterManager not ready yet");
+                return;
+            }
             var characters = CharacterManager.Instance.GetAllOwnedCharacters();
             if (characters.Count > 0)
             {
@@ -45,15 +50,19 @@ namespace Golfin.Roster
         private void OnEnable()
         {
             // Subscribe to events
-            RewardPointsManager.Instance.OnPointsChanged += UpdateRewardPointsDisplay;
-            CharacterManager.Instance.OnCharacterSelected += OnCharacterSelected;
+            if (RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.OnPointsChanged += UpdateRewardPointsDisplay;
+            if (CharacterManager.Instance != null)
+                CharacterManager.Instance.OnCharacterSelected += OnCharacterSelected;
         }
-        
+
         private void OnDisable()
         {
             // Unsubscribe from events
-            RewardPointsManager.Instance.OnPointsChanged -= UpdateRewardPointsDisplay;
-            CharacterManager.Instance.OnCharacterSelected -= OnCharacterSelected;
+            if (RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.OnPointsChanged -= UpdateRewardPointsDisplay;
+            if (CharacterManager.Instance != null)
+                CharacterManager.Instance.OnCharacterSelected -= OnCharacterSelected;
         }
         
         /// <summary>
