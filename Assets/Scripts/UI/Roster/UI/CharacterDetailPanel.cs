@@ -184,6 +184,17 @@ namespace Golfin.Roster
             if (lowStaminaIcon != null)
                 lowStaminaIcon.SetActive(playerData.IsStaminaLow(LOW_STAMINA_THRESHOLD));
 
+            // --- Button States ---
+            if (levelUpButton != null)
+            {
+                bool atMax = playerData.currentLevel >= maxLevel;
+                bool canAfford = RewardPointsManager.Instance != null
+                    && RewardPointsManager.Instance.CanAfford(CharacterManager.Instance.GetLevelUpCost(characterId));
+                levelUpButton.interactable = !atMax && canAfford;
+            }
+            if (boostButton != null)
+                boostButton.interactable = false; // until boost system exists
+
             // --- Select Button ---
             UpdateSelectButton(playerData.isSelected);
 
@@ -239,6 +250,13 @@ namespace Golfin.Roster
         {
             if (selectButtonText != null)
                 selectButtonText.text = isSelected ? "SELECTED" : "SELECT";
+
+            if (selectButton != null)
+                selectButton.interactable = !isSelected;
+
+            var selectImage = selectButton?.GetComponent<Image>();
+            if (selectImage != null)
+                selectImage.color = isSelected ? new Color(1f, 0.8f, 0.2f, 1f) : Color.white;
         }
 
         // --- Button Click Handlers ---
