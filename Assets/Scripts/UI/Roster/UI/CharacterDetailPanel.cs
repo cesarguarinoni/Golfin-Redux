@@ -59,6 +59,9 @@ namespace Golfin.Roster
         [SerializeField] private GameObject? selectedIcon;            // Eye icon, null until added
         [SerializeField] private GameObject? lowStaminaIcon;          // Bolt icon, null until added
 
+        [Header("Modals")]
+        [SerializeField] private LevelUpModalController? levelUpModal;
+
         [Header("Carousel Reference")]
         [SerializeField] private CarouselController? carousel;
 
@@ -263,8 +266,8 @@ namespace Golfin.Roster
 
         private void OnLevelUpClicked()
         {
-            Debug.Log($"[CharacterDetailPanel] Level Up clicked for {currentCharacterId}");
-            // Phase 2c: Open LevelUpModal
+            if (levelUpModal != null && !string.IsNullOrEmpty(currentCharacterId))
+                levelUpModal.Open(currentCharacterId);
         }
 
         private void OnBoostClicked()
