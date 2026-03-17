@@ -116,10 +116,12 @@ namespace Golfin.Roster
             var csvData = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
             var soData = CharacterManager.Instance.GetCharacterTemplate(characterId);
 
-            // --- Portrait ---
+            // --- Portrait (CSV full-body first, then SO full, then CSV thumbnail) ---
             if (characterImage != null)
             {
-                if (soData != null && soData.portraitFull != null)
+                if (csvData?.portraitFullSprite != null)
+                    characterImage.sprite = csvData.portraitFullSprite;
+                else if (soData != null && soData.portraitFull != null)
                     characterImage.sprite = soData.portraitFull;
                 else if (csvData?.portraitSprite != null)
                     characterImage.sprite = csvData.portraitSprite;
