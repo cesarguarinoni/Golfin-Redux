@@ -242,6 +242,16 @@ namespace Golfin.Roster
                 UpdatePanel(currentCharacterId);
         }
 
+        /// <summary>
+        /// Called by CompareController after a swap so the panel switches
+        /// to displaying the newly selected character.
+        /// </summary>
+        public void ShowCharacter(string characterId)
+        {
+            currentCharacterId = characterId;
+            UpdatePanel(characterId);
+        }
+
         private void UpdateSelectButton(bool isSelected)
         {
             if (selectButtonText != null)

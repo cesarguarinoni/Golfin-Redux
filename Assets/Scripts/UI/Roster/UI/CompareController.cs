@@ -340,19 +340,30 @@ namespace Golfin.Roster
             else if (rightData != null && !rightData.isSelected) swapToId = _rightCharacterId;
 
             if (swapToId == null) return;
-
-            CharacterManager.Instance.SelectCharacter(swapToId);
-            Debug.Log($"[CompareController] Swapped to {swapToId}");
-            CleanupAndExit();
+            CommitSwapAndExit(swapToId);
         }
 
         private void OnRightSelectClicked()
         {
             // "SWAP" button on right column — select right character
             if (string.IsNullOrEmpty(_rightCharacterId)) return;
-            CharacterManager.Instance.SelectCharacter(_rightCharacterId);
-            Debug.Log($"[CompareController] Right column swap to {_rightCharacterId}");
+            CommitSwapAndExit(_rightCharacterId);
+        }
+
+        /// <summary>
+        /// Selects <paramref name="characterId"/>, exits compare mode, then updates the
+        /// detail panel to display the newly selected character (not the old one).
+        /// </summary>
+        private void CommitSwapAndExit(string characterId)
+        {
+            CharacterManager.Instance.SelectCharacter(characterId);
+            Debug.Log($"[CompareController] Swapped selection to {characterId}");
+
             CleanupAndExit();
+
+            // After CleanupAndExit _isCompareMode is false, so UpdatePanel runs normally.
+            // Push the new character into the detail panel so it reflects the swap.
+            GetComponent<CharacterDetailPanel>()?.ShowCharacter(characterId);
         }
 
         private void OnRightCompareClicked()
