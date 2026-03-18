@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Golfin.Roster;
 
 namespace Golfin.UI
 {
@@ -60,6 +61,41 @@ namespace Golfin.UI
             HideBars();
 
             InitializeButtons();
+        }
+
+        private void OnEnable()
+        {
+            // RewardPointsManager may not exist yet if we're very early in startup —
+            // Start() below covers that case.
+            if (RewardPointsManager.Instance != null)
+            {
+                RewardPointsManager.Instance.OnPointsChanged += SetRewardPoints;
+                SetRewardPoints(RewardPointsManager.Instance.GetPoints());
+            }
+        }
+
+        private void Start()
+        {
+            // By Start() all Awake() calls are done, so Instance is guaranteed available.
+            // Subscribe only if OnEnable() missed it (Instance was null at that point).
+            if (RewardPointsManager.Instance != null)
+            {
+                // Re-subscribing a delegate that's already subscribed would double-fire,
+                // so remove first to ensure exactly one subscription.
+                RewardPointsManager.Instance.OnPointsChanged -= SetRewardPoints;
+                RewardPointsManager.Instance.OnPointsChanged += SetRewardPoints;
+                SetRewardPoints(RewardPointsManager.Instance.GetPoints());
+            }
+            else
+            {
+                Debug.LogWarning("[PersistentUI] RewardPointsManager not found — RP display will not update.");
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.OnPointsChanged -= SetRewardPoints;
         }
 
         /// <summary>
