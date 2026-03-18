@@ -62,6 +62,9 @@ namespace Golfin.Roster
         [Header("Modals")]
         [SerializeField] private LevelUpModalController? levelUpModal;
 
+        [Header("Compare")]
+        [SerializeField] private CompareController? compareController;
+
         [Header("Carousel Reference")]
         [SerializeField] private CarouselController? carousel;
 
@@ -103,10 +106,16 @@ namespace Golfin.Roster
         }
 
         /// <summary>
-        /// Main data binding — populates all UI fields from character data
+        /// Main data binding — populates all UI fields from character data.
+        /// Skipped while CompareController is in compare mode (it handles
+        /// carousel taps itself in that state).
         /// </summary>
         private void UpdatePanel(string characterId)
         {
+            // In compare mode the CompareController intercepts carousel taps;
+            // we must not overwrite the left column while it is managed by compare.
+            if (compareController != null && compareController.IsCompareMode) return;
+
             currentCharacterId = characterId;
 
             var playerData = CharacterManager.Instance.GetCharacterData(characterId);
@@ -259,8 +268,8 @@ namespace Golfin.Roster
 
         private void OnCompareClicked()
         {
-            Debug.Log($"[CharacterDetailPanel] Compare clicked for {currentCharacterId}");
-            // Phase 2d: Enter compare mode
+            if (compareController != null && !string.IsNullOrEmpty(currentCharacterId))
+                compareController.EnterCompareMode(currentCharacterId);
         }
 
         private void OnSelectClicked()
