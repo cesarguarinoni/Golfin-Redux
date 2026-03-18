@@ -73,13 +73,13 @@ namespace Golfin.Roster.Editor
                 wired += WireTMPFrom(so, "compareNameText",
                     infoRoot, "CharacterNamePanel/CharacterNameText", ref failed);
 
-                // Rarity row — children of RarityPanel/RarityRow
+                // Rarity row — RarityText is child 0; LevelText/LevelTextMax are inside LevelPanel
                 wired += WireTMPFrom(so, "compareRarityLabel",
-                    infoRoot, "RarityPanel/RarityRow/RarityLabel",   ref failed);
+                    infoRoot, "RarityPanel/RarityRow/RarityText",              ref failed);
                 wired += WireTMPFrom(so, "compareLevelText",
-                    infoRoot, "RarityPanel/RarityRow/LevelText",     ref failed);
+                    infoRoot, "RarityPanel/RarityRow/LevelPanel/LevelText",    ref failed);
                 wired += WireTMPFrom(so, "compareMaxLevelText",
-                    infoRoot, "RarityPanel/RarityRow/LevelTextMax",  ref failed);
+                    infoRoot, "RarityPanel/RarityRow/LevelPanel/LevelTextMax", ref failed);
 
                 // Stat rows
                 wired += WireGOFrom(so, "compareStrengthRow",
@@ -107,7 +107,7 @@ namespace Golfin.Roster.Editor
                 wired += WireButtonFrom(so, "compareRightSelectButton",
                     infoRoot, "SelectButton",    ref failed);
                 wired += WireTMPFrom(so, "compareRightSelectButtonText",
-                    infoRoot, "SelectButton/Text", ref failed);
+                    infoRoot, "SelectButton/Text (TMP)", ref failed);
             }
 
             // ── Carousel ──────────────────────────────────────────────────────
