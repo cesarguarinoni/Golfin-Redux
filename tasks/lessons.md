@@ -95,6 +95,80 @@ if (Golfin.UI.PersistentUIManager.Instance != null)
 }
 ```
 
+## Never Use ?? With Unity Objects — Use == null Instead
+
+**Mistake:** Used `GetComponent<CanvasGroup>() ?? AddComponent<CanvasGroup>()` in `GetOrAddCG`.
+C#'s `??` operator uses reference equality (`ReferenceEquals`), NOT Unity's overloaded `==`.
+A destroyed/missing Unity component passes `??` but throws `MissingComponentException` on access.
+
+**Rule:** Always use `== null` / `!= null` when checking Unity `UnityEngine.Object` references.
+Never use `??` or `?.` for the null-coalescing/null-conditional part of Unity object checks.
+
+**Pattern:**
+```csharp
+// WRONG — ?? can miss Unity-null objects:
+var cg = obj.GetComponent<CanvasGroup>() ?? obj.AddComponent<CanvasGroup>();
+
+// CORRECT — == null respects Unity's overloaded equality:
+var cg = obj.GetComponent<CanvasGroup>();
+if (cg == null) cg = obj.AddComponent<CanvasGroup>();
+```
+
+## Pre-Add CanvasGroup in Builder — Never Rely on Runtime AddComponent for Fades
+
+**Rule:** If a GameObject will be faded (FadeIn/FadeOut via CanvasGroup), add the CanvasGroup
+in the Editor builder script at build time, not lazily at runtime. Runtime AddComponent on objects
+that may be inactive or mid-animation can produce stale references.
+
+**Pattern (in builder):**
+```csharp
+var cg = clone.GetComponent<CanvasGroup>() ?? clone.AddComponent<CanvasGroup>();
+cg.alpha = 0f;  // start transparent; FadeIn animates to 1
+```
+
+## Clone RightPanel for Compare Panel — Never Build From Scratch
+
+**Rule:** When a compare/secondary panel must visually match an existing panel, clone it with
+`Object.Instantiate(rightPanel.gameObject, parent, false)` rather than building from scratch.
+Building from scratch requires duplicating every font/color/size the user set manually.
+Cloning preserves all those settings automatically.
+
+**After cloning:**
+- Override the clone's RectTransform anchors to position it correctly
+- Wrap all cloned children in a new empty container (CompareInfoPanel) for show/hide control
+- Add ComparePlaceholder as a full-stretch overlay on top
+- Strip any left-column-specific buttons from the clone's ButtonsPanel
+
+## AutoWire Paths Must Be Verified Against Scene YAML — Don't Assume Names
+
+**Mistake:** Assumed child names (RarityLabel, Text) without checking the actual scene YAML.
+4 paths failed because real names were: RarityText, LevelPanel/LevelText, LevelPanel/LevelTextMax,
+and "Text (TMP)" (not "Text").
+
+**Rule:** For any AutoWire paths that aren't directly from CLAUDE.md documentation, grep the
+ShellScene.unity for the actual `m_Name:` values. Use `m_Father` fileID cross-references to
+confirm parent-child relationships before coding the paths.
+
+## After Compare Swap — Explicitly Push New Character Into Detail Panel
+
+**Problem:** CharacterDetailPanel.OnSelectionChanged refreshes the CURRENTLY DISPLAYED character's
+button state, but never switches currentCharacterId to the newly selected character.
+After a swap from compare mode, the panel kept showing the old character.
+
+**Fix:** Add a public `ShowCharacter(string id)` method to CharacterDetailPanel that sets
+`currentCharacterId` and calls `UpdatePanel`. Call it from CompareController after any swap,
+AFTER CleanupAndExit() (which sets _isCompareMode = false so UpdatePanel doesn't early-return).
+
+```csharp
+// In CompareController:
+private void CommitSwapAndExit(string characterId)
+{
+    CharacterManager.Instance.SelectCharacter(characterId);
+    CleanupAndExit();  // sets _isCompareMode = false first
+    GetComponent<CharacterDetailPanel>()?.ShowCharacter(characterId);
+}
+```
+
 ## Always Use New Input System — Never UnityEngine.Input
 
 **Mistake:** Used `Input.GetKeyDown(KeyCode)` in a debug script. Project uses the New Input System package, so the legacy `UnityEngine.Input` class throws InvalidOperationException at runtime.
