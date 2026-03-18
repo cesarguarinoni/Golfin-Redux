@@ -11,6 +11,11 @@ namespace Golfin.Roster.Editor
     /// the compareController field on CharacterDetailPanel.
     ///
     /// Run after: GOLFIN > Build Compare Right Panel
+    ///
+    /// CompareRightPanel is now a clone of RightPanel, so the right-column
+    /// fields are found using the same child paths as CharacterDetailPanel
+    /// (CharacterNamePanel/CharacterNameText, RarityPanel/RarityRow/RarityLabel, etc.)
+    /// but relative to CompareRightPanel/CompareInfoPanel.
     /// </summary>
     public static class CompareAutoWire
     {
@@ -38,50 +43,71 @@ namespace Golfin.Roster.Editor
             int failed = 0;
 
             // ── Normal Mode ───────────────────────────────────────────────────
-            wired += WireGO(so,     "leftPanel",   root, "LeftPanel",   ref failed);
-            wired += WireRT(so,     "rightPanel",  root, "RightPanel",  ref failed);
+            wired += WireGO(so, "leftPanel",  root, "LeftPanel",  ref failed);
+            wired += WireRT(so, "rightPanel", root, "RightPanel", ref failed);
 
             // ── Compare Layout ────────────────────────────────────────────────
-            wired += WireGO(so,     "compareRightPanel",  root, "CompareRightPanel",                         ref failed);
-            wired += WireGO(so,     "comparePlaceholder", root, "CompareRightPanel/ComparePlaceholder",      ref failed);
-            wired += WireGO(so,     "compareInfoPanel",   root, "CompareRightPanel/CompareInfoPanel",        ref failed);
-            wired += WireGO(so,     "verticalDivider",    root, "VerticalDivider",                           ref failed);
+            wired += WireGO(so, "compareRightPanel",  root, "CompareRightPanel",                    ref failed);
+            wired += WireGO(so, "comparePlaceholder", root, "CompareRightPanel/ComparePlaceholder", ref failed);
+            wired += WireGO(so, "compareInfoPanel",   root, "CompareRightPanel/CompareInfoPanel",   ref failed);
+            wired += WireGO(so, "verticalDivider",    root, "VerticalDivider",                      ref failed);
 
             // ── Left Column Buttons ───────────────────────────────────────────
-            // Try ButtonsPanel first; fall back to RightPanel root if not found
             var buttonsRoot = root.Find("RightPanel/ButtonsPanel") ?? root.Find("RightPanel");
-            wired += WireButtonFrom(so, "compareButton",      buttonsRoot, "LevelUpButton",      ref failed); // existing
-            // NOTE: "compareButton" wires to the existing CompareButton in the detail panel
-            wired += WireButtonFrom(so, "compareButton",      root, "RightPanel/CompareButton",  ref failed);
-            wired += WireButtonFrom(so, "closeCompareButton", root, "RightPanel/ButtonsPanel/CloseCompareButton", ref failed);
-            wired += WireButtonFrom(so, "selectButton",       root, "RightPanel/SelectButton",   ref failed);
-            wired += WireButtonFrom(so, "swapButton",         root, "RightPanel/ButtonsPanel/SwapButton",    ref failed);
+            wired += WireButtonFrom(so, "compareButton",      root,        "RightPanel/CompareButton",              ref failed);
+            wired += WireButtonFrom(so, "closeCompareButton", buttonsRoot, "CloseCompareButton",                    ref failed);
+            wired += WireButtonFrom(so, "selectButton",       root,        "RightPanel/SelectButton",               ref failed);
+            wired += WireButtonFrom(so, "swapButton",         buttonsRoot, "SwapButton",                            ref failed);
 
-            // ── Right Column Info ─────────────────────────────────────────────
+            // ── Right Column Info (inside CompareRightPanel/CompareInfoPanel) ─
+            // CompareInfoPanel is a clone of RightPanel, so paths match CharacterDetailPanel.
             var infoRoot = root.Find("CompareRightPanel/CompareInfoPanel");
             if (infoRoot == null)
             {
                 Debug.LogWarning("[CompareAutoWire] CompareInfoPanel not found — run Build first.");
-                failed += 20;
+                failed += 15;
             }
             else
             {
-                wired += WireTMPFrom(so, "compareNameText",     infoRoot, "CompareNameText",                    ref failed);
-                wired += WireTMPFrom(so, "compareRarityLabel",  infoRoot, "CompareRarityRow/CompareRarityLabel",ref failed);
-                wired += WireTMPFrom(so, "compareLevelText",    infoRoot, "CompareRarityRow/CompareLevelText",  ref failed);
-                wired += WireTMPFrom(so, "compareMaxLevelText", infoRoot, "CompareRarityRow/CompareMaxLevelText",ref failed);
+                // Name
+                wired += WireTMPFrom(so, "compareNameText",
+                    infoRoot, "CharacterNamePanel/CharacterNameText", ref failed);
 
-                wired += WireGOFrom(so,  "compareStrengthRow",    infoRoot, "CompareStatsPanel/CompareStats1", ref failed);
-                wired += WireGOFrom(so,  "compareClubControlRow", infoRoot, "CompareStatsPanel/CompareStats2", ref failed);
-                wired += WireGOFrom(so,  "compareRecoveryRow",    infoRoot, "CompareStatsPanel/CompareStats3", ref failed);
-                wired += WireGOFrom(so,  "compareStaminaRow",     infoRoot, "CompareStatsPanel/CompareStats4", ref failed);
+                // Rarity row — children of RarityPanel/RarityRow
+                wired += WireTMPFrom(so, "compareRarityLabel",
+                    infoRoot, "RarityPanel/RarityRow/RarityLabel",   ref failed);
+                wired += WireTMPFrom(so, "compareLevelText",
+                    infoRoot, "RarityPanel/RarityRow/LevelText",     ref failed);
+                wired += WireTMPFrom(so, "compareMaxLevelText",
+                    infoRoot, "RarityPanel/RarityRow/LevelTextMax",  ref failed);
 
-                wired += WireButtonFrom(so, "compareLevelUpButton", infoRoot, "CompareButtonsPanel/CompareLevelUpButton", ref failed);
-                wired += WireButtonFrom(so, "compareBoostButton",   infoRoot, "CompareButtonsPanel/CompareBoostButton",   ref failed);
-                wired += WireTMPFrom(so,    "compareBioText",       infoRoot, "CompareBioPanel/CompareBioText",            ref failed);
-                wired += WireButtonFrom(so, "compareRightCompareButton", infoRoot, "CompareActionsPanel/CompareRightCompareButton", ref failed);
-                wired += WireButtonFrom(so, "compareRightSelectButton",  infoRoot, "CompareActionsPanel/CompareRightSelectButton",  ref failed);
-                wired += WireTMPFrom(so,    "compareRightSelectButtonText", infoRoot, "CompareActionsPanel/CompareRightSelectButton/Text", ref failed);
+                // Stat rows
+                wired += WireGOFrom(so, "compareStrengthRow",
+                    infoRoot, "CharacterStatsPanel/CharacterStats1", ref failed);
+                wired += WireGOFrom(so, "compareClubControlRow",
+                    infoRoot, "CharacterStatsPanel/CharacterStats2", ref failed);
+                wired += WireGOFrom(so, "compareRecoveryRow",
+                    infoRoot, "CharacterStatsPanel/CharacterStats3", ref failed);
+                wired += WireGOFrom(so, "compareStaminaRow",
+                    infoRoot, "CharacterStatsPanel/CharacterStats4", ref failed);
+
+                // Buttons — Level Up and Boost reuse the cloned ButtonsPanel buttons
+                wired += WireButtonFrom(so, "compareLevelUpButton",
+                    infoRoot, "ButtonsPanel/LevelUpButton", ref failed);
+                wired += WireButtonFrom(so, "compareBoostButton",
+                    infoRoot, "ButtonsPanel/BoostButton",   ref failed);
+
+                // Bio
+                wired += WireTMPFrom(so, "compareBioText",
+                    infoRoot, "BioPanel/BioText", ref failed);
+
+                // Compare-specific action buttons (reuse cloned CompareButton / SelectButton)
+                wired += WireButtonFrom(so, "compareRightCompareButton",
+                    infoRoot, "CompareButton",   ref failed);
+                wired += WireButtonFrom(so, "compareRightSelectButton",
+                    infoRoot, "SelectButton",    ref failed);
+                wired += WireTMPFrom(so, "compareRightSelectButtonText",
+                    infoRoot, "SelectButton/Text", ref failed);
             }
 
             // ── Carousel ──────────────────────────────────────────────────────
@@ -136,7 +162,6 @@ namespace Golfin.Roster.Editor
             return canvas?.transform.Find("ScreensRoot/RosterScreen/CarouselSection/DetailPanel");
         }
 
-        // Wire a GameObject field by path relative to `root`
         private static int WireGO(SerializedObject so, string field, Transform root,
             string path, ref int failed)
         {
@@ -144,7 +169,6 @@ namespace Golfin.Roster.Editor
             return SetProp(so, field, t?.gameObject, path, ref failed);
         }
 
-        // Wire a RectTransform field
         private static int WireRT(SerializedObject so, string field, Transform root,
             string path, ref int failed)
         {
@@ -152,16 +176,14 @@ namespace Golfin.Roster.Editor
             return SetProp(so, field, t?.GetComponent<RectTransform>(), path, ref failed);
         }
 
-        // Wire a TMP field relative to `from`
         private static int WireTMPFrom(SerializedObject so, string field, Transform from,
             string path, ref int failed)
         {
-            var t = from.Find(path);
+            var t   = from.Find(path);
             var tmp = t?.GetComponent<TextMeshProUGUI>();
             return SetProp(so, field, tmp, path, ref failed);
         }
 
-        // Wire a Button field relative to `from`
         private static int WireButtonFrom(SerializedObject so, string field, Transform? from,
             string path, ref int failed)
         {
@@ -171,7 +193,6 @@ namespace Golfin.Roster.Editor
             return SetProp(so, field, btn, path, ref failed);
         }
 
-        // Wire a GameObject field relative to `from`
         private static int WireGOFrom(SerializedObject so, string field, Transform from,
             string path, ref int failed)
         {

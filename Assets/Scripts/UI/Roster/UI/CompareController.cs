@@ -143,8 +143,8 @@ namespace Golfin.Roster
 
             StopAllCoroutines();
 
-            // Portrait fades out
-            StartCoroutine(FadeOut(leftPanel, fadeDuration));
+            // Hide portrait immediately — SetActive is more reliable than CanvasGroup fade
+            SafeSetActive(leftPanel, false);
 
             // Info panel slides to the left half
             StartCoroutine(SlidePanel(rightPanel, _compareLeftPos, slideDuration));
@@ -364,7 +364,8 @@ namespace Golfin.Roster
             StartCoroutine(FadeOut(compareRightPanel, fadeDuration));
             SafeSetActive(verticalDivider, false);
             StartCoroutine(SlidePanel(rightPanel, _normalRightPos, slideDuration));
-            StartCoroutine(FadeIn(leftPanel, fadeDuration, slideDuration));
+            // Restore portrait immediately (matches instant hide on enter)
+            SafeSetActive(leftPanel, true);
 
             SafeSetActive(compareButton?.gameObject,      true);
             SafeSetActive(closeCompareButton?.gameObject, false);
@@ -388,7 +389,6 @@ namespace Golfin.Roster
 
             if (rightPanel != null) rightPanel.anchoredPosition = _normalRightPos;
 
-            SetAlpha(leftPanel, 1f);
             SafeSetActive(leftPanel, true);
 
             SafeSetActive(compareButton?.gameObject,      true);
