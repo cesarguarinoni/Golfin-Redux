@@ -22,6 +22,26 @@ Before closing:
 2. Update `tasks/lessons.md` if any corrections were made
 3. Commit with descriptive message
 
+## Debugging Unity
+
+### Reading Unity Console without copy-paste
+Unity Editor logs to a fixed file on Windows. Read it directly:
+```powershell
+# Last 100 lines (quick check)
+Get-Content -Path "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 100
+
+# Filter for errors only
+Get-Content -Path "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 500 | Select-String "Error|Exception|NullReference"
+
+# Filter for game logs only
+Get-Content -Path "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 500 | Select-String "\[CharacterManager\]|\[CarouselController\]|\[ScreenManager\]|\[RosterScreenController\]|\[LevelUpModal\]|\[CompareController\]"
+
+# Watch live (keep running while testing in Unity)
+Get-Content -Path "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Wait -Tail 10
+```
+
+Note: Log resets each time Unity Editor starts. Contains a lot of noise from asset imports and compilation — always filter.
+
 ---
 
 ## Basic Rules
