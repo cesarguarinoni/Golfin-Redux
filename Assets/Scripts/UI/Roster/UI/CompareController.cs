@@ -157,8 +157,13 @@ namespace Golfin.Roster
             // Divider
             SafeSetActive(verticalDivider, true);
 
-            // Swap buttons
-            SafeSetActive(compareButton?.gameObject, false);
+            // Swap buttons — CompareButton hides, CloseCompareButton shows
+            if (compareButton == null)
+                Debug.LogWarning("[CompareController] compareButton is null — run GOLFIN > Wire Compare Panel.");
+            if (closeCompareButton == null)
+                Debug.LogWarning("[CompareController] closeCompareButton is null — run GOLFIN > Wire Compare Panel.");
+
+            SafeSetActive(compareButton?.gameObject,      false);
             SafeSetActive(closeCompareButton?.gameObject, true);
             UpdateLeftColumnButtons();
 
@@ -191,11 +196,14 @@ namespace Golfin.Roster
 
             StopAllCoroutines();
 
-            // Placeholder fades out, info panel fades in
-            if (comparePlaceholder.activeSelf)
-                StartCoroutine(FadeOut(comparePlaceholder, fadeDuration));
+            // Ensure compare panel is fully visible — StopAllCoroutines may have
+            // interrupted the FadeIn(compareRightPanel) started in EnterCompareMode.
+            SafeSetActive(compareRightPanel, true);
+            SetAlpha(compareRightPanel, 1f);
 
-            StartCoroutine(FadeIn(compareInfoPanel, fadeDuration, fadeDuration));
+            // Switch from placeholder to info immediately (reliable SetActive)
+            SafeSetActive(comparePlaceholder, false);
+            SafeSetActive(compareInfoPanel,   true);
 
             RefreshRightColumn(characterId);
 
@@ -279,8 +287,20 @@ namespace Golfin.Roster
             var bar    = statRow.transform.Find("Name+Bar/Bar")?.GetComponent<Image>();
             var numTMP = statRow.transform.Find("StatNumber")?.GetComponent<TextMeshProUGUI>();
 
-            if (bar    != null) bar.fillAmount = cap > 0 ? (float)current / cap : 0f;
-            if (numTMP != null) numTMP.text    = $"{current}/{cap}";
+            if (bar != null)
+            {
+                // Force Filled mode — required for fillAmount to have any visual effect.
+                // The clone preserves the original setting but we enforce it here to be safe.
+                if (bar.type != Image.Type.Filled)
+                {
+                    bar.type       = Image.Type.Filled;
+                    bar.fillMethod = Image.FillMethod.Horizontal;
+                    bar.fillOrigin = 0;
+                }
+                bar.fillAmount = cap > 0 ? (float)current / cap : 0f;
+            }
+
+            if (numTMP != null) numTMP.text = $"{current}/{cap}";
             // Colours are set on the Image sprites in the Editor — not overridden here
         }
 
