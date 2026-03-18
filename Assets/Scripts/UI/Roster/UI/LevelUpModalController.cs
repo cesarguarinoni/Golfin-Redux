@@ -145,6 +145,10 @@ namespace Golfin.Roster
             pendingRecovery    = 0;
             pendingStamina     = 0;
 
+            // Reset levelText colour to white on every open — it only turns blue
+            // inside RefreshDisplay() if a preview level-up has happened this session.
+            if (levelText != null) levelText.color = Color.white;
+
             RefreshDisplay();
             Show();
         }
