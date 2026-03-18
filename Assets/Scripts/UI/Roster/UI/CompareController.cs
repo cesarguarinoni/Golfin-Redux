@@ -382,7 +382,8 @@ namespace Golfin.Roster
         private void OnRightLevelUpClicked()
         {
             if (string.IsNullOrEmpty(_rightCharacterId) || levelUpModal == null) return;
-            levelUpModal.Open(_rightCharacterId);
+            var anchor = compareRightPanel != null ? compareRightPanel.GetComponent<RectTransform>() : null;
+            levelUpModal.Open(_rightCharacterId, anchor);
         }
 
         // ── Cleanup ────────────────────────────────────────────────────────────

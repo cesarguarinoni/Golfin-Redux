@@ -87,6 +87,9 @@ namespace Golfin.Roster
         [SerializeField] private Color spDepletedColor  = new Color(0.753f, 0.251f, 0f, 1f);      // #C04000 — no SP remaining
         [SerializeField] private Color levelTextColor   = new Color(0.153f, 0.459f, 0.867f, 1f);  // #2775DD — level display
 
+        // ── Anchor (optional — reparent modal to a specific panel) ─────────
+        private Transform? _originalParent;
+
         // ── Preview State (local, not committed until Confirm) ──────────────
         private string characterId = "";
         private int previewLevel;           // starts at current level
@@ -127,10 +130,26 @@ namespace Golfin.Roster
         /// <summary>
         /// Called by CharacterDetailPanel when the LEVEL UP button is tapped.
         /// Initialises preview state from current character data and shows the modal.
+        /// Pass anchorPanel to center the modal inside a specific panel (e.g. RightPanel or CompareRightPanel).
         /// </summary>
-        public void Open(string characterId)
+        public void Open(string characterId, RectTransform? anchorPanel = null)
         {
             this.characterId = characterId;
+
+            // Reparent to anchor panel so the modal appears centred within it
+            if (anchorPanel != null)
+            {
+                _originalParent = transform.parent;
+                transform.SetParent(anchorPanel, false);
+                var rt = GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchorMin = Vector2.zero;
+                    rt.anchorMax = Vector2.one;
+                    rt.offsetMin = Vector2.zero;
+                    rt.offsetMax = Vector2.zero;
+                }
+            }
 
             var playerData = CharacterManager.Instance.GetCharacterData(characterId);
             if (playerData == null) return;
@@ -362,6 +381,16 @@ namespace Golfin.Roster
         /// Discards ALL previewed changes (level-ups + SP allocation).
         /// Safe to call because nothing was ever written to CharacterManager.
         /// </summary>
+        protected override void OnHide()
+        {
+            // Restore original parent after modal is hidden
+            if (_originalParent != null)
+            {
+                transform.SetParent(_originalParent, false);
+                _originalParent = null;
+            }
+        }
+
         private void OnCancelClicked()
         {
             pendingStrength    = 0;
