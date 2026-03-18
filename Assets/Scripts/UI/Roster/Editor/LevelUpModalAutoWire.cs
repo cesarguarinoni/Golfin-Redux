@@ -59,19 +59,23 @@ namespace Golfin.Roster.Editor
 
             // ── Stat Rows ────────────────────────────────────────────────────
             WireStatRow(so, root, "ModalPanel/SPSection/StatRow_Strength",
-                "strengthBar", "strengthBarPending", "strengthValue", "strengthPending", "strengthPlusButton",
+                "strengthBar", "strengthBarPending",
+                "strengthValueCurrent", "strengthValueMax", "strengthPending", "strengthPlusButton",
                 ref wired, ref failed);
 
             WireStatRow(so, root, "ModalPanel/SPSection/StatRow_ClubControl",
-                "clubControlBar", "clubControlBarPending", "clubControlValue", "clubControlPending", "clubControlPlusButton",
+                "clubControlBar", "clubControlBarPending",
+                "clubControlValueCurrent", "clubControlValueMax", "clubControlPending", "clubControlPlusButton",
                 ref wired, ref failed);
 
             WireStatRow(so, root, "ModalPanel/SPSection/StatRow_Recovery",
-                "recoveryBar", "recoveryBarPending", "recoveryValue", "recoveryPending", "recoveryPlusButton",
+                "recoveryBar", "recoveryBarPending",
+                "recoveryValueCurrent", "recoveryValueMax", "recoveryPending", "recoveryPlusButton",
                 ref wired, ref failed);
 
             WireStatRow(so, root, "ModalPanel/SPSection/StatRow_Stamina",
-                "staminaBar", "staminaBarPending", "staminaValue", "staminaPending", "staminaPlusButton",
+                "staminaBar", "staminaBarPending",
+                "staminaValueCurrent", "staminaValueMax", "staminaPending", "staminaPlusButton",
                 ref wired, ref failed);
 
             // ── Action Buttons ───────────────────────────────────────────────
@@ -95,24 +99,27 @@ namespace Golfin.Roster.Editor
         // ── Stat row helper ──────────────────────────────────────────────────
 
         /// <summary>
-        /// Wires all 5 fields for one stat row.
+        /// Wires all 6 fields for one stat row.
         /// Expected children under rowPath:
-        ///   StatBar/Bar        → barField       (blue Image)
-        ///   StatBar/BarPending → barPendingField (orange Image)
-        ///   StatValue          → valueField      (TMP)
-        ///   PendingLabel       → pendingField    (TMP)
-        ///   PlusButton         → plusButtonField (Button)
+        ///   StatBar/Bar           → barField            (blue Image)
+        ///   StatBar/BarPending    → barPendingField      (orange Image)
+        ///   StatValueCurrent      → valueCurrentField    (TMP — "10")
+        ///   StatValueMax          → valueMaxField        (TMP — "/25")
+        ///   PendingLabel          → pendingField         (TMP — "+N")
+        ///   PlusButton            → plusButtonField      (Button)
         /// </summary>
         private static void WireStatRow(SerializedObject so, Transform root, string rowPath,
             string barField, string barPendingField,
-            string valueField, string pendingField, string plusButtonField,
+            string valueCurrentField, string valueMaxField,
+            string pendingField, string plusButtonField,
             ref int wired, ref int failed)
         {
-            wired += WireImage(so,  barField,        root, $"{rowPath}/StatBar/Bar",        ref failed);
-            wired += WireImage(so,  barPendingField, root, $"{rowPath}/StatBar/BarPending", ref failed);
-            wired += WireTMP(so,    valueField,      root, $"{rowPath}/StatValue",          ref failed);
-            wired += WireTMP(so,    pendingField,    root, $"{rowPath}/PendingLabel",       ref failed);
-            wired += WireButton(so, plusButtonField, root, $"{rowPath}/PlusButton",         ref failed);
+            wired += WireImage(so,  barField,          root, $"{rowPath}/StatBar/Bar",           ref failed);
+            wired += WireImage(so,  barPendingField,   root, $"{rowPath}/StatBar/BarPending",    ref failed);
+            wired += WireTMP(so,    valueCurrentField, root, $"{rowPath}/StatValueCurrent",      ref failed);
+            wired += WireTMP(so,    valueMaxField,     root, $"{rowPath}/StatValueMax",          ref failed);
+            wired += WireTMP(so,    pendingField,      root, $"{rowPath}/PendingLabel",          ref failed);
+            wired += WireButton(so, plusButtonField,   root, $"{rowPath}/PlusButton",            ref failed);
         }
 
         // ── Detail Panel back-reference ──────────────────────────────────────

@@ -194,25 +194,49 @@ namespace Golfin.Roster.Editor
                 MakeTMP("NextLevelValue", row.transform, "Lv 2",       15, TextAlignmentOptions.Right);
             }
 
-            // CostRow — "COST  [coin]  805"
+            // CostRow — "COST" left | spacer | [RPIcon] "100" right
             {
-                var row = MakeHRow("CostRow", info.transform, 22);
+                var row = MakeRect("CostRow", info.transform);
+                LayoutEl(row, preferredHeight: 22);
+                var layout = row.AddComponent<HorizontalLayoutGroup>();
+                layout.childAlignment        = TextAnchor.MiddleLeft;
+                layout.childControlWidth     = true;
+                layout.childControlHeight    = true;
+                layout.childForceExpandWidth  = false; // spacer takes remaining space
+                layout.childForceExpandHeight = true;
+
                 MakeTMP("CostLabel", row.transform, "COST", 15, TextAlignmentOptions.Left);
+
+                // Spacer — pushes RPIcon+CostValue to the right
+                var costSpacer = MakeRect("Spacer", row.transform);
+                costSpacer.AddComponent<LayoutElement>().flexibleWidth = 1;
 
                 // RPIcon placeholder (gold square; swap sprite in Inspector)
                 var iconGO = MakeRect("RPIcon", row.transform);
-                var iconImg = iconGO.AddComponent<Image>();
-                iconImg.color = new Color(1f, 0.85f, 0.1f, 1f);
+                iconGO.AddComponent<Image>().color = new Color(1f, 0.85f, 0.1f, 1f);
                 LayoutEl(iconGO, preferredWidth: 20, preferredHeight: 20);
 
-                MakeTMP("CostValue", row.transform, "100", 15, TextAlignmentOptions.Right);
+                MakeTMP("CostValue", row.transform, "100", 15, TextAlignmentOptions.Left);
             }
 
-            // RewardRow — "REWARD  1 SP"
+            // RewardRow — "REWARD" left | spacer | "1 SP" right
             {
-                var row = MakeHRow("RewardRow", info.transform, 22);
+                var row = MakeRect("RewardRow", info.transform);
+                LayoutEl(row, preferredHeight: 22);
+                var layout = row.AddComponent<HorizontalLayoutGroup>();
+                layout.childAlignment        = TextAnchor.MiddleLeft;
+                layout.childControlWidth     = true;
+                layout.childControlHeight    = true;
+                layout.childForceExpandWidth  = false;
+                layout.childForceExpandHeight = true;
+
                 MakeTMP("RewardLabel", row.transform, "REWARD", 15, TextAlignmentOptions.Left);
-                MakeTMP("RewardValue", row.transform, "1 SP",   15, TextAlignmentOptions.Right);
+
+                // Spacer
+                var rewardSpacer = MakeRect("Spacer", row.transform);
+                rewardSpacer.AddComponent<LayoutElement>().flexibleWidth = 1;
+
+                MakeTMP("RewardValue", row.transform, "1 SP", 15, TextAlignmentOptions.Left);
             }
         }
 
@@ -333,9 +357,12 @@ namespace Golfin.Roster.Editor
             barImg.fillOrigin = 0;
             barImg.fillAmount = 0.4f; // placeholder — overridden at runtime
 
-            // StatValue
-            var value = MakeTMP("StatValue", row.transform, "10/25", 13, TextAlignmentOptions.Right);
-            LayoutEl(value.gameObject, preferredWidth: 48);
+            // StatValueCurrent + StatValueMax — split for different font sizes
+            // e.g. "10" (larger) + "/25" (smaller), rendered side-by-side
+            var valueCurrent = MakeTMP("StatValueCurrent", row.transform, "10",  13, TextAlignmentOptions.Right);
+            LayoutEl(valueCurrent.gameObject, preferredWidth: 26);
+            var valueMax = MakeTMP("StatValueMax", row.transform, "/25", 11, TextAlignmentOptions.Right);
+            LayoutEl(valueMax.gameObject, preferredWidth: 30);
 
             // PlusButton
             var plusGO = MakeRect("PlusButton", row.transform);

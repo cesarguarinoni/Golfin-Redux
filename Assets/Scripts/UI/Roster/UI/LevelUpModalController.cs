@@ -42,32 +42,36 @@ namespace Golfin.Roster
         // so only the delta segment shows through.
 
         [Header("Stat Row — Strength")]
-        [SerializeField] private Image             strengthBar        = null!;
-        [SerializeField] private Image             strengthBarPending = null!;
-        [SerializeField] private TextMeshProUGUI   strengthValue      = null!;
-        [SerializeField] private TextMeshProUGUI   strengthPending    = null!;  // "+N" label
-        [SerializeField] private Button            strengthPlusButton = null!;
+        [SerializeField] private Image             strengthBar             = null!;
+        [SerializeField] private Image             strengthBarPending      = null!;
+        [SerializeField] private TextMeshProUGUI   strengthValueCurrent    = null!;  // "10"
+        [SerializeField] private TextMeshProUGUI   strengthValueMax        = null!;  // "/25"
+        [SerializeField] private TextMeshProUGUI   strengthPending         = null!;  // "+N" label
+        [SerializeField] private Button            strengthPlusButton      = null!;
 
         [Header("Stat Row — Club Control")]
-        [SerializeField] private Image             clubControlBar        = null!;
-        [SerializeField] private Image             clubControlBarPending = null!;
-        [SerializeField] private TextMeshProUGUI   clubControlValue      = null!;
-        [SerializeField] private TextMeshProUGUI   clubControlPending    = null!;
-        [SerializeField] private Button            clubControlPlusButton = null!;
+        [SerializeField] private Image             clubControlBar             = null!;
+        [SerializeField] private Image             clubControlBarPending      = null!;
+        [SerializeField] private TextMeshProUGUI   clubControlValueCurrent    = null!;
+        [SerializeField] private TextMeshProUGUI   clubControlValueMax        = null!;
+        [SerializeField] private TextMeshProUGUI   clubControlPending         = null!;
+        [SerializeField] private Button            clubControlPlusButton      = null!;
 
         [Header("Stat Row — Recovery")]
-        [SerializeField] private Image             recoveryBar        = null!;
-        [SerializeField] private Image             recoveryBarPending = null!;
-        [SerializeField] private TextMeshProUGUI   recoveryValue      = null!;
-        [SerializeField] private TextMeshProUGUI   recoveryPending    = null!;
-        [SerializeField] private Button            recoveryPlusButton = null!;
+        [SerializeField] private Image             recoveryBar             = null!;
+        [SerializeField] private Image             recoveryBarPending      = null!;
+        [SerializeField] private TextMeshProUGUI   recoveryValueCurrent    = null!;
+        [SerializeField] private TextMeshProUGUI   recoveryValueMax        = null!;
+        [SerializeField] private TextMeshProUGUI   recoveryPending         = null!;
+        [SerializeField] private Button            recoveryPlusButton      = null!;
 
         [Header("Stat Row — Stamina")]
-        [SerializeField] private Image             staminaBar        = null!;
-        [SerializeField] private Image             staminaBarPending = null!;
-        [SerializeField] private TextMeshProUGUI   staminaValue      = null!;
-        [SerializeField] private TextMeshProUGUI   staminaPending    = null!;
-        [SerializeField] private Button            staminaPlusButton = null!;
+        [SerializeField] private Image             staminaBar             = null!;
+        [SerializeField] private Image             staminaBarPending      = null!;
+        [SerializeField] private TextMeshProUGUI   staminaValueCurrent    = null!;
+        [SerializeField] private TextMeshProUGUI   staminaValueMax        = null!;
+        [SerializeField] private TextMeshProUGUI   staminaPending         = null!;
+        [SerializeField] private Button            staminaPlusButton      = null!;
 
         // ── Action Buttons ──────────────────────────────────────────────────
         [Header("Actions")]
@@ -226,16 +230,20 @@ namespace Golfin.Roster
             int baseRec  = csvChar?.baseRecovery    ?? 0;
             int baseStam = csvChar?.baseStamina     ?? 0;
 
-            UpdateStatRow(strengthBar,    strengthBarPending,    strengthValue,    strengthPending,    strengthPlusButton,
+            UpdateStatRow(strengthBar,    strengthBarPending,
+                strengthValueCurrent,    strengthValueMax,    strengthPending,    strengthPlusButton,
                 baseStr  + playerData.spentStrength,    pendingStrength,    caps.strengthCap,    availableSP);
 
-            UpdateStatRow(clubControlBar, clubControlBarPending, clubControlValue, clubControlPending, clubControlPlusButton,
+            UpdateStatRow(clubControlBar, clubControlBarPending,
+                clubControlValueCurrent, clubControlValueMax, clubControlPending, clubControlPlusButton,
                 baseCc   + playerData.spentClubControl, pendingClubControl, caps.clubControlCap, availableSP);
 
-            UpdateStatRow(recoveryBar,    recoveryBarPending,    recoveryValue,    recoveryPending,    recoveryPlusButton,
+            UpdateStatRow(recoveryBar,    recoveryBarPending,
+                recoveryValueCurrent,    recoveryValueMax,    recoveryPending,    recoveryPlusButton,
                 baseRec  + playerData.spentRecovery,    pendingRecovery,    caps.recoveryCap,    availableSP);
 
-            UpdateStatRow(staminaBar,     staminaBarPending,     staminaValue,     staminaPending,     staminaPlusButton,
+            UpdateStatRow(staminaBar,     staminaBarPending,
+                staminaValueCurrent,     staminaValueMax,     staminaPending,     staminaPlusButton,
                 baseStam + playerData.spentStamina,     pendingStamina,     caps.staminaCap,     availableSP);
 
             // --- Reset / Confirm button states ---
@@ -255,7 +263,8 @@ namespace Golfin.Roster
         /// </summary>
         private void UpdateStatRow(
             Image bar, Image barPending,
-            TextMeshProUGUI valueText, TextMeshProUGUI pendingText,
+            TextMeshProUGUI valueTextCurrent, TextMeshProUGUI valueTextMax,
+            TextMeshProUGUI pendingText,
             Button plusButton,
             int currentValue, int pendingAmount, int cap, int availableSP)
         {
@@ -274,9 +283,11 @@ namespace Golfin.Roster
                 barPending.gameObject.SetActive(pendingAmount > 0);
             }
 
-            // Value text: show current + pending preview
-            if (valueText != null)
-                valueText.text = $"{currentValue + pendingAmount}/{cap}";
+            // Value split: "10" (current font) + "/25" (smaller font)
+            if (valueTextCurrent != null)
+                valueTextCurrent.text = $"{currentValue + pendingAmount}";
+            if (valueTextMax != null)
+                valueTextMax.text = $"/{cap}";
 
             // "+N" pending label
             if (pendingText != null)
