@@ -28,7 +28,7 @@ namespace Golfin.Roster.Editor
             var controller = detailPanel.GetComponent<CompareController>();
             if (controller == null)
             {
-                controller = detailPanel.AddComponent<CompareController>();
+                controller = detailPanel.gameObject.AddComponent<CompareController>();
                 Debug.Log("[CompareAutoWire] Added CompareController to DetailPanel.");
             }
 
