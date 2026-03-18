@@ -78,15 +78,15 @@ namespace Golfin.Roster
         [SerializeField] private Button            resetButton         = null!;
         [SerializeField] private Button            cancelButton        = null!;
         [SerializeField] private Button            confirmButton       = null!;
-        [SerializeField] private Image             confirmButtonImage  = null!;
 
         // ── Colors ──────────────────────────────────────────────────────────
         [Header("Colors")]
-        [SerializeField] private Color activeButtonColor  = new Color(0.85f, 0.72f, 0.2f, 1f);  // gold
-        [SerializeField] private Color inactiveButtonColor = new Color(0.6f, 0.6f, 0.6f, 1f);   // gray
-        [SerializeField] private Color pendingBarColor    = new Color(1f, 0.7f, 0.2f, 1f);       // orange
-        [SerializeField] private Color normalBarColor     = new Color(0.2f, 0.6f, 1f, 1f);       // blue
-        [SerializeField] private Color greenTextColor     = new Color(0.2f, 0.8f, 0.2f, 1f);     // green
+        [SerializeField] private Color pendingBarColor  = new Color(1f, 0.7f, 0.2f, 1f);         // orange
+        [SerializeField] private Color normalBarColor   = new Color(0.2f, 0.6f, 1f, 1f);          // blue
+        [SerializeField] private Color greenTextColor   = new Color(0.2f, 0.8f, 0.2f, 1f);        // green — next level / reward
+        [SerializeField] private Color spAvailableColor = new Color(1f, 0.525f, 0.110f, 1f);      // #FF861C — SP available
+        [SerializeField] private Color spDepletedColor  = new Color(0.753f, 0.251f, 0f, 1f);      // #C04000 — no SP remaining
+        [SerializeField] private Color levelTextColor   = new Color(0.153f, 0.459f, 0.867f, 1f);  // #2775DD — level display
 
         // ── Preview State (local, not committed until Confirm) ──────────────
         private string characterId = "";
@@ -175,7 +175,10 @@ namespace Golfin.Roster
 
             int maxLevel = CharacterManager.Instance.GetMaxLevel(characterId);
             if (levelText != null)
-                levelText.text = $"Lv {previewLevel}/{maxLevel}";
+            {
+                levelText.text  = $"Lv {previewLevel}/{maxLevel}";
+                levelText.color = levelTextColor; // fixed #2775DD
+            }
 
             // --- Next Level / Cost / Reward ---
             bool isMaxLevel = previewLevel >= maxLevel;
@@ -219,7 +222,7 @@ namespace Golfin.Roster
             if (availableSPValue != null)
             {
                 availableSPValue.text  = $"{availableSP} SP";
-                availableSPValue.color = availableSP > 0 ? greenTextColor : Color.white;
+                availableSPValue.color = availableSP > 0 ? spAvailableColor : spDepletedColor;
             }
 
             // --- Stat Rows ---
@@ -250,10 +253,9 @@ namespace Golfin.Roster
             bool hasPending      = totalPending > 0;
             bool allSPAllocated  = availableSP == 0 && hasPending;
 
-            if (resetButton   != null) resetButton.interactable   = hasPending;
-            if (confirmButton != null) confirmButton.interactable  = allSPAllocated;
-            if (confirmButtonImage != null)
-                confirmButtonImage.color = allSPAllocated ? activeButtonColor : inactiveButtonColor;
+            if (resetButton   != null) resetButton.interactable  = hasPending;
+            if (confirmButton != null) confirmButton.interactable = allSPAllocated;
+            // Button visual state is handled by the Button's Color Tint transition — do NOT set Image.color here.
         }
 
         /// <summary>

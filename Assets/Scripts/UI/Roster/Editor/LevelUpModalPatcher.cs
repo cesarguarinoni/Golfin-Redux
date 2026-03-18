@@ -41,6 +41,27 @@ namespace Golfin.Roster.Editor
             EditorUtility.DisplayDialog("Done", $"Row alignment patched ({fixed_} rows updated).\nNo other changes made.", "OK");
         }
 
+        [MenuItem("GOLFIN/Patch LevelUpModal — PendingLabel Placement")]
+        public static void PatchPendingLabelPlacement()
+        {
+            var root = FindModalRoot();
+            if (root == null) return;
+
+            int fixed_ = 0;
+            fixed_ += PatchPendingLabel(root, "ModalPanel/SPSection/StatRow_Strength");
+            fixed_ += PatchPendingLabel(root, "ModalPanel/SPSection/StatRow_ClubControl");
+            fixed_ += PatchPendingLabel(root, "ModalPanel/SPSection/StatRow_Recovery");
+            fixed_ += PatchPendingLabel(root, "ModalPanel/SPSection/StatRow_Stamina");
+
+            MarkDirtyAndSave(root.gameObject);
+            Debug.Log($"[LevelUpPatcher] PendingLabel placement: {fixed_} row(s) adjusted.");
+            EditorUtility.DisplayDialog("Done",
+                $"PendingLabel placement: {fixed_} row(s) adjusted.\n" +
+                "PendingLabel is now the immediate sibling after StatName in each row.\n" +
+                "No sizes, fonts, or positions were changed.",
+                "OK");
+        }
+
         [MenuItem("GOLFIN/Patch LevelUpModal — Split Stat Values")]
         public static void PatchStatValues()
         {
@@ -136,7 +157,70 @@ namespace Golfin.Roster.Editor
             return changed ? 1 : 0;
         }
 
-        // ── Patch B: Split Stat Values ───────────────────────────────────────
+        // ── Patch B: PendingLabel Placement ─────────────────────────────────
+
+        /// <summary>
+        /// Ensures PendingLabel is the immediate sibling after StatName within the
+        /// same parent transform. If they share a parent with a HorizontalLayoutGroup,
+        /// PendingLabel will render inline to the right of StatName.
+        /// Does NOT change any sizes, fonts, RectTransform values, or component settings.
+        /// </summary>
+        private static int PatchPendingLabel(Transform root, string rowPath)
+        {
+            var row = root.Find(rowPath);
+            if (row == null)
+            {
+                Debug.LogWarning($"[LevelUpPatcher] '{rowPath}' not found — skipping.");
+                return 0;
+            }
+
+            var statName     = row.Find("StatName");
+            var pendingLabel = row.Find("PendingLabel");
+
+            if (statName == null)
+            {
+                Debug.LogWarning($"[LevelUpPatcher] {row.name}: 'StatName' not found — skipping.");
+                return 0;
+            }
+            if (pendingLabel == null)
+            {
+                Debug.LogWarning($"[LevelUpPatcher] {row.name}: 'PendingLabel' not found — skipping.");
+                return 0;
+            }
+
+            // Verify they share the same parent (must be in the same HLG to be inline)
+            if (statName.parent != pendingLabel.parent)
+            {
+                Debug.LogWarning($"[LevelUpPatcher] {row.name}: StatName and PendingLabel are in different parents " +
+                    $"('{statName.parent.name}' vs '{pendingLabel.parent.name}'). " +
+                    "Manual hierarchy fix needed — they must share the same HorizontalLayoutGroup.");
+                return 0;
+            }
+
+            var hlg = statName.parent.GetComponent<HorizontalLayoutGroup>();
+            if (hlg == null)
+            {
+                Debug.LogWarning($"[LevelUpPatcher] {row.name}: Parent '{statName.parent.name}' has no HorizontalLayoutGroup. " +
+                    "PendingLabel can't be inline without one.");
+                return 0;
+            }
+
+            int nameIndex    = statName.GetSiblingIndex();
+            int pendingIndex = pendingLabel.GetSiblingIndex();
+            int targetIndex  = nameIndex + 1;
+
+            if (pendingIndex == targetIndex)
+            {
+                Debug.Log($"[LevelUpPatcher] {row.name}: PendingLabel already at correct sibling index {targetIndex} — skipped.");
+                return 0;
+            }
+
+            pendingLabel.SetSiblingIndex(targetIndex);
+            Debug.Log($"[LevelUpPatcher] {row.name}: Moved PendingLabel from index {pendingIndex} → {targetIndex} (after StatName).");
+            return 1;
+        }
+
+        // ── Patch D: Split Stat Values ───────────────────────────────────────
 
         /// <summary>
         /// In a stat row, replaces the single "StatValue" TMP with two siblings:

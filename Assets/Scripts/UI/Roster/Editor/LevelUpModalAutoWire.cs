@@ -79,10 +79,10 @@ namespace Golfin.Roster.Editor
                 ref wired, ref failed);
 
             // ── Action Buttons ───────────────────────────────────────────────
-            wired += WireButton(so, "resetButton",   root, "ModalPanel/SPSection/ResetButton",          ref failed);
-            wired += WireButton(so, "cancelButton",  root, "ModalPanel/FooterSection/CancelButton",     ref failed);
-            wired += WireButton(so, "confirmButton", root, "ModalPanel/FooterSection/ConfirmButton",    ref failed);
-            wired += WireImage(so,  "confirmButtonImage", root, "ModalPanel/FooterSection/ConfirmButton", ref failed);
+            wired += WireButton(so, "resetButton",   root, "ModalPanel/SPSection/ResetButton",       ref failed);
+            wired += WireButton(so, "cancelButton",  root, "ModalPanel/FooterSection/CancelButton",  ref failed);
+            wired += WireButton(so, "confirmButton", root, "ModalPanel/FooterSection/ConfirmButton", ref failed);
+            // confirmButtonImage removed — button state handled by Color Tint transition, not Image.color
 
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(controller);
