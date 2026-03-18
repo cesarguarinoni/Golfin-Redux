@@ -87,7 +87,7 @@ This survives any hierarchy reorganisation the user makes.
 using UnityEngine.InputSystem;
 
 // Key check (replaces Input.GetKeyDown):
-if (Keyboard.current != null && Keyboard.current[Key.BackQuote].wasPressedThisFrame) { }
+if (Keyboard.current != null && Keyboard.current[Key.Backquote].wasPressedThisFrame) { }
 
 // Mouse button (replaces Input.GetMouseButtonDown(0)):
 if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) { }
