@@ -30,7 +30,7 @@ public class RewardPointsDebugPanel : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current[Key.BackQuote].wasPressedThisFrame)
+        if (Keyboard.current != null && Keyboard.current[Key.Backquote].wasPressedThisFrame)
             _visible = !_visible;
     }
 
