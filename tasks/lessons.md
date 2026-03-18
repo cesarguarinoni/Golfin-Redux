@@ -76,6 +76,25 @@ foreach (var img in Object.FindObjectsOfType<Image>())
 ```
 This survives any hierarchy reorganisation the user makes.
 
+## ScreenManager Must Drive PersistentUIManager Bar Visibility
+
+**Mistake:** `PersistentUIManager` had `ShowBars()`/`HideBars()` but nothing called them.
+`Awake()` hides bars; there was no code to show them when navigating to Home or Roster.
+
+**Rule:** Any screen manager that controls screen transitions MUST also call
+`PersistentUIManager.Instance?.ShowBars()` / `HideBars()` in the same `ApplyScreen()` method.
+Never leave bar visibility untriggered — it will silently stay hidden.
+
+**Pattern:**
+```csharp
+bool showBars = screenId == ScreenId.Home || screenId == ScreenId.Roster;
+if (Golfin.UI.PersistentUIManager.Instance != null)
+{
+    if (showBars) Golfin.UI.PersistentUIManager.Instance.ShowBars();
+    else          Golfin.UI.PersistentUIManager.Instance.HideBars();
+}
+```
+
 ## Always Use New Input System — Never UnityEngine.Input
 
 **Mistake:** Used `Input.GetKeyDown(KeyCode)` in a debug script. Project uses the New Input System package, so the legacy `UnityEngine.Input` class throws InvalidOperationException at runtime.
