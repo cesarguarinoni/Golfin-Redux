@@ -95,6 +95,14 @@ namespace GolfinRedux.UI
                 Debug.LogWarning("[ScreenManager] _rosterScreen is NULL!");
             }
             // Settings is an overlay (SettingsController), not managed here
+
+            // Show persistent bars only on Home and Roster; hide on Logo/Splash/Loading
+            bool showBars = screenId == ScreenId.Home || screenId == ScreenId.Roster;
+            if (Golfin.UI.PersistentUIManager.Instance != null)
+            {
+                if (showBars) Golfin.UI.PersistentUIManager.Instance.ShowBars();
+                else          Golfin.UI.PersistentUIManager.Instance.HideBars();
+            }
         }
     }
 }
