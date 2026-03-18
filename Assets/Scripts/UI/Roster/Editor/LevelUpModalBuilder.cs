@@ -198,12 +198,12 @@ namespace Golfin.Roster.Editor
             {
                 var row = MakeRect("CostRow", info.transform);
                 LayoutEl(row, preferredHeight: 22);
-                var layout = row.AddComponent<HorizontalLayoutGroup>();
-                layout.childAlignment        = TextAnchor.MiddleLeft;
-                layout.childControlWidth     = true;
-                layout.childControlHeight    = true;
-                layout.childForceExpandWidth  = false; // spacer takes remaining space
-                layout.childForceExpandHeight = true;
+                var costLayout = row.AddComponent<HorizontalLayoutGroup>();
+                costLayout.childAlignment        = TextAnchor.MiddleLeft;
+                costLayout.childControlWidth     = true;
+                costLayout.childControlHeight    = true;
+                costLayout.childForceExpandWidth  = false; // spacer takes remaining space
+                costLayout.childForceExpandHeight = true;
 
                 MakeTMP("CostLabel", row.transform, "COST", 15, TextAlignmentOptions.Left);
 
@@ -223,12 +223,12 @@ namespace Golfin.Roster.Editor
             {
                 var row = MakeRect("RewardRow", info.transform);
                 LayoutEl(row, preferredHeight: 22);
-                var layout = row.AddComponent<HorizontalLayoutGroup>();
-                layout.childAlignment        = TextAnchor.MiddleLeft;
-                layout.childControlWidth     = true;
-                layout.childControlHeight    = true;
-                layout.childForceExpandWidth  = false;
-                layout.childForceExpandHeight = true;
+                var rewardLayout = row.AddComponent<HorizontalLayoutGroup>();
+                rewardLayout.childAlignment        = TextAnchor.MiddleLeft;
+                rewardLayout.childControlWidth     = true;
+                rewardLayout.childControlHeight    = true;
+                rewardLayout.childForceExpandWidth  = false;
+                rewardLayout.childForceExpandHeight = true;
 
                 MakeTMP("RewardLabel", row.transform, "REWARD", 15, TextAlignmentOptions.Left);
 
