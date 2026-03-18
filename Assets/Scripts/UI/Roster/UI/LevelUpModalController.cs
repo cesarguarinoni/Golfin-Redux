@@ -161,7 +161,17 @@ namespace Golfin.Roster
         {
             var playerData = CharacterManager.Instance.GetCharacterData(characterId);
             var csvChar    = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
-            if (playerData == null) return;
+            if (playerData == null)
+            {
+                Debug.LogError($"[LevelUpModal] RefreshDisplay: playerData null for '{characterId}'");
+                return;
+            }
+
+            if (CharacterLevelUpDatabase.Instance == null)
+            {
+                Debug.LogError("[LevelUpModal] CharacterLevelUpDatabase not found — modal cannot open. Is it in the scene?");
+                return;
+            }
 
             // --- Header ---
             if (characterNameText != null)

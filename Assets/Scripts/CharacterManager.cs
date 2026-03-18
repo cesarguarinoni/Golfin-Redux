@@ -170,9 +170,7 @@ namespace Golfin.Roster
         /// </summary>
         public int GetMaxLevel(string characterId)
         {
-            var template = GetCharacterTemplate(characterId);
-            if (template == null) return 199;
-            // All characters share the same max level (199) for now
+            // All characters share the same max level (199) — no template lookup needed
             return 199;
         }
 
