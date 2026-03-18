@@ -231,6 +231,12 @@ namespace Golfin.Roster.Editor
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color     = new Color(0.65f, 0.65f, 0.65f, 1f);
 
+            // ── CanvasGroup for FadeIn/FadeOut ────────────────────────────────
+            // Pre-add so FadeOut/FadeIn never need to call AddComponent at runtime,
+            // which can fail or produce stale references depending on object state.
+            var panelCG = clone.GetComponent<CanvasGroup>() ?? clone.AddComponent<CanvasGroup>();
+            panelCG.alpha = 0f;  // starts invisible; FadeIn will animate to 1
+
             // ── Initial visibility ────────────────────────────────────────────
             placeholder.SetActive(true);   // shown until a character is picked
             infoPanel.SetActive(false);    // hidden until a character is picked

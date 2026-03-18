@@ -464,7 +464,13 @@ namespace Golfin.Roster
         // ── Small Utilities ────────────────────────────────────────────────────
 
         private static CanvasGroup GetOrAddCG(GameObject obj)
-            => obj.GetComponent<CanvasGroup>() ?? obj.AddComponent<CanvasGroup>();
+        {
+            // Do NOT use ?? here — Unity's == null is overloaded; ?? uses C# reference equality
+            // and can return a stale/missing component reference, causing MissingComponentException.
+            var cg = obj.GetComponent<CanvasGroup>();
+            if (cg == null) cg = obj.AddComponent<CanvasGroup>();
+            return cg;
+        }
 
         private static void SetAlpha(GameObject obj, float alpha)
         {
