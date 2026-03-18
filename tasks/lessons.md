@@ -53,3 +53,25 @@ in the Unity Inspector.
 ### Gold color for selected state
 Use `new Color(1f, 0.8f, 0.2f, 1f)` as gold for selected button tint.
 Apply via `selectButton.GetComponent<Image>().color = goldColor`.
+
+## Editor Fix Scripts — Use Generic Component Search, Not Hardcoded Paths
+
+**Mistake:** FixBarImageTypes.cs used hardcoded Transform.Find() paths. When the user had reorganised the hierarchy for layout fixes, the script missed bars that had moved.
+
+**Rule:** One-shot fix/patch editor scripts that target a component type across the scene should use `Object.FindObjectsOfType<T>()` or recursive search by component, filtered by name if needed — never hardcoded full paths. Hardcoded paths are brittle and break silently when the user adjusts the hierarchy.
+
+**Pattern to use:**
+```csharp
+// Find ALL Image components in scene, filter by GameObject name
+foreach (var img in Object.FindObjectsOfType<Image>())
+{
+    if (img.gameObject.name == "Bar" || img.gameObject.name == "BarPending")
+    {
+        img.type = Image.Type.Filled;
+        img.fillMethod = Image.FillMethod.Horizontal;
+        img.fillOrigin = 0;
+        EditorUtility.SetDirty(img);
+    }
+}
+```
+This survives any hierarchy reorganisation the user makes.
