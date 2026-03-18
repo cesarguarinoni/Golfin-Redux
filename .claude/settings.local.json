@@ -4,7 +4,13 @@
       "Bash(git checkout:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(powershell -File Docs/generate_audit.ps1)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File Docs/generate_audit.ps1)",
+      "Bash(powershell -Command \"Get-Content -Encoding UTF8 ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Docs\\\\generate_audit.ps1'' | Select-Object -Last 10 | ForEach-Object { [System.BitConverter]::ToString\\([System.Text.Encoding]::UTF8.GetBytes\\($_\\) }\")",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"& { \\(Get-Content ''C:/Users/cesar/GolfinRedux/Docs/generate_audit.ps1'' -Raw\\) -split ''\\\\n'' | Select-Object -Last 10 | ForEach-Object { Write-Host \\([int[]][char[]]$_ } }\")",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"Select-String -Path ''Docs/generate_audit.ps1'' -Pattern ''[^\\\\x00-\\\\x7F]'' | Select-Object LineNumber, Line\")"
     ]
   }
 }
