@@ -81,9 +81,8 @@ namespace Golfin.Roster
 
         // ── Colors ──────────────────────────────────────────────────────────
         [Header("Colors")]
-        [SerializeField] private Color pendingBarColor  = new Color(1f, 0.7f, 0.2f, 1f);         // orange
-        [SerializeField] private Color normalBarColor   = new Color(0.2f, 0.6f, 1f, 1f);          // blue
-        [SerializeField] private Color greenTextColor   = new Color(0.2f, 0.8f, 0.2f, 1f);        // green — next level / reward
+        [SerializeField] private Color pendingBarColor  = new Color(1f, 0.7f, 0.2f, 1f);         // orange — pending label text
+        [SerializeField] private Color greenTextColor   = new Color(0.2f, 0.8f, 0.2f, 1f);        // green — reward value
         [SerializeField] private Color spAvailableColor = new Color(1f, 0.525f, 0.110f, 1f);      // #FF861C — SP available
         [SerializeField] private Color spDepletedColor  = new Color(0.753f, 0.251f, 0f, 1f);      // #C04000 — no SP remaining
         [SerializeField] private Color levelTextColor   = new Color(0.153f, 0.459f, 0.867f, 1f);  // #2775DD — level display
@@ -176,8 +175,10 @@ namespace Golfin.Roster
             int maxLevel = CharacterManager.Instance.GetMaxLevel(characterId);
             if (levelText != null)
             {
-                levelText.text  = $"Lv {previewLevel}/{maxLevel}";
-                levelText.color = levelTextColor; // fixed #2775DD
+                levelText.text = $"Lv {previewLevel}/{maxLevel}";
+                // Only tint blue once a preview level-up has happened; otherwise leave Editor colour
+                if (previewLevel > playerData.currentLevel)
+                    levelText.color = levelTextColor; // #2775DD
             }
 
             // --- Next Level / Cost / Reward ---
@@ -201,7 +202,7 @@ namespace Golfin.Roster
                 if (nextLevelValue != null)
                 {
                     nextLevelValue.text  = $"Lv {nextLevel}";
-                    nextLevelValue.color = greenTextColor;
+                    nextLevelValue.color = levelTextColor; // #2775DD
                 }
                 if (costValue   != null) costValue.text   = nextCost.ToString();
                 if (rewardValue != null)
@@ -270,18 +271,14 @@ namespace Golfin.Roster
             Button plusButton,
             int currentValue, int pendingAmount, int cap, int availableSP)
         {
-            // Blue bar — confirmed stat value
+            // Blue bar — confirmed stat value (colour left as-is on the Image)
             if (bar != null)
-            {
                 bar.fillAmount = cap > 0 ? (float)currentValue / cap : 0f;
-                bar.color      = normalBarColor;
-            }
 
-            // Orange bar — current + pending (only delta shows, as blue bar covers the base)
+            // Orange bar — current + pending, colour already on the Image
             if (barPending != null)
             {
                 barPending.fillAmount = cap > 0 ? (float)(currentValue + pendingAmount) / cap : 0f;
-                barPending.color      = pendingBarColor;
                 barPending.gameObject.SetActive(pendingAmount > 0);
             }
 

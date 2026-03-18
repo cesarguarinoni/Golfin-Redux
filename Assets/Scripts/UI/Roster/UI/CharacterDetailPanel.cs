@@ -65,10 +65,7 @@ namespace Golfin.Roster
         [Header("Carousel Reference")]
         [SerializeField] private CarouselController? carousel;
 
-        [Header("Colors")]
-        [SerializeField] private Color normalBarColor = new Color(0.2f, 0.6f, 1f, 1f);    // Blue
-        [SerializeField] private Color criticalBarColor = new Color(0.9f, 0.2f, 0.2f, 1f); // Red
-        [SerializeField] private Color maxBarColor = new Color(0.2f, 1f, 0.4f, 1f);        // Green
+        // Bar colours removed — Image colours are set on the sprites in the Editor
 
         private string currentCharacterId = "";
         private const float LOW_STAMINA_THRESHOLD = 0.25f;
@@ -175,12 +172,6 @@ namespace Golfin.Roster
             UpdateStatBar(staminaName, staminaBar, staminaNumber, "STAMINA",
                 playerData.currentStamina, RarityStatCaps.GetStatCap(rarity, "Stamina"));
 
-            // Override stamina bar color if energy is low
-            if (playerData.IsStaminaLow(LOW_STAMINA_THRESHOLD) && staminaBar != null)
-            {
-                staminaBar.color = criticalBarColor;
-            }
-
             // --- Status Icons ---
             if (selectedIcon != null)
                 selectedIcon.SetActive(playerData.isSelected);
@@ -223,15 +214,8 @@ namespace Golfin.Roster
                 numberField.text = $"{currentValue}/{capValue}";
 
             if (bar != null)
-            {
-                float fillAmount = capValue > 0 ? (float)currentValue / capValue : 0f;
-                bar.fillAmount = fillAmount;
-
-                if (fillAmount >= 1f)
-                    bar.color = maxBarColor;
-                else
-                    bar.color = normalBarColor;
-            }
+                bar.fillAmount = capValue > 0 ? (float)currentValue / capValue : 0f;
+            // Bar colour left as-is on the Image — set in Editor
         }
 
         // --- Event Handlers ---
@@ -256,10 +240,7 @@ namespace Golfin.Roster
 
             if (selectButton != null)
                 selectButton.interactable = !isSelected;
-
-            var selectImage = selectButton?.GetComponent<Image>();
-            if (selectImage != null)
-                selectImage.color = isSelected ? new Color(1f, 0.8f, 0.2f, 1f) : Color.white;
+            // Button visual state handled by Color Tint transition — do NOT set Image.color here
         }
 
         // --- Button Click Handlers ---
