@@ -75,3 +75,20 @@ foreach (var img in Object.FindObjectsOfType<Image>())
 }
 ```
 This survives any hierarchy reorganisation the user makes.
+
+## Always Use New Input System — Never UnityEngine.Input
+
+**Mistake:** Used `Input.GetKeyDown(KeyCode)` in a debug script. Project uses the New Input System package, so the legacy `UnityEngine.Input` class throws InvalidOperationException at runtime.
+
+**Rule:** ALWAYS use `UnityEngine.InputSystem` in this project. Never use `UnityEngine.Input`.
+
+**Pattern:**
+```csharp
+using UnityEngine.InputSystem;
+
+// Key check (replaces Input.GetKeyDown):
+if (Keyboard.current != null && Keyboard.current[Key.BackQuote].wasPressedThisFrame) { }
+
+// Mouse button (replaces Input.GetMouseButtonDown(0)):
+if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) { }
+```
