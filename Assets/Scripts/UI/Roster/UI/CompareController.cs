@@ -272,6 +272,9 @@ namespace Golfin.Roster
             if (compareBoostButton != null)
                 compareBoostButton.interactable = false; // not yet implemented
 
+            // Hide Compare button on right panel — already in compare mode
+            SafeSetActive(compareRightCompareButton?.gameObject, false);
+
             UpdateRightColumnButtons(playerData.isSelected);
         }
 
