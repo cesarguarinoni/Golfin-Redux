@@ -1,5 +1,6 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Golfin.Roster;
 
 /// <summary>
@@ -10,9 +11,6 @@ using Golfin.Roster;
 /// </summary>
 public class RewardPointsDebugPanel : MonoBehaviour
 {
-    [Header("Toggle Key")]
-    [SerializeField] private KeyCode toggleKey = KeyCode.BackQuote; // ` / ~
-
     private bool _visible = false;
     private string _inputText = "";
 
@@ -32,7 +30,7 @@ public class RewardPointsDebugPanel : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(toggleKey))
+        if (Keyboard.current != null && Keyboard.current[Key.BackQuote].wasPressedThisFrame)
             _visible = !_visible;
     }
 
