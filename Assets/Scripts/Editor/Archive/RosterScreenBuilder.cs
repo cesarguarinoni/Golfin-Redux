@@ -15,7 +15,7 @@ namespace Golfin.Roster.Editor
     {
         private const string PREFAB_PATH = "Assets/Prefabs/UI/Roster/";
         
-        [MenuItem("Tools/GOLFIN/Roster/Build Complete Roster Screen", priority = 1)]
+        // [MenuItem - archived]
         public static void BuildFromScratch()
         {
             Debug.Log("[RosterBuilder] Starting complete Roster Screen build...");

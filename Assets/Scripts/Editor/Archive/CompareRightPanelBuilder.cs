@@ -39,7 +39,7 @@ namespace Golfin.Roster.Editor
     /// </summary>
     public static class CompareRightPanelBuilder
     {
-        [MenuItem("GOLFIN/Build Compare Right Panel")]
+        // [MenuItem - archived]
         public static void Build()
         {
             var detailPanel = FindDetailPanel();

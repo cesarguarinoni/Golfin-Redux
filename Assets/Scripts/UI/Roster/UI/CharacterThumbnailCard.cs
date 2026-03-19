@@ -55,9 +55,10 @@ namespace Golfin.Roster
                 return;
             }
 
-            // CSV-first, SO fallback (matches CharacterDetailPanel pattern)
+            // CSV-first, SO fallback — only query ScriptableObject if CSV has nothing
+            // (avoids "[CharacterDatabase] not found" warnings for CSV-only characters)
             var csvData = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
-            var soData = CharacterManager.Instance.GetCharacterTemplate(characterId);
+            var soData = csvData == null ? CharacterManager.Instance.GetCharacterTemplate(characterId) : null;
 
             if (csvData == null && soData == null)
             {

@@ -13,7 +13,7 @@ namespace Golfin.Roster.Editor
     /// </summary>
     public static class FixBarImageTypes
     {
-        [MenuItem("GOLFIN/Fix Bar Image Types")]
+        // [MenuItem - archived]
         public static void Fix()
         {
             int fixed_ = 0, missing = 0;

@@ -1,6 +1,8 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using System.Collections.Generic;
 using Golfin.Roster;
 
 namespace Golfin.Roster.Editor
@@ -71,6 +73,43 @@ namespace Golfin.Roster.Editor
                 PlayerPrefs.DeleteAll();
                 PlayerPrefs.Save();
                 Debug.Log("[Roster Debug] Player progress reset.");
+            }
+        }
+
+        // ── Scene Cleanup ─────────────────────────────────────────────────────────
+
+        [MenuItem("GOLFIN/Debug/Remove Missing Scripts From Scene", priority = 401)]
+        public static void RemoveMissingScripts()
+        {
+            var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+            int removed = 0;
+            var dirtyObjects = new List<GameObject>();
+
+            foreach (var go in allObjects)
+            {
+                // Skip prefab assets in the project — only process scene objects
+                if (!go.scene.IsValid()) continue;
+
+                int count = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(go);
+                if (count > 0)
+                {
+                    Undo.RegisterCompleteObjectUndo(go, "Remove Missing Scripts");
+                    GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+                    removed += count;
+                    dirtyObjects.Add(go);
+                    Debug.Log($"[SceneCleanup] Removed {count} missing script(s) from '{go.name}'.");
+                }
+            }
+
+            if (removed > 0)
+            {
+                EditorSceneManager.MarkSceneDirty(
+                    UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+                Debug.Log($"[SceneCleanup] Done — removed {removed} missing script(s) total. Save the scene.");
+            }
+            else
+            {
+                Debug.Log("[SceneCleanup] No missing scripts found in the active scene.");
             }
         }
     }

@@ -26,7 +26,7 @@ namespace Golfin.Roster.Editor
     {
         // ── Menu items ───────────────────────────────────────────────────────
 
-        [MenuItem("GOLFIN/Patch LevelUpModal — Row Alignment")]
+        // [MenuItem - archived]
         public static void PatchRowAlignment()
         {
             var root = FindModalRoot();
@@ -41,7 +41,7 @@ namespace Golfin.Roster.Editor
             EditorUtility.DisplayDialog("Done", $"Row alignment patched ({fixed_} rows updated).\nNo other changes made.", "OK");
         }
 
-        [MenuItem("GOLFIN/Patch LevelUpModal — PendingLabel Placement")]
+        // [MenuItem - archived]
         public static void PatchPendingLabelPlacement()
         {
             var root = FindModalRoot();
@@ -62,7 +62,7 @@ namespace Golfin.Roster.Editor
                 "OK");
         }
 
-        [MenuItem("GOLFIN/Patch LevelUpModal — Split Stat Values")]
+        // [MenuItem - archived]
         public static void PatchStatValues()
         {
             var root = FindModalRoot();

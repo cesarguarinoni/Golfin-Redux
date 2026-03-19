@@ -40,7 +40,7 @@ namespace Golfin.Roster.Editor
             "2. Assign prefab + references in inspector\n" +
             "3. Run Phase 2a test to verify";
         
-        [MenuItem("Tools/GOLFIN/Build Roster Carousel (Phase 2a)")]
+        // [MenuItem - archived]
         public static void BuildCarousel()
         {
             Debug.Log("[RosterCarouselBuilder] Building Roster Carousel...");

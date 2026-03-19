@@ -21,7 +21,7 @@ namespace Golfin.Roster.Editor
         private static int testsPassed = 0;
         private static int testsFailed = 0;
         
-        [MenuItem("Tools/GOLFIN/Test Roster Phase 1")]
+        // [MenuItem - archived]
         public static void RunTests()
         {
             Debug.Log("\n========================================");

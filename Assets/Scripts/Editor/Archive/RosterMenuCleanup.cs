@@ -17,32 +17,32 @@ namespace Golfin.Roster.Editor
         // ═══════════════════════════════════════════════════════════════════════════
         
         // Priority 0-99: Main Build Tools
-        [MenuItem("Tools/GOLFIN/Roster/Build Complete Roster Screen", priority = 1)]
+        // [MenuItem - archived]
         public static void BuildCompleteRosterScreen()
         {
             RosterScreenBuilder.BuildFromScratch();
         }
         
-        [MenuItem("Tools/GOLFIN/Roster/Build Character Thumbnail Prefab", priority = 2)]
+        // [MenuItem - archived]
         public static void BuildCharacterThumbnailPrefab()
         {
             RosterPrefabBuilder.BuildCharacterThumbnailCard();
         }
         
-        [MenuItem("Tools/GOLFIN/Roster/Build StatBar Prefab", priority = 3)]
+        // [MenuItem - archived]
         public static void BuildStatBarPrefab()
         {
             RosterPrefabBuilder.BuildStatBar();
         }
         
         // Priority 100-199: Testing Tools
-        [MenuItem("Tools/GOLFIN/Roster/Test Phase 1 (Data)", priority = 101)]
+        // [MenuItem - archived]
         public static void TestPhase1()
         {
             RosterPhase1TestRunner.RunTests();
         }
         
-        [MenuItem("Tools/GOLFIN/Roster/Test Carousel", priority = 102)]
+        // [MenuItem - archived]
         public static void TestCarousel()
         {
             // Future: Test carousel in isolation
@@ -50,7 +50,7 @@ namespace Golfin.Roster.Editor
         }
         
         // Priority 200-299: Debug/Utility Tools
-        [MenuItem("Tools/GOLFIN/Roster/Debug: List All Characters", priority = 201)]
+        // [MenuItem - archived]
         public static void DebugListCharacters()
         {
             var characters = CharacterManager.Instance.GetAllOwnedCharacters();
@@ -61,7 +61,7 @@ namespace Golfin.Roster.Editor
             }
         }
         
-        [MenuItem("Tools/GOLFIN/Roster/Debug: Validate References", priority = 202)]
+        // [MenuItem - archived]
         public static void DebugValidateReferences()
         {
             var rosterScreen = GameObject.Find("RosterScreen");
@@ -83,7 +83,7 @@ namespace Golfin.Roster.Editor
         }
         
         // Priority 300-399: Data Management
-        [MenuItem("Tools/GOLFIN/Roster/Data: Reset Player Progress", priority = 301)]
+        // [MenuItem - archived]
         public static void ResetPlayerProgress()
         {
             if (EditorUtility.DisplayDialog(
@@ -98,7 +98,7 @@ namespace Golfin.Roster.Editor
             }
         }
         
-        [MenuItem("Tools/GOLFIN/Roster/Data: Grant 100000 Reward Points", priority = 302)]
+        // [MenuItem - archived]
         public static void GrantRewardPoints()
         {
             if (!Application.isPlaying)

@@ -26,7 +26,7 @@ namespace Golfin.Roster.Editor
     /// </summary>
     public static class LevelUpModalBuilder
     {
-        [MenuItem("GOLFIN/Build Level Up Modal")]
+        // [MenuItem - archived]
         public static void Build()
         {
             var rosterScreen = FindRosterScreen();

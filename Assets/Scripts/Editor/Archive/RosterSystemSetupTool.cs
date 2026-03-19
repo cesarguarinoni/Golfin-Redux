@@ -21,7 +21,7 @@ namespace Golfin.Roster.Editor
             "• RewardPointsManager\n\n" +
             "All references are wired. You're ready for Phase 2 UI!";
         
-        [MenuItem("Tools/GOLFIN/Setup Roster System (Phase 1)")]
+        // [MenuItem - archived]
         public static void SetupRosterSystem()
         {
             Debug.Log("[RosterSystemSetupTool] Starting Roster System Phase 1 setup...");

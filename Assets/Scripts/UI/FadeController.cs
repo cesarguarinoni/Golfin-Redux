@@ -23,7 +23,8 @@ namespace GolfinRedux.UI
 
             Instance = this;
             _canvasGroup = GetComponent<CanvasGroup>();
-            DontDestroyOnLoad(gameObject); // optional if ShellScene persists
+            // DontDestroyOnLoad intentionally omitted: FadeController lives inside Canvas,
+            // which is not a root GameObject. ShellScene persists anyway.
         }
 
         public void FadeIn(float? duration = null)
