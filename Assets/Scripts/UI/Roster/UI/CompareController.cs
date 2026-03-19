@@ -134,7 +134,7 @@ namespace Golfin.Roster
 
             // Refresh right column if a character is loaded
             if (!string.IsNullOrEmpty(_rightCharacterId))
-                PopulateRightColumn(_rightCharacterId);
+                RefreshRightColumn(_rightCharacterId);
         }
 
         // ── Enter / Exit ───────────────────────────────────────────────────────
