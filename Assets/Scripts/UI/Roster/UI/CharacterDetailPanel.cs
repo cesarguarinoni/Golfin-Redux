@@ -61,6 +61,7 @@ namespace Golfin.Roster
 
         [Header("Modals")]
         [SerializeField] private LevelUpModalController? levelUpModal;
+        [SerializeField] private RectTransform? levelUpAnchorPanel; // wire to RightPanel
 
         [Header("Compare")]
         [SerializeField] private CompareController? compareController;
@@ -266,8 +267,15 @@ namespace Golfin.Roster
 
         private void OnLevelUpClicked()
         {
-            if (levelUpModal != null && !string.IsNullOrEmpty(currentCharacterId))
-                levelUpModal.Open(currentCharacterId);
+            if (levelUpModal == null || string.IsNullOrEmpty(currentCharacterId)) return;
+
+            // In compare mode the detail panel is sharing the screen, so anchor
+            // the modal to RightPanel only. Outside compare, use the default
+            // full-screen centre (no anchor) — exactly as before.
+            var anchor = (compareController != null && compareController.IsCompareMode)
+                ? levelUpAnchorPanel
+                : null;
+            levelUpModal.Open(currentCharacterId, anchor);
         }
 
         private void OnBoostClicked()

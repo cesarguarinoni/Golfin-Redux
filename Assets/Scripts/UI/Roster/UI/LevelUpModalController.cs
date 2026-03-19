@@ -87,11 +87,10 @@ namespace Golfin.Roster
         [SerializeField] private Color spDepletedColor  = new Color(0.753f, 0.251f, 0f, 1f);      // #C04000 — no SP remaining
         [SerializeField] private Color levelTextColor   = new Color(0.153f, 0.459f, 0.867f, 1f);  // #2775DD — level display
 
-        // ── Anchor (optional — reparent modal to a specific panel) ─────────
-        private Transform? _originalParent;
-        private Vector2 _savedContainerAnchorMin, _savedContainerAnchorMax;
-        private Vector2 _savedContainerOffsetMin, _savedContainerOffsetMax;
-        private Vector2 _savedModalPanelAnchoredPos;
+        // ── Anchor (optional — reposition modalPanel over a specific panel) ─
+        // LevelUpModal itself is never reparented — the backdrop child must stay
+        // under RosterScreen so it darkens the entire screen, not just one panel.
+        private Vector3? _savedModalLocalPos;
 
         // ── Preview State (local, not committed until Confirm) ──────────────
         private string characterId = "";
@@ -139,38 +138,23 @@ namespace Golfin.Roster
         {
             this.characterId = characterId;
 
-            // Reparent to anchor panel so the modal appears centred within it
-            if (anchorPanel != null)
+            // Move modalPanel to centre over anchorPanel without reparenting.
+            // Keeping LevelUpModal under RosterScreen means the backdrop darkens
+            // the full screen, not just the anchor panel.
+            if (anchorPanel != null && modalPanel != null)
             {
-                var containerRt = GetComponent<RectTransform>();
-                if (containerRt != null)
-                {
-                    // Save container state for restore
-                    _originalParent            = transform.parent;
-                    _savedContainerAnchorMin   = containerRt.anchorMin;
-                    _savedContainerAnchorMax   = containerRt.anchorMax;
-                    _savedContainerOffsetMin   = containerRt.offsetMin;
-                    _savedContainerOffsetMax   = containerRt.offsetMax;
+                // World-space centre of the anchor panel.
+                Vector3 anchorWorldCentre = anchorPanel.TransformPoint(anchorPanel.rect.center);
 
-                    transform.SetParent(anchorPanel, false);
-                    containerRt.anchorMin = Vector2.zero;
-                    containerRt.anchorMax = Vector2.one;
-                    containerRt.offsetMin = Vector2.zero;
-                    containerRt.offsetMax = Vector2.zero;
-                }
+                // Convert to LevelUpModal's local space (= modalPanel's parent space).
+                // Because LevelUpModal is stretch-full its local origin is the pivot
+                // (centre of RosterScreen), so InverseTransformPoint gives us the
+                // exact localPosition we need.
+                Vector3 targetLocal = transform.InverseTransformPoint(anchorWorldCentre);
+                targetLocal.z = 0f;
 
-                // modalPanel has anchoredPosition = (0, -230) which was designed for the full
-                // RosterScreen. Inside a smaller anchor panel that offset pushes it off-screen.
-                // Force it to centre (0, 0) and restore on hide.
-                if (modalPanel != null)
-                {
-                    var mpRt = modalPanel.GetComponent<RectTransform>();
-                    if (mpRt != null)
-                    {
-                        _savedModalPanelAnchoredPos = mpRt.anchoredPosition;
-                        mpRt.anchoredPosition = Vector2.zero;
-                    }
-                }
+                _savedModalLocalPos           = modalPanel.transform.localPosition;
+                modalPanel.transform.localPosition = targetLocal;
             }
 
             var playerData = CharacterManager.Instance.GetCharacterData(characterId);
@@ -405,28 +389,25 @@ namespace Golfin.Roster
         /// </summary>
         protected override void OnHide()
         {
-            if (_originalParent == null) return;
+            if (!_savedModalLocalPos.HasValue) return;
 
-            // Restore modalPanel's anchoredPosition
-            if (modalPanel != null)
-            {
-                var mpRt = modalPanel.GetComponent<RectTransform>();
-                if (mpRt != null)
-                    mpRt.anchoredPosition = _savedModalPanelAnchoredPos;
-            }
+            // Defer the restore until the FadeOut coroutine finishes and
+            // ModalController.HideImmediate() deactivates modalPanel.
+            // Restoring immediately would snap the dialog to its default
+            // position while it is still visible and mid-fade.
+            StartCoroutine(RestorePositionAfterFade());
+        }
 
-            // Restore container parent and RectTransform
-            var containerRt = GetComponent<RectTransform>();
-            transform.SetParent(_originalParent, false);
-            if (containerRt != null)
-            {
-                containerRt.anchorMin = _savedContainerAnchorMin;
-                containerRt.anchorMax = _savedContainerAnchorMax;
-                containerRt.offsetMin = _savedContainerOffsetMin;
-                containerRt.offsetMax = _savedContainerOffsetMax;
-            }
+        private System.Collections.IEnumerator RestorePositionAfterFade()
+        {
+            // Wait until the fade is done and the panel has been hidden.
+            while (modalPanel != null && modalPanel.activeSelf)
+                yield return null;
 
-            _originalParent = null;
+            if (modalPanel != null && _savedModalLocalPos.HasValue)
+                modalPanel.transform.localPosition = _savedModalLocalPos.Value;
+
+            _savedModalLocalPos = null;
         }
 
         private void OnCancelClicked()
