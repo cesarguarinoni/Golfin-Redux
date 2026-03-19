@@ -36,6 +36,7 @@ namespace Golfin.Roster
         private int totalPages = 1;
         private string selectedCharacterId = "";
         private bool viewportExpanded = false;
+        private bool _isAnimating = false;  // true during arrow smooth-scroll; suppresses swipe listener
         
         // Events
         public event System.Action<string> OnCharacterSelected; // Change to event
@@ -237,6 +238,8 @@ namespace Golfin.Roster
         {
             if (scrollRect == null) yield break;
 
+            _isAnimating = true;
+
             float elapsed  = 0f;
             float startPos = scrollRect.horizontalNormalizedPosition;
 
@@ -249,6 +252,7 @@ namespace Golfin.Roster
             }
 
             scrollRect.horizontalNormalizedPosition = targetPos;
+            _isAnimating = false;
         }
         
         /// <summary>
@@ -296,6 +300,28 @@ namespace Golfin.Roster
                 Debug.Log("[CarouselController] paginationDotsParent not assigned — dots skipped.");
             }
 
+            RefreshDotColors();
+            UpdateArrowButtonStates();
+
+            // Swipe/drag listener — fires on every frame the user moves the scroll view
+            if (scrollRect != null)
+                scrollRect.onValueChanged.AddListener(OnScrollValueChanged);
+        }
+
+        /// <summary>
+        /// Called by ScrollRect every frame during a drag. Skipped during arrow animation.
+        /// </summary>
+        private void OnScrollValueChanged(Vector2 scrollPos)
+        {
+            if (_isAnimating || totalPages <= 1) return;
+
+            int newPage = Mathf.Clamp(
+                Mathf.RoundToInt(scrollPos.x * (totalPages - 1)),
+                0, totalPages - 1);
+
+            if (newPage == currentPage) return;
+
+            currentPage = newPage;
             RefreshDotColors();
             UpdateArrowButtonStates();
         }
