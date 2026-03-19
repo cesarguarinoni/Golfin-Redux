@@ -36,6 +36,9 @@ namespace Golfin.Inventory.Editor
         private const float TABBAR_H    = 50f;
         private const float INDICATOR_H = 3f;   // underline thickness
         private const float FILTERBAR_H = 48f;
+        // Persistent nav bar heights — must match ShellScene TopBar / BottomNavBar sizeDelta.y
+        private const float TOPBAR_H    = 321f;
+        private const float BOTTOMNAV_H = 196f;
 
         [MenuItem("GOLFIN/Build Inventory Screen")]
         public static void Run()
@@ -109,6 +112,68 @@ namespace Golfin.Inventory.Editor
             Debug.Log("[InventoryScreenBuilder] ✓ InventoryScreen built and wired.");
         }
 
+        // ── Quick layout patcher (for existing scenes without a full rebuild) ─
+
+        [MenuItem("GOLFIN/Patch - Fix InventoryScreen Layout")]
+        public static void PatchLayout()
+        {
+            // Find InventoryScreen in scene
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            Transform inventoryScreen = null;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                var t = root.transform.Find("ScreensRoot/InventoryScreen")
+                     ?? FindByName(root.transform, "InventoryScreen");
+                if (t != null) { inventoryScreen = t; break; }
+            }
+
+            if (inventoryScreen == null)
+            {
+                EditorUtility.DisplayDialog("Patch InventoryScreen Layout",
+                    "InventoryScreen not found.\nRun GOLFIN/Build Inventory Screen first.", "OK");
+                return;
+            }
+
+            var rt = inventoryScreen.GetComponent<RectTransform>();
+            if (rt == null)
+            {
+                EditorUtility.DisplayDialog("Patch InventoryScreen Layout",
+                    "InventoryScreen has no RectTransform!", "OK");
+                return;
+            }
+
+            Undo.RecordObject(rt, "Fix InventoryScreen Layout");
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(0f,  BOTTOMNAV_H);
+            rt.offsetMax = new Vector2(0f, -TOPBAR_H);
+            EditorUtility.SetDirty(rt);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+
+            EditorUtility.DisplayDialog("Patch InventoryScreen Layout",
+                $"Done!\n\n" +
+                $"InventoryScreen RectTransform updated:\n" +
+                $"  offsetMin.y = +{BOTTOMNAV_H}  (clears BottomNavBar)\n" +
+                $"  offsetMax.y = -{TOPBAR_H}  (clears TopBar)\n\n" +
+                $"Save the scene and enter Play Mode to verify.",
+                "OK");
+
+            Debug.Log($"[InventoryScreenBuilder] ✓ InventoryScreen layout patched " +
+                      $"(offsetMin.y={BOTTOMNAV_H}, offsetMax.y={-TOPBAR_H}).");
+        }
+
+        private static Transform FindByName(Transform parent, string name)
+        {
+            if (parent.name == name) return parent;
+            foreach (Transform child in parent)
+            {
+                var result = FindByName(child, name);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
         // ── Root ─────────────────────────────────────────────────────────────
 
         private static RectTransform BuildRoot(Transform screensRoot)
@@ -118,8 +183,9 @@ namespace Golfin.Inventory.Editor
             var rt = go.AddComponent<RectTransform>();
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
+            // Inset so content is never hidden behind the persistent TopBar or BottomNavBar
+            rt.offsetMin = new Vector2(0f,  BOTTOMNAV_H);   // push up from bottom nav
+            rt.offsetMax = new Vector2(0f, -TOPBAR_H);      // push down from top bar
 
             // Background — semi-transparent dark so it's clearly visible
             var bg = go.AddComponent<Image>();
