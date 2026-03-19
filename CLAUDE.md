@@ -10,6 +10,7 @@ Before doing anything else:
 3. Read `Docs/ARCHITECTURE_AUDIT.md` (just generated — file tree, singletons, events, health check)
 4. Read any `Docs/PHASE_*_SPEC.md` files (active task specs from architect)
 5. Read `tasks/lessons.md` for relevant project lessons
+6. Read Docs/TellCode.md for any pending instructions from architect
 
 ## Session End (EVERY SESSION)
 
@@ -41,6 +42,31 @@ Get-Content -Path "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Wait -Tail 10
 ```
 
 Note: Log resets each time Unity Editor starts. Contains a lot of noise from asset imports and compilation — always filter.
+
+### Screenshots for visual review
+Take a screenshot of the Game View for Claude (architect) to compare against references:
+- In Unity Play mode, navigate to the screen you want to capture
+- Menu: **GOLFIN > Screenshot > Capture Game View**
+- Screenshot saves to `Assets/Screenshots/screenshot_YYYY-MM-DD_HH-mm-ss.png`
+- Claude (architect) reads it directly via filesystem access at `C:\Users\cesar\GolfinRedux`
+- Reference images are in `Assets/References/` with `_compressed` subfolders for comparison
+- Screenshots and references must be compressed (max 800px wide) for Claude to read them:
+  ```powershell
+  pip install Pillow  # first time only
+  powershell -File Docs/compress_screenshots.ps1 "Assets/Screenshots"
+  ```
+
+Workflow:
+1. Claude Code builds/changes UI
+2. Navigate to the screen in Play mode
+3. Run GOLFIN > Screenshot > Capture Game View
+4. Compress: `powershell -File Docs/compress_screenshots.ps1 "Assets/Screenshots"`
+5. Claude reads `Assets/Screenshots/_compressed/` and compares against references
+
+### TellCode.md workflow
+- Claude (architect) writes instructions to `Docs/TellCode.md`
+- Claude Code reads this file at the start of each task
+- After completing, add a status line at the bottom of the file
 
 ---
 
