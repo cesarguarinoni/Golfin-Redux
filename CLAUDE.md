@@ -237,6 +237,17 @@ Canvas > ScreensRoot > RosterScreen
 
 ---
 
+## Conventions
+
+### Localization
+- All **new** user-facing text should use localization keys from the start: `LocalizationManager.GetText("KEY")`
+- Use the pattern `SCREEN_ELEMENT` (e.g., `ROSTER_LEVEL_UP`, `HOME_PLAY_BUTTON`, `MODAL_CONFIRM`)
+- Add both EN and JP entries to the localization CSV when creating new text
+- Legacy hardcoded text will be migrated in a dedicated localization pass (not yet scheduled)
+- Rich text tags like `<color=#EEDC9A>` are supported in localization values — TMP handles them natively
+
+---
+
 ## Development Docs
 
 | File | Purpose |
