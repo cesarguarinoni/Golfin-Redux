@@ -17,9 +17,9 @@ namespace Golfin.Roster
         [Header("CSV File")]
         [SerializeField] private TextAsset charactersCSV;
 
-        [Header("Sprites")]
-        [SerializeField] private Sprite[] characterPortraits;    // Thumbnail sprites — assign in Inspector
-        [SerializeField] private Sprite[] fullBodyPortraits;     // Full-body detail panel sprites — assign in Inspector
+        // Sprites are loaded at runtime from Resources/Portraits/ — no Inspector assignment needed.
+        private const string ThumbnailResourcesPath = "Portraits/Thumbnails";
+        private const string FullBodyResourcesPath  = "Portraits/FullBody";
 
         private Dictionary<string, CharacterDataRuntime> characterMap = new Dictionary<string, CharacterDataRuntime>();
         private List<CharacterDataRuntime> allCharacters = new List<CharacterDataRuntime>();
@@ -186,39 +186,22 @@ namespace Golfin.Roster
 
         private Sprite? FindSpriteByName(string spriteName)
         {
-            if (characterPortraits == null || characterPortraits.Length == 0)
-            {
-                Debug.LogWarning($"[CharacterDatabaseCSV] No character portraits assigned in Inspector!");
-                return null;
-            }
+            if (string.IsNullOrEmpty(spriteName)) return null;
 
-            foreach (var sprite in characterPortraits)
-            {
-                if (sprite != null && sprite.name == spriteName)
-                {
-                    return sprite;
-                }
-            }
-
-            Debug.LogWarning($"[CharacterDatabaseCSV] Sprite '{spriteName}' not found in characterPortraits array");
-            return null;
+            var sprite = Resources.Load<Sprite>($"{ThumbnailResourcesPath}/{spriteName}");
+            if (sprite == null)
+                Debug.LogWarning($"[CharacterDatabaseCSV] Thumbnail sprite '{spriteName}' not found in Resources/{ThumbnailResourcesPath}/");
+            return sprite;
         }
 
         private Sprite? FindFullBodySpriteByName(string spriteName)
         {
             if (string.IsNullOrEmpty(spriteName)) return null;
 
-            if (fullBodyPortraits != null)
-            {
-                foreach (var sprite in fullBodyPortraits)
-                {
-                    if (sprite != null && sprite.name == spriteName)
-                        return sprite;
-                }
-            }
-
-            Debug.LogWarning($"[CharacterDatabaseCSV] Full-body sprite '{spriteName}' not found in fullBodyPortraits array");
-            return null;
+            var sprite = Resources.Load<Sprite>($"{FullBodyResourcesPath}/{spriteName}");
+            if (sprite == null)
+                Debug.LogWarning($"[CharacterDatabaseCSV] Full-body sprite '{spriteName}' not found in Resources/{FullBodyResourcesPath}/");
+            return sprite;
         }
 
         /// <summary>
