@@ -12,7 +12,11 @@
       "Bash(powershell -ExecutionPolicy Bypass -Command \"& { \\(Get-Content ''C:/Users/cesar/GolfinRedux/Docs/generate_audit.ps1'' -Raw\\) -split ''\\\\n'' | Select-Object -Last 10 | ForEach-Object { Write-Host \\([int[]][char[]]$_ } }\")",
       "Bash(powershell -ExecutionPolicy Bypass -Command \"Select-String -Path ''Docs/generate_audit.ps1'' -Pattern ''[^\\\\x00-\\\\x7F]'' | Select-Object LineNumber, Line\")",
       "Bash(powershell -File C:/Users/cesar/GolfinRedux/Docs/generate_audit.ps1)",
-      "Bash(C:/Users/cesar/GolfinRedux/Assets/Localization/LocalizationText.csv:*)"
+      "Bash(C:/Users/cesar/GolfinRedux/Assets/Localization/LocalizationText.csv:*)",
+      "Bash(powershell.exe -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 500 | Select-String ''InventoryScreen|FilterBar|ClubsContent|Build Inventory|ClubsMain''\")",
+      "Bash(powershell.exe -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 30\")",
+      "Bash(powershell.exe -Command \"Select-String -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scenes\\\\ShellScene.unity'' -Pattern ''FilterBar|Viewport|ClubsContent|ClubsMainSection|InventoryScreen'' | Select-Object -First 40 | ForEach-Object { $_Line.Trim\\(\\) }\")",
+      "Bash(powershell.exe -Command \":*)"
     ]
   }
 }
