@@ -8,7 +8,8 @@ namespace GolfinRedux.UI
         Splash,
         Loading,
         Home,
-        Roster
+        Roster,
+        Inventory
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -19,6 +20,8 @@ namespace GolfinRedux.UI
     /// </summary>
     public class ScreenManager : MonoBehaviour
     {
+        public static ScreenManager? Instance { get; private set; }
+
         [SerializeField] private ScreenId _initialScreen = ScreenId.Logo;
 
         [Header("Screen Containers")]
@@ -27,9 +30,16 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _loadingScreen;
         [SerializeField] private GameObject _homeScreen;
         [SerializeField] private GameObject _rosterScreen;
+        [SerializeField] private GameObject _inventoryScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         private ScreenId _currentScreen;
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+            Instance = this;
+        }
 
         private void Start()
         {
@@ -94,10 +104,16 @@ namespace GolfinRedux.UI
             {
                 Debug.LogWarning("[ScreenManager] _rosterScreen is NULL!");
             }
+
+            if (_inventoryScreen != null)
+                _inventoryScreen.SetActive(screenId == ScreenId.Inventory);
+
             // Settings is an overlay (SettingsController), not managed here
 
-            // Show persistent bars only on Home and Roster; hide on Logo/Splash/Loading
-            bool showBars = screenId == ScreenId.Home || screenId == ScreenId.Roster;
+            // Show persistent bars on Home, Roster, and Inventory; hide on Logo/Splash/Loading
+            bool showBars = screenId == ScreenId.Home
+                         || screenId == ScreenId.Roster
+                         || screenId == ScreenId.Inventory;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
                 if (showBars) Golfin.UI.PersistentUIManager.Instance.ShowBars();

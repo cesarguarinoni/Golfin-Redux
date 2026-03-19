@@ -192,8 +192,28 @@ namespace Golfin.UI
             currentScreen = screen;
             UpdateScreenHighlight();
 
-            // Handle screen navigation
-            // TODO: Implement actual screen switching logic
+            var sm = GolfinRedux.UI.ScreenManager.Instance;
+            if (sm == null)
+            {
+                Debug.LogWarning("[PersistentUI] ScreenManager.Instance is null — cannot navigate.");
+                return;
+            }
+
+            switch (screen)
+            {
+                case Screen.Home:
+                    sm.ShowScreen(GolfinRedux.UI.ScreenId.Home);
+                    break;
+                case Screen.Inventory:
+                    sm.ShowScreen(GolfinRedux.UI.ScreenId.Inventory);
+                    break;
+                case Screen.Characters:
+                    sm.ShowScreen(GolfinRedux.UI.ScreenId.Roster);
+                    break;
+                default:
+                    Debug.LogWarning($"[PersistentUI] Navigation to {screen} not yet implemented.");
+                    break;
+            }
         }
 
         private void UpdateScreenHighlight()
