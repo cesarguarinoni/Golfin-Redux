@@ -149,7 +149,8 @@ namespace Golfin.Roster.Editor
             var controller = detailPanel.GetComponent<CompareController>();
             if (controller == null) { Debug.LogError("[StatusIconBuilder] CompareController component not found."); return false; }
 
-            // Parent: CompareRightPanel/CompareInfoPanel (mirror of RightPanel — same layout)
+            // Parent: CompareRightPanel/CompareInfoPanel/CharacterNamePanel
+            // Mirror the RightPanel structure exactly — icons live inside CharacterNamePanel.
             var infoPanel = detailPanel.Find("CompareRightPanel/CompareInfoPanel");
             if (infoPanel == null)
             {
@@ -157,15 +158,32 @@ namespace Golfin.Roster.Editor
                 return false;
             }
 
-            // Clean up any old row placed inside CharacterNamePanel
-            var oldRow = infoPanel.Find("CharacterNamePanel/StatusIconsRow");
-            if (oldRow != null) Object.DestroyImmediate(oldRow.gameObject);
+            // Clean up any stale rows that landed in the wrong place
+            var staleRoot     = infoPanel.Find("StatusIconsRow");
+            var staleNamePane = infoPanel.Find("CharacterNamePanel/StatusIconsRow");
+            if (staleRoot     != null) Object.DestroyImmediate(staleRoot.gameObject);
+            if (staleNamePane != null) Object.DestroyImmediate(staleNamePane.gameObject);
 
-            var row = GetOrCreateIconRow(infoPanel, "StatusIconsRow", iconSize: 28f, spacing: 6f,
-                                         anchorMin: new Vector2(1f, 1f),
-                                         anchorMax: new Vector2(1f, 1f),
-                                         pivot:     new Vector2(1f, 1f),
-                                         anchoredPosition: new Vector2(-8f, -86f));
+            var namePanel = infoPanel.Find("CharacterNamePanel");
+            if (namePanel == null)
+            {
+                Debug.LogError("[StatusIconBuilder] CompareInfoPanel/CharacterNamePanel not found.");
+                return false;
+            }
+
+            // Place row inside CharacterNamePanel — same parent as the working RightPanel row.
+            // Add ignoreLayout so the parent VLG cannot override the position.
+            // CharacterNamePanel is 489×120; anchor top-right, 8px inset.
+            var row = GetOrCreateIconRow(namePanel, "StatusIconsRow", iconSize: 28f, spacing: 6f,
+                                         anchorMin:        new Vector2(1f, 1f),
+                                         anchorMax:        new Vector2(1f, 1f),
+                                         pivot:            new Vector2(1f, 1f),
+                                         anchoredPosition: new Vector2(-8f, -8f));
+
+            // ignoreLayout frees the row from the VerticalLayoutGroup on CharacterNamePanel
+            var le = row.gameObject.GetComponent<LayoutElement>()
+                  ?? row.gameObject.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
 
             var selectedGO  = GetOrCreateIcon(row, "IconSelectedBig",  ART_PATH + "IconSelectedBig.png",  28f);
             var levelUpGO   = GetOrCreateIcon(row, "IconLevelUpBig",   ART_PATH + "IconLevelUpBig.png",   28f);
