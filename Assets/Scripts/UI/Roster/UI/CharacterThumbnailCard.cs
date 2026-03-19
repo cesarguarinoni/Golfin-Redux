@@ -62,7 +62,6 @@ namespace Golfin.Roster
 
             // Resolve rarity
             CharacterRarity rarity = csvData?.rarity ?? soData?.rarity ?? CharacterRarity.Common;
-            var rarityColor = RarityHelper.GetRarityColor(rarity);
             var rarityLabel = RarityHelper.GetRarityLabel(rarity);
             var rarityBadgeTextColor = RarityHelper.GetRarityBadgeTextColor(rarity);
 
@@ -101,9 +100,20 @@ namespace Golfin.Roster
                 levelText.text = $"Lv {playerChar.currentLevel}/{maxLevel}";
             }
 
-            // Set background color to match rarity
+            // Load rarity background sprite — enum name matches filename exactly
             if (backgroundImage != null)
-                backgroundImage.color = rarityColor;
+            {
+                var bgSprite = Resources.Load<Sprite>($"Rarities/{rarity}");
+                if (bgSprite != null)
+                {
+                    backgroundImage.sprite = bgSprite;
+                    backgroundImage.color  = Color.white; // no tint — sprite has the correct color
+                }
+                else
+                {
+                    Debug.LogWarning($"[CharacterThumbnailCard] Rarity sprite 'Rarities/{rarity}' not found in Resources.");
+                }
+            }
 
             // Wire button
             if (cardButton != null)
