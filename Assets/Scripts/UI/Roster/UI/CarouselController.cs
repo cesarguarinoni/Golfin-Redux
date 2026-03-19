@@ -33,6 +33,7 @@ namespace Golfin.Roster
         private List<Image> paginationDots = new List<Image>();
         private ScrollRect scrollRect;
         private int currentPage = 0;
+        private int totalPages = 1;
         private string selectedCharacterId = "";
         private bool viewportExpanded = false;
         
@@ -57,16 +58,7 @@ namespace Golfin.Roster
         {
             PopulateCarousel();
             SetupArrowButtons();
-            
-            // Pagination dots are optional
-            if (paginationDotPrefab != null && paginationDotsParent != null)
-            {
-                UpdatePaginationDots();
-            }
-            else
-            {
-                Debug.Log("[CarouselController] Pagination dots disabled (prefab not assigned)");
-            }
+            SetupPagination();
         }
         
         /// <summary>
@@ -164,10 +156,8 @@ namespace Golfin.Roster
             
             // Select first character by default
             if (cards.Count > 0)
-            {
                 SelectCharacter(cards[0].GetCharacterId());
-            }
-            
+
             Debug.Log($"[CarouselController] Populated with {cards.Count} cards");
         }
         
@@ -215,126 +205,122 @@ namespace Golfin.Roster
         }
         
         /// <summary>
-        /// Setup left/right arrow buttons
+        /// Wire arrow buttons — called once in Start after PopulateCarousel.
         /// </summary>
         private void SetupArrowButtons()
         {
             if (leftArrowButton != null)
-                leftArrowButton.onClick.AddListener(ScrollLeft);
-            
+                leftArrowButton.onClick.AddListener(() => GoToPage(currentPage - 1));
+
             if (rightArrowButton != null)
-                rightArrowButton.onClick.AddListener(ScrollRight);
-            
+                rightArrowButton.onClick.AddListener(() => GoToPage(currentPage + 1));
+        }
+
+        /// <summary>
+        /// Navigate to a page, smooth-scroll, and refresh UI state.
+        /// </summary>
+        private void GoToPage(int page)
+        {
+            page = Mathf.Clamp(page, 0, totalPages - 1);
+            if (page == currentPage) return;
+            currentPage = page;
+
+            // Normalized position: page 0 → 0.0, last page → 1.0
+            float targetPos = totalPages > 1 ? (float)currentPage / (totalPages - 1) : 0f;
+            StartCoroutine(SmoothScroll(targetPos));
+
+            RefreshDotColors();
             UpdateArrowButtonStates();
         }
-        
-        /// <summary>
-        /// Scroll carousel left
-        /// </summary>
-        public void ScrollLeft()
-        {
-            if (currentPage > 0)
-            {
-                currentPage--;
-                ScrollToPage(currentPage);
-                UpdatePaginationDots();
-                UpdateArrowButtonStates();
-            }
-        }
-        
-        /// <summary>
-        /// Scroll carousel right
-        /// </summary>
-        public void ScrollRight()
-        {
-            int maxPages = Mathf.CeilToInt((float)cards.Count / cardsPerPage) - 1;
-            if (currentPage < maxPages)
-            {
-                currentPage++;
-                ScrollToPage(currentPage);
-                UpdatePaginationDots();
-                UpdateArrowButtonStates();
-            }
-        }
-        
-        /// <summary>
-        /// Scroll to specific page
-        /// </summary>
-        private void ScrollToPage(int page)
-        {
-            if (scrollRect == null) return;
-            
-            // Calculate target scroll position
-            float cardWidth = 1f / cards.Count;
-            float targetScrollPos = page * cardWidth * cardsPerPage / (float)cards.Count;
-            targetScrollPos = Mathf.Clamp01(targetScrollPos);
-            
-            // Smooth scroll
-            StartCoroutine(SmoothScroll(targetScrollPos));
-        }
-        
+
         private System.Collections.IEnumerator SmoothScroll(float targetPos)
         {
-            float elapsedTime = 0f;
+            if (scrollRect == null) yield break;
+
+            float elapsed  = 0f;
             float startPos = scrollRect.horizontalNormalizedPosition;
-            
-            while (elapsedTime < scrollSmoothness)
+
+            while (elapsed < scrollSmoothness)
             {
-                elapsedTime += Time.deltaTime;
-                float t = elapsedTime / scrollSmoothness;
-                scrollRect.horizontalNormalizedPosition = Mathf.Lerp(startPos, targetPos, t);
+                elapsed += Time.deltaTime;
+                scrollRect.horizontalNormalizedPosition =
+                    Mathf.Lerp(startPos, targetPos, elapsed / scrollSmoothness);
                 yield return null;
             }
-            
+
             scrollRect.horizontalNormalizedPosition = targetPos;
         }
         
         /// <summary>
-        /// Update pagination dots to show current page
+        /// Build pagination dots once after PopulateCarousel. Creates dots from the
+        /// prefab if assigned, otherwise falls back to a minimal runtime dot.
         /// </summary>
-        private void UpdatePaginationDots()
+        private void SetupPagination()
         {
-            // Safety check
-            if (paginationDotPrefab == null || paginationDotsParent == null)
-            {
-                return;
-            }
-            
-            // Clear existing dots
+            totalPages = Mathf.CeilToInt(cards.Count > 0 ? (float)cards.Count / cardsPerPage : 1);
+            currentPage = 0;
+
             paginationDots.Clear();
-            foreach (Transform child in paginationDotsParent)
+
+            if (paginationDotsParent != null)
             {
-                Destroy(child.gameObject);
-            }
-            
-            // Create new dots
-            int totalPages = Mathf.CeilToInt((float)cards.Count / cardsPerPage);
-            for (int i = 0; i < totalPages; i++)
-            {
-                var dotGO = Instantiate(paginationDotPrefab, paginationDotsParent);
-                var dotImage = dotGO.GetComponent<Image>();
-                
-                if (dotImage != null)
+                // Remove any dots left over from a previous populate
+                foreach (Transform child in paginationDotsParent)
+                    Destroy(child.gameObject);
+
+                for (int i = 0; i < totalPages; i++)
                 {
-                    dotImage.color = (i == currentPage) ? Color.white : new Color(1, 1, 1, 0.5f);
-                    paginationDots.Add(dotImage);
+                    Image dotImg;
+
+                    if (paginationDotPrefab != null)
+                    {
+                        dotImg = Instantiate(paginationDotPrefab, paginationDotsParent)
+                                    .GetComponent<Image>();
+                    }
+                    else
+                    {
+                        // Runtime fallback: 16×16 white circle
+                        var dotGO = new GameObject($"Dot_{i}", typeof(RectTransform), typeof(Image));
+                        dotGO.transform.SetParent(paginationDotsParent, false);
+                        var rt = dotGO.GetComponent<RectTransform>();
+                        rt.sizeDelta = new Vector2(16f, 16f);
+                        dotImg = dotGO.GetComponent<Image>();
+                    }
+
+                    if (dotImg != null)
+                        paginationDots.Add(dotImg);
                 }
             }
+            else
+            {
+                Debug.Log("[CarouselController] paginationDotsParent not assigned — dots skipped.");
+            }
+
+            RefreshDotColors();
+            UpdateArrowButtonStates();
         }
-        
+
         /// <summary>
-        /// Update arrow button states (disable when at start/end)
+        /// Update dot colours only — no allocation.
+        /// </summary>
+        private void RefreshDotColors()
+        {
+            for (int i = 0; i < paginationDots.Count; i++)
+            {
+                if (paginationDots[i] != null)
+                    paginationDots[i].color = i == currentPage
+                        ? Color.white
+                        : new Color(1f, 1f, 1f, 0.35f);
+            }
+        }
+
+        /// <summary>
+        /// Disable left arrow on first page, right arrow on last page.
         /// </summary>
         private void UpdateArrowButtonStates()
         {
-            if (leftArrowButton != null)
-                leftArrowButton.interactable = (currentPage > 0);
-            
-            if (rightArrowButton != null)
-            {
-                int maxPages = Mathf.CeilToInt((float)cards.Count / cardsPerPage) - 1;
-                rightArrowButton.interactable = (currentPage < maxPages);
-            }
+            if (leftArrowButton  != null) leftArrowButton.interactable  = currentPage > 0;
+            if (rightArrowButton != null) rightArrowButton.interactable = currentPage < totalPages - 1;
         }
         
         /// <summary>
