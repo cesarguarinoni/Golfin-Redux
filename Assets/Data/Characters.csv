@@ -1,13 +1,13 @@
 id,name,lastName,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,portraitSprite,portraitFull,maxLevel,bio
+char_james,James,Cartwright,Common,6,7,6,6,James,BigRosterJames,199,A dependable player just starting out on the tour.
+char_olivia,Olivia,Guarinoni,Uncommon,7,8,6,7,Olivia,BigRosterOlivia,199,A rising talent with solid fundamentals.
+char_richard,Richard,Brenson,Mythic,11,10,10,11,Richard,BigRosterRichard,199,A seasoned pro with decades of experience.
 char_elizabeth,Elizabeth,Blackwood,Rare,8,10,7,9,Elizabeth,BigRosterElizabeth,199,"Elizabeth Blackwood, 46, a maverick from Cornwall, earned her Ladies European Tour spot through precision. With three decades on coastal courses her impeccable control makes her the top mentor for young talents."
 char_shae,Shae,O'Connell,Legendary,12,8,15,10,Shae,BigRosterShae,199,"Shae O'Connell, 23, from County Clare, earned her Ladies European Tour card through finesse and course smarts. Decades on windswept links make her an ideal mentor for players refining control."
-char_james,James,Cartwright,Common,6,7,6,6,James,BigRosterJames,199,A dependable player just starting out on the tour.
-char_olivia,Olivia,Guarinoni,Uncommon,7,8,6,7,Olivia,,199,A rising talent with solid fundamentals.
-char_camila,Camila,Perez,Rare,9,9,8,8,Camila,,199,A versatile player known for consistency.
-char_alejandro,Guillermo,Abravanel,Mythic,10,11,9,12,Alejandro,,199,A powerful hitter with natural talent.
-char_ean,Ean,McCormick,Uncommon,7,7,7,7,Ean,,199,A balanced player with room to grow.
+char_camila,Camila,Perez,Rare,9,9,8,8,Camila,BigRosterCamila,199,A versatile player known for consistency.
+char_alejandro,Guillermo,Abravanel,Mythic,10,11,9,12,Guillermo,,199,A powerful hitter with natural talent.
+char_ean,Ean,McCormick,Uncommon,7,7,7,7,Ean,BigRosterEan,199,A balanced player with room to grow.
 char_freda,Freda,Faarlund,Supreme,15,12,18,14,Freda,,199,A legendary figure on the tour circuit.
-char_johan,Johan,Christofferson,Rare,8,10,7,10,Johan,,199,Known for his precise short game.
+char_johan,Johan,Christofferson,Rare,8,10,7,10,Johan,BigRosterJohan,199,Known for his precise short game.
 char_mike,Mike,Millar,Common,6,6,7,7,Mike,,199,An enthusiastic newcomer to competitive golf.
-char_richard,Richard,Brenson,Mythic,11,10,10,11,Richard,,199,A seasoned pro with decades of experience.
 char_roshana,Roshana,Smith,Legendary,13,9,14,11,Roshana,,199,A fierce competitor with an unshakeable mindset.

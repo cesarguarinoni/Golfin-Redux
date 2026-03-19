@@ -1,12 +1,13 @@
 # Architecture Audit
 
-> Auto-generated 2026-03-18 06:59. Do not edit manually.
+> Auto-generated 2026-03-19 12:26. Do not edit manually.
 
 ## File Tree (Scripts)
 
 ```
 Assets/Scripts/Audio/AudioManager.cs
 Assets/Scripts/CharacterManager.cs
+Assets/Scripts/Debug/RewardPointsDebugPanel.cs
 Assets/Scripts/UI/AboutSubmenu.cs
 Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs
 Assets/Scripts/UI/Editor/MenuItemRemover.cs
@@ -30,7 +31,14 @@ Assets/Scripts/UI/Roster/Data/ManualSPAllocation.cs
 Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs
 Assets/Scripts/UI/Roster/Data/RarityStatCaps.cs
 Assets/Scripts/UI/Roster/Data/StatAllocationStrategy.cs
+Assets/Scripts/UI/Roster/Editor/CompareAutoWire.cs
+Assets/Scripts/UI/Roster/Editor/CompareRightPanelBuilder.cs
 Assets/Scripts/UI/Roster/Editor/DetailPanelAutoWire.cs
+Assets/Scripts/UI/Roster/Editor/FixBarImageTypes.cs
+Assets/Scripts/UI/Roster/Editor/LevelUpModalAutoWire.cs
+Assets/Scripts/UI/Roster/Editor/LevelUpModalBuilder.cs
+Assets/Scripts/UI/Roster/Editor/LevelUpModalPatcher.cs
+Assets/Scripts/UI/Roster/Editor/PaginationDotSetup.cs
 Assets/Scripts/UI/Roster/Editor/RosterCarouselBuilder.cs
 Assets/Scripts/UI/Roster/Editor/RosterMenuCleanup.cs
 Assets/Scripts/UI/Roster/Editor/RosterPhase1TestRunner.cs
@@ -43,6 +51,8 @@ Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
 Assets/Scripts/UI/Roster/UI/CarouselController.cs
 Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs
 Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs
+Assets/Scripts/UI/Roster/UI/CompareController.cs
+Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs
 Assets/Scripts/UI/Roster/UI/RosterScreenController.cs
 Assets/Scripts/UI/Roster/UI/StatBar.cs
 Assets/Scripts/UI/ScreenDeactivator.cs
@@ -84,6 +94,7 @@ Assets/Data/README_HOLES.md.meta
 |---|---|---|---|
 | CharacterManager | Assets/Scripts/CharacterManager.cs | Yes |  |
 | AudioManager | Assets/Scripts/Audio/AudioManager.cs | Yes |  |
+| RewardPointsDebugPanel | Assets/Scripts/Debug/RewardPointsDebugPanel.cs | Yes |  |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs |  |  |
 | ExampleAutoWireScreen | Assets/Scripts/UI/ExampleAutoWireScreen.cs |  |  |
 | ExampleFullyAutoWired | Assets/Scripts/UI/ExampleAutoWireScreen.cs |  |  |
@@ -112,6 +123,7 @@ Assets/Data/README_HOLES.md.meta
 | CarouselController | Assets/Scripts/UI/Roster/UI/CarouselController.cs | Yes |  |
 | CharacterDetailPanel | Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs | Yes |  |
 | CharacterThumbnailCard | Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs | Yes |  |
+| CompareController | Assets/Scripts/UI/Roster/UI/CompareController.cs | Yes |  |
 | RosterScreenController | Assets/Scripts/UI/Roster/UI/RosterScreenController.cs | Yes |  |
 | StatBar | Assets/Scripts/UI/Roster/UI/StatBar.cs |  |  |
 
@@ -148,7 +160,7 @@ Assets/Data/README_HOLES.md.meta
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs | 5 |
 | FadeController | Assets/Scripts/UI/FadeController.cs | 1 |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | 2 |
-| HomeScreenController | Assets/Scripts/UI/HomeScreenController.cs | 43 |
+| HomeScreenController | Assets/Scripts/UI/HomeScreenController.cs | 42 |
 | LanguageSubmenu | Assets/Scripts/UI/LanguageSubmenu.cs | 6 |
 | LoadingBar | Assets/Scripts/UI/LoadingBar.cs | 2 |
 | LoadingScreenController | Assets/Scripts/UI/LoadingScreenController.cs | 5 |
@@ -164,10 +176,12 @@ Assets/Data/README_HOLES.md.meta
 | CharacterLevelUpDatabase | Assets/Scripts/UI/Roster/Data/CharacterLevelUpDatabase.cs | 1 |
 | PlayerCharacterData | Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs | 14 |
 | CharacterDatabase | Assets/Scripts/UI/Roster/Managers/CharacterDatabase.cs | 18 |
-| CharacterDatabaseCSV | Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs | 3 |
+| CharacterDatabaseCSV | Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs | 1 |
 | CarouselController | Assets/Scripts/UI/Roster/UI/CarouselController.cs | 9 |
 | CharacterDetailPanel | Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs | 29 |
 | CharacterThumbnailCard | Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs | 8 |
+| CompareController | Assets/Scripts/UI/Roster/UI/CompareController.cs | 30 |
+| LevelUpModalController | Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs | 40 |
 | RosterScreenController | Assets/Scripts/UI/Roster/UI/RosterScreenController.cs | 2 |
 | StatBar | Assets/Scripts/UI/Roster/UI/StatBar.cs | 7 |
 
@@ -183,7 +197,7 @@ char_elizabeth,1,100,1,30,30,20,27
 ### Characters.csv
 ```
 id,name,lastName,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,portraitSprite,portraitFull,maxLevel,bio
-char_elizabeth,Elizabeth,Blackwood,Rare,8,10,7,9,Elizabeth,BigRosterElizabeth,199,"Elizabeth Blackwood, 46, a maverick from Cornwall, earned her Ladies European Tour spot through precision. With three decades on coastal courses her impeccable control makes her the top mentor for young talents."
+char_james,James,Cartwright,Common,6,7,6,6,James,BigRosterJames,199,A dependable player just starting out on the tour.
 ```
 (13 rows)
 

@@ -32,29 +32,35 @@ MonoBehaviour:
     english: TAP FOR NEXT TIP
     japanese: "\u30BF\u30C3\u30D7\u3057\u3066\u6B21\u3078"
   - key: TIP_CLUB
-    english: HOLD THE CLUB BALL BUTTON TO ENTER YOUR BAGS IN-GAME
+    english: <color=#EEDC9A>HOLD</color> THE CLUB BALL BUTTON TO ENTER YOUR BAGS
+      IN-GAME
     japanese: "\u30AF\u30E9\u30D6\u30DC\u30BF\u30F3\u9577\u62BC\u3057\u3067\u30D0\u30C3\u30B0\u3092\u958B\u304F"
   - key: TIP_FORECAST
-    english: LANDINGFORECAST  DOES NOT FACTOR THE BALL'S RUN OR WIND. COMPENSATE
-      ACCORDINGLY
+    english: LANDING <color=#EEDC9A>FORECAST</color> DOES NOT FACTOR THE BALL'S RUN
+      OR WIND. COMPENSATE ACCORDINGLY
     japanese: "\u7740\u5730\u4E88\u6E2C\u306B\u306F\u30DC\u30FC\u30EB\u306E\u8EE2\u304C\u308A\u3068\u98A8\u306F\u542B\u307E\u308C\u307E\u305B\u3093"
   - key: TIP_RARITIES
-    english: DIFFERENT RARITIES  BESTOW DIFFERENT INITIAL STATS  AND MAX LEVEL
+    english: DIFFERENT <color=#EEDC9A>RARITIES</color> BESTOW DIFFERENT INITIAL STATS 
+      AND MAX</color> LEVEL
     japanese: "\u30EC\u30A2\u5EA6\u306B\u3088\u3063\u3066\u521D\u671F\u30B9\u30C6\u30FC\u30BF\u30B9\u3068\u6700\u5927\u30EC\u30D9\u30EB\u304C\u7570\u306A\u308A\u307E\u3059"
   - key: TIP_SWING
-    english: PULL  THE CLUB BACK THEN FLICK  IT FORWARD TO SWING
+    english: <color=#EEDC9A>PULL</color> THE CLUB BACK THEN FLICK  IT FORWARD TO
+      SWING
     japanese: "\u30AF\u30E9\u30D6\u3092\u5F15\u3044\u3066\u524D\u306B\u5F3E\u3044\u3066\u30B9\u30A4\u30F3\u30B0"
   - key: TIP_ACCURACY
-    english: FLICKER  THROUGH THE BALL FOR PERFECT ACCURACY
+    english: <color=#EEDC9A>FLICKER</color> THROUGH THE BALL FOR <color=#EEDC9A>PERFECT</color>
+      ACCURACY
     japanese: "\u30DC\u30FC\u30EB\u3092\u901A\u904E\u3055\u305B\u308B\u3068\u5B8C\u74A7\u306A\u7CBE\u5EA6"
   - key: TIP_LEADERBOARD
-    english: LOOK FOR THESE ICONS IN LEADERBOARDS  FOR LONGEST SHOTS
+    english: LOOK FOR THESE ICONS IN <color=#EEDC9A>LEADERBOARDS</colors> FOR LONGEST
+      SHOTS
     japanese: "\u30EA\u30FC\u30C0\u30FC\u30DC\u30FC\u30C9\u3067\u3053\u308C\u3089\u306E\u30A2\u30A4\u30B3\u30F3\u3092\u63A2\u3057\u3066\u6700\u9577\u30B7\u30E7\u30C3\u30C8"
   - key: TIP_TIMING
-    english: HIT THE BALL WHEN HIGHLIGHTED  FOR A PERFECT SHOT
+    english: HIT THE BALL WHEN <color=#EEDC9A>HIGHLIGHTED</color> FOR A PERFECT SHOT
     japanese: "\u30CF\u30A4\u30E9\u30A4\u30C8\u6642\u306B\u30DC\u30FC\u30EB\u3092\u6253\u3064\u3068\u5B8C\u74A7\u306A\u30B7\u30E7\u30C3\u30C8"
   - key: TIP_VIEW
-    english: DOUBLE TAP TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW
+    english: <color=#EEDC9A>DOUBLE TAP</color>TO SWITCH BETWEEN SHOT VIEW AND MAP
+      VIEW
     japanese: "\u30C0\u30D6\u30EB\u30BF\u30C3\u30D7\u3067\u30B7\u30E7\u30C3\u30C8\u30D3\u30E5\u30FC\u3068\u30DE\u30C3\u30D7\u30D3\u30E5\u30FC\u3092\u5207\u308A\u66FF\u3048"
   - key: HOME_CURRENCY_LABEL
     english: COINS
@@ -189,3 +195,90 @@ MonoBehaviour:
   - key: SETTINGS_ABOUT_LICENCES
     english: LICENCES
     japanese: 
+  - key: ROSTER_TITLE
+    english: ROSTER
+    japanese: "\u30ED\u30B9\u30BF\u30FC"
+  - key: ROSTER_STRENGTH
+    english: STRENGTH
+    japanese: "\u30B9\u30C8\u30EC\u30F3\u30B0\u30B9"
+  - key: ROSTER_CLUB_CONTROL
+    english: CLUB CONTROL
+    japanese: "\u30AF\u30E9\u30D6\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB"
+  - key: ROSTER_RECOVERY
+    english: RECOVERY
+    japanese: "\u30EA\u30AB\u30D0\u30EA\u30FC"
+  - key: ROSTER_STAMINA
+    english: STAMINA
+    japanese: "\u30B9\u30BF\u30DF\u30CA"
+  - key: ROSTER_LEVEL_UP
+    english: LEVEL UP
+    japanese: "\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7"
+  - key: ROSTER_BOOST
+    english: BOOST
+    japanese: "\u30D6\u30FC\u30B9\u30C8"
+  - key: ROSTER_BIO
+    english: BIO
+    japanese: "\u30D0\u30A4\u30AA"
+  - key: ROSTER_COMPARE
+    english: COMPARE
+    japanese: "\u6BD4\u8F03"
+  - key: ROSTER_SELECT
+    english: SELECT
+    japanese: "\u9078\u629E"
+  - key: ROSTER_SELECTED
+    english: SELECTED
+    japanese: "\u9078\u629E\u6E08\u307F"
+  - key: ROSTER_SWAP
+    english: SWAP
+    japanese: "\u4EA4\u63DB"
+  - key: MODAL_NEXT_LEVEL
+    english: NEXT LEVEL
+    japanese: "\u6B21\u306E\u30EC\u30D9\u30EB"
+  - key: MODAL_COST
+    english: COST
+    japanese: "\u30B3\u30B9\u30C8"
+  - key: MODAL_REWARD
+    english: REWARD
+    japanese: "\u5831\u916C"
+  - key: MODAL_LEVEL_UP
+    english: LEVEL UP
+    japanese: "\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7"
+  - key: MODAL_AVAILABLE_SP
+    english: AVAILABLE SP
+    japanese: "\u5229\u7528\u53EF\u80FDSP"
+  - key: MODAL_RESET
+    english: RESET
+    japanese: "\u30EA\u30BB\u30C3\u30C8"
+  - key: MODAL_CANCEL
+    english: CANCEL
+    japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  - key: MODAL_CONFIRM
+    english: CONFIRM
+    japanese: "\u78BA\u8A8D"
+  - key: MODAL_SP_SUFFIX
+    english: SP
+    japanese: SP
+  - key: COMPARE_EMPTY_PROMPT
+    english: TAP ON ANY OTHER CHARACTER TO COMPARE STATS
+    japanese: "\u4ED6\u306E\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u3092\u30BF\u30C3\u30D7\u3057\u3066\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u6BD4\u8F03"
+  - key: COMPARE_CLOSE
+    english: CLOSE COMPARE
+    japanese: "\u6BD4\u8F03\u3092\u9589\u3058\u308B"
+  - key: RARITY_COMMON
+    english: COMMON
+    japanese: "\u30B3\u30E2\u30F3"
+  - key: RARITY_UNCOMMON
+    english: UNCOMMON
+    japanese: "\u30A2\u30F3\u30B3\u30E2\u30F3"
+  - key: RARITY_RARE
+    english: RARE
+    japanese: "\u30EC\u30A2"
+  - key: RARITY_MYTHIC
+    english: MYTHIC
+    japanese: "\u30DF\u30B7\u30C3\u30AF"
+  - key: RARITY_LEGENDARY
+    english: LEGENDARY
+    japanese: "\u30EC\u30B8\u30A7\u30F3\u30C0\u30EA\u30FC"
+  - key: RARITY_SUPREME
+    english: SUPREME
+    japanese: "\u30B9\u30D7\u30EA\u30FC\u30E0"
