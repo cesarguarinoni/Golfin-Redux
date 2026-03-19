@@ -251,7 +251,8 @@ namespace Golfin.Inventory.Editor
 
         private static (RectTransform filterBar, Object[] buttons) BuildFilterBar(RectTransform clubsContent)
         {
-            // Outer container (clips scrolling)
+            // Simple flat container — HorizontalLayoutGroup distributes buttons evenly.
+            // No ScrollRect/Mask nesting (avoids stencil-buffer invisibility bugs).
             var container = new GameObject("FilterBar");
             container.transform.SetParent(clubsContent, false);
             var containerRT = container.AddComponent<RectTransform>();
@@ -264,81 +265,47 @@ namespace Golfin.Inventory.Editor
             var containerImg = container.AddComponent<Image>();
             containerImg.color = new Color(0.06f, 0.06f, 0.10f, 1f);
 
-            // ScrollRect for horizontal scroll on small screens
-            var scrollRect = container.AddComponent<ScrollRect>();
-            scrollRect.horizontal = true;
-            scrollRect.vertical   = false;
-            scrollRect.scrollSensitivity = 20f;
-
-            // Viewport
-            var viewportGO = new GameObject("Viewport");
-            viewportGO.transform.SetParent(container.transform, false);
-            var vpRT = viewportGO.AddComponent<RectTransform>();
-            vpRT.anchorMin = Vector2.zero; vpRT.anchorMax = Vector2.one;
-            vpRT.offsetMin = new Vector2(4f, 0f); vpRT.offsetMax = new Vector2(-4f, 0f);
-            viewportGO.AddComponent<Mask>().showMaskGraphic = false;
-            viewportGO.AddComponent<Image>().color = Color.clear;
-            scrollRect.viewport = vpRT;
-
-            // Content (all buttons live here)
-            var contentGO = new GameObject("Content");
-            contentGO.transform.SetParent(viewportGO.transform, false);
-            var contentRT = contentGO.AddComponent<RectTransform>();
-            contentRT.anchorMin = new Vector2(0f, 0f);
-            contentRT.anchorMax = new Vector2(0f, 1f);
-            contentRT.pivot     = new Vector2(0f, 0.5f);
-            contentRT.offsetMin = Vector2.zero;
-            contentRT.offsetMax = Vector2.zero;
-
-            var hlg = contentGO.AddComponent<HorizontalLayoutGroup>();
-            hlg.spacing            = 4f;
-            hlg.padding            = new RectOffset(4, 4, 4, 4);
-            hlg.childAlignment     = TextAnchor.MiddleLeft;
+            // HLG: buttons fill the bar width evenly (flexibleWidth = 1)
+            var hlg = container.AddComponent<HorizontalLayoutGroup>();
+            hlg.spacing               = 2f;
+            hlg.padding               = new RectOffset(4, 4, 4, 4);
+            hlg.childAlignment        = TextAnchor.MiddleCenter;
             hlg.childForceExpandHeight = true;
-            hlg.childForceExpandWidth  = false;
+            hlg.childForceExpandWidth  = true;   // distribute evenly across full width
 
-            var csf = contentGO.AddComponent<ContentSizeFitter>();
-            csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            scrollRect.content = contentRT;
-
-            // Build filter buttons
+            // Build filter buttons directly inside the container
             int count   = FILTER_LABELS.Length;
             var buttons = new Object[count];
 
             for (int i = 0; i < count; i++)
             {
                 var btnGO = new GameObject(FILTER_LABELS[i] + "Filter");
-                btnGO.transform.SetParent(contentGO.transform, false);
+                btnGO.transform.SetParent(container.transform, false);
 
                 var btnImg = btnGO.AddComponent<Image>();
-                btnImg.color = i == 0 ? new Color(1f, 1f, 1f, 0.15f) : Color.clear;
-
-                var le = btnGO.AddComponent<LayoutElement>();
-                le.preferredWidth  = 72f;
-                le.preferredHeight = FILTERBAR_H - 8f;
-                le.flexibleWidth   = 0f;
+                btnImg.color = i == 0
+                    ? new Color(1f, 1f, 1f, 0.20f)   // ALL active
+                    : new Color(1f, 1f, 1f, 0f);      // others inactive
 
                 var btn = btnGO.AddComponent<Button>();
-                var cb  = btn.colors;
-                cb.normalColor      = Color.white;
-                cb.highlightedColor = new Color(1f, 1f, 1f, 0.85f);
-                cb.pressedColor     = new Color(0.8f, 0.8f, 0.8f);
-                btn.colors = cb;
                 buttons[i] = btn;
 
-                // Label
+                // Label — stretch fill button
                 var labelGO = new GameObject("Label");
                 labelGO.transform.SetParent(btnGO.transform, false);
                 var labelRT = labelGO.AddComponent<RectTransform>();
-                labelRT.anchorMin = Vector2.zero; labelRT.anchorMax = Vector2.one;
-                labelRT.offsetMin = new Vector2(4f, 0f); labelRT.offsetMax = new Vector2(-4f, 0f);
+                labelRT.anchorMin = Vector2.zero;
+                labelRT.anchorMax = Vector2.one;
+                labelRT.offsetMin = Vector2.zero;
+                labelRT.offsetMax = Vector2.zero;
                 var tmp = labelGO.AddComponent<TextMeshProUGUI>();
-                tmp.text      = FILTER_LABELS[i];
-                tmp.fontSize  = 11f;
-                tmp.fontStyle = FontStyles.Bold;
-                tmp.color     = i == 0 ? Color.white : new Color(0.55f, 0.55f, 0.55f);
-                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.text                    = FILTER_LABELS[i];
+                tmp.fontSize                = 10f;
+                tmp.fontStyle               = FontStyles.Bold;
+                tmp.color                   = i == 0 ? Color.white : new Color(0.55f, 0.55f, 0.55f);
+                tmp.alignment               = TextAlignmentOptions.Center;
+                tmp.enableAutoSizing        = false;
+                tmp.overflowMode            = TextOverflowModes.Ellipsis;
             }
 
             return (containerRT, buttons);
