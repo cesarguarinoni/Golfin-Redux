@@ -1,0 +1,92 @@
+#nullable enable
+using UnityEngine;
+
+namespace Golfin.Inventory
+{
+    // ── Enums ──────────────────────────────────────────────────────────────────
+
+    public enum ClubType
+    {
+        Driver,
+        Wood,
+        Iron,
+        A_Wedge,   // Approach Wedge  (CSV: "A.Wedge")
+        P_Wedge,   // Pitching Wedge  (CSV: "P.Wedge")
+        S_Wedge,   // Sand Wedge      (CSV: "S.Wedge")
+        Putter
+    }
+
+    // ── Template data (loaded from Clubs.csv) ──────────────────────────────────
+
+    /// <summary>
+    /// Read-only club template loaded from Clubs.csv.
+    /// One instance per club definition shared across all players.
+    /// </summary>
+    public class ClubDataRuntime
+    {
+        public string   clubId              = "";
+        public string   name                = "";
+        public ClubType type                = ClubType.Driver;
+        public CharacterRarity rarity       = CharacterRarity.Common;  // reuse existing rarity enum
+        public string   brand               = "";
+
+        // Base stats (level 1 values)
+        public int basePower          = 0;
+        public int baseAccuracy       = 0;
+        public int baseLieResistance  = 0;
+        public int baseLoft           = 0;
+        public int maxDurability      = 100;
+        public int baseDistance       = 0;   // shown as "X yd", not a bar
+
+        // Sprites (loaded from Resources/Clubs/)
+        public string  portraitSpriteName = "";
+        public Sprite? portraitSprite     = null;
+        public string  portraitFullName   = "";
+        public Sprite? portraitFull       = null;
+
+        public int    maxLevel = 119;
+        public string info     = "";
+
+        public string GetTypeLabel() => type switch
+        {
+            ClubType.Driver  => "DRIVER",
+            ClubType.Wood    => "WOOD",
+            ClubType.Iron    => "IRON",
+            ClubType.A_Wedge => "A. WEDGE",
+            ClubType.P_Wedge => "P. WEDGE",
+            ClubType.S_Wedge => "S. WEDGE",
+            ClubType.Putter  => "PUTTER",
+            _                => "CLUB"
+        };
+
+        public override string ToString() =>
+            $"{name} ({rarity} {GetTypeLabel()}): PWR={basePower} ACC={baseAccuracy}";
+    }
+
+    // ── Player instance data (owned club state) ─────────────────────────────────
+
+    /// <summary>
+    /// Mutable per-player club state — level, durability, equip slot.
+    /// Mirrors the PlayerCharacterData pattern from the Roster system.
+    /// </summary>
+    public class PlayerClubData
+    {
+        public string clubId           = "";
+        public int    currentLevel     = 1;
+        public int    currentDurability;   // set to maxDurability on init
+        public int    maxDurability    = 100;
+        public int    equippedBagSlot  = 0;  // 0 = not equipped, 1-N = bag number
+
+        public bool IsEquipped      => equippedBagSlot > 0;
+        public bool IsDurabilityLow => maxDurability > 0
+                                    && (float)currentDurability / maxDurability < 0.25f;
+
+        // Computed stats at current level
+        // Phase A: stats equal base values (scaling formula added later)
+        public int GetPower(ClubDataRuntime template)         => template.basePower;
+        public int GetAccuracy(ClubDataRuntime template)      => template.baseAccuracy;
+        public int GetLieResistance(ClubDataRuntime template) => template.baseLieResistance;
+        public int GetLoft(ClubDataRuntime template)          => template.baseLoft;
+        public int GetDistance(ClubDataRuntime template)      => template.baseDistance;
+    }
+}
