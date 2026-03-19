@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Golfin.UI;
+using Golfin.Roster;
 
 namespace GolfinRedux.UI
 {
@@ -45,7 +46,6 @@ namespace GolfinRedux.UI
         // -------- Character --------
         [Header("Character")]
         [SerializeField] private Image characterImage;
-        [SerializeField] private Sprite[] characterSprites;
 
         // -------- Next Hole Panel --------
         [Header("Next Hole Panel")]
@@ -132,8 +132,12 @@ namespace GolfinRedux.UI
             if (usernameText != null)
                 usernameText.text = "Player";   // TODO: load real value
 
+            // Subscribe to selection changes so the image updates immediately
+            if (CharacterManager.Instance != null)
+                CharacterManager.Instance.OnCharacterSelected += OnCharacterSelectionChanged;
+
             // Character
-            RandomizeCharacter();
+            UpdateHomeCharacterImage();
 
             // News
             _currentNewsIndex = 0;
@@ -146,6 +150,35 @@ namespace GolfinRedux.UI
 
             // Bottom nav highlight Home
             SetActiveNav(ScreenId.Home);
+        }
+
+        private void OnDisable()
+        {
+            if (CharacterManager.Instance != null)
+                CharacterManager.Instance.OnCharacterSelected -= OnCharacterSelectionChanged;
+        }
+
+        private void OnCharacterSelectionChanged(string _) => UpdateHomeCharacterImage();
+
+        private void UpdateHomeCharacterImage()
+        {
+            if (characterImage == null) return;
+
+            var selectedId = CharacterManager.Instance?.GetSelectedCharacterId();
+            if (string.IsNullOrEmpty(selectedId)) return;
+
+            var csvChar = CharacterDatabaseCSV.Instance?.GetCharacter(selectedId);
+            string charName = csvChar?.characterName ?? "";
+
+            var sprite = Resources.Load<Sprite>($"Characters/Homescreen/{charName}");
+            if (sprite == null)
+                sprite = Resources.Load<Sprite>("Characters/Homescreen/Placeholder");
+
+            if (sprite != null)
+            {
+                characterImage.sprite = sprite;
+                characterImage.preserveAspect = true;
+            }
         }
 
         private void Update()
@@ -236,17 +269,6 @@ namespace GolfinRedux.UI
             Debug.Log("[HomeScreen] Promo (GPS) banner clicked");
         }
 
-        // ---------- Character ----------
-
-        private void RandomizeCharacter()
-        {
-            if (characterImage == null || characterSprites == null || characterSprites.Length == 0)
-                return;
-
-            int idx = Random.Range(0, characterSprites.Length);
-            characterImage.sprite = characterSprites[idx];
-            characterImage.preserveAspect = true;
-        }
 
         // ---------- Next Hole Panel ----------
 
