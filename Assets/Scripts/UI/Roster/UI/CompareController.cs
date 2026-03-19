@@ -61,6 +61,7 @@ namespace Golfin.Roster
 
         [Header("Status Icons — Right Column")]
         [SerializeField] private GameObject? compareSelectedIcon;
+        [SerializeField] private GameObject? compareLevelUpReadyIcon; // IconLevelUpBig — wire in Inspector
         [SerializeField] private GameObject? compareLowStaminaIcon;
 
         // ── Carousel ───────────────────────────────────────────────────────────
@@ -271,8 +272,21 @@ namespace Golfin.Roster
                 compareBioText.text = csvChar?.bio ?? "";
 
             // Status icons
-            if (compareSelectedIcon   != null) compareSelectedIcon.SetActive(playerData.isSelected);
-            if (compareLowStaminaIcon != null) compareLowStaminaIcon.SetActive(playerData.IsStaminaLow(LOW_STAMINA_THRESHOLD));
+            if (compareSelectedIcon != null)
+                compareSelectedIcon.SetActive(playerData.isSelected);
+
+            if (compareLevelUpReadyIcon != null)
+            {
+                int  maxLevel  = CharacterManager.Instance.GetMaxLevel(characterId);
+                int  cost      = CharacterManager.Instance.GetLevelUpCost(characterId);
+                bool canLevel  = RewardPointsManager.Instance != null
+                              && RewardPointsManager.Instance.CanAfford(cost)
+                              && playerData.currentLevel < maxLevel;
+                compareLevelUpReadyIcon.SetActive(canLevel);
+            }
+
+            if (compareLowStaminaIcon != null)
+                compareLowStaminaIcon.SetActive(playerData.IsStaminaLow(LOW_STAMINA_THRESHOLD));
 
             // Level Up button state
             if (compareLevelUpButton != null)

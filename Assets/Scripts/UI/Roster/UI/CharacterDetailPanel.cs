@@ -55,9 +55,9 @@ namespace Golfin.Roster
         [Header("Bio")]
         [SerializeField] private TextMeshProUGUI bioText;           // BioPanel > BioText
 
-        [Header("Status Icons (Optional — add when ready)")]
-        [SerializeField] private GameObject? selectedIcon;            // Eye icon, null until added
-        [SerializeField] private GameObject? lowStaminaIcon;          // Bolt icon, null until added
+        [Header("Status Icons")]
+        [SerializeField] private GameObject? selectedIcon;       // IconSelectedBig — wire in Inspector
+        [SerializeField] private GameObject? levelUpReadyIcon;   // IconLevelUpBig  — wire in Inspector
 
         [Header("Modals")]
         [SerializeField] private LevelUpModalController? levelUpModal;
@@ -93,6 +93,9 @@ namespace Golfin.Roster
                 CharacterManager.Instance.OnCharacterSelected += OnSelectionChanged;
             }
 
+            if (RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.OnPointsChanged += OnPointsChanged;
+
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
         }
 
@@ -106,6 +109,9 @@ namespace Golfin.Roster
                 CharacterManager.Instance.OnCharacterLeveledUp -= OnLeveledUp;
                 CharacterManager.Instance.OnCharacterSelected -= OnSelectionChanged;
             }
+
+            if (RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.OnPointsChanged -= OnPointsChanged;
 
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
         }
@@ -199,8 +205,15 @@ namespace Golfin.Roster
             // --- Status Icons ---
             if (selectedIcon != null)
                 selectedIcon.SetActive(playerData.isSelected);
-            if (lowStaminaIcon != null)
-                lowStaminaIcon.SetActive(playerData.IsStaminaLow(LOW_STAMINA_THRESHOLD));
+
+            if (levelUpReadyIcon != null)
+            {
+                int cost      = CharacterManager.Instance.GetLevelUpCost(characterId);
+                bool canLevel = RewardPointsManager.Instance != null
+                             && RewardPointsManager.Instance.CanAfford(cost)
+                             && playerData.currentLevel < maxLevel;
+                levelUpReadyIcon.SetActive(canLevel);
+            }
 
             // --- Button States ---
             if (levelUpButton != null)
@@ -253,6 +266,13 @@ namespace Golfin.Roster
         private void OnSelectionChanged(string characterId)
         {
             // Refresh to update SELECT/SELECTED state
+            if (!string.IsNullOrEmpty(currentCharacterId))
+                UpdatePanel(currentCharacterId);
+        }
+
+        private void OnPointsChanged(int _)
+        {
+            // Re-evaluate level-up-ready icon whenever RP balance changes
             if (!string.IsNullOrEmpty(currentCharacterId))
                 UpdatePanel(currentCharacterId);
         }

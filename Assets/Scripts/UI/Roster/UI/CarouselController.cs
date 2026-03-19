@@ -376,6 +376,27 @@ namespace Golfin.Roster
             Debug.Log($"[CarouselController] Selected: {characterId}");
         }
         
+        private void OnEnable()
+        {
+            if (RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.OnPointsChanged += OnPointsChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.OnPointsChanged -= OnPointsChanged;
+        }
+
+        /// <summary>
+        /// Re-evaluate the level-up-ready icon on every card when RP balance changes.
+        /// </summary>
+        private void OnPointsChanged(int _)
+        {
+            foreach (var card in cards)
+                card.RefreshIcons();
+        }
+
         /// <summary>
         /// Get currently selected character ID
         /// </summary>

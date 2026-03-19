@@ -29,6 +29,11 @@ namespace Golfin.Roster
         [SerializeField] private Image selectionHighlight;
         [SerializeField] private Image backgroundImage;
         [SerializeField] private Button cardButton;
+
+        [Header("Status Icons")]
+        [SerializeField] private GameObject? selectedIcon;     // IconSelectedSmall — wire in Inspector
+        [SerializeField] private GameObject? levelUpReadyIcon; // IconLevelUpSmall  — wire in Inspector
+        [SerializeField] private GameObject? staminaIcon;      // IconStaminaSmall  — wire in Inspector
         
         private string characterId = "";
         private bool isSelected = false;
@@ -119,8 +124,42 @@ namespace Golfin.Roster
             if (cardButton != null)
                 cardButton.onClick.AddListener(() => OnClicked?.Invoke());
 
+            // Status icons
+            RefreshIcons();
+
             string displayName = csvData?.characterName ?? soData?.characterName ?? charId;
             Debug.Log($"[CharacterThumbnailCard] Initialized: {displayName}");
+        }
+
+        /// <summary>
+        /// Refreshes the three status icons. Called on Initialize and whenever
+        /// RP balance or selection state may have changed (via CarouselController).
+        /// </summary>
+        public void RefreshIcons()
+        {
+            if (string.IsNullOrEmpty(characterId)) return;
+
+            var playerData = CharacterManager.Instance?.GetCharacterData(characterId);
+            if (playerData == null) return;
+
+            // Selected icon
+            if (selectedIcon != null)
+                selectedIcon.SetActive(playerData.isSelected);
+
+            // Level-up-ready icon
+            if (levelUpReadyIcon != null)
+            {
+                int  maxLevel = CharacterManager.Instance!.GetMaxLevel(characterId);
+                int  cost     = CharacterManager.Instance.GetLevelUpCost(characterId);
+                bool canLevel = RewardPointsManager.Instance != null
+                             && RewardPointsManager.Instance.CanAfford(cost)
+                             && playerData.currentLevel < maxLevel;
+                levelUpReadyIcon.SetActive(canLevel);
+            }
+
+            // Stamina icon
+            if (staminaIcon != null)
+                staminaIcon.SetActive(playerData.IsStaminaLow());
         }
         
         /// <summary>
