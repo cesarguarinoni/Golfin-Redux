@@ -138,9 +138,9 @@ namespace Golfin.Roster
             var playerData = CharacterManager.Instance.GetCharacterData(characterId);
             if (playerData == null) return;
 
-            // Get template data (try CSV first, then ScriptableObject)
+            // Get template data — CSV first; only query ScriptableObject if CSV has nothing
             var csvData = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
-            var soData = CharacterManager.Instance.GetCharacterTemplate(characterId);
+            var soData = csvData == null ? CharacterManager.Instance.GetCharacterTemplate(characterId) : null;
 
             // --- Portrait (CSV full-body first, then SO full, then CSV thumbnail) ---
             if (characterImage != null)

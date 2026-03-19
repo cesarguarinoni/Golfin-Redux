@@ -232,20 +232,33 @@ namespace Golfin.Roster
         public void RefreshStatValues(string characterId)
         {
             var playerChar = GetCharacterData(characterId);
-            var template = GetCharacterTemplate(characterId);
-            if (playerChar == null || template == null) return;
+            if (playerChar == null) return;
 
-            playerChar.currentStrength = template.baseStrength + playerChar.spentStrength;
-            playerChar.currentClubControl = template.baseClubControl + playerChar.spentClubControl;
-            playerChar.currentRecovery = template.baseRecovery + playerChar.spentRecovery;
-            playerChar.currentStamina = template.baseStamina + playerChar.spentStamina;
+            // Resolve base stats and rarity — CSV first, ScriptableObject fallback
+            int bStr, bCtrl, bRec, bStam;
+            CharacterRarity rarity;
 
-            // Clamp to rarity caps
-            var caps = RarityStatCaps.GetStatCaps(template.rarity);
-            playerChar.currentStrength = Mathf.Min(playerChar.currentStrength, caps.strengthCap);
-            playerChar.currentClubControl = Mathf.Min(playerChar.currentClubControl, caps.clubControlCap);
-            playerChar.currentRecovery = Mathf.Min(playerChar.currentRecovery, caps.recoveryCap);
-            playerChar.currentStamina = Mathf.Min(playerChar.currentStamina, caps.staminaCap);
+            var csv = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
+            if (csv != null)
+            {
+                bStr = csv.baseStrength; bCtrl = csv.baseClubControl;
+                bRec = csv.baseRecovery; bStam = csv.baseStamina;
+                rarity = csv.rarity;
+            }
+            else
+            {
+                var so = GetCharacterTemplate(characterId);
+                if (so == null) return;
+                bStr = so.baseStrength; bCtrl = so.baseClubControl;
+                bRec = so.baseRecovery; bStam = so.baseStamina;
+                rarity = so.rarity;
+            }
+
+            var caps = RarityStatCaps.GetStatCaps(rarity);
+            playerChar.currentStrength    = Mathf.Min(bStr  + playerChar.spentStrength,    caps.strengthCap);
+            playerChar.currentClubControl = Mathf.Min(bCtrl + playerChar.spentClubControl, caps.clubControlCap);
+            playerChar.currentRecovery    = Mathf.Min(bRec  + playerChar.spentRecovery,    caps.recoveryCap);
+            playerChar.currentStamina     = Mathf.Min(bStam + playerChar.spentStamina,     caps.staminaCap);
         }
 
         /// <summary>
