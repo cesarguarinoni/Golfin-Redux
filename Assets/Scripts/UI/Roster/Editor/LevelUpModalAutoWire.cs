@@ -84,6 +84,16 @@ namespace Golfin.Roster.Editor
             wired += WireButton(so, "confirmButton", root, "ModalPanel/FooterSection/ConfirmButton", ref failed);
             // confirmButtonImage removed — button state handled by Color Tint transition, not Image.color
 
+            // ── Static Labels (localized) ────────────────────────────────────
+            wired += WireTMP(so, "nextLevelLabel",     root, "ModalPanel/InfoSection/NextLevelRow/NextLevelLabel",              ref failed);
+            wired += WireTMP(so, "costLabel",          root, "ModalPanel/InfoSection/CostRow/CostLabel",                       ref failed);
+            wired += WireTMP(so, "rewardLabel",        root, "ModalPanel/InfoSection/RewardRow/RewardLabel",                   ref failed);
+            wired += WireTMP(so, "levelUpButtonLabel", root, "ModalPanel/LevelUpButton/Text",                                  ref failed);
+            wired += WireTMP(so, "availableSPLabel",   root, "ModalPanel/SPSection/AvailableSPRow/AvailableSPLabel",           ref failed);
+            wired += WireTMP(so, "resetButtonLabel",   root, "ModalPanel/SPSection/ResetButton/Text",                         ref failed);
+            wired += WireTMP(so, "cancelButtonLabel",  root, "ModalPanel/FooterSection/CancelButton/Text",                    ref failed);
+            wired += WireTMP(so, "confirmButtonLabel", root, "ModalPanel/FooterSection/ConfirmButton/Text",                   ref failed);
+
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(controller);
 

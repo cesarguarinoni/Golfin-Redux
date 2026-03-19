@@ -48,7 +48,8 @@ namespace Golfin.Roster.Editor
 
             // ── Compare Layout ────────────────────────────────────────────────
             wired += WireGO(so, "compareRightPanel",  root, "CompareRightPanel",                    ref failed);
-            wired += WireGO(so, "comparePlaceholder", root, "CompareRightPanel/ComparePlaceholder", ref failed);
+            wired += WireGO(so,  "comparePlaceholder",     root, "CompareRightPanel/ComparePlaceholder",                    ref failed);
+            wired += WireTMPFrom(so, "comparePlaceholderText", root.Find("CompareRightPanel/ComparePlaceholder"), "PlaceholderText", ref failed);
             wired += WireGO(so, "compareInfoPanel",   root, "CompareRightPanel/CompareInfoPanel",   ref failed);
             wired += WireGO(so, "verticalDivider",    root, "VerticalDivider",                      ref failed);
 

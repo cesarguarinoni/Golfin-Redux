@@ -30,7 +30,8 @@ namespace Golfin.Roster
         // ── Compare Mode Layout ────────────────────────────────────────────────
         [Header("Compare Mode References")]
         [SerializeField] private GameObject compareRightPanel  = null!; // new right column
-        [SerializeField] private GameObject comparePlaceholder = null!; // "TAP…" text
+        [SerializeField] private GameObject comparePlaceholder = null!; // "TAP…" overlay
+        [SerializeField] private TextMeshProUGUI comparePlaceholderText = null!; // TMP inside overlay
         [SerializeField] private GameObject compareInfoPanel   = null!; // actual data
         [SerializeField] private GameObject verticalDivider    = null!; // 1px line
 
@@ -114,12 +115,26 @@ namespace Golfin.Roster
         {
             if (carousel != null)
                 carousel.OnCharacterSelected += OnCarouselSelection;
+
+            LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
         }
 
         private void OnDisable()
         {
             if (carousel != null)
                 carousel.OnCharacterSelected -= OnCarouselSelection;
+
+            LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+        }
+
+        private void RefreshLocalizedText()
+        {
+            if (comparePlaceholderText != null)
+                comparePlaceholderText.text = LocalizationManager.Get("COMPARE_EMPTY_PROMPT");
+
+            // Refresh right column if a character is loaded
+            if (!string.IsNullOrEmpty(_rightCharacterId))
+                PopulateRightColumn(_rightCharacterId);
         }
 
         // ── Enter / Exit ───────────────────────────────────────────────────────
@@ -228,7 +243,7 @@ namespace Golfin.Roster
             var rarity = csvChar?.rarity ?? CharacterRarity.Common;
             if (compareRarityLabel != null)
             {
-                compareRarityLabel.text  = rarity.ToString().ToUpper();
+                compareRarityLabel.text  = LocalizationManager.Get($"RARITY_{rarity.ToString().ToUpper()}");
                 compareRarityLabel.color = RarityHelper.GetRarityColor(rarity);
             }
             if (compareLevelText    != null) compareLevelText.text    = $"Lv {playerData.currentLevel}";
@@ -323,7 +338,9 @@ namespace Golfin.Roster
         private void UpdateRightColumnButtons(bool isSelected)
         {
             if (compareRightSelectButtonText != null)
-                compareRightSelectButtonText.text = isSelected ? "SELECTED" : "SWAP";
+                compareRightSelectButtonText.text = isSelected
+                    ? LocalizationManager.Get("ROSTER_SELECTED")
+                    : LocalizationManager.Get("ROSTER_SWAP");
 
             if (compareRightSelectButton != null)
                 compareRightSelectButton.interactable = !isSelected;

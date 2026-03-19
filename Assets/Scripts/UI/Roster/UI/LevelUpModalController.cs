@@ -79,6 +79,17 @@ namespace Golfin.Roster
         [SerializeField] private Button            cancelButton        = null!;
         [SerializeField] private Button            confirmButton       = null!;
 
+        // ── Static Labels (localized) ────────────────────────────────────────
+        [Header("Static Labels")]
+        [SerializeField] private TextMeshProUGUI nextLevelLabel    = null!;
+        [SerializeField] private TextMeshProUGUI costLabel         = null!;
+        [SerializeField] private TextMeshProUGUI rewardLabel       = null!;
+        [SerializeField] private TextMeshProUGUI levelUpButtonLabel = null!;
+        [SerializeField] private TextMeshProUGUI availableSPLabel  = null!;
+        [SerializeField] private TextMeshProUGUI resetButtonLabel  = null!;
+        [SerializeField] private TextMeshProUGUI cancelButtonLabel = null!;
+        [SerializeField] private TextMeshProUGUI confirmButtonLabel = null!;
+
         // ── Colors ──────────────────────────────────────────────────────────
         [Header("Colors")]
         [SerializeField] private Color pendingBarColor  = new Color(1f, 0.7f, 0.2f, 1f);         // orange — pending label text
@@ -111,6 +122,16 @@ namespace Golfin.Roster
         protected override void Awake()
         {
             base.Awake(); // ModalController sets up CanvasGroup + starts hidden
+        }
+
+        private void OnEnable()
+        {
+            LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+        }
+
+        private void OnDisable()
+        {
+            LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
         }
 
         private void Start()
@@ -174,13 +195,31 @@ namespace Golfin.Roster
             // inside RefreshDisplay() if a preview level-up has happened this session.
             if (levelText != null) levelText.color = Color.white;
 
-            RefreshDisplay();
+            RefreshLocalizedText();
             Show();
         }
 
         // ───────────────────────────────────────────────────────────────────
         // Display
         // ───────────────────────────────────────────────────────────────────
+
+        /// <summary>Sets all static label text from the localization table. Called once on
+        /// open and again whenever the player switches language.</summary>
+        private void RefreshLocalizedText()
+        {
+            if (nextLevelLabel     != null) nextLevelLabel.text     = LocalizationManager.Get("MODAL_NEXT_LEVEL");
+            if (costLabel          != null) costLabel.text          = LocalizationManager.Get("MODAL_COST");
+            if (rewardLabel        != null) rewardLabel.text        = LocalizationManager.Get("MODAL_REWARD");
+            if (levelUpButtonLabel != null) levelUpButtonLabel.text = LocalizationManager.Get("MODAL_LEVEL_UP");
+            if (availableSPLabel   != null) availableSPLabel.text   = LocalizationManager.Get("MODAL_AVAILABLE_SP");
+            if (resetButtonLabel   != null) resetButtonLabel.text   = LocalizationManager.Get("MODAL_RESET");
+            if (cancelButtonLabel  != null) cancelButtonLabel.text  = LocalizationManager.Get("MODAL_CANCEL");
+            if (confirmButtonLabel != null) confirmButtonLabel.text = LocalizationManager.Get("MODAL_CONFIRM");
+
+            // Re-run display so dynamic values (SP suffix, rarity name) also update
+            if (!string.IsNullOrEmpty(characterId))
+                RefreshDisplay();
+        }
 
         private void RefreshDisplay()
         {
@@ -207,7 +246,7 @@ namespace Golfin.Roster
             var rarity = csvChar?.rarity ?? CharacterRarity.Common;
             if (rarityLabel != null)
             {
-                rarityLabel.text  = rarity.ToString().ToUpper();
+                rarityLabel.text  = LocalizationManager.Get($"RARITY_{rarity.ToString().ToUpper()}");
                 rarityLabel.color = RarityHelper.GetRarityColor(rarity);
             }
 
@@ -246,7 +285,7 @@ namespace Golfin.Roster
                 if (costValue   != null) costValue.text   = nextCost.ToString();
                 if (rewardValue != null)
                 {
-                    rewardValue.text  = $"{spReward} SP";
+                    rewardValue.text  = $"{spReward} {LocalizationManager.Get("MODAL_SP_SUFFIX")}";
                     rewardValue.color = greenTextColor;
                 }
                 if (levelUpButton != null)
@@ -261,7 +300,7 @@ namespace Golfin.Roster
 
             if (availableSPValue != null)
             {
-                availableSPValue.text  = $"{availableSP} SP";
+                availableSPValue.text  = $"{availableSP} {LocalizationManager.Get("MODAL_SP_SUFFIX")}";
                 availableSPValue.color = availableSP > 0 ? spAvailableColor : spDepletedColor;
             }
 

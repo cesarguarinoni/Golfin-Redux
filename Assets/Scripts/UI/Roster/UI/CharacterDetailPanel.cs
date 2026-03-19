@@ -92,6 +92,8 @@ namespace Golfin.Roster
                 CharacterManager.Instance.OnCharacterLeveledUp += OnLeveledUp;
                 CharacterManager.Instance.OnCharacterSelected += OnSelectionChanged;
             }
+
+            LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
         }
 
         private void OnDisable()
@@ -104,6 +106,14 @@ namespace Golfin.Roster
                 CharacterManager.Instance.OnCharacterLeveledUp -= OnLeveledUp;
                 CharacterManager.Instance.OnCharacterSelected -= OnSelectionChanged;
             }
+
+            LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+        }
+
+        private void RefreshLocalizedText()
+        {
+            if (!string.IsNullOrEmpty(currentCharacterId))
+                UpdatePanel(currentCharacterId);
         }
 
         /// <summary>
@@ -157,7 +167,7 @@ namespace Golfin.Roster
 
             if (rarityLabel != null)
             {
-                rarityLabel.text = rarity.ToString().ToUpper();
+                rarityLabel.text = LocalizationManager.Get($"RARITY_{rarity.ToString().ToUpper()}");
                 rarityLabel.color = RarityHelper.GetRarityColor(rarity);
             }
 
@@ -170,16 +180,20 @@ namespace Golfin.Roster
                 maxLevelText.text = $"/{maxLevel}";
 
             // --- Stats ---
-            UpdateStatBar(strengthName, strengthBar, strengthNumber, "STRENGTH",
+            UpdateStatBar(strengthName, strengthBar, strengthNumber,
+                LocalizationManager.Get("ROSTER_STRENGTH"),
                 playerData.currentStrength, RarityStatCaps.GetStatCap(rarity, "Strength"));
 
-            UpdateStatBar(clubControlName, clubControlBar, clubControlNumber, "CLUB CONTROL",
+            UpdateStatBar(clubControlName, clubControlBar, clubControlNumber,
+                LocalizationManager.Get("ROSTER_CLUB_CONTROL"),
                 playerData.currentClubControl, RarityStatCaps.GetStatCap(rarity, "ClubControl"));
 
-            UpdateStatBar(recoveryName, recoveryBar, recoveryNumber, "RECOVERY",
+            UpdateStatBar(recoveryName, recoveryBar, recoveryNumber,
+                LocalizationManager.Get("ROSTER_RECOVERY"),
                 playerData.currentRecovery, RarityStatCaps.GetStatCap(rarity, "Recovery"));
 
-            UpdateStatBar(staminaName, staminaBar, staminaNumber, "STAMINA",
+            UpdateStatBar(staminaName, staminaBar, staminaNumber,
+                LocalizationManager.Get("ROSTER_STAMINA"),
                 playerData.currentStamina, RarityStatCaps.GetStatCap(rarity, "Stamina"));
 
             // --- Status Icons ---
@@ -256,7 +270,9 @@ namespace Golfin.Roster
         private void UpdateSelectButton(bool isSelected)
         {
             if (selectButtonText != null)
-                selectButtonText.text = isSelected ? "SELECTED" : "SELECT";
+                selectButtonText.text = isSelected
+                    ? LocalizationManager.Get("ROSTER_SELECTED")
+                    : LocalizationManager.Get("ROSTER_SELECT");
 
             if (selectButton != null)
                 selectButton.interactable = !isSelected;
