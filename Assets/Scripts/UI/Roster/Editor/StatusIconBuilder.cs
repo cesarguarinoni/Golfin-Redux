@@ -56,15 +56,24 @@ namespace Golfin.Roster.Editor
             var panel = detailPanel.GetComponent<CharacterDetailPanel>();
             if (panel == null) { Debug.LogError("[StatusIconBuilder] CharacterDetailPanel component not found."); return false; }
 
-            // Parent: RightPanel/CharacterNamePanel
-            var namePanel = detailPanel.Find("RightPanel/CharacterNamePanel");
-            if (namePanel == null) { Debug.LogError("[StatusIconBuilder] RightPanel/CharacterNamePanel not found."); return false; }
+            var rightPanel = detailPanel.Find("RightPanel");
+            if (rightPanel == null) { Debug.LogError("[StatusIconBuilder] RightPanel not found."); return false; }
 
-            // Create / replace icon row
-            var row = GetOrCreateIconRow(namePanel, "StatusIconsRow", topRight: true, iconSize: 28f, spacing: 4f);
+            // Clean up any old row that may have been created inside CharacterNamePanel
+            var oldRow = detailPanel.Find("RightPanel/CharacterNamePanel/StatusIconsRow");
+            if (oldRow != null) Object.DestroyImmediate(oldRow.gameObject);
 
-            var selectedGO  = GetOrCreateIcon(row, "IconSelectedBig",  ART_PATH + "IconSelectedBig.png",  28f);
-            var levelUpGO   = GetOrCreateIcon(row, "IconLevelUpBig",   ART_PATH + "IconLevelUpBig.png",   28f);
+            // Create row as direct child of RightPanel so layout groups can't disturb it.
+            // CharacterNamePanel: center y = -100 from RightPanel top, height 120.
+            // To vertically centre 28px icons on it: top of row = -100 + 14 = -86.
+            var row = GetOrCreateIconRow(rightPanel, "StatusIconsRow", iconSize: 28f, spacing: 6f,
+                                         anchorMin: new Vector2(1f, 1f),
+                                         anchorMax: new Vector2(1f, 1f),
+                                         pivot:     new Vector2(1f, 1f),
+                                         anchoredPosition: new Vector2(-8f, -86f));
+
+            var selectedGO = GetOrCreateIcon(row, "IconSelectedBig", ART_PATH + "IconSelectedBig.png", 28f);
+            var levelUpGO  = GetOrCreateIcon(row, "IconLevelUpBig",  ART_PATH + "IconLevelUpBig.png",  28f);
 
             // Wire to CharacterDetailPanel
             var so = new SerializedObject(panel);
@@ -99,17 +108,17 @@ namespace Golfin.Roster.Editor
                 return false;
             }
 
-            // Icon row at the bottom-center of the card
+            // Icon row — bottom-centre of card, 6px above the bottom edge
             var row = GetOrCreateIconRow(prefabRoot.transform, "StatusIconsRow",
-                                         topRight: false, iconSize: 20f, spacing: 4f);
+                                         iconSize: 20f, spacing: 4f,
+                                         anchorMin:        new Vector2(0.5f, 0f),
+                                         anchorMax:        new Vector2(0.5f, 0f),
+                                         pivot:            new Vector2(0.5f, 0f),
+                                         anchoredPosition: new Vector2(0f, 6f));
 
-            // Anchor the row to the bottom-center of the card
+            // Widen the row to fit 3 icons (3×20 + 2×4 gap = 68px)
             var rowRT = row.GetComponent<RectTransform>();
-            rowRT.anchorMin        = new Vector2(0.5f, 0f);
-            rowRT.anchorMax        = new Vector2(0.5f, 0f);
-            rowRT.pivot            = new Vector2(0.5f, 0f);
-            rowRT.anchoredPosition = new Vector2(0f, 6f);    // 6px above the bottom edge
-            rowRT.sizeDelta        = new Vector2(80f, 20f);  // wide enough for 3 × 20px icons + gaps
+            rowRT.sizeDelta = new Vector2(68f, 20f);
 
             var selectedGO  = GetOrCreateIcon(row, "IconSelectedSmall",  ART_PATH + "IconSelectedSmall.png",  20f);
             var levelUpGO   = GetOrCreateIcon(row, "IconLevelUpSmall",   ART_PATH + "IconLevelUpSmall.png",   20f);
@@ -140,15 +149,23 @@ namespace Golfin.Roster.Editor
             var controller = detailPanel.GetComponent<CompareController>();
             if (controller == null) { Debug.LogError("[StatusIconBuilder] CompareController component not found."); return false; }
 
-            // Parent: CompareRightPanel/CompareInfoPanel/CharacterNamePanel
-            var namePanel = detailPanel.Find("CompareRightPanel/CompareInfoPanel/CharacterNamePanel");
-            if (namePanel == null)
+            // Parent: CompareRightPanel/CompareInfoPanel (mirror of RightPanel — same layout)
+            var infoPanel = detailPanel.Find("CompareRightPanel/CompareInfoPanel");
+            if (infoPanel == null)
             {
-                Debug.LogError("[StatusIconBuilder] CompareRightPanel/CompareInfoPanel/CharacterNamePanel not found.");
+                Debug.LogError("[StatusIconBuilder] CompareRightPanel/CompareInfoPanel not found.");
                 return false;
             }
 
-            var row = GetOrCreateIconRow(namePanel, "StatusIconsRow", topRight: true, iconSize: 28f, spacing: 4f);
+            // Clean up any old row placed inside CharacterNamePanel
+            var oldRow = infoPanel.Find("CharacterNamePanel/StatusIconsRow");
+            if (oldRow != null) Object.DestroyImmediate(oldRow.gameObject);
+
+            var row = GetOrCreateIconRow(infoPanel, "StatusIconsRow", iconSize: 28f, spacing: 6f,
+                                         anchorMin: new Vector2(1f, 1f),
+                                         anchorMax: new Vector2(1f, 1f),
+                                         pivot:     new Vector2(1f, 1f),
+                                         anchoredPosition: new Vector2(-8f, -86f));
 
             var selectedGO  = GetOrCreateIcon(row, "IconSelectedBig",  ART_PATH + "IconSelectedBig.png",  28f);
             var levelUpGO   = GetOrCreateIcon(row, "IconLevelUpBig",   ART_PATH + "IconLevelUpBig.png",   28f);
@@ -170,10 +187,12 @@ namespace Golfin.Roster.Editor
 
         /// <summary>
         /// Gets or creates a named HorizontalLayoutGroup row inside <paramref name="parent"/>.
-        /// <paramref name="topRight"/> positions it in the top-right corner of the parent.
+        /// Explicit anchor, pivot and position so the caller controls exact placement.
         /// </summary>
         private static Transform GetOrCreateIconRow(Transform parent, string rowName,
-                                                     bool topRight, float iconSize, float spacing)
+                                                     float iconSize, float spacing,
+                                                     Vector2 anchorMin, Vector2 anchorMax,
+                                                     Vector2 pivot,     Vector2 anchoredPosition)
         {
             var existing = parent.Find(rowName);
             if (existing != null) return existing;
@@ -182,14 +201,11 @@ namespace Golfin.Roster.Editor
             rowGO.transform.SetParent(parent, false);
 
             var rt = rowGO.GetComponent<RectTransform>();
-            if (topRight)
-            {
-                rt.anchorMin        = new Vector2(1f, 1f);
-                rt.anchorMax        = new Vector2(1f, 1f);
-                rt.pivot            = new Vector2(1f, 1f);
-                rt.anchoredPosition = new Vector2(-2f, -2f); // 2px inset from top-right corner
-                rt.sizeDelta        = new Vector2(iconSize * 2 + spacing + 4f, iconSize);
-            }
+            rt.anchorMin        = anchorMin;
+            rt.anchorMax        = anchorMax;
+            rt.pivot            = pivot;
+            rt.anchoredPosition = anchoredPosition;
+            rt.sizeDelta        = new Vector2(iconSize * 2 + spacing + 4f, iconSize);
 
             var layout = rowGO.AddComponent<HorizontalLayoutGroup>();
             layout.spacing              = spacing;
