@@ -18,7 +18,7 @@ namespace Golfin.Roster.Editor
     public static class StatusIconBuilder
     {
         private const string ART_PATH    = "Assets/Art/Roster Screen/";
-        private const string PREFAB_PATH = "Assets/Prefabs/UI/Roster/CharacterThumbnailCard.prefab";
+        private const string PREFAB_PATH = "Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab";
 
         // ── Menu items ────────────────────────────────────────────────────────
 
