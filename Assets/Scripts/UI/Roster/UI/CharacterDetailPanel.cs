@@ -260,6 +260,11 @@ namespace Golfin.Roster
 
             if (selectButton != null)
                 selectButton.interactable = !isSelected;
+
+            // Compare is only meaningful for the active character.
+            if (compareButton != null)
+                compareButton.interactable = isSelected;
+
             // Button visual state handled by Color Tint transition — do NOT set Image.color here
         }
 
