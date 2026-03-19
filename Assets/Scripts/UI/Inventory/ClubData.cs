@@ -1,5 +1,6 @@
 #nullable enable
 using UnityEngine;
+using Golfin.Roster;   // CharacterRarity
 
 namespace Golfin.Inventory
 {
