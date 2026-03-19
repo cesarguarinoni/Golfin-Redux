@@ -89,6 +89,9 @@ namespace Golfin.Roster
 
         // ── Anchor (optional — reparent modal to a specific panel) ─────────
         private Transform? _originalParent;
+        private Vector2 _savedContainerAnchorMin, _savedContainerAnchorMax;
+        private Vector2 _savedContainerOffsetMin, _savedContainerOffsetMax;
+        private Vector2 _savedModalPanelAnchoredPos;
 
         // ── Preview State (local, not committed until Confirm) ──────────────
         private string characterId = "";
@@ -139,15 +142,34 @@ namespace Golfin.Roster
             // Reparent to anchor panel so the modal appears centred within it
             if (anchorPanel != null)
             {
-                _originalParent = transform.parent;
-                transform.SetParent(anchorPanel, false);
-                var rt = GetComponent<RectTransform>();
-                if (rt != null)
+                var containerRt = GetComponent<RectTransform>();
+                if (containerRt != null)
                 {
-                    rt.anchorMin = Vector2.zero;
-                    rt.anchorMax = Vector2.one;
-                    rt.offsetMin = Vector2.zero;
-                    rt.offsetMax = Vector2.zero;
+                    // Save container state for restore
+                    _originalParent            = transform.parent;
+                    _savedContainerAnchorMin   = containerRt.anchorMin;
+                    _savedContainerAnchorMax   = containerRt.anchorMax;
+                    _savedContainerOffsetMin   = containerRt.offsetMin;
+                    _savedContainerOffsetMax   = containerRt.offsetMax;
+
+                    transform.SetParent(anchorPanel, false);
+                    containerRt.anchorMin = Vector2.zero;
+                    containerRt.anchorMax = Vector2.one;
+                    containerRt.offsetMin = Vector2.zero;
+                    containerRt.offsetMax = Vector2.zero;
+                }
+
+                // modalPanel has anchoredPosition = (0, -230) which was designed for the full
+                // RosterScreen. Inside a smaller anchor panel that offset pushes it off-screen.
+                // Force it to centre (0, 0) and restore on hide.
+                if (modalPanel != null)
+                {
+                    var mpRt = modalPanel.GetComponent<RectTransform>();
+                    if (mpRt != null)
+                    {
+                        _savedModalPanelAnchoredPos = mpRt.anchoredPosition;
+                        mpRt.anchoredPosition = Vector2.zero;
+                    }
                 }
             }
 
@@ -383,12 +405,28 @@ namespace Golfin.Roster
         /// </summary>
         protected override void OnHide()
         {
-            // Restore original parent after modal is hidden
-            if (_originalParent != null)
+            if (_originalParent == null) return;
+
+            // Restore modalPanel's anchoredPosition
+            if (modalPanel != null)
             {
-                transform.SetParent(_originalParent, false);
-                _originalParent = null;
+                var mpRt = modalPanel.GetComponent<RectTransform>();
+                if (mpRt != null)
+                    mpRt.anchoredPosition = _savedModalPanelAnchoredPos;
             }
+
+            // Restore container parent and RectTransform
+            var containerRt = GetComponent<RectTransform>();
+            transform.SetParent(_originalParent, false);
+            if (containerRt != null)
+            {
+                containerRt.anchorMin = _savedContainerAnchorMin;
+                containerRt.anchorMax = _savedContainerAnchorMax;
+                containerRt.offsetMin = _savedContainerOffsetMin;
+                containerRt.offsetMax = _savedContainerOffsetMax;
+            }
+
+            _originalParent = null;
         }
 
         private void OnCancelClicked()

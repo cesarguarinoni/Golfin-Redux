@@ -61,7 +61,6 @@ namespace Golfin.Roster
 
         [Header("Modals")]
         [SerializeField] private LevelUpModalController? levelUpModal;
-        [SerializeField] private RectTransform? levelUpAnchorPanel; // wire to RightPanel
 
         [Header("Compare")]
         [SerializeField] private CompareController? compareController;
@@ -268,7 +267,7 @@ namespace Golfin.Roster
         private void OnLevelUpClicked()
         {
             if (levelUpModal != null && !string.IsNullOrEmpty(currentCharacterId))
-                levelUpModal.Open(currentCharacterId, levelUpAnchorPanel);
+                levelUpModal.Open(currentCharacterId);
         }
 
         private void OnBoostClicked()
