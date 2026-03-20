@@ -61,3 +61,9 @@ sysinfo.txt
 *.aab
 *.keystore
 .claude/worktrees/kind-haslett/
+
+# =========================
+# Screenshots (local review only)
+# =========================
+
+Assets/Screenshots/

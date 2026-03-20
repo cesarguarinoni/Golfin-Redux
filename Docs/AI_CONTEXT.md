@@ -1,112 +1,186 @@
 # AI Context — Golfin Redux
 
-## Current Phase: Club Inventory Phase B ✅ COMPLETE (Phase C next)
+**Last Updated:** 2026-03-20 by Claude (Architect)
+
+## Current Phase: Club Inventory Phase C (Carousel + Detail Panel)
 
 ### Status
 
-#### Phase 2b — Roster Detail Panel ✅ COMPLETE
-- [x] Carousel fully working: correct sizes, all 12 characters, bounce animation, viewport clip fix
-- [x] Full-body portrait loading via `portraitFull` CSV column
-- [x] SELECT button fully working — interactable state, SELECTED text
-- [x] Level Up / Boost button interactable state
-- [x] Rarity badge background removed
-
-#### Phase 2c — Level Up Modal ✅ COMPLETE
-- [x] LevelUpModalController — preview-only flow, nothing commits until CONFIRM
-- [x] LevelUpModalBuilder — Editor script builds hierarchy (one-time use)
-- [x] LevelUpModalAutoWire — wires all fields including CharacterDetailPanel.levelUpModal
-- [x] SP color preview, level text color, stat value split, RP flow verified
-- [x] RewardPointsDebugPanel — backtick toggle, runtime RP debug
-- [x] Modal not appearing bug fixed
-
-#### Phase 2d — Compare & Swap ✅ COMPLETE
-- [x] CompareController — state machine, carousel interception, fade/slide animation
-- [x] CompareRightPanelBuilder — clones RightPanel exactly (fonts/colors/positions preserved)
-- [x] CompareAutoWire — wires all 27 fields (0 failed after path fixes)
-- [x] CharacterDetailPanel — IsCompareMode guard, OnCompareClicked, ShowCharacter() public method
-- [x] Top/bottom bar visibility — ScreenManager.ApplyScreen() calls ShowBars/HideBars
-- [x] BigRoster portrait hides immediately on compare enter (SafeSetActive, not CanvasGroup fade)
-- [x] Placeholder hides immediately when right character is selected (SafeSetActive)
-- [x] Stat bars force Image.Type.Filled in UpdateCompareStatRow
-- [x] CanvasGroup pre-added in builder; GetOrAddCG uses == null not ?? (Unity null safety)
-- [x] After swap: detail panel updates to show newly selected character (CommitSwapAndExit + ShowCharacter)
+#### Phase 2 — Character Roster ✅ COMPLETE
+- [x] Phase 2a: Carousel + Navigation
+- [x] Phase 2b: Detail Panel (data binding, stats, bio, portraits, select)
+- [x] Phase 2c: Level Up Modal (preview flow, SP allocation, confirm/cancel, RP integration)
+- [x] Phase 2d: Compare & Swap (dual column, animations, swap selection)
+- [x] Localization pass (all hardcoded text wired to CSV)
+- [x] Status icons (selected, level-up ready, low stamina) on detail panel + carousel cards
+- [x] Carousel pagination dots + arrow navigation
+- [x] Resources-based sprite loading (portraits, rarities, homescreen)
 
 #### Club Inventory Phase A — Foundation ✅ COMPLETE
-- [x] ClubThumbnailCard.cs — mirrors CharacterThumbnailCard pattern, reads from ClubManager/ClubDatabaseCSV
-- [x] ClubThumbnailCardBuilder.cs — duplicates CharacterThumbnailCardGlowUp prefab, swaps component, wires fields
-- [x] Rarity backgrounds loaded from shared Resources/Rarities/ folder
+- [x] ClubManager.cs, ClubDatabaseCSV.cs, ClubData.cs, PlayerClubData
+- [x] Clubs.csv (6 clubs, 1 per type)
+- [x] ClubThumbnailCard.cs + prefab builder
+- [x] Club sprites in Resources/Clubs/Portraits and Resources/Clubs/Full
 
 #### Club Inventory Phase B — InventoryScreen ✅ COMPLETE
-- [x] InventoryScreen hierarchy built by InventoryScreenBuilder.cs (GOLFIN/Build Inventory Screen)
-- [x] ScreenId.Inventory added to ScreenManager enum
-- [x] ScreenManager._inventoryScreen wired; ApplyScreen() activates/deactivates correctly
-- [x] ScreenManager.ApplyScreen() shows persistent bars on Inventory screen
-- [x] PersistentUIManager.NavigateTo() implemented — routes to ScreenManager.ShowScreen()
-- [x] Tab bar: CLUBS / BAGS / BALLS / ITEMS with underline indicators
-- [x] InventoryScreenController.cs — tab switching, content panel visibility
-- [x] ClubFilterBar.cs — 8 filter buttons (ALL/DRIVERS/WOODS/IRONS/A.WEDGES/P.WEDGES/S.WEDGES/PUTTERS)
-- [x] FilterBarPatcher.cs — surgical patch: removes ScrollRect/Mask, adds flat HLG, rebuilds buttons
-- [x] **FilterBar visibility root cause found and fixed**: InventoryScreen root RT was not offset for nav bars
-  - TopBar = 321px (top-anchored), BottomNavBar = 196px (bottom-anchored)
-  - Fixed: `offsetMin.y = +196`, `offsetMax.y = -321`
-  - GOLFIN/Patch - Fix InventoryScreen Layout — surgical scene patcher (no full rebuild needed)
-  - InventoryScreenBuilder.BuildRoot() updated with correct offsets for future rebuilds
+- [x] InventoryScreen hierarchy, ScreenId.Inventory, nav wiring
+- [x] Tab bar (CLUBS/BAGS/BALLS/ITEMS)
+- [x] ClubFilterBar (8 type filters)
+- [x] FilterBar visibility fix (nav bar offsets)
+- [x] Archived 9 obsolete editor scripts
 
-#### Codebase Health Fixes (this session)
-- [x] Archived 9 obsolete editor scripts → Assets/Scripts/Editor/Archive/ (MenuItem attributes stripped)
-- [x] RosterDebugTools.cs created (GOLFIN/Debug/ menu items)
-- [x] FadeController.cs — removed DontDestroyOnLoad (was non-root child of Canvas)
-- [x] CharacterThumbnailCard.cs — CSV-first fix (no longer triggers SO lookup when CSV has data)
-- [x] CharacterDetailPanel.cs — same CSV-first fix
-- [x] CharacterManager.RefreshStatValues() — fixed silent stat bug (was returning early for CSV-only chars)
+#### Club Inventory Phase C — Scripts complete, pending Unity run
+- [x] ClubCarouselController.cs — subscribes to ClubFilterBar, fires OnClubSelected
+- [x] ClubDetailPanel.cs — all 6 stats, equip toggle, localization, event wiring
+- [x] ClubDetailPanelBuilder.cs — GOLFIN/Inventory/Build Club Phase C
+- [x] ClubDetailPanelAutoWire.cs — GOLFIN/Inventory/Wire Club Detail Panel
+- [x] 13 CLUB_ localization keys added to LocalizationText.csv
+- [ ] ⚠️ Run builder + auto-wire in Unity Editor (manual step)
+- [ ] ⚠️ Assign ClubThumbnailCard prefab + ClubFilterBar in Inspector
+- [ ] ⚠️ Script Execution Order: ClubDatabaseCSV=-200, ClubManager=-100
+- [ ] Visual polish to match reference images
+
+#### Club Inventory Phase D — Planned
+- [ ] Compare mode with stat differences (green +N / red -N)
+- [ ] SWAP equipped club
+
+#### Club Inventory Phase E — Planned
+- [ ] Bag selection modal (future — direct equip to Bag 1 for now)
+- [ ] Repair modal (future)
 
 ---
 
-### Workflow Rules
-- **Push to GitHub after every change**
+## AI Workflow
 
-### Key Files (Phase B additions)
-- `Assets/Scripts/UI/Inventory/Editor/InventoryScreenBuilder.cs` — builds full InventoryScreen hierarchy; TOPBAR_H=321, BOTTOMNAV_H=196 constants
-- `Assets/Scripts/UI/Inventory/Editor/FilterBarPatcher.cs` — surgical FilterBar rebuild (GOLFIN/Patch - Rebuild FilterBar)
-- `Assets/Scripts/UI/Inventory/InventoryScreenController.cs` — tab management
-- `Assets/Scripts/UI/Inventory/ClubFilterBar.cs` — filter type selection, fires OnFilterChanged
-- `Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs` — club card, reads from ClubManager/ClubDatabaseCSV
-- `Assets/Scripts/UI/Inventory/Editor/ClubThumbnailCardBuilder.cs` — duplicates CharacterThumbnailCardGlowUp prefab
-- `Assets/Scripts/UI/ScreenManager.cs` — screen transitions + bar visibility (includes ScreenId.Inventory)
-- `Assets/Scripts/UI/PersistentUIManager.cs` — NavigateTo() routes Inventory tab to ScreenManager
+### Tools & Communication
+- **Claude (claude.ai)** = Architect — analyzes references, writes specs, reviews architecture
+- **Claude Code** = Implementer — full repo access, reads specs, edits files
+- **Filesystem access** — Claude (architect) can read/write files directly at `C:\Users\cesar\GolfinRedux`
+  - Can read all .cs scripts, CSV data, markdown docs
+  - Can read images (under 1MB — use compressed versions)
+  - Can write to Docs/ (TellCode.md, AI_CONTEXT.md, specs)
+  - Cannot run Unity or PowerShell commands
+- **TellCode.md** — Claude (architect) writes instructions to `Docs/TellCode.md`, Claude Code reads and executes
+- **AI_CONTEXT.md** — shared memory, updated by both. Claude Code updates at session end.
 
-### Known Nav Bar Heights (ShellScene.unity YAML — verified)
+### Handoff Process
+1. Claude (architect) writes instructions → `Docs/TellCode.md` (direct filesystem write)
+2. User tells Claude Code: "check TellCode" (two words)
+3. Claude Code reads and implements
+4. Claude Code marks tasks done in TellCode.md
+5. Claude (architect) reads project files directly to verify — no uploads needed
+
+### Screenshot Comparison Workflow
+1. Claude Code builds/changes UI
+2. User navigates to the screen in Play mode
+3. Run `GOLFIN > Screenshot > Capture Game View` (saves to Assets/Screenshots/)
+4. Run compression: `powershell -File Docs/compress_screenshots.ps1 "Assets/Screenshots"`
+5. Claude (architect) reads compressed screenshot + reference from Assets/References/ and compares
+6. Reference images must also be compressed (run compress script on References folders)
+7. Max image size for filesystem read: 1MB
+
+### No-Upload Workflow (NEW — 2026-03-20)
+Claude (architect) now has direct filesystem access to the entire project. This means:
+- **No more file uploads needed** — Claude reads scripts, CSVs, configs directly
+- **No more copy-paste for instructions** — Claude writes TellCode.md directly
+- **No more uploading screenshots** — Claude reads from Assets/Screenshots/ (compressed)
+- **AI_CONTEXT.md can be updated directly** by Claude (architect)
+- User's role is reduced to: navigating Unity, taking screenshots, and saying "check TellCode"
+
+---
+
+## Project Structure (Key Paths)
+
 ```
-TopBar:       anchorMin/Max=(0.5,1), sizeDelta=(1178, 321), pivot=(0.5,1)  → 321px, top-anchored
-BottomNavBar: anchorMin/Max=(0.5,0), sizeDelta=(1178, 196), pivot=(0.5,0) → 196px, bottom-anchored
-RosterScreen: full stretch (0,0)→(1,1), sizeDelta=(0,0) — internal sections offset manually
-InventoryScreen: full stretch (0,0)→(1,1), offsetMin.y=+196, offsetMax.y=-321 (fixed this session)
+C:\Users\cesar\GolfinRedux\
+├── Assets/
+│   ├── Data/
+│   │   ├── Characters.csv (12 characters)
+│   │   ├── Clubs.csv (6 clubs)
+│   │   ├── LevelUpCosts.csv (199 levels, universal)
+│   │   └── CharacterLevelUpCosts.csv (character-specific, 89 rows)
+│   │
+│   ├── Resources/
+│   │   ├── Characters/Homescreen/ (homescreen portraits)
+│   │   ├── Clubs/Portraits/ (6 club thumbnails)
+│   │   ├── Clubs/Full/ (2 + Placeholder)
+│   │   ├── Portraits/FullBody/ (character full-body)
+│   │   ├── Portraits/Thumbnails/ (character thumbnails)
+│   │   └── Rarities/ (6 rarity backgrounds, shared)
+│   │
+│   ├── References/
+│   │   ├── Roster Screen/ (7 reference images)
+│   │   └── Inventory/ (club inventory references — to be added)
+│   │
+│   ├── Screenshots/ (captured via GOLFIN > Screenshot menu)
+│   │
+│   ├── Scripts/
+│   │   ├── CharacterManager.cs (singleton)
+│   │   ├── ClubManager.cs (singleton)
+│   │   ├── UI/Roster/ (Data/, Editor/, Managers/, UI/)
+│   │   ├── UI/Inventory/ (ClubData, ClubDatabaseCSV, ClubFilterBar, ClubThumbnailCard, InventoryScreenController)
+│   │   └── UI/ (ScreenManager, PersistentUIManager, HomeScreenController, etc.)
+│   │
+│   ├── Localization/
+│   │   └── LocalizationText.csv (key, English, Japanese)
+│   │
+│   └── Prefabs/UI/Roster/ (CharacterThumbnailCardGlowUp, StatBar, etc.)
+│
+├── Docs/
+│   ├── AI_CONTEXT.md (this file)
+│   ├── TellCode.md (architect → code instructions, checked each task)
+│   ├── CLAUDE.md (Claude Code auto-reads at session start)
+│   ├── CLUB_INVENTORY_SPEC.md (active spec)
+│   ├── GAME_DESIGN_AGENT.md (for future design sprint)
+│   ├── generate_audit.ps1 (architecture audit generator)
+│   ├── compress_screenshots.ps1 (image compression for review)
+│   └── (archived phase specs: PHASE_2B/2C/2D, LOCALIZATION_PASS)
+│
+├── tasks/
+│   └── lessons.md
+│
+└── CLAUDE.md (project root — Claude Code reads at session start)
 ```
 
-### Known AutoWire Paths (verified against ShellScene.unity YAML)
-```
-RarityRow children:
-  RarityPanel/RarityRow/RarityText           (NOT RarityLabel)
-  RarityPanel/RarityRow/LevelPanel/LevelText     (nested in LevelPanel)
-  RarityPanel/RarityRow/LevelPanel/LevelTextMax  (nested in LevelPanel)
+## Technical Notes
 
-SelectButton text child:
-  SelectButton/Text (TMP)                    (NOT "Text")
+### Known Nav Bar Heights
 ```
+TopBar:       321px, top-anchored
+BottomNavBar: 196px, bottom-anchored
+InventoryScreen: offsetMin.y=+196, offsetMax.y=-321
+```
+
+### Script Execution Order
+```
+CharacterDatabaseCSV:  -200
+CharacterManager:      -100
+Everything else:       default (0)
+ClubDatabaseCSV:       needs adding (before ClubManager)
+```
+
+### Design Decisions
+- CSV-first architecture (not ScriptableObjects)
+- Resources.Load for sprites (no Inspector arrays)
+- Event-driven UI (Action delegates, subscribe OnEnable/unsubscribe OnDisable)
+- Namespace: Golfin.Roster for roster, Golfin.Inventory for clubs
+- Localization: all new text uses LocalizationManager.Get("KEY")
+- Rich text tags supported in localization CSV values
+- Character bios stay in Characters.csv (bioJa column deferred)
+- Platform: Windows (PowerShell, no bash/chmod/sed)
+
+### Deferred Items
+- Character compare stat differences (green +N / red -N) — apply when doing club compare
+- Character bio Japanese translations (bioJa column)
+- Full Japanese localization review by Ken
+- Pagination dots styling polish
+- Status icons in compare mode right panel
 
 ### Blockers
-- None.
+- None
 
-### What's Next (Club Inventory Phase C)
-1. **Run GOLFIN/Patch - Fix InventoryScreen Layout** (or re-run GOLFIN/Build Inventory Screen) to apply the nav bar offset fix to the scene
-2. **Run GOLFIN/Setup Club Thumbnail Card Prefab** to create ClubThumbnailCard.prefab (builder exists, prefab not yet generated)
-3. **Phase C — Carousel + Detail Panel**:
-   - ClubDetailPanel hierarchy (stat bars, portrait, EQUIP button)
-   - Wire carousel to ClubManager data filtered by ClubFilterBar.OnFilterChanged
-   - EQUIP button logs to console (Phase E wires actual equip logic)
-4. **Phase D** — Compare mode (stat differences: green +N / red -N)
-5. **Phase E** — LEVEL UP / REPAIR log to console, Bag 1 direct equip
-
-### Session startup reminder
-Run: `powershell -File Docs/generate_audit.ps1 > Docs/ARCHITECTURE_AUDIT.md`
-Then read: Docs/AI_CONTEXT.md, Docs/ARCHITECTURE_AUDIT.md, any Docs/PHASE_*_SPEC.md, tasks/lessons.md
+### Session Startup Reminder (for Claude Code)
+1. Run: `powershell -File Docs/generate_audit.ps1 > Docs/ARCHITECTURE_AUDIT.md`
+2. Read: Docs/AI_CONTEXT.md, Docs/ARCHITECTURE_AUDIT.md
+3. Read: Docs/TellCode.md for pending architect instructions
+4. Read: Any active spec files in Docs/
