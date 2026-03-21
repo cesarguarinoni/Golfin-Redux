@@ -72,6 +72,35 @@ Workflow:
 
 ## Basic Rules
 
+### 0. Pre-Commit Code Verification (MANDATORY)
+**Before committing ANY C# file, verify it will compile. This is not optional.**
+
+For EVERY new or modified .cs file, check these before saving:
+
+1. **Using directives:** Read the top of the file you're editing. Does every type you reference have a corresponding `using` statement? Common ones missed:
+   - `CharacterRarity` → needs `using Golfin.Roster;`
+   - `ClubType`, `ClubDataRuntime`, `PlayerClubData` → needs `using Golfin.Inventory;`
+   - `TextMeshProUGUI` → needs `using TMPro;`
+   - `Image`, `Button`, `ScrollRect` → needs `using UnityEngine.UI;`
+   - `Keyboard`, `Key` → needs `using UnityEngine.InputSystem;`
+   - `DOTween` → needs `using DG.Tweening;`
+   - `List<>`, `Dictionary<>` → needs `using System.Collections.Generic;`
+   - `Action`, `Func` → needs `using System;`
+   - `IEnumerator` → needs `using System.Collections;`
+
+2. **Namespace consistency:** If the file is in `Golfin.Inventory` namespace, and it references a type from `Golfin.Roster`, it MUST have `using Golfin.Roster;`. Cross-namespace references are the #1 source of compile errors.
+
+3. **Method signatures:** When calling a method on another class, READ that class first to verify the method exists with the expected name and parameters. Don't guess.
+
+4. **Null safety:** Use `== null` not `??` for Unity objects (see lessons.md).
+
+5. **After writing a file, scan it once more for red flags:**
+   - Any type name you're not 100% sure about → grep the codebase for it
+   - Any method call on a singleton → verify the method exists on that singleton
+   - Any event subscription → verify the event exists with the correct delegate signature
+
+**If in doubt, READ THE FILE you're referencing before writing code that depends on it.**
+
 ### 1. Plan Mode Default
 - Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
 - If something goes sideways, STOP and re-plan immediately — don't keep pushing
@@ -150,40 +179,52 @@ This is a Unity project — there are no custom CLI build commands. Development 
 ```
 Logo → Splash → Loading → Home (Hub)
                             ├→ Roster (character management)
+                            ├→ Inventory (clubs, bags, balls, items)
                             ├→ Settings (modal overlay)
                             ├→ Gacha (not yet implemented)
                             └→ Gameplay (not yet implemented)
 ```
 
-`ScreenManager` controls transitions with fade animations via `FadeController`. `PersistentUIManager` handles the top bar and bottom nav bar, showing them only on Home and Roster screens.
+`ScreenManager` controls transitions with fade animations via `FadeController`. `PersistentUIManager` handles the top bar and bottom nav bar, showing them only on Home, Roster, and Inventory screens.
 
 ### Core Singletons
 | Class | Location | Purpose |
 |---|---|---|
 | `CharacterManager` | `Assets/Scripts/CharacterManager.cs` | Central hub — roster, selection, level-up, stat allocation |
+| `ClubManager` | `Assets/Scripts/ClubManager.cs` | Club ownership, equip/unequip, bag management |
 | `RewardPointsManager` | `Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs` | R-point currency, persisted via PlayerPrefs |
 | `CharacterDatabaseCSV` | `Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs` | Runtime CSV character loader (preferred over ScriptableObjects) |
+| `ClubDatabaseCSV` | `Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs` | Runtime CSV club loader |
 | `CharacterLevelUpDatabase` | `Assets/Scripts/UI/Roster/Data/CharacterLevelUpDatabase.cs` | Level economy CSV lookup |
 | `AudioManager` | `Assets/Scripts/Audio/AudioManager.cs` | Music/SFX playback |
 | `ScreenManager` | `Assets/Scripts/UI/ScreenManager.cs` | Screen activation/deactivation with fade transitions |
 | `PersistentUIManager` | `Assets/Scripts/UI/PersistentUIManager.cs` | Top/bottom nav bars visibility |
 | `FadeController` | `Assets/Scripts/UI/FadeController.cs` | Screen fade transitions |
 
+### Namespaces
+| Namespace | Contents |
+|---|---|
+| `Golfin.Roster` | CharacterData, PlayerCharacterData, RarityHelper, RarityStatCaps, CharacterRarity, all roster UI scripts |
+| `Golfin.Inventory` | ClubData, ClubDataRuntime, PlayerClubData, ClubType, ClubDatabaseCSV, all inventory UI scripts |
+| (global) | CharacterManager, ClubManager, LocalizationManager, ScreenManager, PersistentUIManager |
+
 ### Character System
 
 **Two-layer data model:**
 - **`CharacterData`** (ScriptableObject) — base template: stats, portraits (`portraitThumbnail`, `portraitFull`), rarity, identity, localization keys
-- **`PlayerCharacterData`** (plain C#) — player instance: level (1–199), SP earned/spent, pending SP allocation, selection state, stamina energy
+- **`PlayerCharacterData`** (plain C#) — player instance: level, SP earned/spent, pending SP allocation, selection state, stamina energy
 
 **CSV-first architecture:** `CharacterDatabaseCSV` loads character data from `Assets/Data/Characters.csv` at runtime. `CharacterManager` tries CSV first, falls back to ScriptableObject database.
 
-**Four stats:** Strength, Club Control, Recovery, Stamina  
-**Stat caps:** Rarity-based, defined in `RarityStatCaps.cs` (Common 25 → Supreme 50)  
-**Six rarities:** Common, Uncommon, Rare, Mythic, Legendary, Supreme  
+**Four stats:** Strength, Club Control, Recovery, Stamina
+**Stat caps:** Rarity-based, defined in `RarityStatCaps.cs` (Common 25 → Supreme 50)
+**Six rarities:** Common, Uncommon, Rare, Mythic, Legendary, Supreme
+**Starting levels by rarity:** Common 10, Uncommon 40, Rare 80, Mythic 120, Legendary 160, Supreme 200
+**Max levels by rarity:** Common 39, Uncommon 79, Rare 119, Mythic 159, Legendary 199, Supreme 239
 
 **SP allocation** uses Strategy pattern: `ManualSPAllocation` (player-controlled) or `AutomaticStatAllocation`, both implementing `StatAllocationStrategy`.
 
-**Level-up economy** is CSV-driven: `Assets/Data/LevelUpCosts.csv` — RP cost and SP reward per level for all 199 levels.
+**Level-up economy** is CSV-driven: `Assets/Data/LevelUpCosts.csv` — 240 levels, cost = level × 5 RP, SP reward = 1 per level. Shared between characters and clubs.
 
 **Existing utilities (USE THESE, don't duplicate):**
 - `RarityHelper.GetRarityColor(rarity)` — standard rarity colors
@@ -191,6 +232,16 @@ Logo → Splash → Loading → Home (Hub)
 - `RarityHelper.GetRarityBadgeTextColor(rarity)` — card badge text colors
 - `RarityStatCaps.GetCap(rarity, statName)` — stat maximums
 - `ModalController` — base class for modal dialogs (fade, backdrop, show/hide)
+
+### Club System
+
+**Two-layer data model (mirrors character system):**
+- **`ClubDataRuntime`** — template from Clubs.csv: stats, sprites, rarity, type, brand
+- **`PlayerClubData`** — player instance: level, durability, equip slot
+
+**Six club stats:** Power, Accuracy, Lie Resistance, Loft, Durability (consumable), Distance (derived, no bar)
+**Club types:** Driver, Wood, Iron, A.Wedge, P.Wedge, S.Wedge, Putter
+**Same rarity/level system as characters**
 
 ### Roster UI Hierarchy (Unity)
 ```
@@ -241,32 +292,40 @@ Canvas > ScreensRoot > RosterScreen
 | `CharacterManager` | `OnRosterChanged()` | RosterScreenController, CarouselController |
 | `RewardPointsManager` | `OnPointsChanged(int)` | RosterScreenController, HomeScreenController |
 | `CarouselController` | `OnCharacterSelected(string)` | CharacterDetailPanel |
+| `ClubManager` | `OnClubEquipped(string)` | ClubDetailPanel |
+| `ClubManager` | `OnClubLeveledUp(string)` | ClubDetailPanel |
+| `ClubManager` | `OnInventoryChanged()` | ClubCarouselController |
 
 ### Data Files
 | File | Purpose |
 |---|---|
 | `Assets/Data/Characters.csv` | Character data (CSV-first, loaded by CharacterDatabaseCSV) |
+| `Assets/Data/Clubs.csv` | Club data (CSV-first, loaded by ClubDatabaseCSV) |
 | `Assets/Data/CharacterDatabase.asset` | ScriptableObject character templates (fallback) |
-| `Assets/Data/LevelUpCosts.csv` | Level economy: `costs_r`, `sp_reward` for 199 levels |
+| `Assets/Data/LevelUpCosts.csv` | Level economy: 240 levels, cost = level × 5, SP = 1 (shared) |
 | `Assets/Data/HoleDatabase.csv` | Hole definitions |
 | `Assets/Data/HoleDatabase.asset` | ScriptableObject hole collection |
 
 ### Localization
-`LocalizationManager` loads CSV files from `Assets/Localization/`. Key prefixes: `HOLE_*`, `CHAR_*`, `ROSTER_*`, `HOME_*`. Currently supports English and Japanese.
+`LocalizationManager` loads CSV files from `Assets/Localization/`. Key prefixes: `HOLE_*`, `CHAR_*`, `ROSTER_*`, `HOME_*`, `CLUB_*`, `MODAL_*`, `COMPARE_*`. Currently supports English and Japanese.
 
 ### Key Patterns
 - **Events:** C# `System.Action` delegates, subscribe in `OnEnable`, unsubscribe in `OnDisable`
-- **Namespace:** `Golfin.Roster` for all roster/character scripts
+- **Namespaces:** `Golfin.Roster` for roster, `Golfin.Inventory` for clubs
 - **Modals:** Extend `ModalController` base class
-- **Prefab Builder Tools:** Editor scripts in `Assets/Scripts/UI/Roster/Editor/`
+- **Sprites:** Load via `Resources.Load<Sprite>()`, NOT Inspector arrays
+- **Prefab Builder Tools:** Editor scripts in `Assets/Scripts/UI/Roster/Editor/` and `Assets/Scripts/UI/Inventory/Editor/`
 - **UIAutoWire:** `Assets/Scripts/Utilities/UIAutoWire.cs` for component auto-discovery
+- **Unity null checks:** Always `== null` not `??` (see lessons.md)
+- **Input system:** Always `UnityEngine.InputSystem`, never `UnityEngine.Input`
+- **Platform:** Windows (PowerShell, no bash/chmod/sed)
 
 ---
 
 ## Conventions
 
 ### Localization
-- All **new** user-facing text should use localization keys from the start: `LocalizationManager.GetText("KEY")`
+- All **new** user-facing text should use localization keys from the start: `LocalizationManager.Get("KEY")`
 - Use the pattern `SCREEN_ELEMENT` (e.g., `ROSTER_LEVEL_UP`, `HOME_PLAY_BUTTON`, `MODAL_CONFIRM`)
 - Add both EN and JP entries to the localization CSV when creating new text
 - Legacy hardcoded text will be migrated in a dedicated localization pass (not yet scheduled)
@@ -279,9 +338,11 @@ Canvas > ScreensRoot > RosterScreen
 | File | Purpose |
 |---|---|
 | `Docs/AI_CONTEXT.md` | Living project status — current phase, blockers, next steps |
+| `Docs/TellCode.md` | Architect instructions for Claude Code |
 | `Docs/ARCHITECTURE_AUDIT.md` | Auto-generated — file tree, singletons, events, health check |
-| `Docs/generate_audit.sh` | Script to regenerate the audit |
-| `Docs/PHASE_*_SPEC.md` | Active implementation specs from architect |
-| `Docs/ROSTER_DEVELOPMENT_PLAN_UPDATED.md` | 7-phase roadmap |
-| `tasks/todo.md` | Current task checklist |
+| `Docs/generate_audit.ps1` | Script to regenerate the audit |
+| `Docs/CLUB_INVENTORY_SPEC.md` | Active club inventory spec |
+| `Docs/Game Design/GAME_DESIGN_CHANGELOG.md` | Game design changes from original GDD |
+| `Docs/GAME_DESIGN_AGENT.md` | AI agent for evaluating GDD systems |
+| `Docs/Archive/` | Completed phase specs |
 | `tasks/lessons.md` | Accumulated corrections and patterns |

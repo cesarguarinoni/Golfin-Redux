@@ -1,13 +1,25 @@
 # Architecture Audit
 
-> Auto-generated 2026-03-19 12:26. Do not edit manually.
+> Auto-generated 2026-03-20 10:19. Do not edit manually.
 
 ## File Tree (Scripts)
 
 ```
 Assets/Scripts/Audio/AudioManager.cs
 Assets/Scripts/CharacterManager.cs
+Assets/Scripts/ClubManager.cs
 Assets/Scripts/Debug/RewardPointsDebugPanel.cs
+Assets/Scripts/Editor/Archive/CompareRightPanelBuilder.cs
+Assets/Scripts/Editor/Archive/FixBarImageTypes.cs
+Assets/Scripts/Editor/Archive/LevelUpModalBuilder.cs
+Assets/Scripts/Editor/Archive/LevelUpModalPatcher.cs
+Assets/Scripts/Editor/Archive/RosterCarouselBuilder.cs
+Assets/Scripts/Editor/Archive/RosterMenuCleanup.cs
+Assets/Scripts/Editor/Archive/RosterPhase1TestRunner.cs
+Assets/Scripts/Editor/Archive/RosterPrefabBuilder.cs
+Assets/Scripts/Editor/Archive/RosterScreenBuilder.cs
+Assets/Scripts/Editor/Archive/RosterSystemSetupTool.cs
+Assets/Scripts/Editor/ScreenshotTool.cs
 Assets/Scripts/UI/AboutSubmenu.cs
 Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs
 Assets/Scripts/UI/Editor/MenuItemRemover.cs
@@ -17,6 +29,15 @@ Assets/Scripts/UI/HoleData.cs
 Assets/Scripts/UI/HoleDatabase.cs
 Assets/Scripts/UI/HoleDatabaseLoader.cs
 Assets/Scripts/UI/HomeScreenController.cs
+Assets/Scripts/UI/Inventory/ClubData.cs
+Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs
+Assets/Scripts/UI/Inventory/ClubFilterBar.cs
+Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs
+Assets/Scripts/UI/Inventory/Editor/ClubManagerSetup.cs
+Assets/Scripts/UI/Inventory/Editor/ClubThumbnailCardBuilder.cs
+Assets/Scripts/UI/Inventory/Editor/FilterBarPatcher.cs
+Assets/Scripts/UI/Inventory/Editor/InventoryScreenBuilder.cs
+Assets/Scripts/UI/Inventory/InventoryScreenController.cs
 Assets/Scripts/UI/LanguageSubmenu.cs
 Assets/Scripts/UI/LoadingBar.cs
 Assets/Scripts/UI/LoadingScreenController.cs
@@ -32,19 +53,11 @@ Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs
 Assets/Scripts/UI/Roster/Data/RarityStatCaps.cs
 Assets/Scripts/UI/Roster/Data/StatAllocationStrategy.cs
 Assets/Scripts/UI/Roster/Editor/CompareAutoWire.cs
-Assets/Scripts/UI/Roster/Editor/CompareRightPanelBuilder.cs
 Assets/Scripts/UI/Roster/Editor/DetailPanelAutoWire.cs
-Assets/Scripts/UI/Roster/Editor/FixBarImageTypes.cs
 Assets/Scripts/UI/Roster/Editor/LevelUpModalAutoWire.cs
-Assets/Scripts/UI/Roster/Editor/LevelUpModalBuilder.cs
-Assets/Scripts/UI/Roster/Editor/LevelUpModalPatcher.cs
 Assets/Scripts/UI/Roster/Editor/PaginationDotSetup.cs
-Assets/Scripts/UI/Roster/Editor/RosterCarouselBuilder.cs
-Assets/Scripts/UI/Roster/Editor/RosterMenuCleanup.cs
-Assets/Scripts/UI/Roster/Editor/RosterPhase1TestRunner.cs
-Assets/Scripts/UI/Roster/Editor/RosterPrefabBuilder.cs
-Assets/Scripts/UI/Roster/Editor/RosterScreenBuilder.cs
-Assets/Scripts/UI/Roster/Editor/RosterSystemSetupTool.cs
+Assets/Scripts/UI/Roster/Editor/RosterDebugTools.cs
+Assets/Scripts/UI/Roster/Editor/StatusIconBuilder.cs
 Assets/Scripts/UI/Roster/Managers/CharacterDatabase.cs
 Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs
 Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
@@ -76,6 +89,8 @@ Assets/Data/CharacterLevelUpCosts.csv
 Assets/Data/CharacterLevelUpCosts.csv.meta
 Assets/Data/Characters.csv
 Assets/Data/Characters.csv.meta
+Assets/Data/Clubs.csv
+Assets/Data/Clubs.csv.meta
 Assets/Data/CREATE_DATABASE.md
 Assets/Data/CREATE_DATABASE.md.meta
 Assets/Data/HoleDatabase.asset
@@ -93,6 +108,7 @@ Assets/Data/README_HOLES.md.meta
 | Class | File | Singleton | Key Interfaces |
 |---|---|---|---|
 | CharacterManager | Assets/Scripts/CharacterManager.cs | Yes |  |
+| ClubManager | Assets/Scripts/ClubManager.cs | Yes |  |
 | AudioManager | Assets/Scripts/Audio/AudioManager.cs | Yes |  |
 | RewardPointsDebugPanel | Assets/Scripts/Debug/RewardPointsDebugPanel.cs | Yes |  |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs |  |  |
@@ -116,6 +132,10 @@ Assets/Data/README_HOLES.md.meta
 | SplashScreenController | Assets/Scripts/UI/SplashScreenController.cs |  |  |
 | SwipeDetector | Assets/Scripts/UI/SwipeDetector.cs |  | IBeginDragHandler, IEndDragHandler |
 | UserProfileSubmenu | Assets/Scripts/UI/UserProfileSubmenu.cs | Yes |  |
+| ClubDatabaseCSV | Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs | Yes |  |
+| ClubFilterBar | Assets/Scripts/UI/Inventory/ClubFilterBar.cs |  |  |
+| ClubThumbnailCard | Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs | Yes |  |
+| InventoryScreenController | Assets/Scripts/UI/Inventory/InventoryScreenController.cs |  |  |
 | ModalController | Assets/Scripts/UI/Modals/ModalController.cs |  |  |
 | CharacterLevelUpDatabase | Assets/Scripts/UI/Roster/Data/CharacterLevelUpDatabase.cs | Yes |  |
 | CharacterDatabaseCSV | Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs | Yes |  |
@@ -130,6 +150,7 @@ Assets/Data/README_HOLES.md.meta
 ## Singletons
 
 - **CharacterManager** (Assets/Scripts/CharacterManager.cs) (DontDestroyOnLoad)
+- **ClubManager** (Assets/Scripts/ClubManager.cs) (DontDestroyOnLoad)
 - **AudioManager** (Assets/Scripts/Audio/AudioManager.cs) (DontDestroyOnLoad)
 - **FadeController** (Assets/Scripts/UI/FadeController.cs) (DontDestroyOnLoad)
 - **PersistentUIManager** (Assets/Scripts/UI/PersistentUIManager.cs) (DontDestroyOnLoad)
@@ -146,8 +167,12 @@ Assets/Data/README_HOLES.md.meta
 | CharacterManager | `public event System.Action<string>? OnCharacterLeveledUp;` |
 | CharacterManager | `public event System.Action<string>? OnCharacterSelected;` |
 | CharacterManager | `public event System.Action? OnRosterChanged;` |
+| ClubManager | `public event System.Action<string>? OnClubEquipped;` |
+| ClubManager | `public event System.Action<string>? OnClubLeveledUp;` |
+| ClubManager | `public event System.Action? OnInventoryChanged;` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnExpanded;` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnCollapsed;` |
+| ClubFilterBar | `public event System.Action<ClubType?>? OnFilterChanged;` |
 | RewardPointsManager | `public event System.Action<int> OnPointsChanged;` |
 | CarouselController | `public event System.Action<string> OnCharacterSelected; // Change to event` |
 
@@ -166,12 +191,16 @@ Assets/Data/README_HOLES.md.meta
 | LoadingScreenController | Assets/Scripts/UI/LoadingScreenController.cs | 5 |
 | LogoScreenController | Assets/Scripts/UI/LogoScreenController.cs | 3 |
 | ProTipCard | Assets/Scripts/UI/ProTipCard.cs | 9 |
-| ScreenManager | Assets/Scripts/UI/ScreenManager.cs | 6 |
+| ScreenManager | Assets/Scripts/UI/ScreenManager.cs | 7 |
 | SettingsMenuItem | Assets/Scripts/UI/SettingsMenuItem.cs | 7 |
 | SoundSettingsSubmenu | Assets/Scripts/UI/SoundSettingsSubmenu.cs | 4 |
 | SwipeDetector | Assets/Scripts/UI/SwipeDetector.cs | 1 |
 | UserProfileSubmenu | Assets/Scripts/UI/UserProfileSubmenu.cs | 11 |
 | LocalizationEditorHelper | Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs | 1 |
+| ClubDatabaseCSV | Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs | 1 |
+| ClubFilterBar | Assets/Scripts/UI/Inventory/ClubFilterBar.cs | 5 |
+| ClubThumbnailCard | Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs | 10 |
+| InventoryScreenController | Assets/Scripts/UI/Inventory/InventoryScreenController.cs | 6 |
 | ModalController | Assets/Scripts/UI/Modals/ModalController.cs | 2 |
 | CharacterLevelUpDatabase | Assets/Scripts/UI/Roster/Data/CharacterLevelUpDatabase.cs | 1 |
 | PlayerCharacterData | Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs | 14 |
@@ -179,9 +208,9 @@ Assets/Data/README_HOLES.md.meta
 | CharacterDatabaseCSV | Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs | 1 |
 | CarouselController | Assets/Scripts/UI/Roster/UI/CarouselController.cs | 9 |
 | CharacterDetailPanel | Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs | 29 |
-| CharacterThumbnailCard | Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs | 8 |
-| CompareController | Assets/Scripts/UI/Roster/UI/CompareController.cs | 30 |
-| LevelUpModalController | Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs | 40 |
+| CharacterThumbnailCard | Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs | 11 |
+| CompareController | Assets/Scripts/UI/Roster/UI/CompareController.cs | 32 |
+| LevelUpModalController | Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs | 48 |
 | RosterScreenController | Assets/Scripts/UI/Roster/UI/RosterScreenController.cs | 2 |
 | StatBar | Assets/Scripts/UI/Roster/UI/StatBar.cs | 7 |
 
@@ -200,6 +229,13 @@ id,name,lastName,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,po
 char_james,James,Cartwright,Common,6,7,6,6,James,BigRosterJames,199,A dependable player just starting out on the tour.
 ```
 (13 rows)
+
+### Clubs.csv
+```
+id,name,type,rarity,brand,basePower,baseAccuracy,baseLieResistance,baseLoft,maxDurability,baseDistance,portraitSprite,portraitFull,maxLevel,info
+club_driver_gf,Driver G&F,Driver,Common,G&F,80,30,10,12,100,250,Driver-G&F,Placeholder,119,"A reliable driver from G&F with balanced power and solid accuracy off the tee."
+```
+(7 rows)
 
 ### HoleDatabase.csv
 ```
