@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using Golfin.Inventory;
+using Golfin.Roster;
 
 /// <summary>
 /// Singleton — owns all player club data, handles equip/unequip and bag assignment.
