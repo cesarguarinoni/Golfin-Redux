@@ -1,186 +1,137 @@
 # AI Context — Golfin Redux
 
-**Last Updated:** 2026-03-20 by Claude (Architect)
+**Last Updated:** 2026-03-21 by Claude Code
 
-## Current Phase: Club Inventory Phase C (Carousel + Detail Panel)
+## Current Phase: Club Inventory Phase C — Manual Wiring Needed
 
 ### Status
 
 #### Phase 2 — Character Roster ✅ COMPLETE
-- [x] Phase 2a: Carousel + Navigation
-- [x] Phase 2b: Detail Panel (data binding, stats, bio, portraits, select)
-- [x] Phase 2c: Level Up Modal (preview flow, SP allocation, confirm/cancel, RP integration)
-- [x] Phase 2d: Compare & Swap (dual column, animations, swap selection)
-- [x] Localization pass (all hardcoded text wired to CSV)
-- [x] Status icons (selected, level-up ready, low stamina) on detail panel + carousel cards
-- [x] Carousel pagination dots + arrow navigation
-- [x] Resources-based sprite loading (portraits, rarities, homescreen)
+- All sub-phases (2a-2d) complete
+- Localization pass complete
+- Status icons implemented
+- Carousel pagination + arrows working
 
 #### Club Inventory Phase A — Foundation ✅ COMPLETE
-- [x] ClubManager.cs, ClubDatabaseCSV.cs, ClubData.cs, PlayerClubData
-- [x] Clubs.csv (6 clubs, 1 per type)
-- [x] ClubThumbnailCard.cs + prefab builder
-- [x] Club sprites in Resources/Clubs/Portraits and Resources/Clubs/Full
+- ClubManager.cs, ClubDatabaseCSV.cs, ClubData.cs, Clubs.csv (6 clubs)
+- ClubThumbnailCard.cs + prefab builder
+- Club sprites in Resources/Clubs/
 
 #### Club Inventory Phase B — InventoryScreen ✅ COMPLETE
-- [x] InventoryScreen hierarchy, ScreenId.Inventory, nav wiring
-- [x] Tab bar (CLUBS/BAGS/BALLS/ITEMS)
-- [x] ClubFilterBar (8 type filters)
-- [x] FilterBar visibility fix (nav bar offsets)
-- [x] Archived 9 obsolete editor scripts
+- InventoryScreen hierarchy, tabs, filter bar, nav wiring
+- FilterBar visibility fixed
 
-#### Club Inventory Phase C — Scripts complete, pending Unity run
-- [x] ClubCarouselController.cs — subscribes to ClubFilterBar, fires OnClubSelected
-- [x] ClubDetailPanel.cs — all 6 stats, equip toggle, localization, event wiring
-- [x] ClubDetailPanelBuilder.cs — GOLFIN/Inventory/Build Club Phase C
-- [x] ClubDetailPanelAutoWire.cs — GOLFIN/Inventory/Wire Club Detail Panel
-- [x] 13 CLUB_ localization keys added to LocalizationText.csv
-- [ ] ⚠️ Run builder + auto-wire in Unity Editor (manual step)
-- [ ] ⚠️ Assign ClubThumbnailCard prefab + ClubFilterBar in Inspector
-- [ ] ⚠️ Script Execution Order: ClubDatabaseCSV=-200, ClubManager=-100
-- [ ] Visual polish to match reference images
+#### New Leveling Economy ✅ COMPLETE (2026-03-21)
+- CharacterManager: rarity-based starting + max levels (Common 10→39, Supreme 200→239)
+- ClubManager: same rarity-based starting levels
+- LevelUpCosts.csv: 240 rows (levels 1–240, cost = level × 5 RP, 1 SP each)
+- CharacterLevelUpCosts.csv deleted (replaced by universal LevelUpCosts.csv)
+- CharacterLevelUpDatabase parser: no limit, dictionary-based, works for 240 levels
+
+#### Club Inventory Phase C — Code Done, Manual Wiring Needed ⚠️
+Claude Code completed all Phase C code (2026-03-20):
+- [x] ClubCarouselController.cs created
+- [x] ClubDetailPanel.cs created (6 stats + durability + distance + equip)
+- [x] ClubDetailPanelBuilder.cs + ClubDetailPanelAutoWire.cs created
+- [x] Localization keys added (13 CLUB_ keys)
+- [x] Guillermo ID fixed (char_alejandro → char_guillermo)
+- [x] .gitignore updated (Assets/Screenshots/)
+
+**MANUAL STEPS NEEDED (do these first tomorrow):**
+1. Unity: Edit → Project Settings → Script Execution Order: ClubDatabaseCSV = -200, ClubManager = -100
+2. Run: GOLFIN/Inventory/Build Club Phase C
+3. Run: GOLFIN/Inventory/Wire Club Detail Panel
+4. Assign ClubThumbnailCard.prefab to ClubCarouselController.clubCardPrefab in Inspector
+5. Assign ClubFilterBar to ClubCarouselController.filterBar in Inspector
+6. Test in Play mode: navigate to Inventory, verify carousel + detail panel
 
 #### Club Inventory Phase D — Planned
 - [ ] Compare mode with stat differences (green +N / red -N)
 - [ ] SWAP equipped club
 
 #### Club Inventory Phase E — Planned
-- [ ] Bag selection modal (future — direct equip to Bag 1 for now)
+- [ ] Bag selection modal (future)
 - [ ] Repair modal (future)
 
 ---
 
-## AI Workflow
+### AI Workflow
 
-### Tools & Communication
-- **Claude (claude.ai)** = Architect — analyzes references, writes specs, reviews architecture
-- **Claude Code** = Implementer — full repo access, reads specs, edits files
-- **Filesystem access** — Claude (architect) can read/write files directly at `C:\Users\cesar\GolfinRedux`
-  - Can read all .cs scripts, CSV data, markdown docs
-  - Can read images (under 1MB — use compressed versions)
-  - Can write to Docs/ (TellCode.md, AI_CONTEXT.md, specs)
-  - Cannot run Unity or PowerShell commands
-- **TellCode.md** — Claude (architect) writes instructions to `Docs/TellCode.md`, Claude Code reads and executes
-- **AI_CONTEXT.md** — shared memory, updated by both. Claude Code updates at session end.
+#### Tools & Communication
+- **Claude (claude.ai)** = Architect — filesystem access to C:\Users\cesar\GolfinRedux
+- **Claude Code** = Implementer — full repo access
+- **TellCode.md** — architect writes instructions, Code reads and executes
+- **Figma** — company file accessible (key: hXFadl4O6HGKWakiEKgZbW), personal file blocked
+- **Daily Report** — auto Telegram to Ken at 18:00 JST (chronological order, Japan holidays)
 
-### Handoff Process
-1. Claude (architect) writes instructions → `Docs/TellCode.md` (direct filesystem write)
-2. User tells Claude Code: "check TellCode" (two words)
-3. Claude Code reads and implements
-4. Claude Code marks tasks done in TellCode.md
-5. Claude (architect) reads project files directly to verify — no uploads needed
+#### Key File Locations
+```
+Docs/TellCode.md          — architect → code instructions
+Docs/AI_CONTEXT.md         — shared memory (this file)
+Docs/CLUB_INVENTORY_SPEC.md — active spec
+Docs/GAME_DESIGN_AGENT.md  — for future design sprint
+Docs/Archive/              — completed phase specs
+Assets/Screenshots/         — Unity captures for visual review
+Assets/References/          — design reference images
+C:\Users\cesar\golfin-tools\ — daily report script (outside project)
+```
 
-### Screenshot Comparison Workflow
-1. Claude Code builds/changes UI
-2. User navigates to the screen in Play mode
-3. Run `GOLFIN > Screenshot > Capture Game View` (saves to Assets/Screenshots/)
-4. Run compression: `powershell -File Docs/compress_screenshots.ps1 "Assets/Screenshots"`
-5. Claude (architect) reads compressed screenshot + reference from Assets/References/ and compares
-6. Reference images must also be compressed (run compress script on References folders)
-7. Max image size for filesystem read: 1MB
-
-### No-Upload Workflow (NEW — 2026-03-20)
-Claude (architect) now has direct filesystem access to the entire project. This means:
-- **No more file uploads needed** — Claude reads scripts, CSVs, configs directly
-- **No more copy-paste for instructions** — Claude writes TellCode.md directly
-- **No more uploading screenshots** — Claude reads from Assets/Screenshots/ (compressed)
-- **AI_CONTEXT.md can be updated directly** by Claude (architect)
-- User's role is reduced to: navigating Unity, taking screenshots, and saying "check TellCode"
+#### Figma Access
+- Company file key: `hXFadl4O6HGKWakiEKgZbW`
+- Personal file key: `5gEAHjl6xAtW8iYY7NMvWd` (BLOCKED — plan limitation)
+- Use company file for all design pulls
 
 ---
 
-## Project Structure (Key Paths)
+### Project Structure
 
 ```
-C:\Users\cesar\GolfinRedux\
-├── Assets/
-│   ├── Data/
-│   │   ├── Characters.csv (12 characters)
-│   │   ├── Clubs.csv (6 clubs)
-│   │   ├── LevelUpCosts.csv (199 levels, universal)
-│   │   └── CharacterLevelUpCosts.csv (character-specific, 89 rows)
-│   │
-│   ├── Resources/
-│   │   ├── Characters/Homescreen/ (homescreen portraits)
-│   │   ├── Clubs/Portraits/ (6 club thumbnails)
-│   │   ├── Clubs/Full/ (2 + Placeholder)
-│   │   ├── Portraits/FullBody/ (character full-body)
-│   │   ├── Portraits/Thumbnails/ (character thumbnails)
-│   │   └── Rarities/ (6 rarity backgrounds, shared)
-│   │
-│   ├── References/
-│   │   ├── Roster Screen/ (7 reference images)
-│   │   └── Inventory/ (club inventory references — to be added)
-│   │
-│   ├── Screenshots/ (captured via GOLFIN > Screenshot menu)
-│   │
-│   ├── Scripts/
-│   │   ├── CharacterManager.cs (singleton)
-│   │   ├── ClubManager.cs (singleton)
-│   │   ├── UI/Roster/ (Data/, Editor/, Managers/, UI/)
-│   │   ├── UI/Inventory/ (ClubData, ClubDatabaseCSV, ClubFilterBar, ClubThumbnailCard, InventoryScreenController)
-│   │   └── UI/ (ScreenManager, PersistentUIManager, HomeScreenController, etc.)
-│   │
-│   ├── Localization/
-│   │   └── LocalizationText.csv (key, English, Japanese)
-│   │
-│   └── Prefabs/UI/Roster/ (CharacterThumbnailCardGlowUp, StatBar, etc.)
-│
-├── Docs/
-│   ├── AI_CONTEXT.md (this file)
-│   ├── TellCode.md (architect → code instructions, checked each task)
-│   ├── CLAUDE.md (Claude Code auto-reads at session start)
-│   ├── CLUB_INVENTORY_SPEC.md (active spec)
-│   ├── GAME_DESIGN_AGENT.md (for future design sprint)
-│   ├── generate_audit.ps1 (architecture audit generator)
-│   ├── compress_screenshots.ps1 (image compression for review)
-│   └── (archived phase specs: PHASE_2B/2C/2D, LOCALIZATION_PASS)
-│
-├── tasks/
-│   └── lessons.md
-│
-└── CLAUDE.md (project root — Claude Code reads at session start)
-```
-
-## Technical Notes
-
-### Known Nav Bar Heights
-```
-TopBar:       321px, top-anchored
-BottomNavBar: 196px, bottom-anchored
-InventoryScreen: offsetMin.y=+196, offsetMax.y=-321
+Assets/
+├── Data/
+│   ├── Characters.csv (12 characters)
+│   ├── Clubs.csv (6 clubs)
+│   └── LevelUpCosts.csv (240 levels, cost = level × 5 RP, 1 SP/level)
+├── Resources/
+│   ├── Characters/Homescreen/
+│   ├── Clubs/Portraits/ (6 thumbnails)
+│   ├── Clubs/Full/ (2 + Placeholder)
+│   ├── Portraits/FullBody/ + Thumbnails/
+│   └── Rarities/ (6 rarity backgrounds, shared)
+├── Scripts/
+│   ├── CharacterManager.cs, ClubManager.cs
+│   ├── UI/Roster/ (complete)
+│   ├── UI/Inventory/ (ClubData, ClubDatabaseCSV, ClubFilterBar, ClubThumbnailCard, 
+│   │                   ClubCarouselController, ClubDetailPanel, InventoryScreenController)
+│   └── UI/ (ScreenManager, PersistentUIManager, etc.)
+├── Localization/LocalizationText.csv
+└── References/ (Roster Screen/, Inventory/ — add club refs here)
 ```
 
 ### Script Execution Order
 ```
 CharacterDatabaseCSV:  -200
+ClubDatabaseCSV:       -200 (NEEDS SETTING)
 CharacterManager:      -100
-Everything else:       default (0)
-ClubDatabaseCSV:       needs adding (before ClubManager)
+ClubManager:           -100 (NEEDS SETTING)
 ```
 
 ### Design Decisions
-- CSV-first architecture (not ScriptableObjects)
+- CSV-first architecture
 - Resources.Load for sprites (no Inspector arrays)
-- Event-driven UI (Action delegates, subscribe OnEnable/unsubscribe OnDisable)
-- Namespace: Golfin.Roster for roster, Golfin.Inventory for clubs
-- Localization: all new text uses LocalizationManager.Get("KEY")
-- Rich text tags supported in localization CSV values
-- Character bios stay in Characters.csv (bioJa column deferred)
-- Platform: Windows (PowerShell, no bash/chmod/sed)
+- Event-driven UI (Action delegates)
+- Localization: LocalizationManager.Get("KEY") for all new text
+- Platform: Windows (PowerShell)
+- Use == null not ?? for Unity objects
 
 ### Deferred Items
-- Character compare stat differences (green +N / red -N) — apply when doing club compare
-- Character bio Japanese translations (bioJa column)
+- Character compare stat differences (green +N / red -N)
+- Character bio Japanese translations
 - Full Japanese localization review by Ken
 - Pagination dots styling polish
 - Status icons in compare mode right panel
+- Club Level Up modal
+- Club Repair modal
+- Bag Selection modal (grid picker)
 
 ### Blockers
 - None
-
-### Session Startup Reminder (for Claude Code)
-1. Run: `powershell -File Docs/generate_audit.ps1 > Docs/ARCHITECTURE_AUDIT.md`
-2. Read: Docs/AI_CONTEXT.md, Docs/ARCHITECTURE_AUDIT.md
-3. Read: Docs/TellCode.md for pending architect instructions
-4. Read: Any active spec files in Docs/

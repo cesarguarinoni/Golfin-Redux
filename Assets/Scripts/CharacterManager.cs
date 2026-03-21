@@ -58,7 +58,7 @@ namespace Golfin.Roster
                 foreach (var charTemplate in allChars)
                 {
                     var playerData = new PlayerCharacterData(charTemplate.characterId);
-                    playerData.currentLevel = 1;
+                    playerData.currentLevel = GetStartingLevel(charTemplate.rarity);
                     playerData.currentStrength = charTemplate.baseStrength;
                     playerData.currentClubControl = charTemplate.baseClubControl;
                     playerData.currentRecovery = charTemplate.baseRecovery;
@@ -75,7 +75,7 @@ namespace Golfin.Roster
                 foreach (var charTemplate in allChars)
                 {
                     var playerData = new PlayerCharacterData(charTemplate.characterId);
-                    playerData.currentLevel = 1;
+                    playerData.currentLevel = GetStartingLevel(charTemplate.rarity);
                     playerData.currentStrength = charTemplate.baseStrength;
                     playerData.currentClubControl = charTemplate.baseClubControl;
                     playerData.currentRecovery = charTemplate.baseRecovery;
@@ -165,13 +165,40 @@ namespace Golfin.Roster
         public CharacterData? GetCharacter(string characterId)
             => GetCharacterTemplate(characterId);
 
+        private int GetStartingLevel(CharacterRarity rarity) => rarity switch
+        {
+            CharacterRarity.Common    => 10,
+            CharacterRarity.Uncommon  => 40,
+            CharacterRarity.Rare      => 80,
+            CharacterRarity.Mythic    => 120,
+            CharacterRarity.Legendary => 160,
+            CharacterRarity.Supreme   => 200,
+            _                         => 10
+        };
+
+        private int GetMaxLevelForRarity(CharacterRarity rarity) => rarity switch
+        {
+            CharacterRarity.Common    => 39,
+            CharacterRarity.Uncommon  => 79,
+            CharacterRarity.Rare      => 119,
+            CharacterRarity.Mythic    => 159,
+            CharacterRarity.Legendary => 199,
+            CharacterRarity.Supreme   => 239,
+            _                         => 39
+        };
+
         /// <summary>
         /// Get max level based on rarity
         /// </summary>
         public int GetMaxLevel(string characterId)
         {
-            // All characters share the same max level (199) — no template lookup needed
-            return 199;
+            var csv = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
+            if (csv != null) return GetMaxLevelForRarity(csv.rarity);
+
+            var so = GetCharacterTemplate(characterId);
+            if (so != null) return GetMaxLevelForRarity(so.rarity);
+
+            return 39;
         }
 
         /// <summary>

@@ -46,9 +46,20 @@ public class ClubManager : MonoBehaviour
 
     // ── Initialization ────────────────────────────────────────────────────────
 
+    private int GetStartingLevel(CharacterRarity rarity) => rarity switch
+    {
+        CharacterRarity.Common    => 10,
+        CharacterRarity.Uncommon  => 40,
+        CharacterRarity.Rare      => 80,
+        CharacterRarity.Mythic    => 120,
+        CharacterRarity.Legendary => 160,
+        CharacterRarity.Supreme   => 200,
+        _                         => 10
+    };
+
     /// <summary>
     /// Seeds PlayerClubData for every club in the database.
-    /// Phase A: player owns all clubs at level 1, none equipped.
+    /// Starting level is rarity-based per the new leveling economy.
     /// </summary>
     private void InitializeClubs()
     {
@@ -65,11 +76,11 @@ public class ClubManager : MonoBehaviour
         {
             var playerClub = new PlayerClubData
             {
-                clubId          = template.clubId,
-                currentLevel    = 1,
-                maxDurability   = template.maxDurability,
+                clubId            = template.clubId,
+                currentLevel      = GetStartingLevel(template.rarity),
+                maxDurability     = template.maxDurability,
                 currentDurability = template.maxDurability,  // start at full durability
-                equippedBagSlot = 0,
+                equippedBagSlot   = 0,
             };
             ownedClubs[template.clubId] = playerClub;
         }
