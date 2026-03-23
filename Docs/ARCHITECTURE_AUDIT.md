@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-03-20 10:19. Do not edit manually.
+> Auto-generated 2026-03-23 14:17. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -29,10 +29,14 @@ Assets/Scripts/UI/HoleData.cs
 Assets/Scripts/UI/HoleDatabase.cs
 Assets/Scripts/UI/HoleDatabaseLoader.cs
 Assets/Scripts/UI/HomeScreenController.cs
+Assets/Scripts/UI/Inventory/ClubCarouselController.cs
 Assets/Scripts/UI/Inventory/ClubData.cs
 Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs
+Assets/Scripts/UI/Inventory/ClubDetailPanel.cs
 Assets/Scripts/UI/Inventory/ClubFilterBar.cs
 Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs
+Assets/Scripts/UI/Inventory/Editor/ClubDetailPanelAutoWire.cs
+Assets/Scripts/UI/Inventory/Editor/ClubDetailPanelBuilder.cs
 Assets/Scripts/UI/Inventory/Editor/ClubManagerSetup.cs
 Assets/Scripts/UI/Inventory/Editor/ClubThumbnailCardBuilder.cs
 Assets/Scripts/UI/Inventory/Editor/FilterBarPatcher.cs
@@ -85,8 +89,6 @@ Assets/Scripts/Utilities/UIAutoWire.cs
 ```
 Assets/Data/CharacterDatabase.asset
 Assets/Data/CharacterDatabase.asset.meta
-Assets/Data/CharacterLevelUpCosts.csv
-Assets/Data/CharacterLevelUpCosts.csv.meta
 Assets/Data/Characters.csv
 Assets/Data/Characters.csv.meta
 Assets/Data/Clubs.csv
@@ -132,7 +134,9 @@ Assets/Data/README_HOLES.md.meta
 | SplashScreenController | Assets/Scripts/UI/SplashScreenController.cs |  |  |
 | SwipeDetector | Assets/Scripts/UI/SwipeDetector.cs |  | IBeginDragHandler, IEndDragHandler |
 | UserProfileSubmenu | Assets/Scripts/UI/UserProfileSubmenu.cs | Yes |  |
+| ClubCarouselController | Assets/Scripts/UI/Inventory/ClubCarouselController.cs | Yes |  |
 | ClubDatabaseCSV | Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs | Yes |  |
+| ClubDetailPanel | Assets/Scripts/UI/Inventory/ClubDetailPanel.cs | Yes |  |
 | ClubFilterBar | Assets/Scripts/UI/Inventory/ClubFilterBar.cs |  |  |
 | ClubThumbnailCard | Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs | Yes |  |
 | InventoryScreenController | Assets/Scripts/UI/Inventory/InventoryScreenController.cs |  |  |
@@ -172,6 +176,7 @@ Assets/Data/README_HOLES.md.meta
 | ClubManager | `public event System.Action? OnInventoryChanged;` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnExpanded;` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnCollapsed;` |
+| ClubCarouselController | `public event System.Action<string>? OnClubSelected;` |
 | ClubFilterBar | `public event System.Action<ClubType?>? OnFilterChanged;` |
 | RewardPointsManager | `public event System.Action<int> OnPointsChanged;` |
 | CarouselController | `public event System.Action<string> OnCharacterSelected; // Change to event` |
@@ -197,7 +202,9 @@ Assets/Data/README_HOLES.md.meta
 | SwipeDetector | Assets/Scripts/UI/SwipeDetector.cs | 1 |
 | UserProfileSubmenu | Assets/Scripts/UI/UserProfileSubmenu.cs | 11 |
 | LocalizationEditorHelper | Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs | 1 |
+| ClubCarouselController | Assets/Scripts/UI/Inventory/ClubCarouselController.cs | 9 |
 | ClubDatabaseCSV | Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs | 1 |
+| ClubDetailPanel | Assets/Scripts/UI/Inventory/ClubDetailPanel.cs | 32 |
 | ClubFilterBar | Assets/Scripts/UI/Inventory/ClubFilterBar.cs | 5 |
 | ClubThumbnailCard | Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs | 10 |
 | InventoryScreenController | Assets/Scripts/UI/Inventory/InventoryScreenController.cs | 6 |
@@ -216,24 +223,17 @@ Assets/Data/README_HOLES.md.meta
 
 ## CSV Data Files
 
-### CharacterLevelUpCosts.csv
-```
-characterId,level,cost_r,sp_reward,str_cap,ctrl_cap,rec_cap,stam_cap
-char_elizabeth,1,100,1,30,30,20,27
-```
-(89 rows)
-
 ### Characters.csv
 ```
-id,name,lastName,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,portraitSprite,portraitFull,maxLevel,bio
-char_james,James,Cartwright,Common,6,7,6,6,James,BigRosterJames,199,A dependable player just starting out on the tour.
+id,name,lastName,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,portraitSprite,portraitFull,startLevel,maxLevel,bio
+char_james,James,Cartwright,Common,6,7,6,6,James,BigRosterJames,10,39,A dependable player just starting out on the tour.
 ```
 (13 rows)
 
 ### Clubs.csv
 ```
-id,name,type,rarity,brand,basePower,baseAccuracy,baseLieResistance,baseLoft,maxDurability,baseDistance,portraitSprite,portraitFull,maxLevel,info
-club_driver_gf,Driver G&F,Driver,Common,G&F,80,30,10,12,100,250,Driver-G&F,Placeholder,119,"A reliable driver from G&F with balanced power and solid accuracy off the tee."
+id,name,type,rarity,brand,basePower,baseAccuracy,baseLieResistance,baseLoft,maxDurability,baseDistance,portraitSprite,portraitFull,startLevel,maxLevel,info
+club_driver_gf,Driver G&F,Driver,Common,G&F,80,30,10,12,100,250,Driver-G&F,Driver-G&F,10,39,A reliable driver from G&F with balanced power and solid accuracy off the tee.
 ```
 (7 rows)
 
@@ -247,9 +247,9 @@ HOLE_LOMOND_5,5,Points,100,RepairKit,10,Ball,30
 ### LevelUpCosts.csv
 ```
 level,cost_r,sp_reward
-1,100,1
+1,5,1
 ```
-(200 rows)
+(241 rows)
 
 ## Quick Health
 

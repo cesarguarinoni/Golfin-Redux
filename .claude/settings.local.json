@@ -16,7 +16,9 @@
       "Bash(powershell.exe -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 500 | Select-String ''InventoryScreen|FilterBar|ClubsContent|Build Inventory|ClubsMain''\")",
       "Bash(powershell.exe -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 30\")",
       "Bash(powershell.exe -Command \"Select-String -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scenes\\\\ShellScene.unity'' -Pattern ''FilterBar|Viewport|ClubsContent|ClubsMainSection|InventoryScreen'' | Select-Object -First 40 | ForEach-Object { $_Line.Trim\\(\\) }\")",
-      "Bash(powershell.exe -Command \":*)"
+      "Bash(powershell.exe -Command \":*)",
+      "Bash(powershell -File \"C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Docs\\\\generate_audit.ps1\")",
+      "Bash(\"C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Docs\\\\ARCHITECTURE_AUDIT.md\")"
     ]
   }
 }
