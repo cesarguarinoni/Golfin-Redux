@@ -44,20 +44,28 @@ namespace Golfin.Inventory
 
         private void InjectDividers()
         {
-            // Insert a thin vertical divider Image after each filter button (except the last).
-            // Works inside HorizontalLayoutGroup: fixed 1px width via LayoutElement.
-            for (int i = filterButtons.Length - 1; i >= 1; i--)
-            {
-                if (filterButtons[i] == null) continue;
+            // Dividers ignore the HorizontalLayoutGroup entirely (ignoreLayout = true)
+            // and are positioned absolutely using RectTransform anchors.
+            // With 8 evenly-distributed buttons, dividers sit at x = 1/8, 2/8 ... 7/8.
+            int buttonCount = filterButtons.Length; // expected 8
+            int dividerCount = buttonCount - 1;
 
+            for (int i = 0; i < dividerCount; i++)
+            {
                 var divGO = new GameObject("FilterDivider");
                 divGO.transform.SetParent(transform, false);
-                divGO.transform.SetSiblingIndex(filterButtons[i].transform.GetSiblingIndex());
 
+                // Ignore HLG so it doesn't resize or reposition the divider
                 var le = divGO.AddComponent<LayoutElement>();
-                le.preferredWidth  = 1f;
-                le.flexibleWidth   = 0f;
-                le.preferredHeight = 24f;
+                le.ignoreLayout = true;
+
+                // Position at the boundary between button i and i+1
+                float xPos = (float)(i + 1) / buttonCount;
+                var rt = divGO.GetComponent<RectTransform>();
+                rt.anchorMin       = new Vector2(xPos, 0.15f);
+                rt.anchorMax       = new Vector2(xPos, 0.85f);
+                rt.sizeDelta       = new Vector2(1f, 0f); // 1px wide, height from anchors
+                rt.anchoredPosition = Vector2.zero;
 
                 var img = divGO.AddComponent<Image>();
                 img.color         = new Color(1f, 1f, 1f, 0.3f);

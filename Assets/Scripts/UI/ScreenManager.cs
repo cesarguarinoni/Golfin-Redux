@@ -39,6 +39,14 @@ namespace GolfinRedux.UI
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
             Instance = this;
+
+            // FadeController's GameObject may be left inactive in the Editor.
+            // Activate it now so fade transitions work for all screens including Inventory.
+            if (FadeController.Instance == null)
+            {
+                var fc = FindObjectOfType<FadeController>(includeInactive: true);
+                if (fc != null) fc.gameObject.SetActive(true);
+            }
         }
 
         private void Start()

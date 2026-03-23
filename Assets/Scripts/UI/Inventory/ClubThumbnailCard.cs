@@ -99,9 +99,9 @@ namespace Golfin.Inventory
                 rarityLabelText.color = rarityTextColor;
             }
 
-            // ── Level ────────────────────────────────────────────────────────
+            // ── Level (max shown in detail panel, not on card) ────────────────
             if (levelText != null)
-                levelText.text = $"Lv {playerClub.currentLevel}/{template.maxLevel}";
+                levelText.text = $"Lv {playerClub.currentLevel}";
 
             // ── Background (rarity sprite — shared with character cards) ─────
             if (backgroundImage != null)

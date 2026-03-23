@@ -99,12 +99,9 @@ namespace Golfin.Roster
                 rarityLabelText.color = rarityBadgeTextColor;
             }
 
-            // Set level
+            // Set level (max shown in detail panel, not on card)
             if (levelText != null)
-            {
-                int maxLevel = CharacterManager.Instance.GetMaxLevel(characterId);
-                levelText.text = $"Lv {playerChar.currentLevel}/{maxLevel}";
-            }
+                levelText.text = $"Lv {playerChar.currentLevel}";
 
             // Load rarity background sprite — enum name matches filename exactly
             if (backgroundImage != null)

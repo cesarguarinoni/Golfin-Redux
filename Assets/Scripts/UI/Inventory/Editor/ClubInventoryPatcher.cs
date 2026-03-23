@@ -26,18 +26,185 @@ namespace Golfin.Inventory.Editor
         public static void PatchAll()
         {
             int fixes = 0;
-            fixes += Fix3_EquipSpacer()    ? 1 : 0;
-            fixes += Fix6_SpacingGaps()    ? 1 : 0;
-            fixes += Fix9_CopyDotPrefab()  ? 1 : 0;
-            fixes += Fix10_FontSizes()     ? 1 : 0;
-            fixes += Fix11_StatRowLayout() ? 1 : 0;
+            fixes += FixArrowSprites()      ? 1 : 0;
+            fixes += FixCarouselViewport()  ? 1 : 0;
+            fixes += Fix3_EquipSpacer()     ? 1 : 0;
+            fixes += Fix6_SpacingGaps()     ? 1 : 0;
+            fixes += Fix9_CopyDotPrefab()   ? 1 : 0;
+            fixes += Fix10_FontSizes()      ? 1 : 0;
+            fixes += Fix11_StatRowLayout()  ? 1 : 0;
 
             EditorSceneManager.MarkSceneDirty(
                 UnityEngine.SceneManagement.SceneManager.GetActiveScene());
 
             EditorUtility.DisplayDialog("Club Inventory Patcher",
-                $"All patches applied ({fixes}/5 succeeded).\nSave the scene and enter Play Mode to verify.",
+                $"All patches applied ({fixes}/7 succeeded).\nSave the scene and enter Play Mode to verify.",
                 "OK");
+        }
+
+        // ── Arrow Sprites ─────────────────────────────────────────────────────
+
+        [MenuItem("GOLFIN/Patch Club Inventory/Fix Arrow Sprites")]
+        public static void PatchArrowSprites()
+        {
+            bool ok = FixArrowSprites();
+            MarkDirtyAndLog("Arrow Sprites", ok);
+        }
+
+        private static bool FixArrowSprites()
+        {
+            const string leftPath  = "Assets/Art/Roster Screen/ArrowLeft.png";
+            const string rightPath = "Assets/Art/Roster Screen/ArrowRight.png";
+
+            var leftSprite  = AssetDatabase.LoadAssetAtPath<Sprite>(leftPath);
+            var rightSprite = AssetDatabase.LoadAssetAtPath<Sprite>(rightPath);
+
+            if (leftSprite == null || rightSprite == null)
+            {
+                Debug.LogWarning($"[ClubInventoryPatcher] Arrow sprites not found at '{leftPath}' / '{rightPath}'. (FixArrowSprites skipped)");
+                return false;
+            }
+
+            var carouselSection = FindByName(null, "ClubCarouselSection");
+            if (carouselSection == null)
+            {
+                Debug.LogWarning("[ClubInventoryPatcher] ClubCarouselSection not found (FixArrowSprites skipped).");
+                return false;
+            }
+
+            int changed = 0;
+
+            var leftArrow  = carouselSection.Find("LeftArrow");
+            var rightArrow = carouselSection.Find("RightArrow");
+
+            if (leftArrow != null)
+            {
+                var img = leftArrow.GetComponent<Image>();
+                if (img != null)
+                {
+                    Undo.RecordObject(img, "Fix Arrow Sprites");
+                    img.sprite  = leftSprite;
+                    img.color   = Color.white;
+                    img.type    = Image.Type.Simple;
+                    img.preserveAspect = true;
+                    EditorUtility.SetDirty(img);
+                    changed++;
+                    Debug.Log("[ClubInventoryPatcher] LeftArrow sprite assigned.");
+                }
+            }
+            else Debug.LogWarning("[ClubInventoryPatcher] LeftArrow not found under ClubCarouselSection.");
+
+            if (rightArrow != null)
+            {
+                var img = rightArrow.GetComponent<Image>();
+                if (img != null)
+                {
+                    Undo.RecordObject(img, "Fix Arrow Sprites");
+                    img.sprite  = rightSprite;
+                    img.color   = Color.white;
+                    img.type    = Image.Type.Simple;
+                    img.preserveAspect = true;
+                    EditorUtility.SetDirty(img);
+                    changed++;
+                    Debug.Log("[ClubInventoryPatcher] RightArrow sprite assigned.");
+                }
+            }
+            else Debug.LogWarning("[ClubInventoryPatcher] RightArrow not found under ClubCarouselSection.");
+
+            return changed > 0;
+        }
+
+        // ── Carousel Viewport ─────────────────────────────────────────────────
+
+        [MenuItem("GOLFIN/Patch Club Inventory/Fix Carousel Viewport")]
+        public static void PatchCarouselViewport()
+        {
+            bool ok = FixCarouselViewport();
+            MarkDirtyAndLog("Carousel Viewport", ok);
+        }
+
+        private static bool FixCarouselViewport()
+        {
+            // Find Roster carousel's ScrollView settings and copy to Club carousel
+            var rosterCarouselGO = FindByName(null, "CarouselSection");
+            var clubCarouselGO   = FindByName(null, "ClubCarouselSection");
+
+            if (clubCarouselGO == null)
+            {
+                Debug.LogWarning("[ClubInventoryPatcher] ClubCarouselSection not found (FixCarouselViewport skipped).");
+                return false;
+            }
+
+            int changed = 0;
+
+            // ── Club ScrollRect: ensure horizontal=true, vertical=false ──────
+            var clubScrollRect = clubCarouselGO.GetComponentInChildren<ScrollRect>();
+            if (clubScrollRect != null)
+            {
+                Undo.RecordObject(clubScrollRect, "Fix Carousel Viewport");
+                clubScrollRect.horizontal = true;
+                clubScrollRect.vertical   = false;
+                EditorUtility.SetDirty(clubScrollRect);
+                changed++;
+            }
+
+            // ── Club Viewport: remove blocking Image if present ───────────────
+            var clubViewport = FindDeep(clubCarouselGO, "Viewport");
+            if (clubViewport != null)
+            {
+                var vpImg = clubViewport.GetComponent<Image>();
+                if (vpImg != null && vpImg.color.a > 0.01f)
+                {
+                    Undo.RecordObject(vpImg, "Fix Carousel Viewport");
+                    vpImg.color = Color.clear; // transparent — keeps Mask working without blocking view
+                    EditorUtility.SetDirty(vpImg);
+                    Debug.Log("[ClubInventoryPatcher] Viewport Image made transparent.");
+                    changed++;
+                }
+            }
+
+            // ── Club Content HLG: copy spacing from Roster if available ───────
+            var clubContent = FindDeep(clubCarouselGO, "Content");
+            if (clubContent != null)
+            {
+                var clubHLG = clubContent.GetComponent<HorizontalLayoutGroup>();
+
+                // Try to read Roster's Content spacing as reference
+                float targetSpacing = 6f; // default from Roster builder
+                if (rosterCarouselGO != null)
+                {
+                    var rosterContent = FindDeep(rosterCarouselGO, "Content");
+                    if (rosterContent != null)
+                    {
+                        var rosterHLG = rosterContent.GetComponent<HorizontalLayoutGroup>();
+                        if (rosterHLG != null) targetSpacing = rosterHLG.spacing;
+                    }
+                }
+
+                if (clubHLG != null)
+                {
+                    Undo.RecordObject(clubHLG, "Fix Carousel Viewport");
+                    clubHLG.spacing               = targetSpacing;
+                    clubHLG.childForceExpandWidth  = false;
+                    clubHLG.childForceExpandHeight = false;
+                    EditorUtility.SetDirty(clubHLG);
+                    changed++;
+                }
+
+                // Ensure ContentSizeFitter is set to PreferredSize on horizontal
+                var csf = clubContent.GetComponent<ContentSizeFitter>();
+                if (csf != null)
+                {
+                    Undo.RecordObject(csf, "Fix Carousel Viewport");
+                    csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                    csf.verticalFit   = ContentSizeFitter.FitMode.Unconstrained;
+                    EditorUtility.SetDirty(csf);
+                    changed++;
+                }
+            }
+
+            Debug.Log($"[ClubInventoryPatcher] FixCarouselViewport: {changed} properties updated.");
+            return changed > 0;
         }
 
         // ── Fix 3: EQUIP button spacer ────────────────────────────────────────
