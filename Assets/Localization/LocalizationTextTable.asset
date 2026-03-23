@@ -282,3 +282,42 @@ MonoBehaviour:
   - key: RARITY_SUPREME
     english: SUPREME
     japanese: "\u30B9\u30D7\u30EA\u30FC\u30E0"
+  - key: CLUB_POWER
+    english: POWER
+    japanese: "\u30D1\u30EF\u30FC"
+  - key: CLUB_ACCURACY
+    english: ACCURACY
+    japanese: "\u30A2\u30AD\u30E5\u30E9\u30B7\u30FC"
+  - key: CLUB_LIE_RESISTANCE
+    english: LIE RESISTANCE
+    japanese: "\u30E9\u30A4\u8010\u6027"
+  - key: CLUB_LOFT
+    english: LOFT
+    japanese: "\u30ED\u30D5\u30C8"
+  - key: CLUB_DURABILITY
+    english: DURABILITY
+    japanese: "\u8010\u4E45\u6027"
+  - key: CLUB_DISTANCE
+    english: DISTANCE
+    japanese: "\u98DB\u8DDD\u96E2"
+  - key: CLUB_LEVEL_UP
+    english: LEVEL UP
+    japanese: "\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7"
+  - key: CLUB_REPAIR
+    english: REPAIR
+    japanese: "\u4FEE\u7406"
+  - key: CLUB_COMPARE
+    english: COMPARE
+    japanese: "\u6BD4\u8F03"
+  - key: CLUB_EQUIP
+    english: EQUIP
+    japanese: "\u88C5\u5099"
+  - key: CLUB_EQUIPPED
+    english: EQUIPPED
+    japanese: "\u88C5\u5099\u6E08\u307F"
+  - key: CLUB_INFO
+    english: INFO
+    japanese: "\u60C5\u5831"
+  - key: CLUB_IN_BAG
+    english: IN BAG
+    japanese: "\u30D0\u30C3\u30B0"

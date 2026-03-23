@@ -6,90 +6,129 @@
 
 ---
 
-## Current Task (2026-03-21) — New Leveling Economy + Phase C Wiring
+## Current Task (2026-03-23) — Club Inventory Visual Polish
 
-### Priority 1: Adopt New Leveling Economy
+The Club Inventory screen has all the code in place but looks very rough compared to the Figma design. The architect compared screenshots against the Figma reference and found these issues. Fix them in priority order.
 
-The leveling CSVs and data files have been updated by the architect. The new system uses:
-- **Universal cost curve:** `LevelUpCosts.csv` — 240 levels, cost = level × 5 RP, 1 SP per level
-- **Rarity-based starting levels and max levels** (both characters and clubs):
-  - Common: start 10, max 39
-  - Uncommon: start 40, max 79
-  - Rare: start 80, max 119
-  - Mythic: start 120, max 159
-  - Legendary: start 160, max 199
-  - Supreme: start 200, max 239
+### Reference: Figma Design Specs (from architect's earlier extraction)
+```
+TYPOGRAPHY (all Rubik font):
+- Screen title: SemiBold 51px (Unity ~36), letter-spacing -1.29
+- Club name: SemiBold 45px (Unity ~32), letter-spacing -0.69
+- Rarity label: SemiBold 45px (Unity ~32)  
+- Level: SemiBold 45px / Regular 33px for "/119"
+- Stat names: Medium 33px (Unity ~24), letter-spacing 0.18
+- Stat values: Bold 33px (Unity ~24)
+- Button text: SemiBold 39px (Unity ~28)
+- EQUIP button: SemiBold 66px (Unity ~48)
+- Filter bar: SemiBold 20px (Unity ~14), letter-spacing -1.5
+- Tab labels: Medium 30px (Unity ~22)
+- INFO header: SemiBold 48px (Unity ~34)
+- INFO body: Regular 33px (Unity ~24), line-height 39px
 
-**CSV files already updated:** `LevelUpCosts.csv`, `Characters.csv`, `Clubs.csv`
-
-**Code changes needed:**
-
-**1a. Update CharacterManager.cs — starting level by rarity**
-In `LoadRoster()` or `InitializeCharacters()`, when creating `PlayerCharacterData` for each character, set `currentLevel` based on the character's rarity instead of hardcoding to 1:
-
-```csharp
-private int GetStartingLevel(CharacterRarity rarity) => rarity switch
-{
-    CharacterRarity.Common => 10,
-    CharacterRarity.Uncommon => 40,
-    CharacterRarity.Rare => 80,
-    CharacterRarity.Mythic => 120,
-    CharacterRarity.Legendary => 160,
-    CharacterRarity.Supreme => 200,
-    _ => 10
-};
+COLORS:
+- Panel background gradient: #133453 → #091B33 (top to bottom)
+- Panel border: rgba(255,255,255,0.9), 3px, rounded 20px
+- Stat bar fill gradient: #5792E6 → #2775DD → #1A55A4
+- Stat bar background: #182430
+- Stat bar height: 20px, fully rounded (radius 20px)
+- Active filter text: #EBD170 (gold)
+- Inactive filter text: white
+- Active tab text: gold gradient (FCF195 → D6AB42 → BB7F1D)
+- Inactive tab text: silver gradient (FFFFFF → D1D5DB → 818EA1)
+- EQUIP button: gold gradient (FCF195 → D6AB42 → BB7F1D), border #FFE48B
+- Regular buttons: silver gradient (FFFFFF → D1D5DB → 818EA1)
+- Rarity text colors: Common #7E848A, Uncommon #ABC9F5, Rare #C0EAC9, 
+  Mythic #FFF5D3, Legendary #ECB5A3, Supreme #C6B8DE
+- Rarity stat color (for labels like "RARE"): #50C878 (green for Rare)
+- Text blue: #2775DD
+- Dark blue: #001E39
 ```
 
-Use this when initializing player data: `currentLevel = GetStartingLevel(template.rarity)`
+### Priority 1: Fix Carousel (CRITICAL — no cards showing)
 
-**1b. Update ClubManager.cs — starting level by rarity**
-Same pattern. In `InitializeClubs()`, set `currentLevel` based on club rarity:
+The carousel section is empty. Verify:
+1. `ClubCarouselController` is attached to the correct GameObject
+2. It has `clubCardPrefab` assigned (ClubThumbnailCard.prefab must exist)
+3. It has `filterBar` reference assigned
+4. `ClubDatabaseCSV` and `ClubManager` are in the scene and running (check Script Execution Order: both need -200 and -100)
+5. `PopulateCarousel()` is being called — add Debug.Log if missing
+6. Cards per page = 6, pagination dots should show
 
-```csharp
-private int GetStartingLevel(CharacterRarity rarity) => rarity switch
-{
-    CharacterRarity.Common => 10,
-    CharacterRarity.Uncommon => 40,
-    CharacterRarity.Rare => 80,
-    CharacterRarity.Mythic => 120,
-    CharacterRarity.Legendary => 160,
-    CharacterRarity.Supreme => 200,
-    _ => 10
-};
-```
+If the prefab doesn't exist yet, run GOLFIN/Setup Club Thumbnail Card Prefab.
 
-Use: `currentLevel = GetStartingLevel(template.rarity)`
+### Priority 2: Fix Detail Panel Layout
 
-**1c. Update CharacterLevelUpDatabase.cs or wherever level-up costs are read**
-The game currently reads `LevelUpCosts.csv` which now has 240 rows (was 200). Make sure the CSV parser doesn't have a hardcoded limit. The cost lookup should use the character's current level as the index into the CSV: `cost = LevelUpCosts[currentLevel].cost_r`
+The detail panel needs to match the two-panel layout from Figma:
 
-**1d. Delete CharacterLevelUpCosts.csv** (the old character-specific level costs file)
-This file is no longer needed — the universal `LevelUpCosts.csv` is used for both characters and clubs. Remove references to it in `CharacterLevelUpDatabase.cs` if it loads that file.
+**Left Panel (~45% width):**
+- Top: Club image (full-body photo, takes ~60% of left panel height)
+- Bottom: INFO section (header "INFO" + description text)
+- The image and INFO should be INSIDE the dark blue panel, not floating outside
 
-**1e. Verify the Level Up Modal still works**
-The Level Up Modal reads cost and SP from the level-up database. After these changes, open the modal for characters of different rarities and verify:
-- A Common character at level 10 shows cost = 50 RP (level 10 × 5)
-- A Supreme character at level 200 shows cost = 1000 RP (level 200 × 5)
-- SP reward is always 1
+**Right Panel (~55% width):**  
+- Club name at top
+- Divider line
+- Rarity + Level row
+- Divider line
+- 6 stat rows (Power, Accuracy, Lie Resistance, Loft, Durability, Distance)
+- Divider line
+- LEVEL UP + REPAIR buttons (side by side)
+- COMPARE button (full width)
+- Divider line
+- EQUIP button (large, gold, full width)
 
-### Priority 2: Phase C Manual Wiring (carried over from yesterday)
+**Panel styling:**
+- Background: gradient #133453 → #091B33
+- Border: 3px solid rgba(255,255,255,0.9), border-radius 20px
+- Add shadow: 0px 4px 4px rgba(0,0,0,0.25)
 
-If not already done:
-1. Unity: Edit → Project Settings → Script Execution Order: ClubDatabaseCSV = -200, ClubManager = -100
-2. Run: GOLFIN/Inventory/Build Club Phase C
-3. Run: GOLFIN/Inventory/Wire Club Detail Panel
-4. Assign ClubThumbnailCard.prefab to ClubCarouselController.clubCardPrefab in Inspector
-5. Assign ClubFilterBar to ClubCarouselController.filterBar in Inspector
+### Priority 3: Fix Stat Bars
+
+Current bars are plain rectangles. They need:
+1. Bar background: #182430, height 20px, fully rounded (border-radius = height/2)
+2. Bar fill: blue gradient (#5792E6 → #2775DD → #1A55A4), also fully rounded
+3. Bar image type must be Filled, Horizontal, Left origin
+4. Stat value text to the right of the bar (e.g., "80", "30/100" for durability)
+5. Stat name text above the bar
+6. Stat icon to the left of the name+bar group
+
+### Priority 4: Fix Buttons
+
+All buttons need proper styling:
+- **Regular buttons** (LEVEL UP, REPAIR, COMPARE): silver gradient background, rounded 20px, 2px border #9FABB7
+- **EQUIP button**: gold gradient background, rounded 20px, 2px border #FFE48B, larger text (48px Unity)
+- **Disabled buttons**: add a dark overlay (backdrop-blur + rgba(0,0,0,0.3))
+- Button text color: #1E293B (dark slate) with text-shadow 0px 1px 0px rgba(255,255,255,0.3)
+
+### Priority 5: Fix "INVENTORY" Title and Tab Bar
+
+- "INVENTORY" title should be centered, white, SemiBold ~36px in Unity
+- Tab bar: active tab (CLUBS) should have gold gradient text, inactive tabs silver gradient
+- Both should have the dark blue gradient background with rounded corners and white border
+- Filter bar text sizes should be ~14px Unity, gold for active, white for inactive
+
+### Priority 6: Club Image Data Binding
+
+The screenshot shows the A. Wedge Fyloe image when "DRIVER G&F" is labeled. Verify that `ClubDetailPanel.UpdatePanel()` loads the correct `portraitFull` sprite for the selected club. The Driver G&F should show `Placeholder` since it doesn't have a full image yet.
+
+### Priority 7: Divider Lines
+
+Between sections in the right panel (after name, after rarity/level, after stats, before buttons), add thin horizontal divider lines. These are visible in Figma as subtle white lines spanning ~60% of the panel width, centered.
+
+---
 
 ### Reminders
+- Font size conversion: Figma px ÷ ~1.4 ≈ Unity TMP size (approximate — verify with one known element)
 - Platform: Windows (PowerShell, no bash/chmod/sed)
 - Use `== null` not `??` for Unity objects
+- All new text uses `LocalizationManager.Get("KEY")`
 - Push to GitHub after completing
 
 ---
 
 ## Completed Tasks
 
-✅ DONE: 2026-03-20 — Task 1-4 (previous session): ScreenshotTool, compress script, CLAUDE.md update, root cleanup
+✅ DONE: 2026-03-20 — Task 1-4: ScreenshotTool, compress script, CLAUDE.md update, root cleanup
 ✅ DONE: 2026-03-20 — Phase C code: ClubCarouselController, ClubDetailPanel, builders, auto-wire, localization keys
-✅ DONE: 2026-03-21 — New leveling economy: rarity-based starting/max levels in CharacterManager + ClubManager, CharacterLevelUpCosts.csv deleted, LevelUpCosts.csv now 240 rows
+✅ DONE: 2026-03-21 — New leveling economy: rarity-based starting/max levels, CharacterLevelUpCosts.csv deleted
