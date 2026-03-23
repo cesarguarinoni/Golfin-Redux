@@ -257,7 +257,7 @@ namespace Golfin.Inventory.Editor
                 if (row == null) continue;
 
                 var nameField = row.Find("StatsName");
-                if (nameField != null) changed += SetTMPOnTransform(nameField, 24f, FontStyles.Medium);
+                if (nameField != null) changed += SetTMPOnTransform(nameField, 24f, FontStyles.Normal);
 
                 var numField = row.Find("StatNumber");
                 if (numField != null) changed += SetTMPOnTransform(numField, 24f, FontStyles.Bold);
