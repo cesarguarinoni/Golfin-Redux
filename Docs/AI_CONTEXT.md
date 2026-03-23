@@ -123,6 +123,47 @@ ClubManager:           -100 (NEEDS SETTING)
 - Platform: Windows (PowerShell)
 - Use == null not ?? for Unity objects
 
+### Font Size Ratio: Figma ÷ 1.4 = Unity TMP size
+```
+Figma 66px → Unity 47px  (EQUIP button)
+Figma 51px → Unity 36px  (screen titles)
+Figma 48px → Unity 34px  (INFO header)
+Figma 45px → Unity 32px  (club name, rarity, level)
+Figma 39px → Unity 28px  (button text, RP counter)
+Figma 33px → Unity 24px  (stat names, stat values, body text)
+Figma 30px → Unity 21px  (tab labels)
+Figma 20px → Unity 14px  (filter bar labels)
+```
+
+### Figma Spacing Reference (Figma px → Unity px at ÷1.4 ratio)
+```
+FULL SCREEN: 1170 × 2532 Figma → ~835 × 1808 Unity equivalent
+Top UI (persistent bar): 313 Figma → 224 Unity (TopBar is 321px in scene)
+Bottom nav: 263 Figma → 188 Unity (BottomNavBar is 196px in scene)
+
+INSIDE CONTENT AREA:
+- Horizontal padding: 48 Figma → 34 Unity (each side)
+- Tab bar to filter bar gap: 12 Figma → 9 Unity
+- Filter bar to carousel gap: 12 Figma → 9 Unity
+- Carousel section height: 353 Figma → 252 Unity (cards 343 → 245)
+- Pagination dots row: ~24 Figma → 17 Unity
+- Carousel to detail panel gap: 24 Figma → 17 Unity
+- Detail panel fills remaining height
+
+INSIDE DETAIL PANEL:
+- Internal padding: 24 Figma → 17 Unity (all sides)
+- Left panel width: ~46% of detail panel
+- Right panel width: ~54% of detail panel
+- Gap between left and right panels: 1px white border line
+- Vertical gap between sections in right panel: 24 Figma → 17 Unity
+- Gap between stat rows: 24 Figma → 17 Unity
+- Stat icon width: 55 Figma → 39 Unity
+- Stat icon height: 45 Figma → 32 Unity
+- Stat bar height: 20 Figma → 14 Unity
+- Stat bar gap from name: 5 Figma → 4 Unity
+- Stat value column width: 115 Figma → 82 Unity
+```
+
 ### Deferred Items
 - Character compare stat differences (green +N / red -N)
 - Character bio Japanese translations

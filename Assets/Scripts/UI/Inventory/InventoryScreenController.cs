@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.Utilities;
 
 namespace Golfin.Inventory
 {
@@ -27,9 +28,7 @@ namespace Golfin.Inventory
         [Header("References — set by builder")]
         [SerializeField] public ClubFilterBar? clubFilterBar;   // accessed by ClubCarouselController (Phase C)
 
-        [Header("Tab Label Colors")]
-        [SerializeField] private Color activeTabColor   = Color.white;
-        [SerializeField] private Color inactiveTabColor = new Color(0.55f, 0.55f, 0.55f, 1f);
+        // Tab colors kept for fallback but gradient logic takes precedence in RefreshTabVisuals
 
         private int _activeTab = 0;
 
@@ -67,13 +66,17 @@ namespace Golfin.Inventory
             {
                 if (tabButtons[i] == null) continue;
 
-                // Label colour
                 var label = tabButtons[i].GetComponentInChildren<TextMeshProUGUI>();
                 if (label != null)
-                    label.color = (i == _activeTab) ? activeTabColor : inactiveTabColor;
+                {
+                    if (i == _activeTab)
+                        TextGradients.ApplyGold(label);
+                    else
+                        TextGradients.ApplySilver(label);
+                }
             }
 
-            // Active indicator underlines
+            // Active indicator underlines (kept for scenes that still have them)
             for (int i = 0; i < tabIndicators.Length; i++)
                 if (tabIndicators[i] != null)
                     tabIndicators[i].enabled = (i == _activeTab);

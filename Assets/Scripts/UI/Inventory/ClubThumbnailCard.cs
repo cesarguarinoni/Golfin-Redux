@@ -72,9 +72,22 @@ namespace Golfin.Inventory
             if (portraitImage != null && template.portraitSprite != null)
                 portraitImage.sprite = template.portraitSprite;
 
-            // ── Name ─────────────────────────────────────────────────────────
+            // ── Name (type on top, brand below) ──────────────────────────────
             if (nameText != null)
-                nameText.text = template.name;
+            {
+                string fullName = template.name;
+                string brand    = template.brand;
+
+                string typePart = fullName;
+                if (!string.IsNullOrEmpty(brand))
+                {
+                    int brandIndex = fullName.IndexOf(brand, System.StringComparison.OrdinalIgnoreCase);
+                    if (brandIndex >= 0)
+                        typePart = fullName.Substring(0, brandIndex).Trim();
+                }
+
+                nameText.text = $"{typePart.ToUpper()}\n{brand.ToUpper()}";
+            }
 
             // ── Rarity badge ─────────────────────────────────────────────────
             if (rarityBadgeImage != null)
