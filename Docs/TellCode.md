@@ -147,3 +147,4 @@ The max level is shown in the detail panel (Lv 10/39), not on the carousel card.
 ✅ DONE: 2026-03-20 — Phase C code: ClubCarouselController, ClubDetailPanel, builders, auto-wire
 ✅ DONE: 2026-03-21 — New leveling economy: rarity-based starting/max levels
 ✅ DONE: 2026-03-23 — TextGradients utility, RuntimeActiveStateManager, portrait 2-line names, screenshot auto-compress, EQUIP spacer (partial — some rolled back by user)
+✅ DONE: 2026-03-23 — Filter bar dividers (ignoreLayout + manual anchors), arrow sprites patcher, carousel viewport patcher, FadeController startup fix, level text "Lv X" only on cards
