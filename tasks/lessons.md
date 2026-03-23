@@ -169,6 +169,40 @@ private void CommitSwapAndExit(string characterId)
 }
 ```
 
+## HorizontalLayoutGroup Overrides LayoutElement Preferred Sizes for Thin Dividers
+
+**Mistake:** Used `LayoutElement.preferredWidth = 1f` for thin divider Images inside a HLG. The HLG auto-sizes children based on `childForceExpand` and available space, overriding the preferred width entirely.
+
+**Rule:** For absolutely-positioned overlays (dividers, indicators) inside a layout group, use `LayoutElement.ignoreLayout = true` and position manually via RectTransform anchors/sizeDelta.
+
+**Pattern:**
+```csharp
+var le = divGO.AddComponent<LayoutElement>();
+le.ignoreLayout = true;
+
+var rt = divGO.GetComponent<RectTransform>();
+float xPos = (float)(i + 1) / buttonCount; // normalized position between buttons
+rt.anchorMin        = new Vector2(xPos, 0.15f);
+rt.anchorMax        = new Vector2(xPos, 0.85f);
+rt.sizeDelta        = new Vector2(1f, 0f);   // 1px wide, height from anchors
+rt.anchoredPosition = Vector2.zero;
+```
+
+## FadeController GameObject May Be Inactive in Editor — Causes Missing Screen Transitions
+
+**Mistake:** FadeController is left inactive in the scene during editing. Because `Awake()` never runs, `FadeController.Instance` stays null. ScreenManager's `FadeOutThenIn` call is skipped, and the Inventory screen either appears instantly or not at all depending on timing.
+
+**Rule:** In `ScreenManager.Awake()`, find FadeController including inactive GameObjects and activate it before any screen transitions are attempted.
+
+**Pattern:**
+```csharp
+if (FadeController.Instance == null)
+{
+    var fc = FindObjectOfType<FadeController>(includeInactive: true);
+    if (fc != null) fc.gameObject.SetActive(true);
+}
+```
+
 ## Always Use New Input System — Never UnityEngine.Input
 
 **Mistake:** Used `Input.GetKeyDown(KeyCode)` in a debug script. Project uses the New Input System package, so the legacy `UnityEngine.Input` class throws InvalidOperationException at runtime.
