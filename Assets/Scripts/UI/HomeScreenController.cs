@@ -111,7 +111,7 @@ namespace GolfinRedux.UI
             if (navHomeButton != null)       navHomeButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));
             if (navGachaButton != null)      navGachaButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));      // TODO: Gacha
             if (navTeeButton != null)        navTeeButton.onClick.AddListener(() => OnNavClicked(ScreenId.Loading));     // TODO: Hole select
-            if (navInventoryButton != null)  navInventoryButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));  // TODO: Inventory
+            if (navInventoryButton != null)  navInventoryButton.onClick.AddListener(() => OnNavClicked(ScreenId.Inventory));
             if (navCharactersButton != null) navCharactersButton.onClick.AddListener(() => OnNavClicked(ScreenId.Roster)); // Roster Screen
         }
 
@@ -458,6 +458,10 @@ namespace GolfinRedux.UI
                     Debug.Log("[HomeScreenController] Showing Roster screen...");
                     screenManager.ShowScreen(ScreenId.Roster);
                     break;
+                case ScreenId.Inventory:
+                    Debug.Log("[HomeScreenController] Showing Inventory screen...");
+                    screenManager.ShowScreen(ScreenId.Inventory);
+                    break;
                 // For now other tabs just keep you on Home or are TODO
                 default:
                     screenManager.ShowScreen(ScreenId.Home);
@@ -474,7 +478,7 @@ namespace GolfinRedux.UI
             if (navTeeIcon != null)
                 navTeeIcon.color = active == ScreenId.Loading ? navActiveColor : navNormalColor;
             if (navInventoryIcon != null)
-                navInventoryIcon.color = navNormalColor;
+                navInventoryIcon.color = active == ScreenId.Inventory ? navActiveColor : navNormalColor;
             if (navCharactersIcon != null)
                 navCharactersIcon.color = active == ScreenId.Roster ? navActiveColor : navNormalColor;
         }

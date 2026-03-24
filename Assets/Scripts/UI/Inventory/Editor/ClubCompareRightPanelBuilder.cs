@@ -4,6 +4,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 
 namespace Golfin.Inventory.Editor
 {
@@ -62,6 +63,11 @@ namespace Golfin.Inventory.Editor
 
             var root = detailPanelGO.transform;
 
+            // ── Capture existing CompareInfoPanel formatting before destroying ──
+            // Preserves manual Inspector fixes (font size, autosize, alignment, etc.)
+            // made to ClubNameText and RarityLevelRow children so they survive a rebuild.
+            var savedFormats = CaptureCompareInfoPanelFormats(root);
+
             // ── Remove stale compare elements ──────────────────────────────────
             DestroyIfExists(root, "CompareRightPanel");
             DestroyIfExists(root, "VerticalDivider");
@@ -72,6 +78,9 @@ namespace Golfin.Inventory.Editor
             BuildVerticalDivider(root);
             BuildCompareRightPanel(root);
             AddLeftPanelButtons(root.Find("RightPanel"));
+
+            // ── Restore saved formatting onto newly-cloned CompareInfoPanel ────
+            RestoreCompareInfoPanelFormats(root, savedFormats);
 
             // ── Add / get ClubCompareController ───────────────────────────────
             if (detailPanelGO.GetComponent<ClubCompareController>() == null)
@@ -90,6 +99,124 @@ namespace Golfin.Inventory.Editor
                 "OK");
 
             Debug.Log("[ClubCompareRightPanelBuilder] ✓ Compare panel built.");
+        }
+
+        // ── Formatting Snapshot — preserves manual Inspector edits on rebuild ─
+
+        private struct TMPSnapshot
+        {
+            public TMP_FontAsset? font;
+            public float          fontSize;
+            public float          fontSizeMin;
+            public float          fontSizeMax;
+            public bool           enableAutoSizing;
+            public FontStyles     fontStyle;
+            public TextAlignmentOptions alignment;
+            public bool           enableWordWrapping;
+            public TextOverflowModes overflowMode;
+        }
+
+        private struct RectSnapshot
+        {
+            public Vector2 anchorMin, anchorMax, pivot;
+            public Vector2 offsetMin, offsetMax;
+        }
+
+        private struct ElementSnapshot
+        {
+            public TMPSnapshot  tmp;
+            public RectSnapshot rect;
+        }
+
+        /// <summary>
+        /// Names of elements inside CompareInfoPanel whose formatting should survive a rebuild.
+        /// Includes ClubNameText, and all three children of RarityLevelRow.
+        /// </summary>
+        private static readonly string[] SnapshotTargets =
+        {
+            "ClubNameText",
+            "RarityLabel",
+            "LevelText",
+            "LevelTextMax"
+        };
+
+        private static Dictionary<string, ElementSnapshot> CaptureCompareInfoPanelFormats(Transform root)
+        {
+            var result = new Dictionary<string, ElementSnapshot>();
+            var cip    = root.Find("CompareRightPanel/CompareInfoPanel");
+            if (cip == null) return result; // nothing to capture on first build
+
+            foreach (var name in SnapshotTargets)
+            {
+                var t   = FindTransformByName(cip, name);
+                var tmp = t?.GetComponent<TextMeshProUGUI>();
+                var rt  = t?.GetComponent<RectTransform>();
+                if (tmp == null || rt == null) continue;
+
+                result[name] = new ElementSnapshot
+                {
+                    tmp = new TMPSnapshot
+                    {
+                        font              = tmp.font,
+                        fontSize          = tmp.fontSize,
+                        fontSizeMin       = tmp.fontSizeMin,
+                        fontSizeMax       = tmp.fontSizeMax,
+                        enableAutoSizing  = tmp.enableAutoSizing,
+                        fontStyle         = tmp.fontStyle,
+                        alignment         = tmp.alignment,
+                        enableWordWrapping = tmp.enableWordWrapping,
+                        overflowMode      = tmp.overflowMode
+                    },
+                    rect = new RectSnapshot
+                    {
+                        anchorMin = rt.anchorMin, anchorMax = rt.anchorMax,
+                        pivot     = rt.pivot,
+                        offsetMin = rt.offsetMin, offsetMax = rt.offsetMax
+                    }
+                };
+            }
+
+            return result;
+        }
+
+        private static void RestoreCompareInfoPanelFormats(
+            Transform root, Dictionary<string, ElementSnapshot> saved)
+        {
+            if (saved.Count == 0) return;
+
+            var cip = root.Find("CompareRightPanel/CompareInfoPanel");
+            if (cip == null) return;
+
+            foreach (var kv in saved)
+            {
+                var t   = FindTransformByName(cip, kv.Key);
+                var tmp = t?.GetComponent<TextMeshProUGUI>();
+                var rt  = t?.GetComponent<RectTransform>();
+                if (tmp == null) continue;
+
+                var s = kv.Value.tmp;
+                if (s.font != null) tmp.font = s.font;
+                tmp.fontSize          = s.fontSize;
+                tmp.fontSizeMin       = s.fontSizeMin;
+                tmp.fontSizeMax       = s.fontSizeMax;
+                tmp.enableAutoSizing  = s.enableAutoSizing;
+                tmp.fontStyle         = s.fontStyle;
+                tmp.alignment         = s.alignment;
+                tmp.enableWordWrapping = s.enableWordWrapping;
+                tmp.overflowMode      = s.overflowMode;
+                EditorUtility.SetDirty(tmp);
+
+                if (rt != null)
+                {
+                    var r         = kv.Value.rect;
+                    rt.anchorMin  = r.anchorMin;
+                    rt.anchorMax  = r.anchorMax;
+                    rt.pivot      = r.pivot;
+                    rt.offsetMin  = r.offsetMin;
+                    rt.offsetMax  = r.offsetMax;
+                    EditorUtility.SetDirty(rt);
+                }
+            }
         }
 
         // ── Vertical Divider ───────────────────────────────────────────────────

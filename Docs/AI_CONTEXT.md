@@ -1,36 +1,37 @@
 # AI Context — Golfin Redux
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
-**Team:** Kai (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-03-24
+**Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
+**Last Updated:** 2026-03-25 (session 2)
 
 ## Current Status
 
 | System | Status |
 |---|---|
-| Character Roster | ✅ Complete (carousel, detail, compare, level up, localization) |
-| Club Inventory | 🔧 Phase D compare wired (46/46 fields) — play mode verify pending |
+| Character Roster | ✅ Complete |
+| Club Inventory | 🔧 Compare panel done, user fixing images. Phase E (modals) not started. |
 | Leveling Economy | ✅ Rarity-based (Common 10→39, Supreme 200→239), cost = level × 5 |
 | Settings | Needs minor visual fixes |
 | Shop, Bags, Balls, Items | Not started |
-| Gameplay (3D course, shooting, physics) | Not started |
+| Gameplay | Not started |
 
 ## Active Work
-- Compare panel builder (clone approach) + auto-wire complete — needs play mode verification
-- 5 Phase C visual fixes still pending verification (filter dividers, arrows, viewport, fade, level text)
-- GOLFIN menu reorganization + Art/References folder renames done — needs Unity verify
+- Club Inventory compare mode functionally complete — user dressing up visuals
+- `ClubCompareRightPanelBuilder`: now preserves ClubNameText + RarityLevelRow TMP formatting (font, size, autosize, style, alignment, rect) when re-running "Build Club Compare Panel" — saves snapshot before destroy, restores after clone
+- Phase E (Bag selection modal, Repair modal, Club Level Up modal) is next for Clubs
+- Menu cleanup + asset folder renames done — verify in Unity
+- Next screen after Clubs: Settings (G-014) or Bags Inventory (G-016)
 
-## Key Files (read as needed, not every session)
+## Key Files (read as needed)
 - `Docs/Rules.md` — design constraints, Figma specs, conventions
-- `Docs/Tasks.md` — current checklist for Claude Code
+- `Docs/Tasks.md` — current checklist
+- `Docs/TellCode.md` — architect → code instructions
+- `CLAUDE.md` — Claude Code session rules + project architecture
 - `Docs/ARCHITECTURE_AUDIT.md` — auto-generated file tree, singletons, events
-- `CLAUDE.md` — Claude Code session rules and project architecture
-- `Docs/Game Design/` — changelog, formulas proposal, naming convention, level spreadsheets
+- `Docs/Game Design/` — changelog, formulas, naming convention, level spreadsheets
 
-## Quick Architecture Reference
-- **CSV-first** data (not ScriptableObjects)
-- **Resources.Load** for sprites (no Inspector arrays)
-- **Event-driven UI** (Action delegates, OnEnable/OnDisable)
+## Quick Architecture
+- **CSV-first** data, **Resources.Load** for sprites, **Event-driven UI**
 - **Namespaces:** `Golfin.Roster`, `Golfin.Inventory`
 - **Singletons:** CharacterManager, ClubManager, RewardPointsManager, ScreenManager, PersistentUIManager, CharacterDatabaseCSV, ClubDatabaseCSV
 - **Platform:** Windows (PowerShell)

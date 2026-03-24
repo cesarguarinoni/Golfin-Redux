@@ -289,7 +289,7 @@ MonoBehaviour:
     english: ACCURACY
     japanese: "\u30A2\u30AD\u30E5\u30E9\u30B7\u30FC"
   - key: CLUB_LIE_RESISTANCE
-    english: LIE RESISTANCE
+    english: LIE RESIST.
     japanese: "\u30E9\u30A4\u8010\u6027"
   - key: CLUB_LOFT
     english: LOFT

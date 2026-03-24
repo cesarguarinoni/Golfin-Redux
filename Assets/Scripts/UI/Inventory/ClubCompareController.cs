@@ -247,6 +247,7 @@ namespace Golfin.Inventory
             SafeSetActive(compareInfoPanel,   true);
 
             RefreshRightColumn(clubId);
+            UpdateLeftColumnButtons();
 
             Debug.Log($"[ClubCompareController] Comparing {_leftClubId} vs {clubId}");
         }
@@ -345,13 +346,15 @@ namespace Golfin.Inventory
                     : LocalizationManager.Get("CLUB_EQUIP");
 
             var equipImg = compareRightEquipButton == null ? null : compareRightEquipButton.GetComponent<Image>();
-            if (equipImg != null) equipImg.color = isEquipped ? EquippedGoldColor : Color.white;
+            if (equipImg != null) equipImg.color = Color.white;
 
             if (compareBagLabel != null)
             {
-                compareBagLabel.gameObject.SetActive(isEquipped);
-                if (isEquipped)
-                    compareBagLabel.text = $"{LocalizationManager.Get("CLUB_IN_BAG")} {rightPlayerClub.equippedBagSlot}";
+                compareBagLabel.text  = isEquipped
+                    ? $"{LocalizationManager.Get("CLUB_IN_BAG")} {rightPlayerClub.equippedBagSlot}"
+                    : " ";
+                compareBagLabel.color = new Color(compareBagLabel.color.r, compareBagLabel.color.g, compareBagLabel.color.b,
+                    isEquipped ? 1f : 0f);
             }
 
             if (compareEquippedIcon != null) compareEquippedIcon.SetActive(isEquipped);
@@ -411,12 +414,30 @@ namespace Golfin.Inventory
 
         private void UpdateLeftColumnButtons()
         {
-            var leftClub    = ClubManager.Instance == null ? null : ClubManager.Instance.GetClubData(_leftClubId);
-            bool isEquipped = leftClub?.IsEquipped ?? false;
+            var leftClub     = ClubManager.Instance == null ? null : ClubManager.Instance.GetClubData(_leftClubId);
+            bool leftEquipped = leftClub?.IsEquipped ?? false;
 
-            // If left club is already equipped show EquipButton ("EQUIPPED"); otherwise show SwapButton
-            SafeSetActive(equipButton?.gameObject, isEquipped);
-            SafeSetActive(swapButton?.gameObject,  !isEquipped);
+            // Show SWAP only when a right club is selected AND that club is already in a bag
+            bool rightEquipped = false;
+            if (!string.IsNullOrEmpty(_rightClubId) && ClubManager.Instance != null)
+            {
+                var rightClub = ClubManager.Instance.GetClubData(_rightClubId);
+                rightEquipped = rightClub?.IsEquipped ?? false;
+            }
+
+            bool showSwap = rightEquipped;
+            SafeSetActive(swapButton?.gameObject,  showSwap);
+            SafeSetActive(equipButton?.gameObject, !showSwap);
+
+            // Keep equip button text correct when it is showing instead of SWAP
+            if (!showSwap && equipButton != null)
+            {
+                var btnText = equipButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (btnText != null)
+                    btnText.text = leftEquipped
+                        ? LocalizationManager.Get("CLUB_EQUIPPED")
+                        : LocalizationManager.Get("CLUB_EQUIP");
+            }
         }
 
         // ── Button Handlers ────────────────────────────────────────────────────

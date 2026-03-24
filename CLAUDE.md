@@ -6,11 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Before doing anything else:
 1. Run: `powershell -File Docs/generate_audit.ps1 > Docs/ARCHITECTURE_AUDIT.md`
-2. Read `Docs/AI_CONTEXT.md` (current phase, status, blockers)
-3. Read `Docs/ARCHITECTURE_AUDIT.md` (just generated — file tree, singletons, events, health check)
-4. Read any `Docs/PHASE_*_SPEC.md` files (active task specs from architect)
-5. Read `tasks/lessons.md` for relevant project lessons
-6. Read Docs/TellCode.md for any pending instructions from architect
+2. Read `Docs/AI_CONTEXT.md` (tiny — current status and active work)
+3. Read `Docs/Tasks.md` (current checklist — what to do)
+4. Read `Docs/TellCode.md` for any pending architect instructions
+5. If working on UI/design: read `Docs/Rules.md` (design constraints, Figma specs, conventions)
+6. If needed: read `Docs/ARCHITECTURE_AUDIT.md` (file tree, singletons, events)
+7. Read `tasks/lessons.md` for relevant project lessons
 
 ## Session End (EVERY SESSION)
 
@@ -367,13 +368,14 @@ Quick rules:
 
 | File | Purpose |
 |---|---|
-| `Docs/AI_CONTEXT.md` | Living project status — current phase, blockers, next steps |
+| `Docs/AI_CONTEXT.md` | Tiny core memory — current status, active work |
+| `Docs/Tasks.md` | Current checklist and backlog |
+| `Docs/Rules.md` | Design constraints, Figma specs, conventions |
 | `Docs/TellCode.md` | Architect instructions for Claude Code |
-| `Docs/ARCHITECTURE_AUDIT.md` | Auto-generated — file tree, singletons, events, health check |
+| `Docs/ARCHITECTURE_AUDIT.md` | Auto-generated — file tree, singletons, events |
 | `Docs/generate_audit.ps1` | Script to regenerate the audit |
-| `Docs/CLUB_INVENTORY_SPEC.md` | Active club inventory spec |
 | `Docs/Game Design/GAME_DESIGN_CHANGELOG.md` | Game design changes from original GDD |
-| `Docs/Game Design/ASSET_NAMING_CONVENTION.md` | Asset & file naming rules (mandatory for new assets) |
+| `Docs/Game Design/ASSET_NAMING_CONVENTION.md` | Asset & file naming rules |
 | `Docs/Game Design/GAMEPLAY_FORMULAS_PROPOSAL.md` | Simplified gameplay formulas (proposal) |
 | `Docs/GAME_DESIGN_AGENT.md` | AI agent for evaluating GDD systems |
 | `Docs/Archive/` | Completed phase specs |

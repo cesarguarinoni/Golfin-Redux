@@ -243,13 +243,15 @@ namespace Golfin.Inventory
 
             var equipImg = equipButton == null ? null : equipButton.GetComponent<Image>();
             if (equipImg != null)
-                equipImg.color = isEquipped ? EquippedGoldColor : Color.white;
+                equipImg.color = Color.white;
 
             if (bagLabel != null)
             {
-                bagLabel.gameObject.SetActive(isEquipped);
-                if (isEquipped)
-                    bagLabel.text = $"{LocalizationManager.Get("CLUB_IN_BAG")} {playerClub.equippedBagSlot}";
+                bagLabel.text  = isEquipped
+                    ? $"{LocalizationManager.Get("CLUB_IN_BAG")} {playerClub.equippedBagSlot}"
+                    : " ";
+                bagLabel.color = new Color(bagLabel.color.r, bagLabel.color.g, bagLabel.color.b,
+                    isEquipped ? 1f : 0f);
             }
 
             // ── Status Icons ──────────────────────────────────────────────────
