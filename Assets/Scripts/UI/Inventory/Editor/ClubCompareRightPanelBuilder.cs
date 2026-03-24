@@ -162,232 +162,72 @@ namespace Golfin.Inventory.Editor
             tmp.enableWordWrapping = true;
         }
 
-        private static void BuildCompareInfoPanel(Transform parent)
+        private static void BuildCompareInfoPanel(Transform compareRightPanel)
         {
-            var go = new GameObject("CompareInfoPanel");
-            go.transform.SetParent(parent, false);
-            var rt = go.AddComponent<RectTransform>();
+            // Find the existing styled RightPanel
+            var detailPanel = compareRightPanel.parent;
+            var rightPanel  = detailPanel.Find("RightPanel");
+            if (rightPanel == null)
+            {
+                Debug.LogError("[ClubCompareRightPanelBuilder] RightPanel not found — cannot clone.");
+                return;
+            }
+
+            // Clone the entire RightPanel — inherits all fonts, colors, sprites, layout
+            var clone = Object.Instantiate(rightPanel.gameObject, compareRightPanel, false);
+            clone.name = "CompareInfoPanel";
+
+            // Reset RectTransform to fill parent
+            var rt = clone.GetComponent<RectTransform>();
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
 
-            var vlg = go.AddComponent<VerticalLayoutGroup>();
-            vlg.padding               = new RectOffset((int)PANEL_PAD, (int)PANEL_PAD, (int)PANEL_PAD, (int)PANEL_PAD);
-            vlg.spacing               = 4f;
-            vlg.childAlignment        = TextAnchor.UpperLeft;
-            vlg.childForceExpandWidth  = true;
-            vlg.childForceExpandHeight = false;
+            // Add DiffLabel TMP to each stat row — insert after first child (StatsName/icon), before bar
+            string[] statRows = { "PowerRow", "AccuracyRow", "LieResistanceRow", "LoftRow", "DurabilityRow" };
+            foreach (var rowName in statRows)
+            {
+                var row = FindTransformByName(clone.transform, rowName);
+                if (row == null) continue;
 
-            // ClubNameText
-            var nameGO = new GameObject("ClubNameText");
-            nameGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(nameGO, preferredHeight: 22f);
-            var nameTMP = nameGO.AddComponent<TextMeshProUGUI>();
-            nameTMP.text      = "CLUB NAME";
-            nameTMP.fontSize  = 15f;
-            nameTMP.fontStyle = FontStyles.Bold;
-            nameTMP.color     = Color.white;
+                var diffGO  = new GameObject("DiffLabel");
+                diffGO.transform.SetParent(row, false);
+                diffGO.transform.SetSiblingIndex(1); // after icon/name, before bar
+                var diffLE  = diffGO.AddComponent<LayoutElement>();
+                diffLE.preferredWidth = 45f;
+                var diffTMP = diffGO.AddComponent<TextMeshProUGUI>();
+                diffTMP.text      = "";
+                diffTMP.fontSize  = 10f;
+                diffTMP.fontStyle = FontStyles.Bold;
+                diffTMP.color     = new Color(0.2f, 0.8f, 0.3f, 1f);
+                diffTMP.alignment = TextAlignmentOptions.Left;
+                diffGO.SetActive(false);
+            }
 
-            BuildDivider(go.transform);
-            BuildRarityLevelRow(go.transform);
-            BuildDivider(go.transform);
-            BuildCompareStatsPanel(go.transform);
-            BuildDivider(go.transform);
-            BuildButtonsPanel(go.transform);
-            BuildTextButton(go.transform, "CompareButton",  "COMPARE", BUTTON_H);
+            // Add DiffLabel to DistanceRow too
+            var distRow = FindTransformByName(clone.transform, "DistanceRow");
+            if (distRow != null)
+            {
+                var diffGO  = new GameObject("DiffLabel");
+                diffGO.transform.SetParent(distRow, false);
+                diffGO.transform.SetSiblingIndex(1);
+                var diffLE  = diffGO.AddComponent<LayoutElement>();
+                diffLE.preferredWidth = 45f;
+                var diffTMP = diffGO.AddComponent<TextMeshProUGUI>();
+                diffTMP.text      = "";
+                diffTMP.fontSize  = 10f;
+                diffTMP.fontStyle = FontStyles.Bold;
+                diffTMP.color     = new Color(0.2f, 0.8f, 0.3f, 1f);
+                diffTMP.alignment = TextAlignmentOptions.Left;
+                diffGO.SetActive(false);
+            }
 
-            // BagLabel
-            var bagGO = new GameObject("BagLabel");
-            bagGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(bagGO, preferredHeight: 18f);
-            var bagTMP = bagGO.AddComponent<TextMeshProUGUI>();
-            bagTMP.text      = "IN BAG 1";
-            bagTMP.fontSize  = 11f;
-            bagTMP.color     = new Color(0.3f, 0.6f, 1f, 1f);
-            bagTMP.alignment = TextAlignmentOptions.Center;
-            bagGO.SetActive(false);
+            // Remove ClubDetailPanel script if it was duplicated by the clone
+            var detailPanelScript = clone.GetComponent<ClubDetailPanel>();
+            if (detailPanelScript != null) Object.DestroyImmediate(detailPanelScript);
 
-            BuildTextButton(go.transform, "EquipButton", "EQUIP", BUTTON_H);
-
-            go.SetActive(false); // hidden until a club is tapped
-        }
-
-        private static void BuildRarityLevelRow(Transform parent)
-        {
-            var go = new GameObject("RarityLevelRow");
-            go.transform.SetParent(parent, false);
-            AddLayoutElement(go, preferredHeight: 22f);
-
-            var hlg = go.AddComponent<HorizontalLayoutGroup>();
-            hlg.childAlignment        = TextAnchor.MiddleLeft;
-            hlg.childForceExpandWidth  = false;
-            hlg.childForceExpandHeight = true;
-            hlg.spacing               = 4f;
-
-            var rarityGO = new GameObject("RarityLabel");
-            rarityGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(rarityGO, preferredWidth: 70f);
-            var rarityTMP = rarityGO.AddComponent<TextMeshProUGUI>();
-            rarityTMP.text      = "COMMON";
-            rarityTMP.fontSize  = 12f;
-            rarityTMP.fontStyle = FontStyles.Bold;
-            rarityTMP.color     = Color.white;
-
-            var levelGO = new GameObject("LevelText");
-            levelGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(levelGO, preferredWidth: 50f);
-            var levelTMP = levelGO.AddComponent<TextMeshProUGUI>();
-            levelTMP.text     = "Lv 1";
-            levelTMP.fontSize = 12f;
-            levelTMP.color    = Color.white;
-
-            var maxGO = new GameObject("LevelTextMax");
-            maxGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(maxGO, preferredWidth: 40f);
-            var maxTMP = maxGO.AddComponent<TextMeshProUGUI>();
-            maxTMP.text     = "/119";
-            maxTMP.fontSize = 12f;
-            maxTMP.color    = new Color(0.6f, 0.6f, 0.6f, 1f);
-        }
-
-        private static void BuildCompareStatsPanel(Transform parent)
-        {
-            var go = new GameObject("StatsPanel");
-            go.transform.SetParent(parent, false);
-            var le = AddLayoutElement(go, preferredHeight: ROW_H * 6 + 4f);
-            le.flexibleHeight = 1f;
-
-            var vlg = go.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing               = 3f;
-            vlg.childAlignment        = TextAnchor.UpperLeft;
-            vlg.childForceExpandWidth  = true;
-            vlg.childForceExpandHeight = false;
-
-            BuildCompareStatRow(go.transform, "PowerRow");
-            BuildCompareStatRow(go.transform, "AccuracyRow");
-            BuildCompareStatRow(go.transform, "LieResistanceRow");
-            BuildCompareStatRow(go.transform, "LoftRow");
-            BuildCompareStatRow(go.transform, "DurabilityRow");
-            BuildCompareDistanceRow(go.transform);
-        }
-
-        /// <summary>
-        /// Stat row with a DiffLabel between the stat name and the bar:
-        /// StatsName (72px) | DiffLabel (35px, hidden) | Bar (flex) | StatNumber (42px)
-        /// </summary>
-        private static void BuildCompareStatRow(Transform parent, string name)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            AddLayoutElement(go, preferredHeight: ROW_H);
-
-            var hlg = go.AddComponent<HorizontalLayoutGroup>();
-            hlg.childAlignment        = TextAnchor.MiddleLeft;
-            hlg.childForceExpandWidth  = false;
-            hlg.childForceExpandHeight = true;
-            hlg.spacing               = 4f;
-
-            // StatsName
-            var nameGO = new GameObject("StatsName");
-            nameGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(nameGO, preferredWidth: 72f);
-            var nameTMP = nameGO.AddComponent<TextMeshProUGUI>();
-            nameTMP.text         = name.Replace("Row", "").ToUpper();
-            nameTMP.fontSize     = 9f;
-            nameTMP.color        = new Color(0.7f, 0.7f, 0.7f, 1f);
-            nameTMP.overflowMode = TextOverflowModes.Ellipsis;
-
-            // DiffLabel (initially hidden — shown when compare data is loaded)
-            var diffGO = new GameObject("DiffLabel");
-            diffGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(diffGO, preferredWidth: 35f);
-            var diffTMP = diffGO.AddComponent<TextMeshProUGUI>();
-            diffTMP.text      = "+0";
-            diffTMP.fontSize  = 9f;
-            diffTMP.fontStyle = FontStyles.Bold;
-            diffTMP.color     = new Color(0.2f, 0.8f, 0.3f, 1f);
-            diffTMP.alignment = TextAlignmentOptions.Left;
-            diffGO.SetActive(false);
-
-            // Bar
-            var barGO = new GameObject("Bar");
-            barGO.transform.SetParent(go.transform, false);
-            var barLE = AddLayoutElement(barGO, preferredHeight: 8f);
-            barLE.flexibleWidth = 1f;
-
-            var barImg = barGO.AddComponent<Image>();
-            barImg.color      = new Color(0.2f, 0.5f, 0.9f, 1f);
-            barImg.type       = Image.Type.Filled;
-            barImg.fillMethod = Image.FillMethod.Horizontal;
-            barImg.fillOrigin = 0;
-            barImg.fillAmount = 0.75f;
-
-            // StatNumber
-            var numGO = new GameObject("StatNumber");
-            numGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(numGO, preferredWidth: 42f);
-            var numTMP = numGO.AddComponent<TextMeshProUGUI>();
-            numTMP.text      = "75/100";
-            numTMP.fontSize  = 9f;
-            numTMP.color     = Color.white;
-            numTMP.alignment = TextAlignmentOptions.Right;
-        }
-
-        /// <summary>
-        /// Distance row with DiffLabel:
-        /// StatsName (72px) | DiffLabel (35px, hidden) | Spacer (flex) | DistanceValue (55px)
-        /// </summary>
-        private static void BuildCompareDistanceRow(Transform parent)
-        {
-            var go = new GameObject("DistanceRow");
-            go.transform.SetParent(parent, false);
-            AddLayoutElement(go, preferredHeight: ROW_H);
-
-            var hlg = go.AddComponent<HorizontalLayoutGroup>();
-            hlg.childAlignment        = TextAnchor.MiddleLeft;
-            hlg.childForceExpandWidth  = false;
-            hlg.childForceExpandHeight = true;
-            hlg.spacing               = 4f;
-
-            // StatsName
-            var nameGO = new GameObject("StatsName");
-            nameGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(nameGO, preferredWidth: 72f);
-            var nameTMP = nameGO.AddComponent<TextMeshProUGUI>();
-            nameTMP.text     = "DISTANCE";
-            nameTMP.fontSize = 9f;
-            nameTMP.color    = new Color(0.7f, 0.7f, 0.7f, 1f);
-
-            // DiffLabel
-            var diffGO = new GameObject("DiffLabel");
-            diffGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(diffGO, preferredWidth: 35f);
-            var diffTMP = diffGO.AddComponent<TextMeshProUGUI>();
-            diffTMP.text      = "+0";
-            diffTMP.fontSize  = 9f;
-            diffTMP.fontStyle = FontStyles.Bold;
-            diffTMP.color     = new Color(0.2f, 0.8f, 0.3f, 1f);
-            diffTMP.alignment = TextAlignmentOptions.Left;
-            diffGO.SetActive(false);
-
-            // Spacer
-            var spacerGO = new GameObject("Spacer");
-            spacerGO.transform.SetParent(go.transform, false);
-            var spacerLE = AddLayoutElement(spacerGO, preferredHeight: 1f);
-            spacerLE.flexibleWidth = 1f;
-            spacerGO.AddComponent<Image>().color = Color.clear;
-
-            // DistanceValue
-            var valGO = new GameObject("DistanceValue");
-            valGO.transform.SetParent(go.transform, false);
-            AddLayoutElement(valGO, preferredWidth: 55f);
-            var valTMP = valGO.AddComponent<TextMeshProUGUI>();
-            valTMP.text      = "250 yd";
-            valTMP.fontSize  = 10f;
-            valTMP.color     = Color.white;
-            valTMP.fontStyle = FontStyles.Bold;
-            valTMP.alignment = TextAlignmentOptions.Right;
+            clone.SetActive(false); // hidden until a club is tapped
         }
 
         // ── Left Column Button Additions ───────────────────────────────────────
