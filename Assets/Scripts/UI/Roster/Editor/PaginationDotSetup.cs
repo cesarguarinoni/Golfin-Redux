@@ -22,7 +22,7 @@ namespace Golfin.Roster.Editor
     {
         private const string PREFAB_PATH = "Assets/Prefabs/UI/Roster/PaginationDot.prefab";
 
-        [MenuItem("GOLFIN/Setup Pagination Dots")]
+        [MenuItem("GOLFIN/Setup/Pagination Dots")]
         public static void Run()
         {
             // ── 1. Find CarouselController in the open scene ─────────────────

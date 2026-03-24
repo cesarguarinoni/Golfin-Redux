@@ -7,7 +7,7 @@ namespace Golfin.Roster.Editor
 {
     public static class DetailPanelAutoWire
     {
-        [MenuItem("GOLFIN/Wire Detail Panel")]
+        [MenuItem("GOLFIN/Wire/Roster Detail Panel")]
         public static void WireDetailPanel()
         {
             // Find DetailPanel in scene

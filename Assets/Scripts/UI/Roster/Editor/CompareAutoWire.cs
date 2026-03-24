@@ -19,7 +19,7 @@ namespace Golfin.Roster.Editor
     /// </summary>
     public static class CompareAutoWire
     {
-        [MenuItem("GOLFIN/Wire Compare Panel")]
+        [MenuItem("GOLFIN/Wire/Roster Compare Panel")]
         public static void Wire()
         {
             var detailPanel = FindDetailPanel();

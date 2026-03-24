@@ -82,6 +82,11 @@ namespace Golfin.Inventory
         [Header("Carousel")]
         [SerializeField] private ClubCarouselController? carousel;
 
+        // ── Compare Controller ─────────────────────────────────────────────────
+
+        [Header("Compare")]
+        [SerializeField] private ClubCompareController? compareController;
+
         // ── State ──────────────────────────────────────────────────────────────
 
         private string currentClubId = "";
@@ -132,8 +137,20 @@ namespace Golfin.Inventory
 
         // ── Data Binding ───────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Force-shows a specific club regardless of compare mode.
+        /// Called by ClubCompareController after a swap/equip action.
+        /// </summary>
+        public void ShowClub(string clubId)
+        {
+            currentClubId = clubId;
+            UpdatePanel(clubId);
+        }
+
         private void UpdatePanel(string clubId)
         {
+            if (compareController != null && compareController.IsCompareMode) return;
+
             currentClubId = clubId;
 
             var playerClub = ClubManager.Instance == null
@@ -277,7 +294,10 @@ namespace Golfin.Inventory
 
         private void OnCompareClicked()
         {
-            Debug.Log($"[ClubDetailPanel] COMPARE clicked for '{currentClubId}' — Phase D.");
+            if (compareController != null && !string.IsNullOrEmpty(currentClubId))
+                compareController.EnterCompareMode(currentClubId);
+            else
+                Debug.Log($"[ClubDetailPanel] COMPARE clicked for '{currentClubId}' — run Wire Club Compare Panel.");
         }
 
         private void OnEquipClicked()

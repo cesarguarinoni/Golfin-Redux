@@ -23,7 +23,7 @@ namespace Golfin.Inventory.Editor
 
         private const float FILTERBAR_H = 48f;
 
-        [MenuItem("GOLFIN/Patch - Rebuild FilterBar")]
+        // [MenuItem - archived] "GOLFIN/Patch - Rebuild FilterBar"
         public static void Run()
         {
             // ── Find FilterBar ────────────────────────────────────────────────

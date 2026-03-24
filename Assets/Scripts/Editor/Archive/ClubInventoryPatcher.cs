@@ -22,7 +22,7 @@ namespace Golfin.Inventory.Editor
     {
         // ── Master patch ──────────────────────────────────────────────────────
 
-        [MenuItem("GOLFIN/Patch Club Inventory/All Fixes")]
+        // [MenuItem - archived] "GOLFIN/Patch Club Inventory/All Fixes")]
         public static void PatchAll()
         {
             int fixes = 0;
@@ -44,7 +44,7 @@ namespace Golfin.Inventory.Editor
 
         // ── Arrow Sprites ─────────────────────────────────────────────────────
 
-        [MenuItem("GOLFIN/Patch Club Inventory/Fix Arrow Sprites")]
+        // [MenuItem - archived] "GOLFIN/Patch Club Inventory/Fix Arrow Sprites")]
         public static void PatchArrowSprites()
         {
             bool ok = FixArrowSprites();
@@ -116,7 +116,7 @@ namespace Golfin.Inventory.Editor
 
         // ── Carousel Viewport ─────────────────────────────────────────────────
 
-        [MenuItem("GOLFIN/Patch Club Inventory/Fix Carousel Viewport")]
+        // [MenuItem - archived] "GOLFIN/Patch Club Inventory/Fix Carousel Viewport")]
         public static void PatchCarouselViewport()
         {
             bool ok = FixCarouselViewport();
@@ -209,7 +209,7 @@ namespace Golfin.Inventory.Editor
 
         // ── Fix 3: EQUIP button spacer ────────────────────────────────────────
 
-        [MenuItem("GOLFIN/Patch Club Inventory/Fix3 EQUIP Spacer")]
+        // [MenuItem - archived] "GOLFIN/Patch Club Inventory/Fix3 EQUIP Spacer")]
         public static void PatchFix3()
         {
             bool ok = Fix3_EquipSpacer();
@@ -266,7 +266,7 @@ namespace Golfin.Inventory.Editor
 
         // ── Fix 6: Spacing gaps ───────────────────────────────────────────────
 
-        [MenuItem("GOLFIN/Patch Club Inventory/Fix6 Spacing Gaps")]
+        // [MenuItem - archived] "GOLFIN/Patch Club Inventory/Fix6 Spacing Gaps")]
         public static void PatchFix6()
         {
             bool ok = Fix6_SpacingGaps();
@@ -337,7 +337,7 @@ namespace Golfin.Inventory.Editor
 
         // ── Fix 9: Copy pagination dot prefab from Roster carousel ────────────
 
-        [MenuItem("GOLFIN/Patch Club Inventory/Fix9 Copy Pagination Dot Prefab")]
+        // [MenuItem - archived] "GOLFIN/Patch Club Inventory/Fix9 Copy Pagination Dot Prefab")]
         public static void PatchFix9()
         {
             bool ok = Fix9_CopyDotPrefab();
@@ -390,7 +390,7 @@ namespace Golfin.Inventory.Editor
 
         // ── Fix 10: Font sizes in Club Detail Panel ───────────────────────────
 
-        [MenuItem("GOLFIN/Patch Club Inventory/Fix10 Font Sizes")]
+        // [MenuItem - archived] "GOLFIN/Patch Club Inventory/Fix10 Font Sizes")]
         public static void PatchFix10()
         {
             bool ok = Fix10_FontSizes();
@@ -458,7 +458,7 @@ namespace Golfin.Inventory.Editor
 
         // ── Fix 11: Stat row layout ───────────────────────────────────────────
 
-        [MenuItem("GOLFIN/Patch Club Inventory/Fix11 Stat Row Layout")]
+        // [MenuItem - archived] "GOLFIN/Patch Club Inventory/Fix11 Stat Row Layout")]
         public static void PatchFix11()
         {
             bool ok = Fix11_StatRowLayout();

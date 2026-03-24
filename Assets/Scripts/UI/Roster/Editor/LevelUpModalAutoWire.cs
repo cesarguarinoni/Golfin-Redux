@@ -17,7 +17,7 @@ namespace Golfin.Roster.Editor
     /// </summary>
     public static class LevelUpModalAutoWire
     {
-        [MenuItem("GOLFIN/Wire Level Up Modal")]
+        [MenuItem("GOLFIN/Wire/Roster Level Up Modal")]
         public static void Wire()
         {
             // ── Find LevelUpModal ────────────────────────────────────────────

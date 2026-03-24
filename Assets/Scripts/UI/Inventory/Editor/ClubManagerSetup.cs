@@ -16,7 +16,7 @@ namespace Golfin.Inventory.Editor
     {
         private const string CSV_ASSET_PATH = "Assets/Data/Clubs.csv";
 
-        [MenuItem("GOLFIN/Setup Club Managers")]
+        [MenuItem("GOLFIN/Setup/Club Managers")]
         public static void Run()
         {
             bool changed = false;

@@ -219,3 +219,15 @@ if (Keyboard.current != null && Keyboard.current[Key.Backquote].wasPressedThisFr
 // Mouse button (replaces Input.GetMouseButtonDown(0)):
 if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) { }
 ```
+
+## Raycast Target on Decorative Images Blocks Button Clicks
+
+**Repeat offender.** This has happened on both the Roster DetailPanel and the Club DetailPanel.
+
+**Symptom:** Buttons exist, look correct, but don't respond to taps/clicks.
+
+**Cause:** A non-interactive Image component (background, rim, portrait, decorative element) has `Raycast Target = true` and sits on top of or overlaps the button in the hierarchy. It eats the click before the button receives it.
+
+**Fix:** Disable `Raycast Target` on ALL non-interactive Image components — backgrounds, rims, portraits, dividers, icons (unless the icon IS a button). Only Buttons and interactive elements should have Raycast Target enabled.
+
+**Prevention:** When creating any new Image component in code or Inspector, immediately set `raycastTarget = false` unless it's intentionally interactive.

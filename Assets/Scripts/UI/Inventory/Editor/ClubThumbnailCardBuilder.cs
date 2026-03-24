@@ -21,7 +21,7 @@ namespace Golfin.Inventory.Editor
         private const string DEST_PREFAB   = "Assets/Prefabs/UI/Inventory/ClubThumbnailCard.prefab";
         private const string DEST_FOLDER   = "Assets/Prefabs/UI/Inventory";
 
-        [MenuItem("GOLFIN/Setup Club Thumbnail Card Prefab")]
+        [MenuItem("GOLFIN/Setup/Club Thumbnail Card Prefab")]
         public static void Run()
         {
             // ── 1. Ensure destination folder exists ───────────────────────────

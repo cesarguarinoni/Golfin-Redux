@@ -6,145 +6,156 @@
 
 ---
 
-## Current Task (2026-03-23) — 5 Targeted Fixes Only
+## Current Task (2026-03-25) — Project Cleanup: Menu, Assets, File Tree
 
-The user has done extensive manual fixes. Only these 5 issues remain. Do NOT touch anything else — no font changes, no padding changes, no layout changes beyond what's listed here.
-
----
-
-### Fix 1: Filter Bar Dividers — Use LayoutElement.ignoreLayout
-
-The HorizontalLayoutGroup keeps auto-sizing the divider images and breaking them. The fix is to make dividers IGNORE the layout:
-
-```csharp
-// For each divider Image in the filter bar:
-var layoutElement = divider.GetComponent<LayoutElement>();
-if (layoutElement == null) layoutElement = divider.AddComponent<LayoutElement>();
-layoutElement.ignoreLayout = true;
-```
-
-Then position each divider manually using RectTransform anchors between the filter buttons. Since there are 8 filter buttons evenly distributed, each divider sits at 1/8, 2/8, 3/8... of the way across:
-
-```csharp
-// Position divider N (0-indexed) between button N and N+1
-// With 8 buttons, dividers go at positions 1/8, 2/8, 3/8, 4/8, 5/8, 6/8, 7/8
-var rt = divider.GetComponent<RectTransform>();
-float xPos = (float)(i + 1) / 8f; // normalized position
-rt.anchorMin = new Vector2(xPos, 0.15f);
-rt.anchorMax = new Vector2(xPos, 0.85f);
-rt.sizeDelta = new Vector2(1, 0); // 1px wide, height from anchors
-rt.anchoredPosition = Vector2.zero;
-```
-
-This way the dividers are positioned absolutely within the filter bar, ignoring the HLG entirely. Set divider Image color to `rgba(255, 255, 255, 0.3)`.
-
-Do this in `ClubFilterBar.Start()` or in the builder. If divider GameObjects already exist in the hierarchy, just add `LayoutElement.ignoreLayout = true` and set their anchors. If they don't exist, create them programmatically.
+Three cleanup tasks. Do them in order.
 
 ---
 
-### Fix 2: Carousel Arrow Images Missing
+### Task 1: Reorganize GOLFIN Unity Menu
 
-The user deleted the text fields and fixed the Image components on the arrow buttons, but the arrow sprites are now gone. 
+The menu has 30+ items scattered across the root and inconsistent submenus. Reorganize into clean categories. **Only change the `[MenuItem(...)]` paths — do NOT rename files or move code.**
 
-1. Find what arrow sprites the **Roster** carousel uses:
+**New menu structure:**
+
+```
+GOLFIN/
+├── Build/
+│   ├── Inventory Screen
+│   └── Club Compare Panel
+│
+├── Wire/
+│   ├── Roster Detail Panel
+│   ├── Roster Compare Panel
+│   ├── Roster Level Up Modal
+│   ├── Club Detail Panel
+│   └── Club Compare Panel
+│
+├── Setup/
+│   ├── Club Managers
+│   ├── Club Thumbnail Card Prefab
+│   ├── Pagination Dots
+│   └── Status Icons (All)
+│
+├── Debug/
+│   ├── List All Characters
+│   ├── Validate References
+│   ├── Grant 100000 RP
+│   ├── Reset Player Progress
+│   └── Remove Missing Scripts
+│
+├── Screenshot/
+│   ├── Capture Game View
+│   └── Capture Named
+│
+└── Utilities/
+    └── Deactivate Unnecessary Screens
+```
+
+**Items to ARCHIVE (move MenuItems to comments, move files to Editor/Archive):**
+These are one-time patches that are no longer needed:
+- `Patch - Fix InventoryScreen Layout` (InventoryScreenBuilder.cs — the patch method only)
+- `Patch - Rebuild FilterBar` (FilterBarPatcher.cs)
+- `Patch Club Inventory/All Fixes` and all sub-patches (ClubInventoryPatcher.cs — entire file)
+- `Build Status Icons — 1. Detail Panel` (keep only "All" variant)
+- `Build Status Icons — 2. Card Prefab` (keep only "All" variant)
+- `Build Status Icons — 3. Compare Panel` (keep only "All" variant)
+- `Build Club Phase C` (one-time builder, already run)
+- `Tools/GOLFIN/!!! CLEANUP` and `!!! RESTORE` (MenuItemRemover.cs — archive entire file)
+
+**Files to keep:**
+
+| Current MenuItem | New MenuItem | File |
+|---|---|---|
+| `GOLFIN/Build Inventory Screen` | `GOLFIN/Build/Inventory Screen` | InventoryScreenBuilder.cs |
+| `GOLFIN/Inventory/Build Club Compare Panel` | `GOLFIN/Build/Club Compare Panel` | ClubCompareRightPanelBuilder.cs |
+| `GOLFIN/Wire Detail Panel` | `GOLFIN/Wire/Roster Detail Panel` | DetailPanelAutoWire.cs |
+| `GOLFIN/Wire Compare Panel` | `GOLFIN/Wire/Roster Compare Panel` | CompareAutoWire.cs |
+| `GOLFIN/Wire Level Up Modal` | `GOLFIN/Wire/Roster Level Up Modal` | LevelUpModalAutoWire.cs |
+| `GOLFIN/Inventory/Wire Club Detail Panel` | `GOLFIN/Wire/Club Detail Panel` | ClubDetailPanelAutoWire.cs |
+| `GOLFIN/Inventory/Wire Club Compare Panel` | `GOLFIN/Wire/Club Compare Panel` | ClubCompareAutoWire.cs |
+| `GOLFIN/Setup Club Managers` | `GOLFIN/Setup/Club Managers` | ClubManagerSetup.cs |
+| `GOLFIN/Setup Club Thumbnail Card Prefab` | `GOLFIN/Setup/Club Thumbnail Card Prefab` | ClubThumbnailCardBuilder.cs |
+| `GOLFIN/Setup Pagination Dots` | `GOLFIN/Setup/Pagination Dots` | PaginationDotSetup.cs |
+| `GOLFIN/Build Status Icons (All)` | `GOLFIN/Setup/Status Icons (All)` | StatusIconBuilder.cs |
+| `GOLFIN/Debug/*` | `GOLFIN/Debug/*` (keep as-is) | RosterDebugTools.cs |
+| `GOLFIN/Screenshot/*` | `GOLFIN/Screenshot/*` (keep as-is) | ScreenshotTool.cs |
+| `GOLFIN/Deactivate Unnecessary Screens` | `GOLFIN/Utilities/Deactivate Unnecessary Screens` | ScreenDeactivator.cs |
+
+---
+
+### Task 2: Asset Naming Convention
+
+Rename art asset folders to use PascalCase with no spaces. This doesn't affect code wiring because sprites are loaded via `Resources.Load()` using the filenames inside the folders, not the folder names under `Art/`.
+
+**Art folder renames:**
+
+| Current | New |
+|---|---|
+| `Assets/Art/Clubs Inventory` | `Assets/Art/ClubsInventory` |
+| `Assets/Art/Home Screen` | `Assets/Art/HomeScreen` |
+| `Assets/Art/Loading Screen` | `Assets/Art/LoadingScreen` |
+| `Assets/Art/Logo Screen` | `Assets/Art/LogoScreen` |
+| `Assets/Art/Roster Screen` | `Assets/Art/RosterScreen` |
+| `Assets/Art/Splash Screen` | `Assets/Art/SplashScreen` |
+
+**IMPORTANT:** Before renaming, search for any code that references these folder paths directly (e.g., `"Art/Roster Screen/"`). There might be some in Editor scripts like StatusIconBuilder.cs or ClubInventoryPatcher.cs that load sprites by path. Update those references.
+
 ```powershell
-# Search for arrow-related sprite references in CarouselController or the scene
-Get-Content -Path "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 500 | Select-String "arrow|Arrow"
+# Search for Art folder references in code
+Get-ChildItem -Path "C:\Users\cesar\GolfinRedux\Assets\Scripts" -Recurse -Filter "*.cs" | Select-String "Art/" | Select-Object Filename, Line
 ```
 
-2. Or check the Roster carousel hierarchy in the scene — the LeftArrow and RightArrow buttons should have Image components with sprites assigned. Find those sprite assets.
+**Reference folder renames:**
 
-3. Look in the project for arrow sprites:
-```powershell
-Get-ChildItem -Path "C:\Users\cesar\GolfinRedux\Assets" -Recurse -Filter "*arrow*" | Select-Object FullName
-Get-ChildItem -Path "C:\Users\cesar\GolfinRedux\Assets" -Recurse -Filter "*Arrow*" | Select-Object FullName
-Get-ChildItem -Path "C:\Users\cesar\GolfinRedux\Assets" -Recurse -Filter "*chevron*" | Select-Object FullName
-```
+| Current | New |
+|---|---|
+| `Assets/References/Home Screen` | `Assets/References/HomeScreen` |
+| `Assets/References/Loading Screen` | `Assets/References/LoadingScreen` |
+| `Assets/References/Logo Screen` | `Assets/References/LogoScreen` |
+| `Assets/References/Roster Screen` | `Assets/References/RosterScreen` |
+| `Assets/References/Splash Screen` | `Assets/References/SplashScreen` |
 
-4. Once found, assign the same sprites to the Club Inventory carousel's LeftArrow and RightArrow Image components. The left arrow should be rotated 180° (or use a left-facing variant if one exists).
+These are reference images only — no code references them. Safe to rename.
 
-If no arrow sprites exist at all in the project, create simple triangle arrow sprites programmatically or log a warning. But they SHOULD exist since the Roster carousel has working arrows.
+**Sprite naming convention (for NEW sprites going forward — don't rename existing ones):**
+- Thumbnails: `{CharacterName}.png` (e.g., `James.png`) — already follows this
+- Full body: `BigRoster{Name}.png` — already follows this
+- Club portraits: `{ClubType}-{Brand}.png` (e.g., `Iron7-Mireo.png`) — already follows this
+- Club full: `{ClubType}-{Brand}.png` — already follows this
+- Rarity backgrounds: `{RarityName}.png` — already follows this
+- Stat icons: `Icon{StatName}.png`
+- UI elements: `{ScreenName}_{ElementName}.png`
 
 ---
 
-### Fix 3: Club Carousel Card Sizes and Viewport
+### Task 3: File Tree Cleanup
 
-The ClubsMainSection and Viewport don't match the club card sizes/positions. The cards are showing but the scroll area is wrong.
+**Scripts to archive** (move to `Assets/Scripts/Editor/Archive/`, comment out MenuItems):
+- `Assets/Scripts/UI/Inventory/Editor/ClubInventoryPatcher.cs` — all one-time patches
+- `Assets/Scripts/UI/Inventory/Editor/FilterBarPatcher.cs` — one-time fix
+- `Assets/Scripts/UI/Editor/MenuItemRemover.cs` — no longer needed
+- `Assets/Scripts/UI/Inventory/Editor/ClubDetailPanelBuilder.cs` — one-time builder (Phase C already built)
 
-Read the Roster carousel's ScrollView setup and replicate it exactly for the Club carousel:
-1. Check the Roster's `ScrollView` RectTransform (anchors, sizeDelta, pivot)
-2. Check the Roster's `Viewport` RectTransform and Mask settings
-3. Check the Roster's `Content` RectTransform, HorizontalLayoutGroup settings, and ContentSizeFitter
-4. Check `CarouselController.cardsPerPage` and card prefab size
+**Check if `Assets/Scripts/UI/ExampleAutoWireScreen.cs` is still used.** If it's just an example/template, archive it.
 
-Then compare against the Club carousel's equivalent objects and fix any mismatches. The card prefab size should be the same between Roster and Clubs (both use the same base prefab structure with rarity backgrounds).
-
-Key things to check:
-- Viewport should NOT have an Image component that blocks visibility (user already removed one earlier)
-- Content's HorizontalLayoutGroup spacing should match Roster
-- Card RectTransform size should match the prefab's intended size
-- ScrollView should have horizontal scroll enabled, vertical disabled
-
----
-
-### Fix 4: Fade Overlay Must Be Active at Runtime
-
-The user reports that if the Fade Overlay isn't manually turned on before runtime, the Clubs Inventory screen doesn't appear.
-
-This is likely a `FadeController` issue. Find where `FadeController` or `ScreenManager` expects the fade overlay to be in a specific state at startup.
-
-Check `FadeController.cs`:
-- Does it assume the overlay starts active (opaque) and fades out?
-- Or does it start inactive and fades in?
-
-If the overlay must be active at start, add this to `RuntimeActiveStateManager` (Fix 8 from previous TellCode — create this script if not done yet). OR add it directly to `FadeController.Awake()`:
-
-```csharp
-private void Awake()
-{
-    // Ensure fade overlay starts active
-    if (fadeOverlay != null && !fadeOverlay.activeSelf)
-        fadeOverlay.SetActive(true);
-}
-```
-
-Alternatively, this might be a ScreenManager.ApplyScreen() issue — the Inventory screen might not be getting activated properly if the fade sequence doesn't complete. Check the screen transition flow for Inventory.
-
----
-
-### Fix 5: Carousel Portraits — Show Only Current Level
-
-Club thumbnail cards currently show "Lv 10/39" but should show only "Lv 10" (no max level on the portrait card).
-
-In `ClubThumbnailCard.Initialize()`, find where levelText is set and change:
-
-```csharp
-// CURRENT (wrong):
-levelText.text = $"Lv {playerClub.currentLevel}/{template.maxLevel}";
-
-// FIX:
-levelText.text = $"Lv {playerClub.currentLevel}";
-```
-
-The max level is shown in the detail panel (Lv 10/39), not on the carousel card.
-
-**Also check `CharacterThumbnailCard.cs`** — if it also shows max level on the portrait card, fix it the same way. Looking at the Roster screenshot, it shows "Lv 10/39" on cards too. The Figma reference for Roster shows only "Lv 10" on cards. Fix both if needed.
+**Check `Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs`** — does it have MenuItems? If so, categorize under GOLFIN/Utilities/.
 
 ---
 
 ### Reminders
-- Do NOT change any font sizes, paddings, or layout settings beyond what's listed above
-- Platform: Windows (PowerShell, no bash/chmod/sed)
-- Use `== null` not `??` for Unity objects
-- Verify `using` directives before committing (Rule 0 in CLAUDE.md)
+- Only change MenuItem path strings — don't rename .cs files (Unity tracks by GUID, but renaming adds confusion)
+- Test that the menu still works after changes (MenuItem paths must be unique)
+- Comment out MenuItems on archived files (prefix with `// [MenuItem - archived]`)
 - Push to GitHub after completing
 
 ---
 
 ## Completed Tasks
 
-✅ DONE: 2026-03-20 — ScreenshotTool, compress script, CLAUDE.md update, root cleanup
+✅ DONE: 2026-03-20 — ScreenshotTool, compress script, CLAUDE.md update
 ✅ DONE: 2026-03-20 — Phase C code: ClubCarouselController, ClubDetailPanel, builders, auto-wire
 ✅ DONE: 2026-03-21 — New leveling economy: rarity-based starting/max levels
-✅ DONE: 2026-03-23 — TextGradients utility, RuntimeActiveStateManager, portrait 2-line names, screenshot auto-compress, EQUIP spacer (partial — some rolled back by user)
-✅ DONE: 2026-03-23 — Filter bar dividers (ignoreLayout + manual anchors), arrow sprites patcher, carousel viewport patcher, FadeController startup fix, level text "Lv X" only on cards
+✅ DONE: 2026-03-23 — TextGradients, visual fixes, filter dividers, arrows, viewport, fade, level text
+✅ DONE: 2026-03-25 — Club Compare Phase D: ClubCompareController, builder, auto-wire, stat differences
+✅ DONE: 2026-03-24 — Project cleanup: GOLFIN menu reorganized, Art/References folders renamed PascalCase, 5 editor scripts archived

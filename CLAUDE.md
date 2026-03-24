@@ -324,12 +324,42 @@ Canvas > ScreensRoot > RosterScreen
 
 ## Conventions
 
+### Asset & File Naming
+Follow `Docs/Game Design/ASSET_NAMING_CONVENTION.md` for ALL new assets. Key rules:
+- **Prefixes:** `S_` sprite, `BG_` background, `ICO_` icon, `T_` texture, `MESH_` 3D model
+- **No spaces in filenames or folders** — use PascalCase or hyphens
+- **Characters:** `S_Char_{Name}`, `S_CharFull_{Name}`, `S_CharHome_{Name}`
+- **Clubs:** `S_Club_{Type}-{Brand}`, `S_ClubFull_{Type}-{Brand}`
+- **UI elements:** `ICO_{Name}`, `S_Btn_{Name}_{State}`, `S_Rarity_{Name}`, `S_Rim_{Variant}`
+- **Scripts:** `{System}Manager`, `{System}DatabaseCSV`, `{System}DetailPanel`, `{System}CompareController`
+- **Unity hierarchy:** `{Screen}Screen`, `{Name}Panel`, `{Action}Button`, `{Name}Text`, `{Name}Row`
+- **Localization keys:** `{SCREEN}_{ELEMENT}` (e.g., `CLUB_POWER`, `ROSTER_LEVEL_UP`)
+- **CSV IDs:** `char_{name}`, `club_{type}_{brand}`
+- **DO NOT rename files in Resources/** without updating the corresponding CSV values
+
 ### Localization
 - All **new** user-facing text should use localization keys from the start: `LocalizationManager.Get("KEY")`
 - Use the pattern `SCREEN_ELEMENT` (e.g., `ROSTER_LEVEL_UP`, `HOME_PLAY_BUTTON`, `MODAL_CONFIRM`)
 - Add both EN and JP entries to the localization CSV when creating new text
 - Legacy hardcoded text will be migrated in a dedicated localization pass (not yet scheduled)
 - Rich text tags like `<color=#EEDC9A>` are supported in localization values — TMP handles them natively
+
+---
+
+### Asset & File Naming Convention
+**Full reference:** `Docs/Game Design/ASSET_NAMING_CONVENTION.md` — READ THIS before creating any new assets.
+
+Quick rules:
+- **No spaces** in filenames or folder names — use PascalCase or hyphens
+- **Prefixes:** `S_` sprite, `T_` texture, `MESH_` 3D model, `BG_` background, `ICO_` icon, `FX_` effect, `SFX_` sound, `MUS_` music
+- **Characters:** `S_Char_{Name}`, `S_CharFull_{Name}`, `S_CharHome_{Name}`
+- **Clubs:** `S_Club_{Type}-{Brand}`, `S_ClubFull_{Type}-{Brand}`
+- **UI elements:** `ICO_{Name}`, `S_Btn_{Name}_{State}`, `S_Rarity_{Name}`, `S_Rim_{Variant}`
+- **Scripts:** `{System}Manager`, `{System}DatabaseCSV`, `{System}DetailPanel`, `{System}CompareController`
+- **Unity hierarchy:** `{Screen}Screen`, `{Name}Panel`, `{Action}Button`, `{Name}Text`, `{Name}Row`
+- **Localization keys:** `{SCREEN}_{ELEMENT}` (e.g., `CLUB_POWER`, `ROSTER_LEVEL_UP`)
+- **CSV IDs:** `char_{name}`, `club_{type}_{brand}`
+- **DO NOT rename files in Resources/** without updating the corresponding CSV values
 
 ---
 
@@ -343,6 +373,8 @@ Canvas > ScreensRoot > RosterScreen
 | `Docs/generate_audit.ps1` | Script to regenerate the audit |
 | `Docs/CLUB_INVENTORY_SPEC.md` | Active club inventory spec |
 | `Docs/Game Design/GAME_DESIGN_CHANGELOG.md` | Game design changes from original GDD |
+| `Docs/Game Design/ASSET_NAMING_CONVENTION.md` | Asset & file naming rules (mandatory for new assets) |
+| `Docs/Game Design/GAMEPLAY_FORMULAS_PROPOSAL.md` | Simplified gameplay formulas (proposal) |
 | `Docs/GAME_DESIGN_AGENT.md` | AI agent for evaluating GDD systems |
 | `Docs/Archive/` | Completed phase specs |
 | `tasks/lessons.md` | Accumulated corrections and patterns |

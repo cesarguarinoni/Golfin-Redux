@@ -15,7 +15,7 @@ namespace Golfin.Inventory.Editor
     /// </summary>
     public static class ClubDetailPanelAutoWire
     {
-        [MenuItem("GOLFIN/Inventory/Wire Club Detail Panel")]
+        [MenuItem("GOLFIN/Wire/Club Detail Panel")]
         public static void Run()
         {
             var detailPanelGO = FindByName("ClubDetailPanel");

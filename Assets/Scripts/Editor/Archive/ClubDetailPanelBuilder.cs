@@ -49,7 +49,7 @@ namespace Golfin.Inventory.Editor
         private const float BUTTON_H    = 36f;
         private const float PANEL_PAD   = 8f;
 
-        [MenuItem("GOLFIN/Inventory/Build Club Phase C")]
+        // [MenuItem - archived] "GOLFIN/Inventory/Build Club Phase C"
         public static void Run()
         {
             var mainSection = FindClubsMainSection();

@@ -40,7 +40,7 @@ namespace Golfin.Inventory.Editor
         private const float TOPBAR_H    = 321f;
         private const float BOTTOMNAV_H = 196f;
 
-        [MenuItem("GOLFIN/Build Inventory Screen")]
+        [MenuItem("GOLFIN/Build/Inventory Screen")]
         public static void Run()
         {
             var screensRoot = FindScreensRoot();
@@ -114,7 +114,7 @@ namespace Golfin.Inventory.Editor
 
         // ── Quick layout patcher (for existing scenes without a full rebuild) ─
 
-        [MenuItem("GOLFIN/Patch - Fix InventoryScreen Layout")]
+        // [MenuItem - archived] "GOLFIN/Patch - Fix InventoryScreen Layout"
         public static void PatchLayout()
         {
             // Find InventoryScreen in scene

@@ -58,7 +58,7 @@ namespace Golfin.UI
             Debug.Log("[ScreenDeactivator] Pre-runtime screen deactivation complete");
         }
 
-        [MenuItem("GOLFIN/Deactivate Unnecessary Screens")]
+        [MenuItem("GOLFIN/Utilities/Deactivate Unnecessary Screens")]
         private static void ManualDeactivate()
         {
             DeactivateScreensInEditor();

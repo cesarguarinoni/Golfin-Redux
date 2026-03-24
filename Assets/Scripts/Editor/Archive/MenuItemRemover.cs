@@ -10,7 +10,7 @@ namespace Golfin.Editor
     /// </summary>
     public static class MenuItemRemover
     {
-        [MenuItem("Tools/GOLFIN/!!! CLEANUP: Hide Legacy Menus", priority = 0)]
+        // [MenuItem - archived] "Tools/GOLFIN/!!! CLEANUP: Hide Legacy Menus"
         public static void HideLegacyMenus()
         {
             string[] scriptsToRename = new string[]
@@ -53,7 +53,7 @@ namespace Golfin.Editor
                 "OK");
         }
         
-        [MenuItem("Tools/GOLFIN/!!! RESTORE: Restore Legacy Menus", priority = 1)]
+        // [MenuItem - archived] "Tools/GOLFIN/!!! RESTORE: Restore Legacy Menus"
         public static void RestoreLegacyMenus()
         {
             string[] scriptsToRestore = new string[]

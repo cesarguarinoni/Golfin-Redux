@@ -17,12 +17,12 @@ namespace Golfin.Roster.Editor
     /// </summary>
     public static class StatusIconBuilder
     {
-        private const string ART_PATH    = "Assets/Art/Roster Screen/";
+        private const string ART_PATH    = "Assets/Art/RosterScreen/";
         private const string PREFAB_PATH = "Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab";
 
         // ── Menu items ────────────────────────────────────────────────────────
 
-        [MenuItem("GOLFIN/Build Status Icons (All)")]
+        [MenuItem("GOLFIN/Setup/Status Icons (All)")]
         public static void BuildAll()
         {
             int total = 0;
@@ -37,13 +37,13 @@ namespace Golfin.Roster.Editor
                 "OK");
         }
 
-        [MenuItem("GOLFIN/Build Status Icons — 1. Detail Panel")]
+        // [MenuItem - archived] "GOLFIN/Build Status Icons — 1. Detail Panel"
         public static void MenuDetailPanel()  => BuildDetailPanelIcons();
 
-        [MenuItem("GOLFIN/Build Status Icons — 2. Card Prefab")]
+        // [MenuItem - archived] "GOLFIN/Build Status Icons — 2. Card Prefab"
         public static void MenuCardPrefab()   => BuildCardPrefabIcons();
 
-        [MenuItem("GOLFIN/Build Status Icons — 3. Compare Panel")]
+        // [MenuItem - archived] "GOLFIN/Build Status Icons — 3. Compare Panel"
         public static void MenuComparePanel() => BuildComparePanelIcons();
 
         // ── 1. Detail Panel ───────────────────────────────────────────────────

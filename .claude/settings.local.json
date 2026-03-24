@@ -18,7 +18,14 @@
       "Bash(powershell.exe -Command \"Select-String -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scenes\\\\ShellScene.unity'' -Pattern ''FilterBar|Viewport|ClubsContent|ClubsMainSection|InventoryScreen'' | Select-Object -First 40 | ForEach-Object { $_Line.Trim\\(\\) }\")",
       "Bash(powershell.exe -Command \":*)",
       "Bash(powershell -File \"C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Docs\\\\generate_audit.ps1\")",
-      "Bash(\"C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Docs\\\\ARCHITECTURE_AUDIT.md\")"
+      "Bash(\"C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Docs\\\\ARCHITECTURE_AUDIT.md\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets'' -Recurse -Include ''*arrow*'',''*Arrow*'',''*chevron*'',''*Chevron*'' | Select-Object -ExpandProperty FullName\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts'' -Recurse -Filter ''*.cs'' | Select-String ''\\\\[MenuItem'' | Select-Object Filename, Line | Format-Table -AutoSize -Wrap\")",
+      "Bash(powershell -Command \"Select-String ''\\\\[MenuItem'' ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\UI\\\\Inventory\\\\Editor\\\\InventoryScreenBuilder.cs''\")",
+      "Bash(powershell -Command \"Select-String ''\\\\[MenuItem'' ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\UI\\\\Roster\\\\Editor\\\\StatusIconBuilder.cs''\")",
+      "Bash(powershell -Command \"Select-String ''\\\\[MenuItem'' ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\UI\\\\ScreenDeactivator.cs''; Select-String ''\\\\[MenuItem'' ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\UI\\\\Roster\\\\Editor\\\\PaginationDotSetup.cs''; Select-String ''\\\\[MenuItem'' ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\UI\\\\Roster\\\\Editor\\\\LevelUpModalAutoWire.cs''; Select-String ''\\\\[MenuItem'' ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\UI\\\\Roster\\\\Editor\\\\DetailPanelAutoWire.cs''\")",
+      "Bash(powershell -Command \"Select-String ''\\\\[MenuItem'' ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\UI\\\\Inventory\\\\Editor\\\\ClubInventoryPatcher.cs''\")",
+      "Bash(powershell -Command \"Get-ChildItem ''C:\\\\Users\\\\cesar\\\\GolfinRedux'' -Filter ''package.json'' -Recurse -Depth 3 | Select-Object FullName; Get-ChildItem ''C:\\\\Users\\\\cesar\\\\GolfinRedux'' -Filter ''requirements.txt'' -Recurse -Depth 3 | Select-Object FullName; Get-ChildItem ''C:\\\\Users\\\\cesar\\\\GolfinRedux'' -Filter ''Makefile'' -Recurse -Depth 3 | Select-Object FullName\")"
     ]
   }
 }
