@@ -108,10 +108,12 @@ namespace Golfin.Inventory.Editor
                 // Name
                 wired += WireTMPFrom(so, "compareNameText", infoRoot, "ClubNameText", ref failed);
 
-                // Rarity + Level
+                // Rarity + Level — RarityLabel is direct child; LevelText/LevelTextMax use deep search
+                // in case the scene hierarchy nests them inside a sub-container
                 wired += WireTMPFrom(so, "compareRarityLabel",  infoRoot, "RarityLevelRow/RarityLabel",  ref failed);
-                wired += WireTMPFrom(so, "compareLevelText",    infoRoot, "RarityLevelRow/LevelText",    ref failed);
-                wired += WireTMPFrom(so, "compareMaxLevelText", infoRoot, "RarityLevelRow/LevelTextMax", ref failed);
+                var rarityRow = infoRoot.Find("RarityLevelRow");
+                wired += WireTMPDeep(so, "compareLevelText",    rarityRow, "LevelText",    ref failed);
+                wired += WireTMPDeep(so, "compareMaxLevelText", rarityRow, "LevelTextMax", ref failed);
 
                 // Power
                 wired += WireStatRow(so,
@@ -143,9 +145,10 @@ namespace Golfin.Inventory.Editor
                 wired += WireTMPFrom(so, "compareDistanceValue", infoRoot, "StatsPanel/DistanceRow/DistanceValue", ref failed);
                 wired += WireTMPFrom(so, "compareDistanceDiff",  infoRoot, "StatsPanel/DistanceRow/DiffLabel",     ref failed);
 
-                // Buttons
-                wired += WireButtonFrom(so, "compareLevelUpButton",      infoRoot, "ButtonsPanel/LevelUpButton", ref failed);
-                wired += WireButtonFrom(so, "compareRepairButton",       infoRoot, "ButtonsPanel/RepairButton",  ref failed);
+                // Buttons — deep search within ButtonsPanel in case it was restructured
+                var buttonsPanel = FindTransformByName(infoRoot, "ButtonsPanel");
+                wired += WireButtonDeep(so, "compareLevelUpButton", buttonsPanel, "LevelUpButton", ref failed);
+                wired += WireButtonDeep(so, "compareRepairButton",  buttonsPanel, "RepairButton",  ref failed);
                 wired += WireButtonFrom(so, "compareRightCompareButton", infoRoot, "CompareButton",              ref failed);
                 wired += WireButtonFrom(so, "compareRightEquipButton",   infoRoot, "EquipButton",                ref failed);
                 wired += WireTMPFrom(so,   "compareRightEquipText",      infoRoot, "EquipButton/Text (TMP)",     ref failed);
@@ -207,11 +210,15 @@ namespace Golfin.Inventory.Editor
             string nameProp, string barProp, string numberProp, string diffProp,
             Transform infoRoot, string rowPath, ref int failed)
         {
+            // Resolve the row root first (path-based — works since StatNumber is found here)
+            var rowRoot = infoRoot.Find(rowPath);
             int count = 0;
-            count += WireTMPFrom  (so, nameProp,   infoRoot, rowPath + "/StatsName",  ref failed);
-            count += WireImageFrom(so, barProp,    infoRoot, rowPath + "/Bar",         ref failed);
-            count += WireTMPFrom  (so, numberProp, infoRoot, rowPath + "/StatNumber",  ref failed);
-            count += WireTMPFrom  (so, diffProp,   infoRoot, rowPath + "/DiffLabel",   ref failed);
+            // StatsName and Bar use deep search in case they are inside a sub-container (e.g. icon wrapper)
+            count += WireTMPDeep  (so, nameProp,   rowRoot, "StatsName",  ref failed);
+            count += WireImageDeep(so, barProp,    rowRoot, "Bar",         ref failed);
+            // StatNumber and DiffLabel are direct children — path lookup is fine
+            count += WireTMPFrom  (so, numberProp, infoRoot, rowPath + "/StatNumber", ref failed);
+            count += WireTMPFrom  (so, diffProp,   infoRoot, rowPath + "/DiffLabel",  ref failed);
             return count;
         }
 
@@ -262,6 +269,33 @@ namespace Golfin.Inventory.Editor
             var t   = from.Find(path);
             var btn = t?.GetComponent<Button>();
             return SetProp(so, field, btn, path, ref failed);
+        }
+
+        // Deep-search variants — use FindTransformByName when the exact path is unknown
+        // (e.g. when scene hierarchy may have sub-containers wrapping the target object)
+
+        private static int WireTMPDeep(SerializedObject so, string field, Transform? root, string name, ref int failed)
+        {
+            if (root == null) { Debug.LogWarning($"[ClubCompareAutoWire] Root is null searching for '{name}' ({field})."); failed++; return 0; }
+            var t   = FindTransformByName(root, name);
+            var tmp = t?.GetComponent<TextMeshProUGUI>();
+            return SetProp(so, field, tmp, name, ref failed);
+        }
+
+        private static int WireImageDeep(SerializedObject so, string field, Transform? root, string name, ref int failed)
+        {
+            if (root == null) { Debug.LogWarning($"[ClubCompareAutoWire] Root is null searching for '{name}' ({field})."); failed++; return 0; }
+            var t   = FindTransformByName(root, name);
+            var img = t?.GetComponent<Image>();
+            return SetProp(so, field, img, name, ref failed);
+        }
+
+        private static int WireButtonDeep(SerializedObject so, string field, Transform? root, string name, ref int failed)
+        {
+            if (root == null) { Debug.LogWarning($"[ClubCompareAutoWire] Root is null searching for '{name}' ({field})."); failed++; return 0; }
+            var t   = FindTransformByName(root, name);
+            var btn = t?.GetComponent<Button>();
+            return SetProp(so, field, btn, name, ref failed);
         }
 
         private static int SetProp<T>(SerializedObject so, string field, T? obj, string path,
