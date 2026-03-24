@@ -145,10 +145,9 @@ namespace Golfin.Inventory.Editor
                 wired += WireTMPFrom(so, "compareDistanceValue", infoRoot, "StatsPanel/DistanceRow/DistanceValue", ref failed);
                 wired += WireTMPFrom(so, "compareDistanceDiff",  infoRoot, "StatsPanel/DistanceRow/DiffLabel",     ref failed);
 
-                // Buttons — deep search within ButtonsPanel in case it was restructured
-                var buttonsPanel = FindTransformByName(infoRoot, "ButtonsPanel");
-                wired += WireButtonDeep(so, "compareLevelUpButton", buttonsPanel, "LevelUpButton", ref failed);
-                wired += WireButtonDeep(so, "compareRepairButton",  buttonsPanel, "RepairButton",  ref failed);
+                // Buttons — deep search within infoRoot (ButtonsPanel wrapper may not exist in clone)
+                wired += WireButtonDeep(so, "compareLevelUpButton", infoRoot, "LevelUpButton", ref failed);
+                wired += WireButtonDeep(so, "compareRepairButton",  infoRoot, "RepairButton",  ref failed);
                 wired += WireButtonFrom(so, "compareRightCompareButton", infoRoot, "CompareButton",              ref failed);
                 wired += WireButtonFrom(so, "compareRightEquipButton",   infoRoot, "EquipButton",                ref failed);
                 wired += WireTMPFrom(so,   "compareRightEquipText",      infoRoot, "EquipButton/Text (TMP)",     ref failed);
