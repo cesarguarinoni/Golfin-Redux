@@ -12,7 +12,7 @@ namespace Golfin.Inventory.Editor
     ///
     /// Run: GOLFIN/Wire/Club Repair Modal
     ///
-    /// Expected hierarchy (simpler than Level Up modal):
+    /// Expected hierarchy (built by GOLFIN/Build/Club Repair Modal Sections):
     ///   ClubRepairModal
     ///     Backdrop
     ///     ModalPanel
@@ -24,14 +24,14 @@ namespace Golfin.Inventory.Editor
     ///       DurabilitySection/DurabilityBarRow/DurabilityBarPreview
     ///       DurabilitySection/DurabilityValueText
     ///       DurabilitySection/DurabilityChangeText
-    ///       KitSection/StandardKitButton
-    ///       KitSection/StandardKitButton/KitLabel
-    ///       KitSection/StandardKitButton/KitCountText
-    ///       KitSection/StandardKitButton/SelectedIndicator
-    ///       KitSection/PremiumKitButton
-    ///       KitSection/PremiumKitButton/KitLabel
-    ///       KitSection/PremiumKitButton/KitCountText
-    ///       KitSection/PremiumKitButton/SelectedIndicator
+    ///       KitSection/KitButtonsRow/StandardKitButton
+    ///       KitSection/KitButtonsRow/StandardKitButton/KitLabel
+    ///       KitSection/KitButtonsRow/StandardKitButton/KitCountText
+    ///       KitSection/KitButtonsRow/StandardKitButton/SelectedIndicator
+    ///       KitSection/KitButtonsRow/PremiumKitButton
+    ///       KitSection/KitButtonsRow/PremiumKitButton/KitLabel
+    ///       KitSection/KitButtonsRow/PremiumKitButton/KitCountText
+    ///       KitSection/KitButtonsRow/PremiumKitButton/SelectedIndicator
     ///       KitSection/NoKitsMessage
     ///       FooterSection/CancelButton
     ///       FooterSection/CancelButton/Text
@@ -74,15 +74,15 @@ namespace Golfin.Inventory.Editor
             wired += WireTMP(so,    "durabilityChangeText", root, "ModalPanel/DurabilitySection/DurabilityChangeText",             ref failed);
 
             // ── Kit Selection ────────────────────────────────────────────────
-            wired += WireButton(so, "standardKitButton",    root, "ModalPanel/KitSection/StandardKitButton",                      ref failed);
-            wired += WireTMP(so,    "standardKitLabel",     root, "ModalPanel/KitSection/StandardKitButton/KitLabel",             ref failed);
-            wired += WireTMP(so,    "standardKitCountText", root, "ModalPanel/KitSection/StandardKitButton/KitCountText",         ref failed);
-            wired += WireGO(so,     "standardKitSelected",  root, "ModalPanel/KitSection/StandardKitButton/SelectedIndicator",    ref failed);
-            wired += WireButton(so, "premiumKitButton",     root, "ModalPanel/KitSection/PremiumKitButton",                       ref failed);
-            wired += WireTMP(so,    "premiumKitLabel",      root, "ModalPanel/KitSection/PremiumKitButton/KitLabel",              ref failed);
-            wired += WireTMP(so,    "premiumKitCountText",  root, "ModalPanel/KitSection/PremiumKitButton/KitCountText",          ref failed);
-            wired += WireGO(so,     "premiumKitSelected",   root, "ModalPanel/KitSection/PremiumKitButton/SelectedIndicator",     ref failed);
-            wired += WireTMP(so,    "noKitsMessage",        root, "ModalPanel/KitSection/NoKitsMessage",                          ref failed);
+            wired += WireButton(so, "standardKitButton",    root, "ModalPanel/KitSection/KitButtonsRow/StandardKitButton",                      ref failed);
+            wired += WireTMP(so,    "standardKitLabel",     root, "ModalPanel/KitSection/KitButtonsRow/StandardKitButton/KitLabel",             ref failed);
+            wired += WireTMP(so,    "standardKitCountText", root, "ModalPanel/KitSection/KitButtonsRow/StandardKitButton/KitCountText",         ref failed);
+            wired += WireGO(so,     "standardKitSelected",  root, "ModalPanel/KitSection/KitButtonsRow/StandardKitButton/SelectedIndicator",    ref failed);
+            wired += WireButton(so, "premiumKitButton",     root, "ModalPanel/KitSection/KitButtonsRow/PremiumKitButton",                       ref failed);
+            wired += WireTMP(so,    "premiumKitLabel",      root, "ModalPanel/KitSection/KitButtonsRow/PremiumKitButton/KitLabel",              ref failed);
+            wired += WireTMP(so,    "premiumKitCountText",  root, "ModalPanel/KitSection/KitButtonsRow/PremiumKitButton/KitCountText",          ref failed);
+            wired += WireGO(so,     "premiumKitSelected",   root, "ModalPanel/KitSection/KitButtonsRow/PremiumKitButton/SelectedIndicator",     ref failed);
+            wired += WireTMP(so,    "noKitsMessage",        root, "ModalPanel/KitSection/NoKitsMessage",                                         ref failed);
 
             // ── Action Buttons ───────────────────────────────────────────────
             wired += WireButton(so, "cancelButton",         root, "ModalPanel/FooterSection/CancelButton",  ref failed);
