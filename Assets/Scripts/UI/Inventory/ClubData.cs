@@ -78,16 +78,23 @@ namespace Golfin.Inventory
         public int    maxDurability    = 100;
         public int    equippedBagSlot  = 0;  // 0 = not equipped, 1-N = bag number
 
+        // SP allocation (Phase E1)
+        public int totalSPEarned      = 0;
+        public int spentPower          = 0;
+        public int spentAccuracy       = 0;
+        public int spentLieResistance  = 0;
+        public int spentDurability     = 0;
+        public const int MAX_SP_PER_STAT = 20;
+
         public bool IsEquipped      => equippedBagSlot > 0;
         public bool IsDurabilityLow => maxDurability > 0
                                     && (float)currentDurability / maxDurability < 0.25f;
 
-        // Computed stats at current level
-        // Phase A: stats equal base values (scaling formula added later)
-        public int GetPower(ClubDataRuntime template)         => template.basePower;
-        public int GetAccuracy(ClubDataRuntime template)      => template.baseAccuracy;
-        public int GetLieResistance(ClubDataRuntime template) => template.baseLieResistance;
-        public int GetLoft(ClubDataRuntime template)          => template.baseLoft;
+        // Computed stats — base + spent SP
+        public int GetPower(ClubDataRuntime template)         => template.basePower + spentPower;
+        public int GetAccuracy(ClubDataRuntime template)      => template.baseAccuracy + spentAccuracy;
+        public int GetLieResistance(ClubDataRuntime template) => template.baseLieResistance + spentLieResistance;
+        public int GetLoft(ClubDataRuntime template)          => template.baseLoft;          // fixed — no SP
         public int GetDistance(ClubDataRuntime template)      => template.baseDistance;
     }
 }

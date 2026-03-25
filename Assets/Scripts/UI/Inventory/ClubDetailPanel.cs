@@ -16,6 +16,11 @@ namespace Golfin.Inventory
     /// </summary>
     public class ClubDetailPanel : MonoBehaviour
     {
+        // ── Panel Roots ────────────────────────────────────────────────────────
+
+        [Header("Panel Roots")]
+        [SerializeField] private RectTransform rightPanel = null!;
+
         // ── Left Panel ─────────────────────────────────────────────────────────
 
         [Header("Left Panel")]
@@ -86,6 +91,11 @@ namespace Golfin.Inventory
 
         [Header("Compare")]
         [SerializeField] private ClubCompareController? compareController;
+
+        // ── Level Up Modal ─────────────────────────────────────────────────────
+
+        [Header("Modals")]
+        [SerializeField] private ClubLevelUpModalController? levelUpModal;
 
         // ── State ──────────────────────────────────────────────────────────────
 
@@ -284,8 +294,10 @@ namespace Golfin.Inventory
 
         private void OnLevelUpClicked()
         {
-            Debug.Log($"[ClubDetailPanel] LEVEL UP clicked for '{currentClubId}' — modal in Phase D.");
-            ClubManager.Instance?.LevelUp(currentClubId);
+            if (levelUpModal != null)
+                levelUpModal.Open(currentClubId, rightPanel);
+            else
+                Debug.Log($"[ClubDetailPanel] LEVEL UP clicked for '{currentClubId}' — wire ClubLevelUpModal.");
         }
 
         private void OnRepairClicked()

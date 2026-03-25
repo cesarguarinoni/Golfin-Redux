@@ -75,14 +75,25 @@ public class ClubManager : MonoBehaviour
 
         foreach (var template in db.GetAllClubs())
         {
+            int startingLevel = GetStartingLevel(template.rarity);
             var playerClub = new PlayerClubData
             {
                 clubId            = template.clubId,
-                currentLevel      = GetStartingLevel(template.rarity),
+                currentLevel      = startingLevel,
                 maxDurability     = template.maxDurability,
                 currentDurability = template.maxDurability,  // start at full durability
                 equippedBagSlot   = 0,
             };
+
+            // Seed totalSPEarned based on starting level
+            int totalSP = 0;
+            if (CharacterLevelUpDatabase.Instance != null)
+            {
+                for (int lv = 2; lv <= startingLevel; lv++)
+                    totalSP += CharacterLevelUpDatabase.Instance.GetSPReward(lv);
+            }
+            playerClub.totalSPEarned = totalSP;
+
             ownedClubs[template.clubId] = playerClub;
         }
 
@@ -158,7 +169,38 @@ public class ClubManager : MonoBehaviour
         OnClubEquipped?.Invoke(clubId);
     }
 
-    // ── Level Up (stub — full modal in later phase) ───────────────────────────
+    // ── Level Up (modal) ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Sets a club's level directly. RP payment handled by the modal before calling this.
+    /// </summary>
+    public void SetLevel(string clubId, int newLevel)
+    {
+        if (!ownedClubs.TryGetValue(clubId, out var club))
+        {
+            Debug.LogWarning($"[ClubManager] SetLevel: club '{clubId}' not found.");
+            return;
+        }
+
+        int maxLevel = GetMaxLevel(clubId);
+        club.currentLevel = Mathf.Clamp(newLevel, 1, maxLevel);
+        Debug.Log($"[ClubManager] '{clubId}' level set to {club.currentLevel}/{maxLevel}.");
+    }
+
+    /// <summary>
+    /// Fires OnClubLeveledUp to trigger UI refresh after SP/level commit.
+    /// </summary>
+    public void RefreshStatValues(string clubId)
+    {
+        if (!ownedClubs.ContainsKey(clubId))
+        {
+            Debug.LogWarning($"[ClubManager] RefreshStatValues: club '{clubId}' not found.");
+            return;
+        }
+        OnClubLeveledUp?.Invoke(clubId);
+    }
+
+    // ── Level Up (stub — placeholder) ─────────────────────────────────────────
 
     /// <summary>
     /// Placeholder level-up. Logs to console; full modal implemented later.

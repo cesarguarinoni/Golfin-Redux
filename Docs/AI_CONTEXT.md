@@ -9,17 +9,15 @@
 | System | Status |
 |---|---|
 | Character Roster | ✅ Complete |
-| Club Inventory | 🔧 Compare panel done, user fixing images. Phase E (modals) not started. |
+| Club Inventory | 🔧 Phase E1 (Club Level Up Modal) ✅ code complete, pending Unity hierarchy setup |
 | Leveling Economy | ✅ Rarity-based (Common 10→39, Supreme 200→239), cost = level × 5 |
 | Settings | Needs minor visual fixes |
 | Shop, Bags, Balls, Items | Not started |
 | Gameplay | Not started |
 
 ## Active Work
-- Club Inventory compare mode functionally complete — user dressing up visuals
-- `ClubCompareRightPanelBuilder`: now preserves ClubNameText + RarityLevelRow TMP formatting (font, size, autosize, style, alignment, rect) when re-running "Build Club Compare Panel" — saves snapshot before destroy, restores after clone
-- Phase E (Bag selection modal, Repair modal, Club Level Up modal) is next for Clubs
-- Menu cleanup + asset folder renames done — verify in Unity
+- Phase E1 (Club Level Up Modal) code complete. Next: clone LevelUpModal hierarchy in Unity, rename to ClubLevelUpModal, attach ClubLevelUpModalController, run GOLFIN/Wire/Club Level Up Modal.
+- Phase E2 (Repair) uses Repair Kits not RP. E3 (Bag Selection) MAX_CLUBS_PER_BAG = 8.
 - Next screen after Clubs: Settings (G-014) or Bags Inventory (G-016)
 
 ## Key Files (read as needed)

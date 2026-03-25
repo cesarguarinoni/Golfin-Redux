@@ -6,147 +6,161 @@
 
 ---
 
-## Current Task (2026-03-25) — Project Cleanup: Menu, Assets, File Tree
+## Current Task (2026-03-25) — Phase E1: Club Level Up Modal
 
-Three cleanup tasks. Do them in order.
+Full spec: `Docs/SPEC_ClubPhaseE1_LevelUpModal.md`
+Reference: `Docs/Game Design/GAMEPLAY_FORMULAS_PROPOSAL.md`, `Docs/Game Design/New Levels.xlsx`
+Pattern to follow: `Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs` (character version)
+
+Do these sub-tasks in order.
 
 ---
 
-### Task 1: Reorganize GOLFIN Unity Menu
+### Sub-task 1: Extend PlayerClubData with SP fields
 
-The menu has 30+ items scattered across the root and inconsistent submenus. Reorganize into clean categories. **Only change the `[MenuItem(...)]` paths — do NOT rename files or move code.**
+**File:** `Assets/Scripts/UI/Inventory/ClubData.cs`
 
-**New menu structure:**
-
-```
-GOLFIN/
-├── Build/
-│   ├── Inventory Screen
-│   └── Club Compare Panel
-│
-├── Wire/
-│   ├── Roster Detail Panel
-│   ├── Roster Compare Panel
-│   ├── Roster Level Up Modal
-│   ├── Club Detail Panel
-│   └── Club Compare Panel
-│
-├── Setup/
-│   ├── Club Managers
-│   ├── Club Thumbnail Card Prefab
-│   ├── Pagination Dots
-│   └── Status Icons (All)
-│
-├── Debug/
-│   ├── List All Characters
-│   ├── Validate References
-│   ├── Grant 100000 RP
-│   ├── Reset Player Progress
-│   └── Remove Missing Scripts
-│
-├── Screenshot/
-│   ├── Capture Game View
-│   └── Capture Named
-│
-└── Utilities/
-    └── Deactivate Unnecessary Screens
+Add to `PlayerClubData`:
+```csharp
+public int totalSPEarned      = 0;
+public int spentPower          = 0;
+public int spentAccuracy       = 0;
+public int spentLieResistance  = 0;
+public int spentDurability     = 0;
+public const int MAX_SP_PER_STAT = 20;
 ```
 
-**Items to ARCHIVE (move MenuItems to comments, move files to Editor/Archive):**
-These are one-time patches that are no longer needed:
-- `Patch - Fix InventoryScreen Layout` (InventoryScreenBuilder.cs — the patch method only)
-- `Patch - Rebuild FilterBar` (FilterBarPatcher.cs)
-- `Patch Club Inventory/All Fixes` and all sub-patches (ClubInventoryPatcher.cs — entire file)
-- `Build Status Icons — 1. Detail Panel` (keep only "All" variant)
-- `Build Status Icons — 2. Card Prefab` (keep only "All" variant)
-- `Build Status Icons — 3. Compare Panel` (keep only "All" variant)
-- `Build Club Phase C` (one-time builder, already run)
-- `Tools/GOLFIN/!!! CLEANUP` and `!!! RESTORE` (MenuItemRemover.cs — archive entire file)
+Update `Get{Stat}()` methods:
+```csharp
+public int GetPower(ClubDataRuntime template)         => template.basePower + spentPower;
+public int GetAccuracy(ClubDataRuntime template)      => template.baseAccuracy + spentAccuracy;
+public int GetLieResistance(ClubDataRuntime template) => template.baseLieResistance + spentLieResistance;
+public int GetLoft(ClubDataRuntime template)          => template.baseLoft;  // fixed — no SP
+public int GetDistance(ClubDataRuntime template)      => template.baseDistance;
+```
 
-**Files to keep:**
+Durability SP increases maxDurability (+5 per SP point). When SP is committed, update `maxDurability` field directly so existing `IsDurabilityLow` works unchanged.
 
-| Current MenuItem | New MenuItem | File |
+---
+
+### Sub-task 2: ClubManager additions
+
+**File:** `Assets/Scripts/ClubManager.cs`
+
+Add these methods:
+```csharp
+public void SetLevel(string clubId, int newLevel)
+// Sets level without RP check. Modal handles payment.
+
+public void RefreshStatValues(string clubId)
+// Fires OnClubLeveledUp to refresh UI. Stats computed on-the-fly.
+```
+
+Update `InitializeClubs()` to seed `totalSPEarned`:
+```csharp
+// After creating each playerClub, sum SP rewards from Lv 2 → startingLevel:
+int totalSP = 0;
+for (int lv = 2; lv <= playerClub.currentLevel; lv++)
+    totalSP += CharacterLevelUpDatabase.Instance.GetSPReward(lv);
+playerClub.totalSPEarned = totalSP;
+```
+
+---
+
+### Sub-task 3: Create ClubLevelUpModalController
+
+**New file:** `Assets/Scripts/UI/Inventory/ClubLevelUpModalController.cs`
+**Namespace:** `Golfin.Inventory`
+**Extends:** `Golfin.UI.Modals.ModalController`
+
+Mirror `LevelUpModalController.cs` closely but with these differences:
+
+| Aspect | Character | Club |
 |---|---|---|
-| `GOLFIN/Build Inventory Screen` | `GOLFIN/Build/Inventory Screen` | InventoryScreenBuilder.cs |
-| `GOLFIN/Inventory/Build Club Compare Panel` | `GOLFIN/Build/Club Compare Panel` | ClubCompareRightPanelBuilder.cs |
-| `GOLFIN/Wire Detail Panel` | `GOLFIN/Wire/Roster Detail Panel` | DetailPanelAutoWire.cs |
-| `GOLFIN/Wire Compare Panel` | `GOLFIN/Wire/Roster Compare Panel` | CompareAutoWire.cs |
-| `GOLFIN/Wire Level Up Modal` | `GOLFIN/Wire/Roster Level Up Modal` | LevelUpModalAutoWire.cs |
-| `GOLFIN/Inventory/Wire Club Detail Panel` | `GOLFIN/Wire/Club Detail Panel` | ClubDetailPanelAutoWire.cs |
-| `GOLFIN/Inventory/Wire Club Compare Panel` | `GOLFIN/Wire/Club Compare Panel` | ClubCompareAutoWire.cs |
-| `GOLFIN/Setup Club Managers` | `GOLFIN/Setup/Club Managers` | ClubManagerSetup.cs |
-| `GOLFIN/Setup Club Thumbnail Card Prefab` | `GOLFIN/Setup/Club Thumbnail Card Prefab` | ClubThumbnailCardBuilder.cs |
-| `GOLFIN/Setup Pagination Dots` | `GOLFIN/Setup/Pagination Dots` | PaginationDotSetup.cs |
-| `GOLFIN/Build Status Icons (All)` | `GOLFIN/Setup/Status Icons (All)` | StatusIconBuilder.cs |
-| `GOLFIN/Debug/*` | `GOLFIN/Debug/*` (keep as-is) | RosterDebugTools.cs |
-| `GOLFIN/Screenshot/*` | `GOLFIN/Screenshot/*` (keep as-is) | ScreenshotTool.cs |
-| `GOLFIN/Deactivate Unnecessary Screens` | `GOLFIN/Utilities/Deactivate Unnecessary Screens` | ScreenDeactivator.cs |
+| Stats with SP | 4 (STR, CC, REC, STAM) | 4 (Power, Accuracy, LieRes, Durability) |
+| Fixed stat | None | **Loft** — show value, no `+` button |
+| Stat cap | Rarity-based `RarityStatCaps` | **Flat 20 SP per stat** for all rarities |
+| Cap display | `/{rarityStatCap}` | `/{baseStat + 20}` |
+| Rarity advantage | Higher per-stat caps | More total SP (more levels to gain) |
+| Durability SP | N/A | Increases `maxDurability` (+5 per SP) |
+| Distance | N/A | Not shown in modal |
+
+**Key formulas:**
+- RP cost to next level: `CharacterLevelUpDatabase.Instance.GetLevelUpCost(nextLevel)` (= nextLevel × 5)
+- SP reward per level: `CharacterLevelUpDatabase.Instance.GetSPReward(nextLevel)` (= 1)
+- Available SP: `previewTotalSPEarned - currentTotalSpent - totalPending`
+- Stat cap display: `template.base{Stat} + MAX_SP_PER_STAT`
+- CONFIRM enabled: `availableSP == 0 && totalPending > 0`
+
+**Confirm commits:**
+1. `RewardPointsManager.Instance.Spend(totalRPCost)` — single RP transaction
+2. `ClubManager.Instance.SetLevel(clubId, previewLevel)`
+3. `playerClub.totalSPEarned = previewTotalSPEarned`
+4. `playerClub.spent{Stat} += pending{Stat}` for each stat
+5. `playerClub.maxDurability = template.maxDurability + (playerClub.spentDurability * 5)`
+6. `ClubManager.Instance.RefreshStatValues(clubId)`
+
+**Copy from character modal:**
+- `Open()` anchor-panel repositioning logic
+- `OnHide()` + `RestorePositionAfterFade()` coroutine
+- `UpdateStatRow()` helper (blue bar + orange pending bar behind it)
+- Color constants
+- Localization pattern
 
 ---
 
-### Task 2: Asset Naming Convention
+### Sub-task 4: Wire into existing panels
 
-Rename art asset folders to use PascalCase with no spaces. This doesn't affect code wiring because sprites are loaded via `Resources.Load()` using the filenames inside the folders, not the folder names under `Art/`.
+**ClubDetailPanel.cs:**
+- Add `[SerializeField] ClubLevelUpModalController? levelUpModal;`
+- `OnLevelUpClicked()` → `levelUpModal?.Open(currentClubId, rightPanel);`
 
-**Art folder renames:**
+**ClubCompareController.cs:**
+- Add `[SerializeField] ClubLevelUpModalController? levelUpModal;`
+- `OnRightLevelUpClicked()` → `levelUpModal?.Open(_rightClubId, compareRightPanel.GetComponent<RectTransform>());`
+- Subscribe to `ClubManager.Instance.OnClubLeveledUp` in `OnEnable/OnDisable` to refresh compare when a club is leveled up in the modal.
 
-| Current | New |
-|---|---|
-| `Assets/Art/Clubs Inventory` | `Assets/Art/ClubsInventory` |
-| `Assets/Art/Home Screen` | `Assets/Art/HomeScreen` |
-| `Assets/Art/Loading Screen` | `Assets/Art/LoadingScreen` |
-| `Assets/Art/Logo Screen` | `Assets/Art/LogoScreen` |
-| `Assets/Art/Roster Screen` | `Assets/Art/RosterScreen` |
-| `Assets/Art/Splash Screen` | `Assets/Art/SplashScreen` |
+---
 
-**IMPORTANT:** Before renaming, search for any code that references these folder paths directly (e.g., `"Art/Roster Screen/"`). There might be some in Editor scripts like StatusIconBuilder.cs or ClubInventoryPatcher.cs that load sprites by path. Update those references.
+### Sub-task 5: Editor auto-wire
 
-```powershell
-# Search for Art folder references in code
-Get-ChildItem -Path "C:\Users\cesar\GolfinRedux\Assets\Scripts" -Recurse -Filter "*.cs" | Select-String "Art/" | Select-Object Filename, Line
+**New file:** `Assets/Scripts/UI/Inventory/Editor/ClubLevelUpModalAutoWire.cs`
+**MenuItem:** `GOLFIN/Wire/Club Level Up Modal`
+
+Wire all SerializeFields on `ClubLevelUpModalController`. Also wire `levelUpModal` references on `ClubDetailPanel` and `ClubCompareController`.
+
+---
+
+### Sub-task 6: Localization
+
+Add these keys to the localization CSV:
 ```
-
-**Reference folder renames:**
-
-| Current | New |
-|---|---|
-| `Assets/References/Home Screen` | `Assets/References/HomeScreen` |
-| `Assets/References/Loading Screen` | `Assets/References/LoadingScreen` |
-| `Assets/References/Logo Screen` | `Assets/References/LogoScreen` |
-| `Assets/References/Roster Screen` | `Assets/References/RosterScreen` |
-| `Assets/References/Splash Screen` | `Assets/References/SplashScreen` |
-
-These are reference images only — no code references them. Safe to rename.
-
-**Sprite naming convention (for NEW sprites going forward — don't rename existing ones):**
-- Thumbnails: `{CharacterName}.png` (e.g., `James.png`) — already follows this
-- Full body: `BigRoster{Name}.png` — already follows this
-- Club portraits: `{ClubType}-{Brand}.png` (e.g., `Iron7-Mireo.png`) — already follows this
-- Club full: `{ClubType}-{Brand}.png` — already follows this
-- Rarity backgrounds: `{RarityName}.png` — already follows this
-- Stat icons: `Icon{StatName}.png`
-- UI elements: `{ScreenName}_{ElementName}.png`
-
----
-
-### Task 3: File Tree Cleanup
-
-**Scripts to archive** (move to `Assets/Scripts/Editor/Archive/`, comment out MenuItems):
-- `Assets/Scripts/UI/Inventory/Editor/ClubInventoryPatcher.cs` — all one-time patches
-- `Assets/Scripts/UI/Inventory/Editor/FilterBarPatcher.cs` — one-time fix
-- `Assets/Scripts/UI/Editor/MenuItemRemover.cs` — no longer needed
-- `Assets/Scripts/UI/Inventory/Editor/ClubDetailPanelBuilder.cs` — one-time builder (Phase C already built)
-
-**Check if `Assets/Scripts/UI/ExampleAutoWireScreen.cs` is still used.** If it's just an example/template, archive it.
-
-**Check `Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs`** — does it have MenuItems? If so, categorize under GOLFIN/Utilities/.
+CLUB_MODAL_LEVEL_UP,Level Up,レベルアップ
+CLUB_MODAL_NEXT_LEVEL,Next Level,次のレベル
+CLUB_MODAL_COST,Cost,コスト
+CLUB_MODAL_REWARD,Reward,報酬
+CLUB_MODAL_SP_SUFFIX,SP,SP
+CLUB_MODAL_AVAILABLE_SP,Available SP,利用可能SP
+CLUB_MODAL_RESET,Reset,リセット
+CLUB_MODAL_CANCEL,Cancel,キャンセル
+CLUB_MODAL_CONFIRM,Confirm,確認
+CLUB_STAT_POWER,Power,パワー
+CLUB_STAT_ACCURACY,Accuracy,精度
+CLUB_STAT_LIE_RES,Lie Res.,ライ抵抗
+CLUB_STAT_LOFT_FIXED,Loft (Fixed),ロフト（固定）
+CLUB_STAT_DURABILITY,Durability,耐久性
+CLUB_MODAL_MAX,MAX,MAX
+```
 
 ---
 
 ### Reminders
-- Only change MenuItem path strings — don't rename .cs files (Unity tracks by GUID, but renaming adds confusion)
-- Test that the menu still works after changes (MenuItem paths must be unique)
-- Comment out MenuItems on archived files (prefix with `// [MenuItem - archived]`)
+- Read the full spec in `Docs/SPEC_ClubPhaseE1_LevelUpModal.md` before starting
+- **Reuse the Roster Level Up modal as much as possible.** The Club Level Up modal is nearly identical to the Character one. Clone the existing `LevelUpModal` hierarchy in Unity (same layout, same images, same button styles, same stat row structure). Only change what's different: swap the 4 character stats for the 5 club stats (Power, Accuracy, Lie Res, Loft fixed, Durability), remove the character-specific fields, and rebind data to ClubManager instead of CharacterManager.
+- Mirror `LevelUpModalController.cs` code as closely as possible — same patterns, same code style, same color constants, same animation approach.
+- The AutoWire script should clone/duplicate the existing Roster LevelUpModal hierarchy and rewire it, similar to how `ClubCompareRightPanelBuilder` clones the roster compare panel.
+- Loft row: display-only, no barPending, no pending label, no plus button
+- Per-stat SP cap = 20 (flat, NOT rarity-based)
 - Push to GitHub after completing
 
 ---
@@ -159,3 +173,4 @@ These are reference images only — no code references them. Safe to rename.
 ✅ DONE: 2026-03-23 — TextGradients, visual fixes, filter dividers, arrows, viewport, fade, level text
 ✅ DONE: 2026-03-25 — Club Compare Phase D: ClubCompareController, builder, auto-wire, stat differences
 ✅ DONE: 2026-03-24 — Project cleanup: GOLFIN menu reorganized, Art/References folders renamed PascalCase, 5 editor scripts archived
+✅ DONE: 2026-03-25 — Phase E1 Club Level Up Modal: PlayerClubData SP fields, ClubManager.SetLevel/RefreshStatValues, ClubLevelUpModalController, ClubDetailPanel/ClubCompareController wired, ClubLevelUpModalAutoWire, localization keys. Pending: Unity hierarchy clone + wire run.

@@ -102,6 +102,10 @@ namespace Golfin.Inventory
         [Header("Carousel")]
         [SerializeField] private ClubCarouselController? carousel;
 
+        // ── Modals ─────────────────────────────────────────────────────────────
+        [Header("Modals")]
+        [SerializeField] private ClubLevelUpModalController? levelUpModal;
+
         // ── Animation ─────────────────────────────────────────────────────────
         [Header("Animation")]
         [SerializeField] private float slideDuration = 0.3f;
@@ -150,6 +154,9 @@ namespace Golfin.Inventory
             if (carousel != null)
                 carousel.OnClubSelected += OnCarouselSelection;
 
+            if (ClubManager.Instance != null)
+                ClubManager.Instance.OnClubLeveledUp += OnClubLeveledUp;
+
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
         }
 
@@ -158,7 +165,17 @@ namespace Golfin.Inventory
             if (carousel != null)
                 carousel.OnClubSelected -= OnCarouselSelection;
 
+            if (ClubManager.Instance != null)
+                ClubManager.Instance.OnClubLeveledUp -= OnClubLeveledUp;
+
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+        }
+
+        private void OnClubLeveledUp(string leveledClubId)
+        {
+            // Refresh compare right column if the leveled club is currently displayed there
+            if (_isCompareMode && leveledClubId == _rightClubId && !string.IsNullOrEmpty(_rightClubId))
+                RefreshRightColumn(_rightClubId);
         }
 
         private void RefreshLocalizedText()
@@ -486,9 +503,12 @@ namespace Golfin.Inventory
 
         private void OnRightLevelUpClicked()
         {
-            if (string.IsNullOrEmpty(_rightClubId) || ClubManager.Instance == null) return;
-            Debug.Log($"[ClubCompareController] Level Up clicked for '{_rightClubId}'.");
-            ClubManager.Instance.LevelUp(_rightClubId);
+            if (string.IsNullOrEmpty(_rightClubId)) return;
+
+            if (levelUpModal != null)
+                levelUpModal.Open(_rightClubId, compareRightPanel.GetComponent<RectTransform>());
+            else
+                Debug.Log($"[ClubCompareController] Level Up clicked for '{_rightClubId}' — wire ClubLevelUpModal.");
         }
 
         private void OnRightRepairClicked()
