@@ -231,3 +231,31 @@ if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) { }
 **Fix:** Disable `Raycast Target` on ALL non-interactive Image components — backgrounds, rims, portraits, dividers, icons (unless the icon IS a button). Only Buttons and interactive elements should have Raycast Target enabled.
 
 **Prevention:** When creating any new Image component in code or Inspector, immediately set `raycastTarget = false` unless it's intentionally interactive.
+
+## ModalController — Root Must Stay Active
+
+**Rule:** `ModalController` expects the **root GameObject to always be active**. It only toggles the `modalPanel` child via `Show()`/`Hide()`. If the root is inactive, `Show()` still runs (called directly in code, not via Unity events) and calls `modalPanel.SetActive(true)`, but nothing renders because the parent is inactive.
+
+**Symptom:** Console shows `[Modal] X shown` but nothing appears in the hierarchy as active.
+
+**Fix:** Ensure the modal root GameObject is enabled in the scene. Save the scene in that state so Play mode doesn't revert it.
+
+## GameObject.Find() Misses Inactive Objects — Use FindObjectOfType in AutoWire Scripts
+
+**Rule:** `GameObject.Find("Name")` silently returns null for inactive GameObjects. Since modals start hidden (`ModalController.Awake()` deactivates `modalPanel`), the root may be active but if it was ever saved inactive it won't be found.
+
+**Pattern for all AutoWire scripts:**
+```csharp
+// WRONG — misses inactive objects:
+var go = GameObject.Find("MyModal");
+
+// CORRECT — finds inactive too:
+var controller = Object.FindObjectOfType<MyModalController>(includeInactive: true);
+var go = controller?.gameObject;
+```
+
+## Modal Anchor Repositioning Only Works at Canvas Root
+
+**Mistake:** Copied anchor-repositioning logic (world→local coord math) from `LevelUpModalController` into `ClubLevelUpModalController`. The character modal lives at the Canvas root so the math works. The club modal lives inside `InventoryScreen/ContentArea`, which has its own transform offsets — the math lands in the wrong spot and overwrites the correct inspector position every `Open()` call.
+
+**Rule:** If a modal is parented inside a screen hierarchy (not at Canvas root), remove all runtime repositioning code. Set position in the editor; it will hold at runtime.

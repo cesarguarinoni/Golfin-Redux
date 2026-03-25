@@ -23,14 +23,7 @@ Updated by both Claude (Architect) and Claude Code.
 - [ ] User fixing compare panel images/visual polish
 
 ### Phase E — Modals
-#### E1 — Club Level Up Modal ✅ CODE COMPLETE — pending Unity hierarchy setup
-- [x] Extend PlayerClubData with SP fields (totalSPEarned, spentPower/Accuracy/LieRes/Durability, MAX_SP_PER_STAT=20)
-- [x] ClubManager.SetLevel(), RefreshStatValues(), seed totalSPEarned in InitializeClubs()
-- [x] ClubLevelUpModalController.cs (mirrors character LevelUpModalController)
-- [x] Wire into ClubDetailPanel + ClubCompareController
-- [x] ClubLevelUpModalAutoWire.cs (GOLFIN/Wire/Club Level Up Modal)
-- [x] Localization keys
-- [ ] Unity: clone LevelUpModal hierarchy → rename to ClubLevelUpModal → attach ClubLevelUpModalController → run GOLFIN/Wire/Club Level Up Modal
+#### E1 — Club Level Up Modal ✅ COMPLETE
 
 #### E2 — Repair Modal (spec pending)
 - [ ] Repair costs Repair Kits (from Items), not RP
