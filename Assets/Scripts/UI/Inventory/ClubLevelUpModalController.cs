@@ -68,12 +68,13 @@ namespace Golfin.Inventory
         [SerializeField] private TextMeshProUGUI lieResPending         = null!;
         [SerializeField] private Button          lieResPlusButton      = null!;
 
-        // ── Stat Row — Loft (fixed, no + button) ────────────────────────────
+        // ── Stat Row — Loft (fixed — [+] button kept for layout but always disabled) ──
         [Header("Stat Row — Loft (fixed)")]
         [SerializeField] private TextMeshProUGUI loftStatLabel    = null!;
         [SerializeField] private Image           loftBar          = null!;
         [SerializeField] private TextMeshProUGUI loftValueCurrent = null!;
         [SerializeField] private TextMeshProUGUI loftValueMax     = null!;
+        [SerializeField] private Button          loftPlusButton   = null!;
 
         [Header("Stat Row — Durability")]
         [SerializeField] private TextMeshProUGUI durabilityStatLabel       = null!;
@@ -128,6 +129,8 @@ namespace Golfin.Inventory
         protected override void Awake()
         {
             base.Awake();
+            // Loft is a fixed stat — [+] button kept for layout symmetry but never interactive
+            if (loftPlusButton != null) loftPlusButton.interactable = false;
         }
 
         private void OnEnable()

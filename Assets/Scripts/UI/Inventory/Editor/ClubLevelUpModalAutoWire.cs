@@ -102,10 +102,11 @@ namespace Golfin.Inventory.Editor
                 "lieResValueCurrent", "lieResValueMax", "lieResPending", "lieResPlusButton",
                 ref wired, ref failed);
 
-            // ── Fixed Stat Row — Loft (no barPending / pending label / plusButton) ──
+            // ── Fixed Stat Row — Loft ([+] wired but disabled permanently in Awake) ──
             WireFixedStatRow(so, root, "ModalPanel/SPSection/StatRow_Loft",
                 "loftStatLabel",
                 "loftBar", "loftValueCurrent", "loftValueMax",
+                "loftPlusButton",
                 ref wired, ref failed);
 
             WireAllocatableStatRow(so, root, "ModalPanel/SPSection/StatRow_Durability",
@@ -162,12 +163,14 @@ namespace Golfin.Inventory.Editor
         private static void WireFixedStatRow(SerializedObject so, Transform root, string rowPath,
             string statLabelField,
             string barField, string valueCurrentField, string valueMaxField,
+            string plusButtonField,
             ref int wired, ref int failed)
         {
-            wired += WireTMP(so,   statLabelField,    root, $"{rowPath}/StatName",         ref failed);
-            wired += WireImage(so, barField,          root, $"{rowPath}/StatBar/Bar",       ref failed);
-            wired += WireTMP(so,   valueCurrentField, root, $"{rowPath}/StatValueCurrent",  ref failed);
-            wired += WireTMP(so,   valueMaxField,     root, $"{rowPath}/StatValueMax",      ref failed);
+            wired += WireTMP(so,    statLabelField,    root, $"{rowPath}/StatName",         ref failed);
+            wired += WireImage(so,  barField,          root, $"{rowPath}/StatBar/Bar",       ref failed);
+            wired += WireTMP(so,    valueCurrentField, root, $"{rowPath}/StatValueCurrent",  ref failed);
+            wired += WireTMP(so,    valueMaxField,     root, $"{rowPath}/StatValueMax",      ref failed);
+            wired += WireButton(so, plusButtonField,   root, $"{rowPath}/PlusButton",        ref failed);
         }
 
         // ── Back-reference helpers ────────────────────────────────────────────
