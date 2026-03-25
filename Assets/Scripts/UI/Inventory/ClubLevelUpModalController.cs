@@ -452,7 +452,7 @@ namespace Golfin.Inventory
             if (playerClub == null || template == null) return;
 
             // 1. Deduct RP (single transaction)
-            RewardPointsManager.Instance.Spend(totalRPCost);
+            RewardPointsManager.Instance.SpendPoints(totalRPCost);
 
             // 2. Set new level
             ClubManager.Instance.SetLevel(clubId, previewLevel);
