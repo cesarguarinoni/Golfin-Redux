@@ -115,12 +115,6 @@ CLUB_STAT_LIE_RES,Lie Res.,ライ抵抗
 CLUB_STAT_LOFT_FIXED,Loft (Fixed),ロフト（固定）
 CLUB_STAT_DURABILITY,Durability,耐久性
 CLUB_MODAL_MAX,MAX,MAX
-CLUB_REPAIR_TITLE,Repair,修理
-CLUB_REPAIR_DURABILITY,Durability,耐久性
-CLUB_REPAIR_STANDARD_KIT,Standard Kit,標準修理キット
-CLUB_REPAIR_PREMIUM_KIT,Premium Kit,プレミアム修理キット
 CLUB_REPAIR_NO_KITS,You don't own any Repair Kits.,修理キットを持っていません。
-CLUB_REPAIR_FULL_DURABILITY,This club is at full durability.,このクラブは最大耐久性です。
-CLUB_REPAIR_CANCEL,Cancel,キャンセル
-CLUB_REPAIR_CONFIRM,Repair,修理する
+CLUB_REPAIR_FULL,This club is at full durability.,このクラブは最大耐久性です。
 CLUB_REPAIR_TOAST,{0} was repaired. Durability {1} → {2}.,{0}が修理されました。耐久性 {1} → {2}。

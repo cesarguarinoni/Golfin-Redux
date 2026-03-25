@@ -105,7 +105,6 @@ namespace Golfin.Inventory
         // ── Modals ─────────────────────────────────────────────────────────────
         [Header("Modals")]
         [SerializeField] private ClubLevelUpModalController? levelUpModal;
-        [SerializeField] private ClubRepairModalController?  repairModal;
 
         // ── Animation ─────────────────────────────────────────────────────────
         [Header("Animation")]
@@ -527,10 +526,27 @@ namespace Golfin.Inventory
         private void OnRightRepairClicked()
         {
             if (string.IsNullOrEmpty(_rightClubId)) return;
-            if (repairModal != null)
-                repairModal.Open(_rightClubId, compareRightPanel.GetComponent<RectTransform>());
-            else
-                Debug.Log($"[ClubCompareController] Repair clicked for '{_rightClubId}' — wire ClubRepairModal.");
+            if (ClubManager.Instance == null || RepairKitManager.Instance == null) return;
+
+            var playerClub = ClubManager.Instance.GetClubData(_rightClubId);
+            if (playerClub == null) return;
+
+            var (newDurability, kitUsed) = RepairKitManager.Instance.UseBestKit(
+                playerClub.currentDurability, playerClub.maxDurability);
+
+            if (kitUsed == RepairKitManager.KitType.None)
+            {
+                Debug.Log("[ClubCompareController] No repair kits available."); // TODO: Toast
+                return;
+            }
+
+            int oldDurability = playerClub.currentDurability;
+            ClubManager.Instance.RepairClub(_rightClubId, newDurability);
+
+            var template = ClubDatabaseCSV.Instance?.GetClub(_rightClubId);
+            string clubName = template?.name ?? _rightClubId;
+            Debug.Log($"[ClubCompareController] {clubName} repaired with {kitUsed}. " +
+                      $"Durability {oldDurability} → {newDurability}."); // TODO: Toast
         }
 
         // ── Cleanup ────────────────────────────────────────────────────────────

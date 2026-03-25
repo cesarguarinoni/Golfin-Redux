@@ -12,6 +12,8 @@ public class RepairKitManager : MonoBehaviour
 {
     public static RepairKitManager Instance { get; private set; } = null!;
 
+    public enum KitType { None, Standard, Premium }
+
     // ── Event ─────────────────────────────────────────────────────────────────
 
     /// <summary>Fired whenever kit counts change.</summary>
@@ -51,29 +53,50 @@ public class RepairKitManager : MonoBehaviour
     // ── Use API ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Uses a Standard Kit. Returns the new durability value after partial restoration.
-    /// Returns 0 (unchanged) if no Standard Kits are available.
+    /// Picks the best kit for the situation and uses it.
+    /// Kit selection: ≤50% missing → prefer Standard; >50% → prefer Premium; fallback to whichever available.
+    /// Returns (newDurability, kitUsed). Returns (currentDurability, None) if no kit available.
     /// </summary>
-    public int UseStandardKit(int currentDurability, int maxDurability)
+    public (int newDurability, KitType kitUsed) UseBestKit(int currentDurability, int maxDurability)
     {
-        if (standardKitCount <= 0) return currentDurability;
-        standardKitCount--;
-        int restored     = Mathf.CeilToInt(maxDurability * STANDARD_RESTORE_PERCENT);
-        int newDurability = Mathf.Min(currentDurability + restored, maxDurability);
+        if (currentDurability >= maxDurability)
+            return (currentDurability, KitType.None);
+
+        float missingPercent = 1f - (float)currentDurability / maxDurability;
+        KitType chosen = ChooseKit(missingPercent);
+
+        if (chosen == KitType.None)
+            return (currentDurability, KitType.None);
+
+        int newDurability;
+        if (chosen == KitType.Standard)
+        {
+            standardKitCount--;
+            int restored = Mathf.CeilToInt(maxDurability * STANDARD_RESTORE_PERCENT);
+            newDurability = Mathf.Min(currentDurability + restored, maxDurability);
+        }
+        else // Premium
+        {
+            premiumKitCount--;
+            newDurability = maxDurability;
+        }
+
         OnInventoryChanged?.Invoke();
-        return newDurability;
+        return (newDurability, chosen);
     }
 
-    /// <summary>
-    /// Uses a Premium Kit. Returns maxDurability (full restoration).
-    /// Returns 0 (unchanged) if no Premium Kits are available.
-    /// </summary>
-    public int UsePremiumKit(int maxDurability)
+    private KitType ChooseKit(float missingPercent)
     {
-        if (premiumKitCount <= 0) return maxDurability;
-        premiumKitCount--;
-        OnInventoryChanged?.Invoke();
-        return maxDurability;
+        // Small repair (≤50% missing) → prefer Standard to avoid wasting Premium
+        if (missingPercent <= 0.5f && standardKitCount > 0)
+            return KitType.Standard;
+        // Big repair (>50% missing) → prefer Premium
+        if (premiumKitCount > 0)
+            return KitType.Premium;
+        // Fallback: Standard is better than nothing
+        if (standardKitCount > 0)
+            return KitType.Standard;
+        return KitType.None;
     }
 
     /// <summary>Add kits (from mission rewards, etc). Capped at MAX_STACK.</summary>

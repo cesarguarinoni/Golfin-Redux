@@ -232,7 +232,7 @@ public class ClubManager : MonoBehaviour
 
     /// <summary>
     /// Repairs a club to the given newDurability value.
-    /// Called by ClubRepairModalController after kit consumption.
+    /// Called after RepairKitManager.UseBestKit() consumes a kit.
     /// </summary>
     public void RepairClub(string clubId, int newDurability)
     {
