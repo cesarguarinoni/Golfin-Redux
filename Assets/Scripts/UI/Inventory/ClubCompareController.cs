@@ -105,6 +105,7 @@ namespace Golfin.Inventory
         // ── Modals ─────────────────────────────────────────────────────────────
         [Header("Modals")]
         [SerializeField] private ClubLevelUpModalController? levelUpModal;
+        [SerializeField] private ClubRepairModalController?  repairModal;
 
         // ── Animation ─────────────────────────────────────────────────────────
         [Header("Animation")]
@@ -155,7 +156,10 @@ namespace Golfin.Inventory
                 carousel.OnClubSelected += OnCarouselSelection;
 
             if (ClubManager.Instance != null)
+            {
                 ClubManager.Instance.OnClubLeveledUp += OnClubLeveledUp;
+                ClubManager.Instance.OnClubRepaired  += OnClubRepairedHandler;
+            }
 
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
         }
@@ -166,7 +170,10 @@ namespace Golfin.Inventory
                 carousel.OnClubSelected -= OnCarouselSelection;
 
             if (ClubManager.Instance != null)
+            {
                 ClubManager.Instance.OnClubLeveledUp -= OnClubLeveledUp;
+                ClubManager.Instance.OnClubRepaired  -= OnClubRepairedHandler;
+            }
 
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
         }
@@ -175,6 +182,12 @@ namespace Golfin.Inventory
         {
             // Refresh compare right column if the leveled club is currently displayed there
             if (_isCompareMode && leveledClubId == _rightClubId && !string.IsNullOrEmpty(_rightClubId))
+                RefreshRightColumn(_rightClubId);
+        }
+
+        private void OnClubRepairedHandler(string repairedClubId)
+        {
+            if (_isCompareMode && repairedClubId == _rightClubId && !string.IsNullOrEmpty(_rightClubId))
                 RefreshRightColumn(_rightClubId);
         }
 
@@ -377,11 +390,11 @@ namespace Golfin.Inventory
             if (compareEquippedIcon != null) compareEquippedIcon.SetActive(isEquipped);
 
             // ── Button states ─────────────────────────────────────────────────
-            bool atMax = rightPlayerClub.currentLevel >= maxLevel;
+            bool atMax       = rightPlayerClub.currentLevel >= maxLevel;
+            bool needsRepair = rightPlayerClub.currentDurability < rightPlayerClub.maxDurability;
+            bool hasKits     = RepairKitManager.Instance != null && RepairKitManager.Instance.HasAnyKit();
             if (compareLevelUpButton != null) compareLevelUpButton.interactable = !atMax;
-            if (compareRepairButton  != null)
-                compareRepairButton.interactable =
-                    rightPlayerClub.currentDurability < rightPlayerClub.maxDurability;
+            if (compareRepairButton  != null) compareRepairButton.interactable  = needsRepair && hasKits;
 
             // Already in compare mode — disable this button
             if (compareRightCompareButton != null) compareRightCompareButton.interactable = false;
@@ -513,9 +526,11 @@ namespace Golfin.Inventory
 
         private void OnRightRepairClicked()
         {
-            if (string.IsNullOrEmpty(_rightClubId) || ClubManager.Instance == null) return;
-            Debug.Log($"[ClubCompareController] Repair clicked for '{_rightClubId}'.");
-            ClubManager.Instance.Repair(_rightClubId);
+            if (string.IsNullOrEmpty(_rightClubId)) return;
+            if (repairModal != null)
+                repairModal.Open(_rightClubId, compareRightPanel.GetComponent<RectTransform>());
+            else
+                Debug.Log($"[ClubCompareController] Repair clicked for '{_rightClubId}' — wire ClubRepairModal.");
         }
 
         // ── Cleanup ────────────────────────────────────────────────────────────

@@ -26,6 +26,9 @@ public class ClubManager : MonoBehaviour
     /// <summary>Fired when the owned-club list changes (add/remove).</summary>
     public event System.Action? OnInventoryChanged;
 
+    /// <summary>Fired after a club is repaired. Arg = clubId.</summary>
+    public event System.Action<string>? OnClubRepaired;
+
     // ── State ─────────────────────────────────────────────────────────────────
 
     private readonly Dictionary<string, PlayerClubData> ownedClubs = new();
@@ -225,11 +228,31 @@ public class ClubManager : MonoBehaviour
         OnClubLeveledUp?.Invoke(clubId);
     }
 
-    // ── Repair (stub — modal in later phase) ──────────────────────────────────
+    // ── Repair ────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Placeholder repair. Logs to console; Repair Modal implemented later.
+    /// Repairs a club to the given newDurability value.
+    /// Called by ClubRepairModalController after kit consumption.
     /// </summary>
+    public void RepairClub(string clubId, int newDurability)
+    {
+        if (!ownedClubs.TryGetValue(clubId, out var club))
+        {
+            Debug.LogWarning($"[ClubManager] RepairClub: club '{clubId}' not found.");
+            return;
+        }
+
+        int oldDurability = club.currentDurability;
+        club.currentDurability = Mathf.Clamp(newDurability, 0, club.maxDurability);
+
+        Debug.Log($"[ClubManager] '{clubId}' repaired: {oldDurability} → {club.currentDurability}/{club.maxDurability}");
+        OnClubRepaired?.Invoke(clubId);
+    }
+
+    /// <summary>
+    /// Placeholder repair stub — kept for legacy callers during transition.
+    /// </summary>
+    [System.Obsolete("Use RepairClub(clubId, newDurability)")]
     public void Repair(string clubId)
     {
         if (!ownedClubs.TryGetValue(clubId, out var club))
@@ -239,6 +262,6 @@ public class ClubManager : MonoBehaviour
         }
 
         Debug.Log($"[ClubManager] Repair requested for '{clubId}' " +
-                  $"(durability {club.currentDurability}/{club.maxDurability}) — modal coming in later phase.");
+                  $"(durability {club.currentDurability}/{club.maxDurability}) — use RepairClub() instead.");
     }
 }

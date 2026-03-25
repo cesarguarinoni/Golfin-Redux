@@ -92,10 +92,11 @@ namespace Golfin.Inventory
         [Header("Compare")]
         [SerializeField] private ClubCompareController? compareController;
 
-        // ── Level Up Modal ─────────────────────────────────────────────────────
+        // ── Modals ─────────────────────────────────────────────────────────────
 
         [Header("Modals")]
-        [SerializeField] private ClubLevelUpModalController? levelUpModal;
+        [SerializeField] private ClubLevelUpModalController?  levelUpModal;
+        [SerializeField] private ClubRepairModalController?   repairModal;
 
         // ── State ──────────────────────────────────────────────────────────────
 
@@ -123,7 +124,10 @@ namespace Golfin.Inventory
                 carousel.OnClubSelected += UpdatePanel;
 
             if (ClubManager.Instance != null)
-                ClubManager.Instance.OnClubEquipped += OnClubEquippedChanged;
+            {
+                ClubManager.Instance.OnClubEquipped  += OnClubEquippedChanged;
+                ClubManager.Instance.OnClubRepaired  += OnClubRepairedHandler;
+            }
 
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
         }
@@ -134,7 +138,10 @@ namespace Golfin.Inventory
                 carousel.OnClubSelected -= UpdatePanel;
 
             if (ClubManager.Instance != null)
-                ClubManager.Instance.OnClubEquipped -= OnClubEquippedChanged;
+            {
+                ClubManager.Instance.OnClubEquipped  -= OnClubEquippedChanged;
+                ClubManager.Instance.OnClubRepaired  -= OnClubRepairedHandler;
+            }
 
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
         }
@@ -268,10 +275,11 @@ namespace Golfin.Inventory
             if (equippedIcon != null) equippedIcon.SetActive(isEquipped);
 
             // ── Button States ─────────────────────────────────────────────────
-            bool atMax = playerClub.currentLevel >= maxLevel;
+            bool atMax     = playerClub.currentLevel >= maxLevel;
+            bool needsRepair = playerClub.currentDurability < playerClub.maxDurability;
+            bool hasKits     = RepairKitManager.Instance != null && RepairKitManager.Instance.HasAnyKit();
             if (levelUpButton != null) levelUpButton.interactable = !atMax;
-            if (repairButton  != null)
-                repairButton.interactable = playerClub.currentDurability < playerClub.maxDurability;
+            if (repairButton  != null) repairButton.interactable  = needsRepair && hasKits;
         }
 
         private void UpdateStatBar(TextMeshProUGUI? nameField, Image? bar,
@@ -302,8 +310,15 @@ namespace Golfin.Inventory
 
         private void OnRepairClicked()
         {
-            Debug.Log($"[ClubDetailPanel] REPAIR clicked for '{currentClubId}' — modal in Phase D.");
-            ClubManager.Instance?.Repair(currentClubId);
+            if (repairModal != null)
+                repairModal.Open(currentClubId, rightPanel);
+            else
+                Debug.Log($"[ClubDetailPanel] REPAIR clicked for '{currentClubId}' — wire ClubRepairModal.");
+        }
+
+        private void OnClubRepairedHandler(string repairedClubId)
+        {
+            if (repairedClubId == currentClubId) UpdatePanel(currentClubId);
         }
 
         private void OnCompareClicked()

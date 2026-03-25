@@ -6,161 +6,143 @@
 
 ---
 
-## Current Task (2026-03-25) — Phase E1: Club Level Up Modal
+## Current Task (2026-03-26) — Phase E2: Club Repair Modal
 
-Full spec: `Docs/SPEC_ClubPhaseE1_LevelUpModal.md`
-Reference: `Docs/Game Design/GAMEPLAY_FORMULAS_PROPOSAL.md`, `Docs/Game Design/New Levels.xlsx`
-Pattern to follow: `Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs` (character version)
+Full spec: `Docs/SPEC_ClubPhaseE2_RepairModal.md`
+Pattern to follow: `Assets/Scripts/UI/Inventory/ClubLevelUpModalController.cs` (Phase E1)
 
 Do these sub-tasks in order.
 
 ---
 
-### Sub-task 1: Extend PlayerClubData with SP fields
+### Sub-task 1: Create RepairKitManager Singleton
 
-**File:** `Assets/Scripts/UI/Inventory/ClubData.cs`
+**New file:** `Assets/Scripts/RepairKitManager.cs`
+**No namespace** (matches ClubManager, RewardPointsManager pattern)
 
-Add to `PlayerClubData`:
-```csharp
-public int totalSPEarned      = 0;
-public int spentPower          = 0;
-public int spentAccuracy       = 0;
-public int spentLieResistance  = 0;
-public int spentDurability     = 0;
-public const int MAX_SP_PER_STAT = 20;
-```
+Standalone singleton (DontDestroyOnLoad) that manages repair kit inventory:
+- `standardKitCount` (starting: 5 for testing), `premiumKitCount` (starting: 2)
+- Constants: `STANDARD_RESTORE_PERCENT = 0.5f`, `PREMIUM_RESTORE_PERCENT = 1.0f`, `MAX_STACK = 99`
+- Methods: `GetStandardCount()`, `GetPremiumCount()`, `HasAnyKit()`
+- `UseStandardKit(currentDurability, maxDurability)` → returns new durability, decrements count
+- `UsePremiumKit(maxDurability)` → returns maxDurability, decrements count
+- `AddKits(int standard, int premium)` — for mission rewards later
+- Event: `OnInventoryChanged`
 
-Update `Get{Stat}()` methods:
-```csharp
-public int GetPower(ClubDataRuntime template)         => template.basePower + spentPower;
-public int GetAccuracy(ClubDataRuntime template)      => template.baseAccuracy + spentAccuracy;
-public int GetLieResistance(ClubDataRuntime template) => template.baseLieResistance + spentLieResistance;
-public int GetLoft(ClubDataRuntime template)          => template.baseLoft;  // fixed — no SP
-public int GetDistance(ClubDataRuntime template)      => template.baseDistance;
-```
-
-Durability SP increases maxDurability (+5 per SP point). When SP is committed, update `maxDurability` field directly so existing `IsDurabilityLow` works unchanged.
+See full spec for implementation details.
 
 ---
 
-### Sub-task 2: ClubManager additions
+### Sub-task 2: Add OnClubRepaired Event + RepairClub Method
 
 **File:** `Assets/Scripts/ClubManager.cs`
 
-Add these methods:
+Add event:
 ```csharp
-public void SetLevel(string clubId, int newLevel)
-// Sets level without RP check. Modal handles payment.
-
-public void RefreshStatValues(string clubId)
-// Fires OnClubLeveledUp to refresh UI. Stats computed on-the-fly.
+/// <summary>Fired after a club is repaired. Arg = clubId.</summary>
+public event System.Action<string>? OnClubRepaired;
 ```
 
-Update `InitializeClubs()` to seed `totalSPEarned`:
+Add real repair method:
 ```csharp
-// After creating each playerClub, sum SP rewards from Lv 2 → startingLevel:
-int totalSP = 0;
-for (int lv = 2; lv <= playerClub.currentLevel; lv++)
-    totalSP += CharacterLevelUpDatabase.Instance.GetSPReward(lv);
-playerClub.totalSPEarned = totalSP;
+public void RepairClub(string clubId, int newDurability)
+{
+    if (!ownedClubs.TryGetValue(clubId, out var club)) { /* warn + return */ }
+    int old = club.currentDurability;
+    club.currentDurability = Mathf.Clamp(newDurability, 0, club.maxDurability);
+    Debug.Log($"[ClubManager] '{clubId}' repaired: {old} → {club.currentDurability}/{club.maxDurability}");
+    OnClubRepaired?.Invoke(clubId);
+}
 ```
+
+Mark the old `Repair(string clubId)` stub as `[System.Obsolete("Use RepairClub(clubId, newDurability)")]`.
 
 ---
 
-### Sub-task 3: Create ClubLevelUpModalController
+### Sub-task 3: Create ClubRepairModalController
 
-**New file:** `Assets/Scripts/UI/Inventory/ClubLevelUpModalController.cs`
+**New file:** `Assets/Scripts/UI/Inventory/ClubRepairModalController.cs`
 **Namespace:** `Golfin.Inventory`
 **Extends:** `Golfin.UI.Modals.ModalController`
 
-Mirror `LevelUpModalController.cs` closely but with these differences:
+Simpler than Level Up modal — no SP allocation, no level preview. Just:
+1. Show club name, rarity, level, durability bar
+2. Kit selection: Standard (×count) or Premium (×count) — toggle buttons
+3. Preview bar shows durability after repair (green overlay)
+4. CONFIRM: consume kit via RepairKitManager, update club via ClubManager.RepairClub
+5. CANCEL: close modal, no changes
 
-| Aspect | Character | Club |
-|---|---|---|
-| Stats with SP | 4 (STR, CC, REC, STAM) | 4 (Power, Accuracy, LieRes, Durability) |
-| Fixed stat | None | **Loft** — show value, no `+` button |
-| Stat cap | Rarity-based `RarityStatCaps` | **Flat 20 SP per stat** for all rarities |
-| Cap display | `/{rarityStatCap}` | `/{baseStat + 20}` |
-| Rarity advantage | Higher per-stat caps | More total SP (more levels to gain) |
-| Durability SP | N/A | Increases `maxDurability` (+5 per SP) |
-| Distance | N/A | Not shown in modal |
+**Key fields:**
+- Club info: `clubNameText`, `rarityLabel`, `levelText`
+- Durability: `durabilityBar` (blue), `durabilityBarPreview` (green), `durabilityValueText`, `durabilityChangeText`
+- Kit buttons: `standardKitButton`, `standardKitCountText`, `standardKitSelected`, `premiumKitButton`, `premiumKitCountText`, `premiumKitSelected`
+- Messages: `noKitsMessage`
+- Actions: `cancelButton`, `confirmButton`
 
-**Key formulas:**
-- RP cost to next level: `CharacterLevelUpDatabase.Instance.GetLevelUpCost(nextLevel)` (= nextLevel × 5)
-- SP reward per level: `CharacterLevelUpDatabase.Instance.GetSPReward(nextLevel)` (= 1)
-- Available SP: `previewTotalSPEarned - currentTotalSpent - totalPending`
-- Stat cap display: `template.base{Stat} + MAX_SP_PER_STAT`
-- CONFIRM enabled: `availableSP == 0 && totalPending > 0`
+**Confirm enabled when:** kit is selected AND club is not at full durability.
 
-**Confirm commits:**
-1. `RewardPointsManager.Instance.Spend(totalRPCost)` — single RP transaction
-2. `ClubManager.Instance.SetLevel(clubId, previewLevel)`
-3. `playerClub.totalSPEarned = previewTotalSPEarned`
-4. `playerClub.spent{Stat} += pending{Stat}` for each stat
-5. `playerClub.maxDurability = template.maxDurability + (playerClub.spentDurability * 5)`
-6. `ClubManager.Instance.RefreshStatValues(clubId)`
-
-**Copy from character modal:**
-- `Open()` anchor-panel repositioning logic
-- `OnHide()` + `RestorePositionAfterFade()` coroutine
-- `UpdateStatRow()` helper (blue bar + orange pending bar behind it)
-- Color constants
-- Localization pattern
+See full spec for complete field list, logic, and color values.
 
 ---
 
-### Sub-task 4: Wire into existing panels
+### Sub-task 4: Wire into Existing Panels
 
 **ClubDetailPanel.cs:**
-- Add `[SerializeField] ClubLevelUpModalController? levelUpModal;`
-- `OnLevelUpClicked()` → `levelUpModal?.Open(currentClubId, rightPanel);`
+- Add `[SerializeField] private ClubRepairModalController? repairModal;`
+- Update `OnRepairClicked()` → `repairModal?.Open(currentClubId, rightPanel);`
+- Subscribe to `ClubManager.Instance.OnClubRepaired` in `OnEnable/OnDisable` → refresh panel
+- In `UpdatePanel()`, set repair button interactable: `needsRepair && hasKits`
 
 **ClubCompareController.cs:**
-- Add `[SerializeField] ClubLevelUpModalController? levelUpModal;`
-- `OnRightLevelUpClicked()` → `levelUpModal?.Open(_rightClubId, compareRightPanel.GetComponent<RectTransform>());`
-- Subscribe to `ClubManager.Instance.OnClubLeveledUp` in `OnEnable/OnDisable` to refresh compare when a club is leveled up in the modal.
+- Add `[SerializeField] private ClubRepairModalController? repairModal;`
+- Update `OnRightRepairClicked()` → `repairModal?.Open(_rightClubId, ...);`
+- Subscribe to `OnClubRepaired` in `OnEnable/OnDisable` → refresh compare
 
 ---
 
-### Sub-task 5: Editor auto-wire
+### Sub-task 5: Editor Auto-Wire + Hierarchy Builder
 
-**New file:** `Assets/Scripts/UI/Inventory/Editor/ClubLevelUpModalAutoWire.cs`
-**MenuItem:** `GOLFIN/Wire/Club Level Up Modal`
+**New file:** `Assets/Scripts/UI/Inventory/Editor/ClubRepairModalAutoWire.cs`
+**MenuItem:** `GOLFIN/Wire/Club Repair Modal`
 
-Wire all SerializeFields on `ClubLevelUpModalController`. Also wire `levelUpModal` references on `ClubDetailPanel` and `ClubCompareController`.
+Build the repair modal hierarchy (simpler than Level Up — just club info + durability bar + kit selector + action buttons). Wire all SerializeFields. Also wire `repairModal` references on ClubDetailPanel and ClubCompareController.
 
 ---
 
-### Sub-task 6: Localization
+### Sub-task 6: RepairKitManager Setup Script
+
+**New file:** `Assets/Scripts/Editor/RepairKitManagerSetup.cs`
+**MenuItem:** `GOLFIN/Setup/Repair Kit Manager`
+
+Finds or creates RepairKitManager on the Managers GameObject.
+
+---
+
+### Sub-task 7: Localization
 
 Add these keys to the localization CSV:
 ```
-CLUB_MODAL_LEVEL_UP,Level Up,レベルアップ
-CLUB_MODAL_NEXT_LEVEL,Next Level,次のレベル
-CLUB_MODAL_COST,Cost,コスト
-CLUB_MODAL_REWARD,Reward,報酬
-CLUB_MODAL_SP_SUFFIX,SP,SP
-CLUB_MODAL_AVAILABLE_SP,Available SP,利用可能SP
-CLUB_MODAL_RESET,Reset,リセット
-CLUB_MODAL_CANCEL,Cancel,キャンセル
-CLUB_MODAL_CONFIRM,Confirm,確認
-CLUB_STAT_POWER,Power,パワー
-CLUB_STAT_ACCURACY,Accuracy,精度
-CLUB_STAT_LIE_RES,Lie Res.,ライ抵抗
-CLUB_STAT_LOFT_FIXED,Loft (Fixed),ロフト（固定）
-CLUB_STAT_DURABILITY,Durability,耐久性
-CLUB_MODAL_MAX,MAX,MAX
+CLUB_REPAIR_TITLE,Repair,修理
+CLUB_REPAIR_DURABILITY,Durability,耐久性
+CLUB_REPAIR_STANDARD_KIT,Standard Kit,標準修理キット
+CLUB_REPAIR_PREMIUM_KIT,Premium Kit,プレミアム修理キット
+CLUB_REPAIR_NO_KITS,You don't own any Repair Kits.,修理キットを持っていません。
+CLUB_REPAIR_FULL_DURABILITY,This club is at full durability.,このクラブは最大耐久性です。
+CLUB_REPAIR_CANCEL,Cancel,キャンセル
+CLUB_REPAIR_CONFIRM,Repair,修理する
+CLUB_REPAIR_TOAST,{0} was repaired. Durability {1} → {2}.,{0}が修理されました。耐久性 {1} → {2}。
 ```
 
 ---
 
 ### Reminders
-- Read the full spec in `Docs/SPEC_ClubPhaseE1_LevelUpModal.md` before starting
-- **Reuse the Roster Level Up modal as much as possible.** The Club Level Up modal is nearly identical to the Character one. Clone the existing `LevelUpModal` hierarchy in Unity (same layout, same images, same button styles, same stat row structure). Only change what's different: swap the 4 character stats for the 5 club stats (Power, Accuracy, Lie Res, Loft fixed, Durability), remove the character-specific fields, and rebind data to ClubManager instead of CharacterManager.
-- Mirror `LevelUpModalController.cs` code as closely as possible — same patterns, same code style, same color constants, same animation approach.
-- The AutoWire script should clone/duplicate the existing Roster LevelUpModal hierarchy and rewire it, similar to how `ClubCompareRightPanelBuilder` clones the roster compare panel.
-- Loft row: display-only, no barPending, no pending label, no plus button
-- Per-stat SP cap = 20 (flat, NOT rarity-based)
+- Read the full spec in `Docs/SPEC_ClubPhaseE2_RepairModal.md` before starting
+- **Repair uses Repair Kits, NOT RP** — completely separate from the Level Up modal's RP cost
+- The modal is simpler than Level Up — no SP allocation rows, no level preview. Just: pick kit → see durability preview → confirm
+- RepairKitManager is standalone for now; will integrate with Items system later
+- Repair button on ClubDetailPanel/ClubCompareController should be grayed out when: club at full durability OR no kits owned
+- Toast system doesn't exist yet — use `Debug.Log` + tag with `// TODO: Toast` for later
+- The AutoWire should build a simpler hierarchy than the LevelUp modal
 - Push to GitHub after completing
 
 ---
@@ -174,3 +156,5 @@ CLUB_MODAL_MAX,MAX,MAX
 ✅ DONE: 2026-03-25 — Club Compare Phase D: ClubCompareController, builder, auto-wire, stat differences
 ✅ DONE: 2026-03-24 — Project cleanup: GOLFIN menu reorganized, Art/References folders renamed PascalCase, 5 editor scripts archived
 ✅ DONE: 2026-03-25 — Phase E1 Club Level Up Modal: PlayerClubData SP fields, ClubManager.SetLevel/RefreshStatValues, ClubLevelUpModalController, ClubDetailPanel/ClubCompareController wired, ClubLevelUpModalAutoWire, localization keys. Pending: Unity hierarchy clone + wire run.
+✅ SPEC READY: 2026-03-26 — Phase E2 Repair Modal spec written (SPEC_ClubPhaseE2_RepairModal.md)
+✅ DONE: 2026-03-26 — Phase E2 code complete: RepairKitManager, ClubManager.RepairClub/OnClubRepaired, ClubRepairModalController, ClubDetailPanel/ClubCompareController updated, ClubRepairModalAutoWire, RepairKitManagerSetup, 9 localization keys. Pending: Unity hierarchy build + wire run.
