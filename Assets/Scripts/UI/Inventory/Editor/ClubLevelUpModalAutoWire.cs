@@ -85,26 +85,31 @@ namespace Golfin.Inventory.Editor
 
             // ── Allocatable Stat Rows ────────────────────────────────────────
             WireAllocatableStatRow(so, root, "ModalPanel/SPSection/StatRow_Power",
+                "powerStatLabel",
                 "powerBar", "powerBarPending",
                 "powerValueCurrent", "powerValueMax", "powerPending", "powerPlusButton",
                 ref wired, ref failed);
 
             WireAllocatableStatRow(so, root, "ModalPanel/SPSection/StatRow_Accuracy",
+                "accuracyStatLabel",
                 "accuracyBar", "accuracyBarPending",
                 "accuracyValueCurrent", "accuracyValueMax", "accuracyPending", "accuracyPlusButton",
                 ref wired, ref failed);
 
             WireAllocatableStatRow(so, root, "ModalPanel/SPSection/StatRow_LieRes",
+                "lieResStatLabel",
                 "lieResBar", "lieResBarPending",
                 "lieResValueCurrent", "lieResValueMax", "lieResPending", "lieResPlusButton",
                 ref wired, ref failed);
 
             // ── Fixed Stat Row — Loft (no barPending / pending label / plusButton) ──
             WireFixedStatRow(so, root, "ModalPanel/SPSection/StatRow_Loft",
+                "loftStatLabel",
                 "loftBar", "loftValueCurrent", "loftValueMax",
                 ref wired, ref failed);
 
             WireAllocatableStatRow(so, root, "ModalPanel/SPSection/StatRow_Durability",
+                "durabilityStatLabel",
                 "durabilityBar", "durabilityBarPending",
                 "durabilityValueCurrent", "durabilityValueMax", "durabilityPending", "durabilityPlusButton",
                 ref wired, ref failed);
@@ -139,11 +144,13 @@ namespace Golfin.Inventory.Editor
         // ── Stat row helpers ─────────────────────────────────────────────────
 
         private static void WireAllocatableStatRow(SerializedObject so, Transform root, string rowPath,
+            string statLabelField,
             string barField, string barPendingField,
             string valueCurrentField, string valueMaxField,
             string pendingField, string plusButtonField,
             ref int wired, ref int failed)
         {
+            wired += WireTMP(so,    statLabelField,    root, $"{rowPath}/StatName",           ref failed);
             wired += WireImage(so,  barField,          root, $"{rowPath}/StatBar/Bar",         ref failed);
             wired += WireImage(so,  barPendingField,   root, $"{rowPath}/StatBar/BarPending",  ref failed);
             wired += WireTMP(so,    valueCurrentField, root, $"{rowPath}/StatValueCurrent",    ref failed);
@@ -153,9 +160,11 @@ namespace Golfin.Inventory.Editor
         }
 
         private static void WireFixedStatRow(SerializedObject so, Transform root, string rowPath,
+            string statLabelField,
             string barField, string valueCurrentField, string valueMaxField,
             ref int wired, ref int failed)
         {
+            wired += WireTMP(so,   statLabelField,    root, $"{rowPath}/StatName",         ref failed);
             wired += WireImage(so, barField,          root, $"{rowPath}/StatBar/Bar",       ref failed);
             wired += WireTMP(so,   valueCurrentField, root, $"{rowPath}/StatValueCurrent",  ref failed);
             wired += WireTMP(so,   valueMaxField,     root, $"{rowPath}/StatValueMax",      ref failed);

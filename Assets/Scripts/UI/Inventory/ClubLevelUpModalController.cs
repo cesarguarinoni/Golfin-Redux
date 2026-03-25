@@ -42,6 +42,7 @@ namespace Golfin.Inventory
 
         // ── Stat Rows (allocatable) ──────────────────────────────────────────
         [Header("Stat Row — Power")]
+        [SerializeField] private TextMeshProUGUI powerStatLabel       = null!;
         [SerializeField] private Image           powerBar             = null!;
         [SerializeField] private Image           powerBarPending      = null!;
         [SerializeField] private TextMeshProUGUI powerValueCurrent    = null!;
@@ -50,6 +51,7 @@ namespace Golfin.Inventory
         [SerializeField] private Button          powerPlusButton      = null!;
 
         [Header("Stat Row — Accuracy")]
+        [SerializeField] private TextMeshProUGUI accuracyStatLabel       = null!;
         [SerializeField] private Image           accuracyBar             = null!;
         [SerializeField] private Image           accuracyBarPending      = null!;
         [SerializeField] private TextMeshProUGUI accuracyValueCurrent    = null!;
@@ -58,6 +60,7 @@ namespace Golfin.Inventory
         [SerializeField] private Button          accuracyPlusButton      = null!;
 
         [Header("Stat Row — Lie Resistance")]
+        [SerializeField] private TextMeshProUGUI lieResStatLabel       = null!;
         [SerializeField] private Image           lieResBar             = null!;
         [SerializeField] private Image           lieResBarPending      = null!;
         [SerializeField] private TextMeshProUGUI lieResValueCurrent    = null!;
@@ -67,11 +70,13 @@ namespace Golfin.Inventory
 
         // ── Stat Row — Loft (fixed, no + button) ────────────────────────────
         [Header("Stat Row — Loft (fixed)")]
+        [SerializeField] private TextMeshProUGUI loftStatLabel    = null!;
         [SerializeField] private Image           loftBar          = null!;
         [SerializeField] private TextMeshProUGUI loftValueCurrent = null!;
         [SerializeField] private TextMeshProUGUI loftValueMax     = null!;
 
         [Header("Stat Row — Durability")]
+        [SerializeField] private TextMeshProUGUI durabilityStatLabel       = null!;
         [SerializeField] private Image           durabilityBar             = null!;
         [SerializeField] private Image           durabilityBarPending      = null!;
         [SerializeField] private TextMeshProUGUI durabilityValueCurrent    = null!;
@@ -185,6 +190,7 @@ namespace Golfin.Inventory
 
         private void RefreshLocalizedText()
         {
+            // Header / info labels
             if (nextLevelLabel     != null) nextLevelLabel.text     = LocalizationManager.Get("CLUB_MODAL_NEXT_LEVEL");
             if (costLabel          != null) costLabel.text          = LocalizationManager.Get("CLUB_MODAL_COST");
             if (rewardLabel        != null) rewardLabel.text        = LocalizationManager.Get("CLUB_MODAL_REWARD");
@@ -193,6 +199,13 @@ namespace Golfin.Inventory
             if (resetButtonLabel   != null) resetButtonLabel.text   = LocalizationManager.Get("CLUB_MODAL_RESET");
             if (cancelButtonLabel  != null) cancelButtonLabel.text  = LocalizationManager.Get("CLUB_MODAL_CANCEL");
             if (confirmButtonLabel != null) confirmButtonLabel.text = LocalizationManager.Get("CLUB_MODAL_CONFIRM");
+
+            // Stat name labels
+            if (powerStatLabel      != null) powerStatLabel.text      = LocalizationManager.Get("CLUB_STAT_POWER");
+            if (accuracyStatLabel   != null) accuracyStatLabel.text   = LocalizationManager.Get("CLUB_STAT_ACCURACY");
+            if (lieResStatLabel     != null) lieResStatLabel.text     = LocalizationManager.Get("CLUB_STAT_LIE_RES");
+            if (loftStatLabel       != null) loftStatLabel.text       = LocalizationManager.Get("CLUB_STAT_LOFT_FIXED");
+            if (durabilityStatLabel != null) durabilityStatLabel.text = LocalizationManager.Get("CLUB_STAT_DURABILITY");
 
             if (!string.IsNullOrEmpty(clubId))
                 RefreshDisplay();
