@@ -48,22 +48,18 @@ namespace Golfin.Inventory.Editor
         [MenuItem("GOLFIN/Wire/Club Level Up Modal")]
         public static void Wire()
         {
-            // ── Find ClubLevelUpModal ────────────────────────────────────────
-            var modalGO = GameObject.Find("ClubLevelUpModal");
-            if (modalGO == null)
+            // ── Find ClubLevelUpModal (including inactive) ───────────────────
+            // GameObject.Find() misses inactive objects — use FindObjectOfType instead.
+            var controller = Object.FindObjectOfType<ClubLevelUpModalController>(includeInactive: true);
+            if (controller == null)
             {
-                Debug.LogError("[ClubLevelUpAutoWire] 'ClubLevelUpModal' not found in scene. " +
+                Debug.LogError("[ClubLevelUpAutoWire] ClubLevelUpModalController not found in scene. " +
                                "Clone the LevelUpModal hierarchy, rename to 'ClubLevelUpModal', " +
                                "and attach ClubLevelUpModalController.");
                 return;
             }
 
-            var controller = modalGO.GetComponent<ClubLevelUpModalController>();
-            if (controller == null)
-            {
-                Debug.LogError("[ClubLevelUpAutoWire] ClubLevelUpModalController not found on 'ClubLevelUpModal'.");
-                return;
-            }
+            var modalGO = controller.gameObject;
 
             var so   = new SerializedObject(controller);
             var root = modalGO.transform;

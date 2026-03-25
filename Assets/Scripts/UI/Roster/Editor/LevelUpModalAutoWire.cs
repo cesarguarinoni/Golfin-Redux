@@ -20,20 +20,16 @@ namespace Golfin.Roster.Editor
         [MenuItem("GOLFIN/Wire/Roster Level Up Modal")]
         public static void Wire()
         {
-            // ── Find LevelUpModal ────────────────────────────────────────────
-            var modalGO = GameObject.Find("LevelUpModal");
-            if (modalGO == null)
+            // ── Find LevelUpModal (including inactive) ───────────────────────
+            // GameObject.Find() misses inactive objects — use FindObjectOfType instead.
+            var controller = Object.FindObjectOfType<LevelUpModalController>(includeInactive: true);
+            if (controller == null)
             {
-                Debug.LogError("[LevelUpAutoWire] LevelUpModal not found in scene. Run GOLFIN > Build Level Up Modal first.");
+                Debug.LogError("[LevelUpAutoWire] LevelUpModalController not found in scene. Run GOLFIN > Build Level Up Modal first.");
                 return;
             }
 
-            var controller = modalGO.GetComponent<LevelUpModalController>();
-            if (controller == null)
-            {
-                Debug.LogError("[LevelUpAutoWire] LevelUpModalController component not found on LevelUpModal.");
-                return;
-            }
+            var modalGO = controller.gameObject;
 
             var so   = new SerializedObject(controller);
             var root = modalGO.transform;
