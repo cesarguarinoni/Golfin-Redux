@@ -2,7 +2,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections;
 using Golfin.Roster;       // CharacterLevelUpDatabase, RarityHelper
 using Golfin.UI.Modals;
 
@@ -105,9 +104,6 @@ namespace Golfin.Inventory
         [SerializeField] private Color spDepletedColor  = new Color(0.753f, 0.251f, 0f, 1f);     // #C04000
         [SerializeField] private Color levelTextColor   = new Color(0.153f, 0.459f, 0.867f, 1f); // #2775DD
 
-        // ── Anchor reposition ────────────────────────────────────────────────
-        private Vector3? _savedModalLocalPos;
-
         // ── Preview State ────────────────────────────────────────────────────
         private string clubId            = "";
         private int    previewLevel;
@@ -157,22 +153,12 @@ namespace Golfin.Inventory
 
         /// <summary>
         /// Opens the modal for the given club.
-        /// Pass anchorPanel to centre the modal over a specific panel (e.g. RightPanel).
+        /// anchorPanel parameter kept for API compatibility with callers — not used for positioning.
+        /// Modal position is set in the editor (ModalPanel RectTransform).
         /// </summary>
         public void Open(string clubId, RectTransform? anchorPanel = null)
         {
             this.clubId = clubId;
-
-            // Reposition modalPanel over anchorPanel without reparenting
-            if (anchorPanel != null && modalPanel != null)
-            {
-                Vector3 anchorWorldCentre = anchorPanel.TransformPoint(anchorPanel.rect.center);
-                Vector3 targetLocal       = transform.InverseTransformPoint(anchorWorldCentre);
-                targetLocal.z = 0f;
-
-                _savedModalLocalPos                = modalPanel.transform.localPosition;
-                modalPanel.transform.localPosition = targetLocal;
-            }
 
             var playerClub = ClubManager.Instance == null ? null : ClubManager.Instance.GetClubData(clubId);
             if (playerClub == null) return;
@@ -409,24 +395,6 @@ namespace Golfin.Inventory
             pendingLieRes     = 0;
             pendingDurability = 0;
             RefreshDisplay();
-        }
-
-        /// <summary>Starts position restore coroutine on hide.</summary>
-        protected override void OnHide()
-        {
-            if (!_savedModalLocalPos.HasValue) return;
-            StartCoroutine(RestorePositionAfterFade());
-        }
-
-        private IEnumerator RestorePositionAfterFade()
-        {
-            while (modalPanel != null && modalPanel.activeSelf)
-                yield return null;
-
-            if (modalPanel != null && _savedModalLocalPos.HasValue)
-                modalPanel.transform.localPosition = _savedModalLocalPos.Value;
-
-            _savedModalLocalPos = null;
         }
 
         private void OnCancelClicked()
