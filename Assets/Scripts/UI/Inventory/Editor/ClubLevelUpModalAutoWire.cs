@@ -166,7 +166,7 @@ namespace Golfin.Inventory.Editor
         private static void WireDetailPanelReference(ClubLevelUpModalController modal,
             GameObject modalGO, ref int wired, ref int failed)
         {
-            var detailPanel = Object.FindObjectOfType<ClubDetailPanel>();
+            var detailPanel = Object.FindObjectOfType<ClubDetailPanel>(includeInactive: true);
             if (detailPanel == null)
             {
                 Debug.LogWarning("[ClubLevelUpAutoWire] ClubDetailPanel not found. Wire 'levelUpModal' manually.");
@@ -213,7 +213,7 @@ namespace Golfin.Inventory.Editor
         private static void WireCompareControllerReference(ClubLevelUpModalController modal,
             ref int wired, ref int failed)
         {
-            var compareController = Object.FindObjectOfType<ClubCompareController>();
+            var compareController = Object.FindObjectOfType<ClubCompareController>(includeInactive: true);
             if (compareController == null)
             {
                 Debug.LogWarning("[ClubLevelUpAutoWire] ClubCompareController not found. Wire 'levelUpModal' manually.");
