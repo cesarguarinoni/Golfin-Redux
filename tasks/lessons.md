@@ -259,3 +259,21 @@ var go = controller?.gameObject;
 **Mistake:** Copied anchor-repositioning logic (world→local coord math) from `LevelUpModalController` into `ClubLevelUpModalController`. The character modal lives at the Canvas root so the math works. The club modal lives inside `InventoryScreen/ContentArea`, which has its own transform offsets — the math lands in the wrong spot and overwrites the correct inspector position every `Open()` call.
 
 **Rule:** If a modal is parented inside a screen hierarchy (not at Canvas root), remove all runtime repositioning code. Set position in the editor; it will hold at runtime.
+
+## Editor Scripts — Always Search Including Inactive Objects
+
+**Mistake (repeated):** Used `GameObject.Find("DetailPanel")` and `Object.FindObjectOfType<T>()` in editor scripts. Both silently return null for inactive GameObjects, which is the normal state for screens and modals in this project.
+
+**Rules:**
+- For finding by name: use `Resources.FindObjectsOfTypeAll<GameObject>()` filtered by `go.name == "X" && go.scene.isLoaded`
+- For finding by type: use `Object.FindObjectOfType<T>(true)` (the `true` = includeInactive)
+
+**Pattern:**
+```csharp
+// By name (finds inactive):
+foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+    if (go.name == "DetailPanel" && go.scene.isLoaded) return go.transform;
+
+// By type (finds inactive):
+var modal = Object.FindObjectOfType<LevelUpModalController>(true);
+```
