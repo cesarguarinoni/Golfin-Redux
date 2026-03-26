@@ -126,7 +126,9 @@ public static class BagSelectionModalAutoWire
         SetAnchored(fullBadge, new Vector2(0f, 0.5f), new Vector2(1f, 0.75f));
         var fullBadgeImg = GetOrAdd<Image>(fullBadge);
         fullBadgeImg.color = new Color(0.8f, 0.2f, 0.2f, 0.9f);
-        var fullBadgeTMP = GetOrAdd<TextMeshProUGUI>(fullBadge);
+        var fullBadgeText = GetOrCreate(fullBadge.transform, "Text");
+        SetFullStretch(fullBadgeText);
+        var fullBadgeTMP = GetOrAdd<TextMeshProUGUI>(fullBadgeText);
         fullBadgeTMP.text = "FULL"; fullBadgeTMP.fontSize = 14;
         fullBadgeTMP.alignment = TextAlignmentOptions.Center; fullBadgeTMP.color = Color.white;
         fullBadge.SetActive(false);
