@@ -123,3 +123,10 @@ BAG_LOCKED,Locked,ロック
 BAG_FULL_TOAST,Bag {0} is full ({1}/{1}). Remove a club first.,バッグ{0}は満杯です（{1}/{1}）。先にクラブを外してください。
 BAG_EQUIPPED_TOAST,{0} equipped to Bag {1}.,{0}をバッグ{1}に装備しました。
 BAG_UNEQUIPPED_TOAST,{0} removed from Bag {1}.,{0}をバッグ{1}から外しました。
+BALL_OWNED,OWNED,所持
+BALL_INFO,INFO,情報
+BALL_POWER,POWER,パワー
+BALL_REBOUND,REBOUND,リバウンド
+BALL_WIND_RESISTANCE,WIND RESISTANCE,耐風
+BALL_ROLL,ROLL,ロール
+BALL_SPIN,SPIN,スピン
