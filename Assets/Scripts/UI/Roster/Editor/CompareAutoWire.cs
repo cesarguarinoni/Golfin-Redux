@@ -92,6 +92,16 @@ namespace Golfin.Roster.Editor
                 wired += WireGOFrom(so, "compareStaminaRow",
                     infoRoot, "CharacterStatsPanel/CharacterStats4", ref failed);
 
+                // Stat diff labels
+                wired += WireTMPFrom(so, "strengthDiffLabel",
+                    infoRoot, "CharacterStatsPanel/CharacterStats1/DiffLabel", ref failed);
+                wired += WireTMPFrom(so, "clubControlDiffLabel",
+                    infoRoot, "CharacterStatsPanel/CharacterStats2/DiffLabel", ref failed);
+                wired += WireTMPFrom(so, "recoveryDiffLabel",
+                    infoRoot, "CharacterStatsPanel/CharacterStats3/DiffLabel", ref failed);
+                wired += WireTMPFrom(so, "staminaDiffLabel",
+                    infoRoot, "CharacterStatsPanel/CharacterStats4/DiffLabel", ref failed);
+
                 // Buttons — Level Up and Boost reuse the cloned ButtonsPanel buttons
                 wired += WireButtonFrom(so, "compareLevelUpButton",
                     infoRoot, "ButtonsPanel/LevelUpButton", ref failed);

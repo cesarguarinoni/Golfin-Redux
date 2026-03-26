@@ -59,6 +59,12 @@ namespace Golfin.Roster
         [SerializeField] private Button          compareRightSelectButton      = null!;
         [SerializeField] private TextMeshProUGUI compareRightSelectButtonText  = null!;
 
+        [Header("Right Column — Stat Diffs")]
+        [SerializeField] private TextMeshProUGUI? strengthDiffLabel;
+        [SerializeField] private TextMeshProUGUI? clubControlDiffLabel;
+        [SerializeField] private TextMeshProUGUI? recoveryDiffLabel;
+        [SerializeField] private TextMeshProUGUI? staminaDiffLabel;
+
         [Header("Status Icons — Right Column")]
         [SerializeField] private GameObject? compareSelectedIcon;
         [SerializeField] private GameObject? compareLevelUpReadyIcon; // IconLevelUpBig — wire in Inspector
@@ -86,6 +92,9 @@ namespace Golfin.Roster
         private Vector2 _compareLeftPos;   // computed from layout at enter time
 
         private const float LOW_STAMINA_THRESHOLD = 0.25f;
+
+        private static readonly Color DiffPositiveColor = new(0.2f, 0.8f, 0.18f, 1f); // green
+        private static readonly Color DiffNegativeColor = new(0.9f, 0.2f, 0.2f,  1f); // red
 
         // ── Public ─────────────────────────────────────────────────────────────
         public bool IsCompareMode => _isCompareMode;
@@ -148,6 +157,8 @@ namespace Golfin.Roster
             _isCompareMode     = true;
             _leftCharacterId   = characterId;
             _rightCharacterId  = null;
+
+            HideAllDiffs();
 
             // Cache normal position (layout is live by now)
             _normalRightPos = rightPanel.anchoredPosition;
@@ -266,6 +277,20 @@ namespace Golfin.Roster
             UpdateCompareStatRow(compareStaminaRow,
                 playerData.currentStamina,
                 RarityStatCaps.GetStatCap(rarity, "Stamina"));
+
+            // Stat differences (left vs right)
+            var leftData = CharacterManager.Instance.GetCharacterData(_leftCharacterId);
+            if (leftData != null)
+            {
+                ShowStatDifference(strengthDiffLabel,    leftData.currentStrength,    playerData.currentStrength);
+                ShowStatDifference(clubControlDiffLabel, leftData.currentClubControl, playerData.currentClubControl);
+                ShowStatDifference(recoveryDiffLabel,    leftData.currentRecovery,    playerData.currentRecovery);
+                ShowStatDifference(staminaDiffLabel,     leftData.currentStamina,     playerData.currentStamina);
+            }
+            else
+            {
+                HideAllDiffs();
+            }
 
             // Bio
             if (compareBioText != null)
@@ -462,6 +487,39 @@ namespace Golfin.Roster
             SafeSetActive(closeCompareButton?.gameObject, false);
             SafeSetActive(swapButton?.gameObject,         false);
             SafeSetActive(selectButton?.gameObject,       true);
+        }
+
+        // ── Stat Diff Helpers ──────────────────────────────────────────────────
+
+        private void ShowStatDifference(TextMeshProUGUI? diffLabel, int leftValue, int rightValue)
+        {
+            if (diffLabel == null) return;
+
+            int diff = rightValue - leftValue;
+            if (diff > 0)
+            {
+                diffLabel.text  = $"+{diff}";
+                diffLabel.color = DiffPositiveColor;
+                diffLabel.gameObject.SetActive(true);
+            }
+            else if (diff < 0)
+            {
+                diffLabel.text  = $"{diff}";
+                diffLabel.color = DiffNegativeColor;
+                diffLabel.gameObject.SetActive(true);
+            }
+            else
+            {
+                diffLabel.gameObject.SetActive(false);
+            }
+        }
+
+        private void HideAllDiffs()
+        {
+            SafeSetActive(strengthDiffLabel?.gameObject,    false);
+            SafeSetActive(clubControlDiffLabel?.gameObject, false);
+            SafeSetActive(recoveryDiffLabel?.gameObject,    false);
+            SafeSetActive(staminaDiffLabel?.gameObject,     false);
         }
 
         // ── Animation Coroutines ───────────────────────────────────────────────
