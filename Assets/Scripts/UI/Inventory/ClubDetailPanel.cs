@@ -269,7 +269,7 @@ namespace Golfin.Inventory
                 if (isEquipped)
                 {
                     var bagData = BagDatabaseCSV.Instance?.GetBagBySlot(playerClub.equippedBagSlot);
-                    string bagName = bagData?.name ?? $"Bag {playerClub.equippedBagSlot}";
+                    string bagName = (bagData?.name ?? $"Bag {playerClub.equippedBagSlot}").ToUpper();
                     bagLabel.text = $"{LocalizationManager.Get("CLUB_IN_BAG")} {bagName}";
                 }
                 else
