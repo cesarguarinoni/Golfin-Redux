@@ -382,9 +382,16 @@ namespace Golfin.Inventory
 
             if (compareBagLabel != null)
             {
-                compareBagLabel.text  = isEquipped
-                    ? $"{LocalizationManager.Get("CLUB_IN_BAG")} {rightPlayerClub.equippedBagSlot}"
-                    : " ";
+                if (isEquipped)
+                {
+                    var bagData = BagDatabaseCSV.Instance?.GetBagBySlot(rightPlayerClub.equippedBagSlot);
+                    string bagName = bagData?.name ?? $"Bag {rightPlayerClub.equippedBagSlot}";
+                    compareBagLabel.text = $"{LocalizationManager.Get("CLUB_IN_BAG")} {bagName}";
+                }
+                else
+                {
+                    compareBagLabel.text = " ";
+                }
                 compareBagLabel.color = new Color(compareBagLabel.color.r, compareBagLabel.color.g, compareBagLabel.color.b,
                     isEquipped ? 1f : 0f);
             }

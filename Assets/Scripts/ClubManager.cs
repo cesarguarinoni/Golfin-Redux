@@ -128,7 +128,11 @@ public class ClubManager : MonoBehaviour
             .ToList();
     }
 
-    /// <summary>Returns the club currently equipped to a given bag slot, or null.</summary>
+    /// <summary>
+    /// Returns one club equipped to a given bag slot, or null.
+    /// Obsolete: bags hold multiple clubs — use BagManager.GetClubsInBag() instead.
+    /// </summary>
+    [System.Obsolete("Bags hold multiple clubs. Use BagManager.GetClubsInBag(bagSlot) instead.")]
     public PlayerClubData? GetEquippedClub(int bagSlot = 1)
         => ownedClubs.Values.FirstOrDefault(c => c.equippedBagSlot == bagSlot);
 
@@ -143,7 +147,7 @@ public class ClubManager : MonoBehaviour
 
     /// <summary>
     /// Equips a club to the specified bag slot.
-    /// Any club already in that slot is unequipped first.
+    /// Bags hold up to 8 clubs — capacity is enforced by BagManager.AssignClubToBag().
     /// Pass bagSlot = 0 to unequip.
     /// </summary>
     public void EquipClub(string clubId, int bagSlot = 1)
@@ -152,17 +156,6 @@ public class ClubManager : MonoBehaviour
         {
             Debug.LogWarning($"[ClubManager] EquipClub: club '{clubId}' not found.");
             return;
-        }
-
-        // Unequip any club currently in this slot
-        if (bagSlot > 0)
-        {
-            var current = GetEquippedClub(bagSlot);
-            if (current != null && current.clubId != clubId)
-            {
-                current.equippedBagSlot = 0;
-                OnClubEquipped?.Invoke(current.clubId);
-            }
         }
 
         club.equippedBagSlot = bagSlot;
