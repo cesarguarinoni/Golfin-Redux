@@ -103,6 +103,48 @@ PROPOSAL — needs review and playtesting before implementation. Open questions 
 
 ---
 
+## 2026-03-26 — Club Repair Simplified (No Modal)
+
+### What Changed
+**Replaced the Confluence-designed Repair Kit Selection screen + modal flow with instant auto-repair.**
+
+### Old Design (Confluence GDD)
+- Player taps REPAIR → opens a Repair Kit Selection screen
+- Player browses available kits, selects one, taps USE
+- Separate screen with sorting, filtering, kit info display
+- Explicit kit choice required every time
+
+### New Design (Redux)
+- Player taps REPAIR → system **automatically picks the best kit** and uses it instantly
+- No modal, no selection screen, no extra taps
+- Auto-selection logic:
+  - ≤50% durability missing → prefer **Standard Kit** (50% restore)
+  - >50% durability missing → prefer **Premium Kit** (100% restore)
+  - Falls back to whichever kit type is available
+- Button grayed out when: club at full durability OR no kits owned
+- Toast notification shows result (when toast system is built)
+
+### Why
+- Reduces friction — repair is maintenance, not a fun decision
+- Players don't need to think about which kit to use; the system optimizes for them
+- Original design had a full selection screen because it was part of a larger Items inventory system; since Items screen isn't built yet, this is simpler and may stay permanent
+
+### Kit Types Unchanged
+| Kit | Effect | How to Obtain |
+|---|---|---|
+| Standard Repair Kit 🛠️ | Restores 50% of maxDurability | Mission rewards |
+| Premium Repair Kit ⭐ | Restores 100% of maxDurability | Mission rewards |
+
+### Files
+| File | Change |
+|---|---|
+| `Assets/Scripts/RepairKitManager.cs` | New singleton — manages kit inventory + auto-selection |
+| `Assets/Scripts/ClubManager.cs` | Added `OnClubRepaired` event + `RepairClub()` method |
+| `Assets/Scripts/UI/Inventory/ClubDetailPanel.cs` | Repair button calls auto-use directly |
+| `Assets/Scripts/UI/Inventory/ClubCompareController.cs` | Same auto-use wiring |
+
+---
+
 ## Design Reference Files
 
 | File | Description |

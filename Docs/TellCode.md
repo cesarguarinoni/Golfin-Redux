@@ -6,143 +6,185 @@
 
 ---
 
-## Current Task (2026-03-26) — Phase E2: Club Repair Modal
+## Current Task (2026-03-26) — Phase E3: Bag Selection Modal
 
-Full spec: `Docs/SPEC_ClubPhaseE2_RepairModal.md`
-Pattern to follow: `Assets/Scripts/UI/Inventory/ClubLevelUpModalController.cs` (Phase E1)
+Full spec: `Docs/SPEC_ClubPhaseE3_BagSelection.md`
+
+When the player taps **EQUIP** on a club, a modal appears with a 5×2 grid of bag slots.
+1 bag unlocked at start, 9 locked. Each bag holds max 8 clubs.
+If a bag is full → toast error, block. CANCEL closes without changes.
 
 Do these sub-tasks in order.
 
 ---
 
-### Sub-task 1: Create RepairKitManager Singleton
+### Sub-task 1: Create BagManager Singleton
 
-**New file:** `Assets/Scripts/RepairKitManager.cs`
-**No namespace** (matches ClubManager, RewardPointsManager pattern)
+**New file:** `Assets/Scripts/BagManager.cs`
+**No namespace** (matches ClubManager, RepairKitManager pattern)
 
-Standalone singleton (DontDestroyOnLoad) that manages repair kit inventory:
-- `standardKitCount` (starting: 5 for testing), `premiumKitCount` (starting: 2)
-- Constants: `STANDARD_RESTORE_PERCENT = 0.5f`, `PREMIUM_RESTORE_PERCENT = 1.0f`, `MAX_STACK = 99`
-- Methods: `GetStandardCount()`, `GetPremiumCount()`, `HasAnyKit()`
-- `UseStandardKit(currentDurability, maxDurability)` → returns new durability, decrements count
-- `UsePremiumKit(maxDurability)` → returns maxDurability, decrements count
-- `AddKits(int standard, int premium)` — for mission rewards later
-- Event: `OnInventoryChanged`
+Standalone singleton (DontDestroyOnLoad):
+- Constants: `MAX_BAGS = 10`, `MAX_CLUBS_PER_BAG = 8`
+- `unlockedBags = 1` (private field)
+- Event: `public event System.Action<int>? OnBagChanged` (arg = bagSlot)
 
-See full spec for implementation details.
+Query API:
+- `IsBagUnlocked(int bagSlot)` — 1-based, returns `bagSlot <= unlockedBags`
+- `GetClubCountInBag(int bagSlot)` — queries ClubManager for clubs with `equippedBagSlot == bagSlot`
+- `IsBagFull(int bagSlot)` — `GetClubCountInBag(bagSlot) >= MAX_CLUBS_PER_BAG`
+- `GetClubsInBag(int bagSlot)` — returns `List<PlayerClubData>` from ClubManager
+- `GetUnlockedBagCount()` — returns `unlockedBags`
 
----
+Mutate API:
+- **`AssignClubToBag(string clubId, int bagSlot)`** → returns bool
+  1. Check `IsBagUnlocked` → false → return false
+  2. Check `IsBagFull` → true → return false
+  3. Call `ClubManager.Instance.EquipClub(clubId, bagSlot)`
+  4. Fire `OnBagChanged?.Invoke(bagSlot)`
+  5. Return true
+- `RemoveClubFromBag(string clubId)` — sets `equippedBagSlot = 0` via `ClubManager.Instance.EquipClub(clubId, 0)`
+- `UnlockNextBag()` — increments `unlockedBags` (capped at MAX_BAGS), for future use
 
-### Sub-task 2: Add OnClubRepaired Event + RepairClub Method
-
-**File:** `Assets/Scripts/ClubManager.cs`
-
-Add event:
-```csharp
-/// <summary>Fired after a club is repaired. Arg = clubId.</summary>
-public event System.Action<string>? OnClubRepaired;
-```
-
-Add real repair method:
-```csharp
-public void RepairClub(string clubId, int newDurability)
-{
-    if (!ownedClubs.TryGetValue(clubId, out var club)) { /* warn + return */ }
-    int old = club.currentDurability;
-    club.currentDurability = Mathf.Clamp(newDurability, 0, club.maxDurability);
-    Debug.Log($"[ClubManager] '{clubId}' repaired: {old} → {club.currentDurability}/{club.maxDurability}");
-    OnClubRepaired?.Invoke(clubId);
-}
-```
-
-Mark the old `Repair(string clubId)` stub as `[System.Obsolete("Use RepairClub(clubId, newDurability)")]`.
+**Important:** No separate data store. `PlayerClubData.equippedBagSlot` is the source of truth.
 
 ---
 
-### Sub-task 3: Create ClubRepairModalController
+### Sub-task 2: Create BagSelectionModalController
 
-**New file:** `Assets/Scripts/UI/Inventory/ClubRepairModalController.cs`
+**New file:** `Assets/Scripts/UI/Inventory/BagSelectionModalController.cs`
 **Namespace:** `Golfin.Inventory`
 **Extends:** `Golfin.UI.Modals.ModalController`
 
-Simpler than Level Up modal — no SP allocation, no level preview. Just:
-1. Show club name, rarity, level, durability bar
-2. Kit selection: Standard (×count) or Premium (×count) — toggle buttons
-3. Preview bar shows durability after repair (green overlay)
-4. CONFIRM: consume kit via RepairKitManager, update club via ClubManager.RepairClub
-5. CANCEL: close modal, no changes
+SerializeFields:
+```csharp
+[Header("Bag Grid")]
+[SerializeField] private Transform bagGridParent = null!;
+[SerializeField] private GameObject bagSlotPrefab = null!;
 
-**Key fields:**
-- Club info: `clubNameText`, `rarityLabel`, `levelText`
-- Durability: `durabilityBar` (blue), `durabilityBarPreview` (green), `durabilityValueText`, `durabilityChangeText`
-- Kit buttons: `standardKitButton`, `standardKitCountText`, `standardKitSelected`, `premiumKitButton`, `premiumKitCountText`, `premiumKitSelected`
-- Messages: `noKitsMessage`
-- Actions: `cancelButton`, `confirmButton`
-
-**Confirm enabled when:** kit is selected AND club is not at full durability.
-
-See full spec for complete field list, logic, and color values.
-
----
-
-### Sub-task 4: Wire into Existing Panels
-
-**ClubDetailPanel.cs:**
-- Add `[SerializeField] private ClubRepairModalController? repairModal;`
-- Update `OnRepairClicked()` → `repairModal?.Open(currentClubId, rightPanel);`
-- Subscribe to `ClubManager.Instance.OnClubRepaired` in `OnEnable/OnDisable` → refresh panel
-- In `UpdatePanel()`, set repair button interactable: `needsRepair && hasKits`
-
-**ClubCompareController.cs:**
-- Add `[SerializeField] private ClubRepairModalController? repairModal;`
-- Update `OnRightRepairClicked()` → `repairModal?.Open(_rightClubId, ...);`
-- Subscribe to `OnClubRepaired` in `OnEnable/OnDisable` → refresh compare
-
----
-
-### Sub-task 5: Editor Auto-Wire + Hierarchy Builder
-
-**New file:** `Assets/Scripts/UI/Inventory/Editor/ClubRepairModalAutoWire.cs`
-**MenuItem:** `GOLFIN/Wire/Club Repair Modal`
-
-Build the repair modal hierarchy (simpler than Level Up — just club info + durability bar + kit selector + action buttons). Wire all SerializeFields. Also wire `repairModal` references on ClubDetailPanel and ClubCompareController.
-
----
-
-### Sub-task 6: RepairKitManager Setup Script
-
-**New file:** `Assets/Scripts/Editor/RepairKitManagerSetup.cs`
-**MenuItem:** `GOLFIN/Setup/Repair Kit Manager`
-
-Finds or creates RepairKitManager on the Managers GameObject.
-
----
-
-### Sub-task 7: Localization
-
-Add these keys to the localization CSV:
+[Header("Cancel")]
+[SerializeField] private Button cancelButton = null!;
 ```
-CLUB_REPAIR_TITLE,Repair,修理
-CLUB_REPAIR_DURABILITY,Durability,耐久性
-CLUB_REPAIR_STANDARD_KIT,Standard Kit,標準修理キット
-CLUB_REPAIR_PREMIUM_KIT,Premium Kit,プレミアム修理キット
-CLUB_REPAIR_NO_KITS,You don't own any Repair Kits.,修理キットを持っていません。
-CLUB_REPAIR_FULL_DURABILITY,This club is at full durability.,このクラブは最大耐久性です。
-CLUB_REPAIR_CANCEL,Cancel,キャンセル
-CLUB_REPAIR_CONFIRM,Repair,修理する
-CLUB_REPAIR_TOAST,{0} was repaired. Durability {1} → {2}.,{0}が修理されました。耐久性 {1} → {2}。
+
+Public API:
+```csharp
+public void Open(string clubId)
+```
+- Stores `currentClubId`
+- Destroys old slot instances, instantiates 10 new ones from prefab
+- For each slot (1–10): configure appearance based on locked/unlocked/full/equipped state
+- Calls `Show()` (inherited from ModalController)
+
+Each slot instance children (found by name):
+- `BagImage` (Image), `BagLabel` (TMP), `CountLabel` (TMP), `FullBadge` (GameObject), `EquippedIcon` (GameObject)
+
+Slot states:
+- **Locked:** dim alpha, label = "LOCKED", no click
+- **Unlocked, not full:** label = "BAG {n}", count = "{x}/8", clickable
+- **Unlocked, full:** same + FullBadge visible, clickable (shows toast)
+- **Club already in this bag:** EquippedIcon visible
+
+`OnSlotClicked(int bagSlot)`:
+1. If full → `Debug.Log($"Bag {bagSlot} is full (8/8).")` // TODO: Toast → return
+2. `BagManager.Instance.AssignClubToBag(currentClubId, bagSlot)`
+3. `Hide()` (closes modal, ClubDetailPanel refreshes via OnClubEquipped event)
+
+Wire `cancelButton` → `Hide()` in `Awake` or `Start`.
+
+---
+
+### Sub-task 3: Wire Equip Buttons to Bag Selection Modal
+
+**File:** `Assets/Scripts/UI/Inventory/ClubDetailPanel.cs`
+
+Add SerializeField:
+```csharp
+[Header("Bag Selection")]
+[SerializeField] private BagSelectionModalController? bagSelectionModal;
+```
+
+Replace `OnEquipClicked()`:
+```csharp
+private void OnEquipClicked()
+{
+    if (string.IsNullOrEmpty(currentClubId) || ClubManager.Instance == null) return;
+    var playerClub = ClubManager.Instance.GetClubData(currentClubId);
+    if (playerClub == null) return;
+
+    if (playerClub.IsEquipped)
+    {
+        // Unequip — remove from bag
+        BagManager.Instance?.RemoveClubFromBag(currentClubId);
+    }
+    else
+    {
+        // Open bag selection modal
+        if (bagSelectionModal != null)
+            bagSelectionModal.Open(currentClubId);
+        else
+            Debug.Log("[ClubDetailPanel] EQUIP clicked — wire BagSelectionModal.");
+    }
+}
+```
+
+**File:** `Assets/Scripts/UI/Inventory/ClubCompareController.cs`
+
+Same pattern — add `bagSelectionModal` SerializeField.
+Update the right-panel equip button to open `bagSelectionModal.Open(rightClubId)` when not equipped,
+or `BagManager.Instance.RemoveClubFromBag(rightClubId)` when already equipped.
+
+---
+
+### Sub-task 4: BagSelectionModalAutoWire (Editor Script)
+
+**New file:** `Assets/Scripts/Editor/BagSelectionModalAutoWire.cs`
+**MenuItem:** `GOLFIN/Wire/Bag Selection Modal`
+
+Creates modal hierarchy under ClubsScreen Canvas:
+1. BagSelectionModal GameObject with BagSelectionModalController
+2. Backdrop (dark overlay Image)
+3. ModalPanel with CanvasGroup
+4. Title TMP ("CHOOSE A BAG")
+5. BagGrid (GridLayoutGroup, 5 cols, cell ~130×130, spacing 8)
+6. BagSlotPrefab template with children: BagImage, BagLabel, CountLabel, FullBadge, EquippedIcon
+7. CancelButton
+8. Wires all SerializeFields on BagSelectionModalController
+9. Wires `bagSelectionModal` on ClubDetailPanel and ClubCompareController
+
+---
+
+### Sub-task 5: BagManagerSetup (Editor Script)
+
+**New file:** `Assets/Scripts/Editor/BagManagerSetup.cs`
+**MenuItem:** `GOLFIN/Setup/Bag Manager`
+
+Finds or creates BagManager on the Managers GameObject.
+
+---
+
+### Sub-task 6: Localization
+
+Add to the localization CSV:
+```
+BAG_CHOOSE_TITLE,Choose a Bag,バッグを選択
+BAG_LOCKED,Locked,ロック
+BAG_FULL_TOAST,Bag {0} is full ({1}/{1}). Remove a club first.,バッグ{0}は満杯です（{1}/{1}）。先にクラブを外してください。
+BAG_EQUIPPED_TOAST,{0} equipped to Bag {1}.,{0}をバッグ{1}に装備しました。
+BAG_UNEQUIPPED_TOAST,{0} removed from Bag {1}.,{0}をバッグ{1}から外しました。
 ```
 
 ---
 
 ### Reminders
-- Read the full spec in `Docs/SPEC_ClubPhaseE2_RepairModal.md` before starting
-- **Repair uses Repair Kits, NOT RP** — completely separate from the Level Up modal's RP cost
-- The modal is simpler than Level Up — no SP allocation rows, no level preview. Just: pick kit → see durability preview → confirm
-- RepairKitManager is standalone for now; will integrate with Items system later
-- Repair button on ClubDetailPanel/ClubCompareController should be grayed out when: club at full durability OR no kits owned
-- Toast system doesn't exist yet — use `Debug.Log` + tag with `// TODO: Toast` for later
-- The AutoWire should build a simpler hierarchy than the LevelUp modal
+- Read the full spec in `Docs/SPEC_ClubPhaseE3_BagSelection.md` before starting
+- `PlayerClubData.equippedBagSlot` already exists — BagManager is a convenience layer on top
+- `ClubManager.EquipClub(clubId, bagSlot)` already handles unequipping previous club in that slot
+- BagManager adds the "is bag full?" and "is bag unlocked?" guards
+- Toast system doesn't exist yet — `Debug.Log` + `// TODO: Toast`
+- Grid = 5×2 = 10 slots; only slot 1 unlocked at start
+- Modal does NOT show bag contents — just slot availability
+- **Bag thumbnails:** `Resources/Bags/Thumbnail/{BagName}.png` — each bag has its own portrait; only `Mireo.png` exists now, use as fallback for missing
+- **Rarity letter badge** at top-left of bag portrait — same as club/character portraits (mockup is missing it but must be there for consistency)
+- Bag portrait sits on a **rarity-colored background** like club portraits
 - Push to GitHub after completing
 
 ---
@@ -155,6 +197,5 @@ CLUB_REPAIR_TOAST,{0} was repaired. Durability {1} → {2}.,{0}が修理され�
 ✅ DONE: 2026-03-23 — TextGradients, visual fixes, filter dividers, arrows, viewport, fade, level text
 ✅ DONE: 2026-03-25 — Club Compare Phase D: ClubCompareController, builder, auto-wire, stat differences
 ✅ DONE: 2026-03-24 — Project cleanup: GOLFIN menu reorganized, Art/References folders renamed PascalCase, 5 editor scripts archived
-✅ DONE: 2026-03-25 — Phase E1 Club Level Up Modal: PlayerClubData SP fields, ClubManager.SetLevel/RefreshStatValues, ClubLevelUpModalController, ClubDetailPanel/ClubCompareController wired, ClubLevelUpModalAutoWire, localization keys. Pending: Unity hierarchy clone + wire run.
-✅ SPEC READY: 2026-03-26 — Phase E2 Repair Modal spec written (SPEC_ClubPhaseE2_RepairModal.md)
-✅ DONE: 2026-03-26 — Phase E2 code complete: RepairKitManager, ClubManager.RepairClub/OnClubRepaired, ClubRepairModalController, ClubDetailPanel/ClubCompareController updated, ClubRepairModalAutoWire, RepairKitManagerSetup, 9 localization keys. Pending: Unity hierarchy build + wire run.
+✅ DONE: 2026-03-25 — Phase E1 Club Level Up Modal: PlayerClubData SP fields, ClubManager.SetLevel/RefreshStatValues, ClubLevelUpModalController, ClubDetailPanel/ClubCompareController wired, ClubLevelUpModalAutoWire, localization keys.
+✅ DONE: 2026-03-26 — Phase E2 Club Repair One-Tap: RepairKitManager singleton, ClubManager.RepairClub/OnClubRepaired, ClubDetailPanel+ClubCompareController one-tap repair, localization keys, cleanup old modal files.

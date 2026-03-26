@@ -25,12 +25,21 @@ Updated by both Claude (Architect) and Claude Code.
 ### Phase E — Modals
 #### E1 — Club Level Up Modal ✅ COMPLETE
 
-#### E2 — Repair Modal (spec pending)
-- [ ] Repair costs Repair Kits (from Items), not RP
-- [ ] Add OnClubRepaired event
+#### E2 — Club Repair One-Tap ✅ COMPLETE
+- [x] RepairKitManager singleton (UseBestKit auto-select: Standard ≤50%, Premium >50%)
+- [x] ClubManager: OnClubRepaired event + RepairClub() method
+- [x] ClubDetailPanel + ClubCompareController: one-tap repair (no modal)
+- [x] Localization keys
+- [x] RepairKitManager setup script
+- [x] Cleanup: delete old modal files
 
-#### E3 — Bag Selection Modal (spec pending)
-- [ ] MAX_CLUBS_PER_BAG = 8
+#### E3 — Bag Selection Modal (spec ready → `SPEC_ClubPhaseE3_BagSelection.md`)
+- [ ] BagManager singleton (MAX_BAGS=10, MAX_CLUBS_PER_BAG=8, 1 unlocked at start)
+- [ ] BagSelectionModalController (5×2 grid, locked/unlocked/full states)
+- [ ] Wire Equip buttons on ClubDetailPanel + ClubCompareController → open modal
+- [ ] BagSelectionModalAutoWire editor script
+- [ ] BagManagerSetup editor script
+- [ ] Localization keys
 
 ---
 

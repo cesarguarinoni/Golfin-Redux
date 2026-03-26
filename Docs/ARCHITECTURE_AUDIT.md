@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-03-23 14:17. Do not edit manually.
+> Auto-generated 2026-03-25 09:51. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -9,10 +9,15 @@ Assets/Scripts/Audio/AudioManager.cs
 Assets/Scripts/CharacterManager.cs
 Assets/Scripts/ClubManager.cs
 Assets/Scripts/Debug/RewardPointsDebugPanel.cs
+Assets/Scripts/Editor/Archive/ClubDetailPanelBuilder.cs
+Assets/Scripts/Editor/Archive/ClubInventoryPatcher.cs
 Assets/Scripts/Editor/Archive/CompareRightPanelBuilder.cs
+Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs
+Assets/Scripts/Editor/Archive/FilterBarPatcher.cs
 Assets/Scripts/Editor/Archive/FixBarImageTypes.cs
 Assets/Scripts/Editor/Archive/LevelUpModalBuilder.cs
 Assets/Scripts/Editor/Archive/LevelUpModalPatcher.cs
+Assets/Scripts/Editor/Archive/MenuItemRemover.cs
 Assets/Scripts/Editor/Archive/RosterCarouselBuilder.cs
 Assets/Scripts/Editor/Archive/RosterMenuCleanup.cs
 Assets/Scripts/Editor/Archive/RosterPhase1TestRunner.cs
@@ -22,24 +27,23 @@ Assets/Scripts/Editor/Archive/RosterSystemSetupTool.cs
 Assets/Scripts/Editor/ScreenshotTool.cs
 Assets/Scripts/UI/AboutSubmenu.cs
 Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs
-Assets/Scripts/UI/Editor/MenuItemRemover.cs
-Assets/Scripts/UI/ExampleAutoWireScreen.cs
 Assets/Scripts/UI/FadeController.cs
 Assets/Scripts/UI/HoleData.cs
 Assets/Scripts/UI/HoleDatabase.cs
 Assets/Scripts/UI/HoleDatabaseLoader.cs
 Assets/Scripts/UI/HomeScreenController.cs
 Assets/Scripts/UI/Inventory/ClubCarouselController.cs
+Assets/Scripts/UI/Inventory/ClubCompareController.cs
 Assets/Scripts/UI/Inventory/ClubData.cs
 Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs
 Assets/Scripts/UI/Inventory/ClubDetailPanel.cs
 Assets/Scripts/UI/Inventory/ClubFilterBar.cs
 Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs
+Assets/Scripts/UI/Inventory/Editor/ClubCompareAutoWire.cs
+Assets/Scripts/UI/Inventory/Editor/ClubCompareRightPanelBuilder.cs
 Assets/Scripts/UI/Inventory/Editor/ClubDetailPanelAutoWire.cs
-Assets/Scripts/UI/Inventory/Editor/ClubDetailPanelBuilder.cs
 Assets/Scripts/UI/Inventory/Editor/ClubManagerSetup.cs
 Assets/Scripts/UI/Inventory/Editor/ClubThumbnailCardBuilder.cs
-Assets/Scripts/UI/Inventory/Editor/FilterBarPatcher.cs
 Assets/Scripts/UI/Inventory/Editor/InventoryScreenBuilder.cs
 Assets/Scripts/UI/Inventory/InventoryScreenController.cs
 Assets/Scripts/UI/LanguageSubmenu.cs
@@ -81,6 +85,8 @@ Assets/Scripts/UI/SoundSettingsSubmenu.cs
 Assets/Scripts/UI/SplashScreenController.cs
 Assets/Scripts/UI/SwipeDetector.cs
 Assets/Scripts/UI/UserProfileSubmenu.cs
+Assets/Scripts/Utilities/RuntimeActiveStateManager.cs
+Assets/Scripts/Utilities/TextGradients.cs
 Assets/Scripts/Utilities/UIAutoWire.cs
 ```
 
@@ -113,9 +119,9 @@ Assets/Data/README_HOLES.md.meta
 | ClubManager | Assets/Scripts/ClubManager.cs | Yes |  |
 | AudioManager | Assets/Scripts/Audio/AudioManager.cs | Yes |  |
 | RewardPointsDebugPanel | Assets/Scripts/Debug/RewardPointsDebugPanel.cs | Yes |  |
+| ExampleAutoWireScreen | Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs |  |  |
+| ExampleFullyAutoWired | Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs |  |  |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs |  |  |
-| ExampleAutoWireScreen | Assets/Scripts/UI/ExampleAutoWireScreen.cs |  |  |
-| ExampleFullyAutoWired | Assets/Scripts/UI/ExampleAutoWireScreen.cs |  |  |
 | FadeController | Assets/Scripts/UI/FadeController.cs | Yes |  |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | Yes |  |
 | HomeScreenController | Assets/Scripts/UI/HomeScreenController.cs | Yes |  |
@@ -135,6 +141,7 @@ Assets/Data/README_HOLES.md.meta
 | SwipeDetector | Assets/Scripts/UI/SwipeDetector.cs |  | IBeginDragHandler, IEndDragHandler |
 | UserProfileSubmenu | Assets/Scripts/UI/UserProfileSubmenu.cs | Yes |  |
 | ClubCarouselController | Assets/Scripts/UI/Inventory/ClubCarouselController.cs | Yes |  |
+| ClubCompareController | Assets/Scripts/UI/Inventory/ClubCompareController.cs | Yes |  |
 | ClubDatabaseCSV | Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs | Yes |  |
 | ClubDetailPanel | Assets/Scripts/UI/Inventory/ClubDetailPanel.cs | Yes |  |
 | ClubFilterBar | Assets/Scripts/UI/Inventory/ClubFilterBar.cs |  |  |
@@ -150,6 +157,7 @@ Assets/Data/README_HOLES.md.meta
 | CompareController | Assets/Scripts/UI/Roster/UI/CompareController.cs | Yes |  |
 | RosterScreenController | Assets/Scripts/UI/Roster/UI/RosterScreenController.cs | Yes |  |
 | StatBar | Assets/Scripts/UI/Roster/UI/StatBar.cs |  |  |
+| RuntimeActiveStateManager | Assets/Scripts/Utilities/RuntimeActiveStateManager.cs |  |  |
 
 ## Singletons
 
@@ -203,11 +211,12 @@ Assets/Data/README_HOLES.md.meta
 | UserProfileSubmenu | Assets/Scripts/UI/UserProfileSubmenu.cs | 11 |
 | LocalizationEditorHelper | Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs | 1 |
 | ClubCarouselController | Assets/Scripts/UI/Inventory/ClubCarouselController.cs | 9 |
+| ClubCompareController | Assets/Scripts/UI/Inventory/ClubCompareController.cs | 48 |
 | ClubDatabaseCSV | Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs | 1 |
-| ClubDetailPanel | Assets/Scripts/UI/Inventory/ClubDetailPanel.cs | 32 |
-| ClubFilterBar | Assets/Scripts/UI/Inventory/ClubFilterBar.cs | 5 |
+| ClubDetailPanel | Assets/Scripts/UI/Inventory/ClubDetailPanel.cs | 33 |
+| ClubFilterBar | Assets/Scripts/UI/Inventory/ClubFilterBar.cs | 1 |
 | ClubThumbnailCard | Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs | 10 |
-| InventoryScreenController | Assets/Scripts/UI/Inventory/InventoryScreenController.cs | 6 |
+| InventoryScreenController | Assets/Scripts/UI/Inventory/InventoryScreenController.cs | 4 |
 | ModalController | Assets/Scripts/UI/Modals/ModalController.cs | 2 |
 | CharacterLevelUpDatabase | Assets/Scripts/UI/Roster/Data/CharacterLevelUpDatabase.cs | 1 |
 | PlayerCharacterData | Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs | 14 |
@@ -220,6 +229,7 @@ Assets/Data/README_HOLES.md.meta
 | LevelUpModalController | Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs | 48 |
 | RosterScreenController | Assets/Scripts/UI/Roster/UI/RosterScreenController.cs | 2 |
 | StatBar | Assets/Scripts/UI/Roster/UI/StatBar.cs | 7 |
+| RuntimeActiveStateManager | Assets/Scripts/Utilities/RuntimeActiveStateManager.cs | 2 |
 
 ## CSV Data Files
 
