@@ -42,9 +42,11 @@ public static class BagSelectionModalAutoWire
         }
         else
         {
-            // Parent: find the Canvas, place modal as direct child
-            var canvas = Object.FindObjectOfType<Canvas>(includeInactive: true);
-            Transform parent = canvas != null ? canvas.transform : null!;
+            // Parent: find InventoryScreen, place modal as direct child
+            var inventoryScreen = GameObject.Find("InventoryScreen");
+            Transform parent = inventoryScreen != null
+                ? inventoryScreen.transform
+                : (Object.FindObjectOfType<Canvas>(includeInactive: true)?.transform ?? null!);
 
             root = new GameObject("BagSelectionModal");
             if (parent != null) root.transform.SetParent(parent, false);
