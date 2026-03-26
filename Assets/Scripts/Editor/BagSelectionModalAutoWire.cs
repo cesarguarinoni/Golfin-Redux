@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Golfin.Inventory;
+using System.IO;
 
 /// <summary>
 /// Builds the BagSelectionModal hierarchy and wires all SerializeFields.
@@ -161,6 +162,20 @@ public static class BagSelectionModalAutoWire
         wired += SetPropComponent<Button>(so, "cancelButton", cancelBtn, ref failed);
         wired += SetProp(so, "bagGridParent", bagGrid.transform);
         wired += SetProp(so, "bagSlotPrefab", prefab);
+
+        // Wire bagSlotLockedPrefab from Assets/Prefabs/UI/Inventory/
+        const string lockedPrefabPath = "Assets/Prefabs/UI/Inventory/BagSlotLockedPrefab.prefab";
+        var lockedPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(lockedPrefabPath);
+        if (lockedPrefab != null)
+        {
+            wired += SetProp(so, "bagSlotLockedPrefab", lockedPrefab);
+            Debug.Log("[BagSelectionAutoWire] Wired bagSlotLockedPrefab.");
+        }
+        else
+        {
+            Debug.LogWarning($"[BagSelectionAutoWire] BagSlotLockedPrefab not found at '{lockedPrefabPath}'. Wire manually in Inspector.");
+            failed++;
+        }
 
         so.ApplyModifiedProperties();
         EditorUtility.SetDirty(controller);

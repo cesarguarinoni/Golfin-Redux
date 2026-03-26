@@ -11,27 +11,22 @@ using Golfin.Inventory;
 /// Attach to: Managers GameObject.
 ///
 /// Source of truth: PlayerClubData.equippedBagSlot (owned by ClubManager).
+/// Unlock state: seeded from BagDatabaseCSV.startsUnlocked at Awake.
 /// </summary>
 public class BagManager : MonoBehaviour
 {
     public static BagManager Instance { get; private set; } = null!;
 
-    public const int MAX_BAGS         = 10;
+    /// <summary>Total bags available — driven by CSV row count, fallback 10.</summary>
+    public static int MAX_BAGS
+        => BagDatabaseCSV.Instance != null ? BagDatabaseCSV.Instance.GetBagCount() : 10;
+
     public const int MAX_CLUBS_PER_BAG = 8;
 
     /// <summary>Fired when bag contents change. Arg = bagSlot that changed.</summary>
     public event System.Action<int>? OnBagChanged;
 
-    private int unlockedBags = 1;  // bag 1 unlocked at start
-
-    // Thumbnail name per slot (1-based index). Empty string → fallback to "Mireo".
-    private static readonly string[] BagThumbnailNames =
-    {
-        "",       // index 0 — unused (slots are 1-based)
-        "Mireo",  // bag 1
-        "Golfin", // bag 2
-        "", "", "", "", "", "", "", ""  // bags 3–10, fallback Mireo
-    };
+    private readonly HashSet<int> unlockedSlots = new();
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -40,6 +35,20 @@ public class BagManager : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        // Seed unlock state from CSV (BagDatabaseCSV runs at order -90, before us)
+        if (BagDatabaseCSV.Instance != null)
+        {
+            var bags = BagDatabaseCSV.Instance.GetAllBags();
+            for (int i = 0; i < bags.Count; i++)
+                if (bags[i].startsUnlocked) unlockedSlots.Add(i + 1);
+        }
+        else
+        {
+            // Fallback: unlock bag 1 if CSV not loaded yet
+            unlockedSlots.Add(1);
+            Debug.LogWarning("[BagManager] BagDatabaseCSV not ready in Awake — bag 1 unlocked as fallback.");
+        }
     }
 
     private void OnDestroy()
@@ -50,7 +59,7 @@ public class BagManager : MonoBehaviour
     // ── Query API ─────────────────────────────────────────────────────────────
 
     /// <summary>Bag slots are 1-based.</summary>
-    public bool IsBagUnlocked(int bagSlot) => bagSlot >= 1 && bagSlot <= unlockedBags;
+    public bool IsBagUnlocked(int bagSlot) => unlockedSlots.Contains(bagSlot);
 
     public int GetClubCountInBag(int bagSlot) => GetClubsInBag(bagSlot).Count;
 
@@ -65,15 +74,7 @@ public class BagManager : MonoBehaviour
         return result;
     }
 
-    public int GetUnlockedBagCount() => unlockedBags;
-
-    /// <summary>Returns the thumbnail name for a bag slot (falls back to "Mireo").</summary>
-    public static string GetBagThumbnailName(int bagSlot)
-    {
-        if (bagSlot < 1 || bagSlot >= BagThumbnailNames.Length) return "Mireo";
-        string name = BagThumbnailNames[bagSlot];
-        return string.IsNullOrEmpty(name) ? "Mireo" : name;
-    }
+    public int GetUnlockedBagCount() => unlockedSlots.Count;
 
     // ── Mutate API ────────────────────────────────────────────────────────────
 
@@ -124,11 +125,19 @@ public class BagManager : MonoBehaviour
         Debug.Log($"[BagManager] '{clubId}' removed from Bag {oldSlot}.");
     }
 
-    /// <summary>Unlocks the next bag slot (for future shop/progression).</summary>
+    /// <summary>Unlocks the next locked bag slot (for shop/progression).</summary>
     public void UnlockNextBag()
     {
-        if (unlockedBags >= MAX_BAGS) return;
-        unlockedBags++;
-        Debug.Log($"[BagManager] Bag {unlockedBags} unlocked.");
+        int maxBags = MAX_BAGS;
+        for (int slot = 1; slot <= maxBags; slot++)
+        {
+            if (!unlockedSlots.Contains(slot))
+            {
+                unlockedSlots.Add(slot);
+                Debug.Log($"[BagManager] Bag {slot} unlocked.");
+                return;
+            }
+        }
+        Debug.Log("[BagManager] All bags already unlocked.");
     }
 }

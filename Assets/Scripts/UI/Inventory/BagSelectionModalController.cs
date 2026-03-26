@@ -4,22 +4,24 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Golfin.UI.Modals;
+using Golfin.Roster;   // RarityHelper
 
 namespace Golfin.Inventory
 {
     /// <summary>
-    /// Bag Selection Modal — Phase E3.
+    /// Bag Selection Modal — Phase E3 / E3b.
     ///
-    /// Shows a 5×2 grid of bag slots when the player taps EQUIP on a club.
-    /// Player picks which bag to assign the club to.
-    /// Slot 1 is unlocked at start; slots 2–10 are locked.
-    /// Bags at capacity (8/8) block assignment and show a toast.
+    /// Shows a grid of bag slots when the player taps EQUIP on a club.
+    /// Uses production-styled prefabs by Kai — only binds data into existing children.
+    ///   bagSlotPrefab       — unlocked bag slot
+    ///   bagSlotLockedPrefab — locked bag slot (no data binding, already styled)
     /// </summary>
     public class BagSelectionModalController : ModalController
     {
         [Header("Bag Grid")]
-        [SerializeField] private Transform   bagGridParent = null!;
-        [SerializeField] private GameObject  bagSlotPrefab = null!;
+        [SerializeField] private Transform  bagGridParent       = null!;
+        [SerializeField] private GameObject bagSlotPrefab       = null!;   // unlocked bags
+        [SerializeField] private GameObject bagSlotLockedPrefab = null!;   // locked bags
 
         [Header("Cancel")]
         [SerializeField] private Button cancelButton = null!;
@@ -27,10 +29,6 @@ namespace Golfin.Inventory
         // ── State ─────────────────────────────────────────────────────────────
         private string currentClubId = "";
         private readonly List<GameObject> spawnedSlots = new();
-
-        // ── Colors ────────────────────────────────────────────────────────────
-        private static readonly Color LockedColor    = new Color(0.4f, 0.4f, 0.4f, 0.5f);
-        private static readonly Color AvailableColor = Color.white;
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -54,74 +52,85 @@ namespace Golfin.Inventory
 
         private void BuildSlots()
         {
-            // Destroy previously spawned slots
             foreach (var slot in spawnedSlots)
                 if (slot != null) Destroy(slot);
             spawnedSlots.Clear();
 
-            if (bagSlotPrefab == null || bagGridParent == null) return;
+            if (bagGridParent == null) return;
 
-            bagSlotPrefab.SetActive(false); // ensure template stays hidden
+            // Keep templates hidden
+            if (bagSlotPrefab       != null) bagSlotPrefab.SetActive(false);
+            if (bagSlotLockedPrefab != null) bagSlotLockedPrefab.SetActive(false);
+
             if (BagManager.Instance == null || ClubManager.Instance == null) return;
 
             var currentClub = ClubManager.Instance.GetClubData(currentClubId);
+            int bagCount = BagDatabaseCSV.Instance != null
+                ? BagDatabaseCSV.Instance.GetBagCount()
+                : BagManager.MAX_BAGS;
 
-            for (int i = 1; i <= BagManager.MAX_BAGS; i++)
+            for (int i = 1; i <= bagCount; i++)
             {
                 int bagSlot = i; // capture for lambda
+                bool unlocked = BagManager.Instance.IsBagUnlocked(bagSlot);
+
+                if (!unlocked)
+                {
+                    // Locked — use locked prefab, no data binding, no button
+                    if (bagSlotLockedPrefab == null) continue;
+                    var lockedGO = Instantiate(bagSlotLockedPrefab, bagGridParent);
+                    lockedGO.SetActive(true);
+                    spawnedSlots.Add(lockedGO);
+                    continue;
+                }
+
+                // Unlocked — use regular prefab, bind data
+                if (bagSlotPrefab == null) continue;
                 var slotGO = Instantiate(bagSlotPrefab, bagGridParent);
                 slotGO.SetActive(true);
                 spawnedSlots.Add(slotGO);
 
-                bool unlocked  = BagManager.Instance.IsBagUnlocked(bagSlot);
-                bool full      = unlocked && BagManager.Instance.IsBagFull(bagSlot);
-                int  count     = unlocked ? BagManager.Instance.GetClubCountInBag(bagSlot) : 0;
-                bool hasClub   = currentClub != null && currentClub.equippedBagSlot == bagSlot;
+                var bagData  = BagDatabaseCSV.Instance?.GetBagBySlot(bagSlot);
+                bool full    = BagManager.Instance.IsBagFull(bagSlot);
+                bool hasClub = currentClub != null && currentClub.equippedBagSlot == bagSlot;
 
-                // ── Child references (by name, matches AutoWire-built hierarchy) ──
-                var bagImage     = FindChild<Image>(slotGO, "BagImage");
-                var bagLabel     = FindChild<TextMeshProUGUI>(slotGO, "BagLabel");
-                var countLabel   = FindChild<TextMeshProUGUI>(slotGO, "CountLabel");
-                var fullBadge    = FindChildGO(slotGO, "FullBadge");
-                var equippedIcon = FindChildGO(slotGO, "EquippedIcon");
+                // ── BagImage ───────────────────────────────────────────────────
+                var bagImage = FindChild<Image>(slotGO, "BagImage");
+                if (bagImage != null && bagData?.thumbnailSprite != null)
+                    bagImage.sprite = bagData.thumbnailSprite;
 
-                // ── Thumbnail ──────────────────────────────────────────────────
-                if (bagImage != null)
-                {
-                    string thumbName = BagManager.GetBagThumbnailName(bagSlot);
-                    var sprite = Resources.Load<Sprite>($"Bags/Thumbnail/{thumbName}");
-                    if (sprite == null)
-                        sprite = Resources.Load<Sprite>("Bags/Thumbnail/Mireo");
-                    if (sprite != null) bagImage.sprite = sprite;
-                    bagImage.color = unlocked ? AvailableColor : LockedColor;
-                }
-
-                // ── Labels ─────────────────────────────────────────────────────
+                // ── BagLabel ───────────────────────────────────────────────────
+                var bagLabel = FindChild<TextMeshProUGUI>(slotGO, "BagLabel");
                 if (bagLabel != null)
-                    bagLabel.text = unlocked
-                        ? $"BAG {bagSlot}"
-                        : LocalizationManager.Get("BAG_LOCKED").ToUpper();
+                    bagLabel.text = bagData != null ? bagData.name.ToUpper() : $"BAG {bagSlot}";
 
-                if (countLabel != null)
+                // ── RarityBadge ────────────────────────────────────────────────
+                if (bagData != null)
                 {
-                    countLabel.gameObject.SetActive(unlocked);
-                    if (unlocked)
-                        countLabel.text = $"{count}/{BagManager.MAX_CLUBS_PER_BAG}";
+                    var rarityBadge = FindChild<Image>(slotGO, "RarityBadge");
+                    if (rarityBadge != null)
+                    {
+                        var raritySprite = Resources.Load<Sprite>($"Rarities/{bagData.rarity}");
+                        if (raritySprite != null) rarityBadge.sprite = raritySprite;
+                    }
+
+                    var rarityText = FindChild<TextMeshProUGUI>(slotGO, "RarityBadge/Text");
+                    if (rarityText != null)
+                    {
+                        rarityText.text  = RarityHelper.GetRarityLabel(bagData.rarity);
+                        rarityText.color = RarityHelper.GetRarityBadgeTextColor(bagData.rarity);
+                    }
                 }
 
-                // ── Badges ─────────────────────────────────────────────────────
-                fullBadge?.SetActive(full);
-                equippedIcon?.SetActive(hasClub);
+                // ── FullBadge / EquippedIcon ───────────────────────────────────
+                FindChildGO(slotGO, "FullBadge")?.SetActive(full);
+                FindChildGO(slotGO, "EquippedIcon")?.SetActive(hasClub);
 
                 // ── Click handler ──────────────────────────────────────────────
                 var btn = slotGO.GetComponent<Button>();
                 if (btn == null) btn = slotGO.AddComponent<Button>();
-                btn.interactable = unlocked;
-                if (unlocked)
-                {
-                    btn.onClick.RemoveAllListeners();
-                    btn.onClick.AddListener(() => OnSlotClicked(bagSlot));
-                }
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(() => OnSlotClicked(bagSlot));
             }
         }
 
@@ -133,7 +142,7 @@ namespace Golfin.Inventory
 
             if (BagManager.Instance.IsBagFull(bagSlot))
             {
-                Debug.Log($"[BagSelectionModal] Bag {bagSlot} is full ({BagManager.MAX_CLUBS_PER_BAG}/{BagManager.MAX_CLUBS_PER_BAG}). Remove a club first."); // TODO: Toast
+                Debug.Log($"[BagSelectionModal] Bag {bagSlot} is full. Remove a club first."); // TODO: Toast
                 return;
             }
 
@@ -144,15 +153,15 @@ namespace Golfin.Inventory
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        private static T? FindChild<T>(GameObject parent, string childName) where T : Component
+        private static T? FindChild<T>(GameObject parent, string path) where T : Component
         {
-            var t = parent.transform.Find(childName);
+            var t = parent.transform.Find(path);
             return t == null ? null : t.GetComponent<T>();
         }
 
-        private static GameObject? FindChildGO(GameObject parent, string childName)
+        private static GameObject? FindChildGO(GameObject parent, string path)
         {
-            var t = parent.transform.Find(childName);
+            var t = parent.transform.Find(path);
             return t == null ? null : t.gameObject;
         }
     }
