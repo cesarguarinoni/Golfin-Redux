@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -76,7 +77,7 @@ namespace Golfin.Roster.Editor
                 added++;
             }
 
-            EditorSceneManagement.EditorSceneManager.MarkSceneDirty(
+            EditorSceneManager.MarkSceneDirty(
                 UnityEngine.SceneManagement.SceneManager.GetActiveScene());
 
             Debug.Log($"[CompareRightPanelDiffBuilder] Done — {added} DiffLabel(s) added, " +
