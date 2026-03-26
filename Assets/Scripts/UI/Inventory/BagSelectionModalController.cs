@@ -81,16 +81,11 @@ namespace Golfin.Inventory
 
                 if (!unlocked)
                 {
-                    // Locked — use locked prefab, bind label from database
+                    // Locked — use locked prefab as-is, no data binding (Kai's prefab already shows "LOCKED")
                     if (bagSlotLockedPrefab == null) continue;
                     var lockedGO = Instantiate(bagSlotLockedPrefab, bagGridParent);
                     lockedGO.SetActive(true);
                     spawnedSlots.Add(lockedGO);
-
-                    var lockedData  = BagDatabaseCSV.Instance?.GetBagBySlot(bagSlot);
-                    var lockedLabel = FindChild<TextMeshProUGUI>(lockedGO, "BagLabel");
-                    if (lockedLabel != null)
-                        lockedLabel.text = lockedData != null ? lockedData.name.ToUpper() : $"BAG {bagSlot}";
                     continue;
                 }
 
