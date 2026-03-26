@@ -55,10 +55,10 @@ namespace Golfin.Roster.Editor
 
             // ── Left Column Buttons ───────────────────────────────────────────
             var buttonsRoot = root.Find("RightPanel/ButtonsPanel") ?? root.Find("RightPanel");
-            wired += WireButtonFrom(so, "compareButton",      root,        "RightPanel/CompareButton",              ref failed);
-            wired += WireButtonFrom(so, "closeCompareButton", buttonsRoot, "CloseCompareButton",                    ref failed);
-            wired += WireButtonFrom(so, "selectButton",       root,        "RightPanel/SelectButton",               ref failed);
-            wired += WireButtonFrom(so, "swapButton",         buttonsRoot, "SwapButton",                            ref failed);
+            wired += WireButtonFrom(so, "compareButton",      root, "RightPanel/CompareButton",      ref failed);
+            wired += WireButtonFrom(so, "closeCompareButton", root, "RightPanel/CloseCompareButton", ref failed);
+            wired += WireButtonFrom(so, "selectButton",       root, "RightPanel/SelectButton",       ref failed);
+            wired += WireButtonFrom(so, "swapButton",         buttonsRoot, "SwapButton",             ref failed);
 
             // ── Right Column Info (inside CompareRightPanel/CompareInfoPanel) ─
             // CompareInfoPanel is a clone of RightPanel, so paths match CharacterDetailPanel.
@@ -122,7 +122,7 @@ namespace Golfin.Roster.Editor
             }
 
             // ── Carousel ──────────────────────────────────────────────────────
-            var carousel = Object.FindObjectOfType<CarouselController>();
+            var carousel = Object.FindObjectOfType<CarouselController>(true);
             if (carousel != null)
             {
                 var prop = so.FindProperty("carousel");
@@ -131,7 +131,7 @@ namespace Golfin.Roster.Editor
             else { Debug.LogWarning("[CompareAutoWire] CarouselController not found."); failed++; }
 
             // ── Level Up Modal ─────────────────────────────────────────────────
-            var modal = Object.FindObjectOfType<LevelUpModalController>();
+            var modal = Object.FindObjectOfType<LevelUpModalController>(true);
             if (modal != null)
             {
                 var prop = so.FindProperty("levelUpModal");
