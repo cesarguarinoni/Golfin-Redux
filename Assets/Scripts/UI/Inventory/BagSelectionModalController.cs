@@ -60,6 +60,8 @@ namespace Golfin.Inventory
             spawnedSlots.Clear();
 
             if (bagSlotPrefab == null || bagGridParent == null) return;
+
+            bagSlotPrefab.SetActive(false); // ensure template stays hidden
             if (BagManager.Instance == null || ClubManager.Instance == null) return;
 
             var currentClub = ClubManager.Instance.GetClubData(currentClubId);
