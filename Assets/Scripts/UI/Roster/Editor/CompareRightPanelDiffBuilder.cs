@@ -89,10 +89,13 @@ namespace Golfin.Roster.Editor
 
         private static Transform? FindDetailPanel()
         {
-            var direct = GameObject.Find("DetailPanel");
-            if (direct != null) return direct.transform;
-            var canvas = GameObject.Find("Canvas");
-            return canvas?.transform.Find("ScreensRoot/RosterScreen/CarouselSection/DetailPanel");
+            // GameObject.Find misses inactive objects — search all scene GameObjects instead
+            foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+            {
+                if (go.name == "DetailPanel" && go.scene.isLoaded)
+                    return go.transform;
+            }
+            return null;
         }
     }
 }
