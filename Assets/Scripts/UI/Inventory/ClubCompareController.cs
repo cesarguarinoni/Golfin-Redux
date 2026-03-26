@@ -104,7 +104,10 @@ namespace Golfin.Inventory
 
         // ── Modals ─────────────────────────────────────────────────────────────
         [Header("Modals")]
-        [SerializeField] private ClubLevelUpModalController? levelUpModal;
+        [SerializeField] private ClubLevelUpModalController?  levelUpModal;
+
+        [Header("Bag Selection")]
+        [SerializeField] private BagSelectionModalController? bagSelectionModal;
 
         // ── Animation ─────────────────────────────────────────────────────────
         [Header("Animation")]
@@ -491,14 +494,16 @@ namespace Golfin.Inventory
 
             if (!club.IsEquipped)
             {
-                ClubManager.Instance.EquipClub(_rightClubId, 1);
-                Debug.Log($"[ClubCompareController] Equipped (right column) {_rightClubId}");
-                CleanupAndExit();
-                GetComponent<ClubDetailPanel>()?.ShowClub(_rightClubId);
+                // Open bag selection modal
+                if (bagSelectionModal != null)
+                    bagSelectionModal.Open(_rightClubId);
+                else
+                    Debug.Log($"[ClubCompareController] EQUIP clicked for '{_rightClubId}' — wire BagSelectionModal.");
             }
             else
             {
-                // Already equipped — just exit compare and show it
+                // Already equipped → remove from bag, exit compare
+                BagManager.Instance?.RemoveClubFromBag(_rightClubId);
                 CleanupAndExit();
                 GetComponent<ClubDetailPanel>()?.ShowClub(_rightClubId);
             }

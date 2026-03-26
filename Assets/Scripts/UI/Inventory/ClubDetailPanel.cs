@@ -95,7 +95,10 @@ namespace Golfin.Inventory
         // ── Modals ─────────────────────────────────────────────────────────────
 
         [Header("Modals")]
-        [SerializeField] private ClubLevelUpModalController? levelUpModal;
+        [SerializeField] private ClubLevelUpModalController?  levelUpModal;
+
+        [Header("Bag Selection")]
+        [SerializeField] private BagSelectionModalController? bagSelectionModal;
 
         // ── State ──────────────────────────────────────────────────────────────
 
@@ -353,8 +356,19 @@ namespace Golfin.Inventory
             var playerClub = ClubManager.Instance.GetClubData(currentClubId);
             if (playerClub == null) return;
 
-            // Toggle equip: if already equipped, unequip (bagSlot 0); else equip to Bag 1
-            ClubManager.Instance.EquipClub(currentClubId, playerClub.IsEquipped ? 0 : 1);
+            if (playerClub.IsEquipped)
+            {
+                // Already equipped → remove from bag
+                BagManager.Instance?.RemoveClubFromBag(currentClubId);
+            }
+            else
+            {
+                // Not equipped → open bag selection modal
+                if (bagSelectionModal != null)
+                    bagSelectionModal.Open(currentClubId);
+                else
+                    Debug.Log("[ClubDetailPanel] EQUIP clicked — wire BagSelectionModal.");
+            }
             // Panel refreshes via OnClubEquippedChanged event
         }
     }

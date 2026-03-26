@@ -118,3 +118,8 @@ CLUB_MODAL_MAX,MAX,MAX
 CLUB_REPAIR_NO_KITS,You don't own any Repair Kits.,修理キットを持っていません。
 CLUB_REPAIR_FULL,This club is at full durability.,このクラブは最大耐久性です。
 CLUB_REPAIR_TOAST,{0} was repaired. Durability {1} → {2}.,{0}が修理されました。耐久性 {1} → {2}。
+BAG_CHOOSE_TITLE,Choose a Bag,バッグを選択
+BAG_LOCKED,Locked,ロック
+BAG_FULL_TOAST,Bag {0} is full ({1}/{1}). Remove a club first.,バッグ{0}は満杯です（{1}/{1}）。先にクラブを外してください。
+BAG_EQUIPPED_TOAST,{0} equipped to Bag {1}.,{0}をバッグ{1}に装備しました。
+BAG_UNEQUIPPED_TOAST,{0} removed from Bag {1}.,{0}をバッグ{1}から外しました。
