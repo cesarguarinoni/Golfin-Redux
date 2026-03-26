@@ -58,9 +58,14 @@ namespace Golfin.Inventory
 
             if (bagGridParent == null) return;
 
-            // Keep templates hidden
+            // Keep prefab assets hidden (no-op if they're project assets, not scene objects)
             if (bagSlotPrefab       != null) bagSlotPrefab.SetActive(false);
             if (bagSlotLockedPrefab != null) bagSlotLockedPrefab.SetActive(false);
+
+            // Hide any scene-object templates sitting inside the grid
+            foreach (Transform child in bagGridParent)
+                if (child.name == "BagSlotPrefab" || child.name == "BagSlotLockedPrefab")
+                    child.gameObject.SetActive(false);
 
             if (BagManager.Instance == null || ClubManager.Instance == null) return;
 
@@ -76,11 +81,16 @@ namespace Golfin.Inventory
 
                 if (!unlocked)
                 {
-                    // Locked — use locked prefab, no data binding, no button
+                    // Locked — use locked prefab, bind label from database
                     if (bagSlotLockedPrefab == null) continue;
                     var lockedGO = Instantiate(bagSlotLockedPrefab, bagGridParent);
                     lockedGO.SetActive(true);
                     spawnedSlots.Add(lockedGO);
+
+                    var lockedData  = BagDatabaseCSV.Instance?.GetBagBySlot(bagSlot);
+                    var lockedLabel = FindChild<TextMeshProUGUI>(lockedGO, "BagLabel");
+                    if (lockedLabel != null)
+                        lockedLabel.text = lockedData != null ? lockedData.name.ToUpper() : $"BAG {bagSlot}";
                     continue;
                 }
 
