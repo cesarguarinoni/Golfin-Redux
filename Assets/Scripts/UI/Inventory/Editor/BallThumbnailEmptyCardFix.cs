@@ -34,12 +34,24 @@ namespace Golfin.Inventory.Editor
 
             try
             {
-                // ── 1. Bake LayoutElement with correct preferred size ──────────
+                // ── 1. Set RectTransform sizeDelta so HLG has a concrete size ────
+                // The HLG reads the child's RectTransform.rect when LayoutElement
+                // values are 0/-1 (unset). Root was (0,0) — fix it first.
+                var rt = prefabRoot.GetComponent<RectTransform>();
+                rt.anchorMin        = new Vector2(0f, 0f);
+                rt.anchorMax        = new Vector2(0f, 0f);
+                rt.pivot            = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta        = new Vector2(135f, 165f);
+                rt.anchoredPosition = Vector2.zero;
+                EditorUtility.SetDirty(rt);
+                Debug.Log("[EmptyCardFix] ✓ RectTransform sizeDelta set to 135×165.");
+
+                // ── 2. Bake LayoutElement so sizes survive layout rebuilds ──────
                 var le = prefabRoot.GetComponent<LayoutElement>();
                 if (le == null)
                     le = prefabRoot.AddComponent<LayoutElement>();
 
-                le.ignoreLayout   = false;
+                le.ignoreLayout    = false;
                 le.preferredWidth  = 135f;
                 le.preferredHeight = 165f;
                 le.minWidth        = 135f;
@@ -47,7 +59,7 @@ namespace Golfin.Inventory.Editor
                 EditorUtility.SetDirty(le);
                 Debug.Log("[EmptyCardFix] ✓ LayoutElement baked — 135×165.");
 
-                // ── 2. Make button non-interactable ───────────────────────────
+                // ── 3. Make button non-interactable ───────────────────────────
                 var btn = prefabRoot.GetComponent<Button>();
                 if (btn != null)
                 {
@@ -56,7 +68,7 @@ namespace Golfin.Inventory.Editor
                     Debug.Log("[EmptyCardFix] ✓ Button.interactable = false.");
                 }
 
-                // ── 3. Disable RaycastTarget on all Images ────────────────────
+                // ── 4. Disable RaycastTarget on all Images ────────────────────
                 foreach (var img in prefabRoot.GetComponentsInChildren<Image>(true))
                 {
                     img.raycastTarget = false;
