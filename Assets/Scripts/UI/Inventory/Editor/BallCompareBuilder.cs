@@ -8,345 +8,314 @@ using TMPro;
 namespace Golfin.Inventory.Editor
 {
     /// <summary>
-    /// Builds the Ball Compare hierarchy inside BallDetailPanel and wires
-    /// BallCompareController + BallDetailPanel.compareController.
+    /// Builds the Compare Mode hierarchy inside BallDetailPanel, then wires
+    /// BallCompareController and BallDetailPanel.compareController.
     ///
-    /// Creates:
-    ///   BallDetailPanel
-    ///     VerticalDivider     (2px line, inactive)
-    ///     CompareRightPanel   (full-stretch, inactive, CanvasGroup for fade)
-    ///       ComparePlaceholder
-    ///         ComparePlaceholderText
-    ///       CompareInfoPanel
-    ///         CompareNameText
-    ///         CompareQuantityText
-    ///         [5 stat rows — mirroring left panel structure]
-    ///         ButtonsRow
-    ///           CloseCompareButton
-    ///           CompareRightCompareButton
+    /// Strategy (mirrors ClubCompareRightPanelBuilder):
+    ///   1. Clone RightPanel → CompareInfoPanel (inherits all fonts/colors/layout)
+    ///   2. Wrap in CompareRightPanel (right-half overlay)
+    ///   3. Add ComparePlaceholder overlay
+    ///   4. Add DiffLabel TMP to each stat row
+    ///   5. Add CloseCompareButton to RightPanel
+    ///   6. Add VerticalDivider
+    ///   7. Add + wire BallCompareController
     ///
     /// Run: GOLFIN/Setup/Ball Compare
+    /// Safe to re-run.
     /// </summary>
     public static class BallCompareBuilder
     {
+        private const float BUTTON_H  = 36f;
+        private const float PANEL_PAD = 8f;
+
         [MenuItem("GOLFIN/Setup/Ball Compare")]
         public static void Run()
         {
             // ── Find BallDetailPanel ──────────────────────────────────────────
-            BallDetailPanel? detailPanel = null;
+            BallDetailPanel? detailScript = null;
             foreach (var obj in Resources.FindObjectsOfTypeAll<BallDetailPanel>())
             {
-                if (obj.gameObject.scene.isLoaded) { detailPanel = obj; break; }
+                if (obj.gameObject.scene.isLoaded) { detailScript = obj; break; }
             }
 
-            if (detailPanel == null)
+            if (detailScript == null)
             {
                 EditorUtility.DisplayDialog("Ball Compare Builder",
-                    "BallDetailPanel not found in scene. Build BallDetailPanel first.", "OK");
+                    "BallDetailPanel not found in scene.", "OK");
                 return;
             }
 
-            var root = detailPanel.transform;
+            var root = detailScript.transform;
 
-            // ── Guard: already built? ─────────────────────────────────────────
-            if (root.Find("CompareRightPanel") != null)
-            {
-                bool rebuild = EditorUtility.DisplayDialog("Ball Compare Builder",
-                    "CompareRightPanel already exists. Rebuild?", "Rebuild", "Cancel");
-                if (!rebuild) return;
-                Object.DestroyImmediate(root.Find("CompareRightPanel")!.gameObject);
-                var existingDiv = root.Find("VerticalDivider");
-                if (existingDiv != null) Object.DestroyImmediate(existingDiv.gameObject);
-            }
+            // ── Remove stale compare elements ─────────────────────────────────
+            DestroyIfExists(root, "CompareRightPanel");
+            DestroyIfExists(root, "VerticalDivider");
+            DestroyIfExists(root.Find("RightPanel"), "CloseCompareButton");
 
-            // ── Find RightPanel to read its font/size for matching style ──────
+            // ── Build hierarchy ───────────────────────────────────────────────
+            BuildVerticalDivider(root);
+            var crp         = BuildCompareRightPanel(root);  // returns CompareRightPanel
+            var cipGO       = crp.Find("CompareInfoPanel")?.gameObject;
+            var placeholder = crp.Find("ComparePlaceholder")?.gameObject;
+
+            // ── Add CloseCompareButton to RightPanel ──────────────────────────
             var rightPanelT = root.Find("RightPanel");
-            var sampleTMP   = rightPanelT != null
-                ? rightPanelT.GetComponentInChildren<TextMeshProUGUI>()
-                : null;
-            TMP_FontAsset? font = sampleTMP != null ? sampleTMP.font : null;
+            var closeBtnGO  = BuildButton(rightPanelT!, "CloseCompareButton", "CLOSE COMPARE");
+            var compareBtnT = rightPanelT?.Find("CompareButton");
+            if (compareBtnT != null)
+                closeBtnGO.transform.SetSiblingIndex(compareBtnT.GetSiblingIndex() + 1);
+            closeBtnGO.SetActive(false);
 
-            // ── VerticalDivider ───────────────────────────────────────────────
-            var divGO = new GameObject("VerticalDivider", typeof(RectTransform), typeof(Image));
-            divGO.transform.SetParent(root, false);
-            {
-                var rt = divGO.GetComponent<RectTransform>();
-                rt.anchorMin        = new Vector2(0.5f, 0.1f);
-                rt.anchorMax        = new Vector2(0.5f, 0.9f);
-                rt.sizeDelta        = new Vector2(2f, 0f);
-                rt.anchoredPosition = Vector2.zero;
-
-                var img = divGO.GetComponent<Image>();
-                img.color         = new Color(1f, 1f, 1f, 0.2f);
-                img.raycastTarget = false;
-            }
-            divGO.SetActive(false);
-
-            // ── CompareRightPanel ─────────────────────────────────────────────
-            var crpGO = new GameObject("CompareRightPanel", typeof(RectTransform));
-            crpGO.transform.SetParent(root, false);
-            {
-                var rt = crpGO.GetComponent<RectTransform>();
-                rt.anchorMin = Vector2.zero;
-                rt.anchorMax = Vector2.one;
-                rt.sizeDelta = Vector2.zero;
-                rt.anchoredPosition = Vector2.zero;
-
-                var cg = crpGO.AddComponent<CanvasGroup>();
-                cg.alpha = 0f;
-            }
-            crpGO.SetActive(false);
-            var crpT = crpGO.transform;
-
-            // ── ComparePlaceholder ────────────────────────────────────────────
-            var placeholderGO = MakeStretchChild("ComparePlaceholder", crpT);
-            placeholderGO.SetActive(true);
-            var placeholderText = MakeTMP("ComparePlaceholderText", placeholderGO.transform, font,
-                "Select a ball to compare", 18f, TextAnchor.MiddleCenter);
-            placeholderText.alignment = TextAlignmentOptions.Center;
-            placeholderText.color     = new Color(1f, 1f, 1f, 0.5f);
-
-            // ── CompareInfoPanel ──────────────────────────────────────────────
-            var cipGO = MakeStretchChild("CompareInfoPanel", crpT);
-            cipGO.SetActive(false);
-            var cipT = cipGO.transform;
-
-            // Add a VerticalLayoutGroup so children stack naturally
-            var vlg = cipGO.AddComponent<VerticalLayoutGroup>();
-            vlg.childForceExpandWidth  = true;
-            vlg.childForceExpandHeight = false;
-            vlg.spacing    = 4f;
-            vlg.padding    = new RectOffset(8, 8, 12, 12);
-            vlg.childAlignment = TextAnchor.UpperCenter;
-
-            // Name
-            var compareNameText = MakeTMP("CompareNameText", cipT, font, "BALL NAME", 22f, TextAnchor.MiddleCenter);
-            AddLayoutElement(compareNameText.gameObject, preferredHeight: 30f);
-
-            // Quantity
-            var compareQuantityText = MakeTMP("CompareQuantityText", cipT, font, "x99", 16f, TextAnchor.MiddleCenter);
-            AddLayoutElement(compareQuantityText.gameObject, preferredHeight: 24f);
-
-            // Stat rows
-            string[] statNames = { "Power", "Rebound", "WindResistance", "Roll", "Spin" };
-            var statRows = new (TextMeshProUGUI name, Image bar, TextMeshProUGUI number, TextMeshProUGUI diff)[5];
-
-            for (int i = 0; i < statNames.Length; i++)
-            {
-                statRows[i] = BuildStatRow($"{statNames[i]}Row", cipT, font);
-            }
-
-            // Buttons row
-            var buttonsRowGO = new GameObject("ButtonsRow", typeof(RectTransform));
-            buttonsRowGO.transform.SetParent(cipT, false);
-            {
-                var hlg = buttonsRowGO.AddComponent<HorizontalLayoutGroup>();
-                hlg.spacing              = 8f;
-                hlg.childForceExpandWidth  = true;
-                hlg.childForceExpandHeight = false;
-                hlg.padding = new RectOffset(0, 0, 4, 0);
-                AddLayoutElement(buttonsRowGO, preferredHeight: 36f);
-            }
-
-            var closeBtn = MakeButton("CloseCompareButton", buttonsRowGO.transform, font, "CLOSE");
-            var compareRightBtn = MakeButton("CompareRightCompareButton", buttonsRowGO.transform, font, "COMPARE");
-
-            // ── Add BallCompareController ─────────────────────────────────────
-            var ctrl = detailPanel.GetComponent<BallCompareController>();
-            if (ctrl == null) ctrl = detailPanel.gameObject.AddComponent<BallCompareController>();
+            // ── Add / get BallCompareController ───────────────────────────────
+            var ctrl = detailScript.GetComponent<BallCompareController>();
+            if (ctrl == null) ctrl = detailScript.gameObject.AddComponent<BallCompareController>();
 
             // ── Wire BallCompareController ────────────────────────────────────
-            var so = new SerializedObject(ctrl);
+            var cso = new SerializedObject(ctrl);
 
-            // Layout panels
-            WireGO(so, "leftPanel",     root.Find("LeftPanel")?.gameObject);
-            WireRT(so, "rightPanel",    root.Find("RightPanel")?.GetComponent<RectTransform>());
-            WireGO(so, "compareRightPanel",  crpGO);
-            WireGO(so, "comparePlaceholder", placeholderGO);
-            WireTMP(so, "comparePlaceholderText", placeholderText);
-            WireGO(so, "compareInfoPanel",   cipGO);
-            WireGO(so, "verticalDivider",    divGO);
+            // Layout
+            Prop(cso, "leftPanel",     root.Find("LeftPanel")?.gameObject);
+            Prop(cso, "rightPanel",    rightPanelT?.GetComponent<RectTransform>());
+            Prop(cso, "compareRightPanel",  crp.gameObject);
+            Prop(cso, "comparePlaceholder", placeholder);
 
-            // Buttons — find compareButton on RightPanel
-            var compareBtnObj = rightPanelT?.Find("CompareButton")?.GetComponent<Button>();
-            WireObj(so, "compareButton",      compareBtnObj);
-            WireObj(so, "closeCompareButton", closeBtn);
+            var placeholderText = crp.Find("ComparePlaceholder/PlaceholderText")
+                                     ?.GetComponent<TextMeshProUGUI>();
+            Prop(cso, "comparePlaceholderText", placeholderText);
+            Prop(cso, "compareInfoPanel", cipGO);
+            Prop(cso, "verticalDivider",  root.Find("VerticalDivider")?.gameObject);
 
-            // Right column info
-            WireTMP(so, "compareNameText",     compareNameText);
-            WireTMP(so, "compareQuantityText", compareQuantityText);
+            // Buttons
+            Prop(cso, "compareButton",      compareBtnT?.GetComponent<Button>());
+            Prop(cso, "closeCompareButton", closeBtnGO.GetComponent<Button>());
 
-            // Stat rows
-            WireStatRow(so, "Power",         statRows[0]);
-            WireStatRow(so, "Rebound",       statRows[1]);
-            WireStatRow(so, "WindResistance",statRows[2]);
-            WireStatRow(so, "Roll",          statRows[3]);
-            WireStatRow(so, "Spin",          statRows[4]);
+            // Right column — name + quantity
+            var cipT = cipGO?.transform;
+            Prop(cso, "compareNameText",     cipT?.Find("BallNameText")?.GetComponent<TextMeshProUGUI>());
+            Prop(cso, "compareQuantityText", cipT?.Find("OwnedPanel/QuantityText")?.GetComponent<TextMeshProUGUI>());
 
-            // Right column buttons
-            WireObj(so, "compareRightCompareButton", compareRightBtn);
+            // Right column — stat rows (cloned names match RightPanel exactly)
+            WireStatRow(cso, "Power",          cipT, "PowerRow");
+            WireStatRow(cso, "Rebound",        cipT, "ReboundRow");
+            WireStatRow(cso, "WindResistance", cipT, "WindResistanceRow");
+            WireStatRow(cso, "Roll",           cipT, "RollRow");
+            WireStatRow(cso, "Spin",           cipT, "SpinRow");
 
-            // Carousel — reuse the one already wired on BallDetailPanel
-            var carouselObj = detailPanel.GetComponent<BallCarouselController>();
-            if (carouselObj == null)
-                carouselObj = Object.FindObjectOfType<BallCarouselController>(true);
-            WireObj(so, "carousel", carouselObj);
+            // Right column — COMPARE button (repurposed from cloned CompareButton)
+            Prop(cso, "compareRightCompareButton",
+                 cipT?.Find("CompareButton")?.GetComponent<Button>());
 
-            so.ApplyModifiedProperties();
+            // Carousel
+            var carousel = Object.FindObjectOfType<BallCarouselController>(true);
+            Prop(cso, "carousel", carousel);
+
+            cso.ApplyModifiedProperties();
             EditorUtility.SetDirty(ctrl);
 
             // ── Wire BallDetailPanel.compareController ────────────────────────
-            var dpSO = new SerializedObject(detailPanel);
-            dpSO.FindProperty("compareController").objectReferenceValue = ctrl;
-            dpSO.ApplyModifiedProperties();
-            EditorUtility.SetDirty(detailPanel);
+            var dso = new SerializedObject(detailScript);
+            dso.FindProperty("compareController").objectReferenceValue = ctrl;
+            dso.ApplyModifiedProperties();
+            EditorUtility.SetDirty(detailScript);
 
             EditorSceneManager.MarkSceneDirty(
                 UnityEngine.SceneManagement.SceneManager.GetActiveScene());
 
             Debug.Log("[BallCompareBuilder] Done.");
             EditorUtility.DisplayDialog("Ball Compare Builder",
-                "Compare hierarchy built and wired!\n\n" +
-                "Hit Play → switch to BALLS tab → tap COMPARE to test.", "OK");
+                "Done!\n\nCompareRightPanel built (cloned from RightPanel).\n" +
+                "BallCompareController wired.\n\n" +
+                "Hit Play → BALLS tab → COMPARE button to test.", "OK");
         }
 
-        // ── Factory Helpers ───────────────────────────────────────────────────
+        // ── Hierarchy Builders ────────────────────────────────────────────────
 
-        private static (TextMeshProUGUI name, Image bar, TextMeshProUGUI number, TextMeshProUGUI diff)
-            BuildStatRow(string goName, Transform parent, TMP_FontAsset? font)
+        private static void BuildVerticalDivider(Transform parent)
         {
-            var rowGO = new GameObject(goName, typeof(RectTransform));
-            rowGO.transform.SetParent(parent, false);
-            var hlg = rowGO.AddComponent<HorizontalLayoutGroup>();
-            hlg.spacing              = 4f;
-            hlg.childForceExpandWidth  = false;
-            hlg.childForceExpandHeight = true;
-            AddLayoutElement(rowGO, preferredHeight: 28f);
-
-            var nameT  = MakeTMP("StatName", rowGO.transform, font, "STAT", 12f, TextAnchor.MiddleLeft);
-            AddLayoutElement(nameT.gameObject, preferredWidth: 70f);
-
-            var barGO = new GameObject("Bar", typeof(RectTransform), typeof(Image));
-            barGO.transform.SetParent(rowGO.transform, false);
-            var barLE = barGO.AddComponent<LayoutElement>();
-            barLE.flexibleWidth = 1f;
-            barLE.preferredHeight = 12f;
-            var barImg = barGO.GetComponent<Image>();
-            barImg.color = new Color(0.25f, 0.25f, 0.3f, 0.5f);
-            barImg.raycastTarget = false;
-            barImg.type = Image.Type.Filled;
-            barImg.fillMethod = Image.FillMethod.Horizontal;
-            barImg.fillOrigin = 0;
-
-            var numberT = MakeTMP("StatNumber", rowGO.transform, font, "+0", 12f, TextAnchor.MiddleRight);
-            AddLayoutElement(numberT.gameObject, preferredWidth: 28f);
-
-            var diffT = MakeTMP("DiffLabel", rowGO.transform, font, "", 11f, TextAnchor.MiddleRight);
-            AddLayoutElement(diffT.gameObject, preferredWidth: 28f);
-            diffT.color = new Color(0.2f, 0.8f, 0.3f, 1f);
-            diffT.gameObject.SetActive(false);
-
-            return (nameT, barImg, numberT, diffT);
-        }
-
-        private static Button MakeButton(string goName, Transform parent, TMP_FontAsset? font, string label)
-        {
-            var go  = new GameObject(goName, typeof(RectTransform), typeof(Image), typeof(Button));
+            var go = new GameObject("VerticalDivider");
             go.transform.SetParent(parent, false);
-            go.GetComponent<Image>().color = new Color(0.2f, 0.2f, 0.25f, 1f);
-            var txt = MakeTMP("Text", go.transform, font, label, 12f, TextAnchor.MiddleCenter);
-            txt.alignment = TextAlignmentOptions.Center;
-            return go.GetComponent<Button>();
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(2f, 0f);
+            go.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.2f);
+            go.SetActive(false);
         }
 
-        private static TextMeshProUGUI MakeTMP(string goName, Transform parent, TMP_FontAsset? font,
-            string text, float size, TextAnchor anchor)
+        /// <summary>Returns the CompareRightPanel transform.</summary>
+        private static Transform BuildCompareRightPanel(Transform parent)
         {
-            var go  = new GameObject(goName, typeof(RectTransform), typeof(TextMeshProUGUI));
+            var go = new GameObject("CompareRightPanel");
             go.transform.SetParent(parent, false);
-            var tmp = go.GetComponent<TextMeshProUGUI>();
-            tmp.text      = text;
-            tmp.fontSize  = size;
-            tmp.color     = Color.white;
-            tmp.raycastTarget = false;
-            if (font != null) tmp.font = font;
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            go.AddComponent<Image>().color = new Color(0.10f, 0.10f, 0.14f, 1f);
+            go.AddComponent<CanvasGroup>();
 
-            // TextAnchor → TMP alignment
-            tmp.alignment = anchor switch
-            {
-                TextAnchor.MiddleLeft   => TextAlignmentOptions.MidlineLeft,
-                TextAnchor.MiddleRight  => TextAlignmentOptions.MidlineRight,
-                TextAnchor.MiddleCenter => TextAlignmentOptions.Center,
-                TextAnchor.UpperCenter  => TextAlignmentOptions.Top,
-                _ => TextAlignmentOptions.Left
-            };
+            BuildComparePlaceholder(go.transform);
+            BuildCompareInfoPanel(go.transform);
 
-            var rt = go.GetComponent<RectTransform>();
+            go.SetActive(false);
+            return go.transform;
+        }
+
+        private static void BuildComparePlaceholder(Transform parent)
+        {
+            var go = new GameObject("ComparePlaceholder");
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
-            rt.sizeDelta = Vector2.zero;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            go.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
 
-            return tmp;
+            var textGO = new GameObject("PlaceholderText");
+            textGO.transform.SetParent(go.transform, false);
+            var textRT = textGO.AddComponent<RectTransform>();
+            textRT.anchorMin = new Vector2(0f, 0.3f);
+            textRT.anchorMax = new Vector2(1f, 0.7f);
+            textRT.offsetMin = new Vector2(PANEL_PAD, 0f);
+            textRT.offsetMax = new Vector2(-PANEL_PAD, 0f);
+            var tmp = textGO.AddComponent<TextMeshProUGUI>();
+            tmp.text                = "TAP ON ANY OTHER BALL TO COMPARE STATS";
+            tmp.fontSize            = 12f;
+            tmp.color               = new Color(0.7f, 0.7f, 0.7f, 1f);
+            tmp.alignment           = TextAlignmentOptions.Center;
+            tmp.enableWordWrapping  = true;
         }
 
-        private static GameObject MakeStretchChild(string goName, Transform parent)
+        private static void BuildCompareInfoPanel(Transform compareRightPanel)
         {
-            var go = new GameObject(goName, typeof(RectTransform));
+            var detailPanel = compareRightPanel.parent;
+            var rightPanel  = detailPanel.Find("RightPanel");
+            if (rightPanel == null)
+            {
+                Debug.LogError("[BallCompareBuilder] RightPanel not found — cannot clone.");
+                return;
+            }
+
+            // Clone RightPanel — inherits all fonts, colors, layout settings
+            var clone = Object.Instantiate(rightPanel.gameObject, compareRightPanel, false);
+            clone.name = "CompareInfoPanel";
+
+            var rt = clone.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            // Remove duplicated BallDetailPanel component
+            var dp = clone.GetComponent<BallDetailPanel>();
+            if (dp != null) Object.DestroyImmediate(dp);
+
+            // Add DiffLabel TMP to each stat row
+            string[] rows = { "PowerRow", "ReboundRow", "WindResistanceRow", "RollRow", "SpinRow" };
+            foreach (var rowName in rows)
+            {
+                var row = FindByName(clone.transform, rowName);
+                if (row == null) { Debug.LogWarning($"[BallCompareBuilder] {rowName} not found in clone."); continue; }
+
+                var diffGO  = new GameObject("DiffLabel");
+                diffGO.transform.SetParent(row, false);
+                diffGO.transform.SetSiblingIndex(row.childCount - 1); // last child (after StatNumber)
+                var le      = diffGO.AddComponent<LayoutElement>();
+                le.preferredWidth = 30f;
+                var diffTMP = diffGO.AddComponent<TextMeshProUGUI>();
+                diffTMP.text      = "";
+                diffTMP.fontSize  = 10f;
+                diffTMP.fontStyle = FontStyles.Bold;
+                diffTMP.color     = new Color(0.2f, 0.8f, 0.3f, 1f);
+                diffTMP.alignment = TextAlignmentOptions.Left;
+                diffGO.SetActive(false);
+            }
+
+            clone.SetActive(false);
+        }
+
+        private static GameObject BuildButton(Transform parent, string name, string label)
+        {
+            var go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            var rt = go.GetComponent<RectTransform>();
-            rt.anchorMin        = Vector2.zero;
-            rt.anchorMax        = Vector2.one;
-            rt.sizeDelta        = Vector2.zero;
-            rt.anchoredPosition = Vector2.zero;
+
+            var le = go.AddComponent<LayoutElement>();
+            le.preferredHeight = BUTTON_H;
+
+            go.AddComponent<Image>().color = new Color(0.2f, 0.2f, 0.3f, 1f);
+            go.AddComponent<Button>();
+
+            var textGO = new GameObject("Text (TMP)");
+            textGO.transform.SetParent(go.transform, false);
+            var textRT = textGO.AddComponent<RectTransform>();
+            textRT.anchorMin = Vector2.zero;
+            textRT.anchorMax = Vector2.one;
+            textRT.offsetMin = Vector2.zero;
+            textRT.offsetMax = Vector2.zero;
+            var tmp = textGO.AddComponent<TextMeshProUGUI>();
+            tmp.text      = label;
+            tmp.fontSize  = 11f;
+            tmp.fontStyle = FontStyles.Bold;
+            tmp.color     = Color.white;
+            tmp.alignment = TextAlignmentOptions.Center;
+
             return go;
         }
 
-        private static void AddLayoutElement(GameObject go, float preferredWidth = -1f, float preferredHeight = -1f)
-        {
-            var le = go.GetComponent<LayoutElement>();
-            if (le == null) le = go.AddComponent<LayoutElement>();
-            if (preferredWidth  >= 0f) le.preferredWidth  = preferredWidth;
-            if (preferredHeight >= 0f) le.preferredHeight = preferredHeight;
-        }
-
-        // ── Wire Helpers ──────────────────────────────────────────────────────
+        // ── Wiring Helpers ────────────────────────────────────────────────────
 
         private static void WireStatRow(SerializedObject so, string statName,
-            (TextMeshProUGUI name, Image bar, TextMeshProUGUI number, TextMeshProUGUI diff) row)
+            Transform? cipT, string rowName)
         {
-            string prefix = $"compare{statName}";
-            WireTMP(so, $"{prefix}Name",   row.name);
-            WireObj(so, $"{prefix}Bar",    row.bar);
-            WireTMP(so, $"{prefix}Number", row.number);
-            WireTMP(so, $"{prefix}Diff",   row.diff);
+            var row = cipT != null ? FindByName(cipT, rowName) : null;
+            if (row == null) { Debug.LogWarning($"[BallCompareBuilder] {rowName} not found."); return; }
+
+            // Name: Name+Bar/StatsName
+            Prop(so, $"compare{statName}Name",
+                 row.Find("Name+Bar/StatsName")?.GetComponent<TextMeshProUGUI>());
+
+            // Bar: Name+Bar/BarContainer (Image — BallSegmentedBar added at runtime)
+            Prop(so, $"compare{statName}Bar",
+                 row.Find("Name+Bar/BarContainer")?.GetComponent<Image>());
+
+            // Number: StatNumber
+            Prop(so, $"compare{statName}Number",
+                 row.Find("StatNumber")?.GetComponent<TextMeshProUGUI>());
+
+            // Diff: DiffLabel (added by this builder above)
+            Prop(so, $"compare{statName}Diff",
+                 row.Find("DiffLabel")?.GetComponent<TextMeshProUGUI>());
         }
 
-        private static void WireGO(SerializedObject so, string prop, GameObject? obj)
+        private static void Prop(SerializedObject so, string propName, Object? value)
         {
-            var p = so.FindProperty(prop);
-            if (p != null) p.objectReferenceValue = obj;
-            else Debug.LogWarning($"[BallCompareBuilder] Property '{prop}' not found.");
+            var p = so.FindProperty(propName);
+            if (p != null)
+                p.objectReferenceValue = value;
+            else
+                Debug.LogWarning($"[BallCompareBuilder] Property not found: {propName}");
         }
 
-        private static void WireRT(SerializedObject so, string prop, RectTransform? rt)
+        // ── Utilities ─────────────────────────────────────────────────────────
+
+        private static void DestroyIfExists(Transform? parent, string childName)
         {
-            var p = so.FindProperty(prop);
-            if (p != null) p.objectReferenceValue = rt;
-            else Debug.LogWarning($"[BallCompareBuilder] Property '{prop}' not found.");
+            if (parent == null) return;
+            var child = parent.Find(childName);
+            if (child != null) Object.DestroyImmediate(child.gameObject);
         }
 
-        private static void WireTMP(SerializedObject so, string prop, TextMeshProUGUI? tmp)
+        private static Transform? FindByName(Transform parent, string name)
         {
-            var p = so.FindProperty(prop);
-            if (p != null) p.objectReferenceValue = tmp;
-            else Debug.LogWarning($"[BallCompareBuilder] Property '{prop}' not found.");
-        }
-
-        private static void WireObj(SerializedObject so, string prop, Object? obj)
-        {
-            var p = so.FindProperty(prop);
-            if (p != null) p.objectReferenceValue = obj;
-            else Debug.LogWarning($"[BallCompareBuilder] Property '{prop}' not found.");
+            if (parent.name == name) return parent;
+            foreach (Transform child in parent)
+            {
+                var result = FindByName(child, name);
+                if (result != null) return result;
+            }
+            return null;
         }
     }
 }
