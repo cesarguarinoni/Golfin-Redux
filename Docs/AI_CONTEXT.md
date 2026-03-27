@@ -26,7 +26,7 @@
 - ✅ BallSegmentedBar — 20 segments, center=0, negative→left (red), positive→right (blue), range ±10
 - ✅ BallCompareController — clones RightPanel, DiffLabel per stat, CloseCompareButton
 - ✅ All editor scripts: BallManagerSetup, BallCarouselAutoWire, BallDetailPanelAutoWire, BallCompareBuilder
-- **Missing:** Resources/Balls/Full/Golfin.png — Golfin ball falls back to thumbnail
+- ✅ Resources/Balls/Full/Golfin.png added — both ball portraits present
 
 ## Lessons from Phase G (2026-03-26)
 - `GameObject.Find` misses inactive objects — use `Resources.FindObjectsOfTypeAll<GameObject>()` filtered by `go.scene.isLoaded` in all editor scripts
