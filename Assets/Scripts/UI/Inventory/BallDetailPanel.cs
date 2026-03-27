@@ -56,8 +56,6 @@ namespace Golfin.Inventory
         private string currentBallId = "";
 
         private const int BALL_STAT_MAX = 10;
-        private static readonly Color StatPositiveColor = new(0.2f, 0.5f, 0.9f, 1f);   // blue
-        private static readonly Color StatNegativeColor = new(0.9f, 0.3f, 0.15f, 1f);  // orange-red
 
         // ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -163,11 +161,12 @@ namespace Golfin.Inventory
                 else                numberField.text = "0";
             }
 
-            // Bar fill — absolute value / max, colored by sign
+            // Segmented bar — get-or-add BallSegmentedBar, then set value
             if (bar != null)
             {
-                bar.fillAmount = BALL_STAT_MAX > 0 ? (float)Mathf.Abs(value) / BALL_STAT_MAX : 0f;
-                bar.color      = value >= 0 ? StatPositiveColor : StatNegativeColor;
+                var seg = bar.GetComponent<BallSegmentedBar>();
+                if (seg == null) seg = bar.gameObject.AddComponent<BallSegmentedBar>();
+                seg.SetValue(value, BALL_STAT_MAX);
             }
         }
     }
