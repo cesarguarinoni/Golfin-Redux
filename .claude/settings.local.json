@@ -30,7 +30,12 @@
       "Bash(powershell -Command \"Select-String -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\UI\\\\Inventory\\\\Editor\\\\ClubCompareAutoWire.cs'' -Pattern ''WireTMPDeep|WireImageDeep|WireButtonDeep|rarityRow|buttonsPanel|rowRoot'' | Select-Object LineNumber, Line\")",
       "Bash(powershell -Command \"Select-String -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\UI\\\\Inventory\\\\ClubCompareController.cs'' -Pattern ''LevelUp|Repair|ButtonsPanel|levelUp|repair'' | Select-Object LineNumber, Line\")",
       "Bash(xargs grep:*)",
-      "Bash(\"C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Localization\\\\LocalizationText.csv\":*)"
+      "Bash(\"C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Localization\\\\LocalizationText.csv\":*)",
+      "Bash(echo \"BALL_OWNED,OWNED,所持:*)",
+      "Bash(ls \"C:/Users/cesar/GolfinRedux/Assets/Scripts/UI/Inventory/Ball\"*)",
+      "Bash(ls \"C:/Users/cesar/GolfinRedux/Assets/Scripts/Ball\"*)",
+      "Bash(ls \"C:/Users/cesar/GolfinRedux/Assets/Data/Balls\"*)",
+      "Bash(powershell -Command \":*)"
     ]
   }
 }

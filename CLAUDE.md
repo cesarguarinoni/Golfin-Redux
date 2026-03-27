@@ -10,8 +10,9 @@ Before doing anything else:
 3. Read `Docs/Tasks.md` (current checklist — what to do)
 4. Read `Docs/TellCode.md` for any pending architect instructions
 5. If working on UI/design: read `Docs/Rules.md` (design constraints, Figma specs, conventions)
-6. If needed: read `Docs/ARCHITECTURE_AUDIT.md` (file tree, singletons, events)
-7. Read `tasks/lessons.md` for relevant project lessons
+6. If working on UI: read `Docs/UI_HIERARCHY.md` (scene UI paths) and `Docs/PATTERNS.md` (recurring patterns)
+7. If needed: read `Docs/ARCHITECTURE_AUDIT.md` (file tree, singletons, events)
+8. Read `tasks/lessons.md` for relevant project lessons
 
 ## Session End (EVERY SESSION)
 
@@ -22,7 +23,9 @@ Before closing:
    - Any new issues or blockers discovered
    - What's next
 2. Update `tasks/lessons.md` if any corrections were made
-3. Commit with descriptive message
+3. If UI hierarchy changed (new panels, modals, stat rows, buttons): update `Docs/UI_HIERARCHY.md`
+4. If new patterns emerged or existing ones changed: update `Docs/PATTERNS.md`
+5. Commit with descriptive message
 
 ## Debugging Unity
 

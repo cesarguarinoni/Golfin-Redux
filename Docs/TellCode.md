@@ -6,190 +6,66 @@
 
 ---
 
-## Current Task (2026-03-26) — Phase E3: Bag Selection Modal
+## Current Task (2026-03-27) — Phase H: Balls Inventory Screen
 
-Full spec: `Docs/SPEC_ClubPhaseE3_BagSelection.md`
+Full spec: `Docs/SPEC_H_BallsInventory.md`
 
-When the player taps **EQUIP** on a club, a modal appears with a 5×2 grid of bag slots.
-1 bag unlocked at start, 9 locked. Each bag holds max 8 clubs.
-If a bag is full → toast error, block. CANCEL closes without changes.
+This phase adds the Balls tab to the Inventory screen — CSV database, manager singleton,
+carousel of ball cards, and a detail panel with stat bars (positive=blue, negative=red).
 
-Do these sub-tasks in order.
+**Read the full spec before starting.** It contains complete code for all files.
+Execute sub-tasks in this order:
 
----
+### Step 1: Data Layer (H1)
+1. Create `Assets/Scripts/UI/Inventory/BallData.cs` — BallDataRuntime + PlayerBallData
+2. Create `Assets/Scripts/UI/Inventory/BallDatabaseCSV.cs` — singleton CSV loader
+3. Create `Assets/Scripts/BallManager.cs` — singleton, owns player ball data
+4. Create `Assets/Data/Balls.csv` — 2 balls (Golfin + Putt Ace)
+5. Set Script Execution Order: BallDatabaseCSV before BallManager
 
-### Sub-task 1: Create BagManager Singleton
+### Step 2: Editor Setup (H5c)
+6. Create `Assets/Scripts/UI/Inventory/Editor/BallManagerSetup.cs` — menu item to create scene GOs
 
-**New file:** `Assets/Scripts/BagManager.cs`
-**No namespace** (matches ClubManager, RepairKitManager pattern)
+### Step 3: UI Scripts (H2, H3, H4)
+7. Create `Assets/Scripts/UI/Inventory/BallThumbnailCard.cs` — ball card component
+8. Create `Assets/Scripts/UI/Inventory/Editor/BallThumbnailCardBuilder.cs` — prefab builder
+9. Create `Assets/Scripts/UI/Inventory/BallCarouselController.cs` — from ClubCarouselController, remove filter bar
+10. Create `Assets/Scripts/UI/Inventory/BallDetailPanel.cs` — simplified from ClubDetailPanel
 
-Standalone singleton (DontDestroyOnLoad):
-- Constants: `MAX_BAGS = 10`, `MAX_CLUBS_PER_BAG = 8`
-- `unlockedBags = 1` (private field)
-- Event: `public event System.Action<int>? OnBagChanged` (arg = bagSlot)
+### Step 4: Auto-wire + Localization (H5b, H6)
+11. Create `Assets/Scripts/UI/Inventory/Editor/BallDetailPanelAutoWire.cs`
+12. Add localization keys (BALL_OWNED, BALL_INFO, BALL_POWER, BALL_REBOUND, BALL_WIND_RESISTANCE, BALL_ROLL, BALL_SPIN)
 
-Query API:
-- `IsBagUnlocked(int bagSlot)` — 1-based, returns `bagSlot <= unlockedBags`
-- `GetClubCountInBag(int bagSlot)` — queries ClubManager for clubs with `equippedBagSlot == bagSlot`
-- `IsBagFull(int bagSlot)` — `GetClubCountInBag(bagSlot) >= MAX_CLUBS_PER_BAG`
-- `GetClubsInBag(int bagSlot)` — returns `List<PlayerClubData>` from ClubManager
-- `GetUnlockedBagCount()` — returns `unlockedBags`
+### Key Differences from Clubs
+- **No rarity** — no rarity badge on cards, no rarity label in detail panel
+- **No level** — level badge repurposed for quantity display (x99 or ∞)
+- **No durability, no equip, no repair, no level-up** — just a COMPARE button
+- **Stats range -10 to +10** — bar fill = abs(value)/10, color = blue (≥0) or orange-red (<0)
+- **Quantity display:** -1 in PlayerBallData = unlimited (show ∞), otherwise show x{qty}
+- **No filter bar** — flat list of all balls
 
-Mutate API:
-- **`AssignClubToBag(string clubId, int bagSlot)`** → returns bool
-  1. Check `IsBagUnlocked` → false → return false
-  2. Check `IsBagFull` → true → return false
-  3. Call `ClubManager.Instance.EquipClub(clubId, bagSlot)`
-  4. Fire `OnBagChanged?.Invoke(bagSlot)`
-  5. Return true
-- `RemoveClubFromBag(string clubId)` — sets `equippedBagSlot = 0` via `ClubManager.Instance.EquipClub(clubId, 0)`
-- `UnlockNextBag()` — increments `unlockedBags` (capped at MAX_BAGS), for future use
+### Compare Button
+Wire the COMPARE button but just `Debug.Log("Compare coming soon")` for now. Phase H8 later.
 
-**Important:** No separate data store. `PlayerClubData.equippedBagSlot` is the source of truth.
-
----
-
-### Sub-task 2: Create BagSelectionModalController
-
-**New file:** `Assets/Scripts/UI/Inventory/BagSelectionModalController.cs`
-**Namespace:** `Golfin.Inventory`
-**Extends:** `Golfin.UI.Modals.ModalController`
-
-SerializeFields:
-```csharp
-[Header("Bag Grid")]
-[SerializeField] private Transform bagGridParent = null!;
-[SerializeField] private GameObject bagSlotPrefab = null!;
-
-[Header("Cancel")]
-[SerializeField] private Button cancelButton = null!;
-```
-
-Public API:
-```csharp
-public void Open(string clubId)
-```
-- Stores `currentClubId`
-- Destroys old slot instances, instantiates 10 new ones from prefab
-- For each slot (1–10): configure appearance based on locked/unlocked/full/equipped state
-- Calls `Show()` (inherited from ModalController)
-
-Each slot instance children (found by name):
-- `BagImage` (Image), `BagLabel` (TMP), `CountLabel` (TMP), `FullBadge` (GameObject), `EquippedIcon` (GameObject)
-
-Slot states:
-- **Locked:** dim alpha, label = "LOCKED", no click
-- **Unlocked, not full:** label = "BAG {n}", count = "{x}/8", clickable
-- **Unlocked, full:** same + FullBadge visible, clickable (shows toast)
-- **Club already in this bag:** EquippedIcon visible
-
-`OnSlotClicked(int bagSlot)`:
-1. If full → `Debug.Log($"Bag {bagSlot} is full (8/8).")` // TODO: Toast → return
-2. `BagManager.Instance.AssignClubToBag(currentClubId, bagSlot)`
-3. `Hide()` (closes modal, ClubDetailPanel refreshes via OnClubEquipped event)
-
-Wire `cancelButton` → `Hide()` in `Awake` or `Start`.
-
----
-
-### Sub-task 3: Wire Equip Buttons to Bag Selection Modal
-
-**File:** `Assets/Scripts/UI/Inventory/ClubDetailPanel.cs`
-
-Add SerializeField:
-```csharp
-[Header("Bag Selection")]
-[SerializeField] private BagSelectionModalController? bagSelectionModal;
-```
-
-Replace `OnEquipClicked()`:
-```csharp
-private void OnEquipClicked()
-{
-    if (string.IsNullOrEmpty(currentClubId) || ClubManager.Instance == null) return;
-    var playerClub = ClubManager.Instance.GetClubData(currentClubId);
-    if (playerClub == null) return;
-
-    if (playerClub.IsEquipped)
-    {
-        // Unequip — remove from bag
-        BagManager.Instance?.RemoveClubFromBag(currentClubId);
-    }
-    else
-    {
-        // Open bag selection modal
-        if (bagSelectionModal != null)
-            bagSelectionModal.Open(currentClubId);
-        else
-            Debug.Log("[ClubDetailPanel] EQUIP clicked — wire BagSelectionModal.");
-    }
-}
-```
-
-**File:** `Assets/Scripts/UI/Inventory/ClubCompareController.cs`
-
-Same pattern — add `bagSelectionModal` SerializeField.
-Update the right-panel equip button to open `bagSelectionModal.Open(rightClubId)` when not equipped,
-or `BagManager.Instance.RemoveClubFromBag(rightClubId)` when already equipped.
-
----
-
-### Sub-task 4: BagSelectionModalAutoWire (Editor Script)
-
-**New file:** `Assets/Scripts/Editor/BagSelectionModalAutoWire.cs`
-**MenuItem:** `GOLFIN/Wire/Bag Selection Modal`
-
-Creates modal hierarchy under ClubsScreen Canvas:
-1. BagSelectionModal GameObject with BagSelectionModalController
-2. Backdrop (dark overlay Image)
-3. ModalPanel with CanvasGroup
-4. Title TMP ("CHOOSE A BAG")
-5. BagGrid (GridLayoutGroup, 5 cols, cell ~130×130, spacing 8)
-6. BagSlotPrefab template with children: BagImage, BagLabel, CountLabel, FullBadge, EquippedIcon
-7. CancelButton
-8. Wires all SerializeFields on BagSelectionModalController
-9. Wires `bagSelectionModal` on ClubDetailPanel and ClubCompareController
-
----
-
-### Sub-task 5: BagManagerSetup (Editor Script)
-
-**New file:** `Assets/Scripts/Editor/BagManagerSetup.cs`
-**MenuItem:** `GOLFIN/Setup/Bag Manager`
-
-Finds or creates BagManager on the Managers GameObject.
-
----
-
-### Sub-task 6: Localization
-
-Add to the localization CSV:
-```
-BAG_CHOOSE_TITLE,Choose a Bag,バッグを選択
-BAG_LOCKED,Locked,ロック
-BAG_FULL_TOAST,Bag {0} is full ({1}/{1}). Remove a club first.,バッグ{0}は満杯です（{1}/{1}）。先にクラブを外してください。
-BAG_EQUIPPED_TOAST,{0} equipped to Bag {1}.,{0}をバッグ{1}に装備しました。
-BAG_UNEQUIPPED_TOAST,{0} removed from Bag {1}.,{0}をバッグ{1}から外しました。
-```
+### Stat Bars
+Start with smooth fill bars (same Image.fillAmount approach as clubs). The segmented visual style
+from the mockup is deferred to a polish pass.
 
 ---
 
 ### Reminders
-- Read the full spec in `Docs/SPEC_ClubPhaseE3_BagSelection.md` before starting
-- `PlayerClubData.equippedBagSlot` already exists — BagManager is a convenience layer on top
-- `ClubManager.EquipClub(clubId, bagSlot)` already handles unequipping previous club in that slot
-- BagManager adds the "is bag full?" and "is bag unlocked?" guards
-- Toast system doesn't exist yet — `Debug.Log` + `// TODO: Toast`
-- Grid = 5×2 = 10 slots; only slot 1 unlocked at start
-- Modal does NOT show bag contents — just slot availability
-- **Bag thumbnails:** `Resources/Bags/Thumbnail/{BagName}.png` — each bag has its own portrait; only `Mireo.png` exists now, use as fallback for missing
-- **Rarity letter badge** at top-left of bag portrait — same as club/character portraits (mockup is missing it but must be there for consistency)
-- Bag portrait sits on a **rarity-colored background** like club portraits
+- Check `Docs/SPEC_H_BallsInventory.md` for complete code listings
+- Balls sprites already exist at `Resources/Balls/Thumbnails/` and `Resources/Balls/Full/`
+- BallCarouselController is a copy of ClubCarouselController with filter code removed
 - Push to GitHub after completing
 
 ---
 
 ## Completed Tasks
+
+✅ DONE: 2026-03-27 — Phase H Balls Inventory: BallData, BallDatabaseCSV, BallManager, Balls.csv, BallThumbnailCard, BallCarouselController, BallDetailPanel, BallManagerSetup, BallDetailPanelAutoWire, 7 localization keys
+
+✅ DONE: 2026-03-26 — Phase G Character Compare stat diff labels: CompareRightPanelDiffBuilder, CompareController diff fields/methods, CompareAutoWire diff wiring
 
 ✅ DONE: 2026-03-20 — ScreenshotTool, compress script, CLAUDE.md update
 ✅ DONE: 2026-03-20 — Phase C code: ClubCarouselController, ClubDetailPanel, builders, auto-wire
@@ -199,3 +75,7 @@ BAG_UNEQUIPPED_TOAST,{0} removed from Bag {1}.,{0}をバッグ{1}から外しま
 ✅ DONE: 2026-03-24 — Project cleanup: GOLFIN menu reorganized, Art/References folders renamed PascalCase, 5 editor scripts archived
 ✅ DONE: 2026-03-25 — Phase E1 Club Level Up Modal: PlayerClubData SP fields, ClubManager.SetLevel/RefreshStatValues, ClubLevelUpModalController, ClubDetailPanel/ClubCompareController wired, ClubLevelUpModalAutoWire, localization keys.
 ✅ DONE: 2026-03-26 — Phase E2 Club Repair One-Tap: RepairKitManager singleton, ClubManager.RepairClub/OnClubRepaired, ClubDetailPanel+ClubCompareController one-tap repair, localization keys, cleanup old modal files.
+✅ DONE: 2026-03-26 — Phase E3 Bag Selection Modal: BagManager singleton, BagSelectionModalController, equip buttons wired, auto-wire script, localization keys.
+✅ DONE: 2026-03-26 — Phase E3b Bags CSV + Data-Driven Bag Slots: BagDatabaseCSV, BagManager CSV integration, two-prefab bag grid, ClubManager multi-club-per-bag fix, bag name labels.
+✅ DONE: 2026-03-26 — Phase E4 Bag ↔ Club management (assign/unassign from bag modal).
+✅ DONE: 2026-03-26 — Phase F Level Up Modal polish (SP allocation UI).
