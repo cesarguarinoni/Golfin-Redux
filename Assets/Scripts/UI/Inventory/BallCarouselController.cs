@@ -23,8 +23,11 @@ namespace Golfin.Inventory
         [SerializeField] private Transform paginationDotsParent = null!;
         [SerializeField] private GameObject? paginationDotPrefab;
 
+        [SerializeField] private GameObject? ballEmptyCardPrefab;
+
         [Header("Settings")]
         [SerializeField] private int cardsPerPage = 6;
+        [SerializeField] private int minCardCount  = 5;   // always show at least this many slots
         [SerializeField] private float scrollSmoothness = 0.3f;
 
         /// <summary>Fired when a card is tapped. Arg = ballId.</summary>
@@ -134,6 +137,18 @@ namespace Golfin.Inventory
                     card.OnClicked += () => SelectBall(id);
                     cards.Add(card);
                 }
+            }
+
+            // Pad to minCardCount with empty (non-selectable) slot cards
+            int totalSlots = Mathf.Max(cards.Count, minCardCount);
+            for (int i = cards.Count; i < totalSlots; i++)
+            {
+                if (ballEmptyCardPrefab == null) break;
+                var emptyGO = Instantiate(ballEmptyCardPrefab, contentParent);
+                var le = emptyGO.GetComponent<LayoutElement>();
+                if (le == null) le = emptyGO.AddComponent<LayoutElement>();
+                le.preferredWidth  = 135f;
+                le.preferredHeight = 165f;
             }
 
             // Keep previous selection if still visible, otherwise select first

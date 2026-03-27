@@ -16,7 +16,8 @@ namespace Golfin.Inventory.Editor
     /// </summary>
     public static class BallCarouselAutoWire
     {
-        private const string PREFAB_PATH = "Assets/Prefabs/UI/Inventory/BallThumbnailCard.prefab";
+        private const string PREFAB_PATH       = "Assets/Prefabs/UI/Inventory/BallThumbnailCard.prefab";
+        private const string EMPTY_PREFAB_PATH = "Assets/Prefabs/UI/Inventory/BallThumbnailEmptyCard.prefab";
 
         [MenuItem("GOLFIN/Wire/Ball Carousel")]
         public static void Run()
@@ -77,9 +78,11 @@ namespace Golfin.Inventory.Editor
             // pagination
             Wire("paginationDotsParent", root.Find("PaginationDots"), "PaginationDots");
 
-            // prefab
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PREFAB_PATH);
-            Wire("ballCardPrefab", prefab, $"prefab at {PREFAB_PATH}");
+            // prefabs
+            var prefab      = AssetDatabase.LoadAssetAtPath<GameObject>(PREFAB_PATH);
+            var emptyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(EMPTY_PREFAB_PATH);
+            Wire("ballCardPrefab",      prefab,      $"prefab at {PREFAB_PATH}");
+            Wire("ballEmptyCardPrefab", emptyPrefab, $"prefab at {EMPTY_PREFAB_PATH}");
 
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(ctrl);
