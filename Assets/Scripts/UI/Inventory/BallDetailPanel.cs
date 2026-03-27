@@ -53,6 +53,9 @@ namespace Golfin.Inventory
         [Header("Carousel")]
         [SerializeField] private BallCarouselController? carousel;
 
+        [Header("Compare")]
+        [SerializeField] private BallCompareController? compareController;
+
         private string currentBallId = "";
 
         private const int BALL_STAT_MAX = 10;
@@ -97,13 +100,23 @@ namespace Golfin.Inventory
 
         private void OnCompareClicked()
         {
-            Debug.Log("[BallDetailPanel] Compare coming soon.");
+            if (compareController != null)
+                compareController.EnterCompareMode(currentBallId);
+            else
+                Debug.Log("[BallDetailPanel] compareController not wired — run GOLFIN/Setup/Ball Compare.");
+        }
+
+        /// <summary>Called by BallCompareController after exiting compare mode.</summary>
+        public void ShowBall(string ballId)
+        {
+            UpdatePanel(ballId);
         }
 
         // ── Panel Update ───────────────────────────────────────────────────────
 
         private void UpdatePanel(string ballId)
         {
+            if (compareController != null && compareController.IsCompareMode) return;
             currentBallId = ballId;
 
             var playerBall = BallManager.Instance?.GetBallData(ballId);
