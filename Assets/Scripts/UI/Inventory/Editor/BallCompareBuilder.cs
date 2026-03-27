@@ -54,9 +54,9 @@ namespace Golfin.Inventory.Editor
                 bool rebuild = EditorUtility.DisplayDialog("Ball Compare Builder",
                     "CompareRightPanel already exists. Rebuild?", "Rebuild", "Cancel");
                 if (!rebuild) return;
-                DestroyImmediate(root.Find("CompareRightPanel")!.gameObject);
+                Object.DestroyImmediate(root.Find("CompareRightPanel")!.gameObject);
                 var existingDiv = root.Find("VerticalDivider");
-                if (existingDiv != null) DestroyImmediate(existingDiv.gameObject);
+                if (existingDiv != null) Object.DestroyImmediate(existingDiv.gameObject);
             }
 
             // ── Find RightPanel to read its font/size for matching style ──────
