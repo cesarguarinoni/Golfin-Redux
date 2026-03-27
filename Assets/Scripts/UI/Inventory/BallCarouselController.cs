@@ -27,7 +27,7 @@ namespace Golfin.Inventory
 
         [Header("Settings")]
         [SerializeField] private int cardsPerPage = 6;
-        [SerializeField] private int minCardCount  = 5;   // always show at least this many slots
+        [SerializeField] private int minCardCount  = 6;   // always show at least this many slots
         [SerializeField] private float scrollSmoothness = 0.3f;
 
         /// <summary>Fired when a card is tapped. Arg = ballId.</summary>
