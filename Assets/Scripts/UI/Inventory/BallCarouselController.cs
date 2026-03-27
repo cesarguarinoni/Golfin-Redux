@@ -139,16 +139,26 @@ namespace Golfin.Inventory
                 }
             }
 
-            // Pad to minCardCount with empty (non-selectable) slot cards
+            // Pad to minCardCount with empty (non-selectable) slot cards.
+            // LayoutElement is baked into the prefab — no AddComponent needed.
             int totalSlots = Mathf.Max(cards.Count, minCardCount);
             for (int i = cards.Count; i < totalSlots; i++)
             {
                 if (ballEmptyCardPrefab == null) break;
                 var emptyGO = Instantiate(ballEmptyCardPrefab, contentParent);
+
+                // Safety: ensure LayoutElement has correct sizes (baked in prefab, but guard anyway)
                 var le = emptyGO.GetComponent<LayoutElement>();
                 if (le == null) le = emptyGO.AddComponent<LayoutElement>();
+                le.ignoreLayout    = false;
                 le.preferredWidth  = 135f;
                 le.preferredHeight = 165f;
+                le.minWidth        = 135f;
+                le.minHeight       = 165f;
+
+                // Safety: ensure not clickable
+                var btn = emptyGO.GetComponent<Button>();
+                if (btn != null) btn.interactable = false;
             }
 
             // Keep previous selection if still visible, otherwise select first
