@@ -4,6 +4,16 @@ Updated by both Claude (Architect) and Claude Code.
 
 ---
 
+## ✅ Completed: Phase H — Balls Inventory (2026-03-27)
+- [x] BallManager, BallDatabaseCSV, BallData, PlayerBallData
+- [x] BallCarouselController (6 slots, empty card fill)
+- [x] BallDetailPanel (portrait, name, quantity, segmented stat bars)
+- [x] BallSegmentedBar (20 segments, centre=0, ±10 range, red/blue halves)
+- [x] BallCompareController (RightPanel clone, DiffLabels, CloseCompareButton)
+- [x] All editor auto-wire + builder scripts
+
+---
+
 ## Active: Club Inventory
 
 ### Phase C — Visual Polish
@@ -33,13 +43,23 @@ Updated by both Claude (Architect) and Claude Code.
 - [x] RepairKitManager setup script
 - [x] Cleanup: delete old modal files
 
-#### E3 — Bag Selection Modal (spec ready → `SPEC_ClubPhaseE3_BagSelection.md`)
-- [ ] BagManager singleton (MAX_BAGS=10, MAX_CLUBS_PER_BAG=8, 1 unlocked at start)
-- [ ] BagSelectionModalController (5×2 grid, locked/unlocked/full states)
-- [ ] Wire Equip buttons on ClubDetailPanel + ClubCompareController → open modal
-- [ ] BagSelectionModalAutoWire editor script
-- [ ] BagManagerSetup editor script
-- [ ] Localization keys
+#### E3 — Bag Selection Modal
+##### E3a — Modal + BagManager ✅ COMPLETE
+- [x] BagManager singleton
+- [x] BagSelectionModalController (5×2 grid)
+- [x] Wire Equip buttons → open modal
+- [x] BagSelectionModalAutoWire editor script
+- [x] BagManagerSetup editor script
+- [x] Localization keys
+- [x] Kai: Created BagSlotPrefab + BagSlotLockedPrefab, styled, added RarityBadge
+
+##### E3b — Bags CSV + Data-Driven Slots (spec ready → TellCode.md)
+- [ ] Bags.csv data file (id, name, rarity, thumbnail, unlocked)
+- [ ] BagDatabaseCSV singleton (loads CSV, provides BagDataRuntime)
+- [ ] BagManager updated to use CSV unlock data (remove hardcoded array)
+- [ ] BagSelectionModalController: two prefabs (unlocked/locked), data binding (rarity bg, badge, thumbnail)
+- [ ] Wire bagSlotLockedPrefab reference
+- [ ] BagDatabaseCSVSetup editor script
 
 ---
 
