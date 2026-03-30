@@ -123,17 +123,63 @@ pointing to the 6 buttons in the new layout:
 Remove any extra entries (the old A.WEDGES, P.WEDGES, S.WEDGES buttons).
 If Code can't modify the serialized array programmatically, flag it for Cesar to fix in Inspector.
 
-### Step 4: Clean up old divider GameObjects
+### Step 4: Fix filter buttons missing raycast targets (BUTTONS HAVE NEVER WORKED)
+
+The filter buttons (ALLFilter, DRIVERSFilter, etc.) each have a Button component but **no Image
+component** and `m_TargetGraphic: {fileID: 0}` (null). Without a Graphic with `raycastTarget = true`,
+Unity's EventSystem can't detect clicks on them.
+
+**Fix in `ClubFilterBar.cs` — add this to `Start()`, before `InjectDividers()`:**
+
+```csharp
+            EnsureButtonRaycastTargets();
+```
+
+**Add this new method:**
+
+```csharp
+        /// <summary>
+        /// Ensures every filter button has an Image so the Button component can receive clicks.
+        /// Adds a fully transparent Image if one is missing.
+        /// </summary>
+        private void EnsureButtonRaycastTargets()
+        {
+            for (int i = 0; i < filterButtons.Length; i++)
+            {
+                if (filterButtons[i] == null) continue;
+                var go = filterButtons[i].gameObject;
+                var img = go.GetComponent<Image>();
+                if (img == null)
+                {
+                    img = go.AddComponent<Image>();
+                    img.color = new Color(1f, 1f, 1f, 0f); // fully transparent
+                }
+                img.raycastTarget = true;
+
+                // Wire as the Button's targetGraphic if missing
+                var btn = filterButtons[i];
+                if (btn.targetGraphic == null)
+                    btn.targetGraphic = img;
+            }
+        }
+```
+
+This adds a transparent Image to each button at runtime, sets `raycastTarget = true`, and
+assigns it as the Button's `targetGraphic`. This is safe to call even if an Image already exists.
+
+### Step 5: Clean up old divider GameObjects
 
 The 7 `FilterDivider` GameObjects visible in the hierarchy were created at runtime by the old code.
 They'll be gone on next Play since `InjectDividers()` recreates them. No manual cleanup needed.
 
 ### Verification
 - Play the scene, go to Clubs tab
+- **Click each filter tab** — ALL, DRIVERS, WOODS, IRONS, WEDGES, PUTTERS should all respond to taps
 - Confirm 5 dividers appear evenly spaced between 6 tabs (not 7 dividers for 8 tabs)
 - Click WEDGES tab — should show all A.Wedge, P.Wedge, and S.Wedge clubs combined
 - Click each other tab — should filter correctly
 - ALL tab should still show everything
+- Check console for `[ClubFilterBar] Filter set to:` log messages confirming clicks register
 
 ---
 
@@ -156,3 +202,4 @@ They'll be gone on next Play since `InjectDividers()` recreates them. No manual 
 ✅ DONE: 2026-03-26 — Phase E4 Bag ↔ Club management (assign/unassign from bag modal).
 ✅ DONE: 2026-03-26 — Phase F Level Up Modal polish (SP allocation UI).
 ✅ DONE: 2026-03-30 — Fix Club Filter Bar: 8→6 tabs + unified WEDGES. Updated ClubFilterBar.cs (comment, buttonCount, GetCurrentFilter switch, IsWedgeFilter property) and ClubCarouselController.cs (wedge union query). Step 3 (Inspector filterButtons array) requires manual fix by Cesar.
+✅ DONE: 2026-03-30 — Fix filter button raycast targets: EnsureButtonRaycastTargets() added to ClubFilterBar.cs Start() — handled by Cesar directly.
