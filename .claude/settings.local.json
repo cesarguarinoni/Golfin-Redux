@@ -35,7 +35,9 @@
       "Bash(ls \"C:/Users/cesar/GolfinRedux/Assets/Scripts/UI/Inventory/Ball\"*)",
       "Bash(ls \"C:/Users/cesar/GolfinRedux/Assets/Scripts/Ball\"*)",
       "Bash(ls \"C:/Users/cesar/GolfinRedux/Assets/Data/Balls\"*)",
-      "Bash(powershell -Command \":*)"
+      "Bash(powershell -Command \":*)",
+      "Bash(python Docs/daily_report.py --note \"Session ran out of time due to Desktop Commander token overuse. In the meantime, worked on Bags Screen and Matchmaking designs in Figma.\")",
+      "Bash(python daily_report.py --note \"Session ran out of time due to Desktop Commander token overuse. In the meantime, worked on Bags Screen and Matchmaking designs in Figma.\")"
     ]
   }
 }
