@@ -87,9 +87,26 @@ namespace Golfin.Inventory
                 return;
             }
 
-            List<PlayerClubData> clubs = filter == null
-                ? ClubManager.Instance.GetAllOwnedClubs()
-                : ClubManager.Instance.GetOwnedClubsOfType(filter.Value);
+            List<PlayerClubData> clubs;
+            if (filter == null)
+            {
+                clubs = ClubManager.Instance.GetAllOwnedClubs();
+            }
+            else if (filterBar != null && filterBar.IsWedgeFilter)
+            {
+                // Unified WEDGES tab — gather all 3 wedge types
+                var a = ClubManager.Instance.GetOwnedClubsOfType(ClubType.A_Wedge);
+                var p = ClubManager.Instance.GetOwnedClubsOfType(ClubType.P_Wedge);
+                var s = ClubManager.Instance.GetOwnedClubsOfType(ClubType.S_Wedge);
+                clubs = new List<PlayerClubData>(a.Count + p.Count + s.Count);
+                clubs.AddRange(a);
+                clubs.AddRange(p);
+                clubs.AddRange(s);
+            }
+            else
+            {
+                clubs = ClubManager.Instance.GetOwnedClubsOfType(filter.Value);
+            }
 
             // Layout: prevent cards from stretching
             var layoutGroup = contentParent.GetComponent<HorizontalLayoutGroup>();

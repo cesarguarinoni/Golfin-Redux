@@ -8,7 +8,7 @@ namespace Golfin.Inventory
 {
     /// <summary>
     /// Sub-filter bar inside the Club Inventory screen.
-    /// Buttons: ALL | DRIVERS | WOODS | IRONS | A.WEDGES | P.WEDGES | S.WEDGES | PUTTERS
+    /// Buttons: ALL | DRIVERS | WOODS | IRONS | WEDGES | PUTTERS
     ///
     /// Active tab: gold gradient text. Inactive tabs: silver gradient text.
     /// Thin vertical dividers (rgba 255,255,255,0.3) are injected between buttons on Start.
@@ -47,7 +47,7 @@ namespace Golfin.Inventory
             // Dividers ignore the HorizontalLayoutGroup entirely (ignoreLayout = true)
             // and are positioned absolutely using RectTransform anchors.
             // With 8 evenly-distributed buttons, dividers sit at x = 1/8, 2/8 ... 7/8.
-            int buttonCount = filterButtons.Length; // expected 8
+            int buttonCount = filterButtons.Length; // expected 6
             int dividerCount = buttonCount - 1;
 
             for (int i = 0; i < dividerCount; i++)
@@ -104,8 +104,19 @@ namespace Golfin.Inventory
 
         // ── Accessors ─────────────────────────────────────────────────────────
 
-        /// <summary>Returns null for ALL, or the active ClubType filter.</summary>
-        public ClubType? GetCurrentFilter()
-            => _activeIndex == 0 ? (ClubType?)null : (ClubType)(_activeIndex - 1);
+        /// <summary>Returns null for ALL, or the primary ClubType for the active tab.</summary>
+        public ClubType? GetCurrentFilter() => _activeIndex switch
+        {
+            0 => null,              // ALL
+            1 => ClubType.Driver,
+            2 => ClubType.Wood,
+            3 => ClubType.Iron,
+            4 => ClubType.A_Wedge,  // sentinel for unified WEDGES tab — check IsWedgeFilter
+            5 => ClubType.Putter,
+            _ => null
+        };
+
+        /// <summary>True when the active filter is the unified WEDGES tab (covers A/P/S wedges).</summary>
+        public bool IsWedgeFilter => _activeIndex == 4;
     }
 }

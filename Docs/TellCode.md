@@ -6,58 +6,134 @@
 
 ---
 
-## Current Task (2026-03-27) — Phase H: Balls Inventory Screen
+## Current Task (2026-03-30) — Fix Club Filter Bar: 8→6 Tabs + Unified Wedges
 
-Full spec: `Docs/SPEC_H_BallsInventory.md`
+The UI was manually changed from 8 filter tabs to 6. The 3 wedge tabs (A.WEDGES, P.WEDGES, S.WEDGES)
+were unified into a single WEDGES tab. New tab layout:
 
-This phase adds the Balls tab to the Inventory screen — CSV database, manager singleton,
-carousel of ball cards, and a detail panel with stat bars (positive=blue, negative=red).
+**ALL | DRIVERS | WOODS | IRONS | WEDGES | PUTTERS** (6 buttons)
 
-**Read the full spec before starting.** It contains complete code for all files.
-Execute sub-tasks in this order:
+Two problems:
+1. The filter dividers are still positioned for 8 tabs (the `filterButtons` serialized array likely still has 8 entries)
+2. The index→ClubType mapping assumes 1:1 with the old 8-tab layout
 
-### Step 1: Data Layer (H1)
-1. Create `Assets/Scripts/UI/Inventory/BallData.cs` — BallDataRuntime + PlayerBallData
-2. Create `Assets/Scripts/UI/Inventory/BallDatabaseCSV.cs` — singleton CSV loader
-3. Create `Assets/Scripts/BallManager.cs` — singleton, owns player ball data
-4. Create `Assets/Data/Balls.csv` — 2 balls (Golfin + Putt Ace)
-5. Set Script Execution Order: BallDatabaseCSV before BallManager
+### Step 1: Fix `ClubFilterBar.cs`
 
-### Step 2: Editor Setup (H5c)
-6. Create `Assets/Scripts/UI/Inventory/Editor/BallManagerSetup.cs` — menu item to create scene GOs
+**File:** `Assets/Scripts/UI/Inventory/ClubFilterBar.cs`
 
-### Step 3: UI Scripts (H2, H3, H4)
-7. Create `Assets/Scripts/UI/Inventory/BallThumbnailCard.cs` — ball card component
-8. Create `Assets/Scripts/UI/Inventory/Editor/BallThumbnailCardBuilder.cs` — prefab builder
-9. Create `Assets/Scripts/UI/Inventory/BallCarouselController.cs` — from ClubCarouselController, remove filter bar
-10. Create `Assets/Scripts/UI/Inventory/BallDetailPanel.cs` — simplified from ClubDetailPanel
+**A) Update the doc comment** (line ~8):
 
-### Step 4: Auto-wire + Localization (H5b, H6)
-11. Create `Assets/Scripts/UI/Inventory/Editor/BallDetailPanelAutoWire.cs`
-12. Add localization keys (BALL_OWNED, BALL_INFO, BALL_POWER, BALL_REBOUND, BALL_WIND_RESISTANCE, BALL_ROLL, BALL_SPIN)
+Replace:
+```csharp
+    /// Buttons: ALL | DRIVERS | WOODS | IRONS | A.WEDGES | P.WEDGES | S.WEDGES | PUTTERS
+```
+With:
+```csharp
+    /// Buttons: ALL | DRIVERS | WOODS | IRONS | WEDGES | PUTTERS
+```
 
-### Key Differences from Clubs
-- **No rarity** — no rarity badge on cards, no rarity label in detail panel
-- **No level** — level badge repurposed for quantity display (x99 or ∞)
-- **No durability, no equip, no repair, no level-up** — just a COMPARE button
-- **Stats range -10 to +10** — bar fill = abs(value)/10, color = blue (≥0) or orange-red (<0)
-- **Quantity display:** -1 in PlayerBallData = unlimited (show ∞), otherwise show x{qty}
-- **No filter bar** — flat list of all balls
+**B) Update the comment on the buttonCount line** (line ~50):
 
-### Compare Button
-Wire the COMPARE button but just `Debug.Log("Compare coming soon")` for now. Phase H8 later.
+Replace:
+```csharp
+            int buttonCount = filterButtons.Length; // expected 8
+```
+With:
+```csharp
+            int buttonCount = filterButtons.Length; // expected 6
+```
 
-### Stat Bars
-Start with smooth fill bars (same Image.fillAmount approach as clubs). The segmented visual style
-from the mockup is deferred to a polish pass.
+**C) Add `IsWedgeFilter` property and replace `GetCurrentFilter()`:**
 
----
+Replace the entire `GetCurrentFilter()` method at the bottom:
+```csharp
+        /// <summary>Returns null for ALL, or the active ClubType filter.</summary>
+        public ClubType? GetCurrentFilter()
+            => _activeIndex == 0 ? (ClubType?)null : (ClubType)(_activeIndex - 1);
+```
+With:
+```csharp
+        /// <summary>Returns null for ALL, or the primary ClubType for the active tab.</summary>
+        public ClubType? GetCurrentFilter() => _activeIndex switch
+        {
+            0 => null,              // ALL
+            1 => ClubType.Driver,
+            2 => ClubType.Wood,
+            3 => ClubType.Iron,
+            4 => ClubType.A_Wedge,  // sentinel for unified WEDGES tab — check IsWedgeFilter
+            5 => ClubType.Putter,
+            _ => null
+        };
 
-### Reminders
-- Check `Docs/SPEC_H_BallsInventory.md` for complete code listings
-- Balls sprites already exist at `Resources/Balls/Thumbnails/` and `Resources/Balls/Full/`
-- BallCarouselController is a copy of ClubCarouselController with filter code removed
-- Push to GitHub after completing
+        /// <summary>True when the active filter is the unified WEDGES tab (covers A/P/S wedges).</summary>
+        public bool IsWedgeFilter => _activeIndex == 4;
+```
+
+### Step 2: Fix `ClubCarouselController.cs`
+
+**File:** `Assets/Scripts/UI/Inventory/ClubCarouselController.cs`
+
+In the `PopulateCarousel` method (around line 90-92), replace the filter query:
+
+Replace:
+```csharp
+            List<PlayerClubData> clubs = filter == null
+                ? ClubManager.Instance.GetAllOwnedClubs()
+                : ClubManager.Instance.GetOwnedClubsOfType(filter.Value);
+```
+With:
+```csharp
+            List<PlayerClubData> clubs;
+            if (filter == null)
+            {
+                clubs = ClubManager.Instance.GetAllOwnedClubs();
+            }
+            else if (filterBar != null && filterBar.IsWedgeFilter)
+            {
+                // Unified WEDGES tab — gather all 3 wedge types
+                var a = ClubManager.Instance.GetOwnedClubsOfType(ClubType.A_Wedge);
+                var p = ClubManager.Instance.GetOwnedClubsOfType(ClubType.P_Wedge);
+                var s = ClubManager.Instance.GetOwnedClubsOfType(ClubType.S_Wedge);
+                clubs = new List<PlayerClubData>(a.Count + p.Count + s.Count);
+                clubs.AddRange(a);
+                clubs.AddRange(p);
+                clubs.AddRange(s);
+            }
+            else
+            {
+                clubs = ClubManager.Instance.GetOwnedClubsOfType(filter.Value);
+            }
+```
+
+### Step 3: Fix the serialized `filterButtons` array in Unity
+
+Open the ClubFilterBar component in the Inspector (it lives on the `FilterBar` GameObject under
+`ContentArea > ClubsContent > FilterBar`). The `filterButtons` array must have exactly 6 entries
+pointing to the 6 buttons in the new layout:
+
+| Index | Button GameObject |
+|-------|-------------------|
+| 0     | ALLFilter         |
+| 1     | DRIVERSFilter     |
+| 2     | WOODSFilter       |
+| 3     | IRONSFilter       |
+| 4     | WEDGESFilter      |
+| 5     | PUTTERSFilter     |
+
+Remove any extra entries (the old A.WEDGES, P.WEDGES, S.WEDGES buttons).
+If Code can't modify the serialized array programmatically, flag it for Cesar to fix in Inspector.
+
+### Step 4: Clean up old divider GameObjects
+
+The 7 `FilterDivider` GameObjects visible in the hierarchy were created at runtime by the old code.
+They'll be gone on next Play since `InjectDividers()` recreates them. No manual cleanup needed.
+
+### Verification
+- Play the scene, go to Clubs tab
+- Confirm 5 dividers appear evenly spaced between 6 tabs (not 7 dividers for 8 tabs)
+- Click WEDGES tab — should show all A.Wedge, P.Wedge, and S.Wedge clubs combined
+- Click each other tab — should filter correctly
+- ALL tab should still show everything
 
 ---
 
@@ -79,3 +155,4 @@ from the mockup is deferred to a polish pass.
 ✅ DONE: 2026-03-26 — Phase E3b Bags CSV + Data-Driven Bag Slots: BagDatabaseCSV, BagManager CSV integration, two-prefab bag grid, ClubManager multi-club-per-bag fix, bag name labels.
 ✅ DONE: 2026-03-26 — Phase E4 Bag ↔ Club management (assign/unassign from bag modal).
 ✅ DONE: 2026-03-26 — Phase F Level Up Modal polish (SP allocation UI).
+✅ DONE: 2026-03-30 — Fix Club Filter Bar: 8→6 tabs + unified WEDGES. Updated ClubFilterBar.cs (comment, buttonCount, GetCurrentFilter switch, IsWedgeFilter property) and ClubCarouselController.cs (wedge union query). Step 3 (Inspector filterButtons array) requires manual fix by Cesar.
