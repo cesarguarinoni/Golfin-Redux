@@ -7,6 +7,7 @@ Includes Japan holiday/weekend awareness.
 See DAILY_REPORT_SETUP.md for installation and configuration.
 """
 
+import argparse
 import os
 import subprocess
 import sys
@@ -224,6 +225,7 @@ def summarize_with_claude(
     ai_context: str,
     notion_tasks: str,
     day_note: str,
+    extra_note: str = "",
 ) -> str:
     """Send commits + Notion tasks to Claude Sonnet for bilingual structured summary."""
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -242,6 +244,10 @@ def summarize_with_claude(
     if day_note:
         day_note_section = f"\nDay note (include at the top of the report, before the English section):\n{day_note}\n"
 
+    extra_note_section = ""
+    if extra_note:
+        extra_note_section = f"\nExtra note from developer (include as a bullet in the blockers or 'what was done' section as appropriate — translate it to Japanese in the JP section):\n{extra_note}\n"
+
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=1500,
@@ -249,7 +255,7 @@ def summarize_with_claude(
             {
                 "role": "user",
                 "content": f"""You are a development progress reporter for GOLFIN, a 3D mobile golf game built in Unity (C#).
-{context_section}{notion_section}
+{context_section}{notion_section}{extra_note_section}
 Here are today's ({today}) git commits ({commit_count} total), listed in CHRONOLOGICAL ORDER (oldest first):
 
 {commits}
@@ -329,6 +335,10 @@ def post_to_telegram(text: str):
 # =============================================================================
 
 def main():
+    parser = argparse.ArgumentParser(description="GOLFIN daily report")
+    parser.add_argument("--note", default="", help="Extra note to include in today's report")
+    args = parser.parse_args()
+
     print(f"[{datetime.now().isoformat()}] Starting daily report...")
 
     commits = get_todays_commits()
@@ -368,7 +378,7 @@ def main():
         )
     else:
         report = summarize_with_claude(
-            commits, file_changes, commit_count, ai_context, notion_tasks_text, day_note
+            commits, file_changes, commit_count, ai_context, notion_tasks_text, day_note, args.note
         )
 
     post_to_telegram(report)
