@@ -115,7 +115,6 @@ namespace Golfin.Inventory.Editor
 
             // Wire ModalController.modalPanel
             var modalCtrl = root.GetComponent<ItemUseModalController>();
-            var soModal   = new SerializedObject(modalCtrl.GetComponent<ModalController>() ?? (UnityEngine.Component)modalCtrl);
             // We'll let AutoWire handle field wiring; just set modalPanel via base class field
             var baseSO = new SerializedObject(modalCtrl);
             baseSO.FindProperty("modalPanel").objectReferenceValue = modalPanel;
