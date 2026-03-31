@@ -187,6 +187,92 @@ BagSelectionModal
 
 ---
 
+---
+
+## Items Inventory Screen
+
+Root: `InventoryScreen/ItemsContent`
+
+### ItemDetailPanel (ItemDetailPanel)
+```
+ItemsContent
+├── ItemCarousel                                 (ItemCarouselController — horizontal scroll)
+│   └── [ItemThumbnailCard prefabs]
+│       ├── Background                           (Image — rarity bg)
+│       ├── ItemImage                            (Image — thumbnail sprite)
+│       ├── RarityBadge                          (TMP — "C"/"R"/"M")
+│       └── NameText                             (TMP — "{name}\n{rarity}")
+└── ItemDetailPanel                              (ItemDetailPanel)
+    ├── LeftPanel
+    │   ├── ItemImage                            (Image — full sprite)
+    │   └── BrandText                            (TMP — "GOLFIN")
+    └── RightPanel
+        ├── ItemNameText                         (TMP)
+        ├── RarityText                           (TMP — colored rarity)
+        ├── QuantityText                         (TMP — "x3")
+        ├── RestoresHeader                       (TMP — "RESTORES")
+        ├── EffectIcon                           (Image)
+        ├── EffectText                           (TMP — "DURABILITY 50%")
+        ├── ProTipHeader                         (TMP — "*PRO TIP")
+        ├── ProTipText                           (TMP)
+        ├── InfoHeader                           (TMP — "INFO")
+        ├── InfoText                             (TMP)
+        ├── CompareButton                        (Button — always disabled)
+        └── UseButton                            (Button — gold, disabled if qty=0)
+```
+
+### ItemUseModal (ItemUseModalController : ModalController)
+```
+ItemUseModal                                     (root — ModalController, full-screen overlay)
+├── Background                                   (Image — RepairBackground.png, dark overlay)
+└── ModalPanel                                   (toggled by Show/Hide)
+    └── ModalContainer                           (VerticalLayoutGroup)
+        ├── TitleText                            (TMP — "SELECT CLUB")
+        ├── TopDivider                           (Image — thin white line)
+        ├── FilterBar                            (ClubFilterBar — HorizontalLayoutGroup)
+        │   ├── ALLFilter / Button / Text        (TMP)
+        │   ├── DRIVERSFilter / Button / Text
+        │   ├── WOODSFilter / Button / Text
+        │   ├── IRONSFilter / Button / Text
+        │   ├── WEDGESFilter / Button / Text
+        │   └── PUTTERSFilter / Button / Text
+        ├── ScrollArea                           (ScrollRect — vertical)
+        │   ├── Viewport                         (RectMask2D)
+        │   │   └── GridContent                  (GridLayoutGroup — 4 columns, ContentSizeFitter)
+        │   │       └── [ItemUseClubCard prefabs — spawned at runtime]
+        │   └── Scrollbar                        (Scrollbar — vertical, right edge)
+        │       └── Sliding Area/Handle
+        ├── BottomDivider                        (Image — thin white line)
+        └── CancelButton                         (Button)
+            └── Text                             (TMP — "CANCEL")
+```
+
+### ItemUseClubCard prefab (180 × 410, VerticalLayoutGroup)
+```
+ItemUseClubCard
+├── CardTop                                      (Image — rarity bg sprite, 140h)
+│   ├── Portrait                                 (Image — club portrait, preserveAspect)
+│   ├── RarityBadge                              (TMP — "R" etc., top-left)
+│   └── LevelBadge                               (TMP — "Lv10", top-right)
+├── NameText                                     (TMP — "DRIVER\nG&F")
+├── StatsPanel                                   (VerticalLayoutGroup — 5 rows)
+│   ├── StatRow_Power      / Bar (Image filled) + StatNum (TMP)
+│   ├── StatRow_Accuracy   / Bar + StatNum
+│   ├── StatRow_LieRes     / Bar + StatNum
+│   ├── StatRow_Loft       / Bar + StatNum
+│   └── StatRow_Durability / Bar + StatNum
+├── DistanceRow                                  (HorizontalLayoutGroup)
+│   ├── DistLabel                                (TMP — "DIST")
+│   └── DistanceValue                            (TMP — "150 yd")
+├── ButtonRow                                    (HorizontalLayoutGroup — both disabled)
+│   ├── LevelUpBtn / Text
+│   └── RepairBtn / Text
+└── UseRepairKitBtn                              (Button — gold, full-width)
+    └── UseRepairKitText                         (TMP — "USE REPAIR KIT")
+```
+
+---
+
 ## Key Notes
 
 - **Character stat rows** use `Name+Bar/StatsName`, `Name+Bar/Bar`, `DiffLabel`, `StatNumber`
