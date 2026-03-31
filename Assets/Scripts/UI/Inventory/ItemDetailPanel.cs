@@ -35,6 +35,9 @@ namespace Golfin.Inventory
         [Header("Carousel")]
         [SerializeField] private ItemCarouselController? carousel;
 
+        [Header("Modals")]
+        [SerializeField] private ItemUseModalController? useModal;
+
         private string currentItemId = "";
 
         // ── Lifecycle ──────────────────────────────────────────────────────────
@@ -80,8 +83,10 @@ namespace Golfin.Inventory
 
         private void OnUseClicked()
         {
-            // Phase I2 will wire the club selection modal here
-            Debug.Log($"[ItemDetailPanel] USE clicked for '{currentItemId}' — Phase I2 will open modal.");
+            if (useModal != null && !string.IsNullOrEmpty(currentItemId))
+                useModal.Open(currentItemId);
+            else
+                Debug.Log($"[ItemDetailPanel] USE clicked for '{currentItemId}' — wire ItemUseModalController.");
         }
 
         // ── Panel Update ───────────────────────────────────────────────────────
