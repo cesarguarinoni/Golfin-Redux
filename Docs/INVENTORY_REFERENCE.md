@@ -200,12 +200,29 @@ quoted fields with commas. If a third CSV database is needed, consider extractin
 
 ---
 
-## Items Screen (Future — Tab Index 3)
+## Items Screen (Tab Index 3) — Phase I1
 
-Not yet implemented. Based on confluence doc:
-- Shows owned consumable items (repair kits, etc.)
-- Each item has: name, quantity, image, text description
-- "Use" button to consume selected item
-- No stats, no rarity, no level
-- Simplest of all inventory screens
-- Pattern: flat list, no carousel pagination needed (or reuse carousel)
+**Full spec:** `Docs/Specs/PHASE_I1_ITEMS_SCREEN.md`
+
+Shows owned consumable items (repair kits for now, 3 tiers).
+
+| System | Runtime Scripts | Editor Scripts |
+|--------|----------------|----------------|
+| Items | `Assets/Scripts/UI/Inventory/Item*.cs` | `Assets/Scripts/UI/Inventory/Editor/Item*.cs` |
+| Manager | `Assets/Scripts/ItemManager.cs` | `Assets/Scripts/Editor/ItemManagerSetup.cs` |
+| Database | `Assets/Scripts/UI/Inventory/ItemDatabaseCSV.cs` | (wired by setup) |
+
+| Data | Location |
+|------|----------|
+| Items.csv | `Assets/Data/Items.csv` |
+| Item sprites (thumb) | `Resources/Items/Thumbnails/` |
+| Item sprites (full) | `Resources/Items/Full/` |
+
+**Key differences from Balls:**
+- Items HAVE rarity (Common/Rare/Mythic) — shown on card + detail panel
+- Items have NO stat bars — instead show effect text ("DURABILITY 50%")
+- Items have a USE button (triggers club selection modal in Phase I2)
+- Compare button always grayed out (non-functional)
+- Carousel reuses BallThumbnailCard prefab pattern (cloned + swapped component)
+- Empty card: reuses BallThumbnailEmptyCard directly
+- ItemManager replaces RepairKitManager as the single item inventory manager

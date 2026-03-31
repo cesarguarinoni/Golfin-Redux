@@ -445,3 +445,12 @@ MonoBehaviour:
   - key: ITEM_DURABILITY
     english: DURABILITY
     japanese: "\u8010\u4E45\u5EA6"
+  - key: ITEM_SELECT_CLUB
+    english: SELECT CLUB
+    japanese: "\u30AF\u30E9\u30D6\u3092\u9078\u629E"
+  - key: ITEM_USE_REPAIR_KIT
+    english: USE REPAIR KIT
+    japanese: "\u4FEE\u7406\u30AD\u30C3\u30C8\u3092\u4F7F\u3046"
+  - key: ITEM_CANCEL
+    english: CANCEL
+    japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"
