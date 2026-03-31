@@ -148,10 +148,16 @@ namespace Golfin.Inventory.Editor
             topDivImg.raycastTarget = false;
 
             // ── FilterBar ─────────────────────────────────────────────────────
+            // Matches InventoryScreenBuilder FilterBar exactly: same HLG settings,
+            // same background color, same button images, same font/color/overflow.
             var filterBarGO = MakeChild(container, "FilterBar");
-            filterBarGO.AddComponent<LayoutElement>().preferredHeight = 44f;
+            filterBarGO.AddComponent<LayoutElement>().preferredHeight = 48f;
+            var filterBarBg = filterBarGO.AddComponent<Image>();
+            filterBarBg.color = new Color(0.06f, 0.06f, 0.10f, 1f);
             var filterBarHLG = filterBarGO.AddComponent<HorizontalLayoutGroup>();
-            filterBarHLG.spacing           = 0f;
+            filterBarHLG.spacing               = 2f;
+            filterBarHLG.padding               = new RectOffset(4, 4, 4, 4);
+            filterBarHLG.childAlignment        = TextAnchor.MiddleCenter;
             filterBarHLG.childForceExpandWidth  = true;
             filterBarHLG.childForceExpandHeight = true;
             var filterBarComp = filterBarGO.AddComponent<ClubFilterBar>();
@@ -162,22 +168,27 @@ namespace Golfin.Inventory.Editor
             {
                 var btnGO  = MakeChild(filterBarGO, $"{FILTER_LABELS[i]}Filter");
                 var btnImg = btnGO.AddComponent<Image>();
-                btnImg.color = new Color(1f, 1f, 1f, 0f); // transparent
+                btnImg.color = i == 0
+                    ? new Color(1f, 1f, 1f, 0.20f)   // ALL active
+                    : new Color(1f, 1f, 1f, 0f);      // others inactive
                 var btn    = btnGO.AddComponent<Button>();
                 btn.targetGraphic = btnImg;
                 filterBtns[i]     = btn;
 
-                var labelGO  = MakeChild(btnGO, "Text");
+                var labelGO  = MakeChild(btnGO, "Label");
                 var labelRT  = labelGO.GetComponent<RectTransform>();
                 labelRT.anchorMin = Vector2.zero;
                 labelRT.anchorMax = Vector2.one;
-                labelRT.sizeDelta = Vector2.zero;
-                var labelTMP     = labelGO.AddComponent<TextMeshProUGUI>();
-                labelTMP.text      = FILTER_LABELS[i];
-                labelTMP.fontSize  = 11f;
-                labelTMP.fontStyle = FontStyles.Bold;
-                labelTMP.alignment = TextAlignmentOptions.Center;
-                labelTMP.color     = Color.white;
+                labelRT.offsetMin = Vector2.zero;
+                labelRT.offsetMax = Vector2.zero;
+                var labelTMP            = labelGO.AddComponent<TextMeshProUGUI>();
+                labelTMP.text           = FILTER_LABELS[i];
+                labelTMP.fontSize       = 10f;
+                labelTMP.fontStyle      = FontStyles.Bold;
+                labelTMP.alignment      = TextAlignmentOptions.Center;
+                labelTMP.color          = i == 0 ? Color.white : new Color(0.55f, 0.55f, 0.55f);
+                labelTMP.enableAutoSizing = false;
+                labelTMP.overflowMode   = TextOverflowModes.Ellipsis;
             }
 
             // Wire filterButtons array on ClubFilterBar
