@@ -6,7 +6,90 @@
 
 ---
 
-## Current Task (2026-03-30) — Fix Club Filter Bar: 8→6 Tabs + Unified Wedges
+## Current Task (2026-03-31) — Phase I1: Items Inventory Screen
+
+Read the full spec: `Docs/Specs/PHASE_I1_ITEMS_SCREEN.md`
+
+This phase creates the Items tab content (tab index 3) in the Inventory screen.
+Items are consumable goods — starting with 3 tiers of Repair Kits.
+
+### Implementation Order
+
+**Step 1 — Data layer (create these files in order):**
+
+1. `Assets/Data/Items.csv` — create per spec (3 rows: repairkit_common/rare/mythic)
+2. `Assets/Scripts/UI/Inventory/ItemDataRuntime.cs` — data class (clone BallDataRuntime pattern)
+3. `Assets/Scripts/UI/Inventory/PlayerItemData.cs` — player instance (clone PlayerBallData)
+4. `Assets/Scripts/UI/Inventory/ItemDatabaseCSV.cs` — **clone** `BallDatabaseCSV.cs`, rename class,
+   change sprite paths to `Items/Thumbnails` + `Items/Full`, update ParseRow for item fields
+5. `Assets/Scripts/ItemManager.cs` — new singleton (no namespace), see spec for full API.
+   Includes `UseBestRepairKit()` which replaces `RepairKitManager.UseBestKit()`.
+
+**Step 2 — Migrate RepairKitManager → ItemManager:**
+
+1. In `ClubDetailPanel.cs`, find `OnRepairClicked()` — replace `RepairKitManager.Instance.UseBestKit(...)`
+   with `ItemManager.Instance.UseBestRepairKit(...)`. The return tuple changes from
+   `(int newDurability, KitType kitUsed)` to `(int newDurability, string? itemUsed)`.
+   Check `itemUsed != null` instead of `kitUsed != KitType.None`.
+2. Same for `ClubCompareController.cs` — `OnRepairLeftClicked()` / `OnRepairRightClicked()`.
+3. Search codebase for any other `RepairKitManager` references and update.
+4. After all references are updated, **delete** `Assets/Scripts/RepairKitManager.cs` and
+   `Assets/Scripts/Editor/RepairKitManagerSetup.cs` (and their .meta files).
+5. Remove the RepairKitManager component from the Managers GameObject in the scene
+   (the setup script will add ItemManager instead).
+
+**Step 3 — UI scripts (clone from Ball equivalents):**
+
+1. `ItemThumbnailCard.cs` — **clone** `BallThumbnailCard.cs`, rename class + methods.
+   Key differences: reads `ItemDatabaseCSV`/`ItemManager`, shows rarity background
+   from `Resources/Rarities/{rarity}`, shows rarity badge letter in top-left.
+2. `ItemCarouselController.cs` — **clone** `BallCarouselController.cs`, rename class.
+   Key differences: reads `ItemManager`, event is `OnItemSelected`, card type is
+   `ItemThumbnailCard`, prefab fields renamed.
+3. `ItemDetailPanel.cs` — **clone** `BallDetailPanel.cs` as starting point, then
+   **heavily modify**: remove all stat bar fields/logic, add rarity/effect/proTip/
+   brand/USE button fields. See spec for full SerializeField list.
+
+**Step 4 — Editor scripts:**
+
+1. `Assets/Scripts/UI/Inventory/Editor/ItemThumbnailCardBuilder.cs`
+   - Menu: `GOLFIN/Build/Item Thumbnail Card`
+   - Uses `AssetDatabase.CopyAsset()` to clone `BallThumbnailCard.prefab`
+     → `Assets/Prefabs/UI/Inventory/ItemThumbnailCard.prefab`
+   - Opens prefab, removes `BallThumbnailCard` component, adds `ItemThumbnailCard`
+   - Preserves all child GameObjects (portrait, name, quantity badge, background, etc.)
+
+2. `Assets/Scripts/Editor/ItemManagerSetup.cs`
+   - Menu: `GOLFIN/Setup/Item Manager`
+   - Creates `ItemDatabaseCSV` + `ItemManager` on Managers GO
+   - Wires `itemsCSV` TextAsset from `Assets/Data/Items.csv`
+   - Sets Script Execution Order: ItemDatabaseCSV = -90, ItemManager = -80
+
+3. `Assets/Scripts/UI/Inventory/Editor/ItemDetailPanelAutoWire.cs`
+   - Menu: `GOLFIN/Wire/Item Detail Panel`
+   - Wires ItemDetailPanel + ItemCarouselController SerializeFields
+
+**Step 5 — Scene hierarchy:**
+
+Replace the "ITEMS — Coming Soon" placeholder in `ItemsContent` with the actual
+carousel + detail panel hierarchy. See spec section 4B for the full tree.
+The builder script or auto-wire should handle wiring.
+
+**Step 6 — Localization keys:**
+
+Add the 7 keys from the spec to the localization system.
+
+### Verification
+- Play → ITEMS tab → 3 cards + 3 empty slots
+- Tap each card → detail panel updates
+- USE button clickable (just logs for now — modal is Phase I2)
+- Compare button always grayed out
+- Go to Clubs → repair still works (ItemManager migration)
+- Check console for no errors
+
+---
+
+## Previous Task (2026-03-30) — Fix Club Filter Bar: 8→6 Tabs + Unified Wedges
 
 The UI was manually changed from 8 filter tabs to 6. The 3 wedge tabs (A.WEDGES, P.WEDGES, S.WEDGES)
 were unified into a single WEDGES tab. New tab layout:
@@ -203,3 +286,4 @@ They'll be gone on next Play since `InjectDividers()` recreates them. No manual 
 ✅ DONE: 2026-03-26 — Phase F Level Up Modal polish (SP allocation UI).
 ✅ DONE: 2026-03-30 — Fix Club Filter Bar: 8→6 tabs + unified WEDGES. Updated ClubFilterBar.cs (comment, buttonCount, GetCurrentFilter switch, IsWedgeFilter property) and ClubCarouselController.cs (wedge union query). Step 3 (Inspector filterButtons array) requires manual fix by Cesar.
 ✅ DONE: 2026-03-30 — Fix filter button raycast targets: EnsureButtonRaycastTargets() added to ClubFilterBar.cs Start() — handled by Cesar directly.
+✅ DONE: 2026-03-31 — Phase I1 Items Screen: Items.csv, ItemDataRuntime, PlayerItemData, ItemDatabaseCSV, ItemManager (replaces RepairKitManager), ItemThumbnailCard, ItemCarouselController, ItemDetailPanel, ItemManagerSetup, ItemThumbnailCardBuilder, ItemDetailPanelAutoWire, 7 ITEM_* localization keys. Scene hierarchy (Step 5) requires manual editor work — run GOLFIN/Setup/Item Manager + GOLFIN/Build/Item Thumbnail Card first.

@@ -401,7 +401,7 @@ namespace Golfin.Inventory
             // ── Button states ─────────────────────────────────────────────────
             bool atMax       = rightPlayerClub.currentLevel >= maxLevel;
             bool needsRepair = rightPlayerClub.currentDurability < rightPlayerClub.maxDurability;
-            bool hasKits     = RepairKitManager.Instance != null && RepairKitManager.Instance.HasAnyKit();
+            bool hasKits     = ItemManager.Instance != null && ItemManager.Instance.HasAnyRepairKit();
             if (compareLevelUpButton != null) compareLevelUpButton.interactable = !atMax;
             if (compareRepairButton  != null) compareRepairButton.interactable  = needsRepair && hasKits;
 
@@ -538,15 +538,15 @@ namespace Golfin.Inventory
         private void OnRightRepairClicked()
         {
             if (string.IsNullOrEmpty(_rightClubId)) return;
-            if (ClubManager.Instance == null || RepairKitManager.Instance == null) return;
+            if (ClubManager.Instance == null || ItemManager.Instance == null) return;
 
             var playerClub = ClubManager.Instance.GetClubData(_rightClubId);
             if (playerClub == null) return;
 
-            var (newDurability, kitUsed) = RepairKitManager.Instance.UseBestKit(
+            var (newDurability, itemUsed) = ItemManager.Instance.UseBestRepairKit(
                 playerClub.currentDurability, playerClub.maxDurability);
 
-            if (kitUsed == RepairKitManager.KitType.None)
+            if (itemUsed == null)
             {
                 Debug.Log("[ClubCompareController] No repair kits available."); // TODO: Toast
                 return;
@@ -557,7 +557,7 @@ namespace Golfin.Inventory
 
             var template = ClubDatabaseCSV.Instance?.GetClub(_rightClubId);
             string clubName = template?.name ?? _rightClubId;
-            Debug.Log($"[ClubCompareController] {clubName} repaired with {kitUsed}. " +
+            Debug.Log($"[ClubCompareController] {clubName} repaired with {itemUsed}. " +
                       $"Durability {oldDurability} → {newDurability}."); // TODO: Toast
         }
 

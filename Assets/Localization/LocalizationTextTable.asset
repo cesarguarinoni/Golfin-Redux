@@ -424,3 +424,24 @@ MonoBehaviour:
   - key: BALL_COMPARE_EMPTY_PROMPT
     english: Select a ball to compare
     japanese: "\u6BD4\u8F03\u3059\u308B\u30DC\u30FC\u30EB\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044"
+  - key: ITEM_RESTORES
+    english: RESTORES
+    japanese: "\u56DE\u5FA9"
+  - key: ITEM_PRO_TIP
+    english: '*PRO TIP'
+    japanese: "*\u30D7\u30ED\u306E\u30B3\u30C4"
+  - key: ITEM_INFO
+    english: INFO
+    japanese: "\u60C5\u5831"
+  - key: ITEM_USE
+    english: USE
+    japanese: "\u4F7F\u3046"
+  - key: ITEM_COMPARE
+    english: COMPARE
+    japanese: "\u6BD4\u8F03"
+  - key: ITEM_OWNED
+    english: OWNED
+    japanese: "\u6240\u6301\u6570"
+  - key: ITEM_DURABILITY
+    english: DURABILITY
+    japanese: "\u8010\u4E45\u5EA6"

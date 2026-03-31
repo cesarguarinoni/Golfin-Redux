@@ -13,9 +13,20 @@
 | Balls Inventory | ✅ Phase H complete (carousel, detail panel, segmented stat bars, compare) |
 | Leveling Economy | ✅ Rarity-based (Common 10→39, Supreme 200→239), cost = level × 5 |
 | Settings | Needs minor visual fixes |
-| Items Inventory | Not started |
+| Items Inventory | ✅ Phase I1 complete — carousel, detail panel, ItemManager (replaces RepairKitManager) |
 | Shop | Not started |
 | Gameplay | Not started |
+
+## Session Summary (2026-03-31)
+- Phase I1 data layer: Items.csv, ItemDataRuntime, PlayerItemData, ItemDatabaseCSV, ItemManager
+- Phase I1 UI layer: ItemThumbnailCard, ItemCarouselController, ItemDetailPanel
+- Editor scripts: ItemManagerSetup, ItemThumbnailCardBuilder, ItemDetailPanelAutoWire
+- Migrated RepairKitManager → ItemManager in ClubDetailPanel + ClubCompareController
+- Deleted RepairKitManager.cs + RepairKitManagerSetup.cs
+- Added 7 ITEM_* localization keys
+- **Scene hierarchy (ItemsContent) still needs to be built in Unity editor — see spec 4B**
+- **Run GOLFIN/Setup/Item Manager after opening Unity to add ItemDatabaseCSV + ItemManager to Managers GO**
+- **Run GOLFIN/Build/Item Thumbnail Card to create ItemThumbnailCard.prefab**
 
 ## Week Summary (2026-03-24 → 2026-03-27)
 - Phase E2: Club Repair One-Tap
@@ -25,8 +36,9 @@
 - Phase G: Character Compare stat differences
 - Phase H: Balls Inventory (full screen — data layer, carousel, detail, segmented bars, compare)
 
-## Next Up (Monday 2026-03-31)
-- Items Inventory screen (simplest — flat list, quantity, use button, no stats)
+## Next Up
+
+- Phase I2 — USE button club selection modal
 - Settings visual fixes
 - Review/playtest all inventory screens end-to-end
 

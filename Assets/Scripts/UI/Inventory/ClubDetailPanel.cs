@@ -286,7 +286,7 @@ namespace Golfin.Inventory
             // ── Button States ─────────────────────────────────────────────────
             bool atMax     = playerClub.currentLevel >= maxLevel;
             bool needsRepair = playerClub.currentDurability < playerClub.maxDurability;
-            bool hasKits     = RepairKitManager.Instance != null && RepairKitManager.Instance.HasAnyKit();
+            bool hasKits     = ItemManager.Instance != null && ItemManager.Instance.HasAnyRepairKit();
             if (levelUpButton != null) levelUpButton.interactable = !atMax;
             if (repairButton  != null) repairButton.interactable  = needsRepair && hasKits;
         }
@@ -320,15 +320,15 @@ namespace Golfin.Inventory
         private void OnRepairClicked()
         {
             if (string.IsNullOrEmpty(currentClubId)) return;
-            if (ClubManager.Instance == null || RepairKitManager.Instance == null) return;
+            if (ClubManager.Instance == null || ItemManager.Instance == null) return;
 
             var playerClub = ClubManager.Instance.GetClubData(currentClubId);
             if (playerClub == null) return;
 
-            var (newDurability, kitUsed) = RepairKitManager.Instance.UseBestKit(
+            var (newDurability, itemUsed) = ItemManager.Instance.UseBestRepairKit(
                 playerClub.currentDurability, playerClub.maxDurability);
 
-            if (kitUsed == RepairKitManager.KitType.None)
+            if (itemUsed == null)
             {
                 Debug.Log("[ClubDetailPanel] No repair kits available."); // TODO: Toast
                 return;
@@ -339,7 +339,7 @@ namespace Golfin.Inventory
 
             var template = ClubDatabaseCSV.Instance?.GetClub(currentClubId);
             string clubName = template?.name ?? currentClubId;
-            Debug.Log($"[ClubDetailPanel] {clubName} repaired with {kitUsed}. " +
+            Debug.Log($"[ClubDetailPanel] {clubName} repaired with {itemUsed}. " +
                       $"Durability {oldDurability} → {newDurability}."); // TODO: Toast
         }
 

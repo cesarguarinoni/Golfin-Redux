@@ -260,6 +260,23 @@ var go = controller?.gameObject;
 
 **Rule:** If a modal is parented inside a screen hierarchy (not at Canvas root), remove all runtime repositioning code. Set position in the editor; it will hold at runtime.
 
+## Rarity Color Switch — Match Project Canonical Colors, Not Intuition
+
+**Mistake:** In `ItemDetailPanel.GetRarityColor()`, wrote Uncommon as green and Rare as blue —
+the opposite of the project standard. The project canonical colors are:
+- Common    → grey-blue  `~#BFBFCC`
+- Uncommon  → blue       `new Color(0.29f, 0.56f, 0.89f)`  (matches RarityHelper)
+- Rare      → green      `#50C878`  `new Color(0.314f, 0.784f, 0.471f)`
+- Mythic    → amber      `#FFC107`  `new Color(1.00f, 0.757f, 0.027f)`
+- Legendary → orange     `new Color(1.00f, 0.65f, 0.10f)`
+- Supreme   → red        `new Color(1.00f, 0.30f, 0.30f)`
+
+**Rule:** When writing a local rarity color switch (for string-based rarities that can't use
+`RarityHelper` enum), always cross-check against `RarityHelper.GetRarityColor()` in
+`CharacterDatabase.cs` before writing the values. Don't assume which color maps to which rarity.
+
+---
+
 ## Editor Scripts — Always Search Including Inactive Objects
 
 **Mistake (repeated):** Used `GameObject.Find("DetailPanel")` and `Object.FindObjectOfType<T>()` in editor scripts. Both silently return null for inactive GameObjects, which is the normal state for screens and modals in this project.
