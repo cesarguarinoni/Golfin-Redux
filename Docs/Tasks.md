@@ -14,6 +14,50 @@ Updated by both Claude (Architect) and Claude Code.
 
 ---
 
+## ✅ Completed: Phase I — Items Inventory (2026-03-31)
+- [x] ItemDatabaseCSV, ItemManager, ItemDataRuntime, PlayerItemData
+- [x] ItemCarouselController, ItemThumbnailCard, ItemDetailPanel
+- [x] ItemUseModalController (club selection for repair kits)
+- [x] ItemUseClubCard, ClubFilterBar reuse
+- [x] All editor scripts, localization keys
+
+---
+
+## Active: Phase J — Bags Inventory
+
+### J1 — CSV + Data Model
+- [ ] Add `description` and `fullImage` columns to Bags.csv
+- [ ] Update BagDataRuntime + BagDatabaseCSV to parse new fields
+- [ ] Add full-size bag sprites to Resources/Bags/Full/
+
+### J2 — BagManager Equipped State
+- [ ] Add EquippedBagSlot property + OnEquippedBagChanged event
+- [ ] Add EquipBag(int) method
+- [ ] Auto-equip first unlocked bag in Awake()
+
+### J3 — Carousel
+- [ ] BagCarouselController.cs (horizontal scroll, pagination)
+- [ ] BagThumbnailCard.cs (data binding)
+- [ ] Kai: Create BagThumbnailCard prefab (clone BagSlotPrefab)
+
+### J4 — Detail Panel
+- [ ] BagDetailPanel.cs (info area + 8-slot club grid)
+- [ ] Equipped bag button logic (gold/silver)
+- [ ] Kai: Build BagsContent panel in scene
+
+### J5 — Swap/Equip Modal
+- [ ] BagClubModalController.cs (single modal, Swap/Equip mode)
+- [ ] BagClubCard.cs (new component)
+- [ ] Kai: Create BagClubCard prefab (clone BagSwapClubCard)
+- [ ] Kai: Build BagClubModal hierarchy (clone ItemUseModal)
+
+### J6 — Wiring + Polish
+- [ ] Localization keys (7 keys, EN + JP)
+- [ ] Kai: Wire InventoryScreenController.tabPanels[1] = BagsContent
+- [ ] Verify Graphic Raycaster + raycast targets
+
+---
+
 ## Active: Club Inventory
 
 ### Phase C — Visual Polish
@@ -80,7 +124,7 @@ Updated by both Claude (Architect) and Claude Code.
 | ID | Task | Status |
 |---|---|---|
 | G-014 | Settings (visual fixes) | Minor fixes left |
-| G-016 | Bags Inventory | Not started |
+| G-016 | Bags Inventory | **Active — Phase J** |
 | G-017 | Shop | Not started |
 | G-018 | Matchmaking (simulated) | Not started |
 | G-020 | Result Screen (simulated) | Not started |

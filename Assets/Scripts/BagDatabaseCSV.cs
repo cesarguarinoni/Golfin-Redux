@@ -11,9 +11,12 @@ public class BagDataRuntime
     public string bagId          = "";
     public string name           = "";
     public CharacterRarity rarity = CharacterRarity.Common;
-    public string thumbnailName  = "";        // filename in Resources/Bags/Thumbnail/
+    public string thumbnailName   = "";        // filename in Resources/Bags/Thumbnail/
     public Sprite? thumbnailSprite = null;    // loaded from Resources
-    public bool startsUnlocked   = false;
+    public string fullImageName   = "";       // filename in Resources/Bags/Full/
+    public Sprite? fullImageSprite = null;    // loaded from Resources
+    public string description     = "";
+    public bool startsUnlocked    = false;
 }
 
 /// <summary>
@@ -99,11 +102,13 @@ public class BagDatabaseCSV : MonoBehaviour
             string Get(string col, string def = "")
                 => idx.TryGetValue(col, out int i) && i < fields.Count ? fields[i].Trim() : def;
 
-            string id        = Get("id");
-            string name      = Get("name");
-            string rarityStr = Get("rarity", "Common");
-            string thumbnail = Get("thumbnail");
-            string unlocked  = Get("unlocked", "false");
+            string id          = Get("id");
+            string name        = Get("name");
+            string rarityStr   = Get("rarity", "Common");
+            string thumbnail   = Get("thumbnail");
+            string fullImage   = Get("fullImage");
+            string description = Get("description");
+            string unlocked    = Get("unlocked", "false");
 
             if (string.IsNullOrEmpty(id)) return null;
 
@@ -113,14 +118,21 @@ public class BagDatabaseCSV : MonoBehaviour
             if (!string.IsNullOrEmpty(thumbnail))
                 sprite = Resources.Load<Sprite>($"{ThumbnailPath}/{thumbnail}");
 
+            Sprite? fullSprite = null;
+            if (!string.IsNullOrEmpty(fullImage))
+                fullSprite = Resources.Load<Sprite>($"Bags/Full/{fullImage}");
+
             return new BagDataRuntime
             {
-                bagId           = id,
-                name            = name,
-                rarity          = rarity,
-                thumbnailName   = thumbnail,
-                thumbnailSprite = sprite,
-                startsUnlocked  = unlocked.Equals("true", System.StringComparison.OrdinalIgnoreCase),
+                bagId            = id,
+                name             = name,
+                rarity           = rarity,
+                thumbnailName    = thumbnail,
+                thumbnailSprite  = sprite,
+                fullImageName    = fullImage,
+                fullImageSprite  = fullSprite,
+                description      = description,
+                startsUnlocked   = unlocked.Equals("true", System.StringComparison.OrdinalIgnoreCase),
             };
         }
         catch (System.Exception e)

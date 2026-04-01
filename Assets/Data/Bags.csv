@@ -1,11 +1,11 @@
-id,name,rarity,thumbnail,unlocked
-bag_mireo,Mireo,Rare,Mireo,true
-bag_golfin,Golfin,Common,,false
-bag_locked3,Bag 3,Common,,false
-bag_locked4,Bag 4,Common,,false
-bag_locked5,Bag 5,Common,,false
-bag_locked6,Bag 6,Common,,false
-bag_locked7,Bag 7,Common,,false
-bag_locked8,Bag 8,Common,,false
-bag_locked9,Bag 9,Common,,false
-bag_locked10,Bag 10,Common,,false
+id,name,rarity,thumbnail,fullImage,description,unlocked
+bag_mireo,Mireo,Rare,Mireo,Mireo,"Add any 8 clubs you want to take out to the field to your bag. Remember you always need at least 1 Driver and 1 Putter.",true
+bag_golfin,Golfin,Common,,,,false
+bag_locked3,Bag 3,Common,,,,false
+bag_locked4,Bag 4,Common,,,,false
+bag_locked5,Bag 5,Common,,,,false
+bag_locked6,Bag 6,Common,,,,false
+bag_locked7,Bag 7,Common,,,,false
+bag_locked8,Bag 8,Common,,,,false
+bag_locked9,Bag 9,Common,,,,false
+bag_locked10,Bag 10,Common,,,,false

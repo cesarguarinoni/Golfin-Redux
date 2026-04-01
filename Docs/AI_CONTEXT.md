@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-03-27 (end of week)
+**Last Updated:** 2026-04-01
 
 ## Current Status
 
@@ -14,31 +14,25 @@
 | Leveling Economy | ✅ Rarity-based (Common 10→39, Supreme 200→239), cost = level × 5 |
 | Settings | Needs minor visual fixes |
 | Items Inventory | ✅ Phase I1 + I2 complete — carousel, detail panel, ItemManager, Item Use Modal (club selection) |
+| Bags Inventory | 🟡 Phase J in progress — spec written in TellCode.md, awaiting implementation |
 | Shop | Not started |
 | Gameplay | Not started |
 
-## Session Summary (2026-03-31)
-### Phase I1 (completed earlier)
-- Data layer: Items.csv, ItemDataRuntime, PlayerItemData, ItemDatabaseCSV, ItemManager
-- UI layer: ItemThumbnailCard, ItemCarouselController, ItemDetailPanel
-- Editor scripts: ItemManagerSetup, ItemsContentBuilder, ItemRightPanelBuilder, ItemDetailPanelAutoWire
-- Migrated RepairKitManager → ItemManager in ClubDetailPanel + ClubCompareController
-- Added 7 ITEM_* localization keys (ITEM_RESTORES, ITEM_PRO_TIP, ITEM_INFO, ITEM_USE, ITEM_COMPARE, ITEM_OWNED, ITEM_DURABILITY)
-- Fixed rarity colors: Uncommon=blue(0.29,0.56,0.89), Rare=green #50C878, Mythic=amber #FFC107
+## Session Summary (2026-04-01)
+### Phase J — Bags Inventory (spec written, implementation next)
+- Full TellCode.md spec: 9 steps (J1–J9)
+- CSV expansion: added `description` + `fullImage` columns to Bags.csv
+- BagManager: added EquippedBagSlot, EquipBag(), OnEquippedBagChanged
+- New scripts: BagCarouselController, BagThumbnailCard, BagDetailPanel
+- New modal: BagClubModalController (single modal, Swap/Equip mode flag)
+- New card component: BagClubCard (replaces ItemUseClubCard in modal context)
+- Kai manual work: 4 prefab/panel clones + wiring (listed in Step J9)
+- Design decision: 10 bags (CSV-driven), one equipped at a time, logged in changelog
 
-### Phase I2 (completed this session)
-- ItemUseModalController — ModalController subclass, Open(itemId), BuildClubCards(filter), OnRepairKitUsed
-- ItemUseClubCard — club card component (180×410) with stats, rarity badge, USE REPAIR KIT gold button
-- Editor scripts: ItemUseClubCardBuilder, ItemUseModalBuilder, ItemUseModalAutoWire
-- Added 3 localization keys: ITEM_SELECT_CLUB, ITEM_USE_REPAIR_KIT, ITEM_CANCEL
-- Fixed compile error in ItemUseModalBuilder (removed dead soModal line with ?? Unity object violation)
-
-## Next Step (Unity editor work — "dressing it up")
-Run in order:
-1. GOLFIN/Build/Item Use Club Card Prefab
-2. GOLFIN/Build/Item Use Modal
-3. GOLFIN/Wire/Item Use Modal
-Then visual polish / layout tuning in Inspector.
+## Next Step
+1. Claude Code implements Steps J1–J3, J4–J8 (scripts only)
+2. Kai does Step J9 (manual Unity work: prefabs, panels, wiring)
+3. Visual polish + testing
 
 ## Week Summary (2026-03-24 → 2026-03-27)
 - Phase E2: Club Repair One-Tap
@@ -50,7 +44,8 @@ Then visual polish / layout tuning in Inspector.
 
 ## Next Up
 
-- Visual polish on Items screen + Item Use Modal (layout, sizing, art)
+- Phase J implementation (Bags Inventory — TellCode.md has full spec)
+- Visual polish on Items screen + Item Use Modal
 - Settings visual fixes
 - Review/playtest all inventory screens end-to-end
 

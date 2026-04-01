@@ -145,6 +145,31 @@ PROPOSAL — needs review and playtesting before implementation. Open questions 
 
 ---
 
+## 2026-04-01 — Bags Screen: Equipped Bag + CSV Expansion
+
+### What Changed
+
+**Original GDD:** "Default Bag Selector" lets the user make a bag the current default.
+Only 2 bags mentioned, second bag grayed out until enough clubs.
+
+**Redux implementation:**
+- Up to 10 bags (CSV-driven), locked bags replaced with unlocked as player progresses
+- "Equipped" concept = one active bag taken to the field (tap EQUIP to switch)
+- Once equipped, can only be unequipped by equipping another bag
+- Added `description` and `fullImage` columns to Bags.csv
+- Bags have rarity (visual only for now — rarity badge on portraits)
+- Swap/Equip club modals are a single modal with mode flag
+- Mandatory club validation (1 Putter, 1 Driver, 1 Iron/Wedge) deferred to Phase J+
+- LEVEL UP and REPAIR buttons on club cards disabled in this context (future phase)
+
+### Why
+
+The original 2-bag design was too limited. 10 bags with unlock progression gives more
+room for monetization and player engagement. The "equipped bag" concept is cleaner
+than "default bag selector" — same idea, better UX language.
+
+---
+
 ## Design Reference Files
 
 | File | Description |

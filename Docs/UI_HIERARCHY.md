@@ -273,6 +273,88 @@ ItemUseClubCard
 
 ---
 
+## Bags Inventory Screen
+
+Root: `InventoryScreen/BagsContent`
+
+### BagsContent (BagCarouselController + BagDetailPanel)
+```
+BagsContent
+├── BagCarousel                                  (BagCarouselController — horizontal scroll)
+│   ├── [BagThumbnailCard instances]              (unlocked bags)
+│   │   ├── BagImage                             (Image — thumbnail sprite)
+│   │   ├── BagLabel                             (TMP — bag name)
+│   │   ├── RarityBadge                          (Image — rarity bg)
+│   │   │   └── Text                             (TMP — "R")
+│   │   └── EquippedIcon                         (GO — toggled)
+│   └── [BagSlotLockedPrefab instances]           (locked bags)
+├── BagDetailPanel                               (BagDetailPanel)
+│   ├── InfoArea
+│   │   ├── BagFullImage                         (Image — full-size bag sprite)
+│   │   ├── BagNameText                          (TMP — "BAG 1")
+│   │   ├── EquippedIcon                         (GO — toggled)
+│   │   └── DescriptionText                      (TMP — bag description from CSV)
+│   └── ClubGrid                                 (GridLayoutGroup — 4×2)
+│       ├── [BagSwapClubCard instances]           (equipped clubs — uses ItemUseClubCard)
+│       │   ├── CardTop/Portrait, RarityBadge, LevelBadge
+│       │   ├── NameText
+│       │   ├── StatsPanel (5 stat rows + DistanceRow)
+│       │   ├── ButtonRow (LevelUpBtn, RepairBtn)
+│       │   └── SwapBtn / SwapText                (TMP — "SWAP")
+│       └── [BagEmptyClubCard instances]          (empty slots — "EQUIP CLUB" button)
+└── EquipBagButton                               (Button — gold/silver)
+    └── Text                                     (TMP — "EQUIPPED" / "EQUIP")
+```
+
+### BagClubModal (BagClubModalController : ModalController)
+```
+BagClubModal                                     (root — ModalController, full-screen overlay)
+├── Backdrop                                     (GO)
+└── ModalPanel                                   (toggled by Show/Hide)
+    └── ModalContainer                           (VerticalLayoutGroup)
+        ├── TitleText                            (TMP — "SWAP CLUB" / "EQUIP CLUB")
+        ├── FilterBar                            (ClubFilterBar — 6 buttons)
+        │   ├── ALLFilter / Button / Text
+        │   ├── DRIVERSFilter / Button / Text
+        │   ├── WOODSFilter / Button / Text
+        │   ├── IRONSFilter / Button / Text
+        │   ├── WEDGESFilter / Button / Text
+        │   └── PUTTERSFilter / Button / Text
+        ├── ScrollArea                           (ScrollRect — vertical)
+        │   ├── Viewport                         (RectMask2D)
+        │   │   └── GridContent                  (GridLayoutGroup — 4 columns)
+        │   │       └── [BagClubCard prefabs — spawned at runtime]
+        │   └── Scrollbar                        (Scrollbar — vertical)
+        └── CancelButton                         (Button)
+            └── Text                             (TMP — "CANCEL")
+```
+
+### BagClubCard prefab (183 × 410, same as BagSwapClubCard)
+```
+BagClubCard
+├── Background                                   (Image — rarity bg)
+│   ├── CardTop                                  (Image — rarity bg sprite)
+│   │   ├── Portrait                             (Image — club portrait)
+│   │   ├── RarityBadge                          (TMP — "R")
+│   │   ├── LevelBadge                           (TMP — "Lv10")
+│   │   └── NameText                             (TMP — "DRIVER\nG&F")
+│   ├── StatsPanel                               (VerticalLayoutGroup)
+│   │   ├── DistanceRow / Image + DistanceValue
+│   │   ├── StatRow_Power / Image + Bar + StatNum
+│   │   ├── StatRow_Accuracy / Image + Bar + StatNum
+│   │   ├── StatRow_LieRes / Image + Bar + StatNum
+│   │   ├── StatRow_Loft / Image + Bar + StatNum
+│   │   └── StatRow_Durability / Image + Bar + StatNum
+│   └── ButtonRow                                (HorizontalLayoutGroup)
+│       ├── LevelUpBtn / Text                    (disabled)
+│       └── RepairBtn / Text                     (disabled)
+├── Rim                                          (Image — decorative border)
+└── SwapBtn                                      (Button — action: SWAP / EQUIP)
+    └── SwapText                                 (TMP — action label)
+```
+
+---
+
 ## Key Notes
 
 - **Character stat rows** use `Name+Bar/StatsName`, `Name+Bar/Bar`, `DiffLabel`, `StatNumber`

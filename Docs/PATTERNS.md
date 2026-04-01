@@ -196,19 +196,47 @@ public void SelectCharacter(string characterId)
 
 ---
 
+## 9. Multi-Mode Modal Pattern (BagClubModal)
+
+**When:** A modal needs to serve two slightly different purposes with the same UI.
+
+**Pattern:** Single modal controller + enum for mode. Title, button labels, and action
+logic vary by mode. Prefab/hierarchy is shared.
+
+```csharp
+public enum BagClubModalMode { Swap, Equip }
+
+public void Open(int bagSlot, BagClubModalMode mode, string? existingClubId)
+{
+    // Set title based on mode
+    titleText.text = mode == BagClubModalMode.Swap
+        ? LocalizationManager.Get("BAG_SWAP_CLUB")
+        : LocalizationManager.Get("BAG_EQUIP_CLUB");
+    // Build cards with mode-appropriate action label
+    // OnAction: Swap removes old club first, Equip just adds
+}
+```
+
+**Used by:** `BagClubModalController` (Swap/Equip clubs in bags)
+
+**Benefits over two separate modals:**
+- Single prefab, single hierarchy, single set of SerializeField wires
+- Less code duplication
+- Filter bar, scroll, card building logic shared
+
+---
+
 ## Quick Reference: File Locations
 
-| Pattern | Character (Roster) | Club (Inventory) |
-|---|---|---|
-| Database CSV | `Roster/Managers/CharacterDatabaseCSV.cs` | `Inventory/ClubDatabaseCSV.cs` |
-| Manager | `Roster/Managers/CharacterManager.cs` (external) | `Inventory/ClubManager.cs` (external) |
-| Detail Panel | `Roster/UI/CharacterDetailPanel.cs` | `Inventory/ClubDetailPanel.cs` |
-| Compare Controller | `Roster/UI/CompareController.cs` | `Inventory/ClubCompareController.cs` |
-| Level Up Modal | `Roster/UI/LevelUpModalController.cs` | `Inventory/ClubLevelUpModalController.cs` |
-| AutoWire (Detail) | `Roster/Editor/DetailPanelAutoWire.cs` | `Inventory/Editor/ClubDetailPanelAutoWire.cs` |
-| AutoWire (Compare) | `Roster/Editor/CompareAutoWire.cs` | `Inventory/Editor/ClubCompareAutoWire.cs` |
-| AutoWire (LevelUp) | `Roster/Editor/LevelUpModalAutoWire.cs` | `Inventory/Editor/ClubLevelUpModalAutoWire.cs` |
-| Carousel | `Roster/UI/CarouselController.cs` | `Inventory/ClubCarouselController.cs` |
-| Thumbnail Card | `Roster/UI/CharacterThumbnailCard.cs` | `Inventory/ClubThumbnailCard.cs` |
+| Pattern | Character (Roster) | Club (Inventory) | Bag (Inventory) |
+|---|---|---|---|
+| Database CSV | `Roster/Managers/CharacterDatabaseCSV.cs` | `Inventory/ClubDatabaseCSV.cs` | `Scripts/BagDatabaseCSV.cs` (root) |
+| Manager | `Roster/Managers/CharacterManager.cs` (external) | `Scripts/ClubManager.cs` (root) | `Scripts/BagManager.cs` (root) |
+| Detail Panel | `Roster/UI/CharacterDetailPanel.cs` | `Inventory/ClubDetailPanel.cs` | `Inventory/BagDetailPanel.cs` |
+| Compare Controller | `Roster/UI/CompareController.cs` | `Inventory/ClubCompareController.cs` | — |
+| Level Up Modal | `Roster/UI/LevelUpModalController.cs` | `Inventory/ClubLevelUpModalController.cs` | — |
+| Club Modal | — | — | `Inventory/BagClubModalController.cs` |
+| Carousel | `Roster/UI/CarouselController.cs` | `Inventory/ClubCarouselController.cs` | `Inventory/BagCarouselController.cs` |
+| Thumbnail Card | `Roster/UI/CharacterThumbnailCard.cs` | `Inventory/ClubThumbnailCard.cs` | `Inventory/BagThumbnailCard.cs` |
 
-All paths relative to `Assets/Scripts/UI/`.
+All paths relative to `Assets/Scripts/UI/` unless noted as `(root)` = `Assets/Scripts/`.

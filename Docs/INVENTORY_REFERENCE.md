@@ -32,9 +32,9 @@ Each screen has matching Editor scripts:
 |--------|----------------|----------------|
 | Clubs | `Assets/Scripts/UI/Inventory/Club*.cs` | `Assets/Scripts/UI/Inventory/Editor/Club*.cs` |
 | Balls | `Assets/Scripts/UI/Inventory/Ball*.cs` | `Assets/Scripts/UI/Inventory/Editor/Ball*.cs` |
-| Items | (TBD) | (TBD) |
-| Bags | `Assets/Scripts/UI/Inventory/BagSelectionModalController.cs` | — |
-| Managers | `Assets/Scripts/ClubManager.cs`, `Assets/Scripts/BallManager.cs` | `Assets/Scripts/UI/Inventory/Editor/*ManagerSetup.cs` |
+| Items | `Assets/Scripts/UI/Inventory/Item*.cs` | `Assets/Scripts/UI/Inventory/Editor/Item*.cs` |
+| Bags | `Assets/Scripts/UI/Inventory/Bag*.cs` | (auto-wire TBD) |
+| Managers | `Assets/Scripts/ClubManager.cs`, `Assets/Scripts/BallManager.cs`, `Assets/Scripts/BagManager.cs`, `Assets/Scripts/ItemManager.cs` | `Assets/Scripts/UI/Inventory/Editor/*ManagerSetup.cs` |
 
 ### Data
 | File | Location |
@@ -45,6 +45,12 @@ Each screen has matching Editor scripts:
 | Club sprites (full) | `Resources/Clubs/Full/` |
 | Ball sprites (thumb) | `Resources/Balls/Thumbnails/` |
 | Ball sprites (full) | `Resources/Balls/Full/` |
+| Items.csv | `Assets/Data/Items.csv` |
+| Item sprites (thumb) | `Resources/Items/Thumbnails/` |
+| Item sprites (full) | `Resources/Items/Full/` |
+| Bags.csv | `Assets/Data/Bags.csv` |
+| Bag sprites (thumb) | `Resources/Bags/Thumbnail/` |
+| Bag sprites (full) | `Resources/Bags/Full/` |
 | Rarity backgrounds | `Resources/Rarities/` (Common, Uncommon, Rare, Mythic, Legendary, Supreme) |
 
 ### Prefabs
@@ -52,6 +58,14 @@ Each screen has matching Editor scripts:
 |--------|----------|
 | ClubThumbnailCard | `Assets/Prefabs/UI/Inventory/ClubThumbnailCard.prefab` |
 | BallThumbnailCard | `Assets/Prefabs/UI/Inventory/BallThumbnailCard.prefab` |
+| ItemThumbnailCard | `Assets/Prefabs/UI/Inventory/ItemThumbnailCard.prefab` |
+| BagThumbnailCard | `Assets/Prefabs/UI/Inventory/BagThumbnailCard.prefab` |
+| BagSwapClubCard | `Assets/Prefabs/UI/Inventory/BagSwapClubCard.prefab` |
+| BagEmptyClubCard | `Assets/Prefabs/UI/Inventory/BagEmptyClubCard.prefab` |
+| BagClubCard | `Assets/Prefabs/UI/Inventory/BagClubCard.prefab` |
+| BagSlotPrefab | `Assets/Prefabs/UI/Inventory/BagSlotPrefab.prefab` |
+| BagSlotLockedPrefab | `Assets/Prefabs/UI/Inventory/BagSlotLockedPrefab.prefab` |
+| ItemUseClubCard | `Assets/Prefabs/UI/Inventory/ItemUseClubCard.prefab` |
 | Source (character card) | `Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab` |
 
 ---
@@ -74,16 +88,18 @@ Arrays: `tabButtons[]`, `tabPanels[]`, `tabIndicators[]`
 
 ## Data Model Comparison
 
-| Field | Characters | Clubs | Balls | Items |
-|-------|-----------|-------|-------|-------|
-| Rarity | ✅ 6 tiers | ✅ 6 tiers | ❌ None | ❌ None |
-| Level | ✅ | ✅ (rarity-based start) | ❌ | ❌ |
-| Stats | 4 (STR/CC/REC/STA) | 5 bars + Distance | 5 bars (-10 to +10) | ❌ |
-| Durability | ❌ | ✅ (current/max) | ❌ | ❌ |
-| Equip | ❌ (selected differently) | ✅ (bag slots) | ❌ (chosen in-game) | ❌ (use from inventory) |
-| Quantity | ❌ (unique) | ❌ (unique) | ✅ (stack to 99, ∞) | ✅ (stack to 99) |
-| SP Allocation | ✅ (ManualSP) | ✅ (ManualSP) | ❌ | ❌ |
-| Compare | ✅ | ✅ | ✅ (future) | ❌ |
+| Field | Characters | Clubs | Balls | Items | Bags |
+|-------|-----------|-------|-------|-------|------|
+| Rarity | ✅ 6 tiers | ✅ 6 tiers | ❌ None | ✅ 3 tiers | ✅ 6 tiers |
+| Level | ✅ | ✅ (rarity-based start) | ❌ | ❌ | ❌ (future) |
+| Stats | 4 (STR/CC/REC/STA) | 5 bars + Distance | 5 bars (-10 to +10) | ❌ | ❌ |
+| Durability | ❌ | ✅ (current/max) | ❌ | ❌ | ❌ |
+| Equip | ❌ (selected differently) | ✅ (bag slots) | ❌ (chosen in-game) | ❌ (use from inventory) | ✅ (one active bag) |
+| Quantity | ❌ (unique) | ❌ (unique) | ✅ (stack to 99, ∞) | ✅ (stack to 99) | ❌ (unique) |
+| SP Allocation | ✅ (ManualSP) | ✅ (ManualSP) | ❌ | ❌ | ❌ |
+| Compare | ✅ | ✅ | ✅ (future) | ❌ | ❌ |
+| Club Grid | ❌ | ❌ | ❌ | ❌ | ✅ (8-slot grid) |
+| Description | Bio text | ❌ | ❌ | ✅ | ✅ (from CSV) |
 
 ---
 
@@ -226,3 +242,43 @@ Shows owned consumable items (repair kits for now, 3 tiers).
 - Carousel reuses BallThumbnailCard prefab pattern (cloned + swapped component)
 - Empty card: reuses BallThumbnailEmptyCard directly
 - ItemManager replaces RepairKitManager as the single item inventory manager
+
+
+---
+
+## Bags Screen (Tab Index 1) — Phase J
+
+Shows the player's golf bags. Each bag holds up to 8 clubs. One bag is "equipped" for gameplay.
+
+| System | Runtime Scripts | Editor Scripts |
+|--------|----------------|----------------|
+| Bags | `Assets/Scripts/UI/Inventory/Bag*.cs` | (auto-wire TBD) |
+| Manager | `Assets/Scripts/BagManager.cs` | `Assets/Scripts/UI/Inventory/Editor/BagManagerSetup.cs` |
+| Database | `Assets/Scripts/BagDatabaseCSV.cs` | (wired by setup) |
+
+| Data | Location |
+|------|----------|
+| Bags.csv | `Assets/Data/Bags.csv` |
+| Bag sprites (thumb) | `Resources/Bags/Thumbnail/` |
+| Bag sprites (full) | `Resources/Bags/Full/` |
+
+### CSV Columns
+`id, name, rarity, thumbnail, fullImage, description, unlocked`
+
+### BagManager Key APIs
+- `EquippedBagSlot` — which bag goes to the field (1-based, only one at a time)
+- `EquipBag(int bagSlot)` — equips a bag, fires `OnEquippedBagChanged`
+- `AssignClubToBag(clubId, bagSlot)` — adds club, fires `OnBagChanged`
+- `RemoveClubFromBag(clubId)` — removes club, fires `OnBagChanged`
+- `GetClubsInBag(bagSlot)` — returns `List<PlayerClubData>`
+- `IsBagFull(bagSlot)` — checks 8-club limit
+
+### Key Differences from Other Screens
+- Bags have rarity but NO stats — detail panel shows description text instead
+- Club grid uses existing `BagSwapClubCard` prefab (has `ItemUseClubCard` component for data binding)
+- Empty slots use `BagEmptyClubCard` prefab
+- Swap/Equip modal (`BagClubModalController`) is a single modal with `BagClubModalMode` enum
+- Modal uses new `BagClubCard` component (not `ItemUseClubCard`) — action button text is configurable
+- Carousel shows locked bags using `BagSlotLockedPrefab`
+- `BagThumbnailCard` carousel card cloned from `BagSlotPrefab`
+- Equipped bag button: gold (EQUIPPED, disabled) / silver (EQUIP, active)

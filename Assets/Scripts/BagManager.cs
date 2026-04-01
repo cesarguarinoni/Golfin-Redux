@@ -26,6 +26,12 @@ public class BagManager : MonoBehaviour
     /// <summary>Fired when bag contents change. Arg = bagSlot that changed.</summary>
     public event System.Action<int>? OnBagChanged;
 
+    /// <summary>The bag slot (1-based) currently equipped for gameplay. 0 = none.</summary>
+    public int EquippedBagSlot { get; private set; } = 0;
+
+    /// <summary>Fired when the equipped bag changes. Arg = new equippedBagSlot.</summary>
+    public event System.Action<int>? OnEquippedBagChanged;
+
     private readonly HashSet<int> unlockedSlots = new();
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -48,6 +54,13 @@ public class BagManager : MonoBehaviour
             // Fallback: unlock bag 1 if CSV not loaded yet
             unlockedSlots.Add(1);
             Debug.LogWarning("[BagManager] BagDatabaseCSV not ready in Awake — bag 1 unlocked as fallback.");
+        }
+
+        // Auto-equip first unlocked bag
+        if (EquippedBagSlot == 0 && unlockedSlots.Count > 0)
+        {
+            EquippedBagSlot = 1; // bag_mireo is slot 1
+            Debug.Log($"[BagManager] Auto-equipped Bag {EquippedBagSlot}.");
         }
     }
 
@@ -123,6 +136,20 @@ public class BagManager : MonoBehaviour
 
         if (oldSlot > 0) OnBagChanged?.Invoke(oldSlot);
         Debug.Log($"[BagManager] '{clubId}' removed from Bag {oldSlot}.");
+    }
+
+    /// <summary>Equips a bag for gameplay. Only one bag can be equipped at a time.</summary>
+    public void EquipBag(int bagSlot)
+    {
+        if (!IsBagUnlocked(bagSlot))
+        {
+            Debug.Log($"[BagManager] Cannot equip locked Bag {bagSlot}.");
+            return;
+        }
+        int oldSlot = EquippedBagSlot;
+        EquippedBagSlot = bagSlot;
+        Debug.Log($"[BagManager] Equipped Bag {bagSlot} (was Bag {oldSlot}).");
+        OnEquippedBagChanged?.Invoke(bagSlot);
     }
 
     /// <summary>Unlocks the next locked bag slot (for shop/progression).</summary>
