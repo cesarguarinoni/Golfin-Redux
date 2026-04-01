@@ -454,3 +454,24 @@ MonoBehaviour:
   - key: ITEM_CANCEL
     english: CANCEL
     japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  - key: BAG_EQUIPPED
+    english: EQUIPPED
+    japanese: "\u88C5\u5099\u4E2D"
+  - key: BAG_EQUIP
+    english: EQUIP
+    japanese: "\u88C5\u5099"
+  - key: BAG_SWAP
+    english: SWAP
+    japanese: "\u4EA4\u63DB"
+  - key: BAG_SWAP_CLUB
+    english: SWAP CLUB
+    japanese: "\u30AF\u30E9\u30D6\u3092\u4EA4\u63DB"
+  - key: BAG_EQUIP_CLUB
+    english: EQUIP CLUB
+    japanese: "\u30AF\u30E9\u30D6\u3092\u88C5\u5099"
+  - key: BAG_EQUIP_ACTION
+    english: EQUIP
+    japanese: "\u88C5\u5099"
+  - key: BAG_CANCEL
+    english: CANCEL
+    japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"

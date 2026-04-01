@@ -40,7 +40,9 @@
       "Bash(python daily_report.py --note \"Session ran out of time due to Desktop Commander token overuse. In the meantime, worked on Bags Screen and Matchmaking designs in Figma.\")",
       "Bash(find C:UserscesarGolfinReduxAssetsScripts -type f \\\\\\(-name *Builder*.cs -o -name *builder*.cs \\\\\\))",
       "Bash(powershell -Command \"Get-Content ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Docs\\\\TellCode.md''\")",
-      "Bash(find C:UserscesarGolfinReduxAssetsScriptsUIInventoryEditor -type f -name *.cs)"
+      "Bash(find C:UserscesarGolfinReduxAssetsScriptsUIInventoryEditor -type f -name *.cs)",
+      "Bash(Get-Content -Path \"$env:LOCALAPPDATA\\\\Unity\\\\Editor\\\\Editor.log\" -Tail 200)",
+      "Bash(Select-String \"BagCarousel|BagManager|BagDatabase|BagThumbnail|Error|Exception|NullRef\")"
     ]
   }
 }

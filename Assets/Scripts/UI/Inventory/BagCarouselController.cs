@@ -23,6 +23,9 @@ namespace Golfin.Inventory
         [SerializeField] private Transform paginationDotsParent = null!;
         [SerializeField] private GameObject? paginationDotPrefab;
 
+        [Header("Detail Panel")]
+        [SerializeField] private BagDetailPanel? detailPanel;
+
         [Header("Settings")]
         [SerializeField] private int cardsPerPage = 6;
         [SerializeField] private int minCardCount = 6;
@@ -175,6 +178,7 @@ namespace Golfin.Inventory
 
             selectedBagSlot = bagSlot;
             OnBagSelected?.Invoke(bagSlot);
+            detailPanel?.ShowBag(bagSlot);
         }
 
         public int GetSelectedBagSlot() => selectedBagSlot;
