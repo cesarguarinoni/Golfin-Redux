@@ -23,38 +23,18 @@ Updated by both Claude (Architect) and Claude Code.
 
 ---
 
-## Active: Phase J — Bags Inventory
-
-### J1 — CSV + Data Model
-- [ ] Add `description` and `fullImage` columns to Bags.csv
-- [ ] Update BagDataRuntime + BagDatabaseCSV to parse new fields
-- [ ] Add full-size bag sprites to Resources/Bags/Full/
-
-### J2 — BagManager Equipped State
-- [ ] Add EquippedBagSlot property + OnEquippedBagChanged event
-- [ ] Add EquipBag(int) method
-- [ ] Auto-equip first unlocked bag in Awake()
-
-### J3 — Carousel
-- [ ] BagCarouselController.cs (horizontal scroll, pagination)
-- [ ] BagThumbnailCard.cs (data binding)
-- [ ] Kai: Create BagThumbnailCard prefab (clone BagSlotPrefab)
-
-### J4 — Detail Panel
-- [ ] BagDetailPanel.cs (info area + 8-slot club grid)
-- [ ] Equipped bag button logic (gold/silver)
-- [ ] Kai: Build BagsContent panel in scene
-
-### J5 — Swap/Equip Modal
-- [ ] BagClubModalController.cs (single modal, Swap/Equip mode)
-- [ ] BagClubCard.cs (new component)
-- [ ] Kai: Create BagClubCard prefab (clone BagSwapClubCard)
-- [ ] Kai: Build BagClubModal hierarchy (clone ItemUseModal)
-
-### J6 — Wiring + Polish
-- [ ] Localization keys (7 keys, EN + JP)
-- [ ] Kai: Wire InventoryScreenController.tabPanels[1] = BagsContent
-- [ ] Verify Graphic Raycaster + raycast targets
+## ✅ Completed: Phase J — Bags Inventory (2026-04-01)
+- [x] Bags.csv: added fullImage + description columns, Golfin bag (Mythic, unlocked)
+- [x] BagDataRuntime + BagDatabaseCSV: fullImageSprite, description fields parsed
+- [x] BagManager: EquippedBagSlot, EquipBag(), OnEquippedBagChanged, auto-equip slot 1
+- [x] BagCarouselController: unlocked bags + locked pad cards (min 6), arrows hide on 1 page
+- [x] BagThumbnailCard: thumbnail, rarity badge, equipped icon, selection scale
+- [x] BagDetailPanel: full image, name, description, 8-slot club grid, equip button
+- [x] BagClubModalController: Swap/Equip mode, filter bar, excludes clubs already in bag
+- [x] BagClubCard: cardTopImage field (wires to CardTop image, not Background container)
+- [x] Editor: BagsContentAutoWire + BagClubModalAutoWire (GOLFIN/Wire menu)
+- [x] Cesar: Prefabs, scene hierarchy, Inspector wiring, full-size bag images
+- [x] Bug fixes: prefab SetActive poisoning, 10-slot carousel, Driver G&F always showing
 
 ---
 
