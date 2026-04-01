@@ -14,7 +14,7 @@
 | Leveling Economy | ✅ Rarity-based (Common 10→39, Supreme 200→239), cost = level × 5 |
 | Settings | Needs minor visual fixes |
 | Items Inventory | ✅ Phase I complete — carousel, detail panel, ItemManager, Item Use Modal |
-| Bags Inventory | ✅ Phase J complete — carousel, detail panel, equip bag, swap/equip club modal |
+| Bags Inventory | ✅ Phase J complete — carousel, detail panel, equip bag, swap/equip club modal, visual polish |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -35,9 +35,9 @@
 - Detail panel used `BagSwapClubCard` (no script component) → `GetComponent<BagClubCard>()` returned null → cards never initialized → always showed baked-in Driver G&F portrait. Fixed: use `BagClubCard.prefab` which has the component correctly
 
 ## Next Step
-- Visual polish pass on Bags screen
-- Settings visual fixes
-- End-to-end playtest all inventory screens
+- **Phase K: 3D Golf Course Pipeline prototype** (starting 2026-04-02)
+- Settings visual fixes (deferred)
+- End-to-end playtest all inventory screens (deferred)
 
 ## Week Summary (2026-03-24 → 2026-03-27)
 - Phase E2: Club Repair One-Tap
