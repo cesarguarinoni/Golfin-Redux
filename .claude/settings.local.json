@@ -42,7 +42,16 @@
       "Bash(powershell -Command \"Get-Content ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Docs\\\\TellCode.md''\")",
       "Bash(find C:UserscesarGolfinReduxAssetsScriptsUIInventoryEditor -type f -name *.cs)",
       "Bash(Get-Content -Path \"$env:LOCALAPPDATA\\\\Unity\\\\Editor\\\\Editor.log\" -Tail 200)",
-      "Bash(Select-String \"BagCarousel|BagManager|BagDatabase|BagThumbnail|Error|Exception|NullRef\")"
+      "Bash(Select-String \"BagCarousel|BagManager|BagDatabase|BagThumbnail|Error|Exception|NullRef\")",
+      "Bash(powershell -Command \"Get-Content -Path \"\"$env:LOCALAPPDATA\\\\Unity\\\\Editor\\\\Editor.log\"\" -Tail 200 | Select-String ''BagCarousel|BagManager|BagDatabase|BagThumbnail|Error|Exception|NullRef''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 200 | Select-String ''BagCarousel|BagManager|BagDatabase|BagThumbnail|Error|Exception|NullRef''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 300 | Select-String ''Bag|Error|Exception|NullRef|startsUnlocked|unlocked''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 500 | Select-String ''BagDatabase|BagManager|Auto-equipped|Loaded.*bag|BagCarousel|BagThumbnail|PopulateCarousel''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 1000 | Select-String ''BagDatabase|Auto-equipped|Loaded.*bag|BagCarousel|carousel|Bag.*unlocked|startsUnlocked''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 2000 | Select-String ''\\\\[Bag''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 300 | Select-String ''BagsContent|AutoWire|wired|failed|Arrow|arrow''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 500 | Select-String ''Wire|wired|failed''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 1000 | Select-String ''NOT FOUND|leftArrow|rightArrow|Arrow|Pagination''\")"
     ]
   }
 }

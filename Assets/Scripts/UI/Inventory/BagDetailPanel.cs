@@ -111,23 +111,14 @@ namespace Golfin.Inventory
                 var cardGO = Instantiate(clubCardPrefab, clubGridParent);
                 spawnedCards.Add(cardGO);
 
-                BindSwapClubCard(cardGO, playerClub, template);
-
-                // Wire SWAP button
-                var swapBtn = FindChild<Button>(cardGO, "SwapBtn");
-                if (swapBtn != null)
+                // Use BagClubCard directly — same component as modal, stat bars guaranteed wired
+                var card = cardGO.GetComponent<BagClubCard>();
+                if (card != null)
                 {
                     var capturedClubId = playerClub.clubId;
-                    swapBtn.onClick.RemoveAllListeners();
-                    swapBtn.onClick.AddListener(() => OpenModal(BagClubModalMode.Swap, capturedClubId));
+                    card.Initialize(playerClub, template, LocalizationManager.Get("BAG_SWAP"));
+                    card.OnActionClicked += () => OpenModal(BagClubModalMode.Swap, capturedClubId);
                 }
-
-                // Level Up and Repair disabled in this context
-                var levelUpBtn = FindChild<Button>(cardGO, "LevelUpBtn");
-                if (levelUpBtn != null) levelUpBtn.interactable = false;
-
-                var repairBtn = FindChild<Button>(cardGO, "RepairBtn");
-                if (repairBtn != null) repairBtn.interactable = false;
             }
 
             // Empty slots
@@ -143,20 +134,6 @@ namespace Golfin.Inventory
                     equipBtn.onClick.RemoveAllListeners();
                     equipBtn.onClick.AddListener(() => OpenModal(BagClubModalMode.Equip, null));
                 }
-            }
-        }
-
-        private void BindSwapClubCard(GameObject cardGO, PlayerClubData playerClub, ClubDataRuntime template)
-        {
-            var cardComp = cardGO.GetComponent<ItemUseClubCard>();
-            if (cardComp != null)
-            {
-                bool needsRepair = playerClub.currentDurability < playerClub.maxDurability;
-                cardComp.Initialize(playerClub, template, 0, needsRepair);
-
-                var swapText = FindChild<TextMeshProUGUI>(cardGO, "SwapBtn/SwapText");
-                if (swapText != null)
-                    swapText.text = LocalizationManager.Get("BAG_SWAP");
             }
         }
 

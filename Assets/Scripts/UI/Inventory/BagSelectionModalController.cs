@@ -58,11 +58,7 @@ namespace Golfin.Inventory
 
             if (bagGridParent == null) return;
 
-            // Keep prefab assets hidden (no-op if they're project assets, not scene objects)
-            if (bagSlotPrefab       != null) bagSlotPrefab.SetActive(false);
-            if (bagSlotLockedPrefab != null) bagSlotLockedPrefab.SetActive(false);
-
-            // Hide any scene-object templates sitting inside the grid
+            // Hide any scene-object templates sitting inside the grid (do NOT call SetActive on prefab assets)
             foreach (Transform child in bagGridParent)
                 if (child.name == "BagSlotPrefab" || child.name == "BagSlotLockedPrefab")
                     child.gameObject.SetActive(false);

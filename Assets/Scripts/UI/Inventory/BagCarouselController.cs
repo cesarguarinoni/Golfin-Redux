@@ -102,27 +102,14 @@ namespace Golfin.Inventory
             var allBags = BagDatabaseCSV.Instance.GetAllBags();
             int previousSlot = selectedBagSlot;
 
+            // ── Step 1: spawn only UNLOCKED bags as thumbnail cards ────────────
             for (int i = 0; i < allBags.Count; i++)
             {
                 int bagSlot = i + 1;
-                bool unlocked = BagManager.Instance.IsBagUnlocked(bagSlot);
+                if (!BagManager.Instance.IsBagUnlocked(bagSlot)) continue;
 
-                if (!unlocked)
-                {
-                    // Locked card
-                    if (bagLockedCardPrefab != null)
-                    {
-                        var lockedGO = Instantiate(bagLockedCardPrefab, contentParent);
-                        var le = lockedGO.GetComponent<LayoutElement>();
-                        if (le == null) le = lockedGO.AddComponent<LayoutElement>();
-                        le.preferredWidth = 135f;
-                        le.preferredHeight = 165f;
-                    }
-                    continue;
-                }
-
-                // Unlocked card
                 var cardGO = Instantiate(bagCardPrefab, contentParent);
+                cardGO.SetActive(true); // prefab may have been saved inactive
                 var cardLE = cardGO.GetComponent<LayoutElement>();
                 if (cardLE == null) cardLE = cardGO.AddComponent<LayoutElement>();
                 cardLE.preferredWidth = 135f;
@@ -131,23 +118,23 @@ namespace Golfin.Inventory
                 var card = cardGO.GetComponent<BagThumbnailCard>();
                 if (card != null)
                 {
-                    var bagData = allBags[i];
                     bool isEquipped = BagManager.Instance.EquippedBagSlot == bagSlot;
-                    card.Initialize(bagSlot, bagData, isEquipped);
+                    card.Initialize(bagSlot, allBags[i], isEquipped);
                     int slot = bagSlot;
                     card.OnClicked += () => SelectBag(slot);
                     cards.Add(card);
                 }
             }
 
-            // Pad to minCardCount with locked prefabs
+            // ── Step 2: pad with locked cards up to minCardCount total ─────────
             int currentCount = contentParent.childCount;
             for (int i = currentCount; i < minCardCount; i++)
             {
                 if (bagLockedCardPrefab == null) break;
-                var extraLocked = Instantiate(bagLockedCardPrefab, contentParent);
-                var le = extraLocked.GetComponent<LayoutElement>();
-                if (le == null) le = extraLocked.AddComponent<LayoutElement>();
+                var lockedGO = Instantiate(bagLockedCardPrefab, contentParent);
+                lockedGO.SetActive(true); // prefab may have been saved inactive
+                var le = lockedGO.GetComponent<LayoutElement>();
+                if (le == null) le = lockedGO.AddComponent<LayoutElement>();
                 le.preferredWidth = 135f;
                 le.preferredHeight = 165f;
             }
@@ -255,8 +242,10 @@ namespace Golfin.Inventory
 
         private void UpdateArrowButtonStates()
         {
-            if (leftArrowButton  != null) leftArrowButton.interactable  = currentPage > 0;
-            if (rightArrowButton != null) rightArrowButton.interactable = currentPage < totalPages - 1;
+            bool multiPage = totalPages > 1;
+            // Hide arrows entirely when everything fits on one page
+            if (leftArrowButton  != null) leftArrowButton.gameObject.SetActive(multiPage && currentPage > 0);
+            if (rightArrowButton != null) rightArrowButton.gameObject.SetActive(multiPage && currentPage < totalPages - 1);
         }
     }
 }

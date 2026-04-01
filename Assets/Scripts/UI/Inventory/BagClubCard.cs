@@ -7,15 +7,19 @@ using Golfin.Roster;
 namespace Golfin.Inventory
 {
     /// <summary>
-    /// Club card inside the Bag Swap/Equip modal.
+    /// Club card used in the Bag detail panel grid AND the Swap/Equip modal.
     /// Same visual layout as ItemUseClubCard (portrait, stats, buttons)
     /// but action button label is configurable ("SWAP" or "EQUIP").
     /// Level Up and Repair buttons are always disabled.
+    ///
+    /// Inspector wiring note:
+    ///   cardTopImage  → CardTop   (the rarity-coloured image, NOT the Background container)
+    ///   portraitImage → CardTop/Portrait  (or wherever the club portrait lives)
     /// </summary>
     public class BagClubCard : MonoBehaviour
     {
         [Header("Card Top")]
-        [SerializeField] private Image           backgroundImage  = null!;
+        [SerializeField] private Image           cardTopImage     = null!;  // wire to CardTop, NOT Background
         [SerializeField] private Image           portraitImage    = null!;
         [SerializeField] private TextMeshProUGUI nameText         = null!;
         [SerializeField] private TextMeshProUGUI rarityBadgeText  = null!;
@@ -55,11 +59,11 @@ namespace Golfin.Inventory
             if (portraitImage != null && template.portraitSprite != null)
                 portraitImage.sprite = template.portraitSprite;
 
-            // Rarity bg
-            if (backgroundImage != null)
+            // Rarity bg — goes on CardTop image, not the Background container
+            if (cardTopImage != null)
             {
                 var bgSprite = Resources.Load<Sprite>($"Rarities/{template.rarity}");
-                if (bgSprite != null) { backgroundImage.sprite = bgSprite; backgroundImage.color = Color.white; }
+                if (bgSprite != null) { cardTopImage.sprite = bgSprite; cardTopImage.color = Color.white; }
             }
 
             // Name

@@ -881,9 +881,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'DRIVER
-
-    G&F'
+  m_text: Test
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 39fb7824ee463ab408c7f2e76c362562, type: 2}
   m_sharedMaterial: {fileID: 2100000, guid: 6f6951e370dee4940a42f02a42e2ccf8, type: 2}
@@ -910,7 +908,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20
+  m_fontSize: 30
   m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -2435,7 +2433,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 1614545952, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
-  m_Type: 1
+  m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 0
@@ -2583,7 +2581,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: caa09c5427883e0489a42910af13961e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Inventory.BagClubCard
-  backgroundImage: {fileID: 9103602770144467328}
+  cardTopImage: {fileID: 0}
   portraitImage: {fileID: 2224294535834255235}
   nameText: {fileID: 7844687729420141010}
   rarityBadgeText: {fileID: 749727262008646853}
