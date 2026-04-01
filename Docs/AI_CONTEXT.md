@@ -13,26 +13,31 @@
 | Balls Inventory | ✅ Phase H complete (carousel, detail panel, segmented stat bars, compare) |
 | Leveling Economy | ✅ Rarity-based (Common 10→39, Supreme 200→239), cost = level × 5 |
 | Settings | Needs minor visual fixes |
-| Items Inventory | ✅ Phase I1 + I2 complete — carousel, detail panel, ItemManager, Item Use Modal (club selection) |
-| Bags Inventory | 🟡 Phase J in progress — spec written in TellCode.md, awaiting implementation |
+| Items Inventory | ✅ Phase I complete — carousel, detail panel, ItemManager, Item Use Modal |
+| Bags Inventory | ✅ Phase J complete — carousel, detail panel, equip bag, swap/equip club modal |
 | Shop | Not started |
 | Gameplay | Not started |
 
 ## Session Summary (2026-04-01)
-### Phase J — Bags Inventory (spec written, implementation next)
-- Full TellCode.md spec: 9 steps (J1–J9)
-- CSV expansion: added `description` + `fullImage` columns to Bags.csv
-- BagManager: added EquippedBagSlot, EquipBag(), OnEquippedBagChanged
-- New scripts: BagCarouselController, BagThumbnailCard, BagDetailPanel
-- New modal: BagClubModalController (single modal, Swap/Equip mode flag)
-- New card component: BagClubCard (replaces ItemUseClubCard in modal context)
-- Kai manual work: 4 prefab/panel clones + wiring (listed in Step J9)
-- Design decision: 10 bags (CSV-driven), one equipped at a time, logged in changelog
+### Phase J — Bags Inventory ✅ COMPLETE
+- Bags.csv expanded: `description` + `fullImage` columns, Golfin bag added (Mythic, unlocked)
+- BagManager: EquippedBagSlot, EquipBag(), OnEquippedBagChanged, auto-equip slot 1
+- BagCarouselController: shows unlocked bags + locked pad cards (min 6), arrows hide on 1 page
+- BagThumbnailCard: thumbnail, rarity badge, equipped icon, selection scale
+- BagDetailPanel: full bag image, name, description, 8-slot club grid, equip bag button
+- BagClubModalController: Swap/Equip mode, filter bar, excludes clubs already in the bag
+- BagClubCard: `cardTopImage` field (NOT backgroundImage — wires to CardTop, not Background container)
+- Editor auto-wire: BagsContentAutoWire + BagClubModalAutoWire (GOLFIN/Wire menu)
+
+### Key bugs fixed this session
+- Prefab `SetActive(false)` in BagSelectionModalController was poisoning in-memory prefab assets → all instantiated carousel cards appeared inactive
+- Carousel showed all 10 CSV bags as slots; fixed to show only unlocked bags + pad to minCardCount
+- Detail panel used `BagSwapClubCard` (no script component) → `GetComponent<BagClubCard>()` returned null → cards never initialized → always showed baked-in Driver G&F portrait. Fixed: use `BagClubCard.prefab` which has the component correctly
 
 ## Next Step
-1. Claude Code implements Steps J1–J3, J4–J8 (scripts only)
-2. Kai does Step J9 (manual Unity work: prefabs, panels, wiring)
-3. Visual polish + testing
+- Visual polish pass on Bags screen
+- Settings visual fixes
+- End-to-end playtest all inventory screens
 
 ## Week Summary (2026-03-24 → 2026-03-27)
 - Phase E2: Club Repair One-Tap
@@ -44,10 +49,9 @@
 
 ## Next Up
 
-- Phase J implementation (Bags Inventory — TellCode.md has full spec)
-- Visual polish on Items screen + Item Use Modal
+- Visual polish pass on Bags screen
 - Settings visual fixes
-- Review/playtest all inventory screens end-to-end
+- End-to-end playtest all inventory screens
 
 ## Key Lessons (accumulated)
 - `GameObject.Find` misses inactive objects — use `Resources.FindObjectsOfTypeAll<GameObject>()` filtered by `go.scene.isLoaded` in editor scripts

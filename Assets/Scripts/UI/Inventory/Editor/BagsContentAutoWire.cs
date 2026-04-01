@@ -44,7 +44,7 @@ namespace Golfin.Inventory.Editor
         private const string PREFAB_BAG_CARD    = "Assets/Prefabs/UI/Inventory/BagThumbnailCard.prefab";
         private const string PREFAB_LOCKED_A    = "Assets/Prefabs/UI/Inventory/BagSlotLockedPrefab.prefab";
         private const string PREFAB_LOCKED_B    = "Assets/Prefabs/UI/Inventory/BagSlotLocked.prefab"; // alt name
-        private const string PREFAB_SWAP_CARD   = "Assets/Prefabs/UI/Inventory/BagSwapClubCard.prefab";
+        private const string PREFAB_CLUB_CARD   = "Assets/Prefabs/UI/Inventory/BagClubCard.prefab";   // must have BagClubCard component
         private const string PREFAB_EMPTY_CARD  = "Assets/Prefabs/UI/Inventory/BagEmptyClubCard.prefab";
 
         [MenuItem("GOLFIN/Wire/Bags Content")]
@@ -142,9 +142,9 @@ namespace Golfin.Inventory.Editor
                 WireDetail("clubGridParent", dRoot.Find("ClubGrid"), "ClubGrid");
 
                 // Club card prefabs
-                var swapCardPrefab  = AssetDatabase.LoadAssetAtPath<GameObject>(PREFAB_SWAP_CARD);
+                var clubCardPrefab  = AssetDatabase.LoadAssetAtPath<GameObject>(PREFAB_CLUB_CARD);
                 var emptyCardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PREFAB_EMPTY_CARD);
-                WireDetail("clubCardPrefab",      swapCardPrefab,  PREFAB_SWAP_CARD);
+                WireDetail("clubCardPrefab",      clubCardPrefab,  PREFAB_CLUB_CARD);
                 WireDetail("emptyClubCardPrefab", emptyCardPrefab, PREFAB_EMPTY_CARD);
 
                 // EquipBagButton — direct child of BagsContent (sibling of BagDetailPanel)

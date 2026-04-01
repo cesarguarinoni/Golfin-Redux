@@ -21,7 +21,7 @@ namespace Golfin.Inventory
 
         [Header("Club Grid")]
         [SerializeField] private Transform  clubGridParent     = null!;  // 4×2 GridLayoutGroup
-        [SerializeField] private GameObject clubCardPrefab      = null!;  // BagSwapClubCard
+        [SerializeField] private GameObject clubCardPrefab      = null!;  // BagClubCard.prefab — must have BagClubCard component
         [SerializeField] private GameObject emptyClubCardPrefab = null!;  // BagEmptyClubCard
 
         [Header("Equip Bag Button")]
