@@ -1,0 +1,15 @@
+# UHole — Course Intake Pipeline
+
+# Downloaded tile caches (large, re-fetchable)
+output/*/basemap/gsi-photo-z17/
+output/*/basemap/gsi-dem-z14/
+
+# Fetched raw source pages
+output/*/raw/
+output/*/source/course-page.html
+
+# Session lock
+.course-intake/
+
+# Node
+node_modules/

@@ -118,71 +118,53 @@
               <h3>Georeferencing workspace</h3>
             </div>
           </div>
-          <div class="two-column alignment-editor-shell">
-            <article class="card">
-              <div class="panel-header">
-                <div>
-                  <div class="eyebrow">Editor</div>
-                  <h4 id="editor-title">Select a hole</h4>
-                </div>
-                <button id="save-alignment">Save Control Points</button>
-              </div>
-              <div class="field-group">
-                <div class="editor-summary">
-                  <div class="eyebrow">Selected Hole</div>
-                  <strong id="selected-hole-readout">Hole 1</strong>
-                </div>
-                <label class="field-inline">
-                  <span>Hole</span>
-                  <select id="editor-hole-select"></select>
-                </label>
-                <label class="field-inline">
-                  <span>Focus Tile</span>
-                  <select id="editor-tile-select"></select>
-                </label>
-              </div>
-              <p id="editor-hint" class="helper-copy">Click a point on the official map, then click the matching point on the base-map tile.</p>
-              <div class="field-group">
-                <div>
-                  <div class="eyebrow">Pending pair</div>
-                  <div id="pending-point" class="helper-copy">No point selected yet.</div>
-                </div>
-              </div>
-              <div id="control-points-list" class="stack"></div>
-            </article>
-            <article class="card">
-              <div class="image-compare">
-                <section>
-                  <div class="panel-header">
-                    <div>
-                      <div class="eyebrow">Official Hole Map</div>
-                      <div id="official-view-readout" class="view-readout">100% / 0deg</div>
-                    </div>
-                    <div class="header-actions">
-                      <button id="rotate-official-left" type="button">Rotate -</button>
-                      <button id="rotate-official-right" type="button">Rotate +</button>
-                      <button id="reset-official-view" type="button">Reset View</button>
-                    </div>
+          <div class="alignment-editor-shell">
+            <div class="alignment-toolbar">
+              <h4 id="editor-title" class="toolbar-title">Select a hole</h4>
+              <label class="field-inline field-inline--compact">
+                <span>Hole</span>
+                <select id="editor-hole-select"></select>
+              </label>
+              <label class="field-inline field-inline--compact">
+                <span>Tile</span>
+                <select id="editor-tile-select"></select>
+              </label>
+              <div id="pending-point" class="helper-copy toolbar-pending">Click official map first</div>
+              <button id="save-alignment">Save</button>
+              <strong id="selected-hole-readout" hidden></strong>
+            </div>
+            <div id="control-points-list" class="cp-chips-row"></div>
+            <div class="image-compare">
+              <section>
+                <div class="panel-header">
+                  <div>
+                    <div class="eyebrow">Official Hole Map</div>
+                    <div id="official-view-readout" class="view-readout">100% / 0deg</div>
                   </div>
-                  <div id="official-map-stage" class="image-stage"></div>
-                </section>
-                <section>
-                  <div class="panel-header">
-                    <div>
-                      <div class="eyebrow">GSI Base Map Mosaic</div>
-                      <div id="basemap-view-readout" class="view-readout">100% / 0deg</div>
-                      <div id="basemap-coordinate-readout" class="view-readout">Lat -- / Lon --</div>
-                    </div>
-                    <div class="header-actions">
-                      <button id="rotate-basemap-left" type="button">Rotate -</button>
-                      <button id="rotate-basemap-right" type="button">Rotate +</button>
-                      <button id="reset-basemap-view" type="button">Reset View</button>
-                    </div>
+                  <div class="header-actions">
+                    <button id="rotate-official-left" type="button">Rotate -</button>
+                    <button id="rotate-official-right" type="button">Rotate +</button>
+                    <button id="reset-official-view" type="button">Reset View</button>
                   </div>
-                  <div id="basemap-stage" class="image-stage"></div>
-                </section>
-              </div>
-            </article>
+                </div>
+                <div id="official-map-stage" class="image-stage"></div>
+              </section>
+              <section>
+                <div class="panel-header">
+                  <div>
+                    <div class="eyebrow">GSI Base Map Mosaic</div>
+                    <div id="basemap-view-readout" class="view-readout">100% / 0deg</div>
+                    <div id="basemap-coordinate-readout" class="view-readout">Lat -- / Lon --</div>
+                  </div>
+                  <div class="header-actions">
+                    <button id="rotate-basemap-left" type="button">Rotate -</button>
+                    <button id="rotate-basemap-right" type="button">Rotate +</button>
+                    <button id="reset-basemap-view" type="button">Reset View</button>
+                  </div>
+                </div>
+                <div id="basemap-stage" class="image-stage"></div>
+              </section>
+            </div>
           </div>
           <div id="alignment-grid" class="holes-grid"></div>
         </section>

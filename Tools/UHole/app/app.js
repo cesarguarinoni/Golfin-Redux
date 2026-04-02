@@ -342,21 +342,16 @@ function renderAlignmentEditor() {
   applyViewport("basemap", basemapStageEl);
 
   pendingPointEl.textContent = state.pendingOfficialPoint
-    ? `Official map point queued at ${state.pendingOfficialPoint.x}px, ${state.pendingOfficialPoint.y}px. Click the matching spot on the base map tile.`
-    : "Hole is selected. Click one point on the official map first, then click the matching point on the base map tile.";
+    ? `Pt queued at ${Math.round(state.pendingOfficialPoint.x)}px, ${Math.round(state.pendingOfficialPoint.y)}px — now click base map`
+    : "Click official map first";
 
   controlPointsListEl.innerHTML = (hole.alignment?.control_points || []).length
     ? hole.alignment.control_points.map((point, index) => `
-        <article class="control-point-card">
-          <p><strong>Point ${index + 1}</strong></p>
-          <p>Official: ${Math.round(point.official.x)}px, ${Math.round(point.official.y)}px</p>
-          <p>Base tile: ${Math.round(point.basemap.x)}px, ${Math.round(point.basemap.y)}px</p>
-          <div class="control-point-actions">
-            <button type="button" data-delete-point="${index}">Delete Point</button>
-          </div>
-        </article>
+        <span class="cp-chip" title="Official: ${Math.round(point.official.x)}px, ${Math.round(point.official.y)}px → Base: ${Math.round(point.basemap.x)}px, ${Math.round(point.basemap.y)}px">
+          Pt ${index + 1} <button type="button" data-delete-point="${index}" class="cp-delete">×</button>
+        </span>
       `).join("")
-    : "<p class=\"helper-copy\">No control points saved yet.</p>";
+    : "";
 
   const officialButton = officialMapStageEl.querySelector("[data-stage-action='official']");
   if (officialButton) {

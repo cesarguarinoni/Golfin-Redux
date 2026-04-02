@@ -117,29 +117,29 @@ Start by building a `Course Intake` desktop app with four tabs:
 3. `Hole Review`
 4. `Export`
 
-Details are in [docs/architecture.md](/C:/Users/cesar/UHole/docs/architecture.md) and [docs/unity-importer.md](/C:/Users/cesar/UHole/docs/unity-importer.md).
+Details are in [docs/architecture.md](docs/architecture.md) and [docs/unity-importer.md](docs/unity-importer.md).
 
 ## Current Prototype
 
 This repo now includes:
 
-- A dependency-light local app shell in [app/index.html](/C:/Users/cesar/UHole/app/index.html)
-- A static dev server in [scripts/dev-server.mjs](/C:/Users/cesar/UHole/scripts/dev-server.mjs)
-- A Lomond exporter in [scripts/ingest-lomond.mjs](/C:/Users/cesar/UHole/scripts/ingest-lomond.mjs)
-- Shared Lomond metadata in [scripts/lib/lomond-data.mjs](/C:/Users/cesar/UHole/scripts/lib/lomond-data.mjs)
+- A dependency-light local app shell in [app/index.html](app/index.html)
+- A static dev server in [scripts/dev-server.mjs](scripts/dev-server.mjs)
+- A Lomond exporter in [scripts/ingest-lomond.mjs](scripts/ingest-lomond.mjs)
+- Shared Lomond metadata in [scripts/lib/lomond-data.mjs](scripts/lib/lomond-data.mjs)
 - Per-hole alignment workspaces in `output/<course>/holes/<nn>/alignment.json`
 
 ## Run It
 
 ### No-Terminal Launch
 
-Double-click [Launch Course Intake.vbs](/C:/Users/cesar/UHole/Launch%20Course%20Intake.vbs) to:
+Double-click `Launch Course Intake.vbs` to:
 
 - Start the local server in the background
 - Reuse an existing running server if one is already up
 - Open the app in your default browser
 
-Double-click [Stop Course Intake.vbs](/C:/Users/cesar/UHole/Stop%20Course%20Intake.vbs) to stop the background server.
+Double-click `Stop Course Intake.vbs` to stop the background server.
 
 Inside the app, the main operator actions are:
 
