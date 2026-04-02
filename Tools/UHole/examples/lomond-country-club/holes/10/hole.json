@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "hole_number": 10,
+  "display_name": "Hole 10",
+  "par": 4,
+  "stroke_index": 10,
+  "tee_sets": [
+    {
+      "name": "Back",
+      "yards": 392,
+      "meters": 358.44
+    },
+    {
+      "name": "Regular",
+      "yards": 368,
+      "meters": 336.5
+    },
+    {
+      "name": "Front",
+      "yards": 346,
+      "meters": 316.38
+    },
+    {
+      "name": "Ladies",
+      "yards": 328,
+      "meters": 299.92
+    }
+  ],
+  "review_status": "ingested",
+  "geometry_status": "missing",
+  "assets": {
+    "official_references": [
+      "raw/official/hole-10-detail-image.jpg"
+    ]
+  },
+  "notes": [
+    "Hole 10 starts the IN side. Keep front-nine and back-nine grouping available in the source registry."
+  ]
+}

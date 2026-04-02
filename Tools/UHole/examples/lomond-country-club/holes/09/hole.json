@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "hole_number": 9,
+  "display_name": "Hole 9",
+  "par": 4,
+  "stroke_index": 11,
+  "tee_sets": [
+    {
+      "name": "Back",
+      "yards": 434,
+      "meters": 396.85
+    },
+    {
+      "name": "Regular",
+      "yards": 403,
+      "meters": 368.5
+    },
+    {
+      "name": "Front",
+      "yards": 376,
+      "meters": 343.81
+    },
+    {
+      "name": "Ladies",
+      "yards": 357,
+      "meters": 326.44
+    }
+  ],
+  "review_status": "ingested",
+  "geometry_status": "missing",
+  "assets": {
+    "official_references": [
+      "raw/official/hole-09-detail-image.jpg"
+    ]
+  },
+  "notes": [
+    "Hole package intentionally omits geometry until aerial alignment and review are complete."
+  ]
+}

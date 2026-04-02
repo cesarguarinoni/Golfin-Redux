@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "hole_number": 6,
+  "display_name": "Hole 6",
+  "par": 3,
+  "stroke_index": 7,
+  "tee_yardages": {
+    "source_id": "official-course-page-hole-table",
+    "entries": [
+      {
+        "tee_name": "Back",
+        "yards": 193,
+        "meters": 176.48
+      },
+      {
+        "tee_name": "Regular",
+        "yards": 173,
+        "meters": 158.19
+      },
+      {
+        "tee_name": "Front",
+        "yards": 149,
+        "meters": 136.25
+      },
+      {
+        "tee_name": "Ladies",
+        "yards": 129,
+        "meters": 117.96
+      }
+    ]
+  },
+  "tee_sets": [
+    {
+      "name": "Back",
+      "yards": 193,
+      "meters": 176.48
+    },
+    {
+      "name": "Regular",
+      "yards": 173,
+      "meters": 158.19
+    },
+    {
+      "name": "Front",
+      "yards": 149,
+      "meters": 136.25
+    },
+    {
+      "name": "Ladies",
+      "yards": 129,
+      "meters": 117.96
+    }
+  ],
+  "review_status": "ingested",
+  "geometry_status": "missing",
+  "assets": {
+    "official_references": [
+      "holes/06/source/official-map.gif"
+    ],
+    "alignment_json": "holes/06/alignment.json"
+  },
+  "notes": [
+    "Official hole detail link discovered at https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e06.gif"
+  ]
+}

@@ -46519,7 +46519,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &996160667
 RectTransform:
   m_ObjectHideFlags: 0
@@ -48533,7 +48533,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1040613140
 RectTransform:
   m_ObjectHideFlags: 0
@@ -62466,7 +62466,7 @@ MonoBehaviour:
   equippedIcon: {fileID: 1171375081}
   descriptionText: {fileID: 887801587}
   clubGridParent: {fileID: 1417984477}
-  clubCardPrefab: {fileID: 5515789285376337593, guid: 8776936979a541b408eb4046721e2184, type: 3}
+  clubCardPrefab: {fileID: 5515789285376337593, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   emptyClubCardPrefab: {fileID: 5087155905511719938, guid: 4bd8466fd43c46940ab6b271ffd38fdb, type: 3}
   equipBagButton: {fileID: 1598507874}
   equipBagText: {fileID: 649518528}
@@ -65884,7 +65884,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1478452890
 RectTransform:
   m_ObjectHideFlags: 0

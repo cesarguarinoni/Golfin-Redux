@@ -1,0 +1,135 @@
+{
+  "course_id": "lomond-country-club",
+  "captured_at": "2026-04-02T03:26:55.351Z",
+  "sources": [
+    {
+      "source_id": "official-course-page-overview",
+      "category": "official",
+      "url": "https://www.lomond-cc.com/course/",
+      "license_status": "unknown_site_content_review_required",
+      "trust_level": "official",
+      "use_mode": "metadata_and_reference_images"
+    },
+    {
+      "source_id": "official-course-page-hole-table",
+      "category": "official",
+      "url": "https://www.lomond-cc.com/course/",
+      "license_status": "unknown_site_content_review_required",
+      "trust_level": "official",
+      "use_mode": "metadata"
+    },
+    {
+      "source_id": "gsi-seamlessphoto",
+      "category": "public_authoritative",
+      "url": "https://maps.gsi.go.jp/development/ichiran.html",
+      "license_status": "attribution_required",
+      "trust_level": "public_authoritative",
+      "use_mode": "alignment_base_map_and_reference_imagery",
+      "notes": [
+        "GSI tile list indicates real-time app use is permitted with attribution.",
+        "Course center is currently an inferred approximate centroid and should be validated."
+      ]
+    },
+    {
+      "source_id": "gsi-dem",
+      "category": "public_authoritative",
+      "url": "https://maps.gsi.go.jp/development/demtile.html",
+      "license_status": "attribution_required",
+      "trust_level": "public_authoritative",
+      "use_mode": "elevation_reference"
+    }
+  ],
+  "extraction": {
+    "hole_detail_links_found": [
+      {
+        "hole_number": 1,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e01.gif"
+      },
+      {
+        "hole_number": 2,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e02.gif"
+      },
+      {
+        "hole_number": 3,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e03.gif"
+      },
+      {
+        "hole_number": 4,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e04.gif"
+      },
+      {
+        "hole_number": 5,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e05.gif"
+      },
+      {
+        "hole_number": 6,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e06.gif"
+      },
+      {
+        "hole_number": 7,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e07.gif"
+      },
+      {
+        "hole_number": 8,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e08.gif"
+      },
+      {
+        "hole_number": 9,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e09.gif"
+      },
+      {
+        "hole_number": 10,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e10.gif"
+      },
+      {
+        "hole_number": 11,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e11.gif"
+      },
+      {
+        "hole_number": 12,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e12.gif"
+      },
+      {
+        "hole_number": 13,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e13.gif"
+      },
+      {
+        "hole_number": 14,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e14.gif"
+      },
+      {
+        "hole_number": 15,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e15.gif"
+      },
+      {
+        "hole_number": 16,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e16.gif"
+      },
+      {
+        "hole_number": 17,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e17.gif"
+      },
+      {
+        "hole_number": 18,
+        "url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e18.gif"
+      }
+    ]
+  },
+  "required_before_production": [
+    "Add licensable aerial imagery source and attribution.",
+    "Add DEM source and attribution.",
+    "Georeference official hole detail images against a licensable base map.",
+    "Populate reviewed geometry artifacts for every hole."
+  ],
+  "base_map": {
+    "provider": "gsi",
+    "manifest_path": "basemap/manifest.json",
+    "inferred_center": {
+      "lat": 34.8789,
+      "lon": 136.4468,
+      "source": "inferred_from_public_address_resolution",
+      "confidence": "medium",
+      "note": "Approximate course center inferred from the club address and public web mapping search results. Replace with surveyed or manually validated course centroid when available."
+    }
+  }
+}

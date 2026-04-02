@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Course Intake</title>
+    <link rel="stylesheet" href="/app/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+    <div class="page-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="eyebrow">Unity Golf Pipeline</div>
+          <h1>Course Intake</h1>
+          <p>Centralize course data, review source trust, and export one package per course.</p>
+        </div>
+        <nav class="nav">
+          <button class="nav-link is-active" data-panel="overview">Overview</button>
+          <button class="nav-link" data-panel="sources">Sources</button>
+          <button class="nav-link" data-panel="basemap">Base Map</button>
+          <button class="nav-link" data-panel="alignment">Alignment</button>
+          <button class="nav-link" data-panel="holes">Holes</button>
+          <button class="nav-link" data-panel="export">Export</button>
+        </nav>
+        <div class="sidebar-card">
+          <div class="eyebrow">Current target</div>
+          <strong>Lomond Country Club</strong>
+          <p>18 holes, official metadata ingested, geometry still pending review.</p>
+        </div>
+      </aside>
+
+      <section class="main">
+        <header class="hero">
+          <div>
+            <div class="eyebrow">Operator Dashboard</div>
+          </div>
+          <div class="hero-actions">
+            <button id="refetch-ingest">Refetch Lomond</button>
+            <button id="refetch-basemap">Refetch GSI Base Map</button>
+            <button id="init-alignment">Initialize Alignment</button>
+            <button id="refresh-data">Reload Example Package</button>
+            <a class="button-secondary" href="/output/lomond-country-club/course.json" target="_blank" rel="noreferrer">Open Export</a>
+          </div>
+        </header>
+
+        <section id="status-banner" class="status-banner" hidden></section>
+
+        <section class="auto-cache-note">
+          <div class="eyebrow">Local Cache</div>
+          <p>Cached Lomond sources and cached GSI base-map tiles load automatically from disk. Use the refetch buttons only when you want to refresh the local cache.</p>
+        </section>
+
+        <section class="stats" id="stats"></section>
+
+        <section class="panel is-visible" id="panel-overview">
+          <div class="panel-header">
+            <div>
+              <div class="eyebrow">Overview</div>
+              <h3>Pipeline status</h3>
+            </div>
+          </div>
+          <div class="two-column">
+            <article class="card">
+              <h4>What this app owns</h4>
+              <ul>
+                <li>Source capture and provenance</li>
+                <li>Hole-by-hole normalized metadata</li>
+                <li>Review gating before Unity import</li>
+                <li>Export package contract for generated scenes</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h4>Next automation steps</h4>
+              <ol>
+                <li>Scrape official hole detail links and save raw artifacts.</li>
+                <li>Pull licensable aerial and DEM sources.</li>
+                <li>Georeference each hole map.</li>
+                <li>Generate reviewed geometry for fairway, green, bunkers, and hazards.</li>
+              </ol>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-sources">
+          <div class="panel-header">
+            <div>
+              <div class="eyebrow">Sources</div>
+              <h3>Provenance and trust</h3>
+            </div>
+          </div>
+          <div id="sources-list" class="stack"></div>
+        </section>
+
+        <section class="panel" id="panel-basemap">
+          <div class="panel-header">
+            <div>
+              <div class="eyebrow">Base Map</div>
+              <h3>Licensable GSI imagery and DEM</h3>
+            </div>
+          </div>
+          <div class="two-column">
+            <article class="card">
+              <h4>Manifest</h4>
+              <div id="basemap-summary" class="stack"></div>
+            </article>
+            <article class="card">
+              <h4>Photo tile preview</h4>
+              <div id="basemap-preview" class="basemap-preview"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel" id="panel-alignment">
+          <div class="panel-header">
+            <div>
+              <div class="eyebrow">Alignment</div>
+              <h3>Georeferencing workspace</h3>
+            </div>
+          </div>
+          <div class="two-column alignment-editor-shell">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <div class="eyebrow">Editor</div>
+                  <h4 id="editor-title">Select a hole</h4>
+                </div>
+                <button id="save-alignment">Save Control Points</button>
+              </div>
+              <div class="field-group">
+                <div class="editor-summary">
+                  <div class="eyebrow">Selected Hole</div>
+                  <strong id="selected-hole-readout">Hole 1</strong>
+                </div>
+                <label class="field-inline">
+                  <span>Hole</span>
+                  <select id="editor-hole-select"></select>
+                </label>
+                <label class="field-inline">
+                  <span>Focus Tile</span>
+                  <select id="editor-tile-select"></select>
+                </label>
+              </div>
+              <p id="editor-hint" class="helper-copy">Click a point on the official map, then click the matching point on the base-map tile.</p>
+              <div class="field-group">
+                <div>
+                  <div class="eyebrow">Pending pair</div>
+                  <div id="pending-point" class="helper-copy">No point selected yet.</div>
+                </div>
+              </div>
+              <div id="control-points-list" class="stack"></div>
+            </article>
+            <article class="card">
+              <div class="image-compare">
+                <section>
+                  <div class="panel-header">
+                    <div>
+                      <div class="eyebrow">Official Hole Map</div>
+                      <div id="official-view-readout" class="view-readout">100% / 0deg</div>
+                    </div>
+                    <div class="header-actions">
+                      <button id="rotate-official-left" type="button">Rotate -</button>
+                      <button id="rotate-official-right" type="button">Rotate +</button>
+                      <button id="reset-official-view" type="button">Reset View</button>
+                    </div>
+                  </div>
+                  <div id="official-map-stage" class="image-stage"></div>
+                </section>
+                <section>
+                  <div class="panel-header">
+                    <div>
+                      <div class="eyebrow">GSI Base Map Mosaic</div>
+                      <div id="basemap-view-readout" class="view-readout">100% / 0deg</div>
+                      <div id="basemap-coordinate-readout" class="view-readout">Lat -- / Lon --</div>
+                    </div>
+                    <div class="header-actions">
+                      <button id="rotate-basemap-left" type="button">Rotate -</button>
+                      <button id="rotate-basemap-right" type="button">Rotate +</button>
+                      <button id="reset-basemap-view" type="button">Reset View</button>
+                    </div>
+                  </div>
+                  <div id="basemap-stage" class="image-stage"></div>
+                </section>
+              </div>
+            </article>
+          </div>
+          <div id="alignment-grid" class="holes-grid"></div>
+        </section>
+
+        <section class="panel" id="panel-holes">
+          <div class="panel-header">
+            <div>
+              <div class="eyebrow">Holes</div>
+              <h3>Per-hole package preview</h3>
+            </div>
+          </div>
+          <div id="holes-grid" class="holes-grid"></div>
+        </section>
+
+        <section class="panel" id="panel-export">
+          <div class="panel-header">
+            <div>
+              <div class="eyebrow">Export</div>
+              <h3>Unity handoff</h3>
+            </div>
+          </div>
+          <article class="card">
+            <p>The Unity importer should consume reviewed exports only. Each hole becomes one scene, and generated content must remain safe to re-import.</p>
+            <pre id="export-preview"></pre>
+          </article>
+        </section>
+      </section>
+    </div>
+    </main>
+
+    <script type="module" src="/app/app.js"></script>
+  </body>
+</html>

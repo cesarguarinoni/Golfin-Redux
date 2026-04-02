@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/course.schema.json",
+  "title": "Course Package",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "course_id",
+    "display_name",
+    "country_code",
+    "hole_count",
+    "review_status",
+    "source_summary",
+    "holes"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "course_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "native_name": {
+      "type": "string"
+    },
+    "country_code": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 2
+    },
+    "address": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string",
+      "format": "uri"
+    },
+    "hole_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "par_total": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "yardage_claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "value",
+          "unit",
+          "source_id",
+          "status"
+        ],
+        "properties": {
+          "value": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reported",
+              "derived",
+              "conflict"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "review_status": {
+      "type": "string",
+      "enum": [
+        "raw",
+        "ingested",
+        "reviewed",
+        "production_candidate"
+      ]
+    },
+    "source_summary": {
+      "type": "object",
+      "required": [
+        "official_sources",
+        "authoritative_public_sources",
+        "reference_only_sources"
+      ],
+      "properties": {
+        "official_sources": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "authoritative_public_sources": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reference_only_sources": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "course_crs": {
+      "type": "object",
+      "properties": {
+        "wgs84_centroid": {
+          "type": "object",
+          "required": [
+            "lat",
+            "lon"
+          ],
+          "properties": {
+            "lat": {
+              "type": "number"
+            },
+            "lon": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "projected_crs": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "holes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "hole_number",
+          "path"
+        ],
+        "properties": {
+          "hole_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "attribution": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}

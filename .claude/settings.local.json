@@ -51,7 +51,22 @@
       "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 2000 | Select-String ''\\\\[Bag''\")",
       "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 300 | Select-String ''BagsContent|AutoWire|wired|failed|Arrow|arrow''\")",
       "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 500 | Select-String ''Wire|wired|failed''\")",
-      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 1000 | Select-String ''NOT FOUND|leftArrow|rightArrow|Arrow|Pagination''\")"
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 1000 | Select-String ''NOT FOUND|leftArrow|rightArrow|Arrow|Pagination''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 500 | Select-String ''\\\\[Bag|\\\\[Club''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 1000 | Select-String ''\\\\[ClubManager\\\\]|\\\\[BagManager\\\\]|\\\\[BagClub''\")",
+      "Bash(powershell -Command \"Get-Content -Path ''C:\\\\Users\\\\cesar\\\\AppData\\\\Local\\\\Unity\\\\Editor\\\\Editor.log'' -Tail 1000 | Select-String ''equip|Equip|assigned|Assign'' | Select-Object -First 30\")",
+      "Bash(powershell -Command \"Select-String -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Scripts\\\\ClubManager.cs'' -Pattern ''EquipClub|equippedBagSlot|OnClubEquipped'' | Select-Object LineNumber, Line\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Prefabs\\\\UI\\\\Inventory'' -Filter ''*.prefab'' | Select-Object Name\")",
+      "Bash(powershell -Command \"Select-String -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Prefabs\\\\UI\\\\Inventory\\\\BagSwapClubCard.prefab'' -Pattern ''BagClubCard|ItemUseClubCard'' | Select-Object Line\")",
+      "Bash(powershell -Command \"Select-String -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Prefabs\\\\UI\\\\Inventory\\\\BagSwapClubCard.prefab'' -Pattern ''m_Script|script'' | Select-Object Line | Select-Object -First 5\")",
+      "Bash(powershell -Command \"Select-String -Path ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\Assets\\\\Prefabs\\\\UI\\\\Inventory\\\\BagClubCard.prefab'' -Pattern ''m_Script'' | Select-Object Line | Select-Object -First 5\")",
+      "Bash(powershell -Command \"\\(Get-Content ''C:\\\\Users\\\\cesar\\\\GolfinRedux\\\\tasks\\\\lessons.md'' -Raw\\).TrimEnd\\(\\)\")",
+      "Bash(powershell -Command \"git -C ''C:\\\\Users\\\\cesar\\\\GolfinRedux'' add Assets/Scripts/UI/Inventory/BagCarouselController.cs Assets/Scripts/UI/Inventory/BagThumbnailCard.cs Assets/Scripts/UI/Inventory/BagDetailPanel.cs Assets/Scripts/UI/Inventory/BagClubModalController.cs Assets/Scripts/UI/Inventory/BagClubCard.cs Assets/Scripts/UI/Inventory/BagSelectionModalController.cs Assets/Scripts/UI/Inventory/Editor/BagsContentAutoWire.cs Assets/Scripts/UI/Inventory/Editor/BagClubModalAutoWire.cs Assets/Scripts/BagManager.cs Assets/Scripts/BagDatabaseCSV.cs Assets/Data/Bags.csv Docs/AI_CONTEXT.md tasks/lessons.md\")",
+      "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" add Docs/Tasks.md)",
+      "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" commit -m \"docs: mark Phase J complete in Tasks.md:*)",
+      "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" push)",
+      "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" add Docs/AI_CONTEXT.md)",
+      "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" commit -m \"docs: next up is 3D golf course pipeline prototype:*)"
     ]
   }
 }

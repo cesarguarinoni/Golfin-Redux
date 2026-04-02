@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "hole_number": 17,
+  "display_name": "Hole 17",
+  "par": 4,
+  "stroke_index": 6,
+  "tee_yardages": {
+    "source_id": "official-course-page-hole-table",
+    "entries": [
+      {
+        "tee_name": "Back",
+        "yards": 410,
+        "meters": 374.9
+      },
+      {
+        "tee_name": "Regular",
+        "yards": 379,
+        "meters": 346.56
+      },
+      {
+        "tee_name": "Front",
+        "yards": 353,
+        "meters": 322.78
+      },
+      {
+        "tee_name": "Ladies",
+        "yards": 328,
+        "meters": 299.92
+      }
+    ]
+  },
+  "tee_sets": [
+    {
+      "name": "Back",
+      "yards": 410,
+      "meters": 374.9
+    },
+    {
+      "name": "Regular",
+      "yards": 379,
+      "meters": 346.56
+    },
+    {
+      "name": "Front",
+      "yards": 353,
+      "meters": 322.78
+    },
+    {
+      "name": "Ladies",
+      "yards": 328,
+      "meters": 299.92
+    }
+  ],
+  "review_status": "ingested",
+  "geometry_status": "missing",
+  "assets": {
+    "official_references": [
+      "holes/17/source/official-map.gif"
+    ],
+    "alignment_json": "holes/17/alignment.json"
+  },
+  "notes": [
+    "Official hole detail link discovered at https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e17.gif"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "course-intake",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dependency-light course intake app and ingestion scripts for Unity golf pipelines.",
+  "scripts": {
+    "start": "node scripts/dev-server.mjs",
+    "ingest:lomond": "node scripts/ingest-lomond.mjs",
+    "launch": "node scripts/launch-app.mjs",
+    "stop": "node scripts/stop-app.mjs"
+  }
+}

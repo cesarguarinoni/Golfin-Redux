@@ -34,10 +34,17 @@
 - Carousel showed all 10 CSV bags as slots; fixed to show only unlocked bags + pad to minCardCount
 - Detail panel used `BagSwapClubCard` (no script component) → `GetComponent<BagClubCard>()` returned null → cards never initialized → always showed baked-in Driver G&F portrait. Fixed: use `BagClubCard.prefab` which has the component correctly
 
-## Next Step
-- **Phase K: 3D Golf Course Pipeline prototype** (starting 2026-04-02)
-- Settings visual fixes (deferred)
-- End-to-end playtest all inventory screens (deferred)
+## Next Step — Phase K: 3D Golf Course Pipeline (2026-04-02)
+- First course: Lomond Country Club (ローモンドカントリー倶楽部), Kameyama, Mie, Japan
+- Coordinates: ~34.859°N, 136.815°E | 18 holes, par 72, 7,028 yards
+- First prototype: Hole 1 (Par 5, 531yd Back, HDCP 9)
+- Goal: walk around Hole 1 in first-person (WASD + mouse look)
+- Pipeline: elevation data → satellite texture → terrain painting → hole details
+- Evaluating "Real World Terrain" Unity asset ($90) vs free QGIS route
+- Hole diagrams: lomond-cc.com/wp-content/themes/templateB/images/course_e01.gif (01–18)
+- Yardages: Back 531 / Regular 509 / Front 488 / Ladies 458
+- No gameplay code yet — GameplayScene.unity exists but is empty
+- Pair mode: Claude architects, Kai drives 3D/scene setup
 
 ## Week Summary (2026-03-24 → 2026-03-27)
 - Phase E2: Club Repair One-Tap
@@ -49,7 +56,8 @@
 
 ## Next Up
 
-- Visual polish pass on Bags screen
+- Phase K: 3D golf course prototype (Hole 1 walk-around)
+- Visual polish pass on all inventory screens
 - Settings visual fixes
 - End-to-end playtest all inventory screens
 

@@ -2581,7 +2581,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: caa09c5427883e0489a42910af13961e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Inventory.BagClubCard
-  cardTopImage: {fileID: 0}
+  cardTopImage: {fileID: 1751179287800261674}
   portraitImage: {fileID: 2224294535834255235}
   nameText: {fileID: 7844687729420141010}
   rarityBadgeText: {fileID: 749727262008646853}

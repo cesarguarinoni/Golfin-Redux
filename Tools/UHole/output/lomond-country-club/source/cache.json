@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "force_refetch": false,
+  "last_run_at": "2026-04-02T03:26:55.343Z",
+  "course_page": {
+    "cached": true,
+    "path": "source/course-page.html"
+  },
+  "holes": [
+    {
+      "hole_number": 1,
+      "cached": true,
+      "path": "holes/01/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e01.gif"
+    },
+    {
+      "hole_number": 2,
+      "cached": true,
+      "path": "holes/02/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e02.gif"
+    },
+    {
+      "hole_number": 3,
+      "cached": true,
+      "path": "holes/03/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e03.gif"
+    },
+    {
+      "hole_number": 4,
+      "cached": true,
+      "path": "holes/04/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e04.gif"
+    },
+    {
+      "hole_number": 5,
+      "cached": true,
+      "path": "holes/05/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e05.gif"
+    },
+    {
+      "hole_number": 6,
+      "cached": true,
+      "path": "holes/06/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e06.gif"
+    },
+    {
+      "hole_number": 7,
+      "cached": true,
+      "path": "holes/07/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e07.gif"
+    },
+    {
+      "hole_number": 8,
+      "cached": true,
+      "path": "holes/08/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e08.gif"
+    },
+    {
+      "hole_number": 9,
+      "cached": true,
+      "path": "holes/09/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e09.gif"
+    },
+    {
+      "hole_number": 10,
+      "cached": true,
+      "path": "holes/10/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e10.gif"
+    },
+    {
+      "hole_number": 11,
+      "cached": true,
+      "path": "holes/11/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e11.gif"
+    },
+    {
+      "hole_number": 12,
+      "cached": true,
+      "path": "holes/12/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e12.gif"
+    },
+    {
+      "hole_number": 13,
+      "cached": true,
+      "path": "holes/13/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e13.gif"
+    },
+    {
+      "hole_number": 14,
+      "cached": true,
+      "path": "holes/14/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e14.gif"
+    },
+    {
+      "hole_number": 15,
+      "cached": true,
+      "path": "holes/15/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e15.gif"
+    },
+    {
+      "hole_number": 16,
+      "cached": true,
+      "path": "holes/16/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e16.gif"
+    },
+    {
+      "hole_number": 17,
+      "cached": true,
+      "path": "holes/17/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e17.gif"
+    },
+    {
+      "hole_number": 18,
+      "cached": true,
+      "path": "holes/18/source/official-map.gif",
+      "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e18.gif"
+    }
+  ]
+}

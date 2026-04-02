@@ -1,0 +1,35 @@
+{
+  "course_id": "lomond-country-club",
+  "captured_at": "2026-04-02",
+  "sources": [
+    {
+      "source_id": "official-course-page-overview",
+      "category": "official",
+      "url": "https://www.lomond-cc.com/course/",
+      "license_status": "unknown_site_content_review_required",
+      "trust_level": "official",
+      "use_mode": "metadata_and_reference_images",
+      "notes": [
+        "Contains official course summary and total yardage claim.",
+        "Contains hole-number links for 18 hole detail pages or images."
+      ]
+    },
+    {
+      "source_id": "official-course-page-hole-table",
+      "category": "official",
+      "url": "https://www.lomond-cc.com/course/",
+      "license_status": "unknown_site_content_review_required",
+      "trust_level": "official",
+      "use_mode": "metadata",
+      "notes": [
+        "Contains per-hole par, stroke index, and tee yardages."
+      ]
+    }
+  ],
+  "required_before_production": [
+    "Add licensable aerial imagery source and attribution.",
+    "Add DEM source and attribution.",
+    "Download and record all 18 official hole detail images with resolved URLs.",
+    "Populate reviewed geometry artifacts for every hole."
+  ]
+}

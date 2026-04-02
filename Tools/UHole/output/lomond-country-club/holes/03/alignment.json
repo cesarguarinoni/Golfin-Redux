@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "hole_number": 3,
+  "status": "ready_for_control_points",
+  "official_map": {
+    "path": "holes/03/source/official-map.gif",
+    "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e03.gif",
+    "trusted_for": [
+      "hole layout reference",
+      "manual control point placement"
+    ]
+  },
+  "target_base_map": {
+    "provider": "gsi",
+    "path": "basemap/manifest.json",
+    "license_checked": true
+  },
+  "control_points": [],
+  "transform": {
+    "pixel_to_world_ready": false,
+    "residual_error_m": null
+  },
+  "notes": [
+    "Add a licensable aerial or orthophoto source before georeferencing.",
+    "Place at least four well-spread control points before approving alignment.",
+    "Use the GSI photo dataset as the operator-visible base map during initial control point placement."
+  ]
+}

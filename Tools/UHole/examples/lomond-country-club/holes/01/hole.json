@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "hole_number": 1,
+  "display_name": "Hole 1",
+  "par": 5,
+  "stroke_index": 9,
+  "tee_sets": [
+    {
+      "name": "Back",
+      "yards": 531,
+      "meters": 485.55
+    },
+    {
+      "name": "Regular",
+      "yards": 509,
+      "meters": 465.43
+    },
+    {
+      "name": "Front",
+      "yards": 488,
+      "meters": 446.23
+    },
+    {
+      "name": "Ladies",
+      "yards": 458,
+      "meters": 418.81
+    }
+  ],
+  "review_status": "ingested",
+  "geometry_status": "missing",
+  "assets": {
+    "official_references": [
+      "raw/official/hole-01-detail-image.jpg"
+    ]
+  },
+  "notes": [
+    "Official hole detail image should be downloaded by the web harvester and georeferenced before geometry export."
+  ]
+}

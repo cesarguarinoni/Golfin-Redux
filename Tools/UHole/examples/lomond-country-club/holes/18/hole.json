@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "hole_number": 18,
+  "display_name": "Hole 18",
+  "par": 5,
+  "stroke_index": 12,
+  "tee_sets": [
+    {
+      "name": "Back",
+      "yards": 567,
+      "meters": 518.46
+    },
+    {
+      "name": "Regular",
+      "yards": 548,
+      "meters": 501.09
+    },
+    {
+      "name": "Front",
+      "yards": 521,
+      "meters": 476.4
+    },
+    {
+      "name": "Ladies",
+      "yards": 502,
+      "meters": 459.03
+    }
+  ],
+  "review_status": "ingested",
+  "geometry_status": "missing",
+  "assets": {
+    "official_references": [
+      "raw/official/hole-18-detail-image.jpg"
+    ]
+  },
+  "notes": [
+    "Final production package should include reviewed green and hazard geometry before Unity scene generation."
+  ]
+}

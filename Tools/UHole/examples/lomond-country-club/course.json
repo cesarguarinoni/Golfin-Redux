@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "display_name": "Lomond Country Club",
+  "native_name": "ローモンドカントリー倶楽部",
+  "country_code": "JP",
+  "address": "2570-3 Ryoocho, Kameyama, Mie 519-0222, Japan",
+  "website": "https://www.lomond-cc.com/course/",
+  "hole_count": 18,
+  "par_total": 72,
+  "yardage_claims": [
+    {
+      "value": 7028,
+      "unit": "yards",
+      "source_id": "official-course-page-overview",
+      "status": "conflict",
+      "note": "Overview section on the official course page reports 7,028 yards."
+    },
+    {
+      "value": 7024,
+      "unit": "yards",
+      "source_id": "official-course-page-hole-table",
+      "status": "derived",
+      "note": "Back-tee total from the official hole-by-hole table sums to 7,024 yards."
+    }
+  ],
+  "review_status": "ingested",
+  "source_summary": {
+    "official_sources": 1,
+    "authoritative_public_sources": 0,
+    "reference_only_sources": 0
+  },
+  "holes": [
+    {
+      "hole_number": 1,
+      "path": "holes/01/hole.json"
+    },
+    {
+      "hole_number": 9,
+      "path": "holes/09/hole.json"
+    },
+    {
+      "hole_number": 10,
+      "path": "holes/10/hole.json"
+    },
+    {
+      "hole_number": 18,
+      "path": "holes/18/hole.json"
+    }
+  ],
+  "attribution": [
+    "Course metadata and yardages derived from the official Lomond Country Club course page.",
+    "Additional aerial/elevation sources must be listed in provenance.json before production use."
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "lomond-country-club",
+  "hole_number": 14,
+  "display_name": "Hole 14",
+  "par": 4,
+  "stroke_index": 2,
+  "tee_yardages": {
+    "source_id": "official-course-page-hole-table",
+    "entries": [
+      {
+        "tee_name": "Back",
+        "yards": 420,
+        "meters": 384.05
+      },
+      {
+        "tee_name": "Regular",
+        "yards": 392,
+        "meters": 358.44
+      },
+      {
+        "tee_name": "Front",
+        "yards": 373,
+        "meters": 341.07
+      },
+      {
+        "tee_name": "Ladies",
+        "yards": 357,
+        "meters": 326.44
+      }
+    ]
+  },
+  "tee_sets": [
+    {
+      "name": "Back",
+      "yards": 420,
+      "meters": 384.05
+    },
+    {
+      "name": "Regular",
+      "yards": 392,
+      "meters": 358.44
+    },
+    {
+      "name": "Front",
+      "yards": 373,
+      "meters": 341.07
+    },
+    {
+      "name": "Ladies",
+      "yards": 357,
+      "meters": 326.44
+    }
+  ],
+  "review_status": "ingested",
+  "geometry_status": "missing",
+  "assets": {
+    "official_references": [
+      "holes/14/source/official-map.gif"
+    ],
+    "alignment_json": "holes/14/alignment.json"
+  },
+  "notes": [
+    "Official hole detail link discovered at https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e14.gif"
+  ]
+}
