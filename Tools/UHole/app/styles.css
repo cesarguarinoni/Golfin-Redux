@@ -50,6 +50,11 @@ button:hover,
   transform: translateY(-1px);
 }
 
+.mosaic-tile-button:hover,
+.stage-button:hover {
+  transform: none;
+}
+
 #run-ingest,
 #refetch-ingest,
 #fetch-basemap,

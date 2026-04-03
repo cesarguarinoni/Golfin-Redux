@@ -441,11 +441,7 @@ function handleStageClick(event, stage, selectedTile = null) {
     return;
   }
 
-  const rect = event.currentTarget.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  const normalized_x = clamp01(x / rect.width);
-  const normalized_y = clamp01(y / rect.height);
+  const { x, y, normalized_x, normalized_y } = clickToContentCoords(event, stageEl, stage);
 
   if (stage === "official") {
     state.pendingOfficialPoint = { x, y, normalized_x, normalized_y };
@@ -454,7 +450,7 @@ function handleStageClick(event, stage, selectedTile = null) {
   }
 
   if (stage === "basemap" && state.pendingOfficialPoint && selectedTile) {
-    const coordinates = basemapCoordinatesFromClick(x, y, rect, selectedTile);
+    const coordinates = basemapCoordinatesFromNormalized(normalized_x, normalized_y, selectedTile);
     const controlPoints = [...(hole.alignment?.control_points || [])];
     controlPoints.push({
       id: crypto.randomUUID(),
@@ -641,8 +637,8 @@ function updateBasemapCoordinateReadout(event, tile) {
     return;
   }
 
-  const rect = event.currentTarget.getBoundingClientRect();
-  const { lat, lon } = basemapCoordinatesFromClick(event.clientX - rect.left, event.clientY - rect.top, rect, tile);
+  const { normalized_x, normalized_y } = clickToContentCoords(event, basemapStageEl, "basemap");
+  const { lat, lon } = basemapCoordinatesFromNormalized(normalized_x, normalized_y, tile);
   basemapCoordinateReadoutEl.textContent = `Lat ${lat.toFixed(6)} / Lon ${lon.toFixed(6)}`;
 }
 
@@ -650,13 +646,11 @@ function resetBasemapCoordinateReadout() {
   basemapCoordinateReadoutEl.textContent = "Lat -- / Lon --";
 }
 
-function basemapCoordinatesFromClick(localX, localY, rect, tile) {
-  if (!tile?.bounds || !rect?.width || !rect?.height) {
+function basemapCoordinatesFromNormalized(normalizedX, normalizedY, tile) {
+  if (!tile?.bounds) {
     return null;
   }
 
-  const normalizedX = clamp01(localX / rect.width);
-  const normalizedY = clamp01(localY / rect.height);
   const lon = tile.bounds.west + (tile.bounds.east - tile.bounds.west) * normalizedX;
   const lat = tile.bounds.north + (tile.bounds.south - tile.bounds.north) * normalizedY;
   return { lat, lon };
@@ -764,13 +758,41 @@ function attachViewportInteractions(kind, stageEl) {
   };
 }
 
+function clickToContentCoords(event, stageEl, kind) {
+  const viewport = state.viewport[kind];
+  const stageRect = stageEl.getBoundingClientRect();
+  const localClick = screenToLocal(event.clientX - stageRect.left, event.clientY - stageRect.top, viewport);
+  const viewportEl = stageEl.querySelector(`[data-stage-viewport="${kind}"]`);
+  let contentX = 0;
+  let contentY = 0;
+  let el = event.currentTarget;
+  while (el && el !== viewportEl) {
+    contentX += el.offsetLeft;
+    contentY += el.offsetTop;
+    el = el.offsetParent;
+  }
+  const elW = event.currentTarget.offsetWidth;
+  const elH = event.currentTarget.offsetHeight;
+  const x = localClick.x - contentX;
+  const y = localClick.y - contentY;
+  return { x, y, normalized_x: clamp01(x / elW), normalized_y: clamp01(y / elH) };
+}
+
 function clampScale(value) {
   return Math.max(1, Math.min(12, value));
 }
 
 function rotateViewport(kind, delta) {
-  state.viewport[kind].rotation += delta;
   const stage = kind === "official" ? officialMapStageEl : basemapStageEl;
+  const viewport = state.viewport[kind];
+  const rect = stage.getBoundingClientRect();
+  const centerX = rect.width / 2;
+  const centerY = rect.height / 2;
+  const localCenter = screenToLocal(centerX, centerY, viewport);
+  viewport.rotation += delta;
+  const newOffset = localToScreenOffset(localCenter.x, localCenter.y, viewport);
+  viewport.x = centerX - newOffset.x;
+  viewport.y = centerY - newOffset.y;
   applyViewport(kind, stage);
 }
 
