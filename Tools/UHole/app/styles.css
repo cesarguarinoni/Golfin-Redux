@@ -465,6 +465,7 @@ li {
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  transform: scale(calc(1 / var(--viewport-scale, 1)));
 }
 
 .stage-marker.is-pending {
@@ -477,6 +478,12 @@ li {
   align-items: start;
   line-height: 0;
   background: #040910;
+}
+
+.mosaic-markers-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .mosaic-tile {

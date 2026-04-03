@@ -401,27 +401,32 @@ function renderStageMarkup({ imagePath, alt, markers, action }) {
 
 function renderBasemapMosaic({ tiles, focusTilePath, points }) {
   const uniqueX = [...new Set(tiles.map((tile) => tile.x))].sort((a, b) => a - b);
+  const uniqueY = [...new Set(tiles.map((tile) => tile.y))].sort((a, b) => a - b);
   const columns = uniqueX.length;
+  const rows = uniqueY.length;
   const sortedTiles = [...tiles].sort((a, b) => (a.y - b.y) || (a.x - b.x));
 
   return `
     <div class="stage-viewport" data-stage-viewport="basemap">
       <div class="stage-content">
         <div class="mosaic-stage" style="grid-template-columns: repeat(${columns}, minmax(0, 1fr));">
-          ${sortedTiles.map((tile) => {
-            const tilePoints = points
-              .map((point, index) => ({ point, index }))
-              .filter(({ point }) => point.basemap.local_path === tile.local_path);
-            return `
-              <div class="mosaic-tile ${tile.local_path === focusTilePath ? "is-focus" : ""}" data-mosaic-tile="${tile.local_path}">
-                <button class="mosaic-tile-button" data-stage-action="basemap-tile" data-tile-path="${tile.local_path}" type="button">
-                  <img src="/output/lomond-country-club/${tile.local_path}" alt="GSI tile ${tile.z}-${tile.x}-${tile.y}">
-                  ${tilePoints.map(({ point, index }) => `
-                    <span class="stage-marker" style="left:${point.basemap.normalized_x * 100}%; top:${point.basemap.normalized_y * 100}%;">${index + 1}</span>
-                  `).join("")}
-                </button>
-              </div>
-            `;
+          ${sortedTiles.map((tile) => `
+            <div class="mosaic-tile ${tile.local_path === focusTilePath ? "is-focus" : ""}" data-mosaic-tile="${tile.local_path}">
+              <button class="mosaic-tile-button" data-stage-action="basemap-tile" data-tile-path="${tile.local_path}" type="button">
+                <img src="/output/lomond-country-club/${tile.local_path}" alt="GSI tile ${tile.z}-${tile.x}-${tile.y}">
+              </button>
+            </div>
+          `).join("")}
+        </div>
+        <div class="mosaic-markers-overlay">
+          ${points.map((point, index) => {
+            const tile = tiles.find((t) => t.local_path === point.basemap.local_path);
+            if (!tile) return "";
+            const colIndex = uniqueX.indexOf(tile.x);
+            const rowIndex = uniqueY.indexOf(tile.y);
+            const left = (colIndex + point.basemap.normalized_x) / columns * 100;
+            const top = (rowIndex + point.basemap.normalized_y) / rows * 100;
+            return `<span class="stage-marker" style="left:${left}%;top:${top}%;">${index + 1}</span>`;
           }).join("")}
         </div>
       </div>
@@ -669,6 +674,7 @@ function applyViewport(kind, stageEl) {
   }
   const viewport = state.viewport[kind];
   viewportEl.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale}) rotate(${viewport.rotation}deg)`;
+  stageEl.style.setProperty("--viewport-scale", viewport.scale);
   updateViewReadout(kind);
 }
 
