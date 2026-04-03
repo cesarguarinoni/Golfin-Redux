@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Funity</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <p class="eyebrow">Figma to Unity</p>
+        <h1>FUNITY</h1>
+        <p class="lede">
+          Build, inspect, and soon compare Figma-driven Unity UI workflows from one local toolkit.
+        </p>
+      </section>
+
+      <section class="mode-bar" role="tablist" aria-label="Funity modes">
+        <button id="mode-generate" class="mode-tab active" type="button" aria-pressed="true">Generate</button>
+        <button id="mode-compare" class="mode-tab" type="button" aria-pressed="false">Compare</button>
+      </section>
+
+      <section id="generate-workspace" class="workspace">
+        <div class="panel controls">
+          <div class="panel-header">
+            <h2>Source</h2>
+            <button id="load-example" class="ghost-button" type="button">Load Example</button>
+          </div>
+
+          <label class="field">
+            <span>Figma URL</span>
+            <input id="figma-url" type="text" placeholder="https://www.figma.com/design/...?...node-id=1-2" />
+          </label>
+
+          <label class="field">
+            <span>Figma file key</span>
+            <input id="file-key" type="text" placeholder="Optional if URL is provided" />
+          </label>
+
+          <label class="field">
+            <span>Figma personal access token</span>
+            <input id="figma-token" type="password" placeholder="Optional if FIGMA_TOKEN is set on the server" />
+          </label>
+
+          <div class="hint-row">
+            <span class="hint-text">Saved locally in this browser only.</span>
+            <button id="clear-saved-token" class="ghost-button hint-button" type="button">Clear Saved Token</button>
+          </div>
+
+          <label class="checkbox-field">
+            <input id="include-assets" type="checkbox" checked />
+            <span>Download image fill assets</span>
+          </label>
+
+          <label class="checkbox-field">
+            <input id="include-rendered-assets" type="checkbox" checked />
+            <span>Export renderable layer assets by node</span>
+          </label>
+
+          <label class="field">
+            <span>Figma JSON or .fig file</span>
+            <input id="file-input" type="file" accept=".json,application/json,.fig" />
+          </label>
+
+          <label class="field">
+            <span>Screen name</span>
+            <input id="screen-name" type="text" placeholder="Sample Screen" />
+          </label>
+
+          <label class="field">
+            <span>Node ID</span>
+            <input id="node-id" type="text" placeholder="Optional: 1:1" />
+          </label>
+
+          <label class="field">
+            <span>Raw Figma JSON</span>
+            <textarea
+              id="json-input"
+              spellcheck="false"
+              placeholder="Paste the Figma API JSON here..."
+            ></textarea>
+          </label>
+
+          <div class="button-row">
+            <button id="import-figma" class="ghost-button wide-button" type="button">Import From Figma API</button>
+            <button id="generate" class="primary-button wide-button" type="button">Generate Unity Artifacts</button>
+          </div>
+        </div>
+
+        <div class="panel results">
+          <div class="panel-header">
+            <h2>Output</h2>
+            <div class="header-actions">
+              <button id="download-all" class="ghost-button" type="button" disabled>Download All Output</button>
+              <div id="downloads" class="downloads"></div>
+            </div>
+          </div>
+
+          <div id="summary" class="summary empty">No artifacts generated yet.</div>
+
+          <div class="tabs" role="tablist" aria-label="Generated files">
+            <button class="tab active" data-target="unity-import.cs" type="button">Unity C#</button>
+            <button class="tab" data-target="scene.yaml" type="button">YAML</button>
+            <button class="tab" data-target="screen-spec.md" type="button">Spec</button>
+            <button class="tab" data-target="asset-manifest.json" type="button">Assets</button>
+          </div>
+
+          <pre id="output-viewer" class="output-viewer"></pre>
+          <section class="console-panel" aria-label="Console">
+            <div class="console-header">
+              <h3>Console</h3>
+              <div class="console-tools">
+                <label class="console-toggle">
+                  <input id="generate-filter-info" type="checkbox" checked />
+                  <span>Info</span>
+                </label>
+                <label class="console-toggle">
+                  <input id="generate-filter-warn" type="checkbox" checked />
+                  <span>Warn</span>
+                </label>
+                <label class="console-toggle">
+                  <input id="generate-filter-error" type="checkbox" checked />
+                  <span>Error</span>
+                </label>
+                <button id="clear-console" class="ghost-button hint-button" type="button">Clear</button>
+              </div>
+            </div>
+            <div id="console-viewer" class="console-viewer"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="compare-workspace" class="workspace workspace-hidden">
+        <div class="panel compare-intro">
+          <div class="panel-header">
+            <h2>Compare</h2>
+          </div>
+          <div class="compare-stack">
+            <div class="compare-copy">
+              <p>
+                Compare will inspect a Figma target against an already implemented Unity screen and
+                pinpoint mismatches in layout, hierarchy, typography, colors, spacing, and assets.
+              </p>
+            </div>
+
+            <label class="field">
+              <span>Figma target URL</span>
+              <input id="compare-figma-url" type="text" placeholder="https://www.figma.com/design/...?...node-id=1-2" />
+            </label>
+
+            <label class="field">
+              <span>Figma JSON or .fig file</span>
+              <input id="compare-figma-json-file" type="file" accept=".json,application/json,.fig,.figma" />
+            </label>
+
+            <div class="compare-source-tools">
+              <button id="inspect-compare-source" class="ghost-button" type="button">Detect Figma Screens</button>
+            </div>
+
+            <label class="field">
+              <span>Detected Figma screens</span>
+              <select id="compare-screen-select">
+                <option value="">No detected screens yet</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Raw Figma JSON</span>
+              <textarea
+                id="compare-figma-json"
+                spellcheck="false"
+                placeholder="Paste Figma JSON here, or load a JSON file. .figma files are not parsed yet, but the slot is reserved for that support."
+              ></textarea>
+            </label>
+
+            <div class="compare-split">
+              <label class="field">
+                <span>Figma screen name</span>
+                <input id="compare-figma-screen" type="text" placeholder="Optional: Bags Screen - Menu" />
+              </label>
+
+              <label class="field">
+                <span>Figma node ID</span>
+                <input id="compare-figma-node-id" type="text" placeholder="Optional: 1:1" />
+              </label>
+            </div>
+
+            <div class="compare-match-panel">
+              <div class="compare-match-header">
+                <h3>Name Matching</h3>
+                <button id="save-name-match" class="ghost-button hint-button" type="button">Save Match</button>
+              </div>
+              <div class="compare-split">
+                <label class="field">
+                  <span>Detected Figma screen</span>
+                  <select id="compare-match-figma-select">
+                    <option value="">No detected screens yet</option>
+                  </select>
+                </label>
+
+                <label class="field">
+                  <span>Detected Unity root</span>
+                  <select id="compare-match-unity-select">
+                    <option value="">No detected Unity roots yet</option>
+                  </select>
+                </label>
+              </div>
+              <div class="field">
+                <span>Saved name matches</span>
+                <div id="compare-name-matches" class="match-list"></div>
+              </div>
+            </div>
+
+            <div class="compare-split">
+              <label class="field">
+                <span>Unity screen name</span>
+                <input id="compare-unity-screen" type="text" placeholder="BagsMenuScreen" />
+              </label>
+
+              <label class="field">
+                <span>Build / scene version</span>
+                <input id="compare-scene-version" type="text" placeholder="MainMenu_v12" />
+              </label>
+            </div>
+
+            <label class="field">
+              <span>Unity screenshot or capture</span>
+              <input id="compare-screenshot" type="file" accept="image/*" />
+            </label>
+
+            <label class="field">
+              <span>Unity hierarchy / prefab / scene dump</span>
+              <input id="compare-unity-dump-file" type="file" accept=".txt,.yaml,.yml,.prefab,.unity,.json,.log,text/plain,application/json" />
+              <textarea
+                id="compare-unity-dump"
+                spellcheck="false"
+                placeholder="Paste hierarchy text, prefab YAML, scene export, or structured notes from Unity..."
+              ></textarea>
+            </label>
+
+            <div class="compare-split compare-checks">
+              <label class="checkbox-field">
+                <input id="compare-layout" type="checkbox" checked />
+                <span>Layout and spacing</span>
+              </label>
+
+              <label class="checkbox-field">
+                <input id="compare-typography" type="checkbox" checked />
+                <span>Typography</span>
+              </label>
+
+              <label class="checkbox-field">
+                <input id="compare-colors" type="checkbox" checked />
+                <span>Colors and opacity</span>
+              </label>
+
+              <label class="checkbox-field">
+                <input id="compare-assets" type="checkbox" checked />
+                <span>Assets and icons</span>
+              </label>
+            </div>
+
+            <button id="start-compare" class="primary-button wide-button" type="button">Start Compare Analysis</button>
+          </div>
+        </div>
+
+        <div class="panel compare-console">
+          <div class="panel-header">
+            <h2>Compare Outputs</h2>
+          </div>
+          <div class="compare-grid">
+            <div class="compare-card">
+              <h3>Discrepancy Report</h3>
+              <p>List mismatches with severity, node references, and the most likely Unity-side source of drift.</p>
+            </div>
+            <div class="compare-card">
+              <h3>Fix Suggestions</h3>
+              <p>Generate concrete implementation suggestions such as anchor fixes, font swaps, spacing tweaks, or asset replacement.</p>
+            </div>
+            <div class="compare-card">
+              <h3>Evidence View</h3>
+              <p>Keep the Figma target, Unity capture, hierarchy hints, and mismatch notes tied together in one review surface.</p>
+            </div>
+            <div class="compare-card">
+              <h3>AI Assist</h3>
+              <p>Hand the discrepancy report to an assistant like me for prioritization, explanation, and step-by-step remediation.</p>
+            </div>
+          </div>
+
+          <div class="compare-output">
+            <div class="compare-output-header">
+              <h3>Planned Analysis Flow</h3>
+            </div>
+            <pre id="compare-preview" class="compare-preview">Compare mode is configured but not running yet.
+
+Planned pipeline:
+1. Resolve the target Figma frame or component.
+2. Ingest Unity evidence: screenshot plus hierarchy or prefab data.
+3. Compare layout, typography, colors, and assets.
+4. Produce a discrepancy report with suggested fixes.
+5. Forward the report to AI assist for prioritization and explanation.</pre>
+          </div>
+
+          <section class="console-panel compare-console-panel" aria-label="Compare Console">
+            <div class="console-header">
+              <h3>Compare Console</h3>
+              <div class="console-tools">
+                <label class="console-toggle">
+                  <input id="compare-filter-info" type="checkbox" checked />
+                  <span>Info</span>
+                </label>
+                <label class="console-toggle">
+                  <input id="compare-filter-warn" type="checkbox" checked />
+                  <span>Warn</span>
+                </label>
+                <label class="console-toggle">
+                  <input id="compare-filter-error" type="checkbox" checked />
+                  <span>Error</span>
+                </label>
+                <button id="clear-compare-console" class="ghost-button hint-button" type="button">Clear</button>
+              </div>
+            </div>
+            <div id="compare-console-viewer" class="console-viewer"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+  </html>

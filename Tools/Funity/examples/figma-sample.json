@@ -1,0 +1,150 @@
+{
+  "document": {
+    "id": "0:0",
+    "name": "Root",
+    "type": "DOCUMENT",
+    "children": [
+      {
+        "id": "1:1",
+        "name": "Sample Screen",
+        "type": "FRAME",
+        "absoluteBoundingBox": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        },
+        "fills": [
+          {
+            "type": "SOLID",
+            "visible": true,
+            "opacity": 1,
+            "color": {
+              "r": 0.9725,
+              "g": 0.9568,
+              "b": 0.9254
+            }
+          }
+        ],
+        "children": [
+          {
+            "id": "1:2",
+            "name": "Header",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 24,
+              "y": 24,
+              "width": 342,
+              "height": 96
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 1,
+                "color": {
+                  "r": 0.1803,
+                  "g": 0.1490,
+                  "b": 0.1294
+                }
+              }
+            ],
+            "cornerRadius": 24,
+            "children": [
+              {
+                "id": "1:3",
+                "name": "Title",
+                "type": "TEXT",
+                "characters": "Welcome back",
+                "absoluteBoundingBox": {
+                  "x": 44,
+                  "y": 48,
+                  "width": 180,
+                  "height": 32
+                },
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "visible": true,
+                    "opacity": 1,
+                    "color": {
+                      "r": 1,
+                      "g": 0.9803,
+                      "b": 0.9568
+                    }
+                  }
+                ],
+                "style": {
+                  "fontFamily": "Inter",
+                  "fontWeight": 700,
+                  "fontSize": 28,
+                  "lineHeightPx": 32,
+                  "textAlignHorizontal": "LEFT",
+                  "textAlignVertical": "TOP"
+                }
+              }
+            ]
+          },
+          {
+            "id": "1:4",
+            "name": "CTA Button",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 24,
+              "y": 156,
+              "width": 200,
+              "height": 56
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "visible": true,
+                "opacity": 1,
+                "color": {
+                  "r": 0.8588,
+                  "g": 0.4156,
+                  "b": 0.2078
+                }
+              }
+            ],
+            "cornerRadius": 18,
+            "children": [
+              {
+                "id": "1:5",
+                "name": "CTA Label",
+                "type": "TEXT",
+                "characters": "Start Session",
+                "absoluteBoundingBox": {
+                  "x": 56,
+                  "y": 173,
+                  "width": 136,
+                  "height": 22
+                },
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "visible": true,
+                    "opacity": 1,
+                    "color": {
+                      "r": 1,
+                      "g": 0.9882,
+                      "b": 0.9647
+                    }
+                  }
+                ],
+                "style": {
+                  "fontFamily": "Inter",
+                  "fontWeight": 600,
+                  "fontSize": 18,
+                  "lineHeightPx": 22,
+                  "textAlignHorizontal": "CENTER",
+                  "textAlignVertical": "CENTER"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
