@@ -313,28 +313,13 @@ function renderAlignmentEditor() {
   officialMapStageEl.innerHTML = renderStageMarkup({
     imagePath: officialImagePath,
     alt: `Official hole ${hole.hole_number} map`,
-    markers: [
-      ...(hole.alignment?.control_points || []).map((point, index) => ({
-        left: `${point.official.normalized_x * 100}%`,
-        top: `${point.official.normalized_y * 100}%`,
-        label: index + 1,
-        pending: false
-      })),
-      ...(state.pendingOfficialPoint ? [{
-        left: `${state.pendingOfficialPoint.normalized_x * 100}%`,
-        top: `${state.pendingOfficialPoint.normalized_y * 100}%`,
-        label: "?",
-        pending: true
-      }] : [])
-    ],
     action: "official"
   });
 
   basemapStageEl.innerHTML = photoTiles.length
     ? renderBasemapMosaic({
         tiles: photoTiles,
-        focusTilePath: state.selectedPhotoTilePath,
-        points: hole.alignment?.control_points || []
+        focusTilePath: state.selectedPhotoTilePath
       })
     : "<p class=\"helper-copy\">No cached GSI photo tile is available yet. Use Refetch GSI Base Map to populate the local base-map cache.</p>";
 
@@ -384,26 +369,21 @@ function renderAlignmentEditor() {
   }
 }
 
-function renderStageMarkup({ imagePath, alt, markers, action }) {
+function renderStageMarkup({ imagePath, alt, action }) {
   return `
     <div class="stage-viewport" data-stage-viewport="${action}">
       <div class="stage-content">
         <button class="stage-button" data-stage-action="${action}" type="button">
           <img src="${imagePath}" alt="${alt}">
-          ${markers.map((marker) => `
-            <span class="stage-marker ${marker.pending ? "is-pending" : ""}" style="left:${marker.left}; top:${marker.top};">${marker.label}</span>
-          `).join("")}
         </button>
       </div>
     </div>
   `;
 }
 
-function renderBasemapMosaic({ tiles, focusTilePath, points }) {
+function renderBasemapMosaic({ tiles, focusTilePath }) {
   const uniqueX = [...new Set(tiles.map((tile) => tile.x))].sort((a, b) => a - b);
-  const uniqueY = [...new Set(tiles.map((tile) => tile.y))].sort((a, b) => a - b);
   const columns = uniqueX.length;
-  const rows = uniqueY.length;
   const sortedTiles = [...tiles].sort((a, b) => (a.y - b.y) || (a.x - b.x));
 
   return `
@@ -417,17 +397,6 @@ function renderBasemapMosaic({ tiles, focusTilePath, points }) {
               </button>
             </div>
           `).join("")}
-        </div>
-        <div class="mosaic-markers-overlay">
-          ${points.map((point, index) => {
-            const tile = tiles.find((t) => t.local_path === point.basemap.local_path);
-            if (!tile) return "";
-            const colIndex = uniqueX.indexOf(tile.x);
-            const rowIndex = uniqueY.indexOf(tile.y);
-            const left = (colIndex + point.basemap.normalized_x) / columns * 100;
-            const top = (rowIndex + point.basemap.normalized_y) / rows * 100;
-            return `<span class="stage-marker" style="left:${left}%;top:${top}%;">${index + 1}</span>`;
-          }).join("")}
         </div>
       </div>
     </div>
@@ -674,8 +643,77 @@ function applyViewport(kind, stageEl) {
   }
   const viewport = state.viewport[kind];
   viewportEl.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale}) rotate(${viewport.rotation}deg)`;
-  stageEl.style.setProperty("--viewport-scale", viewport.scale);
+  updateMarkerPositions(kind, stageEl);
   updateViewReadout(kind);
+}
+
+function updateMarkerPositions(kind, stageEl) {
+  const viewport = state.viewport[kind];
+  const hole = getSelectedHole();
+
+  let layerEl = stageEl.querySelector(".stage-marker-layer");
+  if (!layerEl) {
+    layerEl = document.createElement("div");
+    layerEl.className = "stage-marker-layer";
+    stageEl.appendChild(layerEl);
+  }
+  layerEl.innerHTML = "";
+
+  if (!hole) {
+    return;
+  }
+
+  const controlPoints = hole.alignment?.control_points || [];
+
+  if (kind === "official") {
+    const buttonEl = stageEl.querySelector(".stage-button");
+    if (!buttonEl) {
+      return;
+    }
+    const bw = buttonEl.offsetWidth;
+    const bh = buttonEl.offsetHeight;
+    for (let i = 0; i < controlPoints.length; i++) {
+      const pt = controlPoints[i];
+      placeMarker(layerEl, pt.official.normalized_x * bw, pt.official.normalized_y * bh, String(i + 1), false, viewport);
+    }
+    if (state.pendingOfficialPoint) {
+      placeMarker(layerEl,
+        state.pendingOfficialPoint.normalized_x * bw,
+        state.pendingOfficialPoint.normalized_y * bh,
+        "?", true, viewport);
+    }
+  } else {
+    const photoTiles = state.basemap?.datasets?.find((d) => d.type === "imagery")?.tiles || [];
+    const firstTileBtn = stageEl.querySelector(".mosaic-tile-button");
+    if (!firstTileBtn || !photoTiles.length) {
+      return;
+    }
+    const tileW = firstTileBtn.offsetWidth;
+    const uniqueX = [...new Set(photoTiles.map((t) => t.x))].sort((a, b) => a - b);
+    const uniqueY = [...new Set(photoTiles.map((t) => t.y))].sort((a, b) => a - b);
+    for (let i = 0; i < controlPoints.length; i++) {
+      const pt = controlPoints[i];
+      const tile = photoTiles.find((t) => t.local_path === pt.basemap.local_path);
+      if (!tile) {
+        continue;
+      }
+      const colIndex = uniqueX.indexOf(tile.x);
+      const rowIndex = uniqueY.indexOf(tile.y);
+      const cx = (colIndex + pt.basemap.normalized_x) * tileW;
+      const cy = (rowIndex + pt.basemap.normalized_y) * tileW;
+      placeMarker(layerEl, cx, cy, String(i + 1), false, viewport);
+    }
+  }
+}
+
+function placeMarker(layerEl, contentX, contentY, label, pending, viewport) {
+  const offset = localToScreenOffset(contentX, contentY, viewport);
+  const span = document.createElement("span");
+  span.className = "stage-marker" + (pending ? " is-pending" : "");
+  span.textContent = label;
+  span.style.left = (viewport.x + offset.x) + "px";
+  span.style.top = (viewport.y + offset.y) + "px";
+  layerEl.appendChild(span);
 }
 
 function attachViewportInteractions(kind, stageEl) {
