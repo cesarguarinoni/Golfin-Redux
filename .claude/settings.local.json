@@ -66,7 +66,11 @@
       "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" commit -m \"docs: mark Phase J complete in Tasks.md:*)",
       "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" push)",
       "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" add Docs/AI_CONTEXT.md)",
-      "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" commit -m \"docs: next up is 3D golf course pipeline prototype:*)"
+      "Bash(git -C \"C:\\\\Users\\\\cesar\\\\GolfinRedux\" commit -m \"docs: next up is 3D golf course pipeline prototype:*)",
+      "Bash(node scripts/fetch-gsi-basemap.mjs --force)",
+      "Bash(node -e \"const f=require\\(''fs''\\);const p=JSON.parse\\(f.readFileSync\\(''C:/Users/cesar/GolfinRedux/Tools/UHole/output/lomond-country-club/provenance.json''\\)\\);console.log\\(JSON.stringify\\(p.base_map?.inferred_center,null,2\\)\\)\")",
+      "Bash(node -e \"const f=require\\(''fs''\\);const m=JSON.parse\\(f.readFileSync\\(''C:/Users/cesar/GolfinRedux/Tools/UHole/output/lomond-country-club/basemap/manifest.json''\\)\\);console.log\\(''center:'',m.center?.lat,m.center?.lon\\);console.log\\(''photo tiles:'',m.photo?.tiles?.length\\);console.log\\(''dem tiles:'',m.dem?.tiles?.length\\);const lats=m.photo?.tiles?.map\\(t=>t.lat_min\\);console.log\\(''lat range:'',Math.min\\(...lats\\)?.toFixed\\(4\\),''-'',Math.max\\(...lats\\)?.toFixed\\(4\\)\\)\")",
+      "Bash(node -e \"const f=require\\(''fs''\\);const m=JSON.parse\\(f.readFileSync\\(''C:/Users/cesar/GolfinRedux/Tools/UHole/output/lomond-country-club/basemap/manifest.json''\\)\\);console.log\\(JSON.stringify\\(Object.keys\\(m\\),null,2\\)\\);console.log\\(''photo keys:'',Object.keys\\(m.photo||{}\\)\\);console.log\\(''center:'',m.center\\)\")"
     ]
   }
 }
