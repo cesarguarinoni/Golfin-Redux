@@ -16,11 +16,11 @@ const provenancePath = path.join(courseRoot, "provenance.json");
 const forceRefetch = process.argv.includes("--force");
 
 const inferredCourseCenter = {
-  lat: 34.8789,
-  lon: 136.4468,
-  source: "inferred_from_public_address_resolution",
-  confidence: "medium",
-  note: "Approximate course center inferred from the club address and public web mapping search results. Replace with surveyed or manually validated course centroid when available."
+  lat: 34.9115,
+  lon: 136.4370,
+  source: "manual_verification_google_maps",
+  confidence: "high",
+  note: "Clubhouse verified at 34.9132, 136.4416 via Google Maps. Course center estimated from aerial imagery to be slightly west-northwest of clubhouse."
 };
 
 async function main() {

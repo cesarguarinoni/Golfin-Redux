@@ -106,3 +106,5 @@ The course.json doesn't store coordinates currently, but add a `center` field af
 - The hole data (hole.json files, yardages, pars, etc.)
 - The schemas
 - The ingest script
+
+✅ DONE: 2026-04-03 — Corrected course center to 34.9115, 136.4370; deleted old tiles; re-fetched 340 photo + 9 DEM tiles covering correct area; updated provenance.json, course.json (center field added); no stale alignment.json references found.

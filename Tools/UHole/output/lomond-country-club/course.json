@@ -5,6 +5,12 @@
   "native_name": "ローモンドカントリー倶楽部",
   "country_code": "JP",
   "address": "2570-3 Ryoocho, Kameyama, Mie 519-0222, Japan",
+  "center": {
+    "lat": 34.9115,
+    "lon": 136.4370,
+    "confidence": "high",
+    "source": "manual_verification_google_maps"
+  },
   "website": "https://www.lomond-cc.com/course/",
   "hole_count": 18,
   "par_total": 72,
