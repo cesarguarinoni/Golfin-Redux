@@ -105,6 +105,8 @@ async function loadData() {
   const selectedHole = getSelectedHole();
   state.selectedPhotoTilePath = selectedHole?.alignment?.selected_photo_tile || selectedHole?.alignment?.target_base_map?.selected_tile || state.selectedPhotoTilePath;
   render();
+  loadSavedViewport("official");
+  loadSavedViewport("basemap");
   if (sourceCache) {
     const cachedImages = (sourceCache.holes || []).filter((item) => item.cached).length;
     setStatus(`Loaded course package from disk. Lomond cache has ${cachedImages} cached hole images available.`, "info");
@@ -222,10 +224,10 @@ function renderAlignment() {
       state.pendingOfficialPoint = null;
       const hole = getSelectedHole();
       state.selectedPhotoTilePath = hole?.alignment?.selected_photo_tile || null;
-      resetViewport("official");
-      resetViewport("basemap");
       renderAlignment();
       renderAlignmentEditor();
+      loadSavedViewport("official");
+      loadSavedViewport("basemap");
       scrollSelectedHoleCardIntoView();
     };
     card.addEventListener("click", selectHole);
@@ -296,10 +298,10 @@ function renderAlignmentEditor() {
     state.pendingOfficialPoint = null;
     const hole = getSelectedHole();
     state.selectedPhotoTilePath = hole?.alignment?.selected_photo_tile || null;
-    resetViewport("official");
-    resetViewport("basemap");
     renderAlignment();
     renderAlignmentEditor();
+    loadSavedViewport("official");
+    loadSavedViewport("basemap");
     scrollSelectedHoleCardIntoView();
   };
 
@@ -415,15 +417,35 @@ function handleStageClick(event, stage, selectedTile = null) {
     return;
   }
 
-  const { x, y, normalized_x, normalized_y } = clickToContentCoords(event, stageEl, stage);
+  const viewport = state.viewport[stage];
+  const stageRect = stageEl.getBoundingClientRect();
+  const localClick = screenToLocal(event.clientX - stageRect.left, event.clientY - stageRect.top, viewport);
 
   if (stage === "official") {
-    state.pendingOfficialPoint = { x, y, normalized_x, normalized_y };
+    const buttonEl = stageEl.querySelector(".stage-button");
+    if (!buttonEl) return;
+    const bw = buttonEl.offsetWidth;
+    const bh = buttonEl.offsetHeight;
+    const x = localClick.x;
+    const y = localClick.y;
+    state.pendingOfficialPoint = { x, y, normalized_x: clamp01(x / bw), normalized_y: clamp01(y / bh) };
     renderAlignmentEditor();
     return;
   }
 
   if (stage === "basemap" && state.pendingOfficialPoint && selectedTile) {
+    const photoTiles = state.basemap?.datasets?.find((d) => d.type === "imagery")?.tiles || [];
+    const firstTileBtn = stageEl.querySelector(".mosaic-tile-button");
+    if (!firstTileBtn) return;
+    const tileW = firstTileBtn.offsetWidth;
+    const uniqueX = [...new Set(photoTiles.map((t) => t.x))].sort((a, b) => a - b);
+    const uniqueY = [...new Set(photoTiles.map((t) => t.y))].sort((a, b) => a - b);
+    const colIndex = uniqueX.indexOf(selectedTile.x);
+    const rowIndex = uniqueY.indexOf(selectedTile.y);
+    const x = localClick.x - colIndex * tileW;
+    const y = localClick.y - rowIndex * tileW;
+    const normalized_x = clamp01(x / tileW);
+    const normalized_y = clamp01(y / tileW);
     const coordinates = basemapCoordinatesFromNormalized(normalized_x, normalized_y, selectedTile);
     const controlPoints = [...(hole.alignment?.control_points || [])];
     controlPoints.push({
@@ -611,7 +633,19 @@ function updateBasemapCoordinateReadout(event, tile) {
     return;
   }
 
-  const { normalized_x, normalized_y } = clickToContentCoords(event, basemapStageEl, "basemap");
+  const viewport = state.viewport["basemap"];
+  const stageRect = basemapStageEl.getBoundingClientRect();
+  const localClick = screenToLocal(event.clientX - stageRect.left, event.clientY - stageRect.top, viewport);
+  const photoTiles = state.basemap?.datasets?.find((d) => d.type === "imagery")?.tiles || [];
+  const firstTileBtn = basemapStageEl.querySelector(".mosaic-tile-button");
+  if (!firstTileBtn) return;
+  const tileW = firstTileBtn.offsetWidth;
+  const uniqueX = [...new Set(photoTiles.map((t) => t.x))].sort((a, b) => a - b);
+  const colIndex = uniqueX.indexOf(tile.x);
+  const uniqueY = [...new Set(photoTiles.map((t) => t.y))].sort((a, b) => a - b);
+  const rowIndex = uniqueY.indexOf(tile.y);
+  const normalized_x = clamp01((localClick.x - colIndex * tileW) / tileW);
+  const normalized_y = clamp01((localClick.y - rowIndex * tileW) / tileW);
   const { lat, lon } = basemapCoordinatesFromNormalized(normalized_x, normalized_y, tile);
   basemapCoordinateReadoutEl.textContent = `Lat ${lat.toFixed(6)} / Lon ${lon.toFixed(6)}`;
 }
@@ -636,6 +670,25 @@ function resetViewport(kind) {
   applyViewport(kind, stage);
 }
 
+function vpKey(kind) {
+  return `uhole-vp-${state.selectedHoleNumber}-${kind}`;
+}
+
+function loadSavedViewport(kind) {
+  try {
+    const saved = localStorage.getItem(vpKey(kind));
+    if (saved) {
+      state.viewport[kind] = { scale: 1, x: 0, y: 0, rotation: 0, ...JSON.parse(saved) };
+    } else {
+      state.viewport[kind] = { scale: 1, x: 0, y: 0, rotation: 0 };
+    }
+  } catch {
+    state.viewport[kind] = { scale: 1, x: 0, y: 0, rotation: 0 };
+  }
+  const stage = kind === "official" ? officialMapStageEl : basemapStageEl;
+  applyViewport(kind, stage);
+}
+
 function applyViewport(kind, stageEl) {
   const viewportEl = stageEl.querySelector(`[data-stage-viewport="${kind}"]`);
   if (!viewportEl) {
@@ -643,6 +696,7 @@ function applyViewport(kind, stageEl) {
   }
   const viewport = state.viewport[kind];
   viewportEl.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale}) rotate(${viewport.rotation}deg)`;
+  try { localStorage.setItem(vpKey(kind), JSON.stringify(viewport)); } catch { /* quota */ }
   updateMarkerPositions(kind, stageEl);
   updateViewReadout(kind);
 }
@@ -802,25 +856,6 @@ function attachViewportInteractions(kind, stageEl) {
   };
 }
 
-function clickToContentCoords(event, stageEl, kind) {
-  const viewport = state.viewport[kind];
-  const stageRect = stageEl.getBoundingClientRect();
-  const localClick = screenToLocal(event.clientX - stageRect.left, event.clientY - stageRect.top, viewport);
-  const viewportEl = stageEl.querySelector(`[data-stage-viewport="${kind}"]`);
-  let contentX = 0;
-  let contentY = 0;
-  let el = event.currentTarget;
-  while (el && el !== viewportEl) {
-    contentX += el.offsetLeft;
-    contentY += el.offsetTop;
-    el = el.offsetParent;
-  }
-  const elW = event.currentTarget.offsetWidth;
-  const elH = event.currentTarget.offsetHeight;
-  const x = localClick.x - contentX;
-  const y = localClick.y - contentY;
-  return { x, y, normalized_x: clamp01(x / elW), normalized_y: clamp01(y / elH) };
-}
 
 function clampScale(value) {
   return Math.max(1, Math.min(12, value));
