@@ -449,6 +449,7 @@ namespace Golfin.CourseImport
                 layers[i].normalMapTexture = FindTextureExact(texDir, normalNames[i]);
                 layers[i].tileSize = new Vector2(tileSizes[i], tileSizes[i]);
                 layers[i].tileOffset = Vector2.zero;
+                layers[i].smoothness = 0f;
 
                 if (layers[i].diffuseTexture == null)
                     Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoNames[i]}");
