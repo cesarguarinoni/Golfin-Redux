@@ -76,8 +76,9 @@ namespace Golfin.CourseImport
                     "{\"items\":" + anchorsJson + "}");
                 var anchors = anchorsWrapper.items;
 
-                float terrainX = manifest.terrain.terrain_width_m;
-                float terrainZ = manifest.terrain.terrain_length_m;
+                // Swap X/Z to rotate 90° CCW — matches UHole Lite vertical orientation
+                float terrainX = manifest.terrain.terrain_length_m;
+                float terrainZ = manifest.terrain.terrain_width_m;
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating scene...", 0.1f);
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -150,7 +151,7 @@ namespace Golfin.CourseImport
             string heightmapPath = Path.Combine(exportPath, manifest.terrain.heightmap_file);
             byte[] rawBytes = File.ReadAllBytes(heightmapPath);
 
-            // Flip heightmap vertically only (reverse row order, keep columns)
+            // Rotate heightmap 90° CCW: heights[hx, hy] instead of heights[res-1-hy, hx]
             float[,] heights = new float[res, res];
             for (int hy = 0; hy < res; hy++)
             {
@@ -158,7 +159,7 @@ namespace Golfin.CourseImport
                 {
                     int idx = (hy * res + hx) * 2;
                     ushort val = (ushort)((rawBytes[idx] << 8) | rawBytes[idx + 1]);
-                    heights[res - 1 - hy, hx] = val / 65535f;
+                    heights[hx, hy] = val / 65535f;
                 }
             }
 
@@ -180,11 +181,18 @@ namespace Golfin.CourseImport
             string texFile = manifest.texture.file;
             string srcPath = Path.Combine(exportPath, texFile);
 
-            // Simple copy — no flip, no rotation
+            // Rotate texture 90° CCW to match terrain rotation
             string texturePath = $"{dataDir}/texture_hole{holeId}.png";
             string fullTexPath = Path.Combine(projectRoot, texturePath);
             EnsureDirectory(Path.GetDirectoryName(fullTexPath));
-            File.Copy(srcPath, fullTexPath, true);
+
+            byte[] srcBytes = File.ReadAllBytes(srcPath);
+            var srcTex = new Texture2D(2, 2);
+            srcTex.LoadImage(srcBytes);
+            var rotatedTex = RotateTexture90CCW(srcTex);
+            File.WriteAllBytes(fullTexPath, rotatedTex.EncodeToPNG());
+            Object.DestroyImmediate(srcTex);
+            Object.DestroyImmediate(rotatedTex);
 
             AssetDatabase.ImportAsset(texturePath);
 
@@ -223,7 +231,8 @@ namespace Golfin.CourseImport
             else mat.color = Color.yellow;
             renderer.sharedMaterial = mat;
 
-            Vector3 worldPos = new Vector3(anchor.local.x, 0f, -anchor.local.z);
+            // 90° CCW rotation: (x, z) → (-z, x) → (local.z, local.x)
+            Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
             float terrainHeight = terrain.SampleHeight(worldPos);
             float terrainBase = terrainTransform.position.y;
             marker.transform.position = new Vector3(
@@ -250,12 +259,38 @@ namespace Golfin.CourseImport
             var backTee = anchors.FirstOrDefault(a => a.type.Contains("back"));
             if (backTee != null)
             {
-                Vector3 pos = new Vector3(backTee.local.x, 0f, -backTee.local.z);
+                Vector3 pos = new Vector3(backTee.local.z, 0f, backTee.local.x);
                 float terrainHeight = terrain.SampleHeight(pos);
                 float terrainBase = terrainTransform.position.y;
                 camGO.transform.position = new Vector3(pos.x, terrainBase + terrainHeight + 2f, pos.z);
                 camGO.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
             }
+        }
+
+        private static Texture2D RotateTexture90CCW(Texture2D orig)
+        {
+            int oldW = orig.width;
+            int oldH = orig.height;
+            int newW = oldH;
+            int newH = oldW;
+
+            var origPixels = orig.GetPixels();
+            var rotatedPixels = new Color[newW * newH];
+
+            for (int ry = 0; ry < newH; ry++)
+            {
+                for (int rx = 0; rx < newW; rx++)
+                {
+                    int origX = ry;
+                    int origY = oldH - 1 - rx;
+                    rotatedPixels[ry * newW + rx] = origPixels[origY * oldW + origX];
+                }
+            }
+
+            var rotated = new Texture2D(newW, newH);
+            rotated.SetPixels(rotatedPixels);
+            rotated.Apply();
+            return rotated;
         }
 
         private static void EnsureDirectory(string path)
