@@ -4,6 +4,7 @@
   "description": "Map-based golf hole pipeline — official course maps to Unity terrain",
   "type": "module",
   "scripts": {
+    "gui": "node scripts/dev-server.mjs",
     "scrape": "node scripts/scrape-course.mjs",
     "extract": "node scripts/extract-hole.mjs",
     "classify": "node scripts/classify-zones.mjs",

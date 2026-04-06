@@ -15,9 +15,53 @@
 | Bags Inventory | ✅ Phase J complete |
 | 3D Course Pipeline | ✅ Phase K prototype complete — Hole 1 walkable |
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
+| UHole Lite | ✅ Full pipeline + GUI with orientation, tee dragging, zone painting, heightmap view |
 | Leveling Economy | ✅ Rarity-based |
 | Shop | Not started |
 | Gameplay | Not started |
+
+---
+
+## UHole Lite — Map-Based Hole Pipeline ✅
+
+Alternative to full UHole (satellite tiles + DEM). Uses official course map illustrations as textures. Pipeline processes all 18 Lomond CC holes.
+
+### Pipeline Steps (all complete)
+1. **Scrape** — downloads hole GIFs + scorecard data
+2. **Extract** — crops illustration, removes legend, upscales to 1024×
+3. **Detect Tees** — HSL color matching, 72/72 tees found
+4. **Classify Zones** — 11-zone HSL classification, majority filter
+5. **Generate Terrain** — procedural heightmap with slope, noise, zone modifiers
+6. **Export** — clean packages with manifest, heightmap, texture, anchors, zones
+
+### GUI (`Tools/UHoleLite/app/`, port 4174)
+- Launch: `Tools/UHoleLite/Launch GUI.bat`
+- Features: hole navigation (18 holes), orientation controls (rotate/flip), view modes (Map/Zones/Overlay/Height), draggable tee markers, zone painting (brush + flood fill), zone legend/codex, brush size slider, Ctrl+Z undo, zoom/pan, "Regen Heightmap" button, save all
+- Server: `scripts/dev-server.mjs` — APIs for course data, orientation, tees, zones, heightmap PNG, regen
+
+### Unity Importer
+- `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
+- Menu: `GOLFIN > Import Hole (Lite) > Hole 01..18 + All 18`
+- Heightmap: `heights[res-1-hy, hx]` (vertical flip only)
+- Texture: simple copy, no rotation
+- Anchors: `Vector3(anchor.local.x, 0, -anchor.local.z)`
+
+### Known Issue: Bunker Terrain at 129×129
+Small bunkers near greens appear as mounds rather than depressions. Root cause: 129×129 heightmap resolution too coarse — each cell covers ~4×5 zone pixels, blur pass averages small depressions with surrounding high terrain. **Resolution: switch to separate bunker meshes.** See `Docs/BUNKER_RESEARCH.md`.
+
+### Next Steps (bunker meshes approach)
+1. Stop depressing bunkers in heightmap — keep terrain smooth where bunkers are
+2. Export bunker contour polygons from zone grid
+3. In Unity importer, use `TerrainData.SetHoles()` to cut terrain at bunker locations
+4. Generate/place bowl-shaped bunker meshes under the terrain holes
+5. Add sand material + bunker collider for ball physics
+
+### Key Files
+- Pipeline: `Tools/UHoleLite/scripts/` (7 scripts + lib/)
+- Config: `Tools/UHoleLite/config/lomond-country-club.json`
+- Output: `Tools/UHoleLite/output/lomond-country-club/`
+- GUI: `Tools/UHoleLite/app/` (index.html, app.js, styles.css)
+- Docs: `Tools/UHoleLite/docs/TASK.md`, `Docs/BUNKER_RESEARCH.md`
 
 ---
 
@@ -42,27 +86,11 @@ Official map → control points → affine transform → heightmap + aerial text
 
 - `Tools/UHole/docs/TASK.md` — UHole task instructions
 - `Docs/TellCode.md` — Unity task instructions
-- `Assets/Scripts/Editor/CourseImporter/HoleImporter.cs` — Unity importer
+- `Assets/Scripts/Editor/CourseImporter/HoleImporter.cs` — Unity importer (satellite pipeline)
+- `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs` — Unity importer (map pipeline)
 - `Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs` — JSON data classes
 - `Assets/Scripts/HoleMetadata.cs` — runtime hole metadata component
 - `Assets/Scripts/Debug/WalkCamera.cs` — WASD + mouse look camera
-- `Assets/Golf/Courses/lomond-country-club/Generated/Hole_01.unity` — the scene
-
-### Coordinate Conventions
-
-- **UHole local coords:** `x = dLonM` (east=+X), `z = -dLatM` (north=-Z)
-- **Unity terrain:** positioned at `(-width/2, 0, -length/2)`, extends +X and +Z
-- **Heightmap:** `heights[res-1-x, res-1-y]` — Unity SetHeights uses `[x_index, z_index]`, NOT `[z, x]` as docs imply
-- **Texture:** sampled pixel-by-pixel from geo coords, `U=0→west, V=0→north`, no flips
-- **Anchors:** raw `(local.x, 0, local.z)` — no negation
-- **Anchor world coords:** from basemap tile geo-bounds (v2 alignment tool), not affine transform
-
-### Open Items for Next Phase
-
-1. **Texture-terrain alignment** — FIXED. Diagnostic revealed Unity `SetHeights` uses `heights[x_index, z_index]` (not `[z, x]` as docs imply). Fix: `heights[res-1-x, res-1-y]`. Bump and red square now in same corner. Diagnostic markers need removing (Step 9 in TellCode.md).
-2. **Height verification** — need to validate in-game terrain elevations match the real golf course. Current elevation range 120.81m–205.62m (85m total) includes surrounding forested hillsides — may look exaggerated. Walk around and compare terrain shape to known features.
-3. **DEM5A (5m lidar) integrated** — 25/25 tiles fetched, full Lomond coverage. 98.7% DEM5A sampling, z14 fallback for 220 edge pixels. Files: `scripts/lib/dem5a.mjs`, updated `fetch-gsi-basemap.mjs` and `export-hole.mjs`.
-4. **Bounds too generous** — 80m padding captures steep forested hillsides beyond the fairway, inflating the elevation range. Consider reducing padding or adding fairway-edge anchors.
 
 ---
 
@@ -89,14 +117,18 @@ Official map → control points → affine transform → heightmap + aerial text
 - Unity `heights[row,col]`: Unity `SetHeights` uses `[x_index, z_index]` NOT `[z, x]` — empirically confirmed via diagnostic markers
 - Unity `TerrainLayer`: U=0 → min X, V=0 → min Z
 - Unity `Texture2D.GetPixels()`: pixels[0] = bottom-left (south-west for map tiles)
+- **Bunkers should be separate meshes**, not heightmap depressions — 129×129 is too coarse for small features
 
-### UHole
+### UHole / UHole Lite
 - GSI tile server: `cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg`
 - GSI DEM: 256×256 CSV grid per tile, values in meters, `e` = no data
 - Nominatim/OpenStreetMap lookups unreliable for Japanese golf courses — verify with Google Maps
 - Official map images have info panels on the left — don't use full image for bounds
 - Affine transform extrapolates poorly beyond control point range
-- Anchor world coords from basemap tile geo-bounds are more reliable than affine-derived coords
+- Lomond CC hole diagram URL pattern: `lomond-cc.com/wp-content/themes/templateB/images/course_e{NN}.gif`
+- Zone classification: 11 zones (background, fairway, green, semi_rough, rough, trees, bunker, water, cart_path, ob, tee_box)
+- Tee detection: HSL→cluster→shape filter→mutual proximity, 72/72 high confidence
+- Heightmap orientation for UHole Lite: `heights[res-1-hy, hx]` = vertical flip only
 
 ---
 
@@ -115,4 +147,6 @@ Official map → control points → affine transform → heightmap + aerial text
 - `Docs/Tasks.md` — current checklist
 - `Docs/TellCode.md` — architect → code instructions (Unity)
 - `Tools/UHole/docs/TASK.md` — architect → code instructions (UHole)
+- `Tools/UHoleLite/docs/TASK.md` — architect → code instructions (UHole Lite)
+- `Docs/BUNKER_RESEARCH.md` — bunker implementation research + plan
 - `CLAUDE.md` — Claude Code session rules + project architecture

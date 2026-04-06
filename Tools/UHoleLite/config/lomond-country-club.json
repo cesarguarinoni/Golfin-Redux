@@ -77,7 +77,8 @@
     "base_undulation_m": 8,
     "noise_frequency": 0.012,
     "green_flatness": 0.15,
-    "bunker_depth_m": 1.5,
+    "bunker_depth_m": 3.0,
+    "bunker_lip_m": 0.8,
     "tree_ridge_m": 3.0,
     "tee_to_green_drop_range_m": [3, 15]
   },

@@ -1,282 +1,495 @@
-# TASK.md — UHole Lite: Fix Orientation (Take 3)
+# TASK.md — UHole Lite GUI: Heightmap View, Zone Legend & Zone Painting
 
-> Claude Code: Read this file carefully. Previous fixes did not work.
-> The terrain is STILL rendering horizontally (landscape, rotated 90°).
+> Claude Code: Read this file. Execute the current task block.
+> Read all files in `app/` AND `scripts/dev-server.mjs` before starting.
 
 ---
 
-## Current Task — Fix Terrain 90° Rotation (Definitive)
+## Context
 
-**Problem:** The terrain renders with the golf hole horizontal instead of vertical.
-Two attempts at changing the heightmap indexing did not fix it.
+UHole Lite has a browser-based GUI at `Tools/UHoleLite/app/` served by
+`scripts/dev-server.mjs` on port 4174. Launch with `Launch GUI.bat`.
 
-**New approach:** Instead of guessing at heightmap indexing, swap the terrain
-width/length AND the tileSize so the long dimension (illustration height) maps
-to the correct Unity axis.
+The GUI currently supports:
+- Viewing hole illustrations and zone maps
+- Orientation controls (rotate/flip)
+- View switching (Map / Zones / Overlay)
+- Draggable tee markers with save
 
-### The Key Insight
+**Read these files before starting:**
+- `app/app.js` — Main app logic (~350 lines)
+- `app/index.html` — HTML structure
+- `app/styles.css` — UHole-style dark theme
+- `scripts/dev-server.mjs` — API server
+- `scripts/classify-zones.mjs` — Zone definitions and colors (ZONE_COLORS, ZONES constants)
 
-The illustration is portrait: 530px wide × 637px tall.
-The terrain manifest says: `terrain_width_m=523.4` (short), `terrain_length_m=631.2` (long).
+---
 
-Currently:
-```csharp
-terrainData.size = new Vector3(
-    manifest.terrain.terrain_width_m,   // X = 523 (short axis)
-    elevRange,
-    manifest.terrain.terrain_length_m   // Z = 631 (long axis)
-);
+## Current Task — Three New Features
+
+### Feature 1: Heightmap View
+
+**Goal:** Add a "Height" view mode so the user can see the procedural heightmap
+rendered as a grayscale image, and verify it aligns with the illustration.
+
+#### Server side
+
+Add a new API endpoint `GET /api/heightmap?course=X&hole=N` that reads
+`output/{courseId}/export/hole-{NN}/heightmap.raw` (129×129 uint16 big-endian),
+converts it to a grayscale PNG on the fly, and returns it.
+
+```javascript
+// In dev-server.mjs:
+if (req.method === "GET" && url.pathname === "/api/heightmap") {
+  const courseId = url.searchParams.get("course") || "lomond-country-club";
+  const hole = Number(url.searchParams.get("hole"));
+  const pad = String(hole).padStart(2, "0");
+  const rawPath = path.join(root, "output", courseId, "export", `hole-${pad}`, "heightmap.raw");
+
+  try {
+    const rawBytes = await readFile(rawPath);
+    const res129 = 129;
+    // Convert uint16BE to 8-bit grayscale
+    const pixels = Buffer.alloc(res129 * res129);
+    for (let i = 0; i < res129 * res129; i++) {
+      const val = (rawBytes[i * 2] << 8) | rawBytes[i * 2 + 1]; // big-endian uint16
+      pixels[i] = Math.round((val / 65535) * 255);
+    }
+
+    // Use sharp to create a PNG from the grayscale buffer
+    // Need to import sharp at the top of dev-server.mjs
+    const sharp = (await import("sharp")).default;
+    const pngBuffer = await sharp(pixels, { raw: { width: res129, height: res129, channels: 1 } })
+      .resize(512, 512, { kernel: "nearest" })  // upscale for visibility
+      .png()
+      .toBuffer();
+
+    res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "no-cache" });
+    res.end(pngBuffer);
+  } catch (err) {
+    res.writeHead(404);
+    res.end("Heightmap not found: " + err.message);
+  }
+  return;
+}
 ```
 
-And the terrain is placed at:
-```csharp
-position = (-width/2, 0, -length/2) = (-261.7, 0, -315.6)
+NOTE: `sharp` needs to be imported. Add `import sharp from "sharp";` at the
+top of dev-server.mjs, or use dynamic import as shown above.
+
+#### Client side
+
+1. Add a "Height" button to the view mode switcher:
+   ```html
+   <button class="mode-btn view-btn" data-view="heightmap">Height</button>
+   ```
+
+2. Load the heightmap image when selecting a hole:
+   ```javascript
+   heightmapImg = await loadImage("/api/heightmap?course=" + COURSE_ID + "&hole=" + n);
+   ```
+   Add `let heightmapImg = null;` to the module-level variables.
+
+3. In `drawCanvas()`, add heightmap rendering:
+   ```javascript
+   if (currentView === "heightmap") {
+     if (heightmapImg) {
+       ctx.globalAlpha = 1;
+       ctx.drawImage(heightmapImg, -hw, -hh, srcW * scale, srcH * scale);
+     }
+   }
+   ```
+   
+   Also support overlaying heightmap with the illustration: when view is "both"
+   and the user switches to heightmap, show the heightmap blended with the map.
+   
+   Actually, simpler approach: just make "Height" its own standalone view mode.
+   If the user wants to compare, they can toggle between Map and Height views.
+
+4. The heightmap image is 512×512 (square) but the illustration is ~530×637
+   (portrait). The `drawImage` call stretches the heightmap to match the
+   illustration dimensions, which is correct since the heightmap covers the
+   same terrain area.
+
+---
+
+### Feature 2: Zone Color Legend
+
+**Goal:** Show a persistent legend/codex that maps zone colors to zone names,
+so the user can see what each color in the zone view means.
+
+#### Implementation
+
+Add a legend panel below the toolbar (or in the sidebar) that shows all 11
+zone types with their visualization colors. The legend should:
+- Display a colored swatch (small square or circle) next to each zone name
+- Show the zone name
+- Only be visible when the view is "Zones" or "Overlay"
+- Highlight the zone under the mouse cursor when hovering the canvas
+
+Zone colors (from `classify-zones.mjs`):
+
+| Index | Name        | Color RGB          | Hex       |
+|-------|-------------|-------------------|-----------|
+| 0     | background  | (0, 0, 0)         | #000000   |
+| 1     | fairway     | (0, 204, 0)       | #00CC00   |
+| 2     | green       | (128, 255, 64)    | #80FF40   |
+| 3     | semi_rough  | (102, 136, 51)    | #668833   |
+| 4     | rough       | (51, 102, 34)     | #336622   |
+| 5     | trees       | (26, 51, 16)      | #1A3310   |
+| 6     | bunker      | (221, 204, 136)   | #DDCC88   |
+| 7     | water       | (51, 102, 204)    | #3366CC   |
+| 8     | cart_path   | (153, 153, 153)   | #999999   |
+| 9     | ob          | (255, 51, 51)     | #FF3333   |
+| 10    | tee_box     | (255, 255, 255)   | #FFFFFF   |
+
+#### HTML
+
+Add a legend bar between the toolbar and the canvas stage:
+```html
+<div class="zone-legend" id="zone-legend" hidden>
+  <!-- Populated by JS -->
+</div>
 ```
 
-The texture tileSize is:
-```csharp
-layer.tileSize = new Vector2(terrainData.size.x, terrainData.size.z);
-// = (523, 631)
+#### JS
+
+```javascript
+const ZONE_LEGEND = [
+  { name: "Background", color: "#000000" },
+  { name: "Fairway",    color: "#00CC00" },
+  { name: "Green",      color: "#80FF40" },
+  { name: "Semi-rough", color: "#668833" },
+  { name: "Rough",      color: "#336622" },
+  { name: "Trees",      color: "#1A3310" },
+  { name: "Bunker",     color: "#DDCC88" },
+  { name: "Water",      color: "#3366CC" },
+  { name: "Cart path",  color: "#999999" },
+  { name: "OB",         color: "#FF3333" },
+  { name: "Tee box",    color: "#FFFFFF" },
+];
+
+function buildZoneLegend() {
+  const el = document.getElementById("zone-legend");
+  el.innerHTML = ZONE_LEGEND.map((z, i) =>
+    `<div class="legend-item" data-zone="${i}">` +
+    `<span class="legend-swatch" style="background:${z.color}"></span>` +
+    `<span class="legend-label">${z.name}</span>` +
+    `</div>`
+  ).join("");
+}
 ```
 
-TerrainLayer.tileSize: `x` = repeat distance along terrain X, `y` = repeat
-distance along terrain Z.
+Show/hide based on view mode — visible when view is "zones", "both", or
+when zone painting is active.
 
-If the terrain size is (523, elev, 631), then:
-- Terrain X spans 523m (the short axis)
-- Terrain Z spans 631m (the long axis)
-- Texture U tiles every 523m along X
-- Texture V tiles every 631m along Z
+#### CSS
 
-The texture is 1024×1235 pixels. Unity maps:
-- Texture width (1024px) → U axis → terrain X (523m)
-- Texture height (1235px) → V axis → terrain Z (631m)
+```css
+.zone-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-panel);
+}
 
-The illustration width (short) maps to X (short) ✓
-The illustration height (long) maps to Z (long) ✓
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: default;
+}
 
-This SHOULD give a portrait terrain... but it doesn't. The terrain appears
-landscape, meaning the content is rendered with X and Z swapped.
+.legend-item.is-active {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
 
-### What's Actually Happening
+.legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
 
-I believe the issue is with how `SetHeights` interprets the array dimensions
-relative to `terrainData.size`.
-
-Unity terrain is always SQUARE in heightmap resolution (129×129). The non-square
-world dimensions come from `terrainData.size`. But `SetHeights` maps:
-- array[0, *] = one edge of terrain
-- array[*, 0] = another edge
-
-If the first array dimension maps to the Z axis and the second to X (as Unity
-docs suggest), then the heightmap content should be:
-- Row 0 (first dimension = 0) corresponds to terrain max Z
-- Col 0 (second dimension = 0) corresponds to terrain min X
-
-With `heights[x, res-1-y]` (current code):
-- First dim varies with image X (0→128 = left→right of illustration)
-- Second dim varies with image Y (flipped, 0=bottom, 128=top)
-
-If first dim = Z axis: illustration left/right maps to Z. That would mean
-the illustration's width (short axis) maps to Z (long axis) → landscape!
-That's exactly the bug.
-
-### THE FIX
-
-We need to **swap the two changes simultaneously**:
-
-1. **Swap width/length in terrainData.size** — so the long dimension is on X:
-```csharp
-terrainData.size = new Vector3(
-    manifest.terrain.terrain_length_m,  // X = 631 (LONG axis = illustration height)
-    elevRange,
-    manifest.terrain.terrain_width_m    // Z = 523 (SHORT axis = illustration width)
-);
+.legend-label {
+  white-space: nowrap;
+}
 ```
 
-2. **Match the heightmap indexing** — image Y → first dim (now X=long), image X → second dim (now Z=short):
-```csharp
-heights[res - 1 - y, x] = val / 65535f;
-// First dim (X/long axis) = res-1-y: image row, flipped (top of image = high X)
-// Second dim (Z/short axis) = x: image column
+---
+
+### Feature 3: Zone Painting
+
+**Goal:** Allow the user to paint over zones on the canvas to correct
+misclassifications. For example, paint an area that was classified as "rough"
+to be "fairway" instead.
+
+#### How it works
+
+1. The user selects a zone type from the legend (clicking a legend item makes
+   it the active paint brush)
+2. When a legend item is active (highlighted), clicking/dragging on the canvas
+   in Zones or Overlay view paints pixels to that zone
+3. The paint is applied to the zone grid data and the zones.png is regenerated
+4. A "Save Zones" action persists the changes
+
+#### Implementation
+
+**Paint mode activation:**
+- Click a legend item → it becomes the active brush (highlighted with
+  `is-active` class). Click again to deselect.
+- When a brush is active, the cursor over the canvas changes to a crosshair
+- Show the active brush zone name somewhere visible (toolbar or below canvas)
+
+**Brush settings:**
+- Add a brush size slider (radius 1-20 pixels at raw image resolution)
+- Default brush size: 5px
+
+**Painting on canvas:**
+- On mousedown + mousemove while a brush is active and NOT over a tee marker,
+  paint the zone grid
+- The zone grid is stored in `zones.json` as a base64-encoded uint8 array
+- Load the zone grid into a client-side array when the hole is selected
+- When painting, update the local array and redraw the zones on the canvas
+
+**Client-side zone grid:**
+```javascript
+let zoneGrid = null;   // Uint8Array, width × height
+let zoneGridW = 0;
+let zoneGridH = 0;
+let zonePaintDirty = false;
+let activeBrushZone = -1;  // -1 = no brush
+let brushSize = 5;
+
+// Load when selecting a hole:
+async function loadZoneGrid(holeNumber) {
+  const pad = String(holeNumber).padStart(2, "0");
+  const res = await fetch("/api/zones-grid?course=" + COURSE_ID + "&hole=" + holeNumber);
+  if (!res.ok) { zoneGrid = null; return; }
+  const data = await res.json();
+  zoneGridW = data.width;
+  zoneGridH = data.height;
+  zoneGrid = new Uint8Array(atob(data.grid).split("").map(c => c.charCodeAt(0)));
+}
 ```
 
-3. **Swap terrain position:**
-```csharp
-terrainGO.transform.position = new Vector3(
-    -manifest.terrain.terrain_length_m / 2f,  // X = long axis
-    0f,
-    -manifest.terrain.terrain_width_m / 2f    // Z = short axis
-);
-```
+**New API endpoint:** `GET /api/zones-grid?course=X&hole=N`
 
-4. **Swap tileSize for texture:**
-```csharp
-layer.tileSize = new Vector2(terrainData.size.x, terrainData.size.z);
-// This auto-adjusts since we already swapped size
-```
-
-5. **Swap anchor coordinates:**
-The anchors currently use:
+Returns the zone grid data:
 ```json
-{ "local": { "x": -127.7, "z": 260.1 } }
-```
-Where x was computed from `(normalized.x - 0.5) * terrain_width_m` and
-z from `(normalized.y - 0.5) * terrain_length_m`.
-
-After the swap, we need:
-- World X (long axis) = from illustration Y (normalized.y) = the old z value
-- World Z (short axis) = from illustration X (normalized.x) = the old x value
-
-So swap anchor x and z, and negate the new X to flip the Y axis:
-```csharp
-// In PlaceAnchorMarker and CreateWalkCamera:
-Vector3 worldPos = new Vector3(-anchor.local.z, 0f, anchor.local.x);
-//                              ↑ old z, negated    ↑ old x
+{
+  "width": 528,
+  "height": 637,
+  "grid": "<base64 string>"
+}
 ```
 
-Wait — this is getting complicated and fragile. Let me simplify.
+Read from `output/{courseId}/holes/{NN}/zones.json` → extract `source_dimensions`
+and `grid` fields.
 
-### SIMPLER APPROACH: Rotate the texture, don't swap terrain axes
+**Painting pixels:**
+When the user paints, convert canvas coordinates to zone grid coordinates
+(using the same inverse transform as tee dragging), then paint a circle of
+`brushSize` radius in the zone grid:
 
-Instead of reworking all the coordinate math, we can:
+```javascript
+function paintZone(normX, normY) {
+  if (activeBrushZone < 0 || !zoneGrid) return;
+  const gx = Math.round(normX * (zoneGridW - 1));
+  const gy = Math.round(normY * (zoneGridH - 1));
 
-1. **Keep the terrain as-is** (width=X, length=Z, portrait orientation)
-2. **Rotate the texture 90° CCW** before applying it, so it matches the
-   TerrainLayer UV mapping
+  for (let dy = -brushSize; dy <= brushSize; dy++) {
+    for (let dx = -brushSize; dx <= brushSize; dx++) {
+      if (dx * dx + dy * dy > brushSize * brushSize) continue;
+      const px = gx + dx;
+      const py = gy + dy;
+      if (px < 0 || px >= zoneGridW || py < 0 || py >= zoneGridH) continue;
+      zoneGrid[py * zoneGridW + px] = activeBrushZone;
+    }
+  }
 
-But this doesn't fix the heightmap rotation either.
-
-### SIMPLEST APPROACH: Fix it in the export pipeline (Node.js)
-
-The cleanest fix is to **rotate the heightmap and texture 90°** during
-export so they're already in the orientation Unity expects.
-
-### ACTUALLY — Let me try the simplest C#-only fix first
-
-Keep everything but **swap ONLY terrainData.size X↔Z** and the terrain position:
-
-```csharp
-// In CreateTerrain:
-terrainData.size = new Vector3(
-    manifest.terrain.terrain_length_m,  // SWAP: long axis on X
-    elevRange,
-    manifest.terrain.terrain_width_m    // SWAP: short axis on Z
-);
-
-// Heights: direct mapping
-heights[y, x] = val / 65535f;
-
-// In ImportLiteHole, terrain position:
-terrainGO.transform.position = new Vector3(
-    -manifest.terrain.terrain_length_m / 2f,   // SWAP
-    0f,
-    -manifest.terrain.terrain_width_m / 2f     // SWAP
-);
+  zonePaintDirty = true;
+  regenerateZonesImage();
+}
 ```
 
-And in `PlaceAnchorMarker` and `CreateWalkCamera`, swap x and z:
-```csharp
-Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
+**Regenerate zones image from grid:**
+After painting, regenerate the `zonesImg` canvas-side from the zone grid:
+
+```javascript
+function regenerateZonesImage() {
+  const imgData = new ImageData(zoneGridW, zoneGridH);
+  for (let i = 0; i < zoneGrid.length; i++) {
+    const zone = zoneGrid[i];
+    const color = ZONE_COLORS_RGB[zone] || [0, 0, 0];
+    imgData.data[i * 4 + 0] = color[0];
+    imgData.data[i * 4 + 1] = color[1];
+    imgData.data[i * 4 + 2] = color[2];
+    imgData.data[i * 4 + 3] = 255;
+  }
+
+  // Create an offscreen canvas to generate an ImageBitmap
+  const offscreen = new OffscreenCanvas(zoneGridW, zoneGridH);
+  const offCtx = offscreen.getContext("2d");
+  offCtx.putImageData(imgData, 0, 0);
+
+  // Convert to a regular canvas for drawImage compatibility
+  const tempCanvas = document.createElement("canvas");
+  tempCanvas.width = zoneGridW;
+  tempCanvas.height = zoneGridH;
+  const tempCtx = tempCanvas.getContext("2d");
+  tempCtx.putImageData(imgData, 0, 0);
+
+  // Use the canvas as the zonesImg source
+  zonesImg = tempCanvas;
+  drawCanvas();
+}
 ```
 
-And texture tileSize auto-reads from terrainData.size, so no change needed there.
+Note: `drawImage` can accept a `<canvas>` element, not just `<img>`.
 
-This swaps the world-space layout so the long axis is along X, making the
-terrain landscape in terms of the X/Z dimensions. But the content should now
-be portrait because the heightmap rows (image Y, long axis) map to the first
-SetHeights dimension which maps to... ugh, this circular reasoning isn't working.
-
-### ACTUAL DEFINITIVE APPROACH
-
-Let me stop guessing and make it empirically testable. Here's what to do:
-
-**Change `CreateTerrain()` to try BOTH orientations and log which corner has
-the highest elevation. Then compare to the illustration to verify.**
-
-Actually no — let me just do the one thing that will obviously fix it:
-
-**Swap terrainData.size X↔Z AND use `heights[y, x]`:**
-
-The reasoning:
-- `heights[y, x]` with y=0..128 in first dim, x=0..128 in second dim
-- Unity maps first dim to one axis, second dim to another
-- If the terrain appears landscape with `heights[y,x]` and size=(523, elev, 631),
-  it means the first dim is mapping to Z (631m) and second to X (523m)
-- The image Y (long) is in the first dim → maps to Z → but Z=631 → that's the
-  long axis → that should be portrait...
-
-OK I think the issue might be that Unity's Scene view default camera angle
-is making it LOOK landscape when it's actually portrait. But you said the text
-is sideways, which confirms it's truly rotated.
-
-Let me just write the definitive changes:
-
-### Changes to `HoleLiteImporter.cs`
-
-**1. In `CreateTerrain()`, swap the size dimensions:**
-
-```csharp
-terrainData.size = new Vector3(
-    manifest.terrain.terrain_length_m,  // X = long axis (was terrain_width)
-    elevRange,
-    manifest.terrain.terrain_width_m    // Z = short axis (was terrain_length)
-);
+**Define ZONE_COLORS_RGB in the client:**
+```javascript
+const ZONE_COLORS_RGB = [
+  [0,   0,   0  ],  // 0 background
+  [0,   204, 0  ],  // 1 fairway
+  [128, 255, 64 ],  // 2 green
+  [102, 136, 51 ],  // 3 semi_rough
+  [51,  102, 34 ],  // 4 rough
+  [26,  51,  16 ],  // 5 trees
+  [221, 204, 136],  // 6 bunker
+  [51,  102, 204],  // 7 water
+  [153, 153, 153],  // 8 cart_path
+  [255, 51,  51 ],  // 9 ob
+  [255, 255, 255],  // 10 tee_box
+];
 ```
 
-**2. In `CreateTerrain()`, use simple indexing:**
-```csharp
-heights[y, x] = val / 65535f;
+**Saving painted zones:**
+
+New API endpoint: `POST /api/zones`
+
+Request body:
+```json
+{
+  "courseId": "lomond-country-club",
+  "holeNumber": 1,
+  "width": 528,
+  "height": 637,
+  "grid": "<base64 encoded uint8 array>"
+}
 ```
 
-**3. In `ImportLiteHole()`, swap the terrain position:**
-```csharp
-terrainGO.transform.position = new Vector3(
-    -manifest.terrain.terrain_length_m / 2f,
-    0f,
-    -manifest.terrain.terrain_width_m / 2f
-);
+Server handler:
+- Read existing `zones.json`
+- Update the `grid` field with the new base64 data
+- Recalculate `zone_stats` (count pixels per zone, compute percentages)
+- Write updated `zones.json`
+- Also regenerate `zones.png` from the new grid using sharp
+  (write a new PNG with the zone visualization colors)
+
+Add zones saving to the existing `saveAll()` function — save if `zonePaintDirty`
+is true.
+
+**Brush interaction with tee dragging:**
+- If `activeBrushZone >= 0` AND the mouse is over a tee marker → tee drag
+  takes priority (don't paint)
+- If `activeBrushZone >= 0` AND the mouse is NOT over a tee → paint mode
+- If `activeBrushZone < 0` → tee drag mode (existing behavior)
+
+**Cursor:**
+- Normal mode (no brush): default cursor, `grab` on tee hover
+- Brush active: `crosshair` cursor, `grab` on tee hover (tee still draggable)
+- Painting: `crosshair` cursor
+
+#### HTML additions
+
+Add between the toolbar and canvas stage:
+
+```html
+<!-- Zone legend + paint controls -->
+<div class="zone-legend" id="zone-legend" hidden>
+  <!-- Populated by buildZoneLegend() -->
+</div>
+
+<!-- Brush size (visible when painting) -->
+<div class="alignment-toolbar" id="brush-toolbar" hidden>
+  <h4 class="toolbar-title">Paint</h4>
+  <span id="active-brush-label" class="chip">No brush</span>
+  <div class="toolbar-spacer"></div>
+  <span style="font-size:0.82rem;color:var(--muted)">Brush size</span>
+  <input type="range" id="brush-size" min="1" max="20" value="5"
+    style="width:100px;accent-color:var(--accent)">
+  <span id="brush-size-label" style="font-size:0.82rem;color:var(--muted)">5px</span>
+  <button id="btn-clear-brush">✕ Deselect</button>
+</div>
 ```
 
-**4. In `PlaceAnchorMarker()`, swap x↔z:**
-```csharp
-Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
+#### CSS additions
+
+```css
+#hole-canvas.painting { cursor: crosshair; }
 ```
 
-**5. In `CreateWalkCamera()`, swap x↔z:**
-```csharp
-Vector3 pos = new Vector3(backTee.local.z, 0f, backTee.local.x);
-```
+---
 
-### After re-importing, check:
+### Integration Notes
 
-1. Is the terrain portrait (tall along X) in Scene view?
-2. Is the illustration text upright?
-3. If the image is mirrored, add negation to one axis (e.g., `-anchor.local.z`)
-
-**If the terrain is portrait but upside-down** (green at bottom instead of top),
-change the heightmap to `heights[res - 1 - y, x]`.
-
-**If the terrain is portrait but left-right mirrored**, change the heightmap
-to `heights[y, res - 1 - x]`.
+- All three features should work together smoothly
+- The view mode switcher should now have 4 options: Map | Zones | Overlay | Height
+- The zone legend is visible when viewing Zones, Overlay, or when painting
+- The heightmap view shows a standalone grayscale terrain preview
+- Painting only works in Zones or Overlay view
+- Tee dragging works in ALL view modes
+- Save button saves orientation + tees + zones (whatever has been modified)
 
 ### Verification
 
-- [ ] Terrain is portrait in top-down Scene view
-- [ ] Illustration text reads correctly (upright, not sideways)
-- [ ] Fairway runs top-to-bottom (or bottom-to-top — flip is fine, rotation is not)
-- [ ] Anchor markers are on/near the terrain (not floating off in space)
+- [ ] Heightmap renders as grayscale in the "Height" view mode
+- [ ] Heightmap responds to orientation controls (rotate/flip)
+- [ ] Zone legend displays all 11 zone types with correct colors
+- [ ] Zone legend is visible in Zones and Overlay views
+- [ ] Zone legend hides in Map and Height views
+- [ ] Clicking a legend item activates it as the paint brush
+- [ ] Painting on the zones canvas changes zone colors in real-time
+- [ ] Brush size slider adjusts the paint radius
+- [ ] Painted changes are reflected in the zone overlay
+- [ ] Saving persists painted zones to zones.json and zones.png
+- [ ] Zone stats are recalculated after saving
+- [ ] Tee dragging still works when a brush is selected (tees take priority)
+- [ ] Switching between holes resets the paint state
+- [ ] All features work with orientation transforms applied
 
 ### Do NOT
 
-- Modify Node.js export scripts
-- Modify HoleImporter.cs
-- Change ApplyTexture (tileSize reads from terrainData.size automatically)
+- Modify pipeline scripts (Steps 1-6)
+- Modify Unity scripts
+- Break existing tee drag functionality
+- Break existing orientation controls
+
+---
+
+## Previous Completed Tasks
+
+✅ Steps 1-6: Full pipeline complete (scrape, extract, detect-tees, classify-zones,
+   generate-terrain, export)
+✅ GUI: Browser app with orientation controls, view switching
+✅ Draggable tee markers with save
 
 ---
 
 ## Status Log
 
-- 2026-04-06: Steps 1-6 COMPLETE
-- 2026-04-06: Orientation fix attempt 1 (heights[y,x]) — still rotated
-- 2026-04-06: Orientation fix attempt 2 (heights[x, res-1-y]) — still rotated
+(Claude Code: add completion status lines here)
+- 2026-04-06: Three features implemented — (1) Heightmap "Height" view mode via GET /api/heightmap (sharp converts uint16be raw to grayscale PNG); (2) Zone legend with 11 color swatches, visible in Zones/Overlay views; (3) Zone painting — click legend item to select brush, paint on canvas, adjustable brush size 1-20px, saves via POST /api/zones (updates zones.json grid+stats and regenerates zones.png). All three integrate with existing tee drag and orientation controls.

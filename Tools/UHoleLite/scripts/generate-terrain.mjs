@@ -23,7 +23,6 @@ const ZONES = {
   trees: 5, bunker: 6, water: 7, cart_path: 8, ob: 9, tee_box: 10,
 };
 
-// Japanese description terrain hints
 const TERRAIN_HINTS = [
   { pattern: '打ち上げ',     type: 'uphill' },
   { pattern: '打ち下ろし',   type: 'downhill' },
@@ -42,6 +41,42 @@ function parseHints(descriptionJp) {
 }
 
 // ---------------------------------------------------------------------------
+// Pre-compute a bunker fraction map at heightmap resolution.
+// For each heightmap cell, scan the corresponding area of the zone grid
+// and compute what fraction of zone pixels are bunker.
+// This avoids the point-sampling problem where small bunkers get missed.
+// ---------------------------------------------------------------------------
+
+function computeBunkerFractionMap(zoneGrid, zw, zh) {
+  const fractionMap = new Float32Array(RES * RES);
+  const cellW = zw / RES;
+  const cellH = zh / RES;
+
+  for (let hy = 0; hy < RES; hy++) {
+    for (let hx = 0; hx < RES; hx++) {
+      // Zone-grid rectangle covered by this heightmap cell
+      const x0 = Math.floor(hx * cellW);
+      const x1 = Math.min(Math.ceil((hx + 1) * cellW), zw);
+      const y0 = Math.floor(hy * cellH);
+      const y1 = Math.min(Math.ceil((hy + 1) * cellH), zh);
+
+      let bunkerCount = 0;
+      let totalCount = 0;
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          totalCount++;
+          if (zoneGrid[y * zw + x] === ZONES.bunker) bunkerCount++;
+        }
+      }
+
+      fractionMap[hy * RES + hx] = totalCount > 0 ? bunkerCount / totalCount : 0;
+    }
+  }
+
+  return fractionMap;
+}
+
+// ---------------------------------------------------------------------------
 // Generate heightmap for one hole
 // ---------------------------------------------------------------------------
 
@@ -49,14 +84,12 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
   const seed = holeNumber * 1337;
   const terrainDefaults = config.terrain_defaults;
 
-  // --- Terrain sizing ---
   const backYards = holeData.tees.back.yards;
   const backMeters = backYards * 0.9144;
   const terrainLength = backMeters * 1.3;
   const aspectRatio = extractMeta.aspect_ratio || 1.2;
   const terrainWidth = terrainLength / aspectRatio;
 
-  // --- Find green centroid from zone grid ---
   const zoneGrid = Buffer.from(zonesData.grid, 'base64');
   const zw = zonesData.source_dimensions.width;
   const zh = zonesData.source_dimensions.height;
@@ -71,58 +104,54 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
   }
   const greenCentroid = greenCount > 0
     ? { x: greenSumX / greenCount / zw, y: greenSumY / greenCount / zh }
-    : { x: 0.5, y: 0.15 }; // fallback: green near top
+    : { x: 0.5, y: 0.15 };
 
-  // --- Find tee centroid ---
   const foundTees = teesData.tees.filter(t => t.normalized);
   const teeCentroid = foundTees.length > 0
     ? {
         x: foundTees.reduce((s, t) => s + t.normalized.x, 0) / foundTees.length,
         y: foundTees.reduce((s, t) => s + t.normalized.y, 0) / foundTees.length,
       }
-    : { x: 0.5, y: 0.85 }; // fallback: tees near bottom
+    : { x: 0.5, y: 0.85 };
 
-  // --- Parse terrain hints ---
   const hints = parseHints(holeData.description_jp);
   const hintTypes = new Set(hints.map(h => h.type));
 
-  // Determine slope drop
-  let slopeDrop = 6.0; // default: gentle downhill tee→green
+  let slopeDrop = 6.0;
   if (hintTypes.has('downhill')) slopeDrop = 12.0;
-  if (hintTypes.has('uphill')) slopeDrop = -5.0; // green is higher
+  if (hintTypes.has('uphill')) slopeDrop = -5.0;
   const [dropMin, dropMax] = terrainDefaults.tee_to_green_drop_range_m;
   if (slopeDrop > 0) slopeDrop = Math.min(slopeDrop, dropMax);
 
   const noiseFreq = terrainDefaults.noise_frequency;
   const noiseAmp = terrainDefaults.base_undulation_m;
+  const bunkerDepth = terrainDefaults.bunker_depth_m || 3.0;
 
-  // --- Build heightmap ---
+  // Pre-compute bunker fraction at heightmap resolution
+  const bunkerFrac = computeBunkerFractionMap(zoneGrid, zw, zh);
+
   const heightmap = new Float64Array(RES * RES);
 
   for (let hy = 0; hy < RES; hy++) {
     for (let hx = 0; hx < RES; hx++) {
-      const nx = hx / (RES - 1); // 0-1
-      const ny = hy / (RES - 1); // 0-1
+      const nx = hx / (RES - 1);
+      const ny = hy / (RES - 1);
 
-      // Layer 1: Base slope (tee→green)
+      // Layer 1: Base slope
       const teeY = teeCentroid.y;
       const greenY = greenCentroid.y;
       const span = teeY - greenY;
       const t = span !== 0 ? Math.max(0, Math.min(1, (ny - greenY) / span)) : 0.5;
-      let baseSlope = slopeDrop * t; // 0 at green, slopeDrop at tee
+      let baseSlope = slopeDrop * t;
 
-      // Two-tier fairway: add a step at midpoint
       if (hintTypes.has('two_tier')) {
-        const midT = 0.5;
-        if (t > midT) {
-          baseSlope += 2.0; // step up of 2m in the tee half
-        }
+        if (t > 0.5) baseSlope += 2.0;
       }
 
       // Layer 2: Perlin noise
       let noise = perlin2D(hx * noiseFreq + seed, hy * noiseFreq + seed * 0.7) * noiseAmp;
 
-      // Layer 3: Zone-based modifiers
+      // Layer 3: Zone-based modifiers (point-sample for non-bunker zones)
       const zoneX = Math.min(zw - 1, Math.floor(nx * (zw - 1)));
       const zoneY = Math.min(zh - 1, Math.floor(ny * (zh - 1)));
       const zone = zoneGrid[zoneY * zw + zoneX];
@@ -132,7 +161,7 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
 
       switch (zone) {
         case ZONES.green:
-          noise *= terrainDefaults.green_flatness; // 0.15
+          noise *= terrainDefaults.green_flatness;
           break;
         case ZONES.fairway:
           noise *= 0.45;
@@ -140,35 +169,39 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
         case ZONES.tee_box:
           noise *= 0.10;
           break;
-        case ZONES.bunker:
-          heightMod -= terrainDefaults.bunker_depth_m; // -1.5
-          noise *= 0.3;
-          break;
         case ZONES.water:
           isWater = true;
           break;
         case ZONES.trees:
-          heightMod += terrainDefaults.tree_ridge_m; // +3.0
+          heightMod += terrainDefaults.tree_ridge_m;
           break;
         case ZONES.cart_path:
           noise *= 0.55;
           break;
-        // semi_rough, rough, ob, background: full noise
+      }
+
+      // Bunker: use fraction map instead of point-sample.
+      // Any heightmap cell that overlaps bunker zone gets depressed
+      // proportionally to how much of the cell is bunker.
+      const bf = bunkerFrac[hy * RES + hx];
+      if (bf > 0) {
+        // Depress proportionally. Even 10% bunker overlap creates a dip.
+        // Flatten noise inside bunker areas.
+        noise *= (1 - bf) + bf * 0.15;
+        heightMod -= bunkerDepth * bf;
       }
 
       let totalHeight = baseSlope + noise + heightMod;
 
-      // Mark water for post-processing
       if (isWater) {
-        totalHeight = -9999; // sentinel, will be clamped later
+        totalHeight = -9999;
       }
 
       heightmap[hy * RES + hx] = totalHeight;
     }
   }
 
-  // Layer 4: Green slope (subtle drainage)
-  // Default: slight front-to-back tilt of 0.5m
+  // Layer 4: Green slope
   applyGreenSlope(heightmap, zoneGrid, zw, zh, greenCentroid, holeData.description_jp);
 
   // Find min ignoring water sentinels
@@ -180,34 +213,43 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
     }
   }
 
-  // Clamp water to minimum
   const waterLevel = globalMin - 2.0;
   for (let i = 0; i < RES * RES; i++) {
     if (heightmap[i] < -9000) heightmap[i] = waterLevel;
   }
   globalMin = waterLevel;
 
-  // Layer 6: Smooth transitions (blur, then restore water)
+  // Save pre-blur bunker values for restoration
   const waterMask = new Uint8Array(RES * RES);
+  const preBunker = new Float64Array(RES * RES);
   for (let i = 0; i < RES * RES; i++) {
     if (heightmap[i] <= waterLevel + 0.01) waterMask[i] = 1;
+    if (bunkerFrac[i] > 0) preBunker[i] = heightmap[i];
   }
 
   const smoothed = blur2D(heightmap, RES, RES, 2);
 
-  // Restore water pixels
+  // Restore water fully
   for (let i = 0; i < RES * RES; i++) {
     if (waterMask[i]) smoothed[i] = waterLevel;
   }
 
-  // Recalculate min/max after blur
+  // FULLY restore bunker depressions — the blur was pushing them up.
+  // For cells with bunker fraction, use 100% original (pre-blur) value.
+  for (let i = 0; i < RES * RES; i++) {
+    if (bunkerFrac[i] > 0) {
+      smoothed[i] = preBunker[i];
+    }
+  }
+
+  // Recalculate min/max
   globalMin = Infinity; globalMax = -Infinity;
   for (let i = 0; i < RES * RES; i++) {
     if (smoothed[i] < globalMin) globalMin = smoothed[i];
     if (smoothed[i] > globalMax) globalMax = smoothed[i];
   }
 
-  // Layer 5: Normalize to 0-65535
+  // Normalize to 0-65535
   const range = globalMax - globalMin || 1;
   const uint16Data = new Uint16Array(RES * RES);
   for (let i = 0; i < RES * RES; i++) {
@@ -215,7 +257,6 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
     uint16Data[i] = Math.round(Math.max(0, Math.min(65535, normalized * 65535)));
   }
 
-  // Verify full range usage
   let minVal = 65535, maxVal = 0;
   for (const v of uint16Data) {
     if (v < minVal) minVal = v;
@@ -239,20 +280,15 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
   };
 }
 
-// ---------------------------------------------------------------------------
-// Apply subtle slope across the green zone
-// ---------------------------------------------------------------------------
-
 function applyGreenSlope(heightmap, zoneGrid, zw, zh, greenCentroid, descJp) {
-  // Determine slope direction from description
-  let slopeDir = 'front'; // default: slopes toward the front (approach side)
+  let slopeDir = 'front';
   if (descJp) {
     if (descJp.includes('右から傾斜') || descJp.includes('右サイド')) slopeDir = 'right';
     if (descJp.includes('左から傾斜') || descJp.includes('左サイド')) slopeDir = 'left';
     if (descJp.includes('受けグリーン')) slopeDir = 'front';
   }
 
-  const slopeAmount = 0.5; // meters across the green
+  const slopeAmount = 0.5;
 
   for (let hy = 0; hy < RES; hy++) {
     for (let hx = 0; hx < RES; hx++) {
@@ -280,10 +316,6 @@ function applyGreenSlope(heightmap, zoneGrid, zw, zh, greenCentroid, descJp) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Write heightmap.raw (uint16 big-endian)
-// ---------------------------------------------------------------------------
-
 function writeHeightmapRaw(outputPath, uint16Data) {
   const buffer = Buffer.alloc(RES * RES * 2);
   for (let i = 0; i < RES * RES; i++) {
@@ -292,15 +324,10 @@ function writeHeightmapRaw(outputPath, uint16Data) {
   fs.writeFileSync(outputPath, buffer);
 }
 
-// ---------------------------------------------------------------------------
-// Process one hole
-// ---------------------------------------------------------------------------
-
 async function processHole(courseId, holeNumber, courseJson, config) {
   const nn = String(holeNumber).padStart(2, '0');
   const holeDir = path.join(ROOT, 'output', courseId, 'holes', nn);
 
-  // Load required data
   const teesPath = path.join(holeDir, 'tees.json');
   const zonesPath = path.join(holeDir, 'zones.json');
   const extractMetaPath = path.join(holeDir, 'extract-meta.json');
@@ -320,14 +347,11 @@ async function processHole(courseId, holeNumber, courseJson, config) {
     return null;
   }
 
-  // Generate
   const result = generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMeta, config);
 
-  // Write heightmap.raw
   const rawPath = path.join(holeDir, 'heightmap.raw');
   writeHeightmapRaw(rawPath, result.uint16Data);
 
-  // Write terrain-meta.json
   const meta = {
     hole_number: holeNumber,
     heightmap_file: 'heightmap.raw',
@@ -360,10 +384,6 @@ async function processHole(courseId, holeNumber, courseJson, config) {
 
   return { meta, uint16Min: result.uint16Min, uint16Max: result.uint16Max };
 }
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 
 async function main() {
   const courseId = process.argv[2];

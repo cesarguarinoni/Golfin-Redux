@@ -13,6 +13,8 @@ public class WalkCamera : MonoBehaviour
     private bool cursorLocked = false;
     private bool aerialMode = false;
     private float aerialYaw = 0f;
+    private float floatOffset = 0f;
+    public float floatSpeed = 15f;
 
     // Saved walk-mode state for returning from aerial
     private Vector3 savedPosition;
@@ -72,6 +74,14 @@ public class WalkCamera : MonoBehaviour
         if (keyboard[Key.D].isPressed || keyboard[Key.RightArrow].isPressed) h += 1f;
         if (keyboard[Key.A].isPressed || keyboard[Key.LeftArrow].isPressed) h -= 1f;
 
+        // Q/E to float up/down
+        if (keyboard[Key.Q].isPressed) floatOffset += floatSpeed * Time.deltaTime;
+        if (keyboard[Key.E].isPressed) floatOffset -= floatSpeed * Time.deltaTime;
+        if (floatOffset < 0f) floatOffset = 0f; // can't go below ground
+
+        // Space to snap back to ground
+        if (keyboard[Key.Space].wasPressedThisFrame) floatOffset = 0f;
+
         // Sprint with shift
         float speed = moveSpeed;
         if (keyboard[Key.LeftShift].isPressed) speed *= 3f;
@@ -81,14 +91,14 @@ public class WalkCamera : MonoBehaviour
         if (move.sqrMagnitude > 0f)
             transform.position += move.normalized * speed * Time.deltaTime;
 
-        // Stick to terrain height + offset
+        // Stick to terrain height + offset + float
         if (Terrain.activeTerrain != null)
         {
             float terrainY = Terrain.activeTerrain.SampleHeight(transform.position);
             float terrainBase = Terrain.activeTerrain.transform.position.y;
             transform.position = new Vector3(
                 transform.position.x,
-                terrainBase + terrainY + height,
+                terrainBase + terrainY + height + floatOffset,
                 transform.position.z
             );
         }

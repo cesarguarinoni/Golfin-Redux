@@ -1,67 +1,98 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>UHole Lite — Hole Viewer</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/app/styles.css">
 </head>
 <body>
-  <header>
-    <h1>UHole Lite</h1>
-    <span id="course-name">Loading...</span>
-  </header>
+  <main class="app-shell">
+    <div class="page-shell">
 
-  <div id="layout">
-    <nav id="hole-list"></nav>
-
-    <main id="viewer">
-      <div id="viewer-header">
-        <h2 id="hole-title">Select a hole</h2>
-        <div id="hole-info"></div>
-      </div>
-
-      <div id="canvas-container">
-        <canvas id="hole-canvas"></canvas>
-      </div>
-
-      <div id="controls">
-        <div class="control-group">
-          <label>View:</label>
-          <button class="view-btn active" data-view="illustration">Map</button>
-          <button class="view-btn" data-view="zones">Zones</button>
-          <button class="view-btn" data-view="both">Overlay</button>
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="eyebrow">UHole Lite</div>
+          <h1>Hole Viewer</h1>
+          <p id="course-name">Loading course data…</p>
         </div>
 
-        <div class="control-group">
-          <label>Orientation:</label>
+        <nav class="nav" id="hole-nav"></nav>
+
+        <div class="sidebar-card" id="sidebar-info">
+          <div class="eyebrow">Selected hole</div>
+          <p>Click a hole to begin.</p>
+        </div>
+      </aside>
+
+      <section class="main">
+        <header class="hero">
+          <div>
+            <div class="eyebrow">Orientation Editor</div>
+            <h2 id="hole-title">Select a hole</h2>
+          </div>
+          <div class="hero-actions">
+            <button id="btn-regen" title="Regenerate heightmap from current zones">⟳ Regen Heightmap</button>
+            <button id="btn-save">Save</button>
+          </div>
+        </header>
+
+        <div id="save-banner" class="status-banner" hidden></div>
+
+        <!-- Orientation toolbar -->
+        <div class="alignment-toolbar">
+          <h4 class="toolbar-title">Transform</h4>
+          <div class="mode-switcher">
+            <button class="mode-btn view-btn is-active" data-view="illustration">Map</button>
+            <button class="mode-btn view-btn" data-view="zones">Zones</button>
+            <button class="mode-btn view-btn" data-view="both">Overlay</button>
+            <button class="mode-btn view-btn" data-view="heightmap">Height</button>
+          </div>
+          <div class="toolbar-spacer"></div>
           <button id="btn-rotate-ccw" title="Rotate 90° CCW">↺ 90°</button>
           <button id="btn-rotate-cw" title="Rotate 90° CW">↻ 90°</button>
-          <button id="btn-flip-h" title="Flip Horizontal">⇔ Flip H</button>
-          <button id="btn-flip-v" title="Flip Vertical">⇕ Flip V</button>
-          <button id="btn-reset" title="Reset orientation">Reset</button>
+          <button id="btn-flip-h" title="Flip Horizontal">⇔ H</button>
+          <button id="btn-flip-v" title="Flip Vertical">⇕ V</button>
+          <button id="btn-reset">Reset</button>
+          <div class="opacity-control">
+            <span style="font-size:0.82rem;color:var(--muted)">Opacity</span>
+            <input type="range" id="overlay-opacity" min="0" max="100" value="50">
+          </div>
+          <span id="orientation-readout" class="chip"></span>
         </div>
 
-        <div class="control-group">
-          <label>Overlay opacity:</label>
-          <input type="range" id="overlay-opacity" min="0" max="100" value="50">
-          <span id="opacity-label">50%</span>
+        <!-- Zone legend + paint controls -->
+        <div class="zone-legend" id="zone-legend" hidden></div>
+
+        <div class="alignment-toolbar" id="brush-toolbar" hidden>
+          <h4 class="toolbar-title">Paint</h4>
+          <span id="active-brush-label" class="chip">No brush</span>
+          <div class="mode-switcher">
+            <button class="mode-btn paint-mode-btn is-active" data-paintmode="brush">Brush</button>
+            <button class="mode-btn paint-mode-btn" data-paintmode="fill">Fill</button>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <span id="brush-size-group">
+            <span style="font-size:0.82rem;color:var(--muted)">Size</span>
+            <input type="range" id="brush-size" min="1" max="20" value="5"
+              style="width:80px;accent-color:var(--accent)">
+            <span id="brush-size-label" style="font-size:0.82rem;color:var(--muted)">5px</span>
+          </span>
+          <button id="btn-clear-brush">Deselect</button>
         </div>
 
-        <div class="control-group">
-          <button id="btn-save" class="primary">💾 Save Orientation</button>
-          <span id="save-status"></span>
+        <!-- Canvas stage -->
+        <div class="stacked-stage" id="canvas-stage">
+          <canvas id="hole-canvas"></canvas>
         </div>
-      </div>
 
-      <div id="details-panel">
-        <div id="tee-info"></div>
-        <div id="terrain-info"></div>
-        <div id="zone-stats"></div>
-      </div>
-    </main>
-  </div>
+        <!-- Info bar -->
+        <div class="stats" id="hole-stats" style="margin-top:1rem"></div>
 
-  <script src="app.js"></script>
+      </section>
+    </div>
+  </main>
+
+  <script src="/app/app.js"></script>
 </body>
 </html>
