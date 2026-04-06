@@ -60,8 +60,6 @@ document.getElementById("init-alignment").addEventListener("click", initAlignmen
 document.getElementById("save-alignment").addEventListener("click", saveAlignment);
 document.getElementById("compute-transform").addEventListener("click", computeTransform);
 document.getElementById("export-hole").addEventListener("click", exportHoleForUnity);
-document.getElementById("rotate-left").addEventListener("click", () => handleRotate(-5));
-document.getElementById("rotate-right").addEventListener("click", () => handleRotate(5));
 document.getElementById("reset-view").addEventListener("click", handleResetView);
 
 for (const btn of document.querySelectorAll(".mode-btn")) {
@@ -504,12 +502,15 @@ function updateModeUI() {
 // ===================================================================
 
 function attachStackedInteractions() {
-  // Middle-click prevention
+  // Prevent default middle-click and context menu
   stackedStageEl.onmousedown = (event) => {
     if (event.button === 1) event.preventDefault();
   };
   stackedStageEl.onauxclick = (event) => {
     if (event.button === 1) event.preventDefault();
+  };
+  stackedStageEl.oncontextmenu = (event) => {
+    event.preventDefault();
   };
 
   // Wheel zoom
@@ -521,69 +522,113 @@ function attachStackedInteractions() {
     const pointerY = event.clientY - rect.top;
 
     if (state.editorMode === "align" && !state.visualAlignment.locked && !event.shiftKey) {
-      // Zoom basemap only
       zoomViewportAt("basemap", pointerX, pointerY, zoomFactor);
-    } else if (state.editorMode === "align" && !state.visualAlignment.locked && event.shiftKey) {
-      // Zoom both
-      zoomViewportAt("basemap", pointerX, pointerY, zoomFactor);
-      zoomViewportAt("official", pointerX, pointerY, zoomFactor);
     } else {
-      // All other modes: zoom both
       zoomViewportAt("basemap", pointerX, pointerY, zoomFactor);
       zoomViewportAt("official", pointerX, pointerY, zoomFactor);
-    }
-  };
-
-  // Pan (middle-click drag)
-  let panState = null;
-
-  stackedStageEl.onpointerdown = (event) => {
-    if (event.button !== 1) return;
-    event.preventDefault();
-    const basemapOnly = state.editorMode === "align" && !state.visualAlignment.locked && !event.shiftKey;
-    panState = {
-      startX: event.clientX,
-      startY: event.clientY,
-      originBasemap: { x: state.viewport.basemap.x, y: state.viewport.basemap.y },
-      originOfficial: { x: state.viewport.official.x, y: state.viewport.official.y },
-      basemapOnly,
-      moved: false
-    };
-    stackedStageEl.classList.add("is-panning");
-    stackedStageEl.setPointerCapture(event.pointerId);
-  };
-
-  stackedStageEl.onpointermove = (event) => {
-    if (!panState) return;
-    const dx = event.clientX - panState.startX;
-    const dy = event.clientY - panState.startY;
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) panState.moved = true;
-
-    state.viewport.basemap.x = panState.originBasemap.x + dx;
-    state.viewport.basemap.y = panState.originBasemap.y + dy;
-    applyViewport("basemap");
-
-    if (!panState.basemapOnly) {
-      state.viewport.official.x = panState.originOfficial.x + dx;
-      state.viewport.official.y = panState.originOfficial.y + dy;
-      applyViewport("official");
     }
     updateMarkerPositions();
   };
 
+  // Drag state — shared between pan (middle) and rotate (right)
+  let dragState = null;
+
+  stackedStageEl.onpointerdown = (event) => {
+    // Middle-click = pan
+    if (event.button === 1) {
+      event.preventDefault();
+      const basemapOnly = state.editorMode === "align" && !state.visualAlignment.locked && !event.shiftKey;
+      dragState = {
+        type: "pan",
+        startX: event.clientX,
+        startY: event.clientY,
+        originBasemap: { x: state.viewport.basemap.x, y: state.viewport.basemap.y },
+        originOfficial: { x: state.viewport.official.x, y: state.viewport.official.y },
+        basemapOnly,
+        moved: false,
+        pointerId: event.pointerId
+      };
+      stackedStageEl.classList.add("is-panning");
+      stackedStageEl.setPointerCapture(event.pointerId);
+      return;
+    }
+
+    // Right-click = rotate (analog drag)
+    if (event.button === 2) {
+      event.preventDefault();
+      const rect = stackedStageEl.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const basemapOnly = state.editorMode === "align" && !state.visualAlignment.locked;
+      dragState = {
+        type: "rotate",
+        startX: event.clientX,
+        originRotationBasemap: state.viewport.basemap.rotation,
+        originRotationOfficial: state.viewport.official.rotation,
+        centerX,
+        centerY,
+        basemapOnly,
+        moved: false,
+        pointerId: event.pointerId
+      };
+      stackedStageEl.setPointerCapture(event.pointerId);
+      return;
+    }
+  };
+
+  stackedStageEl.onpointermove = (event) => {
+    if (!dragState) return;
+
+    if (dragState.type === "pan") {
+      const dx = event.clientX - dragState.startX;
+      const dy = event.clientY - dragState.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragState.moved = true;
+
+      state.viewport.basemap.x = dragState.originBasemap.x + dx;
+      state.viewport.basemap.y = dragState.originBasemap.y + dy;
+      applyViewport("basemap");
+
+      if (!dragState.basemapOnly) {
+        state.viewport.official.x = dragState.originOfficial.x + dx;
+        state.viewport.official.y = dragState.originOfficial.y + dy;
+        applyViewport("official");
+      }
+      updateMarkerPositions();
+      return;
+    }
+
+    if (dragState.type === "rotate") {
+      const dx = event.clientX - dragState.startX;
+      if (Math.abs(dx) > 3) dragState.moved = true;
+      // 1px horizontal movement = 0.5 degrees rotation
+      const deltaDeg = dx * 0.5;
+
+      // Rotate around the viewport center, preserving position
+      const newBasemapRotation = dragState.originRotationBasemap + deltaDeg;
+      rotateViewportTo("basemap", newBasemapRotation, dragState.centerX, dragState.centerY);
+
+      if (!dragState.basemapOnly) {
+        const newOfficialRotation = dragState.originRotationOfficial + deltaDeg;
+        rotateViewportTo("official", newOfficialRotation, dragState.centerX, dragState.centerY);
+      }
+      updateMarkerPositions();
+      return;
+    }
+  };
+
   stackedStageEl.onpointerup = (event) => {
-    if (!panState) return;
-    if (panState.moved) {
+    if (!dragState) return;
+    if (dragState.moved) {
       event.preventDefault();
       stackedStageEl.dataset.suppressClick = "true";
     }
-    panState = null;
+    dragState = null;
     stackedStageEl.classList.remove("is-panning");
     stackedStageEl.releasePointerCapture?.(event.pointerId);
   };
 
   stackedStageEl.onpointercancel = () => {
-    panState = null;
+    dragState = null;
     stackedStageEl.classList.remove("is-panning");
   };
 
@@ -602,25 +647,10 @@ function zoomViewportAt(kind, pointerX, pointerY, zoomFactor) {
   applyViewport(kind);
 }
 
-function handleRotate(delta) {
-  const mode = state.editorMode;
-  const rect = stackedStageEl.getBoundingClientRect();
-  const centerX = rect.width / 2;
-  const centerY = rect.height / 2;
-
-  if (mode === "align" && !state.visualAlignment.locked) {
-    rotateViewportAroundCenter("basemap", delta, centerX, centerY);
-  } else {
-    rotateViewportAroundCenter("basemap", delta, centerX, centerY);
-    rotateViewportAroundCenter("official", delta, centerX, centerY);
-  }
-  updateMarkerPositions();
-}
-
-function rotateViewportAroundCenter(kind, delta, centerX, centerY) {
+function rotateViewportTo(kind, targetRotation, centerX, centerY) {
   const viewport = state.viewport[kind];
   const localCenter = screenToLocal(centerX, centerY, viewport);
-  viewport.rotation += delta;
+  viewport.rotation = targetRotation;
   const newOffset = localToScreenOffset(localCenter.x, localCenter.y, viewport);
   viewport.x = centerX - newOffset.x;
   viewport.y = centerY - newOffset.y;
@@ -890,7 +920,8 @@ function loadSavedViewport(kind) {
 function updateViewReadout() {
   const vpO = state.viewport.official;
   const vpB = state.viewport.basemap;
-  viewReadoutEl.textContent = `Official: ${Math.round(vpO.scale * 100)}% ${Math.round(vpO.rotation)}° | Basemap: ${Math.round(vpB.scale * 100)}% ${Math.round(vpB.rotation)}°`;
+  const fmtRot = (r) => r === 0 ? "0°" : `${r.toFixed(1)}°`;
+  viewReadoutEl.textContent = `Official: ${Math.round(vpO.scale * 100)}% ${fmtRot(vpO.rotation)} | Basemap: ${Math.round(vpB.scale * 100)}% ${fmtRot(vpB.rotation)}`;
 }
 
 // ===================================================================
