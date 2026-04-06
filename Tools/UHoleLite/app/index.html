@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UHole Lite — Hole Viewer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>UHole Lite</h1>
+    <span id="course-name">Loading...</span>
+  </header>
+
+  <div id="layout">
+    <nav id="hole-list"></nav>
+
+    <main id="viewer">
+      <div id="viewer-header">
+        <h2 id="hole-title">Select a hole</h2>
+        <div id="hole-info"></div>
+      </div>
+
+      <div id="canvas-container">
+        <canvas id="hole-canvas"></canvas>
+      </div>
+
+      <div id="controls">
+        <div class="control-group">
+          <label>View:</label>
+          <button class="view-btn active" data-view="illustration">Map</button>
+          <button class="view-btn" data-view="zones">Zones</button>
+          <button class="view-btn" data-view="both">Overlay</button>
+        </div>
+
+        <div class="control-group">
+          <label>Orientation:</label>
+          <button id="btn-rotate-ccw" title="Rotate 90° CCW">↺ 90°</button>
+          <button id="btn-rotate-cw" title="Rotate 90° CW">↻ 90°</button>
+          <button id="btn-flip-h" title="Flip Horizontal">⇔ Flip H</button>
+          <button id="btn-flip-v" title="Flip Vertical">⇕ Flip V</button>
+          <button id="btn-reset" title="Reset orientation">Reset</button>
+        </div>
+
+        <div class="control-group">
+          <label>Overlay opacity:</label>
+          <input type="range" id="overlay-opacity" min="0" max="100" value="50">
+          <span id="opacity-label">50%</span>
+        </div>
+
+        <div class="control-group">
+          <button id="btn-save" class="primary">💾 Save Orientation</button>
+          <span id="save-status"></span>
+        </div>
+      </div>
+
+      <div id="details-panel">
+        <div id="tee-info"></div>
+        <div id="terrain-info"></div>
+        <div id="zone-stats"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

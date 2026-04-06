@@ -1,0 +1,224 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: #16213e;
+  border-bottom: 1px solid #0f3460;
+}
+
+header h1 {
+  font-size: 18px;
+  color: #4ecca3;
+  white-space: nowrap;
+}
+
+#course-name {
+  font-size: 14px;
+  color: #888;
+}
+
+#layout {
+  display: flex;
+  height: calc(100vh - 45px);
+}
+
+/* Hole list sidebar */
+nav#hole-list {
+  width: 80px;
+  background: #16213e;
+  border-right: 1px solid #0f3460;
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 4px;
+}
+
+.hole-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 4px;
+  margin-bottom: 2px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.hole-btn:hover {
+  background: #1a1a3e;
+  color: #fff;
+}
+
+.hole-btn.active {
+  background: #0f3460;
+  color: #4ecca3;
+  border-color: #4ecca3;
+}
+
+.hole-btn .par {
+  font-size: 10px;
+  color: #666;
+  display: block;
+}
+
+.hole-btn.active .par {
+  color: #4ecca3;
+}
+
+/* Main viewer */
+main#viewer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#viewer-header {
+  padding: 8px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  border-bottom: 1px solid #0f3460;
+}
+
+#viewer-header h2 {
+  font-size: 16px;
+  color: #4ecca3;
+}
+
+#hole-info {
+  font-size: 13px;
+  color: #888;
+}
+
+/* Canvas */
+#canvas-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#hole-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: auto;
+}
+
+/* Controls */
+#controls {
+  padding: 8px 16px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  border-top: 1px solid #0f3460;
+  background: #16213e;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.control-group label {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+}
+
+button {
+  padding: 5px 10px;
+  border: 1px solid #0f3460;
+  border-radius: 4px;
+  background: #1a1a2e;
+  color: #ccc;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+button:hover {
+  background: #0f3460;
+  color: #fff;
+}
+
+button.active {
+  background: #0f3460;
+  color: #4ecca3;
+  border-color: #4ecca3;
+}
+
+button.primary {
+  background: #0f3460;
+  color: #4ecca3;
+  border-color: #4ecca3;
+  font-weight: 600;
+}
+
+button.primary:hover {
+  background: #4ecca3;
+  color: #1a1a2e;
+}
+
+#save-status {
+  font-size: 11px;
+  color: #4ecca3;
+}
+
+input[type="range"] {
+  width: 100px;
+  accent-color: #4ecca3;
+}
+
+#opacity-label {
+  font-size: 11px;
+  color: #888;
+  min-width: 30px;
+}
+
+/* Details panel */
+#details-panel {
+  padding: 6px 16px;
+  display: flex;
+  gap: 24px;
+  font-size: 11px;
+  color: #888;
+  border-top: 1px solid #0f3460;
+  background: #16213e;
+  flex-wrap: wrap;
+}
+
+#details-panel div {
+  white-space: nowrap;
+}
+
+/* Tee colors in info */
+.tee-back { color: #4488ff; }
+.tee-regular { color: #44cc44; }
+.tee-front { color: #ffffff; }
+.tee-ladies { color: #ff4444; }
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #16213e; }
+::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4ecca3; }

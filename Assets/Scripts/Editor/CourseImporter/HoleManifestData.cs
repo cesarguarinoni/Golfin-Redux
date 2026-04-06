@@ -7,6 +7,7 @@ namespace Golfin.CourseImport
     public class HoleManifest
     {
         public string schema_version;
+        public string pipeline;           // "uhole-lite" or null (UHole)
         public string course_id;
         public int hole_number;
         public int par;
@@ -16,11 +17,20 @@ namespace Golfin.CourseImport
         public ManifestOrigin origin;
         public ManifestTerrain terrain;
         public ManifestAerial aerial;
+        public LiteTextureInfo texture;   // UHole Lite only — single texture PNG
         public string anchors_file;
         public int anchor_count;
         public ManifestTransform transform;
         public string review_status;
         public string exported_at;
+    }
+
+    [System.Serializable]
+    public class LiteTextureInfo
+    {
+        public string file;
+        public int width;
+        public int height;
     }
 
     [System.Serializable]

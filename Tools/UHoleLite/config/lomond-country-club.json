@@ -1,0 +1,90 @@
+{
+  "course_id": "lomond-country-club",
+  "display_name": "Lomond Country Club",
+  "native_name": "ローモンドカントリー倶楽部",
+
+  "sources": {
+    "official_url": "https://www.lomond-cc.com/course/",
+    "gora_url": "https://booking.gora.golf.rakuten.co.jp/guide/course_info/disp/c_id/240078",
+    "hole_map_pattern": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e{NN}.gif",
+    "course_map_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_d01.gif"
+  },
+
+  "image_layout": {
+    "full_width": 850,
+    "full_height": 638,
+    "info_panel_right_edge": 318,
+    "illustration_left": 318,
+    "legend_region": {
+      "x": 680, "y": 520, "width": 160, "height": 100
+    }
+  },
+
+  "tee_marker_colors": {
+    "back":    { "label": "Back",    "rgb": [0, 0, 200],   "hue_range": [210, 260], "min_sat": 0.5 },
+    "regular": { "label": "Regular", "rgb": [0, 200, 0],   "hue_range": [80, 160],  "min_sat": 0.4 },
+    "front":   { "label": "Front",   "rgb": [240, 240, 240], "hue_range": null,     "min_lum": 0.9 },
+    "ladies":  { "label": "Ladies",  "rgb": [220, 30, 30], "hue_range": [340, 20],  "min_sat": 0.6 }
+  },
+
+  "zone_colors_hsl": {
+    "fairway": {
+      "hue": [80, 150],
+      "saturation": [0.40, 1.0],
+      "lightness": [0.30, 0.55]
+    },
+    "green": {
+      "hue": [80, 150],
+      "saturation": [0.40, 1.0],
+      "lightness": [0.55, 0.75],
+      "note": "Brighter/lighter than fairway, often with visible outline"
+    },
+    "semi_rough": {
+      "hue": [70, 160],
+      "saturation": [0.20, 0.50],
+      "lightness": [0.25, 0.45]
+    },
+    "rough": {
+      "hue": [60, 160],
+      "saturation": [0.10, 0.40],
+      "lightness": [0.15, 0.30]
+    },
+    "trees": {
+      "hue": [60, 160],
+      "saturation": [0.05, 0.50],
+      "lightness": [0.0, 0.18]
+    },
+    "bunker": {
+      "hue": [10, 50],
+      "saturation": [0.15, 0.60],
+      "lightness": [0.55, 0.85]
+    },
+    "water": {
+      "hue": [180, 250],
+      "saturation": [0.30, 1.0],
+      "lightness": [0.20, 0.60]
+    },
+    "cart_path": {
+      "saturation_max": 0.10,
+      "lightness": [0.35, 0.65],
+      "note": "Low saturation gray — may be hard to distinguish from rough"
+    }
+  },
+
+  "terrain_defaults": {
+    "course_type": "hilly",
+    "elevation_profile": "moderate",
+    "base_undulation_m": 8,
+    "noise_frequency": 0.012,
+    "green_flatness": 0.15,
+    "bunker_depth_m": 1.5,
+    "tree_ridge_m": 3.0,
+    "tee_to_green_drop_range_m": [3, 15]
+  },
+
+  "upscale": {
+    "target_resolution": 1024,
+    "method": "lanczos3",
+    "sharpen": true
+  }
+}
