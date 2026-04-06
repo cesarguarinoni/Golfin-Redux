@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-06
+**Last Updated:** 2026-04-06 (session 2)
 
 ## Current Status
 
@@ -90,7 +90,7 @@ Official map → control points → affine transform → heightmap + aerial text
 - `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs` — Unity importer (map pipeline)
 - `Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs` — JSON data classes
 - `Assets/Scripts/HoleMetadata.cs` — runtime hole metadata component
-- `Assets/Scripts/Debug/WalkCamera.cs` — WASD + mouse look camera
+- `Assets/Scripts/Debug/WalkCamera.cs` — WASD + mouse look camera, Q/E vertical float, Space to ground
 
 ---
 
