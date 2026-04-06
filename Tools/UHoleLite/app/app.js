@@ -126,6 +126,16 @@ function buildZoneLegend() {
       el.querySelectorAll(".legend-item").forEach(i => i.classList.remove("is-active"));
       item.classList.add("is-active");
       activeBrushZone = zone;
+      // Auto-show overlay layer when its brush is selected
+      if (zone === 5 && !showTrees) {
+        showTrees = true;
+        document.getElementById("btn-toggle-trees").classList.add("is-active-toggle");
+        drawCanvas();
+      } else if (zone === 9 && !showOB) {
+        showOB = true;
+        document.getElementById("btn-toggle-ob").classList.add("is-active-toggle");
+        drawCanvas();
+      }
     }
     updateBrushUI();
   });
