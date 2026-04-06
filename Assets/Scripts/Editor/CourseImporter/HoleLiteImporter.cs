@@ -91,7 +91,7 @@ namespace Golfin.CourseImport
                 terrainGO.transform.position = new Vector3(-terrainX / 2f, 0f, -terrainZ / 2f);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Applying texture...", 0.4f);
-                ApplyTexture(terrainData, manifest, exportPath, dataDir, holeId, projectRoot);
+                ApplySplatmap(terrainData, manifest, exportPath, dataDir, holeId, projectRoot);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Building hierarchy...", 0.6f);
 
@@ -180,7 +180,7 @@ namespace Golfin.CourseImport
             return terrainData;
         }
 
-        private static void ApplyTexture(TerrainData terrainData, HoleManifest manifest,
+        private static void ApplyTextureIllustration(TerrainData terrainData, HoleManifest manifest,
             string exportPath, string dataDir, string holeId, string projectRoot)
         {
             string texFile = manifest.texture.file;
@@ -296,6 +296,302 @@ namespace Golfin.CourseImport
             rotated.SetPixels(rotatedPixels);
             rotated.Apply();
             return rotated;
+        }
+
+        // ─── Splatmap Pipeline ─────────────────────────────────────────────
+
+        private static void ApplySplatmap(TerrainData terrainData, HoleManifest manifest,
+            string exportPath, string dataDir, string holeId, string projectRoot)
+        {
+            // --- 1. Parse zone grid ---
+            string zonesPath = Path.Combine(exportPath, "zones.json");
+            if (!File.Exists(zonesPath))
+            {
+                Debug.LogWarning("[HoleLiteImporter] zones.json not found, falling back to illustration texture");
+                ApplyTextureIllustration(terrainData, manifest, exportPath, dataDir, holeId, projectRoot);
+                return;
+            }
+
+            string zonesJson = File.ReadAllText(zonesPath);
+            var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
+            byte[] grid = System.Convert.FromBase64String(zonesData.grid);
+            int zoneW = zonesData.source_dimensions.width;
+            int zoneH = zonesData.source_dimensions.height;
+
+            Debug.Log($"[HoleLiteImporter] Zone grid: {zoneW}x{zoneH}, {grid.Length} bytes");
+
+            // --- 2. Resample to alphamap resolution ---
+            int alphaRes = 256;
+            terrainData.alphamapResolution = alphaRes;
+
+            byte[] resampledZones = new byte[alphaRes * alphaRes];
+            for (int ay = 0; ay < alphaRes; ay++)
+            {
+                for (int ax = 0; ax < alphaRes; ax++)
+                {
+                    float fx = (float)ax / (alphaRes - 1);
+                    float fy = (float)ay / (alphaRes - 1);
+
+                    // 90° CCW rotation matching heightmap/anchors:
+                    // Alphamap ax → terrain X fraction → zone normY
+                    // Alphamap ay → terrain Z fraction → zone normX
+                    int gx = Mathf.Clamp(Mathf.RoundToInt(fy * (zoneW - 1)), 0, zoneW - 1);
+                    int gy = Mathf.Clamp(Mathf.RoundToInt(fx * (zoneH - 1)), 0, zoneH - 1);
+
+                    resampledZones[ay * alphaRes + ax] = grid[gy * zoneW + gx];
+                }
+            }
+
+            // --- 3. Generate fringe ring around greens ---
+            int fringeRadius = 3;
+            bool[] greenMask = new bool[alphaRes * alphaRes];
+            for (int i = 0; i < resampledZones.Length; i++)
+                greenMask[i] = (resampledZones[i] == 2);
+
+            bool[] dilatedGreen = DilateMask(greenMask, alphaRes, alphaRes, fringeRadius);
+
+            bool[] fringeMask = new bool[alphaRes * alphaRes];
+            for (int i = 0; i < fringeMask.Length; i++)
+            {
+                if (dilatedGreen[i] && !greenMask[i])
+                {
+                    int zone = resampledZones[i];
+                    // Only place fringe on adjacent playable surfaces
+                    if (zone == 1 || zone == 3 || zone == 4)
+                        fringeMask[i] = true;
+                }
+            }
+
+            // --- 4. Build raw alphamap ---
+            int layerCount = 8;
+            float[,,] alphamap = new float[alphaRes, alphaRes, layerCount];
+
+            for (int ay = 0; ay < alphaRes; ay++)
+            {
+                for (int ax = 0; ax < alphaRes; ax++)
+                {
+                    int idx = ay * alphaRes + ax;
+                    int layer;
+
+                    if (fringeMask[idx])
+                        layer = 7; // fringe
+                    else
+                        layer = ZoneToLayer(resampledZones[idx]);
+
+                    alphamap[ay, ax, layer] = 1.0f;
+                }
+            }
+
+            // --- 5. Gaussian blur + re-normalize ---
+            int blurRadius = 3;
+            float sigma = blurRadius / 2.0f;
+
+            for (int l = 0; l < layerCount; l++)
+            {
+                float[,] channel = ExtractChannel(alphamap, alphaRes, layerCount, l);
+                float[,] blurred = GaussianBlur2D(channel, alphaRes, blurRadius, sigma);
+                SetChannel(alphamap, alphaRes, layerCount, l, blurred);
+            }
+
+            // Re-normalize so weights sum to 1.0
+            for (int ay = 0; ay < alphaRes; ay++)
+            {
+                for (int ax = 0; ax < alphaRes; ax++)
+                {
+                    float sum = 0f;
+                    for (int l = 0; l < layerCount; l++)
+                        sum += alphamap[ay, ax, l];
+
+                    if (sum > 0.001f)
+                    {
+                        for (int l = 0; l < layerCount; l++)
+                            alphamap[ay, ax, l] /= sum;
+                    }
+                    else
+                    {
+                        alphamap[ay, ax, 3] = 1.0f; // fallback: rough
+                    }
+                }
+            }
+
+            // --- 6. Create TerrainLayers and apply ---
+            string texDir = "Assets/Courses/Textures_2025(JPG)";
+
+            string[] albedoNames = {
+                "T_Fairway_Light",      // 0 fairway
+                "T_Green_Albedo",       // 1 green
+                "T_Semirough_Albedo",   // 2 semi-rough
+                "T_Rough_Albedo",       // 3 rough (catch-all)
+                "T_Bunker_Albedo",      // 4 bunker
+                "T_Tee_Albedo",         // 5 tee
+                "T_RoadAsphalt_Albedo", // 6 cart path
+                "T_Fringe_Albedo",      // 7 fringe
+            };
+            string[] normalNames = {
+                "T_Fairway_Normal",
+                "T_Green_Normal",
+                "T_Semirough_Normal",
+                "T_Rough_Normal",
+                "T_Bunker_Normal",
+                "T_Tee_Normal",
+                "T_RoadAsphalt_Normal",
+                "T_Fringe_Normal",
+            };
+            float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 4f };
+
+            var layers = new TerrainLayer[layerCount];
+            EnsureDirectory(Path.Combine(projectRoot, dataDir));
+
+            for (int i = 0; i < layerCount; i++)
+            {
+                layers[i] = new TerrainLayer();
+                layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
+                layers[i].normalMapTexture = FindTextureExact(texDir, normalNames[i]);
+                layers[i].tileSize = new Vector2(tileSizes[i], tileSizes[i]);
+                layers[i].tileOffset = Vector2.zero;
+
+                if (layers[i].diffuseTexture == null)
+                    Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoNames[i]}");
+
+                string layerPath = $"{dataDir}/TerrainLayer_{albedoNames[i]}.asset";
+                var existingLayer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
+                if (existingLayer != null)
+                    AssetDatabase.DeleteAsset(layerPath);
+                AssetDatabase.CreateAsset(layers[i], layerPath);
+            }
+
+            terrainData.terrainLayers = layers;
+            terrainData.SetAlphamaps(0, 0, alphamap);
+
+            // Copy zones.json to Assets for future runtime use
+            string destZonesPath = Path.Combine(projectRoot, dataDir, "zones.json");
+            File.Copy(zonesPath, destZonesPath, true);
+            AssetDatabase.ImportAsset($"{dataDir}/zones.json");
+
+            Debug.Log($"[HoleLiteImporter] Splatmap applied: {layerCount} layers, " +
+                      $"alphamap {alphaRes}x{alphaRes}, blur radius {blurRadius}");
+        }
+
+        private static int ZoneToLayer(int zoneIndex)
+        {
+            return zoneIndex switch
+            {
+                1  => 0,  // fairway
+                2  => 1,  // green
+                3  => 2,  // semi_rough
+                4  => 3,  // rough
+                5  => 3,  // trees → rough texture
+                6  => 4,  // bunker
+                7  => 3,  // water → rough for now
+                8  => 6,  // cart_path
+                9  => 3,  // ob → rough texture
+                10 => 5,  // tee_box
+                _  => 3,  // background/unknown → rough
+            };
+        }
+
+        private static bool[] DilateMask(bool[] mask, int w, int h, int radius)
+        {
+            bool[] result = new bool[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    if (mask[y * w + x])
+                    {
+                        for (int dy = -radius; dy <= radius; dy++)
+                        {
+                            for (int dx = -radius; dx <= radius; dx++)
+                            {
+                                if (dx * dx + dy * dy > radius * radius) continue;
+                                int nx = x + dx;
+                                int ny = y + dy;
+                                if (nx >= 0 && nx < w && ny >= 0 && ny < h)
+                                    result[ny * w + nx] = true;
+                            }
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
+        private static float[,] ExtractChannel(float[,,] alphamap, int res, int layerCount, int layer)
+        {
+            float[,] channel = new float[res, res];
+            for (int y = 0; y < res; y++)
+                for (int x = 0; x < res; x++)
+                    channel[y, x] = alphamap[y, x, layer];
+            return channel;
+        }
+
+        private static void SetChannel(float[,,] alphamap, int res, int layerCount, int layer, float[,] channel)
+        {
+            for (int y = 0; y < res; y++)
+                for (int x = 0; x < res; x++)
+                    alphamap[y, x, layer] = channel[y, x];
+        }
+
+        private static float[,] GaussianBlur2D(float[,] input, int res, int radius, float sigma)
+        {
+            int kernelSize = radius * 2 + 1;
+            float[] kernel = new float[kernelSize];
+            float kernelSum = 0f;
+            for (int i = 0; i < kernelSize; i++)
+            {
+                float d = i - radius;
+                kernel[i] = Mathf.Exp(-(d * d) / (2f * sigma * sigma));
+                kernelSum += kernel[i];
+            }
+            for (int i = 0; i < kernelSize; i++)
+                kernel[i] /= kernelSum;
+
+            // Horizontal pass
+            float[,] temp = new float[res, res];
+            for (int y = 0; y < res; y++)
+            {
+                for (int x = 0; x < res; x++)
+                {
+                    float sum = 0f;
+                    for (int k = 0; k < kernelSize; k++)
+                    {
+                        int sx = Mathf.Clamp(x + k - radius, 0, res - 1);
+                        sum += input[y, sx] * kernel[k];
+                    }
+                    temp[y, x] = sum;
+                }
+            }
+
+            // Vertical pass
+            float[,] output = new float[res, res];
+            for (int y = 0; y < res; y++)
+            {
+                for (int x = 0; x < res; x++)
+                {
+                    float sum = 0f;
+                    for (int k = 0; k < kernelSize; k++)
+                    {
+                        int sy = Mathf.Clamp(y + k - radius, 0, res - 1);
+                        sum += temp[sy, x] * kernel[k];
+                    }
+                    output[y, x] = sum;
+                }
+            }
+
+            return output;
+        }
+
+        private static Texture2D FindTextureExact(string dir, string exactName)
+        {
+            string[] guids = AssetDatabase.FindAssets(exactName, new[] { dir });
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                string fileName = Path.GetFileNameWithoutExtension(path);
+                if (fileName == exactName)
+                    return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            }
+            return null;
         }
 
         // ─── Debug: Test Terrain Layers ───────────────────────────────────
