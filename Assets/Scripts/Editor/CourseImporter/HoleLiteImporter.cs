@@ -452,6 +452,7 @@ namespace Golfin.CourseImport
                 layers[i].smoothness = 0f;
                 layers[i].metallic = 0f;
                 layers[i].normalScale = 0.3f;
+                layers[i].normalMapTexture = null;
 
                 if (layers[i].diffuseTexture == null)
                     Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoNames[i]}");
