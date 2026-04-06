@@ -126,6 +126,11 @@ namespace Golfin.CourseImport
                 light.intensity = 1.2f;
                 lightGO.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
+                // Apply skybox
+                var skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Skybox/Sky-2.mat");
+                if (skyMat != null)
+                    RenderSettings.skybox = skyMat;
+
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Saving scene...", 0.9f);
                 EditorSceneManager.SaveScene(scene, scenePath);
                 AssetDatabase.SaveAssets();
