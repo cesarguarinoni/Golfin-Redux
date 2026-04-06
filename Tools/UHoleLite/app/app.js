@@ -151,6 +151,11 @@ function updateLegendVisibility() {
   }
 }
 
+function updateOpacityVisibility() {
+  var ctrl = document.querySelector(".opacity-control");
+  if (ctrl) ctrl.style.display = currentView === "both" ? "" : "none";
+}
+
 // ── Hole Selection ──────────────────────────────────
 
 async function selectHole(n) {
@@ -634,9 +639,13 @@ function setupControls() {
       btn.classList.add("is-active");
       currentView = btn.dataset.view;
       updateLegendVisibility();
+      updateOpacityVisibility();
       drawCanvas();
     });
   });
+
+  // Hide opacity control initially (only shown for Overlay view)
+  updateOpacityVisibility();
 
   document.getElementById("btn-rotate-ccw").addEventListener("click", () => {
     orientation.rotation = (orientation.rotation + 270) % 360;
@@ -724,7 +733,6 @@ async function regenHeightmap() {
   banner.style.borderColor = "";
   banner.style.background = "";
   banner.style.color = "";
-  banner.hidden = false;
 
   try {
     const res = await fetch("/api/regen-heightmap", {
@@ -761,7 +769,7 @@ async function regenHeightmap() {
 
   btn.disabled = false;
   btn.textContent = "⟳ Regen Heightmap";
-  setTimeout(() => { banner.hidden = true; }, 5000);
+  setTimeout(() => { banner.textContent = "\u00a0"; banner.style.borderColor = ""; banner.style.background = ""; banner.style.color = ""; }, 5000);
 }
 
 // ── Save All ────────────────────────────────────────
@@ -833,14 +841,12 @@ async function saveAll() {
     }
 
     banner.textContent = "Saved: " + parts.join(" + ") + " for Hole " + currentHole.number;
-    banner.hidden = false;
-    setTimeout(() => { banner.hidden = true; }, 4000);
+    setTimeout(() => { banner.textContent = "\u00a0"; banner.style.borderColor = ""; banner.style.background = ""; banner.style.color = ""; }, 4000);
   } catch (err) {
     banner.textContent = "Save failed: " + err.message;
     banner.style.borderColor = "rgba(144,52,52,0.35)";
     banner.style.background = "rgba(144,52,52,0.15)";
     banner.style.color = "#ffb4b4";
-    banner.hidden = false;
   }
 }
 
