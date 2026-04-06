@@ -7,6 +7,8 @@ let overlayOpacity = 0.5;
 let orientation = { rotation: 0, flipH: false, flipV: false };
 let illustrationImg = null;
 let zonesImg = null;
+let obImg = null;
+let showOB = true;
 let heightmapImg = null;
 let drawScale = 1;
 let draggingTeeIndex = -1;
@@ -223,8 +225,10 @@ async function loadZoneGrid(holeNumber) {
     const raw = atob(data.grid);
     zoneGrid = new Uint8Array(raw.length);
     for (let i = 0; i < raw.length; i++) zoneGrid[i] = raw.charCodeAt(i);
+    regenerateZonesImage();
   } catch {
     zoneGrid = null;
+    obImg = null;
   }
 }
 
@@ -283,6 +287,12 @@ function drawCanvas() {
   if (currentView === "heightmap" && heightmapImg) {
     ctx.globalAlpha = 1;
     ctx.drawImage(heightmapImg, -hw, -hh, srcW * scale, srcH * scale);
+  }
+
+  // OB overlay (on top of all zone views)
+  if (showOB && obImg && currentView !== "heightmap") {
+    ctx.globalAlpha = 1;
+    ctx.drawImage(obImg, -hw, -hh, srcW * scale, srcH * scale);
   }
 
   ctx.globalAlpha = 1;
@@ -440,22 +450,47 @@ function floodFillZone(normX, normY) {
 
 function regenerateZonesImage() {
   if (!zoneGrid) return;
+  const OB_ZONE = 9;
+
+  // Main zones canvas (OB transparent)
   const tempCanvas = document.createElement("canvas");
   tempCanvas.width = zoneGridW;
   tempCanvas.height = zoneGridH;
   const tempCtx = tempCanvas.getContext("2d");
   const imgData = tempCtx.createImageData(zoneGridW, zoneGridH);
 
+  // OB-only canvas
+  const obCanvas = document.createElement("canvas");
+  obCanvas.width = zoneGridW;
+  obCanvas.height = zoneGridH;
+  const obCtx = obCanvas.getContext("2d");
+  const obData = obCtx.createImageData(zoneGridW, zoneGridH);
+
   for (let i = 0; i < zoneGrid.length; i++) {
-    const c = ZONE_COLORS_RGB[zoneGrid[i]] || [0, 0, 0];
-    imgData.data[i * 4]     = c[0];
-    imgData.data[i * 4 + 1] = c[1];
-    imgData.data[i * 4 + 2] = c[2];
-    imgData.data[i * 4 + 3] = 255;
+    const zone = zoneGrid[i];
+    const c = ZONE_COLORS_RGB[zone] || [0, 0, 0];
+    if (zone === OB_ZONE) {
+      // OB goes to separate layer
+      obData.data[i * 4]     = c[0];
+      obData.data[i * 4 + 1] = c[1];
+      obData.data[i * 4 + 2] = c[2];
+      obData.data[i * 4 + 3] = 255;
+      // Transparent in main zones
+      imgData.data[i * 4 + 3] = 0;
+    } else {
+      imgData.data[i * 4]     = c[0];
+      imgData.data[i * 4 + 1] = c[1];
+      imgData.data[i * 4 + 2] = c[2];
+      imgData.data[i * 4 + 3] = 255;
+    }
   }
 
   tempCtx.putImageData(imgData, 0, 0);
   zonesImg = tempCanvas;
+
+  obCtx.putImageData(obData, 0, 0);
+  obImg = obCanvas;
+
   drawCanvas();
 }
 
@@ -670,6 +705,12 @@ function setupControls() {
 
   document.getElementById("overlay-opacity").addEventListener("input", function () {
     overlayOpacity = this.value / 100;
+    drawCanvas();
+  });
+
+  document.getElementById("btn-toggle-ob").addEventListener("click", function () {
+    showOB = !showOB;
+    this.classList.toggle("is-active-toggle", showOB);
     drawCanvas();
   });
 
