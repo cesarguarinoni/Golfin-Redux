@@ -8,6 +8,7 @@ let orientation = { rotation: 0, flipH: false, flipV: false };
 let illustrationImg = null;
 let zonesImg = null;
 let obImg = null;
+let obMask = null;
 let showOB = true;
 let heightmapImg = null;
 let drawScale = 1;
@@ -224,10 +225,16 @@ async function loadZoneGrid(holeNumber) {
     zoneGridH = data.height;
     const raw = atob(data.grid);
     zoneGrid = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) zoneGrid[i] = raw.charCodeAt(i);
+    obMask = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) {
+      const v = raw.charCodeAt(i);
+      if (v === 9) { obMask[i] = 1; zoneGrid[i] = 0; }
+      else { obMask[i] = 0; zoneGrid[i] = v; }
+    }
     regenerateZonesImage();
   } catch {
     zoneGrid = null;
+    obMask = null;
     obImg = null;
   }
 }
@@ -407,8 +414,8 @@ function paintZone(normX, normY) {
       const py = gy + dy;
       if (px < 0 || px >= zoneGridW || py < 0 || py >= zoneGridH) continue;
       const idx = py * zoneGridW + px;
-      if (activeBrushZone !== 9 && zoneGrid[idx] === 9) continue; // don't paint over OB
-      zoneGrid[idx] = activeBrushZone;
+      if (activeBrushZone === 9) { obMask[idx] = 1; }
+      else { zoneGrid[idx] = activeBrushZone; }
     }
   }
 
@@ -422,28 +429,48 @@ function floodFillZone(normX, normY) {
   const gy = Math.round(normY * (zoneGridH - 1));
   if (gx < 0 || gx >= zoneGridW || gy < 0 || gy >= zoneGridH) return;
 
-  const targetZone = zoneGrid[gy * zoneGridW + gx];
-  if (targetZone === activeBrushZone) return;
-
-  const visited = new Uint8Array(zoneGridW * zoneGridH);
-  const queue = [gx + gy * zoneGridW];
-  visited[queue[0]] = 1;
-
-  while (queue.length > 0) {
-    const idx = queue.shift();
-    zoneGrid[idx] = activeBrushZone;
-
-    const px = idx % zoneGridW;
-    const py = (idx - px) / zoneGridW;
-
-    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-      const nx = px + dx, ny = py + dy;
-      if (nx < 0 || nx >= zoneGridW || ny < 0 || ny >= zoneGridH) continue;
-      const nIdx = ny * zoneGridW + nx;
-      if (visited[nIdx] || zoneGrid[nIdx] !== targetZone) continue;
-      if (activeBrushZone !== 9 && zoneGrid[nIdx] === 9) continue; // don't flood into OB
-      visited[nIdx] = 1;
-      queue.push(nIdx);
+  if (activeBrushZone === 9) {
+    // OB flood: fill connected non-OB pixels in obMask
+    const startIdx = gy * zoneGridW + gx;
+    if (obMask[startIdx]) return; // already OB
+    const targetZone = zoneGrid[startIdx];
+    const visited = new Uint8Array(zoneGridW * zoneGridH);
+    const queue = [startIdx];
+    visited[startIdx] = 1;
+    while (queue.length > 0) {
+      const idx = queue.shift();
+      obMask[idx] = 1;
+      const px = idx % zoneGridW;
+      const py = (idx - px) / zoneGridW;
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const nx = px + dx, ny = py + dy;
+        if (nx < 0 || nx >= zoneGridW || ny < 0 || ny >= zoneGridH) continue;
+        const nIdx = ny * zoneGridW + nx;
+        if (visited[nIdx] || obMask[nIdx] || zoneGrid[nIdx] !== targetZone) continue;
+        visited[nIdx] = 1;
+        queue.push(nIdx);
+      }
+    }
+  } else {
+    // Non-OB flood: operates on zoneGrid, ignores OB layer
+    const targetZone = zoneGrid[gy * zoneGridW + gx];
+    if (targetZone === activeBrushZone) return;
+    const visited = new Uint8Array(zoneGridW * zoneGridH);
+    const queue = [gx + gy * zoneGridW];
+    visited[queue[0]] = 1;
+    while (queue.length > 0) {
+      const idx = queue.shift();
+      zoneGrid[idx] = activeBrushZone;
+      const px = idx % zoneGridW;
+      const py = (idx - px) / zoneGridW;
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const nx = px + dx, ny = py + dy;
+        if (nx < 0 || nx >= zoneGridW || ny < 0 || ny >= zoneGridH) continue;
+        const nIdx = ny * zoneGridW + nx;
+        if (visited[nIdx] || zoneGrid[nIdx] !== targetZone) continue;
+        visited[nIdx] = 1;
+        queue.push(nIdx);
+      }
     }
   }
 
@@ -453,9 +480,8 @@ function floodFillZone(normX, normY) {
 
 function regenerateZonesImage() {
   if (!zoneGrid) return;
-  const OB_ZONE = 9;
 
-  // Main zones canvas (OB transparent)
+  // Main zones canvas
   const tempCanvas = document.createElement("canvas");
   tempCanvas.width = zoneGridW;
   tempCanvas.height = zoneGridH;
@@ -469,22 +495,21 @@ function regenerateZonesImage() {
   const obCtx = obCanvas.getContext("2d");
   const obData = obCtx.createImageData(zoneGridW, zoneGridH);
 
+  const obC = ZONE_COLORS_RGB[9];
   for (let i = 0; i < zoneGrid.length; i++) {
-    const zone = zoneGrid[i];
-    const c = ZONE_COLORS_RGB[zone] || [0, 0, 0];
-    if (zone === OB_ZONE) {
-      // OB goes to separate layer
-      obData.data[i * 4]     = c[0];
-      obData.data[i * 4 + 1] = c[1];
-      obData.data[i * 4 + 2] = c[2];
+    // Main zones layer
+    const c = ZONE_COLORS_RGB[zoneGrid[i]] || [0, 0, 0];
+    imgData.data[i * 4]     = c[0];
+    imgData.data[i * 4 + 1] = c[1];
+    imgData.data[i * 4 + 2] = c[2];
+    imgData.data[i * 4 + 3] = 255;
+
+    // OB layer from mask
+    if (obMask && obMask[i]) {
+      obData.data[i * 4]     = obC[0];
+      obData.data[i * 4 + 1] = obC[1];
+      obData.data[i * 4 + 2] = obC[2];
       obData.data[i * 4 + 3] = 255;
-      // Transparent in main zones
-      imgData.data[i * 4 + 3] = 0;
-    } else {
-      imgData.data[i * 4]     = c[0];
-      imgData.data[i * 4 + 1] = c[1];
-      imgData.data[i * 4 + 2] = c[2];
-      imgData.data[i * 4 + 3] = 255;
     }
   }
 
@@ -557,7 +582,7 @@ function setupCanvasInteraction() {
 
     if (activeBrushZone >= 0 && (currentView === "zones" || currentView === "both")) {
       if (zoneGrid) {
-        zoneUndoStack.push(new Uint8Array(zoneGrid));
+        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), ob: obMask ? new Uint8Array(obMask) : null });
         if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
       }
       const norm = canvasToNormalized(x, y);
@@ -745,7 +770,9 @@ function setupControls() {
   window.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
       if (zoneUndoStack.length > 0 && zoneGrid) {
-        zoneGrid = zoneUndoStack.pop();
+        const snap = zoneUndoStack.pop();
+        zoneGrid = snap.grid;
+        obMask = snap.ob;
         zonePaintDirty = true;
         regenerateZonesImage();
         e.preventDefault();
@@ -865,8 +892,10 @@ async function saveAll() {
     }
 
     if (zonePaintDirty && zoneGrid) {
+      // Merge OB mask back into grid for saving
       let binary = "";
-      for (let i = 0; i < zoneGrid.length; i++) binary += String.fromCharCode(zoneGrid[i]);
+      for (let i = 0; i < zoneGrid.length; i++)
+        binary += String.fromCharCode(obMask && obMask[i] ? 9 : zoneGrid[i]);
       const gridBase64 = btoa(binary);
 
       await fetch("/api/zones", {
