@@ -119,51 +119,55 @@
             </div>
           </div>
           <div class="alignment-editor-shell">
+            <!-- Main toolbar -->
             <div class="alignment-toolbar">
-              <h4 id="editor-title" class="toolbar-title">Select a hole</h4>
               <label class="field-inline field-inline--compact">
                 <span>Hole</span>
                 <select id="editor-hole-select"></select>
               </label>
-              <label class="field-inline field-inline--compact">
-                <span>Tile</span>
-                <select id="editor-tile-select"></select>
+              <div class="mode-switcher">
+                <button class="mode-btn is-active" data-mode="align" type="button">Align</button>
+                <button class="mode-btn" data-mode="fine-tune" type="button">Fine Tune</button>
+                <button class="mode-btn" data-mode="anchors" type="button">Anchors</button>
+              </div>
+              <label class="field-inline field-inline--compact opacity-control">
+                <span>Opacity</span>
+                <input id="opacity-slider" type="range" min="0" max="100" value="50" step="1">
               </label>
-              <div id="pending-point" class="helper-copy toolbar-pending">Click official map first</div>
+              <button id="lock-alignment" type="button">Lock</button>
+              <div class="toolbar-spacer"></div>
+              <div class="header-actions">
+                <button id="rotate-left" type="button">Rotate -</button>
+                <button id="rotate-right" type="button">Rotate +</button>
+                <button id="reset-view" type="button">Reset View</button>
+              </div>
               <button id="save-alignment">Save</button>
-              <strong id="selected-hole-readout" hidden></strong>
+              <button id="compute-transform" hidden>Compute Transform</button>
+              <button id="export-hole" hidden>Export for Unity</button>
+              <span id="transform-result" class="transform-result" hidden></span>
             </div>
-            <div id="control-points-list" class="cp-chips-row"></div>
-            <div class="image-compare">
-              <section>
-                <div class="panel-header">
-                  <div>
-                    <div class="eyebrow">Official Hole Map</div>
-                    <div id="official-view-readout" class="view-readout">100% / 0deg</div>
-                  </div>
-                  <div class="header-actions">
-                    <button id="rotate-official-left" type="button">Rotate -</button>
-                    <button id="rotate-official-right" type="button">Rotate +</button>
-                    <button id="reset-official-view" type="button">Reset View</button>
-                  </div>
-                </div>
-                <div id="official-map-stage" class="image-stage"></div>
-              </section>
-              <section>
-                <div class="panel-header">
-                  <div>
-                    <div class="eyebrow">GSI Base Map Mosaic</div>
-                    <div id="basemap-view-readout" class="view-readout">100% / 0deg</div>
-                    <div id="basemap-coordinate-readout" class="view-readout">Lat -- / Lon --</div>
-                  </div>
-                  <div class="header-actions">
-                    <button id="rotate-basemap-left" type="button">Rotate -</button>
-                    <button id="rotate-basemap-right" type="button">Rotate +</button>
-                    <button id="reset-basemap-view" type="button">Reset View</button>
-                  </div>
-                </div>
-                <div id="basemap-stage" class="image-stage"></div>
-              </section>
+            <!-- Mode sub-bar: changes per mode -->
+            <div id="mode-subbar" class="mode-subbar">
+              <div id="mode-hint" class="helper-copy mode-hint">Drag basemap to align with official map. Shift+scroll to zoom both.</div>
+              <div id="control-points-list" class="cp-chips-row"></div>
+              <div id="anchors-bar" class="anchors-bar" hidden>
+                <label class="field-inline field-inline--compact">
+                  <span>Type</span>
+                  <select id="anchor-type-select"></select>
+                </label>
+                <div id="anchors-list" class="cp-chips-row"></div>
+              </div>
+            </div>
+            <!-- View readouts -->
+            <div class="view-readouts">
+              <span id="view-readout" class="view-readout">100% / 0deg</span>
+              <span id="basemap-coordinate-readout" class="view-readout">Lat -- / Lon --</span>
+            </div>
+            <!-- Stacked stage: three layers -->
+            <div id="stacked-stage" class="stacked-stage" data-mode="align">
+              <div id="layer-basemap" class="stacked-layer" style="z-index:1;"></div>
+              <div id="layer-official" class="stacked-layer" style="z-index:2; opacity:0.5; pointer-events:none;"></div>
+              <div id="layer-markers" class="stacked-layer stacked-marker-layer" style="z-index:3;"></div>
             </div>
           </div>
           <div id="alignment-grid" class="holes-grid"></div>

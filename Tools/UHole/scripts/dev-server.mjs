@@ -4,6 +4,8 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildAlignmentRecord } from "./lib/lomond-data.mjs";
+import { processHole } from "./compute-transform.mjs";
+import { exportHole } from "./export-hole.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -130,7 +132,13 @@ async function saveAlignment(bodyText) {
   const alignment = JSON.parse(await readFile(alignmentPath, "utf8"));
 
   alignment.control_points = Array.isArray(payload.controlPoints) ? payload.controlPoints : alignment.control_points;
+  alignment.anchors = Array.isArray(payload.anchors) ? payload.anchors : alignment.anchors || [];
   alignment.selected_photo_tile = payload.selectedPhotoTile || alignment.selected_photo_tile || null;
+
+  // Persist visual alignment (stacked overlay transform)
+  if (payload.visualAlignment) {
+    alignment.visual_alignment = payload.visualAlignment;
+  }
 
   if (alignment.control_points.length >= 4) {
     alignment.status = "ready_for_transform";
@@ -192,6 +200,42 @@ const server = createServer(async (req, res) => {
     const body = await readRequestBody(req);
     const result = await saveAlignment(body);
     res.writeHead(result.ok ? 200 : 500, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-cache"
+    });
+    res.end(JSON.stringify(result));
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/api/alignment/compute-transform") {
+    const body = await readRequestBody(req);
+    const payload = body ? JSON.parse(body) : {};
+    const holeNumber = Number(payload.holeNumber);
+    if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
+      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ ok: false, message: "Invalid hole number." }));
+      return;
+    }
+    const result = await processHole(holeNumber);
+    res.writeHead(result.ok ? 200 : 400, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-cache"
+    });
+    res.end(JSON.stringify(result));
+    return;
+  }
+
+  if (req.method === "POST" && req.url === "/api/export/hole") {
+    const body = await readRequestBody(req);
+    const payload = body ? JSON.parse(body) : {};
+    const holeNumber = Number(payload.holeNumber);
+    if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
+      res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ ok: false, message: "Invalid hole number." }));
+      return;
+    }
+    const result = await exportHole(holeNumber);
+    res.writeHead(result.ok ? 200 : 400, {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-cache"
     });
