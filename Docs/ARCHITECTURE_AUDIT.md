@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-03-26 13:53. Do not edit manually.
+> Auto-generated 2026-04-06 10:29. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -8,6 +8,7 @@
 Assets/Scripts/Audio/AudioManager.cs
 Assets/Scripts/BagDatabaseCSV.cs
 Assets/Scripts/BagManager.cs
+Assets/Scripts/BallManager.cs
 Assets/Scripts/CharacterManager.cs
 Assets/Scripts/ClubManager.cs
 Assets/Scripts/Debug/RewardPointsDebugPanel.cs
@@ -29,9 +30,9 @@ Assets/Scripts/Editor/Archive/RosterSystemSetupTool.cs
 Assets/Scripts/Editor/BagDatabaseCSVSetup.cs
 Assets/Scripts/Editor/BagManagerSetup.cs
 Assets/Scripts/Editor/BagSelectionModalAutoWire.cs
-Assets/Scripts/Editor/RepairKitManagerSetup.cs
+Assets/Scripts/Editor/ItemManagerSetup.cs
 Assets/Scripts/Editor/ScreenshotTool.cs
-Assets/Scripts/RepairKitManager.cs
+Assets/Scripts/ItemManager.cs
 Assets/Scripts/UI/AboutSubmenu.cs
 Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs
 Assets/Scripts/UI/FadeController.cs
@@ -39,7 +40,20 @@ Assets/Scripts/UI/HoleData.cs
 Assets/Scripts/UI/HoleDatabase.cs
 Assets/Scripts/UI/HoleDatabaseLoader.cs
 Assets/Scripts/UI/HomeScreenController.cs
+Assets/Scripts/UI/Inventory/BagCarouselController.cs
+Assets/Scripts/UI/Inventory/BagClubCard.cs
+Assets/Scripts/UI/Inventory/BagClubModalController.cs
+Assets/Scripts/UI/Inventory/BagDetailPanel.cs
 Assets/Scripts/UI/Inventory/BagSelectionModalController.cs
+Assets/Scripts/UI/Inventory/BagThumbnailCard.cs
+Assets/Scripts/UI/Inventory/BallCarouselController.cs
+Assets/Scripts/UI/Inventory/BallCompareController.cs
+Assets/Scripts/UI/Inventory/BallData.cs
+Assets/Scripts/UI/Inventory/BallDatabaseCSV.cs
+Assets/Scripts/UI/Inventory/BallDetailPanel.cs
+Assets/Scripts/UI/Inventory/BallSegmentedBar.cs
+Assets/Scripts/UI/Inventory/BallThumbnailCard.cs
+Assets/Scripts/UI/Inventory/BallThumbnailEmptyCard.cs
 Assets/Scripts/UI/Inventory/ClubCarouselController.cs
 Assets/Scripts/UI/Inventory/ClubCompareController.cs
 Assets/Scripts/UI/Inventory/ClubData.cs
@@ -48,6 +62,15 @@ Assets/Scripts/UI/Inventory/ClubDetailPanel.cs
 Assets/Scripts/UI/Inventory/ClubFilterBar.cs
 Assets/Scripts/UI/Inventory/ClubLevelUpModalController.cs
 Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs
+Assets/Scripts/UI/Inventory/Editor/BagClubModalAutoWire.cs
+Assets/Scripts/UI/Inventory/Editor/BagsContentAutoWire.cs
+Assets/Scripts/UI/Inventory/Editor/BallCarouselAutoWire.cs
+Assets/Scripts/UI/Inventory/Editor/BallCompareBuilder.cs
+Assets/Scripts/UI/Inventory/Editor/BallDetailPanelAutoWire.cs
+Assets/Scripts/UI/Inventory/Editor/BallDetailPanelBuilder.cs
+Assets/Scripts/UI/Inventory/Editor/BallManagerSetup.cs
+Assets/Scripts/UI/Inventory/Editor/BallThumbnailCardFix.cs
+Assets/Scripts/UI/Inventory/Editor/BallThumbnailEmptyCardFix.cs
 Assets/Scripts/UI/Inventory/Editor/ClubCompareAutoWire.cs
 Assets/Scripts/UI/Inventory/Editor/ClubCompareRightPanelBuilder.cs
 Assets/Scripts/UI/Inventory/Editor/ClubDetailPanelAutoWire.cs
@@ -55,7 +78,22 @@ Assets/Scripts/UI/Inventory/Editor/ClubLevelUpModalAutoWire.cs
 Assets/Scripts/UI/Inventory/Editor/ClubManagerSetup.cs
 Assets/Scripts/UI/Inventory/Editor/ClubThumbnailCardBuilder.cs
 Assets/Scripts/UI/Inventory/Editor/InventoryScreenBuilder.cs
+Assets/Scripts/UI/Inventory/Editor/ItemDetailPanelAutoWire.cs
+Assets/Scripts/UI/Inventory/Editor/ItemRightPanelBuilder.cs
+Assets/Scripts/UI/Inventory/Editor/ItemsContentBuilder.cs
+Assets/Scripts/UI/Inventory/Editor/ItemThumbnailCardBuilder.cs
+Assets/Scripts/UI/Inventory/Editor/ItemUseClubCardBuilder.cs
+Assets/Scripts/UI/Inventory/Editor/ItemUseModalAutoWire.cs
+Assets/Scripts/UI/Inventory/Editor/ItemUseModalBuilder.cs
 Assets/Scripts/UI/Inventory/InventoryScreenController.cs
+Assets/Scripts/UI/Inventory/ItemCarouselController.cs
+Assets/Scripts/UI/Inventory/ItemDatabaseCSV.cs
+Assets/Scripts/UI/Inventory/ItemDataRuntime.cs
+Assets/Scripts/UI/Inventory/ItemDetailPanel.cs
+Assets/Scripts/UI/Inventory/ItemThumbnailCard.cs
+Assets/Scripts/UI/Inventory/ItemUseClubCard.cs
+Assets/Scripts/UI/Inventory/ItemUseModalController.cs
+Assets/Scripts/UI/Inventory/PlayerItemData.cs
 Assets/Scripts/UI/LanguageSubmenu.cs
 Assets/Scripts/UI/LoadingBar.cs
 Assets/Scripts/UI/LoadingScreenController.cs
@@ -71,6 +109,7 @@ Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs
 Assets/Scripts/UI/Roster/Data/RarityStatCaps.cs
 Assets/Scripts/UI/Roster/Data/StatAllocationStrategy.cs
 Assets/Scripts/UI/Roster/Editor/CompareAutoWire.cs
+Assets/Scripts/UI/Roster/Editor/CompareRightPanelDiffBuilder.cs
 Assets/Scripts/UI/Roster/Editor/DetailPanelAutoWire.cs
 Assets/Scripts/UI/Roster/Editor/LevelUpModalAutoWire.cs
 Assets/Scripts/UI/Roster/Editor/PaginationDotSetup.cs
@@ -105,6 +144,8 @@ Assets/Scripts/Utilities/UIAutoWire.cs
 ```
 Assets/Data/Bags.csv
 Assets/Data/Bags.csv.meta
+Assets/Data/Balls.csv
+Assets/Data/Balls.csv.meta
 Assets/Data/CharacterDatabase.asset
 Assets/Data/CharacterDatabase.asset.meta
 Assets/Data/Characters.csv
@@ -117,6 +158,8 @@ Assets/Data/HoleDatabase.asset
 Assets/Data/HoleDatabase.asset.meta
 Assets/Data/HoleDatabase.csv
 Assets/Data/HoleDatabase.csv.meta
+Assets/Data/Items.csv
+Assets/Data/Items.csv.meta
 Assets/Data/LevelUpCosts.csv
 Assets/Data/LevelUpCosts.csv.meta
 Assets/Data/README_HOLES.md
@@ -129,9 +172,10 @@ Assets/Data/README_HOLES.md.meta
 |---|---|---|---|
 | BagDatabaseCSV | Assets/Scripts/BagDatabaseCSV.cs | Yes |  |
 | BagManager | Assets/Scripts/BagManager.cs | Yes |  |
+| BallManager | Assets/Scripts/BallManager.cs | Yes |  |
 | CharacterManager | Assets/Scripts/CharacterManager.cs | Yes |  |
 | ClubManager | Assets/Scripts/ClubManager.cs | Yes |  |
-| RepairKitManager | Assets/Scripts/RepairKitManager.cs | Yes |  |
+| ItemManager | Assets/Scripts/ItemManager.cs | Yes |  |
 | AudioManager | Assets/Scripts/Audio/AudioManager.cs | Yes |  |
 | RewardPointsDebugPanel | Assets/Scripts/Debug/RewardPointsDebugPanel.cs | Yes |  |
 | ExampleAutoWireScreen | Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs |  |  |
@@ -155,6 +199,17 @@ Assets/Data/README_HOLES.md.meta
 | SplashScreenController | Assets/Scripts/UI/SplashScreenController.cs |  |  |
 | SwipeDetector | Assets/Scripts/UI/SwipeDetector.cs |  | IBeginDragHandler, IEndDragHandler |
 | UserProfileSubmenu | Assets/Scripts/UI/UserProfileSubmenu.cs | Yes |  |
+| BagCarouselController | Assets/Scripts/UI/Inventory/BagCarouselController.cs | Yes |  |
+| BagClubCard | Assets/Scripts/UI/Inventory/BagClubCard.cs |  |  |
+| BagDetailPanel | Assets/Scripts/UI/Inventory/BagDetailPanel.cs | Yes |  |
+| BagThumbnailCard | Assets/Scripts/UI/Inventory/BagThumbnailCard.cs |  |  |
+| BallCarouselController | Assets/Scripts/UI/Inventory/BallCarouselController.cs | Yes |  |
+| BallCompareController | Assets/Scripts/UI/Inventory/BallCompareController.cs | Yes |  |
+| BallDatabaseCSV | Assets/Scripts/UI/Inventory/BallDatabaseCSV.cs | Yes |  |
+| BallDetailPanel | Assets/Scripts/UI/Inventory/BallDetailPanel.cs | Yes |  |
+| BallSegmentedBar | Assets/Scripts/UI/Inventory/BallSegmentedBar.cs |  |  |
+| BallThumbnailCard | Assets/Scripts/UI/Inventory/BallThumbnailCard.cs | Yes |  |
+| BallThumbnailEmptyCard | Assets/Scripts/UI/Inventory/BallThumbnailEmptyCard.cs |  |  |
 | ClubCarouselController | Assets/Scripts/UI/Inventory/ClubCarouselController.cs | Yes |  |
 | ClubCompareController | Assets/Scripts/UI/Inventory/ClubCompareController.cs | Yes |  |
 | ClubDatabaseCSV | Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs | Yes |  |
@@ -162,6 +217,11 @@ Assets/Data/README_HOLES.md.meta
 | ClubFilterBar | Assets/Scripts/UI/Inventory/ClubFilterBar.cs |  |  |
 | ClubThumbnailCard | Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs | Yes |  |
 | InventoryScreenController | Assets/Scripts/UI/Inventory/InventoryScreenController.cs |  |  |
+| ItemCarouselController | Assets/Scripts/UI/Inventory/ItemCarouselController.cs | Yes |  |
+| ItemDatabaseCSV | Assets/Scripts/UI/Inventory/ItemDatabaseCSV.cs | Yes |  |
+| ItemDetailPanel | Assets/Scripts/UI/Inventory/ItemDetailPanel.cs | Yes |  |
+| ItemThumbnailCard | Assets/Scripts/UI/Inventory/ItemThumbnailCard.cs | Yes |  |
+| ItemUseClubCard | Assets/Scripts/UI/Inventory/ItemUseClubCard.cs | Yes |  |
 | ModalController | Assets/Scripts/UI/Modals/ModalController.cs |  |  |
 | CharacterLevelUpDatabase | Assets/Scripts/UI/Roster/Data/CharacterLevelUpDatabase.cs | Yes |  |
 | CharacterDatabaseCSV | Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs | Yes |  |
@@ -177,9 +237,10 @@ Assets/Data/README_HOLES.md.meta
 ## Singletons
 
 - **BagManager** (Assets/Scripts/BagManager.cs) (DontDestroyOnLoad)
+- **BallManager** (Assets/Scripts/BallManager.cs) (DontDestroyOnLoad)
 - **CharacterManager** (Assets/Scripts/CharacterManager.cs) (DontDestroyOnLoad)
 - **ClubManager** (Assets/Scripts/ClubManager.cs) (DontDestroyOnLoad)
-- **RepairKitManager** (Assets/Scripts/RepairKitManager.cs) (DontDestroyOnLoad)
+- **ItemManager** (Assets/Scripts/ItemManager.cs) (DontDestroyOnLoad)
 - **AudioManager** (Assets/Scripts/Audio/AudioManager.cs) (DontDestroyOnLoad)
 - **FadeController** (Assets/Scripts/UI/FadeController.cs) (DontDestroyOnLoad)
 - **PersistentUIManager** (Assets/Scripts/UI/PersistentUIManager.cs) (DontDestroyOnLoad)
@@ -194,6 +255,8 @@ Assets/Data/README_HOLES.md.meta
 | Class | Event |
 |---|---|
 | BagManager | `public event System.Action<int>? OnBagChanged;` |
+| BagManager | `public event System.Action<int>? OnEquippedBagChanged;` |
+| BallManager | `public event System.Action? OnInventoryChanged;` |
 | CharacterManager | `public event System.Action<string>? OnCharacterLeveledUp;` |
 | CharacterManager | `public event System.Action<string>? OnCharacterSelected;` |
 | CharacterManager | `public event System.Action? OnRosterChanged;` |
@@ -201,11 +264,17 @@ Assets/Data/README_HOLES.md.meta
 | ClubManager | `public event System.Action<string>? OnClubLeveledUp;` |
 | ClubManager | `public event System.Action? OnInventoryChanged;` |
 | ClubManager | `public event System.Action<string>? OnClubRepaired;` |
-| RepairKitManager | `public event System.Action? OnInventoryChanged;` |
+| ItemManager | `public event System.Action? OnInventoryChanged;` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnExpanded;` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnCollapsed;` |
+| BagCarouselController | `public event System.Action<int>? OnBagSelected;` |
+| BagClubCard | `public event System.Action? OnActionClicked;` |
+| BagThumbnailCard | `public event System.Action? OnClicked;` |
+| BallCarouselController | `public event System.Action<string>? OnBallSelected;` |
 | ClubCarouselController | `public event System.Action<string>? OnClubSelected;` |
 | ClubFilterBar | `public event System.Action<ClubType?>? OnFilterChanged;` |
+| ItemCarouselController | `public event System.Action<string>? OnItemSelected;` |
+| ItemUseClubCard | `public event System.Action? OnUseRepairKit;` |
 | RewardPointsManager | `public event System.Action<int> OnPointsChanged;` |
 | CarouselController | `public event System.Action<string> OnCharacterSelected; // Change to event` |
 
@@ -232,7 +301,17 @@ Assets/Data/README_HOLES.md.meta
 | SwipeDetector | Assets/Scripts/UI/SwipeDetector.cs | 1 |
 | UserProfileSubmenu | Assets/Scripts/UI/UserProfileSubmenu.cs | 11 |
 | LocalizationEditorHelper | Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs | 1 |
+| BagCarouselController | Assets/Scripts/UI/Inventory/BagCarouselController.cs | 11 |
+| BagClubCard | Assets/Scripts/UI/Inventory/BagClubCard.cs | 20 |
+| BagClubModalController | Assets/Scripts/UI/Inventory/BagClubModalController.cs | 6 |
+| BagDetailPanel | Assets/Scripts/UI/Inventory/BagDetailPanel.cs | 10 |
 | BagSelectionModalController | Assets/Scripts/UI/Inventory/BagSelectionModalController.cs | 4 |
+| BagThumbnailCard | Assets/Scripts/UI/Inventory/BagThumbnailCard.cs | 6 |
+| BallCarouselController | Assets/Scripts/UI/Inventory/BallCarouselController.cs | 10 |
+| BallCompareController | Assets/Scripts/UI/Inventory/BallCompareController.cs | 35 |
+| BallDatabaseCSV | Assets/Scripts/UI/Inventory/BallDatabaseCSV.cs | 1 |
+| BallDetailPanel | Assets/Scripts/UI/Inventory/BallDetailPanel.cs | 24 |
+| BallThumbnailCard | Assets/Scripts/UI/Inventory/BallThumbnailCard.cs | 6 |
 | ClubCarouselController | Assets/Scripts/UI/Inventory/ClubCarouselController.cs | 9 |
 | ClubCompareController | Assets/Scripts/UI/Inventory/ClubCompareController.cs | 50 |
 | ClubDatabaseCSV | Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs | 1 |
@@ -241,6 +320,14 @@ Assets/Data/README_HOLES.md.meta
 | ClubLevelUpModalController | Assets/Scripts/UI/Inventory/ClubLevelUpModalController.cs | 57 |
 | ClubThumbnailCard | Assets/Scripts/UI/Inventory/ClubThumbnailCard.cs | 10 |
 | InventoryScreenController | Assets/Scripts/UI/Inventory/InventoryScreenController.cs | 4 |
+| ItemCarouselController | Assets/Scripts/UI/Inventory/ItemCarouselController.cs | 10 |
+| ItemDatabaseCSV | Assets/Scripts/UI/Inventory/ItemDatabaseCSV.cs | 1 |
+| ItemDetailPanel | Assets/Scripts/UI/Inventory/ItemDetailPanel.cs | 15 |
+| ItemThumbnailCard | Assets/Scripts/UI/Inventory/ItemThumbnailCard.cs | 7 |
+| ItemUseClubCard | Assets/Scripts/UI/Inventory/ItemUseClubCard.cs | 20 |
+| ItemUseModalController | Assets/Scripts/UI/Inventory/ItemUseModalController.cs | 7 |
+| ItemThumbnailCardBuilder | Assets/Scripts/UI/Inventory/Editor/ItemThumbnailCardBuilder.cs | 1 |
+| ItemUseClubCardBuilder | Assets/Scripts/UI/Inventory/Editor/ItemUseClubCardBuilder.cs | 1 |
 | ModalController | Assets/Scripts/UI/Modals/ModalController.cs | 2 |
 | CharacterLevelUpDatabase | Assets/Scripts/UI/Roster/Data/CharacterLevelUpDatabase.cs | 1 |
 | PlayerCharacterData | Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs | 14 |
@@ -249,7 +336,7 @@ Assets/Data/README_HOLES.md.meta
 | CarouselController | Assets/Scripts/UI/Roster/UI/CarouselController.cs | 9 |
 | CharacterDetailPanel | Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs | 29 |
 | CharacterThumbnailCard | Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs | 11 |
-| CompareController | Assets/Scripts/UI/Roster/UI/CompareController.cs | 32 |
+| CompareController | Assets/Scripts/UI/Roster/UI/CompareController.cs | 36 |
 | LevelUpModalController | Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs | 48 |
 | RosterScreenController | Assets/Scripts/UI/Roster/UI/RosterScreenController.cs | 2 |
 | StatBar | Assets/Scripts/UI/Roster/UI/StatBar.cs | 7 |
@@ -259,10 +346,17 @@ Assets/Data/README_HOLES.md.meta
 
 ### Bags.csv
 ```
-id,name,rarity,thumbnail,unlocked
-bag_mireo,Mireo,Rare,Mireo,true
+id,name,rarity,thumbnail,fullImage,description,unlocked
+bag_mireo,Mireo,Rare,Mireo,Mireo,Add any 8 clubs you want to take out to the field to your bag. Remember you always need at least 1 Driver and 1 Putter.,TRUE
 ```
 (11 rows)
+
+### Balls.csv
+```
+id,name,brand,power,rebound,windResistance,roll,spin,thumbnailSprite,fullSprite,info
+ball_golfin,Golfin,Golfin,0,0,0,0,0,Golfin,Golfin,"The standard Golfin ball. Perfectly balanced with no stat bonuses or penaltiesƒ?"reliable in any situation."
+```
+(3 rows)
 
 ### Characters.csv
 ```
@@ -284,6 +378,13 @@ courseNameKey,holeNumber,reward1Type,reward1Amount,reward2Type,reward2Amount,rew
 HOLE_LOMOND_5,5,Points,100,RepairKit,10,Ball,30
 ```
 (6 rows)
+
+### Items.csv
+```
+id,name,category,rarity,restorePercent,thumbnailSprite,fullSprite,proTip,info
+repairkit_common,Repair Kit,RepairKit,Common,50,RepairKit-Common,RepairKit-Common,"Clubs will automatically use the best repair kit available when you repair them from the Clubs tab.","Essential and efficient, this Repair Kit restores up to 50% of any club's durability. Designed for quick fixes and reliable performance, it's a must have for keeping your equipment in solid shape round after round."
+```
+(4 rows)
 
 ### LevelUpCosts.csv
 ```

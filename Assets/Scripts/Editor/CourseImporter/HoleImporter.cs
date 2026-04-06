@@ -157,8 +157,10 @@ namespace Golfin.CourseImport
                 {
                     int idx = (y * res + x) * 2;
                     ushort val = (ushort)((rawBytes[idx] << 8) | rawBytes[idx + 1]);
-                    // Flip rows: UHole row 0 = north → heights[res-1,x] = min Z = north
-                    heights[res - 1 - y, x] = val / 65535f;
+                    // Diagnostic showed: bump at NE, red square at NW
+                    // heights[row, col] — Unity docs say [z, x] but empirically
+                    // col=0 maps to east (max X). Swap indices to fix.
+                    heights[res - 1 - x, res - 1 - y] = val / 65535f;
                 }
             }
 
@@ -230,7 +232,7 @@ namespace Golfin.CourseImport
                     // Texture pixel (px=0, py=0) = bottom-left in Unity = (U=0, V=0)
                     // TerrainLayer: U=0 → min X (west), V=0 → min Z (north after row flip)
                     // So py=0 (bottom) = V=0 = north, py=max (top) = V=1 = south
-                    float u = 1f - (float)px / (texRes - 1); // flip: 0=east, 1=west (fixes horizontal mirror)
+                    float u = (float)px / (texRes - 1); // 0=west, 1=east
                     float v = (float)py / (texRes - 1); // 0=north, 1=south
 
                     double lon = holeWest + u * (holeEast - holeWest);

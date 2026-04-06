@@ -1,0 +1,13 @@
+# Output data (large, regenerable)
+output/
+
+# Dependencies
+node_modules/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Session locks
+*.lock
+!package-lock.json

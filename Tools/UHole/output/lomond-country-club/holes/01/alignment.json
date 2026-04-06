@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "course_id": "lomond-country-club",
   "hole_number": 1,
-  "status": "ready_for_control_points",
+  "status": "transform_computed",
   "official_map": {
     "path": "holes/01/source/official-map.gif",
     "source_url": "https://www.lomond-cc.com/wp-content/themes/templateB/images/course_e01.gif",
@@ -16,14 +16,263 @@
     "path": "basemap/manifest.json",
     "license_checked": true
   },
-  "control_points": [],
+  "control_points": [
+    {
+      "id": "467344ed-f2fe-4101-bea5-4492da1538c1",
+      "official": {
+        "x": 834,
+        "y": 357.6333312988281,
+        "normalized_x": 0.7043918918918919,
+        "normalized_y": 0.40228721180970545
+      },
+      "basemap": {
+        "x": 16.54775894436841,
+        "y": 45.283689667482975,
+        "normalized_x": 0.28047049058251544,
+        "normalized_y": 0.7675201638556436,
+        "local_path": "basemap/gsi-photo-z17/17-115211-51955.jpg",
+        "z": 17,
+        "x_tile": 115211,
+        "y_tile": 51955,
+        "lat": 34.913486092797065,
+        "lon": 136.43723273755347
+      }
+    },
+    {
+      "id": "5bec9ef1-a404-4ef8-9c06-6ca03f7036fc",
+      "official": {
+        "x": 835,
+        "y": 280.6333312988281,
+        "normalized_x": 0.7052364864864865,
+        "normalized_y": 0.315673038581359
+      },
+      "basemap": {
+        "x": 7.484565374881186,
+        "y": 50.58304282585681,
+        "normalized_x": 0.1268570402522235,
+        "normalized_y": 0.8573397089128273,
+        "local_path": "basemap/gsi-photo-z17/17-115211-51955.jpg",
+        "z": 17,
+        "x_tile": 115211,
+        "y_tile": 51955,
+        "lat": 34.91328379870904,
+        "lon": 136.43681082561105
+      }
+    },
+    {
+      "id": "c063a00d-1104-409d-a4aa-a3c882e28382",
+      "official": {
+        "x": 891,
+        "y": 139.63333129882812,
+        "normalized_x": 0.7525337837837838,
+        "normalized_y": 0.1570678642281531
+      },
+      "basemap": {
+        "x": 42.78038671248123,
+        "y": 55.75015114322866,
+        "normalized_x": 0.7250913002115463,
+        "normalized_y": 0.9449178159869265,
+        "local_path": "basemap/gsi-photo-z17/17-115210-51955.jpg",
+        "z": 17,
+        "x_tile": 115210,
+        "y_tile": 51955,
+        "lat": 34.91308655285023,
+        "lon": 136.43570734304868
+      }
+    },
+    {
+      "id": "549f94e3-ba11-45d0-a973-d82076aa96ef",
+      "official": {
+        "x": 737,
+        "y": 589.6333312988281,
+        "normalized_x": 0.6224662162162162,
+        "normalized_y": 0.6632545908873207
+      },
+      "basemap": {
+        "x": 55.760102087566224,
+        "y": 38.43309680134399,
+        "normalized_x": 0.9450864760604445,
+        "normalized_y": 0.6514084203617626,
+        "local_path": "basemap/gsi-photo-z17/17-115211-51955.jpg",
+        "z": 17,
+        "x_tile": 115211,
+        "y_tile": 51955,
+        "lat": 34.91374760290876,
+        "lon": 136.43905815987688
+      }
+    }
+  ],
   "transform": {
-    "pixel_to_world_ready": false,
-    "residual_error_m": null
+    "pixel_to_world_ready": true,
+    "method": "least_squares_affine",
+    "coefficients": {
+      "a": -0.000005861766794623691,
+      "b": 0.000005436321316665271,
+      "tx": 136.4401752401609,
+      "c": 0.0000037858119412703672,
+      "d": 0.0000027552584072054742,
+      "ty": 34.90933857939672
+    },
+    "residuals": [
+      {
+        "point_index": 0,
+        "error_m": 0.56
+      },
+      {
+        "point_index": 1,
+        "error_m": 1.28
+      },
+      {
+        "point_index": 2,
+        "error_m": 1.17
+      },
+      {
+        "point_index": 3,
+        "error_m": 0.67
+      }
+    ],
+    "mean_residual_m": 0.92,
+    "max_residual_m": 1.28,
+    "computed_at": "2026-04-06T04:43:05.815Z"
   },
   "notes": [
     "Add a licensable aerial or orthophoto source before georeferencing.",
     "Place at least four well-spread control points before approving alignment.",
     "Use the GSI photo dataset as the operator-visible base map during initial control point placement."
+  ],
+  "selected_photo_tile": "basemap/gsi-photo-z17/17-115212-51955.jpg",
+  "anchors": [
+    {
+      "type": "tee_back",
+      "label": "Back Tee",
+      "view_px": {
+        "x": 635,
+        "y": 811.63
+      },
+      "basemap_px": {
+        "x": 742.71,
+        "y": 446.64
+      },
+      "basemap_tile": {
+        "local_path": "basemap/gsi-photo-z17/17-115212-51955.jpg",
+        "z": 17,
+        "x": 115212,
+        "y": 51955
+      },
+      "world": {
+        "lat": 34.9139304,
+        "lon": 136.4408249
+      }
+    },
+    {
+      "type": "tee_regular",
+      "label": "Regular Tee",
+      "view_px": {
+        "x": 649,
+        "y": 775.63
+      },
+      "basemap_px": {
+        "x": 736.86,
+        "y": 447.76
+      },
+      "basemap_tile": {
+        "local_path": "basemap/gsi-photo-z17/17-115212-51955.jpg",
+        "z": 17,
+        "x": 115212,
+        "y": 51955
+      },
+      "world": {
+        "lat": 34.913888,
+        "lon": 136.4405523
+      }
+    },
+    {
+      "type": "tee_front",
+      "label": "Front Tee",
+      "view_px": {
+        "x": 666,
+        "y": 755.63
+      },
+      "basemap_px": {
+        "x": 732.85,
+        "y": 447.17
+      },
+      "basemap_tile": {
+        "local_path": "basemap/gsi-photo-z17/17-115212-51955.jpg",
+        "z": 17,
+        "x": 115212,
+        "y": 51955
+      },
+      "world": {
+        "lat": 34.9139105,
+        "lon": 136.4403657
+      }
+    },
+    {
+      "type": "tee_ladies",
+      "label": "Ladies Tee",
+      "view_px": {
+        "x": 675,
+        "y": 719.23
+      },
+      "basemap_px": {
+        "x": 727.35,
+        "y": 448.97
+      },
+      "basemap_tile": {
+        "local_path": "basemap/gsi-photo-z17/17-115212-51955.jpg",
+        "z": 17,
+        "x": 115212,
+        "y": 51955
+      },
+      "world": {
+        "lat": 34.9138418,
+        "lon": 136.4401097
+      }
+    },
+    {
+      "type": "green_center",
+      "label": "Green Center",
+      "view_px": {
+        "x": 864,
+        "y": 121.23
+      },
+      "basemap_px": {
+        "x": 633.63,
+        "y": 473.13
+      },
+      "basemap_tile": {
+        "local_path": "basemap/gsi-photo-z17/17-115210-51956.jpg",
+        "z": 17,
+        "x": 115210,
+        "y": 51956
+      },
+      "world": {
+        "lat": 34.9129192,
+        "lon": 136.4357468
+      }
+    },
+    {
+      "type": "pin",
+      "label": "Pin",
+      "view_px": {
+        "x": 804,
+        "y": 501.23
+      },
+      "basemap_px": {
+        "x": 688.27,
+        "y": 449.91
+      },
+      "basemap_tile": {
+        "local_path": "basemap/gsi-photo-z17/17-115211-51955.jpg",
+        "z": 17,
+        "x": 115211,
+        "y": 51955
+      },
+      "world": {
+        "lat": 34.9138057,
+        "lon": 136.4382904
+      }
+    }
   ]
 }

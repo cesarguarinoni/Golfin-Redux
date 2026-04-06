@@ -1,0 +1,74 @@
+[
+  {
+    "type": "tee_back",
+    "label": "Back Tee",
+    "world": {
+      "lat": 34.9139304,
+      "lon": 136.4408249
+    },
+    "local": {
+      "x": 231.78,
+      "z": -56.28
+    }
+  },
+  {
+    "type": "tee_regular",
+    "label": "Regular Tee",
+    "world": {
+      "lat": 34.913888,
+      "lon": 136.4405523
+    },
+    "local": {
+      "x": 206.89,
+      "z": -51.56
+    }
+  },
+  {
+    "type": "tee_front",
+    "label": "Front Tee",
+    "world": {
+      "lat": 34.9139105,
+      "lon": 136.4403657
+    },
+    "local": {
+      "x": 189.86,
+      "z": -54.07
+    }
+  },
+  {
+    "type": "tee_ladies",
+    "label": "Ladies Tee",
+    "world": {
+      "lat": 34.9138418,
+      "lon": 136.4401097
+    },
+    "local": {
+      "x": 166.49,
+      "z": -46.42
+    }
+  },
+  {
+    "type": "green_center",
+    "label": "Green Center",
+    "world": {
+      "lat": 34.9129192,
+      "lon": 136.4357468
+    },
+    "local": {
+      "x": -231.78,
+      "z": 56.28
+    }
+  },
+  {
+    "type": "pin",
+    "label": "Pin",
+    "world": {
+      "lat": 34.9138057,
+      "lon": 136.4382904
+    },
+    "local": {
+      "x": 0.42,
+      "z": -42.4
+    }
+  }
+]

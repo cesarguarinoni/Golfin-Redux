@@ -220,6 +220,12 @@ if (Keyboard.current != null && Keyboard.current[Key.Backquote].wasPressedThisFr
 if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame) { }
 ```
 
+## Never Use Namespace `Golfin.Debug` — Shadows UnityEngine.Debug
+
+**Mistake:** Created `WalkCamera.cs` in `namespace Golfin.Debug`. Every file with `using UnityEngine;` that calls `Debug.Log` now resolves `Debug` to `Golfin.Debug` instead of `UnityEngine.Debug`, causing 100+ compile errors across the entire project.
+
+**Rule:** Never create a namespace called `Golfin.Debug` (or any `*.Debug` namespace). The name collides with `UnityEngine.Debug` which is used everywhere. Put debug utilities in the global namespace or a non-colliding namespace like `Golfin.DebugTools`.
+
 ## Raycast Target on Decorative Images Blocks Button Clicks
 
 **Repeat offender.** This has happened on both the Roster DetailPanel and the Club DetailPanel.

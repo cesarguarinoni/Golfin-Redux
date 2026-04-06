@@ -11,6 +11,7 @@ const courseRoot = path.join(root, "output", courseId);
 const basemapRoot = path.join(courseRoot, "basemap");
 const photoRoot = path.join(basemapRoot, "gsi-photo-z17");
 const demRoot = path.join(basemapRoot, "gsi-dem-z14");
+const dem5aRoot = path.join(basemapRoot, "gsi-dem5a-z15");
 const manifestPath = path.join(basemapRoot, "manifest.json");
 const provenancePath = path.join(courseRoot, "provenance.json");
 const forceRefetch = process.argv.includes("--force");
@@ -26,9 +27,11 @@ const inferredCourseCenter = {
 async function main() {
   await mkdir(photoRoot, { recursive: true });
   await mkdir(demRoot, { recursive: true });
+  await mkdir(dem5aRoot, { recursive: true });
 
   const photoZoom = 17;
   const demZoom = 14;
+  const dem5aZoom = 15;
   const coverageMeters = {
     west: 2800,
     east: 2000,
@@ -38,8 +41,10 @@ async function main() {
 
   const photoRange = tileRangeForCoverage(inferredCourseCenter.lat, inferredCourseCenter.lon, photoZoom, coverageMeters);
   const demRange = tileRangeForCoverage(inferredCourseCenter.lat, inferredCourseCenter.lon, demZoom, coverageMeters);
+  const dem5aRange = tileRangeForCoverage(inferredCourseCenter.lat, inferredCourseCenter.lon, dem5aZoom, coverageMeters);
   const photoTiles = enumerateTiles(photoRange, photoZoom);
   const demTiles = enumerateTiles(demRange, demZoom);
+  const dem5aTiles = enumerateTiles(dem5aRange, dem5aZoom);
 
   console.log(`Downloading ${photoTiles.length} GSI photo tiles...`);
   const savedPhotoTiles = await downloadTiles({
@@ -56,6 +61,15 @@ async function main() {
     extension: ".txt",
     makeUrl: ({ z, x, y }) => `https://cyberjapandata.gsi.go.jp/xyz/dem/${z}/${x}/${y}.txt`
   });
+
+  console.log(`Downloading ${dem5aTiles.length} GSI DEM5A (5m lidar) tiles...`);
+  const { saved: savedDem5aTiles, missing: missingDem5a } = await downloadTilesWithMissing({
+    tiles: dem5aTiles,
+    outputDir: dem5aRoot,
+    extension: ".png",
+    makeUrl: ({ z, x, y }) => `https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/${z}/${x}/${y}.png`
+  });
+  console.log(`  DEM5A: ${savedDem5aTiles.length} available, ${missingDem5a} missing (no lidar coverage)`);
 
   const manifest = {
     schema_version: "1.0.0",
@@ -88,6 +102,18 @@ async function main() {
         local_root: relativeFromCourse(demRoot),
         tile_count: savedDemTiles.length,
         tiles: savedDemTiles
+      },
+      {
+        id: "gsi-dem5a-z15",
+        label: "GSI DEM5A (5m lidar)",
+        type: "elevation_hires",
+        zoom: dem5aZoom,
+        tile_span_m: Number(tileSpanMeters(inferredCourseCenter.lat, dem5aZoom).toFixed(2)),
+        local_root: relativeFromCourse(dem5aRoot),
+        tile_count: savedDem5aTiles.length,
+        tiles_available: savedDem5aTiles.length,
+        tiles_missing: missingDem5a,
+        tiles: savedDem5aTiles
       }
     ]
   };
@@ -143,6 +169,58 @@ async function downloadTiles({ tiles, outputDir, extension, makeUrl }) {
     }
   }
   return saved;
+}
+
+async function downloadTilesWithMissing({ tiles, outputDir, extension, makeUrl }) {
+  const saved = [];
+  let missing = 0;
+  for (const tile of tiles) {
+    const url = makeUrl(tile);
+    const filename = `${tile.z}-${tile.x}-${tile.y}${extension}`;
+    const localPath = path.join(outputDir, filename);
+    let usedCache = false;
+
+    if (!forceRefetch) {
+      try {
+        await stat(localPath);
+        usedCache = true;
+      } catch {
+        usedCache = false;
+      }
+    }
+
+    try {
+      if (!usedCache) {
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent": "CourseIntakeBot/0.1 (+https://local.course-intake)"
+          }
+        });
+        if (response.status === 404) {
+          missing++;
+          continue;
+        }
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        await writeFile(localPath, bytes);
+      }
+      saved.push({
+        z: tile.z,
+        x: tile.x,
+        y: tile.y,
+        bounds: tile.bounds,
+        local_path: relativeFromCourse(localPath),
+        source_url: url,
+        cached: usedCache
+      });
+    } catch (error) {
+      console.warn(`  Failed ${url}: ${error.message}`);
+      missing++;
+    }
+  }
+  return { saved, missing };
 }
 
 async function updateProvenance(manifest) {

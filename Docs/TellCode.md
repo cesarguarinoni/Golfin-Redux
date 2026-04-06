@@ -1028,7 +1028,36 @@ the official map illustration. And the raw UHole coords already do that.
 
 ---
 
-## Current Task — Phase K Step 8: Fix Texture Horizontal Flip
+## Current Task — Phase K Step 9: Remove Diagnostic Markers
+
+**The texture-terrain alignment fix is confirmed.** The diagnostic showed that Unity's
+`SetHeights` uses `heights[x_index, z_index]` (not `[z, x]` as the docs imply).
+The fix: `heights[res-1-x, res-1-y]` where y=raw row (north-south) and x=raw col (east-west).
+
+### Changes
+
+1. **`export-hole.mjs`**: Remove the diagnostic NW corner bump code (the `for` loop
+   that sets heightmap cells to maxElev). Keep everything else.
+
+2. **`HoleImporter.cs`**: Remove the diagnostic red square code (the `for` loop
+   that sets outputPixels to Color.red). Keep everything else.
+   The heightmap indexing `heights[res-1-x, res-1-y]` is CORRECT — do NOT change it.
+
+3. Re-export: `node scripts/export-hole.mjs 1`
+4. Re-import in Unity: GOLFIN > Import Hole > Hole 01
+
+### Verification
+
+- [ ] No red square visible on terrain
+- [ ] No artificial elevation bump visible
+- [ ] Aerial texture features align with terrain contours
+- [ ] Anchor markers sit on correct features
+
+### Do NOT
+
+- Change the heightmap indexing (it's correct now)
+- Change the texture sampling
+- Change anchor coordinates
 
 **Problem:** The aerial texture is horizontally flipped relative to the anchor positions
 in Unity. The anchors land on the correct hole features (verified in the UHole alignment
