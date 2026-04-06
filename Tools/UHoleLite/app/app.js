@@ -406,7 +406,9 @@ function paintZone(normX, normY) {
       const px = gx + dx;
       const py = gy + dy;
       if (px < 0 || px >= zoneGridW || py < 0 || py >= zoneGridH) continue;
-      zoneGrid[py * zoneGridW + px] = activeBrushZone;
+      const idx = py * zoneGridW + px;
+      if (activeBrushZone !== 9 && zoneGrid[idx] === 9) continue; // don't paint over OB
+      zoneGrid[idx] = activeBrushZone;
     }
   }
 
@@ -439,6 +441,7 @@ function floodFillZone(normX, normY) {
       if (nx < 0 || nx >= zoneGridW || ny < 0 || ny >= zoneGridH) continue;
       const nIdx = ny * zoneGridW + nx;
       if (visited[nIdx] || zoneGrid[nIdx] !== targetZone) continue;
+      if (activeBrushZone !== 9 && zoneGrid[nIdx] === 9) continue; // don't flood into OB
       visited[nIdx] = 1;
       queue.push(nIdx);
     }
