@@ -7,6 +7,9 @@ let overlayOpacity = 0.5;
 let orientation = { rotation: 0, flipH: false, flipV: false };
 let illustrationImg = null;
 let zonesImg = null;
+let treesImg = null;
+let treesMask = null;
+let showTrees = true;
 let obImg = null;
 let obMask = null;
 let showOB = true;
@@ -225,15 +228,19 @@ async function loadZoneGrid(holeNumber) {
     zoneGridH = data.height;
     const raw = atob(data.grid);
     zoneGrid = new Uint8Array(raw.length);
+    treesMask = new Uint8Array(raw.length);
     obMask = new Uint8Array(raw.length);
     for (let i = 0; i < raw.length; i++) {
       const v = raw.charCodeAt(i);
       if (v === 9) { obMask[i] = 1; zoneGrid[i] = 0; }
-      else { obMask[i] = 0; zoneGrid[i] = v; }
+      else if (v === 5) { treesMask[i] = 1; zoneGrid[i] = 0; }
+      else { zoneGrid[i] = v; }
     }
     regenerateZonesImage();
   } catch {
     zoneGrid = null;
+    treesMask = null;
+    treesImg = null;
     obMask = null;
     obImg = null;
   }
@@ -296,7 +303,13 @@ function drawCanvas() {
     ctx.drawImage(heightmapImg, -hw, -hh, srcW * scale, srcH * scale);
   }
 
-  // OB overlay (on top of all zone views)
+  // Trees overlay (over terrain, under OB)
+  if (showTrees && treesImg && currentView !== "heightmap") {
+    ctx.globalAlpha = 1;
+    ctx.drawImage(treesImg, -hw, -hh, srcW * scale, srcH * scale);
+  }
+
+  // OB overlay (on top of everything)
   if (showOB && obImg && currentView !== "heightmap") {
     ctx.globalAlpha = 1;
     ctx.drawImage(obImg, -hw, -hh, srcW * scale, srcH * scale);
@@ -415,6 +428,7 @@ function paintZone(normX, normY) {
       if (px < 0 || px >= zoneGridW || py < 0 || py >= zoneGridH) continue;
       const idx = py * zoneGridW + px;
       if (activeBrushZone === 9) { obMask[idx] = 1; }
+      else if (activeBrushZone === 5) { treesMask[idx] = 1; }
       else { zoneGrid[idx] = activeBrushZone; }
     }
   }
@@ -429,30 +443,35 @@ function floodFillZone(normX, normY) {
   const gy = Math.round(normY * (zoneGridH - 1));
   if (gx < 0 || gx >= zoneGridW || gy < 0 || gy >= zoneGridH) return;
 
-  if (activeBrushZone === 9) {
-    // OB flood: fill connected non-OB pixels in obMask
+  // Determine which mask/grid to flood
+  var mask = null;
+  if (activeBrushZone === 9) mask = obMask;
+  else if (activeBrushZone === 5) mask = treesMask;
+
+  if (mask) {
+    // Overlay flood: fill connected non-masked pixels
     const startIdx = gy * zoneGridW + gx;
-    if (obMask[startIdx]) return; // already OB
+    if (mask[startIdx]) return; // already set
     const targetZone = zoneGrid[startIdx];
     const visited = new Uint8Array(zoneGridW * zoneGridH);
     const queue = [startIdx];
     visited[startIdx] = 1;
     while (queue.length > 0) {
       const idx = queue.shift();
-      obMask[idx] = 1;
+      mask[idx] = 1;
       const px = idx % zoneGridW;
       const py = (idx - px) / zoneGridW;
       for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
         const nx = px + dx, ny = py + dy;
         if (nx < 0 || nx >= zoneGridW || ny < 0 || ny >= zoneGridH) continue;
         const nIdx = ny * zoneGridW + nx;
-        if (visited[nIdx] || obMask[nIdx] || zoneGrid[nIdx] !== targetZone) continue;
+        if (visited[nIdx] || mask[nIdx] || zoneGrid[nIdx] !== targetZone) continue;
         visited[nIdx] = 1;
         queue.push(nIdx);
       }
     }
   } else {
-    // Non-OB flood: operates on zoneGrid, ignores OB layer
+    // Regular flood: operates on zoneGrid
     const targetZone = zoneGrid[gy * zoneGridW + gx];
     if (targetZone === activeBrushZone) return;
     const visited = new Uint8Array(zoneGridW * zoneGridH);
@@ -488,6 +507,13 @@ function regenerateZonesImage() {
   const tempCtx = tempCanvas.getContext("2d");
   const imgData = tempCtx.createImageData(zoneGridW, zoneGridH);
 
+  // Trees-only canvas
+  const treesCanvas = document.createElement("canvas");
+  treesCanvas.width = zoneGridW;
+  treesCanvas.height = zoneGridH;
+  const treesCtx = treesCanvas.getContext("2d");
+  const treesData = treesCtx.createImageData(zoneGridW, zoneGridH);
+
   // OB-only canvas
   const obCanvas = document.createElement("canvas");
   obCanvas.width = zoneGridW;
@@ -495,6 +521,7 @@ function regenerateZonesImage() {
   const obCtx = obCanvas.getContext("2d");
   const obData = obCtx.createImageData(zoneGridW, zoneGridH);
 
+  const treesC = ZONE_COLORS_RGB[5];
   const obC = ZONE_COLORS_RGB[9];
   for (let i = 0; i < zoneGrid.length; i++) {
     // Main zones layer
@@ -503,6 +530,14 @@ function regenerateZonesImage() {
     imgData.data[i * 4 + 1] = c[1];
     imgData.data[i * 4 + 2] = c[2];
     imgData.data[i * 4 + 3] = 255;
+
+    // Trees layer from mask
+    if (treesMask && treesMask[i]) {
+      treesData.data[i * 4]     = treesC[0];
+      treesData.data[i * 4 + 1] = treesC[1];
+      treesData.data[i * 4 + 2] = treesC[2];
+      treesData.data[i * 4 + 3] = 255;
+    }
 
     // OB layer from mask
     if (obMask && obMask[i]) {
@@ -515,6 +550,9 @@ function regenerateZonesImage() {
 
   tempCtx.putImageData(imgData, 0, 0);
   zonesImg = tempCanvas;
+
+  treesCtx.putImageData(treesData, 0, 0);
+  treesImg = treesCanvas;
 
   obCtx.putImageData(obData, 0, 0);
   obImg = obCanvas;
@@ -582,7 +620,7 @@ function setupCanvasInteraction() {
 
     if (activeBrushZone >= 0 && (currentView === "zones" || currentView === "both")) {
       if (zoneGrid) {
-        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), ob: obMask ? new Uint8Array(obMask) : null });
+        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null });
         if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
       }
       const norm = canvasToNormalized(x, y);
@@ -736,6 +774,12 @@ function setupControls() {
     drawCanvas();
   });
 
+  document.getElementById("btn-toggle-trees").addEventListener("click", function () {
+    showTrees = !showTrees;
+    this.classList.toggle("is-active-toggle", showTrees);
+    drawCanvas();
+  });
+
   document.getElementById("btn-toggle-ob").addEventListener("click", function () {
     showOB = !showOB;
     this.classList.toggle("is-active-toggle", showOB);
@@ -772,6 +816,7 @@ function setupControls() {
       if (zoneUndoStack.length > 0 && zoneGrid) {
         const snap = zoneUndoStack.pop();
         zoneGrid = snap.grid;
+        treesMask = snap.trees;
         obMask = snap.ob;
         zonePaintDirty = true;
         regenerateZonesImage();
@@ -895,7 +940,7 @@ async function saveAll() {
       // Merge OB mask back into grid for saving
       let binary = "";
       for (let i = 0; i < zoneGrid.length; i++)
-        binary += String.fromCharCode(obMask && obMask[i] ? 9 : zoneGrid[i]);
+        binary += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : zoneGrid[i]);
       const gridBase64 = btoa(binary);
 
       await fetch("/api/zones", {
