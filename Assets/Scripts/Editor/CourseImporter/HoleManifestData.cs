@@ -128,4 +128,20 @@ namespace Golfin.CourseImport
     {
         public float x, z;
     }
+
+    // zones.json — zone grid data for splatmap pipeline
+    [System.Serializable]
+    public class ZonesData
+    {
+        public int hole_number;
+        public ZoneSourceDimensions source_dimensions;
+        public string grid;
+    }
+
+    [System.Serializable]
+    public class ZoneSourceDimensions
+    {
+        public int width;
+        public int height;
+    }
 }

@@ -298,6 +298,256 @@ namespace Golfin.CourseImport
             return rotated;
         }
 
+        // ─── Debug: Test Terrain Layers ───────────────────────────────────
+
+        [MenuItem("GOLFIN/Debug/Test Terrain Layers")]
+        public static void TestTerrainLayers()
+        {
+            var terrain = Object.FindObjectOfType<Terrain>();
+            if (terrain == null)
+            {
+                EditorUtility.DisplayDialog("Error", "No terrain in scene. Import a hole first.", "OK");
+                return;
+            }
+
+            var terrainData = terrain.terrainData;
+            string texDir = "Assets/Courses/Textures_2025(JPG)";
+
+            var fairwayLayer = CreateTestLayer(texDir, "T_Fairway_Light", "T_Fairway_Normal", 5f);
+            var roughLayer = CreateTestLayer(texDir, "T_Rough_Albedo", "T_Rough_Normal", 8f);
+            var greenLayer = CreateTestLayer(texDir, "T_Green_Albedo", "T_Green_Normal", 3f);
+
+            if (fairwayLayer == null || roughLayer == null || greenLayer == null)
+            {
+                Debug.LogError("[TestTerrainLayers] Could not find all textures. Check Assets/Courses/Textures_2025(JPG)/");
+                return;
+            }
+
+            // Save layer assets
+            string dataDir = "Assets/Golf/Courses/lomond-country-club/Data/hole-01";
+            EnsureDirectory(Path.Combine(Path.GetDirectoryName(Application.dataPath), dataDir));
+
+            SaveLayerAsset(fairwayLayer, $"{dataDir}/TestLayer_Fairway.asset");
+            SaveLayerAsset(roughLayer, $"{dataDir}/TestLayer_Rough.asset");
+            SaveLayerAsset(greenLayer, $"{dataDir}/TestLayer_Green.asset");
+
+            terrainData.terrainLayers = new TerrainLayer[] { fairwayLayer, roughLayer, greenLayer };
+
+            // Paint test pattern
+            int alphaRes = terrainData.alphamapResolution;
+            float[,,] alphamap = new float[alphaRes, alphaRes, 3];
+
+            for (int y = 0; y < alphaRes; y++)
+            {
+                for (int x = 0; x < alphaRes; x++)
+                {
+                    float fx = (float)x / alphaRes;
+                    float fy = (float)y / alphaRes;
+
+                    // Default: rough
+                    int layer = 1;
+
+                    // Middle third horizontal stripe: fairway
+                    if (fy > 0.33f && fy < 0.66f)
+                        layer = 0;
+
+                    // Small circle at center: green
+                    float dx = fx - 0.5f;
+                    float dy = fy - 0.5f;
+                    if (dx * dx + dy * dy < 0.02f)
+                        layer = 2;
+
+                    alphamap[y, x, layer] = 1.0f;
+                }
+            }
+
+            terrainData.SetAlphamaps(0, 0, alphamap);
+            Debug.Log($"[TestTerrainLayers] Applied 3 test layers to terrain (alphamap {alphaRes}x{alphaRes})");
+            Debug.Log("[TestTerrainLayers] Pattern: rough (everywhere) + fairway (middle stripe) + green (center circle)");
+            Debug.Log("[TestTerrainLayers] CHECK: Do textures tile well? Are sizes reasonable? Walk around in play mode.");
+        }
+
+        private static TerrainLayer CreateTestLayer(string texDir, string albedoName, string normalName, float tileSize)
+        {
+            var albedo = FindTextureInDir(texDir, albedoName);
+            var normal = FindTextureInDir(texDir, normalName);
+
+            if (albedo == null)
+            {
+                Debug.LogWarning($"Could not find texture: {albedoName} in {texDir}");
+                return null;
+            }
+
+            var layer = new TerrainLayer();
+            layer.diffuseTexture = albedo;
+            if (normal != null)
+                layer.normalMapTexture = normal;
+            layer.tileSize = new Vector2(tileSize, tileSize);
+            layer.tileOffset = Vector2.zero;
+            return layer;
+        }
+
+        private static Texture2D FindTextureInDir(string dir, string namePrefix)
+        {
+            string[] guids = AssetDatabase.FindAssets(namePrefix, new[] { dir });
+            foreach (var guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                string fileName = Path.GetFileNameWithoutExtension(path);
+                if (fileName == namePrefix || fileName.StartsWith(namePrefix + "."))
+                {
+                    var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                    if (tex != null) return tex;
+                }
+            }
+            return null;
+        }
+
+        private static void SaveLayerAsset(TerrainLayer layer, string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<TerrainLayer>(path);
+            if (existing != null)
+                AssetDatabase.DeleteAsset(path);
+            AssetDatabase.CreateAsset(layer, path);
+        }
+
+        // ─── Debug: Test Zone Alignment ──────────────────────────────────
+
+        [MenuItem("GOLFIN/Debug/Test Zone Alignment")]
+        public static void TestZoneAlignment()
+        {
+            var terrain = Object.FindObjectOfType<Terrain>();
+            if (terrain == null)
+            {
+                EditorUtility.DisplayDialog("Error", "No terrain in scene. Import a hole first.", "OK");
+                return;
+            }
+
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+
+            // Load zones.json
+            string zonesPath = Path.Combine(projectRoot, "Tools", "UHoleLite", "output",
+                "lomond-country-club", "export", "hole-01", "zones.json");
+            if (!File.Exists(zonesPath))
+            {
+                EditorUtility.DisplayDialog("Error", $"zones.json not found:\n{zonesPath}", "OK");
+                return;
+            }
+            string zonesJson = File.ReadAllText(zonesPath);
+            var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
+
+            // Load manifest for terrain dimensions
+            string manifestPath = Path.Combine(projectRoot, "Tools", "UHoleLite", "output",
+                "lomond-country-club", "export", "hole-01", "hole-manifest.json");
+            string manifestJson = File.ReadAllText(manifestPath);
+            var manifest = JsonUtility.FromJson<HoleManifest>(manifestJson);
+
+            byte[] grid = System.Convert.FromBase64String(zonesData.grid);
+            int w = zonesData.source_dimensions.width;
+            int h = zonesData.source_dimensions.height;
+
+            float terrainBase = terrain.transform.position.y;
+
+            // ── Green centroid (zone 2) ──
+            float sumX = 0, sumY = 0;
+            int greenCount = 0;
+            for (int gy = 0; gy < h; gy++)
+            {
+                for (int gx = 0; gx < w; gx++)
+                {
+                    if (grid[gy * w + gx] == 2)
+                    {
+                        sumX += gx;
+                        sumY += gy;
+                        greenCount++;
+                    }
+                }
+            }
+
+            if (greenCount == 0)
+            {
+                Debug.LogError("[TestZoneAlignment] No green zone pixels found!");
+                return;
+            }
+
+            float centroidGX = sumX / greenCount;
+            float centroidGY = sumY / greenCount;
+            float normX = centroidGX / (w - 1);
+            float normY = centroidGY / (h - 1);
+
+            Debug.Log($"[TestZoneAlignment] Green centroid: grid({centroidGX:F1}, {centroidGY:F1}), " +
+                      $"norm({normX:F3}, {normY:F3}), {greenCount} pixels");
+
+            // 90° CCW transform: worldX = (normY - 0.5) * terrain_length_m
+            //                    worldZ = (normX - 0.5) * terrain_width_m
+            float worldX = (normY - 0.5f) * manifest.terrain.terrain_length_m;
+            float worldZ = (normX - 0.5f) * manifest.terrain.terrain_width_m;
+
+            // Clean up previous debug sphere
+            var old = GameObject.Find("DEBUG_GreenCentroid");
+            if (old != null) Object.DestroyImmediate(old);
+
+            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere.name = "DEBUG_GreenCentroid";
+            sphere.transform.localScale = new Vector3(10f, 10f, 10f);
+
+            float terrainHeight = terrain.SampleHeight(new Vector3(worldX, 0, worldZ));
+            sphere.transform.position = new Vector3(worldX, terrainBase + terrainHeight + 10f, worldZ);
+
+            var sphereRenderer = sphere.GetComponent<Renderer>();
+            var sphereMat = new Material(Shader.Find("Standard"));
+            sphereMat.color = Color.magenta;
+            sphereRenderer.sharedMaterial = sphereMat;
+
+            Debug.Log($"[TestZoneAlignment] Placed DEBUG_GreenCentroid at world ({worldX:F1}, {terrainBase + terrainHeight + 10f:F1}, {worldZ:F1})");
+            Debug.Log("[TestZoneAlignment] CHECK: Is the magenta sphere on or near the green area?");
+
+            // ── Additional zone centroids: fairway(1), bunker(6), tee_box(10) ──
+            int[] debugZones = { 1, 6, 10 };
+            string[] debugNames = { "Fairway", "Bunker", "TeeBox" };
+            Color[] debugColors = { Color.green, Color.yellow, Color.white };
+            float[] debugSizes = { 8f, 6f, 6f };
+
+            for (int i = 0; i < debugZones.Length; i++)
+            {
+                float sx = 0, sy = 0;
+                int count = 0;
+                for (int gy2 = 0; gy2 < h; gy2++)
+                {
+                    for (int gx2 = 0; gx2 < w; gx2++)
+                    {
+                        if (grid[gy2 * w + gx2] == debugZones[i])
+                        {
+                            sx += gx2;
+                            sy += gy2;
+                            count++;
+                        }
+                    }
+                }
+                if (count == 0) continue;
+
+                float cnx = (sx / count) / (w - 1);
+                float cny = (sy / count) / (h - 1);
+                float wx = (cny - 0.5f) * manifest.terrain.terrain_length_m;
+                float wz = (cnx - 0.5f) * manifest.terrain.terrain_width_m;
+
+                var oldSph = GameObject.Find($"DEBUG_{debugNames[i]}Centroid");
+                if (oldSph != null) Object.DestroyImmediate(oldSph);
+
+                var sph = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                sph.name = $"DEBUG_{debugNames[i]}Centroid";
+                sph.transform.localScale = Vector3.one * debugSizes[i];
+                float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                sph.transform.position = new Vector3(wx, terrainBase + th + debugSizes[i], wz);
+                var r = sph.GetComponent<Renderer>();
+                var m = new Material(Shader.Find("Standard"));
+                m.color = debugColors[i];
+                r.sharedMaterial = m;
+
+                Debug.Log($"[TestZoneAlignment] {debugNames[i]} centroid: norm({cnx:F3}, {cny:F3}) → world({wx:F1}, {wz:F1}), {count}px");
+            }
+        }
+
         private static void EnsureDirectory(string path)
         {
             if (!Directory.Exists(path))
