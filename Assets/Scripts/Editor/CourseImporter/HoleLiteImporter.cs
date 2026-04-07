@@ -1615,8 +1615,30 @@ namespace Golfin.CourseImport
                 int texW = mh;  // rotated dimensions
                 int texH = mw;
                 var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
-                tex.filterMode = FilterMode.Point; // crisp pixel edges
+                tex.filterMode = FilterMode.Bilinear; // smooth staircase edges
                 tex.wrapMode = TextureWrapMode.Clamp;
+
+                // 1px dilate the mask to prevent bilinear interpolation from
+                // shrinking the water boundary at edges
+                byte[] dilated = new byte[mw * mh];
+                for (int my = 0; my < mh; my++)
+                {
+                    for (int mx = 0; mx < mw; mx++)
+                    {
+                        if (maskBytes[my * mw + mx] == 1)
+                        {
+                            dilated[my * mw + mx] = 1;
+                            continue;
+                        }
+                        // Check 4-connected neighbors
+                        bool hasWaterNeighbor =
+                            (mx > 0      && maskBytes[my * mw + (mx - 1)] == 1) ||
+                            (mx < mw - 1 && maskBytes[my * mw + (mx + 1)] == 1) ||
+                            (my > 0      && maskBytes[(my - 1) * mw + mx] == 1) ||
+                            (my < mh - 1 && maskBytes[(my + 1) * mw + mx] == 1);
+                        dilated[my * mw + mx] = hasWaterNeighbor ? (byte)1 : (byte)0;
+                    }
+                }
 
                 Color waterColor = new Color(0.18f, 0.40f, 0.58f, 1.0f);
                 Color clearColor = new Color(0f, 0f, 0f, 0f);
@@ -1625,7 +1647,7 @@ namespace Golfin.CourseImport
                 {
                     for (int mx = 0; mx < mw; mx++)
                     {
-                        bool isWater = maskBytes[my * mw + mx] == 1;
+                        bool isWater = dilated[my * mw + mx] == 1;
                         int tx = my;
                         int ty = mx;
                         tex.SetPixel(tx, ty, isWater ? waterColor : clearColor);
@@ -1647,7 +1669,7 @@ namespace Golfin.CourseImport
                 {
                     importer.textureType = TextureImporterType.Default;
                     importer.alphaIsTransparency = true;
-                    importer.filterMode = FilterMode.Point;
+                    importer.filterMode = FilterMode.Bilinear;
                     importer.textureCompression = TextureImporterCompression.Uncompressed;
                     importer.npotScale = TextureImporterNPOTScale.None;
                     importer.maxTextureSize = 4096;
