@@ -34,6 +34,9 @@
           <div class="hero-actions">
             <button id="btn-regen" title="Regenerate heightmap from current zones">⟳ Regen Heightmap</button>
             <button id="btn-save">Save</button>
+            <button id="btn-save-as" title="Export hole snapshot to a file">Save As</button>
+            <button id="btn-load" title="Load a hole snapshot from file">Load</button>
+            <input type="file" id="load-file-input" accept=".json" hidden>
           </div>
         </header>
 
@@ -72,6 +75,7 @@
           <div class="mode-switcher">
             <button class="mode-btn paint-mode-btn is-active" data-paintmode="brush">Brush</button>
             <button class="mode-btn paint-mode-btn" data-paintmode="fill">Fill</button>
+            <button class="mode-btn paint-mode-btn" data-paintmode="eraser">Eraser</button>
           </div>
           <div class="toolbar-spacer"></div>
           <span id="brush-size-group">

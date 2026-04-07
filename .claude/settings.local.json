@@ -91,7 +91,8 @@
       "Bash(node scripts/export-hole.mjs lomond-country-club 1)",
       "Bash(node -e \"const d=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''output/lomond-country-club/export/hole-01/bunkers.json'',''utf-8''\\)\\); console.log\\(''schema:'', d.schema_version\\); console.log\\(''count:'', d.bunker_count\\); d.bunkers.forEach\\(b => console.log\\(''  #''+b.id, ''pixels:''+b.pixel_count, ''contour:''+b.contour.length+''pts'', ''center:'', JSON.stringify\\(b.center_local\\), ''size:'', JSON.stringify\\(b.size_m\\)\\)\\);\")",
       "Bash(node scripts/export-hole.mjs lomond-country-club 12)",
-      "Bash(node -e \"const d=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''output/lomond-country-club/export/hole-12/water.json'',''utf8''\\)\\); console.log\\(''schema:'', d.schema_version\\); console.log\\(''count:'', d.water_count\\); console.log\\(''has depth_m:'', ''depth_m'' in d\\); const w=d.water[0]; console.log\\(''region 1 keys:'', Object.keys\\(w\\).join\\('', ''\\)\\); console.log\\(''has contour:'', ''contour'' in w\\); console.log\\(''bbox:'', JSON.stringify\\(w.bbox\\)\\); console.log\\(''mask_width:'', w.mask_width, ''mask_height:'', w.mask_height\\);\")"
+      "Bash(node -e \"const d=JSON.parse\\(require\\(''fs''\\).readFileSync\\(''output/lomond-country-club/export/hole-12/water.json'',''utf8''\\)\\); console.log\\(''schema:'', d.schema_version\\); console.log\\(''count:'', d.water_count\\); console.log\\(''has depth_m:'', ''depth_m'' in d\\); const w=d.water[0]; console.log\\(''region 1 keys:'', Object.keys\\(w\\).join\\('', ''\\)\\); console.log\\(''has contour:'', ''contour'' in w\\); console.log\\(''bbox:'', JSON.stringify\\(w.bbox\\)\\); console.log\\(''mask_width:'', w.mask_width, ''mask_height:'', w.mask_height\\);\")",
+      "Bash(find C:UserscesarGolfinReduxToolsUHoleLite -type f -name *.cs -o -name *.h -o -name *.cpp)"
     ]
   }
 }

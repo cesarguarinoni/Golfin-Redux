@@ -28,7 +28,7 @@ let brushSize = 5;
 let isPainting = false;
 let zoneUndoStack = [];
 const MAX_UNDO = 30;
-let fillMode = false;
+let paintMode = "brush"; // "brush" | "fill" | "eraser"
 
 // Zoom & pan state
 let zoomLevel = 1;
@@ -447,6 +447,28 @@ function paintZone(normX, normY) {
   regenerateZonesImage();
 }
 
+function eraseZone(normX, normY) {
+  if (activeBrushZone < 0 || !zoneGrid) return;
+  const gx = Math.round(normX * (zoneGridW - 1));
+  const gy = Math.round(normY * (zoneGridH - 1));
+
+  for (let dy = -brushSize; dy <= brushSize; dy++) {
+    for (let dx = -brushSize; dx <= brushSize; dx++) {
+      if (dx * dx + dy * dy > brushSize * brushSize) continue;
+      const px = gx + dx;
+      const py = gy + dy;
+      if (px < 0 || px >= zoneGridW || py < 0 || py >= zoneGridH) continue;
+      const idx = py * zoneGridW + px;
+      if (activeBrushZone === 9) { obMask[idx] = 0; }
+      else if (activeBrushZone === 5) { treesMask[idx] = 0; }
+      else if (zoneGrid[idx] === activeBrushZone) { zoneGrid[idx] = 0; }
+    }
+  }
+
+  zonePaintDirty = true;
+  regenerateZonesImage();
+}
+
 function floodFillZone(normX, normY) {
   if (activeBrushZone < 0 || !zoneGrid) return;
   const gx = Math.round(normX * (zoneGridW - 1));
@@ -635,8 +657,11 @@ function setupCanvasInteraction() {
       }
       const norm = canvasToNormalized(x, y);
       if (norm) {
-        if (fillMode) {
+        if (paintMode === "fill") {
           floodFillZone(norm.x, norm.y);
+        } else if (paintMode === "eraser") {
+          isPainting = true;
+          eraseZone(norm.x, norm.y);
         } else {
           isPainting = true;
           paintZone(norm.x, norm.y);
@@ -672,7 +697,10 @@ function setupCanvasInteraction() {
 
     if (isPainting && activeBrushZone >= 0) {
       const norm = canvasToNormalized(x, y);
-      if (norm) paintZone(norm.x, norm.y);
+      if (norm) {
+        if (paintMode === "eraser") eraseZone(norm.x, norm.y);
+        else paintZone(norm.x, norm.y);
+      }
       return;
     }
 
@@ -797,6 +825,14 @@ function setupControls() {
   });
 
   document.getElementById("btn-save").addEventListener("click", saveAll);
+  document.getElementById("btn-save-as").addEventListener("click", saveAsSnapshot);
+  document.getElementById("btn-load").addEventListener("click", () => {
+    document.getElementById("load-file-input").value = "";
+    document.getElementById("load-file-input").click();
+  });
+  document.getElementById("load-file-input").addEventListener("change", (e) => {
+    if (e.target.files.length > 0) loadSnapshot(e.target.files[0]);
+  });
   document.getElementById("btn-regen").addEventListener("click", regenHeightmap);
 
   // Brush controls
@@ -809,8 +845,8 @@ function setupControls() {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".paint-mode-btn").forEach(b => b.classList.remove("is-active"));
       btn.classList.add("is-active");
-      fillMode = btn.dataset.paintmode === "fill";
-      document.getElementById("brush-size-group").style.display = fillMode ? "none" : "";
+      paintMode = btn.dataset.paintmode;
+      document.getElementById("brush-size-group").style.display = paintMode === "fill" ? "none" : "";
     });
   });
 
@@ -976,6 +1012,113 @@ async function saveAll() {
     banner.style.background = "rgba(144,52,52,0.15)";
     banner.style.color = "#ffb4b4";
   }
+}
+
+// ── Save As (export snapshot to file) ──────────────
+
+function saveAsSnapshot() {
+  if (!currentHole) return;
+  const snapshot = {
+    courseId: COURSE_ID,
+    holeNumber: currentHole.number,
+    orientation: { ...orientation },
+    tees: currentHole.tees ? JSON.parse(JSON.stringify(currentHole.tees)) : null,
+  };
+
+  if (zoneGrid) {
+    let binary = "";
+    for (let i = 0; i < zoneGrid.length; i++)
+      binary += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : zoneGrid[i]);
+    snapshot.zones = {
+      width: zoneGridW,
+      height: zoneGridH,
+      grid: btoa(binary),
+    };
+  }
+
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "hole-" + String(currentHole.number).padStart(2, "0") + "-snapshot.json";
+  a.click();
+  URL.revokeObjectURL(url);
+
+  const banner = document.getElementById("save-banner");
+  banner.textContent = "Snapshot exported for Hole " + currentHole.number;
+  setTimeout(() => { banner.textContent = "\u00a0"; }, 3000);
+}
+
+// ── Load (import snapshot from file) ───────────────
+
+function loadSnapshot(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const snapshot = JSON.parse(reader.result);
+      const banner = document.getElementById("save-banner");
+
+      if (!currentHole) {
+        banner.textContent = "Select a hole before loading a snapshot.";
+        banner.style.borderColor = "rgba(144,52,52,0.35)";
+        banner.style.background = "rgba(144,52,52,0.15)";
+        banner.style.color = "#ffb4b4";
+        setTimeout(() => { banner.textContent = "\u00a0"; banner.style.borderColor = ""; banner.style.background = ""; banner.style.color = ""; }, 4000);
+        return;
+      }
+
+      // Push undo snapshot before applying
+      if (zoneGrid) {
+        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null });
+        if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
+      }
+
+      // Restore orientation
+      if (snapshot.orientation) {
+        orientation = snapshot.orientation;
+        updateOrientationUI();
+      }
+
+      // Restore tees
+      if (snapshot.tees) {
+        currentHole.tees = snapshot.tees;
+        teesModified = new Set(snapshot.tees.tees ? snapshot.tees.tees.map((_, i) => i) : []);
+      }
+
+      // Restore zones
+      if (snapshot.zones) {
+        zoneGridW = snapshot.zones.width;
+        zoneGridH = snapshot.zones.height;
+        const raw = atob(snapshot.zones.grid);
+        zoneGrid = new Uint8Array(raw.length);
+        treesMask = new Uint8Array(raw.length);
+        obMask = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) {
+          const v = raw.charCodeAt(i);
+          if (v === 9) { obMask[i] = 1; zoneGrid[i] = 0; }
+          else if (v === 5) { treesMask[i] = 1; zoneGrid[i] = 0; }
+          else { zoneGrid[i] = v; }
+        }
+        zonePaintDirty = true;
+        regenerateZonesImage();
+      }
+
+      drawCanvas();
+      updateStats();
+
+      banner.textContent = "Loaded snapshot from " + file.name;
+      setTimeout(() => { banner.textContent = "\u00a0"; }, 4000);
+    } catch (err) {
+      const banner = document.getElementById("save-banner");
+      banner.textContent = "Load failed: " + err.message;
+      banner.style.borderColor = "rgba(144,52,52,0.35)";
+      banner.style.background = "rgba(144,52,52,0.15)";
+      banner.style.color = "#ffb4b4";
+      setTimeout(() => { banner.textContent = "\u00a0"; banner.style.borderColor = ""; banner.style.background = ""; banner.style.color = ""; }, 5000);
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ── Stats Cards ─────────────────────────────────────

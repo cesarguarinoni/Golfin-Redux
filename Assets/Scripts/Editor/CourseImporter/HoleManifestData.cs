@@ -193,6 +193,17 @@ namespace Golfin.CourseImport
         public BunkerData[] greens;
     }
 
+    // tees-mesh.json — tee box contour data (reuses BunkerData like greens)
+    [System.Serializable]
+    public class TeesFileData
+    {
+        public string schema_version;
+        public int hole_number;
+        public int tee_count;
+        public float height_m;
+        public BunkerData[] tees;
+    }
+
     // water.json — rasterized mask data (schema v2.0.0)
     [System.Serializable]
     public class WaterFileData

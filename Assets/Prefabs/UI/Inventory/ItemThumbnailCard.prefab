@@ -314,7 +314,7 @@ GameObject:
   - component: {fileID: 233762505762116794}
   - component: {fileID: 3563500425415452135}
   - component: {fileID: 5041725850470508210}
-  - component: {fileID: 463719180700596749}
+  - component: {fileID: 7311266263998865278}
   m_Layer: 0
   m_Name: ItemThumbnailCard
   m_TagString: Untagged
@@ -450,7 +450,7 @@ MonoBehaviour:
   m_FlexibleWidth: 0
   m_FlexibleHeight: 0
   m_LayoutPriority: 1
---- !u!114 &463719180700596749
+--- !u!114 &7311266263998865278
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

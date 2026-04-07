@@ -7,514 +7,170 @@
 
 ---
 
-## Current Task — Water Option 2: Rasterized Quad + Alpha Mask
+## Current Task — Tee Area Auto-Mesh
 
-**Context:** The contour pipeline (traceBorder → RDP → Chaikin) distorts
-large water bodies. RDP straightens curves, Chaikin inflates concave
-sections. Fine for small bunkers, but visually wrong on 50-100m+ lakes
-with complex coastlines. See `Docs/WATER_FINDINGS.md` for full analysis.
-
-**Solution:** Skip contour extraction entirely for water. Export raw pixel
-mask data per region, import as a textured quad in Unity. The mask IS the
-zone map — pixel-perfect boundaries, zero distortion.
+**Goal:** Export tee box contours and import as slightly raised meshes
+in Unity, similar to greens but lower and with less aggressive smoothing.
 
 ---
 
-### Part A: Export — Rasterized water masks (`export-hole.mjs`)
+### Part A: Export (`Tools/UHoleLite/scripts/export-hole.mjs`)
 
-**Replace** the `extractWaterContours()` function and update water export
-in `exportHole()`. Instead of contour points, output per-region pixel masks.
+#### A1. Add optional params to `extractZoneContours()`
 
-#### A1. New function: `extractWaterMasks()`
-
-Replace `extractWaterContours()` with this new function. It reuses the
-existing flood-fill logic from `extractZoneContours()` but outputs mask
-data instead of contours.
-
+Change the signature from:
 ```javascript
-/**
- * Extract water regions as rasterized masks (no contour simplification).
- * Each region gets a bbox-cropped binary mask for pixel-perfect Unity import.
- */
-function extractWaterMasks(zonesData, terrainMeta, minPixels = 50) {
-  const grid = Buffer.from(zonesData.grid, 'base64');
-  const w = zonesData.source_dimensions.width;
-  const h = zonesData.source_dimensions.height;
-  const visited = new Uint8Array(w * h);
-
-  const tw = terrainMeta.terrain_width_m;
-  const tl = terrainMeta.terrain_length_m;
-  const targetZone = 7; // water
-
-  function floodFill(startX, startY) {
-    const pixels = [];
-    const stack = [[startX, startY]];
-    while (stack.length > 0) {
-      const [x, y] = stack.pop();
-      if (x < 0 || x >= w || y < 0 || y >= h) continue;
-      const idx = y * w + x;
-      if (visited[idx] || grid[idx] !== targetZone) continue;
-      visited[idx] = 1;
-      pixels.push([x, y]);
-      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
-    }
-    return pixels;
-  }
-
-  const regions = [];
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (grid[y * w + x] === targetZone && !visited[y * w + x]) {
-        const pixels = floodFill(x, y);
-        if (pixels.length < minPixels) continue;
-
-        // Bounding box in pixel coords
-        const xs = pixels.map(p => p[0]);
-        const ys = pixels.map(p => p[1]);
-        const pxMinX = Math.min(...xs);
-        const pxMaxX = Math.max(...xs);
-        const pxMinY = Math.min(...ys);
-        const pxMaxY = Math.max(...ys);
-
-        const maskW = pxMaxX - pxMinX + 1;
-        const maskH = pxMaxY - pxMinY + 1;
-
-        // Build binary mask cropped to bbox
-        const mask = new Uint8Array(maskW * maskH); // 0 = not water
-        for (const [px, py] of pixels) {
-          const mx = px - pxMinX;
-          const my = py - pxMinY;
-          mask[my * maskW + mx] = 1;
-        }
-
-        // Convert mask to base64
-        const maskBase64 = Buffer.from(mask).toString('base64');
-
-        // Bounding box in local meter coordinates
-        // Same coord system as anchors: (normCoord - 0.5) * terrainSize
-        const bboxMinX = parseFloat(((pxMinX / (w - 1) - 0.5) * tw).toFixed(2));
-        const bboxMaxX = parseFloat(((pxMaxX / (w - 1) - 0.5) * tw).toFixed(2));
-        const bboxMinZ = parseFloat(((pxMinY / (h - 1) - 0.5) * tl).toFixed(2));
-        const bboxMaxZ = parseFloat(((pxMaxY / (h - 1) - 0.5) * tl).toFixed(2));
-
-        regions.push({
-          id: regions.length + 1,
-          pixel_count: pixels.length,
-          bbox: {
-            min_x: bboxMinX,
-            max_x: bboxMaxX,
-            min_z: bboxMinZ,
-            max_z: bboxMaxZ,
-          },
-          mask: maskBase64,
-          mask_width: maskW,
-          mask_height: maskH,
-        });
-      }
-    }
-  }
-
-  // Sort by size (largest first), re-assign IDs
-  regions.sort((a, b) => b.pixel_count - a.pixel_count);
-  regions.forEach((r, i) => { r.id = i + 1; });
-
-  return regions;
-}
+function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8)
+```
+to:
+```javascript
+function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2)
 ```
 
-#### A2. Update `exportHole()` — water section
+Then replace the hardcoded values in the function body:
+- `const RDP_EPSILON = 2.0;` → use the `rdpEpsilon` parameter
+- `smoothPolygon(simplified, 2)` → `smoothPolygon(simplified, smoothPasses)`
 
-Find the water section in `exportHole()` (starts with `// --- Build water.json ---`).
-Replace it with:
+#### A2. Add tee export to `exportHole()`
+
+After the greens export block and before the water export block, add:
 
 ```javascript
-  // --- Build water.json ---
-  const water = extractWaterMasks(zonesData, terrainMeta, 50);
+  // --- Build tees.json ---
+  const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 1.5, 1);
+  // zone 10 = tee_box, min 15px, RDP 1.5 (keep squarer shape), 1 Chaikin pass (smooth but not round)
 
-  const waterOutput = {
-    schema_version: '2.0.0',
+  const teesOutput = {
+    schema_version: '1.0.0',
     hole_number: holeNumber,
-    water_count: water.length,
-    water: water,
+    tee_count: tees.length,
+    height_m: 0.08,
+    tees: tees,
   };
 
   fs.writeFileSync(
-    path.join(exportDir, 'water.json'),
-    JSON.stringify(waterOutput, null, 2),
+    path.join(exportDir, 'tees.json'),
+    JSON.stringify(teesOutput, null, 2),
     'utf-8'
   );
 
-  // Log water mask stats
-  if (water.length > 0) {
-    const maskStats = water.map(w =>
-      `#${w.id}: ${w.mask_width}x${w.mask_height}px (${w.pixel_count}px)`
+  if (tees.length > 0) {
+    const contourStats = tees.map(t =>
+      `#${t.id}: ${t.contour.length}pts`
     ).join(', ');
-    console.log(`  Water masks: ${maskStats}`);
+    console.log(`  Tee contours: ${contourStats}`);
   }
 ```
 
-Also remove `depth_m` from the output — flat planes don't need it.
+#### A3. Update manifest
 
-#### A3. Delete old function
+Add `tees_file: 'tees.json'` to the manifest object (after `greens_file`).
 
-Delete `extractWaterContours()` entirely. It's no longer called.
+#### A4. Update export result
 
-**Do NOT** modify `extractZoneContours()`, `traceBorder()`,
-`simplifyPolygon()`, `smoothPolygon()`, or `ensureCCW()` — bunkers
-and greens still use them.
+Add `teeCount: tees.length` to the return object and update the
+console.log line to include tee count.
 
 ---
 
-### Part B: Import — Rasterized quad meshes (`HoleLiteImporter.cs`)
+### Part B: Import (`Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`)
 
-**File:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
+#### B1. Add tunable constants
 
-#### B1. Update data classes
+Near the existing `ShoreRadius` / `ShoreDepthMeters` statics:
 
-Find the existing `WaterFileData` and `WaterRegionData` classes (they're
-at the bottom of the file or inline). Replace them to match the new
-schema. If they don't exist as named classes, add them:
+```csharp
+/// <summary>Height of tee surface above terrain in meters.</summary>
+public static float TeeHeight = 0.08f;
+/// <summary>Scale factor for tee collar (1.0 = no collar beyond contour).</summary>
+public static float TeeCollarScale = 1.05f;
+```
+
+#### B2. Add `CreateTeeMeshes()` method
+
+Model this after `CreateGreenMeshes()` but with these differences:
+- Uses `tees.json` instead of `greens.json`
+- Uses `TeeHeight` (0.08m) instead of `greenHeight` (0.15m)
+- Uses `TeeCollarScale` (1.05) instead of `greenCollarScale` (1.08)
+- Uses `T_Tee_Albedo` texture for the surface (fall back to
+  `T_Green_Albedo` if not found — tee grass is similar)
+- Uses `T_Semirough_Albedo` for collar (same as green collar)
+- SurfaceMarker: `SurfaceType.Tee` (if it exists, otherwise
+  `SurfaceType.Fairway` as closest match — add a NOTE)
+- Terrain holes: cut at 95% of collar scale (same as greens)
+
+Use `CreateRaisedMesh()` — it already handles contour, collar rings,
+surface mesh, and colliders. Just pass the tee-specific params.
+
+#### B3. Add data classes
 
 ```csharp
 [System.Serializable]
-private class WaterFileData
+private class TeesFileData
 {
     public string schema_version;
     public int hole_number;
-    public int water_count;
-    public WaterRegionData[] water;
+    public int tee_count;
+    public float height_m;
+    public TeeRegionData[] tees;
 }
 
 [System.Serializable]
-private class WaterRegionData
+private class TeeRegionData
 {
     public int id;
     public int pixel_count;
-    public WaterBBox bbox;
-    public string mask;        // base64-encoded binary mask
-    public int mask_width;
-    public int mask_height;
-}
-
-[System.Serializable]
-private class WaterBBox
-{
-    public float min_x;
-    public float max_x;
-    public float min_z;
-    public float max_z;
+    public ContourPoint[] contour;
+    public LocalCoord center_local;
 }
 ```
 
-Remove `contour` field references from any old water data class.
+If `ContourPoint` and `LocalCoord` already exist (from bunker/green
+data classes), reuse them.
 
-#### B2. Replace `CreateWaterMeshes()`
+#### B4. Hook into `ImportLiteHole()`
 
-Replace the entire method. The new version reads bbox + mask, creates
-quads with alpha-cutout textures.
+Add a progress bar step and call `CreateTeeMeshes()` after greens,
+before water:
 
 ```csharp
-private static void CreateWaterMeshes(TerrainData terrainData, GameObject terrainGO,
-    Transform parentRoot, string exportPath, string dataDir, string projectRoot,
-    bool[,] holes)
-{
-    string waterPath = Path.Combine(exportPath, "water.json");
-    if (!File.Exists(waterPath))
-    {
-        Debug.Log("[HoleLiteImporter] No water.json found, skipping");
-        return;
-    }
-
-    string json = File.ReadAllText(waterPath);
-    var waterFile = JsonUtility.FromJson<WaterFileData>(json);
-
-    if (waterFile.water == null || waterFile.water.Length == 0)
-    {
-        Debug.Log("[HoleLiteImporter] No water in water.json");
-        return;
-    }
-
-    var waterRoot = new GameObject("Water");
-    waterRoot.transform.SetParent(parentRoot);
-
-    float waterY = 0.05f; // slightly above flat terrain
-
-    foreach (var water in waterFile.water)
-    {
-        if (string.IsNullOrEmpty(water.mask) || water.mask_width < 1 || water.mask_height < 1)
-            continue;
-
-        // Decode mask
-        byte[] maskBytes = System.Convert.FromBase64String(water.mask);
-        int mw = water.mask_width;
-        int mh = water.mask_height;
-
-        if (maskBytes.Length != mw * mh)
-        {
-            Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: mask size mismatch " +
-                             $"({maskBytes.Length} != {mw}x{mh}={mw * mh}), skipping");
-            continue;
-        }
-
-        // Apply 90° CCW rotation to bbox (same as anchors/contours)
-        // Pre-rotation bbox is in (x, z) = (width_axis, length_axis)
-        // 90° CCW: worldX = local.z, worldZ = local.x
-        float worldMinX = water.bbox.min_z;
-        float worldMaxX = water.bbox.max_z;
-        float worldMinZ = water.bbox.min_x;
-        float worldMaxZ = water.bbox.max_x;
-
-        float quadW = worldMaxX - worldMinX;
-        float quadH = worldMaxZ - worldMinZ;
-        float centerX = (worldMinX + worldMaxX) / 2f;
-        float centerZ = (worldMinZ + worldMaxZ) / 2f;
-
-        // --- Generate SDF texture for smooth edges ---
-        // Compute signed distance field from binary mask.
-        // Inside water = high alpha, outside = low alpha,
-        // boundary = 0.5. Alpha cutoff at 0.5 produces smooth edges.
-
-        // Step 1: Compute distance field using brute-force (mask is small)
-        // For each pixel, find distance to nearest edge pixel.
-        // Edge pixel = water pixel with at least one non-water 4-neighbor.
-        var edgePixels = new System.Collections.Generic.List<int[]>();
-        for (int my = 0; my < mh; my++)
-        {
-            for (int mx = 0; mx < mw; mx++)
-            {
-                if (maskBytes[my * mw + mx] != 1) continue;
-                bool isEdge =
-                    (mx == 0      || maskBytes[my * mw + (mx - 1)] == 0) ||
-                    (mx == mw - 1 || maskBytes[my * mw + (mx + 1)] == 0) ||
-                    (my == 0      || maskBytes[(my - 1) * mw + mx] == 0) ||
-                    (my == mh - 1 || maskBytes[(my + 1) * mw + mx] == 0);
-                if (isEdge)
-                    edgePixels.Add(new int[] { mx, my });
-            }
-        }
-
-        // Step 2: For each pixel, compute min distance to any edge pixel
-        // Positive inside, negative outside. Normalize to 0-1 with 0.5 = edge.
-        float sdfSpread = 3.0f; // pixels of gradient on each side of edge
-        float[] sdfValues = new float[mw * mh];
-
-        for (int my = 0; my < mh; my++)
-        {
-            for (int mx = 0; mx < mw; mx++)
-            {
-                float minDist = float.MaxValue;
-                foreach (var ep in edgePixels)
-                {
-                    float dx = mx - ep[0];
-                    float dy = my - ep[1];
-                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                    if (dist < minDist) minDist = dist;
-                }
-
-                bool isInside = maskBytes[my * mw + mx] == 1;
-                float signedDist = isInside ? minDist : -minDist;
-
-                // Map to 0-1: 0.5 = boundary, 1.0 = deep inside, 0.0 = far outside
-                float alpha = Mathf.Clamp01(0.5f + signedDist / (2f * sdfSpread));
-                sdfValues[my * mw + mx] = alpha;
-            }
-        }
-
-        // Step 3: Build texture with 90° CCW rotation
-        // mask pixel (mx, my) → rotated texture pixel (my, mw-1-mx)
-        int texW = mh;  // rotated dimensions
-        int texH = mw;
-        var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Bilinear;
-        tex.wrapMode = TextureWrapMode.Clamp;
-
-        Color waterColor = new Color(0.18f, 0.40f, 0.58f);
-
-        for (int my = 0; my < mh; my++)
-        {
-            for (int mx = 0; mx < mw; mx++)
-            {
-                float alpha = sdfValues[my * mw + mx];
-                // 90° CCW rotation
-                int tx = my;
-                int ty = mw - 1 - mx;
-                tex.SetPixel(tx, ty, new Color(waterColor.r, waterColor.g, waterColor.b, alpha));
-            }
-        }
-        tex.Apply();
-
-        // Save texture as asset
-        string texPath = $"{dataDir}/WaterMask_{water.id}.png";
-        string fullTexPath = Path.Combine(projectRoot, texPath);
-        File.WriteAllBytes(fullTexPath, tex.EncodeToPNG());
-        Object.DestroyImmediate(tex);
-
-        AssetDatabase.ImportAsset(texPath);
-
-        // Configure texture importer
-        var importer = AssetImporter.GetAtPath(texPath) as TextureImporter;
-        if (importer != null)
-        {
-            importer.textureType = TextureImporterType.Default;
-            importer.alphaIsTransparency = true;
-            importer.filterMode = FilterMode.Bilinear;
-            importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.npotScale = TextureImporterNPOTScale.None;
-            importer.maxTextureSize = 4096;
-            importer.wrapMode = TextureWrapMode.Clamp;
-            importer.SaveAndReimport();
-        }
-
-        var savedTex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
-
-        // --- Create material (alpha cutout) ---
-        string matPath = $"{dataDir}/WaterSurface_{water.id}.mat";
-        var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-        if (existingMat != null)
-            AssetDatabase.DeleteAsset(matPath);
-
-        var mat = new Material(GetLitShader());
-        mat.name = $"WaterSurface_{water.id}";
-        mat.mainTexture = savedTex;
-
-        // Alpha cutout mode
-        mat.SetFloat("_Surface", 0); // 0 = Opaque — we use cutout via AlphaClip
-        mat.SetFloat("_AlphaClip", 1);
-        mat.SetFloat("_Cutoff", 0.5f);
-        mat.SetFloat("_Smoothness", 0.85f);
-        mat.SetFloat("_Metallic", 0.05f);
-        mat.EnableKeyword("_ALPHATEST_ON");
-        mat.renderQueue = 2450; // AlphaTest queue
-
-        AssetDatabase.CreateAsset(mat, matPath);
-
-        // --- Create quad mesh ---
-        var vertices = new Vector3[]
-        {
-            new Vector3(-quadW / 2f, 0f, -quadH / 2f),
-            new Vector3( quadW / 2f, 0f, -quadH / 2f),
-            new Vector3( quadW / 2f, 0f,  quadH / 2f),
-            new Vector3(-quadW / 2f, 0f,  quadH / 2f),
-        };
-        var uvs = new Vector2[]
-        {
-            new Vector2(0, 0),
-            new Vector2(1, 0),
-            new Vector2(1, 1),
-            new Vector2(0, 1),
-        };
-        var triangles = new int[] { 0, 2, 1, 0, 3, 2 };
-
-        var mesh = new Mesh();
-        mesh.name = $"WaterQuad_{water.id}";
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        mesh.uv = uvs;
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-
-        var go = new GameObject($"Water_{water.id}");
-        go.AddComponent<MeshFilter>().sharedMesh = mesh;
-        go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-
-        // MeshCollider uses the same quad — ball collision covers full bbox,
-        // gameplay logic uses SurfaceMarker + zone lookup for precision
-        go.AddComponent<MeshCollider>().sharedMesh = mesh;
-
-        go.transform.position = new Vector3(centerX, waterY, centerZ);
-
-        var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-        marker.surfaceType = Golfin.Course.SurfaceType.Water;
-
-        go.transform.SetParent(waterRoot.transform);
-
-        Debug.Log($"[HoleLiteImporter] Water {water.id}: quad {quadW:F1}x{quadH:F1}m, " +
-                  $"mask {texW}x{texH}px, pos ({centerX:F1}, {waterY}, {centerZ:F1})");
-    }
-
-    // Copy water.json to Assets
-    string destPath = Path.Combine(projectRoot, dataDir, "water.json");
-    File.Copy(waterPath, destPath, true);
-    AssetDatabase.ImportAsset($"{dataDir}/water.json");
-
-    Debug.Log($"[HoleLiteImporter] Created {waterFile.water.Length} water quad(s)");
-}
+EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating tees...", 0.56f);
+CreateTeeMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 ```
 
-#### B3. Delete old methods
+#### B5. Check SurfaceType enum
 
-**Delete** `CreateFlatWaterMesh()` and `CreateWaterMaterial()` entirely.
-They are no longer called.
-
-#### B4. Remove old data classes
-
-If old water data classes reference `contour` fields (like
-`WaterContourPoint` or similar), delete them. The new `WaterRegionData`
-class has `mask`, `bbox`, `mask_width`, `mask_height` instead.
-
----
-
-### Important Notes
-
-**Mask rotation:** The zone grid is in the UHole Lite coordinate system.
-The importer applies 90° CCW rotation to everything (anchors, bunker
-contours, green contours). The mask needs the same rotation. The spec
-handles this by transposing the mask when building the Texture2D:
-`mask(mx, my) → tex(my, mw-1-mx)`.
-
-**Mask coordinate mapping:** The bbox in water.json uses the SAME local
-meter coordinate system as anchors/contours (pre-rotation). The importer
-applies the 90° CCW swap: `worldX = local.z, worldZ = local.x`. This is
-consistent with how bunker and green contours are rotated.
-
-**SDF (Signed Distance Field) texture:** Instead of a binary mask, the
-importer computes a distance field at import time. Each pixel stores its
-distance to the nearest water edge, mapped to 0-1 where 0.5 = the
-boundary. Inside water → high alpha, outside → low alpha. Combined
-with `FilterMode.Bilinear` and alpha cutoff at 0.5, this produces
-perfectly smooth curves at any zoom — same technique as TextMeshPro.
-The `sdfSpread` parameter (3.0 pixels) controls how wide the gradient
-is on each side of the edge. No upscaling needed — works at original
-mask resolution. Computed once at import time, zero runtime cost.
-
-**MeshCollider on the quad:** The quad covers the full bounding box, so
-the collider is larger than the visible water. For gameplay, SurfaceMarker
-detection is the primary mechanism — the collider just prevents the ball
-from falling through.
+Look at `Golfin.Course.SurfaceType` — if `Tee` exists, use it. If not,
+add it. If you'd rather not modify the enum right now, use `Fairway` and
+leave a `// TODO: add SurfaceType.Tee` comment.
 
 ---
 
 ### Verification
 
-1. Re-export Hole 12: `node scripts/export-hole.mjs lomond-country-club 12`
-   - [ ] Console shows mask stats (e.g. `Water masks: #1: 45x82px (2340px)`)
-   - [ ] `water.json` has `schema_version: "2.0.0"`, `bbox`, `mask`, `mask_width`, `mask_height`
-   - [ ] No `contour` field in water.json
-   - [ ] No `depth_m` in water.json
+1. Re-export Hole 1: `node scripts/export-hole.mjs lomond-country-club 1`
+   - [ ] Console shows `Tee contours: #1: Npts, #2: Npts, ...`
+   - [ ] `tees.json` exists in export folder with contour data
+   - [ ] Existing bunker/green/water export unchanged
 
-2. Re-import Hole 12 in Unity: `GOLFIN > Import Hole (Lite) > Hole 12`
-   - [ ] Water appears as blue shapes matching the zone map exactly
-   - [ ] **No shape distortion** — edges follow zone grid pixels
-   - [ ] Edges are **smooth** — no staircase jaggies at land/water boundary
-   - [ ] Each water region has its own `Water_N` GameObject
-   - [ ] Each has `SurfaceMarker` with `SurfaceType.Water`
-   - [ ] Each has `MeshCollider`
-   - [ ] `WaterMask_N.png` and `WaterSurface_N.mat` in data folder
-   - [ ] Bunkers and greens still work (no regression)
+2. Re-import Hole 1 in Unity: `GOLFIN > Import Hole (Lite) > Hole 01`
+   - [ ] Tee areas appear as slightly raised platforms
+   - [ ] Edges are smooth (no jagged staircase)
+   - [ ] Shape is squarer than greens (less rounded)
+   - [ ] Each tee has SurfaceMarker component
+   - [ ] Collar slope visible around tee edges
+   - [ ] Greens, bunkers, water still work
+
+3. Re-import Hole 12 (has water):
+   - [ ] Tees + water + bunkers + greens all coexist
    - [ ] No console errors
-
-3. Re-export and re-import Hole 01 (no water):
-   - [ ] Export skips water gracefully
-   - [ ] Import skips water gracefully (`No water.json found` or `No water`)
 
 ### Do NOT
 
-- Modify `extractZoneContours()`, `traceBorder()`, `simplifyPolygon()`,
-  `smoothPolygon()`, or `ensureCCW()` — bunkers/greens still use them
-- Modify bunker or green mesh generation
-- Modify the splatmap pipeline or `ZoneToLayer()`
-- Change heightmap resolution or terrain holes logic
+- Modify `traceBorder()`, `simplifyPolygon()`, `smoothPolygon()`, `ensureCCW()`
+- Modify bunker, green, or water mesh generation
+- Modify the splatmap or heightmap pipeline
+- Modify shore slope logic
 
 ---
 
@@ -548,9 +204,10 @@ from falling through.
 ✅ DONE: 2026-04-07 — Green zone meshes: contour export, raised mesh, SurfaceMarker component
 ✅ DONE: 2026-04-07 — Green collar: semi-rough slope as separate mesh, collar/surface split
 ✅ DONE: 2026-04-07 — Phase 2 Water Zone Meshes: water contour export + basin mesh importer + transparent material
-✅ DONE: 2026-04-07 — Morphological close for water fragments + re-export. Hole 12: 23→16 regions (radius=3 bridges some gaps, wider gaps persist)
+✅ DONE: 2026-04-07 — Morphological close for water fragments + re-export
 ✅ DONE: 2026-04-07 — Water tree absorption + dilate-only (replaced morphological close)
-✅ DONE: 2026-04-07 — Fix water border gaps: rim expanded to 105%, terrain cut at 100% (was 90%)
+✅ DONE: 2026-04-07 — Fix water border gaps: rim expanded to 105%, terrain cut at 100%
 ✅ DONE: 2026-04-07 — Simplified water to flat plane: no basin, no terrain holes, opaque material
-✅ DONE: 2026-04-07 — Water Option 2: Rasterized quad + alpha mask (pixel-perfect water boundaries, no contour distortion)
-✅ DONE: 2026-04-07 — Water SDF texture: signed distance field for smooth edges (replaces upscale+dilate)
+✅ DONE: 2026-04-07 — Water Option 2: Rasterized quad + alpha mask (pixel-perfect water boundaries)
+✅ DONE: 2026-04-07 — Water SDF texture: signed distance field for smooth edges
+✅ DONE: 2026-04-08 — Water Shore Slope: terrain depression near water edges via heightmap modification at import time

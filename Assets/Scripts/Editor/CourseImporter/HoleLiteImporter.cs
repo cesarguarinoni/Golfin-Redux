@@ -9,6 +9,16 @@ namespace Golfin.CourseImport
 {
     public static class HoleLiteImporter
     {
+        // ─── Tunable Shore Slope Parameters ─────────────────────────
+        /// <summary>Radius in heightmap cells around water to apply slope. At 1025 res, ~0.5m/cell.</summary>
+        public static int ShoreRadius = 2;
+        /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
+        public static float ShoreDepthMeters = 0.1f;
+        /// <summary>Height of tee surface above terrain in meters.</summary>
+        public static float TeeHeight = 0.08f;
+        /// <summary>Scale factor for tee collar (1.0 = no collar beyond contour).</summary>
+        public static float TeeCollarScale = 1.05f;
+
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 01")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 02")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 03")] public static void Lite03() { ImportLiteHole("lomond-country-club", 3); }
@@ -91,7 +101,7 @@ namespace Golfin.CourseImport
                     terrainX, terrainZ);
                 var terrainGO = Terrain.CreateTerrainGameObject(terrainData);
                 terrainGO.name = "TerrainRoot";
-                terrainGO.transform.position = new Vector3(-terrainX / 2f, 0f, -terrainZ / 2f);
+                terrainGO.transform.position = new Vector3(-terrainX / 2f, -ShoreDepthMeters, -terrainZ / 2f);
 
                 // Create holeRoot early so bunkers can be parented to it
                 var holeRoot = new GameObject("HoleRoot");
@@ -107,10 +117,13 @@ namespace Golfin.CourseImport
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating bunkers...", 0.5f);
                 CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating greens...", 0.55f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating greens...", 0.53f);
                 CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating water...", 0.57f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating tees...", 0.56f);
+                CreateTeeMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
+
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating water...", 0.59f);
                 CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
                 terrainData.SetHoles(0, 0, holes);
@@ -194,14 +207,21 @@ namespace Golfin.CourseImport
             string dataDir, string holeId, string projectRoot, float terrainX, float terrainZ)
         {
             int res = manifest.terrain.resolution;
-            // V2 DEV: Use higher heightmap resolution (513) for finer holes grid.
-            // holesResolution = heightmapResolution - 1, so 513 gives 512-cell
-            // holes grid (~1.2m/cell) instead of 128-cell (~5m/cell).
-            // Terrain is flat anyway, so the bigger array costs nothing.
             int actualRes = 1025;
-            float elevRange = 1.0f;  // V2 DEV: flat terrain, nonzero to avoid edge cases
+
+            // Elevation range must accommodate shore depression below Y=0
+            // Total range = ShoreDepthMeters + small buffer for flat terrain variation
+            float elevRange = ShoreDepthMeters + 1.0f;
+
+            // Flat terrain height normalized: maps to world Y=0
+            // terrainGO.position.y = -ShoreDepthMeters, so normalizedFlat * elevRange + (-ShoreDepthMeters) = 0
+            // normalizedFlat = ShoreDepthMeters / elevRange
+            float normalizedFlat = ShoreDepthMeters / elevRange;
+
             float[,] heights = new float[actualRes, actualRes];
-            // All values default to 0.0 — perfectly flat
+            for (int z = 0; z < actualRes; z++)
+                for (int x = 0; x < actualRes; x++)
+                    heights[z, x] = normalizedFlat;
 
             var terrainData = new TerrainData();
             terrainData.heightmapResolution = actualRes;
@@ -1366,6 +1386,131 @@ namespace Golfin.CourseImport
             Debug.Log($"[HoleLiteImporter] Created {greensFile.greens.Length} green(s)");
         }
 
+        // ─── Tee Pipeline ──────────────────────────────────────────────
+
+        private static void CreateTeeMeshes(TerrainData terrainData, GameObject terrainGO,
+            Transform parentRoot, string exportPath, string dataDir, string projectRoot,
+            bool[,] holes)
+        {
+            string teesPath = Path.Combine(exportPath, "tees-mesh.json");
+            if (!File.Exists(teesPath))
+            {
+                Debug.Log("[HoleLiteImporter] No tees-mesh.json found, skipping");
+                return;
+            }
+
+            string json = File.ReadAllText(teesPath);
+            var teesFile = JsonUtility.FromJson<TeesFileData>(json);
+
+            if (teesFile.tees == null || teesFile.tees.Length == 0)
+            {
+                Debug.Log("[HoleLiteImporter] No tees in tees-mesh.json");
+                return;
+            }
+
+            float teeHeight = teesFile.height_m > 0 ? teesFile.height_m : TeeHeight;
+
+            // Try tee-specific texture first, fall back to green (similar grass)
+            string texName = "T_Tee_Albedo";
+            string texPath = System.IO.Path.Combine(dataDir, $"TerrainLayer_{texName}.asset");
+            if (!File.Exists(System.IO.Path.Combine(projectRoot, texPath)))
+                texName = "T_Green_Albedo";
+
+            var teeMat = CreateZoneMaterial(dataDir, projectRoot,
+                "TeeSurface", texName, 3f);
+            var collarMat = CreateZoneMaterial(dataDir, projectRoot,
+                "TeeCollar", "T_Semirough_Albedo", 4f);
+
+            var teesRoot = new GameObject("Tees");
+            teesRoot.transform.SetParent(parentRoot);
+
+            var terrain = terrainGO.GetComponent<Terrain>();
+            float terrainBaseY = terrainGO.transform.position.y;
+            Vector3 terrainPos = terrainGO.transform.position;
+            Vector3 terrainSize = terrainData.size;
+
+            int holesRes = terrainData.holesResolution;
+
+            foreach (var tee in teesFile.tees)
+            {
+                if (tee.contour == null || tee.contour.Length < 3) continue;
+
+                // Apply 90° CCW rotation to contour vertices
+                var worldContour = new Vector2[tee.contour.Length];
+                float sumX = 0, sumZ = 0;
+                for (int i = 0; i < tee.contour.Length; i++)
+                {
+                    float wx = tee.contour[i].z;
+                    float wz = tee.contour[i].x;
+                    worldContour[i] = new Vector2(wx, wz);
+                    sumX += wx;
+                    sumZ += wz;
+                }
+                float centroidX = sumX / worldContour.Length;
+                float centroidZ = sumZ / worldContour.Length;
+
+                // Bounding box should include the collar extent
+                float cMinX = float.MaxValue, cMaxX = float.MinValue;
+                float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
+                foreach (var v in worldContour)
+                {
+                    float wx = centroidX + (v.x - centroidX) * TeeCollarScale;
+                    float wz = centroidZ + (v.y - centroidZ) * TeeCollarScale;
+                    if (wx < cMinX) cMinX = wx;
+                    if (wx > cMaxX) cMaxX = wx;
+                    if (wz < cMinZ) cMinZ = wz;
+                    if (wz > cMaxZ) cMaxZ = wz;
+                }
+
+                // Cut contour at 95% of COLLAR scale
+                var cutContour = new Vector2[worldContour.Length];
+                for (int i = 0; i < worldContour.Length; i++)
+                {
+                    cutContour[i] = new Vector2(
+                        centroidX + (worldContour[i].x - centroidX) * TeeCollarScale * 0.95f,
+                        centroidZ + (worldContour[i].y - centroidZ) * TeeCollarScale * 0.95f);
+                }
+
+                int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+                int hMaxZ = Mathf.Clamp(Mathf.CeilToInt((cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+
+                for (int hz = hMinZ; hz <= hMaxZ; hz++)
+                    for (int hx = hMinX; hx <= hMaxX; hx++)
+                    {
+                        float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
+                        float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
+                        if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
+                            holes[hz, hx] = false;
+                    }
+
+                // Create raised mesh
+                float surfaceY = terrainBaseY + terrain.SampleHeight(
+                    new Vector3(centroidX, 0, centroidZ));
+
+                var meshGO = CreateRaisedMesh(tee.id, "Tee", worldContour,
+                    centroidX, centroidZ, surfaceY, teeHeight, teeMat,
+                    terrain, terrainBaseY, collarMat, TeeCollarScale);
+                meshGO.transform.SetParent(teesRoot.transform);
+
+                // Find the surface child and add Tee marker
+                var surfaceChild = meshGO.transform.Find($"Tee_{tee.id}_Surface");
+                if (surfaceChild != null)
+                {
+                    var marker = surfaceChild.gameObject.AddComponent<Golfin.Course.SurfaceMarker>();
+                    marker.surfaceType = Golfin.Course.SurfaceType.Tee;
+                }
+            }
+
+            // Copy tees-mesh.json to Assets
+            string destPath = Path.Combine(projectRoot, dataDir, "tees-mesh.json");
+            File.Copy(teesPath, destPath, true);
+            AssetDatabase.ImportAsset($"{dataDir}/tees-mesh.json");
+
+            Debug.Log($"[HoleLiteImporter] Created {teesFile.tees.Length} tee(s)");
+        }
+
         private static GameObject CreateRaisedMesh(int id, string zoneName,
             Vector2[] contour, float centroidX, float centroidZ,
             float surfaceY, float height, Material surfaceMat,
@@ -1765,6 +1910,128 @@ namespace Golfin.CourseImport
 
                 Debug.Log($"[HoleLiteImporter] Water {water.id}: quad {quadW:F1}x{quadH:F1}m, " +
                           $"mask {texW}x{texH}px, pos ({centerX:F1}, {waterY}, {centerZ:F1})");
+            }
+
+            // ─── Shore slope pass: depress terrain near water edges ──────────
+            if (ShoreRadius > 0 && ShoreDepthMeters > 0f)
+            {
+                int hRes = terrainData.heightmapResolution;
+                float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
+                float elevRange = terrainData.size.y;
+                float normalizedFlat = ShoreDepthMeters / elevRange;
+
+                // Build water mask on the heightmap grid using zone data
+                string zonesPath = Path.Combine(exportPath, "zones.json");
+                bool[,] isWater = new bool[hRes, hRes];
+
+                if (File.Exists(zonesPath))
+                {
+                    string zonesJson = File.ReadAllText(zonesPath);
+                    var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
+                    byte[] grid = System.Convert.FromBase64String(zonesData.grid);
+                    int zw = zonesData.source_dimensions.width;
+                    int zh = zonesData.source_dimensions.height;
+
+                    for (int hz = 0; hz < hRes; hz++)
+                    {
+                        for (int hx = 0; hx < hRes; hx++)
+                        {
+                            // Map heightmap cell to zone grid
+                            // Heightmap uses 90° CCW rotation from zone grid
+                            float normX = (float)hx / (hRes - 1);
+                            float normZ = (float)hz / (hRes - 1);
+
+                            // Reverse the 90° CCW: zone.x = normZ, zone.y = normX
+                            int zx = Mathf.Clamp(Mathf.RoundToInt(normZ * (zw - 1)), 0, zw - 1);
+                            int zy = Mathf.Clamp(Mathf.RoundToInt(normX * (zh - 1)), 0, zh - 1);
+
+                            if (grid[zy * zw + zx] == 7) // 7 = water zone
+                                isWater[hz, hx] = true;
+                        }
+                    }
+                }
+
+                // Chamfer distance transform (approximate Euclidean)
+                float[,] distToWater = new float[hRes, hRes];
+                for (int z = 0; z < hRes; z++)
+                    for (int x = 0; x < hRes; x++)
+                        distToWater[z, x] = isWater[z, x] ? 0f : float.MaxValue;
+
+                // Forward pass
+                for (int z = 0; z < hRes; z++)
+                {
+                    for (int x = 0; x < hRes; x++)
+                    {
+                        if (x > 0)
+                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z, x - 1] + 1f);
+                        if (z > 0)
+                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z - 1, x] + 1f);
+                        if (x > 0 && z > 0)
+                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z - 1, x - 1] + 1.414f);
+                        if (x < hRes - 1 && z > 0)
+                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z - 1, x + 1] + 1.414f);
+                    }
+                }
+
+                // Backward pass
+                for (int z = hRes - 1; z >= 0; z--)
+                {
+                    for (int x = hRes - 1; x >= 0; x--)
+                    {
+                        if (x < hRes - 1)
+                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z, x + 1] + 1f);
+                        if (z < hRes - 1)
+                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z + 1, x] + 1f);
+                        if (x < hRes - 1 && z < hRes - 1)
+                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z + 1, x + 1] + 1.414f);
+                        if (x > 0 && z < hRes - 1)
+                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z + 1, x - 1] + 1.414f);
+                    }
+                }
+
+                // Apply depression
+                int depressedCount = 0;
+                for (int z = 0; z < hRes; z++)
+                {
+                    for (int x = 0; x < hRes; x++)
+                    {
+                        if (isWater[z, x]) continue; // don't touch water cells
+                        float dist = distToWater[z, x];
+                        if (dist > ShoreRadius) continue;
+
+                        // Smoothstep falloff: 1.0 at water edge → 0.0 at radius
+                        float t = dist / ShoreRadius;
+                        float blend = 1f - (t * t * (3f - 2f * t));
+
+                        // Target: water-level height in normalized space
+                        // Water is at world Y=0.05, terrain base at -ShoreDepthMeters
+                        // Normalized water height = (0.05 + ShoreDepthMeters) / elevRange
+                        float normalizedWaterH = (0.05f + ShoreDepthMeters) / elevRange;
+                        // We want shore to dip most of the way to water but not below it
+                        float targetH = Mathf.Lerp(normalizedFlat, normalizedWaterH, 0.85f);
+
+                        heights[z, x] = Mathf.Lerp(normalizedFlat, targetH, blend);
+                        depressedCount++;
+                    }
+                }
+
+                // Also depress water cells themselves to below water surface
+                // so terrain doesn't poke through the water quad
+                float normalizedUnderwater = (ShoreDepthMeters - 0.5f) / elevRange;
+                // Clamp to minimum 0 (can't go below terrain bounds)
+                normalizedUnderwater = Mathf.Max(0f, normalizedUnderwater);
+                for (int z = 0; z < hRes; z++)
+                {
+                    for (int x = 0; x < hRes; x++)
+                    {
+                        if (isWater[z, x])
+                            heights[z, x] = normalizedUnderwater;
+                    }
+                }
+
+                terrainData.SetHeights(0, 0, heights);
+                Debug.Log($"[HoleLiteImporter] Shore slope: depressed {depressedCount} cells, " +
+                          $"radius={ShoreRadius}, depth={ShoreDepthMeters:F1}m");
             }
 
             // Copy water.json to Assets

@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-04-06 10:29. Do not edit manually.
+> Auto-generated 2026-04-07 19:09. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -11,7 +11,9 @@ Assets/Scripts/BagManager.cs
 Assets/Scripts/BallManager.cs
 Assets/Scripts/CharacterManager.cs
 Assets/Scripts/ClubManager.cs
+Assets/Scripts/Course/SurfaceMarker.cs
 Assets/Scripts/Debug/RewardPointsDebugPanel.cs
+Assets/Scripts/Debug/WalkCamera.cs
 Assets/Scripts/Editor/Archive/ClubDetailPanelBuilder.cs
 Assets/Scripts/Editor/Archive/ClubInventoryPatcher.cs
 Assets/Scripts/Editor/Archive/CompareRightPanelBuilder.cs
@@ -30,8 +32,12 @@ Assets/Scripts/Editor/Archive/RosterSystemSetupTool.cs
 Assets/Scripts/Editor/BagDatabaseCSVSetup.cs
 Assets/Scripts/Editor/BagManagerSetup.cs
 Assets/Scripts/Editor/BagSelectionModalAutoWire.cs
+Assets/Scripts/Editor/CourseImporter/HoleImporter.cs
+Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs
+Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs
 Assets/Scripts/Editor/ItemManagerSetup.cs
 Assets/Scripts/Editor/ScreenshotTool.cs
+Assets/Scripts/HoleMetadata.cs
 Assets/Scripts/ItemManager.cs
 Assets/Scripts/UI/AboutSubmenu.cs
 Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs
@@ -175,9 +181,12 @@ Assets/Data/README_HOLES.md.meta
 | BallManager | Assets/Scripts/BallManager.cs | Yes |  |
 | CharacterManager | Assets/Scripts/CharacterManager.cs | Yes |  |
 | ClubManager | Assets/Scripts/ClubManager.cs | Yes |  |
+| HoleMetadata | Assets/Scripts/HoleMetadata.cs |  |  |
 | ItemManager | Assets/Scripts/ItemManager.cs | Yes |  |
 | AudioManager | Assets/Scripts/Audio/AudioManager.cs | Yes |  |
+| SurfaceMarker | Assets/Scripts/Course/SurfaceMarker.cs |  |  |
 | RewardPointsDebugPanel | Assets/Scripts/Debug/RewardPointsDebugPanel.cs | Yes |  |
+| WalkCamera | Assets/Scripts/Debug/WalkCamera.cs |  |  |
 | ExampleAutoWireScreen | Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs |  |  |
 | ExampleFullyAutoWired | Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs |  |  |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs |  |  |

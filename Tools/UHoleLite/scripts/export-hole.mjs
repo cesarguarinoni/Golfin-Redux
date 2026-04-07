@@ -154,7 +154,7 @@ function ensureCCW(polygon) {
   return polygon;
 }
 
-function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8) {
+function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2) {
   const grid = Buffer.from(zonesData.grid, 'base64');
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
@@ -220,16 +220,15 @@ function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8) 
         // Simplify then smooth
         // Close the polygon for RDP so the start/end seam gets simplified
         // (otherwise RDP anchors the first & last point, creating a pointy tip)
-        const RDP_EPSILON = 2.0;
         const closed = [...contourMeters, contourMeters[0]];  // duplicate first pt
-        let simplified = simplifyPolygon(closed, RDP_EPSILON);
+        let simplified = simplifyPolygon(closed, rdpEpsilon);
         // Remove the duplicate closing point
         if (simplified.length > 1 &&
             simplified[0].x === simplified[simplified.length - 1].x &&
             simplified[0].z === simplified[simplified.length - 1].z) {
           simplified = simplified.slice(0, -1);
         }
-        contourMeters = smoothPolygon(simplified, 2);
+        contourMeters = smoothPolygon(simplified, smoothPasses);
         contourMeters = ensureCCW(contourMeters);
 
         regions.push({
@@ -404,6 +403,7 @@ function exportHole(courseId, holeNumber, courseJson) {
     zones_file: 'zones.json',
     bunkers_file: 'bunkers.json',
     greens_file: 'greens.json',
+    tees_file: 'tees-mesh.json',
     water_file: 'water.json',
     review_status: 'auto-generated',
   };
@@ -486,6 +486,31 @@ function exportHole(courseId, holeNumber, courseJson) {
     console.log(`  Green contours: ${contourStats}`);
   }
 
+  // --- Build tees.json ---
+  const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 1.5, 1);
+  // zone 10 = tee_box, min 15px, RDP 1.5 (keep squarer shape), 1 Chaikin pass (smooth but not round)
+
+  const teesOutput = {
+    schema_version: '1.0.0',
+    hole_number: holeNumber,
+    tee_count: tees.length,
+    height_m: 0.08,
+    tees: tees,
+  };
+
+  fs.writeFileSync(
+    path.join(exportDir, 'tees-mesh.json'),
+    JSON.stringify(teesOutput, null, 2),
+    'utf-8'
+  );
+
+  if (tees.length > 0) {
+    const contourStats = tees.map(t =>
+      `#${t.id}: ${t.contour.length}pts`
+    ).join(', ');
+    console.log(`  Tee contours: ${contourStats}`);
+  }
+
   // --- Build water.json ---
   const water = extractWaterMasks(zonesData, terrainMeta, 50);
 
@@ -520,6 +545,7 @@ function exportHole(courseId, holeNumber, courseJson) {
     anchorCount: anchors.length,
     bunkerCount: bunkers.length,
     greenCount: greens.length,
+    teeCount: tees.length,
     waterCount: water.length,
   };
 }
@@ -565,7 +591,7 @@ async function main() {
       console.log(`OK  export/hole-${nn}/  par=${m.par}  ${m.championship_yards}yd  ` +
         `${m.terrain.terrain_width_m}×${m.terrain.terrain_length_m}m  ` +
         `${result.anchorCount} anchors  ${result.bunkerCount} bunkers  ` +
-        `${result.greenCount} greens  ${result.waterCount} water`);
+        `${result.greenCount} greens  ${result.teeCount} tees  ${result.waterCount} water`);
       successCount++;
     } else {
       console.log('FAILED');
