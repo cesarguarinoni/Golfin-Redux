@@ -112,6 +112,35 @@ function perpendicularDistance(point, lineStart, lineEnd) {
 }
 
 /**
+ * Chaikin's corner-cutting subdivision for smoothing polygons.
+ * Each iteration replaces each edge with two new points at 25%/75%,
+ * rounding off corners. For closed polygons.
+ */
+function smoothPolygon(polygon, iterations = 2) {
+  let pts = polygon;
+  for (let iter = 0; iter < iterations; iter++) {
+    const smoothed = [];
+    const n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const curr = pts[i];
+      const next = pts[(i + 1) % n];
+      // Q = 75% curr + 25% next
+      smoothed.push({
+        x: parseFloat((0.75 * curr.x + 0.25 * next.x).toFixed(2)),
+        z: parseFloat((0.75 * curr.z + 0.25 * next.z).toFixed(2)),
+      });
+      // R = 25% curr + 75% next
+      smoothed.push({
+        x: parseFloat((0.25 * curr.x + 0.75 * next.x).toFixed(2)),
+        z: parseFloat((0.25 * curr.z + 0.75 * next.z).toFixed(2)),
+      });
+    }
+    pts = smoothed;
+  }
+  return pts;
+}
+
+/**
  * Ensure polygon has counter-clockwise winding (shoelace formula).
  */
 function ensureCCW(polygon) {
@@ -191,9 +220,10 @@ function extractBunkers(zonesData, terrainMeta) {
           z: parseFloat(((by / (h - 1) - 0.5) * tl).toFixed(2)),
         }));
 
-        // Simplify (epsilon in meters — start conservative)
-        const RDP_EPSILON = 1.5;
+        // Simplify then smooth
+        const RDP_EPSILON = 2.0;  // slightly more aggressive (Chaikin adds vertices back)
         contourMeters = simplifyPolygon(contourMeters, RDP_EPSILON);
+        contourMeters = smoothPolygon(contourMeters, 2);
         contourMeters = ensureCCW(contourMeters);
 
         bunkers.push({

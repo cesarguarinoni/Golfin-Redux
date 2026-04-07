@@ -6,19 +6,25 @@
 
 ---
 
-## Current Task — Bunker V2: Flat Terrain + Contour Mesh Importer
+## Current Task — Re-import After Contour Smoothing
 
-**Reference:** `Docs/BUNKER_V2_SPEC.md` for full architecture.
+The UHole Lite export now produces smoothed contours (Chaikin subdivision).
+The Unity importer code (`CreateZoneMeshes` / `CreateContourMesh`) is
+already correct — it uses whatever contour vertices it receives.
 
-Two changes to `HoleLiteImporter.cs`:
+> **IMPORTANT:** Run `Tools/UHoleLite/docs/TASK.md` first (contour
+> smoothing), re-export hole 01, THEN re-import in Unity.
 
-1. **Flatten terrain** (skip heightmap — all heights = 0)
-2. **Replace `CreateBunkers()` with `CreateZoneMeshes()`** that uses
-   contour polygons from bunkers.json V2
+### Steps
 
-> **IMPORTANT:** Task 1 (contour export) must be done first on the UHole
-> Lite side — see `Tools/UHoleLite/docs/TASK.md`. Do that task first,
-> re-export hole 01, THEN come back here.
+1. In UHole Lite: `node scripts/export-hole.mjs lomond-country-club 1`
+2. In Unity: `GOLFIN > Import Hole (Lite) > Hole 01`
+3. Verify bunker shapes are now smooth (rounded curves, not angular)
+4. Verify terrain hole cuts follow the contour (not rectangular)
+5. Check rim edges are flush, no z-fighting, no terrain bleed-through
+
+If the Unity importer is NOT already updated with `CreateZoneMeshes` /
+`CreateContourMesh`, apply the changes below first.
 
 ---
 
@@ -472,3 +478,5 @@ Re-import Hole 01: `GOLFIN > Import Hole (Lite) > Hole 01`
 ✅ DONE: 2026-04-07 — Phase K-Surface Validation: Test Terrain Layers + Test Zone Alignment debug tools
 ✅ DONE: 2026-04-07 — Phase K-Surface Task 1: Splatmap importer — ApplySplatmap() with 8 terrain layers, zone grid resampling, fringe ring, Gaussian blur, fallback to illustration texture
 ✅ DONE: 2026-04-07 — V1 Bunker meshes (bounding-box bowls, SetHoles, terrain-following lip, multiple iterations)
+✅ DONE: 2026-04-07 — Bunker V2: contour export (traceBorder+RDP+CCW), flat terrain, contour mesh importer (CreateZoneMeshes+CreateContourMesh)
+✅ DONE: 2026-04-07 — Contour smoothing: Chaikin subdivision (2 iterations), RDP epsilon 2.0, all 18 holes re-exported with smooth contours
