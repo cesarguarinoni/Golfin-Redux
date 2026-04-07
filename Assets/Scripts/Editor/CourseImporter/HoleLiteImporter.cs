@@ -1609,8 +1609,9 @@ namespace Golfin.CourseImport
                 float centerZ = (worldMinZ + worldMaxZ) / 2f;
 
                 // --- Generate alpha mask texture ---
-                // After 90° CCW: mask rows (Y) map to world Z, mask cols (X) map to world X
-                // Transpose the mask: mask pixel (mx, my) → rotated texture pixel (my, mw-1-mx)
+                // 90° CCW rotation: U→worldX=local.z (increases with my),
+                //                   V→worldZ=local.x (increases with mx)
+                // Simple transpose: mask(mx, my) → tex(my, mx)
                 int texW = mh;  // rotated dimensions
                 int texH = mw;
                 var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
@@ -1625,9 +1626,8 @@ namespace Golfin.CourseImport
                     for (int mx = 0; mx < mw; mx++)
                     {
                         bool isWater = maskBytes[my * mw + mx] == 1;
-                        // 90° CCW rotation of mask pixels
                         int tx = my;
-                        int ty = mw - 1 - mx;
+                        int ty = mx;
                         tex.SetPixel(tx, ty, isWater ? waterColor : clearColor);
                     }
                 }
