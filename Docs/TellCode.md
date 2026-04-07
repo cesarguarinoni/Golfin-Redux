@@ -270,28 +270,76 @@ private static void CreateWaterMeshes(TerrainData terrainData, GameObject terrai
         float centerX = (worldMinX + worldMaxX) / 2f;
         float centerZ = (worldMinZ + worldMaxZ) / 2f;
 
-        // --- Generate alpha mask texture ---
-        // After 90° CCW: mask rows (Y) map to world Z, mask cols (X) map to world X
-        // But since we rotated, we need to transpose the mask:
-        // mask pixel (mx, my) → rotated texture pixel (my, mw-1-mx)
-        int texW = mh;  // rotated dimensions
-        int texH = mw;
-        var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Point; // crisp pixel edges
-        tex.wrapMode = TextureWrapMode.Clamp;
+        // --- Generate SDF texture for smooth edges ---
+        // Compute signed distance field from binary mask.
+        // Inside water = high alpha, outside = low alpha,
+        // boundary = 0.5. Alpha cutoff at 0.5 produces smooth edges.
 
-        Color waterColor = new Color(0.18f, 0.40f, 0.58f, 1.0f);
-        Color clearColor = new Color(0f, 0f, 0f, 0f);
+        // Step 1: Compute distance field using brute-force (mask is small)
+        // For each pixel, find distance to nearest edge pixel.
+        // Edge pixel = water pixel with at least one non-water 4-neighbor.
+        var edgePixels = new System.Collections.Generic.List<int[]>();
+        for (int my = 0; my < mh; my++)
+        {
+            for (int mx = 0; mx < mw; mx++)
+            {
+                if (maskBytes[my * mw + mx] != 1) continue;
+                bool isEdge =
+                    (mx == 0      || maskBytes[my * mw + (mx - 1)] == 0) ||
+                    (mx == mw - 1 || maskBytes[my * mw + (mx + 1)] == 0) ||
+                    (my == 0      || maskBytes[(my - 1) * mw + mx] == 0) ||
+                    (my == mh - 1 || maskBytes[(my + 1) * mw + mx] == 0);
+                if (isEdge)
+                    edgePixels.Add(new int[] { mx, my });
+            }
+        }
+
+        // Step 2: For each pixel, compute min distance to any edge pixel
+        // Positive inside, negative outside. Normalize to 0-1 with 0.5 = edge.
+        float sdfSpread = 3.0f; // pixels of gradient on each side of edge
+        float[] sdfValues = new float[mw * mh];
 
         for (int my = 0; my < mh; my++)
         {
             for (int mx = 0; mx < mw; mx++)
             {
-                bool isWater = maskBytes[my * mw + mx] == 1;
-                // 90° CCW rotation of mask pixels
+                float minDist = float.MaxValue;
+                foreach (var ep in edgePixels)
+                {
+                    float dx = mx - ep[0];
+                    float dy = my - ep[1];
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist < minDist) minDist = dist;
+                }
+
+                bool isInside = maskBytes[my * mw + mx] == 1;
+                float signedDist = isInside ? minDist : -minDist;
+
+                // Map to 0-1: 0.5 = boundary, 1.0 = deep inside, 0.0 = far outside
+                float alpha = Mathf.Clamp01(0.5f + signedDist / (2f * sdfSpread));
+                sdfValues[my * mw + mx] = alpha;
+            }
+        }
+
+        // Step 3: Build texture with 90° CCW rotation
+        // mask pixel (mx, my) → rotated texture pixel (my, mw-1-mx)
+        int texW = mh;  // rotated dimensions
+        int texH = mw;
+        var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color waterColor = new Color(0.18f, 0.40f, 0.58f);
+
+        for (int my = 0; my < mh; my++)
+        {
+            for (int mx = 0; mx < mw; mx++)
+            {
+                float alpha = sdfValues[my * mw + mx];
+                // 90° CCW rotation
                 int tx = my;
                 int ty = mw - 1 - mx;
-                tex.SetPixel(tx, ty, isWater ? waterColor : clearColor);
+                tex.SetPixel(tx, ty, new Color(waterColor.r, waterColor.g, waterColor.b, alpha));
             }
         }
         tex.Apply();
@@ -310,7 +358,7 @@ private static void CreateWaterMeshes(TerrainData terrainData, GameObject terrai
         {
             importer.textureType = TextureImporterType.Default;
             importer.alphaIsTransparency = true;
-            importer.filterMode = FilterMode.Point;
+            importer.filterMode = FilterMode.Bilinear;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.npotScale = TextureImporterNPOTScale.None;
             importer.maxTextureSize = 4096;
@@ -420,8 +468,15 @@ meter coordinate system as anchors/contours (pre-rotation). The importer
 applies the 90° CCW swap: `worldX = local.z, worldZ = local.x`. This is
 consistent with how bunker and green contours are rotated.
 
-**FilterMode.Point:** Keeps pixel edges crisp — no blurring between
-water and non-water pixels. This is intentional for pixel-perfect match.
+**SDF (Signed Distance Field) texture:** Instead of a binary mask, the
+importer computes a distance field at import time. Each pixel stores its
+distance to the nearest water edge, mapped to 0-1 where 0.5 = the
+boundary. Inside water → high alpha, outside → low alpha. Combined
+with `FilterMode.Bilinear` and alpha cutoff at 0.5, this produces
+perfectly smooth curves at any zoom — same technique as TextMeshPro.
+The `sdfSpread` parameter (3.0 pixels) controls how wide the gradient
+is on each side of the edge. No upscaling needed — works at original
+mask resolution. Computed once at import time, zero runtime cost.
 
 **MeshCollider on the quad:** The quad covers the full bounding box, so
 the collider is larger than the visible water. For gameplay, SurfaceMarker
@@ -441,7 +496,7 @@ from falling through.
 2. Re-import Hole 12 in Unity: `GOLFIN > Import Hole (Lite) > Hole 12`
    - [ ] Water appears as blue shapes matching the zone map exactly
    - [ ] **No shape distortion** — edges follow zone grid pixels
-   - [ ] Edges are crisp (no blur between water/non-water)
+   - [ ] Edges are **smooth** — no staircase jaggies at land/water boundary
    - [ ] Each water region has its own `Water_N` GameObject
    - [ ] Each has `SurfaceMarker` with `SurfaceType.Water`
    - [ ] Each has `MeshCollider`
@@ -498,3 +553,4 @@ from falling through.
 ✅ DONE: 2026-04-07 — Fix water border gaps: rim expanded to 105%, terrain cut at 100% (was 90%)
 ✅ DONE: 2026-04-07 — Simplified water to flat plane: no basin, no terrain holes, opaque material
 ✅ DONE: 2026-04-07 — Water Option 2: Rasterized quad + alpha mask (pixel-perfect water boundaries, no contour distortion)
+✅ DONE: 2026-04-07 — Water SDF texture: signed distance field for smooth edges (replaces upscale+dilate)
