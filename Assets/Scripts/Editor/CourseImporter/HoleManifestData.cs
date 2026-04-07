@@ -20,6 +20,7 @@ namespace Golfin.CourseImport
         public LiteTextureInfo texture;   // UHole Lite only — single texture PNG
         public string anchors_file;
         public string bunkers_file;
+        public string greens_file;
         public int anchor_count;
         public ManifestTransform transform;
         public string review_status;
@@ -179,6 +180,47 @@ namespace Golfin.CourseImport
     {
         public float w;
         public float h;
+    }
+
+    // greens.json — reuses BunkerData since green regions have the same contour format
+    [System.Serializable]
+    public class GreensFileData
+    {
+        public string schema_version;
+        public int hole_number;
+        public int green_count;
+        public float height_m;
+        public BunkerData[] greens;
+    }
+
+    // water.json — rasterized mask data (schema v2.0.0)
+    [System.Serializable]
+    public class WaterFileData
+    {
+        public string schema_version;
+        public int hole_number;
+        public int water_count;
+        public WaterRegionData[] water;
+    }
+
+    [System.Serializable]
+    public class WaterRegionData
+    {
+        public int id;
+        public int pixel_count;
+        public WaterBBox bbox;
+        public string mask;        // base64-encoded binary mask
+        public int mask_width;
+        public int mask_height;
+    }
+
+    [System.Serializable]
+    public class WaterBBox
+    {
+        public float min_x;
+        public float max_x;
+        public float min_z;
+        public float max_z;
     }
 
     // zones.json — zone grid data for splatmap pipeline

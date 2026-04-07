@@ -154,10 +154,7 @@ function ensureCCW(polygon) {
   return polygon;
 }
 
-function extractBunkers(zonesData, terrainMeta) {
-  const BUNKER_ZONE = 6;
-  const MIN_PIXELS = 8;  // ignore tiny noise regions
-
+function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8) {
   const grid = Buffer.from(zonesData.grid, 'base64');
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
@@ -166,7 +163,7 @@ function extractBunkers(zonesData, terrainMeta) {
   const tw = terrainMeta.terrain_width_m;
   const tl = terrainMeta.terrain_length_m;
 
-  // Flood-fill to find connected bunker regions
+  // Flood-fill to find connected regions
   function floodFill(startX, startY) {
     const pixels = [];
     const stack = [[startX, startY]];
@@ -174,7 +171,7 @@ function extractBunkers(zonesData, terrainMeta) {
       const [x, y] = stack.pop();
       if (x < 0 || x >= w || y < 0 || y >= h) continue;
       const idx = y * w + x;
-      if (visited[idx] || grid[idx] !== BUNKER_ZONE) continue;
+      if (visited[idx] || grid[idx] !== targetZone) continue;
       visited[idx] = 1;
       pixels.push([x, y]);
       stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
@@ -182,13 +179,13 @@ function extractBunkers(zonesData, terrainMeta) {
     return pixels;
   }
 
-  const bunkers = [];
+  const regions = [];
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (grid[y * w + x] === BUNKER_ZONE && !visited[y * w + x]) {
+      if (grid[y * w + x] === targetZone && !visited[y * w + x]) {
         const pixels = floodFill(x, y);
-        if (pixels.length < MIN_PIXELS) continue;
+        if (pixels.length < minPixels) continue;
 
         const xs = pixels.map(p => p[0]);
         const ys = pixels.map(p => p[1]);
@@ -212,7 +209,7 @@ function extractBunkers(zonesData, terrainMeta) {
         const sizeZ = parseFloat((normH * tl).toFixed(2));
 
         // --- Trace contour ---
-        const borderPixels = traceBorder(grid, w, h, pixels, BUNKER_ZONE);
+        const borderPixels = traceBorder(grid, w, h, pixels, targetZone);
 
         // Convert border pixels to local meter coordinates
         let contourMeters = borderPixels.map(([bx, by]) => ({
@@ -221,13 +218,22 @@ function extractBunkers(zonesData, terrainMeta) {
         }));
 
         // Simplify then smooth
-        const RDP_EPSILON = 2.0;  // slightly more aggressive (Chaikin adds vertices back)
-        contourMeters = simplifyPolygon(contourMeters, RDP_EPSILON);
-        contourMeters = smoothPolygon(contourMeters, 2);
+        // Close the polygon for RDP so the start/end seam gets simplified
+        // (otherwise RDP anchors the first & last point, creating a pointy tip)
+        const RDP_EPSILON = 2.0;
+        const closed = [...contourMeters, contourMeters[0]];  // duplicate first pt
+        let simplified = simplifyPolygon(closed, RDP_EPSILON);
+        // Remove the duplicate closing point
+        if (simplified.length > 1 &&
+            simplified[0].x === simplified[simplified.length - 1].x &&
+            simplified[0].z === simplified[simplified.length - 1].z) {
+          simplified = simplified.slice(0, -1);
+        }
+        contourMeters = smoothPolygon(simplified, 2);
         contourMeters = ensureCCW(contourMeters);
 
-        bunkers.push({
-          id: bunkers.length + 1,
+        regions.push({
+          id: regions.length + 1,
           pixel_count: pixels.length,
           contour: contourMeters,
           center_local: { x: localX, z: localZ },
@@ -246,11 +252,101 @@ function extractBunkers(zonesData, terrainMeta) {
   }
 
   // Sort by size (largest first)
-  bunkers.sort((a, b) => b.pixel_count - a.pixel_count);
+  regions.sort((a, b) => b.pixel_count - a.pixel_count);
   // Re-assign IDs after sort
-  bunkers.forEach((b, i) => { b.id = i + 1; });
+  regions.forEach((b, i) => { b.id = i + 1; });
 
-  return bunkers;
+  return regions;
+}
+
+/**
+ * Extract water regions as rasterized masks (no contour simplification).
+ * Each region gets a bbox-cropped binary mask for pixel-perfect Unity import.
+ */
+function extractWaterMasks(zonesData, terrainMeta, minPixels = 50) {
+  const grid = Buffer.from(zonesData.grid, 'base64');
+  const w = zonesData.source_dimensions.width;
+  const h = zonesData.source_dimensions.height;
+  const visited = new Uint8Array(w * h);
+
+  const tw = terrainMeta.terrain_width_m;
+  const tl = terrainMeta.terrain_length_m;
+  const targetZone = 7; // water
+
+  function floodFill(startX, startY) {
+    const pixels = [];
+    const stack = [[startX, startY]];
+    while (stack.length > 0) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= w || y < 0 || y >= h) continue;
+      const idx = y * w + x;
+      if (visited[idx] || grid[idx] !== targetZone) continue;
+      visited[idx] = 1;
+      pixels.push([x, y]);
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+    return pixels;
+  }
+
+  const regions = [];
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (grid[y * w + x] === targetZone && !visited[y * w + x]) {
+        const pixels = floodFill(x, y);
+        if (pixels.length < minPixels) continue;
+
+        // Bounding box in pixel coords
+        const xs = pixels.map(p => p[0]);
+        const ys = pixels.map(p => p[1]);
+        const pxMinX = Math.min(...xs);
+        const pxMaxX = Math.max(...xs);
+        const pxMinY = Math.min(...ys);
+        const pxMaxY = Math.max(...ys);
+
+        const maskW = pxMaxX - pxMinX + 1;
+        const maskH = pxMaxY - pxMinY + 1;
+
+        // Build binary mask cropped to bbox
+        const mask = new Uint8Array(maskW * maskH); // 0 = not water
+        for (const [px, py] of pixels) {
+          const mx = px - pxMinX;
+          const my = py - pxMinY;
+          mask[my * maskW + mx] = 1;
+        }
+
+        // Convert mask to base64
+        const maskBase64 = Buffer.from(mask).toString('base64');
+
+        // Bounding box in local meter coordinates
+        // Same coord system as anchors: (normCoord - 0.5) * terrainSize
+        const bboxMinX = parseFloat(((pxMinX / (w - 1) - 0.5) * tw).toFixed(2));
+        const bboxMaxX = parseFloat(((pxMaxX / (w - 1) - 0.5) * tw).toFixed(2));
+        const bboxMinZ = parseFloat(((pxMinY / (h - 1) - 0.5) * tl).toFixed(2));
+        const bboxMaxZ = parseFloat(((pxMaxY / (h - 1) - 0.5) * tl).toFixed(2));
+
+        regions.push({
+          id: regions.length + 1,
+          pixel_count: pixels.length,
+          bbox: {
+            min_x: bboxMinX,
+            max_x: bboxMaxX,
+            min_z: bboxMinZ,
+            max_z: bboxMaxZ,
+          },
+          mask: maskBase64,
+          mask_width: maskW,
+          mask_height: maskH,
+        });
+      }
+    }
+  }
+
+  // Sort by size (largest first), re-assign IDs
+  regions.sort((a, b) => b.pixel_count - a.pixel_count);
+  regions.forEach((r, i) => { r.id = i + 1; });
+
+  return regions;
 }
 
 function exportHole(courseId, holeNumber, courseJson) {
@@ -307,6 +403,8 @@ function exportHole(courseId, holeNumber, courseJson) {
     anchors_file: 'anchors.json',
     zones_file: 'zones.json',
     bunkers_file: 'bunkers.json',
+    greens_file: 'greens.json',
+    water_file: 'water.json',
     review_status: 'auto-generated',
   };
 
@@ -339,7 +437,7 @@ function exportHole(courseId, holeNumber, courseJson) {
 
   // --- Build bunkers.json ---
   const zonesData = JSON.parse(fs.readFileSync(path.join(holeDir, 'zones.json'), 'utf-8'));
-  const bunkers = extractBunkers(zonesData, terrainMeta);
+  const bunkers = extractZoneContours(zonesData, terrainMeta, 6);  // zone 6 = bunker
 
   const bunkersOutput = {
     schema_version: '2.0.0',
@@ -355,12 +453,61 @@ function exportHole(courseId, holeNumber, courseJson) {
     'utf-8'
   );
 
-  // Log contour stats
+  // Log bunker contour stats
   if (bunkers.length > 0) {
     const contourStats = bunkers.map(b =>
       `#${b.id}: ${b.contour.length}pts`
     ).join(', ');
-    console.log(`  Contours: ${contourStats}`);
+    console.log(`  Bunker contours: ${contourStats}`);
+  }
+
+  // --- Build greens.json ---
+  const greens = extractZoneContours(zonesData, terrainMeta, 2, 20);  // zone 2 = green, min 20px
+
+  const greensOutput = {
+    schema_version: '1.0.0',
+    hole_number: holeNumber,
+    green_count: greens.length,
+    height_m: 0.15,
+    greens: greens,
+  };
+
+  fs.writeFileSync(
+    path.join(exportDir, 'greens.json'),
+    JSON.stringify(greensOutput, null, 2),
+    'utf-8'
+  );
+
+  // Log green contour stats
+  if (greens.length > 0) {
+    const contourStats = greens.map(g =>
+      `#${g.id}: ${g.contour.length}pts`
+    ).join(', ');
+    console.log(`  Green contours: ${contourStats}`);
+  }
+
+  // --- Build water.json ---
+  const water = extractWaterMasks(zonesData, terrainMeta, 50);
+
+  const waterOutput = {
+    schema_version: '2.0.0',
+    hole_number: holeNumber,
+    water_count: water.length,
+    water: water,
+  };
+
+  fs.writeFileSync(
+    path.join(exportDir, 'water.json'),
+    JSON.stringify(waterOutput, null, 2),
+    'utf-8'
+  );
+
+  // Log water mask stats
+  if (water.length > 0) {
+    const maskStats = water.map(w =>
+      `#${w.id}: ${w.mask_width}x${w.mask_height}px (${w.pixel_count}px)`
+    ).join(', ');
+    console.log(`  Water masks: ${maskStats}`);
   }
 
   // --- Copy files ---
@@ -372,6 +519,8 @@ function exportHole(courseId, holeNumber, courseJson) {
     manifest,
     anchorCount: anchors.length,
     bunkerCount: bunkers.length,
+    greenCount: greens.length,
+    waterCount: water.length,
   };
 }
 
@@ -413,7 +562,10 @@ async function main() {
     const result = exportHole(courseId, h, courseJson);
     if (result) {
       const m = result.manifest;
-      console.log(`OK  export/hole-${nn}/  par=${m.par}  ${m.championship_yards}yd  ${m.terrain.terrain_width_m}×${m.terrain.terrain_length_m}m  ${result.anchorCount} anchors  ${result.bunkerCount} bunkers`);
+      console.log(`OK  export/hole-${nn}/  par=${m.par}  ${m.championship_yards}yd  ` +
+        `${m.terrain.terrain_width_m}×${m.terrain.terrain_length_m}m  ` +
+        `${result.anchorCount} anchors  ${result.bunkerCount} bunkers  ` +
+        `${result.greenCount} greens  ${result.waterCount} water`);
       successCount++;
     } else {
       console.log('FAILED');

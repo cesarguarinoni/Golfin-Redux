@@ -100,8 +100,20 @@ namespace Golfin.CourseImport
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Applying texture...", 0.4f);
                 ApplySplatmap(terrainData, manifest, exportPath, dataDir, holeId, projectRoot);
 
+                // Read terrain holes once, pass to both zone methods, write once at end
+                int holesRes = terrainData.holesResolution;
+                bool[,] holes = terrainData.GetHoles(0, 0, holesRes, holesRes);
+
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating bunkers...", 0.5f);
-                CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot);
+                CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
+
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating greens...", 0.55f);
+                CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
+
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating water...", 0.57f);
+                CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
+
+                terrainData.SetHoles(0, 0, holes);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Building hierarchy...", 0.6f);
 
@@ -182,14 +194,17 @@ namespace Golfin.CourseImport
             string dataDir, string holeId, string projectRoot, float terrainX, float terrainZ)
         {
             int res = manifest.terrain.resolution;
-            // V2 DEV: Flat terrain — skip heightmap, all heights = 0.
-            // Splatmap still paints correct zones. Re-enable heightmap in Task 4.
+            // V2 DEV: Use higher heightmap resolution (513) for finer holes grid.
+            // holesResolution = heightmapResolution - 1, so 513 gives 512-cell
+            // holes grid (~1.2m/cell) instead of 128-cell (~5m/cell).
+            // Terrain is flat anyway, so the bigger array costs nothing.
+            int actualRes = 1025;
             float elevRange = 1.0f;  // V2 DEV: flat terrain, nonzero to avoid edge cases
-            float[,] heights = new float[res, res];
+            float[,] heights = new float[actualRes, actualRes];
             // All values default to 0.0 — perfectly flat
 
             var terrainData = new TerrainData();
-            terrainData.heightmapResolution = res;
+            terrainData.heightmapResolution = actualRes;
             terrainData.size = new Vector3(terrainX, elevRange, terrainZ);
             terrainData.SetHeights(0, 0, heights);
 
@@ -501,11 +516,11 @@ namespace Golfin.CourseImport
             return zoneIndex switch
             {
                 1  => 0,  // fairway
-                2  => 1,  // green
+                2  => 3,  // green → rough (mesh handles surface, fringe still generated)
                 3  => 2,  // semi_rough
                 4  => 3,  // rough
                 5  => 3,  // trees → rough texture
-                6  => 4,  // bunker
+                6  => 3,  // bunker → rough (mesh handles sand surface, prevents blur glow)
                 7  => 3,  // water → rough for now
                 8  => 6,  // cart_path
                 9  => 3,  // ob → rough texture
@@ -896,7 +911,8 @@ namespace Golfin.CourseImport
         }
 
         private static void CreateZoneMeshes(TerrainData terrainData, GameObject terrainGO,
-            Transform parentRoot, string exportPath, string dataDir, string projectRoot)
+            Transform parentRoot, string exportPath, string dataDir, string projectRoot,
+            bool[,] holes)
         {
             string bunkersPath = Path.Combine(exportPath, "bunkers.json");
             if (!File.Exists(bunkersPath))
@@ -938,9 +954,7 @@ namespace Golfin.CourseImport
             Vector3 terrainPos = terrainGO.transform.position;
             Vector3 terrainSize = terrainData.size;
 
-            // --- Terrain holes ---
             int holesRes = terrainData.holesResolution;
-            bool[,] holes = terrainData.GetHoles(0, 0, holesRes, holesRes);
 
             foreach (var bunker in bunkersFile.bunkers)
             {
@@ -969,14 +983,24 @@ namespace Golfin.CourseImport
                     if (v.y > cMaxZ) cMaxZ = v.y;
                 }
 
-                // Cut terrain holes by tracing contour (with small inward margin)
-                float marginX = (cMaxX - cMinX) * 0.05f;
-                float marginZ = (cMaxZ - cMinZ) * 0.05f;
+                // Cut terrain using the MESH RIM directly.
+                // Instead of a separate shrunk contour, we iterate the full
+                // bounding box and cut any cell whose center falls inside the
+                // rim polygon scaled to 90%.  This guarantees the terrain hole
+                // tracks the mesh shape — no mismatch possible.
+                var cutContour = new Vector2[worldContour.Length];
+                for (int i = 0; i < worldContour.Length; i++)
+                {
+                    cutContour[i] = new Vector2(
+                        centroidX + (worldContour[i].x - centroidX) * 0.90f,
+                        centroidZ + (worldContour[i].y - centroidZ) * 0.90f);
+                }
 
-                int hMinX = Mathf.Clamp(Mathf.FloorToInt(((cMinX + marginX) - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-                int hMaxX = Mathf.Clamp(Mathf.CeilToInt(((cMaxX - marginX) - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-                int hMinZ = Mathf.Clamp(Mathf.FloorToInt(((cMinZ + marginZ) - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-                int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(((cMaxZ - marginZ) - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+                // Search the FULL bounding box — let point-in-polygon do the shaping
+                int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+                int hMaxZ = Mathf.Clamp(Mathf.CeilToInt((cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
 
                 for (int hz = hMinZ; hz <= hMaxZ; hz++)
                 {
@@ -985,10 +1009,11 @@ namespace Golfin.CourseImport
                         float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
                         float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
 
-                        if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
+                        if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
                             holes[hz, hx] = false;
                     }
                 }
+
 
                 // --- Generate contour-shaped mesh ---
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
@@ -999,9 +1024,11 @@ namespace Golfin.CourseImport
                 var meshGO = CreateContourMesh(bunker.id, worldContour, centroidX, centroidZ,
                     surfaceY, bowlDepth, sandMat, terrain, terrainBaseY);
                 meshGO.transform.SetParent(bunkersRoot.transform);
-            }
 
-            terrainData.SetHoles(0, 0, holes);
+                // Add SurfaceMarker
+                var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
+                marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+            }
 
             // Copy bunkers.json to Assets
             string destPath = Path.Combine(projectRoot, dataDir, "bunkers.json");
@@ -1184,6 +1211,523 @@ namespace Golfin.CourseImport
 
             AssetDatabase.CreateAsset(mat, matPath);
             return mat;
+        }
+
+        private static Material CreateZoneMaterial(string dataDir, string projectRoot,
+            string matName, string albedoTexName, float tileScale)
+        {
+            string matPath = $"{dataDir}/{matName}.mat";
+
+            var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (existingMat != null)
+                AssetDatabase.DeleteAsset(matPath);
+
+            var mat = new Material(GetLitShader());
+            mat.name = matName;
+
+            string texDir = "Assets/Courses/Textures_2025(JPG)";
+            var tex = FindTextureExact(texDir, albedoTexName);
+            if (tex != null)
+            {
+                mat.mainTexture = tex;
+                mat.mainTextureScale = new Vector2(tileScale, tileScale);
+            }
+            else
+            {
+                Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoTexName}");
+                mat.color = Color.green;
+            }
+
+            mat.SetFloat("_Smoothness", 0.1f);
+            mat.SetFloat("_Metallic", 0f);
+            mat.SetFloat("_Cull", 0f);  // double-sided
+
+            AssetDatabase.CreateAsset(mat, matPath);
+            return mat;
+        }
+
+        // ─── Green Pipeline ─────────────────────────────────────────────
+
+        private static void CreateGreenMeshes(TerrainData terrainData, GameObject terrainGO,
+            Transform parentRoot, string exportPath, string dataDir, string projectRoot,
+            bool[,] holes)
+        {
+            string greensPath = Path.Combine(exportPath, "greens.json");
+            if (!File.Exists(greensPath))
+            {
+                Debug.Log("[HoleLiteImporter] No greens.json found, skipping");
+                return;
+            }
+
+            string json = File.ReadAllText(greensPath);
+            var greensFile = JsonUtility.FromJson<GreensFileData>(json);
+
+            if (greensFile.greens == null || greensFile.greens.Length == 0)
+            {
+                Debug.Log("[HoleLiteImporter] No greens in greens.json");
+                return;
+            }
+
+            float greenHeight = greensFile.height_m > 0 ? greensFile.height_m : 0.15f;
+
+            var greenMat = CreateZoneMaterial(dataDir, projectRoot,
+                "GreenSurface", "T_Green_Albedo", 3f);
+            var collarMat = CreateZoneMaterial(dataDir, projectRoot,
+                "GreenCollar", "T_Semirough_Albedo", 4f);
+
+            var greensRoot = new GameObject("Greens");
+            greensRoot.transform.SetParent(parentRoot);
+
+            var terrain = terrainGO.GetComponent<Terrain>();
+            float terrainBaseY = terrainGO.transform.position.y;
+            Vector3 terrainPos = terrainGO.transform.position;
+            Vector3 terrainSize = terrainData.size;
+
+            int holesRes = terrainData.holesResolution;
+
+            foreach (var green in greensFile.greens)
+            {
+                if (green.contour == null || green.contour.Length < 3) continue;
+
+                // Apply 90° CCW rotation to contour vertices
+                var worldContour = new Vector2[green.contour.Length];
+                float sumX = 0, sumZ = 0;
+                for (int i = 0; i < green.contour.Length; i++)
+                {
+                    float wx = green.contour[i].z;
+                    float wz = green.contour[i].x;
+                    worldContour[i] = new Vector2(wx, wz);
+                    sumX += wx;
+                    sumZ += wz;
+                }
+                float centroidX = sumX / worldContour.Length;
+                float centroidZ = sumZ / worldContour.Length;
+
+                // Bounding box should include the collar extent
+                float greenCollarScale = 1.08f;
+                float cMinX = float.MaxValue, cMaxX = float.MinValue;
+                float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
+                foreach (var v in worldContour)
+                {
+                    float wx = centroidX + (v.x - centroidX) * greenCollarScale;
+                    float wz = centroidZ + (v.y - centroidZ) * greenCollarScale;
+                    if (wx < cMinX) cMinX = wx;
+                    if (wx > cMaxX) cMaxX = wx;
+                    if (wz < cMinZ) cMinZ = wz;
+                    if (wz > cMaxZ) cMaxZ = wz;
+                }
+
+                // Cut contour at 95% of COLLAR scale
+                var cutContour = new Vector2[worldContour.Length];
+                for (int i = 0; i < worldContour.Length; i++)
+                {
+                    cutContour[i] = new Vector2(
+                        centroidX + (worldContour[i].x - centroidX) * greenCollarScale * 0.95f,
+                        centroidZ + (worldContour[i].y - centroidZ) * greenCollarScale * 0.95f);
+                }
+
+                int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+                int hMaxZ = Mathf.Clamp(Mathf.CeilToInt((cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+
+                for (int hz = hMinZ; hz <= hMaxZ; hz++)
+                    for (int hx = hMinX; hx <= hMaxX; hx++)
+                    {
+                        float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
+                        float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
+                        if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
+                            holes[hz, hx] = false;
+                    }
+
+                // Create raised mesh
+                float surfaceY = terrainBaseY + terrain.SampleHeight(
+                    new Vector3(centroidX, 0, centroidZ));
+
+                var meshGO = CreateRaisedMesh(green.id, "Green", worldContour,
+                    centroidX, centroidZ, surfaceY, greenHeight, greenMat,
+                    terrain, terrainBaseY, collarMat, greenCollarScale);
+                meshGO.transform.SetParent(greensRoot.transform);
+
+                // Find the surface child and add Green marker
+                var surfaceChild = meshGO.transform.Find($"Green_{green.id}_Surface");
+                if (surfaceChild != null)
+                {
+                    var marker = surfaceChild.gameObject.AddComponent<Golfin.Course.SurfaceMarker>();
+                    marker.surfaceType = Golfin.Course.SurfaceType.Green;
+                }
+            }
+
+            // Copy greens.json to Assets
+            string destPath = Path.Combine(projectRoot, dataDir, "greens.json");
+            File.Copy(greensPath, destPath, true);
+            AssetDatabase.ImportAsset($"{dataDir}/greens.json");
+
+            Debug.Log($"[HoleLiteImporter] Created {greensFile.greens.Length} green(s)");
+        }
+
+        private static GameObject CreateRaisedMesh(int id, string zoneName,
+            Vector2[] contour, float centroidX, float centroidZ,
+            float surfaceY, float height, Material surfaceMat,
+            Terrain terrain, float terrainBaseY,
+            Material collarMat = null, float collarScale = 1.08f)
+        {
+            int n = contour.Length;
+            if (n < 3) return new GameObject($"{zoneName}_{id}_SKIP");
+
+            // Parent object positioned at centroid
+            var parent = new GameObject($"{zoneName}_{id}");
+            parent.transform.position = new Vector3(centroidX, surfaceY, centroidZ);
+
+            // UV bounding box (use collar scale for full extent)
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+            foreach (var v in contour)
+            {
+                float wx = centroidX + (v.x - centroidX) * collarScale;
+                float wz = centroidZ + (v.y - centroidZ) * collarScale;
+                if (wx < minX) minX = wx;
+                if (wx > maxX) maxX = wx;
+                if (wz < minZ) minZ = wz;
+                if (wz > maxZ) maxZ = wz;
+            }
+            float extentX = Mathf.Max(maxX - minX, 0.1f);
+            float extentZ = Mathf.Max(maxZ - minZ, 0.1f);
+
+            // ── Collar mesh (semi-rough slope around the green) ──
+            // Rings: outer rim (collarScale) → contour rim (1.0) → slope (0.97) → edge (0.93)
+            // outer rim and contour rim at terrain height, slope at 30%, edge at 100%
+            if (collarMat != null)
+            {
+                float[] collarScales = { collarScale, 1.0f, 0.97f, 0.93f };
+                float[] collarHeightFracs = { -1f, -1f, 0.3f, 1.0f }; // -1 = terrain height
+                int collarRings = collarScales.Length;
+                int collarVertCount = n * collarRings;
+                var collarVerts = new Vector3[collarVertCount];
+                var collarUVs = new Vector2[collarVertCount];
+
+                for (int r = 0; r < collarRings; r++)
+                {
+                    float scale = collarScales[r];
+                    for (int i = 0; i < n; i++)
+                    {
+                        float wx = centroidX + (contour[i].x - centroidX) * scale;
+                        float wz = centroidZ + (contour[i].y - centroidZ) * scale;
+
+                        float y;
+                        if (collarHeightFracs[r] < 0)
+                        {
+                            float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                            y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
+                        }
+                        else
+                        {
+                            y = height * collarHeightFracs[r];
+                        }
+
+                        int vi = r * n + i;
+                        collarVerts[vi] = new Vector3(wx - centroidX, y, wz - centroidZ);
+                        collarUVs[vi] = new Vector2(
+                            (wx - minX) / extentX,
+                            (wz - minZ) / extentZ);
+                    }
+                }
+
+                // Triangles: quads between adjacent rings (no center fan)
+                int collarTriCount = n * (collarRings - 1) * 6;
+                var collarTris = new int[collarTriCount];
+                int cti = 0;
+                for (int r = 0; r < collarRings - 1; r++)
+                {
+                    for (int i = 0; i < n; i++)
+                    {
+                        int curr = r * n + i;
+                        int next = r * n + (i + 1) % n;
+                        int currInner = (r + 1) * n + i;
+                        int nextInner = (r + 1) * n + (i + 1) % n;
+                        collarTris[cti++] = curr;
+                        collarTris[cti++] = currInner;
+                        collarTris[cti++] = next;
+                        collarTris[cti++] = next;
+                        collarTris[cti++] = currInner;
+                        collarTris[cti++] = nextInner;
+                    }
+                }
+
+                var collarMesh = new Mesh();
+                collarMesh.name = $"{zoneName}Collar_{id}";
+                collarMesh.vertices = collarVerts;
+                collarMesh.triangles = collarTris;
+                collarMesh.uv = collarUVs;
+                collarMesh.RecalculateNormals();
+                collarMesh.RecalculateBounds();
+
+                var collarGO = new GameObject($"{zoneName}_{id}_Collar");
+                collarGO.AddComponent<MeshFilter>().sharedMesh = collarMesh;
+                collarGO.AddComponent<MeshRenderer>().sharedMaterial = collarMat;
+                collarGO.AddComponent<MeshCollider>().sharedMesh = collarMesh;
+                collarGO.transform.SetParent(parent.transform, false);
+
+                // SurfaceMarker for collar = SemiRough
+                var collarMarker = collarGO.AddComponent<Golfin.Course.SurfaceMarker>();
+                collarMarker.surfaceType = Golfin.Course.SurfaceType.SemiRough;
+            }
+
+            // ── Putting surface mesh (flat top) ──
+            // Rings: edge (0.93) → inner (0.80) → center
+            // All at full green height
+            float[] surfaceScales = { 0.93f, 0.80f };
+            int surfaceRings = surfaceScales.Length;
+            int surfaceVertCount = n * surfaceRings + 1;
+            var surfaceVerts = new Vector3[surfaceVertCount];
+            var surfaceUVs = new Vector2[surfaceVertCount];
+
+            for (int r = 0; r < surfaceRings; r++)
+            {
+                float scale = surfaceScales[r];
+                for (int i = 0; i < n; i++)
+                {
+                    float wx = centroidX + (contour[i].x - centroidX) * scale;
+                    float wz = centroidZ + (contour[i].y - centroidZ) * scale;
+
+                    int vi = r * n + i;
+                    surfaceVerts[vi] = new Vector3(wx - centroidX, height, wz - centroidZ);
+                    surfaceUVs[vi] = new Vector2(
+                        (wx - minX) / extentX,
+                        (wz - minZ) / extentZ);
+                }
+            }
+
+            int centerIdx = surfaceVertCount - 1;
+            surfaceVerts[centerIdx] = new Vector3(0, height, 0);
+            surfaceUVs[centerIdx] = new Vector2(0.5f, 0.5f);
+
+            int surfaceTriCount = n * (surfaceRings - 1) * 6 + n * 3;
+            var surfaceTris = new int[surfaceTriCount];
+            int sti = 0;
+
+            for (int r = 0; r < surfaceRings - 1; r++)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    int curr = r * n + i;
+                    int next = r * n + (i + 1) % n;
+                    int currInner = (r + 1) * n + i;
+                    int nextInner = (r + 1) * n + (i + 1) % n;
+                    surfaceTris[sti++] = curr;
+                    surfaceTris[sti++] = currInner;
+                    surfaceTris[sti++] = next;
+                    surfaceTris[sti++] = next;
+                    surfaceTris[sti++] = currInner;
+                    surfaceTris[sti++] = nextInner;
+                }
+            }
+
+            int lastRing = (surfaceRings - 1) * n;
+            for (int i = 0; i < n; i++)
+            {
+                surfaceTris[sti++] = lastRing + i;
+                surfaceTris[sti++] = centerIdx;
+                surfaceTris[sti++] = lastRing + (i + 1) % n;
+            }
+
+            var surfaceMesh = new Mesh();
+            surfaceMesh.name = $"{zoneName}Surface_{id}";
+            surfaceMesh.vertices = surfaceVerts;
+            surfaceMesh.triangles = surfaceTris;
+            surfaceMesh.uv = surfaceUVs;
+            surfaceMesh.RecalculateNormals();
+            surfaceMesh.RecalculateBounds();
+
+            var surfaceGO = new GameObject($"{zoneName}_{id}_Surface");
+            surfaceGO.AddComponent<MeshFilter>().sharedMesh = surfaceMesh;
+            surfaceGO.AddComponent<MeshRenderer>().sharedMaterial = surfaceMat;
+            surfaceGO.AddComponent<MeshCollider>().sharedMesh = surfaceMesh;
+            surfaceGO.transform.SetParent(parent.transform, false);
+
+            Debug.Log($"[HoleLiteImporter] {zoneName} {id}: {n} contour verts, " +
+                      $"collar={collarMat != null}, collarScale={collarScale:F2}");
+
+            return parent;
+        }
+
+        // ─── Water Zone Meshes (Rasterized Quad + Alpha Mask) ─────────────
+
+        private static void CreateWaterMeshes(TerrainData terrainData, GameObject terrainGO,
+            Transform parentRoot, string exportPath, string dataDir, string projectRoot,
+            bool[,] holes)
+        {
+            string waterPath = Path.Combine(exportPath, "water.json");
+            if (!File.Exists(waterPath))
+            {
+                Debug.Log("[HoleLiteImporter] No water.json found, skipping");
+                return;
+            }
+
+            string json = File.ReadAllText(waterPath);
+            var waterFile = JsonUtility.FromJson<WaterFileData>(json);
+
+            if (waterFile.water == null || waterFile.water.Length == 0)
+            {
+                Debug.Log("[HoleLiteImporter] No water in water.json");
+                return;
+            }
+
+            var waterRoot = new GameObject("Water");
+            waterRoot.transform.SetParent(parentRoot);
+
+            float waterY = 0.05f; // slightly above flat terrain
+
+            foreach (var water in waterFile.water)
+            {
+                if (string.IsNullOrEmpty(water.mask) || water.mask_width < 1 || water.mask_height < 1)
+                    continue;
+
+                // Decode mask
+                byte[] maskBytes = System.Convert.FromBase64String(water.mask);
+                int mw = water.mask_width;
+                int mh = water.mask_height;
+
+                if (maskBytes.Length != mw * mh)
+                {
+                    Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: mask size mismatch " +
+                                     $"({maskBytes.Length} != {mw}x{mh}={mw * mh}), skipping");
+                    continue;
+                }
+
+                // Apply 90° CCW rotation to bbox (same as anchors/contours)
+                // Pre-rotation bbox is in (x, z) = (width_axis, length_axis)
+                // 90° CCW: worldX = local.z, worldZ = local.x
+                float worldMinX = water.bbox.min_z;
+                float worldMaxX = water.bbox.max_z;
+                float worldMinZ = water.bbox.min_x;
+                float worldMaxZ = water.bbox.max_x;
+
+                float quadW = worldMaxX - worldMinX;
+                float quadH = worldMaxZ - worldMinZ;
+                float centerX = (worldMinX + worldMaxX) / 2f;
+                float centerZ = (worldMinZ + worldMaxZ) / 2f;
+
+                // --- Generate alpha mask texture ---
+                // After 90° CCW: mask rows (Y) map to world Z, mask cols (X) map to world X
+                // Transpose the mask: mask pixel (mx, my) → rotated texture pixel (my, mw-1-mx)
+                int texW = mh;  // rotated dimensions
+                int texH = mw;
+                var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
+                tex.filterMode = FilterMode.Point; // crisp pixel edges
+                tex.wrapMode = TextureWrapMode.Clamp;
+
+                Color waterColor = new Color(0.18f, 0.40f, 0.58f, 1.0f);
+                Color clearColor = new Color(0f, 0f, 0f, 0f);
+
+                for (int my = 0; my < mh; my++)
+                {
+                    for (int mx = 0; mx < mw; mx++)
+                    {
+                        bool isWater = maskBytes[my * mw + mx] == 1;
+                        // 90° CCW rotation of mask pixels
+                        int tx = my;
+                        int ty = mw - 1 - mx;
+                        tex.SetPixel(tx, ty, isWater ? waterColor : clearColor);
+                    }
+                }
+                tex.Apply();
+
+                // Save texture as asset
+                string texPath = $"{dataDir}/WaterMask_{water.id}.png";
+                string fullTexPath = Path.Combine(projectRoot, texPath);
+                File.WriteAllBytes(fullTexPath, tex.EncodeToPNG());
+                Object.DestroyImmediate(tex);
+
+                AssetDatabase.ImportAsset(texPath);
+
+                // Configure texture importer
+                var importer = AssetImporter.GetAtPath(texPath) as TextureImporter;
+                if (importer != null)
+                {
+                    importer.textureType = TextureImporterType.Default;
+                    importer.alphaIsTransparency = true;
+                    importer.filterMode = FilterMode.Point;
+                    importer.textureCompression = TextureImporterCompression.Uncompressed;
+                    importer.npotScale = TextureImporterNPOTScale.None;
+                    importer.maxTextureSize = 4096;
+                    importer.wrapMode = TextureWrapMode.Clamp;
+                    importer.SaveAndReimport();
+                }
+
+                var savedTex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+
+                // --- Create material (alpha cutout) ---
+                string matPath = $"{dataDir}/WaterSurface_{water.id}.mat";
+                var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                if (existingMat != null)
+                    AssetDatabase.DeleteAsset(matPath);
+
+                var mat = new Material(GetLitShader());
+                mat.name = $"WaterSurface_{water.id}";
+                mat.mainTexture = savedTex;
+
+                // Alpha cutout mode
+                mat.SetFloat("_Surface", 0); // 0 = Opaque — we use cutout via AlphaClip
+                mat.SetFloat("_AlphaClip", 1);
+                mat.SetFloat("_Cutoff", 0.5f);
+                mat.SetFloat("_Smoothness", 0.85f);
+                mat.SetFloat("_Metallic", 0.05f);
+                mat.EnableKeyword("_ALPHATEST_ON");
+                mat.renderQueue = 2450; // AlphaTest queue
+
+                AssetDatabase.CreateAsset(mat, matPath);
+
+                // --- Create quad mesh ---
+                var vertices = new Vector3[]
+                {
+                    new Vector3(-quadW / 2f, 0f, -quadH / 2f),
+                    new Vector3( quadW / 2f, 0f, -quadH / 2f),
+                    new Vector3( quadW / 2f, 0f,  quadH / 2f),
+                    new Vector3(-quadW / 2f, 0f,  quadH / 2f),
+                };
+                var uvs = new Vector2[]
+                {
+                    new Vector2(0, 0),
+                    new Vector2(1, 0),
+                    new Vector2(1, 1),
+                    new Vector2(0, 1),
+                };
+                var triangles = new int[] { 0, 2, 1, 0, 3, 2 };
+
+                var mesh = new Mesh();
+                mesh.name = $"WaterQuad_{water.id}";
+                mesh.vertices = vertices;
+                mesh.triangles = triangles;
+                mesh.uv = uvs;
+                mesh.RecalculateNormals();
+                mesh.RecalculateBounds();
+
+                var go = new GameObject($"Water_{water.id}");
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+
+                // MeshCollider uses the same quad — ball collision covers full bbox,
+                // gameplay logic uses SurfaceMarker + zone lookup for precision
+                go.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+                go.transform.position = new Vector3(centerX, waterY, centerZ);
+
+                var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+                marker.surfaceType = Golfin.Course.SurfaceType.Water;
+
+                go.transform.SetParent(waterRoot.transform);
+
+                Debug.Log($"[HoleLiteImporter] Water {water.id}: quad {quadW:F1}x{quadH:F1}m, " +
+                          $"mask {texW}x{texH}px, pos ({centerX:F1}, {waterY}, {centerZ:F1})");
+            }
+
+            // Copy water.json to Assets
+            string destPath = Path.Combine(projectRoot, dataDir, "water.json");
+            File.Copy(waterPath, destPath, true);
+            AssetDatabase.ImportAsset($"{dataDir}/water.json");
+
+            Debug.Log($"[HoleLiteImporter] Created {waterFile.water.Length} water quad(s)");
         }
 
         private static void EnsureDirectory(string path)

@@ -3,453 +3,463 @@
 > Claude Code: Read this file at the start of each task. Execute the latest instruction block.
 > After completing, add a status line at the bottom: `✅ DONE: [date] [brief summary]`
 > Claude (Architect) will update this file with new instructions as needed.
+> Handoff: `Docs/TellCode.md`
 
 ---
 
-## Current Task — Re-import After Contour Smoothing
+## Current Task — Water Option 2: Rasterized Quad + Alpha Mask
 
-The UHole Lite export now produces smoothed contours (Chaikin subdivision).
-The Unity importer code (`CreateZoneMeshes` / `CreateContourMesh`) is
-already correct — it uses whatever contour vertices it receives.
+**Context:** The contour pipeline (traceBorder → RDP → Chaikin) distorts
+large water bodies. RDP straightens curves, Chaikin inflates concave
+sections. Fine for small bunkers, but visually wrong on 50-100m+ lakes
+with complex coastlines. See `Docs/WATER_FINDINGS.md` for full analysis.
 
-> **IMPORTANT:** Run `Tools/UHoleLite/docs/TASK.md` first (contour
-> smoothing), re-export hole 01, THEN re-import in Unity.
-
-### Steps
-
-1. In UHole Lite: `node scripts/export-hole.mjs lomond-country-club 1`
-2. In Unity: `GOLFIN > Import Hole (Lite) > Hole 01`
-3. Verify bunker shapes are now smooth (rounded curves, not angular)
-4. Verify terrain hole cuts follow the contour (not rectangular)
-5. Check rim edges are flush, no z-fighting, no terrain bleed-through
-
-If the Unity importer is NOT already updated with `CreateZoneMeshes` /
-`CreateContourMesh`, apply the changes below first.
+**Solution:** Skip contour extraction entirely for water. Export raw pixel
+mask data per region, import as a textured quad in Unity. The mask IS the
+zone map — pixel-perfect boundaries, zero distortion.
 
 ---
 
-### Change 1: Flat Terrain
+### Part A: Export — Rasterized water masks (`export-hole.mjs`)
 
-In `CreateTerrain()`, replace the heightmap loading with a flat surface.
+**Replace** the `extractWaterContours()` function and update water export
+in `exportHole()`. Instead of contour points, output per-region pixel masks.
 
-**Find this block** (the heightmap loading + rotation loop):
+#### A1. New function: `extractWaterMasks()`
 
-```csharp
-string heightmapPath = Path.Combine(exportPath, manifest.terrain.heightmap_file);
-byte[] rawBytes = File.ReadAllBytes(heightmapPath);
+Replace `extractWaterContours()` with this new function. It reuses the
+existing flood-fill logic from `extractZoneContours()` but outputs mask
+data instead of contours.
 
-// Rotate heightmap 90° CCW: heights[hx, hy] instead of heights[res-1-hy, hx]
-float[,] heights = new float[res, res];
-for (int hy = 0; hy < res; hy++)
-{
-    for (int hx = 0; hx < res; hx++)
-    {
-        int idx = (hy * res + hx) * 2;
-        ushort val = (ushort)((rawBytes[idx] << 8) | rawBytes[idx + 1]);
-        heights[hx, hy] = val / 65535f;
+```javascript
+/**
+ * Extract water regions as rasterized masks (no contour simplification).
+ * Each region gets a bbox-cropped binary mask for pixel-perfect Unity import.
+ */
+function extractWaterMasks(zonesData, terrainMeta, minPixels = 50) {
+  const grid = Buffer.from(zonesData.grid, 'base64');
+  const w = zonesData.source_dimensions.width;
+  const h = zonesData.source_dimensions.height;
+  const visited = new Uint8Array(w * h);
+
+  const tw = terrainMeta.terrain_width_m;
+  const tl = terrainMeta.terrain_length_m;
+  const targetZone = 7; // water
+
+  function floodFill(startX, startY) {
+    const pixels = [];
+    const stack = [[startX, startY]];
+    while (stack.length > 0) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= w || y < 0 || y >= h) continue;
+      const idx = y * w + x;
+      if (visited[idx] || grid[idx] !== targetZone) continue;
+      visited[idx] = 1;
+      pixels.push([x, y]);
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
     }
+    return pixels;
+  }
+
+  const regions = [];
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (grid[y * w + x] === targetZone && !visited[y * w + x]) {
+        const pixels = floodFill(x, y);
+        if (pixels.length < minPixels) continue;
+
+        // Bounding box in pixel coords
+        const xs = pixels.map(p => p[0]);
+        const ys = pixels.map(p => p[1]);
+        const pxMinX = Math.min(...xs);
+        const pxMaxX = Math.max(...xs);
+        const pxMinY = Math.min(...ys);
+        const pxMaxY = Math.max(...ys);
+
+        const maskW = pxMaxX - pxMinX + 1;
+        const maskH = pxMaxY - pxMinY + 1;
+
+        // Build binary mask cropped to bbox
+        const mask = new Uint8Array(maskW * maskH); // 0 = not water
+        for (const [px, py] of pixels) {
+          const mx = px - pxMinX;
+          const my = py - pxMinY;
+          mask[my * maskW + mx] = 1;
+        }
+
+        // Convert mask to base64
+        const maskBase64 = Buffer.from(mask).toString('base64');
+
+        // Bounding box in local meter coordinates
+        // Same coord system as anchors: (normCoord - 0.5) * terrainSize
+        const bboxMinX = parseFloat(((pxMinX / (w - 1) - 0.5) * tw).toFixed(2));
+        const bboxMaxX = parseFloat(((pxMaxX / (w - 1) - 0.5) * tw).toFixed(2));
+        const bboxMinZ = parseFloat(((pxMinY / (h - 1) - 0.5) * tl).toFixed(2));
+        const bboxMaxZ = parseFloat(((pxMaxY / (h - 1) - 0.5) * tl).toFixed(2));
+
+        regions.push({
+          id: regions.length + 1,
+          pixel_count: pixels.length,
+          bbox: {
+            min_x: bboxMinX,
+            max_x: bboxMaxX,
+            min_z: bboxMinZ,
+            max_z: bboxMaxZ,
+          },
+          mask: maskBase64,
+          mask_width: maskW,
+          mask_height: maskH,
+        });
+      }
+    }
+  }
+
+  // Sort by size (largest first), re-assign IDs
+  regions.sort((a, b) => b.pixel_count - a.pixel_count);
+  regions.forEach((r, i) => { r.id = i + 1; });
+
+  return regions;
 }
 ```
 
-**Replace with:**
+#### A2. Update `exportHole()` — water section
 
-```csharp
-// V2 DEV: Flat terrain — skip heightmap, all heights = 0.
-// Splatmap still paints correct zones. Re-enable heightmap in Task 4.
-float[,] heights = new float[res, res];
-// All values default to 0.0 — perfectly flat
+Find the water section in `exportHole()` (starts with `// --- Build water.json ---`).
+Replace it with:
+
+```javascript
+  // --- Build water.json ---
+  const water = extractWaterMasks(zonesData, terrainMeta, 50);
+
+  const waterOutput = {
+    schema_version: '2.0.0',
+    hole_number: holeNumber,
+    water_count: water.length,
+    water: water,
+  };
+
+  fs.writeFileSync(
+    path.join(exportDir, 'water.json'),
+    JSON.stringify(waterOutput, null, 2),
+    'utf-8'
+  );
+
+  // Log water mask stats
+  if (water.length > 0) {
+    const maskStats = water.map(w =>
+      `#${w.id}: ${w.mask_width}x${w.mask_height}px (${w.pixel_count}px)`
+    ).join(', ');
+    console.log(`  Water masks: ${maskStats}`);
+  }
 ```
 
-Also change `elevRange` to a safe nonzero value:
+Also remove `depth_m` from the output — flat planes don't need it.
 
-```csharp
-// OLD:
-float elevRange = manifest.terrain.max_elevation_m - manifest.terrain.min_elevation_m;
+#### A3. Delete old function
 
-// NEW:
-float elevRange = 1.0f;  // V2 DEV: flat terrain, nonzero to avoid edge cases
-```
+Delete `extractWaterContours()` entirely. It's no longer called.
+
+**Do NOT** modify `extractZoneContours()`, `traceBorder()`,
+`simplifyPolygon()`, `smoothPolygon()`, or `ensureCCW()` — bunkers
+and greens still use them.
 
 ---
 
-### Change 2: Replace CreateBunkers → CreateZoneMeshes
+### Part B: Import — Rasterized quad meshes (`HoleLiteImporter.cs`)
 
-Delete the existing `CreateBunkers()` and `CreateBowlMesh()` methods entirely.
-Replace with the new contour-based system below.
+**File:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
 
-#### 2A. New Data Classes
+#### B1. Update data classes
 
-Add/update these serializable classes (some may already exist — replace as
-needed):
+Find the existing `WaterFileData` and `WaterRegionData` classes (they're
+at the bottom of the file or inline). Replace them to match the new
+schema. If they don't exist as named classes, add them:
 
 ```csharp
 [System.Serializable]
-public class BunkerContourVertex
-{
-    public float x;
-    public float z;
-}
-
-[System.Serializable]
-public class BunkerData
-{
-    public int id;
-    public int pixel_count;
-    public BunkerContourVertex[] contour;  // V2: ordered polygon vertices
-    public LocalCoord center_local;
-    public SizeData size_m;
-}
-
-[System.Serializable]
-public class BunkersFileData
+private class WaterFileData
 {
     public string schema_version;
     public int hole_number;
-    public int bunker_count;
-    public float depth_m;
-    public BunkerData[] bunkers;
+    public int water_count;
+    public WaterRegionData[] water;
+}
+
+[System.Serializable]
+private class WaterRegionData
+{
+    public int id;
+    public int pixel_count;
+    public WaterBBox bbox;
+    public string mask;        // base64-encoded binary mask
+    public int mask_width;
+    public int mask_height;
+}
+
+[System.Serializable]
+private class WaterBBox
+{
+    public float min_x;
+    public float max_x;
+    public float min_z;
+    public float max_z;
 }
 ```
 
-(If `LocalCoord` and `SizeData` already exist and are used elsewhere, keep
-them. Just make sure `BunkerData` has `contour` and `BunkersFileData` has
-`schema_version`.)
+Remove `contour` field references from any old water data class.
 
-#### 2B. Point-in-Polygon Utility
+#### B2. Replace `CreateWaterMeshes()`
 
-Add this static method:
-
-```csharp
-private static bool IsInsideContour(float px, float pz, Vector2[] contour)
-{
-    bool inside = false;
-    for (int i = 0, j = contour.Length - 1; i < contour.Length; j = i++)
-    {
-        if ((contour[i].y > pz) != (contour[j].y > pz) &&
-            px < (contour[j].x - contour[i].x) * (pz - contour[i].y)
-                 / (contour[j].y - contour[i].y) + contour[i].x)
-        {
-            inside = !inside;
-        }
-    }
-    return inside;
-}
-```
-
-#### 2C. New `CreateZoneMeshes()` Method
+Replace the entire method. The new version reads bbox + mask, creates
+quads with alpha-cutout textures.
 
 ```csharp
-private static void CreateZoneMeshes(TerrainData terrainData, GameObject terrainGO,
-    Transform parentRoot, string exportPath, string dataDir, string projectRoot)
+private static void CreateWaterMeshes(TerrainData terrainData, GameObject terrainGO,
+    Transform parentRoot, string exportPath, string dataDir, string projectRoot,
+    bool[,] holes)
 {
-    string bunkersPath = Path.Combine(exportPath, "bunkers.json");
-    if (!File.Exists(bunkersPath))
+    string waterPath = Path.Combine(exportPath, "water.json");
+    if (!File.Exists(waterPath))
     {
-        Debug.Log("[HoleLiteImporter] No bunkers.json found, skipping");
+        Debug.Log("[HoleLiteImporter] No water.json found, skipping");
         return;
     }
 
-    string json = File.ReadAllText(bunkersPath);
-    var bunkersFile = JsonUtility.FromJson<BunkersFileData>(json);
+    string json = File.ReadAllText(waterPath);
+    var waterFile = JsonUtility.FromJson<WaterFileData>(json);
 
-    if (bunkersFile.bunkers == null || bunkersFile.bunkers.Length == 0)
+    if (waterFile.water == null || waterFile.water.Length == 0)
     {
-        Debug.Log("[HoleLiteImporter] No bunkers in bunkers.json");
+        Debug.Log("[HoleLiteImporter] No water in water.json");
         return;
     }
 
-    // Check for V2 contour data
-    bool hasContours = !string.IsNullOrEmpty(bunkersFile.schema_version) &&
-                       bunkersFile.bunkers[0].contour != null &&
-                       bunkersFile.bunkers[0].contour.Length > 0;
+    var waterRoot = new GameObject("Water");
+    waterRoot.transform.SetParent(parentRoot);
 
-    if (!hasContours)
+    float waterY = 0.05f; // slightly above flat terrain
+
+    foreach (var water in waterFile.water)
     {
-        Debug.LogWarning("[HoleLiteImporter] bunkers.json has no contour data " +
-                         "(V1 format). Re-export with updated export-hole.mjs. Skipping bunkers.");
-        return;
-    }
+        if (string.IsNullOrEmpty(water.mask) || water.mask_width < 1 || water.mask_height < 1)
+            continue;
 
-    float defaultDepth = bunkersFile.depth_m > 0 ? bunkersFile.depth_m : 2.0f;
+        // Decode mask
+        byte[] maskBytes = System.Convert.FromBase64String(water.mask);
+        int mw = water.mask_width;
+        int mh = water.mask_height;
 
-    var sandMat = CreateBunkerMaterial(dataDir, projectRoot);
-
-    var bunkersRoot = new GameObject("Bunkers");
-    bunkersRoot.transform.SetParent(parentRoot);
-
-    var terrain = terrainGO.GetComponent<Terrain>();
-    float terrainBaseY = terrainGO.transform.position.y;
-    Vector3 terrainPos = terrainGO.transform.position;
-    Vector3 terrainSize = terrainData.size;
-
-    // --- Terrain holes ---
-    int holesRes = terrainData.holesResolution;
-    bool[,] holes = terrainData.GetHoles(0, 0, holesRes, holesRes);
-
-    foreach (var bunker in bunkersFile.bunkers)
-    {
-        // Apply 90° CCW rotation to contour vertices (same as anchors)
-        var worldContour = new Vector2[bunker.contour.Length];
-        float sumX = 0, sumZ = 0;
-        for (int i = 0; i < bunker.contour.Length; i++)
+        if (maskBytes.Length != mw * mh)
         {
-            float wx = bunker.contour[i].z;  // 90° CCW: worldX = local.z
-            float wz = bunker.contour[i].x;  // 90° CCW: worldZ = local.x
-            worldContour[i] = new Vector2(wx, wz);
-            sumX += wx;
-            sumZ += wz;
-        }
-        float centroidX = sumX / worldContour.Length;
-        float centroidZ = sumZ / worldContour.Length;
-
-        // Bounding box of contour (for limiting hole-grid search)
-        float cMinX = float.MaxValue, cMaxX = float.MinValue;
-        float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
-        foreach (var v in worldContour)
-        {
-            if (v.x < cMinX) cMinX = v.x;
-            if (v.x > cMaxX) cMaxX = v.x;
-            if (v.y < cMinZ) cMinZ = v.y;
-            if (v.y > cMaxZ) cMaxZ = v.y;
+            Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: mask size mismatch " +
+                             $"({maskBytes.Length} != {mw}x{mh}={mw * mh}), skipping");
+            continue;
         }
 
-        // Cut terrain holes by tracing contour (with small inward margin)
-        float marginX = (cMaxX - cMinX) * 0.05f;
-        float marginZ = (cMaxZ - cMinZ) * 0.05f;
+        // Apply 90° CCW rotation to bbox (same as anchors/contours)
+        // Pre-rotation bbox is in (x, z) = (width_axis, length_axis)
+        // 90° CCW: worldX = local.z, worldZ = local.x
+        float worldMinX = water.bbox.min_z;
+        float worldMaxX = water.bbox.max_z;
+        float worldMinZ = water.bbox.min_x;
+        float worldMaxZ = water.bbox.max_x;
 
-        int hMinX = Mathf.Clamp(Mathf.FloorToInt(((cMinX + marginX) - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-        int hMaxX = Mathf.Clamp(Mathf.CeilToInt(((cMaxX - marginX) - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-        int hMinZ = Mathf.Clamp(Mathf.FloorToInt(((cMinZ + marginZ) - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-        int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(((cMaxZ - marginZ) - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+        float quadW = worldMaxX - worldMinX;
+        float quadH = worldMaxZ - worldMinZ;
+        float centerX = (worldMinX + worldMaxX) / 2f;
+        float centerZ = (worldMinZ + worldMaxZ) / 2f;
 
-        for (int hz = hMinZ; hz <= hMaxZ; hz++)
+        // --- Generate alpha mask texture ---
+        // After 90° CCW: mask rows (Y) map to world Z, mask cols (X) map to world X
+        // But since we rotated, we need to transpose the mask:
+        // mask pixel (mx, my) → rotated texture pixel (my, mw-1-mx)
+        int texW = mh;  // rotated dimensions
+        int texH = mw;
+        var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point; // crisp pixel edges
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color waterColor = new Color(0.18f, 0.40f, 0.58f, 1.0f);
+        Color clearColor = new Color(0f, 0f, 0f, 0f);
+
+        for (int my = 0; my < mh; my++)
         {
-            for (int hx = hMinX; hx <= hMaxX; hx++)
+            for (int mx = 0; mx < mw; mx++)
             {
-                float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
-                float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
-
-                if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
-                    holes[hz, hx] = false;
+                bool isWater = maskBytes[my * mw + mx] == 1;
+                // 90° CCW rotation of mask pixels
+                int tx = my;
+                int ty = mw - 1 - mx;
+                tex.SetPixel(tx, ty, isWater ? waterColor : clearColor);
             }
         }
+        tex.Apply();
 
-        // --- Generate contour-shaped mesh ---
-        float surfaceY = terrainBaseY + terrain.SampleHeight(
-            new Vector3(centroidX, 0, centroidZ));
+        // Save texture as asset
+        string texPath = $"{dataDir}/WaterMask_{water.id}.png";
+        string fullTexPath = Path.Combine(projectRoot, texPath);
+        File.WriteAllBytes(fullTexPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
 
-        float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+        AssetDatabase.ImportAsset(texPath);
 
-        var meshGO = CreateContourMesh(bunker.id, worldContour, centroidX, centroidZ,
-            surfaceY, bowlDepth, sandMat, terrain, terrainBaseY);
-        meshGO.transform.SetParent(bunkersRoot.transform);
+        // Configure texture importer
+        var importer = AssetImporter.GetAtPath(texPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Default;
+            importer.alphaIsTransparency = true;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.npotScale = TextureImporterNPOTScale.None;
+            importer.maxTextureSize = 4096;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.SaveAndReimport();
+        }
+
+        var savedTex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+
+        // --- Create material (alpha cutout) ---
+        string matPath = $"{dataDir}/WaterSurface_{water.id}.mat";
+        var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+        if (existingMat != null)
+            AssetDatabase.DeleteAsset(matPath);
+
+        var mat = new Material(GetLitShader());
+        mat.name = $"WaterSurface_{water.id}";
+        mat.mainTexture = savedTex;
+
+        // Alpha cutout mode
+        mat.SetFloat("_Surface", 0); // 0 = Opaque — we use cutout via AlphaClip
+        mat.SetFloat("_AlphaClip", 1);
+        mat.SetFloat("_Cutoff", 0.5f);
+        mat.SetFloat("_Smoothness", 0.85f);
+        mat.SetFloat("_Metallic", 0.05f);
+        mat.EnableKeyword("_ALPHATEST_ON");
+        mat.renderQueue = 2450; // AlphaTest queue
+
+        AssetDatabase.CreateAsset(mat, matPath);
+
+        // --- Create quad mesh ---
+        var vertices = new Vector3[]
+        {
+            new Vector3(-quadW / 2f, 0f, -quadH / 2f),
+            new Vector3( quadW / 2f, 0f, -quadH / 2f),
+            new Vector3( quadW / 2f, 0f,  quadH / 2f),
+            new Vector3(-quadW / 2f, 0f,  quadH / 2f),
+        };
+        var uvs = new Vector2[]
+        {
+            new Vector2(0, 0),
+            new Vector2(1, 0),
+            new Vector2(1, 1),
+            new Vector2(0, 1),
+        };
+        var triangles = new int[] { 0, 2, 1, 0, 3, 2 };
+
+        var mesh = new Mesh();
+        mesh.name = $"WaterQuad_{water.id}";
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.uv = uvs;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        var go = new GameObject($"Water_{water.id}");
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+
+        // MeshCollider uses the same quad — ball collision covers full bbox,
+        // gameplay logic uses SurfaceMarker + zone lookup for precision
+        go.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+        go.transform.position = new Vector3(centerX, waterY, centerZ);
+
+        var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+        marker.surfaceType = Golfin.Course.SurfaceType.Water;
+
+        go.transform.SetParent(waterRoot.transform);
+
+        Debug.Log($"[HoleLiteImporter] Water {water.id}: quad {quadW:F1}x{quadH:F1}m, " +
+                  $"mask {texW}x{texH}px, pos ({centerX:F1}, {waterY}, {centerZ:F1})");
     }
 
-    terrainData.SetHoles(0, 0, holes);
+    // Copy water.json to Assets
+    string destPath = Path.Combine(projectRoot, dataDir, "water.json");
+    File.Copy(waterPath, destPath, true);
+    AssetDatabase.ImportAsset($"{dataDir}/water.json");
 
-    // Copy bunkers.json to Assets
-    string destPath = Path.Combine(projectRoot, dataDir, "bunkers.json");
-    File.Copy(bunkersPath, destPath, true);
-    AssetDatabase.ImportAsset($"{dataDir}/bunkers.json");
-
-    Debug.Log($"[HoleLiteImporter] Created {bunkersFile.bunkers.Length} contour-based bunker(s)");
+    Debug.Log($"[HoleLiteImporter] Created {waterFile.water.Length} water quad(s)");
 }
 ```
 
-#### 2D. New `CreateContourMesh()` Method
+#### B3. Delete old methods
 
-This generates a mesh from the contour polygon with concentric rings
-that descend into a bowl shape.
+**Delete** `CreateFlatWaterMesh()` and `CreateWaterMaterial()` entirely.
+They are no longer called.
 
-```csharp
-private static GameObject CreateContourMesh(int id, Vector2[] contour,
-    float centroidX, float centroidZ, float surfaceY, float depth,
-    Material sandMat, Terrain terrain, float terrainBaseY)
-{
-    int n = contour.Length; // number of contour vertices
-    if (n < 3)
-    {
-        Debug.LogWarning($"[HoleLiteImporter] Bunker {id}: contour has < 3 vertices, skipping");
-        return new GameObject($"Bunker_{id}_SKIP");
-    }
+#### B4. Remove old data classes
 
-    // Ring layout: rim (100%) → inner (80%) → mid (50%) → deep (20%) → center
-    float[] ringScales = { 1.0f, 0.80f, 0.50f, 0.20f };
-    float[] ringDepths = { 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
-    // Ring 0 (rim): at terrain height + tiny offset
-    // Ring 1 (inner): at terrain height (transition)
-    // Ring 2 (mid): half depth
-    // Ring 3 (deep): near full depth
+If old water data classes reference `contour` fields (like
+`WaterContourPoint` or similar), delete them. The new `WaterRegionData`
+class has `mask`, `bbox`, `mask_width`, `mask_height` instead.
 
-    int ringCount = ringScales.Length;
-    int vertCount = n * ringCount + 1; // +1 for center
-    var vertices = new Vector3[vertCount];
-    var uvs = new Vector2[vertCount];
+---
 
-    // Compute bounding box for UV mapping
-    float minX = float.MaxValue, maxX = float.MinValue;
-    float minZ = float.MaxValue, maxZ = float.MinValue;
-    foreach (var v in contour)
-    {
-        if (v.x < minX) minX = v.x;
-        if (v.x > maxX) maxX = v.x;
-        if (v.y < minZ) minZ = v.y;
-        if (v.y > maxZ) maxZ = v.y;
-    }
-    float extentX = Mathf.Max(maxX - minX, 0.1f);
-    float extentZ = Mathf.Max(maxZ - minZ, 0.1f);
+### Important Notes
 
-    for (int r = 0; r < ringCount; r++)
-    {
-        float scale = ringScales[r];
-        float ringY = -ringDepths[r];
+**Mask rotation:** The zone grid is in the UHole Lite coordinate system.
+The importer applies 90° CCW rotation to everything (anchors, bunker
+contours, green contours). The mask needs the same rotation. The spec
+handles this by transposing the mask when building the Texture2D:
+`mask(mx, my) → tex(my, mw-1-mx)`.
 
-        for (int i = 0; i < n; i++)
-        {
-            // Scale toward centroid
-            float wx = centroidX + (contour[i].x - centroidX) * scale;
-            float wz = centroidZ + (contour[i].y - centroidZ) * scale;
+**Mask coordinate mapping:** The bbox in water.json uses the SAME local
+meter coordinate system as anchors/contours (pre-rotation). The importer
+applies the 90° CCW swap: `worldX = local.z, worldZ = local.x`. This is
+consistent with how bunker and green contours are rotated.
 
-            float y = ringY;
+**FilterMode.Point:** Keeps pixel edges crisp — no blurring between
+water and non-water pixels. This is intentional for pixel-perfect match.
 
-            // Rim ring (r==0): sample terrain height for seamless edge
-            if (r == 0)
-            {
-                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
-            }
-            // Inner ring (r==1): also at terrain height, no offset
-            else if (r == 1)
-            {
-                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                y = (terrainBaseY + terrainH) - surfaceY;
-            }
-
-            // Local space relative to mesh origin (centroid at surface)
-            float localX = wx - centroidX;
-            float localZ = wz - centroidZ;
-
-            int vi = r * n + i;
-            vertices[vi] = new Vector3(localX, y, localZ);
-            uvs[vi] = new Vector2(
-                (wx - minX) / extentX,
-                (wz - minZ) / extentZ);
-        }
-    }
-
-    // Center vertex — bottom of bowl
-    int centerIdx = vertCount - 1;
-    vertices[centerIdx] = new Vector3(0, -depth, 0);
-    uvs[centerIdx] = new Vector2(0.5f, 0.5f);
-
-    // --- Triangles ---
-    // Quads between adjacent rings + fan from last ring to center
-    int triCount = n * (ringCount - 1) * 6 + n * 3;
-    var triangles = new int[triCount];
-    int ti = 0;
-
-    for (int r = 0; r < ringCount - 1; r++)
-    {
-        for (int i = 0; i < n; i++)
-        {
-            int curr = r * n + i;
-            int next = r * n + (i + 1) % n;
-            int currInner = (r + 1) * n + i;
-            int nextInner = (r + 1) * n + (i + 1) % n;
-
-            triangles[ti++] = curr;
-            triangles[ti++] = currInner;
-            triangles[ti++] = next;
-
-            triangles[ti++] = next;
-            triangles[ti++] = currInner;
-            triangles[ti++] = nextInner;
-        }
-    }
-
-    // Fan from last ring to center
-    int lastRingStart = (ringCount - 1) * n;
-    for (int i = 0; i < n; i++)
-    {
-        int curr = lastRingStart + i;
-        int next = lastRingStart + (i + 1) % n;
-
-        triangles[ti++] = curr;
-        triangles[ti++] = centerIdx;
-        triangles[ti++] = next;
-    }
-
-    // --- Build mesh ---
-    var mesh = new Mesh();
-    mesh.name = $"BunkerContour_{id}";
-    mesh.vertices = vertices;
-    mesh.triangles = triangles;
-    mesh.uv = uvs;
-    mesh.RecalculateNormals();
-    mesh.RecalculateBounds();
-
-    var go = new GameObject($"Bunker_{id}");
-    var mf = go.AddComponent<MeshFilter>();
-    mf.sharedMesh = mesh;
-    var mr = go.AddComponent<MeshRenderer>();
-    mr.sharedMaterial = sandMat;
-
-    var mc = go.AddComponent<MeshCollider>();
-    mc.sharedMesh = mesh;
-
-    // Position: mesh origin at centroid, at terrain surface height
-    go.transform.position = new Vector3(centroidX, surfaceY, centroidZ);
-
-    Debug.Log($"[HoleLiteImporter] Bunker {id}: {n} contour verts, " +
-              $"{ringCount} rings, {mesh.vertexCount} total verts");
-
-    return go;
-}
-```
-
-#### 2E. Update the Call Site
-
-In `ImportLiteHole()`, replace the call:
-
-```csharp
-// OLD:
-CreateBunkers(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot);
-
-// NEW:
-CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot);
-```
+**MeshCollider on the quad:** The quad covers the full bounding box, so
+the collider is larger than the visible water. For gameplay, SurfaceMarker
+detection is the primary mechanism — the collider just prevents the ball
+from falling through.
 
 ---
 
 ### Verification
 
-**Prerequisites:** Run the UHole Lite TASK.md first to generate V2 contour
-data, then re-export hole 01.
+1. Re-export Hole 12: `node scripts/export-hole.mjs lomond-country-club 12`
+   - [ ] Console shows mask stats (e.g. `Water masks: #1: 45x82px (2340px)`)
+   - [ ] `water.json` has `schema_version: "2.0.0"`, `bbox`, `mask`, `mask_width`, `mask_height`
+   - [ ] No `contour` field in water.json
+   - [ ] No `depth_m` in water.json
 
-Re-import Hole 01: `GOLFIN > Import Hole (Lite) > Hole 01`
+2. Re-import Hole 12 in Unity: `GOLFIN > Import Hole (Lite) > Hole 12`
+   - [ ] Water appears as blue shapes matching the zone map exactly
+   - [ ] **No shape distortion** — edges follow zone grid pixels
+   - [ ] Edges are crisp (no blur between water/non-water)
+   - [ ] Each water region has its own `Water_N` GameObject
+   - [ ] Each has `SurfaceMarker` with `SurfaceType.Water`
+   - [ ] Each has `MeshCollider`
+   - [ ] `WaterMask_N.png` and `WaterSurface_N.mat` in data folder
+   - [ ] Bunkers and greens still work (no regression)
+   - [ ] No console errors
 
-- [ ] Terrain is flat (no elevation anywhere)
-- [ ] Splatmap paints correct zone textures on flat ground
-- [ ] Bunker meshes appear as contour-shaped bowls sunk below surface
-- [ ] Bunker shapes match the splatmap zone boundaries (not bounding boxes)
-- [ ] No terrain visible inside bunker bowls
-- [ ] Rim edges are flush with flat surface (no gaps)
-- [ ] No z-fighting
-- [ ] Sand texture tiles on bowl surface
-- [ ] No console errors
-- [ ] Walk camera works on flat terrain
-- [ ] Anchor markers visible (at ground level on flat terrain)
-- [ ] Try Hole 02 and 03 as well
-
----
+3. Re-export and re-import Hole 01 (no water):
+   - [ ] Export skips water gracefully
+   - [ ] Import skips water gracefully (`No water.json found` or `No water`)
 
 ### Do NOT
 
-- Modify UHole Lite scripts (those are handled by separate TASK.md)
-- Modify `ApplySplatmap()` (it works fine as-is)
-- Modify the debug tools (`TestTerrainLayers`, `TestZoneAlignment`)
-- Delete `CreateBunkerMaterial()` — it's still used
-- Change bunker positions or zone data
+- Modify `extractZoneContours()`, `traceBorder()`, `simplifyPolygon()`,
+  `smoothPolygon()`, or `ensureCCW()` — bunkers/greens still use them
+- Modify bunker or green mesh generation
+- Modify the splatmap pipeline or `ZoneToLayer()`
+- Change heightmap resolution or terrain holes logic
 
 ---
 
@@ -476,7 +486,15 @@ Re-import Hole 01: `GOLFIN > Import Hole (Lite) > Hole 01`
 ✅ DONE: 2026-03-30 — Fix filter button raycast targets
 ✅ DONE: 2026-04-06 — Phase K Steps 1-8: HoleImporter + HoleLiteImporter terrain pipeline
 ✅ DONE: 2026-04-07 — Phase K-Surface Validation: Test Terrain Layers + Test Zone Alignment debug tools
-✅ DONE: 2026-04-07 — Phase K-Surface Task 1: Splatmap importer — ApplySplatmap() with 8 terrain layers, zone grid resampling, fringe ring, Gaussian blur, fallback to illustration texture
-✅ DONE: 2026-04-07 — V1 Bunker meshes (bounding-box bowls, SetHoles, terrain-following lip, multiple iterations)
-✅ DONE: 2026-04-07 — Bunker V2: contour export (traceBorder+RDP+CCW), flat terrain, contour mesh importer (CreateZoneMeshes+CreateContourMesh)
-✅ DONE: 2026-04-07 — Contour smoothing: Chaikin subdivision (2 iterations), RDP epsilon 2.0, all 18 holes re-exported with smooth contours
+✅ DONE: 2026-04-07 — Phase K-Surface Task 1: Splatmap importer
+✅ DONE: 2026-04-07 — V1 Bunker meshes (bounding-box bowls — dead end)
+✅ DONE: 2026-04-07 — Bunker V2: contour export + flat terrain + contour mesh importer
+✅ DONE: 2026-04-07 — Bunker V2 polish: Chaikin smoothing, closed-polygon RDP, 1025 heightmap res, sand glow fix
+✅ DONE: 2026-04-07 — Green zone meshes: contour export, raised mesh, SurfaceMarker component
+✅ DONE: 2026-04-07 — Green collar: semi-rough slope as separate mesh, collar/surface split
+✅ DONE: 2026-04-07 — Phase 2 Water Zone Meshes: water contour export + basin mesh importer + transparent material
+✅ DONE: 2026-04-07 — Morphological close for water fragments + re-export. Hole 12: 23→16 regions (radius=3 bridges some gaps, wider gaps persist)
+✅ DONE: 2026-04-07 — Water tree absorption + dilate-only (replaced morphological close)
+✅ DONE: 2026-04-07 — Fix water border gaps: rim expanded to 105%, terrain cut at 100% (was 90%)
+✅ DONE: 2026-04-07 — Simplified water to flat plane: no basin, no terrain holes, opaque material
+✅ DONE: 2026-04-07 — Water Option 2: Rasterized quad + alpha mask (pixel-perfect water boundaries, no contour distortion)
