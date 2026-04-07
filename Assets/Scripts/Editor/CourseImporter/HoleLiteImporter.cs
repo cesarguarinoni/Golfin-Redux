@@ -1608,48 +1608,60 @@ namespace Golfin.CourseImport
                 float centerX = (worldMinX + worldMaxX) / 2f;
                 float centerZ = (worldMinZ + worldMaxZ) / 2f;
 
-                // --- Generate alpha mask texture ---
-                // 90° CCW rotation: U→worldX=local.z (increases with my),
-                //                   V→worldZ=local.x (increases with mx)
-                // Simple transpose: mask(mx, my) → tex(my, mx)
-                int texW = mh;  // rotated dimensions
-                int texH = mw;
-                var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
-                tex.filterMode = FilterMode.Bilinear; // smooth staircase edges
-                tex.wrapMode = TextureWrapMode.Clamp;
-
-                // 1px dilate the mask to prevent bilinear interpolation from
-                // shrinking the water boundary at edges
-                byte[] dilated = new byte[mw * mh];
-                for (int my = 0; my < mh; my++)
+                // --- Upscale mask 4x for smoother bilinear edges ---
+                int scale = 4;
+                int upW = mw * scale;
+                int upH = mh * scale;
+                byte[] upscaled = new byte[upW * upH];
+                for (int uy = 0; uy < upH; uy++)
                 {
-                    for (int mx = 0; mx < mw; mx++)
+                    int srcY = uy / scale;
+                    for (int ux = 0; ux < upW; ux++)
                     {
-                        if (maskBytes[my * mw + mx] == 1)
-                        {
-                            dilated[my * mw + mx] = 1;
-                            continue;
-                        }
-                        // Check 4-connected neighbors
-                        bool hasWaterNeighbor =
-                            (mx > 0      && maskBytes[my * mw + (mx - 1)] == 1) ||
-                            (mx < mw - 1 && maskBytes[my * mw + (mx + 1)] == 1) ||
-                            (my > 0      && maskBytes[(my - 1) * mw + mx] == 1) ||
-                            (my < mh - 1 && maskBytes[(my + 1) * mw + mx] == 1);
-                        dilated[my * mw + mx] = hasWaterNeighbor ? (byte)1 : (byte)0;
+                        int srcX = ux / scale;
+                        upscaled[uy * upW + ux] = maskBytes[srcY * mw + srcX];
                     }
                 }
+
+                // 1px dilate on the upscaled mask to prevent bilinear
+                // interpolation from shrinking the water boundary
+                byte[] dilated = new byte[upW * upH];
+                for (int uy = 0; uy < upH; uy++)
+                {
+                    for (int ux = 0; ux < upW; ux++)
+                    {
+                        if (upscaled[uy * upW + ux] == 1)
+                        {
+                            dilated[uy * upW + ux] = 1;
+                            continue;
+                        }
+                        bool hasWaterNeighbor =
+                            (ux > 0       && upscaled[uy * upW + (ux - 1)] == 1) ||
+                            (ux < upW - 1 && upscaled[uy * upW + (ux + 1)] == 1) ||
+                            (uy > 0       && upscaled[(uy - 1) * upW + ux] == 1) ||
+                            (uy < upH - 1 && upscaled[(uy + 1) * upW + ux] == 1);
+                        dilated[uy * upW + ux] = hasWaterNeighbor ? (byte)1 : (byte)0;
+                    }
+                }
+
+                // Build texture from upscaled+dilated mask
+                // 90° CCW rotation: transpose (uy, ux) → tex(uy, ux)
+                int texW = upH;
+                int texH = upW;
+                var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
+                tex.filterMode = FilterMode.Bilinear;
+                tex.wrapMode = TextureWrapMode.Clamp;
 
                 Color waterColor = new Color(0.18f, 0.40f, 0.58f, 1.0f);
                 Color clearColor = new Color(0f, 0f, 0f, 0f);
 
-                for (int my = 0; my < mh; my++)
+                for (int uy = 0; uy < upH; uy++)
                 {
-                    for (int mx = 0; mx < mw; mx++)
+                    for (int ux = 0; ux < upW; ux++)
                     {
-                        bool isWater = dilated[my * mw + mx] == 1;
-                        int tx = my;
-                        int ty = mx;
+                        bool isWater = dilated[uy * upW + ux] == 1;
+                        int tx = uy;
+                        int ty = ux;
                         tex.SetPixel(tx, ty, isWater ? waterColor : clearColor);
                     }
                 }
