@@ -55,7 +55,10 @@ namespace Golfin.CourseImport
 
             try
             {
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Reading manifest...", 0f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Cleaning previous import...", 0f);
+                CleanPreviousImport(dataDir, scenePath);
+
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Reading manifest...", 0.05f);
 
                 EnsureDirectory(Path.Combine(projectRoot, generatedDir));
                 EnsureDirectory(Path.Combine(projectRoot, dataDir));
@@ -149,6 +152,30 @@ namespace Golfin.CourseImport
                 Debug.LogError($"[HoleLiteImporter] Import failed: {ex}");
                 EditorUtility.DisplayDialog("Import Error", ex.Message, "OK");
             }
+        }
+
+        private static void CleanPreviousImport(string dataDir, string scenePath)
+        {
+            // Delete old scene file
+            if (AssetDatabase.LoadAssetAtPath<Object>(scenePath) != null)
+            {
+                AssetDatabase.DeleteAsset(scenePath);
+                Debug.Log($"[HoleLiteImporter] Deleted old scene: {scenePath}");
+            }
+
+            // Delete all assets in the data directory
+            string[] guids = AssetDatabase.FindAssets("", new[] { dataDir });
+            if (guids.Length > 0)
+            {
+                foreach (string guid in guids)
+                {
+                    string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                    AssetDatabase.DeleteAsset(assetPath);
+                }
+                Debug.Log($"[HoleLiteImporter] Cleaned {guids.Length} old assets from {dataDir}");
+            }
+
+            AssetDatabase.Refresh();
         }
 
         private static TerrainData CreateTerrain(HoleManifest manifest, string exportPath,
