@@ -6,473 +6,444 @@
 
 ---
 
-## Current Task — Phase K-Surface Task 1: Splatmap Importer
+## Current Task — Bunker V2: Flat Terrain + Contour Mesh Importer
 
-**Goal:** Replace the illustration texture on the terrain with 8 tiling golf
-textures (fairway, green, semi-rough, rough, bunker, tee, cart path, fringe),
-auto-painted from the UHole Lite zone grid via a splatmap.
+**Reference:** `Docs/BUNKER_V2_SPEC.md` for full architecture.
 
-**Context:** Read `Docs/PHASE_K_SURFACE_SPEC.md` for the full architecture.
-The validation tests (`GOLFIN > Debug > Test Terrain Layers` and
-`GOLFIN > Debug > Test Zone Alignment`) confirmed:
-- Textures tile acceptably at terrain scale ✅
-- Zone-to-terrain coordinate mapping is correct ✅
+Two changes to `HoleLiteImporter.cs`:
 
-Now build the real thing.
+1. **Flatten terrain** (skip heightmap — all heights = 0)
+2. **Replace `CreateBunkers()` with `CreateZoneMeshes()`** that uses
+   contour polygons from bunkers.json V2
 
----
-
-### Overview
-
-Modify `HoleLiteImporter.cs` to replace `ApplyTexture()` with `ApplySplatmap()`.
-The new method reads `zones.json` from the export folder, generates a smoothed
-alphamap, and applies 8 TerrainLayers using the existing textures in
-`Assets/Courses/Textures_2025(JPG)/`.
+> **IMPORTANT:** Task 1 (contour export) must be done first on the UHole
+> Lite side — see `Tools/UHoleLite/docs/TASK.md`. Do that task first,
+> re-export hole 01, THEN come back here.
 
 ---
 
-### Step 1: Data Classes
+### Change 1: Flat Terrain
 
-Add to `Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs` (if not
-already added by the validation task):
+In `CreateTerrain()`, replace the heightmap loading with a flat surface.
+
+**Find this block** (the heightmap loading + rotation loop):
 
 ```csharp
-[System.Serializable]
-public class ZonesData
-{
-    public int hole_number;
-    public ZoneSourceDimensions source_dimensions;
-    public string grid; // base64-encoded uint8 array
-}
+string heightmapPath = Path.Combine(exportPath, manifest.terrain.heightmap_file);
+byte[] rawBytes = File.ReadAllBytes(heightmapPath);
 
-[System.Serializable]
-public class ZoneSourceDimensions
+// Rotate heightmap 90° CCW: heights[hx, hy] instead of heights[res-1-hy, hx]
+float[,] heights = new float[res, res];
+for (int hy = 0; hy < res; hy++)
 {
-    public int width;
-    public int height;
+    for (int hx = 0; hx < res; hx++)
+    {
+        int idx = (hy * res + hx) * 2;
+        ushort val = (ushort)((rawBytes[idx] << 8) | rawBytes[idx + 1]);
+        heights[hx, hy] = val / 65535f;
+    }
 }
 ```
 
----
+**Replace with:**
 
-### Step 2: Replace ApplyTexture with ApplySplatmap
+```csharp
+// V2 DEV: Flat terrain — skip heightmap, all heights = 0.
+// Splatmap still paints correct zones. Re-enable heightmap in Task 4.
+float[,] heights = new float[res, res];
+// All values default to 0.0 — perfectly flat
+```
 
-In `HoleLiteImporter.cs`, replace the call to `ApplyTexture(...)` inside
-`ImportLiteHole()` with a call to `ApplySplatmap(...)`. Keep the old
-`ApplyTexture` method in the file (commented out or renamed to
-`ApplyTextureIllustration`) so we can toggle back for debugging.
+Also change `elevRange` to a safe nonzero value:
 
-Change in `ImportLiteHole()`:
 ```csharp
 // OLD:
-// ApplyTexture(terrainData, manifest, exportPath, dataDir, holeId, projectRoot);
+float elevRange = manifest.terrain.max_elevation_m - manifest.terrain.min_elevation_m;
 
 // NEW:
-ApplySplatmap(terrainData, manifest, exportPath, dataDir, holeId, projectRoot);
+float elevRange = 1.0f;  // V2 DEV: flat terrain, nonzero to avoid edge cases
 ```
 
 ---
 
-### Step 3: ApplySplatmap Method
+### Change 2: Replace CreateBunkers → CreateZoneMeshes
 
-Add this new method to `HoleLiteImporter.cs`. It does 6 things:
-1. Parse zone grid from zones.json
-2. Resample to alphamap resolution
-3. Generate synthetic fringe ring around greens
-4. Build raw alphamap (hard per-pixel zone assignments)
-5. Gaussian blur each channel + re-normalize (soft transitions)
-6. Create TerrainLayers and apply
+Delete the existing `CreateBunkers()` and `CreateBowlMesh()` methods entirely.
+Replace with the new contour-based system below.
+
+#### 2A. New Data Classes
+
+Add/update these serializable classes (some may already exist — replace as
+needed):
 
 ```csharp
-private static void ApplySplatmap(TerrainData terrainData, HoleManifest manifest,
-    string exportPath, string dataDir, string holeId, string projectRoot)
+[System.Serializable]
+public class BunkerContourVertex
 {
-    // --- 1. Parse zone grid ---
-    string zonesPath = Path.Combine(exportPath, "zones.json");
-    if (!File.Exists(zonesPath))
+    public float x;
+    public float z;
+}
+
+[System.Serializable]
+public class BunkerData
+{
+    public int id;
+    public int pixel_count;
+    public BunkerContourVertex[] contour;  // V2: ordered polygon vertices
+    public LocalCoord center_local;
+    public SizeData size_m;
+}
+
+[System.Serializable]
+public class BunkersFileData
+{
+    public string schema_version;
+    public int hole_number;
+    public int bunker_count;
+    public float depth_m;
+    public BunkerData[] bunkers;
+}
+```
+
+(If `LocalCoord` and `SizeData` already exist and are used elsewhere, keep
+them. Just make sure `BunkerData` has `contour` and `BunkersFileData` has
+`schema_version`.)
+
+#### 2B. Point-in-Polygon Utility
+
+Add this static method:
+
+```csharp
+private static bool IsInsideContour(float px, float pz, Vector2[] contour)
+{
+    bool inside = false;
+    for (int i = 0, j = contour.Length - 1; i < contour.Length; j = i++)
     {
-        Debug.LogWarning("[HoleLiteImporter] zones.json not found, falling back to illustration texture");
-        ApplyTextureIllustration(terrainData, manifest, exportPath, dataDir, holeId, projectRoot);
+        if ((contour[i].y > pz) != (contour[j].y > pz) &&
+            px < (contour[j].x - contour[i].x) * (pz - contour[i].y)
+                 / (contour[j].y - contour[i].y) + contour[i].x)
+        {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+```
+
+#### 2C. New `CreateZoneMeshes()` Method
+
+```csharp
+private static void CreateZoneMeshes(TerrainData terrainData, GameObject terrainGO,
+    Transform parentRoot, string exportPath, string dataDir, string projectRoot)
+{
+    string bunkersPath = Path.Combine(exportPath, "bunkers.json");
+    if (!File.Exists(bunkersPath))
+    {
+        Debug.Log("[HoleLiteImporter] No bunkers.json found, skipping");
         return;
     }
 
-    string zonesJson = File.ReadAllText(zonesPath);
-    var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
-    byte[] grid = System.Convert.FromBase64String(zonesData.grid);
-    int zoneW = zonesData.source_dimensions.width;
-    int zoneH = zonesData.source_dimensions.height;
+    string json = File.ReadAllText(bunkersPath);
+    var bunkersFile = JsonUtility.FromJson<BunkersFileData>(json);
 
-    Debug.Log($"[HoleLiteImporter] Zone grid: {zoneW}x{zoneH}, {grid.Length} bytes");
-
-    // --- 2. Resample to alphamap resolution ---
-    int alphaRes = 256;
-    terrainData.alphamapResolution = alphaRes;
-
-    byte[] resampledZones = new byte[alphaRes * alphaRes];
-    for (int ay = 0; ay < alphaRes; ay++)
+    if (bunkersFile.bunkers == null || bunkersFile.bunkers.Length == 0)
     {
-        for (int ax = 0; ax < alphaRes; ax++)
+        Debug.Log("[HoleLiteImporter] No bunkers in bunkers.json");
+        return;
+    }
+
+    // Check for V2 contour data
+    bool hasContours = !string.IsNullOrEmpty(bunkersFile.schema_version) &&
+                       bunkersFile.bunkers[0].contour != null &&
+                       bunkersFile.bunkers[0].contour.Length > 0;
+
+    if (!hasContours)
+    {
+        Debug.LogWarning("[HoleLiteImporter] bunkers.json has no contour data " +
+                         "(V1 format). Re-export with updated export-hole.mjs. Skipping bunkers.");
+        return;
+    }
+
+    float defaultDepth = bunkersFile.depth_m > 0 ? bunkersFile.depth_m : 2.0f;
+
+    var sandMat = CreateBunkerMaterial(dataDir, projectRoot);
+
+    var bunkersRoot = new GameObject("Bunkers");
+    bunkersRoot.transform.SetParent(parentRoot);
+
+    var terrain = terrainGO.GetComponent<Terrain>();
+    float terrainBaseY = terrainGO.transform.position.y;
+    Vector3 terrainPos = terrainGO.transform.position;
+    Vector3 terrainSize = terrainData.size;
+
+    // --- Terrain holes ---
+    int holesRes = terrainData.holesResolution;
+    bool[,] holes = terrainData.GetHoles(0, 0, holesRes, holesRes);
+
+    foreach (var bunker in bunkersFile.bunkers)
+    {
+        // Apply 90° CCW rotation to contour vertices (same as anchors)
+        var worldContour = new Vector2[bunker.contour.Length];
+        float sumX = 0, sumZ = 0;
+        for (int i = 0; i < bunker.contour.Length; i++)
         {
-            float fx = (float)ax / (alphaRes - 1);
-            float fy = (float)ay / (alphaRes - 1);
-
-            // Apply the same 90° CCW rotation as the heightmap/texture.
-            // The heightmap uses heights[hx, hy] (swapped indices).
-            // Anchors use: worldPos = Vector3(local.z, 0, local.x)
-            // where local.x = (normX - 0.5) * terrain_width_m
-            //       local.z = (normY - 0.5) * terrain_length_m
-            //
-            // Alphamap [ay, ax]:
-            //   Unity docs: alphamap[z_index, x_index, layer]
-            //   ay maps along terrain Z, ax maps along terrain X
-            //
-            // Terrain X corresponds to zone grid Y (after 90° CCW)
-            // Terrain Z corresponds to zone grid X (after 90° CCW)
-            //
-            // So: zone grid X ← terrain Z fraction (fy... but need to check direction)
-            //     zone grid Y ← terrain X fraction (fx... but need to check direction)
-            //
-            // The validation test confirmed this mapping works:
-            //   worldX = (normY - 0.5) * terrain_length_m
-            //   worldZ = (normX - 0.5) * terrain_width_m
-            //
-            // Alphamap ax → terrain X fraction → zone normY
-            // Alphamap ay → terrain Z fraction → zone normX
-
-            int gx = Mathf.Clamp(Mathf.RoundToInt(fy * (zoneW - 1)), 0, zoneW - 1);
-            int gy = Mathf.Clamp(Mathf.RoundToInt(fx * (zoneH - 1)), 0, zoneH - 1);
-
-            resampledZones[ay * alphaRes + ax] = grid[gy * zoneW + gx];
+            float wx = bunker.contour[i].z;  // 90° CCW: worldX = local.z
+            float wz = bunker.contour[i].x;  // 90° CCW: worldZ = local.x
+            worldContour[i] = new Vector2(wx, wz);
+            sumX += wx;
+            sumZ += wz;
         }
-    }
+        float centroidX = sumX / worldContour.Length;
+        float centroidZ = sumZ / worldContour.Length;
 
-    // --- 3. Generate fringe ring around greens ---
-    int fringeRadius = 3;
-    bool[] greenMask = new bool[alphaRes * alphaRes];
-    for (int i = 0; i < resampledZones.Length; i++)
-        greenMask[i] = (resampledZones[i] == 2);
-
-    bool[] dilatedGreen = DilateMask(greenMask, alphaRes, alphaRes, fringeRadius);
-
-    bool[] fringeMask = new bool[alphaRes * alphaRes];
-    for (int i = 0; i < fringeMask.Length; i++)
-    {
-        if (dilatedGreen[i] && !greenMask[i])
+        // Bounding box of contour (for limiting hole-grid search)
+        float cMinX = float.MaxValue, cMaxX = float.MinValue;
+        float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
+        foreach (var v in worldContour)
         {
-            int zone = resampledZones[i];
-            // Only place fringe on adjacent playable surfaces
-            if (zone == 1 || zone == 3 || zone == 4)
-                fringeMask[i] = true;
+            if (v.x < cMinX) cMinX = v.x;
+            if (v.x > cMaxX) cMaxX = v.x;
+            if (v.y < cMinZ) cMinZ = v.y;
+            if (v.y > cMaxZ) cMaxZ = v.y;
         }
-    }
 
-    // --- 4. Build raw alphamap ---
-    int layerCount = 8;
-    float[,,] alphamap = new float[alphaRes, alphaRes, layerCount];
+        // Cut terrain holes by tracing contour (with small inward margin)
+        float marginX = (cMaxX - cMinX) * 0.05f;
+        float marginZ = (cMaxZ - cMinZ) * 0.05f;
 
-    for (int ay = 0; ay < alphaRes; ay++)
-    {
-        for (int ax = 0; ax < alphaRes; ax++)
+        int hMinX = Mathf.Clamp(Mathf.FloorToInt(((cMinX + marginX) - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+        int hMaxX = Mathf.Clamp(Mathf.CeilToInt(((cMaxX - marginX) - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+        int hMinZ = Mathf.Clamp(Mathf.FloorToInt(((cMinZ + marginZ) - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+        int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(((cMaxZ - marginZ) - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+
+        for (int hz = hMinZ; hz <= hMaxZ; hz++)
         {
-            int idx = ay * alphaRes + ax;
-            int layer;
-
-            if (fringeMask[idx])
-                layer = 7; // fringe
-            else
-                layer = ZoneToLayer(resampledZones[idx]);
-
-            alphamap[ay, ax, layer] = 1.0f;
-        }
-    }
-
-    // --- 5. Gaussian blur + re-normalize ---
-    int blurRadius = 3;
-    float sigma = blurRadius / 2.0f;
-
-    for (int l = 0; l < layerCount; l++)
-    {
-        float[,] channel = ExtractChannel(alphamap, alphaRes, layerCount, l);
-        float[,] blurred = GaussianBlur2D(channel, alphaRes, blurRadius, sigma);
-        SetChannel(alphamap, alphaRes, layerCount, l, blurred);
-    }
-
-    // Re-normalize so weights sum to 1.0
-    for (int ay = 0; ay < alphaRes; ay++)
-    {
-        for (int ax = 0; ax < alphaRes; ax++)
-        {
-            float sum = 0f;
-            for (int l = 0; l < layerCount; l++)
-                sum += alphamap[ay, ax, l];
-
-            if (sum > 0.001f)
+            for (int hx = hMinX; hx <= hMaxX; hx++)
             {
-                for (int l = 0; l < layerCount; l++)
-                    alphamap[ay, ax, l] /= sum;
-            }
-            else
-            {
-                alphamap[ay, ax, 3] = 1.0f; // fallback: rough
+                float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
+                float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
+
+                if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
+                    holes[hz, hx] = false;
             }
         }
+
+        // --- Generate contour-shaped mesh ---
+        float surfaceY = terrainBaseY + terrain.SampleHeight(
+            new Vector3(centroidX, 0, centroidZ));
+
+        float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+
+        var meshGO = CreateContourMesh(bunker.id, worldContour, centroidX, centroidZ,
+            surfaceY, bowlDepth, sandMat, terrain, terrainBaseY);
+        meshGO.transform.SetParent(bunkersRoot.transform);
     }
 
-    // --- 6. Create TerrainLayers and apply ---
-    string texDir = "Assets/Courses/Textures_2025(JPG)";
+    terrainData.SetHoles(0, 0, holes);
 
-    string[] albedoNames = {
-        "T_Fairway_Light",      // 0 fairway
-        "T_Green_Albedo",       // 1 green
-        "T_Semirough_Albedo",   // 2 semi-rough
-        "T_Rough_Albedo",       // 3 rough (catch-all)
-        "T_Bunker_Albedo",      // 4 bunker
-        "T_Tee_Albedo",         // 5 tee
-        "T_RoadAsphalt_Albedo", // 6 cart path
-        "T_Fringe_Albedo",      // 7 fringe
-    };
-    string[] normalNames = {
-        "T_Fairway_Normal",
-        "T_Green_Normal",
-        "T_Semirough_Normal",
-        "T_Rough_Normal",
-        "T_Bunker_Normal",
-        "T_Tee_Normal",
-        "T_RoadAsphalt_Normal",
-        "T_Fringe_Normal",
-    };
-    float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 4f };
+    // Copy bunkers.json to Assets
+    string destPath = Path.Combine(projectRoot, dataDir, "bunkers.json");
+    File.Copy(bunkersPath, destPath, true);
+    AssetDatabase.ImportAsset($"{dataDir}/bunkers.json");
 
-    var layers = new TerrainLayer[layerCount];
-    string layerDir = $"{dataDir}";
-    EnsureDirectory(Path.Combine(projectRoot, layerDir));
-
-    for (int i = 0; i < layerCount; i++)
-    {
-        layers[i] = new TerrainLayer();
-        layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
-        layers[i].normalMapTexture = FindTextureExact(texDir, normalNames[i]);
-        layers[i].tileSize = new Vector2(tileSizes[i], tileSizes[i]);
-        layers[i].tileOffset = Vector2.zero;
-
-        if (layers[i].diffuseTexture == null)
-            Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoNames[i]}");
-
-        string layerPath = $"{layerDir}/TerrainLayer_{albedoNames[i]}.asset";
-        var existingLayer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
-        if (existingLayer != null)
-            AssetDatabase.DeleteAsset(layerPath);
-        AssetDatabase.CreateAsset(layers[i], layerPath);
-    }
-
-    terrainData.terrainLayers = layers;
-    terrainData.SetAlphamaps(0, 0, alphamap);
-
-    // Copy zones.json to Assets for future runtime use
-    string destZonesPath = Path.Combine(projectRoot, dataDir, "zones.json");
-    File.Copy(zonesPath, destZonesPath, true);
-    AssetDatabase.ImportAsset($"{dataDir}/zones.json");
-
-    Debug.Log($"[HoleLiteImporter] Splatmap applied: {layerCount} layers, " +
-              $"alphamap {alphaRes}x{alphaRes}, blur radius {blurRadius}");
+    Debug.Log($"[HoleLiteImporter] Created {bunkersFile.bunkers.Length} contour-based bunker(s)");
 }
 ```
 
----
+#### 2D. New `CreateContourMesh()` Method
 
-### Step 4: Helper Methods
-
-Add these helpers to `HoleLiteImporter.cs`:
+This generates a mesh from the contour polygon with concentric rings
+that descend into a bowl shape.
 
 ```csharp
-private static int ZoneToLayer(int zoneIndex)
+private static GameObject CreateContourMesh(int id, Vector2[] contour,
+    float centroidX, float centroidZ, float surfaceY, float depth,
+    Material sandMat, Terrain terrain, float terrainBaseY)
 {
-    return zoneIndex switch
+    int n = contour.Length; // number of contour vertices
+    if (n < 3)
     {
-        1  => 0,  // fairway
-        2  => 1,  // green
-        3  => 2,  // semi_rough
-        4  => 3,  // rough
-        5  => 3,  // trees → rough texture
-        6  => 4,  // bunker
-        7  => 3,  // water → rough for now
-        8  => 6,  // cart_path
-        9  => 3,  // ob → rough texture
-        10 => 5,  // tee_box
-        _  => 3,  // background/unknown → rough
-    };
-}
+        Debug.LogWarning($"[HoleLiteImporter] Bunker {id}: contour has < 3 vertices, skipping");
+        return new GameObject($"Bunker_{id}_SKIP");
+    }
 
-private static bool[] DilateMask(bool[] mask, int w, int h, int radius)
-{
-    bool[] result = new bool[w * h];
-    for (int y = 0; y < h; y++)
+    // Ring layout: rim (100%) → inner (80%) → mid (50%) → deep (20%) → center
+    float[] ringScales = { 1.0f, 0.80f, 0.50f, 0.20f };
+    float[] ringDepths = { 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
+    // Ring 0 (rim): at terrain height + tiny offset
+    // Ring 1 (inner): at terrain height (transition)
+    // Ring 2 (mid): half depth
+    // Ring 3 (deep): near full depth
+
+    int ringCount = ringScales.Length;
+    int vertCount = n * ringCount + 1; // +1 for center
+    var vertices = new Vector3[vertCount];
+    var uvs = new Vector2[vertCount];
+
+    // Compute bounding box for UV mapping
+    float minX = float.MaxValue, maxX = float.MinValue;
+    float minZ = float.MaxValue, maxZ = float.MinValue;
+    foreach (var v in contour)
     {
-        for (int x = 0; x < w; x++)
+        if (v.x < minX) minX = v.x;
+        if (v.x > maxX) maxX = v.x;
+        if (v.y < minZ) minZ = v.y;
+        if (v.y > maxZ) maxZ = v.y;
+    }
+    float extentX = Mathf.Max(maxX - minX, 0.1f);
+    float extentZ = Mathf.Max(maxZ - minZ, 0.1f);
+
+    for (int r = 0; r < ringCount; r++)
+    {
+        float scale = ringScales[r];
+        float ringY = -ringDepths[r];
+
+        for (int i = 0; i < n; i++)
         {
-            if (mask[y * w + x])
+            // Scale toward centroid
+            float wx = centroidX + (contour[i].x - centroidX) * scale;
+            float wz = centroidZ + (contour[i].y - centroidZ) * scale;
+
+            float y = ringY;
+
+            // Rim ring (r==0): sample terrain height for seamless edge
+            if (r == 0)
             {
-                // Already set — spread to neighbors
-                for (int dy = -radius; dy <= radius; dy++)
-                {
-                    for (int dx = -radius; dx <= radius; dx++)
-                    {
-                        if (dx * dx + dy * dy > radius * radius) continue;
-                        int nx = x + dx;
-                        int ny = y + dy;
-                        if (nx >= 0 && nx < w && ny >= 0 && ny < h)
-                            result[ny * w + nx] = true;
-                    }
-                }
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
             }
-        }
-    }
-    return result;
-}
-
-private static float[,] ExtractChannel(float[,,] alphamap, int res, int layerCount, int layer)
-{
-    float[,] channel = new float[res, res];
-    for (int y = 0; y < res; y++)
-        for (int x = 0; x < res; x++)
-            channel[y, x] = alphamap[y, x, layer];
-    return channel;
-}
-
-private static void SetChannel(float[,,] alphamap, int res, int layerCount, int layer, float[,] channel)
-{
-    for (int y = 0; y < res; y++)
-        for (int x = 0; x < res; x++)
-            alphamap[y, x, layer] = channel[y, x];
-}
-
-private static float[,] GaussianBlur2D(float[,] input, int res, int radius, float sigma)
-{
-    // Build 1D kernel
-    int kernelSize = radius * 2 + 1;
-    float[] kernel = new float[kernelSize];
-    float kernelSum = 0f;
-    for (int i = 0; i < kernelSize; i++)
-    {
-        float d = i - radius;
-        kernel[i] = Mathf.Exp(-(d * d) / (2f * sigma * sigma));
-        kernelSum += kernel[i];
-    }
-    for (int i = 0; i < kernelSize; i++)
-        kernel[i] /= kernelSum;
-
-    // Horizontal pass
-    float[,] temp = new float[res, res];
-    for (int y = 0; y < res; y++)
-    {
-        for (int x = 0; x < res; x++)
-        {
-            float sum = 0f;
-            for (int k = 0; k < kernelSize; k++)
+            // Inner ring (r==1): also at terrain height, no offset
+            else if (r == 1)
             {
-                int sx = Mathf.Clamp(x + k - radius, 0, res - 1);
-                sum += input[y, sx] * kernel[k];
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                y = (terrainBaseY + terrainH) - surfaceY;
             }
-            temp[y, x] = sum;
+
+            // Local space relative to mesh origin (centroid at surface)
+            float localX = wx - centroidX;
+            float localZ = wz - centroidZ;
+
+            int vi = r * n + i;
+            vertices[vi] = new Vector3(localX, y, localZ);
+            uvs[vi] = new Vector2(
+                (wx - minX) / extentX,
+                (wz - minZ) / extentZ);
         }
     }
 
-    // Vertical pass
-    float[,] output = new float[res, res];
-    for (int y = 0; y < res; y++)
+    // Center vertex — bottom of bowl
+    int centerIdx = vertCount - 1;
+    vertices[centerIdx] = new Vector3(0, -depth, 0);
+    uvs[centerIdx] = new Vector2(0.5f, 0.5f);
+
+    // --- Triangles ---
+    // Quads between adjacent rings + fan from last ring to center
+    int triCount = n * (ringCount - 1) * 6 + n * 3;
+    var triangles = new int[triCount];
+    int ti = 0;
+
+    for (int r = 0; r < ringCount - 1; r++)
     {
-        for (int x = 0; x < res; x++)
+        for (int i = 0; i < n; i++)
         {
-            float sum = 0f;
-            for (int k = 0; k < kernelSize; k++)
-            {
-                int sy = Mathf.Clamp(y + k - radius, 0, res - 1);
-                sum += temp[sy, x] * kernel[k];
-            }
-            output[y, x] = sum;
+            int curr = r * n + i;
+            int next = r * n + (i + 1) % n;
+            int currInner = (r + 1) * n + i;
+            int nextInner = (r + 1) * n + (i + 1) % n;
+
+            triangles[ti++] = curr;
+            triangles[ti++] = currInner;
+            triangles[ti++] = next;
+
+            triangles[ti++] = next;
+            triangles[ti++] = currInner;
+            triangles[ti++] = nextInner;
         }
     }
 
-    return output;
-}
-
-private static Texture2D FindTextureExact(string dir, string exactName)
-{
-    // Search for the texture by exact filename (without extension)
-    string[] guids = AssetDatabase.FindAssets(exactName, new[] { dir });
-    foreach (var guid in guids)
+    // Fan from last ring to center
+    int lastRingStart = (ringCount - 1) * n;
+    for (int i = 0; i < n; i++)
     {
-        string path = AssetDatabase.GUIDToAssetPath(guid);
-        string fileName = Path.GetFileNameWithoutExtension(path);
-        if (fileName == exactName)
-        {
-            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-        }
+        int curr = lastRingStart + i;
+        int next = lastRingStart + (i + 1) % n;
+
+        triangles[ti++] = curr;
+        triangles[ti++] = centerIdx;
+        triangles[ti++] = next;
     }
-    Debug.LogWarning($"[HoleLiteImporter] Texture not found: {exactName} in {dir}");
-    return null;
+
+    // --- Build mesh ---
+    var mesh = new Mesh();
+    mesh.name = $"BunkerContour_{id}";
+    mesh.vertices = vertices;
+    mesh.triangles = triangles;
+    mesh.uv = uvs;
+    mesh.RecalculateNormals();
+    mesh.RecalculateBounds();
+
+    var go = new GameObject($"Bunker_{id}");
+    var mf = go.AddComponent<MeshFilter>();
+    mf.sharedMesh = mesh;
+    var mr = go.AddComponent<MeshRenderer>();
+    mr.sharedMaterial = sandMat;
+
+    var mc = go.AddComponent<MeshCollider>();
+    mc.sharedMesh = mesh;
+
+    // Position: mesh origin at centroid, at terrain surface height
+    go.transform.position = new Vector3(centroidX, surfaceY, centroidZ);
+
+    Debug.Log($"[HoleLiteImporter] Bunker {id}: {n} contour verts, " +
+              $"{ringCount} rings, {mesh.vertexCount} total verts");
+
+    return go;
 }
 ```
 
----
+#### 2E. Update the Call Site
 
-### Step 5: Rename Old Method
-
-Rename the existing `ApplyTexture` method to `ApplyTextureIllustration` so
-it's still available for debugging:
+In `ImportLiteHole()`, replace the call:
 
 ```csharp
-// Was: private static void ApplyTexture(...)
-private static void ApplyTextureIllustration(TerrainData terrainData, HoleManifest manifest,
-    string exportPath, string dataDir, string holeId, string projectRoot)
-{
-    // ... existing code unchanged ...
-}
+// OLD:
+CreateBunkers(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot);
+
+// NEW:
+CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot);
 ```
-
----
-
-### Step 6: Clean Up Debug Menu Items
-
-The two validation test menu items from the previous task
-(`GOLFIN > Debug > Test Terrain Layers` and `GOLFIN > Debug > Test Zone Alignment`)
-can stay — they're useful for future debugging. No need to remove them.
 
 ---
 
 ### Verification
 
-After implementation, re-import Hole 01: `GOLFIN > Import Hole (Lite) > Hole 01`
+**Prerequisites:** Run the UHole Lite TASK.md first to generate V2 contour
+data, then re-export hole 01.
 
-- [ ] 8 TerrainLayers created in `Assets/Golf/Courses/lomond-country-club/Data/hole-01/`
-- [ ] Each layer has both diffuse and normal map assigned (no null warnings in console)
-- [ ] Terrain shows distinct surfaces: green patch, fairway stripe, rough everywhere else
-- [ ] Fairway texture is visually different from rough texture
-- [ ] Green texture patch visible at the green area
-- [ ] Bunker sand patches visible at bunker locations (if any exist in zone grid)
-- [ ] Tee texture visible near tee marker anchors
-- [ ] Smooth transitions between zone types (no hard pixel edges)
-- [ ] Fringe ring visible around the green (slightly different shade)
-- [ ] zones.json copied to Assets data folder
+Re-import Hole 01: `GOLFIN > Import Hole (Lite) > Hole 01`
+
+- [ ] Terrain is flat (no elevation anywhere)
+- [ ] Splatmap paints correct zone textures on flat ground
+- [ ] Bunker meshes appear as contour-shaped bowls sunk below surface
+- [ ] Bunker shapes match the splatmap zone boundaries (not bounding boxes)
+- [ ] No terrain visible inside bunker bowls
+- [ ] Rim edges are flush with flat surface (no gaps)
+- [ ] No z-fighting
+- [ ] Sand texture tiles on bowl surface
 - [ ] No console errors
-- [ ] Re-running import replaces layers cleanly (no duplicate assets)
-- [ ] Walking around in play mode — textures look reasonable from ground level
+- [ ] Walk camera works on flat terrain
+- [ ] Anchor markers visible (at ground level on flat terrain)
+- [ ] Try Hole 02 and 03 as well
 
-### If Zone Alignment Is Off
-
-If surfaces appear rotated or mirrored relative to the terrain features:
-- The `gx/gy` mapping in the resampling loop is the only thing to adjust
-- Try swapping `gx` and `gy`, or inverting one axis: `(zoneW - 1 - gx)` or `(zoneH - 1 - gy)`
-- Use the debug spheres from `Test Zone Alignment` as reference points
-- The tee anchor markers should sit on tee-textured terrain
+---
 
 ### Do NOT
 
-- Remove or modify `CreateTerrain()` or heightmap code
-- Change anchor placement or WalkCamera
-- Modify UHole Lite scripts
-- Change the zone grid data
-- Remove the debug menu items from the validation task
+- Modify UHole Lite scripts (those are handled by separate TASK.md)
+- Modify `ApplySplatmap()` (it works fine as-is)
+- Modify the debug tools (`TestTerrainLayers`, `TestZoneAlignment`)
+- Delete `CreateBunkerMaterial()` — it's still used
+- Change bunker positions or zone data
 
 ---
 
@@ -500,3 +471,4 @@ If surfaces appear rotated or mirrored relative to the terrain features:
 ✅ DONE: 2026-04-06 — Phase K Steps 1-8: HoleImporter + HoleLiteImporter terrain pipeline
 ✅ DONE: 2026-04-07 — Phase K-Surface Validation: Test Terrain Layers + Test Zone Alignment debug tools
 ✅ DONE: 2026-04-07 — Phase K-Surface Task 1: Splatmap importer — ApplySplatmap() with 8 terrain layers, zone grid resampling, fringe ring, Gaussian blur, fallback to illustration texture
+✅ DONE: 2026-04-07 — V1 Bunker meshes (bounding-box bowls, SetHoles, terrain-following lip, multiple iterations)

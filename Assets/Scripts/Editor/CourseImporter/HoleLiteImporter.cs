@@ -90,12 +90,18 @@ namespace Golfin.CourseImport
                 terrainGO.name = "TerrainRoot";
                 terrainGO.transform.position = new Vector3(-terrainX / 2f, 0f, -terrainZ / 2f);
 
+                // Create holeRoot early so bunkers can be parented to it
+                var holeRoot = new GameObject("HoleRoot");
+                terrainGO.transform.SetParent(holeRoot.transform);
+
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Applying texture...", 0.4f);
                 ApplySplatmap(terrainData, manifest, exportPath, dataDir, holeId, projectRoot);
 
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating bunkers...", 0.5f);
+                CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot);
+
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Building hierarchy...", 0.6f);
 
-                var holeRoot = new GameObject("HoleRoot");
                 var metadata = holeRoot.AddComponent<HoleMetadata>();
                 metadata.courseId = manifest.course_id;
                 metadata.holeNumber = manifest.hole_number;
@@ -103,8 +109,6 @@ namespace Golfin.CourseImport
                 metadata.strokeIndex = manifest.stroke_index;
                 metadata.championshipYards = manifest.championship_yards;
                 metadata.reviewStatus = manifest.review_status;
-
-                terrainGO.transform.SetParent(holeRoot.transform);
 
                 var anchorsRoot = new GameObject("Anchors");
                 anchorsRoot.transform.SetParent(holeRoot.transform);
@@ -151,22 +155,11 @@ namespace Golfin.CourseImport
             string dataDir, string holeId, string projectRoot, float terrainX, float terrainZ)
         {
             int res = manifest.terrain.resolution;
-            float elevRange = manifest.terrain.max_elevation_m - manifest.terrain.min_elevation_m;
-
-            string heightmapPath = Path.Combine(exportPath, manifest.terrain.heightmap_file);
-            byte[] rawBytes = File.ReadAllBytes(heightmapPath);
-
-            // Rotate heightmap 90° CCW: heights[hx, hy] instead of heights[res-1-hy, hx]
+            // V2 DEV: Flat terrain — skip heightmap, all heights = 0.
+            // Splatmap still paints correct zones. Re-enable heightmap in Task 4.
+            float elevRange = 1.0f;  // V2 DEV: flat terrain, nonzero to avoid edge cases
             float[,] heights = new float[res, res];
-            for (int hy = 0; hy < res; hy++)
-            {
-                for (int hx = 0; hx < res; hx++)
-                {
-                    int idx = (hy * res + hx) * 2;
-                    ushort val = (ushort)((rawBytes[idx] << 8) | rawBytes[idx + 1]);
-                    heights[hx, hy] = val / 65535f;
-                }
-            }
+            // All values default to 0.0 — perfectly flat
 
             var terrainData = new TerrainData();
             terrainData.heightmapResolution = res;
@@ -228,7 +221,7 @@ namespace Golfin.CourseImport
             marker.transform.localScale = new Vector3(2f, 5f, 2f);
 
             var renderer = marker.GetComponent<Renderer>();
-            var mat = new Material(Shader.Find("Standard"));
+            var mat = new Material(GetLitShader());
             if (anchor.type.Contains("back")) mat.color = Color.blue;
             else if (anchor.type.Contains("regular")) mat.color = Color.green;
             else if (anchor.type.Contains("front")) mat.color = Color.white;
@@ -795,7 +788,7 @@ namespace Golfin.CourseImport
             sphere.transform.position = new Vector3(worldX, terrainBase + terrainHeight + 10f, worldZ);
 
             var sphereRenderer = sphere.GetComponent<Renderer>();
-            var sphereMat = new Material(Shader.Find("Standard"));
+            var sphereMat = new Material(GetLitShader());
             sphereMat.color = Color.magenta;
             sphereRenderer.sharedMaterial = sphereMat;
 
@@ -840,12 +833,330 @@ namespace Golfin.CourseImport
                 float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
                 sph.transform.position = new Vector3(wx, terrainBase + th + debugSizes[i], wz);
                 var r = sph.GetComponent<Renderer>();
-                var m = new Material(Shader.Find("Standard"));
+                var m = new Material(GetLitShader());
                 m.color = debugColors[i];
                 r.sharedMaterial = m;
 
                 Debug.Log($"[TestZoneAlignment] {debugNames[i]} centroid: norm({cnx:F3}, {cny:F3}) → world({wx:F1}, {wz:F1}), {count}px");
             }
+        }
+
+        private static Shader GetLitShader()
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null)
+                shader = Shader.Find("Standard");
+            if (shader == null)
+                Debug.LogWarning("[HoleLiteImporter] Could not find Lit or Standard shader");
+            return shader;
+        }
+
+        // ─── Bunker Pipeline ──────────────────────────────────────────────
+
+        private static bool IsInsideContour(float px, float pz, Vector2[] contour)
+        {
+            bool inside = false;
+            for (int i = 0, j = contour.Length - 1; i < contour.Length; j = i++)
+            {
+                if ((contour[i].y > pz) != (contour[j].y > pz) &&
+                    px < (contour[j].x - contour[i].x) * (pz - contour[i].y)
+                         / (contour[j].y - contour[i].y) + contour[i].x)
+                {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        private static void CreateZoneMeshes(TerrainData terrainData, GameObject terrainGO,
+            Transform parentRoot, string exportPath, string dataDir, string projectRoot)
+        {
+            string bunkersPath = Path.Combine(exportPath, "bunkers.json");
+            if (!File.Exists(bunkersPath))
+            {
+                Debug.Log("[HoleLiteImporter] No bunkers.json found, skipping");
+                return;
+            }
+
+            string json = File.ReadAllText(bunkersPath);
+            var bunkersFile = JsonUtility.FromJson<BunkersFileData>(json);
+
+            if (bunkersFile.bunkers == null || bunkersFile.bunkers.Length == 0)
+            {
+                Debug.Log("[HoleLiteImporter] No bunkers in bunkers.json");
+                return;
+            }
+
+            // Check for V2 contour data
+            bool hasContours = !string.IsNullOrEmpty(bunkersFile.schema_version) &&
+                               bunkersFile.bunkers[0].contour != null &&
+                               bunkersFile.bunkers[0].contour.Length > 0;
+
+            if (!hasContours)
+            {
+                Debug.LogWarning("[HoleLiteImporter] bunkers.json has no contour data " +
+                                 "(V1 format). Re-export with updated export-hole.mjs. Skipping bunkers.");
+                return;
+            }
+
+            float defaultDepth = bunkersFile.depth_m > 0 ? bunkersFile.depth_m : 2.0f;
+
+            var sandMat = CreateBunkerMaterial(dataDir, projectRoot);
+
+            var bunkersRoot = new GameObject("Bunkers");
+            bunkersRoot.transform.SetParent(parentRoot);
+
+            var terrain = terrainGO.GetComponent<Terrain>();
+            float terrainBaseY = terrainGO.transform.position.y;
+            Vector3 terrainPos = terrainGO.transform.position;
+            Vector3 terrainSize = terrainData.size;
+
+            // --- Terrain holes ---
+            int holesRes = terrainData.holesResolution;
+            bool[,] holes = terrainData.GetHoles(0, 0, holesRes, holesRes);
+
+            foreach (var bunker in bunkersFile.bunkers)
+            {
+                // Apply 90° CCW rotation to contour vertices (same as anchors)
+                var worldContour = new Vector2[bunker.contour.Length];
+                float sumX = 0, sumZ = 0;
+                for (int i = 0; i < bunker.contour.Length; i++)
+                {
+                    float wx = bunker.contour[i].z;  // 90° CCW: worldX = local.z
+                    float wz = bunker.contour[i].x;  // 90° CCW: worldZ = local.x
+                    worldContour[i] = new Vector2(wx, wz);
+                    sumX += wx;
+                    sumZ += wz;
+                }
+                float centroidX = sumX / worldContour.Length;
+                float centroidZ = sumZ / worldContour.Length;
+
+                // Bounding box of contour (for limiting hole-grid search)
+                float cMinX = float.MaxValue, cMaxX = float.MinValue;
+                float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
+                foreach (var v in worldContour)
+                {
+                    if (v.x < cMinX) cMinX = v.x;
+                    if (v.x > cMaxX) cMaxX = v.x;
+                    if (v.y < cMinZ) cMinZ = v.y;
+                    if (v.y > cMaxZ) cMaxZ = v.y;
+                }
+
+                // Cut terrain holes by tracing contour (with small inward margin)
+                float marginX = (cMaxX - cMinX) * 0.05f;
+                float marginZ = (cMaxZ - cMinZ) * 0.05f;
+
+                int hMinX = Mathf.Clamp(Mathf.FloorToInt(((cMinX + marginX) - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMaxX = Mathf.Clamp(Mathf.CeilToInt(((cMaxX - marginX) - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMinZ = Mathf.Clamp(Mathf.FloorToInt(((cMinZ + marginZ) - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+                int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(((cMaxZ - marginZ) - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+
+                for (int hz = hMinZ; hz <= hMaxZ; hz++)
+                {
+                    for (int hx = hMinX; hx <= hMaxX; hx++)
+                    {
+                        float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
+                        float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
+
+                        if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
+                            holes[hz, hx] = false;
+                    }
+                }
+
+                // --- Generate contour-shaped mesh ---
+                float surfaceY = terrainBaseY + terrain.SampleHeight(
+                    new Vector3(centroidX, 0, centroidZ));
+
+                float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+
+                var meshGO = CreateContourMesh(bunker.id, worldContour, centroidX, centroidZ,
+                    surfaceY, bowlDepth, sandMat, terrain, terrainBaseY);
+                meshGO.transform.SetParent(bunkersRoot.transform);
+            }
+
+            terrainData.SetHoles(0, 0, holes);
+
+            // Copy bunkers.json to Assets
+            string destPath = Path.Combine(projectRoot, dataDir, "bunkers.json");
+            File.Copy(bunkersPath, destPath, true);
+            AssetDatabase.ImportAsset($"{dataDir}/bunkers.json");
+
+            Debug.Log($"[HoleLiteImporter] Created {bunkersFile.bunkers.Length} contour-based bunker(s)");
+        }
+
+        private static GameObject CreateContourMesh(int id, Vector2[] contour,
+            float centroidX, float centroidZ, float surfaceY, float depth,
+            Material sandMat, Terrain terrain, float terrainBaseY)
+        {
+            int n = contour.Length;
+            if (n < 3)
+            {
+                Debug.LogWarning($"[HoleLiteImporter] Bunker {id}: contour has < 3 vertices, skipping");
+                return new GameObject($"Bunker_{id}_SKIP");
+            }
+
+            // Ring layout: rim (100%) → inner (80%) → mid (50%) → deep (20%) → center
+            float[] ringScales = { 1.0f, 0.80f, 0.50f, 0.20f };
+            float[] ringDepths = { 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
+
+            int ringCount = ringScales.Length;
+            int vertCount = n * ringCount + 1; // +1 for center
+            var vertices = new Vector3[vertCount];
+            var uvs = new Vector2[vertCount];
+
+            // Compute bounding box for UV mapping
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+            foreach (var v in contour)
+            {
+                if (v.x < minX) minX = v.x;
+                if (v.x > maxX) maxX = v.x;
+                if (v.y < minZ) minZ = v.y;
+                if (v.y > maxZ) maxZ = v.y;
+            }
+            float extentX = Mathf.Max(maxX - minX, 0.1f);
+            float extentZ = Mathf.Max(maxZ - minZ, 0.1f);
+
+            for (int r = 0; r < ringCount; r++)
+            {
+                float scale = ringScales[r];
+                float ringY = -ringDepths[r];
+
+                for (int i = 0; i < n; i++)
+                {
+                    // Scale toward centroid
+                    float wx = centroidX + (contour[i].x - centroidX) * scale;
+                    float wz = centroidZ + (contour[i].y - centroidZ) * scale;
+
+                    float y = ringY;
+
+                    // Rim ring (r==0): sample terrain height for seamless edge
+                    if (r == 0)
+                    {
+                        float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                        y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
+                    }
+                    // Inner ring (r==1): also at terrain height, no offset
+                    else if (r == 1)
+                    {
+                        float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                        y = (terrainBaseY + terrainH) - surfaceY;
+                    }
+
+                    // Local space relative to mesh origin (centroid at surface)
+                    float localX = wx - centroidX;
+                    float localZ = wz - centroidZ;
+
+                    int vi = r * n + i;
+                    vertices[vi] = new Vector3(localX, y, localZ);
+                    uvs[vi] = new Vector2(
+                        (wx - minX) / extentX,
+                        (wz - minZ) / extentZ);
+                }
+            }
+
+            // Center vertex — bottom of bowl
+            int centerIdx = vertCount - 1;
+            vertices[centerIdx] = new Vector3(0, -depth, 0);
+            uvs[centerIdx] = new Vector2(0.5f, 0.5f);
+
+            // --- Triangles ---
+            int triCount = n * (ringCount - 1) * 6 + n * 3;
+            var triangles = new int[triCount];
+            int ti = 0;
+
+            for (int r = 0; r < ringCount - 1; r++)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    int curr = r * n + i;
+                    int next = r * n + (i + 1) % n;
+                    int currInner = (r + 1) * n + i;
+                    int nextInner = (r + 1) * n + (i + 1) % n;
+
+                    triangles[ti++] = curr;
+                    triangles[ti++] = currInner;
+                    triangles[ti++] = next;
+
+                    triangles[ti++] = next;
+                    triangles[ti++] = currInner;
+                    triangles[ti++] = nextInner;
+                }
+            }
+
+            // Fan from last ring to center
+            int lastRingStart = (ringCount - 1) * n;
+            for (int i = 0; i < n; i++)
+            {
+                int curr = lastRingStart + i;
+                int next = lastRingStart + (i + 1) % n;
+
+                triangles[ti++] = curr;
+                triangles[ti++] = centerIdx;
+                triangles[ti++] = next;
+            }
+
+            // --- Build mesh ---
+            var mesh = new Mesh();
+            mesh.name = $"BunkerContour_{id}";
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.uv = uvs;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"Bunker_{id}");
+            var mf = go.AddComponent<MeshFilter>();
+            mf.sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = sandMat;
+
+            var mc = go.AddComponent<MeshCollider>();
+            mc.sharedMesh = mesh;
+
+            // Position: mesh origin at centroid, at terrain surface height
+            go.transform.position = new Vector3(centroidX, surfaceY, centroidZ);
+
+            Debug.Log($"[HoleLiteImporter] Bunker {id}: {n} contour verts, " +
+                      $"{ringCount} rings, {mesh.vertexCount} total verts");
+
+            return go;
+        }
+
+        private static Material CreateBunkerMaterial(string dataDir, string projectRoot)
+        {
+            string matPath = $"{dataDir}/BunkerSand.mat";
+
+            // Check if material already exists
+            var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (existingMat != null)
+                AssetDatabase.DeleteAsset(matPath);
+
+            var mat = new Material(GetLitShader());
+            mat.name = "BunkerSand";
+
+            // Try to use the existing bunker texture
+            string texDir = "Assets/Courses/Textures_2025(JPG)";
+            var bunkerTex = FindTextureExact(texDir, "T_Bunker_Albedo");
+            if (bunkerTex != null)
+            {
+                mat.mainTexture = bunkerTex;
+                mat.mainTextureScale = new Vector2(2f, 2f);  // tile within the bowl
+            }
+            else
+            {
+                // Fallback: plain sand color
+                mat.color = new Color(0.87f, 0.80f, 0.53f); // sandy beige
+            }
+
+            mat.SetFloat("_Smoothness", 0.1f);
+            mat.SetFloat("_Metallic", 0f);
+
+            // Render both sides so bowl interior is always visible
+            mat.SetFloat("_Cull", 0f);  // 0 = Off (double-sided)
+
+            AssetDatabase.CreateAsset(mat, matPath);
+            return mat;
         }
 
         private static void EnsureDirectory(string path)

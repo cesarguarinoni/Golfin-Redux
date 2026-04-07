@@ -14,6 +14,215 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
+/**
+ * Trace the outer border of a connected region of pixels.
+ * Returns ordered array of [x, y] pixel coordinates forming the boundary.
+ */
+function traceBorder(grid, w, h, pixels, zoneValue) {
+  const pixelSet = new Set();
+  for (const [px, py] of pixels) {
+    pixelSet.add(py * w + px);
+  }
+
+  // A pixel is a border pixel if it has at least one 4-connected neighbor NOT in the set
+  const border = [];
+  for (const [px, py] of pixels) {
+    const neighbors = [[px-1,py],[px+1,py],[px,py-1],[px,py+1]];
+    const isBorder = neighbors.some(([nx, ny]) => {
+      if (nx < 0 || nx >= w || ny < 0 || ny >= h) return true;
+      return !pixelSet.has(ny * w + nx);
+    });
+    if (isBorder) border.push([px, py]);
+  }
+
+  if (border.length === 0) return [];
+
+  // Order by walking the perimeter (8-connected)
+  border.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+
+  const borderSet = new Set(border.map(([x, y]) => y * w + x));
+  const ordered = [border[0]];
+  const visited = new Set();
+  visited.add(border[0][1] * w + border[0][0]);
+
+  const dirs8 = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+  let current = border[0];
+  for (let step = 0; step < border.length * 2; step++) {
+    let found = false;
+    for (const [dx, dy] of dirs8) {
+      const nx = current[0] + dx;
+      const ny = current[1] + dy;
+      const key = ny * w + nx;
+      if (borderSet.has(key) && !visited.has(key)) {
+        visited.add(key);
+        ordered.push([nx, ny]);
+        current = [nx, ny];
+        found = true;
+        break;
+      }
+    }
+    if (!found) break;
+  }
+
+  return ordered;
+}
+
+/**
+ * Ramer-Douglas-Peucker line simplification.
+ */
+function simplifyPolygon(points, epsilon) {
+  if (points.length <= 2) return points;
+
+  let maxDist = 0;
+  let maxIdx = 0;
+  const start = points[0];
+  const end = points[points.length - 1];
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const d = perpendicularDistance(points[i], start, end);
+    if (d > maxDist) {
+      maxDist = d;
+      maxIdx = i;
+    }
+  }
+
+  if (maxDist > epsilon) {
+    const left = simplifyPolygon(points.slice(0, maxIdx + 1), epsilon);
+    const right = simplifyPolygon(points.slice(maxIdx), epsilon);
+    return left.slice(0, -1).concat(right);
+  } else {
+    return [start, end];
+  }
+}
+
+function perpendicularDistance(point, lineStart, lineEnd) {
+  const dx = lineEnd.x - lineStart.x;
+  const dz = lineEnd.z - lineStart.z;
+  const lenSq = dx * dx + dz * dz;
+
+  if (lenSq === 0) {
+    const ex = point.x - lineStart.x;
+    const ez = point.z - lineStart.z;
+    return Math.sqrt(ex * ex + ez * ez);
+  }
+
+  const num = Math.abs(dx * (lineStart.z - point.z) - (lineStart.x - point.x) * dz);
+  return num / Math.sqrt(lenSq);
+}
+
+/**
+ * Ensure polygon has counter-clockwise winding (shoelace formula).
+ */
+function ensureCCW(polygon) {
+  let area = 0;
+  for (let i = 0; i < polygon.length; i++) {
+    const j = (i + 1) % polygon.length;
+    area += polygon[i].x * polygon[j].z;
+    area -= polygon[j].x * polygon[i].z;
+  }
+  if (area > 0) polygon.reverse();
+  return polygon;
+}
+
+function extractBunkers(zonesData, terrainMeta) {
+  const BUNKER_ZONE = 6;
+  const MIN_PIXELS = 8;  // ignore tiny noise regions
+
+  const grid = Buffer.from(zonesData.grid, 'base64');
+  const w = zonesData.source_dimensions.width;
+  const h = zonesData.source_dimensions.height;
+  const visited = new Uint8Array(w * h);
+
+  const tw = terrainMeta.terrain_width_m;
+  const tl = terrainMeta.terrain_length_m;
+
+  // Flood-fill to find connected bunker regions
+  function floodFill(startX, startY) {
+    const pixels = [];
+    const stack = [[startX, startY]];
+    while (stack.length > 0) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= w || y < 0 || y >= h) continue;
+      const idx = y * w + x;
+      if (visited[idx] || grid[idx] !== BUNKER_ZONE) continue;
+      visited[idx] = 1;
+      pixels.push([x, y]);
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+    return pixels;
+  }
+
+  const bunkers = [];
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (grid[y * w + x] === BUNKER_ZONE && !visited[y * w + x]) {
+        const pixels = floodFill(x, y);
+        if (pixels.length < MIN_PIXELS) continue;
+
+        const xs = pixels.map(p => p[0]);
+        const ys = pixels.map(p => p[1]);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        // Center in normalized coordinates (0-1 range within zone grid)
+        const normCX = (minX + maxX) / 2 / (w - 1);
+        const normCY = (minY + maxY) / 2 / (h - 1);
+
+        // Size in normalized coordinates
+        const normW = (maxX - minX + 1) / w;
+        const normH = (maxY - minY + 1) / h;
+
+        // Convert to local meter coordinates (same system as anchors)
+        const localX = parseFloat(((normCX - 0.5) * tw).toFixed(2));
+        const localZ = parseFloat(((normCY - 0.5) * tl).toFixed(2));
+        const sizeX = parseFloat((normW * tw).toFixed(2));
+        const sizeZ = parseFloat((normH * tl).toFixed(2));
+
+        // --- Trace contour ---
+        const borderPixels = traceBorder(grid, w, h, pixels, BUNKER_ZONE);
+
+        // Convert border pixels to local meter coordinates
+        let contourMeters = borderPixels.map(([bx, by]) => ({
+          x: parseFloat(((bx / (w - 1) - 0.5) * tw).toFixed(2)),
+          z: parseFloat(((by / (h - 1) - 0.5) * tl).toFixed(2)),
+        }));
+
+        // Simplify (epsilon in meters — start conservative)
+        const RDP_EPSILON = 1.5;
+        contourMeters = simplifyPolygon(contourMeters, RDP_EPSILON);
+        contourMeters = ensureCCW(contourMeters);
+
+        bunkers.push({
+          id: bunkers.length + 1,
+          pixel_count: pixels.length,
+          contour: contourMeters,
+          center_local: { x: localX, z: localZ },
+          size_m: { x: sizeX, z: sizeZ },
+          center_normalized: {
+            x: parseFloat(normCX.toFixed(4)),
+            y: parseFloat(normCY.toFixed(4)),
+          },
+          size_normalized: {
+            w: parseFloat(normW.toFixed(4)),
+            h: parseFloat(normH.toFixed(4)),
+          },
+        });
+      }
+    }
+  }
+
+  // Sort by size (largest first)
+  bunkers.sort((a, b) => b.pixel_count - a.pixel_count);
+  // Re-assign IDs after sort
+  bunkers.forEach((b, i) => { b.id = i + 1; });
+
+  return bunkers;
+}
+
 function exportHole(courseId, holeNumber, courseJson) {
   const nn = String(holeNumber).padStart(2, '0');
   const holeDir = path.join(ROOT, 'output', courseId, 'holes', nn);
@@ -67,6 +276,7 @@ function exportHole(courseId, holeNumber, courseJson) {
     aerial: null,
     anchors_file: 'anchors.json',
     zones_file: 'zones.json',
+    bunkers_file: 'bunkers.json',
     review_status: 'auto-generated',
   };
 
@@ -97,6 +307,32 @@ function exportHole(courseId, holeNumber, courseJson) {
     'utf-8'
   );
 
+  // --- Build bunkers.json ---
+  const zonesData = JSON.parse(fs.readFileSync(path.join(holeDir, 'zones.json'), 'utf-8'));
+  const bunkers = extractBunkers(zonesData, terrainMeta);
+
+  const bunkersOutput = {
+    schema_version: '2.0.0',
+    hole_number: holeNumber,
+    bunker_count: bunkers.length,
+    depth_m: 2.0,
+    bunkers: bunkers,
+  };
+
+  fs.writeFileSync(
+    path.join(exportDir, 'bunkers.json'),
+    JSON.stringify(bunkersOutput, null, 2),
+    'utf-8'
+  );
+
+  // Log contour stats
+  if (bunkers.length > 0) {
+    const contourStats = bunkers.map(b =>
+      `#${b.id}: ${b.contour.length}pts`
+    ).join(', ');
+    console.log(`  Contours: ${contourStats}`);
+  }
+
   // --- Copy files ---
   fs.copyFileSync(path.join(holeDir, 'heightmap.raw'), path.join(exportDir, 'heightmap.raw'));
   fs.copyFileSync(path.join(holeDir, 'illustration.png'), path.join(exportDir, 'texture.png'));
@@ -105,6 +341,7 @@ function exportHole(courseId, holeNumber, courseJson) {
   return {
     manifest,
     anchorCount: anchors.length,
+    bunkerCount: bunkers.length,
   };
 }
 
@@ -146,7 +383,7 @@ async function main() {
     const result = exportHole(courseId, h, courseJson);
     if (result) {
       const m = result.manifest;
-      console.log(`OK  export/hole-${nn}/  par=${m.par}  ${m.championship_yards}yd  ${m.terrain.terrain_width_m}×${m.terrain.terrain_length_m}m  ${result.anchorCount} anchors`);
+      console.log(`OK  export/hole-${nn}/  par=${m.par}  ${m.championship_yards}yd  ${m.terrain.terrain_width_m}×${m.terrain.terrain_length_m}m  ${result.anchorCount} anchors  ${result.bunkerCount} bunkers`);
       successCount++;
     } else {
       console.log('FAILED');

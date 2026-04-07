@@ -19,6 +19,7 @@ namespace Golfin.CourseImport
         public ManifestAerial aerial;
         public LiteTextureInfo texture;   // UHole Lite only — single texture PNG
         public string anchors_file;
+        public string bunkers_file;
         public int anchor_count;
         public ManifestTransform transform;
         public string review_status;
@@ -127,6 +128,57 @@ namespace Golfin.CourseImport
     public class AnchorLocal
     {
         public float x, z;
+    }
+
+    // bunkers.json
+    [System.Serializable]
+    public class BunkersFileData
+    {
+        public string schema_version;
+        public int hole_number;
+        public int bunker_count;
+        public float depth_m;
+        public BunkerData[] bunkers;
+    }
+
+    [System.Serializable]
+    public class BunkerContourVertex
+    {
+        public float x;
+        public float z;
+    }
+
+    [System.Serializable]
+    public class BunkerData
+    {
+        public int id;
+        public int pixel_count;
+        public BunkerContourVertex[] contour;  // V2: ordered polygon vertices
+        public AnchorLocal center_local;       // reuse existing class — has x, z
+        public BunkerSize size_m;
+        public BunkerNormCenter center_normalized;
+        public BunkerNormSize size_normalized;
+    }
+
+    [System.Serializable]
+    public class BunkerSize
+    {
+        public float x;
+        public float z;
+    }
+
+    [System.Serializable]
+    public class BunkerNormCenter
+    {
+        public float x;
+        public float y;
+    }
+
+    [System.Serializable]
+    public class BunkerNormSize
+    {
+        public float w;
+        public float h;
     }
 
     // zones.json — zone grid data for splatmap pipeline

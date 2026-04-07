@@ -41,42 +41,6 @@ function parseHints(descriptionJp) {
 }
 
 // ---------------------------------------------------------------------------
-// Pre-compute a bunker fraction map at heightmap resolution.
-// For each heightmap cell, scan the corresponding area of the zone grid
-// and compute what fraction of zone pixels are bunker.
-// This avoids the point-sampling problem where small bunkers get missed.
-// ---------------------------------------------------------------------------
-
-function computeBunkerFractionMap(zoneGrid, zw, zh) {
-  const fractionMap = new Float32Array(RES * RES);
-  const cellW = zw / RES;
-  const cellH = zh / RES;
-
-  for (let hy = 0; hy < RES; hy++) {
-    for (let hx = 0; hx < RES; hx++) {
-      // Zone-grid rectangle covered by this heightmap cell
-      const x0 = Math.floor(hx * cellW);
-      const x1 = Math.min(Math.ceil((hx + 1) * cellW), zw);
-      const y0 = Math.floor(hy * cellH);
-      const y1 = Math.min(Math.ceil((hy + 1) * cellH), zh);
-
-      let bunkerCount = 0;
-      let totalCount = 0;
-      for (let y = y0; y < y1; y++) {
-        for (let x = x0; x < x1; x++) {
-          totalCount++;
-          if (zoneGrid[y * zw + x] === ZONES.bunker) bunkerCount++;
-        }
-      }
-
-      fractionMap[hy * RES + hx] = totalCount > 0 ? bunkerCount / totalCount : 0;
-    }
-  }
-
-  return fractionMap;
-}
-
-// ---------------------------------------------------------------------------
 // Generate heightmap for one hole
 // ---------------------------------------------------------------------------
 
@@ -125,11 +89,6 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
 
   const noiseFreq = terrainDefaults.noise_frequency;
   const noiseAmp = terrainDefaults.base_undulation_m;
-  const bunkerDepth = terrainDefaults.bunker_depth_m || 3.0;
-
-  // Pre-compute bunker fraction at heightmap resolution
-  const bunkerFrac = computeBunkerFractionMap(zoneGrid, zw, zh);
-
   const heightmap = new Float64Array(RES * RES);
 
   for (let hy = 0; hy < RES; hy++) {
@@ -175,20 +134,12 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
         case ZONES.trees:
           heightMod += terrainDefaults.tree_ridge_m;
           break;
+        case ZONES.bunker:
+          noise *= 0.3;   // smooth but not dead flat
+          break;
         case ZONES.cart_path:
           noise *= 0.55;
           break;
-      }
-
-      // Bunker: use fraction map instead of point-sample.
-      // Any heightmap cell that overlaps bunker zone gets depressed
-      // proportionally to how much of the cell is bunker.
-      const bf = bunkerFrac[hy * RES + hx];
-      if (bf > 0) {
-        // Depress proportionally. Even 10% bunker overlap creates a dip.
-        // Flatten noise inside bunker areas.
-        noise *= (1 - bf) + bf * 0.15;
-        heightMod -= bunkerDepth * bf;
       }
 
       let totalHeight = baseSlope + noise + heightMod;
@@ -219,12 +170,9 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
   }
   globalMin = waterLevel;
 
-  // Save pre-blur bunker values for restoration
   const waterMask = new Uint8Array(RES * RES);
-  const preBunker = new Float64Array(RES * RES);
   for (let i = 0; i < RES * RES; i++) {
     if (heightmap[i] <= waterLevel + 0.01) waterMask[i] = 1;
-    if (bunkerFrac[i] > 0) preBunker[i] = heightmap[i];
   }
 
   const smoothed = blur2D(heightmap, RES, RES, 2);
@@ -232,14 +180,6 @@ function generateHeightmap(holeNumber, holeData, teesData, zonesData, extractMet
   // Restore water fully
   for (let i = 0; i < RES * RES; i++) {
     if (waterMask[i]) smoothed[i] = waterLevel;
-  }
-
-  // FULLY restore bunker depressions — the blur was pushing them up.
-  // For cells with bunker fraction, use 100% original (pre-blur) value.
-  for (let i = 0; i < RES * RES; i++) {
-    if (bunkerFrac[i] > 0) {
-      smoothed[i] = preBunker[i];
-    }
   }
 
   // Recalculate min/max

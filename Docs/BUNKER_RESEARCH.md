@@ -56,3 +56,45 @@ The green zone applies noise flattening (`green_flatness: 0.15`) and a drainage 
 - The next step is implementing separate bunker meshes — this is a Phase K task for the Unity importer
 - The current zone painting + regen heightmap workflow in the GUI is still useful for tuning zone boundaries
 - Don't spend more time trying to fix bunker depressions in the heightmap — switch to mesh-based bunkers
+
+## V1 Status (2026-04-07)
+
+V1 bunker meshes are implemented as simple elliptical bowls derived from
+bunker region bounding boxes. **V1 is a dead end.** Key issues:
+
+- **SetHoles() is too coarse**: 128×128 hole grid for ~630×520m terrain =
+  ~5m per cell. Small bunkers (5-15m) get 1-3 cells, rounding produces
+  cuts that overshoot the bowl lip on one side while leaving terrain
+  visible on the other. No ratio of hole-size to lip-size reliably works.
+- **Bowl-over-terrain z-fights**: Without SetHoles, terrain renders through
+  the bowl mesh. renderQueue overrides don't reliably beat Unity terrain
+  in URP.
+- **Shape**: Uniform ellipses from bounding boxes, not actual zone contours.
+- **Depth**: Parabolic bowl, no directional variation.
+
+**Conclusion:** The separate-mesh approach needs contour-based meshes that
+replace terrain geometry entirely, not bowl overlays fighting with terrain.
+
+### V2 Direction: Contour-Based Terrain Replacement
+
+Instead of overlaying bowls, **replace the terrain surface itself** inside
+bunker (and green) regions with custom meshes:
+
+1. **Export contour polygons** from zone grid (marching squares or border
+   tracing on bunker/green zone pixels)
+2. **Simplify polygon** (Ramer-Douglas-Peucker) to ~20-30 vertices
+3. **Use SetHoles to cut terrain** at the EXACT contour boundary (not
+   bounding box — trace the actual shape in the holes grid)
+4. **Generate replacement mesh** that fills the hole: rim vertices at
+   terrain height, interior vertices depressed for bunkers / smooth for
+   greens, triangulated with Delaunay or ear-clipping
+5. **Rim vertices sample terrain height** so the mesh edge exactly matches
+   the terrain edge at the hole boundary
+6. **Material per zone**: sand for bunkers, green grass for greens
+
+This is fundamentally different from the bowl approach:
+- SetHoles cuts are traced from the actual contour, not a bounding box
+- The replacement mesh fills the hole exactly — no overlap, no z-fighting
+- Rim vertices match terrain height — seamless edge
+- Works for any shape (irregular bunkers, amoeba-shaped greens)
+- Can apply to water hazards, tee boxes, etc.
