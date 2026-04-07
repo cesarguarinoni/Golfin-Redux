@@ -1608,61 +1608,72 @@ namespace Golfin.CourseImport
                 float centerX = (worldMinX + worldMaxX) / 2f;
                 float centerZ = (worldMinZ + worldMaxZ) / 2f;
 
-                // --- Upscale mask 4x for smoother bilinear edges ---
-                int scale = 4;
-                int upW = mw * scale;
-                int upH = mh * scale;
-                byte[] upscaled = new byte[upW * upH];
-                for (int uy = 0; uy < upH; uy++)
+                // --- Generate SDF texture for smooth edges ---
+                // Signed distance field: inside water = high alpha, outside = low,
+                // boundary = 0.5. Alpha cutoff at 0.5 produces smooth curves.
+
+                // Step 1: Find edge pixels (water pixels with non-water 4-neighbor)
+                var edgePixels = new System.Collections.Generic.List<int[]>();
+                for (int my = 0; my < mh; my++)
                 {
-                    int srcY = uy / scale;
-                    for (int ux = 0; ux < upW; ux++)
+                    for (int mx = 0; mx < mw; mx++)
                     {
-                        int srcX = ux / scale;
-                        upscaled[uy * upW + ux] = maskBytes[srcY * mw + srcX];
+                        if (maskBytes[my * mw + mx] != 1) continue;
+                        bool isEdge =
+                            (mx == 0      || maskBytes[my * mw + (mx - 1)] == 0) ||
+                            (mx == mw - 1 || maskBytes[my * mw + (mx + 1)] == 0) ||
+                            (my == 0      || maskBytes[(my - 1) * mw + mx] == 0) ||
+                            (my == mh - 1 || maskBytes[(my + 1) * mw + mx] == 0);
+                        if (isEdge)
+                            edgePixels.Add(new int[] { mx, my });
                     }
                 }
 
-                // 1px dilate on the upscaled mask to prevent bilinear
-                // interpolation from shrinking the water boundary
-                byte[] dilated = new byte[upW * upH];
-                for (int uy = 0; uy < upH; uy++)
+                // Step 2: Compute min distance to any edge pixel per pixel
+                // Positive inside, negative outside. Normalize to 0-1 with 0.5 = edge.
+                float sdfSpread = 3.0f; // pixels of gradient on each side of edge
+                float[] sdfValues = new float[mw * mh];
+
+                for (int my = 0; my < mh; my++)
                 {
-                    for (int ux = 0; ux < upW; ux++)
+                    for (int mx = 0; mx < mw; mx++)
                     {
-                        if (upscaled[uy * upW + ux] == 1)
+                        float minDist = float.MaxValue;
+                        foreach (var ep in edgePixels)
                         {
-                            dilated[uy * upW + ux] = 1;
-                            continue;
+                            float dx = mx - ep[0];
+                            float dy = my - ep[1];
+                            float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                            if (dist < minDist) minDist = dist;
                         }
-                        bool hasWaterNeighbor =
-                            (ux > 0       && upscaled[uy * upW + (ux - 1)] == 1) ||
-                            (ux < upW - 1 && upscaled[uy * upW + (ux + 1)] == 1) ||
-                            (uy > 0       && upscaled[(uy - 1) * upW + ux] == 1) ||
-                            (uy < upH - 1 && upscaled[(uy + 1) * upW + ux] == 1);
-                        dilated[uy * upW + ux] = hasWaterNeighbor ? (byte)1 : (byte)0;
+
+                        bool isInside = maskBytes[my * mw + mx] == 1;
+                        float signedDist = isInside ? minDist : -minDist;
+
+                        // Map to 0-1: 0.5 = boundary, 1.0 = deep inside, 0.0 = far outside
+                        float alpha = Mathf.Clamp01(0.5f + signedDist / (2f * sdfSpread));
+                        sdfValues[my * mw + mx] = alpha;
                     }
                 }
 
-                // Build texture from upscaled+dilated mask
-                // 90° CCW rotation: transpose (uy, ux) → tex(uy, ux)
-                int texW = upH;
-                int texH = upW;
+                // Step 3: Build texture with 90° CCW rotation
+                // transpose: mask(mx, my) → tex(my, mx)
+                int texW = mh;
+                int texH = mw;
                 var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
                 tex.filterMode = FilterMode.Bilinear;
                 tex.wrapMode = TextureWrapMode.Clamp;
 
-                Color waterColor = new Color(0.18f, 0.40f, 0.58f, 1.0f);
-                Color clearColor = new Color(0f, 0f, 0f, 0f);
+                Color waterColor = new Color(0.18f, 0.40f, 0.58f);
 
-                for (int uy = 0; uy < upH; uy++)
+                for (int my = 0; my < mh; my++)
                 {
-                    for (int ux = 0; ux < upW; ux++)
+                    for (int mx = 0; mx < mw; mx++)
                     {
-                        bool isWater = dilated[uy * upW + ux] == 1;
-                        int tx = uy;
-                        int ty = ux;
-                        tex.SetPixel(tx, ty, isWater ? waterColor : clearColor);
+                        float alpha = sdfValues[my * mw + mx];
+                        int tx = my;
+                        int ty = mx;
+                        tex.SetPixel(tx, ty, new Color(waterColor.r, waterColor.g, waterColor.b, alpha));
                     }
                 }
                 tex.Apply();
