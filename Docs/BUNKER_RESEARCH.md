@@ -72,29 +72,17 @@ bunker region bounding boxes. **V1 is a dead end.** Key issues:
 - **Shape**: Uniform ellipses from bounding boxes, not actual zone contours.
 - **Depth**: Parabolic bowl, no directional variation.
 
-**Conclusion:** The separate-mesh approach needs contour-based meshes that
-replace terrain geometry entirely, not bowl overlays fighting with terrain.
+## V2 Status (2026-04-07)
 
-### V2 Direction: Contour-Based Terrain Replacement
+V2 contour-based bunker meshes are working on flat terrain:
 
-Instead of overlaying bowls, **replace the terrain surface itself** inside
-bunker (and green) regions with custom meshes:
+- **Contour extraction**: Moore-neighbor border tracing → RDP simplification
+  (closed polygon) → Chaikin smoothing (2 iterations) → CCW winding
+- **Terrain holes**: 1025 heightmap resolution (1024 holes grid, ~0.6m/cell)
+  with contour-traced point-in-polygon cutting at 90% scale
+- **Mesh**: 4-ring bowl (rim → inner → mid → deep → center) following
+  contour shape, sand material, MeshCollider
+- **Splatmap**: Bunker zones mapped to rough texture (layer 3) instead of
+  sand (layer 4) — mesh handles sand surface, prevents blur glow
 
-1. **Export contour polygons** from zone grid (marching squares or border
-   tracing on bunker/green zone pixels)
-2. **Simplify polygon** (Ramer-Douglas-Peucker) to ~20-30 vertices
-3. **Use SetHoles to cut terrain** at the EXACT contour boundary (not
-   bounding box — trace the actual shape in the holes grid)
-4. **Generate replacement mesh** that fills the hole: rim vertices at
-   terrain height, interior vertices depressed for bunkers / smooth for
-   greens, triangulated with Delaunay or ear-clipping
-5. **Rim vertices sample terrain height** so the mesh edge exactly matches
-   the terrain edge at the hole boundary
-6. **Material per zone**: sand for bunkers, green grass for greens
-
-This is fundamentally different from the bowl approach:
-- SetHoles cuts are traced from the actual contour, not a bounding box
-- The replacement mesh fills the hole exactly — no overlap, no z-fighting
-- Rim vertices match terrain height — seamless edge
-- Works for any shape (irregular bunkers, amoeba-shaped greens)
-- Can apply to water hazards, tee boxes, etc.
+**Next:** Re-enable heightmap, verify contour meshes work with real elevation.
