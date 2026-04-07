@@ -1689,14 +1689,18 @@ namespace Golfin.CourseImport
                 mat.name = $"WaterSurface_{water.id}";
                 mat.mainTexture = savedTex;
 
-                // Alpha cutout mode
-                mat.SetFloat("_Surface", 0); // 0 = Opaque — we use cutout via AlphaClip
-                mat.SetFloat("_AlphaClip", 1);
-                mat.SetFloat("_Cutoff", 0.5f);
+                // Transparent blending — bilinear edge pixels fade smoothly
+                mat.SetFloat("_Surface", 1); // 1 = Transparent
+                mat.SetFloat("_Blend", 0);   // 0 = Alpha blend
+                mat.SetFloat("_AlphaClip", 0);
                 mat.SetFloat("_Smoothness", 0.85f);
                 mat.SetFloat("_Metallic", 0.05f);
-                mat.EnableKeyword("_ALPHATEST_ON");
-                mat.renderQueue = 2450; // AlphaTest queue
+                mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetFloat("_ZWrite", 0);
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.DisableKeyword("_ALPHATEST_ON");
+                mat.renderQueue = 3000; // Transparent queue
 
                 AssetDatabase.CreateAsset(mat, matPath);
 
