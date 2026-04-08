@@ -17,7 +17,7 @@ namespace Golfin.CourseImport
         /// <summary>Dilation radius for fairway fringe ring (semi-rough border around fairway).</summary>
         public static int FairwayFringeRadius = 2;
         /// <summary>Width of fairway mow stripes in meters.</summary>
-        public static float MowStripeWidth = 15f;
+        public static float MowStripeWidth = 5f;
 
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 01")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 02")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
