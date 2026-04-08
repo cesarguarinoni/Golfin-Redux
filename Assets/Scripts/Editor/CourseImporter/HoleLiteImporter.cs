@@ -14,12 +14,6 @@ namespace Golfin.CourseImport
         public static int ShoreRadius = 2;
         /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
         public static float ShoreDepthMeters = 0.1f;
-        /// <summary>DEPRECATED — replaced by FairwayFringeMeters + dilation.</summary>
-        public static int FairwayFringeRadius = 2;
-        /// <summary>Width of fairway fringe border in meters.</summary>
-        public static float FairwayFringeMeters = 1.5f;
-        /// <summary>Width of fairway mow stripes in meters.</summary>
-        public static float MowStripeWidth = 5f;
 
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 01")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 02")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
@@ -129,6 +123,10 @@ namespace Golfin.CourseImport
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating water...", 0.59f);
                 CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
+
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating zone meshes...", 0.62f);
+                CreateFlatZoneMeshes(terrainData, terrainGO, holeRoot.transform,
+                    exportPath, dataDir, projectRoot);
 
                 terrainData.SetHoles(0, 0, holes);
 
@@ -509,39 +507,6 @@ namespace Golfin.CourseImport
 
             Debug.Log($"[HoleLiteImporter] Zone grid: {zoneW}x{zoneH}, {grid.Length} bytes");
 
-            // --- Compute fairway stripe direction (tee → green in alphamap coords) ---
-            string anchorsPath = Path.Combine(exportPath, "anchors.json");
-            Vector2 stripeDir = new Vector2(0, 1); // default: stripes along Z
-            if (File.Exists(anchorsPath))
-            {
-                string anchJson = File.ReadAllText(anchorsPath);
-                var anchWrap = JsonUtility.FromJson<AnchorArrayWrapper>(
-                    "{\"items\":" + anchJson + "}");
-                var anchs = anchWrap.items;
-
-                var backTee = System.Array.Find(anchs, a => a.type.Contains("back"));
-
-                // Get green centroid from greens.json
-                string grPath = Path.Combine(exportPath, "greens.json");
-                AnchorLocal greenCenter = null;
-                if (File.Exists(grPath))
-                {
-                    var grFile = JsonUtility.FromJson<GreensFileData>(File.ReadAllText(grPath));
-                    if (grFile.greens != null && grFile.greens.Length > 0)
-                        greenCenter = grFile.greens[0].center_local;
-                }
-
-                if (backTee != null && greenCenter != null)
-                {
-                    // Match terrain space: 90° CCW rotation (x,z) → (z,x)
-                    Vector2 teePos = new Vector2(backTee.local.z, backTee.local.x);
-                    Vector2 greenPos = new Vector2(greenCenter.z, greenCenter.x);
-                    Vector2 dir = (greenPos - teePos).normalized;
-                    if (dir.sqrMagnitude > 0.01f)
-                        stripeDir = new Vector2(-dir.y, dir.x); // perpendicular to tee→green
-                }
-            }
-
             // --- 2. Resample to alphamap resolution ---
             int alphaRes = 1024;
             terrainData.alphamapResolution = alphaRes;
@@ -584,129 +549,10 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // --- 2b. Override zone grid edges with smoothed vector contours ---
-            string fairwayContoursPath = Path.Combine(exportPath, "fairway-contours.json");
-            if (File.Exists(fairwayContoursPath))
-            {
-                string fcJson = File.ReadAllText(fairwayContoursPath);
-                var fcData = JsonUtility.FromJson<FairwayContoursFile>(fcJson);
-
-                if (fcData.fairways != null)
-                {
-                    // Clear ALL fairway pixels — re-fill only what the smooth contour covers.
-                    for (int i = 0; i < resampledZones.Length; i++)
-                    {
-                        if (resampledZones[i] == 1)
-                            resampledZones[i] = 4; // revert to rough
-                    }
-
-                    foreach (var fw in fcData.fairways)
-                    {
-                        if (fw.contour == null || fw.contour.Length < 3) continue;
-                        int n = fw.contour.Length;
-
-                        float[] polyAX = new float[n];
-                        float[] polyAY = new float[n];
-                        float terrainXSize = terrainData.size.x;
-                        float terrainZSize = terrainData.size.z;
-
-                        float bminAX = float.MaxValue, bmaxAX = float.MinValue;
-                        float bminAY = float.MaxValue, bmaxAY = float.MinValue;
-
-                        for (int i = 0; i < n; i++)
-                        {
-                            float worldX = fw.contour[i].z; // 90° CCW rotation
-                            float worldZ = fw.contour[i].x;
-                            float ax = (worldX + terrainXSize / 2f) / terrainXSize * (alphaRes - 1);
-                            float ay = (worldZ + terrainZSize / 2f) / terrainZSize * (alphaRes - 1);
-                            polyAX[i] = ax;
-                            polyAY[i] = ay;
-                            if (ax < bminAX) bminAX = ax;
-                            if (ax > bmaxAX) bmaxAX = ax;
-                            if (ay < bminAY) bminAY = ay;
-                            if (ay > bmaxAY) bmaxAY = ay;
-                        }
-
-                        int minAXi = Mathf.Max(0, Mathf.FloorToInt(bminAX));
-                        int maxAXi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAX));
-                        int minAYi = Mathf.Max(0, Mathf.FloorToInt(bminAY));
-                        int maxAYi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAY));
-
-                        RasterizePolygon(polyAX, polyAY, n,
-                            resampledZones, alphaRes, alphaRes, 1,
-                            minAXi, minAYi, maxAXi, maxAYi);
-                    }
-
-                    Debug.Log($"[HoleLiteImporter] Rasterized {fcData.fairways.Length} " +
-                              $"smooth fairway contour(s) onto alphamap");
-                }
-            }
-
-            // Load tee + semi-rough contours and rasterize
-            string zoneContoursPath = Path.Combine(exportPath, "zone-contours.json");
-            if (File.Exists(zoneContoursPath))
-            {
-                string zcJson = File.ReadAllText(zoneContoursPath);
-                var zcData = JsonUtility.FromJson<ZoneContoursFile>(zcJson);
-
-                // Tee boxes (zone 10)
-                if (zcData.zones != null && zcData.zones.tee != null)
-                {
-                    for (int i = 0; i < resampledZones.Length; i++)
-                        if (resampledZones[i] == 10) resampledZones[i] = 4;
-
-                    foreach (var region in zcData.zones.tee)
-                        RasterizeContour(region, resampledZones, alphaRes, terrainData, 10);
-                }
-
-                // Semi-rough (zone 3) — overlay smooth contours on top
-                if (zcData.zones != null && zcData.zones.semi_rough != null && zcData.zones.semi_rough.Length > 0)
-                {
-                    foreach (var region in zcData.zones.semi_rough)
-                        RasterizeContour(region, resampledZones, alphaRes, terrainData, 3);
-                }
-
-                // Cart paths (zone 8)
-                if (zcData.zones != null && zcData.zones.cart_path != null)
-                {
-                    for (int i = 0; i < resampledZones.Length; i++)
-                        if (resampledZones[i] == 8) resampledZones[i] = 4; // revert to rough
-
-                    foreach (var region in zcData.zones.cart_path)
-                        RasterizeContour(region, resampledZones, alphaRes, terrainData, 8);
-
-                    Debug.Log($"[HoleLiteImporter] Rasterized {zcData.zones.cart_path.Length} " +
-                              $"smooth cart path contour(s)");
-                }
-            }
-
-            // --- 3b. Fairway fringe ring (dilation-based, smooth edges from vector contours) ---
-            bool[] fairwayMask = new bool[alphaRes * alphaRes];
-            for (int i = 0; i < resampledZones.Length; i++)
-                fairwayMask[i] = (resampledZones[i] == 1);
-
-            float metersPerPixel = Mathf.Max(terrainData.size.x, terrainData.size.z) / alphaRes;
-            int fairwayFringePx = Mathf.Max(1, Mathf.RoundToInt(FairwayFringeMeters / metersPerPixel));
-
-            bool[] dilatedFairway = DilateMask(fairwayMask, alphaRes, alphaRes, fairwayFringePx);
-
-            bool[] fairwayFringeMask = new bool[alphaRes * alphaRes];
-            for (int i = 0; i < alphaRes * alphaRes; i++)
-            {
-                if (dilatedFairway[i] && !fairwayMask[i])
-                {
-                    int zone = resampledZones[i];
-                    if (zone == 3 || zone == 4 || zone == 5)
-                        fairwayFringeMask[i] = true;
-                }
-            }
-
             // --- 4. Build raw alphamap ---
+            // (Fairway/tee/cart path contour rasterization removed — mesh overlays handle those zones)
             int layerCount = 8;
             float[,,] alphamap = new float[alphaRes, alphaRes, layerCount];
-
-            float terrainSizeX = terrainData.size.x;
-            float terrainSizeZ = terrainData.size.z;
 
             for (int ay = 0; ay < alphaRes; ay++)
             {
@@ -717,23 +563,10 @@ namespace Golfin.CourseImport
 
                     if (fringeMask[idx])
                         layer = 2; // green fringe → semi-rough
-                    else if (fairwayFringeMask[idx])
-                        layer = 2; // fairway fringe → semi-rough
                     else
                     {
                         int zone = resampledZones[idx];
                         layer = ZoneToLayer(zone);
-
-                        // Mow stripes on fairway
-                        if (zone == 1)
-                        {
-                            float worldX = ((float)ax / (alphaRes - 1)) * terrainSizeX - terrainSizeX / 2f;
-                            float worldZ = ((float)ay / (alphaRes - 1)) * terrainSizeZ - terrainSizeZ / 2f;
-                            float proj = worldX * stripeDir.x + worldZ * stripeDir.y;
-                            int band = Mathf.FloorToInt(proj / MowStripeWidth);
-                            if (band % 2 != 0)
-                                layer = 7; // dark fairway stripe
-                        }
                     }
 
                     alphamap[ay, ax, layer] = 1.0f;
@@ -881,16 +714,16 @@ namespace Golfin.CourseImport
         {
             return zoneIndex switch
             {
-                1  => 0,  // fairway
-                2  => 3,  // green → rough (mesh handles surface, fringe still generated)
+                1  => 3,  // fairway → rough (mesh overlay handles surface)
+                2  => 3,  // green → rough (mesh handles surface)
                 3  => 2,  // semi_rough
                 4  => 3,  // rough
                 5  => 3,  // trees → rough texture
-                6  => 3,  // bunker → rough (mesh handles sand surface, prevents blur glow)
-                7  => 3,  // water → rough for now
-                8  => 6,  // cart_path
+                6  => 3,  // bunker → rough (mesh handles sand surface)
+                7  => 3,  // water → rough
+                8  => 3,  // cart_path → rough (mesh overlay handles surface)
                 9  => 3,  // ob → rough texture
-                10 => 5,  // tee_box
+                10 => 3,  // tee_box → rough (mesh overlay handles surface)
                 _  => 3,  // background/unknown → rough
             };
         }
@@ -919,78 +752,6 @@ namespace Golfin.CourseImport
                 }
             }
             return result;
-        }
-
-        /// <summary>
-        /// Rasterize a smooth polygon onto a byte grid.
-        /// For each pixel inside the polygon, sets grid[y * w + x] = value.
-        /// Uses ray-casting (point-in-polygon) test.
-        /// </summary>
-        static void RasterizePolygon(float[] polyX, float[] polyZ, int polyCount,
-            byte[] grid, int w, int h, byte value,
-            int minAX, int minAY, int maxAX, int maxAY)
-        {
-            for (int ay = minAY; ay <= maxAY; ay++)
-            {
-                for (int ax = minAX; ax <= maxAX; ax++)
-                {
-                    float px = ax + 0.5f;
-                    float py = ay + 0.5f;
-                    bool inside = false;
-                    for (int i = 0, j = polyCount - 1; i < polyCount; j = i++)
-                    {
-                        if ((polyZ[i] > py) != (polyZ[j] > py) &&
-                            px < (polyX[j] - polyX[i]) * (py - polyZ[i]) /
-                                 (polyZ[j] - polyZ[i]) + polyX[i])
-                        {
-                            inside = !inside;
-                        }
-                    }
-                    if (inside)
-                        grid[ay * w + ax] = value;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Convert a ZoneContourRegion from local meters to alphamap coords and rasterize.
-        /// </summary>
-        static void RasterizeContour(ZoneContourRegion region, byte[] grid,
-            int alphaRes, TerrainData terrainData, byte zoneValue)
-        {
-            if (region.contour == null || region.contour.Length < 3) return;
-            int n = region.contour.Length;
-
-            float terrainX = terrainData.size.x;
-            float terrainZ = terrainData.size.z;
-
-            float[] polyAX = new float[n];
-            float[] polyAY = new float[n];
-            float bminAX = float.MaxValue, bmaxAX = float.MinValue;
-            float bminAY = float.MaxValue, bmaxAY = float.MinValue;
-
-            for (int i = 0; i < n; i++)
-            {
-                float worldX = region.contour[i].z;
-                float worldZ = region.contour[i].x;
-                float ax = (worldX + terrainX / 2f) / terrainX * (alphaRes - 1);
-                float ay = (worldZ + terrainZ / 2f) / terrainZ * (alphaRes - 1);
-                polyAX[i] = ax;
-                polyAY[i] = ay;
-                if (ax < bminAX) bminAX = ax;
-                if (ax > bmaxAX) bmaxAX = ax;
-                if (ay < bminAY) bminAY = ay;
-                if (ay > bmaxAY) bmaxAY = ay;
-            }
-
-            int minAXi = Mathf.Max(0, Mathf.FloorToInt(bminAX));
-            int maxAXi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAX));
-            int minAYi = Mathf.Max(0, Mathf.FloorToInt(bminAY));
-            int maxAYi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAY));
-
-            RasterizePolygon(polyAX, polyAY, n,
-                grid, alphaRes, alphaRes, zoneValue,
-                minAXi, minAYi, maxAXi, maxAYi);
         }
 
         private static float[,] ExtractChannel(float[,,] alphamap, int res, int layerCount, int layer)
@@ -2380,6 +2141,217 @@ namespace Golfin.CourseImport
             AssetDatabase.ImportAsset($"{dataDir}/water.json");
 
             Debug.Log($"[HoleLiteImporter] Created {waterFile.water.Length} water quad(s)");
+        }
+
+        // ─── Flat Zone Mesh Pipeline (Fairway, Tee, Cart Path) ─────────
+
+        private static void CreateFlatZoneMeshes(TerrainData terrainData,
+            GameObject terrainGO, Transform parentRoot,
+            string exportPath, string dataDir, string projectRoot)
+        {
+            string texDir = "Assets/Courses/Textures_2025(JPG)";
+            var terrain = terrainGO.GetComponent<Terrain>();
+            float terrainBaseY = terrainGO.transform.position.y;
+
+            // ─── Fairway meshes ─────────────────────────────
+            string fwPath = Path.Combine(exportPath, "fairway-contours.json");
+            if (File.Exists(fwPath))
+            {
+                string json = File.ReadAllText(fwPath);
+                var data = JsonUtility.FromJson<FairwayContoursFile>(json);
+
+                if (data.fairways != null && data.fairways.Length > 0)
+                {
+                    var fwRoot = new GameObject("Fairways");
+                    fwRoot.transform.SetParent(parentRoot);
+
+                    var fwMat = CreateTiledMaterial(texDir, "T_Fairway_Light",
+                        "T_Fairway_Normal", dataDir, 5f);
+
+                    foreach (var fw in data.fairways)
+                    {
+                        if (fw.contour == null || fw.contour.Length < 3) continue;
+
+                        var meshGO = CreateFlatContourMesh(
+                            fw.id, "Fairway", fw.contour,
+                            terrain, terrainBaseY, fwMat, 5f,
+                            Golfin.Course.SurfaceType.Fairway);
+                        if (meshGO != null)
+                            meshGO.transform.SetParent(fwRoot.transform);
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Created {data.fairways.Length} fairway mesh(es)");
+                }
+            }
+
+            // ─── Tee & Cart Path meshes from zone-contours.json ─────
+            string zcPath = Path.Combine(exportPath, "zone-contours.json");
+            if (File.Exists(zcPath))
+            {
+                string json = File.ReadAllText(zcPath);
+                var data = JsonUtility.FromJson<ZoneContoursFile>(json);
+
+                // Tee meshes
+                if (data.zones != null && data.zones.tee != null && data.zones.tee.Length > 0)
+                {
+                    var teeRoot = new GameObject("Tees");
+                    teeRoot.transform.SetParent(parentRoot);
+
+                    var teeMat = CreateTiledMaterial(texDir, "T_Tee_Albedo",
+                        "T_Tee_Normal", dataDir, 3f);
+
+                    foreach (var region in data.zones.tee)
+                    {
+                        if (region.contour == null || region.contour.Length < 3) continue;
+
+                        var meshGO = CreateFlatContourMesh(
+                            region.id, "Tee", region.contour,
+                            terrain, terrainBaseY, teeMat, 3f,
+                            Golfin.Course.SurfaceType.Tee);
+                        if (meshGO != null)
+                            meshGO.transform.SetParent(teeRoot.transform);
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Created {data.zones.tee.Length} tee mesh(es)");
+                }
+
+                // Cart path meshes
+                if (data.zones != null && data.zones.cart_path != null && data.zones.cart_path.Length > 0)
+                {
+                    var cpRoot = new GameObject("CartPaths");
+                    cpRoot.transform.SetParent(parentRoot);
+
+                    var cpMat = CreateTiledMaterial(texDir, "T_RoadAsphalt_Albedo",
+                        "T_RoadAsphalt_Normal", dataDir, 4f);
+
+                    foreach (var region in data.zones.cart_path)
+                    {
+                        if (region.contour == null || region.contour.Length < 3) continue;
+
+                        var meshGO = CreateFlatContourMesh(
+                            region.id, "CartPath", region.contour,
+                            terrain, terrainBaseY, cpMat, 4f,
+                            Golfin.Course.SurfaceType.CartPath);
+                        if (meshGO != null)
+                            meshGO.transform.SetParent(cpRoot.transform);
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Created {data.zones.cart_path.Length} cart path mesh(es)");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Create a flat mesh from a contour polygon, positioned at terrain height.
+        /// Uses centroid-fan triangulation (works for convex and mildly concave shapes).
+        /// </summary>
+        private static GameObject CreateFlatContourMesh(int id, string zoneName,
+            ContourPoint[] contour, Terrain terrain, float terrainBaseY,
+            Material mat, float tileSize, Golfin.Course.SurfaceType surfaceType)
+        {
+            int n = contour.Length;
+            if (n < 3) return null;
+
+            // Convert contour to world space (90° CCW rotation: worldX = z, worldZ = x)
+            Vector3[] worldPts = new Vector3[n];
+            float yOffset = 0.02f; // slightly above terrain to prevent z-fighting
+
+            for (int i = 0; i < n; i++)
+            {
+                float wx = contour[i].z; // 90° CCW rotation
+                float wz = contour[i].x;
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                worldPts[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
+            }
+
+            // Compute centroid
+            float cx = 0, cy = 0, cz = 0;
+            for (int i = 0; i < n; i++)
+            {
+                cx += worldPts[i].x;
+                cy += worldPts[i].y;
+                cz += worldPts[i].z;
+            }
+            cx /= n; cy /= n; cz /= n;
+            Vector3 centroid = new Vector3(cx, cy, cz);
+
+            // Build mesh: vertices = contour points + centroid (all relative to centroid)
+            var verts = new Vector3[n + 1];
+            var uvs = new Vector2[n + 1];
+
+            for (int i = 0; i < n; i++)
+            {
+                verts[i] = worldPts[i] - centroid; // relative to centroid
+                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
+            }
+            // Center vertex
+            verts[n] = Vector3.zero; // centroid is at origin
+            uvs[n] = new Vector2(cx / tileSize, cz / tileSize);
+
+            // Triangles: fan from centroid
+            var tris = new int[n * 3];
+            for (int i = 0; i < n; i++)
+            {
+                tris[i * 3 + 0] = i;
+                tris[i * 3 + 1] = n; // centroid
+                tris[i * 3 + 2] = (i + 1) % n;
+            }
+
+            var mesh = new Mesh();
+            mesh.name = $"{zoneName}_{id}";
+            mesh.vertices = verts;
+            mesh.triangles = tris;
+            mesh.uv = uvs;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"{zoneName}_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = surfaceType;
+
+            return go;
+        }
+
+        /// <summary>
+        /// Create a URP Lit material with tiled albedo + normal map for zone overlays.
+        /// World-space tiling is handled in the mesh UVs (divided by tileSize),
+        /// so material tiling stays at (1,1).
+        /// </summary>
+        private static Material CreateTiledMaterial(string texDir, string albedoName,
+            string normalName, string dataDir, float tileSize)
+        {
+            string matPath = $"{dataDir}/MAT_{albedoName}.mat";
+            var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (existingMat != null)
+                AssetDatabase.DeleteAsset(matPath);
+
+            var mat = new Material(GetLitShader());
+            mat.name = $"MAT_{albedoName}";
+
+            var albedo = FindTextureExact(texDir, albedoName);
+            if (albedo != null)
+                mat.mainTexture = albedo;
+
+            var normal = FindTextureExact(texDir, normalName);
+            if (normal != null)
+            {
+                mat.SetTexture("_BumpMap", normal);
+                mat.SetFloat("_BumpScale", 0.4f);
+                mat.EnableKeyword("_NORMALMAP");
+            }
+
+            // Tiling is 1:1 because mesh UVs are worldPos / tileSize
+            mat.mainTextureScale = Vector2.one;
+            mat.SetFloat("_Smoothness", 0f);
+            mat.SetFloat("_Metallic", 0f);
+
+            AssetDatabase.CreateAsset(mat, matPath);
+            return mat;
         }
 
         private static void EnsureDirectory(string path)
