@@ -531,8 +531,9 @@ namespace Golfin.CourseImport
 
                 if (backTee != null && greenCenter != null)
                 {
-                    Vector2 teePos = new Vector2(backTee.local.x, backTee.local.z);
-                    Vector2 greenPos = new Vector2(greenCenter.x, greenCenter.z);
+                    // Match terrain space: 90° CCW rotation (x,z) → (z,x)
+                    Vector2 teePos = new Vector2(backTee.local.z, backTee.local.x);
+                    Vector2 greenPos = new Vector2(greenCenter.z, greenCenter.x);
                     Vector2 dir = (greenPos - teePos).normalized;
                     if (dir.sqrMagnitude > 0.01f)
                         stripeDir = dir;
