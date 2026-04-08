@@ -2243,7 +2243,7 @@ namespace Golfin.CourseImport
 
         /// <summary>
         /// Create a flat mesh from a contour polygon, positioned at terrain height.
-        /// Uses centroid-fan triangulation (works for convex and mildly concave shapes).
+        /// Uses ear-clipping triangulation (handles concave shapes like thin cart paths).
         /// </summary>
         private static GameObject CreateFlatContourMesh(int id, string zoneName,
             ContourPoint[] contour, Terrain terrain, float terrainBaseY,
@@ -2264,7 +2264,7 @@ namespace Golfin.CourseImport
                 worldPts[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
             }
 
-            // Compute centroid
+            // Compute centroid for mesh origin
             float cx = 0, cy = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
@@ -2275,32 +2275,33 @@ namespace Golfin.CourseImport
             cx /= n; cy /= n; cz /= n;
             Vector3 centroid = new Vector3(cx, cy, cz);
 
-            // Build mesh: vertices = contour points + centroid (all relative to centroid)
-            var verts = new Vector3[n + 1];
-            var uvs = new Vector2[n + 1];
-
+            // Build 2D polygon for ear-clipping (XZ plane)
+            Vector2[] poly2D = new Vector2[n];
             for (int i = 0; i < n; i++)
+                poly2D[i] = new Vector2(worldPts[i].x, worldPts[i].z);
+
+            // Ear-clipping triangulation
+            var triIndices = EarClipTriangulate(poly2D);
+            if (triIndices == null || triIndices.Count < 3)
             {
-                verts[i] = worldPts[i] - centroid; // relative to centroid
-                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
+                Debug.LogWarning($"[HoleLiteImporter] Ear-clip failed for {zoneName}_{id} ({n} verts), skipping");
+                return null;
             }
-            // Center vertex
-            verts[n] = Vector3.zero; // centroid is at origin
-            uvs[n] = new Vector2(cx / tileSize, cz / tileSize);
 
-            // Triangles: fan from centroid
-            var tris = new int[n * 3];
+            // Build mesh vertices (relative to centroid)
+            var verts = new Vector3[n];
+            var uvs = new Vector2[n];
+
             for (int i = 0; i < n; i++)
             {
-                tris[i * 3 + 0] = i;
-                tris[i * 3 + 1] = n; // centroid
-                tris[i * 3 + 2] = (i + 1) % n;
+                verts[i] = worldPts[i] - centroid;
+                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
             }
 
             var mesh = new Mesh();
             mesh.name = $"{zoneName}_{id}";
             mesh.vertices = verts;
-            mesh.triangles = tris;
+            mesh.triangles = triIndices.ToArray();
             mesh.uv = uvs;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
@@ -2315,6 +2316,107 @@ namespace Golfin.CourseImport
             marker.surfaceType = surfaceType;
 
             return go;
+        }
+
+        /// <summary>
+        /// Ear-clipping triangulation for arbitrary simple polygons (convex or concave).
+        /// Returns list of triangle indices into the original vertex array.
+        /// Ensures CCW winding before clipping.
+        /// </summary>
+        private static System.Collections.Generic.List<int> EarClipTriangulate(Vector2[] polygon)
+        {
+            int n = polygon.Length;
+            if (n < 3) return null;
+
+            var tris = new System.Collections.Generic.List<int>((n - 2) * 3);
+
+            // Build index list
+            var indices = new System.Collections.Generic.List<int>(n);
+
+            // Ensure CCW winding (positive signed area)
+            float signedArea = 0;
+            for (int i = 0; i < n; i++)
+            {
+                int j = (i + 1) % n;
+                signedArea += (polygon[j].x - polygon[i].x) * (polygon[j].y + polygon[i].y);
+            }
+
+            if (signedArea > 0) // CW → reverse to CCW
+            {
+                for (int i = n - 1; i >= 0; i--)
+                    indices.Add(i);
+            }
+            else
+            {
+                for (int i = 0; i < n; i++)
+                    indices.Add(i);
+            }
+
+            int remaining = indices.Count;
+            int maxIterations = remaining * remaining; // safety limit
+            int iter = 0;
+            int earIdx = 0;
+
+            while (remaining > 2 && iter < maxIterations)
+            {
+                iter++;
+                int prev = (earIdx - 1 + remaining) % remaining;
+                int curr = earIdx % remaining;
+                int next = (earIdx + 1) % remaining;
+
+                int iPrev = indices[prev];
+                int iCurr = indices[curr];
+                int iNext = indices[next];
+
+                Vector2 a = polygon[iPrev];
+                Vector2 b = polygon[iCurr];
+                Vector2 c = polygon[iNext];
+
+                // Check if this vertex forms a convex angle (CCW cross product > 0)
+                float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+                if (cross > 0)
+                {
+                    // Check no other vertex lies inside triangle abc
+                    bool isEar = true;
+                    for (int k = 0; k < remaining; k++)
+                    {
+                        if (k == prev || k == curr || k == next) continue;
+                        if (PointInTriangle(polygon[indices[k]], a, b, c))
+                        {
+                            isEar = false;
+                            break;
+                        }
+                    }
+
+                    if (isEar)
+                    {
+                        tris.Add(iPrev);
+                        tris.Add(iCurr);
+                        tris.Add(iNext);
+
+                        indices.RemoveAt(curr);
+                        remaining--;
+                        // Don't advance earIdx — the next vertex shifted into curr's slot
+                        if (remaining > 0)
+                            earIdx = earIdx % remaining;
+                        continue;
+                    }
+                }
+
+                earIdx = (earIdx + 1) % remaining;
+            }
+
+            return tris;
+        }
+
+        private static bool PointInTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+        {
+            float d1 = (p.x - b.x) * (a.y - b.y) - (a.x - b.x) * (p.y - b.y);
+            float d2 = (p.x - c.x) * (b.y - c.y) - (b.x - c.x) * (p.y - c.y);
+            float d3 = (p.x - a.x) * (c.y - a.y) - (c.x - a.x) * (p.y - a.y);
+            bool hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+            bool hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+            return !(hasNeg && hasPos);
         }
 
         /// <summary>
