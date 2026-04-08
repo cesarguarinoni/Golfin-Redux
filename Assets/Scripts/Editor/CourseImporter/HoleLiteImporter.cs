@@ -2489,6 +2489,18 @@ namespace Golfin.CourseImport
                     // For CCW polygon: convex vertex has positive cross (left/CCW turn)
                     // For CW polygon: convex vertex has negative cross (right/CW turn)
                     bool isConvex = isCCW ? (cross > 0) : (cross < 0);
+
+                    // Skip degenerate near-collinear triangles (area < 0.01 m²)
+                    // These cause z-fighting flicker at thin polygon tips
+                    float triArea = Mathf.Abs(cross) * 0.5f;
+                    if (triArea < 0.01f)
+                    {
+                        // Remove the vertex without emitting a triangle
+                        indices.RemoveAt(i);
+                        earFound = true;
+                        break;
+                    }
+
                     if (!isConvex) continue;
 
                     // Check that no other vertex is inside this triangle
@@ -2506,8 +2518,6 @@ namespace Golfin.CourseImport
                     if (hasPointInside) continue;
 
                     // This is an ear — emit triangle with CW winding (front-face up in Unity)
-                    // CCW polygon ear (prev,curr,next) is CCW → flip to CW for Unity front-face
-                    // CW polygon ear (prev,curr,next) is already CW → emit as-is
                     if (isCCW)
                     {
                         result.Add(next);
