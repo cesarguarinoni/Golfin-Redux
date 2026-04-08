@@ -588,54 +588,8 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // --- 5. Gaussian blur + re-normalize ---
-            int blurRadius = 3;
-            float sigma = blurRadius / 2.0f;
-
-            for (int l = 0; l < layerCount; l++)
-            {
-                float[,] channel = ExtractChannel(alphamap, alphaRes, layerCount, l);
-                float[,] blurred = GaussianBlur2D(channel, alphaRes, blurRadius, sigma);
-                SetChannel(alphamap, alphaRes, layerCount, l, blurred);
-            }
-
-            // Re-normalize so weights sum to 1.0
-            for (int ay = 0; ay < alphaRes; ay++)
-            {
-                for (int ax = 0; ax < alphaRes; ax++)
-                {
-                    float sum = 0f;
-                    for (int l = 0; l < layerCount; l++)
-                        sum += alphamap[ay, ax, l];
-
-                    if (sum > 0.001f)
-                    {
-                        for (int l = 0; l < layerCount; l++)
-                            alphamap[ay, ax, l] /= sum;
-                    }
-                    else
-                    {
-                        alphamap[ay, ax, 3] = 1.0f; // fallback: rough
-                    }
-                }
-            }
-
-            // --- 5b. Re-stamp fairway for crisp edges ---
-            // Fairway gets hard edges. Fringe blurs outward into rough naturally.
-            for (int ay = 0; ay < alphaRes; ay++)
-            {
-                for (int ax = 0; ax < alphaRes; ax++)
-                {
-                    int idx = ay * alphaRes + ax;
-
-                    if (fairwayMask[idx])
-                    {
-                        for (int l = 0; l < layerCount; l++)
-                            alphamap[ay, ax, l] = 0f;
-                        alphamap[ay, ax, 0] = 1.0f; // layer 0 = fairway
-                    }
-                }
-            }
+            // Blur removed — fringe rings handle zone transitions.
+            // GaussianBlur2D / ExtractChannel / SetChannel kept as helpers.
 
             // --- 6. Create TerrainLayers and apply ---
             string texDir = "Assets/Courses/Textures_2025(JPG)";
