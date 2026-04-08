@@ -620,9 +620,8 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // --- 5b. Re-stamp fairway and fairway fringe for crisp edges ---
-            // The blur softens all boundaries, but fairway should have sharp,
-            // manicured edges like a real golf course.
+            // --- 5b. Re-stamp fairway for crisp edges ---
+            // Fairway gets hard edges. Fringe blurs outward into rough naturally.
             for (int ay = 0; ay < alphaRes; ay++)
             {
                 for (int ax = 0; ax < alphaRes; ax++)
@@ -634,12 +633,6 @@ namespace Golfin.CourseImport
                         for (int l = 0; l < layerCount; l++)
                             alphamap[ay, ax, l] = 0f;
                         alphamap[ay, ax, 0] = 1.0f; // layer 0 = fairway
-                    }
-                    else if (fairwayFringeMask[idx])
-                    {
-                        for (int l = 0; l < layerCount; l++)
-                            alphamap[ay, ax, l] = 0f;
-                        alphamap[ay, ax, 2] = 1.0f; // layer 2 = semi-rough
                     }
                 }
             }

@@ -7,17 +7,18 @@
 
 ---
 
-## Current Task — Sharp Fairway Edges (No Blur Bleeding)
+## Current Task — Fix Fairway Fringe Blend Direction
 
-**Problem:** The Gaussian blur in the splatmap pipeline bleeds fairway
-into surrounding zones, making edges soft/gradual. Real fairway has a
-crisp mowed edge — it shouldn't blend into rough.
+**Problem:** The re-stamp makes both fairway AND fringe edges hard. But
+the fringe should blend outward into rough — only the fairway→fringe
+boundary should be crisp.
 
-**Fix:** After the blur + re-normalize step, re-stamp fairway pixels
-back to 100% fairway. This preserves the blur for other zone transitions
-(rough↔semi-rough, etc.) but gives fairway a hard edge.
-
-Also re-stamp the fairway fringe pixels so they stay crisp too.
+**Fix:** Only re-stamp **fairway** pixels after the blur. Remove the
+fairway fringe re-stamp. This way:
+- Fairway has a hard edge (re-stamped to 100%)
+- Fringe was painted as semi-rough before blur, so blur softens
+  fringe→rough naturally (outward blend)
+- Fairway→fringe boundary stays sharp because fairway is re-stamped
 
 **File:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
 
@@ -25,13 +26,12 @@ Also re-stamp the fairway fringe pixels so they stay crisp too.
 
 ### What to change
 
-In `ApplySplatmap()`, after step 5 (Gaussian blur + re-normalize),
-add step 5b:
+In the step 5b re-stamp block, **remove the fairwayFringeMask branch**.
+Keep only the fairway re-stamp:
 
 ```csharp
-// --- 5b. Re-stamp fairway and fairway fringe for crisp edges ---
-// The blur softens all boundaries, but fairway should have sharp,
-// manicured edges like a real golf course.
+// --- 5b. Re-stamp fairway for crisp edges ---
+// Fairway gets hard edges. Fringe blurs outward into rough naturally.
 for (int ay = 0; ay < alphaRes; ay++)
 {
     for (int ax = 0; ax < alphaRes; ax++)
@@ -40,43 +40,26 @@ for (int ay = 0; ay < alphaRes; ay++)
 
         if (fairwayMask[idx])
         {
-            // Hard fairway: clear all layers, set fairway to 1.0
             for (int l = 0; l < layerCount; l++)
                 alphamap[ay, ax, l] = 0f;
             alphamap[ay, ax, 0] = 1.0f; // layer 0 = fairway
-        }
-        else if (fairwayFringeMask[idx])
-        {
-            // Hard fairway fringe: clear all, set semi-rough to 1.0
-            for (int l = 0; l < layerCount; l++)
-                alphamap[ay, ax, l] = 0f;
-            alphamap[ay, ax, 2] = 1.0f; // layer 2 = semi-rough
         }
     }
 }
 ```
 
-This goes right before step 6 (Create TerrainLayers and apply).
-
-Note: `fairwayMask` and `fairwayFringeMask` are already computed in
-steps 3b. Make sure they're accessible at this point (they should be
-since they're local variables in the same method).
-
 ---
 
 ### Verification
 
-- [ ] Re-import Hole 1
-- [ ] Fairway has crisp, sharp edges — no bleeding into rough
-- [ ] Fairway fringe (semi-rough border) also crisp
-- [ ] Other zone transitions still smooth (rough↔semi-rough, etc.)
-- [ ] Green fringe still works
-- [ ] No console errors
+- [ ] Fairway edge is crisp (no bleed inward)
+- [ ] Fringe blends softly outward into rough
+- [ ] Clear visual: fairway → sharp edge → fringe → soft blend → rough
 
 ### Do NOT
 
-- Modify the blur itself (other zones still need it)
-- Modify zone meshes or export pipeline
+- Modify the blur step
+- Modify green fringe logic
 
 ---
 
@@ -88,5 +71,5 @@ since they're local variables in the same method).
 ✅ DONE: 2026-04-08 — Terrain plastic sheen fixed via Mask Map
 ✅ DONE: 2026-04-08 — Cleaned up failed terrain sheen fixes
 ✅ DONE: 2026-04-08 — Swapped fairway/fringe textures + rotated fairway grain
-✅ DONE: 2026-04-08 — Fairway fringe ring (semi-rough border)
-✅ DONE: 2026-04-08 — Sharp fairway edges: re-stamp fairway + fringe after blur
+✅ DONE: 2026-04-08 — Fairway fringe ring + sharp fairway edges (both sides hard — needs fix)
+✅ DONE: 2026-04-08 — Fix fringe blend: only re-stamp fairway, let fringe blur outward
