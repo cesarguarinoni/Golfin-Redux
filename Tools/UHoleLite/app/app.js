@@ -487,187 +487,69 @@ function matchZoneColor(r, g, b) {
   return bestZone;
 }
 
-// ── Straighten Boundaries ───────────────────────────
+// ── Straighten Boundaries (morphological close) ────
 function straightenBoundaries() {
   const w = zoneGridW, h = zoneGridH;
   const result = new Uint8Array(w * h);
   result.fill(0);
 
-  // Process zones in priority order (higher overwrite lower)
-  const zonePriority = [0, 4, 5, 3, 1, 10, 2, 6, 7, 8, 9];
+  // Process zones in priority order (higher overwrites lower)
+  const zonePriority = [4, 5, 3, 1, 10, 2, 6, 7, 8, 9];
+  const radius = 3;
 
   for (const zone of zonePriority) {
-    if (zone === 0) continue;
+    const mask = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) {
+      if (zoneGrid[i] === zone) mask[i] = 1;
+    }
 
-    const visited = new Uint8Array(w * h);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const idx = y * w + x;
-        if (zoneGrid[idx] !== zone || visited[idx]) continue;
+    const dilated = dilateMask(mask, w, h, radius);
+    const closed = erodeMask(dilated, w, h, radius);
 
-        // Flood fill to collect region pixels
-        const pixels = [];
-        const stack = [[x, y]];
-        visited[idx] = 1;
-        while (stack.length > 0) {
-          const [px, py] = stack.pop();
-          pixels.push([px, py]);
-          for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-            const nx = px + dx, ny = py + dy;
-            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-            const ni = ny * w + nx;
-            if (!visited[ni] && zoneGrid[ni] === zone) {
-              visited[ni] = 1;
-              stack.push([nx, ny]);
-            }
-          }
-        }
-
-        if (pixels.length < 20) {
-          for (const [px, py] of pixels) result[py * w + px] = zone;
-          continue;
-        }
-
-        const border = traceBorderPixels(pixels, w, h);
-        if (border.length < 4) {
-          for (const [px, py] of pixels) result[py * w + px] = zone;
-          continue;
-        }
-
-        // RDP simplify (close polygon first)
-        let simplified = rdpSimplify([...border, border[0]], 1.5);
-        if (simplified.length > 1 &&
-            simplified[0][0] === simplified[simplified.length-1][0] &&
-            simplified[0][1] === simplified[simplified.length-1][1]) {
-          simplified = simplified.slice(0, -1);
-        }
-
-        // Chaikin smooth (1 pass)
-        const smoothed = chaikinSmooth(simplified, 1);
-
-        // Rasterize polygon back to grid
-        scanlineFill(result, w, h, smoothed, zone);
-      }
+    for (let i = 0; i < w * h; i++) {
+      if (closed[i]) result[i] = zone;
     }
   }
 
   zoneGrid.set(result);
 }
 
-function traceBorderPixels(pixels, gridW, gridH) {
-  const pixelSet = new Set(pixels.map(([x,y]) => y * gridW + x));
-  const border = [];
-  for (const [px, py] of pixels) {
-    const neighbors = [[px-1,py],[px+1,py],[px,py-1],[px,py+1]];
-    const isBorder = neighbors.some(([nx,ny]) => {
-      if (nx < 0 || nx >= gridW || ny < 0 || ny >= gridH) return true;
-      return !pixelSet.has(ny * gridW + nx);
-    });
-    if (isBorder) border.push([px, py]);
-  }
-  if (border.length === 0) return [];
-
-  // Order by walking perimeter (8-connected)
-  border.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
-  const borderSet = new Set(border.map(([x,y]) => y * gridW + x));
-  const ordered = [border[0]];
-  const visitedSet = new Set([border[0][1] * gridW + border[0][0]]);
-  const dirs8 = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-
-  let current = border[0];
-  for (let step = 0; step < border.length * 2; step++) {
-    let found = false;
-    for (const [dx, dy] of dirs8) {
-      const nx = current[0] + dx, ny = current[1] + dy;
-      const key = ny * gridW + nx;
-      if (borderSet.has(key) && !visitedSet.has(key)) {
-        visitedSet.add(key);
-        ordered.push([nx, ny]);
-        current = [nx, ny];
-        found = true;
-        break;
-      }
-    }
-    if (!found) break;
-  }
-  return ordered;
-}
-
-function rdpSimplify(points, epsilon) {
-  if (points.length <= 2) return points;
-  let maxDist = 0, maxIdx = 0;
-  const start = points[0], end = points[points.length - 1];
-  for (let i = 1; i < points.length - 1; i++) {
-    const d = perpDist(points[i], start, end);
-    if (d > maxDist) { maxDist = d; maxIdx = i; }
-  }
-  if (maxDist > epsilon) {
-    const left = rdpSimplify(points.slice(0, maxIdx + 1), epsilon);
-    const right = rdpSimplify(points.slice(maxIdx), epsilon);
-    return left.slice(0, -1).concat(right);
-  }
-  return [start, end];
-}
-
-function perpDist(point, lineStart, lineEnd) {
-  const dx = lineEnd[0] - lineStart[0];
-  const dy = lineEnd[1] - lineStart[1];
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq === 0) {
-    const ex = point[0] - lineStart[0];
-    const ey = point[1] - lineStart[1];
-    return Math.sqrt(ex * ex + ey * ey);
-  }
-  return Math.abs(dx * (lineStart[1] - point[1]) -
-                  (lineStart[0] - point[0]) * dy) / Math.sqrt(lenSq);
-}
-
-function chaikinSmooth(polygon, iterations) {
-  let pts = polygon;
-  for (let iter = 0; iter < iterations; iter++) {
-    const smoothed = [];
-    const n = pts.length;
-    for (let i = 0; i < n; i++) {
-      const curr = pts[i], next = pts[(i + 1) % n];
-      smoothed.push([0.75*curr[0] + 0.25*next[0], 0.75*curr[1] + 0.25*next[1]]);
-      smoothed.push([0.25*curr[0] + 0.75*next[0], 0.25*curr[1] + 0.75*next[1]]);
-    }
-    pts = smoothed;
-  }
-  return pts;
-}
-
-function scanlineFill(grid, w, h, polygon, zone) {
-  if (polygon.length < 3) return;
-  let minY = h, maxY = 0;
-  for (const [, y] of polygon) {
-    if (y < minY) minY = Math.floor(y);
-    if (y > maxY) maxY = Math.ceil(y);
-  }
-  minY = Math.max(0, minY);
-  maxY = Math.min(h - 1, maxY);
-
-  const n = polygon.length;
-  for (let y = minY; y <= maxY; y++) {
-    const intersections = [];
-    for (let i = 0; i < n; i++) {
-      const [x1, y1] = polygon[i];
-      const [x2, y2] = polygon[(i + 1) % n];
-      if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) {
-        const t = (y - y1) / (y2 - y1);
-        intersections.push(x1 + t * (x2 - x1));
-      }
-    }
-    intersections.sort((a, b) => a - b);
-
-    for (let i = 0; i < intersections.length - 1; i += 2) {
-      const xStart = Math.max(0, Math.ceil(intersections[i]));
-      const xEnd = Math.min(w - 1, Math.floor(intersections[i + 1]));
-      for (let x = xStart; x <= xEnd; x++) {
-        grid[y * w + x] = zone;
+function dilateMask(mask, w, h, radius) {
+  const result = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!mask[y * w + x]) continue;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (dx * dx + dy * dy > radius * radius) continue;
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && nx < w && ny >= 0 && ny < h)
+            result[ny * w + nx] = 1;
+        }
       }
     }
   }
+  return result;
+}
+
+function erodeMask(mask, w, h, radius) {
+  const result = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!mask[y * w + x]) continue;
+      let allSet = true;
+      for (let dy = -radius; dy <= radius && allSet; dy++) {
+        for (let dx = -radius; dx <= radius && allSet; dx++) {
+          if (dx * dx + dy * dy > radius * radius) continue;
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || nx >= w || ny < 0 || ny >= h || !mask[ny * w + nx])
+            allSet = false;
+        }
+      }
+      if (allSet) result[y * w + x] = 1;
+    }
+  }
+  return result;
 }
 
 function floodFillZone(normX, normY) {
