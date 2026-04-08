@@ -60,54 +60,45 @@ const ZONE_COLORS = {
 function classifyPixel(r, g, b) {
   const { h, s, l } = rgbToHsl(r, g, b);
 
-  // 1. Near-black → background
+  // 1. Near-black → background (illustration margins)
   if (l < 0.08) return ZONES.background;
 
-  // 2. Very bright, low saturation → background (illustration border/margin)
-  //    The wide light margins around the hole are not playable area.
-  if (l > 0.82 && s < 0.18) return ZONES.background;
+  // 2. Bunker — pink/light red (#fbd9de: h≈351, s≈0.81, l≈0.92)
+  if (l > 0.78 && s > 0.20 && (h > 330 || h < 25)) return ZONES.bunker;
 
-  // 3. Gray, low saturation → rough (most gray in these illustrations is shadow)
-  //    True cart paths are thin — the majority filter will preserve them if enough
-  //    pixels are genuinely gray. Ultra-low saturation gray = cart path candidate.
-  if (s < 0.05 && l > 0.30 && l < 0.60) return ZONES.cart_path;
+  // 3. Cart path — purple/lilac (#e1abe0: h≈301, s≈0.47, l≈0.78)
+  if (h >= 260 && h <= 330 && s > 0.20 && l > 0.55) return ZONES.cart_path;
 
-  // 4. Blue → water
-  if (h >= 180 && h <= 250 && s > 0.25) return ZONES.water;
+  // 4. OB — white overlay surrounding OB areas (washed-out terrain)
+  if (l > 0.78 && s < 0.25) return ZONES.ob;
 
-  // 5. Tan/beige → bunker
-  if (h >= 10 && h <= 55 && s > 0.15 && l >= 0.55 && l <= 0.85) return ZONES.bunker;
+  // 5. Blue → water
+  if (h >= 180 && h <= 260 && s > 0.25) return ZONES.water;
 
-  // 6. Green hue range — the main classification area
+  // 6. Green hue range — main classification area
   if (h >= 55 && h <= 185) {
-    // Very dark → trees (forest/dark masses)
+    // Very dark green → trees (#1a3310: h≈103, s≈0.52, l≈0.13)
     if (l < 0.18) return ZONES.trees;
-    if (l < 0.25 && s < 0.35) return ZONES.trees;
 
-    // Putting green: very bright, high saturation green — extremely restrictive
-    // to avoid capturing bright fairway highlights
-    if (s > 0.60 && l > 0.68) return ZONES.green;
+    // Putting green — yellow-green hue, bright, high sat (#43bd0a: h≈101, s≈0.90, l≈0.39)
+    if (h < 115 && s > 0.65 && l > 0.28) return ZONES.green;
 
-    // Fairway: bright, saturated green
-    if (s > 0.28 && l >= 0.28 && l <= 0.65) return ZONES.fairway;
+    // Rough — dark pure green (#028505: h≈121, s≈0.97, l≈0.27)
+    if (h >= 115 && s > 0.70 && l < 0.29) return ZONES.rough;
 
-    // Semi-rough: medium saturation, moderate lightness
-    if (s >= 0.12 && l >= 0.22 && l <= 0.42) return ZONES.semi_rough;
+    // Fairway — medium pure green (#049707/#02a603: h≈121, s≈0.95, l≈0.30-0.33)
+    if (h >= 115 && s > 0.70 && l >= 0.29) return ZONES.fairway;
 
-    // Darker green → rough
+    // Semi-rough — lower saturation greens
+    if (s > 0.25 && l >= 0.18 && l <= 0.50) return ZONES.semi_rough;
+
     return ZONES.rough;
   }
 
-  // 7. Warm tones outside green hue (pinkish/brownish bare earth near bunkers)
-  if (h >= 0 && h < 55 && s > 0.12 && l > 0.40 && l < 0.80) return ZONES.bunker;
+  // 7. Light, low saturation outside green hue → OB
+  if (l > 0.70 && s < 0.30) return ZONES.ob;
 
-  // 8. Light desaturated colors → background (margin areas)
-  if (l > 0.75 && s < 0.15) return ZONES.background;
-
-  // 9. Moderate lightness, low saturation → rough
-  if (s < 0.10 && l >= 0.20 && l < 0.50) return ZONES.rough;
-
-  // 10. Default
+  // 8. Default
   if (l < 0.22) return ZONES.trees;
   return ZONES.rough;
 }
@@ -290,10 +281,10 @@ function markTeeBoxes(grid, width, height, tees, radius) {
 async function classifyHole(courseId, holeNumber) {
   const nn = String(holeNumber).padStart(2, '0');
   const holeDir = path.join(ROOT, 'output', courseId, 'holes', nn);
-  const rawPath = path.join(holeDir, 'illustration_raw.png');
+  const rawPath = path.join(holeDir, 'illustration.png');
 
   if (!fs.existsSync(rawPath)) {
-    console.error(`  illustration_raw.png not found for hole ${holeNumber}`);
+    console.error(`  illustration.png not found for hole ${holeNumber}`);
     return null;
   }
 
@@ -368,7 +359,7 @@ async function classifyHole(courseId, holeNumber) {
 
   const output = {
     hole_number: holeNumber,
-    source: 'illustration_raw.png',
+    source: 'illustration.png',
     source_dimensions: { width, height },
     zone_index: Object.fromEntries(Object.entries(ZONES).map(([k, v]) => [v, k])),
     zone_stats: zoneCounts,
