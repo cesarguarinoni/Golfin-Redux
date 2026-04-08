@@ -374,7 +374,6 @@ namespace Golfin.CourseImport
 
                     Vector3 markerPos = worldPos + perpDir * offset;
                     float terrainHeight = terrain.SampleHeight(markerPos);
-                    markerPos.y = terrainBase + terrainHeight + 0.01f;
 
                     var markerGO = Object.Instantiate(meshPrefab);
                     markerGO.name = $"TeeMarker_{teeLabel}_{suffix}";
@@ -386,10 +385,17 @@ namespace Golfin.CourseImport
                             rend.sharedMaterial = mat;
                     }
 
-                    markerGO.transform.position = markerPos;
                     markerGO.transform.rotation = rotation;
                     if (scaleFix != 1f)
                         markerGO.transform.localScale = Vector3.one * scaleFix;
+
+                    // Offset Y so marker rests on terrain (pivot is at mesh center)
+                    var rends = markerGO.GetComponentsInChildren<Renderer>();
+                    float halfHeight = 0f;
+                    if (rends.Length > 0)
+                        halfHeight = rends[0].bounds.extents.y;
+                    markerPos.y = terrainBase + terrainHeight + halfHeight;
+                    markerGO.transform.position = markerPos;
                     markerGO.transform.SetParent(parent);
                 }
             }
