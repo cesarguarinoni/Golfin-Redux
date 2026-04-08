@@ -2734,8 +2734,8 @@ namespace Golfin.CourseImport
                 verts[n + i] = outerRing[i] - centroid;
 
                 float u = arcLengths[i] / uTileSize;
-                uvs[i] = new Vector2(u, 0f);       // inner = light (v=0)
-                uvs[n + i] = new Vector2(u, 1f);   // outer = dark  (v=1)
+                uvs[i] = new Vector2(0f, u);       // inner = light (u=0)
+                uvs[n + i] = new Vector2(1f, u);   // outer = dark  (u=1)
             }
 
             // Triangles: quad strip, outward winding
