@@ -2456,11 +2456,11 @@ namespace Golfin.CourseImport
                     int curr = indices[i];
                     int next = indices[(i + 1) % count];
 
-                    // Check if this vertex is convex (forms a CW turn for CCW polygon)
+                    // Check if this vertex is convex
                     float cross = CrossXZ(pts[prev], pts[curr], pts[next]);
-                    // For CCW polygon: convex vertex has negative cross (CW turn)
-                    // For CW polygon: convex vertex has positive cross (CCW turn)
-                    bool isConvex = isCCW ? (cross < 0) : (cross > 0);
+                    // For CCW polygon: convex vertex has positive cross (left/CCW turn)
+                    // For CW polygon: convex vertex has negative cross (right/CW turn)
+                    bool isConvex = isCCW ? (cross > 0) : (cross < 0);
                     if (!isConvex) continue;
 
                     // Check that no other vertex is inside this triangle
@@ -2477,18 +2477,20 @@ namespace Golfin.CourseImport
                     }
                     if (hasPointInside) continue;
 
-                    // This is an ear — emit triangle with CW winding (front-face up)
+                    // This is an ear — emit triangle with CW winding (front-face up in Unity)
+                    // CCW polygon ear (prev,curr,next) is CCW → flip to CW for Unity front-face
+                    // CW polygon ear (prev,curr,next) is already CW → emit as-is
                     if (isCCW)
                     {
-                        result.Add(prev);
-                        result.Add(curr);
                         result.Add(next);
+                        result.Add(curr);
+                        result.Add(prev);
                     }
                     else
                     {
-                        result.Add(next);
-                        result.Add(curr);
                         result.Add(prev);
+                        result.Add(curr);
+                        result.Add(next);
                     }
 
                     indices.RemoveAt(i);
