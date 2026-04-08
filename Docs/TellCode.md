@@ -7,381 +7,158 @@
 
 ---
 
-## Current Task — Fairway Mow Stripes + Fairway Border Ring
+## Current Task — Tee Border Ring with Gradient Texture
 
-**Context:** Fairway, tee, and cart path are now mesh overlays with smooth
-contour edges. Two things remain to match the reference look:
+**Goal:** Add a border outline ring around each tee area, using the
+`T_TeeDark_Albedo` texture. This texture has a lighter side and a darker
+side — the lighter side must face inward (toward tee center) and the
+darker side must face outward.
 
-1. **Mow stripes** — alternating light/dark fairway bands running
-   perpendicular to the tee→green axis.
-2. **Fairway border ring** — a semi-rough fringe mesh wrapping around
-   the fairway edge (same concept as the green collar).
-
----
-
-### Task 1: Fairway Mow Stripes
-
-**Problem:** The previous attempt produced radial stripes because the
-centroid-fan triangulation creates triangles radiating from the center.
-Stripe assignment per-triangle follows that radial pattern.
-
-**Solution:** Use a **two-submesh approach** with world-space stripe
-calculation. Each triangle gets assigned to either submesh 0 (light) or
-submesh 1 (dark) based on its centroid's position projected onto the
-stripe axis. The mesh gets a MeshRenderer with two materials.
-
-#### Implementation
-
-Modify `CreateFlatContourMesh` (or create a fairway-specific variant
-called `CreateFairwayMesh`) in `HoleLiteImporter.cs`:
-
-**Step 1:** Compute the stripe direction. Load back tee + green centroid
-the same way the splatmap code did:
-
-```csharp
-// In CreateFlatZoneMeshes, before the fairway loop:
-// Compute stripe direction (perpendicular to tee→green)
-Vector2 stripeDir = new Vector2(0, 1); // default
-string anchorsPath = Path.Combine(exportPath, "anchors.json");
-if (File.Exists(anchorsPath))
-{
-    string anchJson = File.ReadAllText(anchorsPath);
-    var anchWrap = JsonUtility.FromJson<AnchorArrayWrapper>(
-        "{\"items\":" + anchJson + "}");
-    var anchs = anchWrap.items;
-    var backTee = System.Array.Find(anchs, a => a.type.Contains("back"));
-
-    string grPath = Path.Combine(exportPath, "greens.json");
-    AnchorLocal greenCenter = null;
-    if (File.Exists(grPath))
-    {
-        var grFile = JsonUtility.FromJson<GreensFileData>(File.ReadAllText(grPath));
-        if (grFile.greens != null && grFile.greens.Length > 0)
-            greenCenter = grFile.greens[0].center_local;
-    }
-
-    if (backTee != null && greenCenter != null)
-    {
-        Vector2 teePos = new Vector2(backTee.local.z, backTee.local.x);
-        Vector2 greenPos = new Vector2(greenCenter.z, greenCenter.x);
-        Vector2 dir = (greenPos - teePos).normalized;
-        if (dir.sqrMagnitude > 0.01f)
-            stripeDir = new Vector2(-dir.y, dir.x); // perpendicular
-    }
-}
-```
-
-**Step 2:** In the fairway mesh creation, after building the vertices
-and triangles (centroid-fan), split triangles into two lists based on
-which stripe band the triangle centroid falls in:
-
-```csharp
-// After building verts[], uvs[], tris[] as before...
-// worldPts[] contains the world-space positions of the contour vertices
-// verts[n] = centroid at Vector3.zero (relative), actual world pos = centroid variable
-
-float stripeWidth = 5f; // meters per stripe — same as MowStripeWidth
-
-// Classify each triangle into light or dark based on its centroid
-var lightTris = new System.Collections.Generic.List<int>();
-var darkTris = new System.Collections.Generic.List<int>();
-
-for (int t = 0; t < tris.Length; t += 3)
-{
-    // Get world positions of triangle vertices
-    // verts are relative to centroid, so add centroid back
-    Vector3 v0 = verts[tris[t]]     + centroid;
-    Vector3 v1 = verts[tris[t + 1]] + centroid;
-    Vector3 v2 = verts[tris[t + 2]] + centroid;
-
-    // Triangle centroid in world space
-    float tcx = (v0.x + v1.x + v2.x) / 3f;
-    float tcz = (v0.z + v1.z + v2.z) / 3f;
-
-    // Project onto stripe axis
-    float proj = tcx * stripeDir.x + tcz * stripeDir.y;
-    int band = Mathf.FloorToInt(proj / stripeWidth);
-
-    if (band % 2 == 0)
-    {
-        lightTris.Add(tris[t]);
-        lightTris.Add(tris[t + 1]);
-        lightTris.Add(tris[t + 2]);
-    }
-    else
-    {
-        darkTris.Add(tris[t]);
-        darkTris.Add(tris[t + 1]);
-        darkTris.Add(tris[t + 2]);
-    }
-}
-
-// Create mesh with 2 submeshes
-mesh.subMeshCount = 2;
-mesh.SetTriangles(lightTris.ToArray(), 0);
-mesh.SetTriangles(darkTris.ToArray(), 1);
-```
-
-**Step 3:** Set two materials on the MeshRenderer:
-
-```csharp
-var renderer = go.AddComponent<MeshRenderer>();
-renderer.sharedMaterials = new Material[] { lightFairwayMat, darkFairwayMat };
-```
-
-Where `lightFairwayMat` uses `T_Fairway_Light` and `darkFairwayMat`
-uses `T_Fairway_Dark`.
-
-**CRITICAL:** The stripe direction MUST use the same perpendicular-to-
-tee→green calculation as the old splatmap code. The projection formula is:
-`proj = worldX * stripeDir.x + worldZ * stripeDir.y` where
-`stripeDir = perpendicular to (teePos → greenPos)`.
-
-**CRITICAL:** The centroid-fan triangulation creates narrow pie-slice
-triangles. Some triangles may span across a stripe boundary, which
-means the stripe edge will follow triangle edges (slightly jagged).
-This is acceptable for now — at ~200+ contour vertices, the triangles
-are small enough that stripe boundaries look reasonable. If the stripe
-edges look too jagged, a future pass can subdivide the mesh along stripe
-boundaries, but DON'T do this now.
-
-**Signature change:** `CreateFlatContourMesh` for fairways needs
-additional parameters: `stripeDir`, `stripeWidth`, `darkFairwayMat`.
-The cleanest approach is to add a dedicated `CreateFairwayMesh` method
-that handles the two-submesh logic, keeping `CreateFlatContourMesh` for
-tee/cart path (single material). Or add optional parameters — your call.
+This is similar to the fairway fringe ring but uses a **directional UV
+mapping** across the ring width instead of world-space tiled UVs.
 
 ---
 
-### Task 2: Fairway Border Ring (Fringe)
+### Implementation
 
-**Goal:** A semi-rough mesh ring (~1.5m wide) wrapping around the outside
-of each fairway contour. Same concept as the green collar.
+Use the existing `CreateFringeRing` and `OffsetContourOutward` as
+reference, but create a dedicated method or adjust the fringe ring
+approach for the tee border. The critical difference is the UV mapping.
 
-#### Implementation
+#### UV mapping for gradient texture
 
-The green collar in `CreateRaisedMesh` uses concentric scaled rings of
-the contour polygon. For the fairway fringe, we do similar but simpler:
-- **Outer ring:** offset the contour outward by `FairwayFringeMeters` (~1.5m)
-- **Inner ring:** the original contour
-- **Mesh:** triangle strip between outer and inner rings
-- **Material:** semi-rough texture
-- **Height:** flat at terrain height (same yOffset as fairway mesh)
+The fringe ring has two vertex rings:
+- **Inner ring** (original tee contour edge) — UV.v = 0 (lighter side)
+- **Outer ring** (offset outward) — UV.v = 1 (darker side)
 
-#### Contour offset method
-
-To expand the contour outward by a distance, compute the outward normal
-at each vertex and push it out:
+The UV.u coordinate should be based on the vertex's position along the
+contour perimeter (normalized arc length), so the texture wraps around
+the ring without stretching.
 
 ```csharp
-/// <summary>
-/// Offset a closed contour outward by a distance.
-/// At each vertex, compute the average outward normal of its two edges,
-/// then push the vertex along that normal.
-/// </summary>
-static Vector3[] OffsetContourOutward(Vector3[] contour, float distance)
+// Compute cumulative arc length along the inner ring for UV.u
+float[] arcLengths = new float[n];
+arcLengths[0] = 0f;
+for (int i = 1; i < n; i++)
 {
-    int n = contour.Length;
-    var result = new Vector3[n];
+    float dx = innerRing[i].x - innerRing[i - 1].x;
+    float dz = innerRing[i].z - innerRing[i - 1].z;
+    arcLengths[i] = arcLengths[i - 1] + Mathf.Sqrt(dx * dx + dz * dz);
+}
+// Close the loop
+float totalArc = arcLengths[n - 1] +
+    Mathf.Sqrt(Mathf.Pow(innerRing[0].x - innerRing[n - 1].x, 2) +
+               Mathf.Pow(innerRing[0].z - innerRing[n - 1].z, 2));
 
-    for (int i = 0; i < n; i++)
-    {
-        int prev = (i - 1 + n) % n;
-        int next = (i + 1) % n;
+// Tile the U axis — repeat texture every ~3m along the perimeter
+float uTileSize = 3f;
 
-        // Edge vectors (XZ plane)
-        Vector2 e1 = new Vector2(contour[i].x - contour[prev].x,
-                                  contour[i].z - contour[prev].z).normalized;
-        Vector2 e2 = new Vector2(contour[next].x - contour[i].x,
-                                  contour[next].z - contour[i].z).normalized;
-
-        // Outward normals (rotate 90° CW: (x,z) → (z,-x))
-        // NOTE: direction depends on winding. If contour is CCW,
-        // outward is CW rotation of edge direction.
-        Vector2 n1 = new Vector2(e1.y, -e1.x);
-        Vector2 n2 = new Vector2(e2.y, -e2.x);
-
-        // Average normal (handles corners smoothly)
-        Vector2 avg = (n1 + n2).normalized;
-
-        // Miter correction: push further at sharp angles so the
-        // offset distance is correct at the vertex, not just along
-        // the normal. miterLen = distance / cos(halfAngle)
-        float dot = Vector2.Dot(n1, avg);
-        float miter = (dot > 0.1f) ? distance / dot : distance;
-        miter = Mathf.Min(miter, distance * 3f); // cap at 3x to prevent spikes
-
-        result[i] = new Vector3(
-            contour[i].x + avg.x * miter,
-            contour[i].y, // keep same Y
-            contour[i].z + avg.y * miter);
-    }
-
-    return result;
+for (int i = 0; i < n; i++)
+{
+    float u = arcLengths[i] / uTileSize; // tiling along perimeter
+    fringeUVs[i]     = new Vector2(u, 0f); // inner = light (v=0)
+    fringeUVs[n + i] = new Vector2(u, 1f); // outer = dark  (v=1)
 }
 ```
 
-**NOTE:** The winding direction matters for the outward normal. The
-contours from export are ensureCCW. In Unity after the 90° rotation,
-check which direction is outward. If the fringe appears inside the
-fairway instead of outside, flip the normal direction:
-`Vector2 n1 = new Vector2(-e1.y, e1.x);` instead of `(e1.y, -e1.x)`.
+**NOTE:** Check which axis of `T_TeeDark_Albedo` has the gradient. If
+the gradient runs along U (left=light, right=dark), swap the UV
+assignment — use U for the inner/outer mapping and V for the perimeter.
+You may need to visually test and swap U/V if the gradient appears
+rotated 90°.
 
-#### Building the fringe mesh
+**NOTE:** The texture import settings should have `wrapMode = Repeat`
+(for the perimeter axis) and `wrapMode = Clamp` on the gradient axis.
+Since Unity textures have a single wrap mode, set it to Repeat and
+ensure the gradient fills the full 0→1 range so clamping isn't needed.
+
+#### Where to add
+
+In `CreateFlatZoneMeshes`, in the tee section, after creating each
+tee mesh, add the border ring:
 
 ```csharp
-// After creating each fairway mesh, create its fringe ring:
-Vector3[] innerRing = worldPts; // the fairway contour vertices
-Vector3[] outerRing = OffsetContourOutward(worldPts, FairwayFringeMeters);
+// After creating tee mesh...
+// Create tee border ring
+var teeBorderMat = CreateTiledMaterial(texDir, "T_TeeDark_Albedo",
+    "T_TeeDark_Normal", dataDir, 1f); // tileSize=1 since UVs are manual
 
-// Update Y for outer ring (sample terrain height at each outer point)
-for (int i = 0; i < outerRing.Length; i++)
-{
-    float h = terrain.SampleHeight(new Vector3(outerRing[i].x, 0, outerRing[i].z));
-    outerRing[i].y = terrainBaseY + h + yOffset;
-}
-
-int fn = innerRing.Length;
-// Vertices: inner ring + outer ring (relative to centroid)
-var fringeVerts = new Vector3[fn * 2];
-var fringeUVs = new Vector2[fn * 2];
-for (int i = 0; i < fn; i++)
-{
-    fringeVerts[i] = innerRing[i] - centroid;           // inner
-    fringeVerts[fn + i] = outerRing[i] - centroid;       // outer
-    fringeUVs[i] = new Vector2(innerRing[i].x / 6f, innerRing[i].z / 6f);
-    fringeUVs[fn + i] = new Vector2(outerRing[i].x / 6f, outerRing[i].z / 6f);
-}
-
-// Triangles: quad strip between inner and outer ring
-var fringeTris = new int[fn * 6];
-for (int i = 0; i < fn; i++)
-{
-    int curr = i;
-    int next = (i + 1) % fn;
-    int outerCurr = fn + i;
-    int outerNext = fn + next;
-    int t = i * 6;
-    fringeTris[t + 0] = curr;
-    fringeTris[t + 1] = outerCurr;
-    fringeTris[t + 2] = next;
-    fringeTris[t + 3] = next;
-    fringeTris[t + 4] = outerCurr;
-    fringeTris[t + 5] = outerNext;
-}
-
-var fringeMesh = new Mesh();
-fringeMesh.name = $"FairwayFringe_{fw.id}";
-fringeMesh.vertices = fringeVerts;
-fringeMesh.triangles = fringeTris;
-fringeMesh.uv = fringeUVs;
-fringeMesh.RecalculateNormals();
-fringeMesh.RecalculateBounds();
-
-var fringeGO = new GameObject($"FairwayFringe_{fw.id}");
-fringeGO.transform.position = centroid;
-fringeGO.AddComponent<MeshFilter>().sharedMesh = fringeMesh;
-fringeGO.AddComponent<MeshRenderer>().sharedMaterial = semiRoughMat;
-fringeGO.AddComponent<MeshCollider>().sharedMesh = fringeMesh;
-
-var fringeMarker = fringeGO.AddComponent<Golfin.Course.SurfaceMarker>();
-fringeMarker.surfaceType = Golfin.Course.SurfaceType.SemiRough;
-
-fringeGO.transform.SetParent(fwRoot.transform);
+// The ring goes OUTSIDE the tee contour
+float teeFringeWidth = 1.0f; // 1 meter wide border
 ```
 
-Load the semi-rough material the same way as other zone materials:
+Then build the ring mesh using `OffsetContourOutward(worldPts, teeFringeWidth)`
+and the gradient UV mapping described above.
+
+**IMPORTANT:** Don't reuse `CreateFringeRing` directly because it uses
+world-space tiling UVs. Either:
+- (A) Add a parameter to `CreateFringeRing` for UV mode (tiled vs gradient)
+- (B) Create `CreateGradientBorderRing` as a new method
+- (C) Modify `CreateFringeRing` to accept a UV callback/mode
+
+Option B (new method) is cleanest. Copy the structure of `CreateFringeRing`
+but replace the UV section with the arc-length + inner/outer gradient
+mapping shown above.
+
+#### Material setup
+
 ```csharp
-var semiRoughMat = CreateTiledMaterial(texDir, "T_Semirough_Albedo",
-    "T_Semirough_Normal", dataDir, projectRoot, 6f);
+var teeBorderMat = new Material(GetLitShader());
+teeBorderMat.name = "MAT_TeeBorder";
+teeBorderMat.mainTexture = FindTextureExact(texDir, "T_TeeDark_Albedo");
+var teeNormal = FindTextureExact(texDir, "T_TeeDark_Normal");
+if (teeNormal != null)
+{
+    teeBorderMat.SetTexture("_BumpMap", teeNormal);
+    teeBorderMat.SetFloat("_BumpScale", 0.4f);
+    teeBorderMat.EnableKeyword("_NORMALMAP");
+}
+teeBorderMat.SetFloat("_Smoothness", 0f);
+teeBorderMat.SetFloat("_Metallic", 0f);
+
+string matPath = $"{dataDir}/MAT_TeeBorder.mat";
+var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+if (existing != null) AssetDatabase.DeleteAsset(matPath);
+AssetDatabase.CreateAsset(teeBorderMat, matPath);
 ```
 
----
+#### SurfaceMarker
 
-### Summary of changes
-
-**File: `HoleLiteImporter.cs`**
-
-1. In `CreateFlatZoneMeshes`:
-   - Compute `stripeDir` from anchors + greens (same formula as splatmap)
-   - Create `darkFairwayMat` alongside `lightFairwayMat` (T_Fairway_Dark)
-   - Create `semiRoughMat` (T_Semirough_Albedo)
-   - For each fairway: call mesh creation with two-submesh stripe logic
-   - For each fairway: create fringe ring mesh
-
-2. Add `OffsetContourOutward` helper method
-
-3. The fairway mesh creation (either modify `CreateFlatContourMesh` or
-   add `CreateFairwayMesh`) needs to:
-   - Accept `stripeDir`, `stripeWidth`, `darkMat` parameters
-   - Split triangles into light/dark submeshes
-   - Set two materials on MeshRenderer
+Use `SurfaceType.Fringe` (or `SurfaceType.Tee` — either works, your call).
 
 ---
 
 ### Verification
 
-- [ ] Fairway has alternating light/dark mow stripes running perpendicular
-  to tee→green direction (parallel bands, NOT radial from center)
-- [ ] Semi-rough fringe ring visible around fairway edge (~1.5m wide)
-- [ ] Fringe appears OUTSIDE the fairway (not inside)
-- [ ] Stripe direction matches the old splatmap stripes
-- [ ] Green collar still looks correct (unchanged)
-- [ ] Tee and cart path meshes unaffected
-- [ ] No z-fighting between fringe and fairway
+- [ ] Each tee area has a visible border ring around it
+- [ ] The lighter side of the texture faces inward (toward tee center)
+- [ ] The darker side of the texture faces outward (toward rough)
+- [ ] The texture wraps smoothly around the perimeter without stretching
+- [ ] No z-fighting with the tee mesh underneath
+- [ ] Border width looks reasonable (~1m)
 - [ ] No console errors
+- [ ] Fairway fringe, greens, bunkers unaffected
+
+### If the gradient is flipped (dark inside, light outside)
+
+Swap the V values:
+```csharp
+fringeUVs[i]     = new Vector2(u, 1f); // inner = dark  (v=1)
+fringeUVs[n + i] = new Vector2(u, 0f); // outer = light (v=0)
+```
+
+Or if the gradient runs along U instead of V, swap the axes:
+```csharp
+fringeUVs[i]     = new Vector2(0f, u); // inner: u=0 (light)
+fringeUVs[n + i] = new Vector2(1f, u); // outer: u=1 (dark)
+```
 
 ### Do NOT
 
-- Subdivide the mesh along stripe boundaries (accept slight jaggedness
-  at stripe edges — the triangle resolution is fine for now)
-- Use a custom shader for stripes
+- Modify fairway mesh or fairway fringe
 - Touch green, bunker, or water meshes
-- Modify the export pipeline
-
----
-
----
-
-### Implementation Report — Fairway Mow Stripes + Fringe Ring
-
-**Date:** 2026-04-08
-
-#### What was built
-
-1. **Mow stripes** — parallel light/dark fairway bands perpendicular to tee→green axis.
-2. **Fairway fringe ring** — a 0.5m semirough border inside the fairway edge.
-
-#### Approach taken (differs from spec)
-
-**Stripes:** The spec proposed a two-submesh approach (T_Fairway_Light + T_Fairway_Dark) with per-triangle centroid classification. This produced radial stripes because centroid-fan triangles are pie slices from center. We tried polygon band slicing (Sutherland-Hodgman clipping into stripe bands), but that bridged across concave curves. We then tried per-triangle splitting at stripe boundaries, but the winding was fragile.
-
-**Final solution:** Cesar created a single `T_Fairway_Mix` texture containing both light and dark bands. UVs are projected onto the stripe axis (`U = dot(worldPos, stripeDir) / stripeWidth`) so the texture naturally creates parallel stripes. One material, no submeshes, no clipping.
-
-**Triangulation:** Centroid-fan extends outside concave polygon boundaries. Replaced with **ear-clipping triangulation** (`EarClipTriangulate`) which always produces triangles within the polygon. Handles all fairway curve shapes correctly.
-
-**Fringe:** Spec proposed semi-rough texture, 1.5m, outside the fairway. Final implementation uses `T_Semirough_Albedo`/`Normal`, 0.5m width, **inside** the fairway edge (negative offset). Uses `OffsetContourOutward` with miter correction, quad-strip mesh between edge ring and offset ring.
-
-#### Key deviations from spec
-| Spec | Actual | Reason |
-|---|---|---|
-| Two materials (light + dark) | Single T_Fairway_Mix | Eliminates all submesh/clipping complexity |
-| Centroid-fan triangulation | Ear-clipping | Centroid-fan escapes concave curves |
-| Fringe outside, 1.5m, T_Semirough | Inside, 0.5m, T_Semirough | Cesar's preference after visual testing |
-| SurfaceType.SemiRough for fringe | SurfaceType.Fringe (new enum) | Distinct surface type added |
-
-#### Files changed
-- `HoleLiteImporter.cs` — `CreateFairwayMesh`, `CreateFringeRing`, `OffsetContourOutward`, `EarClipTriangulate`, `CrossXZ`, `PointInTriangleXZ`
-- `SurfaceMarker.cs` — added `Fringe` to `SurfaceType` enum
-
-#### Verification
-- [x] Parallel mow stripes perpendicular to tee→green
-- [x] Stripes stay within fairway contour on all curves
-- [x] Semirough fringe ring visible inside fairway edge (0.5m)
-- [x] Green collar unchanged
-- [x] Tee and cart path meshes unaffected
-- [x] No z-fighting
-- [x] No console errors
+- Change the export pipeline
+- Apply blur or SDF
 
 ---
 
@@ -399,3 +176,4 @@ var semiRoughMat = CreateTiledMaterial(texDir, "T_Semirough_Albedo",
 ✅ DONE: 2026-04-08 — SDF-based smooth fairway border (replaced by mesh approach)
 ✅ DONE: 2026-04-08 — Vector contour rasterization (replaced by mesh approach)
 ✅ DONE: 2026-04-08 — Zone overlay meshes: fairway + tee as contour meshes with smooth edges
+✅ DONE: 2026-04-08 — Tee border ring with gradient texture (T_TeeDark_Albedo, CreateGradientBorderRing method, 1m width, arc-length UVs)

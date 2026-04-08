@@ -2243,6 +2243,25 @@ namespace Golfin.CourseImport
                     var teeMat = CreateTiledMaterial(texDir, "T_Tee_Albedo",
                         "T_Tee_Normal", dataDir, 3f);
 
+                    // Tee border material (gradient texture: light inside, dark outside)
+                    var teeBorderMat = new Material(GetLitShader());
+                    teeBorderMat.name = "MAT_TeeBorder";
+                    teeBorderMat.mainTexture = FindTextureExact(texDir, "T_TeeDark_Albedo");
+                    var teeBorderNormal = FindTextureExact(texDir, "T_TeeDark_Normal");
+                    if (teeBorderNormal != null)
+                    {
+                        teeBorderMat.SetTexture("_BumpMap", teeBorderNormal);
+                        teeBorderMat.SetFloat("_BumpScale", 0.4f);
+                        teeBorderMat.EnableKeyword("_NORMALMAP");
+                    }
+                    teeBorderMat.SetFloat("_Smoothness", 0f);
+                    teeBorderMat.SetFloat("_Metallic", 0f);
+
+                    string teeBorderMatPath = $"{dataDir}/MAT_TeeBorder.mat";
+                    var existingBorderMat = AssetDatabase.LoadAssetAtPath<Material>(teeBorderMatPath);
+                    if (existingBorderMat != null) AssetDatabase.DeleteAsset(teeBorderMatPath);
+                    AssetDatabase.CreateAsset(teeBorderMat, teeBorderMatPath);
+
                     foreach (var region in data.zones.tee)
                     {
                         if (region.contour == null || region.contour.Length < 3) continue;
@@ -2253,9 +2272,18 @@ namespace Golfin.CourseImport
                             Golfin.Course.SurfaceType.Tee);
                         if (meshGO != null)
                             meshGO.transform.SetParent(teeRoot.transform);
+
+                        // Tee border ring (gradient: light inside → dark outside)
+                        var borderGO = CreateGradientBorderRing(
+                            region.id, "Tee", region.contour,
+                            terrain, terrainBaseY, teeBorderMat,
+                            1.0f,  // border width in meters
+                            3f,    // UV.u tile every 3m along perimeter
+                            Golfin.Course.SurfaceType.Fringe,
+                            teeRoot.transform);
                     }
 
-                    Debug.Log($"[HoleLiteImporter] Created {data.zones.tee.Length} tee mesh(es)");
+                    Debug.Log($"[HoleLiteImporter] Created {data.zones.tee.Length} tee mesh(es) with border rings");
                 }
 
                 // Cart paths stay on splatmap only (too thin/concave for centroid-fan mesh)
@@ -2643,6 +2671,110 @@ namespace Golfin.CourseImport
 
             fringeGO.transform.SetParent(parent);
             return fringeGO;
+        }
+
+        /// <summary>
+        /// Create a gradient border ring around a contour.
+        /// UV.v encodes inner(0)→outer(1) for the gradient texture,
+        /// UV.u tiles along the perimeter using arc length.
+        /// </summary>
+        private static GameObject CreateGradientBorderRing(int id, string label,
+            ContourPoint[] contour, Terrain terrain, float terrainBaseY,
+            Material mat, float borderWidth, float uTileSize,
+            Golfin.Course.SurfaceType surfaceType, Transform parent)
+        {
+            int n = contour.Length;
+            if (n < 3) return null;
+
+            float yOffset = 0.035f; // above tee mesh (0.02) to avoid z-fighting
+
+            // Convert to world space
+            Vector3[] innerRing = new Vector3[n];
+            for (int i = 0; i < n; i++)
+            {
+                float wx = contour[i].z; // 90° CCW rotation
+                float wz = contour[i].x;
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                innerRing[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
+            }
+
+            // Outer ring
+            Vector3[] outerRing = OffsetContourOutward(innerRing, borderWidth);
+            for (int i = 0; i < n; i++)
+            {
+                float h = terrain.SampleHeight(new Vector3(outerRing[i].x, 0, outerRing[i].z));
+                outerRing[i].y = terrainBaseY + h + yOffset;
+            }
+
+            // Centroid
+            float cx = 0, cy = 0, cz = 0;
+            for (int i = 0; i < n; i++)
+            {
+                cx += innerRing[i].x; cy += innerRing[i].y; cz += innerRing[i].z;
+            }
+            cx /= n; cy /= n; cz /= n;
+            Vector3 centroid = new Vector3(cx, cy, cz);
+
+            // Arc lengths along inner ring for UV.u tiling
+            float[] arcLengths = new float[n];
+            arcLengths[0] = 0f;
+            for (int i = 1; i < n; i++)
+            {
+                float dx = innerRing[i].x - innerRing[i - 1].x;
+                float dz = innerRing[i].z - innerRing[i - 1].z;
+                arcLengths[i] = arcLengths[i - 1] + Mathf.Sqrt(dx * dx + dz * dz);
+            }
+
+            // Vertices & UVs
+            var verts = new Vector3[n * 2];
+            var uvs = new Vector2[n * 2];
+            for (int i = 0; i < n; i++)
+            {
+                verts[i] = innerRing[i] - centroid;
+                verts[n + i] = outerRing[i] - centroid;
+
+                float u = arcLengths[i] / uTileSize;
+                uvs[i] = new Vector2(u, 0f);       // inner = light (v=0)
+                uvs[n + i] = new Vector2(u, 1f);   // outer = dark  (v=1)
+            }
+
+            // Triangles: quad strip, outward winding
+            var tris = new int[n * 6];
+            for (int i = 0; i < n; i++)
+            {
+                int curr = i;
+                int next = (i + 1) % n;
+                int offCurr = n + i;
+                int offNext = n + next;
+                int t = i * 6;
+
+                tris[t + 0] = curr;
+                tris[t + 1] = next;
+                tris[t + 2] = offCurr;
+                tris[t + 3] = next;
+                tris[t + 4] = offNext;
+                tris[t + 5] = offCurr;
+            }
+
+            var mesh = new Mesh();
+            mesh.name = $"{label}Border_{id}";
+            mesh.vertices = verts;
+            mesh.triangles = tris;
+            mesh.uv = uvs;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"{label}Border_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = surfaceType;
+
+            go.transform.SetParent(parent);
+            return go;
         }
 
         /// <summary>
