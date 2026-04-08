@@ -14,6 +14,8 @@ namespace Golfin.CourseImport
         public static int ShoreRadius = 2;
         /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
         public static float ShoreDepthMeters = 0.1f;
+        /// <summary>Dilation radius for fairway fringe ring (semi-rough border around fairway).</summary>
+        public static int FairwayFringeRadius = 2;
 
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 01")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 02")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
@@ -545,6 +547,25 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // --- 3b. Generate fringe ring around fairway ---
+            bool[] fairwayMask = new bool[alphaRes * alphaRes];
+            for (int i = 0; i < resampledZones.Length; i++)
+                fairwayMask[i] = (resampledZones[i] == 1); // zone 1 = fairway
+
+            bool[] dilatedFairway = DilateMask(fairwayMask, alphaRes, alphaRes, FairwayFringeRadius);
+
+            bool[] fairwayFringeMask = new bool[alphaRes * alphaRes];
+            for (int i = 0; i < fairwayFringeMask.Length; i++)
+            {
+                if (dilatedFairway[i] && !fairwayMask[i])
+                {
+                    int zone = resampledZones[i];
+                    // Only place fairway fringe on rough/semi-rough/trees (not on green, water, bunker, etc.)
+                    if (zone == 3 || zone == 4 || zone == 5)
+                        fairwayFringeMask[i] = true;
+                }
+            }
+
             // --- 4. Build raw alphamap ---
             int layerCount = 8;
             float[,,] alphamap = new float[alphaRes, alphaRes, layerCount];
@@ -557,7 +578,9 @@ namespace Golfin.CourseImport
                     int layer;
 
                     if (fringeMask[idx])
-                        layer = 7; // fringe
+                        layer = 7; // green fringe
+                    else if (fairwayFringeMask[idx])
+                        layer = 2; // fairway fringe → semi-rough texture
                     else
                         layer = ZoneToLayer(resampledZones[idx]);
 
@@ -601,14 +624,14 @@ namespace Golfin.CourseImport
             string texDir = "Assets/Courses/Textures_2025(JPG)";
 
             string[] albedoNames = {
-                "T_Fairway_Light",      // 0 fairway
+                "T_Fringe_Albedo",      // 0 fairway (T_Fairway_Light is actually fringe-like)
                 "T_Green_Albedo",       // 1 green
                 "T_Semirough_Albedo",   // 2 semi-rough
                 "T_Rough_Albedo",       // 3 rough (catch-all)
                 "T_Bunker_Albedo",      // 4 bunker
                 "T_Tee_Albedo",         // 5 tee
                 "T_RoadAsphalt_Albedo", // 6 cart path
-                "T_Fringe_Albedo",      // 7 fringe
+                "T_Fairway_Light",      // 7 fringe (T_Fringe_Albedo is actually fairway-like)
             };
             string[] normalNames = {
                 "T_Fairway_Normal",
@@ -662,8 +685,8 @@ namespace Golfin.CourseImport
                 layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
                 layers[i].maskMapTexture = matteMask;
                 layers[i].normalMapTexture = null;
-                // Fringe (index 7): non-square tile to fix grain orientation on 90° rotated terrain
-                layers[i].tileSize = (i == 7) ? new Vector2(8f, 4f) : new Vector2(tileSizes[i], tileSizes[i]);
+                // Fairway (index 0): non-square tile to fix grain orientation on 90° rotated terrain
+                layers[i].tileSize = (i == 0) ? new Vector2(4f, 8f) : new Vector2(tileSizes[i], tileSizes[i]);
                 layers[i].tileOffset = Vector2.zero;
                 layers[i].smoothness = 0f;
                 layers[i].metallic = 0f;
