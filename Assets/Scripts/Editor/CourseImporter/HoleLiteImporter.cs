@@ -2343,7 +2343,7 @@ namespace Golfin.CourseImport
         /// Uses a single T_Fairway_Mix texture that contains both light and dark bands.
         /// UVs are oriented so that one axis runs along stripeDir (perpendicular to
         /// tee→green), making the texture bands appear as parallel mow stripes.
-        /// Simple centroid-fan triangulation — stays within contour, no clipping needed.
+        /// Ear-clipping triangulation handles concave fairway shapes correctly.
         /// </summary>
         private static GameObject CreateFairwayMesh(int id, ContourPoint[] contour,
             Terrain terrain, float terrainBaseY,
@@ -2367,7 +2367,7 @@ namespace Golfin.CourseImport
                 worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
             }
 
-            // Compute centroid
+            // Compute centroid for mesh positioning
             float cx = 0, cy = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
@@ -2378,34 +2378,22 @@ namespace Golfin.CourseImport
             cx /= n; cy /= n; cz /= n;
             Vector3 centroid = new Vector3(cx, cy, cz);
 
-            // Build vertices: contour + centroid (relative to centroid)
-            var verts = new Vector3[n + 1];
-            var uvs = new Vector2[n + 1];
+            // Build vertices (contour only — no centroid vertex needed for ear clipping)
+            var verts = new Vector3[n];
+            var uvs = new Vector2[n];
             for (int i = 0; i < n; i++)
             {
                 verts[i] = worldPts[i] - centroid;
-                // UV oriented along stripe axis: U = along stripeDir, V = perpendicular
                 float wx = worldPts[i].x;
                 float wz = worldPts[i].z;
                 uvs[i] = new Vector2(
                     (wx * stripeDir.x + wz * stripeDir.y) / stripeWidth,
                     (wx * parallelDir.x + wz * parallelDir.y) / stripeWidth);
             }
-            // Centroid vertex
-            verts[n] = Vector3.zero;
-            uvs[n] = new Vector2(
-                (cx * stripeDir.x + cz * stripeDir.y) / stripeWidth,
-                (cx * parallelDir.x + cz * parallelDir.y) / stripeWidth);
 
-            // Triangles: fan from centroid
-            // Winding: contour[i] → centroid → contour[i+1] (CW from above = front face)
-            var tris = new int[n * 3];
-            for (int i = 0; i < n; i++)
-            {
-                tris[i * 3 + 0] = i;
-                tris[i * 3 + 1] = n; // centroid
-                tris[i * 3 + 2] = (i + 1) % n;
-            }
+            // Ear-clipping triangulation (handles concave polygons)
+            var tris = EarClipTriangulate(worldPts);
+            if (tris == null || tris.Length < 3) return null;
 
             var mesh = new Mesh();
             mesh.name = $"Fairway_{id}";
@@ -2425,6 +2413,123 @@ namespace Golfin.CourseImport
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
 
             return go;
+        }
+
+        /// <summary>
+        /// Ear-clipping triangulation for a polygon in XZ plane.
+        /// Works for concave polygons. Returns triangle indices into the original array.
+        /// Produces CW winding (front-face up in Unity's left-handed system).
+        /// </summary>
+        private static int[] EarClipTriangulate(Vector3[] pts)
+        {
+            int n = pts.Length;
+            if (n < 3) return null;
+
+            // Build a working list of indices
+            var indices = new System.Collections.Generic.List<int>(n);
+            for (int i = 0; i < n; i++) indices.Add(i);
+
+            // Determine polygon winding (signed area in XZ)
+            float area = 0;
+            for (int i = 0; i < n; i++)
+            {
+                int j = (i + 1) % n;
+                area += pts[i].x * pts[j].z - pts[j].x * pts[i].z;
+            }
+            // area > 0 = CCW in XZ, area < 0 = CW in XZ
+            // We want CW output triangles (front-face up in Unity).
+            // If polygon is CCW, we emit triangles as (prev, curr, next).
+            // If polygon is CW, we emit as (next, curr, prev) to flip.
+            bool isCCW = area > 0;
+
+            var result = new System.Collections.Generic.List<int>();
+            int safety = n * n; // prevent infinite loop on degenerate polygons
+
+            while (indices.Count > 2 && safety-- > 0)
+            {
+                bool earFound = false;
+                int count = indices.Count;
+
+                for (int i = 0; i < count; i++)
+                {
+                    int prev = indices[(i - 1 + count) % count];
+                    int curr = indices[i];
+                    int next = indices[(i + 1) % count];
+
+                    // Check if this vertex is convex (forms a CW turn for CCW polygon)
+                    float cross = CrossXZ(pts[prev], pts[curr], pts[next]);
+                    // For CCW polygon: convex vertex has negative cross (CW turn)
+                    // For CW polygon: convex vertex has positive cross (CCW turn)
+                    bool isConvex = isCCW ? (cross < 0) : (cross > 0);
+                    if (!isConvex) continue;
+
+                    // Check that no other vertex is inside this triangle
+                    bool hasPointInside = false;
+                    for (int j = 0; j < count; j++)
+                    {
+                        int testIdx = indices[j];
+                        if (testIdx == prev || testIdx == curr || testIdx == next) continue;
+                        if (PointInTriangleXZ(pts[testIdx], pts[prev], pts[curr], pts[next]))
+                        {
+                            hasPointInside = true;
+                            break;
+                        }
+                    }
+                    if (hasPointInside) continue;
+
+                    // This is an ear — emit triangle with CW winding (front-face up)
+                    if (isCCW)
+                    {
+                        result.Add(prev);
+                        result.Add(curr);
+                        result.Add(next);
+                    }
+                    else
+                    {
+                        result.Add(next);
+                        result.Add(curr);
+                        result.Add(prev);
+                    }
+
+                    indices.RemoveAt(i);
+                    earFound = true;
+                    break;
+                }
+
+                if (!earFound)
+                {
+                    // Degenerate polygon — fall back to fan from first vertex
+                    Debug.LogWarning($"[EarClip] No ear found with {indices.Count} vertices remaining, falling back to fan");
+                    for (int i = 1; i < indices.Count - 1; i++)
+                    {
+                        result.Add(indices[0]);
+                        result.Add(indices[i]);
+                        result.Add(indices[i + 1]);
+                    }
+                    break;
+                }
+            }
+
+            return result.ToArray();
+        }
+
+        /// <summary>Cross product of (b-a) × (c-b) in XZ plane. Positive = CCW turn.</summary>
+        private static float CrossXZ(Vector3 a, Vector3 b, Vector3 c)
+        {
+            return (b.x - a.x) * (c.z - b.z) - (b.z - a.z) * (c.x - b.x);
+        }
+
+        /// <summary>Test if point p is inside triangle (a, b, c) in XZ plane using barycentric coords.</summary>
+        private static bool PointInTriangleXZ(Vector3 p, Vector3 a, Vector3 b, Vector3 c)
+        {
+            float d1 = (p.x - b.x) * (a.z - b.z) - (a.x - b.x) * (p.z - b.z);
+            float d2 = (p.x - c.x) * (b.z - c.z) - (b.x - c.x) * (p.z - c.z);
+            float d3 = (p.x - a.x) * (c.z - a.z) - (c.x - a.x) * (p.z - a.z);
+
+            bool hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+            bool hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+            return !(hasNeg && hasPos);
         }
 
         /// <summary>
