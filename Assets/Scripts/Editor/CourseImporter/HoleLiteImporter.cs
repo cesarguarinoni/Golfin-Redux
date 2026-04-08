@@ -1528,13 +1528,14 @@ namespace Golfin.CourseImport
                     var col = holeCup.GetComponent<Collider>();
                     if (col != null) Object.DestroyImmediate(col);
 
-                    // Apply hole material
-                    var holeMat = AssetDatabase.LoadAssetAtPath<Material>(
-                        "Assets/Courses/Materials (Shared by courses)/MAT_Hole.mat");
-                    if (holeMat != null)
+                    // Apply pure black material
+                    var rend = holeCup.GetComponent<Renderer>();
+                    if (rend != null)
                     {
-                        var rend = holeCup.GetComponent<Renderer>();
-                        if (rend != null) rend.sharedMaterial = holeMat;
+                        var blackMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                        blackMat.name = "MAT_HoleCup_Black";
+                        blackMat.color = Color.black;
+                        rend.sharedMaterial = blackMat;
                     }
                 }
 
