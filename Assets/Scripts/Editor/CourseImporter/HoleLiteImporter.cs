@@ -666,7 +666,7 @@ namespace Golfin.CourseImport
                 "T_Bunker_Normal",
                 "T_Tee_Normal",
                 "T_RoadAsphalt_Normal",
-                "T_Fringe_Normal",
+                "T_Fairway_Normal",     // 7 dark fairway (mow stripes) — same normal as light fairway
             };
             float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 8f };
 
@@ -709,13 +709,51 @@ namespace Golfin.CourseImport
                 layers[i] = new TerrainLayer();
                 layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
                 layers[i].maskMapTexture = matteMask;
-                layers[i].normalMapTexture = null;
+
+                // Force anisotropic filtering on albedo for sharp textures at grazing angles
+                if (layers[i].diffuseTexture != null)
+                {
+                    string albedoPath = AssetDatabase.GetAssetPath(layers[i].diffuseTexture);
+                    var albedoImporter = AssetImporter.GetAtPath(albedoPath) as TextureImporter;
+                    if (albedoImporter != null && albedoImporter.anisoLevel < 16)
+                    {
+                        albedoImporter.anisoLevel = 16;
+                        albedoImporter.SaveAndReimport();
+                    }
+                }
+
+                // Re-enable normal maps at reduced intensity
+                layers[i].normalMapTexture = FindTextureExact(texDir, normalNames[i]);
+                layers[i].normalScale = 0.4f;
+
+                // Ensure normal map is imported as NormalMap type + aniso filtering
+                if (layers[i].normalMapTexture != null)
+                {
+                    string nrmPath = AssetDatabase.GetAssetPath(layers[i].normalMapTexture);
+                    var nrmImporter = AssetImporter.GetAtPath(nrmPath) as TextureImporter;
+                    if (nrmImporter != null)
+                    {
+                        bool needsReimport = false;
+                        if (nrmImporter.textureType != TextureImporterType.NormalMap)
+                        {
+                            nrmImporter.textureType = TextureImporterType.NormalMap;
+                            needsReimport = true;
+                        }
+                        if (nrmImporter.anisoLevel < 16)
+                        {
+                            nrmImporter.anisoLevel = 16;
+                            needsReimport = true;
+                        }
+                        if (needsReimport)
+                            nrmImporter.SaveAndReimport();
+                    }
+                }
+
                 // Fairway (index 0): non-square tile to fix grain orientation on 90° rotated terrain
                 layers[i].tileSize = new Vector2(tileSizes[i], tileSizes[i]);
                 layers[i].tileOffset = Vector2.zero;
                 layers[i].smoothness = 0f;
                 layers[i].metallic = 0f;
-                layers[i].normalScale = 0f;
 
                 if (layers[i].diffuseTexture == null)
                     Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoNames[i]}");
