@@ -205,6 +205,66 @@ function absorbSmallRegions(grid, width, height, minSize) {
 }
 
 // ---------------------------------------------------------------------------
+// Smooth zone boundaries
+// ---------------------------------------------------------------------------
+
+/**
+ * Smooth zone boundaries by running additional majority filter passes
+ * with a circular kernel. Each pass rounds off single-pixel staircases.
+ * Multiple passes progressively straighten edges.
+ *
+ * Unlike the existing majority filter (square kernel), this uses a
+ * circular kernel to avoid axis-aligned bias, and only modifies pixels
+ * that are on a zone boundary (have at least one different 4-neighbor).
+ */
+function smoothBoundaries(grid, width, height, passes = 3, radius = 2) {
+  let current = new Uint8Array(grid);
+
+  for (let pass = 0; pass < passes; pass++) {
+    const next = new Uint8Array(current);
+    const counts = new Uint32Array(11);
+
+    for (let y = radius; y < height - radius; y++) {
+      for (let x = radius; x < width - radius; x++) {
+        const idx = y * width + x;
+        const thisZone = current[idx];
+
+        // Check if this pixel is on a boundary
+        let isBoundary = false;
+        if (x > 0 && current[idx - 1] !== thisZone) isBoundary = true;
+        else if (x < width - 1 && current[idx + 1] !== thisZone) isBoundary = true;
+        else if (y > 0 && current[(y - 1) * width + x] !== thisZone) isBoundary = true;
+        else if (y < height - 1 && current[(y + 1) * width + x] !== thisZone) isBoundary = true;
+
+        if (!isBoundary) continue;
+
+        // Count zones in circular kernel
+        counts.fill(0);
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            if (dx * dx + dy * dy > radius * radius) continue;
+            counts[current[(y + dy) * width + (x + dx)]]++;
+          }
+        }
+
+        // Assign to majority zone in kernel
+        let bestZone = thisZone;
+        let bestCount = 0;
+        for (let z = 0; z < 11; z++) {
+          if (counts[z] > bestCount) {
+            bestCount = counts[z];
+            bestZone = z;
+          }
+        }
+        next[idx] = bestZone;
+      }
+    }
+    current = next;
+  }
+  return current;
+}
+
+// ---------------------------------------------------------------------------
 // Mark tee boxes
 // ---------------------------------------------------------------------------
 
@@ -259,6 +319,9 @@ async function classifyHole(courseId, holeNumber) {
 
   // Phase 2b: Absorb small regions (<50 pixels)
   grid = absorbSmallRegions(grid, width, height, 50);
+
+  // Phase 2b2: Smooth zone boundaries (reduce pixel staircase jaggies)
+  grid = smoothBoundaries(grid, width, height, 3, 2);
 
   // Phase 2c: Mark tee boxes from tees.json
   const teesPath = path.join(holeDir, 'tees.json');

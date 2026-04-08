@@ -591,75 +591,7 @@ namespace Golfin.CourseImport
             // Blur removed — fringe rings handle zone transitions.
             // GaussianBlur2D / ExtractChannel / SetChannel kept as helpers.
 
-            // --- 5. Anti-alias zone boundaries ---
-            // For each pixel, check if any 4-neighbor has a different dominant layer.
-            // If so, blend this pixel with its neighbors (average the alphamap values
-            // in a small kernel). Interior pixels stay untouched.
-            {
-                float[,,] smoothed = new float[alphaRes, alphaRes, layerCount];
-                System.Array.Copy(alphamap, smoothed, alphamap.Length);
-
-                for (int ay = 1; ay < alphaRes - 1; ay++)
-                {
-                    for (int ax = 1; ax < alphaRes - 1; ax++)
-                    {
-                        // Find dominant layer at this pixel
-                        int thisLayer = 0;
-                        float thisMax = 0f;
-                        for (int l = 0; l < layerCount; l++)
-                        {
-                            if (alphamap[ay, ax, l] > thisMax)
-                            {
-                                thisMax = alphamap[ay, ax, l];
-                                thisLayer = l;
-                            }
-                        }
-
-                        // Check 4-neighbors for different dominant layer
-                        bool isBoundary = false;
-                        int[][] neighbors = { new[]{0,-1}, new[]{0,1}, new[]{-1,0}, new[]{1,0} };
-                        foreach (var n in neighbors)
-                        {
-                            int ny = ay + n[0], nx = ax + n[1];
-                            int nLayer = 0;
-                            float nMax = 0f;
-                            for (int l = 0; l < layerCount; l++)
-                            {
-                                if (alphamap[ny, nx, l] > nMax)
-                                {
-                                    nMax = alphamap[ny, nx, l];
-                                    nLayer = l;
-                                }
-                            }
-                            if (nLayer != thisLayer)
-                            {
-                                isBoundary = true;
-                                break;
-                            }
-                        }
-
-                        if (!isBoundary) continue;
-
-                        // Blend with 3x3 kernel (average)
-                        for (int l = 0; l < layerCount; l++)
-                        {
-                            float sum = 0f;
-                            int count = 0;
-                            for (int dy = -1; dy <= 1; dy++)
-                            {
-                                for (int dx = -1; dx <= 1; dx++)
-                                {
-                                    sum += alphamap[ay + dy, ax + dx, l];
-                                    count++;
-                                }
-                            }
-                            smoothed[ay, ax, l] = sum / count;
-                        }
-                    }
-                }
-
-                alphamap = smoothed;
-            }
+            // --- 5. (Zone boundary smoothing now happens at source in classify-zones.mjs) ---
 
             // --- 6. Create TerrainLayers and apply ---
             string texDir = "Assets/Courses/Textures_2025(JPG)";
@@ -752,7 +684,7 @@ namespace Golfin.CourseImport
             AssetDatabase.ImportAsset($"{dataDir}/zones.json");
 
             Debug.Log($"[HoleLiteImporter] Splatmap applied: {layerCount} layers, " +
-                      $"alphamap {alphaRes}x{alphaRes}, boundary anti-alias");
+                      $"alphamap {alphaRes}x{alphaRes}, no blur (smoothing at source)");
         }
 
         private static int ZoneToLayer(int zoneIndex)
