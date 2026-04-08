@@ -18,51 +18,85 @@ const ROOT = path.resolve(__dirname, '..');
  * Trace the outer border of a connected region of pixels.
  * Returns ordered array of [x, y] pixel coordinates forming the boundary.
  */
+/**
+ * Trace the outer border of a connected region.
+ * Direction-aware walk: at each step, prefer continuing in the same
+ * direction (or close to it) as the previous step. This robustly follows
+ * the contour without the backtrack-direction bugs of a naive Moore trace.
+ */
 function traceBorder(grid, w, h, pixels, zoneValue) {
   const pixelSet = new Set();
   for (const [px, py] of pixels) {
     pixelSet.add(py * w + px);
   }
 
-  // A pixel is a border pixel if it has at least one 4-connected neighbor NOT in the set
-  const border = [];
+  if (pixels.length === 0) return [];
+
+  const isInRegion = (x, y) => {
+    if (x < 0 || x >= w || y < 0 || y >= h) return false;
+    return pixelSet.has(y * w + x);
+  };
+
+  // Find all border pixels (4-connected: has a non-region neighbor)
+  const borderSet = new Set();
+  let startX = w, startY = h;
+
   for (const [px, py] of pixels) {
-    const neighbors = [[px-1,py],[px+1,py],[px,py-1],[px,py+1]];
-    const isBorder = neighbors.some(([nx, ny]) => {
-      if (nx < 0 || nx >= w || ny < 0 || ny >= h) return true;
-      return !pixelSet.has(ny * w + nx);
-    });
-    if (isBorder) border.push([px, py]);
-  }
-
-  if (border.length === 0) return [];
-
-  // Order by walking the perimeter (8-connected)
-  border.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
-
-  const borderSet = new Set(border.map(([x, y]) => y * w + x));
-  const ordered = [border[0]];
-  const visited = new Set();
-  visited.add(border[0][1] * w + border[0][0]);
-
-  const dirs8 = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
-
-  let current = border[0];
-  for (let step = 0; step < border.length * 2; step++) {
-    let found = false;
-    for (const [dx, dy] of dirs8) {
-      const nx = current[0] + dx;
-      const ny = current[1] + dy;
-      const key = ny * w + nx;
-      if (borderSet.has(key) && !visited.has(key)) {
-        visited.add(key);
-        ordered.push([nx, ny]);
-        current = [nx, ny];
-        found = true;
-        break;
+    const nb = [[px-1,py],[px+1,py],[px,py-1],[px,py+1]];
+    if (nb.some(([nx, ny]) => !isInRegion(nx, ny))) {
+      borderSet.add(py * w + px);
+      if (py < startY || (py === startY && px < startX)) {
+        startX = px;
+        startY = py;
       }
     }
-    if (!found) break;
+  }
+
+  if (borderSet.size <= 1) return borderSet.size === 1 ? [[startX, startY]] : [];
+
+  // 8-connected directions CW from E
+  const dx = [1, 1, 0, -1, -1, -1,  0,  1];
+  const dy = [0, 1, 1,  1,  0, -1, -1, -1];
+
+  const visited = new Set();
+  visited.add(startY * w + startX);
+  const ordered = [[startX, startY]];
+  let cx = startX, cy = startY;
+  let prevDir = 0; // start heading east
+
+  const totalBorder = borderSet.size;
+
+  for (let step = 0; step < totalBorder + 10; step++) {
+    // Among 8-connected unvisited border neighbors, pick the one
+    // closest to continuing in the same direction
+    let bestDir = -1;
+    let bestScore = -Infinity;
+
+    for (let i = 0; i < 8; i++) {
+      const nx = cx + dx[i];
+      const ny = cy + dy[i];
+      const key = ny * w + nx;
+      if (!borderSet.has(key) || visited.has(key)) continue;
+
+      // Prefer smallest angular difference from previous direction
+      let diff = i - prevDir;
+      if (diff > 4) diff -= 8;
+      if (diff < -4) diff += 8;
+      const score = -Math.abs(diff);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestDir = i;
+      }
+    }
+
+    if (bestDir === -1) break;
+
+    cx = cx + dx[bestDir];
+    cy = cy + dy[bestDir];
+    visited.add(cy * w + cx);
+    ordered.push([cx, cy]);
+    prevDir = bestDir;
   }
 
   return ordered;
