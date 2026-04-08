@@ -2145,6 +2145,9 @@ namespace Golfin.CourseImport
 
         // ─── Flat Zone Mesh Pipeline (Fairway, Tee, Cart Path) ─────────
 
+        /// <summary>Width of fairway mow stripes in meters.</summary>
+        public static float MowStripeWidth = 5f;
+
         private static void CreateFlatZoneMeshes(TerrainData terrainData,
             GameObject terrainGO, Transform parentRoot,
             string exportPath, string dataDir, string projectRoot)
@@ -2153,7 +2156,37 @@ namespace Golfin.CourseImport
             var terrain = terrainGO.GetComponent<Terrain>();
             float terrainBaseY = terrainGO.transform.position.y;
 
-            // ─── Fairway meshes ─────────────────────────────
+            // ─── Compute stripe direction (perpendicular to tee → green) ───
+            Vector2 stripeDir = new Vector2(0, 1); // default: stripes along Z
+            string anchorsPath = Path.Combine(exportPath, "anchors.json");
+            if (File.Exists(anchorsPath))
+            {
+                string anchJson = File.ReadAllText(anchorsPath);
+                var anchWrap = JsonUtility.FromJson<AnchorArrayWrapper>(
+                    "{\"items\":" + anchJson + "}");
+                var anchs = anchWrap.items;
+                var backTee = System.Array.Find(anchs, a => a.type.Contains("back"));
+
+                string grPath = Path.Combine(exportPath, "greens.json");
+                AnchorLocal greenCenter = null;
+                if (File.Exists(grPath))
+                {
+                    var grFile = JsonUtility.FromJson<GreensFileData>(File.ReadAllText(grPath));
+                    if (grFile.greens != null && grFile.greens.Length > 0)
+                        greenCenter = grFile.greens[0].center_local;
+                }
+
+                if (backTee != null && greenCenter != null)
+                {
+                    Vector2 teePos = new Vector2(backTee.local.z, backTee.local.x);
+                    Vector2 greenPos = new Vector2(greenCenter.z, greenCenter.x);
+                    Vector2 dir = (greenPos - teePos).normalized;
+                    if (dir.sqrMagnitude > 0.01f)
+                        stripeDir = new Vector2(-dir.y, dir.x); // perpendicular to tee→green
+                }
+            }
+
+            // ─── Fairway meshes (with mow stripes) ─────────────────────
             string fwPath = Path.Combine(exportPath, "fairway-contours.json");
             if (File.Exists(fwPath))
             {
@@ -2165,22 +2198,24 @@ namespace Golfin.CourseImport
                     var fwRoot = new GameObject("Fairways");
                     fwRoot.transform.SetParent(parentRoot);
 
-                    var fwMat = CreateTiledMaterial(texDir, "T_Fairway_Light",
+                    var fwMatLight = CreateTiledMaterial(texDir, "T_Fairway_Light",
+                        "T_Fairway_Normal", dataDir, 5f);
+                    var fwMatDark = CreateTiledMaterial(texDir, "T_Fairway_Dark",
                         "T_Fairway_Normal", dataDir, 5f);
 
                     foreach (var fw in data.fairways)
                     {
                         if (fw.contour == null || fw.contour.Length < 3) continue;
 
-                        var meshGO = CreateFlatContourMesh(
-                            fw.id, "Fairway", fw.contour,
-                            terrain, terrainBaseY, fwMat, 5f,
-                            Golfin.Course.SurfaceType.Fairway);
+                        var meshGO = CreateStripedFairwayMesh(
+                            fw.id, fw.contour, terrain, terrainBaseY,
+                            fwMatLight, fwMatDark, 5f,
+                            stripeDir, MowStripeWidth);
                         if (meshGO != null)
                             meshGO.transform.SetParent(fwRoot.transform);
                     }
 
-                    Debug.Log($"[HoleLiteImporter] Created {data.fairways.Length} fairway mesh(es)");
+                    Debug.Log($"[HoleLiteImporter] Created {data.fairways.Length} fairway mesh(es) with mow stripes");
                 }
             }
 
@@ -2291,6 +2326,101 @@ namespace Golfin.CourseImport
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = surfaceType;
+
+            return go;
+        }
+
+        /// <summary>
+        /// Create a fairway mesh with alternating light/dark mow stripes.
+        /// Each triangle in the centroid-fan is assigned to submesh 0 (light) or 1 (dark)
+        /// based on its midpoint projected onto the stripe direction.
+        /// </summary>
+        private static GameObject CreateStripedFairwayMesh(int id,
+            ContourPoint[] contour, Terrain terrain, float terrainBaseY,
+            Material matLight, Material matDark, float tileSize,
+            Vector2 stripeDir, float stripeWidth)
+        {
+            int n = contour.Length;
+            if (n < 3) return null;
+
+            float yOffset = 0.02f;
+
+            // Convert contour to world space (90° CCW rotation)
+            Vector3[] worldPts = new Vector3[n];
+            for (int i = 0; i < n; i++)
+            {
+                float wx = contour[i].z;
+                float wz = contour[i].x;
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                worldPts[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
+            }
+
+            // Compute centroid
+            float cx = 0, cy = 0, cz = 0;
+            for (int i = 0; i < n; i++)
+            {
+                cx += worldPts[i].x;
+                cy += worldPts[i].y;
+                cz += worldPts[i].z;
+            }
+            cx /= n; cy /= n; cz /= n;
+            Vector3 centroid = new Vector3(cx, cy, cz);
+
+            // Vertices: contour points + centroid, relative to centroid
+            var verts = new Vector3[n + 1];
+            var uvs = new Vector2[n + 1];
+            for (int i = 0; i < n; i++)
+            {
+                verts[i] = worldPts[i] - centroid;
+                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
+            }
+            verts[n] = Vector3.zero;
+            uvs[n] = new Vector2(cx / tileSize, cz / tileSize);
+
+            // Build triangles, sorting each into light or dark submesh
+            var lightTris = new System.Collections.Generic.List<int>(n * 3);
+            var darkTris = new System.Collections.Generic.List<int>(n * 3);
+
+            for (int i = 0; i < n; i++)
+            {
+                int i0 = i;
+                int i1 = n; // centroid
+                int i2 = (i + 1) % n;
+
+                // Triangle midpoint in world space
+                float midX = (worldPts[i0 < n ? i0 : 0].x + cx + worldPts[i2].x) / 3f;
+                float midZ = (worldPts[i0 < n ? i0 : 0].z + cz + worldPts[i2].z) / 3f;
+
+                float proj = midX * stripeDir.x + midZ * stripeDir.y;
+                int band = Mathf.FloorToInt(proj / stripeWidth);
+
+                var target = (band % 2 == 0) ? lightTris : darkTris;
+                target.Add(i0);
+                target.Add(i1);
+                target.Add(i2);
+            }
+
+            var mesh = new Mesh();
+            mesh.name = $"Fairway_{id}";
+            mesh.vertices = verts;
+            mesh.uv = uvs;
+            mesh.subMeshCount = 2;
+            mesh.SetTriangles(lightTris, 0);
+            mesh.SetTriangles(darkTris, 1);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"Fairway_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = new Material[] { matLight, matDark };
+
+            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
 
             return go;
         }
