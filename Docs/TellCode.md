@@ -7,242 +7,269 @@
 
 ---
 
-## Current Task — Fix traceBorder to Complete Full Perimeter
+## Current Task — Water: Replace Rasterized Quad with Contour Mesh Overlay
 
-**Root cause found:** The `traceBorder` 8-connected walk in
-`Tools/UHoleLite/scripts/export-hole.mjs` only traces **22.1%** of the
-fairway border (895 of 4046 pixels). The walk gets stuck immediately,
-tracing a tiny loop and missing the rest of the perimeter. This causes
-the polygon closing step to stitch a phantom line across the untraced
-section, and RDP/Chaikin then collapse the fairway at that spot.
+**Goal:** Replace the water rasterized quad + SDF alpha mask with the
+same contour mesh system used by fairways, greens, and bunkers. This
+gives water the same smooth edges as all other zones, and simplifies the
+pipeline (one system for everything).
 
-**Fix:** Replace the naive 8-connected walk with **Moore neighborhood
-tracing** (also known as the Moore boundary trace algorithm). The key
-difference: instead of always scanning neighbors in a fixed direction
-order, start scanning from the direction you ARRIVED from (rotated 90°
-clockwise). This follows the contour consistently without doubling back.
+### Part 1 — Export Side (`Tools/UHoleLite/scripts/export-hole.mjs`)
 
-### Replace the `traceBorder` function
+Replace the `extractWaterMasks()` call with `extractZoneContours()`.
 
-Replace the entire `traceBorder` function in `export-hole.mjs` with:
+In the `exportHole()` function, find the water section and replace:
 
 ```javascript
-/**
- * Trace the outer border of a connected region using Moore neighborhood tracing.
- * Returns ordered array of [x, y] pixel coordinates forming the boundary.
- * 
- * Algorithm: Start at the topmost-leftmost border pixel. At each step,
- * scan 8 neighbors starting from the direction we came from (rotated),
- * and move to the first neighbor that is in the region. This follows
- * the contour consistently without doubling back or getting stuck.
- */
-function traceBorder(grid, w, h, pixels, zoneValue) {
-  const pixelSet = new Set();
-  for (const [px, py] of pixels) {
-    pixelSet.add(py * w + px);
-  }
+// OLD:
+const water = extractWaterMasks(zonesData, terrainMeta, 50);
 
-  // Find border pixels (has at least one 4-connected non-region neighbor)
-  const borderSet = new Set();
-  let startX = w, startY = h;
-  
-  for (const [px, py] of pixels) {
-    const neighbors = [[px-1,py],[px+1,py],[px,py-1],[px,py+1]];
-    const isBorder = neighbors.some(([nx, ny]) => {
-      if (nx < 0 || nx >= w || ny < 0 || ny >= h) return true;
-      return !pixelSet.has(ny * w + nx);
-    });
-    if (isBorder) {
-      borderSet.add(py * w + px);
-      // Track topmost-leftmost border pixel as start
-      if (py < startY || (py === startY && px < startX)) {
-        startX = px;
-        startY = py;
-      }
-    }
-  }
+const waterOutput = {
+  schema_version: '2.0.0',
+  hole_number: holeNumber,
+  water_count: water.length,
+  water: water,
+};
+```
 
-  if (borderSet.size === 0) return [];
+With:
 
-  // Moore neighborhood: 8 directions in clockwise order
-  // Index: 0=W, 1=NW, 2=N, 3=NE, 4=E, 5=SE, 6=S, 7=SW
-  const mooreX = [-1, -1,  0,  1, 1, 1, 0, -1];
-  const mooreY = [ 0, -1, -1, -1, 0, 1, 1,  1];
+```javascript
+// NEW:
+const water = extractZoneContours(zonesData, terrainMeta, 7, 50, 2.0, 2);
+// zone 7 = water, min 50px, RDP epsilon 2.0, 2 Chaikin passes
+// (water shapes are large — epsilon 2.0 is fine; Chaikin 2 softens edges
+// without the over-inflation that was a problem with the old dedicated pipeline)
 
-  const ordered = [[startX, startY]];
-  let cx = startX, cy = startY;
-  
-  // We start at the topmost-leftmost pixel. Since it's the topmost,
-  // the pixel above it (N) is NOT in the region. So we entered from
-  // direction N (index 2). We start scanning from the next direction
-  // clockwise after the direction we came from.
-  // "Came from N" means the previous pixel was at direction 2 (N),
-  // so backtrack direction is S (index 6). Start scanning from the
-  // direction AFTER the backtrack direction (clockwise): SW (index 7).
-  let enterDir = 6; // we "entered" from the south (conceptually)
+const waterOutput = {
+  schema_version: '3.0.0',
+  hole_number: holeNumber,
+  water_count: water.length,
+  water: water,
+};
+```
 
-  const maxSteps = borderSet.size * 3; // safety limit
-  
-  for (let step = 0; step < maxSteps; step++) {
-    // Start scanning from (enterDir + 1) % 8, going clockwise
-    // This is equivalent to: start from the cell AFTER the one we
-    // came from, scanning clockwise around the current pixel
-    let scanStart = (enterDir + 1) % 8;
-    let found = false;
+Also update the log line:
 
-    for (let i = 0; i < 8; i++) {
-      let dir = (scanStart + i) % 8;
-      let nx = cx + mooreX[dir];
-      let ny = cy + mooreY[dir];
+```javascript
+// OLD:
+if (water.length > 0) {
+  const maskStats = water.map(w =>
+    `#${w.id}: ${w.mask_width}x${w.mask_height}px (${w.pixel_count}px)`
+  ).join(', ');
+  console.log(`  Water masks: ${maskStats}`);
+}
 
-      if (nx >= 0 && nx < w && ny >= 0 && ny < h && borderSet.has(ny * w + nx)) {
-        // Check if we've returned to start (complete loop)
-        if (nx === startX && ny === startY && ordered.length > 2) {
-          // Full loop complete
-          return ordered;
-        }
-
-        // Avoid revisiting (except start for closing)
-        // But we DO need to allow revisiting sometimes on thin sections
-        // Use a visited set but allow re-entry after sufficient progress
-        
-        // Move to this neighbor
-        cx = nx;
-        cy = ny;
-        ordered.push([cx, cy]);
-        
-        // The "enter direction" for the next step: we arrived at (cx,cy)
-        // from direction dir. The backtrack direction is (dir + 4) % 8.
-        enterDir = (dir + 4) % 8;
-        found = true;
-        break;
-      }
-    }
-
-    if (!found) break; // stuck, shouldn't happen with Moore trace
-  }
-
-  return ordered;
+// NEW:
+if (water.length > 0) {
+  const contourStats = water.map(w =>
+    `#${w.id}: ${w.contour.length}pts (${w.pixel_count}px)`
+  ).join(', ');
+  console.log(`  Water contours: ${contourStats}`);
 }
 ```
 
-**IMPORTANT NOTE:** The above is the core Moore trace algorithm but it
-has a subtle issue — it doesn't use a `visited` set, so on thin sections
-(1-2 pixels wide) it can revisit pixels and loop forever. The standard
-solution is **Jacob's stopping criterion**: stop when you re-enter the
-start pixel from the same direction you entered it the first time.
+Also update the manifest: change `water_file` from `'water.json'` to
+`'water.json'` (same name, just noting the schema changed).
 
-Here's the version with Jacob's stopping criterion:
+The `extractWaterMasks()` function can stay in the file (dead code) or
+be removed — your choice. It's no longer called.
 
-```javascript
-function traceBorder(grid, w, h, pixels, zoneValue) {
-  const pixelSet = new Set();
-  for (const [px, py] of pixels) {
-    pixelSet.add(py * w + px);
-  }
+### Part 2 — Unity Side (`Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`)
 
-  // Find border pixels
-  const borderSet = new Set();
-  let startX = w, startY = h;
-  
-  for (const [px, py] of pixels) {
-    const neighbors = [[px-1,py],[px+1,py],[px,py-1],[px,py+1]];
-    const isBorder = neighbors.some(([nx, ny]) => {
-      if (nx < 0 || nx >= w || ny < 0 || ny >= h) return true;
-      return !pixelSet.has(ny * w + nx);
-    });
-    if (isBorder) {
-      borderSet.add(py * w + px);
-      if (py < startY || (py === startY && px < startX)) {
-        startX = px;
-        startY = py;
-      }
+Replace `CreateWaterMeshes()` entirely. The new version:
+
+1. Reads `water.json` as contour data (same schema as greens/bunkers)
+2. For each water region:
+   a. Apply 90° CCW rotation to contour vertices (worldX = local.z,
+      worldZ = local.x) — same as all other zones
+   b. Compute centroid
+   c. Create a flat mesh at `waterY = 0.05f` using **ear-clip
+      triangulation** (the `EarClipTriangulate()` method already exists)
+   d. Apply a water material (solid color, high smoothness)
+   e. Add `MeshCollider` + `SurfaceMarker(Water)`
+3. Keep the **shore slope depression** pass (the distance-transform code
+   that dips terrain near water edges) — it's independent of mesh shape
+4. Do NOT cut terrain holes for water (water sits on top, opaque)
+
+Here's the replacement `CreateWaterMeshes()` method:
+
+```csharp
+private static void CreateWaterMeshes(TerrainData terrainData, GameObject terrainGO,
+    Transform parentRoot, string exportPath, string dataDir, string projectRoot,
+    bool[,] holes)
+{
+    string waterPath = Path.Combine(exportPath, "water.json");
+    if (!File.Exists(waterPath))
+    {
+        Debug.Log("[HoleLiteImporter] No water.json found, skipping");
+        return;
     }
-  }
 
-  if (borderSet.size === 0) return [];
-  if (borderSet.size === 1) return [[startX, startY]];
+    string json = File.ReadAllText(waterPath);
+    var waterFile = JsonUtility.FromJson<WaterFileData>(json);
 
-  // Moore neighborhood: 8 directions clockwise
-  const mooreX = [-1, -1,  0,  1, 1, 1, 0, -1];
-  const mooreY = [ 0, -1, -1, -1, 0, 1, 1,  1];
+    if (waterFile.water == null || waterFile.water.Length == 0)
+    {
+        Debug.Log("[HoleLiteImporter] No water in water.json");
+        return;
+    }
 
-  const ordered = [[startX, startY]];
-  let cx = startX, cy = startY;
+    var waterRoot = new GameObject("Water");
+    waterRoot.transform.SetParent(parentRoot);
 
-  // Start pixel is topmost — nothing above, so we "came from" north.
-  // Backtrack direction = south (index 6).
-  let enterDir = 6;
-  const firstEnterDir = enterDir; // remember for Jacob's criterion
+    float waterY = 0.05f;
 
-  let secondVisitDir = -1; // direction when we re-enter start
-  const maxSteps = borderSet.size * 4;
+    // Create water material (solid blue-ish, high smoothness)
+    var waterMat = CreateWaterMaterial(dataDir);
 
-  for (let step = 0; step < maxSteps; step++) {
-    let scanStart = (enterDir + 1) % 8;
-    let found = false;
+    var terrain = terrainGO.GetComponent<Terrain>();
+    float terrainBaseY = terrainGO.transform.position.y;
 
-    for (let i = 0; i < 8; i++) {
-      let dir = (scanStart + i) % 8;
-      let nx = cx + mooreX[dir];
-      let ny = cy + mooreY[dir];
+    foreach (var water in waterFile.water)
+    {
+        if (water.contour == null || water.contour.Length < 3) continue;
 
-      if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-      if (!borderSet.has(ny * w + nx)) continue;
+        int n = water.contour.Length;
 
-      // Jacob's stopping criterion:
-      // Stop when we return to start AND enter from the same direction
-      // as the very first step.
-      if (nx === startX && ny === startY) {
-        let newEnterDir = (dir + 4) % 8;
-        if (ordered.length > 2 && newEnterDir === firstEnterDir) {
-          return ordered; // complete loop, same entry — done
+        // Apply 90° CCW rotation (same as all other zones)
+        Vector3[] worldPts = new Vector3[n];
+        float sumX = 0, sumZ = 0;
+        for (int i = 0; i < n; i++)
+        {
+            float wx = water.contour[i].z;  // 90° CCW
+            float wz = water.contour[i].x;
+            worldPts[i] = new Vector3(wx, waterY, wz);
+            sumX += wx;
+            sumZ += wz;
         }
-        // If we're re-entering start from a different direction,
-        // it means we're on a thin section — continue tracing
-      }
+        float centroidX = sumX / n;
+        float centroidZ = sumZ / n;
+        Vector3 centroid = new Vector3(centroidX, waterY, centroidZ);
 
-      cx = nx;
-      cy = ny;
-      ordered.push([cx, cy]);
-      enterDir = (dir + 4) % 8;
-      found = true;
-      break;
+        // Build mesh with ear-clip triangulation
+        var verts = new Vector3[n];
+        var uvs = new Vector2[n];
+        float tileSize = 10f; // water texture tiling
+        for (int i = 0; i < n; i++)
+        {
+            verts[i] = worldPts[i] - centroid;
+            uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
+        }
+
+        var tris = EarClipTriangulate(worldPts);
+        if (tris == null || tris.Length < 3)
+        {
+            Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: ear-clip failed, skipping");
+            continue;
+        }
+
+        var mesh = new Mesh();
+        mesh.name = $"Water_{water.id}";
+        mesh.vertices = verts;
+        mesh.triangles = tris;
+        mesh.uv = uvs;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        var go = new GameObject($"Water_{water.id}");
+        go.transform.position = centroid;
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterial = waterMat;
+        go.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+        var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+        marker.surfaceType = Golfin.Course.SurfaceType.Water;
+
+        go.transform.SetParent(waterRoot.transform);
+
+        Debug.Log($"[HoleLiteImporter] Water {water.id}: {n} contour verts, " +
+                  $"{tris.Length / 3} tris, pos ({centroidX:F1}, {waterY}, {centroidZ:F1})");
     }
 
-    if (!found) break;
-  }
+    // ─── Shore slope pass (KEEP — independent of mesh type) ──────────
+    if (ShoreRadius > 0 && ShoreDepthMeters > 0f)
+    {
+        // ... (keep the entire existing shore slope code block unchanged)
+        // This code uses the zone grid directly, not the mesh contour,
+        // so it works the same regardless of water mesh type.
+    }
 
-  // If we didn't cleanly close, remove any duplicate trailing points
-  // and return what we have
-  return ordered;
+    // Copy water.json to Assets
+    string destPath = Path.Combine(projectRoot, dataDir, "water.json");
+    File.Copy(waterPath, destPath, true);
+    AssetDatabase.ImportAsset($"{dataDir}/water.json");
+
+    Debug.Log($"[HoleLiteImporter] Created {waterFile.water.Length} water contour mesh(es)");
+}
+
+private static Material CreateWaterMaterial(string dataDir)
+{
+    string matPath = $"{dataDir}/WaterSurface.mat";
+    var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+    if (existingMat != null)
+        AssetDatabase.DeleteAsset(matPath);
+
+    var mat = new Material(GetLitShader());
+    mat.name = "WaterSurface";
+    mat.color = new Color(0.18f, 0.40f, 0.58f);  // dark water blue
+    mat.SetFloat("_Smoothness", 0.85f);
+    mat.SetFloat("_Metallic", 0.05f);
+
+    // Opaque — no alpha clip needed anymore
+    mat.SetFloat("_Surface", 0);
+    mat.SetFloat("_AlphaClip", 0);
+
+    AssetDatabase.CreateAsset(mat, matPath);
+    return mat;
 }
 ```
 
-### After replacing traceBorder
+**Key difference from old code:** The shore slope depression block must
+be preserved in full. Copy it verbatim from the existing
+`CreateWaterMeshes()`. It reads the zone grid directly (not the mesh
+contour), so it doesn't need any changes.
 
-1. Re-export: `node scripts/export-hole.mjs lomond-country-club 1`
-2. Run diagnostic again to verify: `node scripts/diagnose-fairway.mjs lomond-country-club 1`
-   - Completion should be 95%+ (some thin 1-pixel bridges may cause
-     minor differences, but the vast majority of border should be traced)
-   - Width differences should all be within ±2m
-3. Re-import in Unity and compare the middle section visually
+### Part 3 — Update `WaterFileData` / `WaterRegionData` deserialization classes
+
+The `WaterRegionData` class (in `HoleManifestData.cs` probably) currently
+has `mask`, `mask_width`, `mask_height`, `bbox` fields for the rasterized
+approach. Update it to match the contour schema:
+
+```csharp
+[System.Serializable]
+public class WaterRegionData
+{
+    public int id;
+    public int pixel_count;
+    public ContourPoint[] contour;     // NEW — same as bunkers/greens
+    public AnchorLocal center_local;   // NEW
+    public SizeData size_m;            // NEW
+    // Remove: mask, mask_width, mask_height, bbox
+}
+```
+
+Make sure `WaterFileData` still has `public WaterRegionData[] water;`.
+
+The `ContourPoint` and `AnchorLocal` classes should already exist from
+bunkers/greens. Check `HoleManifestData.cs` for them.
 
 ### Verification
 
-- [ ] Diagnostic shows >95% border trace completion
-- [ ] No `*** BIG DIFF` entries in the width comparison
-- [ ] Middle fairway section matches zone illustration width
-- [ ] Other fairway sections unchanged (still look good)
-- [ ] Bunkers still look correct (they use the same traceBorder)
-- [ ] Greens still look correct
-- [ ] No console errors during export or import
+1. Re-export: `node scripts/export-hole.mjs lomond-country-club 1`
+   - Should log `Water contours: #1: NNpts (NNNpx)` instead of mask stats
+2. Re-import in Unity: GOLFIN > Import Hole (Lite) > Hole 01
+   - Water should appear with smooth contour edges (same style as fairway)
+   - Shore slope should still work (terrain dips toward water)
+   - No SDF/mask texture files generated
+3. Walk around in play mode — water edges should look smooth, not pixelated
 
 ### Do NOT
 
-- Change RDP epsilon or Chaikin passes (stay at 3.0 / 3)
-- Modify any Unity importer code
-- Touch fringe ring or mow stripe logic
+- Change `traceBorder`, `simplifyPolygon`, `smoothPolygon`, or `ensureCCW`
+- Modify bunker, green, or fairway pipeline code
+- Change shore slope depression logic
+- Change `EarClipTriangulate`
 
 ---
 
@@ -253,3 +280,4 @@ function traceBorder(grid, w, h, pixels, zoneValue) {
 ✅ DONE: 2026-04-08 — Tee border ring with gradient texture
 ✅ DONE: 2026-04-08 — All earlier tasks (water, bunkers, greens, textures, etc.)
 ✅ DONE: 2026-04-08 — traceBorder replaced with direction-aware walk + RDP epsilon 3.0→1.0, Chaikin 3→2. BIG DIFF at z=50 eliminated (-5.4→-1.2m). Note: trace was not the root cause — the 22.1% diagnostic was misleading (counted interior border pixels). Real fix was RDP reduction. One BIG DIFF remains at z=-5 (narrow tip, -5.2m).
+✅ DONE: 2026-04-09 — Water: replaced rasterized quad + SDF alpha mask with contour mesh overlay. Export uses extractZoneContours (zone 7, epsilon 2.0, 2 Chaikin passes). Unity importer uses ear-clip triangulation + opaque water material. Shore slope depression preserved unchanged.

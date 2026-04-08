@@ -583,10 +583,11 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build water.json ---
-  const water = extractWaterMasks(zonesData, terrainMeta, 50);
+  const water = extractZoneContours(zonesData, terrainMeta, 7, 50, 2.0, 2);
+  // zone 7 = water, min 50px, RDP epsilon 2.0, 2 Chaikin passes
 
   const waterOutput = {
-    schema_version: '2.0.0',
+    schema_version: '3.0.0',
     hole_number: holeNumber,
     water_count: water.length,
     water: water,
@@ -598,12 +599,12 @@ function exportHole(courseId, holeNumber, courseJson) {
     'utf-8'
   );
 
-  // Log water mask stats
+  // Log water contour stats
   if (water.length > 0) {
-    const maskStats = water.map(w =>
-      `#${w.id}: ${w.mask_width}x${w.mask_height}px (${w.pixel_count}px)`
+    const contourStats = water.map(w =>
+      `#${w.id}: ${w.contour.length}pts (${w.pixel_count}px)`
     ).join(', ');
-    console.log(`  Water masks: ${maskStats}`);
+    console.log(`  Water contours: ${contourStats}`);
   }
 
   // --- Copy files ---

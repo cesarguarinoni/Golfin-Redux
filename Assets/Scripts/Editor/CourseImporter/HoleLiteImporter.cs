@@ -1797,7 +1797,7 @@ namespace Golfin.CourseImport
             return parent;
         }
 
-        // ─── Water Zone Meshes (Rasterized Quad + Alpha Mask) ─────────────
+        // ─── Water Zone Meshes (Contour Mesh Overlay) ─────────────
 
         private static void CreateWaterMeshes(TerrainData terrainData, GameObject terrainGO,
             Transform parentRoot, string exportPath, string dataDir, string projectRoot,
@@ -1822,195 +1822,70 @@ namespace Golfin.CourseImport
             var waterRoot = new GameObject("Water");
             waterRoot.transform.SetParent(parentRoot);
 
-            float waterY = 0.05f; // slightly above flat terrain
+            float waterY = 0.05f;
+
+            // Create water material (solid color, high smoothness)
+            var waterMat = CreateWaterMaterial(dataDir);
 
             foreach (var water in waterFile.water)
             {
-                if (string.IsNullOrEmpty(water.mask) || water.mask_width < 1 || water.mask_height < 1)
+                if (water.contour == null || water.contour.Length < 3) continue;
+
+                int n = water.contour.Length;
+
+                // Apply 90° CCW rotation (same as all other zones)
+                Vector3[] worldPts = new Vector3[n];
+                float sumX = 0, sumZ = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    float wx = water.contour[i].z;  // 90° CCW
+                    float wz = water.contour[i].x;
+                    worldPts[i] = new Vector3(wx, waterY, wz);
+                    sumX += wx;
+                    sumZ += wz;
+                }
+                float centroidX = sumX / n;
+                float centroidZ = sumZ / n;
+                Vector3 centroid = new Vector3(centroidX, waterY, centroidZ);
+
+                // Build mesh with ear-clip triangulation
+                var verts = new Vector3[n];
+                var uvs = new Vector2[n];
+                float tileSize = 10f; // water texture tiling
+                for (int i = 0; i < n; i++)
+                {
+                    verts[i] = worldPts[i] - centroid;
+                    uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
+                }
+
+                var tris = EarClipTriangulate(worldPts);
+                if (tris == null || tris.Length < 3)
+                {
+                    Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: ear-clip failed, skipping");
                     continue;
-
-                // Decode mask
-                byte[] maskBytes = System.Convert.FromBase64String(water.mask);
-                int mw = water.mask_width;
-                int mh = water.mask_height;
-
-                if (maskBytes.Length != mw * mh)
-                {
-                    Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: mask size mismatch " +
-                                     $"({maskBytes.Length} != {mw}x{mh}={mw * mh}), skipping");
-                    continue;
                 }
-
-                // Apply 90° CCW rotation to bbox (same as anchors/contours)
-                // Pre-rotation bbox is in (x, z) = (width_axis, length_axis)
-                // 90° CCW: worldX = local.z, worldZ = local.x
-                float worldMinX = water.bbox.min_z;
-                float worldMaxX = water.bbox.max_z;
-                float worldMinZ = water.bbox.min_x;
-                float worldMaxZ = water.bbox.max_x;
-
-                float quadW = worldMaxX - worldMinX;
-                float quadH = worldMaxZ - worldMinZ;
-                float centerX = (worldMinX + worldMaxX) / 2f;
-                float centerZ = (worldMinZ + worldMaxZ) / 2f;
-
-                // --- Generate SDF texture for smooth edges ---
-                // Signed distance field: inside water = high alpha, outside = low,
-                // boundary = 0.5. Alpha cutoff at 0.5 produces smooth curves.
-
-                // Step 1: Find edge pixels (water pixels with non-water 4-neighbor)
-                var edgePixels = new System.Collections.Generic.List<int[]>();
-                for (int my = 0; my < mh; my++)
-                {
-                    for (int mx = 0; mx < mw; mx++)
-                    {
-                        if (maskBytes[my * mw + mx] != 1) continue;
-                        bool isEdge =
-                            (mx == 0      || maskBytes[my * mw + (mx - 1)] == 0) ||
-                            (mx == mw - 1 || maskBytes[my * mw + (mx + 1)] == 0) ||
-                            (my == 0      || maskBytes[(my - 1) * mw + mx] == 0) ||
-                            (my == mh - 1 || maskBytes[(my + 1) * mw + mx] == 0);
-                        if (isEdge)
-                            edgePixels.Add(new int[] { mx, my });
-                    }
-                }
-
-                // Step 2: Compute min distance to any edge pixel per pixel
-                // Positive inside, negative outside. Normalize to 0-1 with 0.5 = edge.
-                float sdfSpread = 3.0f; // pixels of gradient on each side of edge
-                float[] sdfValues = new float[mw * mh];
-
-                for (int my = 0; my < mh; my++)
-                {
-                    for (int mx = 0; mx < mw; mx++)
-                    {
-                        float minDist = float.MaxValue;
-                        foreach (var ep in edgePixels)
-                        {
-                            float dx = mx - ep[0];
-                            float dy = my - ep[1];
-                            float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                            if (dist < minDist) minDist = dist;
-                        }
-
-                        bool isInside = maskBytes[my * mw + mx] == 1;
-                        float signedDist = isInside ? minDist : -minDist;
-
-                        // Map to 0-1: 0.5 = boundary, 1.0 = deep inside, 0.0 = far outside
-                        float alpha = Mathf.Clamp01(0.5f + signedDist / (2f * sdfSpread));
-                        sdfValues[my * mw + mx] = alpha;
-                    }
-                }
-
-                // Step 3: Build texture with 90° CCW rotation
-                // transpose: mask(mx, my) → tex(my, mx)
-                int texW = mh;
-                int texH = mw;
-                var tex = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
-                tex.filterMode = FilterMode.Bilinear;
-                tex.wrapMode = TextureWrapMode.Clamp;
-
-                Color waterColor = new Color(0.18f, 0.40f, 0.58f);
-
-                for (int my = 0; my < mh; my++)
-                {
-                    for (int mx = 0; mx < mw; mx++)
-                    {
-                        float alpha = sdfValues[my * mw + mx];
-                        int tx = my;
-                        int ty = mx;
-                        tex.SetPixel(tx, ty, new Color(waterColor.r, waterColor.g, waterColor.b, alpha));
-                    }
-                }
-                tex.Apply();
-
-                // Save texture as asset
-                string texPath = $"{dataDir}/WaterMask_{water.id}.png";
-                string fullTexPath = Path.Combine(projectRoot, texPath);
-                File.WriteAllBytes(fullTexPath, tex.EncodeToPNG());
-                Object.DestroyImmediate(tex);
-
-                AssetDatabase.ImportAsset(texPath);
-
-                // Configure texture importer
-                var importer = AssetImporter.GetAtPath(texPath) as TextureImporter;
-                if (importer != null)
-                {
-                    importer.textureType = TextureImporterType.Default;
-                    importer.alphaIsTransparency = true;
-                    importer.filterMode = FilterMode.Bilinear;
-                    importer.textureCompression = TextureImporterCompression.Uncompressed;
-                    importer.npotScale = TextureImporterNPOTScale.None;
-                    importer.maxTextureSize = 4096;
-                    importer.wrapMode = TextureWrapMode.Clamp;
-                    importer.SaveAndReimport();
-                }
-
-                var savedTex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
-
-                // --- Create material (alpha cutout) ---
-                string matPath = $"{dataDir}/WaterSurface_{water.id}.mat";
-                var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-                if (existingMat != null)
-                    AssetDatabase.DeleteAsset(matPath);
-
-                var mat = new Material(GetLitShader());
-                mat.name = $"WaterSurface_{water.id}";
-                mat.mainTexture = savedTex;
-
-                // Alpha cutout mode
-                mat.SetFloat("_Surface", 0); // 0 = Opaque — we use cutout via AlphaClip
-                mat.SetFloat("_AlphaClip", 1);
-                mat.SetFloat("_Cutoff", 0.5f);
-                mat.SetFloat("_Smoothness", 0.85f);
-                mat.SetFloat("_Metallic", 0.05f);
-                mat.EnableKeyword("_ALPHATEST_ON");
-                mat.renderQueue = 2450; // AlphaTest queue
-
-                AssetDatabase.CreateAsset(mat, matPath);
-
-                // --- Create quad mesh ---
-                var vertices = new Vector3[]
-                {
-                    new Vector3(-quadW / 2f, 0f, -quadH / 2f),
-                    new Vector3( quadW / 2f, 0f, -quadH / 2f),
-                    new Vector3( quadW / 2f, 0f,  quadH / 2f),
-                    new Vector3(-quadW / 2f, 0f,  quadH / 2f),
-                };
-                var uvs = new Vector2[]
-                {
-                    new Vector2(0, 0),
-                    new Vector2(1, 0),
-                    new Vector2(1, 1),
-                    new Vector2(0, 1),
-                };
-                var triangles = new int[] { 0, 2, 1, 0, 3, 2 };
 
                 var mesh = new Mesh();
-                mesh.name = $"WaterQuad_{water.id}";
-                mesh.vertices = vertices;
-                mesh.triangles = triangles;
+                mesh.name = $"Water_{water.id}";
+                mesh.vertices = verts;
+                mesh.triangles = tris;
                 mesh.uv = uvs;
                 mesh.RecalculateNormals();
                 mesh.RecalculateBounds();
 
                 var go = new GameObject($"Water_{water.id}");
+                go.transform.position = centroid;
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
-                go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-
-                // MeshCollider uses the same quad — ball collision covers full bbox,
-                // gameplay logic uses SurfaceMarker + zone lookup for precision
+                go.AddComponent<MeshRenderer>().sharedMaterial = waterMat;
                 go.AddComponent<MeshCollider>().sharedMesh = mesh;
-
-                go.transform.position = new Vector3(centerX, waterY, centerZ);
 
                 var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Water;
 
                 go.transform.SetParent(waterRoot.transform);
 
-                Debug.Log($"[HoleLiteImporter] Water {water.id}: quad {quadW:F1}x{quadH:F1}m, " +
-                          $"mask {texW}x{texH}px, pos ({centerX:F1}, {waterY}, {centerZ:F1})");
+                Debug.Log($"[HoleLiteImporter] Water {water.id}: {n} contour verts, " +
+                          $"{tris.Length / 3} tris, pos ({centroidX:F1}, {waterY}, {centroidZ:F1})");
             }
 
             // ─── Shore slope pass: depress terrain near water edges ──────────
@@ -2140,7 +2015,28 @@ namespace Golfin.CourseImport
             File.Copy(waterPath, destPath, true);
             AssetDatabase.ImportAsset($"{dataDir}/water.json");
 
-            Debug.Log($"[HoleLiteImporter] Created {waterFile.water.Length} water quad(s)");
+            Debug.Log($"[HoleLiteImporter] Created {waterFile.water.Length} water contour mesh(es)");
+        }
+
+        private static Material CreateWaterMaterial(string dataDir)
+        {
+            string matPath = $"{dataDir}/WaterSurface.mat";
+            var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (existingMat != null)
+                AssetDatabase.DeleteAsset(matPath);
+
+            var mat = new Material(GetLitShader());
+            mat.name = "WaterSurface";
+            mat.color = new Color(0.18f, 0.40f, 0.58f);  // dark water blue
+            mat.SetFloat("_Smoothness", 0.85f);
+            mat.SetFloat("_Metallic", 0.05f);
+
+            // Opaque — no alpha clip needed anymore
+            mat.SetFloat("_Surface", 0);
+            mat.SetFloat("_AlphaClip", 0);
+
+            AssetDatabase.CreateAsset(mat, matPath);
+            return mat;
         }
 
         // ─── Flat Zone Mesh Pipeline (Fairway, Tee, Cart Path) ─────────

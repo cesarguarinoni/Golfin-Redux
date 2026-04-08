@@ -193,7 +193,7 @@ namespace Golfin.CourseImport
         public BunkerData[] greens;
     }
 
-    // water.json — rasterized mask data (schema v2.0.0)
+    // water.json — contour mesh data (schema v3.0.0)
     [System.Serializable]
     public class WaterFileData
     {
@@ -208,19 +208,9 @@ namespace Golfin.CourseImport
     {
         public int id;
         public int pixel_count;
-        public WaterBBox bbox;
-        public string mask;        // base64-encoded binary mask
-        public int mask_width;
-        public int mask_height;
-    }
-
-    [System.Serializable]
-    public class WaterBBox
-    {
-        public float min_x;
-        public float max_x;
-        public float min_z;
-        public float max_z;
+        public ContourPoint[] contour;
+        public AnchorLocal center_local;
+        public BunkerSize size_m;
     }
 
     // fairway-contours.json
