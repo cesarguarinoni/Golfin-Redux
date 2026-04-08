@@ -235,13 +235,19 @@ namespace Golfin.CourseImport
                 for (int x = 0; x < actualRes; x++)
                     heights[z, x] = normalizedFlat;
 
+            string terrainAssetPath = $"{dataDir}/TerrainData_Hole{holeId}.asset";
+            EnsureDirectory(Path.Combine(projectRoot, Path.GetDirectoryName(terrainAssetPath)));
+
+            // Delete stale asset on re-import to prevent CreateAsset failure
+            var existingTerrain = AssetDatabase.LoadAssetAtPath<TerrainData>(terrainAssetPath);
+            if (existingTerrain != null)
+                AssetDatabase.DeleteAsset(terrainAssetPath);
+
             var terrainData = new TerrainData();
             terrainData.heightmapResolution = actualRes;
             terrainData.size = new Vector3(terrainX, elevRange, terrainZ);
             terrainData.SetHeights(0, 0, heights);
 
-            string terrainAssetPath = $"{dataDir}/TerrainData_Hole{holeId}.asset";
-            EnsureDirectory(Path.Combine(projectRoot, Path.GetDirectoryName(terrainAssetPath)));
             AssetDatabase.CreateAsset(terrainData, terrainAssetPath);
 
             return terrainData;
