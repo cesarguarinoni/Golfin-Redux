@@ -721,7 +721,7 @@ namespace Golfin.CourseImport
                 5  => 3,  // trees → rough texture
                 6  => 3,  // bunker → rough (mesh handles sand surface)
                 7  => 3,  // water → rough
-                8  => 3,  // cart_path → rough (mesh overlay handles surface)
+                8  => 6,  // cart_path (splatmap — too thin for mesh overlay)
                 9  => 3,  // ob → rough texture
                 10 => 3,  // tee_box → rough (mesh overlay handles surface)
                 _  => 3,  // background/unknown → rough
@@ -2215,29 +2215,7 @@ namespace Golfin.CourseImport
                     Debug.Log($"[HoleLiteImporter] Created {data.zones.tee.Length} tee mesh(es)");
                 }
 
-                // Cart path meshes
-                if (data.zones != null && data.zones.cart_path != null && data.zones.cart_path.Length > 0)
-                {
-                    var cpRoot = new GameObject("CartPaths");
-                    cpRoot.transform.SetParent(parentRoot);
-
-                    var cpMat = CreateTiledMaterial(texDir, "T_RoadAsphalt_Albedo",
-                        "T_RoadAsphalt_Normal", dataDir, 4f);
-
-                    foreach (var region in data.zones.cart_path)
-                    {
-                        if (region.contour == null || region.contour.Length < 3) continue;
-
-                        var meshGO = CreateFlatContourMesh(
-                            region.id, "CartPath", region.contour,
-                            terrain, terrainBaseY, cpMat, 4f,
-                            Golfin.Course.SurfaceType.CartPath);
-                        if (meshGO != null)
-                            meshGO.transform.SetParent(cpRoot.transform);
-                    }
-
-                    Debug.Log($"[HoleLiteImporter] Created {data.zones.cart_path.Length} cart path mesh(es)");
-                }
+                // Cart paths stay on splatmap only (too thin/concave for centroid-fan mesh)
             }
         }
 
