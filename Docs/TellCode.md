@@ -7,138 +7,177 @@
 
 ---
 
-## Current Task — Morphological Smooth in classify-zones.mjs
+## Current Task — High-Resolution Zone Grid (2048×2048)
 
-**Goal:** After auto-classification, smooth zone boundaries using
-morphological close (dilate → erode) on each zone mask. Done in Node.js
-for reliability, runs on all 18 holes automatically.
+**Problem:** The zone grid resolution matches the source illustration
+(~528×637 or ~1024 upscaled). When mapped onto terrain that's 500+m
+wide, each zone pixel = ~0.5m. This causes visible jaggies on all zone
+boundaries — no amount of smoothing can fix it because the underlying
+data is too coarse.
 
-**File:** `Tools/UHoleLite/scripts/classify-zones.mjs`
+**Fix:** Decouple zone grid resolution from source image resolution.
+The zone grid should always be a fixed high resolution (2048×2048)
+regardless of the source illustration size. This means:
+
+- Classification upsamples to 2048×2048 before classifying
+- Hole Viewer canvas operates on a 2048×2048 zone grid
+- Zone painting, flood fill, and all tools work at this resolution
+- Export reads the 2048×2048 grid
+- Source illustration is displayed as a background but doesn't
+  constrain the zone grid size
+
+At 2048×2048 on a ~500m terrain, each pixel ≈ 0.25m — sub-foot
+resolution, effectively invisible jaggies.
 
 ---
 
-### Add `morphClose()` function
+### Part A: Classification (`Tools/UHoleLite/scripts/classify-zones.mjs`)
 
-After the existing `absorbSmallRegions()` function, add:
+#### A1. Upscale source image to 2048 before classification
 
-```javascript
-/**
- * Morphological close (dilate → erode) on a per-zone basis.
- * Smooths jagged boundaries without significantly changing zone shapes.
- * Circular kernel for isotropic smoothing.
- */
-function morphClose(grid, width, height, radius = 3) {
-  const result = new Uint8Array(width * height);
-  result.fill(0); // background
-
-  // Process zones in priority order (higher priority overwrites lower)
-  // rough < trees < semi_rough < fairway < tee_box < green < bunker < water < cart_path < ob
-  const zonePriority = [4, 5, 3, 1, 10, 2, 6, 7, 8, 9];
-
-  for (const zone of zonePriority) {
-    // Build binary mask
-    const mask = new Uint8Array(width * height);
-    let count = 0;
-    for (let i = 0; i < width * height; i++) {
-      if (grid[i] === zone) { mask[i] = 1; count++; }
-    }
-    if (count === 0) continue;
-
-    // Dilate
-    const dilated = new Uint8Array(width * height);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (!mask[y * width + x]) continue;
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
-            if (dx * dx + dy * dy > radius * radius) continue;
-            const nx = x + dx, ny = y + dy;
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height)
-              dilated[ny * width + nx] = 1;
-          }
-        }
-      }
-    }
-
-    // Erode
-    const closed = new Uint8Array(width * height);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (!dilated[y * width + x]) continue;
-        let allSet = true;
-        for (let dy = -radius; dy <= radius && allSet; dy++) {
-          for (let dx = -radius; dx <= radius && allSet; dx++) {
-            if (dx * dx + dy * dy > radius * radius) continue;
-            const nx = x + dx, ny = y + dy;
-            if (nx < 0 || nx >= width || ny < 0 || ny >= height ||
-                !dilated[ny * width + nx])
-              allSet = false;
-          }
-        }
-        if (allSet) closed[y * width + x] = 1;
-      }
-    }
-
-    // Write to result
-    for (let i = 0; i < width * height; i++) {
-      if (closed[i]) result[i] = zone;
-    }
-  }
-
-  return result;
-}
-```
-
-### Hook into `classifyHole()`
-
-After Phase 2b (absorb small regions), before Phase 2c (mark tee boxes),
-add:
+In `classifyHole()`, after loading the image with sharp, resize to
+2048 on the longest side (maintaining aspect ratio) before reading
+pixels:
 
 ```javascript
-  // Phase 2b2: Morphological close — smooth zone boundaries
-  grid = morphClose(grid, width, height, 3);
+const ZONE_RES = 2048;
+
+// Load and upscale to ZONE_RES on longest side
+const metadata = await sharp(rawPath).metadata();
+const scale = ZONE_RES / Math.max(metadata.width, metadata.height);
+const targetW = Math.round(metadata.width * scale);
+const targetH = Math.round(metadata.height * scale);
+
+const { data, info } = await sharp(rawPath)
+  .resize(targetW, targetH, { kernel: 'lanczos3' })
+  .raw()
+  .toBuffer({ resolveWithObject: true });
+const { width, height, channels } = info;
 ```
 
-### Also: remove `smoothBoundaries()` if it exists
+Replace the existing `sharp(rawPath).raw().toBuffer(...)` call with this.
+The rest of the classification pipeline (per-pixel classify, majority
+filter, absorption, morph close) operates on the larger grid
+automatically.
 
-If the previous `smoothBoundaries()` function and its Phase 2b2 call
-are still in the file, delete them. `morphClose()` replaces it.
+`lanczos3` kernel gives sharp upscaling — better than bilinear for
+preserving color boundaries.
 
-### Also: remove broken straighten code from app.js
+#### A2. Make ZONE_RES configurable
 
-Remove from `Tools/UHoleLite/app/app.js`:
-- `straightenBoundaries()` and all its helpers (`traceBorderPixels`,
-  `rdpSimplify`, `perpDist`, `chaikinSmooth`, `scanlineFill`,
-  `dilateMask`, `erodeMask`)
-- The "Straighten Edges" button handler
-- The button element from `index.html`
+Add at the top of the file:
+```javascript
+const ZONE_RES = 2048; // Zone grid resolution (longest side)
+```
 
-Keep: PNG import, SVG import (if added).
+---
+
+### Part B: Hole Viewer (`Tools/UHoleLite/app/`)
+
+#### B1. Load zone grid at native resolution
+
+The Hole Viewer already loads the zone grid from `GET /api/zones-grid`
+which returns `width`, `height`, and `grid`. If the classification
+produces 2048×2048, the viewer automatically gets that size. No change
+needed for loading.
+
+#### B2. Painting at higher resolution
+
+The zone painting tools (brush, flood fill) already work in zone grid
+coordinates, not canvas coordinates. The `drawHole()` function maps
+between canvas display and zone grid. This should work at any grid
+resolution — verify by testing.
+
+If brush strokes feel too fine or too coarse at the higher resolution,
+the `brushSize` value may need scaling. The brush size is in zone grid
+pixels, so a brush that was 5px on a 1024 grid covers the same visual
+area as 10px on a 2048 grid. Consider doubling the default brush size:
+
+```javascript
+let brushSize = 10; // was 5
+```
+
+#### B3. PNG import at zone grid resolution
+
+The PNG import currently reads the PNG at its native resolution. If the
+user provides a PNG at the old resolution, it won't match the new 2048
+grid. Two options:
+
+a) Require PNG to be 2048×2048 (simplest)
+b) Upscale imported PNG to match zone grid resolution
+
+Go with (a) — just document that imported PNGs should be 2048×2048.
+
+#### B4. SVG import
+
+If SVG import exists, it should rasterize at the zone grid resolution
+(use `zoneGridW` and `zoneGridH` which will now be ~2048×2048).
+
+---
+
+### Part C: Export pipeline
+
+No changes needed. `export-hole.mjs` reads `zones.json` which has
+`source_dimensions` and `grid`. The contour tracing, water mask
+extraction, etc. all use the grid dimensions from the JSON. A larger
+grid means finer contours (more border pixels) but RDP+Chaikin still
+simplify to reasonable vertex counts.
+
+### Part D: Unity importer
+
+No changes needed. The splatmap pipeline resamples from zone grid to
+256×256 alphamap — it reads `source_dimensions` from zones.json.
+
+---
+
+### File size concern
+
+2048×2048 = 4M pixels = ~5.3MB base64 in zones.json. This is fine.
+(4096×4096 would be ~21MB — too large. 2048 is the sweet spot.)
 
 ---
 
 ### Verification
 
-1. Reclassify: `node scripts/classify-zones.mjs lomond-country-club 1`
-   - [ ] No errors
-   - [ ] Check `zones.png` — boundaries smoother than before
+1. Reclassify Hole 1:
+   `node scripts/classify-zones.mjs lomond-country-club 1`
+   - [ ] zones.json has `source_dimensions` ~2048×something
+   - [ ] zones.png is larger, boundaries visibly smoother
 
-2. Compare before/after `zones.png` for the same hole
+2. Reclassify all 18:
+   `node scripts/classify-zones.mjs lomond-country-club --all`
+   - [ ] All 18 holes succeed
 
-3. Reclassify all: `node scripts/classify-zones.mjs lomond-country-club --all`
-   - [ ] All 18 holes process without errors
+3. Open Hole Viewer — zone painting works at higher resolution
 
-4. Re-export + re-import a hole — verify splatmap edges are smoother
+4. Re-export + re-import a hole — smoother splatmap and contours
 
-### Tuning
-
-`radius = 3` should be a good default. If too aggressive (eating small
-features), try `radius = 2`. If not smooth enough, try `radius = 4`.
+5. Check zones.json file size — should be ~5MB (acceptable)
 
 ### Do NOT
 
 - Modify export pipeline
 - Modify Unity importer
-- Modify the majority filter or absorption steps
+- Change the zone color palette
 
-✅ DONE: 2026-04-08 — morphClose() in classify-zones.mjs replaces smoothBoundaries(), all 18 holes OK
+---
+
+## Also: Clean up broken code
+
+Remove from `app.js` any remaining broken straighten code:
+`straightenBoundaries()`, `traceBorderPixels()`, `rdpSimplify()`,
+`perpDist()`, `chaikinSmooth()`, `scanlineFill()`, `dilateMask()`,
+`erodeMask()`, and the Straighten button from `index.html`.
+
+---
+
+## Previous Completed Tasks
+
+✅ DONE: 2026-04-08 — Water Shore Slope
+✅ DONE: 2026-04-08 — Tee Markers: FBX props
+✅ DONE: 2026-04-08 — Flag + hole cup at green centroid
+✅ DONE: 2026-04-08 — Terrain plastic sheen fixed via Mask Map
+✅ DONE: 2026-04-08 — Texture cleanup: fairway/fringe swap, dark fringe, blur removed, fringe ring
+✅ DONE: 2026-04-08 — Various smoothing attempts (smoothBoundaries, straighten v1/v2, morph close)
+
+✅ DONE: 2026-04-08 — High-res zone grid (2048 longest side), brush size doubled, SVG uses grid res

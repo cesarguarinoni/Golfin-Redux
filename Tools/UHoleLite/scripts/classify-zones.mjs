@@ -13,6 +13,8 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { rgbToHsl } from './lib/colors.mjs';
 
+const ZONE_RES = 2048; // Zone grid resolution (longest side)
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -295,8 +297,14 @@ async function classifyHole(courseId, holeNumber) {
     return null;
   }
 
-  // Read pixel data
+  // Read pixel data — upscale to ZONE_RES on longest side for finer boundaries
+  const metadata = await sharp(rawPath).metadata();
+  const scale = ZONE_RES / Math.max(metadata.width, metadata.height);
+  const targetW = Math.round(metadata.width * scale);
+  const targetH = Math.round(metadata.height * scale);
+
   const { data, info } = await sharp(rawPath)
+    .resize(targetW, targetH, { kernel: 'lanczos3' })
     .raw()
     .toBuffer({ resolveWithObject: true });
   const { width, height, channels } = info;

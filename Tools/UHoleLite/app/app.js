@@ -24,7 +24,7 @@ let zoneGridW = 0;
 let zoneGridH = 0;
 let zonePaintDirty = false;
 let activeBrushZone = -1;
-let brushSize = 5;
+let brushSize = 10;
 let isPainting = false;
 let zoneUndoStack = [];
 const MAX_UNDO = 30;
@@ -912,12 +912,9 @@ function setupControls() {
     if (!file) return;
 
     const svgText = await file.text();
-    // Rasterize at high res, preserving aspect ratio (4096 on longest side)
-    const srcW = zoneGridW || 1024;
-    const srcH = zoneGridH || 1024;
-    const scale = 4096 / Math.max(srcW, srcH);
-    const targetW = Math.round(srcW * scale);
-    const targetH = Math.round(srcH * scale);
+    // Rasterize at current zone grid resolution
+    const targetW = zoneGridW || 2048;
+    const targetH = zoneGridH || 2048;
 
     const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
