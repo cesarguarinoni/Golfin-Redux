@@ -487,71 +487,6 @@ function matchZoneColor(r, g, b) {
   return bestZone;
 }
 
-// ── Straighten Boundaries (morphological close) ────
-function straightenBoundaries() {
-  const w = zoneGridW, h = zoneGridH;
-  const result = new Uint8Array(w * h);
-  result.fill(0);
-
-  // Process zones in priority order (higher overwrites lower)
-  const zonePriority = [4, 5, 3, 1, 10, 2, 6, 7, 8, 9];
-  const radius = 3;
-
-  for (const zone of zonePriority) {
-    const mask = new Uint8Array(w * h);
-    for (let i = 0; i < w * h; i++) {
-      if (zoneGrid[i] === zone) mask[i] = 1;
-    }
-
-    const dilated = dilateMask(mask, w, h, radius);
-    const closed = erodeMask(dilated, w, h, radius);
-
-    for (let i = 0; i < w * h; i++) {
-      if (closed[i]) result[i] = zone;
-    }
-  }
-
-  zoneGrid.set(result);
-}
-
-function dilateMask(mask, w, h, radius) {
-  const result = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!mask[y * w + x]) continue;
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          if (dx * dx + dy * dy > radius * radius) continue;
-          const nx = x + dx, ny = y + dy;
-          if (nx >= 0 && nx < w && ny >= 0 && ny < h)
-            result[ny * w + nx] = 1;
-        }
-      }
-    }
-  }
-  return result;
-}
-
-function erodeMask(mask, w, h, radius) {
-  const result = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!mask[y * w + x]) continue;
-      let allSet = true;
-      for (let dy = -radius; dy <= radius && allSet; dy++) {
-        for (let dx = -radius; dx <= radius && allSet; dx++) {
-          if (dx * dx + dy * dy > radius * radius) continue;
-          const nx = x + dx, ny = y + dy;
-          if (nx < 0 || nx >= w || ny < 0 || ny >= h || !mask[ny * w + nx])
-            allSet = false;
-        }
-      }
-      if (allSet) result[y * w + x] = 1;
-    }
-  }
-  return result;
-}
-
 function floodFillZone(normX, normY) {
   if (activeBrushZone < 0 || !zoneGrid) return;
   const gx = Math.round(normX * (zoneGridW - 1));
@@ -966,19 +901,6 @@ function setupControls() {
     };
     img.src = URL.createObjectURL(file);
     e.target.value = "";
-  });
-
-  // Straighten Boundaries
-  document.getElementById("straighten-btn").addEventListener("click", () => {
-    if (!zoneGrid) return;
-    // Push undo (same format as paint undo)
-    zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null });
-    if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
-
-    straightenBoundaries();
-    zonePaintDirty = true;
-    regenerateZonesImage();
-    console.log("Zone boundaries straightened");
   });
 
   // Brush controls
