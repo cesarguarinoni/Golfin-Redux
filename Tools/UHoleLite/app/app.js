@@ -912,8 +912,8 @@ function setupControls() {
     if (!file) return;
 
     const svgText = await file.text();
-    const targetW = zoneGridW || 1024;
-    const targetH = zoneGridH || 1024;
+    const targetW = 4096;
+    const targetH = 4096;
 
     const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
