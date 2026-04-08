@@ -2199,9 +2199,7 @@ namespace Golfin.CourseImport
                     }
 
                     // ── Materials ──
-                    var lightFairwayMat = CreateTiledMaterial(texDir, "T_Fairway_Light",
-                        "T_Fairway_Normal", dataDir, 5f);
-                    var darkFairwayMat = CreateTiledMaterial(texDir, "T_Fairway_Dark",
+                    var fairwayMat = CreateTiledMaterial(texDir, "T_Fairway_Mix",
                         "T_Fairway_Normal", dataDir, 5f);
                     var fringeMat = CreateTiledMaterial(texDir, "T_Fringe_Albedo",
                         "T_Fringe_Normal", dataDir, 6f);
@@ -2212,11 +2210,10 @@ namespace Golfin.CourseImport
                     {
                         if (fw.contour == null || fw.contour.Length < 3) continue;
 
-                        // Fairway mesh with mow stripes (two submeshes)
+                        // Fairway mesh with mow stripes via UV-oriented texture
                         var meshGO = CreateFairwayMesh(
                             fw.id, fw.contour, terrain, terrainBaseY,
-                            lightFairwayMat, darkFairwayMat,
-                            stripeDir, stripeWidth, 5f);
+                            fairwayMat, stripeDir, stripeWidth);
                         if (meshGO != null)
                             meshGO.transform.SetParent(fwRoot.transform);
 
@@ -2342,227 +2339,92 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
-        /// Create a fairway mesh with two submeshes for mow stripes (light/dark).
-        /// Uses centroid-fan triangulation (stays within contour) then splits any
-        /// triangle that crosses a stripe boundary into sub-triangles, each assigned
-        /// to the correct submesh. This keeps geometry within the fairway while
-        /// giving clean parallel stripe edges.
+        /// Create a fairway mesh with mow stripes via UV orientation.
+        /// Uses a single T_Fairway_Mix texture that contains both light and dark bands.
+        /// UVs are oriented so that one axis runs along stripeDir (perpendicular to
+        /// tee→green), making the texture bands appear as parallel mow stripes.
+        /// Simple centroid-fan triangulation — stays within contour, no clipping needed.
         /// </summary>
         private static GameObject CreateFairwayMesh(int id, ContourPoint[] contour,
             Terrain terrain, float terrainBaseY,
-            Material lightMat, Material darkMat,
-            Vector2 stripeDir, float stripeWidth, float tileSize)
+            Material mat, Vector2 stripeDir, float stripeWidth)
         {
             int n = contour.Length;
             if (n < 3) return null;
 
             float yOffset = 0.02f;
 
+            // stripeDir is perpendicular to tee→green. Compute the parallel axis.
+            Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
+
             // Convert contour to world space (90° CCW: worldX = z, worldZ = x)
-            // Store as XZ pairs for stripe projection; Y sampled from terrain
-            var worldXZ = new Vector2[n];
-            for (int i = 0; i < n; i++)
-                worldXZ[i] = new Vector2(contour[i].z, contour[i].x);
-
-            // Compute centroid
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++) { cx += worldXZ[i].x; cz += worldXZ[i].y; }
-            cx /= n; cz /= n;
-            float centY = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
-            Vector3 centroid3 = new Vector3(cx, centY, cz);
-
-            // Helper: make a world-space Vector3 from XZ pair
-            System.Func<Vector2, Vector3> toV3 = (xz) =>
-            {
-                float h = terrain.SampleHeight(new Vector3(xz.x, 0, xz.y));
-                return new Vector3(xz.x, terrainBaseY + h + yOffset, xz.y);
-            };
-
-            // Accumulate vertices with deduplication via dictionary
-            var vertMap = new System.Collections.Generic.Dictionary<long, int>();
-            var allVerts = new System.Collections.Generic.List<Vector3>();
-            var allUVs = new System.Collections.Generic.List<Vector2>();
-            var lightTris = new System.Collections.Generic.List<int>();
-            var darkTris = new System.Collections.Generic.List<int>();
-
-            // Quantize XZ to 1mm grid for vertex dedup
-            System.Func<Vector2, int> getOrAddVert = (xz) =>
-            {
-                long key = ((long)Mathf.RoundToInt(xz.x * 1000f)) * 10000000L +
-                           (long)Mathf.RoundToInt(xz.y * 1000f);
-                int idx;
-                if (vertMap.TryGetValue(key, out idx)) return idx;
-                idx = allVerts.Count;
-                vertMap[key] = idx;
-                allVerts.Add(toV3(xz));
-                allUVs.Add(new Vector2(xz.x / tileSize, xz.y / tileSize));
-                return idx;
-            };
-
-            // Pre-add centroid
-            Vector2 centXZ = new Vector2(cx, cz);
-            int centIdx = getOrAddVert(centXZ);
-
-            // For each centroid-fan triangle, split at stripe boundaries
-            // Winding: contour[i] → centroid → contour[i+1] (CW from above = front face in Unity)
+            Vector3[] worldPts = new Vector3[n];
             for (int i = 0; i < n; i++)
             {
-                Vector2 a = worldXZ[i];       // contour[i]
-                Vector2 b = centXZ;           // centroid
-                Vector2 c = worldXZ[(i + 1) % n]; // contour[i+1]
-
-                SplitTriangleIntoStripes(a, b, c, stripeDir, stripeWidth,
-                    getOrAddVert, lightTris, darkTris);
+                float wx = contour[i].z;
+                float wz = contour[i].x;
+                float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
             }
 
-            if (allVerts.Count < 3) return null;
+            // Compute centroid
+            float cx = 0, cy = 0, cz = 0;
+            for (int i = 0; i < n; i++)
+            {
+                cx += worldPts[i].x;
+                cy += worldPts[i].y;
+                cz += worldPts[i].z;
+            }
+            cx /= n; cy /= n; cz /= n;
+            Vector3 centroid = new Vector3(cx, cy, cz);
 
-            // Make vertices relative to centroid
-            var relVerts = new Vector3[allVerts.Count];
-            for (int i = 0; i < allVerts.Count; i++)
-                relVerts[i] = allVerts[i] - centroid3;
+            // Build vertices: contour + centroid (relative to centroid)
+            var verts = new Vector3[n + 1];
+            var uvs = new Vector2[n + 1];
+            for (int i = 0; i < n; i++)
+            {
+                verts[i] = worldPts[i] - centroid;
+                // UV oriented along stripe axis: U = along stripeDir, V = perpendicular
+                float wx = worldPts[i].x;
+                float wz = worldPts[i].z;
+                uvs[i] = new Vector2(
+                    (wx * stripeDir.x + wz * stripeDir.y) / stripeWidth,
+                    (wx * parallelDir.x + wz * parallelDir.y) / stripeWidth);
+            }
+            // Centroid vertex
+            verts[n] = Vector3.zero;
+            uvs[n] = new Vector2(
+                (cx * stripeDir.x + cz * stripeDir.y) / stripeWidth,
+                (cx * parallelDir.x + cz * parallelDir.y) / stripeWidth);
+
+            // Triangles: fan from centroid
+            // Winding: contour[i] → centroid → contour[i+1] (CW from above = front face)
+            var tris = new int[n * 3];
+            for (int i = 0; i < n; i++)
+            {
+                tris[i * 3 + 0] = i;
+                tris[i * 3 + 1] = n; // centroid
+                tris[i * 3 + 2] = (i + 1) % n;
+            }
 
             var mesh = new Mesh();
             mesh.name = $"Fairway_{id}";
-            mesh.vertices = relVerts;
-            mesh.uv = allUVs.ToArray();
-            mesh.subMeshCount = 2;
-            mesh.SetTriangles(lightTris.ToArray(), 0);
-            mesh.SetTriangles(darkTris.ToArray(), 1);
+            mesh.vertices = verts;
+            mesh.triangles = tris;
+            mesh.uv = uvs;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
             var go = new GameObject($"Fairway_{id}");
-            go.transform.position = centroid3;
+            go.transform.position = centroid;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var renderer = go.AddComponent<MeshRenderer>();
-            renderer.sharedMaterials = new Material[] { lightMat, darkMat };
+            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
             go.AddComponent<MeshCollider>().sharedMesh = mesh;
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
 
             return go;
-        }
-
-        /// <summary>
-        /// Split a single triangle (a,b,c in XZ) at all stripe boundaries it crosses,
-        /// then add each sub-triangle to the correct submesh (light or dark).
-        /// </summary>
-        private static void SplitTriangleIntoStripes(
-            Vector2 a, Vector2 b, Vector2 c,
-            Vector2 stripeDir, float stripeWidth,
-            System.Func<Vector2, int> getOrAddVert,
-            System.Collections.Generic.List<int> lightTris,
-            System.Collections.Generic.List<int> darkTris)
-        {
-            // Project vertices onto stripe axis
-            float pa = Vector2.Dot(a, stripeDir);
-            float pb = Vector2.Dot(b, stripeDir);
-            float pc = Vector2.Dot(c, stripeDir);
-
-            float minP = Mathf.Min(pa, Mathf.Min(pb, pc));
-            float maxP = Mathf.Max(pa, Mathf.Max(pb, pc));
-
-            int minBand = Mathf.FloorToInt(minP / stripeWidth);
-            int maxBand = Mathf.FloorToInt(maxP / stripeWidth);
-
-            // No stripe boundary crosses this triangle — assign whole triangle
-            if (minBand == maxBand)
-            {
-                var list = (minBand % 2 == 0) ? lightTris : darkTris;
-                list.Add(getOrAddVert(a));
-                list.Add(getOrAddVert(b));
-                list.Add(getOrAddVert(c));
-                return;
-            }
-
-            // Collect all stripe boundary thresholds that cross the triangle
-            var boundaries = new System.Collections.Generic.List<float>();
-            for (int band = minBand + 1; band <= maxBand; band++)
-                boundaries.Add(band * stripeWidth);
-
-            // Split the triangle into a list of sub-polygons at each boundary.
-            // We process boundaries one at a time. Start with a list of polygons
-            // (initially just the triangle), clip each against the boundary line.
-            var polys = new System.Collections.Generic.List<System.Collections.Generic.List<Vector2>>();
-            polys.Add(new System.Collections.Generic.List<Vector2> { a, b, c });
-
-            foreach (float threshold in boundaries)
-            {
-                var nextPolys = new System.Collections.Generic.List<System.Collections.Generic.List<Vector2>>();
-                foreach (var poly in polys)
-                {
-                    var above = ClipPolyToHalfPlane(poly, stripeDir, threshold, true);
-                    var below = ClipPolyToHalfPlane(poly, stripeDir, threshold, false);
-                    if (above.Count >= 3) nextPolys.Add(above);
-                    if (below.Count >= 3) nextPolys.Add(below);
-                }
-                polys = nextPolys;
-            }
-
-            // Triangulate each sub-polygon (fan from first vertex) and assign to submesh
-            foreach (var poly in polys)
-            {
-                if (poly.Count < 3) continue;
-
-                // Determine band from polygon centroid
-                float sum = 0;
-                for (int i = 0; i < poly.Count; i++)
-                    sum += Vector2.Dot(poly[i], stripeDir);
-                float avgProj = sum / poly.Count;
-                int band = Mathf.FloorToInt(avgProj / stripeWidth);
-                var list = (band % 2 == 0) ? lightTris : darkTris;
-
-                int v0 = getOrAddVert(poly[0]);
-                for (int i = 1; i < poly.Count - 1; i++)
-                {
-                    list.Add(v0);
-                    list.Add(getOrAddVert(poly[i]));
-                    list.Add(getOrAddVert(poly[i + 1]));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Clip a polygon to a half-plane: keep vertices where dot(v, axis) >= threshold
-        /// (keepAbove=true) or dot(v, axis) &lt;= threshold (keepAbove=false).
-        /// Sutherland-Hodgman single-edge clip.
-        /// </summary>
-        private static System.Collections.Generic.List<Vector2> ClipPolyToHalfPlane(
-            System.Collections.Generic.List<Vector2> poly, Vector2 axis, float threshold, bool keepAbove)
-        {
-            if (poly.Count < 3) return poly;
-
-            var result = new System.Collections.Generic.List<Vector2>();
-            int n = poly.Count;
-
-            for (int i = 0; i < n; i++)
-            {
-                Vector2 curr = poly[i];
-                Vector2 next = poly[(i + 1) % n];
-                float currDot = Vector2.Dot(curr, axis);
-                float nextDot = Vector2.Dot(next, axis);
-
-                bool currIn = keepAbove ? (currDot >= threshold - 0.001f) : (currDot <= threshold + 0.001f);
-                bool nextIn = keepAbove ? (nextDot >= threshold - 0.001f) : (nextDot <= threshold + 0.001f);
-
-                if (currIn)
-                    result.Add(curr);
-
-                if (currIn != nextIn)
-                {
-                    float denom = nextDot - currDot;
-                    if (Mathf.Abs(denom) > 0.0001f)
-                    {
-                        float t = (threshold - currDot) / denom;
-                        t = Mathf.Clamp01(t);
-                        result.Add(Vector2.Lerp(curr, next, t));
-                    }
-                }
-            }
-
-            return result;
         }
 
         /// <summary>
