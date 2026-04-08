@@ -99,6 +99,11 @@ namespace Golfin.CourseImport
                 terrainGO.name = "TerrainRoot";
                 terrainGO.transform.position = new Vector3(-terrainX / 2f, -ShoreDepthMeters, -terrainZ / 2f);
 
+                // Kill plastic sheen: disable reflection probes and assign matte terrain material
+                var terrainComp = terrainGO.GetComponent<Terrain>();
+                terrainComp.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+                terrainComp.materialTemplate = GetTerrainMaterial();
+
                 // Create holeRoot early so bunkers can be parented to it
                 var holeRoot = new GameObject("HoleRoot");
                 terrainGO.transform.SetParent(holeRoot.transform);
@@ -167,7 +172,7 @@ namespace Golfin.CourseImport
                 var light = lightGO.AddComponent<Light>();
                 light.type = LightType.Directional;
                 light.color = new Color(1f, 0.96f, 0.84f);
-                light.intensity = 1.2f;
+                light.intensity = 1.0f;
                 lightGO.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
                 // Apply skybox
@@ -616,7 +621,7 @@ namespace Golfin.CourseImport
                 "T_RoadAsphalt_Normal",
                 "T_Fringe_Normal",
             };
-            float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 4f };
+            float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 8f };
 
             var layers = new TerrainLayer[layerCount];
             EnsureDirectory(Path.Combine(projectRoot, dataDir));
@@ -626,12 +631,13 @@ namespace Golfin.CourseImport
                 layers[i] = new TerrainLayer();
                 layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
                 layers[i].normalMapTexture = FindTextureExact(texDir, normalNames[i]);
-                layers[i].tileSize = new Vector2(tileSizes[i], tileSizes[i]);
+                // Fringe (index 7): non-square tile to fix grain orientation on 90° rotated terrain
+                layers[i].tileSize = (i == 7) ? new Vector2(8f, 4f) : new Vector2(tileSizes[i], tileSizes[i]);
                 layers[i].tileOffset = Vector2.zero;
                 layers[i].smoothness = 0f;
                 layers[i].metallic = 0f;
                 layers[i].normalScale = 0.3f;
-                layers[i].normalMapTexture = null;
+                // normalMapTexture = null line removed (was overwriting the normal map set above)
 
                 if (layers[i].diffuseTexture == null)
                     Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoNames[i]}");
@@ -2086,6 +2092,30 @@ namespace Golfin.CourseImport
             AssetDatabase.ImportAsset($"{dataDir}/water.json");
 
             Debug.Log($"[HoleLiteImporter] Created {waterFile.water.Length} water quad(s)");
+        }
+
+        private static Material GetTerrainMaterial()
+        {
+            string matPath = "Assets/Courses/Materials (Shared by courses)/MAT_Terrain.mat";
+            var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (existing != null) return existing;
+
+            var shader = Shader.Find("Universal Render Pipeline/Terrain/Lit");
+            if (shader == null) shader = Shader.Find("Terrain/Lit");
+            if (shader == null)
+            {
+                Debug.LogWarning("[HoleLiteImporter] Could not find URP Terrain/Lit shader — using default terrain material");
+                return null;
+            }
+
+            var mat = new Material(shader);
+            mat.SetFloat("_Smoothness", 0f);
+            mat.SetFloat("_Metallic", 0f);
+            mat.SetFloat("_SpecularHighlights", 0f);
+            mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+            mat.name = "MAT_Terrain";
+            AssetDatabase.CreateAsset(mat, matPath);
+            return mat;
         }
 
         private static void EnsureDirectory(string path)

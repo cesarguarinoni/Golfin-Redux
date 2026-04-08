@@ -7,78 +7,169 @@
 
 ---
 
-## Current Task — Flag at Green Centroid
+## Current Task — Terrain Texture & Lighting Cleanup
 
-**Goal:** Place `Flag.fbx` at the centroid of each green on import.
+**Goal:** Fix plastic sheen on splatmap terrain, kill sun hotspot,
+fix fringe texture orientation.
 
 **File:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
 
 ---
 
-### What to do
+### Fix 1: Kill plastic sheen on terrain
 
-In `CreateGreenMeshes()`, after each green mesh is created and parented,
-instantiate the flag prop at the green centroid.
+The terrain's URP Lit shader has default specular highlights that cause
+a plastic look even with `smoothness = 0` on layers.
 
-1. Load the flag prefab:
-   ```csharp
-   var flagPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-       "Assets/Art/3D/Props/Flag/Flag.fbx");
-   ```
+After creating the terrain GO in `ImportLiteHole()`, add these settings
+to the `Terrain` component. Find the line:
 
-2. For each green, after `meshGO.transform.SetParent(greensRoot.transform)`:
-   ```csharp
-   if (flagPrefab != null)
-   {
-       var flag = Object.Instantiate(flagPrefab);
-       flag.name = $"Flag_{green.id}";
-       // Position at green centroid, on top of the raised green surface
-       float flagY = surfaceY + greenHeight;
-       flag.transform.position = new Vector3(centroidX, flagY, centroidZ);
-       flag.transform.SetParent(greensRoot.transform);
-   }
-   ```
+```csharp
+terrainGO.name = "TerrainRoot";
+```
 
-   `surfaceY` and `greenHeight` and `centroidX`/`centroidZ` are already
-   computed in the foreach loop — just use them.
+After the terrain position line, add:
 
-3. If the flag looks too big or small, check the FBX scale. You may need
-   to adjust `flag.transform.localScale`. Leave a `// TODO: tune scale`
-   comment if unsure.
+```csharp
+var terrain = terrainGO.GetComponent<Terrain>();
+terrain.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+terrain.materialTemplate = GetTerrainMaterial();
+```
 
-4. Load the flag material and apply it:
-   ```csharp
-   var flagMat = AssetDatabase.LoadAssetAtPath<Material>(
-       "Assets/Art/3D/Props/Flag/MAT_Flag.mat");
-   ```
-   Apply to all renderers on the flag if the FBX doesn't auto-assign it.
+Add a helper method:
 
-5. **Add the hole cup** at the same position as the flag, slightly
-   recessed into the green surface.
+```csharp
+private static Material GetTerrainMaterial()
+{
+    // Try to load existing terrain material first
+    string matPath = "Assets/Courses/Materials (Shared by courses)/MAT_Terrain.mat";
+    var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+    if (existing != null) return existing;
 
-   - Create a flat disc mesh (or use `GameObject.CreatePrimitive(PrimitiveType.Cylinder)`
-     scaled to near-zero height).
-   - Diameter: 0.108m (10.8cm — regulation golf cup is 4.25").
-   - If using a cylinder: scale `(0.108f, 0.001f, 0.108f)`, position
-     at `flagY - 0.005f` (slightly below green surface).
-   - Apply `MAT_Hole.mat` from
-     `Assets/Courses/Materials (Shared by courses)/MAT_Hole.mat`
-   - Name: `Hole_{green.id}`
-   - Parent under `greensRoot`
-   - Remove the collider from the cylinder primitive (it's just visual).
+    // Create a URP terrain lit material with specular killed
+    var mat = new Material(Shader.Find("Universal Render Pipeline/Terrain/Lit"));
+    mat.SetFloat("_Smoothness", 0f);
+    mat.SetFloat("_Metallic", 0f);
+    mat.SetFloat("_SpecularHighlights", 0f);
+    mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+    mat.name = "MAT_Terrain";
+    AssetDatabase.CreateAsset(mat, matPath);
+    return mat;
+}
+```
+
+NOTE: If `Shader.Find("Universal Render Pipeline/Terrain/Lit")` returns
+null, try `"Terrain/Lit"` or check what shader the current terrain uses.
+The key settings are `_Smoothness = 0`, `_SpecularHighlights = 0`, and
+the keyword `_SPECULARHIGHLIGHTS_OFF`. If URP terrain shader doesn't
+support these properties, the alternative is to set
+`terrain.reflectionProbeUsage = Off` and reduce the directional light
+intensity or change its color.
+
+### Fix 2: Fix the normalMapTexture null bug
+
+In the terrain layer creation loop, there's a line that nulls the normal
+map after setting it:
+
+```csharp
+layers[i].normalMapTexture = FindTextureExact(texDir, normalNames[i]);
+// ...
+layers[i].normalMapTexture = null;  // BUG: overwrites the line above
+```
+
+**Remove** the `layers[i].normalMapTexture = null;` line. The normal
+maps should be applied — they'll add surface detail and reduce the
+flat/plastic look.
+
+### Fix 3: Fringe texture orientation
+
+The fringe texture has a vertical grass grain but the terrain rotation
+causes it to appear horizontal. Fix by swapping the tile dimensions
+for the fringe layer.
+
+In the `tileSizes` array, the fringe is index 7 with value `4f`.
+Change it to use non-square tiling that accounts for the 90° rotation:
+
+```csharp
+// After creating the layer, swap U/V tile size for fringe
+if (i == 7) // fringe layer
+{
+    layers[i].tileSize = new Vector2(tileSizes[i], tileSizes[i]);
+    // Rotate tile by swapping U/V offset or using tileOffset
+    // Actually: the terrain itself is rotated 90° CCW, so the texture
+    // grain needs to be rotated too. Try swapping tile dimensions:
+    layers[i].tileSize = new Vector2(4f, 4f);
+}
+```
+
+Actually, since the terrain is rotated 90° CCW and the texture is
+square-tiled, the grain direction depends on the texture itself. The
+simplest fix: **check if the fringe texture needs rotation.** If it has
+a visible directional grain (mow lines running one way), the fix is to
+either:
+
+a) Swap `tileSize` to `new Vector2(tileY, tileX)` — but both are 4f so
+   that won't help.
+b) **Pre-rotate the fringe texture 90° CCW** at import time (same as
+   we do for the illustration texture). Add the fringe albedo to the
+   rotation step.
+
+The cleanest approach: in the layer creation loop, for ALL grass-type
+layers (fairway, green, semi-rough, rough, tee, fringe — indices
+0,1,2,3,5,7), check if the texture has a directional grain and needs
+rotation. For now, just **rotate the fringe texture 90°** by creating
+a rotated copy at import time:
+
+```csharp
+// Before creating layers, rotate fringe texture if needed
+string fringeOrigPath = $"{texDir}/T_Fringe_Albedo";
+var fringeTex = FindTextureExact(texDir, "T_Fringe_Albedo");
+if (fringeTex != null)
+{
+    // Make readable, rotate, save as rotated copy
+    // ... (use RotateTexture90CCW helper)
+}
+```
+
+**Simpler approach:** Just check if rotating the fringe tile 90° fixes
+it by setting a non-square tile size: `new Vector2(4f, 8f)` or similar.
+Experiment with the tile aspect ratio until the grain runs the right way.
+
+**Recommendation:** Try `layers[7].tileSize = new Vector2(8f, 4f)` first.
+If the grain is still wrong, swap to `new Vector2(4f, 8f)`. If neither
+works, pre-rotate the texture file.
+
+### Fix 4: Reduce light intensity
+
+The directional light is at 1.2 intensity which causes the harsh hotspot.
+Reduce to 1.0 and soften the color:
+
+Find:
+```csharp
+light.intensity = 1.2f;
+```
+Replace with:
+```csharp
+light.intensity = 1.0f;
+```
+
+---
 
 ### Verification
 
-- [ ] Re-import Hole 1 — flag appears on the green
-- [ ] Flag is at green centroid, sitting on the green surface (not floating/buried)
-- [ ] Re-import Hole 12 — flag + water + bunkers + tee markers all coexist
+- [ ] Re-import any hole
+- [ ] Terrain no longer has plastic/shiny sheen
+- [ ] No sun hotspot blob when looking toward the light
+- [ ] Fringe texture grain runs vertically (same direction as mow lines)
+- [ ] Normal maps visible on terrain (subtle surface detail)
+- [ ] Bunker, green, water meshes unaffected
 - [ ] No console errors
 
 ### Do NOT
 
-- Modify green mesh generation
-- Modify any other pipeline
-- Add flag to anchors.json or export pipeline (future: green editor will handle pin placement)
+- Modify zone meshes (bunkers, greens, water)
+- Modify the splatmap zone mapping or blur
+- Modify export pipeline
 
 ---
 
@@ -121,4 +212,5 @@ instantiate the flag prop at the green centroid.
 ✅ DONE: 2026-04-08 — Water Shore Slope: terrain depression near water edges
 ✅ DONE: 2026-04-08 — Tee Area raised mesh + collar (reverted — wrong approach)
 ✅ DONE: 2026-04-08 — Tee Markers: FBX props replacing debug cylinders, green mat created
-✅ DONE: 2026-04-08 — Flag at green centroid + hole cup (regulation 0.108m cylinder disc)
+✅ DONE: 2026-04-08 — Flag + hole cup at green centroid
+✅ DONE: 2026-04-08 — Terrain texture & lighting cleanup (plastic sheen fix, normal map bug, fringe orientation, light intensity)
