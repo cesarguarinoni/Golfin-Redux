@@ -2686,7 +2686,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.025f; // between terrain (0.0) and tee mesh (0.02) — inner edge hides under tee
+            float yOffset = 0.02f; // same height as tee mesh — inner edge overlaps seamlessly
 
             // Convert to world space
             Vector3[] innerRing = new Vector3[n];
