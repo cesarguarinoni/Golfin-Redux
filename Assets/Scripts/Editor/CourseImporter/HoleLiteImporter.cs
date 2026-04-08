@@ -2145,7 +2145,7 @@ namespace Golfin.CourseImport
 
         // ─── Flat Zone Mesh Pipeline (Fairway, Tee, Cart Path) ─────────
 
-        private const float FairwayFringeMeters = 1.5f;
+        private const float FairwayFringeMeters = 1.0f;
 
         private static void CreateFlatZoneMeshes(TerrainData terrainData,
             GameObject terrainGO, Transform parentRoot,
@@ -2404,10 +2404,11 @@ namespace Golfin.CourseImport
             int centIdx = getOrAddVert(centXZ);
 
             // For each centroid-fan triangle, split at stripe boundaries
+            // Winding: contour[i] → centroid → contour[i+1] (CW from above = front face in Unity)
             for (int i = 0; i < n; i++)
             {
-                Vector2 a = centXZ;           // centroid
-                Vector2 b = worldXZ[i];       // contour[i]
+                Vector2 a = worldXZ[i];       // contour[i]
+                Vector2 b = centXZ;           // centroid
                 Vector2 c = worldXZ[(i + 1) % n]; // contour[i+1]
 
                 SplitTriangleIntoStripes(a, b, c, stripeDir, stripeWidth,
