@@ -2332,8 +2332,8 @@ namespace Golfin.CourseImport
 
         /// <summary>
         /// Create a fairway mesh with alternating light/dark mow stripes.
-        /// Slices the polygon along stripe boundaries using Sutherland-Hodgman clipping,
-        /// producing parallel band geometry assigned to two submeshes.
+        /// Each triangle in the centroid-fan is assigned to submesh 0 (light) or 1 (dark)
+        /// based on its midpoint projected onto the stripe direction.
         /// </summary>
         private static GameObject CreateStripedFairwayMesh(int id,
             ContourPoint[] contour, Terrain terrain, float terrainBaseY,
@@ -2345,72 +2345,65 @@ namespace Golfin.CourseImport
 
             float yOffset = 0.02f;
 
-            // Build 2D polygon in world XZ (90° CCW rotation)
-            Vector2[] poly2D = new Vector2[n];
-            for (int i = 0; i < n; i++)
-                poly2D[i] = new Vector2(contour[i].z, contour[i].x); // worldX = z, worldZ = x
-
-            // Compute centroid for mesh origin
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++) { cx += poly2D[i].x; cz += poly2D[i].y; }
-            cx /= n; cz /= n;
-
-            // Determine stripe band range
-            float sMin = float.MaxValue, sMax = float.MinValue;
+            // Convert contour to world space (90° CCW rotation)
+            Vector3[] worldPts = new Vector3[n];
             for (int i = 0; i < n; i++)
             {
-                float s = poly2D[i].x * stripeDir.x + poly2D[i].y * stripeDir.y;
-                if (s < sMin) sMin = s;
-                if (s > sMax) sMax = s;
+                float wx = contour[i].z;
+                float wz = contour[i].x;
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                worldPts[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
             }
-            int bandMin = Mathf.FloorToInt(sMin / stripeWidth);
-            int bandMax = Mathf.FloorToInt(sMax / stripeWidth);
 
-            // Slice polygon into bands, collect vertices + triangles
-            var allVerts = new System.Collections.Generic.List<Vector3>();
-            var allUVs = new System.Collections.Generic.List<Vector2>();
-            var lightTris = new System.Collections.Generic.List<int>();
-            var darkTris = new System.Collections.Generic.List<int>();
-
-            // Sample terrain Y at centroid for mesh origin
-            float centroidY = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
-
-            for (int band = bandMin; band <= bandMax; band++)
+            // Compute centroid
+            float cx = 0, cy = 0, cz = 0;
+            for (int i = 0; i < n; i++)
             {
-                float lo = band * stripeWidth;
-                float hi = lo + stripeWidth;
+                cx += worldPts[i].x;
+                cy += worldPts[i].y;
+                cz += worldPts[i].z;
+            }
+            cx /= n; cy /= n; cz /= n;
+            Vector3 centroid = new Vector3(cx, cy, cz);
 
-                // Clip polygon to this stripe band
-                var clipped = ClipPolygonToBand(poly2D, stripeDir, lo, hi);
-                if (clipped == null || clipped.Count < 3) continue;
+            // Vertices: contour points + centroid, relative to centroid
+            var verts = new Vector3[n + 1];
+            var uvs = new Vector2[n + 1];
+            for (int i = 0; i < n; i++)
+            {
+                verts[i] = worldPts[i] - centroid;
+                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
+            }
+            verts[n] = Vector3.zero;
+            uvs[n] = new Vector2(cx / tileSize, cz / tileSize);
 
-                // Add vertices for this band
-                int baseIdx = allVerts.Count;
-                for (int i = 0; i < clipped.Count; i++)
-                {
-                    float wx = clipped[i].x;
-                    float wz = clipped[i].y;
-                    float tH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                    allVerts.Add(new Vector3(wx - cx, terrainBaseY + tH + yOffset - centroidY, wz - cz));
-                    allUVs.Add(new Vector2(wx / tileSize, wz / tileSize));
-                }
+            // Build triangles, sorting each into light or dark submesh
+            var lightTris = new System.Collections.Generic.List<int>(n * 3);
+            var darkTris = new System.Collections.Generic.List<int>(n * 3);
 
-                // Fan-triangulate the clipped band polygon
+            for (int i = 0; i < n; i++)
+            {
+                int i0 = i;
+                int i1 = n; // centroid
+                int i2 = (i + 1) % n;
+
+                // Triangle midpoint in world space
+                float midX = (worldPts[i0 < n ? i0 : 0].x + cx + worldPts[i2].x) / 3f;
+                float midZ = (worldPts[i0 < n ? i0 : 0].z + cz + worldPts[i2].z) / 3f;
+
+                float proj = midX * stripeDir.x + midZ * stripeDir.y;
+                int band = Mathf.FloorToInt(proj / stripeWidth);
+
                 var target = (band % 2 == 0) ? lightTris : darkTris;
-                for (int i = 1; i < clipped.Count - 1; i++)
-                {
-                    target.Add(baseIdx);
-                    target.Add(baseIdx + i);
-                    target.Add(baseIdx + i + 1);
-                }
+                target.Add(i0);
+                target.Add(i1);
+                target.Add(i2);
             }
-
-            if (allVerts.Count < 3) return null;
 
             var mesh = new Mesh();
             mesh.name = $"Fairway_{id}";
-            mesh.vertices = allVerts.ToArray();
-            mesh.uv = allUVs.ToArray();
+            mesh.vertices = verts;
+            mesh.uv = uvs;
             mesh.subMeshCount = 2;
             mesh.SetTriangles(lightTris, 0);
             mesh.SetTriangles(darkTris, 1);
@@ -2418,7 +2411,7 @@ namespace Golfin.CourseImport
             mesh.RecalculateBounds();
 
             var go = new GameObject($"Fairway_{id}");
-            go.transform.position = new Vector3(cx, centroidY, cz);
+            go.transform.position = centroid;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
 
             var renderer = go.AddComponent<MeshRenderer>();
@@ -2430,56 +2423,6 @@ namespace Golfin.CourseImport
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
 
             return go;
-        }
-
-        /// <summary>
-        /// Clip a 2D polygon to the band between lo and hi along stripeDir.
-        /// Uses two passes of Sutherland-Hodgman clipping.
-        /// </summary>
-        private static System.Collections.Generic.List<Vector2> ClipPolygonToBand(
-            Vector2[] polygon, Vector2 dir, float lo, float hi)
-        {
-            // Pass 1: keep side where dot(pt, dir) >= lo
-            var clipped = SutherlandHodgmanClip(polygon, dir, lo, true);
-            if (clipped == null || clipped.Count < 3) return null;
-
-            // Pass 2: keep side where dot(pt, dir) <= hi
-            clipped = SutherlandHodgmanClip(clipped.ToArray(), dir, hi, false);
-            return (clipped != null && clipped.Count >= 3) ? clipped : null;
-        }
-
-        /// <summary>
-        /// Sutherland-Hodgman clip against line dot(pt, dir) = threshold.
-        /// keepAbove=true keeps dot >= threshold, false keeps dot &lt;= threshold.
-        /// </summary>
-        private static System.Collections.Generic.List<Vector2> SutherlandHodgmanClip(
-            Vector2[] polygon, Vector2 dir, float threshold, bool keepAbove)
-        {
-            var output = new System.Collections.Generic.List<Vector2>();
-            int count = polygon.Length;
-
-            for (int i = 0; i < count; i++)
-            {
-                Vector2 curr = polygon[i];
-                Vector2 next = polygon[(i + 1) % count];
-
-                float dCurr = curr.x * dir.x + curr.y * dir.y - threshold;
-                float dNext = next.x * dir.x + next.y * dir.y - threshold;
-
-                bool currIn = keepAbove ? (dCurr >= -0.001f) : (dCurr <= 0.001f);
-                bool nextIn = keepAbove ? (dNext >= -0.001f) : (dNext <= 0.001f);
-
-                if (currIn)
-                    output.Add(curr);
-
-                if (currIn != nextIn)
-                {
-                    float t = dCurr / (dCurr - dNext);
-                    output.Add(Vector2.Lerp(curr, next, t));
-                }
-            }
-
-            return output.Count >= 3 ? output : null;
         }
 
         /// <summary>
