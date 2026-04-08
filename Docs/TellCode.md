@@ -7,461 +7,119 @@
 
 ---
 
-## Current Task — Smooth Zone Boundaries via Vector Contour Rasterization
+## Current Task — Add Cart Path Contours + Increase Tee Smoothing
 
-**Goal:** Eliminate jagged pixel-staircase edges on ALL zone boundaries
-(fairway↔rough, fairway↔semi-rough, tee↔rough, etc.) by tracing zone
-boundaries as vector contours, smoothing them with Chaikin subdivision,
-then rasterizing the smoothed polygons back onto the alphamap.
+**Context:** The vector contour rasterization pipeline is working for
+fairway boundaries — smooth curves confirmed. But two zones are still
+jagged:
 
-**Why the SDF approach failed:** The chamfer SDF produces smooth iso-lines
-mathematically, but thresholding at `dist > 0` converts back to a binary
-mask — so the staircase just moves to a slightly different position. The
-fundamental problem is that the zone grid is ~800px, and the boundary
-shape itself is jagged. We need to smooth the _geometry_ of the boundary,
-not post-process the pixels.
-
-**Approach:** Reuse the proven contour pipeline from bunkers/greens
-(traceBorder → RDP → Chaikin) to extract smooth vector polygons for
-each zone, then rasterize those smooth polygons onto the 1024×1024
-alphamap using scanline fill. Interior pixels stay the same; only the
-edge band gets the smooth curve shape from the vector contour.
+1. **Cart path (zone 8)** — was never added to the contour extraction.
+   The export script doesn't extract it and the importer doesn't consume it.
+2. **Tee boxes (zone 10)** — contours ARE being extracted and rasterized,
+   but the smoothing isn't aggressive enough (small shapes need more
+   Chaikin passes to round off the rectangular corners visibly).
 
 ---
 
-### Part 1: Export pipeline — `Tools/UHoleLite/scripts/export-hole.mjs`
+### Part 1: Export — `Tools/UHoleLite/scripts/export-hole.mjs`
 
-Add fairway contour extraction alongside bunkers and greens.
-
-#### 1a. Extract fairway contours
-
-After the greens extraction block, add fairway extraction:
+In the `exportHole` function, find the section that writes `zone-contours.json`.
+Add cart path extraction and bump tee smoothing:
 
 ```javascript
-// --- Build fairway-contours.json ---
-const fairways = extractZoneContours(zonesData, terrainMeta, 1, 30, 3.0, 3);
-// zone 1 = fairway, min 30px, RDP epsilon 3.0 (looser than bunkers),
-// 3 Chaikin passes for extra smoothness on the larger shapes
-
-const fairwayOutput = {
-  schema_version: '1.0.0',
-  hole_number: holeNumber,
-  fairway_count: fairways.length,
-  fairways: fairways,
-};
-
-fs.writeFileSync(
-  path.join(exportDir, 'fairway-contours.json'),
-  JSON.stringify(fairwayOutput, null, 2),
-  'utf-8'
-);
-
-if (fairways.length > 0) {
-  const contourStats = fairways.map(f =>
-    `#${f.id}: ${f.contour.length}pts (${f.pixel_count}px)`
-  ).join(', ');
-  console.log(`  Fairway contours: ${contourStats}`);
-}
+// Cart path (zone 8)
+const cartPaths = extractZoneContours(zonesData, terrainMeta, 8, 15, 1.5, 3);
+// epsilon 1.5 = preserve the path shape, 3 Chaikin passes = smooth curves
 ```
 
-Also add similar extraction for these zones (same block, after fairway):
+Update the `zoneContoursOutput` to include cart paths:
 
 ```javascript
-// --- Build zone-contours.json (tee, semi-rough, cart path) ---
-const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 2.0, 2);
-const semiRough = extractZoneContours(zonesData, terrainMeta, 3, 30, 3.0, 3);
-
 const zoneContoursOutput = {
   schema_version: '1.0.0',
   hole_number: holeNumber,
   zones: {
     tee: tees,
     semi_rough: semiRough,
+    cart_path: cartPaths,
   },
 };
-
-fs.writeFileSync(
-  path.join(exportDir, 'zone-contours.json'),
-  JSON.stringify(zoneContoursOutput, null, 2),
-  'utf-8'
-);
 ```
 
-#### 1b. Update manifest
+Also change the tee extraction to use 3 Chaikin passes instead of 2:
 
-Add to the manifest object:
 ```javascript
-fairway_contours_file: 'fairway-contours.json',
-zone_contours_file: 'zone-contours.json',
+const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 1.5, 3);
+// was: epsilon 2.0, 2 passes → now: epsilon 1.5, 3 passes
 ```
 
----
+Add a log line for cart paths:
 
-### Part 2: Unity importer — `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
+```javascript
+if (cartPaths.length > 0) {
+  const contourStats = cartPaths.map(c =>
+    `#${c.id}: ${c.contour.length}pts`
+  ).join(', ');
+  console.log(`  Cart path contours: ${contourStats}`);
+}
+```
 
-**The core change:** After resampling the zone grid (step 2), instead of
-using the raw pixel grid directly for the alphamap, we load the smoothed
-vector contours and rasterize them onto the alphamap. This replaces the
-jagged zone grid edges with the smooth Chaikin curves.
+### Part 2: Data classes — `Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs`
 
-#### 2a. Add data classes for contour JSON
-
-Add to `HoleManifestData.cs` (or inline in HoleLiteImporter):
+Add `cart_path` field to `ZoneContoursZones`:
 
 ```csharp
-[System.Serializable]
-public class FairwayContoursFile
-{
-    public int fairway_count;
-    public ZoneContourRegion[] fairways;
-}
-
-[System.Serializable]
-public class ZoneContoursFile
-{
-    public ZoneContoursZones zones;
-}
-
 [System.Serializable]
 public class ZoneContoursZones
 {
     public ZoneContourRegion[] tee;
     public ZoneContourRegion[] semi_rough;
-}
-
-[System.Serializable]
-public class ZoneContourRegion
-{
-    public int id;
-    public int pixel_count;
-    public ContourPoint[] contour;
-    public AnchorLocal center_local;
-}
-
-[System.Serializable]
-public class ContourPoint
-{
-    public float x;
-    public float z;
+    public ZoneContourRegion[] cart_path;
 }
 ```
 
-NOTE: `AnchorLocal` already exists. `ContourPoint` is the same shape
-as the `{x, z}` objects in the contour arrays from export-hole.mjs.
+### Part 3: Importer — `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
 
-#### 2b. Add polygon rasterizer (scanline fill)
-
-Add a static helper method to `HoleLiteImporter`:
+In the `ApplySplatmap` method, find the section that loads `zone-contours.json`
+and processes tee + semi-rough. Add cart path processing right after:
 
 ```csharp
-/// <summary>
-/// Rasterize a smooth polygon onto a byte grid.
-/// For each pixel inside the polygon, sets grid[y * w + x] = value.
-/// Uses ray-casting (point-in-polygon) test.
-/// polyX/polyZ are in the same coordinate space as the grid
-/// (alphamap pixel coordinates, already transformed from local meters).
-/// </summary>
-static void RasterizePolygon(float[] polyX, float[] polyZ, int polyCount,
-    byte[] grid, int w, int h, byte value,
-    int minAX, int minAY, int maxAX, int maxAY)
+// Cart paths (zone 8)
+if (zcData.zones?.cart_path != null)
 {
-    // Only test pixels within the polygon's bounding box
-    for (int ay = minAY; ay <= maxAY; ay++)
-    {
-        for (int ax = minAX; ax <= maxAX; ax++)
-        {
-            // Ray-casting point-in-polygon test
-            float px = ax + 0.5f; // pixel center
-            float py = ay + 0.5f;
-            bool inside = false;
-            for (int i = 0, j = polyCount - 1; i < polyCount; j = i++)
-            {
-                if ((polyZ[i] > py) != (polyZ[j] > py) &&
-                    px < (polyX[j] - polyX[i]) * (py - polyZ[i]) /
-                         (polyZ[j] - polyZ[i]) + polyX[i])
-                {
-                    inside = !inside;
-                }
-            }
-            if (inside)
-                grid[ay * w + ax] = value;
-        }
-    }
+    // Clear original cart path pixels first
+    for (int i = 0; i < resampledZones.Length; i++)
+        if (resampledZones[i] == 8) resampledZones[i] = 4; // revert to rough
+
+    foreach (var region in zcData.zones.cart_path)
+        RasterizeContour(region, resampledZones, alphaRes, terrainData, 8);
+
+    Debug.Log($"[HoleLiteImporter] Rasterized {zcData.zones.cart_path.Length} " +
+              $"smooth cart path contour(s)");
 }
 ```
-
-#### 2c. Modify ApplySplatmap to use vector contours
-
-After step 2 (resample zone grid), before step 3 (green fringe):
-
-```csharp
-// --- 2b. Override zone grid edges with smoothed vector contours ---
-// Load fairway contours and rasterize smooth boundary onto resampledZones
-string fairwayContoursPath = Path.Combine(exportPath, "fairway-contours.json");
-if (File.Exists(fairwayContoursPath))
-{
-    string fcJson = File.ReadAllText(fairwayContoursPath);
-    var fcData = JsonUtility.FromJson<FairwayContoursFile>(fcJson);
-
-    if (fcData.fairways != null)
-    {
-        // First: clear ALL fairway pixels from the resampled grid.
-        // We'll re-fill only what the smooth contour covers.
-        // This prevents jagged original pixels from leaking outside
-        // the smooth boundary.
-        for (int i = 0; i < resampledZones.Length; i++)
-        {
-            if (resampledZones[i] == 1) // zone 1 = fairway
-                resampledZones[i] = 4;  // revert to rough
-        }
-
-        foreach (var fw in fcData.fairways)
-        {
-            if (fw.contour == null || fw.contour.Length < 3) continue;
-            int n = fw.contour.Length;
-
-            // Convert contour from local meters to alphamap pixel coords
-            // Local meters: origin at terrain center
-            // Alphamap: (0,0) = corner, (alphaRes-1, alphaRes-1) = opposite corner
-            // Terrain rotation: worldX = local.z, worldZ = local.x
-            // So: ax = (worldX + terrainX/2) / terrainX * (alphaRes-1)
-            //     ay = (worldZ + terrainZ/2) / terrainZ * (alphaRes-1)
-            // Where worldX = contour.z, worldZ = contour.x (90° CCW)
-
-            float[] polyAX = new float[n];
-            float[] polyAY = new float[n];
-            float terrainX = terrainData.size.x;
-            float terrainZ = terrainData.size.z;
-
-            float bminAX = float.MaxValue, bmaxAX = float.MinValue;
-            float bminAY = float.MaxValue, bmaxAY = float.MinValue;
-
-            for (int i = 0; i < n; i++)
-            {
-                float worldX = fw.contour[i].z; // 90° CCW rotation
-                float worldZ = fw.contour[i].x;
-                float ax = (worldX + terrainX / 2f) / terrainX * (alphaRes - 1);
-                float ay = (worldZ + terrainZ / 2f) / terrainZ * (alphaRes - 1);
-                polyAX[i] = ax;
-                polyAY[i] = ay;
-                if (ax < bminAX) bminAX = ax;
-                if (ax > bmaxAX) bmaxAX = ax;
-                if (ay < bminAY) bminAY = ay;
-                if (ay > bmaxAY) bmaxAY = ay;
-            }
-
-            int minAXi = Mathf.Max(0, Mathf.FloorToInt(bminAX));
-            int maxAXi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAX));
-            int minAYi = Mathf.Max(0, Mathf.FloorToInt(bminAY));
-            int maxAYi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAY));
-
-            RasterizePolygon(polyAX, polyAY, n,
-                resampledZones, alphaRes, alphaRes, 1,
-                minAXi, minAYi, maxAXi, maxAYi);
-        }
-
-        Debug.Log($"[HoleLiteImporter] Rasterized {fcData.fairways.Length} " +
-                  $"smooth fairway contour(s) onto alphamap");
-    }
-}
-
-// Load tee + semi-rough contours and rasterize
-string zoneContoursPath = Path.Combine(exportPath, "zone-contours.json");
-if (File.Exists(zoneContoursPath))
-{
-    string zcJson = File.ReadAllText(zoneContoursPath);
-    var zcData = JsonUtility.FromJson<ZoneContoursFile>(zcJson);
-
-    // Tee boxes (zone 10)
-    if (zcData.zones?.tee != null)
-    {
-        // Clear original tee pixels first
-        for (int i = 0; i < resampledZones.Length; i++)
-            if (resampledZones[i] == 10) resampledZones[i] = 4;
-
-        foreach (var region in zcData.zones.tee)
-            RasterizeContour(region, resampledZones, alphaRes, terrainData, 10);
-    }
-
-    // Semi-rough (zone 3) — only clear+refill if contours exist
-    if (zcData.zones?.semi_rough != null && zcData.zones.semi_rough.Length > 0)
-    {
-        // NOTE: Don't clear semi-rough pixels globally because the
-        // fairway fringe ring also writes to semi-rough layer.
-        // Instead, just overlay the smooth contours on top.
-        foreach (var region in zcData.zones.semi_rough)
-            RasterizeContour(region, resampledZones, alphaRes, terrainData, 3);
-    }
-}
-```
-
-Add the helper that wraps the coordinate transform + rasterize:
-
-```csharp
-static void RasterizeContour(ZoneContourRegion region, byte[] grid,
-    int alphaRes, TerrainData terrainData, byte zoneValue)
-{
-    if (region.contour == null || region.contour.Length < 3) return;
-    int n = region.contour.Length;
-
-    float terrainX = terrainData.size.x;
-    float terrainZ = terrainData.size.z;
-
-    float[] polyAX = new float[n];
-    float[] polyAY = new float[n];
-    float bminAX = float.MaxValue, bmaxAX = float.MinValue;
-    float bminAY = float.MaxValue, bmaxAY = float.MinValue;
-
-    for (int i = 0; i < n; i++)
-    {
-        float worldX = region.contour[i].z;
-        float worldZ = region.contour[i].x;
-        float ax = (worldX + terrainX / 2f) / terrainX * (alphaRes - 1);
-        float ay = (worldZ + terrainZ / 2f) / terrainZ * (alphaRes - 1);
-        polyAX[i] = ax;
-        polyAY[i] = ay;
-        if (ax < bminAX) bminAX = ax;
-        if (ax > bmaxAX) bmaxAX = ax;
-        if (ay < bminAY) bminAY = ay;
-        if (ay > bmaxAY) bmaxAY = ay;
-    }
-
-    int minAXi = Mathf.Max(0, Mathf.FloorToInt(bminAX));
-    int maxAXi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAX));
-    int minAYi = Mathf.Max(0, Mathf.FloorToInt(bminAY));
-    int maxAYi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAY));
-
-    RasterizePolygon(polyAX, polyAY, n,
-        grid, alphaRes, alphaRes, zoneValue,
-        minAXi, minAYi, maxAXi, maxAYi);
-}
-```
-
-#### 2d. Remove SDF-based fairway fringe (no longer needed)
-
-The SDF code (step 3b) was an attempt to smooth edges — now that the
-vector contours produce smooth boundaries, the SDF is redundant.
-
-**Remove** the entire step 3b block:
-- The `fairwayMask` / `ComputeSDF` / `fairwaySDF` / `fringePixels` /
-  `fairwayFringeMask` / `sdfFairwayMask` section.
-
-**Replace** with a simple dilation-based fringe (same approach as green fringe):
-
-```csharp
-// --- 3b. Fairway fringe ring (dilation-based, smooth edges from vector contours) ---
-bool[] fairwayMask = new bool[alphaRes * alphaRes];
-for (int i = 0; i < resampledZones.Length; i++)
-    fairwayMask[i] = (resampledZones[i] == 1);
-
-float metersPerPixel = Mathf.Max(terrainData.size.x, terrainData.size.z) / alphaRes;
-int fairwayFringePx = Mathf.Max(1, Mathf.RoundToInt(FairwayFringeMeters / metersPerPixel));
-
-bool[] dilatedFairway = DilateMask(fairwayMask, alphaRes, alphaRes, fairwayFringePx);
-
-bool[] fairwayFringeMask = new bool[alphaRes * alphaRes];
-for (int i = 0; i < alphaRes * alphaRes; i++)
-{
-    if (dilatedFairway[i] && !fairwayMask[i])
-    {
-        int zone = resampledZones[i];
-        if (zone == 3 || zone == 4 || zone == 5)
-            fairwayFringeMask[i] = true;
-    }
-}
-```
-
-#### 2e. Update the alphamap loop (step 4)
-
-Remove the `sdfFairwayMask` branch. The loop now uses the raw
-`resampledZones` (which has been overwritten with smooth contour data)
-for all zone assignments:
-
-```csharp
-for (int ay = 0; ay < alphaRes; ay++)
-{
-    for (int ax = 0; ax < alphaRes; ax++)
-    {
-        int idx = ay * alphaRes + ax;
-        int layer;
-
-        if (fringeMask[idx])
-            layer = 2; // green fringe → semi-rough
-        else if (fairwayFringeMask[idx])
-            layer = 2; // fairway fringe → semi-rough
-        else
-        {
-            int zone = resampledZones[idx];
-            layer = ZoneToLayer(zone);
-
-            // Mow stripes on fairway
-            if (zone == 1)
-            {
-                float worldX = ((float)ax / (alphaRes - 1)) * terrainSizeX - terrainSizeX / 2f;
-                float worldZ = ((float)ay / (alphaRes - 1)) * terrainSizeZ - terrainSizeZ / 2f;
-                float proj = worldX * stripeDir.x + worldZ * stripeDir.y;
-                int band = Mathf.FloorToInt(proj / MowStripeWidth);
-                if (band % 2 != 0)
-                    layer = 7; // dark fairway stripe
-            }
-        }
-
-        alphamap[ay, ax, layer] = 1.0f;
-    }
-}
-```
-
-#### 2f. Remove ComputeSDF method
-
-The `ComputeSDF` static method is no longer used. Remove it entirely
-to keep the file clean. The `DilateMask` method stays (used by fringe).
 
 ---
 
-### Verification
+### Steps to verify
 
-- [ ] Run `node scripts/export-hole.mjs lomond-country-club 1`
-  - Should output `fairway-contours.json` and `zone-contours.json`
-  - Console shows contour point counts
-- [ ] Re-import Hole 1 in Unity (GOLFIN > Import Hole (Lite) > Hole 01)
-- [ ] **Fairway boundary has smooth, organic curves** — no pixel staircase
-- [ ] Fairway shape is close to the original painted zone (no dramatic
-  size change from the smoothing)
-- [ ] Semi-rough fringe ring visible around fairway
-- [ ] Mow stripes still alternate inside the fairway
-- [ ] Green fringe ring still works (unchanged)
-- [ ] Tee boxes have smooth edges
-- [ ] Bunkers, water, greens unaffected (they use mesh overlays)
-- [ ] No console errors
-- [ ] Cart paths: if they look OK with the raw zone grid, leave them.
-  If jagged, we can add cart_path contours later.
+1. Re-run export: `node scripts/export-hole.mjs lomond-country-club 1`
+   - Console should show cart path contour stats
+   - `zone-contours.json` should now have a `cart_path` array
+2. Re-import in Unity: GOLFIN > Import Hole (Lite) > Hole 01
+3. Check:
+   - [ ] Cart path edges are smooth curves (no pixel staircase)
+   - [ ] Tee box edges are noticeably smoother than before
+   - [ ] Fairway boundaries still smooth (unchanged)
+   - [ ] No console errors
+   - [ ] Cart path texture (asphalt) still appears correctly
 
 ### Do NOT
 
-- Apply any Gaussian blur
-- Use alpha blending / fractional splatmap weights
-- Modify the bunker, green, or water mesh pipelines
-- Touch terrain layers, textures, or mask maps
+- Touch fairway contour extraction (already working)
+- Modify bunker, green, or water pipelines
 - Change zone indices or ZoneToLayer mapping
-
----
-
-### Design rationale
-
-The key insight: bunkers and greens already look great because they go
-through the contour pipeline (traceBorder → RDP → Chaikin → mesh).
-The fairway and other splatmap-painted zones skip this step and go
-straight from pixel grid to alphamap — hence the jaggedness.
-
-Option D applies the same proven contour pipeline to splatmap zones:
-1. Export: trace zone boundary → simplify (RDP) → smooth (Chaikin)
-2. Import: clear original jagged pixels → rasterize smooth polygon
-3. Result: the alphamap now contains smooth curves from vector data
-   instead of pixel staircases from the zone grid
-
-The `resampledZones` byte array gets overwritten in-place with the
-smooth polygon fill, so all downstream code (fringe rings, mow stripes,
-ZoneToLayer) works unchanged — they just get smoother input.
+- Apply any blur
 
 ---
 
@@ -477,4 +135,5 @@ ZoneToLayer) works unchanged — they just get smoother input.
 ✅ DONE: 2026-04-08 — Fairway mow stripes: alternating light/dark bands along tee→green axis
 ✅ DONE: 2026-04-08 — Re-enable normal maps (0.4 intensity) + aniso filtering (level 16) on all terrain textures
 ✅ DONE: 2026-04-08 — SDF-based smooth fairway border (chamfer distance, 1.5m fringe, organic curves)
-✅ DONE: 2026-04-08 — Vector contour rasterization for smooth zone boundaries (fairway, tee, semi-rough)
+✅ DONE: 2026-04-08 — Vector contour rasterization for fairway + tee + semi-rough (smooth zone boundaries)
+✅ DONE: 2026-04-08 — Cart path contours + increased tee smoothing (ε1.5, 3 Chaikin passes)

@@ -665,6 +665,19 @@ namespace Golfin.CourseImport
                     foreach (var region in zcData.zones.semi_rough)
                         RasterizeContour(region, resampledZones, alphaRes, terrainData, 3);
                 }
+
+                // Cart paths (zone 8)
+                if (zcData.zones != null && zcData.zones.cart_path != null)
+                {
+                    for (int i = 0; i < resampledZones.Length; i++)
+                        if (resampledZones[i] == 8) resampledZones[i] = 4; // revert to rough
+
+                    foreach (var region in zcData.zones.cart_path)
+                        RasterizeContour(region, resampledZones, alphaRes, terrainData, 8);
+
+                    Debug.Log($"[HoleLiteImporter] Rasterized {zcData.zones.cart_path.Length} " +
+                              $"smooth cart path contour(s)");
+                }
             }
 
             // --- 3b. Fairway fringe ring (dilation-based, smooth edges from vector contours) ---

@@ -514,8 +514,11 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build zone-contours.json (tee, semi-rough) ---
-  const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 2.0, 2);
+  const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 1.5, 3);
+  // was: epsilon 2.0, 2 passes → now: epsilon 1.5, 3 passes
   const semiRough = extractZoneContours(zonesData, terrainMeta, 3, 30, 3.0, 3);
+  const cartPaths = extractZoneContours(zonesData, terrainMeta, 8, 15, 1.5, 3);
+  // epsilon 1.5 = preserve the path shape, 3 Chaikin passes = smooth curves
 
   const zoneContoursOutput = {
     schema_version: '1.0.0',
@@ -523,6 +526,7 @@ function exportHole(courseId, holeNumber, courseJson) {
     zones: {
       tee: tees,
       semi_rough: semiRough,
+      cart_path: cartPaths,
     },
   };
 
@@ -532,8 +536,15 @@ function exportHole(courseId, holeNumber, courseJson) {
     'utf-8'
   );
 
-  if (tees.length > 0 || semiRough.length > 0) {
-    console.log(`  Zone contours: ${tees.length} tee(s), ${semiRough.length} semi-rough`);
+  if (tees.length > 0 || semiRough.length > 0 || cartPaths.length > 0) {
+    console.log(`  Zone contours: ${tees.length} tee(s), ${semiRough.length} semi-rough, ${cartPaths.length} cart path(s)`);
+  }
+
+  if (cartPaths.length > 0) {
+    const contourStats = cartPaths.map(c =>
+      `#${c.id}: ${c.contour.length}pts`
+    ).join(', ');
+    console.log(`  Cart path contours: ${contourStats}`);
   }
 
   // --- Build water.json ---

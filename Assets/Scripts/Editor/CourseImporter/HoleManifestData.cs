@@ -243,6 +243,7 @@ namespace Golfin.CourseImport
     {
         public ZoneContourRegion[] tee;
         public ZoneContourRegion[] semi_rough;
+        public ZoneContourRegion[] cart_path;
     }
 
     [System.Serializable]
