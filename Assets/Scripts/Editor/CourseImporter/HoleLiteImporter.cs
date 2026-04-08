@@ -1364,8 +1364,7 @@ namespace Golfin.CourseImport
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = sandMat;
 
-            var mc = go.AddComponent<MeshCollider>();
-            mc.sharedMesh = mesh;
+            AddCleanMeshCollider(go, mesh);
 
             // Position: mesh origin at centroid, at terrain surface height
             go.transform.position = new Vector3(centroidX, surfaceY, centroidZ);
@@ -1711,7 +1710,7 @@ namespace Golfin.CourseImport
                 var collarGO = new GameObject($"{zoneName}_{id}_Collar");
                 collarGO.AddComponent<MeshFilter>().sharedMesh = collarMesh;
                 collarGO.AddComponent<MeshRenderer>().sharedMaterial = collarMat;
-                collarGO.AddComponent<MeshCollider>().sharedMesh = collarMesh;
+                AddCleanMeshCollider(collarGO, collarMesh);
                 collarGO.transform.SetParent(parent.transform, false);
 
                 // SurfaceMarker for collar = SemiRough
@@ -1788,7 +1787,7 @@ namespace Golfin.CourseImport
             var surfaceGO = new GameObject($"{zoneName}_{id}_Surface");
             surfaceGO.AddComponent<MeshFilter>().sharedMesh = surfaceMesh;
             surfaceGO.AddComponent<MeshRenderer>().sharedMaterial = surfaceMat;
-            surfaceGO.AddComponent<MeshCollider>().sharedMesh = surfaceMesh;
+            AddCleanMeshCollider(surfaceGO, surfaceMesh);
             surfaceGO.transform.SetParent(parent.transform, false);
 
             Debug.Log($"[HoleLiteImporter] {zoneName} {id}: {n} contour verts, " +
@@ -1878,11 +1877,7 @@ namespace Golfin.CourseImport
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 go.AddComponent<MeshRenderer>().sharedMaterial = waterMat;
 
-                var mc = go.AddComponent<MeshCollider>();
-                mc.cookingOptions = MeshColliderCookingOptions.CookForFasterSimulation
-                                  | MeshColliderCookingOptions.EnableMeshCleaning
-                                  | MeshColliderCookingOptions.WeldColocatedVertices;
-                mc.sharedMesh = mesh;
+                AddCleanMeshCollider(go, mesh);
 
                 var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Water;
@@ -2259,7 +2254,7 @@ namespace Golfin.CourseImport
             go.transform.position = centroid;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+            AddCleanMeshCollider(go, mesh);
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = surfaceType;
@@ -2336,12 +2331,22 @@ namespace Golfin.CourseImport
             go.transform.position = centroid;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+            AddCleanMeshCollider(go, mesh);
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
 
             return go;
+        }
+
+        private static MeshCollider AddCleanMeshCollider(GameObject go, Mesh mesh)
+        {
+            var mc = go.AddComponent<MeshCollider>();
+            mc.cookingOptions = MeshColliderCookingOptions.CookForFasterSimulation
+                              | MeshColliderCookingOptions.EnableMeshCleaning
+                              | MeshColliderCookingOptions.WeldColocatedVertices;
+            mc.sharedMesh = mesh;
+            return mc;
         }
 
         /// <summary>
@@ -2575,7 +2580,7 @@ namespace Golfin.CourseImport
             fringeGO.transform.position = centroid;
             fringeGO.AddComponent<MeshFilter>().sharedMesh = fringeMesh;
             fringeGO.AddComponent<MeshRenderer>().sharedMaterial = fringeMat;
-            fringeGO.AddComponent<MeshCollider>().sharedMesh = fringeMesh;
+            AddCleanMeshCollider(fringeGO, fringeMesh);
 
             var fringeMarker = fringeGO.AddComponent<Golfin.Course.SurfaceMarker>();
             fringeMarker.surfaceType = Golfin.Course.SurfaceType.Fringe;
@@ -2688,7 +2693,7 @@ namespace Golfin.CourseImport
             go.transform.position = centroid;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+            AddCleanMeshCollider(go, mesh);
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = surfaceType;
