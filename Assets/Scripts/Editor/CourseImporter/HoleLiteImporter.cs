@@ -2490,10 +2490,10 @@ namespace Golfin.CourseImport
                     // For CW polygon: convex vertex has negative cross (right/CW turn)
                     bool isConvex = isCCW ? (cross > 0) : (cross < 0);
 
-                    // Skip degenerate near-collinear triangles (area < 0.01 m²)
-                    // These cause z-fighting flicker at thin polygon tips
+                    // Skip degenerate near-collinear triangles (area < 0.1 m²)
+                    // These cause z-fighting flicker / black faces at thin polygon tips
                     float triArea = Mathf.Abs(cross) * 0.5f;
-                    if (triArea < 0.01f)
+                    if (triArea < 0.1f)
                     {
                         // Remove the vertex without emitting a triangle
                         indices.RemoveAt(i);
