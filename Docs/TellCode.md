@@ -7,95 +7,95 @@
 
 ---
 
-## Current Task — Kill Terrain Plastic Sheen (Take 3)
+## Current Task — Kill Terrain Plastic Sheen (Take 4 — Mask Map)
 
-**Root cause found:** The URP terrain shader reads smoothness from the
-**alpha channel of the albedo texture**. Our terrain textures are JPGs
-which have no alpha channel. When Unity imports a JPG, it fills alpha
-with **white (1.0) = full smoothness** → plastic sheen.
+**Root cause confirmed from Unity docs:** The URP TerrainLit shader reads
+smoothness from the **albedo texture's alpha channel**. JPG textures have
+no alpha, so Unity fills it with white = full smoothness = plastic.
 
-This is why the zone meshes look fine — they use `URP/Lit` which respects
-the material's `_Smoothness` property. The terrain shader ignores the
-layer smoothness and reads from the texture alpha instead.
+Setting `layer.smoothness = 0` and `alphaSource = None` did NOT work
+because the URP terrain shader ignores the layer smoothness property and
+reads directly from the texture alpha.
+
+**The proper fix:** Assign a **Mask Map** texture to each terrain layer.
+Per Unity docs, when a mask map is present, the shader reads smoothness
+from the **mask map's alpha** instead of the albedo alpha. The mask map
+channels are: `R=Metallic, G=AO, B=Detail, A=Smoothness`.
+
+A mask map with `A=0` → smoothness = 0 → no plastic.
 
 **File:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
 
 ---
 
-### The Fix
+### Step 1: Generate a "matte" mask map texture at import time
 
-In `ApplySplatmap()`, in the terrain layer creation loop, after
-`FindTextureExact()` loads each albedo texture, configure the texture
-importer to disable alpha:
+In `ApplySplatmap()`, before the layer creation loop, create a small
+(4×4) mask map texture with the right channel values:
 
 ```csharp
-for (int i = 0; i < layerCount; i++)
+// Create a shared "matte" mask map: R=0 (no metallic), G=255 (full AO),
+// B=0 (no detail mask), A=0 (zero smoothness)
+string matteMaskPath = $"{dataDir}/MatteMaskMap.png";
+string fullMattePath = Path.Combine(projectRoot, matteMaskPath);
+if (!File.Exists(fullMattePath))
 {
-    layers[i] = new TerrainLayer();
-    var albedoTex = FindTextureExact(texDir, albedoNames[i]);
-
-    // Fix terrain plastic sheen: URP terrain shader reads smoothness
-    // from albedo alpha. JPGs have no alpha → Unity fills white (1.0)
-    // = full smoothness. Disable alpha source to force 0 smoothness.
-    if (albedoTex != null)
-    {
-        string texPath = AssetDatabase.GetAssetPath(albedoTex);
-        var texImporter = AssetImporter.GetAtPath(texPath) as TextureImporter;
-        if (texImporter != null && texImporter.alphaSource != TextureImporterAlphaSource.None)
-        {
-            texImporter.alphaSource = TextureImporterAlphaSource.None;
-            texImporter.SaveAndReimport();
-        }
-    }
-
-    layers[i].diffuseTexture = albedoTex;
-    // ... rest of layer setup
+    var matteTex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+    Color matteColor = new Color(0f, 1f, 0f, 0f); // R=0,G=1,B=0,A=0
+    for (int y = 0; y < 4; y++)
+        for (int x = 0; x < 4; x++)
+            matteTex.SetPixel(x, y, matteColor);
+    matteTex.Apply();
+    File.WriteAllBytes(fullMattePath, matteTex.EncodeToPNG());
+    Object.DestroyImmediate(matteTex);
 }
+AssetDatabase.ImportAsset(matteMaskPath);
+
+// Configure as linear (non-sRGB) — mask maps must NOT be color-corrected
+var maskImporter = AssetImporter.GetAtPath(matteMaskPath) as TextureImporter;
+if (maskImporter != null)
+{
+    maskImporter.sRGBTexture = false;        // CRITICAL: must be linear
+    maskImporter.textureType = TextureImporterType.Default;
+    maskImporter.textureCompression = TextureImporterCompression.Uncompressed;
+    maskImporter.npotScale = TextureImporterNPOTScale.None;
+    maskImporter.SaveAndReimport();
+}
+
+var matteMask = AssetDatabase.LoadAssetAtPath<Texture2D>(matteMaskPath);
 ```
 
-This sets `Alpha Source = None` on each terrain albedo texture, so Unity
-won't generate a white alpha channel. The terrain shader will then read
-alpha = 0 = no smoothness = no plastic sheen.
+### Step 2: Assign mask map to each terrain layer
 
-### Also: null out normal maps again
-
-The normals were making the specular worse. Set them to null until we
-have proper lighting:
+In the layer creation loop, after setting diffuseTexture, add:
 
 ```csharp
-layers[i].normalMapTexture = null;
+layers[i].maskMapTexture = matteMask;
 ```
 
-### Also: remove GetTerrainMaterial()
+### Step 3: Clean up previous failed fixes
 
-The custom terrain material approach didn't help. Remove the
-`GetTerrainMaterial()` method and the lines that set
-`terrain.materialTemplate`. Let the terrain use Unity's default
-Terrain/Lit shader — with the alpha fix, it won't be shiny.
-
-Remove these lines from `ImportLiteHole()`:
-```csharp
-terrainComp.materialTemplate = GetTerrainMaterial();
-```
-
-And delete the `GetTerrainMaterial()` method.
-
-Keep `terrain.reflectionProbeUsage = Off` — doesn't hurt.
+- **Remove** `GetTerrainMaterial()` method entirely
+- **Remove** `terrainComp.materialTemplate = GetTerrainMaterial();` line
+- **Remove** any `alphaSource` modifications on terrain textures
+- **Keep** `terrain.reflectionProbeUsage = Off` (doesn't hurt)
+- **Keep** normal maps nulled for now (`layers[i].normalMapTexture = null`)
 
 ---
 
 ### Verification
 
 - [ ] Re-import any hole
-- [ ] Terrain no longer has plastic/shiny sheen
+- [ ] No plastic sheen on terrain
 - [ ] No sun hotspot blob
-- [ ] Terrain textures still display correctly (colors unchanged)
-- [ ] Zone meshes (bunkers, greens, water) unaffected
+- [ ] Terrain colors unchanged (mask map doesn't affect albedo color)
+- [ ] Zone meshes unaffected
 - [ ] No console errors
+- [ ] Check `MatteMaskMap.png` in data folder — should be 4×4, RGBA
 
 ### Do NOT
 
-- Modify zone meshes or their materials
+- Modify zone meshes or materials
 - Modify splatmap zone mapping
 - Modify export pipeline
 
@@ -106,5 +106,5 @@ Keep `terrain.reflectionProbeUsage = Off` — doesn't hurt.
 ✅ DONE: 2026-04-08 — Water Shore Slope: terrain depression near water edges
 ✅ DONE: 2026-04-08 — Tee Markers: FBX props replacing debug cylinders, green mat created
 ✅ DONE: 2026-04-08 — Flag + hole cup at green centroid
-✅ DONE: 2026-04-08 — Terrain lighting cleanup attempts 1-2 (material keywords, normals — didn't fix root cause)
-✅ DONE: 2026-04-08 — Terrain plastic sheen Take 3: albedo alpha fix (root cause — JPG alpha=1.0 → full smoothness)
+✅ DONE: 2026-04-08 — Terrain lighting cleanup attempts 1-3 (keywords, normals, alpha source — none fixed root cause)
+✅ DONE: 2026-04-08 — Terrain plastic sheen Take 4: matte mask map (A=0 smoothness) assigned to all terrain layers

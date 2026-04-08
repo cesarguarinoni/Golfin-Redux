@@ -625,26 +625,42 @@ namespace Golfin.CourseImport
             var layers = new TerrainLayer[layerCount];
             EnsureDirectory(Path.Combine(projectRoot, dataDir));
 
+            // Create a shared "matte" mask map: R=0 (no metallic), G=255 (full AO),
+            // B=0 (no detail mask), A=0 (zero smoothness)
+            // URP TerrainLit reads smoothness from mask map alpha when present,
+            // bypassing the albedo alpha (which JPGs fill with white = plastic sheen).
+            string matteMaskPath = $"{dataDir}/MatteMaskMap.png";
+            string fullMattePath = Path.Combine(projectRoot, matteMaskPath);
+            if (!File.Exists(fullMattePath))
+            {
+                var matteTex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+                Color matteColor = new Color(0f, 1f, 0f, 0f);
+                for (int y = 0; y < 4; y++)
+                    for (int x = 0; x < 4; x++)
+                        matteTex.SetPixel(x, y, matteColor);
+                matteTex.Apply();
+                File.WriteAllBytes(fullMattePath, matteTex.EncodeToPNG());
+                Object.DestroyImmediate(matteTex);
+            }
+            AssetDatabase.ImportAsset(matteMaskPath);
+
+            var maskImporter = AssetImporter.GetAtPath(matteMaskPath) as TextureImporter;
+            if (maskImporter != null)
+            {
+                maskImporter.sRGBTexture = false;
+                maskImporter.textureType = TextureImporterType.Default;
+                maskImporter.textureCompression = TextureImporterCompression.Uncompressed;
+                maskImporter.npotScale = TextureImporterNPOTScale.None;
+                maskImporter.SaveAndReimport();
+            }
+
+            var matteMask = AssetDatabase.LoadAssetAtPath<Texture2D>(matteMaskPath);
+
             for (int i = 0; i < layerCount; i++)
             {
                 layers[i] = new TerrainLayer();
-                var albedoTex = FindTextureExact(texDir, albedoNames[i]);
-
-                // Fix terrain plastic sheen: URP terrain shader reads smoothness
-                // from albedo alpha. JPGs have no alpha → Unity fills white (1.0)
-                // = full smoothness. Disable alpha source to force 0 smoothness.
-                if (albedoTex != null)
-                {
-                    string texPath = AssetDatabase.GetAssetPath(albedoTex);
-                    var texImporter = AssetImporter.GetAtPath(texPath) as TextureImporter;
-                    if (texImporter != null && texImporter.alphaSource != TextureImporterAlphaSource.None)
-                    {
-                        texImporter.alphaSource = TextureImporterAlphaSource.None;
-                        texImporter.SaveAndReimport();
-                    }
-                }
-
-                layers[i].diffuseTexture = albedoTex;
+                layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
+                layers[i].maskMapTexture = matteMask;
                 layers[i].normalMapTexture = null;
                 // Fringe (index 7): non-square tile to fix grain orientation on 90° rotated terrain
                 layers[i].tileSize = (i == 7) ? new Vector2(8f, 4f) : new Vector2(tileSizes[i], tileSizes[i]);
