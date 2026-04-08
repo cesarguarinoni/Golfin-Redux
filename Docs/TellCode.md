@@ -7,158 +7,123 @@
 
 ---
 
-## Current Task — Tee Border Ring with Gradient Texture
+## Current Task — Fix Fairway Width Shrinkage
 
-**Goal:** Add a border outline ring around each tee area, using the
-`T_TeeDark_Albedo` texture. This texture has a lighter side and a darker
-side — the lighter side must face inward (toward tee center) and the
-darker side must face outward.
+**Problem:** The middle fairway corridor is noticeably thinner than the
+zone illustration. Two factors cause this:
 
-This is similar to the fairway fringe ring but uses a **directional UV
-mapping** across the ring width instead of world-space tiled UVs.
+1. **Chaikin smoothing** in the export pipeline shrinks the contour
+   (corner-cutting pulls vertices inward on convex sections)
+2. **Fringe ring** uses negative offset (-0.5m inward), eating into
+   the fairway from inside
 
----
+**Fix:** Two changes:
 
-### Implementation
+### Change 1: Compensate for Chaikin shrinkage in the export pipeline
 
-Use the existing `CreateFringeRing` and `OffsetContourOutward` as
-reference, but create a dedicated method or adjust the fringe ring
-approach for the tee border. The critical difference is the UV mapping.
+In `Tools/UHoleLite/scripts/export-hole.mjs`, in `extractZoneContours`,
+after the Chaikin smoothing step and before `ensureCCW`, add a dilation
+step that pushes the smoothed contour outward to compensate for the
+shrinkage. This only needs to apply to large polygons (fairways) — small
+shapes like bunkers and greens aren't affected enough to matter.
 
-#### UV mapping for gradient texture
+Add this function before `extractZoneContours`:
 
-The fringe ring has two vertex rings:
-- **Inner ring** (original tee contour edge) — UV.v = 0 (lighter side)
-- **Outer ring** (offset outward) — UV.v = 1 (darker side)
+```javascript
+/**
+ * Offset a closed polygon outward by a distance.
+ * At each vertex, compute the average outward normal of its two edges
+ * and push along it with miter correction.
+ * Assumes CCW winding (outward = left of edge direction).
+ */
+function offsetPolygon(polygon, distance) {
+  const n = polygon.length;
+  if (n < 3) return polygon;
 
-The UV.u coordinate should be based on the vertex's position along the
-contour perimeter (normalized arc length), so the texture wraps around
-the ring without stretching.
+  const result = [];
+  for (let i = 0; i < n; i++) {
+    const prev = (i - 1 + n) % n;
+    const next = (i + 1) % n;
 
-```csharp
-// Compute cumulative arc length along the inner ring for UV.u
-float[] arcLengths = new float[n];
-arcLengths[0] = 0f;
-for (int i = 1; i < n; i++)
-{
-    float dx = innerRing[i].x - innerRing[i - 1].x;
-    float dz = innerRing[i].z - innerRing[i - 1].z;
-    arcLengths[i] = arcLengths[i - 1] + Mathf.Sqrt(dx * dx + dz * dz);
-}
-// Close the loop
-float totalArc = arcLengths[n - 1] +
-    Mathf.Sqrt(Mathf.Pow(innerRing[0].x - innerRing[n - 1].x, 2) +
-               Mathf.Pow(innerRing[0].z - innerRing[n - 1].z, 2));
+    // Edge vectors
+    const e1x = polygon[i].x - polygon[prev].x;
+    const e1z = polygon[i].z - polygon[prev].z;
+    const e1len = Math.sqrt(e1x * e1x + e1z * e1z) || 1;
+    const e2x = polygon[next].x - polygon[i].x;
+    const e2z = polygon[next].z - polygon[i].z;
+    const e2len = Math.sqrt(e2x * e2x + e2z * e2z) || 1;
 
-// Tile the U axis — repeat texture every ~3m along the perimeter
-float uTileSize = 3f;
+    // Outward normals (rotate 90° CCW for CCW polygon: (x,z) → (-z,x))
+    const n1x = -e1z / e1len;
+    const n1z =  e1x / e1len;
+    const n2x = -e2z / e2len;
+    const n2z =  e2x / e2len;
 
-for (int i = 0; i < n; i++)
-{
-    float u = arcLengths[i] / uTileSize; // tiling along perimeter
-    fringeUVs[i]     = new Vector2(u, 0f); // inner = light (v=0)
-    fringeUVs[n + i] = new Vector2(u, 1f); // outer = dark  (v=1)
+    // Average normal
+    let avgx = n1x + n2x;
+    let avgz = n1z + n2z;
+    const avglen = Math.sqrt(avgx * avgx + avgz * avgz) || 1;
+    avgx /= avglen;
+    avgz /= avglen;
+
+    // Miter correction
+    const dot = n1x * avgx + n1z * avgz;
+    let miter = dot > 0.1 ? distance / dot : distance;
+    miter = Math.min(miter, distance * 3); // cap to prevent spikes
+
+    result.push({
+      x: parseFloat((polygon[i].x + avgx * miter).toFixed(2)),
+      z: parseFloat((polygon[i].z + avgz * miter).toFixed(2)),
+    });
+  }
+
+  return result;
 }
 ```
 
-**NOTE:** Check which axis of `T_TeeDark_Albedo` has the gradient. If
-the gradient runs along U (left=light, right=dark), swap the UV
-assignment — use U for the inner/outer mapping and V for the perimeter.
-You may need to visually test and swap U/V if the gradient appears
-rotated 90°.
+Then in `extractZoneContours`, after the smoothPolygon call:
 
-**NOTE:** The texture import settings should have `wrapMode = Repeat`
-(for the perimeter axis) and `wrapMode = Clamp` on the gradient axis.
-Since Unity textures have a single wrap mode, set it to Repeat and
-ensure the gradient fills the full 0→1 range so clamping isn't needed.
+```javascript
+contourMeters = smoothPolygon(simplified, smoothPasses);
 
-#### Where to add
-
-In `CreateFlatZoneMeshes`, in the tee section, after creating each
-tee mesh, add the border ring:
-
-```csharp
-// After creating tee mesh...
-// Create tee border ring
-var teeBorderMat = CreateTiledMaterial(texDir, "T_TeeDark_Albedo",
-    "T_TeeDark_Normal", dataDir, 1f); // tileSize=1 since UVs are manual
-
-// The ring goes OUTSIDE the tee contour
-float teeFringeWidth = 1.0f; // 1 meter wide border
-```
-
-Then build the ring mesh using `OffsetContourOutward(worldPts, teeFringeWidth)`
-and the gradient UV mapping described above.
-
-**IMPORTANT:** Don't reuse `CreateFringeRing` directly because it uses
-world-space tiling UVs. Either:
-- (A) Add a parameter to `CreateFringeRing` for UV mode (tiled vs gradient)
-- (B) Create `CreateGradientBorderRing` as a new method
-- (C) Modify `CreateFringeRing` to accept a UV callback/mode
-
-Option B (new method) is cleanest. Copy the structure of `CreateFringeRing`
-but replace the UV section with the arc-length + inner/outer gradient
-mapping shown above.
-
-#### Material setup
-
-```csharp
-var teeBorderMat = new Material(GetLitShader());
-teeBorderMat.name = "MAT_TeeBorder";
-teeBorderMat.mainTexture = FindTextureExact(texDir, "T_TeeDark_Albedo");
-var teeNormal = FindTextureExact(texDir, "T_TeeDark_Normal");
-if (teeNormal != null)
-{
-    teeBorderMat.SetTexture("_BumpMap", teeNormal);
-    teeBorderMat.SetFloat("_BumpScale", 0.4f);
-    teeBorderMat.EnableKeyword("_NORMALMAP");
+// Compensate for Chaikin shrinkage on large polygons.
+// Each Chaikin pass shrinks the polygon by roughly 0.5-1m on curves.
+// Dilate outward proportional to the number of smooth passes.
+if (smoothPasses > 0 && pixels.length > 5000) {
+  const compensation = smoothPasses * 0.5; // ~0.5m per pass
+  contourMeters = offsetPolygon(contourMeters, compensation);
 }
-teeBorderMat.SetFloat("_Smoothness", 0f);
-teeBorderMat.SetFloat("_Metallic", 0f);
 
-string matPath = $"{dataDir}/MAT_TeeBorder.mat";
-var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-if (existing != null) AssetDatabase.DeleteAsset(matPath);
-AssetDatabase.CreateAsset(teeBorderMat, matPath);
+contourMeters = ensureCCW(contourMeters);
 ```
 
-#### SurfaceMarker
+This only applies to regions larger than 5000 pixels (fairways), leaving
+bunkers and greens untouched.
 
-Use `SurfaceType.Fringe` (or `SurfaceType.Tee` — either works, your call).
+### Change 2: NONE — Keep fringe inward
+
+The fringe stays at -0.5m inward. Moving it outward would cause it to
+spill into bunkers and other zones. The Chaikin compensation in Change 1
+already accounts for both the Chaikin shrinkage AND the 0.5m fringe
+eating into the fairway (compensation = passes × 0.5 ≈ 1.5m, which
+covers the ~1m Chaikin shrinkage + 0.5m fringe).
 
 ---
 
 ### Verification
 
-- [ ] Each tee area has a visible border ring around it
-- [ ] The lighter side of the texture faces inward (toward tee center)
-- [ ] The darker side of the texture faces outward (toward rough)
-- [ ] The texture wraps smoothly around the perimeter without stretching
-- [ ] No z-fighting with the tee mesh underneath
-- [ ] Border width looks reasonable (~1m)
+- [ ] Middle fairway corridor matches the zone illustration width
+- [ ] Other fairway sections not bloated (compensation is proportional)
+- [ ] Fringe ring appears OUTSIDE the fairway (not inside)
+- [ ] No gap between fairway edge and fringe ring inner edge
+- [ ] Bunkers and greens unchanged (compensation skipped for small shapes)
 - [ ] No console errors
-- [ ] Fairway fringe, greens, bunkers unaffected
-
-### If the gradient is flipped (dark inside, light outside)
-
-Swap the V values:
-```csharp
-fringeUVs[i]     = new Vector2(u, 1f); // inner = dark  (v=1)
-fringeUVs[n + i] = new Vector2(u, 0f); // outer = light (v=0)
-```
-
-Or if the gradient runs along U instead of V, swap the axes:
-```csharp
-fringeUVs[i]     = new Vector2(0f, u); // inner: u=0 (light)
-fringeUVs[n + i] = new Vector2(1f, u); // outer: u=1 (dark)
-```
 
 ### Do NOT
 
-- Modify fairway mesh or fairway fringe
-- Touch green, bunker, or water meshes
-- Change the export pipeline
-- Apply blur or SDF
+- Change the RDP epsilon or Chaikin passes (stay at 3.0 / 3)
+- Touch bunker, green, or water pipelines
+- Modify tee or cart path meshes
 
 ---
 
@@ -176,4 +141,5 @@ fringeUVs[n + i] = new Vector2(1f, u); // outer: u=1 (dark)
 ✅ DONE: 2026-04-08 — SDF-based smooth fairway border (replaced by mesh approach)
 ✅ DONE: 2026-04-08 — Vector contour rasterization (replaced by mesh approach)
 ✅ DONE: 2026-04-08 — Zone overlay meshes: fairway + tee as contour meshes with smooth edges
-✅ DONE: 2026-04-08 — Tee border ring with gradient texture (T_TeeDark_Albedo, CreateGradientBorderRing method, 1m width, arc-length UVs)
+✅ DONE: 2026-04-08 — Tee border ring with gradient texture (T_TeeDark_Albedo)
+✅ DONE: 2026-04-08 — Fix fairway width shrinkage: offsetPolygon dilation after Chaikin smoothing (0.5m/pass, >5000px regions only)

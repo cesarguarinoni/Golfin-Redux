@@ -154,6 +154,56 @@ function ensureCCW(polygon) {
   return polygon;
 }
 
+/**
+ * Offset a closed polygon outward by a distance.
+ * At each vertex, compute the average outward normal of its two edges
+ * and push along it with miter correction.
+ * Assumes CCW winding (outward = left of edge direction).
+ */
+function offsetPolygon(polygon, distance) {
+  const n = polygon.length;
+  if (n < 3) return polygon;
+
+  const result = [];
+  for (let i = 0; i < n; i++) {
+    const prev = (i - 1 + n) % n;
+    const next = (i + 1) % n;
+
+    // Edge vectors
+    const e1x = polygon[i].x - polygon[prev].x;
+    const e1z = polygon[i].z - polygon[prev].z;
+    const e1len = Math.sqrt(e1x * e1x + e1z * e1z) || 1;
+    const e2x = polygon[next].x - polygon[i].x;
+    const e2z = polygon[next].z - polygon[i].z;
+    const e2len = Math.sqrt(e2x * e2x + e2z * e2z) || 1;
+
+    // Outward normals (rotate 90° CCW for CCW polygon: (x,z) → (-z,x))
+    const n1x = -e1z / e1len;
+    const n1z =  e1x / e1len;
+    const n2x = -e2z / e2len;
+    const n2z =  e2x / e2len;
+
+    // Average normal
+    let avgx = n1x + n2x;
+    let avgz = n1z + n2z;
+    const avglen = Math.sqrt(avgx * avgx + avgz * avgz) || 1;
+    avgx /= avglen;
+    avgz /= avglen;
+
+    // Miter correction
+    const dot = n1x * avgx + n1z * avgz;
+    let miter = dot > 0.1 ? distance / dot : distance;
+    miter = Math.min(miter, distance * 3); // cap to prevent spikes
+
+    result.push({
+      x: parseFloat((polygon[i].x + avgx * miter).toFixed(2)),
+      z: parseFloat((polygon[i].z + avgz * miter).toFixed(2)),
+    });
+  }
+
+  return result;
+}
+
 function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2) {
   const grid = Buffer.from(zonesData.grid, 'base64');
   const w = zonesData.source_dimensions.width;
@@ -230,6 +280,15 @@ function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, 
           simplified = simplified.slice(0, -1);
         }
         contourMeters = smoothPolygon(simplified, smoothPasses);
+
+        // Compensate for Chaikin shrinkage on large polygons.
+        // Each Chaikin pass shrinks the polygon by roughly 0.5-1m on curves.
+        // Dilate outward proportional to the number of smooth passes.
+        if (smoothPasses > 0 && pixels.length > 5000) {
+          const compensation = smoothPasses * 0.5; // ~0.5m per pass
+          contourMeters = offsetPolygon(contourMeters, compensation);
+        }
+
         contourMeters = ensureCCW(contourMeters);
 
         regions.push({
@@ -490,8 +549,9 @@ function exportHole(courseId, holeNumber, courseJson) {
 
   // --- Build fairway-contours.json ---
   const fairways = extractZoneContours(zonesData, terrainMeta, 1, 30, 3.0, 3);
-  // zone 1 = fairway, min 30px, RDP epsilon 3.0 (looser than bunkers),
-  // 3 Chaikin passes for extra smoothness on the larger shapes
+  // zone 1 = fairway, min 30px, RDP epsilon 3.0, 3 Chaikin passes.
+  // NOTE: narrow corridor sections may appear slightly thinner than the zone
+  // map due to Chaikin shrinkage — acceptable tradeoff for smooth edges.
 
   const fairwayOutput = {
     schema_version: '1.0.0',
