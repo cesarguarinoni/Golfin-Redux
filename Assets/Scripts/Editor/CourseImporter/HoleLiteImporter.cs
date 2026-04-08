@@ -14,8 +14,10 @@ namespace Golfin.CourseImport
         public static int ShoreRadius = 2;
         /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
         public static float ShoreDepthMeters = 0.1f;
-        /// <summary>Dilation radius for fairway fringe ring (semi-rough border around fairway).</summary>
+        /// <summary>DEPRECATED — replaced by FairwayFringeMeters + SDF.</summary>
         public static int FairwayFringeRadius = 2;
+        /// <summary>Width of fairway fringe border in meters.</summary>
+        public static float FairwayFringeMeters = 1.5f;
         /// <summary>Width of fairway mow stripes in meters.</summary>
         public static float MowStripeWidth = 5f;
 
@@ -582,24 +584,40 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // --- 3b. Generate fringe ring around fairway ---
+            // --- 3b. SDF-based fairway fringe ---
             bool[] fairwayMask = new bool[alphaRes * alphaRes];
             for (int i = 0; i < resampledZones.Length; i++)
                 fairwayMask[i] = (resampledZones[i] == 1); // zone 1 = fairway
 
-            bool[] dilatedFairway = DilateMask(fairwayMask, alphaRes, alphaRes, FairwayFringeRadius);
+            float[] fairwaySDF = ComputeSDF(fairwayMask, alphaRes, alphaRes);
 
+            // Convert fringe width from meters to alphamap pixels
+            // Terrain size / alphamap resolution = meters per pixel
+            float metersPerPixel = Mathf.Max(terrainData.size.x, terrainData.size.z) / alphaRes;
+            float fringePixels = FairwayFringeMeters / metersPerPixel;
+
+            // Build fringe mask from SDF: pixels just outside fairway edge
             bool[] fairwayFringeMask = new bool[alphaRes * alphaRes];
-            for (int i = 0; i < fairwayFringeMask.Length; i++)
+            for (int i = 0; i < alphaRes * alphaRes; i++)
             {
-                if (dilatedFairway[i] && !fairwayMask[i])
+                // Outside fairway (negative SDF) but within fringe distance
+                if (fairwaySDF[i] < 0f && fairwaySDF[i] >= -fringePixels)
                 {
                     int zone = resampledZones[i];
-                    // Only place fairway fringe on rough/semi-rough/trees (not on green, water, bunker, etc.)
+                    // Only place fringe on rough/semi-rough/trees
                     if (zone == 3 || zone == 4 || zone == 5)
                         fairwayFringeMask[i] = true;
                 }
             }
+
+            // Also use SDF to smooth the fairway INSIDE edge.
+            // Pixels that are inside fairway zone but very close to the SDF=0
+            // boundary get smooth contours because the SDF iso-line at 0 is
+            // smooth. We override the zone-based assignment in step 4 using
+            // the SDF value instead of the raw zone grid.
+            bool[] sdfFairwayMask = new bool[alphaRes * alphaRes];
+            for (int i = 0; i < alphaRes * alphaRes; i++)
+                sdfFairwayMask[i] = (fairwaySDF[i] > 0f);
 
             // --- 4. Build raw alphamap ---
             int layerCount = 8;
@@ -616,24 +634,26 @@ namespace Golfin.CourseImport
                     int layer;
 
                     if (fringeMask[idx])
-                        layer = 2; // green fringe → semi-rough (layer 7 is now dark fairway)
+                        layer = 2; // green fringe → semi-rough
                     else if (fairwayFringeMask[idx])
-                        layer = 2; // fairway fringe → semi-rough texture
+                        layer = 2; // fairway fringe → semi-rough (SDF-smoothed)
+                    else if (sdfFairwayMask[idx])
+                    {
+                        // SDF says this pixel is inside the fairway boundary
+                        // (smooth contour replaces jagged zone grid edge)
+                        layer = 0; // fairway
+
+                        // Mow stripes: alternate light/dark fairway
+                        float worldX = ((float)ax / (alphaRes - 1)) * terrainSizeX - terrainSizeX / 2f;
+                        float worldZ = ((float)ay / (alphaRes - 1)) * terrainSizeZ - terrainSizeZ / 2f;
+                        float proj = worldX * stripeDir.x + worldZ * stripeDir.y;
+                        int band = Mathf.FloorToInt(proj / MowStripeWidth);
+                        if (band % 2 != 0)
+                            layer = 7; // dark fairway stripe
+                    }
                     else
                     {
                         layer = ZoneToLayer(resampledZones[idx]);
-
-                        // Mow stripes: alternate light/dark fairway
-                        if (layer == 0) // fairway
-                        {
-                            float worldX = ((float)ax / (alphaRes - 1)) * terrainSizeX - terrainSizeX / 2f;
-                            float worldZ = ((float)ay / (alphaRes - 1)) * terrainSizeZ - terrainSizeZ / 2f;
-
-                            float proj = worldX * stripeDir.x + worldZ * stripeDir.y;
-                            int band = Mathf.FloorToInt(proj / MowStripeWidth);
-                            if (band % 2 != 0)
-                                layer = 7; // dark fairway stripe
-                        }
                     }
 
                     alphamap[ay, ax, layer] = 1.0f;
@@ -819,6 +839,83 @@ namespace Golfin.CourseImport
                 }
             }
             return result;
+        }
+
+        /// <summary>
+        /// Compute signed distance field from a binary mask.
+        /// Positive = inside mask, negative = outside.
+        /// Uses two-pass chamfer distance (fast approximation).
+        /// </summary>
+        static float[] ComputeSDF(bool[] mask, int w, int h)
+        {
+            float[] dist = new float[w * h];
+            float INF = w + h; // larger than any real distance
+
+            // Initialize: 0 at edges, +INF inside, -INF outside
+            for (int i = 0; i < w * h; i++)
+            {
+                int x = i % w;
+                int y = i / w;
+                bool val = mask[i];
+
+                // Check if this pixel is on the edge (has a neighbor with different value)
+                bool isEdge = false;
+                if (x > 0     && mask[i - 1] != val) isEdge = true;
+                if (x < w - 1 && mask[i + 1] != val) isEdge = true;
+                if (y > 0     && mask[i - w] != val) isEdge = true;
+                if (y < h - 1 && mask[i + w] != val) isEdge = true;
+
+                if (isEdge)
+                    dist[i] = 0f;
+                else
+                    dist[i] = val ? INF : -INF;
+            }
+
+            // Forward pass (top-left to bottom-right)
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int i = y * w + x;
+                    float sign = dist[i] >= 0 ? 1f : -1f;
+                    float abs = Mathf.Abs(dist[i]);
+
+                    if (x > 0)
+                        abs = Mathf.Min(abs, Mathf.Abs(dist[i - 1]) + 1f);
+                    if (y > 0)
+                        abs = Mathf.Min(abs, Mathf.Abs(dist[i - w]) + 1f);
+                    if (x > 0 && y > 0)
+                        abs = Mathf.Min(abs, Mathf.Abs(dist[i - w - 1]) + 1.414f);
+                    if (x < w - 1 && y > 0)
+                        abs = Mathf.Min(abs, Mathf.Abs(dist[i - w + 1]) + 1.414f);
+
+                    dist[i] = sign * abs;
+                }
+            }
+
+            // Backward pass (bottom-right to top-left)
+            for (int y = h - 1; y >= 0; y--)
+            {
+                for (int x = w - 1; x >= 0; x--)
+                {
+                    int i = y * w + x;
+                    float sign = dist[i] >= 0 ? 1f : -1f;
+                    float abs = Mathf.Abs(dist[i]);
+
+                    if (x < w - 1)
+                        abs = Mathf.Min(abs, Mathf.Abs(dist[i + 1]) + 1f);
+                    if (y < h - 1)
+                        abs = Mathf.Min(abs, Mathf.Abs(dist[i + w]) + 1f);
+                    if (x < w - 1 && y < h - 1)
+                        abs = Mathf.Min(abs, Mathf.Abs(dist[i + w + 1]) + 1.414f);
+                    if (x > 0 && y < h - 1)
+                        abs = Mathf.Min(abs, Mathf.Abs(dist[i + w - 1]) + 1.414f);
+
+                    dist[i] = sign * abs;
+                }
+            }
+
+            return dist;
         }
 
         private static float[,] ExtractChannel(float[,,] alphamap, int res, int layerCount, int layer)
