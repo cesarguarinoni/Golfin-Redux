@@ -7,170 +7,121 @@
 
 ---
 
-## Current Task — Tee Area Auto-Mesh
+## Current Task — Tee Markers (Replace Raised Mesh with FBX Props)
 
-**Goal:** Export tee box contours and import as slightly raised meshes
-in Unity, similar to greens but lower and with less aggressive smoothing.
-
----
-
-### Part A: Export (`Tools/UHoleLite/scripts/export-hole.mjs`)
-
-#### A1. Add optional params to `extractZoneContours()`
-
-Change the signature from:
-```javascript
-function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8)
-```
-to:
-```javascript
-function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2)
-```
-
-Then replace the hardcoded values in the function body:
-- `const RDP_EPSILON = 2.0;` → use the `rdpEpsilon` parameter
-- `smoothPolygon(simplified, 2)` → `smoothPolygon(simplified, smoothPasses)`
-
-#### A2. Add tee export to `exportHole()`
-
-After the greens export block and before the water export block, add:
-
-```javascript
-  // --- Build tees.json ---
-  const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 1.5, 1);
-  // zone 10 = tee_box, min 15px, RDP 1.5 (keep squarer shape), 1 Chaikin pass (smooth but not round)
-
-  const teesOutput = {
-    schema_version: '1.0.0',
-    hole_number: holeNumber,
-    tee_count: tees.length,
-    height_m: 0.08,
-    tees: tees,
-  };
-
-  fs.writeFileSync(
-    path.join(exportDir, 'tees.json'),
-    JSON.stringify(teesOutput, null, 2),
-    'utf-8'
-  );
-
-  if (tees.length > 0) {
-    const contourStats = tees.map(t =>
-      `#${t.id}: ${t.contour.length}pts`
-    ).join(', ');
-    console.log(`  Tee contours: ${contourStats}`);
-  }
-```
-
-#### A3. Update manifest
-
-Add `tees_file: 'tees.json'` to the manifest object (after `greens_file`).
-
-#### A4. Update export result
-
-Add `teeCount: tees.length` to the return object and update the
-console.log line to include tee count.
+**Goal:** Remove the tee raised mesh approach. Replace debug anchor
+cylinders with proper FBX tee marker props from
+`Assets/Art/3D/Props/TeeMarkers/`. Two markers per tee, placed on the
+terrain surface. Splatmap already handles the tee texture (zone 10 →
+`T_Tee_Albedo`), so no terrain changes needed.
 
 ---
 
-### Part B: Import (`Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`)
+### Part A: Remove tee raised mesh
 
-#### B1. Add tunable constants
+#### A1. Remove `CreateTeeMeshes()` call from `ImportLiteHole()`
 
-Near the existing `ShoreRadius` / `ShoreDepthMeters` statics:
-
-```csharp
-/// <summary>Height of tee surface above terrain in meters.</summary>
-public static float TeeHeight = 0.08f;
-/// <summary>Scale factor for tee collar (1.0 = no collar beyond contour).</summary>
-public static float TeeCollarScale = 1.05f;
-```
-
-#### B2. Add `CreateTeeMeshes()` method
-
-Model this after `CreateGreenMeshes()` but with these differences:
-- Uses `tees.json` instead of `greens.json`
-- Uses `TeeHeight` (0.08m) instead of `greenHeight` (0.15m)
-- Uses `TeeCollarScale` (1.05) instead of `greenCollarScale` (1.08)
-- Uses `T_Tee_Albedo` texture for the surface (fall back to
-  `T_Green_Albedo` if not found — tee grass is similar)
-- Uses `T_Semirough_Albedo` for collar (same as green collar)
-- SurfaceMarker: `SurfaceType.Tee` (if it exists, otherwise
-  `SurfaceType.Fairway` as closest match — add a NOTE)
-- Terrain holes: cut at 95% of collar scale (same as greens)
-
-Use `CreateRaisedMesh()` — it already handles contour, collar rings,
-surface mesh, and colliders. Just pass the tee-specific params.
-
-#### B3. Add data classes
-
-```csharp
-[System.Serializable]
-private class TeesFileData
-{
-    public string schema_version;
-    public int hole_number;
-    public int tee_count;
-    public float height_m;
-    public TeeRegionData[] tees;
-}
-
-[System.Serializable]
-private class TeeRegionData
-{
-    public int id;
-    public int pixel_count;
-    public ContourPoint[] contour;
-    public LocalCoord center_local;
-}
-```
-
-If `ContourPoint` and `LocalCoord` already exist (from bunker/green
-data classes), reuse them.
-
-#### B4. Hook into `ImportLiteHole()`
-
-Add a progress bar step and call `CreateTeeMeshes()` after greens,
-before water:
-
+Find and delete this block:
 ```csharp
 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating tees...", 0.56f);
 CreateTeeMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 ```
 
-#### B5. Check SurfaceType enum
+#### A2. Delete `CreateTeeMeshes()` method entirely
 
-Look at `Golfin.Course.SurfaceType` — if `Tee` exists, use it. If not,
-add it. If you'd rather not modify the enum right now, use `Fairway` and
-leave a `// TODO: add SurfaceType.Tee` comment.
+#### A3. Delete tee data classes (`TeesFileData`, `TeeRegionData`) if they exist
+
+#### A4. Remove tee-related constants
+
+Delete `TeeHeight` and `TeeCollarScale` from the top of the class.
+
+#### A5. Remove tee export from `export-hole.mjs`
+
+Delete the `// --- Build tees.json ---` block from `exportHole()`.
+Remove `tees_file` from the manifest object.
+Remove `teeCount` from the return object and console.log line.
+
+**Do NOT** revert the `extractZoneContours()` optional params
+(`rdpEpsilon`, `smoothPasses`) — those are still useful for future zones.
+
+---
+
+### Part B: Replace anchor debug cylinders with FBX tee markers
+
+#### B1. Create green tee marker
+
+There's no green FBX marker. Duplicate the white one:
+- Copy `MESH_WhiteTee.fbx` → keep same mesh
+- Create a new material `MAT_GreenTee.mat` in
+  `Assets/Art/3D/Props/TeeMarkers/Materials/`
+- Use the same shader as the other tee materials (check `MAT_WhiteTee.mat`)
+- Set color to green: `new Color(0.2f, 0.6f, 0.2f)` (adjust if the
+  other materials use a texture instead of flat color — match the pattern)
+
+#### B2. Update `PlaceAnchorMarker()` to use FBX markers
+
+Replace the current method. For tee anchors (`type` contains "tee"),
+instantiate the FBX mesh prefab instead of `CreatePrimitive(Cylinder)`.
+
+Color mapping:
+- `tee_back` → `MESH_BlueTee` + `MAT_BlueTee`
+- `tee_regular` → `MESH_WhiteTee` + `MAT_GreenTee` (green material on white mesh)
+- `tee_front` → `MESH_WhiteTee` + `MAT_WhiteTee`
+- `tee_ladies` → `MESH_RedTee` + `MAT_RedTee`
+
+For each tee anchor, place **2 markers** spaced ~3m apart perpendicular
+to the tee-to-green direction. To determine perpendicular direction:
+- Find the green anchor (or centroid of green zone) for forward direction
+- Cross with up vector to get left/right
+- Place marker A at position + 1.5m left, marker B at position + 1.5m right
+- If no green direction can be determined, default to spacing along X axis
+
+Each marker should:
+- Load mesh: `AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/3D/Props/TeeMarkers/MESH_{Color}Tee.fbx")`
+- Instantiate with `PrefabUtility.InstantiatePrefab()` or `Object.Instantiate()`
+- Apply the correct material from `Assets/Art/3D/Props/TeeMarkers/Materials/MAT_{Color}Tee.mat`
+- Position on terrain surface: `terrain.SampleHeight(pos)` + small Y offset (0.01m)
+- Parent under `Anchors` root
+
+For non-tee anchors (if any exist in the future), keep the current
+cylinder debug marker approach.
+
+#### B3. Naming convention
+
+Name the GameObjects:
+- `TeeMarker_back_L`, `TeeMarker_back_R`
+- `TeeMarker_regular_L`, `TeeMarker_regular_R`
+- `TeeMarker_front_L`, `TeeMarker_front_R`
+- `TeeMarker_ladies_L`, `TeeMarker_ladies_R`
 
 ---
 
 ### Verification
 
 1. Re-export Hole 1: `node scripts/export-hole.mjs lomond-country-club 1`
-   - [ ] Console shows `Tee contours: #1: Npts, #2: Npts, ...`
-   - [ ] `tees.json` exists in export folder with contour data
-   - [ ] Existing bunker/green/water export unchanged
+   - [ ] No `tees.json` generated (removed)
+   - [ ] No errors, bunkers/greens/water still export
 
 2. Re-import Hole 1 in Unity: `GOLFIN > Import Hole (Lite) > Hole 01`
-   - [ ] Tee areas appear as slightly raised platforms
-   - [ ] Edges are smooth (no jagged staircase)
-   - [ ] Shape is squarer than greens (less rounded)
-   - [ ] Each tee has SurfaceMarker component
-   - [ ] Collar slope visible around tee edges
-   - [ ] Greens, bunkers, water still work
+   - [ ] No raised tee meshes in scene
+   - [ ] 8 tee marker objects (2 per tee × 4 tees)
+   - [ ] Blue markers at back tee, Green at regular, White at front, Red at ladies
+   - [ ] Markers sitting on terrain surface
+   - [ ] Markers spaced ~3m apart at each tee position
+   - [ ] Tee area texture visible on terrain (splatmap unchanged)
+   - [ ] Greens, bunkers, water unaffected
+   - [ ] No console errors
 
-3. Re-import Hole 12 (has water):
-   - [ ] Tees + water + bunkers + greens all coexist
+3. Re-import Hole 12:
+   - [ ] Tee markers + water + bunkers + greens all coexist
    - [ ] No console errors
 
 ### Do NOT
 
-- Modify `traceBorder()`, `simplifyPolygon()`, `smoothPolygon()`, `ensureCCW()`
+- Modify splatmap pipeline or zone textures
 - Modify bunker, green, or water mesh generation
-- Modify the splatmap or heightmap pipeline
 - Modify shore slope logic
+- Remove `extractZoneContours()` optional params
 
 ---
 
@@ -211,3 +162,5 @@ leave a `// TODO: add SurfaceType.Tee` comment.
 ✅ DONE: 2026-04-07 — Water Option 2: Rasterized quad + alpha mask (pixel-perfect water boundaries)
 ✅ DONE: 2026-04-07 — Water SDF texture: signed distance field for smooth edges
 ✅ DONE: 2026-04-08 — Water Shore Slope: terrain depression near water edges via heightmap modification at import time
+✅ DONE: 2026-04-08 — Tee Area raised mesh + collar (reverted — wrong approach)
+✅ DONE: 2026-04-08 — Tee Markers: removed raised mesh, replaced debug cylinders with FBX tee marker props (2 per tee, 4 colors)

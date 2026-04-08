@@ -14,10 +14,6 @@ namespace Golfin.CourseImport
         public static int ShoreRadius = 2;
         /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
         public static float ShoreDepthMeters = 0.1f;
-        /// <summary>Height of tee surface above terrain in meters.</summary>
-        public static float TeeHeight = 0.08f;
-        /// <summary>Scale factor for tee collar (1.0 = no collar beyond contour).</summary>
-        public static float TeeCollarScale = 1.05f;
 
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 01")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 02")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
@@ -120,8 +116,6 @@ namespace Golfin.CourseImport
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating greens...", 0.53f);
                 CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating tees...", 0.56f);
-                CreateTeeMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating water...", 0.59f);
                 CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
@@ -143,7 +137,7 @@ namespace Golfin.CourseImport
 
                 var terrain = terrainGO.GetComponent<Terrain>();
                 foreach (var anchor in anchors)
-                    PlaceAnchorMarker(anchor, terrain, terrainGO.transform, anchorsRoot.transform);
+                    PlaceAnchorMarker(anchor, anchors, terrain, terrainGO.transform, anchorsRoot.transform);
 
                 var debugRefs = new GameObject("DebugReferences");
                 debugRefs.transform.SetParent(holeRoot.transform);
@@ -275,8 +269,100 @@ namespace Golfin.CourseImport
             terrainData.terrainLayers = new TerrainLayer[] { layer };
         }
 
-        private static void PlaceAnchorMarker(AnchorData anchor, Terrain terrain,
-            Transform terrainTransform, Transform parent)
+        private static void PlaceAnchorMarker(AnchorData anchor, AnchorData[] allAnchors,
+            Terrain terrain, Transform terrainTransform, Transform parent)
+        {
+            // 90° CCW rotation: (x, z) → (-z, x) → (local.z, local.x)
+            Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
+            float terrainBase = terrainTransform.position.y;
+
+            if (anchor.type.Contains("tee"))
+            {
+                // Determine tee color mapping
+                string meshName, matName, teeLabel;
+                if (anchor.type.Contains("back"))
+                {
+                    meshName = "MESH_BlueTee"; matName = "MAT_BlueTee"; teeLabel = "back";
+                }
+                else if (anchor.type.Contains("regular"))
+                {
+                    meshName = "MESH_WhiteTee"; matName = "MAT_GreenTee"; teeLabel = "regular";
+                }
+                else if (anchor.type.Contains("front"))
+                {
+                    meshName = "MESH_WhiteTee"; matName = "MAT_WhiteTee"; teeLabel = "front";
+                }
+                else if (anchor.type.Contains("ladies"))
+                {
+                    meshName = "MESH_RedTee"; matName = "MAT_RedTee"; teeLabel = "ladies";
+                }
+                else
+                {
+                    meshName = "MESH_WhiteTee"; matName = "MAT_WhiteTee"; teeLabel = "unknown";
+                }
+
+                // Load FBX mesh and material
+                var meshPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                    $"Assets/Art/3D/Props/TeeMarkers/{meshName}.fbx");
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(
+                    $"Assets/Art/3D/Props/TeeMarkers/Materials/{matName}.mat");
+
+                if (meshPrefab == null)
+                {
+                    Debug.LogWarning($"[HoleLiteImporter] FBX not found: {meshName}.fbx, falling back to cylinder");
+                    PlaceDebugCylinder(anchor, worldPos, terrain, terrainBase, parent);
+                    return;
+                }
+
+                // Compute perpendicular direction for marker pair spacing
+                Vector3 perpDir = Vector3.right; // default: space along X axis
+                // Try to find green anchor for forward direction
+                var greenAnchor = allAnchors.FirstOrDefault(a => a.type.Contains("green"));
+                if (greenAnchor != null)
+                {
+                    Vector3 greenPos = new Vector3(greenAnchor.local.z, 0f, greenAnchor.local.x);
+                    Vector3 forward = (greenPos - worldPos).normalized;
+                    if (forward.sqrMagnitude > 0.001f)
+                    {
+                        perpDir = Vector3.Cross(Vector3.up, forward).normalized;
+                        if (perpDir.sqrMagnitude < 0.001f)
+                            perpDir = Vector3.right;
+                    }
+                }
+
+                // Place 2 markers: Left and Right, spaced 3m apart (1.5m each side)
+                for (int side = 0; side < 2; side++)
+                {
+                    float offset = (side == 0) ? -1.5f : 1.5f;
+                    string suffix = (side == 0) ? "L" : "R";
+
+                    Vector3 markerPos = worldPos + perpDir * offset;
+                    float terrainHeight = terrain.SampleHeight(markerPos);
+                    markerPos.y = terrainBase + terrainHeight + 0.01f;
+
+                    var markerGO = Object.Instantiate(meshPrefab);
+                    markerGO.name = $"TeeMarker_{teeLabel}_{suffix}";
+
+                    // Apply material to all renderers in the instantiated FBX
+                    if (mat != null)
+                    {
+                        foreach (var rend in markerGO.GetComponentsInChildren<Renderer>())
+                            rend.sharedMaterial = mat;
+                    }
+
+                    markerGO.transform.position = markerPos;
+                    markerGO.transform.SetParent(parent);
+                }
+            }
+            else
+            {
+                // Non-tee anchors: keep debug cylinder approach
+                PlaceDebugCylinder(anchor, worldPos, terrain, terrainBase, parent);
+            }
+        }
+
+        private static void PlaceDebugCylinder(AnchorData anchor, Vector3 worldPos,
+            Terrain terrain, float terrainBase, Transform parent)
         {
             var marker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             marker.name = $"Anchor_{anchor.type}";
@@ -284,17 +370,10 @@ namespace Golfin.CourseImport
 
             var renderer = marker.GetComponent<Renderer>();
             var mat = new Material(GetLitShader());
-            if (anchor.type.Contains("back")) mat.color = Color.blue;
-            else if (anchor.type.Contains("regular")) mat.color = Color.green;
-            else if (anchor.type.Contains("front")) mat.color = Color.white;
-            else if (anchor.type.Contains("ladies")) mat.color = Color.red;
-            else mat.color = Color.yellow;
+            mat.color = Color.yellow;
             renderer.sharedMaterial = mat;
 
-            // 90° CCW rotation: (x, z) → (-z, x) → (local.z, local.x)
-            Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
             float terrainHeight = terrain.SampleHeight(worldPos);
-            float terrainBase = terrainTransform.position.y;
             marker.transform.position = new Vector3(
                 worldPos.x, terrainBase + terrainHeight + 5f, worldPos.z);
 
@@ -1386,130 +1465,6 @@ namespace Golfin.CourseImport
             Debug.Log($"[HoleLiteImporter] Created {greensFile.greens.Length} green(s)");
         }
 
-        // ─── Tee Pipeline ──────────────────────────────────────────────
-
-        private static void CreateTeeMeshes(TerrainData terrainData, GameObject terrainGO,
-            Transform parentRoot, string exportPath, string dataDir, string projectRoot,
-            bool[,] holes)
-        {
-            string teesPath = Path.Combine(exportPath, "tees-mesh.json");
-            if (!File.Exists(teesPath))
-            {
-                Debug.Log("[HoleLiteImporter] No tees-mesh.json found, skipping");
-                return;
-            }
-
-            string json = File.ReadAllText(teesPath);
-            var teesFile = JsonUtility.FromJson<TeesFileData>(json);
-
-            if (teesFile.tees == null || teesFile.tees.Length == 0)
-            {
-                Debug.Log("[HoleLiteImporter] No tees in tees-mesh.json");
-                return;
-            }
-
-            float teeHeight = teesFile.height_m > 0 ? teesFile.height_m : TeeHeight;
-
-            // Try tee-specific texture first, fall back to green (similar grass)
-            string texName = "T_Tee_Albedo";
-            string texPath = System.IO.Path.Combine(dataDir, $"TerrainLayer_{texName}.asset");
-            if (!File.Exists(System.IO.Path.Combine(projectRoot, texPath)))
-                texName = "T_Green_Albedo";
-
-            var teeMat = CreateZoneMaterial(dataDir, projectRoot,
-                "TeeSurface", texName, 3f);
-            var collarMat = CreateZoneMaterial(dataDir, projectRoot,
-                "TeeCollar", "T_Semirough_Albedo", 4f);
-
-            var teesRoot = new GameObject("Tees");
-            teesRoot.transform.SetParent(parentRoot);
-
-            var terrain = terrainGO.GetComponent<Terrain>();
-            float terrainBaseY = terrainGO.transform.position.y;
-            Vector3 terrainPos = terrainGO.transform.position;
-            Vector3 terrainSize = terrainData.size;
-
-            int holesRes = terrainData.holesResolution;
-
-            foreach (var tee in teesFile.tees)
-            {
-                if (tee.contour == null || tee.contour.Length < 3) continue;
-
-                // Apply 90° CCW rotation to contour vertices
-                var worldContour = new Vector2[tee.contour.Length];
-                float sumX = 0, sumZ = 0;
-                for (int i = 0; i < tee.contour.Length; i++)
-                {
-                    float wx = tee.contour[i].z;
-                    float wz = tee.contour[i].x;
-                    worldContour[i] = new Vector2(wx, wz);
-                    sumX += wx;
-                    sumZ += wz;
-                }
-                float centroidX = sumX / worldContour.Length;
-                float centroidZ = sumZ / worldContour.Length;
-
-                // Bounding box should include the collar extent
-                float cMinX = float.MaxValue, cMaxX = float.MinValue;
-                float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
-                foreach (var v in worldContour)
-                {
-                    float wx = centroidX + (v.x - centroidX) * TeeCollarScale;
-                    float wz = centroidZ + (v.y - centroidZ) * TeeCollarScale;
-                    if (wx < cMinX) cMinX = wx;
-                    if (wx > cMaxX) cMaxX = wx;
-                    if (wz < cMinZ) cMinZ = wz;
-                    if (wz > cMaxZ) cMaxZ = wz;
-                }
-
-                // Cut contour at 95% of COLLAR scale
-                var cutContour = new Vector2[worldContour.Length];
-                for (int i = 0; i < worldContour.Length; i++)
-                {
-                    cutContour[i] = new Vector2(
-                        centroidX + (worldContour[i].x - centroidX) * TeeCollarScale * 0.95f,
-                        centroidZ + (worldContour[i].y - centroidZ) * TeeCollarScale * 0.95f);
-                }
-
-                int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-                int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-                int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-                int hMaxZ = Mathf.Clamp(Mathf.CeilToInt((cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-
-                for (int hz = hMinZ; hz <= hMaxZ; hz++)
-                    for (int hx = hMinX; hx <= hMaxX; hx++)
-                    {
-                        float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
-                        float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
-                        if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
-                            holes[hz, hx] = false;
-                    }
-
-                // Create raised mesh
-                float surfaceY = terrainBaseY + terrain.SampleHeight(
-                    new Vector3(centroidX, 0, centroidZ));
-
-                var meshGO = CreateRaisedMesh(tee.id, "Tee", worldContour,
-                    centroidX, centroidZ, surfaceY, teeHeight, teeMat,
-                    terrain, terrainBaseY, collarMat, TeeCollarScale);
-                meshGO.transform.SetParent(teesRoot.transform);
-
-                // Find the surface child and add Tee marker
-                var surfaceChild = meshGO.transform.Find($"Tee_{tee.id}_Surface");
-                if (surfaceChild != null)
-                {
-                    var marker = surfaceChild.gameObject.AddComponent<Golfin.Course.SurfaceMarker>();
-                    marker.surfaceType = Golfin.Course.SurfaceType.Tee;
-                }
-            }
-
-            // Copy tees-mesh.json to Assets
-            string destPath = Path.Combine(projectRoot, dataDir, "tees-mesh.json");
-            File.Copy(teesPath, destPath, true);
-            AssetDatabase.ImportAsset($"{dataDir}/tees-mesh.json");
-
-            Debug.Log($"[HoleLiteImporter] Created {teesFile.tees.Length} tee(s)");
-        }
 
         private static GameObject CreateRaisedMesh(int id, string zoneName,
             Vector2[] contour, float centroidX, float centroidZ,
