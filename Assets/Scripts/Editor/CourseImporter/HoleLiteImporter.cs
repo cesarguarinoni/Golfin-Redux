@@ -630,14 +630,13 @@ namespace Golfin.CourseImport
             {
                 layers[i] = new TerrainLayer();
                 layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
-                layers[i].normalMapTexture = FindTextureExact(texDir, normalNames[i]);
+                layers[i].normalMapTexture = null;  // Normals disabled — they amplify specular catchlights
                 // Fringe (index 7): non-square tile to fix grain orientation on 90° rotated terrain
                 layers[i].tileSize = (i == 7) ? new Vector2(8f, 4f) : new Vector2(tileSizes[i], tileSizes[i]);
                 layers[i].tileOffset = Vector2.zero;
                 layers[i].smoothness = 0f;
                 layers[i].metallic = 0f;
-                layers[i].normalScale = 0.3f;
-                // normalMapTexture = null line removed (was overwriting the normal map set above)
+                layers[i].normalScale = 0f;
 
                 if (layers[i].diffuseTexture == null)
                     Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoNames[i]}");
@@ -2098,22 +2097,35 @@ namespace Golfin.CourseImport
         {
             string matPath = "Assets/Courses/Materials (Shared by courses)/MAT_Terrain.mat";
             var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-            if (existing != null) return existing;
+            if (existing != null)
+            {
+                // Always re-apply settings in case they got lost
+                existing.SetFloat("_Smoothness", 0f);
+                existing.SetFloat("_Metallic", 0f);
+                existing.SetFloat("_SpecularHighlights", 0f);
+                existing.SetFloat("_EnvironmentReflections", 0f);
+                existing.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+                existing.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+                EditorUtility.SetDirty(existing);
+                return existing;
+            }
 
             var shader = Shader.Find("Universal Render Pipeline/Terrain/Lit");
             if (shader == null) shader = Shader.Find("Terrain/Lit");
             if (shader == null)
             {
-                Debug.LogWarning("[HoleLiteImporter] Could not find URP Terrain/Lit shader — using default terrain material");
+                Debug.LogWarning("[HoleLiteImporter] Could not find URP Terrain shader");
                 return null;
             }
 
             var mat = new Material(shader);
+            mat.name = "MAT_Terrain";
             mat.SetFloat("_Smoothness", 0f);
             mat.SetFloat("_Metallic", 0f);
             mat.SetFloat("_SpecularHighlights", 0f);
+            mat.SetFloat("_EnvironmentReflections", 0f);
             mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
-            mat.name = "MAT_Terrain";
+            mat.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
             AssetDatabase.CreateAsset(mat, matPath);
             return mat;
         }
