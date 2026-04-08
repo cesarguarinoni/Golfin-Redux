@@ -136,8 +136,26 @@ namespace Golfin.CourseImport
                 anchorsRoot.transform.SetParent(holeRoot.transform);
 
                 var terrain = terrainGO.GetComponent<Terrain>();
+
+                // Load green centroid for tee marker orientation
+                Vector3 greenCentroid = Vector3.zero;
+                bool hasGreenCentroid = false;
+                string greensPath = Path.Combine(exportPath, "greens.json");
+                if (File.Exists(greensPath))
+                {
+                    var greensFile = JsonUtility.FromJson<GreensFileData>(File.ReadAllText(greensPath));
+                    if (greensFile.greens != null && greensFile.greens.Length > 0)
+                    {
+                        var gc = greensFile.greens[0].center_local;
+                        // Apply 90° CCW rotation: (x, z) → (z, x)
+                        greenCentroid = new Vector3(gc.z, 0f, gc.x);
+                        hasGreenCentroid = true;
+                    }
+                }
+
                 foreach (var anchor in anchors)
-                    PlaceAnchorMarker(anchor, anchors, terrain, terrainGO.transform, anchorsRoot.transform);
+                    PlaceAnchorMarker(anchor, terrain, terrainGO.transform, anchorsRoot.transform,
+                        hasGreenCentroid, greenCentroid);
 
                 var debugRefs = new GameObject("DebugReferences");
                 debugRefs.transform.SetParent(holeRoot.transform);
@@ -269,8 +287,9 @@ namespace Golfin.CourseImport
             terrainData.terrainLayers = new TerrainLayer[] { layer };
         }
 
-        private static void PlaceAnchorMarker(AnchorData anchor, AnchorData[] allAnchors,
-            Terrain terrain, Transform terrainTransform, Transform parent)
+        private static void PlaceAnchorMarker(AnchorData anchor,
+            Terrain terrain, Transform terrainTransform, Transform parent,
+            bool hasGreenCentroid, Vector3 greenCentroid)
         {
             // 90° CCW rotation: (x, z) → (-z, x) → (local.z, local.x)
             Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
@@ -278,8 +297,10 @@ namespace Golfin.CourseImport
 
             if (anchor.type.Contains("tee"))
             {
-                // Determine tee color mapping
+                // Determine tee color mapping + scale correction
+                // Red and Gold FBX have globalScale=1 in meta, Blue/White have 0.15
                 string meshName, matName, teeLabel;
+                float scaleFix = 1f;
                 if (anchor.type.Contains("back"))
                 {
                     meshName = "MESH_BlueTee"; matName = "MAT_BlueTee"; teeLabel = "back";
@@ -295,6 +316,7 @@ namespace Golfin.CourseImport
                 else if (anchor.type.Contains("ladies"))
                 {
                     meshName = "MESH_RedTee"; matName = "MAT_RedTee"; teeLabel = "ladies";
+                    scaleFix = 0.15f; // Red FBX imports at 1.0 scale, others at 0.15
                 }
                 else
                 {
@@ -314,21 +336,24 @@ namespace Golfin.CourseImport
                     return;
                 }
 
-                // Compute perpendicular direction for marker pair spacing
-                Vector3 perpDir = Vector3.right; // default: space along X axis
-                // Try to find green anchor for forward direction
-                var greenAnchor = allAnchors.FirstOrDefault(a => a.type.Contains("green"));
-                if (greenAnchor != null)
+                // Compute forward direction to green and perpendicular for spacing
+                Vector3 forwardDir = Vector3.forward; // default
+                Vector3 perpDir = Vector3.right;      // default: space along X axis
+                if (hasGreenCentroid)
                 {
-                    Vector3 greenPos = new Vector3(greenAnchor.local.z, 0f, greenAnchor.local.x);
-                    Vector3 forward = (greenPos - worldPos).normalized;
-                    if (forward.sqrMagnitude > 0.001f)
+                    Vector3 toGreen = (greenCentroid - worldPos);
+                    toGreen.y = 0f;
+                    if (toGreen.sqrMagnitude > 0.01f)
                     {
-                        perpDir = Vector3.Cross(Vector3.up, forward).normalized;
+                        forwardDir = toGreen.normalized;
+                        perpDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
                         if (perpDir.sqrMagnitude < 0.001f)
                             perpDir = Vector3.right;
                     }
                 }
+
+                // Rotation: markers face the green
+                Quaternion rotation = Quaternion.LookRotation(forwardDir, Vector3.up);
 
                 // Place 2 markers: Left and Right, spaced 3m apart (1.5m each side)
                 for (int side = 0; side < 2; side++)
@@ -351,6 +376,9 @@ namespace Golfin.CourseImport
                     }
 
                     markerGO.transform.position = markerPos;
+                    markerGO.transform.rotation = rotation;
+                    if (scaleFix != 1f)
+                        markerGO.transform.localScale = Vector3.one * scaleFix;
                     markerGO.transform.SetParent(parent);
                 }
             }
