@@ -173,6 +173,7 @@ namespace Golfin.CourseImport
                 light.type = LightType.Directional;
                 light.color = new Color(1f, 0.96f, 0.84f);
                 light.intensity = 1.0f;
+                light.renderMode = LightRenderMode.ForceVertex;  // Kill per-pixel specular
                 lightGO.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
                 // Apply skybox

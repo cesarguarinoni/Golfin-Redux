@@ -129,3 +129,4 @@ if the grain direction is correct now. If it's still wrong, try
 ✅ DONE: 2026-04-08 — Flag + hole cup at green centroid
 ✅ DONE: 2026-04-08 — Terrain lighting cleanup attempt 1: normals re-enabled, light reduced, terrain material created (still plastic)
 ✅ DONE: 2026-04-08 — Terrain plastic sheen Take 2: normals nulled, normalScale=0, env reflections off, specular keywords on material
+✅ DONE: 2026-04-08 — Terrain plastic sheen Take 3: ForceVertex light rendering (nuclear option) to kill per-pixel specular
