@@ -220,6 +220,7 @@ const server = createServer(async (req, res) => {
 
       const existing = JSON.parse(await readFile(zonesPath, "utf8"));
       existing.grid = body.grid;
+      existing.source_dimensions = { width: body.width, height: body.height };
 
       const raw = Buffer.from(body.grid, "base64");
       const totalPixels = body.width * body.height;
