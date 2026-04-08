@@ -489,7 +489,7 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build fairway-contours.json ---
-  const fairways = extractZoneContours(zonesData, terrainMeta, 1, 30, 3.0, 3);
+  const fairways = extractZoneContours(zonesData, terrainMeta, 1, 30, 1.0, 2);
   // zone 1 = fairway, min 30px, RDP epsilon 3.0, 3 Chaikin passes.
   // NOTE: narrow corridor sections may appear slightly thinner than the zone
   // map due to Chaikin shrinkage — acceptable tradeoff for smooth edges.

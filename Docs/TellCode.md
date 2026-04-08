@@ -7,139 +7,88 @@
 
 ---
 
-## Current Task — Fix Fairway Width Shrinkage
+## Current Task — Diagnose & Fix Fairway Width Shrinkage
 
-**Problem:** The middle fairway corridor is noticeably thinner than the
-zone illustration. Two factors cause this:
+**Problem:** The middle fairway section (fairway #1, the large region)
+is significantly thinner in Unity than in the zone illustration. Other
+thin sections of the fairway are fine — this is localized to one area.
 
-1. **Chaikin smoothing** in the export pipeline shrinks the contour
-   (corner-cutting pulls vertices inward on convex sections)
-2. **Fringe ring** uses negative offset (-0.5m inward), eating into
-   the fairway from inside
+**Key discovery:** The zone grid is 2596×3124 pixels (0.20 m/px), NOT
+the 794×956 I originally assumed. At this resolution, RDP epsilon=3.0
+removes points within 15 pixels of the simplification line. On a corridor
+that's only 50-100 pixels wide, that's devastating.
 
-**Fix:** Two changes:
+### Step 1: Run the diagnostic script
 
-### Change 1: Compensate for Chaikin shrinkage in the export pipeline
-
-In `Tools/UHoleLite/scripts/export-hole.mjs`, in `extractZoneContours`,
-after the Chaikin smoothing step and before `ensureCCW`, add a dilation
-step that pushes the smoothed contour outward to compensate for the
-shrinkage. This only needs to apply to large polygons (fairways) — small
-shapes like bunkers and greens aren't affected enough to matter.
-
-Add this function before `extractZoneContours`:
-
-```javascript
-/**
- * Offset a closed polygon outward by a distance.
- * At each vertex, compute the average outward normal of its two edges
- * and push along it with miter correction.
- * Assumes CCW winding (outward = left of edge direction).
- */
-function offsetPolygon(polygon, distance) {
-  const n = polygon.length;
-  if (n < 3) return polygon;
-
-  const result = [];
-  for (let i = 0; i < n; i++) {
-    const prev = (i - 1 + n) % n;
-    const next = (i + 1) % n;
-
-    // Edge vectors
-    const e1x = polygon[i].x - polygon[prev].x;
-    const e1z = polygon[i].z - polygon[prev].z;
-    const e1len = Math.sqrt(e1x * e1x + e1z * e1z) || 1;
-    const e2x = polygon[next].x - polygon[i].x;
-    const e2z = polygon[next].z - polygon[i].z;
-    const e2len = Math.sqrt(e2x * e2x + e2z * e2z) || 1;
-
-    // Outward normals (rotate 90° CCW for CCW polygon: (x,z) → (-z,x))
-    const n1x = -e1z / e1len;
-    const n1z =  e1x / e1len;
-    const n2x = -e2z / e2len;
-    const n2z =  e2x / e2len;
-
-    // Average normal
-    let avgx = n1x + n2x;
-    let avgz = n1z + n2z;
-    const avglen = Math.sqrt(avgx * avgx + avgz * avgz) || 1;
-    avgx /= avglen;
-    avgz /= avglen;
-
-    // Miter correction
-    const dot = n1x * avgx + n1z * avgz;
-    let miter = dot > 0.1 ? distance / dot : distance;
-    miter = Math.min(miter, distance * 3); // cap to prevent spikes
-
-    result.push({
-      x: parseFloat((polygon[i].x + avgx * miter).toFixed(2)),
-      z: parseFloat((polygon[i].z + avgz * miter).toFixed(2)),
-    });
-  }
-
-  return result;
-}
+```
+cd Tools/UHoleLite
+node scripts/diagnose-fairway.mjs lomond-country-club 1
 ```
 
-Then in `extractZoneContours`, after the smoothPolygon call:
+This compares the raw zone grid fairway width vs the smoothed contour
+width at each Z position. Look for rows where the difference is large
+(marked `*** BIG DIFF`). This tells us exactly WHERE the shrinkage
+happens and by HOW MUCH.
 
+**Paste the output into TellCode.md** so the architect can analyze it.
+
+### Step 2: Based on diagnostic results
+
+**If the issue is RDP (contour has too few points in the problem area):**
+The fix is to reduce RDP epsilon for fairways. The grid is 0.2m/px
+so epsilon=3.0 means 15px tolerance — way too aggressive. Try
+epsilon=1.0 (5px tolerance) which is enough to remove collinear points
+but preserves corridor shape.
+
+Change in `export-hole.mjs`:
 ```javascript
-contourMeters = smoothPolygon(simplified, smoothPasses);
-
-// Compensate for Chaikin shrinkage on large polygons.
-// Each Chaikin pass shrinks the polygon by roughly 0.5-1m on curves.
-// Dilate outward proportional to the number of smooth passes.
-if (smoothPasses > 0 && pixels.length > 5000) {
-  const compensation = smoothPasses * 0.5; // ~0.5m per pass
-  contourMeters = offsetPolygon(contourMeters, compensation);
-}
-
-contourMeters = ensureCCW(contourMeters);
+const fairways = extractZoneContours(zonesData, terrainMeta, 1, 30, 1.0, 3);
 ```
 
-This only applies to regions larger than 5000 pixels (fairways), leaving
-bunkers and greens untouched.
+**If the issue is Chaikin (plenty of points but they're pulled inward):**
+Reduce Chaikin to 2 passes:
+```javascript
+const fairways = extractZoneContours(zonesData, terrainMeta, 1, 30, 1.0, 2);
+```
 
-### Change 2: NONE — Keep fringe inward
+**If the issue is the border trace itself (traceBorder shortcutting):**
+This would require fixing the 8-connected walk algorithm.
 
-The fringe stays at -0.5m inward. Moving it outward would cause it to
-spill into bunkers and other zones. The Chaikin compensation in Change 1
-already accounts for both the Chaikin shrinkage AND the 0.5m fringe
-eating into the fairway (compensation = passes × 0.5 ≈ 1.5m, which
-covers the ~1m Chaikin shrinkage + 0.5m fringe).
+### Step 3: Re-export and re-import to verify
+
+```
+node scripts/export-hole.mjs lomond-country-club 1
+```
+Then re-import in Unity and compare the middle section width.
 
 ---
 
-### Verification
-
-- [ ] Middle fairway corridor matches the zone illustration width
-- [ ] Other fairway sections not bloated (compensation is proportional)
-- [ ] Fringe ring appears OUTSIDE the fairway (not inside)
-- [ ] No gap between fairway edge and fringe ring inner edge
-- [ ] Bunkers and greens unchanged (compensation skipped for small shapes)
-- [ ] No console errors
-
 ### Do NOT
 
-- Change the RDP epsilon or Chaikin passes (stay at 3.0 / 3)
-- Touch bunker, green, or water pipelines
-- Modify tee or cart path meshes
+- Change fringe ring direction (stays inward)
+- Modify bunker, green, or water pipelines
+- Apply uniform dilation (bloats wide sections)
 
 ---
 
 ## Previous Completed Tasks
 
-✅ DONE: 2026-04-08 — Fairway mow stripes (T_Fairway_Mix, ear-clip triangulation) + fringe ring (semirough, 0.5m inward)
-✅ DONE: 2026-04-08 — Water Shore Slope
-✅ DONE: 2026-04-08 — Tee Markers: FBX props
-✅ DONE: 2026-04-08 — Flag + hole cup at green centroid
-✅ DONE: 2026-04-08 — Terrain plastic sheen fixed via Mask Map
-✅ DONE: 2026-04-08 — Texture cleanup: swap, fringe ring, blur removed, alphamap 1024, zone grid 2048
-✅ DONE: 2026-04-08 — PNG + SVG zone import in Hole Viewer
-✅ DONE: 2026-04-08 — Morphological close + various smoothing attempts
-✅ DONE: 2026-04-08 — Re-enable normal maps (0.4 intensity) + aniso filtering (level 16) on all terrain textures
-✅ DONE: 2026-04-08 — SDF-based smooth fairway border (replaced by mesh approach)
-✅ DONE: 2026-04-08 — Vector contour rasterization (replaced by mesh approach)
-✅ DONE: 2026-04-08 — Zone overlay meshes: fairway + tee as contour meshes with smooth edges
-✅ DONE: 2026-04-08 — Tee border ring with gradient texture (T_TeeDark_Albedo)
-❌ REVERTED: 2026-04-08 — Fairway Chaikin dilation reverted. Uniform offsetPolygon (0.5m/pass) bloated the upper fairway lip into the adjacent bunker while the thin middle corridor remained unfixed. The narrowness appears to be in the source zone illustration, not an artifact of Chaikin smoothing. Needs architect review — possible source data fix or a non-uniform approach.
+✅ DONE: 2026-04-08 — Fairway mow stripes + fringe ring
+✅ DONE: 2026-04-08 — Zone overlay meshes: fairway + tee as contour meshes
+✅ DONE: 2026-04-08 — Tee border ring with gradient texture
+✅ DONE: 2026-04-08 — All earlier tasks (water, bunkers, greens, textures, etc.)
+✅ DONE: 2026-04-08 — Fairway width fix: RDP epsilon 3.0→1.0, Chaikin 3→2 passes. z=50 diff: -5.4m→-1.2m, z=150: -4.2m→-2.7m. One BIG DIFF remains at z=-5 (tip narrowing, -5.2m) — likely source data.
+
+### Diagnostic output (after fix: epsilon=1.0, smoothPasses=2)
+
+Fairway #1: 132713 pixels, 108 contour points (was 128 with old params)
+
+Smoothed Contour Width vs Grid:
+```
+localZ   | widthM | gridWidthM | diff
+    -5.0 |    7.9 |       13.1 |  -5.2 *** BIG DIFF (fairway tip)
+     0.0 |   17.4 |       17.3 |   0.0
+    50.0 |   48.2 |       49.4 |  -1.2  (was -5.4)
+   150.0 |    7.2 |        9.9 |  -2.7  (was -4.2)
+```
+Most other rows within ±1.5m. The z=-5 BIG DIFF is at the narrow tip where the fairway transitions — may need source data adjustment.
