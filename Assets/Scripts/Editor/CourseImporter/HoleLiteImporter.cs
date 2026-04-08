@@ -16,6 +16,8 @@ namespace Golfin.CourseImport
         public static float ShoreDepthMeters = 0.1f;
         /// <summary>Dilation radius for fairway fringe ring (semi-rough border around fairway).</summary>
         public static int FairwayFringeRadius = 2;
+        /// <summary>Width of fairway mow stripes in meters.</summary>
+        public static float MowStripeWidth = 15f;
 
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 01")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 02")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
@@ -255,7 +257,7 @@ namespace Golfin.CourseImport
 
             var terrainData = new TerrainData();
             terrainData.heightmapResolution = actualRes;
-            terrainData.alphamapResolution = 256;  // pre-set before saving to disk
+            terrainData.alphamapResolution = 1024;  // high-res splatmap for smooth zone edges
             terrainData.size = new Vector3(terrainX, elevRange, terrainZ);
             terrainData.SetHeights(0, 0, heights);
 
@@ -505,8 +507,41 @@ namespace Golfin.CourseImport
 
             Debug.Log($"[HoleLiteImporter] Zone grid: {zoneW}x{zoneH}, {grid.Length} bytes");
 
+            // --- Compute fairway stripe direction (tee → green in alphamap coords) ---
+            string anchorsPath = Path.Combine(exportPath, "anchors.json");
+            Vector2 stripeDir = new Vector2(0, 1); // default: stripes along Z
+            if (File.Exists(anchorsPath))
+            {
+                string anchJson = File.ReadAllText(anchorsPath);
+                var anchWrap = JsonUtility.FromJson<AnchorArrayWrapper>(
+                    "{\"items\":" + anchJson + "}");
+                var anchs = anchWrap.items;
+
+                var backTee = System.Array.Find(anchs, a => a.type.Contains("back"));
+
+                // Get green centroid from greens.json
+                string grPath = Path.Combine(exportPath, "greens.json");
+                AnchorLocal greenCenter = null;
+                if (File.Exists(grPath))
+                {
+                    var grFile = JsonUtility.FromJson<GreensFileData>(File.ReadAllText(grPath));
+                    if (grFile.greens != null && grFile.greens.Length > 0)
+                        greenCenter = grFile.greens[0].center_local;
+                }
+
+                if (backTee != null && greenCenter != null)
+                {
+                    // Apply 90° CCW rotation to both (same as anchor placement): (x,z) → (z,x)
+                    Vector2 teePos = new Vector2(backTee.local.z, backTee.local.x);
+                    Vector2 greenPos = new Vector2(greenCenter.z, greenCenter.x);
+                    Vector2 dir = (greenPos - teePos).normalized;
+                    if (dir.sqrMagnitude > 0.01f)
+                        stripeDir = dir;
+                }
+            }
+
             // --- 2. Resample to alphamap resolution ---
-            int alphaRes = 256;
+            int alphaRes = 1024;
             terrainData.alphamapResolution = alphaRes;
 
             byte[] resampledZones = new byte[alphaRes * alphaRes];
@@ -570,6 +605,9 @@ namespace Golfin.CourseImport
             int layerCount = 8;
             float[,,] alphamap = new float[alphaRes, alphaRes, layerCount];
 
+            float terrainSizeX = terrainData.size.x;
+            float terrainSizeZ = terrainData.size.z;
+
             for (int ay = 0; ay < alphaRes; ay++)
             {
                 for (int ax = 0; ax < alphaRes; ax++)
@@ -578,11 +616,25 @@ namespace Golfin.CourseImport
                     int layer;
 
                     if (fringeMask[idx])
-                        layer = 7; // green fringe
+                        layer = 2; // green fringe → semi-rough (layer 7 is now dark fairway)
                     else if (fairwayFringeMask[idx])
                         layer = 2; // fairway fringe → semi-rough texture
                     else
+                    {
                         layer = ZoneToLayer(resampledZones[idx]);
+
+                        // Mow stripes: alternate light/dark fairway
+                        if (layer == 0) // fairway
+                        {
+                            float worldX = ((float)ax / (alphaRes - 1)) * terrainSizeX - terrainSizeX / 2f;
+                            float worldZ = ((float)ay / (alphaRes - 1)) * terrainSizeZ - terrainSizeZ / 2f;
+
+                            float proj = worldX * stripeDir.x + worldZ * stripeDir.y;
+                            int band = Mathf.FloorToInt(proj / MowStripeWidth);
+                            if (band % 2 != 0)
+                                layer = 7; // dark fairway stripe
+                        }
+                    }
 
                     alphamap[ay, ax, layer] = 1.0f;
                 }
@@ -604,7 +656,7 @@ namespace Golfin.CourseImport
                 "T_Bunker_Albedo",      // 4 bunker
                 "T_Tee_Albedo",         // 5 tee
                 "T_RoadAsphalt_Albedo", // 6 cart path
-                "T_Fairway_Dark",       // 7 fringe
+                "T_Fairway_Dark",       // 7 dark fairway (mow stripes)
             };
             string[] normalNames = {
                 "T_Fairway_Normal",
