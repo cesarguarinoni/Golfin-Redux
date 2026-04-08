@@ -142,4 +142,4 @@ covers the ~1m Chaikin shrinkage + 0.5m fringe).
 ✅ DONE: 2026-04-08 — Vector contour rasterization (replaced by mesh approach)
 ✅ DONE: 2026-04-08 — Zone overlay meshes: fairway + tee as contour meshes with smooth edges
 ✅ DONE: 2026-04-08 — Tee border ring with gradient texture (T_TeeDark_Albedo)
-✅ DONE: 2026-04-08 — Fix fairway width shrinkage: offsetPolygon dilation after Chaikin smoothing (0.5m/pass, >5000px regions only)
+❌ REVERTED: 2026-04-08 — Fairway Chaikin dilation reverted. Uniform offsetPolygon (0.5m/pass) bloated the upper fairway lip into the adjacent bunker while the thin middle corridor remained unfixed. The narrowness appears to be in the source zone illustration, not an artifact of Chaikin smoothing. Needs architect review — possible source data fix or a non-uniform approach.
