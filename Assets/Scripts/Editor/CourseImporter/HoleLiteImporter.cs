@@ -536,7 +536,7 @@ namespace Golfin.CourseImport
                     Vector2 greenPos = new Vector2(greenCenter.z, greenCenter.x);
                     Vector2 dir = (greenPos - teePos).normalized;
                     if (dir.sqrMagnitude > 0.01f)
-                        stripeDir = dir;
+                        stripeDir = new Vector2(-dir.y, dir.x); // perpendicular to tee→green
                 }
             }
 
