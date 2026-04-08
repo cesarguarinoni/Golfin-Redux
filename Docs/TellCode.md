@@ -477,3 +477,4 @@ ZoneToLayer) works unchanged — they just get smoother input.
 ✅ DONE: 2026-04-08 — Fairway mow stripes: alternating light/dark bands along tee→green axis
 ✅ DONE: 2026-04-08 — Re-enable normal maps (0.4 intensity) + aniso filtering (level 16) on all terrain textures
 ✅ DONE: 2026-04-08 — SDF-based smooth fairway border (chamfer distance, 1.5m fringe, organic curves)
+✅ DONE: 2026-04-08 — Vector contour rasterization for smooth zone boundaries (fairway, tee, semi-rough)
