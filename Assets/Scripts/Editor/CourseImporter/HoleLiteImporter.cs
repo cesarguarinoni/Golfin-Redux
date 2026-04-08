@@ -2343,7 +2343,9 @@ namespace Golfin.CourseImport
 
         /// <summary>
         /// Create a fairway mesh with two submeshes for mow stripes (light/dark).
-        /// Triangles are assigned to light or dark based on centroid projection onto stripe axis.
+        /// Slices the polygon into parallel bands along stripeDir, then centroid-fan
+        /// triangulates each band into the correct submesh. This gives clean parallel
+        /// stripe boundaries instead of the radial pattern from whole-polygon centroid-fan.
         /// </summary>
         private static GameObject CreateFairwayMesh(int id, ContourPoint[] contour,
             Terrain terrain, float terrainBaseY,
@@ -2353,83 +2355,102 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            // Convert contour to world space (90° CCW rotation: worldX = z, worldZ = x)
-            Vector3[] worldPts = new Vector3[n];
-            float yOffset = 0.02f;
-
+            // Convert contour to world-space XZ points (90° CCW: worldX = z, worldZ = x)
+            var poly = new System.Collections.Generic.List<Vector2>(n);
             for (int i = 0; i < n; i++)
+                poly.Add(new Vector2(contour[i].z, contour[i].x));
+
+            // Find projection range along stripeDir
+            float minProj = float.MaxValue, maxProj = float.MinValue;
+            for (int i = 0; i < poly.Count; i++)
             {
-                float wx = contour[i].z;
-                float wz = contour[i].x;
-                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                worldPts[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
+                float p = Vector2.Dot(poly[i], stripeDir);
+                if (p < minProj) minProj = p;
+                if (p > maxProj) maxProj = p;
             }
 
-            // Compute centroid
-            float cx = 0, cy = 0, cz = 0;
-            for (int i = 0; i < n; i++)
-            {
-                cx += worldPts[i].x;
-                cy += worldPts[i].y;
-                cz += worldPts[i].z;
-            }
-            cx /= n; cy /= n; cz /= n;
-            Vector3 centroid = new Vector3(cx, cy, cz);
+            int minBand = Mathf.FloorToInt(minProj / stripeWidth);
+            int maxBand = Mathf.FloorToInt(maxProj / stripeWidth);
 
-            // Build vertices: contour + centroid (relative to centroid)
-            var verts = new Vector3[n + 1];
-            var uvs = new Vector2[n + 1];
-            for (int i = 0; i < n; i++)
-            {
-                verts[i] = worldPts[i] - centroid;
-                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
-            }
-            verts[n] = Vector3.zero;
-            uvs[n] = new Vector2(cx / tileSize, cz / tileSize);
-
-            // Build fan triangles
-            var tris = new int[n * 3];
-            for (int i = 0; i < n; i++)
-            {
-                tris[i * 3 + 0] = i;
-                tris[i * 3 + 1] = n;
-                tris[i * 3 + 2] = (i + 1) % n;
-            }
-
-            // Classify each triangle into light or dark submesh
+            // Accumulate all vertices and triangles across bands
+            var allVerts = new System.Collections.Generic.List<Vector3>();
+            var allUVs = new System.Collections.Generic.List<Vector2>();
             var lightTris = new System.Collections.Generic.List<int>();
             var darkTris = new System.Collections.Generic.List<int>();
 
-            for (int t = 0; t < tris.Length; t += 3)
+            float yOffset = 0.02f;
+
+            for (int band = minBand; band <= maxBand; band++)
             {
-                Vector3 v0 = verts[tris[t]] + centroid;
-                Vector3 v1 = verts[tris[t + 1]] + centroid;
-                Vector3 v2 = verts[tris[t + 2]] + centroid;
+                float lo = band * stripeWidth;
+                float hi = lo + stripeWidth;
 
-                float tcx = (v0.x + v1.x + v2.x) / 3f;
-                float tcz = (v0.z + v1.z + v2.z) / 3f;
+                // Clip polygon to this band (two half-plane clips)
+                var clipped = ClipPolygonToHalfPlane(poly, stripeDir, lo, true);   // keep >= lo
+                clipped = ClipPolygonToHalfPlane(clipped, stripeDir, hi, false);   // keep <= hi
 
-                float proj = tcx * stripeDir.x + tcz * stripeDir.y;
-                int band = Mathf.FloorToInt(proj / stripeWidth);
+                if (clipped.Count < 3) continue;
 
-                if (band % 2 == 0)
+                // Centroid-fan triangulate this band polygon
+                int baseIdx = allVerts.Count;
+                int cn = clipped.Count;
+
+                // Compute band polygon centroid
+                float bcx = 0, bcz = 0;
+                for (int i = 0; i < cn; i++)
                 {
-                    lightTris.Add(tris[t]);
-                    lightTris.Add(tris[t + 1]);
-                    lightTris.Add(tris[t + 2]);
+                    bcx += clipped[i].x;
+                    bcz += clipped[i].y; // Vector2.y = world Z
                 }
-                else
+                bcx /= cn; bcz /= cn;
+
+                // Add contour vertices + centroid
+                for (int i = 0; i < cn; i++)
                 {
-                    darkTris.Add(tris[t]);
-                    darkTris.Add(tris[t + 1]);
-                    darkTris.Add(tris[t + 2]);
+                    float wx = clipped[i].x;
+                    float wz = clipped[i].y;
+                    float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                    allVerts.Add(new Vector3(wx, terrainBaseY + th + yOffset, wz));
+                    allUVs.Add(new Vector2(wx / tileSize, wz / tileSize));
+                }
+                // Centroid vertex
+                float ch = terrain.SampleHeight(new Vector3(bcx, 0, bcz));
+                allVerts.Add(new Vector3(bcx, terrainBaseY + ch + yOffset, bcz));
+                allUVs.Add(new Vector2(bcx / tileSize, bcz / tileSize));
+                int centIdx = baseIdx + cn;
+
+                // Fan triangles
+                var targetList = (band % 2 == 0) ? lightTris : darkTris;
+                for (int i = 0; i < cn; i++)
+                {
+                    targetList.Add(baseIdx + i);
+                    targetList.Add(centIdx);
+                    targetList.Add(baseIdx + (i + 1) % cn);
                 }
             }
 
+            if (allVerts.Count < 3) return null;
+
+            // Compute overall centroid for mesh positioning
+            float ocx = 0, ocy = 0, ocz = 0;
+            for (int i = 0; i < allVerts.Count; i++)
+            {
+                ocx += allVerts[i].x;
+                ocy += allVerts[i].y;
+                ocz += allVerts[i].z;
+            }
+            ocx /= allVerts.Count; ocy /= allVerts.Count; ocz /= allVerts.Count;
+            Vector3 origin = new Vector3(ocx, ocy, ocz);
+
+            // Make vertices relative to origin
+            var relVerts = new Vector3[allVerts.Count];
+            for (int i = 0; i < allVerts.Count; i++)
+                relVerts[i] = allVerts[i] - origin;
+
             var mesh = new Mesh();
             mesh.name = $"Fairway_{id}";
-            mesh.vertices = verts;
-            mesh.uv = uvs;
+            mesh.vertices = relVerts;
+            mesh.uv = allUVs.ToArray();
             mesh.subMeshCount = 2;
             mesh.SetTriangles(lightTris.ToArray(), 0);
             mesh.SetTriangles(darkTris.ToArray(), 1);
@@ -2437,7 +2458,7 @@ namespace Golfin.CourseImport
             mesh.RecalculateBounds();
 
             var go = new GameObject($"Fairway_{id}");
-            go.transform.position = centroid;
+            go.transform.position = origin;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var renderer = go.AddComponent<MeshRenderer>();
             renderer.sharedMaterials = new Material[] { lightMat, darkMat };
@@ -2447,6 +2468,47 @@ namespace Golfin.CourseImport
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
 
             return go;
+        }
+
+        /// <summary>
+        /// Clip a 2D polygon to a half-plane defined by: dot(point, axis) >= threshold (keepAbove=true)
+        /// or dot(point, axis) <= threshold (keepAbove=false). Sutherland-Hodgman single edge clip.
+        /// </summary>
+        private static System.Collections.Generic.List<Vector2> ClipPolygonToHalfPlane(
+            System.Collections.Generic.List<Vector2> poly, Vector2 axis, float threshold, bool keepAbove)
+        {
+            if (poly.Count < 3) return poly;
+
+            var result = new System.Collections.Generic.List<Vector2>();
+            int n = poly.Count;
+
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 curr = poly[i];
+                Vector2 next = poly[(i + 1) % n];
+                float currDot = Vector2.Dot(curr, axis);
+                float nextDot = Vector2.Dot(next, axis);
+
+                bool currInside = keepAbove ? (currDot >= threshold - 0.001f) : (currDot <= threshold + 0.001f);
+                bool nextInside = keepAbove ? (nextDot >= threshold - 0.001f) : (nextDot <= threshold + 0.001f);
+
+                if (currInside)
+                    result.Add(curr);
+
+                if (currInside != nextInside)
+                {
+                    // Edge crosses the clip line — compute intersection
+                    float denom = nextDot - currDot;
+                    if (Mathf.Abs(denom) > 0.0001f)
+                    {
+                        float t = (threshold - currDot) / denom;
+                        t = Mathf.Clamp01(t);
+                        result.Add(Vector2.Lerp(curr, next, t));
+                    }
+                }
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -2461,7 +2523,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.02f;
+            float yOffset = 0.03f; // slightly above fairway (0.02) to avoid z-fighting
 
             // Convert to world space
             Vector3[] innerRing = new Vector3[n];
@@ -2506,6 +2568,7 @@ namespace Golfin.CourseImport
             }
 
             // Triangles: quad strip between inner and outer ring
+            // Two winding orders per quad so both faces render (front = up = CCW when viewed from above)
             var fringeTris = new int[n * 6];
             for (int i = 0; i < n; i++)
             {
@@ -2514,12 +2577,14 @@ namespace Golfin.CourseImport
                 int outerCurr = n + i;
                 int outerNext = n + next;
                 int t = i * 6;
+                // Triangle 1: curr → next → outerCurr (CCW from above)
                 fringeTris[t + 0] = curr;
-                fringeTris[t + 1] = outerCurr;
-                fringeTris[t + 2] = next;
+                fringeTris[t + 1] = next;
+                fringeTris[t + 2] = outerCurr;
+                // Triangle 2: next → outerNext → outerCurr (CCW from above)
                 fringeTris[t + 3] = next;
-                fringeTris[t + 4] = outerCurr;
-                fringeTris[t + 5] = outerNext;
+                fringeTris[t + 4] = outerNext;
+                fringeTris[t + 5] = outerCurr;
             }
 
             var fringeMesh = new Mesh();
