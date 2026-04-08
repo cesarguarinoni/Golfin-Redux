@@ -1520,7 +1520,7 @@ namespace Golfin.CourseImport
                     var holeCup = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                     holeCup.name = $"Hole_{green.id}";
                     float flagY = surfaceY + greenHeight;
-                    holeCup.transform.position = new Vector3(centroidX, flagY - 0.005f, centroidZ);
+                    holeCup.transform.position = new Vector3(centroidX, flagY + 0.001f, centroidZ);
                     holeCup.transform.localScale = new Vector3(0.108f, 0.001f, 0.108f);
                     holeCup.transform.SetParent(greensRoot.transform);
 
