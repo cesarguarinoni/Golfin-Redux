@@ -2341,19 +2341,18 @@ namespace Golfin.CourseImport
 
         private static MeshCollider AddCleanMeshCollider(GameObject go, Mesh mesh)
         {
+            // Skip meshes too small for PhysX to cook — they produce
+            // "cleaning the mesh failed" errors. Bounds extent < 0.5m
+            // in any axis means the shape is tiny junk from noisy source data.
+            var bounds = mesh.bounds;
+            if (bounds.extents.x < 0.5f || bounds.extents.z < 0.5f)
+                return null;
+
             var mc = go.AddComponent<MeshCollider>();
             mc.cookingOptions = MeshColliderCookingOptions.CookForFasterSimulation
                               | MeshColliderCookingOptions.EnableMeshCleaning
                               | MeshColliderCookingOptions.WeldColocatedVertices;
             mc.sharedMesh = mesh;
-
-            // If PhysX failed to cook, remove the broken collider so it
-            // doesn't cause runtime issues — the mesh still renders fine.
-            if (mc.sharedMesh == null)
-            {
-                Object.DestroyImmediate(mc);
-                return null;
-            }
             return mc;
         }
 
