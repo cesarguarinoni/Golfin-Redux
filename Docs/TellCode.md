@@ -7,121 +7,78 @@
 
 ---
 
-## Current Task — Tee Markers (Replace Raised Mesh with FBX Props)
+## Current Task — Flag at Green Centroid
 
-**Goal:** Remove the tee raised mesh approach. Replace debug anchor
-cylinders with proper FBX tee marker props from
-`Assets/Art/3D/Props/TeeMarkers/`. Two markers per tee, placed on the
-terrain surface. Splatmap already handles the tee texture (zone 10 →
-`T_Tee_Albedo`), so no terrain changes needed.
+**Goal:** Place `Flag.fbx` at the centroid of each green on import.
+
+**File:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
 
 ---
 
-### Part A: Remove tee raised mesh
+### What to do
 
-#### A1. Remove `CreateTeeMeshes()` call from `ImportLiteHole()`
+In `CreateGreenMeshes()`, after each green mesh is created and parented,
+instantiate the flag prop at the green centroid.
 
-Find and delete this block:
-```csharp
-EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating tees...", 0.56f);
-CreateTeeMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
-```
+1. Load the flag prefab:
+   ```csharp
+   var flagPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+       "Assets/Art/3D/Props/Flag/Flag.fbx");
+   ```
 
-#### A2. Delete `CreateTeeMeshes()` method entirely
+2. For each green, after `meshGO.transform.SetParent(greensRoot.transform)`:
+   ```csharp
+   if (flagPrefab != null)
+   {
+       var flag = Object.Instantiate(flagPrefab);
+       flag.name = $"Flag_{green.id}";
+       // Position at green centroid, on top of the raised green surface
+       float flagY = surfaceY + greenHeight;
+       flag.transform.position = new Vector3(centroidX, flagY, centroidZ);
+       flag.transform.SetParent(greensRoot.transform);
+   }
+   ```
 
-#### A3. Delete tee data classes (`TeesFileData`, `TeeRegionData`) if they exist
+   `surfaceY` and `greenHeight` and `centroidX`/`centroidZ` are already
+   computed in the foreach loop — just use them.
 
-#### A4. Remove tee-related constants
+3. If the flag looks too big or small, check the FBX scale. You may need
+   to adjust `flag.transform.localScale`. Leave a `// TODO: tune scale`
+   comment if unsure.
 
-Delete `TeeHeight` and `TeeCollarScale` from the top of the class.
+4. Load the flag material and apply it:
+   ```csharp
+   var flagMat = AssetDatabase.LoadAssetAtPath<Material>(
+       "Assets/Art/3D/Props/Flag/MAT_Flag.mat");
+   ```
+   Apply to all renderers on the flag if the FBX doesn't auto-assign it.
 
-#### A5. Remove tee export from `export-hole.mjs`
+5. **Add the hole cup** at the same position as the flag, slightly
+   recessed into the green surface.
 
-Delete the `// --- Build tees.json ---` block from `exportHole()`.
-Remove `tees_file` from the manifest object.
-Remove `teeCount` from the return object and console.log line.
-
-**Do NOT** revert the `extractZoneContours()` optional params
-(`rdpEpsilon`, `smoothPasses`) — those are still useful for future zones.
-
----
-
-### Part B: Replace anchor debug cylinders with FBX tee markers
-
-#### B1. Create green tee marker
-
-There's no green FBX marker. Duplicate the white one:
-- Copy `MESH_WhiteTee.fbx` → keep same mesh
-- Create a new material `MAT_GreenTee.mat` in
-  `Assets/Art/3D/Props/TeeMarkers/Materials/`
-- Use the same shader as the other tee materials (check `MAT_WhiteTee.mat`)
-- Set color to green: `new Color(0.2f, 0.6f, 0.2f)` (adjust if the
-  other materials use a texture instead of flat color — match the pattern)
-
-#### B2. Update `PlaceAnchorMarker()` to use FBX markers
-
-Replace the current method. For tee anchors (`type` contains "tee"),
-instantiate the FBX mesh prefab instead of `CreatePrimitive(Cylinder)`.
-
-Color mapping:
-- `tee_back` → `MESH_BlueTee` + `MAT_BlueTee`
-- `tee_regular` → `MESH_WhiteTee` + `MAT_GreenTee` (green material on white mesh)
-- `tee_front` → `MESH_WhiteTee` + `MAT_WhiteTee`
-- `tee_ladies` → `MESH_RedTee` + `MAT_RedTee`
-
-For each tee anchor, place **2 markers** spaced ~3m apart perpendicular
-to the tee-to-green direction. To determine perpendicular direction:
-- Find the green anchor (or centroid of green zone) for forward direction
-- Cross with up vector to get left/right
-- Place marker A at position + 1.5m left, marker B at position + 1.5m right
-- If no green direction can be determined, default to spacing along X axis
-
-Each marker should:
-- Load mesh: `AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/3D/Props/TeeMarkers/MESH_{Color}Tee.fbx")`
-- Instantiate with `PrefabUtility.InstantiatePrefab()` or `Object.Instantiate()`
-- Apply the correct material from `Assets/Art/3D/Props/TeeMarkers/Materials/MAT_{Color}Tee.mat`
-- Position on terrain surface: `terrain.SampleHeight(pos)` + small Y offset (0.01m)
-- Parent under `Anchors` root
-
-For non-tee anchors (if any exist in the future), keep the current
-cylinder debug marker approach.
-
-#### B3. Naming convention
-
-Name the GameObjects:
-- `TeeMarker_back_L`, `TeeMarker_back_R`
-- `TeeMarker_regular_L`, `TeeMarker_regular_R`
-- `TeeMarker_front_L`, `TeeMarker_front_R`
-- `TeeMarker_ladies_L`, `TeeMarker_ladies_R`
-
----
+   - Create a flat disc mesh (or use `GameObject.CreatePrimitive(PrimitiveType.Cylinder)`
+     scaled to near-zero height).
+   - Diameter: 0.108m (10.8cm — regulation golf cup is 4.25").
+   - If using a cylinder: scale `(0.108f, 0.001f, 0.108f)`, position
+     at `flagY - 0.005f` (slightly below green surface).
+   - Apply `MAT_Hole.mat` from
+     `Assets/Courses/Materials (Shared by courses)/MAT_Hole.mat`
+   - Name: `Hole_{green.id}`
+   - Parent under `greensRoot`
+   - Remove the collider from the cylinder primitive (it's just visual).
 
 ### Verification
 
-1. Re-export Hole 1: `node scripts/export-hole.mjs lomond-country-club 1`
-   - [ ] No `tees.json` generated (removed)
-   - [ ] No errors, bunkers/greens/water still export
-
-2. Re-import Hole 1 in Unity: `GOLFIN > Import Hole (Lite) > Hole 01`
-   - [ ] No raised tee meshes in scene
-   - [ ] 8 tee marker objects (2 per tee × 4 tees)
-   - [ ] Blue markers at back tee, Green at regular, White at front, Red at ladies
-   - [ ] Markers sitting on terrain surface
-   - [ ] Markers spaced ~3m apart at each tee position
-   - [ ] Tee area texture visible on terrain (splatmap unchanged)
-   - [ ] Greens, bunkers, water unaffected
-   - [ ] No console errors
-
-3. Re-import Hole 12:
-   - [ ] Tee markers + water + bunkers + greens all coexist
-   - [ ] No console errors
+- [ ] Re-import Hole 1 — flag appears on the green
+- [ ] Flag is at green centroid, sitting on the green surface (not floating/buried)
+- [ ] Re-import Hole 12 — flag + water + bunkers + tee markers all coexist
+- [ ] No console errors
 
 ### Do NOT
 
-- Modify splatmap pipeline or zone textures
-- Modify bunker, green, or water mesh generation
-- Modify shore slope logic
-- Remove `extractZoneContours()` optional params
+- Modify green mesh generation
+- Modify any other pipeline
+- Add flag to anchors.json or export pipeline (future: green editor will handle pin placement)
 
 ---
 
@@ -161,6 +118,7 @@ Name the GameObjects:
 ✅ DONE: 2026-04-07 — Simplified water to flat plane: no basin, no terrain holes, opaque material
 ✅ DONE: 2026-04-07 — Water Option 2: Rasterized quad + alpha mask (pixel-perfect water boundaries)
 ✅ DONE: 2026-04-07 — Water SDF texture: signed distance field for smooth edges
-✅ DONE: 2026-04-08 — Water Shore Slope: terrain depression near water edges via heightmap modification at import time
+✅ DONE: 2026-04-08 — Water Shore Slope: terrain depression near water edges
 ✅ DONE: 2026-04-08 — Tee Area raised mesh + collar (reverted — wrong approach)
-✅ DONE: 2026-04-08 — Tee Markers: removed raised mesh, replaced debug cylinders with FBX tee marker props (2 per tee, 4 colors)
+✅ DONE: 2026-04-08 — Tee Markers: FBX props replacing debug cylinders, green mat created
+✅ DONE: 2026-04-08 — Flag at green centroid + hole cup (regulation 0.108m cylinder disc)
