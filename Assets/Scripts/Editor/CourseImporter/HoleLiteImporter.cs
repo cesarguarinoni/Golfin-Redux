@@ -2686,7 +2686,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.035f; // above tee mesh (0.02) to avoid z-fighting
+            float yOffset = 0.025f; // between terrain (0.0) and tee mesh (0.02) — inner edge hides under tee
 
             // Convert to world space
             Vector3[] innerRing = new Vector3[n];
@@ -2696,6 +2696,15 @@ namespace Golfin.CourseImport
                 float wz = contour[i].x;
                 float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                 innerRing[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
+            }
+
+            // Pull inner ring slightly inward so it overlaps under the tee mesh (no gap)
+            float inwardOverlap = 0.15f;
+            Vector3[] innerRingInset = OffsetContourOutward(innerRing, -inwardOverlap);
+            for (int i = 0; i < n; i++)
+            {
+                float h = terrain.SampleHeight(new Vector3(innerRingInset[i].x, 0, innerRingInset[i].z));
+                innerRingInset[i].y = terrainBaseY + h + yOffset;
             }
 
             // Outer ring
@@ -2730,7 +2739,7 @@ namespace Golfin.CourseImport
             var uvs = new Vector2[n * 2];
             for (int i = 0; i < n; i++)
             {
-                verts[i] = innerRing[i] - centroid;
+                verts[i] = innerRingInset[i] - centroid;
                 verts[n + i] = outerRing[i] - centroid;
 
                 float u = arcLengths[i] / uTileSize;
