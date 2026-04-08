@@ -99,10 +99,9 @@ namespace Golfin.CourseImport
                 terrainGO.name = "TerrainRoot";
                 terrainGO.transform.position = new Vector3(-terrainX / 2f, -ShoreDepthMeters, -terrainZ / 2f);
 
-                // Kill plastic sheen: disable reflection probes and assign matte terrain material
+                // Disable reflection probes on terrain
                 var terrainComp = terrainGO.GetComponent<Terrain>();
                 terrainComp.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
-                terrainComp.materialTemplate = GetTerrainMaterial();
 
                 // Create holeRoot early so bunkers can be parented to it
                 var holeRoot = new GameObject("HoleRoot");
@@ -173,7 +172,6 @@ namespace Golfin.CourseImport
                 light.type = LightType.Directional;
                 light.color = new Color(1f, 0.96f, 0.84f);
                 light.intensity = 1.0f;
-                light.renderMode = LightRenderMode.ForceVertex;  // Kill per-pixel specular
                 lightGO.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
                 // Apply skybox
@@ -630,8 +628,24 @@ namespace Golfin.CourseImport
             for (int i = 0; i < layerCount; i++)
             {
                 layers[i] = new TerrainLayer();
-                layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
-                layers[i].normalMapTexture = null;  // Normals disabled — they amplify specular catchlights
+                var albedoTex = FindTextureExact(texDir, albedoNames[i]);
+
+                // Fix terrain plastic sheen: URP terrain shader reads smoothness
+                // from albedo alpha. JPGs have no alpha → Unity fills white (1.0)
+                // = full smoothness. Disable alpha source to force 0 smoothness.
+                if (albedoTex != null)
+                {
+                    string texPath = AssetDatabase.GetAssetPath(albedoTex);
+                    var texImporter = AssetImporter.GetAtPath(texPath) as TextureImporter;
+                    if (texImporter != null && texImporter.alphaSource != TextureImporterAlphaSource.None)
+                    {
+                        texImporter.alphaSource = TextureImporterAlphaSource.None;
+                        texImporter.SaveAndReimport();
+                    }
+                }
+
+                layers[i].diffuseTexture = albedoTex;
+                layers[i].normalMapTexture = null;
                 // Fringe (index 7): non-square tile to fix grain orientation on 90° rotated terrain
                 layers[i].tileSize = (i == 7) ? new Vector2(8f, 4f) : new Vector2(tileSizes[i], tileSizes[i]);
                 layers[i].tileOffset = Vector2.zero;
@@ -2092,43 +2106,6 @@ namespace Golfin.CourseImport
             AssetDatabase.ImportAsset($"{dataDir}/water.json");
 
             Debug.Log($"[HoleLiteImporter] Created {waterFile.water.Length} water quad(s)");
-        }
-
-        private static Material GetTerrainMaterial()
-        {
-            string matPath = "Assets/Courses/Materials (Shared by courses)/MAT_Terrain.mat";
-            var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-            if (existing != null)
-            {
-                // Always re-apply settings in case they got lost
-                existing.SetFloat("_Smoothness", 0f);
-                existing.SetFloat("_Metallic", 0f);
-                existing.SetFloat("_SpecularHighlights", 0f);
-                existing.SetFloat("_EnvironmentReflections", 0f);
-                existing.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
-                existing.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
-                EditorUtility.SetDirty(existing);
-                return existing;
-            }
-
-            var shader = Shader.Find("Universal Render Pipeline/Terrain/Lit");
-            if (shader == null) shader = Shader.Find("Terrain/Lit");
-            if (shader == null)
-            {
-                Debug.LogWarning("[HoleLiteImporter] Could not find URP Terrain shader");
-                return null;
-            }
-
-            var mat = new Material(shader);
-            mat.name = "MAT_Terrain";
-            mat.SetFloat("_Smoothness", 0f);
-            mat.SetFloat("_Metallic", 0f);
-            mat.SetFloat("_SpecularHighlights", 0f);
-            mat.SetFloat("_EnvironmentReflections", 0f);
-            mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
-            mat.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
-            AssetDatabase.CreateAsset(mat, matPath);
-            return mat;
         }
 
         private static void EnsureDirectory(string path)

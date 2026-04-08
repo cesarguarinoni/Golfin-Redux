@@ -7,116 +7,95 @@
 
 ---
 
-## Current Task — Kill Terrain Plastic Sheen (Take 2)
+## Current Task — Kill Terrain Plastic Sheen (Take 3)
 
-**Problem:** Terrain still has specular highlights/plastic look despite
-`smoothness = 0` on layers and `GetTerrainMaterial()`. The normals we
-re-enabled are making it worse by giving the surface micro-detail that
-catches specular light.
+**Root cause found:** The URP terrain shader reads smoothness from the
+**alpha channel of the albedo texture**. Our terrain textures are JPGs
+which have no alpha channel. When Unity imports a JPG, it fills alpha
+with **white (1.0) = full smoothness** → plastic sheen.
 
-**Root cause:** URP Terrain/Lit shader controls specular via both the
-material AND the per-layer smoothness/normal maps. Setting smoothness=0
-on layers isn't enough — the shader still has specular response.
+This is why the zone meshes look fine — they use `URP/Lit` which respects
+the material's `_Smoothness` property. The terrain shader ignores the
+layer smoothness and reads from the texture alpha instead.
 
 **File:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
 
 ---
 
-### Fix: Disable normals and force specular off
+### The Fix
 
-In the terrain layer creation loop, **null out normal maps** again.
-The normals were causing more harm (specular catchlights) than good
-(surface detail). We can re-enable them later when we have proper
-lighting/shader setup.
-
-Find the layer creation loop and make sure:
-```csharp
-layers[i].normalMapTexture = null;  // Disable normals — they amplify specular
-layers[i].smoothness = 0f;
-layers[i].metallic = 0f;
-```
-
-Also, in `GetTerrainMaterial()`, make sure the material has these
-keywords and properties set:
+In `ApplySplatmap()`, in the terrain layer creation loop, after
+`FindTextureExact()` loads each albedo texture, configure the texture
+importer to disable alpha:
 
 ```csharp
-private static Material GetTerrainMaterial()
+for (int i = 0; i < layerCount; i++)
 {
-    string matPath = "Assets/Courses/Materials (Shared by courses)/MAT_Terrain.mat";
-    var existing = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-    if (existing != null)
+    layers[i] = new TerrainLayer();
+    var albedoTex = FindTextureExact(texDir, albedoNames[i]);
+
+    // Fix terrain plastic sheen: URP terrain shader reads smoothness
+    // from albedo alpha. JPGs have no alpha → Unity fills white (1.0)
+    // = full smoothness. Disable alpha source to force 0 smoothness.
+    if (albedoTex != null)
     {
-        // Always re-apply settings in case they got lost
-        existing.SetFloat("_Smoothness", 0f);
-        existing.SetFloat("_Metallic", 0f);
-        // Try all known URP specular-off approaches
-        existing.SetFloat("_SpecularHighlights", 0f);
-        existing.SetFloat("_EnvironmentReflections", 0f);
-        existing.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
-        existing.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
-        EditorUtility.SetDirty(existing);
-        return existing;
+        string texPath = AssetDatabase.GetAssetPath(albedoTex);
+        var texImporter = AssetImporter.GetAtPath(texPath) as TextureImporter;
+        if (texImporter != null && texImporter.alphaSource != TextureImporterAlphaSource.None)
+        {
+            texImporter.alphaSource = TextureImporterAlphaSource.None;
+            texImporter.SaveAndReimport();
+        }
     }
 
-    // Create new
-    var shader = Shader.Find("Universal Render Pipeline/Terrain/Lit");
-    if (shader == null) shader = Shader.Find("Terrain/Lit");
-    if (shader == null)
-    {
-        Debug.LogWarning("[HoleLiteImporter] Could not find URP Terrain shader");
-        return null;
-    }
-
-    var mat = new Material(shader);
-    mat.name = "MAT_Terrain";
-    mat.SetFloat("_Smoothness", 0f);
-    mat.SetFloat("_Metallic", 0f);
-    mat.SetFloat("_SpecularHighlights", 0f);
-    mat.SetFloat("_EnvironmentReflections", 0f);
-    mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
-    mat.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
-    AssetDatabase.CreateAsset(mat, matPath);
-    return mat;
+    layers[i].diffuseTexture = albedoTex;
+    // ... rest of layer setup
 }
 ```
 
-**Important:** Delete the existing `MAT_Terrain.mat` file first before
-re-importing, so it gets recreated with the correct settings. Or
-manually delete it from
-`Assets/Courses/Materials (Shared by courses)/MAT_Terrain.mat`.
+This sets `Alpha Source = None` on each terrain albedo texture, so Unity
+won't generate a white alpha channel. The terrain shader will then read
+alpha = 0 = no smoothness = no plastic sheen.
 
-### Alternative if keywords don't work
+### Also: null out normal maps again
 
-If the URP terrain shader ignores `_SPECULARHIGHLIGHTS_OFF`, the nuclear
-option is to set the directional light to cast **no specular**:
+The normals were making the specular worse. Set them to null until we
+have proper lighting:
 
-After creating the light in `ImportLiteHole()`:
 ```csharp
-light.renderMode = LightRenderMode.ForceVertex;
+layers[i].normalMapTexture = null;
 ```
 
-This forces vertex lighting which removes per-pixel specular. It's a
-blunt instrument but guaranteed to kill the hotspot.
+### Also: remove GetTerrainMaterial()
 
-### Fringe texture — check result
+The custom terrain material approach didn't help. Remove the
+`GetTerrainMaterial()` method and the lines that set
+`terrain.materialTemplate`. Let the terrain use Unity's default
+Terrain/Lit shader — with the alpha fix, it won't be shiny.
 
-The previous task changed fringe tile to `new Vector2(8f, 4f)`. Check
-if the grain direction is correct now. If it's still wrong, try
-`new Vector2(4f, 8f)` instead.
+Remove these lines from `ImportLiteHole()`:
+```csharp
+terrainComp.materialTemplate = GetTerrainMaterial();
+```
+
+And delete the `GetTerrainMaterial()` method.
+
+Keep `terrain.reflectionProbeUsage = Off` — doesn't hurt.
 
 ---
 
 ### Verification
 
-- [ ] Delete `MAT_Terrain.mat` from Assets, then re-import a hole
-- [ ] No plastic sheen on terrain
-- [ ] No sun hotspot when looking toward light
-- [ ] Terrain still textured properly (not flat grey)
-- [ ] All zone meshes unaffected
+- [ ] Re-import any hole
+- [ ] Terrain no longer has plastic/shiny sheen
+- [ ] No sun hotspot blob
+- [ ] Terrain textures still display correctly (colors unchanged)
+- [ ] Zone meshes (bunkers, greens, water) unaffected
+- [ ] No console errors
 
 ### Do NOT
 
-- Modify zone meshes
+- Modify zone meshes or their materials
 - Modify splatmap zone mapping
 - Modify export pipeline
 
@@ -127,6 +106,5 @@ if the grain direction is correct now. If it's still wrong, try
 ✅ DONE: 2026-04-08 — Water Shore Slope: terrain depression near water edges
 ✅ DONE: 2026-04-08 — Tee Markers: FBX props replacing debug cylinders, green mat created
 ✅ DONE: 2026-04-08 — Flag + hole cup at green centroid
-✅ DONE: 2026-04-08 — Terrain lighting cleanup attempt 1: normals re-enabled, light reduced, terrain material created (still plastic)
-✅ DONE: 2026-04-08 — Terrain plastic sheen Take 2: normals nulled, normalScale=0, env reflections off, specular keywords on material
-✅ DONE: 2026-04-08 — Terrain plastic sheen Take 3: ForceVertex light rendering (nuclear option) to kill per-pixel specular
+✅ DONE: 2026-04-08 — Terrain lighting cleanup attempts 1-2 (material keywords, normals — didn't fix root cause)
+✅ DONE: 2026-04-08 — Terrain plastic sheen Take 3: albedo alpha fix (root cause — JPG alpha=1.0 → full smoothness)
