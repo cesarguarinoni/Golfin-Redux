@@ -2145,6 +2145,8 @@ namespace Golfin.CourseImport
 
         // ─── Flat Zone Mesh Pipeline (Fairway, Tee, Cart Path) ─────────
 
+        private const float FairwayFringeMeters = 1.5f;
+
         private static void CreateFlatZoneMeshes(TerrainData terrainData,
             GameObject terrainGO, Transform parentRoot,
             string exportPath, string dataDir, string projectRoot)
@@ -2165,22 +2167,66 @@ namespace Golfin.CourseImport
                     var fwRoot = new GameObject("Fairways");
                     fwRoot.transform.SetParent(parentRoot);
 
-                    var fwMat = CreateTiledMaterial(texDir, "T_Fairway_Light",
+                    // ── Compute stripe direction (perpendicular to tee→green) ──
+                    Vector2 stripeDir = new Vector2(0, 1); // default fallback
+                    string anchorsPath = Path.Combine(exportPath, "anchors.json");
+                    if (File.Exists(anchorsPath))
+                    {
+                        string anchJson = File.ReadAllText(anchorsPath);
+                        var anchWrap = JsonUtility.FromJson<AnchorArrayWrapper>(
+                            "{\"items\":" + anchJson + "}");
+                        var anchs = anchWrap.items;
+                        var backTee = System.Array.Find(anchs, a => a.type.Contains("back"));
+
+                        string grPath = Path.Combine(exportPath, "greens.json");
+                        AnchorLocal greenCenter = null;
+                        if (File.Exists(grPath))
+                        {
+                            var grFile = JsonUtility.FromJson<GreensFileData>(File.ReadAllText(grPath));
+                            if (grFile.greens != null && grFile.greens.Length > 0)
+                                greenCenter = grFile.greens[0].center_local;
+                        }
+
+                        if (backTee != null && greenCenter != null)
+                        {
+                            // Apply same 90° CCW rotation as contour points: worldX = z, worldZ = x
+                            Vector2 teePos = new Vector2(backTee.local.z, backTee.local.x);
+                            Vector2 greenPos = new Vector2(greenCenter.z, greenCenter.x);
+                            Vector2 dir = (greenPos - teePos).normalized;
+                            if (dir.sqrMagnitude > 0.01f)
+                                stripeDir = new Vector2(-dir.y, dir.x); // perpendicular
+                        }
+                    }
+
+                    // ── Materials ──
+                    var lightFairwayMat = CreateTiledMaterial(texDir, "T_Fairway_Light",
                         "T_Fairway_Normal", dataDir, 5f);
+                    var darkFairwayMat = CreateTiledMaterial(texDir, "T_Fairway_Dark",
+                        "T_Fairway_Normal", dataDir, 5f);
+                    var fringeMat = CreateTiledMaterial(texDir, "T_Fringe_Albedo",
+                        "T_Fringe_Normal", dataDir, 6f);
+
+                    float stripeWidth = 5f;
 
                     foreach (var fw in data.fairways)
                     {
                         if (fw.contour == null || fw.contour.Length < 3) continue;
 
-                        var meshGO = CreateFlatContourMesh(
-                            fw.id, "Fairway", fw.contour,
-                            terrain, terrainBaseY, fwMat, 5f,
-                            Golfin.Course.SurfaceType.Fairway);
+                        // Fairway mesh with mow stripes (two submeshes)
+                        var meshGO = CreateFairwayMesh(
+                            fw.id, fw.contour, terrain, terrainBaseY,
+                            lightFairwayMat, darkFairwayMat,
+                            stripeDir, stripeWidth, 5f);
                         if (meshGO != null)
                             meshGO.transform.SetParent(fwRoot.transform);
+
+                        // Fringe ring around fairway
+                        var fringeGO = CreateFringeRing(
+                            fw.id, fw.contour, terrain, terrainBaseY,
+                            fringeMat, FairwayFringeMeters, 6f, fwRoot.transform);
                     }
 
-                    Debug.Log($"[HoleLiteImporter] Created {data.fairways.Length} fairway mesh(es)");
+                    Debug.Log($"[HoleLiteImporter] Created {data.fairways.Length} fairway mesh(es) with mow stripes + fringe");
                 }
             }
 
@@ -2293,6 +2339,251 @@ namespace Golfin.CourseImport
             marker.surfaceType = surfaceType;
 
             return go;
+        }
+
+        /// <summary>
+        /// Create a fairway mesh with two submeshes for mow stripes (light/dark).
+        /// Triangles are assigned to light or dark based on centroid projection onto stripe axis.
+        /// </summary>
+        private static GameObject CreateFairwayMesh(int id, ContourPoint[] contour,
+            Terrain terrain, float terrainBaseY,
+            Material lightMat, Material darkMat,
+            Vector2 stripeDir, float stripeWidth, float tileSize)
+        {
+            int n = contour.Length;
+            if (n < 3) return null;
+
+            // Convert contour to world space (90° CCW rotation: worldX = z, worldZ = x)
+            Vector3[] worldPts = new Vector3[n];
+            float yOffset = 0.02f;
+
+            for (int i = 0; i < n; i++)
+            {
+                float wx = contour[i].z;
+                float wz = contour[i].x;
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                worldPts[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
+            }
+
+            // Compute centroid
+            float cx = 0, cy = 0, cz = 0;
+            for (int i = 0; i < n; i++)
+            {
+                cx += worldPts[i].x;
+                cy += worldPts[i].y;
+                cz += worldPts[i].z;
+            }
+            cx /= n; cy /= n; cz /= n;
+            Vector3 centroid = new Vector3(cx, cy, cz);
+
+            // Build vertices: contour + centroid (relative to centroid)
+            var verts = new Vector3[n + 1];
+            var uvs = new Vector2[n + 1];
+            for (int i = 0; i < n; i++)
+            {
+                verts[i] = worldPts[i] - centroid;
+                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
+            }
+            verts[n] = Vector3.zero;
+            uvs[n] = new Vector2(cx / tileSize, cz / tileSize);
+
+            // Build fan triangles
+            var tris = new int[n * 3];
+            for (int i = 0; i < n; i++)
+            {
+                tris[i * 3 + 0] = i;
+                tris[i * 3 + 1] = n;
+                tris[i * 3 + 2] = (i + 1) % n;
+            }
+
+            // Classify each triangle into light or dark submesh
+            var lightTris = new System.Collections.Generic.List<int>();
+            var darkTris = new System.Collections.Generic.List<int>();
+
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                Vector3 v0 = verts[tris[t]] + centroid;
+                Vector3 v1 = verts[tris[t + 1]] + centroid;
+                Vector3 v2 = verts[tris[t + 2]] + centroid;
+
+                float tcx = (v0.x + v1.x + v2.x) / 3f;
+                float tcz = (v0.z + v1.z + v2.z) / 3f;
+
+                float proj = tcx * stripeDir.x + tcz * stripeDir.y;
+                int band = Mathf.FloorToInt(proj / stripeWidth);
+
+                if (band % 2 == 0)
+                {
+                    lightTris.Add(tris[t]);
+                    lightTris.Add(tris[t + 1]);
+                    lightTris.Add(tris[t + 2]);
+                }
+                else
+                {
+                    darkTris.Add(tris[t]);
+                    darkTris.Add(tris[t + 1]);
+                    darkTris.Add(tris[t + 2]);
+                }
+            }
+
+            var mesh = new Mesh();
+            mesh.name = $"Fairway_{id}";
+            mesh.vertices = verts;
+            mesh.uv = uvs;
+            mesh.subMeshCount = 2;
+            mesh.SetTriangles(lightTris.ToArray(), 0);
+            mesh.SetTriangles(darkTris.ToArray(), 1);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"Fairway_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials = new Material[] { lightMat, darkMat };
+            go.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
+
+            return go;
+        }
+
+        /// <summary>
+        /// Create a fringe ring mesh around a fairway contour.
+        /// Inner ring = original contour, outer ring = offset outward.
+        /// </summary>
+        private static GameObject CreateFringeRing(int id, ContourPoint[] contour,
+            Terrain terrain, float terrainBaseY,
+            Material fringeMat, float fringeWidth, float tileSize,
+            Transform parent)
+        {
+            int n = contour.Length;
+            if (n < 3) return null;
+
+            float yOffset = 0.02f;
+
+            // Convert to world space
+            Vector3[] innerRing = new Vector3[n];
+            for (int i = 0; i < n; i++)
+            {
+                float wx = contour[i].z;
+                float wz = contour[i].x;
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                innerRing[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
+            }
+
+            // Offset outward for outer ring
+            Vector3[] outerRing = OffsetContourOutward(innerRing, fringeWidth);
+
+            // Update Y for outer ring (sample terrain height)
+            for (int i = 0; i < outerRing.Length; i++)
+            {
+                float h = terrain.SampleHeight(new Vector3(outerRing[i].x, 0, outerRing[i].z));
+                outerRing[i].y = terrainBaseY + h + yOffset;
+            }
+
+            // Compute centroid from inner ring
+            float cx = 0, cy = 0, cz = 0;
+            for (int i = 0; i < n; i++)
+            {
+                cx += innerRing[i].x;
+                cy += innerRing[i].y;
+                cz += innerRing[i].z;
+            }
+            cx /= n; cy /= n; cz /= n;
+            Vector3 centroid = new Vector3(cx, cy, cz);
+
+            // Vertices: inner ring + outer ring (relative to centroid)
+            var fringeVerts = new Vector3[n * 2];
+            var fringeUVs = new Vector2[n * 2];
+            for (int i = 0; i < n; i++)
+            {
+                fringeVerts[i] = innerRing[i] - centroid;
+                fringeVerts[n + i] = outerRing[i] - centroid;
+                fringeUVs[i] = new Vector2(innerRing[i].x / tileSize, innerRing[i].z / tileSize);
+                fringeUVs[n + i] = new Vector2(outerRing[i].x / tileSize, outerRing[i].z / tileSize);
+            }
+
+            // Triangles: quad strip between inner and outer ring
+            var fringeTris = new int[n * 6];
+            for (int i = 0; i < n; i++)
+            {
+                int curr = i;
+                int next = (i + 1) % n;
+                int outerCurr = n + i;
+                int outerNext = n + next;
+                int t = i * 6;
+                fringeTris[t + 0] = curr;
+                fringeTris[t + 1] = outerCurr;
+                fringeTris[t + 2] = next;
+                fringeTris[t + 3] = next;
+                fringeTris[t + 4] = outerCurr;
+                fringeTris[t + 5] = outerNext;
+            }
+
+            var fringeMesh = new Mesh();
+            fringeMesh.name = $"FairwayFringe_{id}";
+            fringeMesh.vertices = fringeVerts;
+            fringeMesh.triangles = fringeTris;
+            fringeMesh.uv = fringeUVs;
+            fringeMesh.RecalculateNormals();
+            fringeMesh.RecalculateBounds();
+
+            var fringeGO = new GameObject($"FairwayFringe_{id}");
+            fringeGO.transform.position = centroid;
+            fringeGO.AddComponent<MeshFilter>().sharedMesh = fringeMesh;
+            fringeGO.AddComponent<MeshRenderer>().sharedMaterial = fringeMat;
+            fringeGO.AddComponent<MeshCollider>().sharedMesh = fringeMesh;
+
+            var fringeMarker = fringeGO.AddComponent<Golfin.Course.SurfaceMarker>();
+            fringeMarker.surfaceType = Golfin.Course.SurfaceType.Fringe;
+
+            fringeGO.transform.SetParent(parent);
+            return fringeGO;
+        }
+
+        /// <summary>
+        /// Offset a closed contour outward by a distance.
+        /// At each vertex, compute the average outward normal of its two edges,
+        /// then push the vertex along that normal with miter correction.
+        /// </summary>
+        private static Vector3[] OffsetContourOutward(Vector3[] contour, float distance)
+        {
+            int n = contour.Length;
+            var result = new Vector3[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                int prev = (i - 1 + n) % n;
+                int next = (i + 1) % n;
+
+                // Edge vectors (XZ plane)
+                Vector2 e1 = new Vector2(contour[i].x - contour[prev].x,
+                                          contour[i].z - contour[prev].z).normalized;
+                Vector2 e2 = new Vector2(contour[next].x - contour[i].x,
+                                          contour[next].z - contour[i].z).normalized;
+
+                // Outward normals (rotate 90° CW: (x,z) → (z,-x))
+                // Contours are CCW in export; after 90° rotation to Unity, outward = CW rotation
+                Vector2 n1 = new Vector2(e1.y, -e1.x);
+                Vector2 n2 = new Vector2(e2.y, -e2.x);
+
+                // Average normal
+                Vector2 avg = (n1 + n2).normalized;
+
+                // Miter correction: push further at sharp angles
+                float dot = Vector2.Dot(n1, avg);
+                float miter = (dot > 0.1f) ? distance / dot : distance;
+                miter = Mathf.Min(miter, distance * 3f); // cap to prevent spikes
+
+                result[i] = new Vector3(
+                    contour[i].x + avg.x * miter,
+                    contour[i].y,
+                    contour[i].z + avg.y * miter);
+            }
+
+            return result;
         }
 
         /// <summary>

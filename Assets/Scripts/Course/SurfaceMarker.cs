@@ -11,7 +11,8 @@ namespace Golfin.Course
         Bunker,
         Water,
         Tee,
-        CartPath
+        CartPath,
+        Fringe
     }
 
     public class SurfaceMarker : MonoBehaviour
