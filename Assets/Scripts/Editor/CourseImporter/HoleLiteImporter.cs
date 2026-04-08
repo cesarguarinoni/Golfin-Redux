@@ -2346,6 +2346,14 @@ namespace Golfin.CourseImport
                               | MeshColliderCookingOptions.EnableMeshCleaning
                               | MeshColliderCookingOptions.WeldColocatedVertices;
             mc.sharedMesh = mesh;
+
+            // If PhysX failed to cook, remove the broken collider so it
+            // doesn't cause runtime issues — the mesh still renders fine.
+            if (mc.sharedMesh == null)
+            {
+                Object.DestroyImmediate(mc);
+                return null;
+            }
             return mc;
         }
 
