@@ -478,3 +478,4 @@ We can add stripes later as a polish pass.
 ✅ DONE: 2026-04-08 — Re-enable normal maps (0.4 intensity) + aniso filtering (level 16) on all terrain textures
 ✅ DONE: 2026-04-08 — SDF-based smooth fairway border (replaced by mesh approach)
 ✅ DONE: 2026-04-08 — Vector contour rasterization (replaced by mesh approach)
+✅ DONE: 2026-04-08 — Zone overlay meshes: fairway, tee, cart path mesh overlays + splatmap simplification
