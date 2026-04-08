@@ -1493,6 +1493,51 @@ namespace Golfin.CourseImport
                     terrain, terrainBaseY, collarMat, greenCollarScale);
                 meshGO.transform.SetParent(greensRoot.transform);
 
+                // Place flag at green centroid
+                var flagPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                    "Assets/Art/3D/Props/Flag/Flag.fbx");
+                if (flagPrefab != null)
+                {
+                    var flag = Object.Instantiate(flagPrefab);
+                    flag.name = $"Flag_{green.id}";
+                    float flagY = surfaceY + greenHeight;
+                    flag.transform.position = new Vector3(centroidX, flagY, centroidZ);
+                    flag.transform.SetParent(greensRoot.transform);
+
+                    // Apply flag material to all renderers
+                    var flagMat = AssetDatabase.LoadAssetAtPath<Material>(
+                        "Assets/Art/3D/Props/Flag/MAT_Flag.mat");
+                    if (flagMat != null)
+                    {
+                        foreach (var rend in flag.GetComponentsInChildren<Renderer>())
+                            rend.sharedMaterial = flagMat;
+                    }
+                    // TODO: tune scale if flag appears too big or small
+                }
+
+                // Place hole cup at flag position (flat cylinder, regulation 4.25" = 0.108m diameter)
+                {
+                    var holeCup = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                    holeCup.name = $"Hole_{green.id}";
+                    float flagY = surfaceY + greenHeight;
+                    holeCup.transform.position = new Vector3(centroidX, flagY - 0.005f, centroidZ);
+                    holeCup.transform.localScale = new Vector3(0.108f, 0.001f, 0.108f);
+                    holeCup.transform.SetParent(greensRoot.transform);
+
+                    // Remove collider (visual only)
+                    var col = holeCup.GetComponent<Collider>();
+                    if (col != null) Object.DestroyImmediate(col);
+
+                    // Apply hole material
+                    var holeMat = AssetDatabase.LoadAssetAtPath<Material>(
+                        "Assets/Courses/Materials (Shared by courses)/MAT_Hole.mat");
+                    if (holeMat != null)
+                    {
+                        var rend = holeCup.GetComponent<Renderer>();
+                        if (rend != null) rend.sharedMaterial = holeMat;
+                    }
+                }
+
                 // Find the surface child and add Green marker
                 var surfaceChild = meshGO.transform.Find($"Green_{green.id}_Surface");
                 if (surfaceChild != null)
