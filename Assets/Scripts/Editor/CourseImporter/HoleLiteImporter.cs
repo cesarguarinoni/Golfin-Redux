@@ -2145,7 +2145,7 @@ namespace Golfin.CourseImport
 
         // ─── Flat Zone Mesh Pipeline (Fairway, Tee, Cart Path) ─────────
 
-        private const float FairwayFringeMeters = 1.0f;
+        private const float FairwayFringeMeters = 0.5f;
 
         private static void CreateFlatZoneMeshes(TerrainData terrainData,
             GameObject terrainGO, Transform parentRoot,
@@ -2201,8 +2201,8 @@ namespace Golfin.CourseImport
                     // ── Materials ──
                     var fairwayMat = CreateTiledMaterial(texDir, "T_Fairway_Mix",
                         "T_Fairway_Normal", dataDir, 5f);
-                    var fringeMat = CreateTiledMaterial(texDir, "T_Fringe_Albedo",
-                        "T_Fringe_Normal", dataDir, 6f);
+                    var fringeMat = CreateTiledMaterial(texDir, "T_Semirough_Albedo",
+                        "T_Semirough_Normal", dataDir, 6f);
 
                     float stripeWidth = 5f;
 
