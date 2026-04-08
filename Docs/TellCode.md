@@ -7,127 +7,135 @@
 
 ---
 
-## Current Task — Fix Straighten Edges (Morphological Close Approach)
+## Current Task — Import Zones from SVG (Inkscape)
 
-**Problem:** The vectorize→rasterize approach completely broke zone
-shapes. Revert it and replace with morphological close (dilate → erode).
+**Goal:** Add "Import Zones SVG" button to Hole Viewer. User draws zone
+shapes in Inkscape with zone fill colors. App rasterizes SVG to zone
+grid — vector edges = zero jaggies. Keep existing PNG import too.
 
-**Approach:** For each zone (as a binary mask):
-1. **Dilate** by N pixels (fills jagged indentations)
-2. **Erode** by N pixels (restores original size, but edges are now smooth)
-3. Write the smoothed mask back to the grid
+**Also:** Remove all broken straighten code.
 
-This is a standard morphological close operation. Process zones in
-priority order so higher-priority zones overwrite lower ones.
-
-**File:** `Tools/UHoleLite/app/app.js`
+**Files:**
+- `Tools/UHoleLite/app/app.js` — add SVG import, remove broken straighten
+- `Tools/UHoleLite/app/index.html` — replace Straighten button with Import SVG
 
 ---
 
-### Replace the `straightenBoundaries()` function entirely
+### How it works
 
-Delete all the helper functions added in the previous attempt
-(`traceBorderPixels`, `rdpSimplify`, `perpDist`, `chaikinSmooth`,
-`scanlineFill`). Replace `straightenBoundaries()` with:
+1. User traces zone shapes in Inkscape over the hole illustration
+2. Each shape's fill = zone color (same palette as paint tool)
+3. Click "Import Zones SVG" → app rasterizes SVG to offscreen canvas
+   at zone grid resolution → reads pixels → nearest-color match to
+   zone index → replaces zone grid
+
+### Implementation
+
+#### 1. HTML — replace Straighten button
+
+```html
+<button id="import-svg-btn" title="Import zones from SVG">Import Zones SVG</button>
+<input type="file" id="svg-file-input" accept=".svg" style="display:none">
+```
+
+#### 2. JS — SVG import logic
 
 ```javascript
-function straightenBoundaries() {
-  const w = zoneGridW, h = zoneGridH;
-  const result = new Uint8Array(w * h);
-  result.fill(0); // start with background
+document.getElementById("import-svg-btn").addEventListener("click", () => {
+  document.getElementById("svg-file-input").click();
+});
 
-  // Process zones in priority order (higher overwrites lower)
-  const zonePriority = [4, 5, 3, 1, 10, 2, 6, 7, 8, 9];
-  const radius = 3; // dilate/erode radius
+document.getElementById("svg-file-input").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-  for (const zone of zonePriority) {
-    // Build binary mask for this zone
-    const mask = new Uint8Array(w * h);
-    for (let i = 0; i < w * h; i++) {
-      if (zoneGrid[i] === zone) mask[i] = 1;
+  const svgText = await file.text();
+  const targetW = zoneGridW || 1024;
+  const targetH = zoneGridH || 1024;
+
+  const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+
+  img.onload = () => {
+    const tmpCanvas = document.createElement("canvas");
+    tmpCanvas.width = targetW;
+    tmpCanvas.height = targetH;
+    const tmpCtx = tmpCanvas.getContext("2d");
+
+    // Black background = zone 0 (background)
+    tmpCtx.fillStyle = "#000000";
+    tmpCtx.fillRect(0, 0, targetW, targetH);
+    tmpCtx.drawImage(img, 0, 0, targetW, targetH);
+
+    const imageData = tmpCtx.getImageData(0, 0, targetW, targetH);
+    const pixels = imageData.data;
+    const newGrid = new Uint8Array(targetW * targetH);
+
+    for (let i = 0; i < targetW * targetH; i++) {
+      const r = pixels[i * 4];
+      const g = pixels[i * 4 + 1];
+      const b = pixels[i * 4 + 2];
+      newGrid[i] = matchZoneColorNearest(r, g, b);
     }
 
-    // Dilate (expand)
-    const dilated = dilateMask(mask, w, h, radius);
-    // Erode (shrink back)
-    const closed = erodeMask(dilated, w, h, radius);
-
-    // Write to result where mask is set
-    for (let i = 0; i < w * h; i++) {
-      if (closed[i]) result[i] = zone;
+    if (zoneGrid) {
+      zoneUndoStack.push(new Uint8Array(zoneGrid));
+      if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
     }
+
+    zoneGrid = newGrid;
+    zoneGridW = targetW;
+    zoneGridH = targetH;
+    zonePaintDirty = true;
+    drawHole();
+
+    URL.revokeObjectURL(url);
+    console.log(`Imported zones from SVG: ${targetW}×${targetH}`);
+  };
+
+  img.src = url;
+  e.target.value = "";
+});
+
+// Nearest-match because SVG rasterizer anti-aliases edges
+function matchZoneColorNearest(r, g, b) {
+  let bestZone = 0;
+  let bestDist = Infinity;
+  for (let z = 0; z < ZONE_COLORS_RGB.length; z++) {
+    const [zr, zg, zb] = ZONE_COLORS_RGB[z];
+    const dist = (r - zr) ** 2 + (g - zg) ** 2 + (b - zb) ** 2;
+    if (dist < bestDist) { bestDist = dist; bestZone = z; }
   }
-
-  zoneGrid.set(result);
-}
-
-function dilateMask(mask, w, h, radius) {
-  const result = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!mask[y * w + x]) continue;
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          if (dx * dx + dy * dy > radius * radius) continue;
-          const nx = x + dx, ny = y + dy;
-          if (nx >= 0 && nx < w && ny >= 0 && ny < h)
-            result[ny * w + nx] = 1;
-        }
-      }
-    }
-  }
-  return result;
-}
-
-function erodeMask(mask, w, h, radius) {
-  const result = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (!mask[y * w + x]) continue;
-      // Check if ALL pixels in the circular kernel are set
-      let allSet = true;
-      for (let dy = -radius; dy <= radius && allSet; dy++) {
-        for (let dx = -radius; dx <= radius && allSet; dx++) {
-          if (dx * dx + dy * dy > radius * radius) continue;
-          const nx = x + dx, ny = y + dy;
-          if (nx < 0 || nx >= w || ny < 0 || ny >= h || !mask[ny * w + nx])
-            allSet = false;
-        }
-      }
-      if (allSet) result[y * w + x] = 1;
-    }
-  }
-  return result;
+  return bestZone;
 }
 ```
 
-Delete the old helper functions: `traceBorderPixels`, `rdpSimplify`,
-`perpDist`, `chaikinSmooth`, `scanlineFill`.
+#### 3. Remove broken straighten code
+
+Delete all of these if present: `straightenBoundaries()`,
+`traceBorderPixels()`, `rdpSimplify()`, `perpDist()`,
+`chaikinSmooth()`, `scanlineFill()`, `dilateMask()`, `erodeMask()`,
+the Straighten button handler and HTML element.
+
+**Keep** the PNG import button and `matchZoneColor()` (exact match).
 
 ---
 
 ### Verification
 
-- [ ] Click "Straighten Edges" in Hole Viewer
-- [ ] Zone shapes are preserved (no distortion like before)
-- [ ] Jagged edges are smoothed/rounded
-- [ ] Small features preserved (bunkers, tee boxes)
+- [ ] "Import Zones SVG" button works in Hole Viewer
+- [ ] "Import Zones PNG" button still works
+- [ ] SVG rasterized at correct zone grid resolution
+- [ ] Anti-aliased edges snap to nearest zone color
 - [ ] Undo works
-- [ ] Can save the result
+- [ ] Save persists to zones.json + zones.png
+- [ ] No broken straighten code remains
 
 ### Do NOT
 
-- Modify export pipeline
-- Modify Unity importer
-
----
+- Modify export pipeline or Unity importer
 
 ## Previous Completed Tasks
 
-✅ DONE: 2026-04-08 — Water Shore Slope
-✅ DONE: 2026-04-08 — Tee Markers: FBX props
-✅ DONE: 2026-04-08 — Flag + hole cup at green centroid
-✅ DONE: 2026-04-08 — Terrain plastic sheen fixed via Mask Map
-✅ DONE: 2026-04-08 — Texture cleanup: fairway/fringe swap, dark fringe, blur removed, fringe ring
-✅ DONE: 2026-04-08 — Straighten Edges v1 (vectorize — broke shapes, needs replacement)
-✅ DONE: 2026-04-08 — Straighten Edges v2 (morphological close: dilate→erode, radius 3)
+✅ DONE: 2026-04-08 — Import Zones SVG button + removed all straighten code

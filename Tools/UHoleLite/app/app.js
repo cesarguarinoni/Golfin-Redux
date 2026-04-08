@@ -903,6 +903,71 @@ function setupControls() {
     e.target.value = "";
   });
 
+  // Import Zones from SVG
+  document.getElementById("import-svg-btn").addEventListener("click", () => {
+    document.getElementById("svg-file-input").click();
+  });
+  document.getElementById("svg-file-input").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const svgText = await file.text();
+    const targetW = zoneGridW || 1024;
+    const targetH = zoneGridH || 1024;
+
+    const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+
+    img.onload = () => {
+      const tmpCanvas = document.createElement("canvas");
+      tmpCanvas.width = targetW;
+      tmpCanvas.height = targetH;
+      const tmpCtx = tmpCanvas.getContext("2d");
+
+      // Black background = zone 0 (background)
+      tmpCtx.fillStyle = "#000000";
+      tmpCtx.fillRect(0, 0, targetW, targetH);
+      tmpCtx.drawImage(img, 0, 0, targetW, targetH);
+
+      const imageData = tmpCtx.getImageData(0, 0, targetW, targetH);
+      const pixels = imageData.data;
+
+      // Push undo before replacing
+      if (zoneGrid) {
+        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null });
+        if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
+      }
+
+      const newGrid = new Uint8Array(targetW * targetH);
+      const newTrees = new Uint8Array(targetW * targetH);
+      const newOB = new Uint8Array(targetW * targetH);
+      for (let i = 0; i < targetW * targetH; i++) {
+        const r = pixels[i * 4];
+        const g = pixels[i * 4 + 1];
+        const b = pixels[i * 4 + 2];
+        const zone = matchZoneColor(r, g, b);
+        if (zone === 5) { newTrees[i] = 1; newGrid[i] = 0; }
+        else if (zone === 9) { newOB[i] = 1; newGrid[i] = 0; }
+        else { newGrid[i] = zone; }
+      }
+
+      zoneGrid = newGrid;
+      zoneGridW = targetW;
+      zoneGridH = targetH;
+      treesMask = newTrees;
+      obMask = newOB;
+      zonePaintDirty = true;
+      regenerateZonesImage();
+
+      URL.revokeObjectURL(url);
+      console.log(`Imported zones from SVG: ${targetW}×${targetH}`);
+    };
+
+    img.src = url;
+    e.target.value = "";
+  });
+
   // Brush controls
   document.getElementById("brush-size").addEventListener("input", function () {
     brushSize = Number(this.value);
