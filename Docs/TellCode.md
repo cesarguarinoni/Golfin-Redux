@@ -7,15 +7,17 @@
 
 ---
 
-## Current Task — Fairway Fringe Ring
+## Current Task — Sharp Fairway Edges (No Blur Bleeding)
 
-**Goal:** Add a visible transition border around fairway zones, similar
-to how greens already have a fringe ring. Fairway should not blur
-directly into rough — it should have a manicured edge.
+**Problem:** The Gaussian blur in the splatmap pipeline bleeds fairway
+into surrounding zones, making edges soft/gradual. Real fairway has a
+crisp mowed edge — it shouldn't blend into rough.
 
-**Approach:** Same dilation technique as the green fringe. Dilate the
-fairway mask, paint the ring using the semi-rough texture (layer 2).
-This creates a visible intermediate zone between fairway and rough.
+**Fix:** After the blur + re-normalize step, re-stamp fairway pixels
+back to 100% fairway. This preserves the blur for other zone transitions
+(rough↔semi-rough, etc.) but gives fairway a hard edge.
+
+Also re-stamp the fairway fringe pixels so they stay crisp too.
 
 **File:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
 
@@ -23,70 +25,58 @@ This creates a visible intermediate zone between fairway and rough.
 
 ### What to change
 
-In `ApplySplatmap()`, after the existing green fringe block (step 3),
-add a fairway fringe block:
+In `ApplySplatmap()`, after step 5 (Gaussian blur + re-normalize),
+add step 5b:
 
 ```csharp
-// --- 3b. Generate fringe ring around fairway ---
-int fairwayFringeRadius = 2;
-bool[] fairwayMask = new bool[alphaRes * alphaRes];
-for (int i = 0; i < resampledZones.Length; i++)
-    fairwayMask[i] = (resampledZones[i] == 1); // zone 1 = fairway
-
-bool[] dilatedFairway = DilateMask(fairwayMask, alphaRes, alphaRes, fairwayFringeRadius);
-
-bool[] fairwayFringeMask = new bool[alphaRes * alphaRes];
-for (int i = 0; i < fairwayFringeMask.Length; i++)
+// --- 5b. Re-stamp fairway and fairway fringe for crisp edges ---
+// The blur softens all boundaries, but fairway should have sharp,
+// manicured edges like a real golf course.
+for (int ay = 0; ay < alphaRes; ay++)
 {
-    if (dilatedFairway[i] && !fairwayMask[i])
+    for (int ax = 0; ax < alphaRes; ax++)
     {
-        int zone = resampledZones[i];
-        // Only place fairway fringe on rough/semi-rough/trees (not on green, water, bunker, etc.)
-        if (zone == 3 || zone == 4 || zone == 5)
-            fairwayFringeMask[i] = true;
+        int idx = ay * alphaRes + ax;
+
+        if (fairwayMask[idx])
+        {
+            // Hard fairway: clear all layers, set fairway to 1.0
+            for (int l = 0; l < layerCount; l++)
+                alphamap[ay, ax, l] = 0f;
+            alphamap[ay, ax, 0] = 1.0f; // layer 0 = fairway
+        }
+        else if (fairwayFringeMask[idx])
+        {
+            // Hard fairway fringe: clear all, set semi-rough to 1.0
+            for (int l = 0; l < layerCount; l++)
+                alphamap[ay, ax, l] = 0f;
+            alphamap[ay, ax, 2] = 1.0f; // layer 2 = semi-rough
+        }
     }
 }
 ```
 
-Then in step 4 (build raw alphamap), add the fairway fringe check
-before the existing fringe check:
+This goes right before step 6 (Create TerrainLayers and apply).
 
-```csharp
-if (fringeMask[idx])
-    layer = 7; // green fringe
-else if (fairwayFringeMask[idx])
-    layer = 2; // fairway fringe → semi-rough texture
-else
-    layer = ZoneToLayer(resampledZones[idx]);
-```
-
-Green fringe takes priority over fairway fringe (in case they overlap
-near the green).
-
-### Tunable
-
-`fairwayFringeRadius = 2` — make this a `public static int` at the top
-of the class so it can be tuned:
-
-```csharp
-public static int FairwayFringeRadius = 2;
-```
+Note: `fairwayMask` and `fairwayFringeMask` are already computed in
+steps 3b. Make sure they're accessible at this point (they should be
+since they're local variables in the same method).
 
 ---
 
 ### Verification
 
 - [ ] Re-import Hole 1
-- [ ] Fairway has a visible semi-rough border around it
-- [ ] The border separates fairway from rough cleanly
-- [ ] Green fringe still works (unaffected)
+- [ ] Fairway has crisp, sharp edges — no bleeding into rough
+- [ ] Fairway fringe (semi-rough border) also crisp
+- [ ] Other zone transitions still smooth (rough↔semi-rough, etc.)
+- [ ] Green fringe still works
 - [ ] No console errors
 
 ### Do NOT
 
-- Modify green fringe logic
+- Modify the blur itself (other zones still need it)
 - Modify zone meshes or export pipeline
-- Modify the mask map fix
 
 ---
 
@@ -98,4 +88,5 @@ public static int FairwayFringeRadius = 2;
 ✅ DONE: 2026-04-08 — Terrain plastic sheen fixed via Mask Map
 ✅ DONE: 2026-04-08 — Cleaned up failed terrain sheen fixes
 ✅ DONE: 2026-04-08 — Swapped fairway/fringe textures + rotated fairway grain
-✅ DONE: 2026-04-08 — Fairway fringe ring: semi-rough border around fairway via dilation
+✅ DONE: 2026-04-08 — Fairway fringe ring (semi-rough border)
+✅ DONE: 2026-04-08 — Sharp fairway edges: re-stamp fairway + fringe after blur
