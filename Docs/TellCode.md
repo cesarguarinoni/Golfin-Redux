@@ -7,59 +7,138 @@
 
 ---
 
-## Current Task — High-Res SVG Rasterization (4096×4096)
+## Current Task — Morphological Smooth in classify-zones.mjs
 
-**Problem:** Rasterizing SVG at the current zone grid resolution
-(~1024×1024) reintroduces jaggies. At 4096×4096, each pixel is ~0.1m —
-invisible at gameplay camera distance.
+**Goal:** After auto-classification, smooth zone boundaries using
+morphological close (dilate → erode) on each zone mask. Done in Node.js
+for reliability, runs on all 18 holes automatically.
 
-**Fix:** Change the SVG import to rasterize at 4096×4096 instead of
-`zoneGridW × zoneGridH`. The zone grid becomes 4096×4096. Downstream
-pipeline handles any grid size — splatmap resamples to 256×256 anyway,
-contour tracing works on any resolution, water mask extraction scales.
-
-**File:** `Tools/UHoleLite/app/app.js`
+**File:** `Tools/UHoleLite/scripts/classify-zones.mjs`
 
 ---
 
-### What to change
+### Add `morphClose()` function
 
-In the SVG import handler (`svg-file-input` change event), change:
-
-```javascript
-const targetW = zoneGridW || 1024;
-const targetH = zoneGridH || 1024;
-```
-
-To:
+After the existing `absorbSmallRegions()` function, add:
 
 ```javascript
-const targetW = 4096;
-const targetH = 4096;
+/**
+ * Morphological close (dilate → erode) on a per-zone basis.
+ * Smooths jagged boundaries without significantly changing zone shapes.
+ * Circular kernel for isotropic smoothing.
+ */
+function morphClose(grid, width, height, radius = 3) {
+  const result = new Uint8Array(width * height);
+  result.fill(0); // background
+
+  // Process zones in priority order (higher priority overwrites lower)
+  // rough < trees < semi_rough < fairway < tee_box < green < bunker < water < cart_path < ob
+  const zonePriority = [4, 5, 3, 1, 10, 2, 6, 7, 8, 9];
+
+  for (const zone of zonePriority) {
+    // Build binary mask
+    const mask = new Uint8Array(width * height);
+    let count = 0;
+    for (let i = 0; i < width * height; i++) {
+      if (grid[i] === zone) { mask[i] = 1; count++; }
+    }
+    if (count === 0) continue;
+
+    // Dilate
+    const dilated = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (!mask[y * width + x]) continue;
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            if (dx * dx + dy * dy > radius * radius) continue;
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+              dilated[ny * width + nx] = 1;
+          }
+        }
+      }
+    }
+
+    // Erode
+    const closed = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (!dilated[y * width + x]) continue;
+        let allSet = true;
+        for (let dy = -radius; dy <= radius && allSet; dy++) {
+          for (let dx = -radius; dx <= radius && allSet; dx++) {
+            if (dx * dx + dy * dy > radius * radius) continue;
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height ||
+                !dilated[ny * width + nx])
+              allSet = false;
+          }
+        }
+        if (allSet) closed[y * width + x] = 1;
+      }
+    }
+
+    // Write to result
+    for (let i = 0; i < width * height; i++) {
+      if (closed[i]) result[i] = zone;
+    }
+  }
+
+  return result;
+}
 ```
 
-That's it.
+### Hook into `classifyHole()`
+
+After Phase 2b (absorb small regions), before Phase 2c (mark tee boxes),
+add:
+
+```javascript
+  // Phase 2b2: Morphological close — smooth zone boundaries
+  grid = morphClose(grid, width, height, 3);
+```
+
+### Also: remove `smoothBoundaries()` if it exists
+
+If the previous `smoothBoundaries()` function and its Phase 2b2 call
+are still in the file, delete them. `morphClose()` replaces it.
+
+### Also: remove broken straighten code from app.js
+
+Remove from `Tools/UHoleLite/app/app.js`:
+- `straightenBoundaries()` and all its helpers (`traceBorderPixels`,
+  `rdpSimplify`, `perpDist`, `chaikinSmooth`, `scanlineFill`,
+  `dilateMask`, `erodeMask`)
+- The "Straighten Edges" button handler
+- The button element from `index.html`
+
+Keep: PNG import, SVG import (if added).
 
 ---
 
 ### Verification
 
-- [ ] Import an SVG — zone grid becomes 4096×4096
-- [ ] Zone boundaries visibly smoother than 1024×1024
-- [ ] Save works (zones.json will be larger — ~16MB base64 grid)
-- [ ] Export still works: `node scripts/export-hole.mjs lomond-country-club 1`
-- [ ] Unity import still works (splatmap resamples to 256×256)
-- [ ] Contours (bunkers, greens) are smoother
+1. Reclassify: `node scripts/classify-zones.mjs lomond-country-club 1`
+   - [ ] No errors
+   - [ ] Check `zones.png` — boundaries smoother than before
 
-### Concern
+2. Compare before/after `zones.png` for the same hole
 
-The zones.json base64 grid at 4096×4096 = 16M pixels = ~21MB base64.
-If this is too large for the pipeline, try 2048×2048 (4M pixels, ~5MB)
-as a compromise.
+3. Reclassify all: `node scripts/classify-zones.mjs lomond-country-club --all`
+   - [ ] All 18 holes process without errors
+
+4. Re-export + re-import a hole — verify splatmap edges are smoother
+
+### Tuning
+
+`radius = 3` should be a good default. If too aggressive (eating small
+features), try `radius = 2`. If not smooth enough, try `radius = 4`.
 
 ### Do NOT
 
-- Modify export pipeline or Unity importer
-- Remove PNG import button
+- Modify export pipeline
+- Modify Unity importer
+- Modify the majority filter or absorption steps
 
-✅ DONE: 2026-04-08 — SVG rasterization now at 4096×4096
+✅ DONE: 2026-04-08 — morphClose() in classify-zones.mjs replaces smoothBoundaries(), all 18 holes OK

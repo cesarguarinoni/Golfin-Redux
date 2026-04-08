@@ -196,63 +196,70 @@ function absorbSmallRegions(grid, width, height, minSize) {
 }
 
 // ---------------------------------------------------------------------------
-// Smooth zone boundaries
+// Morphological close — smooth zone boundaries
 // ---------------------------------------------------------------------------
 
 /**
- * Smooth zone boundaries by running additional majority filter passes
- * with a circular kernel. Each pass rounds off single-pixel staircases.
- * Multiple passes progressively straighten edges.
- *
- * Unlike the existing majority filter (square kernel), this uses a
- * circular kernel to avoid axis-aligned bias, and only modifies pixels
- * that are on a zone boundary (have at least one different 4-neighbor).
+ * Morphological close (dilate → erode) on a per-zone basis.
+ * Smooths jagged boundaries without significantly changing zone shapes.
+ * Circular kernel for isotropic smoothing.
  */
-function smoothBoundaries(grid, width, height, passes = 3, radius = 2) {
-  let current = new Uint8Array(grid);
+function morphClose(grid, width, height, radius = 3) {
+  const result = new Uint8Array(width * height);
+  result.fill(0);
 
-  for (let pass = 0; pass < passes; pass++) {
-    const next = new Uint8Array(current);
-    const counts = new Uint32Array(11);
+  // Process zones in priority order (higher priority overwrites lower)
+  const zonePriority = [4, 5, 3, 1, 10, 2, 6, 7, 8, 9];
 
-    for (let y = radius; y < height - radius; y++) {
-      for (let x = radius; x < width - radius; x++) {
-        const idx = y * width + x;
-        const thisZone = current[idx];
+  for (const zone of zonePriority) {
+    const mask = new Uint8Array(width * height);
+    let count = 0;
+    for (let i = 0; i < width * height; i++) {
+      if (grid[i] === zone) { mask[i] = 1; count++; }
+    }
+    if (count === 0) continue;
 
-        // Check if this pixel is on a boundary
-        let isBoundary = false;
-        if (x > 0 && current[idx - 1] !== thisZone) isBoundary = true;
-        else if (x < width - 1 && current[idx + 1] !== thisZone) isBoundary = true;
-        else if (y > 0 && current[(y - 1) * width + x] !== thisZone) isBoundary = true;
-        else if (y < height - 1 && current[(y + 1) * width + x] !== thisZone) isBoundary = true;
-
-        if (!isBoundary) continue;
-
-        // Count zones in circular kernel
-        counts.fill(0);
+    // Dilate
+    const dilated = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (!mask[y * width + x]) continue;
         for (let dy = -radius; dy <= radius; dy++) {
           for (let dx = -radius; dx <= radius; dx++) {
             if (dx * dx + dy * dy > radius * radius) continue;
-            counts[current[(y + dy) * width + (x + dx)]]++;
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height)
+              dilated[ny * width + nx] = 1;
           }
         }
-
-        // Assign to majority zone in kernel
-        let bestZone = thisZone;
-        let bestCount = 0;
-        for (let z = 0; z < 11; z++) {
-          if (counts[z] > bestCount) {
-            bestCount = counts[z];
-            bestZone = z;
-          }
-        }
-        next[idx] = bestZone;
       }
     }
-    current = next;
+
+    // Erode
+    const closed = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (!dilated[y * width + x]) continue;
+        let allSet = true;
+        for (let dy = -radius; dy <= radius && allSet; dy++) {
+          for (let dx = -radius; dx <= radius && allSet; dx++) {
+            if (dx * dx + dy * dy > radius * radius) continue;
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || nx >= width || ny < 0 || ny >= height ||
+                !dilated[ny * width + nx])
+              allSet = false;
+          }
+        }
+        if (allSet) closed[y * width + x] = 1;
+      }
+    }
+
+    for (let i = 0; i < width * height; i++) {
+      if (closed[i]) result[i] = zone;
+    }
   }
-  return current;
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -311,8 +318,8 @@ async function classifyHole(courseId, holeNumber) {
   // Phase 2b: Absorb small regions (<50 pixels)
   grid = absorbSmallRegions(grid, width, height, 50);
 
-  // Phase 2b2: Smooth zone boundaries (reduce pixel staircase jaggies)
-  grid = smoothBoundaries(grid, width, height, 3, 2);
+  // Phase 2b2: Morphological close — smooth zone boundaries
+  grid = morphClose(grid, width, height, 3);
 
   // Phase 2c: Mark tee boxes from tees.json
   const teesPath = path.join(holeDir, 'tees.json');
