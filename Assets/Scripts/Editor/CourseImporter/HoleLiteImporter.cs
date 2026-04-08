@@ -531,9 +531,8 @@ namespace Golfin.CourseImport
 
                 if (backTee != null && greenCenter != null)
                 {
-                    // Apply 90° CCW rotation to both (same as anchor placement): (x,z) → (z,x)
-                    Vector2 teePos = new Vector2(backTee.local.z, backTee.local.x);
-                    Vector2 greenPos = new Vector2(greenCenter.z, greenCenter.x);
+                    Vector2 teePos = new Vector2(backTee.local.x, backTee.local.z);
+                    Vector2 greenPos = new Vector2(greenCenter.x, greenCenter.z);
                     Vector2 dir = (greenPos - teePos).normalized;
                     if (dir.sqrMagnitude > 0.01f)
                         stripeDir = dir;
@@ -649,7 +648,7 @@ namespace Golfin.CourseImport
             string texDir = "Assets/Courses/Textures_2025(JPG)";
 
             string[] albedoNames = {
-                "T_Fringe_Albedo",      // 0 fairway (T_Fairway_Light is actually fringe-like)
+                "T_Fairway_Light",      // 0 fairway (light mow stripe)
                 "T_Green_Albedo",       // 1 green
                 "T_Semirough_Albedo",   // 2 semi-rough
                 "T_Rough_Albedo",       // 3 rough (catch-all)
