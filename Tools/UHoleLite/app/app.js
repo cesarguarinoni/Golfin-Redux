@@ -469,6 +469,24 @@ function eraseZone(normX, normY) {
   regenerateZonesImage();
 }
 
+/**
+ * Match an RGB pixel to the nearest zone color.
+ * Tries exact match first, then falls back to closest Euclidean distance
+ * (handles anti-aliased edges in the PNG).
+ */
+function matchZoneColor(r, g, b) {
+  let bestZone = 0;
+  let bestDist = Infinity;
+  for (let z = 0; z < ZONE_COLORS_RGB.length; z++) {
+    const [zr, zg, zb] = ZONE_COLORS_RGB[z];
+    const dr = r - zr, dg = g - zg, db = b - zb;
+    const dist = dr * dr + dg * dg + db * db;
+    if (dist === 0) return z; // exact match
+    if (dist < bestDist) { bestDist = dist; bestZone = z; }
+  }
+  return bestZone;
+}
+
 function floodFillZone(normX, normY) {
   if (activeBrushZone < 0 || !zoneGrid) return;
   const gx = Math.round(normX * (zoneGridW - 1));
@@ -834,6 +852,56 @@ function setupControls() {
     if (e.target.files.length > 0) loadSnapshot(e.target.files[0]);
   });
   document.getElementById("btn-regen").addEventListener("click", regenHeightmap);
+
+  // Import Zones from PNG
+  document.getElementById("import-zones-btn").addEventListener("click", () => {
+    document.getElementById("zones-file-input").click();
+  });
+  document.getElementById("zones-file-input").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+      const tmpCanvas = document.createElement("canvas");
+      tmpCanvas.width = img.width;
+      tmpCanvas.height = img.height;
+      const tmpCtx = tmpCanvas.getContext("2d");
+      tmpCtx.drawImage(img, 0, 0);
+      const imageData = tmpCtx.getImageData(0, 0, img.width, img.height);
+      const pixels = imageData.data;
+
+      // Push undo snapshot before replacing
+      if (zoneGrid) {
+        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null });
+        if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
+      }
+
+      // Build new grid + masks by matching each pixel to closest zone color
+      const newGrid = new Uint8Array(img.width * img.height);
+      const newTrees = new Uint8Array(img.width * img.height);
+      const newOB = new Uint8Array(img.width * img.height);
+      for (let i = 0; i < img.width * img.height; i++) {
+        const r = pixels[i * 4];
+        const g = pixels[i * 4 + 1];
+        const b = pixels[i * 4 + 2];
+        const zone = matchZoneColor(r, g, b);
+        if (zone === 5) { newTrees[i] = 1; newGrid[i] = 0; }
+        else if (zone === 9) { newOB[i] = 1; newGrid[i] = 0; }
+        else { newGrid[i] = zone; }
+      }
+
+      zoneGrid = newGrid;
+      zoneGridW = img.width;
+      zoneGridH = img.height;
+      treesMask = newTrees;
+      obMask = newOB;
+      zonePaintDirty = true;
+      regenerateZonesImage();
+      console.log(`Imported zones from ${file.name}: ${img.width}×${img.height}`);
+    };
+    img.src = URL.createObjectURL(file);
+    e.target.value = "";
+  });
 
   // Brush controls
   document.getElementById("brush-size").addEventListener("input", function () {
