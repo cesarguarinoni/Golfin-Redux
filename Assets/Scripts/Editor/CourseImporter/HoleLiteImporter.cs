@@ -175,6 +175,10 @@ namespace Golfin.CourseImport
                 if (skyMat != null)
                     RenderSettings.skybox = skyMat;
 
+                // Force-serialize all terrain modifications (splatmap, layers, holes)
+                // so the disk asset matches the in-memory state
+                EditorUtility.SetDirty(terrainData);
+
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Saving scene...", 0.9f);
                 EditorSceneManager.SaveScene(scene, scenePath);
                 AssetDatabase.SaveAssets();
@@ -245,6 +249,7 @@ namespace Golfin.CourseImport
 
             var terrainData = new TerrainData();
             terrainData.heightmapResolution = actualRes;
+            terrainData.alphamapResolution = 256;  // pre-set before saving to disk
             terrainData.size = new Vector3(terrainX, elevRange, terrainZ);
             terrainData.SetHeights(0, 0, heights);
 
