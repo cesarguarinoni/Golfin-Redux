@@ -223,6 +223,44 @@ namespace Golfin.CourseImport
         public float max_z;
     }
 
+    // fairway-contours.json
+    [System.Serializable]
+    public class FairwayContoursFile
+    {
+        public int fairway_count;
+        public ZoneContourRegion[] fairways;
+    }
+
+    // zone-contours.json
+    [System.Serializable]
+    public class ZoneContoursFile
+    {
+        public ZoneContoursZones zones;
+    }
+
+    [System.Serializable]
+    public class ZoneContoursZones
+    {
+        public ZoneContourRegion[] tee;
+        public ZoneContourRegion[] semi_rough;
+    }
+
+    [System.Serializable]
+    public class ZoneContourRegion
+    {
+        public int id;
+        public int pixel_count;
+        public ContourPoint[] contour;
+        public AnchorLocal center_local;
+    }
+
+    [System.Serializable]
+    public class ContourPoint
+    {
+        public float x;
+        public float z;
+    }
+
     // zones.json — zone grid data for splatmap pipeline
     [System.Serializable]
     public class ZonesData

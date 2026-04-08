@@ -187,12 +187,13 @@ function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, 
         const pixels = floodFill(x, y);
         if (pixels.length < minPixels) continue;
 
-        const xs = pixels.map(p => p[0]);
-        const ys = pixels.map(p => p[1]);
-        const minX = Math.min(...xs);
-        const maxX = Math.max(...xs);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const [px, py] of pixels) {
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+        }
 
         // Center in normalized coordinates (0-1 range within zone grid)
         const normCX = (minX + maxX) / 2 / (w - 1);
@@ -404,6 +405,8 @@ function exportHole(courseId, holeNumber, courseJson) {
     bunkers_file: 'bunkers.json',
     greens_file: 'greens.json',
     water_file: 'water.json',
+    fairway_contours_file: 'fairway-contours.json',
+    zone_contours_file: 'zone-contours.json',
     review_status: 'auto-generated',
   };
 
@@ -483,6 +486,54 @@ function exportHole(courseId, holeNumber, courseJson) {
       `#${g.id}: ${g.contour.length}pts`
     ).join(', ');
     console.log(`  Green contours: ${contourStats}`);
+  }
+
+  // --- Build fairway-contours.json ---
+  const fairways = extractZoneContours(zonesData, terrainMeta, 1, 30, 3.0, 3);
+  // zone 1 = fairway, min 30px, RDP epsilon 3.0 (looser than bunkers),
+  // 3 Chaikin passes for extra smoothness on the larger shapes
+
+  const fairwayOutput = {
+    schema_version: '1.0.0',
+    hole_number: holeNumber,
+    fairway_count: fairways.length,
+    fairways: fairways,
+  };
+
+  fs.writeFileSync(
+    path.join(exportDir, 'fairway-contours.json'),
+    JSON.stringify(fairwayOutput, null, 2),
+    'utf-8'
+  );
+
+  if (fairways.length > 0) {
+    const contourStats = fairways.map(f =>
+      `#${f.id}: ${f.contour.length}pts (${f.pixel_count}px)`
+    ).join(', ');
+    console.log(`  Fairway contours: ${contourStats}`);
+  }
+
+  // --- Build zone-contours.json (tee, semi-rough) ---
+  const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 2.0, 2);
+  const semiRough = extractZoneContours(zonesData, terrainMeta, 3, 30, 3.0, 3);
+
+  const zoneContoursOutput = {
+    schema_version: '1.0.0',
+    hole_number: holeNumber,
+    zones: {
+      tee: tees,
+      semi_rough: semiRough,
+    },
+  };
+
+  fs.writeFileSync(
+    path.join(exportDir, 'zone-contours.json'),
+    JSON.stringify(zoneContoursOutput, null, 2),
+    'utf-8'
+  );
+
+  if (tees.length > 0 || semiRough.length > 0) {
+    console.log(`  Zone contours: ${tees.length} tee(s), ${semiRough.length} semi-rough`);
   }
 
   // --- Build water.json ---

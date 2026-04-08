@@ -14,7 +14,7 @@ namespace Golfin.CourseImport
         public static int ShoreRadius = 2;
         /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
         public static float ShoreDepthMeters = 0.1f;
-        /// <summary>DEPRECATED — replaced by FairwayFringeMeters + SDF.</summary>
+        /// <summary>DEPRECATED — replaced by FairwayFringeMeters + dilation.</summary>
         public static int FairwayFringeRadius = 2;
         /// <summary>Width of fairway fringe border in meters.</summary>
         public static float FairwayFringeMeters = 1.5f;
@@ -584,40 +584,109 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // --- 3b. SDF-based fairway fringe ---
+            // --- 2b. Override zone grid edges with smoothed vector contours ---
+            string fairwayContoursPath = Path.Combine(exportPath, "fairway-contours.json");
+            if (File.Exists(fairwayContoursPath))
+            {
+                string fcJson = File.ReadAllText(fairwayContoursPath);
+                var fcData = JsonUtility.FromJson<FairwayContoursFile>(fcJson);
+
+                if (fcData.fairways != null)
+                {
+                    // Clear ALL fairway pixels — re-fill only what the smooth contour covers.
+                    for (int i = 0; i < resampledZones.Length; i++)
+                    {
+                        if (resampledZones[i] == 1)
+                            resampledZones[i] = 4; // revert to rough
+                    }
+
+                    foreach (var fw in fcData.fairways)
+                    {
+                        if (fw.contour == null || fw.contour.Length < 3) continue;
+                        int n = fw.contour.Length;
+
+                        float[] polyAX = new float[n];
+                        float[] polyAY = new float[n];
+                        float terrainXSize = terrainData.size.x;
+                        float terrainZSize = terrainData.size.z;
+
+                        float bminAX = float.MaxValue, bmaxAX = float.MinValue;
+                        float bminAY = float.MaxValue, bmaxAY = float.MinValue;
+
+                        for (int i = 0; i < n; i++)
+                        {
+                            float worldX = fw.contour[i].z; // 90° CCW rotation
+                            float worldZ = fw.contour[i].x;
+                            float ax = (worldX + terrainXSize / 2f) / terrainXSize * (alphaRes - 1);
+                            float ay = (worldZ + terrainZSize / 2f) / terrainZSize * (alphaRes - 1);
+                            polyAX[i] = ax;
+                            polyAY[i] = ay;
+                            if (ax < bminAX) bminAX = ax;
+                            if (ax > bmaxAX) bmaxAX = ax;
+                            if (ay < bminAY) bminAY = ay;
+                            if (ay > bmaxAY) bmaxAY = ay;
+                        }
+
+                        int minAXi = Mathf.Max(0, Mathf.FloorToInt(bminAX));
+                        int maxAXi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAX));
+                        int minAYi = Mathf.Max(0, Mathf.FloorToInt(bminAY));
+                        int maxAYi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAY));
+
+                        RasterizePolygon(polyAX, polyAY, n,
+                            resampledZones, alphaRes, alphaRes, 1,
+                            minAXi, minAYi, maxAXi, maxAYi);
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Rasterized {fcData.fairways.Length} " +
+                              $"smooth fairway contour(s) onto alphamap");
+                }
+            }
+
+            // Load tee + semi-rough contours and rasterize
+            string zoneContoursPath = Path.Combine(exportPath, "zone-contours.json");
+            if (File.Exists(zoneContoursPath))
+            {
+                string zcJson = File.ReadAllText(zoneContoursPath);
+                var zcData = JsonUtility.FromJson<ZoneContoursFile>(zcJson);
+
+                // Tee boxes (zone 10)
+                if (zcData.zones != null && zcData.zones.tee != null)
+                {
+                    for (int i = 0; i < resampledZones.Length; i++)
+                        if (resampledZones[i] == 10) resampledZones[i] = 4;
+
+                    foreach (var region in zcData.zones.tee)
+                        RasterizeContour(region, resampledZones, alphaRes, terrainData, 10);
+                }
+
+                // Semi-rough (zone 3) — overlay smooth contours on top
+                if (zcData.zones != null && zcData.zones.semi_rough != null && zcData.zones.semi_rough.Length > 0)
+                {
+                    foreach (var region in zcData.zones.semi_rough)
+                        RasterizeContour(region, resampledZones, alphaRes, terrainData, 3);
+                }
+            }
+
+            // --- 3b. Fairway fringe ring (dilation-based, smooth edges from vector contours) ---
             bool[] fairwayMask = new bool[alphaRes * alphaRes];
             for (int i = 0; i < resampledZones.Length; i++)
-                fairwayMask[i] = (resampledZones[i] == 1); // zone 1 = fairway
+                fairwayMask[i] = (resampledZones[i] == 1);
 
-            float[] fairwaySDF = ComputeSDF(fairwayMask, alphaRes, alphaRes);
-
-            // Convert fringe width from meters to alphamap pixels
-            // Terrain size / alphamap resolution = meters per pixel
             float metersPerPixel = Mathf.Max(terrainData.size.x, terrainData.size.z) / alphaRes;
-            float fringePixels = FairwayFringeMeters / metersPerPixel;
+            int fairwayFringePx = Mathf.Max(1, Mathf.RoundToInt(FairwayFringeMeters / metersPerPixel));
 
-            // Build fringe mask from SDF: pixels just outside fairway edge
+            bool[] dilatedFairway = DilateMask(fairwayMask, alphaRes, alphaRes, fairwayFringePx);
+
             bool[] fairwayFringeMask = new bool[alphaRes * alphaRes];
             for (int i = 0; i < alphaRes * alphaRes; i++)
             {
-                // Outside fairway (negative SDF) but within fringe distance
-                if (fairwaySDF[i] < 0f && fairwaySDF[i] >= -fringePixels)
+                if (dilatedFairway[i] && !fairwayMask[i])
                 {
                     int zone = resampledZones[i];
-                    // Only place fringe on rough/semi-rough/trees
                     if (zone == 3 || zone == 4 || zone == 5)
                         fairwayFringeMask[i] = true;
                 }
             }
-
-            // Also use SDF to smooth the fairway INSIDE edge.
-            // Pixels that are inside fairway zone but very close to the SDF=0
-            // boundary get smooth contours because the SDF iso-line at 0 is
-            // smooth. We override the zone-based assignment in step 4 using
-            // the SDF value instead of the raw zone grid.
-            bool[] sdfFairwayMask = new bool[alphaRes * alphaRes];
-            for (int i = 0; i < alphaRes * alphaRes; i++)
-                sdfFairwayMask[i] = (fairwaySDF[i] > 0f);
 
             // --- 4. Build raw alphamap ---
             int layerCount = 8;
@@ -636,24 +705,22 @@ namespace Golfin.CourseImport
                     if (fringeMask[idx])
                         layer = 2; // green fringe → semi-rough
                     else if (fairwayFringeMask[idx])
-                        layer = 2; // fairway fringe → semi-rough (SDF-smoothed)
-                    else if (sdfFairwayMask[idx])
-                    {
-                        // SDF says this pixel is inside the fairway boundary
-                        // (smooth contour replaces jagged zone grid edge)
-                        layer = 0; // fairway
-
-                        // Mow stripes: alternate light/dark fairway
-                        float worldX = ((float)ax / (alphaRes - 1)) * terrainSizeX - terrainSizeX / 2f;
-                        float worldZ = ((float)ay / (alphaRes - 1)) * terrainSizeZ - terrainSizeZ / 2f;
-                        float proj = worldX * stripeDir.x + worldZ * stripeDir.y;
-                        int band = Mathf.FloorToInt(proj / MowStripeWidth);
-                        if (band % 2 != 0)
-                            layer = 7; // dark fairway stripe
-                    }
+                        layer = 2; // fairway fringe → semi-rough
                     else
                     {
-                        layer = ZoneToLayer(resampledZones[idx]);
+                        int zone = resampledZones[idx];
+                        layer = ZoneToLayer(zone);
+
+                        // Mow stripes on fairway
+                        if (zone == 1)
+                        {
+                            float worldX = ((float)ax / (alphaRes - 1)) * terrainSizeX - terrainSizeX / 2f;
+                            float worldZ = ((float)ay / (alphaRes - 1)) * terrainSizeZ - terrainSizeZ / 2f;
+                            float proj = worldX * stripeDir.x + worldZ * stripeDir.y;
+                            int band = Mathf.FloorToInt(proj / MowStripeWidth);
+                            if (band % 2 != 0)
+                                layer = 7; // dark fairway stripe
+                        }
                     }
 
                     alphamap[ay, ax, layer] = 1.0f;
@@ -842,80 +909,75 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
-        /// Compute signed distance field from a binary mask.
-        /// Positive = inside mask, negative = outside.
-        /// Uses two-pass chamfer distance (fast approximation).
+        /// Rasterize a smooth polygon onto a byte grid.
+        /// For each pixel inside the polygon, sets grid[y * w + x] = value.
+        /// Uses ray-casting (point-in-polygon) test.
         /// </summary>
-        static float[] ComputeSDF(bool[] mask, int w, int h)
+        static void RasterizePolygon(float[] polyX, float[] polyZ, int polyCount,
+            byte[] grid, int w, int h, byte value,
+            int minAX, int minAY, int maxAX, int maxAY)
         {
-            float[] dist = new float[w * h];
-            float INF = w + h; // larger than any real distance
-
-            // Initialize: 0 at edges, +INF inside, -INF outside
-            for (int i = 0; i < w * h; i++)
+            for (int ay = minAY; ay <= maxAY; ay++)
             {
-                int x = i % w;
-                int y = i / w;
-                bool val = mask[i];
-
-                // Check if this pixel is on the edge (has a neighbor with different value)
-                bool isEdge = false;
-                if (x > 0     && mask[i - 1] != val) isEdge = true;
-                if (x < w - 1 && mask[i + 1] != val) isEdge = true;
-                if (y > 0     && mask[i - w] != val) isEdge = true;
-                if (y < h - 1 && mask[i + w] != val) isEdge = true;
-
-                if (isEdge)
-                    dist[i] = 0f;
-                else
-                    dist[i] = val ? INF : -INF;
-            }
-
-            // Forward pass (top-left to bottom-right)
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
+                for (int ax = minAX; ax <= maxAX; ax++)
                 {
-                    int i = y * w + x;
-                    float sign = dist[i] >= 0 ? 1f : -1f;
-                    float abs = Mathf.Abs(dist[i]);
-
-                    if (x > 0)
-                        abs = Mathf.Min(abs, Mathf.Abs(dist[i - 1]) + 1f);
-                    if (y > 0)
-                        abs = Mathf.Min(abs, Mathf.Abs(dist[i - w]) + 1f);
-                    if (x > 0 && y > 0)
-                        abs = Mathf.Min(abs, Mathf.Abs(dist[i - w - 1]) + 1.414f);
-                    if (x < w - 1 && y > 0)
-                        abs = Mathf.Min(abs, Mathf.Abs(dist[i - w + 1]) + 1.414f);
-
-                    dist[i] = sign * abs;
+                    float px = ax + 0.5f;
+                    float py = ay + 0.5f;
+                    bool inside = false;
+                    for (int i = 0, j = polyCount - 1; i < polyCount; j = i++)
+                    {
+                        if ((polyZ[i] > py) != (polyZ[j] > py) &&
+                            px < (polyX[j] - polyX[i]) * (py - polyZ[i]) /
+                                 (polyZ[j] - polyZ[i]) + polyX[i])
+                        {
+                            inside = !inside;
+                        }
+                    }
+                    if (inside)
+                        grid[ay * w + ax] = value;
                 }
             }
+        }
 
-            // Backward pass (bottom-right to top-left)
-            for (int y = h - 1; y >= 0; y--)
+        /// <summary>
+        /// Convert a ZoneContourRegion from local meters to alphamap coords and rasterize.
+        /// </summary>
+        static void RasterizeContour(ZoneContourRegion region, byte[] grid,
+            int alphaRes, TerrainData terrainData, byte zoneValue)
+        {
+            if (region.contour == null || region.contour.Length < 3) return;
+            int n = region.contour.Length;
+
+            float terrainX = terrainData.size.x;
+            float terrainZ = terrainData.size.z;
+
+            float[] polyAX = new float[n];
+            float[] polyAY = new float[n];
+            float bminAX = float.MaxValue, bmaxAX = float.MinValue;
+            float bminAY = float.MaxValue, bmaxAY = float.MinValue;
+
+            for (int i = 0; i < n; i++)
             {
-                for (int x = w - 1; x >= 0; x--)
-                {
-                    int i = y * w + x;
-                    float sign = dist[i] >= 0 ? 1f : -1f;
-                    float abs = Mathf.Abs(dist[i]);
-
-                    if (x < w - 1)
-                        abs = Mathf.Min(abs, Mathf.Abs(dist[i + 1]) + 1f);
-                    if (y < h - 1)
-                        abs = Mathf.Min(abs, Mathf.Abs(dist[i + w]) + 1f);
-                    if (x < w - 1 && y < h - 1)
-                        abs = Mathf.Min(abs, Mathf.Abs(dist[i + w + 1]) + 1.414f);
-                    if (x > 0 && y < h - 1)
-                        abs = Mathf.Min(abs, Mathf.Abs(dist[i + w - 1]) + 1.414f);
-
-                    dist[i] = sign * abs;
-                }
+                float worldX = region.contour[i].z;
+                float worldZ = region.contour[i].x;
+                float ax = (worldX + terrainX / 2f) / terrainX * (alphaRes - 1);
+                float ay = (worldZ + terrainZ / 2f) / terrainZ * (alphaRes - 1);
+                polyAX[i] = ax;
+                polyAY[i] = ay;
+                if (ax < bminAX) bminAX = ax;
+                if (ax > bmaxAX) bmaxAX = ax;
+                if (ay < bminAY) bminAY = ay;
+                if (ay > bmaxAY) bmaxAY = ay;
             }
 
-            return dist;
+            int minAXi = Mathf.Max(0, Mathf.FloorToInt(bminAX));
+            int maxAXi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAX));
+            int minAYi = Mathf.Max(0, Mathf.FloorToInt(bminAY));
+            int maxAYi = Mathf.Min(alphaRes - 1, Mathf.CeilToInt(bmaxAY));
+
+            RasterizePolygon(polyAX, polyAY, n,
+                grid, alphaRes, alphaRes, zoneValue,
+                minAXi, minAYi, maxAXi, maxAYi);
         }
 
         private static float[,] ExtractChannel(float[,,] alphamap, int res, int layerCount, int layer)
