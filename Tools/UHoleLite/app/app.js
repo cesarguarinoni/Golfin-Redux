@@ -912,8 +912,12 @@ function setupControls() {
     if (!file) return;
 
     const svgText = await file.text();
-    const targetW = 4096;
-    const targetH = 4096;
+    // Rasterize at high res, preserving aspect ratio (4096 on longest side)
+    const srcW = zoneGridW || 1024;
+    const srcH = zoneGridH || 1024;
+    const scale = 4096 / Math.max(srcW, srcH);
+    const targetW = Math.round(srcW * scale);
+    const targetH = Math.round(srcH * scale);
 
     const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
