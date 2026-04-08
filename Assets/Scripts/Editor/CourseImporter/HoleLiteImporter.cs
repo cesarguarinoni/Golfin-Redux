@@ -1877,7 +1877,12 @@ namespace Golfin.CourseImport
                 go.transform.position = centroid;
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 go.AddComponent<MeshRenderer>().sharedMaterial = waterMat;
-                go.AddComponent<MeshCollider>().sharedMesh = mesh;
+
+                var mc = go.AddComponent<MeshCollider>();
+                mc.cookingOptions = MeshColliderCookingOptions.CookForFasterSimulation
+                                  | MeshColliderCookingOptions.EnableMeshCleaning
+                                  | MeshColliderCookingOptions.WeldColocatedVertices;
+                mc.sharedMesh = mesh;
 
                 var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Water;
