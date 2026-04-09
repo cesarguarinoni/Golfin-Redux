@@ -9,44 +9,52 @@
 
 ## Current Task — Mountain Backdrop Around Terrain
 
-**Goal:** Place `Mountains.fbx` models around the terrain perimeter
-to create a mountain backdrop, similar to the real Lomond course
-which is surrounded by forested hills.
+**Goal:** Place a single instance of `Mountains.fbx` around the terrain.
+This is a pre-built ring/cylinder mesh designed to surround the playing
+area like a skybox backdrop. It needs ONE instance, centered on the
+terrain, scaled to fit.
 
 ### Assets
 
 - FBX: `Assets/Art/3D/Props/Vegetation/FBX/Mountains.fbx`
-- Texture: `Assets/Art/3D/Props/Vegetation/Materials/LandscapesGreen.png`
+- Texture: `Assets/Art/3D/Props/Vegetation/Materials/Mountain.png`
+  (try this first — `LandscapesGreen.png` gets stretched)
 - NOTE: `LandscapesGreen.mat` is HDRP — do NOT use it. Create a new
   URP Lit material.
 
+### Key issue from first attempt
+
+The first attempt placed 8 separate instances, which is wrong. The FBX
+is a single ring mesh. Also `LandscapesGreen.png` stretched badly and
+transparency didn't work.
+
 ### Approach
 
-Add a `PlaceMountainBackdrop` method to `HoleLiteImporter.cs`, called
-after the terrain and meshes are created. It should:
+Replace the current `PlaceMountainBackdrop` method with a simpler one:
 
-1. **Load the FBX** from `Assets/Art/3D/Props/Vegetation/FBX/Mountains.fbx`
-2. **Create a URP Lit material** with `LandscapesGreen.png` as albedo,
-   smoothness=0, metallic=0. Save as `{dataDir}/MAT_Mountains.mat`.
-3. **Place 6-8 instances** around the terrain perimeter:
-   - Calculate terrain center (0, 0, 0) and terrain half-extents
-   - Place mountains at 8 compass positions (N, NE, E, SE, S, SW, W, NW)
-     at a distance of `terrainX * 0.6` from center (just beyond terrain edge)
-   - Each instance faces inward (toward terrain center)
-   - Scale each instance large enough to fill the horizon:
-     `Vector3.one * terrainX * 0.15f` (adjust if needed)
-   - Y position: sample terrain height at placement point, or use 0
-     (base of terrain) — mountains should rise FROM the terrain edge
-4. **Parent all to a `MountainBackdrop` GameObject** under `HoleRoot`
+1. **Instantiate ONE Mountains.fbx** at terrain center (0, terrainBaseY, 0)
+2. **Create a URP Lit material** with:
+   - Albedo: `Mountain.png` (try this first, fall back to `LandscapesGreen.png`)
+   - Surface Type: **Transparent** (the texture likely has alpha for sky fade)
+   - Set `_Surface` = 1 (transparent)
+   - Set `_Blend` = 0 (alpha blend)
+   - Set render queue to 3000 (transparent)
+   - Enable `_SURFACE_TYPE_TRANSPARENT` and `_ALPHABLEND_ON` keywords
+   - Smoothness = 0, Metallic = 0
+   - Double-sided: `_Cull` = 0 (Off) — visible from inside AND outside
+3. **Scale to match terrain size**:
+   - First check the FBX bounds to understand its native size
+   - Scale so the ring diameter roughly matches `Mathf.Max(terrainX, terrainZ) * 1.5`
+   - The scale factor = desired_diameter / fbx_native_diameter
+4. **Y position**: base at `terrainBaseY` (terrain origin Y)
 
 ```csharp
 private static void PlaceMountainBackdrop(
     Terrain terrain, float terrainBaseY,
     float terrainX, float terrainZ,
-    string dataDir, string projectRoot,
+    string dataDir,
     Transform parentRoot)
 {
-    // Load mountain FBX
     var mountainPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
         "Assets/Art/3D/Props/Vegetation/FBX/Mountains.fbx");
     if (mountainPrefab == null)
@@ -55,104 +63,88 @@ private static void PlaceMountainBackdrop(
         return;
     }
 
-    // Create URP material with green landscape texture
+    // Create URP transparent material
     string matPath = $"{dataDir}/MAT_Mountains.mat";
     var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
     if (existingMat != null) AssetDatabase.DeleteAsset(matPath);
 
     var mat = new Material(GetLitShader());
     mat.name = "MAT_Mountains";
+
+    // Try Mountain.png first, fall back to LandscapesGreen.png
     var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
-        "Assets/Art/3D/Props/Vegetation/Materials/LandscapesGreen.png");
+        "Assets/Art/3D/Props/Vegetation/Materials/Mountain.png");
+    if (albedo == null)
+        albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
+            "Assets/Art/3D/Props/Vegetation/Materials/LandscapesGreen.png");
     if (albedo != null) mat.mainTexture = albedo;
+
+    // Enable transparency for sky-fade alpha
+    mat.SetFloat("_Surface", 1f); // 0=Opaque, 1=Transparent
+    mat.SetFloat("_Blend", 0f);   // 0=Alpha, 1=Premultiply, 2=Additive, 3=Multiply
+    mat.SetFloat("_Cull", 0f);    // 0=Off (double-sided)
     mat.SetFloat("_Smoothness", 0f);
     mat.SetFloat("_Metallic", 0f);
+    mat.SetFloat("_AlphaClip", 0f); // no alpha clip, smooth blend
+    mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+    mat.EnableKeyword("_ALPHABLEND_ON");
+    mat.renderQueue = 3000;
     AssetDatabase.CreateAsset(mat, matPath);
 
-    var root = new GameObject("MountainBackdrop");
-    root.transform.SetParent(parentRoot);
+    // Instantiate single ring mesh
+    var instance = Object.Instantiate(mountainPrefab);
+    instance.name = "MountainBackdrop";
 
-    // 8 compass positions around terrain
-    float radius = Mathf.Max(terrainX, terrainZ) * 0.55f;
-    float scale = Mathf.Max(terrainX, terrainZ) * 0.15f;
-    float[] angles = { 0, 45, 90, 135, 180, 225, 270, 315 };
+    // Apply material to all renderers
+    foreach (var rend in instance.GetComponentsInChildren<Renderer>())
+        rend.sharedMaterial = mat;
 
-    for (int i = 0; i < angles.Length; i++)
+    // Check FBX bounds to determine native size
+    var renderers = instance.GetComponentsInChildren<Renderer>();
+    Bounds combinedBounds = new Bounds(Vector3.zero, Vector3.zero);
+    bool boundsInit = false;
+    foreach (var rend in renderers)
     {
-        float rad = angles[i] * Mathf.Deg2Rad;
-        float px = Mathf.Sin(rad) * radius;
-        float pz = Mathf.Cos(rad) * radius;
-
-        // Sample terrain height at placement point (clamp to terrain bounds)
-        float terrainH = 0f;
-        Vector3 samplePos = new Vector3(px, 0, pz);
-        // Only sample if within terrain bounds
-        Vector3 terrainLocalPos = samplePos - terrain.transform.position;
-        if (terrainLocalPos.x >= 0 && terrainLocalPos.x <= terrain.terrainData.size.x &&
-            terrainLocalPos.z >= 0 && terrainLocalPos.z <= terrain.terrainData.size.z)
+        if (!boundsInit)
         {
-            terrainH = terrain.SampleHeight(samplePos);
+            combinedBounds = rend.bounds;
+            boundsInit = true;
         }
-
-        var instance = Object.Instantiate(mountainPrefab);
-        instance.name = $"Mountain_{i}";
-
-        // Apply material
-        foreach (var rend in instance.GetComponentsInChildren<Renderer>())
-            rend.sharedMaterial = mat;
-
-        // Position: at terrain edge, base at terrain height
-        instance.transform.position = new Vector3(px, terrainBaseY + terrainH, pz);
-
-        // Face inward (toward center)
-        instance.transform.LookAt(new Vector3(0, instance.transform.position.y, 0));
-
-        // Scale to fill horizon
-        instance.transform.localScale = Vector3.one * scale;
-
-        instance.transform.SetParent(root.transform);
+        else
+        {
+            combinedBounds.Encapsulate(rend.bounds);
+        }
     }
 
-    Debug.Log($"[HoleLiteImporter] Placed {angles.Length} mountain backdrop instances");
+    float nativeDiameter = Mathf.Max(combinedBounds.size.x, combinedBounds.size.z);
+    float desiredDiameter = Mathf.Max(terrainX, terrainZ) * 1.5f;
+    float scaleFactor = nativeDiameter > 0.01f ? desiredDiameter / nativeDiameter : 1f;
+
+    instance.transform.position = new Vector3(0, terrainBaseY, 0);
+    instance.transform.localScale = Vector3.one * scaleFactor;
+    instance.transform.SetParent(parentRoot);
+
+    Debug.Log($"[HoleLiteImporter] Mountain backdrop: native={nativeDiameter:F1}m, " +
+              $"scale={scaleFactor:F2}, desired={desiredDiameter:F0}m");
 }
 ```
-
-### Call Site
-
-In `ImportLiteHole()`, after the camera and light setup, before saving:
-
-```csharp
-EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Placing mountains...", 0.85f);
-PlaceMountainBackdrop(terrain, terrainGO.transform.position.y,
-    terrainX, terrainZ, dataDir, projectRoot, holeRoot.transform);
-```
-
-### Tuning notes
-
-- The scale and radius values will likely need adjustment after seeing
-  the result. The FBX mesh size is unknown until we see it in-scene.
-- If mountains are too small, increase scale. If too close, increase radius.
-- If they look flat from certain angles, add random Y-axis rotation
-  variation (e.g., `angles[i] + Random.Range(-15, 15)`).
-- The `LandscapesGreen.png` texture gives green forested mountains
-  appropriate for Mie, Japan. If it looks wrong, we also have
-  `Mountain.png` as an alternative.
 
 ### Verification
 
 1. Re-import Hole 01
-2. Look around from the tee — mountains should be visible on the horizon
-   in all directions
-3. Mountains should be green/forested, not snow-capped
-4. Mountains should not overlap the playing area
-5. Check from above — mountains should form a ring around the terrain
+2. Mountains should form a single ring around the terrain
+3. Top of mountains should fade to transparent (sky visible through)
+4. Mountains visible from inside (double-sided rendering)
+5. Check scale — mountains should fill the horizon without being
+   absurdly large or tiny
+6. Console log shows native size and scale factor for tuning
 
 ### Do NOT
 
-- Use the existing `LandscapesGreen.mat` (it's HDRP)
-- Change terrain generation or zone meshes
-- Change any bunker code
-- Place mountains inside the terrain bounds
+- Place multiple instances (it's a single ring mesh)
+- Use `LandscapesGreen.mat` (it's HDRP)
+- Change terrain or zone mesh code
+- Use opaque rendering (the texture has alpha for sky fade)
 
 **Goal:** The ear-clip contour approach for cart paths doesn't work
 well on sloped terrain — the mesh is a filled polygon with sparse
@@ -1009,4 +1001,6 @@ This gives natural terrain-under-asphalt and a visible edge transition.
 ✅ DONE: 2026-04-09 — Cart path Y-offset bumped to 0.25m. SubdivideToTerrain receives yOffset as parameter, no separate value to change.
 ✅ DONE: 2026-04-09 — Cart path: lowered Y-offset back to 0.05m, made material double-sided (_Cull=0). Subdivision + double-sided eliminates poke-through without visible floating.
 ✅ DONE: 2026-04-09 — Cart path: spine-based strip mesh. Export extracts centerline via paired-edge averaging + RDP/Chaikin. Unity CreateSpineStripMesh builds quad strip along spine with terrain-sampled vertices. Ear-clip fallback preserved. Hole 1: 176 spine pts, 2.5m width.
-✅ DONE: 2026-04-09 — Mountain backdrop: PlaceMountainBackdrop places 8 Mountains.fbx instances at compass positions around terrain perimeter. URP Lit material with LandscapesGreen.png (smoothness=0, metallic=0). Each instance faces inward, scaled to terrainSize*0.15, at radius terrainSize*0.55. Parented under MountainBackdrop→HoleRoot.
+✅ DONE: 2026-04-09 — Mountain backdrop v1: 8 instances approach (wrong — FBX is a single ring mesh).
+✅ DONE: 2026-04-09 — Mountain backdrop v2: Single ring instance, centered at origin, scaled to terrain diagonal. LandscapesGreen.png opaque.
+✅ DONE: 2026-04-09 — Mountain backdrop v3: Mountain.png texture (less stretching), transparent material with alpha blend, double-sided (_Cull=0), scale=terrainMax*1.5/nativeDiameter. Render queue 3000.

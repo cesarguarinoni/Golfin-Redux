@@ -3289,18 +3289,32 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            // Create URP material with green landscape texture
+            // Create URP transparent material
             string matPath = $"{dataDir}/MAT_Mountains.mat";
             var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
             if (existingMat != null) AssetDatabase.DeleteAsset(matPath);
 
             var mat = new Material(GetLitShader());
             mat.name = "MAT_Mountains";
+
+            // Try Mountain.png first (less stretching), fall back to LandscapesGreen.png
             var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                "Assets/Art/3D/Props/Vegetation/Materials/LandscapesGreen.png");
+                "Assets/Art/3D/Props/Vegetation/Materials/Mountain.png");
+            if (albedo == null)
+                albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                    "Assets/Art/3D/Props/Vegetation/Materials/LandscapesGreen.png");
             if (albedo != null) mat.mainTexture = albedo;
+
+            // Enable transparency for sky-fade alpha
+            mat.SetFloat("_Surface", 1f);   // Transparent
+            mat.SetFloat("_Blend", 0f);     // Alpha blend
+            mat.SetFloat("_Cull", 0f);      // Double-sided
             mat.SetFloat("_Smoothness", 0f);
             mat.SetFloat("_Metallic", 0f);
+            mat.SetFloat("_AlphaClip", 0f); // smooth blend, no clip
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.EnableKeyword("_ALPHABLEND_ON");
+            mat.renderQueue = 3000;
             AssetDatabase.CreateAsset(mat, matPath);
 
             // Measure FBX native bounds
@@ -3314,9 +3328,9 @@ namespace Golfin.CourseImport
             float fbxDiameter = Mathf.Max(fbxBounds.size.x, fbxBounds.size.z);
             Debug.Log($"[HoleLiteImporter] Mountains.fbx native bounds: {fbxBounds.size} (diameter={fbxDiameter:F1}m)");
 
-            // Single ring instance — scale so the ring diameter matches the terrain diagonal
-            float terrainDiag = Mathf.Sqrt(terrainX * terrainX + terrainZ * terrainZ);
-            float scale = fbxDiameter > 0.01f ? terrainDiag / fbxDiameter : 1f;
+            // Single ring instance — scale so the ring diameter is 1.5x the larger terrain axis
+            float desiredDiameter = Mathf.Max(terrainX, terrainZ) * 1.5f;
+            float scale = fbxDiameter > 0.01f ? desiredDiameter / fbxDiameter : 1f;
 
             var instance = Object.Instantiate(mountainPrefab);
             instance.name = "MountainBackdrop";
@@ -3330,7 +3344,7 @@ namespace Golfin.CourseImport
             instance.transform.localScale = Vector3.one * scale;
             instance.transform.SetParent(parentRoot);
 
-            Debug.Log($"[HoleLiteImporter] Placed mountain backdrop ring (scale={scale:F3}, terrain diag={terrainDiag:F1}m)");
+            Debug.Log($"[HoleLiteImporter] Mountain backdrop: native={fbxDiameter:F1}m, scale={scale:F3}, desired={desiredDiameter:F0}m");
         }
     }
 }
