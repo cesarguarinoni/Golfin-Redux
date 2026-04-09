@@ -3299,15 +3299,13 @@ namespace Golfin.CourseImport
             }
             float fbxDiameter = Mathf.Max(fbxBounds.size.x, fbxBounds.size.z);
 
-            // Scale so the FBX matches the larger terrain axis
-            float desiredSize = Mathf.Max(terrainX, terrainZ);
-            float scale = fbxDiameter > 0.01f ? desiredSize / fbxDiameter : 1f;
+            float scale = 0.7f;
 
             var instance = Object.Instantiate(mountainPrefab);
             instance.name = "MountainBackdrop";
 
             // Center at origin, base at terrain level
-            instance.transform.position = new Vector3(0, terrainBaseY, 0);
+            instance.transform.position = new Vector3(0, 30f, 0);
             instance.transform.localScale = Vector3.one * scale;
             instance.transform.SetParent(parentRoot);
 
