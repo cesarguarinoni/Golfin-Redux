@@ -1228,7 +1228,7 @@ namespace Golfin.CourseImport
                 float centroidX = sumX / worldContour.Length;
                 float centroidZ = sumZ / worldContour.Length;
 
-                // Bounding box of contour
+                // Bounding box
                 float cMinX = float.MaxValue, cMaxX = float.MinValue;
                 float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
                 foreach (var v in worldContour)
@@ -1239,68 +1239,75 @@ namespace Golfin.CourseImport
                     if (v.y > cMaxZ) cMaxZ = v.y;
                 }
 
-                // ── Inscribed rectangle terrain hole ──
-                // Shrink bbox by 40% on each side. The bowl rim covers the gap.
-                // Axis-aligned edges align perfectly with holes grid — no corner overshoot.
-                float bboxW = cMaxX - cMinX;
-                float bboxH = cMaxZ - cMinZ;
-                float shrink = 0.40f;
-                float insetX = bboxW * shrink;
-                float insetZ = bboxH * shrink;
-
-                float rectMinX = cMinX + insetX;
-                float rectMaxX = cMaxX - insetX;
-                float rectMinZ = cMinZ + insetZ;
-                float rectMaxZ = cMaxZ - insetZ;
-
-                // Only cut if the rectangle is big enough (at least 2 grid cells)
-                float cellSize = terrainSize.x / holesRes;
-                bool canCut = (rectMaxX - rectMinX) > cellSize * 2 &&
-                              (rectMaxZ - rectMinZ) > cellSize * 2;
-
-                if (canCut)
+                // Compute min radius for adaptive cut scale
+                float minRadius = float.MaxValue;
+                foreach (var v in worldContour)
                 {
-                    int hMinX = Mathf.Clamp(Mathf.CeilToInt(
-                        (rectMinX - terrainPos.x) / terrainSize.x * holesRes),
-                        0, holesRes - 1);
-                    int hMaxX = Mathf.Clamp(Mathf.FloorToInt(
-                        (rectMaxX - terrainPos.x) / terrainSize.x * holesRes),
-                        0, holesRes - 1);
-                    int hMinZ = Mathf.Clamp(Mathf.CeilToInt(
-                        (rectMinZ - terrainPos.z) / terrainSize.z * holesRes),
-                        0, holesRes - 1);
-                    int hMaxZ = Mathf.Clamp(Mathf.FloorToInt(
-                        (rectMaxZ - terrainPos.z) / terrainSize.z * holesRes),
-                        0, holesRes - 1);
+                    float dx = v.x - centroidX;
+                    float dz = v.y - centroidZ;
+                    float dist = Mathf.Sqrt(dx * dx + dz * dz);
+                    if (dist < minRadius) minRadius = dist;
+                }
 
-                    // Simple rectangle — no point-in-polygon test needed
-                    for (int hz = hMinZ; hz <= hMaxZ; hz++)
-                        for (int hx = hMinX; hx <= hMaxX; hx++)
+                // Fixed-distance inset: 0.7m from contour edge
+                // (~1.2 grid cells at ~0.6m/cell — enough to prevent poke-through
+                // without making the hole too small on small bunkers)
+                float cutInsetM = 0.7f;
+                float cutScale = Mathf.Max(0.5f,
+                    1f - cutInsetM / Mathf.Max(minRadius, 0.5f));
+
+                // Cut terrain hole
+                var cutContour = new Vector2[worldContour.Length];
+                for (int i = 0; i < worldContour.Length; i++)
+                {
+                    cutContour[i] = new Vector2(
+                        centroidX + (worldContour[i].x - centroidX) * cutScale,
+                        centroidZ + (worldContour[i].y - centroidZ) * cutScale);
+                }
+
+                int hMinX = Mathf.Clamp(Mathf.FloorToInt(
+                    (cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
+                    (cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
+                    (cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+                int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+                    (cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+
+                for (int hz = hMinZ; hz <= hMaxZ; hz++)
+                {
+                    for (int hx = hMinX; hx <= hMaxX; hx++)
+                    {
+                        float cellWorldX = ((hx + 0.5f) / holesRes)
+                            * terrainSize.x + terrainPos.x;
+                        float cellWorldZ = ((hz + 0.5f) / holesRes)
+                            * terrainSize.z + terrainPos.z;
+
+                        if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
                             holes[hz, hx] = false;
-
-                    Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: cut rect " +
-                              $"({rectMaxX - rectMinX:F1}x{rectMaxZ - rectMinZ:F1}m) " +
-                              $"inside bbox ({bboxW:F1}x{bboxH:F1}m)");
-                }
-                else
-                {
-                    Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: too small " +
-                              $"for terrain hole ({bboxW:F1}x{bboxH:F1}m), " +
-                              $"bowl rim covers fully");
+                    }
                 }
 
-                // ── Bowl mesh (unchanged) ──
+                // Bowl mesh with adaptive inner ring
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
                 float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
 
+                // Inner ring scale matches cut scale (+ small overlap)
+                // Clamped to 0.80 max so large bunkers stay unchanged
+                float innerRing = Mathf.Min(cutScale + 0.02f, 0.80f);
+
                 var meshGO = CreateContourMesh(bunker.id, worldContour,
                     centroidX, centroidZ, surfaceY, bowlDepth,
-                    sandMat, terrain, terrainBaseY);
+                    sandMat, terrain, terrainBaseY, innerRing);
                 meshGO.transform.SetParent(bunkersRoot.transform);
 
                 var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+
+                Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: " +
+                          $"minR={minRadius:F1}m, cutScale={cutScale:F2}, " +
+                          $"innerRing={innerRing:F2}, {bunker.contour.Length} verts");
             }
 
             // Copy bunkers.json to Assets
@@ -1313,7 +1320,8 @@ namespace Golfin.CourseImport
 
         private static GameObject CreateContourMesh(int id, Vector2[] contour,
             float centroidX, float centroidZ, float surfaceY, float depth,
-            Material sandMat, Terrain terrain, float terrainBaseY)
+            Material sandMat, Terrain terrain, float terrainBaseY,
+            float innerRingScale = 0.80f)
         {
             int n = contour.Length;
             if (n < 3)
@@ -1322,8 +1330,14 @@ namespace Golfin.CourseImport
                 return new GameObject($"Bunker_{id}_SKIP");
             }
 
-            // Ring layout: rim (100%) → inner (80%) → mid (50%) → deep (20%) → center
-            float[] ringScales = { 1.0f, 0.80f, 0.50f, 0.20f };
+            // Ring layout: rim (100%) → inner → mid → deep → center
+            // innerRingScale adapts to bunker size so rim covers terrain hole edge
+            float[] ringScales = {
+                1.0f,
+                innerRingScale,
+                innerRingScale * 0.625f,
+                innerRingScale * 0.25f
+            };
             float[] ringDepths = { 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
 
             int ringCount = ringScales.Length;
