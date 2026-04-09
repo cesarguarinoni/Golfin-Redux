@@ -2056,12 +2056,15 @@ namespace Golfin.CourseImport
             // Underwater tint
             mat.SetColor("_UnderWaterColor", new Color(0.1f, 0.2f, 0.25f, 0.5f));
 
-            // Depth range (how quickly color transitions from shallow→deep)
-            mat.SetFloat("_DepthStart", 0.1f);
-            mat.SetFloat("_DepthEnd", 2.0f);
+            // Depth range: short range so water becomes opaque quickly.
+            // Prevents terrain splatmap underneath from showing through
+            // as brownish patches. Shore depression is only ~0.1m.
+            mat.SetFloat("_DepthStart", 0f);
+            mat.SetFloat("_DepthEnd", 0.3f);
 
-            // Refraction distortion (subtle — it's a pond, not a river)
-            mat.SetFloat("_Distortion", 16f);
+            // Refraction distortion: zero. Higher values warp the terrain
+            // texture underneath through the water, producing ugly patches.
+            mat.SetFloat("_Distortion", 0f);
 
             // Specular
             mat.SetFloat("_Smoothness", 0.7f);
