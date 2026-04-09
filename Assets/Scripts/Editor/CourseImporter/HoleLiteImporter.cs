@@ -480,12 +480,15 @@ namespace Golfin.CourseImport
                     if (scaleFix != 1f)
                         markerGO.transform.localScale = Vector3.one * scaleFix;
 
-                    // Offset Y so marker rests on terrain (pivot is at mesh center)
+                    // Place at a temp position so bounds reflect actual scale
+                    markerGO.transform.position = markerPos;
+
+                    // Measure scaled bounds and lift so base sits on terrain
                     var rends = markerGO.GetComponentsInChildren<Renderer>();
                     float halfHeight = 0f;
                     if (rends.Length > 0)
                         halfHeight = rends[0].bounds.extents.y;
-                    markerPos.y = terrainBase + terrainHeight + halfHeight;
+                    markerPos.y = terrainBase + terrainHeight + halfHeight + 0.1f;
                     markerGO.transform.position = markerPos;
                     markerGO.transform.SetParent(parent);
                 }
