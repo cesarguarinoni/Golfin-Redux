@@ -3309,7 +3309,7 @@ namespace Golfin.CourseImport
             instance.transform.localScale = Vector3.one * scale;
             instance.transform.SetParent(parentRoot);
 
-            Debug.Log($"[HoleLiteImporter] Mountain backdrop: native={fbxDiameter:F1}m, scale={scale:F3}, desired={desiredSize:F0}m");
+            Debug.Log($"[HoleLiteImporter] Mountain backdrop: native={fbxDiameter:F1}m, scale={scale:F3}");
         }
     }
 }
