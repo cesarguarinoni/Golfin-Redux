@@ -7,65 +7,117 @@
 
 ---
 
-## Current Task — Fix Small Bunker Terrain Poke-Through (v3)
+## Current Task — Fix Small Bunker Terrain Poke-Through (v4)
 
-**Goal:** Bunker 7 (and any future small bunkers with shorter bbox
-axis < 7m) has terrain poking through the rim ring. Fix by keeping
-the same bowl mesh but **skipping the terrain hole** and using
-**shader depth bias** so the bunker mesh always renders on top of
-terrain without z-fighting.
+**Goal:** Bunker 7 has terrain poking through the rim ring. Root
+cause: the 90% scale cut + fixed ring scales produce a rim that's
+narrower than the terrain hole grid cell (~0.6m). Fix by using
+**fixed-distance inset** for both the terrain cut and the bowl mesh
+rings, so the rim is always wide enough regardless of bunker size.
 
-**v3 approach:** Research shows the standard technique for mesh-on-
-terrain overlays is shader `Offset -1, -1` (depth bias). This tells
-the GPU to treat the mesh as slightly closer to the camera than its
-actual position, winning z-fights against coplanar terrain. No terrain
-hole needed, no donut/collar complexity.
+**Why v2/v3 failed:** Both tried to avoid terrain holes entirely.
+But without a terrain hole, the bowl vertices below terrain lose the
+depth test — terrain always renders on top. renderQueue doesn't help
+because the terrain fragments are genuinely closer to the camera.
+`CreateGradientBorderRing` creates a donut with empty interior.
+The only approach that works is terrain hole + bowl mesh.
 
-**v2 failed because:** `CreateGradientBorderRing` creates an outward
-ring with empty interior (donut shape). The interior sand surface mesh
-was z-fighting with terrain and losing, so only the collar ring was
-visible.
+**v4 insight:** The problem isn't the terrain hole approach — it's
+the **percentage-based scaling**. A 90% scale inset = 10% of radius
+as rim width. For Bunker 7 (radius ~2.8m) that's 0.28m — less than
+one terrain hole grid cell (0.6m). Solution: use a **fixed inset
+distance** (1.2m = 2 grid cells) so the rim is always wide enough.
 
-### The Fix
+### The Fix: Adaptive Ring Scales
 
-For small bunkers (shorter bbox axis < 7m):
+Two changes to `CreateZoneMeshes()` in `HoleLiteImporter.cs`:
 
-1. **Same bowl mesh** as large bunkers (`CreateContourMesh`) — same
-   4-ring bowl shape, same sand material, same depth
-2. **No terrain hole** — skip `SetHoles` entirely
-3. **Depth-biased material** — create a variant of the sand material
-   with depth bias so it renders on top of terrain
+**1. Terrain cut: fixed-distance inset instead of percentage**
 
-The depth bias is set by modifying the material's shader pass. In URP,
-you can't set `Offset` on the standard Lit shader directly from C#,
-but you CAN use `Material.SetFloat("_ZWrite", 1)` and
-`material.renderQueue = 2001` (Geometry+1) to ensure the bunker mesh
-renders after and on top of terrain (renderQueue 2000).
+Replace the percentage-based `cutScale`:
+```csharp
+// OLD (percentage — fails for small bunkers):
+float cutScale = 0.90f;
 
-Alternatively, and more robustly: **raise the mesh slightly**. Since
-there's no terrain hole, the bowl mesh just needs to sit 0.05-0.1m
-above terrain. The rim ring already samples terrain height. Adding a
-small Y offset to the rim ring vertices makes the rim reliably cover
-terrain without z-fighting. The interior bowl goes below terrain
-naturally (it's a depression) so no z-fight there.
+// NEW (fixed distance — always 1.2m inset from contour edge):
+float cutInsetM = 1.2f; // 2 grid cells at ~0.6m/cell
+```
 
-Actually — the **real** insight: the current bowl mesh `CreateContourMesh`
-already places the rim ring (ring 0, scale=1.0) at terrain height +0.02m,
-and ring 1 (scale=0.80) at terrain height +0.00m. The z-fighting only
-happens at the rim. Bumping the rim Y offset from +0.02 to +0.08 for
-small bunkers would fix this. But that's fragile.
+For the cut contour, instead of scaling toward centroid by a
+percentage, compute a per-vertex inset. The simplest way: compute
+the min radius (shortest centroid-to-vertex distance), then derive
+the scale from that:
 
-**Cleanest approach: renderQueue + slight rim boost.**
+```csharp
+float minRadius = float.MaxValue;
+foreach (var v in worldContour)
+{
+    float dx = v.x - centroidX;
+    float dz = v.y - centroidZ;
+    float dist = Mathf.Sqrt(dx * dx + dz * dz);
+    if (dist < minRadius) minRadius = dist;
+}
 
-### Code Changes
+// Ensure cut doesn't go negative (bunker too small for any cut)
+float cutInsetM = 1.2f;
+float cutScale = Mathf.Max(0.3f, 1f - cutInsetM / Mathf.Max(minRadius, 0.5f));
+```
 
-In the `foreach (var bunker in bunkersFile.bunkers)` loop inside
-`CreateZoneMeshes()`, replace the current body:
+This gives:
+- Bunker 7 (minRadius ~1.7m): cutScale = 0.29 → BUT we clamp to 0.3
+- Bunker 6 (minRadius ~2.4m): cutScale = 0.50
+- Bunker 1 (minRadius ~6.8m): cutScale = 0.82
+- Large bunkers: cutScale ≈ 0.84-0.88 (similar to current 0.90)
+
+**2. Bowl mesh: match ring 1 (inner) to the cut scale**
+
+Currently `CreateContourMesh` has fixed ring scales:
+```csharp
+float[] ringScales = { 1.0f, 0.80f, 0.50f, 0.20f };
+```
+
+The rim ring (ring 0 at 100%) to inner ring (ring 1 at 80%) gap is
+what covers the terrain hole edge. For small bunkers, ring 1 needs
+to be closer to the cut edge.
+
+Add a `float innerRingScale` parameter to `CreateContourMesh`:
+
+```csharp
+private static GameObject CreateContourMesh(int id, Vector2[] contour,
+    float centroidX, float centroidZ, float surfaceY, float depth,
+    Material sandMat, Terrain terrain, float terrainBaseY,
+    float innerRingScale = 0.80f)  // NEW parameter with default
+```
+
+Then use it:
+```csharp
+float[] ringScales = { 1.0f, innerRingScale,
+    innerRingScale * 0.625f,   // mid: 62.5% between inner and center
+    innerRingScale * 0.25f };  // deep: 25% between inner and center
+```
+
+Call it with the cut scale:
+```csharp
+// innerRingScale should match (or slightly exceed) cutScale
+// so the rim fully covers the terrain hole edge
+float innerRing = Mathf.Min(cutScale + 0.02f, 0.80f);
+
+var meshGO = CreateContourMesh(bunker.id, worldContour,
+    centroidX, centroidZ, surfaceY, bowlDepth,
+    sandMat, terrain, terrainBaseY, innerRing);
+```
+
+For large bunkers (cutScale ~0.85): innerRing = min(0.87, 0.80) = **0.80**
+→ same as current.
+
+For Bunker 7 (cutScale = 0.30): innerRing = min(0.32, 0.80) = **0.32**
+→ very wide rim that fully covers the tiny terrain hole.
+
+### Full Code for the Loop
 
 ```csharp
 foreach (var bunker in bunkersFile.bunkers)
 {
-    // Apply 90° CCW rotation to contour vertices (same as anchors)
     var worldContour = new Vector2[bunker.contour.Length];
     float sumX = 0, sumZ = 0;
     for (int i = 0; i < bunker.contour.Length; i++)
@@ -79,138 +131,139 @@ foreach (var bunker in bunkersFile.bunkers)
     float centroidX = sumX / worldContour.Length;
     float centroidZ = sumZ / worldContour.Length;
 
-    // Determine bunker mode by shorter bounding box axis
-    float shorterAxis = Mathf.Min(bunker.size_m.x, bunker.size_m.z);
-    bool isSmallBunker = shorterAxis < 7.0f;
-
-    if (!isSmallBunker)
+    // Bounding box
+    float cMinX = float.MaxValue, cMaxX = float.MinValue;
+    float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
+    foreach (var v in worldContour)
     {
-        // ── Large bunker: terrain hole + bowl (existing approach) ──
-
-        float cMinX = float.MaxValue, cMaxX = float.MinValue;
-        float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
-        foreach (var v in worldContour)
-        {
-            if (v.x < cMinX) cMinX = v.x;
-            if (v.x > cMaxX) cMaxX = v.x;
-            if (v.y < cMinZ) cMinZ = v.y;
-            if (v.y > cMaxZ) cMaxZ = v.y;
-        }
-
-        float cutScale = 0.90f;
-        var cutContour = new Vector2[worldContour.Length];
-        for (int i = 0; i < worldContour.Length; i++)
-        {
-            cutContour[i] = new Vector2(
-                centroidX + (worldContour[i].x - centroidX) * cutScale,
-                centroidZ + (worldContour[i].y - centroidZ) * cutScale);
-        }
-
-        int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-        int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-        int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-        int hMaxZ = Mathf.Clamp(Mathf.CeilToInt((cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-
-        for (int hz = hMinZ; hz <= hMaxZ; hz++)
-        {
-            for (int hx = hMinX; hx <= hMaxX; hx++)
-            {
-                float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
-                float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
-
-                if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
-                    holes[hz, hx] = false;
-            }
-        }
-
-        float surfaceY = terrainBaseY + terrain.SampleHeight(
-            new Vector3(centroidX, 0, centroidZ));
-        float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
-
-        var meshGO = CreateContourMesh(bunker.id, worldContour,
-            centroidX, centroidZ, surfaceY, bowlDepth,
-            sandMat, terrain, terrainBaseY);
-        meshGO.transform.SetParent(bunkersRoot.transform);
-
-        var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
-        marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
-
-        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: BOWL " +
-                  $"(shorterAxis={shorterAxis:F1}m, {bunker.contour.Length} verts)");
+        if (v.x < cMinX) cMinX = v.x;
+        if (v.x > cMaxX) cMaxX = v.x;
+        if (v.y < cMinZ) cMinZ = v.y;
+        if (v.y > cMaxZ) cMaxZ = v.y;
     }
-    else
+
+    // Compute min radius for adaptive cut scale
+    float minRadius = float.MaxValue;
+    foreach (var v in worldContour)
     {
-        // ── Small bunker: same bowl mesh, NO terrain hole ──
-        // Use the same CreateContourMesh but with:
-        //   - no terrain hole cutting
-        //   - renderQueue bump so bowl renders on top of terrain
-        //   - slightly higher rim Y offset to prevent z-fighting
-
-        float surfaceY = terrainBaseY + terrain.SampleHeight(
-            new Vector3(centroidX, 0, centroidZ));
-
-        // Shallower bowl for small bunkers (they're small pots, not deep traps)
-        float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 1.5f), 0.3f);
-
-        var meshGO = CreateContourMesh(bunker.id, worldContour,
-            centroidX, centroidZ, surfaceY, bowlDepth,
-            sandMat, terrain, terrainBaseY);
-        meshGO.transform.SetParent(bunkersRoot.transform);
-
-        // Bump renderQueue so this bunker renders AFTER terrain
-        // (terrain = Geometry 2000, bunker = 2001)
-        var mr = meshGO.GetComponent<MeshRenderer>();
-        if (mr != null && mr.sharedMaterial != null)
-        {
-            // Create a material instance so we don't affect large bunkers
-            var matInstance = new Material(mr.sharedMaterial);
-            matInstance.renderQueue = 2001;
-            mr.sharedMaterial = matInstance;
-        }
-
-        var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
-        marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
-
-        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: SMALL BOWL " +
-                  $"(shorterAxis={shorterAxis:F1}m, no terrain hole, " +
-                  $"{bunker.contour.Length} verts)");
+        float dx = v.x - centroidX;
+        float dz = v.y - centroidZ;
+        float dist = Mathf.Sqrt(dx * dx + dz * dz);
+        if (dist < minRadius) minRadius = dist;
     }
+
+    // Fixed-distance inset: always 1.2m from contour edge
+    // (2 terrain hole grid cells at ~0.6m/cell)
+    float cutInsetM = 1.2f;
+    float cutScale = Mathf.Max(0.3f,
+        1f - cutInsetM / Mathf.Max(minRadius, 0.5f));
+
+    // Cut terrain hole
+    var cutContour = new Vector2[worldContour.Length];
+    for (int i = 0; i < worldContour.Length; i++)
+    {
+        cutContour[i] = new Vector2(
+            centroidX + (worldContour[i].x - centroidX) * cutScale,
+            centroidZ + (worldContour[i].y - centroidZ) * cutScale);
+    }
+
+    int hMinX = Mathf.Clamp(Mathf.FloorToInt(
+        (cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+    int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
+        (cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+    int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
+        (cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+    int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+        (cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+
+    for (int hz = hMinZ; hz <= hMaxZ; hz++)
+    {
+        for (int hx = hMinX; hx <= hMaxX; hx++)
+        {
+            float cellWorldX = ((hx + 0.5f) / holesRes)
+                * terrainSize.x + terrainPos.x;
+            float cellWorldZ = ((hz + 0.5f) / holesRes)
+                * terrainSize.z + terrainPos.z;
+
+            if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
+                holes[hz, hx] = false;
+        }
+    }
+
+    // Bowl mesh with adaptive inner ring
+    float surfaceY = terrainBaseY + terrain.SampleHeight(
+        new Vector3(centroidX, 0, centroidZ));
+    float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+
+    // Inner ring scale matches cut scale (+ small overlap)
+    // Clamped to 0.80 max so large bunkers stay unchanged
+    float innerRing = Mathf.Min(cutScale + 0.02f, 0.80f);
+
+    var meshGO = CreateContourMesh(bunker.id, worldContour,
+        centroidX, centroidZ, surfaceY, bowlDepth,
+        sandMat, terrain, terrainBaseY, innerRing);
+    meshGO.transform.SetParent(bunkersRoot.transform);
+
+    var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
+    marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+
+    Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: " +
+              $"minR={minRadius:F1}m, cutScale={cutScale:F2}, " +
+              $"innerRing={innerRing:F2}, {bunker.contour.Length} verts");
 }
 ```
 
-### Also: Boost Rim Y-Offset for Small Bunkers
+### Changes to CreateContourMesh
 
-In `CreateContourMesh`, the rim ring (r==0) uses `y = terrainH - surfaceY + 0.02f`.
-For small bunkers where there's no terrain hole, that 0.02m margin might
-not be enough. Either:
+Add `innerRingScale` parameter (default 0.80f for backward compat):
 
-**Option A (preferred):** The renderQueue=2001 should be sufficient.
-The GPU draws the bunker mesh after terrain, so even at coplanar depth
-the bunker wins. Test this first.
+```csharp
+private static GameObject CreateContourMesh(int id, Vector2[] contour,
+    float centroidX, float centroidZ, float surfaceY, float depth,
+    Material sandMat, Terrain terrain, float terrainBaseY,
+    float innerRingScale = 0.80f)
+{
+    // ... existing code ...
 
-**Option B (fallback):** If renderQueue alone doesn't work on all
-devices, add a `float rimBoost` parameter to `CreateContourMesh` that
-defaults to 0.02f but can be set to 0.08f for small bunkers.
+    // Replace the fixed ring scales:
+    // OLD: float[] ringScales = { 1.0f, 0.80f, 0.50f, 0.20f };
+    // NEW: adaptive based on innerRingScale
+    float[] ringScales = {
+        1.0f,
+        innerRingScale,
+        innerRingScale * 0.625f,
+        innerRingScale * 0.25f
+    };
 
-### Data Access Note
+    // ... rest unchanged ...
+}
+```
 
-Same as v2: ensure `BunkerRegionData` in `HoleManifestData.cs` has
-`size_m` as a `SizeData` field. If not, add it.
+This means for Bunker 7 (innerRingScale=0.32):
+- Ring 0: 100% (rim at terrain height)
+- Ring 1: 32% (inner ring — wide flat rim)
+- Ring 2: 20% (mid slope)
+- Ring 3: 8% (deep)
+- Center: 0% (bottom)
+
+The wide rim completely covers the terrain hole edge. The bowl is
+shallower but still has shape. For a 2.8m radius bunker, this is
+reasonable — it's a small pot bunker, not a deep trap.
 
 ### Verification
 
 1. Re-import Hole 01
-2. Console: Bunkers 1-6 = `BOWL`, Bunker 7 = `SMALL BOWL`
-3. Bunker 7: proper sand bowl visible (not a donut!), no terrain
-   poke-through, no z-fighting flicker
-4. Bunker 6: back to normal bowl mode with terrain hole
-5. All other bunkers unchanged
+2. Console: all bunkers show cutScale + innerRing values
+3. Bunker 7: bowl visible with wide rim, no terrain poke-through
+4. Large bunkers: cutScale ~0.82-0.88, innerRing = 0.80 (unchanged)
+5. No donuts, no invisible meshes, no z-fighting
 
 ### Do NOT
 
-- Change `CreateContourMesh` (reuse as-is)
-- Use `CreateGradientBorderRing` for bunkers (it creates a donut)
-- Use `CreateEarClipContourMesh` for bunkers (it's flat, not a bowl)
+- Use `CreateEarClipContourMesh` or `CreateGradientBorderRing` for
+  bunkers (both proven to fail)
+- Skip terrain holes (terrain always wins depth test over below-
+  terrain vertices)
 - Change the bunker export pipeline
 - Change other zone meshes
 
@@ -1275,4 +1328,5 @@ This gives natural terrain-under-asphalt and a visible edge transition.
 ✅ DONE: 2026-04-09 — Water mesh: fixed sunken positioning on DEM terrain. Water now samples terrain.SampleHeight() at each contour vertex (like fairway/tee meshes) instead of fixed Y=0.05. Shore depression uses relative offsets from current height instead of absolute normalized values. Water cells depressed by (ShoreDepthMeters+0.5)/elevRange below current height.
 ✅ DONE: 2026-04-10 — Hybrid bunker system v1: small bunkers (minRadius < 4m) flat overlay. Superseded by v2.
 ✅ DONE: 2026-04-10 — Hybrid bunker system v2: shorterAxis < 7m threshold (fixes Bunker 6 false positive). Shallow overlay with 0.3m central depression + sand collar ring via CreateGradientBorderRing. Bowl mode unchanged for large bunkers. Superseded by v3.
-✅ DONE: 2026-04-10 — Hybrid bunker system v3: small bunkers use same CreateContourMesh bowl (shallower, max 1.5m depth) but skip terrain hole. renderQueue=2001 prevents z-fighting with terrain. No ear-clip or collar ring needed.
+✅ DONE: 2026-04-10 — Hybrid bunker system v3: small bunkers use same CreateContourMesh bowl (shallower, max 1.5m depth) but skip terrain hole. renderQueue=2001 prevents z-fighting with terrain. No ear-clip or collar ring needed. Superseded by v4.
+✅ DONE: 2026-04-10 — Bunker v4: unified approach — all bunkers use terrain hole + bowl. Replaced fixed 90% cutScale with adaptive fixed-distance inset (1.2m = 2 grid cells). Added innerRingScale param to CreateContourMesh so rim width adapts to bunker size. Small bunkers get wider rim that fully covers terrain hole edge.
