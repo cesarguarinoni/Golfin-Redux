@@ -7,11 +7,203 @@
 
 ---
 
-## Current Task — Fix Water Mesh Sunken Too Deep
+## Current Task — Fix Small Bunker Terrain Poke-Through (Hybrid Approach)
 
-**Goal:** Water is sunken way below the terrain surface after DEM
-heightmap changes. The water mesh needs to sit at terrain surface
-level, not deep underground.
+**Goal:** Bunker 7 (and any future small bunkers) has terrain poking
+through the rim ring because the terrain hole grid (~0.6m/cell at 1024
+resolution) overshoots the bowl lip on a bunker with only ~2.8m
+radius. Fix by using a **hybrid approach**: small bunkers get a flat
+sand overlay (no terrain hole, no bowl), large bunkers keep the
+current bowl approach.
+
+### Root Cause
+
+The terrain holes grid is 1024 cells for ~630m terrain = ~0.6m/cell.
+At 90% cut scale, Bunker 7 (radius ~2.8m) has a rim ring only ~0.28m
+wide. The grid snaps to cell boundaries, and at convex corners the
+cut overshoots the rim, exposing raw terrain through the bowl.
+
+### The Fix: Two-Mode Bunker System
+
+In `CreateZoneMeshes()` in `HoleLiteImporter.cs`, add a size check
+for each bunker. Compute the **minimum radius** (shortest distance
+from centroid to any contour vertex). Use that to pick the mode:
+
+**Threshold:** `minRadius < 4.0f` → flat overlay mode, else → bowl mode (current)
+
+(4m gives comfortable margin above the ~0.6m grid cell size. The
+rim ring needs to be wider than 1 grid cell to be safe.)
+
+#### Mode A: Flat Overlay (small bunkers)
+
+- **No terrain hole cut** — skip `SetHoles` for this bunker entirely
+- Create a **flat contour mesh** sitting on the terrain surface, like
+  fairway/tee meshes
+- Use `CreateEarClipContourMesh()` (already exists) with the bunker
+  contour, sand material, and `SurfaceType.Bunker`
+- Y-offset: `0.04f` (just above terrain, below fairway at 0.08)
+- This gives a clean sand pad with no poke-through
+
+#### Mode B: Bowl (large bunkers) — UNCHANGED
+
+- Current approach: terrain hole at 90% scale, 4-ring bowl mesh
+- No changes needed for bunkers with `minRadius >= 4.0f`
+
+### Code Changes
+
+In the `foreach (var bunker in bunkersFile.bunkers)` loop inside
+`CreateZoneMeshes()`, replace the current body with:
+
+```csharp
+foreach (var bunker in bunkersFile.bunkers)
+{
+    // Apply 90° CCW rotation to contour vertices (same as anchors)
+    var worldContour = new Vector2[bunker.contour.Length];
+    float sumX = 0, sumZ = 0;
+    for (int i = 0; i < bunker.contour.Length; i++)
+    {
+        float wx = bunker.contour[i].z;  // 90° CCW: worldX = local.z
+        float wz = bunker.contour[i].x;  // 90° CCW: worldZ = local.x
+        worldContour[i] = new Vector2(wx, wz);
+        sumX += wx;
+        sumZ += wz;
+    }
+    float centroidX = sumX / worldContour.Length;
+    float centroidZ = sumZ / worldContour.Length;
+
+    // Compute minimum radius (shortest distance from centroid to any contour vertex)
+    float minRadius = float.MaxValue;
+    foreach (var v in worldContour)
+    {
+        float dx = v.x - centroidX;
+        float dz = v.y - centroidZ;
+        float dist = Mathf.Sqrt(dx * dx + dz * dz);
+        if (dist < minRadius) minRadius = dist;
+    }
+
+    bool isSmallBunker = minRadius < 4.0f;
+
+    if (isSmallBunker)
+    {
+        // ── Mode A: Flat sand overlay (no terrain hole, no bowl) ──
+        // Reuse the ear-clip contour mesh approach (same as cart paths)
+        var meshGO = CreateEarClipContourMesh(
+            bunker.id, "Bunker", bunker.contour,
+            terrain, terrainBaseY, sandMat, 4f,
+            Golfin.Course.SurfaceType.Bunker);
+        if (meshGO != null)
+            meshGO.transform.SetParent(bunkersRoot.transform);
+
+        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: FLAT overlay " +
+                  $"(minRadius={minRadius:F1}m < 4m, {bunker.contour.Length} verts)");
+    }
+    else
+    {
+        // ── Mode B: Bowl mesh with terrain hole (existing approach) ──
+
+        // Bounding box of contour (for limiting hole-grid search)
+        float cMinX = float.MaxValue, cMaxX = float.MinValue;
+        float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
+        foreach (var v in worldContour)
+        {
+            if (v.x < cMinX) cMinX = v.x;
+            if (v.x > cMaxX) cMaxX = v.x;
+            if (v.y < cMinZ) cMinZ = v.y;
+            if (v.y > cMaxZ) cMaxZ = v.y;
+        }
+
+        // Cut terrain hole at 90% scale
+        float cutScale = 0.90f;
+        var cutContour = new Vector2[worldContour.Length];
+        for (int i = 0; i < worldContour.Length; i++)
+        {
+            cutContour[i] = new Vector2(
+                centroidX + (worldContour[i].x - centroidX) * cutScale,
+                centroidZ + (worldContour[i].y - centroidZ) * cutScale);
+        }
+
+        int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+        int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+        int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+        int hMaxZ = Mathf.Clamp(Mathf.CeilToInt((cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+
+        for (int hz = hMinZ; hz <= hMaxZ; hz++)
+        {
+            for (int hx = hMinX; hx <= hMaxX; hx++)
+            {
+                float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
+                float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
+
+                if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
+                    holes[hz, hx] = false;
+            }
+        }
+
+        // Generate contour-shaped bowl mesh
+        float surfaceY = terrainBaseY + terrain.SampleHeight(
+            new Vector3(centroidX, 0, centroidZ));
+
+        float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+
+        var meshGO = CreateContourMesh(bunker.id, worldContour, centroidX, centroidZ,
+            surfaceY, bowlDepth, sandMat, terrain, terrainBaseY);
+        meshGO.transform.SetParent(bunkersRoot.transform);
+
+        // Add SurfaceMarker
+        var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
+        marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+
+        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: BOWL " +
+                  $"(minRadius={minRadius:F1}m, {bunker.contour.Length} verts)");
+    }
+}
+```
+
+### Important Notes
+
+1. `CreateEarClipContourMesh` already handles the 90° CCW rotation
+   internally (it reads `contour[i].z` / `contour[i].x`), so pass
+   the **original** `bunker.contour` (ContourPoint[]), NOT the
+   already-rotated `worldContour` (Vector2[]).
+
+2. The `sandMat` variable is already created earlier in the method
+   (via `CreateBunkerMaterial`). Reuse it for flat overlays too.
+
+3. The flat overlay Y-offset in `CreateEarClipContourMesh` is
+   currently `0.05f`. That's fine for bunkers — slightly above
+   terrain, below fairway meshes.
+
+4. `CreateEarClipContourMesh` also calls `SubdivideToTerrain` to
+   split long triangles, so the flat bunker mesh will follow terrain
+   curvature on DEM terrain. Good.
+
+5. Keep the existing `SurfaceMarker` on bowl-mode bunkers. The flat
+   overlay mode gets its marker from `CreateEarClipContourMesh`
+   already.
+
+### Verification
+
+1. Re-import Hole 01: `GOLFIN > Import Hole (Lite) > Hole 01`
+2. Console should show:
+   - Bunkers 1-6: `BOWL (minRadius=X.Xm, ...)`
+   - Bunker 7: `FLAT overlay (minRadius=X.Xm < 4m, ...)`
+3. Bunker 7: clean sand pad, no terrain poke-through, no z-fighting
+4. Bunkers 1-6: unchanged bowl appearance
+5. Walk around all bunkers — no visual regressions
+
+### Do NOT
+
+- Change `CreateContourMesh` (bowl mesh generator)
+- Change `CreateEarClipContourMesh` (it already works)
+- Change the bunker export pipeline (export-hole.mjs)
+- Change other zone meshes (green, fairway, tee, water, cart path)
+- Remove the terrain hole cutting for large bunkers
+
+---
+
+## Previous Task — Fix Water Mesh Sunken Too Deep
+
+(Completed — water now samples terrain height at each contour vertex)
 
 ### Root Cause
 
@@ -1066,3 +1258,4 @@ This gives natural terrain-under-asphalt and a visible edge transition.
 ✅ DONE: 2026-04-09 — Mountain backdrop v2: Single ring instance, centered at origin, scaled to terrain diagonal. LandscapesGreen.png opaque.
 ✅ DONE: 2026-04-09 — Mountain backdrop v3: Mountain.png texture (less stretching), transparent material with alpha blend, double-sided (_Cull=0), scale=terrainMax*1.5/nativeDiameter. Render queue 3000.
 ✅ DONE: 2026-04-09 — Water mesh: fixed sunken positioning on DEM terrain. Water now samples terrain.SampleHeight() at each contour vertex (like fairway/tee meshes) instead of fixed Y=0.05. Shore depression uses relative offsets from current height instead of absolute normalized values. Water cells depressed by (ShoreDepthMeters+0.5)/elevRange below current height.
+✅ DONE: 2026-04-10 — Hybrid bunker system: small bunkers (minRadius < 4m) get flat sand overlay via CreateEarClipContourMesh (no terrain hole, no bowl). Large bunkers keep bowl approach. Fixes Bunker 7 terrain poke-through.

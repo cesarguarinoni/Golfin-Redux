@@ -1229,59 +1229,91 @@ namespace Golfin.CourseImport
                 float centroidX = sumX / worldContour.Length;
                 float centroidZ = sumZ / worldContour.Length;
 
-                // Bounding box of contour (for limiting hole-grid search)
-                float cMinX = float.MaxValue, cMaxX = float.MinValue;
-                float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
+                // Compute minimum radius (shortest distance from centroid to any contour vertex)
+                float minRadius = float.MaxValue;
                 foreach (var v in worldContour)
                 {
-                    if (v.x < cMinX) cMinX = v.x;
-                    if (v.x > cMaxX) cMaxX = v.x;
-                    if (v.y < cMinZ) cMinZ = v.y;
-                    if (v.y > cMaxZ) cMaxZ = v.y;
+                    float dx = v.x - centroidX;
+                    float dz = v.y - centroidZ;
+                    float dist = Mathf.Sqrt(dx * dx + dz * dz);
+                    if (dist < minRadius) minRadius = dist;
                 }
 
-                // Cut terrain using the MESH RIM directly.
-                // Scale to 90% — the bunker bowl mesh rim covers the gap.
-                float cutScale = 0.90f;
-                var cutContour = new Vector2[worldContour.Length];
-                for (int i = 0; i < worldContour.Length; i++)
+                bool isSmallBunker = minRadius < 4.0f;
+
+                if (isSmallBunker)
                 {
-                    cutContour[i] = new Vector2(
-                        centroidX + (worldContour[i].x - centroidX) * cutScale,
-                        centroidZ + (worldContour[i].y - centroidZ) * cutScale);
+                    // ── Mode A: Flat sand overlay (no terrain hole, no bowl) ──
+                    // Reuse the ear-clip contour mesh approach (same as cart paths)
+                    var meshGO = CreateEarClipContourMesh(
+                        bunker.id, "Bunker", bunker.contour,
+                        terrain, terrainBaseY, sandMat, 4f,
+                        Golfin.Course.SurfaceType.Bunker);
+                    if (meshGO != null)
+                        meshGO.transform.SetParent(bunkersRoot.transform);
+
+                    Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: FLAT overlay " +
+                              $"(minRadius={minRadius:F1}m < 4m, {bunker.contour.Length} verts)");
                 }
-
-                int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-                int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-                int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-                int hMaxZ = Mathf.Clamp(Mathf.CeilToInt((cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-
-                for (int hz = hMinZ; hz <= hMaxZ; hz++)
+                else
                 {
-                    for (int hx = hMinX; hx <= hMaxX; hx++)
+                    // ── Mode B: Bowl mesh with terrain hole (existing approach) ──
+
+                    // Bounding box of contour (for limiting hole-grid search)
+                    float cMinX = float.MaxValue, cMaxX = float.MinValue;
+                    float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
+                    foreach (var v in worldContour)
                     {
-                        float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
-                        float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
-
-                        if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
-                            holes[hz, hx] = false;
+                        if (v.x < cMinX) cMinX = v.x;
+                        if (v.x > cMaxX) cMaxX = v.x;
+                        if (v.y < cMinZ) cMinZ = v.y;
+                        if (v.y > cMaxZ) cMaxZ = v.y;
                     }
+
+                    // Cut terrain hole at 90% scale
+                    float cutScale = 0.90f;
+                    var cutContour = new Vector2[worldContour.Length];
+                    for (int i = 0; i < worldContour.Length; i++)
+                    {
+                        cutContour[i] = new Vector2(
+                            centroidX + (worldContour[i].x - centroidX) * cutScale,
+                            centroidZ + (worldContour[i].y - centroidZ) * cutScale);
+                    }
+
+                    int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                    int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                    int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+                    int hMaxZ = Mathf.Clamp(Mathf.CeilToInt((cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+
+                    for (int hz = hMinZ; hz <= hMaxZ; hz++)
+                    {
+                        for (int hx = hMinX; hx <= hMaxX; hx++)
+                        {
+                            float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
+                            float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
+
+                            if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
+                                holes[hz, hx] = false;
+                        }
+                    }
+
+                    // Generate contour-shaped bowl mesh
+                    float surfaceY = terrainBaseY + terrain.SampleHeight(
+                        new Vector3(centroidX, 0, centroidZ));
+
+                    float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+
+                    var meshGO = CreateContourMesh(bunker.id, worldContour, centroidX, centroidZ,
+                        surfaceY, bowlDepth, sandMat, terrain, terrainBaseY);
+                    meshGO.transform.SetParent(bunkersRoot.transform);
+
+                    // Add SurfaceMarker
+                    var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
+                    marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+
+                    Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: BOWL " +
+                              $"(minRadius={minRadius:F1}m, {bunker.contour.Length} verts)");
                 }
-
-
-                // --- Generate contour-shaped mesh ---
-                float surfaceY = terrainBaseY + terrain.SampleHeight(
-                    new Vector3(centroidX, 0, centroidZ));
-
-                float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
-
-                var meshGO = CreateContourMesh(bunker.id, worldContour, centroidX, centroidZ,
-                    surfaceY, bowlDepth, sandMat, terrain, terrainBaseY);
-                meshGO.transform.SetParent(bunkersRoot.transform);
-
-                // Add SurfaceMarker
-                var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
-                marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
             }
 
             // Copy bunkers.json to Assets
