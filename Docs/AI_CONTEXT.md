@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-09
+**Last Updated:** 2026-04-09 (evening)
 
 ## Current Status
 
@@ -13,7 +13,7 @@
 | Balls Inventory | ✅ Phase H complete |
 | Items Inventory | ✅ Phase I complete |
 | Bags Inventory | ✅ Phase J complete |
-| 3D Course Pipeline | ✅ Phase K prototype complete — Hole 1 walkable |
+| 3D Course Pipeline | ✅ Phase K prototype complete — Hole 1 walkable with DEM terrain, water shader, mountains |
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
@@ -34,11 +34,11 @@ contour-traced mesh overlays with smooth edges:
 | Zone | Approach | Mesh type |
 |---|---|---|
 | Green | Mesh overlay (raised) | `CreateRaisedMesh` — collar + putting surface |
-| Bunker | Mesh overlay (bowl) | `CreateRaisedMesh` — 4-ring bowl |
-| Water | **Mesh overlay (flat)** | Ear-clip triangulation contour mesh (same as fairway) |
-| **Fairway** | **Mesh overlay (flat)** | Ear-clip triangulation, mow stripes (T_Fairway_Mix UV), inward fringe ring (0.5m semi-rough) |
-| **Tee box** | **Mesh overlay (flat)** | Ear-clip triangulation + gradient border ring (T_TeeDark_Albedo) |
-| Cart path | Splatmap | Contour mesh attempted but spilled into other zones; reverted |
+| Bunker | Mesh overlay (bowl) | `CreateContourMesh` — 4-ring bowl |
+| Water | **Mesh overlay (URPWater shader)** | Ear-clip contour mesh + `URPWater/Standard` shader |
+| **Fairway** | **Mesh overlay (flat)** | Ear-clip triangulation, mow stripes, inward fringe ring |
+| **Tee box** | **Mesh overlay (flat)** | Ear-clip triangulation + gradient border ring |
+| **Cart path** | **Spine-based strip mesh** | Centerline extracted from contour, fixed-width ribbon, terrain-draped |
 | Rough | Splatmap | Base terrain layer |
 | Semi-rough | Splatmap | Terrain layer |
 
@@ -57,7 +57,14 @@ contour-traced mesh overlays with smooth edges:
 - Uniform polygon dilation can't fix shape-specific shrinkage — it bloats wide sections and pushes into neighbors.
 - Cart path contour meshes spill into bunkers/other zones — splatmap is acceptable for cart paths.
 
-### Pipeline Steps
+### On the Horizon
+- ~~Fix water (broken after DEM changes — sunken too low)~~ ✅ Fixed — terrain.SampleHeight() at each vertex
+- Fix bunker 7 (2.2m radius terrain poke-through)
+- GeoAlign remaining 17 holes
+- Trees (auto-place in tree zones, cover steep terrain)
+- Illumination (directional light, shadows)
+- Visual/texture polish pass
+- Full 18-hole pipeline beyond Hole 1 prototype
 1. **Scrape** — downloads hole GIFs + scorecard data
 2. **Extract** — crops illustration, removes legend, upscales to 1024×
 3. **Detect Tees** — HSL color matching, 72/72 tees found
@@ -81,12 +88,43 @@ contour-traced mesh overlays with smooth edges:
 - GUI: `Tools/UHoleLite/app/`
 - Docs: `Docs/BUNKER_RESEARCH.md`, `Docs/WATER_FINDINGS.md`
 
-### On the Horizon
-- Re-enable real heightmap (Task 4 in TellCode.md)
-- Water shape pipeline replacement (pixel-perfect approach)
-- Texture-terrain alignment refinement
-- Height verification against real course data
-- Full 18-hole pipeline beyond Hole 1 prototype
+### DEM Heightmap Pipeline (2026-04-09)
+
+**GeoAlign tool** (`Tools/GeoAlign/`) — web app for geo-aligning hole
+illustrations to GSI satellite imagery via control points + affine transform.
+Hole 1 aligned with 6 control points, mean residual 0.8m.
+
+**Quadratic surface fit (v4):** `height = a*x² + b*y² + c*x*y + d*x + e*y + f`
+- ONE surface fit to all playable zones (fairway, green, tee, bunker, rough, semi-rough, cart path)
+- Captures valleys, ridges, two-tier terrain while remaining mathematically smooth
+- Playable zones = pure quadratic surface (zero DEM detail)
+- Trees/OB/background = quadratic + 75% DEM residual (5 blur passes) for mountainous terrain
+- DEM source: GSI DEM5A tiles (z15, ~5m/pixel lidar)
+- Resolution: 1025×1025 to match Unity terrain directly
+
+**Water shader:** `URPWater/Standard` at `Assets/Art/3D/Props/URPWater/`.
+Color mode Colors, single normal map, edge fade ON, foam/caustics/waves OFF,
+normal speed zeroed, low specular. **BROKEN after DEM changes** — water sunken
+too low. Needs fix in generate-terrain.mjs (water sentinel value issue).
+
+**Cart path spine mesh:** Contour polygon → split at farthest points → resample
+both edge chains → average = centerline spine. Unity extrudes fixed-width strip
+along spine, sampling terrain height at each vertex pair. Open polyline (not closed).
+
+**Mountain backdrop:** Single `Mountains.fbx` instance (pre-built ring mesh),
+scale 0.7, Y position 30. `Mountain.png` texture with transparency.
+
+### Key Terrain Values
+- Overlay y-offsets: fairway 0.08m, tee 0.08m, fringe 0.10m, tee border 0.06m, cart path 0.04m
+- Bunker terrain hole cut: 90% scale (works for ≥3m radius bunkers)
+- DEM residual: 75% for trees/OB/background, 5 blur passes
+- Quadratic surface fit uses only playable zone DEM samples
+
+### Known Issues
+- **Bunker 7** (2.2m radius): terrain poke-through at rim corners. Needs rethink of rim ring + terrain hole interaction for small bunkers.
+- ~~**Water broken**~~: ✅ Fixed — water mesh now samples terrain height at each contour vertex instead of using fixed Y=0.05.
+
+
 
 ---
 

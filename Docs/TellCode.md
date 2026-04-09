@@ -7,7 +7,68 @@
 
 ---
 
-## Current Task — Mountain Backdrop Around Terrain
+## Current Task — Fix Water Mesh Sunken Too Deep
+
+**Goal:** Water is sunken way below the terrain surface after DEM
+heightmap changes. The water mesh needs to sit at terrain surface
+level, not deep underground.
+
+### Root Cause
+
+The `CreateWaterMeshes` method depresses terrain heights and positions
+the water mesh. With the old flat terrain (elevRange ~1.1m), the shore
+depression math worked. With DEM terrain (elevRange ~15-25m), the
+relationship between normalized heightmap values and world-space
+positions changed.
+
+### Debug First
+
+Add these logs at the start of `CreateWaterMeshes`:
+```csharp
+Debug.Log($"[Water] terrainBaseY={terrainBaseY:F2}, terrainSize.y={terrainData.size.y:F2}");
+Debug.Log($"[Water] ShoreDepthMeters={ShoreDepthMeters:F2}");
+// For the first water contour point:
+float sampleH = terrain.SampleHeight(new Vector3(firstWaterPoint.x, 0, firstWaterPoint.z));
+Debug.Log($"[Water] SampleHeight at water center={sampleH:F2}, world Y={terrainBaseY + sampleH:F2}");
+```
+
+### The Fix
+
+The water mesh should be positioned using `terrain.SampleHeight()` at
+each contour vertex, same as fairway/tee meshes. The water mesh Y
+should be `terrainBaseY + terrain.SampleHeight(pos) - 0.05f` (just
+slightly below terrain surface).
+
+The shore depression (modifying terrain heightmap cells near water)
+needs to account for the new elevation range. The normalized
+depression amount should be:
+```csharp
+float normalizedDepression = ShoreDepthMeters / terrainData.size.y;
+```
+NOT a fixed value. Check if `CreateWaterMeshes` hardcodes any
+depression values that assumed the old 1.1m elevation range.
+
+### Key things to check in CreateWaterMeshes:
+
+1. How is the water mesh Y position calculated?
+2. Is there a hardcoded water level or depression depth?
+3. Does the shore slope code use `terrainData.size.y` correctly?
+4. Are the contour vertices sampling `terrain.SampleHeight()` like
+   other zone meshes do?
+
+The water mesh should work exactly like the fairway mesh — sample
+terrain height at each contour point, position slightly below surface.
+
+### Verification
+1. Re-import Hole 01
+2. Water should sit at terrain surface level (slightly below)
+3. Shore slope should be visible around water edges
+4. Water shader (URPWater) should look correct
+
+### Do NOT
+- Change the heightmap generation pipeline (generate-terrain.mjs)
+- Change other zone meshes
+- Change the URPWater shader settings
 
 **Goal:** Place a single instance of `Mountains.fbx` around the terrain.
 This is a pre-built ring/cylinder mesh designed to surround the playing
@@ -1004,3 +1065,4 @@ This gives natural terrain-under-asphalt and a visible edge transition.
 ✅ DONE: 2026-04-09 — Mountain backdrop v1: 8 instances approach (wrong — FBX is a single ring mesh).
 ✅ DONE: 2026-04-09 — Mountain backdrop v2: Single ring instance, centered at origin, scaled to terrain diagonal. LandscapesGreen.png opaque.
 ✅ DONE: 2026-04-09 — Mountain backdrop v3: Mountain.png texture (less stretching), transparent material with alpha blend, double-sided (_Cull=0), scale=terrainMax*1.5/nativeDiameter. Render queue 3000.
+✅ DONE: 2026-04-09 — Water mesh: fixed sunken positioning on DEM terrain. Water now samples terrain.SampleHeight() at each contour vertex (like fairway/tee meshes) instead of fixed Y=0.05. Shore depression uses relative offsets from current height instead of absolute normalized values. Water cells depressed by (ShoreDepthMeters+0.5)/elevRange below current height.
