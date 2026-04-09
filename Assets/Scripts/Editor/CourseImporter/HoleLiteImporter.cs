@@ -113,6 +113,7 @@ namespace Golfin.CourseImport
                 // Read terrain holes once, pass to both zone methods, write once at end
                 int holesRes = terrainData.holesResolution;
                 bool[,] holes = terrainData.GetHoles(0, 0, holesRes, holesRes);
+                Debug.Log($"[HoleLiteImporter] Terrain holes resolution: {holesRes}x{holesRes}");
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating bunkers...", 0.5f);
                 CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
@@ -178,6 +179,10 @@ namespace Golfin.CourseImport
                 light.intensity = 1.0f;
                 lightGO.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Placing mountains...", 0.85f);
+                PlaceMountainBackdrop(terrain, terrainGO.transform.position.y,
+                    terrainX, terrainZ, dataDir, holeRoot.transform);
+
                 // Apply skybox
                 var skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Skybox/Sky-2.mat");
                 if (skyMat != null)
@@ -230,34 +235,112 @@ namespace Golfin.CourseImport
         private static TerrainData CreateTerrain(HoleManifest manifest, string exportPath,
             string dataDir, string holeId, string projectRoot, float terrainX, float terrainZ)
         {
-            int res = manifest.terrain.resolution;
+            int rawRes = manifest.terrain.resolution; // 1025 from DEM pipeline
             int actualRes = 1025;
 
-            // Elevation range must accommodate shore depression below Y=0
-            // Total range = ShoreDepthMeters + small buffer for flat terrain variation
-            float elevRange = ShoreDepthMeters + 1.0f;
+            // Elevation range: DEM range + shore depression headroom
+            float demRange = manifest.terrain.max_elevation_m;
+            if (demRange < 1f) demRange = 1f; // safety floor
+            float elevRange = demRange + ShoreDepthMeters + 1.0f;
 
-            // Flat terrain height normalized: maps to world Y=0
-            // terrainGO.position.y = -ShoreDepthMeters, so normalizedFlat * elevRange + (-ShoreDepthMeters) = 0
+            // normalizedFlat = the height value that maps to world Y=0
+            // terrainGO.position.y = -ShoreDepthMeters
+            // So: normalizedFlat * elevRange + (-ShoreDepthMeters) = 0
             // normalizedFlat = ShoreDepthMeters / elevRange
             float normalizedFlat = ShoreDepthMeters / elevRange;
 
+            // --- Read heightmap.raw (uint16be, rawRes x rawRes) ---
             float[,] heights = new float[actualRes, actualRes];
-            for (int z = 0; z < actualRes; z++)
-                for (int x = 0; x < actualRes; x++)
-                    heights[z, x] = normalizedFlat;
+            string rawPath = Path.Combine(exportPath, "heightmap.raw");
+            bool loadedRaw = false;
 
+            if (File.Exists(rawPath))
+            {
+                byte[] rawBytes = File.ReadAllBytes(rawPath);
+                int expectedBytes = rawRes * rawRes * 2;
+                if (rawBytes.Length == expectedBytes && rawRes == actualRes)
+                {
+                    // Direct load — raw resolution matches terrain resolution
+                    for (int y = 0; y < rawRes; y++)
+                    {
+                        for (int x = 0; x < rawRes; x++)
+                        {
+                            int idx = (y * rawRes + x) * 2;
+                            ushort val = (ushort)((rawBytes[idx] << 8) | rawBytes[idx + 1]);
+                            float normalized = val / 65535f;
+                            heights[y, x] = normalizedFlat + normalized * (demRange / elevRange);
+                        }
+                    }
+                    loadedRaw = true;
+                    Debug.Log($"[HoleLiteImporter] Loaded heightmap.raw: {rawRes}x{rawRes}, " +
+                              $"elevRange={demRange:F1}m, totalRange={elevRange:F1}m");
+                }
+                else if (rawBytes.Length == expectedBytes && rawRes != actualRes)
+                {
+                    // Mismatch: raw is a different resolution — bilinear upsample
+                    var rawHeights = new float[rawRes, rawRes];
+                    for (int y = 0; y < rawRes; y++)
+                    {
+                        for (int x = 0; x < rawRes; x++)
+                        {
+                            int idx = (y * rawRes + x) * 2;
+                            ushort val = (ushort)((rawBytes[idx] << 8) | rawBytes[idx + 1]);
+                            float normalized = val / 65535f;
+                            rawHeights[y, x] = normalizedFlat + normalized * (demRange / elevRange);
+                        }
+                    }
+
+                    for (int z = 0; z < actualRes; z++)
+                    {
+                        for (int x = 0; x < actualRes; x++)
+                        {
+                            float srcX = (float)x / (actualRes - 1) * (rawRes - 1);
+                            float srcZ = (float)z / (actualRes - 1) * (rawRes - 1);
+                            int x0 = Mathf.FloorToInt(srcX);
+                            int z0 = Mathf.FloorToInt(srcZ);
+                            int x1 = Mathf.Min(x0 + 1, rawRes - 1);
+                            int z1 = Mathf.Min(z0 + 1, rawRes - 1);
+                            float fx = srcX - x0;
+                            float fz = srcZ - z0;
+                            float top = rawHeights[z0, x0] + fx * (rawHeights[z0, x1] - rawHeights[z0, x0]);
+                            float bot = rawHeights[z1, x0] + fx * (rawHeights[z1, x1] - rawHeights[z1, x0]);
+                            heights[z, x] = top + fz * (bot - top);
+                        }
+                    }
+                    loadedRaw = true;
+                    Debug.Log($"[HoleLiteImporter] Loaded heightmap.raw: {rawRes}x{rawRes} " +
+                              $"(upsampled to {actualRes}), elevRange={demRange:F1}m");
+                }
+                else
+                {
+                    Debug.LogWarning($"[HoleLiteImporter] heightmap.raw size mismatch: " +
+                        $"expected {expectedBytes} bytes, got {rawBytes.Length}. Using flat terrain.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[HoleLiteImporter] heightmap.raw not found at {rawPath}. Using flat terrain.");
+            }
+
+            if (!loadedRaw)
+            {
+                // Fallback: flat terrain (original behavior)
+                for (int z = 0; z < actualRes; z++)
+                    for (int x = 0; x < actualRes; x++)
+                        heights[z, x] = normalizedFlat;
+            }
+
+            // --- Create and save TerrainData ---
             string terrainAssetPath = $"{dataDir}/TerrainData_Hole{holeId}.asset";
             EnsureDirectory(Path.Combine(projectRoot, Path.GetDirectoryName(terrainAssetPath)));
 
-            // Delete stale asset on re-import to prevent CreateAsset failure
             var existingTerrain = AssetDatabase.LoadAssetAtPath<TerrainData>(terrainAssetPath);
             if (existingTerrain != null)
                 AssetDatabase.DeleteAsset(terrainAssetPath);
 
             var terrainData = new TerrainData();
             terrainData.heightmapResolution = actualRes;
-            terrainData.alphamapResolution = 1024;  // high-res splatmap for smooth zone edges
+            terrainData.alphamapResolution = 1024;
             terrainData.size = new Vector3(terrainX, elevRange, terrainZ);
             terrainData.SetHeights(0, 0, heights);
 
@@ -529,28 +612,8 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // --- 3. Generate fringe ring around greens ---
-            int fringeRadius = 3;
-            bool[] greenMask = new bool[alphaRes * alphaRes];
-            for (int i = 0; i < resampledZones.Length; i++)
-                greenMask[i] = (resampledZones[i] == 2);
-
-            bool[] dilatedGreen = DilateMask(greenMask, alphaRes, alphaRes, fringeRadius);
-
-            bool[] fringeMask = new bool[alphaRes * alphaRes];
-            for (int i = 0; i < fringeMask.Length; i++)
-            {
-                if (dilatedGreen[i] && !greenMask[i])
-                {
-                    int zone = resampledZones[i];
-                    // Only place fringe on adjacent playable surfaces
-                    if (zone == 1 || zone == 3 || zone == 4)
-                        fringeMask[i] = true;
-                }
-            }
-
-            // --- 4. Build raw alphamap ---
-            // (Fairway/tee/cart path contour rasterization removed — mesh overlays handle those zones)
+            // --- 3. Build raw alphamap ---
+            // (Green fringe ring removed — collar mesh handles green transition)
             int layerCount = 8;
             float[,,] alphamap = new float[alphaRes, alphaRes, layerCount];
 
@@ -559,16 +622,8 @@ namespace Golfin.CourseImport
                 for (int ax = 0; ax < alphaRes; ax++)
                 {
                     int idx = ay * alphaRes + ax;
-                    int layer;
-
-                    if (fringeMask[idx])
-                        layer = 2; // green fringe → semi-rough
-                    else
-                    {
-                        int zone = resampledZones[idx];
-                        layer = ZoneToLayer(zone);
-                    }
-
+                    int zone = resampledZones[idx];
+                    int layer = ZoneToLayer(zone);
                     alphamap[ay, ax, layer] = 1.0f;
                 }
             }
@@ -1183,19 +1238,16 @@ namespace Golfin.CourseImport
                 }
 
                 // Cut terrain using the MESH RIM directly.
-                // Instead of a separate shrunk contour, we iterate the full
-                // bounding box and cut any cell whose center falls inside the
-                // rim polygon scaled to 90%.  This guarantees the terrain hole
-                // tracks the mesh shape — no mismatch possible.
+                // Scale to 90% — the bunker bowl mesh rim covers the gap.
+                float cutScale = 0.90f;
                 var cutContour = new Vector2[worldContour.Length];
                 for (int i = 0; i < worldContour.Length; i++)
                 {
                     cutContour[i] = new Vector2(
-                        centroidX + (worldContour[i].x - centroidX) * 0.90f,
-                        centroidZ + (worldContour[i].y - centroidZ) * 0.90f);
+                        centroidX + (worldContour[i].x - centroidX) * cutScale,
+                        centroidZ + (worldContour[i].y - centroidZ) * cutScale);
                 }
 
-                // Search the FULL bounding box — let point-in-polygon do the shaping
                 int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
                 int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
                 int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
@@ -2309,15 +2361,29 @@ namespace Golfin.CourseImport
                     var cpMat = CreateTiledMaterial(texDir, "T_RoadAsphalt_Albedo",
                         "T_RoadAsphalt_Normal", dataDir, 4f);
                     cpMat.SetFloat("_Smoothness", 0.3f);
+                    cpMat.SetFloat("_Cull", 0f);  // 0 = Off (double-sided rendering)
 
                     foreach (var region in cpData.cart_paths)
                     {
-                        if (region.contour == null || region.contour.Length < 3) continue;
+                        GameObject meshGO = null;
 
-                        var meshGO = CreateEarClipContourMesh(
-                            region.id, "CartPath", region.contour,
-                            terrain, terrainBaseY, cpMat, 4f,
-                            Golfin.Course.SurfaceType.CartPath);
+                        // Prefer spine strip mesh if available
+                        if (region.spine != null && region.spine.Length >= 2)
+                        {
+                            float halfWidth = (region.width_m > 0 ? region.width_m : 2.5f) / 2f;
+                            meshGO = CreateSpineStripMesh(
+                                region.id, region.spine, halfWidth,
+                                terrain, terrainBaseY, cpMat, 4f,
+                                Golfin.Course.SurfaceType.CartPath);
+                        }
+                        else if (region.contour != null && region.contour.Length >= 3)
+                        {
+                            // Fallback to ear-clip (backward compatibility)
+                            meshGO = CreateEarClipContourMesh(
+                                region.id, "CartPath", region.contour,
+                                terrain, terrainBaseY, cpMat, 4f,
+                                Golfin.Course.SurfaceType.CartPath);
+                        }
 
                         if (meshGO != null)
                             meshGO.transform.SetParent(cpRoot.transform);
@@ -2350,7 +2416,7 @@ namespace Golfin.CourseImport
 
             // Convert contour to world space (90° CCW rotation: worldX = z, worldZ = x)
             Vector3[] worldPts = new Vector3[n];
-            float yOffset = 0.02f; // slightly above terrain to prevent z-fighting
+            float yOffset = 0.08f; // raised for sloped DEM terrain
 
             for (int i = 0; i < n; i++)
             {
@@ -2424,7 +2490,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.015f; // between terrain and other overlays
+            float yOffset = 0.05f; // low offset + subdivision + double-sided material
 
             // 90° CCW rotation
             Vector3[] worldPts = new Vector3[n];
@@ -2458,11 +2524,18 @@ namespace Golfin.CourseImport
                 return null;
             }
 
+            // Subdivide long triangles so mesh follows terrain curvature
+            var vertList = new System.Collections.Generic.List<Vector3>(verts);
+            var uvList = new System.Collections.Generic.List<Vector2>(uvs);
+            var triList = new System.Collections.Generic.List<int>(tris);
+            SubdivideToTerrain(ref vertList, ref uvList, ref triList,
+                centroid, terrain, terrainBaseY, tileSize, yOffset, 2.0f);
+
             var mesh = new Mesh();
             mesh.name = $"{zoneName}_{id}";
-            mesh.vertices = verts;
-            mesh.triangles = tris;
-            mesh.uv = uvs;
+            mesh.vertices = vertList.ToArray();
+            mesh.triangles = triList.ToArray();
+            mesh.uv = uvList.ToArray();
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
@@ -2492,7 +2565,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.02f;
+            float yOffset = 0.08f; // raised for sloped DEM terrain
 
             // stripeDir is perpendicular to tee→green. Compute the parallel axis.
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
@@ -2702,6 +2775,196 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
+        /// Subdivide triangles until no edge exceeds maxEdgeLength.
+        /// Each new vertex is placed at the terrain-sampled height.
+        /// Works in local space (vertices are relative to centroid).
+        /// </summary>
+        private static void SubdivideToTerrain(
+            ref System.Collections.Generic.List<Vector3> verts,
+            ref System.Collections.Generic.List<Vector2> uvs,
+            ref System.Collections.Generic.List<int> tris,
+            Vector3 centroid, Terrain terrain, float terrainBaseY,
+            float tileSize, float yOffset, float maxEdgeLength)
+        {
+            int maxIterations = 5;
+            for (int iter = 0; iter < maxIterations; iter++)
+            {
+                var newTris = new System.Collections.Generic.List<int>();
+                bool subdivided = false;
+
+                for (int t = 0; t < tris.Count; t += 3)
+                {
+                    int i0 = tris[t], i1 = tris[t + 1], i2 = tris[t + 2];
+                    Vector3 v0 = verts[i0], v1 = verts[i1], v2 = verts[i2];
+
+                    float d01 = Vector3.Distance(v0, v1);
+                    float d12 = Vector3.Distance(v1, v2);
+                    float d20 = Vector3.Distance(v2, v0);
+
+                    float maxD = Mathf.Max(d01, Mathf.Max(d12, d20));
+                    if (maxD <= maxEdgeLength)
+                    {
+                        newTris.Add(i0); newTris.Add(i1); newTris.Add(i2);
+                        continue;
+                    }
+
+                    subdivided = true;
+
+                    // Split the longest edge at its midpoint
+                    int iA, iB, iC;
+                    if (d01 >= d12 && d01 >= d20) { iA = i0; iB = i1; iC = i2; }
+                    else if (d12 >= d01 && d12 >= d20) { iA = i1; iB = i2; iC = i0; }
+                    else { iA = i2; iB = i0; iC = i1; }
+
+                    Vector3 midLocal = (verts[iA] + verts[iB]) * 0.5f;
+                    Vector3 midWorld = midLocal + centroid;
+                    float th = terrain.SampleHeight(new Vector3(midWorld.x, 0, midWorld.z));
+                    midLocal.y = terrainBaseY + th + yOffset - centroid.y;
+
+                    int iMid = verts.Count;
+                    verts.Add(midLocal);
+                    uvs.Add(new Vector2(midWorld.x / tileSize, midWorld.z / tileSize));
+
+                    newTris.Add(iA); newTris.Add(iMid); newTris.Add(iC);
+                    newTris.Add(iMid); newTris.Add(iB); newTris.Add(iC);
+                }
+
+                tris = newTris;
+                if (!subdivided) break;
+            }
+        }
+
+        /// <summary>
+        /// Create a strip mesh along a spine centerline with fixed width.
+        /// Each spine point generates two vertices (left + right of spine),
+        /// and each segment creates a quad (two triangles).
+        /// Terrain height is sampled at every vertex for precise draping.
+        /// </summary>
+        private static GameObject CreateSpineStripMesh(
+            int id, ContourPoint[] spine, float halfWidth,
+            Terrain terrain, float terrainBaseY,
+            Material mat, float tileSize,
+            Golfin.Course.SurfaceType surfaceType)
+        {
+            int n = spine.Length;
+            if (n < 2) return null;
+
+            float yOffset = 0.04f; // small offset, mesh follows terrain closely
+
+            var verts = new Vector3[n * 2];
+            var uvs = new Vector2[n * 2];
+            float arcLength = 0;
+
+            for (int i = 0; i < n; i++)
+            {
+                // 90° CCW rotation: worldX = z, worldZ = x
+                float cx = spine[i].z;
+                float cz = spine[i].x;
+
+                // Tangent direction (forward along spine)
+                float tx, tz;
+                if (i == 0)
+                {
+                    tx = spine[1].z - spine[0].z;
+                    tz = spine[1].x - spine[0].x;
+                }
+                else if (i == n - 1)
+                {
+                    tx = spine[n - 1].z - spine[n - 2].z;
+                    tz = spine[n - 1].x - spine[n - 2].x;
+                }
+                else
+                {
+                    tx = spine[i + 1].z - spine[i - 1].z;
+                    tz = spine[i + 1].x - spine[i - 1].x;
+                }
+
+                // Normalize tangent
+                float tLen = Mathf.Sqrt(tx * tx + tz * tz);
+                if (tLen > 0.001f) { tx /= tLen; tz /= tLen; }
+                else { tx = 1; tz = 0; }
+
+                // Perpendicular (rotate 90° CW in XZ plane)
+                float px = tz;
+                float pz = -tx;
+
+                // Left and right positions
+                float lx = cx - px * halfWidth;
+                float lz = cz - pz * halfWidth;
+                float rx = cx + px * halfWidth;
+                float rz = cz + pz * halfWidth;
+
+                // Sample terrain at each position
+                float lh = terrain.SampleHeight(new Vector3(lx, 0, lz));
+                float rh = terrain.SampleHeight(new Vector3(rx, 0, rz));
+
+                verts[i * 2]     = new Vector3(lx, terrainBaseY + lh + yOffset, lz);
+                verts[i * 2 + 1] = new Vector3(rx, terrainBaseY + rh + yOffset, rz);
+
+                // UVs: u = 0 (left) to 1 (right), v = arc length for tiling
+                if (i > 0)
+                {
+                    float dx = cx - spine[i - 1].z;
+                    float dz2 = cz - spine[i - 1].x;
+                    arcLength += Mathf.Sqrt(dx * dx + dz2 * dz2);
+                }
+                uvs[i * 2]     = new Vector2(0f, arcLength / tileSize);
+                uvs[i * 2 + 1] = new Vector2(1f, arcLength / tileSize);
+            }
+
+            // Compute centroid for mesh positioning
+            float sumX = 0, sumY = 0, sumZ = 0;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                sumX += verts[i].x; sumY += verts[i].y; sumZ += verts[i].z;
+            }
+            Vector3 centroid = new Vector3(
+                sumX / verts.Length, sumY / verts.Length, sumZ / verts.Length);
+
+            // Make vertices relative to centroid
+            for (int i = 0; i < verts.Length; i++)
+                verts[i] -= centroid;
+
+            // Triangles: quad strip
+            int quadCount = n - 1;
+            var tris = new int[quadCount * 6];
+            for (int i = 0; i < quadCount; i++)
+            {
+                int bl = i * 2;
+                int br = i * 2 + 1;
+                int tl = (i + 1) * 2;
+                int tr = (i + 1) * 2 + 1;
+
+                int t = i * 6;
+                tris[t + 0] = bl;
+                tris[t + 1] = tl;
+                tris[t + 2] = br;
+                tris[t + 3] = br;
+                tris[t + 4] = tl;
+                tris[t + 5] = tr;
+            }
+
+            var mesh = new Mesh();
+            mesh.name = $"CartPath_{id}";
+            mesh.vertices = verts;
+            mesh.triangles = tris;
+            mesh.uv = uvs;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"CartPath_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+            AddCleanMeshCollider(go, mesh);
+
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = surfaceType;
+
+            return go;
+        }
+
+        /// <summary>
         /// Create a fringe ring mesh along a fairway contour edge.
         /// Positive fringeWidth = outward, negative = inward.
         /// edgeRing = original contour, offsetRing = pushed by fringeWidth.
@@ -2714,7 +2977,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.03f; // slightly above fairway (0.02) to avoid z-fighting
+            float yOffset = 0.10f; // above fairway (0.08) on sloped terrain
 
             // Convert to world space — this is the contour edge
             Vector3[] edgeRing = new Vector3[n];
@@ -2825,7 +3088,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.015f; // slightly below tee mesh (0.02) to avoid z-fighting, above terrain
+            float yOffset = 0.06f; // below tee mesh (0.08) on sloped terrain
 
             // Convert to world space
             Vector3[] innerRing = new Vector3[n];
@@ -3009,6 +3272,65 @@ namespace Golfin.CourseImport
         {
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
+        }
+
+        // ─── Mountain Backdrop ────────────────────────────────────────────
+
+        private static void PlaceMountainBackdrop(
+            Terrain terrain, float terrainBaseY,
+            float terrainX, float terrainZ,
+            string dataDir, Transform parentRoot)
+        {
+            var mountainPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Art/3D/Props/Vegetation/FBX/Mountains.fbx");
+            if (mountainPrefab == null)
+            {
+                Debug.LogWarning("[HoleLiteImporter] Mountains.fbx not found");
+                return;
+            }
+
+            // Create URP material with green landscape texture
+            string matPath = $"{dataDir}/MAT_Mountains.mat";
+            var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (existingMat != null) AssetDatabase.DeleteAsset(matPath);
+
+            var mat = new Material(GetLitShader());
+            mat.name = "MAT_Mountains";
+            var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/Art/3D/Props/Vegetation/Materials/LandscapesGreen.png");
+            if (albedo != null) mat.mainTexture = albedo;
+            mat.SetFloat("_Smoothness", 0f);
+            mat.SetFloat("_Metallic", 0f);
+            AssetDatabase.CreateAsset(mat, matPath);
+
+            // Measure FBX native bounds
+            var renderers = mountainPrefab.GetComponentsInChildren<Renderer>();
+            Bounds fbxBounds = new Bounds(Vector3.zero, Vector3.zero);
+            foreach (var r in renderers)
+            {
+                if (fbxBounds.size == Vector3.zero) fbxBounds = r.bounds;
+                else fbxBounds.Encapsulate(r.bounds);
+            }
+            float fbxDiameter = Mathf.Max(fbxBounds.size.x, fbxBounds.size.z);
+            Debug.Log($"[HoleLiteImporter] Mountains.fbx native bounds: {fbxBounds.size} (diameter={fbxDiameter:F1}m)");
+
+            // Single ring instance — scale so the ring diameter matches the terrain diagonal
+            float terrainDiag = Mathf.Sqrt(terrainX * terrainX + terrainZ * terrainZ);
+            float scale = fbxDiameter > 0.01f ? terrainDiag / fbxDiameter : 1f;
+
+            var instance = Object.Instantiate(mountainPrefab);
+            instance.name = "MountainBackdrop";
+
+            // Apply material
+            foreach (var rend in instance.GetComponentsInChildren<Renderer>())
+                rend.sharedMaterial = mat;
+
+            // Center at origin, base at terrain level
+            instance.transform.position = new Vector3(0, terrainBaseY, 0);
+            instance.transform.localScale = Vector3.one * scale;
+            instance.transform.SetParent(parentRoot);
+
+            Debug.Log($"[HoleLiteImporter] Placed mountain backdrop ring (scale={scale:F3}, terrain diag={terrainDiag:F1}m)");
         }
     }
 }
