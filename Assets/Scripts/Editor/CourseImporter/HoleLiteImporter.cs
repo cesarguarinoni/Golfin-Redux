@@ -1923,7 +1923,7 @@ namespace Golfin.CourseImport
                     }
 
                     float terrainH = terrain.SampleHeight(new Vector3(sx, 0, sz));
-                    float wy = terrainBaseY + terrainH - 0.05f;
+                    float wy = terrainBaseY + terrainH - 0.45f;
                     worldPts[i] = new Vector3(wx, wy, wz);
                     sumX += wx; sumY += wy; sumZ += wz;
                 }
