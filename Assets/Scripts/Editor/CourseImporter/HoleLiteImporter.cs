@@ -1229,34 +1229,74 @@ namespace Golfin.CourseImport
                 float centroidX = sumX / worldContour.Length;
                 float centroidZ = sumZ / worldContour.Length;
 
-                // Compute minimum radius (shortest distance from centroid to any contour vertex)
-                float minRadius = float.MaxValue;
-                foreach (var v in worldContour)
-                {
-                    float dx = v.x - centroidX;
-                    float dz = v.y - centroidZ;
-                    float dist = Mathf.Sqrt(dx * dx + dz * dz);
-                    if (dist < minRadius) minRadius = dist;
-                }
+                // Determine bunker mode by shorter bounding box axis
+                float shorterAxis = Mathf.Min(bunker.size_m.x, bunker.size_m.z);
+                bool isSmallBunker = shorterAxis < 7.0f;
 
-                bool isSmallBunker = minRadius < 4.0f;
+                // Convert BunkerContourVertex[] to ContourPoint[] (same fields, different types)
+                var contourPts = new ContourPoint[bunker.contour.Length];
+                for (int i = 0; i < bunker.contour.Length; i++)
+                    contourPts[i] = new ContourPoint { x = bunker.contour[i].x, z = bunker.contour[i].z };
 
                 if (isSmallBunker)
                 {
-                    // ── Mode A: Flat sand overlay (no terrain hole, no bowl) ──
-                    // Convert BunkerContourVertex[] to ContourPoint[] for CreateEarClipContourMesh
-                    var contourPts = new ContourPoint[bunker.contour.Length];
-                    for (int i = 0; i < bunker.contour.Length; i++)
-                        contourPts[i] = new ContourPoint { x = bunker.contour[i].x, z = bunker.contour[i].z };
+                    // ── Mode A: Shallow sand overlay with collar (no terrain hole) ──
+
+                    // 1. Sand surface mesh (ear-clip, terrain-following)
                     var meshGO = CreateEarClipContourMesh(
                         bunker.id, "Bunker", contourPts,
                         terrain, terrainBaseY, sandMat, 4f,
                         Golfin.Course.SurfaceType.Bunker);
+
                     if (meshGO != null)
+                    {
+                        // 2. Apply shallow central depression
+                        var mf = meshGO.GetComponent<MeshFilter>();
+                        if (mf != null && mf.sharedMesh != null)
+                        {
+                            var mesh = mf.sharedMesh;
+                            var verts = mesh.vertices;
+
+                            float maxR = 0;
+                            for (int i = 0; i < verts.Length; i++)
+                            {
+                                float r = Mathf.Sqrt(verts[i].x * verts[i].x +
+                                                     verts[i].z * verts[i].z);
+                                if (r > maxR) maxR = r;
+                            }
+
+                            float shallowDepth = 0.3f;
+                            for (int i = 0; i < verts.Length; i++)
+                            {
+                                float r = Mathf.Sqrt(verts[i].x * verts[i].x +
+                                                     verts[i].z * verts[i].z);
+                                float t = maxR > 0.1f ? r / maxR : 0f; // 0=center, 1=edge
+                                float depression = shallowDepth * (1f - t * t); // quadratic falloff
+                                verts[i].y -= depression;
+                            }
+
+                            mesh.vertices = verts;
+                            mesh.RecalculateNormals();
+                            mesh.RecalculateBounds();
+
+                            var mc = meshGO.GetComponent<MeshCollider>();
+                            if (mc != null) mc.sharedMesh = mesh;
+                        }
+
                         meshGO.transform.SetParent(bunkersRoot.transform);
 
-                    Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: FLAT overlay " +
-                              $"(minRadius={minRadius:F1}m < 4m, {bunker.contour.Length} verts)");
+                        // 3. Sand collar ring (soft edge transition)
+                        CreateGradientBorderRing(
+                            bunker.id, "BunkerCollar", contourPts,
+                            terrain, terrainBaseY, sandMat,
+                            1.5f,   // border width in meters
+                            4f,     // UV tile size
+                            Golfin.Course.SurfaceType.Bunker,
+                            bunkersRoot.transform);
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: SHALLOW overlay " +
+                              $"(shorterAxis={shorterAxis:F1}m < 7m, {bunker.contour.Length} verts)");
                 }
                 else
                 {
@@ -1315,7 +1355,7 @@ namespace Golfin.CourseImport
                     marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
 
                     Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: BOWL " +
-                              $"(minRadius={minRadius:F1}m, {bunker.contour.Length} verts)");
+                              $"(shorterAxis={shorterAxis:F1}m, {bunker.contour.Length} verts)");
                 }
             }
 
