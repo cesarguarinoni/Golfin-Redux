@@ -1249,10 +1249,11 @@ namespace Golfin.CourseImport
                     if (dist < minRadius) minRadius = dist;
                 }
 
-                // Fixed-distance inset: always 1.2m from contour edge
-                // (2 terrain hole grid cells at ~0.6m/cell)
-                float cutInsetM = 1.2f;
-                float cutScale = Mathf.Max(0.3f,
+                // Fixed-distance inset: 0.7m from contour edge
+                // (~1.2 grid cells at ~0.6m/cell — enough to prevent poke-through
+                // without making the hole too small on small bunkers)
+                float cutInsetM = 0.7f;
+                float cutScale = Mathf.Max(0.5f,
                     1f - cutInsetM / Mathf.Max(minRadius, 0.5f));
 
                 // Cut terrain hole
