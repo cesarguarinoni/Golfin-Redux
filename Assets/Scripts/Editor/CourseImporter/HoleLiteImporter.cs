@@ -2084,8 +2084,8 @@ namespace Golfin.CourseImport
                 mat.SetTexture("_NormalMapA", waterNormal);
                 // Tiling: (tilingX, tilingY, offsetX, offsetY)
                 mat.SetVector("_NormalMapATilings", new Vector4(2f, 2f, 0f, 0f));
-                // Speed: moderate ripple drift
-                mat.SetVector("_NormalMapASpeeds", new Vector4(0.7f, 0.5f, 0.35f, 0.6f));
+                // Speed: (SpeedA_X, SpeedA_Y, SpeedB_X, SpeedB_Y)
+                mat.SetVector("_NormalMapASpeeds", new Vector4(0.7f, 0.5f, 0f, 0f));
                 mat.SetFloat("_NormalMapAIntensity", 0.15f);  // Very subtle — just enough
                 // to break up the mirror-flat look without creating harsh specular
                 // wave patterns from the directional light.
