@@ -2025,31 +2025,8 @@ namespace Golfin.CourseImport
                     }
                 }
 
-                // Apply depression — depress RELATIVE to each cell's current height
-                // normalizedDepression = how much to lower in normalized heightmap space
-                float normalizedDepression = ShoreDepthMeters / elevRange;
+                // Shore lip disabled — only underwater depression applied
                 int depressedCount = 0;
-                for (int z = 0; z < hRes; z++)
-                {
-                    for (int x = 0; x < hRes; x++)
-                    {
-                        if (isWater[z, x]) continue; // water cells handled below
-                        float dist = distToWater[z, x];
-                        if (dist > ShoreRadius) continue;
-
-                        // Smoothstep falloff: 1.0 at water edge → 0.0 at radius
-                        float t = dist / ShoreRadius;
-                        float blend = 1f - (t * t * (3f - 2f * t));
-
-                        // Depress relative to current height
-                        float currentH = heights[z, x];
-                        float targetH = currentH - normalizedDepression;
-                        targetH = Mathf.Max(0f, targetH);
-
-                        heights[z, x] = Mathf.Lerp(currentH, targetH, blend);
-                        depressedCount++;
-                    }
-                }
 
                 // Depress water cells below water mesh surface
                 // Water mesh is at sampleHeight - 0.05m; push terrain 0.5m below that
