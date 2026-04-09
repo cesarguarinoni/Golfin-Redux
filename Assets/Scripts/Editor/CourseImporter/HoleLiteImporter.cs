@@ -2089,6 +2089,9 @@ namespace Golfin.CourseImport
                 mat.SetFloat("_NormalMapAIntensity", 0.15f);  // Very subtle — just enough
                 // to break up the mirror-flat look without creating harsh specular
                 // wave patterns from the directional light.
+
+                // Normal map B: zero speed (single mode only uses A, but zero B to be safe)
+                mat.SetVector("_NormalMapBSpeeds", new Vector4(0f, 0f, 0f, 0f));
             }
             else
             {
