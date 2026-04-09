@@ -1891,24 +1891,30 @@ namespace Golfin.CourseImport
 
                 int n = water.contour.Length;
 
-                // Apply 90° CCW rotation and sample terrain height at each vertex
+                // Find the lowest terrain height among contour points — water sits flat at that level
+                float minTerrainH = float.MaxValue;
+                for (int i = 0; i < n; i++)
+                {
+                    float wx = water.contour[i].z;
+                    float wz = water.contour[i].x;
+                    float h = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                    if (h < minTerrainH) minTerrainH = h;
+                }
+                float waterY = terrainBaseY + minTerrainH - 0.02f;
+
+                // Apply 90° CCW rotation, flat water level
                 Vector3[] worldPts = new Vector3[n];
                 float sumX = 0, sumY = 0, sumZ = 0;
                 for (int i = 0; i < n; i++)
                 {
                     float wx = water.contour[i].z;  // 90° CCW
                     float wz = water.contour[i].x;
-                    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                    float wy = terrainBaseY + terrainH - 0.05f; // slightly below terrain surface
-                    worldPts[i] = new Vector3(wx, wy, wz);
+                    worldPts[i] = new Vector3(wx, waterY, wz);
                     sumX += wx;
-                    sumY += wy;
+                    sumY += waterY;
                     sumZ += wz;
-
-                    if (i == 0)
-                        Debug.Log($"[Water] SampleHeight at first contour pt=({wx:F1},{wz:F1}): " +
-                                  $"terrainH={terrainH:F2}, worldY={wy:F2}");
                 }
+                Debug.Log($"[Water] id={water.id}: minTerrainH={minTerrainH:F2}, waterY={waterY:F2}");
                 float centroidX = sumX / n;
                 float centroidY = sumY / n;
                 float centroidZ = sumZ / n;
