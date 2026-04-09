@@ -2077,7 +2077,7 @@ namespace Golfin.CourseImport
 
                 // Depress water cells below water mesh surface
                 // Water mesh is at sampleHeight - 0.05m; push terrain 0.5m below that
-                float underwaterDrop = (ShoreDepthMeters + 0.5f) / elevRange;
+                float underwaterDrop = (ShoreDepthMeters + 0.15f) / elevRange;
                 for (int z = 0; z < hRes; z++)
                 {
                     for (int x = 0; x < hRes; x++)
