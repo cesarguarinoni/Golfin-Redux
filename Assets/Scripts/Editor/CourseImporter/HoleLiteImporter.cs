@@ -3289,34 +3289,6 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            // Create URP transparent material
-            string matPath = $"{dataDir}/MAT_Mountains.mat";
-            var existingMat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-            if (existingMat != null) AssetDatabase.DeleteAsset(matPath);
-
-            var mat = new Material(GetLitShader());
-            mat.name = "MAT_Mountains";
-
-            // Try Mountain.png first (less stretching), fall back to LandscapesGreen.png
-            var albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                "Assets/Art/3D/Props/Vegetation/Materials/Mountain.png");
-            if (albedo == null)
-                albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    "Assets/Art/3D/Props/Vegetation/Materials/LandscapesGreen.png");
-            if (albedo != null) mat.mainTexture = albedo;
-
-            // Enable transparency for sky-fade alpha
-            mat.SetFloat("_Surface", 1f);   // Transparent
-            mat.SetFloat("_Blend", 0f);     // Alpha blend
-            mat.SetFloat("_Cull", 0f);      // Double-sided
-            mat.SetFloat("_Smoothness", 0f);
-            mat.SetFloat("_Metallic", 0f);
-            mat.SetFloat("_AlphaClip", 0f); // smooth blend, no clip
-            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            mat.EnableKeyword("_ALPHABLEND_ON");
-            mat.renderQueue = 3000;
-            AssetDatabase.CreateAsset(mat, matPath);
-
             // Measure FBX native bounds
             var renderers = mountainPrefab.GetComponentsInChildren<Renderer>();
             Bounds fbxBounds = new Bounds(Vector3.zero, Vector3.zero);
@@ -3326,25 +3298,20 @@ namespace Golfin.CourseImport
                 else fbxBounds.Encapsulate(r.bounds);
             }
             float fbxDiameter = Mathf.Max(fbxBounds.size.x, fbxBounds.size.z);
-            Debug.Log($"[HoleLiteImporter] Mountains.fbx native bounds: {fbxBounds.size} (diameter={fbxDiameter:F1}m)");
 
-            // Single ring instance — scale so the ring diameter is 1.5x the larger terrain axis
-            float desiredDiameter = Mathf.Max(terrainX, terrainZ) * 1.5f;
-            float scale = fbxDiameter > 0.01f ? desiredDiameter / fbxDiameter : 1f;
+            // Scale so the FBX matches the larger terrain axis
+            float desiredSize = Mathf.Max(terrainX, terrainZ);
+            float scale = fbxDiameter > 0.01f ? desiredSize / fbxDiameter : 1f;
 
             var instance = Object.Instantiate(mountainPrefab);
             instance.name = "MountainBackdrop";
-
-            // Apply material
-            foreach (var rend in instance.GetComponentsInChildren<Renderer>())
-                rend.sharedMaterial = mat;
 
             // Center at origin, base at terrain level
             instance.transform.position = new Vector3(0, terrainBaseY, 0);
             instance.transform.localScale = Vector3.one * scale;
             instance.transform.SetParent(parentRoot);
 
-            Debug.Log($"[HoleLiteImporter] Mountain backdrop: native={fbxDiameter:F1}m, scale={scale:F3}, desired={desiredDiameter:F0}m");
+            Debug.Log($"[HoleLiteImporter] Mountain backdrop: native={fbxDiameter:F1}m, scale={scale:F3}, desired={desiredSize:F0}m");
         }
     }
 }
