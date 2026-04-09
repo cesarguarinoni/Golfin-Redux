@@ -1244,9 +1244,12 @@ namespace Golfin.CourseImport
                 if (isSmallBunker)
                 {
                     // ── Mode A: Flat sand overlay (no terrain hole, no bowl) ──
-                    // Reuse the ear-clip contour mesh approach (same as cart paths)
+                    // Convert BunkerContourVertex[] to ContourPoint[] for CreateEarClipContourMesh
+                    var contourPts = new ContourPoint[bunker.contour.Length];
+                    for (int i = 0; i < bunker.contour.Length; i++)
+                        contourPts[i] = new ContourPoint { x = bunker.contour[i].x, z = bunker.contour[i].z };
                     var meshGO = CreateEarClipContourMesh(
-                        bunker.id, "Bunker", bunker.contour,
+                        bunker.id, "Bunker", contourPts,
                         terrain, terrainBaseY, sandMat, 4f,
                         Golfin.Course.SurfaceType.Bunker);
                     if (meshGO != null)
