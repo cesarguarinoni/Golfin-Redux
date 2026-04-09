@@ -1876,7 +1876,11 @@ namespace Golfin.CourseImport
             var waterRoot = new GameObject("Water");
             waterRoot.transform.SetParent(parentRoot);
 
-            float waterY = 0.05f;
+            Terrain terrain = terrainGO.GetComponent<Terrain>();
+            float terrainBaseY = terrainGO.transform.position.y;
+
+            Debug.Log($"[Water] terrainBaseY={terrainBaseY:F2}, terrainSize.y={terrainData.size.y:F2}");
+            Debug.Log($"[Water] ShoreDepthMeters={ShoreDepthMeters:F2}");
 
             // Create water material (solid color, high smoothness)
             var waterMat = CreateWaterMaterial(dataDir);
@@ -1887,20 +1891,28 @@ namespace Golfin.CourseImport
 
                 int n = water.contour.Length;
 
-                // Apply 90° CCW rotation (same as all other zones)
+                // Apply 90° CCW rotation and sample terrain height at each vertex
                 Vector3[] worldPts = new Vector3[n];
-                float sumX = 0, sumZ = 0;
+                float sumX = 0, sumY = 0, sumZ = 0;
                 for (int i = 0; i < n; i++)
                 {
                     float wx = water.contour[i].z;  // 90° CCW
                     float wz = water.contour[i].x;
-                    worldPts[i] = new Vector3(wx, waterY, wz);
+                    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                    float wy = terrainBaseY + terrainH - 0.05f; // slightly below terrain surface
+                    worldPts[i] = new Vector3(wx, wy, wz);
                     sumX += wx;
+                    sumY += wy;
                     sumZ += wz;
+
+                    if (i == 0)
+                        Debug.Log($"[Water] SampleHeight at first contour pt=({wx:F1},{wz:F1}): " +
+                                  $"terrainH={terrainH:F2}, worldY={wy:F2}");
                 }
                 float centroidX = sumX / n;
+                float centroidY = sumY / n;
                 float centroidZ = sumZ / n;
-                Vector3 centroid = new Vector3(centroidX, waterY, centroidZ);
+                Vector3 centroid = new Vector3(centroidX, centroidY, centroidZ);
 
                 // Build mesh with ear-clip triangulation
                 var verts = new Vector3[n];
@@ -1940,7 +1952,7 @@ namespace Golfin.CourseImport
                 go.transform.SetParent(waterRoot.transform);
 
                 Debug.Log($"[HoleLiteImporter] Water {water.id}: {n} contour verts, " +
-                          $"{tris.Length / 3} tris, pos ({centroidX:F1}, {waterY}, {centroidZ:F1})");
+                          $"{tris.Length / 3} tris, pos ({centroidX:F1}, {centroidY:F2}, {centroidZ:F1})");
             }
 
             // ─── Shore slope pass: depress terrain near water edges ──────────
@@ -1949,7 +1961,6 @@ namespace Golfin.CourseImport
                 int hRes = terrainData.heightmapResolution;
                 float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
                 float elevRange = terrainData.size.y;
-                float normalizedFlat = ShoreDepthMeters / elevRange;
 
                 // Build water mask on the heightmap grid using zone data
                 string zonesPath = Path.Combine(exportPath, "zones.json");
@@ -2020,13 +2031,15 @@ namespace Golfin.CourseImport
                     }
                 }
 
-                // Apply depression
+                // Apply depression — depress RELATIVE to each cell's current height
+                // normalizedDepression = how much to lower in normalized heightmap space
+                float normalizedDepression = ShoreDepthMeters / elevRange;
                 int depressedCount = 0;
                 for (int z = 0; z < hRes; z++)
                 {
                     for (int x = 0; x < hRes; x++)
                     {
-                        if (isWater[z, x]) continue; // don't touch water cells
+                        if (isWater[z, x]) continue; // water cells handled below
                         float dist = distToWater[z, x];
                         if (dist > ShoreRadius) continue;
 
@@ -2034,29 +2047,28 @@ namespace Golfin.CourseImport
                         float t = dist / ShoreRadius;
                         float blend = 1f - (t * t * (3f - 2f * t));
 
-                        // Target: water-level height in normalized space
-                        // Water is at world Y=0.05, terrain base at -ShoreDepthMeters
-                        // Normalized water height = (0.05 + ShoreDepthMeters) / elevRange
-                        float normalizedWaterH = (0.05f + ShoreDepthMeters) / elevRange;
-                        // We want shore to dip most of the way to water but not below it
-                        float targetH = Mathf.Lerp(normalizedFlat, normalizedWaterH, 0.85f);
+                        // Depress relative to current height
+                        float currentH = heights[z, x];
+                        float targetH = currentH - normalizedDepression;
+                        targetH = Mathf.Max(0f, targetH);
 
-                        heights[z, x] = Mathf.Lerp(normalizedFlat, targetH, blend);
+                        heights[z, x] = Mathf.Lerp(currentH, targetH, blend);
                         depressedCount++;
                     }
                 }
 
-                // Also depress water cells themselves to below water surface
-                // so terrain doesn't poke through the water quad
-                float normalizedUnderwater = (ShoreDepthMeters - 0.5f) / elevRange;
-                // Clamp to minimum 0 (can't go below terrain bounds)
-                normalizedUnderwater = Mathf.Max(0f, normalizedUnderwater);
+                // Depress water cells below water mesh surface
+                // Water mesh is at sampleHeight - 0.05m; push terrain 0.5m below that
+                float underwaterDrop = (ShoreDepthMeters + 0.5f) / elevRange;
                 for (int z = 0; z < hRes; z++)
                 {
                     for (int x = 0; x < hRes; x++)
                     {
                         if (isWater[z, x])
-                            heights[z, x] = normalizedUnderwater;
+                        {
+                            float currentH = heights[z, x];
+                            heights[z, x] = Mathf.Max(0f, currentH - underwaterDrop);
+                        }
                     }
                 }
 
