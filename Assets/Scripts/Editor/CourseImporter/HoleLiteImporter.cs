@@ -721,7 +721,7 @@ namespace Golfin.CourseImport
                 5  => 3,  // trees → rough texture
                 6  => 3,  // bunker → rough (mesh handles sand surface)
                 7  => 3,  // water → rough
-                8  => 6,  // cart_path (splatmap — too thin for mesh overlay)
+                8  => 3,  // cart_path → rough (mesh overlay handles surface)
                 9  => 3,  // ob → rough texture
                 10 => 3,  // tee_box → rough (mesh overlay handles surface)
                 _  => 3,  // background/unknown → rough
@@ -2025,17 +2025,117 @@ namespace Golfin.CourseImport
             if (existingMat != null)
                 AssetDatabase.DeleteAsset(matPath);
 
-            var mat = new Material(GetLitShader());
-            mat.name = "WaterSurface";
-            mat.color = new Color(0.18f, 0.40f, 0.58f);  // dark water blue
-            mat.SetFloat("_Smoothness", 0.85f);
-            mat.SetFloat("_Metallic", 0.05f);
+            // Use the URPWater shader (already in project)
+            var waterShader = Shader.Find("URPWater/Standard");
+            if (waterShader == null)
+            {
+                Debug.LogWarning("[HoleLiteImporter] URPWater/Standard shader not found! " +
+                                 "Falling back to URP/Lit. Check Assets/Art/3D/Props/URPWater/");
+                var fallback = new Material(GetLitShader());
+                fallback.name = "WaterSurface";
+                fallback.color = new Color(0.18f, 0.40f, 0.58f);
+                fallback.SetFloat("_Smoothness", 0.85f);
+                AssetDatabase.CreateAsset(fallback, matPath);
+                return fallback;
+            }
 
-            // Opaque — no alpha clip needed anymore
-            mat.SetFloat("_Surface", 0);
-            mat.SetFloat("_AlphaClip", 0);
+            var mat = new Material(waterShader);
+            mat.name = "WaterSurface";
+
+            // ── Render queue: transparent (required by URPWater) ──
+            mat.renderQueue = 3000;
+
+            // ── Color mode: Colors (not gradient — simpler, cheaper) ──
+            mat.SetFloat("_ColorMode", 0);
+            mat.EnableKeyword("_COLORMODE_COLORS");
+
+            // Shallow water color (teal-blue, typical golf pond)
+            mat.SetColor("_Color", new Color(0.15f, 0.55f, 0.65f, 1f));
+            // Deep water color (dark blue-green)
+            mat.SetColor("_DepthColor", new Color(0.02f, 0.12f, 0.20f, 1f));
+            // Underwater tint
+            mat.SetColor("_UnderWaterColor", new Color(0.1f, 0.2f, 0.25f, 0.5f));
+
+            // Depth range (how quickly color transitions from shallow→deep)
+            mat.SetFloat("_DepthStart", 0.1f);
+            mat.SetFloat("_DepthEnd", 2.0f);
+
+            // Refraction distortion (subtle — it's a pond, not a river)
+            mat.SetFloat("_Distortion", 16f);
+
+            // Specular
+            mat.SetFloat("_Smoothness", 0.7f);
+            mat.SetColor("_SpecColor", new Color(0.9f, 0.9f, 0.9f, 1f));
+
+            // ── Normal map: Single mode (cheapest, one scrolling normal) ──
+            mat.SetFloat("_NormalsMode", 0);
+            mat.EnableKeyword("_NORMALSMODE_SINGLE");
+
+            // Use the water normal map included with the package
+            var waterNormal = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/Art/3D/Props/URPWater/Demo/Textures/Water/T_Water_03_N.tga");
+            if (waterNormal != null)
+            {
+                mat.SetTexture("_NormalMapA", waterNormal);
+                // Tiling: (tilingX, tilingY, offsetX, offsetY)
+                mat.SetVector("_NormalMapATilings", new Vector4(2f, 2f, 0f, 0f));
+                // Speed: slow gentle ripples (X speed, Y speed, X speed2, Y speed2)
+                mat.SetVector("_NormalMapASpeeds", new Vector4(0.3f, 0.2f, 0.15f, 0.1f));
+                mat.SetFloat("_NormalMapAIntensity", 0.6f);
+            }
+            else
+            {
+                Debug.LogWarning("[HoleLiteImporter] T_Water_03_N.tga not found! " +
+                                 "Water will lack surface ripples.");
+            }
+
+            // ── Edge fade: ON (softens where water meets shore) ──
+            mat.SetFloat("_EdgeFade", 1);
+            mat.EnableKeyword("_EDGEFADE_ON");
+            mat.SetFloat("_EdgeSize", 0.5f); // fade over 0.5m at edges
+
+            // ── Foam: OFF (keep it simple for now) ──
+            mat.SetFloat("_Foam", 0);
+
+            // ── Caustics: OFF ──
+            mat.SetFloat("_Caustics", 0);
+
+            // ── Scattering: OFF ──
+            mat.SetFloat("_Scattering", 0);
+
+            // ── Reflections: Probes (uses URP reflection probes, low cost) ──
+            mat.SetFloat("_ReflectionMode", 2); // 0=Off, 1=CubeMap, 2=Probes, 3=RealTime
+            mat.EnableKeyword("_REFLECTIONMODE_PROBES");
+            mat.SetFloat("_ReflectionFresnel", 5f);
+            mat.SetFloat("_ReflectionFresnelNormal", 0.2f);
+            mat.SetFloat("_ReflectionIntensity", 0.6f);
+            mat.SetFloat("_ReflectionDistortion", 0.3f);
+            mat.SetFloat("_ReflectionRoughness", 0.15f);
+
+            // ── Waves: OFF (flat pond, no Gerstner displacement) ──
+            mat.SetFloat("_DisplacementMode", 0);
+
+            // ── World UV: ON (our mesh UVs are world-position-based) ──
+            mat.SetFloat("_WorldUV", 1);
+            mat.EnableKeyword("_WORLD_UV");
 
             AssetDatabase.CreateAsset(mat, matPath);
+
+            // Check URP depth texture requirement
+            var pipelineAsset = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline
+                as UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset;
+            if (pipelineAsset != null)
+            {
+                if (!pipelineAsset.supportsCameraDepthTexture)
+                    Debug.LogWarning("[HoleLiteImporter] URP Depth Texture is OFF! " +
+                        "Water edge fade and depth coloring won't work. " +
+                        "Enable it: Edit > Project Settings > Graphics > URP Asset > General > Depth Texture");
+                if (!pipelineAsset.supportsCameraOpaqueTexture)
+                    Debug.LogWarning("[HoleLiteImporter] URP Opaque Texture is OFF! " +
+                        "Water refraction/distortion won't work. " +
+                        "Enable it: Edit > Project Settings > Graphics > URP Asset > General > Opaque Texture");
+            }
+
             return mat;
         }
 
@@ -2182,7 +2282,48 @@ namespace Golfin.CourseImport
                     Debug.Log($"[HoleLiteImporter] Created {data.zones.tee.Length} tee mesh(es) with border rings");
                 }
 
-                // Cart paths stay on splatmap only (too thin/concave for centroid-fan mesh)
+            }
+
+            // ─── Cart path meshes from cart-paths.json ─────
+            string cpPath = Path.Combine(exportPath, "cart-paths.json");
+            if (File.Exists(cpPath))
+            {
+                string cpJson = File.ReadAllText(cpPath);
+                var cpData = JsonUtility.FromJson<CartPathsFile>(cpJson);
+
+                if (cpData.cart_paths != null && cpData.cart_paths.Length > 0)
+                {
+                    var cpRoot = new GameObject("CartPaths");
+                    cpRoot.transform.SetParent(parentRoot);
+
+                    var cpMat = CreateTiledMaterial(texDir, "T_RoadAsphalt_Albedo",
+                        "T_RoadAsphalt_Normal", dataDir, 4f);
+                    cpMat.SetFloat("_Smoothness", 0.3f);
+
+                    foreach (var region in cpData.cart_paths)
+                    {
+                        if (region.contour == null || region.contour.Length < 3) continue;
+
+                        var meshGO = CreateEarClipContourMesh(
+                            region.id, "CartPath", region.contour,
+                            terrain, terrainBaseY, cpMat, 4f,
+                            Golfin.Course.SurfaceType.CartPath);
+
+                        if (meshGO != null)
+                            meshGO.transform.SetParent(cpRoot.transform);
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Created {cpData.cart_paths.Length} cart path mesh(es)");
+                }
+            }
+
+            // Copy cart-paths.json to Assets
+            string cpSrcPath = Path.Combine(exportPath, "cart-paths.json");
+            if (File.Exists(cpSrcPath))
+            {
+                string cpDestPath = Path.Combine(projectRoot, dataDir, "cart-paths.json");
+                File.Copy(cpSrcPath, cpDestPath, true);
+                AssetDatabase.ImportAsset($"{dataDir}/cart-paths.json");
             }
         }
 
@@ -2240,6 +2381,71 @@ namespace Golfin.CourseImport
                 tris[i * 3 + 0] = i;
                 tris[i * 3 + 1] = n; // centroid
                 tris[i * 3 + 2] = (i + 1) % n;
+            }
+
+            var mesh = new Mesh();
+            mesh.name = $"{zoneName}_{id}";
+            mesh.vertices = verts;
+            mesh.triangles = tris;
+            mesh.uv = uvs;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"{zoneName}_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+            AddCleanMeshCollider(go, mesh);
+
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = surfaceType;
+
+            return go;
+        }
+
+        /// <summary>
+        /// Create a flat mesh from a contour polygon using ear-clip triangulation.
+        /// Handles concave/winding shapes like cart paths correctly.
+        /// </summary>
+        private static GameObject CreateEarClipContourMesh(int id, string zoneName,
+            ContourPoint[] contour, Terrain terrain, float terrainBaseY,
+            Material mat, float tileSize, Golfin.Course.SurfaceType surfaceType)
+        {
+            int n = contour.Length;
+            if (n < 3) return null;
+
+            float yOffset = 0.015f; // between terrain and other overlays
+
+            // 90° CCW rotation
+            Vector3[] worldPts = new Vector3[n];
+            for (int i = 0; i < n; i++)
+            {
+                float wx = contour[i].z;
+                float wz = contour[i].x;
+                float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
+            }
+
+            // Centroid
+            float cx = 0, cy = 0, cz = 0;
+            for (int i = 0; i < n; i++)
+            { cx += worldPts[i].x; cy += worldPts[i].y; cz += worldPts[i].z; }
+            cx /= n; cy /= n; cz /= n;
+            Vector3 centroid = new Vector3(cx, cy, cz);
+
+            var verts = new Vector3[n];
+            var uvs = new Vector2[n];
+            for (int i = 0; i < n; i++)
+            {
+                verts[i] = worldPts[i] - centroid;
+                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
+            }
+
+            var tris = EarClipTriangulate(worldPts);
+            if (tris == null || tris.Length < 3)
+            {
+                Debug.LogWarning($"[HoleLiteImporter] {zoneName} {id}: ear-clip failed, skipping");
+                return null;
             }
 
             var mesh = new Mesh();
