@@ -2066,9 +2066,11 @@ namespace Golfin.CourseImport
             // texture underneath through the water, producing ugly patches.
             mat.SetFloat("_Distortion", 0f);
 
-            // Specular
-            mat.SetFloat("_Smoothness", 0.7f);
-            mat.SetColor("_SpecColor", new Color(0.9f, 0.9f, 0.9f, 1f));
+            // Specular: low smoothness + dim spec color to avoid harsh sun glints.
+            // The normal map creates per-pixel angle variation; high smoothness
+            // turns that into visible bright/dark wave bands from the directional light.
+            mat.SetFloat("_Smoothness", 0.4f);
+            mat.SetColor("_SpecColor", new Color(0.4f, 0.4f, 0.4f, 1f));
 
             // ── Normal map: Single mode (cheapest, one scrolling normal) ──
             mat.SetFloat("_NormalsMode", 0);
@@ -2082,9 +2084,12 @@ namespace Golfin.CourseImport
                 mat.SetTexture("_NormalMapA", waterNormal);
                 // Tiling: (tilingX, tilingY, offsetX, offsetY)
                 mat.SetVector("_NormalMapATilings", new Vector4(2f, 2f, 0f, 0f));
-                // Speed: calm pond ripples
-                mat.SetVector("_NormalMapASpeeds", new Vector4(0.1f, 0.07f, 0.05f, 0.08f));
-                mat.SetFloat("_NormalMapAIntensity", 0.6f);
+                // Speed: zero — still pond, no scrolling normals.
+                // Normal map still gives surface texture/roughness without animation.
+                mat.SetVector("_NormalMapASpeeds", new Vector4(0f, 0f, 0f, 0f));
+                mat.SetFloat("_NormalMapAIntensity", 0.15f);  // Very subtle — just enough
+                // to break up the mirror-flat look without creating harsh specular
+                // wave patterns from the directional light.
             }
             else
             {
@@ -2110,10 +2115,10 @@ namespace Golfin.CourseImport
             mat.SetFloat("_ReflectionMode", 2); // 0=Off, 1=CubeMap, 2=Probes, 3=RealTime
             mat.EnableKeyword("_REFLECTIONMODE_PROBES");
             mat.SetFloat("_ReflectionFresnel", 5f);
-            mat.SetFloat("_ReflectionFresnelNormal", 0.2f);
-            mat.SetFloat("_ReflectionIntensity", 0.6f);
-            mat.SetFloat("_ReflectionDistortion", 0.3f);
-            mat.SetFloat("_ReflectionRoughness", 0.15f);
+            mat.SetFloat("_ReflectionFresnelNormal", 0.05f);  // Low normal influence on reflection angle
+            mat.SetFloat("_ReflectionIntensity", 0.4f);  // Toned down
+            mat.SetFloat("_ReflectionDistortion", 0.05f);  // Near-zero distortion
+            mat.SetFloat("_ReflectionRoughness", 0.3f);  // Rougher = softer reflections
 
             // ── Waves: OFF (flat pond, no Gerstner displacement) ──
             mat.SetFloat("_DisplacementMode", 0);
