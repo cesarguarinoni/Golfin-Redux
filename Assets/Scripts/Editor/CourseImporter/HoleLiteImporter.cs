@@ -2079,8 +2079,8 @@ namespace Golfin.CourseImport
                 mat.SetTexture("_NormalMapA", waterNormal);
                 // Tiling: (tilingX, tilingY, offsetX, offsetY)
                 mat.SetVector("_NormalMapATilings", new Vector4(2f, 2f, 0f, 0f));
-                // Speed: gentle ripple drift
-                mat.SetVector("_NormalMapASpeeds", new Vector4(0.5f, 0.3f, 0.2f, 0.4f));
+                // Speed: calm pond ripples
+                mat.SetVector("_NormalMapASpeeds", new Vector4(0.1f, 0.07f, 0.05f, 0.08f));
                 mat.SetFloat("_NormalMapAIntensity", 0.6f);
             }
             else
