@@ -1891,39 +1891,15 @@ namespace Golfin.CourseImport
 
                 int n = water.contour.Length;
 
-                // Compute centroid in XZ for inward nudging
-                float cx = 0, cz = 0;
-                for (int i = 0; i < n; i++)
-                {
-                    cx += water.contour[i].z; // 90° CCW
-                    cz += water.contour[i].x;
-                }
-                cx /= n; cz /= n;
-
-                // Sample terrain height nudged inward from the contour edge
-                // so we sample inside the shore depression, not on the lip
-                float inwardNudge = 3f; // meters toward centroid
+                // Sample terrain at each vertex directly — water follows the slope
                 Vector3[] worldPts = new Vector3[n];
                 float sumX = 0, sumY = 0, sumZ = 0;
                 for (int i = 0; i < n; i++)
                 {
                     float wx = water.contour[i].z;  // 90° CCW
                     float wz = water.contour[i].x;
-
-                    // Nudge sample point toward centroid
-                    float dx = cx - wx;
-                    float dz = cz - wz;
-                    float dist = Mathf.Sqrt(dx * dx + dz * dz);
-                    float nudge = Mathf.Min(inwardNudge, dist * 0.5f);
-                    float sx = wx, sz = wz;
-                    if (dist > 0.01f)
-                    {
-                        sx += dx / dist * nudge;
-                        sz += dz / dist * nudge;
-                    }
-
-                    float terrainH = terrain.SampleHeight(new Vector3(sx, 0, sz));
-                    float wy = terrainBaseY + terrainH - 0.45f;
+                    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                    float wy = terrainBaseY + terrainH - 0.1f;
                     worldPts[i] = new Vector3(wx, wy, wz);
                     sumX += wx; sumY += wy; sumZ += wz;
                 }
