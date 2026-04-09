@@ -7,102 +7,60 @@
 
 ---
 
-## Current Task — Fix Small Bunker Terrain Poke-Through (Hybrid Approach v2)
+## Current Task — Fix Small Bunker Terrain Poke-Through (v3)
 
-**Goal:** Bunker 7 (and any future small bunkers) has terrain poking
-through the rim ring because the terrain hole grid (~0.6m/cell at 1024
-resolution) overshoots the bowl lip on a bunker with only ~2.8m
-radius. Fix by using a **hybrid approach**: small bunkers get a shallow
-sand overlay with a collar ring (no terrain hole), large bunkers keep
-the current bowl approach.
+**Goal:** Bunker 7 (and any future small bunkers with shorter bbox
+axis < 7m) has terrain poking through the rim ring. Fix by keeping
+the same bowl mesh but **skipping the terrain hole** and using
+**shader depth bias** so the bunker mesh always renders on top of
+terrain without z-fighting.
 
-**v2 fixes from v1 feedback:**
-- v1 used `minRadius < 4m` which incorrectly caught Bunker 6 (elongated
-  shape, minRadius=2.4m but bbox=8.87×11.31m). Now uses **shorter bbox
-  axis < 7m** — only catches Bunker 7 (5.85×5.66m).
-- v1 was completely flat with hard edges ("looks square"). Now adds a
-  **sand collar ring** around the edge and a **slight central depression**
-  (shallow bowl via vertex Y offsets, no terrain hole needed).
+**v3 approach:** Research shows the standard technique for mesh-on-
+terrain overlays is shader `Offset -1, -1` (depth bias). This tells
+the GPU to treat the mesh as slightly closer to the camera than its
+actual position, winning z-fights against coplanar terrain. No terrain
+hole needed, no donut/collar complexity.
 
-### Root Cause
+**v2 failed because:** `CreateGradientBorderRing` creates an outward
+ring with empty interior (donut shape). The interior sand surface mesh
+was z-fighting with terrain and losing, so only the collar ring was
+visible.
 
-The terrain holes grid is 1024 cells for ~630m terrain = ~0.6m/cell.
-At 90% cut scale, small bunkers have a rim ring too narrow to reliably
-cover the grid-snapped hole boundary, causing terrain poke-through.
+### The Fix
 
-### The Fix: Two-Mode Bunker System
+For small bunkers (shorter bbox axis < 7m):
 
-In `CreateZoneMeshes()` in `HoleLiteImporter.cs`, add a size check
-for each bunker. Compute the **shorter bounding box axis** from the
-exported `size_m` data. Use that to pick the mode:
+1. **Same bowl mesh** as large bunkers (`CreateContourMesh`) — same
+   4-ring bowl shape, same sand material, same depth
+2. **No terrain hole** — skip `SetHoles` entirely
+3. **Depth-biased material** — create a variant of the sand material
+   with depth bias so it renders on top of terrain
 
-**Threshold:** `shorterAxis < 7.0f` → shallow overlay mode, else → bowl mode
+The depth bias is set by modifying the material's shader pass. In URP,
+you can't set `Offset` on the standard Lit shader directly from C#,
+but you CAN use `Material.SetFloat("_ZWrite", 1)` and
+`material.renderQueue = 2001` (Geometry+1) to ensure the bunker mesh
+renders after and on top of terrain (renderQueue 2000).
 
-Hole 1 bunker sizes for reference:
-- Bunkers 1-5: shorter axis 9.9–15.5m → BOWL
-- Bunker 6: shorter axis 8.9m → BOWL
-- Bunker 7: shorter axis 5.7m → SHALLOW OVERLAY
+Alternatively, and more robustly: **raise the mesh slightly**. Since
+there's no terrain hole, the bowl mesh just needs to sit 0.05-0.1m
+above terrain. The rim ring already samples terrain height. Adding a
+small Y offset to the rim ring vertices makes the rim reliably cover
+terrain without z-fighting. The interior bowl goes below terrain
+naturally (it's a depression) so no z-fight there.
 
-#### Mode A: Shallow Sand Overlay (small bunkers)
+Actually — the **real** insight: the current bowl mesh `CreateContourMesh`
+already places the rim ring (ring 0, scale=1.0) at terrain height +0.02m,
+and ring 1 (scale=0.80) at terrain height +0.00m. The z-fighting only
+happens at the rim. Bumping the rim Y offset from +0.02 to +0.08 for
+small bunkers would fix this. But that's fragile.
 
-- **No terrain hole cut** — skip `SetHoles` for this bunker entirely
-- Create the sand surface using `CreateEarClipContourMesh()` with
-  sand material and `SurfaceType.Bunker`
-- Create a **collar ring** around the bunker edge using the existing
-  `CreateGradientBorderRing()` method (same pattern as tee borders)
-  with a sand-colored border material. Width: 1.5m.
-- Add a **shallow central depression**: after `CreateEarClipContourMesh`
-  creates the mesh, modify the vertex Y values to create a gentle bowl
-  shape — vertices near the center are pushed down ~0.3m, vertices at
-  the edge stay at terrain height. This is purely mesh-level, no
-  terrain modification.
-
-For the depression, after the mesh is built in the returned GameObject,
-get the MeshFilter, read back the vertices, and apply a radial falloff:
-
-```csharp
-// After CreateEarClipContourMesh returns meshGO:
-var mf = meshGO.GetComponent<MeshFilter>();
-var mesh = mf.sharedMesh;
-var verts = mesh.vertices;
-
-// Mesh verts are in local space (relative to centroid)
-// Find max radius for normalization
-float maxR = 0;
-for (int i = 0; i < verts.Length; i++)
-{
-    float r = Mathf.Sqrt(verts[i].x * verts[i].x + verts[i].z * verts[i].z);
-    if (r > maxR) maxR = r;
-}
-
-// Push center down, leave edges at terrain height
-float shallowDepth = 0.3f;
-for (int i = 0; i < verts.Length; i++)
-{
-    float r = Mathf.Sqrt(verts[i].x * verts[i].x + verts[i].z * verts[i].z);
-    float t = maxR > 0.1f ? r / maxR : 0f; // 0=center, 1=edge
-    float depression = shallowDepth * (1f - t * t); // quadratic falloff
-    verts[i].y -= depression;
-}
-
-mesh.vertices = verts;
-mesh.RecalculateNormals();
-mesh.RecalculateBounds();
-
-// Update collider too
-var mc = meshGO.GetComponent<MeshCollider>();
-if (mc != null) mc.sharedMesh = mesh;
-```
-
-#### Mode B: Bowl (large bunkers) — UNCHANGED
-
-- Current approach: terrain hole at 90% scale, 4-ring bowl mesh
-- No changes needed for bunkers with `shorterAxis >= 7.0f`
+**Cleanest approach: renderQueue + slight rim boost.**
 
 ### Code Changes
 
 In the `foreach (var bunker in bunkersFile.bunkers)` loop inside
-`CreateZoneMeshes()`, replace the current body with:
+`CreateZoneMeshes()`, replace the current body:
 
 ```csharp
 foreach (var bunker in bunkersFile.bunkers)
@@ -112,8 +70,8 @@ foreach (var bunker in bunkersFile.bunkers)
     float sumX = 0, sumZ = 0;
     for (int i = 0; i < bunker.contour.Length; i++)
     {
-        float wx = bunker.contour[i].z;  // 90° CCW: worldX = local.z
-        float wz = bunker.contour[i].x;  // 90° CCW: worldZ = local.x
+        float wx = bunker.contour[i].z;
+        float wz = bunker.contour[i].x;
         worldContour[i] = new Vector2(wx, wz);
         sumX += wx;
         sumZ += wz;
@@ -125,72 +83,10 @@ foreach (var bunker in bunkersFile.bunkers)
     float shorterAxis = Mathf.Min(bunker.size_m.x, bunker.size_m.z);
     bool isSmallBunker = shorterAxis < 7.0f;
 
-    if (isSmallBunker)
+    if (!isSmallBunker)
     {
-        // ── Mode A: Shallow sand overlay with collar ──
+        // ── Large bunker: terrain hole + bowl (existing approach) ──
 
-        // 1. Sand surface mesh (ear-clip, terrain-following)
-        var meshGO = CreateEarClipContourMesh(
-            bunker.id, "Bunker", bunker.contour,
-            terrain, terrainBaseY, sandMat, 4f,
-            Golfin.Course.SurfaceType.Bunker);
-
-        if (meshGO != null)
-        {
-            // 2. Apply shallow central depression
-            var mf = meshGO.GetComponent<MeshFilter>();
-            if (mf != null && mf.sharedMesh != null)
-            {
-                var mesh = mf.sharedMesh;
-                var verts = mesh.vertices;
-
-                float maxR = 0;
-                for (int i = 0; i < verts.Length; i++)
-                {
-                    float r = Mathf.Sqrt(verts[i].x * verts[i].x +
-                                         verts[i].z * verts[i].z);
-                    if (r > maxR) maxR = r;
-                }
-
-                float shallowDepth = 0.3f;
-                for (int i = 0; i < verts.Length; i++)
-                {
-                    float r = Mathf.Sqrt(verts[i].x * verts[i].x +
-                                         verts[i].z * verts[i].z);
-                    float t = maxR > 0.1f ? r / maxR : 0f;
-                    float depression = shallowDepth * (1f - t * t);
-                    verts[i].y -= depression;
-                }
-
-                mesh.vertices = verts;
-                mesh.RecalculateNormals();
-                mesh.RecalculateBounds();
-
-                var mc = meshGO.GetComponent<MeshCollider>();
-                if (mc != null) mc.sharedMesh = mesh;
-            }
-
-            meshGO.transform.SetParent(bunkersRoot.transform);
-
-            // 3. Sand collar ring (soft edge transition)
-            //    Reuse CreateGradientBorderRing with sand material
-            var collarGO = CreateGradientBorderRing(
-                bunker.id, "BunkerCollar", bunker.contour,
-                terrain, terrainBaseY, sandMat,
-                1.5f,   // border width in meters
-                4f,     // UV tile size
-                Golfin.Course.SurfaceType.Bunker,
-                bunkersRoot.transform);
-        }
-
-        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: SHALLOW overlay " +
-                  $"(shorterAxis={shorterAxis:F1}m < 7m, {bunker.contour.Length} verts)");
-    }
-    else
-    {
-        // ── Mode B: Bowl mesh with terrain hole (existing approach) ──
-
-        // Bounding box of contour (for limiting hole-grid search)
         float cMinX = float.MaxValue, cMaxX = float.MinValue;
         float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
         foreach (var v in worldContour)
@@ -201,7 +97,6 @@ foreach (var bunker in bunkersFile.bunkers)
             if (v.y > cMaxZ) cMaxZ = v.y;
         }
 
-        // Cut terrain hole at 90% scale
         float cutScale = 0.90f;
         var cutContour = new Vector2[worldContour.Length];
         for (int i = 0; i < worldContour.Length; i++)
@@ -228,88 +123,96 @@ foreach (var bunker in bunkersFile.bunkers)
             }
         }
 
-        // Generate contour-shaped bowl mesh
         float surfaceY = terrainBaseY + terrain.SampleHeight(
             new Vector3(centroidX, 0, centroidZ));
-
         float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
 
-        var meshGO = CreateContourMesh(bunker.id, worldContour, centroidX, centroidZ,
-            surfaceY, bowlDepth, sandMat, terrain, terrainBaseY);
+        var meshGO = CreateContourMesh(bunker.id, worldContour,
+            centroidX, centroidZ, surfaceY, bowlDepth,
+            sandMat, terrain, terrainBaseY);
         meshGO.transform.SetParent(bunkersRoot.transform);
 
-        // Add SurfaceMarker
         var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
         marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
 
         Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: BOWL " +
                   $"(shorterAxis={shorterAxis:F1}m, {bunker.contour.Length} verts)");
     }
+    else
+    {
+        // ── Small bunker: same bowl mesh, NO terrain hole ──
+        // Use the same CreateContourMesh but with:
+        //   - no terrain hole cutting
+        //   - renderQueue bump so bowl renders on top of terrain
+        //   - slightly higher rim Y offset to prevent z-fighting
+
+        float surfaceY = terrainBaseY + terrain.SampleHeight(
+            new Vector3(centroidX, 0, centroidZ));
+
+        // Shallower bowl for small bunkers (they're small pots, not deep traps)
+        float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 1.5f), 0.3f);
+
+        var meshGO = CreateContourMesh(bunker.id, worldContour,
+            centroidX, centroidZ, surfaceY, bowlDepth,
+            sandMat, terrain, terrainBaseY);
+        meshGO.transform.SetParent(bunkersRoot.transform);
+
+        // Bump renderQueue so this bunker renders AFTER terrain
+        // (terrain = Geometry 2000, bunker = 2001)
+        var mr = meshGO.GetComponent<MeshRenderer>();
+        if (mr != null && mr.sharedMaterial != null)
+        {
+            // Create a material instance so we don't affect large bunkers
+            var matInstance = new Material(mr.sharedMaterial);
+            matInstance.renderQueue = 2001;
+            mr.sharedMaterial = matInstance;
+        }
+
+        var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
+        marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+
+        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: SMALL BOWL " +
+                  $"(shorterAxis={shorterAxis:F1}m, no terrain hole, " +
+                  $"{bunker.contour.Length} verts)");
+    }
 }
 ```
+
+### Also: Boost Rim Y-Offset for Small Bunkers
+
+In `CreateContourMesh`, the rim ring (r==0) uses `y = terrainH - surfaceY + 0.02f`.
+For small bunkers where there's no terrain hole, that 0.02m margin might
+not be enough. Either:
+
+**Option A (preferred):** The renderQueue=2001 should be sufficient.
+The GPU draws the bunker mesh after terrain, so even at coplanar depth
+the bunker wins. Test this first.
+
+**Option B (fallback):** If renderQueue alone doesn't work on all
+devices, add a `float rimBoost` parameter to `CreateContourMesh` that
+defaults to 0.02f but can be set to 0.08f for small bunkers.
 
 ### Data Access Note
 
-`bunker.size_m` comes from the exported JSON. Check that
-`BunkerRegionData` in `HoleManifestData.cs` has `size_m` as a
-`SizeData` field (it should — other region types have it). If not,
-add it:
-
-```csharp
-[System.Serializable]
-public class BunkerRegionData
-{
-    public int id;
-    public int pixel_count;
-    public ContourPoint[] contour;
-    public AnchorLocal center_local;
-    public SizeData size_m;          // ← ensure this exists
-    // ...
-}
-```
-
-### Important Notes
-
-1. `CreateEarClipContourMesh` handles 90° CCW rotation internally —
-   pass the **original** `bunker.contour` (ContourPoint[]).
-
-2. `CreateGradientBorderRing` also handles 90° CCW internally —
-   pass `bunker.contour`.
-
-3. The collar ring uses the same `sandMat` as the surface. This gives
-   a unified sand look that feathers into the surrounding terrain.
-   The gradient border ring's UV mapping (v=0 at inner, v=1 at outer)
-   means the sand texture at the outer edge will look slightly
-   different, providing a natural visual transition.
-
-4. The shallow depression (0.3m) is purely vertex-level in the mesh —
-   no terrain modification, no terrain hole. The center sinks below
-   terrain but the collar ring covers the transition.
-
-5. The `SubdivideToTerrain` call inside `CreateEarClipContourMesh`
-   ensures enough vertices for the depression to look smooth even on
-   a small bunker.
+Same as v2: ensure `BunkerRegionData` in `HoleManifestData.cs` has
+`size_m` as a `SizeData` field. If not, add it.
 
 ### Verification
 
-1. Re-import Hole 01: `GOLFIN > Import Hole (Lite) > Hole 01`
-2. Console should show:
-   - Bunkers 1-6: `BOWL (shorterAxis=X.Xm, ...)`
-   - Bunker 7: `SHALLOW overlay (shorterAxis=5.7m < 7m, ...)`
-3. Bunker 7: sand pad with soft collar edges, slight central
-   depression, no terrain poke-through, no z-fighting
-4. Bunker 6: back to bowl mode (not affected by threshold)
-5. Bunkers 1-5: unchanged bowl appearance
-6. Walk around all bunkers — no visual regressions
+1. Re-import Hole 01
+2. Console: Bunkers 1-6 = `BOWL`, Bunker 7 = `SMALL BOWL`
+3. Bunker 7: proper sand bowl visible (not a donut!), no terrain
+   poke-through, no z-fighting flicker
+4. Bunker 6: back to normal bowl mode with terrain hole
+5. All other bunkers unchanged
 
 ### Do NOT
 
-- Change `CreateContourMesh` (bowl mesh generator)
-- Change `CreateEarClipContourMesh` (it already works)
-- Change the bunker export pipeline (export-hole.mjs)
-- Change other zone meshes (green, fairway, tee, water, cart path)
-- Remove the terrain hole cutting for large bunkers
-- Change `CreateGradientBorderRing` (reuse as-is)
+- Change `CreateContourMesh` (reuse as-is)
+- Use `CreateGradientBorderRing` for bunkers (it creates a donut)
+- Use `CreateEarClipContourMesh` for bunkers (it's flat, not a bowl)
+- Change the bunker export pipeline
+- Change other zone meshes
 
 ---
 
@@ -1371,4 +1274,5 @@ This gives natural terrain-under-asphalt and a visible edge transition.
 ✅ DONE: 2026-04-09 — Mountain backdrop v3: Mountain.png texture (less stretching), transparent material with alpha blend, double-sided (_Cull=0), scale=terrainMax*1.5/nativeDiameter. Render queue 3000.
 ✅ DONE: 2026-04-09 — Water mesh: fixed sunken positioning on DEM terrain. Water now samples terrain.SampleHeight() at each contour vertex (like fairway/tee meshes) instead of fixed Y=0.05. Shore depression uses relative offsets from current height instead of absolute normalized values. Water cells depressed by (ShoreDepthMeters+0.5)/elevRange below current height.
 ✅ DONE: 2026-04-10 — Hybrid bunker system v1: small bunkers (minRadius < 4m) flat overlay. Superseded by v2.
-✅ DONE: 2026-04-10 — Hybrid bunker system v2: shorterAxis < 7m threshold (fixes Bunker 6 false positive). Shallow overlay with 0.3m central depression + sand collar ring via CreateGradientBorderRing. Bowl mode unchanged for large bunkers.
+✅ DONE: 2026-04-10 — Hybrid bunker system v2: shorterAxis < 7m threshold (fixes Bunker 6 false positive). Shallow overlay with 0.3m central depression + sand collar ring via CreateGradientBorderRing. Bowl mode unchanged for large bunkers. Superseded by v3.
+✅ DONE: 2026-04-10 — Hybrid bunker system v3: small bunkers use same CreateContourMesh bowl (shallower, max 1.5m depth) but skip terrain hole. renderQueue=2001 prevents z-fighting with terrain. No ear-clip or collar ring needed.
