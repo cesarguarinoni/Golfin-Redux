@@ -2079,8 +2079,11 @@ namespace Golfin.CourseImport
                 mat.SetTexture("_NormalMapA", waterNormal);
                 // Tiling: (tilingX, tilingY, offsetX, offsetY)
                 mat.SetVector("_NormalMapATilings", new Vector4(2f, 2f, 0f, 0f));
-                // Speed: slow gentle ripples (X speed, Y speed, X speed2, Y speed2)
-                mat.SetVector("_NormalMapASpeeds", new Vector4(0.3f, 0.2f, 0.15f, 0.1f));
+                // Speed: zero — still pond, no scrolling normals.
+                // The normal map still gives surface texture/roughness, but
+                // reflections won't dance around from a fixed light source.
+                // Bump this up slightly (e.g. 0.05) if the water looks too "frozen".
+                mat.SetVector("_NormalMapASpeeds", new Vector4(0f, 0f, 0f, 0f));
                 mat.SetFloat("_NormalMapAIntensity", 0.6f);
             }
             else
