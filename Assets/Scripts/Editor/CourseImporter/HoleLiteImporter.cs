@@ -1274,7 +1274,8 @@ namespace Golfin.CourseImport
                 // ── Bowl mesh ──
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
-                float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+                float shorterAxis = Mathf.Min(bunker.size_m.x, bunker.size_m.z);
+                float bowlDepth = Mathf.Clamp(Mathf.Min(defaultDepth, shorterAxis * 0.2f), 0.5f, 3f);
 
                 var meshGO = CreateContourMesh(bunker.id, worldContour,
                     centroidX, centroidZ, surfaceY, bowlDepth,
