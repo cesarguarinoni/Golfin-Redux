@@ -1,79 +1,10 @@
-# TellCode.md — Instructions from Claude (Architect) to Claude Code
-
-> Claude Code: Read this file at the start of each task. Execute the latest instruction block.
-> After completing, add a status line at the bottom: `✅ DONE: [date] [brief summary]`
-> Claude (Architect) will update this file with new instructions as needed.
-> Handoff: `Docs/TellCode.md`
-> Previous completed specs archived in: `Docs/TellCode_Archive.md`
-
----
-
-## Current Task — Tree Placement System
-
-**Goal:** Automatically place trees on the terrain using zone 5
-(trees) data exported from UHole Lite. Uses Unity's built-in
-Terrain tree system for automatic LOD, billboarding, and batching.
-
-**Prerequisite:** Run `node scripts/export-hole.mjs lomond-country-club 1`
-first. This produces `tree-zones.json` in the export folder.
-
-### Part 1 — Data Classes
-
-In `Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs`, add:
-
-```csharp
-// tree-zones.json — tree placement mask + regions
-[System.Serializable]
-public class TreeZonesFile
-{
-    public string schema_version;
-    public int hole_number;
-    public int mask_width;
-    public int mask_height;
-    public string mask_base64;
-    public TreeMPP meters_per_pixel;
-    public int tree_region_count;
-    public TreeRegionData[] tree_regions;
-}
-
-[System.Serializable]
-public class TreeMPP
-{
-    public float x;
-    public float z;
-}
-
-[System.Serializable]
-public class TreeRegionData
-{
-    public int id;
-    public int pixel_count;
-    public float area_m2;
-    public ContourPoint[] contour;
-    public AnchorLocal center_local;
-    public BunkerSize size_m;
-}
-```
-
-Also add `tree_zones_file` to the manifest class if not present:
-```csharp
-public string tree_zones_file;
-```
-
-### Part 2 — TreePlacer.cs
-
-Create `Assets/Scripts/Editor/CourseImporter/TreePlacer.cs`
-
-This is an editor-only class called by `HoleLiteImporter` after
-terrain + zone meshes are created.
-
-```csharp
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Golfin.Editor.CourseImporter
+namespace Golfin.CourseImport
 {
     /// <summary>
     /// Places trees on terrain using zone 5 mask from UHole Lite.
@@ -82,7 +13,6 @@ namespace Golfin.Editor.CourseImporter
     public static class TreePlacer
     {
         // Tree prototypes — paths to prefabs
-        // These MUST have LODGroup to work well as terrain trees
         private static readonly string[] TreePrefabPaths = new string[]
         {
             "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_01Cedar.prefab",
@@ -93,16 +23,14 @@ namespace Golfin.Editor.CourseImporter
         };
 
         // Relative weight for each prototype (must match TreePrefabPaths length)
-        // Higher weight = more of that tree type
         private static readonly float[] TreeWeights = { 3f, 2f, 2f, 2f, 1f };
 
         // Placement settings
-        private const float MinSpacing = 6f;   // meters between trees (~50 trees per hole)
+        private const float MinSpacing = 6f;   // meters between trees
         private const float ScaleMin = 0.85f;
         private const float ScaleMax = 1.15f;
 
         // Zones to EXCLUDE from tree placement
-        // 0=Background is OK (rough edges), 3=semi-rough OK, 4=rough OK
         private static readonly HashSet<int> ExcludeZones = new HashSet<int>
         {
             1,  // fairway
@@ -161,7 +89,6 @@ namespace Golfin.Editor.CourseImporter
 
             // ---- Register tree prototypes ----
             var prototypes = new List<TreePrototype>();
-            var loadedPrefabs = new List<GameObject>();
 
             foreach (var prefabPath in TreePrefabPaths)
             {
@@ -172,7 +99,6 @@ namespace Golfin.Editor.CourseImporter
                     continue;
                 }
                 prototypes.Add(new TreePrototype { prefab = prefab });
-                loadedPrefabs.Add(prefab);
             }
 
             if (prototypes.Count == 0)
@@ -193,12 +119,10 @@ namespace Golfin.Editor.CourseImporter
                 cumulativeWeights[i] = totalWeight;
             }
 
-            // ---- Poisson disk sampling ----
+            // ---- Poisson disk sampling (grid-jitter approximation) ----
             var trees = new List<TreeInstance>();
             var rng = new System.Random(42); // fixed seed for reproducibility
 
-            // Simple grid-based Poisson approximation:
-            // Divide terrain into cells of MinSpacing, jitter each
             float cellSize = MinSpacing;
             int cellsX = Mathf.FloorToInt(tWidth / cellSize);
             int cellsZ = Mathf.FloorToInt(tLength / cellSize);
@@ -269,8 +193,7 @@ namespace Golfin.Editor.CourseImporter
             terrainData.SetTreeInstances(trees.ToArray(), true);
 
             Debug.Log($"[TreePlacer] Placed {trees.Count} trees " +
-                $"({prototypes.Count} types, {cellSize}m spacing, " +
-                $"seed=42)");
+                $"({prototypes.Count} types, {cellSize}m spacing, seed=42)");
         }
 
         [MenuItem("GOLFIN/Place Trees (Current Terrain)")]
@@ -316,72 +239,4 @@ namespace Golfin.Editor.CourseImporter
         }
     }
 }
-```
-
-**Key design points:**
-- `position.y = 0` — Unity auto-snaps to terrain when
-  `snapToHeightmap: true` in `SetTreeInstances()`
-- Fixed seed (42) for reproducibility — same placement each import
-- Grid-jitter Poisson approximation: simpler than true Poisson disk,
-  still prevents clumping, >= MinSpacing guaranteed
-- Zone grid double-check: even though mask = zone 5, the zone grid
-  exclusion catches edge pixels where zones overlap
-- Uses `System.Random` not `UnityEngine.Random` to avoid polluting
-  Unity's global random state
-
-### Part 3 — Wire into HoleLiteImporter
-
-In `HoleLiteImporter.cs`, in the `ImportHole()` method (or wherever
-the import pipeline runs), add a call to `TreePlacer.PlaceTrees()`
-**after** terrain creation and zone mesh creation.
-
-Find the end of the import sequence (after mountains, after zone
-meshes) and add:
-
-```csharp
-// ---- Trees ----
-string zonesJsonExportPath = Path.Combine(exportPath, "zones.json");
-TreePlacer.PlaceTrees(terrain, terrainBaseY, exportPath,
-    zonesJsonExportPath);
-```
-
-### Verification
-
-1. Re-export: `node scripts/export-hole.mjs lomond-country-club 1`
-2. Re-import in Unity: GOLFIN > Import Hole (Lite) > Hole 01
-3. Trees should appear in the zone 5 painted areas
-4. Console: `[TreePlacer] Placed NN trees (5 types, 6m spacing, seed=42)`
-5. Trees should:
-   - Follow terrain height (no floating, no buried)
-   - Not appear on fairway, green, bunker, water, tee, cart path
-   - Have varied rotation and scale
-   - Show LOD transitions when zooming in/out in Scene view
-6. Re-run via GOLFIN > Place Trees should clear + re-place
-
-### Do NOT
-
-- Place trees as standalone GameObjects (use Terrain tree system)
-- Use `UnityEngine.Random` (use `System.Random` with fixed seed)
-- Change any existing zone mesh or terrain code
-- Change the tree prefabs themselves
-- Change the export pipeline (that's in TASK.md)
-
----
-
-## Completed Tasks
-
-✅ 2026-04-08 — Fairway mow stripes + fringe ring
-✅ 2026-04-08 — Zone overlay meshes: fairway + tee as contour meshes
-✅ 2026-04-08 — Tee border ring with gradient texture
-✅ 2026-04-08 — All earlier tasks (water, bunkers, greens, textures, etc.)
-✅ 2026-04-08 — traceBorder direction-aware walk + RDP/Chaikin tuning
-✅ 2026-04-09 — Water contour mesh overlay (ear-clip, opaque material)
-✅ 2026-04-09 — Cart path contour mesh + min-width dilation
-✅ 2026-04-09 — Water shader (URPWater/Standard, animated normals)
-✅ 2026-04-09 — Heightmap .raw loader in CreateTerrain
-✅ 2026-04-09 — Overlay mesh Y-offsets for DEM terrain
-✅ 2026-04-09 — Cart path spine-based strip mesh
-✅ 2026-04-09 — Mountain backdrop (single ring, transparent, URP)
-✅ 2026-04-09 — Water mesh DEM positioning fix
-✅ 2026-04-10 — Bunker v1-v5 iterations → v5 inscribed rectangle terrain hole
-✅ 2026-04-10 — Tree Placement System: data classes, TreePlacer.cs, wired into HoleLiteImporter
+#endif

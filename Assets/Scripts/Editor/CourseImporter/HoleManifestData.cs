@@ -23,6 +23,7 @@ namespace Golfin.CourseImport
         public string greens_file;
         public int anchor_count;
         public ManifestTransform transform;
+        public string tree_zones_file;
         public string review_status;
         public string exported_at;
     }
@@ -274,6 +275,38 @@ namespace Golfin.CourseImport
         public AnchorLocal center_local;
         public BunkerSize size_m;
         public bool dilated;
+    }
+
+    // tree-zones.json — tree placement mask + regions
+    [System.Serializable]
+    public class TreeZonesFile
+    {
+        public string schema_version;
+        public int hole_number;
+        public int mask_width;
+        public int mask_height;
+        public string mask_base64;
+        public TreeMPP meters_per_pixel;
+        public int tree_region_count;
+        public TreeRegionData[] tree_regions;
+    }
+
+    [System.Serializable]
+    public class TreeMPP
+    {
+        public float x;
+        public float z;
+    }
+
+    [System.Serializable]
+    public class TreeRegionData
+    {
+        public int id;
+        public int pixel_count;
+        public float area_m2;
+        public ContourPoint[] contour;
+        public AnchorLocal center_local;
+        public BunkerSize size_m;
     }
 
     // zones.json — zone grid data for splatmap pipeline
