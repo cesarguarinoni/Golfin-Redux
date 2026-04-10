@@ -1239,11 +1239,8 @@ namespace Golfin.CourseImport
                     if (v.y > cMaxZ) cMaxZ = v.y;
                 }
 
-                float shorterAxis = Mathf.Min(bunker.size_m.x, bunker.size_m.z);
-                bool isSmall = shorterAxis < 7.0f;
-
-                // Small: dilated cut (105%) + skirt ring. Large: original 90% inward cut.
-                float cutScale = isSmall ? 1.05f : 0.90f;
+                // Unified: 90% inward cut for all bunkers (2049 resolution gives ~0.3m/cell precision)
+                float cutScale = 0.90f;
                 var cutContour = new Vector2[worldContour.Length];
                 for (int i = 0; i < worldContour.Length; i++)
                 {
@@ -1277,30 +1274,18 @@ namespace Golfin.CourseImport
                 // ── Bowl mesh ──
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
-                // Small bunkers: shallower bowl (max 1.0m)
-                float bowlDepth = isSmall
-                    ? Mathf.Max(Mathf.Min(defaultDepth, 1.0f), 0.3f)
-                    : Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+                float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
 
                 var meshGO = CreateContourMesh(bunker.id, worldContour,
                     centroidX, centroidZ, surfaceY, bowlDepth,
-                    sandMat, terrain, terrainBaseY, isSmall);
-                if (isSmall)
-                {
-                    meshGO.transform.localScale = Vector3.one * 1.13f;
-                    // Raise mesh above terrain so rim covers hole edge
-                    var pos = meshGO.transform.position;
-                    meshGO.transform.position = new Vector3(pos.x, pos.y + 0.11f, pos.z);
-                }
+                    sandMat, terrain, terrainBaseY, false);
                 meshGO.transform.SetParent(bunkersRoot.transform);
 
                 var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
 
-                Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: " +
-                          (isSmall ? $"SMALL shingle (cut=105%, skirt, depth={bowlDepth:F1}m)"
-                                   : $"LARGE original (cut=90%)") +
-                          $", {bunker.contour.Length} verts");
+                float shorterAxis = Mathf.Min(bunker.size_m.x, bunker.size_m.z);
+                Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: unified (cut=90%, depth={bowlDepth:F1}m, axis={shorterAxis:F1}m), {bunker.contour.Length} verts");
             }
 
             // Copy bunkers.json to Assets
