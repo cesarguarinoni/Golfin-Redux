@@ -1277,7 +1277,7 @@ namespace Golfin.CourseImport
                 // ── Bowl mesh ──
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
-                if (isSmall) surfaceY += 0.2f; // raise small bunker mesh origin
+                if (isSmall) surfaceY += 0.39f; // raise small bunker mesh origin
                 // Small bunkers: shallower bowl (max 1.0m)
                 float bowlDepth = isSmall
                     ? Mathf.Max(Mathf.Min(defaultDepth, 1.0f), 0.3f)
