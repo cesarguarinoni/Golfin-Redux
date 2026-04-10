@@ -1287,7 +1287,7 @@ namespace Golfin.CourseImport
                     sandMat, terrain, terrainBaseY, isSmall);
                 if (isSmall)
                 {
-                    meshGO.transform.localScale = Vector3.one * 1.1f;
+                    meshGO.transform.localScale = Vector3.one * 1.13f;
                     // Raise mesh above terrain so rim covers hole edge
                     var pos = meshGO.transform.position;
                     meshGO.transform.position = new Vector3(pos.x, pos.y + 0.11f, pos.z);
