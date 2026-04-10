@@ -1285,7 +1285,6 @@ namespace Golfin.CourseImport
                 var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
 
-                float shorterAxis = Mathf.Min(bunker.size_m.x, bunker.size_m.z);
                 Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: unified (cut=90%, depth={bowlDepth:F1}m, axis={shorterAxis:F1}m), {bunker.contour.Length} verts");
             }
 
