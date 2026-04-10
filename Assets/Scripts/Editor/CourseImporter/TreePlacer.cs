@@ -428,6 +428,11 @@ namespace Golfin.CourseImport
             lodGroup.SetLODs(lods);
             lodGroup.fadeMode = LODFadeMode.CrossFade;
             lodGroup.animateCrossFading = true;
+
+            // For prefab instances, record changes as overrides
+            // so Unity doesn't revert them to the prefab's values
+            if (PrefabUtility.IsPartOfPrefabInstance(lodGroup))
+                PrefabUtility.RecordPrefabInstancePropertyModifications(lodGroup);
         }
 
         /// <summary>
