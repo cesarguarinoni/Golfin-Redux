@@ -6,45 +6,109 @@
 
 ---
 
-## Current Task — Increase Heightmap Resolution to 2049
+## Current Task — Export Tree Zone Mask
 
-**Goal:** Change the heightmap resolution constant from 1025 to 2049.
+**Goal:** Extract zone 5 (trees) data from the zone grid and export
+as `tree-zones.json` with a base64-encoded binary mask + region
+contours. This gives the Unity TreePlacer both pixel-level precision
+(mask) and region metadata (contours, area).
 
-### Change
+### What to add
 
-In `Tools/UHoleLite/scripts/generate-terrain.mjs`, line ~21:
+In `Tools/UHoleLite/scripts/export-hole.mjs`, add tree zone
+extraction and export in the `exportHole()` function.
+
+#### 1. Extract tree regions + build binary mask
+
+After the existing water extraction block (near the end of
+`exportHole()`), add:
 
 ```javascript
-// OLD:
-const RES = 1025;
+// --- Build tree-zones.json ---
+const treeRegions = extractZoneContours(zonesData, terrainMeta, 5, 30, 3.0, 2);
+// zone 5 = trees, min 30px (skip tiny splotches), RDP epsilon 3.0
+// (trees don't need precise contours), 2 Chaikin passes
 
-// NEW:
-const RES = 2049;
+// Build binary mask from zone grid (1 = tree zone, 0 = not)
+const gridBuf = Buffer.from(zonesData.grid, 'base64');
+const maskW = zonesData.source_dimensions.width;
+const maskH = zonesData.source_dimensions.height;
+const treeMask = Buffer.alloc(maskW * maskH);
+for (let i = 0; i < gridBuf.length; i++) {
+  treeMask[i] = gridBuf[i] === 5 ? 1 : 0;
+}
+
+const treeZonesOutput = {
+  schema_version: '1.0.0',
+  hole_number: holeNumber,
+  mask_width: maskW,
+  mask_height: maskH,
+  mask_base64: treeMask.toString('base64'),
+  meters_per_pixel: {
+    x: parseFloat((terrainMeta.terrain_width_m / maskW).toFixed(4)),
+    z: parseFloat((terrainMeta.terrain_length_m / maskH).toFixed(4)),
+  },
+  tree_region_count: treeRegions.length,
+  tree_regions: treeRegions.map(r => ({
+    id: r.id,
+    pixel_count: r.pixel_count,
+    area_m2: parseFloat(
+      (r.pixel_count *
+       (terrainMeta.terrain_width_m / maskW) *
+       (terrainMeta.terrain_length_m / maskH)
+      ).toFixed(1)
+    ),
+    contour: r.contour,
+    center_local: r.center_local,
+    size_m: r.size_m,
+  })),
+};
+
+fs.writeFileSync(
+  path.join(exportDir, 'tree-zones.json'),
+  JSON.stringify(treeZonesOutput, null, 2),
+  'utf-8'
+);
+
+if (treeRegions.length > 0) {
+  const totalArea = treeZonesOutput.tree_regions
+    .reduce((sum, r) => sum + r.area_m2, 0);
+  console.log(`  Tree zones: ${treeRegions.length} region(s), ` +
+    `${totalArea.toFixed(0)} m² total`);
+} else {
+  console.log(`  Tree zones: none painted`);
+}
 ```
 
-That's the only change. Everything else in the script scales
-automatically with this constant (loop bounds, DEM sampling,
-zone mask resampling, raw output size, terrain-meta.json).
+#### 2. Add to manifest
 
-### After the Code Change
+In the `manifest` object, add after `cart_paths_file`:
 
-Re-run the pipeline for Hole 1:
-
-```powershell
-cd Tools\UHoleLite
-node scripts/generate-terrain.mjs lomond-country-club 1
-node scripts/export-hole.mjs lomond-country-club 1
+```javascript
+tree_zones_file: 'tree-zones.json',
 ```
+
+#### 3. Update export result log
+
+In the export result object at the bottom of `exportHole()`,
+add `treeRegionCount: treeRegions.length` and include it in
+the console log in `main()`.
 
 ### Verification
 
-1. `holes/01/terrain-meta.json` should show `"resolution": 2049`
-2. `holes/01/heightmap.raw` should be ~8MB (2049×2049×2 bytes)
-3. No errors during generation or export
+1. Re-export: `node scripts/export-hole.mjs lomond-country-club 1`
+2. Console should show `Tree zones: N region(s), NNN m² total`
+   (or `none painted` if zone 5 isn't painted yet)
+3. `export/hole-01/tree-zones.json` should exist with:
+   - `mask_width` = 2596, `mask_height` = 3124
+   - `mask_base64` = base64 string (length = ceil(2596*3124 * 4/3))
+   - `tree_regions` array with contours
+4. If zone 5 is painted, mask should have 1s in those areas
 
 ### Do NOT
 
-- Change zone grid resolution (independent)
-- Change texture resolution
-- Change contour extraction or export pipeline
-- Change any other scripts
+- Change any existing zone extraction (bunkers, greens, etc.)
+- Change `traceBorder`, `simplifyPolygon`, `smoothPolygon`
+- Change the zone grid or splatmap pipeline
+- Change `extractZoneContours` function itself
+- Remove or modify any existing export files

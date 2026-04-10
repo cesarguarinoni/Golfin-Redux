@@ -7,51 +7,534 @@
 
 ---
 
-## Current Task — Increase Heightmap Resolution to 2049 (Unity Side)
+## Current Task — Tree Placement System
 
-**Goal:** Match the Unity importer to the new 2049 heightmap
-resolution from the UHole Lite pipeline.
+**Goal:** Automatically place trees on the terrain using zone 5
+(trees) data exported from UHole Lite. Uses Unity's built-in
+Terrain tree system for automatic LOD, billboarding, and batching.
 
-### Change
+**Prerequisite:** Run `node scripts/export-hole.mjs lomond-country-club 1`
+first. This produces `tree-zones.json` in the export folder.
 
-In `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`,
-in `CreateTerrain()`, find:
+### Part 1 — Data Classes
+
+In `Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs`, add:
+
 ```csharp
-int actualRes = 1025;
+// tree-zones.json — tree placement mask + regions
+[System.Serializable]
+public class TreeZonesFile
+{
+    public string schema_version;
+    public int hole_number;
+    public int mask_width;
+    public int mask_height;
+    public string mask_base64;
+    public TreeMPP meters_per_pixel;
+    public int tree_region_count;
+    public TreeRegionData[] tree_regions;
+}
+
+[System.Serializable]
+public class TreeMPP
+{
+    public float x;
+    public float z;
+}
+
+[System.Serializable]
+public class TreeRegionData
+{
+    public int id;
+    public int pixel_count;
+    public float area_m2;
+    public ContourPoint[] contour;
+    public AnchorLocal center_local;
+    public BunkerSize size_m;
+}
 ```
-Change to:
+
+Also add `tree_zones_file` to the manifest class if not present:
 ```csharp
-int actualRes = 2049;
+public string tree_zones_file;
 ```
 
-That's the only change.
+### Part 2 — TreePlacer.cs
 
-### Context
+Create `Assets/Scripts/Editor/CourseImporter/TreePlacer.cs`
 
-The UHole Lite pipeline (`generate-terrain.mjs`) is being updated
-separately via TASK.md to export at 2049 resolution. The manifest's
-`terrain.resolution` field will read 2049. This Unity-side change
-matches it.
+This is an editor-only class called by `HoleLiteImporter` after
+terrain + zone meshes are created.
 
-The heightmap loader already handles mismatched resolutions (bilinear
-upsample fallback exists), but matching gives best quality.
+```csharp
+using UnityEngine;
+using UnityEditor;
+using System.Collections.Generic;
+using System.IO;
 
-Terrain holes grid becomes 2048×2048 (~0.3m/cell instead of ~0.6m),
-which improves bunker hole precision for all bunkers.
+namespace Golfin.Editor.CourseImporter
+{
+    /// <summary>
+    /// Places trees on terrain using zone 5 mask from UHole Lite.
+    /// Uses Unity Terrain tree system (automatic LOD + billboarding).
+    /// </summary>
+    public static class TreePlacer
+    {
+        // Tree prototypes — paths to prefabs
+        // These MUST have LODGroup to work well as terrain trees
+        private static readonly string[] TreePrefabPaths = new string[]
+        {
+            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_01Cedar.prefab",
+            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_JapaneseBlack_01.prefab",
+            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_Maple.prefab",
+            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_ScottishPine_01.prefab",
+            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_Bush_01.prefab",
+        };
+
+        // Relative weight for each prototype (must match TreePrefabPaths length)
+        // Higher weight = more of that tree type
+        private static readonly float[] TreeWeights = { 3f, 2f, 2f, 2f, 1f };
+
+        // Placement settings
+        private const float MinSpacing = 6f;   // meters between trees (~50 trees per hole)
+        private const float ScaleMin = 0.85f;
+        private const float ScaleMax = 1.15f;
+
+        // Zones to EXCLUDE from tree placement
+        // 0=Background is OK (rough edges), 3=semi-rough OK, 4=rough OK
+        private static readonly HashSet<int> ExcludeZones = new HashSet<int>
+        {
+            1,  // fairway
+            2,  // green
+            6,  // bunker
+            7,  // water
+            8,  // cart path
+            10, // tee box
+        };
+
+        /// <summary>
+        /// Main entry point. Call after terrain is created.
+        /// </summary>
+        public static void PlaceTrees(
+            Terrain terrain, float terrainBaseY,
+            string exportPath, string zonesJsonPath)
+        {
+            // Load tree-zones.json
+            string tzPath = Path.Combine(exportPath, "tree-zones.json");
+            if (!File.Exists(tzPath))
+            {
+                Debug.Log("[TreePlacer] No tree-zones.json found, skipping");
+                return;
+            }
+
+            string tzJson = File.ReadAllText(tzPath);
+            var tzData = JsonUtility.FromJson<TreeZonesFile>(tzJson);
+
+            if (tzData.tree_region_count == 0 ||
+                string.IsNullOrEmpty(tzData.mask_base64))
+            {
+                Debug.Log("[TreePlacer] No tree zones painted, skipping");
+                return;
+            }
+
+            // Decode binary mask
+            byte[] mask = System.Convert.FromBase64String(tzData.mask_base64);
+            int maskW = tzData.mask_width;
+            int maskH = tzData.mask_height;
+
+            // Load zone grid for exclusion checks
+            byte[] zoneGrid = null;
+            int zoneW = 0, zoneH = 0;
+            if (File.Exists(zonesJsonPath))
+            {
+                string zJson = File.ReadAllText(zonesJsonPath);
+                var zData = JsonUtility.FromJson<ZonesData>(zJson);
+                zoneGrid = System.Convert.FromBase64String(zData.grid);
+                zoneW = zData.source_dimensions.width;
+                zoneH = zData.source_dimensions.height;
+            }
+
+            var terrainData = terrain.terrainData;
+            float tWidth = terrainData.size.x;
+            float tLength = terrainData.size.z;
+
+            // ---- Register tree prototypes ----
+            var prototypes = new List<TreePrototype>();
+            var loadedPrefabs = new List<GameObject>();
+
+            foreach (var prefabPath in TreePrefabPaths)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                if (prefab == null)
+                {
+                    Debug.LogWarning($"[TreePlacer] Prefab not found: {prefabPath}");
+                    continue;
+                }
+                prototypes.Add(new TreePrototype { prefab = prefab });
+                loadedPrefabs.Add(prefab);
+            }
+
+            if (prototypes.Count == 0)
+            {
+                Debug.LogError("[TreePlacer] No tree prefabs found!");
+                return;
+            }
+
+            terrainData.treePrototypes = prototypes.ToArray();
+
+            // Build cumulative weight array
+            float totalWeight = 0;
+            var cumulativeWeights = new float[prototypes.Count];
+            for (int i = 0; i < prototypes.Count; i++)
+            {
+                float w = i < TreeWeights.Length ? TreeWeights[i] : 1f;
+                totalWeight += w;
+                cumulativeWeights[i] = totalWeight;
+            }
+
+            // ---- Poisson disk sampling ----
+            var trees = new List<TreeInstance>();
+            var rng = new System.Random(42); // fixed seed for reproducibility
+
+            // Simple grid-based Poisson approximation:
+            // Divide terrain into cells of MinSpacing, jitter each
+            float cellSize = MinSpacing;
+            int cellsX = Mathf.FloorToInt(tWidth / cellSize);
+            int cellsZ = Mathf.FloorToInt(tLength / cellSize);
+
+            for (int cz = 0; cz < cellsZ; cz++)
+            {
+                for (int cx = 0; cx < cellsX; cx++)
+                {
+                    // Jittered position within cell
+                    float worldX = (cx + (float)rng.NextDouble()) * cellSize;
+                    float worldZ = (cz + (float)rng.NextDouble()) * cellSize;
+
+                    // Normalized terrain coordinates (0-1)
+                    float nx = worldX / tWidth;
+                    float nz = worldZ / tLength;
+
+                    if (nx < 0 || nx >= 1 || nz < 0 || nz >= 1) continue;
+
+                    // Check tree mask
+                    int maskX = Mathf.Clamp(
+                        Mathf.FloorToInt(nx * maskW), 0, maskW - 1);
+                    int maskY = Mathf.Clamp(
+                        Mathf.FloorToInt(nz * maskH), 0, maskH - 1);
+                    if (mask[maskY * maskW + maskX] == 0) continue;
+
+                    // Check zone grid — skip excluded zones
+                    if (zoneGrid != null)
+                    {
+                        int zx = Mathf.Clamp(
+                            Mathf.FloorToInt(nx * zoneW), 0, zoneW - 1);
+                        int zy = Mathf.Clamp(
+                            Mathf.FloorToInt(nz * zoneH), 0, zoneH - 1);
+                        int zone = zoneGrid[zy * zoneW + zx];
+                        if (ExcludeZones.Contains(zone)) continue;
+                    }
+
+                    // Pick prototype (weighted random)
+                    float roll = (float)rng.NextDouble() * totalWeight;
+                    int protoIdx = 0;
+                    for (int i = 0; i < cumulativeWeights.Length; i++)
+                    {
+                        if (roll <= cumulativeWeights[i])
+                        {
+                            protoIdx = i;
+                            break;
+                        }
+                    }
+
+                    // Random scale + rotation
+                    float scale = ScaleMin +
+                        (float)rng.NextDouble() * (ScaleMax - ScaleMin);
+                    float rotation = (float)rng.NextDouble() * 360f
+                        * Mathf.Deg2Rad;
+
+                    trees.Add(new TreeInstance
+                    {
+                        position = new Vector3(nx, 0f, nz),
+                        widthScale = scale,
+                        heightScale = scale,
+                        rotation = rotation,
+                        color = Color.white,
+                        lightmapColor = Color.white,
+                        prototypeIndex = protoIdx,
+                    });
+                }
+            }
+
+            terrainData.SetTreeInstances(trees.ToArray(), true);
+
+            Debug.Log($"[TreePlacer] Placed {trees.Count} trees " +
+                $"({prototypes.Count} types, {cellSize}m spacing, " +
+                $"seed=42)");
+        }
+
+        [MenuItem("GOLFIN/Place Trees (Current Terrain)")]
+        private static void PlaceTreesMenuItem()
+        {
+            var terrain = Terrain.activeTerrain;
+            if (terrain == null)
+            {
+                Debug.LogError("[TreePlacer] No active terrain found");
+                return;
+            }
+
+            // Find export path — check all 18 holes
+            string exportBase = "Tools/UHoleLite/output/lomond-country-club/export";
+            string exportPath = null;
+            for (int h = 1; h <= 18; h++)
+            {
+                string candidate = Path.Combine(
+                    Application.dataPath, "..", exportBase,
+                    $"hole-{h:D2}");
+                if (Directory.Exists(candidate) &&
+                    File.Exists(Path.Combine(candidate, "tree-zones.json")))
+                {
+                    exportPath = candidate;
+                    break;
+                }
+            }
+
+            if (exportPath == null)
+            {
+                Debug.LogError("[TreePlacer] No export folder with " +
+                    "tree-zones.json found");
+                return;
+            }
+
+            // Clear existing trees first
+            terrain.terrainData.SetTreeInstances(
+                new TreeInstance[0], false);
+
+            float terrainBaseY = terrain.transform.position.y;
+            string zonesPath = Path.Combine(exportPath, "zones.json");
+            PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath);
+        }
+    }
+}
+```
+
+### Part 3 — Wire into HoleLiteImporter
+
+In `HoleLiteImporter.cs`, in the `ImportHole()` method (or wherever
+the import pipeline runs), add a call to `TreePlacer.PlaceTrees()`
+**after** terrain creation and zone mesh creation.
+
+Find the end of the import sequence (after mountains, after zone
+meshes) and add:
+
+```csharp
+// ---- Trees ----
+string zonesJsonExportPath = Path.Combine(exportPath, "zones.json");
+TreePlacer.PlaceTrees(terrain, terrainBaseY, exportPath,
+    zonesJsonExportPath);
+```
+
+Make sure to add `using Golfin.Editor.CourseImporter;` if needed
+(though it's likely in the same namespace).
 
 ### Verification
 
-1. After pipeline re-run + Unity re-import of Hole 01:
-2. Console: `Terrain holes resolution: 2048x2048`
-3. Console: `Loaded heightmap.raw: 2049x2049`
-4. Terrain looks identical but smoother
-5. All bunkers (including Bunker 7) work correctly
+1. Re-export: `node scripts/export-hole.mjs lomond-country-club 1`
+2. Re-import in Unity: GOLFIN > Import Hole (Lite) > Hole 01
+3. Trees should appear in the zone 5 painted areas
+4. Console: `[TreePlacer] Placed NN trees (5 types, 6m spacing, seed=42)`
+5. Trees should:
+   - Follow terrain height (no floating, no buried)
+   - Not appear on fairway, green, bunker, water, tee, cart path
+   - Have varied rotation and scale
+   - Show LOD transitions when zooming in/out in Scene view
+6. Re-run via GOLFIN > Place Trees should clear + re-place
 
 ### Do NOT
 
-- Change any other importer code
-- Change zone mesh code
-- Change bunker mesh code
+- Place trees as standalone GameObjects (use Terrain tree system)
+- Use `UnityEngine.Random` (use `System.Random` with fixed seed)
+- Change any existing zone mesh or terrain code
+- Change the tree prefabs themselves
+- Change the export pipeline (that's in TASK.md)
+
+---
+
+## Previous Task — Fix Small Bunker Terrain Poke-Through (v5)
+
+**Goal:** Bunker 7 has terrain poking through the rim ring. Fix by
+using a **simple inscribed square** for the terrain hole cut instead
+of tracing the contour shape. The square is smaller than the bowl
+lip, so the rim always covers it. The bowl mesh still follows the
+actual contour.
+
+**Why previous approaches failed:**
+- v2/v3: Skipping terrain holes doesn't work — terrain always wins
+  depth test over below-terrain bowl vertices. renderQueue doesn't
+  help. Collar ring = donut with empty interior.
+- v4: Adaptive contour-traced cut still has grid-snap overshoot at
+  convex corners of small contours.
+
+**v5 insight:** The terrain hole doesn't need to follow the bunker
+shape. It just needs to be a hole *somewhere under the bowl* so the
+bowl interior is visible. A simple axis-aligned rectangle inscribed
+well inside the contour is immune to grid-snap corner issues because
+its edges are straight and axis-aligned — they align perfectly with
+the holes grid.
+
+### The Fix
+
+Replace the contour-traced terrain hole cut with an **inscribed
+rectangle** approach:
+
+1. Compute the bunker's axis-aligned bounding box
+2. Shrink it by a **fixed margin** (e.g. 40% on each side) to get
+   a rectangle that's well inside the contour
+3. Cut terrain holes using this simple rectangle (no point-in-polygon
+   test needed — just min/max grid cell bounds)
+4. Bowl mesh stays exactly as-is — same `CreateContourMesh`, same
+   contour shape, same 4-ring bowl
+
+The rim ring (ring 0 at 100% to ring 1 at 80%) covers the gap between
+the contour edge and the inscribed rectangle. For small bunkers this
+gap is larger, but the rim ring is also proportionally larger.
+
+### Code Changes
+
+In the `foreach (var bunker in bunkersFile.bunkers)` loop inside
+`CreateZoneMeshes()`, replace the terrain hole cutting section:
+
+```csharp
+foreach (var bunker in bunkersFile.bunkers)
+{
+    var worldContour = new Vector2[bunker.contour.Length];
+    float sumX = 0, sumZ = 0;
+    for (int i = 0; i < bunker.contour.Length; i++)
+    {
+        float wx = bunker.contour[i].z;
+        float wz = bunker.contour[i].x;
+        worldContour[i] = new Vector2(wx, wz);
+        sumX += wx;
+        sumZ += wz;
+    }
+    float centroidX = sumX / worldContour.Length;
+    float centroidZ = sumZ / worldContour.Length;
+
+    // Bounding box of contour
+    float cMinX = float.MaxValue, cMaxX = float.MinValue;
+    float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
+    foreach (var v in worldContour)
+    {
+        if (v.x < cMinX) cMinX = v.x;
+        if (v.x > cMaxX) cMaxX = v.x;
+        if (v.y < cMinZ) cMinZ = v.y;
+        if (v.y > cMaxZ) cMaxZ = v.y;
+    }
+
+    // ── Inscribed rectangle terrain hole ──
+    // Shrink the bounding box by 40% on each side to get a rectangle
+    // well inside the contour. The bowl rim covers the gap.
+    float bboxW = cMaxX - cMinX;
+    float bboxH = cMaxZ - cMinZ;
+    float shrink = 0.40f; // 40% inset on each side
+    float insetX = bboxW * shrink;
+    float insetZ = bboxH * shrink;
+
+    float rectMinX = cMinX + insetX;
+    float rectMaxX = cMaxX - insetX;
+    float rectMinZ = cMinZ + insetZ;
+    float rectMaxZ = cMaxZ - insetZ;
+
+    // Only cut if the rectangle is big enough (at least 2 grid cells)
+    float cellSize = terrainSize.x / holesRes;
+    bool canCut = (rectMaxX - rectMinX) > cellSize * 2 &&
+                  (rectMaxZ - rectMinZ) > cellSize * 2;
+
+    if (canCut)
+    {
+        int hMinX = Mathf.Clamp(Mathf.CeilToInt(
+            (rectMinX - terrainPos.x) / terrainSize.x * holesRes),
+            0, holesRes - 1);
+        int hMaxX = Mathf.Clamp(Mathf.FloorToInt(
+            (rectMaxX - terrainPos.x) / terrainSize.x * holesRes),
+            0, holesRes - 1);
+        int hMinZ = Mathf.Clamp(Mathf.CeilToInt(
+            (rectMinZ - terrainPos.z) / terrainSize.z * holesRes),
+            0, holesRes - 1);
+        int hMaxZ = Mathf.Clamp(Mathf.FloorToInt(
+            (rectMaxZ - terrainPos.z) / terrainSize.z * holesRes),
+            0, holesRes - 1);
+
+        // Simple rectangle — no point-in-polygon test needed
+        for (int hz = hMinZ; hz <= hMaxZ; hz++)
+            for (int hx = hMinX; hx <= hMaxX; hx++)
+                holes[hz, hx] = false;
+
+        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: cut rect " +
+                  $"({rectMaxX - rectMinX:F1}x{rectMaxZ - rectMinZ:F1}m) " +
+                  $"inside bbox ({bboxW:F1}x{bboxH:F1}m)");
+    }
+    else
+    {
+        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: too small " +
+                  $"for terrain hole ({bboxW:F1}x{bboxH:F1}m), " +
+                  $"bowl rim covers fully");
+    }
+
+    // ── Bowl mesh (unchanged) ──
+    float surfaceY = terrainBaseY + terrain.SampleHeight(
+        new Vector3(centroidX, 0, centroidZ));
+    float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+
+    var meshGO = CreateContourMesh(bunker.id, worldContour,
+        centroidX, centroidZ, surfaceY, bowlDepth,
+        sandMat, terrain, terrainBaseY);
+    meshGO.transform.SetParent(bunkersRoot.transform);
+
+    var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
+    marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+}
+```
+
+Note: use `CeilToInt` for min bounds and `FloorToInt` for max bounds
+when converting to grid cells. This ensures the rectangle is always
+*inside* the calculated area (conservative), never overshooting.
+
+### Why This Works for All Sizes
+
+**Large bunker** (bbox 15x35m): inscribed rect = 9x21m. Plenty of
+terrain cut for the bowl to show through. Rim covers the 3m gap
+on each side easily.
+
+**Bunker 7** (bbox 5.85x5.66m): inscribed rect = 3.5x3.4m → ~1.2m
+cut → might be only 2x2 grid cells, but that's enough. If too small,
+`canCut` check skips the hole and the bowl rim sits entirely on
+terrain with its +0.02m Y offset. Worst case for tiny bunkers:
+the rim covers everything and there's no terrain hole at all.
+
+**Key advantage:** Axis-aligned rectangle edges align perfectly with
+the terrain holes grid — zero corner overshoot by definition.
+
+### No Changes to CreateContourMesh
+
+`CreateContourMesh` stays exactly as-is. Same 4-ring bowl, same
+ring scales `{ 1.0, 0.80, 0.50, 0.20 }`, same everything.
+
+### Verification
+
+1. Re-import Hole 01
+2. Console: each bunker shows cut rect size vs bbox size
+3. Bunker 7: bowl visible, no terrain poke-through at rim
+4. Large bunkers: slightly smaller terrain hole but visually identical
+   (rim covers the difference)
+5. No code changes to `CreateContourMesh` — only the hole cutting
+
+### Do NOT
+
+- Change `CreateContourMesh` (no ring scale changes needed)
+- Use `IsInsideContour` for terrain hole cutting (use simple rect)
+- Skip terrain holes entirely (terrain wins depth test)
+- Change the bunker export pipeline
+- Change other zone meshes
 
 ---
 
@@ -658,436 +1141,7 @@ public class CartPathRegionData
 
 ## Previous Task — Cart Path: Contour Mesh Overlay with Minimum Width
 
-**Goal:** Replace splatmap-only cart paths with contour mesh overlays
-(same system as fairway/water/green/bunker), plus a minimum-width
-enforcement of 2.5m (standard golf cart path width). Narrow painted
-regions get dilated up to 2.5m instead of being skipped.
-
-Splatmap paint for cart paths stays (zone 8 → layer 6 in `ZoneToLayer`)
-— it provides the grass-beneath-asphalt ground. The mesh overlay sits
-on top, giving the path physical presence and smooth edges.
-
-### Part 1 — Export Side (`Tools/UHoleLite/scripts/export-hole.mjs`)
-
-Add a new function `extractCartPathContours()` that wraps
-`extractZoneContours` with a **minimum-width dilation** step.
-
-```javascript
-/**
- * Extract cart path contours with minimum width enforcement.
- * If a region is narrower than minWidthPx, dilate it until it reaches
- * the minimum. This prevents thin hand-painted paths from producing
- * degenerate contours.
- *
- * @param {object} zonesData - zones.json data (grid, source_dimensions)
- * @param {object} terrainMeta - terrain-meta.json data
- * @param {number} minWidthM - minimum path width in meters (default 2.5)
- * @param {number} minPixels - minimum region size in pixels
- * @param {number} rdpEpsilon - RDP simplification epsilon
- * @param {number} smoothPasses - Chaikin smoothing passes
- */
-function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPixels = 15, rdpEpsilon = 1.0, smoothPasses = 2) {
-  const grid = Buffer.from(zonesData.grid, 'base64');
-  const w = zonesData.source_dimensions.width;
-  const h = zonesData.source_dimensions.height;
-  const tw = terrainMeta.terrain_width_m;
-  const tl = terrainMeta.terrain_length_m;
-  const targetZone = 8; // cart path
-
-  // Meters per pixel
-  const mppX = tw / w;
-  const mppY = tl / h;
-  const mpp = (mppX + mppY) / 2; // average
-  const minWidthPx = Math.ceil(minWidthM / mpp);
-
-  // Step 1: Find all cart path pixels, flood-fill into regions
-  const visited = new Uint8Array(w * h);
-  const regions = [];
-
-  function floodFill(startX, startY) {
-    const pixels = [];
-    const stack = [[startX, startY]];
-    while (stack.length > 0) {
-      const [x, y] = stack.pop();
-      if (x < 0 || x >= w || y < 0 || y >= h) continue;
-      const idx = y * w + x;
-      if (visited[idx] || grid[idx] !== targetZone) continue;
-      visited[idx] = 1;
-      pixels.push([x, y]);
-      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
-    }
-    return pixels;
-  }
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (grid[y * w + x] === targetZone && !visited[y * w + x]) {
-        const pixels = floodFill(x, y);
-        if (pixels.length >= minPixels) {
-          regions.push(pixels);
-        }
-      }
-    }
-  }
-
-  // Step 2: For each region, check width and dilate if needed
-  // Then run the standard contour pipeline on the (possibly dilated) pixels
-  const results = [];
-
-  for (const originalPixels of regions) {
-    // Create a local mask for this region
-    let pixelSet = new Set();
-    for (const [px, py] of originalPixels) {
-      pixelSet.add(py * w + px);
-    }
-
-    // Estimate width: area / bounding-box-diagonal-length
-    // Better approach: use the longer bbox dimension as "length",
-    // then width ≈ area / length
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const [px, py] of originalPixels) {
-      if (px < minX) minX = px;
-      if (px > maxX) maxX = px;
-      if (py < minY) minY = py;
-      if (py > maxY) maxY = py;
-    }
-    const bboxW = maxX - minX + 1;
-    const bboxH = maxY - minY + 1;
-    const longerAxis = Math.max(bboxW, bboxH);
-    const estWidthPx = originalPixels.length / longerAxis;
-
-    // Dilate if too narrow
-    let currentPixels = originalPixels;
-    if (estWidthPx < minWidthPx) {
-      const dilateRadius = Math.ceil((minWidthPx - estWidthPx) / 2);
-      console.log(`    Cart path region: est width ${(estWidthPx * mpp).toFixed(1)}m < ${minWidthM}m, dilating by ${dilateRadius}px`);
-
-      // Build a mask, dilate it, extract new pixel list
-      // Only dilate into non-zone pixels (rough/semi-rough/trees) — never
-      // into other features like fairway, green, bunker, water, tee, OB
-      const safeZones = new Set([0, 3, 4, 5, 9]); // background, semi-rough, rough, trees, OB
-      const dilated = new Set(pixelSet);
-
-      for (let r = 0; r < dilateRadius; r++) {
-        const frontier = [];
-        for (const key of dilated) {
-          const py = Math.floor(key / w);
-          const px = key % w;
-          const neighbors = [[px-1,py],[px+1,py],[px,py-1],[px,py+1]];
-          for (const [nx, ny] of neighbors) {
-            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-            const nKey = ny * w + nx;
-            if (dilated.has(nKey)) continue;
-            // Only expand into safe zones
-            if (safeZones.has(grid[nKey])) {
-              frontier.push(nKey);
-            }
-          }
-        }
-        for (const key of frontier) {
-          dilated.add(key);
-        }
-      }
-
-      // Convert back to pixel array
-      currentPixels = [];
-      for (const key of dilated) {
-        currentPixels.push([key % w, Math.floor(key / w)]);
-      }
-      pixelSet = dilated;
-    }
-
-    // Step 3: Run standard contour pipeline on this region
-    const borderPixels = traceBorder(grid, w, h, currentPixels, targetZone);
-    // NOTE: traceBorder uses borderSet based on pixelSet internally.
-    // Since we may have dilated pixels that don't match the grid value,
-    // we need to pass the dilated pixel list directly.
-    // traceBorder's 5th param (zoneValue) is unused in the current
-    // direction-aware implementation — it uses the pixelSet built from
-    // the `pixels` parameter. So this should work as-is.
-
-    // Convert to meters
-    let contourMeters = borderPixels.map(([bx, by]) => ({
-      x: parseFloat(((bx / (w - 1) - 0.5) * tw).toFixed(2)),
-      z: parseFloat(((by / (h - 1) - 0.5) * tl).toFixed(2)),
-    }));
-
-    if (contourMeters.length < 3) continue;
-
-    // RDP + Chaikin
-    const closed = [...contourMeters, contourMeters[0]];
-    let simplified = simplifyPolygon(closed, rdpEpsilon);
-    if (simplified.length > 1 &&
-        simplified[0].x === simplified[simplified.length - 1].x &&
-        simplified[0].z === simplified[simplified.length - 1].z) {
-      simplified = simplified.slice(0, -1);
-    }
-    contourMeters = smoothPolygon(simplified, smoothPasses);
-    contourMeters = ensureCCW(contourMeters);
-
-    // Bounding box in local meters
-    const normCX = (minX + maxX) / 2 / (w - 1);
-    const normCY = (minY + maxY) / 2 / (h - 1);
-    const normW = (maxX - minX + 1) / w;
-    const normH = (maxY - minY + 1) / h;
-
-    results.push({
-      id: results.length + 1,
-      pixel_count: currentPixels.length,
-      contour: contourMeters,
-      center_local: {
-        x: parseFloat(((normCX - 0.5) * tw).toFixed(2)),
-        z: parseFloat(((normCY - 0.5) * tl).toFixed(2)),
-      },
-      size_m: {
-        x: parseFloat((normW * tw).toFixed(2)),
-        z: parseFloat((normH * tl).toFixed(2)),
-      },
-      center_normalized: {
-        x: parseFloat(normCX.toFixed(4)),
-        y: parseFloat(normCY.toFixed(4)),
-      },
-      size_normalized: {
-        w: parseFloat(normW.toFixed(4)),
-        h: parseFloat(normH.toFixed(4)),
-      },
-      dilated: estWidthPx < minWidthPx,
-    });
-  }
-
-  // Sort by size (largest first), re-assign IDs
-  results.sort((a, b) => b.pixel_count - a.pixel_count);
-  results.forEach((r, i) => { r.id = i + 1; });
-
-  return results;
-}
-```
-
-Then in `exportHole()`, replace the cart path extraction in the
-zone-contours section. Find:
-
-```javascript
-const cartPaths = extractZoneContours(zonesData, terrainMeta, 8, 15, 1.5, 3);
-```
-
-Replace with:
-
-```javascript
-const cartPaths = extractCartPathContours(zonesData, terrainMeta, 2.5, 15, 1.0, 2);
-// 2.5m min width, 15 min pixels, RDP epsilon 1.0 (preserve narrow shape), 2 Chaikin passes
-```
-
-Also add a **separate export file** for cart paths so Unity can import
-them independently (like bunkers, greens, water):
-
-```javascript
-// --- Build cart-paths.json ---
-const cartPathsOutput = {
-  schema_version: '1.0.0',
-  hole_number: holeNumber,
-  cart_path_count: cartPaths.length,
-  min_width_m: 2.5,
-  cart_paths: cartPaths,
-};
-
-fs.writeFileSync(
-  path.join(exportDir, 'cart-paths.json'),
-  JSON.stringify(cartPathsOutput, null, 2),
-  'utf-8'
-);
-
-if (cartPaths.length > 0) {
-  const stats = cartPaths.map(c =>
-    `#${c.id}: ${c.contour.length}pts (${c.pixel_count}px${c.dilated ? ', dilated' : ''})`
-  ).join(', ');
-  console.log(`  Cart path contours: ${stats}`);
-}
-```
-
-Update the manifest to include `cart_paths_file: 'cart-paths.json'`.
-
-**Keep cart paths in zone-contours.json too** for backward compatibility,
-but the Unity importer should read from `cart-paths.json`.
-
-### Part 2 — Unity Side (`Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`)
-
-Add cart path mesh creation in `CreateFlatZoneMeshes()`. After the tee
-mesh section, add:
-
-```csharp
-// ─── Cart path meshes from cart-paths.json ─────
-string cpPath = Path.Combine(exportPath, "cart-paths.json");
-if (File.Exists(cpPath))
-{
-    string cpJson = File.ReadAllText(cpPath);
-    var cpData = JsonUtility.FromJson<CartPathsFile>(cpJson);
-
-    if (cpData.cart_paths != null && cpData.cart_paths.Length > 0)
-    {
-        var cpRoot = new GameObject("CartPaths");
-        cpRoot.transform.SetParent(parentRoot);
-
-        var cpMat = CreateTiledMaterial(texDir, "T_RoadAsphalt_Albedo",
-            "T_RoadAsphalt_Normal", dataDir, 4f);
-        // Override smoothness for asphalt — slightly glossy
-        cpMat.SetFloat("_Smoothness", 0.3f);
-
-        foreach (var region in cpData.cart_paths)
-        {
-            if (region.contour == null || region.contour.Length < 3) continue;
-
-            // Use ear-clip (cart paths are narrow/winding = concave)
-            var meshGO = CreateFairwayMesh(
-                region.id, region.contour,
-                terrain, terrainBaseY,
-                cpMat,
-                new Vector2(1, 0), // stripe dir doesn't matter for asphalt
-                4f); // tile size for asphalt texture
-
-            if (meshGO != null)
-            {
-                meshGO.name = $"CartPath_{region.id}";
-                // Override surface marker
-                var marker = meshGO.GetComponent<Golfin.Course.SurfaceMarker>();
-                if (marker != null)
-                    marker.surfaceType = Golfin.Course.SurfaceType.CartPath;
-                meshGO.transform.SetParent(cpRoot.transform);
-            }
-        }
-
-        Debug.Log($"[HoleLiteImporter] Created {cpData.cart_paths.Length} cart path mesh(es)");
-    }
-}
-```
-
-Alternatively, instead of reusing `CreateFairwayMesh` (which has
-mow-stripe UV logic), create a simpler ear-clip mesh without stripe
-UVs — just standard world-position-based tiling. You can use
-`CreateFlatContourMesh` directly if it works, or make a variant
-that uses ear-clip instead of centroid-fan:
-
-```csharp
-private static GameObject CreateEarClipContourMesh(int id, string zoneName,
-    ContourPoint[] contour, Terrain terrain, float terrainBaseY,
-    Material mat, float tileSize, Golfin.Course.SurfaceType surfaceType)
-{
-    int n = contour.Length;
-    if (n < 3) return null;
-
-    float yOffset = 0.015f; // between terrain and other overlays
-
-    // 90° CCW rotation
-    Vector3[] worldPts = new Vector3[n];
-    for (int i = 0; i < n; i++)
-    {
-        float wx = contour[i].z;
-        float wz = contour[i].x;
-        float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-        worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
-    }
-
-    // Centroid
-    float cx = 0, cy = 0, cz = 0;
-    for (int i = 0; i < n; i++)
-    { cx += worldPts[i].x; cy += worldPts[i].y; cz += worldPts[i].z; }
-    cx /= n; cy /= n; cz /= n;
-    Vector3 centroid = new Vector3(cx, cy, cz);
-
-    var verts = new Vector3[n];
-    var uvs = new Vector2[n];
-    for (int i = 0; i < n; i++)
-    {
-        verts[i] = worldPts[i] - centroid;
-        uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
-    }
-
-    var tris = EarClipTriangulate(worldPts);
-    if (tris == null || tris.Length < 3) return null;
-
-    var mesh = new Mesh();
-    mesh.name = $"{zoneName}_{id}";
-    mesh.vertices = verts;
-    mesh.triangles = tris;
-    mesh.uv = uvs;
-    mesh.RecalculateNormals();
-    mesh.RecalculateBounds();
-
-    var go = new GameObject($"{zoneName}_{id}");
-    go.transform.position = centroid;
-    go.AddComponent<MeshFilter>().sharedMesh = mesh;
-    go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-    go.AddComponent<MeshCollider>().sharedMesh = mesh;
-
-    var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-    marker.surfaceType = surfaceType;
-
-    return go;
-}
-```
-
-Use it:
-```csharp
-var meshGO = CreateEarClipContourMesh(
-    region.id, "CartPath", region.contour,
-    terrain, terrainBaseY, cpMat, 4f,
-    Golfin.Course.SurfaceType.CartPath);
-```
-
-### Part 3 — Data Classes
-
-Add to `HoleManifestData.cs`:
-
-```csharp
-[System.Serializable]
-public class CartPathsFile
-{
-    public string schema_version;
-    public int hole_number;
-    public int cart_path_count;
-    public float min_width_m;
-    public CartPathRegionData[] cart_paths;
-}
-
-[System.Serializable]
-public class CartPathRegionData
-{
-    public int id;
-    public int pixel_count;
-    public ContourPoint[] contour;
-    public AnchorLocal center_local;
-    public SizeData size_m;
-    public bool dilated;
-}
-```
-
-Also check that `SurfaceType` enum has a `CartPath` entry. If not, add
-it (check `Assets/Scripts/Course/SurfaceMarker.cs` or similar).
-
-### Part 4 — Keep Splatmap
-
-**Do NOT** change `ZoneToLayer` for zone 8. Cart path splatmap paint
-stays at layer 6 (T_RoadAsphalt_Albedo). The mesh overlay sits on top.
-This gives natural terrain-under-asphalt and a visible edge transition.
-
-### Verification
-
-1. Re-export: `node scripts/export-hole.mjs lomond-country-club 1`
-   - Should log `Cart path contours: #N: NNpts (NNpx)` or `dilated`
-   - `cart-paths.json` should exist in export dir
-2. Re-import in Unity: GOLFIN > Import Hole (Lite) > Hole 01
-   - Cart paths should be visible as raised asphalt mesh on terrain
-   - Splatmap asphalt still visible underneath (no gap)
-   - Walk along path — smooth edges, no jaggies
-3. Check a hole that has narrow cart paths — verify dilation kicks in
-   and the path is at least 2.5m wide
-
-### Do NOT
-
-- Remove cart path from splatmap pipeline (zone 8 → layer 6 stays)
-- Change `traceBorder`, `simplifyPolygon`, `smoothPolygon`, `ensureCCW`
-- Modify bunker, green, fairway, or water pipeline code
-- Change `EarClipTriangulate`
-- Skip small cart path regions — dilate them up to 2.5m instead
+(See git history for full spec — completed 2026-04-09)
 
 ---
 
@@ -1115,7 +1169,5 @@ This gives natural terrain-under-asphalt and a visible edge transition.
 ✅ DONE: 2026-04-10 — Hybrid bunker system v1: small bunkers (minRadius < 4m) flat overlay. Superseded by v2.
 ✅ DONE: 2026-04-10 — Hybrid bunker system v2: shorterAxis < 7m threshold (fixes Bunker 6 false positive). Shallow overlay with 0.3m central depression + sand collar ring via CreateGradientBorderRing. Bowl mode unchanged for large bunkers. Superseded by v3.
 ✅ DONE: 2026-04-10 — Hybrid bunker system v3: small bunkers use same CreateContourMesh bowl (shallower, max 1.5m depth) but skip terrain hole. renderQueue=2001 prevents z-fighting with terrain. No ear-clip or collar ring needed. Superseded by v4.
-✅ DONE: 2026-04-10 — Bunker v4: unified approach — adaptive inset. Superseded by v6 (rim too wide, hole too small).
-✅ DONE: 2026-04-10 — Bunker v6: two-mode — large bunkers keep 90% contour-traced cut, small bunkers (shorterAxis < 7m) get 1.6m square terrain hole at centroid. Superseded by v7.
-✅ DONE: 2026-04-10 — Bunker v7: shingle overlap — terrain hole dilated outward (105%), 5-ring bowl with skirt at 110% that tucks 0.15m below terrain. Universal approach, no size branching. Skirt hides hole edge from all angles.
-✅ DONE: 2026-04-10 — Heightmap resolution 1025→2049. generate-terrain.mjs RES=2049, HoleLiteImporter.cs actualRes=2049. Terrain holes grid 2048x2048 (~0.3m/cell). All bunkers confirmed working. Pipeline re-run verified: terrain-meta.json resolution=2049, heightmap.raw ~8MB.
+✅ DONE: 2026-04-10 — Bunker v4: unified approach — all bunkers use terrain hole + bowl. Replaced fixed 90% cutScale with adaptive fixed-distance inset (1.2m = 2 grid cells). Added innerRingScale param to CreateContourMesh so rim width adapts to bunker size. Small bunkers get wider rim that fully covers terrain hole edge. Superseded by v5 (rim too wide, hole too small).
+✅ DONE: 2026-04-10 — Bunker v5: inscribed rectangle terrain hole (40% bbox shrink). Axis-aligned edges = zero grid-snap overshoot. CreateContourMesh reverted to fixed ring scales {1.0, 0.80, 0.50, 0.20}. Small bunkers that can't fit 2 grid cells get no terrain hole (rim covers fully).

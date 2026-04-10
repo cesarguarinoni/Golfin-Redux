@@ -252,6 +252,30 @@ namespace Golfin.CourseImport
         public float z;
     }
 
+    // cart-paths.json — cart path contour mesh data
+    [System.Serializable]
+    public class CartPathsFile
+    {
+        public string schema_version;
+        public int hole_number;
+        public int cart_path_count;
+        public float min_width_m;
+        public CartPathRegionData[] cart_paths;
+    }
+
+    [System.Serializable]
+    public class CartPathRegionData
+    {
+        public int id;
+        public int pixel_count;
+        public ContourPoint[] contour;
+        public ContourPoint[] spine;
+        public float width_m;
+        public AnchorLocal center_local;
+        public BunkerSize size_m;
+        public bool dilated;
+    }
+
     // zones.json — zone grid data for splatmap pipeline
     [System.Serializable]
     public class ZonesData

@@ -104,8 +104,8 @@ Hole 1 aligned with 6 control points, mean residual 0.8m.
 
 **Water shader:** `URPWater/Standard` at `Assets/Art/3D/Props/URPWater/`.
 Color mode Colors, single normal map, edge fade ON, foam/caustics/waves OFF,
-normal speed zeroed, low specular. **BROKEN after DEM changes** — water sunken
-too low. Needs fix in generate-terrain.mjs (water sentinel value issue).
+normal speed zeroed, low specular. Per-vertex terrain-following with -0.1m
+offset, underwater depression only (no shore lip).
 
 **Cart path spine mesh:** Contour polygon → split at farthest points → resample
 both edge chains → average = centerline spine. Unity extrudes fixed-width strip
@@ -121,7 +121,7 @@ scale 0.7, Y position 30. `Mountain.png` texture with transparency.
 - Quadratic surface fit uses only playable zone DEM samples
 
 ### Known Issues
-- **Bunker 7** (2.2m radius): terrain poke-through at rim corners. Needs rethink of rim ring + terrain hole interaction for small bunkers.
+- ~~**Bunker 7** (2.2m radius): terrain poke-through at rim corners~~: ✅ Fixed — increased heightmap from 1025 to 2049 (holes grid 2048×2048, ~0.3m/cell). Small bunkers (shorterAxis<7m) also get depth scaled relative to size. Shingle overlap (v7) kept as belt-and-suspenders for small bunkers.
 - ~~**Water broken**~~: ✅ Fixed — water mesh now samples terrain height at each contour vertex instead of using fixed Y=0.05.
 
 
