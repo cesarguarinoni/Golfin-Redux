@@ -1290,7 +1290,7 @@ namespace Golfin.CourseImport
                     meshGO.transform.localScale = Vector3.one * 1.1f;
                     // Raise mesh above terrain so rim covers hole edge
                     var pos = meshGO.transform.position;
-                    meshGO.transform.position = new Vector3(pos.x, pos.y + 0.39f, pos.z);
+                    meshGO.transform.position = new Vector3(pos.x, pos.y + 0.11f, pos.z);
                 }
                 meshGO.transform.SetParent(bunkersRoot.transform);
 
