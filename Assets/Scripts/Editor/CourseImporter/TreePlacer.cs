@@ -347,9 +347,10 @@ namespace Golfin.CourseImport
                     else
                     {
                         // ---- Standalone tree ----
+                        // Use Object.Instantiate (not PrefabUtility) to break
+                        // the prefab link so LODGroup overrides stick.
                         var entry = activeEntries[entryIdx];
-                        var instance = (GameObject)PrefabUtility
-                            .InstantiatePrefab(entry.prefab);
+                        var instance = Object.Instantiate(entry.prefab);
                         instance.name = $"{entry.name}_{standaloneCount}";
 
                         float y = terrainBaseY + terrainH - SinkOffset;
@@ -429,10 +430,6 @@ namespace Golfin.CourseImport
             lodGroup.fadeMode = LODFadeMode.CrossFade;
             lodGroup.animateCrossFading = true;
 
-            // For prefab instances, record changes as overrides
-            // so Unity doesn't revert them to the prefab's values
-            if (PrefabUtility.IsPartOfPrefabInstance(lodGroup))
-                PrefabUtility.RecordPrefabInstancePropertyModifications(lodGroup);
         }
 
         /// <summary>
