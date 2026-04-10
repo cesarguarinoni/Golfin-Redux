@@ -197,12 +197,30 @@ namespace Golfin.CourseImport
             terrainData.SetTreeInstances(trees.ToArray(), true);
 
             // ---- Unify draw distances ----
-            // Terrain tree system ignores per-prefab LODGroup settings.
-            // These terrain-level settings control ALL trees uniformly.
             terrain.treeDistance = 150f;          // max draw distance (meters)
             terrain.treeBillboardDistance = 80f;  // 3D→billboard transition
             terrain.treeCrossFadeLength = 20f;    // fade band width
             terrain.treeMaximumFullLODCount = 50; // max full-detail trees
+
+            // ---- Normalize LODGroup thresholds across all prototypes ----
+            // Each prefab has different screenRelativeHeight values, causing
+            // trees to pop LODs at different distances. Override them all to
+            // uniform values so transitions happen at the same distance.
+            foreach (var proto in terrainData.treePrototypes)
+            {
+                if (proto.prefab == null) continue;
+                var lodGroup = proto.prefab.GetComponent<LODGroup>();
+                if (lodGroup == null) continue;
+
+                var lods = lodGroup.GetLODs();
+                // Normalize to consistent thresholds
+                if (lods.Length >= 1) lods[0].screenRelativeTransitionHeight = 0.15f;
+                if (lods.Length >= 2) lods[1].screenRelativeTransitionHeight = 0.05f;
+                if (lods.Length >= 3) lods[2].screenRelativeTransitionHeight = 0.01f;
+                lodGroup.SetLODs(lods);
+                lodGroup.fadeMode = LODFadeMode.CrossFade;
+                lodGroup.animateCrossFading = true;
+            }
 
             Debug.Log($"[TreePlacer] Placed {trees.Count} trees " +
                 $"({prototypes.Count} types, {cellSize}m spacing, " +
