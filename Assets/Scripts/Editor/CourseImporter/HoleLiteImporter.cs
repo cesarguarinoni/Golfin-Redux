@@ -1290,7 +1290,7 @@ namespace Golfin.CourseImport
                     meshGO.transform.localScale = Vector3.one * 1.13f;
                     // Raise mesh above terrain so rim covers hole edge
                     var pos = meshGO.transform.position;
-                    meshGO.transform.position = new Vector3(pos.x, pos.y + 0.11f, pos.z);
+                    meshGO.transform.position = new Vector3(pos.x, pos.y + 0.05f, pos.z);
                 }
                 meshGO.transform.SetParent(bunkersRoot.transform);
 
@@ -1377,13 +1377,10 @@ namespace Golfin.CourseImport
                         float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                         y = (terrainBaseY + terrainH) - surfaceY - 0.15f;
                     }
-                    else if (r == rimIdx)  // Rim: at terrain height
+                    else if (r == rimIdx)  // Rim: at terrain height + tiny offset
                     {
                         float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                        // When using skirt, compensate for the +0.11m transform lift
-                        // so the lip sits flush with terrain instead of poking up
-                        float rimOffset = useSkirt ? -0.09f : 0.02f;
-                        y = (terrainBaseY + terrainH) - surfaceY + rimOffset;
+                        y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
                     }
                     else if (r == innerIdx)  // Inner: at terrain height
                     {
