@@ -1377,10 +1377,13 @@ namespace Golfin.CourseImport
                         float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                         y = (terrainBaseY + terrainH) - surfaceY - 0.15f;
                     }
-                    else if (r == rimIdx)  // Rim: at terrain height + tiny offset
+                    else if (r == rimIdx)  // Rim: at terrain height
                     {
                         float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                        y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
+                        // When using skirt, compensate for the +0.11m transform lift
+                        // so the lip sits flush with terrain instead of poking up
+                        float rimOffset = useSkirt ? -0.09f : 0.02f;
+                        y = (terrainBaseY + terrainH) - surfaceY + rimOffset;
                     }
                     else if (r == innerIdx)  // Inner: at terrain height
                     {
