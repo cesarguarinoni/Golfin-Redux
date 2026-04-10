@@ -17,17 +17,22 @@ namespace Golfin.CourseImport
         public GameObject prefab; // loaded asset
         public bool enabled;      // include in placement?
         public float weight;      // relative spawn weight
+        public bool standalone;   // true = instantiate as GameObject; false = terrain tree system
+        public bool hasLODGroup;  // auto-detected from prefab
     }
 
     /// <summary>
     /// Places trees on terrain using zone 5 mask from UHole Lite.
-    /// Uses Unity Terrain tree system (automatic LOD + billboarding).
+    /// Mixed mode: prefabs with LODGroup on root → terrain tree system;
+    /// prefabs without (or forced standalone) → instantiated GameObjects.
     /// </summary>
     public static class TreePlacer
     {
-        // Folder scanned for tree prefabs
-        public const string TreePrefabFolder =
-            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs";
+        // Folders scanned for tree prefabs
+        public static readonly string[] TreePrefabFolders = new string[]
+        {
+            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs",
+        };
 
         // Default enabled prefabs + weights (applied on first scan)
         private static readonly Dictionary<string, float> DefaultWeights =
@@ -38,6 +43,16 @@ namespace Golfin.CourseImport
             { "MESH_JapaneseBlack_01",      0.5f },
             { "Mesh_Metasequoia",           2.0f },
             { "MESH_ScottishPine_01",       2.0f },
+            { "Spruce 1",                   1.5f },
+            { "Spruce 3",                   1.0f },
+        };
+
+        // Prefabs forced standalone even if they have a LODGroup
+        // (particle systems, complex hierarchies that terrain trees strip)
+        private static readonly HashSet<string> ForceStandaloneNames =
+            new HashSet<string>
+        {
+            "Spruce 1", "Spruce 3",
         };
 
         // The dynamic tree palette — populated by ScanPrefabs()
@@ -63,6 +78,9 @@ namespace Golfin.CourseImport
         public static float LOD1Threshold = 0.05f;
         public static float LOD2Threshold = 0.01f;
 
+        // Container name for standalone trees in scene hierarchy
+        private const string StandaloneContainerName = "StandaloneTrees";
+
         // Zones to EXCLUDE from tree placement
         private static readonly HashSet<int> ExcludeZones = new HashSet<int>
         {
@@ -75,47 +93,58 @@ namespace Golfin.CourseImport
         };
 
         /// <summary>
-        /// Scan the prefab folder and populate TreePalette.
-        /// Preserves existing enabled/weight state for prefabs already in the list.
+        /// Scan all prefab folders and populate TreePalette.
+        /// Preserves existing enabled/weight/standalone state for prefabs already in the list.
         /// </summary>
         public static void ScanPrefabs()
         {
-            // Remember current state
             var existing = new Dictionary<string, TreeEntry>();
             foreach (var e in TreePalette)
                 existing[e.path] = e;
 
             TreePalette.Clear();
 
-            string[] guids = AssetDatabase.FindAssets("t:GameObject", new[] { TreePrefabFolder });
-            foreach (string guid in guids)
+            foreach (string folder in TreePrefabFolders)
             {
-                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
-                if (!assetPath.EndsWith(".prefab")) continue;
+                if (!AssetDatabase.IsValidFolder(folder)) continue;
 
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
-                if (prefab == null) continue;
-
-                string fileName = Path.GetFileNameWithoutExtension(assetPath);
-
-                // Preserve previous state if it exists
-                if (existing.TryGetValue(assetPath, out var prev))
+                string[] guids = AssetDatabase.FindAssets("t:GameObject",
+                    new[] { folder });
+                foreach (string guid in guids)
                 {
-                    prev.prefab = prefab;
-                    TreePalette.Add(prev);
-                }
-                else
-                {
-                    // New entry — use defaults if available, otherwise disabled weight 1
-                    bool isDefault = DefaultWeights.TryGetValue(fileName, out float w);
-                    TreePalette.Add(new TreeEntry
+                    string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                    if (!assetPath.EndsWith(".prefab")) continue;
+
+                    var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+                    if (prefab == null) continue;
+
+                    string fileName = Path.GetFileNameWithoutExtension(assetPath);
+
+                    // Auto-detect LODGroup on root (not children — terrain trees
+                    // need it on root to work)
+                    bool hasRootLOD = prefab.GetComponent<LODGroup>() != null;
+                    bool forceStandalone = ForceStandaloneNames.Contains(fileName);
+
+                    if (existing.TryGetValue(assetPath, out var prev))
                     {
-                        path = assetPath,
-                        name = fileName,
-                        prefab = prefab,
-                        enabled = isDefault,
-                        weight = isDefault ? w : 1f,
-                    });
+                        prev.prefab = prefab;
+                        prev.hasLODGroup = hasRootLOD;
+                        TreePalette.Add(prev);
+                    }
+                    else
+                    {
+                        bool isDefault = DefaultWeights.TryGetValue(fileName, out float w);
+                        TreePalette.Add(new TreeEntry
+                        {
+                            path = assetPath,
+                            name = fileName,
+                            prefab = prefab,
+                            enabled = isDefault,
+                            weight = isDefault ? w : 1f,
+                            hasLODGroup = hasRootLOD,
+                            standalone = forceStandalone || !hasRootLOD,
+                        });
+                    }
                 }
             }
 
@@ -140,9 +169,9 @@ namespace Golfin.CourseImport
         /// </summary>
         public static void PlaceTrees(
             Terrain terrain, float terrainBaseY,
-            string exportPath, string zonesJsonPath)
+            string exportPath, string zonesJsonPath,
+            Transform parentRoot = null)
         {
-            // Load tree-zones.json
             string tzPath = Path.Combine(exportPath, "tree-zones.json");
             if (!File.Exists(tzPath))
             {
@@ -150,9 +179,8 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            string tzJson = File.ReadAllText(tzPath);
-            var tzData = JsonUtility.FromJson<TreeZonesFile>(tzJson);
-
+            var tzData = JsonUtility.FromJson<TreeZonesFile>(
+                File.ReadAllText(tzPath));
             if (tzData.tree_region_count == 0 ||
                 string.IsNullOrEmpty(tzData.mask_base64))
             {
@@ -160,18 +188,16 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            // Decode binary mask
             byte[] mask = System.Convert.FromBase64String(tzData.mask_base64);
             int maskW = tzData.mask_width;
             int maskH = tzData.mask_height;
 
-            // Load zone grid for exclusion checks
             byte[] zoneGrid = null;
             int zoneW = 0, zoneH = 0;
             if (File.Exists(zonesJsonPath))
             {
-                string zJson = File.ReadAllText(zonesJsonPath);
-                var zData = JsonUtility.FromJson<ZonesData>(zJson);
+                var zData = JsonUtility.FromJson<ZonesData>(
+                    File.ReadAllText(zonesJsonPath));
                 zoneGrid = System.Convert.FromBase64String(zData.grid);
                 zoneW = zData.source_dimensions.width;
                 zoneH = zData.source_dimensions.height;
@@ -191,15 +217,36 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            // ---- Register tree prototypes ----
-            var prototypes = new List<TreePrototype>();
-            foreach (var entry in activeEntries)
-            {
-                prototypes.Add(new TreePrototype { prefab = entry.prefab });
-            }
-            terrainData.treePrototypes = prototypes.ToArray();
+            // ---- Split into terrain vs standalone ----
+            var terrainEntries = new List<TreeEntry>();
+            var standaloneEntries = new List<TreeEntry>();
+            // Maps from activeEntries index → terrain prototype index (or -1)
+            var terrainProtoMap = new int[activeEntries.Count];
 
-            // Build cumulative weight array
+            for (int i = 0; i < activeEntries.Count; i++)
+            {
+                if (activeEntries[i].standalone)
+                {
+                    terrainProtoMap[i] = -1;
+                    standaloneEntries.Add(activeEntries[i]);
+                }
+                else
+                {
+                    terrainProtoMap[i] = terrainEntries.Count;
+                    terrainEntries.Add(activeEntries[i]);
+                }
+            }
+
+            // Register terrain tree prototypes
+            if (terrainEntries.Count > 0)
+            {
+                var protos = terrainEntries
+                    .Select(e => new TreePrototype { prefab = e.prefab })
+                    .ToArray();
+                terrainData.treePrototypes = protos;
+            }
+
+            // Build cumulative weight array (over ALL active entries)
             float totalWeight = 0;
             var cumulativeWeights = new float[activeEntries.Count];
             for (int i = 0; i < activeEntries.Count; i++)
@@ -208,9 +255,20 @@ namespace Golfin.CourseImport
                 cumulativeWeights[i] = totalWeight;
             }
 
+            // Standalone container
+            GameObject standaloneContainer = null;
+            if (standaloneEntries.Count > 0)
+            {
+                standaloneContainer = new GameObject(StandaloneContainerName);
+                if (parentRoot != null)
+                    standaloneContainer.transform.SetParent(parentRoot);
+            }
+
             // ---- Poisson disk sampling (grid-jitter approximation) ----
-            var trees = new List<TreeInstance>();
-            var rng = new System.Random(42); // fixed seed for reproducibility
+            var terrainTrees = new List<TreeInstance>();
+            int standaloneCount = 0;
+            var rng = new System.Random(42);
+            var typeCounts = new int[activeEntries.Count];
 
             float cellSize = MinSpacing;
             int cellsX = Mathf.FloorToInt(tWidth / cellSize);
@@ -220,26 +278,21 @@ namespace Golfin.CourseImport
             {
                 for (int cx = 0; cx < cellsX; cx++)
                 {
-                    // Jittered position within cell
                     float worldX = (cx + (float)rng.NextDouble()) * cellSize;
                     float worldZ = (cz + (float)rng.NextDouble()) * cellSize;
 
-                    // Normalized terrain coordinates (0-1)
                     float nx = worldX / tWidth;
                     float nz = worldZ / tLength;
-
                     if (nx < 0 || nx >= 1 || nz < 0 || nz >= 1) continue;
 
-                    // Check tree mask
-                    // 90° CCW rotation matching splatmap pipeline:
-                    // terrain X fraction → zone normY, terrain Z fraction → zone normX
+                    // Check tree mask (90° CCW rotation matching splatmap pipeline)
                     int maskX = Mathf.Clamp(
                         Mathf.FloorToInt(nz * maskW), 0, maskW - 1);
                     int maskY = Mathf.Clamp(
                         Mathf.FloorToInt(nx * maskH), 0, maskH - 1);
                     if (mask[maskY * maskW + maskX] == 0) continue;
 
-                    // Check zone grid — skip excluded zones
+                    // Zone grid exclusion
                     if (zoneGrid != null)
                     {
                         int zx = Mathf.Clamp(
@@ -252,45 +305,71 @@ namespace Golfin.CourseImport
 
                     // Pick prototype (weighted random)
                     float roll = (float)rng.NextDouble() * totalWeight;
-                    int protoIdx = 0;
+                    int entryIdx = 0;
                     for (int i = 0; i < cumulativeWeights.Length; i++)
                     {
                         if (roll <= cumulativeWeights[i])
                         {
-                            protoIdx = i;
+                            entryIdx = i;
                             break;
                         }
                     }
 
-                    // Random scale + rotation
                     float scale = ScaleMin +
                         (float)rng.NextDouble() * (ScaleMax - ScaleMin);
-                    float rotation = (float)rng.NextDouble() * 360f
-                        * Mathf.Deg2Rad;
+                    float rotDeg = (float)rng.NextDouble() * 360f;
 
-                    // Sample terrain height and apply sink offset so
-                    // trunk bases don't float on slopes/ledges.
-                    // Position.y is normalized [0-1] relative to terrainData.size.y.
-                    Vector3 worldPos = new Vector3(worldX + terrain.transform.position.x,
-                        0f, worldZ + terrain.transform.position.z);
+                    // Sample terrain height
+                    Vector3 worldPos = new Vector3(
+                        worldX + terrain.transform.position.x,
+                        0f,
+                        worldZ + terrain.transform.position.z);
                     float terrainH = terrain.SampleHeight(worldPos);
-                    float ny = Mathf.Max(0f, (terrainH - SinkOffset) / terrainData.size.y);
 
-                    trees.Add(new TreeInstance
+                    typeCounts[entryIdx]++;
+
+                    if (terrainProtoMap[entryIdx] >= 0)
                     {
-                        position = new Vector3(nx, ny, nz),
-                        widthScale = scale,
-                        heightScale = scale,
-                        rotation = rotation,
-                        color = Color.white,
-                        lightmapColor = Color.white,
-                        prototypeIndex = protoIdx,
-                    });
+                        // ---- Terrain tree ----
+                        float ny = Mathf.Max(0f,
+                            (terrainH - SinkOffset) / terrainData.size.y);
+                        terrainTrees.Add(new TreeInstance
+                        {
+                            position = new Vector3(nx, ny, nz),
+                            widthScale = scale,
+                            heightScale = scale,
+                            rotation = rotDeg * Mathf.Deg2Rad,
+                            color = Color.white,
+                            lightmapColor = Color.white,
+                            prototypeIndex = terrainProtoMap[entryIdx],
+                        });
+                    }
+                    else
+                    {
+                        // ---- Standalone tree ----
+                        var entry = activeEntries[entryIdx];
+                        var instance = (GameObject)PrefabUtility
+                            .InstantiatePrefab(entry.prefab);
+                        instance.name = $"{entry.name}_{standaloneCount}";
+
+                        float y = terrainBaseY + terrainH - SinkOffset;
+                        instance.transform.position = new Vector3(
+                            worldPos.x, y, worldPos.z);
+                        instance.transform.rotation =
+                            Quaternion.Euler(0f, rotDeg, 0f);
+                        instance.transform.localScale = Vector3.one * scale;
+
+                        if (standaloneContainer != null)
+                            instance.transform.SetParent(
+                                standaloneContainer.transform);
+
+                        standaloneCount++;
+                    }
                 }
             }
 
-            // snap=false so our computed Y with sink offset is used
-            terrainData.SetTreeInstances(trees.ToArray(), false);
+            // Apply terrain trees
+            terrainData.SetTreeInstances(terrainTrees.ToArray(), false);
 
             // ---- Unify draw distances ----
             terrain.treeDistance = DrawDistance;
@@ -298,7 +377,7 @@ namespace Golfin.CourseImport
             terrain.treeCrossFadeLength = CrossFadeLength;
             terrain.treeMaximumFullLODCount = MaxFullLODCount;
 
-            // ---- Normalize LODGroup thresholds across all prototypes ----
+            // ---- Normalize LODGroup thresholds for terrain prototypes ----
             foreach (var proto in terrainData.treePrototypes)
             {
                 if (proto.prefab == null) continue;
@@ -314,14 +393,32 @@ namespace Golfin.CourseImport
                 lodGroup.animateCrossFading = true;
             }
 
-            // Build per-type count summary
-            var typeCounts = new int[activeEntries.Count];
-            foreach (var t in trees) typeCounts[t.prototypeIndex]++;
+            // Summary
             var summary = string.Join(", ",
-                activeEntries.Select((e, i) => $"{e.name}={typeCounts[i]}"));
+                activeEntries.Select((e, i) =>
+                    $"{e.name}={typeCounts[i]}{(e.standalone ? "(GO)" : "")}"));
 
-            Debug.Log($"[TreePlacer] Placed {trees.Count} trees " +
-                $"({activeEntries.Count} types, {cellSize}m spacing, seed=42)\n  {summary}");
+            Debug.Log($"[TreePlacer] Placed {terrainTrees.Count} terrain + " +
+                $"{standaloneCount} standalone = " +
+                $"{terrainTrees.Count + standaloneCount} total " +
+                $"({activeEntries.Count} types, {cellSize}m spacing, seed=42)" +
+                $"\n  {summary}");
+        }
+
+        /// <summary>
+        /// Remove standalone tree container from the scene.
+        /// Called before re-placing trees.
+        /// </summary>
+        public static void CleanupStandaloneTrees()
+        {
+            // Find all containers including inactive
+            foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+            {
+                if (go.name == StandaloneContainerName && go.scene.isLoaded)
+                {
+                    Object.DestroyImmediate(go);
+                }
+            }
         }
 
         [MenuItem("GOLFIN/Import Trees (Current Hole)")]
@@ -334,14 +431,11 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            // Detect hole number from active scene name (format: Hole_01)
             string sceneName = UnityEditor.SceneManagement.EditorSceneManager
                 .GetActiveScene().name;
             int holeNumber = -1;
             if (sceneName.StartsWith("Hole_") && sceneName.Length >= 7)
-            {
                 int.TryParse(sceneName.Substring(5, 2), out holeNumber);
-            }
 
             if (holeNumber < 1 || holeNumber > 18)
             {
@@ -361,15 +455,27 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            // Clear existing trees first
-            terrain.terrainData.SetTreeInstances(
-                new TreeInstance[0], false);
+            // Clear terrain trees
+            terrain.terrainData.SetTreeInstances(new TreeInstance[0], false);
+
+            // Clear standalone trees
+            CleanupStandaloneTrees();
+
+            // Find HoleRoot as parent
+            Transform parentRoot = null;
+            foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+            {
+                if (go.name == "HoleRoot" && go.scene.isLoaded)
+                {
+                    parentRoot = go.transform;
+                    break;
+                }
+            }
 
             float terrainBaseY = terrain.transform.position.y;
             string zonesPath = Path.Combine(exportPath, "zones.json");
-            PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath);
+            PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot);
 
-            // Save scene so trees persist
             var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
             Debug.Log($"[TreePlacer] Scene saved: {scene.path}");

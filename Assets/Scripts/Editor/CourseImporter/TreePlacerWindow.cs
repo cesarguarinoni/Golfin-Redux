@@ -16,7 +16,7 @@ namespace Golfin.CourseImport
         public static void ShowWindow()
         {
             var window = GetWindow<TreePlacerWindow>("Tree Settings");
-            window.minSize = new Vector2(340, 500);
+            window.minSize = new Vector2(420, 520);
         }
 
         private void OnEnable()
@@ -30,7 +30,7 @@ namespace Golfin.CourseImport
             // ---- Tree Palette ----
             GUILayout.Label("Tree Palette", EditorStyles.boldLabel);
 
-            if (GUILayout.Button("Rescan Prefab Folder", GUILayout.Height(20)))
+            if (GUILayout.Button("Rescan Prefab Folders", GUILayout.Height(20)))
                 TreePlacer.ScanPrefabs();
 
             EditorGUILayout.Space(4);
@@ -39,12 +39,14 @@ namespace Golfin.CourseImport
             EditorGUILayout.BeginHorizontal();
             GUILayout.Label("On", EditorStyles.miniLabel, GUILayout.Width(24));
             GUILayout.Label("Prefab", EditorStyles.miniLabel, GUILayout.MinWidth(140));
-            GUILayout.Label("Weight", EditorStyles.miniLabel, GUILayout.Width(60));
+            GUILayout.Label("Weight", EditorStyles.miniLabel, GUILayout.Width(50));
+            GUILayout.Label("GO", EditorStyles.miniLabel, GUILayout.Width(24));
+            GUILayout.Label("LOD", EditorStyles.miniLabel, GUILayout.Width(28));
             EditorGUILayout.EndHorizontal();
 
             // Scrollable list
             treeScrollPos = EditorGUILayout.BeginScrollView(treeScrollPos,
-                GUILayout.MinHeight(150), GUILayout.MaxHeight(300));
+                GUILayout.MinHeight(150), GUILayout.MaxHeight(350));
 
             foreach (var entry in TreePlacer.TreePalette)
             {
@@ -52,15 +54,20 @@ namespace Golfin.CourseImport
 
                 entry.enabled = EditorGUILayout.Toggle(entry.enabled, GUILayout.Width(20));
 
-                // Prefab name — dimmed if disabled
-                var style = entry.enabled ? EditorStyles.label : EditorStyles.miniLabel;
-                GUILayout.Label(entry.name, style, GUILayout.MinWidth(140));
+                var nameStyle = entry.enabled ? EditorStyles.label : EditorStyles.miniLabel;
+                GUILayout.Label(entry.name, nameStyle, GUILayout.MinWidth(140));
 
-                // Weight — only editable when enabled
                 EditorGUI.BeginDisabledGroup(!entry.enabled);
-                entry.weight = EditorGUILayout.FloatField(entry.weight, GUILayout.Width(60));
+                entry.weight = EditorGUILayout.FloatField(entry.weight, GUILayout.Width(50));
                 if (entry.weight < 0f) entry.weight = 0f;
+
+                // Standalone toggle (GO = GameObject)
+                entry.standalone = EditorGUILayout.Toggle(entry.standalone, GUILayout.Width(20));
                 EditorGUI.EndDisabledGroup();
+
+                // LOD indicator (read-only)
+                GUILayout.Label(entry.hasLODGroup ? "\u2713" : "\u2013",
+                    EditorStyles.centeredGreyMiniLabel, GUILayout.Width(24));
 
                 EditorGUILayout.EndHorizontal();
             }
@@ -69,7 +76,14 @@ namespace Golfin.CourseImport
 
             // Summary
             var active = TreePlacer.GetActiveEntries();
-            EditorGUILayout.LabelField($"{active.Count} enabled / {TreePlacer.TreePalette.Count} total",
+            int terrainCount = 0, standaloneCount = 0;
+            foreach (var e in active)
+            {
+                if (e.standalone) standaloneCount++;
+                else terrainCount++;
+            }
+            EditorGUILayout.LabelField(
+                $"{active.Count} enabled ({terrainCount} terrain, {standaloneCount} standalone) / {TreePlacer.TreePalette.Count} total",
                 EditorStyles.centeredGreyMiniLabel);
 
             EditorGUILayout.Space(10);
@@ -102,8 +116,9 @@ namespace Golfin.CourseImport
 
             // ---- Actions ----
             EditorGUILayout.HelpBox(
-                "Re-import clears existing trees and places new ones using the " +
-                "palette and settings above. Session-only (reset on Unity restart).",
+                "GO = standalone GameObject (particles, complex hierarchy).\n" +
+                "LOD = \u2713 if prefab has LODGroup on root.\n" +
+                "Prefabs without root LODGroup auto-default to standalone.",
                 MessageType.Info);
 
             EditorGUILayout.Space(5);

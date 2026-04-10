@@ -232,7 +232,7 @@ namespace Golfin.CourseImport
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Placing trees...", 0.87f);
                 string zonesJsonExportPath = Path.Combine(exportPath, "zones.json");
                 TreePlacer.PlaceTrees(terrain, terrainGO.transform.position.y,
-                    exportPath, zonesJsonExportPath);
+                    exportPath, zonesJsonExportPath, holeRoot.transform);
 
                 // Apply skybox
                 var skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Skybox/Sky-2.mat");
