@@ -196,8 +196,18 @@ namespace Golfin.CourseImport
 
             terrainData.SetTreeInstances(trees.ToArray(), true);
 
+            // ---- Unify draw distances ----
+            // Terrain tree system ignores per-prefab LODGroup settings.
+            // These terrain-level settings control ALL trees uniformly.
+            terrain.treeDistance = 150f;          // max draw distance (meters)
+            terrain.treeBillboardDistance = 80f;  // 3D→billboard transition
+            terrain.treeCrossFadeLength = 20f;    // fade band width
+            terrain.treeMaximumFullLODCount = 50; // max full-detail trees
+
             Debug.Log($"[TreePlacer] Placed {trees.Count} trees " +
-                $"({prototypes.Count} types, {cellSize}m spacing, seed=42)");
+                $"({prototypes.Count} types, {cellSize}m spacing, " +
+                $"seed=42, draw={terrain.treeDistance}m, " +
+                $"billboard={terrain.treeBillboardDistance}m)");
         }
 
         [MenuItem("GOLFIN/Place Trees (Current Terrain)")]
