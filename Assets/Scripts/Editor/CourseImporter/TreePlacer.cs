@@ -417,19 +417,21 @@ namespace Golfin.CourseImport
         private static void NormalizeLODGroup(LODGroup lodGroup)
         {
             var lods = lodGroup.GetLODs();
+            if (lods.Length == 0) return;
 
-            // Set the last LOD's cull threshold to match DrawDistance.
-            // screenRelativeTransitionHeight ≈ objectSize / (2 * distance * tan(fov/2))
-            // For a ~15m tree at 150m with 60° fov: ~15/(2*150*0.577) ≈ 0.087
-            // We use the configured thresholds + add a cull LOD at the end.
-            if (lods.Length >= 1) lods[0].screenRelativeTransitionHeight = LOD0Threshold;
-            if (lods.Length >= 2) lods[1].screenRelativeTransitionHeight = LOD1Threshold;
-            if (lods.Length >= 3) lods[2].screenRelativeTransitionHeight = LOD2Threshold;
+            // Distribute thresholds evenly from LOD0Threshold down to LOD2Threshold
+            // across ALL LOD levels. Must be monotonically decreasing or
+            // SetLODs silently rejects the whole array.
+            for (int i = 0; i < lods.Length; i++)
+            {
+                float t = (lods.Length == 1) ? 0f : (float)i / (lods.Length - 1);
+                lods[i].screenRelativeTransitionHeight =
+                    Mathf.Lerp(LOD0Threshold, LOD2Threshold, t);
+            }
 
             lodGroup.SetLODs(lods);
             lodGroup.fadeMode = LODFadeMode.CrossFade;
             lodGroup.animateCrossFading = true;
-
         }
 
         /// <summary>
