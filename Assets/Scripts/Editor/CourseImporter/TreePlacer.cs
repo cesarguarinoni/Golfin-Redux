@@ -423,8 +423,7 @@ namespace Golfin.CourseImport
 
         // ---- Save / Load Settings ----
 
-        private const string SettingsPath =
-            "Assets/Scripts/Editor/CourseImporter/TreePlacerSettings.json";
+        private const string SettingsFolder = "Assets/Settings/TreePresets";
 
         [System.Serializable]
         private class SavedEntry
@@ -452,8 +451,24 @@ namespace Golfin.CourseImport
             public SavedEntry[] entries;
         }
 
+        /// <summary>
+        /// Save current settings to a user-chosen JSON file.
+        /// </summary>
         public static void SaveSettings()
         {
+            // Ensure folder exists
+            string absFolder = Path.Combine(
+                Path.GetDirectoryName(Application.dataPath), SettingsFolder);
+            if (!Directory.Exists(absFolder))
+            {
+                Directory.CreateDirectory(absFolder);
+                AssetDatabase.Refresh();
+            }
+
+            string savePath = EditorUtility.SaveFilePanel(
+                "Save Tree Preset", absFolder, "TreePreset", "json");
+            if (string.IsNullOrEmpty(savePath)) return;
+
             var data = new SavedSettings
             {
                 minSpacing = MinSpacing,
@@ -476,26 +491,33 @@ namespace Golfin.CourseImport
                 }).ToArray(),
             };
 
-            string json = JsonUtility.ToJson(data, true);
-            File.WriteAllText(
-                Path.Combine(Path.GetDirectoryName(Application.dataPath), SettingsPath),
-                json);
-            AssetDatabase.ImportAsset(SettingsPath);
-            Debug.Log($"[TreePlacer] Settings saved to {SettingsPath}");
+            File.WriteAllText(savePath, JsonUtility.ToJson(data, true));
+            AssetDatabase.Refresh();
+            Debug.Log($"[TreePlacer] Preset saved: {Path.GetFileName(savePath)}");
         }
 
+        /// <summary>
+        /// Load settings from a user-chosen JSON file.
+        /// </summary>
         public static void LoadSettings()
         {
-            string fullPath = Path.Combine(
-                Path.GetDirectoryName(Application.dataPath), SettingsPath);
-            if (!File.Exists(fullPath))
+            string absFolder = Path.Combine(
+                Path.GetDirectoryName(Application.dataPath), SettingsFolder);
+            if (!Directory.Exists(absFolder))
+                absFolder = Path.GetDirectoryName(Application.dataPath);
+
+            string loadPath = EditorUtility.OpenFilePanel(
+                "Load Tree Preset", absFolder, "json");
+            if (string.IsNullOrEmpty(loadPath)) return;
+
+            if (!File.Exists(loadPath))
             {
-                Debug.LogWarning($"[TreePlacer] No settings file found at {SettingsPath}");
+                Debug.LogWarning($"[TreePlacer] File not found: {loadPath}");
                 return;
             }
 
             var data = JsonUtility.FromJson<SavedSettings>(
-                File.ReadAllText(fullPath));
+                File.ReadAllText(loadPath));
 
             MinSpacing = data.minSpacing;
             ScaleMin = data.scaleMin;
@@ -509,7 +531,6 @@ namespace Golfin.CourseImport
             LOD1Threshold = data.lod1;
             LOD2Threshold = data.lod2;
 
-            // Apply saved palette state
             if (data.entries != null)
             {
                 var lookup = new Dictionary<string, SavedEntry>();
@@ -527,7 +548,7 @@ namespace Golfin.CourseImport
                 }
             }
 
-            Debug.Log($"[TreePlacer] Settings loaded from {SettingsPath}");
+            Debug.Log($"[TreePlacer] Preset loaded: {Path.GetFileName(loadPath)}");
         }
 
         [MenuItem("Trees/Import Trees (Current Hole)")]
