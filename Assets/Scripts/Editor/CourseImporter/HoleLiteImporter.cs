@@ -1277,7 +1277,6 @@ namespace Golfin.CourseImport
                 // ── Bowl mesh ──
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
-                if (isSmall) surfaceY += 0.39f; // raise small bunker mesh origin
                 // Small bunkers: shallower bowl (max 1.0m)
                 float bowlDepth = isSmall
                     ? Mathf.Max(Mathf.Min(defaultDepth, 1.0f), 0.3f)
@@ -1286,7 +1285,13 @@ namespace Golfin.CourseImport
                 var meshGO = CreateContourMesh(bunker.id, worldContour,
                     centroidX, centroidZ, surfaceY, bowlDepth,
                     sandMat, terrain, terrainBaseY, isSmall);
-                if (isSmall) meshGO.transform.localScale = Vector3.one * 1.1f;
+                if (isSmall)
+                {
+                    meshGO.transform.localScale = Vector3.one * 1.1f;
+                    // Raise mesh above terrain so rim covers hole edge
+                    var pos = meshGO.transform.position;
+                    meshGO.transform.position = new Vector3(pos.x, pos.y + 0.39f, pos.z);
+                }
                 meshGO.transform.SetParent(bunkersRoot.transform);
 
                 var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
