@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-09 (evening)
+**Last Updated:** 2026-04-10 (evening)
 
 ## Current Status
 
@@ -13,7 +13,7 @@
 | Balls Inventory | ✅ Phase H complete |
 | Items Inventory | ✅ Phase I complete |
 | Bags Inventory | ✅ Phase J complete |
-| 3D Course Pipeline | ✅ Phase K prototype complete — Hole 1 walkable with DEM terrain, water shader, mountains |
+| 3D Course Pipeline | ✅ Phase K prototype complete — Hole 1 with DEM terrain, water, mountains, trees, shadows |
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
@@ -125,6 +125,23 @@ scale 0.7, Y position 30. `Mountain.png` texture with transparency.
 - ~~**Water broken**~~: ✅ Fixed — water mesh now samples terrain height at each contour vertex instead of using fixed Y=0.05.
 
 
+
+### Session 2026-04-10
+
+**Completed:**
+- Tree Placement System (full pipeline): export tree-zones.json from UHole Lite + TreePlacer.cs in Unity
+- Mixed mode: terrain trees (LODGroup → billboard/batch) + standalone GameObjects (particles, complex hierarchy)
+- Tree Settings editor window (Trees > Tree Settings): palette with enable/weight/standalone per prefab, filter (Both/Terrain/Standalone), placement params, draw distances, LOD thresholds
+- Save/Load Presets (manual, named JSON files) + session auto-persistence across Play mode
+- Directional light & shadows: soft shadows, Mixed bake, 100m distance, URP pipeline check
+- Fixed floating tee markers and zone mesh Y-offsets (0.08m → 0.02m) exposed by shadows
+- Tree sink offset (0.3m default) to prevent floating trunks on slopes
+- Trees decoupled from hole import (separate Trees menu)
+
+**Next:**
+- Visual polish pass on trees (tweak presets, density per hole)
+- Remaining 17 holes GeoAlign + import
+- Tree/foliage coverage for steep terrain and OB areas
 
 ---
 
