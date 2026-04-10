@@ -172,12 +172,57 @@ namespace Golfin.CourseImport
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Setting up camera...", 0.8f);
                 CreateWalkCamera(anchors, terrain, terrainGO.transform);
 
+                // ---- Directional Light (Sun) ----
                 var lightGO = new GameObject("Directional Light");
                 var light = lightGO.AddComponent<Light>();
                 light.type = LightType.Directional;
-                light.color = new Color(1f, 0.96f, 0.84f);
-                light.intensity = 1.0f;
-                lightGO.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+
+                // Warm sunlight color — slightly less saturated than before
+                light.color = new Color(1f, 0.96f, 0.88f);
+                light.intensity = 1.2f;
+
+                // Sun position: 45° altitude, 135° azimuth (SE → NW shadows)
+                // Simulates mid-morning sun at Lomond CC (~34.9°N latitude)
+                lightGO.transform.rotation = Quaternion.Euler(45f, 135f, 0f);
+
+                // Shadows
+                light.shadows = LightShadows.Soft;
+                light.shadowStrength = 0.7f;
+                light.shadowBias = 0.05f;
+                light.shadowNormalBias = 0.4f;
+                light.shadowNearPlane = 0.2f;
+
+                // Light mode: Mixed — allows baking later while keeping
+                // real-time shadows for dynamic objects (ball, character)
+                light.lightmapBakeType = LightmapBakeType.Mixed;
+
+                // Shadow distance — covers playable area without wasting budget
+                QualitySettings.shadowDistance = 100f;
+
+                // Terrain shadow casting
+                terrainComp.shadowCastingMode =
+                    UnityEngine.Rendering.ShadowCastingMode.On;
+
+                // URP pipeline shadow distance check
+                var pipelineAsset = UnityEngine.Rendering.GraphicsSettings
+                    .currentRenderPipeline
+                    as UnityEngine.Rendering.Universal
+                       .UniversalRenderPipelineAsset;
+                if (pipelineAsset != null)
+                {
+                    var sdField = pipelineAsset.GetType().GetProperty(
+                        "shadowDistance");
+                    if (sdField != null)
+                    {
+                        float pipelineShadowDist = (float)sdField.GetValue(
+                            pipelineAsset);
+                        if (pipelineShadowDist < 100f)
+                            Debug.LogWarning(
+                                "[HoleLiteImporter] URP shadow distance is " +
+                                $"{pipelineShadowDist}m — shadows will clip " +
+                                "before 100m. Increase in URP Asset > Shadows.");
+                    }
+                }
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Placing mountains...", 0.85f);
                 PlaceMountainBackdrop(terrain, terrainGO.transform.position.y,
