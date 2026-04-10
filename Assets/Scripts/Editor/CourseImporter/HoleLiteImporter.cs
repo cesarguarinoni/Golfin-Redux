@@ -1243,7 +1243,7 @@ namespace Golfin.CourseImport
                 bool isSmall = shorterAxis < 7.0f;
 
                 // Small: dilated cut (105%) + skirt ring. Large: original 90% inward cut.
-                float cutScale = isSmall ? 1.10f : 0.90f;
+                float cutScale = isSmall ? 1.05f : 0.90f;
                 var cutContour = new Vector2[worldContour.Length];
                 for (int i = 0; i < worldContour.Length; i++)
                 {
@@ -1286,6 +1286,7 @@ namespace Golfin.CourseImport
                 var meshGO = CreateContourMesh(bunker.id, worldContour,
                     centroidX, centroidZ, surfaceY, bowlDepth,
                     sandMat, terrain, terrainBaseY, isSmall);
+                if (isSmall) meshGO.transform.localScale = Vector3.one * 1.1f;
                 meshGO.transform.SetParent(bunkersRoot.transform);
 
                 var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
