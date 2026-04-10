@@ -10,21 +10,79 @@ namespace Golfin.CourseImport
     /// </summary>
     public class TreePlacerWindow : EditorWindow
     {
+        private Vector2 treeScrollPos;
+
         [MenuItem("GOLFIN/Tree Settings")]
         public static void ShowWindow()
         {
             var window = GetWindow<TreePlacerWindow>("Tree Settings");
-            window.minSize = new Vector2(300, 380);
+            window.minSize = new Vector2(340, 500);
+        }
+
+        private void OnEnable()
+        {
+            if (TreePlacer.TreePalette.Count == 0)
+                TreePlacer.ScanPrefabs();
         }
 
         private void OnGUI()
         {
+            // ---- Tree Palette ----
+            GUILayout.Label("Tree Palette", EditorStyles.boldLabel);
+
+            if (GUILayout.Button("Rescan Prefab Folder", GUILayout.Height(20)))
+                TreePlacer.ScanPrefabs();
+
+            EditorGUILayout.Space(4);
+
+            // Column headers
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label("On", EditorStyles.miniLabel, GUILayout.Width(24));
+            GUILayout.Label("Prefab", EditorStyles.miniLabel, GUILayout.MinWidth(140));
+            GUILayout.Label("Weight", EditorStyles.miniLabel, GUILayout.Width(60));
+            EditorGUILayout.EndHorizontal();
+
+            // Scrollable list
+            treeScrollPos = EditorGUILayout.BeginScrollView(treeScrollPos,
+                GUILayout.MinHeight(150), GUILayout.MaxHeight(300));
+
+            foreach (var entry in TreePlacer.TreePalette)
+            {
+                EditorGUILayout.BeginHorizontal();
+
+                entry.enabled = EditorGUILayout.Toggle(entry.enabled, GUILayout.Width(20));
+
+                // Prefab name — dimmed if disabled
+                var style = entry.enabled ? EditorStyles.label : EditorStyles.miniLabel;
+                GUILayout.Label(entry.name, style, GUILayout.MinWidth(140));
+
+                // Weight — only editable when enabled
+                EditorGUI.BeginDisabledGroup(!entry.enabled);
+                entry.weight = EditorGUILayout.FloatField(entry.weight, GUILayout.Width(60));
+                if (entry.weight < 0f) entry.weight = 0f;
+                EditorGUI.EndDisabledGroup();
+
+                EditorGUILayout.EndHorizontal();
+            }
+
+            EditorGUILayout.EndScrollView();
+
+            // Summary
+            var active = TreePlacer.GetActiveEntries();
+            EditorGUILayout.LabelField($"{active.Count} enabled / {TreePlacer.TreePalette.Count} total",
+                EditorStyles.centeredGreyMiniLabel);
+
+            EditorGUILayout.Space(10);
+
+            // ---- Placement ----
             GUILayout.Label("Placement", EditorStyles.boldLabel);
             TreePlacer.MinSpacing = EditorGUILayout.FloatField("Min Spacing (m)", TreePlacer.MinSpacing);
             TreePlacer.ScaleMin = EditorGUILayout.FloatField("Scale Min", TreePlacer.ScaleMin);
             TreePlacer.ScaleMax = EditorGUILayout.FloatField("Scale Max", TreePlacer.ScaleMax);
 
             EditorGUILayout.Space(10);
+
+            // ---- Draw Distances ----
             GUILayout.Label("Draw Distances", EditorStyles.boldLabel);
             TreePlacer.DrawDistance = EditorGUILayout.FloatField("Max Draw Distance (m)", TreePlacer.DrawDistance);
             TreePlacer.BillboardDistance = EditorGUILayout.FloatField("Billboard Distance (m)", TreePlacer.BillboardDistance);
@@ -32,15 +90,19 @@ namespace Golfin.CourseImport
             TreePlacer.MaxFullLODCount = EditorGUILayout.IntField("Max Full LOD Count", TreePlacer.MaxFullLODCount);
 
             EditorGUILayout.Space(10);
+
+            // ---- LOD Thresholds ----
             GUILayout.Label("LOD Thresholds (screen %)", EditorStyles.boldLabel);
-            TreePlacer.LOD0Threshold = EditorGUILayout.Slider("LOD 0 → 1", TreePlacer.LOD0Threshold, 0.01f, 0.5f);
-            TreePlacer.LOD1Threshold = EditorGUILayout.Slider("LOD 1 → 2", TreePlacer.LOD1Threshold, 0.005f, 0.2f);
-            TreePlacer.LOD2Threshold = EditorGUILayout.Slider("LOD 2 → Cull", TreePlacer.LOD2Threshold, 0.001f, 0.1f);
+            TreePlacer.LOD0Threshold = EditorGUILayout.Slider("LOD 0 \u2192 1", TreePlacer.LOD0Threshold, 0.01f, 0.5f);
+            TreePlacer.LOD1Threshold = EditorGUILayout.Slider("LOD 1 \u2192 2", TreePlacer.LOD1Threshold, 0.005f, 0.2f);
+            TreePlacer.LOD2Threshold = EditorGUILayout.Slider("LOD 2 \u2192 Cull", TreePlacer.LOD2Threshold, 0.001f, 0.1f);
 
             EditorGUILayout.Space(15);
+
+            // ---- Actions ----
             EditorGUILayout.HelpBox(
-                "Click 'Re-import Trees' to clear and re-place trees on the current hole " +
-                "using the settings above. Changes are session-only (reset on Unity restart).",
+                "Re-import clears existing trees and places new ones using the " +
+                "palette and settings above. Session-only (reset on Unity restart).",
                 MessageType.Info);
 
             EditorGUILayout.Space(5);
@@ -49,7 +111,6 @@ namespace Golfin.CourseImport
                 EditorApplication.ExecuteMenuItem("GOLFIN/Import Trees (Current Hole)");
             }
 
-            // Live-apply draw distances to active terrain without re-importing
             EditorGUILayout.Space(5);
             if (GUILayout.Button("Apply Draw Distances Only"))
             {

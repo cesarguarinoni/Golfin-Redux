@@ -3,40 +3,56 @@ using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Golfin.CourseImport
 {
+    /// <summary>
+    /// Describes one tree prefab available for placement.
+    /// </summary>
+    public class TreeEntry
+    {
+        public string path;       // asset path
+        public string name;       // display name (filename without extension)
+        public GameObject prefab; // loaded asset
+        public bool enabled;      // include in placement?
+        public float weight;      // relative spawn weight
+    }
+
     /// <summary>
     /// Places trees on terrain using zone 5 mask from UHole Lite.
     /// Uses Unity Terrain tree system (automatic LOD + billboarding).
     /// </summary>
     public static class TreePlacer
     {
-        // Tree prototypes — paths to prefabs
-        private static readonly string[] TreePrefabPaths = new string[]
+        // Folder scanned for tree prefabs
+        public const string TreePrefabFolder =
+            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs";
+
+        // Default enabled prefabs + weights (applied on first scan)
+        private static readonly Dictionary<string, float> DefaultWeights =
+            new Dictionary<string, float>
         {
-            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_01Cedar.prefab",
-            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_JapaneseBlack_01_Var1.prefab",
-            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_JapaneseBlack_01.prefab",
-            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mesh_Metasequoia.prefab",
-            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_ScottishPine_01.prefab",
+            { "MESH_01Cedar",               3.0f },
+            { "MESH_JapaneseBlack_01_Var1", 3.0f },
+            { "MESH_JapaneseBlack_01",      0.5f },
+            { "Mesh_Metasequoia",           2.0f },
+            { "MESH_ScottishPine_01",       2.0f },
         };
 
-        // Relative weight for each prototype (must match TreePrefabPaths length)
-        // Cedar=backbone, JBlackPine_v2=main pine, JBlackPine_v1=rare accent,
-        // Metasequoia=tall variety, ScottishPine=filler
-        private static readonly float[] TreeWeights = { 3f, 3f, 0.5f, 2f, 2f };
+        // The dynamic tree palette — populated by ScanPrefabs()
+        public static List<TreeEntry> TreePalette = new List<TreeEntry>();
 
-        // Placement settings (public so TreePlacerWindow can edit them)
-        public static float MinSpacing = 6f;      // meters between trees
+        // Placement settings
+        public static float MinSpacing = 6f;
         public static float ScaleMin = 0.85f;
         public static float ScaleMax = 1.15f;
 
         // Draw distance settings
-        public static float DrawDistance = 150f;          // max draw distance (meters)
-        public static float BillboardDistance = 80f;      // 3D→billboard transition
-        public static float CrossFadeLength = 20f;        // fade band width
-        public static int MaxFullLODCount = 50;           // max full-detail trees
+        public static float DrawDistance = 150f;
+        public static float BillboardDistance = 80f;
+        public static float CrossFadeLength = 20f;
+        public static int MaxFullLODCount = 50;
 
         // LOD thresholds (screen-relative height)
         public static float LOD0Threshold = 0.15f;
@@ -53,6 +69,67 @@ namespace Golfin.CourseImport
             8,  // cart path
             10, // tee box
         };
+
+        /// <summary>
+        /// Scan the prefab folder and populate TreePalette.
+        /// Preserves existing enabled/weight state for prefabs already in the list.
+        /// </summary>
+        public static void ScanPrefabs()
+        {
+            // Remember current state
+            var existing = new Dictionary<string, TreeEntry>();
+            foreach (var e in TreePalette)
+                existing[e.path] = e;
+
+            TreePalette.Clear();
+
+            string[] guids = AssetDatabase.FindAssets("t:GameObject", new[] { TreePrefabFolder });
+            foreach (string guid in guids)
+            {
+                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                if (!assetPath.EndsWith(".prefab")) continue;
+
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+                if (prefab == null) continue;
+
+                string fileName = Path.GetFileNameWithoutExtension(assetPath);
+
+                // Preserve previous state if it exists
+                if (existing.TryGetValue(assetPath, out var prev))
+                {
+                    prev.prefab = prefab;
+                    TreePalette.Add(prev);
+                }
+                else
+                {
+                    // New entry — use defaults if available, otherwise disabled weight 1
+                    bool isDefault = DefaultWeights.TryGetValue(fileName, out float w);
+                    TreePalette.Add(new TreeEntry
+                    {
+                        path = assetPath,
+                        name = fileName,
+                        prefab = prefab,
+                        enabled = isDefault,
+                        weight = isDefault ? w : 1f,
+                    });
+                }
+            }
+
+            // Sort: enabled first, then alphabetical
+            TreePalette.Sort((a, b) =>
+            {
+                if (a.enabled != b.enabled) return a.enabled ? -1 : 1;
+                return string.Compare(a.name, b.name, System.StringComparison.Ordinal);
+            });
+        }
+
+        /// <summary>
+        /// Get the enabled entries with weight > 0.
+        /// </summary>
+        public static List<TreeEntry> GetActiveEntries()
+        {
+            return TreePalette.Where(e => e.enabled && e.weight > 0f).ToList();
+        }
 
         /// <summary>
         /// Main entry point. Call after terrain is created.
@@ -100,35 +177,30 @@ namespace Golfin.CourseImport
             float tWidth = terrainData.size.x;
             float tLength = terrainData.size.z;
 
-            // ---- Register tree prototypes ----
-            var prototypes = new List<TreePrototype>();
+            // ---- Ensure palette is populated ----
+            if (TreePalette.Count == 0) ScanPrefabs();
+            var activeEntries = GetActiveEntries();
 
-            foreach (var prefabPath in TreePrefabPaths)
+            if (activeEntries.Count == 0)
             {
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-                if (prefab == null)
-                {
-                    Debug.LogWarning($"[TreePlacer] Prefab not found: {prefabPath}");
-                    continue;
-                }
-                prototypes.Add(new TreePrototype { prefab = prefab });
-            }
-
-            if (prototypes.Count == 0)
-            {
-                Debug.LogError("[TreePlacer] No tree prefabs found!");
+                Debug.LogError("[TreePlacer] No tree prefabs enabled!");
                 return;
             }
 
+            // ---- Register tree prototypes ----
+            var prototypes = new List<TreePrototype>();
+            foreach (var entry in activeEntries)
+            {
+                prototypes.Add(new TreePrototype { prefab = entry.prefab });
+            }
             terrainData.treePrototypes = prototypes.ToArray();
 
             // Build cumulative weight array
             float totalWeight = 0;
-            var cumulativeWeights = new float[prototypes.Count];
-            for (int i = 0; i < prototypes.Count; i++)
+            var cumulativeWeights = new float[activeEntries.Count];
+            for (int i = 0; i < activeEntries.Count; i++)
             {
-                float w = i < TreeWeights.Length ? TreeWeights[i] : 1f;
-                totalWeight += w;
+                totalWeight += activeEntries[i].weight;
                 cumulativeWeights[i] = totalWeight;
             }
 
@@ -229,10 +301,14 @@ namespace Golfin.CourseImport
                 lodGroup.animateCrossFading = true;
             }
 
+            // Build per-type count summary
+            var typeCounts = new int[activeEntries.Count];
+            foreach (var t in trees) typeCounts[t.prototypeIndex]++;
+            var summary = string.Join(", ",
+                activeEntries.Select((e, i) => $"{e.name}={typeCounts[i]}"));
+
             Debug.Log($"[TreePlacer] Placed {trees.Count} trees " +
-                $"({prototypes.Count} types, {cellSize}m spacing, " +
-                $"seed=42, draw={terrain.treeDistance}m, " +
-                $"billboard={terrain.treeBillboardDistance}m)");
+                $"({activeEntries.Count} types, {cellSize}m spacing, seed=42)\n  {summary}");
         }
 
         [MenuItem("GOLFIN/Import Trees (Current Hole)")]
