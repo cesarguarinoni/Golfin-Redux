@@ -210,8 +210,8 @@ namespace Golfin.CourseImport
                 $"billboard={terrain.treeBillboardDistance}m)");
         }
 
-        [MenuItem("GOLFIN/Place Trees (Current Terrain)")]
-        private static void PlaceTreesMenuItem()
+        [MenuItem("GOLFIN/Import Trees (Current Hole)")]
+        private static void ImportTreesMenuItem()
         {
             var terrain = Terrain.activeTerrain;
             if (terrain == null)
@@ -220,26 +220,30 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            // Find export path — check all 18 holes
-            string exportBase = "Tools/UHoleLite/output/lomond-country-club/export";
-            string exportPath = null;
-            for (int h = 1; h <= 18; h++)
+            // Detect hole number from active scene name (format: Hole_01)
+            string sceneName = UnityEditor.SceneManagement.EditorSceneManager
+                .GetActiveScene().name;
+            int holeNumber = -1;
+            if (sceneName.StartsWith("Hole_") && sceneName.Length >= 7)
             {
-                string candidate = Path.Combine(
-                    Application.dataPath, "..", exportBase,
-                    $"hole-{h:D2}");
-                if (Directory.Exists(candidate) &&
-                    File.Exists(Path.Combine(candidate, "tree-zones.json")))
-                {
-                    exportPath = candidate;
-                    break;
-                }
+                int.TryParse(sceneName.Substring(5, 2), out holeNumber);
             }
 
-            if (exportPath == null)
+            if (holeNumber < 1 || holeNumber > 18)
             {
-                Debug.LogError("[TreePlacer] No export folder with " +
-                    "tree-zones.json found");
+                Debug.LogError($"[TreePlacer] Cannot detect hole number " +
+                    $"from scene '{sceneName}' (expected Hole_XX)");
+                return;
+            }
+
+            string exportPath = Path.Combine(
+                Application.dataPath, "..",
+                "Tools/UHoleLite/output/lomond-country-club/export",
+                $"hole-{holeNumber:D2}");
+
+            if (!Directory.Exists(exportPath))
+            {
+                Debug.LogError($"[TreePlacer] Export folder not found: {exportPath}");
                 return;
             }
 
@@ -250,6 +254,11 @@ namespace Golfin.CourseImport
             float terrainBaseY = terrain.transform.position.y;
             string zonesPath = Path.Combine(exportPath, "zones.json");
             PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath);
+
+            // Save scene so trees persist
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[TreePlacer] Scene saved: {scene.path}");
         }
     }
 }
