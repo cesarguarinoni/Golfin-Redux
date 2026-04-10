@@ -1243,7 +1243,7 @@ namespace Golfin.CourseImport
                 bool isSmall = shorterAxis < 7.0f;
 
                 // Small: dilated cut (105%) + skirt ring. Large: original 90% inward cut.
-                float cutScale = isSmall ? 1.05f : 0.90f;
+                float cutScale = isSmall ? 1.10f : 0.90f;
                 var cutContour = new Vector2[worldContour.Length];
                 for (int i = 0; i < worldContour.Length; i++)
                 {
@@ -1277,6 +1277,7 @@ namespace Golfin.CourseImport
                 // ── Bowl mesh ──
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
+                if (isSmall) surfaceY += 0.2f; // raise small bunker mesh origin
                 // Small bunkers: shallower bowl (max 1.0m)
                 float bowlDepth = isSmall
                     ? Mathf.Max(Mathf.Min(defaultDepth, 1.0f), 0.3f)
