@@ -384,13 +384,17 @@ namespace Golfin.CourseImport
                 var lodGroup = proto.prefab.GetComponent<LODGroup>();
                 if (lodGroup == null) continue;
 
-                var lods = lodGroup.GetLODs();
-                if (lods.Length >= 1) lods[0].screenRelativeTransitionHeight = LOD0Threshold;
-                if (lods.Length >= 2) lods[1].screenRelativeTransitionHeight = LOD1Threshold;
-                if (lods.Length >= 3) lods[2].screenRelativeTransitionHeight = LOD2Threshold;
-                lodGroup.SetLODs(lods);
-                lodGroup.fadeMode = LODFadeMode.CrossFade;
-                lodGroup.animateCrossFading = true;
+                NormalizeLODGroup(lodGroup);
+            }
+
+            // ---- Normalize LODGroup thresholds for standalone trees ----
+            if (standaloneContainer != null)
+            {
+                foreach (var lodGroup in standaloneContainer
+                    .GetComponentsInChildren<LODGroup>(true))
+                {
+                    NormalizeLODGroup(lodGroup);
+                }
             }
 
             // Summary
@@ -403,6 +407,27 @@ namespace Golfin.CourseImport
                 $"{terrainTrees.Count + standaloneCount} total " +
                 $"({activeEntries.Count} types, {cellSize}m spacing, seed=42)" +
                 $"\n  {summary}");
+        }
+
+        /// <summary>
+        /// Apply uniform LOD thresholds + CrossFade to a LODGroup.
+        /// Works for both terrain prototype prefabs and standalone instances.
+        /// </summary>
+        private static void NormalizeLODGroup(LODGroup lodGroup)
+        {
+            var lods = lodGroup.GetLODs();
+
+            // Set the last LOD's cull threshold to match DrawDistance.
+            // screenRelativeTransitionHeight ≈ objectSize / (2 * distance * tan(fov/2))
+            // For a ~15m tree at 150m with 60° fov: ~15/(2*150*0.577) ≈ 0.087
+            // We use the configured thresholds + add a cull LOD at the end.
+            if (lods.Length >= 1) lods[0].screenRelativeTransitionHeight = LOD0Threshold;
+            if (lods.Length >= 2) lods[1].screenRelativeTransitionHeight = LOD1Threshold;
+            if (lods.Length >= 3) lods[2].screenRelativeTransitionHeight = LOD2Threshold;
+
+            lodGroup.SetLODs(lods);
+            lodGroup.fadeMode = LODFadeMode.CrossFade;
+            lodGroup.animateCrossFading = true;
         }
 
         /// <summary>
