@@ -125,11 +125,11 @@ namespace Golfin.CourseImport
 
             // ---- Save / Load ----
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Save Settings"))
-                TreePlacer.SaveSettings();
-            if (GUILayout.Button("Load Settings"))
+            if (GUILayout.Button("Save Preset"))
+                TreePlacer.SavePreset();
+            if (GUILayout.Button("Load Preset"))
             {
-                TreePlacer.LoadSettings();
+                TreePlacer.LoadPreset();
                 Repaint();
             }
             EditorGUILayout.EndHorizontal();

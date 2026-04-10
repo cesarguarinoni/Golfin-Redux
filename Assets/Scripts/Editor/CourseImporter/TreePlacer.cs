@@ -421,7 +421,39 @@ namespace Golfin.CourseImport
             }
         }
 
-        // ---- Save / Load Settings ----
+        // ---- Session persistence (survives Play mode / domain reload) ----
+
+        private const string SessionFile = "Temp/TreePlacerSession.json";
+
+        /// <summary>
+        /// Auto-save current state to Temp/ so it survives domain reload.
+        /// Called by InitializeOnLoad callback.
+        /// </summary>
+        public static void SaveSession()
+        {
+            var data = BuildSavedSettings();
+            string path = Path.Combine(
+                Path.GetDirectoryName(Application.dataPath), SessionFile);
+            File.WriteAllText(path, JsonUtility.ToJson(data, true));
+        }
+
+        /// <summary>
+        /// Auto-load session state after domain reload.
+        /// Called by InitializeOnLoad callback.
+        /// </summary>
+        public static bool LoadSession()
+        {
+            string path = Path.Combine(
+                Path.GetDirectoryName(Application.dataPath), SessionFile);
+            if (!File.Exists(path)) return false;
+
+            var data = JsonUtility.FromJson<SavedSettings>(
+                File.ReadAllText(path));
+            ApplySavedSettings(data);
+            return true;
+        }
+
+        // ---- Save / Load Presets (manual) ----
 
         private const string SettingsFolder = "Assets/Settings/TreePresets";
 
@@ -451,25 +483,9 @@ namespace Golfin.CourseImport
             public SavedEntry[] entries;
         }
 
-        /// <summary>
-        /// Save current settings to a user-chosen JSON file.
-        /// </summary>
-        public static void SaveSettings()
+        private static SavedSettings BuildSavedSettings()
         {
-            // Ensure folder exists
-            string absFolder = Path.Combine(
-                Path.GetDirectoryName(Application.dataPath), SettingsFolder);
-            if (!Directory.Exists(absFolder))
-            {
-                Directory.CreateDirectory(absFolder);
-                AssetDatabase.Refresh();
-            }
-
-            string savePath = EditorUtility.SaveFilePanel(
-                "Save Tree Preset", absFolder, "TreePreset", "json");
-            if (string.IsNullOrEmpty(savePath)) return;
-
-            var data = new SavedSettings
+            return new SavedSettings
             {
                 minSpacing = MinSpacing,
                 scaleMin = ScaleMin,
@@ -490,35 +506,10 @@ namespace Golfin.CourseImport
                     standalone = e.standalone,
                 }).ToArray(),
             };
-
-            File.WriteAllText(savePath, JsonUtility.ToJson(data, true));
-            AssetDatabase.Refresh();
-            Debug.Log($"[TreePlacer] Preset saved: {Path.GetFileName(savePath)}");
         }
 
-        /// <summary>
-        /// Load settings from a user-chosen JSON file.
-        /// </summary>
-        public static void LoadSettings()
+        private static void ApplySavedSettings(SavedSettings data)
         {
-            string absFolder = Path.Combine(
-                Path.GetDirectoryName(Application.dataPath), SettingsFolder);
-            if (!Directory.Exists(absFolder))
-                absFolder = Path.GetDirectoryName(Application.dataPath);
-
-            string loadPath = EditorUtility.OpenFilePanel(
-                "Load Tree Preset", absFolder, "json");
-            if (string.IsNullOrEmpty(loadPath)) return;
-
-            if (!File.Exists(loadPath))
-            {
-                Debug.LogWarning($"[TreePlacer] File not found: {loadPath}");
-                return;
-            }
-
-            var data = JsonUtility.FromJson<SavedSettings>(
-                File.ReadAllText(loadPath));
-
             MinSpacing = data.minSpacing;
             ScaleMin = data.scaleMin;
             ScaleMax = data.scaleMax;
@@ -547,7 +538,57 @@ namespace Golfin.CourseImport
                     }
                 }
             }
+        }
 
+        /// <summary>
+        /// Save current settings to a user-chosen JSON file.
+        /// </summary>
+        public static void SavePreset()
+        {
+            string absFolder = Path.Combine(
+                Path.GetDirectoryName(Application.dataPath), SettingsFolder);
+            if (!Directory.Exists(absFolder))
+            {
+                Directory.CreateDirectory(absFolder);
+                AssetDatabase.Refresh();
+            }
+
+            string savePath = EditorUtility.SaveFilePanel(
+                "Save Tree Preset", absFolder, "TreePreset", "json");
+            if (string.IsNullOrEmpty(savePath)) return;
+
+            File.WriteAllText(savePath, JsonUtility.ToJson(BuildSavedSettings(), true));
+            AssetDatabase.Refresh();
+            Debug.Log($"[TreePlacer] Preset saved: {Path.GetFileName(savePath)}");
+        }
+
+        /// <summary>
+        /// Load settings from a user-chosen JSON file.
+        /// </summary>
+        public static void LoadPreset()
+        {
+            string absFolder = Path.Combine(
+                Path.GetDirectoryName(Application.dataPath), SettingsFolder);
+            if (!Directory.Exists(absFolder))
+                absFolder = Path.GetDirectoryName(Application.dataPath);
+
+            string loadPath = EditorUtility.OpenFilePanel(
+                "Load Tree Preset", absFolder, "json");
+            if (string.IsNullOrEmpty(loadPath)) return;
+
+            if (!File.Exists(loadPath))
+            {
+                Debug.LogWarning($"[TreePlacer] File not found: {loadPath}");
+                return;
+            }
+
+            // Ensure palette is populated before applying
+            if (TreePalette.Count == 0) ScanPrefabs();
+
+            var data = JsonUtility.FromJson<SavedSettings>(
+                File.ReadAllText(loadPath));
+            ApplySavedSettings(data);
+            SaveSession(); // persist to session so Play mode doesn't lose it
             Debug.Log($"[TreePlacer] Preset loaded: {Path.GetFileName(loadPath)}");
         }
 
@@ -609,6 +650,41 @@ namespace Golfin.CourseImport
             var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
             Debug.Log($"[TreePlacer] Scene saved: {scene.path}");
+        }
+    }
+
+    /// <summary>
+    /// Auto-saves TreePlacer state before Play mode and restores it
+    /// after domain reload so settings survive Enter/Exit Play.
+    /// </summary>
+    [InitializeOnLoad]
+    public static class TreePlacerSessionPersistence
+    {
+        static TreePlacerSessionPersistence()
+        {
+            // Restore session after domain reload (Play mode, recompile)
+            TreePlacer.ScanPrefabs();
+            if (TreePlacer.LoadSession())
+            {
+                // Re-sort after applying saved state
+                TreePlacer.TreePalette.Sort((a, b) =>
+                {
+                    if (a.enabled != b.enabled) return a.enabled ? -1 : 1;
+                    return string.Compare(a.name, b.name, System.StringComparison.Ordinal);
+                });
+            }
+
+            // Save session before Play mode starts
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingEditMode ||
+                state == PlayModeStateChange.ExitingPlayMode)
+            {
+                TreePlacer.SaveSession();
+            }
         }
     }
 }
