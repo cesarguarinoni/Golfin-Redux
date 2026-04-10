@@ -112,3 +112,7 @@ the console log in `main()`.
 - Change the zone grid or splatmap pipeline
 - Change `extractZoneContours` function itself
 - Remove or modify any existing export files
+
+---
+
+✅ 2026-04-10 — Export Tree Zone Mask: binary mask + 2 regions, 2337m² total for Hole 1

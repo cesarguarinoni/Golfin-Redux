@@ -757,6 +757,7 @@ function exportHole(courseId, holeNumber, courseJson) {
     fairway_contours_file: 'fairway-contours.json',
     cart_paths_file: 'cart-paths.json',
     zone_contours_file: 'zone-contours.json',
+    tree_zones_file: 'tree-zones.json',
     review_status: 'auto-generated',
   };
 
@@ -938,6 +939,61 @@ function exportHole(courseId, holeNumber, courseJson) {
     console.log(`  Water contours: ${contourStats}`);
   }
 
+  // --- Build tree-zones.json ---
+  const treeRegions = extractZoneContours(zonesData, terrainMeta, 5, 30, 3.0, 2);
+  // zone 5 = trees, min 30px (skip tiny splotches), RDP epsilon 3.0
+  // (trees don't need precise contours), 2 Chaikin passes
+
+  // Build binary mask from zone grid (1 = tree zone, 0 = not)
+  const gridBuf = Buffer.from(zonesData.grid, 'base64');
+  const maskW = zonesData.source_dimensions.width;
+  const maskH = zonesData.source_dimensions.height;
+  const treeMask = Buffer.alloc(maskW * maskH);
+  for (let i = 0; i < gridBuf.length; i++) {
+    treeMask[i] = gridBuf[i] === 5 ? 1 : 0;
+  }
+
+  const treeZonesOutput = {
+    schema_version: '1.0.0',
+    hole_number: holeNumber,
+    mask_width: maskW,
+    mask_height: maskH,
+    mask_base64: treeMask.toString('base64'),
+    meters_per_pixel: {
+      x: parseFloat((terrainMeta.terrain_width_m / maskW).toFixed(4)),
+      z: parseFloat((terrainMeta.terrain_length_m / maskH).toFixed(4)),
+    },
+    tree_region_count: treeRegions.length,
+    tree_regions: treeRegions.map(r => ({
+      id: r.id,
+      pixel_count: r.pixel_count,
+      area_m2: parseFloat(
+        (r.pixel_count *
+         (terrainMeta.terrain_width_m / maskW) *
+         (terrainMeta.terrain_length_m / maskH)
+        ).toFixed(1)
+      ),
+      contour: r.contour,
+      center_local: r.center_local,
+      size_m: r.size_m,
+    })),
+  };
+
+  fs.writeFileSync(
+    path.join(exportDir, 'tree-zones.json'),
+    JSON.stringify(treeZonesOutput, null, 2),
+    'utf-8'
+  );
+
+  if (treeRegions.length > 0) {
+    const totalArea = treeZonesOutput.tree_regions
+      .reduce((sum, r) => sum + r.area_m2, 0);
+    console.log(`  Tree zones: ${treeRegions.length} region(s), ` +
+      `${totalArea.toFixed(0)} m² total`);
+  } else {
+    console.log(`  Tree zones: none painted`);
+  }
+
   // --- Copy files ---
   fs.copyFileSync(path.join(holeDir, 'heightmap.raw'), path.join(exportDir, 'heightmap.raw'));
   fs.copyFileSync(path.join(holeDir, 'illustration.png'), path.join(exportDir, 'texture.png'));
@@ -949,6 +1005,7 @@ function exportHole(courseId, holeNumber, courseJson) {
     bunkerCount: bunkers.length,
     greenCount: greens.length,
     waterCount: water.length,
+    treeRegionCount: treeRegions.length,
   };
 }
 
@@ -993,7 +1050,8 @@ async function main() {
       console.log(`OK  export/hole-${nn}/  par=${m.par}  ${m.championship_yards}yd  ` +
         `${m.terrain.terrain_width_m}×${m.terrain.terrain_length_m}m  ` +
         `${result.anchorCount} anchors  ${result.bunkerCount} bunkers  ` +
-        `${result.greenCount} greens  ${result.waterCount} water`);
+        `${result.greenCount} greens  ${result.waterCount} water  ` +
+        `${result.treeRegionCount} tree regions`);
       successCount++;
     } else {
       console.log('FAILED');
