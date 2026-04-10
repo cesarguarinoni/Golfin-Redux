@@ -142,19 +142,21 @@ namespace Golfin.CourseImport
                     if (nx < 0 || nx >= 1 || nz < 0 || nz >= 1) continue;
 
                     // Check tree mask
+                    // 90° CCW rotation matching splatmap pipeline:
+                    // terrain X fraction → zone normY, terrain Z fraction → zone normX
                     int maskX = Mathf.Clamp(
-                        Mathf.FloorToInt(nx * maskW), 0, maskW - 1);
+                        Mathf.FloorToInt(nz * maskW), 0, maskW - 1);
                     int maskY = Mathf.Clamp(
-                        Mathf.FloorToInt(nz * maskH), 0, maskH - 1);
+                        Mathf.FloorToInt(nx * maskH), 0, maskH - 1);
                     if (mask[maskY * maskW + maskX] == 0) continue;
 
                     // Check zone grid — skip excluded zones
                     if (zoneGrid != null)
                     {
                         int zx = Mathf.Clamp(
-                            Mathf.FloorToInt(nx * zoneW), 0, zoneW - 1);
+                            Mathf.FloorToInt(nz * zoneW), 0, zoneW - 1);
                         int zy = Mathf.Clamp(
-                            Mathf.FloorToInt(nz * zoneH), 0, zoneH - 1);
+                            Mathf.FloorToInt(nx * zoneH), 0, zoneH - 1);
                         int zone = zoneGrid[zy * zoneW + zx];
                         if (ExcludeZones.Contains(zone)) continue;
                     }
