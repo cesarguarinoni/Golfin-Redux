@@ -48,6 +48,10 @@ namespace Golfin.CourseImport
         public static float ScaleMin = 0.85f;
         public static float ScaleMax = 1.15f;
 
+        // Sink offset — pushes trees below terrain surface to prevent
+        // trunk bases from floating on slopes/ledges (meters)
+        public static float SinkOffset = 0.3f;
+
         // Draw distance settings
         public static float DrawDistance = 150f;
         public static float BillboardDistance = 80f;
@@ -264,9 +268,17 @@ namespace Golfin.CourseImport
                     float rotation = (float)rng.NextDouble() * 360f
                         * Mathf.Deg2Rad;
 
+                    // Sample terrain height and apply sink offset so
+                    // trunk bases don't float on slopes/ledges.
+                    // Position.y is normalized [0-1] relative to terrainData.size.y.
+                    Vector3 worldPos = new Vector3(worldX + terrain.transform.position.x,
+                        0f, worldZ + terrain.transform.position.z);
+                    float terrainH = terrain.SampleHeight(worldPos);
+                    float ny = Mathf.Max(0f, (terrainH - SinkOffset) / terrainData.size.y);
+
                     trees.Add(new TreeInstance
                     {
-                        position = new Vector3(nx, 0f, nz),
+                        position = new Vector3(nx, ny, nz),
                         widthScale = scale,
                         heightScale = scale,
                         rotation = rotation,
@@ -277,7 +289,8 @@ namespace Golfin.CourseImport
                 }
             }
 
-            terrainData.SetTreeInstances(trees.ToArray(), true);
+            // snap=false so our computed Y with sink offset is used
+            terrainData.SetTreeInstances(trees.ToArray(), false);
 
             // ---- Unify draw distances ----
             terrain.treeDistance = DrawDistance;

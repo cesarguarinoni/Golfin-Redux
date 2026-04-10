@@ -79,6 +79,7 @@ namespace Golfin.CourseImport
             TreePlacer.MinSpacing = EditorGUILayout.FloatField("Min Spacing (m)", TreePlacer.MinSpacing);
             TreePlacer.ScaleMin = EditorGUILayout.FloatField("Scale Min", TreePlacer.ScaleMin);
             TreePlacer.ScaleMax = EditorGUILayout.FloatField("Scale Max", TreePlacer.ScaleMax);
+            TreePlacer.SinkOffset = EditorGUILayout.Slider("Sink Offset (m)", TreePlacer.SinkOffset, 0f, 2f);
 
             EditorGUILayout.Space(10);
 
