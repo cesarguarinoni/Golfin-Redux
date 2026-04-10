@@ -167,15 +167,17 @@ const server = createServer(async (req, res) => {
 
     try {
       const rawBytes = await readFile(rawPath);
-      const res129 = 129;
-      const pixels = Buffer.alloc(res129 * res129);
-      for (let i = 0; i < res129 * res129; i++) {
+      // Derive resolution from file size (uint16 = 2 bytes per pixel)
+      const pixelCount = rawBytes.length / 2;
+      const rawRes = Math.round(Math.sqrt(pixelCount));
+      const pixels = Buffer.alloc(rawRes * rawRes);
+      for (let i = 0; i < rawRes * rawRes; i++) {
         const val = (rawBytes[i * 2] << 8) | rawBytes[i * 2 + 1];
         pixels[i] = Math.round((val / 65535) * 255);
       }
 
       const sharp = (await import("sharp")).default;
-      const pngBuffer = await sharp(pixels, { raw: { width: res129, height: res129, channels: 1 } })
+      const pngBuffer = await sharp(pixels, { raw: { width: rawRes, height: rawRes, channels: 1 } })
         .resize(512, 512, { kernel: "nearest" })
         .png()
         .toBuffer();

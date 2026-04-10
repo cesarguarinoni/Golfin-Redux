@@ -1,0 +1,13 @@
+{
+  "name": "geoalign",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/dev-server.mjs",
+    "fetch": "node scripts/fetch-tiles.mjs lomond-country-club"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "sharp": "^0.33.0"
+  }
+}

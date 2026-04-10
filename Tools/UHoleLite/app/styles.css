@@ -106,6 +106,38 @@ body {
 .hero h2 { margin: 0; font-weight: 600; }
 .hero-actions { display: flex; gap: 0.75rem; }
 
+.hero-io {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  grid-column: 1 / -1;
+}
+
+.io-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-panel);
+}
+
+.io-group button {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.78rem;
+  border-radius: 6px;
+}
+
+.io-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
 button {
   border: 1px solid var(--line);
   background: var(--bg-panel-alt);
@@ -189,6 +221,11 @@ button.is-active-toggle {
   background: rgba(69, 188, 255, 0.22);
   border-color: rgba(69, 188, 255, 0.4);
   color: var(--accent-deep);
+}
+
+.layer-visibility {
+  display: flex;
+  gap: 6px;
 }
 
 .chip {

@@ -28,7 +28,7 @@
       <section class="main">
         <header class="hero">
           <div>
-            <div class="eyebrow">Orientation Editor</div>
+            <div class="eyebrow">Zone Editor</div>
             <h2 id="hole-title">Select a hole</h2>
           </div>
           <div class="hero-actions">
@@ -37,38 +37,49 @@
             <button id="btn-save-as" title="Export hole snapshot to a file">Save As</button>
             <button id="btn-load" title="Load a hole snapshot from file">Load</button>
             <input type="file" id="load-file-input" accept=".json" hidden>
-            <button id="import-zones-btn" title="Import zones from PNG">Import Zones PNG</button>
-            <input type="file" id="zones-file-input" accept=".png,.jpg,.jpeg" hidden>
-            <button id="import-svg-btn" title="Import zones from SVG">Import Zones SVG</button>
-            <input type="file" id="svg-file-input" accept=".svg" hidden>
+          </div>
+          <div class="hero-io">
+            <div class="io-group">
+              <span class="io-label">Export</span>
+              <button id="export-all-btn" title="Export all zones as one PNG">All</button>
+              <button id="export-terrain-btn" title="Export terrain layer">Terrain</button>
+              <button id="export-trees-btn" title="Export trees layer">Trees</button>
+              <button id="export-cartpath-btn" title="Export cart path layer">Cart Path</button>
+              <button id="export-ob-btn" title="Export OB layer">OB</button>
+            </div>
+            <div class="io-group">
+              <span class="io-label">Import</span>
+              <button id="import-terrain-btn" title="Import terrain layer from PNG">Terrain</button>
+              <input type="file" id="import-terrain-file" accept=".png,.jpg,.jpeg" hidden>
+              <button id="import-trees-btn" title="Import trees layer from PNG">Trees</button>
+              <input type="file" id="import-trees-file" accept=".png,.jpg,.jpeg" hidden>
+              <button id="import-cartpath-btn" title="Import cart path layer from PNG">Cart Path</button>
+              <input type="file" id="import-cartpath-file" accept=".png,.jpg,.jpeg" hidden>
+              <button id="import-ob-btn" title="Import OB layer from PNG">OB</button>
+              <input type="file" id="import-ob-file" accept=".png,.jpg,.jpeg" hidden>
+            </div>
           </div>
         </header>
 
         <div id="save-banner" class="status-banner">&nbsp;</div>
 
-        <!-- Orientation toolbar -->
+        <!-- View toolbar -->
         <div class="alignment-toolbar">
-          <h4 class="toolbar-title">Transform</h4>
+          <h4 class="toolbar-title">View</h4>
           <div class="mode-switcher">
             <button class="mode-btn view-btn is-active" data-view="illustration">Map</button>
-            <button class="mode-btn view-btn" data-view="zones">Zones</button>
             <button class="mode-btn view-btn" data-view="both">Overlay</button>
             <button class="mode-btn view-btn" data-view="heightmap">Height</button>
           </div>
           <div class="toolbar-spacer"></div>
-          <button id="btn-rotate-ccw" title="Rotate 90° CCW">↺ 90°</button>
-          <button id="btn-rotate-cw" title="Rotate 90° CW">↻ 90°</button>
-          <button id="btn-flip-h" title="Flip Horizontal">⇔ H</button>
-          <button id="btn-flip-v" title="Flip Vertical">⇕ V</button>
-          <button id="btn-reset">Reset</button>
-          <button id="btn-toggle-trees" class="is-active-toggle" title="Toggle Trees layer">Trees</button>
-          <button id="btn-toggle-ob" class="is-active-toggle" title="Toggle OB layer">OB</button>
           <div class="opacity-control">
             <span style="font-size:0.82rem;color:var(--muted)">Opacity</span>
             <input type="range" id="overlay-opacity" min="0" max="100" value="50">
           </div>
-          <span id="orientation-readout" class="chip"></span>
         </div>
+
+        <!-- Layer bar -->
+        <div class="alignment-toolbar" id="layer-bar" hidden></div>
 
         <!-- Zone legend + paint controls -->
         <div class="zone-legend" id="zone-legend" hidden></div>

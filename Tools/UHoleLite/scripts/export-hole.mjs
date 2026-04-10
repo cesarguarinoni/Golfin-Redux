@@ -175,6 +175,33 @@ function smoothPolygon(polygon, iterations = 2) {
 }
 
 /**
+ * Chaikin smoothing for an OPEN polyline (does not wrap around).
+ * Preserves the first and last endpoints.
+ */
+function smoothPolyline(polyline, iterations = 2) {
+  let pts = polyline;
+  for (let iter = 0; iter < iterations; iter++) {
+    if (pts.length < 2) break;
+    const smoothed = [pts[0]]; // keep first endpoint
+    for (let i = 0; i < pts.length - 1; i++) {
+      const curr = pts[i];
+      const next = pts[i + 1];
+      smoothed.push({
+        x: parseFloat((0.75 * curr.x + 0.25 * next.x).toFixed(2)),
+        z: parseFloat((0.75 * curr.z + 0.25 * next.z).toFixed(2)),
+      });
+      smoothed.push({
+        x: parseFloat((0.25 * curr.x + 0.75 * next.x).toFixed(2)),
+        z: parseFloat((0.25 * curr.z + 0.75 * next.z).toFixed(2)),
+      });
+    }
+    smoothed.push(pts[pts.length - 1]); // keep last endpoint
+    pts = smoothed;
+  }
+  return pts;
+}
+
+/**
  * Ensure polygon has counter-clockwise winding (shoelace formula).
  */
 function ensureCCW(polygon) {
@@ -291,6 +318,294 @@ function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, 
   regions.forEach((b, i) => { b.id = i + 1; });
 
   return regions;
+}
+
+/**
+ * Extract cart path contours with minimum width enforcement.
+ * If a region is narrower than minWidthM, dilate it until it reaches
+ * the minimum. This prevents thin hand-painted paths from producing
+ * degenerate contours.
+ */
+function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPixels = 15, rdpEpsilon = 1.0, smoothPasses = 2) {
+  const grid = Buffer.from(zonesData.grid, 'base64');
+  const w = zonesData.source_dimensions.width;
+  const h = zonesData.source_dimensions.height;
+  const tw = terrainMeta.terrain_width_m;
+  const tl = terrainMeta.terrain_length_m;
+  const targetZone = 8; // cart path
+
+  // Meters per pixel
+  const mppX = tw / w;
+  const mppY = tl / h;
+  const mpp = (mppX + mppY) / 2;
+  const minWidthPx = Math.ceil(minWidthM / mpp);
+
+  // Step 1: Find all cart path pixels, flood-fill into regions
+  const visited = new Uint8Array(w * h);
+  const regions = [];
+
+  function floodFill(startX, startY) {
+    const pixels = [];
+    const stack = [[startX, startY]];
+    while (stack.length > 0) {
+      const [x, y] = stack.pop();
+      if (x < 0 || x >= w || y < 0 || y >= h) continue;
+      const idx = y * w + x;
+      if (visited[idx] || grid[idx] !== targetZone) continue;
+      visited[idx] = 1;
+      pixels.push([x, y]);
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+    return pixels;
+  }
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (grid[y * w + x] === targetZone && !visited[y * w + x]) {
+        const pixels = floodFill(x, y);
+        if (pixels.length >= minPixels) {
+          regions.push(pixels);
+        }
+      }
+    }
+  }
+
+  // Step 2: For each region, check width and dilate if needed
+  const results = [];
+
+  for (const originalPixels of regions) {
+    let pixelSet = new Set();
+    for (const [px, py] of originalPixels) {
+      pixelSet.add(py * w + px);
+    }
+
+    // Estimate width: area / longer bbox axis
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const [px, py] of originalPixels) {
+      if (px < minX) minX = px;
+      if (px > maxX) maxX = px;
+      if (py < minY) minY = py;
+      if (py > maxY) maxY = py;
+    }
+    const bboxW = maxX - minX + 1;
+    const bboxH = maxY - minY + 1;
+    const longerAxis = Math.max(bboxW, bboxH);
+    const estWidthPx = originalPixels.length / longerAxis;
+
+    // Dilate if too narrow
+    let currentPixels = originalPixels;
+    if (estWidthPx < minWidthPx) {
+      const dilateRadius = Math.ceil((minWidthPx - estWidthPx) / 2);
+      console.log(`    Cart path region: est width ${(estWidthPx * mpp).toFixed(1)}m < ${minWidthM}m, dilating by ${dilateRadius}px`);
+
+      // Only dilate into safe zones (rough, semi-rough, trees, background, OB)
+      const safeZones = new Set([0, 3, 4, 5, 9]);
+      const dilated = new Set(pixelSet);
+
+      for (let r = 0; r < dilateRadius; r++) {
+        const frontier = [];
+        for (const key of dilated) {
+          const py = Math.floor(key / w);
+          const px = key % w;
+          const neighbors = [[px-1,py],[px+1,py],[px,py-1],[px,py+1]];
+          for (const [nx, ny] of neighbors) {
+            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+            const nKey = ny * w + nx;
+            if (dilated.has(nKey)) continue;
+            if (safeZones.has(grid[nKey])) {
+              frontier.push(nKey);
+            }
+          }
+        }
+        for (const key of frontier) {
+          dilated.add(key);
+        }
+      }
+
+      currentPixels = [];
+      for (const key of dilated) {
+        currentPixels.push([key % w, Math.floor(key / w)]);
+      }
+      pixelSet = dilated;
+
+      // Recompute bounding box after dilation
+      minX = Infinity; maxX = -Infinity; minY = Infinity; maxY = -Infinity;
+      for (const [px, py] of currentPixels) {
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+      }
+    }
+
+    // Step 3: Run standard contour pipeline on this region
+    const borderPixels = traceBorder(grid, w, h, currentPixels, targetZone);
+
+    let contourMeters = borderPixels.map(([bx, by]) => ({
+      x: parseFloat(((bx / (w - 1) - 0.5) * tw).toFixed(2)),
+      z: parseFloat(((by / (h - 1) - 0.5) * tl).toFixed(2)),
+    }));
+
+    if (contourMeters.length < 3) continue;
+
+    // RDP + Chaikin
+    const closed = [...contourMeters, contourMeters[0]];
+    let simplified = simplifyPolygon(closed, rdpEpsilon);
+    if (simplified.length > 1 &&
+        simplified[0].x === simplified[simplified.length - 1].x &&
+        simplified[0].z === simplified[simplified.length - 1].z) {
+      simplified = simplified.slice(0, -1);
+    }
+    contourMeters = smoothPolygon(simplified, smoothPasses);
+    contourMeters = ensureCCW(contourMeters);
+
+    const normCX = (minX + maxX) / 2 / (w - 1);
+    const normCY = (minY + maxY) / 2 / (h - 1);
+    const normW = (maxX - minX + 1) / w;
+    const normH = (maxY - minY + 1) / h;
+
+    // Extract centerline spine from contour
+    let spine = extractPathSpine(contourMeters);
+    // Ensure spine is an open polyline — remove duplicate endpoint
+    if (spine.length >= 2) {
+      const first = spine[0], last = spine[spine.length - 1];
+      const dx = first.x - last.x, dz = first.z - last.z;
+      if (Math.sqrt(dx * dx + dz * dz) < 1.0) {
+        spine = spine.slice(0, -1);
+      }
+    }
+    // Simplify + smooth the spine (open polyline — no wrap-around)
+    spine = simplifyPolygon(spine, rdpEpsilon);
+    spine = smoothPolyline(spine, smoothPasses);
+
+    results.push({
+      id: results.length + 1,
+      pixel_count: currentPixels.length,
+      contour: contourMeters,
+      spine,
+      width_m: minWidthM,
+      center_local: {
+        x: parseFloat(((normCX - 0.5) * tw).toFixed(2)),
+        z: parseFloat(((normCY - 0.5) * tl).toFixed(2)),
+      },
+      size_m: {
+        x: parseFloat((normW * tw).toFixed(2)),
+        z: parseFloat((normH * tl).toFixed(2)),
+      },
+      center_normalized: {
+        x: parseFloat(normCX.toFixed(4)),
+        y: parseFloat(normCY.toFixed(4)),
+      },
+      size_normalized: {
+        w: parseFloat(normW.toFixed(4)),
+        h: parseFloat(normH.toFixed(4)),
+      },
+      dilated: estWidthPx < minWidthPx,
+    });
+  }
+
+  // Sort by size (largest first), re-assign IDs
+  results.sort((a, b) => b.pixel_count - a.pixel_count);
+  results.forEach((r, i) => { r.id = i + 1; });
+
+  return results;
+}
+
+/**
+ * Resample a polyline to a target number of equally-spaced points via arc-length interpolation.
+ * @param {{x:number, z:number}[]} chain
+ * @param {number} targetCount
+ * @returns {{x:number, z:number}[]}
+ */
+function resampleChain(chain, targetCount) {
+  if (chain.length < 2 || targetCount < 2) return chain.slice();
+
+  const arcLengths = [0];
+  for (let i = 1; i < chain.length; i++) {
+    const dx = chain[i].x - chain[i - 1].x;
+    const dz = chain[i].z - chain[i - 1].z;
+    arcLengths.push(arcLengths[i - 1] + Math.sqrt(dx * dx + dz * dz));
+  }
+  const totalLength = arcLengths[arcLengths.length - 1];
+  if (totalLength < 0.001) return chain.slice();
+
+  const result = [];
+  for (let i = 0; i < targetCount; i++) {
+    const targetDist = (i / (targetCount - 1)) * totalLength;
+
+    let seg = 0;
+    while (seg < arcLengths.length - 2 && arcLengths[seg + 1] < targetDist) {
+      seg++;
+    }
+
+    const segLen = arcLengths[seg + 1] - arcLengths[seg];
+    const t = segLen > 0 ? (targetDist - arcLengths[seg]) / segLen : 0;
+
+    result.push({
+      x: parseFloat((chain[seg].x + t * (chain[seg + 1].x - chain[seg].x)).toFixed(2)),
+      z: parseFloat((chain[seg].z + t * (chain[seg + 1].z - chain[seg].z)).toFixed(2)),
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Extract the centerline spine of a narrow elongated polygon (e.g., cart path).
+ * Finds the two farthest vertices (path endpoints), splits the contour into
+ * left/right chains, resamples both to equal count, and averages corresponding
+ * points to produce the medial axis.
+ * @param {{x:number, z:number}[]} contour - closed polygon in local meters
+ * @returns {{x:number, z:number}[]} spine centerline
+ */
+function extractPathSpine(contour) {
+  const n = contour.length;
+  if (n < 4) return contour.slice();
+
+  // Find the pair of vertices with maximum distance (path endpoints)
+  let maxDist = 0, iA = 0, iB = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const dx = contour[i].x - contour[j].x;
+      const dz = contour[i].z - contour[j].z;
+      const d = dx * dx + dz * dz;
+      if (d > maxDist) {
+        maxDist = d;
+        iA = i;
+        iB = j;
+      }
+    }
+  }
+
+  // Split into two chains: A→B (forward) and B→A (backward)
+  const chainLeft = [];
+  for (let i = iA; i !== iB; i = (i + 1) % n) {
+    chainLeft.push(contour[i]);
+  }
+  chainLeft.push(contour[iB]);
+
+  const chainRight = [];
+  for (let i = iB; i !== iA; i = (i + 1) % n) {
+    chainRight.push(contour[i]);
+  }
+  chainRight.push(contour[iA]);
+  chainRight.reverse(); // so both chains go A→B
+
+  // Resample both chains to the same number of points
+  const numSpinePoints = Math.max(chainLeft.length, chainRight.length);
+  const leftResampled = resampleChain(chainLeft, numSpinePoints);
+  const rightResampled = resampleChain(chainRight, numSpinePoints);
+
+  // Average corresponding points → spine
+  const spine = [];
+  for (let i = 0; i < numSpinePoints; i++) {
+    spine.push({
+      x: parseFloat(((leftResampled[i].x + rightResampled[i].x) / 2).toFixed(2)),
+      z: parseFloat(((leftResampled[i].z + rightResampled[i].z) / 2).toFixed(2)),
+    });
+  }
+
+  return spine;
 }
 
 /**
@@ -440,6 +755,7 @@ function exportHole(courseId, holeNumber, courseJson) {
     greens_file: 'greens.json',
     water_file: 'water.json',
     fairway_contours_file: 'fairway-contours.json',
+    cart_paths_file: 'cart-paths.json',
     zone_contours_file: 'zone-contours.json',
     review_status: 'auto-generated',
   };
@@ -552,8 +868,8 @@ function exportHole(courseId, holeNumber, courseJson) {
   const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 1.5, 3);
   // was: epsilon 2.0, 2 passes → now: epsilon 1.5, 3 passes
   const semiRough = extractZoneContours(zonesData, terrainMeta, 3, 30, 3.0, 3);
-  const cartPaths = extractZoneContours(zonesData, terrainMeta, 8, 15, 1.5, 3);
-  // epsilon 1.5 = preserve the path shape, 3 Chaikin passes = smooth curves
+  const cartPaths = extractCartPathContours(zonesData, terrainMeta, 2.5, 15, 1.0, 2);
+  // 2.5m min width, 15 min pixels, RDP epsilon 1.0 (preserve narrow shape), 2 Chaikin passes
 
   const zoneContoursOutput = {
     schema_version: '1.0.0',
@@ -575,9 +891,24 @@ function exportHole(courseId, holeNumber, courseJson) {
     console.log(`  Zone contours: ${tees.length} tee(s), ${semiRough.length} semi-rough, ${cartPaths.length} cart path(s)`);
   }
 
+  // --- Build cart-paths.json ---
+  const cartPathsOutput = {
+    schema_version: '1.0.0',
+    hole_number: holeNumber,
+    cart_path_count: cartPaths.length,
+    min_width_m: 2.5,
+    cart_paths: cartPaths,
+  };
+
+  fs.writeFileSync(
+    path.join(exportDir, 'cart-paths.json'),
+    JSON.stringify(cartPathsOutput, null, 2),
+    'utf-8'
+  );
+
   if (cartPaths.length > 0) {
     const contourStats = cartPaths.map(c =>
-      `#${c.id}: ${c.contour.length}pts`
+      `#${c.id}: ${c.contour.length}pts, spine ${c.spine ? c.spine.length : 0}pts (${c.pixel_count}px${c.dilated ? ', dilated' : ''})`
     ).join(', ');
     console.log(`  Cart path contours: ${contourStats}`);
   }

@@ -13,6 +13,12 @@ let showTrees = true;
 let obImg = null;
 let obMask = null;
 let showOB = true;
+let cartPathImg = null;
+let cartPathMask = null;
+let showCartPath = true;
+
+// Layer system
+let activeLayer = "terrain"; // "terrain" | "trees" | "cartpath" | "ob"
 let heightmapImg = null;
 let drawScale = 1;
 let draggingTeeIndex = -1;
@@ -68,6 +74,14 @@ const ZONE_LEGEND = [
   { name: "Tee box",    color: "#FFFFFF" },
 ];
 
+// Layer → zone indices mapping
+const LAYER_ZONES = {
+  terrain:  [0, 1, 2, 3, 4, 6, 7, 10], // Background, Fairway, Green, Semi-rough, Rough, Bunker, Water, Tee box
+  trees:    [5],
+  cartpath: [8],
+  ob:       [9],
+};
+
 // ── Init ────────────────────────────────────────────
 
 async function init() {
@@ -108,6 +122,7 @@ function buildHoleNav() {
 
 function buildZoneLegend() {
   const el = document.getElementById("zone-legend");
+  // Build all brush items (will be shown/hidden based on active layer)
   el.innerHTML = ZONE_LEGEND.map((z, i) =>
     '<div class="legend-item" data-zone="' + i + '">' +
     '<span class="legend-swatch" style="background:' + z.color + '"></span>' +
@@ -126,19 +141,106 @@ function buildZoneLegend() {
       el.querySelectorAll(".legend-item").forEach(i => i.classList.remove("is-active"));
       item.classList.add("is-active");
       activeBrushZone = zone;
-      // Auto-show overlay layer when its brush is selected
-      if (zone === 5 && !showTrees) {
-        showTrees = true;
-        document.getElementById("btn-toggle-trees").classList.add("is-active-toggle");
-        drawCanvas();
-      } else if (zone === 9 && !showOB) {
-        showOB = true;
-        document.getElementById("btn-toggle-ob").classList.add("is-active-toggle");
-        drawCanvas();
-      }
     }
     updateBrushUI();
   });
+
+  // Build layer bar
+  buildLayerBar();
+  filterBrushesByLayer();
+}
+
+function buildLayerBar() {
+  const bar = document.getElementById("layer-bar");
+  const layers = [
+    { id: "terrain",  label: "Terrain" },
+    { id: "trees",    label: "Trees" },
+    { id: "cartpath", label: "Cart Path" },
+    { id: "ob",       label: "OB" },
+  ];
+
+  bar.innerHTML = '<h4 class="toolbar-title">Layers</h4>' +
+    '<div class="mode-switcher">' +
+    layers.map(l =>
+      '<button class="mode-btn layer-btn' + (l.id === activeLayer ? ' is-active' : '') +
+      '" data-layer="' + l.id + '">' + l.label + '</button>'
+    ).join("") +
+    '</div>' +
+    '<div class="toolbar-spacer"></div>' +
+    '<div class="layer-visibility">' +
+    '<button id="btn-toggle-trees" class="is-active-toggle" title="Toggle Trees visibility">Trees</button>' +
+    '<button id="btn-toggle-cartpath" class="is-active-toggle" title="Toggle Cart Path visibility">Cart Path</button>' +
+    '<button id="btn-toggle-ob" class="is-active-toggle" title="Toggle OB visibility">OB</button>' +
+    '</div>';
+
+  bar.querySelectorAll(".layer-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      bar.querySelectorAll(".layer-btn").forEach(b => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+      activeLayer = btn.dataset.layer;
+      filterBrushesByLayer();
+    });
+  });
+
+  // Visibility toggles
+  document.getElementById("btn-toggle-trees").addEventListener("click", function () {
+    showTrees = !showTrees;
+    this.classList.toggle("is-active-toggle", showTrees);
+    drawCanvas();
+  });
+  document.getElementById("btn-toggle-cartpath").addEventListener("click", function () {
+    showCartPath = !showCartPath;
+    this.classList.toggle("is-active-toggle", showCartPath);
+    drawCanvas();
+  });
+  document.getElementById("btn-toggle-ob").addEventListener("click", function () {
+    showOB = !showOB;
+    this.classList.toggle("is-active-toggle", showOB);
+    drawCanvas();
+  });
+}
+
+function filterBrushesByLayer() {
+  const el = document.getElementById("zone-legend");
+  const allowedZones = LAYER_ZONES[activeLayer] || [];
+
+  // Show/hide brush items based on layer
+  el.querySelectorAll(".legend-item").forEach(item => {
+    const zone = Number(item.dataset.zone);
+    item.style.display = allowedZones.includes(zone) ? "" : "none";
+  });
+
+  // If current brush is not in the active layer, deselect it
+  if (activeBrushZone >= 0 && !allowedZones.includes(activeBrushZone)) {
+    activeBrushZone = -1;
+    el.querySelectorAll(".legend-item").forEach(i => i.classList.remove("is-active"));
+  }
+
+  // Auto-select first brush if none active
+  if (activeBrushZone < 0 && allowedZones.length > 0) {
+    const firstZone = allowedZones[0];
+    activeBrushZone = firstZone;
+    el.querySelectorAll(".legend-item").forEach(i => {
+      i.classList.toggle("is-active", Number(i.dataset.zone) === firstZone);
+    });
+  }
+
+  // Auto-show the overlay for the active layer
+  if (activeLayer === "trees" && !showTrees) {
+    showTrees = true;
+    document.getElementById("btn-toggle-trees").classList.add("is-active-toggle");
+    drawCanvas();
+  } else if (activeLayer === "cartpath" && !showCartPath) {
+    showCartPath = true;
+    document.getElementById("btn-toggle-cartpath").classList.add("is-active-toggle");
+    drawCanvas();
+  } else if (activeLayer === "ob" && !showOB) {
+    showOB = true;
+    document.getElementById("btn-toggle-ob").classList.add("is-active-toggle");
+    drawCanvas();
+  }
+
+  updateBrushUI();
 }
 
 function updateBrushUI() {
@@ -149,7 +251,7 @@ function updateBrushUI() {
     label.textContent = ZONE_LEGEND[activeBrushZone].name;
     label.style.background = ZONE_LEGEND[activeBrushZone].color;
     label.style.color = activeBrushZone === 0 || activeBrushZone === 5 || activeBrushZone === 4 ? "#fff" : "#000";
-    canvas.classList.toggle("painting", true);
+    canvas.classList.toggle("painting", currentView === "both");
   } else {
     toolbar.hidden = true;
     canvas.classList.remove("painting");
@@ -158,12 +260,21 @@ function updateBrushUI() {
 
 function updateLegendVisibility() {
   const legend = document.getElementById("zone-legend");
-  const show = currentView === "zones" || currentView === "both" || activeBrushZone >= 0;
+  const layerBar = document.getElementById("layer-bar");
+  const show = currentView === "both";
   legend.hidden = !show;
+  if (layerBar) layerBar.hidden = !show;
   if (!show && activeBrushZone >= 0) {
     activeBrushZone = -1;
     legend.querySelectorAll(".legend-item").forEach(i => i.classList.remove("is-active"));
     updateBrushUI();
+  }
+  // Show brush toolbar only when zone painting is available
+  if (!show) {
+    document.getElementById("brush-toolbar").hidden = true;
+    canvas.classList.remove("painting");
+  } else if (activeBrushZone >= 0) {
+    document.getElementById("brush-toolbar").hidden = false;
   }
 }
 
@@ -240,10 +351,12 @@ async function loadZoneGrid(holeNumber) {
     zoneGrid = new Uint8Array(raw.length);
     treesMask = new Uint8Array(raw.length);
     obMask = new Uint8Array(raw.length);
+    cartPathMask = new Uint8Array(raw.length);
     for (let i = 0; i < raw.length; i++) {
       const v = raw.charCodeAt(i);
       if (v === 9) { obMask[i] = 1; zoneGrid[i] = 0; }
       else if (v === 5) { treesMask[i] = 1; zoneGrid[i] = 0; }
+      else if (v === 8) { cartPathMask[i] = 1; zoneGrid[i] = 0; }
       else { zoneGrid[i] = v; }
     }
     regenerateZonesImage();
@@ -253,6 +366,8 @@ async function loadZoneGrid(holeNumber) {
     treesImg = null;
     obMask = null;
     obImg = null;
+    cartPathMask = null;
+    cartPathImg = null;
   }
 }
 
@@ -303,7 +418,7 @@ function drawCanvas() {
     ctx.drawImage(illustrationImg, -hw, -hh, srcW * scale, srcH * scale);
   }
 
-  if ((currentView === "zones" || currentView === "both") && zonesImg) {
+  if ((currentView === "both") && zonesImg) {
     ctx.globalAlpha = currentView === "both" ? overlayOpacity : 1;
     ctx.drawImage(zonesImg, -hw, -hh, srcW * scale, srcH * scale);
   }
@@ -313,16 +428,20 @@ function drawCanvas() {
     ctx.drawImage(heightmapImg, -hw, -hh, srcW * scale, srcH * scale);
   }
 
-  // Trees overlay (over terrain, under OB)
-  if (showTrees && treesImg && currentView !== "heightmap") {
-    ctx.globalAlpha = 1;
-    ctx.drawImage(treesImg, -hw, -hh, srcW * scale, srcH * scale);
-  }
-
-  // OB overlay (on top of everything)
-  if (showOB && obImg && currentView !== "heightmap") {
-    ctx.globalAlpha = 1;
-    ctx.drawImage(obImg, -hw, -hh, srcW * scale, srcH * scale);
+  // Overlay layers (only in Overlay view)
+  if (currentView === "both") {
+    if (showTrees && treesImg) {
+      ctx.globalAlpha = 1;
+      ctx.drawImage(treesImg, -hw, -hh, srcW * scale, srcH * scale);
+    }
+    if (showCartPath && cartPathImg) {
+      ctx.globalAlpha = 1;
+      ctx.drawImage(cartPathImg, -hw, -hh, srcW * scale, srcH * scale);
+    }
+    if (showOB && obImg) {
+      ctx.globalAlpha = 1;
+      ctx.drawImage(obImg, -hw, -hh, srcW * scale, srcH * scale);
+    }
   }
 
   ctx.globalAlpha = 1;
@@ -425,6 +544,42 @@ function hitTestTee(canvasX, canvasY) {
   return -1;
 }
 
+// rAF throttle for paint updates
+let _paintRafPending = false;
+let _paintDirtyRect = null;
+
+function schedulePaintRedraw(gx, gy) {
+  const r = brushSize + 1;
+  const rect = {
+    x: Math.max(0, gx - r),
+    y: Math.max(0, gy - r),
+    w: Math.min(zoneGridW, gx + r + 1) - Math.max(0, gx - r),
+    h: Math.min(zoneGridH, gy + r + 1) - Math.max(0, gy - r),
+  };
+
+  // Merge with pending dirty rect
+  if (_paintDirtyRect) {
+    const nx = Math.min(_paintDirtyRect.x, rect.x);
+    const ny = Math.min(_paintDirtyRect.y, rect.y);
+    const nx2 = Math.max(_paintDirtyRect.x + _paintDirtyRect.w, rect.x + rect.w);
+    const ny2 = Math.max(_paintDirtyRect.y + _paintDirtyRect.h, rect.y + rect.h);
+    _paintDirtyRect = { x: nx, y: ny, w: nx2 - nx, h: ny2 - ny };
+  } else {
+    _paintDirtyRect = rect;
+  }
+
+  if (!_paintRafPending) {
+    _paintRafPending = true;
+    requestAnimationFrame(() => {
+      _paintRafPending = false;
+      if (_paintDirtyRect) {
+        regenerateZonesImage(_paintDirtyRect);
+        _paintDirtyRect = null;
+      }
+    });
+  }
+}
+
 function paintZone(normX, normY) {
   if (activeBrushZone < 0 || !zoneGrid) return;
   const gx = Math.round(normX * (zoneGridW - 1));
@@ -439,12 +594,13 @@ function paintZone(normX, normY) {
       const idx = py * zoneGridW + px;
       if (activeBrushZone === 9) { obMask[idx] = 1; }
       else if (activeBrushZone === 5) { treesMask[idx] = 1; }
+      else if (activeBrushZone === 8) { cartPathMask[idx] = 1; }
       else { zoneGrid[idx] = activeBrushZone; }
     }
   }
 
   zonePaintDirty = true;
-  regenerateZonesImage();
+  schedulePaintRedraw(gx, gy);
 }
 
 function eraseZone(normX, normY) {
@@ -461,12 +617,13 @@ function eraseZone(normX, normY) {
       const idx = py * zoneGridW + px;
       if (activeBrushZone === 9) { obMask[idx] = 0; }
       else if (activeBrushZone === 5) { treesMask[idx] = 0; }
+      else if (activeBrushZone === 8) { cartPathMask[idx] = 0; }
       else if (zoneGrid[idx] === activeBrushZone) { zoneGrid[idx] = 0; }
     }
   }
 
   zonePaintDirty = true;
-  regenerateZonesImage();
+  schedulePaintRedraw(gx, gy);
 }
 
 /**
@@ -497,6 +654,7 @@ function floodFillZone(normX, normY) {
   var mask = null;
   if (activeBrushZone === 9) mask = obMask;
   else if (activeBrushZone === 5) mask = treesMask;
+  else if (activeBrushZone === 8) mask = cartPathMask;
 
   if (mask) {
     // Overlay flood: fill connected non-masked pixels
@@ -547,65 +705,111 @@ function floodFillZone(normX, normY) {
   regenerateZonesImage();
 }
 
-function regenerateZonesImage() {
+// Persistent layer canvases + ImageData (avoid re-allocation on every stroke)
+let _zonesCanvas = null, _zonesCtx = null, _zonesImgData = null;
+let _treesCanvas = null, _treesCtx = null, _treesImgData = null;
+let _obCanvas = null, _obCtx = null, _obImgData = null;
+let _cpCanvas = null, _cpCtx = null, _cpImgData = null;
+let _layerW = 0, _layerH = 0;
+
+function invalidateLayerCanvases() {
+  _layerW = 0; _layerH = 0;
+  _zonesCanvas = null;
+}
+
+function ensureLayerCanvases() {
+  if (_layerW === zoneGridW && _layerH === zoneGridH && _zonesCanvas) return;
+  _layerW = zoneGridW;
+  _layerH = zoneGridH;
+
+  _zonesCanvas = document.createElement("canvas");
+  _zonesCanvas.width = _layerW; _zonesCanvas.height = _layerH;
+  _zonesCtx = _zonesCanvas.getContext("2d");
+  _zonesImgData = _zonesCtx.createImageData(_layerW, _layerH);
+
+  _treesCanvas = document.createElement("canvas");
+  _treesCanvas.width = _layerW; _treesCanvas.height = _layerH;
+  _treesCtx = _treesCanvas.getContext("2d");
+  _treesImgData = _treesCtx.createImageData(_layerW, _layerH);
+
+  _obCanvas = document.createElement("canvas");
+  _obCanvas.width = _layerW; _obCanvas.height = _layerH;
+  _obCtx = _obCanvas.getContext("2d");
+  _obImgData = _obCtx.createImageData(_layerW, _layerH);
+
+  _cpCanvas = document.createElement("canvas");
+  _cpCanvas.width = _layerW; _cpCanvas.height = _layerH;
+  _cpCtx = _cpCanvas.getContext("2d");
+  _cpImgData = _cpCtx.createImageData(_layerW, _layerH);
+}
+
+/**
+ * Update a rectangular region of the layer canvases.
+ * If no rect given, updates the entire grid (full rebuild).
+ */
+function regenerateZonesImage(dirtyRect) {
   if (!zoneGrid) return;
-
-  // Main zones canvas
-  const tempCanvas = document.createElement("canvas");
-  tempCanvas.width = zoneGridW;
-  tempCanvas.height = zoneGridH;
-  const tempCtx = tempCanvas.getContext("2d");
-  const imgData = tempCtx.createImageData(zoneGridW, zoneGridH);
-
-  // Trees-only canvas
-  const treesCanvas = document.createElement("canvas");
-  treesCanvas.width = zoneGridW;
-  treesCanvas.height = zoneGridH;
-  const treesCtx = treesCanvas.getContext("2d");
-  const treesData = treesCtx.createImageData(zoneGridW, zoneGridH);
-
-  // OB-only canvas
-  const obCanvas = document.createElement("canvas");
-  obCanvas.width = zoneGridW;
-  obCanvas.height = zoneGridH;
-  const obCtx = obCanvas.getContext("2d");
-  const obData = obCtx.createImageData(zoneGridW, zoneGridH);
+  ensureLayerCanvases();
 
   const treesC = ZONE_COLORS_RGB[5];
   const obC = ZONE_COLORS_RGB[9];
-  for (let i = 0; i < zoneGrid.length; i++) {
-    // Main zones layer
-    const c = ZONE_COLORS_RGB[zoneGrid[i]] || [0, 0, 0];
-    imgData.data[i * 4]     = c[0];
-    imgData.data[i * 4 + 1] = c[1];
-    imgData.data[i * 4 + 2] = c[2];
-    imgData.data[i * 4 + 3] = 255;
+  const cpC = ZONE_COLORS_RGB[8];
 
-    // Trees layer from mask
-    if (treesMask && treesMask[i]) {
-      treesData.data[i * 4]     = treesC[0];
-      treesData.data[i * 4 + 1] = treesC[1];
-      treesData.data[i * 4 + 2] = treesC[2];
-      treesData.data[i * 4 + 3] = 255;
-    }
+  const x0 = dirtyRect ? Math.max(0, dirtyRect.x) : 0;
+  const y0 = dirtyRect ? Math.max(0, dirtyRect.y) : 0;
+  const x1 = dirtyRect ? Math.min(zoneGridW, dirtyRect.x + dirtyRect.w) : zoneGridW;
+  const y1 = dirtyRect ? Math.min(zoneGridH, dirtyRect.y + dirtyRect.h) : zoneGridH;
 
-    // OB layer from mask
-    if (obMask && obMask[i]) {
-      obData.data[i * 4]     = obC[0];
-      obData.data[i * 4 + 1] = obC[1];
-      obData.data[i * 4 + 2] = obC[2];
-      obData.data[i * 4 + 3] = 255;
+  const zd = _zonesImgData.data;
+  const td = _treesImgData.data;
+  const od = _obImgData.data;
+  const cd = _cpImgData.data;
+
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const i = y * zoneGridW + x;
+      const i4 = i * 4;
+
+      const c = ZONE_COLORS_RGB[zoneGrid[i]] || [0, 0, 0];
+      zd[i4] = c[0]; zd[i4+1] = c[1]; zd[i4+2] = c[2]; zd[i4+3] = 255;
+
+      if (treesMask && treesMask[i]) {
+        td[i4] = treesC[0]; td[i4+1] = treesC[1]; td[i4+2] = treesC[2]; td[i4+3] = 255;
+      } else {
+        td[i4+3] = 0;
+      }
+
+      if (obMask && obMask[i]) {
+        od[i4] = obC[0]; od[i4+1] = obC[1]; od[i4+2] = obC[2]; od[i4+3] = 255;
+      } else {
+        od[i4+3] = 0;
+      }
+
+      if (cartPathMask && cartPathMask[i]) {
+        cd[i4] = cpC[0]; cd[i4+1] = cpC[1]; cd[i4+2] = cpC[2]; cd[i4+3] = 255;
+      } else {
+        cd[i4+3] = 0;
+      }
     }
   }
 
-  tempCtx.putImageData(imgData, 0, 0);
-  zonesImg = tempCanvas;
+  if (dirtyRect) {
+    const dw = x1 - x0, dh = y1 - y0;
+    _zonesCtx.putImageData(_zonesImgData, 0, 0, x0, y0, dw, dh);
+    _treesCtx.putImageData(_treesImgData, 0, 0, x0, y0, dw, dh);
+    _obCtx.putImageData(_obImgData, 0, 0, x0, y0, dw, dh);
+    _cpCtx.putImageData(_cpImgData, 0, 0, x0, y0, dw, dh);
+  } else {
+    _zonesCtx.putImageData(_zonesImgData, 0, 0);
+    _treesCtx.putImageData(_treesImgData, 0, 0);
+    _obCtx.putImageData(_obImgData, 0, 0);
+    _cpCtx.putImageData(_cpImgData, 0, 0);
+  }
 
-  treesCtx.putImageData(treesData, 0, 0);
-  treesImg = treesCanvas;
-
-  obCtx.putImageData(obData, 0, 0);
-  obImg = obCanvas;
+  zonesImg = _zonesCanvas;
+  treesImg = _treesCanvas;
+  obImg = _obCanvas;
+  cartPathImg = _cpCanvas;
 
   drawCanvas();
 }
@@ -668,9 +872,9 @@ function setupCanvasInteraction() {
       return;
     }
 
-    if (activeBrushZone >= 0 && (currentView === "zones" || currentView === "both")) {
+    if (activeBrushZone >= 0 && (currentView === "both")) {
       if (zoneGrid) {
-        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null });
+        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null, cp: cartPathMask ? new Uint8Array(cartPathMask) : null });
         if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
       }
       const norm = canvasToNormalized(x, y);
@@ -723,7 +927,7 @@ function setupCanvasInteraction() {
     }
 
     const teeIdx = hitTestTee(x, y);
-    const hasBrush = activeBrushZone >= 0 && (currentView === "zones" || currentView === "both");
+    const hasBrush = activeBrushZone >= 0 && (currentView === "both");
     canvas.classList.toggle("hovering-tee", teeIdx >= 0);
     canvas.classList.toggle("painting", hasBrush && teeIdx < 0);
     updateTeeTooltip(teeIdx, x, y);
@@ -804,43 +1008,12 @@ function setupControls() {
   // Hide opacity control initially (only shown for Overlay view)
   updateOpacityVisibility();
 
-  document.getElementById("btn-rotate-ccw").addEventListener("click", () => {
-    orientation.rotation = (orientation.rotation + 270) % 360;
-    updateOrientationUI(); drawCanvas();
-  });
-  document.getElementById("btn-rotate-cw").addEventListener("click", () => {
-    orientation.rotation = (orientation.rotation + 90) % 360;
-    updateOrientationUI(); drawCanvas();
-  });
-  document.getElementById("btn-flip-h").addEventListener("click", () => {
-    orientation.flipH = !orientation.flipH;
-    updateOrientationUI(); drawCanvas();
-  });
-  document.getElementById("btn-flip-v").addEventListener("click", () => {
-    orientation.flipV = !orientation.flipV;
-    updateOrientationUI(); drawCanvas();
-  });
-  document.getElementById("btn-reset").addEventListener("click", () => {
-    orientation = { rotation: 0, flipH: false, flipV: false };
-    updateOrientationUI(); drawCanvas();
-  });
-
   document.getElementById("overlay-opacity").addEventListener("input", function () {
     overlayOpacity = this.value / 100;
     drawCanvas();
   });
 
-  document.getElementById("btn-toggle-trees").addEventListener("click", function () {
-    showTrees = !showTrees;
-    this.classList.toggle("is-active-toggle", showTrees);
-    drawCanvas();
-  });
-
-  document.getElementById("btn-toggle-ob").addEventListener("click", function () {
-    showOB = !showOB;
-    this.classList.toggle("is-active-toggle", showOB);
-    drawCanvas();
-  });
+  // Tree/CartPath/OB toggles are set up in buildLayerBar()
 
   document.getElementById("btn-save").addEventListener("click", saveAll);
   document.getElementById("btn-save-as").addEventListener("click", saveAsSnapshot);
@@ -853,120 +1026,181 @@ function setupControls() {
   });
   document.getElementById("btn-regen").addEventListener("click", regenHeightmap);
 
-  // Import Zones from PNG
-  document.getElementById("import-zones-btn").addEventListener("click", () => {
-    document.getElementById("zones-file-input").click();
+  // ── Export helpers ──────────────────────────────────
+
+  function exportLayerPNG(suffix, renderFn) {
+    if (!zoneGrid || !currentHole) return;
+    const tmpCanvas = document.createElement("canvas");
+    tmpCanvas.width = zoneGridW;
+    tmpCanvas.height = zoneGridH;
+    const tmpCtx = tmpCanvas.getContext("2d");
+    const imgData = tmpCtx.createImageData(zoneGridW, zoneGridH);
+    renderFn(imgData.data);
+    tmpCtx.putImageData(imgData, 0, 0);
+    const url = tmpCanvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "hole-" + String(currentHole.number).padStart(2, "0") + "-" + suffix + ".png";
+    a.click();
+    showBanner("Exported " + suffix + " PNG (" + zoneGridW + "×" + zoneGridH + ")");
+  }
+
+  function showBanner(msg) {
+    const banner = document.getElementById("save-banner");
+    banner.textContent = msg;
+    setTimeout(() => { banner.textContent = "\u00a0"; }, 3000);
+  }
+
+  // Export All — merges all layers into one zone-colored PNG
+  document.getElementById("export-all-btn").addEventListener("click", () => {
+    exportLayerPNG("zones-all", (data) => {
+      for (let i = 0; i < zoneGrid.length; i++) {
+        const zone = (obMask && obMask[i]) ? 9
+          : (treesMask && treesMask[i]) ? 5
+          : (cartPathMask && cartPathMask[i]) ? 8
+          : zoneGrid[i];
+        const c = ZONE_COLORS_RGB[zone] || [0, 0, 0];
+        data[i * 4] = c[0]; data[i * 4 + 1] = c[1]; data[i * 4 + 2] = c[2]; data[i * 4 + 3] = 255;
+      }
+    });
   });
-  document.getElementById("zones-file-input").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const img = new Image();
-    img.onload = () => {
-      const tmpCanvas = document.createElement("canvas");
-      tmpCanvas.width = img.width;
-      tmpCanvas.height = img.height;
-      const tmpCtx = tmpCanvas.getContext("2d");
-      tmpCtx.drawImage(img, 0, 0);
-      const imageData = tmpCtx.getImageData(0, 0, img.width, img.height);
-      const pixels = imageData.data;
 
-      // Push undo snapshot before replacing
-      if (zoneGrid) {
-        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null });
-        if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
+  // Export Terrain — only the base zoneGrid (no overlay masks)
+  document.getElementById("export-terrain-btn").addEventListener("click", () => {
+    exportLayerPNG("terrain", (data) => {
+      for (let i = 0; i < zoneGrid.length; i++) {
+        const c = ZONE_COLORS_RGB[zoneGrid[i]] || [0, 0, 0];
+        data[i * 4] = c[0]; data[i * 4 + 1] = c[1]; data[i * 4 + 2] = c[2]; data[i * 4 + 3] = 255;
       }
+    });
+  });
 
-      // Build new grid + masks by matching each pixel to closest zone color
-      const newGrid = new Uint8Array(img.width * img.height);
-      const newTrees = new Uint8Array(img.width * img.height);
-      const newOB = new Uint8Array(img.width * img.height);
-      for (let i = 0; i < img.width * img.height; i++) {
-        const r = pixels[i * 4];
-        const g = pixels[i * 4 + 1];
-        const b = pixels[i * 4 + 2];
-        const zone = matchZoneColor(r, g, b);
-        if (zone === 5) { newTrees[i] = 1; newGrid[i] = 0; }
-        else if (zone === 9) { newOB[i] = 1; newGrid[i] = 0; }
-        else { newGrid[i] = zone; }
+  // Export Trees — white where trees, black elsewhere
+  document.getElementById("export-trees-btn").addEventListener("click", () => {
+    exportLayerPNG("trees", (data) => {
+      for (let i = 0; i < zoneGrid.length; i++) {
+        const on = treesMask && treesMask[i];
+        data[i * 4] = on ? 255 : 0; data[i * 4 + 1] = on ? 255 : 0; data[i * 4 + 2] = on ? 255 : 0; data[i * 4 + 3] = 255;
       }
+    });
+  });
 
-      zoneGrid = newGrid;
-      zoneGridW = img.width;
-      zoneGridH = img.height;
-      treesMask = newTrees;
-      obMask = newOB;
-      zonePaintDirty = true;
-      regenerateZonesImage();
-      console.log(`Imported zones from ${file.name}: ${img.width}×${img.height}`);
+  // Export Cart Path — white where cart path, black elsewhere
+  document.getElementById("export-cartpath-btn").addEventListener("click", () => {
+    exportLayerPNG("cartpath", (data) => {
+      for (let i = 0; i < zoneGrid.length; i++) {
+        const on = cartPathMask && cartPathMask[i];
+        data[i * 4] = on ? 255 : 0; data[i * 4 + 1] = on ? 255 : 0; data[i * 4 + 2] = on ? 255 : 0; data[i * 4 + 3] = 255;
+      }
+    });
+  });
+
+  // Export OB — white where OB, black elsewhere
+  document.getElementById("export-ob-btn").addEventListener("click", () => {
+    exportLayerPNG("ob", (data) => {
+      for (let i = 0; i < zoneGrid.length; i++) {
+        const on = obMask && obMask[i];
+        data[i * 4] = on ? 255 : 0; data[i * 4 + 1] = on ? 255 : 0; data[i * 4 + 2] = on ? 255 : 0; data[i * 4 + 3] = 255;
+      }
+    });
+  });
+
+  // ── Import helpers ──────────────────────────────────
+
+  function importLayerPNG(fileInputId, applyFn) {
+    const input = document.getElementById(fileInputId);
+    input.value = "";
+    input.click();
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        const tmpCanvas = document.createElement("canvas");
+        tmpCanvas.width = img.width;
+        tmpCanvas.height = img.height;
+        const tmpCtx = tmpCanvas.getContext("2d");
+        tmpCtx.drawImage(img, 0, 0);
+        const imageData = tmpCtx.getImageData(0, 0, img.width, img.height);
+
+        // Push undo snapshot
+        if (zoneGrid) {
+          zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null, cp: cartPathMask ? new Uint8Array(cartPathMask) : null });
+          if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
+        }
+
+        applyFn(imageData.data, img.width, img.height);
+
+        zonePaintDirty = true;
+        regenerateZonesImage();
+        showBanner("Imported from " + file.name + " (" + img.width + "×" + img.height + ")");
+      };
+      img.src = URL.createObjectURL(file);
+      e.target.value = "";
     };
-    img.src = URL.createObjectURL(file);
-    e.target.value = "";
-  });
+  }
 
-  // Import Zones from SVG
-  document.getElementById("import-svg-btn").addEventListener("click", () => {
-    document.getElementById("svg-file-input").click();
-  });
-  document.getElementById("svg-file-input").addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const svgText = await file.text();
-    // Rasterize at current zone grid resolution
-    const targetW = zoneGridW || 2048;
-    const targetH = zoneGridH || 2048;
-
-    const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-
-    img.onload = () => {
-      const tmpCanvas = document.createElement("canvas");
-      tmpCanvas.width = targetW;
-      tmpCanvas.height = targetH;
-      const tmpCtx = tmpCanvas.getContext("2d");
-
-      // Black background = zone 0 (background)
-      tmpCtx.fillStyle = "#000000";
-      tmpCtx.fillRect(0, 0, targetW, targetH);
-      tmpCtx.drawImage(img, 0, 0, targetW, targetH);
-
-      const imageData = tmpCtx.getImageData(0, 0, targetW, targetH);
-      const pixels = imageData.data;
-
-      // Push undo before replacing
-      if (zoneGrid) {
-        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null });
-        if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
+  // Import Terrain — replaces base zoneGrid, preserves overlay masks
+  document.getElementById("import-terrain-btn").addEventListener("click", () => {
+    importLayerPNG("import-terrain-file", (pixels, w, h) => {
+      const newGrid = new Uint8Array(w * h);
+      for (let i = 0; i < w * h; i++) {
+        const zone = matchZoneColor(pixels[i * 4], pixels[i * 4 + 1], pixels[i * 4 + 2]);
+        // Only import terrain zones (skip overlay zones 5, 8, 9)
+        if (zone !== 5 && zone !== 8 && zone !== 9) newGrid[i] = zone;
       }
-
-      const newGrid = new Uint8Array(targetW * targetH);
-      const newTrees = new Uint8Array(targetW * targetH);
-      const newOB = new Uint8Array(targetW * targetH);
-      for (let i = 0; i < targetW * targetH; i++) {
-        const r = pixels[i * 4];
-        const g = pixels[i * 4 + 1];
-        const b = pixels[i * 4 + 2];
-        const zone = matchZoneColor(r, g, b);
-        if (zone === 5) { newTrees[i] = 1; newGrid[i] = 0; }
-        else if (zone === 9) { newOB[i] = 1; newGrid[i] = 0; }
-        else { newGrid[i] = zone; }
-      }
-
       zoneGrid = newGrid;
-      zoneGridW = targetW;
-      zoneGridH = targetH;
-      treesMask = newTrees;
-      obMask = newOB;
-      zonePaintDirty = true;
-      regenerateZonesImage();
+      // Resize masks if grid dimensions changed
+      if (w !== zoneGridW || h !== zoneGridH) {
+        treesMask = new Uint8Array(w * h);
+        obMask = new Uint8Array(w * h);
+        cartPathMask = new Uint8Array(w * h);
+      }
+      zoneGridW = w;
+      zoneGridH = h;
+    });
+  });
 
-      URL.revokeObjectURL(url);
-      console.log(`Imported zones from SVG: ${targetW}×${targetH}`);
-    };
+  // Import Trees — white pixels become trees, black pixels clear trees
+  document.getElementById("import-trees-btn").addEventListener("click", () => {
+    importLayerPNG("import-trees-file", (pixels, w, h) => {
+      if (w !== zoneGridW || h !== zoneGridH) {
+        showBanner("Size mismatch: expected " + zoneGridW + "×" + zoneGridH + ", got " + w + "×" + h);
+        return;
+      }
+      for (let i = 0; i < w * h; i++) {
+        const brightness = pixels[i * 4] + pixels[i * 4 + 1] + pixels[i * 4 + 2];
+        treesMask[i] = brightness > 384 ? 1 : 0; // > 50% white = tree
+      }
+    });
+  });
 
-    img.src = url;
-    e.target.value = "";
+  // Import Cart Path — white pixels become cart path
+  document.getElementById("import-cartpath-btn").addEventListener("click", () => {
+    importLayerPNG("import-cartpath-file", (pixels, w, h) => {
+      if (w !== zoneGridW || h !== zoneGridH) {
+        showBanner("Size mismatch: expected " + zoneGridW + "×" + zoneGridH + ", got " + w + "×" + h);
+        return;
+      }
+      for (let i = 0; i < w * h; i++) {
+        const brightness = pixels[i * 4] + pixels[i * 4 + 1] + pixels[i * 4 + 2];
+        cartPathMask[i] = brightness > 384 ? 1 : 0;
+      }
+    });
+  });
+
+  // Import OB — white pixels become OB
+  document.getElementById("import-ob-btn").addEventListener("click", () => {
+    importLayerPNG("import-ob-file", (pixels, w, h) => {
+      if (w !== zoneGridW || h !== zoneGridH) {
+        showBanner("Size mismatch: expected " + zoneGridW + "×" + zoneGridH + ", got " + w + "×" + h);
+        return;
+      }
+      for (let i = 0; i < w * h; i++) {
+        const brightness = pixels[i * 4] + pixels[i * 4 + 1] + pixels[i * 4 + 2];
+        obMask[i] = brightness > 384 ? 1 : 0;
+      }
+    });
   });
 
   // Brush controls
@@ -998,6 +1232,7 @@ function setupControls() {
         zoneGrid = snap.grid;
         treesMask = snap.trees;
         obMask = snap.ob;
+        cartPathMask = snap.cp;
         zonePaintDirty = true;
         regenerateZonesImage();
         e.preventDefault();
@@ -1009,11 +1244,7 @@ function setupControls() {
 }
 
 function updateOrientationUI() {
-  document.getElementById("btn-flip-h").classList.toggle("is-active-toggle", orientation.flipH);
-  document.getElementById("btn-flip-v").classList.toggle("is-active-toggle", orientation.flipV);
-  document.getElementById("orientation-readout").textContent =
-    "R:" + orientation.rotation + "° H:" + (orientation.flipH ? "Y" : "N") +
-    " V:" + (orientation.flipV ? "Y" : "N");
+  // Orientation buttons removed — this is now a no-op kept for compatibility
 }
 
 // ── Regen Heightmap ─────────────────────────────────
@@ -1120,7 +1351,7 @@ async function saveAll() {
       // Merge OB mask back into grid for saving
       let binary = "";
       for (let i = 0; i < zoneGrid.length; i++)
-        binary += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : zoneGrid[i]);
+        binary += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : cartPathMask && cartPathMask[i] ? 8 : zoneGrid[i]);
       const gridBase64 = btoa(binary);
 
       await fetch("/api/zones", {
@@ -1162,7 +1393,7 @@ function saveAsSnapshot() {
   if (zoneGrid) {
     let binary = "";
     for (let i = 0; i < zoneGrid.length; i++)
-      binary += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : zoneGrid[i]);
+      binary += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : cartPathMask && cartPathMask[i] ? 8 : zoneGrid[i]);
     snapshot.zones = {
       width: zoneGridW,
       height: zoneGridH,
@@ -1204,7 +1435,7 @@ function loadSnapshot(file) {
 
       // Push undo snapshot before applying
       if (zoneGrid) {
-        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null });
+        zoneUndoStack.push({ grid: new Uint8Array(zoneGrid), trees: treesMask ? new Uint8Array(treesMask) : null, ob: obMask ? new Uint8Array(obMask) : null, cp: cartPathMask ? new Uint8Array(cartPathMask) : null });
         if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
       }
 
@@ -1228,10 +1459,12 @@ function loadSnapshot(file) {
         zoneGrid = new Uint8Array(raw.length);
         treesMask = new Uint8Array(raw.length);
         obMask = new Uint8Array(raw.length);
+        cartPathMask = new Uint8Array(raw.length);
         for (let i = 0; i < raw.length; i++) {
           const v = raw.charCodeAt(i);
           if (v === 9) { obMask[i] = 1; zoneGrid[i] = 0; }
           else if (v === 5) { treesMask[i] = 1; zoneGrid[i] = 0; }
+          else if (v === 8) { cartPathMask[i] = 1; zoneGrid[i] = 0; }
           else { zoneGrid[i] = v; }
         }
         zonePaintDirty = true;
