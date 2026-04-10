@@ -17,7 +17,7 @@ import { latToTileY, lonToTileX, tileBounds } from './lib/tiles.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-const RES = 1025; // heightmap resolution (matches Unity terrain)
+const RES = 2049; // heightmap resolution (matches Unity terrain)
 
 // Zone indices (must match classify-zones.mjs)
 const ZONES = {

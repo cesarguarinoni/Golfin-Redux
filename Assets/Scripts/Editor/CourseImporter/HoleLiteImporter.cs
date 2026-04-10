@@ -236,7 +236,7 @@ namespace Golfin.CourseImport
             string dataDir, string holeId, string projectRoot, float terrainX, float terrainZ)
         {
             int rawRes = manifest.terrain.resolution; // 1025 from DEM pipeline
-            int actualRes = 1025;
+            int actualRes = 2049;
 
             // Elevation range: DEM range + shore depression headroom
             float demRange = manifest.terrain.max_elevation_m;
