@@ -539,7 +539,7 @@ namespace Golfin.CourseImport
                     float halfHeight = 0f;
                     if (rends.Length > 0)
                         halfHeight = rends[0].bounds.extents.y;
-                    markerPos.y = terrainBase + terrainHeight + halfHeight + 0.1f;
+                    markerPos.y = terrainBase + terrainHeight + halfHeight;
                     markerGO.transform.position = markerPos;
                     markerGO.transform.SetParent(parent);
                 }
@@ -2475,7 +2475,7 @@ namespace Golfin.CourseImport
 
             // Convert contour to world space (90° CCW rotation: worldX = z, worldZ = x)
             Vector3[] worldPts = new Vector3[n];
-            float yOffset = 0.08f; // raised for sloped DEM terrain
+            float yOffset = 0.02f; // minimal offset to avoid z-fighting
 
             for (int i = 0; i < n; i++)
             {
@@ -2549,7 +2549,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.05f; // low offset + subdivision + double-sided material
+            float yOffset = 0.02f; // minimal offset to avoid z-fighting
 
             // 90° CCW rotation
             Vector3[] worldPts = new Vector3[n];
@@ -2624,7 +2624,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.08f; // raised for sloped DEM terrain
+            float yOffset = 0.02f; // minimal offset to avoid z-fighting
 
             // stripeDir is perpendicular to tee→green. Compute the parallel axis.
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
@@ -2908,7 +2908,7 @@ namespace Golfin.CourseImport
             int n = spine.Length;
             if (n < 2) return null;
 
-            float yOffset = 0.04f; // small offset, mesh follows terrain closely
+            float yOffset = 0.02f; // minimal offset to avoid z-fighting
 
             var verts = new Vector3[n * 2];
             var uvs = new Vector2[n * 2];
@@ -3036,7 +3036,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.10f; // above fairway (0.08) on sloped terrain
+            float yOffset = 0.03f; // slightly above fairway (0.02)
 
             // Convert to world space — this is the contour edge
             Vector3[] edgeRing = new Vector3[n];
@@ -3147,7 +3147,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.06f; // below tee mesh (0.08) on sloped terrain
+            float yOffset = 0.01f; // below tee mesh (0.02)
 
             // Convert to world space
             Vector3[] innerRing = new Vector3[n];
