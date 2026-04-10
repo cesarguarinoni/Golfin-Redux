@@ -4,19 +4,22 @@ using UnityEditor;
 
 namespace Golfin.CourseImport
 {
+    public enum TreeFilter { Both, TerrainOnly, StandaloneOnly }
+
     /// <summary>
     /// Editor window for tweaking TreePlacer parameters and re-importing trees.
-    /// Open via GOLFIN > Tree Settings.
+    /// Open via Trees > Tree Settings.
     /// </summary>
     public class TreePlacerWindow : EditorWindow
     {
         private Vector2 treeScrollPos;
+        private TreeFilter filter = TreeFilter.Both;
 
-        [MenuItem("GOLFIN/Tree Settings")]
+        [MenuItem("Trees/Tree Settings")]
         public static void ShowWindow()
         {
             var window = GetWindow<TreePlacerWindow>("Tree Settings");
-            window.minSize = new Vector2(420, 520);
+            window.minSize = new Vector2(420, 560);
         }
 
         private void OnEnable()
@@ -28,7 +31,11 @@ namespace Golfin.CourseImport
         private void OnGUI()
         {
             // ---- Tree Palette ----
+            EditorGUILayout.BeginHorizontal();
             GUILayout.Label("Tree Palette", EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            filter = (TreeFilter)EditorGUILayout.EnumPopup(filter, GUILayout.Width(120));
+            EditorGUILayout.EndHorizontal();
 
             if (GUILayout.Button("Rescan Prefab Folders", GUILayout.Height(20)))
                 TreePlacer.ScanPrefabs();
@@ -50,6 +57,10 @@ namespace Golfin.CourseImport
 
             foreach (var entry in TreePlacer.TreePalette)
             {
+                // Apply filter
+                if (filter == TreeFilter.TerrainOnly && entry.standalone) continue;
+                if (filter == TreeFilter.StandaloneOnly && !entry.standalone) continue;
+
                 EditorGUILayout.BeginHorizontal();
 
                 entry.enabled = EditorGUILayout.Toggle(entry.enabled, GUILayout.Width(20));
@@ -61,11 +72,9 @@ namespace Golfin.CourseImport
                 entry.weight = EditorGUILayout.FloatField(entry.weight, GUILayout.Width(50));
                 if (entry.weight < 0f) entry.weight = 0f;
 
-                // Standalone toggle (GO = GameObject)
                 entry.standalone = EditorGUILayout.Toggle(entry.standalone, GUILayout.Width(20));
                 EditorGUI.EndDisabledGroup();
 
-                // LOD indicator (read-only)
                 GUILayout.Label(entry.hasLODGroup ? "\u2713" : "\u2013",
                     EditorStyles.centeredGreyMiniLabel, GUILayout.Width(24));
 
@@ -114,17 +123,30 @@ namespace Golfin.CourseImport
 
             EditorGUILayout.Space(15);
 
+            // ---- Save / Load ----
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Save Settings"))
+                TreePlacer.SaveSettings();
+            if (GUILayout.Button("Load Settings"))
+            {
+                TreePlacer.LoadSettings();
+                Repaint();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.Space(10);
+
             // ---- Actions ----
             EditorGUILayout.HelpBox(
                 "GO = standalone GameObject (particles, complex hierarchy).\n" +
                 "LOD = \u2713 if prefab has LODGroup on root.\n" +
-                "Prefabs without root LODGroup auto-default to standalone.",
+                "Filter dropdown shows Terrain (LOD), Standalone (no LOD), or Both.",
                 MessageType.Info);
 
             EditorGUILayout.Space(5);
             if (GUILayout.Button("Re-import Trees", GUILayout.Height(30)))
             {
-                EditorApplication.ExecuteMenuItem("GOLFIN/Import Trees (Current Hole)");
+                EditorApplication.ExecuteMenuItem("Trees/Import Trees (Current Hole)");
             }
 
             EditorGUILayout.Space(5);

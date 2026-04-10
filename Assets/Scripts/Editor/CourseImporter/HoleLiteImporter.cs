@@ -228,11 +228,8 @@ namespace Golfin.CourseImport
                 PlaceMountainBackdrop(terrain, terrainGO.transform.position.y,
                     terrainX, terrainZ, dataDir, holeRoot.transform);
 
-                // ---- Trees ----
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Placing trees...", 0.87f);
-                string zonesJsonExportPath = Path.Combine(exportPath, "zones.json");
-                TreePlacer.PlaceTrees(terrain, terrainGO.transform.position.y,
-                    exportPath, zonesJsonExportPath, holeRoot.transform);
+                // Trees are placed separately via Trees > Import Trees (Current Hole)
+                // to avoid overwriting Tree Settings palette on each hole import.
 
                 // Apply skybox
                 var skyMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Skybox/Sky-2.mat");

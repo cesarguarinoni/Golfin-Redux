@@ -421,7 +421,116 @@ namespace Golfin.CourseImport
             }
         }
 
-        [MenuItem("GOLFIN/Import Trees (Current Hole)")]
+        // ---- Save / Load Settings ----
+
+        private const string SettingsPath =
+            "Assets/Scripts/Editor/CourseImporter/TreePlacerSettings.json";
+
+        [System.Serializable]
+        private class SavedEntry
+        {
+            public string path;
+            public bool enabled;
+            public float weight;
+            public bool standalone;
+        }
+
+        [System.Serializable]
+        private class SavedSettings
+        {
+            public float minSpacing;
+            public float scaleMin;
+            public float scaleMax;
+            public float sinkOffset;
+            public float drawDistance;
+            public float billboardDistance;
+            public float crossFadeLength;
+            public int maxFullLODCount;
+            public float lod0;
+            public float lod1;
+            public float lod2;
+            public SavedEntry[] entries;
+        }
+
+        public static void SaveSettings()
+        {
+            var data = new SavedSettings
+            {
+                minSpacing = MinSpacing,
+                scaleMin = ScaleMin,
+                scaleMax = ScaleMax,
+                sinkOffset = SinkOffset,
+                drawDistance = DrawDistance,
+                billboardDistance = BillboardDistance,
+                crossFadeLength = CrossFadeLength,
+                maxFullLODCount = MaxFullLODCount,
+                lod0 = LOD0Threshold,
+                lod1 = LOD1Threshold,
+                lod2 = LOD2Threshold,
+                entries = TreePalette.Select(e => new SavedEntry
+                {
+                    path = e.path,
+                    enabled = e.enabled,
+                    weight = e.weight,
+                    standalone = e.standalone,
+                }).ToArray(),
+            };
+
+            string json = JsonUtility.ToJson(data, true);
+            File.WriteAllText(
+                Path.Combine(Path.GetDirectoryName(Application.dataPath), SettingsPath),
+                json);
+            AssetDatabase.ImportAsset(SettingsPath);
+            Debug.Log($"[TreePlacer] Settings saved to {SettingsPath}");
+        }
+
+        public static void LoadSettings()
+        {
+            string fullPath = Path.Combine(
+                Path.GetDirectoryName(Application.dataPath), SettingsPath);
+            if (!File.Exists(fullPath))
+            {
+                Debug.LogWarning($"[TreePlacer] No settings file found at {SettingsPath}");
+                return;
+            }
+
+            var data = JsonUtility.FromJson<SavedSettings>(
+                File.ReadAllText(fullPath));
+
+            MinSpacing = data.minSpacing;
+            ScaleMin = data.scaleMin;
+            ScaleMax = data.scaleMax;
+            SinkOffset = data.sinkOffset;
+            DrawDistance = data.drawDistance;
+            BillboardDistance = data.billboardDistance;
+            CrossFadeLength = data.crossFadeLength;
+            MaxFullLODCount = data.maxFullLODCount;
+            LOD0Threshold = data.lod0;
+            LOD1Threshold = data.lod1;
+            LOD2Threshold = data.lod2;
+
+            // Apply saved palette state
+            if (data.entries != null)
+            {
+                var lookup = new Dictionary<string, SavedEntry>();
+                foreach (var se in data.entries)
+                    lookup[se.path] = se;
+
+                foreach (var entry in TreePalette)
+                {
+                    if (lookup.TryGetValue(entry.path, out var saved))
+                    {
+                        entry.enabled = saved.enabled;
+                        entry.weight = saved.weight;
+                        entry.standalone = saved.standalone;
+                    }
+                }
+            }
+
+            Debug.Log($"[TreePlacer] Settings loaded from {SettingsPath}");
+        }
+
+        [MenuItem("Trees/Import Trees (Current Hole)")]
         private static void ImportTreesMenuItem()
         {
             var terrain = Terrain.activeTerrain;
