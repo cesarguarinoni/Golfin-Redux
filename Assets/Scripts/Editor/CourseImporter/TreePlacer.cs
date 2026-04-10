@@ -27,10 +27,21 @@ namespace Golfin.CourseImport
         // Metasequoia=tall variety, ScottishPine=filler
         private static readonly float[] TreeWeights = { 3f, 3f, 0.5f, 2f, 2f };
 
-        // Placement settings
-        private const float MinSpacing = 6f;   // meters between trees
-        private const float ScaleMin = 0.85f;
-        private const float ScaleMax = 1.15f;
+        // Placement settings (public so TreePlacerWindow can edit them)
+        public static float MinSpacing = 6f;      // meters between trees
+        public static float ScaleMin = 0.85f;
+        public static float ScaleMax = 1.15f;
+
+        // Draw distance settings
+        public static float DrawDistance = 150f;          // max draw distance (meters)
+        public static float BillboardDistance = 80f;      // 3D→billboard transition
+        public static float CrossFadeLength = 20f;        // fade band width
+        public static int MaxFullLODCount = 50;           // max full-detail trees
+
+        // LOD thresholds (screen-relative height)
+        public static float LOD0Threshold = 0.15f;
+        public static float LOD1Threshold = 0.05f;
+        public static float LOD2Threshold = 0.01f;
 
         // Zones to EXCLUDE from tree placement
         private static readonly HashSet<int> ExcludeZones = new HashSet<int>
@@ -197,15 +208,12 @@ namespace Golfin.CourseImport
             terrainData.SetTreeInstances(trees.ToArray(), true);
 
             // ---- Unify draw distances ----
-            terrain.treeDistance = 150f;          // max draw distance (meters)
-            terrain.treeBillboardDistance = 80f;  // 3D→billboard transition
-            terrain.treeCrossFadeLength = 20f;    // fade band width
-            terrain.treeMaximumFullLODCount = 50; // max full-detail trees
+            terrain.treeDistance = DrawDistance;
+            terrain.treeBillboardDistance = BillboardDistance;
+            terrain.treeCrossFadeLength = CrossFadeLength;
+            terrain.treeMaximumFullLODCount = MaxFullLODCount;
 
             // ---- Normalize LODGroup thresholds across all prototypes ----
-            // Each prefab has different screenRelativeHeight values, causing
-            // trees to pop LODs at different distances. Override them all to
-            // uniform values so transitions happen at the same distance.
             foreach (var proto in terrainData.treePrototypes)
             {
                 if (proto.prefab == null) continue;
@@ -213,10 +221,9 @@ namespace Golfin.CourseImport
                 if (lodGroup == null) continue;
 
                 var lods = lodGroup.GetLODs();
-                // Normalize to consistent thresholds
-                if (lods.Length >= 1) lods[0].screenRelativeTransitionHeight = 0.15f;
-                if (lods.Length >= 2) lods[1].screenRelativeTransitionHeight = 0.05f;
-                if (lods.Length >= 3) lods[2].screenRelativeTransitionHeight = 0.01f;
+                if (lods.Length >= 1) lods[0].screenRelativeTransitionHeight = LOD0Threshold;
+                if (lods.Length >= 2) lods[1].screenRelativeTransitionHeight = LOD1Threshold;
+                if (lods.Length >= 3) lods[2].screenRelativeTransitionHeight = LOD2Threshold;
                 lodGroup.SetLODs(lods);
                 lodGroup.fadeMode = LODFadeMode.CrossFade;
                 lodGroup.animateCrossFading = true;
