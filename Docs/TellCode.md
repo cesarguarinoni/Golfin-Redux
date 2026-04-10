@@ -7,196 +7,228 @@
 
 ---
 
-## Current Task — Fix Small Bunker Terrain Poke-Through (v6)
+## Current Task — Fix Small Bunker Terrain Poke-Through (v7)
 
-**Goal:** Bunker 7 has terrain poking through the rim ring. Fix by
-using a **two-mode approach**: large bunkers keep the current contour-
-traced terrain hole (works fine), small bunkers use a **simple square
-terrain hole centered inside the bowl** with a mostly-flat rim that
-sits on terrain.
+**Goal:** Bunker 7 has terrain poking through the rim ring. Fix using
+proven production techniques: **overlap aggressively + dilate the
+terrain hole + lower the outer ring below terrain.**
 
 **Previous failures:**
 - v2/v3: Can't skip terrain holes — terrain wins depth test.
-- v4: Adaptive contour-traced cut still grid-snaps badly at corners.
-- v5: Applied square cut to ALL bunkers (wrong — large bunkers need
-  contour-traced cuts for proper shape).
+- v4: Adaptive contour inset still grid-snaps at corners.
+- v5: Applied square to all bunkers (wrong).
+- v6: Square cut for small bunkers only — still had edge issues.
 
-**v6 approach:** Small bunkers get a tiny square terrain hole in the
-center. The bowl mesh is mostly flat rim sitting on terrain, with
-only the center area depressed into the square hole. The square edges
-are hidden deep inside the bowl where nobody can see them.
+**v7 approach — industry-proven "shingle overlap":**
+Instead of trying to make a precise small hole that the rim barely
+covers, do the opposite:
+1. **Dilate the terrain hole** — make it BIGGER than the contour
+2. **Expand the bowl mesh outward** — extend rim past the contour
+3. **Lower the outer ring below terrain** — tucks under like a skirt
 
-### Size Threshold
+The expanded mesh hides the dilated hole edges. Terrain can't poke
+through because the mesh extends under it. Like shingles on a roof.
 
-Use `shorterAxis < 7.0f` (from `bunker.size_m`) to distinguish:
-- Bunkers 1-6: shorter axis 8.9–15.5m → **contour-traced cut** (current)
-- Bunker 7: shorter axis 5.7m → **square cut** (new)
+**Apply to ALL bunkers** — this approach works universally. No size
+threshold, no branching, one code path.
 
-Ensure `BunkerRegionData` in `HoleManifestData.cs` has `size_m` as a
-`SizeData` field. If not, add it.
+### Changes to CreateZoneMeshes (terrain hole cutting)
 
-### Code Changes
-
-In the `foreach (var bunker in bunkersFile.bunkers)` loop inside
-`CreateZoneMeshes()`, branch based on size:
+Replace the current terrain hole cutting logic. Instead of scaling
+the contour INWARD by 90%, scale it OUTWARD by 105%:
 
 ```csharp
-foreach (var bunker in bunkersFile.bunkers)
+// OLD: cut inside the contour (rim covers gap)
+float cutScale = 0.90f;  // 10% smaller than contour
+
+// NEW: cut OUTSIDE the contour (mesh extends past hole)
+float cutScale = 1.05f;  // 5% larger than contour
+```
+
+The terrain hole is now slightly BIGGER than the bunker contour.
+This means the hole edge is always outside the bowl rim — terrain
+can never poke through from inside because there's no terrain there.
+
+The bowl mesh rim extends past the contour to cover the exposed
+hole edge (handled by the mesh changes below).
+
+### Changes to CreateContourMesh
+
+Three changes to make the mesh overlap the terrain:
+
+**1. Add an outer "skirt" ring at 110% scale, below terrain**
+
+Add a new ring OUTSIDE the current rim ring. This ring extends
+beyond the contour and sits BELOW terrain height, tucking under
+the terrain surface like a skirt:
+
+```csharp
+// OLD ring layout:
+float[] ringScales = { 1.0f, 0.80f, 0.50f, 0.20f };
+float[] ringDepths = { 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
+
+// NEW ring layout — add outer skirt ring:
+float[] ringScales = { 1.10f, 1.0f, 0.80f, 0.50f, 0.20f };
+float[] ringDepths = { 0.0f, 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
+```
+
+Update `ringCount`, `vertCount`, triangles, etc. to account for
+5 rings instead of 4.
+
+**2. Skirt ring (r==0, scale=1.10) sits BELOW terrain**
+
+The skirt ring samples terrain height and then goes 0.15m BELOW it:
+
+```csharp
+if (r == 0)  // skirt ring — below terrain
 {
-    var worldContour = new Vector2[bunker.contour.Length];
-    float sumX = 0, sumZ = 0;
-    for (int i = 0; i < bunker.contour.Length; i++)
+    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+    y = (terrainBaseY + terrainH) - surfaceY - 0.15f;  // 15cm below
+}
+else if (r == 1)  // rim ring — at terrain height (old r==0)
+{
+    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+    y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
+}
+else if (r == 2)  // inner ring — at terrain height (old r==1)
+{
+    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+    y = (terrainBaseY + terrainH) - surfaceY;
+}
+// rings 3, 4 and center: unchanged (use ringDepths)
+```
+
+The skirt goes below terrain so it's invisible from above — terrain
+covers it. But if there's a terrain hole gap, the skirt fills it
+instead of showing sky/void.
+
+**3. Keep material double-sided**
+
+The sand material already has `_Cull = 0` (double-sided). The skirt
+ring needs this since it's viewed from above through the terrain hole.
+
+### Full Updated CreateContourMesh
+
+Here's the ring layout section to replace:
+
+```csharp
+private static GameObject CreateContourMesh(int id, Vector2[] contour,
+    float centroidX, float centroidZ, float surfaceY, float depth,
+    Material sandMat, Terrain terrain, float terrainBaseY)
+{
+    int n = contour.Length;
+    if (n < 3) { /* skip */ }
+
+    // Ring layout: skirt(110%) → rim(100%) → inner(80%) → mid(50%) → deep(20%) → center
+    float[] ringScales = { 1.10f, 1.0f, 0.80f, 0.50f, 0.20f };
+    float[] ringDepths = { 0.0f, 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
+
+    int ringCount = ringScales.Length;
+    int vertCount = n * ringCount + 1; // +1 for center
+    var vertices = new Vector3[vertCount];
+    var uvs = new Vector2[vertCount];
+
+    // ... (UV bounding box code unchanged) ...
+
+    for (int r = 0; r < ringCount; r++)
     {
-        float wx = bunker.contour[i].z;
-        float wz = bunker.contour[i].x;
-        worldContour[i] = new Vector2(wx, wz);
-        sumX += wx;
-        sumZ += wz;
-    }
-    float centroidX = sumX / worldContour.Length;
-    float centroidZ = sumZ / worldContour.Length;
+        float scale = ringScales[r];
+        float ringY = -ringDepths[r];
 
-    // Bounding box of contour
-    float cMinX = float.MaxValue, cMaxX = float.MinValue;
-    float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
-    foreach (var v in worldContour)
-    {
-        if (v.x < cMinX) cMinX = v.x;
-        if (v.x > cMaxX) cMaxX = v.x;
-        if (v.y < cMinZ) cMinZ = v.y;
-        if (v.y > cMaxZ) cMaxZ = v.y;
-    }
-
-    float shorterAxis = Mathf.Min(
-        bunker.size_m.x, bunker.size_m.z);
-    bool isSmall = shorterAxis < 7.0f;
-
-    if (isSmall)
-    {
-        // ── Small bunker: square terrain hole in center ──
-        // The square is much smaller than the bowl — just enough
-        // to let the depressed center show through. The bowl rim
-        // sits flat on terrain covering the gap.
-
-        float squareHalf = 0.8f; // 1.6m square (small, conservative)
-        float sqMinX = centroidX - squareHalf;
-        float sqMaxX = centroidX + squareHalf;
-        float sqMinZ = centroidZ - squareHalf;
-        float sqMaxZ = centroidZ + squareHalf;
-
-        int hMinX = Mathf.Clamp(Mathf.CeilToInt(
-            (sqMinX - terrainPos.x) / terrainSize.x * holesRes),
-            0, holesRes - 1);
-        int hMaxX = Mathf.Clamp(Mathf.FloorToInt(
-            (sqMaxX - terrainPos.x) / terrainSize.x * holesRes),
-            0, holesRes - 1);
-        int hMinZ = Mathf.Clamp(Mathf.CeilToInt(
-            (sqMinZ - terrainPos.z) / terrainSize.z * holesRes),
-            0, holesRes - 1);
-        int hMaxZ = Mathf.Clamp(Mathf.FloorToInt(
-            (sqMaxZ - terrainPos.z) / terrainSize.z * holesRes),
-            0, holesRes - 1);
-
-        if (hMaxX > hMinX && hMaxZ > hMinZ)
+        for (int i = 0; i < n; i++)
         {
-            for (int hz = hMinZ; hz <= hMaxZ; hz++)
-                for (int hx = hMinX; hx <= hMaxX; hx++)
-                    holes[hz, hx] = false;
-        }
+            float wx = centroidX + (contour[i].x - centroidX) * scale;
+            float wz = centroidZ + (contour[i].y - centroidZ) * scale;
 
-        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: SMALL " +
-                  $"square cut ({squareHalf * 2:F1}m) at center, " +
-                  $"shorterAxis={shorterAxis:F1}m");
-    }
-    else
-    {
-        // ── Large bunker: contour-traced cut (existing approach) ──
-        float cutScale = 0.90f;
-        var cutContour = new Vector2[worldContour.Length];
-        for (int i = 0; i < worldContour.Length; i++)
-        {
-            cutContour[i] = new Vector2(
-                centroidX + (worldContour[i].x - centroidX) * cutScale,
-                centroidZ + (worldContour[i].y - centroidZ) * cutScale);
-        }
+            float y = ringY;
 
-        int hMinX = Mathf.Clamp(Mathf.FloorToInt(
-            (cMinX - terrainPos.x) / terrainSize.x * holesRes),
-            0, holesRes - 1);
-        int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
-            (cMaxX - terrainPos.x) / terrainSize.x * holesRes),
-            0, holesRes - 1);
-        int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
-            (cMinZ - terrainPos.z) / terrainSize.z * holesRes),
-            0, holesRes - 1);
-        int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
-            (cMaxZ - terrainPos.z) / terrainSize.z * holesRes),
-            0, holesRes - 1);
-
-        for (int hz = hMinZ; hz <= hMaxZ; hz++)
-        {
-            for (int hx = hMinX; hx <= hMaxX; hx++)
+            if (r == 0)  // Skirt: below terrain (hides hole edge)
             {
-                float cellWorldX = ((hx + 0.5f) / holesRes)
-                    * terrainSize.x + terrainPos.x;
-                float cellWorldZ = ((hz + 0.5f) / holesRes)
-                    * terrainSize.z + terrainPos.z;
-                if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
-                    holes[hz, hx] = false;
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                y = (terrainBaseY + terrainH) - surfaceY - 0.15f;
             }
-        }
+            else if (r == 1)  // Rim: at terrain height + tiny offset
+            {
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
+            }
+            else if (r == 2)  // Inner: at terrain height
+            {
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                y = (terrainBaseY + terrainH) - surfaceY;
+            }
+            // r==3 (mid) and r==4 (deep): use ringY from ringDepths
 
-        Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: LARGE " +
-                  $"contour cut at 90%, shorterAxis={shorterAxis:F1}m");
+            float localX = wx - centroidX;
+            float localZ = wz - centroidZ;
+
+            int vi = r * n + i;
+            vertices[vi] = new Vector3(localX, y, localZ);
+            uvs[vi] = new Vector2(
+                (wx - minX) / extentX,
+                (wz - minZ) / extentZ);
+        }
     }
 
-    // ── Bowl mesh (same for both modes) ──
-    float surfaceY = terrainBaseY + terrain.SampleHeight(
-        new Vector3(centroidX, 0, centroidZ));
-    float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+    // Center vertex — bottom of bowl (unchanged)
+    int centerIdx = vertCount - 1;
+    vertices[centerIdx] = new Vector3(0, -depth, 0);
+    uvs[centerIdx] = new Vector2(0.5f, 0.5f);
 
-    var meshGO = CreateContourMesh(bunker.id, worldContour,
-        centroidX, centroidZ, surfaceY, bowlDepth,
-        sandMat, terrain, terrainBaseY);
-    meshGO.transform.SetParent(bunkersRoot.transform);
-
-    var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
-    marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+    // Triangles: quads between rings + fan to center
+    // (same structure as before, just one more ring)
+    int triCount = n * (ringCount - 1) * 6 + n * 3;
+    // ... (triangle generation code stays the same pattern) ...
 }
 ```
 
-### Why This Works
+### Changes to Terrain Hole Cutting in CreateZoneMeshes
 
-The square hole is ~1.6m centered on the bunker centroid. The bowl
-mesh has ring 0 (rim) at 100% and ring 1 (inner) at 80% of contour
-size. For Bunker 7 (radius ~2.8m), ring 1 is at ~2.2m from centroid.
-The 0.8m square is well inside ring 1, so the rim + inner ring
-fully cover the terrain around the square. The depressed rings
-(mid at 50%, deep at 20%) fall inside or near the square hole.
+```csharp
+// Replace cutScale = 0.90f with:
+float cutScale = 1.05f;  // 5% LARGER than contour (hole is bigger)
 
-The square edges are invisible because they're underneath the bowl
-mesh's depressed interior. Nobody will ever see them.
+var cutContour = new Vector2[worldContour.Length];
+for (int i = 0; i < worldContour.Length; i++)
+{
+    cutContour[i] = new Vector2(
+        centroidX + (worldContour[i].x - centroidX) * cutScale,
+        centroidZ + (worldContour[i].y - centroidZ) * cutScale);
+}
+```
 
-For large bunkers, nothing changes at all.
+Everything else in the hole-cutting loop stays the same.
 
-### No Changes to CreateContourMesh
+### Why This Works for ALL Sizes
 
-`CreateContourMesh` stays exactly as-is. Same 4-ring bowl, same
-ring scales `{ 1.0, 0.80, 0.50, 0.20 }`, same depth.
+**Large bunkers:** The 5% outward cut and 10% outward skirt are
+proportionally small. The skirt tucks 15cm below terrain — invisible
+from above. Visually identical to current.
+
+**Bunker 7 (small):** The 5% outward cut means the hole extends
+~0.14m past the contour on each side. The skirt ring at 110% extends
+~0.28m past contour. The skirt sits below terrain, covering any gap.
+Terrain can't poke through because there's no terrain inside the
+(dilated) hole, and the skirt covers the edge outside.
+
+**Grid snap:** Even if the grid snaps the hole slightly larger than
+the 5% cut contour, the 10% skirt mesh still extends past it.
+The skirt is below terrain so it's hidden, but if a gap appears
+it fills it with sand instead of void.
 
 ### Verification
 
 1. Re-import Hole 01
-2. Console: Bunkers 1-6 = `LARGE contour cut`, Bunker 7 = `SMALL square cut`
-3. Bunker 7: bowl visible with proper sand interior, no terrain
-   poke-through at rim corners
-4. Large bunkers: completely unchanged
-5. Walk all the way around Bunker 7 — no visible square edges
+2. All 7 bunkers: bowl visible, no terrain poke-through
+3. Bunker 7: no visible seam, no terrain at rim corners
+4. Walk around bunkers from all angles — skirt invisible from above
+5. Check from below (fly under terrain) — skirt ring visible as
+   sand lip extending under terrain edge
 
 ### Do NOT
 
-- Apply square cut to large bunkers (they need contour-traced cuts)
-- Change `CreateContourMesh`
+- Use size thresholds or branching (one code path for all)
+- Shrink the terrain hole (dilate it outward instead)
 - Skip terrain holes
 - Change the bunker export pipeline
 - Change other zone meshes
@@ -1264,4 +1296,5 @@ This gives natural terrain-under-asphalt and a visible edge transition.
 ✅ DONE: 2026-04-10 — Hybrid bunker system v2: shorterAxis < 7m threshold (fixes Bunker 6 false positive). Shallow overlay with 0.3m central depression + sand collar ring via CreateGradientBorderRing. Bowl mode unchanged for large bunkers. Superseded by v3.
 ✅ DONE: 2026-04-10 — Hybrid bunker system v3: small bunkers use same CreateContourMesh bowl (shallower, max 1.5m depth) but skip terrain hole. renderQueue=2001 prevents z-fighting with terrain. No ear-clip or collar ring needed. Superseded by v4.
 ✅ DONE: 2026-04-10 — Bunker v4: unified approach — adaptive inset. Superseded by v6 (rim too wide, hole too small).
-✅ DONE: 2026-04-10 — Bunker v6: two-mode — large bunkers keep 90% contour-traced cut, small bunkers (shorterAxis < 7m) get 1.6m square terrain hole at centroid. CreateContourMesh reverted to fixed ring scales. Bowl mesh same for both modes.
+✅ DONE: 2026-04-10 — Bunker v6: two-mode — large bunkers keep 90% contour-traced cut, small bunkers (shorterAxis < 7m) get 1.6m square terrain hole at centroid. Superseded by v7.
+✅ DONE: 2026-04-10 — Bunker v7: shingle overlap — terrain hole dilated outward (105%), 5-ring bowl with skirt at 110% that tucks 0.15m below terrain. Universal approach, no size branching. Skirt hides hole edge from all angles.

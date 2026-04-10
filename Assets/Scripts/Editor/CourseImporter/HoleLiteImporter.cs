@@ -1239,86 +1239,40 @@ namespace Golfin.CourseImport
                     if (v.y > cMaxZ) cMaxZ = v.y;
                 }
 
-                float shorterAxis = Mathf.Min(
-                    bunker.size_m.x, bunker.size_m.z);
-                bool isSmall = shorterAxis < 7.0f;
-
-                if (isSmall)
+                // ── Dilated terrain hole (5% LARGER than contour) ──
+                // Mesh skirt ring extends past the hole edge, hiding it.
+                float cutScale = 1.05f;
+                var cutContour = new Vector2[worldContour.Length];
+                for (int i = 0; i < worldContour.Length; i++)
                 {
-                    // ── Small bunker: square terrain hole in center ──
-                    float squareHalf = 0.8f; // 1.6m square
-                    float sqMinX = centroidX - squareHalf;
-                    float sqMaxX = centroidX + squareHalf;
-                    float sqMinZ = centroidZ - squareHalf;
-                    float sqMaxZ = centroidZ + squareHalf;
-
-                    int hMinX = Mathf.Clamp(Mathf.CeilToInt(
-                        (sqMinX - terrainPos.x) / terrainSize.x * holesRes),
-                        0, holesRes - 1);
-                    int hMaxX = Mathf.Clamp(Mathf.FloorToInt(
-                        (sqMaxX - terrainPos.x) / terrainSize.x * holesRes),
-                        0, holesRes - 1);
-                    int hMinZ = Mathf.Clamp(Mathf.CeilToInt(
-                        (sqMinZ - terrainPos.z) / terrainSize.z * holesRes),
-                        0, holesRes - 1);
-                    int hMaxZ = Mathf.Clamp(Mathf.FloorToInt(
-                        (sqMaxZ - terrainPos.z) / terrainSize.z * holesRes),
-                        0, holesRes - 1);
-
-                    if (hMaxX > hMinX && hMaxZ > hMinZ)
-                    {
-                        for (int hz = hMinZ; hz <= hMaxZ; hz++)
-                            for (int hx = hMinX; hx <= hMaxX; hx++)
-                                holes[hz, hx] = false;
-                    }
-
-                    Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: SMALL " +
-                              $"square cut ({squareHalf * 2:F1}m) at center, " +
-                              $"shorterAxis={shorterAxis:F1}m");
-                }
-                else
-                {
-                    // ── Large bunker: contour-traced cut (existing approach) ──
-                    float cutScale = 0.90f;
-                    var cutContour = new Vector2[worldContour.Length];
-                    for (int i = 0; i < worldContour.Length; i++)
-                    {
-                        cutContour[i] = new Vector2(
-                            centroidX + (worldContour[i].x - centroidX) * cutScale,
-                            centroidZ + (worldContour[i].y - centroidZ) * cutScale);
-                    }
-
-                    int hMinX = Mathf.Clamp(Mathf.FloorToInt(
-                        (cMinX - terrainPos.x) / terrainSize.x * holesRes),
-                        0, holesRes - 1);
-                    int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
-                        (cMaxX - terrainPos.x) / terrainSize.x * holesRes),
-                        0, holesRes - 1);
-                    int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
-                        (cMinZ - terrainPos.z) / terrainSize.z * holesRes),
-                        0, holesRes - 1);
-                    int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
-                        (cMaxZ - terrainPos.z) / terrainSize.z * holesRes),
-                        0, holesRes - 1);
-
-                    for (int hz = hMinZ; hz <= hMaxZ; hz++)
-                    {
-                        for (int hx = hMinX; hx <= hMaxX; hx++)
-                        {
-                            float cellWorldX = ((hx + 0.5f) / holesRes)
-                                * terrainSize.x + terrainPos.x;
-                            float cellWorldZ = ((hz + 0.5f) / holesRes)
-                                * terrainSize.z + terrainPos.z;
-                            if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
-                                holes[hz, hx] = false;
-                        }
-                    }
-
-                    Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: LARGE " +
-                              $"contour cut at 90%, shorterAxis={shorterAxis:F1}m");
+                    cutContour[i] = new Vector2(
+                        centroidX + (worldContour[i].x - centroidX) * cutScale,
+                        centroidZ + (worldContour[i].y - centroidZ) * cutScale);
                 }
 
-                // ── Bowl mesh (same for both modes) ──
+                int hMinX = Mathf.Clamp(Mathf.FloorToInt(
+                    (cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
+                    (cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
+                int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
+                    (cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+                int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+                    (cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
+
+                for (int hz = hMinZ; hz <= hMaxZ; hz++)
+                {
+                    for (int hx = hMinX; hx <= hMaxX; hx++)
+                    {
+                        float cellWorldX = ((hx + 0.5f) / holesRes)
+                            * terrainSize.x + terrainPos.x;
+                        float cellWorldZ = ((hz + 0.5f) / holesRes)
+                            * terrainSize.z + terrainPos.z;
+                        if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
+                            holes[hz, hx] = false;
+                    }
+                }
+
+                // ── Bowl mesh with skirt ring ──
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
                 float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
@@ -1330,6 +1284,10 @@ namespace Golfin.CourseImport
 
                 var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+
+                Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: " +
+                          $"shingle overlap (cut=105%, skirt=110%), " +
+                          $"{bunker.contour.Length} verts");
             }
 
             // Copy bunkers.json to Assets
@@ -1351,9 +1309,9 @@ namespace Golfin.CourseImport
                 return new GameObject($"Bunker_{id}_SKIP");
             }
 
-            // Ring layout: rim (100%) → inner (80%) → mid (50%) → deep (20%) → center
-            float[] ringScales = { 1.0f, 0.80f, 0.50f, 0.20f };
-            float[] ringDepths = { 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
+            // Ring layout: skirt(110%) → rim(100%) → inner(80%) → mid(50%) → deep(20%) → center
+            float[] ringScales = { 1.10f, 1.0f, 0.80f, 0.50f, 0.20f };
+            float[] ringDepths = { 0.0f, 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
 
             int ringCount = ringScales.Length;
             int vertCount = n * ringCount + 1; // +1 for center
@@ -1386,14 +1344,20 @@ namespace Golfin.CourseImport
 
                     float y = ringY;
 
-                    // Rim ring (r==0): sample terrain height for seamless edge
+                    // Skirt ring (r==0): below terrain — hides hole edge
                     if (r == 0)
+                    {
+                        float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                        y = (terrainBaseY + terrainH) - surfaceY - 0.15f;
+                    }
+                    // Rim ring (r==1): at terrain height + tiny offset
+                    else if (r == 1)
                     {
                         float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                         y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
                     }
-                    // Inner ring (r==1): also at terrain height, no offset
-                    else if (r == 1)
+                    // Inner ring (r==2): at terrain height
+                    else if (r == 2)
                     {
                         float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                         y = (terrainBaseY + terrainH) - surfaceY;
