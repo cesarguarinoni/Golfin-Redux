@@ -7,231 +7,51 @@
 
 ---
 
-## Current Task — Fix Small Bunker Terrain Poke-Through (v7)
+## Current Task — Increase Heightmap Resolution to 2049 (Unity Side)
 
-**Goal:** Bunker 7 has terrain poking through the rim ring. Fix using
-proven production techniques: **overlap aggressively + dilate the
-terrain hole + lower the outer ring below terrain.**
+**Goal:** Match the Unity importer to the new 2049 heightmap
+resolution from the UHole Lite pipeline.
 
-**Previous failures:**
-- v2/v3: Can't skip terrain holes — terrain wins depth test.
-- v4: Adaptive contour inset still grid-snaps at corners.
-- v5: Applied square to all bunkers (wrong).
-- v6: Square cut for small bunkers only — still had edge issues.
+### Change
 
-**v7 approach — industry-proven "shingle overlap":**
-Instead of trying to make a precise small hole that the rim barely
-covers, do the opposite:
-1. **Dilate the terrain hole** — make it BIGGER than the contour
-2. **Expand the bowl mesh outward** — extend rim past the contour
-3. **Lower the outer ring below terrain** — tucks under like a skirt
-
-The expanded mesh hides the dilated hole edges. Terrain can't poke
-through because the mesh extends under it. Like shingles on a roof.
-
-**Apply to ALL bunkers** — this approach works universally. No size
-threshold, no branching, one code path.
-
-### Changes to CreateZoneMeshes (terrain hole cutting)
-
-Replace the current terrain hole cutting logic. Instead of scaling
-the contour INWARD by 90%, scale it OUTWARD by 105%:
-
+In `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`,
+in `CreateTerrain()`, find:
 ```csharp
-// OLD: cut inside the contour (rim covers gap)
-float cutScale = 0.90f;  // 10% smaller than contour
-
-// NEW: cut OUTSIDE the contour (mesh extends past hole)
-float cutScale = 1.05f;  // 5% larger than contour
+int actualRes = 1025;
+```
+Change to:
+```csharp
+int actualRes = 2049;
 ```
 
-The terrain hole is now slightly BIGGER than the bunker contour.
-This means the hole edge is always outside the bowl rim — terrain
-can never poke through from inside because there's no terrain there.
+That's the only change.
 
-The bowl mesh rim extends past the contour to cover the exposed
-hole edge (handled by the mesh changes below).
+### Context
 
-### Changes to CreateContourMesh
+The UHole Lite pipeline (`generate-terrain.mjs`) is being updated
+separately via TASK.md to export at 2049 resolution. The manifest's
+`terrain.resolution` field will read 2049. This Unity-side change
+matches it.
 
-Three changes to make the mesh overlap the terrain:
+The heightmap loader already handles mismatched resolutions (bilinear
+upsample fallback exists), but matching gives best quality.
 
-**1. Add an outer "skirt" ring at 110% scale, below terrain**
-
-Add a new ring OUTSIDE the current rim ring. This ring extends
-beyond the contour and sits BELOW terrain height, tucking under
-the terrain surface like a skirt:
-
-```csharp
-// OLD ring layout:
-float[] ringScales = { 1.0f, 0.80f, 0.50f, 0.20f };
-float[] ringDepths = { 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
-
-// NEW ring layout — add outer skirt ring:
-float[] ringScales = { 1.10f, 1.0f, 0.80f, 0.50f, 0.20f };
-float[] ringDepths = { 0.0f, 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
-```
-
-Update `ringCount`, `vertCount`, triangles, etc. to account for
-5 rings instead of 4.
-
-**2. Skirt ring (r==0, scale=1.10) sits BELOW terrain**
-
-The skirt ring samples terrain height and then goes 0.15m BELOW it:
-
-```csharp
-if (r == 0)  // skirt ring — below terrain
-{
-    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-    y = (terrainBaseY + terrainH) - surfaceY - 0.15f;  // 15cm below
-}
-else if (r == 1)  // rim ring — at terrain height (old r==0)
-{
-    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-    y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
-}
-else if (r == 2)  // inner ring — at terrain height (old r==1)
-{
-    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-    y = (terrainBaseY + terrainH) - surfaceY;
-}
-// rings 3, 4 and center: unchanged (use ringDepths)
-```
-
-The skirt goes below terrain so it's invisible from above — terrain
-covers it. But if there's a terrain hole gap, the skirt fills it
-instead of showing sky/void.
-
-**3. Keep material double-sided**
-
-The sand material already has `_Cull = 0` (double-sided). The skirt
-ring needs this since it's viewed from above through the terrain hole.
-
-### Full Updated CreateContourMesh
-
-Here's the ring layout section to replace:
-
-```csharp
-private static GameObject CreateContourMesh(int id, Vector2[] contour,
-    float centroidX, float centroidZ, float surfaceY, float depth,
-    Material sandMat, Terrain terrain, float terrainBaseY)
-{
-    int n = contour.Length;
-    if (n < 3) { /* skip */ }
-
-    // Ring layout: skirt(110%) → rim(100%) → inner(80%) → mid(50%) → deep(20%) → center
-    float[] ringScales = { 1.10f, 1.0f, 0.80f, 0.50f, 0.20f };
-    float[] ringDepths = { 0.0f, 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
-
-    int ringCount = ringScales.Length;
-    int vertCount = n * ringCount + 1; // +1 for center
-    var vertices = new Vector3[vertCount];
-    var uvs = new Vector2[vertCount];
-
-    // ... (UV bounding box code unchanged) ...
-
-    for (int r = 0; r < ringCount; r++)
-    {
-        float scale = ringScales[r];
-        float ringY = -ringDepths[r];
-
-        for (int i = 0; i < n; i++)
-        {
-            float wx = centroidX + (contour[i].x - centroidX) * scale;
-            float wz = centroidZ + (contour[i].y - centroidZ) * scale;
-
-            float y = ringY;
-
-            if (r == 0)  // Skirt: below terrain (hides hole edge)
-            {
-                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                y = (terrainBaseY + terrainH) - surfaceY - 0.15f;
-            }
-            else if (r == 1)  // Rim: at terrain height + tiny offset
-            {
-                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
-            }
-            else if (r == 2)  // Inner: at terrain height
-            {
-                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                y = (terrainBaseY + terrainH) - surfaceY;
-            }
-            // r==3 (mid) and r==4 (deep): use ringY from ringDepths
-
-            float localX = wx - centroidX;
-            float localZ = wz - centroidZ;
-
-            int vi = r * n + i;
-            vertices[vi] = new Vector3(localX, y, localZ);
-            uvs[vi] = new Vector2(
-                (wx - minX) / extentX,
-                (wz - minZ) / extentZ);
-        }
-    }
-
-    // Center vertex — bottom of bowl (unchanged)
-    int centerIdx = vertCount - 1;
-    vertices[centerIdx] = new Vector3(0, -depth, 0);
-    uvs[centerIdx] = new Vector2(0.5f, 0.5f);
-
-    // Triangles: quads between rings + fan to center
-    // (same structure as before, just one more ring)
-    int triCount = n * (ringCount - 1) * 6 + n * 3;
-    // ... (triangle generation code stays the same pattern) ...
-}
-```
-
-### Changes to Terrain Hole Cutting in CreateZoneMeshes
-
-```csharp
-// Replace cutScale = 0.90f with:
-float cutScale = 1.05f;  // 5% LARGER than contour (hole is bigger)
-
-var cutContour = new Vector2[worldContour.Length];
-for (int i = 0; i < worldContour.Length; i++)
-{
-    cutContour[i] = new Vector2(
-        centroidX + (worldContour[i].x - centroidX) * cutScale,
-        centroidZ + (worldContour[i].y - centroidZ) * cutScale);
-}
-```
-
-Everything else in the hole-cutting loop stays the same.
-
-### Why This Works for ALL Sizes
-
-**Large bunkers:** The 5% outward cut and 10% outward skirt are
-proportionally small. The skirt tucks 15cm below terrain — invisible
-from above. Visually identical to current.
-
-**Bunker 7 (small):** The 5% outward cut means the hole extends
-~0.14m past the contour on each side. The skirt ring at 110% extends
-~0.28m past contour. The skirt sits below terrain, covering any gap.
-Terrain can't poke through because there's no terrain inside the
-(dilated) hole, and the skirt covers the edge outside.
-
-**Grid snap:** Even if the grid snaps the hole slightly larger than
-the 5% cut contour, the 10% skirt mesh still extends past it.
-The skirt is below terrain so it's hidden, but if a gap appears
-it fills it with sand instead of void.
+Terrain holes grid becomes 2048×2048 (~0.3m/cell instead of ~0.6m),
+which improves bunker hole precision for all bunkers.
 
 ### Verification
 
-1. Re-import Hole 01
-2. All 7 bunkers: bowl visible, no terrain poke-through
-3. Bunker 7: no visible seam, no terrain at rim corners
-4. Walk around bunkers from all angles — skirt invisible from above
-5. Check from below (fly under terrain) — skirt ring visible as
-   sand lip extending under terrain edge
+1. After pipeline re-run + Unity re-import of Hole 01:
+2. Console: `Terrain holes resolution: 2048x2048`
+3. Console: `Loaded heightmap.raw: 2049x2049`
+4. Terrain looks identical but smoother
+5. All bunkers (including Bunker 7) work correctly
 
 ### Do NOT
 
-- Use size thresholds or branching (one code path for all)
-- Shrink the terrain hole (dilate it outward instead)
-- Skip terrain holes
-- Change the bunker export pipeline
-- Change other zone meshes
+- Change any other importer code
+- Change zone mesh code
+- Change bunker mesh code
 
 ---
 
@@ -1298,3 +1118,4 @@ This gives natural terrain-under-asphalt and a visible edge transition.
 ✅ DONE: 2026-04-10 — Bunker v4: unified approach — adaptive inset. Superseded by v6 (rim too wide, hole too small).
 ✅ DONE: 2026-04-10 — Bunker v6: two-mode — large bunkers keep 90% contour-traced cut, small bunkers (shorterAxis < 7m) get 1.6m square terrain hole at centroid. Superseded by v7.
 ✅ DONE: 2026-04-10 — Bunker v7: shingle overlap — terrain hole dilated outward (105%), 5-ring bowl with skirt at 110% that tucks 0.15m below terrain. Universal approach, no size branching. Skirt hides hole edge from all angles.
+✅ DONE: 2026-04-10 — Heightmap resolution 1025→2049. generate-terrain.mjs RES=2049, HoleLiteImporter.cs actualRes=2049. Terrain holes grid 2048x2048 (~0.3m/cell). All bunkers confirmed working. Pipeline re-run verified: terrain-meta.json resolution=2049, heightmap.raw ~8MB.
