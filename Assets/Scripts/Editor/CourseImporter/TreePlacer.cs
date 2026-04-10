@@ -16,14 +16,16 @@ namespace Golfin.CourseImport
         private static readonly string[] TreePrefabPaths = new string[]
         {
             "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_01Cedar.prefab",
+            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_JapaneseBlack_01_Var1.prefab",
             "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_JapaneseBlack_01.prefab",
-            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_Maple.prefab",
+            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mesh_Metasequoia.prefab",
             "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_ScottishPine_01.prefab",
-            "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/MESH_Bush_01.prefab",
         };
 
         // Relative weight for each prototype (must match TreePrefabPaths length)
-        private static readonly float[] TreeWeights = { 3f, 2f, 2f, 2f, 1f };
+        // Cedar=backbone, JBlackPine_v2=main pine, JBlackPine_v1=rare accent,
+        // Metasequoia=tall variety, ScottishPine=filler
+        private static readonly float[] TreeWeights = { 3f, 3f, 0.5f, 2f, 2f };
 
         // Placement settings
         private const float MinSpacing = 6f;   // meters between trees
