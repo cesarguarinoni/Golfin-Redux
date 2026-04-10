@@ -1239,9 +1239,11 @@ namespace Golfin.CourseImport
                     if (v.y > cMaxZ) cMaxZ = v.y;
                 }
 
-                // ── Dilated terrain hole (5% LARGER than contour) ──
-                // Mesh skirt ring extends past the hole edge, hiding it.
-                float cutScale = 1.05f;
+                float shorterAxis = Mathf.Min(bunker.size_m.x, bunker.size_m.z);
+                bool isSmall = shorterAxis < 7.0f;
+
+                // Small: dilated cut (105%) + skirt ring. Large: original 90% inward cut.
+                float cutScale = isSmall ? 1.05f : 0.90f;
                 var cutContour = new Vector2[worldContour.Length];
                 for (int i = 0; i < worldContour.Length; i++)
                 {
@@ -1272,22 +1274,26 @@ namespace Golfin.CourseImport
                     }
                 }
 
-                // ── Bowl mesh with skirt ring ──
+                // ── Bowl mesh ──
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
-                float bowlDepth = Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
+                // Small bunkers: shallower bowl (max 1.0m)
+                float bowlDepth = isSmall
+                    ? Mathf.Max(Mathf.Min(defaultDepth, 1.0f), 0.3f)
+                    : Mathf.Max(Mathf.Min(defaultDepth, 3f), 0.5f);
 
                 var meshGO = CreateContourMesh(bunker.id, worldContour,
                     centroidX, centroidZ, surfaceY, bowlDepth,
-                    sandMat, terrain, terrainBaseY);
+                    sandMat, terrain, terrainBaseY, isSmall);
                 meshGO.transform.SetParent(bunkersRoot.transform);
 
                 var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
 
                 Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: " +
-                          $"shingle overlap (cut=105%, skirt=110%), " +
-                          $"{bunker.contour.Length} verts");
+                          (isSmall ? $"SMALL shingle (cut=105%, skirt, depth={bowlDepth:F1}m)"
+                                   : $"LARGE original (cut=90%)") +
+                          $", {bunker.contour.Length} verts");
             }
 
             // Copy bunkers.json to Assets
@@ -1300,7 +1306,8 @@ namespace Golfin.CourseImport
 
         private static GameObject CreateContourMesh(int id, Vector2[] contour,
             float centroidX, float centroidZ, float surfaceY, float depth,
-            Material sandMat, Terrain terrain, float terrainBaseY)
+            Material sandMat, Terrain terrain, float terrainBaseY,
+            bool useSkirt = false)
         {
             int n = contour.Length;
             if (n < 3)
@@ -1309,9 +1316,20 @@ namespace Golfin.CourseImport
                 return new GameObject($"Bunker_{id}_SKIP");
             }
 
-            // Ring layout: skirt(110%) → rim(100%) → inner(80%) → mid(50%) → deep(20%) → center
-            float[] ringScales = { 1.10f, 1.0f, 0.80f, 0.50f, 0.20f };
-            float[] ringDepths = { 0.0f, 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
+            float[] ringScales;
+            float[] ringDepths;
+            if (useSkirt)
+            {
+                // Skirt(110%) → rim(100%) → inner(80%) → mid(50%) → deep(20%) → center
+                ringScales = new float[] { 1.10f, 1.0f, 0.80f, 0.50f, 0.20f };
+                ringDepths = new float[] { 0.0f, 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
+            }
+            else
+            {
+                // Original: rim(100%) → inner(80%) → mid(50%) → deep(20%) → center
+                ringScales = new float[] { 1.0f, 0.80f, 0.50f, 0.20f };
+                ringDepths = new float[] { 0.0f, 0.0f, depth * 0.5f, depth * 0.9f };
+            }
 
             int ringCount = ringScales.Length;
             int vertCount = n * ringCount + 1; // +1 for center
@@ -1344,20 +1362,20 @@ namespace Golfin.CourseImport
 
                     float y = ringY;
 
-                    // Skirt ring (r==0): below terrain — hides hole edge
-                    if (r == 0)
+                    int rimIdx = useSkirt ? 1 : 0;
+                    int innerIdx = useSkirt ? 2 : 1;
+
+                    if (useSkirt && r == 0)  // Skirt: below terrain — hides hole edge
                     {
                         float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                         y = (terrainBaseY + terrainH) - surfaceY - 0.15f;
                     }
-                    // Rim ring (r==1): at terrain height + tiny offset
-                    else if (r == 1)
+                    else if (r == rimIdx)  // Rim: at terrain height + tiny offset
                     {
                         float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                         y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
                     }
-                    // Inner ring (r==2): at terrain height
-                    else if (r == 2)
+                    else if (r == innerIdx)  // Inner: at terrain height
                     {
                         float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                         y = (terrainBaseY + terrainH) - surfaceY;
