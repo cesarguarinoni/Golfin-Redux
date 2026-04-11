@@ -166,9 +166,20 @@ namespace Golfin.CourseImport
                     }
                 }
 
+                // Load tee contours so markers can be centered on tee surface
+                ZoneContourRegion[] teeRegions = null;
+                string teeZcPath = Path.Combine(exportPath, "zone-contours.json");
+                if (File.Exists(teeZcPath))
+                {
+                    var zcData = JsonUtility.FromJson<ZoneContoursFile>(
+                        File.ReadAllText(teeZcPath));
+                    if (zcData.zones != null)
+                        teeRegions = zcData.zones.tee;
+                }
+
                 foreach (var anchor in anchors)
                     PlaceAnchorMarker(anchor, terrain, terrainGO.transform, anchorsRoot.transform,
-                        hasGreenCentroid, greenCentroid);
+                        hasGreenCentroid, greenCentroid, teeRegions);
 
                 // Depress terrain under overlay meshes to prevent z-fighting
                 DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
@@ -544,7 +555,8 @@ namespace Golfin.CourseImport
 
         private static void PlaceAnchorMarker(AnchorData anchor,
             Terrain terrain, Transform terrainTransform, Transform parent,
-            bool hasGreenCentroid, Vector3 greenCentroid)
+            bool hasGreenCentroid, Vector3 greenCentroid,
+            ZoneContourRegion[] teeRegions = null)
         {
             // 90° CCW rotation: (x, z) → (-z, x) → (local.z, local.x)
             Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
@@ -552,6 +564,35 @@ namespace Golfin.CourseImport
 
             if (anchor.type.Contains("tee"))
             {
+                // Find the closest tee region and center markers on it
+                if (teeRegions != null && teeRegions.Length > 0)
+                {
+                    float bestDist = float.MaxValue;
+                    ZoneContourRegion bestRegion = null;
+                    foreach (var region in teeRegions)
+                    {
+                        if (region.contour == null || region.contour.Length < 3) continue;
+                        // Region center in world coords (90° CCW)
+                        Vector3 rc = new Vector3(region.center_local.z, 0f,
+                                                 region.center_local.x);
+                        float d = (rc - worldPos).sqrMagnitude;
+                        if (d < bestDist) { bestDist = d; bestRegion = region; }
+                    }
+
+                    if (bestRegion != null)
+                    {
+                        // Compute centroid of the tee contour (excludes border)
+                        float cx = 0f, cz = 0f;
+                        int n = bestRegion.contour.Length;
+                        for (int i = 0; i < n; i++)
+                        {
+                            cx += bestRegion.contour[i].z; // 90° CCW
+                            cz += bestRegion.contour[i].x;
+                        }
+                        worldPos = new Vector3(cx / n, 0f, cz / n);
+                    }
+                }
+
                 // Determine tee color mapping + scale correction
                 // Red and Gold FBX have globalScale=1 in meta, Blue/White have 0.15
                 string meshName, matName, teeLabel;
