@@ -2579,7 +2579,7 @@ namespace Golfin.CourseImport
 
             // Convert contour to world space (90° CCW rotation: worldX = z, worldZ = x)
             Vector3[] worldPts = new Vector3[n];
-            float yOffset = 0.005f; // minimal offset to avoid z-fighting
+            float yOffset = 0.02f; // minimal offset to avoid z-fighting
 
             for (int i = 0; i < n; i++)
             {
@@ -2589,7 +2589,7 @@ namespace Golfin.CourseImport
                 worldPts[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
             }
 
-            // Compute centroid
+            // Compute centroid (Y=0 so vertex Y values are absolute terrain heights)
             float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
@@ -2597,9 +2597,7 @@ namespace Golfin.CourseImport
                 cz += worldPts[i].z;
             }
             cx /= n; cz /= n;
-            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
-            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
-            Vector3 centroid = new Vector3(cx, cy, cz);
+            Vector3 centroid = new Vector3(cx, 0, cz);
 
             // Build mesh: vertices = contour points + centroid (all relative to centroid)
             var verts = new Vector3[n + 1];
@@ -2661,7 +2659,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.005f; // minimal offset to avoid z-fighting
+            float yOffset = 0.02f; // minimal offset to avoid z-fighting
 
             // 90° CCW rotation
             Vector3[] worldPts = new Vector3[n];
@@ -2673,14 +2671,12 @@ namespace Golfin.CourseImport
                 worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
             }
 
-            // Centroid
+            // Centroid (Y=0 so vertex Y values are absolute terrain heights)
             float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
             { cx += worldPts[i].x; cz += worldPts[i].z; }
             cx /= n; cz /= n;
-            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
-            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
-            Vector3 centroid = new Vector3(cx, cy, cz);
+            Vector3 centroid = new Vector3(cx, 0, cz);
 
             var verts = new Vector3[n];
             var uvs = new Vector2[n];
@@ -2738,7 +2734,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.005f; // minimal offset to avoid z-fighting
+            float yOffset = 0.02f; // minimal offset to avoid z-fighting
 
             // stripeDir is perpendicular to tee→green. Compute the parallel axis.
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
@@ -2753,7 +2749,7 @@ namespace Golfin.CourseImport
                 worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
             }
 
-            // Compute centroid for mesh positioning
+            // Compute centroid for mesh positioning (Y=0 so vertex Y values are absolute terrain heights)
             float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
@@ -2761,9 +2757,7 @@ namespace Golfin.CourseImport
                 cz += worldPts[i].z;
             }
             cx /= n; cz /= n;
-            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
-            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
-            Vector3 centroid = new Vector3(cx, cy, cz);
+            Vector3 centroid = new Vector3(cx, 0, cz);
 
             // Build vertices (contour only — no centroid vertex needed for ear clipping)
             var verts = new Vector3[n];
@@ -3039,7 +3033,7 @@ namespace Golfin.CourseImport
             int n = spine.Length;
             if (n < 2) return null;
 
-            float yOffset = 0.005f; // minimal offset to avoid z-fighting
+            float yOffset = 0.02f; // minimal offset to avoid z-fighting
 
             var verts = new Vector3[n * 2];
             var uvs = new Vector2[n * 2];
@@ -3102,17 +3096,13 @@ namespace Golfin.CourseImport
                 uvs[i * 2 + 1] = new Vector2(1f, arcLength / tileSize);
             }
 
-            // Compute centroid for mesh positioning
+            // Compute centroid for mesh positioning (Y=0 so vertex Y values are absolute terrain heights)
             float sumX = 0, sumZ = 0;
             for (int i = 0; i < verts.Length; i++)
             {
                 sumX += verts[i].x; sumZ += verts[i].z;
             }
-            float centX = sumX / verts.Length;
-            float centZ = sumZ / verts.Length;
-            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
-            float centY = terrainBaseY + terrain.SampleHeight(new Vector3(centX, 0, centZ)) + yOffset;
-            Vector3 centroid = new Vector3(centX, centY, centZ);
+            Vector3 centroid = new Vector3(sumX / verts.Length, 0, sumZ / verts.Length);
 
             // Make vertices relative to centroid
             for (int i = 0; i < verts.Length; i++)
@@ -3170,7 +3160,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.007f; // slightly above fairway (0.005)
+            float yOffset = 0.03f; // slightly above fairway (0.02)
 
             // Convert to world space — this is the contour edge
             Vector3[] edgeRing = new Vector3[n];
@@ -3192,7 +3182,7 @@ namespace Golfin.CourseImport
                 offsetRing[i].y = terrainBaseY + h + yOffset;
             }
 
-            // Compute centroid
+            // Compute centroid (Y=0 so vertex Y values are absolute terrain heights)
             float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
@@ -3200,9 +3190,7 @@ namespace Golfin.CourseImport
                 cz += edgeRing[i].z;
             }
             cx /= n; cz /= n;
-            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
-            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
-            Vector3 centroid = new Vector3(cx, cy, cz);
+            Vector3 centroid = new Vector3(cx, 0, cz);
 
             // Vertices: edge ring (0..n-1) + offset ring (n..2n-1)
             var fringeVerts = new Vector3[n * 2];
@@ -3282,7 +3270,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.003f; // below tee mesh (0.005)
+            float yOffset = 0.01f; // below tee mesh (0.02)
 
             // Convert to world space
             Vector3[] innerRing = new Vector3[n];
@@ -3311,16 +3299,14 @@ namespace Golfin.CourseImport
                 outerRing[i].y = terrainBaseY + h + yOffset;
             }
 
-            // Centroid
+            // Centroid (Y=0 so vertex Y values are absolute terrain heights)
             float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
                 cx += innerRing[i].x; cz += innerRing[i].z;
             }
             cx /= n; cz /= n;
-            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
-            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
-            Vector3 centroid = new Vector3(cx, cy, cz);
+            Vector3 centroid = new Vector3(cx, 0, cz);
 
             // Arc lengths along inner ring for UV.u tiling
             float[] arcLengths = new float[n];
