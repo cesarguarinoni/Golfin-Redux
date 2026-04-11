@@ -246,14 +246,16 @@ function draw() {
   }
 
   // Layer 2: GSI satellite (transformed, with opacity)
+  // Rotation pivots around viewport center; offset is applied after rotation
   if (gsiImg) {
-    const cx = canvas.width / 2 + gsiOffsetX;
-    const cy = canvas.height / 2 + gsiOffsetY;
+    const vcx = canvas.width / 2;
+    const vcy = canvas.height / 2;
 
     ctx.save();
     ctx.globalAlpha = gsiOpacity;
-    ctx.translate(cx, cy);
+    ctx.translate(vcx, vcy);
     ctx.rotate(gsiRotation);
+    ctx.translate(gsiOffsetX, gsiOffsetY);
     ctx.scale(gsiScale, gsiScale);
     ctx.drawImage(gsiImg, -gsiImg.width / 2, -gsiImg.height / 2);
     ctx.restore();
@@ -346,20 +348,27 @@ function canvasToIllPx(cx, cy) {
 function canvasToGsiWorld(canvasX, canvasY) {
   if (!gsiImg || !gsiMeta) return null;
 
-  const cx = canvas.width / 2 + gsiOffsetX;
-  const cy = canvas.height / 2 + gsiOffsetY;
-  const dx = canvasX - cx;
-  const dy = canvasY - cy;
+  // Inverse of draw transform: viewport-center → rotate → offset → scale → draw
+  const vcx = canvas.width / 2;
+  const vcy = canvas.height / 2;
 
-  // Reverse rotation
+  // 1. Undo viewport-center translation
+  const dx = canvasX - vcx;
+  const dy = canvasY - vcy;
+
+  // 2. Undo rotation (around viewport center)
   const cos = Math.cos(-gsiRotation);
   const sin = Math.sin(-gsiRotation);
-  const rx = (dx * cos - dy * sin) / gsiScale;
-  const ry = (dx * sin + dy * cos) / gsiScale;
+  const ux = dx * cos - dy * sin;
+  const uy = dx * sin + dy * cos;
 
-  // GSI composite pixel space (origin at top-left)
-  const gsiPx = rx + gsiImg.width / 2;
-  const gsiPy = ry + gsiImg.height / 2;
+  // 3. Undo offset
+  const ox = ux - gsiOffsetX;
+  const oy = uy - gsiOffsetY;
+
+  // 4. Undo scale → GSI pixel space (centered)
+  const gsiPx = ox / gsiScale + gsiImg.width / 2;
+  const gsiPy = oy / gsiScale + gsiImg.height / 2;
 
   if (gsiPx < 0 || gsiPx >= gsiMeta.width || gsiPy < 0 || gsiPy >= gsiMeta.height) return null;
 
@@ -379,20 +388,18 @@ function worldToCanvas(lat, lon) {
   const gsiPx = ((lon - gsiMeta.bounds.west) / (gsiMeta.bounds.east - gsiMeta.bounds.west)) * gsiMeta.width;
   const gsiPy = ((gsiMeta.bounds.north - lat) / (gsiMeta.bounds.north - gsiMeta.bounds.south)) * gsiMeta.height;
 
-  // GSI pixel (centered) → canvas
-  const rx = gsiPx - gsiImg.width / 2;
-  const ry = gsiPy - gsiImg.height / 2;
+  // Forward transform matching draw(): scale → offset → rotate → viewport-center
+  const sx = (gsiPx - gsiImg.width / 2) * gsiScale + gsiOffsetX;
+  const sy = (gsiPy - gsiImg.height / 2) * gsiScale + gsiOffsetY;
 
   const cos = Math.cos(gsiRotation);
   const sin = Math.sin(gsiRotation);
-  const sx = rx * gsiScale;
-  const sy = ry * gsiScale;
-  const cx = canvas.width / 2 + gsiOffsetX;
-  const cy = canvas.height / 2 + gsiOffsetY;
+  const vcx = canvas.width / 2;
+  const vcy = canvas.height / 2;
 
   return {
-    x: cx + sx * cos - sy * sin,
-    y: cy + sx * sin + sy * cos,
+    x: vcx + sx * cos - sy * sin,
+    y: vcy + sx * sin + sy * cos,
   };
 }
 
@@ -643,22 +650,33 @@ function setupEventListeners() {
     });
   });
 
-  // Prevent sliders from jumping on first click — only drag the thumb
+  // Prevent sliders from jumping on track click — only allow dragging from the thumb.
+  // On pointerdown: if the click is NOT on the thumb, save the current value and
+  // restore it on the next input event (preventing the browser's jump-to-click).
   for (const slider of [$rotationSlider, $scaleSlider]) {
-    let engaged = false;
+    let savedValue = null;
     slider.addEventListener("pointerdown", (e) => {
       const rect = slider.getBoundingClientRect();
-      const thumbWidth = 16;
+      const thumbWidth = 24;
       const trackWidth = rect.width - thumbWidth;
       const min = Number(slider.min);
       const max = Number(slider.max);
       const ratio = (Number(slider.value) - min) / (max - min);
       const thumbCenter = rect.left + thumbWidth / 2 + ratio * trackWidth;
       if (Math.abs(e.clientX - thumbCenter) > thumbWidth) {
-        e.preventDefault();
-        slider.focus();
+        // Clicked on track — save value so the next input event restores it
+        savedValue = slider.value;
       }
     });
+    slider.addEventListener("input", () => {
+      if (savedValue !== null) {
+        slider.value = savedValue;
+        savedValue = null;
+      }
+    });
+    slider.addEventListener("pointerup", () => { savedValue = null; });
+    slider.addEventListener("pointercancel", () => { savedValue = null; });
+    slider.addEventListener("mousedown", (e) => { e.stopPropagation(); });
   }
 
   // View sliders + number inputs (bidirectional sync)
@@ -680,7 +698,7 @@ function setupEventListeners() {
     draw();
   });
   $rotationInput.addEventListener("input", () => {
-    const v = Math.max(-180, Math.min(180, Number($rotationInput.value) || 0));
+    const v = Math.max(-30, Math.min(30, Number($rotationInput.value) || 0));
     gsiRotation = (v * Math.PI) / 180;
     $rotationSlider.value = v;
     draw();
@@ -813,9 +831,14 @@ function onCanvasMouseMove(e) {
   }
 
   // Navigate mode: dragging GSI layer
+  // Screen-space drag delta must be converted to offset space (pre-rotation)
   if (isDragging && currentMode === "navigate") {
-    gsiOffsetX = dragStartOffsetX + (x - dragStartX);
-    gsiOffsetY = dragStartOffsetY + (y - dragStartY);
+    const sdx = x - dragStartX;
+    const sdy = y - dragStartY;
+    const cos = Math.cos(-gsiRotation);
+    const sin = Math.sin(-gsiRotation);
+    gsiOffsetX = dragStartOffsetX + (sdx * cos - sdy * sin);
+    gsiOffsetY = dragStartOffsetY + (sdx * sin + sdy * cos);
     draw();
     return;
   }
@@ -857,26 +880,23 @@ function onCanvasWheel(e) {
   const newScale = Math.max(0.1, Math.min(5, oldScale * factor));
 
   // Adjust offset so the point under the mouse stays fixed.
-  // The GSI display center is (canvas.width/2 + gsiOffsetX, canvas.height/2 + gsiOffsetY).
-  // A world point at canvas position P satisfies:
-  //   P = center + R(θ) * S * r
-  // After scaling S→S', we want P unchanged, so:
-  //   center' + R(θ) * S' * r = center + R(θ) * S * r
-  //   center' = center + R(θ) * (S - S') * r
-  // where r is constant. Easier: offset relative to mouse.
-  //   P - center = R(θ)*S*r  →  stays proportional to S
-  //   (P - center') / S' = (P - center) / S
-  //   P - center' = (P - center) * S'/S
-  //   center' = P - (P - center) * S'/S
-  const cx = canvas.width / 2 + gsiOffsetX;
-  const cy = canvas.height / 2 + gsiOffsetY;
-  const ratio = newScale / oldScale;
-  const newCx = mouseX - (mouseX - cx) * ratio;
-  const newCy = mouseY - (mouseY - cy) * ratio;
+  // Transform: canvas = vcx + R(θ) * (S * local + offset)
+  // For fixed point P: offset' = offset + (S - S') * local
+  // where local = (R(-θ) * (P - vcx) - offset) / S
+  const vcx = canvas.width / 2;
+  const vcy = canvas.height / 2;
+  const cos = Math.cos(-gsiRotation);
+  const sin = Math.sin(-gsiRotation);
+  const dx = mouseX - vcx;
+  const dy = mouseY - vcy;
+  const ux = dx * cos - dy * sin;
+  const uy = dx * sin + dy * cos;
+  const localX = (ux - gsiOffsetX) / oldScale;
+  const localY = (uy - gsiOffsetY) / oldScale;
 
   gsiScale = newScale;
-  gsiOffsetX = newCx - canvas.width / 2;
-  gsiOffsetY = newCy - canvas.height / 2;
+  gsiOffsetX += (oldScale - newScale) * localX;
+  gsiOffsetY += (oldScale - newScale) * localY;
 
   $scaleSlider.value = Math.round(gsiScale * 100);
   $scaleInput.value = gsiScale.toFixed(2);
@@ -922,12 +942,13 @@ function onKeyDown(e) {
     return;
   }
 
-  // WASD — pan GSI layer
+  // WASD — pan GSI layer (screen-space directions, rotated into offset space)
   const panStep = e.shiftKey ? 50 : 10;
-  if (e.key === "w" || e.key === "W") { gsiOffsetY -= panStep; updateSliders(); draw(); return; }
-  if (e.key === "s" || e.key === "S") { gsiOffsetY += panStep; updateSliders(); draw(); return; }
-  if (e.key === "a" || e.key === "A") { gsiOffsetX -= panStep; updateSliders(); draw(); return; }
-  if (e.key === "d" || e.key === "D") { gsiOffsetX += panStep; updateSliders(); draw(); return; }
+  const pc = Math.cos(-gsiRotation), ps = Math.sin(-gsiRotation);
+  if (e.key === "w" || e.key === "W") { gsiOffsetX +=  ps * panStep; gsiOffsetY -= pc * panStep; updateSliders(); draw(); return; }
+  if (e.key === "s" || e.key === "S") { gsiOffsetX += -ps * panStep; gsiOffsetY += pc * panStep; updateSliders(); draw(); return; }
+  if (e.key === "a" || e.key === "A") { gsiOffsetX -= pc * panStep; gsiOffsetY -= ps * panStep; updateSliders(); draw(); return; }
+  if (e.key === "d" || e.key === "D") { gsiOffsetX += pc * panStep; gsiOffsetY += ps * panStep; updateSliders(); draw(); return; }
 
   // Q/E — rotate GSI layer
   const rotStep = e.shiftKey ? 1.0 : 0.2; // degrees

@@ -8,136 +8,171 @@
 
 ---
 
-## Current Task — Terrain Depression Under Overlay Meshes
+## Current Task — Terrain Depression v2: Contour-Based
 
-**Problem:** Overlay meshes (fairway, tee, cart path) z-fight with the
-terrain surface because both occupy the same Y position. Previous
-attempts (Y-offset, grid mesh, subdivision) all produced artifacts.
+**Problem with v1:** The zone grid (~0.2m/px) has lower resolution
+than the heightmap (2049, ~0.3m/cell). Zone boundaries don't align
+precisely with contour meshes, causing the depression to bleed
+outside the fairway. Also 5cm depression wasn't enough.
 
-**Solution:** Depress the terrain heightmap slightly under ALL overlay
-zone areas. The overlay mesh samples `terrain.SampleHeight()` BEFORE
-the depression, so it sits at the original height while the terrain
-drops ~5cm below it. No z-fighting, no visual artifacts.
+**Fix:** Use the **actual contour polygons** from the JSON files
+(the same contours used to build the overlay meshes) to test which
+heightmap cells to depress. This guarantees exact alignment.
 
-This is the same proven pattern as the water shore slope pass —
-depress terrain AFTER meshes sample their heights.
+**Depression depth:** Use the mesh's yOffset + a margin.
+The meshes use yOffset = 0.02m, so depress by **0.10m (10cm)**.
+This gives 8cm clearance — enough for terrain interpolation error.
 
 ---
 
-### Execution order (critical)
+### Changes to `DepressTerrainUnderOverlays`
 
-In `ImportLiteHole`, the current order is:
-1. `CreateTerrain` (heightmap with smoothing)
-2. `ApplySplatmap`
-3. `CreateZoneMeshes` (bunkers — already use terrain holes)
-4. `CreateGreenMeshes` (already uses terrain holes + raised mesh)
-5. `CreateWaterMeshes` (already depresses terrain under water)
-6. `CreateFlatZoneMeshes` (fairway, tee, cart path — samples terrain)
-7. `SetHoles` (writes accumulated hole mask)
-
-**Add a new step 6.5** between `CreateFlatZoneMeshes` and `SetHoles`:
+Replace the zone-grid approach with contour-polygon point-in-polygon
+testing. Load the same contour JSON files used by `CreateFlatZoneMeshes`.
 
 ```csharp
-// Depress terrain under overlay meshes to prevent z-fighting
-DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
-```
-
-This runs AFTER all meshes have sampled their heights, so the
-meshes sit at the original terrain height while the terrain
-drops below them.
-
-### New method: `DepressTerrainUnderOverlays`
-
-```csharp
-private const float OverlayDepressionMeters = 0.05f; // 5cm
+private const float OverlayDepressionMeters = 0.10f; // 10cm
 
 private static void DepressTerrainUnderOverlays(
     TerrainData terrainData, GameObject terrainGO, string exportPath)
 {
-    string zonesPath = Path.Combine(exportPath, "zones.json");
-    if (!File.Exists(zonesPath)) return;
-
-    string zonesJson = File.ReadAllText(zonesPath);
-    var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
-    byte[] grid = System.Convert.FromBase64String(zonesData.grid);
-    int zw = zonesData.source_dimensions.width;
-    int zh = zonesData.source_dimensions.height;
-
     int hRes = terrainData.heightmapResolution;
     float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
     float elevRange = terrainData.size.y;
     float dropNormalized = OverlayDepressionMeters / elevRange;
+    Vector3 terrainPos = terrainGO.transform.position;
+    Vector3 terrainSize = terrainData.size;
 
-    // Zones to depress: fairway(1), tee(10), cart_path(8)
-    // NOT green(2) — already raised mesh with terrain hole
-    // NOT bunker(6) — already uses terrain hole + bowl mesh
-    // NOT water(7) — already has its own depression pass
-    var depressZones = new HashSet<int> { 1, 8, 10 };
+    bool[,] depress = new bool[hRes, hRes];
 
-    int depressedCount = 0;
-    for (int hz = 0; hz < hRes; hz++)
+    // --- Collect all contour polygons that have overlay meshes ---
+    // Fairway contours
+    string fwPath = Path.Combine(exportPath, "fairway-contours.json");
+    if (File.Exists(fwPath))
     {
-        for (int hx = 0; hx < hRes; hx++)
-        {
-            float normX = (float)hx / (hRes - 1);
-            float normZ = (float)hz / (hRes - 1);
-            // Reverse 90° CCW: zone.x = normZ, zone.y = normX
-            int gx = Mathf.Clamp(Mathf.RoundToInt(normZ * (zw - 1)), 0, zw - 1);
-            int gy = Mathf.Clamp(Mathf.RoundToInt(normX * (zh - 1)), 0, zh - 1);
-            int zone = grid[gy * zw + gx];
-
-            if (depressZones.Contains(zone))
-            {
-                heights[hz, hx] = Mathf.Max(0f, heights[hz, hx] - dropNormalized);
-                depressedCount++;
-            }
-        }
+        var data = JsonUtility.FromJson<FairwayContoursFile>(
+            File.ReadAllText(fwPath));
+        if (data.fairways != null)
+            foreach (var fw in data.fairways)
+                if (fw.contour != null && fw.contour.Length >= 3)
+                    MarkContourCells(fw.contour, depress,
+                        hRes, terrainPos, terrainSize);
     }
 
+    // Tee contours
+    string zcPath = Path.Combine(exportPath, "zone-contours.json");
+    if (File.Exists(zcPath))
+    {
+        var data = JsonUtility.FromJson<ZoneContoursFile>(
+            File.ReadAllText(zcPath));
+        if (data.zones?.tee != null)
+            foreach (var region in data.zones.tee)
+                if (region.contour != null && region.contour.Length >= 3)
+                    MarkContourCells(region.contour, depress,
+                        hRes, terrainPos, terrainSize);
+    }
+
+    // Cart path contours (use spine width, not contour)
+    string cpPath = Path.Combine(exportPath, "cart-paths.json");
+    if (File.Exists(cpPath))
+    {
+        var data = JsonUtility.FromJson<CartPathsFile>(
+            File.ReadAllText(cpPath));
+        if (data.cart_paths != null)
+            foreach (var cp in data.cart_paths)
+            {
+                if (cp.contour != null && cp.contour.Length >= 3)
+                    MarkContourCells(cp.contour, depress,
+                        hRes, terrainPos, terrainSize);
+            }
+    }
+
+    // Apply depression
+    int depressedCount = 0;
+    for (int hz = 0; hz < hRes; hz++)
+        for (int hx = 0; hx < hRes; hx++)
+            if (depress[hz, hx])
+            {
+                heights[hz, hx] = Mathf.Max(0f,
+                    heights[hz, hx] - dropNormalized);
+                depressedCount++;
+            }
+
     terrainData.SetHeights(0, 0, heights);
-    Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount} cells " +
-              $"lowered by {OverlayDepressionMeters:F2}m under fairway/tee/cart path");
+    Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount}" +
+              $" cells lowered by {OverlayDepressionMeters:F2}m");
+}
+
+/// <summary>
+/// Mark heightmap cells that fall inside a contour polygon.
+/// Contour uses local meter coords with 90° CCW rotation applied.
+/// </summary>
+private static void MarkContourCells(ContourPoint[] contour,
+    bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize)
+{
+    // Convert contour to world XZ (90° CCW: worldX = z, worldZ = x)
+    var worldContour = new Vector2[contour.Length];
+    float minX = float.MaxValue, maxX = float.MinValue;
+    float minZ = float.MaxValue, maxZ = float.MinValue;
+    for (int i = 0; i < contour.Length; i++)
+    {
+        float wx = contour[i].z;  // 90° CCW
+        float wz = contour[i].x;
+        worldContour[i] = new Vector2(wx, wz);
+        if (wx < minX) minX = wx;
+        if (wx > maxX) maxX = wx;
+        if (wz < minZ) minZ = wz;
+        if (wz > maxZ) maxZ = wz;
+    }
+
+    // Convert bbox to heightmap cell range
+    int hMinX = Mathf.Clamp(Mathf.FloorToInt(
+        (minX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+    int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
+        (maxX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+    int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
+        (minZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+    int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+        (maxZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+
+    // Test each cell in bbox
+    for (int hz = hMinZ; hz <= hMaxZ; hz++)
+    {
+        for (int hx = hMinX; hx <= hMaxX; hx++)
+        {
+            float cellWorldX = (float)hx / (hRes - 1)
+                * terrainSize.x + terrainPos.x;
+            float cellWorldZ = (float)hz / (hRes - 1)
+                * terrainSize.z + terrainPos.z;
+            if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
+                depress[hz, hx] = true;
+        }
+    }
 }
 ```
 
-### Key points
+`IsInsideContour` already exists in the codebase.
 
-- Depression depth: **0.05m (5cm)** — enough to eliminate z-fighting,
-  small enough to be invisible at mesh edges where terrain shows through
-- Uses the **merged zone grid** (not terrain_grid) because we want the
-  actual zone boundaries including overlays
-- Same 90° CCW coordinate mapping as the heightmap smoothing pass
-- The overlay meshes were already built using `terrain.SampleHeight()`
-  at the original height, so they don't move
-- Fringe/border rings sit at the boundary and will align naturally
-  because they also sampled before the depression
+### Placement in ImportLiteHole
 
-### Remove yOffset from overlay meshes
-
-Since the terrain is now depressed, the 0.02f yOffset in overlay
-meshes is no longer needed to fight z-fighting. However, **keep the
-yOffset as-is** for now — it's a safety margin and removing it
-could reintroduce z-fighting at the exact edge where the zone grid
-resolution doesn't perfectly match the mesh contour.
+Add AFTER `CreateFlatZoneMeshes` and BEFORE `terrainData.SetHoles`:
+```csharp
+DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
+```
 
 ### Verification
 
-1. Import Hole 4 (hilly terrain)
-2. Fairway: smooth, no z-fighting, follows slope
-3. Tee boxes: smooth, no z-fighting
-4. Cart paths: smooth, no z-fighting
-5. Green: unchanged (uses terrain holes, not depression)
-6. Bunkers: unchanged
-7. Water: unchanged (has its own depression)
-8. Walk to the edge of a fairway — transition to rough should be
-   clean, no visible terrain gap
+1. Import Hole 4 (hilly)
+2. Fairway: no z-fighting, depression exactly matches fairway shape
+3. No terrain depression visible outside fairway/tee/cart path edges
+4. Walk along fairway edge — terrain-to-mesh transition is clean
+5. Green/bunker/water: unchanged
 
 ### Do NOT
-- Change existing overlay mesh creation methods
+- Use the zone grid for depression (too coarse)
+- Change overlay mesh creation methods
 - Change green, bunker, or water code
-- Depress under green or bunker zones (they use terrain holes)
-- Change the heightmap smoothing pass
-- Remove yOffset from mesh methods
+- Depress under green or bunker zones
 
 ---
 
@@ -920,3 +955,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-11 — Grid draping v2: dilated contour (0.5m outward) + all-4-corners rule for clean edges, deleted legacy methods + SubdivideToTerrain
 ✅ 2026-04-11 — v3: Reverted to ear-clip + subdivision with Y=0 origin fix. Deleted grid methods entirely.
 ✅ 2026-04-11 — Terrain depression (5cm) under fairway/tee/cart path zones to prevent z-fighting
+✅ 2026-04-11 — Terrain depression v2: contour-based (10cm), uses actual contour polygons for exact alignment

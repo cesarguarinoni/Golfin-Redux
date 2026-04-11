@@ -315,7 +315,11 @@ namespace Golfin.CourseImport
     {
         public int hole_number;
         public ZoneSourceDimensions source_dimensions;
-        public string grid;
+        public string grid;            // merged grid (backward compat)
+        public string terrain_grid;    // terrain only (no overlays)
+        public string trees_mask;      // binary mask: 1 = tree
+        public string ob_mask;         // binary mask: 1 = OB
+        public string cart_path_mask;  // binary mask: 1 = cart path
     }
 
     [System.Serializable]

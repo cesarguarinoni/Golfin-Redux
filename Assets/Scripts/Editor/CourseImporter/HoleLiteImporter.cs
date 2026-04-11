@@ -16,7 +16,7 @@ namespace Golfin.CourseImport
         public static float ShoreDepthMeters = 0.1f;
 
         // ─── Overlay Terrain Depression ─────────────────────────────
-        private const float OverlayDepressionMeters = 0.05f;
+        private const float OverlayDepressionMeters = 0.10f;
 
         // ─── Heightmap Smoothing Parameters ─────────────────────────
         private const int SmoothRadius = 8;
@@ -2377,49 +2377,115 @@ namespace Golfin.CourseImport
         private static void DepressTerrainUnderOverlays(
             TerrainData terrainData, GameObject terrainGO, string exportPath)
         {
-            string zonesPath = Path.Combine(exportPath, "zones.json");
-            if (!File.Exists(zonesPath)) return;
-
-            string zonesJson = File.ReadAllText(zonesPath);
-            var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
-            byte[] grid = System.Convert.FromBase64String(zonesData.grid);
-            int zw = zonesData.source_dimensions.width;
-            int zh = zonesData.source_dimensions.height;
-
             int hRes = terrainData.heightmapResolution;
             float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
             float elevRange = terrainData.size.y;
             float dropNormalized = OverlayDepressionMeters / elevRange;
+            Vector3 terrainPos = terrainGO.transform.position;
+            Vector3 terrainSize = terrainData.size;
 
-            // Zones to depress: fairway(1), tee(10), cart_path(8)
-            // NOT green(2) — already raised mesh with terrain hole
-            // NOT bunker(6) — already uses terrain hole + bowl mesh
-            // NOT water(7) — already has its own depression pass
-            var depressZones = new System.Collections.Generic.HashSet<int> { 1, 8, 10 };
+            bool[,] depress = new bool[hRes, hRes];
 
-            int depressedCount = 0;
-            for (int hz = 0; hz < hRes; hz++)
+            // --- Collect all contour polygons that have overlay meshes ---
+            // Fairway contours
+            string fwPath = Path.Combine(exportPath, "fairway-contours.json");
+            if (File.Exists(fwPath))
             {
-                for (int hx = 0; hx < hRes; hx++)
-                {
-                    float normX = (float)hx / (hRes - 1);
-                    float normZ = (float)hz / (hRes - 1);
-                    // Reverse 90° CCW: zone.x = normZ, zone.y = normX
-                    int gx = Mathf.Clamp(Mathf.RoundToInt(normZ * (zw - 1)), 0, zw - 1);
-                    int gy = Mathf.Clamp(Mathf.RoundToInt(normX * (zh - 1)), 0, zh - 1);
-                    int zone = grid[gy * zw + gx];
-
-                    if (depressZones.Contains(zone))
-                    {
-                        heights[hz, hx] = Mathf.Max(0f, heights[hz, hx] - dropNormalized);
-                        depressedCount++;
-                    }
-                }
+                var data = JsonUtility.FromJson<FairwayContoursFile>(
+                    File.ReadAllText(fwPath));
+                if (data.fairways != null)
+                    foreach (var fw in data.fairways)
+                        if (fw.contour != null && fw.contour.Length >= 3)
+                            MarkContourCells(fw.contour, depress,
+                                hRes, terrainPos, terrainSize);
             }
 
+            // Tee contours
+            string zcPath = Path.Combine(exportPath, "zone-contours.json");
+            if (File.Exists(zcPath))
+            {
+                var data = JsonUtility.FromJson<ZoneContoursFile>(
+                    File.ReadAllText(zcPath));
+                if (data.zones != null && data.zones.tee != null)
+                    foreach (var region in data.zones.tee)
+                        if (region.contour != null && region.contour.Length >= 3)
+                            MarkContourCells(region.contour, depress,
+                                hRes, terrainPos, terrainSize);
+            }
+
+            // Cart path contours
+            string cpPath = Path.Combine(exportPath, "cart-paths.json");
+            if (File.Exists(cpPath))
+            {
+                var data = JsonUtility.FromJson<CartPathsFile>(
+                    File.ReadAllText(cpPath));
+                if (data.cart_paths != null)
+                    foreach (var cp in data.cart_paths)
+                        if (cp.contour != null && cp.contour.Length >= 3)
+                            MarkContourCells(cp.contour, depress,
+                                hRes, terrainPos, terrainSize);
+            }
+
+            // Apply depression
+            int depressedCount = 0;
+            for (int hz = 0; hz < hRes; hz++)
+                for (int hx = 0; hx < hRes; hx++)
+                    if (depress[hz, hx])
+                    {
+                        heights[hz, hx] = Mathf.Max(0f,
+                            heights[hz, hx] - dropNormalized);
+                        depressedCount++;
+                    }
+
             terrainData.SetHeights(0, 0, heights);
-            Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount} cells " +
-                      $"lowered by {OverlayDepressionMeters:F2}m under fairway/tee/cart path");
+            Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount}" +
+                      $" cells lowered by {OverlayDepressionMeters:F2}m");
+        }
+
+        /// <summary>
+        /// Mark heightmap cells that fall inside a contour polygon.
+        /// Contour uses local meter coords with 90° CCW rotation applied.
+        /// </summary>
+        private static void MarkContourCells(ContourPoint[] contour,
+            bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize)
+        {
+            var worldContour = new Vector2[contour.Length];
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+            for (int i = 0; i < contour.Length; i++)
+            {
+                float wx = contour[i].z;  // 90° CCW
+                float wz = contour[i].x;
+                worldContour[i] = new Vector2(wx, wz);
+                if (wx < minX) minX = wx;
+                if (wx > maxX) maxX = wx;
+                if (wz < minZ) minZ = wz;
+                if (wz > maxZ) maxZ = wz;
+            }
+
+            // Convert bbox to heightmap cell range
+            int hMinX = Mathf.Clamp(Mathf.FloorToInt(
+                (minX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+            int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
+                (maxX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+            int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
+                (minZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+            int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+                (maxZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+
+            // Test each cell in bbox
+            for (int hz = hMinZ; hz <= hMaxZ; hz++)
+            {
+                for (int hx = hMinX; hx <= hMaxX; hx++)
+                {
+                    float cellWorldX = (float)hx / (hRes - 1)
+                        * terrainSize.x + terrainPos.x;
+                    float cellWorldZ = (float)hz / (hRes - 1)
+                        * terrainSize.z + terrainPos.z;
+                    if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
+                        depress[hz, hx] = true;
+                }
+            }
         }
 
         private static void CreateFlatZoneMeshes(TerrainData terrainData,

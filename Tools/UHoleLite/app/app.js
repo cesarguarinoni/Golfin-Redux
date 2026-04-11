@@ -348,16 +348,33 @@ async function loadZoneGrid(holeNumber) {
     zoneGridW = data.width;
     zoneGridH = data.height;
     const raw = atob(data.grid);
-    zoneGrid = new Uint8Array(raw.length);
-    treesMask = new Uint8Array(raw.length);
-    obMask = new Uint8Array(raw.length);
-    cartPathMask = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) {
-      const v = raw.charCodeAt(i);
-      if (v === 9) { obMask[i] = 1; zoneGrid[i] = 0; }
-      else if (v === 5) { treesMask[i] = 1; zoneGrid[i] = 0; }
-      else if (v === 8) { cartPathMask[i] = 1; zoneGrid[i] = 0; }
-      else { zoneGrid[i] = v; }
+    const len = raw.length;
+    zoneGrid = new Uint8Array(len);
+    treesMask = new Uint8Array(len);
+    obMask = new Uint8Array(len);
+    cartPathMask = new Uint8Array(len);
+
+    if (data.terrain_grid) {
+      // Separate masks available — terrain is preserved under overlays
+      const terrain = atob(data.terrain_grid);
+      const trees = data.trees_mask ? atob(data.trees_mask) : null;
+      const ob = data.ob_mask ? atob(data.ob_mask) : null;
+      const cp = data.cart_path_mask ? atob(data.cart_path_mask) : null;
+      for (let i = 0; i < len; i++) {
+        zoneGrid[i] = terrain.charCodeAt(i);
+        if (trees) treesMask[i] = trees.charCodeAt(i);
+        if (ob) obMask[i] = ob.charCodeAt(i);
+        if (cp) cartPathMask[i] = cp.charCodeAt(i);
+      }
+    } else {
+      // Legacy merged grid — extract overlays, default terrain to rough
+      for (let i = 0; i < len; i++) {
+        const v = raw.charCodeAt(i);
+        if (v === 9) { obMask[i] = 1; zoneGrid[i] = 4; }
+        else if (v === 5) { treesMask[i] = 1; zoneGrid[i] = 4; }
+        else if (v === 8) { cartPathMask[i] = 1; zoneGrid[i] = 4; }
+        else { zoneGrid[i] = v; }
+      }
     }
     regenerateZonesImage();
   } catch {
@@ -1161,7 +1178,7 @@ function setupControls() {
     });
   });
 
-  // Import Trees — white pixels become trees, black pixels clear trees
+  // Import Trees — opaque pixels become trees, transparent pixels clear trees
   document.getElementById("import-trees-btn").addEventListener("click", () => {
     importLayerPNG("import-trees-file", (pixels, w, h) => {
       if (w !== zoneGridW || h !== zoneGridH) {
@@ -1169,13 +1186,12 @@ function setupControls() {
         return;
       }
       for (let i = 0; i < w * h; i++) {
-        const brightness = pixels[i * 4] + pixels[i * 4 + 1] + pixels[i * 4 + 2];
-        treesMask[i] = brightness > 384 ? 1 : 0; // > 50% white = tree
+        treesMask[i] = pixels[i * 4 + 3] > 128 ? 1 : 0; // alpha > 50% = tree
       }
     });
   });
 
-  // Import Cart Path — white pixels become cart path
+  // Import Cart Path — opaque pixels become cart path
   document.getElementById("import-cartpath-btn").addEventListener("click", () => {
     importLayerPNG("import-cartpath-file", (pixels, w, h) => {
       if (w !== zoneGridW || h !== zoneGridH) {
@@ -1183,13 +1199,12 @@ function setupControls() {
         return;
       }
       for (let i = 0; i < w * h; i++) {
-        const brightness = pixels[i * 4] + pixels[i * 4 + 1] + pixels[i * 4 + 2];
-        cartPathMask[i] = brightness > 384 ? 1 : 0;
+        cartPathMask[i] = pixels[i * 4 + 3] > 128 ? 1 : 0;
       }
     });
   });
 
-  // Import OB — white pixels become OB
+  // Import OB — opaque pixels become OB
   document.getElementById("import-ob-btn").addEventListener("click", () => {
     importLayerPNG("import-ob-file", (pixels, w, h) => {
       if (w !== zoneGridW || h !== zoneGridH) {
@@ -1197,8 +1212,7 @@ function setupControls() {
         return;
       }
       for (let i = 0; i < w * h; i++) {
-        const brightness = pixels[i * 4] + pixels[i * 4 + 1] + pixels[i * 4 + 2];
-        obMask[i] = brightness > 384 ? 1 : 0;
+        obMask[i] = pixels[i * 4 + 3] > 128 ? 1 : 0;
       }
     });
   });
@@ -1348,11 +1362,19 @@ async function saveAll() {
     }
 
     if (zonePaintDirty && zoneGrid) {
-      // Merge OB mask back into grid for saving
-      let binary = "";
-      for (let i = 0; i < zoneGrid.length; i++)
-        binary += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : cartPathMask && cartPathMask[i] ? 8 : zoneGrid[i]);
-      const gridBase64 = btoa(binary);
+      // Build merged grid for backward compat + separate overlay masks
+      let mergedBin = "";
+      let terrainBin = "";
+      let treesBin = "";
+      let obBin = "";
+      let cpBin = "";
+      for (let i = 0; i < zoneGrid.length; i++) {
+        mergedBin += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : cartPathMask && cartPathMask[i] ? 8 : zoneGrid[i]);
+        terrainBin += String.fromCharCode(zoneGrid[i]);
+        treesBin += String.fromCharCode(treesMask ? treesMask[i] : 0);
+        obBin += String.fromCharCode(obMask ? obMask[i] : 0);
+        cpBin += String.fromCharCode(cartPathMask ? cartPathMask[i] : 0);
+      }
 
       await fetch("/api/zones", {
         method: "POST",
@@ -1362,7 +1384,11 @@ async function saveAll() {
           holeNumber: currentHole.number,
           width: zoneGridW,
           height: zoneGridH,
-          grid: gridBase64,
+          grid: btoa(mergedBin),
+          terrain_grid: btoa(terrainBin),
+          trees_mask: btoa(treesBin),
+          ob_mask: btoa(obBin),
+          cart_path_mask: btoa(cpBin),
         }),
       });
       parts.push("zones painted");
@@ -1391,13 +1417,26 @@ function saveAsSnapshot() {
   };
 
   if (zoneGrid) {
-    let binary = "";
-    for (let i = 0; i < zoneGrid.length; i++)
-      binary += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : cartPathMask && cartPathMask[i] ? 8 : zoneGrid[i]);
+    let mergedBin = "";
+    let terrainBin = "";
+    let treesBin = "";
+    let obBin = "";
+    let cpBin = "";
+    for (let i = 0; i < zoneGrid.length; i++) {
+      mergedBin += String.fromCharCode(obMask && obMask[i] ? 9 : treesMask && treesMask[i] ? 5 : cartPathMask && cartPathMask[i] ? 8 : zoneGrid[i]);
+      terrainBin += String.fromCharCode(zoneGrid[i]);
+      treesBin += String.fromCharCode(treesMask ? treesMask[i] : 0);
+      obBin += String.fromCharCode(obMask ? obMask[i] : 0);
+      cpBin += String.fromCharCode(cartPathMask ? cartPathMask[i] : 0);
+    }
     snapshot.zones = {
       width: zoneGridW,
       height: zoneGridH,
-      grid: btoa(binary),
+      grid: btoa(mergedBin),
+      terrain_grid: btoa(terrainBin),
+      trees_mask: btoa(treesBin),
+      ob_mask: btoa(obBin),
+      cart_path_mask: btoa(cpBin),
     };
   }
 
@@ -1456,16 +1495,31 @@ function loadSnapshot(file) {
         zoneGridW = snapshot.zones.width;
         zoneGridH = snapshot.zones.height;
         const raw = atob(snapshot.zones.grid);
-        zoneGrid = new Uint8Array(raw.length);
-        treesMask = new Uint8Array(raw.length);
-        obMask = new Uint8Array(raw.length);
-        cartPathMask = new Uint8Array(raw.length);
-        for (let i = 0; i < raw.length; i++) {
-          const v = raw.charCodeAt(i);
-          if (v === 9) { obMask[i] = 1; zoneGrid[i] = 0; }
-          else if (v === 5) { treesMask[i] = 1; zoneGrid[i] = 0; }
-          else if (v === 8) { cartPathMask[i] = 1; zoneGrid[i] = 0; }
-          else { zoneGrid[i] = v; }
+        const len = raw.length;
+        zoneGrid = new Uint8Array(len);
+        treesMask = new Uint8Array(len);
+        obMask = new Uint8Array(len);
+        cartPathMask = new Uint8Array(len);
+
+        if (snapshot.zones.terrain_grid) {
+          const terrain = atob(snapshot.zones.terrain_grid);
+          const trees = snapshot.zones.trees_mask ? atob(snapshot.zones.trees_mask) : null;
+          const ob = snapshot.zones.ob_mask ? atob(snapshot.zones.ob_mask) : null;
+          const cp = snapshot.zones.cart_path_mask ? atob(snapshot.zones.cart_path_mask) : null;
+          for (let i = 0; i < len; i++) {
+            zoneGrid[i] = terrain.charCodeAt(i);
+            if (trees) treesMask[i] = trees.charCodeAt(i);
+            if (ob) obMask[i] = ob.charCodeAt(i);
+            if (cp) cartPathMask[i] = cp.charCodeAt(i);
+          }
+        } else {
+          for (let i = 0; i < len; i++) {
+            const v = raw.charCodeAt(i);
+            if (v === 9) { obMask[i] = 1; zoneGrid[i] = 4; }
+            else if (v === 5) { treesMask[i] = 1; zoneGrid[i] = 4; }
+            else if (v === 8) { cartPathMask[i] = 1; zoneGrid[i] = 4; }
+            else { zoneGrid[i] = v; }
+          }
         }
         zonePaintDirty = true;
         regenerateZonesImage();

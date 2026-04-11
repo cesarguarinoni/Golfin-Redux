@@ -915,8 +915,8 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build water.json ---
-  const water = extractZoneContours(zonesData, terrainMeta, 7, 50, 2.0, 2);
-  // zone 7 = water, min 50px, RDP epsilon 2.0, 2 Chaikin passes
+  const water = extractZoneContours(zonesData, terrainMeta, 7, 8, 2.0, 2);
+  // zone 7 = water, min 8px (small ponds matter), RDP epsilon 2.0, 2 Chaikin passes
 
   const waterOutput = {
     schema_version: '3.0.0',

@@ -200,11 +200,17 @@ const server = createServer(async (req, res) => {
 
     try {
       const zonesJson = JSON.parse(await readFile(zonesPath, "utf8"));
-      sendJson(res, 200, {
+      const result = {
         width: zonesJson.source_dimensions.width,
         height: zonesJson.source_dimensions.height,
         grid: zonesJson.grid,
-      });
+      };
+      // Include separate overlay masks if available
+      if (zonesJson.terrain_grid) result.terrain_grid = zonesJson.terrain_grid;
+      if (zonesJson.trees_mask) result.trees_mask = zonesJson.trees_mask;
+      if (zonesJson.ob_mask) result.ob_mask = zonesJson.ob_mask;
+      if (zonesJson.cart_path_mask) result.cart_path_mask = zonesJson.cart_path_mask;
+      sendJson(res, 200, result);
     } catch (err) {
       sendJson(res, 404, { ok: false, message: err.message });
     }
@@ -223,6 +229,12 @@ const server = createServer(async (req, res) => {
       const existing = JSON.parse(await readFile(zonesPath, "utf8"));
       existing.grid = body.grid;
       existing.source_dimensions = { width: body.width, height: body.height };
+
+      // Store separate overlay masks (terrain preserved under overlays)
+      if (body.terrain_grid) existing.terrain_grid = body.terrain_grid;
+      if (body.trees_mask) existing.trees_mask = body.trees_mask;
+      if (body.ob_mask) existing.ob_mask = body.ob_mask;
+      if (body.cart_path_mask) existing.cart_path_mask = body.cart_path_mask;
 
       const raw = Buffer.from(body.grid, "base64");
       const totalPixels = body.width * body.height;
