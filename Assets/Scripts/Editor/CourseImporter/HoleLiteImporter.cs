@@ -2402,7 +2402,7 @@ namespace Golfin.CourseImport
                         if (fw.contour != null && fw.contour.Length >= 3)
                             MarkContourCells(fw.contour, depress,
                                 hRes, terrainPos, terrainSize,
-                                DepressionInsetMeters + FairwayFringeMeters + 0.20f);
+                                DepressionInsetMeters + FairwayFringeMeters + 0.10f);
             }
 
             // Tee contours
