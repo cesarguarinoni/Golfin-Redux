@@ -142,9 +142,31 @@ namespace Golfin.CourseImport
                 // Depress terrain under overlay meshes to prevent z-fighting
                 DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
 
-                // Greens AFTER depression — collar compensates for depressed terrain
+                // Load fairway contours for green-over-fairway detection
+                Vector2[][] fairwayPolygons = null;
+                string fwContoursPath = Path.Combine(exportPath, "fairway-contours.json");
+                if (File.Exists(fwContoursPath))
+                {
+                    var fwData = JsonUtility.FromJson<FairwayContoursFile>(
+                        File.ReadAllText(fwContoursPath));
+                    if (fwData.fairways != null)
+                    {
+                        var polys = new System.Collections.Generic.List<Vector2[]>();
+                        foreach (var fw in fwData.fairways)
+                        {
+                            if (fw.contour == null || fw.contour.Length < 3) continue;
+                            var poly = new Vector2[fw.contour.Length];
+                            for (int i = 0; i < fw.contour.Length; i++)
+                                poly[i] = new Vector2(fw.contour[i].z, fw.contour[i].x); // 90° CCW
+                            polys.Add(poly);
+                        }
+                        fairwayPolygons = polys.ToArray();
+                    }
+                }
+
+                // Greens AFTER depression — so collar can compensate for depressed terrain
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating greens...", 0.62f);
-                CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
+                CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes, fairwayPolygons);
 
                 terrainData.SetHoles(0, 0, holes);
 
@@ -1680,7 +1702,7 @@ namespace Golfin.CourseImport
 
         private static void CreateGreenMeshes(TerrainData terrainData, GameObject terrainGO,
             Transform parentRoot, string exportPath, string dataDir, string projectRoot,
-            bool[,] holes)
+            bool[,] holes, Vector2[][] fairwayPolygons = null)
         {
             string greensPath = Path.Combine(exportPath, "greens.json");
             if (!File.Exists(greensPath))
@@ -1770,9 +1792,24 @@ namespace Golfin.CourseImport
                             holes[hz, hx] = false;
                     }
 
-                // Terrain under greens is depressed — compensate so collar
-                // sits at original terrain height (flush with adjacent fairway)
-                float fairwayBaseOffset = OverlayDepressionMeters + 0.01f;
+                // Detect if green centroid is inside a fairway — if so, compensate
+                // for terrain depression (fairway mesh sits at original terrain + 0.01)
+                float fairwayBaseOffset = 0f;
+                if (fairwayPolygons != null)
+                {
+                    foreach (var fwPoly in fairwayPolygons)
+                    {
+                        if (IsInsideContour(centroidX, centroidZ, fwPoly))
+                        {
+                            // Terrain was depressed under fairway; fairway mesh is at
+                            // original terrain + 0.01. Add back the depression + fairway offset.
+                            fairwayBaseOffset = OverlayDepressionMeters + 0.01f;
+                            Debug.Log($"[HoleLiteImporter] Green {green.id} on fairway — " +
+                                $"applying base offset {fairwayBaseOffset:F2}m");
+                            break;
+                        }
+                    }
+                }
 
                 // Create raised mesh
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
@@ -2434,19 +2471,6 @@ namespace Golfin.CourseImport
                         if (cp.contour != null && cp.contour.Length >= 3)
                             MarkContourCells(cp.contour, depress,
                                 hRes, terrainPos, terrainSize);
-            }
-
-            // Green contours (collar extends 1.08x beyond green — depress under that)
-            string greensPath = Path.Combine(exportPath, "greens.json");
-            if (File.Exists(greensPath))
-            {
-                var data = JsonUtility.FromJson<GreensFileData>(
-                    File.ReadAllText(greensPath));
-                if (data.greens != null)
-                    foreach (var green in data.greens)
-                        if (green.contour != null && green.contour.Length >= 3)
-                            MarkContourCells(green.contour, depress,
-                                hRes, terrainPos, terrainSize, 0f); // no inset — use full contour
             }
 
             // Apply depression
