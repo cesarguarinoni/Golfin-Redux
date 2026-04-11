@@ -15,6 +15,9 @@ namespace Golfin.CourseImport
         /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
         public static float ShoreDepthMeters = 0.1f;
 
+        // ─── Overlay Terrain Depression ─────────────────────────────
+        private const float OverlayDepressionMeters = 0.05f;
+
         // ─── Heightmap Smoothing Parameters ─────────────────────────
         private const int SmoothRadius = 8;
         private const float SmoothSigma = 4.0f;
@@ -135,6 +138,9 @@ namespace Golfin.CourseImport
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating zone meshes...", 0.62f);
                 CreateFlatZoneMeshes(terrainData, terrainGO, holeRoot.transform,
                     exportPath, dataDir, projectRoot);
+
+                // Depress terrain under overlay meshes to prevent z-fighting
+                DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
 
                 terrainData.SetHoles(0, 0, holes);
 
@@ -2367,6 +2373,54 @@ namespace Golfin.CourseImport
         // ─── Flat Zone Mesh Pipeline (Fairway, Tee, Cart Path) ─────────
 
         private const float FairwayFringeMeters = 0.5f;
+
+        private static void DepressTerrainUnderOverlays(
+            TerrainData terrainData, GameObject terrainGO, string exportPath)
+        {
+            string zonesPath = Path.Combine(exportPath, "zones.json");
+            if (!File.Exists(zonesPath)) return;
+
+            string zonesJson = File.ReadAllText(zonesPath);
+            var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
+            byte[] grid = System.Convert.FromBase64String(zonesData.grid);
+            int zw = zonesData.source_dimensions.width;
+            int zh = zonesData.source_dimensions.height;
+
+            int hRes = terrainData.heightmapResolution;
+            float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
+            float elevRange = terrainData.size.y;
+            float dropNormalized = OverlayDepressionMeters / elevRange;
+
+            // Zones to depress: fairway(1), tee(10), cart_path(8)
+            // NOT green(2) — already raised mesh with terrain hole
+            // NOT bunker(6) — already uses terrain hole + bowl mesh
+            // NOT water(7) — already has its own depression pass
+            var depressZones = new System.Collections.Generic.HashSet<int> { 1, 8, 10 };
+
+            int depressedCount = 0;
+            for (int hz = 0; hz < hRes; hz++)
+            {
+                for (int hx = 0; hx < hRes; hx++)
+                {
+                    float normX = (float)hx / (hRes - 1);
+                    float normZ = (float)hz / (hRes - 1);
+                    // Reverse 90° CCW: zone.x = normZ, zone.y = normX
+                    int gx = Mathf.Clamp(Mathf.RoundToInt(normZ * (zw - 1)), 0, zw - 1);
+                    int gy = Mathf.Clamp(Mathf.RoundToInt(normX * (zh - 1)), 0, zh - 1);
+                    int zone = grid[gy * zw + gx];
+
+                    if (depressZones.Contains(zone))
+                    {
+                        heights[hz, hx] = Mathf.Max(0f, heights[hz, hx] - dropNormalized);
+                        depressedCount++;
+                    }
+                }
+            }
+
+            terrainData.SetHeights(0, 0, heights);
+            Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount} cells " +
+                      $"lowered by {OverlayDepressionMeters:F2}m under fairway/tee/cart path");
+        }
 
         private static void CreateFlatZoneMeshes(TerrainData terrainData,
             GameObject terrainGO, Transform parentRoot,

@@ -8,98 +8,136 @@
 
 ---
 
-## Current Task — Grid-Based Terrain Draping (v3: Hybrid Edge Stitching)
+## Current Task — Terrain Depression Under Overlay Meshes
 
-**Problem:** Pure grid creates staircase edges. Contour dilation
-doesn't fix it for concave shapes. We've tried 3 approaches and
-all produce visible edge artifacts.
+**Problem:** Overlay meshes (fairway, tee, cart path) z-fight with the
+terrain surface because both occupy the same Y position. Previous
+attempts (Y-offset, grid mesh, subdivision) all produced artifacts.
 
-**Root cause:** A regular grid can never match a smooth curved
-contour boundary. The grid is great for the interior (smooth terrain
-draping) but bad at edges.
+**Solution:** Depress the terrain heightmap slightly under ALL overlay
+zone areas. The overlay mesh samples `terrain.SampleHeight()` BEFORE
+the depression, so it sits at the original height while the terrain
+drops ~5cm below it. No z-fighting, no visual artifacts.
 
-**Solution: Hybrid approach.**
-1. Grid fills the interior — only emit quads where ALL 4 corners
-   are **well inside** the contour (inset by gridSpacing)
-2. A ring of triangles stitches the grid edge to the original
-   contour vertices — giving smooth curved edges
+This is the same proven pattern as the water shore slope pass —
+depress terrain AFTER meshes sample their heights.
 
-This is exactly how the green's `CreateRaisedMesh` already works:
-ring vertices (contour) connected to interior structure. The green
-looks good because the contour vertices ARE the edge.
+---
 
-**Actually, even simpler — don't use a grid at all.**
+### Execution order (critical)
 
-The green works perfectly. It uses per-vertex terrain sampling with
-mesh origin at Y=0. The reason the fairway/tee were bumpy was the
-**centroid Y averaging bug**, which is now fixed. Let's test if the
-original ear-clip + subdivision approach now works correctly with
-the Y=0 origin fix applied.
+In `ImportLiteHole`, the current order is:
+1. `CreateTerrain` (heightmap with smoothing)
+2. `ApplySplatmap`
+3. `CreateZoneMeshes` (bunkers — already use terrain holes)
+4. `CreateGreenMeshes` (already uses terrain holes + raised mesh)
+5. `CreateWaterMeshes` (already depresses terrain under water)
+6. `CreateFlatZoneMeshes` (fairway, tee, cart path — samples terrain)
+7. `SetHoles` (writes accumulated hole mask)
 
-**Task:** Apply the Y=0 mesh origin + per-vertex terrain sampling
-pattern (proven in `CreateRaisedMesh`) to the existing ear-clip
-methods. Remove the grid-based code entirely.
+**Add a new step 6.5** between `CreateFlatZoneMeshes` and `SetHoles`:
 
-For each of these methods, change to:
-- `go.transform.position = new Vector3(cx, 0, cz)` (Y=0, not averaged Y)
-- Each vertex Y = `terrainBaseY + terrain.SampleHeight(wx, wz) + yOffset`
-- In SubdivideToTerrain, since centroid.y=0:
-  `midLocal.y = terrainBaseY + th + yOffset` (no centroid.y subtraction)
-
-**Methods to fix:**
-1. `CreateFairwayMesh`
-2. `CreateFlatContourMesh` (tees)
-3. `CreateEarClipContourMesh` (cart path fallback)
-4. `CreateSpineStripMesh` (cart path spines)
-5. `CreateFringeRing` (fairway fringe)
-6. `CreateGradientBorderRing` (tee border)
-
-**Delete** `CreateGridDrapedMesh` and `CreateGridDrapedFairwayMesh`
-if they exist. Revert `CreateFlatZoneMeshes` to call the original
-methods (ear-clip based, not grid based).
-
-**Key change in SubdivideToTerrain:**
 ```csharp
-// OLD (broken when centroid.y != actual terrain at centroid XZ):
-midLocal.y = terrainBaseY + th + yOffset - centroid.y;
-
-// NEW (centroid.y is always 0 now):
-midLocal.y = terrainBaseY + th + yOffset;
+// Depress terrain under overlay meshes to prevent z-fighting
+DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
 ```
 
-**Key change in centroid computation (all methods):**
-```csharp
-// OLD: average all 3 components including Y
-cx /= n; cy /= n; cz /= n;
-Vector3 centroid = new Vector3(cx, cy, cz);
+This runs AFTER all meshes have sampled their heights, so the
+meshes sit at the original terrain height while the terrain
+drops below them.
 
-// NEW: average XZ only, Y = 0
-cx /= n; cz /= n;
-Vector3 centroid = new Vector3(cx, 0, cz);
+### New method: `DepressTerrainUnderOverlays`
+
+```csharp
+private const float OverlayDepressionMeters = 0.05f; // 5cm
+
+private static void DepressTerrainUnderOverlays(
+    TerrainData terrainData, GameObject terrainGO, string exportPath)
+{
+    string zonesPath = Path.Combine(exportPath, "zones.json");
+    if (!File.Exists(zonesPath)) return;
+
+    string zonesJson = File.ReadAllText(zonesPath);
+    var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
+    byte[] grid = System.Convert.FromBase64String(zonesData.grid);
+    int zw = zonesData.source_dimensions.width;
+    int zh = zonesData.source_dimensions.height;
+
+    int hRes = terrainData.heightmapResolution;
+    float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
+    float elevRange = terrainData.size.y;
+    float dropNormalized = OverlayDepressionMeters / elevRange;
+
+    // Zones to depress: fairway(1), tee(10), cart_path(8)
+    // NOT green(2) — already raised mesh with terrain hole
+    // NOT bunker(6) — already uses terrain hole + bowl mesh
+    // NOT water(7) — already has its own depression pass
+    var depressZones = new HashSet<int> { 1, 8, 10 };
+
+    int depressedCount = 0;
+    for (int hz = 0; hz < hRes; hz++)
+    {
+        for (int hx = 0; hx < hRes; hx++)
+        {
+            float normX = (float)hx / (hRes - 1);
+            float normZ = (float)hz / (hRes - 1);
+            // Reverse 90° CCW: zone.x = normZ, zone.y = normX
+            int gx = Mathf.Clamp(Mathf.RoundToInt(normZ * (zw - 1)), 0, zw - 1);
+            int gy = Mathf.Clamp(Mathf.RoundToInt(normX * (zh - 1)), 0, zh - 1);
+            int zone = grid[gy * zw + gx];
+
+            if (depressZones.Contains(zone))
+            {
+                heights[hz, hx] = Mathf.Max(0f, heights[hz, hx] - dropNormalized);
+                depressedCount++;
+            }
+        }
+    }
+
+    terrainData.SetHeights(0, 0, heights);
+    Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount} cells " +
+              $"lowered by {OverlayDepressionMeters:F2}m under fairway/tee/cart path");
+}
 ```
 
-**Key change in vertex computation (all methods):**
-```csharp
-// Vertices are relative to centroid. Since centroid.y=0,
-// vertex.y IS the absolute world Y.
-verts[i] = new Vector3(
-    worldPts[i].x - cx,
-    terrainBaseY + terrainH + yOffset,  // absolute Y
-    worldPts[i].z - cz);
-```
+### Key points
+
+- Depression depth: **0.05m (5cm)** — enough to eliminate z-fighting,
+  small enough to be invisible at mesh edges where terrain shows through
+- Uses the **merged zone grid** (not terrain_grid) because we want the
+  actual zone boundaries including overlays
+- Same 90° CCW coordinate mapping as the heightmap smoothing pass
+- The overlay meshes were already built using `terrain.SampleHeight()`
+  at the original height, so they don't move
+- Fringe/border rings sit at the boundary and will align naturally
+  because they also sampled before the depression
+
+### Remove yOffset from overlay meshes
+
+Since the terrain is now depressed, the 0.02f yOffset in overlay
+meshes is no longer needed to fight z-fighting. However, **keep the
+yOffset as-is** for now — it's a safety margin and removing it
+could reintroduce z-fighting at the exact edge where the zone grid
+resolution doesn't perfectly match the mesh contour.
 
 ### Verification
-1. Import Hole 4 (hilly)
-2. Fairway: smooth, no bumps, follows terrain slope
-3. Tee: smooth, no staircase edges
-4. Cart path: smooth
-5. Green: unchanged (already working)
-6. Hole 1 (flat): identical to before
+
+1. Import Hole 4 (hilly terrain)
+2. Fairway: smooth, no z-fighting, follows slope
+3. Tee boxes: smooth, no z-fighting
+4. Cart paths: smooth, no z-fighting
+5. Green: unchanged (uses terrain holes, not depression)
+6. Bunkers: unchanged
+7. Water: unchanged (has its own depression)
+8. Walk to the edge of a fairway — transition to rough should be
+   clean, no visible terrain gap
 
 ### Do NOT
-- Use grid-based mesh generation
-- Change green, bunker, or water mesh code
-- Change heightmap smoothing
+- Change existing overlay mesh creation methods
+- Change green, bunker, or water code
+- Depress under green or bunker zones (they use terrain holes)
+- Change the heightmap smoothing pass
+- Remove yOffset from mesh methods
 
 ---
 
@@ -881,3 +919,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-11 — Replaced subdivision with grid-based terrain draping (0.5m grid) for fairway, tee, and cart path fallback meshes
 ✅ 2026-04-11 — Grid draping v2: dilated contour (0.5m outward) + all-4-corners rule for clean edges, deleted legacy methods + SubdivideToTerrain
 ✅ 2026-04-11 — v3: Reverted to ear-clip + subdivision with Y=0 origin fix. Deleted grid methods entirely.
+✅ 2026-04-11 — Terrain depression (5cm) under fairway/tee/cart path zones to prevent z-fighting
