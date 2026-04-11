@@ -8,64 +8,233 @@
 
 ---
 
-## Current Task — Apply Per-Vertex Terrain Sampling to ALL Overlay Meshes
+## Current Task — Replace Subdivision with Grid-Based Terrain Draping
 
-**Context:** The green fix (mesh origin at Y=0, each vertex independently
-samples `terrain.SampleHeight()` at its own XZ) worked perfectly.
-Apply the same pattern to every remaining overlay mesh method.
+**Problem:** The current subdivision approach creates bumpy overlay meshes.
+Each subdivision triangle samples terrain at its 3 vertices, but between
+those points (1.5-2m apart) the mesh interpolates linearly while the
+terrain interpolates via Unity's smooth heightmap. This creates visible
+facets — the mesh doesn't match the terrain's smooth surface.
 
-**Pattern (already proven in `CreateRaisedMesh`):**
-```
-go.transform.position = new Vector3(cx, 0, cz);  // Y=0
-vertex.y = terrainBaseY + terrain.SampleHeight(vertexXZ) + yOffset;
-```
-No centroid Y averaging. No shared `surfaceY` reference.
+The green works because `greenHeight` lifts the surface above terrain,
+hiding the mismatch. Flat overlays (fairway, tee) have no such buffer.
+
+**Solution:** Replace ear-clip + subdivision with a **regular grid mesh**
+that samples terrain height at every grid point. This matches the
+terrain's own interpolation and produces a perfectly smooth result.
 
 ---
 
-### Methods to update:
+### New method: `CreateGridDrapedMesh`
 
-**1. `CreateFairwayMesh`** — may already be partially fixed from the
-previous centroid fix, but verify it uses Y=0 origin and per-vertex
-terrain sampling (not centroid Y averaging).
+This replaces the per-mesh terrain draping for ALL flat overlays
+(fairway, tee, cart path, fringe, border).
 
-**2. `CreateFlatContourMesh`** (tees) — same fix.
+**Algorithm:**
+1. Compute bounding box of the contour
+2. Create a regular grid covering the bbox at `gridSpacing` resolution
+   (0.5m — fine enough to match terrain, coarse enough for mobile)
+3. For each grid point, test if it's inside the contour polygon
+4. For inside points: sample `terrain.SampleHeight()` at that XZ
+5. Build a triangle mesh from the grid (two triangles per quad cell)
+6. Only emit triangles where ALL 3 vertices are inside the contour
+7. Mesh origin at Y=0, each vertex Y = `terrainBaseY + terrainH + yOffset`
 
-**3. `CreateEarClipContourMesh`** (cart path fallback) — same fix.
+```csharp
+private static GameObject CreateGridDrapedMesh(
+    int id, string zoneName, Vector2[] contourXZ,
+    Terrain terrain, float terrainBaseY,
+    Material mat, float tileSize, float yOffset,
+    Golfin.Course.SurfaceType surfaceType)
+{
+    const float gridSpacing = 0.5f;
 
-**4. `CreateSpineStripMesh`** (cart path spines) — same fix.
+    // 1. Bounding box
+    float minX = float.MaxValue, maxX = float.MinValue;
+    float minZ = float.MaxValue, maxZ = float.MinValue;
+    foreach (var v in contourXZ)
+    {
+        if (v.x < minX) minX = v.x;
+        if (v.x > maxX) maxX = v.x;
+        if (v.y < minZ) minZ = v.y;
+        if (v.y > maxZ) maxZ = v.y;
+    }
 
-**5. `CreateFringeRing`** (fairway fringe) — same fix.
+    // 2. Grid dimensions
+    int gridW = Mathf.CeilToInt((maxX - minX) / gridSpacing) + 1;
+    int gridH = Mathf.CeilToInt((maxZ - minZ) / gridSpacing) + 1;
 
-**6. `CreateGradientBorderRing`** (tee border) — same fix.
+    // 3. Sample grid — test inside + sample height
+    bool[] inside = new bool[gridW * gridH];
+    float[] heightAt = new float[gridW * gridH];
 
-**7. `SubdivideToTerrain`** — verify that when centroid.y=0,
-new midpoint vertices get: `midLocal.y = terrainBaseY + th + yOffset`
-(no centroid.y subtraction since it's 0).
+    for (int gz = 0; gz < gridH; gz++)
+    {
+        for (int gx = 0; gx < gridW; gx++)
+        {
+            float wx = minX + gx * gridSpacing;
+            float wz = minZ + gz * gridSpacing;
+            int idx = gz * gridW + gx;
 
-### For each method, the change is:
+            if (IsInsideContour(wx, wz, contourXZ))
+            {
+                inside[idx] = true;
+                float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                heightAt[idx] = terrainBaseY + th + yOffset;
+            }
+        }
+    }
 
-1. Compute centroid XZ only (average X and Z of vertices)
-2. Set mesh `go.transform.position = new Vector3(cx, 0, cz)`
-3. Each vertex Y = `terrainBaseY + terrain.SampleHeight(wx, wz) + yOffset`
-4. Vertex local XZ = `worldXZ - centroidXZ` (unchanged)
+    // 4. Build mesh — only emit quads where all 4 corners are inside
+    // Centroid for mesh positioning (XZ only)
+    float cx = (minX + maxX) * 0.5f;
+    float cz = (minZ + maxZ) * 0.5f;
 
-### yOffset values (unchanged):
-- Main meshes (fairway, tee, cart path): 0.02f
-- Fringe ring: 0.03f
-- Gradient border: 0.01f
+    var verts = new List<Vector3>();
+    var uvs = new List<Vector2>();
+    var tris = new List<int>();
+    var vertMap = new int[gridW * gridH]; // grid index → vert index
+    for (int i = 0; i < vertMap.Length; i++) vertMap[i] = -1;
+
+    int GetOrAddVert(int gx, int gz)
+    {
+        int idx = gz * gridW + gx;
+        if (vertMap[idx] >= 0) return vertMap[idx];
+        float wx = minX + gx * gridSpacing;
+        float wz = minZ + gz * gridSpacing;
+        int vi = verts.Count;
+        verts.Add(new Vector3(wx - cx, heightAt[idx], wz - cz));
+        uvs.Add(new Vector2(wx / tileSize, wz / tileSize));
+        vertMap[idx] = vi;
+        return vi;
+    }
+
+    for (int gz = 0; gz < gridH - 1; gz++)
+    {
+        for (int gx = 0; gx < gridW - 1; gx++)
+        {
+            int bl = gz * gridW + gx;
+            int br = gz * gridW + gx + 1;
+            int tl = (gz + 1) * gridW + gx;
+            int tr = (gz + 1) * gridW + gx + 1;
+
+            // Only emit if all 4 corners inside
+            if (!inside[bl] || !inside[br] || !inside[tl] || !inside[tr])
+                continue;
+
+            int vBL = GetOrAddVert(gx, gz);
+            int vBR = GetOrAddVert(gx + 1, gz);
+            int vTL = GetOrAddVert(gx, gz + 1);
+            int vTR = GetOrAddVert(gx + 1, gz + 1);
+
+            tris.Add(vBL); tris.Add(vTL); tris.Add(vBR);
+            tris.Add(vBR); tris.Add(vTL); tris.Add(vTR);
+        }
+    }
+
+    if (tris.Count == 0) return null;
+
+    var mesh = new Mesh();
+    mesh.name = $"{zoneName}_{id}";
+    mesh.vertices = verts.ToArray();
+    mesh.triangles = tris.ToArray();
+    mesh.uv = uvs.ToArray();
+    mesh.RecalculateNormals();
+    mesh.RecalculateBounds();
+
+    var go = new GameObject($"{zoneName}_{id}");
+    go.transform.position = new Vector3(cx, 0, cz);
+    go.AddComponent<MeshFilter>().sharedMesh = mesh;
+    go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+    AddCleanMeshCollider(go, mesh);
+
+    var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+    marker.surfaceType = surfaceType;
+
+    return go;
+}
+```
+
+Note: `IsInsideContour` already exists in the codebase.
+Note: Will need `using System.Collections.Generic;` (already present).
+
+### Part 2 — Fairway variant with stripe UVs
+
+For fairways, the UV computation is different (stripe-oriented).
+Add an overload or parameter:
+
+```csharp
+private static GameObject CreateGridDrapedFairwayMesh(
+    int id, Vector2[] contourXZ,
+    Terrain terrain, float terrainBaseY,
+    Material mat, Vector2 stripeDir, float stripeWidth, float yOffset)
+```
+
+Same grid logic, but UV computation uses stripe projection:
+```csharp
+uvs.Add(new Vector2(
+    (wx * stripeDir.x + wz * stripeDir.y) / stripeWidth,
+    (wx * parallelDir.x + wz * parallelDir.y) / stripeWidth));
+```
+
+### Part 3 — Wire into existing code
+
+**Replace calls in `CreateFlatZoneMeshes`:**
+
+1. `CreateFairwayMesh` → `CreateGridDrapedFairwayMesh`
+   - Convert contour from `ContourPoint[]` to `Vector2[]` with 90° CCW
+     rotation first: `new Vector2(contour[i].z, contour[i].x)`
+
+2. `CreateFlatContourMesh` (tees) → `CreateGridDrapedMesh`
+   - Same contour conversion
+
+3. `CreateEarClipContourMesh` (cart path fallback) → `CreateGridDrapedMesh`
+
+4. `CreateFringeRing` — Keep the ring approach BUT use grid draping:
+   - Build a contour for the outer edge and inner edge
+   - Use `CreateGridDrapedMesh` with the outer contour, then subtract
+     the inner contour from the inside test
+   - OR simpler: keep the ring mesh but set mesh origin to Y=0 and
+     sample terrain per-vertex (same pattern as the green fix)
+   - **Simplest:** Keep `CreateFringeRing` as-is since it already
+     samples per-vertex and is a narrow strip — the faceting is
+     minimal on a 0.5m-wide ring
+
+5. `CreateGradientBorderRing` — Same as fringe: keep as-is, the ring
+   is narrow enough that per-vertex sampling is fine
+
+6. `CreateSpineStripMesh` (cart path spines) — Already samples per-vertex
+   at each spine point. Keep as-is.
+
+**Do NOT change:**
+- `CreateRaisedMesh` (green) — already fixed and working
+- `CreateContourMesh` (bunker bowls) — different mesh type
+- Water meshes — different mesh type
+
+### Part 4 — Remove old methods
+
+After wiring, remove `SubdivideToTerrain` and the old
+`CreateFairwayMesh`, `CreateFlatContourMesh`, `CreateEarClipContourMesh`
+methods if they're no longer called anywhere.
 
 ### Verification
 
 1. Import Hole 3 or 4 (hilly terrain)
-2. ALL overlays drape terrain slope — no sinking, no floating
-3. Hole 1 (flat) looks identical to before
-4. No z-fighting between overlapping layers
+2. **Fairway:** Perfectly smooth, follows terrain exactly like a decal
+3. **Tee boxes:** Smooth, flush with terrain
+4. **Cart paths (contour fallback):** Smooth
+5. **Cart paths (spine):** Unchanged (already fine)
+6. **Fringe/border rings:** Unchanged (already fine)
+7. **Green:** Unchanged (already fixed)
+8. Hole 1 (flat): Looks identical to before
+9. Check vertex count in console — grid at 0.5m on a 200m fairway
+   ≈ ~400×20 = ~8000 verts, well within mobile budget
 
 ### Do NOT
-- Change green/bunker/water mesh code (green is already fixed)
+- Change green, bunker, or water mesh code
 - Change heightmap smoothing
 - Change materials or coordinate transforms
+- Use gridSpacing finer than 0.5m (mobile perf)
 
 ---
 
@@ -636,3 +805,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-11 — Fixed overlay mesh terrain draping: centroid Y now sampled from terrain instead of averaged from vertices (root cause: averaged Y on slopes shifts entire mesh)
 ✅ 2026-04-11 — Fixed green mesh slope conformance: per-vertex terrain sampling for collar + putting surface, parent Y=0, flag/cup terrain-sampled
 ✅ 2026-04-11 — Applied Y=0 origin pattern to all 6 overlay mesh methods (fairway, tee, cart path, spine, fringe, border), restored yOffsets to 0.02/0.03/0.01
+✅ 2026-04-11 — Replaced subdivision with grid-based terrain draping (0.5m grid) for fairway, tee, and cart path fallback meshes
