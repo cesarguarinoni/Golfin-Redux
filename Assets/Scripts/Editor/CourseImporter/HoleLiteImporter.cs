@@ -2569,7 +2569,7 @@ namespace Golfin.CourseImport
 
             // Convert contour to world space (90° CCW rotation: worldX = z, worldZ = x)
             Vector3[] worldPts = new Vector3[n];
-            float yOffset = 0.02f; // minimal offset to avoid z-fighting
+            float yOffset = 0.08f; // offset to prevent sinking on slopes
 
             for (int i = 0; i < n; i++)
             {
@@ -2617,7 +2617,7 @@ namespace Golfin.CourseImport
             var uvList = new System.Collections.Generic.List<Vector2>(uvs);
             var triList = new System.Collections.Generic.List<int>(trisArr);
             SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, tileSize, yOffset, 2.0f);
+                centroid, terrain, terrainBaseY, tileSize, yOffset, 1.5f);
 
             var mesh = new Mesh();
             mesh.name = $"{zoneName}_{id}";
@@ -2650,7 +2650,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.02f; // minimal offset to avoid z-fighting
+            float yOffset = 0.08f; // offset to prevent sinking on slopes
 
             // 90° CCW rotation
             Vector3[] worldPts = new Vector3[n];
@@ -2689,7 +2689,7 @@ namespace Golfin.CourseImport
             var uvList = new System.Collections.Generic.List<Vector2>(uvs);
             var triList = new System.Collections.Generic.List<int>(tris);
             SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, tileSize, yOffset, 2.0f);
+                centroid, terrain, terrainBaseY, tileSize, yOffset, 1.5f);
 
             var mesh = new Mesh();
             mesh.name = $"{zoneName}_{id}";
@@ -2725,7 +2725,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.02f; // minimal offset to avoid z-fighting
+            float yOffset = 0.08f; // offset to prevent sinking on slopes
 
             // stripeDir is perpendicular to tee→green. Compute the parallel axis.
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
@@ -2773,7 +2773,7 @@ namespace Golfin.CourseImport
             var uvList = new System.Collections.Generic.List<Vector2>(uvs);
             var triList = new System.Collections.Generic.List<int>(trisArr);
             SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, stripeWidth, yOffset, 2.0f);
+                centroid, terrain, terrainBaseY, stripeWidth, yOffset, 1.5f);
 
             // Recompute ALL UVs using stripe orientation (subdivision adds verts with wrong UVs)
             for (int i = 0; i < vertList.Count; i++)
@@ -3025,7 +3025,7 @@ namespace Golfin.CourseImport
             int n = spine.Length;
             if (n < 2) return null;
 
-            float yOffset = 0.02f; // minimal offset to avoid z-fighting
+            float yOffset = 0.08f; // offset to prevent sinking on slopes
 
             var verts = new Vector3[n * 2];
             var uvs = new Vector2[n * 2];
@@ -3153,7 +3153,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.03f; // slightly above fairway (0.02)
+            float yOffset = 0.09f; // slightly above fairway (0.08)
 
             // Convert to world space — this is the contour edge
             Vector3[] edgeRing = new Vector3[n];
@@ -3264,7 +3264,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.01f; // below tee mesh (0.02)
+            float yOffset = 0.07f; // below tee mesh (0.08)
 
             // Convert to world space
             Vector3[] innerRing = new Vector3[n];

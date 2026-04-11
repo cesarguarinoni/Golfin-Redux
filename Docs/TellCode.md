@@ -8,7 +8,36 @@
 
 ---
 
-## Current Task — Heightmap Smoothing + Overlay Mesh Conformance
+## Current Task — Increase Overlay Mesh Y-Offset
+
+**Problem:** Fairway, tee, and cart path overlay meshes are still sinking
+into the terrain on hilly holes despite subdivision. The current
+`yOffset = 0.02f` (2cm) is not enough — on slopes, even with 2m
+subdivision, the terrain rises more than 2cm between sample points.
+
+**Fix:** Increase `yOffset` from `0.02f` to `0.08f` (8cm) in:
+
+1. `CreateFlatContourMesh` — tees (currently 0.02f)
+2. `CreateFairwayMesh` — fairways (currently 0.02f)
+3. `CreateEarClipContourMesh` — cart paths (currently 0.02f)
+4. `CreateSpineStripMesh` — cart path spine strips (currently 0.02f)
+5. `CreateFringeRing` — fairway fringe (currently 0.03f → change to 0.09f)
+6. `CreateGradientBorderRing` — tee border (currently 0.01f → change to 0.07f)
+
+Keep the relative ordering: border(0.07) < main mesh(0.08) < fringe(0.09)
+so z-fighting between overlapping layers is avoided.
+
+Also, in `SubdivideToTerrain`, reduce `maxEdgeLength` from `2.0f` to
+`1.5f` at all call sites for finer terrain conformance on slopes.
+
+### Do NOT
+- Change green, bunker, or water mesh code
+- Change the heightmap smoothing
+- Change materials or textures
+
+---
+
+## Previous Task (DONE) — Heightmap Smoothing + Overlay Mesh Conformance
 
 ### Problem 1: Bumpy terrain outside play area
 The DEM heightmap (~8m/px at z14) upsampled from 1025→2049 creates
@@ -571,3 +600,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-10 — Tree placement v1 (terrain trees only, Trees(2025))
 ✅ 2026-04-10 — Tree placement v2: mixed mode (terrain + standalone), Spruce prefabs, Objects/ scan
 ✅ 2026-04-11 — Heightmap smoothing (play-area mask + transition blend) + overlay mesh terrain conformance (SubdivideToTerrain for fairway + tee meshes)
+✅ 2026-04-11 — Increased overlay mesh Y-offsets (0.02→0.08, fringe 0.09, border 0.07) + reduced SubdivideToTerrain maxEdge 2.0→1.5
