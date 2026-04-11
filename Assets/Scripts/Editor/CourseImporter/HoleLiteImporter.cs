@@ -4,6 +4,9 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using Unity.Collections;
+using Unity.Mathematics;
+using andywiecko.BurstTriangulator;
 
 namespace Golfin.CourseImport
 {
@@ -2706,61 +2709,158 @@ namespace Golfin.CourseImport
             }
         }
 
-        // ─── Overlay Mesh Methods (ear-clip + subdivision, Y=0 origin) ──
+        // ─── CDT Triangulation ────────────────────────────────────────
+
+        /// <summary>
+        /// Constrained Delaunay Triangulation with interior Steiner points
+        /// for terrain conformance. Returns world-space verts, UVs, and tris.
+        /// </summary>
+        private static (Vector3[] verts, Vector2[] uvs, int[] tris)
+            CDTTriangulate(
+                ContourPoint[] contour,
+                Terrain terrain, float terrainBaseY, float yOffset,
+                float gridSpacing,
+                System.Func<float, float, Vector2> uvFunc)
+        {
+            int n = contour.Length;
+            if (n < 3) return (null, null, null);
+
+            // 1. Boundary vertices (2D XZ plane after 90° CCW rotation)
+            var positions2D = new System.Collections.Generic.List<double2>();
+            for (int i = 0; i < n; i++)
+            {
+                float wx = contour[i].z; // 90° CCW
+                float wz = contour[i].x;
+                positions2D.Add(new double2(wx, wz));
+            }
+
+            // 2. Constraint edges (closed polygon)
+            var constraintEdges = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < n; i++)
+            {
+                constraintEdges.Add(i);
+                constraintEdges.Add((i + 1) % n);
+            }
+
+            // 3. Interior Steiner points on a grid for terrain conformance
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+            foreach (var pt in contour)
+            {
+                float wx = pt.z; float wz = pt.x;
+                if (wx < minX) minX = wx; if (wx > maxX) maxX = wx;
+                if (wz < minZ) minZ = wz; if (wz > maxZ) maxZ = wz;
+            }
+
+            var poly2D = new Vector2[n];
+            for (int i = 0; i < n; i++)
+                poly2D[i] = new Vector2(contour[i].z, contour[i].x);
+
+            for (float gx = minX + gridSpacing; gx < maxX; gx += gridSpacing)
+            {
+                for (float gz = minZ + gridSpacing; gz < maxZ; gz += gridSpacing)
+                {
+                    if (IsInsideContour(gx, gz, poly2D))
+                        positions2D.Add(new double2(gx, gz));
+                }
+            }
+
+            // 4. Run CDT
+            using var inputPositions = new NativeArray<double2>(
+                positions2D.ToArray(), Allocator.TempJob);
+            using var inputConstraints = new NativeArray<int>(
+                constraintEdges.ToArray(), Allocator.TempJob);
+
+            using var triangulator = new Triangulator(Allocator.TempJob)
+            {
+                Settings =
+                {
+                    RestoreBoundary = true,
+                },
+                Input =
+                {
+                    Positions = inputPositions,
+                    ConstraintEdges = inputConstraints,
+                }
+            };
+
+            triangulator.Run();
+
+            var outputTriangles = triangulator.Output.Triangles;
+            var outputPositions = triangulator.Output.Positions;
+
+            if (outputTriangles.Length < 3) return (null, null, null);
+
+            // 5. Build Unity mesh arrays
+            int vertCount = outputPositions.Length;
+            var verts = new Vector3[vertCount];
+            var uvs = new Vector2[vertCount];
+
+            for (int i = 0; i < vertCount; i++)
+            {
+                float wx = (float)outputPositions[i].x;
+                float wz = (float)outputPositions[i].y; // y in 2D = z in 3D
+                float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                verts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
+                uvs[i] = uvFunc(wx, wz);
+            }
+
+            var tris = new int[outputTriangles.Length];
+            for (int i = 0; i < outputTriangles.Length; i++)
+                tris[i] = outputTriangles[i];
+
+            return (verts, uvs, tris);
+        }
+
+        // ─── Overlay Mesh Methods ─────────────────────────────────────
 
         private static GameObject CreateFlatContourMesh(int id, string zoneName,
             ContourPoint[] contour, Terrain terrain, float terrainBaseY,
             Material mat, float tileSize, Golfin.Course.SurfaceType surfaceType)
         {
-            int n = contour.Length;
-            if (n < 3) return null;
-
-            Vector3[] worldPts = new Vector3[n];
             float yOffset = 0.01f;
 
-            for (int i = 0; i < n; i++)
+            System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+                new Vector2(wx / tileSize, wz / tileSize);
+
+            var (rawVerts, uvs, tris) = CDTTriangulate(
+                contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
+
+            if (rawVerts == null || tris == null || tris.Length < 3)
             {
-                float wx = contour[i].z;
-                float wz = contour[i].x;
-                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                worldPts[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
+                Debug.LogWarning($"[HoleLiteImporter] {zoneName} {id}: CDT failed");
+                return null;
             }
 
+            // Center mesh (Y=0 origin pattern)
             float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++) { cx += worldPts[i].x; cz += worldPts[i].z; }
-            cx /= n; cz /= n;
+            for (int i = 0; i < rawVerts.Length; i++)
+            { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+            cx /= rawVerts.Length; cz /= rawVerts.Length;
             Vector3 centroid = new Vector3(cx, 0, cz);
 
-            var verts = new Vector3[n + 1];
-            var uvs = new Vector2[n + 1];
-            for (int i = 0; i < n; i++)
-            {
-                verts[i] = worldPts[i] - centroid;
-                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
-            }
-            float centerH = terrain.SampleHeight(new Vector3(cx, 0, cz));
-            verts[n] = new Vector3(0, terrainBaseY + centerH + yOffset, 0);
-            uvs[n] = new Vector2(cx / tileSize, cz / tileSize);
+            for (int i = 0; i < rawVerts.Length; i++)
+                rawVerts[i] -= centroid;
 
-            var trisArr = new int[n * 3];
-            for (int i = 0; i < n; i++)
+            // Check winding
+            if (tris.Length >= 3)
             {
-                trisArr[i * 3 + 0] = i;
-                trisArr[i * 3 + 1] = n;
-                trisArr[i * 3 + 2] = (i + 1) % n;
+                Vector3 a = rawVerts[tris[0]];
+                Vector3 b = rawVerts[tris[1]];
+                Vector3 c = rawVerts[tris[2]];
+                float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+                if (cross > 0)
+                {
+                    for (int t = 0; t < tris.Length; t += 3)
+                    { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
+                }
             }
-
-            var vertList = new System.Collections.Generic.List<Vector3>(verts);
-            var uvList = new System.Collections.Generic.List<Vector2>(uvs);
-            var triList = new System.Collections.Generic.List<int>(trisArr);
-            SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, tileSize, yOffset, 0.75f);
 
             var mesh = new Mesh();
             mesh.name = $"{zoneName}_{id}";
-            mesh.vertices = vertList.ToArray();
-            mesh.triangles = triList.ToArray();
-            mesh.uv = uvList.ToArray();
+            mesh.vertices = rawVerts;
+            mesh.triangles = tris;
+            mesh.uv = uvs;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
@@ -2779,122 +2879,57 @@ namespace Golfin.CourseImport
             ContourPoint[] contour, Terrain terrain, float terrainBaseY,
             Material mat, float tileSize, Golfin.Course.SurfaceType surfaceType)
         {
-            int n = contour.Length;
-            if (n < 3) return null;
-
-            float yOffset = 0.01f;
-            Vector3[] worldPts = new Vector3[n];
-            for (int i = 0; i < n; i++)
-            {
-                float wx = contour[i].z;
-                float wz = contour[i].x;
-                float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
-            }
-
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++) { cx += worldPts[i].x; cz += worldPts[i].z; }
-            cx /= n; cz /= n;
-            Vector3 centroid = new Vector3(cx, 0, cz);
-
-            var verts = new Vector3[n];
-            var uvs = new Vector2[n];
-            for (int i = 0; i < n; i++)
-            {
-                verts[i] = worldPts[i] - centroid;
-                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
-            }
-
-            var tris = EarClipTriangulate(worldPts);
-            if (tris == null || tris.Length < 3)
-            {
-                Debug.LogWarning($"[HoleLiteImporter] {zoneName} {id}: ear-clip failed, skipping");
-                return null;
-            }
-
-            var vertList = new System.Collections.Generic.List<Vector3>(verts);
-            var uvList = new System.Collections.Generic.List<Vector2>(uvs);
-            var triList = new System.Collections.Generic.List<int>(tris);
-            SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, tileSize, yOffset, 0.75f);
-
-            var mesh = new Mesh();
-            mesh.name = $"{zoneName}_{id}";
-            mesh.vertices = vertList.ToArray();
-            mesh.triangles = triList.ToArray();
-            mesh.uv = uvList.ToArray();
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
-            var go = new GameObject($"{zoneName}_{id}");
-            go.transform.position = centroid;
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-            AddCleanMeshCollider(go, mesh);
-
-            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-            marker.surfaceType = surfaceType;
-            return go;
+            // Now uses CDT instead of ear-clip
+            return CreateFlatContourMesh(id, zoneName, contour,
+                terrain, terrainBaseY, mat, tileSize, surfaceType);
         }
 
         private static GameObject CreateFairwayMesh(int id, ContourPoint[] contour,
             Terrain terrain, float terrainBaseY,
             Material mat, Vector2 stripeDir, float stripeWidth)
         {
-            int n = contour.Length;
-            if (n < 3) return null;
-
             float yOffset = 0.01f;
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
 
-            Vector3[] worldPts = new Vector3[n];
-            for (int i = 0; i < n; i++)
-            {
-                float wx = contour[i].z;
-                float wz = contour[i].x;
-                float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
-            }
-
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++) { cx += worldPts[i].x; cz += worldPts[i].z; }
-            cx /= n; cz /= n;
-            Vector3 centroid = new Vector3(cx, 0, cz);
-
-            var verts = new Vector3[n];
-            var uvs = new Vector2[n];
-            for (int i = 0; i < n; i++)
-            {
-                verts[i] = worldPts[i] - centroid;
-                float wx = worldPts[i].x;
-                float wz = worldPts[i].z;
-                uvs[i] = new Vector2(
+            System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+                new Vector2(
                     (wx * stripeDir.x + wz * stripeDir.y) / stripeWidth,
                     (wx * parallelDir.x + wz * parallelDir.y) / stripeWidth);
-            }
 
-            var trisArr = EarClipTriangulate(worldPts);
-            if (trisArr == null || trisArr.Length < 3) return null;
+            var (rawVerts, uvs, tris) = CDTTriangulate(
+                contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
 
-            var vertList = new System.Collections.Generic.List<Vector3>(verts);
-            var uvList = new System.Collections.Generic.List<Vector2>(uvs);
-            var triList = new System.Collections.Generic.List<int>(trisArr);
-            SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, stripeWidth, yOffset, 0.75f);
+            if (rawVerts == null || tris == null || tris.Length < 3) return null;
 
-            for (int i = 0; i < vertList.Count; i++)
+            // Center mesh (Y=0 origin pattern)
+            float cx = 0, cz = 0;
+            for (int i = 0; i < rawVerts.Length; i++)
+            { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+            cx /= rawVerts.Length; cz /= rawVerts.Length;
+            Vector3 centroid = new Vector3(cx, 0, cz);
+
+            for (int i = 0; i < rawVerts.Length; i++)
+                rawVerts[i] -= centroid;
+
+            // Check winding — CDT may output CCW, Unity needs CW for front-face-up
+            if (tris.Length >= 3)
             {
-                Vector3 wp = vertList[i] + centroid;
-                uvList[i] = new Vector2(
-                    (wp.x * stripeDir.x + wp.z * stripeDir.y) / stripeWidth,
-                    (wp.x * parallelDir.x + wp.z * parallelDir.y) / stripeWidth);
+                Vector3 a = rawVerts[tris[0]];
+                Vector3 b = rawVerts[tris[1]];
+                Vector3 c = rawVerts[tris[2]];
+                float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+                if (cross > 0)
+                {
+                    for (int t = 0; t < tris.Length; t += 3)
+                    { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
+                }
             }
 
             var mesh = new Mesh();
             mesh.name = $"Fairway_{id}";
-            mesh.vertices = vertList.ToArray();
-            mesh.triangles = triList.ToArray();
-            mesh.uv = uvList.ToArray();
+            mesh.vertices = rawVerts;
+            mesh.triangles = tris;
+            mesh.uv = uvs;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
@@ -2907,59 +2942,6 @@ namespace Golfin.CourseImport
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
             return go;
-        }
-
-        private static void SubdivideToTerrain(
-            ref System.Collections.Generic.List<Vector3> verts,
-            ref System.Collections.Generic.List<Vector2> uvs,
-            ref System.Collections.Generic.List<int> tris,
-            Vector3 centroid, Terrain terrain, float terrainBaseY,
-            float tileSize, float yOffset, float maxEdgeLength)
-        {
-            int maxIterations = 5;
-            for (int iter = 0; iter < maxIterations; iter++)
-            {
-                var newTris = new System.Collections.Generic.List<int>();
-                bool subdivided = false;
-
-                for (int t = 0; t < tris.Count; t += 3)
-                {
-                    int i0 = tris[t], i1 = tris[t + 1], i2 = tris[t + 2];
-                    Vector3 v0 = verts[i0], v1 = verts[i1], v2 = verts[i2];
-
-                    float d01 = Vector3.Distance(v0, v1);
-                    float d12 = Vector3.Distance(v1, v2);
-                    float d20 = Vector3.Distance(v2, v0);
-
-                    float maxD = Mathf.Max(d01, Mathf.Max(d12, d20));
-                    if (maxD <= maxEdgeLength)
-                    {
-                        newTris.Add(i0); newTris.Add(i1); newTris.Add(i2);
-                        continue;
-                    }
-
-                    subdivided = true;
-                    int iA, iB, iC;
-                    if (d01 >= d12 && d01 >= d20) { iA = i0; iB = i1; iC = i2; }
-                    else if (d12 >= d01 && d12 >= d20) { iA = i1; iB = i2; iC = i0; }
-                    else { iA = i2; iB = i0; iC = i1; }
-
-                    Vector3 midLocal = (verts[iA] + verts[iB]) * 0.5f;
-                    Vector3 midWorld = midLocal + centroid;
-                    float th = terrain.SampleHeight(new Vector3(midWorld.x, 0, midWorld.z));
-                    midLocal.y = terrainBaseY + th + yOffset; // centroid.y is 0
-
-                    int iMid = verts.Count;
-                    verts.Add(midLocal);
-                    uvs.Add(new Vector2(midWorld.x / tileSize, midWorld.z / tileSize));
-
-                    newTris.Add(iA); newTris.Add(iMid); newTris.Add(iC);
-                    newTris.Add(iMid); newTris.Add(iB); newTris.Add(iC);
-                }
-
-                tris = newTris;
-                if (!subdivided) break;
-            }
         }
 
         private static MeshCollider AddCleanMeshCollider(GameObject go, Mesh mesh)

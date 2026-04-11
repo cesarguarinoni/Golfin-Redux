@@ -8,171 +8,367 @@
 
 ---
 
-## Current Task — Terrain Depression v2: Contour-Based
+## Current Task — Replace Ear-Clip with CDT for Fairway Meshes
 
-**Problem with v1:** The zone grid (~0.2m/px) has lower resolution
-than the heightmap (2049, ~0.3m/cell). Zone boundaries don't align
-precisely with contour meshes, causing the depression to bleed
-outside the fairway. Also 5cm depression wasn't enough.
+**Problem:** Ear-clip triangulation produces degenerate fan patterns
+on large concave fairway polygons. Long sliver triangles span the
+entire fairway width, creating visible blade artifacts on slopes
+(confirmed via wireframe: all triangles radiate from one vertex).
 
-**Fix:** Use the **actual contour polygons** from the JSON files
-(the same contours used to build the overlay meshes) to test which
-heightmap cells to depress. This guarantees exact alignment.
-
-**Depression depth:** Use the mesh's yOffset + a margin.
-The meshes use yOffset = 0.02m, so depress by **0.10m (10cm)**.
-This gives 8cm clearance — enough for terrain interpolation error.
+**Solution:** Replace ear-clip with Constrained Delaunay Triangulation
+(CDT) using the BurstTriangulator package. CDT preserves the exact
+contour boundary (no staircase) while producing well-shaped interior
+triangles.
 
 ---
 
-### Changes to `DepressTerrainUnderOverlays`
+### Step 1: Install BurstTriangulator
 
-Replace the zone-grid approach with contour-polygon point-in-polygon
-testing. Load the same contour JSON files used by `CreateFlatZoneMeshes`.
+Add to `Packages/manifest.json`:
+```json
+"com.andywiecko.burst.triangulator": "https://github.com/andywiecko/BurstTriangulator.git"
+```
+
+This is MIT-licensed. If it requires `com.unity.collections` or
+`com.unity.burst` and they're not already present, add those too.
+Check the package's `package.json` for dependencies.
+
+### Step 2: New method — CDT triangulation
+
+Add a new method in `HoleLiteImporter.cs`:
 
 ```csharp
-private const float OverlayDepressionMeters = 0.10f; // 10cm
+/// <summary>
+/// Constrained Delaunay Triangulation of a polygon defined by contour
+/// vertices. Produces well-shaped triangles with the contour as
+/// boundary constraints. Interior Steiner points are added at
+/// gridSpacing intervals for terrain conformance.
+/// Returns triangle indices into the combined vertex array
+/// (contour vertices first, then Steiner points).
+/// </summary>
+using Unity.Collections;
+using andywiecko.BurstTriangulator;
 
-private static void DepressTerrainUnderOverlays(
-    TerrainData terrainData, GameObject terrainGO, string exportPath)
+private static (Vector3[] verts, Vector2[] uvs, int[] tris)
+    CDTTriangulate(
+        ContourPoint[] contour,
+        Terrain terrain, float terrainBaseY, float yOffset,
+        float gridSpacing,
+        System.Func<float, float, Vector2> uvFunc)
 {
-    int hRes = terrainData.heightmapResolution;
-    float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
-    float elevRange = terrainData.size.y;
-    float dropNormalized = OverlayDepressionMeters / elevRange;
-    Vector3 terrainPos = terrainGO.transform.position;
-    Vector3 terrainSize = terrainData.size;
+    int n = contour.Length;
+    if (n < 3) return (null, null, null);
 
-    bool[,] depress = new bool[hRes, hRes];
-
-    // --- Collect all contour polygons that have overlay meshes ---
-    // Fairway contours
-    string fwPath = Path.Combine(exportPath, "fairway-contours.json");
-    if (File.Exists(fwPath))
+    // 1. Boundary vertices (2D, XZ plane after 90° CCW rotation)
+    var positions2D = new System.Collections.Generic.List<double2>();
+    for (int i = 0; i < n; i++)
     {
-        var data = JsonUtility.FromJson<FairwayContoursFile>(
-            File.ReadAllText(fwPath));
-        if (data.fairways != null)
-            foreach (var fw in data.fairways)
-                if (fw.contour != null && fw.contour.Length >= 3)
-                    MarkContourCells(fw.contour, depress,
-                        hRes, terrainPos, terrainSize);
+        float wx = contour[i].z; // 90° CCW rotation
+        float wz = contour[i].x;
+        positions2D.Add(new double2(wx, wz));
     }
 
-    // Tee contours
-    string zcPath = Path.Combine(exportPath, "zone-contours.json");
-    if (File.Exists(zcPath))
+    // 2. Constraint edges (closed polygon: 0→1, 1→2, ..., n-1→0)
+    var constraintEdges = new System.Collections.Generic.List<int>();
+    for (int i = 0; i < n; i++)
     {
-        var data = JsonUtility.FromJson<ZoneContoursFile>(
-            File.ReadAllText(zcPath));
-        if (data.zones?.tee != null)
-            foreach (var region in data.zones.tee)
-                if (region.contour != null && region.contour.Length >= 3)
-                    MarkContourCells(region.contour, depress,
-                        hRes, terrainPos, terrainSize);
+        constraintEdges.Add(i);
+        constraintEdges.Add((i + 1) % n);
     }
 
-    // Cart path contours (use spine width, not contour)
-    string cpPath = Path.Combine(exportPath, "cart-paths.json");
-    if (File.Exists(cpPath))
+    // 3. Add interior Steiner points on a grid
+    //    (for terrain conformance — without these, CDT only uses
+    //    contour vertices and large interior triangles won't follow
+    //    terrain undulations)
+    float minX = float.MaxValue, maxX = float.MinValue;
+    float minZ = float.MaxValue, maxZ = float.MinValue;
+    foreach (var pt in contour)
     {
-        var data = JsonUtility.FromJson<CartPathsFile>(
-            File.ReadAllText(cpPath));
-        if (data.cart_paths != null)
-            foreach (var cp in data.cart_paths)
-            {
-                if (cp.contour != null && cp.contour.Length >= 3)
-                    MarkContourCells(cp.contour, depress,
-                        hRes, terrainPos, terrainSize);
-            }
+        float wx = pt.z; float wz = pt.x;
+        if (wx < minX) minX = wx; if (wx > maxX) maxX = wx;
+        if (wz < minZ) minZ = wz; if (wz > maxZ) maxZ = wz;
     }
 
-    // Apply depression
-    int depressedCount = 0;
-    for (int hz = 0; hz < hRes; hz++)
-        for (int hx = 0; hx < hRes; hx++)
-            if (depress[hz, hx])
-            {
-                heights[hz, hx] = Mathf.Max(0f,
-                    heights[hz, hx] - dropNormalized);
-                depressedCount++;
-            }
+    // Build 2D contour for point-in-polygon test
+    var poly2D = new Vector2[n];
+    for (int i = 0; i < n; i++)
+        poly2D[i] = new Vector2(contour[i].z, contour[i].x);
 
-    terrainData.SetHeights(0, 0, heights);
-    Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount}" +
-              $" cells lowered by {OverlayDepressionMeters:F2}m");
+    for (float gx = minX + gridSpacing; gx < maxX; gx += gridSpacing)
+    {
+        for (float gz = minZ + gridSpacing; gz < maxZ; gz += gridSpacing)
+        {
+            if (IsInsideContour2D(gx, gz, poly2D))
+                positions2D.Add(new double2(gx, gz));
+        }
+    }
+
+    // 4. Run CDT
+    using var inputPositions = new NativeArray<double2>(
+        positions2D.ToArray(), Allocator.TempJob);
+    using var inputConstraints = new NativeArray<int>(
+        constraintEdges.ToArray(), Allocator.TempJob);
+
+    using var triangulator = new Triangulator(Allocator.TempJob)
+    {
+        Input =
+        {
+            Positions = inputPositions,
+            ConstraintEdges = inputConstraints,
+        },
+        Settings =
+        {
+            // Remove triangles outside the constrained boundary
+            RestoreBoundary = true,
+        }
+    };
+
+    triangulator.Run();
+
+    var outputTriangles = triangulator.Output.Triangles;
+    var outputPositions = triangulator.Output.Positions;
+
+    // 5. Build Unity mesh arrays
+    int vertCount = outputPositions.Length;
+    var verts = new Vector3[vertCount];
+    var uvs = new Vector2[vertCount];
+
+    for (int i = 0; i < vertCount; i++)
+    {
+        float wx = (float)outputPositions[i].x;
+        float wz = (float)outputPositions[i].y; // y in 2D = z in 3D
+        float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+        verts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
+        uvs[i] = uvFunc(wx, wz);
+    }
+
+    // Copy triangles
+    var tris = new int[outputTriangles.Length];
+    outputTriangles.CopyTo(tris);
+
+    return (verts, uvs, tris);
 }
 
 /// <summary>
-/// Mark heightmap cells that fall inside a contour polygon.
-/// Contour uses local meter coords with 90° CCW rotation applied.
+/// Point-in-polygon test using ray casting (XZ plane).
 /// </summary>
-private static void MarkContourCells(ContourPoint[] contour,
-    bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize)
+private static bool IsInsideContour2D(float px, float pz, Vector2[] poly)
 {
-    // Convert contour to world XZ (90° CCW: worldX = z, worldZ = x)
-    var worldContour = new Vector2[contour.Length];
-    float minX = float.MaxValue, maxX = float.MinValue;
-    float minZ = float.MaxValue, maxZ = float.MinValue;
-    for (int i = 0; i < contour.Length; i++)
+    bool inside = false;
+    int n = poly.Length;
+    for (int i = 0, j = n - 1; i < n; j = i++)
     {
-        float wx = contour[i].z;  // 90° CCW
-        float wz = contour[i].x;
-        worldContour[i] = new Vector2(wx, wz);
-        if (wx < minX) minX = wx;
-        if (wx > maxX) maxX = wx;
-        if (wz < minZ) minZ = wz;
-        if (wz > maxZ) maxZ = wz;
+        if (((poly[i].y > pz) != (poly[j].y > pz)) &&
+            (px < (poly[j].x - poly[i].x) * (pz - poly[i].y) /
+                  (poly[j].y - poly[i].y) + poly[i].x))
+            inside = !inside;
     }
-
-    // Convert bbox to heightmap cell range
-    int hMinX = Mathf.Clamp(Mathf.FloorToInt(
-        (minX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
-    int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
-        (maxX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
-    int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
-        (minZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
-    int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
-        (maxZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
-
-    // Test each cell in bbox
-    for (int hz = hMinZ; hz <= hMaxZ; hz++)
-    {
-        for (int hx = hMinX; hx <= hMaxX; hx++)
-        {
-            float cellWorldX = (float)hx / (hRes - 1)
-                * terrainSize.x + terrainPos.x;
-            float cellWorldZ = (float)hz / (hRes - 1)
-                * terrainSize.z + terrainPos.z;
-            if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
-                depress[hz, hx] = true;
-        }
-    }
+    return inside;
 }
 ```
 
-`IsInsideContour` already exists in the codebase.
+**IMPORTANT NOTE on BurstTriangulator API:** The exact API may differ
+from what's shown above. Claude Code MUST check the actual installed
+package source after `Step 1` to verify:
+- The correct namespace (might be `andywiecko.BurstTriangulator` or
+  just `BurstTriangulator`)
+- Whether it uses `double2` or `float2` for positions
+- The Settings property names (e.g. `RestoreBoundary` might be
+  named differently)
+- Whether `Triangulator` takes generic type parameter
+- How Output.Triangles and Output.Positions are accessed
 
-### Placement in ImportLiteHole
+Read the package's Runtime/*.cs files and any README/samples to
+get the correct API before writing code.
 
-Add AFTER `CreateFlatZoneMeshes` and BEFORE `terrainData.SetHoles`:
+### Step 3: Replace CreateFairwayMesh
+
+Rewrite `CreateFairwayMesh` to use CDT instead of ear-clip:
+
 ```csharp
-DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
+private static GameObject CreateFairwayMesh(int id,
+    ContourPoint[] contour,
+    Terrain terrain, float terrainBaseY,
+    Material mat, Vector2 stripeDir, float stripeWidth)
+{
+    float yOffset = 0.01f;
+    Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
+
+    // UV function for mow stripes
+    System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+        new Vector2(
+            (wx * stripeDir.x + wz * stripeDir.y) / stripeWidth,
+            (wx * parallelDir.x + wz * parallelDir.y) / stripeWidth);
+
+    var (rawVerts, uvs, tris) = CDTTriangulate(
+        contour, terrain, terrainBaseY, yOffset,
+        1.0f,  // gridSpacing: 1m Steiner points
+        uvFunc);
+
+    if (rawVerts == null || tris == null || tris.Length < 3)
+        return null;
+
+    // Center mesh (Y=0 origin pattern)
+    float cx = 0, cz = 0;
+    for (int i = 0; i < rawVerts.Length; i++)
+    { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+    cx /= rawVerts.Length; cz /= rawVerts.Length;
+    Vector3 centroid = new Vector3(cx, 0, cz);
+
+    for (int i = 0; i < rawVerts.Length; i++)
+        rawVerts[i] -= centroid;
+
+    // Check winding — CDT may output CCW, Unity needs CW
+    // for front-face-up. Test first triangle:
+    if (tris.Length >= 3)
+    {
+        Vector3 a = rawVerts[tris[0]];
+        Vector3 b = rawVerts[tris[1]];
+        Vector3 c = rawVerts[tris[2]];
+        float cross = (b.x - a.x) * (c.z - a.z) -
+                      (b.z - a.z) * (c.x - a.x);
+        if (cross > 0) // CCW → flip all triangles
+        {
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                int tmp = tris[t];
+                tris[t] = tris[t + 2];
+                tris[t + 2] = tmp;
+            }
+        }
+    }
+
+    var mesh = new Mesh();
+    mesh.name = $"Fairway_{id}";
+    mesh.vertices = rawVerts;
+    mesh.triangles = tris;
+    mesh.uv = uvs;
+    mesh.RecalculateNormals();
+    mesh.RecalculateBounds();
+
+    var go = new GameObject($"Fairway_{id}");
+    go.transform.position = centroid;
+    go.AddComponent<MeshFilter>().sharedMesh = mesh;
+    go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+    AddCleanMeshCollider(go, mesh);
+
+    var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+    marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
+    return go;
+}
 ```
+
+### Step 4: Replace CreateFlatContourMesh (tees + cart path fallback)
+
+Same pattern — replace ear-clip + SubdivideToTerrain with CDT:
+
+```csharp
+private static GameObject CreateFlatContourMesh(int id,
+    string zoneName, ContourPoint[] contour,
+    Terrain terrain, float terrainBaseY,
+    Material mat, float tileSize, float yOffset,
+    Golfin.Course.SurfaceType surfaceType)
+{
+    System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+        new Vector2(wx / tileSize, wz / tileSize);
+
+    var (rawVerts, uvs, tris) = CDTTriangulate(
+        contour, terrain, terrainBaseY, yOffset,
+        1.0f,  // gridSpacing
+        uvFunc);
+
+    if (rawVerts == null || tris == null || tris.Length < 3)
+    {
+        Debug.LogWarning(
+            $"[HoleLiteImporter] {zoneName} {id}: CDT failed");
+        return null;
+    }
+
+    // Center mesh (Y=0 origin pattern)
+    float cx = 0, cz = 0;
+    for (int i = 0; i < rawVerts.Length; i++)
+    { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+    cx /= rawVerts.Length; cz /= rawVerts.Length;
+    Vector3 centroid = new Vector3(cx, 0, cz);
+
+    for (int i = 0; i < rawVerts.Length; i++)
+        rawVerts[i] -= centroid;
+
+    // Check winding (same as fairway)
+    if (tris.Length >= 3)
+    {
+        Vector3 a = rawVerts[tris[0]];
+        Vector3 b = rawVerts[tris[1]];
+        Vector3 c = rawVerts[tris[2]];
+        float cross = (b.x - a.x) * (c.z - a.z) -
+                      (b.z - a.z) * (c.x - a.x);
+        if (cross > 0)
+        {
+            for (int t = 0; t < tris.Length; t += 3)
+            { int tmp = tris[t]; tris[t] = tris[t+2]; tris[t+2] = tmp; }
+        }
+    }
+
+    var mesh = new Mesh();
+    mesh.name = $"{zoneName}_{id}";
+    mesh.vertices = rawVerts;
+    mesh.triangles = tris;
+    mesh.uv = uvs;
+    mesh.RecalculateNormals();
+    mesh.RecalculateBounds();
+
+    var go = new GameObject($"{zoneName}_{id}");
+    go.transform.position = centroid;
+    go.AddComponent<MeshFilter>().sharedMesh = mesh;
+    go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+    AddCleanMeshCollider(go, mesh);
+
+    var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+    marker.surfaceType = surfaceType;
+    return go;
+}
+```
+
+### Step 5: Clean up old methods
+
+After confirming CDT works:
+- `SubdivideToTerrain` — DELETE (no longer called by anything)
+- `EarClipTriangulate` — KEEP for now (greens/bunkers/water may
+  still use it via other code paths). Only delete if truly unused.
+- `CrossXZ`, `PointInTriangleXZ` — KEEP if EarClip is kept
 
 ### Verification
 
-1. Import Hole 4 (hilly)
-2. Fairway: no z-fighting, depression exactly matches fairway shape
-3. No terrain depression visible outside fairway/tee/cart path edges
-4. Walk along fairway edge — terrain-to-mesh transition is clean
-5. Green/bunker/water: unchanged
+1. Install package — `Packages/manifest.json` updated, no compile errors
+2. Import Hole 4 (hilly) — the worst case for blades
+3. **Fairway wireframe:** Well-shaped triangles throughout, NO fan
+   pattern, no sliver triangles spanning the full width
+4. **Fairway surface:** Smooth, conforms to terrain, no blades
+5. **Tee boxes:** Same quality improvement
+6. **Cart path (contour fallback):** Working
+7. **Fringe ring:** Unchanged (uses ring mesh, not ear-clip)
+8. **Green/bunker/water:** Unchanged (don't touch these)
+9. Import Hole 1 (flat) — looks identical to before
+10. Vertex count: contour verts + Steiner grid points. At 1m spacing
+    on a 200m fairway bounding box: ~200×40 = ~8000 interior points
+    + ~200 boundary = ~8200 total. Well within mobile budget.
 
 ### Do NOT
-- Use the zone grid for depression (too coarse)
-- Change overlay mesh creation methods
-- Change green, bunker, or water code
-- Depress under green or bunker zones
+- Change green, bunker, or water mesh code
+- Change the fringe ring or gradient border ring methods
+- Change heightmap smoothing or depression code
+- Change materials or coordinate transforms
+- Use gridSpacing finer than 1.0m (mobile perf)
+
+---
+
+## Deferred — Terrain Depression v3 (Feathered Edges)
+
+The depression cliff (one-sided step at fairway edge) remains.
+Once CDT fixes the blade problem, revisit depression feathering.
+The spec was: chamfer distance transform to ramp depression over
+~1m outside the contour edge. Deferred because CDT is higher
+priority — blades are more visible than the depression step.
 
 ---
 
@@ -956,3 +1152,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-11 — v3: Reverted to ear-clip + subdivision with Y=0 origin fix. Deleted grid methods entirely.
 ✅ 2026-04-11 — Terrain depression (5cm) under fairway/tee/cart path zones to prevent z-fighting
 ✅ 2026-04-11 — Terrain depression v2: contour-based (10cm), uses actual contour polygons for exact alignment
+✅ 2026-04-11 — Replaced ear-clip with CDT (BurstTriangulator) for fairway, tee, and cart path meshes. Deleted SubdivideToTerrain.
