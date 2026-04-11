@@ -2430,9 +2430,11 @@ namespace Golfin.CourseImport
                     {
                         if (cp.spine != null && cp.spine.Length >= 2)
                         {
-                            // Build polygon from spine left+right edges
+                            // Build polygon from spine left+right edges,
+                            // inset 0.10m so depression hides under road mesh
                             float halfWidth = (cp.width_m > 0
-                                ? cp.width_m : 2.5f) / 2f;
+                                ? cp.width_m : 2.5f) / 2f - 0.10f;
+                            if (halfWidth < 0.1f) halfWidth = 0.1f;
                             var spinePoly = BuildSpinePolygon(
                                 cp.spine, halfWidth);
                             if (spinePoly != null)
