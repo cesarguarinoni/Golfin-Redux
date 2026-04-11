@@ -143,25 +143,12 @@ namespace Golfin.CourseImport
                 CreateFlatZoneMeshes(terrainData, terrainGO, holeRoot.transform,
                     exportPath, dataDir, projectRoot);
 
-                // Depress terrain under overlay meshes to prevent z-fighting
-                DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
-
-                terrainData.SetHoles(0, 0, holes);
-
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Building hierarchy...", 0.6f);
-
-                var metadata = holeRoot.AddComponent<HoleMetadata>();
-                metadata.courseId = manifest.course_id;
-                metadata.holeNumber = manifest.hole_number;
-                metadata.par = manifest.par;
-                metadata.strokeIndex = manifest.stroke_index;
-                metadata.championshipYards = manifest.championship_yards;
-                metadata.reviewStatus = manifest.review_status;
+                // Place anchor markers BEFORE terrain depression so
+                // SampleHeight returns the original undepressed surface
+                var terrain = terrainGO.GetComponent<Terrain>();
 
                 var anchorsRoot = new GameObject("Anchors");
                 anchorsRoot.transform.SetParent(holeRoot.transform);
-
-                var terrain = terrainGO.GetComponent<Terrain>();
 
                 // Load green centroid for tee marker orientation
                 Vector3 greenCentroid = Vector3.zero;
@@ -182,6 +169,21 @@ namespace Golfin.CourseImport
                 foreach (var anchor in anchors)
                     PlaceAnchorMarker(anchor, terrain, terrainGO.transform, anchorsRoot.transform,
                         hasGreenCentroid, greenCentroid);
+
+                // Depress terrain under overlay meshes to prevent z-fighting
+                DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
+
+                terrainData.SetHoles(0, 0, holes);
+
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Building hierarchy...", 0.6f);
+
+                var metadata = holeRoot.AddComponent<HoleMetadata>();
+                metadata.courseId = manifest.course_id;
+                metadata.holeNumber = manifest.hole_number;
+                metadata.par = manifest.par;
+                metadata.strokeIndex = manifest.stroke_index;
+                metadata.championshipYards = manifest.championship_yards;
+                metadata.reviewStatus = manifest.review_status;
 
                 var debugRefs = new GameObject("DebugReferences");
                 debugRefs.transform.SetParent(holeRoot.transform);
@@ -615,10 +617,9 @@ namespace Golfin.CourseImport
                     string suffix = (side == 0) ? "L" : "R";
 
                     Vector3 markerPos = worldPos + perpDir * offset;
-                    // Terrain is depressed under tee overlays — lift markers
-                    // back up by the depression amount so they sit on the mesh
-                    float terrainHeight = terrain.SampleHeight(markerPos)
-                        + OverlayDepressionMeters;
+                    // Sample terrain at each marker's own XZ position
+                    float terrainHeight = terrain.SampleHeight(
+                        new Vector3(markerPos.x, 0f, markerPos.z));
 
                     var markerGO = Object.Instantiate(meshPrefab);
                     markerGO.name = $"TeeMarker_{teeLabel}_{suffix}";
