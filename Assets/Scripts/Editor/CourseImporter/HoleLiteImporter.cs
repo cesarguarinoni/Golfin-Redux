@@ -2662,8 +2662,16 @@ namespace Golfin.CourseImport
                     int tl = (gz + 1) * gridW + gx;
                     int tr = (gz + 1) * gridW + gx + 1;
 
-                    if (!inside[bl] || !inside[br] || !inside[tl] || !inside[tr])
+                    // Emit if ANY corner is inside (overshoot at edges is hidden
+                    // by fringe/border rings; holes from "all 4" rule are worse)
+                    if (!inside[bl] && !inside[br] && !inside[tl] && !inside[tr])
                         continue;
+
+                    // For outside corners, sample terrain height on demand
+                    if (!inside[bl]) heightAt[bl] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + gx * gridSpacing, 0, minZ + gz * gridSpacing)) + yOffset;
+                    if (!inside[br]) heightAt[br] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + (gx + 1) * gridSpacing, 0, minZ + gz * gridSpacing)) + yOffset;
+                    if (!inside[tl]) heightAt[tl] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + gx * gridSpacing, 0, minZ + (gz + 1) * gridSpacing)) + yOffset;
+                    if (!inside[tr]) heightAt[tr] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + (gx + 1) * gridSpacing, 0, minZ + (gz + 1) * gridSpacing)) + yOffset;
 
                     int vBL = GetOrAddVert(gx, gz);
                     int vBR = GetOrAddVert(gx + 1, gz);
@@ -2775,8 +2783,16 @@ namespace Golfin.CourseImport
                     int tl = (gz + 1) * gridW + gx;
                     int tr = (gz + 1) * gridW + gx + 1;
 
-                    if (!inside[bl] || !inside[br] || !inside[tl] || !inside[tr])
+                    // Emit if ANY corner is inside (overshoot at edges is hidden
+                    // by fringe/border rings; holes from "all 4" rule are worse)
+                    if (!inside[bl] && !inside[br] && !inside[tl] && !inside[tr])
                         continue;
+
+                    // For outside corners, sample terrain height on demand
+                    if (!inside[bl]) heightAt[bl] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + gx * gridSpacing, 0, minZ + gz * gridSpacing)) + yOffset;
+                    if (!inside[br]) heightAt[br] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + (gx + 1) * gridSpacing, 0, minZ + gz * gridSpacing)) + yOffset;
+                    if (!inside[tl]) heightAt[tl] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + gx * gridSpacing, 0, minZ + (gz + 1) * gridSpacing)) + yOffset;
+                    if (!inside[tr]) heightAt[tr] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + (gx + 1) * gridSpacing, 0, minZ + (gz + 1) * gridSpacing)) + yOffset;
 
                     int vBL = GetOrAddVert(gx, gz);
                     int vBR = GetOrAddVert(gx + 1, gz);
