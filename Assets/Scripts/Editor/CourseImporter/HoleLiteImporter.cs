@@ -132,19 +132,41 @@ namespace Golfin.CourseImport
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating bunkers...", 0.5f);
                 CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating greens...", 0.53f);
-                CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
-
-
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating water...", 0.59f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating water...", 0.55f);
                 CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating zone meshes...", 0.62f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating zone meshes...", 0.58f);
                 CreateFlatZoneMeshes(terrainData, terrainGO, holeRoot.transform,
                     exportPath, dataDir, projectRoot);
 
                 // Depress terrain under overlay meshes to prevent z-fighting
                 DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
+
+                // Load fairway contours for green-over-fairway detection
+                Vector2[][] fairwayPolygons = null;
+                string fwContoursPath = Path.Combine(exportPath, "fairway-contours.json");
+                if (File.Exists(fwContoursPath))
+                {
+                    var fwData = JsonUtility.FromJson<FairwayContoursFile>(
+                        File.ReadAllText(fwContoursPath));
+                    if (fwData.fairways != null)
+                    {
+                        var polys = new System.Collections.Generic.List<Vector2[]>();
+                        foreach (var fw in fwData.fairways)
+                        {
+                            if (fw.contour == null || fw.contour.Length < 3) continue;
+                            var poly = new Vector2[fw.contour.Length];
+                            for (int i = 0; i < fw.contour.Length; i++)
+                                poly[i] = new Vector2(fw.contour[i].z, fw.contour[i].x); // 90° CCW
+                            polys.Add(poly);
+                        }
+                        fairwayPolygons = polys.ToArray();
+                    }
+                }
+
+                // Greens AFTER depression — so collar can compensate for depressed terrain
+                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating greens...", 0.62f);
+                CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes, fairwayPolygons);
 
                 terrainData.SetHoles(0, 0, holes);
 
@@ -1680,7 +1702,7 @@ namespace Golfin.CourseImport
 
         private static void CreateGreenMeshes(TerrainData terrainData, GameObject terrainGO,
             Transform parentRoot, string exportPath, string dataDir, string projectRoot,
-            bool[,] holes)
+            bool[,] holes, Vector2[][] fairwayPolygons = null)
         {
             string greensPath = Path.Combine(exportPath, "greens.json");
             if (!File.Exists(greensPath))
@@ -1770,13 +1792,32 @@ namespace Golfin.CourseImport
                             holes[hz, hx] = false;
                     }
 
+                // Detect if green centroid is inside a fairway — if so, compensate
+                // for terrain depression (fairway mesh sits at original terrain + 0.01)
+                float fairwayBaseOffset = 0f;
+                if (fairwayPolygons != null)
+                {
+                    foreach (var fwPoly in fairwayPolygons)
+                    {
+                        if (IsInsideContour(centroidX, centroidZ, fwPoly))
+                        {
+                            // Terrain was depressed under fairway; fairway mesh is at
+                            // original terrain + 0.01. Add back the depression + fairway offset.
+                            fairwayBaseOffset = OverlayDepressionMeters + 0.01f;
+                            Debug.Log($"[HoleLiteImporter] Green {green.id} on fairway — " +
+                                $"applying base offset {fairwayBaseOffset:F2}m");
+                            break;
+                        }
+                    }
+                }
+
                 // Create raised mesh
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
 
                 var meshGO = CreateRaisedMesh(green.id, "Green", worldContour,
                     centroidX, centroidZ, surfaceY, greenHeight, greenMat,
-                    terrain, terrainBaseY, collarMat, greenCollarScale);
+                    terrain, terrainBaseY, collarMat, greenCollarScale, fairwayBaseOffset);
                 meshGO.transform.SetParent(greensRoot.transform);
 
                 // Place flag at green centroid
@@ -1787,7 +1828,7 @@ namespace Golfin.CourseImport
                     var flag = Object.Instantiate(flagPrefab);
                     flag.name = $"Flag_{green.id}";
                     float flagTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
-                    float flagY = terrainBaseY + flagTerrainH + greenHeight;
+                    float flagY = terrainBaseY + flagTerrainH + greenHeight + fairwayBaseOffset;
                     flag.transform.position = new Vector3(centroidX, flagY, centroidZ);
                     flag.transform.SetParent(greensRoot.transform);
 
@@ -1807,7 +1848,7 @@ namespace Golfin.CourseImport
                     var holeCup = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                     holeCup.name = $"Hole_{green.id}";
                     float cupTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
-                    float cupY = terrainBaseY + cupTerrainH + greenHeight;
+                    float cupY = terrainBaseY + cupTerrainH + greenHeight + fairwayBaseOffset;
                     holeCup.transform.position = new Vector3(centroidX, cupY + 0.001f, centroidZ);
                     holeCup.transform.localScale = new Vector3(0.108f, 0.001f, 0.108f);
                     holeCup.transform.SetParent(greensRoot.transform);
@@ -1849,7 +1890,8 @@ namespace Golfin.CourseImport
             Vector2[] contour, float centroidX, float centroidZ,
             float surfaceY, float height, Material surfaceMat,
             Terrain terrain, float terrainBaseY,
-            Material collarMat = null, float collarScale = 1.08f)
+            Material collarMat = null, float collarScale = 1.08f,
+            float fairwayBaseOffset = 0f)
         {
             int n = contour.Length;
             if (n < 3) return new GameObject($"{zoneName}_{id}_SKIP");
@@ -1898,13 +1940,13 @@ namespace Golfin.CourseImport
                         if (collarHeightFracs[r] < 0)
                         {
                             // Outer/contour rim: at terrain height + small offset
-                            y = terrainBaseY + localTerrainH + 0.02f;
+                            y = terrainBaseY + localTerrainH + 0.02f + fairwayBaseOffset;
                         }
                         else
                         {
                             // Slope/edge rings: terrain + fraction of green height
                             y = terrainBaseY + localTerrainH
-                                + height * collarHeightFracs[r];
+                                + height * collarHeightFracs[r] + fairwayBaseOffset;
                         }
 
                         int vi = r * n + i;
@@ -1976,7 +2018,7 @@ namespace Golfin.CourseImport
                     int vi = r * n + i;
                     surfaceVerts[vi] = new Vector3(
                         wx - centroidX,
-                        terrainBaseY + localTerrainH + height,
+                        terrainBaseY + localTerrainH + height + fairwayBaseOffset,
                         wz - centroidZ);
                     surfaceUVs[vi] = new Vector2(
                         (wx - minX) / extentX,
@@ -1986,7 +2028,7 @@ namespace Golfin.CourseImport
 
             int centerIdx = surfaceVertCount - 1;
             float centerTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
-            surfaceVerts[centerIdx] = new Vector3(0, terrainBaseY + centerTerrainH + height, 0);
+            surfaceVerts[centerIdx] = new Vector3(0, terrainBaseY + centerTerrainH + height + fairwayBaseOffset, 0);
             surfaceUVs[centerIdx] = new Vector2(0.5f, 0.5f);
 
             int surfaceTriCount = n * (surfaceRings - 1) * 6 + n * 3;
