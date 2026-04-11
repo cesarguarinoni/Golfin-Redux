@@ -2579,7 +2579,7 @@ namespace Golfin.CourseImport
 
             // Convert contour to world space (90° CCW rotation: worldX = z, worldZ = x)
             Vector3[] worldPts = new Vector3[n];
-            float yOffset = 0.005f; // minimal offset to avoid z-fighting
+            float yOffset = 0.01f; // offset to clear terrain between sample points
 
             for (int i = 0; i < n; i++)
             {
@@ -2660,7 +2660,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.005f; // minimal offset to avoid z-fighting
+            float yOffset = 0.01f; // offset to clear terrain between sample points
 
             // 90° CCW rotation
             Vector3[] worldPts = new Vector3[n];
@@ -2735,7 +2735,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.005f; // minimal offset to avoid z-fighting
+            float yOffset = 0.01f; // offset to clear terrain between sample points
 
             // stripeDir is perpendicular to tee→green. Compute the parallel axis.
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
@@ -3034,7 +3034,7 @@ namespace Golfin.CourseImport
             int n = spine.Length;
             if (n < 2) return null;
 
-            float yOffset = 0.005f; // minimal offset to avoid z-fighting
+            float yOffset = 0.01f; // offset to clear terrain between sample points
 
             var verts = new Vector3[n * 2];
             var uvs = new Vector2[n * 2];
@@ -3161,7 +3161,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.007f; // slightly above fairway (0.005)
+            float yOffset = 0.012f; // slightly above fairway (0.01)
 
             // Convert to world space — this is the contour edge
             Vector3[] edgeRing = new Vector3[n];
@@ -3271,7 +3271,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.003f; // below tee mesh (0.005)
+            float yOffset = 0.008f; // below tee mesh (0.01)
 
             // Convert to world space
             Vector3[] innerRing = new Vector3[n];
