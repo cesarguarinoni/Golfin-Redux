@@ -23,9 +23,9 @@ namespace Golfin.CourseImport
         private const float DepressionInsetMeters = 0.20f;
 
         // ─── Heightmap Smoothing Parameters ─────────────────────────
-        private const int SmoothRadius = 16;
-        private const float SmoothSigma = 16.0f;
-        private const int TransitionCells = 40;
+        private const int SmoothRadius = 24;
+        private const float SmoothSigma = 24.0f;
+        private const int TransitionCells = 60;
         private static readonly System.Collections.Generic.HashSet<int> PlayZones =
             new System.Collections.Generic.HashSet<int> { 1, 2, 6, 7, 8, 10 };
 
