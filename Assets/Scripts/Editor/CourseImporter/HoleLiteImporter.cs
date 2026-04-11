@@ -2457,28 +2457,23 @@ namespace Golfin.CourseImport
         {
             if (inset < 0f) inset = DepressionInsetMeters;
 
-            // Convert to world XZ and inset toward centroid
+            // Convert contour to world Vector3[] with 90° CCW rotation
             int n = contour.Length;
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++) { cx += contour[i].z; cz += contour[i].x; }
-            cx /= n; cz /= n;
+            var contour3D = new Vector3[n];
+            for (int i = 0; i < n; i++)
+                contour3D[i] = new Vector3(contour[i].z, 0, contour[i].x);
 
-            var worldContour = new Vector2[n];
+            // Edge-perpendicular inset using OffsetContourOutward with negative distance
+            Vector3[] insetContour = OffsetContourOutward(contour3D, -inset);
+
+            // Build Vector2[] for point-in-polygon test + compute bbox
+            var worldContour = new Vector2[insetContour.Length];
             float minX = float.MaxValue, maxX = float.MinValue;
             float minZ = float.MaxValue, maxZ = float.MinValue;
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < insetContour.Length; i++)
             {
-                float wx = contour[i].z;  // 90° CCW
-                float wz = contour[i].x;
-                // Inset toward centroid
-                float dx = wx - cx;
-                float dz = wz - cz;
-                float len = Mathf.Sqrt(dx * dx + dz * dz);
-                if (len > 0.001f)
-                {
-                    wx -= (dx / len) * inset;
-                    wz -= (dz / len) * inset;
-                }
+                float wx = insetContour[i].x;
+                float wz = insetContour[i].z;
                 worldContour[i] = new Vector2(wx, wz);
                 if (wx < minX) minX = wx;
                 if (wx > maxX) maxX = wx;
