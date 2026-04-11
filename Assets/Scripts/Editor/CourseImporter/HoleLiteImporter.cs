@@ -2627,7 +2627,7 @@ namespace Golfin.CourseImport
             var uvList = new System.Collections.Generic.List<Vector2>(uvs);
             var triList = new System.Collections.Generic.List<int>(trisArr);
             SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, tileSize, yOffset, 1.5f);
+                centroid, terrain, terrainBaseY, tileSize, yOffset, 0.75f);
 
             var mesh = new Mesh();
             mesh.name = $"{zoneName}_{id}";
@@ -2699,7 +2699,7 @@ namespace Golfin.CourseImport
             var uvList = new System.Collections.Generic.List<Vector2>(uvs);
             var triList = new System.Collections.Generic.List<int>(tris);
             SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, tileSize, yOffset, 1.5f);
+                centroid, terrain, terrainBaseY, tileSize, yOffset, 0.75f);
 
             var mesh = new Mesh();
             mesh.name = $"{zoneName}_{id}";
@@ -2782,7 +2782,7 @@ namespace Golfin.CourseImport
             var uvList = new System.Collections.Generic.List<Vector2>(uvs);
             var triList = new System.Collections.Generic.List<int>(trisArr);
             SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, stripeWidth, yOffset, 1.5f);
+                centroid, terrain, terrainBaseY, stripeWidth, yOffset, 0.75f);
 
             // Recompute ALL UVs using stripe orientation (subdivision adds verts with wrong UVs)
             for (int i = 0; i < vertList.Count; i++)
