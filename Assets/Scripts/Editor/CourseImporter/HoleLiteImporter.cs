@@ -2378,7 +2378,7 @@ namespace Golfin.CourseImport
 
         private const float FairwayFringeMeters = 0.5f;
 
-        private const float DepressionSlopeMeters = 0.70f;
+        private const float DepressionSlopeMeters = 0.20f;
 
         private static void DepressTerrainUnderOverlays(
             TerrainData terrainData, GameObject terrainGO, string exportPath)
