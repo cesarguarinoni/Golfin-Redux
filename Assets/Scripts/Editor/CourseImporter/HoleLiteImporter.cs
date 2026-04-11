@@ -615,7 +615,10 @@ namespace Golfin.CourseImport
                     string suffix = (side == 0) ? "L" : "R";
 
                     Vector3 markerPos = worldPos + perpDir * offset;
-                    float terrainHeight = terrain.SampleHeight(markerPos);
+                    // Terrain is depressed under tee overlays — lift markers
+                    // back up by the depression amount so they sit on the mesh
+                    float terrainHeight = terrain.SampleHeight(markerPos)
+                        + OverlayDepressionMeters;
 
                     var markerGO = Object.Instantiate(meshPrefab);
                     markerGO.name = $"TeeMarker_{teeLabel}_{suffix}";
