@@ -2398,7 +2398,8 @@ namespace Golfin.CourseImport
                     foreach (var fw in data.fairways)
                         if (fw.contour != null && fw.contour.Length >= 3)
                             MarkContourCells(fw.contour, depress,
-                                hRes, terrainPos, terrainSize);
+                                hRes, terrainPos, terrainSize,
+                                DepressionInsetMeters + FairwayFringeMeters);
             }
 
             // Tee contours
@@ -2448,8 +2449,11 @@ namespace Golfin.CourseImport
         /// Contour uses local meter coords with 90° CCW rotation applied.
         /// </summary>
         private static void MarkContourCells(ContourPoint[] contour,
-            bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize)
+            bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize,
+            float inset = -1f)
         {
+            if (inset < 0f) inset = DepressionInsetMeters;
+
             // Convert to world XZ and inset toward centroid
             int n = contour.Length;
             float cx = 0, cz = 0;
@@ -2469,8 +2473,8 @@ namespace Golfin.CourseImport
                 float len = Mathf.Sqrt(dx * dx + dz * dz);
                 if (len > 0.001f)
                 {
-                    wx -= (dx / len) * DepressionInsetMeters;
-                    wz -= (dz / len) * DepressionInsetMeters;
+                    wx -= (dx / len) * inset;
+                    wz -= (dz / len) * inset;
                 }
                 worldContour[i] = new Vector2(wx, wz);
                 if (wx < minX) minX = wx;
