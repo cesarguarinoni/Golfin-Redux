@@ -2418,17 +2418,35 @@ namespace Golfin.CourseImport
                                 hRes, terrainPos, terrainSize);
             }
 
-            // Cart path contours
+            // Cart path depression — use spine geometry when available
             string cpPath = Path.Combine(exportPath, "cart-paths.json");
             if (File.Exists(cpPath))
             {
                 var data = JsonUtility.FromJson<CartPathsFile>(
                     File.ReadAllText(cpPath));
                 if (data.cart_paths != null)
+                {
                     foreach (var cp in data.cart_paths)
-                        if (cp.contour != null && cp.contour.Length >= 3)
+                    {
+                        if (cp.spine != null && cp.spine.Length >= 2)
+                        {
+                            // Build polygon from spine left+right edges
+                            float halfWidth = (cp.width_m > 0
+                                ? cp.width_m : 2.5f) / 2f;
+                            var spinePoly = BuildSpinePolygon(
+                                cp.spine, halfWidth);
+                            if (spinePoly != null)
+                                MarkWorldContourCells(spinePoly, depress,
+                                    hRes, terrainPos, terrainSize);
+                        }
+                        else if (cp.contour != null && cp.contour.Length >= 3)
+                        {
+                            // Fallback to contour if no spine
                             MarkContourCells(cp.contour, depress,
                                 hRes, terrainPos, terrainSize);
+                        }
+                    }
+                }
             }
 
             // Apply depression
@@ -2492,6 +2510,99 @@ namespace Golfin.CourseImport
                 (maxZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
 
             // Test each cell in bbox
+            for (int hz = hMinZ; hz <= hMaxZ; hz++)
+            {
+                for (int hx = hMinX; hx <= hMaxX; hx++)
+                {
+                    float cellWorldX = (float)hx / (hRes - 1)
+                        * terrainSize.x + terrainPos.x;
+                    float cellWorldZ = (float)hz / (hRes - 1)
+                        * terrainSize.z + terrainPos.z;
+                    if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
+                        depress[hz, hx] = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Build a closed polygon from a spine centerline + half-width.
+        /// Returns left edge forward + right edge reversed = closed loop.
+        /// Same geometry as CreateSpineStripMesh uses.
+        /// </summary>
+        private static Vector2[] BuildSpinePolygon(
+            ContourPoint[] spine, float halfWidth)
+        {
+            int n = spine.Length;
+            if (n < 2) return null;
+
+            var left = new Vector2[n];
+            var right = new Vector2[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                float cx = spine[i].z;  // 90° CCW
+                float cz = spine[i].x;
+
+                // Tangent
+                float tx, tz;
+                if (i == 0)
+                { tx = spine[1].z - spine[0].z; tz = spine[1].x - spine[0].x; }
+                else if (i == n - 1)
+                { tx = spine[n-1].z - spine[n-2].z; tz = spine[n-1].x - spine[n-2].x; }
+                else
+                { tx = spine[i+1].z - spine[i-1].z; tz = spine[i+1].x - spine[i-1].x; }
+
+                float tLen = Mathf.Sqrt(tx * tx + tz * tz);
+                if (tLen > 0.001f) { tx /= tLen; tz /= tLen; }
+                else { tx = 1; tz = 0; }
+
+                // Perpendicular (same as CreateSpineStripMesh)
+                float px = tz;
+                float pz = -tx;
+
+                left[i]  = new Vector2(cx - px * halfWidth,
+                                       cz - pz * halfWidth);
+                right[i] = new Vector2(cx + px * halfWidth,
+                                       cz + pz * halfWidth);
+            }
+
+            // Closed polygon: left forward, then right reversed
+            var poly = new Vector2[n * 2];
+            for (int i = 0; i < n; i++)
+                poly[i] = left[i];
+            for (int i = 0; i < n; i++)
+                poly[n + i] = right[n - 1 - i];
+
+            return poly;
+        }
+
+        /// <summary>
+        /// Mark heightmap cells inside a world-space Vector2[] polygon.
+        /// No contour conversion or inset — polygon is already in
+        /// world XZ coords at the desired boundary.
+        /// </summary>
+        private static void MarkWorldContourCells(Vector2[] worldContour,
+            bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize)
+        {
+            float minX = float.MaxValue, maxX = float.MinValue;
+            float minZ = float.MaxValue, maxZ = float.MinValue;
+            foreach (var v in worldContour)
+            {
+                if (v.x < minX) minX = v.x;
+                if (v.x > maxX) maxX = v.x;
+                if (v.y < minZ) minZ = v.y;
+                if (v.y > maxZ) maxZ = v.y;
+            }
+
+            int hMinX = Mathf.Clamp(Mathf.FloorToInt(
+                (minX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+            int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
+                (maxX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+            int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
+                (minZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+            int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+                (maxZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+
             for (int hz = hMinZ; hz <= hMaxZ; hz++)
             {
                 for (int hx = hMinX; hx <= hMaxX; hx++)
