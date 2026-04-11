@@ -16,8 +16,8 @@ namespace Golfin.CourseImport
         public static float ShoreDepthMeters = 0.1f;
 
         // ─── Overlay Terrain Depression ─────────────────────────────
-        private const float OverlayDepressionMeters = 0.20f;
-        private const float DepressionInsetMeters = 0.10f;
+        private const float OverlayDepressionMeters = 0.40f;
+        private const float DepressionInsetMeters = 0.20f;
 
         // ─── Heightmap Smoothing Parameters ─────────────────────────
         private const int SmoothRadius = 8;
