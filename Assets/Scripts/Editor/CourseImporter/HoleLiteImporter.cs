@@ -2586,6 +2586,26 @@ namespace Golfin.CourseImport
         /// Create a terrain-draped mesh from a contour polygon using a regular grid.
         /// Samples terrain height at every grid point for perfectly smooth results.
         /// </summary>
+        private static Vector2[] DilateContour2D(Vector2[] contour, float distance)
+        {
+            int n = contour.Length;
+            var result = new Vector2[n];
+            float cx = 0, cz = 0;
+            for (int i = 0; i < n; i++) { cx += contour[i].x; cz += contour[i].y; }
+            cx /= n; cz /= n;
+            for (int i = 0; i < n; i++)
+            {
+                float dx = contour[i].x - cx;
+                float dz = contour[i].y - cz;
+                float len = Mathf.Sqrt(dx * dx + dz * dz);
+                if (len < 0.001f) { result[i] = contour[i]; continue; }
+                result[i] = new Vector2(
+                    contour[i].x + (dx / len) * distance,
+                    contour[i].y + (dz / len) * distance);
+            }
+            return result;
+        }
+
         private static GameObject CreateGridDrapedMesh(
             int id, string zoneName, Vector2[] contourXZ,
             Terrain terrain, float terrainBaseY,
@@ -2594,7 +2614,7 @@ namespace Golfin.CourseImport
         {
             const float gridSpacing = 0.5f;
 
-            // 1. Bounding box
+            // 1. Bounding box (expanded by gridSpacing for dilated contour)
             float minX = float.MaxValue, maxX = float.MinValue;
             float minZ = float.MaxValue, maxZ = float.MinValue;
             foreach (var v in contourXZ)
@@ -2604,12 +2624,15 @@ namespace Golfin.CourseImport
                 if (v.y < minZ) minZ = v.y;
                 if (v.y > maxZ) maxZ = v.y;
             }
+            minX -= gridSpacing; minZ -= gridSpacing;
+            maxX += gridSpacing; maxZ += gridSpacing;
 
             // 2. Grid dimensions
             int gridW = Mathf.CeilToInt((maxX - minX) / gridSpacing) + 1;
             int gridH = Mathf.CeilToInt((maxZ - minZ) / gridSpacing) + 1;
 
-            // 3. Sample grid — test inside + sample height
+            // 3. Sample grid — test inside DILATED contour + sample height
+            var dilatedContour = DilateContour2D(contourXZ, gridSpacing);
             bool[] inside = new bool[gridW * gridH];
             float[] heightAt = new float[gridW * gridH];
 
@@ -2621,7 +2644,7 @@ namespace Golfin.CourseImport
                     float wz = minZ + gz * gridSpacing;
                     int idx = gz * gridW + gx;
 
-                    if (IsInsideContour(wx, wz, contourXZ))
+                    if (IsInsideContour(wx, wz, dilatedContour))
                     {
                         inside[idx] = true;
                         float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
@@ -2630,7 +2653,7 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // 4. Build mesh — only emit quads where all 4 corners are inside
+            // 4. Build mesh — only emit quads where all 4 corners are inside dilated contour
             float cx = (minX + maxX) * 0.5f;
             float cz = (minZ + maxZ) * 0.5f;
 
@@ -2662,16 +2685,9 @@ namespace Golfin.CourseImport
                     int tl = (gz + 1) * gridW + gx;
                     int tr = (gz + 1) * gridW + gx + 1;
 
-                    // Emit if ANY corner is inside (overshoot at edges is hidden
-                    // by fringe/border rings; holes from "all 4" rule are worse)
-                    if (!inside[bl] && !inside[br] && !inside[tl] && !inside[tr])
+                    // Only emit if all 4 corners inside the dilated contour
+                    if (!inside[bl] || !inside[br] || !inside[tl] || !inside[tr])
                         continue;
-
-                    // For outside corners, sample terrain height on demand
-                    if (!inside[bl]) heightAt[bl] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + gx * gridSpacing, 0, minZ + gz * gridSpacing)) + yOffset;
-                    if (!inside[br]) heightAt[br] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + (gx + 1) * gridSpacing, 0, minZ + gz * gridSpacing)) + yOffset;
-                    if (!inside[tl]) heightAt[tl] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + gx * gridSpacing, 0, minZ + (gz + 1) * gridSpacing)) + yOffset;
-                    if (!inside[tr]) heightAt[tr] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + (gx + 1) * gridSpacing, 0, minZ + (gz + 1) * gridSpacing)) + yOffset;
 
                     int vBL = GetOrAddVert(gx, gz);
                     int vBR = GetOrAddVert(gx + 1, gz);
@@ -2716,7 +2732,7 @@ namespace Golfin.CourseImport
             const float gridSpacing = 0.5f;
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
 
-            // 1. Bounding box
+            // 1. Bounding box (expanded by gridSpacing for dilated contour)
             float minX = float.MaxValue, maxX = float.MinValue;
             float minZ = float.MaxValue, maxZ = float.MinValue;
             foreach (var v in contourXZ)
@@ -2726,10 +2742,14 @@ namespace Golfin.CourseImport
                 if (v.y < minZ) minZ = v.y;
                 if (v.y > maxZ) maxZ = v.y;
             }
+            minX -= gridSpacing; minZ -= gridSpacing;
+            maxX += gridSpacing; maxZ += gridSpacing;
 
             int gridW = Mathf.CeilToInt((maxX - minX) / gridSpacing) + 1;
             int gridH = Mathf.CeilToInt((maxZ - minZ) / gridSpacing) + 1;
 
+            // Test inside DILATED contour + sample height
+            var dilatedContour = DilateContour2D(contourXZ, gridSpacing);
             bool[] inside = new bool[gridW * gridH];
             float[] heightAt = new float[gridW * gridH];
 
@@ -2741,7 +2761,7 @@ namespace Golfin.CourseImport
                     float wz = minZ + gz * gridSpacing;
                     int idx = gz * gridW + gx;
 
-                    if (IsInsideContour(wx, wz, contourXZ))
+                    if (IsInsideContour(wx, wz, dilatedContour))
                     {
                         inside[idx] = true;
                         float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
@@ -2783,16 +2803,9 @@ namespace Golfin.CourseImport
                     int tl = (gz + 1) * gridW + gx;
                     int tr = (gz + 1) * gridW + gx + 1;
 
-                    // Emit if ANY corner is inside (overshoot at edges is hidden
-                    // by fringe/border rings; holes from "all 4" rule are worse)
-                    if (!inside[bl] && !inside[br] && !inside[tl] && !inside[tr])
+                    // Only emit if all 4 corners inside the dilated contour
+                    if (!inside[bl] || !inside[br] || !inside[tl] || !inside[tr])
                         continue;
-
-                    // For outside corners, sample terrain height on demand
-                    if (!inside[bl]) heightAt[bl] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + gx * gridSpacing, 0, minZ + gz * gridSpacing)) + yOffset;
-                    if (!inside[br]) heightAt[br] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + (gx + 1) * gridSpacing, 0, minZ + gz * gridSpacing)) + yOffset;
-                    if (!inside[tl]) heightAt[tl] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + gx * gridSpacing, 0, minZ + (gz + 1) * gridSpacing)) + yOffset;
-                    if (!inside[tr]) heightAt[tr] = terrainBaseY + terrain.SampleHeight(new Vector3(minX + (gx + 1) * gridSpacing, 0, minZ + (gz + 1) * gridSpacing)) + yOffset;
 
                     int vBL = GetOrAddVert(gx, gz);
                     int vBR = GetOrAddVert(gx + 1, gz);
@@ -2816,255 +2829,6 @@ namespace Golfin.CourseImport
 
             var go = new GameObject($"Fairway_{id}");
             go.transform.position = new Vector3(cx, 0, cz);
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-            AddCleanMeshCollider(go, mesh);
-
-            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-            marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
-
-            return go;
-        }
-
-        // ─── Legacy Mesh Methods (kept for reference, no longer called) ──
-
-        /// <summary>
-        /// Create a flat mesh from a contour polygon, positioned at terrain height.
-        /// Uses centroid-fan triangulation (works for convex and mildly concave shapes).
-        /// </summary>
-        private static GameObject CreateFlatContourMesh(int id, string zoneName,
-            ContourPoint[] contour, Terrain terrain, float terrainBaseY,
-            Material mat, float tileSize, Golfin.Course.SurfaceType surfaceType)
-        {
-            int n = contour.Length;
-            if (n < 3) return null;
-
-            // Convert contour to world space (90° CCW rotation: worldX = z, worldZ = x)
-            Vector3[] worldPts = new Vector3[n];
-            float yOffset = 0.01f; // offset to clear terrain between sample points
-
-            for (int i = 0; i < n; i++)
-            {
-                float wx = contour[i].z; // 90° CCW rotation
-                float wz = contour[i].x;
-                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                worldPts[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
-            }
-
-            // Compute centroid (Y=0 so vertex Y values are absolute terrain heights)
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++)
-            {
-                cx += worldPts[i].x;
-                cz += worldPts[i].z;
-            }
-            cx /= n; cz /= n;
-            Vector3 centroid = new Vector3(cx, 0, cz);
-
-            // Build mesh: vertices = contour points + centroid (all relative to centroid)
-            var verts = new Vector3[n + 1];
-            var uvs = new Vector2[n + 1];
-
-            for (int i = 0; i < n; i++)
-            {
-                verts[i] = worldPts[i] - centroid; // relative to centroid
-                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
-            }
-            // Center vertex (Y = terrain height at centroid, XZ = 0 since it's at the origin)
-            float centerH = terrain.SampleHeight(new Vector3(cx, 0, cz));
-            verts[n] = new Vector3(0, terrainBaseY + centerH + yOffset, 0);
-            uvs[n] = new Vector2(cx / tileSize, cz / tileSize);
-
-            // Triangles: fan from centroid
-            var trisArr = new int[n * 3];
-            for (int i = 0; i < n; i++)
-            {
-                trisArr[i * 3 + 0] = i;
-                trisArr[i * 3 + 1] = n; // centroid
-                trisArr[i * 3 + 2] = (i + 1) % n;
-            }
-
-            // Subdivide to conform to terrain surface
-            var vertList = new System.Collections.Generic.List<Vector3>(verts);
-            var uvList = new System.Collections.Generic.List<Vector2>(uvs);
-            var triList = new System.Collections.Generic.List<int>(trisArr);
-            SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, tileSize, yOffset, 0.75f);
-
-            var mesh = new Mesh();
-            mesh.name = $"{zoneName}_{id}";
-            mesh.vertices = vertList.ToArray();
-            mesh.triangles = triList.ToArray();
-            mesh.uv = uvList.ToArray();
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
-            var go = new GameObject($"{zoneName}_{id}");
-            go.transform.position = centroid;
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-            AddCleanMeshCollider(go, mesh);
-
-            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-            marker.surfaceType = surfaceType;
-
-            return go;
-        }
-
-        /// <summary>
-        /// Create a flat mesh from a contour polygon using ear-clip triangulation.
-        /// Handles concave/winding shapes like cart paths correctly.
-        /// </summary>
-        private static GameObject CreateEarClipContourMesh(int id, string zoneName,
-            ContourPoint[] contour, Terrain terrain, float terrainBaseY,
-            Material mat, float tileSize, Golfin.Course.SurfaceType surfaceType)
-        {
-            int n = contour.Length;
-            if (n < 3) return null;
-
-            float yOffset = 0.01f; // offset to clear terrain between sample points
-
-            // 90° CCW rotation
-            Vector3[] worldPts = new Vector3[n];
-            for (int i = 0; i < n; i++)
-            {
-                float wx = contour[i].z;
-                float wz = contour[i].x;
-                float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
-            }
-
-            // Centroid (Y=0 so vertex Y values are absolute terrain heights)
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++)
-            { cx += worldPts[i].x; cz += worldPts[i].z; }
-            cx /= n; cz /= n;
-            Vector3 centroid = new Vector3(cx, 0, cz);
-
-            var verts = new Vector3[n];
-            var uvs = new Vector2[n];
-            for (int i = 0; i < n; i++)
-            {
-                verts[i] = worldPts[i] - centroid;
-                uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
-            }
-
-            var tris = EarClipTriangulate(worldPts);
-            if (tris == null || tris.Length < 3)
-            {
-                Debug.LogWarning($"[HoleLiteImporter] {zoneName} {id}: ear-clip failed, skipping");
-                return null;
-            }
-
-            // Subdivide long triangles so mesh follows terrain curvature
-            var vertList = new System.Collections.Generic.List<Vector3>(verts);
-            var uvList = new System.Collections.Generic.List<Vector2>(uvs);
-            var triList = new System.Collections.Generic.List<int>(tris);
-            SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, tileSize, yOffset, 0.75f);
-
-            var mesh = new Mesh();
-            mesh.name = $"{zoneName}_{id}";
-            mesh.vertices = vertList.ToArray();
-            mesh.triangles = triList.ToArray();
-            mesh.uv = uvList.ToArray();
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
-            var go = new GameObject($"{zoneName}_{id}");
-            go.transform.position = centroid;
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-            AddCleanMeshCollider(go, mesh);
-
-            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-            marker.surfaceType = surfaceType;
-
-            return go;
-        }
-
-        /// <summary>
-        /// Create a fairway mesh with mow stripes via UV orientation.
-        /// Uses a single T_Fairway_Mix texture that contains both light and dark bands.
-        /// UVs are oriented so that one axis runs along stripeDir (perpendicular to
-        /// tee→green), making the texture bands appear as parallel mow stripes.
-        /// Ear-clipping triangulation handles concave fairway shapes correctly.
-        /// </summary>
-        private static GameObject CreateFairwayMesh(int id, ContourPoint[] contour,
-            Terrain terrain, float terrainBaseY,
-            Material mat, Vector2 stripeDir, float stripeWidth)
-        {
-            int n = contour.Length;
-            if (n < 3) return null;
-
-            float yOffset = 0.01f; // offset to clear terrain between sample points
-
-            // stripeDir is perpendicular to tee→green. Compute the parallel axis.
-            Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
-
-            // Convert contour to world space (90° CCW: worldX = z, worldZ = x)
-            Vector3[] worldPts = new Vector3[n];
-            for (int i = 0; i < n; i++)
-            {
-                float wx = contour[i].z;
-                float wz = contour[i].x;
-                float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                worldPts[i] = new Vector3(wx, terrainBaseY + th + yOffset, wz);
-            }
-
-            // Compute centroid for mesh positioning (Y=0 so vertex Y values are absolute terrain heights)
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++)
-            {
-                cx += worldPts[i].x;
-                cz += worldPts[i].z;
-            }
-            cx /= n; cz /= n;
-            Vector3 centroid = new Vector3(cx, 0, cz);
-
-            // Build vertices (contour only — no centroid vertex needed for ear clipping)
-            var verts = new Vector3[n];
-            var uvs = new Vector2[n];
-            for (int i = 0; i < n; i++)
-            {
-                verts[i] = worldPts[i] - centroid;
-                float wx = worldPts[i].x;
-                float wz = worldPts[i].z;
-                uvs[i] = new Vector2(
-                    (wx * stripeDir.x + wz * stripeDir.y) / stripeWidth,
-                    (wx * parallelDir.x + wz * parallelDir.y) / stripeWidth);
-            }
-
-            // Ear-clipping triangulation (handles concave polygons)
-            var trisArr = EarClipTriangulate(worldPts);
-            if (trisArr == null || trisArr.Length < 3) return null;
-
-            // Subdivide to conform to terrain surface
-            var vertList = new System.Collections.Generic.List<Vector3>(verts);
-            var uvList = new System.Collections.Generic.List<Vector2>(uvs);
-            var triList = new System.Collections.Generic.List<int>(trisArr);
-            SubdivideToTerrain(ref vertList, ref uvList, ref triList,
-                centroid, terrain, terrainBaseY, stripeWidth, yOffset, 0.75f);
-
-            // Recompute ALL UVs using stripe orientation (subdivision adds verts with wrong UVs)
-            for (int i = 0; i < vertList.Count; i++)
-            {
-                Vector3 wp = vertList[i] + centroid;
-                uvList[i] = new Vector2(
-                    (wp.x * stripeDir.x + wp.z * stripeDir.y) / stripeWidth,
-                    (wp.x * parallelDir.x + wp.z * parallelDir.y) / stripeWidth);
-            }
-
-            var mesh = new Mesh();
-            mesh.name = $"Fairway_{id}";
-            mesh.vertices = vertList.ToArray();
-            mesh.triangles = triList.ToArray();
-            mesh.uv = uvList.ToArray();
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
-            var go = new GameObject($"Fairway_{id}");
-            go.transform.position = centroid;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;
             AddCleanMeshCollider(go, mesh);
@@ -3219,66 +2983,6 @@ namespace Golfin.CourseImport
             bool hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
 
             return !(hasNeg && hasPos);
-        }
-
-        /// <summary>
-        /// Subdivide triangles until no edge exceeds maxEdgeLength.
-        /// Each new vertex is placed at the terrain-sampled height.
-        /// Works in local space (vertices are relative to centroid).
-        /// </summary>
-        private static void SubdivideToTerrain(
-            ref System.Collections.Generic.List<Vector3> verts,
-            ref System.Collections.Generic.List<Vector2> uvs,
-            ref System.Collections.Generic.List<int> tris,
-            Vector3 centroid, Terrain terrain, float terrainBaseY,
-            float tileSize, float yOffset, float maxEdgeLength)
-        {
-            int maxIterations = 5;
-            for (int iter = 0; iter < maxIterations; iter++)
-            {
-                var newTris = new System.Collections.Generic.List<int>();
-                bool subdivided = false;
-
-                for (int t = 0; t < tris.Count; t += 3)
-                {
-                    int i0 = tris[t], i1 = tris[t + 1], i2 = tris[t + 2];
-                    Vector3 v0 = verts[i0], v1 = verts[i1], v2 = verts[i2];
-
-                    float d01 = Vector3.Distance(v0, v1);
-                    float d12 = Vector3.Distance(v1, v2);
-                    float d20 = Vector3.Distance(v2, v0);
-
-                    float maxD = Mathf.Max(d01, Mathf.Max(d12, d20));
-                    if (maxD <= maxEdgeLength)
-                    {
-                        newTris.Add(i0); newTris.Add(i1); newTris.Add(i2);
-                        continue;
-                    }
-
-                    subdivided = true;
-
-                    // Split the longest edge at its midpoint
-                    int iA, iB, iC;
-                    if (d01 >= d12 && d01 >= d20) { iA = i0; iB = i1; iC = i2; }
-                    else if (d12 >= d01 && d12 >= d20) { iA = i1; iB = i2; iC = i0; }
-                    else { iA = i2; iB = i0; iC = i1; }
-
-                    Vector3 midLocal = (verts[iA] + verts[iB]) * 0.5f;
-                    Vector3 midWorld = midLocal + centroid;
-                    float th = terrain.SampleHeight(new Vector3(midWorld.x, 0, midWorld.z));
-                    midLocal.y = terrainBaseY + th + yOffset - centroid.y;
-
-                    int iMid = verts.Count;
-                    verts.Add(midLocal);
-                    uvs.Add(new Vector2(midWorld.x / tileSize, midWorld.z / tileSize));
-
-                    newTris.Add(iA); newTris.Add(iMid); newTris.Add(iC);
-                    newTris.Add(iMid); newTris.Add(iB); newTris.Add(iC);
-                }
-
-                tris = newTris;
-                if (!subdivided) break;
-            }
         }
 
         /// <summary>

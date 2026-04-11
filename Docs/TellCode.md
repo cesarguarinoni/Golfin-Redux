@@ -8,27 +8,80 @@
 
 ---
 
-## Current Task — Replace Subdivision with Grid-Based Terrain Draping
+## Current Task — Grid-Based Terrain Draping (v2: Dilated Contour)
 
-**Problem:** The current subdivision approach creates bumpy overlay meshes.
-Each subdivision triangle samples terrain at its 3 vertices, but between
-those points (1.5-2m apart) the mesh interpolates linearly while the
-terrain interpolates via Unity's smooth heightmap. This creates visible
-facets — the mesh doesn't match the terrain's smooth surface.
+**Problem:** The grid mesh with "any corner inside" rule creates
+jagged staircase edges. The "all 4 corners inside" rule creates holes.
 
-The green works because `greenHeight` lifts the surface above terrain,
-hiding the mismatch. Flat overlays (fairway, tee) have no such buffer.
+**Solution:** Keep the **all 4 corners** rule (no holes, clean grid),
+but **dilate the contour outward by one grid cell (0.5m)** before
+the inside test. This ensures the grid mesh fully covers the original
+contour with a small overshoot that the fringe/border ring hides.
 
-**Solution:** Replace ear-clip + subdivision with a **regular grid mesh**
-that samples terrain height at every grid point. This matches the
-terrain's own interpolation and produces a perfectly smooth result.
+In `CreateGridDrapedMesh`:
+```csharp
+// Dilate contour outward by gridSpacing for the inside test
+// so the grid mesh fully covers the original contour edge
+var dilatedContour = DilateContour2D(contourXZ, gridSpacing);
+
+// Use dilatedContour for IsInsideContour test
+// Use original contourXZ for bounding box (dilated is slightly larger
+// but we add +1 cell padding to bbox anyway)
+```
+
+New helper:
+```csharp
+private static Vector2[] DilateContour2D(Vector2[] contour, float distance)
+{
+    int n = contour.Length;
+    var result = new Vector2[n];
+    // Compute centroid
+    float cx = 0, cz = 0;
+    for (int i = 0; i < n; i++) { cx += contour[i].x; cz += contour[i].y; }
+    cx /= n; cz /= n;
+    // Push each vertex outward from centroid
+    for (int i = 0; i < n; i++)
+    {
+        float dx = contour[i].x - cx;
+        float dz = contour[i].y - cz;
+        float len = Mathf.Sqrt(dx * dx + dz * dz);
+        if (len < 0.001f) { result[i] = contour[i]; continue; }
+        result[i] = new Vector2(
+            contour[i].x + (dx / len) * distance,
+            contour[i].y + (dz / len) * distance);
+    }
+    return result;
+}
+```
+
+Also expand bbox by `gridSpacing` on each side so dilated points
+aren't clipped.
+
+**The rest of the grid approach stays the same as the spec below
+(all 4 corners rule, 0.5m grid, mesh at Y=0, per-vertex terrain
+sampling).**
+
+**IMPORTANT:** Claude Code must actually **replace** the old methods
+(`CreateFairwayMesh`, `CreateFlatContourMesh`, `CreateEarClipContourMesh`)
+with calls to `CreateGridDrapedMesh` / `CreateGridDrapedFairwayMesh`.
+The old methods should be deleted. Check `CreateFlatZoneMeshes` where
+they're called and swap them.
+
+### Verification
+1. Import Hole 4 (hilly)
+2. Fairway: smooth, follows terrain, no staircase edges, no holes
+3. Tee: smooth, no jagged edges
+4. Green: unchanged (already fixed)
+5. Hole 1 (flat): looks identical
+
+### Do NOT
+- Change green, bunker, or water mesh code
+- Use the "any corner" rule (creates staircases)
+- Use the old ear-clip + subdivide approach
 
 ---
 
-### New method: `CreateGridDrapedMesh`
-
-This replaces the per-mesh terrain draping for ALL flat overlays
-(fairway, tee, cart path, fringe, border).
+### Reference: `CreateGridDrapedMesh` full code
 
 **Algorithm:**
 1. Compute bounding box of the contour
@@ -64,7 +117,8 @@ private static GameObject CreateGridDrapedMesh(
     int gridW = Mathf.CeilToInt((maxX - minX) / gridSpacing) + 1;
     int gridH = Mathf.CeilToInt((maxZ - minZ) / gridSpacing) + 1;
 
-    // 3. Sample grid — test inside + sample height
+    // 3. Sample grid — test inside DILATED contour + sample height
+    var dilatedContour = DilateContour2D(contourXZ, gridSpacing);
     bool[] inside = new bool[gridW * gridH];
     float[] heightAt = new float[gridW * gridH];
 
@@ -76,7 +130,7 @@ private static GameObject CreateGridDrapedMesh(
             float wz = minZ + gz * gridSpacing;
             int idx = gz * gridW + gx;
 
-            if (IsInsideContour(wx, wz, contourXZ))
+            if (IsInsideContour(wx, wz, dilatedContour))
             {
                 inside[idx] = true;
                 float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
@@ -118,7 +172,7 @@ private static GameObject CreateGridDrapedMesh(
             int tl = (gz + 1) * gridW + gx;
             int tr = (gz + 1) * gridW + gx + 1;
 
-            // Only emit if all 4 corners inside
+            // Only emit if all 4 corners inside the DILATED contour
             if (!inside[bl] || !inside[br] || !inside[tl] || !inside[tr])
                 continue;
 
@@ -806,3 +860,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-11 — Fixed green mesh slope conformance: per-vertex terrain sampling for collar + putting surface, parent Y=0, flag/cup terrain-sampled
 ✅ 2026-04-11 — Applied Y=0 origin pattern to all 6 overlay mesh methods (fairway, tee, cart path, spine, fringe, border), restored yOffsets to 0.02/0.03/0.01
 ✅ 2026-04-11 — Replaced subdivision with grid-based terrain draping (0.5m grid) for fairway, tee, and cart path fallback meshes
+✅ 2026-04-11 — Grid draping v2: dilated contour (0.5m outward) + all-4-corners rule for clean edges, deleted legacy methods + SubdivideToTerrain
