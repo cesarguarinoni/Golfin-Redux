@@ -15,6 +15,13 @@ namespace Golfin.CourseImport
         /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
         public static float ShoreDepthMeters = 0.1f;
 
+        // ─── Heightmap Smoothing Parameters ─────────────────────────
+        private const int SmoothRadius = 8;
+        private const float SmoothSigma = 4.0f;
+        private const int TransitionCells = 40;
+        private static readonly System.Collections.Generic.HashSet<int> PlayZones =
+            new System.Collections.Generic.HashSet<int> { 1, 2, 6, 7, 8, 10 };
+
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 01")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 02")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
         [MenuItem("GOLFIN/Import Hole (Lite)/Hole 03")] public static void Lite03() { ImportLiteHole("lomond-country-club", 3); }
@@ -378,6 +385,92 @@ namespace Golfin.CourseImport
                         heights[z, x] = normalizedFlat;
             }
 
+            // --- Smooth heightmap outside play area ---
+            if (loadedRaw)
+            {
+                string zonesSmPath = Path.Combine(exportPath, "zones.json");
+                if (File.Exists(zonesSmPath))
+                {
+                    string zonesSmJson = File.ReadAllText(zonesSmPath);
+                    var zonesSmData = JsonUtility.FromJson<ZonesData>(zonesSmJson);
+                    byte[] smGrid = System.Convert.FromBase64String(zonesSmData.grid);
+                    int smW = zonesSmData.source_dimensions.width;
+                    int smH = zonesSmData.source_dimensions.height;
+
+                    // Step 1: Build play-area mask
+                    bool[] isPlayArea = new bool[actualRes * actualRes];
+                    for (int hz = 0; hz < actualRes; hz++)
+                    {
+                        for (int hx = 0; hx < actualRes; hx++)
+                        {
+                            float normX = (float)hx / (actualRes - 1);
+                            float normZ = (float)hz / (actualRes - 1);
+                            // Reverse 90° CCW: zone.x = normZ, zone.y = normX
+                            int gx = Mathf.Clamp(Mathf.RoundToInt(normZ * (smW - 1)), 0, smW - 1);
+                            int gy = Mathf.Clamp(Mathf.RoundToInt(normX * (smH - 1)), 0, smH - 1);
+                            int zone = smGrid[gy * smW + gx];
+                            if (PlayZones.Contains(zone))
+                                isPlayArea[hz * actualRes + hx] = true;
+                        }
+                    }
+
+                    // Step 2: Distance transform + blend mask
+                    float[] distToPlay = new float[actualRes * actualRes];
+                    for (int i = 0; i < distToPlay.Length; i++)
+                        distToPlay[i] = isPlayArea[i] ? 0f : float.MaxValue;
+
+                    // Forward pass (chamfer)
+                    for (int z = 0; z < actualRes; z++)
+                    {
+                        for (int x = 0; x < actualRes; x++)
+                        {
+                            int idx = z * actualRes + x;
+                            if (x > 0) distToPlay[idx] = Mathf.Min(distToPlay[idx], distToPlay[idx - 1] + 1f);
+                            if (z > 0) distToPlay[idx] = Mathf.Min(distToPlay[idx], distToPlay[(z - 1) * actualRes + x] + 1f);
+                            if (x > 0 && z > 0) distToPlay[idx] = Mathf.Min(distToPlay[idx], distToPlay[(z - 1) * actualRes + (x - 1)] + 1.414f);
+                            if (x < actualRes - 1 && z > 0) distToPlay[idx] = Mathf.Min(distToPlay[idx], distToPlay[(z - 1) * actualRes + (x + 1)] + 1.414f);
+                        }
+                    }
+                    // Backward pass
+                    for (int z = actualRes - 1; z >= 0; z--)
+                    {
+                        for (int x = actualRes - 1; x >= 0; x--)
+                        {
+                            int idx = z * actualRes + x;
+                            if (x < actualRes - 1) distToPlay[idx] = Mathf.Min(distToPlay[idx], distToPlay[idx + 1] + 1f);
+                            if (z < actualRes - 1) distToPlay[idx] = Mathf.Min(distToPlay[idx], distToPlay[(z + 1) * actualRes + x] + 1f);
+                            if (x < actualRes - 1 && z < actualRes - 1) distToPlay[idx] = Mathf.Min(distToPlay[idx], distToPlay[(z + 1) * actualRes + (x + 1)] + 1.414f);
+                            if (x > 0 && z < actualRes - 1) distToPlay[idx] = Mathf.Min(distToPlay[idx], distToPlay[(z + 1) * actualRes + (x - 1)] + 1.414f);
+                        }
+                    }
+
+                    // Blend factor: 1.0 = keep raw DEM (play area), 0.0 = fully smoothed
+                    float[] blendFactor = new float[actualRes * actualRes];
+                    for (int i = 0; i < blendFactor.Length; i++)
+                    {
+                        if (isPlayArea[i])
+                            blendFactor[i] = 1.0f;
+                        else if (distToPlay[i] < TransitionCells)
+                            blendFactor[i] = 1.0f - distToPlay[i] / TransitionCells;
+                        else
+                            blendFactor[i] = 0.0f;
+                    }
+
+                    // Step 3: Gaussian blur + blend
+                    float[,] smoothed = GaussianBlur2D(heights, actualRes, SmoothRadius, SmoothSigma);
+                    for (int z = 0; z < actualRes; z++)
+                    {
+                        for (int x = 0; x < actualRes; x++)
+                        {
+                            float b = blendFactor[z * actualRes + x];
+                            heights[z, x] = Mathf.Lerp(smoothed[z, x], heights[z, x], b);
+                        }
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Heightmap smoothing applied (radius={SmoothRadius}, transition={TransitionCells} cells)");
+                }
+            }
+
             // --- Create and save TerrainData ---
             string terrainAssetPath = $"{dataDir}/TerrainData_Hole{holeId}.asset";
             EnsureDirectory(Path.Combine(projectRoot, Path.GetDirectoryName(terrainAssetPath)));
@@ -635,11 +728,15 @@ namespace Golfin.CourseImport
 
             string zonesJson = File.ReadAllText(zonesPath);
             var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
-            byte[] grid = System.Convert.FromBase64String(zonesData.grid);
+            // Prefer terrain_grid (preserves real terrain under overlays) over merged grid
+            string gridSource = !string.IsNullOrEmpty(zonesData.terrain_grid)
+                ? zonesData.terrain_grid : zonesData.grid;
+            byte[] grid = System.Convert.FromBase64String(gridSource);
             int zoneW = zonesData.source_dimensions.width;
             int zoneH = zonesData.source_dimensions.height;
 
-            Debug.Log($"[HoleLiteImporter] Zone grid: {zoneW}x{zoneH}, {grid.Length} bytes");
+            Debug.Log($"[HoleLiteImporter] Zone grid: {zoneW}x{zoneH}, {grid.Length} bytes" +
+                (!string.IsNullOrEmpty(zonesData.terrain_grid) ? " (separate terrain layer)" : " (merged)"));
 
             // --- 2. Resample to alphamap resolution ---
             int alphaRes = 1024;
@@ -2507,19 +2604,26 @@ namespace Golfin.CourseImport
             uvs[n] = new Vector2(cx / tileSize, cz / tileSize);
 
             // Triangles: fan from centroid
-            var tris = new int[n * 3];
+            var trisArr = new int[n * 3];
             for (int i = 0; i < n; i++)
             {
-                tris[i * 3 + 0] = i;
-                tris[i * 3 + 1] = n; // centroid
-                tris[i * 3 + 2] = (i + 1) % n;
+                trisArr[i * 3 + 0] = i;
+                trisArr[i * 3 + 1] = n; // centroid
+                trisArr[i * 3 + 2] = (i + 1) % n;
             }
+
+            // Subdivide to conform to terrain surface
+            var vertList = new System.Collections.Generic.List<Vector3>(verts);
+            var uvList = new System.Collections.Generic.List<Vector2>(uvs);
+            var triList = new System.Collections.Generic.List<int>(trisArr);
+            SubdivideToTerrain(ref vertList, ref uvList, ref triList,
+                centroid, terrain, terrainBaseY, tileSize, yOffset, 2.0f);
 
             var mesh = new Mesh();
             mesh.name = $"{zoneName}_{id}";
-            mesh.vertices = verts;
-            mesh.triangles = tris;
-            mesh.uv = uvs;
+            mesh.vertices = vertList.ToArray();
+            mesh.triangles = triList.ToArray();
+            mesh.uv = uvList.ToArray();
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
@@ -2661,14 +2765,30 @@ namespace Golfin.CourseImport
             }
 
             // Ear-clipping triangulation (handles concave polygons)
-            var tris = EarClipTriangulate(worldPts);
-            if (tris == null || tris.Length < 3) return null;
+            var trisArr = EarClipTriangulate(worldPts);
+            if (trisArr == null || trisArr.Length < 3) return null;
+
+            // Subdivide to conform to terrain surface
+            var vertList = new System.Collections.Generic.List<Vector3>(verts);
+            var uvList = new System.Collections.Generic.List<Vector2>(uvs);
+            var triList = new System.Collections.Generic.List<int>(trisArr);
+            SubdivideToTerrain(ref vertList, ref uvList, ref triList,
+                centroid, terrain, terrainBaseY, stripeWidth, yOffset, 2.0f);
+
+            // Recompute ALL UVs using stripe orientation (subdivision adds verts with wrong UVs)
+            for (int i = 0; i < vertList.Count; i++)
+            {
+                Vector3 wp = vertList[i] + centroid;
+                uvList[i] = new Vector2(
+                    (wp.x * stripeDir.x + wp.z * stripeDir.y) / stripeWidth,
+                    (wp.x * parallelDir.x + wp.z * parallelDir.y) / stripeWidth);
+            }
 
             var mesh = new Mesh();
             mesh.name = $"Fairway_{id}";
-            mesh.vertices = verts;
-            mesh.triangles = tris;
-            mesh.uv = uvs;
+            mesh.vertices = vertList.ToArray();
+            mesh.triangles = triList.ToArray();
+            mesh.uv = uvList.ToArray();
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 

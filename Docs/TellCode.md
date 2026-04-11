@@ -8,7 +8,183 @@
 
 ---
 
-## Current Task — Tree Placement System (v2: Mixed Mode)
+## Current Task — Heightmap Smoothing + Overlay Mesh Conformance
+
+### Problem 1: Bumpy terrain outside play area
+The DEM heightmap (~8m/px at z14) upsampled from 1025→2049 creates
+stair-step facets. These are very visible in rough/OB/tree areas.
+
+### Problem 2: Hard step at play/non-play boundary
+The transition between play zones and surrounding terrain has a visible
+cliff/step where the DEM resolution isn't sufficient.
+
+### Problem 3: Overlay meshes half-sunken into terrain
+Fairway and tee meshes only sample terrain height at contour vertices.
+Between vertices the mesh interpolates linearly while the terrain curves,
+causing the mesh to clip below the terrain surface on hilly holes.
+
+---
+
+### Part 1 — Heightmap Smoothing (in `CreateTerrain`)
+
+After the heightmap is loaded (the `heights[,]` array is populated),
+before `terrainData.SetHeights()`, add a smoothing pass:
+
+**Step 1: Build a play-area mask on the heightmap grid**
+
+Load `zones.json` from the export folder (same as splatmap does).
+For each heightmap cell `(hx, hz)` in `[0..actualRes)`, map it back to
+the zone grid using the same 90° CCW rotation as `ApplySplatmap`:
+```
+float normX = (float)hx / (actualRes - 1); // terrain X fraction
+float normZ = (float)hz / (actualRes - 1); // terrain Z fraction
+// Reverse 90° CCW: zone.x = normZ * (zoneW-1), zone.y = normX * (zoneH-1)
+int gx = Clamp(Round(normZ * (zoneW - 1)), 0, zoneW - 1);
+int gy = Clamp(Round(normX * (zoneH - 1)), 0, zoneH - 1);
+int zone = grid[gy * zoneW + gx];
+```
+
+Play zones (used for slope calculation — current heights are fine):
+**1** (fairway), **2** (green), **6** (bunker),
+**7** (water), **8** (cart_path), **10** (tee_box).
+
+Create `bool[] isPlayArea = new bool[actualRes * actualRes]`.
+Set `true` for cells matching any play zone.
+
+Note: Play area heights don't need to be exact — they drive slope
+calculation, not literal real-world elevation. But we still use them
+as the anchor for the transition blend so the boundary is seamless.
+
+**Step 2: Build a blend mask with transition band**
+
+Dilate the play-area mask by `TransitionCells` (const = 40 cells,
+~12m at 2049 res over ~600m terrain). Use a distance transform:
+
+```csharp
+float[] distToPlay = new float[actualRes * actualRes];
+// Initialize: 0 for play cells, float.MaxValue for others
+// Forward + backward chamfer pass (same approach as shore slope)
+```
+
+Then compute blend factor:
+```csharp
+float[] blendFactor = new float[actualRes * actualRes];
+for each cell:
+  if (isPlayArea) blendFactor = 1.0  // keep raw DEM
+  else if (dist < TransitionCells)
+    blendFactor = dist / TransitionCells  // 0→1 ramp
+  else blendFactor = 0.0  // fully smoothed
+```
+
+**Step 3: Smooth the heightmap**
+
+Apply a Gaussian blur to the full `heights[,]` array → `smoothedHeights[,]`.
+Use the existing `GaussianBlur2D` helper (it operates on `float[,]`).
+Parameters: **radius = 8, sigma = 4.0f**.
+
+Note: `GaussianBlur2D` is a private method in `HoleLiteImporter` —
+make it `internal` or just call it directly since `CreateTerrain` is
+in the same class.
+
+Extract a 2D slice from `heights` → blur it → blend:
+```csharp
+float[,] smoothed = GaussianBlur2D(heights, actualRes, 8, 4.0f);
+for (int z = 0; z < actualRes; z++)
+  for (int x = 0; x < actualRes; x++)
+  {
+      float b = blendFactor[z * actualRes + x];
+      heights[z, x] = Mathf.Lerp(smoothed[z, x], heights[z, x], b);
+  }
+```
+
+This keeps play-area heights as-is (they're already fine for slope
+calculation), smoothly transitions at the boundary (no visible step),
+and fully smooths outside terrain to remove DEM stair-stepping.
+
+If `zones.json` doesn't exist (no zone data), skip smoothing entirely
+(flat terrain fallback already handles this).
+
+**Constants to add at class level:**
+```csharp
+private const int SmoothRadius = 8;
+private const float SmoothSigma = 4.0f;
+private const int TransitionCells = 40;
+private static readonly HashSet<int> PlayZones =
+    new HashSet<int> { 1, 2, 6, 7, 8, 10 };
+```
+
+---
+
+### Part 2 — Overlay Mesh Terrain Conformance
+
+**Problem:** `CreateFairwayMesh` and `CreateFlatContourMesh` (tees)
+don't subdivide their meshes, so large triangles float above or sink
+below the terrain between vertices.
+
+**Fix:** After ear-clip/fan triangulation, call `SubdivideToTerrain`
+(already exists and is used by `CreateEarClipContourMesh` for cart paths).
+
+**In `CreateFairwayMesh`**, after ear-clip and before creating the Mesh:
+```csharp
+var vertList = new System.Collections.Generic.List<Vector3>(verts);
+var uvList = new System.Collections.Generic.List<Vector2>(uvs);
+var triList = new System.Collections.Generic.List<int>(tris);
+SubdivideToTerrain(ref vertList, ref uvList, ref triList,
+    centroid, terrain, terrainBaseY, stripeWidth, yOffset, 2.0f);
+// Then use vertList/uvList/triList for the Mesh
+```
+
+Note: `SubdivideToTerrain` needs a `tileSize` param for UV computation.
+For fairway, pass `stripeWidth` (the UV tiling parameter). The subdivision
+computes new UVs as `worldPos / tileSize` — but fairway UVs use the
+oriented stripe projection (`stripeDir`/`parallelDir`). So we need a
+small tweak:
+
+**Add a UV callback overload to `SubdivideToTerrain`**, OR just
+recompute UVs for new vertices using the stripe formula:
+
+Simplest approach — after subdivision, recompute ALL UVs using the
+stripe orientation:
+```csharp
+for (int i = 0; i < vertList.Count; i++)
+{
+    Vector3 wp = vertList[i] + centroid;
+    uvList[i] = new Vector2(
+        (wp.x * stripeDir.x + wp.z * stripeDir.y) / stripeWidth,
+        (wp.x * parallelDir.x + wp.z * parallelDir.y) / stripeWidth);
+}
+```
+
+**In `CreateFlatContourMesh`** (tees), after fan triangulation:
+```csharp
+// Convert fan triangulation result to lists
+var vertList = new System.Collections.Generic.List<Vector3>(verts);
+var uvList = new System.Collections.Generic.List<Vector2>(uvs);
+var triList = new System.Collections.Generic.List<int>(tris);
+SubdivideToTerrain(ref vertList, ref uvList, ref triList,
+    centroid, terrain, terrainBaseY, tileSize, yOffset, 2.0f);
+// Then use vertList/uvList/triList for the Mesh
+```
+
+### Verification
+
+1. Re-import any hole with elevation changes (try Hole 2, 3, or 4)
+2. **Terrain outside play area:** Smooth, no stair-stepping
+3. **Play/non-play boundary:** Gradual transition, no cliff/step
+4. **Fairway/tee meshes:** Conform to terrain surface, no sinking
+5. **Cart paths:** Should already work (already has subdivision)
+6. **Greens/bunkers:** Unaffected (they use raised/bowl meshes)
+
+### Do NOT
+
+- Change play-zone heights in a way that breaks slope calculation
+- Change zone grid resolution or zone classification
+- Modify bunker, green, or water mesh code
+- Change the heightmap resolution (2049)
+
+---
+
+## Previous Task (DONE) — Tree Placement System (v2: Mixed Mode)
 
 **Goal:** Place trees on the terrain using zone 5 (trees) mask from
 UHole Lite. Support TWO placement modes based on prefab type:
@@ -394,3 +570,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-10 — Bunker v1-v5 iterations → v5 inscribed rectangle terrain hole
 ✅ 2026-04-10 — Tree placement v1 (terrain trees only, Trees(2025))
 ✅ 2026-04-10 — Tree placement v2: mixed mode (terrain + standalone), Spruce prefabs, Objects/ scan
+✅ 2026-04-11 — Heightmap smoothing (play-area mask + transition blend) + overlay mesh terrain conformance (SubdivideToTerrain for fairway + tee meshes)
