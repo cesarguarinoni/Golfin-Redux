@@ -8,102 +8,139 @@
 
 ---
 
-## Current Task — Fix Overlay Mesh Terrain Draping
+## Current Task — Fix Green Mesh Slope Conformance
 
-**Problem:** Overlay meshes (fairway, tee, cart path, green collar) appear
-to sit at a fixed Y-plane instead of following the terrain slope. They
-sink into the terrain on one side and float above it on the other.
-The previous fix (increasing yOffset to 8cm) made them float everywhere.
+**Problem:** The green's `CreateRaisedMesh` uses a single `surfaceY`
+(sampled at the centroid) as the reference for ALL collar and surface
+vertices. On a slope, vertices far from the centroid are at a different
+terrain height, causing the collar to sink on the uphill side and
+float on the downhill side. The putting surface is flat instead of
+following the terrain slope.
 
-**Root cause analysis needed:** The subdivision is in place, yOffset is
-back to 0.02f. The issue is likely one of:
+**Root cause:** Same as the fairway fix (centroid Y averaging), but
+the green has additional complexity because it's a raised structure
+with collar rings at different height fractions.
 
-A) The `terrain.SampleHeight()` call isn't returning correct values
-   because the TerrainData hasn't been fully committed yet (heights
-   set but not flushed)
-B) The mesh centroid Y is computed as the average of all vertex Y values,
-   but on a slope, this average doesn't match any actual terrain point —
-   and since vertices are stored relative to centroid, the whole mesh
-   shifts
-C) The 90° CCW coordinate transform has a subtle error for some holes
+**Fix:** Each vertex should independently sample `terrain.SampleHeight()`
+at its own XZ position. The green surface follows the terrain slope
+but raised by `greenHeight`.
 
-**Debugging step — add diagnostic logging:**
+---
 
-In `CreateFairwayMesh`, right after computing worldPts and centroid,
-add this log:
+### Changes to `CreateRaisedMesh`
+
+**1. Mesh origin:** Set parent Y to 0 instead of `surfaceY`:
 ```csharp
-// DEBUG: Compare sampled height vs terrain height at centroid
-float debugTerrainH = terrain.SampleHeight(new Vector3(cx, 0, cz));
-float debugExpectedY = terrainBaseY + debugTerrainH + yOffset;
-Debug.Log($"[FairwayDebug] Fairway {id}: centroidY={cy:F3}, " +
-    $"terrainAtCentroid={debugExpectedY:F3}, diff={cy - debugExpectedY:F3}, " +
-    $"terrainBaseY={terrainBaseY:F3}, sampleH={debugTerrainH:F3}");
-
-// DEBUG: Check first 3 vertices
-for (int dbg = 0; dbg < Mathf.Min(3, n); dbg++)
-{
-    float vTerrainH = terrain.SampleHeight(new Vector3(worldPts[dbg].x, 0, worldPts[dbg].z));
-    float vExpectedY = terrainBaseY + vTerrainH + yOffset;
-    Debug.Log($"[FairwayDebug]   v[{dbg}]: worldY={worldPts[dbg].y:F3}, " +
-        $"expectedY={vExpectedY:F3}, diff={worldPts[dbg].y - vExpectedY:F3}");
-}
+// OLD: parent.transform.position = new Vector3(centroidX, surfaceY, centroidZ);
+// NEW:
+parent.transform.position = new Vector3(centroidX, 0, centroidZ);
 ```
 
-Do the same in `CreateRaisedMesh` (green collar) for the outer rim
-vertices (ring 0):
+**2. Collar rings — per-vertex terrain sampling:**
+
+For each collar vertex, sample terrain height at that vertex's XZ:
 ```csharp
-// DEBUG: After collar vertex computation, log first 3 outer rim verts
-if (collarMat != null)
+for (int r = 0; r < collarRings; r++)
 {
-    for (int dbg = 0; dbg < Mathf.Min(3, n); dbg++)
+    float scale = collarScales[r];
+    for (int i = 0; i < n; i++)
     {
-        float scale0 = collarScales[0];
-        float wx0 = centroidX + (contour[dbg].x - centroidX) * scale0;
-        float wz0 = centroidZ + (contour[dbg].y - centroidZ) * scale0;
-        float th0 = terrain.SampleHeight(new Vector3(wx0, 0, wz0));
-        Debug.Log($"[GreenDebug] Green {id} collar v[{dbg}]: " +
-            $"terrainH={th0:F3}, surfaceY={surfaceY:F3}, " +
-            $"vertY={collarVerts[dbg].y:F3}, terrainBaseY={terrainBaseY:F3}");
+        float wx = centroidX + (contour[i].x - centroidX) * scale;
+        float wz = centroidZ + (contour[i].y - centroidZ) * scale;
+        float localTerrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+
+        float y;
+        if (collarHeightFracs[r] < 0)
+        {
+            // Outer/contour rim: at terrain height + small offset
+            y = terrainBaseY + localTerrainH + 0.02f;
+        }
+        else
+        {
+            // Slope/edge rings: interpolate between terrain and
+            // terrain + greenHeight at this vertex's position
+            y = terrainBaseY + localTerrainH
+                + height * collarHeightFracs[r];
+        }
+
+        int vi = r * n + i;
+        collarVerts[vi] = new Vector3(wx - centroidX, y, wz - centroidZ);
+        // UVs unchanged
     }
 }
 ```
 
-**Also revert yOffset back to 0.02f** in all methods (undo the 0.08 change):
-- `CreateFlatContourMesh`: 0.02f
-- `CreateFairwayMesh`: 0.02f  
-- `CreateEarClipContourMesh`: 0.02f
-- `CreateSpineStripMesh`: 0.02f
-- `CreateFringeRing`: 0.03f
-- `CreateGradientBorderRing`: 0.01f
+**3. Putting surface — slope-following raised mesh:**
 
-**After importing a hilly hole (e.g. Hole 3 or 4)**, paste the debug
-output here so we can see what's actually happening with the heights.
+Each surface vertex sits at its own terrain height + greenHeight:
+```csharp
+for (int r = 0; r < surfaceRings; r++)
+{
+    float scale = surfaceScales[r];
+    for (int i = 0; i < n; i++)
+    {
+        float wx = centroidX + (contour[i].x - centroidX) * scale;
+        float wz = centroidZ + (contour[i].y - centroidZ) * scale;
+        float localTerrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
 
-### Debug Results (Hole 4)
+        int vi = r * n + i;
+        surfaceVerts[vi] = new Vector3(
+            wx - centroidX,
+            terrainBaseY + localTerrainH + height,
+            wz - centroidZ);
+        // UVs unchanged
+    }
+}
 
-**Fairway:** Individual vertex heights match terrain perfectly (diff=0.000).
-But centroidY=19.718 vs terrainAtCentroid=19.772 → diff=-0.055m.
-**Root cause confirmed: hypothesis B.** The centroid Y is computed as the
-average of all vertex Y values. On a slope, this average is lower than
-the actual terrain height at the centroid's XZ position. Since vertices
-are stored relative to centroid (`worldPt - centroid`), the whole mesh
-shifts down by ~5.5cm on this slope.
+// Center vertex:
+float centerTerrainH = terrain.SampleHeight(
+    new Vector3(centroidX, 0, centroidZ));
+surfaceVerts[centerIdx] = new Vector3(
+    0,
+    terrainBaseY + centerTerrainH + height,
+    0);
+```
 
-**Fix:** In the centroid computation, don't average Y. Instead sample
-terrain height at the averaged XZ: `cy = terrainBaseY + terrain.SampleHeight(cx, cz) + yOffset`.
-This anchors the mesh's origin to the actual terrain surface.
+**4. Flag and hole cup positioning:**
 
-**Green collar:** Working correctly. vertY values are relative to surfaceY
-and show the expected ramp from green surface down to terrain level.
+Update flag/hole cup placement in `CreateGreenMeshes` to also use
+per-point terrain sampling:
+```csharp
+// OLD: float flagY = surfaceY + greenHeight;
+// NEW:
+float flagTerrainH = terrain.SampleHeight(
+    new Vector3(centroidX, 0, centroidZ));
+float flagY = terrainBaseY + flagTerrainH + greenHeight;
+```
+
+**5. Remove the `surfaceY` variable** from `CreateRaisedMesh`’s
+parameters or just stop using it for vertex computation. It can
+still be passed for backward compatibility but should not affect
+vertex heights.
+
+### Also: Remove debug logging
+
+Remove the `[FairwayDebug]` and `[GreenDebug]` logging added in
+the previous task — it was diagnostic only.
+
+### Verification
+
+1. Import Hole 3 or 4 (hilly terrain)
+2. **Green collar:** Drapes the terrain slope — no sinking or floating
+3. **Putting surface:** Follows terrain slope, raised by greenHeight
+4. **Flag + hole cup:** Sit on top of the green surface
+5. **Hole 1 (flat):** Should look identical to before
+6. **Fairway/tee:** Should still work (previous centroid fix)
 
 ### Do NOT
-- Change the heightmap smoothing code
-- Change materials or textures
-- Remove the subdivision calls
+- Change bunker or water mesh code
+- Change heightmap smoothing
+- Change materials or the 90° CCW coordinate transform
+- Change the collar ring scales or height fractions
 
 ---
 
-## Previous Task (DONE) — Increase Overlay Mesh Y-Offset (REVERTED)
+## Previous Tasks (DONE)
 
 ### Problem 1: Bumpy terrain outside play area
 The DEM heightmap (~8m/px at z14) upsampled from 1025→2049 creates
@@ -668,3 +705,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-11 — Heightmap smoothing (play-area mask + transition blend) + overlay mesh terrain conformance (SubdivideToTerrain for fairway + tee meshes)
 ✅ 2026-04-11 — Increased overlay mesh Y-offsets (0.02→0.08, fringe 0.09, border 0.07) + reduced SubdivideToTerrain maxEdge 2.0→1.5
 ✅ 2026-04-11 — Fixed overlay mesh terrain draping: centroid Y now sampled from terrain instead of averaged from vertices (root cause: averaged Y on slopes shifts entire mesh)
+✅ 2026-04-11 — Fixed green mesh slope conformance: per-vertex terrain sampling for collar + putting surface, parent Y=0, flag/cup terrain-sampled

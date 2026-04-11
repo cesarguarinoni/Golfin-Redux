@@ -1776,7 +1776,8 @@ namespace Golfin.CourseImport
                 {
                     var flag = Object.Instantiate(flagPrefab);
                     flag.name = $"Flag_{green.id}";
-                    float flagY = surfaceY + greenHeight;
+                    float flagTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
+                    float flagY = terrainBaseY + flagTerrainH + greenHeight;
                     flag.transform.position = new Vector3(centroidX, flagY, centroidZ);
                     flag.transform.SetParent(greensRoot.transform);
 
@@ -1795,8 +1796,9 @@ namespace Golfin.CourseImport
                 {
                     var holeCup = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                     holeCup.name = $"Hole_{green.id}";
-                    float flagY = surfaceY + greenHeight;
-                    holeCup.transform.position = new Vector3(centroidX, flagY + 0.001f, centroidZ);
+                    float cupTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
+                    float cupY = terrainBaseY + cupTerrainH + greenHeight;
+                    holeCup.transform.position = new Vector3(centroidX, cupY + 0.001f, centroidZ);
                     holeCup.transform.localScale = new Vector3(0.108f, 0.001f, 0.108f);
                     holeCup.transform.SetParent(greensRoot.transform);
 
@@ -1842,9 +1844,9 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return new GameObject($"{zoneName}_{id}_SKIP");
 
-            // Parent object positioned at centroid
+            // Parent object positioned at centroid (Y=0, vertices carry absolute Y)
             var parent = new GameObject($"{zoneName}_{id}");
-            parent.transform.position = new Vector3(centroidX, surfaceY, centroidZ);
+            parent.transform.position = new Vector3(centroidX, 0, centroidZ);
 
             // UV bounding box (use collar scale for full extent)
             float minX = float.MaxValue, maxX = float.MinValue;
@@ -1880,16 +1882,19 @@ namespace Golfin.CourseImport
                     {
                         float wx = centroidX + (contour[i].x - centroidX) * scale;
                         float wz = centroidZ + (contour[i].y - centroidZ) * scale;
+                        float localTerrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
 
                         float y;
                         if (collarHeightFracs[r] < 0)
                         {
-                            float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                            y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
+                            // Outer/contour rim: at terrain height + small offset
+                            y = terrainBaseY + localTerrainH + 0.02f;
                         }
                         else
                         {
-                            y = height * collarHeightFracs[r];
+                            // Slope/edge rings: terrain + fraction of green height
+                            y = terrainBaseY + localTerrainH
+                                + height * collarHeightFracs[r];
                         }
 
                         int vi = r * n + i;
@@ -1956,9 +1961,13 @@ namespace Golfin.CourseImport
                 {
                     float wx = centroidX + (contour[i].x - centroidX) * scale;
                     float wz = centroidZ + (contour[i].y - centroidZ) * scale;
+                    float localTerrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
 
                     int vi = r * n + i;
-                    surfaceVerts[vi] = new Vector3(wx - centroidX, height, wz - centroidZ);
+                    surfaceVerts[vi] = new Vector3(
+                        wx - centroidX,
+                        terrainBaseY + localTerrainH + height,
+                        wz - centroidZ);
                     surfaceUVs[vi] = new Vector2(
                         (wx - minX) / extentX,
                         (wz - minZ) / extentZ);
@@ -1966,7 +1975,8 @@ namespace Golfin.CourseImport
             }
 
             int centerIdx = surfaceVertCount - 1;
-            surfaceVerts[centerIdx] = new Vector3(0, height, 0);
+            float centerTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
+            surfaceVerts[centerIdx] = new Vector3(0, terrainBaseY + centerTerrainH + height, 0);
             surfaceUVs[centerIdx] = new Vector2(0.5f, 0.5f);
 
             int surfaceTriCount = n * (surfaceRings - 1) * 6 + n * 3;
