@@ -16,7 +16,8 @@ namespace Golfin.CourseImport
         public static float ShoreDepthMeters = 0.1f;
 
         // ─── Overlay Terrain Depression ─────────────────────────────
-        private const float OverlayDepressionMeters = 0.10f;
+        private const float OverlayDepressionMeters = 0.20f;
+        private const float DepressionInsetMeters = 0.10f;
 
         // ─── Heightmap Smoothing Parameters ─────────────────────────
         private const int SmoothRadius = 8;
@@ -2449,13 +2450,28 @@ namespace Golfin.CourseImport
         private static void MarkContourCells(ContourPoint[] contour,
             bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize)
         {
-            var worldContour = new Vector2[contour.Length];
+            // Convert to world XZ and inset toward centroid
+            int n = contour.Length;
+            float cx = 0, cz = 0;
+            for (int i = 0; i < n; i++) { cx += contour[i].z; cz += contour[i].x; }
+            cx /= n; cz /= n;
+
+            var worldContour = new Vector2[n];
             float minX = float.MaxValue, maxX = float.MinValue;
             float minZ = float.MaxValue, maxZ = float.MinValue;
-            for (int i = 0; i < contour.Length; i++)
+            for (int i = 0; i < n; i++)
             {
                 float wx = contour[i].z;  // 90° CCW
                 float wz = contour[i].x;
+                // Inset toward centroid
+                float dx = wx - cx;
+                float dz = wz - cz;
+                float len = Mathf.Sqrt(dx * dx + dz * dz);
+                if (len > 0.001f)
+                {
+                    wx -= (dx / len) * DepressionInsetMeters;
+                    wz -= (dz / len) * DepressionInsetMeters;
+                }
                 worldContour[i] = new Vector2(wx, wz);
                 if (wx < minX) minX = wx;
                 if (wx > maxX) maxX = wx;
