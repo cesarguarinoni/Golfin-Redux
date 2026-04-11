@@ -2378,8 +2378,6 @@ namespace Golfin.CourseImport
 
         private const float FairwayFringeMeters = 0.5f;
 
-        private const float DepressionSlopeMeters = 0.50f;
-
         private static void DepressTerrainUnderOverlays(
             TerrainData terrainData, GameObject terrainGO, string exportPath)
         {
@@ -2390,8 +2388,7 @@ namespace Golfin.CourseImport
             Vector3 terrainPos = terrainGO.transform.position;
             Vector3 terrainSize = terrainData.size;
 
-            // Depression factor: 0 = no depression, 1 = full depression
-            float[,] depressFactor = new float[hRes, hRes];
+            bool[,] depress = new bool[hRes, hRes];
 
             // --- Collect all contour polygons that have overlay meshes ---
             // Fairway contours
@@ -2403,7 +2400,7 @@ namespace Golfin.CourseImport
                 if (data.fairways != null)
                     foreach (var fw in data.fairways)
                         if (fw.contour != null && fw.contour.Length >= 3)
-                            MarkContourCellsSloped(fw.contour, depressFactor,
+                            MarkContourCells(fw.contour, depress,
                                 hRes, terrainPos, terrainSize,
                                 DepressionInsetMeters + FairwayFringeMeters + 0.10f);
             }
@@ -2417,7 +2414,7 @@ namespace Golfin.CourseImport
                 if (data.zones != null && data.zones.tee != null)
                     foreach (var region in data.zones.tee)
                         if (region.contour != null && region.contour.Length >= 3)
-                            MarkContourCellsSloped(region.contour, depressFactor,
+                            MarkContourCells(region.contour, depress,
                                 hRes, terrainPos, terrainSize);
             }
 
@@ -2430,36 +2427,32 @@ namespace Golfin.CourseImport
                 if (data.cart_paths != null)
                     foreach (var cp in data.cart_paths)
                         if (cp.contour != null && cp.contour.Length >= 3)
-                            MarkContourCellsSloped(cp.contour, depressFactor,
+                            MarkContourCells(cp.contour, depress,
                                 hRes, terrainPos, terrainSize);
             }
 
-            // Apply depression with factor
+            // Apply depression
             int depressedCount = 0;
             for (int hz = 0; hz < hRes; hz++)
                 for (int hx = 0; hx < hRes; hx++)
-                {
-                    float f = depressFactor[hz, hx];
-                    if (f > 0f)
+                    if (depress[hz, hx])
                     {
                         heights[hz, hx] = Mathf.Max(0f,
-                            heights[hz, hx] - dropNormalized * f);
+                            heights[hz, hx] - dropNormalized);
                         depressedCount++;
                     }
-                }
 
             terrainData.SetHeights(0, 0, heights);
             Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount}" +
-                      $" cells (slope {DepressionSlopeMeters:F1}m, max {OverlayDepressionMeters:F2}m)");
+                      $" cells lowered by {OverlayDepressionMeters:F2}m");
         }
 
         /// <summary>
-        /// Mark heightmap cells with a depression factor (0–1).
-        /// Full depression inside the inset contour, linear slope in the
-        /// transition band (DepressionSlopeMeters wide) outside it.
+        /// Mark heightmap cells that fall inside a contour polygon.
+        /// Contour uses local meter coords with 90° CCW rotation applied.
         /// </summary>
-        private static void MarkContourCellsSloped(ContourPoint[] contour,
-            float[,] depressFactor, int hRes, Vector3 terrainPos, Vector3 terrainSize,
+        private static void MarkContourCells(ContourPoint[] contour,
+            bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize,
             float inset = -1f)
         {
             if (inset < 0f) inset = DepressionInsetMeters;
@@ -2470,25 +2463,22 @@ namespace Golfin.CourseImport
             for (int i = 0; i < n; i++)
                 contour3D[i] = new Vector3(contour[i].z, 0, contour[i].x);
 
-            // Two contours: inner (full depression) and outer (slope start)
-            Vector3[] innerContour = OffsetContourOutward(contour3D, -inset);
-            Vector3[] outerContour = OffsetContourOutward(contour3D, -(inset - DepressionSlopeMeters));
+            // Edge-perpendicular inset using OffsetContourOutward with negative distance
+            Vector3[] insetContour = OffsetContourOutward(contour3D, -inset);
 
-            // Build Vector2[] for both contours
-            var innerPoly = new Vector2[innerContour.Length];
-            var outerPoly = new Vector2[outerContour.Length];
+            // Build Vector2[] for point-in-polygon test + compute bbox
+            var worldContour = new Vector2[insetContour.Length];
             float minX = float.MaxValue, maxX = float.MinValue;
             float minZ = float.MaxValue, maxZ = float.MinValue;
-
-            for (int i = 0; i < innerContour.Length; i++)
-                innerPoly[i] = new Vector2(innerContour[i].x, innerContour[i].z);
-            for (int i = 0; i < outerContour.Length; i++)
+            for (int i = 0; i < insetContour.Length; i++)
             {
-                outerPoly[i] = new Vector2(outerContour[i].x, outerContour[i].z);
-                if (outerContour[i].x < minX) minX = outerContour[i].x;
-                if (outerContour[i].x > maxX) maxX = outerContour[i].x;
-                if (outerContour[i].z < minZ) minZ = outerContour[i].z;
-                if (outerContour[i].z > maxZ) maxZ = outerContour[i].z;
+                float wx = insetContour[i].x;
+                float wz = insetContour[i].z;
+                worldContour[i] = new Vector2(wx, wz);
+                if (wx < minX) minX = wx;
+                if (wx > maxX) maxX = wx;
+                if (wz < minZ) minZ = wz;
+                if (wz > maxZ) maxZ = wz;
             }
 
             // Convert bbox to heightmap cell range
@@ -2501,6 +2491,7 @@ namespace Golfin.CourseImport
             int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
                 (maxZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
 
+            // Test each cell in bbox
             for (int hz = hMinZ; hz <= hMaxZ; hz++)
             {
                 for (int hx = hMinX; hx <= hMaxX; hx++)
@@ -2509,42 +2500,10 @@ namespace Golfin.CourseImport
                         * terrainSize.x + terrainPos.x;
                     float cellWorldZ = (float)hz / (hRes - 1)
                         * terrainSize.z + terrainPos.z;
-
-                    if (IsInsideContour(cellWorldX, cellWorldZ, innerPoly))
-                    {
-                        // Full depression
-                        depressFactor[hz, hx] = Mathf.Max(depressFactor[hz, hx], 1f);
-                    }
-                    else if (IsInsideContour(cellWorldX, cellWorldZ, outerPoly))
-                    {
-                        // Slope zone — estimate fraction by closest distance to inner contour
-                        // Approximate: use normalized distance between outer and inner edges
-                        float minDist = float.MaxValue;
-                        for (int i = 0; i < innerPoly.Length; i++)
-                        {
-                            int j = (i + 1) % innerPoly.Length;
-                            float d = DistToSegment(cellWorldX, cellWorldZ,
-                                innerPoly[i].x, innerPoly[i].y,
-                                innerPoly[j].x, innerPoly[j].y);
-                            if (d < minDist) minDist = d;
-                        }
-                        float t = 1f - Mathf.Clamp01(minDist / DepressionSlopeMeters);
-                        depressFactor[hz, hx] = Mathf.Max(depressFactor[hz, hx], t);
-                    }
+                    if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
+                        depress[hz, hx] = true;
                 }
             }
-        }
-
-        /// <summary>Distance from point (px,pz) to line segment (ax,az)-(bx,bz).</summary>
-        private static float DistToSegment(float px, float pz,
-            float ax, float az, float bx, float bz)
-        {
-            float dx = bx - ax, dz = bz - az;
-            float lenSq = dx * dx + dz * dz;
-            if (lenSq < 0.0001f) return Mathf.Sqrt((px - ax) * (px - ax) + (pz - az) * (pz - az));
-            float t = Mathf.Clamp01(((px - ax) * dx + (pz - az) * dz) / lenSq);
-            float projX = ax + t * dx, projZ = az + t * dz;
-            return Mathf.Sqrt((px - projX) * (px - projX) + (pz - projZ) * (pz - projZ));
         }
 
         private static void CreateFlatZoneMeshes(TerrainData terrainData,
