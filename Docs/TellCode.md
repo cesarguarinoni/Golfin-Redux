@@ -667,3 +667,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-10 — Tree placement v2: mixed mode (terrain + standalone), Spruce prefabs, Objects/ scan
 ✅ 2026-04-11 — Heightmap smoothing (play-area mask + transition blend) + overlay mesh terrain conformance (SubdivideToTerrain for fairway + tee meshes)
 ✅ 2026-04-11 — Increased overlay mesh Y-offsets (0.02→0.08, fringe 0.09, border 0.07) + reduced SubdivideToTerrain maxEdge 2.0→1.5
+✅ 2026-04-11 — Fixed overlay mesh terrain draping: centroid Y now sampled from terrain instead of averaged from vertices (root cause: averaged Y on slopes shifts entire mesh)

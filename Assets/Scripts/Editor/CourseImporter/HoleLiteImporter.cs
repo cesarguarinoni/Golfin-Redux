@@ -1900,18 +1900,6 @@ namespace Golfin.CourseImport
                     }
                 }
 
-                // DEBUG: Log first 3 outer rim collar verts
-                for (int dbg = 0; dbg < Mathf.Min(3, n); dbg++)
-                {
-                    float scale0 = collarScales[0];
-                    float wx0 = centroidX + (contour[dbg].x - centroidX) * scale0;
-                    float wz0 = centroidZ + (contour[dbg].y - centroidZ) * scale0;
-                    float th0 = terrain.SampleHeight(new Vector3(wx0, 0, wz0));
-                    Debug.Log($"[GreenDebug] Green {id} collar v[{dbg}]: " +
-                        $"terrainH={th0:F3}, surfaceY={surfaceY:F3}, " +
-                        $"vertY={collarVerts[dbg].y:F3}, terrainBaseY={terrainBaseY:F3}");
-                }
-
                 // Triangles: quads between adjacent rings (no center fan)
                 int collarTriCount = n * (collarRings - 1) * 6;
                 var collarTris = new int[collarTriCount];
@@ -2592,14 +2580,15 @@ namespace Golfin.CourseImport
             }
 
             // Compute centroid
-            float cx = 0, cy = 0, cz = 0;
+            float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
                 cx += worldPts[i].x;
-                cy += worldPts[i].y;
                 cz += worldPts[i].z;
             }
-            cx /= n; cy /= n; cz /= n;
+            cx /= n; cz /= n;
+            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
+            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
             Vector3 centroid = new Vector3(cx, cy, cz);
 
             // Build mesh: vertices = contour points + centroid (all relative to centroid)
@@ -2675,10 +2664,12 @@ namespace Golfin.CourseImport
             }
 
             // Centroid
-            float cx = 0, cy = 0, cz = 0;
+            float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
-            { cx += worldPts[i].x; cy += worldPts[i].y; cz += worldPts[i].z; }
-            cx /= n; cy /= n; cz /= n;
+            { cx += worldPts[i].x; cz += worldPts[i].z; }
+            cx /= n; cz /= n;
+            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
+            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
             Vector3 centroid = new Vector3(cx, cy, cz);
 
             var verts = new Vector3[n];
@@ -2753,31 +2744,16 @@ namespace Golfin.CourseImport
             }
 
             // Compute centroid for mesh positioning
-            float cx = 0, cy = 0, cz = 0;
+            float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
                 cx += worldPts[i].x;
-                cy += worldPts[i].y;
                 cz += worldPts[i].z;
             }
-            cx /= n; cy /= n; cz /= n;
+            cx /= n; cz /= n;
+            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
+            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
             Vector3 centroid = new Vector3(cx, cy, cz);
-
-            // DEBUG: Compare sampled height vs terrain height at centroid
-            float debugTerrainH = terrain.SampleHeight(new Vector3(cx, 0, cz));
-            float debugExpectedY = terrainBaseY + debugTerrainH + yOffset;
-            Debug.Log($"[FairwayDebug] Fairway {id}: centroidY={cy:F3}, " +
-                $"terrainAtCentroid={debugExpectedY:F3}, diff={cy - debugExpectedY:F3}, " +
-                $"terrainBaseY={terrainBaseY:F3}, sampleH={debugTerrainH:F3}");
-
-            // DEBUG: Check first 3 vertices
-            for (int dbg = 0; dbg < Mathf.Min(3, n); dbg++)
-            {
-                float vTerrainH = terrain.SampleHeight(new Vector3(worldPts[dbg].x, 0, worldPts[dbg].z));
-                float vExpectedY = terrainBaseY + vTerrainH + yOffset;
-                Debug.Log($"[FairwayDebug]   v[{dbg}]: worldY={worldPts[dbg].y:F3}, " +
-                    $"expectedY={vExpectedY:F3}, diff={worldPts[dbg].y - vExpectedY:F3}");
-            }
 
             // Build vertices (contour only — no centroid vertex needed for ear clipping)
             var verts = new Vector3[n];
@@ -3117,13 +3093,16 @@ namespace Golfin.CourseImport
             }
 
             // Compute centroid for mesh positioning
-            float sumX = 0, sumY = 0, sumZ = 0;
+            float sumX = 0, sumZ = 0;
             for (int i = 0; i < verts.Length; i++)
             {
-                sumX += verts[i].x; sumY += verts[i].y; sumZ += verts[i].z;
+                sumX += verts[i].x; sumZ += verts[i].z;
             }
-            Vector3 centroid = new Vector3(
-                sumX / verts.Length, sumY / verts.Length, sumZ / verts.Length);
+            float centX = sumX / verts.Length;
+            float centZ = sumZ / verts.Length;
+            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
+            float centY = terrainBaseY + terrain.SampleHeight(new Vector3(centX, 0, centZ)) + yOffset;
+            Vector3 centroid = new Vector3(centX, centY, centZ);
 
             // Make vertices relative to centroid
             for (int i = 0; i < verts.Length; i++)
@@ -3204,14 +3183,15 @@ namespace Golfin.CourseImport
             }
 
             // Compute centroid
-            float cx = 0, cy = 0, cz = 0;
+            float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
                 cx += edgeRing[i].x;
-                cy += edgeRing[i].y;
                 cz += edgeRing[i].z;
             }
-            cx /= n; cy /= n; cz /= n;
+            cx /= n; cz /= n;
+            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
+            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
             Vector3 centroid = new Vector3(cx, cy, cz);
 
             // Vertices: edge ring (0..n-1) + offset ring (n..2n-1)
@@ -3322,12 +3302,14 @@ namespace Golfin.CourseImport
             }
 
             // Centroid
-            float cx = 0, cy = 0, cz = 0;
+            float cx = 0, cz = 0;
             for (int i = 0; i < n; i++)
             {
-                cx += innerRing[i].x; cy += innerRing[i].y; cz += innerRing[i].z;
+                cx += innerRing[i].x; cz += innerRing[i].z;
             }
-            cx /= n; cy /= n; cz /= n;
+            cx /= n; cz /= n;
+            // Sample terrain at centroid XZ instead of averaging Y (slope fix)
+            float cy = terrainBaseY + terrain.SampleHeight(new Vector3(cx, 0, cz)) + yOffset;
             Vector3 centroid = new Vector3(cx, cy, cz);
 
             // Arc lengths along inner ring for UV.u tiling
