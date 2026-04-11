@@ -1750,6 +1750,26 @@ namespace Golfin.CourseImport
             var collarMat = CreateZoneMaterial(dataDir, projectRoot,
                 "GreenCollar", "T_Semirough_Albedo", 4f);
 
+            // Load fairway contours to detect greens inside fairways
+            var fairwayPolys = new System.Collections.Generic.List<Vector2[]>();
+            string fwDetectPath = Path.Combine(exportPath, "fairway-contours.json");
+            if (File.Exists(fwDetectPath))
+            {
+                var fwData = JsonUtility.FromJson<FairwayContoursFile>(
+                    File.ReadAllText(fwDetectPath));
+                if (fwData.fairways != null)
+                {
+                    foreach (var fw in fwData.fairways)
+                    {
+                        if (fw.contour == null || fw.contour.Length < 3) continue;
+                        var poly = new Vector2[fw.contour.Length];
+                        for (int i = 0; i < fw.contour.Length; i++)
+                            poly[i] = new Vector2(fw.contour[i].z, fw.contour[i].x);
+                        fairwayPolys.Add(poly);
+                    }
+                }
+            }
+
             var greensRoot = new GameObject("Greens");
             greensRoot.transform.SetParent(parentRoot);
 
@@ -1815,13 +1835,25 @@ namespace Golfin.CourseImport
                             holes[hz, hx] = false;
                     }
 
+                // Detect if green is inside a fairway — boost Y so collar
+                // sits above the fairway mesh surface
+                float yBoost = 0f;
+                foreach (var fwPoly in fairwayPolys)
+                {
+                    if (IsInsideContour(centroidX, centroidZ, fwPoly))
+                    {
+                        yBoost = 0.02f; // clear fairway's 0.01m offset
+                        break;
+                    }
+                }
+
                 // Create raised mesh
                 float surfaceY = terrainBaseY + terrain.SampleHeight(
                     new Vector3(centroidX, 0, centroidZ));
 
                 var meshGO = CreateRaisedMesh(green.id, "Green", worldContour,
                     centroidX, centroidZ, surfaceY, greenHeight, greenMat,
-                    terrain, terrainBaseY, collarMat, greenCollarScale);
+                    terrain, terrainBaseY, collarMat, greenCollarScale, yBoost);
                 meshGO.transform.SetParent(greensRoot.transform);
 
                 // Place flag at green centroid
@@ -1832,7 +1864,7 @@ namespace Golfin.CourseImport
                     var flag = Object.Instantiate(flagPrefab);
                     flag.name = $"Flag_{green.id}";
                     float flagTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
-                    float flagY = terrainBaseY + flagTerrainH + greenHeight;
+                    float flagY = terrainBaseY + flagTerrainH + greenHeight + yBoost;
                     flag.transform.position = new Vector3(centroidX, flagY, centroidZ);
                     flag.transform.SetParent(greensRoot.transform);
 
@@ -1852,7 +1884,7 @@ namespace Golfin.CourseImport
                     var holeCup = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                     holeCup.name = $"Hole_{green.id}";
                     float cupTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
-                    float cupY = terrainBaseY + cupTerrainH + greenHeight;
+                    float cupY = terrainBaseY + cupTerrainH + greenHeight + yBoost;
                     holeCup.transform.position = new Vector3(centroidX, cupY + 0.001f, centroidZ);
                     holeCup.transform.localScale = new Vector3(0.108f, 0.001f, 0.108f);
                     holeCup.transform.SetParent(greensRoot.transform);
@@ -1894,7 +1926,8 @@ namespace Golfin.CourseImport
             Vector2[] contour, float centroidX, float centroidZ,
             float surfaceY, float height, Material surfaceMat,
             Terrain terrain, float terrainBaseY,
-            Material collarMat = null, float collarScale = 1.08f)
+            Material collarMat = null, float collarScale = 1.08f,
+            float yBoost = 0f)
         {
             int n = contour.Length;
             if (n < 3) return new GameObject($"{zoneName}_{id}_SKIP");
@@ -1943,13 +1976,13 @@ namespace Golfin.CourseImport
                         if (collarHeightFracs[r] < 0)
                         {
                             // Outer/contour rim: at terrain height + small offset
-                            y = terrainBaseY + localTerrainH + 0.02f;
+                            y = terrainBaseY + localTerrainH + 0.02f + yBoost;
                         }
                         else
                         {
                             // Slope/edge rings: terrain + fraction of green height
                             y = terrainBaseY + localTerrainH
-                                + height * collarHeightFracs[r];
+                                + height * collarHeightFracs[r] + yBoost;
                         }
 
                         int vi = r * n + i;
@@ -2021,7 +2054,7 @@ namespace Golfin.CourseImport
                     int vi = r * n + i;
                     surfaceVerts[vi] = new Vector3(
                         wx - centroidX,
-                        terrainBaseY + localTerrainH + height,
+                        terrainBaseY + localTerrainH + height + yBoost,
                         wz - centroidZ);
                     surfaceUVs[vi] = new Vector2(
                         (wx - minX) / extentX,
@@ -2031,7 +2064,7 @@ namespace Golfin.CourseImport
 
             int centerIdx = surfaceVertCount - 1;
             float centerTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
-            surfaceVerts[centerIdx] = new Vector3(0, terrainBaseY + centerTerrainH + height, 0);
+            surfaceVerts[centerIdx] = new Vector3(0, terrainBaseY + centerTerrainH + height + yBoost, 0);
             surfaceUVs[centerIdx] = new Vector2(0.5f, 0.5f);
 
             int surfaceTriCount = n * (surfaceRings - 1) * 6 + n * 3;
