@@ -216,7 +216,7 @@ function ensureCCW(polygon) {
 }
 
 function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2) {
-  const grid = Buffer.from(zonesData.grid, 'base64');
+  const grid = Buffer.from(zonesData.terrain_grid || zonesData.grid, 'base64');
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
   const visited = new Uint8Array(w * h);
@@ -327,7 +327,7 @@ function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, 
  * degenerate contours.
  */
 function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPixels = 15, rdpEpsilon = 1.0, smoothPasses = 2) {
-  const grid = Buffer.from(zonesData.grid, 'base64');
+  const grid = Buffer.from(zonesData.terrain_grid || zonesData.grid, 'base64');
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
   const tw = terrainMeta.terrain_width_m;
@@ -613,7 +613,7 @@ function extractPathSpine(contour) {
  * Each region gets a bbox-cropped binary mask for pixel-perfect Unity import.
  */
 function extractWaterMasks(zonesData, terrainMeta, minPixels = 50) {
-  const grid = Buffer.from(zonesData.grid, 'base64');
+  const grid = Buffer.from(zonesData.terrain_grid || zonesData.grid, 'base64');
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
   const visited = new Uint8Array(w * h);
