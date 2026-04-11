@@ -2883,7 +2883,7 @@ namespace Golfin.CourseImport
             Terrain terrain, float terrainBaseY,
             Material mat, Vector2 stripeDir, float stripeWidth)
         {
-            float yOffset = 0.05f; // raised 0.04 above terrain
+            float yOffset = 0.01f;
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
 
             System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
@@ -3227,7 +3227,7 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return null;
 
-            float yOffset = 0.052f; // slightly above fairway (0.05), raised 0.04
+            float yOffset = 0.012f; // slightly above fairway (0.01)
 
             // Convert to world space — this is the contour edge
             Vector3[] edgeRing = new Vector3[n];
