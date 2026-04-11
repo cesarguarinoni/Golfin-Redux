@@ -945,7 +945,9 @@ function exportHole(courseId, holeNumber, courseJson) {
   // (trees don't need precise contours), 2 Chaikin passes
 
   // Build binary mask from zone grid (1 = tree zone, 0 = not)
-  const gridBuf = Buffer.from(zonesData.grid, 'base64');
+  // Prefer terrain_grid (OB doesn't mask out trees) over merged grid
+  const treeGridSrc = zonesData.terrain_grid || zonesData.grid;
+  const gridBuf = Buffer.from(treeGridSrc, 'base64');
   const maskW = zonesData.source_dimensions.width;
   const maskH = zonesData.source_dimensions.height;
   const treeMask = Buffer.alloc(maskW * maskH);

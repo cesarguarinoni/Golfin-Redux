@@ -817,8 +817,13 @@ namespace Golfin.CourseImport
 
             // --- 3. Build raw alphamap ---
             // (Green fringe ring removed — collar mesh handles green transition)
-            int layerCount = 8;
+            int layerCount = 9; // +1 for OB layer
             float[,,] alphamap = new float[alphaRes, alphaRes, layerCount];
+
+            // Load OB mask to overlay OB texture on rough areas
+            byte[] obMask = null;
+            if (!string.IsNullOrEmpty(zonesData.ob_mask))
+                obMask = System.Convert.FromBase64String(zonesData.ob_mask);
 
             for (int ay = 0; ay < alphaRes; ay++)
             {
@@ -827,6 +832,20 @@ namespace Golfin.CourseImport
                     int idx = ay * alphaRes + ax;
                     int zone = resampledZones[idx];
                     int layer = ZoneToLayer(zone);
+
+                    // Check OB mask — if this pixel is OB and the
+                    // underlying zone is rough (layer 3), use OB layer
+                    if (obMask != null && layer == 3)
+                    {
+                        float fx = (float)ax / (alphaRes - 1);
+                        float fy = (float)ay / (alphaRes - 1);
+                        int gx = Mathf.Clamp(Mathf.RoundToInt(fy * (zoneW - 1)), 0, zoneW - 1);
+                        int gy = Mathf.Clamp(Mathf.RoundToInt(fx * (zoneH - 1)), 0, zoneH - 1);
+                        int obIdx = gy * zoneW + gx;
+                        if (obIdx < obMask.Length && obMask[obIdx] != 0)
+                            layer = 8; // OB layer
+                    }
+
                     alphamap[ay, ax, layer] = 1.0f;
                 }
             }
@@ -848,6 +867,7 @@ namespace Golfin.CourseImport
                 "T_Tee_Albedo",         // 5 tee
                 "T_RoadAsphalt_Albedo", // 6 cart path
                 "T_Fairway_Dark",       // 7 dark fairway (mow stripes)
+                "T_OOB_Albedo",         // 8 out of bounds
             };
             string[] normalNames = {
                 "T_Fairway_Normal",
@@ -858,8 +878,9 @@ namespace Golfin.CourseImport
                 "T_Tee_Normal",
                 "T_RoadAsphalt_Normal",
                 "T_Fairway_Normal",     // 7 dark fairway (mow stripes) — same normal as light fairway
+                "T_OOB_Normal",         // 8 out of bounds
             };
-            float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 8f };
+            float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 8f, 8f };
 
             var layers = new TerrainLayer[layerCount];
             EnsureDirectory(Path.Combine(projectRoot, dataDir));
