@@ -8,83 +8,102 @@
 
 ---
 
-## Current Task — Grid-Based Terrain Draping (v2: Dilated Contour)
+## Current Task — Grid-Based Terrain Draping (v3: Hybrid Edge Stitching)
 
-**Problem:** The grid mesh with "any corner inside" rule creates
-jagged staircase edges. The "all 4 corners inside" rule creates holes.
+**Problem:** Pure grid creates staircase edges. Contour dilation
+doesn't fix it for concave shapes. We've tried 3 approaches and
+all produce visible edge artifacts.
 
-**Solution:** Keep the **all 4 corners** rule (no holes, clean grid),
-but **dilate the contour outward by one grid cell (0.5m)** before
-the inside test. This ensures the grid mesh fully covers the original
-contour with a small overshoot that the fringe/border ring hides.
+**Root cause:** A regular grid can never match a smooth curved
+contour boundary. The grid is great for the interior (smooth terrain
+draping) but bad at edges.
 
-In `CreateGridDrapedMesh`:
+**Solution: Hybrid approach.**
+1. Grid fills the interior — only emit quads where ALL 4 corners
+   are **well inside** the contour (inset by gridSpacing)
+2. A ring of triangles stitches the grid edge to the original
+   contour vertices — giving smooth curved edges
+
+This is exactly how the green's `CreateRaisedMesh` already works:
+ring vertices (contour) connected to interior structure. The green
+looks good because the contour vertices ARE the edge.
+
+**Actually, even simpler — don't use a grid at all.**
+
+The green works perfectly. It uses per-vertex terrain sampling with
+mesh origin at Y=0. The reason the fairway/tee were bumpy was the
+**centroid Y averaging bug**, which is now fixed. Let's test if the
+original ear-clip + subdivision approach now works correctly with
+the Y=0 origin fix applied.
+
+**Task:** Apply the Y=0 mesh origin + per-vertex terrain sampling
+pattern (proven in `CreateRaisedMesh`) to the existing ear-clip
+methods. Remove the grid-based code entirely.
+
+For each of these methods, change to:
+- `go.transform.position = new Vector3(cx, 0, cz)` (Y=0, not averaged Y)
+- Each vertex Y = `terrainBaseY + terrain.SampleHeight(wx, wz) + yOffset`
+- In SubdivideToTerrain, since centroid.y=0:
+  `midLocal.y = terrainBaseY + th + yOffset` (no centroid.y subtraction)
+
+**Methods to fix:**
+1. `CreateFairwayMesh`
+2. `CreateFlatContourMesh` (tees)
+3. `CreateEarClipContourMesh` (cart path fallback)
+4. `CreateSpineStripMesh` (cart path spines)
+5. `CreateFringeRing` (fairway fringe)
+6. `CreateGradientBorderRing` (tee border)
+
+**Delete** `CreateGridDrapedMesh` and `CreateGridDrapedFairwayMesh`
+if they exist. Revert `CreateFlatZoneMeshes` to call the original
+methods (ear-clip based, not grid based).
+
+**Key change in SubdivideToTerrain:**
 ```csharp
-// Dilate contour outward by gridSpacing for the inside test
-// so the grid mesh fully covers the original contour edge
-var dilatedContour = DilateContour2D(contourXZ, gridSpacing);
+// OLD (broken when centroid.y != actual terrain at centroid XZ):
+midLocal.y = terrainBaseY + th + yOffset - centroid.y;
 
-// Use dilatedContour for IsInsideContour test
-// Use original contourXZ for bounding box (dilated is slightly larger
-// but we add +1 cell padding to bbox anyway)
+// NEW (centroid.y is always 0 now):
+midLocal.y = terrainBaseY + th + yOffset;
 ```
 
-New helper:
+**Key change in centroid computation (all methods):**
 ```csharp
-private static Vector2[] DilateContour2D(Vector2[] contour, float distance)
-{
-    int n = contour.Length;
-    var result = new Vector2[n];
-    // Compute centroid
-    float cx = 0, cz = 0;
-    for (int i = 0; i < n; i++) { cx += contour[i].x; cz += contour[i].y; }
-    cx /= n; cz /= n;
-    // Push each vertex outward from centroid
-    for (int i = 0; i < n; i++)
-    {
-        float dx = contour[i].x - cx;
-        float dz = contour[i].y - cz;
-        float len = Mathf.Sqrt(dx * dx + dz * dz);
-        if (len < 0.001f) { result[i] = contour[i]; continue; }
-        result[i] = new Vector2(
-            contour[i].x + (dx / len) * distance,
-            contour[i].y + (dz / len) * distance);
-    }
-    return result;
-}
+// OLD: average all 3 components including Y
+cx /= n; cy /= n; cz /= n;
+Vector3 centroid = new Vector3(cx, cy, cz);
+
+// NEW: average XZ only, Y = 0
+cx /= n; cz /= n;
+Vector3 centroid = new Vector3(cx, 0, cz);
 ```
 
-Also expand bbox by `gridSpacing` on each side so dilated points
-aren't clipped.
-
-**The rest of the grid approach stays the same as the spec below
-(all 4 corners rule, 0.5m grid, mesh at Y=0, per-vertex terrain
-sampling).**
-
-**IMPORTANT:** Claude Code must actually **replace** the old methods
-(`CreateFairwayMesh`, `CreateFlatContourMesh`, `CreateEarClipContourMesh`)
-with calls to `CreateGridDrapedMesh` / `CreateGridDrapedFairwayMesh`.
-The old methods should be deleted. Check `CreateFlatZoneMeshes` where
-they're called and swap them.
+**Key change in vertex computation (all methods):**
+```csharp
+// Vertices are relative to centroid. Since centroid.y=0,
+// vertex.y IS the absolute world Y.
+verts[i] = new Vector3(
+    worldPts[i].x - cx,
+    terrainBaseY + terrainH + yOffset,  // absolute Y
+    worldPts[i].z - cz);
+```
 
 ### Verification
 1. Import Hole 4 (hilly)
-2. Fairway: smooth, follows terrain, no staircase edges, no holes
-3. Tee: smooth, no jagged edges
-4. Green: unchanged (already fixed)
-5. Hole 1 (flat): looks identical
+2. Fairway: smooth, no bumps, follows terrain slope
+3. Tee: smooth, no staircase edges
+4. Cart path: smooth
+5. Green: unchanged (already working)
+6. Hole 1 (flat): identical to before
 
 ### Do NOT
+- Use grid-based mesh generation
 - Change green, bunker, or water mesh code
-- Use the "any corner" rule (creates staircases)
-- Use the old ear-clip + subdivide approach
+- Change heightmap smoothing
 
 ---
 
-### Reference: `CreateGridDrapedMesh` full code
-
-**Algorithm:**
-1. Compute bounding box of the contour
+## Completed Tasks
 2. Create a regular grid covering the bbox at `gridSpacing` resolution
    (0.5m — fine enough to match terrain, coarse enough for mobile)
 3. For each grid point, test if it's inside the contour polygon
@@ -861,3 +880,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-11 — Applied Y=0 origin pattern to all 6 overlay mesh methods (fairway, tee, cart path, spine, fringe, border), restored yOffsets to 0.02/0.03/0.01
 ✅ 2026-04-11 — Replaced subdivision with grid-based terrain draping (0.5m grid) for fairway, tee, and cart path fallback meshes
 ✅ 2026-04-11 — Grid draping v2: dilated contour (0.5m outward) + all-4-corners rule for clean edges, deleted legacy methods + SubdivideToTerrain
+✅ 2026-04-11 — v3: Reverted to ear-clip + subdivision with Y=0 origin fix. Deleted grid methods entirely.
