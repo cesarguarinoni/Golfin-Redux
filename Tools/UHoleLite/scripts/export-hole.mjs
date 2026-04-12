@@ -327,7 +327,9 @@ function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, 
  * degenerate contours.
  */
 function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPixels = 15, rdpEpsilon = 1.0, smoothPasses = 2) {
-  const grid = Buffer.from(zonesData.terrain_grid || zonesData.grid, 'base64');
+  // Use the full classification grid (not terrain_grid) — terrain_grid strips
+  // cart paths during terrain generation, so zone 8 pixels only exist in 'grid'.
+  const grid = Buffer.from(zonesData.grid, 'base64');
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
   const tw = terrainMeta.terrain_width_m;
@@ -464,44 +466,276 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     const normW = (maxX - minX + 1) / w;
     const normH = (maxY - minY + 1) / h;
 
-    // Extract centerline spine from contour
-    let spine = extractPathSpine(contourMeters);
-    // Ensure spine is an open polyline — remove duplicate endpoint
-    if (spine.length >= 2) {
-      const first = spine[0], last = spine[spine.length - 1];
-      const dx = first.x - last.x, dz = first.z - last.z;
-      if (Math.sqrt(dx * dx + dz * dz) < 1.0) {
-        spine = spine.slice(0, -1);
+    // --- Skeleton-based spine extraction with tee clipping ---
+    // Downsample the region mask for cleaner skeletonization.
+    // Wide paths (~30px+) produce noisy skeletons at full res.
+    // Target skeleton input width ~6-10px for clean results.
+    const dsTarget = 3; // target width in downsampled pixels
+    const dsFactor = Math.max(1, Math.round(estWidthPx / dsTarget));
+    const dsW = Math.ceil(w / dsFactor);
+    const dsH = Math.ceil(h / dsFactor);
+
+    // Build downsampled binary mask, clipping cart path pixels that
+    // directly overlap tee zones. This prevents spines from running
+    // under tee meshes while preserving junction structure (unlike
+    // clipping the skeleton post-thinning, which blows away junctions).
+    const dsMask = new Uint8Array(dsW * dsH);
+    for (const [px, py] of currentPixels) {
+      // Skip pixels that overlap tee zones in the full-res grid
+      if (grid[py * w + px] === 10) continue;
+      const dsx = Math.floor(px / dsFactor);
+      const dsy = Math.floor(py / dsFactor);
+      if (dsx < dsW && dsy < dsH) dsMask[dsy * dsW + dsx] = 1;
+    }
+
+    // Also clear DS pixels where the majority of underlying full-res
+    // pixels are tee zone — prevents bleed-through at DS boundaries
+    for (let dsy = 0; dsy < dsH; dsy++) {
+      for (let dsx = 0; dsx < dsW; dsx++) {
+        if (!dsMask[dsy * dsW + dsx]) continue;
+        // Sample full-res pixels in this DS cell
+        let teeCount = 0, total = 0;
+        for (let fy = dsy * dsFactor; fy < Math.min((dsy + 1) * dsFactor, h); fy++) {
+          for (let fx = dsx * dsFactor; fx < Math.min((dsx + 1) * dsFactor, w); fx++) {
+            if (grid[fy * w + fx] === 10) teeCount++;
+            total++;
+          }
+        }
+        if (teeCount > total * 0.5) dsMask[dsy * dsW + dsx] = 0;
       }
     }
-    // Simplify + smooth the spine (open polyline — no wrap-around)
-    spine = simplifyPolygon(spine, rdpEpsilon);
-    spine = smoothPolyline(spine, smoothPasses);
 
-    results.push({
-      id: results.length + 1,
-      pixel_count: currentPixels.length,
-      contour: contourMeters,
-      spine,
-      width_m: minWidthM,
-      center_local: {
-        x: parseFloat(((normCX - 0.5) * tw).toFixed(2)),
-        z: parseFloat(((normCY - 0.5) * tl).toFixed(2)),
-      },
-      size_m: {
-        x: parseFloat((normW * tw).toFixed(2)),
-        z: parseFloat((normH * tl).toFixed(2)),
-      },
-      center_normalized: {
-        x: parseFloat(normCX.toFixed(4)),
-        y: parseFloat(normCY.toFixed(4)),
-      },
-      size_normalized: {
-        w: parseFloat(normW.toFixed(4)),
-        h: parseFloat(normH.toFixed(4)),
-      },
-      dilated: estWidthPx < minWidthPx,
-    });
+    // Thin to 1-pixel-wide skeleton (on downsampled mask)
+    const skeleton = thinSkeleton(dsMask, dsW, dsH);
+
+    // Prune short spur branches (noise from thinning)
+    // Use 3x the downsampled path width as threshold — short spurs are edge noise
+    const dsEstWidth = Math.max(Math.ceil(estWidthPx / dsFactor), 2);
+    const spurThreshold = Math.max(Math.ceil(dsEstWidth * 3), 8);
+    pruneSpurs(skeleton, dsW, dsH, spurThreshold);
+
+    // Trace skeleton into separate chains (in downsampled coords)
+    const dsChains = traceSkeletonChains(skeleton, dsW, dsH);
+
+    // Convert chains back to full-res pixel coords
+    const chains = dsChains.map(chain =>
+      chain.map(({ x, y }) => ({
+        x: Math.min(x * dsFactor + Math.floor(dsFactor / 2), w - 1),
+        y: Math.min(y * dsFactor + Math.floor(dsFactor / 2), h - 1),
+      }))
+    );
+
+    const regionId = results.length + 1;
+
+    // Minimum spine length in downsampled pixels — skip fragments shorter
+    // than ~2x the downsampled path width (prevents noise but keeps real branches)
+    const minSpinePixels = Math.max(Math.ceil(dsEstWidth * 2), 5);
+
+    // Filter out short fragment chains before deciding whether the skeleton is usable
+    const significantChains = chains.filter(c => c.length >= minSpinePixels);
+
+    // If skeleton produced too many significant chains, it's noise — fall back
+    // to the original contour-based farthest-pair spine extraction.
+    // Real Y/T-junctions produce 2-4 significant chains.
+    const maxExpectedBranches = 5;
+    if (significantChains.length > maxExpectedBranches) {
+      console.log(`    Skeleton noisy (${significantChains.length} chains), falling back to contour spine`);
+      let spine = extractPathSpine(contourMeters);
+      if (spine.length >= 2) {
+        const first = spine[0], last = spine[spine.length - 1];
+        const ddx = first.x - last.x, ddz = first.z - last.z;
+        if (Math.sqrt(ddx * ddx + ddz * ddz) < 1.0) spine = spine.slice(0, -1);
+      }
+      spine = simplifyPolygon(spine, rdpEpsilon);
+      spine = smoothPolyline(spine, smoothPasses);
+
+      results.push({
+        id: regionId,
+        pixel_count: currentPixels.length,
+        contour: contourMeters,
+        spine,
+        width_m: minWidthM,
+        center_local: {
+          x: parseFloat(((normCX - 0.5) * tw).toFixed(2)),
+          z: parseFloat(((normCY - 0.5) * tl).toFixed(2)),
+        },
+        size_m: {
+          x: parseFloat((normW * tw).toFixed(2)),
+          z: parseFloat((normH * tl).toFixed(2)),
+        },
+        center_normalized: { x: parseFloat(normCX.toFixed(4)), y: parseFloat(normCY.toFixed(4)) },
+        size_normalized: { w: parseFloat(normW.toFixed(4)), h: parseFloat(normH.toFixed(4)) },
+        dilated: estWidthPx < minWidthPx,
+      });
+    } else if (significantChains.length === 0) {
+      // Fallback: no skeleton chains (e.g., very small region) — use contour centroid as degenerate spine
+      results.push({
+        id: regionId,
+        pixel_count: currentPixels.length,
+        contour: contourMeters,
+        spine: [{ x: parseFloat(((normCX - 0.5) * tw).toFixed(2)), z: parseFloat(((normCY - 0.5) * tl).toFixed(2)) }],
+        width_m: minWidthM,
+        center_local: {
+          x: parseFloat(((normCX - 0.5) * tw).toFixed(2)),
+          z: parseFloat(((normCY - 0.5) * tl).toFixed(2)),
+        },
+        size_m: {
+          x: parseFloat((normW * tw).toFixed(2)),
+          z: parseFloat((normH * tl).toFixed(2)),
+        },
+        center_normalized: { x: parseFloat(normCX.toFixed(4)), y: parseFloat(normCY.toFixed(4)) },
+        size_normalized: { w: parseFloat(normW.toFixed(4)), h: parseFloat(normH.toFixed(4)) },
+        dilated: estWidthPx < minWidthPx,
+      });
+    } else {
+      // --- Identify shared junction pixels across chains ---
+      // Collect all chain endpoint pixels. Pixels shared by 2+ chain
+      // endpoints are junction points. After smoothing we snap spine
+      // endpoints back to the exact junction meter coordinate so that
+      // branches connect seamlessly.
+      const endpointCount = new Map(); // "x,y" → count of chain endpoints here
+      for (const chain of significantChains) {
+        for (const pt of [chain[0], chain[chain.length - 1]]) {
+          const key = `${pt.x},${pt.y}`;
+          endpointCount.set(key, (endpointCount.get(key) || 0) + 1);
+        }
+      }
+
+      // Junctions: pixels where 2+ chain endpoints meet
+      const sharedJunctions = new Map();
+      for (const [key, count] of endpointCount) {
+        if (count >= 2) {
+          const [px, py] = key.split(',').map(Number);
+          sharedJunctions.set(key, {
+            mx: parseFloat(((px / (w - 1) - 0.5) * tw).toFixed(2)),
+            mz: parseFloat(((py / (h - 1) - 0.5) * tl).toFixed(2)),
+            px, py,
+          });
+        }
+      }
+
+      // Track which chains have a shared junction in their interior
+      // (merged main chains that pass through a branch junction).
+      // For each such chain, record the interior pixel index closest
+      // to the junction so we can snap the smoothed spine vertex.
+      const junctionRadius = dsFactor + 1; // full-res pixels tolerance (1 DS pixel + margin)
+      const interiorJunctions = new Map(); // chainIndex → [{junctionKey, interiorIdx}]
+      for (let ci = 0; ci < significantChains.length; ci++) {
+        const chain = significantChains[ci];
+        const firstKey = `${chain[0].x},${chain[0].y}`;
+        const lastKey = `${chain[chain.length - 1].x},${chain[chain.length - 1].y}`;
+
+        for (const [jKey, jpt] of sharedJunctions) {
+          // Skip if this junction is already at this chain's endpoint
+          if (jKey === firstKey || jKey === lastKey) continue;
+
+          // Check interior pixels for proximity to this junction
+          let bestDist = Infinity, bestIdx = -1;
+          for (let pi = 1; pi < chain.length - 1; pi++) {
+            const ddx = chain[pi].x - jpt.px;
+            const ddy = chain[pi].y - jpt.py;
+            const d = ddx * ddx + ddy * ddy;
+            if (d < bestDist) { bestDist = d; bestIdx = pi; }
+          }
+          if (bestIdx >= 0 && bestDist <= junctionRadius * junctionRadius) {
+            if (!interiorJunctions.has(ci)) interiorJunctions.set(ci, []);
+            interiorJunctions.get(ci).push({ jKey, interiorIdx: bestIdx });
+          }
+        }
+      }
+
+      // Convert each chain to a spine entry
+      for (let ci = 0; ci < significantChains.length; ci++) {
+        const chain = significantChains[ci];
+
+        // Convert pixel coords to meter coords
+        let spine = chain.map(({ x: cx, y: cy }) => ({
+          x: parseFloat(((cx / (w - 1) - 0.5) * tw).toFixed(2)),
+          z: parseFloat(((cy / (h - 1) - 0.5) * tl).toFixed(2)),
+        }));
+
+        // Find nearest shared junction for each endpoint (fuzzy match
+        // within junctionRadius to handle DS→full rounding differences)
+        const firstPt = chain[0], lastPt = chain[chain.length - 1];
+        let snapFirst = sharedJunctions.get(`${firstPt.x},${firstPt.y}`);
+        let snapLast = sharedJunctions.get(`${lastPt.x},${lastPt.y}`);
+
+        if (!snapFirst || !snapLast) {
+          for (const [, jpt] of sharedJunctions) {
+            if (!snapFirst) {
+              const ddx = firstPt.x - jpt.px, ddy = firstPt.y - jpt.py;
+              if (ddx * ddx + ddy * ddy <= junctionRadius * junctionRadius) {
+                snapFirst = jpt;
+              }
+            }
+            if (!snapLast) {
+              const ddx = lastPt.x - jpt.px, ddy = lastPt.y - jpt.py;
+              if (ddx * ddx + ddy * ddy <= junctionRadius * junctionRadius) {
+                snapLast = jpt;
+              }
+            }
+          }
+        }
+
+        // Simplify + smooth the spine (open polyline)
+        spine = simplifyPolygon(spine, rdpEpsilon);
+        spine = smoothPolyline(spine, smoothPasses);
+
+        if (spine.length < 2) continue;
+
+        // Snap endpoints back to exact junction coordinates
+        if (snapFirst) {
+          spine[0] = { x: snapFirst.mx, z: snapFirst.mz };
+        }
+        if (snapLast) {
+          spine[spine.length - 1] = { x: snapLast.mx, z: snapLast.mz };
+        }
+
+        // For junctions in this chain's INTERIOR (merged main chain case):
+        // ensure the spine has a vertex at the junction point so branches
+        // can connect to it. Find the closest spine vertex and snap it.
+        const intJunctions = interiorJunctions.get(ci);
+        if (intJunctions) {
+          for (const { jKey } of intJunctions) {
+            const jpt = sharedJunctions.get(jKey);
+            if (!jpt) continue;
+
+            // Find nearest vertex on the smoothed spine
+            let bestDist = Infinity, bestIdx = -1;
+            for (let si = 0; si < spine.length; si++) {
+              const ddx = spine[si].x - jpt.mx;
+              const ddz = spine[si].z - jpt.mz;
+              const d = ddx * ddx + ddz * ddz;
+              if (d < bestDist) { bestDist = d; bestIdx = si; }
+            }
+            // Replace the nearest vertex with the exact junction point
+            if (bestIdx >= 0 && bestDist < 400) { // within ~20m
+              spine[bestIdx] = { x: jpt.mx, z: jpt.mz };
+            }
+          }
+        }
+
+        results.push({
+          id: results.length + 1,
+          pixel_count: currentPixels.length,
+          contour: contourMeters,
+          spine,
+          width_m: minWidthM,
+          parent_region: regionId,
+          center_local: {
+            x: parseFloat(((normCX - 0.5) * tw).toFixed(2)),
+            z: parseFloat(((normCY - 0.5) * tl).toFixed(2)),
+          },
+          size_m: {
+            x: parseFloat((normW * tw).toFixed(2)),
+            z: parseFloat((normH * tl).toFixed(2)),
+          },
+          center_normalized: { x: parseFloat(normCX.toFixed(4)), y: parseFloat(normCY.toFixed(4)) },
+          size_normalized: { w: parseFloat(normW.toFixed(4)), h: parseFloat(normH.toFixed(4)) },
+          dilated: estWidthPx < minWidthPx,
+        });
+      }
+    }
   }
 
   // Sort by size (largest first), re-assign IDs
@@ -509,6 +743,473 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
   results.forEach((r, i) => { r.id = i + 1; });
 
   return results;
+}
+
+/**
+ * Zhang-Suen morphological thinning — reduces a binary mask to a 1-pixel-wide skeleton.
+ * Preserves topology including branches and junctions.
+ * @param {Uint8Array} mask - binary mask (1 = foreground, 0 = background)
+ * @param {number} w - width
+ * @param {number} h - height
+ * @returns {Uint8Array} modified mask with skeleton pixels = 1
+ */
+function thinSkeleton(mask, w, h) {
+  const out = new Uint8Array(mask);
+
+  // Neighbor offsets: P2..P9 in Zhang-Suen order (N, NE, E, SE, S, SW, W, NW)
+  const dy = [-1, -1,  0,  1, 1, 1, 0, -1];
+  const dx = [ 0,  1,  1,  1, 0, -1, -1, -1];
+
+  function getP(x, y, i) {
+    const nx = x + dx[i], ny = y + dy[i];
+    if (nx < 0 || nx >= w || ny < 0 || ny >= h) return 0;
+    return out[ny * w + nx];
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+
+    // Sub-iteration 1
+    const toRemove1 = [];
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        if (!out[y * w + x]) continue;
+
+        const p = [];
+        for (let i = 0; i < 8; i++) p.push(getP(x, y, i));
+
+        // B(P1) = number of non-zero neighbors
+        const B = p.reduce((s, v) => s + v, 0);
+        if (B < 2 || B > 6) continue;
+
+        // A(P1) = number of 0→1 transitions in the ordered sequence P2..P9..P2
+        let A = 0;
+        for (let i = 0; i < 8; i++) {
+          if (p[i] === 0 && p[(i + 1) % 8] === 1) A++;
+        }
+        if (A !== 1) continue;
+
+        // Conditions for sub-iteration 1: P2*P4*P6=0 and P4*P6*P8=0
+        if (p[0] * p[2] * p[4] !== 0) continue;
+        if (p[2] * p[4] * p[6] !== 0) continue;
+
+        toRemove1.push(y * w + x);
+      }
+    }
+    for (const idx of toRemove1) { out[idx] = 0; changed = true; }
+
+    // Sub-iteration 2
+    const toRemove2 = [];
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        if (!out[y * w + x]) continue;
+
+        const p = [];
+        for (let i = 0; i < 8; i++) p.push(getP(x, y, i));
+
+        const B = p.reduce((s, v) => s + v, 0);
+        if (B < 2 || B > 6) continue;
+
+        let A = 0;
+        for (let i = 0; i < 8; i++) {
+          if (p[i] === 0 && p[(i + 1) % 8] === 1) A++;
+        }
+        if (A !== 1) continue;
+
+        // Conditions for sub-iteration 2: P2*P4*P8=0 and P2*P6*P8=0
+        if (p[0] * p[2] * p[6] !== 0) continue;
+        if (p[0] * p[4] * p[6] !== 0) continue;
+
+        toRemove2.push(y * w + x);
+      }
+    }
+    for (const idx of toRemove2) { out[idx] = 0; changed = true; }
+  }
+
+  return out;
+}
+
+/**
+ * Remove short spur branches from a skeleton.
+ * A spur is a branch that starts at an endpoint and ends at a junction,
+ * shorter than maxLen pixels. Iteratively removes spurs until none remain.
+ * @param {Uint8Array} skeleton - thinned binary mask (modified in place)
+ * @param {number} w - width
+ * @param {number} h - height
+ * @param {number} maxLen - max spur length in pixels to prune
+ */
+function pruneSpurs(skeleton, w, h, maxLen) {
+  const dx = [1, 1, 0, -1, -1, -1, 0, 1];
+  const dy = [0, 1, 1, 1, 0, -1, -1, -1];
+
+  function neighborCount(x, y) {
+    let c = 0;
+    for (let i = 0; i < 8; i++) {
+      const nx = x + dx[i], ny = y + dy[i];
+      if (nx >= 0 && nx < w && ny >= 0 && ny < h && skeleton[ny * w + nx]) c++;
+    }
+    return c;
+  }
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+
+    // Find current endpoints
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (!skeleton[y * w + x]) continue;
+        if (neighborCount(x, y) !== 1) continue;
+
+        // Walk from endpoint, collecting spur pixels
+        const spur = [{ x, y }];
+        let cx = x, cy = y;
+        for (let step = 0; step < maxLen; step++) {
+          let nextX = -1, nextY = -1;
+          for (let i = 0; i < 8; i++) {
+            const nx = cx + dx[i], ny = cy + dy[i];
+            if (nx >= 0 && nx < w && ny >= 0 && ny < h && skeleton[ny * w + nx]) {
+              // Don't go back to previous pixel
+              if (spur.length >= 2 && nx === spur[spur.length - 2].x && ny === spur[spur.length - 2].y) continue;
+              nextX = nx;
+              nextY = ny;
+              break;
+            }
+          }
+          if (nextX === -1) break; // dead end (isolated pixel)
+          spur.push({ x: nextX, y: nextY });
+          cx = nextX;
+          cy = nextY;
+
+          // Reached a junction? This spur can be pruned.
+          if (neighborCount(cx, cy) >= 3) {
+            // Remove spur pixels (but NOT the junction pixel)
+            for (let s = 0; s < spur.length - 1; s++) {
+              skeleton[spur[s].y * w + spur[s].x] = 0;
+            }
+            changed = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Collapse adjacent junction pixels (staircase artifacts from Zhang-Suen)
+ * into single representative pixels. Two junction pixels that are
+ * 8-connected neighbors are part of the same logical junction.
+ * Replaces each cluster with its centroid pixel.
+ * @param {Uint8Array} skeleton - thinned binary mask (modified in place)
+ * @param {number} w - width
+ * @param {number} h - height
+ */
+function collapseJunctionClusters(skeleton, w, h) {
+  const dx = [1, 1, 0, -1, -1, -1, 0, 1];
+  const dy = [0, 1, 1, 1, 0, -1, -1, -1];
+
+  function neighborCount(x, y) {
+    let c = 0;
+    for (let i = 0; i < 8; i++) {
+      const nx = x + dx[i], ny = y + dy[i];
+      if (nx >= 0 && nx < w && ny >= 0 && ny < h && skeleton[ny * w + nx]) c++;
+    }
+    return c;
+  }
+
+  // Find all junction pixels (3+ skeleton neighbors)
+  const junctionPixels = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (skeleton[y * w + x] && neighborCount(x, y) >= 3) {
+        junctionPixels.push({ x, y });
+      }
+    }
+  }
+
+  if (junctionPixels.length === 0) return;
+
+  // Flood-fill junction pixels into connected clusters (8-connected)
+  const jpSet = new Set(junctionPixels.map(p => p.y * w + p.x));
+  const visitedJP = new Set();
+  const clusters = [];
+
+  for (const jp of junctionPixels) {
+    const key = jp.y * w + jp.x;
+    if (visitedJP.has(key)) continue;
+
+    const cluster = [];
+    const stack = [jp];
+    while (stack.length > 0) {
+      const p = stack.pop();
+      const k = p.y * w + p.x;
+      if (visitedJP.has(k)) continue;
+      visitedJP.add(k);
+      cluster.push(p);
+
+      for (let i = 0; i < 8; i++) {
+        const nx = p.x + dx[i], ny = p.y + dy[i];
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+          const nk = ny * w + nx;
+          if (jpSet.has(nk) && !visitedJP.has(nk)) {
+            stack.push({ x: nx, y: ny });
+          }
+        }
+      }
+    }
+
+    if (cluster.length > 1) {
+      clusters.push(cluster);
+    }
+  }
+
+  // For each cluster, find non-junction skeleton neighbors (the "arms" leaving this junction)
+  // Keep only the centroid pixel and re-connect the arms to it
+  for (const cluster of clusters) {
+    // Find centroid
+    let cx = 0, cy = 0;
+    for (const p of cluster) { cx += p.x; cy += p.y; }
+    cx = Math.round(cx / cluster.length);
+    cy = Math.round(cy / cluster.length);
+
+    // Find all non-junction skeleton pixels adjacent to the cluster
+    const clusterSet = new Set(cluster.map(p => p.y * w + p.x));
+    const arms = new Set();
+    for (const p of cluster) {
+      for (let i = 0; i < 8; i++) {
+        const nx = p.x + dx[i], ny = p.y + dy[i];
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+          const nk = ny * w + nx;
+          if (skeleton[nk] && !clusterSet.has(nk)) {
+            arms.add(nk);
+          }
+        }
+      }
+    }
+
+    // Clear all cluster pixels
+    for (const p of cluster) {
+      skeleton[p.y * w + p.x] = 0;
+    }
+
+    // Place centroid
+    skeleton[cy * w + cx] = 1;
+
+    // Draw 1px lines from centroid to each arm pixel (Bresenham)
+    for (const armKey of arms) {
+      const ax = armKey % w, ay = Math.floor(armKey / w);
+      // Simple line drawing
+      let lx = cx, ly = cy;
+      const steps = Math.max(Math.abs(ax - cx), Math.abs(ay - cy));
+      for (let s = 1; s < steps; s++) {
+        const t = s / steps;
+        const px = Math.round(cx + t * (ax - cx));
+        const py = Math.round(cy + t * (ay - cy));
+        skeleton[py * w + px] = 1;
+      }
+    }
+  }
+}
+
+/**
+ * Trace skeleton pixels into separate chains.
+ * Finds junctions (3+ neighbors) and endpoints (1 neighbor), then walks
+ * each segment between them. After tracing, merges chains through
+ * pass-through junctions (junctions with exactly 2 chain connections).
+ * @param {Uint8Array} skeleton - thinned binary mask
+ * @param {number} w - width
+ * @param {number} h - height
+ * @returns {{x:number, y:number}[][]} array of chains, each chain = [{x,y}, ...]
+ */
+function traceSkeletonChains(skeleton, w, h) {
+  // Collapse junction clusters into single pixels, then re-prune spurs
+  // that the collapse may have created (new endpoints from broken connections).
+  // Iterate until stable.
+  for (let pass = 0; pass < 3; pass++) {
+    collapseJunctionClusters(skeleton, w, h);
+    pruneSpurs(skeleton, w, h, 5);
+  }
+
+  // 8-connected neighbor offsets
+  const dx = [1, 1, 0, -1, -1, -1, 0, 1];
+  const dy = [0, 1, 1, 1, 0, -1, -1, -1];
+
+  function neighbors(x, y) {
+    const nb = [];
+    for (let i = 0; i < 8; i++) {
+      const nx = x + dx[i], ny = y + dy[i];
+      if (nx >= 0 && nx < w && ny >= 0 && ny < h && skeleton[ny * w + nx]) {
+        nb.push({ x: nx, y: ny });
+      }
+    }
+    return nb;
+  }
+
+  // Classify pixels
+  const endpoints = [];
+  const junctions = [];
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!skeleton[y * w + x]) continue;
+      const nb = neighbors(x, y);
+      if (nb.length === 1) endpoints.push({ x, y });
+      else if (nb.length >= 3) junctions.push({ x, y });
+    }
+  }
+
+  const visited = new Uint8Array(w * h);
+  const chains = [];
+
+  const junctionSet = new Set();
+  for (const j of junctions) junctionSet.add(j.y * w + j.x);
+
+  function walkChain(startX, startY) {
+    const chain = [{ x: startX, y: startY }];
+    visited[startY * w + startX] = 1;
+
+    let cx = startX, cy = startY;
+    while (true) {
+      const nb = neighbors(cx, cy);
+      let next = null;
+      for (const n of nb) {
+        if (!visited[n.y * w + n.x]) { next = n; break; }
+      }
+      if (!next) break;
+
+      chain.push(next);
+      visited[next.y * w + next.x] = 1;
+      cx = next.x;
+      cy = next.y;
+
+      // Stop at junctions (include the junction point but allow it to be revisited)
+      if (junctionSet.has(cy * w + cx)) {
+        visited[cy * w + cx] = 0;
+        break;
+      }
+    }
+    return chain;
+  }
+
+  // Walk from endpoints first
+  for (const ep of endpoints) {
+    if (visited[ep.y * w + ep.x]) continue;
+    const chain = walkChain(ep.x, ep.y);
+    if (chain.length >= 2) chains.push(chain);
+  }
+
+  // Walk from junctions for remaining segments
+  for (const jp of junctions) {
+    const nb = neighbors(jp.x, jp.y);
+    for (const n of nb) {
+      if (visited[n.y * w + n.x]) continue;
+      visited[jp.y * w + jp.x] = 1;
+      const chain = [{ x: jp.x, y: jp.y }];
+      let cx = n.x, cy = n.y;
+      chain.push({ x: cx, y: cy });
+      visited[cy * w + cx] = 1;
+
+      while (true) {
+        const nb2 = neighbors(cx, cy);
+        let next = null;
+        for (const nn of nb2) {
+          if (!visited[nn.y * w + nn.x]) { next = nn; break; }
+        }
+        if (!next) break;
+        chain.push(next);
+        visited[next.y * w + next.x] = 1;
+        cx = next.x;
+        cy = next.y;
+        if (junctionSet.has(cy * w + cx)) {
+          visited[cy * w + cx] = 0;
+          break;
+        }
+      }
+
+      if (chain.length >= 2) chains.push(chain);
+      visited[jp.y * w + jp.x] = 0;
+    }
+  }
+
+  // Pick up isolated loops
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (skeleton[y * w + x] && !visited[y * w + x]) {
+        const chain = walkChain(x, y);
+        if (chain.length >= 2) chains.push(chain);
+      }
+    }
+  }
+
+  // --- Merge chains through pass-through junctions ---
+  // A junction connecting exactly 2 chain ends is a pass-through, not a branch.
+  if (chains.length > 1) {
+    const junctionChains = new Map();
+
+    for (let ci = 0; ci < chains.length; ci++) {
+      const chain = chains[ci];
+      const startKey = chain[0].y * w + chain[0].x;
+      const endKey = chain[chain.length - 1].y * w + chain[chain.length - 1].x;
+
+      if (junctionSet.has(startKey)) {
+        if (!junctionChains.has(startKey)) junctionChains.set(startKey, []);
+        junctionChains.get(startKey).push({ chainIdx: ci, end: 'start' });
+      }
+      if (junctionSet.has(endKey)) {
+        if (!junctionChains.has(endKey)) junctionChains.set(endKey, []);
+        junctionChains.get(endKey).push({ chainIdx: ci, end: 'end' });
+      }
+    }
+
+    let mergedAny = true;
+    while (mergedAny) {
+      mergedAny = false;
+
+      for (const [jKey, connections] of junctionChains) {
+        if (connections.length !== 2) continue;
+
+        const [a, b] = connections;
+        if (a.chainIdx === b.chainIdx) continue;
+        if (!chains[a.chainIdx] || !chains[b.chainIdx]) continue;
+
+        let chainA = chains[a.chainIdx].slice();
+        let chainB = chains[b.chainIdx].slice();
+
+        if (a.end === 'start') chainA.reverse();
+        if (b.end === 'end') chainB.reverse();
+
+        const merged = chainA.concat(chainB.slice(1));
+        chains[a.chainIdx] = merged;
+        chains[b.chainIdx] = null;
+
+        junctionChains.delete(jKey);
+
+        for (const [otherKey, otherConns] of junctionChains) {
+          for (const conn of otherConns) {
+            if (conn.chainIdx === b.chainIdx) {
+              conn.chainIdx = a.chainIdx;
+              const mc = chains[a.chainIdx];
+              const mcStartKey = mc[0].y * w + mc[0].x;
+              const mcEndKey = mc[mc.length - 1].y * w + mc[mc.length - 1].x;
+              if (otherKey === mcStartKey) conn.end = 'start';
+              else if (otherKey === mcEndKey) conn.end = 'end';
+            }
+          }
+        }
+
+        mergedAny = true;
+        break;
+      }
+    }
+
+    const mergedChains = chains.filter(c => c !== null);
+    chains.length = 0;
+    chains.push(...mergedChains);
+  }
+
+  return chains;
 }
 
 /**
@@ -909,7 +1610,7 @@ function exportHole(courseId, holeNumber, courseJson) {
 
   if (cartPaths.length > 0) {
     const contourStats = cartPaths.map(c =>
-      `#${c.id}: ${c.contour.length}pts, spine ${c.spine ? c.spine.length : 0}pts (${c.pixel_count}px${c.dilated ? ', dilated' : ''})`
+      `#${c.id}: ${c.contour.length}pts, spine ${c.spine ? c.spine.length : 0}pts (${c.pixel_count}px${c.dilated ? ', dilated' : ''}${c.parent_region ? ', branch of R' + c.parent_region : ''})`
     ).join(', ');
     console.log(`  Cart path contours: ${contourStats}`);
   }

@@ -1,0 +1,171 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: WaterSurface
+  m_Shader: {fileID: 4800000, guid: 206e4b0fd7976c742b851eef70622872, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _CAUSTICSMODE_2D
+  - _COLORMODE_COLORS
+  - _EDGEFADE_ON
+  - _NORMALSMODE_SINGLE
+  - _REFLECTIONMODE_PROBES
+  - _WORLD_UV
+  m_InvalidKeywords:
+  - _DISPLACEMENTMODE_OFF
+  - _REFLECTIONMODE_OFF
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _CausticsTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CausticsTex3D:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CubemapTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FlowMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoamTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMapA:
+        m_Texture: {fileID: 2800000, guid: e5ffaaa802ba34040991e3c4d48ec850, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMapB:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMapFar:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RefractionColor:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AddFoam: 0
+    - _AlphaMask: 0
+    - _CapsScatterNormals: 0
+    - _CapsScattering: 0
+    - _CapsScatteringIntensity: 1
+    - _CapsScatteringRangeMax: 1
+    - _CapsScatteringRangeMin: 0
+    - _Caustics: 0
+    - _CausticsAngleMask: 0
+    - _CausticsDirectionMask: 0
+    - _CausticsDistortion: 0.1
+    - _CausticsEnd: 1
+    - _CausticsIntensity: 4
+    - _CausticsMode: 0
+    - _CausticsStart: 0
+    - _CausticsTiling3D: 0.5
+    - _ColorMode: 0
+    - _CullMode: 0
+    - _DepthEnd: 0.3
+    - _DepthStart: 0
+    - _DispMask: 0
+    - _DisplacementMode: 0
+    - _Distortion: 0
+    - _DoubleSided: 0
+    - _DynamicDisplacement: 1
+    - _DynamicEffects: 0
+    - _DynamicFoam: 1
+    - _DynamicNormal: 1
+    - _EdgeFade: 1
+    - _EdgeSize: 0.5
+    - _FlowIntensity: 0.1
+    - _FlowSpeed: 5
+    - _Foam: 0
+    - _FoamCapsIntensity: 1
+    - _FoamCapsRangeMax: 1
+    - _FoamCapsRangeMin: 0
+    - _FoamDistortion: 0.1
+    - _FoamRippleDistance: 1
+    - _FoamRippleSize: 1
+    - _FoamRippleSpeed: 0.1
+    - _FoamRipples: 0
+    - _FoamSize: 0.1
+    - _FoamWhiteCaps: 0
+    - _NormalFar: 0
+    - _NormalFarDistance: 200
+    - _NormalMapAIntensity: 0.15
+    - _NormalMapBIntensity: 1
+    - _NormalMapFarIntensity: 1
+    - _NormalsMode: 0
+    - _Orthographic: 0
+    - _ReflectionDistortion: 0.05
+    - _ReflectionFresnel: 5
+    - _ReflectionFresnelNormal: 0.05
+    - _ReflectionIntensity: 0.4
+    - _ReflectionMode: 2
+    - _ReflectionRoughness: 0.3
+    - _Scattering: 0
+    - _ScatteringIntensity: 1
+    - _ScatteringRangeMax: 1
+    - _ScatteringRangeMin: 0
+    - _Smoothness: 0.4
+    - _SpeedMul: 0
+    - _WaveAmplitude: 1
+    - _WaveCount: 1
+    - _WaveEffectsBoost: 0
+    - _WaveEndDistance: 1000
+    - _WaveLength: 8
+    - _WaveNormal: 1
+    - _WaveSpeed: 10
+    - _WaveStartDistance: 0
+    - _WaveSteepness: 0.5
+    - _WorldUV: 1
+    m_Colors:
+    - _CausticsSpeed: {r: 1, g: 1, b: -1, a: -1}
+    - _CausticsSpeed3D: {r: 1, g: 1, b: 1, a: 1}
+    - _CausticsTiling: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0.15, g: 0.55, b: 0.65, a: 1}
+    - _DepthColor: {r: 0.02, g: 0.12, b: 0.2, a: 1}
+    - _FlowTiling: {r: 1, g: 1, b: 0, a: 0}
+    - _FoamColor: {r: 1, g: 1, b: 1, a: 1}
+    - _FoamTiling: {r: 1, g: 1, b: 1, a: 1}
+    - _NormalMapASpeeds: {r: 0.7, g: 0.5, b: 0, a: 0}
+    - _NormalMapATilings: {r: 2, g: 2, b: 0, a: 0}
+    - _NormalMapBSpeeds: {r: 0, g: 0, b: 0, a: 0}
+    - _NormalMapBTilings: {r: 1, g: 1, b: 1, a: 1}
+    - _NormalMapFarSpeeds: {r: 1, g: 1, b: 1, a: 1}
+    - _NormalMapFarTilings: {r: 1, g: 1, b: 0.5, a: 0.5}
+    - _RefractionKey1: {r: -1, g: -1, b: -1, a: -1}
+    - _RefractionKey2: {r: -1, g: -1, b: -1, a: -1}
+    - _RefractionKey3: {r: -1, g: -1, b: -1, a: -1}
+    - _RefractionKey4: {r: -1, g: -1, b: -1, a: -1}
+    - _RefractionKey5: {r: -1, g: -1, b: -1, a: -1}
+    - _RefractionKey6: {r: -1, g: -1, b: -1, a: -1}
+    - _RefractionKey7: {r: -1, g: -1, b: -1, a: -1}
+    - _RefractionKey8: {r: -1, g: -1, b: -1, a: -1}
+    - _ScatteringColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SpecColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
+    - _UnderWaterColor: {r: 0.1, g: 0.2, b: 0.25, a: 0.5}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

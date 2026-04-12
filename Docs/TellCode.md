@@ -362,13 +362,271 @@ After confirming CDT works:
 
 ---
 
-## Deferred — Terrain Depression v3 (Feathered Edges)
+## Current Task — Fix One-Sided Depression Cliff
 
-The depression cliff (one-sided step at fairway edge) remains.
-Once CDT fixes the blade problem, revisit depression feathering.
-The spec was: chamfer distance transform to ramp depression over
-~1m outside the contour edge. Deferred because CDT is higher
-priority — blades are more visible than the depression step.
+**Problem:** The terrain depression under fairway overlays only
+appears on one side. Root cause: `MarkContourCells` insets the
+contour by pulling each vertex toward the **centroid**. On a long
+winding fairway the centroid is far from the edges, so the
+centroid-pull gives proper inset on one side but barely moves
+(or moves wrong) on the opposite side.
+
+**Fix:** Replace the centroid-pull inset with proper edge-
+perpendicular polygon offsetting using the existing
+`OffsetContourOutward` method (negative distance = inward).
+
+### Changes to `MarkContourCells`
+
+Replace the current centroid-pull inset logic:
+
+```csharp
+// REMOVE this block:
+float cx = 0, cz = 0;
+for (int i = 0; i < n; i++) { cx += contour[i].z; cz += contour[i].x; }
+cx /= n; cz /= n;
+
+var worldContour = new Vector2[n];
+// ... the loop that pulls toward centroid ...
+```
+
+Replace with proper edge-perpendicular inset:
+
+```csharp
+private static void MarkContourCells(ContourPoint[] contour,
+    bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize,
+    float inset = -1f)
+{
+    if (inset < 0f) inset = DepressionInsetMeters;
+    int n = contour.Length;
+    if (n < 3) return;
+
+    // Convert contour to world-space Vector3[] for OffsetContourOutward
+    Vector3[] contour3D = new Vector3[n];
+    for (int i = 0; i < n; i++)
+    {
+        contour3D[i] = new Vector3(
+            contour[i].z,  // 90° CCW rotation
+            0f,
+            contour[i].x);
+    }
+
+    // Edge-perpendicular inset (negative = inward)
+    Vector3[] insetContour3D = OffsetContourOutward(contour3D, -inset);
+
+    // Convert to Vector2 for point-in-polygon + compute bbox
+    var worldContour = new Vector2[n];
+    float minX = float.MaxValue, maxX = float.MinValue;
+    float minZ = float.MaxValue, maxZ = float.MinValue;
+    for (int i = 0; i < n; i++)
+    {
+        float wx = insetContour3D[i].x;
+        float wz = insetContour3D[i].z;
+        worldContour[i] = new Vector2(wx, wz);
+        if (wx < minX) minX = wx;
+        if (wx > maxX) maxX = wx;
+        if (wz < minZ) minZ = wz;
+        if (wz > maxZ) maxZ = wz;
+    }
+
+    // Convert bbox to heightmap cell range
+    int hMinX = Mathf.Clamp(Mathf.FloorToInt(
+        (minX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+    int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
+        (maxX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+    int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
+        (minZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+    int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+        (maxZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+
+    // Test each cell in bbox
+    for (int hz = hMinZ; hz <= hMaxZ; hz++)
+    {
+        for (int hx = hMinX; hx <= hMaxX; hx++)
+        {
+            float cellWorldX = (float)hx / (hRes - 1)
+                * terrainSize.x + terrainPos.x;
+            float cellWorldZ = (float)hz / (hRes - 1)
+                * terrainSize.z + terrainPos.z;
+            if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
+                depress[hz, hx] = true;
+        }
+    }
+}
+```
+
+The key change: instead of pulling vertices toward centroid by
+`inset` meters, we use `OffsetContourOutward(contour3D, -inset)`
+which pushes each vertex inward along the perpendicular to its
+adjacent edges. This gives uniform inset on ALL sides.
+
+### Verification
+
+1. Import Hole 4 (hilly)
+2. Depression should be symmetric — visible equally on both sides
+   of the fairway (or ideally NOT visible because it's hidden
+   under the mesh)
+3. The depression edge should be ~0.7m inside the fairway contour
+   (0.5m fringe + 0.2m margin), fully hidden under the fairway mesh
+4. Green/bunker/water: unchanged
+
+### Part 2: Fix cart path depression to follow spine geometry
+
+**Problem:** Cart path depression uses the contour polygon from
+`cart-paths.json`, but the actual rendered mesh uses the spine
+strip (`CreateSpineStripMesh`). On slopes these diverge — the
+contour depression doesn't match the rendered strip, leaving
+terrain poking through on one side.
+
+**Fix:** Build a depression polygon from the spine's left+right
+edge vertices (the same geometry `CreateSpineStripMesh` computes)
+and use THAT for depression marking instead of the contour.
+
+In `DepressTerrainUnderOverlays`, replace the cart path section:
+
+```csharp
+// Cart path depression — use spine geometry, not contour
+string cpPath = Path.Combine(exportPath, "cart-paths.json");
+if (File.Exists(cpPath))
+{
+    var data = JsonUtility.FromJson<CartPathsFile>(
+        File.ReadAllText(cpPath));
+    if (data.cart_paths != null)
+    {
+        foreach (var cp in data.cart_paths)
+        {
+            if (cp.spine != null && cp.spine.Length >= 2)
+            {
+                // Build polygon from spine left+right edges
+                float halfWidth = (cp.width_m > 0
+                    ? cp.width_m : 2.5f) / 2f;
+                var spinePoly = BuildSpinePolygon(
+                    cp.spine, halfWidth);
+                if (spinePoly != null)
+                    MarkWorldContourCells(spinePoly, depress,
+                        hRes, terrainPos, terrainSize);
+            }
+            else if (cp.contour != null && cp.contour.Length >= 3)
+            {
+                // Fallback to contour if no spine
+                MarkContourCells(cp.contour, depress,
+                    hRes, terrainPos, terrainSize);
+            }
+        }
+    }
+}
+```
+
+New helper methods:
+
+```csharp
+/// <summary>
+/// Build a closed polygon from a spine centerline + half-width.
+/// Returns left edge forward + right edge reversed = closed loop.
+/// Same geometry as CreateSpineStripMesh uses.
+/// </summary>
+private static Vector2[] BuildSpinePolygon(
+    ContourPoint[] spine, float halfWidth)
+{
+    int n = spine.Length;
+    if (n < 2) return null;
+
+    var left = new Vector2[n];
+    var right = new Vector2[n];
+
+    for (int i = 0; i < n; i++)
+    {
+        float cx = spine[i].z;  // 90° CCW
+        float cz = spine[i].x;
+
+        // Tangent
+        float tx, tz;
+        if (i == 0)
+        { tx = spine[1].z - spine[0].z; tz = spine[1].x - spine[0].x; }
+        else if (i == n - 1)
+        { tx = spine[n-1].z - spine[n-2].z; tz = spine[n-1].x - spine[n-2].x; }
+        else
+        { tx = spine[i+1].z - spine[i-1].z; tz = spine[i+1].x - spine[i-1].x; }
+
+        float tLen = Mathf.Sqrt(tx * tx + tz * tz);
+        if (tLen > 0.001f) { tx /= tLen; tz /= tLen; }
+        else { tx = 1; tz = 0; }
+
+        // Perpendicular (same as CreateSpineStripMesh)
+        float px = tz;
+        float pz = -tx;
+
+        left[i]  = new Vector2(cx - px * halfWidth,
+                               cz - pz * halfWidth);
+        right[i] = new Vector2(cx + px * halfWidth,
+                               cz + pz * halfWidth);
+    }
+
+    // Closed polygon: left forward, then right reversed
+    var poly = new Vector2[n * 2];
+    for (int i = 0; i < n; i++)
+        poly[i] = left[i];
+    for (int i = 0; i < n; i++)
+        poly[n + i] = right[n - 1 - i];
+
+    return poly;
+}
+
+/// <summary>
+/// Mark heightmap cells inside a world-space Vector2[] polygon.
+/// (No contour conversion or inset — polygon is already in
+/// world XZ coords at the desired boundary.)
+/// </summary>
+private static void MarkWorldContourCells(Vector2[] worldContour,
+    bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize)
+{
+    float minX = float.MaxValue, maxX = float.MinValue;
+    float minZ = float.MaxValue, maxZ = float.MinValue;
+    foreach (var v in worldContour)
+    {
+        if (v.x < minX) minX = v.x;
+        if (v.x > maxX) maxX = v.x;
+        if (v.y < minZ) minZ = v.y;
+        if (v.y > maxZ) maxZ = v.y;
+    }
+
+    int hMinX = Mathf.Clamp(Mathf.FloorToInt(
+        (minX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+    int hMaxX = Mathf.Clamp(Mathf.CeilToInt(
+        (maxX - terrainPos.x) / terrainSize.x * (hRes - 1)), 0, hRes - 1);
+    int hMinZ = Mathf.Clamp(Mathf.FloorToInt(
+        (minZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+    int hMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+        (maxZ - terrainPos.z) / terrainSize.z * (hRes - 1)), 0, hRes - 1);
+
+    for (int hz = hMinZ; hz <= hMaxZ; hz++)
+    {
+        for (int hx = hMinX; hx <= hMaxX; hx++)
+        {
+            float cellWorldX = (float)hx / (hRes - 1)
+                * terrainSize.x + terrainPos.x;
+            float cellWorldZ = (float)hz / (hRes - 1)
+                * terrainSize.z + terrainPos.z;
+            if (IsInsideContour(cellWorldX, cellWorldZ, worldContour))
+                depress[hz, hx] = true;
+        }
+    }
+}
+```
+
+### Verification
+
+1. Import Hole 4 (hilly)
+2. **Fairway depression:** Symmetric on both sides, hidden under mesh
+3. **Cart path depression:** Follows the actual rendered strip exactly,
+   no terrain poking through on either side
+4. Cart paths without spines (contour fallback): still depressed
+5. Green/bunker/water: unchanged
+
+### Do NOT
+- Change CDT or mesh creation code
+- Change depression depth (OverlayDepressionMeters)
+- Change CreateSpineStripMesh
+- Change any other method signatures
 
 ---
 
@@ -1153,3 +1411,4 @@ Note: `parentRoot` parameter is new (for standalone tree container).
 ✅ 2026-04-11 — Terrain depression (5cm) under fairway/tee/cart path zones to prevent z-fighting
 ✅ 2026-04-11 — Terrain depression v2: contour-based (10cm), uses actual contour polygons for exact alignment
 ✅ 2026-04-11 — Replaced ear-clip with CDT (BurstTriangulator) for fairway, tee, and cart path meshes. Deleted SubdivideToTerrain.
+✅ 2026-04-12 — Fixed one-sided depression cliff (MarkContourCells already uses OffsetContourOutward). Cart path depression now follows spine geometry (BuildSpinePolygon + MarkWorldContourCells) with contour fallback.

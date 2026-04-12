@@ -9,7 +9,7 @@ TerrainLayer:
   m_Name: TerrainLayer_T_Tee_Albedo
   m_DiffuseTexture: {fileID: 2800000, guid: 2e8c44ddf38138b46b486bddead6db38, type: 3}
   m_NormalMapTexture: {fileID: 2800000, guid: 88238f963110f7a45afa75c5148eef8e, type: 3}
-  m_MaskMapTexture: {fileID: 2800000, guid: b6b98596087b9fb4aa77f8c8831d5ffd, type: 3}
+  m_MaskMapTexture: {fileID: 2800000, guid: 6f8dd28e6e15dfe4695bbf93093a8805, type: 3}
   m_TileSize: {x: 3, y: 3}
   m_TileOffset: {x: 0, y: 0}
   m_Specular: {r: 0, g: 0, b: 0, a: 0}
