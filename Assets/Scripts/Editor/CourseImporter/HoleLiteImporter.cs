@@ -781,22 +781,29 @@ namespace Golfin.CourseImport
                         forwardDir = toGreen.normalized;
                 }
 
-                // Fixed 3m spacing between pairs, 1.5m perpendicular offset
-                float pairSpacing = 3f;
                 int count = anchorsInGroup.Count;
 
-                for (int g = 0; g < count; g++)
+                if (count == 1)
                 {
-                    // Index 0 = Red (closest to green) → positive forward offset
-                    // Index N-1 = Blue (farthest from green) → negative forward offset
-                    float t = (count == 1) ? 0f : 1f - (float)g / (count - 1);
-                    float forwardOffset = (t - 0.5f) * (count - 1) * pairSpacing;
+                    // Single marker type — place at centroid (original behavior)
+                    PlaceAnchorMarker(anchorsInGroup[0], terrain, terrainTransform,
+                        parent, hasGreenCentroid, greenCentroid, teeRegions);
+                }
+                else
+                {
+                    // Multiple marker types sharing a tee region — space them 3m apart
+                    float pairSpacing = 3f;
+                    for (int g = 0; g < count; g++)
+                    {
+                        float t = 1f - (float)g / (count - 1);
+                        float forwardOffset = (t - 0.5f) * (count - 1) * pairSpacing;
 
-                    Vector3 pairCenter = centroid + forwardDir * forwardOffset;
+                        Vector3 pairCenter = centroid + forwardDir * forwardOffset;
 
-                    PlaceAnchorMarker(anchorsInGroup[g], terrain, terrainTransform,
-                        parent, hasGreenCentroid, greenCentroid, teeRegions,
-                        pairCenter);
+                        PlaceAnchorMarker(anchorsInGroup[g], terrain, terrainTransform,
+                            parent, hasGreenCentroid, greenCentroid, teeRegions,
+                            pairCenter);
+                    }
                 }
             }
         }
