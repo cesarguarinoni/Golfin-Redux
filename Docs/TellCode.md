@@ -8,81 +8,50 @@
 
 ---
 
-## Current Issue — Cart Path Intersections Still Overshoot
+## Current Task — Fix `spineExt` Bug in CreateSpineStripMesh
 
 ### Problem
-Cart path strip meshes overshoot past their endpoints at intersections.
-Paths that should meet cleanly at a junction extend too far beyond it.
+`CreateSpineStripMesh` in `HoleLiteImporter.cs` references an undefined
+variable `spineExt` — a leftover from the removed endpoint extension
+feature (step 9, removed earlier). This should be `spine` (the method
+parameter).
 
-### What Was Done (2026-04-13 session)
+### Fix
+In `CreateSpineStripMesh` (~line 3893+), find-replace ALL occurrences
+of `spineExt` → `spine` within that method only. There are ~12 refs:
 
-**Export pipeline (`Tools/UHoleLite/scripts/export-hole.mjs` → `extractCartPathContours`):**
+Tangent calculations:
+- `spineExt[0]`, `spineExt[1]` (i==0 case)
+- `spineExt[n-1]`, `spineExt[n-2]` (i==n-1 case)
+- `spineExt[i+1]`, `spineExt[i-1]` (middle case)
 
-1. **OB feature export fix** ✅ — Trees/cart paths in OB zones were lost because
-   the merged grid gives OB priority. Now uses separate `trees_mask` and
-   `cart_path_mask` overlays.
+Arc length calculation:
+- `spineExt[i-1]` (2 refs for dx/dz2)
 
-2. **Skeleton pixel clipping** ✅ — Extended tee-only clipping to exclude fairway
-   (zone 1), bunker (6), water (7), tee (10) using `terrain_grid`. Fixed bug
-   where `cart_path_mask` stamping overwrote original zones.
+If there's a `var spineExt = spine;` or an extension block that creates
+`spineExt`, remove it and just use `spine` directly.
 
-3. **Spine nudging (`nudgeSpinesFromContours`)** ✅ — Iterative geometry-based push
-   (10 passes, progressive smoothing) ensures 2.5m strip doesn't overlap
-   fairway/bunker/tee/water contour polygons. 15/18 holes fully clean.
+### Do NOT Change
+- `BuildSpinePolygon` (already correct)
+- Any other methods
+- Splatmap painting or depression logic
 
-4. **dsFactor cap** ✅ — Downsampling was based on `area/longerAxis` which for
-   branching networks gave dsFactor=27 (merged close parallel paths). Now capped
-   by actual path width so parallel paths stay separate.
+### After Fixing
+Run: GOLFIN > Import Hole (Lite) > Hole 18
+Verify cart paths render without errors in the console.
 
-5. **Chain merging at 2-way junctions** ✅ — If a junction has exactly 2 chain
-   endpoints, those chains are merged into one continuous path. Hole 18: 7→4 paths.
-
-6. **Orphan endpoint snapping** ✅ — After merging, endpoints within 10m of another
-   spine's interior get extended to touch it. Hole 18 CP#4 start: 5.6m→0.8m from CP#3.
-
-**Unity importer (`HoleLiteImporter.cs`):**
-
-7. **Splatmap painting** ✅ — Full cart path texture painted under strip mesh
-   (100% interior, 85% anti-alias on outer 1px, polygon 0.2m wider than mesh).
-   `BuildSpinePolygon` subdivides spine to 0.5m spacing for smooth splatmap edges.
-
-8. **Junction disc patches** ❌ REMOVED — Created octagonal discs at junction
-   points but they were visible, clipped through terrain, looked wrong.
-
-9. **Strip endpoint extension** ❌ REMOVED — Extended strip mesh by 2.5m past
-   each endpoint. Caused every path to overshoot past its natural end.
-
-### What Still Doesn't Work
-**Cart path strip meshes overshoot at intersections.** The endpoint snapping
-(step 6) adds a connection point to the spine data, but the strip mesh still
-extends past the junction. The overshoot is visible at every path endpoint,
-not just junctions.
-
-### Root Cause Analysis
-The spine points end at the correct locations, but either:
-- The strip mesh `CreateSpineStripMesh` generates geometry past the last point
-- The endpoint snap point is past the intersection (snaps to nearest point on
-  the *segment* between two spine vertices, which may be between them)
-- The spine smoothing/simplification moves endpoints away from the ideal junction
-
-### Key Files
-- `Tools/UHoleLite/scripts/export-hole.mjs` — `extractCartPathContours()` (~lines 332-850)
-- `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs` — `CreateSpineStripMesh()` (~line 3893)
-- `Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs` — `CartPathRegionData` class
-
-### Data for Debugging (Hole 18)
+NOTE: The pipeline-side pullback fix (in TASK.md) must also be run
+before the visual junction issue is fully resolved. Run:
 ```
-4 cart paths after merging (was 7 before, 9 before dsFactor fix)
-CP#1: 56pts  — short branch
-CP#2: 196pts — medium branch
-CP#3: 464pts — main long path
-CP#4: 22pts  — short branch, start snapped to 0.8m from CP#3
-Junctions at: (180.4,-232.6), (144.9,-291.2), (-77.2,117.0) [in export coords]
+cd Tools/UHoleLite
+node scripts/export-hole.mjs lomond-country-club 18
 ```
+Then re-import in Unity.
 
 ---
 
 ## Completed Tasks
+✅ 2026-04-13 — Fix spineExt→spine in CreateSpineStripMesh + pullback snapped endpoints by halfWidth at T-junctions
 ✅ 2026-04-13 — Node.js residual ramp (60-cell smoothstep) + Unity-side boundary height propagation
 ✅ 2026-04-13 — Unity-side boundary height propagation (smoothstep ramp from play height to blurred DEM)
 ✅ 2026-04-13 — Cart path depression: 3-strategy fix (0.50m inset + smoothstep ramp + 2px splatmap edge paint)

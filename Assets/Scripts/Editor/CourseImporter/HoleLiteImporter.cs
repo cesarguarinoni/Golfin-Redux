@@ -3915,18 +3915,18 @@ namespace Golfin.CourseImport
                 float tx, tz;
                 if (i == 0)
                 {
-                    tx = spineExt[1].z - spineExt[0].z;
-                    tz = spineExt[1].x - spineExt[0].x;
+                    tx = spine[1].z - spine[0].z;
+                    tz = spine[1].x - spine[0].x;
                 }
                 else if (i == n - 1)
                 {
-                    tx = spineExt[n - 1].z - spineExt[n - 2].z;
-                    tz = spineExt[n - 1].x - spineExt[n - 2].x;
+                    tx = spine[n - 1].z - spine[n - 2].z;
+                    tz = spine[n - 1].x - spine[n - 2].x;
                 }
                 else
                 {
-                    tx = spineExt[i + 1].z - spineExt[i - 1].z;
-                    tz = spineExt[i + 1].x - spineExt[i - 1].x;
+                    tx = spine[i + 1].z - spine[i - 1].z;
+                    tz = spine[i + 1].x - spine[i - 1].x;
                 }
 
                 // Normalize tangent
@@ -3954,8 +3954,8 @@ namespace Golfin.CourseImport
                 // UVs: u = 0 (left) to 1 (right), v = arc length for tiling
                 if (i > 0)
                 {
-                    float dx = cx - spineExt[i - 1].z;
-                    float dz2 = cz - spineExt[i - 1].x;
+                    float dx = cx - spine[i - 1].z;
+                    float dz2 = cz - spine[i - 1].x;
                     arcLength += Mathf.Sqrt(dx * dx + dz2 * dz2);
                 }
                 uvs[i * 2]     = new Vector2(0f, arcLength / tileSize);

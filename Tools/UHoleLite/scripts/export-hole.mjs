@@ -885,6 +885,97 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     }
   }
 
+  // --- Pull back snapped endpoints by halfWidth ---
+  // At T-junctions, the branch strip extends ±halfWidth from its spine
+  // center. If the endpoint sits on the target spine's centerline, the
+  // strip overshoots by halfWidth past the far edge. Pull the endpoint
+  // back along the approach direction by halfWidth so the strip EDGE
+  // (not center) lands at the target centerline. The overlap with the
+  // main strip covers the junction area.
+  const halfWidth = minWidthM / 2;
+  for (const cp of results) {
+    if (!cp.spine || cp.spine.length < 3) continue;
+
+    for (const endIdx of [0, cp.spine.length - 1]) {
+      const ep = cp.spine[endIdx];
+
+      // Check if this endpoint is near another spine's interior
+      let isSnapped = false;
+      for (const other of results) {
+        if (other === cp) continue;
+        if (cp.parent_region !== other.parent_region) continue;
+        if (!other.spine || other.spine.length < 2) continue;
+
+        for (let si = 1; si < other.spine.length - 1; si++) {
+          const dx = ep.x - other.spine[si].x;
+          const dz = ep.z - other.spine[si].z;
+          const d = Math.sqrt(dx * dx + dz * dz);
+          if (d < halfWidth * 2) {
+            isSnapped = true;
+            break;
+          }
+        }
+        if (isSnapped) break;
+      }
+
+      if (!isSnapped) continue;
+
+      // Pull back: find the point on the spine that is halfWidth
+      // away from the endpoint, measured along the spine arc
+      if (endIdx === 0) {
+        // Pull back from start: remove leading points until we've
+        // traveled halfWidth along the spine, then interpolate
+        let accumulated = 0;
+        let cutIdx = 0;
+        for (let i = 0; i < cp.spine.length - 2; i++) {
+          const dx = cp.spine[i + 1].x - cp.spine[i].x;
+          const dz = cp.spine[i + 1].z - cp.spine[i].z;
+          const segLen = Math.sqrt(dx * dx + dz * dz);
+          if (accumulated + segLen >= halfWidth) {
+            // Interpolate the new start point
+            const remaining = halfWidth - accumulated;
+            const t = remaining / segLen;
+            cp.spine[i] = {
+              x: parseFloat((cp.spine[i].x + t * dx).toFixed(2)),
+              z: parseFloat((cp.spine[i].z + t * dz).toFixed(2)),
+            };
+            cutIdx = i;
+            break;
+          }
+          accumulated += segLen;
+          cutIdx = i + 1;
+        }
+        if (cutIdx > 0) {
+          cp.spine.splice(0, cutIdx);
+        }
+      } else {
+        // Pull back from end: remove trailing points
+        let accumulated = 0;
+        let cutIdx = cp.spine.length - 1;
+        for (let i = cp.spine.length - 1; i > 0; i--) {
+          const dx = cp.spine[i].x - cp.spine[i - 1].x;
+          const dz = cp.spine[i].z - cp.spine[i - 1].z;
+          const segLen = Math.sqrt(dx * dx + dz * dz);
+          if (accumulated + segLen >= halfWidth) {
+            const remaining = halfWidth - accumulated;
+            const t = remaining / segLen;
+            cp.spine[i] = {
+              x: parseFloat((cp.spine[i].x - t * dx).toFixed(2)),
+              z: parseFloat((cp.spine[i].z - t * dz).toFixed(2)),
+            };
+            cutIdx = i;
+            break;
+          }
+          accumulated += segLen;
+          cutIdx = i - 1;
+        }
+        if (cutIdx < cp.spine.length - 1) {
+          cp.spine.splice(cutIdx + 1);
+        }
+      }
+    }
+  }
+
   // Sort by size (largest first), re-assign IDs
   results.sort((a, b) => b.pixel_count - a.pixel_count);
   results.forEach((r, i) => { r.id = i + 1; });
