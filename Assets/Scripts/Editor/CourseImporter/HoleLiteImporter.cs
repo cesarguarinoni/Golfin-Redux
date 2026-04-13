@@ -3896,37 +3896,7 @@ namespace Golfin.CourseImport
             Material mat, float tileSize,
             Golfin.Course.SurfaceType surfaceType)
         {
-            // Extend spine past each endpoint so strip meshes overlap at
-            // junctions, filling gaps between converging branches.
-            // Use full path width (2*halfWidth) for generous overlap.
-            float extendDist = halfWidth * 2f;
-            var extSpine = new List<ContourPoint>(spine.Length + 2);
-            {
-                float tx = spine[1].x - spine[0].x;
-                float tz = spine[1].z - spine[0].z;
-                float tl = Mathf.Sqrt(tx * tx + tz * tz);
-                if (tl > 0.001f) { tx /= tl; tz /= tl; }
-                extSpine.Add(new ContourPoint {
-                    x = spine[0].x - tx * extendDist,
-                    z = spine[0].z - tz * extendDist
-                });
-            }
-            for (int i = 0; i < spine.Length; i++)
-                extSpine.Add(spine[i]);
-            {
-                int last = spine.Length - 1;
-                float tx = spine[last].x - spine[last - 1].x;
-                float tz = spine[last].z - spine[last - 1].z;
-                float tl = Mathf.Sqrt(tx * tx + tz * tz);
-                if (tl > 0.001f) { tx /= tl; tz /= tl; }
-                extSpine.Add(new ContourPoint {
-                    x = spine[last].x + tx * extendDist,
-                    z = spine[last].z + tz * extendDist
-                });
-            }
-            var spineExt = extSpine.ToArray();
-
-            int n = spineExt.Length;
+            int n = spine.Length;
             if (n < 2) return null;
 
             float yOffset = 0.01f; // offset to clear terrain between sample points
@@ -3938,8 +3908,8 @@ namespace Golfin.CourseImport
             for (int i = 0; i < n; i++)
             {
                 // 90° CCW rotation: worldX = z, worldZ = x
-                float cx = spineExt[i].z;
-                float cz = spineExt[i].x;
+                float cx = spine[i].z;
+                float cz = spine[i].x;
 
                 // Tangent direction (forward along spine)
                 float tx, tz;
