@@ -341,6 +341,15 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
       if (cpMaskBuf[i] && grid[i] !== 8) grid[i] = 8;
     }
   }
+  // Base zone grid (no overlays) for detecting zone overlaps.
+  // cart_path_mask stamping above overwrites original zones with 8, so we
+  // need the untouched terrain_grid to know the real underlying zone.
+  const terrainGridBuf = zonesData.terrain_grid
+    ? Buffer.from(zonesData.terrain_grid, 'base64') : null;
+  // Zones where cart paths should NOT overlap — skeleton extraction will
+  // clip these pixels so the spine routes around them.
+  const overlapZones = new Set([1, 6, 10]); // fairway, bunker, tee
+
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
   const tw = terrainMeta.terrain_width_m;
@@ -487,32 +496,35 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     const dsH = Math.ceil(h / dsFactor);
 
     // Build downsampled binary mask, clipping cart path pixels that
-    // directly overlap tee zones. This prevents spines from running
-    // under tee meshes while preserving junction structure (unlike
-    // clipping the skeleton post-thinning, which blows away junctions).
+    // overlap fairway, bunker, or tee zones. Uses terrain_grid (base
+    // zones without overlay masks) because cart_path_mask stamping
+    // overwrites the original zone with 8 in the working grid.
+    // This prevents spines from running under these zone meshes while
+    // preserving junction structure (unlike clipping post-thinning).
     const dsMask = new Uint8Array(dsW * dsH);
     for (const [px, py] of currentPixels) {
-      // Skip pixels that overlap tee zones in the full-res grid
-      if (grid[py * w + px] === 10) continue;
+      // Skip pixels that overlap forbidden zones in the base terrain grid
+      if (terrainGridBuf && overlapZones.has(terrainGridBuf[py * w + px])) continue;
       const dsx = Math.floor(px / dsFactor);
       const dsy = Math.floor(py / dsFactor);
       if (dsx < dsW && dsy < dsH) dsMask[dsy * dsW + dsx] = 1;
     }
 
     // Also clear DS pixels where the majority of underlying full-res
-    // pixels are tee zone — prevents bleed-through at DS boundaries
-    for (let dsy = 0; dsy < dsH; dsy++) {
-      for (let dsx = 0; dsx < dsW; dsx++) {
-        if (!dsMask[dsy * dsW + dsx]) continue;
-        // Sample full-res pixels in this DS cell
-        let teeCount = 0, total = 0;
-        for (let fy = dsy * dsFactor; fy < Math.min((dsy + 1) * dsFactor, h); fy++) {
-          for (let fx = dsx * dsFactor; fx < Math.min((dsx + 1) * dsFactor, w); fx++) {
-            if (grid[fy * w + fx] === 10) teeCount++;
-            total++;
+    // pixels are overlap zones — prevents bleed-through at DS boundaries
+    if (terrainGridBuf) {
+      for (let dsy = 0; dsy < dsH; dsy++) {
+        for (let dsx = 0; dsx < dsW; dsx++) {
+          if (!dsMask[dsy * dsW + dsx]) continue;
+          let overlapCount = 0, total = 0;
+          for (let fy = dsy * dsFactor; fy < Math.min((dsy + 1) * dsFactor, h); fy++) {
+            for (let fx = dsx * dsFactor; fx < Math.min((dsx + 1) * dsFactor, w); fx++) {
+              if (overlapZones.has(terrainGridBuf[fy * w + fx])) overlapCount++;
+              total++;
+            }
           }
+          if (overlapCount > total * 0.5) dsMask[dsy * dsW + dsx] = 0;
         }
-        if (teeCount > total * 0.5) dsMask[dsy * dsW + dsx] = 0;
       }
     }
 
