@@ -781,42 +781,38 @@ namespace Golfin.CourseImport
                         forwardDir = toGreen.normalized;
                 }
 
-                // Compute the tee region's extent along both axes so markers
-                // spread as far apart as possible while staying inside the tee.
+                // Project tee contour into a 2D coordinate system:
+                //   u = forward axis (toward green), v = perpendicular axis
+                // Then for each pair position, find the actual perpendicular
+                // width of the tee AT that forward position.
                 Vector3 perpDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
                 if (perpDir.sqrMagnitude < 0.001f) perpDir = Vector3.right;
 
-                float fwdExtent = 6f;  // fallback
-                float perpExtent = 6f; // fallback
                 const float edgeMargin = 1f; // 1m inset from tee border
+
+                // Project contour to 2D (u=forward, v=perp) relative to centroid
+                Vector2[] contour2D = null;
+                float usableFwd = 4f; // fallback
 
                 if (kvp.Key >= 0 && teeRegions != null)
                 {
                     var contour = teeRegions[kvp.Key].contour;
-                    float minFwd = float.MaxValue, maxFwd = float.MinValue;
-                    float minPerp = float.MaxValue, maxPerp = float.MinValue;
+                    contour2D = new Vector2[contour.Length];
+                    float minU = float.MaxValue, maxU = float.MinValue;
                     for (int i = 0; i < contour.Length; i++)
                     {
                         float wx = contour[i].z; // 90° CCW
                         float wz = contour[i].x;
                         float dx = wx - centroid.x;
                         float dz = wz - centroid.z;
-                        float fProj = dx * forwardDir.x + dz * forwardDir.z;
-                        float pProj = dx * perpDir.x + dz * perpDir.z;
-                        if (fProj < minFwd) minFwd = fProj;
-                        if (fProj > maxFwd) maxFwd = fProj;
-                        if (pProj < minPerp) minPerp = pProj;
-                        if (pProj > maxPerp) maxPerp = pProj;
+                        float u = dx * forwardDir.x + dz * forwardDir.z;
+                        float v = dx * perpDir.x + dz * perpDir.z;
+                        contour2D[i] = new Vector2(u, v);
+                        if (u < minU) minU = u;
+                        if (u > maxU) maxU = u;
                     }
-                    fwdExtent = maxFwd - minFwd;
-                    perpExtent = maxPerp - minPerp;
+                    usableFwd = Mathf.Max((maxU - minU) - edgeMargin * 2f, 0f);
                 }
-
-                float usableFwd = Mathf.Max(fwdExtent - edgeMargin * 2f, 0f);
-                // Perpendicular half-extent available for each marker (1.5m default)
-                float maxPerpOffset = Mathf.Min(1.5f,
-                    (perpExtent - edgeMargin * 2f) / 2f);
-                maxPerpOffset = Mathf.Max(maxPerpOffset, 0.5f); // at least 0.5m
 
                 int count = anchorsInGroup.Count;
 
@@ -827,11 +823,41 @@ namespace Golfin.CourseImport
                     float t = (count == 1) ? 0f : 1f - (float)g / (count - 1);
                     float forwardOffset = (t - 0.5f) * usableFwd;
 
+                    // Find the perpendicular width of the tee at this forward position
+                    // by intersecting a horizontal line (u = forwardOffset) with the contour
+                    float perpHalf = 1.5f; // default
+                    if (contour2D != null)
+                    {
+                        float minV = float.MaxValue, maxV = float.MinValue;
+                        int cn = contour2D.Length;
+                        for (int i = 0; i < cn; i++)
+                        {
+                            int j = (i + 1) % cn;
+                            float u0 = contour2D[i].x, v0 = contour2D[i].y;
+                            float u1 = contour2D[j].x, v1 = contour2D[j].y;
+                            // Check if the edge crosses u = forwardOffset
+                            if ((u0 - forwardOffset) * (u1 - forwardOffset) <= 0f
+                                && Mathf.Abs(u1 - u0) > 1e-6f)
+                            {
+                                float tInterp = (forwardOffset - u0) / (u1 - u0);
+                                float vHit = v0 + tInterp * (v1 - v0);
+                                if (vHit < minV) minV = vHit;
+                                if (vHit > maxV) maxV = vHit;
+                            }
+                        }
+                        if (minV < maxV)
+                        {
+                            // Inset by margin, then halve for each side
+                            perpHalf = Mathf.Max((maxV - minV - edgeMargin * 2f) / 2f, 0.3f);
+                            perpHalf = Mathf.Min(perpHalf, 1.5f); // cap at 1.5m
+                        }
+                    }
+
                     Vector3 pairCenter = centroid + forwardDir * forwardOffset;
 
                     PlaceAnchorMarker(anchorsInGroup[g], terrain, terrainTransform,
                         parent, hasGreenCentroid, greenCentroid, teeRegions,
-                        pairCenter, maxPerpOffset);
+                        pairCenter, perpHalf);
                 }
             }
         }
