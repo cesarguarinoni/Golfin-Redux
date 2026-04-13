@@ -1093,7 +1093,7 @@ namespace Golfin.CourseImport
                                 float hw = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
                                 // Paint slightly wider than the mesh strip so the
                                 // splatmap extends beyond mesh edges as a safety margin
-                                var poly = BuildSpinePolygon(cp.spine, hw + 0.5f);
+                                var poly = BuildSpinePolygon(cp.spine, hw + 0.2f);
                                 if (poly != null)
                                 {
                                     float minX2 = float.MaxValue, maxX2 = float.MinValue;
