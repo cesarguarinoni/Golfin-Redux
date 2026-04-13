@@ -1065,8 +1065,8 @@ namespace Golfin.CourseImport
                                 float dist = cpEdgeDist[ay, ax];
                                 if (dist > edgeWidth) continue; // too far inside
 
-                                // Blend: 100% cart path at dist=0 (edge), 50% at dist=edgeWidth
-                                float blend = 1f - (dist / edgeWidth) * 0.5f;
+                                // Blend: 40% cart path at dist=0 (edge), 20% at dist=edgeWidth
+                                float blend = 0.4f - (dist / edgeWidth) * 0.2f;
 
                                 // Find which layer currently has weight here
                                 int currentLayer = -1;
