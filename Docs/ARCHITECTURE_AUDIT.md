@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-04-10 12:57. Do not edit manually.
+> Auto-generated 2026-04-13 18:44. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -35,6 +35,8 @@ Assets/Scripts/Editor/BagSelectionModalAutoWire.cs
 Assets/Scripts/Editor/CourseImporter/HoleImporter.cs
 Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs
 Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs
+Assets/Scripts/Editor/CourseImporter/TreePlacer.cs
+Assets/Scripts/Editor/CourseImporter/TreePlacerWindow.cs
 Assets/Scripts/Editor/ItemManagerSetup.cs
 Assets/Scripts/Editor/ScreenshotTool.cs
 Assets/Scripts/HoleMetadata.cs

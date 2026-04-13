@@ -258,13 +258,18 @@ async function processHole(courseId, holeNumber, config) {
   // Step 4: Remove yardage legend
   const cleanedBuffer = await removeLegend(croppedBuffer, afterTrimW, afterTrimH);
 
-  // Step 5: Upscale to 1024px wide, maintaining aspect ratio
-  const targetWidth = 1024;
+  // Step 5: Upscale to 2048px on longest side, maintaining aspect ratio
+  // Matches ZONE_RES in classify-zones.mjs so texture and zone grid align 1:1
+  const targetLongest = 2048;
   const finalBuffer = await sharp(cleanedBuffer)
-    .resize(targetWidth, null, {
-      kernel: sharp.kernel.lanczos3,
-      withoutEnlargement: false,
-    })
+    .resize(
+      afterTrimW >= afterTrimH ? targetLongest : null,
+      afterTrimH > afterTrimW ? targetLongest : null,
+      {
+        kernel: sharp.kernel.lanczos3,
+        withoutEnlargement: false,
+      }
+    )
     .sharpen({ sigma: 0.8 })
     .png()
     .toFile(path.join(holeDir, 'illustration.png'));
