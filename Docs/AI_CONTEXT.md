@@ -24,6 +24,12 @@
 
 ## Active Work — Course Visual Polish
 
+### Smooth Play↔Non-Play Terrain Transition (2026-04-13) ✅
+- Replaced linear blend (Lerp smoothed↔raw via blendFactor) with boundary-height propagation
+- Non-play terrain now starts at adjacent play-area height (no cliff)
+- Smoothstep ramp from boundary height to Gaussian-blurred DEM over TransitionCells
+- Play area remains untouched (raw DEM detail preserved)
+
 ### OB↔Rough Transition (2026-04-13) ✅
 - OB texture changed to reuse T_Rough with darker/yellower tint via `diffuseRemapMax`
 - OB tile size changed to 10f (vs 8f for rough) for visual variation

@@ -479,30 +479,138 @@ namespace Golfin.CourseImport
                         }
                     }
 
-                    // Blend factor: 1.0 = keep raw DEM (play area), 0.0 = fully smoothed
-                    float[] blendFactor = new float[actualRes * actualRes];
-                    for (int i = 0; i < blendFactor.Length; i++)
-                    {
-                        if (isPlayArea[i])
-                            blendFactor[i] = 1.0f;
-                        else if (distToPlay[i] < TransitionCells)
-                            blendFactor[i] = 1.0f - distToPlay[i] / TransitionCells;
-                        else
-                            blendFactor[i] = 0.0f;
-                    }
-
-                    // Step 3: Gaussian blur + blend
+                    // Step 3: Gaussian blur (target for non-play areas)
                     float[,] smoothed = GaussianBlur2D(heights, actualRes, SmoothRadius, SmoothSigma);
+
+                    // --- Build boundary height field ---
+                    // For play-area cells: boundaryHeight = own height
+                    // For non-play cells: propagate from nearest play-area cell
+                    float[] boundaryHeight = new float[actualRes * actualRes];
+                    for (int i = 0; i < boundaryHeight.Length; i++)
+                        boundaryHeight[i] = isPlayArea[i]
+                            ? heights[i / actualRes, i % actualRes]
+                            : float.MinValue;
+
+                    // Forward pass — propagate boundary heights outward
                     for (int z = 0; z < actualRes; z++)
                     {
                         for (int x = 0; x < actualRes; x++)
                         {
-                            float b = blendFactor[z * actualRes + x];
-                            heights[z, x] = Mathf.Lerp(smoothed[z, x], heights[z, x], b);
+                            int idx = z * actualRes + x;
+                            if (isPlayArea[idx]) continue;
+
+                            float bestH = float.MinValue;
+                            float bestD = float.MaxValue;
+
+                            // Check neighbors closer to play area
+                            if (x > 0)
+                            {
+                                int ni = idx - 1;
+                                if (boundaryHeight[ni] > float.MinValue && distToPlay[ni] < bestD)
+                                { bestD = distToPlay[ni]; bestH = boundaryHeight[ni]; }
+                            }
+                            if (z > 0)
+                            {
+                                int ni = (z - 1) * actualRes + x;
+                                if (boundaryHeight[ni] > float.MinValue && distToPlay[ni] < bestD)
+                                { bestD = distToPlay[ni]; bestH = boundaryHeight[ni]; }
+                            }
+                            if (x > 0 && z > 0)
+                            {
+                                int ni = (z - 1) * actualRes + (x - 1);
+                                if (boundaryHeight[ni] > float.MinValue && distToPlay[ni] < bestD)
+                                { bestD = distToPlay[ni]; bestH = boundaryHeight[ni]; }
+                            }
+                            if (x < actualRes - 1 && z > 0)
+                            {
+                                int ni = (z - 1) * actualRes + (x + 1);
+                                if (boundaryHeight[ni] > float.MinValue && distToPlay[ni] < bestD)
+                                { bestD = distToPlay[ni]; bestH = boundaryHeight[ni]; }
+                            }
+
+                            if (bestH > float.MinValue)
+                                boundaryHeight[idx] = bestH;
+                        }
+                    }
+                    // Backward pass
+                    for (int z = actualRes - 1; z >= 0; z--)
+                    {
+                        for (int x = actualRes - 1; x >= 0; x--)
+                        {
+                            int idx = z * actualRes + x;
+                            if (isPlayArea[idx]) continue;
+
+                            float bestH = boundaryHeight[idx];
+                            float bestD = (bestH > float.MinValue) ? distToPlay[idx] : float.MaxValue;
+
+                            if (x < actualRes - 1)
+                            {
+                                int ni = idx + 1;
+                                if (boundaryHeight[ni] > float.MinValue && distToPlay[ni] < bestD)
+                                { bestD = distToPlay[ni]; bestH = boundaryHeight[ni]; }
+                            }
+                            if (z < actualRes - 1)
+                            {
+                                int ni = (z + 1) * actualRes + x;
+                                if (boundaryHeight[ni] > float.MinValue && distToPlay[ni] < bestD)
+                                { bestD = distToPlay[ni]; bestH = boundaryHeight[ni]; }
+                            }
+                            if (x < actualRes - 1 && z < actualRes - 1)
+                            {
+                                int ni = (z + 1) * actualRes + (x + 1);
+                                if (boundaryHeight[ni] > float.MinValue && distToPlay[ni] < bestD)
+                                { bestD = distToPlay[ni]; bestH = boundaryHeight[ni]; }
+                            }
+                            if (x > 0 && z < actualRes - 1)
+                            {
+                                int ni = (z + 1) * actualRes + (x - 1);
+                                if (boundaryHeight[ni] > float.MinValue && distToPlay[ni] < bestD)
+                                { bestD = distToPlay[ni]; bestH = boundaryHeight[ni]; }
+                            }
+
+                            if (bestH > float.MinValue)
+                                boundaryHeight[idx] = bestH;
                         }
                     }
 
-                    Debug.Log($"[HoleLiteImporter] Heightmap smoothing applied (radius={SmoothRadius}, transition={TransitionCells} cells)");
+                    // Fallback: any cell still at sentinel gets normalizedFlat
+                    for (int i = 0; i < boundaryHeight.Length; i++)
+                        if (boundaryHeight[i] <= float.MinValue)
+                            boundaryHeight[i] = normalizedFlat;
+
+                    // Step 4: Blend — play area keeps raw, non-play ramps from
+                    // boundary height to smoothed DEM
+                    for (int z = 0; z < actualRes; z++)
+                    {
+                        for (int x = 0; x < actualRes; x++)
+                        {
+                            int idx = z * actualRes + x;
+
+                            if (isPlayArea[idx])
+                                continue; // Play area: keep raw DEM untouched
+
+                            float dist = distToPlay[idx];
+                            float bh = boundaryHeight[idx];
+                            float demH = smoothed[z, x]; // target = blurred DEM
+
+                            if (dist < TransitionCells)
+                            {
+                                // Smoothstep ramp: 0 at boundary → 1 at TransitionCells
+                                float t = dist / TransitionCells;
+                                t = t * t * (3f - 2f * t); // smoothstep
+                                heights[z, x] = Mathf.Lerp(bh, demH, t);
+                            }
+                            else
+                            {
+                                // Beyond transition: full smoothed DEM
+                                heights[z, x] = demH;
+                            }
+                        }
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Heightmap smoothing applied " +
+                        $"(radius={SmoothRadius}, transition={TransitionCells} cells, " +
+                        $"boundary-height propagation enabled)");
                 }
             }
 
