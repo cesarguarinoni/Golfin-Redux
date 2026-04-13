@@ -1065,7 +1065,9 @@ namespace Golfin.CourseImport
                 if (layers[i].diffuseTexture == null)
                     Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoNames[i]}");
 
-                string layerPath = $"{dataDir}/TerrainLayer_{albedoNames[i]}.asset";
+                // OB layer (8) reuses T_Rough texture — use distinct asset name to avoid overwriting layer 3
+                string layerAssetName = (i == 8) ? "T_OB_TintedRough" : albedoNames[i];
+                string layerPath = $"{dataDir}/TerrainLayer_{layerAssetName}.asset";
                 var existingLayer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
                 if (existingLayer != null)
                     AssetDatabase.DeleteAsset(layerPath);
