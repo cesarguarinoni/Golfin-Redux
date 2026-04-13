@@ -3896,32 +3896,32 @@ namespace Golfin.CourseImport
             Material mat, float tileSize,
             Golfin.Course.SurfaceType surfaceType)
         {
-            // Extend spine by halfWidth at each end so strip meshes overlap
-            // at junctions, filling the gap between converging branches.
+            // Extend spine past each endpoint so strip meshes overlap at
+            // junctions, filling gaps between converging branches.
+            // Use full path width (2*halfWidth) for generous overlap.
+            float extendDist = halfWidth * 2f;
             var extSpine = new List<ContourPoint>(spine.Length + 2);
             {
-                // Extend start: push first point backward along initial tangent
                 float tx = spine[1].x - spine[0].x;
                 float tz = spine[1].z - spine[0].z;
                 float tl = Mathf.Sqrt(tx * tx + tz * tz);
                 if (tl > 0.001f) { tx /= tl; tz /= tl; }
                 extSpine.Add(new ContourPoint {
-                    x = spine[0].x - tx * halfWidth,
-                    z = spine[0].z - tz * halfWidth
+                    x = spine[0].x - tx * extendDist,
+                    z = spine[0].z - tz * extendDist
                 });
             }
             for (int i = 0; i < spine.Length; i++)
                 extSpine.Add(spine[i]);
             {
-                // Extend end: push last point forward along final tangent
                 int last = spine.Length - 1;
                 float tx = spine[last].x - spine[last - 1].x;
                 float tz = spine[last].z - spine[last - 1].z;
                 float tl = Mathf.Sqrt(tx * tx + tz * tz);
                 if (tl > 0.001f) { tx /= tl; tz /= tl; }
                 extSpine.Add(new ContourPoint {
-                    x = spine[last].x + tx * halfWidth,
-                    z = spine[last].z + tz * halfWidth
+                    x = spine[last].x + tx * extendDist,
+                    z = spine[last].z + tz * extendDist
                 });
             }
             var spineExt = extSpine.ToArray();
