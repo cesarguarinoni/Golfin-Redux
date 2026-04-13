@@ -781,29 +781,42 @@ namespace Golfin.CourseImport
                         forwardDir = toGreen.normalized;
                 }
 
-                // Compute the tee region's extent along the forward axis so
-                // markers spread as far apart as possible within the tee area.
-                float extent = 6f; // fallback if no contour
+                // Compute the tee region's extent along both axes so markers
+                // spread as far apart as possible while staying inside the tee.
+                Vector3 perpDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
+                if (perpDir.sqrMagnitude < 0.001f) perpDir = Vector3.right;
+
+                float fwdExtent = 6f;  // fallback
+                float perpExtent = 6f; // fallback
+                const float edgeMargin = 1f; // 1m inset from tee border
+
                 if (kvp.Key >= 0 && teeRegions != null)
                 {
                     var contour = teeRegions[kvp.Key].contour;
-                    float minProj = float.MaxValue, maxProj = float.MinValue;
+                    float minFwd = float.MaxValue, maxFwd = float.MinValue;
+                    float minPerp = float.MaxValue, maxPerp = float.MinValue;
                     for (int i = 0; i < contour.Length; i++)
                     {
-                        // Project contour point onto forward axis relative to centroid
                         float wx = contour[i].z; // 90° CCW
                         float wz = contour[i].x;
-                        float proj = (wx - centroid.x) * forwardDir.x
-                                   + (wz - centroid.z) * forwardDir.z;
-                        if (proj < minProj) minProj = proj;
-                        if (proj > maxProj) maxProj = proj;
+                        float dx = wx - centroid.x;
+                        float dz = wz - centroid.z;
+                        float fProj = dx * forwardDir.x + dz * forwardDir.z;
+                        float pProj = dx * perpDir.x + dz * perpDir.z;
+                        if (fProj < minFwd) minFwd = fProj;
+                        if (fProj > maxFwd) maxFwd = fProj;
+                        if (pProj < minPerp) minPerp = pProj;
+                        if (pProj > maxPerp) maxPerp = pProj;
                     }
-                    extent = maxProj - minProj;
+                    fwdExtent = maxFwd - minFwd;
+                    perpExtent = maxPerp - minPerp;
                 }
 
-                // Inset from edges so markers don't sit on the boundary
-                float edgeMargin = 1.5f;
-                float usableExtent = Mathf.Max(extent - edgeMargin * 2f, 0f);
+                float usableFwd = Mathf.Max(fwdExtent - edgeMargin * 2f, 0f);
+                // Perpendicular half-extent available for each marker (1.5m default)
+                float maxPerpOffset = Mathf.Min(1.5f,
+                    (perpExtent - edgeMargin * 2f) / 2f);
+                maxPerpOffset = Mathf.Max(maxPerpOffset, 0.5f); // at least 0.5m
 
                 int count = anchorsInGroup.Count;
 
@@ -812,15 +825,13 @@ namespace Golfin.CourseImport
                     // Index 0 = Red (closest to green) → positive forward offset
                     // Index N-1 = Blue (farthest from green) → negative forward offset
                     float t = (count == 1) ? 0f : 1f - (float)g / (count - 1);
-                    // t goes from 1 (index 0, front) to 0 (index N-1, back)
-                    // Map to [-usableExtent/2, +usableExtent/2]
-                    float forwardOffset = (t - 0.5f) * usableExtent;
+                    float forwardOffset = (t - 0.5f) * usableFwd;
 
                     Vector3 pairCenter = centroid + forwardDir * forwardOffset;
 
                     PlaceAnchorMarker(anchorsInGroup[g], terrain, terrainTransform,
                         parent, hasGreenCentroid, greenCentroid, teeRegions,
-                        pairCenter);
+                        pairCenter, maxPerpOffset);
                 }
             }
         }
@@ -829,7 +840,8 @@ namespace Golfin.CourseImport
             Terrain terrain, Transform terrainTransform, Transform parent,
             bool hasGreenCentroid, Vector3 greenCentroid,
             ZoneContourRegion[] teeRegions = null,
-            Vector3? overridePosition = null)
+            Vector3? overridePosition = null,
+            float perpOffset = 1.5f)
         {
             // 90° CCW rotation: (x, z) → (-z, x) → (local.z, local.x)
             Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
@@ -927,10 +939,10 @@ namespace Golfin.CourseImport
                 // Rotation: markers face the green
                 Quaternion rotation = Quaternion.LookRotation(forwardDir, Vector3.up);
 
-                // Place 2 markers: Left and Right, spaced 3m apart (1.5m each side)
+                // Place 2 markers: Left and Right, spaced symmetrically
                 for (int side = 0; side < 2; side++)
                 {
-                    float offset = (side == 0) ? -1.5f : 1.5f;
+                    float offset = (side == 0) ? -perpOffset : perpOffset;
                     string suffix = (side == 0) ? "L" : "R";
 
                     Vector3 markerPos = worldPos + perpDir * offset;
