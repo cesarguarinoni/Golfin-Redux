@@ -276,6 +276,14 @@ namespace Golfin.CourseImport
         public BunkerSize size_m;
         public bool dilated;
         public ContourPoint[] junctions; // Where branches meet — for fill patches
+        public SnappedEndpoints snapped_endpoints;
+    }
+
+    [System.Serializable]
+    public class SnappedEndpoints
+    {
+        public bool start;
+        public bool end;
     }
 
     // tree-zones.json — tree placement mask + regions
