@@ -215,9 +215,11 @@ function ensureCCW(polygon) {
   return polygon;
 }
 
-function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2, gridKey = null) {
-  const gridSrc = gridKey ? zonesData[gridKey] : (zonesData.terrain_grid || zonesData.grid);
-  const grid = Buffer.from(gridSrc, 'base64');
+function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2, gridKey = null, gridBuffer = null) {
+  const grid = gridBuffer || Buffer.from(
+    gridKey ? zonesData[gridKey] : (zonesData.terrain_grid || zonesData.grid),
+    'base64'
+  );
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
   const visited = new Uint8Array(w * h);
@@ -328,9 +330,17 @@ function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, 
  * degenerate contours.
  */
 function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPixels = 15, rdpEpsilon = 1.0, smoothPasses = 2) {
-  // Use the full classification grid (not terrain_grid) — terrain_grid strips
-  // cart paths during terrain generation, so zone 8 pixels only exist in 'grid'.
-  const grid = Buffer.from(zonesData.grid, 'base64');
+  // Merged grid gives OB priority over cart paths, so zone 8 pixels under OB
+  // become zone 9. Use cart_path_mask overlay to recover them.
+  const mergedGrid = Buffer.from(zonesData.grid, 'base64');
+  const cpMaskBuf = zonesData.cart_path_mask
+    ? Buffer.from(zonesData.cart_path_mask, 'base64') : null;
+  const grid = Buffer.from(mergedGrid);  // copy
+  if (cpMaskBuf) {
+    for (let i = 0; i < grid.length; i++) {
+      if (cpMaskBuf[i] && grid[i] !== 8) grid[i] = 8;
+    }
+  }
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
   const tw = terrainMeta.terrain_width_m;
@@ -1642,19 +1652,29 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build tree-zones.json ---
-  // zone 5 = trees — must use 'grid' (terrain_grid merges trees into zone 4)
-  const treeRegions = extractZoneContours(zonesData, terrainMeta, 5, 30, 3.0, 2, 'grid');
-
-  // Build binary mask from zone grid (1 = tree zone, 0 = not)
-  // Must use 'grid' — terrain_grid has no zone 5
-  const treeGridSrc = zonesData.grid;
-  const gridBuf = Buffer.from(treeGridSrc, 'base64');
+  // Trees exist in two places: zone 5 in merged grid, AND trees_mask overlay.
+  // The merged grid gives OB priority (zone 9) over trees (zone 5), so trees
+  // under OB are lost in 'grid'. Use trees_mask to recover them.
   const maskW = zonesData.source_dimensions.width;
   const maskH = zonesData.source_dimensions.height;
+  const mergedBuf = Buffer.from(zonesData.grid, 'base64');
+  const treesMaskBuf = zonesData.trees_mask
+    ? Buffer.from(zonesData.trees_mask, 'base64') : null;
+
+  // Build a synthetic grid where zone 5 = tree (from merged grid OR trees_mask)
+  const treeGrid = Buffer.alloc(maskW * maskH);
   const treeMask = Buffer.alloc(maskW * maskH);
-  for (let i = 0; i < gridBuf.length; i++) {
-    treeMask[i] = gridBuf[i] === 5 ? 1 : 0;
+  for (let i = 0; i < mergedBuf.length; i++) {
+    const isTree = mergedBuf[i] === 5 || (treesMaskBuf && treesMaskBuf[i]);
+    if (isTree) {
+      treeGrid[i] = 5;
+      treeMask[i] = 1;
+    }
   }
+
+  const treeRegions = extractZoneContours(
+    zonesData, terrainMeta, 5, 30, 3.0, 2, null, treeGrid
+  );
 
   const treeZonesOutput = {
     schema_version: '1.0.0',
