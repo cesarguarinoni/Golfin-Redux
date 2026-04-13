@@ -3507,8 +3507,10 @@ namespace Golfin.CourseImport
                             float wx = jp.z, wz = jp.x;
                             float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
 
-                            // Create a small disc mesh (octagon) at the junction
-                            int segments = 8;
+                            // Create a disc mesh at the junction, large enough to fill
+                            // the triangular gaps between converging strip meshes.
+                            float junctionRadius = halfWidth * 2.5f;
+                            int segments = 12;
                             var verts = new Vector3[segments + 1];
                             var tris = new int[segments * 3];
                             var uvs = new Vector2[segments + 1];
@@ -3518,8 +3520,8 @@ namespace Golfin.CourseImport
                             for (int s = 0; s < segments; s++)
                             {
                                 float angle = s * Mathf.PI * 2f / segments;
-                                float dx = Mathf.Cos(angle) * halfWidth;
-                                float dz = Mathf.Sin(angle) * halfWidth;
+                                float dx = Mathf.Cos(angle) * junctionRadius;
+                                float dz = Mathf.Sin(angle) * junctionRadius;
                                 float sh = terrain.SampleHeight(
                                     new Vector3(wx + dx, 0, wz + dz));
                                 verts[s + 1] = new Vector3(dx, sh - th, dz);
