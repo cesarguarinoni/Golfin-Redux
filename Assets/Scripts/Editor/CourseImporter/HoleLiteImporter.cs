@@ -781,19 +781,41 @@ namespace Golfin.CourseImport
                         forwardDir = toGreen.normalized;
                 }
 
-                // Space each tee pair along the forward axis, centered on centroid.
-                // Spacing = 3m between each pair's center (enough for 2 markers + gap).
-                float pairSpacing = 3f;
+                // Compute the tee region's extent along the forward axis so
+                // markers spread as far apart as possible within the tee area.
+                float extent = 6f; // fallback if no contour
+                if (kvp.Key >= 0 && teeRegions != null)
+                {
+                    var contour = teeRegions[kvp.Key].contour;
+                    float minProj = float.MaxValue, maxProj = float.MinValue;
+                    for (int i = 0; i < contour.Length; i++)
+                    {
+                        // Project contour point onto forward axis relative to centroid
+                        float wx = contour[i].z; // 90° CCW
+                        float wz = contour[i].x;
+                        float proj = (wx - centroid.x) * forwardDir.x
+                                   + (wz - centroid.z) * forwardDir.z;
+                        if (proj < minProj) minProj = proj;
+                        if (proj > maxProj) maxProj = proj;
+                    }
+                    extent = maxProj - minProj;
+                }
+
+                // Inset from edges so markers don't sit on the boundary
+                float edgeMargin = 1.5f;
+                float usableExtent = Mathf.Max(extent - edgeMargin * 2f, 0f);
+
                 int count = anchorsInGroup.Count;
 
                 for (int g = 0; g < count; g++)
                 {
-                    // Offset along forward axis: front tees closer to green,
-                    // back tees farther. Centered on the centroid.
-                    float forwardOffset = (g - (count - 1) / 2f) * pairSpacing;
+                    // Index 0 = Red (closest to green) → positive forward offset
+                    // Index N-1 = Blue (farthest from green) → negative forward offset
+                    float t = (count == 1) ? 0f : 1f - (float)g / (count - 1);
+                    // t goes from 1 (index 0, front) to 0 (index N-1, back)
+                    // Map to [-usableExtent/2, +usableExtent/2]
+                    float forwardOffset = (t - 0.5f) * usableExtent;
 
-                    // Positive offset = toward green (front), negative = away (back)
-                    // Since index 0 = front (Red), offset should be toward green
                     Vector3 pairCenter = centroid + forwardDir * forwardOffset;
 
                     PlaceAnchorMarker(anchorsInGroup[g], terrain, terrainTransform,
