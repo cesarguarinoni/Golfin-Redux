@@ -3471,13 +3471,10 @@ namespace Golfin.CourseImport
                         if (region.spine != null && region.spine.Length >= 2)
                         {
                             float halfWidth = (region.width_m > 0 ? region.width_m : 2.5f) / 2f;
-                            bool taperStart = region.snapped_endpoints != null && region.snapped_endpoints.start;
-                            bool taperEnd = region.snapped_endpoints != null && region.snapped_endpoints.end;
                             meshGO = CreateSpineStripMesh(
                                 region.id, region.spine, halfWidth,
                                 terrain, terrainBaseY, cpMat, 4f,
-                                Golfin.Course.SurfaceType.CartPath,
-                                taperStart, taperEnd);
+                                Golfin.Course.SurfaceType.CartPath);
                         }
                         else if (region.contour != null && region.contour.Length >= 3)
                         {
@@ -3897,8 +3894,7 @@ namespace Golfin.CourseImport
             int id, ContourPoint[] spine, float halfWidth,
             Terrain terrain, float terrainBaseY,
             Material mat, float tileSize,
-            Golfin.Course.SurfaceType surfaceType,
-            bool taperStart = false, bool taperEnd = false)
+            Golfin.Course.SurfaceType surfaceType)
         {
             int n = spine.Length;
             if (n < 2) return null;
@@ -3942,25 +3938,11 @@ namespace Golfin.CourseImport
                 float px = tz;
                 float pz = -tx;
 
-                // Taper width at snapped endpoints (narrow to 0 over last 3 points)
-                float localHalfWidth = halfWidth;
-                const int taperPoints = 3;
-                if (taperStart && i < taperPoints)
-                {
-                    float t = (float)i / taperPoints;
-                    localHalfWidth = halfWidth * t;
-                }
-                else if (taperEnd && i > n - 1 - taperPoints)
-                {
-                    float t = (float)(n - 1 - i) / taperPoints;
-                    localHalfWidth = halfWidth * t;
-                }
-
                 // Left and right positions
-                float lx = cx - px * localHalfWidth;
-                float lz = cz - pz * localHalfWidth;
-                float rx = cx + px * localHalfWidth;
-                float rz = cz + pz * localHalfWidth;
+                float lx = cx - px * halfWidth;
+                float lz = cz - pz * halfWidth;
+                float rx = cx + px * halfWidth;
+                float rz = cz + pz * halfWidth;
 
                 // Sample terrain at each position
                 float lh = terrain.SampleHeight(new Vector3(lx, 0, lz));

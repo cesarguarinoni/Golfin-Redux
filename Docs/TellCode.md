@@ -8,45 +8,67 @@
 
 ---
 
-## Current Task — Taper Strip at T-Junction Endpoints
+## Current Task — Revert Taper, Test Clean spineExt Fix
 
-Full spec is in `Tools/UHoleLite/docs/TASK.md` (both pipeline + Unity
-changes are there). Summary:
+The taper approach made both junctions look bad. We need to revert it
+and test whether the `spineExt→spine` fix alone resolves the original
+overshoot problem. The `spineExt` bug was producing wrong tangent
+directions at endpoints, which could have been the real cause of the
+perpendicular overshoot all along.
 
-### Unity side (this file's scope):
+### Changes in HoleLiteImporter.cs — `CreateSpineStripMesh`:
 
-1. **Data model:** Add `snapped_endpoints` to `CartPathRegionData` in
-   `HoleManifestData.cs` (or wherever that class is defined):
+1. **Remove `taperStart` and `taperEnd` parameters** from the method
+   signature. Revert to the original signature:
    ```csharp
-   public SnappedEndpoints snapped_endpoints;
-   [System.Serializable]
-   public class SnappedEndpoints { public bool start; public bool end; }
+   private static GameObject CreateSpineStripMesh(
+       int id, ContourPoint[] spine, float halfWidth,
+       Terrain terrain, float terrainBaseY,
+       Material mat, float tileSize,
+       Golfin.Course.SurfaceType surfaceType)
    ```
 
-2. **Taper in CreateSpineStripMesh:** Add `taperStart`/`taperEnd`
-   params. In the vertex loop, taper `halfWidth` to 0 over last 3
-   points at flagged endpoints. Use `localHalfWidth` for lx/lz/rx/rz.
+2. **Remove all `localHalfWidth` logic.** Delete the `taperPoints`
+   block and any `localHalfWidth` variable. Use `halfWidth` directly
+   for lx/lz/rx/rz calculations (which should already be the case
+   after removing the taper code).
 
-3. **Caller:** Pass `region.snapped_endpoints.start/end` when calling
-   `CreateSpineStripMesh` from `CreateFlatZoneMeshes`.
+3. **Update the caller** in `CreateFlatZoneMeshes` — remove the
+   `taperStart`/`taperEnd` arguments from the `CreateSpineStripMesh`
+   call. Just pass the standard arguments.
 
-See TASK.md for exact code snippets.
-
-### Pipeline side:
-Revert the pullback block and add `snapped_endpoints` flags to
-cart-paths.json. See TASK.md for details.
+4. **Keep the `spineExt→spine` fix.** Do NOT revert that. The tangent
+   calculations should reference `spine[...]`, not `spineExt[...]`.
 
 ### Do NOT change:
-- `BuildSpinePolygon` (splatmap painting stays full width)
-- Terrain depression logic
-- Chain merging / junction snapping
+- The `snapped_endpoints` data model (harmless, leave it for future use)
+- `BuildSpinePolygon`
+- Pipeline code (`export-hole.mjs`)
+- Any other mesh generation code
+
+### After Reverting
+
+```
+cd Tools/UHoleLite
+node scripts/export-hole.mjs lomond-country-club 18
+```
+
+Then Unity: GOLFIN > Import Hole (Lite) > Hole 18
+
+Check BOTH junctions:
+- CP#4→CP#3 (was fine originally, broken by taper)
+- CP#4→CP#2 (was overshooting originally)
+
+If CP#4→CP#2 still overshoots after the spineExt fix, report exactly
+what it looks like and we'll take a different approach.
 
 ---
 
 ## Completed Tasks
-✅ 2026-04-13 — Taper strip at T-junction endpoints (replaces pullback)
+✅ 2026-04-13 — Revert taper, test clean spineExt→spine fix alone
+✅ 2026-04-13 — Taper strip at T-junction endpoints (REVERTING — made both junctions worse)
 ✅ 2026-04-13 — spineExt→spine fix in CreateSpineStripMesh
-✅ 2026-04-13 — Node.js residual ramp (60-cell smoothstep) + Unity-side boundary height propagation
+✅ 2026-04-13 — Node.js residual ramp + boundary height propagation
 ✅ 2026-04-13 — Cart path depression: 3-strategy fix
 ✅ 2026-04-13 — Natural OB↔Rough transition
 ✅ 2026-04-13 — "Smooth OB" button in UHole Lite
