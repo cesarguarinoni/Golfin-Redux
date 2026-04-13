@@ -122,7 +122,7 @@ namespace Golfin.CourseImport
                 terrainGO.transform.SetParent(holeRoot.transform);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Applying texture...", 0.4f);
-                ApplySplatmap(terrainData, manifest, exportPath, dataDir, holeId, projectRoot);
+                ApplySplatmap(terrainData, manifest, exportPath, dataDir, holeId, projectRoot, terrainGO);
 
                 // Read terrain holes once, pass to both zone methods, write once at end
                 int holesRes = terrainData.holesResolution;
@@ -782,7 +782,8 @@ namespace Golfin.CourseImport
         // ─── Splatmap Pipeline ─────────────────────────────────────────────
 
         private static void ApplySplatmap(TerrainData terrainData, HoleManifest manifest,
-            string exportPath, string dataDir, string holeId, string projectRoot)
+            string exportPath, string dataDir, string holeId, string projectRoot,
+            GameObject terrainGO = null)
         {
             // --- 1. Parse zone grid ---
             string zonesPath = Path.Combine(exportPath, "zones.json");
@@ -961,6 +962,133 @@ namespace Golfin.CourseImport
             }
 
             // --- 5. (Zone boundary smoothing now happens at source in classify-zones.mjs) ---
+
+            // --- 5b. Paint cart path texture on terrain at road edges ---
+            if (terrainGO != null)
+            {
+                string cpEdgePath = Path.Combine(exportPath, "cart-paths.json");
+                if (File.Exists(cpEdgePath))
+                {
+                    var cpData = JsonUtility.FromJson<CartPathsFile>(
+                        File.ReadAllText(cpEdgePath));
+                    if (cpData.cart_paths != null)
+                    {
+                        // Build a mask of cart path cells at alphamap resolution
+                        bool[,] cpMask = new bool[alphaRes, alphaRes];
+                        Vector3 terrainPos2 = terrainGO.transform.position;
+                        Vector3 terrainSize2 = terrainData.size;
+
+                        foreach (var cp in cpData.cart_paths)
+                        {
+                            if (cp.spine != null && cp.spine.Length >= 2)
+                            {
+                                float hw = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
+                                var poly = BuildSpinePolygon(cp.spine, hw);
+                                if (poly != null)
+                                {
+                                    // Mark cells inside the full-width polygon
+                                    float minX2 = float.MaxValue, maxX2 = float.MinValue;
+                                    float minZ2 = float.MaxValue, maxZ2 = float.MinValue;
+                                    foreach (var v in poly)
+                                    {
+                                        if (v.x < minX2) minX2 = v.x;
+                                        if (v.x > maxX2) maxX2 = v.x;
+                                        if (v.y < minZ2) minZ2 = v.y;
+                                        if (v.y > maxZ2) maxZ2 = v.y;
+                                    }
+
+                                    int aMinX = Mathf.Clamp(Mathf.FloorToInt(
+                                        (minX2 - terrainPos2.x) / terrainSize2.x
+                                        * (alphaRes - 1)), 0, alphaRes - 1);
+                                    int aMaxX = Mathf.Clamp(Mathf.CeilToInt(
+                                        (maxX2 - terrainPos2.x) / terrainSize2.x
+                                        * (alphaRes - 1)), 0, alphaRes - 1);
+                                    int aMinZ = Mathf.Clamp(Mathf.FloorToInt(
+                                        (minZ2 - terrainPos2.z) / terrainSize2.z
+                                        * (alphaRes - 1)), 0, alphaRes - 1);
+                                    int aMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+                                        (maxZ2 - terrainPos2.z) / terrainSize2.z
+                                        * (alphaRes - 1)), 0, alphaRes - 1);
+
+                                    for (int ay = aMinZ; ay <= aMaxZ; ay++)
+                                    {
+                                        for (int ax = aMinX; ax <= aMaxX; ax++)
+                                        {
+                                            float cwx = (float)ax / (alphaRes - 1)
+                                                * terrainSize2.x + terrainPos2.x;
+                                            float cwz = (float)ay / (alphaRes - 1)
+                                                * terrainSize2.z + terrainPos2.z;
+                                            if (IsInsideContour(cwx, cwz, poly))
+                                                cpMask[ay, ax] = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Find edge pixels: cpMask=true but near boundary
+                        // Paint those with cart path texture (layer 6)
+                        const int edgeWidth = 2; // pixels
+
+                        // Distance from outside edge (inside the mask)
+                        float[,] cpEdgeDist = new float[alphaRes, alphaRes];
+                        for (int ay = 0; ay < alphaRes; ay++)
+                            for (int ax = 0; ax < alphaRes; ax++)
+                                cpEdgeDist[ay, ax] = cpMask[ay, ax] ? 99999f : 0f;
+
+                        // Chamfer forward
+                        for (int ay = 0; ay < alphaRes; ay++)
+                            for (int ax = 0; ax < alphaRes; ax++)
+                            {
+                                if (ax > 0) cpEdgeDist[ay, ax] = Mathf.Min(
+                                    cpEdgeDist[ay, ax], cpEdgeDist[ay, ax - 1] + 1f);
+                                if (ay > 0) cpEdgeDist[ay, ax] = Mathf.Min(
+                                    cpEdgeDist[ay, ax], cpEdgeDist[ay - 1, ax] + 1f);
+                            }
+                        // Chamfer backward
+                        for (int ay = alphaRes - 1; ay >= 0; ay--)
+                            for (int ax = alphaRes - 1; ax >= 0; ax--)
+                            {
+                                if (ax < alphaRes - 1) cpEdgeDist[ay, ax] = Mathf.Min(
+                                    cpEdgeDist[ay, ax], cpEdgeDist[ay, ax + 1] + 1f);
+                                if (ay < alphaRes - 1) cpEdgeDist[ay, ax] = Mathf.Min(
+                                    cpEdgeDist[ay, ax], cpEdgeDist[ay + 1, ax] + 1f);
+                            }
+
+                        // Paint edge strip: full cart path texture at edge, blending inward
+                        int cpEdgePainted = 0;
+                        for (int ay = 0; ay < alphaRes; ay++)
+                        {
+                            for (int ax = 0; ax < alphaRes; ax++)
+                            {
+                                if (!cpMask[ay, ax]) continue;
+                                float dist = cpEdgeDist[ay, ax];
+                                if (dist > edgeWidth) continue; // too far inside
+
+                                // Blend: 100% cart path at dist=0 (edge), 50% at dist=edgeWidth
+                                float blend = 1f - (dist / edgeWidth) * 0.5f;
+
+                                // Find which layer currently has weight here
+                                int currentLayer = -1;
+                                for (int l = 0; l < layerCount; l++)
+                                {
+                                    if (alphamap[ay, ax, l] > 0.5f)
+                                    { currentLayer = l; break; }
+                                }
+                                if (currentLayer < 0) currentLayer = 3; // rough fallback
+
+                                // Set blend
+                                for (int l = 0; l < layerCount; l++)
+                                    alphamap[ay, ax, l] = 0f;
+                                alphamap[ay, ax, 6] = blend;         // cart path texture
+                                alphamap[ay, ax, currentLayer] = 1f - blend; // existing texture
+                                cpEdgePainted++;
+                            }
+                        }
+                        Debug.Log($"[HoleLiteImporter] Cart path edge: painted {cpEdgePainted} splatmap cells");
+                    }
+                }
+            }
 
             // --- 6. Create TerrainLayers and apply ---
             string texDir = "Assets/Courses/Textures_2025(JPG)";
@@ -2632,6 +2760,9 @@ namespace Golfin.CourseImport
                                 hRes, terrainPos, terrainSize);
             }
 
+            // Cart path depression — separate array for gradient ramp
+            bool[,] cartDepress = new bool[hRes, hRes];
+
             // Cart path depression — use spine geometry when available
             string cpPath = Path.Combine(exportPath, "cart-paths.json");
             if (File.Exists(cpPath))
@@ -2645,27 +2776,27 @@ namespace Golfin.CourseImport
                         if (cp.spine != null && cp.spine.Length >= 2)
                         {
                             // Build polygon from spine left+right edges,
-                            // inset 0.10m so depression hides under road mesh
+                            // inset 0.50m so depression starts well inside road edge
                             float halfWidth = (cp.width_m > 0
-                                ? cp.width_m : 2.5f) / 2f - 0.10f;
-                            if (halfWidth < 0.1f) halfWidth = 0.1f;
+                                ? cp.width_m : 2.5f) / 2f - 0.50f;
+                            if (halfWidth < 0.3f) halfWidth = 0.3f;
                             var spinePoly = BuildSpinePolygon(
                                 cp.spine, halfWidth);
                             if (spinePoly != null)
-                                MarkWorldContourCells(spinePoly, depress,
+                                MarkWorldContourCells(spinePoly, cartDepress,
                                     hRes, terrainPos, terrainSize);
                         }
                         else if (cp.contour != null && cp.contour.Length >= 3)
                         {
                             // Fallback to contour if no spine
-                            MarkContourCells(cp.contour, depress,
+                            MarkContourCells(cp.contour, cartDepress,
                                 hRes, terrainPos, terrainSize);
                         }
                     }
                 }
             }
 
-            // Apply depression
+            // Apply depression (fairway/tee — flat drop)
             int depressedCount = 0;
             for (int hz = 0; hz < hRes; hz++)
                 for (int hx = 0; hx < hRes; hx++)
@@ -2676,9 +2807,66 @@ namespace Golfin.CourseImport
                         depressedCount++;
                     }
 
+            // --- Cart path cells: distance-based gradual slope ---
+            // Step 1: Distance transform on cartDepress (chamfer)
+            float[,] cartDist = new float[hRes, hRes];
+            for (int hz = 0; hz < hRes; hz++)
+                for (int hx = 0; hx < hRes; hx++)
+                    cartDist[hz, hx] = cartDepress[hz, hx] ? 0f : 99999f;
+
+            // Forward pass
+            for (int hz = 0; hz < hRes; hz++)
+                for (int hx = 0; hx < hRes; hx++)
+                {
+                    if (hx > 0) cartDist[hz, hx] = Mathf.Min(
+                        cartDist[hz, hx], cartDist[hz, hx - 1] + 1f);
+                    if (hz > 0) cartDist[hz, hx] = Mathf.Min(
+                        cartDist[hz, hx], cartDist[hz - 1, hx] + 1f);
+                }
+            // Backward pass
+            for (int hz = hRes - 1; hz >= 0; hz--)
+                for (int hx = hRes - 1; hx >= 0; hx--)
+                {
+                    if (hx < hRes - 1) cartDist[hz, hx] = Mathf.Min(
+                        cartDist[hz, hx], cartDist[hz, hx + 1] + 1f);
+                    if (hz < hRes - 1) cartDist[hz, hx] = Mathf.Min(
+                        cartDist[hz, hx], cartDist[hz + 1, hx] + 1f);
+                }
+
+            // Step 2: Find max distance (= center of widest part)
+            float maxCartDist = 0f;
+            for (int hz = 0; hz < hRes; hz++)
+                for (int hx = 0; hx < hRes; hx++)
+                    if (cartDepress[hz, hx] && cartDist[hz, hx] > maxCartDist)
+                        maxCartDist = cartDist[hz, hx];
+
+            if (maxCartDist < 1f) maxCartDist = 1f; // safety
+
+            // Step 3: Apply smoothstep ramp — edge gets 0% drop, center gets 100%
+            int cartDepressedCount = 0;
+            for (int hz = 0; hz < hRes; hz++)
+            {
+                for (int hx = 0; hx < hRes; hx++)
+                {
+                    if (!cartDepress[hz, hx]) continue;
+
+                    float t = cartDist[hz, hx] / maxCartDist; // 0 at edge → 1 at center
+                    t = Mathf.Clamp01(t);
+                    t = t * t * (3f - 2f * t); // smoothstep
+
+                    float cellDrop = dropNormalized * t;
+                    heights[hz, hx] = Mathf.Max(0f,
+                        heights[hz, hx] - cellDrop);
+                    cartDepressedCount++;
+                }
+            }
+
+            depressedCount += cartDepressedCount;
+
             terrainData.SetHeights(0, 0, heights);
             Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount}" +
-                      $" cells lowered by {OverlayDepressionMeters:F2}m");
+                      $" cells lowered by {OverlayDepressionMeters:F2}m" +
+                      $" (cart path gradient: {cartDepressedCount} cells)");
         }
 
         /// <summary>
