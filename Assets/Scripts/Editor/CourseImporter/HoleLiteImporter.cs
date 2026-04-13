@@ -3017,10 +3017,8 @@ namespace Golfin.CourseImport
                                 hRes, terrainPos, terrainSize);
             }
 
-            // Cart path depression — separate array for gradient ramp
-            bool[,] cartDepress = new bool[hRes, hRes];
-
             // Cart path depression — use spine geometry when available
+            // Same flat depression as fairways/tees (marks into `depress` array)
             string cpPath = Path.Combine(exportPath, "cart-paths.json");
             if (File.Exists(cpPath))
             {
@@ -3032,28 +3030,26 @@ namespace Golfin.CourseImport
                     {
                         if (cp.spine != null && cp.spine.Length >= 2)
                         {
-                            // Build polygon from spine left+right edges,
-                            // inset 0.50m so depression starts well inside road edge
+                            // Full mesh width + 0.30m margin beyond mesh edges
                             float halfWidth = (cp.width_m > 0
-                                ? cp.width_m : 2.5f) / 2f - 0.50f;
-                            if (halfWidth < 0.3f) halfWidth = 0.3f;
+                                ? cp.width_m : 2.5f) / 2f + 0.30f;
                             var spinePoly = BuildSpinePolygon(
                                 cp.spine, halfWidth);
                             if (spinePoly != null)
-                                MarkWorldContourCells(spinePoly, cartDepress,
+                                MarkWorldContourCells(spinePoly, depress,
                                     hRes, terrainPos, terrainSize);
                         }
                         else if (cp.contour != null && cp.contour.Length >= 3)
                         {
                             // Fallback to contour if no spine
-                            MarkContourCells(cp.contour, cartDepress,
+                            MarkContourCells(cp.contour, depress,
                                 hRes, terrainPos, terrainSize);
                         }
                     }
                 }
             }
 
-            // Apply depression (fairway/tee — flat drop)
+            // Apply depression (fairway/tee/cart path — flat uniform drop)
             int depressedCount = 0;
             for (int hz = 0; hz < hRes; hz++)
                 for (int hx = 0; hx < hRes; hx++)
@@ -3064,66 +3060,9 @@ namespace Golfin.CourseImport
                         depressedCount++;
                     }
 
-            // --- Cart path cells: distance-based gradual slope ---
-            // Step 1: Distance transform on cartDepress (chamfer)
-            float[,] cartDist = new float[hRes, hRes];
-            for (int hz = 0; hz < hRes; hz++)
-                for (int hx = 0; hx < hRes; hx++)
-                    cartDist[hz, hx] = cartDepress[hz, hx] ? 0f : 99999f;
-
-            // Forward pass
-            for (int hz = 0; hz < hRes; hz++)
-                for (int hx = 0; hx < hRes; hx++)
-                {
-                    if (hx > 0) cartDist[hz, hx] = Mathf.Min(
-                        cartDist[hz, hx], cartDist[hz, hx - 1] + 1f);
-                    if (hz > 0) cartDist[hz, hx] = Mathf.Min(
-                        cartDist[hz, hx], cartDist[hz - 1, hx] + 1f);
-                }
-            // Backward pass
-            for (int hz = hRes - 1; hz >= 0; hz--)
-                for (int hx = hRes - 1; hx >= 0; hx--)
-                {
-                    if (hx < hRes - 1) cartDist[hz, hx] = Mathf.Min(
-                        cartDist[hz, hx], cartDist[hz, hx + 1] + 1f);
-                    if (hz < hRes - 1) cartDist[hz, hx] = Mathf.Min(
-                        cartDist[hz, hx], cartDist[hz + 1, hx] + 1f);
-                }
-
-            // Step 2: Find max distance (= center of widest part)
-            float maxCartDist = 0f;
-            for (int hz = 0; hz < hRes; hz++)
-                for (int hx = 0; hx < hRes; hx++)
-                    if (cartDepress[hz, hx] && cartDist[hz, hx] > maxCartDist)
-                        maxCartDist = cartDist[hz, hx];
-
-            if (maxCartDist < 1f) maxCartDist = 1f; // safety
-
-            // Step 3: Apply smoothstep ramp — edge gets 0% drop, center gets 100%
-            int cartDepressedCount = 0;
-            for (int hz = 0; hz < hRes; hz++)
-            {
-                for (int hx = 0; hx < hRes; hx++)
-                {
-                    if (!cartDepress[hz, hx]) continue;
-
-                    float t = cartDist[hz, hx] / maxCartDist; // 0 at edge → 1 at center
-                    t = Mathf.Clamp01(t);
-                    t = t * t * (3f - 2f * t); // smoothstep
-
-                    float cellDrop = dropNormalized * t;
-                    heights[hz, hx] = Mathf.Max(0f,
-                        heights[hz, hx] - cellDrop);
-                    cartDepressedCount++;
-                }
-            }
-
-            depressedCount += cartDepressedCount;
-
             terrainData.SetHeights(0, 0, heights);
             Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount}" +
-                      $" cells lowered by {OverlayDepressionMeters:F2}m" +
-                      $" (cart path gradient: {cartDepressedCount} cells)");
+                      $" cells lowered by {OverlayDepressionMeters:F2}m");
         }
 
         /// <summary>
