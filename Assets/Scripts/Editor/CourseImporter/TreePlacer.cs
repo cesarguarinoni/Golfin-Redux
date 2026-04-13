@@ -832,7 +832,7 @@ namespace Golfin.CourseImport
             Debug.Log($"[TreePlacer] Preset loaded: {Path.GetFileName(loadPath)}");
         }
 
-        [MenuItem("Trees/Import Trees (Current Hole)")]
+        [MenuItem("Trees/Import Trees Current Hole")]
         private static void ImportTreesMenuItem()
         {
             var terrain = Terrain.activeTerrain;
@@ -845,19 +845,22 @@ namespace Golfin.CourseImport
             string sceneName = UnityEditor.SceneManagement.EditorSceneManager
                 .GetActiveScene().name;
             int holeNumber = -1;
-            if (sceneName.StartsWith("Hole_") && sceneName.Length >= 7)
-                int.TryParse(sceneName.Substring(5, 2), out holeNumber);
+            bool isGeo = sceneName.EndsWith("_Geo");
+            string baseName = isGeo ? sceneName.Replace("_Geo", "") : sceneName;
+            if (baseName.StartsWith("Hole_") && baseName.Length >= 7)
+                int.TryParse(baseName.Substring(5, 2), out holeNumber);
 
             if (holeNumber < 1 || holeNumber > 18)
             {
                 Debug.LogError($"[TreePlacer] Cannot detect hole number " +
-                    $"from scene '{sceneName}' (expected Hole_XX)");
+                    $"from scene '{sceneName}' (expected Hole_XX or Hole_XX_Geo)");
                 return;
             }
 
+            string toolFolder = isGeo ? "UHoleGeo" : "UHoleLite";
             string exportPath = Path.Combine(
                 Application.dataPath, "..",
-                "Tools/UHoleLite/output/lomond-country-club/export",
+                $"Tools/{toolFolder}/output/lomond-country-club/export",
                 $"hole-{holeNumber:D2}");
 
             if (!Directory.Exists(exportPath))
@@ -892,8 +895,8 @@ namespace Golfin.CourseImport
             Debug.Log($"[TreePlacer] Scene saved: {scene.path}");
         }
 
-        [MenuItem("Trees/Import All Trees (All Holes)")]
-        private static void ImportAllTreesMenuItem()
+        [MenuItem("Trees/Import All Trees Lite")]
+        private static void ImportAllTreesLiteMenuItem()
         {
             // Save current scene before switching
             var currentScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
@@ -966,7 +969,233 @@ namespace Golfin.CourseImport
                 imported++;
             }
 
-            Debug.Log($"[TreePlacer] All holes done: {imported} imported, {skipped} skipped");
+            Debug.Log($"[TreePlacer] Lite holes done: {imported} imported, {skipped} skipped");
+        }
+
+        [MenuItem("Trees/Import All Trees Geo")]
+        private static void ImportAllTreesGeoMenuItem()
+        {
+            var currentScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            if (currentScene.isDirty)
+                UnityEditor.SceneManagement.EditorSceneManager.SaveScene(currentScene);
+
+            string scenesDir = "Assets/Golf/Courses/lomond-country-club/Generated";
+            string exportBase = Path.Combine(
+                Application.dataPath, "..",
+                "Tools/UHoleGeo/output/lomond-country-club/export");
+
+            if (TreePalette.Count == 0) ScanPrefabs();
+
+            int imported = 0;
+            int skipped = 0;
+
+            for (int h = 1; h <= 18; h++)
+            {
+                string scenePath = $"{scenesDir}/Hole_{h:D2}_Geo.unity";
+                if (!File.Exists(Path.Combine(Application.dataPath, "..", scenePath)))
+                {
+                    Debug.Log($"[TreePlacer] Geo Hole {h}: scene not found, skipping");
+                    skipped++;
+                    continue;
+                }
+
+                string exportPath = Path.Combine(exportBase, $"hole-{h:D2}");
+                string tzPath = Path.Combine(exportPath, "tree-zones.json");
+                if (!File.Exists(tzPath))
+                {
+                    Debug.Log($"[TreePlacer] Geo Hole {h}: no tree-zones.json, skipping");
+                    skipped++;
+                    continue;
+                }
+
+                var scene = UnityEditor.SceneManagement.EditorSceneManager
+                    .OpenScene(scenePath,
+                        UnityEditor.SceneManagement.OpenSceneMode.Single);
+
+                var terrain = Terrain.activeTerrain;
+                if (terrain == null)
+                {
+                    Debug.LogWarning($"[TreePlacer] Geo Hole {h}: no active terrain");
+                    skipped++;
+                    continue;
+                }
+
+                terrain.terrainData.SetTreeInstances(new TreeInstance[0], false);
+                CleanupStandaloneTrees();
+
+                Transform parentRoot = null;
+                foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+                {
+                    if (go.name == "HoleRoot" && go.scene.isLoaded)
+                    {
+                        parentRoot = go.transform;
+                        break;
+                    }
+                }
+
+                float terrainBaseY = terrain.transform.position.y;
+                string zonesPath = Path.Combine(exportPath, "zones.json");
+                PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot);
+
+                UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+                imported++;
+            }
+
+            Debug.Log($"[TreePlacer] Geo holes done: {imported} imported, {skipped} skipped");
+        }
+
+        [MenuItem("Trees/Import All Trees Lite Flat")]
+        private static void ImportAllTreesLiteFlatMenuItem()
+        {
+            var currentScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            if (currentScene.isDirty)
+                UnityEditor.SceneManagement.EditorSceneManager.SaveScene(currentScene);
+
+            string scenesDir = "Assets/Golf/Courses/lomond-country-club/Generated";
+            string exportBase = Path.Combine(
+                Application.dataPath, "..",
+                "Tools/UHoleLite/output/lomond-country-club/export");
+
+            if (TreePalette.Count == 0) ScanPrefabs();
+
+            int imported = 0;
+            int skipped = 0;
+
+            for (int h = 1; h <= 18; h++)
+            {
+                string scenePath = $"{scenesDir}/Hole_{h:D2}_Flat.unity";
+                if (!File.Exists(Path.Combine(Application.dataPath, "..",
+                    scenePath)))
+                {
+                    Debug.Log($"[TreePlacer] Lite Flat Hole {h}: scene not found, skipping");
+                    skipped++;
+                    continue;
+                }
+
+                string exportPath = Path.Combine(exportBase, $"hole-{h:D2}-flat");
+                string tzPath = Path.Combine(exportPath, "tree-zones.json");
+                if (!File.Exists(tzPath))
+                {
+                    Debug.Log($"[TreePlacer] Lite Flat Hole {h}: no tree-zones.json, skipping");
+                    skipped++;
+                    continue;
+                }
+
+                var scene = UnityEditor.SceneManagement.EditorSceneManager
+                    .OpenScene(scenePath,
+                        UnityEditor.SceneManagement.OpenSceneMode.Single);
+
+                var terrain = Terrain.activeTerrain;
+                if (terrain == null)
+                {
+                    Debug.LogWarning($"[TreePlacer] Lite Flat Hole {h}: no active terrain");
+                    skipped++;
+                    continue;
+                }
+
+                terrain.terrainData.SetTreeInstances(new TreeInstance[0], false);
+                CleanupStandaloneTrees();
+
+                Transform parentRoot = null;
+                foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+                {
+                    if (go.name == "HoleRoot" && go.scene.isLoaded)
+                    {
+                        parentRoot = go.transform;
+                        break;
+                    }
+                }
+
+                float terrainBaseY = terrain.transform.position.y;
+                string zonesPath = Path.Combine(exportPath, "zones.json");
+                PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot);
+
+                UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+                imported++;
+            }
+
+            Debug.Log($"[TreePlacer] Lite Flat holes done: {imported} imported, {skipped} skipped");
+        }
+
+        [MenuItem("Trees/Import All Trees Geo Flat")]
+        private static void ImportAllTreesGeoFlatMenuItem()
+        {
+            var currentScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            if (currentScene.isDirty)
+                UnityEditor.SceneManagement.EditorSceneManager.SaveScene(currentScene);
+
+            string scenesDir = "Assets/Golf/Courses/lomond-country-club/Generated";
+            string exportBase = Path.Combine(
+                Application.dataPath, "..",
+                "Tools/UHoleGeo/output/lomond-country-club/export");
+
+            if (TreePalette.Count == 0) ScanPrefabs();
+
+            int imported = 0;
+            int skipped = 0;
+
+            for (int h = 1; h <= 18; h++)
+            {
+                string scenePath = $"{scenesDir}/Hole_{h:D2}_Geo_Flat.unity";
+                if (!File.Exists(Path.Combine(Application.dataPath, "..", scenePath)))
+                {
+                    Debug.Log($"[TreePlacer] Geo Flat Hole {h}: scene not found, skipping");
+                    skipped++;
+                    continue;
+                }
+
+                string exportPath = Path.Combine(exportBase, $"hole-{h:D2}-flat");
+                string tzPath = Path.Combine(exportPath, "tree-zones.json");
+                if (!File.Exists(tzPath))
+                {
+                    Debug.Log($"[TreePlacer] Geo Flat Hole {h}: no tree-zones.json, skipping");
+                    skipped++;
+                    continue;
+                }
+
+                var scene = UnityEditor.SceneManagement.EditorSceneManager
+                    .OpenScene(scenePath,
+                        UnityEditor.SceneManagement.OpenSceneMode.Single);
+
+                var terrain = Terrain.activeTerrain;
+                if (terrain == null)
+                {
+                    Debug.LogWarning($"[TreePlacer] Geo Flat Hole {h}: no active terrain");
+                    skipped++;
+                    continue;
+                }
+
+                terrain.terrainData.SetTreeInstances(new TreeInstance[0], false);
+                CleanupStandaloneTrees();
+
+                Transform parentRoot = null;
+                foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+                {
+                    if (go.name == "HoleRoot" && go.scene.isLoaded)
+                    {
+                        parentRoot = go.transform;
+                        break;
+                    }
+                }
+
+                float terrainBaseY = terrain.transform.position.y;
+                string zonesPath = Path.Combine(exportPath, "zones.json");
+                PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot);
+
+                UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+                imported++;
+            }
+
+            Debug.Log($"[TreePlacer] Geo Flat holes done: {imported} imported, {skipped} skipped");
+        }
+
+        [MenuItem("Trees/Import All Trees")]
+        private static void ImportAllTreesMenuItem()
+        {
+            ImportAllTreesLiteMenuItem();
+            ImportAllTreesGeoMenuItem();
+            ImportAllTreesLiteFlatMenuItem();
+            ImportAllTreesGeoFlatMenuItem();
         }
     }
 

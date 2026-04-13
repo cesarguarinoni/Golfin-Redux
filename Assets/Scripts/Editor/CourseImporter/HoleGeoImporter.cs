@@ -11,7 +11,7 @@ using andywiecko.BurstTriangulator;
 
 namespace Golfin.CourseImport
 {
-    public static class HoleLiteImporter
+    public static class HoleGeoImporter
     {
         // ─── Tunable Shore Slope Parameters ─────────────────────────
         /// <summary>Radius in heightmap cells around water to apply slope. At 1025 res, ~0.5m/cell.</summary>
@@ -30,82 +30,82 @@ namespace Golfin.CourseImport
         private static readonly System.Collections.Generic.HashSet<int> PlayZones =
             new System.Collections.Generic.HashSet<int> { 1, 2, 6, 7, 8, 10 };
 
-        [MenuItem("Import/Lite/Import Hole 01 Lite")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
-        [MenuItem("Import/Lite/Import Hole 02 Lite")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
-        [MenuItem("Import/Lite/Import Hole 03 Lite")] public static void Lite03() { ImportLiteHole("lomond-country-club", 3); }
-        [MenuItem("Import/Lite/Import Hole 04 Lite")] public static void Lite04() { ImportLiteHole("lomond-country-club", 4); }
-        [MenuItem("Import/Lite/Import Hole 05 Lite")] public static void Lite05() { ImportLiteHole("lomond-country-club", 5); }
-        [MenuItem("Import/Lite/Import Hole 06 Lite")] public static void Lite06() { ImportLiteHole("lomond-country-club", 6); }
-        [MenuItem("Import/Lite/Import Hole 07 Lite")] public static void Lite07() { ImportLiteHole("lomond-country-club", 7); }
-        [MenuItem("Import/Lite/Import Hole 08 Lite")] public static void Lite08() { ImportLiteHole("lomond-country-club", 8); }
-        [MenuItem("Import/Lite/Import Hole 09 Lite")] public static void Lite09() { ImportLiteHole("lomond-country-club", 9); }
-        [MenuItem("Import/Lite/Import Hole 10 Lite")] public static void Lite10() { ImportLiteHole("lomond-country-club", 10); }
-        [MenuItem("Import/Lite/Import Hole 11 Lite")] public static void Lite11() { ImportLiteHole("lomond-country-club", 11); }
-        [MenuItem("Import/Lite/Import Hole 12 Lite")] public static void Lite12() { ImportLiteHole("lomond-country-club", 12); }
-        [MenuItem("Import/Lite/Import Hole 13 Lite")] public static void Lite13() { ImportLiteHole("lomond-country-club", 13); }
-        [MenuItem("Import/Lite/Import Hole 14 Lite")] public static void Lite14() { ImportLiteHole("lomond-country-club", 14); }
-        [MenuItem("Import/Lite/Import Hole 15 Lite")] public static void Lite15() { ImportLiteHole("lomond-country-club", 15); }
-        [MenuItem("Import/Lite/Import Hole 16 Lite")] public static void Lite16() { ImportLiteHole("lomond-country-club", 16); }
-        [MenuItem("Import/Lite/Import Hole 17 Lite")] public static void Lite17() { ImportLiteHole("lomond-country-club", 17); }
-        [MenuItem("Import/Lite/Import Hole 18 Lite")] public static void Lite18() { ImportLiteHole("lomond-country-club", 18); }
+        [MenuItem("Import/Geo/Import Hole 01 Geo")] public static void Geo01() { ImportGeoHole("lomond-country-club", 1); }
+        [MenuItem("Import/Geo/Import Hole 02 Geo")] public static void Geo02() { ImportGeoHole("lomond-country-club", 2); }
+        [MenuItem("Import/Geo/Import Hole 03 Geo")] public static void Geo03() { ImportGeoHole("lomond-country-club", 3); }
+        [MenuItem("Import/Geo/Import Hole 04 Geo")] public static void Geo04() { ImportGeoHole("lomond-country-club", 4); }
+        [MenuItem("Import/Geo/Import Hole 05 Geo")] public static void Geo05() { ImportGeoHole("lomond-country-club", 5); }
+        [MenuItem("Import/Geo/Import Hole 06 Geo")] public static void Geo06() { ImportGeoHole("lomond-country-club", 6); }
+        [MenuItem("Import/Geo/Import Hole 07 Geo")] public static void Geo07() { ImportGeoHole("lomond-country-club", 7); }
+        [MenuItem("Import/Geo/Import Hole 08 Geo")] public static void Geo08() { ImportGeoHole("lomond-country-club", 8); }
+        [MenuItem("Import/Geo/Import Hole 09 Geo")] public static void Geo09() { ImportGeoHole("lomond-country-club", 9); }
+        [MenuItem("Import/Geo/Import Hole 10 Geo")] public static void Geo10() { ImportGeoHole("lomond-country-club", 10); }
+        [MenuItem("Import/Geo/Import Hole 11 Geo")] public static void Geo11() { ImportGeoHole("lomond-country-club", 11); }
+        [MenuItem("Import/Geo/Import Hole 12 Geo")] public static void Geo12() { ImportGeoHole("lomond-country-club", 12); }
+        [MenuItem("Import/Geo/Import Hole 13 Geo")] public static void Geo13() { ImportGeoHole("lomond-country-club", 13); }
+        [MenuItem("Import/Geo/Import Hole 14 Geo")] public static void Geo14() { ImportGeoHole("lomond-country-club", 14); }
+        [MenuItem("Import/Geo/Import Hole 15 Geo")] public static void Geo15() { ImportGeoHole("lomond-country-club", 15); }
+        [MenuItem("Import/Geo/Import Hole 16 Geo")] public static void Geo16() { ImportGeoHole("lomond-country-club", 16); }
+        [MenuItem("Import/Geo/Import Hole 17 Geo")] public static void Geo17() { ImportGeoHole("lomond-country-club", 17); }
+        [MenuItem("Import/Geo/Import Hole 18 Geo")] public static void Geo18() { ImportGeoHole("lomond-country-club", 18); }
 
-        [MenuItem("Import/Lite/Import All Holes Lite")]
-        public static void LiteAll()
+        [MenuItem("Import/Geo/Import All Holes Geo")]
+        public static void GeoAll()
         {
             for (int i = 1; i <= 18; i++)
-                ImportLiteHole("lomond-country-club", i);
+                ImportGeoHole("lomond-country-club", i);
         }
 
-        [MenuItem("Import/Lite/Import Hole 01 Flat")] public static void LiteFlat01() { ImportLiteHoleFlat("lomond-country-club", 1); }
-        [MenuItem("Import/Lite/Import Hole 02 Flat")] public static void LiteFlat02() { ImportLiteHoleFlat("lomond-country-club", 2); }
-        [MenuItem("Import/Lite/Import Hole 03 Flat")] public static void LiteFlat03() { ImportLiteHoleFlat("lomond-country-club", 3); }
-        [MenuItem("Import/Lite/Import Hole 04 Flat")] public static void LiteFlat04() { ImportLiteHoleFlat("lomond-country-club", 4); }
-        [MenuItem("Import/Lite/Import Hole 05 Flat")] public static void LiteFlat05() { ImportLiteHoleFlat("lomond-country-club", 5); }
-        [MenuItem("Import/Lite/Import Hole 06 Flat")] public static void LiteFlat06() { ImportLiteHoleFlat("lomond-country-club", 6); }
-        [MenuItem("Import/Lite/Import Hole 07 Flat")] public static void LiteFlat07() { ImportLiteHoleFlat("lomond-country-club", 7); }
-        [MenuItem("Import/Lite/Import Hole 08 Flat")] public static void LiteFlat08() { ImportLiteHoleFlat("lomond-country-club", 8); }
-        [MenuItem("Import/Lite/Import Hole 09 Flat")] public static void LiteFlat09() { ImportLiteHoleFlat("lomond-country-club", 9); }
-        [MenuItem("Import/Lite/Import Hole 10 Flat")] public static void LiteFlat10() { ImportLiteHoleFlat("lomond-country-club", 10); }
-        [MenuItem("Import/Lite/Import Hole 11 Flat")] public static void LiteFlat11() { ImportLiteHoleFlat("lomond-country-club", 11); }
-        [MenuItem("Import/Lite/Import Hole 12 Flat")] public static void LiteFlat12() { ImportLiteHoleFlat("lomond-country-club", 12); }
-        [MenuItem("Import/Lite/Import Hole 13 Flat")] public static void LiteFlat13() { ImportLiteHoleFlat("lomond-country-club", 13); }
-        [MenuItem("Import/Lite/Import Hole 14 Flat")] public static void LiteFlat14() { ImportLiteHoleFlat("lomond-country-club", 14); }
-        [MenuItem("Import/Lite/Import Hole 15 Flat")] public static void LiteFlat15() { ImportLiteHoleFlat("lomond-country-club", 15); }
-        [MenuItem("Import/Lite/Import Hole 16 Flat")] public static void LiteFlat16() { ImportLiteHoleFlat("lomond-country-club", 16); }
-        [MenuItem("Import/Lite/Import Hole 17 Flat")] public static void LiteFlat17() { ImportLiteHoleFlat("lomond-country-club", 17); }
-        [MenuItem("Import/Lite/Import Hole 18 Flat")] public static void LiteFlat18() { ImportLiteHoleFlat("lomond-country-club", 18); }
+        [MenuItem("Import/Geo/Import Hole 01 Geo Flat")] public static void GeoFlat01() { ImportGeoHoleFlat("lomond-country-club", 1); }
+        [MenuItem("Import/Geo/Import Hole 02 Geo Flat")] public static void GeoFlat02() { ImportGeoHoleFlat("lomond-country-club", 2); }
+        [MenuItem("Import/Geo/Import Hole 03 Geo Flat")] public static void GeoFlat03() { ImportGeoHoleFlat("lomond-country-club", 3); }
+        [MenuItem("Import/Geo/Import Hole 04 Geo Flat")] public static void GeoFlat04() { ImportGeoHoleFlat("lomond-country-club", 4); }
+        [MenuItem("Import/Geo/Import Hole 05 Geo Flat")] public static void GeoFlat05() { ImportGeoHoleFlat("lomond-country-club", 5); }
+        [MenuItem("Import/Geo/Import Hole 06 Geo Flat")] public static void GeoFlat06() { ImportGeoHoleFlat("lomond-country-club", 6); }
+        [MenuItem("Import/Geo/Import Hole 07 Geo Flat")] public static void GeoFlat07() { ImportGeoHoleFlat("lomond-country-club", 7); }
+        [MenuItem("Import/Geo/Import Hole 08 Geo Flat")] public static void GeoFlat08() { ImportGeoHoleFlat("lomond-country-club", 8); }
+        [MenuItem("Import/Geo/Import Hole 09 Geo Flat")] public static void GeoFlat09() { ImportGeoHoleFlat("lomond-country-club", 9); }
+        [MenuItem("Import/Geo/Import Hole 10 Geo Flat")] public static void GeoFlat10() { ImportGeoHoleFlat("lomond-country-club", 10); }
+        [MenuItem("Import/Geo/Import Hole 11 Geo Flat")] public static void GeoFlat11() { ImportGeoHoleFlat("lomond-country-club", 11); }
+        [MenuItem("Import/Geo/Import Hole 12 Geo Flat")] public static void GeoFlat12() { ImportGeoHoleFlat("lomond-country-club", 12); }
+        [MenuItem("Import/Geo/Import Hole 13 Geo Flat")] public static void GeoFlat13() { ImportGeoHoleFlat("lomond-country-club", 13); }
+        [MenuItem("Import/Geo/Import Hole 14 Geo Flat")] public static void GeoFlat14() { ImportGeoHoleFlat("lomond-country-club", 14); }
+        [MenuItem("Import/Geo/Import Hole 15 Geo Flat")] public static void GeoFlat15() { ImportGeoHoleFlat("lomond-country-club", 15); }
+        [MenuItem("Import/Geo/Import Hole 16 Geo Flat")] public static void GeoFlat16() { ImportGeoHoleFlat("lomond-country-club", 16); }
+        [MenuItem("Import/Geo/Import Hole 17 Geo Flat")] public static void GeoFlat17() { ImportGeoHoleFlat("lomond-country-club", 17); }
+        [MenuItem("Import/Geo/Import Hole 18 Geo Flat")] public static void GeoFlat18() { ImportGeoHoleFlat("lomond-country-club", 18); }
 
-        [MenuItem("Import/Lite/Import All Holes Flat")]
-        public static void LiteAllFlat()
+        [MenuItem("Import/Geo/Import All Holes Geo Flat")]
+        public static void GeoAllFlat()
         {
             for (int i = 1; i <= 18; i++)
-                ImportLiteHoleFlat("lomond-country-club", i);
+                ImportGeoHoleFlat("lomond-country-club", i);
         }
 
-        public static void ImportLiteHole(string courseId, int holeNumber)
+        public static void ImportGeoHole(string courseId, int holeNumber)
         {
             string holeId = holeNumber.ToString("D2");
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
 
-            string exportPath = Path.Combine(projectRoot, "Tools", "UHoleLite", "output",
+            string exportPath = Path.Combine(projectRoot, "Tools", "UHoleGeo", "output",
                 courseId, "export", $"hole-{holeId}");
             string generatedDir = $"Assets/Golf/Courses/{courseId}/Generated";
-            string dataDir = $"Assets/Golf/Courses/{courseId}/Data/hole-{holeId}";
-            string scenePath = $"{generatedDir}/Hole_{holeId}.unity";
+            string dataDir = $"Assets/Golf/Courses/{courseId}/Data/hole-{holeId}-geo";
+            string scenePath = $"{generatedDir}/Hole_{holeId}_Geo.unity";
 
             ImportHoleInternal(courseId, holeNumber, exportPath, dataDir, scenePath);
         }
 
-        public static void ImportLiteHoleFlat(string courseId, int holeNumber)
+        public static void ImportGeoHoleFlat(string courseId, int holeNumber)
         {
             string holeId = holeNumber.ToString("D2");
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
 
-            string exportPath = Path.Combine(projectRoot, "Tools", "UHoleLite", "output",
+            string exportPath = Path.Combine(projectRoot, "Tools", "UHoleGeo", "output",
                 courseId, "export", $"hole-{holeId}-flat");
             string generatedDir = $"Assets/Golf/Courses/{courseId}/Generated";
-            string dataDir = $"Assets/Golf/Courses/{courseId}/Data/hole-{holeId}-flat";
-            string scenePath = $"{generatedDir}/Hole_{holeId}_Flat.unity";
+            string dataDir = $"Assets/Golf/Courses/{courseId}/Data/hole-{holeId}-geo-flat";
+            string scenePath = $"{generatedDir}/Hole_{holeId}_Geo_Flat.unity";
 
             ImportHoleInternal(courseId, holeNumber, exportPath, dataDir, scenePath);
         }
@@ -120,16 +120,16 @@ namespace Golfin.CourseImport
             if (!Directory.Exists(exportPath))
             {
                 EditorUtility.DisplayDialog("Import Error",
-                    $"Export folder not found:\n{exportPath}\n\nRun the UHole Lite pipeline first.", "OK");
+                    $"Export folder not found:\n{exportPath}\n\nRun the UHole Geo pipeline first.", "OK");
                 return;
             }
 
             try
             {
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Cleaning previous import...", 0f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Cleaning previous import...", 0f);
                 CleanPreviousImport(dataDir, scenePath);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Reading manifest...", 0.05f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Reading manifest...", 0.05f);
 
                 EnsureDirectory(Path.Combine(projectRoot, generatedDir));
                 EnsureDirectory(Path.Combine(projectRoot, dataDir));
@@ -137,11 +137,11 @@ namespace Golfin.CourseImport
                 string manifestJson = File.ReadAllText(Path.Combine(exportPath, "hole-manifest.json"));
                 var manifest = JsonUtility.FromJson<HoleManifest>(manifestJson);
 
-                if (manifest.pipeline != "uhole-lite")
+                if (manifest.pipeline != "uhole-geo")
                 {
                     EditorUtility.ClearProgressBar();
                     EditorUtility.DisplayDialog("Import Error",
-                        "This is not a UHole Lite package. Use GOLFIN > Import Hole instead.", "OK");
+                        "This is not a UHole Geo package. Use Import > Lite instead.", "OK");
                     return;
                 }
 
@@ -150,14 +150,14 @@ namespace Golfin.CourseImport
                     "{\"items\":" + anchorsJson + "}");
                 var anchors = anchorsWrapper.items;
 
-                // Swap X/Z to rotate 90° CCW — matches UHole Lite vertical orientation
-                float terrainX = manifest.terrain.terrain_length_m;
-                float terrainZ = manifest.terrain.terrain_width_m;
+                // No rotation for Geo — satellite is already north-up
+                float terrainX = manifest.terrain.terrain_width_m;
+                float terrainZ = manifest.terrain.terrain_length_m;
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating scene...", 0.1f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating scene...", 0.1f);
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Building terrain...", 0.2f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Building terrain...", 0.2f);
                 var terrainData = CreateTerrain(manifest, exportPath, dataDir, holeId, projectRoot,
                     terrainX, terrainZ);
                 var terrainGO = Terrain.CreateTerrainGameObject(terrainData);
@@ -172,7 +172,7 @@ namespace Golfin.CourseImport
                 var holeRoot = new GameObject("HoleRoot");
                 terrainGO.transform.SetParent(holeRoot.transform);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Applying texture...", 0.4f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Applying texture...", 0.4f);
                 ApplySplatmap(terrainData, manifest, exportPath, dataDir, holeId, projectRoot, terrainGO);
 
                 // Read terrain holes once, pass to both zone methods, write once at end
@@ -180,17 +180,17 @@ namespace Golfin.CourseImport
                 bool[,] holes = terrainData.GetHoles(0, 0, holesRes, holesRes);
                 Debug.Log($"[HoleLiteImporter] Terrain holes resolution: {holesRes}x{holesRes}");
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating bunkers...", 0.5f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating bunkers...", 0.5f);
                 CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating greens...", 0.53f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating greens...", 0.53f);
                 CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating water...", 0.59f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating water...", 0.59f);
                 CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Creating zone meshes...", 0.62f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating zone meshes...", 0.62f);
                 CreateFlatZoneMeshes(terrainData, terrainGO, holeRoot.transform,
                     exportPath, dataDir, projectRoot);
 
@@ -211,8 +211,8 @@ namespace Golfin.CourseImport
                     if (greensFile.greens != null && greensFile.greens.Length > 0)
                     {
                         var gc = greensFile.greens[0].center_local;
-                        // Apply 90° CCW rotation: (x, z) → (z, x)
-                        greenCentroid = new Vector3(gc.z, 0f, gc.x);
+                        // No rotation for Geo — direct mapping
+                        greenCentroid = new Vector3(gc.x, 0f, gc.z);
                         hasGreenCentroid = true;
                     }
                 }
@@ -249,7 +249,7 @@ namespace Golfin.CourseImport
 
                 terrainData.SetHoles(0, 0, holes);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Building hierarchy...", 0.6f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Building hierarchy...", 0.6f);
 
                 var metadata = holeRoot.AddComponent<HoleMetadata>();
                 metadata.courseId = manifest.course_id;
@@ -262,7 +262,7 @@ namespace Golfin.CourseImport
                 var debugRefs = new GameObject("DebugReferences");
                 debugRefs.transform.SetParent(holeRoot.transform);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Setting up camera...", 0.8f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Setting up camera...", 0.8f);
                 CreateWalkCamera(anchors, terrain, terrainGO.transform);
 
                 // ---- Directional Light (Sun) ----
@@ -317,7 +317,7 @@ namespace Golfin.CourseImport
                     }
                 }
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Placing mountains...", 0.85f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Placing mountains...", 0.85f);
                 PlaceMountainBackdrop(terrain, terrainGO.transform.position.y,
                     terrainX, terrainZ, dataDir, holeRoot.transform);
 
@@ -333,7 +333,7 @@ namespace Golfin.CourseImport
                 // so the disk asset matches the in-memory state
                 EditorUtility.SetDirty(terrainData);
 
-                EditorUtility.DisplayProgressBar("Importing Hole (Lite)", "Saving scene...", 0.9f);
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Saving scene...", 0.9f);
                 EditorSceneManager.SaveScene(scene, scenePath);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
@@ -496,9 +496,9 @@ namespace Golfin.CourseImport
                         {
                             float normX = (float)hx / (actualRes - 1);
                             float normZ = (float)hz / (actualRes - 1);
-                            // Reverse 90° CCW: zone.x = normZ, zone.y = normX
-                            int gx = Mathf.Clamp(Mathf.RoundToInt(normZ * (smW - 1)), 0, smW - 1);
-                            int gy = Mathf.Clamp(Mathf.RoundToInt(normX * (smH - 1)), 0, smH - 1);
+                            // No rotation for Geo — direct mapping
+                            int gx = Mathf.Clamp(Mathf.RoundToInt(normX * (smW - 1)), 0, smW - 1);
+                            int gy = Mathf.Clamp(Mathf.RoundToInt(normZ * (smH - 1)), 0, smH - 1);
                             int obIdx = gy * smW + gx;
 
                             if (smObMask != null && obIdx < smObMask.Length)
@@ -678,7 +678,7 @@ namespace Golfin.CourseImport
             }
 
             // --- Create and save TerrainData ---
-            string terrainAssetPath = $"{dataDir}/TerrainData_Hole{holeId}.asset";
+            string terrainAssetPath = $"{dataDir}/TerrainData_Hole{holeId}Geo.asset";
             EnsureDirectory(Path.Combine(projectRoot, Path.GetDirectoryName(terrainAssetPath)));
 
             var existingTerrain = AssetDatabase.LoadAssetAtPath<TerrainData>(terrainAssetPath);
@@ -702,18 +702,12 @@ namespace Golfin.CourseImport
             string texFile = manifest.texture.file;
             string srcPath = Path.Combine(exportPath, texFile);
 
-            // Rotate texture 90° CCW to match terrain rotation
+            // No rotation for Geo — copy texture directly
             string texturePath = $"{dataDir}/texture_hole{holeId}.png";
             string fullTexPath = Path.Combine(projectRoot, texturePath);
             EnsureDirectory(Path.GetDirectoryName(fullTexPath));
 
-            byte[] srcBytes = File.ReadAllBytes(srcPath);
-            var srcTex = new Texture2D(2, 2);
-            srcTex.LoadImage(srcBytes);
-            var rotatedTex = RotateTexture90CCW(srcTex);
-            File.WriteAllBytes(fullTexPath, rotatedTex.EncodeToPNG());
-            Object.DestroyImmediate(srcTex);
-            Object.DestroyImmediate(rotatedTex);
+            File.Copy(srcPath, fullTexPath, true);
 
             AssetDatabase.ImportAsset(texturePath);
 
@@ -772,7 +766,7 @@ namespace Golfin.CourseImport
                 int regionIdx = -1;
                 if (teeRegions != null && teeRegions.Length > 0)
                 {
-                    Vector3 anchorWorld = new Vector3(anchor.local.z, 0f, anchor.local.x);
+                    Vector3 anchorWorld = new Vector3(anchor.local.x, 0f, anchor.local.z);
                     float bestDist = float.MaxValue;
                     for (int r = 0; r < teeRegions.Length; r++)
                     {
@@ -807,8 +801,8 @@ namespace Golfin.CourseImport
                     int n = region.contour.Length;
                     for (int i = 0; i < n; i++)
                     {
-                        cx += region.contour[i].z; // 90° CCW
-                        cz += region.contour[i].x;
+                        cx += region.contour[i].x; // Geo: no rotation
+                        cz += region.contour[i].z;
                     }
                     centroid = new Vector3(cx / n, 0f, cz / n);
                 }
@@ -816,7 +810,7 @@ namespace Golfin.CourseImport
                 {
                     // Fallback: average of anchor positions
                     float sx = 0, sz = 0;
-                    foreach (var a in anchorsInGroup) { sx += a.local.z; sz += a.local.x; }
+                    foreach (var a in anchorsInGroup) { sx += a.local.x; sz += a.local.z; }
                     centroid = new Vector3(sx / anchorsInGroup.Count, 0f,
                                            sz / anchorsInGroup.Count);
                 }
@@ -864,8 +858,8 @@ namespace Golfin.CourseImport
             ZoneContourRegion[] teeRegions = null,
             Vector3? overridePosition = null)
         {
-            // 90° CCW rotation: (x, z) → (-z, x) → (local.z, local.x)
-            Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
+            // Geo: direct mapping (no rotation)
+            Vector3 worldPos = new Vector3(anchor.local.x, 0f, anchor.local.z);
             float terrainBase = terrainTransform.position.y;
 
             if (anchor.type.Contains("tee"))
@@ -895,8 +889,8 @@ namespace Golfin.CourseImport
                         int n = bestRegion.contour.Length;
                         for (int i = 0; i < n; i++)
                         {
-                            cx += bestRegion.contour[i].z;
-                            cz += bestRegion.contour[i].x;
+                            cx += bestRegion.contour[i].x;
+                            cz += bestRegion.contour[i].z;
                         }
                         worldPos = new Vector3(cx / n, 0f, cz / n);
                     }
@@ -1042,7 +1036,7 @@ namespace Golfin.CourseImport
             var backTee = anchors.FirstOrDefault(a => a.type.Contains("back"));
             if (backTee != null)
             {
-                Vector3 pos = new Vector3(backTee.local.z, 0f, backTee.local.x);
+                Vector3 pos = new Vector3(backTee.local.x, 0f, backTee.local.z);
                 float terrainHeight = terrain.SampleHeight(pos);
                 float terrainBase = terrainTransform.position.y;
                 camGO.transform.position = new Vector3(pos.x, terrainBase + terrainHeight + 2f, pos.z);
@@ -1115,11 +1109,9 @@ namespace Golfin.CourseImport
                     float fx = (float)ax / (alphaRes - 1);
                     float fy = (float)ay / (alphaRes - 1);
 
-                    // 90° CCW rotation matching heightmap/anchors:
-                    // Alphamap ax → terrain X fraction → zone normY
-                    // Alphamap ay → terrain Z fraction → zone normX
-                    int gx = Mathf.Clamp(Mathf.RoundToInt(fy * (zoneW - 1)), 0, zoneW - 1);
-                    int gy = Mathf.Clamp(Mathf.RoundToInt(fx * (zoneH - 1)), 0, zoneH - 1);
+                    // No rotation for Geo — direct mapping
+                    int gx = Mathf.Clamp(Mathf.RoundToInt(fx * (zoneW - 1)), 0, zoneW - 1);
+                    int gy = Mathf.Clamp(Mathf.RoundToInt(fy * (zoneH - 1)), 0, zoneH - 1);
 
                     resampledZones[ay * alphaRes + ax] = grid[gy * zoneW + gx];
                 }
@@ -1503,7 +1495,7 @@ namespace Golfin.CourseImport
                     }
                 }
 
-                // Fairway (index 0): non-square tile to fix grain orientation on 90° rotated terrain
+                // Fairway (index 0): tile size for terrain texture
                 layers[i].tileSize = new Vector2(tileSizes[i], tileSizes[i]);
                 layers[i].tileOffset = Vector2.zero;
                 layers[i].smoothness = 0f;
@@ -1789,7 +1781,7 @@ namespace Golfin.CourseImport
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
 
             // Load zones.json
-            string zonesPath = Path.Combine(projectRoot, "Tools", "UHoleLite", "output",
+            string zonesPath = Path.Combine(projectRoot, "Tools", "UHoleGeo", "output",
                 "lomond-country-club", "export", "hole-01", "zones.json");
             if (!File.Exists(zonesPath))
             {
@@ -1800,7 +1792,7 @@ namespace Golfin.CourseImport
             var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
 
             // Load manifest for terrain dimensions
-            string manifestPath = Path.Combine(projectRoot, "Tools", "UHoleLite", "output",
+            string manifestPath = Path.Combine(projectRoot, "Tools", "UHoleGeo", "output",
                 "lomond-country-club", "export", "hole-01", "hole-manifest.json");
             string manifestJson = File.ReadAllText(manifestPath);
             var manifest = JsonUtility.FromJson<HoleManifest>(manifestJson);
@@ -1841,10 +1833,9 @@ namespace Golfin.CourseImport
             Debug.Log($"[TestZoneAlignment] Green centroid: grid({centroidGX:F1}, {centroidGY:F1}), " +
                       $"norm({normX:F3}, {normY:F3}), {greenCount} pixels");
 
-            // 90° CCW transform: worldX = (normY - 0.5) * terrain_length_m
-            //                    worldZ = (normX - 0.5) * terrain_width_m
-            float worldX = (normY - 0.5f) * manifest.terrain.terrain_length_m;
-            float worldZ = (normX - 0.5f) * manifest.terrain.terrain_width_m;
+            // No rotation for Geo — direct mapping
+            float worldX = (normX - 0.5f) * manifest.terrain.terrain_width_m;
+            float worldZ = (normY - 0.5f) * manifest.terrain.terrain_length_m;
 
             // Clean up previous debug sphere
             var old = GameObject.Find("DEBUG_GreenCentroid");
@@ -1891,8 +1882,8 @@ namespace Golfin.CourseImport
 
                 float cnx = (sx / count) / (w - 1);
                 float cny = (sy / count) / (h - 1);
-                float wx = (cny - 0.5f) * manifest.terrain.terrain_length_m;
-                float wz = (cnx - 0.5f) * manifest.terrain.terrain_width_m;
+                float wx = (cnx - 0.5f) * manifest.terrain.terrain_width_m;
+                float wz = (cny - 0.5f) * manifest.terrain.terrain_length_m;
 
                 var oldSph = GameObject.Find($"DEBUG_{debugNames[i]}Centroid");
                 if (oldSph != null) Object.DestroyImmediate(oldSph);
@@ -1990,8 +1981,8 @@ namespace Golfin.CourseImport
                 float sumX = 0, sumZ = 0;
                 for (int i = 0; i < bunker.contour.Length; i++)
                 {
-                    float wx = bunker.contour[i].z;  // 90° CCW: worldX = local.z
-                    float wz = bunker.contour[i].x;  // 90° CCW: worldZ = local.x
+                    float wx = bunker.contour[i].x;  // Geo: no rotation
+                    float wz = bunker.contour[i].z;
                     worldContour[i] = new Vector2(wx, wz);
                     sumX += wx;
                     sumZ += wz;
@@ -2335,7 +2326,7 @@ namespace Golfin.CourseImport
                         if (fw.contour == null || fw.contour.Length < 3) continue;
                         var poly = new Vector2[fw.contour.Length];
                         for (int i = 0; i < fw.contour.Length; i++)
-                            poly[i] = new Vector2(fw.contour[i].z, fw.contour[i].x);
+                            poly[i] = new Vector2(fw.contour[i].x, fw.contour[i].z);
                         fairwayPolys.Add(poly);
                     }
                 }
@@ -2355,13 +2346,13 @@ namespace Golfin.CourseImport
             {
                 if (green.contour == null || green.contour.Length < 3) continue;
 
-                // Apply 90° CCW rotation to contour vertices
+                // Map contour vertices to world space
                 var worldContour = new Vector2[green.contour.Length];
                 float sumX = 0, sumZ = 0;
                 for (int i = 0; i < green.contour.Length; i++)
                 {
-                    float wx = green.contour[i].z;
-                    float wz = green.contour[i].x;
+                    float wx = green.contour[i].x;
+                    float wz = green.contour[i].z;
                     worldContour[i] = new Vector2(wx, wz);
                     sumX += wx;
                     sumZ += wz;
@@ -2732,8 +2723,8 @@ namespace Golfin.CourseImport
                 float sumX = 0, sumY = 0, sumZ = 0;
                 for (int i = 0; i < n; i++)
                 {
-                    float wx = water.contour[i].z;  // 90° CCW
-                    float wz = water.contour[i].x;
+                    float wx = water.contour[i].x;  // Geo: no rotation
+                    float wz = water.contour[i].z;
                     float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                     float wy = terrainBaseY + terrainH - 0.1f;
                     worldPts[i] = new Vector3(wx, wy, wz);
@@ -2809,13 +2800,13 @@ namespace Golfin.CourseImport
                         for (int hx = 0; hx < hRes; hx++)
                         {
                             // Map heightmap cell to zone grid
-                            // Heightmap uses 90° CCW rotation from zone grid
+                            // Map heightmap grid to zone grid
                             float normX = (float)hx / (hRes - 1);
                             float normZ = (float)hz / (hRes - 1);
 
-                            // Reverse the 90° CCW: zone.x = normZ, zone.y = normX
-                            int zx = Mathf.Clamp(Mathf.RoundToInt(normZ * (zw - 1)), 0, zw - 1);
-                            int zy = Mathf.Clamp(Mathf.RoundToInt(normX * (zh - 1)), 0, zh - 1);
+                            // No rotation for Geo — direct mapping
+                            int zx = Mathf.Clamp(Mathf.RoundToInt(normX * (zw - 1)), 0, zw - 1);
+                            int zy = Mathf.Clamp(Mathf.RoundToInt(normZ * (zh - 1)), 0, zh - 1);
 
                             if (grid[zy * zw + zx] == 7) // 7 = water zone
                                 isWater[hz, hx] = true;
@@ -3175,7 +3166,7 @@ namespace Golfin.CourseImport
 
         /// <summary>
         /// Mark heightmap cells that fall inside a contour polygon.
-        /// Contour uses local meter coords with 90° CCW rotation applied.
+        /// Contour uses local meter coords.
         /// </summary>
         private static void MarkContourCells(ContourPoint[] contour,
             bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize,
@@ -3183,11 +3174,11 @@ namespace Golfin.CourseImport
         {
             if (inset < 0f) inset = DepressionInsetMeters;
 
-            // Convert contour to world Vector3[] with 90° CCW rotation
+            // Convert contour to world Vector3[]
             int n = contour.Length;
             var contour3D = new Vector3[n];
             for (int i = 0; i < n; i++)
-                contour3D[i] = new Vector3(contour[i].z, 0, contour[i].x);
+                contour3D[i] = new Vector3(contour[i].x, 0, contour[i].z);
 
             // Edge-perpendicular inset using OffsetContourOutward with negative distance
             Vector3[] insetContour = OffsetContourOutward(contour3D, -inset);
@@ -3275,17 +3266,17 @@ namespace Golfin.CourseImport
 
             for (int i = 0; i < sn; i++)
             {
-                float cx = subdiv[i].z;  // 90° CCW
-                float cz = subdiv[i].x;
+                float cx = subdiv[i].x;  // Geo: no rotation
+                float cz = subdiv[i].z;
 
                 // Tangent
                 float tx, tz;
                 if (i == 0)
-                { tx = subdiv[1].z - subdiv[0].z; tz = subdiv[1].x - subdiv[0].x; }
+                { tx = subdiv[1].x - subdiv[0].x; tz = subdiv[1].z - subdiv[0].z; }
                 else if (i == sn - 1)
-                { tx = subdiv[sn-1].z - subdiv[sn-2].z; tz = subdiv[sn-1].x - subdiv[sn-2].x; }
+                { tx = subdiv[sn-1].x - subdiv[sn-2].x; tz = subdiv[sn-1].z - subdiv[sn-2].z; }
                 else
-                { tx = subdiv[i+1].z - subdiv[i-1].z; tz = subdiv[i+1].x - subdiv[i-1].x; }
+                { tx = subdiv[i+1].x - subdiv[i-1].x; tz = subdiv[i+1].z - subdiv[i-1].z; }
 
                 float tLen = Mathf.Sqrt(tx * tx + tz * tz);
                 if (tLen > 0.001f) { tx /= tLen; tz /= tLen; }
@@ -3394,9 +3385,9 @@ namespace Golfin.CourseImport
 
                         if (backTee != null && greenCenter != null)
                         {
-                            // Apply same 90° CCW rotation as contour points: worldX = z, worldZ = x
-                            Vector2 teePos = new Vector2(backTee.local.z, backTee.local.x);
-                            Vector2 greenPos = new Vector2(greenCenter.z, greenCenter.x);
+                            // No rotation for Geo — direct mapping
+                            Vector2 teePos = new Vector2(backTee.local.x, backTee.local.z);
+                            Vector2 greenPos = new Vector2(greenCenter.x, greenCenter.z);
                             Vector2 dir = (greenPos - teePos).normalized;
                             if (dir.sqrMagnitude > 0.01f)
                                 stripeDir = new Vector2(-dir.y, dir.x); // perpendicular
@@ -3566,12 +3557,12 @@ namespace Golfin.CourseImport
             int n = contour.Length;
             if (n < 3) return (null, null, null);
 
-            // 1. Boundary vertices (2D XZ plane after 90° CCW rotation)
+            // 1. Boundary vertices (2D XZ plane)
             var positions2D = new System.Collections.Generic.List<double2>();
             for (int i = 0; i < n; i++)
             {
-                float wx = contour[i].z; // 90° CCW
-                float wz = contour[i].x;
+                float wx = contour[i].x; // Geo: no rotation
+                float wz = contour[i].z;
                 positions2D.Add(new double2(wx, wz));
             }
 
@@ -3588,14 +3579,14 @@ namespace Golfin.CourseImport
             float minZ = float.MaxValue, maxZ = float.MinValue;
             foreach (var pt in contour)
             {
-                float wx = pt.z; float wz = pt.x;
+                float wx = pt.x; float wz = pt.z;
                 if (wx < minX) minX = wx; if (wx > maxX) maxX = wx;
                 if (wz < minZ) minZ = wz; if (wz > maxZ) maxZ = wz;
             }
 
             var poly2D = new Vector2[n];
             for (int i = 0; i < n; i++)
-                poly2D[i] = new Vector2(contour[i].z, contour[i].x);
+                poly2D[i] = new Vector2(contour[i].x, contour[i].z);
 
             for (float gx = minX + gridSpacing; gx < maxX; gx += gridSpacing)
             {
@@ -3954,26 +3945,26 @@ namespace Golfin.CourseImport
 
             for (int i = 0; i < n; i++)
             {
-                // 90° CCW rotation: worldX = z, worldZ = x
-                float cx = spine[i].z;
-                float cz = spine[i].x;
+                // Geo: no rotation — direct mapping
+                float cx = spine[i].x;
+                float cz = spine[i].z;
 
                 // Tangent direction (forward along spine)
                 float tx, tz;
                 if (i == 0)
                 {
-                    tx = spine[1].z - spine[0].z;
-                    tz = spine[1].x - spine[0].x;
+                    tx = spine[1].x - spine[0].x;
+                    tz = spine[1].z - spine[0].z;
                 }
                 else if (i == n - 1)
                 {
-                    tx = spine[n - 1].z - spine[n - 2].z;
-                    tz = spine[n - 1].x - spine[n - 2].x;
+                    tx = spine[n - 1].x - spine[n - 2].x;
+                    tz = spine[n - 1].z - spine[n - 2].z;
                 }
                 else
                 {
-                    tx = spine[i + 1].z - spine[i - 1].z;
-                    tz = spine[i + 1].x - spine[i - 1].x;
+                    tx = spine[i + 1].x - spine[i - 1].x;
+                    tz = spine[i + 1].z - spine[i - 1].z;
                 }
 
                 // Normalize tangent
@@ -4079,8 +4070,8 @@ namespace Golfin.CourseImport
             Vector3[] edgeRing = new Vector3[n];
             for (int i = 0; i < n; i++)
             {
-                float wx = contour[i].z;
-                float wz = contour[i].x;
+                float wx = contour[i].x;
+                float wz = contour[i].z;
                 float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                 edgeRing[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
             }
@@ -4189,8 +4180,8 @@ namespace Golfin.CourseImport
             Vector3[] innerRing = new Vector3[n];
             for (int i = 0; i < n; i++)
             {
-                float wx = contour[i].z; // 90° CCW rotation
-                float wz = contour[i].x;
+                float wx = contour[i].x; // Geo: no rotation
+                float wz = contour[i].z;
                 float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
                 innerRing[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
             }

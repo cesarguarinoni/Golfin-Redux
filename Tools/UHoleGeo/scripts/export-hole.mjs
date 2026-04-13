@@ -1,23 +1,30 @@
 #!/usr/bin/env node
 /**
- * export-hole.mjs — Step 6: Assemble final export package for Unity import
+ * export-hole.mjs -- UHole Geo: Assemble final export package for Unity import
  *
  * Usage:
- *   node scripts/export-hole.mjs lomond-country-club 1      # single hole
+ *   node scripts/export-hole.mjs lomond-country-club 7       # single hole
  *   node scripts/export-hole.mjs lomond-country-club --all   # all 18
+ *
+ * Key differences from UHole Lite:
+ *   - pipeline = "uhole-geo"
+ *   - texture source = satellite.png (not illustration.png)
+ *   - NO coordinate rotation (direct identity mapping)
+ *   - Reads hole-bounds.json for bounds data
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-/**
- * Trace the outer border of a connected region of pixels.
- * Returns ordered array of [x, y] pixel coordinates forming the boundary.
- */
+// ---------------------------------------------------------------------------
+// Geometry helpers
+// ---------------------------------------------------------------------------
+
 /**
  * Trace the outer border of a connected region.
  * Direction-aware walk: at each step, prefer continuing in the same
@@ -215,6 +222,10 @@ function ensureCCW(polygon) {
   return polygon;
 }
 
+// ---------------------------------------------------------------------------
+// Zone contour extraction
+// ---------------------------------------------------------------------------
+
 function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2, gridKey = null, gridBuffer = null) {
   const grid = gridBuffer || Buffer.from(
     gridKey ? zonesData[gridKey] : (zonesData.terrain_grid || zonesData.grid),
@@ -284,8 +295,7 @@ function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, 
 
         // Simplify then smooth
         // Close the polygon for RDP so the start/end seam gets simplified
-        // (otherwise RDP anchors the first & last point, creating a pointy tip)
-        const closed = [...contourMeters, contourMeters[0]];  // duplicate first pt
+        const closed = [...contourMeters, contourMeters[0]];
         let simplified = simplifyPolygon(closed, rdpEpsilon);
         // Remove the duplicate closing point
         if (simplified.length > 1 &&
@@ -323,6 +333,10 @@ function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, 
   return regions;
 }
 
+// ---------------------------------------------------------------------------
+// Cart path extraction
+// ---------------------------------------------------------------------------
+
 /**
  * Extract cart path contours with minimum width enforcement.
  * If a region is narrower than minWidthM, dilate it until it reaches
@@ -342,12 +356,9 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     }
   }
   // Base zone grid (no overlays) for detecting zone overlaps.
-  // cart_path_mask stamping above overwrites original zones with 8, so we
-  // need the untouched terrain_grid to know the real underlying zone.
   const terrainGridBuf = zonesData.terrain_grid
     ? Buffer.from(zonesData.terrain_grid, 'base64') : null;
-  // Zones where cart paths should NOT overlap — skeleton extraction will
-  // clip these pixels so the spine routes around them.
+  // Zones where cart paths should NOT overlap
   const overlapZones = new Set([1, 6, 7, 10]); // fairway, bunker, water, tee
 
   const w = zonesData.source_dimensions.width;
@@ -488,28 +499,17 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
 
     // --- Skeleton-based spine extraction with overlap clipping ---
     // Downsample the region mask for cleaner skeletonization.
-    // Wide paths (~30px+) produce noisy skeletons at full res.
-    // Target skeleton input width ~6-10px for clean results.
-    //
-    // IMPORTANT: estWidthPx is area/longerAxis — for branching networks
-    // this overestimates massively (e.g. 82px for a 7px-wide path network).
-    // Cap dsFactor so actual path width (~minWidthPx) stays ≥3px after DS.
     const dsTarget = 3;
     const dsFromEst = Math.round(estWidthPx / dsTarget);
-    const dsFromActual = Math.floor(minWidthPx / dsTarget); // preserve actual path width
+    const dsFromActual = Math.floor(minWidthPx / dsTarget);
     const dsFactor = Math.max(1, Math.min(dsFromEst, dsFromActual));
     const dsW = Math.ceil(w / dsFactor);
     const dsH = Math.ceil(h / dsFactor);
 
     // Build downsampled binary mask, clipping cart path pixels that
-    // overlap fairway, bunker, or tee zones. Uses terrain_grid (base
-    // zones without overlay masks) because cart_path_mask stamping
-    // overwrites the original zone with 8 in the working grid.
-    // This prevents spines from running under these zone meshes while
-    // preserving junction structure (unlike clipping post-thinning).
+    // overlap fairway, bunker, or tee zones.
     const dsMask = new Uint8Array(dsW * dsH);
     for (const [px, py] of currentPixels) {
-      // Skip pixels that overlap forbidden zones in the base terrain grid
       if (terrainGridBuf && overlapZones.has(terrainGridBuf[py * w + px])) continue;
       const dsx = Math.floor(px / dsFactor);
       const dsy = Math.floor(py / dsFactor);
@@ -517,7 +517,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     }
 
     // Also clear DS pixels where the majority of underlying full-res
-    // pixels are overlap zones — prevents bleed-through at DS boundaries
+    // pixels are overlap zones
     if (terrainGridBuf) {
       for (let dsy = 0; dsy < dsH; dsy++) {
         for (let dsx = 0; dsx < dsW; dsx++) {
@@ -538,7 +538,6 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     const skeleton = thinSkeleton(dsMask, dsW, dsH);
 
     // Prune short spur branches (noise from thinning)
-    // Use 3x the downsampled path width as threshold — short spurs are edge noise
     const dsEstWidth = Math.max(Math.ceil(estWidthPx / dsFactor), 2);
     const spurThreshold = Math.max(Math.ceil(dsEstWidth * 3), 8);
     pruneSpurs(skeleton, dsW, dsH, spurThreshold);
@@ -556,16 +555,13 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
 
     const regionId = results.length + 1;
 
-    // Minimum spine length in downsampled pixels — skip fragments shorter
-    // than ~2x the downsampled path width (prevents noise but keeps real branches)
+    // Minimum spine length in downsampled pixels
     const minSpinePixels = Math.max(Math.ceil(dsEstWidth * 2), 5);
 
-    // Filter out short fragment chains before deciding whether the skeleton is usable
+    // Filter out short fragment chains
     const significantChains = chains.filter(c => c.length >= minSpinePixels);
 
-    // If skeleton produced too many significant chains, it's noise — fall back
-    // to the original contour-based farthest-pair spine extraction.
-    // Complex cart path networks can have 8-10+ real branches (e.g. hole 18).
+    // If skeleton produced too many significant chains, fall back to contour spine
     const maxExpectedBranches = 12;
     if (significantChains.length > maxExpectedBranches) {
       console.log(`    Skeleton noisy (${significantChains.length} chains), falling back to contour spine`);
@@ -597,7 +593,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
         dilated: estWidthPx < minWidthPx,
       });
     } else if (significantChains.length === 0) {
-      // Fallback: no skeleton chains (e.g., very small region) — use contour centroid as degenerate spine
+      // Fallback: no skeleton chains — use contour centroid as degenerate spine
       results.push({
         id: regionId,
         pixel_count: currentPixels.length,
@@ -618,11 +614,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
       });
     } else {
       // --- Identify shared junction pixels across chains ---
-      // Collect all chain endpoint pixels. Pixels shared by 2+ chain
-      // endpoints are junction points. After smoothing we snap spine
-      // endpoints back to the exact junction meter coordinate so that
-      // branches connect seamlessly.
-      const endpointCount = new Map(); // "x,y" → count of chain endpoints here
+      const endpointCount = new Map();
       for (const chain of significantChains) {
         for (const pt of [chain[0], chain[chain.length - 1]]) {
           const key = `${pt.x},${pt.y}`;
@@ -644,12 +636,9 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
       }
 
       // --- Merge chains at 2-way junctions ---
-      // If a junction has exactly 2 chain endpoints, those chains form a
-      // continuous path — merge them into one chain (avoids visible seam).
       let mergedSomething = true;
       while (mergedSomething) {
         mergedSomething = false;
-        // Recount endpoints after each merge
         const epCount2 = new Map();
         for (let ci = 0; ci < significantChains.length; ci++) {
           const chain = significantChains[ci];
@@ -663,12 +652,11 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
         for (const [jKey, chainIndices] of epCount2) {
           if (chainIndices.length !== 2) continue;
           const [ai, bi] = chainIndices;
-          if (ai === bi) continue; // same chain loops back
+          if (ai === bi) continue;
           const chainA = significantChains[ai];
           const chainB = significantChains[bi];
           if (!chainA || !chainB) continue;
 
-          // Determine which ends connect at this junction
           const aEnd = `${chainA[chainA.length - 1].x},${chainA[chainA.length - 1].y}` === jKey;
           const aStart = `${chainA[0].x},${chainA[0].y}` === jKey;
           const bEnd = `${chainB[chainB.length - 1].x},${chainB[chainB.length - 1].y}` === jKey;
@@ -676,46 +664,36 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
 
           let merged = null;
           if (aEnd && bStart) {
-            // A's end → B's start: concat A + B (skip duplicate junction point)
             merged = [...chainA, ...chainB.slice(1)];
           } else if (aEnd && bEnd) {
-            // A's end → B's end: concat A + reversed B
             merged = [...chainA, ...chainB.slice(0, -1).reverse()];
           } else if (aStart && bStart) {
-            // A's start → B's start: reverse A + B
             merged = [...chainA.slice(1).reverse(), ...chainB];
           } else if (aStart && bEnd) {
-            // B's end → A's start: concat B + A
             merged = [...chainB, ...chainA.slice(1)];
           }
 
           if (merged) {
             significantChains[ai] = merged;
             significantChains.splice(bi, 1);
-            // Remove this junction since it's no longer a branch point
             sharedJunctions.delete(jKey);
             mergedSomething = true;
-            break; // restart — indices changed
+            break;
           }
         }
       }
 
-      // Track which chains have a shared junction in their interior
-      // (merged main chains that pass through a branch junction).
-      // For each such chain, record the interior pixel index closest
-      // to the junction so we can snap the smoothed spine vertex.
-      const junctionRadius = dsFactor + 1; // full-res pixels tolerance (1 DS pixel + margin)
-      const interiorJunctions = new Map(); // chainIndex → [{junctionKey, interiorIdx}]
+      // Track interior junctions (merged main chains passing through a branch junction)
+      const junctionRadius = dsFactor + 1;
+      const interiorJunctions = new Map();
       for (let ci = 0; ci < significantChains.length; ci++) {
         const chain = significantChains[ci];
         const firstKey = `${chain[0].x},${chain[0].y}`;
         const lastKey = `${chain[chain.length - 1].x},${chain[chain.length - 1].y}`;
 
         for (const [jKey, jpt] of sharedJunctions) {
-          // Skip if this junction is already at this chain's endpoint
           if (jKey === firstKey || jKey === lastKey) continue;
 
-          // Check interior pixels for proximity to this junction
           let bestDist = Infinity, bestIdx = -1;
           for (let pi = 1; pi < chain.length - 1; pi++) {
             const ddx = chain[pi].x - jpt.px;
@@ -740,8 +718,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
           z: parseFloat(((cy / (h - 1) - 0.5) * tl).toFixed(2)),
         }));
 
-        // Find nearest shared junction for each endpoint (fuzzy match
-        // within junctionRadius to handle DS→full rounding differences)
+        // Find nearest shared junction for each endpoint
         const firstPt = chain[0], lastPt = chain[chain.length - 1];
         let snapFirst = sharedJunctions.get(`${firstPt.x},${firstPt.y}`);
         let snapLast = sharedJunctions.get(`${lastPt.x},${lastPt.y}`);
@@ -777,16 +754,14 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
           spine[spine.length - 1] = { x: snapLast.mx, z: snapLast.mz };
         }
 
-        // For junctions in this chain's INTERIOR (merged main chain case):
-        // ensure the spine has a vertex at the junction point so branches
-        // can connect to it. Find the closest spine vertex and snap it.
+        // For junctions in this chain's INTERIOR: ensure the spine has a
+        // vertex at the junction point so branches can connect to it.
         const intJunctions = interiorJunctions.get(ci);
         if (intJunctions) {
           for (const { jKey } of intJunctions) {
             const jpt = sharedJunctions.get(jKey);
             if (!jpt) continue;
 
-            // Find nearest vertex on the smoothed spine
             let bestDist = Infinity, bestIdx = -1;
             for (let si = 0; si < spine.length; si++) {
               const ddx = spine[si].x - jpt.mx;
@@ -794,8 +769,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
               const d = ddx * ddx + ddz * ddz;
               if (d < bestDist) { bestDist = d; bestIdx = si; }
             }
-            // Replace the nearest vertex with the exact junction point
-            if (bestIdx >= 0 && bestDist < 400) { // within ~20m
+            if (bestIdx >= 0 && bestDist < 400) {
               spine[bestIdx] = { x: jpt.mx, z: jpt.mz };
             }
           }
@@ -808,7 +782,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
           spine,
           width_m: minWidthM,
           parent_region: regionId,
-          junctions: null, // filled below after all chains processed
+          junctions: null,
           center_local: {
             x: parseFloat(((normCX - 0.5) * tw).toFixed(2)),
             z: parseFloat(((normCY - 0.5) * tl).toFixed(2)),
@@ -823,8 +797,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
         });
       }
 
-      // Collect junction points (shared by 2+ chain endpoints) and attach
-      // to every branch in this region so Unity can create fill patches.
+      // Collect junction points and attach to every branch in this region
       const junctionList = [];
       for (const [, jpt] of sharedJunctions) {
         junctionList.push({ x: jpt.mx, z: jpt.mz });
@@ -838,9 +811,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
   }
 
   // --- Snap orphan endpoints to nearest point on other spines ---
-  // After chain merging, some branch endpoints are near another spine's
-  // interior but not connected. Extend the branch to touch the other spine.
-  const snapRadius = minWidthM * 4; // search within 4× path width (10m)
+  const snapRadius = minWidthM * 4;
   for (let ai = 0; ai < results.length; ai++) {
     const spineA = results[ai].spine;
     if (!spineA || spineA.length < 2) continue;
@@ -848,7 +819,6 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     for (const endIdx of [0, spineA.length - 1]) {
       const ep = spineA[endIdx];
 
-      // Find nearest point on any OTHER spine
       let bestDist = Infinity, bestPoint = null;
       for (let bi = 0; bi < results.length; bi++) {
         if (bi === ai) continue;
@@ -857,7 +827,6 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
         if (!spineB || spineB.length < 2) continue;
 
         for (let si = 0; si < spineB.length - 1; si++) {
-          // Nearest point on segment spineB[si]→spineB[si+1]
           const ax = spineB[si].x, az = spineB[si].z;
           const bx = spineB[si + 1].x, bz = spineB[si + 1].z;
           const dx = bx - ax, dz = bz - az;
@@ -875,7 +844,6 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
       }
 
       if (bestPoint && bestDist > 0.5 && bestDist < snapRadius) {
-        // Extend spine to connect: add the snap point at the endpoint
         if (endIdx === 0) {
           spineA.unshift(bestPoint);
         } else {
@@ -896,7 +864,6 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
         if (cp.parent_region !== other.parent_region) continue;
         if (!other.spine || other.spine.length < 2) continue;
 
-        // Check proximity to interior points (not endpoints) of other spine
         for (let si = 1; si < other.spine.length - 1; si++) {
           const dx = ep.x - other.spine[si].x;
           const dz = ep.z - other.spine[si].z;
@@ -917,18 +884,13 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
   return results;
 }
 
+// ---------------------------------------------------------------------------
+// Spine nudging
+// ---------------------------------------------------------------------------
+
 /**
- * Nudge cart path spines so the strip (center ± halfWidth + margin) stays
+ * Nudge cart path spines so the strip (center +/- halfWidth + margin) stays
  * outside all forbidden contour polygons (fairway, bunker, tee).
- *
- * For each spine vertex whose strip edge falls inside a forbidden polygon,
- * compute the nearest contour edge and push the spine point perpendicular
- * to that edge until the strip edge clears it.
- *
- * @param {Array} cartPaths - cart path regions with .spine arrays
- * @param {Array} forbiddenContours - array of {contour: [{x,z},...]} polygons
- * @param {number} halfWidth - strip half-width in meters
- * @param {number} margin - extra clearance beyond half-width (meters)
  */
 function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin = 0.5) {
   if (forbiddenContours.length === 0) return;
@@ -945,7 +907,7 @@ function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin
     return inside;
   }
 
-  // Nearest point on segment AB to point P, returns {x, z, dist}
+  // Nearest point on segment AB to point P
   function nearestOnSegment(ax, az, bx, bz, px, pz) {
     const dx = bx - ax, dz = bz - az;
     const lenSq = dx * dx + dz * dz;
@@ -960,7 +922,7 @@ function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin
     return { x: nx, z: nz, dist: d };
   }
 
-  // Find nearest point on contour boundary to a given point
+  // Find nearest point on contour boundary
   function nearestContourPoint(px, pz, contour) {
     let best = null;
     for (let i = 0; i < contour.length; i++) {
@@ -974,8 +936,6 @@ function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin
   const clearance = halfWidth + margin;
   let totalNudged = 0;
 
-  // Iterative nudge-then-smooth: each pass may leave residual overlaps
-  // because smoothing pulls points back. Repeat until clean or max iters.
   const maxPasses = 10;
 
   for (const cp of cartPaths) {
@@ -988,7 +948,6 @@ function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin
       for (let i = 0; i < spine.length; i++) {
         const pt = spine[i];
 
-        // Compute tangent and perpendicular at this spine vertex
         const prev = spine[Math.max(i - 1, 0)];
         const next = spine[Math.min(i + 1, spine.length - 1)];
         const tx = next.x - prev.x, tz = next.z - prev.z;
@@ -1015,9 +974,6 @@ function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin
           if (!nearest) continue;
 
           if (centerInside) {
-            // Center is inside polygon. Move it to just outside the boundary
-            // at clearance distance from the edge.
-            // Direction: from center TOWARD nearest boundary, then PAST it.
             let toEdgeX = nearest.x - bestNewX;
             let toEdgeZ = nearest.z - bestNewZ;
             const toEdgeLen = Math.sqrt(toEdgeX * toEdgeX + toEdgeZ * toEdgeZ);
@@ -1028,12 +984,10 @@ function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin
               toEdgeX /= toEdgeLen;
               toEdgeZ /= toEdgeLen;
             }
-            // Place center at: boundary point + clearance in same direction
             bestNewX = nearest.x + toEdgeX * (clearance + 0.3);
             bestNewZ = nearest.z + toEdgeZ * (clearance + 0.3);
             moved = true;
           } else {
-            // Only edge inside — push center away from boundary
             const gap = clearance - nearest.dist + 0.3;
             if (gap <= 0) continue;
             let awayX = bestNewX - nearest.x;
@@ -1062,13 +1016,10 @@ function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin
         }
       }
 
-      if (passNudged === 0) break; // converged
+      if (passNudged === 0) break;
 
-      // Light smoothing pass on nudged spine to avoid jerky kinks.
-      // Progressively reduce smoothing strength so later passes converge.
-      // Skip last 2 passes entirely so final nudges aren't pulled back.
+      // Light smoothing pass on nudged spine to avoid jerky kinks
       if (pass < maxPasses - 2 && spine.length >= 3) {
-        // Reduce neighbor weight as passes increase (0.2 → 0.1 → 0.05...)
         const neighborW = Math.max(0.05, 0.2 / (1 + pass * 0.5));
         const selfW = 1 - 2 * neighborW;
         const smoothed = spine.map((p, i) => {
@@ -1089,13 +1040,13 @@ function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin
   }
 }
 
+// ---------------------------------------------------------------------------
+// Skeleton thinning (Zhang-Suen)
+// ---------------------------------------------------------------------------
+
 /**
- * Zhang-Suen morphological thinning — reduces a binary mask to a 1-pixel-wide skeleton.
+ * Zhang-Suen morphological thinning -- reduces a binary mask to a 1-pixel-wide skeleton.
  * Preserves topology including branches and junctions.
- * @param {Uint8Array} mask - binary mask (1 = foreground, 0 = background)
- * @param {number} w - width
- * @param {number} h - height
- * @returns {Uint8Array} modified mask with skeleton pixels = 1
  */
 function thinSkeleton(mask, w, h) {
   const out = new Uint8Array(mask);
@@ -1123,18 +1074,15 @@ function thinSkeleton(mask, w, h) {
         const p = [];
         for (let i = 0; i < 8; i++) p.push(getP(x, y, i));
 
-        // B(P1) = number of non-zero neighbors
         const B = p.reduce((s, v) => s + v, 0);
         if (B < 2 || B > 6) continue;
 
-        // A(P1) = number of 0→1 transitions in the ordered sequence P2..P9..P2
         let A = 0;
         for (let i = 0; i < 8; i++) {
           if (p[i] === 0 && p[(i + 1) % 8] === 1) A++;
         }
         if (A !== 1) continue;
 
-        // Conditions for sub-iteration 1: P2*P4*P6=0 and P4*P6*P8=0
         if (p[0] * p[2] * p[4] !== 0) continue;
         if (p[2] * p[4] * p[6] !== 0) continue;
 
@@ -1161,7 +1109,6 @@ function thinSkeleton(mask, w, h) {
         }
         if (A !== 1) continue;
 
-        // Conditions for sub-iteration 2: P2*P4*P8=0 and P2*P6*P8=0
         if (p[0] * p[2] * p[6] !== 0) continue;
         if (p[0] * p[4] * p[6] !== 0) continue;
 
@@ -1174,14 +1121,14 @@ function thinSkeleton(mask, w, h) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Spur pruning
+// ---------------------------------------------------------------------------
+
 /**
  * Remove short spur branches from a skeleton.
  * A spur is a branch that starts at an endpoint and ends at a junction,
  * shorter than maxLen pixels. Iteratively removes spurs until none remain.
- * @param {Uint8Array} skeleton - thinned binary mask (modified in place)
- * @param {number} w - width
- * @param {number} h - height
- * @param {number} maxLen - max spur length in pixels to prune
  */
 function pruneSpurs(skeleton, w, h, maxLen) {
   const dx = [1, 1, 0, -1, -1, -1, 0, 1];
@@ -1200,7 +1147,6 @@ function pruneSpurs(skeleton, w, h, maxLen) {
   while (changed) {
     changed = false;
 
-    // Find current endpoints
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         if (!skeleton[y * w + x]) continue;
@@ -1214,21 +1160,18 @@ function pruneSpurs(skeleton, w, h, maxLen) {
           for (let i = 0; i < 8; i++) {
             const nx = cx + dx[i], ny = cy + dy[i];
             if (nx >= 0 && nx < w && ny >= 0 && ny < h && skeleton[ny * w + nx]) {
-              // Don't go back to previous pixel
               if (spur.length >= 2 && nx === spur[spur.length - 2].x && ny === spur[spur.length - 2].y) continue;
               nextX = nx;
               nextY = ny;
               break;
             }
           }
-          if (nextX === -1) break; // dead end (isolated pixel)
+          if (nextX === -1) break;
           spur.push({ x: nextX, y: nextY });
           cx = nextX;
           cy = nextY;
 
-          // Reached a junction? This spur can be pruned.
           if (neighborCount(cx, cy) >= 3) {
-            // Remove spur pixels (but NOT the junction pixel)
             for (let s = 0; s < spur.length - 1; s++) {
               skeleton[spur[s].y * w + spur[s].x] = 0;
             }
@@ -1241,14 +1184,13 @@ function pruneSpurs(skeleton, w, h, maxLen) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Junction cluster collapse
+// ---------------------------------------------------------------------------
+
 /**
  * Collapse adjacent junction pixels (staircase artifacts from Zhang-Suen)
- * into single representative pixels. Two junction pixels that are
- * 8-connected neighbors are part of the same logical junction.
- * Replaces each cluster with its centroid pixel.
- * @param {Uint8Array} skeleton - thinned binary mask (modified in place)
- * @param {number} w - width
- * @param {number} h - height
+ * into single representative pixels.
  */
 function collapseJunctionClusters(skeleton, w, h) {
   const dx = [1, 1, 0, -1, -1, -1, 0, 1];
@@ -1309,16 +1251,13 @@ function collapseJunctionClusters(skeleton, w, h) {
     }
   }
 
-  // For each cluster, find non-junction skeleton neighbors (the "arms" leaving this junction)
-  // Keep only the centroid pixel and re-connect the arms to it
+  // For each cluster, keep only the centroid pixel and re-connect the arms
   for (const cluster of clusters) {
-    // Find centroid
     let cx = 0, cy = 0;
     for (const p of cluster) { cx += p.x; cy += p.y; }
     cx = Math.round(cx / cluster.length);
     cy = Math.round(cy / cluster.length);
 
-    // Find all non-junction skeleton pixels adjacent to the cluster
     const clusterSet = new Set(cluster.map(p => p.y * w + p.x));
     const arms = new Set();
     for (const p of cluster) {
@@ -1344,7 +1283,6 @@ function collapseJunctionClusters(skeleton, w, h) {
     // Draw 1px lines from centroid to each arm pixel (Bresenham)
     for (const armKey of arms) {
       const ax = armKey % w, ay = Math.floor(armKey / w);
-      // Simple line drawing
       let lx = cx, ly = cy;
       const steps = Math.max(Math.abs(ax - cx), Math.abs(ay - cy));
       for (let s = 1; s < steps; s++) {
@@ -1357,26 +1295,22 @@ function collapseJunctionClusters(skeleton, w, h) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Skeleton chain tracing
+// ---------------------------------------------------------------------------
+
 /**
  * Trace skeleton pixels into separate chains.
  * Finds junctions (3+ neighbors) and endpoints (1 neighbor), then walks
- * each segment between them. After tracing, merges chains through
- * pass-through junctions (junctions with exactly 2 chain connections).
- * @param {Uint8Array} skeleton - thinned binary mask
- * @param {number} w - width
- * @param {number} h - height
- * @returns {{x:number, y:number}[][]} array of chains, each chain = [{x,y}, ...]
+ * each segment between them.
  */
 function traceSkeletonChains(skeleton, w, h) {
-  // Collapse junction clusters into single pixels, then re-prune spurs
-  // that the collapse may have created (new endpoints from broken connections).
-  // Iterate until stable.
+  // Collapse junction clusters, then re-prune spurs. Iterate until stable.
   for (let pass = 0; pass < 3; pass++) {
     collapseJunctionClusters(skeleton, w, h);
     pruneSpurs(skeleton, w, h, 5);
   }
 
-  // 8-connected neighbor offsets
   const dx = [1, 1, 0, -1, -1, -1, 0, 1];
   const dy = [0, 1, 1, 1, 0, -1, -1, -1];
 
@@ -1488,7 +1422,6 @@ function traceSkeletonChains(skeleton, w, h) {
   }
 
   // --- Merge chains through pass-through junctions ---
-  // A junction connecting exactly 2 chain ends is a pass-through, not a branch.
   if (chains.length > 1) {
     const junctionChains = new Map();
 
@@ -1556,11 +1489,12 @@ function traceSkeletonChains(skeleton, w, h) {
   return chains;
 }
 
+// ---------------------------------------------------------------------------
+// Medial axis / path spine extraction
+// ---------------------------------------------------------------------------
+
 /**
  * Resample a polyline to a target number of equally-spaced points via arc-length interpolation.
- * @param {{x:number, z:number}[]} chain
- * @param {number} targetCount
- * @returns {{x:number, z:number}[]}
  */
 function resampleChain(chain, targetCount) {
   if (chain.length < 2 || targetCount < 2) return chain.slice();
@@ -1600,8 +1534,6 @@ function resampleChain(chain, targetCount) {
  * Finds the two farthest vertices (path endpoints), splits the contour into
  * left/right chains, resamples both to equal count, and averages corresponding
  * points to produce the medial axis.
- * @param {{x:number, z:number}[]} contour - closed polygon in local meters
- * @returns {{x:number, z:number}[]} spine centerline
  */
 function extractPathSpine(contour) {
   const n = contour.length;
@@ -1622,7 +1554,7 @@ function extractPathSpine(contour) {
     }
   }
 
-  // Split into two chains: A→B (forward) and B→A (backward)
+  // Split into two chains: A->B (forward) and B->A (backward)
   const chainLeft = [];
   for (let i = iA; i !== iB; i = (i + 1) % n) {
     chainLeft.push(contour[i]);
@@ -1634,14 +1566,14 @@ function extractPathSpine(contour) {
     chainRight.push(contour[i]);
   }
   chainRight.push(contour[iA]);
-  chainRight.reverse(); // so both chains go A→B
+  chainRight.reverse(); // so both chains go A->B
 
   // Resample both chains to the same number of points
   const numSpinePoints = Math.max(chainLeft.length, chainRight.length);
   const leftResampled = resampleChain(chainLeft, numSpinePoints);
   const rightResampled = resampleChain(chainRight, numSpinePoints);
 
-  // Average corresponding points → spine
+  // Average corresponding points -> spine
   const spine = [];
   for (let i = 0; i < numSpinePoints; i++) {
     spine.push({
@@ -1652,6 +1584,10 @@ function extractPathSpine(contour) {
 
   return spine;
 }
+
+// ---------------------------------------------------------------------------
+// Water masks
+// ---------------------------------------------------------------------------
 
 /**
  * Extract water regions as rasterized masks (no contour simplification).
@@ -1690,7 +1626,6 @@ function extractWaterMasks(zonesData, terrainMeta, minPixels = 50) {
         const pixels = floodFill(x, y);
         if (pixels.length < minPixels) continue;
 
-        // Bounding box in pixel coords
         const xs = pixels.map(p => p[0]);
         const ys = pixels.map(p => p[1]);
         const pxMinX = Math.min(...xs);
@@ -1701,19 +1636,15 @@ function extractWaterMasks(zonesData, terrainMeta, minPixels = 50) {
         const maskW = pxMaxX - pxMinX + 1;
         const maskH = pxMaxY - pxMinY + 1;
 
-        // Build binary mask cropped to bbox
-        const mask = new Uint8Array(maskW * maskH); // 0 = not water
+        const mask = new Uint8Array(maskW * maskH);
         for (const [px, py] of pixels) {
           const mx = px - pxMinX;
           const my = py - pxMinY;
           mask[my * maskW + mx] = 1;
         }
 
-        // Convert mask to base64
         const maskBase64 = Buffer.from(mask).toString('base64');
 
-        // Bounding box in local meter coordinates
-        // Same coord system as anchors: (normCoord - 0.5) * terrainSize
         const bboxMinX = parseFloat(((pxMinX / (w - 1) - 0.5) * tw).toFixed(2));
         const bboxMaxX = parseFloat(((pxMaxX / (w - 1) - 0.5) * tw).toFixed(2));
         const bboxMinZ = parseFloat(((pxMinY / (h - 1) - 0.5) * tl).toFixed(2));
@@ -1743,15 +1674,19 @@ function extractWaterMasks(zonesData, terrainMeta, minPixels = 50) {
   return regions;
 }
 
-function exportHole(courseId, holeNumber, courseJson) {
+// ---------------------------------------------------------------------------
+// Main export function
+// ---------------------------------------------------------------------------
+
+async function exportHole(courseId, holeNumber, courseJson) {
   const nn = String(holeNumber).padStart(2, '0');
   const holeDir = path.join(ROOT, 'output', courseId, 'holes', nn);
   const exportDir = path.join(ROOT, 'output', courseId, 'export', `hole-${nn}`);
 
   // Check required files
   const required = [
-    'terrain-meta.json', 'heightmap.raw', 'illustration.png',
-    'tees.json', 'zones.json', 'extract-meta.json',
+    'terrain-meta.json', 'heightmap.raw', 'satellite.png',
+    'zones.json', 'hole-bounds.json',
   ];
   for (const f of required) {
     if (!fs.existsSync(path.join(holeDir, f))) {
@@ -1764,36 +1699,45 @@ function exportHole(courseId, holeNumber, courseJson) {
 
   // Load source data
   const terrainMeta = JSON.parse(fs.readFileSync(path.join(holeDir, 'terrain-meta.json'), 'utf-8'));
-  const teesData = JSON.parse(fs.readFileSync(path.join(holeDir, 'tees.json'), 'utf-8'));
-  const extractMeta = JSON.parse(fs.readFileSync(path.join(holeDir, 'extract-meta.json'), 'utf-8'));
+  const holeBounds = JSON.parse(fs.readFileSync(path.join(holeDir, 'hole-bounds.json'), 'utf-8'));
   const holeData = courseJson.holes.find(h => h.number === holeNumber);
 
+  // Tees are optional for Geo pipeline
+  const teesPath = path.join(holeDir, 'tees.json');
+  const teesData = fs.existsSync(teesPath)
+    ? JSON.parse(fs.readFileSync(teesPath, 'utf-8'))
+    : null;
+
   // --- Build hole-manifest.json ---
+  const tw = terrainMeta.terrain_width_m;
+  const tl = terrainMeta.terrain_length_m;
+
   const manifest = {
     schema_version: '1.0.0',
-    pipeline: 'uhole-lite',
+    pipeline: 'uhole-geo',
     course_id: courseId,
     hole_number: holeNumber,
-    par: holeData.par,
-    stroke_index: holeData.hdcp,
-    championship_yards: holeData.tees.back.yards,
-    bounds: null,
-    origin: null,
+    par: holeData ? holeData.par : null,
+    bounds: {
+      north: holeBounds.north,
+      south: holeBounds.south,
+      east: holeBounds.east,
+      west: holeBounds.west,
+    },
     terrain: {
       heightmap_file: 'heightmap.raw',
-      format: terrainMeta.format,
-      resolution: terrainMeta.resolution,
+      format: terrainMeta.format || 'uint16be',
+      resolution: terrainMeta.resolution || 2049,
+      terrain_width_m: tw,
+      terrain_length_m: tl,
       min_elevation_m: terrainMeta.min_elevation_m,
       max_elevation_m: terrainMeta.max_elevation_m,
-      terrain_width_m: terrainMeta.terrain_width_m,
-      terrain_length_m: terrainMeta.terrain_length_m,
     },
     texture: {
       file: 'texture.png',
-      width: extractMeta.final_dimensions.width,
-      height: extractMeta.final_dimensions.height,
+      width: 1024,
+      height: 1024,
     },
-    aerial: null,
     anchors_file: 'anchors.json',
     zones_file: 'zones.json',
     bunkers_file: 'bunkers.json',
@@ -1813,19 +1757,20 @@ function exportHole(courseId, holeNumber, courseJson) {
   );
 
   // --- Build anchors.json (local meter coordinates) ---
-  const tw = terrainMeta.terrain_width_m;
-  const tl = terrainMeta.terrain_length_m;
-
-  const anchors = teesData.tees
-    .filter(t => t.normalized)
-    .map(t => ({
-      type: t.type,
-      label: `${t.color.charAt(0).toUpperCase() + t.color.slice(1)} Tee (${t.yards}y)`,
-      local: {
-        x: parseFloat(((t.normalized.x - 0.5) * tw).toFixed(1)),
-        z: parseFloat(((t.normalized.y - 0.5) * tl).toFixed(1)),
-      },
-    }));
+  const anchors = [];
+  if (teesData && teesData.tees) {
+    for (const t of teesData.tees) {
+      if (!t.normalized) continue;
+      anchors.push({
+        type: t.type,
+        label: `${t.color.charAt(0).toUpperCase() + t.color.slice(1)} Tee (${t.yards}y)`,
+        local: {
+          x: parseFloat(((t.normalized.x - 0.5) * tw).toFixed(1)),
+          z: parseFloat(((t.normalized.y - 0.5) * tl).toFixed(1)),
+        },
+      });
+    }
+  }
 
   fs.writeFileSync(
     path.join(exportDir, 'anchors.json'),
@@ -1833,9 +1778,11 @@ function exportHole(courseId, holeNumber, courseJson) {
     'utf-8'
   );
 
-  // --- Build bunkers.json ---
+  // --- Load zones data ---
   const zonesData = JSON.parse(fs.readFileSync(path.join(holeDir, 'zones.json'), 'utf-8'));
-  const bunkers = extractZoneContours(zonesData, terrainMeta, 6);  // zone 6 = bunker
+
+  // --- Build bunkers.json ---
+  const bunkers = extractZoneContours(zonesData, terrainMeta, 6);
 
   const bunkersOutput = {
     schema_version: '2.0.0',
@@ -1851,7 +1798,6 @@ function exportHole(courseId, holeNumber, courseJson) {
     'utf-8'
   );
 
-  // Log bunker contour stats
   if (bunkers.length > 0) {
     const contourStats = bunkers.map(b =>
       `#${b.id}: ${b.contour.length}pts`
@@ -1860,7 +1806,7 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build greens.json ---
-  const greens = extractZoneContours(zonesData, terrainMeta, 2, 20);  // zone 2 = green, min 20px
+  const greens = extractZoneContours(zonesData, terrainMeta, 2, 20);
 
   const greensOutput = {
     schema_version: '1.0.0',
@@ -1876,7 +1822,6 @@ function exportHole(courseId, holeNumber, courseJson) {
     'utf-8'
   );
 
-  // Log green contour stats
   if (greens.length > 0) {
     const contourStats = greens.map(g =>
       `#${g.id}: ${g.contour.length}pts`
@@ -1886,9 +1831,6 @@ function exportHole(courseId, holeNumber, courseJson) {
 
   // --- Build fairway-contours.json ---
   const fairways = extractZoneContours(zonesData, terrainMeta, 1, 30, 1.0, 2);
-  // zone 1 = fairway, min 30px, RDP epsilon 3.0, 3 Chaikin passes.
-  // NOTE: narrow corridor sections may appear slightly thinner than the zone
-  // map due to Chaikin shrinkage — acceptable tradeoff for smooth edges.
 
   const fairwayOutput = {
     schema_version: '1.0.0',
@@ -1910,18 +1852,15 @@ function exportHole(courseId, holeNumber, courseJson) {
     console.log(`  Fairway contours: ${contourStats}`);
   }
 
-  // --- Build zone-contours.json (tee, semi-rough) ---
+  // --- Build zone-contours.json (tee, semi-rough, cart path) ---
   const tees = extractZoneContours(zonesData, terrainMeta, 10, 15, 1.5, 3);
-  // was: epsilon 2.0, 2 passes → now: epsilon 1.5, 3 passes
   const semiRough = extractZoneContours(zonesData, terrainMeta, 3, 30, 3.0, 3);
   const cartPaths = extractCartPathContours(zonesData, terrainMeta, 2.5, 15, 1.0, 2);
-  // 2.5m min width, 15 min pixels, RDP epsilon 1.0 (preserve narrow shape), 2 Chaikin passes
 
   // Extract water contours early so they can be used for spine nudging
   const water = extractZoneContours(zonesData, terrainMeta, 7, 8, 2.0, 2);
 
-  // Nudge cart path spines so the strip mesh doesn't overlap with
-  // fairway, bunker, tee, or water contour polygons
+  // Nudge cart path spines away from fairway, bunker, tee, and water contours
   const forbiddenContours = [
     ...fairways.map(f => ({ contour: f.contour })),
     ...bunkers.map(b => ({ contour: b.contour })),
@@ -1973,8 +1912,6 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build water.json ---
-  // (water contours already extracted above for spine nudging)
-
   const waterOutput = {
     schema_version: '3.0.0',
     hole_number: holeNumber,
@@ -1988,7 +1925,6 @@ function exportHole(courseId, holeNumber, courseJson) {
     'utf-8'
   );
 
-  // Log water contour stats
   if (water.length > 0) {
     const contourStats = water.map(w =>
       `#${w.id}: ${w.contour.length}pts (${w.pixel_count}px)`
@@ -1997,16 +1933,12 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build tree-zones.json ---
-  // Trees exist in two places: zone 5 in merged grid, AND trees_mask overlay.
-  // The merged grid gives OB priority (zone 9) over trees (zone 5), so trees
-  // under OB are lost in 'grid'. Use trees_mask to recover them.
   const maskW = zonesData.source_dimensions.width;
   const maskH = zonesData.source_dimensions.height;
   const mergedBuf = Buffer.from(zonesData.grid, 'base64');
   const treesMaskBuf = zonesData.trees_mask
     ? Buffer.from(zonesData.trees_mask, 'base64') : null;
 
-  // Build a synthetic grid where zone 5 = tree (from merged grid OR trees_mask)
   const treeGrid = Buffer.alloc(maskW * maskH);
   const treeMask = Buffer.alloc(maskW * maskH);
   for (let i = 0; i < mergedBuf.length; i++) {
@@ -2057,14 +1989,21 @@ function exportHole(courseId, holeNumber, courseJson) {
     const totalArea = treeZonesOutput.tree_regions
       .reduce((sum, r) => sum + r.area_m2, 0);
     console.log(`  Tree zones: ${treeRegions.length} region(s), ` +
-      `${totalArea.toFixed(0)} m² total`);
+      `${totalArea.toFixed(0)} m2 total`);
   } else {
     console.log(`  Tree zones: none painted`);
   }
 
   // --- Copy files ---
+  // Copy heightmap.raw
   fs.copyFileSync(path.join(holeDir, 'heightmap.raw'), path.join(exportDir, 'heightmap.raw'));
-  fs.copyFileSync(path.join(holeDir, 'illustration.png'), path.join(exportDir, 'texture.png'));
+
+  // Copy satellite.png as texture.png, resized to 1024x1024
+  await sharp(path.join(holeDir, 'satellite.png'))
+    .resize(1024, 1024, { fit: 'fill' })
+    .toFile(path.join(exportDir, 'texture.png'));
+
+  // Copy zones.json
   fs.copyFileSync(path.join(holeDir, 'zones.json'), path.join(exportDir, 'zones.json'));
 
   // --- Create flat variant ---
@@ -2121,7 +2060,7 @@ function createFlatExport(normalExportDir, flatExportDir) {
 }
 
 // ---------------------------------------------------------------------------
-// Main
+// CLI
 // ---------------------------------------------------------------------------
 
 async function main() {
@@ -2135,7 +2074,7 @@ async function main() {
 
   const coursePath = path.join(ROOT, 'output', courseId, 'course.json');
   if (!fs.existsSync(coursePath)) {
-    console.error('course.json not found — run scrape-course.mjs first');
+    console.error('course.json not found -- run course setup first');
     process.exit(1);
   }
   const courseJson = JSON.parse(fs.readFileSync(coursePath, 'utf-8'));
@@ -2149,17 +2088,17 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Exporting ${holes.length} hole(s)\n`);
+  console.log(`Exporting ${holes.length} hole(s) [uhole-geo]\n`);
 
   let successCount = 0;
   for (const h of holes) {
     const nn = String(h).padStart(2, '0');
     process.stdout.write(`Hole ${h}/18 ... `);
-    const result = exportHole(courseId, h, courseJson);
+    const result = await exportHole(courseId, h, courseJson);
     if (result) {
       const m = result.manifest;
-      console.log(`OK  export/hole-${nn}/  par=${m.par}  ${m.championship_yards}yd  ` +
-        `${m.terrain.terrain_width_m}×${m.terrain.terrain_length_m}m  ` +
+      console.log(`OK  export/hole-${nn}/  par=${m.par}  ` +
+        `${m.terrain.terrain_width_m}x${m.terrain.terrain_length_m}m  ` +
         `${result.anchorCount} anchors  ${result.bunkerCount} bunkers  ` +
         `${result.greenCount} greens  ${result.waterCount} water  ` +
         `${result.treeRegionCount} tree regions`);
