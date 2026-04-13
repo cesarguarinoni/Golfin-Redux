@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-13
+**Last Updated:** 2026-04-13 (session 2)
 
 ## Current Status
 
@@ -19,6 +19,22 @@
 | Leveling Economy | ✅ Rarity-based |
 | Shop | Not started |
 | Gameplay | Not started |
+
+---
+
+## Session 2 Changes (2026-04-13)
+
+### Completed
+- Fixed `spineExt→spine` bug in `CreateSpineStripMesh` (undefined variable leftover)
+- Added `snapped_endpoints` flags to pipeline export (marks T-junction endpoints)
+- Tried pullback + taper approaches for T-junction overshoot (both reverted — need different approach)
+- Cart path depression: tried flat (visible cliff), restored smoothstep gradient with wider polygon (full width + 0.30m margin instead of old 0.50m inset)
+- **Tree exclusion from overlay meshes** — TreePlacer now builds polygon exclusion zones from all overlay contours (fairway, tee, bunker, green, water, cart path spine) and does point-in-polygon tests during placement
+- Tried bunker sand + water bed splatmap painting under overlays (both reverted per user)
+
+### Still Open
+- Cart path T-junction overshoot (pullback and taper both failed — needs new approach from architect)
+- Bunker/water splatmap painting under overlays (reverted, may revisit with different approach)
 
 ---
 
@@ -140,7 +156,6 @@ contour-traced mesh overlays with smooth edges:
 | 6 | T_RoadAsphalt_Albedo | Cart path |
 | 7 | T_Fairway_Dark | Dark fairway (mow stripes) |
 | 8 | T_Rough_Albedo (tinted) | OB — same texture, darker via diffuseRemapMax |
-| 9 | T_WaterBed_DarkBlue (generated) | Water bed — solid dark blue under water meshes |
 
 ### Key Files
 - Pipeline: `Tools/UHoleLite/scripts/` (7 scripts + lib/ + diagnose-fairway.mjs)
