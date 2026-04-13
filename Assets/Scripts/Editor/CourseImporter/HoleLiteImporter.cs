@@ -420,7 +420,12 @@ namespace Golfin.CourseImport
                     int smW = zonesSmData.source_dimensions.width;
                     int smH = zonesSmData.source_dimensions.height;
 
-                    // Step 1: Build play-area mask
+                    // Step 1: Build play-area mask from OB boundary
+                    // Everything NOT in OB = play area (keeps raw DEM detail)
+                    byte[] smObMask = null;
+                    if (!string.IsNullOrEmpty(zonesSmData.ob_mask))
+                        smObMask = System.Convert.FromBase64String(zonesSmData.ob_mask);
+
                     bool[] isPlayArea = new bool[actualRes * actualRes];
                     for (int hz = 0; hz < actualRes; hz++)
                     {
@@ -431,9 +436,16 @@ namespace Golfin.CourseImport
                             // Reverse 90° CCW: zone.x = normZ, zone.y = normX
                             int gx = Mathf.Clamp(Mathf.RoundToInt(normZ * (smW - 1)), 0, smW - 1);
                             int gy = Mathf.Clamp(Mathf.RoundToInt(normX * (smH - 1)), 0, smH - 1);
-                            int zone = smGrid[gy * smW + gx];
-                            if (PlayZones.Contains(zone))
-                                isPlayArea[hz * actualRes + hx] = true;
+                            int obIdx = gy * smW + gx;
+
+                            if (smObMask != null && obIdx < smObMask.Length)
+                                isPlayArea[hz * actualRes + hx] = (smObMask[obIdx] == 0);
+                            else
+                            {
+                                // Fallback: use zone-based play area if no OB mask
+                                int zone = smGrid[gy * smW + gx];
+                                isPlayArea[hz * actualRes + hx] = PlayZones.Contains(zone);
+                            }
                         }
                     }
 
