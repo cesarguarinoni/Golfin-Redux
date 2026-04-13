@@ -348,7 +348,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     ? Buffer.from(zonesData.terrain_grid, 'base64') : null;
   // Zones where cart paths should NOT overlap — skeleton extraction will
   // clip these pixels so the spine routes around them.
-  const overlapZones = new Set([1, 6, 10]); // fairway, bunker, tee
+  const overlapZones = new Set([1, 6, 7, 10]); // fairway, bunker, water, tee
 
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
@@ -559,8 +559,8 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
 
     // If skeleton produced too many significant chains, it's noise — fall back
     // to the original contour-based farthest-pair spine extraction.
-    // Real Y/T-junctions produce 2-4 significant chains.
-    const maxExpectedBranches = 5;
+    // Complex cart path networks can have 8-10+ real branches (e.g. hole 18).
+    const maxExpectedBranches = 12;
     if (significantChains.length > maxExpectedBranches) {
       console.log(`    Skeleton noisy (${significantChains.length} chains), falling back to contour spine`);
       let spine = extractPathSpine(contourMeters);
@@ -1768,13 +1768,16 @@ function exportHole(courseId, holeNumber, courseJson) {
   const cartPaths = extractCartPathContours(zonesData, terrainMeta, 2.5, 15, 1.0, 2);
   // 2.5m min width, 15 min pixels, RDP epsilon 1.0 (preserve narrow shape), 2 Chaikin passes
 
+  // Extract water contours early so they can be used for spine nudging
+  const water = extractZoneContours(zonesData, terrainMeta, 7, 8, 2.0, 2);
+
   // Nudge cart path spines so the strip mesh doesn't overlap with
-  // fairway, bunker, or tee contour polygons (smoothed contours are
-  // larger than raw pixels, so pixel-level clipping alone isn't enough)
+  // fairway, bunker, tee, or water contour polygons
   const forbiddenContours = [
     ...fairways.map(f => ({ contour: f.contour })),
     ...bunkers.map(b => ({ contour: b.contour })),
     ...tees.map(t => ({ contour: t.contour })),
+    ...water.map(w => ({ contour: w.contour })),
   ];
   nudgeSpinesFromContours(cartPaths, forbiddenContours, 2.5 / 2);
 
@@ -1821,8 +1824,7 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build water.json ---
-  const water = extractZoneContours(zonesData, terrainMeta, 7, 8, 2.0, 2);
-  // zone 7 = water, min 8px (small ponds matter), RDP epsilon 2.0, 2 Chaikin passes
+  // (water contours already extracted above for spine nudging)
 
   const waterOutput = {
     schema_version: '3.0.0',
