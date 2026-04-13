@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -3050,29 +3051,56 @@ namespace Golfin.CourseImport
         /// Build a closed polygon from a spine centerline + half-width.
         /// Returns left edge forward + right edge reversed = closed loop.
         /// Same geometry as CreateSpineStripMesh uses.
+        ///
+        /// The spine is subdivided to maxSegmentLength spacing before computing
+        /// edges. This produces a polygon that closely matches the smooth mesh
+        /// quad strip at splatmap resolution, avoiding wavy/jagged edges.
         /// </summary>
         private static Vector2[] BuildSpinePolygon(
-            ContourPoint[] spine, float halfWidth)
+            ContourPoint[] spine, float halfWidth,
+            float maxSegmentLength = 0.5f)
         {
             int n = spine.Length;
             if (n < 2) return null;
 
-            var left = new Vector2[n];
-            var right = new Vector2[n];
-
-            for (int i = 0; i < n; i++)
+            // Subdivide spine so no segment exceeds maxSegmentLength.
+            // This gives the polygon enough vertices to match the smooth mesh.
+            var subdiv = new List<ContourPoint>();
+            subdiv.Add(spine[0]);
+            for (int i = 1; i < n; i++)
             {
-                float cx = spine[i].z;  // 90° CCW
-                float cz = spine[i].x;
+                float dx = spine[i].x - spine[i - 1].x;
+                float dz = spine[i].z - spine[i - 1].z;
+                float segLen = Mathf.Sqrt(dx * dx + dz * dz);
+                int steps = Mathf.Max(1, Mathf.CeilToInt(segLen / maxSegmentLength));
+                for (int s = 1; s <= steps; s++)
+                {
+                    float t = (float)s / steps;
+                    subdiv.Add(new ContourPoint
+                    {
+                        x = spine[i - 1].x + dx * t,
+                        z = spine[i - 1].z + dz * t,
+                    });
+                }
+            }
+
+            int sn = subdiv.Count;
+            var left = new Vector2[sn];
+            var right = new Vector2[sn];
+
+            for (int i = 0; i < sn; i++)
+            {
+                float cx = subdiv[i].z;  // 90° CCW
+                float cz = subdiv[i].x;
 
                 // Tangent
                 float tx, tz;
                 if (i == 0)
-                { tx = spine[1].z - spine[0].z; tz = spine[1].x - spine[0].x; }
-                else if (i == n - 1)
-                { tx = spine[n-1].z - spine[n-2].z; tz = spine[n-1].x - spine[n-2].x; }
+                { tx = subdiv[1].z - subdiv[0].z; tz = subdiv[1].x - subdiv[0].x; }
+                else if (i == sn - 1)
+                { tx = subdiv[sn-1].z - subdiv[sn-2].z; tz = subdiv[sn-1].x - subdiv[sn-2].x; }
                 else
-                { tx = spine[i+1].z - spine[i-1].z; tz = spine[i+1].x - spine[i-1].x; }
+                { tx = subdiv[i+1].z - subdiv[i-1].z; tz = subdiv[i+1].x - subdiv[i-1].x; }
 
                 float tLen = Mathf.Sqrt(tx * tx + tz * tz);
                 if (tLen > 0.001f) { tx /= tLen; tz /= tLen; }
@@ -3089,11 +3117,11 @@ namespace Golfin.CourseImport
             }
 
             // Closed polygon: left forward, then right reversed
-            var poly = new Vector2[n * 2];
-            for (int i = 0; i < n; i++)
+            var poly = new Vector2[sn * 2];
+            for (int i = 0; i < sn; i++)
                 poly[i] = left[i];
-            for (int i = 0; i < n; i++)
-                poly[n + i] = right[n - 1 - i];
+            for (int i = 0; i < sn; i++)
+                poly[sn + i] = right[sn - 1 - i];
 
             return poly;
         }
