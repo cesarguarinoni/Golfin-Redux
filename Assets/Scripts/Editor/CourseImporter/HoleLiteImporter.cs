@@ -3489,68 +3489,7 @@ namespace Golfin.CourseImport
                             meshGO.transform.SetParent(cpRoot.transform);
                     }
 
-                    // Create fill patches at junction points where branches meet.
-                    // Each junction gets a small disc mesh so there are no gaps.
-                    var seenJunctions = new HashSet<string>();
-                    int junctionCount = 0;
-                    foreach (var region in cpData.cart_paths)
-                    {
-                        if (region.junctions == null) continue;
-                        float halfWidth = (region.width_m > 0 ? region.width_m : 2.5f) / 2f;
-                        foreach (var jp in region.junctions)
-                        {
-                            string key = $"{jp.x},{jp.z}";
-                            if (seenJunctions.Contains(key)) continue;
-                            seenJunctions.Add(key);
-
-                            // 90° CCW rotation
-                            float wx = jp.z, wz = jp.x;
-                            float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-
-                            // Create a disc mesh at the junction, large enough to fill
-                            // the triangular gaps between converging strip meshes.
-                            float junctionRadius = halfWidth * 2.5f;
-                            int segments = 12;
-                            var verts = new Vector3[segments + 1];
-                            var tris = new int[segments * 3];
-                            var uvs = new Vector2[segments + 1];
-
-                            verts[0] = Vector3.zero;
-                            uvs[0] = new Vector2(0.5f, 0.5f);
-                            for (int s = 0; s < segments; s++)
-                            {
-                                float angle = s * Mathf.PI * 2f / segments;
-                                float dx = Mathf.Cos(angle) * junctionRadius;
-                                float dz = Mathf.Sin(angle) * junctionRadius;
-                                float sh = terrain.SampleHeight(
-                                    new Vector3(wx + dx, 0, wz + dz));
-                                verts[s + 1] = new Vector3(dx, sh - th, dz);
-                                uvs[s + 1] = new Vector2(
-                                    0.5f + Mathf.Cos(angle) * 0.5f,
-                                    0.5f + Mathf.Sin(angle) * 0.5f);
-                                tris[s * 3] = 0;
-                                tris[s * 3 + 1] = s + 1;
-                                tris[s * 3 + 2] = (s + 1) % segments + 1;
-                            }
-
-                            var mesh = new Mesh();
-                            mesh.name = $"CartPathJunction_{junctionCount}";
-                            mesh.vertices = verts;
-                            mesh.triangles = tris;
-                            mesh.uv = uvs;
-                            mesh.RecalculateNormals();
-
-                            var go = new GameObject($"CartPathJunction_{junctionCount}");
-                            go.transform.position = new Vector3(
-                                wx, terrainBaseY + th + 0.01f, wz);
-                            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-                            go.AddComponent<MeshRenderer>().sharedMaterial = cpMat;
-                            go.transform.SetParent(cpRoot.transform);
-                            junctionCount++;
-                        }
-                    }
-
-                    Debug.Log($"[HoleLiteImporter] Created {cpData.cart_paths.Length} cart path mesh(es), {junctionCount} junction patches");
+                    Debug.Log($"[HoleLiteImporter] Created {cpData.cart_paths.Length} cart path mesh(es)");
                 }
             }
 
@@ -3957,7 +3896,37 @@ namespace Golfin.CourseImport
             Material mat, float tileSize,
             Golfin.Course.SurfaceType surfaceType)
         {
-            int n = spine.Length;
+            // Extend spine by halfWidth at each end so strip meshes overlap
+            // at junctions, filling the gap between converging branches.
+            var extSpine = new List<ContourPoint>(spine.Length + 2);
+            {
+                // Extend start: push first point backward along initial tangent
+                float tx = spine[1].x - spine[0].x;
+                float tz = spine[1].z - spine[0].z;
+                float tl = Mathf.Sqrt(tx * tx + tz * tz);
+                if (tl > 0.001f) { tx /= tl; tz /= tl; }
+                extSpine.Add(new ContourPoint {
+                    x = spine[0].x - tx * halfWidth,
+                    z = spine[0].z - tz * halfWidth
+                });
+            }
+            for (int i = 0; i < spine.Length; i++)
+                extSpine.Add(spine[i]);
+            {
+                // Extend end: push last point forward along final tangent
+                int last = spine.Length - 1;
+                float tx = spine[last].x - spine[last - 1].x;
+                float tz = spine[last].z - spine[last - 1].z;
+                float tl = Mathf.Sqrt(tx * tx + tz * tz);
+                if (tl > 0.001f) { tx /= tl; tz /= tl; }
+                extSpine.Add(new ContourPoint {
+                    x = spine[last].x + tx * halfWidth,
+                    z = spine[last].z + tz * halfWidth
+                });
+            }
+            var spineExt = extSpine.ToArray();
+
+            int n = spineExt.Length;
             if (n < 2) return null;
 
             float yOffset = 0.01f; // offset to clear terrain between sample points
@@ -3969,25 +3938,25 @@ namespace Golfin.CourseImport
             for (int i = 0; i < n; i++)
             {
                 // 90° CCW rotation: worldX = z, worldZ = x
-                float cx = spine[i].z;
-                float cz = spine[i].x;
+                float cx = spineExt[i].z;
+                float cz = spineExt[i].x;
 
                 // Tangent direction (forward along spine)
                 float tx, tz;
                 if (i == 0)
                 {
-                    tx = spine[1].z - spine[0].z;
-                    tz = spine[1].x - spine[0].x;
+                    tx = spineExt[1].z - spineExt[0].z;
+                    tz = spineExt[1].x - spineExt[0].x;
                 }
                 else if (i == n - 1)
                 {
-                    tx = spine[n - 1].z - spine[n - 2].z;
-                    tz = spine[n - 1].x - spine[n - 2].x;
+                    tx = spineExt[n - 1].z - spineExt[n - 2].z;
+                    tz = spineExt[n - 1].x - spineExt[n - 2].x;
                 }
                 else
                 {
-                    tx = spine[i + 1].z - spine[i - 1].z;
-                    tz = spine[i + 1].x - spine[i - 1].x;
+                    tx = spineExt[i + 1].z - spineExt[i - 1].z;
+                    tz = spineExt[i + 1].x - spineExt[i - 1].x;
                 }
 
                 // Normalize tangent
@@ -4015,8 +3984,8 @@ namespace Golfin.CourseImport
                 // UVs: u = 0 (left) to 1 (right), v = arc length for tiling
                 if (i > 0)
                 {
-                    float dx = cx - spine[i - 1].z;
-                    float dz2 = cz - spine[i - 1].x;
+                    float dx = cx - spineExt[i - 1].z;
+                    float dz2 = cz - spineExt[i - 1].x;
                     arcLength += Mathf.Sqrt(dx * dx + dz2 * dz2);
                 }
                 uvs[i * 2]     = new Vector2(0f, arcLength / tileSize);

@@ -643,6 +643,63 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
         }
       }
 
+      // --- Merge chains at 2-way junctions ---
+      // If a junction has exactly 2 chain endpoints, those chains form a
+      // continuous path — merge them into one chain (avoids visible seam).
+      let mergedSomething = true;
+      while (mergedSomething) {
+        mergedSomething = false;
+        // Recount endpoints after each merge
+        const epCount2 = new Map();
+        for (let ci = 0; ci < significantChains.length; ci++) {
+          const chain = significantChains[ci];
+          for (const pt of [chain[0], chain[chain.length - 1]]) {
+            const key = `${pt.x},${pt.y}`;
+            if (!epCount2.has(key)) epCount2.set(key, []);
+            epCount2.get(key).push(ci);
+          }
+        }
+
+        for (const [jKey, chainIndices] of epCount2) {
+          if (chainIndices.length !== 2) continue;
+          const [ai, bi] = chainIndices;
+          if (ai === bi) continue; // same chain loops back
+          const chainA = significantChains[ai];
+          const chainB = significantChains[bi];
+          if (!chainA || !chainB) continue;
+
+          // Determine which ends connect at this junction
+          const aEnd = `${chainA[chainA.length - 1].x},${chainA[chainA.length - 1].y}` === jKey;
+          const aStart = `${chainA[0].x},${chainA[0].y}` === jKey;
+          const bEnd = `${chainB[chainB.length - 1].x},${chainB[chainB.length - 1].y}` === jKey;
+          const bStart = `${chainB[0].x},${chainB[0].y}` === jKey;
+
+          let merged = null;
+          if (aEnd && bStart) {
+            // A's end → B's start: concat A + B (skip duplicate junction point)
+            merged = [...chainA, ...chainB.slice(1)];
+          } else if (aEnd && bEnd) {
+            // A's end → B's end: concat A + reversed B
+            merged = [...chainA, ...chainB.slice(0, -1).reverse()];
+          } else if (aStart && bStart) {
+            // A's start → B's start: reverse A + B
+            merged = [...chainA.slice(1).reverse(), ...chainB];
+          } else if (aStart && bEnd) {
+            // B's end → A's start: concat B + A
+            merged = [...chainB, ...chainA.slice(1)];
+          }
+
+          if (merged) {
+            significantChains[ai] = merged;
+            significantChains.splice(bi, 1);
+            // Remove this junction since it's no longer a branch point
+            sharedJunctions.delete(jKey);
+            mergedSomething = true;
+            break; // restart — indices changed
+          }
+        }
+      }
+
       // Track which chains have a shared junction in their interior
       // (merged main chains that pass through a branch junction).
       // For each such chain, record the interior pixel index closest
