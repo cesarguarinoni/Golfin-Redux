@@ -215,8 +215,9 @@ function ensureCCW(polygon) {
   return polygon;
 }
 
-function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2) {
-  const grid = Buffer.from(zonesData.terrain_grid || zonesData.grid, 'base64');
+function extractZoneContours(zonesData, terrainMeta, targetZone, minPixels = 8, rdpEpsilon = 2.0, smoothPasses = 2, gridKey = null) {
+  const gridSrc = gridKey ? zonesData[gridKey] : (zonesData.terrain_grid || zonesData.grid);
+  const grid = Buffer.from(gridSrc, 'base64');
   const w = zonesData.source_dimensions.width;
   const h = zonesData.source_dimensions.height;
   const visited = new Uint8Array(w * h);
@@ -1641,13 +1642,12 @@ function exportHole(courseId, holeNumber, courseJson) {
   }
 
   // --- Build tree-zones.json ---
-  const treeRegions = extractZoneContours(zonesData, terrainMeta, 5, 30, 3.0, 2);
-  // zone 5 = trees, min 30px (skip tiny splotches), RDP epsilon 3.0
-  // (trees don't need precise contours), 2 Chaikin passes
+  // zone 5 = trees — must use 'grid' (terrain_grid merges trees into zone 4)
+  const treeRegions = extractZoneContours(zonesData, terrainMeta, 5, 30, 3.0, 2, 'grid');
 
   // Build binary mask from zone grid (1 = tree zone, 0 = not)
-  // Prefer terrain_grid (OB doesn't mask out trees) over merged grid
-  const treeGridSrc = zonesData.terrain_grid || zonesData.grid;
+  // Must use 'grid' — terrain_grid has no zone 5
+  const treeGridSrc = zonesData.grid;
   const gridBuf = Buffer.from(treeGridSrc, 'base64');
   const maskW = zonesData.source_dimensions.width;
   const maskH = zonesData.source_dimensions.height;
