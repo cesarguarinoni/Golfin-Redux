@@ -24,6 +24,16 @@
 
 ## Active Work — Course Visual Polish
 
+### OB Feature Export Fix + Cart Path Overlap Avoidance (2026-04-13) ✅
+- Fixed export pipeline: trees/cart paths in OB zones were lost because merged grid gives OB priority. Now uses separate `trees_mask` and `cart_path_mask` overlays.
+- Trees: +60,896 pixels recovered (277K → 338K)
+- Cart path skeleton clipping: extended tee-only clipping to exclude fairway (1), bunker (6), tee (10) using `terrain_grid` (base zones)
+- Fixed bug: `cart_path_mask` stamping overwrote original zones, breaking tee clipping
+- Spine nudging (`nudgeSpinesFromContours`): iterative geometry-based push that ensures 2.5m-wide strip doesn't overlap fairway/bunker/tee contour polygons
+  - Two-case: center-inside → push to boundary + clearance; edge-only → small perpendicular nudge
+  - 10 passes with progressive smoothing decay
+  - 15/18 holes fully clean; 3 holes have ≤3 sub-1m residual overlaps
+
 ### Smooth Play↔Non-Play Terrain Transition (2026-04-13) ✅
 - Replaced linear blend (Lerp smoothed↔raw via blendFactor) with boundary-height propagation
 - Non-play terrain now starts at adjacent play-area height (no cliff)
