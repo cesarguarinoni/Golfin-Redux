@@ -1174,32 +1174,32 @@ namespace Golfin.CourseImport
                                 if (!cpMask[ay, ax]) continue;
                                 float dist = cpEdgeDist[ay, ax];
 
-                                if (dist > edgeWidth)
-                                {
-                                    // Interior: full cart path texture
-                                    for (int l = 0; l < layerCount; l++)
-                                        alphamap[ay, ax, l] = 0f;
-                                    alphamap[ay, ax, 6] = 1f;
-                                    cpInteriorPainted++;
-                                }
-                                else
-                                {
-                                    // Edge strip: blend cart path with existing texture
-                                    float blend = 0.6f - (dist / edgeWidth) * 0.2f;
+                                // Outermost 1px row: soft anti-alias blend (85% cart path).
+                                // Everything else: 100% cart path for uniform appearance.
+                                float blend = (dist < 1f) ? 0.85f : 1f;
 
+                                if (blend < 1f)
+                                {
                                     int currentLayer = -1;
                                     for (int l = 0; l < layerCount; l++)
                                     {
                                         if (alphamap[ay, ax, l] > 0.5f)
                                         { currentLayer = l; break; }
                                     }
-                                    if (currentLayer < 0) currentLayer = 3; // rough fallback
+                                    if (currentLayer < 0) currentLayer = 3;
 
                                     for (int l = 0; l < layerCount; l++)
                                         alphamap[ay, ax, l] = 0f;
                                     alphamap[ay, ax, 6] = blend;
                                     alphamap[ay, ax, currentLayer] = 1f - blend;
                                     cpEdgePainted++;
+                                }
+                                else
+                                {
+                                    for (int l = 0; l < layerCount; l++)
+                                        alphamap[ay, ax, l] = 0f;
+                                    alphamap[ay, ax, 6] = 1f;
+                                    cpInteriorPainted++;
                                 }
                             }
                         }
