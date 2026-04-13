@@ -589,31 +589,84 @@ async function generateHeightmapDEM(holeNumber, holeData, teesData, zonesData, e
     }
   }
 
-  // Add residual variation ONLY to non-playable zones (trees, OB, background)
+  // Add residual variation to non-playable zones (trees, OB, background)
+  // with a distance-based ramp to avoid hard discontinuity at boundary
   const residualZones = new Set([
     ZONES.trees, ZONES.ob, ZONES.background,
   ]);
-  const RESIDUAL_FRACTION = 0.75; // 75% of real DEM hills in tree/OB/background zones
+  const RESIDUAL_FRACTION = 0.75;
+  const RESIDUAL_RAMP_CELLS = 60; // cells over which residual ramps from 0→100%
 
+  // Step A: Build playable mask at heightmap resolution
+  const isPlayable = new Uint8Array(RES * RES);
   for (let hy = 0; hy < RES; hy++) {
     for (let hx = 0; hx < RES; hx++) {
-      const idx = hy * RES + hx;
-      if (heightmap[idx] < -9000) continue;
-
       const nx = hx / (RES - 1);
       const ny = hy / (RES - 1);
       const zx = Math.min(zw - 1, Math.floor(nx * (zw - 1)));
       const zy = Math.min(zh - 1, Math.floor(ny * (zh - 1)));
       const zone = zoneGrid[zy * zw + zx];
-
-      if (residualZones.has(zone)) {
-        const surfH = evalQuadratic(holeSurface, hx, hy);
-        const rawH = rawDem[idx];
-        const residual = rawH - surfH;
-        heightmap[idx] = surfH + residual * RESIDUAL_FRACTION;
+      if (!residualZones.has(zone)) {
+        isPlayable[hy * RES + hx] = 1;
       }
     }
   }
+
+  // Step B: Distance transform from playable boundary (chamfer)
+  const distFromPlay = new Float64Array(RES * RES);
+  for (let i = 0; i < RES * RES; i++) {
+    distFromPlay[i] = isPlayable[i] ? 0 : 1e9;
+  }
+  // Forward pass
+  for (let hy = 0; hy < RES; hy++) {
+    for (let hx = 0; hx < RES; hx++) {
+      const idx = hy * RES + hx;
+      if (hx > 0)
+        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[idx - 1] + 1);
+      if (hy > 0)
+        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy - 1) * RES + hx] + 1);
+      if (hx > 0 && hy > 0)
+        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy - 1) * RES + (hx - 1)] + 1.414);
+      if (hx < RES - 1 && hy > 0)
+        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy - 1) * RES + (hx + 1)] + 1.414);
+    }
+  }
+  // Backward pass
+  for (let hy = RES - 1; hy >= 0; hy--) {
+    for (let hx = RES - 1; hx >= 0; hx--) {
+      const idx = hy * RES + hx;
+      if (hx < RES - 1)
+        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[idx + 1] + 1);
+      if (hy < RES - 1)
+        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy + 1) * RES + hx] + 1);
+      if (hx < RES - 1 && hy < RES - 1)
+        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy + 1) * RES + (hx + 1)] + 1.414);
+      if (hx > 0 && hy < RES - 1)
+        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy + 1) * RES + (hx - 1)] + 1.414);
+    }
+  }
+
+  // Step C: Apply residual with ramped fraction
+  for (let hy = 0; hy < RES; hy++) {
+    for (let hx = 0; hx < RES; hx++) {
+      const idx = hy * RES + hx;
+      if (isPlayable[idx]) continue; // playable cells stay as quadratic
+
+      const dist = distFromPlay[idx];
+      // Smoothstep ramp: 0 at boundary → 1 at RESIDUAL_RAMP_CELLS
+      let t = Math.min(dist / RESIDUAL_RAMP_CELLS, 1.0);
+      t = t * t * (3 - 2 * t); // smoothstep
+
+      const fraction = RESIDUAL_FRACTION * t;
+      const surfH = evalQuadratic(holeSurface, hx, hy);
+      const rawH = rawDem[idx];
+      const residual = rawH - surfH;
+      heightmap[idx] = surfH + residual * fraction;
+    }
+  }
+
+  console.log(`  Residual ramp: ${RESIDUAL_RAMP_CELLS} cells transition, ` +
+    `${(RESIDUAL_FRACTION * 100).toFixed(0)}% max fraction`);
 
   // Smooth residual zones to remove sharp DEM-grid bumps
   for (const z of [ZONES.trees, ZONES.ob, ZONES.background]) {
