@@ -769,6 +769,178 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
 }
 
 /**
+ * Nudge cart path spines so the strip (center ± halfWidth + margin) stays
+ * outside all forbidden contour polygons (fairway, bunker, tee).
+ *
+ * For each spine vertex whose strip edge falls inside a forbidden polygon,
+ * compute the nearest contour edge and push the spine point perpendicular
+ * to that edge until the strip edge clears it.
+ *
+ * @param {Array} cartPaths - cart path regions with .spine arrays
+ * @param {Array} forbiddenContours - array of {contour: [{x,z},...]} polygons
+ * @param {number} halfWidth - strip half-width in meters
+ * @param {number} margin - extra clearance beyond half-width (meters)
+ */
+function nudgeSpinesFromContours(cartPaths, forbiddenContours, halfWidth, margin = 0.5) {
+  if (forbiddenContours.length === 0) return;
+
+  // Point-in-polygon (ray casting)
+  function pip(px, pz, contour) {
+    let inside = false;
+    for (let i = 0, j = contour.length - 1; i < contour.length; j = i++) {
+      const xi = contour[i].x, zi = contour[i].z;
+      const xj = contour[j].x, zj = contour[j].z;
+      if (((zi > pz) !== (zj > pz)) && (px < (xj - xi) * (pz - zi) / (zj - zi) + xi))
+        inside = !inside;
+    }
+    return inside;
+  }
+
+  // Nearest point on segment AB to point P, returns {x, z, dist}
+  function nearestOnSegment(ax, az, bx, bz, px, pz) {
+    const dx = bx - ax, dz = bz - az;
+    const lenSq = dx * dx + dz * dz;
+    if (lenSq < 1e-10) {
+      const d = Math.sqrt((px - ax) ** 2 + (pz - az) ** 2);
+      return { x: ax, z: az, dist: d };
+    }
+    let t = ((px - ax) * dx + (pz - az) * dz) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    const nx = ax + t * dx, nz = az + t * dz;
+    const d = Math.sqrt((px - nx) ** 2 + (pz - nz) ** 2);
+    return { x: nx, z: nz, dist: d };
+  }
+
+  // Find nearest point on contour boundary to a given point
+  function nearestContourPoint(px, pz, contour) {
+    let best = null;
+    for (let i = 0; i < contour.length; i++) {
+      const j = (i + 1) % contour.length;
+      const np = nearestOnSegment(contour[i].x, contour[i].z, contour[j].x, contour[j].z, px, pz);
+      if (!best || np.dist < best.dist) best = np;
+    }
+    return best;
+  }
+
+  const clearance = halfWidth + margin;
+  let totalNudged = 0;
+
+  // Iterative nudge-then-smooth: each pass may leave residual overlaps
+  // because smoothing pulls points back. Repeat until clean or max iters.
+  const maxPasses = 10;
+
+  for (const cp of cartPaths) {
+    if (!cp.spine || cp.spine.length < 2) continue;
+    const spine = cp.spine;
+
+    for (let pass = 0; pass < maxPasses; pass++) {
+      let passNudged = 0;
+
+      for (let i = 0; i < spine.length; i++) {
+        const pt = spine[i];
+
+        // Compute tangent and perpendicular at this spine vertex
+        const prev = spine[Math.max(i - 1, 0)];
+        const next = spine[Math.min(i + 1, spine.length - 1)];
+        const tx = next.x - prev.x, tz = next.z - prev.z;
+        const tLen = Math.sqrt(tx * tx + tz * tz) || 1;
+        const perpX = tz / tLen, perpZ = -tx / tLen;
+
+        let bestNewX = pt.x, bestNewZ = pt.z;
+        let moved = false;
+
+        for (const fc of forbiddenContours) {
+          const contour = fc.contour;
+          const centerInside = pip(bestNewX, bestNewZ, contour);
+
+          const leftX = bestNewX - perpX * clearance;
+          const leftZ = bestNewZ - perpZ * clearance;
+          const rightX = bestNewX + perpX * clearance;
+          const rightZ = bestNewZ + perpZ * clearance;
+          const leftInside = pip(leftX, leftZ, contour);
+          const rightInside = pip(rightX, rightZ, contour);
+
+          if (!centerInside && !leftInside && !rightInside) continue;
+
+          const nearest = nearestContourPoint(bestNewX, bestNewZ, contour);
+          if (!nearest) continue;
+
+          if (centerInside) {
+            // Center is inside polygon. Move it to just outside the boundary
+            // at clearance distance from the edge.
+            // Direction: from center TOWARD nearest boundary, then PAST it.
+            let toEdgeX = nearest.x - bestNewX;
+            let toEdgeZ = nearest.z - bestNewZ;
+            const toEdgeLen = Math.sqrt(toEdgeX * toEdgeX + toEdgeZ * toEdgeZ);
+            if (toEdgeLen < 1e-6) {
+              toEdgeX = leftInside ? perpX : -perpX;
+              toEdgeZ = leftInside ? perpZ : -perpZ;
+            } else {
+              toEdgeX /= toEdgeLen;
+              toEdgeZ /= toEdgeLen;
+            }
+            // Place center at: boundary point + clearance in same direction
+            bestNewX = nearest.x + toEdgeX * (clearance + 0.3);
+            bestNewZ = nearest.z + toEdgeZ * (clearance + 0.3);
+            moved = true;
+          } else {
+            // Only edge inside — push center away from boundary
+            const gap = clearance - nearest.dist + 0.3;
+            if (gap <= 0) continue;
+            let awayX = bestNewX - nearest.x;
+            let awayZ = bestNewZ - nearest.z;
+            const awayLen = Math.sqrt(awayX * awayX + awayZ * awayZ);
+            if (awayLen < 1e-6) {
+              awayX = leftInside ? perpX : -perpX;
+              awayZ = leftInside ? perpZ : -perpZ;
+            } else {
+              awayX /= awayLen;
+              awayZ /= awayLen;
+            }
+            bestNewX += awayX * gap;
+            bestNewZ += awayZ * gap;
+            moved = true;
+          }
+        }
+
+        if (moved) {
+          spine[i] = {
+            x: parseFloat(bestNewX.toFixed(2)),
+            z: parseFloat(bestNewZ.toFixed(2)),
+          };
+          passNudged++;
+          totalNudged++;
+        }
+      }
+
+      if (passNudged === 0) break; // converged
+
+      // Light smoothing pass on nudged spine to avoid jerky kinks.
+      // Progressively reduce smoothing strength so later passes converge.
+      // Skip last 2 passes entirely so final nudges aren't pulled back.
+      if (pass < maxPasses - 2 && spine.length >= 3) {
+        // Reduce neighbor weight as passes increase (0.2 → 0.1 → 0.05...)
+        const neighborW = Math.max(0.05, 0.2 / (1 + pass * 0.5));
+        const selfW = 1 - 2 * neighborW;
+        const smoothed = spine.map((p, i) => {
+          if (i === 0 || i === spine.length - 1) return p;
+          const prev = spine[i - 1], next = spine[i + 1];
+          return {
+            x: parseFloat((p.x * selfW + prev.x * neighborW + next.x * neighborW).toFixed(2)),
+            z: parseFloat((p.z * selfW + prev.z * neighborW + next.z * neighborW).toFixed(2)),
+          };
+        });
+        for (let i = 0; i < spine.length; i++) spine[i] = smoothed[i];
+      }
+    }
+  }
+
+  if (totalNudged > 0) {
+    console.log(`    Spine nudge: ${totalNudged} point(s) pushed away from fairway/bunker/tee contours`);
+  }
+}
+
+/**
  * Zhang-Suen morphological thinning — reduces a binary mask to a 1-pixel-wide skeleton.
  * Preserves topology including branches and junctions.
  * @param {Uint8Array} mask - binary mask (1 = foreground, 0 = background)
@@ -1595,6 +1767,16 @@ function exportHole(courseId, holeNumber, courseJson) {
   const semiRough = extractZoneContours(zonesData, terrainMeta, 3, 30, 3.0, 3);
   const cartPaths = extractCartPathContours(zonesData, terrainMeta, 2.5, 15, 1.0, 2);
   // 2.5m min width, 15 min pixels, RDP epsilon 1.0 (preserve narrow shape), 2 Chaikin passes
+
+  // Nudge cart path spines so the strip mesh doesn't overlap with
+  // fairway, bunker, or tee contour polygons (smoothed contours are
+  // larger than raw pixels, so pixel-level clipping alone isn't enough)
+  const forbiddenContours = [
+    ...fairways.map(f => ({ contour: f.contour })),
+    ...bunkers.map(b => ({ contour: b.contour })),
+    ...tees.map(t => ({ contour: t.contour })),
+  ];
+  nudgeSpinesFromContours(cartPaths, forbiddenContours, 2.5 / 2);
 
   const zoneContoursOutput = {
     schema_version: '1.0.0',
