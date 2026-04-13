@@ -1077,7 +1077,7 @@ namespace Golfin.CourseImport
 
             // --- 3. Build raw alphamap ---
             // (Green fringe ring removed — collar mesh handles green transition)
-            int layerCount = 9; // +1 for OB layer
+            int layerCount = 10; // +1 for OB layer, +1 for water bed
             float[,,] alphamap = new float[alphaRes, alphaRes, layerCount];
 
             // Load OB mask to overlay OB texture on rough areas
@@ -1416,6 +1416,75 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // --- 5d. Paint sand texture under water mesh overlays ---
+            if (terrainGO != null)
+            {
+                string wtSplatPath = Path.Combine(exportPath, "water.json");
+                if (File.Exists(wtSplatPath))
+                {
+                    var wtData = JsonUtility.FromJson<WaterFileData>(
+                        File.ReadAllText(wtSplatPath));
+                    if (wtData.water != null)
+                    {
+                        Vector3 terrainPos4 = terrainGO.transform.position;
+                        Vector3 terrainSize4 = terrainData.size;
+                        int wtPainted = 0;
+
+                        foreach (var w in wtData.water)
+                        {
+                            if (w.contour == null || w.contour.Length < 3) continue;
+
+                            // Convert contour to world-space polygon (90° CCW)
+                            var poly = new Vector2[w.contour.Length];
+                            float minX4 = float.MaxValue, maxX4 = float.MinValue;
+                            float minZ4 = float.MaxValue, maxZ4 = float.MinValue;
+                            for (int i = 0; i < w.contour.Length; i++)
+                            {
+                                float wx = w.contour[i].z;
+                                float wz = w.contour[i].x;
+                                poly[i] = new Vector2(wx, wz);
+                                if (wx < minX4) minX4 = wx;
+                                if (wx > maxX4) maxX4 = wx;
+                                if (wz < minZ4) minZ4 = wz;
+                                if (wz > maxZ4) maxZ4 = wz;
+                            }
+
+                            int aMinX = Mathf.Clamp(Mathf.FloorToInt(
+                                (minX4 - terrainPos4.x) / terrainSize4.x
+                                * (alphaRes - 1)), 0, alphaRes - 1);
+                            int aMaxX = Mathf.Clamp(Mathf.CeilToInt(
+                                (maxX4 - terrainPos4.x) / terrainSize4.x
+                                * (alphaRes - 1)), 0, alphaRes - 1);
+                            int aMinZ = Mathf.Clamp(Mathf.FloorToInt(
+                                (minZ4 - terrainPos4.z) / terrainSize4.z
+                                * (alphaRes - 1)), 0, alphaRes - 1);
+                            int aMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+                                (maxZ4 - terrainPos4.z) / terrainSize4.z
+                                * (alphaRes - 1)), 0, alphaRes - 1);
+
+                            for (int ay = aMinZ; ay <= aMaxZ; ay++)
+                            {
+                                for (int ax = aMinX; ax <= aMaxX; ax++)
+                                {
+                                    float cwx = (float)ax / (alphaRes - 1)
+                                        * terrainSize4.x + terrainPos4.x;
+                                    float cwz = (float)ay / (alphaRes - 1)
+                                        * terrainSize4.z + terrainPos4.z;
+                                    if (IsInsideContour(cwx, cwz, poly))
+                                    {
+                                        for (int l = 0; l < layerCount; l++)
+                                            alphamap[ay, ax, l] = 0f;
+                                        alphamap[ay, ax, 9] = 1f; // dark blue water bed
+                                        wtPainted++;
+                                    }
+                                }
+                            }
+                        }
+                        Debug.Log($"[HoleLiteImporter] Water splatmap: {wtPainted} cells painted with dark blue water bed");
+                    }
+                }
+            }
+
             // --- 6. Create TerrainLayers and apply ---
             string texDir = "Assets/Courses/Textures_2025(JPG)";
 
@@ -1429,6 +1498,7 @@ namespace Golfin.CourseImport
                 "T_RoadAsphalt_Albedo", // 6 cart path
                 "T_Fairway_Dark",       // 7 dark fairway (mow stripes)
                 "T_Rough_Albedo",       // 8 OB — same grass as rough, tinted darker
+                null,                   // 9 water bed — generated solid dark blue
             };
             string[] normalNames = {
                 "T_Fairway_Normal",
@@ -1440,8 +1510,9 @@ namespace Golfin.CourseImport
                 "T_RoadAsphalt_Normal",
                 "T_Fairway_Normal",     // 7 dark fairway (mow stripes) — same normal as light fairway
                 "T_Rough_Normal",       // 8 OB — same normal as rough
+                null,                   // 9 water bed — no normal map
             };
-            float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 8f, 10f };
+            float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 8f, 10f, 10f };
 
             var layers = new TerrainLayer[layerCount];
             EnsureDirectory(Path.Combine(projectRoot, dataDir));
@@ -1477,10 +1548,32 @@ namespace Golfin.CourseImport
 
             var matteMask = AssetDatabase.LoadAssetAtPath<Texture2D>(matteMaskPath);
 
+            // Generate solid dark blue texture for water bed (layer 9)
+            string waterBedTexPath = $"{dataDir}/T_WaterBed_DarkBlue.png";
+            string fullWaterBedPath = Path.Combine(projectRoot, waterBedTexPath);
+            {
+                var waterTex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+                // Dark blue-green: murky pond/lake bottom
+                Color waterBedColor = new Color(0.04f, 0.08f, 0.18f, 1f);
+                for (int y = 0; y < 4; y++)
+                    for (int x = 0; x < 4; x++)
+                        waterTex.SetPixel(x, y, waterBedColor);
+                waterTex.Apply();
+                File.WriteAllBytes(fullWaterBedPath, waterTex.EncodeToPNG());
+                Object.DestroyImmediate(waterTex);
+            }
+            AssetDatabase.ImportAsset(waterBedTexPath);
+            var waterBedTex = AssetDatabase.LoadAssetAtPath<Texture2D>(waterBedTexPath);
+
             for (int i = 0; i < layerCount; i++)
             {
                 layers[i] = new TerrainLayer();
-                layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
+
+                // Layer 9 (water bed) uses a generated solid-color texture
+                if (albedoNames[i] == null)
+                    layers[i].diffuseTexture = waterBedTex;
+                else
+                    layers[i].diffuseTexture = FindTextureExact(texDir, albedoNames[i]);
                 layers[i].maskMapTexture = matteMask;
 
                 // Force anisotropic filtering on albedo for sharp textures at grazing angles
@@ -1496,11 +1589,14 @@ namespace Golfin.CourseImport
                 }
 
                 // Re-enable normal maps at reduced intensity
-                layers[i].normalMapTexture = FindTextureExact(texDir, normalNames[i]);
-                layers[i].normalScale = 0.4f;
+                if (normalNames[i] != null)
+                {
+                    layers[i].normalMapTexture = FindTextureExact(texDir, normalNames[i]);
+                    layers[i].normalScale = 0.4f;
+                }
 
                 // Ensure normal map is imported as NormalMap type + aniso filtering
-                if (layers[i].normalMapTexture != null)
+                if (normalNames[i] != null && layers[i].normalMapTexture != null)
                 {
                     string nrmPath = AssetDatabase.GetAssetPath(layers[i].normalMapTexture);
                     var nrmImporter = AssetImporter.GetAtPath(nrmPath) as TextureImporter;
@@ -1528,11 +1624,17 @@ namespace Golfin.CourseImport
                 layers[i].smoothness = 0f;
                 layers[i].metallic = 0f;
 
-                if (layers[i].diffuseTexture == null)
+                if (layers[i].diffuseTexture == null && albedoNames[i] != null)
                     Debug.LogWarning($"[HoleLiteImporter] Missing texture: {albedoNames[i]}");
 
                 // OB layer (8) reuses T_Rough texture — use distinct asset name to avoid overwriting layer 3
-                string layerAssetName = (i == 8) ? "T_OB_TintedRough" : albedoNames[i];
+                // Water bed layer (9) uses generated texture
+                string layerAssetName = i switch
+                {
+                    8 => "T_OB_TintedRough",
+                    9 => "T_WaterBed_DarkBlue",
+                    _ => albedoNames[i],
+                };
                 string layerPath = $"{dataDir}/TerrainLayer_{layerAssetName}.asset";
                 var existingLayer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
                 if (existingLayer != null)

@@ -140,6 +140,7 @@ contour-traced mesh overlays with smooth edges:
 | 6 | T_RoadAsphalt_Albedo | Cart path |
 | 7 | T_Fairway_Dark | Dark fairway (mow stripes) |
 | 8 | T_Rough_Albedo (tinted) | OB — same texture, darker via diffuseRemapMax |
+| 9 | T_WaterBed_DarkBlue (generated) | Water bed — solid dark blue under water meshes |
 
 ### Key Files
 - Pipeline: `Tools/UHoleLite/scripts/` (7 scripts + lib/ + diagnose-fairway.mjs)
