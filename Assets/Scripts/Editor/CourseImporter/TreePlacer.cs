@@ -680,6 +680,83 @@ namespace Golfin.CourseImport
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
             Debug.Log($"[TreePlacer] Scene saved: {scene.path}");
         }
+
+        [MenuItem("Trees/Import All Trees (All Holes)")]
+        private static void ImportAllTreesMenuItem()
+        {
+            // Save current scene before switching
+            var currentScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            if (currentScene.isDirty)
+                UnityEditor.SceneManagement.EditorSceneManager.SaveScene(currentScene);
+
+            string scenesDir = "Assets/Golf/Courses/lomond-country-club/Generated";
+            string exportBase = Path.Combine(
+                Application.dataPath, "..",
+                "Tools/UHoleLite/output/lomond-country-club/export");
+
+            if (TreePalette.Count == 0) ScanPrefabs();
+
+            int imported = 0;
+            int skipped = 0;
+
+            for (int h = 1; h <= 18; h++)
+            {
+                string scenePath = $"{scenesDir}/Hole_{h:D2}.unity";
+                if (!File.Exists(Path.Combine(Application.dataPath, "..",
+                    scenePath)))
+                {
+                    Debug.Log($"[TreePlacer] Hole {h}: scene not found, skipping");
+                    skipped++;
+                    continue;
+                }
+
+                string exportPath = Path.Combine(exportBase, $"hole-{h:D2}");
+                string tzPath = Path.Combine(exportPath, "tree-zones.json");
+                if (!File.Exists(tzPath))
+                {
+                    Debug.Log($"[TreePlacer] Hole {h}: no tree-zones.json, skipping");
+                    skipped++;
+                    continue;
+                }
+
+                // Open the hole scene
+                var scene = UnityEditor.SceneManagement.EditorSceneManager
+                    .OpenScene(scenePath,
+                        UnityEditor.SceneManagement.OpenSceneMode.Single);
+
+                var terrain = Terrain.activeTerrain;
+                if (terrain == null)
+                {
+                    Debug.LogWarning($"[TreePlacer] Hole {h}: no active terrain");
+                    skipped++;
+                    continue;
+                }
+
+                // Clear existing trees
+                terrain.terrainData.SetTreeInstances(new TreeInstance[0], false);
+                CleanupStandaloneTrees();
+
+                // Find HoleRoot
+                Transform parentRoot = null;
+                foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+                {
+                    if (go.name == "HoleRoot" && go.scene.isLoaded)
+                    {
+                        parentRoot = go.transform;
+                        break;
+                    }
+                }
+
+                float terrainBaseY = terrain.transform.position.y;
+                string zonesPath = Path.Combine(exportPath, "zones.json");
+                PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot);
+
+                UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
+                imported++;
+            }
+
+            Debug.Log($"[TreePlacer] All holes done: {imported} imported, {skipped} skipped");
+        }
     }
 
     /// <summary>
