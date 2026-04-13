@@ -792,7 +792,7 @@ namespace Golfin.CourseImport
                 else
                 {
                     // Multiple marker types sharing a tee region — space them 3m apart
-                    float pairSpacing = 3f;
+                    float pairSpacing = 5f;
                     for (int g = 0; g < count; g++)
                     {
                         float t = 1f - (float)g / (count - 1);
