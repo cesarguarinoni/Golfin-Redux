@@ -178,9 +178,21 @@ namespace Golfin.CourseImport
                         teeRegions = zcData.zones.tee;
                 }
 
+                // Separate tee anchors from non-tee anchors.
+                // Tee anchors are grouped by closest tee region so multiple
+                // anchors sharing a region get spaced along the forward axis.
+                var teeAnchors = new List<AnchorData>();
                 foreach (var anchor in anchors)
-                    PlaceAnchorMarker(anchor, terrain, terrainGO.transform, anchorsRoot.transform,
-                        hasGreenCentroid, greenCentroid, teeRegions);
+                {
+                    if (anchor.type.Contains("tee"))
+                        teeAnchors.Add(anchor);
+                    else
+                        PlaceAnchorMarker(anchor, terrain, terrainGO.transform,
+                            anchorsRoot.transform, hasGreenCentroid, greenCentroid, teeRegions);
+                }
+
+                PlaceTeeMarkerGroups(teeAnchors, terrain, terrainGO.transform,
+                    anchorsRoot.transform, hasGreenCentroid, greenCentroid, teeRegions);
 
                 // Depress terrain under overlay meshes to prevent z-fighting
                 DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
@@ -674,10 +686,128 @@ namespace Golfin.CourseImport
             terrainData.terrainLayers = new TerrainLayer[] { layer };
         }
 
+        /// <summary>
+        /// Front-to-back ordering for tee types. Lower = closer to green.
+        /// Red (ladies) → White (front) → Green (regular) → Blue (back).
+        /// </summary>
+        private static int TeeTypeOrder(string type)
+        {
+            if (type.Contains("ladies"))  return 0; // Red — closest to green
+            if (type.Contains("front"))   return 1; // White
+            if (type.Contains("regular")) return 2; // Green
+            if (type.Contains("back"))    return 3; // Blue — farthest from green
+            return 4;
+        }
+
+        /// <summary>
+        /// Group tee anchors by closest tee region and place each group with
+        /// proper spacing along the forward axis (toward the green).
+        /// When multiple tee types share a region, markers are distributed
+        /// evenly and centered, ordered front-to-back (Red, White, Green, Blue).
+        /// </summary>
+        private static void PlaceTeeMarkerGroups(
+            List<AnchorData> teeAnchors,
+            Terrain terrain, Transform terrainTransform, Transform parent,
+            bool hasGreenCentroid, Vector3 greenCentroid,
+            ZoneContourRegion[] teeRegions)
+        {
+            if (teeAnchors.Count == 0) return;
+
+            // Group anchors by their closest tee region
+            // Key = region index (-1 if no regions), Value = list of anchors
+            var groups = new Dictionary<int, List<AnchorData>>();
+
+            foreach (var anchor in teeAnchors)
+            {
+                int regionIdx = -1;
+                if (teeRegions != null && teeRegions.Length > 0)
+                {
+                    Vector3 anchorWorld = new Vector3(anchor.local.z, 0f, anchor.local.x);
+                    float bestDist = float.MaxValue;
+                    for (int r = 0; r < teeRegions.Length; r++)
+                    {
+                        if (teeRegions[r].contour == null || teeRegions[r].contour.Length < 3)
+                            continue;
+                        Vector3 rc = new Vector3(teeRegions[r].center_local.z, 0f,
+                                                  teeRegions[r].center_local.x);
+                        float d = (rc - anchorWorld).sqrMagnitude;
+                        if (d < bestDist) { bestDist = d; regionIdx = r; }
+                    }
+                }
+
+                if (!groups.ContainsKey(regionIdx))
+                    groups[regionIdx] = new List<AnchorData>();
+                groups[regionIdx].Add(anchor);
+            }
+
+            foreach (var kvp in groups)
+            {
+                var anchorsInGroup = kvp.Value;
+
+                // Sort front-to-back: Red, White, Green, Blue
+                anchorsInGroup.Sort((a, b) =>
+                    TeeTypeOrder(a.type).CompareTo(TeeTypeOrder(b.type)));
+
+                // Compute tee region centroid
+                Vector3 centroid;
+                if (kvp.Key >= 0 && teeRegions != null)
+                {
+                    var region = teeRegions[kvp.Key];
+                    float cx = 0f, cz = 0f;
+                    int n = region.contour.Length;
+                    for (int i = 0; i < n; i++)
+                    {
+                        cx += region.contour[i].z; // 90° CCW
+                        cz += region.contour[i].x;
+                    }
+                    centroid = new Vector3(cx / n, 0f, cz / n);
+                }
+                else
+                {
+                    // Fallback: average of anchor positions
+                    float sx = 0, sz = 0;
+                    foreach (var a in anchorsInGroup) { sx += a.local.z; sz += a.local.x; }
+                    centroid = new Vector3(sx / anchorsInGroup.Count, 0f,
+                                           sz / anchorsInGroup.Count);
+                }
+
+                // Forward direction toward green
+                Vector3 forwardDir = Vector3.forward;
+                if (hasGreenCentroid)
+                {
+                    Vector3 toGreen = greenCentroid - centroid;
+                    toGreen.y = 0f;
+                    if (toGreen.sqrMagnitude > 0.01f)
+                        forwardDir = toGreen.normalized;
+                }
+
+                // Space each tee pair along the forward axis, centered on centroid.
+                // Spacing = 3m between each pair's center (enough for 2 markers + gap).
+                float pairSpacing = 3f;
+                int count = anchorsInGroup.Count;
+
+                for (int g = 0; g < count; g++)
+                {
+                    // Offset along forward axis: front tees closer to green,
+                    // back tees farther. Centered on the centroid.
+                    float forwardOffset = (g - (count - 1) / 2f) * pairSpacing;
+
+                    // Positive offset = toward green (front), negative = away (back)
+                    // Since index 0 = front (Red), offset should be toward green
+                    Vector3 pairCenter = centroid + forwardDir * forwardOffset;
+
+                    PlaceAnchorMarker(anchorsInGroup[g], terrain, terrainTransform,
+                        parent, hasGreenCentroid, greenCentroid, teeRegions,
+                        pairCenter);
+                }
+            }
+        }
+
         private static void PlaceAnchorMarker(AnchorData anchor,
             Terrain terrain, Transform terrainTransform, Transform parent,
             bool hasGreenCentroid, Vector3 greenCentroid,
-            ZoneContourRegion[] teeRegions = null)
+            ZoneContourRegion[] teeRegions = null,
+            Vector3? overridePosition = null)
         {
             // 90° CCW rotation: (x, z) → (-z, x) → (local.z, local.x)
             Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
@@ -685,15 +815,19 @@ namespace Golfin.CourseImport
 
             if (anchor.type.Contains("tee"))
             {
-                // Find the closest tee region and center markers on it
-                if (teeRegions != null && teeRegions.Length > 0)
+                // Use pre-computed position from PlaceTeeMarkerGroups if available;
+                // otherwise fall back to closest tee region centroid.
+                if (overridePosition.HasValue)
+                {
+                    worldPos = overridePosition.Value;
+                }
+                else if (teeRegions != null && teeRegions.Length > 0)
                 {
                     float bestDist = float.MaxValue;
                     ZoneContourRegion bestRegion = null;
                     foreach (var region in teeRegions)
                     {
                         if (region.contour == null || region.contour.Length < 3) continue;
-                        // Region center in world coords (90° CCW)
                         Vector3 rc = new Vector3(region.center_local.z, 0f,
                                                  region.center_local.x);
                         float d = (rc - worldPos).sqrMagnitude;
@@ -702,12 +836,11 @@ namespace Golfin.CourseImport
 
                     if (bestRegion != null)
                     {
-                        // Compute centroid of the tee contour (excludes border)
                         float cx = 0f, cz = 0f;
                         int n = bestRegion.contour.Length;
                         for (int i = 0; i < n; i++)
                         {
-                            cx += bestRegion.contour[i].z; // 90° CCW
+                            cx += bestRegion.contour[i].z;
                             cz += bestRegion.contour[i].x;
                         }
                         worldPos = new Vector3(cx / n, 0f, cz / n);
