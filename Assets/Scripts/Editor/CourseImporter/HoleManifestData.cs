@@ -275,6 +275,7 @@ namespace Golfin.CourseImport
         public AnchorLocal center_local;
         public BunkerSize size_m;
         public bool dilated;
+        public ContourPoint[] junctions; // Where branches meet — for fill patches
     }
 
     // tree-zones.json — tree placement mask + regions

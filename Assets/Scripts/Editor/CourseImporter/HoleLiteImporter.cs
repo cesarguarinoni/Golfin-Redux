@@ -3489,7 +3489,66 @@ namespace Golfin.CourseImport
                             meshGO.transform.SetParent(cpRoot.transform);
                     }
 
-                    Debug.Log($"[HoleLiteImporter] Created {cpData.cart_paths.Length} cart path mesh(es)");
+                    // Create fill patches at junction points where branches meet.
+                    // Each junction gets a small disc mesh so there are no gaps.
+                    var seenJunctions = new HashSet<string>();
+                    int junctionCount = 0;
+                    foreach (var region in cpData.cart_paths)
+                    {
+                        if (region.junctions == null) continue;
+                        float halfWidth = (region.width_m > 0 ? region.width_m : 2.5f) / 2f;
+                        foreach (var jp in region.junctions)
+                        {
+                            string key = $"{jp.x},{jp.z}";
+                            if (seenJunctions.Contains(key)) continue;
+                            seenJunctions.Add(key);
+
+                            // 90° CCW rotation
+                            float wx = jp.z, wz = jp.x;
+                            float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+
+                            // Create a small disc mesh (octagon) at the junction
+                            int segments = 8;
+                            var verts = new Vector3[segments + 1];
+                            var tris = new int[segments * 3];
+                            var uvs = new Vector2[segments + 1];
+
+                            verts[0] = Vector3.zero;
+                            uvs[0] = new Vector2(0.5f, 0.5f);
+                            for (int s = 0; s < segments; s++)
+                            {
+                                float angle = s * Mathf.PI * 2f / segments;
+                                float dx = Mathf.Cos(angle) * halfWidth;
+                                float dz = Mathf.Sin(angle) * halfWidth;
+                                float sh = terrain.SampleHeight(
+                                    new Vector3(wx + dx, 0, wz + dz));
+                                verts[s + 1] = new Vector3(dx, sh - th, dz);
+                                uvs[s + 1] = new Vector2(
+                                    0.5f + Mathf.Cos(angle) * 0.5f,
+                                    0.5f + Mathf.Sin(angle) * 0.5f);
+                                tris[s * 3] = 0;
+                                tris[s * 3 + 1] = s + 1;
+                                tris[s * 3 + 2] = (s + 1) % segments + 1;
+                            }
+
+                            var mesh = new Mesh();
+                            mesh.name = $"CartPathJunction_{junctionCount}";
+                            mesh.vertices = verts;
+                            mesh.triangles = tris;
+                            mesh.uv = uvs;
+                            mesh.RecalculateNormals();
+
+                            var go = new GameObject($"CartPathJunction_{junctionCount}");
+                            go.transform.position = new Vector3(
+                                wx, terrainBaseY + th + 0.01f, wz);
+                            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                            go.AddComponent<MeshRenderer>().sharedMaterial = cpMat;
+                            go.transform.SetParent(cpRoot.transform);
+                            junctionCount++;
+                        }
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Created {cpData.cart_paths.Length} cart path mesh(es), {junctionCount} junction patches");
                 }
             }
 

@@ -486,12 +486,18 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     const normW = (maxX - minX + 1) / w;
     const normH = (maxY - minY + 1) / h;
 
-    // --- Skeleton-based spine extraction with tee clipping ---
+    // --- Skeleton-based spine extraction with overlap clipping ---
     // Downsample the region mask for cleaner skeletonization.
     // Wide paths (~30px+) produce noisy skeletons at full res.
     // Target skeleton input width ~6-10px for clean results.
-    const dsTarget = 3; // target width in downsampled pixels
-    const dsFactor = Math.max(1, Math.round(estWidthPx / dsTarget));
+    //
+    // IMPORTANT: estWidthPx is area/longerAxis — for branching networks
+    // this overestimates massively (e.g. 82px for a 7px-wide path network).
+    // Cap dsFactor so actual path width (~minWidthPx) stays ≥3px after DS.
+    const dsTarget = 3;
+    const dsFromEst = Math.round(estWidthPx / dsTarget);
+    const dsFromActual = Math.floor(minWidthPx / dsTarget); // preserve actual path width
+    const dsFactor = Math.max(1, Math.min(dsFromEst, dsFromActual));
     const dsW = Math.ceil(w / dsFactor);
     const dsH = Math.ceil(h / dsFactor);
 
@@ -745,6 +751,7 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
           spine,
           width_m: minWidthM,
           parent_region: regionId,
+          junctions: null, // filled below after all chains processed
           center_local: {
             x: parseFloat(((normCX - 0.5) * tw).toFixed(2)),
             z: parseFloat(((normCY - 0.5) * tl).toFixed(2)),
@@ -757,6 +764,18 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
           size_normalized: { w: parseFloat(normW.toFixed(4)), h: parseFloat(normH.toFixed(4)) },
           dilated: estWidthPx < minWidthPx,
         });
+      }
+
+      // Collect junction points (shared by 2+ chain endpoints) and attach
+      // to every branch in this region so Unity can create fill patches.
+      const junctionList = [];
+      for (const [, jpt] of sharedJunctions) {
+        junctionList.push({ x: jpt.mx, z: jpt.mz });
+      }
+      if (junctionList.length > 0) {
+        for (const r of results) {
+          if (r.parent_region === regionId) r.junctions = junctionList;
+        }
       }
     }
   }
