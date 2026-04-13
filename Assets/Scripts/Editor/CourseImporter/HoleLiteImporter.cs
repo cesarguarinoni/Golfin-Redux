@@ -1347,6 +1347,75 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // --- 5c. Paint bunker sand texture under bunker mesh overlays ---
+            if (terrainGO != null)
+            {
+                string bkSplatPath = Path.Combine(exportPath, "bunkers.json");
+                if (File.Exists(bkSplatPath))
+                {
+                    var bkData = JsonUtility.FromJson<BunkersFileData>(
+                        File.ReadAllText(bkSplatPath));
+                    if (bkData.bunkers != null)
+                    {
+                        Vector3 terrainPos3 = terrainGO.transform.position;
+                        Vector3 terrainSize3 = terrainData.size;
+                        int bkPainted = 0;
+
+                        foreach (var bk in bkData.bunkers)
+                        {
+                            if (bk.contour == null || bk.contour.Length < 3) continue;
+
+                            // Convert contour to world-space polygon (90° CCW)
+                            var poly = new Vector2[bk.contour.Length];
+                            float minX3 = float.MaxValue, maxX3 = float.MinValue;
+                            float minZ3 = float.MaxValue, maxZ3 = float.MinValue;
+                            for (int i = 0; i < bk.contour.Length; i++)
+                            {
+                                float wx = bk.contour[i].z;
+                                float wz = bk.contour[i].x;
+                                poly[i] = new Vector2(wx, wz);
+                                if (wx < minX3) minX3 = wx;
+                                if (wx > maxX3) maxX3 = wx;
+                                if (wz < minZ3) minZ3 = wz;
+                                if (wz > maxZ3) maxZ3 = wz;
+                            }
+
+                            int aMinX = Mathf.Clamp(Mathf.FloorToInt(
+                                (minX3 - terrainPos3.x) / terrainSize3.x
+                                * (alphaRes - 1)), 0, alphaRes - 1);
+                            int aMaxX = Mathf.Clamp(Mathf.CeilToInt(
+                                (maxX3 - terrainPos3.x) / terrainSize3.x
+                                * (alphaRes - 1)), 0, alphaRes - 1);
+                            int aMinZ = Mathf.Clamp(Mathf.FloorToInt(
+                                (minZ3 - terrainPos3.z) / terrainSize3.z
+                                * (alphaRes - 1)), 0, alphaRes - 1);
+                            int aMaxZ = Mathf.Clamp(Mathf.CeilToInt(
+                                (maxZ3 - terrainPos3.z) / terrainSize3.z
+                                * (alphaRes - 1)), 0, alphaRes - 1);
+
+                            for (int ay = aMinZ; ay <= aMaxZ; ay++)
+                            {
+                                for (int ax = aMinX; ax <= aMaxX; ax++)
+                                {
+                                    float cwx = (float)ax / (alphaRes - 1)
+                                        * terrainSize3.x + terrainPos3.x;
+                                    float cwz = (float)ay / (alphaRes - 1)
+                                        * terrainSize3.z + terrainPos3.z;
+                                    if (IsInsideContour(cwx, cwz, poly))
+                                    {
+                                        for (int l = 0; l < layerCount; l++)
+                                            alphamap[ay, ax, l] = 0f;
+                                        alphamap[ay, ax, 4] = 1f; // bunker sand
+                                        bkPainted++;
+                                    }
+                                }
+                            }
+                        }
+                        Debug.Log($"[HoleLiteImporter] Bunker splatmap: {bkPainted} cells painted with sand texture");
+                    }
+                }
+            }
+
             // --- 6. Create TerrainLayers and apply ---
             string texDir = "Assets/Courses/Textures_2025(JPG)";
 
