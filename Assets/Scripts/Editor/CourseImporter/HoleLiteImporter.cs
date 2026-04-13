@@ -1091,7 +1091,9 @@ namespace Golfin.CourseImport
                             if (cp.spine != null && cp.spine.Length >= 2)
                             {
                                 float hw = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
-                                var poly = BuildSpinePolygon(cp.spine, hw);
+                                // Paint slightly wider than the mesh strip so the
+                                // splatmap extends beyond mesh edges as a safety margin
+                                var poly = BuildSpinePolygon(cp.spine, hw + 0.5f);
                                 if (poly != null)
                                 {
                                     // Mark cells inside the full-width polygon
