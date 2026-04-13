@@ -1163,7 +1163,10 @@ namespace Golfin.CourseImport
                                     cpEdgeDist[ay, ax], cpEdgeDist[ay + 1, ax] + 1f);
                             }
 
-                        // Paint edge strip: full cart path texture at edge, blending inward
+                        // Paint cart path texture under the entire strip mesh so
+                        // the terrain matches if the mesh breaks at any point.
+                        // Interior = 100% cart path; edge strip = blended with surroundings.
+                        int cpInteriorPainted = 0;
                         int cpEdgePainted = 0;
                         for (int ay = 0; ay < alphaRes; ay++)
                         {
@@ -1171,29 +1174,37 @@ namespace Golfin.CourseImport
                             {
                                 if (!cpMask[ay, ax]) continue;
                                 float dist = cpEdgeDist[ay, ax];
-                                if (dist > edgeWidth) continue; // too far inside
 
-                                // Blend: 40% cart path at dist=0 (edge), 20% at dist=edgeWidth
-                                float blend = 0.4f - (dist / edgeWidth) * 0.2f;
-
-                                // Find which layer currently has weight here
-                                int currentLayer = -1;
-                                for (int l = 0; l < layerCount; l++)
+                                if (dist > edgeWidth)
                                 {
-                                    if (alphamap[ay, ax, l] > 0.5f)
-                                    { currentLayer = l; break; }
+                                    // Interior: full cart path texture
+                                    for (int l = 0; l < layerCount; l++)
+                                        alphamap[ay, ax, l] = 0f;
+                                    alphamap[ay, ax, 6] = 1f;
+                                    cpInteriorPainted++;
                                 }
-                                if (currentLayer < 0) currentLayer = 3; // rough fallback
+                                else
+                                {
+                                    // Edge strip: blend cart path with existing texture
+                                    float blend = 0.6f - (dist / edgeWidth) * 0.2f;
 
-                                // Set blend
-                                for (int l = 0; l < layerCount; l++)
-                                    alphamap[ay, ax, l] = 0f;
-                                alphamap[ay, ax, 6] = blend;         // cart path texture
-                                alphamap[ay, ax, currentLayer] = 1f - blend; // existing texture
-                                cpEdgePainted++;
+                                    int currentLayer = -1;
+                                    for (int l = 0; l < layerCount; l++)
+                                    {
+                                        if (alphamap[ay, ax, l] > 0.5f)
+                                        { currentLayer = l; break; }
+                                    }
+                                    if (currentLayer < 0) currentLayer = 3; // rough fallback
+
+                                    for (int l = 0; l < layerCount; l++)
+                                        alphamap[ay, ax, l] = 0f;
+                                    alphamap[ay, ax, 6] = blend;
+                                    alphamap[ay, ax, currentLayer] = 1f - blend;
+                                    cpEdgePainted++;
+                                }
                             }
                         }
-                        Debug.Log($"[HoleLiteImporter] Cart path edge: painted {cpEdgePainted} splatmap cells");
+                        Debug.Log($"[HoleLiteImporter] Cart path splatmap: {cpInteriorPainted} interior + {cpEdgePainted} edge cells painted");
                     }
                 }
             }
