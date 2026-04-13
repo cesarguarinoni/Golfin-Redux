@@ -837,6 +837,54 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     }
   }
 
+  // --- Snap orphan endpoints to nearest point on other spines ---
+  // After chain merging, some branch endpoints are near another spine's
+  // interior but not connected. Extend the branch to touch the other spine.
+  const snapRadius = minWidthM * 4; // search within 4× path width (10m)
+  for (let ai = 0; ai < results.length; ai++) {
+    const spineA = results[ai].spine;
+    if (!spineA || spineA.length < 2) continue;
+
+    for (const endIdx of [0, spineA.length - 1]) {
+      const ep = spineA[endIdx];
+
+      // Find nearest point on any OTHER spine
+      let bestDist = Infinity, bestPoint = null;
+      for (let bi = 0; bi < results.length; bi++) {
+        if (bi === ai) continue;
+        if (results[ai].parent_region !== results[bi].parent_region) continue;
+        const spineB = results[bi].spine;
+        if (!spineB || spineB.length < 2) continue;
+
+        for (let si = 0; si < spineB.length - 1; si++) {
+          // Nearest point on segment spineB[si]→spineB[si+1]
+          const ax = spineB[si].x, az = spineB[si].z;
+          const bx = spineB[si + 1].x, bz = spineB[si + 1].z;
+          const dx = bx - ax, dz = bz - az;
+          const lenSq = dx * dx + dz * dz;
+          if (lenSq < 1e-10) continue;
+          let t = ((ep.x - ax) * dx + (ep.z - az) * dz) / lenSq;
+          t = Math.max(0, Math.min(1, t));
+          const nx = ax + t * dx, nz = az + t * dz;
+          const d = Math.sqrt((ep.x - nx) ** 2 + (ep.z - nz) ** 2);
+          if (d < bestDist) {
+            bestDist = d;
+            bestPoint = { x: parseFloat(nx.toFixed(2)), z: parseFloat(nz.toFixed(2)) };
+          }
+        }
+      }
+
+      if (bestPoint && bestDist > 0.5 && bestDist < snapRadius) {
+        // Extend spine to connect: add the snap point at the endpoint
+        if (endIdx === 0) {
+          spineA.unshift(bestPoint);
+        } else {
+          spineA.push(bestPoint);
+        }
+      }
+    }
+  }
+
   // Sort by size (largest first), re-assign IDs
   results.sort((a, b) => b.pixel_count - a.pixel_count);
   results.forEach((r, i) => { r.id = i + 1; });
