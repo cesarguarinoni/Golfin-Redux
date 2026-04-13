@@ -165,6 +165,203 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
+        /// Build exclusion polygons from all overlay mesh contours so trees
+        /// don't appear on fairways, greens, bunkers, tees, water, or cart paths.
+        /// Returns world-space Vector2[] polygons (x=worldX, y=worldZ).
+        /// </summary>
+        private static List<Vector2[]> BuildExclusionPolygons(string exportPath)
+        {
+            var polygons = new List<Vector2[]>();
+            float margin = 1.0f; // extra margin around overlays
+
+            // Helper: convert ContourPoint[] to world-space polygon
+            // Contour coords use 90° CCW rotation: worldX = pt.z, worldZ = pt.x
+            System.Func<ContourPoint[], Vector2[]> contourToWorld = (contour) =>
+            {
+                var poly = new Vector2[contour.Length];
+                for (int i = 0; i < contour.Length; i++)
+                    poly[i] = new Vector2(contour[i].z, contour[i].x);
+                return poly;
+            };
+
+            // Fairway contours
+            string fwPath = Path.Combine(exportPath, "fairway-contours.json");
+            if (File.Exists(fwPath))
+            {
+                var data = JsonUtility.FromJson<FairwayContoursFile>(
+                    File.ReadAllText(fwPath));
+                if (data.fairways != null)
+                    foreach (var fw in data.fairways)
+                        if (fw.contour != null && fw.contour.Length >= 3)
+                            polygons.Add(contourToWorld(fw.contour));
+            }
+
+            // Tee contours
+            string zcPath = Path.Combine(exportPath, "zone-contours.json");
+            if (File.Exists(zcPath))
+            {
+                var data = JsonUtility.FromJson<ZoneContoursFile>(
+                    File.ReadAllText(zcPath));
+                if (data.zones != null && data.zones.tee != null)
+                    foreach (var region in data.zones.tee)
+                        if (region.contour != null && region.contour.Length >= 3)
+                            polygons.Add(contourToWorld(region.contour));
+            }
+
+            // Bunker contours
+            string bkPath = Path.Combine(exportPath, "bunkers.json");
+            if (File.Exists(bkPath))
+            {
+                var data = JsonUtility.FromJson<BunkersFileData>(
+                    File.ReadAllText(bkPath));
+                if (data.bunkers != null)
+                    foreach (var bk in data.bunkers)
+                        if (bk.contour != null && bk.contour.Length >= 3)
+                        {
+                            var poly = new Vector2[bk.contour.Length];
+                            for (int i = 0; i < bk.contour.Length; i++)
+                                poly[i] = new Vector2(bk.contour[i].z, bk.contour[i].x);
+                            polygons.Add(poly);
+                        }
+            }
+
+            // Green contours
+            string grPath = Path.Combine(exportPath, "greens.json");
+            if (File.Exists(grPath))
+            {
+                var data = JsonUtility.FromJson<GreensFileData>(
+                    File.ReadAllText(grPath));
+                if (data.greens != null)
+                    foreach (var gr in data.greens)
+                        if (gr.contour != null && gr.contour.Length >= 3)
+                        {
+                            var poly = new Vector2[gr.contour.Length];
+                            for (int i = 0; i < gr.contour.Length; i++)
+                                poly[i] = new Vector2(gr.contour[i].z, gr.contour[i].x);
+                            polygons.Add(poly);
+                        }
+            }
+
+            // Water contours
+            string wtPath = Path.Combine(exportPath, "water.json");
+            if (File.Exists(wtPath))
+            {
+                var data = JsonUtility.FromJson<WaterFileData>(
+                    File.ReadAllText(wtPath));
+                if (data.water != null)
+                    foreach (var w in data.water)
+                        if (w.contour != null && w.contour.Length >= 3)
+                            polygons.Add(contourToWorld(w.contour));
+            }
+
+            // Cart path spine polygons (full mesh width + margin)
+            string cpPath = Path.Combine(exportPath, "cart-paths.json");
+            if (File.Exists(cpPath))
+            {
+                var data = JsonUtility.FromJson<CartPathsFile>(
+                    File.ReadAllText(cpPath));
+                if (data.cart_paths != null)
+                {
+                    foreach (var cp in data.cart_paths)
+                    {
+                        if (cp.spine != null && cp.spine.Length >= 2)
+                        {
+                            float halfWidth = (cp.width_m > 0
+                                ? cp.width_m : 2.5f) / 2f + margin;
+                            var spinePoly = BuildSpinePolygonForExclusion(
+                                cp.spine, halfWidth);
+                            if (spinePoly != null)
+                                polygons.Add(spinePoly);
+                        }
+                        else if (cp.contour != null && cp.contour.Length >= 3)
+                        {
+                            polygons.Add(contourToWorld(cp.contour));
+                        }
+                    }
+                }
+            }
+
+            return polygons;
+        }
+
+        /// <summary>
+        /// Build a closed polygon from spine left+right edges (for tree exclusion).
+        /// Simplified version — no subdivision needed since we only test points.
+        /// Returns world-space Vector2[] (x=worldX, y=worldZ).
+        /// </summary>
+        private static Vector2[] BuildSpinePolygonForExclusion(
+            ContourPoint[] spine, float halfWidth)
+        {
+            int n = spine.Length;
+            if (n < 2) return null;
+
+            var left = new Vector2[n];
+            var right = new Vector2[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                float cx = spine[i].z;  // 90° CCW
+                float cz = spine[i].x;
+
+                float tx, tz;
+                if (i == 0)
+                { tx = spine[1].z - spine[0].z; tz = spine[1].x - spine[0].x; }
+                else if (i == n - 1)
+                { tx = spine[n-1].z - spine[n-2].z; tz = spine[n-1].x - spine[n-2].x; }
+                else
+                { tx = spine[i+1].z - spine[i-1].z; tz = spine[i+1].x - spine[i-1].x; }
+
+                float tLen = Mathf.Sqrt(tx * tx + tz * tz);
+                if (tLen > 0.001f) { tx /= tLen; tz /= tLen; }
+                else { tx = 1; tz = 0; }
+
+                float px = tz;
+                float pz = -tx;
+
+                left[i]  = new Vector2(cx - px * halfWidth, cz - pz * halfWidth);
+                right[i] = new Vector2(cx + px * halfWidth, cz + pz * halfWidth);
+            }
+
+            var poly = new Vector2[n * 2];
+            for (int i = 0; i < n; i++)
+                poly[i] = left[i];
+            for (int i = 0; i < n; i++)
+                poly[n + i] = right[n - 1 - i];
+
+            return poly;
+        }
+
+        /// <summary>
+        /// Ray-casting point-in-polygon test (world XZ coordinates).
+        /// </summary>
+        private static bool PointInPolygon(float px, float pz, Vector2[] poly)
+        {
+            bool inside = false;
+            int n = poly.Length;
+            for (int i = 0, j = n - 1; i < n; j = i++)
+            {
+                float xi = poly[i].x, zi = poly[i].y;
+                float xj = poly[j].x, zj = poly[j].y;
+                if (((zi > pz) != (zj > pz)) &&
+                    (px < (xj - xi) * (pz - zi) / (zj - zi) + xi))
+                    inside = !inside;
+            }
+            return inside;
+        }
+
+        /// <summary>
+        /// Check if a point falls inside any of the exclusion polygons.
+        /// </summary>
+        private static bool IsInsideAnyOverlay(
+            float worldX, float worldZ, List<Vector2[]> polygons)
+        {
+            foreach (var poly in polygons)
+                if (PointInPolygon(worldX, worldZ, poly))
+                    return true;
+            return false;
+        }
+
+        /// <summary>
         /// Main entry point. Call after terrain is created.
         /// </summary>
         public static void PlaceTrees(
@@ -202,6 +399,9 @@ namespace Golfin.CourseImport
                 zoneW = zData.source_dimensions.width;
                 zoneH = zData.source_dimensions.height;
             }
+
+            // Build exclusion polygons from overlay mesh contours
+            var exclusionPolygons = BuildExclusionPolygons(exportPath);
 
             var terrainData = terrain.terrainData;
             float tWidth = terrainData.size.x;
@@ -301,6 +501,16 @@ namespace Golfin.CourseImport
                             Mathf.FloorToInt(nx * zoneH), 0, zoneH - 1);
                         int zone = zoneGrid[zy * zoneW + zx];
                         if (ExcludeZones.Contains(zone)) continue;
+                    }
+
+                    // Overlay mesh polygon exclusion (catches cart paths
+                    // and any overlay that extends beyond zone grid pixels)
+                    if (exclusionPolygons.Count > 0)
+                    {
+                        float absX = worldX + terrain.transform.position.x;
+                        float absZ = worldZ + terrain.transform.position.z;
+                        if (IsInsideAnyOverlay(absX, absZ, exclusionPolygons))
+                            continue;
                     }
 
                     // Pick prototype (weighted random)
@@ -406,7 +616,8 @@ namespace Golfin.CourseImport
             Debug.Log($"[TreePlacer] Placed {terrainTrees.Count} terrain + " +
                 $"{standaloneCount} standalone = " +
                 $"{terrainTrees.Count + standaloneCount} total " +
-                $"({activeEntries.Count} types, {cellSize}m spacing, seed=42)" +
+                $"({activeEntries.Count} types, {cellSize}m spacing, seed=42, " +
+                $"{exclusionPolygons.Count} exclusion polygons)" +
                 $"\n  {summary}");
         }
 
