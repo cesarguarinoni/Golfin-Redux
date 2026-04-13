@@ -1081,12 +1081,8 @@ namespace Golfin.CourseImport
                         File.ReadAllText(cpEdgePath));
                     if (cpData.cart_paths != null)
                     {
-                        // Build TWO masks: wide (for interior fill) and exact (for edge distance).
-                        // The wide mask extends 0.5m beyond the mesh strip so splatmap
-                        // covers any gaps. Edge blending uses the exact-width mask so
-                        // the blend transition stays at the mesh boundary, not outside.
-                        bool[,] cpMaskWide = new bool[alphaRes, alphaRes];
-                        bool[,] cpMaskExact = new bool[alphaRes, alphaRes];
+                        // Build mask of cart path cells at alphamap resolution
+                        bool[,] cpMask = new bool[alphaRes, alphaRes];
                         Vector3 terrainPos2 = terrainGO.transform.position;
                         Vector3 terrainSize2 = terrainData.size;
 
@@ -1095,13 +1091,14 @@ namespace Golfin.CourseImport
                             if (cp.spine != null && cp.spine.Length >= 2)
                             {
                                 float hw = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
-                                var polyWide = BuildSpinePolygon(cp.spine, hw + 0.5f);
-                                var polyExact = BuildSpinePolygon(cp.spine, hw);
-                                if (polyWide != null)
+                                // Paint slightly wider than the mesh strip so the
+                                // splatmap extends beyond mesh edges as a safety margin
+                                var poly = BuildSpinePolygon(cp.spine, hw + 0.5f);
+                                if (poly != null)
                                 {
                                     float minX2 = float.MaxValue, maxX2 = float.MinValue;
                                     float minZ2 = float.MaxValue, maxZ2 = float.MinValue;
-                                    foreach (var v in polyWide)
+                                    foreach (var v in poly)
                                     {
                                         if (v.x < minX2) minX2 = v.x;
                                         if (v.x > maxX2) maxX2 = v.x;
@@ -1130,24 +1127,21 @@ namespace Golfin.CourseImport
                                                 * terrainSize2.x + terrainPos2.x;
                                             float cwz = (float)ay / (alphaRes - 1)
                                                 * terrainSize2.z + terrainPos2.z;
-                                            if (IsInsideContour(cwx, cwz, polyWide))
-                                                cpMaskWide[ay, ax] = true;
-                                            if (polyExact != null && IsInsideContour(cwx, cwz, polyExact))
-                                                cpMaskExact[ay, ax] = true;
+                                            if (IsInsideContour(cwx, cwz, poly))
+                                                cpMask[ay, ax] = true;
                                         }
                                     }
                                 }
                             }
                         }
 
-                        // Edge distance is computed from the EXACT-width mask boundary
-                        // so the blend transition stays at the mesh edge, not the wider paint area.
-                        const int edgeWidth = 2; // pixels
+                        // Distance from outside edge (inside the mask)
+                        const int edgeWidth = 1; // 1px thin edge strip
 
                         float[,] cpEdgeDist = new float[alphaRes, alphaRes];
                         for (int ay = 0; ay < alphaRes; ay++)
                             for (int ax = 0; ax < alphaRes; ax++)
-                                cpEdgeDist[ay, ax] = cpMaskExact[ay, ax] ? 99999f : 0f;
+                                cpEdgeDist[ay, ax] = cpMask[ay, ax] ? 99999f : 0f;
 
                         // Chamfer forward
                         for (int ay = 0; ay < alphaRes; ay++)
@@ -1170,15 +1164,14 @@ namespace Golfin.CourseImport
 
                         // Paint cart path texture under the entire strip mesh so
                         // the terrain matches if the mesh breaks at any point.
-                        // Wide mask = fill area (interior + margin beyond mesh).
-                        // Exact mask edge distance = blend transition at mesh boundary.
+                        // Interior = 100% cart path; thin edge strip = blended.
                         int cpInteriorPainted = 0;
                         int cpEdgePainted = 0;
                         for (int ay = 0; ay < alphaRes; ay++)
                         {
                             for (int ax = 0; ax < alphaRes; ax++)
                             {
-                                if (!cpMaskWide[ay, ax]) continue;
+                                if (!cpMask[ay, ax]) continue;
                                 float dist = cpEdgeDist[ay, ax];
 
                                 if (dist > edgeWidth)
