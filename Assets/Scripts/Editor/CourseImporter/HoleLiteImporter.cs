@@ -850,8 +850,103 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // Blur removed — fringe rings handle zone transitions.
-            // GaussianBlur2D / ExtractChannel / SetChannel kept as helpers.
+            // --- Smooth rough↔OB boundary (4px blend) ---
+            // Since both layers use the same base texture (just tinted),
+            // blending creates a gradual color shift — not a texture seam.
+            if (obMask != null)
+            {
+                const int blendRadius = 4;
+
+                // Build distance-to-boundary field at alphamap resolution
+                float[] obBorderDist = new float[alphaRes * alphaRes];
+
+                // Step 1: Find boundary pixels (rough↔OB adjacency)
+                for (int i = 0; i < alphaRes * alphaRes; i++)
+                    obBorderDist[i] = 99999f;
+
+                for (int ay = 0; ay < alphaRes; ay++)
+                {
+                    for (int ax = 0; ax < alphaRes; ax++)
+                    {
+                        int idx = ay * alphaRes + ax;
+                        bool isOB = alphamap[ay, ax, 8] > 0.5f;
+                        bool isRough = alphamap[ay, ax, 3] > 0.5f;
+                        if (!isOB && !isRough) continue;
+
+                        // Check 4-neighbors for a rough↔OB transition
+                        bool border = false;
+                        if (ax > 0) {
+                            bool nOB = alphamap[ay, ax-1, 8] > 0.5f;
+                            bool nRough = alphamap[ay, ax-1, 3] > 0.5f;
+                            if ((isOB && nRough) || (isRough && nOB)) border = true;
+                        }
+                        if (!border && ax < alphaRes-1) {
+                            bool nOB = alphamap[ay, ax+1, 8] > 0.5f;
+                            bool nRough = alphamap[ay, ax+1, 3] > 0.5f;
+                            if ((isOB && nRough) || (isRough && nOB)) border = true;
+                        }
+                        if (!border && ay > 0) {
+                            bool nOB = alphamap[ay-1, ax, 8] > 0.5f;
+                            bool nRough = alphamap[ay-1, ax, 3] > 0.5f;
+                            if ((isOB && nRough) || (isRough && nOB)) border = true;
+                        }
+                        if (!border && ay < alphaRes-1) {
+                            bool nOB = alphamap[ay+1, ax, 8] > 0.5f;
+                            bool nRough = alphamap[ay+1, ax, 3] > 0.5f;
+                            if ((isOB && nRough) || (isRough && nOB)) border = true;
+                        }
+                        if (border) obBorderDist[idx] = 0f;
+                    }
+                }
+
+                // Step 2: Chamfer distance transform (forward + backward)
+                for (int ay = 0; ay < alphaRes; ay++)
+                    for (int ax = 0; ax < alphaRes; ax++) {
+                        int idx = ay * alphaRes + ax;
+                        if (ax > 0) obBorderDist[idx] = Mathf.Min(obBorderDist[idx], obBorderDist[idx-1] + 1f);
+                        if (ay > 0) obBorderDist[idx] = Mathf.Min(obBorderDist[idx], obBorderDist[idx-alphaRes] + 1f);
+                    }
+                for (int ay = alphaRes-1; ay >= 0; ay--)
+                    for (int ax = alphaRes-1; ax >= 0; ax--) {
+                        int idx = ay * alphaRes + ax;
+                        if (ax < alphaRes-1) obBorderDist[idx] = Mathf.Min(obBorderDist[idx], obBorderDist[idx+1] + 1f);
+                        if (ay < alphaRes-1) obBorderDist[idx] = Mathf.Min(obBorderDist[idx], obBorderDist[idx+alphaRes] + 1f);
+                    }
+
+                // Step 3: Blend rough↔OB in the transition zone
+                for (int ay = 0; ay < alphaRes; ay++)
+                {
+                    for (int ax = 0; ax < alphaRes; ax++)
+                    {
+                        int idx = ay * alphaRes + ax;
+                        float dist = obBorderDist[idx];
+                        if (dist >= blendRadius) continue;
+
+                        bool isOB = alphamap[ay, ax, 8] > 0.5f;
+                        bool isRough = alphamap[ay, ax, 3] > 0.5f;
+                        if (!isOB && !isRough) continue;
+
+                        // Smoothstep falloff: 1.0 at boundary → 0.0 at blendRadius
+                        float t = dist / blendRadius;
+                        t = t * t * (3f - 2f * t); // smoothstep
+                        float blendAmount = 1f - t;
+
+                        // Cross-fade: mix in 40% of the other texture at the boundary
+                        float mixStrength = blendAmount * 0.4f;
+
+                        if (isOB)
+                        {
+                            alphamap[ay, ax, 8] = 1f - mixStrength;
+                            alphamap[ay, ax, 3] = mixStrength;
+                        }
+                        else // isRough
+                        {
+                            alphamap[ay, ax, 3] = 1f - mixStrength;
+                            alphamap[ay, ax, 8] = mixStrength;
+                        }
+                    }
+                }
+            }
 
             // --- 5. (Zone boundary smoothing now happens at source in classify-zones.mjs) ---
 
@@ -867,7 +962,7 @@ namespace Golfin.CourseImport
                 "T_Tee_Albedo",         // 5 tee
                 "T_RoadAsphalt_Albedo", // 6 cart path
                 "T_Fairway_Dark",       // 7 dark fairway (mow stripes)
-                "T_OOB_Albedo",         // 8 out of bounds
+                "T_Rough_Albedo",       // 8 OB — same grass as rough, tinted darker
             };
             string[] normalNames = {
                 "T_Fairway_Normal",
@@ -878,9 +973,9 @@ namespace Golfin.CourseImport
                 "T_Tee_Normal",
                 "T_RoadAsphalt_Normal",
                 "T_Fairway_Normal",     // 7 dark fairway (mow stripes) — same normal as light fairway
-                "T_OOB_Normal",         // 8 out of bounds
+                "T_Rough_Normal",       // 8 OB — same normal as rough
             };
-            float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 8f, 8f };
+            float[] tileSizes = { 5f, 3f, 6f, 8f, 4f, 3f, 4f, 8f, 10f };
 
             var layers = new TerrainLayer[layerCount];
             EnsureDirectory(Path.Combine(projectRoot, dataDir));
@@ -976,6 +1071,12 @@ namespace Golfin.CourseImport
                     AssetDatabase.DeleteAsset(layerPath);
                 AssetDatabase.CreateAsset(layers[i], layerPath);
             }
+
+            // Tint OB layer slightly darker (same grass, less maintained look)
+            // diffuseRemapMin/Max remap the albedo RGB channels.
+            // Max < 1.0 = darker. Slightly yellow-green shift = dried grass.
+            layers[8].diffuseRemapMin = new Vector4(0f, 0f, 0f, 0f);
+            layers[8].diffuseRemapMax = new Vector4(0.75f, 0.82f, 0.55f, 1f);
 
             terrainData.terrainLayers = layers;
             terrainData.SetAlphamaps(0, 0, alphamap);
