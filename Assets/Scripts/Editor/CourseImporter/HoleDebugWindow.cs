@@ -66,62 +66,53 @@ namespace Golfin.CourseImport
 
             var td = terrain.terrainData;
             Vector3 origin = terrain.transform.position;
-
-            // Centre over the terrain footprint (ignore Y / mountain backdrop)
             Vector3 center = origin + new Vector3(td.size.x / 2f, 0f, td.size.z / 2f);
-
-            // viewSize = half the larger dimension → terrain fills the view
             float viewSize = Mathf.Max(td.size.x, td.size.z) / 2f;
 
-            // Orient so the green appears at the top of the screen
-            Quaternion rotation = TopDownRotationTowardGreen(center);
+            // Find the flag GameObject in the scene and orient the camera so
+            // the world direction from terrain center → flag maps to screen up.
+            //
+            // Using the flag's actual world position (instead of re-reading
+            // greens.json) avoids any coordinate-mapping confusion between
+            // Lite/Geo pipelines — whatever position the importer placed it
+            // at is the truth.
+            Vector3 screenUp = Vector3.forward; // default: +Z at top of screen
+            var flag = FindFlagInScene();
+            if (flag != null)
+            {
+                Vector3 toFlag = flag.transform.position - center;
+                toFlag.y = 0f;
+                if (toFlag.sqrMagnitude > 0.01f)
+                    screenUp = toFlag.normalized;
+            }
+            else
+            {
+                Debug.LogWarning("[HoleDebug] No Flag_* GameObject found. Using default top-down orientation.");
+            }
+
+            // Top-down camera: forward = down, upwards = direction to flag.
+            // LookRotation projects `upwards` onto the plane perpendicular to
+            // `forward`, so it becomes the world direction that maps to
+            // screen-up. Flag direction at screen-up ⇒ flag visible at top.
+            Quaternion rotation = Quaternion.LookRotation(Vector3.down, screenUp);
 
             sv.orthographic = true;
             sv.LookAt(center, rotation, viewSize);
         }
 
         /// <summary>
-        /// Reads greens.json from the export folder (via HoleMetadata) and returns a
-        /// top-down camera rotation that places the green at the top of the screen.
-        /// Falls back to a plain top-down view if the data is unavailable.
+        /// Finds the flag GameObject placed by the importers. Works even when
+        /// the flag is nested deep in the hierarchy or inactive.
         /// </summary>
-        private static Quaternion TopDownRotationTowardGreen(Vector3 terrainCenter)
+        private static GameObject FindFlagInScene()
         {
-            var metadata = UnityEngine.Object.FindObjectOfType<HoleMetadata>();
-            if (metadata == null || string.IsNullOrEmpty(metadata.importType))
-                return Quaternion.Euler(90f, 0f, 0f);
-
-            string projectRoot = Path.GetDirectoryName(Application.dataPath);
-            string holeId = metadata.holeNumber.ToString("D2");
-            bool isLite = metadata.importType.StartsWith("Lite");
-            bool isFlat = metadata.importType.EndsWith("Flat");
-
-            string toolFolder = isLite ? "UHoleLite" : "UHoleGeo";
-            string exportFolder = isFlat ? $"hole-{holeId}-flat" : $"hole-{holeId}";
-            string exportPath = Path.Combine(projectRoot, "Tools", toolFolder, "output",
-                metadata.courseId, "export", exportFolder);
-
-            string greensPath = Path.Combine(exportPath, "greens.json");
-            if (!File.Exists(greensPath))
-                return Quaternion.Euler(90f, 0f, 0f);
-
-            var greensFile = JsonUtility.FromJson<GreensFileData>(File.ReadAllText(greensPath));
-            if (greensFile.greens == null || greensFile.greens.Length == 0)
-                return Quaternion.Euler(90f, 0f, 0f);
-
-            var gc = greensFile.greens[0].center_local;
-            // Same coordinate mapping as the importers
-            Vector3 greenWorld = isLite
-                ? new Vector3(gc.z, 0f, gc.x)   // Lite: 90° CCW swap
-                : new Vector3(gc.x, 0f, gc.z);  // Geo: direct
-
-            Vector3 toGreen = greenWorld - terrainCenter;
-            toGreen.y = 0f;
-            if (toGreen.sqrMagnitude < 0.01f)
-                return Quaternion.Euler(90f, 0f, 0f);
-
-            // Camera looks straight down; screen "up" points toward the green
-            return Quaternion.LookRotation(Vector3.down, toGreen.normalized);
+            foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+            {
+                if (!go.scene.isLoaded) continue;
+                if (go.hideFlags != HideFlags.None) continue;
+                if (go.name.StartsWith("Flag_")) return go;
+            }
+            return null;
         }
 
         // ──────────────────────────────────────────────────────────────
