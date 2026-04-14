@@ -83,7 +83,15 @@ namespace Golfin.CourseImport
                 Vector3 toFlag = flag.transform.position - center;
                 toFlag.y = 0f;
                 if (toFlag.sqrMagnitude > 0.01f)
-                    screenUp = toFlag.normalized;
+                {
+                    // Snap to nearest cardinal so terrain edges stay parallel
+                    // to the view window. Pick whichever of ±X / ±Z has the
+                    // largest projection onto the flag direction.
+                    if (Mathf.Abs(toFlag.x) > Mathf.Abs(toFlag.z))
+                        screenUp = toFlag.x > 0 ? Vector3.right : Vector3.left;
+                    else
+                        screenUp = toFlag.z > 0 ? Vector3.forward : Vector3.back;
+                }
             }
             else
             {
