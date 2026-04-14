@@ -856,12 +856,12 @@ namespace Golfin.CourseImport
                                     if (p < minP) minP = p;
                                     if (p > maxP) maxP = p;
                                 }
-                                float available = maxP - minP - 4f; // 2m margin each end
+                                float available = maxP - minP - 6f; // 3m margin each end
                                 if (available > bestAvailable)
                                 {
                                     bestAvailable = available;
                                     spreadAxis = axis;
-                                    rangeMin = minP + 2f;
+                                    rangeMin = minP + 3f;
                                     rangeLen = Mathf.Max(0f, available);
                                 }
                             }
