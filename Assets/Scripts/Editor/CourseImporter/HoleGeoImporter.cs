@@ -868,9 +868,11 @@ namespace Golfin.CourseImport
                         }
                     }
 
+                    // g=0 = Red (front), g=last = Blue (back).
+                    // Reverse t so Blue ends up at rangeMin (bottom of map).
                     for (int g = 0; g < count; g++)
                     {
-                        float t = (float)g / (count - 1);
+                        float t = 1f - (float)g / (count - 1);
                         float proj = rangeMin + t * rangeLen;
                         float cp = Vector3.Dot(centroid, spreadAxis);
                         Vector3 pairCenter = centroid + spreadAxis * (proj - cp);
@@ -966,10 +968,11 @@ namespace Golfin.CourseImport
                     return;
                 }
 
-                // Markers always face map north (+Z); pair balls spaced along X
+                // Markers always face map north (+Z); pair balls spaced along X.
+                // FBX visual front is local +X, so rotate 90° CW around Y to align with world +Z.
                 Vector3 forwardDir = Vector3.forward;
                 Vector3 perpDir = Vector3.right;
-                Quaternion rotation = Quaternion.identity;
+                Quaternion rotation = Quaternion.Euler(0f, 90f, 0f);
 
                 // Place 2 markers: Left and Right, spaced 3m apart (1.5m each side)
                 for (int side = 0; side < 2; side++)
