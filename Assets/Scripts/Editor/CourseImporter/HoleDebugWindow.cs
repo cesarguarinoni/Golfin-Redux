@@ -87,7 +87,7 @@ namespace Golfin.CourseImport
         /// </summary>
         private static Quaternion TopDownRotationTowardGreen(Vector3 terrainCenter)
         {
-            var metadata = Object.FindObjectOfType<HoleMetadata>();
+            var metadata = UnityEngine.Object.FindObjectOfType<HoleMetadata>();
             if (metadata == null || string.IsNullOrEmpty(metadata.importType))
                 return Quaternion.Euler(90f, 0f, 0f);
 
