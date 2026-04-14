@@ -103,31 +103,19 @@ namespace Golfin.CourseImport
             // screen-up. Flag direction at screen-up ⇒ flag visible at top.
             Quaternion rotation = Quaternion.LookRotation(Vector3.down, screenUp);
 
-            // Compute viewSize AFTER rotation so the terrain actually fits.
-            // SceneView.size = half the vertical world extent on screen.
-            // After snapping, screenUp along ±Z means world-Z is vertical
-            // (so vertical extent = td.size.z). Along ±X flips it.
-            bool upAlongZ = (screenUp == Vector3.forward || screenUp == Vector3.back);
-            float verticalExtent   = upAlongZ ? td.size.z : td.size.x;
-            float horizontalExtent = upAlongZ ? td.size.x : td.size.z;
-            // Use the scene view window's actual pixel dimensions —
-            // sv.camera.aspect can be stale before the first render.
-            float aspect = sv.position.height > 1f
-                ? sv.position.width / sv.position.height
-                : 1f;
-            float viewSize = Mathf.Max(verticalExtent, horizontalExtent / aspect) / 2f;
-
-            // Apply directly — LookAt() can animate and interpolate size,
-            // which sometimes settles on a looser fit than we asked for.
+            // Set orientation + pivot first, then let SceneView.Frame handle
+            // the zoom. Frame uses the actual camera viewport rect (not the
+            // window rect, which includes the toolbar), so the aspect-fit
+            // math is correct without us having to re-derive it.
             sv.orthographic = true;
             sv.rotation     = rotation;
             sv.pivot        = center;
-            sv.size         = viewSize;
-            sv.Repaint();
+
+            var bounds = new Bounds(center, new Vector3(td.size.x, 0.01f, td.size.z));
+            sv.Frame(bounds, instant: true);
 
             Debug.Log($"[HoleDebug] SetCamera: terrain={td.size.x:F1}×{td.size.z:F1}, " +
-                      $"screenUp={screenUp}, vExt={verticalExtent:F1}, hExt={horizontalExtent:F1}, " +
-                      $"aspect={aspect:F3}, viewSize={viewSize:F1}");
+                      $"screenUp={screenUp}, size={sv.size:F1}");
         }
 
         /// <summary>
