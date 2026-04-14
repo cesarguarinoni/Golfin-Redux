@@ -968,11 +968,10 @@ namespace Golfin.CourseImport
                     return;
                 }
 
-                // Markers always face map north (+Z); pair balls spaced along X.
-                // FBX visual front is local +X, so rotate 90° CW around Y to align with world +Z.
+                // Pair faces map north: balls spread along Z so the gate opens east-west.
                 Vector3 forwardDir = Vector3.forward;
-                Vector3 perpDir = Vector3.right;
-                Quaternion rotation = Quaternion.Euler(0f, -90f, 0f);
+                Vector3 perpDir = Vector3.forward;
+                Quaternion rotation = Quaternion.identity;
 
                 // Place 2 markers: Left and Right, spaced 3m apart (1.5m each side)
                 for (int side = 0; side < 2; side++)
