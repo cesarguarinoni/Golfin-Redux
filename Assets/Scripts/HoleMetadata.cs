@@ -10,5 +10,7 @@ namespace Golfin.CourseImport
         public int strokeIndex;
         public int championshipYards;
         public string reviewStatus;
+        /// <summary>Import pipeline that created this scene: Lite | LiteFlat | Geo | GeoFlat</summary>
+        public string importType;
     }
 }

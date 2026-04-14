@@ -98,7 +98,7 @@ namespace Golfin.CourseImport
             string dataDir = $"Assets/Golf/Courses/{courseId}/Data/hole-{holeId}";
             string scenePath = $"{generatedDir}/Hole_{holeId}.unity";
 
-            ImportHoleInternal(courseId, holeNumber, exportPath, dataDir, scenePath);
+            ImportHoleInternal(courseId, holeNumber, exportPath, dataDir, scenePath, "Lite");
         }
 
         public static void ImportLiteHoleFlat(string courseId, int holeNumber)
@@ -112,11 +112,11 @@ namespace Golfin.CourseImport
             string dataDir = $"Assets/Golf/Courses/{courseId}/Data/hole-{holeId}-flat";
             string scenePath = $"{generatedDir}/Hole_{holeId}_Flat.unity";
 
-            ImportHoleInternal(courseId, holeNumber, exportPath, dataDir, scenePath);
+            ImportHoleInternal(courseId, holeNumber, exportPath, dataDir, scenePath, "LiteFlat");
         }
 
         private static void ImportHoleInternal(string courseId, int holeNumber,
-            string exportPath, string dataDir, string scenePath)
+            string exportPath, string dataDir, string scenePath, string importType = "Lite")
         {
             string holeId = holeNumber.ToString("D2");
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
@@ -270,6 +270,7 @@ namespace Golfin.CourseImport
                 var metadata = holeRoot.AddComponent<HoleMetadata>();
                 metadata.courseId = manifest.course_id;
                 metadata.holeNumber = manifest.hole_number;
+                metadata.importType = importType;
                 metadata.par = manifest.par;
                 metadata.strokeIndex = manifest.stroke_index;
                 metadata.championshipYards = manifest.championship_yards;
