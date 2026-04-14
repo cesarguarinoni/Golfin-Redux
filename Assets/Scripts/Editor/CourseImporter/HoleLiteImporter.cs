@@ -30,52 +30,52 @@ namespace Golfin.CourseImport
         private static readonly System.Collections.Generic.HashSet<int> PlayZones =
             new System.Collections.Generic.HashSet<int> { 1, 2, 6, 7, 8, 10 };
 
-        [MenuItem("Import/Lite/Import Hole 01 Lite")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
-        [MenuItem("Import/Lite/Import Hole 02 Lite")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
-        [MenuItem("Import/Lite/Import Hole 03 Lite")] public static void Lite03() { ImportLiteHole("lomond-country-club", 3); }
-        [MenuItem("Import/Lite/Import Hole 04 Lite")] public static void Lite04() { ImportLiteHole("lomond-country-club", 4); }
-        [MenuItem("Import/Lite/Import Hole 05 Lite")] public static void Lite05() { ImportLiteHole("lomond-country-club", 5); }
-        [MenuItem("Import/Lite/Import Hole 06 Lite")] public static void Lite06() { ImportLiteHole("lomond-country-club", 6); }
-        [MenuItem("Import/Lite/Import Hole 07 Lite")] public static void Lite07() { ImportLiteHole("lomond-country-club", 7); }
-        [MenuItem("Import/Lite/Import Hole 08 Lite")] public static void Lite08() { ImportLiteHole("lomond-country-club", 8); }
-        [MenuItem("Import/Lite/Import Hole 09 Lite")] public static void Lite09() { ImportLiteHole("lomond-country-club", 9); }
-        [MenuItem("Import/Lite/Import Hole 10 Lite")] public static void Lite10() { ImportLiteHole("lomond-country-club", 10); }
-        [MenuItem("Import/Lite/Import Hole 11 Lite")] public static void Lite11() { ImportLiteHole("lomond-country-club", 11); }
-        [MenuItem("Import/Lite/Import Hole 12 Lite")] public static void Lite12() { ImportLiteHole("lomond-country-club", 12); }
-        [MenuItem("Import/Lite/Import Hole 13 Lite")] public static void Lite13() { ImportLiteHole("lomond-country-club", 13); }
-        [MenuItem("Import/Lite/Import Hole 14 Lite")] public static void Lite14() { ImportLiteHole("lomond-country-club", 14); }
-        [MenuItem("Import/Lite/Import Hole 15 Lite")] public static void Lite15() { ImportLiteHole("lomond-country-club", 15); }
-        [MenuItem("Import/Lite/Import Hole 16 Lite")] public static void Lite16() { ImportLiteHole("lomond-country-club", 16); }
-        [MenuItem("Import/Lite/Import Hole 17 Lite")] public static void Lite17() { ImportLiteHole("lomond-country-club", 17); }
-        [MenuItem("Import/Lite/Import Hole 18 Lite")] public static void Lite18() { ImportLiteHole("lomond-country-club", 18); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite01() { ImportLiteHole("lomond-country-club", 1); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite02() { ImportLiteHole("lomond-country-club", 2); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite03() { ImportLiteHole("lomond-country-club", 3); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite04() { ImportLiteHole("lomond-country-club", 4); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite05() { ImportLiteHole("lomond-country-club", 5); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite06() { ImportLiteHole("lomond-country-club", 6); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite07() { ImportLiteHole("lomond-country-club", 7); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite08() { ImportLiteHole("lomond-country-club", 8); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite09() { ImportLiteHole("lomond-country-club", 9); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite10() { ImportLiteHole("lomond-country-club", 10); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite11() { ImportLiteHole("lomond-country-club", 11); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite12() { ImportLiteHole("lomond-country-club", 12); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite13() { ImportLiteHole("lomond-country-club", 13); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite14() { ImportLiteHole("lomond-country-club", 14); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite15() { ImportLiteHole("lomond-country-club", 15); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite16() { ImportLiteHole("lomond-country-club", 16); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite17() { ImportLiteHole("lomond-country-club", 17); }
+        [MenuItem("Import/Lite/Normal/Import Hole  Flat")] public static void Lite18() { ImportLiteHole("lomond-country-club", 18); }
 
-        [MenuItem("Import/Lite/Import All Holes Lite")]
+        [MenuItem("Import/Lite/Normal/Import All Holes Lite")]
         public static void LiteAll()
         {
             for (int i = 1; i <= 18; i++)
                 ImportLiteHole("lomond-country-club", i);
         }
 
-        [MenuItem("Import/Lite/Import Hole 01 Flat")] public static void LiteFlat01() { ImportLiteHoleFlat("lomond-country-club", 1); }
-        [MenuItem("Import/Lite/Import Hole 02 Flat")] public static void LiteFlat02() { ImportLiteHoleFlat("lomond-country-club", 2); }
-        [MenuItem("Import/Lite/Import Hole 03 Flat")] public static void LiteFlat03() { ImportLiteHoleFlat("lomond-country-club", 3); }
-        [MenuItem("Import/Lite/Import Hole 04 Flat")] public static void LiteFlat04() { ImportLiteHoleFlat("lomond-country-club", 4); }
-        [MenuItem("Import/Lite/Import Hole 05 Flat")] public static void LiteFlat05() { ImportLiteHoleFlat("lomond-country-club", 5); }
-        [MenuItem("Import/Lite/Import Hole 06 Flat")] public static void LiteFlat06() { ImportLiteHoleFlat("lomond-country-club", 6); }
-        [MenuItem("Import/Lite/Import Hole 07 Flat")] public static void LiteFlat07() { ImportLiteHoleFlat("lomond-country-club", 7); }
-        [MenuItem("Import/Lite/Import Hole 08 Flat")] public static void LiteFlat08() { ImportLiteHoleFlat("lomond-country-club", 8); }
-        [MenuItem("Import/Lite/Import Hole 09 Flat")] public static void LiteFlat09() { ImportLiteHoleFlat("lomond-country-club", 9); }
-        [MenuItem("Import/Lite/Import Hole 10 Flat")] public static void LiteFlat10() { ImportLiteHoleFlat("lomond-country-club", 10); }
-        [MenuItem("Import/Lite/Import Hole 11 Flat")] public static void LiteFlat11() { ImportLiteHoleFlat("lomond-country-club", 11); }
-        [MenuItem("Import/Lite/Import Hole 12 Flat")] public static void LiteFlat12() { ImportLiteHoleFlat("lomond-country-club", 12); }
-        [MenuItem("Import/Lite/Import Hole 13 Flat")] public static void LiteFlat13() { ImportLiteHoleFlat("lomond-country-club", 13); }
-        [MenuItem("Import/Lite/Import Hole 14 Flat")] public static void LiteFlat14() { ImportLiteHoleFlat("lomond-country-club", 14); }
-        [MenuItem("Import/Lite/Import Hole 15 Flat")] public static void LiteFlat15() { ImportLiteHoleFlat("lomond-country-club", 15); }
-        [MenuItem("Import/Lite/Import Hole 16 Flat")] public static void LiteFlat16() { ImportLiteHoleFlat("lomond-country-club", 16); }
-        [MenuItem("Import/Lite/Import Hole 17 Flat")] public static void LiteFlat17() { ImportLiteHoleFlat("lomond-country-club", 17); }
-        [MenuItem("Import/Lite/Import Hole 18 Flat")] public static void LiteFlat18() { ImportLiteHoleFlat("lomond-country-club", 18); }
+        [MenuItem("Import/Lite/Flat/Import Hole 01 Flat")] public static void LiteFlat01() { ImportLiteHoleFlat("lomond-country-club", 1); }
+        [MenuItem("Import/Lite/Flat/Import Hole 02 Flat")] public static void LiteFlat02() { ImportLiteHoleFlat("lomond-country-club", 2); }
+        [MenuItem("Import/Lite/Flat/Import Hole 03 Flat")] public static void LiteFlat03() { ImportLiteHoleFlat("lomond-country-club", 3); }
+        [MenuItem("Import/Lite/Flat/Import Hole 04 Flat")] public static void LiteFlat04() { ImportLiteHoleFlat("lomond-country-club", 4); }
+        [MenuItem("Import/Lite/Flat/Import Hole 05 Flat")] public static void LiteFlat05() { ImportLiteHoleFlat("lomond-country-club", 5); }
+        [MenuItem("Import/Lite/Flat/Import Hole 06 Flat")] public static void LiteFlat06() { ImportLiteHoleFlat("lomond-country-club", 6); }
+        [MenuItem("Import/Lite/Flat/Import Hole 07 Flat")] public static void LiteFlat07() { ImportLiteHoleFlat("lomond-country-club", 7); }
+        [MenuItem("Import/Lite/Flat/Import Hole 08 Flat")] public static void LiteFlat08() { ImportLiteHoleFlat("lomond-country-club", 8); }
+        [MenuItem("Import/Lite/Flat/Import Hole 09 Flat")] public static void LiteFlat09() { ImportLiteHoleFlat("lomond-country-club", 9); }
+        [MenuItem("Import/Lite/Flat/Import Hole 10 Flat")] public static void LiteFlat10() { ImportLiteHoleFlat("lomond-country-club", 10); }
+        [MenuItem("Import/Lite/Flat/Import Hole 11 Flat")] public static void LiteFlat11() { ImportLiteHoleFlat("lomond-country-club", 11); }
+        [MenuItem("Import/Lite/Flat/Import Hole 12 Flat")] public static void LiteFlat12() { ImportLiteHoleFlat("lomond-country-club", 12); }
+        [MenuItem("Import/Lite/Flat/Import Hole 13 Flat")] public static void LiteFlat13() { ImportLiteHoleFlat("lomond-country-club", 13); }
+        [MenuItem("Import/Lite/Flat/Import Hole 14 Flat")] public static void LiteFlat14() { ImportLiteHoleFlat("lomond-country-club", 14); }
+        [MenuItem("Import/Lite/Flat/Import Hole 15 Flat")] public static void LiteFlat15() { ImportLiteHoleFlat("lomond-country-club", 15); }
+        [MenuItem("Import/Lite/Flat/Import Hole 16 Flat")] public static void LiteFlat16() { ImportLiteHoleFlat("lomond-country-club", 16); }
+        [MenuItem("Import/Lite/Flat/Import Hole 17 Flat")] public static void LiteFlat17() { ImportLiteHoleFlat("lomond-country-club", 17); }
+        [MenuItem("Import/Lite/Flat/Import Hole 18 Flat")] public static void LiteFlat18() { ImportLiteHoleFlat("lomond-country-club", 18); }
 
-        [MenuItem("Import/Lite/Import All Holes Flat")]
+        [MenuItem("Import/Lite/Flat/Import All Holes Flat")]
         public static void LiteAllFlat()
         {
             for (int i = 1; i <= 18; i++)

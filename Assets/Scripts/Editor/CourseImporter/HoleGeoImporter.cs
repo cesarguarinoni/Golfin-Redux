@@ -30,52 +30,52 @@ namespace Golfin.CourseImport
         private static readonly System.Collections.Generic.HashSet<int> PlayZones =
             new System.Collections.Generic.HashSet<int> { 1, 2, 6, 7, 8, 10 };
 
-        [MenuItem("Import/Geo/Import Hole 01 Geo")] public static void Geo01() { ImportGeoHole("lomond-country-club", 1); }
-        [MenuItem("Import/Geo/Import Hole 02 Geo")] public static void Geo02() { ImportGeoHole("lomond-country-club", 2); }
-        [MenuItem("Import/Geo/Import Hole 03 Geo")] public static void Geo03() { ImportGeoHole("lomond-country-club", 3); }
-        [MenuItem("Import/Geo/Import Hole 04 Geo")] public static void Geo04() { ImportGeoHole("lomond-country-club", 4); }
-        [MenuItem("Import/Geo/Import Hole 05 Geo")] public static void Geo05() { ImportGeoHole("lomond-country-club", 5); }
-        [MenuItem("Import/Geo/Import Hole 06 Geo")] public static void Geo06() { ImportGeoHole("lomond-country-club", 6); }
-        [MenuItem("Import/Geo/Import Hole 07 Geo")] public static void Geo07() { ImportGeoHole("lomond-country-club", 7); }
-        [MenuItem("Import/Geo/Import Hole 08 Geo")] public static void Geo08() { ImportGeoHole("lomond-country-club", 8); }
-        [MenuItem("Import/Geo/Import Hole 09 Geo")] public static void Geo09() { ImportGeoHole("lomond-country-club", 9); }
-        [MenuItem("Import/Geo/Import Hole 10 Geo")] public static void Geo10() { ImportGeoHole("lomond-country-club", 10); }
-        [MenuItem("Import/Geo/Import Hole 11 Geo")] public static void Geo11() { ImportGeoHole("lomond-country-club", 11); }
-        [MenuItem("Import/Geo/Import Hole 12 Geo")] public static void Geo12() { ImportGeoHole("lomond-country-club", 12); }
-        [MenuItem("Import/Geo/Import Hole 13 Geo")] public static void Geo13() { ImportGeoHole("lomond-country-club", 13); }
-        [MenuItem("Import/Geo/Import Hole 14 Geo")] public static void Geo14() { ImportGeoHole("lomond-country-club", 14); }
-        [MenuItem("Import/Geo/Import Hole 15 Geo")] public static void Geo15() { ImportGeoHole("lomond-country-club", 15); }
-        [MenuItem("Import/Geo/Import Hole 16 Geo")] public static void Geo16() { ImportGeoHole("lomond-country-club", 16); }
-        [MenuItem("Import/Geo/Import Hole 17 Geo")] public static void Geo17() { ImportGeoHole("lomond-country-club", 17); }
-        [MenuItem("Import/Geo/Import Hole 18 Geo")] public static void Geo18() { ImportGeoHole("lomond-country-club", 18); }
+        [MenuItem("Import/Geo/Normal/Import Hole 01 Geo")] public static void Geo01() { ImportGeoHole("lomond-country-club", 1); }
+        [MenuItem("Import/Geo/Normal/Import Hole 02 Geo")] public static void Geo02() { ImportGeoHole("lomond-country-club", 2); }
+        [MenuItem("Import/Geo/Normal/Import Hole 03 Geo")] public static void Geo03() { ImportGeoHole("lomond-country-club", 3); }
+        [MenuItem("Import/Geo/Normal/Import Hole 04 Geo")] public static void Geo04() { ImportGeoHole("lomond-country-club", 4); }
+        [MenuItem("Import/Geo/Normal/Import Hole 05 Geo")] public static void Geo05() { ImportGeoHole("lomond-country-club", 5); }
+        [MenuItem("Import/Geo/Normal/Import Hole 06 Geo")] public static void Geo06() { ImportGeoHole("lomond-country-club", 6); }
+        [MenuItem("Import/Geo/Normal/Import Hole 07 Geo")] public static void Geo07() { ImportGeoHole("lomond-country-club", 7); }
+        [MenuItem("Import/Geo/Normal/Import Hole 08 Geo")] public static void Geo08() { ImportGeoHole("lomond-country-club", 8); }
+        [MenuItem("Import/Geo/Normal/Import Hole 09 Geo")] public static void Geo09() { ImportGeoHole("lomond-country-club", 9); }
+        [MenuItem("Import/Geo/Normal/Import Hole 10 Geo")] public static void Geo10() { ImportGeoHole("lomond-country-club", 10); }
+        [MenuItem("Import/Geo/Normal/Import Hole 11 Geo")] public static void Geo11() { ImportGeoHole("lomond-country-club", 11); }
+        [MenuItem("Import/Geo/Normal/Import Hole 12 Geo")] public static void Geo12() { ImportGeoHole("lomond-country-club", 12); }
+        [MenuItem("Import/Geo/Normal/Import Hole 13 Geo")] public static void Geo13() { ImportGeoHole("lomond-country-club", 13); }
+        [MenuItem("Import/Geo/Normal/Import Hole 14 Geo")] public static void Geo14() { ImportGeoHole("lomond-country-club", 14); }
+        [MenuItem("Import/Geo/Normal/Import Hole 15 Geo")] public static void Geo15() { ImportGeoHole("lomond-country-club", 15); }
+        [MenuItem("Import/Geo/Normal/Import Hole 16 Geo")] public static void Geo16() { ImportGeoHole("lomond-country-club", 16); }
+        [MenuItem("Import/Geo/Normal/Import Hole 17 Geo")] public static void Geo17() { ImportGeoHole("lomond-country-club", 17); }
+        [MenuItem("Import/Geo/Normal/Import Hole 18 Geo")] public static void Geo18() { ImportGeoHole("lomond-country-club", 18); }
 
-        [MenuItem("Import/Geo/Import All Holes Geo")]
+        [MenuItem("Import/Geo/Normal/Import All Holes Geo")]
         public static void GeoAll()
         {
             for (int i = 1; i <= 18; i++)
                 ImportGeoHole("lomond-country-club", i);
         }
 
-        [MenuItem("Import/Geo/Import Hole 01 Geo Flat")] public static void GeoFlat01() { ImportGeoHoleFlat("lomond-country-club", 1); }
-        [MenuItem("Import/Geo/Import Hole 02 Geo Flat")] public static void GeoFlat02() { ImportGeoHoleFlat("lomond-country-club", 2); }
-        [MenuItem("Import/Geo/Import Hole 03 Geo Flat")] public static void GeoFlat03() { ImportGeoHoleFlat("lomond-country-club", 3); }
-        [MenuItem("Import/Geo/Import Hole 04 Geo Flat")] public static void GeoFlat04() { ImportGeoHoleFlat("lomond-country-club", 4); }
-        [MenuItem("Import/Geo/Import Hole 05 Geo Flat")] public static void GeoFlat05() { ImportGeoHoleFlat("lomond-country-club", 5); }
-        [MenuItem("Import/Geo/Import Hole 06 Geo Flat")] public static void GeoFlat06() { ImportGeoHoleFlat("lomond-country-club", 6); }
-        [MenuItem("Import/Geo/Import Hole 07 Geo Flat")] public static void GeoFlat07() { ImportGeoHoleFlat("lomond-country-club", 7); }
-        [MenuItem("Import/Geo/Import Hole 08 Geo Flat")] public static void GeoFlat08() { ImportGeoHoleFlat("lomond-country-club", 8); }
-        [MenuItem("Import/Geo/Import Hole 09 Geo Flat")] public static void GeoFlat09() { ImportGeoHoleFlat("lomond-country-club", 9); }
-        [MenuItem("Import/Geo/Import Hole 10 Geo Flat")] public static void GeoFlat10() { ImportGeoHoleFlat("lomond-country-club", 10); }
-        [MenuItem("Import/Geo/Import Hole 11 Geo Flat")] public static void GeoFlat11() { ImportGeoHoleFlat("lomond-country-club", 11); }
-        [MenuItem("Import/Geo/Import Hole 12 Geo Flat")] public static void GeoFlat12() { ImportGeoHoleFlat("lomond-country-club", 12); }
-        [MenuItem("Import/Geo/Import Hole 13 Geo Flat")] public static void GeoFlat13() { ImportGeoHoleFlat("lomond-country-club", 13); }
-        [MenuItem("Import/Geo/Import Hole 14 Geo Flat")] public static void GeoFlat14() { ImportGeoHoleFlat("lomond-country-club", 14); }
-        [MenuItem("Import/Geo/Import Hole 15 Geo Flat")] public static void GeoFlat15() { ImportGeoHoleFlat("lomond-country-club", 15); }
-        [MenuItem("Import/Geo/Import Hole 16 Geo Flat")] public static void GeoFlat16() { ImportGeoHoleFlat("lomond-country-club", 16); }
-        [MenuItem("Import/Geo/Import Hole 17 Geo Flat")] public static void GeoFlat17() { ImportGeoHoleFlat("lomond-country-club", 17); }
-        [MenuItem("Import/Geo/Import Hole 18 Geo Flat")] public static void GeoFlat18() { ImportGeoHoleFlat("lomond-country-club", 18); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat01() { ImportGeoHoleFlat("lomond-country-club", 1); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat02() { ImportGeoHoleFlat("lomond-country-club", 2); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat03() { ImportGeoHoleFlat("lomond-country-club", 3); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat04() { ImportGeoHoleFlat("lomond-country-club", 4); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat05() { ImportGeoHoleFlat("lomond-country-club", 5); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat06() { ImportGeoHoleFlat("lomond-country-club", 6); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat07() { ImportGeoHoleFlat("lomond-country-club", 7); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat08() { ImportGeoHoleFlat("lomond-country-club", 8); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat09() { ImportGeoHoleFlat("lomond-country-club", 9); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat10() { ImportGeoHoleFlat("lomond-country-club", 10); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat11() { ImportGeoHoleFlat("lomond-country-club", 11); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat12() { ImportGeoHoleFlat("lomond-country-club", 12); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat13() { ImportGeoHoleFlat("lomond-country-club", 13); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat14() { ImportGeoHoleFlat("lomond-country-club", 14); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat15() { ImportGeoHoleFlat("lomond-country-club", 15); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat16() { ImportGeoHoleFlat("lomond-country-club", 16); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat17() { ImportGeoHoleFlat("lomond-country-club", 17); }
+        [MenuItem("Import/Geo/Flat/Import Hole  Geo")] public static void GeoFlat18() { ImportGeoHoleFlat("lomond-country-club", 18); }
 
-        [MenuItem("Import/Geo/Import All Holes Geo Flat")]
+        [MenuItem("Import/Geo/Normal/Import All Holes Geo Flat")]
         public static void GeoAllFlat()
         {
             for (int i = 1; i <= 18; i++)
