@@ -246,8 +246,19 @@ namespace Golfin.CourseImport
                             anchorsRoot.transform, hasGreenCentroid, greenCentroid, teeRegions);
                 }
 
+                // Load fairway regions so tee markers can face the closest fairway
+                ZoneContourRegion[] fairwayRegions = null;
+                string fwPath = Path.Combine(exportPath, "fairway-contours.json");
+                if (File.Exists(fwPath))
+                {
+                    var fwData = JsonUtility.FromJson<FairwayContoursFile>(
+                        File.ReadAllText(fwPath));
+                    fairwayRegions = fwData.fairways;
+                }
+
                 PlaceTeeMarkerGroups(teeAnchors, terrain, terrainGO.transform,
-                    anchorsRoot.transform, hasGreenCentroid, greenCentroid, teeRegions);
+                    anchorsRoot.transform, hasGreenCentroid, greenCentroid, teeRegions,
+                    fairwayRegions);
 
                 // Depress terrain under overlay meshes to prevent z-fighting
                 DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
@@ -764,7 +775,8 @@ namespace Golfin.CourseImport
             List<AnchorData> teeAnchors,
             Terrain terrain, Transform terrainTransform, Transform parent,
             bool hasGreenCentroid, Vector3 greenCentroid,
-            ZoneContourRegion[] teeRegions)
+            ZoneContourRegion[] teeRegions,
+            ZoneContourRegion[] fairwayRegions = null)
         {
             if (teeAnchors.Count == 0) return;
 
@@ -826,18 +838,47 @@ namespace Golfin.CourseImport
                                            sz / anchorsInGroup.Count);
                 }
 
+                // Pair facing: perpendicular to the direction toward the closest fairway.
+                // Lite coordinate mapping: center_local.(z, x) → world (X, Z).
+                Vector3 groupPerpDir = Vector3.forward; // fallback
+                if (fairwayRegions != null)
+                {
+                    float bestFwDist = float.MaxValue;
+                    Vector3 closestFwCenter = Vector3.zero;
+                    bool foundFw = false;
+                    foreach (var fw in fairwayRegions)
+                    {
+                        if (fw.contour == null || fw.contour.Length < 3) continue;
+                        Vector3 fwCenter = new Vector3(fw.center_local.z, 0f, fw.center_local.x);
+                        float d = (fwCenter - centroid).sqrMagnitude;
+                        if (d < bestFwDist) { bestFwDist = d; closestFwCenter = fwCenter; foundFw = true; }
+                    }
+                    if (foundFw)
+                    {
+                        Vector3 toFairway = (closestFwCenter - centroid);
+                        toFairway.y = 0f;
+                        if (toFairway.sqrMagnitude > 0.01f)
+                        {
+                            Vector3 fairwayDir = toFairway.normalized;
+                            Vector3 p = Vector3.Cross(Vector3.up, fairwayDir).normalized;
+                            if (p.sqrMagnitude > 0.001f) groupPerpDir = p;
+                        }
+                    }
+                }
+
                 int count = anchorsInGroup.Count;
 
                 if (count == 1)
                 {
-                    // Single marker type — place at centroid (original behavior)
+                    // Single marker type — place at centroid, face closest fairway
                     PlaceAnchorMarker(anchorsInGroup[0], terrain, terrainTransform,
-                        parent, hasGreenCentroid, greenCentroid, teeRegions);
+                        parent, hasGreenCentroid, greenCentroid, teeRegions,
+                        null, groupPerpDir);
                 }
                 else
                 {
                     // Multiple marker types — spread as far apart as possible within
-                    // the tee region contour, with a 2m margin from every boundary.
+                    // the tee region contour, with a 3m margin from every boundary.
                     Vector3 spreadAxis = Vector3.right;
                     float rangeMin = centroid.x - (count - 1) * 2.5f;
                     float rangeLen = (count - 1) * 5f;
@@ -853,7 +894,7 @@ namespace Golfin.CourseImport
                                 pts[i] = new Vector3(region.contour[i].z, 0f, region.contour[i].x);
 
                             // Scan 36 directions (0–179°) — pick the axis with the
-                            // longest span after a 2m inset on each end.
+                            // longest span after a 3m inset on each end.
                             float bestAvailable = float.MinValue;
                             for (int s = 0; s < 36; s++)
                             {
@@ -889,7 +930,7 @@ namespace Golfin.CourseImport
 
                         PlaceAnchorMarker(anchorsInGroup[g], terrain, terrainTransform,
                             parent, hasGreenCentroid, greenCentroid, teeRegions,
-                            pairCenter);
+                            pairCenter, groupPerpDir);
                     }
                 }
             }
@@ -899,7 +940,8 @@ namespace Golfin.CourseImport
             Terrain terrain, Transform terrainTransform, Transform parent,
             bool hasGreenCentroid, Vector3 greenCentroid,
             ZoneContourRegion[] teeRegions = null,
-            Vector3? overridePosition = null)
+            Vector3? overridePosition = null,
+            Vector3? overridePerpDir = null)
         {
             // 90° CCW rotation: (x, z) → (-z, x) → (local.z, local.x)
             Vector3 worldPos = new Vector3(anchor.local.z, 0f, anchor.local.x);
@@ -978,9 +1020,9 @@ namespace Golfin.CourseImport
                     return;
                 }
 
-                // Pair faces map north: balls spread along Z so the gate opens east-west.
+                // Pair faces closest fairway; perpDir comes from PlaceTeeMarkerGroups.
                 Vector3 forwardDir = Vector3.forward;
-                Vector3 perpDir = Vector3.forward;
+                Vector3 perpDir = overridePerpDir ?? Vector3.forward;
                 Quaternion rotation = Quaternion.identity;
 
                 // Place 2 markers: Left and Right, spaced 3m apart (1.5m each side)
