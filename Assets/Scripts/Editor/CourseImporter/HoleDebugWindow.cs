@@ -110,8 +110,11 @@ namespace Golfin.CourseImport
             bool upAlongZ = (screenUp == Vector3.forward || screenUp == Vector3.back);
             float verticalExtent   = upAlongZ ? td.size.z : td.size.x;
             float horizontalExtent = upAlongZ ? td.size.x : td.size.z;
-            float aspect = sv.camera != null && sv.camera.aspect > 0.01f
-                ? sv.camera.aspect : 1f;
+            // Use the scene view window's actual pixel dimensions —
+            // sv.camera.aspect can be stale before the first render.
+            float aspect = sv.position.height > 1f
+                ? sv.position.width / sv.position.height
+                : 1f;
             float viewSize = Mathf.Max(verticalExtent, horizontalExtent / aspect) / 2f;
 
             sv.orthographic = true;
