@@ -1655,7 +1655,7 @@ namespace Golfin.CourseImport
 
         // ─── Debug: Test Terrain Layers ───────────────────────────────────
 
-        [MenuItem("GOLFIN/Debug/Test Terrain Layers")]
+        [MenuItem("GOLFIN/Debug/Test Terrain Layers (Geo)")]
         public static void TestTerrainLayers()
         {
             var terrain = Object.FindObjectOfType<Terrain>();
@@ -1768,7 +1768,7 @@ namespace Golfin.CourseImport
 
         // ─── Debug: Test Zone Alignment ──────────────────────────────────
 
-        [MenuItem("GOLFIN/Debug/Test Zone Alignment")]
+        [MenuItem("GOLFIN/Debug/Test Zone Alignment (Geo)")]
         public static void TestZoneAlignment()
         {
             var terrain = Object.FindObjectOfType<Terrain>();
