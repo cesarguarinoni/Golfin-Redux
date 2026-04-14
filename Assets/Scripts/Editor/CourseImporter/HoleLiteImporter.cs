@@ -982,7 +982,7 @@ namespace Golfin.CourseImport
                 // FBX visual front is local +X, so rotate 90° CW around Y to align with world +Z.
                 Vector3 forwardDir = Vector3.forward;
                 Vector3 perpDir = Vector3.right;
-                Quaternion rotation = Quaternion.Euler(0f, 90f, 0f);
+                Quaternion rotation = Quaternion.Euler(0f, -90f, 0f);
 
                 // Place 2 markers: Left and Right, spaced 3m apart (1.5m each side)
                 for (int side = 0; side < 2; side++)
