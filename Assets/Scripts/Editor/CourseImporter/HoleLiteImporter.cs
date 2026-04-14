@@ -15,9 +15,14 @@ namespace Golfin.CourseImport
     {
         // ─── Tunable Shore Slope Parameters ─────────────────────────
         /// <summary>Radius in heightmap cells around water to apply slope. At 1025 res, ~0.5m/cell.</summary>
-        public static int ShoreRadius = 2;
+        public static int ShoreRadius = 10;
         /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
-        public static float ShoreDepthMeters = 0.1f;
+        public static float ShoreDepthMeters = 0.4f;
+
+        // ─── Terrain Y offset — headroom below flat terrain for water bed.
+        // Must be ≥ ShoreDepthMeters + water surface depth (0.05m) + underwater margin (0.3m)
+        // so heightmap can represent the full water bed without clamping.
+        private const float TerrainYOffset = 0.4f;
 
         // ─── Overlay Terrain Depression ─────────────────────────────
         private const float OverlayDepressionMeters = 0.40f;
@@ -162,7 +167,7 @@ namespace Golfin.CourseImport
                     terrainX, terrainZ);
                 var terrainGO = Terrain.CreateTerrainGameObject(terrainData);
                 terrainGO.name = "TerrainRoot";
-                terrainGO.transform.position = new Vector3(-terrainX / 2f, -ShoreDepthMeters, -terrainZ / 2f);
+                terrainGO.transform.position = new Vector3(-terrainX / 2f, -TerrainYOffset, -terrainZ / 2f);
 
                 // Disable reflection probes on terrain
                 var terrainComp = terrainGO.GetComponent<Terrain>();
@@ -385,10 +390,10 @@ namespace Golfin.CourseImport
             float elevRange = demRange + ShoreDepthMeters + 1.0f;
 
             // normalizedFlat = the height value that maps to world Y=0
-            // terrainGO.position.y = -ShoreDepthMeters
-            // So: normalizedFlat * elevRange + (-ShoreDepthMeters) = 0
-            // normalizedFlat = ShoreDepthMeters / elevRange
-            float normalizedFlat = ShoreDepthMeters / elevRange;
+            // terrainGO.position.y = -TerrainYOffset
+            // So: normalizedFlat * elevRange + (-TerrainYOffset) = 0
+            // normalizedFlat = TerrainYOffset / elevRange
+            float normalizedFlat = TerrainYOffset / elevRange;
 
             // --- Read heightmap.raw (uint16be, rawRes x rawRes) ---
             float[,] heights = new float[actualRes, actualRes];
@@ -2727,43 +2732,68 @@ namespace Golfin.CourseImport
 
                 int n = water.contour.Length;
 
-                // Sample terrain at each vertex directly — water follows the slope
-                Vector3[] worldPts = new Vector3[n];
-                float sumX = 0, sumY = 0, sumZ = 0;
+                // 1. Flat water Y from min terrain height across contour
+                float minTerrainH = float.MaxValue;
                 for (int i = 0; i < n; i++)
                 {
                     float wx = water.contour[i].z;  // 90° CCW
                     float wz = water.contour[i].x;
-                    float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                    float wy = terrainBaseY + terrainH - 0.1f;
-                    worldPts[i] = new Vector3(wx, wy, wz);
-                    sumX += wx; sumY += wy; sumZ += wz;
+                    float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                    if (th < minTerrainH) minTerrainH = th;
                 }
-                float centroidX = sumX / n;
-                float centroidY = sumY / n;
-                float centroidZ = sumZ / n;
-                Vector3 centroid = new Vector3(centroidX, centroidY, centroidZ);
+                float waterY = terrainBaseY + minTerrainH - 0.05f;
 
-                // Build mesh with ear-clip triangulation
-                var verts = new Vector3[n];
-                var uvs = new Vector2[n];
-                float tileSize = 10f; // water texture tiling
-                for (int i = 0; i < n; i++)
-                {
-                    verts[i] = worldPts[i] - centroid;
-                    uvs[i] = new Vector2(worldPts[i].x / tileSize, worldPts[i].z / tileSize);
-                }
+                // 2. CDT triangulation (same helper as fairways)
+                float tileSize = 10f;
+                System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+                    new Vector2(wx / tileSize, wz / tileSize);
 
-                var tris = EarClipTriangulate(worldPts);
-                if (tris == null || tris.Length < 3)
+                var (rawVerts, uvs, tris) = CDTTriangulate(
+                    water.contour, terrain, terrainBaseY, 0f, 2.0f, uvFunc);
+
+                if (rawVerts == null || tris == null || tris.Length < 3)
                 {
-                    Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: ear-clip failed, skipping");
+                    Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: CDT failed");
                     continue;
                 }
 
+                // 3. Flatten all Y to waterY
+                for (int i = 0; i < rawVerts.Length; i++)
+                    rawVerts[i].y = waterY;
+
+                // 4. Center mesh (Y=0 origin pattern)
+                float cx = 0, cz = 0;
+                for (int i = 0; i < rawVerts.Length; i++)
+                { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+                cx /= rawVerts.Length; cz /= rawVerts.Length;
+                Vector3 centroid = new Vector3(cx, 0, cz);
+
+                for (int i = 0; i < rawVerts.Length; i++)
+                    rawVerts[i] -= centroid;
+
+                // 5. Check winding
+                if (tris.Length >= 3)
+                {
+                    Vector3 a = rawVerts[tris[0]];
+                    Vector3 b = rawVerts[tris[1]];
+                    Vector3 c = rawVerts[tris[2]];
+                    float cross = (b.x - a.x) * (c.z - a.z)
+                                - (b.z - a.z) * (c.x - a.x);
+                    if (cross > 0)
+                    {
+                        for (int t = 0; t < tris.Length; t += 3)
+                        {
+                            int tmp = tris[t];
+                            tris[t] = tris[t + 2];
+                            tris[t + 2] = tmp;
+                        }
+                    }
+                }
+
+                // 6. Build mesh + GameObject
                 var mesh = new Mesh();
                 mesh.name = $"Water_{water.id}";
-                mesh.vertices = verts;
+                mesh.vertices = rawVerts;
                 mesh.triangles = tris;
                 mesh.uv = uvs;
                 mesh.RecalculateNormals();
@@ -2773,115 +2803,14 @@ namespace Golfin.CourseImport
                 go.transform.position = centroid;
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 go.AddComponent<MeshRenderer>().sharedMaterial = waterMat;
-
                 AddCleanMeshCollider(go, mesh);
 
                 var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Water;
-
                 go.transform.SetParent(waterRoot.transform);
 
                 Debug.Log($"[HoleLiteImporter] Water {water.id}: {n} contour verts, " +
-                          $"{tris.Length / 3} tris, pos ({centroidX:F1}, {centroidY:F2}, {centroidZ:F1})");
-            }
-
-            // ─── Shore slope pass: depress terrain near water edges ──────────
-            if (ShoreRadius > 0 && ShoreDepthMeters > 0f)
-            {
-                int hRes = terrainData.heightmapResolution;
-                float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
-                float elevRange = terrainData.size.y;
-
-                // Build water mask on the heightmap grid using zone data
-                string zonesPath = Path.Combine(exportPath, "zones.json");
-                bool[,] isWater = new bool[hRes, hRes];
-
-                if (File.Exists(zonesPath))
-                {
-                    string zonesJson = File.ReadAllText(zonesPath);
-                    var zonesData = JsonUtility.FromJson<ZonesData>(zonesJson);
-                    byte[] grid = System.Convert.FromBase64String(zonesData.grid);
-                    int zw = zonesData.source_dimensions.width;
-                    int zh = zonesData.source_dimensions.height;
-
-                    for (int hz = 0; hz < hRes; hz++)
-                    {
-                        for (int hx = 0; hx < hRes; hx++)
-                        {
-                            // Map heightmap cell to zone grid
-                            // Heightmap uses 90° CCW rotation from zone grid
-                            float normX = (float)hx / (hRes - 1);
-                            float normZ = (float)hz / (hRes - 1);
-
-                            // Reverse the 90° CCW: zone.x = normZ, zone.y = normX
-                            int zx = Mathf.Clamp(Mathf.RoundToInt(normZ * (zw - 1)), 0, zw - 1);
-                            int zy = Mathf.Clamp(Mathf.RoundToInt(normX * (zh - 1)), 0, zh - 1);
-
-                            if (grid[zy * zw + zx] == 7) // 7 = water zone
-                                isWater[hz, hx] = true;
-                        }
-                    }
-                }
-
-                // Chamfer distance transform (approximate Euclidean)
-                float[,] distToWater = new float[hRes, hRes];
-                for (int z = 0; z < hRes; z++)
-                    for (int x = 0; x < hRes; x++)
-                        distToWater[z, x] = isWater[z, x] ? 0f : float.MaxValue;
-
-                // Forward pass
-                for (int z = 0; z < hRes; z++)
-                {
-                    for (int x = 0; x < hRes; x++)
-                    {
-                        if (x > 0)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z, x - 1] + 1f);
-                        if (z > 0)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z - 1, x] + 1f);
-                        if (x > 0 && z > 0)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z - 1, x - 1] + 1.414f);
-                        if (x < hRes - 1 && z > 0)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z - 1, x + 1] + 1.414f);
-                    }
-                }
-
-                // Backward pass
-                for (int z = hRes - 1; z >= 0; z--)
-                {
-                    for (int x = hRes - 1; x >= 0; x--)
-                    {
-                        if (x < hRes - 1)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z, x + 1] + 1f);
-                        if (z < hRes - 1)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z + 1, x] + 1f);
-                        if (x < hRes - 1 && z < hRes - 1)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z + 1, x + 1] + 1.414f);
-                        if (x > 0 && z < hRes - 1)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x], distToWater[z + 1, x - 1] + 1.414f);
-                    }
-                }
-
-                // Shore lip disabled — only underwater depression applied
-                int depressedCount = 0;
-
-                // Depress water cells below water mesh surface
-                // Water mesh is at sampleHeight - 0.05m; push terrain 0.5m below that
-                float underwaterDrop = (ShoreDepthMeters + 0.15f) / elevRange;
-                for (int z = 0; z < hRes; z++)
-                {
-                    for (int x = 0; x < hRes; x++)
-                    {
-                        if (isWater[z, x])
-                        {
-                            float currentH = heights[z, x];
-                            heights[z, x] = Mathf.Max(0f, currentH - underwaterDrop);
-                        }
-                    }
-                }
-
-                terrainData.SetHeights(0, 0, heights);
-                Debug.Log($"[HoleLiteImporter] Shore slope: depressed {depressedCount} cells, " +
-                          $"radius={ShoreRadius}, depth={ShoreDepthMeters:F1}m");
+                          $"{tris.Length / 3} tris, waterY={waterY:F2}");
             }
 
             // Copy water.json to Assets
@@ -2934,7 +2863,7 @@ namespace Golfin.CourseImport
             // Prevents terrain splatmap underneath from showing through
             // as brownish patches. Shore depression is only ~0.1m.
             mat.SetFloat("_DepthStart", 0f);
-            mat.SetFloat("_DepthEnd", 0.3f);
+            mat.SetFloat("_DepthEnd", 0.8f);
 
             // Refraction distortion: zero. Higher values warp the terrain
             // texture underneath through the water, producing ugly patches.
@@ -3100,6 +3029,9 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // Water is handled separately below — absolute Y assignment
+            string waterDepressPath = Path.Combine(exportPath, "water.json");
+
             // Apply depression (fairway/tee — flat drop)
             int depressedCount = 0;
             for (int hz = 0; hz < hRes; hz++)
@@ -3166,6 +3098,186 @@ namespace Golfin.CourseImport
             }
 
             depressedCount += cartDepressedCount;
+
+            // ─── Water bed (absolute Y) + shore slope ───────────────────
+            if (File.Exists(waterDepressPath))
+            {
+                var waterDataShore = JsonUtility.FromJson<WaterFileData>(
+                    File.ReadAllText(waterDepressPath));
+
+                if (waterDataShore.water != null && waterDataShore.water.Length > 0)
+                {
+                    Terrain terrainForSample = terrainGO.GetComponent<Terrain>();
+                    int bodyCount = waterDataShore.water.Length;
+
+                    // Per-body waterYNorm (terrain-local normalized height of water surface)
+                    // Mirrors CreateWaterMeshes: waterY_world = terrainBaseY + minTerrainH - 0.05
+                    // → normalized = (minTerrainH - 0.05) / elevRange
+                    float[] waterYNormPerBody = new float[bodyCount];
+                    for (int b = 0; b < bodyCount; b++)
+                    {
+                        var w = waterDataShore.water[b];
+                        if (w.contour == null || w.contour.Length < 3)
+                        { waterYNormPerBody[b] = -1f; continue; }
+
+                        float minTerrainH = float.MaxValue;
+                        for (int i = 0; i < w.contour.Length; i++)
+                        {
+                            float wx = w.contour[i].z;
+                            float wz = w.contour[i].x;
+                            float th = terrainForSample.SampleHeight(new Vector3(wx, 0, wz));
+                            if (th < minTerrainH) minTerrainH = th;
+                        }
+                        waterYNormPerBody[b] = (minTerrainH - 0.05f) / elevRange;
+                    }
+
+                    // Per-cell body index (-1 = not water)
+                    int[,] waterBodyIdx = new int[hRes, hRes];
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                            waterBodyIdx[z, x] = -1;
+
+                    for (int b = 0; b < bodyCount; b++)
+                    {
+                        var w = waterDataShore.water[b];
+                        if (w.contour == null || w.contour.Length < 3) continue;
+                        bool[,] thisBody = new bool[hRes, hRes];
+                        MarkContourCells(w.contour, thisBody,
+                            hRes, terrainPos, terrainSize, 0f);
+                        for (int z = 0; z < hRes; z++)
+                            for (int x = 0; x < hRes; x++)
+                                if (thisBody[z, x]) waterBodyIdx[z, x] = b;
+                    }
+
+                    // Chamfer distance transform with nearest-body propagation
+                    float[,] distToWater = new float[hRes, hRes];
+                    int[,] nearestBody = new int[hRes, hRes];
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            if (waterBodyIdx[z, x] >= 0)
+                            { distToWater[z, x] = 0f; nearestBody[z, x] = waterBodyIdx[z, x]; }
+                            else
+                            { distToWater[z, x] = float.MaxValue; nearestBody[z, x] = -1; }
+                        }
+
+                    // Forward pass
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            float d = distToWater[z, x]; int nb = nearestBody[z, x];
+                            if (x > 0 && distToWater[z, x - 1] + 1f < d)
+                            { d = distToWater[z, x - 1] + 1f; nb = nearestBody[z, x - 1]; }
+                            if (z > 0 && distToWater[z - 1, x] + 1f < d)
+                            { d = distToWater[z - 1, x] + 1f; nb = nearestBody[z - 1, x]; }
+                            if (x > 0 && z > 0 && distToWater[z - 1, x - 1] + 1.414f < d)
+                            { d = distToWater[z - 1, x - 1] + 1.414f; nb = nearestBody[z - 1, x - 1]; }
+                            if (x < hRes - 1 && z > 0 && distToWater[z - 1, x + 1] + 1.414f < d)
+                            { d = distToWater[z - 1, x + 1] + 1.414f; nb = nearestBody[z - 1, x + 1]; }
+                            distToWater[z, x] = d; nearestBody[z, x] = nb;
+                        }
+
+                    // Backward pass
+                    for (int z = hRes - 1; z >= 0; z--)
+                        for (int x = hRes - 1; x >= 0; x--)
+                        {
+                            float d = distToWater[z, x]; int nb = nearestBody[z, x];
+                            if (x < hRes - 1 && distToWater[z, x + 1] + 1f < d)
+                            { d = distToWater[z, x + 1] + 1f; nb = nearestBody[z, x + 1]; }
+                            if (z < hRes - 1 && distToWater[z + 1, x] + 1f < d)
+                            { d = distToWater[z + 1, x] + 1f; nb = nearestBody[z + 1, x]; }
+                            if (x < hRes - 1 && z < hRes - 1 && distToWater[z + 1, x + 1] + 1.414f < d)
+                            { d = distToWater[z + 1, x + 1] + 1.414f; nb = nearestBody[z + 1, x + 1]; }
+                            if (x > 0 && z < hRes - 1 && distToWater[z + 1, x - 1] + 1.414f < d)
+                            { d = distToWater[z + 1, x - 1] + 1.414f; nb = nearestBody[z + 1, x - 1]; }
+                            distToWater[z, x] = d; nearestBody[z, x] = nb;
+                        }
+
+                    // Inner shore distance: for water cells, distance to NEAREST shore cell.
+                    // This is the inverse of distToWater. Used to ramp water bed depth
+                    // so bed is shallow (flush with water mesh) at contour edge, deep in interior.
+                    float[,] distToShore = new float[hRes, hRes];
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                            distToShore[z, x] = (waterBodyIdx[z, x] >= 0)
+                                ? float.MaxValue : 0f;
+
+                    // Forward pass (same chamfer as above but seeded from shore cells)
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            float d = distToShore[z, x];
+                            if (x > 0) d = Mathf.Min(d, distToShore[z, x - 1] + 1f);
+                            if (z > 0) d = Mathf.Min(d, distToShore[z - 1, x] + 1f);
+                            if (x > 0 && z > 0)
+                                d = Mathf.Min(d, distToShore[z - 1, x - 1] + 1.414f);
+                            if (x < hRes - 1 && z > 0)
+                                d = Mathf.Min(d, distToShore[z - 1, x + 1] + 1.414f);
+                            distToShore[z, x] = d;
+                        }
+                    // Backward pass
+                    for (int z = hRes - 1; z >= 0; z--)
+                        for (int x = hRes - 1; x >= 0; x--)
+                        {
+                            float d = distToShore[z, x];
+                            if (x < hRes - 1) d = Mathf.Min(d, distToShore[z, x + 1] + 1f);
+                            if (z < hRes - 1) d = Mathf.Min(d, distToShore[z + 1, x] + 1f);
+                            if (x < hRes - 1 && z < hRes - 1)
+                                d = Mathf.Min(d, distToShore[z + 1, x + 1] + 1.414f);
+                            if (x > 0 && z < hRes - 1)
+                                d = Mathf.Min(d, distToShore[z + 1, x - 1] + 1.414f);
+                            distToShore[z, x] = d;
+                        }
+
+                    // Apply: water bed ramped (shallow at edge → deep interior),
+                    // shore cells ramped (flush at edge → origH at ShoreRadius).
+                    float underwaterMaxNorm = 0.30f / elevRange; // max depth below water
+                    float bedRampRadius = ShoreRadius; // same radius for symmetry
+                    int waterCellCount = 0, shoreCount = 0;
+                    for (int z = 0; z < hRes; z++)
+                    {
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            int body = waterBodyIdx[z, x];
+                            if (body >= 0 && waterYNormPerBody[body] >= 0f)
+                            {
+                                float waterH = waterYNormPerBody[body];
+                                // Bed depth ramps from 0 (at shore) to underwaterMaxNorm (interior)
+                                float dShore = distToShore[z, x];
+                                float tb = Mathf.Clamp01(dShore / bedRampRadius);
+                                tb = tb * tb * (3f - 2f * tb); // smoothstep
+                                float depth = underwaterMaxNorm * tb;
+                                heights[z, x] = Mathf.Max(0f, waterH - depth);
+                                waterCellCount++;
+                                continue;
+                            }
+                            if (depress[z, x]) continue;
+
+                            int nb = nearestBody[z, x];
+                            if (nb < 0 || waterYNormPerBody[nb] < 0f) continue;
+
+                            float dist = distToWater[z, x];
+                            if (dist > 0 && dist <= ShoreRadius)
+                            {
+                                float waterH = waterYNormPerBody[nb];
+                                float origH = heights[z, x];
+                                // t=0 at waterline (dist=1), t=1 at ShoreRadius
+                                float t = (ShoreRadius > 1)
+                                    ? (dist - 1f) / (ShoreRadius - 1f)
+                                    : 1f;
+                                t = Mathf.Clamp01(t);
+                                t = t * t * (3f - 2f * t); // smoothstep
+                                float targetH = Mathf.Lerp(waterH, origH, t);
+                                heights[z, x] = Mathf.Min(origH, Mathf.Max(0f, targetH));
+                                shoreCount++;
+                            }
+                        }
+                    }
+                    Debug.Log($"[HoleLiteImporter] Water bed: {waterCellCount} cells ramped " +
+                              $"(edge flush, {underwaterMaxNorm * elevRange:F2}m deep interior), " +
+                              $"shore: {shoreCount} cells ramped (radius={ShoreRadius})");
+                }
+            }
 
             terrainData.SetHeights(0, 0, heights);
             Debug.Log($"[HoleLiteImporter] Terrain depression: {depressedCount}" +
