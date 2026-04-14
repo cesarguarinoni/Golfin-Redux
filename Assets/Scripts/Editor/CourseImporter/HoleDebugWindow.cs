@@ -117,8 +117,17 @@ namespace Golfin.CourseImport
                 : 1f;
             float viewSize = Mathf.Max(verticalExtent, horizontalExtent / aspect) / 2f;
 
+            // Apply directly — LookAt() can animate and interpolate size,
+            // which sometimes settles on a looser fit than we asked for.
             sv.orthographic = true;
-            sv.LookAt(center, rotation, viewSize);
+            sv.rotation     = rotation;
+            sv.pivot        = center;
+            sv.size         = viewSize;
+            sv.Repaint();
+
+            Debug.Log($"[HoleDebug] SetCamera: terrain={td.size.x:F1}×{td.size.z:F1}, " +
+                      $"screenUp={screenUp}, vExt={verticalExtent:F1}, hExt={horizontalExtent:F1}, " +
+                      $"aspect={aspect:F3}, viewSize={viewSize:F1}");
         }
 
         /// <summary>
