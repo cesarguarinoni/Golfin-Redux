@@ -496,9 +496,10 @@ namespace Golfin.CourseImport
                         {
                             float normX = (float)hx / (actualRes - 1);
                             float normZ = (float)hz / (actualRes - 1);
-                            // No rotation for Geo — direct mapping
+                            // Geo: direct X mapping, Y flipped (alphamap south→north
+                            // vs satellite north→south)
                             int gx = Mathf.Clamp(Mathf.RoundToInt(normX * (smW - 1)), 0, smW - 1);
-                            int gy = Mathf.Clamp(Mathf.RoundToInt(normZ * (smH - 1)), 0, smH - 1);
+                            int gy = Mathf.Clamp(Mathf.RoundToInt((1f - normZ) * (smH - 1)), 0, smH - 1);
                             int obIdx = gy * smW + gx;
 
                             if (smObMask != null && obIdx < smObMask.Length)
@@ -772,8 +773,8 @@ namespace Golfin.CourseImport
                     {
                         if (teeRegions[r].contour == null || teeRegions[r].contour.Length < 3)
                             continue;
-                        Vector3 rc = new Vector3(teeRegions[r].center_local.z, 0f,
-                                                  teeRegions[r].center_local.x);
+                        Vector3 rc = new Vector3(teeRegions[r].center_local.x, 0f,
+                                                  teeRegions[r].center_local.z);
                         float d = (rc - anchorWorld).sqrMagnitude;
                         if (d < bestDist) { bestDist = d; regionIdx = r; }
                     }
@@ -815,16 +816,6 @@ namespace Golfin.CourseImport
                                            sz / anchorsInGroup.Count);
                 }
 
-                // Forward direction toward green
-                Vector3 forwardDir = Vector3.forward;
-                if (hasGreenCentroid)
-                {
-                    Vector3 toGreen = greenCentroid - centroid;
-                    toGreen.y = 0f;
-                    if (toGreen.sqrMagnitude > 0.01f)
-                        forwardDir = toGreen.normalized;
-                }
-
                 int count = anchorsInGroup.Count;
 
                 if (count == 1)
@@ -835,14 +826,54 @@ namespace Golfin.CourseImport
                 }
                 else
                 {
-                    // Multiple marker types sharing a tee region — space them 3m apart
-                    float pairSpacing = 5f;
+                    // Multiple marker types — spread as far apart as possible within
+                    // the tee region contour, with a 2m margin from every boundary.
+                    Vector3 spreadAxis = Vector3.right;
+                    float rangeMin = centroid.x - (count - 1) * 2.5f;
+                    float rangeLen = (count - 1) * 5f;
+
+                    if (kvp.Key >= 0 && teeRegions != null)
+                    {
+                        var region = teeRegions[kvp.Key];
+                        if (region.contour != null && region.contour.Length >= 3)
+                        {
+                            // Build world-space XZ contour (Geo: direct mapping)
+                            var pts = new Vector3[region.contour.Length];
+                            for (int i = 0; i < region.contour.Length; i++)
+                                pts[i] = new Vector3(region.contour[i].x, 0f, region.contour[i].z);
+
+                            // Scan 36 directions (0–179°) — pick the axis with the
+                            // longest span after a 2m inset on each end.
+                            float bestAvailable = float.MinValue;
+                            for (int s = 0; s < 36; s++)
+                            {
+                                float angle = s * Mathf.PI / 36f;
+                                Vector3 axis = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                                float minP = float.MaxValue, maxP = float.MinValue;
+                                foreach (var pt in pts)
+                                {
+                                    float p = Vector3.Dot(pt, axis);
+                                    if (p < minP) minP = p;
+                                    if (p > maxP) maxP = p;
+                                }
+                                float available = maxP - minP - 4f; // 2m margin each end
+                                if (available > bestAvailable)
+                                {
+                                    bestAvailable = available;
+                                    spreadAxis = axis;
+                                    rangeMin = minP + 2f;
+                                    rangeLen = Mathf.Max(0f, available);
+                                }
+                            }
+                        }
+                    }
+
                     for (int g = 0; g < count; g++)
                     {
-                        float t = 1f - (float)g / (count - 1);
-                        float forwardOffset = (t - 0.5f) * (count - 1) * pairSpacing;
-
-                        Vector3 pairCenter = centroid + forwardDir * forwardOffset;
+                        float t = (float)g / (count - 1);
+                        float proj = rangeMin + t * rangeLen;
+                        float cp = Vector3.Dot(centroid, spreadAxis);
+                        Vector3 pairCenter = centroid + spreadAxis * (proj - cp);
 
                         PlaceAnchorMarker(anchorsInGroup[g], terrain, terrainTransform,
                             parent, hasGreenCentroid, greenCentroid, teeRegions,
@@ -877,8 +908,8 @@ namespace Golfin.CourseImport
                     foreach (var region in teeRegions)
                     {
                         if (region.contour == null || region.contour.Length < 3) continue;
-                        Vector3 rc = new Vector3(region.center_local.z, 0f,
-                                                 region.center_local.x);
+                        Vector3 rc = new Vector3(region.center_local.x, 0f,
+                                                 region.center_local.z);
                         float d = (rc - worldPos).sqrMagnitude;
                         if (d < bestDist) { bestDist = d; bestRegion = region; }
                     }
@@ -935,24 +966,10 @@ namespace Golfin.CourseImport
                     return;
                 }
 
-                // Compute forward direction to green and perpendicular for spacing
-                Vector3 forwardDir = Vector3.forward; // default
-                Vector3 perpDir = Vector3.right;      // default: space along X axis
-                if (hasGreenCentroid)
-                {
-                    Vector3 toGreen = (greenCentroid - worldPos);
-                    toGreen.y = 0f;
-                    if (toGreen.sqrMagnitude > 0.01f)
-                    {
-                        forwardDir = toGreen.normalized;
-                        perpDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
-                        if (perpDir.sqrMagnitude < 0.001f)
-                            perpDir = Vector3.right;
-                    }
-                }
-
-                // Rotation: markers face the green
-                Quaternion rotation = Quaternion.LookRotation(forwardDir, Vector3.up);
+                // Markers always face map north (+Z); pair balls spaced along X
+                Vector3 forwardDir = Vector3.forward;
+                Vector3 perpDir = Vector3.right;
+                Quaternion rotation = Quaternion.identity;
 
                 // Place 2 markers: Left and Right, spaced 3m apart (1.5m each side)
                 for (int side = 0; side < 2; side++)
@@ -1109,9 +1126,10 @@ namespace Golfin.CourseImport
                     float fx = (float)ax / (alphaRes - 1);
                     float fy = (float)ay / (alphaRes - 1);
 
-                    // No rotation for Geo — direct mapping
+                    // Geo: direct X mapping, Y flipped (alphamap y=0 is south,
+                    // satellite gy=0 is north — so they run in opposite directions).
                     int gx = Mathf.Clamp(Mathf.RoundToInt(fx * (zoneW - 1)), 0, zoneW - 1);
-                    int gy = Mathf.Clamp(Mathf.RoundToInt(fy * (zoneH - 1)), 0, zoneH - 1);
+                    int gy = Mathf.Clamp(Mathf.RoundToInt((1f - fy) * (zoneH - 1)), 0, zoneH - 1);
 
                     resampledZones[ay * alphaRes + ax] = grid[gy * zoneW + gx];
                 }
@@ -1141,8 +1159,9 @@ namespace Golfin.CourseImport
                     {
                         float fx = (float)ax / (alphaRes - 1);
                         float fy = (float)ay / (alphaRes - 1);
-                        int gx = Mathf.Clamp(Mathf.RoundToInt(fy * (zoneW - 1)), 0, zoneW - 1);
-                        int gy = Mathf.Clamp(Mathf.RoundToInt(fx * (zoneH - 1)), 0, zoneH - 1);
+                        // Geo: direct X mapping, Y flipped
+                        int gx = Mathf.Clamp(Mathf.RoundToInt(fx * (zoneW - 1)), 0, zoneW - 1);
+                        int gy = Mathf.Clamp(Mathf.RoundToInt((1f - fy) * (zoneH - 1)), 0, zoneH - 1);
                         int obIdx = gy * zoneW + gx;
                         if (obIdx < obMask.Length && obMask[obIdx] != 0)
                             layer = 8; // OB layer
@@ -2233,6 +2252,9 @@ namespace Golfin.CourseImport
             {
                 mat.mainTexture = bunkerTex;
                 mat.mainTextureScale = new Vector2(2f, 2f);  // tile within the bowl
+                // URP Lit uses _BaseMap, not _MainTex — set explicitly so baked lighting works
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", bunkerTex);
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", Color.white);
             }
             else
             {
@@ -2268,6 +2290,8 @@ namespace Golfin.CourseImport
             {
                 mat.mainTexture = tex;
                 mat.mainTextureScale = new Vector2(tileScale, tileScale);
+                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", tex);
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", Color.white);
             }
             else
             {
@@ -2804,9 +2828,9 @@ namespace Golfin.CourseImport
                             float normX = (float)hx / (hRes - 1);
                             float normZ = (float)hz / (hRes - 1);
 
-                            // No rotation for Geo — direct mapping
+                            // Geo: direct X mapping, Y flipped
                             int zx = Mathf.Clamp(Mathf.RoundToInt(normX * (zw - 1)), 0, zw - 1);
-                            int zy = Mathf.Clamp(Mathf.RoundToInt(normZ * (zh - 1)), 0, zh - 1);
+                            int zy = Mathf.Clamp(Mathf.RoundToInt((1f - normZ) * (zh - 1)), 0, zh - 1);
 
                             if (grid[zy * zw + zx] == 7) // 7 = water zone
                                 isWater[hz, hx] = true;

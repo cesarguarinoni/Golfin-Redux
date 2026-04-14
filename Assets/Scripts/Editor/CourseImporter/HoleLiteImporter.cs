@@ -22,7 +22,7 @@ namespace Golfin.CourseImport
         // ─── Terrain Y offset — headroom below flat terrain for water bed.
         // Must be ≥ ShoreDepthMeters + water surface depth (0.05m) + underwater margin (0.3m)
         // so heightmap can represent the full water bed without clamping.
-        private const float TerrainYOffset = 0.4f;
+        private static float TerrainYOffset => ShoreDepthMeters;
 
         // ─── Overlay Terrain Depression ─────────────────────────────
         private const float OverlayDepressionMeters = 0.40f;
@@ -826,16 +826,6 @@ namespace Golfin.CourseImport
                                            sz / anchorsInGroup.Count);
                 }
 
-                // Forward direction toward green
-                Vector3 forwardDir = Vector3.forward;
-                if (hasGreenCentroid)
-                {
-                    Vector3 toGreen = greenCentroid - centroid;
-                    toGreen.y = 0f;
-                    if (toGreen.sqrMagnitude > 0.01f)
-                        forwardDir = toGreen.normalized;
-                }
-
                 int count = anchorsInGroup.Count;
 
                 if (count == 1)
@@ -846,14 +836,54 @@ namespace Golfin.CourseImport
                 }
                 else
                 {
-                    // Multiple marker types sharing a tee region — space them 3m apart
-                    float pairSpacing = 5f;
+                    // Multiple marker types — spread as far apart as possible within
+                    // the tee region contour, with a 2m margin from every boundary.
+                    Vector3 spreadAxis = Vector3.right;
+                    float rangeMin = centroid.x - (count - 1) * 2.5f;
+                    float rangeLen = (count - 1) * 5f;
+
+                    if (kvp.Key >= 0 && teeRegions != null)
+                    {
+                        var region = teeRegions[kvp.Key];
+                        if (region.contour != null && region.contour.Length >= 3)
+                        {
+                            // Build world-space XZ contour (Lite: swap x<->z)
+                            var pts = new Vector3[region.contour.Length];
+                            for (int i = 0; i < region.contour.Length; i++)
+                                pts[i] = new Vector3(region.contour[i].z, 0f, region.contour[i].x);
+
+                            // Scan 36 directions (0–179°) — pick the axis with the
+                            // longest span after a 2m inset on each end.
+                            float bestAvailable = float.MinValue;
+                            for (int s = 0; s < 36; s++)
+                            {
+                                float angle = s * Mathf.PI / 36f;
+                                Vector3 axis = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+                                float minP = float.MaxValue, maxP = float.MinValue;
+                                foreach (var pt in pts)
+                                {
+                                    float p = Vector3.Dot(pt, axis);
+                                    if (p < minP) minP = p;
+                                    if (p > maxP) maxP = p;
+                                }
+                                float available = maxP - minP - 4f; // 2m margin each end
+                                if (available > bestAvailable)
+                                {
+                                    bestAvailable = available;
+                                    spreadAxis = axis;
+                                    rangeMin = minP + 2f;
+                                    rangeLen = Mathf.Max(0f, available);
+                                }
+                            }
+                        }
+                    }
+
                     for (int g = 0; g < count; g++)
                     {
-                        float t = 1f - (float)g / (count - 1);
-                        float forwardOffset = (t - 0.5f) * (count - 1) * pairSpacing;
-
-                        Vector3 pairCenter = centroid + forwardDir * forwardOffset;
+                        float t = (float)g / (count - 1);
+                        float proj = rangeMin + t * rangeLen;
+                        float cp = Vector3.Dot(centroid, spreadAxis);
+                        Vector3 pairCenter = centroid + spreadAxis * (proj - cp);
 
                         PlaceAnchorMarker(anchorsInGroup[g], terrain, terrainTransform,
                             parent, hasGreenCentroid, greenCentroid, teeRegions,
@@ -946,24 +976,10 @@ namespace Golfin.CourseImport
                     return;
                 }
 
-                // Compute forward direction to green and perpendicular for spacing
-                Vector3 forwardDir = Vector3.forward; // default
-                Vector3 perpDir = Vector3.right;      // default: space along X axis
-                if (hasGreenCentroid)
-                {
-                    Vector3 toGreen = (greenCentroid - worldPos);
-                    toGreen.y = 0f;
-                    if (toGreen.sqrMagnitude > 0.01f)
-                    {
-                        forwardDir = toGreen.normalized;
-                        perpDir = Vector3.Cross(Vector3.up, forwardDir).normalized;
-                        if (perpDir.sqrMagnitude < 0.001f)
-                            perpDir = Vector3.right;
-                    }
-                }
-
-                // Rotation: markers face the green
-                Quaternion rotation = Quaternion.LookRotation(forwardDir, Vector3.up);
+                // Markers always face map north (+Z); pair balls spaced along X
+                Vector3 forwardDir = Vector3.forward;
+                Vector3 perpDir = Vector3.right;
+                Quaternion rotation = Quaternion.identity;
 
                 // Place 2 markers: Left and Right, spaced 3m apart (1.5m each side)
                 for (int side = 0; side < 2; side++)
@@ -2753,8 +2769,32 @@ namespace Golfin.CourseImport
 
                 if (rawVerts == null || tris == null || tris.Length < 3)
                 {
-                    Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: CDT failed");
-                    continue;
+                    Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: CDT failed, falling back to ear-clip");
+
+                    // Ear-clip fallback for shapes CDT can't handle
+                    // (e.g. self-intersecting contours from aggressive RDP)
+                    int nc = water.contour.Length;
+                    var ecPts = new Vector3[nc];
+                    for (int i = 0; i < nc; i++)
+                    {
+                        float wx2 = water.contour[i].z;  // 90° CCW
+                        float wz2 = water.contour[i].x;
+                        ecPts[i] = new Vector3(wx2, waterY, wz2);
+                    }
+                    tris = EarClipTriangulate(ecPts);
+                    if (tris == null || tris.Length < 3)
+                    {
+                        Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: ear-clip also failed, skipping");
+                        continue;
+                    }
+                    rawVerts = new Vector3[nc];
+                    uvs = new Vector2[nc];
+                    float tileSz = 10f;
+                    for (int i = 0; i < nc; i++)
+                    {
+                        rawVerts[i] = ecPts[i];
+                        uvs[i] = new Vector2(ecPts[i].x / tileSz, ecPts[i].z / tileSz);
+                    }
                 }
 
                 // 3. Flatten all Y to waterY
