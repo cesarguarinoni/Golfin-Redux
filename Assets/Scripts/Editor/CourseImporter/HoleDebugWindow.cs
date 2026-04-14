@@ -67,7 +67,6 @@ namespace Golfin.CourseImport
             var td = terrain.terrainData;
             Vector3 origin = terrain.transform.position;
             Vector3 center = origin + new Vector3(td.size.x / 2f, 0f, td.size.z / 2f);
-            float viewSize = Mathf.Max(td.size.x, td.size.z) / 2f;
 
             // Find the flag GameObject in the scene and orient the camera so
             // the world direction from terrain center → flag maps to screen up.
@@ -103,6 +102,17 @@ namespace Golfin.CourseImport
             // `forward`, so it becomes the world direction that maps to
             // screen-up. Flag direction at screen-up ⇒ flag visible at top.
             Quaternion rotation = Quaternion.LookRotation(Vector3.down, screenUp);
+
+            // Compute viewSize AFTER rotation so the terrain actually fits.
+            // SceneView.size = half the vertical world extent on screen.
+            // After snapping, screenUp along ±Z means world-Z is vertical
+            // (so vertical extent = td.size.z). Along ±X flips it.
+            bool upAlongZ = (screenUp == Vector3.forward || screenUp == Vector3.back);
+            float verticalExtent   = upAlongZ ? td.size.z : td.size.x;
+            float horizontalExtent = upAlongZ ? td.size.x : td.size.z;
+            float aspect = sv.camera != null && sv.camera.aspect > 0.01f
+                ? sv.camera.aspect : 1f;
+            float viewSize = Mathf.Max(verticalExtent, horizontalExtent / aspect) / 2f;
 
             sv.orthographic = true;
             sv.LookAt(center, rotation, viewSize);
