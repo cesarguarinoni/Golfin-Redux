@@ -3612,17 +3612,16 @@ namespace Golfin.CourseImport
                     {
                         if (fw.contour == null || fw.contour.Length < 3) continue;
 
-                        // Fairway mesh with mow stripes via UV-oriented texture
+                        // Fairway mesh with fringe as inner-band submesh.
+                        // One mesh, two submeshes, shared vertices along the band.
+                        // This eliminates Z-fighting because fringe triangles are
+                        // part of the same CDT — no independent terrain sampling.
                         var meshGO = CreateFairwayMesh(
                             fw.id, fw.contour, terrain, terrainBaseY,
-                            fairwayMat, stripeDir, stripeWidth);
+                            fairwayMat, fringeMat, FairwayFringeMeters, 6f,
+                            stripeDir, stripeWidth);
                         if (meshGO != null)
                             meshGO.transform.SetParent(fwRoot.transform);
-
-                        // Fringe ring inside fairway edge (negative = inward offset)
-                        var fringeGO = CreateFringeRing(
-                            fw.id, fw.contour, terrain, terrainBaseY,
-                            fringeMat, -FairwayFringeMeters, 6f, fwRoot.transform);
                     }
 
                     Debug.Log($"[HoleLiteImporter] Created {data.fairways.Length} fairway mesh(es) with mow stripes + fringe");
@@ -3668,34 +3667,18 @@ namespace Golfin.CourseImport
                     {
                         if (region.contour == null || region.contour.Length < 3) continue;
 
-                        var meshGO = CreateFlatContourMesh(
+                        // Tee mesh with inner border band as a second submesh.
+                        // Border is now INSIDE the tee (not outside) — shared vertices
+                        // with the tee CDT means no independent terrain sampling, no
+                        // Z-fighting. UV.v encodes distance-to-edge for gradient.
+                        var meshGO = CreateTeeMeshWithBorder(
                             region.id, "Tee", region.contour,
-                            terrain, terrainBaseY, teeMat, 3f,
+                            terrain, terrainBaseY,
+                            teeMat, 3f,
+                            teeBorderMat, 0.4f,  // border width in meters
                             Golfin.Course.SurfaceType.Tee);
                         if (meshGO != null)
                             meshGO.transform.SetParent(teeRoot.transform);
-
-                        // Build tee contour edge in world space (yOffset 0.02 matches tee CDT)
-                        // Border ring derives Y from this instead of sampling terrain independently.
-                        var teeEdge = new Vector3[region.contour.Length];
-                        for (int i = 0; i < region.contour.Length; i++)
-                        {
-                            float wx = region.contour[i].z;
-                            float wz = region.contour[i].x;
-                            float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                            teeEdge[i] = new Vector3(wx, terrainBaseY + th + 0.02f, wz);
-                        }
-
-                        // Tee border ring (gradient: light inside → dark outside)
-                        // Thinned from 1.0m to 0.4m to compensate for reduced inwardOverlap.
-                        var borderGO = CreateGradientBorderRing(
-                            region.id, "Tee", region.contour,
-                            terrain, terrainBaseY, teeBorderMat,
-                            0.4f,  // border width in meters (was 1.0)
-                            3f,    // UV.u tile every 3m along perimeter
-                            Golfin.Course.SurfaceType.Fringe,
-                            teeRoot.transform,
-                            teeEdge, -0.008f);
                     }
 
                     Debug.Log($"[HoleLiteImporter] Created {data.zones.tee.Length} tee mesh(es) with border rings");
@@ -3935,9 +3918,51 @@ namespace Golfin.CourseImport
                 terrain, terrainBaseY, mat, tileSize, surfaceType);
         }
 
+        /// <summary>
+        /// Squared perpendicular distance from point (px,pz) to the closed
+        /// 2D polygon edges. poly2D.x=wx, poly2D.y=wz.
+        /// </summary>
+        private static float DistanceSqToContour(float px, float pz, Vector2[] poly2D)
+        {
+            float best = float.MaxValue;
+            int n = poly2D.Length;
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 a = poly2D[i];
+                Vector2 b = poly2D[(i + 1) % n];
+                float dx = b.x - a.x, dz = b.y - a.y;
+                float lenSq = dx * dx + dz * dz;
+                float ex = px - a.x, ez = pz - a.y;
+                float dSq;
+                if (lenSq < 1e-12f)
+                {
+                    dSq = ex * ex + ez * ez;
+                }
+                else
+                {
+                    float t = (ex * dx + ez * dz) / lenSq;
+                    if (t < 0f) t = 0f; else if (t > 1f) t = 1f;
+                    float cxs = a.x + t * dx, czs = a.y + t * dz;
+                    float fx = px - cxs, fz = pz - czs;
+                    dSq = fx * fx + fz * fz;
+                }
+                if (dSq < best) best = dSq;
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Creates the fairway mesh with an inner fringe band as a second
+        /// submesh. Triangles within fringeWidth of the contour are assigned
+        /// to submesh 1 (fringe material); the rest are submesh 0 (fairway).
+        /// Vertices used by fringe triangles are duplicated with fringe-style
+        /// tile UVs so the fringe texture tiles correctly without affecting
+        /// the mow-stripe UVs on the main fairway triangles.
+        /// </summary>
         private static GameObject CreateFairwayMesh(int id, ContourPoint[] contour,
             Terrain terrain, float terrainBaseY,
-            Material mat, Vector2 stripeDir, float stripeWidth)
+            Material mat, Material fringeMat, float fringeWidth, float fringeTileSize,
+            Vector2 stripeDir, float stripeWidth)
         {
             float yOffset = 0.01f;
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
@@ -3952,6 +3977,12 @@ namespace Golfin.CourseImport
 
             if (rawVerts == null || tris == null || tris.Length < 3) return null;
 
+            // Build 2D polygon for distance-to-contour (90° CCW rotation same as CDT uses)
+            int cn = contour.Length;
+            var poly2D = new Vector2[cn];
+            for (int i = 0; i < cn; i++)
+                poly2D[i] = new Vector2(contour[i].z, contour[i].x);
+
             // Center mesh (Y=0 origin pattern)
             float cx = 0, cz = 0;
             for (int i = 0; i < rawVerts.Length; i++)
@@ -3959,10 +3990,7 @@ namespace Golfin.CourseImport
             cx /= rawVerts.Length; cz /= rawVerts.Length;
             Vector3 centroid = new Vector3(cx, 0, cz);
 
-            for (int i = 0; i < rawVerts.Length; i++)
-                rawVerts[i] -= centroid;
-
-            // Check winding — CDT may output CCW, Unity needs CW for front-face-up
+            // Check winding in WORLD space BEFORE centroid subtraction.
             if (tris.Length >= 3)
             {
                 Vector3 a = rawVerts[tris[0]];
@@ -3976,22 +4004,201 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // Classify triangles by centroid distance to contour (world XZ)
+            float fringeSq = fringeWidth * fringeWidth;
+            var interiorTris = new System.Collections.Generic.List<int>();
+            var fringeSrcTris = new System.Collections.Generic.List<int>();
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                Vector3 a = rawVerts[tris[t]];
+                Vector3 b = rawVerts[tris[t + 1]];
+                Vector3 c = rawVerts[tris[t + 2]];
+                float triCx = (a.x + b.x + c.x) / 3f;
+                float triCz = (a.z + b.z + c.z) / 3f;
+                float dSq = DistanceSqToContour(triCx, triCz, poly2D);
+                if (dSq <= fringeSq)
+                {
+                    fringeSrcTris.Add(tris[t]);
+                    fringeSrcTris.Add(tris[t + 1]);
+                    fringeSrcTris.Add(tris[t + 2]);
+                }
+                else
+                {
+                    interiorTris.Add(tris[t]);
+                    interiorTris.Add(tris[t + 1]);
+                    interiorTris.Add(tris[t + 2]);
+                }
+            }
+
+            // Duplicate fringe-referenced vertices with fringe (tile) UVs so
+            // the fringe texture tiles correctly independent of mow stripes.
+            var finalVerts = new System.Collections.Generic.List<Vector3>(rawVerts);
+            var finalUVs = new System.Collections.Generic.List<Vector2>(uvs);
+            var vertRemap = new System.Collections.Generic.Dictionary<int, int>();
+            var fringeTris = new System.Collections.Generic.List<int>(fringeSrcTris.Count);
+            foreach (int origIdx in fringeSrcTris)
+            {
+                if (!vertRemap.TryGetValue(origIdx, out int newIdx))
+                {
+                    Vector3 src = rawVerts[origIdx];
+                    newIdx = finalVerts.Count;
+                    finalVerts.Add(src);
+                    finalUVs.Add(new Vector2(src.x / fringeTileSize, src.z / fringeTileSize));
+                    vertRemap[origIdx] = newIdx;
+                }
+                fringeTris.Add(newIdx);
+            }
+
+            // Now subtract centroid from all verts (positions only — UVs already absolute world)
+            var vertsArr = finalVerts.ToArray();
+            for (int i = 0; i < vertsArr.Length; i++)
+                vertsArr[i] -= centroid;
+
             var mesh = new Mesh();
             mesh.name = $"Fairway_{id}";
-            mesh.vertices = rawVerts;
-            mesh.triangles = tris;
-            mesh.uv = uvs;
+            mesh.vertices = vertsArr;
+            mesh.uv = finalUVs.ToArray();
+            mesh.subMeshCount = 2;
+            mesh.SetTriangles(interiorTris.ToArray(), 0);
+            mesh.SetTriangles(fringeTris.ToArray(), 1);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
             var go = new GameObject($"Fairway_{id}");
             go.transform.position = centroid;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterials = new Material[] { mat, fringeMat };
             AddCleanMeshCollider(go, mesh);
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
+            return go;
+        }
+
+        /// <summary>
+        /// Creates a tee mesh with an inner border band as a second submesh.
+        /// Triangles within borderWidth of the contour are assigned to submesh 1
+        /// (border material); the rest are submesh 0 (tee material). Border
+        /// vertices are duplicated with UV.v encoding normalized distance to
+        /// contour (0 at edge, 1 at inner band edge) for gradient textures.
+        /// </summary>
+        private static GameObject CreateTeeMeshWithBorder(int id, string zoneName,
+            ContourPoint[] contour, Terrain terrain, float terrainBaseY,
+            Material mat, float tileSize,
+            Material borderMat, float borderWidth,
+            Golfin.Course.SurfaceType surfaceType)
+        {
+            float yOffset = 0.02f; // matches original CreateFlatContourMesh tee offset
+
+            System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+                new Vector2(wx / tileSize, wz / tileSize);
+
+            var (rawVerts, uvs, tris) = CDTTriangulate(
+                contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
+
+            if (rawVerts == null || tris == null || tris.Length < 3)
+            {
+                Debug.LogWarning($"[HoleLiteImporter] {zoneName} {id}: CDT failed");
+                return null;
+            }
+
+            int cn = contour.Length;
+            var poly2D = new Vector2[cn];
+            for (int i = 0; i < cn; i++)
+                poly2D[i] = new Vector2(contour[i].z, contour[i].x);
+
+            // Center mesh
+            float cx = 0, cz = 0;
+            for (int i = 0; i < rawVerts.Length; i++)
+            { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+            cx /= rawVerts.Length; cz /= rawVerts.Length;
+            Vector3 centroid = new Vector3(cx, 0, cz);
+
+            // Winding
+            if (tris.Length >= 3)
+            {
+                Vector3 a = rawVerts[tris[0]];
+                Vector3 b = rawVerts[tris[1]];
+                Vector3 c = rawVerts[tris[2]];
+                float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+                if (cross > 0)
+                {
+                    for (int t = 0; t < tris.Length; t += 3)
+                    { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
+                }
+            }
+
+            // Classify
+            float borderSq = borderWidth * borderWidth;
+            var interiorTris = new System.Collections.Generic.List<int>();
+            var borderSrcTris = new System.Collections.Generic.List<int>();
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                Vector3 a = rawVerts[tris[t]];
+                Vector3 b = rawVerts[tris[t + 1]];
+                Vector3 c = rawVerts[tris[t + 2]];
+                float triCx = (a.x + b.x + c.x) / 3f;
+                float triCz = (a.z + b.z + c.z) / 3f;
+                float dSq = DistanceSqToContour(triCx, triCz, poly2D);
+                if (dSq <= borderSq)
+                {
+                    borderSrcTris.Add(tris[t]);
+                    borderSrcTris.Add(tris[t + 1]);
+                    borderSrcTris.Add(tris[t + 2]);
+                }
+                else
+                {
+                    interiorTris.Add(tris[t]);
+                    interiorTris.Add(tris[t + 1]);
+                    interiorTris.Add(tris[t + 2]);
+                }
+            }
+
+            // Duplicate border verts with gradient UV (u=0, v=normalized dist to contour)
+            var finalVerts = new System.Collections.Generic.List<Vector3>(rawVerts);
+            var finalUVs = new System.Collections.Generic.List<Vector2>(uvs);
+            var vertRemap = new System.Collections.Generic.Dictionary<int, int>();
+            var borderTris = new System.Collections.Generic.List<int>(borderSrcTris.Count);
+            foreach (int origIdx in borderSrcTris)
+            {
+                if (!vertRemap.TryGetValue(origIdx, out int newIdx))
+                {
+                    Vector3 src = rawVerts[origIdx];
+                    float distN = Mathf.Sqrt(DistanceSqToContour(src.x, src.z, poly2D)) / borderWidth;
+                    if (distN < 0f) distN = 0f; else if (distN > 1f) distN = 1f;
+                    newIdx = finalVerts.Count;
+                    finalVerts.Add(src);
+                    // v=0 at tee edge (strongest border), v=1 at inner band edge (blends into tee)
+                    finalUVs.Add(new Vector2(0f, 1f - distN));
+                    vertRemap[origIdx] = newIdx;
+                }
+                borderTris.Add(newIdx);
+            }
+
+            var vertsArr = finalVerts.ToArray();
+            for (int i = 0; i < vertsArr.Length; i++)
+                vertsArr[i] -= centroid;
+
+            var mesh = new Mesh();
+            mesh.name = $"{zoneName}_{id}";
+            mesh.vertices = vertsArr;
+            mesh.uv = finalUVs.ToArray();
+            mesh.subMeshCount = 2;
+            mesh.SetTriangles(interiorTris.ToArray(), 0);
+            mesh.SetTriangles(borderTris.ToArray(), 1);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"{zoneName}_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterials = new Material[] { mat, borderMat };
+            AddCleanMeshCollider(go, mesh);
+
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = surfaceType;
             return go;
         }
 
@@ -4267,236 +4474,6 @@ namespace Golfin.CourseImport
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = surfaceType;
 
-            return go;
-        }
-
-        /// <summary>
-        /// Create a fringe ring mesh along a fairway contour edge.
-        /// Positive fringeWidth = outward, negative = inward.
-        /// edgeRing = original contour, offsetRing = pushed by fringeWidth.
-        /// </summary>
-        private static GameObject CreateFringeRing(int id, ContourPoint[] contour,
-            Terrain terrain, float terrainBaseY,
-            Material fringeMat, float fringeWidth, float tileSize,
-            Transform parent)
-        {
-            int n = contour.Length;
-            if (n < 3) return null;
-
-            float yOffset = 0.012f; // slightly above fairway (0.01)
-
-            // Convert to world space — this is the contour edge
-            Vector3[] edgeRing = new Vector3[n];
-            for (int i = 0; i < n; i++)
-            {
-                float wx = contour[i].z;
-                float wz = contour[i].x;
-                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                edgeRing[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
-            }
-
-            // Offset ring (inward or outward depending on sign of fringeWidth)
-            Vector3[] offsetRing = OffsetContourOutward(edgeRing, fringeWidth);
-
-            // Update Y for offset ring
-            for (int i = 0; i < offsetRing.Length; i++)
-            {
-                float h = terrain.SampleHeight(new Vector3(offsetRing[i].x, 0, offsetRing[i].z));
-                offsetRing[i].y = terrainBaseY + h + yOffset;
-            }
-
-            // Compute centroid (Y=0 so vertex Y values are absolute terrain heights)
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++)
-            {
-                cx += edgeRing[i].x;
-                cz += edgeRing[i].z;
-            }
-            cx /= n; cz /= n;
-            Vector3 centroid = new Vector3(cx, 0, cz);
-
-            // Vertices: edge ring (0..n-1) + offset ring (n..2n-1)
-            var fringeVerts = new Vector3[n * 2];
-            var fringeUVs = new Vector2[n * 2];
-            for (int i = 0; i < n; i++)
-            {
-                fringeVerts[i] = edgeRing[i] - centroid;
-                fringeVerts[n + i] = offsetRing[i] - centroid;
-                fringeUVs[i] = new Vector2(edgeRing[i].x / tileSize, edgeRing[i].z / tileSize);
-                fringeUVs[n + i] = new Vector2(offsetRing[i].x / tileSize, offsetRing[i].z / tileSize);
-            }
-
-            // Triangles: quad strip. Winding depends on whether offset is inward or outward.
-            // Negative fringeWidth (inward) flips the winding relative to outward.
-            var fringeTris = new int[n * 6];
-            for (int i = 0; i < n; i++)
-            {
-                int curr = i;
-                int next = (i + 1) % n;
-                int offCurr = n + i;
-                int offNext = n + next;
-                int t = i * 6;
-
-                if (fringeWidth >= 0)
-                {
-                    // Outward: edge→next→off (CCW from above)
-                    fringeTris[t + 0] = curr;
-                    fringeTris[t + 1] = next;
-                    fringeTris[t + 2] = offCurr;
-                    fringeTris[t + 3] = next;
-                    fringeTris[t + 4] = offNext;
-                    fringeTris[t + 5] = offCurr;
-                }
-                else
-                {
-                    // Inward: edge→off→next (reversed winding)
-                    fringeTris[t + 0] = curr;
-                    fringeTris[t + 1] = offCurr;
-                    fringeTris[t + 2] = next;
-                    fringeTris[t + 3] = next;
-                    fringeTris[t + 4] = offCurr;
-                    fringeTris[t + 5] = offNext;
-                }
-            }
-
-            var fringeMesh = new Mesh();
-            fringeMesh.name = $"FairwayFringe_{id}";
-            fringeMesh.vertices = fringeVerts;
-            fringeMesh.triangles = fringeTris;
-            fringeMesh.uv = fringeUVs;
-            fringeMesh.RecalculateNormals();
-            fringeMesh.RecalculateBounds();
-
-            var fringeGO = new GameObject($"FairwayFringe_{id}");
-            fringeGO.transform.position = centroid;
-            fringeGO.AddComponent<MeshFilter>().sharedMesh = fringeMesh;
-            fringeGO.AddComponent<MeshRenderer>().sharedMaterial = fringeMat;
-            AddCleanMeshCollider(fringeGO, fringeMesh);
-
-            var fringeMarker = fringeGO.AddComponent<Golfin.Course.SurfaceMarker>();
-            fringeMarker.surfaceType = Golfin.Course.SurfaceType.Fringe;
-
-            fringeGO.transform.SetParent(parent);
-            return fringeGO;
-        }
-
-        /// <summary>
-        /// Create a gradient border ring around a contour.
-        /// UV.v encodes inner(0)→outer(1) for the gradient texture,
-        /// UV.u tiles along the perimeter using arc length.
-        /// </summary>
-        private static GameObject CreateGradientBorderRing(int id, string label,
-            ContourPoint[] contour, Terrain terrain, float terrainBaseY,
-            Material mat, float borderWidth, float uTileSize,
-            Golfin.Course.SurfaceType surfaceType, Transform parent,
-            Vector3[] parentEdgeWorldPositions, float parentOffset)
-        {
-            int n = contour.Length;
-            if (n < 3) return null;
-
-            // Build innerRing XZ from contour (Y derived from parent, not terrain)
-            Vector3[] innerRing = new Vector3[n];
-            for (int i = 0; i < n; i++)
-                innerRing[i] = new Vector3(contour[i].z, 0, contour[i].x);
-
-            // Pull inner ring slightly inward so it overlaps under the tee mesh (no gap)
-            // Hack: keep overlap tiny so the border doesn't eat into the tee on slopes.
-            float inwardOverlap = 0.02f;
-            Vector3[] innerRingInset = OffsetContourOutward(innerRing, -inwardOverlap);
-
-            // Outer ring XZ
-            Vector3[] outerRing = OffsetContourOutward(innerRing, borderWidth);
-
-            // Derive Y for all three rings from nearest parent edge vertex.
-            // Drapes border from parent mesh edge — consistent layering on any slope.
-            System.Action<Vector3[], Vector3[]> deriveY = (ring, parent2) =>
-            {
-                for (int i = 0; i < ring.Length; i++)
-                {
-                    float bestDistSq = float.MaxValue;
-                    float bestY = parent2[0].y;
-                    foreach (var pe in parent2)
-                    {
-                        float dx = ring[i].x - pe.x;
-                        float dz = ring[i].z - pe.z;
-                        float dSq = dx * dx + dz * dz;
-                        if (dSq < bestDistSq) { bestDistSq = dSq; bestY = pe.y; }
-                    }
-                    ring[i].y = bestY + parentOffset;
-                }
-            };
-            deriveY(innerRing, parentEdgeWorldPositions);
-            deriveY(innerRingInset, parentEdgeWorldPositions);
-            deriveY(outerRing, parentEdgeWorldPositions);
-
-            // Centroid (Y=0 so vertex Y values are absolute terrain heights)
-            float cx = 0, cz = 0;
-            for (int i = 0; i < n; i++)
-            {
-                cx += innerRing[i].x; cz += innerRing[i].z;
-            }
-            cx /= n; cz /= n;
-            Vector3 centroid = new Vector3(cx, 0, cz);
-
-            // Arc lengths along inner ring for UV.u tiling
-            float[] arcLengths = new float[n];
-            arcLengths[0] = 0f;
-            for (int i = 1; i < n; i++)
-            {
-                float dx = innerRing[i].x - innerRing[i - 1].x;
-                float dz = innerRing[i].z - innerRing[i - 1].z;
-                arcLengths[i] = arcLengths[i - 1] + Mathf.Sqrt(dx * dx + dz * dz);
-            }
-
-            // Vertices & UVs
-            var verts = new Vector3[n * 2];
-            var uvs = new Vector2[n * 2];
-            for (int i = 0; i < n; i++)
-            {
-                verts[i] = innerRingInset[i] - centroid;
-                verts[n + i] = outerRing[i] - centroid;
-
-                float u = arcLengths[i] / uTileSize;
-                uvs[i] = new Vector2(0f, u);       // inner = light (u=0)
-                uvs[n + i] = new Vector2(1f, u);   // outer = dark  (u=1)
-            }
-
-            // Triangles: quad strip, outward winding
-            var tris = new int[n * 6];
-            for (int i = 0; i < n; i++)
-            {
-                int curr = i;
-                int next = (i + 1) % n;
-                int offCurr = n + i;
-                int offNext = n + next;
-                int t = i * 6;
-
-                tris[t + 0] = curr;
-                tris[t + 1] = next;
-                tris[t + 2] = offCurr;
-                tris[t + 3] = next;
-                tris[t + 4] = offNext;
-                tris[t + 5] = offCurr;
-            }
-
-            var mesh = new Mesh();
-            mesh.name = $"{label}Border_{id}";
-            mesh.vertices = verts;
-            mesh.triangles = tris;
-            mesh.uv = uvs;
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
-            var go = new GameObject($"{label}Border_{id}");
-            go.transform.position = centroid;
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-            AddCleanMeshCollider(go, mesh);
-
-            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-            marker.surfaceType = surfaceType;
-
-            go.transform.SetParent(parent);
             return go;
         }
 
