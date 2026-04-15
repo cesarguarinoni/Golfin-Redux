@@ -77,3 +77,69 @@ export function blur2D(data, width, height, passes = 1) {
   }
   return src;
 }
+
+/**
+ * Separable Gaussian blur on a 2D float array with zone mask.
+ * Only blurs cells where mask[i] is truthy. Cells outside the
+ * mask are treated as zero during convolution (boundary handling).
+ * Uses two-pass separable approach: horizontal then vertical.
+ *
+ * @param {Float64Array} data - width×height array
+ * @param {Uint8Array} mask - width×height mask (1 = blur, 0 = skip)
+ * @param {number} width
+ * @param {number} height
+ * @param {number} sigma - Gaussian standard deviation in cells
+ * @returns {Float64Array} blurred copy
+ */
+export function gaussianBlurMasked(data, mask, width, height, sigma) {
+  const radius = Math.ceil(sigma * 3);
+  const kernelSize = radius * 2 + 1;
+  const kernel = new Float64Array(kernelSize);
+  let kernelSum = 0;
+  for (let i = 0; i < kernelSize; i++) {
+    const d = i - radius;
+    kernel[i] = Math.exp(-(d * d) / (2 * sigma * sigma));
+    kernelSum += kernel[i];
+  }
+  for (let i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
+
+  // Horizontal pass
+  const temp = new Float64Array(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (!mask[idx]) { temp[idx] = data[idx]; continue; }
+      let sum = 0, wSum = 0;
+      for (let k = 0; k < kernelSize; k++) {
+        const sx = x + k - radius;
+        if (sx < 0 || sx >= width) continue;
+        const sIdx = y * width + sx;
+        if (!mask[sIdx]) continue;
+        sum += data[sIdx] * kernel[k];
+        wSum += kernel[k];
+      }
+      temp[idx] = wSum > 0 ? sum / wSum : data[idx];
+    }
+  }
+
+  // Vertical pass
+  const result = new Float64Array(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (!mask[idx]) { result[idx] = temp[idx]; continue; }
+      let sum = 0, wSum = 0;
+      for (let k = 0; k < kernelSize; k++) {
+        const sy = y + k - radius;
+        if (sy < 0 || sy >= height) continue;
+        const sIdx = sy * width + x;
+        if (!mask[sIdx]) continue;
+        sum += temp[sIdx] * kernel[k];
+        wSum += kernel[k];
+      }
+      result[idx] = wSum > 0 ? sum / wSum : temp[idx];
+    }
+  }
+
+  return result;
+}
