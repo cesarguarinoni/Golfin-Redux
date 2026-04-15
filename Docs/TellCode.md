@@ -5,328 +5,198 @@
 > Claude (Architect) will update this file with new instructions as needed.
 > Handoff: `Docs/TellCode.md`
 > Previous completed specs archived in: `Docs/TellCode_Archive.md`
-> Full design rationale: `Docs/WATER_REWORK_PLAN.md`
 
 ---
 
-## Current Task — Water Rework (Flat CDT Mesh + Contour Depression + Deeper Shore)
+## Current Task — Clamp Fringe/Border Vertex Y Below Parent Mesh
 
-Water currently uses ear-clip triangulation with per-vertex terrain
-height (uneven surface), its own separate depression system inside
-`CreateWaterMeshes()`, and shallow 0.1m shore depth. Rework to use
-flat CDT meshes, contour-based depression (same system as fairways),
-and deeper natural shore slopes.
+With steeper terrain from the monotone spline, the fairway fringe
+ring and tee gradient border "invade" — their vertices on the uphill
+side sit above the parent mesh, making the decorative ring visually
+overpower or eat into the fairway/tee surface.
 
-**Execute in this order:**
+**Root cause:** Each mesh independently samples `terrain.SampleHeight()`
+at its own XZ position. The fringe ring is offset outward from the
+fairway contour by ~0.5m, so on a slope it samples a different
+terrain height. The 1cm Y-offset gap (0.02 vs 0.03) is meaningless
+against real terrain gradients.
 
-### Step 1: Decouple Terrain Y from ShoreDepthMeters
+**Fix:** After building fringe/border vertices, clamp each vertex Y
+to be at most `parentEdgeY - epsilon` where `parentEdgeY` is the
+parent mesh's Y at the nearest contour edge point.
 
-The terrain GO position uses `-ShoreDepthMeters` for Y. We're bumping
-that value, so decouple them.
+### Step 1: Add Y-Clamp Helper
 
-Add a new constant near the top of the class (next to existing
-constants):
-
-```csharp
-private const float TerrainYOffset = 0.1f;
-```
-
-In `ImportHoleInternal`, find:
+Add this utility method to `HoleLiteImporter`:
 
 ```csharp
-terrainGO.transform.position = new Vector3(-terrainX / 2f, -ShoreDepthMeters, -terrainZ / 2f);
-```
-
-Change to:
-
-```csharp
-terrainGO.transform.position = new Vector3(-terrainX / 2f, -TerrainYOffset, -terrainZ / 2f);
-```
-
-### Step 2: Bump Shore Parameters
-
-Change the existing values at the top of the class:
-
-```csharp
-public static int ShoreRadius = 2;
-public static float ShoreDepthMeters = 0.1f;
-```
-
-To:
-
-```csharp
-public static int ShoreRadius = 4;
-public static float ShoreDepthMeters = 0.4f;
-```
-
-### Step 3: Rewrite `CreateWaterMeshes()` — Flat CDT Mesh
-
-Replace the mesh-building section inside the `foreach (var water ...)`
-loop. Keep the method signature, waterRoot creation, terrain/material
-setup, and the water.json copy at the end.
-
-**New per-body logic:**
-
-1. Compute flat water Y from minimum terrain height across contour:
-
-```csharp
-float minTerrainH = float.MaxValue;
-for (int i = 0; i < n; i++)
+/// <summary>
+/// Clamp each vertex in childVerts so its world Y never exceeds the
+/// interpolated Y of the nearest edge on parentVerts (which shares
+/// the same contour topology). Both arrays are in local space
+/// relative to their respective centroids.
+///
+/// parentContourCount = number of contour vertices in the parent mesh
+/// (the first N vertices in parentVerts that form the outer edge).
+/// childContourCount = same for child (should match parent if both
+/// were built from the same contour).
+/// parentCentroid, childCentroid = world-space mesh origins.
+/// maxYAbove = how far above the parent edge the child is allowed
+///             (negative = must be below). Use e.g. -0.005f.
+/// </summary>
+private static void ClampChildVertsToParentEdge(
+    Vector3[] childVerts, Vector3 childCentroid,
+    Vector3[] parentVerts, Vector3 parentCentroid,
+    int parentContourCount, float maxYAbove)
 {
-    float wx = water.contour[i].z;  // 90° CCW
-    float wz = water.contour[i].x;
-    float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-    if (th < minTerrainH) minTerrainH = th;
-}
-float waterY = terrainBaseY + minTerrainH - 0.05f;
-```
+    if (parentVerts == null || parentVerts.Length == 0) return;
+    int parentN = Mathf.Min(parentContourCount, parentVerts.Length);
 
-2. Use CDT triangulation (same helper as fairways):
-
-```csharp
-float tileSize = 10f;
-System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
-    new Vector2(wx / tileSize, wz / tileSize);
-
-var (rawVerts, uvs, tris) = CDTTriangulate(
-    water.contour, terrain, terrainBaseY, 0f, 2.0f, uvFunc);
-
-if (rawVerts == null || tris == null || tris.Length < 3)
-{
-    Debug.LogWarning($"[HoleLiteImporter] Water {water.id}: CDT failed");
-    continue;
-}
-```
-
-3. Flatten all Y to waterY:
-
-```csharp
-for (int i = 0; i < rawVerts.Length; i++)
-    rawVerts[i].y = waterY;
-```
-
-4. Center mesh (Y=0 origin pattern):
-
-```csharp
-float cx = 0, cz = 0;
-for (int i = 0; i < rawVerts.Length; i++)
-{ cx += rawVerts[i].x; cz += rawVerts[i].z; }
-cx /= rawVerts.Length; cz /= rawVerts.Length;
-Vector3 centroid = new Vector3(cx, 0, cz);
-
-for (int i = 0; i < rawVerts.Length; i++)
-    rawVerts[i] -= centroid;
-```
-
-5. Check winding (same as CreateFlatContourMesh):
-
-```csharp
-if (tris.Length >= 3)
-{
-    Vector3 a = rawVerts[tris[0]];
-    Vector3 b = rawVerts[tris[1]];
-    Vector3 c = rawVerts[tris[2]];
-    float cross = (b.x - a.x) * (c.z - a.z)
-                - (b.z - a.z) * (c.x - a.x);
-    if (cross > 0)
+    for (int i = 0; i < childVerts.Length; i++)
     {
-        for (int t = 0; t < tris.Length; t += 3)
+        // Child vertex in world space
+        Vector3 childWorld = childVerts[i] + childCentroid;
+
+        // Find the closest parent contour edge vertex (XZ only)
+        float bestDistSq = float.MaxValue;
+        float bestParentY = 0f;
+        for (int p = 0; p < parentN; p++)
         {
-            int tmp = tris[t];
-            tris[t] = tris[t + 2];
-            tris[t + 2] = tmp;
-        }
-    }
-}
-```
-
-6. Build mesh + GameObject (same pattern as current, just new data):
-
-```csharp
-var mesh = new Mesh();
-mesh.name = $"Water_{water.id}";
-mesh.vertices = rawVerts;
-mesh.triangles = tris;
-mesh.uv = uvs;
-mesh.RecalculateNormals();
-mesh.RecalculateBounds();
-
-var go = new GameObject($"Water_{water.id}");
-go.transform.position = centroid;
-go.AddComponent<MeshFilter>().sharedMesh = mesh;
-go.AddComponent<MeshRenderer>().sharedMaterial = waterMat;
-AddCleanMeshCollider(go, mesh);
-
-var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-marker.surfaceType = Golfin.Course.SurfaceType.Water;
-go.transform.SetParent(waterRoot.transform);
-```
-
-### Step 4: Remove Old Depression from `CreateWaterMeshes()`
-
-Delete the entire shore slope section — everything from:
-
-```csharp
-// ─── Shore slope pass: depress terrain near water edges ──────────
-```
-
-Through:
-
-```csharp
-Debug.Log($"[HoleLiteImporter] Shore slope: depressed {depressedCount} cells, " +
-          $"radius={ShoreRadius}, depth={ShoreDepthMeters:F1}m");
-```
-
-Keep the water.json copy and final log line after it.
-
-### Step 5: Add Water Depression to `DepressTerrainUnderOverlays()`
-
-In `DepressTerrainUnderOverlays`, after the cart path section and
-before the "Apply depression" loop, add water contour marking:
-
-```csharp
-// Water contours — flat depression, no inset
-string waterDepressPath = Path.Combine(exportPath, "water.json");
-if (File.Exists(waterDepressPath))
-{
-    var waterData = JsonUtility.FromJson<WaterFileData>(
-        File.ReadAllText(waterDepressPath));
-    if (waterData.water != null)
-        foreach (var w in waterData.water)
-            if (w.contour != null && w.contour.Length >= 3)
-                MarkContourCells(w.contour, depress,
-                    hRes, terrainPos, terrainSize, 0f);
-}
-```
-
-Then, AFTER the existing depression application loop (the one that
-applies `dropNormalized` to all `depress[hz,hx]` cells) and AFTER
-the cart path gradient section, add shore slope:
-
-```csharp
-// ─── Shore slope: gradual ramp around water edges ───────────
-if (File.Exists(waterDepressPath))
-{
-    bool[,] waterMask = new bool[hRes, hRes];
-    var waterDataShore = JsonUtility.FromJson<WaterFileData>(
-        File.ReadAllText(waterDepressPath));
-    if (waterDataShore.water != null)
-        foreach (var w in waterDataShore.water)
-            if (w.contour != null && w.contour.Length >= 3)
-                MarkContourCells(w.contour, waterMask,
-                    hRes, terrainPos, terrainSize, 0f);
-
-    // Chamfer distance from water boundary
-    float[,] distToWater = new float[hRes, hRes];
-    for (int z = 0; z < hRes; z++)
-        for (int x = 0; x < hRes; x++)
-            distToWater[z, x] = waterMask[z, x] ? 0f : float.MaxValue;
-
-    // Forward pass
-    for (int z = 0; z < hRes; z++)
-        for (int x = 0; x < hRes; x++)
-        {
-            if (x > 0) distToWater[z, x] = Mathf.Min(
-                distToWater[z, x], distToWater[z, x - 1] + 1f);
-            if (z > 0) distToWater[z, x] = Mathf.Min(
-                distToWater[z, x], distToWater[z - 1, x] + 1f);
-            if (x > 0 && z > 0) distToWater[z, x] = Mathf.Min(
-                distToWater[z, x], distToWater[z - 1, x - 1] + 1.414f);
-            if (x < hRes - 1 && z > 0) distToWater[z, x] = Mathf.Min(
-                distToWater[z, x], distToWater[z - 1, x + 1] + 1.414f);
-        }
-
-    // Backward pass
-    for (int z = hRes - 1; z >= 0; z--)
-        for (int x = hRes - 1; x >= 0; x--)
-        {
-            if (x < hRes - 1) distToWater[z, x] = Mathf.Min(
-                distToWater[z, x], distToWater[z, x + 1] + 1f);
-            if (z < hRes - 1) distToWater[z, x] = Mathf.Min(
-                distToWater[z, x], distToWater[z + 1, x] + 1f);
-            if (x < hRes - 1 && z < hRes - 1) distToWater[z, x] = Mathf.Min(
-                distToWater[z, x], distToWater[z + 1, x + 1] + 1.414f);
-            if (x > 0 && z < hRes - 1) distToWater[z, x] = Mathf.Min(
-                distToWater[z, x], distToWater[z + 1, x - 1] + 1.414f);
-        }
-
-    // Apply shore slope ramp outside water boundary
-    float shoreDropNorm = ShoreDepthMeters / elevRange;
-    int shoreCount = 0;
-    for (int z = 0; z < hRes; z++)
-    {
-        for (int x = 0; x < hRes; x++)
-        {
-            if (waterMask[z, x]) continue;
-            if (depress[z, x]) continue;
-
-            float dist = distToWater[z, x];
-            if (dist > 0 && dist <= ShoreRadius)
+            Vector3 parentWorld = parentVerts[p] + parentCentroid;
+            float dx = childWorld.x - parentWorld.x;
+            float dz = childWorld.z - parentWorld.z;
+            float distSq = dx * dx + dz * dz;
+            if (distSq < bestDistSq)
             {
-                float t = 1f - (dist / ShoreRadius);
-                t = t * t * (3f - 2f * t); // smoothstep
-                float drop = shoreDropNorm * t;
-                heights[z, x] = Mathf.Max(0f,
-                    heights[z, x] - drop);
-                shoreCount++;
+                bestDistSq = distSq;
+                bestParentY = parentWorld.y;
             }
         }
+
+        // Clamp: child vertex must not exceed parentEdgeY + maxYAbove
+        float maxY = bestParentY + maxYAbove;
+        float childLocalMaxY = maxY - childCentroid.y;
+        if (childVerts[i].y > childLocalMaxY)
+            childVerts[i].y = childLocalMaxY;
     }
-    Debug.Log($"[HoleLiteImporter] Shore slope: {shoreCount} cells, " +
-              $"radius={ShoreRadius}, depth={ShoreDepthMeters:F1}m");
 }
 ```
 
-### Step 6: Update Water Material Depth Range
+### Step 2: Apply to Fairway Fringe Ring
 
-In `CreateWaterMaterial()`, change:
+In `CreateFlatZoneMeshes()`, after `CreateFringeRing()` returns the
+fringe mesh, apply the clamp. The fairway mesh is the "parent."
 
-```csharp
-mat.SetFloat("_DepthEnd", 0.3f);
-```
-
-To:
+Find where `CreateFringeRing` is called. It should look something
+like:
 
 ```csharp
-mat.SetFloat("_DepthEnd", 0.8f);
+CreateFringeRing(contour, terrain, terrainBaseY, ...);
 ```
+
+After the fringe GameObject is created (with its mesh and centroid),
+add the clamp call. You'll need access to:
+- The fairway mesh vertices (from the CDT mesh just created above)
+- The fairway centroid
+- The fringe mesh vertices
+- The fringe centroid
+- The number of contour vertices in the fairway mesh's outer edge
+
+The fairway CDT mesh's first N vertices correspond to the contour
+points (CDT adds interior Steiner points after the boundary). N =
+the number of contour points fed into CDT.
+
+```csharp
+// After fringe mesh is built:
+ClampChildVertsToParentEdge(
+    fringeMesh.vertices, fringeCentroid,
+    fairwayMesh.vertices, fairwayCentroid,
+    contourPointCount,  // number of boundary vertices in fairway CDT
+    -0.005f);           // fringe must be at least 5mm BELOW parent edge
+// Re-assign vertices back to mesh after clamping
+fringeMesh.vertices = fringeVerts;
+fringeMesh.RecalculateBounds();
+```
+
+NOTE: `fringeMesh.vertices` returns a copy. You need to store it in
+a local array, pass that to the clamp function, then assign it back:
+
+```csharp
+var fringeVerts = fringeMesh.vertices;
+ClampChildVertsToParentEdge(
+    fringeVerts, fringeCentroid,
+    fairwayVerts, fairwayCentroid,
+    contourPointCount, -0.005f);
+fringeMesh.vertices = fringeVerts;
+fringeMesh.RecalculateBounds();
+```
+
+### Step 3: Apply to Tee Gradient Border
+
+Same pattern for `CreateGradientBorderRing()`. The tee mesh
+(from `CreateFlatContourMesh`) is the parent, the gradient border
+is the child.
+
+Find where the tee gradient border is created. Apply the same clamp:
+
+```csharp
+var borderVerts = borderMesh.vertices;
+ClampChildVertsToParentEdge(
+    borderVerts, borderCentroid,
+    teeVerts, teeCentroid,
+    teeContourCount, -0.005f);
+borderMesh.vertices = borderVerts;
+borderMesh.RecalculateBounds();
+```
+
+### Implementation Notes
+
+- The clamp helper does a brute-force nearest-vertex search. With
+  typical contour sizes (50-200 points) and fringe vertex counts
+  (~200-400), this is <100K distance checks — negligible at import
+  time.
+
+- `maxYAbove = -0.005f` means the fringe/border must always be at
+  least 5mm below the nearest parent edge vertex. This guarantees
+  the parent mesh renders on top even on steep slopes.
+
+- The clamp only lowers vertices, never raises them. On flat terrain
+  the fringe is already below the fairway (due to the existing
+  Y-offset hierarchy), so the clamp is a no-op — no visual change
+  on flat holes.
+
+- If you can't easily access the parent mesh vertices at the call
+  site, an alternative is to store them as a local variable before
+  creating the child mesh. Both meshes are created in sequence
+  within the same loop iteration.
+
+### What NOT to Change
+
+- Y-offset values (0.01, 0.02, 0.03) — keep them as-is
+- Depression system (OverlayDepressionMeters)
+- CDT triangulation or contour extraction
+- Fairway/tee mesh creation logic
+- Green collar (it uses a different raised mesh system)
+- Water, bunker, or cart path meshes
 
 ### Verification
 
-Re-import Hole 01: `Import > Lite > Normal > Import Hole 01 Lite`
-Then Hole 12: `Import > Lite > Normal > Import Hole 12 Lite`
+Re-import a hilly hole (try Hole 4 or whichever has the steepest
+terrain currently):
 
-- [ ] Water surface is perfectly flat (single Y per body)
-- [ ] Water edges follow contour shape (no jaggies)
-- [ ] Shore slopes gradually into water (no cliff)
-- [ ] No z-fighting between water mesh and terrain
-- [ ] URPWater depth coloring works (shallow→deep)
-- [ ] Fairways, tees, bunkers, greens, cart paths unaffected
+- [ ] Fairway fringe stays UNDER the fairway surface on slopes
+- [ ] Tee gradient border stays UNDER the tee surface on slopes
+- [ ] On flat terrain, fringe/border look identical to before
+- [ ] No visual gaps between fringe and fairway
 - [ ] No console errors
-
-### Do NOT change:
-- Export pipeline (export-hole.mjs)
-- CreateWaterMaterial() shader selection (keep URPWater/Standard)
-- CreateFlatZoneMeshes() (fairway/tee/cart path mesh creation)
-- Bunker or green mesh generation
-- Tree placement logic
-- Splatmap painting
 
 ---
 
 ## Completed Tasks
-✅ 2026-04-14 — Fix #6: Inverted shore ramp INSIDE water contour — water bed now shallow (flush) at edge, smoothstep to 0.3m deep in interior. Eliminates "floating water" caused by terrain interpolation dipping below water mesh at contour cells (bed was uniformly deep before).
-✅ 2026-04-14 — Fix #5: Removed post-ramp box blur. Blur was averaging shore cells with out-of-radius neighbors → RAISED cells near waterline → 3cm cliff causing "floating water" look, asymmetric based on proximity to fairway/depress cells. Wider ShoreRadius=10 alone is sufficient.
-✅ 2026-04-14 — Fix #4: ShoreRadius 4→10 + 2-pass 3x3 box blur on shore band to eliminate diagonal stair-stepping asymmetry at water edges.
-✅ 2026-04-14 — Fix #3: TerrainYOffset bumped to 0.4f to match ShoreDepthMeters. Previously only 0.1m heightmap headroom below flat → water bed clamped, shore asymmetric. Now flat terrain still at world Y=0 but with full 0.4m below for water bed + shore ramp.
-✅ 2026-04-14 — Water bed absolute-Y fix: water cells anchored to per-body waterYNorm-0.3m, shore cells ramp from waterH→origH via smoothstep over ShoreRadius. Also fixed normalizedFlat to use TerrainYOffset (was ShoreDepthMeters → pushed flat baseline to +0.3).
-✅ 2026-04-14 — Water rework: flat CDT mesh + contour depression + deeper shore (ShoreRadius=4, ShoreDepthMeters=0.4, TerrainYOffset decoupled, _DepthEnd=0.8)
-✅ 2026-04-13 — Cart path flat depression (full width + 0.30m margin, no gradient)
-✅ 2026-04-13 — Revert taper, test clean spineExt→spine fix alone
-✅ 2026-04-13 — spineExt→spine fix in CreateSpineStripMesh
-✅ 2026-04-13 — Node.js residual ramp + boundary height propagation
-✅ 2026-04-13 — Cart path depression: 3-strategy fix
-✅ 2026-04-13 — Natural OB↔Rough transition + Smooth OB button
+✅ 2026-04-15 — Clamp fringe/border verts below parent mesh. Added ClampChildVertsToParentEdge() helper; applied inside CreateFringeRing (parent=edgeRing) and CreateGradientBorderRing (parent=innerRingInset). maxYAbove=-0.005f.
+✅ 2026-04-14 — Water rework complete (flat CDT mesh + contour depression + deeper shore + 6 iterations of fixes)
+✅ 2026-04-13 — Cart path flat depression + spine fixes
+✅ 2026-04-13 — Natural OB↔Rough transition + Smooth OB
 ✅ 2026-04-12 — CDT triangulation for fairway/tee/cart path meshes
 ✅ 2026-04-12 — Depression cliff fix
 ✅ 2026-04-11 — Heightmap smoothing + overlay terrain conformance
