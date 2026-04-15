@@ -3800,6 +3800,36 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
+        /// Squared perpendicular distance from (px,pz) to any edge segment
+        /// of the closed polygon poly (poly.x=X, poly.y=Z).
+        /// </summary>
+        private static float DistanceSqToContour(float px, float pz, Vector2[] poly)
+        {
+            float best = float.MaxValue;
+            int n = poly.Length;
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 a = poly[i];
+                Vector2 b = poly[(i + 1) % n];
+                float dx = b.x - a.x, dz = b.y - a.y;
+                float lenSq = dx * dx + dz * dz;
+                float ex = px - a.x, ez = pz - a.y;
+                float dSq;
+                if (lenSq < 1e-12f) { dSq = ex * ex + ez * ez; }
+                else
+                {
+                    float t = (ex * dx + ez * dz) / lenSq;
+                    if (t < 0f) t = 0f; else if (t > 1f) t = 1f;
+                    float cxs = a.x + t * dx, czs = a.y + t * dz;
+                    float fx = px - cxs, fz = pz - czs;
+                    dSq = fx * fx + fz * fz;
+                }
+                if (dSq < best) best = dSq;
+            }
+            return best;
+        }
+
+        /// <summary>
         /// Dilate a ContourPoint[] outward by `offset` meters.
         /// Geo importer: contour uses direct X/Z mapping (no 90° rotation,
         /// unlike the Lite importer).
@@ -4018,6 +4048,9 @@ namespace Golfin.CourseImport
                 { borderSrcTris.Add(tris[t]); borderSrcTris.Add(tris[t + 1]); borderSrcTris.Add(tris[t + 2]); }
             }
 
+            // Border UVs: U encodes normalized distance to the tee edge so the
+            // gradient texture fades from light (near tee, u=0) to dark (far, u=1).
+            // V tiles along a world axis for variety along the perimeter.
             var finalVerts = new System.Collections.Generic.List<Vector3>(rawVerts);
             var finalUVs = new System.Collections.Generic.List<Vector2>(uvs);
             var vertRemap = new System.Collections.Generic.Dictionary<int, int>();
@@ -4027,9 +4060,12 @@ namespace Golfin.CourseImport
                 if (!vertRemap.TryGetValue(origIdx, out int newIdx))
                 {
                     Vector3 src = rawVerts[origIdx];
+                    float dist = Mathf.Sqrt(DistanceSqToContour(src.x, src.z, originalPoly));
+                    float u = Mathf.Clamp01(dist / borderWidth);
+                    float v = (src.x + src.z) / borderTileSize;
                     newIdx = finalVerts.Count;
                     finalVerts.Add(src);
-                    finalUVs.Add(new Vector2(src.x / borderTileSize, src.z / borderTileSize));
+                    finalUVs.Add(new Vector2(u, v));
                     vertRemap[origIdx] = newIdx;
                 }
                 borderTris.Add(newIdx);
