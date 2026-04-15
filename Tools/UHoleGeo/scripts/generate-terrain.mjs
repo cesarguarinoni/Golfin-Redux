@@ -426,89 +426,12 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
     }
   }
 
-  // Add residual variation to non-playable zones with distance-based ramp
-  const residualZones = new Set([ZONES.trees, ZONES.ob, ZONES.background]);
-  const RESIDUAL_FRACTION = 0.9;
-  const RESIDUAL_RAMP_CELLS = 60;
+  // --- SAFE MODE: Pure quadratic surface everywhere ---
+  // No DEM residual blending. The quadratic captures the overall
+  // slope from DEM data. All zones (playable and non-playable) use
+  // the same smooth surface. No transition artifacts, no mesh breaks.
 
-  // Build playable mask at heightmap resolution
-  const isPlayable = new Uint8Array(RES * RES);
-  for (let hy = 0; hy < RES; hy++) {
-    for (let hx = 0; hx < RES; hx++) {
-      const nx = hx / (RES - 1);
-      const ny = hy / (RES - 1);
-      const zx = Math.min(zw - 1, Math.floor(nx * (zw - 1)));
-      const zy = Math.min(zh - 1, Math.floor(ny * (zh - 1)));
-      const zone = zoneGrid[zy * zw + zx];
-      if (!residualZones.has(zone)) {
-        isPlayable[hy * RES + hx] = 1;
-      }
-    }
-  }
-
-  // Build a SIGNED distance field: positive outside playable, negative inside.
-  // This lets us ramp fraction smoothly across the boundary (on BOTH sides)
-  // instead of having fraction jump from PLAYABLE_RESIDUAL to a rising outside
-  // ramp at the boundary. Computed as two chamfer DTs that are merged.
-  function chamferDist(seed) {
-    const d = new Float64Array(RES * RES);
-    for (let i = 0; i < RES * RES; i++) d[i] = seed[i] ? 0 : 1e9;
-    for (let hy = 0; hy < RES; hy++) {
-      for (let hx = 0; hx < RES; hx++) {
-        const idx = hy * RES + hx;
-        if (hx > 0) d[idx] = Math.min(d[idx], d[idx - 1] + 1);
-        if (hy > 0) d[idx] = Math.min(d[idx], d[(hy - 1) * RES + hx] + 1);
-        if (hx > 0 && hy > 0) d[idx] = Math.min(d[idx], d[(hy - 1) * RES + (hx - 1)] + 1.414);
-        if (hx < RES - 1 && hy > 0) d[idx] = Math.min(d[idx], d[(hy - 1) * RES + (hx + 1)] + 1.414);
-      }
-    }
-    for (let hy = RES - 1; hy >= 0; hy--) {
-      for (let hx = RES - 1; hx >= 0; hx--) {
-        const idx = hy * RES + hx;
-        if (hx < RES - 1) d[idx] = Math.min(d[idx], d[idx + 1] + 1);
-        if (hy < RES - 1) d[idx] = Math.min(d[idx], d[(hy + 1) * RES + hx] + 1);
-        if (hx < RES - 1 && hy < RES - 1) d[idx] = Math.min(d[idx], d[(hy + 1) * RES + (hx + 1)] + 1.414);
-        if (hx > 0 && hy < RES - 1) d[idx] = Math.min(d[idx], d[(hy + 1) * RES + (hx - 1)] + 1.414);
-      }
-    }
-    return d;
-  }
-  // Distance outside the playable region (0 inside, positive outside)
-  const distFromPlay = chamferDist(isPlayable);
-
-  // Apply residual with smoothstep ramp.
-  // Playable zones stay 100% on the quadratic surface (fully flat for play).
-  // Non-playable zones get DEM residual blended in, ramping up from the boundary.
-  for (let hy = 0; hy < RES; hy++) {
-    for (let hx = 0; hx < RES; hx++) {
-      const idx = hy * RES + hx;
-      if (isPlayable[idx]) continue;
-
-      const dist = distFromPlay[idx];
-      let t = Math.min(dist / RESIDUAL_RAMP_CELLS, 1.0);
-      t = t * t * (3 - 2 * t); // smoothstep
-
-      const fraction = RESIDUAL_FRACTION * t;
-      const surfH = evalQuadratic(holeSurface, hx, hy);
-      const rawH = rawDem[idx];
-      const residual = rawH - surfH;
-      heightmap[idx] = surfH + residual * fraction;
-    }
-  }
-
-  console.log(`  Residual ramp: ${RESIDUAL_RAMP_CELLS} cells transition, ` +
-    `${(RESIDUAL_FRACTION * 100).toFixed(0)}% max fraction`);
-
-  // Zone-masked smoothing. Playable zones get heavy smoothing so the ball
-  // rolls cleanly; non-playable (trees/OB/background) get light smoothing
-  // just to soften DEM sampling noise without flattening real hills.
-  zoneMaskedSmooth(heightmap, zoneGrid, zw, zh, ZONES.green, 8, RES);
-  zoneMaskedSmooth(heightmap, zoneGrid, zw, zh, ZONES.fairway, 4, RES);
-  zoneMaskedSmooth(heightmap, zoneGrid, zw, zh, ZONES.semi_rough, 3, RES);
-  zoneMaskedSmooth(heightmap, zoneGrid, zw, zh, ZONES.bunker, 2, RES);
-  for (const z of [ZONES.trees, ZONES.ob, ZONES.background]) {
-    zoneMaskedSmooth(heightmap, zoneGrid, zw, zh, z, 2, RES);
-  }
+  console.log(`  Mode: pure quadratic (no DEM residual)`);
 
   // Normalize — relative elevation
   let minElev = Infinity, maxElev = -Infinity;
@@ -527,7 +450,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
     heightmap[i] = (heightmap[i] - minElev) * scaleFactor;
   }
 
-  // Single global blur pass to soften zone boundaries
+  // Single global blur pass
   const smoothed = blur2D(heightmap, RES, RES, 1);
 
   // Recalculate min/max after smoothing

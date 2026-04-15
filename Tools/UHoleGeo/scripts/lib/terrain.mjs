@@ -79,6 +79,59 @@ export function blur2D(data, width, height, passes = 1) {
 }
 
 /**
+ * Separable Gaussian blur on a 2D float array (no mask — blurs everything).
+ * @param {Float64Array} data - width×height array
+ * @param {number} width
+ * @param {number} height
+ * @param {number} sigma - Gaussian standard deviation in cells
+ * @returns {Float64Array} blurred copy
+ */
+export function gaussianBlur(data, width, height, sigma) {
+  const radius = Math.ceil(sigma * 3);
+  const kernelSize = radius * 2 + 1;
+  const kernel = new Float64Array(kernelSize);
+  let kernelSum = 0;
+  for (let i = 0; i < kernelSize; i++) {
+    const d = i - radius;
+    kernel[i] = Math.exp(-(d * d) / (2 * sigma * sigma));
+    kernelSum += kernel[i];
+  }
+  for (let i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
+
+  // Horizontal pass
+  const temp = new Float64Array(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0, wSum = 0;
+      for (let k = 0; k < kernelSize; k++) {
+        const sx = x + k - radius;
+        if (sx < 0 || sx >= width) continue;
+        sum += data[y * width + sx] * kernel[k];
+        wSum += kernel[k];
+      }
+      temp[y * width + x] = sum / wSum;
+    }
+  }
+
+  // Vertical pass
+  const result = new Float64Array(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0, wSum = 0;
+      for (let k = 0; k < kernelSize; k++) {
+        const sy = y + k - radius;
+        if (sy < 0 || sy >= height) continue;
+        sum += temp[sy * width + x] * kernel[k];
+        wSum += kernel[k];
+      }
+      result[y * width + x] = sum / wSum;
+    }
+  }
+
+  return result;
+}
+
+/**
  * Separable Gaussian blur on a 2D float array with zone mask.
  * Only blurs cells where mask[i] is truthy. Cells outside the
  * mask are treated as zero during convolution (boundary handling).
