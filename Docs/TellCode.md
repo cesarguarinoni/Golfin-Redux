@@ -207,6 +207,7 @@ it can be removed — it's superseded by this approach.
 ---
 
 ## Completed Tasks
+✅ 2026-04-15 — Fringe/border as submesh of parent CDT. Triangles within the band-width of the contour are assigned to submesh 1 (fringe/border material); shared vertices eliminate Z-fighting. Fairway fringe vertices duplicated with tile UVs to preserve mow stripes on interior. Tee border moved from outward → inward (inside tee). CreateFringeRing and CreateGradientBorderRing deleted.
 ✅ 2026-04-15 — Derive fringe/border Y from parent mesh edge. CreateFringeRing and CreateGradientBorderRing no longer sample terrain; each vertex finds nearest parent contour edge point and uses parentY - 8mm. Call sites build parent edge from contour + terrain at the correct yOffset.
 ✅ 2026-04-15 — Clamp fringe/border vertex Y (didn't fix — bidirectional Z-fighting on slopes)
 ✅ 2026-04-14 — Water rework complete (flat CDT mesh + contour depression + deeper shore + 6 iterations of fixes)
