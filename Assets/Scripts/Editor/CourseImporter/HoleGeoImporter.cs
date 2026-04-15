@@ -3613,7 +3613,8 @@ namespace Golfin.CourseImport
                 ContourPoint[] contour,
                 Terrain terrain, float terrainBaseY, float yOffset,
                 float gridSpacing,
-                System.Func<float, float, Vector2> uvFunc)
+                System.Func<float, float, Vector2> uvFunc,
+                ContourPoint[] innerConstraint = null)
         {
             int n = contour.Length;
             if (n < 3) return (null, null, null);
@@ -3633,6 +3634,27 @@ namespace Golfin.CourseImport
             {
                 constraintEdges.Add(i);
                 constraintEdges.Add((i + 1) % n);
+            }
+
+            // 2b. Optional internal constraint contour (e.g. original fairway contour
+            // when CDTing the dilated fringe boundary). CDT will place triangle edges
+            // exactly along this loop, eliminating jaggies where submeshes change.
+            int innerStart = positions2D.Count;
+            int innerCount = 0;
+            if (innerConstraint != null && innerConstraint.Length >= 3)
+            {
+                innerCount = innerConstraint.Length;
+                for (int i = 0; i < innerCount; i++)
+                {
+                    float iwx = innerConstraint[i].x;
+                    float iwz = innerConstraint[i].z;
+                    positions2D.Add(new double2(iwx, iwz));
+                }
+                for (int i = 0; i < innerCount; i++)
+                {
+                    constraintEdges.Add(innerStart + i);
+                    constraintEdges.Add(innerStart + ((i + 1) % innerCount));
+                }
             }
 
             // 3. Interior Steiner points on a grid for terrain conformance
@@ -3819,8 +3841,11 @@ namespace Golfin.CourseImport
 
             ContourPoint[] dilatedContour = DilateContour(contour, fringeWidth);
 
+            // Original contour is passed as internal constraint so triangle edges
+            // land exactly along it — no jaggies at the fairway/fringe boundary.
             var (rawVerts, uvs, tris) = CDTTriangulate(
-                dilatedContour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
+                dilatedContour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc,
+                innerConstraint: contour);
 
             bool fringeEnabled = rawVerts != null && tris != null && tris.Length >= 3;
             if (!fringeEnabled)
@@ -3834,17 +3859,6 @@ namespace Golfin.CourseImport
             var originalPoly = new Vector2[nc];
             for (int i = 0; i < nc; i++)
                 originalPoly[i] = new Vector2(contour[i].x, contour[i].z);
-
-            var isInterior = new bool[rawVerts.Length];
-            if (fringeEnabled)
-            {
-                for (int i = 0; i < rawVerts.Length; i++)
-                    isInterior[i] = IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly);
-            }
-            else
-            {
-                for (int i = 0; i < rawVerts.Length; i++) isInterior[i] = true;
-            }
 
             float cx = 0, cz = 0;
             for (int i = 0; i < rawVerts.Length; i++)
@@ -3865,15 +3879,26 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // Classify each triangle by its centroid (always strictly inside or
+            // outside the original contour — never on the boundary, since the
+            // triangle has nonzero area). With the original contour as an internal
+            // CDT constraint, no triangle can straddle it.
             var fairwayTris = new System.Collections.Generic.List<int>();
             var fringeSrcTris = new System.Collections.Generic.List<int>();
             for (int t = 0; t < tris.Length; t += 3)
             {
-                int a = tris[t], b = tris[t + 1], c = tris[t + 2];
-                if (isInterior[a] && isInterior[b] && isInterior[c])
-                { fairwayTris.Add(a); fairwayTris.Add(b); fairwayTris.Add(c); }
+                Vector3 va = rawVerts[tris[t]];
+                Vector3 vb = rawVerts[tris[t + 1]];
+                Vector3 vc = rawVerts[tris[t + 2]];
+                float triCx = (va.x + vb.x + vc.x) / 3f;
+                float triCz = (va.z + vb.z + vc.z) / 3f;
+                bool triInsideOriginal = fringeEnabled
+                    ? IsInsideContour(triCx, triCz, originalPoly)
+                    : true;
+                if (triInsideOriginal)
+                { fairwayTris.Add(tris[t]); fairwayTris.Add(tris[t + 1]); fairwayTris.Add(tris[t + 2]); }
                 else
-                { fringeSrcTris.Add(a); fringeSrcTris.Add(b); fringeSrcTris.Add(c); }
+                { fringeSrcTris.Add(tris[t]); fringeSrcTris.Add(tris[t + 1]); fringeSrcTris.Add(tris[t + 2]); }
             }
 
             var finalVerts = new System.Collections.Generic.List<Vector3>(rawVerts);
@@ -3939,7 +3964,8 @@ namespace Golfin.CourseImport
             ContourPoint[] dilatedContour = DilateContour(contour, borderWidth);
 
             var (rawVerts, uvs, tris) = CDTTriangulate(
-                dilatedContour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
+                dilatedContour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc,
+                innerConstraint: contour);
 
             bool borderEnabled = rawVerts != null && tris != null && tris.Length >= 3;
             if (!borderEnabled)
@@ -3953,17 +3979,6 @@ namespace Golfin.CourseImport
             var originalPoly = new Vector2[nc];
             for (int i = 0; i < nc; i++)
                 originalPoly[i] = new Vector2(contour[i].x, contour[i].z);
-
-            var isInterior = new bool[rawVerts.Length];
-            if (borderEnabled)
-            {
-                for (int i = 0; i < rawVerts.Length; i++)
-                    isInterior[i] = IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly);
-            }
-            else
-            {
-                for (int i = 0; i < rawVerts.Length; i++) isInterior[i] = true;
-            }
 
             float cx = 0, cz = 0;
             for (int i = 0; i < rawVerts.Length; i++)
@@ -3984,15 +3999,23 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // Triangle classification by centroid (reliable — never on boundary).
             var teeTris = new System.Collections.Generic.List<int>();
             var borderSrcTris = new System.Collections.Generic.List<int>();
             for (int t = 0; t < tris.Length; t += 3)
             {
-                int a = tris[t], b = tris[t + 1], c = tris[t + 2];
-                if (isInterior[a] && isInterior[b] && isInterior[c])
-                { teeTris.Add(a); teeTris.Add(b); teeTris.Add(c); }
+                Vector3 va = rawVerts[tris[t]];
+                Vector3 vb = rawVerts[tris[t + 1]];
+                Vector3 vc = rawVerts[tris[t + 2]];
+                float triCx = (va.x + vb.x + vc.x) / 3f;
+                float triCz = (va.z + vb.z + vc.z) / 3f;
+                bool triInsideOriginal = borderEnabled
+                    ? IsInsideContour(triCx, triCz, originalPoly)
+                    : true;
+                if (triInsideOriginal)
+                { teeTris.Add(tris[t]); teeTris.Add(tris[t + 1]); teeTris.Add(tris[t + 2]); }
                 else
-                { borderSrcTris.Add(a); borderSrcTris.Add(b); borderSrcTris.Add(c); }
+                { borderSrcTris.Add(tris[t]); borderSrcTris.Add(tris[t + 1]); borderSrcTris.Add(tris[t + 2]); }
             }
 
             var finalVerts = new System.Collections.Generic.List<Vector3>(rawVerts);
