@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { perlin2D, blur2D } from './lib/terrain.mjs';
+import { perlin2D, blur2D, monotoneCubicSpline } from './lib/terrain.mjs';
 import { readDem5aTile, sampleDem5a } from './lib/dem5a.mjs';
 import { latToTileY, lonToTileX, tileBounds } from './lib/tiles.mjs';
 
@@ -79,57 +79,6 @@ async function loadDemTiles(courseId, bounds) {
 function sampleDemSafe(demTiles, lat, lon, fallback) {
   const val = sampleDem5a(demTiles, lat, lon);
   return (val !== null && !isNaN(val)) ? val : fallback;
-}
-
-// ---------------------------------------------------------------------------
-// Zone-aware smoothing
-// ---------------------------------------------------------------------------
-
-function buildZoneMask(zoneGrid, zw, zh, targetZone, res) {
-  const mask = new Uint8Array(res * res);
-  for (let hy = 0; hy < res; hy++) {
-    for (let hx = 0; hx < res; hx++) {
-      const nx = hx / (res - 1);
-      const ny = hy / (res - 1);
-      const zx = Math.min(zw - 1, Math.floor(nx * (zw - 1)));
-      const zy = Math.min(zh - 1, Math.floor(ny * (zh - 1)));
-      if (zoneGrid[zy * zw + zx] === targetZone) {
-        mask[hy * res + hx] = 1;
-      }
-    }
-  }
-  return mask;
-}
-
-function zoneMaskedSmooth(heightmap, zoneGrid, zw, zh, targetZone, passes, res) {
-  const mask = buildZoneMask(zoneGrid, zw, zh, targetZone, res);
-
-  let src = new Float64Array(heightmap);
-  for (let p = 0; p < passes; p++) {
-    const dst = new Float64Array(src);
-    for (let hy = 0; hy < res; hy++) {
-      for (let hx = 0; hx < res; hx++) {
-        if (!mask[hy * res + hx]) continue;
-        let sum = 0, weight = 0;
-        for (let dy = -1; dy <= 1; dy++) {
-          for (let dx = -1; dx <= 1; dx++) {
-            const nx = hx + dx, ny = hy + dy;
-            if (nx < 0 || nx >= res || ny < 0 || ny >= res) continue;
-            const w = (dx === 0 && dy === 0) ? 4 :
-                      (dx === 0 || dy === 0) ? 2 : 1;
-            sum += src[ny * res + nx] * w;
-            weight += w;
-          }
-        }
-        dst[hy * res + hx] = sum / weight;
-      }
-    }
-    src = dst;
-  }
-
-  for (let i = 0; i < res * res; i++) {
-    if (mask[i]) heightmap[i] = src[i];
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -418,20 +367,80 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
     `slope dX=${slopeX}m dY=${slopeY}m, ` +
     `curve dX²=${curveX}m dY²=${curveY}m`);
 
-  // Apply the quadratic surface as the base for the ENTIRE heightmap
+  // ─── Spline + Quadratic Cross-Axis ───────────────────────────
+  const N_SPLINE_POINTS = 20;
+
+  // Tee and green centroids in heightmap coordinates
+  const teeHX = teeCentroid.x * (RES - 1);
+  const teeHY = teeCentroid.y * (RES - 1);
+  const greenHX = greenCentroid.x * (RES - 1);
+  const greenHY = greenCentroid.y * (RES - 1);
+
+  // Axis vector and length
+  const axDx = greenHX - teeHX;
+  const axDy = greenHY - teeHY;
+  const axisLen = Math.sqrt(axDx * axDx + axDy * axDy);
+
+  // Unit vectors: along-axis (A) and cross-axis (C)
+  const axUx = axisLen > 0 ? axDx / axisLen : 1;
+  const axUy = axisLen > 0 ? axDy / axisLen : 0;
+
+  // Sample DEM at N points along the axis
+  const splineXs = [];
+  const splineYs = [];
+  for (let i = 0; i < N_SPLINE_POINTS; i++) {
+    const t = i / (N_SPLINE_POINTS - 1); // 0..1
+    const along = t * axisLen;
+    const hx = teeHX + t * axDx;
+    const hy = teeHY + t * axDy;
+
+    // Map heightmap coords back to lat/lon for DEM sampling
+    const nx = hx / (RES - 1);
+    const ny = hy / (RES - 1);
+    const lat = bounds.north - ny * (bounds.north - bounds.south);
+    const lon = bounds.west + nx * (bounds.east - bounds.west);
+
+    const elev = sampleDemSafe(demTiles, lat, lon, avgElev);
+    splineXs.push(along);
+    splineYs.push(elev);
+  }
+
+  const spline = monotoneCubicSpline(splineXs, splineYs);
+
+  console.log(`  Spline: ${N_SPLINE_POINTS} DEM samples along axis (${axisLen.toFixed(0)} cells)`);
+  console.log(`    Elevations: ${splineYs.map(e => e.toFixed(1)).join(', ')} m ASL`);
+
+  // Build heightmap: spline(along) + quadratic cross-axis residual
   const heightmap = new Float64Array(RES * RES);
   for (let hy = 0; hy < RES; hy++) {
     for (let hx = 0; hx < RES; hx++) {
-      heightmap[hy * RES + hx] = evalQuadratic(holeSurface, hx, hy);
+      // Vector from tee to this cell
+      const dx = hx - teeHX;
+      const dy = hy - teeHY;
+
+      // Project onto axis (clamped to [0, axisLen])
+      let along = dx * axUx + dy * axUy;
+      along = Math.max(0, Math.min(axisLen, along));
+
+      // Spline elevation at this along-axis position
+      const splineH = spline(along);
+
+      // Quadratic at this cell
+      const quadHere = evalQuadratic(holeSurface, hx, hy);
+
+      // Quadratic at the axis point (projection of this cell onto axis)
+      const projHX = teeHX + along * axUx;
+      const projHY = teeHY + along * axUy;
+      const quadOnAxis = evalQuadratic(holeSurface, projHX, projHY);
+
+      // Cross-axis residual: how the quadratic varies perpendicular to axis
+      const crossResidual = quadHere - quadOnAxis;
+
+      heightmap[hy * RES + hx] = splineH + crossResidual;
     }
   }
 
-  // --- SAFE MODE: Pure quadratic surface everywhere ---
-  // No DEM residual blending. The quadratic captures the overall
-  // slope from DEM data. All zones (playable and non-playable) use
-  // the same smooth surface. No transition artifacts, no mesh breaks.
-
-  console.log(`  Mode: pure quadratic (no DEM residual)`);
+  console.log(`  Mode: spline along-axis + quadratic cross-axis`);
 
   // Normalize — relative elevation
   let minElev = Infinity, maxElev = -Infinity;

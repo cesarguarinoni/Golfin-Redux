@@ -196,3 +196,96 @@ export function gaussianBlurMasked(data, mask, width, height, sigma) {
 
   return result;
 }
+
+/**
+ * Fritsch-Carlson monotone cubic interpolation.
+ *
+ * Unlike natural cubic splines, this preserves the monotonicity of
+ * each interval: flat data stays flat, drops stay monotone. This
+ * prevents overshoot and preserves terrace-like elevation profiles.
+ *
+ * @param {number[]} xs - sorted x coordinates (strictly increasing)
+ * @param {number[]} ys - y values at each x
+ * @returns {function(number): number} interpolation function
+ */
+export function monotoneCubicSpline(xs, ys) {
+  const n = xs.length;
+  if (n < 2) return () => ys[0] || 0;
+  if (n === 2) {
+    const slope = (ys[1] - ys[0]) / (xs[1] - xs[0]);
+    return (x) => {
+      if (x <= xs[0]) return ys[0];
+      if (x >= xs[1]) return ys[1];
+      return ys[0] + slope * (x - xs[0]);
+    };
+  }
+
+  // Step 1: Compute secants (slopes between consecutive points)
+  const delta = new Float64Array(n - 1);
+  for (let i = 0; i < n - 1; i++) {
+    delta[i] = (ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]);
+  }
+
+  // Step 2: Initialize tangents using average of neighbouring secants
+  const m = new Float64Array(n);
+  m[0] = delta[0];
+  m[n - 1] = delta[n - 2];
+  for (let i = 1; i < n - 1; i++) {
+    if (delta[i - 1] * delta[i] <= 0) {
+      // Sign change or zero — set tangent to zero (local extremum)
+      m[i] = 0;
+    } else {
+      m[i] = (delta[i - 1] + delta[i]) / 2;
+    }
+  }
+
+  // Step 3: Fritsch-Carlson monotonicity correction
+  for (let i = 0; i < n - 1; i++) {
+    if (Math.abs(delta[i]) < 1e-30) {
+      // Flat segment — force both tangents to zero
+      m[i] = 0;
+      m[i + 1] = 0;
+    } else {
+      const alpha = m[i] / delta[i];
+      const beta = m[i + 1] / delta[i];
+
+      // Check if (alpha, beta) falls outside the monotonicity region
+      // The region is: alpha² + beta² <= 9
+      const h = Math.sqrt(alpha * alpha + beta * beta);
+      if (h > 3) {
+        const tau = 3 / h;
+        m[i] = tau * alpha * delta[i];
+        m[i + 1] = tau * beta * delta[i];
+      }
+    }
+  }
+
+  // Step 4: Build Hermite basis evaluation function
+  return function (x) {
+    if (x <= xs[0]) return ys[0];
+    if (x >= xs[n - 1]) return ys[n - 1];
+
+    // Binary search for interval
+    let lo = 0, hi = n - 2;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (xs[mid + 1] < x) lo = mid + 1;
+      else hi = mid;
+    }
+    const i = lo;
+
+    // Hermite interpolation on [xs[i], xs[i+1]]
+    const h = xs[i + 1] - xs[i];
+    const t = (x - xs[i]) / h;
+    const t2 = t * t;
+    const t3 = t2 * t;
+
+    const h00 = 2 * t3 - 3 * t2 + 1;
+    const h10 = t3 - 2 * t2 + t;
+    const h01 = -2 * t3 + 3 * t2;
+    const h11 = t3 - t2;
+
+    return h00 * ys[i] + h10 * h * m[i] +
+           h01 * ys[i + 1] + h11 * h * m[i + 1];
+  };
+}
