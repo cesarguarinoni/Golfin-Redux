@@ -8,192 +8,207 @@
 
 ---
 
-## Current Task — Clamp Fringe/Border Vertex Y Below Parent Mesh
+## Current Task — Derive Fringe/Border Y from Parent Mesh Edge (Not Terrain)
 
-With steeper terrain from the monotone spline, the fairway fringe
-ring and tee gradient border "invade" — their vertices on the uphill
-side sit above the parent mesh, making the decorative ring visually
-overpower or eat into the fairway/tee surface.
+The fairway fringe ring and tee gradient border break on slopes
+because each mesh independently samples `terrain.SampleHeight()` at
+its own XZ. On a slope, the height difference between the parent
+mesh edge and the child ring at a 0.5m offset exceeds the tiny
+Y-offset gap (1-2cm), causing Z-fighting in both directions.
 
-**Root cause:** Each mesh independently samples `terrain.SampleHeight()`
-at its own XZ position. The fringe ring is offset outward from the
-fairway contour by ~0.5m, so on a slope it samples a different
-terrain height. The 1cm Y-offset gap (0.02 vs 0.03) is meaningless
-against real terrain gradients.
+**Previous attempt (clamp) failed** because the problem is
+bidirectional — sometimes the child eats the parent, sometimes the
+parent eats the child, depending on slope direction.
 
-**Fix:** After building fringe/border vertices, clamp each vertex Y
-to be at most `parentEdgeY - epsilon` where `parentEdgeY` is the
-parent mesh's Y at the nearest contour edge point.
+**New approach:** Child meshes (fringe ring, tee gradient border)
+should NOT sample terrain at all. Instead, each child vertex derives
+its Y from the nearest parent mesh edge vertex, minus a fixed offset.
+This guarantees a consistent visual layering regardless of slope.
 
-### Step 1: Add Y-Clamp Helper
+### Concept
 
-Add this utility method to `HoleLiteImporter`:
+For each child vertex at position (cx, cz):
+1. Find the nearest parent contour edge vertex (px, pz, py)
+2. Set child vertex Y = py - offset (e.g. 5mm below parent)
+
+The child mesh "drapes" from the parent edge downward, always below
+the parent surface. No terrain sampling means no slope-dependent
+height disagreements.
+
+### Step 1: Modify `CreateFringeRing()`
+
+Currently, fringe ring vertices sample terrain height:
+```csharp
+float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+// vertex.y = terrainBaseY + th + yOffset;
+```
+
+Change this so fringe vertices derive Y from the fairway contour
+edge vertices instead. The fairway mesh's contour vertices (the
+outer boundary of the CDT mesh) are the "parent edge."
+
+**Implementation:** `CreateFringeRing` needs access to the parent
+fairway mesh's contour vertices (in world space). Pass them in as
+a parameter.
+
+Change the signature to accept the parent edge data:
+```csharp
+private static void CreateFringeRing(
+    Vector2[] contour,
+    Terrain terrain, float terrainBaseY,
+    // ... existing params ...
+    Vector3[] parentEdgeWorldPositions,  // NEW: fairway contour verts in world space
+    float parentOffset)                  // NEW: how far below parent edge (e.g. -0.008f)
+```
+
+For each fringe vertex at (wx, wz), instead of sampling terrain:
+```csharp
+// OLD:
+// float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+// vert.y = terrainBaseY + th + fringeYOffset;
+
+// NEW: Find nearest parent edge vertex and derive Y from it
+float bestDistSq = float.MaxValue;
+float parentY = 0f;
+for (int p = 0; p < parentEdgeWorldPositions.Length; p++)
+{
+    float dx = wx - parentEdgeWorldPositions[p].x;
+    float dz = wz - parentEdgeWorldPositions[p].z;
+    float dSq = dx * dx + dz * dz;
+    if (dSq < bestDistSq)
+    {
+        bestDistSq = dSq;
+        parentY = parentEdgeWorldPositions[p].y;
+    }
+}
+vert.y = parentY + parentOffset;  // e.g. parentY - 0.008f
+```
+
+Then convert to local space as before (subtract centroid).
+
+**Building parentEdgeWorldPositions:** After creating the fairway
+CDT mesh, extract the contour boundary vertices in world space.
+The CDT mesh's first N vertices correspond to the input contour
+points (before Steiner points are added). So:
 
 ```csharp
-/// <summary>
-/// Clamp each vertex in childVerts so its world Y never exceeds the
-/// interpolated Y of the nearest edge on parentVerts (which shares
-/// the same contour topology). Both arrays are in local space
-/// relative to their respective centroids.
-///
-/// parentContourCount = number of contour vertices in the parent mesh
-/// (the first N vertices in parentVerts that form the outer edge).
-/// childContourCount = same for child (should match parent if both
-/// were built from the same contour).
-/// parentCentroid, childCentroid = world-space mesh origins.
-/// maxYAbove = how far above the parent edge the child is allowed
-///             (negative = must be below). Use e.g. -0.005f.
-/// </summary>
-private static void ClampChildVertsToParentEdge(
-    Vector3[] childVerts, Vector3 childCentroid,
-    Vector3[] parentVerts, Vector3 parentCentroid,
-    int parentContourCount, float maxYAbove)
+// After CDT mesh is built for fairway:
+var fairwayWorldEdge = new Vector3[contour.Length];
+for (int i = 0; i < contour.Length; i++)
 {
-    if (parentVerts == null || parentVerts.Length == 0) return;
-    int parentN = Mathf.Min(parentContourCount, parentVerts.Length);
-
-    for (int i = 0; i < childVerts.Length; i++)
-    {
-        // Child vertex in world space
-        Vector3 childWorld = childVerts[i] + childCentroid;
-
-        // Find the closest parent contour edge vertex (XZ only)
-        float bestDistSq = float.MaxValue;
-        float bestParentY = 0f;
-        for (int p = 0; p < parentN; p++)
-        {
-            Vector3 parentWorld = parentVerts[p] + parentCentroid;
-            float dx = childWorld.x - parentWorld.x;
-            float dz = childWorld.z - parentWorld.z;
-            float distSq = dx * dx + dz * dz;
-            if (distSq < bestDistSq)
-            {
-                bestDistSq = distSq;
-                bestParentY = parentWorld.y;
-            }
-        }
-
-        // Clamp: child vertex must not exceed parentEdgeY + maxYAbove
-        float maxY = bestParentY + maxYAbove;
-        float childLocalMaxY = maxY - childCentroid.y;
-        if (childVerts[i].y > childLocalMaxY)
-            childVerts[i].y = childLocalMaxY;
-    }
+    // CDT vertices are in local space relative to centroid
+    Vector3 local = fairwayMeshVerts[i];
+    fairwayWorldEdge[i] = local + fairwayCentroid;
+    // fairwayWorldEdge[i].y is already the correct world Y
+    // (terrainBaseY + terrainH + yOffset)
 }
 ```
 
-### Step 2: Apply to Fairway Fringe Ring
+Pass `fairwayWorldEdge` and `-0.008f` to `CreateFringeRing`.
 
-In `CreateFlatZoneMeshes()`, after `CreateFringeRing()` returns the
-fringe mesh, apply the clamp. The fairway mesh is the "parent."
+### Step 2: Modify `CreateGradientBorderRing()`
 
-Find where `CreateFringeRing` is called. It should look something
-like:
+Same pattern. The tee gradient border should derive Y from the tee
+mesh's contour edge vertices instead of sampling terrain.
 
+Change `CreateGradientBorderRing` to accept parent edge data:
 ```csharp
-CreateFringeRing(contour, terrain, terrainBaseY, ...);
+private static void CreateGradientBorderRing(
+    Vector2[] contour,
+    Terrain terrain, float terrainBaseY,
+    // ... existing params ...
+    Vector3[] parentEdgeWorldPositions,
+    float parentOffset)
 ```
 
-After the fringe GameObject is created (with its mesh and centroid),
-add the clamp call. You'll need access to:
-- The fairway mesh vertices (from the CDT mesh just created above)
-- The fairway centroid
-- The fringe mesh vertices
-- The fringe centroid
-- The number of contour vertices in the fairway mesh's outer edge
+Same nearest-vertex lookup for each border vertex's Y.
 
-The fairway CDT mesh's first N vertices correspond to the contour
-points (CDT adds interior Steiner points after the boundary). N =
-the number of contour points fed into CDT.
+**Building parent edge for tees:** After `CreateFlatContourMesh`
+builds the tee mesh, extract its contour vertices in world space
+and pass to `CreateGradientBorderRing`.
 
-```csharp
-// After fringe mesh is built:
-ClampChildVertsToParentEdge(
-    fringeMesh.vertices, fringeCentroid,
-    fairwayMesh.vertices, fairwayCentroid,
-    contourPointCount,  // number of boundary vertices in fairway CDT
-    -0.005f);           // fringe must be at least 5mm BELOW parent edge
-// Re-assign vertices back to mesh after clamping
-fringeMesh.vertices = fringeVerts;
-fringeMesh.RecalculateBounds();
-```
+### Step 3: Handle the Inner Edge
 
-NOTE: `fringeMesh.vertices` returns a copy. You need to store it in
-a local array, pass that to the clamp function, then assign it back:
+The fringe ring has TWO edges: the inner edge (touching the fairway)
+and the outer edge (extending into rough). Both need the fix, but
+they have different parent references:
 
-```csharp
-var fringeVerts = fringeMesh.vertices;
-ClampChildVertsToParentEdge(
-    fringeVerts, fringeCentroid,
-    fairwayVerts, fairwayCentroid,
-    contourPointCount, -0.005f);
-fringeMesh.vertices = fringeVerts;
-fringeMesh.RecalculateBounds();
-```
+- **Inner edge vertices** (at the fairway contour): derive Y from
+  the fairway mesh edge. These must be BELOW the fairway surface.
+- **Outer edge vertices** (offset outward): these can still sample
+  terrain, OR derive from the same nearest parent edge vertex with
+  a slightly larger offset. Either works since the outer edge isn't
+  competing with the fairway mesh.
 
-### Step 3: Apply to Tee Gradient Border
+Simplest approach: ALL fringe vertices derive Y from nearest parent
+edge vertex. The outer edge will follow the parent edge's height
+profile (slightly wrong vs actual terrain) but this is invisible
+because the fringe is only 0.5m wide — the terrain height difference
+across 0.5m is negligible compared to the visual improvement.
 
-Same pattern for `CreateGradientBorderRing()`. The tee mesh
-(from `CreateFlatContourMesh`) is the parent, the gradient border
-is the child.
+Same logic applies to tee gradient border: all vertices derive from
+tee edge.
 
-Find where the tee gradient border is created. Apply the same clamp:
+### Step 4: Ensure SubdivideToTerrain Compatibility
 
-```csharp
-var borderVerts = borderMesh.vertices;
-ClampChildVertsToParentEdge(
-    borderVerts, borderCentroid,
-    teeVerts, teeCentroid,
-    teeContourCount, -0.005f);
-borderMesh.vertices = borderVerts;
-borderMesh.RecalculateBounds();
-```
+If `SubdivideToTerrain` is called on fringe/border meshes, the new
+subdivided midpoint vertices will sample terrain height — which
+defeats the purpose. Two options:
 
-### Implementation Notes
+**Option A (preferred):** Skip `SubdivideToTerrain` for fringe and
+border meshes entirely. They're narrow rings (0.5m wide) — terrain
+conformance over that distance is negligible. Just remove the
+subdivision call for these meshes.
 
-- The clamp helper does a brute-force nearest-vertex search. With
-  typical contour sizes (50-200 points) and fringe vertex counts
-  (~200-400), this is <100K distance checks — negligible at import
-  time.
+**Option B:** If subdivision is needed, modify the midpoint Y
+calculation to interpolate between the two parent vertices instead
+of sampling terrain.
 
-- `maxYAbove = -0.005f` means the fringe/border must always be at
-  least 5mm below the nearest parent edge vertex. This guarantees
-  the parent mesh renders on top even on steep slopes.
+Go with Option A unless you see that fringe/border meshes currently
+call `SubdivideToTerrain` and removing it causes visible issues.
 
-- The clamp only lowers vertices, never raises them. On flat terrain
-  the fringe is already below the fairway (due to the existing
-  Y-offset hierarchy), so the clamp is a no-op — no visual change
-  on flat holes.
+### Summary of Changes
 
-- If you can't easily access the parent mesh vertices at the call
-  site, an alternative is to store them as a local variable before
-  creating the child mesh. Both meshes are created in sequence
-  within the same loop iteration.
+| Method | Before | After |
+|--------|--------|-------|
+| `CreateFringeRing` | Samples `terrain.SampleHeight()` per vertex | Derives Y from nearest fairway edge vertex - 8mm |
+| `CreateGradientBorderRing` | Samples `terrain.SampleHeight()` per vertex | Derives Y from nearest tee edge vertex - 8mm |
+| Call site (fairway) | Calls `CreateFringeRing(contour, terrain, ...)` | Extracts fairway edge verts, passes to `CreateFringeRing` |
+| Call site (tee) | Calls `CreateGradientBorderRing(contour, terrain, ...)` | Extracts tee edge verts, passes to `CreateGradientBorderRing` |
 
 ### What NOT to Change
 
-- Y-offset values (0.01, 0.02, 0.03) — keep them as-is
-- Depression system (OverlayDepressionMeters)
-- CDT triangulation or contour extraction
-- Fairway/tee mesh creation logic
-- Green collar (it uses a different raised mesh system)
-- Water, bunker, or cart path meshes
+- Fairway CDT mesh creation (parent mesh still samples terrain)
+- Tee flat contour mesh creation (parent mesh still samples terrain)
+- Green collar (different system, uses raised mesh)
+- Cart path meshes
+- Water, bunker meshes
+- Depression system
+- Y-offset constants (0.01, 0.02, 0.03)
 
 ### Verification
 
-Re-import a hilly hole (try Hole 4 or whichever has the steepest
-terrain currently):
+Re-import Hole 4 (steepest terrain):
 
-- [ ] Fairway fringe stays UNDER the fairway surface on slopes
-- [ ] Tee gradient border stays UNDER the tee surface on slopes
-- [ ] On flat terrain, fringe/border look identical to before
-- [ ] No visual gaps between fringe and fairway
+- [ ] Fairway fringe stays visually UNDER the fairway on all slopes
+- [ ] Tee border stays visually UNDER the tee on all slopes
+- [ ] No Z-fighting between parent and child meshes
+- [ ] On flat terrain (Hole 1), fringe/border look identical to before
+- [ ] No gaps between fringe outer edge and terrain
 - [ ] No console errors
+
+Also reimport Hole 1 to confirm no regression on flatter terrain.
+
+### Remove Previous Clamp Code
+
+If `ClampChildVertsToParentEdge()` was added from the previous task,
+it can be removed — it's superseded by this approach.
 
 ---
 
 ## Completed Tasks
-✅ 2026-04-15 — Clamp fringe/border verts below parent mesh. Added ClampChildVertsToParentEdge() helper; applied inside CreateFringeRing (parent=edgeRing) and CreateGradientBorderRing (parent=innerRingInset). maxYAbove=-0.005f.
+✅ 2026-04-15 — Derive fringe/border Y from parent mesh edge. CreateFringeRing and CreateGradientBorderRing no longer sample terrain; each vertex finds nearest parent contour edge point and uses parentY - 8mm. Call sites build parent edge from contour + terrain at the correct yOffset.
+✅ 2026-04-15 — Clamp fringe/border vertex Y (didn't fix — bidirectional Z-fighting on slopes)
 ✅ 2026-04-14 — Water rework complete (flat CDT mesh + contour depression + deeper shore + 6 iterations of fixes)
 ✅ 2026-04-13 — Cart path flat depression + spine fixes
 ✅ 2026-04-13 — Natural OB↔Rough transition + Smooth OB
