@@ -3861,7 +3861,7 @@ namespace Golfin.CourseImport
             int nc = contour.Length;
             if (nc < 3) return null;
 
-            float yOffset = 0.01f;
+            float yOffset = 0.015f; // slightly higher to avoid terrain eating fairway edges
             Vector2 parallelDir = new Vector2(-stripeDir.y, stripeDir.x);
 
             System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
