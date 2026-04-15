@@ -3619,22 +3619,10 @@ namespace Golfin.CourseImport
                         if (meshGO != null)
                             meshGO.transform.SetParent(fwRoot.transform);
 
-                        // Build fairway contour edge in world space (yOffset 0.01 matches fairway CDT)
-                        // Fringe ring derives Y from this instead of sampling terrain independently.
-                        var fairwayEdge = new Vector3[fw.contour.Length];
-                        for (int i = 0; i < fw.contour.Length; i++)
-                        {
-                            float wx = fw.contour[i].z;
-                            float wz = fw.contour[i].x;
-                            float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                            fairwayEdge[i] = new Vector3(wx, terrainBaseY + th + 0.01f, wz);
-                        }
-
                         // Fringe ring inside fairway edge (negative = inward offset)
                         var fringeGO = CreateFringeRing(
                             fw.id, fw.contour, terrain, terrainBaseY,
-                            fringeMat, -FairwayFringeMeters, 6f, fwRoot.transform,
-                            fairwayEdge, -0.008f);
+                            fringeMat, -FairwayFringeMeters, 6f, fwRoot.transform);
                     }
 
                     Debug.Log($"[HoleLiteImporter] Created {data.fairways.Length} fairway mesh(es) with mow stripes + fringe");
@@ -3699,10 +3687,11 @@ namespace Golfin.CourseImport
                         }
 
                         // Tee border ring (gradient: light inside → dark outside)
+                        // Thinned from 1.0m to 0.4m to compensate for reduced inwardOverlap.
                         var borderGO = CreateGradientBorderRing(
                             region.id, "Tee", region.contour,
                             terrain, terrainBaseY, teeBorderMat,
-                            1.0f,  // border width in meters
+                            0.4f,  // border width in meters (was 1.0)
                             3f,    // UV.u tile every 3m along perimeter
                             Golfin.Course.SurfaceType.Fringe,
                             teeRoot.transform,
@@ -4289,48 +4278,31 @@ namespace Golfin.CourseImport
         private static GameObject CreateFringeRing(int id, ContourPoint[] contour,
             Terrain terrain, float terrainBaseY,
             Material fringeMat, float fringeWidth, float tileSize,
-            Transform parent,
-            Vector3[] parentEdgeWorldPositions, float parentOffset)
+            Transform parent)
         {
             int n = contour.Length;
             if (n < 3) return null;
 
-            // Build edgeRing XZ from contour (Y derived from parent, not terrain)
+            float yOffset = 0.012f; // slightly above fairway (0.01)
+
+            // Convert to world space — this is the contour edge
             Vector3[] edgeRing = new Vector3[n];
             for (int i = 0; i < n; i++)
-                edgeRing[i] = new Vector3(contour[i].z, 0, contour[i].x);
+            {
+                float wx = contour[i].z;
+                float wz = contour[i].x;
+                float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                edgeRing[i] = new Vector3(wx, terrainBaseY + terrainH + yOffset, wz);
+            }
 
-            // Offset ring XZ (inward or outward depending on sign of fringeWidth)
+            // Offset ring (inward or outward depending on sign of fringeWidth)
             Vector3[] offsetRing = OffsetContourOutward(edgeRing, fringeWidth);
 
-            // Derive Y for all vertices from nearest parent edge vertex.
-            // This drapes the fringe from the parent mesh edge, guaranteeing
-            // it stays consistently below the parent regardless of terrain slope.
-            for (int i = 0; i < n; i++)
-            {
-                float bestDistSq = float.MaxValue;
-                float bestY = parentEdgeWorldPositions[0].y;
-                foreach (var pe in parentEdgeWorldPositions)
-                {
-                    float dx = edgeRing[i].x - pe.x;
-                    float dz = edgeRing[i].z - pe.z;
-                    float dSq = dx * dx + dz * dz;
-                    if (dSq < bestDistSq) { bestDistSq = dSq; bestY = pe.y; }
-                }
-                edgeRing[i].y = bestY + parentOffset;
-            }
+            // Update Y for offset ring
             for (int i = 0; i < offsetRing.Length; i++)
             {
-                float bestDistSq = float.MaxValue;
-                float bestY = parentEdgeWorldPositions[0].y;
-                foreach (var pe in parentEdgeWorldPositions)
-                {
-                    float dx = offsetRing[i].x - pe.x;
-                    float dz = offsetRing[i].z - pe.z;
-                    float dSq = dx * dx + dz * dz;
-                    if (dSq < bestDistSq) { bestDistSq = dSq; bestY = pe.y; }
-                }
-                offsetRing[i].y = bestY + parentOffset;
+                float h = terrain.SampleHeight(new Vector3(offsetRing[i].x, 0, offsetRing[i].z));
+                offsetRing[i].y = terrainBaseY + h + yOffset;
             }
 
             // Compute centroid (Y=0 so vertex Y values are absolute terrain heights)
@@ -4428,7 +4400,8 @@ namespace Golfin.CourseImport
                 innerRing[i] = new Vector3(contour[i].z, 0, contour[i].x);
 
             // Pull inner ring slightly inward so it overlaps under the tee mesh (no gap)
-            float inwardOverlap = 0.15f;
+            // Hack: keep overlap tiny so the border doesn't eat into the tee on slopes.
+            float inwardOverlap = 0.02f;
             Vector3[] innerRingInset = OffsetContourOutward(innerRing, -inwardOverlap);
 
             // Outer ring XZ
