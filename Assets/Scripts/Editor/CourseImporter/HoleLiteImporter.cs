@@ -4258,6 +4258,47 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
+        /// Clamp each vertex in childVerts so its world Y never exceeds the
+        /// Y of the nearest vertex in parentVerts by more than maxYAbove.
+        /// Vertices are in local space relative to their respective centroids.
+        /// maxYAbove negative means child must stay BELOW parent edge.
+        /// Only lowers vertices, never raises them.
+        /// </summary>
+        private static void ClampChildVertsToParentEdge(
+            Vector3[] childVerts, Vector3 childCentroid,
+            Vector3[] parentVerts, Vector3 parentCentroid,
+            int parentContourCount, float maxYAbove)
+        {
+            if (parentVerts == null || parentVerts.Length == 0) return;
+            int parentN = Mathf.Min(parentContourCount, parentVerts.Length);
+
+            for (int i = 0; i < childVerts.Length; i++)
+            {
+                Vector3 childWorld = childVerts[i] + childCentroid;
+
+                float bestDistSq = float.MaxValue;
+                float bestParentY = 0f;
+                for (int p = 0; p < parentN; p++)
+                {
+                    Vector3 parentWorld = parentVerts[p] + parentCentroid;
+                    float dx = childWorld.x - parentWorld.x;
+                    float dz = childWorld.z - parentWorld.z;
+                    float distSq = dx * dx + dz * dz;
+                    if (distSq < bestDistSq)
+                    {
+                        bestDistSq = distSq;
+                        bestParentY = parentWorld.y;
+                    }
+                }
+
+                float maxY = bestParentY + maxYAbove;
+                float childLocalMaxY = maxY - childCentroid.y;
+                if (childVerts[i].y > childLocalMaxY)
+                    childVerts[i].y = childLocalMaxY;
+            }
+        }
+
+        /// <summary>
         /// Create a fringe ring mesh along a fairway contour edge.
         /// Positive fringeWidth = outward, negative = inward.
         /// edgeRing = original contour, offsetRing = pushed by fringeWidth.
@@ -4345,6 +4386,13 @@ namespace Golfin.CourseImport
                     fringeTris[t + 5] = offNext;
                 }
             }
+
+            // Clamp fringe verts to stay below the parent fairway edge.
+            // edgeRing[0..n-1] are the fairway contour verts (in fringeVerts[0..n-1]).
+            // On steep terrain the offset ring can sample higher terrain than the edge.
+            var parentEdgeVerts = new Vector3[n];
+            for (int i = 0; i < n; i++) parentEdgeVerts[i] = edgeRing[i] - centroid;
+            ClampChildVertsToParentEdge(fringeVerts, centroid, parentEdgeVerts, centroid, n, -0.005f);
 
             var fringeMesh = new Mesh();
             fringeMesh.name = $"FairwayFringe_{id}";
@@ -4458,6 +4506,13 @@ namespace Golfin.CourseImport
                 tris[t + 4] = offNext;
                 tris[t + 5] = offCurr;
             }
+
+            // Clamp border verts to stay below the parent tee edge.
+            // innerRingInset[0..n-1] are the tee contour verts (in verts[0..n-1]).
+            // The outer ring can sample higher terrain on slopes.
+            var parentTeeVerts = new Vector3[n];
+            for (int i = 0; i < n; i++) parentTeeVerts[i] = innerRingInset[i] - centroid;
+            ClampChildVertsToParentEdge(verts, centroid, parentTeeVerts, centroid, n, -0.005f);
 
             var mesh = new Mesh();
             mesh.name = $"{label}Border_{id}";
