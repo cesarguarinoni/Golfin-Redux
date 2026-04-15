@@ -3778,19 +3778,20 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
-        /// Dilate a ContourPoint[] outward by `offset` meters using OffsetContourOutward
-        /// (which operates on the rotated world-XZ representation).
+        /// Dilate a ContourPoint[] outward by `offset` meters.
+        /// Geo importer: contour uses direct X/Z mapping (no 90° rotation,
+        /// unlike the Lite importer).
         /// </summary>
         private static ContourPoint[] DilateContour(ContourPoint[] contour, float offset)
         {
             int n = contour.Length;
             var worldXZ = new Vector3[n];
             for (int i = 0; i < n; i++)
-                worldXZ[i] = new Vector3(contour[i].z, 0, contour[i].x);
+                worldXZ[i] = new Vector3(contour[i].x, 0, contour[i].z);
             Vector3[] dilated = OffsetContourOutward(worldXZ, offset);
             var result = new ContourPoint[n];
             for (int i = 0; i < n; i++)
-                result[i] = new ContourPoint { x = dilated[i].z, z = dilated[i].x };
+                result[i] = new ContourPoint { x = dilated[i].x, z = dilated[i].z };
             return result;
         }
 
@@ -3832,7 +3833,7 @@ namespace Golfin.CourseImport
 
             var originalPoly = new Vector2[nc];
             for (int i = 0; i < nc; i++)
-                originalPoly[i] = new Vector2(contour[i].z, contour[i].x);
+                originalPoly[i] = new Vector2(contour[i].x, contour[i].z);
 
             var isInterior = new bool[rawVerts.Length];
             if (fringeEnabled)
@@ -3951,7 +3952,7 @@ namespace Golfin.CourseImport
 
             var originalPoly = new Vector2[nc];
             for (int i = 0; i < nc; i++)
-                originalPoly[i] = new Vector2(contour[i].z, contour[i].x);
+                originalPoly[i] = new Vector2(contour[i].x, contour[i].z);
 
             var isInterior = new bool[rawVerts.Length];
             if (borderEnabled)
