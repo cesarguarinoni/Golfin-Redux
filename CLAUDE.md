@@ -382,4 +382,5 @@ Quick rules:
 | `Docs/Game Design/GAMEPLAY_FORMULAS_PROPOSAL.md` | Simplified gameplay formulas (proposal) |
 | `Docs/GAME_DESIGN_AGENT.md` | AI agent for evaluating GDD systems |
 | `Docs/Archive/` | Completed phase specs |
+| `Docs/LESSONS_FRINGE_BORDER_MESHES.md` | **READ before touching fairway/tee fringe/border code.** Hard-won lessons on submesh baking, dilated CDT, and the Lite vs Geo importer trap. |
 | `tasks/lessons.md` | Accumulated corrections and patterns |
