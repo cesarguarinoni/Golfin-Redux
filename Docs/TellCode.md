@@ -8,209 +8,228 @@
 
 ---
 
-## Current Task — Derive Fringe/Border Y from Parent Mesh Edge (Not Terrain)
+## Current Task — Bake Fringe Into Fairway Mesh (Single Mesh, No Overlap)
 
-The fairway fringe ring and tee gradient border break on slopes
-because each mesh independently samples `terrain.SampleHeight()` at
-its own XZ. On a slope, the height difference between the parent
-mesh edge and the child ring at a 0.5m offset exceeds the tiny
-Y-offset gap (1-2cm), causing Z-fighting in both directions.
+Three separate-mesh approaches failed on slopes (Y-offset, clamp,
+parent-derivation). The fundamental problem: two overlapping meshes
+at slightly different XZ positions will ALWAYS disagree on terrain
+height on a slope. Z-buffer has to pick one, creating visual eating.
 
-**Previous attempt (clamp) failed** because the problem is
-bidirectional — sometimes the child eats the parent, sometimes the
-parent eats the child, depending on slope direction.
-
-**New approach:** Child meshes (fringe ring, tee gradient border)
-should NOT sample terrain at all. Instead, each child vertex derives
-its Y from the nearest parent mesh edge vertex, minus a fixed offset.
-This guarantees a consistent visual layering regardless of slope.
+**Solution:** Merge the fringe INTO the fairway mesh. One mesh, one
+set of vertices, one Z-buffer entry per pixel. No overlap at all.
 
 ### Concept
 
-For each child vertex at position (cx, cz):
-1. Find the nearest parent contour edge vertex (px, pz, py)
-2. Set child vertex Y = py - offset (e.g. 5mm below parent)
+Currently: fairway CDT mesh (contour boundary) + separate fringe
+ring mesh. Both overlap at the contour edge → Z-fight.
 
-The child mesh "drapes" from the parent edge downward, always below
-the parent surface. No terrain sampling means no slope-dependent
-height disagreements.
+New: CDT mesh with the DILATED fringe contour as outer boundary.
+Vertices inside the original fairway contour get fairway UVs.
+Vertices between original and dilated contour get fringe UVs.
+Single mesh, single material.
 
-### Step 1: Modify `CreateFringeRing()`
+### Step 1: Remove `CreateFringeRing()` Call
 
-Currently, fringe ring vertices sample terrain height:
+In `CreateFlatZoneMeshes()` (or wherever the fairway mesh is built),
+find where `CreateFringeRing` is called for each fairway region.
+Remove the call entirely — fringe will be part of the fairway mesh.
+
+Also remove `ClampChildVertsToParentEdge()` if it exists.
+
+### Step 2: Dilate Fairway Contour for Outer Boundary
+
+Before feeding the fairway contour to CDT, create a dilated copy.
+The dilation offset should match the current fringe width (0.5m).
+
 ```csharp
-float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-// vertex.y = terrainBaseY + th + yOffset;
+// Dilate contour outward by fringeWidth meters
+float fringeWidth = 0.5f;
+Vector2[] outerContour = DilateContour(contour, fringeWidth);
 ```
 
-Change this so fringe vertices derive Y from the fairway contour
-edge vertices instead. The fairway mesh's contour vertices (the
-outer boundary of the CDT mesh) are the "parent edge."
+`DilateContour` already exists or can be built from the existing
+dilation logic used for bunkers/cart paths. For each vertex, offset
+outward along the averaged normal of adjacent edges:
 
-**Implementation:** `CreateFringeRing` needs access to the parent
-fairway mesh's contour vertices (in world space). Pass them in as
-a parameter.
-
-Change the signature to accept the parent edge data:
 ```csharp
-private static void CreateFringeRing(
-    Vector2[] contour,
-    Terrain terrain, float terrainBaseY,
-    // ... existing params ...
-    Vector3[] parentEdgeWorldPositions,  // NEW: fairway contour verts in world space
-    float parentOffset)                  // NEW: how far below parent edge (e.g. -0.008f)
-```
-
-For each fringe vertex at (wx, wz), instead of sampling terrain:
-```csharp
-// OLD:
-// float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-// vert.y = terrainBaseY + th + fringeYOffset;
-
-// NEW: Find nearest parent edge vertex and derive Y from it
-float bestDistSq = float.MaxValue;
-float parentY = 0f;
-for (int p = 0; p < parentEdgeWorldPositions.Length; p++)
+private static Vector2[] DilateContour(Vector2[] contour, float offset)
 {
-    float dx = wx - parentEdgeWorldPositions[p].x;
-    float dz = wz - parentEdgeWorldPositions[p].z;
-    float dSq = dx * dx + dz * dz;
-    if (dSq < bestDistSq)
+    int n = contour.Length;
+    var result = new Vector2[n];
+    for (int i = 0; i < n; i++)
     {
-        bestDistSq = dSq;
-        parentY = parentEdgeWorldPositions[p].y;
+        // Previous and next edges
+        Vector2 prev = contour[(i - 1 + n) % n];
+        Vector2 curr = contour[i];
+        Vector2 next = contour[(i + 1) % n];
+
+        // Edge normals (outward — assuming CCW winding)
+        Vector2 e1 = (curr - prev).normalized;
+        Vector2 n1 = new Vector2(-e1.y, e1.x);
+        Vector2 e2 = (next - curr).normalized;
+        Vector2 n2 = new Vector2(-e2.y, e2.x);
+
+        // Average normal
+        Vector2 avgN = (n1 + n2).normalized;
+
+        // Handle sharp corners: limit offset to avoid spikes
+        float dot = Vector2.Dot(n1, avgN);
+        float scale = (dot > 0.1f) ? (1f / dot) : 1f;
+        scale = Mathf.Min(scale, 3f); // cap at 3x to avoid huge spikes
+
+        result[i] = curr + avgN * offset * scale;
+    }
+    return result;
+}
+```
+
+If the winding is CW instead of CCW, the normals will point inward.
+Check: if dilated contour is SMALLER than original, flip the normal
+direction (negate offset or swap the normal cross product).
+
+### Step 3: CDT with Outer Boundary
+
+Feed `outerContour` (not `contour`) as the CDT boundary. This
+makes the CDT triangulate the entire area including the fringe band.
+
+The CDT call should use the dilated contour as its input polygon.
+All vertices (both interior Steiner points and boundary vertices)
+sample terrain height as normal.
+
+### Step 4: UV Assignment — Fairway vs Fringe
+
+After CDT produces the mesh, classify each vertex as "fairway" or
+"fringe" by testing whether it's inside the ORIGINAL contour.
+
+```csharp
+// For each vertex in the CDT mesh:
+for (int i = 0; i < verts.Length; i++)
+{
+    // Convert vertex to 2D (world XZ → contour space)
+    Vector2 pt = new Vector2(
+        verts[i].x + centroid.x,  // world X
+        verts[i].z + centroid.z); // world Z
+
+    // NOTE: contour coords use the 90° CCW mapping (x→z, z→x)
+    // Make sure the point-in-polygon test uses the same space
+    // as the original contour points
+
+    if (IsInsideContour(pt.x, pt.y, originalContourWorld))
+    {
+        // Fairway UV: tile fairway texture
+        uvs[i] = ComputeFairwayUV(verts[i], centroid, ...);
+    }
+    else
+    {
+        // Fringe UV: tile fringe texture
+        uvs[i] = ComputeFringeUV(verts[i], centroid, ...);
     }
 }
-vert.y = parentY + parentOffset;  // e.g. parentY - 0.008f
 ```
 
-Then convert to local space as before (subtract centroid).
+### Step 5: Material — Two Textures via UV Region
 
-**Building parentEdgeWorldPositions:** After creating the fairway
-CDT mesh, extract the contour boundary vertices in world space.
-The CDT mesh's first N vertices correspond to the input contour
-points (before Steiner points are added). So:
+**Option A (simplest — recommended):** Use vertex colors to mark
+fairway vs fringe. Set vertex color R=1 for fairway, R=0 for fringe.
+Create a simple shader that lerps between two textures based on
+vertex color R. The shader receives both fairway and fringe textures
+as properties.
 
 ```csharp
-// After CDT mesh is built for fairway:
-var fairwayWorldEdge = new Vector3[contour.Length];
-for (int i = 0; i < contour.Length; i++)
+// Set vertex colors
+Color[] colors = new Color[verts.Length];
+for (int i = 0; i < verts.Length; i++)
 {
-    // CDT vertices are in local space relative to centroid
-    Vector3 local = fairwayMeshVerts[i];
-    fairwayWorldEdge[i] = local + fairwayCentroid;
-    // fairwayWorldEdge[i].y is already the correct world Y
-    // (terrainBaseY + terrainH + yOffset)
+    bool isFairway = IsInsideContour(...);
+    colors[i] = isFairway ? Color.red : Color.blue;
 }
+mesh.colors = colors;
 ```
 
-Pass `fairwayWorldEdge` and `-0.008f` to `CreateFringeRing`.
+Shader (URP Shader Graph or simple Lit variant):
+- Input: _MainTex (fairway), _FringeTex (fringe), vertex color
+- Output: lerp(_FringeTex, _MainTex, vertexColor.r)
 
-### Step 2: Modify `CreateGradientBorderRing()`
+**Option B (no shader change):** Use UV coordinates to map fairway
+vertices to a region of a texture atlas and fringe vertices to
+another region. This requires creating a combined atlas texture from
+T_Fairway_Light + T_Fringe. More work for same result.
 
-Same pattern. The tee gradient border should derive Y from the tee
-mesh's contour edge vertices instead of sampling terrain.
+**Recommendation: Option A.** A simple vertex-color-lerp shader is
+~10 lines of Shader Graph and keeps the textures separate (easier
+to swap/tune). If Shader Graph feels heavy, a surface shader or
+even a custom URP Lit variant works.
 
-Change `CreateGradientBorderRing` to accept parent edge data:
-```csharp
-private static void CreateGradientBorderRing(
-    Vector2[] contour,
-    Terrain terrain, float terrainBaseY,
-    // ... existing params ...
-    Vector3[] parentEdgeWorldPositions,
-    float parentOffset)
-```
+### Step 6: Same for Tee + Tee Border
 
-Same nearest-vertex lookup for each border vertex's Y.
+Apply the same pattern to tees:
+1. Remove `CreateGradientBorderRing()` call
+2. Dilate tee contour by border width
+3. CDT with dilated contour as outer boundary
+4. Vertex colors: inside original = tee, outside = border
+5. Same dual-texture shader (or a separate one with tee + border
+   textures)
 
-**Building parent edge for tees:** After `CreateFlatContourMesh`
-builds the tee mesh, extract its contour vertices in world space
-and pass to `CreateGradientBorderRing`.
-
-### Step 3: Handle the Inner Edge
-
-The fringe ring has TWO edges: the inner edge (touching the fairway)
-and the outer edge (extending into rough). Both need the fix, but
-they have different parent references:
-
-- **Inner edge vertices** (at the fairway contour): derive Y from
-  the fairway mesh edge. These must be BELOW the fairway surface.
-- **Outer edge vertices** (offset outward): these can still sample
-  terrain, OR derive from the same nearest parent edge vertex with
-  a slightly larger offset. Either works since the outer edge isn't
-  competing with the fairway mesh.
-
-Simplest approach: ALL fringe vertices derive Y from nearest parent
-edge vertex. The outer edge will follow the parent edge's height
-profile (slightly wrong vs actual terrain) but this is invisible
-because the fringe is only 0.5m wide — the terrain height difference
-across 0.5m is negligible compared to the visual improvement.
-
-Same logic applies to tee gradient border: all vertices derive from
-tee edge.
-
-### Step 4: Ensure SubdivideToTerrain Compatibility
-
-If `SubdivideToTerrain` is called on fringe/border meshes, the new
-subdivided midpoint vertices will sample terrain height — which
-defeats the purpose. Two options:
-
-**Option A (preferred):** Skip `SubdivideToTerrain` for fringe and
-border meshes entirely. They're narrow rings (0.5m wide) — terrain
-conformance over that distance is negligible. Just remove the
-subdivision call for these meshes.
-
-**Option B:** If subdivision is needed, modify the midpoint Y
-calculation to interpolate between the two parent vertices instead
-of sampling terrain.
-
-Go with Option A unless you see that fringe/border meshes currently
-call `SubdivideToTerrain` and removing it causes visible issues.
-
-### Summary of Changes
-
-| Method | Before | After |
-|--------|--------|-------|
-| `CreateFringeRing` | Samples `terrain.SampleHeight()` per vertex | Derives Y from nearest fairway edge vertex - 8mm |
-| `CreateGradientBorderRing` | Samples `terrain.SampleHeight()` per vertex | Derives Y from nearest tee edge vertex - 8mm |
-| Call site (fairway) | Calls `CreateFringeRing(contour, terrain, ...)` | Extracts fairway edge verts, passes to `CreateFringeRing` |
-| Call site (tee) | Calls `CreateGradientBorderRing(contour, terrain, ...)` | Extracts tee edge verts, passes to `CreateGradientBorderRing` |
+For the tee border, the "gradient" effect (current border fades from
+tee to rough color) can be approximated by using vertex color alpha
+as a distance-from-edge value: 1.0 at the original contour, 0.0
+at the outer edge. The shader blends accordingly.
 
 ### What NOT to Change
 
-- Fairway CDT mesh creation (parent mesh still samples terrain)
-- Tee flat contour mesh creation (parent mesh still samples terrain)
-- Green collar (different system, uses raised mesh)
-- Cart path meshes
-- Water, bunker meshes
+- Green collar (uses raised mesh — different system, not broken)
+- Cart path meshes (separate spline-based rework planned)
+- Water meshes
+- Bunker bowls
 - Depression system
-- Y-offset constants (0.01, 0.02, 0.03)
+- Splatmap painting
+- CDT triangulation logic itself (just feed it a different contour)
+
+### What to Remove
+
+- `CreateFringeRing()` method (or just stop calling it)
+- `CreateGradientBorderRing()` method (or just stop calling it)
+- `ClampChildVertsToParentEdge()` if it exists
+- Any fringe/border Y-offset constants that are no longer used
 
 ### Verification
 
 Re-import Hole 4 (steepest terrain):
 
-- [ ] Fairway fringe stays visually UNDER the fairway on all slopes
-- [ ] Tee border stays visually UNDER the tee on all slopes
-- [ ] No Z-fighting between parent and child meshes
-- [ ] On flat terrain (Hole 1), fringe/border look identical to before
-- [ ] No gaps between fringe outer edge and terrain
+- [ ] Fairway mesh includes fringe band — no separate fringe ring
+- [ ] Fringe texture visible around fairway edges
+- [ ] NO Z-fighting between fairway and fringe on any slope
+- [ ] Tee mesh includes border band — no separate border ring
+- [ ] NO Z-fighting between tee and border
+- [ ] On flat terrain (Hole 1), looks identical to before
 - [ ] No console errors
+- [ ] All overlay meshes still intact (greens, bunkers, water, etc.)
 
-Also reimport Hole 1 to confirm no regression on flatter terrain.
+### Notes for Implementation
 
-### Remove Previous Clamp Code
+- The `IsInsideContour` / point-in-polygon test already exists in the
+  codebase (used for splatmap painting). Reuse it.
+- CDT (BurstTriangulator) accepts any simple polygon as boundary.
+  The dilated contour is still a simple polygon as long as dilation
+  doesn't create self-intersections. At 0.5m dilation this should
+  not happen for golf-course-scale contours.
+- If CDT fails with the dilated contour (rare edge case), fall back
+  to the original contour without fringe — better than crashing.
 
-If `ClampChildVertsToParentEdge()` was added from the previous task,
-it can be removed — it's superseded by this approach.
+---
+
+## NEXT Task — Spline-Based Cart Path Meshes
+
+See `Docs/CART_PATH_SPLINE_PLAN.md` for full spec.
+Prerequisites: Splines package installed + spine data in export.
 
 ---
 
 ## Completed Tasks
-✅ 2026-04-15 — Fringe/border as submesh of parent CDT. Triangles within the band-width of the contour are assigned to submesh 1 (fringe/border material); shared vertices eliminate Z-fighting. Fairway fringe vertices duplicated with tile UVs to preserve mow stripes on interior. Tee border moved from outward → inward (inside tee). CreateFringeRing and CreateGradientBorderRing deleted.
-✅ 2026-04-15 — Derive fringe/border Y from parent mesh edge. CreateFringeRing and CreateGradientBorderRing no longer sample terrain; each vertex finds nearest parent contour edge point and uses parentY - 8mm. Call sites build parent edge from contour + terrain at the correct yOffset.
-✅ 2026-04-15 — Clamp fringe/border vertex Y (didn't fix — bidirectional Z-fighting on slopes)
-✅ 2026-04-14 — Water rework complete (flat CDT mesh + contour depression + deeper shore + 6 iterations of fixes)
+✅ 2026-04-15 — Bake fringe/border into parent mesh via dilated CDT. CreateFairwayMesh and CreateTeeMeshWithBorder now CDT a dilated contour; vertices classified by IsInsideContour vs the original polygon; triangles go to fairway/tee submesh or fringe/border submesh. Single mesh = no Z-fight. DEVIATION: used 2 submeshes instead of vertex-color blend shader (Option A). Hard material edge at the original contour — if visually poor, shader is follow-up.
+✅ 2026-04-15 — Clamp fringe/border vertex Y (didn't fix — bidirectional)
+✅ 2026-04-15 — Parent-derived Y for fringe/border (didn't fix — still bidirectional)
+✅ 2026-04-14 — Water rework complete (6 iterations)
 ✅ 2026-04-13 — Cart path flat depression + spine fixes
 ✅ 2026-04-13 — Natural OB↔Rough transition + Smooth OB
 ✅ 2026-04-12 — CDT triangulation for fairway/tee/cart path meshes
