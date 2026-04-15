@@ -73,3 +73,24 @@ Assets/Screenshots/
 # =========================
 
 **/node_modules/
+
+# =========================
+# Huge assets (over GitHub's 100MB limit or re-downloadable)
+# =========================
+
+# Third-party asset packs (re-downloadable from Asset Store)
+Assets/Packs/
+
+# Generated course scenes (regenerated from terrain data)
+Assets/Golf/Courses/*/Generated/
+
+# Original imported scene lightmaps & reflection probes
+Assets/Scenes/Original/
+
+# Large binary source files
+*.unitypackage
+*.psd
+*.tga
+*.TGA
+*.exr
+*.EXR

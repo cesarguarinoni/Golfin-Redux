@@ -589,88 +589,83 @@ async function generateHeightmapDEM(holeNumber, holeData, teesData, zonesData, e
     }
   }
 
-  // Add residual variation to non-playable zones (trees, OB, background)
-  // with a distance-based ramp to avoid hard discontinuity at boundary
-  const residualZones = new Set([
-    ZONES.trees, ZONES.ob, ZONES.background,
-  ]);
-  const RESIDUAL_FRACTION = 0.75;
-  const RESIDUAL_RAMP_CELLS = 60; // cells over which residual ramps from 0→100%
+  // --- Per-zone residual blending ---
+  // Blend DEM residual back with zone-specific fractions.
+  // Heavy blur removes 5m DEM grid noise, keeps large-scale slopes.
 
-  // Step A: Build playable mask at heightmap resolution
-  const isPlayable = new Uint8Array(RES * RES);
-  for (let hy = 0; hy < RES; hy++) {
-    for (let hx = 0; hx < RES; hx++) {
-      const nx = hx / (RES - 1);
-      const ny = hy / (RES - 1);
-      const zx = Math.min(zw - 1, Math.floor(nx * (zw - 1)));
-      const zy = Math.min(zh - 1, Math.floor(ny * (zh - 1)));
-      const zone = zoneGrid[zy * zw + zx];
-      if (!residualZones.has(zone)) {
-        isPlayable[hy * RES + hx] = 1;
+  const ZONE_RESIDUAL = {
+    [ZONES.green]:      { fraction: 0.0,  blur: 0  },
+    [ZONES.tee_box]:    { fraction: 0.0,  blur: 0  },
+    [ZONES.fairway]:    { fraction: 0.30, blur: 15 },
+    [ZONES.bunker]:     { fraction: 0.0,  blur: 0  },
+    [ZONES.cart_path]:  { fraction: 0.0,  blur: 0  },
+    [ZONES.semi_rough]: { fraction: 0.40, blur: 10 },
+    [ZONES.rough]:      { fraction: 0.50, blur: 8  },
+    [ZONES.water]:      { fraction: 0.0,  blur: 0  },
+    [ZONES.trees]:      { fraction: 0.75, blur: 5  },
+    [ZONES.ob]:         { fraction: 0.75, blur: 5  },
+    [ZONES.background]: { fraction: 0.75, blur: 5  },
+  };
+
+  // Per-cell residual: rawDem - quadratic
+  const residual = new Float64Array(RES * RES);
+  for (let i = 0; i < RES * RES; i++) {
+    residual[i] = rawDem[i] - heightmap[i];
+  }
+
+  for (const [zoneStr, cfg] of Object.entries(ZONE_RESIDUAL)) {
+    const zone = parseInt(zoneStr);
+    if (cfg.fraction <= 0) continue;
+
+    const mask = buildZoneMask(zoneGrid, zw, zh, zone, RES);
+
+    // Skip if zone has no cells
+    let hasCells = false;
+    for (let i = 0; i < RES * RES; i++) {
+      if (mask[i]) { hasCells = true; break; }
+    }
+    if (!hasCells) continue;
+
+    // Copy residual for this zone
+    const zoneRes = new Float64Array(RES * RES);
+    for (let i = 0; i < RES * RES; i++) {
+      zoneRes[i] = mask[i] ? residual[i] : 0;
+    }
+
+    // Zone-masked blur (same kernel as zoneMaskedSmooth)
+    let src = zoneRes;
+    for (let p = 0; p < cfg.blur; p++) {
+      const dst = new Float64Array(src);
+      for (let hy = 0; hy < RES; hy++) {
+        for (let hx = 0; hx < RES; hx++) {
+          const idx = hy * RES + hx;
+          if (!mask[idx]) continue;
+          let sum = 0, weight = 0;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              const nx = hx + dx, ny = hy + dy;
+              if (nx < 0 || nx >= RES || ny < 0 || ny >= RES) continue;
+              const w = (dx === 0 && dy === 0) ? 4 :
+                        (dx === 0 || dy === 0) ? 2 : 1;
+              sum += src[ny * RES + nx] * w;
+              weight += w;
+            }
+          }
+          dst[idx] = sum / weight;
+        }
+      }
+      src = dst;
+    }
+
+    // Blend blurred residual back into heightmap
+    for (let i = 0; i < RES * RES; i++) {
+      if (mask[i]) {
+        heightmap[i] += src[i] * cfg.fraction;
       }
     }
-  }
 
-  // Step B: Distance transform from playable boundary (chamfer)
-  const distFromPlay = new Float64Array(RES * RES);
-  for (let i = 0; i < RES * RES; i++) {
-    distFromPlay[i] = isPlayable[i] ? 0 : 1e9;
-  }
-  // Forward pass
-  for (let hy = 0; hy < RES; hy++) {
-    for (let hx = 0; hx < RES; hx++) {
-      const idx = hy * RES + hx;
-      if (hx > 0)
-        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[idx - 1] + 1);
-      if (hy > 0)
-        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy - 1) * RES + hx] + 1);
-      if (hx > 0 && hy > 0)
-        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy - 1) * RES + (hx - 1)] + 1.414);
-      if (hx < RES - 1 && hy > 0)
-        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy - 1) * RES + (hx + 1)] + 1.414);
-    }
-  }
-  // Backward pass
-  for (let hy = RES - 1; hy >= 0; hy--) {
-    for (let hx = RES - 1; hx >= 0; hx--) {
-      const idx = hy * RES + hx;
-      if (hx < RES - 1)
-        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[idx + 1] + 1);
-      if (hy < RES - 1)
-        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy + 1) * RES + hx] + 1);
-      if (hx < RES - 1 && hy < RES - 1)
-        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy + 1) * RES + (hx + 1)] + 1.414);
-      if (hx > 0 && hy < RES - 1)
-        distFromPlay[idx] = Math.min(distFromPlay[idx], distFromPlay[(hy + 1) * RES + (hx - 1)] + 1.414);
-    }
-  }
-
-  // Step C: Apply residual with ramped fraction
-  for (let hy = 0; hy < RES; hy++) {
-    for (let hx = 0; hx < RES; hx++) {
-      const idx = hy * RES + hx;
-      if (isPlayable[idx]) continue; // playable cells stay as quadratic
-
-      const dist = distFromPlay[idx];
-      // Smoothstep ramp: 0 at boundary → 1 at RESIDUAL_RAMP_CELLS
-      let t = Math.min(dist / RESIDUAL_RAMP_CELLS, 1.0);
-      t = t * t * (3 - 2 * t); // smoothstep
-
-      const fraction = RESIDUAL_FRACTION * t;
-      const surfH = evalQuadratic(holeSurface, hx, hy);
-      const rawH = rawDem[idx];
-      const residual = rawH - surfH;
-      heightmap[idx] = surfH + residual * fraction;
-    }
-  }
-
-  console.log(`  Residual ramp: ${RESIDUAL_RAMP_CELLS} cells transition, ` +
-    `${(RESIDUAL_FRACTION * 100).toFixed(0)}% max fraction`);
-
-  // Smooth residual zones to remove sharp DEM-grid bumps
-  for (const z of [ZONES.trees, ZONES.ob, ZONES.background]) {
-    zoneMaskedSmooth(heightmap, zoneGrid, zw, zh, z, 5, RES); // 5 passes for smooth rounded hills
+    const zoneName = Object.keys(ZONES).find(k => ZONES[k] === zone);
+    console.log(`    ${zoneName}: residual ${(cfg.fraction * 100).toFixed(0)}%, blur ${cfg.blur} passes`);
   }
 
   // Step 4: Green slope (same as Perlin path)

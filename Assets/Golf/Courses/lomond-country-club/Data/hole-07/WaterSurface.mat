@@ -87,7 +87,7 @@ Material:
     - _CausticsTiling3D: 0.5
     - _ColorMode: 0
     - _CullMode: 0
-    - _DepthEnd: 0.3
+    - _DepthEnd: 0.8
     - _DepthStart: 0
     - _DispMask: 0
     - _DisplacementMode: 0

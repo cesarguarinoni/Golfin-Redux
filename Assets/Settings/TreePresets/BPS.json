@@ -1,0 +1,1015 @@
+{
+    "minSpacing": 6.0,
+    "scaleMin": 0.8500000238418579,
+    "scaleMax": 1.149999976158142,
+    "sinkOffset": 0.30000001192092898,
+    "drawDistance": 150.0,
+    "billboardDistance": 80.0,
+    "crossFadeLength": 20.0,
+    "maxFullLODCount": 50,
+    "lod0": 0.15000000596046449,
+    "lod1": 0.05000000074505806,
+    "lod2": 0.009999999776482582,
+    "entries": [
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_02_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_02_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_03_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Ash 01.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Ash 02.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Ash/Ash 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Ash/Ash 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Ash/Ash 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Ash/Ash 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Ash/Ash 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Ash/Ash 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Ash/Ash 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Ash/Ash 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Aspen 01.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Aspen 02.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch 9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch Group 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch Group 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch Group 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch Group 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Birch/Birch Group 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch Group 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Chestnut/Chestnut 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Chestnut/Chestnut 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Chestnut/Chestnut 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Chestnut/Chestnut 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Chestnut/Chestnut 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Chestnut/Chestnut 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Chestnut/Chestnut 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Chestnut/Chestnut 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 04.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 05.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 06.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree01_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree02_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree_Sakura.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_01_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_02_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_Maple.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_MapleOrange.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_MapleRed.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_Maple_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01_NoLOD0.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Old 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Old 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Old 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Old 04.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Pine 01.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Pine 02.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Pine 03.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Pine 04.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Plane Tree 01.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Plane Tree 02.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Plane Tree 03.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Poplar 01.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Poplar 02.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Poplar 03.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 1.prefab",
+            "enabled": false,
+            "weight": 1.5,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 1.prefab",
+            "enabled": false,
+            "weight": 1.5,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce 9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce Group 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce Group 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce Group 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce Group 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Spruce/Spruce Group 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce Group 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Ash/The Great Ash Tree.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/The Great Ash Tree.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Weeping Willow/Weeping_Willow 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Weeping Willow/Weeping_Willow 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Weeping Willow/Weeping_Willow 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Weeping Willow/Weeping_Willow 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Weeping Willow/Weeping_Willow 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Weeping Willow/Weeping_Willow 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Weeping Willow/Weeping_Willow 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Objects/Weeping Willow/Weeping_Willow 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Willow 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Willow 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Willow 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Fir 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Fir 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Fir 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Fir 04.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Pine 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Pine 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Pine 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Pine 04.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        }
+    ],
+    "folderSettings": [
+        {
+            "folder": "BPS",
+            "minSpacing": 4.0,
+            "scaleMin": 0.8500000238418579,
+            "scaleMax": 1.149999976158142,
+            "sinkOffset": 0.30000001192092898
+        },
+        {
+            "folder": "Original",
+            "minSpacing": 4.0,
+            "scaleMin": 0.8500000238418579,
+            "scaleMax": 1.149999976158142,
+            "sinkOffset": 0.30000001192092898
+        }
+    ]
+}

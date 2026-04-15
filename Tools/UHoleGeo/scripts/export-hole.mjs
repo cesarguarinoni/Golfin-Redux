@@ -18,6 +18,49 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
+// Fields that describe absolute dimensions (not point coordinates) — their
+// children shouldn't have Z flipped.
+const SKIP_KEYS = new Set([
+  'size_m', 'size_normalized', 'center_normalized', 'meters_per_pixel',
+  'terrain_size', 'bbox', 'bounds', 'origin',
+]);
+
+// Recursively transform a JSON object from satellite-PNG coords (north at top,
+// +Y increases south) to Unity-terrain coords (+Z = north).
+//   - Arrays of {x, z} points: negate z on each. NOTE: do NOT reverse the
+//     array. Z negation already inverts winding from CCW (PNG) to CW (Unity),
+//     which is exactly what Unity's RecalculateNormals expects for an XZ
+//     surface to have +Y normals (up). Reversing would re-invert and produce
+//     downward normals → dark materials.
+//   - Standalone {x, z} objects: negate z only.
+//   - {mx, mz} tree points: negate mz only.
+//   - Skips dimension/size fields that don't represent directions.
+function flipToUnityZ(obj) {
+  if (Array.isArray(obj)) {
+    const isPointArray = obj.length > 0 && obj[0] &&
+      typeof obj[0].x === 'number' && typeof obj[0].z === 'number';
+    if (isPointArray) {
+      for (const p of obj) p.z = parseFloat((-p.z).toFixed(2));
+      return;
+    }
+    for (const item of obj) flipToUnityZ(item);
+    return;
+  }
+  if (obj && typeof obj === 'object') {
+    for (const key of Object.keys(obj)) {
+      if (SKIP_KEYS.has(key)) continue;
+      const val = obj[key];
+      if (val !== null && typeof val === 'object') flipToUnityZ(val);
+    }
+    if (typeof obj.x === 'number' && typeof obj.z === 'number') {
+      obj.z = parseFloat((-obj.z).toFixed(2));
+    }
+    if (typeof obj.mx === 'number' && typeof obj.mz === 'number') {
+      obj.mz = parseFloat((-obj.mz).toFixed(2));
+    }
+  }
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
@@ -1758,6 +1801,11 @@ async function exportHole(courseId, holeNumber, courseJson) {
 
   // --- Build anchors.json (local meter coordinates) ---
   const anchors = [];
+  const zonesDataForTees = JSON.parse(fs.readFileSync(path.join(holeDir, 'zones.json'), 'utf-8'));
+  const zwT = zonesDataForTees.source_dimensions.width;
+  const zhT = zonesDataForTees.source_dimensions.height;
+  const gridT = Buffer.from(zonesDataForTees.grid, 'base64');
+
   if (teesData && teesData.tees) {
     for (const t of teesData.tees) {
       if (!t.normalized) continue;
@@ -1770,11 +1818,72 @@ async function exportHole(courseId, holeNumber, courseJson) {
         },
       });
     }
+  } else if (holeData && holeData.tees) {
+    // Geo: no manually-placed tees.json. Auto-derive positions from painted
+    // zone 10 (tee_box) pixels. Place 4 tee markers stepped away from the
+    // green centroid (back furthest, ladies closest) along the tee→green line.
+    let teeSumX = 0, teeSumY = 0, teeCount = 0;
+    let grnSumX = 0, grnSumY = 0, grnCount = 0;
+    for (let y = 0; y < zhT; y++) {
+      for (let x = 0; x < zwT; x++) {
+        const z = gridT[y * zwT + x];
+        if (z === 10) { teeSumX += x; teeSumY += y; teeCount++; }
+        else if (z === 2) { grnSumX += x; grnSumY += y; grnCount++; }
+      }
+    }
+    if (teeCount > 0) {
+      const teeCx = teeSumX / teeCount;
+      const teeCy = teeSumY / teeCount;
+      // Green direction unit vector (in pixel space). Falls back to "north" if no green painted.
+      let dirX = 0, dirY = -1;
+      if (grnCount > 0) {
+        const grnCx = grnSumX / grnCount;
+        const grnCy = grnSumY / grnCount;
+        const dx = grnCx - teeCx;
+        const dy = grnCy - teeCy;
+        const len = Math.hypot(dx, dy);
+        if (len > 0.001) { dirX = dx / len; dirY = dy / len; }
+      }
+      // Step each tee 2m apart along the direction TOWARD green (ladies closest).
+      const stepM = 2.0;
+      const teeOrder = [
+        { key: 'back',    type: 'tee_back',    step: 0 },
+        { key: 'regular', type: 'tee_regular', step: 1 },
+        { key: 'front',   type: 'tee_front',   step: 2 },
+        { key: 'ladies',  type: 'tee_ladies',  step: 3 },
+      ];
+      // Convert pixel-space step to normalized step (steps in pixels along dir)
+      // pixels per meter ≈ zwT/tw and zhT/tl — average them
+      const pxPerMeter = (zwT / tw + zhT / tl) / 2;
+      for (const t of teeOrder) {
+        const tee = holeData.tees[t.key];
+        if (!tee) continue;
+        const stepPx = t.step * stepM * pxPerMeter;
+        const px = teeCx + dirX * stepPx;
+        const py = teeCy + dirY * stepPx;
+        const normX = px / (zwT - 1);
+        const normY = py / (zhT - 1);
+        anchors.push({
+          type: t.type,
+          label: `${t.key.charAt(0).toUpperCase() + t.key.slice(1)} Tee (${tee.yards}y)`,
+          local: {
+            x: parseFloat(((normX - 0.5) * tw).toFixed(1)),
+            z: parseFloat(((normY - 0.5) * tl).toFixed(1)),
+          },
+        });
+      }
+      console.log(`  Auto-derived ${anchors.length} tee anchors from painted zone 10 ` +
+        `(${teeCount} tee pixels, ${grnCount} green pixels)`);
+    } else {
+      console.log(`  No tees.json AND no painted tee zone — anchors.json will be empty`);
+    }
   }
 
+  const anchorsOut = JSON.parse(JSON.stringify(anchors));
+  flipToUnityZ(anchorsOut);
   fs.writeFileSync(
     path.join(exportDir, 'anchors.json'),
-    JSON.stringify(anchors, null, 2),
+    JSON.stringify(anchorsOut, null, 2),
     'utf-8'
   );
 
@@ -1792,9 +1901,11 @@ async function exportHole(courseId, holeNumber, courseJson) {
     bunkers: bunkers,
   };
 
+  const bunkersOut = JSON.parse(JSON.stringify(bunkersOutput));
+  flipToUnityZ(bunkersOut);
   fs.writeFileSync(
     path.join(exportDir, 'bunkers.json'),
-    JSON.stringify(bunkersOutput, null, 2),
+    JSON.stringify(bunkersOut, null, 2),
     'utf-8'
   );
 
@@ -1816,9 +1927,11 @@ async function exportHole(courseId, holeNumber, courseJson) {
     greens: greens,
   };
 
+  const greensOut = JSON.parse(JSON.stringify(greensOutput));
+  flipToUnityZ(greensOut);
   fs.writeFileSync(
     path.join(exportDir, 'greens.json'),
-    JSON.stringify(greensOutput, null, 2),
+    JSON.stringify(greensOut, null, 2),
     'utf-8'
   );
 
@@ -1839,9 +1952,11 @@ async function exportHole(courseId, holeNumber, courseJson) {
     fairways: fairways,
   };
 
+  const fairwayOut = JSON.parse(JSON.stringify(fairwayOutput));
+  flipToUnityZ(fairwayOut);
   fs.writeFileSync(
     path.join(exportDir, 'fairway-contours.json'),
-    JSON.stringify(fairwayOutput, null, 2),
+    JSON.stringify(fairwayOut, null, 2),
     'utf-8'
   );
 
@@ -1879,9 +1994,11 @@ async function exportHole(courseId, holeNumber, courseJson) {
     },
   };
 
+  const zoneContoursOut = JSON.parse(JSON.stringify(zoneContoursOutput));
+  flipToUnityZ(zoneContoursOut);
   fs.writeFileSync(
     path.join(exportDir, 'zone-contours.json'),
-    JSON.stringify(zoneContoursOutput, null, 2),
+    JSON.stringify(zoneContoursOut, null, 2),
     'utf-8'
   );
 
@@ -1898,9 +2015,11 @@ async function exportHole(courseId, holeNumber, courseJson) {
     cart_paths: cartPaths,
   };
 
+  const cartPathsOut = JSON.parse(JSON.stringify(cartPathsOutput));
+  flipToUnityZ(cartPathsOut);
   fs.writeFileSync(
     path.join(exportDir, 'cart-paths.json'),
-    JSON.stringify(cartPathsOutput, null, 2),
+    JSON.stringify(cartPathsOut, null, 2),
     'utf-8'
   );
 
@@ -1919,9 +2038,11 @@ async function exportHole(courseId, holeNumber, courseJson) {
     water: water,
   };
 
+  const waterOut = JSON.parse(JSON.stringify(waterOutput));
+  flipToUnityZ(waterOut);
   fs.writeFileSync(
     path.join(exportDir, 'water.json'),
-    JSON.stringify(waterOutput, null, 2),
+    JSON.stringify(waterOut, null, 2),
     'utf-8'
   );
 
@@ -1936,17 +2057,31 @@ async function exportHole(courseId, holeNumber, courseJson) {
   const maskW = zonesData.source_dimensions.width;
   const maskH = zonesData.source_dimensions.height;
   const mergedBuf = Buffer.from(zonesData.grid, 'base64');
+  const terrainBuf = zonesData.terrain_grid
+    ? Buffer.from(zonesData.terrain_grid, 'base64')
+    : mergedBuf; // legacy fallback
   const treesMaskBuf = zonesData.trees_mask
     ? Buffer.from(zonesData.trees_mask, 'base64') : null;
 
+  // Forbidden underlying terrain zones — trees never spawn on these even if
+  // the user painted a tree overlay on top.
+  const FORBIDDEN_TERRAIN = new Set([1, 2, 6, 7, 8, 10]);
+  // (fairway, green, bunker, water, cart_path, tee_box)
+
   const treeGrid = Buffer.alloc(maskW * maskH);
   const treeMask = Buffer.alloc(maskW * maskH);
+  let blocked = 0;
   for (let i = 0; i < mergedBuf.length; i++) {
     const isTree = mergedBuf[i] === 5 || (treesMaskBuf && treesMaskBuf[i]);
     if (isTree) {
+      // Block trees if the UNDERLYING terrain is fairway/green/path/etc.
+      if (FORBIDDEN_TERRAIN.has(terrainBuf[i])) { blocked++; continue; }
       treeGrid[i] = 5;
       treeMask[i] = 1;
     }
+  }
+  if (blocked > 0) {
+    console.log(`  Tree mask: ${blocked} pixels blocked (terrain is fairway/path/etc.)`);
   }
 
   const treeRegions = extractZoneContours(
@@ -1979,9 +2114,11 @@ async function exportHole(courseId, holeNumber, courseJson) {
     })),
   };
 
+  const treeZonesOut = JSON.parse(JSON.stringify(treeZonesOutput));
+  flipToUnityZ(treeZonesOut);
   fs.writeFileSync(
     path.join(exportDir, 'tree-zones.json'),
-    JSON.stringify(treeZonesOutput, null, 2),
+    JSON.stringify(treeZonesOut, null, 2),
     'utf-8'
   );
 

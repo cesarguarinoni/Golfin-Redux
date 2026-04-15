@@ -1,0 +1,3609 @@
+{
+    "minSpacing": 6.0,
+    "scaleMin": 0.8500000238418579,
+    "scaleMax": 1.149999976158142,
+    "sinkOffset": 0.30000001192092898,
+    "drawDistance": 150.0,
+    "billboardDistance": 80.0,
+    "crossFadeLength": 20.0,
+    "maxFullLODCount": 50,
+    "lod0": 0.15000000596046449,
+    "lod1": 0.05000000074505806,
+    "lod2": 0.009999999776482582,
+    "entries": [
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Bush_Simple_01_A.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Bush_Simple_01_B.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Bush_Simple_01_C.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Bush_Simple_01_D.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Tree_Simple_01_A.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Tree_Simple_01_B.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Tree_Simple_02_A.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Tree_Simple_02_B.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Tree_Simple_02_C.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Tree_Simple_03_A.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Tree_Simple_03_B.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Tree_Simple_03_C.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Simple/SM_Plant_Tree_Simple_04_A.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Ash 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Ash 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/Ash 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Aspen 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Aspen 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch 9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch Group 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch Group 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Birch/Birch Group 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Chestnut/Chestnut 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 04.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 05.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 06.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/Flower_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/Flower_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/Flower_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/Flowers_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/Flowers_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/Flowers_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/ForestPine_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/ForestPine_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/ForestPine_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/Grass_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree01_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree02_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_CherryTree_Sakura.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_02_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_01_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_02_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseRed_03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_Maple.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_MapleOrange.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_MapleRed.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_Maple_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01_NoLOD0.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_02_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_03_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/LODs/M_P10_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_10/M_P10_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/M_P11_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_11/LODs/M_P11_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_17.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_17.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_4.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_4.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_5.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_5.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_6.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_6.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_7.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_7.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_8.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_8.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/M_P12_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_12/LODs/M_P12_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_1.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_1.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_10.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_10.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_4.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_4.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_5.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_5.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_6.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_6.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_7.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_7.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_8.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_8.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/LODs/M_P13_Tree_9.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_13/M_P13_Tree_9.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_1.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_1.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_10.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_10.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_4.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_4.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_5.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_5.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_6.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_6.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_7.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_7.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_8.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_8.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/LODs/M_P14_Tree_9.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_14/M_P14_Tree_9.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_1.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_1.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_10.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_10.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_4.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_4.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_5.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_5.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_6.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/LODs/M_P15_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_15/M_P15_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_18.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_18.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_19.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_19.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_20.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_20.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/LODs/M_P1_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_1/M_P1_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_18.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_18.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/M_P2_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_2/LODs/M_P2_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/LODs/M_P3_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_3/M_P3_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/LODs/M_P4_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_4/M_P4_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/M_P5_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_5/LODs/M_P5_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/M_P6_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_6/LODs/M_P6_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/LODs/M_P7_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/M_P7_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/M_P8_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_8/LODs/M_P8_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_11.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_12.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_13.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_14.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_15.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_16.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_17.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_18.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_18.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_19.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_19.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_20.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_20.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/M_P9_Tree_9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_9/LODs/M_P9_Tree_9.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia_Var1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/MountainPine_1.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/MountainPine_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/MountainPine_3.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Old 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Old 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Old 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Old 04.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Pine 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Pine 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Pine 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Pine 04.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Plane Tree 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Plane Tree 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Plane Tree 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Poplar 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Poplar 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Poplar 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/Rock01.prefab",
+            "enabled": true,
+            "weight": 0.20000000298023225,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/Rock02.prefab",
+            "enabled": true,
+            "weight": 0.20000000298023225,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/RocksPebbles.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/SmallPine_1.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/SmallPine_2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 1.prefab",
+            "enabled": false,
+            "weight": 1.5,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 9.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce Group 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce Group 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce Group 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/SprucePine.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Ash/The Great Ash Tree.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Mobile/M_Tree_7/Tree_10.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 1.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 2.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 3.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 4.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 5.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 6.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 7.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Weeping Willow/Weeping_Willow 8.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Willow 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Willow 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Willow 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Fir 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Fir 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Fir 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Fir 04.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Pine 01.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Pine 02.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Pine 03.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Winter Pine 04.prefab",
+            "enabled": false,
+            "weight": 1.0,
+            "standalone": false
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/grass1.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        },
+        {
+            "path": "Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Pine Trees/grass2.prefab",
+            "enabled": true,
+            "weight": 1.0,
+            "standalone": true
+        }
+    ],
+    "folderSettings": [
+        {
+            "folder": "BPS",
+            "minSpacing": 6.0,
+            "scaleMin": 0.8500000238418579,
+            "scaleMax": 1.149999976158142,
+            "sinkOffset": 0.30000001192092898
+        },
+        {
+            "folder": "Original",
+            "minSpacing": 4.0,
+            "scaleMin": 0.8500000238418579,
+            "scaleMax": 1.149999976158142,
+            "sinkOffset": 0.30000001192092898
+        },
+        {
+            "folder": "Mobile",
+            "minSpacing": 6.0,
+            "scaleMin": 0.8500000238418579,
+            "scaleMax": 1.149999976158142,
+            "sinkOffset": 0.30000001192092898
+        },
+        {
+            "folder": "Pine Trees",
+            "minSpacing": 4.0,
+            "scaleMin": 2.0,
+            "scaleMax": 2.299999952316284,
+            "sinkOffset": 0.30000001192092898
+        }
+    ]
+}

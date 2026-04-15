@@ -1,0 +1,29 @@
+{
+  "course_id": "lomond-country-club",
+  "display_name": "Lomond Country Club",
+  "native_name": "ローモンドカントリー倶楽部",
+
+  "center": {
+    "lat": 34.907,
+    "lon": 136.432
+  },
+
+  "sources": {
+    "official_url": "https://www.lomond-cc.com/course/",
+    "gora_url": "https://booking.gora.golf.rakuten.co.jp/guide/course_info/disp/c_id/240078"
+  },
+
+  "gsi_zoom_default": 18,
+
+  "terrain_defaults": {
+    "course_type": "hilly",
+    "elevation_profile": "moderate",
+    "base_undulation_m": 8,
+    "noise_frequency": 0.012,
+    "green_flatness": 0.15,
+    "bunker_depth_m": 3.0,
+    "bunker_lip_m": 0.8,
+    "tree_ridge_m": 3.0,
+    "tee_to_green_drop_range_m": [3, 15]
+  }
+}

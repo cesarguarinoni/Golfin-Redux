@@ -19,6 +19,22 @@ namespace Golfin.CourseImport
         public float weight;      // relative spawn weight
         public bool standalone;   // true = instantiate as GameObject; false = terrain tree system
         public bool hasLODGroup;  // auto-detected from prefab
+        public string folder;     // subfolder name under Trees2025_Prefabs (or "Root")
+    }
+
+    /// <summary>
+    /// Per-folder placement settings. Each subfolder of Trees2025_Prefabs
+    /// gets its own values so different tree types can have their own
+    /// spacing / scale / sink (e.g., European trees scale differently
+    /// from Japanese cedar).
+    /// </summary>
+    [System.Serializable]
+    public class FolderPlacementSettings
+    {
+        public float minSpacing = 6f;
+        public float scaleMin = 0.85f;
+        public float scaleMax = 1.15f;
+        public float sinkOffset = 0.3f;
     }
 
     /// <summary>
@@ -58,7 +74,12 @@ namespace Golfin.CourseImport
         // The dynamic tree palette — populated by ScanPrefabs()
         public static List<TreeEntry> TreePalette = new List<TreeEntry>();
 
-        // Placement settings
+        // Per-folder placement settings — lazily created per encountered folder.
+        // Key is TreeEntry.folder (subfolder name or "Root").
+        public static Dictionary<string, FolderPlacementSettings> PerFolder =
+            new Dictionary<string, FolderPlacementSettings>();
+
+        // Default placement settings (seed new folder entries + back-compat)
         public static float MinSpacing = 6f;
         public static float ScaleMin = 0.85f;
         public static float ScaleMax = 1.15f;
@@ -66,6 +87,41 @@ namespace Golfin.CourseImport
         // Sink offset — pushes trees below terrain surface to prevent
         // trunk bases from floating on slopes/ledges (meters)
         public static float SinkOffset = 0.3f;
+
+        /// <summary>
+        /// Get (or lazily create) placement settings for a given folder.
+        /// New folders seed their values from the current globals.
+        /// </summary>
+        public static FolderPlacementSettings GetFolderSettings(string folder)
+        {
+            if (string.IsNullOrEmpty(folder)) folder = "Root";
+            if (!PerFolder.TryGetValue(folder, out var s))
+            {
+                s = new FolderPlacementSettings
+                {
+                    minSpacing = MinSpacing,
+                    scaleMin = ScaleMin,
+                    scaleMax = ScaleMax,
+                    sinkOffset = SinkOffset,
+                };
+                PerFolder[folder] = s;
+            }
+            return s;
+        }
+
+        /// <summary>
+        /// Return all folder names currently in the palette (sorted),
+        /// containing at least one prefab.
+        /// </summary>
+        public static List<string> GetFolderTabs()
+        {
+            var set = new HashSet<string>();
+            foreach (var e in TreePalette)
+                if (!string.IsNullOrEmpty(e.folder)) set.Add(e.folder);
+            var list = set.ToList();
+            list.Sort(System.StringComparer.Ordinal);
+            return list;
+        }
 
         // Draw distance settings
         public static float DrawDistance = 150f;
@@ -120,6 +176,18 @@ namespace Golfin.CourseImport
 
                     string fileName = Path.GetFileNameWithoutExtension(assetPath);
 
+                    // Derive subfolder relative to the scanned base folder.
+                    // e.g. "Assets/.../Trees2025_Prefabs/European/Foo.prefab" → "European"
+                    // Prefabs directly in the base folder → "Root".
+                    string subFolder = "Root";
+                    if (assetPath.Length > folder.Length + 1 &&
+                        assetPath.StartsWith(folder + "/"))
+                    {
+                        string rel = assetPath.Substring(folder.Length + 1);
+                        int slash = rel.IndexOf('/');
+                        if (slash > 0) subFolder = rel.Substring(0, slash);
+                    }
+
                     // Auto-detect LODGroup on root (not children — terrain trees
                     // need it on root to work)
                     bool hasRootLOD = prefab.GetComponent<LODGroup>() != null;
@@ -129,6 +197,7 @@ namespace Golfin.CourseImport
                     {
                         prev.prefab = prefab;
                         prev.hasLODGroup = hasRootLOD;
+                        prev.folder = subFolder;
                         TreePalette.Add(prev);
                     }
                     else
@@ -143,6 +212,7 @@ namespace Golfin.CourseImport
                             weight = isDefault ? w : 1f,
                             hasLODGroup = hasRootLOD,
                             standalone = forceStandalone || !hasRootLOD,
+                            folder = subFolder,
                         });
                     }
                 }
@@ -169,18 +239,23 @@ namespace Golfin.CourseImport
         /// don't appear on fairways, greens, bunkers, tees, water, or cart paths.
         /// Returns world-space Vector2[] polygons (x=worldX, y=worldZ).
         /// </summary>
-        private static List<Vector2[]> BuildExclusionPolygons(string exportPath)
+        private static List<Vector2[]> BuildExclusionPolygons(string exportPath, bool isGeo = false)
         {
             var polygons = new List<Vector2[]>();
             float margin = 1.0f; // extra margin around overlays
 
-            // Helper: convert ContourPoint[] to world-space polygon
-            // Contour coords use 90° CCW rotation: worldX = pt.z, worldZ = pt.x
+            // Helper: convert ContourPoint[] to world-space polygon.
+            // Lite: contour stores pre-rotation coords → world = (z, x) (90° CCW).
+            // Geo:  contour stores Unity-ready coords → world = (x, z) (no rotation).
             System.Func<ContourPoint[], Vector2[]> contourToWorld = (contour) =>
             {
                 var poly = new Vector2[contour.Length];
                 for (int i = 0; i < contour.Length; i++)
-                    poly[i] = new Vector2(contour[i].z, contour[i].x);
+                {
+                    poly[i] = isGeo
+                        ? new Vector2(contour[i].x, contour[i].z)
+                        : new Vector2(contour[i].z, contour[i].x);
+                }
                 return poly;
             };
 
@@ -208,7 +283,7 @@ namespace Golfin.CourseImport
                             polygons.Add(contourToWorld(region.contour));
             }
 
-            // Bunker contours
+            // Bunker contours (bunker vertex type has same x/z fields as ContourPoint)
             string bkPath = Path.Combine(exportPath, "bunkers.json");
             if (File.Exists(bkPath))
             {
@@ -220,7 +295,11 @@ namespace Golfin.CourseImport
                         {
                             var poly = new Vector2[bk.contour.Length];
                             for (int i = 0; i < bk.contour.Length; i++)
-                                poly[i] = new Vector2(bk.contour[i].z, bk.contour[i].x);
+                            {
+                                poly[i] = isGeo
+                                    ? new Vector2(bk.contour[i].x, bk.contour[i].z)
+                                    : new Vector2(bk.contour[i].z, bk.contour[i].x);
+                            }
                             polygons.Add(poly);
                         }
             }
@@ -237,7 +316,11 @@ namespace Golfin.CourseImport
                         {
                             var poly = new Vector2[gr.contour.Length];
                             for (int i = 0; i < gr.contour.Length; i++)
-                                poly[i] = new Vector2(gr.contour[i].z, gr.contour[i].x);
+                            {
+                                poly[i] = isGeo
+                                    ? new Vector2(gr.contour[i].x, gr.contour[i].z)
+                                    : new Vector2(gr.contour[i].z, gr.contour[i].x);
+                            }
                             polygons.Add(poly);
                         }
             }
@@ -269,7 +352,7 @@ namespace Golfin.CourseImport
                             float halfWidth = (cp.width_m > 0
                                 ? cp.width_m : 2.5f) / 2f + margin;
                             var spinePoly = BuildSpinePolygonForExclusion(
-                                cp.spine, halfWidth);
+                                cp.spine, halfWidth, isGeo);
                             if (spinePoly != null)
                                 polygons.Add(spinePoly);
                         }
@@ -290,7 +373,7 @@ namespace Golfin.CourseImport
         /// Returns world-space Vector2[] (x=worldX, y=worldZ).
         /// </summary>
         private static Vector2[] BuildSpinePolygonForExclusion(
-            ContourPoint[] spine, float halfWidth)
+            ContourPoint[] spine, float halfWidth, bool isGeo = false)
         {
             int n = spine.Length;
             if (n < 2) return null;
@@ -300,16 +383,26 @@ namespace Golfin.CourseImport
 
             for (int i = 0; i < n; i++)
             {
-                float cx = spine[i].z;  // 90° CCW
-                float cz = spine[i].x;
+                // Lite: 90° CCW (worldX = .z, worldZ = .x). Geo: direct (worldX = .x, worldZ = .z).
+                float cx = isGeo ? spine[i].x : spine[i].z;
+                float cz = isGeo ? spine[i].z : spine[i].x;
 
                 float tx, tz;
                 if (i == 0)
-                { tx = spine[1].z - spine[0].z; tz = spine[1].x - spine[0].x; }
+                {
+                    tx = isGeo ? (spine[1].x - spine[0].x) : (spine[1].z - spine[0].z);
+                    tz = isGeo ? (spine[1].z - spine[0].z) : (spine[1].x - spine[0].x);
+                }
                 else if (i == n - 1)
-                { tx = spine[n-1].z - spine[n-2].z; tz = spine[n-1].x - spine[n-2].x; }
+                {
+                    tx = isGeo ? (spine[n-1].x - spine[n-2].x) : (spine[n-1].z - spine[n-2].z);
+                    tz = isGeo ? (spine[n-1].z - spine[n-2].z) : (spine[n-1].x - spine[n-2].x);
+                }
                 else
-                { tx = spine[i+1].z - spine[i-1].z; tz = spine[i+1].x - spine[i-1].x; }
+                {
+                    tx = isGeo ? (spine[i+1].x - spine[i-1].x) : (spine[i+1].z - spine[i-1].z);
+                    tz = isGeo ? (spine[i+1].z - spine[i-1].z) : (spine[i+1].x - spine[i-1].x);
+                }
 
                 float tLen = Mathf.Sqrt(tx * tx + tz * tz);
                 if (tLen > 0.001f) { tx /= tLen; tz /= tLen; }
@@ -367,7 +460,8 @@ namespace Golfin.CourseImport
         public static void PlaceTrees(
             Terrain terrain, float terrainBaseY,
             string exportPath, string zonesJsonPath,
-            Transform parentRoot = null)
+            Transform parentRoot = null,
+            bool isGeo = false)
         {
             string tzPath = Path.Combine(exportPath, "tree-zones.json");
             if (!File.Exists(tzPath))
@@ -401,7 +495,7 @@ namespace Golfin.CourseImport
             }
 
             // Build exclusion polygons from overlay mesh contours
-            var exclusionPolygons = BuildExclusionPolygons(exportPath);
+            var exclusionPolygons = BuildExclusionPolygons(exportPath, isGeo);
 
             var terrainData = terrain.terrainData;
             float tWidth = terrainData.size.x;
@@ -446,15 +540,6 @@ namespace Golfin.CourseImport
                 terrainData.treePrototypes = protos;
             }
 
-            // Build cumulative weight array (over ALL active entries)
-            float totalWeight = 0;
-            var cumulativeWeights = new float[activeEntries.Count];
-            for (int i = 0; i < activeEntries.Count; i++)
-            {
-                totalWeight += activeEntries[i].weight;
-                cumulativeWeights[i] = totalWeight;
-            }
-
             // Standalone container
             GameObject standaloneContainer = null;
             if (standaloneEntries.Count > 0)
@@ -464,117 +549,184 @@ namespace Golfin.CourseImport
                     standaloneContainer.transform.SetParent(parentRoot);
             }
 
-            // ---- Poisson disk sampling (grid-jitter approximation) ----
+            // ---- Per-folder placement passes ----
+            // Each folder uses its own FolderPlacementSettings (spacing, scale,
+            // sink). Folders can overlap spatially since each has its own grid.
             var terrainTrees = new List<TreeInstance>();
             int standaloneCount = 0;
-            var rng = new System.Random(42);
             var typeCounts = new int[activeEntries.Count];
 
-            float cellSize = MinSpacing;
-            int cellsX = Mathf.FloorToInt(tWidth / cellSize);
-            int cellsZ = Mathf.FloorToInt(tLength / cellSize);
+            // Build lookup: activeEntry → index, for typeCounts
+            var entryIndexLookup = new Dictionary<TreeEntry, int>();
+            for (int i = 0; i < activeEntries.Count; i++)
+                entryIndexLookup[activeEntries[i]] = i;
 
-            for (int cz = 0; cz < cellsZ; cz++)
+            // Group active entries by folder
+            var folderGroups = activeEntries
+                .GroupBy(e => string.IsNullOrEmpty(e.folder) ? "Root" : e.folder)
+                .OrderBy(g => g.Key, System.StringComparer.Ordinal)
+                .ToList();
+
+            int folderPassIdx = 0;
+            foreach (var grp in folderGroups)
             {
-                for (int cx = 0; cx < cellsX; cx++)
+                var folderEntries = grp.ToList();
+                var fSettings = GetFolderSettings(grp.Key);
+                var rng = new System.Random(42 + folderPassIdx * 37);
+                folderPassIdx++;
+
+                // Per-folder cumulative weights
+                float totalWeight = 0f;
+                var cumulativeWeights = new float[folderEntries.Count];
+                for (int i = 0; i < folderEntries.Count; i++)
                 {
-                    float worldX = (cx + (float)rng.NextDouble()) * cellSize;
-                    float worldZ = (cz + (float)rng.NextDouble()) * cellSize;
+                    totalWeight += folderEntries[i].weight;
+                    cumulativeWeights[i] = totalWeight;
+                }
+                if (totalWeight <= 0f) continue;
 
-                    float nx = worldX / tWidth;
-                    float nz = worldZ / tLength;
-                    if (nx < 0 || nx >= 1 || nz < 0 || nz >= 1) continue;
+                float cellSize = Mathf.Max(0.5f, fSettings.minSpacing);
+                int cellsX = Mathf.FloorToInt(tWidth / cellSize);
+                int cellsZ = Mathf.FloorToInt(tLength / cellSize);
 
-                    // Check tree mask (90° CCW rotation matching splatmap pipeline)
-                    int maskX = Mathf.Clamp(
-                        Mathf.FloorToInt(nz * maskW), 0, maskW - 1);
-                    int maskY = Mathf.Clamp(
-                        Mathf.FloorToInt(nx * maskH), 0, maskH - 1);
-                    if (mask[maskY * maskW + maskX] == 0) continue;
-
-                    // Zone grid exclusion
-                    if (zoneGrid != null)
+                for (int cz = 0; cz < cellsZ; cz++)
+                {
+                    for (int cx = 0; cx < cellsX; cx++)
                     {
-                        int zx = Mathf.Clamp(
-                            Mathf.FloorToInt(nz * zoneW), 0, zoneW - 1);
-                        int zy = Mathf.Clamp(
-                            Mathf.FloorToInt(nx * zoneH), 0, zoneH - 1);
-                        int zone = zoneGrid[zy * zoneW + zx];
-                        if (ExcludeZones.Contains(zone)) continue;
-                    }
+                        float worldX = (cx + (float)rng.NextDouble()) * cellSize;
+                        float worldZ = (cz + (float)rng.NextDouble()) * cellSize;
 
-                    // Overlay mesh polygon exclusion (catches cart paths
-                    // and any overlay that extends beyond zone grid pixels)
-                    if (exclusionPolygons.Count > 0)
-                    {
-                        float absX = worldX + terrain.transform.position.x;
-                        float absZ = worldZ + terrain.transform.position.z;
-                        if (IsInsideAnyOverlay(absX, absZ, exclusionPolygons))
-                            continue;
-                    }
+                        float nx = worldX / tWidth;
+                        float nz = worldZ / tLength;
+                        if (nx < 0 || nx >= 1 || nz < 0 || nz >= 1) continue;
 
-                    // Pick prototype (weighted random)
-                    float roll = (float)rng.NextDouble() * totalWeight;
-                    int entryIdx = 0;
-                    for (int i = 0; i < cumulativeWeights.Length; i++)
-                    {
-                        if (roll <= cumulativeWeights[i])
+                        // Check tree mask (90° CCW rotation matching splatmap pipeline)
+                        // Map terrain (nx=east frac, nz=north frac) to mask pixel.
+                        // Lite: 90° rotated → maskX=nz, maskY=nx.
+                        // Geo: direct X, flipped Y (mask Y=0 is north of PNG, terrain nz=1 is north).
+                        int maskX, maskY;
+                        if (isGeo)
                         {
-                            entryIdx = i;
-                            break;
+                            maskX = Mathf.Clamp(Mathf.FloorToInt(nx * maskW), 0, maskW - 1);
+                            maskY = Mathf.Clamp(Mathf.FloorToInt((1f - nz) * maskH), 0, maskH - 1);
                         }
-                    }
-
-                    float scale = ScaleMin +
-                        (float)rng.NextDouble() * (ScaleMax - ScaleMin);
-                    float rotDeg = (float)rng.NextDouble() * 360f;
-
-                    // Sample terrain height
-                    Vector3 worldPos = new Vector3(
-                        worldX + terrain.transform.position.x,
-                        0f,
-                        worldZ + terrain.transform.position.z);
-                    float terrainH = terrain.SampleHeight(worldPos);
-
-                    typeCounts[entryIdx]++;
-
-                    if (terrainProtoMap[entryIdx] >= 0)
-                    {
-                        // ---- Terrain tree ----
-                        float ny = Mathf.Max(0f,
-                            (terrainH - SinkOffset) / terrainData.size.y);
-                        terrainTrees.Add(new TreeInstance
+                        else
                         {
-                            position = new Vector3(nx, ny, nz),
-                            widthScale = scale,
-                            heightScale = scale,
-                            rotation = rotDeg * Mathf.Deg2Rad,
-                            color = Color.white,
-                            lightmapColor = Color.white,
-                            prototypeIndex = terrainProtoMap[entryIdx],
-                        });
-                    }
-                    else
-                    {
-                        // ---- Standalone tree ----
-                        // Use Object.Instantiate (not PrefabUtility) to break
-                        // the prefab link so LODGroup overrides stick.
-                        var entry = activeEntries[entryIdx];
-                        var instance = Object.Instantiate(entry.prefab);
-                        instance.name = $"{entry.name}_{standaloneCount}";
+                            maskX = Mathf.Clamp(Mathf.FloorToInt(nz * maskW), 0, maskW - 1);
+                            maskY = Mathf.Clamp(Mathf.FloorToInt(nx * maskH), 0, maskH - 1);
+                        }
+                        if (mask[maskY * maskW + maskX] == 0) continue;
 
-                        float y = terrainBaseY + terrainH - SinkOffset;
-                        instance.transform.position = new Vector3(
-                            worldPos.x, y, worldPos.z);
-                        instance.transform.rotation =
-                            Quaternion.Euler(0f, rotDeg, 0f);
-                        instance.transform.localScale = Vector3.one * scale;
+                        // Zone grid exclusion. Check a small radius around the
+                        // tree candidate so trees stay clear of zone boundaries
+                        // (cart paths, fairway edges) instead of landing right
+                        // against them. Radius is ~1.0m on ground.
+                        if (zoneGrid != null)
+                        {
+                            int zx, zy;
+                            if (isGeo)
+                            {
+                                zx = Mathf.Clamp(Mathf.FloorToInt(nx * zoneW), 0, zoneW - 1);
+                                zy = Mathf.Clamp(Mathf.FloorToInt((1f - nz) * zoneH), 0, zoneH - 1);
+                            }
+                            else
+                            {
+                                zx = Mathf.Clamp(Mathf.FloorToInt(nz * zoneW), 0, zoneW - 1);
+                                zy = Mathf.Clamp(Mathf.FloorToInt(nx * zoneH), 0, zoneH - 1);
+                            }
+                            // Compute search radius in zone-grid pixels (~1m)
+                            float pxPerMeter = (zoneW / tWidth + zoneH / tLength) / 2f;
+                            int radius = Mathf.Max(1, Mathf.RoundToInt(1.0f * pxPerMeter));
+                            bool anyExcluded = false;
+                            for (int dy = -radius; dy <= radius && !anyExcluded; dy++)
+                            {
+                                int yy = Mathf.Clamp(zy + dy, 0, zoneH - 1);
+                                for (int dx = -radius; dx <= radius; dx++)
+                                {
+                                    int xx = Mathf.Clamp(zx + dx, 0, zoneW - 1);
+                                    if (ExcludeZones.Contains(zoneGrid[yy * zoneW + xx]))
+                                    {
+                                        anyExcluded = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (anyExcluded) continue;
+                        }
 
-                        if (standaloneContainer != null)
-                            instance.transform.SetParent(
-                                standaloneContainer.transform);
+                        // Overlay mesh polygon exclusion (catches cart paths
+                        // and any overlay that extends beyond zone grid pixels)
+                        if (exclusionPolygons.Count > 0)
+                        {
+                            float absX = worldX + terrain.transform.position.x;
+                            float absZ = worldZ + terrain.transform.position.z;
+                            if (IsInsideAnyOverlay(absX, absZ, exclusionPolygons))
+                                continue;
+                        }
 
-                        standaloneCount++;
+                        // Pick prototype from THIS folder's entries (weighted)
+                        float roll = (float)rng.NextDouble() * totalWeight;
+                        int folderEntryIdx = 0;
+                        for (int i = 0; i < cumulativeWeights.Length; i++)
+                        {
+                            if (roll <= cumulativeWeights[i])
+                            {
+                                folderEntryIdx = i;
+                                break;
+                            }
+                        }
+
+                        var pickedEntry = folderEntries[folderEntryIdx];
+                        int globalEntryIdx = entryIndexLookup[pickedEntry];
+
+                        float scale = fSettings.scaleMin +
+                            (float)rng.NextDouble() * (fSettings.scaleMax - fSettings.scaleMin);
+                        float rotDeg = (float)rng.NextDouble() * 360f;
+
+                        // Sample terrain height
+                        Vector3 worldPos = new Vector3(
+                            worldX + terrain.transform.position.x,
+                            0f,
+                            worldZ + terrain.transform.position.z);
+                        float terrainH = terrain.SampleHeight(worldPos);
+
+                        typeCounts[globalEntryIdx]++;
+
+                        if (terrainProtoMap[globalEntryIdx] >= 0)
+                        {
+                            // ---- Terrain tree ----
+                            float ny = Mathf.Max(0f,
+                                (terrainH - fSettings.sinkOffset) / terrainData.size.y);
+                            terrainTrees.Add(new TreeInstance
+                            {
+                                position = new Vector3(nx, ny, nz),
+                                widthScale = scale,
+                                heightScale = scale,
+                                rotation = rotDeg * Mathf.Deg2Rad,
+                                color = Color.white,
+                                lightmapColor = Color.white,
+                                prototypeIndex = terrainProtoMap[globalEntryIdx],
+                            });
+                        }
+                        else
+                        {
+                            // ---- Standalone tree ----
+                            var instance = Object.Instantiate(pickedEntry.prefab);
+                            instance.name = $"{pickedEntry.name}_{standaloneCount}";
+
+                            float y = terrainBaseY + terrainH - fSettings.sinkOffset;
+                            instance.transform.position = new Vector3(
+                                worldPos.x, y, worldPos.z);
+                            instance.transform.rotation =
+                                Quaternion.Euler(0f, rotDeg, 0f);
+                            instance.transform.localScale = Vector3.one * scale;
+
+                            if (standaloneContainer != null)
+                                instance.transform.SetParent(
+                                    standaloneContainer.transform);
+
+                            standaloneCount++;
+                        }
                     }
                 }
             }
@@ -616,7 +768,7 @@ namespace Golfin.CourseImport
             Debug.Log($"[TreePlacer] Placed {terrainTrees.Count} terrain + " +
                 $"{standaloneCount} standalone = " +
                 $"{terrainTrees.Count + standaloneCount} total " +
-                $"({activeEntries.Count} types, {cellSize}m spacing, seed=42, " +
+                $"({activeEntries.Count} types across {folderGroups.Count} folders, " +
                 $"{exclusionPolygons.Count} exclusion polygons)" +
                 $"\n  {summary}");
         }
@@ -707,6 +859,16 @@ namespace Golfin.CourseImport
         }
 
         [System.Serializable]
+        private class SavedFolderSettings
+        {
+            public string folder;
+            public float minSpacing;
+            public float scaleMin;
+            public float scaleMax;
+            public float sinkOffset;
+        }
+
+        [System.Serializable]
         private class SavedSettings
         {
             public float minSpacing;
@@ -721,6 +883,7 @@ namespace Golfin.CourseImport
             public float lod1;
             public float lod2;
             public SavedEntry[] entries;
+            public SavedFolderSettings[] folderSettings;
         }
 
         private static SavedSettings BuildSavedSettings()
@@ -744,6 +907,14 @@ namespace Golfin.CourseImport
                     enabled = e.enabled,
                     weight = e.weight,
                     standalone = e.standalone,
+                }).ToArray(),
+                folderSettings = PerFolder.Select(kv => new SavedFolderSettings
+                {
+                    folder = kv.Key,
+                    minSpacing = kv.Value.minSpacing,
+                    scaleMin = kv.Value.scaleMin,
+                    scaleMax = kv.Value.scaleMax,
+                    sinkOffset = kv.Value.sinkOffset,
                 }).ToArray(),
             };
         }
@@ -776,6 +947,22 @@ namespace Golfin.CourseImport
                         entry.weight = saved.weight;
                         entry.standalone = saved.standalone;
                     }
+                }
+            }
+
+            if (data.folderSettings != null)
+            {
+                PerFolder.Clear();
+                foreach (var f in data.folderSettings)
+                {
+                    if (string.IsNullOrEmpty(f.folder)) continue;
+                    PerFolder[f.folder] = new FolderPlacementSettings
+                    {
+                        minSpacing = f.minSpacing,
+                        scaleMin = f.scaleMin,
+                        scaleMax = f.scaleMax,
+                        sinkOffset = f.sinkOffset,
+                    };
                 }
             }
         }
@@ -842,11 +1029,20 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            string sceneName = UnityEditor.SceneManagement.EditorSceneManager
-                .GetActiveScene().name;
+            var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            string sceneName = activeScene.name;
+            string scenePath = activeScene.path ?? "";
             int holeNumber = -1;
-            bool isGeo = sceneName.EndsWith("_Geo");
-            string baseName = isGeo ? sceneName.Replace("_Geo", "") : sceneName;
+
+            // Detect Geo from BOTH the scene name and its file path (case-insensitive).
+            // The scene path is authoritative — saving/renaming a scene won't shift
+            // the asset location. Falls back to the name if path is empty (new scene).
+            bool isGeo = scenePath.IndexOf("_Geo", System.StringComparison.OrdinalIgnoreCase) >= 0
+                || sceneName.IndexOf("_Geo", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+            // Extract hole number by stripping _Geo (if present) then pulling 2 digits
+            string baseName = System.Text.RegularExpressions.Regex
+                .Replace(sceneName, "_Geo$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             if (baseName.StartsWith("Hole_") && baseName.Length >= 7)
                 int.TryParse(baseName.Substring(5, 2), out holeNumber);
 
@@ -862,6 +1058,9 @@ namespace Golfin.CourseImport
                 Application.dataPath, "..",
                 $"Tools/{toolFolder}/output/lomond-country-club/export",
                 $"hole-{holeNumber:D2}");
+
+            Debug.Log($"[TreePlacer] Scene='{sceneName}' path='{scenePath}' " +
+                $"→ isGeo={isGeo}, hole={holeNumber}, loading from {toolFolder}");
 
             if (!Directory.Exists(exportPath))
             {
@@ -888,7 +1087,7 @@ namespace Golfin.CourseImport
 
             float terrainBaseY = terrain.transform.position.y;
             string zonesPath = Path.Combine(exportPath, "zones.json");
-            PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot);
+            PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot, isGeo);
 
             var scene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
             UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
@@ -1035,7 +1234,7 @@ namespace Golfin.CourseImport
 
                 float terrainBaseY = terrain.transform.position.y;
                 string zonesPath = Path.Combine(exportPath, "zones.json");
-                PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot);
+                PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot, true);
 
                 UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
                 imported++;
@@ -1180,7 +1379,7 @@ namespace Golfin.CourseImport
 
                 float terrainBaseY = terrain.transform.position.y;
                 string zonesPath = Path.Combine(exportPath, "zones.json");
-                PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot);
+                PlaceTrees(terrain, terrainBaseY, exportPath, zonesPath, parentRoot, true);
 
                 UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene);
                 imported++;

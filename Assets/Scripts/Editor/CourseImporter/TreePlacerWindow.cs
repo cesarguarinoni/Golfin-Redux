@@ -1,25 +1,27 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
 namespace Golfin.CourseImport
 {
-    public enum TreeFilter { Both, TerrainOnly, StandaloneOnly }
-
     /// <summary>
     /// Editor window for tweaking TreePlacer parameters and re-importing trees.
     /// Open via Trees > Tree Settings.
     /// </summary>
     public class TreePlacerWindow : EditorWindow
     {
+        private const string AllTab = "All";
+
         private Vector2 treeScrollPos;
-        private TreeFilter filter = TreeFilter.Both;
+        private string currentTab = AllTab;
+        private bool goOnly;
 
         [MenuItem("Trees/Tree Settings")]
         public static void ShowWindow()
         {
             var window = GetWindow<TreePlacerWindow>("Tree Settings");
-            window.minSize = new Vector2(420, 560);
+            window.minSize = new Vector2(420, 620);
         }
 
         private void OnEnable()
@@ -28,13 +30,49 @@ namespace Golfin.CourseImport
                 TreePlacer.ScanPrefabs();
         }
 
+        /// <summary>
+        /// Toggle `enabled` on all prefabs that match the current tab + GO filter.
+        /// On the All tab this affects every prefab matching the GO filter.
+        /// </summary>
+        private void SetAllInScope(bool value)
+        {
+            int n = 0;
+            foreach (var entry in TreePlacer.TreePalette)
+            {
+                string entryFolder = string.IsNullOrEmpty(entry.folder) ? "Root" : entry.folder;
+                if (currentTab != AllTab && entryFolder != currentTab) continue;
+                if (goOnly && !entry.standalone) continue;
+                entry.enabled = value;
+                n++;
+            }
+            Debug.Log($"[TreePlacer] {(value ? "Enabled" : "Disabled")} {n} prefab(s) " +
+                $"in tab '{currentTab}'{(goOnly ? " (GO only)" : "")}");
+        }
+
         private void OnGUI()
         {
-            // ---- Tree Palette ----
+            // ---- Tabs: All + folders with prefabs ----
+            var folders = TreePlacer.GetFolderTabs();
+            var tabs = new List<string> { AllTab };
+            tabs.AddRange(folders);
+
+            int currentIdx = Mathf.Max(0, tabs.IndexOf(currentTab));
+            int newIdx = GUILayout.Toolbar(currentIdx, tabs.ToArray());
+            if (newIdx != currentIdx || currentIdx >= tabs.Count)
+                currentTab = tabs[newIdx];
+
+            EditorGUILayout.Space(4);
+
+            // ---- Tree Palette header ----
             EditorGUILayout.BeginHorizontal();
             GUILayout.Label("Tree Palette", EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
-            filter = (TreeFilter)EditorGUILayout.EnumPopup(filter, GUILayout.Width(120));
+            if (GUILayout.Button("All On", EditorStyles.miniButtonLeft, GUILayout.Width(55)))
+                SetAllInScope(true);
+            if (GUILayout.Button("All Off", EditorStyles.miniButtonRight, GUILayout.Width(55)))
+                SetAllInScope(false);
+            GUILayout.Space(8);
+            goOnly = GUILayout.Toggle(goOnly, "GO only", GUILayout.Width(70));
             EditorGUILayout.EndHorizontal();
 
             if (GUILayout.Button("Rescan Prefab Folders", GUILayout.Height(20)))
@@ -51,22 +89,26 @@ namespace Golfin.CourseImport
             GUILayout.Label("LOD", EditorStyles.miniLabel, GUILayout.Width(28));
             EditorGUILayout.EndHorizontal();
 
-            // Scrollable list
+            // Scrollable palette filtered by tab + GO-only
             treeScrollPos = EditorGUILayout.BeginScrollView(treeScrollPos,
-                GUILayout.MinHeight(150), GUILayout.MaxHeight(350));
+                GUILayout.MinHeight(150), GUILayout.MaxHeight(320));
 
+            int shownCount = 0;
             foreach (var entry in TreePlacer.TreePalette)
             {
-                // Apply filter
-                if (filter == TreeFilter.TerrainOnly && entry.standalone) continue;
-                if (filter == TreeFilter.StandaloneOnly && !entry.standalone) continue;
+                string entryFolder = string.IsNullOrEmpty(entry.folder) ? "Root" : entry.folder;
+                if (currentTab != AllTab && entryFolder != currentTab) continue;
+                if (goOnly && !entry.standalone) continue;
 
                 EditorGUILayout.BeginHorizontal();
 
                 entry.enabled = EditorGUILayout.Toggle(entry.enabled, GUILayout.Width(20));
 
                 var nameStyle = entry.enabled ? EditorStyles.label : EditorStyles.miniLabel;
-                GUILayout.Label(entry.name, nameStyle, GUILayout.MinWidth(140));
+                string label = (currentTab == AllTab)
+                    ? $"{entry.name}  [{entryFolder}]"
+                    : entry.name;
+                GUILayout.Label(label, nameStyle, GUILayout.MinWidth(140));
 
                 EditorGUI.BeginDisabledGroup(!entry.enabled);
                 entry.weight = EditorGUILayout.FloatField(entry.weight, GUILayout.Width(50));
@@ -79,11 +121,12 @@ namespace Golfin.CourseImport
                     EditorStyles.centeredGreyMiniLabel, GUILayout.Width(24));
 
                 EditorGUILayout.EndHorizontal();
+                shownCount++;
             }
 
             EditorGUILayout.EndScrollView();
 
-            // Summary
+            // Summary (counts for the current filter)
             var active = TreePlacer.GetActiveEntries();
             int terrainCount = 0, standaloneCount = 0;
             foreach (var e in active)
@@ -92,21 +135,33 @@ namespace Golfin.CourseImport
                 else terrainCount++;
             }
             EditorGUILayout.LabelField(
-                $"{active.Count} enabled ({terrainCount} terrain, {standaloneCount} standalone) / {TreePlacer.TreePalette.Count} total",
+                $"Showing {shownCount} / {TreePlacer.TreePalette.Count}   |   " +
+                $"{active.Count} enabled ({terrainCount} terrain, {standaloneCount} standalone)",
                 EditorStyles.centeredGreyMiniLabel);
 
             EditorGUILayout.Space(10);
 
-            // ---- Placement ----
-            GUILayout.Label("Placement", EditorStyles.boldLabel);
-            TreePlacer.MinSpacing = EditorGUILayout.FloatField("Min Spacing (m)", TreePlacer.MinSpacing);
-            TreePlacer.ScaleMin = EditorGUILayout.FloatField("Scale Min", TreePlacer.ScaleMin);
-            TreePlacer.ScaleMax = EditorGUILayout.FloatField("Scale Max", TreePlacer.ScaleMax);
-            TreePlacer.SinkOffset = EditorGUILayout.Slider("Sink Offset (m)", TreePlacer.SinkOffset, 0f, 2f);
+            // ---- Placement (per-tab) ----
+            GUILayout.Label($"Placement — {currentTab}", EditorStyles.boldLabel);
+            if (currentTab == AllTab)
+            {
+                EditorGUILayout.HelpBox(
+                    "Placement values are per-folder. Select a folder tab to edit " +
+                    "its Min Spacing, Scale range, and Sink Offset.",
+                    MessageType.Info);
+            }
+            else
+            {
+                var fs = TreePlacer.GetFolderSettings(currentTab);
+                fs.minSpacing = EditorGUILayout.FloatField("Min Spacing (m)", fs.minSpacing);
+                fs.scaleMin = EditorGUILayout.FloatField("Scale Min", fs.scaleMin);
+                fs.scaleMax = EditorGUILayout.FloatField("Scale Max", fs.scaleMax);
+                fs.sinkOffset = EditorGUILayout.Slider("Sink Offset (m)", fs.sinkOffset, 0f, 2f);
+            }
 
             EditorGUILayout.Space(10);
 
-            // ---- Draw Distances ----
+            // ---- Draw Distances (universal) ----
             GUILayout.Label("Draw Distances", EditorStyles.boldLabel);
             TreePlacer.DrawDistance = EditorGUILayout.FloatField("Max Draw Distance (m)", TreePlacer.DrawDistance);
             TreePlacer.BillboardDistance = EditorGUILayout.FloatField("Billboard Distance (m)", TreePlacer.BillboardDistance);
@@ -115,7 +170,7 @@ namespace Golfin.CourseImport
 
             EditorGUILayout.Space(10);
 
-            // ---- LOD Thresholds ----
+            // ---- LOD Thresholds (universal) ----
             GUILayout.Label("LOD Thresholds (screen %)", EditorStyles.boldLabel);
             TreePlacer.LOD0Threshold = EditorGUILayout.Slider("LOD 0 \u2192 1", TreePlacer.LOD0Threshold, 0.01f, 0.5f);
             TreePlacer.LOD1Threshold = EditorGUILayout.Slider("LOD 1 \u2192 2", TreePlacer.LOD1Threshold, 0.005f, 0.2f);
@@ -136,17 +191,17 @@ namespace Golfin.CourseImport
 
             EditorGUILayout.Space(10);
 
-            // ---- Actions ----
+            // ---- Info + Actions ----
             EditorGUILayout.HelpBox(
-                "GO = standalone GameObject (particles, complex hierarchy).\n" +
-                "LOD = \u2713 if prefab has LODGroup on root.\n" +
-                "Filter dropdown shows Terrain (LOD), Standalone (no LOD), or Both.",
+                "Tabs filter palette by folder under Trees2025_Prefabs.\n" +
+                "GO only = show standalone prefabs (GO column checked).\n" +
+                "Placement values are per-folder; draw distances and LOD are universal.",
                 MessageType.Info);
 
             EditorGUILayout.Space(5);
             if (GUILayout.Button("Re-import Trees", GUILayout.Height(30)))
             {
-                EditorApplication.ExecuteMenuItem("Trees/Import Trees (Current Hole)");
+                EditorApplication.ExecuteMenuItem("Trees/Import Trees Current Hole");
             }
 
             EditorGUILayout.Space(5);

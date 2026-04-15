@@ -170,10 +170,17 @@ const server = createServer(async (req, res) => {
       // Derive resolution from file size (uint16 = 2 bytes per pixel)
       const pixelCount = rawBytes.length / 2;
       const rawRes = Math.round(Math.sqrt(pixelCount));
+      // Rotate 90° CCW + horizontal flip to match illustration's portrait orientation.
+      //   displayX = srcY, displayY = srcX  (transpose)
       const pixels = Buffer.alloc(rawRes * rawRes);
-      for (let i = 0; i < rawRes * rawRes; i++) {
-        const val = (rawBytes[i * 2] << 8) | rawBytes[i * 2 + 1];
-        pixels[i] = Math.round((val / 65535) * 255);
+      for (let srcY = 0; srcY < rawRes; srcY++) {
+        for (let srcX = 0; srcX < rawRes; srcX++) {
+          const srcIdx = (srcY * rawRes + srcX) * 2;
+          const val = (rawBytes[srcIdx] << 8) | rawBytes[srcIdx + 1];
+          const dstX = srcY;
+          const dstY = srcX;
+          pixels[dstY * rawRes + dstX] = Math.round((val / 65535) * 255);
+        }
       }
 
       const sharp = (await import("sharp")).default;

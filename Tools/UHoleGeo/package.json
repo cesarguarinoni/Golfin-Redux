@@ -1,0 +1,17 @@
+{
+  "name": "uhole-geo",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "gui": "node scripts/dev-server.mjs",
+    "fetch": "node scripts/fetch-satellite.mjs",
+    "classify": "node scripts/classify-zones.mjs",
+    "terrain": "node scripts/generate-terrain.mjs",
+    "export": "node scripts/export-hole.mjs",
+    "all": "node scripts/run-all.mjs"
+  },
+  "dependencies": {
+    "sharp": "^0.33.0",
+    "node-fetch": "^3.3.0"
+  }
+}

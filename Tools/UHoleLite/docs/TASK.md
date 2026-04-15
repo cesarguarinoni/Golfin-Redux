@@ -2,177 +2,182 @@
 
 > Claude Code: Read this file at the start of each task. Execute the latest instruction block.
 > After completing, add a status line at the bottom: `✅ DONE: [date] [brief summary]`
+> Full design rationale: `Docs/TERRAIN_RELIEF_PLAN.md`
 
 ---
 
-## Current Task — Taper Strip at T-Junction Endpoints (replaces pullback)
+## Current Task — Per-Zone DEM Residual Blending
 
-The pullback approach created GAPS instead of fixing overshoots. The
-geometry is: at a ~90° T-junction the strip extends ±halfWidth
-**perpendicular** to the approach direction (i.e. along the main path).
-Pulling back along the approach just moves the strip away from the
-junction. The correct fix is to **taper** the strip width to 0 at
-snapped endpoints so it narrows to a point at the junction.
+The terrain is too flat. `generateHeightmapDEM` fits a single quadratic
+surface to all playable zones and discards 100% of DEM detail. Holes
+with real elevation changes (uphill/downhill) play as gentle bowls.
 
-### Part 1 — Pipeline: Revert pullback, add `snapped_endpoints` flags
+Fix: blend DEM residual back per-zone with heavy blur to keep large-
+scale elevation trends while suppressing 5m-grid noise.
 
-**File:** `Tools/UHoleLite/scripts/export-hole.mjs`
+**File:** `Tools/UHoleLite/scripts/generate-terrain.mjs`
+**Function:** `generateHeightmapDEM()`
 
-**Step 1: Remove the pullback block.** Find the section starting with
-the comment `// --- Pull back snapped endpoints by halfWidth ---` and
-delete the entire block (from that comment through its closing `}`).
+### What to do
 
-**Step 2: Add `snapped_endpoints` flags.** After the orphan snapping
-loop (after the "Snap orphan endpoints" `for` loop closes), add a pass
-that detects which endpoints are near another spine's interior and
-flags them in the cart path data:
+Replace the entire "Add residual variation to non-playable zones"
+section — everything from:
 
 ```javascript
-  // --- Flag snapped endpoints for Unity taper ---
-  for (const cp of results) {
-    if (!cp.spine || cp.spine.length < 2) continue;
-    cp.snapped_endpoints = { start: false, end: false };
+// Add residual variation to non-playable zones (trees, OB, background)
+```
 
-    for (const [label, ep] of [['start', cp.spine[0]], ['end', cp.spine[cp.spine.length - 1]]]) {
-      for (const other of results) {
-        if (other === cp) continue;
-        if (cp.parent_region !== other.parent_region) continue;
-        if (!other.spine || other.spine.length < 2) continue;
+Through and including:
 
-        // Check proximity to interior points (not endpoints) of other spine
-        for (let si = 1; si < other.spine.length - 1; si++) {
-          const dx = ep.x - other.spine[si].x;
-          const dz = ep.z - other.spine[si].z;
-          if (Math.sqrt(dx * dx + dz * dz) < minWidthM * 2) {
-            cp.snapped_endpoints[label] = true;
-            break;
+```javascript
+console.log(`  Residual ramp: ${RESIDUAL_RAMP_CELLS} cells transition, ` +
+    `${(RESIDUAL_FRACTION * 100).toFixed(0)}% max fraction`);
+```
+
+And ALSO remove the per-zone `zoneMaskedSmooth` calls that come right
+after (the block starting with `// Smooth residual zones`):
+
+```javascript
+for (const z of [ZONES.trees, ZONES.ob, ZONES.background]) {
+    zoneMaskedSmooth(heightmap, zoneGrid, zw, zh, z, 5, RES);
+}
+```
+
+Replace ALL of the above with:
+
+```javascript
+  // --- Per-zone residual blending ---
+  // Blend DEM residual back with zone-specific fractions.
+  // Heavy blur removes 5m DEM grid noise, keeps large-scale slopes.
+
+  const ZONE_RESIDUAL = {
+    [ZONES.green]:      { fraction: 0.0,  blur: 0  },
+    [ZONES.tee_box]:    { fraction: 0.0,  blur: 0  },
+    [ZONES.fairway]:    { fraction: 0.30, blur: 15 },
+    [ZONES.bunker]:     { fraction: 0.0,  blur: 0  },
+    [ZONES.cart_path]:  { fraction: 0.0,  blur: 0  },
+    [ZONES.semi_rough]: { fraction: 0.40, blur: 10 },
+    [ZONES.rough]:      { fraction: 0.50, blur: 8  },
+    [ZONES.water]:      { fraction: 0.0,  blur: 0  },
+    [ZONES.trees]:      { fraction: 0.75, blur: 5  },
+    [ZONES.ob]:         { fraction: 0.75, blur: 5  },
+    [ZONES.background]: { fraction: 0.75, blur: 5  },
+  };
+
+  // Per-cell residual: rawDem - quadratic
+  const residual = new Float64Array(RES * RES);
+  for (let i = 0; i < RES * RES; i++) {
+    residual[i] = rawDem[i] - heightmap[i];
+  }
+
+  for (const [zoneStr, cfg] of Object.entries(ZONE_RESIDUAL)) {
+    const zone = parseInt(zoneStr);
+    if (cfg.fraction <= 0) continue;
+
+    const mask = buildZoneMask(zoneGrid, zw, zh, zone, RES);
+
+    // Skip if zone has no cells
+    let hasCells = false;
+    for (let i = 0; i < RES * RES; i++) {
+      if (mask[i]) { hasCells = true; break; }
+    }
+    if (!hasCells) continue;
+
+    // Copy residual for this zone
+    const zoneRes = new Float64Array(RES * RES);
+    for (let i = 0; i < RES * RES; i++) {
+      zoneRes[i] = mask[i] ? residual[i] : 0;
+    }
+
+    // Zone-masked blur (same kernel as zoneMaskedSmooth)
+    let src = zoneRes;
+    for (let p = 0; p < cfg.blur; p++) {
+      const dst = new Float64Array(src);
+      for (let hy = 0; hy < RES; hy++) {
+        for (let hx = 0; hx < RES; hx++) {
+          const idx = hy * RES + hx;
+          if (!mask[idx]) continue;
+          let sum = 0, weight = 0;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              const nx = hx + dx, ny = hy + dy;
+              if (nx < 0 || nx >= RES || ny < 0 || ny >= RES) continue;
+              const w = (dx === 0 && dy === 0) ? 4 :
+                        (dx === 0 || dy === 0) ? 2 : 1;
+              sum += src[ny * RES + nx] * w;
+              weight += w;
+            }
           }
+          dst[idx] = sum / weight;
         }
-        if (cp.snapped_endpoints[label]) break;
+      }
+      src = dst;
+    }
+
+    // Blend blurred residual back into heightmap
+    for (let i = 0; i < RES * RES; i++) {
+      if (mask[i]) {
+        heightmap[i] += src[i] * cfg.fraction;
       }
     }
+
+    const zoneName = Object.keys(ZONES).find(k => ZONES[k] === zone);
+    console.log(`    ${zoneName}: residual ${(cfg.fraction * 100).toFixed(0)}%, blur ${cfg.blur} passes`);
   }
 ```
 
-This adds a `snapped_endpoints: { start: true/false, end: true/false }`
-field to each cart path entry in cart-paths.json.
+### Also remove these constants (no longer used)
 
-### Part 2 — Unity: Taper strip width at snapped endpoints
+Delete these lines near the removed section:
 
-**File:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
-
-**Step 1: Add `snapped_endpoints` to the data model.**
-In `HoleManifestData.cs`, find the `CartPathRegionData` class and add:
-
-```csharp
-public SnappedEndpoints snapped_endpoints;
-
-[System.Serializable]
-public class SnappedEndpoints
-{
-    public bool start;
-    public bool end;
-}
+```javascript
+const RESIDUAL_FRACTION = 0.75;
+const RESIDUAL_RAMP_CELLS = 60;
 ```
 
-If `SnappedEndpoints` class already exists, skip this.
+### What NOT to change
 
-**Step 2: Modify `CreateSpineStripMesh` to accept taper flags.**
-Change the method signature to add two booleans:
-
-```csharp
-private static GameObject CreateSpineStripMesh(
-    int id, ContourPoint[] spine, float halfWidth,
-    Terrain terrain, float terrainBaseY,
-    Material mat, float tileSize,
-    Golfin.Course.SurfaceType surfaceType,
-    bool taperStart = false, bool taperEnd = false)
-```
-
-**Step 3: Apply taper in the vertex generation loop.**
-Inside `CreateSpineStripMesh`, right after computing `halfWidth` for
-each vertex (before computing lx/lz/rx/rz), add width tapering:
-
-```csharp
-// Taper width at snapped endpoints (narrow to 0 over last 3 points)
-float localHalfWidth = halfWidth;
-const int taperPoints = 3;
-if (taperStart && i < taperPoints)
-{
-    float t = (float)i / taperPoints;
-    localHalfWidth = halfWidth * t; // 0 at i=0, full at i=taperPoints
-}
-else if (taperEnd && i > n - 1 - taperPoints)
-{
-    float t = (float)(n - 1 - i) / taperPoints;
-    localHalfWidth = halfWidth * t; // full at n-1-taperPoints, 0 at n-1
-}
-```
-
-Then replace `halfWidth` with `localHalfWidth` in the left/right
-position calculations:
-
-```csharp
-float lx = cx - px * localHalfWidth;
-float lz = cz - pz * localHalfWidth;
-float rx = cx + px * localHalfWidth;
-float rz = cz + pz * localHalfWidth;
-```
-
-**Step 4: Pass the flags from the caller.**
-In `CreateFlatZoneMeshes`, where `CreateSpineStripMesh` is called for
-cart paths, pass the snapped_endpoints flags:
-
-```csharp
-bool taperStart = region.snapped_endpoints != null && region.snapped_endpoints.start;
-bool taperEnd = region.snapped_endpoints != null && region.snapped_endpoints.end;
-meshGO = CreateSpineStripMesh(
-    region.id, region.spine, halfWidth,
-    terrain, terrainBaseY, cpMat, 4f,
-    Golfin.Course.SurfaceType.CartPath,
-    taperStart, taperEnd);
-```
-
-### What NOT to Change
-
-- `BuildSpinePolygon` — splatmap painting stays full width (it paints
-  wider than the mesh anyway with the +0.2f margin)
-- Terrain depression — uses `BuildSpinePolygon` which stays unchanged
-- Chain merging or junction snapping logic
-- `nudgeSpinesFromContours`
-
-### Key Behavior
-
-- **Snapped endpoints:** Strip tapers from full width to 0 over last
-  3 spine points → forms a pointed tip that stops at the junction
-  without overshooting
-- **Free endpoints:** No taper — strip ends at full width (natural end)
-- **Splatmap underneath:** Full width, covers the junction area with
-  asphalt texture. The main path's strip mesh covers the gap visually
-- **Overlap region:** The pointed tip slides under the main path's
-  strip mesh (same material, same Y offset → invisible)
-
-### Running
-
-```bash
-cd Tools/UHoleLite
-node scripts/export-hole.mjs lomond-country-club 18
-```
-
-Then in Unity: GOLFIN > Import Hole (Lite) > Hole 18
+- Quadratic surface fitting (fitQuadratic, evalQuadratic)
+- Green slope (applyGreenSlope)
+- Normalization (25m max range, scaleFactor)
+- Final blur2D pass
+- Water handling
+- Heightmap rotation or uint16 encoding
+- Perlin fallback path (generateHeightmap)
+- Any existing helper functions (buildZoneMask, etc.)
 
 ### Verification
 
-1. Export hole 18, import in Unity
-2. Walk to CP#4 junctions — branch should taper to a point at the
-   junction, no overshoot, no gap
-3. Splatmap asphalt covers the junction area underneath the mesh
-4. Run `--all` to verify no regressions on other holes
-5. Free path endpoints (CP#1 end, CP#3 start/end) should NOT taper
+```bash
+cd Tools/UHoleLite
+node scripts/generate-terrain.mjs lomond-country-club 1
+node scripts/generate-terrain.mjs lomond-country-club 4
+```
+
+Expected console output should now show per-zone residual lines like:
+```
+    fairway: residual 30%, blur 15 passes
+    semi_rough: residual 40%, blur 10 passes
+    rough: residual 50%, blur 8 passes
+    trees: residual 75%, blur 5 passes
+    ...
+```
+
+Then in Unity: `Import > Lite > Normal > Import Hole 01 Lite` and
+`Import Hole 04 Lite`
+
+- [ ] Hole 4: visible elevation change tee→green
+- [ ] Fairway follows overall slope, no 5m staircase bumps
+- [ ] Rough has gentle mounds (not pancake flat)
+- [ ] Trees/OB mountainous (similar to before)
+- [ ] No cliff at fairway↔rough boundary
+- [ ] Green still flat
+- [ ] Water/bunker overlays unaffected
+- [ ] No console errors
 
 ---
 
 ## Completed Tasks
-✅ 2026-04-13 — Taper strip at T-junction endpoints: snapped_endpoints flags in pipeline + localHalfWidth taper in Unity
-✅ 2026-04-13 — Pull back snapped spine endpoints by halfWidth at T-junctions + spineExt→spine fix in Unity (REVERTED — caused gaps)
-✅ 2026-04-13 — Distance-based residual ramp at play/non-play boundary (60-cell smoothstep transition)
+✅ 2026-04-13 — Taper strip at T-junction endpoints
+✅ 2026-04-13 — Distance-based residual ramp at play/non-play boundary
+✅ DONE: 2026-04-14 Per-zone DEM residual blending — replaced ramped-distance residual with per-zone fraction+blur config in generateHeightmapDEM; verified holes 1 & 4 generate with expected per-zone console output.

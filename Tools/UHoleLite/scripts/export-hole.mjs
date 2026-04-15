@@ -103,6 +103,105 @@ function traceBorder(grid, w, h, pixels, zoneValue) {
 }
 
 /**
+ * Wrapper around traceBorder that recovers missed border pixels.
+ * ONLY used for water — narrow channels cause traceBorder to get
+ * stuck and miss one shore. This adds recovery passes without
+ * modifying traceBorder itself.
+ */
+function traceBorderWithRecovery(grid, w, h, pixels, zoneValue) {
+  const ordered = traceBorder(grid, w, h, pixels, zoneValue);
+
+  // Recompute border set to check coverage
+  const pixelSet = new Set();
+  for (const [px, py] of pixels) pixelSet.add(py * w + px);
+  const isInRegion = (x, y) => {
+    if (x < 0 || x >= w || y < 0 || y >= h) return false;
+    return pixelSet.has(y * w + x);
+  };
+  const borderSet = new Set();
+  for (const [px, py] of pixels) {
+    const nb = [[px-1,py],[px+1,py],[px,py-1],[px,py+1]];
+    if (nb.some(([nx, ny]) => !isInRegion(nx, ny)))
+      borderSet.add(py * w + px);
+  }
+
+  if (ordered.length >= borderSet.size * 0.95 || borderSet.size < 20)
+    return ordered;
+
+  // Build visited set from first pass
+  const visited = new Set();
+  for (const [px, py] of ordered) visited.add(py * w + px);
+
+  const dx = [1, 1, 0, -1, -1, -1,  0,  1];
+  const dy = [0, 1, 1,  1,  0, -1, -1, -1];
+  let cx = ordered[ordered.length - 1][0];
+  let cy = ordered[ordered.length - 1][1];
+
+  // Recovery passes
+  while (visited.size < borderSet.size * 0.95) {
+    let startKey = -1;
+    let bestStartDist = Infinity;
+    for (const key of borderSet) {
+      if (visited.has(key)) continue;
+      const ux = key % w;
+      const uy = (key - ux) / w;
+      let nearVisited = false;
+      for (let d = 0; d < 8; d++) {
+        const nk = (uy + dy[d]) * w + (ux + dx[d]);
+        if (visited.has(nk) && borderSet.has(nk)) { nearVisited = true; break; }
+      }
+      if (nearVisited) {
+        const dist = Math.abs(ux - cx) + Math.abs(uy - cy);
+        if (dist < bestStartDist) {
+          bestStartDist = dist;
+          startKey = key;
+        }
+      }
+    }
+    if (startKey === -1) {
+      for (const key of borderSet) {
+        if (!visited.has(key)) { startKey = key; break; }
+      }
+    }
+    if (startKey === -1) break;
+
+    cx = startKey % w;
+    cy = (startKey - cx) / w;
+    visited.add(startKey);
+    ordered.push([cx, cy]);
+    let prevDir = 0;
+
+    const remaining = borderSet.size - visited.size;
+    for (let step = 0; step < remaining + 10; step++) {
+      let bestDir = -1;
+      let bestScore = -Infinity;
+      for (let i = 0; i < 8; i++) {
+        const nx = cx + dx[i];
+        const ny = cy + dy[i];
+        const key = ny * w + nx;
+        if (!borderSet.has(key) || visited.has(key)) continue;
+        let diff = i - prevDir;
+        if (diff > 4) diff -= 8;
+        if (diff < -4) diff += 8;
+        const score = -Math.abs(diff);
+        if (score > bestScore) {
+          bestScore = score;
+          bestDir = i;
+        }
+      }
+      if (bestDir === -1) break;
+      cx = cx + dx[bestDir];
+      cy = cy + dy[bestDir];
+      visited.add(cy * w + cx);
+      ordered.push([cx, cy]);
+      prevDir = bestDir;
+    }
+  }
+
+  return ordered;
+}
+
+/**
  * Ramer-Douglas-Peucker line simplification.
  */
 function simplifyPolygon(points, epsilon) {
@@ -1917,8 +2016,90 @@ function exportHole(courseId, holeNumber, courseJson) {
   const cartPaths = extractCartPathContours(zonesData, terrainMeta, 2.5, 15, 1.0, 2);
   // 2.5m min width, 15 min pixels, RDP epsilon 1.0 (preserve narrow shape), 2 Chaikin passes
 
-  // Extract water contours early so they can be used for spine nudging
-  const water = extractZoneContours(zonesData, terrainMeta, 7, 8, 2.0, 2);
+  // Extract water contours — uses traceBorderWithRecovery to handle
+  // narrow channels where traceBorder gets stuck and misses one shore.
+  // This is a self-contained water extraction that doesn't touch
+  // extractZoneContours or traceBorder.
+  const water = (function() {
+    const grid = Buffer.from(zonesData.terrain_grid || zonesData.grid, 'base64');
+    const w = zonesData.source_dimensions.width;
+    const h = zonesData.source_dimensions.height;
+    const visited = new Uint8Array(w * h);
+    const tw = terrainMeta.terrain_width_m;
+    const tl = terrainMeta.terrain_length_m;
+    const targetZone = 7;
+    const minPixels = 8;
+    const rdpEpsilon = 1.0;
+    const smoothPasses = 2;
+
+    function floodFill(startX, startY) {
+      const pixels = [];
+      const stack = [[startX, startY]];
+      while (stack.length > 0) {
+        const [x, y] = stack.pop();
+        if (x < 0 || x >= w || y < 0 || y >= h) continue;
+        const idx = y * w + x;
+        if (visited[idx] || grid[idx] !== targetZone) continue;
+        visited[idx] = 1;
+        pixels.push([x, y]);
+        stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+      }
+      return pixels;
+    }
+
+    const regions = [];
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (grid[y * w + x] === targetZone && !visited[y * w + x]) {
+          const pixels = floodFill(x, y);
+          if (pixels.length < minPixels) continue;
+
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          for (const [px, py] of pixels) {
+            if (px < minX) minX = px; if (px > maxX) maxX = px;
+            if (py < minY) minY = py; if (py > maxY) maxY = py;
+          }
+          const normCX = (minX + maxX) / 2 / (w - 1);
+          const normCY = (minY + maxY) / 2 / (h - 1);
+          const normW2 = (maxX - minX + 1) / w;
+          const normH2 = (maxY - minY + 1) / h;
+          const localX = parseFloat(((normCX - 0.5) * tw).toFixed(2));
+          const localZ = parseFloat(((normCY - 0.5) * tl).toFixed(2));
+          const sizeX = parseFloat((normW2 * tw).toFixed(2));
+          const sizeZ = parseFloat((normH2 * tl).toFixed(2));
+
+          // Key difference: traceBorderWithRecovery instead of traceBorder
+          const borderPixels = traceBorderWithRecovery(grid, w, h, pixels, targetZone);
+
+          let contourMeters = borderPixels.map(([bx, by]) => ({
+            x: parseFloat(((bx / (w - 1) - 0.5) * tw).toFixed(2)),
+            z: parseFloat(((by / (h - 1) - 0.5) * tl).toFixed(2)),
+          }));
+          const closed = [...contourMeters, contourMeters[0]];
+          let simplified = simplifyPolygon(closed, rdpEpsilon);
+          if (simplified.length > 1 &&
+              simplified[0].x === simplified[simplified.length - 1].x &&
+              simplified[0].z === simplified[simplified.length - 1].z)
+            simplified = simplified.slice(0, -1);
+          contourMeters = smoothPolygon(simplified, smoothPasses);
+          contourMeters = ensureCCW(contourMeters);
+
+          regions.push({
+            id: regions.length + 1,
+            pixel_count: pixels.length,
+            contour: contourMeters,
+            center_local: { x: localX, z: localZ },
+            size_m: { x: sizeX, z: sizeZ },
+            center_normalized: { x: parseFloat(normCX.toFixed(4)), y: parseFloat(normCY.toFixed(4)) },
+            size_normalized: { w: parseFloat(normW2.toFixed(4)), h: parseFloat(normH2.toFixed(4)) },
+          });
+        }
+      }
+    }
+    regions.sort((a, b) => b.pixel_count - a.pixel_count);
+    regions.forEach((b, i) => { b.id = i + 1; });
+    return regions;
+  })();
 
   // Nudge cart path spines so the strip mesh doesn't overlap with
   // fairway, bunker, tee, or water contour polygons
