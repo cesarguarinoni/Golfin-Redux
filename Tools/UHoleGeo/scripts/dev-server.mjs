@@ -502,6 +502,9 @@ const server = createServer(async (req, res) => {
     const courseId = url.searchParams.get("course") || "lomond-country-club";
     const hole = Number(url.searchParams.get("hole"));
     const size = Math.max(64, Math.min(2048, Number(url.searchParams.get("size")) || 512));
+    const rotRaw = Number(url.searchParams.get("rot")) || 0;
+    // Normalize to {0, 90, 180, 270} — matches the canvas rotation toolbar (CW)
+    const rot = ((Math.round(rotRaw / 90) * 90) % 360 + 360) % 360;
     const pad = String(hole).padStart(2, "0");
     const boundsPath = path.join(root, "output", courseId, "holes", pad, "hole-bounds.json");
     const demDir = path.join(root, "..", "UHole", "output", courseId, "basemap", "gsi-dem5a-z15");
@@ -570,11 +573,12 @@ const server = createServer(async (req, res) => {
       }
 
       const sharp = (await import("sharp")).default;
-      const pngBuffer = await sharp(rgb, { raw: { width: size, height: size, channels: 3 } })
-        .png()
-        .toBuffer();
+      let pipeline = sharp(rgb, { raw: { width: size, height: size, channels: 3 } });
+      // Match canvas rotation (CW). sharp.rotate() rotates clockwise as well.
+      if (rot !== 0) pipeline = pipeline.rotate(rot);
+      const pngBuffer = await pipeline.png().toBuffer();
 
-      console.log(`[raw-dem] Hole ${hole}: ${size}x${size} samples, ` +
+      console.log(`[raw-dem] Hole ${hole}: ${size}x${size} samples, rot=${rot}°, ` +
         `elev=[${minE.toFixed(1)}, ${maxE.toFixed(1)}]m ASL, ` +
         `${nanCount} NoData cells, ${tiles.length} tiles`);
 

@@ -1864,7 +1864,8 @@ async function regenHeightmap() {
 
 function viewRawDem() {
   if (!currentHole) return;
-  const url = "/api/raw-dem?course=" + COURSE_ID + "&hole=" + currentHole.number + "&size=1024&_t=" + Date.now();
+  const url = "/api/raw-dem?course=" + COURSE_ID + "&hole=" + currentHole.number +
+    "&size=1024&rot=" + canvasRotation + "&_t=" + Date.now();
   window.open(url, "_blank", "noopener");
 }
 
