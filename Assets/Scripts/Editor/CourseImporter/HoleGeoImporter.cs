@@ -24,6 +24,10 @@ namespace Golfin.CourseImport
         private const float OverlayDepressionMeters = 0.40f;
         private const float DepressionInsetMeters = 0.20f;
 
+        // Spline cart path footprint polygons — populated by CreateSplineCartPaths(),
+        // consumed by DepressTerrainUnderOverlays() to match depression to actual mesh.
+        private static List<Vector2[]> _splineCartPathPolygons;
+
         // ─── Heightmap Smoothing Parameters ─────────────────────────
         private const int SmoothRadius = 16;
         private const float SmoothSigma = 32.0f;
@@ -3128,34 +3132,41 @@ namespace Golfin.CourseImport
                                 hRes, terrainPos, terrainSize);
             }
 
-            // Cart path depression — separate array for gradient ramp
-            // Wider polygon (full mesh width + 0.30m margin) so gradient's
-            // 0% edge is outside the mesh, preventing z-fighting at mesh edges
+            // Cart path depression — separate array for gradient ramp.
+            // Use spline footprint polygons (built during mesh generation) so the
+            // depressed area exactly matches the visible mesh. Fall back to
+            // BuildSpinePolygon if spline polygons are not available.
             bool[,] cartDepress = new bool[hRes, hRes];
-            string cpPath = Path.Combine(exportPath, "cart-paths.json");
-            if (File.Exists(cpPath))
+            if (_splineCartPathPolygons != null && _splineCartPathPolygons.Count > 0)
             {
-                var data = JsonUtility.FromJson<CartPathsFile>(
-                    File.ReadAllText(cpPath));
-                if (data.cart_paths != null)
+                foreach (var poly in _splineCartPathPolygons)
+                    MarkWorldContourCells(poly, cartDepress, hRes, terrainPos, terrainSize);
+            }
+            else
+            {
+                string cpPath = Path.Combine(exportPath, "cart-paths.json");
+                if (File.Exists(cpPath))
                 {
-                    foreach (var cp in data.cart_paths)
+                    var data = JsonUtility.FromJson<CartPathsFile>(
+                        File.ReadAllText(cpPath));
+                    if (data.cart_paths != null)
                     {
-                        if (cp.spine != null && cp.spine.Length >= 2)
+                        foreach (var cp in data.cart_paths)
                         {
-                            // Full mesh width + 0.30m margin beyond mesh edges
-                            float halfWidth = (cp.width_m > 0
-                                ? cp.width_m : 2.5f) / 2f + 0.30f;
-                            var spinePoly = BuildSpinePolygon(
-                                cp.spine, halfWidth);
-                            if (spinePoly != null)
-                                MarkWorldContourCells(spinePoly, cartDepress,
+                            if (cp.spine != null && cp.spine.Length >= 2)
+                            {
+                                float halfWidth = (cp.width_m > 0
+                                    ? cp.width_m : 2.5f) / 2f + 0.30f;
+                                var spinePoly = BuildSpinePolygon(cp.spine, halfWidth);
+                                if (spinePoly != null)
+                                    MarkWorldContourCells(spinePoly, cartDepress,
+                                        hRes, terrainPos, terrainSize);
+                            }
+                            else if (cp.contour != null && cp.contour.Length >= 3)
+                            {
+                                MarkContourCells(cp.contour, cartDepress,
                                     hRes, terrainPos, terrainSize);
-                        }
-                        else if (cp.contour != null && cp.contour.Length >= 3)
-                        {
-                            MarkContourCells(cp.contour, cartDepress,
-                                hRes, terrainPos, terrainSize);
+                            }
                         }
                     }
                 }
@@ -4367,12 +4378,14 @@ namespace Golfin.CourseImport
             cartRoot.transform.SetParent(parent);
 
             int meshCount = 0;
+            _splineCartPathPolygons = new List<Vector2[]>();
 
             foreach (var cp in cpData.cart_paths)
             {
                 if (cp.spine == null || cp.spine.Length < 2) continue;
 
                 float halfWidth = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
+                float depHalfWidth = halfWidth + 0.20f; // depression margin
                 float sampleSpacing = 0.5f; // meters between samples
                 float yOffset = 0.01f;      // sit just above terrain
 
@@ -4403,8 +4416,10 @@ namespace Golfin.CourseImport
                 int sampleCount = Mathf.Max(2,
                     Mathf.CeilToInt(splineLength / sampleSpacing));
 
-                var leftVerts = new List<Vector3>();
+                var leftVerts  = new List<Vector3>();
                 var rightVerts = new List<Vector3>();
+                var leftVertsWide  = new List<Vector2>(); // XZ only, for depression polygon
+                var rightVertsWide = new List<Vector2>();
 
                 for (int s = 0; s <= sampleCount; s++)
                 {
@@ -4424,22 +4439,34 @@ namespace Golfin.CourseImport
                     float3 right = math.cross(new float3(0, 1, 0), tangentFlat);
                     right = math.normalize(right);
 
-                    float3 leftPos = pos - right * halfWidth;
+                    float3 leftPos  = pos - right * halfWidth;
                     float3 rightPos = pos + right * halfWidth;
 
                     // Re-sample terrain height at each edge vertex
-                    float leftH = terrain.SampleHeight(
-                        new Vector3(leftPos.x, 0, leftPos.z));
-                    float rightH = terrain.SampleHeight(
-                        new Vector3(rightPos.x, 0, rightPos.z));
+                    float leftH  = terrain.SampleHeight(new Vector3(leftPos.x,  0, leftPos.z));
+                    float rightH = terrain.SampleHeight(new Vector3(rightPos.x, 0, rightPos.z));
 
                     leftVerts.Add(new Vector3(leftPos.x,
-                        terrainBaseY + leftH + yOffset, leftPos.z));
+                        terrainBaseY + leftH  + yOffset, leftPos.z));
                     rightVerts.Add(new Vector3(rightPos.x,
                         terrainBaseY + rightH + yOffset, rightPos.z));
+
+                    // Wide offsets for depression polygon (margin beyond mesh edge)
+                    float3 lw = pos - right * depHalfWidth;
+                    float3 rw = pos + right * depHalfWidth;
+                    leftVertsWide.Add(new Vector2(lw.x, lw.z));
+                    rightVertsWide.Add(new Vector2(rw.x, rw.z));
                 }
 
                 if (leftVerts.Count < 2) continue;
+
+                // Build closed footprint polygon: left forward + right backward
+                var depPoly = new Vector2[leftVertsWide.Count + rightVertsWide.Count];
+                for (int i = 0; i < leftVertsWide.Count; i++)
+                    depPoly[i] = leftVertsWide[i];
+                for (int i = 0; i < rightVertsWide.Count; i++)
+                    depPoly[leftVertsWide.Count + i] = rightVertsWide[rightVertsWide.Count - 1 - i];
+                _splineCartPathPolygons.Add(depPoly);
 
                 // --- Build triangle strip mesh ---
                 int vertCount = leftVerts.Count * 2;
