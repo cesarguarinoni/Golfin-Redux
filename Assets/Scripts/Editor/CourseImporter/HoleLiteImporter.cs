@@ -2633,7 +2633,9 @@ namespace Golfin.CourseImport
                 { collarSrcTris.Add(tris[t]); collarSrcTris.Add(tris[t + 1]); collarSrcTris.Add(tris[t + 2]); }
             }
 
-            // Duplicate boundary verts for collar so each submesh gets independent UVs.
+            // Duplicate boundary verts for collar with distance-based UVs.
+            // U = 0 at green edge (light side of fringe mat), U = 1 at outer edge.
+            // V tiles along world XZ for perimeter variety.
             var finalVerts = new List<Vector3>(rawVerts);
             var finalUVs   = new List<Vector2>(uvs);
             var vertRemap  = new Dictionary<int, int>();
@@ -2643,9 +2645,12 @@ namespace Golfin.CourseImport
                 if (!vertRemap.TryGetValue(origIdx, out int newIdx))
                 {
                     Vector3 src = rawVerts[origIdx];
+                    float dist = Mathf.Sqrt(DistanceSqToContour(src.x, src.z, originalPoly));
+                    float u = Mathf.Clamp01(dist / collarWidth);
+                    float v = (src.x + src.z) / collarTileSize;
                     newIdx = finalVerts.Count;
                     finalVerts.Add(src);
-                    finalUVs.Add(new Vector2(src.x / collarTileSize, src.z / collarTileSize));
+                    finalUVs.Add(new Vector2(u, v));
                     vertRemap[origIdx] = newIdx;
                 }
                 collarTris.Add(newIdx);
