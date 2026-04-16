@@ -3183,65 +3183,18 @@ namespace Golfin.CourseImport
                         depressedCount++;
                     }
 
-            // Cart path: full flat drop inside, outward ramp outside.
-            // Inside footprint → 100% drop (no terrain poke-through).
-            // Outside footprint within ramp zone → smoothstep back to 0
-            // (no visible cliff at path boundary).
-            int cartRampCells = 3; // ramp width in heightmap cells (~0.5m at 1025 res)
+            // Cart path: flat drop exactly under mesh footprint, nothing outside.
+            // The mesh covers the edge so no outward ramp is needed — it was
+            // depressing grass beyond the road boundary.
             int cartDepressedCount = 0;
-
-            // Step 1: Distance transform outward from cart path boundary
-            float[,] distFromCart = new float[hRes, hRes];
             for (int hz = 0; hz < hRes; hz++)
                 for (int hx = 0; hx < hRes; hx++)
-                    distFromCart[hz, hx] = cartDepress[hz, hx] ? 0f : 99999f;
-
-            // Forward pass
-            for (int hz = 0; hz < hRes; hz++)
-                for (int hx = 0; hx < hRes; hx++)
-                {
-                    if (hx > 0) distFromCart[hz, hx] = Mathf.Min(
-                        distFromCart[hz, hx], distFromCart[hz, hx - 1] + 1f);
-                    if (hz > 0) distFromCart[hz, hx] = Mathf.Min(
-                        distFromCart[hz, hx], distFromCart[hz - 1, hx] + 1f);
-                }
-            // Backward pass
-            for (int hz = hRes - 1; hz >= 0; hz--)
-                for (int hx = hRes - 1; hx >= 0; hx--)
-                {
-                    if (hx < hRes - 1) distFromCart[hz, hx] = Mathf.Min(
-                        distFromCart[hz, hx], distFromCart[hz, hx + 1] + 1f);
-                    if (hz < hRes - 1) distFromCart[hz, hx] = Mathf.Min(
-                        distFromCart[hz, hx], distFromCart[hz + 1, hx] + 1f);
-                }
-
-            // Step 2: Apply depression — flat inside, ramp outside
-            for (int hz = 0; hz < hRes; hz++)
-            {
-                for (int hx = 0; hx < hRes; hx++)
-                {
-                    float dist = distFromCart[hz, hx];
-
                     if (cartDepress[hz, hx])
                     {
-                        // Inside path: full flat drop
                         heights[hz, hx] = Mathf.Max(0f,
                             heights[hz, hx] - dropNormalized);
                         cartDepressedCount++;
                     }
-                    else if (dist > 0 && dist <= cartRampCells)
-                    {
-                        // Outside path within ramp zone: smoothstep from
-                        // full drop (at boundary) to zero (at rampCells)
-                        float t = dist / cartRampCells;
-                        t = t * t * (3f - 2f * t); // smoothstep
-                        float rampDrop = dropNormalized * (1f - t);
-                        heights[hz, hx] = Mathf.Max(0f,
-                            heights[hz, hx] - rampDrop);
-                        cartDepressedCount++;
-                    }
-                }
-            }
 
             depressedCount += cartDepressedCount;
 
@@ -4391,7 +4344,6 @@ namespace Golfin.CourseImport
                 if (cp.spine == null || cp.spine.Length < 2) continue;
 
                 float halfWidth = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
-                float depHalfWidth = halfWidth + 0.5f; // depression extends beyond mesh edge
                 float sampleSpacing = 0.5f; // meters between samples
                 float yOffset = 0.01f;      // sit just above terrain
 
@@ -4424,8 +4376,6 @@ namespace Golfin.CourseImport
 
                 var leftVerts  = new List<Vector3>();
                 var rightVerts = new List<Vector3>();
-                var leftVertsWide  = new List<Vector2>(); // wider polygon for depression
-                var rightVertsWide = new List<Vector2>();
 
                 for (int s = 0; s <= sampleCount; s++)
                 {
@@ -4456,23 +4406,19 @@ namespace Golfin.CourseImport
                         terrainBaseY + leftH  + yOffset, leftPos.z));
                     rightVerts.Add(new Vector3(rightPos.x,
                         terrainBaseY + rightH + yOffset, rightPos.z));
-
-                    float3 lw = pos - right * depHalfWidth;
-                    float3 rw = pos + right * depHalfWidth;
-                    leftVertsWide.Add(new Vector2(lw.x, lw.z));
-                    rightVertsWide.Add(new Vector2(rw.x, rw.z));
                 }
 
                 if (leftVerts.Count < 2) continue;
 
-                // Build depression polygon 0.5m wider than the mesh on each side.
-                // The depression must extend beyond the mesh edge so heightmap cells
-                // at the boundary are fully inside the polygon and get full flat drop.
-                var depPoly = new Vector2[leftVertsWide.Count + rightVertsWide.Count];
-                for (int i = 0; i < leftVertsWide.Count; i++)
-                    depPoly[i] = leftVertsWide[i];
-                for (int i = 0; i < rightVertsWide.Count; i++)
-                    depPoly[leftVertsWide.Count + i] = rightVertsWide[rightVertsWide.Count - 1 - i];
+                // Build depression polygon from actual mesh edge verts.
+                // Flat drop only — the mesh covers the edge so no ramp needed outside.
+                var depPoly = new Vector2[leftVerts.Count + rightVerts.Count];
+                for (int i = 0; i < leftVerts.Count; i++)
+                    depPoly[i] = new Vector2(leftVerts[i].x, leftVerts[i].z);
+                for (int i = 0; i < rightVerts.Count; i++)
+                    depPoly[leftVerts.Count + i] = new Vector2(
+                        rightVerts[rightVerts.Count - 1 - i].x,
+                        rightVerts[rightVerts.Count - 1 - i].z);
                 _splineCartPathPolygons.Add(depPoly);
 
                 // --- Build triangle strip mesh ---
