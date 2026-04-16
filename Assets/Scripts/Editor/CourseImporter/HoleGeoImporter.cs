@@ -4391,7 +4391,6 @@ namespace Golfin.CourseImport
                 if (cp.spine == null || cp.spine.Length < 2) continue;
 
                 float halfWidth = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
-                float depHalfWidth = halfWidth + 0.20f; // depression margin
                 float sampleSpacing = 0.5f; // meters between samples
                 float yOffset = 0.01f;      // sit just above terrain
 
@@ -4424,8 +4423,6 @@ namespace Golfin.CourseImport
 
                 var leftVerts  = new List<Vector3>();
                 var rightVerts = new List<Vector3>();
-                var leftVertsWide  = new List<Vector2>(); // XZ only, for depression polygon
-                var rightVertsWide = new List<Vector2>();
 
                 for (int s = 0; s <= sampleCount; s++)
                 {
@@ -4456,22 +4453,20 @@ namespace Golfin.CourseImport
                         terrainBaseY + leftH  + yOffset, leftPos.z));
                     rightVerts.Add(new Vector3(rightPos.x,
                         terrainBaseY + rightH + yOffset, rightPos.z));
-
-                    // Wide offsets for depression polygon (margin beyond mesh edge)
-                    float3 lw = pos - right * depHalfWidth;
-                    float3 rw = pos + right * depHalfWidth;
-                    leftVertsWide.Add(new Vector2(lw.x, lw.z));
-                    rightVertsWide.Add(new Vector2(rw.x, rw.z));
                 }
 
                 if (leftVerts.Count < 2) continue;
 
-                // Build closed footprint polygon: left forward + right backward
-                var depPoly = new Vector2[leftVertsWide.Count + rightVertsWide.Count];
-                for (int i = 0; i < leftVertsWide.Count; i++)
-                    depPoly[i] = leftVertsWide[i];
-                for (int i = 0; i < rightVertsWide.Count; i++)
-                    depPoly[leftVertsWide.Count + i] = rightVertsWide[rightVertsWide.Count - 1 - i];
+                // Build depression polygon from the actual mesh edge verts (world space).
+                // Using real mesh edges guarantees the polygon exactly matches the visible
+                // mesh footprint — no offset mismatch. The outward ramp handles the edge.
+                var depPoly = new Vector2[leftVerts.Count + rightVerts.Count];
+                for (int i = 0; i < leftVerts.Count; i++)
+                    depPoly[i] = new Vector2(leftVerts[i].x, leftVerts[i].z);
+                for (int i = 0; i < rightVerts.Count; i++)
+                    depPoly[leftVerts.Count + i] = new Vector2(
+                        rightVerts[rightVerts.Count - 1 - i].x,
+                        rightVerts[rightVerts.Count - 1 - i].z);
                 _splineCartPathPolygons.Add(depPoly);
 
                 // --- Build triangle strip mesh ---
