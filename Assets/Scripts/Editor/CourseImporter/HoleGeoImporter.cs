@@ -2509,7 +2509,7 @@ namespace Golfin.CourseImport
                 {
                     Vector3 src = rawVerts[origIdx];
                     float dist = Mathf.Sqrt(DistanceSqToContour(src.x, src.z, originalPoly));
-                    float u = Mathf.Clamp01(dist / collarWidth);
+                    float u = 1f - Mathf.Clamp01(dist / collarWidth);
                     float v = (src.x + src.z) / collarTileSize;
                     newIdx = finalVerts.Count;
                     finalVerts.Add(src);
