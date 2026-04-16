@@ -60,11 +60,51 @@ Mirror the fairway submesh pattern in `CreateGreenMeshes`:
   fairway fringe in the lessons doc. We can swap to a dedicated
   "first cut" texture later; for now functional > pretty.
 
-### yOffset
+### yOffset & Green Raise
 
-- Green interior: keep current value (0.03f+).
-- Collar: same yOffset as green (it's the same mesh now — they share
-  vertex Y at the boundary, that's the whole point).
+Real greens sit slightly above the surrounding turf (~10–20cm). Since
+green + collar are now one mesh, we can't just bump the whole mesh’s
+Y (that would raise the collar too). Instead, lift only the green-side
+verts with a smooth ramp through the collar so the boundary is a
+gentle slope, not a cliff.
+
+Constants:
+```csharp
+const float GreenRaiseMeters = 0.15f; // putting surface above collar
+const float CollarYOffset    = 0.03f; // same as current green yOffset
+```
+
+Per-vertex Y after terrain sampling, before mesh assignment:
+
+```csharp
+// d = perpendicular distance from vert to the ORIGINAL green contour
+//     (positive both inside and outside; use DistanceToContour helper)
+// inside  = vert is inside original contour (use IsInsideContour)
+//
+// Inside the green: full raise.
+// In the collar ring: ramp from 0 at outer boundary to full raise
+//                     at inner boundary (the original contour).
+float raise;
+if (inside) {
+    raise = GreenRaiseMeters;
+} else {
+    float t = 1f - Mathf.Clamp01(d / collarWidth); // 1 at contour, 0 at outer
+    t = t * t * (3f - 2f * t);                      // smoothstep
+    raise = GreenRaiseMeters * t;
+}
+v.y = terrainY + CollarYOffset + raise;
+```
+
+Result: outer collar edge sits at terrain + 3cm (matches fairway
+fringe), ramps smoothly up across the collar, green proper sits at
+terrain + 18cm. No cliff at the green/collar boundary, no terrain
+depression needed, splatmap untouched.
+
+**Important:** classify inside/outside by VERT position against the
+original contour, not by which submesh the vert belongs to. Boundary
+verts (the duplicated pair) should both compute the same Y — they sit
+exactly on the contour, so `d ≈ 0` and ramp `t ≈ 1`, giving full raise
+on both copies. That keeps the boundary watertight.
 
 ### Fallback
 
@@ -132,6 +172,9 @@ Reimport hole 1 (a hole with a clearly visible green) via both
 - [ ] Both Geo and Lite produce equivalent output
 - [ ] `GreenSurfaceInfo` component is on each green GameObject
 - [ ] No console errors or warnings (other than intentional fallback)
+- [ ] Green proper sits visibly raised above surrounding terrain (~15cm)
+- [ ] No cliff at green/collar boundary — it ramps smoothly
+- [ ] Outer collar edge sits flush with surrounding turf (no gap)
 
 ---
 
@@ -249,7 +292,7 @@ Reimport the hole with the splotch AND the cliff:
 
 ---
 
-✅ DONE: 2026-04-16 — CreateGreenMeshCDT added to both importers. Dilated CDT (0.6m collar), internal constraint, centroid classification, boundary vert duplication, GreenSurfaceInfo hook. Re-import to verify collar ring.
+✅ DONE: 2026-04-16 — Green collar CDT complete. Dilated CDT (0.6m), internal constraint, centroid classification, boundary vert duplication, GreenSurfaceInfo hook, MAT_Fringe collar with distance UV (light side faces green), 8cm smoothstep raise on putting surface.
 
 ## Completed Tasks
 ✅ 2026-04-16 — Cart path outward smoothstep ramp (8 cells) — flat drop inside + gradual return outside
