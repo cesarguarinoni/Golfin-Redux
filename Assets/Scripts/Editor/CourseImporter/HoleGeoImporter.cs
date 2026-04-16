@@ -2048,6 +2048,10 @@ namespace Golfin.CourseImport
             float extentX = Mathf.Max(maxX - minX, 0.1f);
             float extentZ = Mathf.Max(maxZ - minZ, 0.1f);
 
+            // Hoist so they're accessible in the lip band code below.
+            int rimIdx   = useSkirt ? 1 : 0;
+            int innerIdx = useSkirt ? 2 : 1;
+
             for (int r = 0; r < ringCount; r++)
             {
                 float scale = ringScales[r];
@@ -2060,9 +2064,6 @@ namespace Golfin.CourseImport
                     float wz = centroidZ + (contour[i].y - centroidZ) * scale;
 
                     float y = ringY;
-
-                    int rimIdx = useSkirt ? 1 : 0;
-                    int innerIdx = useSkirt ? 2 : 1;
 
                     if (useSkirt && r == 0)  // Skirt: below terrain — hides hole edge
                     {
