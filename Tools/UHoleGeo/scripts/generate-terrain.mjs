@@ -457,14 +457,76 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
   const RAVINE_KERNEL_SIGMA_M    = 8.0;   // Gaussian falloff (softness of carve edges)
   const RAVINE_DEPTH_PERCENTILE  = 0.20;  // use mean of deepest 20% of region cells as target depth
 
-  const TOTAL_CELLS = RES * RES;
+  // Step 1: High-pass filter on rawDem to isolate sharp local features.
+  // ravineResidual = rawDem - blur(rawDem, largeRadius)
+  // This is independent of the synthetic surface — the spline can't
+  // bias the detection.
+  //
+  // Blur radius tuned to be much larger than ravine width so the
+  // ravine is preserved in the residual. ~15m sigma works well:
+  // big enough to smooth over ravines (5-15m typical width) so the
+  // blur reflects surrounding high-ground elevation, small enough
+  // to follow overall hole slope so slope cancels in subtraction.
+  const RAVINE_DETECT_SIGMA_M = 15.0;
+  const detectMetersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
+  const detectSigmaCells = RAVINE_DETECT_SIGMA_M / detectMetersPerCell;
+  const detectRadius = Math.max(1, Math.ceil(3 * detectSigmaCells));
+  const detectKernelSize = 2 * detectRadius + 1;
+  const detectKernel = new Float64Array(detectKernelSize);
+  {
+    const s2 = 2 * detectSigmaCells * detectSigmaCells;
+    let kSum = 0;
+    for (let i = 0; i < detectKernelSize; i++) {
+      const x = i - detectRadius;
+      detectKernel[i] = Math.exp(-(x * x) / s2);
+      kSum += detectKernel[i];
+    }
+    for (let i = 0; i < detectKernelSize; i++) detectKernel[i] /= kSum;
+  }
 
-  // Step 1: Compute residual (rawDem - synthetic surface)
-  // Negative values = cell is below the synthetic surface (ravine candidates)
+  // Separable Gaussian blur on rawDem → blurredDem
+  const TOTAL_CELLS = RES * RES;
+  const blurredDem = new Float64Array(TOTAL_CELLS);
+  const tempBuf = new Float64Array(TOTAL_CELLS);
+
+  // Horizontal pass: rawDem → tempBuf
+  for (let hy = 0; hy < RES; hy++) {
+    const rowBase = hy * RES;
+    for (let hx = 0; hx < RES; hx++) {
+      let sum = 0;
+      for (let k = -detectRadius; k <= detectRadius; k++) {
+        let sx = hx + k;
+        if (sx < 0) sx = 0;
+        else if (sx >= RES) sx = RES - 1;
+        sum += rawDem[rowBase + sx] * detectKernel[k + detectRadius];
+      }
+      tempBuf[rowBase + hx] = sum;
+    }
+  }
+
+  // Vertical pass: tempBuf → blurredDem
+  for (let hx = 0; hx < RES; hx++) {
+    for (let hy = 0; hy < RES; hy++) {
+      let sum = 0;
+      for (let k = -detectRadius; k <= detectRadius; k++) {
+        let sy = hy + k;
+        if (sy < 0) sy = 0;
+        else if (sy >= RES) sy = RES - 1;
+        sum += tempBuf[sy * RES + hx] * detectKernel[k + detectRadius];
+      }
+      blurredDem[hy * RES + hx] = sum;
+    }
+  }
+
+  // Residual: how much each cell differs from the smoothed DEM baseline
+  // Negative = below surroundings (ravines, pits), positive = above (mounds, ridges)
   const ravineResidual = new Float64Array(TOTAL_CELLS);
   for (let i = 0; i < TOTAL_CELLS; i++) {
-    ravineResidual[i] = rawDem[i] - heightmap[i];
+    ravineResidual[i] = rawDem[i] - blurredDem[i];
   }
+
+  console.log(`  Ravine detection: high-pass against ${RAVINE_DETECT_SIGMA_M}m blur ` +
+    `(sigma=${detectSigmaCells.toFixed(1)} cells, radius=${detectRadius})`);
 
   // Step 2: Build ravine-candidate mask — cells more than RAVINE_MIN_DEPTH_M below surface
   const ravineCandidate = new Uint8Array(TOTAL_CELLS);

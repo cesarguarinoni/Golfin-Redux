@@ -6,332 +6,190 @@
 
 ---
 
-## Current Task — Ravine Carving (Detect + Carve Big Negative Features)
+## Current Task — Fix Ravine Detection (High-Pass Against Blurred DEM)
 
-The spline+quadratic surface is smooth and playable zones look great.
-But **real big topographic features are missing** — most notably the
-ravine in Hole 7, which runs through the OB and is currently painted
-over by the smooth synthetic surface.
+The ravine carving code from 2026-04-17 runs, but the ravine appears
+in the WRONG PLACE on Hole 7 — it comes out diagonal and spills into
+the fairway. The raw DEM shows the ravine is actually horizontal and
+entirely in OB (GSI raw capture confirms this).
 
-Problem we're solving: make real ravines (and similar big negative
-features) appear in the heightmap while preserving the smoothness of
-playable zones and avoiding the DEM grid noise that killed every
-previous "blend the DEM back in" approach.
+### Why It's Wrong
 
-Key idea: **detect ravines as coherent regions, carve them as smooth
-Gaussian shapes.** We never copy raw DEM pixels into the heightmap —
-we only use the DEM to find where ravines are, how deep, and how wide.
-The actual carving is done with a separable Gaussian blur of a depth
-field, so no grid noise ever enters the output.
+Current detection compares `rawDem` against the synthetic surface
+(spline along tee→green + quadratic cross-axis). On Hole 7, the
+tee→green axis is strongly diagonal, and the spline paints a huge
+diagonal elevation trough into the synthetic. So:
+
+- Where the real ravine is: `rawDem` ≈ low, `synthetic` ≈ also low (diagonal trough overlaps it here) → small residual → NOT detected
+- Where the synthetic is artificially high (the "off-diagonal" side): `rawDem` is normal-flat terrain → big negative residual → FALSE-POSITIVE detected
+
+The carve then happens at those false-positive locations — producing
+the diagonal artifact we see in-game.
+
+### The Fix — Detect Against a Blurred DEM, Not the Synthetic
+
+Standard GIS technique: to find sharp local features (ravines,
+gullies, mounds), compare the raw DEM against a heavily-smoothed
+version of itself. This is a "high-pass filter" or "unsharp mask":
+
+```
+ravineResidual = rawDem - blur(rawDem, largeRadius)
+```
+
+- The blur removes small-scale noise AND local features
+- Subtracting recovers ONLY the local features (ravines become very negative, ridges become very positive)
+- The overall elevation trend (hills, slopes, tee→green drop) is in BOTH terms and cancels out
+- Crucially: detection is now completely independent of the synthetic surface, so the spline's artifacts can't bias it
+
+The carve step then modifies the synthetic heightmap at the detected
+locations — which will now correctly correspond to real features in
+the DEM.
 
 ### Scope
 
-Only `Tools/UHoleGeo/scripts/generate-terrain.mjs`. One file, one
-function (`generateTerrainDEM`). Insert a new block between the
-existing "Build heightmap: spline + quadratic cross-axis" loop and
-the "Normalize" block. Nothing else changes.
+Only `Tools/UHoleGeo/scripts/generate-terrain.mjs`. Two small changes
+to the existing ravine-carving block:
 
-Perlin fallback path is untouched. `playableZones` is already defined
-earlier in the function — reuse it, don't redeclare.
+1. Replace Step 1 (residual computation) with DEM high-pass
+2. Everything else (candidate mask, flood-fill, region filtering,
+   Gaussian carve) stays the same
 
 ### Implementation
 
-Insert the following block in `generateTerrainDEM()` AFTER the line
-`` console.log(`  Mode: spline along-axis + quadratic cross-axis`); ``
-and BEFORE the line `// Normalize — relative elevation`:
+In the existing ravine carving block, find this section:
 
 ```javascript
-// ─── Ravine Carving ──────────────────────────────────────────
-//
-// Detect big negative features (ravines, gullies) as connected
-// regions where rawDem is significantly below the synthetic surface.
-// Carve each qualifying region as a smooth Gaussian depression —
-// this gives us visible ravines without importing DEM grid noise.
-//
-// Tunable parameters (safe defaults — see notes at bottom of task)
-const RAVINE_MIN_DEPTH_M       = 3.0;   // cell counts as ravine if >= this deep below surface
-const RAVINE_MIN_AREA_CELLS    = 2000;  // min region size (rejects noise)
-const RAVINE_MAX_AREA_FRAC     = 0.25;  // reject regions bigger than this fraction of hole
-const RAVINE_MAX_PLAYABLE_FRAC = 0.05;  // skip region if more than 5% is in playable zones
-const RAVINE_KERNEL_SIGMA_M    = 8.0;   // Gaussian falloff (softness of carve edges)
-const RAVINE_DEPTH_PERCENTILE  = 0.20;  // use mean of deepest 20% of region cells as target depth
-
-const TOTAL_CELLS = RES * RES;
-
 // Step 1: Compute residual (rawDem - synthetic surface)
 // Negative values = cell is below the synthetic surface (ravine candidates)
 const ravineResidual = new Float64Array(TOTAL_CELLS);
 for (let i = 0; i < TOTAL_CELLS; i++) {
   ravineResidual[i] = rawDem[i] - heightmap[i];
 }
-
-// Step 2: Build ravine-candidate mask — cells more than RAVINE_MIN_DEPTH_M below surface
-const ravineCandidate = new Uint8Array(TOTAL_CELLS);
-for (let i = 0; i < TOTAL_CELLS; i++) {
-  if (ravineResidual[i] < -RAVINE_MIN_DEPTH_M) ravineCandidate[i] = 1;
-}
 ```
 
+Replace it with:
+
 ```javascript
-// Step 3: Build playable mask at heightmap resolution (for overlap check)
-const isPlayable = new Uint8Array(TOTAL_CELLS);
+// Step 1: High-pass filter on rawDem to isolate sharp local features.
+// ravineResidual = rawDem - blur(rawDem, largeRadius)
+// This is independent of the synthetic surface — the spline can't
+// bias the detection.
+//
+// Blur radius tuned to be much larger than ravine width so the
+// ravine is preserved in the residual. ~15m sigma works well:
+// big enough to smooth over ravines (5-15m typical width) so the
+// blur reflects surrounding high-ground elevation, small enough
+// to follow overall hole slope so slope cancels in subtraction.
+const RAVINE_DETECT_SIGMA_M = 15.0;
+const detectMetersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
+const detectSigmaCells = RAVINE_DETECT_SIGMA_M / detectMetersPerCell;
+const detectRadius = Math.max(1, Math.ceil(3 * detectSigmaCells));
+const detectKernelSize = 2 * detectRadius + 1;
+const detectKernel = new Float64Array(detectKernelSize);
+{
+  const s2 = 2 * detectSigmaCells * detectSigmaCells;
+  let kSum = 0;
+  for (let i = 0; i < detectKernelSize; i++) {
+    const x = i - detectRadius;
+    detectKernel[i] = Math.exp(-(x * x) / s2);
+    kSum += detectKernel[i];
+  }
+  for (let i = 0; i < detectKernelSize; i++) detectKernel[i] /= kSum;
+}
+
+// Separable Gaussian blur on rawDem → blurredDem
+const TOTAL_CELLS = RES * RES;
+const blurredDem = new Float64Array(TOTAL_CELLS);
+const tempBuf = new Float64Array(TOTAL_CELLS);
+
+// Horizontal pass: rawDem → tempBuf
 for (let hy = 0; hy < RES; hy++) {
+  const rowBase = hy * RES;
   for (let hx = 0; hx < RES; hx++) {
-    const nx = hx / (RES - 1);
-    const ny = hy / (RES - 1);
-    const zx = Math.min(zw - 1, Math.floor(nx * (zw - 1)));
-    const zy = Math.min(zh - 1, Math.floor(ny * (zh - 1)));
-    if (playableZones.has(zoneGrid[zy * zw + zx])) {
-      isPlayable[hy * RES + hx] = 1;
+    let sum = 0;
+    for (let k = -detectRadius; k <= detectRadius; k++) {
+      let sx = hx + k;
+      if (sx < 0) sx = 0;
+      else if (sx >= RES) sx = RES - 1;
+      sum += rawDem[rowBase + sx] * detectKernel[k + detectRadius];
     }
+    tempBuf[rowBase + hx] = sum;
   }
 }
 
-// Step 4: Flood-fill connected components in the candidate mask (4-connectivity).
-// Push neighbours conditionally to avoid bloating the stack.
-const regionLabel = new Int32Array(TOTAL_CELLS); // 0 = unlabeled, 1+ = region id
-let numRegions = 0;
-const floodStack = [];
-
-for (let startIdx = 0; startIdx < TOTAL_CELLS; startIdx++) {
-  if (!ravineCandidate[startIdx] || regionLabel[startIdx] !== 0) continue;
-
-  numRegions++;
-  const label = numRegions;
-  floodStack.length = 0;
-  floodStack.push(startIdx);
-  regionLabel[startIdx] = label;
-```
-
-```javascript
-  while (floodStack.length > 0) {
-    const idx = floodStack.pop();
-    const hx = idx % RES;
-    const hy = (idx - hx) / RES;
-
-    // 4-connectivity
-    if (hx > 0) {
-      const n = idx - 1;
-      if (ravineCandidate[n] && regionLabel[n] === 0) {
-        regionLabel[n] = label;
-        floodStack.push(n);
-      }
+// Vertical pass: tempBuf → blurredDem
+for (let hx = 0; hx < RES; hx++) {
+  for (let hy = 0; hy < RES; hy++) {
+    let sum = 0;
+    for (let k = -detectRadius; k <= detectRadius; k++) {
+      let sy = hy + k;
+      if (sy < 0) sy = 0;
+      else if (sy >= RES) sy = RES - 1;
+      sum += tempBuf[sy * RES + hx] * detectKernel[k + detectRadius];
     }
-    if (hx < RES - 1) {
-      const n = idx + 1;
-      if (ravineCandidate[n] && regionLabel[n] === 0) {
-        regionLabel[n] = label;
-        floodStack.push(n);
-      }
-    }
-    if (hy > 0) {
-      const n = idx - RES;
-      if (ravineCandidate[n] && regionLabel[n] === 0) {
-        regionLabel[n] = label;
-        floodStack.push(n);
-      }
-    }
-    if (hy < RES - 1) {
-      const n = idx + RES;
-      if (ravineCandidate[n] && regionLabel[n] === 0) {
-        regionLabel[n] = label;
-        floodStack.push(n);
-      }
-    }
+    blurredDem[hy * RES + hx] = sum;
   }
 }
-```
 
-```javascript
-// Step 5: Gather per-region stats and decide which to carve
-const regionStats = new Array(numRegions + 1); // index 0 unused
-for (let r = 1; r <= numRegions; r++) {
-  regionStats[r] = { cells: [], depths: [], playableCount: 0 };
+// Residual: how much each cell differs from the smoothed DEM baseline
+// Negative = below surroundings (ravines, pits), positive = above (mounds, ridges)
+const ravineResidual = new Float64Array(TOTAL_CELLS);
+for (let i = 0; i < TOTAL_CELLS; i++) {
+  ravineResidual[i] = rawDem[i] - blurredDem[i];
 }
 
-for (let idx = 0; idx < TOTAL_CELLS; idx++) {
-  const r = regionLabel[idx];
-  if (r === 0) continue;
-  regionStats[r].cells.push(idx);
-  regionStats[r].depths.push(ravineResidual[idx]);
-  if (isPlayable[idx]) regionStats[r].playableCount++;
-}
-
-const MAX_AREA_CELLS = Math.floor(TOTAL_CELLS * RAVINE_MAX_AREA_FRAC);
-const carvedRegions = [];
-
-for (let r = 1; r <= numRegions; r++) {
-  const stats = regionStats[r];
-  const area = stats.cells.length;
-
-  if (area < RAVINE_MIN_AREA_CELLS) continue;
-  if (area > MAX_AREA_CELLS) {
-    console.log(`    Region #${r}: area=${area} cells — REJECTED (too big, > ${(RAVINE_MAX_AREA_FRAC * 100).toFixed(0)}% of hole)`);
-    continue;
-  }
-  const playableFrac = stats.playableCount / area;
-  if (playableFrac > RAVINE_MAX_PLAYABLE_FRAC) {
-    console.log(`    Region #${r}: area=${area}, playable=${(playableFrac * 100).toFixed(1)}% — REJECTED (overlaps playable)`);
-    continue;
-  }
+console.log(`  Ravine detection: high-pass against ${RAVINE_DETECT_SIGMA_M}m blur ` +
+  `(sigma=${detectSigmaCells.toFixed(1)} cells, radius=${detectRadius})`);
 ```
+
+**IMPORTANT:** The existing code declares `const TOTAL_CELLS = RES * RES;`
+immediately after the original Step 1 block. Since the new Step 1 now
+declares `TOTAL_CELLS` inside itself, **remove the duplicate line**
+below the new Step 1. Find and delete:
 
 ```javascript
-  // Target depth = mean of deepest N% of cells (avoids outliers dominating)
-  stats.depths.sort((a, b) => a - b); // ascending (most negative first)
-  const deepestCount = Math.max(1, Math.floor(stats.depths.length * RAVINE_DEPTH_PERCENTILE));
-  let depthSum = 0;
-  for (let i = 0; i < deepestCount; i++) depthSum += stats.depths[i];
-  const targetDepth = depthSum / deepestCount; // negative (below surface), meters
-
-  carvedRegions.push({
-    id: r,
-    area,
-    playableFrac,
-    targetDepth,
-    cells: stats.cells,
-  });
-}
-
-console.log(`  Ravine detection: ${numRegions} candidate regions, ${carvedRegions.length} qualifying for carve`);
-for (const region of carvedRegions) {
-  console.log(`    Carve Region #${region.id}: area=${region.area} cells, ` +
-    `playable=${(region.playableFrac * 100).toFixed(1)}%, ` +
-    `depth=${region.targetDepth.toFixed(1)}m`);
-}
+const TOTAL_CELLS = RES * RES;
 ```
 
-```javascript
-// Step 6: Carve each qualifying region with a separable Gaussian blur.
-//
-// Approach:
-//   - Build a source field: region cells = targetDepth, everywhere else = 0
-//   - Apply a separable Gaussian blur (horizontal pass then vertical pass)
-//   - Rescale so the deepest point of the blurred field = targetDepth
-//     (the blur inevitably shallows the peak)
-//   - Add to heightmap
-//
-// Two buffers are reused across all regions instead of allocating fresh
-// buffers per region — saves ~32 MB per extra region per blur buffer.
+(the one that appears between the old Step 1 and Step 2 — NOT the one
+now inside the new Step 1).
 
-if (carvedRegions.length > 0) {
-  const metersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
-  const sigmaCells = RAVINE_KERNEL_SIGMA_M / metersPerCell;
+### Everything Else Stays The Same
 
-  // Build 1D Gaussian kernel with radius = ceil(3 * sigma)
-  const kernelRadius = Math.max(1, Math.ceil(3 * sigmaCells));
-  const kernelSize = 2 * kernelRadius + 1;
-  const kernel = new Float64Array(kernelSize);
-  {
-    const s2 = 2 * sigmaCells * sigmaCells;
-    let kSum = 0;
-    for (let i = 0; i < kernelSize; i++) {
-      const x = i - kernelRadius;
-      kernel[i] = Math.exp(-(x * x) / s2);
-      kSum += kernel[i];
-    }
-    for (let i = 0; i < kernelSize; i++) kernel[i] /= kSum;
-  }
-  console.log(`  Ravine carving: sigma=${RAVINE_KERNEL_SIGMA_M}m (${sigmaCells.toFixed(1)} cells), ` +
-    `kernel radius=${kernelRadius} cells, size=${kernelSize}`);
-```
+Do NOT change:
+- Step 2 (candidate mask based on `ravineResidual < -RAVINE_MIN_DEPTH_M`)
+- Step 3 (playable mask)
+- Step 4 (flood-fill connected components)
+- Step 5 (per-region stats, filtering, targetDepth calculation)
+- Step 6 (Gaussian carve onto the synthetic `heightmap`)
+- Any of the tunable constants (RAVINE_MIN_DEPTH_M, RAVINE_MIN_AREA_CELLS, etc.)
 
-```javascript
-  // Reusable buffers for blur
-  const bufA = new Float64Array(TOTAL_CELLS);
-  const bufB = new Float64Array(TOTAL_CELLS);
+The carve still happens on the synthetic `heightmap` (spline+quadratic).
+We're only fixing WHERE the carve happens — the carve mechanism itself
+is unchanged.
 
-  for (const region of carvedRegions) {
-    // Clear bufA and write source field
-    bufA.fill(0);
-    for (const idx of region.cells) bufA[idx] = region.targetDepth;
+### Why This Should Work
 
-    // Horizontal pass: bufA -> bufB
-    for (let hy = 0; hy < RES; hy++) {
-      const rowBase = hy * RES;
-      for (let hx = 0; hx < RES; hx++) {
-        let sum = 0;
-        for (let k = -kernelRadius; k <= kernelRadius; k++) {
-          let sx = hx + k;
-          if (sx < 0) sx = 0;
-          else if (sx >= RES) sx = RES - 1;
-          sum += bufA[rowBase + sx] * kernel[k + kernelRadius];
-        }
-        bufB[rowBase + hx] = sum;
-      }
-    }
+- `rawDem - blur(rawDem, 30m)` gives a clean signal: ravine cells are very negative, ridge cells are very positive, most cells ~0
+- The 30m blur is wide enough to "see over" the ravine (ravines are typically 5-15m wide), so the blur at a ravine cell reflects the surrounding high ground — making the residual strongly negative
+- The 30m blur is narrow enough to follow overall terrain slope, so the slope cancels out in the subtraction
+- The detection no longer looks at the synthetic surface at all, so spline artifacts can't create false positives
 
-    // Vertical pass: bufB -> bufA
-    for (let hx = 0; hx < RES; hx++) {
-      for (let hy = 0; hy < RES; hy++) {
-        let sum = 0;
-        for (let k = -kernelRadius; k <= kernelRadius; k++) {
-          let sy = hy + k;
-          if (sy < 0) sy = 0;
-          else if (sy >= RES) sy = RES - 1;
-          sum += bufB[sy * RES + hx] * kernel[k + kernelRadius];
-        }
-        bufA[hy * RES + hx] = sum;
-      }
-    }
-```
+### Tuning Notes
 
-```javascript
-    // Find deepest value in blurred field (most negative)
-    let minAfter = 0;
-    for (let i = 0; i < TOTAL_CELLS; i++) {
-      if (bufA[i] < minAfter) minAfter = bufA[i];
-    }
+Only tune if Hole 7 still looks wrong after this change.
 
-    // Rescale so deepest = targetDepth (both are negative, so ratio is positive)
-    if (minAfter < -1e-6) {
-      const rescale = region.targetDepth / minAfter;
-      for (let i = 0; i < TOTAL_CELLS; i++) {
-        heightmap[i] += bufA[i] * rescale;
-      }
-    }
-  }
-}
-// ─── End Ravine Carving ──────────────────────────────────────
-```
+If no ravine detected at all:
+- Lower `RAVINE_DETECT_SIGMA_M` to 10.0 — tighter blur, more sensitive to small features
+- Lower `RAVINE_MIN_DEPTH_M` to 2.0 — accept shallower cells
 
-### Why This Avoids the Failures of Previous Attempts
+If ravine detected but in wrong shape:
+- Log the residual min/max and see where cells below threshold actually are
+- Could add a debug: export `ravineResidual` as a PNG for visual inspection
 
-| Previous failure                                          | Why this doesn't hit it                                                                          |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| DEM residual blending → 5m grid noise on fairway          | We don't blend raw DEM anywhere. The carve uses a smooth Gaussian kernel, not DEM pixels.        |
-| Per-zone residual masks → visible boundary artifacts      | No zone masks in the carving. The kernel is applied globally; boundaries emerge from the Gaussian falloff, which is smooth by construction. |
-| Playable zones had bumps from residual                    | `RAVINE_MAX_PLAYABLE_FRAC = 0.05` prevents carving anything that overlaps playable more than 5%. |
-| Large filters broke narrow zones                          | Carve is a feature-level operation — doesn't care about zone shapes. Just makes a smooth depression wherever the DEM says a ravine is. |
-
-### What NOT to Change
-
-- Axis computation (tee→green centroids, unit vectors)
-- DEM sampling loop (splineXs/splineYs construction)
-- Monotone spline + quadratic cross-axis surface construction
-- `fitQuadratic` / `evalQuadratic`
-- Normalization, final blur, uint16 encode, row-flip
-- Perlin fallback path
-- NaN-fill propagation
-- The existing `playableZones` Set definition (re-use it — don't redeclare)
-
-### Parameter Tuning Notes
-
-Defaults are tuned conservatively for Hole 7's ravine. Tune only if
-visual results on Hole 7 are wrong.
-
-If the ravine doesn't appear deep enough:
-- Lower `RAVINE_MIN_DEPTH_M` (e.g. 2.0) — more cells qualify
-- Lower `RAVINE_KERNEL_SIGMA_M` (e.g. 5.0) — sharper edges, less smoothing
-
-If the ravine detection doesn't trigger at all (0 qualifying regions):
-- Check console output. If candidate regions exist but all REJECTED for
-  "overlaps playable", raise `RAVINE_MAX_PLAYABLE_FRAC` slightly (e.g.
-  0.10). This is the knob that protects playable smoothness, be cautious.
-
-If random false positives appear on other holes:
-- Raise `RAVINE_MIN_AREA_CELLS` (e.g. 4000)
-- Raise `RAVINE_MIN_DEPTH_M` (e.g. 4.0)
+If false positives on other holes:
+- Raise `RAVINE_DETECT_SIGMA_M` to 25.0 — wider blur, only very sharp features detected
+- Raise `RAVINE_MIN_DEPTH_M` to 4.0
 
 ### Verification
 
@@ -340,44 +198,33 @@ cd Tools/UHoleGeo
 node scripts/generate-terrain.mjs lomond-country-club 7
 ```
 
-Expected console output includes lines like:
+Expected console output:
 ```
+  Ravine detection: high-pass against 30m blur (sigma=… cells, radius=…)
   Ravine detection: N candidate regions, K qualifying for carve
     Carve Region #R: area=… cells, playable=…%, depth=…m
-  Ravine carving: sigma=8m (… cells), kernel radius=… cells, size=…
 ```
 
-Then run `--all` to confirm nothing breaks on other holes:
+Run `--all` to check no regressions:
 
 ```bash
 node scripts/generate-terrain.mjs lomond-country-club --all
 ```
 
-Expected: most holes log `0 qualifying for carve`. A few may log
-1-2 regions. No errors, no crashes.
-
 Then in Unity: `Import > Geo > Normal > Import Hole 07 Geo`
 
-- [ ] Ravine visible in the OB area on Hole 7 (roughly horizontal in the rotated-canvas view)
-- [ ] Ravine position matches the GSI raw heightmap capture
-- [ ] Fairway stays smooth — no bumps, no diagonal artifact
-- [ ] No visible cliff where the ravine meets surrounding terrain
-- [ ] Green and tee areas unchanged
-- [ ] Cart paths, bunkers, water all unaffected
-- [ ] No mesh poke-through on overlays
-- [ ] No console errors
-
-Spot-check Hole 1 and Hole 4 to confirm nothing changed:
-
-- [ ] Hole 1 looks the same as before
-- [ ] Hole 4 still shows its terraces
-- [ ] No new false-positive ravines on either hole
+- [ ] Ravine appears in OB area of Hole 7
+- [ ] Ravine shape matches the GSI raw DEM capture (horizontal band, north of fairway in rotated view)
+- [ ] No diagonal trough artifact
+- [ ] Fairway smooth, no carve bleeding into playable
+- [ ] Other holes unchanged vs previous run
 
 ---
 
 ## Completed Tasks
 
+✅ 2026-04-17 — Ravine carving via connected-component detection + Gaussian blur carve. Hole 7: 4 qualifying regions (depths -12 to -28m). WRONG LOCATIONS — detection was biased by spline-polluted synthetic.
+✅ 2026-04-17 — Switched ravine detection to high-pass against 15m blur of rawDem. Hole 7: 5 qualifying regions (depths -3.5 to -12m). All 18 holes pass. Awaiting Unity visual verification.
 ✅ 2026-04-15 — Fritsch-Carlson monotone spline + 20 samples. Preserves terraces without overshoot.
 ✅ 2026-04-15 — Cubic spline (natural) along tee→green axis + quadratic cross-axis. Better heights overall but terraces still rounded off by cubic overshoot + sparse sampling.
 ✅ 2026-04-15 — Per-zone residual blending with Gaussian blur (reverted — zone boundary artifacts)
-✅ 2026-04-17 — Ravine carving via connected-component detection + Gaussian blur carve. Hole 7: 4 qualifying regions (depths -12 to -28m). All 18 holes pass with no errors. Ready for Unity visual verification.
