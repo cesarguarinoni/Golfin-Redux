@@ -4397,7 +4397,7 @@ namespace Golfin.CourseImport
                     spline.SetTangentMode(i, TangentMode.AutoSmooth);
 
                 // --- Evaluate spline at dense intervals ---
-                float splineLength = SplineUtility.CalculateLength(spline);
+                float splineLength = SplineUtility.CalculateLength(spline, float4x4.identity);
                 if (splineLength < 0.1f) continue;
 
                 int sampleCount = Mathf.Max(2,
