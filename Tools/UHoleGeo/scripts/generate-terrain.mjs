@@ -405,10 +405,35 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
     splineYs.push(elev);
   }
 
+  // Clip spline samples to the quadratic baseline so lateral features
+  // (ravines crossing the axis) don't contaminate the along-axis profile.
+  // The quadratic is fit to playable zones only — it represents the
+  // ambient hole terrain without the ravine. If a DEM sample dips more
+  // than MAX_DIP_BELOW_QUAD below that baseline, we clip it. Without
+  // this, the spline projects the ravine dip perpendicular to the axis,
+  // creating a diagonal band of fake low elevation across the map.
+  const MAX_DIP_BELOW_QUAD = 5.0;
+  const splineYsRaw = splineYs.slice();
+  let clippedCount = 0;
+  for (let i = 0; i < N_SPLINE_POINTS; i++) {
+    const t = i / (N_SPLINE_POINTS - 1);
+    const hx = teeHX + t * axDx;
+    const hy = teeHY + t * axDy;
+    const quadBaseline = evalQuadratic(holeSurface, hx, hy);
+    const floor = quadBaseline - MAX_DIP_BELOW_QUAD;
+    if (splineYs[i] < floor) {
+      splineYs[i] = floor;
+      clippedCount++;
+    }
+  }
+
   const spline = monotoneCubicSpline(splineXs, splineYs);
 
   console.log(`  Spline: ${N_SPLINE_POINTS} DEM samples along axis (${axisLen.toFixed(0)} cells)`);
-  console.log(`    Elevations: ${splineYs.map(e => e.toFixed(1)).join(', ')} m ASL`);
+  console.log(`    Raw:      ${splineYsRaw.map(e => e.toFixed(1)).join(', ')} m ASL`);
+  if (clippedCount > 0) {
+    console.log(`    Clipped:  ${splineYs.map(e => e.toFixed(1)).join(', ')} m ASL (${clippedCount} samples)`);
+  }
 
   // Build heightmap: spline(along) + quadratic cross-axis residual
   const heightmap = new Float64Array(RES * RES);
