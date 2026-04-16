@@ -2380,8 +2380,6 @@ namespace Golfin.CourseImport
                 return;
             }
 
-            float greenHeight = greensFile.height_m > 0 ? greensFile.height_m : 0.15f;
-
             var greenMat = CreateZoneMaterial(dataDir, projectRoot,
                 "GreenSurface", "T_Green_Albedo", 3f);
             var collarMat = CreateZoneMaterial(dataDir, projectRoot,
@@ -2484,14 +2482,19 @@ namespace Golfin.CourseImport
                     }
                 }
 
-                // Create raised mesh
-                float surfaceY = terrainBaseY + terrain.SampleHeight(
-                    new Vector3(centroidX, 0, centroidZ));
+                // Build ContourPoint[] for CDT (Lite importer: 90° CCW rotation already in worldContour,
+                // so invert: contour.z = worldContour.x (wx), contour.x = worldContour.y (wz))
+                var contourPoints = new ContourPoint[worldContour.Length];
+                for (int i = 0; i < worldContour.Length; i++)
+                    contourPoints[i] = new ContourPoint { x = worldContour[i].y, z = worldContour[i].x };
 
-                var meshGO = CreateRaisedMesh(green.id, "Green", worldContour,
-                    centroidX, centroidZ, surfaceY, greenHeight, greenMat,
-                    terrain, terrainBaseY, collarMat, greenCollarScale, yBoost);
-                meshGO.transform.SetParent(greensRoot.transform);
+                const float greenYOffset = 0.03f;
+                const float greenCollarWidth = 0.6f;
+                var meshGO = CreateGreenMeshCDT(green.id, contourPoints,
+                    terrain, terrainBaseY, greenMat, collarMat,
+                    greenCollarWidth, collarTileSize: 4f, greenTileSize: 3f, yBoost);
+                if (meshGO != null)
+                    meshGO.transform.SetParent(greensRoot.transform);
 
                 // Place flag at green centroid
                 var flagPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -2501,7 +2504,7 @@ namespace Golfin.CourseImport
                     var flag = Object.Instantiate(flagPrefab);
                     flag.name = $"Flag_{green.id}";
                     float flagTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
-                    float flagY = terrainBaseY + flagTerrainH + greenHeight + yBoost;
+                    float flagY = terrainBaseY + flagTerrainH + greenYOffset + yBoost;
                     flag.transform.position = new Vector3(centroidX, flagY, centroidZ);
                     flag.transform.SetParent(greensRoot.transform);
 
@@ -2521,7 +2524,7 @@ namespace Golfin.CourseImport
                     var holeCup = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                     holeCup.name = $"Hole_{green.id}";
                     float cupTerrainH = terrain.SampleHeight(new Vector3(centroidX, 0, centroidZ));
-                    float cupY = terrainBaseY + cupTerrainH + greenHeight + yBoost;
+                    float cupY = terrainBaseY + cupTerrainH + greenYOffset + yBoost;
                     holeCup.transform.position = new Vector3(centroidX, cupY + 0.001f, centroidZ);
                     holeCup.transform.localScale = new Vector3(0.108f, 0.001f, 0.108f);
                     holeCup.transform.SetParent(greensRoot.transform);
@@ -2540,14 +2543,6 @@ namespace Golfin.CourseImport
                         rend.sharedMaterial = blackMat;
                     }
                 }
-
-                // Find the surface child and add Green marker
-                var surfaceChild = meshGO.transform.Find($"Green_{green.id}_Surface");
-                if (surfaceChild != null)
-                {
-                    var marker = surfaceChild.gameObject.AddComponent<Golfin.Course.SurfaceMarker>();
-                    marker.surfaceType = Golfin.Course.SurfaceType.Green;
-                }
             }
 
             // Copy greens.json to Assets
@@ -2558,6 +2553,136 @@ namespace Golfin.CourseImport
             Debug.Log($"[HoleLiteImporter] Created {greensFile.greens.Length} green(s)");
         }
 
+
+        /// <summary>
+        /// Green mesh with collar baked in as a second submesh via dilated CDT.
+        /// Submesh 0 = putting surface (inside original contour).
+        /// Submesh 1 = collar / first cut (dilation ring, outside original contour).
+        /// Single mesh, shared geometry — no Z-fighting on slopes.
+        /// Falls back to collar-free mesh if dilation CDT fails.
+        /// Lite importer: contour uses 90° CCW rotation (contour.z = wx, contour.x = wz).
+        /// </summary>
+        private static GameObject CreateGreenMeshCDT(
+            int id, ContourPoint[] contour,
+            Terrain terrain, float terrainBaseY,
+            Material greenMat, Material collarMat,
+            float collarWidth, float collarTileSize, float greenTileSize,
+            float yBoost)
+        {
+            const float yOffset = 0.03f;
+            int nc = contour.Length;
+            if (nc < 3) return null;
+
+            float effectiveYOffset = yOffset + yBoost;
+
+            System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+                new Vector2(wx / greenTileSize, wz / greenTileSize);
+
+            ContourPoint[] dilatedContour = DilateContour(contour, collarWidth);
+
+            // Original contour as internal CDT constraint — forces triangle edges
+            // exactly along it so the green/collar boundary has no jaggies.
+            var (rawVerts, uvs, tris) = CDTTriangulate(
+                dilatedContour, terrain, terrainBaseY, effectiveYOffset, 1.0f, uvFunc,
+                innerConstraint: contour);
+
+            bool collarEnabled = rawVerts != null && tris != null && tris.Length >= 3;
+            if (!collarEnabled)
+            {
+                Debug.LogWarning($"[HoleLiteImporter] Green {id}: dilated CDT failed, retrying without collar");
+                (rawVerts, uvs, tris) = CDTTriangulate(
+                    contour, terrain, terrainBaseY, effectiveYOffset, 1.0f, uvFunc);
+                if (rawVerts == null || tris == null || tris.Length < 3)
+                    return null;
+            }
+
+            // Original polygon in world XZ for centroid classification
+            // (Lite: 90° CCW rotation — contour.z = wx, contour.x = wz)
+            var originalPoly = new Vector2[nc];
+            for (int i = 0; i < nc; i++)
+                originalPoly[i] = new Vector2(contour[i].z, contour[i].x);
+
+            // Wind triangles CW (Unity default)
+            if (tris.Length >= 3)
+            {
+                Vector3 a = rawVerts[tris[0]], b = rawVerts[tris[1]], c = rawVerts[tris[2]];
+                float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+                if (cross > 0)
+                    for (int t = 0; t < tris.Length; t += 3)
+                    { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
+            }
+
+            // Classify each triangle by its centroid (always strictly inside or outside
+            // the original contour since triangles have nonzero area).
+            var greenTris = new List<int>();
+            var collarSrcTris = new List<int>();
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                Vector3 va = rawVerts[tris[t]], vb = rawVerts[tris[t + 1]], vc = rawVerts[tris[t + 2]];
+                float triCx = (va.x + vb.x + vc.x) / 3f;
+                float triCz = (va.z + vb.z + vc.z) / 3f;
+                bool inside = collarEnabled ? IsInsideContour(triCx, triCz, originalPoly) : true;
+                if (inside)
+                { greenTris.Add(tris[t]); greenTris.Add(tris[t + 1]); greenTris.Add(tris[t + 2]); }
+                else
+                { collarSrcTris.Add(tris[t]); collarSrcTris.Add(tris[t + 1]); collarSrcTris.Add(tris[t + 2]); }
+            }
+
+            // Duplicate boundary verts for collar so each submesh gets independent UVs.
+            var finalVerts = new List<Vector3>(rawVerts);
+            var finalUVs   = new List<Vector2>(uvs);
+            var vertRemap  = new Dictionary<int, int>();
+            var collarTris = new List<int>(collarSrcTris.Count);
+            foreach (int origIdx in collarSrcTris)
+            {
+                if (!vertRemap.TryGetValue(origIdx, out int newIdx))
+                {
+                    Vector3 src = rawVerts[origIdx];
+                    newIdx = finalVerts.Count;
+                    finalVerts.Add(src);
+                    finalUVs.Add(new Vector2(src.x / collarTileSize, src.z / collarTileSize));
+                    vertRemap[origIdx] = newIdx;
+                }
+                collarTris.Add(newIdx);
+            }
+
+            // Compute centroid for GO position
+            float cx = 0f, cz = 0f;
+            for (int i = 0; i < rawVerts.Length; i++) { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+            cx /= rawVerts.Length; cz /= rawVerts.Length;
+            Vector3 centroid = new Vector3(cx, 0f, cz);
+
+            var vertsArr = finalVerts.ToArray();
+            for (int i = 0; i < vertsArr.Length; i++) vertsArr[i] -= centroid;
+
+            var mesh = new Mesh();
+            mesh.name = $"Green_{id}";
+            mesh.vertices = vertsArr;
+            mesh.uv = finalUVs.ToArray();
+            mesh.subMeshCount = collarEnabled ? 2 : 1;
+            mesh.SetTriangles(greenTris.ToArray(), 0);
+            if (collarEnabled) mesh.SetTriangles(collarTris.ToArray(), 1);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"Green_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterials = collarEnabled
+                ? new Material[] { greenMat, collarMat }
+                : new Material[] { greenMat };
+            AddCleanMeshCollider(go, mesh);
+
+            go.AddComponent<Golfin.Course.GreenSurfaceInfo>();
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = Golfin.Course.SurfaceType.Green;
+
+            Debug.Log($"[HoleLiteImporter] Green {id}: CDT submesh, " +
+                $"greenTris={greenTris.Count / 3}, " +
+                $"collarTris={collarTris.Count / 3}, collarEnabled={collarEnabled}");
+            return go;
+        }
 
         private static GameObject CreateRaisedMesh(int id, string zoneName,
             Vector2[] contour, float centroidX, float centroidZ,
