@@ -3187,7 +3187,7 @@ namespace Golfin.CourseImport
             // Inside footprint → 100% drop (no terrain poke-through).
             // Outside footprint within ramp zone → smoothstep back to 0
             // (no visible cliff at path boundary).
-            int cartRampCells = 8; // ramp width in heightmap cells (~1m at 1025 res)
+            int cartRampCells = 3; // ramp width in heightmap cells (~0.5m at 1025 res)
             int cartDepressedCount = 0;
 
             // Step 1: Distance transform outward from cart path boundary
