@@ -4427,13 +4427,12 @@ namespace Golfin.CourseImport
                     float3 leftPos = pos - right * halfWidth;
                     float3 rightPos = pos + right * halfWidth;
 
-                    // Sample terrain height at the centerline only, then apply
-                    // the same Y to both edge vertices. This keeps the cross-section
-                    // flat (like real asphalt) and prevents edge vertices from
-                    // landing on depression-polygon edges and pulling one side down.
-                    float centerH = terrain.SampleHeight(
-                        new Vector3(pos.x, 0, pos.z));
-                    float edgeY = terrainBaseY + centerH + yOffset;
+                    // Use the spline's own interpolated Y (Bézier AutoSmooth between
+                    // knots) rather than re-sampling terrain at every dense step.
+                    // This smooths over local terrain dips/bumps between spine points
+                    // so the cart path surface stays clean. Knots are already set to
+                    // terrain height at each spine point, giving correct grade overall.
+                    float edgeY = pos.y + yOffset;
 
                     leftVerts.Add(new Vector3(leftPos.x, edgeY, leftPos.z));
                     rightVerts.Add(new Vector3(rightPos.x, edgeY, rightPos.z));
