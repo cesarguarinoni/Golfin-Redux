@@ -4343,7 +4343,8 @@ namespace Golfin.CourseImport
             {
                 if (cp.spine == null || cp.spine.Length < 2) continue;
 
-                float halfWidth = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
+                float halfWidth    = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
+                float depHalfWidth = halfWidth - 0.3f; // inset so depression stays inside mesh
                 float sampleSpacing = 0.5f; // meters between samples
                 float yOffset = 0.01f;      // sit just above terrain
 
@@ -4374,8 +4375,10 @@ namespace Golfin.CourseImport
                 int sampleCount = Mathf.Max(2,
                     Mathf.CeilToInt(splineLength / sampleSpacing));
 
-                var leftVerts  = new List<Vector3>();
-                var rightVerts = new List<Vector3>();
+                var leftVerts     = new List<Vector3>();
+                var rightVerts    = new List<Vector3>();
+                var leftVertsInset  = new List<Vector2>(); // inset polygon for depression
+                var rightVertsInset = new List<Vector2>();
 
                 for (int s = 0; s <= sampleCount; s++)
                 {
@@ -4406,19 +4409,22 @@ namespace Golfin.CourseImport
                         terrainBaseY + leftH  + yOffset, leftPos.z));
                     rightVerts.Add(new Vector3(rightPos.x,
                         terrainBaseY + rightH + yOffset, rightPos.z));
+
+                    float3 li = pos - right * depHalfWidth;
+                    float3 ri = pos + right * depHalfWidth;
+                    leftVertsInset.Add(new Vector2(li.x, li.z));
+                    rightVertsInset.Add(new Vector2(ri.x, ri.z));
                 }
 
                 if (leftVerts.Count < 2) continue;
 
-                // Build depression polygon from actual mesh edge verts.
-                // Flat drop only — the mesh covers the edge so no ramp needed outside.
-                var depPoly = new Vector2[leftVerts.Count + rightVerts.Count];
-                for (int i = 0; i < leftVerts.Count; i++)
-                    depPoly[i] = new Vector2(leftVerts[i].x, leftVerts[i].z);
-                for (int i = 0; i < rightVerts.Count; i++)
-                    depPoly[leftVerts.Count + i] = new Vector2(
-                        rightVerts[rightVerts.Count - 1 - i].x,
-                        rightVerts[rightVerts.Count - 1 - i].z);
+                // Build depression polygon inset 0.3m from mesh edge.
+                // Keeps depression fully inside the visible mesh so no bleed into grass.
+                var depPoly = new Vector2[leftVertsInset.Count + rightVertsInset.Count];
+                for (int i = 0; i < leftVertsInset.Count; i++)
+                    depPoly[i] = leftVertsInset[i];
+                for (int i = 0; i < rightVertsInset.Count; i++)
+                    depPoly[leftVertsInset.Count + i] = rightVertsInset[rightVertsInset.Count - 1 - i];
                 _splineCartPathPolygons.Add(depPoly);
 
                 // --- Build triangle strip mesh ---
