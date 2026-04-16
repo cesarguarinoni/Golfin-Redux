@@ -5,331 +5,128 @@
 > Claude (Architect) will update this file with new instructions as needed.
 > Handoff: `Docs/TellCode.md`
 > Previous completed specs archived in: `Docs/TellCode_Archive.md`
-> Full design rationale: `Docs/CART_PATH_SPLINE_PLAN.md`
 
 ---
 
-## Current Task — Spline-Based Cart Path Meshes (HoleGeoImporter)
+## Current Task — Depress Terrain Under Spline Cart Path Footprint
 
-Replace the current `CreateSpineStripMesh()` cart path approach with
-Unity Splines. The `com.unity.splines` package (v2.8.4) is installed.
+Terrain pokes through the spline cart path mesh on concave slopes.
+The current depression uses the old contour polygon, but the spline
+mesh follows a different (smoother) centerline. On curves, the
+spline extends over un-depressed terrain → terrain shows through.
 
-The export (`cart-paths.json`) already includes `spine` arrays — the
-centerline points in local meter coords (already Z-flipped for Unity).
+**Fix:** After building each spline cart path mesh, construct a
+closed polygon from the mesh's left+right edge vertices and feed
+it to the depression system. This ensures the depressed area exactly
+matches the visible mesh footprint.
 
-### Overview
+### The Approach
 
-For each cart path spine:
-1. Create BezierKnots from spine points (with terrain Y)
-2. Build a Spline with AutoSmooth tangents
-3. Evaluate the spline at dense intervals (~0.5m spacing)
-4. At each sample: offset left/right by halfWidth to get strip edges
-5. Sample `terrain.SampleHeight()` at each edge vertex
-6. Build triangle strip mesh from vertex pairs
-7. Apply material, SurfaceMarker, MeshCollider
+The spline mesh generator already has `leftVerts` and `rightVerts`
+lists (the left and right edge vertices in world space). Build a
+closed polygon:
 
-### Step 1: Add Usings
-
-At the top of `HoleGeoImporter.cs`, add:
-
-```csharp
-using UnityEngine.Splines;
-using Unity.Mathematics;
+```
+left[0] → left[1] → ... → left[N] → right[N] → right[N-1] → ... → right[0] → close
 ```
 
-### Step 2: New Method — `CreateSplineCartPaths()`
+This polygon traces the exact footprint of the strip mesh. Feed it
+to `DepressTerrainUnderOverlays()` (or equivalent) with a small
+margin so the depression extends slightly beyond the mesh edges.
 
-Add this method to `HoleGeoImporter`. It replaces the spine strip
-mesh creation for cart paths. Keep the existing contour-based CDT
-mesh creation for the splatmap/depression system — only the VISIBLE
-strip mesh changes.
+### Step 1: Build Spline Strip Polygon
+
+After building the spline mesh (after the `leftVerts`/`rightVerts`
+lists are populated), construct the footprint polygon:
 
 ```csharp
-/// <summary>
-/// Build cart path strip meshes using Unity Splines for smooth
-/// curves and dense terrain-conforming vertex sampling.
-/// </summary>
-private static void CreateSplineCartPaths(
-    TerrainData terrainData, GameObject terrainGO, Transform parent,
-    string exportPath, string dataDir, string projectRoot)
-{
-    string cpPath = Path.Combine(exportPath, "cart-paths.json");
-    if (!File.Exists(cpPath)) return;
-
-    var cpData = JsonUtility.FromJson<CartPathsFile>(
-        File.ReadAllText(cpPath));
-    if (cpData.cart_paths == null || cpData.cart_paths.Length == 0) return;
-
-    var terrain = terrainGO.GetComponent<Terrain>();
-    float terrainBaseY = terrainGO.transform.position.y;
-
-    // Cart path material (same as existing)
-    var cartMat = CreateCartPathMaterial(dataDir);
-
-    var cartRoot = new GameObject("CartPaths_Spline");
-    cartRoot.transform.SetParent(parent);
-
-    int meshCount = 0;
-
-    foreach (var cp in cpData.cart_paths)
-    {
-        if (cp.spine == null || cp.spine.Length < 2) continue;
-
-        float halfWidth = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
-        float sampleSpacing = 0.5f; // meters between samples
-        float yOffset = 0.01f;      // sit just above terrain
-
-        // --- Build spline from spine points ---
-        // Geo importer: NO 90° rotation (direct mapping)
-        // spine points are already in Unity world-local coords
-        var knots = new BezierKnot[cp.spine.Length];
-        for (int i = 0; i < cp.spine.Length; i++)
-        {
-            float wx = cp.spine[i].x;
-            float wz = cp.spine[i].z;
-            float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-            knots[i] = new BezierKnot(
-                new float3(wx, terrainBaseY + th, wz));
-        }
-
-        var spline = new Spline(knots.Length);
-        for (int i = 0; i < knots.Length; i++)
-            spline.Add(knots[i]);
-
-        // AutoSmooth tangents — Bézier handles the curve smoothing
-        for (int i = 0; i < spline.Count; i++)
-            spline.SetTangentMode(i, TangentMode.AutoSmooth);
-
-        // --- Evaluate spline at dense intervals ---
-        float splineLength = SplineUtility.CalculateLength(spline);
-        if (splineLength < 0.1f) continue;
-
-        int sampleCount = Mathf.Max(2,
-            Mathf.CeilToInt(splineLength / sampleSpacing));
-
-        var leftVerts = new List<Vector3>();
-        var rightVerts = new List<Vector3>();
-        var uvs = new List<Vector2>();
-        float tileSize = 4f; // UV tiling for asphalt texture
-
-        float accumulatedDist = 0f;
-
-        for (int s = 0; s <= sampleCount; s++)
-        {
-            float t = (float)s / sampleCount;
-            SplineUtility.Evaluate(spline, t,
-                out float3 pos, out float3 tangent, out float3 up);
-
-            // Perpendicular direction in XZ plane
-            float3 tangentFlat = math.normalize(
-                new float3(tangent.x, 0, tangent.z));
-
-            // Handle degenerate tangent (vertical segment)
-            if (math.lengthsq(tangentFlat) < 0.001f)
-                tangentFlat = new float3(1, 0, 0);
-            else
-                tangentFlat = math.normalize(tangentFlat);
-
-            float3 right = math.cross(new float3(0, 1, 0), tangentFlat);
-            right = math.normalize(right);
-
-            float3 leftPos = pos - right * halfWidth;
-            float3 rightPos = pos + right * halfWidth;
-
-            // Re-sample terrain height at each edge vertex
-            float leftH = terrain.SampleHeight(
-                new Vector3(leftPos.x, 0, leftPos.z));
-            float rightH = terrain.SampleHeight(
-                new Vector3(rightPos.x, 0, rightPos.z));
-
-            leftVerts.Add(new Vector3(leftPos.x,
-                terrainBaseY + leftH + yOffset, leftPos.z));
-            rightVerts.Add(new Vector3(rightPos.x,
-                terrainBaseY + rightH + yOffset, rightPos.z));
-
-            // UV: u = cross-path (0 left, 1 right)
-            //     v = along-path (tiled by distance)
-            if (s > 0)
-            {
-                float3 prevPos;
-                SplineUtility.Evaluate(spline,
-                    (float)(s - 1) / sampleCount,
-                    out prevPos, out _, out _);
-                accumulatedDist += math.distance(pos, prevPos);
-            }
-            float vCoord = accumulatedDist / tileSize;
-            // Left gets u=0, right gets u=1 (added below)
-        }
-
-        if (leftVerts.Count < 2) continue;
-
-        // --- Build triangle strip mesh ---
-        int vertCount = leftVerts.Count * 2;
-        var meshVerts = new Vector3[vertCount];
-        var meshUVs = new Vector2[vertCount];
-
-        // Recompute accumulated distance for UVs
-        accumulatedDist = 0f;
-        for (int i = 0; i < leftVerts.Count; i++)
-        {
-            if (i > 0)
-            {
-                Vector3 delta = (leftVerts[i] + rightVerts[i]) * 0.5f -
-                                (leftVerts[i-1] + rightVerts[i-1]) * 0.5f;
-                accumulatedDist += delta.magnitude;
-            }
-            float v = accumulatedDist / tileSize;
-
-            meshVerts[i * 2] = leftVerts[i];
-            meshVerts[i * 2 + 1] = rightVerts[i];
-            meshUVs[i * 2] = new Vector2(0f, v);
-            meshUVs[i * 2 + 1] = new Vector2(1f, v);
-        }
-
-        // Triangles: quad strip
-        int quadCount = leftVerts.Count - 1;
-        var tris = new int[quadCount * 6];
-        for (int i = 0; i < quadCount; i++)
-        {
-            int bl = i * 2;
-            int br = i * 2 + 1;
-            int tl = i * 2 + 2;
-            int tr = i * 2 + 3;
-
-            tris[i * 6 + 0] = bl;
-            tris[i * 6 + 1] = tl;
-            tris[i * 6 + 2] = br;
-            tris[i * 6 + 3] = br;
-            tris[i * 6 + 4] = tl;
-            tris[i * 6 + 5] = tr;
-        }
-
-        // Center mesh at centroid (Y=0 origin pattern)
-        float cx = 0, cz = 0;
-        for (int i = 0; i < meshVerts.Length; i++)
-        { cx += meshVerts[i].x; cz += meshVerts[i].z; }
-        cx /= meshVerts.Length;
-        cz /= meshVerts.Length;
-        Vector3 centroid = new Vector3(cx, 0, cz);
-
-        for (int i = 0; i < meshVerts.Length; i++)
-            meshVerts[i] -= centroid;
-
-        // Check winding (ensure top-face normals point up)
-        if (tris.Length >= 3)
-        {
-            Vector3 a = meshVerts[tris[0]];
-            Vector3 b = meshVerts[tris[1]];
-            Vector3 c = meshVerts[tris[2]];
-            float cross = (b.x - a.x) * (c.z - a.z) -
-                          (b.z - a.z) * (c.x - a.x);
-            if (cross > 0)
-            {
-                for (int i = 0; i < tris.Length; i += 3)
-                {
-                    int tmp = tris[i];
-                    tris[i] = tris[i + 2];
-                    tris[i + 2] = tmp;
-                }
-            }
-        }
-
-        var mesh = new Mesh();
-        mesh.name = $"CartPath_Spline_{cp.id}";
-        mesh.vertices = meshVerts;
-        mesh.triangles = tris;
-        mesh.uv = meshUVs;
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-
-        var go = new GameObject($"CartPath_Spline_{cp.id}");
-        go.transform.position = centroid;
-        go.AddComponent<MeshFilter>().sharedMesh = mesh;
-        go.AddComponent<MeshRenderer>().sharedMaterial = cartMat;
-        AddCleanMeshCollider(go, mesh);
-
-        var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-        marker.surfaceType = Golfin.Course.SurfaceType.CartPath;
-        go.transform.SetParent(cartRoot.transform);
-        meshCount++;
-    }
-
-    Debug.Log($"[HoleGeoImporter] Spline cart paths: {meshCount} meshes " +
-        $"(sampling every 0.5m)");
-}
+// Build closed polygon from strip edges (world space)
+// Left edge forward, right edge backward → closed loop
+var stripPoly = new List<Vector2>();
+for (int i = 0; i < leftVerts.Count; i++)
+    stripPoly.Add(new Vector2(leftVerts[i].x, leftVerts[i].z));
+for (int i = rightVerts.Count - 1; i >= 0; i--)
+    stripPoly.Add(new Vector2(rightVerts[i].x, rightVerts[i].z));
 ```
 
-### Step 3: Wire Up in `CreateFlatZoneMeshes()`
+### Step 2: Mark Depression Cells
 
-In `CreateFlatZoneMeshes()`, find where cart path meshes are currently
-created (the `CreateSpineStripMesh` call or whatever builds the cart
-path strip). Replace that section with a call to
-`CreateSplineCartPaths()`.
+In `DepressTerrainUnderOverlays()`, the cart path depression
+currently uses the contour polygon from `cart-paths.json`. Change
+it to use the spline strip polygons instead.
 
-The contour-based CDT mesh for cart paths (used for splatmap painting
-and terrain depression) should STAY — only the visible strip mesh
-changes. If cart paths currently use a single method for both the
-CDT contour mesh and the spine strip, you'll need to:
-1. Keep the CDT contour mesh for splatmap/depression
-2. Replace only the spine strip with the spline mesh
-3. Or: if the CDT contour mesh IS the visible mesh, replace it
-   entirely with the spline mesh and keep the contour data only for
-   splatmap/depression.
+**Option A (cleanest):** Store the strip polygons during mesh
+creation (as a list on the importer or pass them to the depression
+method). Then in `DepressTerrainUnderOverlays`, iterate the strip
+polygons instead of the contour polygons for cart path depression.
 
-Look at how the code is structured and make the cleanest swap.
+**Option B (simpler):** Do the depression inline right after
+building each spline mesh, before the mesh is centered at centroid.
+At that point `leftVerts`/`rightVerts` are still in world space.
+Directly mark heightmap cells inside the strip polygon as depressed.
 
-### Step 4: Material Helper
+Go with whichever is cleaner given the current code structure. The
+key requirement: the depressed area must match the spline mesh
+footprint, NOT the old contour polygon.
 
-If `CreateCartPathMaterial()` doesn't exist as a standalone method,
-extract the cart path material creation from the existing code into
-a reusable method. It should return the asphalt material used for
-cart paths (same material as before).
+### Step 3: Add Margin
+
+Dilate the strip polygon slightly (0.15-0.20m outward) before
+depression. This ensures terrain is pushed down a bit beyond the
+mesh edges, preventing edge-poke-through on slopes.
+
+If polygon dilation is complex, a simpler approach: use a slightly
+wider halfWidth for the depression polygon than for the mesh itself.
+E.g., mesh uses `halfWidth = 1.25m`, depression uses
+`halfWidth + 0.2m = 1.45m`.
+
+```csharp
+// Build depression polygon with margin
+float depMargin = 0.20f;
+var depPoly = new List<Vector2>();
+for (int i = 0; i < leftVertsWide.Count; i++)
+    depPoly.Add(new Vector2(leftVertsWide[i].x, leftVertsWide[i].z));
+for (int i = rightVertsWide.Count - 1; i >= 0; i--)
+    depPoly.Add(new Vector2(rightVertsWide[i].x, rightVertsWide[i].z));
+```
+
+Where `leftVertsWide`/`rightVertsWide` are sampled at
+`halfWidth + depMargin` instead of `halfWidth`. This can be done
+in the same spline evaluation loop — just compute two sets of
+left/right offsets.
 
 ### What NOT to Change
 
-- Contour data in cart-paths.json (still used for splatmap + depression)
-- Splatmap painting of cart path texture on terrain
-- Terrain depression under cart paths
-- Any other zone mesh creation (fairway, tee, green, bunker, water)
-- HoleLiteImporter.cs (Geo only for now — port to Lite later)
+- Spline mesh generation (the visible mesh is working well)
+- Splatmap painting (can stay contour-based for now)
+- Fairway, tee, green, bunker, water depression
+- HoleLiteImporter.cs
 
 ### Verification
 
-Re-export then reimport Hole 4 via `Import > Geo > Normal`:
+Reimport Hole 4 (the one with the visible splotch):
 
-```bash
-cd Tools/UHoleGeo
-node scripts/export-hole.mjs lomond-country-club 4
-```
-
-Then in Unity: `Import > Geo > Normal > Import Hole 04 Geo`
-
-- [ ] Cart paths follow smooth curves (no staircase/blocky edges)
-- [ ] Cart paths conform to terrain on slopes (no floating/sinking)
-- [ ] Consistent width along entire path (no jagged edges)
-- [ ] Asphalt texture applied correctly (UV tiling looks natural)
-- [ ] SurfaceMarker set to CartPath
-- [ ] MeshCollider present
-- [ ] Splatmap still paints under cart path (unchanged)
-- [ ] Terrain depression still works (unchanged)
+- [ ] No terrain showing through cart path mesh on concave slopes
+- [ ] Cart path mesh still looks smooth (unchanged)
+- [ ] Depression visible in heightmap (terrain pushed down under path)
+- [ ] No depression artifacts at path edges (no cliff)
+- [ ] Splatmap still painted under path (unchanged)
+- [ ] Other overlays unaffected
 - [ ] No console errors
-- [ ] Other zone meshes (fairway, tee, green, bunker, water) unaffected
 
-Also test Hole 1 (longer, may have branches):
-- [ ] All cart path branches render
-- [ ] No gaps at branch junctions
-- [ ] Smooth curves throughout
+❌ INCOMPLETE: 2026-04-16 — Spline depression footprint fix attempted but oval artifact persists.
 
-Run all 18 via `Import > Geo > Normal > Import All Holes Geo` to
-verify no crashes.
+**What was implemented:** `_splineCartPathPolygons` collected during mesh gen (wide edge verts at halfWidth+0.20m), `DepressTerrainUnderOverlays()` uses these instead of `BuildSpinePolygon()`.
+
+**What didn't work:** The dark oval remains unchanged after reimport. The artifact may not be a depression mismatch at all — it could be a lighting/shadow artifact from the terrain geometry below the mesh, or a genuine terrain feature that the depression system cannot mask. Needs architect re-evaluation to identify the actual cause.
+
+**Current state:** Spline mesh code is working (smooth curves, SurfaceMarker, MeshCollider). Depression now uses spline footprint polygons. Oval spot unresolved.
 
 ---
 
 ## Completed Tasks
-❌ 2026-04-16 — Spline cart paths REVERTED. Three fix attempts (centerline sampling, spline Y only, dense knots) all produced worse artifacts than the original CreateSpineStripMesh. Root issue: terrain dip artifact at one bend. Needs architect re-evaluation before another attempt.
-✅ 2026-04-16 — Fringe/border baked into parent CDT mesh as submesh (dilated CDT + constraint edges + centroid classification)
-✅ 2026-04-15 — Clamp fringe/border vertex Y (didn't fix)
-✅ 2026-04-15 — Parent-derived Y for fringe/border (didn't fix)
+✅ 2026-04-16 — Spline cart path meshes (smoother curves, keeper)
+✅ 2026-04-16 — Fringe/border baked into parent CDT mesh as submesh
 ✅ 2026-04-14 — Water rework complete (6 iterations)
 ✅ 2026-04-13 — Cart path flat depression + spine fixes
 ✅ 2026-04-13 — Natural OB↔Rough transition + Smooth OB
