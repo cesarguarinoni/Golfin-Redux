@@ -7,7 +7,6 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using Unity.Collections;
 using Unity.Mathematics;
-using UnityEngine.Splines;
 using andywiecko.BurstTriangulator;
 
 namespace Golfin.CourseImport
@@ -3546,9 +3545,52 @@ namespace Golfin.CourseImport
 
             }
 
-            // ─── Cart path meshes from cart-paths.json (spline-based) ─────
-            CreateSplineCartPaths(terrainData, terrainGO, parentRoot,
-                exportPath, dataDir, projectRoot);
+            // ─── Cart path meshes from cart-paths.json ─────
+            string cpPath = Path.Combine(exportPath, "cart-paths.json");
+            if (File.Exists(cpPath))
+            {
+                string cpJson = File.ReadAllText(cpPath);
+                var cpData = JsonUtility.FromJson<CartPathsFile>(cpJson);
+
+                if (cpData.cart_paths != null && cpData.cart_paths.Length > 0)
+                {
+                    var cpRoot = new GameObject("CartPaths");
+                    cpRoot.transform.SetParent(parentRoot);
+
+                    var cpMat = CreateTiledMaterial(texDir, "T_RoadAsphalt_Albedo",
+                        "T_RoadAsphalt_Normal", dataDir, 4f);
+                    cpMat.SetFloat("_Smoothness", 0.3f);
+                    cpMat.SetFloat("_Cull", 0f);  // 0 = Off (double-sided rendering)
+
+                    foreach (var region in cpData.cart_paths)
+                    {
+                        GameObject meshGO = null;
+
+                        // Prefer spine strip mesh if available
+                        if (region.spine != null && region.spine.Length >= 2)
+                        {
+                            float halfWidth = (region.width_m > 0 ? region.width_m : 2.5f) / 2f;
+                            meshGO = CreateSpineStripMesh(
+                                region.id, region.spine, halfWidth,
+                                terrain, terrainBaseY, cpMat, 4f,
+                                Golfin.Course.SurfaceType.CartPath);
+                        }
+                        else if (region.contour != null && region.contour.Length >= 3)
+                        {
+                            // Fallback to ear-clip
+                            meshGO = CreateEarClipContourMesh(
+                                region.id, "CartPath", region.contour,
+                                terrain, terrainBaseY, cpMat, 4f,
+                                Golfin.Course.SurfaceType.CartPath);
+                        }
+
+                        if (meshGO != null)
+                            meshGO.transform.SetParent(cpRoot.transform);
+                    }
+
+                    Debug.Log($"[HoleLiteImporter] Created {cpData.cart_paths.Length} cart path mesh(es)");
+                }
+            }
 
             // Copy cart-paths.json to Assets
             string cpSrcPath = Path.Combine(exportPath, "cart-paths.json");
@@ -4328,233 +4370,6 @@ namespace Golfin.CourseImport
             marker.surfaceType = surfaceType;
 
             return go;
-        }
-
-        /// <summary>
-        /// Returns the cart path material (asphalt, tiled, double-sided).
-        /// </summary>
-        private static Material CreateCartPathMaterial(string dataDir)
-        {
-            string texDir = "Assets/Courses/Textures_2025(JPG)";
-            var mat = CreateTiledMaterial(texDir, "T_RoadAsphalt_Albedo",
-                "T_RoadAsphalt_Normal", dataDir, 4f);
-            mat.SetFloat("_Smoothness", 0.3f);
-            mat.SetFloat("_Cull", 0f);  // 0 = Off (double-sided rendering)
-            return mat;
-        }
-
-        /// <summary>
-        /// Build cart path strip meshes using Unity Splines for smooth
-        /// curves and dense terrain-conforming vertex sampling.
-        /// </summary>
-        private static void CreateSplineCartPaths(
-            TerrainData terrainData, GameObject terrainGO, Transform parent,
-            string exportPath, string dataDir, string projectRoot)
-        {
-            string cpPath = Path.Combine(exportPath, "cart-paths.json");
-            if (!File.Exists(cpPath)) return;
-
-            var cpData = JsonUtility.FromJson<CartPathsFile>(
-                File.ReadAllText(cpPath));
-            if (cpData.cart_paths == null || cpData.cart_paths.Length == 0) return;
-
-            var terrain = terrainGO.GetComponent<Terrain>();
-            float terrainBaseY = terrainGO.transform.position.y;
-
-            var cartMat = CreateCartPathMaterial(dataDir);
-
-            var cartRoot = new GameObject("CartPaths_Spline");
-            cartRoot.transform.SetParent(parent);
-
-            int meshCount = 0;
-
-            foreach (var cp in cpData.cart_paths)
-            {
-                if (cp.spine == null || cp.spine.Length < 2) continue;
-
-                float halfWidth = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
-                float sampleSpacing = 0.5f; // meters between samples
-                float yOffset = 0.01f;      // sit just above terrain
-
-                // --- Subdivide spine to add terrain-sampled intermediate knots ---
-                // More knots → AutoSmooth Y tracks terrain closely, so pos.y
-                // from spline evaluation is accurate without per-sample resampling.
-                const float knotSpacing = 1.0f; // meters between inserted knots
-                var denseSpine = new List<ContourPoint>();
-                for (int i = 0; i < cp.spine.Length - 1; i++)
-                {
-                    denseSpine.Add(cp.spine[i]);
-                    float dx = cp.spine[i + 1].x - cp.spine[i].x;
-                    float dz = cp.spine[i + 1].z - cp.spine[i].z;
-                    float segLen = Mathf.Sqrt(dx * dx + dz * dz);
-                    int inserts = Mathf.FloorToInt(segLen / knotSpacing);
-                    for (int k = 1; k < inserts; k++)
-                    {
-                        float frac = (float)k / inserts;
-                        denseSpine.Add(new ContourPoint
-                        {
-                            x = cp.spine[i].x + dx * frac,
-                            z = cp.spine[i].z + dz * frac
-                        });
-                    }
-                }
-                denseSpine.Add(cp.spine[cp.spine.Length - 1]);
-
-                // --- Build spline from dense spine points ---
-                // Geo importer: NO 90° rotation (direct mapping)
-                var knots = new BezierKnot[denseSpine.Count];
-                for (int i = 0; i < denseSpine.Count; i++)
-                {
-                    float wx = denseSpine[i].x;
-                    float wz = denseSpine[i].z;
-                    float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                    knots[i] = new BezierKnot(
-                        new float3(wx, terrainBaseY + th, wz));
-                }
-
-                var spline = new Spline(knots.Length);
-                for (int i = 0; i < knots.Length; i++)
-                    spline.Add(knots[i]);
-
-                // AutoSmooth tangents — Bézier handles the curve smoothing
-                for (int i = 0; i < spline.Count; i++)
-                    spline.SetTangentMode(i, TangentMode.AutoSmooth);
-
-                // --- Evaluate spline at dense intervals ---
-                float splineLength = SplineUtility.CalculateLength(spline, float4x4.identity);
-                if (splineLength < 0.1f) continue;
-
-                int sampleCount = Mathf.Max(2,
-                    Mathf.CeilToInt(splineLength / sampleSpacing));
-
-                var leftVerts = new List<Vector3>();
-                var rightVerts = new List<Vector3>();
-
-                for (int s = 0; s <= sampleCount; s++)
-                {
-                    float t = (float)s / sampleCount;
-                    SplineUtility.Evaluate(spline, t,
-                        out float3 pos, out float3 tangent, out float3 up);
-
-                    // Perpendicular direction in XZ plane
-                    float3 tangentFlat = new float3(tangent.x, 0, tangent.z);
-
-                    // Handle degenerate tangent (vertical segment)
-                    if (math.lengthsq(tangentFlat) < 0.001f)
-                        tangentFlat = new float3(1, 0, 0);
-                    else
-                        tangentFlat = math.normalize(tangentFlat);
-
-                    float3 right = math.cross(new float3(0, 1, 0), tangentFlat);
-                    right = math.normalize(right);
-
-                    float3 leftPos = pos - right * halfWidth;
-                    float3 rightPos = pos + right * halfWidth;
-
-                    // Use spline's interpolated Y — knots are now dense (every 1m)
-                    // so pos.y closely tracks terrain without per-sample resampling.
-                    // AutoSmooth still gives a smooth path between knots.
-                    float edgeY = pos.y + yOffset;
-
-                    leftVerts.Add(new Vector3(leftPos.x, edgeY, leftPos.z));
-                    rightVerts.Add(new Vector3(rightPos.x, edgeY, rightPos.z));
-                }
-
-                if (leftVerts.Count < 2) continue;
-
-                // --- Build triangle strip mesh ---
-                int vertCount = leftVerts.Count * 2;
-                var meshVerts = new Vector3[vertCount];
-                var meshUVs = new Vector2[vertCount];
-
-                float tileSize = 4f;
-                float accumulatedDist = 0f;
-                for (int i = 0; i < leftVerts.Count; i++)
-                {
-                    if (i > 0)
-                    {
-                        Vector3 delta = (leftVerts[i] + rightVerts[i]) * 0.5f -
-                                        (leftVerts[i-1] + rightVerts[i-1]) * 0.5f;
-                        accumulatedDist += delta.magnitude;
-                    }
-                    float v = accumulatedDist / tileSize;
-
-                    meshVerts[i * 2]     = leftVerts[i];
-                    meshVerts[i * 2 + 1] = rightVerts[i];
-                    meshUVs[i * 2]       = new Vector2(0f, v);
-                    meshUVs[i * 2 + 1]   = new Vector2(1f, v);
-                }
-
-                // Triangles: quad strip
-                int quadCount = leftVerts.Count - 1;
-                var tris = new int[quadCount * 6];
-                for (int i = 0; i < quadCount; i++)
-                {
-                    int bl = i * 2;
-                    int br = i * 2 + 1;
-                    int tl = i * 2 + 2;
-                    int tr = i * 2 + 3;
-
-                    tris[i * 6 + 0] = bl;
-                    tris[i * 6 + 1] = tl;
-                    tris[i * 6 + 2] = br;
-                    tris[i * 6 + 3] = br;
-                    tris[i * 6 + 4] = tl;
-                    tris[i * 6 + 5] = tr;
-                }
-
-                // Center mesh at centroid (Y=0 origin pattern)
-                float cx = 0, cz = 0;
-                for (int i = 0; i < meshVerts.Length; i++)
-                { cx += meshVerts[i].x; cz += meshVerts[i].z; }
-                cx /= meshVerts.Length;
-                cz /= meshVerts.Length;
-                Vector3 centroid = new Vector3(cx, 0, cz);
-
-                for (int i = 0; i < meshVerts.Length; i++)
-                    meshVerts[i] -= centroid;
-
-                // Check winding (ensure top-face normals point up)
-                if (tris.Length >= 3)
-                {
-                    Vector3 a = meshVerts[tris[0]];
-                    Vector3 b = meshVerts[tris[1]];
-                    Vector3 c = meshVerts[tris[2]];
-                    float cross = (b.x - a.x) * (c.z - a.z) -
-                                  (b.z - a.z) * (c.x - a.x);
-                    if (cross > 0)
-                    {
-                        for (int i = 0; i < tris.Length; i += 3)
-                        {
-                            int tmp = tris[i];
-                            tris[i] = tris[i + 2];
-                            tris[i + 2] = tmp;
-                        }
-                    }
-                }
-
-                var mesh = new Mesh();
-                mesh.name = $"CartPath_Spline_{cp.id}";
-                mesh.vertices = meshVerts;
-                mesh.triangles = tris;
-                mesh.uv = meshUVs;
-                mesh.RecalculateNormals();
-                mesh.RecalculateBounds();
-
-                var go = new GameObject($"CartPath_Spline_{cp.id}");
-                go.transform.position = centroid;
-                go.AddComponent<MeshFilter>().sharedMesh = mesh;
-                go.AddComponent<MeshRenderer>().sharedMaterial = cartMat;
-                AddCleanMeshCollider(go, mesh);
-
-                var surfMarker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-                surfMarker.surfaceType = Golfin.Course.SurfaceType.CartPath;
-                go.transform.SetParent(cartRoot.transform);
-                meshCount++;
-            }
-
-            Debug.Log($"[HoleGeoImporter] Spline cart paths: {meshCount} meshes " +
-                $"(sampling every 0.5m)");
         }
 
 
