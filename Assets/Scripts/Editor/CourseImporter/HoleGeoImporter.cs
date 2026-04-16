@@ -4427,16 +4427,16 @@ namespace Golfin.CourseImport
                     float3 leftPos = pos - right * halfWidth;
                     float3 rightPos = pos + right * halfWidth;
 
-                    // Re-sample terrain height at each edge vertex
-                    float leftH = terrain.SampleHeight(
-                        new Vector3(leftPos.x, 0, leftPos.z));
-                    float rightH = terrain.SampleHeight(
-                        new Vector3(rightPos.x, 0, rightPos.z));
+                    // Sample terrain height at the centerline only, then apply
+                    // the same Y to both edge vertices. This keeps the cross-section
+                    // flat (like real asphalt) and prevents edge vertices from
+                    // landing on depression-polygon edges and pulling one side down.
+                    float centerH = terrain.SampleHeight(
+                        new Vector3(pos.x, 0, pos.z));
+                    float edgeY = terrainBaseY + centerH + yOffset;
 
-                    leftVerts.Add(new Vector3(leftPos.x,
-                        terrainBaseY + leftH + yOffset, leftPos.z));
-                    rightVerts.Add(new Vector3(rightPos.x,
-                        terrainBaseY + rightH + yOffset, rightPos.z));
+                    leftVerts.Add(new Vector3(leftPos.x, edgeY, leftPos.z));
+                    rightVerts.Add(new Vector3(rightPos.x, edgeY, rightPos.z));
                 }
 
                 if (leftVerts.Count < 2) continue;
