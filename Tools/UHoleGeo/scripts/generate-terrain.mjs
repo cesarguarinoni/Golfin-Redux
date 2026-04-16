@@ -442,6 +442,245 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
 
   console.log(`  Mode: spline along-axis + quadratic cross-axis`);
 
+  // ─── Ravine Carving ──────────────────────────────────────────
+  //
+  // Detect big negative features (ravines, gullies) as connected
+  // regions where rawDem is significantly below the synthetic surface.
+  // Carve each qualifying region as a smooth Gaussian depression —
+  // this gives us visible ravines without importing DEM grid noise.
+  //
+  // Tunable parameters (safe defaults — see notes at bottom of task)
+  const RAVINE_MIN_DEPTH_M       = 3.0;   // cell counts as ravine if >= this deep below surface
+  const RAVINE_MIN_AREA_CELLS    = 2000;  // min region size (rejects noise)
+  const RAVINE_MAX_AREA_FRAC     = 0.25;  // reject regions bigger than this fraction of hole
+  const RAVINE_MAX_PLAYABLE_FRAC = 0.05;  // skip region if more than 5% is in playable zones
+  const RAVINE_KERNEL_SIGMA_M    = 8.0;   // Gaussian falloff (softness of carve edges)
+  const RAVINE_DEPTH_PERCENTILE  = 0.20;  // use mean of deepest 20% of region cells as target depth
+
+  const TOTAL_CELLS = RES * RES;
+
+  // Step 1: Compute residual (rawDem - synthetic surface)
+  // Negative values = cell is below the synthetic surface (ravine candidates)
+  const ravineResidual = new Float64Array(TOTAL_CELLS);
+  for (let i = 0; i < TOTAL_CELLS; i++) {
+    ravineResidual[i] = rawDem[i] - heightmap[i];
+  }
+
+  // Step 2: Build ravine-candidate mask — cells more than RAVINE_MIN_DEPTH_M below surface
+  const ravineCandidate = new Uint8Array(TOTAL_CELLS);
+  for (let i = 0; i < TOTAL_CELLS; i++) {
+    if (ravineResidual[i] < -RAVINE_MIN_DEPTH_M) ravineCandidate[i] = 1;
+  }
+
+  // Step 3: Build playable mask at heightmap resolution (for overlap check)
+  const isPlayable = new Uint8Array(TOTAL_CELLS);
+  for (let hy = 0; hy < RES; hy++) {
+    for (let hx = 0; hx < RES; hx++) {
+      const nx = hx / (RES - 1);
+      const ny = hy / (RES - 1);
+      const zx = Math.min(zw - 1, Math.floor(nx * (zw - 1)));
+      const zy = Math.min(zh - 1, Math.floor(ny * (zh - 1)));
+      if (playableZones.has(zoneGrid[zy * zw + zx])) {
+        isPlayable[hy * RES + hx] = 1;
+      }
+    }
+  }
+
+  // Step 4: Flood-fill connected components in the candidate mask (4-connectivity).
+  // Push neighbours conditionally to avoid bloating the stack.
+  const regionLabel = new Int32Array(TOTAL_CELLS); // 0 = unlabeled, 1+ = region id
+  let numRegions = 0;
+  const floodStack = [];
+
+  for (let startIdx = 0; startIdx < TOTAL_CELLS; startIdx++) {
+    if (!ravineCandidate[startIdx] || regionLabel[startIdx] !== 0) continue;
+
+    numRegions++;
+    const label = numRegions;
+    floodStack.length = 0;
+    floodStack.push(startIdx);
+    regionLabel[startIdx] = label;
+
+    while (floodStack.length > 0) {
+      const idx = floodStack.pop();
+      const hx = idx % RES;
+      const hy = (idx - hx) / RES;
+
+      // 4-connectivity
+      if (hx > 0) {
+        const n = idx - 1;
+        if (ravineCandidate[n] && regionLabel[n] === 0) {
+          regionLabel[n] = label;
+          floodStack.push(n);
+        }
+      }
+      if (hx < RES - 1) {
+        const n = idx + 1;
+        if (ravineCandidate[n] && regionLabel[n] === 0) {
+          regionLabel[n] = label;
+          floodStack.push(n);
+        }
+      }
+      if (hy > 0) {
+        const n = idx - RES;
+        if (ravineCandidate[n] && regionLabel[n] === 0) {
+          regionLabel[n] = label;
+          floodStack.push(n);
+        }
+      }
+      if (hy < RES - 1) {
+        const n = idx + RES;
+        if (ravineCandidate[n] && regionLabel[n] === 0) {
+          regionLabel[n] = label;
+          floodStack.push(n);
+        }
+      }
+    }
+  }
+
+  // Step 5: Gather per-region stats and decide which to carve
+  const regionStats = new Array(numRegions + 1); // index 0 unused
+  for (let r = 1; r <= numRegions; r++) {
+    regionStats[r] = { cells: [], depths: [], playableCount: 0 };
+  }
+
+  for (let idx = 0; idx < TOTAL_CELLS; idx++) {
+    const r = regionLabel[idx];
+    if (r === 0) continue;
+    regionStats[r].cells.push(idx);
+    regionStats[r].depths.push(ravineResidual[idx]);
+    if (isPlayable[idx]) regionStats[r].playableCount++;
+  }
+
+  const MAX_AREA_CELLS = Math.floor(TOTAL_CELLS * RAVINE_MAX_AREA_FRAC);
+  const carvedRegions = [];
+
+  for (let r = 1; r <= numRegions; r++) {
+    const stats = regionStats[r];
+    const area = stats.cells.length;
+
+    if (area < RAVINE_MIN_AREA_CELLS) continue;
+    if (area > MAX_AREA_CELLS) {
+      console.log(`    Region #${r}: area=${area} cells — REJECTED (too big, > ${(RAVINE_MAX_AREA_FRAC * 100).toFixed(0)}% of hole)`);
+      continue;
+    }
+    const playableFrac = stats.playableCount / area;
+    if (playableFrac > RAVINE_MAX_PLAYABLE_FRAC) {
+      console.log(`    Region #${r}: area=${area}, playable=${(playableFrac * 100).toFixed(1)}% — REJECTED (overlaps playable)`);
+      continue;
+    }
+
+    // Target depth = mean of deepest N% of cells (avoids outliers dominating)
+    stats.depths.sort((a, b) => a - b); // ascending (most negative first)
+    const deepestCount = Math.max(1, Math.floor(stats.depths.length * RAVINE_DEPTH_PERCENTILE));
+    let depthSum = 0;
+    for (let i = 0; i < deepestCount; i++) depthSum += stats.depths[i];
+    const targetDepth = depthSum / deepestCount; // negative (below surface), meters
+
+    carvedRegions.push({
+      id: r,
+      area,
+      playableFrac,
+      targetDepth,
+      cells: stats.cells,
+    });
+  }
+
+  console.log(`  Ravine detection: ${numRegions} candidate regions, ${carvedRegions.length} qualifying for carve`);
+  for (const region of carvedRegions) {
+    console.log(`    Carve Region #${region.id}: area=${region.area} cells, ` +
+      `playable=${(region.playableFrac * 100).toFixed(1)}%, ` +
+      `depth=${region.targetDepth.toFixed(1)}m`);
+  }
+
+  // Step 6: Carve each qualifying region with a separable Gaussian blur.
+  //
+  // Approach:
+  //   - Build a source field: region cells = targetDepth, everywhere else = 0
+  //   - Apply a separable Gaussian blur (horizontal pass then vertical pass)
+  //   - Rescale so the deepest point of the blurred field = targetDepth
+  //     (the blur inevitably shallows the peak)
+  //   - Add to heightmap
+  //
+  // Two buffers are reused across all regions instead of allocating fresh
+  // buffers per region — saves ~32 MB per extra region per blur buffer.
+
+  if (carvedRegions.length > 0) {
+    const metersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
+    const sigmaCells = RAVINE_KERNEL_SIGMA_M / metersPerCell;
+
+    // Build 1D Gaussian kernel with radius = ceil(3 * sigma)
+    const kernelRadius = Math.max(1, Math.ceil(3 * sigmaCells));
+    const kernelSize = 2 * kernelRadius + 1;
+    const kernel = new Float64Array(kernelSize);
+    {
+      const s2 = 2 * sigmaCells * sigmaCells;
+      let kSum = 0;
+      for (let i = 0; i < kernelSize; i++) {
+        const x = i - kernelRadius;
+        kernel[i] = Math.exp(-(x * x) / s2);
+        kSum += kernel[i];
+      }
+      for (let i = 0; i < kernelSize; i++) kernel[i] /= kSum;
+    }
+    console.log(`  Ravine carving: sigma=${RAVINE_KERNEL_SIGMA_M}m (${sigmaCells.toFixed(1)} cells), ` +
+      `kernel radius=${kernelRadius} cells, size=${kernelSize}`);
+
+    // Reusable buffers for blur
+    const bufA = new Float64Array(TOTAL_CELLS);
+    const bufB = new Float64Array(TOTAL_CELLS);
+
+    for (const region of carvedRegions) {
+      // Clear bufA and write source field
+      bufA.fill(0);
+      for (const idx of region.cells) bufA[idx] = region.targetDepth;
+
+      // Horizontal pass: bufA -> bufB
+      for (let hy = 0; hy < RES; hy++) {
+        const rowBase = hy * RES;
+        for (let hx = 0; hx < RES; hx++) {
+          let sum = 0;
+          for (let k = -kernelRadius; k <= kernelRadius; k++) {
+            let sx = hx + k;
+            if (sx < 0) sx = 0;
+            else if (sx >= RES) sx = RES - 1;
+            sum += bufA[rowBase + sx] * kernel[k + kernelRadius];
+          }
+          bufB[rowBase + hx] = sum;
+        }
+      }
+
+      // Vertical pass: bufB -> bufA
+      for (let hx = 0; hx < RES; hx++) {
+        for (let hy = 0; hy < RES; hy++) {
+          let sum = 0;
+          for (let k = -kernelRadius; k <= kernelRadius; k++) {
+            let sy = hy + k;
+            if (sy < 0) sy = 0;
+            else if (sy >= RES) sy = RES - 1;
+            sum += bufB[sy * RES + hx] * kernel[k + kernelRadius];
+          }
+          bufA[hy * RES + hx] = sum;
+        }
+      }
+
+      // Find deepest value in blurred field (most negative)
+      let minAfter = 0;
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        if (bufA[i] < minAfter) minAfter = bufA[i];
+      }
+
+      // Rescale so deepest = targetDepth (both are negative, so ratio is positive)
+      if (minAfter < -1e-6) {
+        const rescale = region.targetDepth / minAfter;
+        for (let i = 0; i < TOTAL_CELLS; i++) {
+          heightmap[i] += bufA[i] * rescale;
+        }
+      }
+    }
+  }
+  // ─── End Ravine Carving ──────────────────────────────────────
+
   // Normalize — relative elevation
   let minElev = Infinity, maxElev = -Infinity;
   for (let i = 0; i < RES * RES; i++) {
