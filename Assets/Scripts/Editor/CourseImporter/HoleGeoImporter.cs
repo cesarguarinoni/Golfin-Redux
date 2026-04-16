@@ -1904,6 +1904,11 @@ namespace Golfin.CourseImport
 
             var sandMat = CreateBunkerMaterial(dataDir, projectRoot);
 
+            const string lipMatPath = "Assets/Courses/Materials (Shared by courses)/MAT_Bunkers_Dark.mat";
+            var lipMat = AssetDatabase.LoadAssetAtPath<Material>(lipMatPath);
+            if (lipMat == null)
+                Debug.LogWarning("[HoleGeoImporter] MAT_Bunkers_Dark not found at " + lipMatPath + " — bunker lips disabled");
+
             var bunkersRoot = new GameObject("Bunkers");
             bunkersRoot.transform.SetParent(parentRoot);
 
@@ -1980,13 +1985,14 @@ namespace Golfin.CourseImport
 
                 var meshGO = CreateContourMesh(bunker.id, worldContour,
                     centroidX, centroidZ, surfaceY, bowlDepth,
-                    sandMat, terrain, terrainBaseY, false);
+                    sandMat, terrain, terrainBaseY, false, lipMat);
                 meshGO.transform.SetParent(bunkersRoot.transform);
 
                 var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
+                meshGO.AddComponent<Golfin.Course.BunkerSurfaceInfo>();
 
-                Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: unified (cut=90%, depth={bowlDepth:F1}m, axis={shorterAxis:F1}m), {bunker.contour.Length} verts");
+                Debug.Log($"[HoleGeoImporter] Bunker {bunker.id}: unified (cut=90%, depth={bowlDepth:F1}m, axis={shorterAxis:F1}m), {bunker.contour.Length} verts");
             }
 
             // Copy bunkers.json to Assets
@@ -1994,13 +2000,13 @@ namespace Golfin.CourseImport
             File.Copy(bunkersPath, destPath, true);
             AssetDatabase.ImportAsset($"{dataDir}/bunkers.json");
 
-            Debug.Log($"[HoleLiteImporter] Created {bunkersFile.bunkers.Length} contour-based bunker(s)");
+            Debug.Log($"[HoleGeoImporter] Created {bunkersFile.bunkers.Length} contour-based bunker(s)");
         }
 
         private static GameObject CreateContourMesh(int id, Vector2[] contour,
             float centroidX, float centroidZ, float surfaceY, float depth,
             Material sandMat, Terrain terrain, float terrainBaseY,
-            bool useSkirt = false)
+            bool useSkirt = false, Material lipMat = null)
         {
             int n = contour.Length;
             if (n < 3)
@@ -2127,12 +2133,87 @@ namespace Golfin.CourseImport
                 triangles[ti++] = next;
             }
 
+            // ── Lip band (submesh 1) ─────────────────────────────────────────
+            // Outward band from the original bunker contour — same submesh recipe
+            // as fairway fringe / tee border / green collar. No CDT needed: the
+            // contour ring directly defines inner/outer boundaries of the band.
+            const float lipWidth = 0.4f;
+            const float lipTileSize = 3f;
+
+            bool lipEnabled = false;
+            var lipVerts = new System.Collections.Generic.List<Vector3>();
+            var lipUVs   = new System.Collections.Generic.List<Vector2>();
+            var lipTris  = new System.Collections.Generic.List<int>();
+
+            if (lipMat != null)
+            {
+                // Dilate contour outward by lipWidth using the existing helper.
+                var contour3D = new Vector3[n];
+                for (int i = 0; i < n; i++)
+                    contour3D[i] = new Vector3(contour[i].x, 0, contour[i].y);
+
+                Vector3[] outerContour3D = null;
+                try { outerContour3D = OffsetContourOutward(contour3D, lipWidth); }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[HoleGeoImporter] Bunker {id}: lip dilation failed ({e.Message}), skipping lip");
+                }
+
+                if (outerContour3D != null)
+                {
+                    // Inner lip ring — duplicate of rim ring verts, u = 0 (sand side).
+                    for (int i = 0; i < n; i++)
+                    {
+                        lipVerts.Add(vertices[rimIdx * n + i]);
+                        float vCoord = (contour[i].x + contour[i].y) / lipTileSize;
+                        lipUVs.Add(new Vector2(0f, vCoord));
+                    }
+                    // Outer lip ring — dilated contour, terrain height + same lift, u = 1 (rough side).
+                    for (int i = 0; i < n; i++)
+                    {
+                        float wx = outerContour3D[i].x;
+                        float wz = outerContour3D[i].z;
+                        float terrainH = terrain.SampleHeight(new Vector3(wx, 0, wz));
+                        float y = (terrainBaseY + terrainH) - surfaceY + 0.02f;
+                        lipVerts.Add(new Vector3(wx - centroidX, y, wz - centroidZ));
+                        float vCoord = (wx + wz) / lipTileSize;
+                        lipUVs.Add(new Vector2(1f, vCoord));
+                    }
+                    // Triangulate as quads. Winding: CW in XZ (= front face +Y in Unity).
+                    // inner[i] → inner[i+1] → outer[i]  and  inner[i+1] → outer[i+1] → outer[i]
+                    for (int i = 0; i < n; i++)
+                    {
+                        int inn0 = i;
+                        int inn1 = (i + 1) % n;
+                        int out0 = n + i;
+                        int out1 = n + (i + 1) % n;
+                        lipTris.Add(inn0); lipTris.Add(inn1); lipTris.Add(out0);
+                        lipTris.Add(inn1); lipTris.Add(out1); lipTris.Add(out0);
+                    }
+                    lipEnabled = true;
+                }
+            }
+
             // --- Build mesh ---
+            var allVerts = new System.Collections.Generic.List<Vector3>(vertices);
+            var allUVs   = new System.Collections.Generic.List<Vector2>(uvs);
+
+            if (lipEnabled)
+            {
+                int lipVertOffset = allVerts.Count;
+                allVerts.AddRange(lipVerts);
+                allUVs.AddRange(lipUVs);
+                for (int i = 0; i < lipTris.Count; i++)
+                    lipTris[i] += lipVertOffset;
+            }
+
             var mesh = new Mesh();
             mesh.name = $"BunkerContour_{id}";
-            mesh.vertices = vertices;
-            mesh.triangles = triangles;
-            mesh.uv = uvs;
+            mesh.vertices = allVerts.ToArray();
+            mesh.uv = allUVs.ToArray();
+            mesh.subMeshCount = lipEnabled ? 2 : 1;
+            mesh.SetTriangles(triangles, 0);
+            if (lipEnabled) mesh.SetTriangles(lipTris.ToArray(), 1);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
@@ -2140,15 +2221,17 @@ namespace Golfin.CourseImport
             var mf = go.AddComponent<MeshFilter>();
             mf.sharedMesh = mesh;
             var mr = go.AddComponent<MeshRenderer>();
-            mr.sharedMaterial = sandMat;
+            mr.sharedMaterials = lipEnabled
+                ? new Material[] { sandMat, lipMat }
+                : new Material[] { sandMat };
 
             AddCleanMeshCollider(go, mesh);
 
             // Position: mesh origin at centroid, at terrain surface height
             go.transform.position = new Vector3(centroidX, surfaceY, centroidZ);
 
-            Debug.Log($"[HoleLiteImporter] Bunker {id}: {n} contour verts, " +
-                      $"{ringCount} rings, {mesh.vertexCount} total verts");
+            Debug.Log($"[HoleGeoImporter] Bunker {id}: {n} contour verts, " +
+                      $"{ringCount} rings, lipEnabled={lipEnabled}, {mesh.vertexCount} total verts");
 
             return go;
         }

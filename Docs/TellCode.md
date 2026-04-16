@@ -7,7 +7,153 @@
 
 ---
 
-## Current Task — Green Collar: Bake as Submesh of Green CDT
+## Previous Task — Bunker Lip: Bake as Submesh of Bunker CDT (DONE)
+
+Add a sand-to-grass transition "lip" ring around each bunker using
+the same submesh pattern used for fairway fringe, tee border, and
+green collar. Read `Docs/LESSONS_FRINGE_BORDER_MESHES.md` first — the
+four-piece recipe there is mandatory.
+
+### Why
+
+Bunker lip polish was previously deferred because overlapping meshes
+Z-fight. The submesh approach (dilated CDT + original contour as
+internal constraint + centroid classification + duplicated boundary
+verts) is now proven across fairway, tee, and green collars. Same
+recipe, new surface.
+
+### Scope
+
+**Both importers** — `HoleGeoImporter.cs` AND `HoleLiteImporter.cs`.
+Match parity exactly. `Re-import Current Hole` dispatches to either,
+so both must work.
+
+Touch only bunker mesh creation (the method inside `CreateZoneMeshes`
+or wherever bunker CDT lives in each importer) and any helper it
+calls. Do not touch fairway, tee, green, water, or cart path code.
+
+Applies to BOTH large bunkers (4-ring bowl) and small bunkers (5-ring
+shingle overlap v7). Each bunker mesh, regardless of variant, gets
+a lip submesh around its outer boundary.
+
+### Implementation
+
+Mirror the fairway/green submesh pattern on the bunker CDT:
+
+1. **Dilate bunker contour outward by `lipWidth`** (start with
+   `lipWidth = 0.4f` meters — adjustable). Run CDT on the dilated
+   shape, not the original.
+2. **Pass original bunker contour as internal CDT constraint** so
+   triangle edges align with the sand/lip boundary (no jaggies).
+3. **Classify triangles by CENTROID** against the original contour.
+   Inside = sand submesh (existing bunker material), outside (in
+   dilation ring) = lip submesh.
+4. **Duplicate boundary verts** referenced by lip triangles so each
+   material gets its own UVs.
+5. Set `subMeshCount = 2` and assign
+   `sharedMaterials = { bunkerSandMat, lipMat }`.
+
+### Materials & UVs
+
+- **Sand submesh:** keep current bunker material and current UV
+  scheme unchanged.
+- **Lip submesh:** use `MAT_Bunkers_Dark` — a gradient material where
+  the LEFT side of the texture points at the bunker (sand side) and
+  the RIGHT side points at the rough (outer side). This is the same
+  UV scheme as the tee border — u encodes normalized distance to the
+  original contour:
+
+  ```csharp
+  // For each lip-submesh vert:
+  float dist = Mathf.Sqrt(DistanceSqToContour(v.x, v.z, originalBunkerPoly));
+  float u = Mathf.Clamp01(dist / lipWidth);
+  // u = 0 at the sand edge (left side of texture, near bunker)
+  // u = 1 at the dilated outer boundary (right side of texture, rough)
+  float vCoord = (v.x + v.z) / tileSize; // arbitrary per-perimeter tiling
+  uv = new Vector2(u, vCoord);
+  ```
+
+  `DistanceSqToContour` already exists (used by tee border) — reuse.
+
+**Asset path:** `Assets/Courses/Materials (Shared by courses)/MAT_Bunkers_Dark.mat` — load via `AssetDatabase.LoadAssetAtPath<Material>(...)`. The parent folder name has spaces and parentheses — the path must be exact including those characters.
+
+**Texture tiling note:** the material has `m_Scale: {x: 1, y: 10}` on its `_BaseMap`, meaning the texture tiles 10x along v. The gradient direction is u (left→right, sand→rough). When computing UVs, make sure vCoord tiles in a range that interacts correctly with that 10x scale — a `tileSize` around 2–4 world meters on vCoord should land in a reasonable visible tile frequency. Adjust and eyeball.
+
+### yOffset
+
+- Sand interior: keep current bunker Y (the existing bowl depression
+  + mesh lift values). No change.
+- Lip: same Y as sand at the boundary — it's the same mesh, they
+  share boundary vert Y. That's the whole point of the submesh
+  approach. The old deferred "lip ~0.13m above terrain" idea is
+  OBSOLETE and does NOT apply here. Do not raise the lip separately.
+
+### Fallback
+
+If dilated CDT fails (degenerate / self-intersecting on tight bunker
+shapes, especially the small shingle-overlap bunkers), retry with
+original contour and skip lip. Log a warning. A bunker without a
+lip is better than a crash.
+
+### Surface Detection — follow green collar pattern
+
+The lip is a DIFFERENT gameplay surface from sand (it's essentially
+rough-over-sand transition — different lie, different stance rules).
+Follow the same marker pattern we set up for greens:
+
+- Add `BunkerSurfaceInfo` MonoBehaviour (new file,
+  `Assets/Scripts/Course/BunkerSurfaceInfo.cs`):
+
+  ```csharp
+  using UnityEngine;
+  namespace Golfin.Course
+  {
+      // Attached to bunker GameObjects. Submesh 0 = sand,
+      // submesh 1 = lip (sand-to-grass transition). Used by ball
+      // physics to determine surface-specific lie/friction.
+      public class BunkerSurfaceInfo : MonoBehaviour
+      {
+          public const int SubmeshSand = 0;
+          public const int SubmeshLip  = 1;
+      }
+  }
+  ```
+
+- Attach to each bunker GameObject in the importer. No runtime
+  wiring yet — just the marker.
+
+### What NOT to Change
+
+- Fairway / tee / green / water / cart path mesh generation
+- Splatmap painting under bunkers
+- Bunker bowl depression (heightmap `SetHoles` / depression logic)
+- Small bunker shingle overlap v7 logic — still ships the 1.13x scale
+  + 0.11m lift. The lip is additive to that.
+- Ball physics, anything gameplay
+- Existing `CDTTriangulate` signature — reuse the optional
+  `innerConstraint` param added for fairway. Don't duplicate.
+
+### Verification
+
+Reimport hole 1 (has multiple bunkers including small ones) via both
+`Import > Geo > Normal > Import Hole 01 Geo` AND
+`Import > Lite > Normal > Import Hole 01 Lite`:
+
+- [ ] Every bunker has a visible dark lip ring around its edge
+- [ ] Lip gradient points the right way — darker/sand-adjacent near
+      bunker, fading to rough at outer edge
+- [ ] No Z-fighting between sand and lip on sloped bunkers
+- [ ] Lip boundary follows the bunker contour smoothly (no jaggies)
+- [ ] Small bunkers (shingle overlap) don't crash — fallback logs
+      warning if CDT fails
+- [ ] Large bunkers render correctly with lip
+- [ ] Both Geo and Lite produce equivalent output
+- [ ] `BunkerSurfaceInfo` component is on each bunker GameObject
+- [ ] No console errors or warnings (other than intentional fallback)
+
+---
+
+## Previous Task — Green Collar: Bake as Submesh of Green CDT
 
 Apply the same pattern that solved fairway fringe Z-fighting to greens:
 bake the collar (green fringe / first cut around the putting surface)
@@ -294,7 +440,10 @@ Reimport the hole with the splotch AND the cliff:
 
 ✅ DONE: 2026-04-16 — Green collar CDT complete. Dilated CDT (0.6m), internal constraint, centroid classification, boundary vert duplication, GreenSurfaceInfo hook, MAT_Fringe collar with distance UV (light side faces green), 8cm smoothstep raise on putting surface.
 
+✅ DONE: 2026-04-16 — Bunker lip submesh complete. Ring-based lip band (0.4m) baked as submesh 1 using OffsetContourOutward. Inner u=0 (sand side), outer u=1 (rough side). BunkerSurfaceInfo component attached. Both Geo and Lite importers updated for parity.
+
 ## Completed Tasks
+✅ 2026-04-16 — Bunker lip baked as submesh 1 of bunker mesh (0.4m ring, MAT_Bunkers_Dark, BunkerSurfaceInfo)
 ✅ 2026-04-16 — Cart path outward smoothstep ramp (8 cells) — flat drop inside + gradual return outside
 ✅ 2026-04-16 — Cart path flat depression (fixed center splotch BUT created edge cliff — needs outward ramp)
 ✅ 2026-04-16 — Spline cart path depression footprint (matched to mesh, gradient ramp broke center)
