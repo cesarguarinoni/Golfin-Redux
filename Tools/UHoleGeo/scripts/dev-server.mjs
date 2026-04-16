@@ -501,7 +501,7 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/raw-dem") {
     const courseId = url.searchParams.get("course") || "lomond-country-club";
     const hole = Number(url.searchParams.get("hole"));
-    const size = Math.max(64, Math.min(2048, Number(url.searchParams.get("size")) || 512));
+    const size = Math.max(64, Math.min(2049, Number(url.searchParams.get("size")) || 2049));
     const rotRaw = Number(url.searchParams.get("rot")) || 0;
     // Normalize to {0, 90, 180, 270} — matches the canvas rotation toolbar (CW)
     const rot = ((Math.round(rotRaw / 90) * 90) % 360 + 360) % 360;
