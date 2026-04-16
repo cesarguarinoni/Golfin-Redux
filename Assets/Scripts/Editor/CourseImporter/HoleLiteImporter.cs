@@ -30,7 +30,7 @@ namespace Golfin.CourseImport
 
         // ─── Green Elevation ─────────────────────────────────────────
         /// <summary>How far the putting surface sits above the outer collar edge.</summary>
-        private const float GreenRaiseMeters = 0.15f;
+        private const float GreenRaiseMeters = 0.08f;
 
         // ─── Heightmap Smoothing Parameters ─────────────────────────
         private const int SmoothRadius = 16;
