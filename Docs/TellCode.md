@@ -5,230 +5,331 @@
 > Claude (Architect) will update this file with new instructions as needed.
 > Handoff: `Docs/TellCode.md`
 > Previous completed specs archived in: `Docs/TellCode_Archive.md`
+> Full design rationale: `Docs/CART_PATH_SPLINE_PLAN.md`
 
 ---
 
-## Current Task — Bake Fringe Into Fairway Mesh (Single Mesh, No Overlap)
+## Current Task — Spline-Based Cart Path Meshes (HoleGeoImporter)
 
-Three separate-mesh approaches failed on slopes (Y-offset, clamp,
-parent-derivation). The fundamental problem: two overlapping meshes
-at slightly different XZ positions will ALWAYS disagree on terrain
-height on a slope. Z-buffer has to pick one, creating visual eating.
+Replace the current `CreateSpineStripMesh()` cart path approach with
+Unity Splines. The `com.unity.splines` package (v2.8.4) is installed.
 
-**Solution:** Merge the fringe INTO the fairway mesh. One mesh, one
-set of vertices, one Z-buffer entry per pixel. No overlap at all.
+The export (`cart-paths.json`) already includes `spine` arrays — the
+centerline points in local meter coords (already Z-flipped for Unity).
 
-### Concept
+### Overview
 
-Currently: fairway CDT mesh (contour boundary) + separate fringe
-ring mesh. Both overlap at the contour edge → Z-fight.
+For each cart path spine:
+1. Create BezierKnots from spine points (with terrain Y)
+2. Build a Spline with AutoSmooth tangents
+3. Evaluate the spline at dense intervals (~0.5m spacing)
+4. At each sample: offset left/right by halfWidth to get strip edges
+5. Sample `terrain.SampleHeight()` at each edge vertex
+6. Build triangle strip mesh from vertex pairs
+7. Apply material, SurfaceMarker, MeshCollider
 
-New: CDT mesh with the DILATED fringe contour as outer boundary.
-Vertices inside the original fairway contour get fairway UVs.
-Vertices between original and dilated contour get fringe UVs.
-Single mesh, single material.
+### Step 1: Add Usings
 
-### Step 1: Remove `CreateFringeRing()` Call
-
-In `CreateFlatZoneMeshes()` (or wherever the fairway mesh is built),
-find where `CreateFringeRing` is called for each fairway region.
-Remove the call entirely — fringe will be part of the fairway mesh.
-
-Also remove `ClampChildVertsToParentEdge()` if it exists.
-
-### Step 2: Dilate Fairway Contour for Outer Boundary
-
-Before feeding the fairway contour to CDT, create a dilated copy.
-The dilation offset should match the current fringe width (0.5m).
+At the top of `HoleGeoImporter.cs`, add:
 
 ```csharp
-// Dilate contour outward by fringeWidth meters
-float fringeWidth = 0.5f;
-Vector2[] outerContour = DilateContour(contour, fringeWidth);
+using UnityEngine.Splines;
+using Unity.Mathematics;
 ```
 
-`DilateContour` already exists or can be built from the existing
-dilation logic used for bunkers/cart paths. For each vertex, offset
-outward along the averaged normal of adjacent edges:
+### Step 2: New Method — `CreateSplineCartPaths()`
+
+Add this method to `HoleGeoImporter`. It replaces the spine strip
+mesh creation for cart paths. Keep the existing contour-based CDT
+mesh creation for the splatmap/depression system — only the VISIBLE
+strip mesh changes.
 
 ```csharp
-private static Vector2[] DilateContour(Vector2[] contour, float offset)
+/// <summary>
+/// Build cart path strip meshes using Unity Splines for smooth
+/// curves and dense terrain-conforming vertex sampling.
+/// </summary>
+private static void CreateSplineCartPaths(
+    TerrainData terrainData, GameObject terrainGO, Transform parent,
+    string exportPath, string dataDir, string projectRoot)
 {
-    int n = contour.Length;
-    var result = new Vector2[n];
-    for (int i = 0; i < n; i++)
+    string cpPath = Path.Combine(exportPath, "cart-paths.json");
+    if (!File.Exists(cpPath)) return;
+
+    var cpData = JsonUtility.FromJson<CartPathsFile>(
+        File.ReadAllText(cpPath));
+    if (cpData.cart_paths == null || cpData.cart_paths.Length == 0) return;
+
+    var terrain = terrainGO.GetComponent<Terrain>();
+    float terrainBaseY = terrainGO.transform.position.y;
+
+    // Cart path material (same as existing)
+    var cartMat = CreateCartPathMaterial(dataDir);
+
+    var cartRoot = new GameObject("CartPaths_Spline");
+    cartRoot.transform.SetParent(parent);
+
+    int meshCount = 0;
+
+    foreach (var cp in cpData.cart_paths)
     {
-        // Previous and next edges
-        Vector2 prev = contour[(i - 1 + n) % n];
-        Vector2 curr = contour[i];
-        Vector2 next = contour[(i + 1) % n];
+        if (cp.spine == null || cp.spine.Length < 2) continue;
 
-        // Edge normals (outward — assuming CCW winding)
-        Vector2 e1 = (curr - prev).normalized;
-        Vector2 n1 = new Vector2(-e1.y, e1.x);
-        Vector2 e2 = (next - curr).normalized;
-        Vector2 n2 = new Vector2(-e2.y, e2.x);
+        float halfWidth = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
+        float sampleSpacing = 0.5f; // meters between samples
+        float yOffset = 0.01f;      // sit just above terrain
 
-        // Average normal
-        Vector2 avgN = (n1 + n2).normalized;
+        // --- Build spline from spine points ---
+        // Geo importer: NO 90° rotation (direct mapping)
+        // spine points are already in Unity world-local coords
+        var knots = new BezierKnot[cp.spine.Length];
+        for (int i = 0; i < cp.spine.Length; i++)
+        {
+            float wx = cp.spine[i].x;
+            float wz = cp.spine[i].z;
+            float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+            knots[i] = new BezierKnot(
+                new float3(wx, terrainBaseY + th, wz));
+        }
 
-        // Handle sharp corners: limit offset to avoid spikes
-        float dot = Vector2.Dot(n1, avgN);
-        float scale = (dot > 0.1f) ? (1f / dot) : 1f;
-        scale = Mathf.Min(scale, 3f); // cap at 3x to avoid huge spikes
+        var spline = new Spline(knots.Length);
+        for (int i = 0; i < knots.Length; i++)
+            spline.Add(knots[i]);
 
-        result[i] = curr + avgN * offset * scale;
+        // AutoSmooth tangents — Bézier handles the curve smoothing
+        for (int i = 0; i < spline.Count; i++)
+            spline.SetTangentMode(i, TangentMode.AutoSmooth);
+
+        // --- Evaluate spline at dense intervals ---
+        float splineLength = SplineUtility.CalculateLength(spline);
+        if (splineLength < 0.1f) continue;
+
+        int sampleCount = Mathf.Max(2,
+            Mathf.CeilToInt(splineLength / sampleSpacing));
+
+        var leftVerts = new List<Vector3>();
+        var rightVerts = new List<Vector3>();
+        var uvs = new List<Vector2>();
+        float tileSize = 4f; // UV tiling for asphalt texture
+
+        float accumulatedDist = 0f;
+
+        for (int s = 0; s <= sampleCount; s++)
+        {
+            float t = (float)s / sampleCount;
+            SplineUtility.Evaluate(spline, t,
+                out float3 pos, out float3 tangent, out float3 up);
+
+            // Perpendicular direction in XZ plane
+            float3 tangentFlat = math.normalize(
+                new float3(tangent.x, 0, tangent.z));
+
+            // Handle degenerate tangent (vertical segment)
+            if (math.lengthsq(tangentFlat) < 0.001f)
+                tangentFlat = new float3(1, 0, 0);
+            else
+                tangentFlat = math.normalize(tangentFlat);
+
+            float3 right = math.cross(new float3(0, 1, 0), tangentFlat);
+            right = math.normalize(right);
+
+            float3 leftPos = pos - right * halfWidth;
+            float3 rightPos = pos + right * halfWidth;
+
+            // Re-sample terrain height at each edge vertex
+            float leftH = terrain.SampleHeight(
+                new Vector3(leftPos.x, 0, leftPos.z));
+            float rightH = terrain.SampleHeight(
+                new Vector3(rightPos.x, 0, rightPos.z));
+
+            leftVerts.Add(new Vector3(leftPos.x,
+                terrainBaseY + leftH + yOffset, leftPos.z));
+            rightVerts.Add(new Vector3(rightPos.x,
+                terrainBaseY + rightH + yOffset, rightPos.z));
+
+            // UV: u = cross-path (0 left, 1 right)
+            //     v = along-path (tiled by distance)
+            if (s > 0)
+            {
+                float3 prevPos;
+                SplineUtility.Evaluate(spline,
+                    (float)(s - 1) / sampleCount,
+                    out prevPos, out _, out _);
+                accumulatedDist += math.distance(pos, prevPos);
+            }
+            float vCoord = accumulatedDist / tileSize;
+            // Left gets u=0, right gets u=1 (added below)
+        }
+
+        if (leftVerts.Count < 2) continue;
+
+        // --- Build triangle strip mesh ---
+        int vertCount = leftVerts.Count * 2;
+        var meshVerts = new Vector3[vertCount];
+        var meshUVs = new Vector2[vertCount];
+
+        // Recompute accumulated distance for UVs
+        accumulatedDist = 0f;
+        for (int i = 0; i < leftVerts.Count; i++)
+        {
+            if (i > 0)
+            {
+                Vector3 delta = (leftVerts[i] + rightVerts[i]) * 0.5f -
+                                (leftVerts[i-1] + rightVerts[i-1]) * 0.5f;
+                accumulatedDist += delta.magnitude;
+            }
+            float v = accumulatedDist / tileSize;
+
+            meshVerts[i * 2] = leftVerts[i];
+            meshVerts[i * 2 + 1] = rightVerts[i];
+            meshUVs[i * 2] = new Vector2(0f, v);
+            meshUVs[i * 2 + 1] = new Vector2(1f, v);
+        }
+
+        // Triangles: quad strip
+        int quadCount = leftVerts.Count - 1;
+        var tris = new int[quadCount * 6];
+        for (int i = 0; i < quadCount; i++)
+        {
+            int bl = i * 2;
+            int br = i * 2 + 1;
+            int tl = i * 2 + 2;
+            int tr = i * 2 + 3;
+
+            tris[i * 6 + 0] = bl;
+            tris[i * 6 + 1] = tl;
+            tris[i * 6 + 2] = br;
+            tris[i * 6 + 3] = br;
+            tris[i * 6 + 4] = tl;
+            tris[i * 6 + 5] = tr;
+        }
+
+        // Center mesh at centroid (Y=0 origin pattern)
+        float cx = 0, cz = 0;
+        for (int i = 0; i < meshVerts.Length; i++)
+        { cx += meshVerts[i].x; cz += meshVerts[i].z; }
+        cx /= meshVerts.Length;
+        cz /= meshVerts.Length;
+        Vector3 centroid = new Vector3(cx, 0, cz);
+
+        for (int i = 0; i < meshVerts.Length; i++)
+            meshVerts[i] -= centroid;
+
+        // Check winding (ensure top-face normals point up)
+        if (tris.Length >= 3)
+        {
+            Vector3 a = meshVerts[tris[0]];
+            Vector3 b = meshVerts[tris[1]];
+            Vector3 c = meshVerts[tris[2]];
+            float cross = (b.x - a.x) * (c.z - a.z) -
+                          (b.z - a.z) * (c.x - a.x);
+            if (cross > 0)
+            {
+                for (int i = 0; i < tris.Length; i += 3)
+                {
+                    int tmp = tris[i];
+                    tris[i] = tris[i + 2];
+                    tris[i + 2] = tmp;
+                }
+            }
+        }
+
+        var mesh = new Mesh();
+        mesh.name = $"CartPath_Spline_{cp.id}";
+        mesh.vertices = meshVerts;
+        mesh.triangles = tris;
+        mesh.uv = meshUVs;
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        var go = new GameObject($"CartPath_Spline_{cp.id}");
+        go.transform.position = centroid;
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterial = cartMat;
+        AddCleanMeshCollider(go, mesh);
+
+        var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+        marker.surfaceType = Golfin.Course.SurfaceType.CartPath;
+        go.transform.SetParent(cartRoot.transform);
+        meshCount++;
     }
-    return result;
+
+    Debug.Log($"[HoleGeoImporter] Spline cart paths: {meshCount} meshes " +
+        $"(sampling every 0.5m)");
 }
 ```
 
-If the winding is CW instead of CCW, the normals will point inward.
-Check: if dilated contour is SMALLER than original, flip the normal
-direction (negate offset or swap the normal cross product).
+### Step 3: Wire Up in `CreateFlatZoneMeshes()`
 
-### Step 3: CDT with Outer Boundary
+In `CreateFlatZoneMeshes()`, find where cart path meshes are currently
+created (the `CreateSpineStripMesh` call or whatever builds the cart
+path strip). Replace that section with a call to
+`CreateSplineCartPaths()`.
 
-Feed `outerContour` (not `contour`) as the CDT boundary. This
-makes the CDT triangulate the entire area including the fringe band.
+The contour-based CDT mesh for cart paths (used for splatmap painting
+and terrain depression) should STAY — only the visible strip mesh
+changes. If cart paths currently use a single method for both the
+CDT contour mesh and the spine strip, you'll need to:
+1. Keep the CDT contour mesh for splatmap/depression
+2. Replace only the spine strip with the spline mesh
+3. Or: if the CDT contour mesh IS the visible mesh, replace it
+   entirely with the spline mesh and keep the contour data only for
+   splatmap/depression.
 
-The CDT call should use the dilated contour as its input polygon.
-All vertices (both interior Steiner points and boundary vertices)
-sample terrain height as normal.
+Look at how the code is structured and make the cleanest swap.
 
-### Step 4: UV Assignment — Fairway vs Fringe
+### Step 4: Material Helper
 
-After CDT produces the mesh, classify each vertex as "fairway" or
-"fringe" by testing whether it's inside the ORIGINAL contour.
-
-```csharp
-// For each vertex in the CDT mesh:
-for (int i = 0; i < verts.Length; i++)
-{
-    // Convert vertex to 2D (world XZ → contour space)
-    Vector2 pt = new Vector2(
-        verts[i].x + centroid.x,  // world X
-        verts[i].z + centroid.z); // world Z
-
-    // NOTE: contour coords use the 90° CCW mapping (x→z, z→x)
-    // Make sure the point-in-polygon test uses the same space
-    // as the original contour points
-
-    if (IsInsideContour(pt.x, pt.y, originalContourWorld))
-    {
-        // Fairway UV: tile fairway texture
-        uvs[i] = ComputeFairwayUV(verts[i], centroid, ...);
-    }
-    else
-    {
-        // Fringe UV: tile fringe texture
-        uvs[i] = ComputeFringeUV(verts[i], centroid, ...);
-    }
-}
-```
-
-### Step 5: Material — Two Textures via UV Region
-
-**Option A (simplest — recommended):** Use vertex colors to mark
-fairway vs fringe. Set vertex color R=1 for fairway, R=0 for fringe.
-Create a simple shader that lerps between two textures based on
-vertex color R. The shader receives both fairway and fringe textures
-as properties.
-
-```csharp
-// Set vertex colors
-Color[] colors = new Color[verts.Length];
-for (int i = 0; i < verts.Length; i++)
-{
-    bool isFairway = IsInsideContour(...);
-    colors[i] = isFairway ? Color.red : Color.blue;
-}
-mesh.colors = colors;
-```
-
-Shader (URP Shader Graph or simple Lit variant):
-- Input: _MainTex (fairway), _FringeTex (fringe), vertex color
-- Output: lerp(_FringeTex, _MainTex, vertexColor.r)
-
-**Option B (no shader change):** Use UV coordinates to map fairway
-vertices to a region of a texture atlas and fringe vertices to
-another region. This requires creating a combined atlas texture from
-T_Fairway_Light + T_Fringe. More work for same result.
-
-**Recommendation: Option A.** A simple vertex-color-lerp shader is
-~10 lines of Shader Graph and keeps the textures separate (easier
-to swap/tune). If Shader Graph feels heavy, a surface shader or
-even a custom URP Lit variant works.
-
-### Step 6: Same for Tee + Tee Border
-
-Apply the same pattern to tees:
-1. Remove `CreateGradientBorderRing()` call
-2. Dilate tee contour by border width
-3. CDT with dilated contour as outer boundary
-4. Vertex colors: inside original = tee, outside = border
-5. Same dual-texture shader (or a separate one with tee + border
-   textures)
-
-For the tee border, the "gradient" effect (current border fades from
-tee to rough color) can be approximated by using vertex color alpha
-as a distance-from-edge value: 1.0 at the original contour, 0.0
-at the outer edge. The shader blends accordingly.
+If `CreateCartPathMaterial()` doesn't exist as a standalone method,
+extract the cart path material creation from the existing code into
+a reusable method. It should return the asphalt material used for
+cart paths (same material as before).
 
 ### What NOT to Change
 
-- Green collar (uses raised mesh — different system, not broken)
-- Cart path meshes (separate spline-based rework planned)
-- Water meshes
-- Bunker bowls
-- Depression system
-- Splatmap painting
-- CDT triangulation logic itself (just feed it a different contour)
-
-### What to Remove
-
-- `CreateFringeRing()` method (or just stop calling it)
-- `CreateGradientBorderRing()` method (or just stop calling it)
-- `ClampChildVertsToParentEdge()` if it exists
-- Any fringe/border Y-offset constants that are no longer used
+- Contour data in cart-paths.json (still used for splatmap + depression)
+- Splatmap painting of cart path texture on terrain
+- Terrain depression under cart paths
+- Any other zone mesh creation (fairway, tee, green, bunker, water)
+- HoleLiteImporter.cs (Geo only for now — port to Lite later)
 
 ### Verification
 
-Re-import Hole 4 (steepest terrain):
+Re-export then reimport Hole 4 via `Import > Geo > Normal`:
 
-- [ ] Fairway mesh includes fringe band — no separate fringe ring
-- [ ] Fringe texture visible around fairway edges
-- [ ] NO Z-fighting between fairway and fringe on any slope
-- [ ] Tee mesh includes border band — no separate border ring
-- [ ] NO Z-fighting between tee and border
-- [ ] On flat terrain (Hole 1), looks identical to before
+```bash
+cd Tools/UHoleGeo
+node scripts/export-hole.mjs lomond-country-club 4
+```
+
+Then in Unity: `Import > Geo > Normal > Import Hole 04 Geo`
+
+- [ ] Cart paths follow smooth curves (no staircase/blocky edges)
+- [ ] Cart paths conform to terrain on slopes (no floating/sinking)
+- [ ] Consistent width along entire path (no jagged edges)
+- [ ] Asphalt texture applied correctly (UV tiling looks natural)
+- [ ] SurfaceMarker set to CartPath
+- [ ] MeshCollider present
+- [ ] Splatmap still paints under cart path (unchanged)
+- [ ] Terrain depression still works (unchanged)
 - [ ] No console errors
-- [ ] All overlay meshes still intact (greens, bunkers, water, etc.)
+- [ ] Other zone meshes (fairway, tee, green, bunker, water) unaffected
 
-### Notes for Implementation
+Also test Hole 1 (longer, may have branches):
+- [ ] All cart path branches render
+- [ ] No gaps at branch junctions
+- [ ] Smooth curves throughout
 
-- The `IsInsideContour` / point-in-polygon test already exists in the
-  codebase (used for splatmap painting). Reuse it.
-- CDT (BurstTriangulator) accepts any simple polygon as boundary.
-  The dilated contour is still a simple polygon as long as dilation
-  doesn't create self-intersections. At 0.5m dilation this should
-  not happen for golf-course-scale contours.
-- If CDT fails with the dilated contour (rare edge case), fall back
-  to the original contour without fringe — better than crashing.
-
----
-
-## NEXT Task — Spline-Based Cart Path Meshes
-
-See `Docs/CART_PATH_SPLINE_PLAN.md` for full spec.
-Prerequisites: Splines package installed + spine data in export.
+Run all 18 via `Import > Geo > Normal > Import All Holes Geo` to
+verify no crashes.
 
 ---
 
 ## Completed Tasks
-✅ 2026-04-15 — Bake fringe/border into parent mesh via dilated CDT. CreateFairwayMesh and CreateTeeMeshWithBorder now CDT a dilated contour; vertices classified by IsInsideContour vs the original polygon; triangles go to fairway/tee submesh or fringe/border submesh. Single mesh = no Z-fight. DEVIATION: used 2 submeshes instead of vertex-color blend shader (Option A). Hard material edge at the original contour — if visually poor, shader is follow-up.
-✅ 2026-04-15 — Clamp fringe/border vertex Y (didn't fix — bidirectional)
-✅ 2026-04-15 — Parent-derived Y for fringe/border (didn't fix — still bidirectional)
+❌ 2026-04-16 — Spline cart paths REVERTED. Three fix attempts (centerline sampling, spline Y only, dense knots) all produced worse artifacts than the original CreateSpineStripMesh. Root issue: terrain dip artifact at one bend. Needs architect re-evaluation before another attempt.
+✅ 2026-04-16 — Fringe/border baked into parent CDT mesh as submesh (dilated CDT + constraint edges + centroid classification)
+✅ 2026-04-15 — Clamp fringe/border vertex Y (didn't fix)
+✅ 2026-04-15 — Parent-derived Y for fringe/border (didn't fix)
 ✅ 2026-04-14 — Water rework complete (6 iterations)
 ✅ 2026-04-13 — Cart path flat depression + spine fixes
 ✅ 2026-04-13 — Natural OB↔Rough transition + Smooth OB
