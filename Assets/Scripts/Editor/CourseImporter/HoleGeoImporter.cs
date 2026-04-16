@@ -3183,56 +3183,18 @@ namespace Golfin.CourseImport
                         depressedCount++;
                     }
 
-            // Cart path cells: distance-based gradual slope
-            // Step 1: Distance transform on cartDepress (chamfer)
-            float[,] cartDist = new float[hRes, hRes];
-            for (int hz = 0; hz < hRes; hz++)
-                for (int hx = 0; hx < hRes; hx++)
-                    cartDist[hz, hx] = cartDepress[hz, hx] ? 0f : 99999f;
-
-            // Forward pass
-            for (int hz = 0; hz < hRes; hz++)
-                for (int hx = 0; hx < hRes; hx++)
-                {
-                    if (hx > 0) cartDist[hz, hx] = Mathf.Min(
-                        cartDist[hz, hx], cartDist[hz, hx - 1] + 1f);
-                    if (hz > 0) cartDist[hz, hx] = Mathf.Min(
-                        cartDist[hz, hx], cartDist[hz - 1, hx] + 1f);
-                }
-            // Backward pass
-            for (int hz = hRes - 1; hz >= 0; hz--)
-                for (int hx = hRes - 1; hx >= 0; hx--)
-                {
-                    if (hx < hRes - 1) cartDist[hz, hx] = Mathf.Min(
-                        cartDist[hz, hx], cartDist[hz, hx + 1] + 1f);
-                    if (hz < hRes - 1) cartDist[hz, hx] = Mathf.Min(
-                        cartDist[hz, hx], cartDist[hz + 1, hx] + 1f);
-                }
-
-            // Step 2: Find max distance (= center of widest part)
-            float maxCartDist = 0f;
-            for (int hz = 0; hz < hRes; hz++)
-                for (int hx = 0; hx < hRes; hx++)
-                    if (cartDepress[hz, hx] && cartDist[hz, hx] > maxCartDist)
-                        maxCartDist = cartDist[hz, hx];
-
-            if (maxCartDist < 1f) maxCartDist = 1f;
-
-            // Step 3: Apply smoothstep ramp — edge gets 0% drop, center gets 100%
+            // Cart path cells: flat drop (same as fairway/tee).
+            // Gradient ramp was causing edge cells to get 0% drop, letting terrain
+            // poke through the mesh on concave slopes. Cart paths have no fringe
+            // to hide the soft edge, so full depression everywhere is correct.
             int cartDepressedCount = 0;
             for (int hz = 0; hz < hRes; hz++)
             {
                 for (int hx = 0; hx < hRes; hx++)
                 {
                     if (!cartDepress[hz, hx]) continue;
-
-                    float t = cartDist[hz, hx] / maxCartDist;
-                    t = Mathf.Clamp01(t);
-                    t = t * t * (3f - 2f * t); // smoothstep
-
-                    float cellDrop = dropNormalized * t;
                     heights[hz, hx] = Mathf.Max(0f,
-                        heights[hz, hx] - cellDrop);
+                        heights[hz, hx] - dropNormalized);
                     cartDepressedCount++;
                 }
             }
