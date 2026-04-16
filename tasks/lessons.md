@@ -95,6 +95,99 @@ if (Golfin.UI.PersistentUIManager.Instance != null)
 }
 ```
 
+---
+
+## Course Importer — Spline Cart Paths (2026-04-16)
+
+### Spline cart paths: use `com.unity.splines` (v2.8.4)
+
+`SplineUtility.CalculateLength<T>(T, float4x4)` requires a transform as second argument.
+Always pass `float4x4.identity` when the spline is already in world/local space:
+```csharp
+float len = SplineUtility.CalculateLength(spline, float4x4.identity);
+```
+
+### `sed` corrupts C# comment lines starting with `//`
+
+When using `sed -i 's/old/new/'` on Windows (Git bash `sed`), comment lines can get their
+`//` replaced with `\`. Always use `Edit` tool for C# file changes — never `sed`.
+A corrupted `\` on a line causes a compile error that Unity silently ignores by running the
+last cached compiled version, making it look like the code ran but did nothing.
+
+### Splatmap painting of cart path texture causes a visible border around the mesh
+
+The old splatmap code painted asphalt texture on the terrain using `BuildSpinePolygon()`,
+which was wider than the spline mesh on curves. The painted asphalt texture showed up as a
+dark border in the grass beyond the road edge.
+**Rule:** When a road/path is a mesh overlay, remove all splatmap painting for that surface.
+The mesh material handles the visual. Painting the terrain underneath is redundant and creates
+visible artifacts at the edges.
+
+### Cart path terrain depression: flat drop, not gradient ramp
+
+**Wrong:** Original depression used a smoothstep gradient ramp (center=100%, edge=0%).
+This left terrain at the mesh edge barely depressed — terrain poked through on concave slopes.
+
+**Also wrong:** Outward ramp (full drop inside, taper outside) — depresses grass beyond the
+road boundary, creating a visible dark ledge around the road.
+
+**Correct:** Flat drop exactly under the mesh footprint. The mesh itself covers the edge so
+no ramp or gradient is needed. Terrain outside the road stays at natural height.
+```csharp
+// Flat drop only
+for (int hz = 0; hz < hRes; hz++)
+    for (int hx = 0; hx < hRes; hx++)
+        if (cartDepress[hz, hx])
+            heights[hz, hx] = Mathf.Max(0f, heights[hz, hx] - dropNormalized);
+```
+
+### Depression polygon must be INSET from mesh edge, not flush or extended
+
+Building the depression polygon at exactly the mesh edge width still marks some cells outside
+the mesh (floating point boundary effects + cell-center sampling). Building it wider makes it
+visibly bleed into the grass.
+**Rule:** For overlay meshes with no fringe, inset the depression polygon by ~0.3m from the
+mesh edge: `depHalfWidth = halfWidth - 0.3f`. The mesh covers the inset gap invisibly.
+
+### Depression polygon: use spline right-vector offsets, not mesh edge vert positions
+
+Building the polygon from `leftVerts`/`rightVerts` (actual mesh verts) seems exact but those
+verts include terrain height variation (Y) and the XZ positions can drift from the spline
+centerline on curves. Using `pos ± right * depHalfWidth` from `SplineUtility.Evaluate` is
+cleaner and more predictable for a 2D polygon.
+
+### Static field for cross-method polygon passing
+
+When `CreateSplineCartPaths()` needs to pass depression polygons to `DepressTerrainUnderOverlays()`,
+use a `private static List<Vector2[]> _splineCartPathPolygons` field. Reset it at the start of
+`CreateSplineCartPaths()` and check for null/empty in `DepressTerrainUnderOverlays()` with a
+fallback to the old approach.
+
+### `pos.y` from spline evaluation is NOT reliable for terrain conformance
+
+If spine points are sparse (e.g., one knot every 5-10m), the AutoSmooth Bézier Y between
+knots can deviate significantly from actual terrain height — causing the mesh to float or sink.
+Fixing this by subdividing the spine to 1m knots and using `pos.y` made the mesh worse (the
+Bézier Y overshoots/undershoots between dense knots). Per-sample `terrain.SampleHeight()` at
+the centerline is the correct approach for terrain-conforming paths.
+
+### Spline tangent degenerate case
+
+When `tangentFlat = new float3(tangent.x, 0, tangent.z)` has near-zero length (vertical
+segment or path doubling back), `math.normalize` produces NaN. Always guard:
+```csharp
+if (math.lengthsq(tangentFlat) < 0.001f)
+    tangentFlat = new float3(1, 0, 0); // fallback to X axis
+else
+    tangentFlat = math.normalize(tangentFlat);
+```
+
+### `MarkWorldContourCells` vs `MarkContourCells`
+
+- `MarkContourCells` — takes `ContourPoint[]` in local meter coords, applies `DepressionInsetMeters` inset automatically
+- `MarkWorldContourCells` — takes `Vector2[]` in world XZ coords, NO inset applied
+Always use `MarkWorldContourCells` for polygons already in world space (e.g. built from spline verts).
+
 ## Never Use ?? With Unity Objects — Use == null Instead
 
 **Mistake:** Used `GetComponent<CanvasGroup>() ?? AddComponent<CanvasGroup>()` in `GetOrAddCG`.
