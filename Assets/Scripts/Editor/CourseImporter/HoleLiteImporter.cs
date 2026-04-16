@@ -28,6 +28,10 @@ namespace Golfin.CourseImport
         private const float OverlayDepressionMeters = 0.40f;
         private const float DepressionInsetMeters = 0.20f;
 
+        // ─── Green Elevation ─────────────────────────────────────────
+        /// <summary>How far the putting surface sits above the outer collar edge.</summary>
+        private const float GreenRaiseMeters = 0.15f;
+
         // ─── Heightmap Smoothing Parameters ─────────────────────────
         private const int SmoothRadius = 16;
         private const float SmoothSigma = 32.0f;
@@ -2493,7 +2497,7 @@ namespace Golfin.CourseImport
                 for (int i = 0; i < worldContour.Length; i++)
                     contourPoints[i] = new ContourPoint { x = worldContour[i].y, z = worldContour[i].x };
 
-                const float greenYOffset = 0.03f;
+                const float greenYOffset = 0.03f + GreenRaiseMeters; // terrain + collar base + raise
                 const float greenCollarWidth = 0.6f;
                 var meshGO = CreateGreenMeshCDT(green.id, contourPoints,
                     terrain, terrainBaseY, greenMat, collarMat,
@@ -2617,6 +2621,27 @@ namespace Golfin.CourseImport
                     { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
             }
 
+            // Per-vert Y raise: green interior gets full GreenRaiseMeters; collar
+            // ramps smoothly from full raise at the green boundary to zero at the
+            // outer collar edge. Classify by vert position (not by submesh) so
+            // boundary verts (d≈0) naturally compute full raise on both copies.
+            for (int i = 0; i < rawVerts.Length; i++)
+            {
+                float d = Mathf.Sqrt(DistanceSqToContour(rawVerts[i].x, rawVerts[i].z, originalPoly));
+                float raise;
+                if (IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly))
+                {
+                    raise = GreenRaiseMeters;
+                }
+                else
+                {
+                    float t = 1f - Mathf.Clamp01(d / collarWidth);
+                    t = t * t * (3f - 2f * t); // smoothstep
+                    raise = GreenRaiseMeters * t;
+                }
+                rawVerts[i].y += raise;
+            }
+
             // Classify each triangle by its centroid (always strictly inside or outside
             // the original contour since triangles have nonzero area).
             var greenTris = new List<int>();
@@ -2634,7 +2659,7 @@ namespace Golfin.CourseImport
             }
 
             // Duplicate boundary verts for collar with distance-based UVs.
-            // U = 0 at green edge (light side of fringe mat), U = 1 at outer edge.
+            // U = 1 at green edge (light side of fringe mat faces green), U = 0 at outer edge.
             // V tiles along world XZ for perimeter variety.
             var finalVerts = new List<Vector3>(rawVerts);
             var finalUVs   = new List<Vector2>(uvs);
