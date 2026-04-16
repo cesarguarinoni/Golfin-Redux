@@ -3,6 +3,8 @@ import { readFile, stat, writeFile, mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readDem5aTile, sampleDem5a } from "./lib/dem5a.mjs";
+import { latToTileY, lonToTileX, tileBounds } from "./lib/tiles.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -488,6 +490,107 @@ const server = createServer(async (req, res) => {
       sendJson(res, 200, { ok: true, width, height });
     } catch (err) {
       sendJson(res, 500, { ok: false, message: err.message });
+    }
+    return;
+  }
+
+  // --- API: Raw GSI DEM5A as grayscale PNG (no transformation) ---
+  // Samples DEM5A directly for the hole's bounding box, stretches min/max to
+  // visible grayscale, and marks NoData cells as magenta. In-memory only —
+  // nothing is written to disk. For visual inspection of the source DEM.
+  if (req.method === "GET" && url.pathname === "/api/raw-dem") {
+    const courseId = url.searchParams.get("course") || "lomond-country-club";
+    const hole = Number(url.searchParams.get("hole"));
+    const size = Math.max(64, Math.min(2048, Number(url.searchParams.get("size")) || 512));
+    const pad = String(hole).padStart(2, "0");
+    const boundsPath = path.join(root, "output", courseId, "holes", pad, "hole-bounds.json");
+    const demDir = path.join(root, "..", "UHole", "output", courseId, "basemap", "gsi-dem5a-z15");
+    const DEM_ZOOM = 15;
+
+    try {
+      const holeBounds = JSON.parse(await readFile(boundsPath, "utf8"));
+      const bounds = holeBounds.bounds;
+
+      // Load DEM tiles covering the bbox (same approach as generate-terrain)
+      const minTX = lonToTileX(bounds.west, DEM_ZOOM);
+      const maxTX = lonToTileX(bounds.east, DEM_ZOOM);
+      const minTY = latToTileY(bounds.north, DEM_ZOOM);
+      const maxTY = latToTileY(bounds.south, DEM_ZOOM);
+
+      const tiles = [];
+      for (let ty = minTY; ty <= maxTY; ty++) {
+        for (let tx = minTX; tx <= maxTX; tx++) {
+          const filePath = path.join(demDir, `${DEM_ZOOM}-${tx}-${ty}.png`);
+          try {
+            const grid = await readDem5aTile(filePath);
+            tiles.push({ bounds: tileBounds(tx, ty, DEM_ZOOM), grid });
+          } catch { /* missing tile — skipped */ }
+        }
+      }
+
+      if (tiles.length === 0) {
+        res.writeHead(404);
+        res.end("No DEM5A tiles available for this bounding box");
+        return;
+      }
+
+      // Sample DEM at every cell — NO transformation
+      const elev = new Float64Array(size * size);
+      let minE = Infinity, maxE = -Infinity;
+      let nanCount = 0;
+      for (let hy = 0; hy < size; hy++) {
+        for (let hx = 0; hx < size; hx++) {
+          const nx = hx / (size - 1);
+          const ny = hy / (size - 1);
+          const lat = bounds.north - ny * (bounds.north - bounds.south);
+          const lon = bounds.west + nx * (bounds.east - bounds.west);
+          const v = sampleDem5a(tiles, lat, lon);
+          if (v === null || isNaN(v)) {
+            elev[hy * size + hx] = NaN;
+            nanCount++;
+          } else {
+            elev[hy * size + hx] = v;
+            if (v < minE) minE = v;
+            if (v > maxE) maxE = v;
+          }
+        }
+      }
+
+      // Stretch min→0, max→255. NoData cells → magenta (255, 0, 255).
+      const range = (maxE - minE) || 1;
+      const rgb = Buffer.alloc(size * size * 3);
+      for (let i = 0; i < size * size; i++) {
+        const v = elev[i];
+        if (isNaN(v)) {
+          rgb[i * 3] = 255; rgb[i * 3 + 1] = 0; rgb[i * 3 + 2] = 255;
+        } else {
+          const g = Math.round(((v - minE) / range) * 255);
+          rgb[i * 3] = g; rgb[i * 3 + 1] = g; rgb[i * 3 + 2] = g;
+        }
+      }
+
+      const sharp = (await import("sharp")).default;
+      const pngBuffer = await sharp(rgb, { raw: { width: size, height: size, channels: 3 } })
+        .png()
+        .toBuffer();
+
+      console.log(`[raw-dem] Hole ${hole}: ${size}x${size} samples, ` +
+        `elev=[${minE.toFixed(1)}, ${maxE.toFixed(1)}]m ASL, ` +
+        `${nanCount} NoData cells, ${tiles.length} tiles`);
+
+      res.writeHead(200, {
+        "Content-Type": "image/png",
+        "Cache-Control": "no-cache",
+        "X-DEM-Min-Elev": minE.toFixed(2),
+        "X-DEM-Max-Elev": maxE.toFixed(2),
+        "X-DEM-NoData-Cells": String(nanCount),
+        "X-DEM-Tiles": String(tiles.length),
+      });
+      res.end(pngBuffer);
+    } catch (err) {
+      console.error("[raw-dem] failed:", err.message);
+      res.writeHead(500);
+      res.end("Raw DEM failed: " + err.message);
     }
     return;
   }

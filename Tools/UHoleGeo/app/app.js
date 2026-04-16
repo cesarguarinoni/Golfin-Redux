@@ -1203,6 +1203,7 @@ function setupControls() {
     if (e.target.files.length > 0) loadSnapshot(e.target.files[0]);
   });
   document.getElementById("btn-regen").addEventListener("click", regenHeightmap);
+  document.getElementById("btn-raw-dem").addEventListener("click", viewRawDem);
   document.getElementById("btn-set-bounds").addEventListener("click", openMapOverlay);
   document.getElementById("btn-place-tees").addEventListener("click", placeTees);
 
@@ -1854,6 +1855,17 @@ async function regenHeightmap() {
   btn.disabled = false;
   btn.textContent = "Regen Heightmap";
   setTimeout(() => { banner.textContent = "\u00a0"; banner.style.borderColor = ""; banner.style.background = ""; banner.style.color = ""; }, 5000);
+}
+
+// ── Raw DEM viewer ──────────────────────────────────
+// Opens the untransformed GSI DEM5A heightmap for the current hole's bounds
+// in a new tab. Useful for visually confirming the source elevation data
+// before it's transformed by generate-terrain.mjs.
+
+function viewRawDem() {
+  if (!currentHole) return;
+  const url = "/api/raw-dem?course=" + COURSE_ID + "&hole=" + currentHole.number + "&size=1024&_t=" + Date.now();
+  window.open(url, "_blank", "noopener");
 }
 
 // ── Save All ────────────────────────────────────────
