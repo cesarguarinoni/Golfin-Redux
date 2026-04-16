@@ -4346,7 +4346,7 @@ namespace Golfin.CourseImport
                 float halfWidth    = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
                 float depHalfWidth = halfWidth - 0.3f; // inset so depression stays inside mesh
                 float sampleSpacing = 0.5f; // meters between samples
-                float yOffset = 0.01f;      // sit just above terrain
+                float yOffset = 0.017f;     // sit just above terrain
 
                 // --- Build spline from spine points ---
                 // Geo importer: NO 90° rotation (direct mapping)
