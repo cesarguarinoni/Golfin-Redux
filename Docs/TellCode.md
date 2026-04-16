@@ -7,7 +7,135 @@
 
 ---
 
-## Current Task — Cart Path Depression: Flat Interior + Outward Ramp
+## Current Task — Green Collar: Bake as Submesh of Green CDT
+
+Apply the same pattern that solved fairway fringe Z-fighting to greens:
+bake the collar (green fringe / first cut around the putting surface)
+into the green CDT mesh as a second submesh. Read
+`Docs/LESSONS_FRINGE_BORDER_MESHES.md` first — the four-piece recipe
+there is mandatory.
+
+### Why
+
+Greens currently render as a contour mesh overlay with no collar.
+Adding a collar as a SEPARATE overlay mesh would Z-fight on slopes
+(same problem fairway had). The proven fix is dilated CDT + original
+contour as internal constraint + centroid classification + duplicated
+boundary verts for per-material UVs.
+
+### Scope
+
+**Both importers** — `HoleGeoImporter.cs` AND `HoleLiteImporter.cs`.
+Match parity exactly (Lite uses 90° CCW rotation, Geo uses direct
+mapping — see lessons doc). `Re-import Current Hole` dispatches to
+either, so both must work.
+
+Touch only `CreateGreenMeshes` (and any helper it calls). Do not
+touch fairway, tee, bunker, water, or cart path code.
+
+### Implementation
+
+Mirror the fairway submesh pattern in `CreateGreenMeshes`:
+
+1. **Dilate green contour outward by `collarWidth`** (start with
+   `collarWidth = 0.6f` meters — adjustable). Run CDT on the dilated
+   shape, not the original.
+2. **Pass original green contour as internal CDT constraint** so
+   triangle edges align with the green/collar boundary (no jaggies).
+3. **Classify triangles by CENTROID** against the original contour.
+   Inside = green submesh, outside (in dilation ring) = collar submesh.
+4. **Duplicate boundary verts** referenced by collar triangles so
+   each material gets its own UVs.
+5. Set `subMeshCount = 2` and assign
+   `sharedMaterials = { greenMat, collarMat }`.
+
+### Materials & UVs
+
+- **Green submesh:** keep current green material and current UV
+  scheme. No change.
+- **Collar submesh:** new material slot. For now, reuse the fairway
+  fringe material (`T_Fairway_Mix` or whatever the fairway fringe
+  uses) with simple world-XZ tile UVs:
+  `uv = new Vector2(v.x / tileSize, v.z / tileSize)` — same recipe as
+  fairway fringe in the lessons doc. We can swap to a dedicated
+  "first cut" texture later; for now functional > pretty.
+
+### yOffset
+
+- Green interior: keep current value (0.03f+).
+- Collar: same yOffset as green (it's the same mesh now — they share
+  vertex Y at the boundary, that's the whole point).
+
+### Fallback
+
+If dilated CDT fails (degenerate / self-intersecting on tight green
+shapes), retry with original contour and skip collar. Log a warning.
+A green without a collar is better than a crash.
+
+### Surface Detection — IMPORTANT (note from Cesar)
+
+The collar is a DIFFERENT gameplay surface (first cut / fringe) from
+the green proper — different ball roll, different putting rules.
+We need a way at runtime to tell which submesh the ball is on.
+
+**Do NOT solve this in this task — just don't paint us into a corner.**
+Leave a clean hook so we can wire it up later. Suggested approach
+(implement only the marked-up part now):
+
+- Tag the spawned green GameObject with submesh metadata. Add a tiny
+  MonoBehaviour `GreenSurfaceInfo` (new file, in `Assets/Scripts/Course/`):
+
+  ```csharp
+  using UnityEngine;
+  namespace Golfin.Course
+  {
+      // Attached to green GameObjects. Submesh 0 = putting surface,
+      // submesh 1 = collar (first cut). Used by ball physics to
+      // determine surface-specific roll/friction.
+      public class GreenSurfaceInfo : MonoBehaviour
+      {
+          public const int SubmeshGreen  = 0;
+          public const int SubmeshCollar = 1;
+      }
+  }
+  ```
+
+- Add `GreenSurfaceInfo` to the green GameObject in `CreateGreenMeshes`.
+- Triangle-to-submesh lookup at runtime is straightforward via
+  `MeshCollider` raycast → `RaycastHit.triangleIndex` → walk submesh
+  triangle ranges. We'll wire that into ball physics later — out of
+  scope here.
+
+That's it for surface detection in this task. Just the component and
+the constants. No physics changes, no ball code edits.
+
+### What NOT to Change
+
+- Fairway / tee / bunker / water / cart path mesh generation
+- Splatmap painting
+- Terrain depression
+- Ball physics, putting code, anything gameplay
+- Existing `CDTTriangulate` signature — if you added an optional
+  `innerConstraint` param for fairway, reuse it. Don't duplicate.
+
+### Verification
+
+Reimport hole 1 (a hole with a clearly visible green) via both
+`Import > Geo > Normal > Import Hole 01 Geo` AND
+`Import > Lite > Normal > Import Hole 01 Lite`:
+
+- [ ] Green has a visible collar ring around it (fairway-fringe-like
+      texture, ~0.6m wide)
+- [ ] No Z-fighting between green and collar on sloped greens
+- [ ] Collar boundary follows the green contour smoothly (no jaggies)
+- [ ] Sharp concave green shapes don't crash — fallback logs warning
+- [ ] Both Geo and Lite produce equivalent output
+- [ ] `GreenSurfaceInfo` component is on each green GameObject
+- [ ] No console errors or warnings (other than intentional fallback)
+
+---
+
+## Previous Task — Cart Path Depression: Flat Interior + Outward Ramp
 
 Two problems that must BOTH be solved:
 1. **Center splotch** — gradient ramp gave 0% drop at edges, terrain
@@ -121,7 +249,10 @@ Reimport the hole with the splotch AND the cliff:
 
 ---
 
+✅ DONE: 2026-04-16 — CreateGreenMeshCDT added to both importers. Dilated CDT (0.6m collar), internal constraint, centroid classification, boundary vert duplication, GreenSurfaceInfo hook. Re-import to verify collar ring.
+
 ## Completed Tasks
+✅ 2026-04-16 — Cart path outward smoothstep ramp (8 cells) — flat drop inside + gradual return outside
 ✅ 2026-04-16 — Cart path flat depression (fixed center splotch BUT created edge cliff — needs outward ramp)
 ✅ 2026-04-16 — Spline cart path depression footprint (matched to mesh, gradient ramp broke center)
 ✅ 2026-04-16 — Spline cart path meshes (smoother curves, keeper)

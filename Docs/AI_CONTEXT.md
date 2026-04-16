@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-15
+**Last Updated:** 2026-04-16
 
 ## Current Status
 
@@ -115,7 +115,7 @@ contour-traced mesh overlays with smooth edges:
 
 | Zone | Approach | Mesh type |
 |---|---|---|
-| Green | Mesh overlay (raised) | `CreateRaisedMesh` — collar + putting surface |
+| Green | **Mesh overlay (CDT submesh)** | `CreateGreenMeshCDT` — submesh 0 = surface, submesh 1 = collar (0.6m dilation ring) |
 | Bunker | Mesh overlay (bowl) | `CreateContourMesh` — 4-ring bowl |
 | Water | **Mesh overlay (flat CDT, URPWater shader)** | CDT triangulation, flat Y per body, `URPWater/Standard` shader |
 | **Fairway** | **Mesh overlay (flat)** | CDT triangulation, mow stripes, inward fringe ring |
