@@ -4376,13 +4376,35 @@ namespace Golfin.CourseImport
                 float sampleSpacing = 0.5f; // meters between samples
                 float yOffset = 0.01f;      // sit just above terrain
 
-                // --- Build spline from spine points ---
-                // Geo importer: NO 90° rotation (direct mapping)
-                var knots = new BezierKnot[cp.spine.Length];
-                for (int i = 0; i < cp.spine.Length; i++)
+                // --- Subdivide spine: insert terrain-sampled knots every 1m ---
+                // More knots → AutoSmooth Y tracks terrain closely, so pos.y
+                // from spline evaluation is accurate without per-sample resampling.
+                const float knotSpacing = 1.0f;
+                var densePoints = new List<Vector2>(); // XZ only for subdivision
+                for (int i = 0; i < cp.spine.Length - 1; i++)
                 {
-                    float wx = cp.spine[i].x;
-                    float wz = cp.spine[i].z;
+                    float ax = cp.spine[i].x,     az = cp.spine[i].z;
+                    float bx = cp.spine[i + 1].x, bz = cp.spine[i + 1].z;
+                    float dx = bx - ax, dz = bz - az;
+                    float segLen = Mathf.Sqrt(dx * dx + dz * dz);
+                    int steps = Mathf.Max(1, Mathf.FloorToInt(segLen / knotSpacing));
+                    for (int k = 0; k < steps; k++)
+                    {
+                        float frac = (float)k / steps;
+                        densePoints.Add(new Vector2(ax + dx * frac, az + dz * frac));
+                    }
+                }
+                densePoints.Add(new Vector2(
+                    cp.spine[cp.spine.Length - 1].x,
+                    cp.spine[cp.spine.Length - 1].z));
+
+                // --- Build spline from dense points ---
+                // Geo importer: NO 90° rotation (direct mapping)
+                var knots = new BezierKnot[densePoints.Count];
+                for (int i = 0; i < densePoints.Count; i++)
+                {
+                    float wx = densePoints[i].x;
+                    float wz = densePoints[i].y;
                     float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
                     knots[i] = new BezierKnot(
                         new float3(wx, terrainBaseY + th, wz));
@@ -4427,16 +4449,12 @@ namespace Golfin.CourseImport
                     float3 leftPos = pos - right * halfWidth;
                     float3 rightPos = pos + right * halfWidth;
 
-                    // Re-sample terrain height at each edge vertex
-                    float leftH = terrain.SampleHeight(
-                        new Vector3(leftPos.x, 0, leftPos.z));
-                    float rightH = terrain.SampleHeight(
-                        new Vector3(rightPos.x, 0, rightPos.z));
+                    // Use spline's interpolated Y — knots are dense (every 1m)
+                    // so pos.y closely matches terrain without per-sample resampling.
+                    float edgeY = pos.y + yOffset;
 
-                    leftVerts.Add(new Vector3(leftPos.x,
-                        terrainBaseY + leftH + yOffset, leftPos.z));
-                    rightVerts.Add(new Vector3(rightPos.x,
-                        terrainBaseY + rightH + yOffset, rightPos.z));
+                    leftVerts.Add(new Vector3(leftPos.x, edgeY, leftPos.z));
+                    rightVerts.Add(new Vector3(rightPos.x, edgeY, rightPos.z));
                 }
 
                 if (leftVerts.Count < 2) continue;
