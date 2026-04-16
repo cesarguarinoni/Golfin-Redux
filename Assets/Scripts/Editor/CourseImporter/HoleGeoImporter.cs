@@ -3183,19 +3183,63 @@ namespace Golfin.CourseImport
                         depressedCount++;
                     }
 
-            // Cart path cells: flat drop (same as fairway/tee).
-            // Gradient ramp was causing edge cells to get 0% drop, letting terrain
-            // poke through the mesh on concave slopes. Cart paths have no fringe
-            // to hide the soft edge, so full depression everywhere is correct.
+            // Cart path: full flat drop inside, outward ramp outside.
+            // Inside footprint → 100% drop (no terrain poke-through).
+            // Outside footprint within ramp zone → smoothstep back to 0
+            // (no visible cliff at path boundary).
+            int cartRampCells = 8; // ramp width in heightmap cells (~1m at 1025 res)
             int cartDepressedCount = 0;
+
+            // Step 1: Distance transform outward from cart path boundary
+            float[,] distFromCart = new float[hRes, hRes];
+            for (int hz = 0; hz < hRes; hz++)
+                for (int hx = 0; hx < hRes; hx++)
+                    distFromCart[hz, hx] = cartDepress[hz, hx] ? 0f : 99999f;
+
+            // Forward pass
+            for (int hz = 0; hz < hRes; hz++)
+                for (int hx = 0; hx < hRes; hx++)
+                {
+                    if (hx > 0) distFromCart[hz, hx] = Mathf.Min(
+                        distFromCart[hz, hx], distFromCart[hz, hx - 1] + 1f);
+                    if (hz > 0) distFromCart[hz, hx] = Mathf.Min(
+                        distFromCart[hz, hx], distFromCart[hz - 1, hx] + 1f);
+                }
+            // Backward pass
+            for (int hz = hRes - 1; hz >= 0; hz--)
+                for (int hx = hRes - 1; hx >= 0; hx--)
+                {
+                    if (hx < hRes - 1) distFromCart[hz, hx] = Mathf.Min(
+                        distFromCart[hz, hx], distFromCart[hz, hx + 1] + 1f);
+                    if (hz < hRes - 1) distFromCart[hz, hx] = Mathf.Min(
+                        distFromCart[hz, hx], distFromCart[hz + 1, hx] + 1f);
+                }
+
+            // Step 2: Apply depression — flat inside, ramp outside
             for (int hz = 0; hz < hRes; hz++)
             {
                 for (int hx = 0; hx < hRes; hx++)
                 {
-                    if (!cartDepress[hz, hx]) continue;
-                    heights[hz, hx] = Mathf.Max(0f,
-                        heights[hz, hx] - dropNormalized);
-                    cartDepressedCount++;
+                    float dist = distFromCart[hz, hx];
+
+                    if (cartDepress[hz, hx])
+                    {
+                        // Inside path: full flat drop
+                        heights[hz, hx] = Mathf.Max(0f,
+                            heights[hz, hx] - dropNormalized);
+                        cartDepressedCount++;
+                    }
+                    else if (dist > 0 && dist <= cartRampCells)
+                    {
+                        // Outside path within ramp zone: smoothstep from
+                        // full drop (at boundary) to zero (at rampCells)
+                        float t = dist / cartRampCells;
+                        t = t * t * (3f - 2f * t); // smoothstep
+                        float rampDrop = dropNormalized * (1f - t);
+                        heights[hz, hx] = Mathf.Max(0f,
+                            heights[hz, hx] - rampDrop);
+                        cartDepressedCount++;
+                    }
                 }
             }
 
