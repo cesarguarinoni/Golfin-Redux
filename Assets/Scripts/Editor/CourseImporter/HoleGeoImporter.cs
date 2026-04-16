@@ -2247,8 +2247,13 @@ namespace Golfin.CourseImport
 
             var greenMat = CreateZoneMaterial(dataDir, projectRoot,
                 "GreenSurface", "T_Green_Albedo", 3f);
-            var collarMat = CreateZoneMaterial(dataDir, projectRoot,
-                "GreenCollar", "T_Semirough_Albedo", 4f);
+            var collarMat = AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/Courses/Materials (Shared by courses)/MAT_Fringe.mat");
+            if (collarMat == null)
+            {
+                Debug.LogWarning("[HoleGeoImporter] MAT_Fringe.mat not found, falling back to T_Semirough_Albedo");
+                collarMat = CreateZoneMaterial(dataDir, projectRoot, "GreenCollar", "T_Semirough_Albedo", 4f);
+            }
 
             // Load fairway contours to detect greens inside fairways
             var fairwayPolys = new System.Collections.Generic.List<Vector2[]>();
