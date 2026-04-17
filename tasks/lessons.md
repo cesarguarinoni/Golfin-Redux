@@ -19,6 +19,18 @@ When `CharacterDetailPanel.cs` was reverted, it lost:
 **Rule:** Never use `git checkout` on a file that has multiple accumulated fixes.
 Use `Edit` to surgically restore just the broken part.
 
+## Unity Transform / Hierarchy
+
+### SetParent worldPositionStays cancels parent Y offsets
+**Mistake:** Set a parent GO's `localPosition.y = -0.03f` to lower all children,
+but children were positioned in world space BEFORE parenting. Unity's
+`SetParent(t, worldPositionStays: true)` auto-adjusts `localPosition` to
+preserve the world position, so localPosition.y becomes +0.03f and the offset
+is cancelled entirely.
+**Rule:** Never apply a Y correction on a parent container to fix child mesh
+positions. Bake the correction into the vertex Y values or into the child GO's
+world position AFTER parenting (set localPosition explicitly).
+
 ## Unity / C# Patterns
 
 ### CS0136 — duplicate local variable in same scope

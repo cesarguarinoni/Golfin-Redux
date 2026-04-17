@@ -22,17 +22,17 @@
 
 ---
 
-## Session Changes (2026-04-17 — Tee Platforms)
+## Session Changes (2026-04-17 — Tee Platforms + Green Fix)
 
 ### Completed
-- **Flat tee platforms (Parts A+B+C):** Each `zones.tee[]` polygon is now an absolute-Y flat platform with a 2m terrain skirt. Multi-tee holes get independent platforms at their own elevation. Tee meshes' interior verts are flattened and border verts resampled against the ramped terrain post-depression.
-  - `TeeSkirtMeters = 2.0f`, `TeeMeshRegistration` struct, `_teePlatformYByRegionId`, `_teeMeshRegistryByRegionId` added
-  - Tee removed from shared `depress` mask (no more tilted tee via relative drop)
-  - `PatchTeeMeshBorderVerts()` called from `ImportHoleInternal` after `DepressTerrainUnderOverlays`
-  - Log extended with `tee platforms:` and `tee skirts:` counts
+- **Flat tee platforms:** `FlattenTerrainUnderTees()` reshapes heightmap to a level platform at each tee polygon's peak elevation before CDT runs. A 2m outward skirt ramp (chamfer distance transform + smoothstep) prevents the "pancake" look by spreading the cliff across 2m of gradual terrain. Skip mask protects fairway/green cells from tee skirt intrusion. Adjacent tees use baseline snapshot + MAX to avoid stacking.
+  - `TeeSkirtMeters = 2.0f` (tunable)
+  - Called just before `CreateFlatZoneMeshes` in `ImportHoleInternal`
+  - Tees remain in `depress` mask for 0.42m clearance
+- **Green Y fix:** Greens were floating ~0.03m. Fixed by setting `yOffset = 0.00f` (was 0.03f) in `CreateGreenMeshCDT`, baking the correction into vert positions directly.
 
 ### Still Open
-- Verify on stress-test holes: Hole 4 (2 tees, different elevations), Hole 1 (3 tees), Hole 7 (tee near water), Hole 18 (6 tees)
+- Stress-test tee platforms on Hole 4 (2 tees), Hole 7 (near water), Hole 18 (6 tees)
 - Tuning `TeeSkirtMeters` if mounds look too steep/gradual
 
 ---
