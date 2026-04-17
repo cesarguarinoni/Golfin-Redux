@@ -3077,34 +3077,145 @@ namespace Golfin.CourseImport
             float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
             Vector3 terrainPos = terrainGO.transform.position;
             Vector3 terrainSize = terrainData.size;
+
+            // Baseline snapshot — every tee's skirt reads the ORIGINAL terrain,
+            // not a previously-raised neighbor's platform. Prevents adjacent
+            // tees from stacking into a plateau.
+            float[,] baseline = (float[,])heights.Clone();
+
+            // Skip mask: cells claimed by fairway / green / cart path should
+            // not have their heights rewritten by a tee skirt. Those surfaces
+            // have their own intended elevations.
+            bool[,] skipMask = new bool[hRes, hRes];
+
+            string fwPath = Path.Combine(exportPath, "fairway-contours.json");
+            if (File.Exists(fwPath))
+            {
+                var fwData = JsonUtility.FromJson<FairwayContoursFile>(
+                    File.ReadAllText(fwPath));
+                if (fwData.fairways != null)
+                    foreach (var fw in fwData.fairways)
+                        if (fw.contour != null && fw.contour.Length >= 3)
+                            MarkContourCells(fw.contour, skipMask,
+                                hRes, terrainPos, terrainSize, 0f);
+            }
+
+            string grPath = Path.Combine(exportPath, "greens.json");
+            if (File.Exists(grPath))
+            {
+                var grData = JsonUtility.FromJson<GreensFileData>(
+                    File.ReadAllText(grPath));
+                if (grData.greens != null)
+                    foreach (var gr in grData.greens)
+                        if (gr.contour != null && gr.contour.Length >= 3)
+                            MarkContourCells(gr.contour, skipMask,
+                                hRes, terrainPos, terrainSize, 0f);
+            }
+
+            // Skirt sizing
+            float metersPerCell = (terrainSize.x + terrainSize.z) * 0.5f / (hRes - 1);
+            int skirtRadiusCells = Mathf.Max(1, Mathf.RoundToInt(
+                TeeSkirtMeters / metersPerCell));
+
+            int flattenedCount = 0;
+            int skirtedCount = 0;
             bool changed = false;
 
             foreach (var region in zcData.zones.tee)
             {
                 if (region.contour == null || region.contour.Length < 3) continue;
 
-                var mask = new bool[hRes, hRes];
-                MarkContourCells(region.contour, mask, hRes, terrainPos, terrainSize, inset: 0f);
+                var teeMask = new bool[hRes, hRes];
+                MarkContourCells(region.contour, teeMask, hRes, terrainPos, terrainSize, 0f);
 
+                // Peak height from BASELINE, not the mutating heights array
                 float maxH = float.MinValue;
                 for (int row = 0; row < hRes; row++)
                     for (int col = 0; col < hRes; col++)
-                        if (mask[row, col] && heights[row, col] > maxH)
-                            maxH = heights[row, col];
+                        if (teeMask[row, col] && baseline[row, col] > maxH)
+                            maxH = baseline[row, col];
 
                 if (maxH == float.MinValue) continue;
 
+                // Raise interior to maxH
                 for (int row = 0; row < hRes; row++)
                     for (int col = 0; col < hRes; col++)
-                        if (mask[row, col])
+                        if (teeMask[row, col])
+                        {
                             heights[row, col] = maxH;
+                            flattenedCount++;
+                        }
+
+                // Chamfer distance transform outward from the tee boundary.
+                float[,] dist = new float[hRes, hRes];
+                for (int z = 0; z < hRes; z++)
+                    for (int x = 0; x < hRes; x++)
+                        dist[z, x] = teeMask[z, x] ? 0f : float.MaxValue;
+
+                // Forward pass
+                for (int z = 0; z < hRes; z++)
+                    for (int x = 0; x < hRes; x++)
+                    {
+                        if (x > 0)
+                            dist[z, x] = Mathf.Min(dist[z, x], dist[z, x - 1] + 1f);
+                        if (z > 0)
+                            dist[z, x] = Mathf.Min(dist[z, x], dist[z - 1, x] + 1f);
+                        if (x > 0 && z > 0)
+                            dist[z, x] = Mathf.Min(dist[z, x], dist[z - 1, x - 1] + 1.414f);
+                        if (x < hRes - 1 && z > 0)
+                            dist[z, x] = Mathf.Min(dist[z, x], dist[z - 1, x + 1] + 1.414f);
+                    }
+                // Backward pass
+                for (int z = hRes - 1; z >= 0; z--)
+                    for (int x = hRes - 1; x >= 0; x--)
+                    {
+                        if (x < hRes - 1)
+                            dist[z, x] = Mathf.Min(dist[z, x], dist[z, x + 1] + 1f);
+                        if (z < hRes - 1)
+                            dist[z, x] = Mathf.Min(dist[z, x], dist[z + 1, x] + 1f);
+                        if (x < hRes - 1 && z < hRes - 1)
+                            dist[z, x] = Mathf.Min(dist[z, x], dist[z + 1, x + 1] + 1.414f);
+                        if (x > 0 && z < hRes - 1)
+                            dist[z, x] = Mathf.Min(dist[z, x], dist[z + 1, x - 1] + 1.414f);
+                    }
+
+                // Apply outward skirt ramp: smoothstep from maxH at boundary to
+                // baseline at skirtRadius. Take MAX so overlapping adjacent tee
+                // skirts don't pull a cell below a neighbor's ramp.
+                for (int z = 0; z < hRes; z++)
+                {
+                    for (int x = 0; x < hRes; x++)
+                    {
+                        if (teeMask[z, x]) continue;
+                        if (skipMask[z, x]) continue;
+
+                        float d = dist[z, x];
+                        if (d <= 0f || d > skirtRadiusCells) continue;
+
+                        float t = d / skirtRadiusCells;
+                        t = t * t * (3f - 2f * t); // smoothstep
+
+                        float rampedH = Mathf.Lerp(maxH, baseline[z, x], t);
+
+                        if (rampedH > heights[z, x])
+                        {
+                            heights[z, x] = rampedH;
+                            skirtedCount++;
+                        }
+                    }
+                }
 
                 changed = true;
-                Debug.Log($"[HoleGeoImporter] Tee {region.id}: flattened terrain to peak h={maxH:F4}");
+                Debug.Log($"[HoleGeoImporter] Tee {region.id}: platform h={maxH:F4}, " +
+                          $"skirt radius={skirtRadiusCells} cells ({TeeSkirtMeters:F1}m)");
             }
 
             if (changed)
+            {
                 terrainData.SetHeights(0, 0, heights);
+                Debug.Log($"[HoleGeoImporter] FlattenTerrainUnderTees: " +
+                          $"{flattenedCount} platform cells, {skirtedCount} skirt cells.");
+            }
         }
 
         private static void DepressTerrainUnderOverlays(
