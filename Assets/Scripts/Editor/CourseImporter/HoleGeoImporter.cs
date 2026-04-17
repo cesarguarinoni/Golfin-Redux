@@ -3137,6 +3137,7 @@ namespace Golfin.CourseImport
             float[,] waterFloorY = new float[hRes, hRes];
             float[,] waterSurfaceY = new float[hRes, hRes];
             bool hasWater = false;
+            var waterContours = new List<(ContourPoint[] pts, float surfaceNorm)>();
 
             string waterPath = Path.Combine(exportPath, "water.json");
             if (File.Exists(waterPath))
@@ -3180,6 +3181,7 @@ namespace Golfin.CourseImport
                                     waterSurfaceY[z, x] = surfaceNorm;
                                 }
 
+                        waterContours.Add((w.contour, surfaceNorm));
                         hasWater = true;
                     }
                 }
@@ -3223,187 +3225,90 @@ namespace Golfin.CourseImport
             depressedCount += cartDepressedCount;
 
             // ─── Shore slope pass: gradual ramp OUTSIDE water contours ─────────
-            // Uses waterMask built above. No file re-read needed.
+            // Uses exact Euclidean distance to polygon edges — no chamfer, no
+            // Voronoi artifacts, no need for any post-blur.
             int shoreCount = 0;
-            if (hasWater && ShoreRadius > 0 && ShoreDepthMeters > 0f)
+            if (hasWater && ShoreRadius > 0 && ShoreDepthMeters > 0f && waterContours.Count > 0)
             {
-                // Joint chamfer: distToWater + nearest-body surfaceY propagation.
-                float[,] distToWater = new float[hRes, hRes];
-                float[,] nearestSurfaceY = new float[hRes, hRes];
-                for (int z = 0; z < hRes; z++)
-                    for (int x = 0; x < hRes; x++)
-                    {
-                        distToWater[z, x] = waterMask[z, x] ? 0f : float.MaxValue;
-                        nearestSurfaceY[z, x] = waterSurfaceY[z, x];
-                    }
+                // Cell size in world metres (average of X and Z).
+                float cellW = terrainSize.x / (hRes - 1);
+                float cellH = terrainSize.z / (hRes - 1);
+                float cellSize = (cellW + cellH) * 0.5f;
+                float shoreRadiusM = ShoreRadius * cellSize;
 
-                // Forward pass
+                // Coarse chamfer for fast culling — only iterate exact distance
+                // on cells within shoreRadius of the rasterized waterMask.
+                float[,] coarseDist = new float[hRes, hRes];
+                for (int z = 0; z < hRes; z++)
+                    for (int x = 0; x < hRes; x++)
+                        coarseDist[z, x] = waterMask[z, x] ? 0f : float.MaxValue;
                 for (int z = 0; z < hRes; z++)
                     for (int x = 0; x < hRes; x++)
                     {
-                        if (x > 0)
-                        {
-                            float cand = distToWater[z, x - 1] + 1f;
-                            if (cand < distToWater[z, x])
-                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z, x - 1]; }
-                        }
-                        if (z > 0)
-                        {
-                            float cand = distToWater[z - 1, x] + 1f;
-                            if (cand < distToWater[z, x])
-                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z - 1, x]; }
-                        }
-                        if (x > 0 && z > 0)
-                        {
-                            float cand = distToWater[z - 1, x - 1] + 1.414f;
-                            if (cand < distToWater[z, x])
-                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z - 1, x - 1]; }
-                        }
-                        if (x < hRes - 1 && z > 0)
-                        {
-                            float cand = distToWater[z - 1, x + 1] + 1.414f;
-                            if (cand < distToWater[z, x])
-                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z - 1, x + 1]; }
-                        }
+                        if (x > 0 && coarseDist[z, x - 1] + 1f < coarseDist[z, x])
+                            coarseDist[z, x] = coarseDist[z, x - 1] + 1f;
+                        if (z > 0 && coarseDist[z - 1, x] + 1f < coarseDist[z, x])
+                            coarseDist[z, x] = coarseDist[z - 1, x] + 1f;
                     }
-                // Backward pass
                 for (int z = hRes - 1; z >= 0; z--)
                     for (int x = hRes - 1; x >= 0; x--)
                     {
-                        if (x < hRes - 1)
-                        {
-                            float cand = distToWater[z, x + 1] + 1f;
-                            if (cand < distToWater[z, x])
-                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z, x + 1]; }
-                        }
-                        if (z < hRes - 1)
-                        {
-                            float cand = distToWater[z + 1, x] + 1f;
-                            if (cand < distToWater[z, x])
-                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z + 1, x]; }
-                        }
-                        if (x < hRes - 1 && z < hRes - 1)
-                        {
-                            float cand = distToWater[z + 1, x + 1] + 1.414f;
-                            if (cand < distToWater[z, x])
-                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z + 1, x + 1]; }
-                        }
-                        if (x > 0 && z < hRes - 1)
-                        {
-                            float cand = distToWater[z + 1, x - 1] + 1.414f;
-                            if (cand < distToWater[z, x])
-                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z + 1, x - 1]; }
-                        }
+                        if (x < hRes - 1 && coarseDist[z, x + 1] + 1f < coarseDist[z, x])
+                            coarseDist[z, x] = coarseDist[z, x + 1] + 1f;
+                        if (z < hRes - 1 && coarseDist[z + 1, x] + 1f < coarseDist[z, x])
+                            coarseDist[z, x] = coarseDist[z + 1, x] + 1f;
                     }
-
-                // Smooth the distance field to eliminate Voronoi seesaw spokes.
-                // The water mask has 1-cell boundary jaggies from polygon rasterization.
-                // The chamfer transform propagates those jaggies as coherent radial
-                // spokes in distToWater. A Gaussian blur on the continuous distance
-                // values produces sub-cell-accurate distances without jagged spokes.
-                {
-                    const int blurRadius = 4;
-                    const float blurSigma = 3.0f;
-                    int kernelSize = blurRadius * 2 + 1;
-                    float[] kernel = new float[kernelSize];
-                    float kernelSum = 0f;
-                    for (int i = 0; i < kernelSize; i++)
-                    {
-                        float d = i - blurRadius;
-                        kernel[i] = Mathf.Exp(-(d * d) / (2f * blurSigma * blurSigma));
-                        kernelSum += kernel[i];
-                    }
-                    for (int i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
-
-                    float[,] tmp = new float[hRes, hRes];
-                    for (int pass = 0; pass < 3; pass++)
-                    {
-                        for (int z = 0; z < hRes; z++)
-                            for (int x = 0; x < hRes; x++)
-                            {
-                                float sum = 0f;
-                                for (int k = 0; k < kernelSize; k++)
-                                {
-                                    int sx = Mathf.Clamp(x + k - blurRadius, 0, hRes - 1);
-                                    sum += distToWater[z, sx] * kernel[k];
-                                }
-                                tmp[z, x] = sum;
-                            }
-                        for (int z = 0; z < hRes; z++)
-                            for (int x = 0; x < hRes; x++)
-                            {
-                                float sum = 0f;
-                                for (int k = 0; k < kernelSize; k++)
-                                {
-                                    int sz = Mathf.Clamp(z + k - blurRadius, 0, hRes - 1);
-                                    sum += tmp[sz, x] * kernel[k];
-                                }
-                                distToWater[z, x] = sum;
-                            }
-                    }
-                }
-
-                int shoreRadiusCells = ShoreRadius;
-                bool[,] rampMask = new bool[hRes, hRes];
 
                 for (int z = 0; z < hRes; z++)
+                {
                     for (int x = 0; x < hRes; x++)
                     {
                         if (waterMask[z, x]) continue;
                         if (depress[z, x]) continue;
                         if (cartDepress[z, x]) continue;
+                        if (coarseDist[z, x] > ShoreRadius + 2) continue; // coarse cull
 
-                        float dist = distToWater[z, x];
-                        if (dist <= 0f || dist > shoreRadiusCells) continue;
+                        // World position of this heightmap cell.
+                        float wx = terrainPos.x + x * cellW;
+                        float wz = terrainPos.z + z * cellH;
 
-                        // t = 0 at boundary, 1 at shoreRadius
-                        float t = dist / shoreRadiusCells;
+                        // Exact distance to nearest polygon edge across all water bodies,
+                        // plus find which body's surface Y to use.
+                        float minDistM = float.MaxValue;
+                        float nearSurfY = 0f;
+                        foreach (var (pts, surfNorm) in waterContours)
+                        {
+                            int n = pts.Length;
+                            for (int i = 0; i < n; i++)
+                            {
+                                int j = (i + 1) % n;
+                                float ax = pts[i].x, az = pts[i].z;
+                                float bx = pts[j].x, bz = pts[j].z;
+                                float edx = bx - ax, edz = bz - az;
+                                float len2 = edx * edx + edz * edz;
+                                float t2 = len2 > 1e-10f
+                                    ? Mathf.Clamp01(((wx - ax) * edx + (wz - az) * edz) / len2)
+                                    : 0f;
+                                float px = ax + t2 * edx - wx;
+                                float pz = az + t2 * edz - wz;
+                                float d = Mathf.Sqrt(px * px + pz * pz);
+                                if (d < minDistM) { minDistM = d; nearSurfY = surfNorm; }
+                            }
+                        }
+
+                        if (minDistM > shoreRadiusM) continue;
+
+                        // t = 0 at boundary, 1 at shoreRadius.
+                        float t = minDistM / shoreRadiusM;
                         t = t * t * (3f - 2f * t); // smoothstep
 
-                        // Absolute lerp: boundary → water surface, shoreRadius → original height.
-                        float waterY = nearestSurfaceY[z, x];
                         float originalH = heights[z, x];
-                        float targetH = Mathf.Lerp(waterY, originalH, t);
+                        float targetH = Mathf.Lerp(nearSurfY, originalH, t);
 
-                        // Only lower — never raise a natural low spot.
                         if (targetH < originalH)
                         {
                             heights[z, x] = Mathf.Max(0f, targetH);
-                            rampMask[z, x] = true;
                             shoreCount++;
-                        }
-                    }
-
-                // Masked 2D Gaussian on ramp heights only.
-                // Only samples from other ramp cells — no cross-boundary leakage,
-                // no restore step, no spikes where ramp meets non-ramp terrain.
-                {
-                    const int rampBlurRadius = 8;
-                    const float rampBlurSigma = 4.0f;
-                    float[,] snapshot = (float[,])heights.Clone();
-                    for (int z = 0; z < hRes; z++)
-                    {
-                        for (int x = 0; x < hRes; x++)
-                        {
-                            if (!rampMask[z, x]) continue;
-                            float wSum = 0f, hSum = 0f;
-                            for (int dz = -rampBlurRadius; dz <= rampBlurRadius; dz++)
-                            {
-                                int nz = z + dz;
-                                if (nz < 0 || nz >= hRes) continue;
-                                for (int dx = -rampBlurRadius; dx <= rampBlurRadius; dx++)
-                                {
-                                    int nx = x + dx;
-                                    if (nx < 0 || nx >= hRes) continue;
-                                    if (!rampMask[nz, nx]) continue;
-                                    float w = Mathf.Exp(-(dz * dz + dx * dx) /
-                                        (2f * rampBlurSigma * rampBlurSigma));
-                                    hSum += snapshot[nz, nx] * w;
-                                    wSum += w;
-                                }
-                            }
-                            if (wSum > 0f)
-                                heights[z, x] = hSum / wSum;
                         }
                     }
                 }
