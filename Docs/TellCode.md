@@ -7,7 +7,726 @@
 
 ---
 
-## Current Task — Fix Voronoi Seesaw in Shore Ramp (Hole 7 Geo)
+## Current Task — Tree Brush Tool (Scene-view cluster painter)
+
+Build an editor tool that lets Cesar paint clusters of trees directly
+into a hole scene from the Scene view, on top of whatever `TreePlacer`
+already produced from `tree-zones.json`. This is for **detailed
+landscaping** — specimen trees, copses near greens, gaps the mask
+missed. The `TreePlacer` zone-mask flow stays untouched.
+
+**Target file (new):** `Assets/Scripts/Editor/CourseImporter/TreeBrushTool.cs`
+**Reference:** `Assets/Scripts/Editor/CourseImporter/TreePlacer.cs` (read-only — reuse its palette + folder settings, don't duplicate logic)
+
+---
+
+### Design summary
+
+- EditorWindow: **`Window > Trees > Brush Tool`**.
+- Reuses `TreePlacer.TreePalette` (same scanned prefabs), so
+  enabling/disabling and weights stay in sync with `TreePlacer`.
+  No separate prefab list.
+- Brush mode = **cluster only** (1 click drops N jittered trees in a
+  radius). No single-tree mode, no stamp mode.
+- Picks prefabs from the currently-selected folder tab using that
+  folder's `FolderPlacementSettings.weight` distribution. **Brush
+  settings are independent of `TreePlacer` settings** — the brush has
+  its own `scaleMin`/`scaleMax`/`sinkOffset`/`minSpacing` per folder,
+  stored separately so artists can tune the brush without touching
+  importer behavior.
+- Standalone vs terrain-tree decision is per `TreeEntry.standalone`
+  (already auto-detected by `TreePlacer.ScanPrefabs`):
+    - Standalone → `PrefabUtility.InstantiatePrefab` under a scene
+      container `PaintedTrees` (parented to `HoleRoot` if found).
+    - Terrain-tree → appended to `terrain.terrainData.treeInstances`
+      after registering the prefab as a `TreePrototype` (or reusing the
+      existing index if already registered).
+- **`PaintedTrees` is a separate container from `StandaloneTrees`** so
+  re-running `TreePlacer.PlaceTrees` (which calls
+  `CleanupStandaloneTrees`) doesn't wipe brush-painted trees.
+- Full undo support — every brush stroke is one undo entry.
+
+Constraint behaviour:
+- **Excludes zones via the same overlay-polygon test `TreePlacer` uses.**
+  Trees can't be painted over fairway, green, tee, bunker, water, or
+  cart path. The brush calls `TreePlacer.IsBlockedByOverlay(worldX,
+  worldZ)` (new public helper, see Step 4) per candidate; rejected
+  candidates count toward `maxAttempts` but not `placedCount`.
+- Honors terrain bounds — clusters that fall partly outside the active
+  terrain just skip the out-of-bounds members.
+- Sample terrain Y per tree via `terrain.SampleHeight(...)`, apply
+  `sinkOffset` from the brush's own per-folder settings.
+
+---
+
+### Step 1 — File scaffold
+
+Create `Assets/Scripts/Editor/CourseImporter/TreeBrushTool.cs` wrapped
+in `#if UNITY_EDITOR ... #endif`, namespace `Golfin.CourseImport`.
+
+Class: `public class TreeBrushTool : EditorWindow`.
+
+```csharp
+[MenuItem("Window/Trees/Brush Tool")]
+public static void ShowWindow()
+{
+    var w = GetWindow<TreeBrushTool>("Tree Brush");
+    w.minSize = new Vector2(280, 360);
+}
+```
+
+Internal state (serialized so it survives domain reloads via
+`[SerializeField]` on private fields, plus `EditorWindow` auto-serializes):
+
+```csharp
+[SerializeField] private bool brushEnabled;          // master toggle
+[SerializeField] private string activeFolder = "Root"; // tab from palette
+[SerializeField] private float brushRadius = 4f;     // meters
+[SerializeField] private int treesPerClick = 5;      // cluster size
+[SerializeField] private bool alignToTerrainNormal = false; // tilt by slope
+[SerializeField] private float maxAlignTiltDeg = 15f;
+[SerializeField] private int seed = 0;               // 0 = random per stroke
+
+// Brush-only per-folder settings, fully independent of TreePlacer.PerFolder.
+// Persisted as EditorPrefs JSON (key "TreeBrush.FolderSettings") so they
+// survive domain reloads, scene switches, and Unity restarts without
+// requiring a scene asset.
+[System.Serializable]
+public class BrushFolderSettings
+{
+    public string folder;
+    public float minSpacingInCluster = 1.5f;
+    public float scaleMin = 0.85f;
+    public float scaleMax = 1.15f;
+    public float sinkOffset = 0.3f;
+}
+[SerializeField] private List<BrushFolderSettings> brushFolderSettings = new();
+```
+
+Helper: `BrushFolderSettings GetBrushFolderSettings(string folder)` —
+look up by name, lazy-create on first request seeded from the matching
+`TreePlacer.GetFolderSettings(folder)` values (so first-time use of a
+folder mirrors importer values, then drifts independently as the
+artist tunes). Persistence: in `OnDisable` and after any settings
+change, serialize `brushFolderSettings` to `EditorPrefs` under
+`"Golfin.TreeBrush.FolderSettings"` via `JsonUtility.ToJson`. In
+`OnEnable`, restore from `EditorPrefs` if present.
+
+`OnEnable`/`OnDisable` register/unregister `SceneView.duringSceneGui`:
+
+```csharp
+private void OnEnable()
+{
+    SceneView.duringSceneGui += OnSceneGUI;
+    if (TreePlacer.TreePalette.Count == 0) TreePlacer.ScanPrefabs();
+}
+private void OnDisable()
+{
+    SceneView.duringSceneGui -= OnSceneGUI;
+}
+```
+
+---
+
+### Step 2 — Window UI (`OnGUI`)
+
+Top section:
+- Big toggle: **"Brush enabled (B)"** — bound to `brushEnabled`. Color
+  the window background tinted green when enabled so it's obvious.
+- Help box if `brushEnabled` and no terrain in scene: "No active
+  terrain in this scene."
+
+Folder picker:
+- Dropdown of `TreePlacer.GetFolderTabs()`. If empty, show "Scan
+  prefabs in TreePlacer first."
+- Right of the dropdown: a small "Refresh Palette" button that calls
+  `TreePlacer.ScanPrefabs()`.
+- Below the dropdown, a small read-only summary of which prefabs from
+  the active folder are currently enabled (from
+  `TreePlacer.TreePalette.Where(e => e.enabled && e.folder == activeFolder)`)
+  with their weights — so the artist sees what they're about to paint
+  without leaving this window. If none are enabled in the folder, show
+  a warning: "No enabled prefabs in folder X — enable some in
+  TreePlacer."
+
+Brush settings (apply to ALL folders):
+- `brushRadius` slider 0.5..20 m.
+- `treesPerClick` int slider 1..30.
+- `alignToTerrainNormal` toggle. If on, show `maxAlignTiltDeg` slider
+  0..45.
+- `seed` int field. Tooltip: "0 = random per stroke; non-zero = repeatable."
+
+Per-folder brush settings (editable, independent of TreePlacer):
+- Header: "Brush settings — folder: {activeFolder}"
+- `minSpacingInCluster` slider 0.3..5 m.
+- `scaleMin` / `scaleMax` slider pair 0.3..3.
+- `sinkOffset` slider 0..1 m.
+- Small button: **"Reset to TreePlacer defaults"** — copies the active
+  folder's `TreePlacer.GetFolderSettings(activeFolder)` values into the
+  brush's `BrushFolderSettings` for that folder.
+- Footer note: "These settings are independent of the importer.
+  Changing them here does NOT affect Trees > Import Trees."
+
+Bottom row of buttons:
+- **"Clear Painted Trees (this scene)"** → `Undo.RegisterCompleteObjectUndo`
+  on the container, then `DestroyImmediate` the `PaintedTrees`
+  GameObject. Also remove any terrain-tree instances tagged as
+  brush-painted (see Step 4 for tagging).
+
+Tooltip / footer: "Hold **Shift** and click in Scene view to paint a
+cluster. Hold **Ctrl** to erase trees within the brush radius."
+
+---
+
+### Step 3 — Scene view interaction (`OnSceneGUI`)
+
+```csharp
+private void OnSceneGUI(SceneView sv)
+{
+    if (!brushEnabled) return;
+    var terrain = Terrain.activeTerrain;
+    if (terrain == null) return;
+
+    // Keyboard shortcut: B toggles brush
+    if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.B)
+    {
+        brushEnabled = !brushEnabled;
+        Repaint();
+        Event.current.Use();
+        return;
+    }
+
+    // Take control of mouse so left-click doesn't deselect
+    int controlId = GUIUtility.GetControlID(FocusType.Passive);
+    HandleUtility.AddDefaultControl(controlId);
+
+    // Raycast from mouse into the scene
+    var mouse = Event.current.mousePosition;
+    Ray ray = HandleUtility.GUIPointToWorldRay(mouse);
+    if (!Physics.Raycast(ray, out RaycastHit hit, 5000f))
+    {
+        // Fall back: intersect the terrain plane analytically
+        if (!RaycastTerrain(terrain, ray, out hit)) return;
+    }
+
+    // Draw brush gizmo
+    // Exclusion check at the cursor centre — turn the disc orange-ish
+    // if the cursor itself is over an excluded zone, so the artist
+    // knows clicks won't place anything there.
+    var exclusionPolys = TreePlacer.BuildExclusionPolygonsForActiveScene();
+    bool overExcluded = TreePlacer.IsBlockedByOverlay(
+        hit.point.x, hit.point.z, exclusionPolys);
+
+    Handles.color =
+        overExcluded ? new Color(1f, 0.55f, 0.1f, 0.8f) :
+        Event.current.shift ? new Color(0.2f, 1f, 0.2f, 0.8f) :
+        Event.current.control ? new Color(1f, 0.3f, 0.3f, 0.8f) :
+        new Color(1f, 1f, 1f, 0.5f);
+    Handles.DrawWireDisc(hit.point, Vector3.up, brushRadius);
+
+    // Click handling
+    if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+    {
+        if (Event.current.shift)
+        {
+            PaintCluster(terrain, hit.point);
+            Event.current.Use();
+        }
+        else if (Event.current.control)
+        {
+            EraseInRadius(terrain, hit.point);
+            Event.current.Use();
+        }
+    }
+
+    // Force repaint so the gizmo follows the mouse smoothly
+    if (Event.current.type == EventType.MouseMove ||
+        Event.current.type == EventType.MouseDrag)
+        sv.Repaint();
+}
+```
+
+**`RaycastTerrain` helper** — analytic raycast against the active
+terrain's bounds + sample. Use Unity's `terrain.GetComponent<Collider>()`
+if present (terrain colliders ARE in `Physics.Raycast`'s world by
+default), so the fallback only fires when there's no terrain collider.
+Implementation: step along ray from `ray.origin` in fixed increments
+of 0.5m up to 5000m, comparing `terrain.SampleHeight(p) + terrain.transform.position.y`
+against `p.y`; on first crossing, return that point. Cheap and
+sufficient for the brush.
+
+---
+
+### Step 4 — `PaintCluster`
+
+```csharp
+private void PaintCluster(Terrain terrain, Vector3 center)
+{
+    var folderEntries = TreePlacer.TreePalette
+        .Where(e => e.enabled && e.weight > 0f &&
+                    (e.folder ?? "Root") == activeFolder)
+        .ToList();
+    if (folderEntries.Count == 0)
+    {
+        Debug.LogWarning($"[TreeBrush] No enabled prefabs in folder '{activeFolder}'");
+        return;
+    }
+
+    // Brush-only settings (NOT TreePlacer.PerFolder)
+    var bSettings = GetBrushFolderSettings(activeFolder);
+
+    // Build overlay-exclusion polygons for the current scene/hole.
+    // We resolve the export folder via the active scene name (same logic
+    // as TreePlacer.ImportTreesMenuItem). If we can't resolve it (e.g.,
+    // an ad-hoc test scene), polygons stays empty and exclusion is a no-op.
+    var exclusionPolys = TreePlacer.BuildExclusionPolygonsForActiveScene();
+
+    var rng = (seed == 0)
+        ? new System.Random()
+        : new System.Random(seed + Mathf.FloorToInt(center.x * 31f) + Mathf.FloorToInt(center.z * 53f));
+
+    // Cumulative weights for picker
+    float total = 0f;
+    var cum = new float[folderEntries.Count];
+    for (int i = 0; i < folderEntries.Count; i++)
+    {
+        total += folderEntries[i].weight;
+        cum[i] = total;
+    }
+    if (total <= 0f) return;
+
+    // Get-or-create the PaintedTrees container
+    var container = GetOrCreatePaintedContainer();
+    Undo.RegisterCompleteObjectUndo(container, "Paint Tree Cluster");
+
+    // Collect placed positions for in-cluster spacing check
+    var placed = new List<Vector2>();
+    int placedCount = 0;
+    int attempts = 0;
+    int maxAttempts = treesPerClick * 12; // higher bound — exclusion can reject many
+
+    // For terrain-tree appends, batch then assign once at the end
+    var newTerrainTrees = new List<TreeInstance>();
+
+    while (placedCount < treesPerClick && attempts < maxAttempts)
+    {
+        attempts++;
+
+        // Uniform random in disc
+        double u = rng.NextDouble();
+        double v = rng.NextDouble();
+        float r = brushRadius * Mathf.Sqrt((float)u);
+        float a = (float)(v * 2.0 * System.Math.PI);
+        float dx = r * Mathf.Cos(a);
+        float dz = r * Mathf.Sin(a);
+        Vector2 pos2 = new Vector2(center.x + dx, center.z + dz);
+
+        // Spacing check inside this cluster (uses brush setting)
+        bool tooClose = false;
+        for (int i = 0; i < placed.Count; i++)
+        {
+            if ((placed[i] - pos2).sqrMagnitude <
+                bSettings.minSpacingInCluster * bSettings.minSpacingInCluster)
+            { tooClose = true; break; }
+        }
+        if (tooClose) continue;
+
+        // Ensure point is inside the terrain bounds
+        var tPos = terrain.transform.position;
+        var tSize = terrain.terrainData.size;
+        float lx = pos2.x - tPos.x;
+        float lz = pos2.y - tPos.z;
+        if (lx < 0 || lx > tSize.x || lz < 0 || lz > tSize.z) continue;
+
+        // Overlay exclusion: skip if this candidate falls inside ANY
+        // fairway/green/tee/bunker/water/cart-path polygon.
+        if (TreePlacer.IsBlockedByOverlay(pos2.x, pos2.y, exclusionPolys))
+            continue;
+
+        float terrainH = terrain.SampleHeight(new Vector3(pos2.x, 0, pos2.y));
+        float worldY = tPos.y + terrainH - bSettings.sinkOffset;
+
+        // Pick prefab from folder by weight
+        float roll = (float)rng.NextDouble() * total;
+        int pickIdx = 0;
+        for (int i = 0; i < cum.Length; i++)
+            if (roll <= cum[i]) { pickIdx = i; break; }
+        var entry = folderEntries[pickIdx];
+
+        float scale = bSettings.scaleMin +
+            (float)rng.NextDouble() * (bSettings.scaleMax - bSettings.scaleMin);
+        float rotDeg = (float)rng.NextDouble() * 360f;
+
+        if (entry.standalone)
+        {
+            // Use PrefabUtility to keep the prefab connection
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(entry.prefab);
+            go.name = $"{entry.name}_brush_{placedCount}";
+            go.transform.SetParent(container.transform, true);
+            go.transform.position = new Vector3(pos2.x, worldY, pos2.y);
+
+            Vector3 up = Vector3.up;
+            if (alignToTerrainNormal)
+            {
+                Vector3 norm = SampleTerrainNormal(terrain, pos2);
+                // Clamp tilt
+                float tilt = Vector3.Angle(Vector3.up, norm);
+                if (tilt > maxAlignTiltDeg)
+                    norm = Vector3.Slerp(Vector3.up, norm, maxAlignTiltDeg / tilt);
+                up = norm;
+            }
+            go.transform.rotation = Quaternion.AngleAxis(rotDeg, Vector3.up) *
+                                    Quaternion.FromToRotation(Vector3.up, up);
+            go.transform.localScale = Vector3.one * scale;
+
+            Undo.RegisterCreatedObjectUndo(go, "Paint Tree");
+        }
+        else
+        {
+            // Terrain tree path
+            int protoIdx = EnsureTerrainPrototype(terrain, entry.prefab);
+            float ny = Mathf.Max(0f,
+                (terrainH - bSettings.sinkOffset) / tSize.y);
+            float nx = lx / tSize.x;
+            float nz = lz / tSize.z;
+            newTerrainTrees.Add(new TreeInstance
+            {
+                position = new Vector3(nx, ny, nz),
+                widthScale = scale,
+                heightScale = scale,
+                rotation = rotDeg * Mathf.Deg2Rad,
+                color = Color.white,
+                lightmapColor = Color.white,
+                prototypeIndex = protoIdx,
+            });
+        }
+
+        placed.Add(pos2);
+        placedCount++;
+    }
+
+    if (placedCount == 0 && attempts >= maxAttempts)
+    {
+        Debug.Log($"[TreeBrush] No trees placed — entire brush radius " +
+                  $"may be over an excluded zone (fairway/green/tee/bunker/water/path).");
+    }
+
+    if (newTerrainTrees.Count > 0)
+    {
+        // Append, don't replace
+        var existing = terrain.terrainData.treeInstances;
+        Undo.RegisterCompleteObjectUndo(terrain.terrainData,
+            "Paint Terrain Trees");
+        var combined = new TreeInstance[existing.Length + newTerrainTrees.Count];
+        System.Array.Copy(existing, combined, existing.Length);
+        for (int i = 0; i < newTerrainTrees.Count; i++)
+            combined[existing.Length + i] = newTerrainTrees[i];
+        terrain.terrainData.SetTreeInstances(combined, false);
+    }
+
+    // Mark scene dirty
+    EditorUtility.SetDirty(container);
+    UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
+        terrain.gameObject.scene);
+}
+```
+
+**Helpers needed:**
+
+`GetOrCreatePaintedContainer()` — find a GO named `PaintedTrees` in the
+active scene; if missing, create one and parent it to `HoleRoot` if
+that exists, else leave at scene root. Register with
+`Undo.RegisterCreatedObjectUndo` if newly created.
+
+`EnsureTerrainPrototype(Terrain terrain, GameObject prefab)` — scan
+`terrain.terrainData.treePrototypes`; if `prefab` already there, return
+its index; otherwise append a new `TreePrototype { prefab = prefab }`,
+write back via `terrain.terrainData.treePrototypes = newArray`, and
+return the new index.
+
+`SampleTerrainNormal(Terrain terrain, Vector2 worldPos)` — use
+`terrain.terrainData.GetInterpolatedNormal(nx, nz)` where `nx`/`nz`
+are normalized terrain coords.
+
+---
+
+### Step 4.5 — Expose overlay-exclusion helpers in TreePlacer
+
+The brush needs to test whether a candidate point falls inside any
+fairway/green/tee/bunker/water/cart-path polygon. `TreePlacer` already
+builds these polygons in `BuildExclusionPolygons` and tests them with
+`PointInPolygon` / `IsInsideAnyOverlay` — but everything is `private`
+and tied to a known `exportPath` + `isGeo` flag. Add a thin public
+surface.
+
+Add these to `TreePlacer.cs` (no changes to existing logic — pure
+additions):
+
+```csharp
+/// <summary>
+/// Build overlay-exclusion polygons for the currently-active scene.
+/// Resolves Lite-vs-Geo and the export folder from the scene name +
+/// path (same logic as ImportTreesMenuItem).
+/// Returns an empty list if the scene name doesn't match a hole or
+/// the export folder is missing.
+/// Used by TreeBrushTool to keep the brush off overlay surfaces.
+/// </summary>
+public static List<Vector2[]> BuildExclusionPolygonsForActiveScene()
+{
+    var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+    string sceneName = activeScene.name;
+    string scenePath = activeScene.path ?? "";
+
+    bool isGeo = scenePath.IndexOf("_Geo", System.StringComparison.OrdinalIgnoreCase) >= 0
+        || sceneName.IndexOf("_Geo", System.StringComparison.OrdinalIgnoreCase) >= 0;
+    bool isFlat = scenePath.IndexOf("_Flat", System.StringComparison.OrdinalIgnoreCase) >= 0
+        || sceneName.IndexOf("_Flat", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+    string baseName = System.Text.RegularExpressions.Regex
+        .Replace(sceneName, "(_Geo)?(_Flat)?$", "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    int holeNumber = -1;
+    if (baseName.StartsWith("Hole_") && baseName.Length >= 7)
+        int.TryParse(baseName.Substring(5, 2), out holeNumber);
+    if (holeNumber < 1 || holeNumber > 18)
+        return new List<Vector2[]>();
+
+    string toolFolder = isGeo ? "UHoleGeo" : "UHoleLite";
+    string holeFolder = isFlat ? $"hole-{holeNumber:D2}-flat" : $"hole-{holeNumber:D2}";
+    string exportPath = Path.Combine(
+        Application.dataPath, "..",
+        $"Tools/{toolFolder}/output/lomond-country-club/export",
+        holeFolder);
+
+    if (!Directory.Exists(exportPath))
+        return new List<Vector2[]>();
+
+    return BuildExclusionPolygons(exportPath, isGeo);
+}
+
+/// <summary>
+/// Test if (worldX, worldZ) falls inside ANY of the supplied
+/// overlay-exclusion polygons. Empty list = always returns false.
+/// </summary>
+public static bool IsBlockedByOverlay(
+    float worldX, float worldZ, List<Vector2[]> polygons)
+{
+    if (polygons == null || polygons.Count == 0) return false;
+    return IsInsideAnyOverlay(worldX, worldZ, polygons);
+}
+```
+
+That's the only structural change to `TreePlacer` for exclusion. The
+private `BuildExclusionPolygons` / `IsInsideAnyOverlay` /
+`PointInPolygon` stay private — only the two new public wrappers are
+added.
+
+---
+
+### Step 5 — `EraseInRadius`
+
+```csharp
+private void EraseInRadius(Terrain terrain, Vector3 center)
+{
+    float r2 = brushRadius * brushRadius;
+    int removedGO = 0;
+    int removedTerrain = 0;
+
+    // Standalone painted trees
+    var container = FindPaintedContainer();
+    if (container != null)
+    {
+        // Collect first to avoid mutating during iteration
+        var toRemove = new List<GameObject>();
+        for (int i = 0; i < container.transform.childCount; i++)
+        {
+            var child = container.transform.GetChild(i).gameObject;
+            Vector2 d = new Vector2(child.transform.position.x - center.x,
+                                    child.transform.position.z - center.z);
+            if (d.sqrMagnitude <= r2) toRemove.Add(child);
+        }
+        foreach (var go in toRemove)
+        {
+            Undo.DestroyObjectImmediate(go);
+            removedGO++;
+        }
+    }
+
+    // Terrain trees: filter by world distance, rewrite array
+    var tPos = terrain.transform.position;
+    var tSize = terrain.terrainData.size;
+    var instances = terrain.terrainData.treeInstances;
+    var kept = new List<TreeInstance>(instances.Length);
+    for (int i = 0; i < instances.Length; i++)
+    {
+        float wx = tPos.x + instances[i].position.x * tSize.x;
+        float wz = tPos.z + instances[i].position.z * tSize.z;
+        Vector2 d = new Vector2(wx - center.x, wz - center.z);
+        if (d.sqrMagnitude <= r2) { removedTerrain++; continue; }
+        kept.Add(instances[i]);
+    }
+    if (removedTerrain > 0)
+    {
+        Undo.RegisterCompleteObjectUndo(terrain.terrainData, "Erase Terrain Trees");
+        terrain.terrainData.SetTreeInstances(kept.ToArray(), false);
+    }
+
+    if (removedGO + removedTerrain > 0)
+    {
+        Debug.Log($"[TreeBrush] Erased {removedGO} GO + {removedTerrain} terrain trees");
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
+            terrain.gameObject.scene);
+    }
+}
+```
+
+**Note on terrain-tree erase:** this removes **all** terrain-tree
+instances in the radius — including ones placed by `TreePlacer`, not
+just brush-painted ones. There is no per-instance metadata on
+`TreeInstance` to distinguish source. That's acceptable: the artist
+explicitly chose to erase the area; if they want to restore the
+mask-driven trees, they re-run `Trees > Import Trees Current Hole`.
+Document this in the window as a small footer note: "Erase removes any
+terrain trees in the radius, including ones placed by TreePlacer.
+Re-import to restore."
+
+The standalone container split (`PaintedTrees` vs `StandaloneTrees`)
+*does* make the GameObject side robust — re-importing won't kill
+brush-painted trees, only the importer's own.
+
+---
+
+### Step 6 — Don't break TreePlacer
+
+`TreePlacer.CleanupStandaloneTrees()` only deletes GameObjects named
+`StandaloneTrees`. Our container is `PaintedTrees`, so cleanup is
+already isolated — no change needed there.
+
+After painting, the next `Trees > Import Trees Current Hole` run will:
+- Wipe `StandaloneTrees` (importer's container) ✓
+- Replace ALL terrain-tree instances via
+  `terrain.terrainData.SetTreeInstances(...)` ✗ — this WILL erase
+  brush-painted terrain trees too
+
+This is a known limitation. Options for the artist:
+1. Paint only after the final `TreePlacer` import.
+2. For specimens that must survive re-imports, use prefabs marked
+   `standalone` (in `PaintedTrees`).
+
+Add this note to the window's help section.
+
+---
+
+### Step 7 — Apply `NormalizeLODGroup`
+
+Standalone painted trees should get the same LOD treatment as importer
+trees. `TreePlacer.NormalizeLODGroup` is private — make it
+`internal static` (single-word visibility change) so the brush tool
+can call it on each instance after creation.
+
+In `TreePlacer.cs`, change:
+
+```csharp
+private static void NormalizeLODGroup(LODGroup lodGroup)
+```
+
+to:
+
+```csharp
+internal static void NormalizeLODGroup(LODGroup lodGroup)
+```
+
+Then in `PaintCluster`, after instantiating a standalone tree:
+
+```csharp
+foreach (var lg in go.GetComponentsInChildren<LODGroup>(true))
+    TreePlacer.NormalizeLODGroup(lg);
+```
+
+(For terrain-tree path, the prototype's prefab already has LODGroup
+normalized once the importer runs; brush-only sessions can skip this
+since unnormalized LODs are still functional.)
+
+---
+
+### Verification
+
+Open `Hole_07_Geo` (or any hole with a baked terrain), then:
+
+- [ ] `Window > Trees > Brush Tool` opens; folder dropdown shows the
+      same folders as the TreePlacer window.
+- [ ] Toggle "Brush enabled". Move mouse over the terrain — wire disc
+      gizmo follows, white by default.
+- [ ] Hold Shift — disc turns green. Click — a cluster of N trees
+      drops with jitter inside `brushRadius`, none closer than
+      `minSpacingInCluster`.
+- [ ] Hover the cursor over a fairway, green, tee, bunker, water, or
+      cart path — the disc turns **orange**. Shift-click does nothing
+      (or only places trees in the non-overlapping part of the disc
+      if the brush straddles the edge).
+- [ ] Move the brush partially over a fairway edge — only the trees
+      outside the fairway polygon get placed; spacing in the placed
+      portion still respects `minSpacingInCluster`.
+- [ ] Change `scaleMin`/`scaleMax`/`sinkOffset` in the brush window —
+      next paint stroke uses the new values. Re-running
+      `Trees > Import Trees Current Hole` is **unaffected** — importer
+      still uses its own `TreePlacer.GetFolderSettings`.
+- [ ] Click "Reset to TreePlacer defaults" — brush settings snap back
+      to whatever TreePlacer is currently using for that folder.
+- [ ] Standalone prefabs (e.g., `Spruce 1`) appear under
+      `HoleRoot/PaintedTrees/`. Terrain-tree prefabs (e.g., the cedars)
+      appear via the terrain system, no scene GameObjects.
+- [ ] Hold Ctrl — disc turns red. Click — trees inside the radius
+      vanish (both standalone and terrain).
+- [ ] `Ctrl+Z` undoes a paint stroke as one operation. `Ctrl+Z` undoes
+      an erase as one operation.
+- [ ] Run `Trees > Import Trees Current Hole`. `PaintedTrees`
+      container survives. (Terrain-tree brush placements get wiped —
+      this is documented behavior.)
+- [ ] Switch to a hole with no `tree-zones.json` painted (e.g., a
+      brand-new hole). Brush still works against the bare terrain.
+- [ ] Disable the brush toggle — gizmo disappears, scene clicks
+      behave normally (selection works).
+- [ ] `B` key toggles the brush while the Scene view is focused.
+- [ ] Click the "Clear Painted Trees (this scene)" button — the
+      `PaintedTrees` container is destroyed. Undo restores it.
+
+Regression:
+
+- [ ] Run `Trees > Import All Trees Geo` on a hole — completes without
+      errors, `StandaloneTrees` populated, `PaintedTrees` (if exists
+      from a prior session) untouched.
+
+---
+
+### Do NOT change
+
+- `TreePlacer.PlaceTrees`, `TreePlacer.ScanPrefabs`, the menu items,
+  session persistence, or any of its `MenuItem` flows.
+- `TreePlacer.PerFolder` settings — those stay the importer's source
+  of truth. The brush keeps its own `BrushFolderSettings`.
+- `tree-zones.json` schema, the UHole pipeline, or any export tools.
+- The `StandaloneTrees` container name or `CleanupStandaloneTrees`
+  behavior. The brush uses a different container by design.
+- `TreePlacer`'s default weights, force-standalone list, or
+  `ExcludeZones`.
+- The private polygon helpers (`BuildExclusionPolygons`,
+  `IsInsideAnyOverlay`, `PointInPolygon`) — leave them private and
+  call only via the new `BuildExclusionPolygonsForActiveScene` /
+  `IsBlockedByOverlay` wrappers.
+
+Allowed changes to `TreePlacer.cs`:
+- `NormalizeLODGroup`: `private` → `internal`
+- New public method: `BuildExclusionPolygonsForActiveScene()`
+- New public method: `IsBlockedByOverlay(float, float, List<Vector2[]>)`
+
+---
+
+
+
+✅ DONE: 2026-04-17 — Tree Brush Tool complete: TreeBrushTool.cs + TreePlacer overlay helpers + NormalizeLODGroup internal
+
+## Previous Task — Fix Voronoi Seesaw in Shore Ramp (Hole 7 Geo)
 
 The 3-pass box blur didn't help. Correct diagnosis: this is a **Voronoi
 seesaw pattern**, not per-cell chamfer quantization noise.

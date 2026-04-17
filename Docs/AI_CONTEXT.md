@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-16
+**Last Updated:** 2026-04-17
 
 ## Current Status
 
@@ -240,6 +240,17 @@ along spine, sampling terrain height at each vertex pair.
 - Tree Settings editor window (Trees > Tree Settings)
 - Save/Load Presets + session auto-persistence
 - Directional light & shadows: soft shadows, Mixed bake, 100m distance
+
+### Tree Brush Tool (2026-04-17) ✅
+
+- New `Window > Trees > Brush Tool` EditorWindow (`TreeBrushTool.cs`)
+- Shift+click paints N jittered trees in a radius; Ctrl+click erases; B key toggles
+- Reuses TreePlacer palette/weights; no separate prefab list
+- Per-folder BrushFolderSettings (scale/sink/spacing) independent of importer, persisted via EditorPrefs
+- Painted standalone trees under `PaintedTrees` container (survives TreePlacer re-imports)
+- Exclusion zones: same overlay-polygon test as TreePlacer; disc turns orange over excluded areas
+- Full undo per stroke (terrain trees + standalone GOs)
+- TreePlacer: `NormalizeLODGroup` → `internal`; added `BuildExclusionPolygonsForActiveScene()` + `IsBlockedByOverlay()`
 
 ---
 
