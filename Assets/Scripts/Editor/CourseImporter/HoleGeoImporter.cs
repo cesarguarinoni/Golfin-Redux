@@ -213,6 +213,9 @@ namespace Golfin.CourseImport
                 CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating zone meshes...", 0.62f);
+                // Flatten terrain under each tee polygon to its peak height so CDT
+                // samples a naturally flat surface — no post-mesh hacks needed.
+                FlattenTerrainUnderTees(terrainData, terrainGO, exportPath);
                 CreateFlatZoneMeshes(terrainData, terrainGO, holeRoot.transform,
                     exportPath, dataDir, projectRoot);
 
@@ -3055,6 +3058,55 @@ namespace Golfin.CourseImport
 
         private const float FairwayFringeMeters = 0.5f;
 
+        /// <summary>
+        /// Reshapes the terrain heightmap so that each tee polygon is a flat
+        /// platform at its own peak elevation. Must run BEFORE CreateFlatZoneMeshes
+        /// so CDT samples an already-flat surface and produces level geometry
+        /// without any post-process hacks.
+        /// </summary>
+        private static void FlattenTerrainUnderTees(
+            TerrainData terrainData, GameObject terrainGO, string exportPath)
+        {
+            string zcPath = Path.Combine(exportPath, "zone-contours.json");
+            if (!File.Exists(zcPath)) return;
+            var zcData = JsonUtility.FromJson<ZoneContoursFile>(File.ReadAllText(zcPath));
+            if (zcData.zones == null || zcData.zones.tee == null || zcData.zones.tee.Length == 0)
+                return;
+
+            int hRes = terrainData.heightmapResolution;
+            float[,] heights = terrainData.GetHeights(0, 0, hRes, hRes);
+            Vector3 terrainPos = terrainGO.transform.position;
+            Vector3 terrainSize = terrainData.size;
+            bool changed = false;
+
+            foreach (var region in zcData.zones.tee)
+            {
+                if (region.contour == null || region.contour.Length < 3) continue;
+
+                var mask = new bool[hRes, hRes];
+                MarkContourCells(region.contour, mask, hRes, terrainPos, terrainSize, inset: 0f);
+
+                float maxH = float.MinValue;
+                for (int row = 0; row < hRes; row++)
+                    for (int col = 0; col < hRes; col++)
+                        if (mask[row, col] && heights[row, col] > maxH)
+                            maxH = heights[row, col];
+
+                if (maxH == float.MinValue) continue;
+
+                for (int row = 0; row < hRes; row++)
+                    for (int col = 0; col < hRes; col++)
+                        if (mask[row, col])
+                            heights[row, col] = maxH;
+
+                changed = true;
+                Debug.Log($"[HoleGeoImporter] Tee {region.id}: flattened terrain to peak h={maxH:F4}");
+            }
+
+            if (changed)
+                terrainData.SetHeights(0, 0, heights);
+        }
+
         private static void DepressTerrainUnderOverlays(
             TerrainData terrainData, GameObject terrainGO, string exportPath)
         {
@@ -4083,27 +4135,6 @@ namespace Golfin.CourseImport
                 {
                     for (int t = 0; t < tris.Length; t += 3)
                     { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
-                }
-            }
-
-            // Flatten interior verts to their median Y so the tee surface is
-            // perfectly level regardless of terrain slope. Interior verts are
-            // those whose (x,z) falls inside the original (non-dilated) contour.
-            // Border ring verts (outside originalPoly) are left at natural terrain
-            // height so the ring blends into surrounding ground. Runs before
-            // centroid subtraction so all downstream code sees flattened positions.
-            {
-                var interiorYs = new System.Collections.Generic.List<float>(rawVerts.Length);
-                for (int i = 0; i < rawVerts.Length; i++)
-                    if (IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly))
-                        interiorYs.Add(rawVerts[i].y);
-                if (interiorYs.Count > 0)
-                {
-                    interiorYs.Sort();
-                    float flatY = interiorYs[interiorYs.Count - 1]; // max Y — terrain always below flat surface
-                    for (int i = 0; i < rawVerts.Length; i++)
-                        if (IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly))
-                            rawVerts[i].y = flatY;
                 }
             }
 
