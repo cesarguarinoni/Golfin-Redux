@@ -4203,7 +4203,7 @@ namespace Golfin.CourseImport
             int nc = contour.Length;
             if (nc < 3) return null;
 
-            float yOffset = 0.02f;
+            float yOffset = 0.00f;
 
             System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
                 new Vector2(wx / tileSize, wz / tileSize);
