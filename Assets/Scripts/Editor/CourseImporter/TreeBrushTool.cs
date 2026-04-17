@@ -16,7 +16,7 @@ namespace Golfin.CourseImport
         }
 
         [SerializeField] private bool brushEnabled;
-        [SerializeField] private string activeFolder = "Root";
+        [SerializeField] private string activeFolder = "All";
         [SerializeField] private float brushRadius = 4f;
         [SerializeField] private int treesPerClick = 5;
         [SerializeField] private bool alignToTerrainNormal = false;
@@ -52,8 +52,10 @@ namespace Golfin.CourseImport
             var existing = brushFolderSettings.FirstOrDefault(s => s.folder == folder);
             if (existing != null) return existing;
 
-            // Lazy-create, seed from matching TreePlacer folder settings
-            var src = TreePlacer.GetFolderSettings(folder);
+            // Lazy-create, seed from matching TreePlacer folder settings (or globals for "All")
+            FolderPlacementSettings src = (folder == "All")
+                ? new FolderPlacementSettings()
+                : TreePlacer.GetFolderSettings(folder);
             var created = new BrushFolderSettings
             {
                 folder = folder,
@@ -124,13 +126,17 @@ namespace Golfin.CourseImport
 
             EditorGUILayout.Space(4);
 
-            var folders = TreePlacer.GetFolderTabs();
-            if (folders.Count == 0)
+            var folderTabs = TreePlacer.GetFolderTabs();
+            if (folderTabs.Count == 0)
             {
                 EditorGUILayout.HelpBox("Scan prefabs in TreePlacer first.", MessageType.Info);
             }
             else
             {
+                // "All" is always first; individual folders follow for fine control
+                var folders = new System.Collections.Generic.List<string> { "All" };
+                folders.AddRange(folderTabs);
+
                 EditorGUILayout.BeginHorizontal();
                 int folderIdx = Mathf.Max(0, folders.IndexOf(activeFolder));
                 EditorGUI.BeginChangeCheck();
@@ -142,12 +148,13 @@ namespace Golfin.CourseImport
                 EditorGUILayout.EndHorizontal();
 
                 var activePrefabs = TreePlacer.TreePalette
-                    .Where(e => e.enabled && (e.folder ?? "Root") == activeFolder)
+                    .Where(e => e.enabled &&
+                        (activeFolder == "All" || (e.folder ?? "Root") == activeFolder))
                     .ToList();
                 if (activePrefabs.Count == 0)
                 {
                     EditorGUILayout.HelpBox(
-                        $"No enabled prefabs in folder '{activeFolder}' — enable some in TreePlacer.",
+                        "No enabled prefabs — enable some in Tree Settings.",
                         MessageType.Warning);
                 }
                 else
@@ -177,9 +184,11 @@ namespace Golfin.CourseImport
                 SceneView.RepaintAll();
 
             EditorGUILayout.Space(4);
-            EditorGUILayout.LabelField($"Brush Settings — folder: {activeFolder}", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                $"Brush Settings — {(activeFolder == "All" ? "all folders" : "folder: " + activeFolder)}",
+                EditorStyles.boldLabel);
 
-            if (folders.Count > 0)
+            if (folderTabs.Count > 0)
             {
                 var bSettings = GetBrushFolderSettings(activeFolder);
                 EditorGUI.BeginChangeCheck();
@@ -193,7 +202,10 @@ namespace Golfin.CourseImport
 
                 if (GUILayout.Button("Reset to TreePlacer Defaults"))
                 {
-                    var src = TreePlacer.GetFolderSettings(activeFolder);
+                    // For "All", seed from global defaults; for a specific folder, use that folder's settings
+                    var src = (activeFolder == "All")
+                        ? new FolderPlacementSettings()
+                        : TreePlacer.GetFolderSettings(activeFolder);
                     bSettings.scaleMin = src.scaleMin;
                     bSettings.scaleMax = src.scaleMax;
                     bSettings.sinkOffset = src.sinkOffset;
@@ -354,11 +366,11 @@ namespace Golfin.CourseImport
         {
             var folderEntries = TreePlacer.TreePalette
                 .Where(e => e.enabled && e.weight > 0f &&
-                            (e.folder ?? "Root") == activeFolder)
+                            (activeFolder == "All" || (e.folder ?? "Root") == activeFolder))
                 .ToList();
             if (folderEntries.Count == 0)
             {
-                Debug.LogWarning($"[TreeBrush] No enabled prefabs in folder '{activeFolder}'");
+                Debug.LogWarning("[TreeBrush] No enabled prefabs — enable some in Tree Settings.");
                 return;
             }
 
