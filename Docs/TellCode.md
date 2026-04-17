@@ -197,4 +197,72 @@ more than enough.
 
 ---
 
-✅ DONE: 2026-04-18 — Added separable Gaussian blur (sigma=2, radius=3) on dist[] in FlattenTerrainUnderTees, inserted between backward chamfer pass and skirt ramp lerp. No other changes.
+❌ BLOCKED: 2026-04-18 — Three approaches tried, none had any visible effect. Details below.
+
+---
+
+## Debug Notes — Tee Skirt Banding (for Architect)
+
+### What the stripes look like
+Radial spokes radiating outward from the tee perimeter, roughly 1–2m wide each,
+evenly curved following the tee outline. They are geometric ridges — visible as
+light/dark alternation on the slope under directional lighting. Screenshot attached
+to conversation.
+
+### What we tried
+
+**Attempt 1 — dist[] Gaussian blur (sigma=2, radius=3), naïve**
+Inserted between the backward chamfer pass and the smoothstep lerp.
+Result: banding got WORSE.
+Reason: dist=0 interior (teeMask) cells were included in the convolution kernel,
+pulling the first exterior ring's dist values down, steepening the mound edge.
+
+**Attempt 2 — dist[] Gaussian blur with Mathf.Max(1f, ...) interior clamp**
+Same kernel, but sampled values clamped to minimum 1f so interior cells don't
+drag exterior cells downward.
+Result: no visible change at all.
+Hypothesis at the time: blur kernel (7 cells wide) might be too narrow if skirt
+is wider than expected at this terrain resolution.
+
+**Attempt 3 — heights[] Gaussian blur after the smoothstep lerp**
+Removed the dist[] blur entirely. After the lerp loop writes rampedH to heights[],
+applied a separable Gaussian directly on heights[] in the skirt region. Kernel
+spans the full skirt width (bR = skirtRadiusCells, sigma = bR * 0.4f). Only
+skirt cells are written; tee interior and terrain cells feed the kernel.
+Result: no visible change at all.
+
+### Current state of the code
+`FlattenTerrainUnderTees` has the heights[] blur block at the end of the per-region
+loop (after the lerp, before the Debug.Log). It compiles and runs — no errors in
+log. The stripes look identical with and without it.
+
+### Hypotheses for architect to evaluate
+
+1. **The stripes are not from terrain geometry at all — they're a normal map artifact.**
+   The tee slope uses `T_Tee_Normal` tiled via `CreateTiledMaterial`. On a flat
+   surface the tile pattern is invisible, but on a slope the tangent-space normals
+   interact with the light direction and create visible periodic stripes. This would
+   explain why no amount of heightmap manipulation changes them.
+   *Test: temporarily set the tee material to use a flat normal map (or set
+   _BumpScale to 0) and re-import. If stripes vanish, it's the normal map.*
+
+2. **skirtRadiusCells is smaller than assumed at this terrain resolution.**
+   If metersPerCell is large (terrain resolution low), the skirt might be only 2–3
+   cells wide. The chamfer distance then only has 2–3 distinct values in the skirt,
+   making the height gradient a staircase regardless of blurring.
+   *Check: the Debug.Log prints `skirt radius=N cells`. What does it say?*
+
+3. **The stripes come from the tee contour polygon having coarse vertex spacing.**
+   If the contour has vertices spaced ~1m apart, each polygon edge spans ~4 cells.
+   The chamfer distance from that coarsely-rasterized boundary produces wide flat
+   "spokes" (one per edge), each 4+ cells wide. A blur kernel narrower than the
+   spoke width can't average them out.
+   *Fix: densify the contour before MarkContourCells — interpolate to ~0.5 cell
+   spacing. Or compute true per-cell Euclidean distance to the nearest contour
+   edge rather than chamfer distance from rasterized cells.*
+
+4. **The skirt height differential is too large for the skirt width.**
+   A 0.4m raise over 2m horizontal = 11° average slope. Even a perfectly smooth
+   ramp on an 8-cell-wide slope will show terrain LOD/normal quantization as
+   visible banding in Unity's terrain renderer.
+   *Fix: increase TeeSkirtMeters (wider ramp), or reduce the platform raise amount.*
