@@ -42,22 +42,6 @@ namespace Golfin.CourseImport
         /// ramps back to natural terrain.</summary>
         private const float TeeSkirtMeters = 2.0f;
 
-        /// <summary>Populated by DepressTerrainUnderOverlays; consumed by
-        /// PatchTeeMeshBorderVerts so tee meshes flatten their interior verts
-        /// to match the platform Y used when reshaping the terrain.</summary>
-        private static System.Collections.Generic.Dictionary<int, float>
-            _teePlatformYByRegionId;
-
-        private struct TeeMeshRegistration
-        {
-            public MeshFilter meshFilter;
-            public ContourPoint[] contour;   // original (non-dilated) contour
-            public Vector3 meshCentroidWorld; // mesh GO world position
-        }
-
-        private static System.Collections.Generic.Dictionary<int, TeeMeshRegistration>
-            _teeMeshRegistryByRegionId;
-
         // ─── Heightmap Smoothing Parameters ─────────────────────────
         private const int SmoothRadius = 16;
         private const float SmoothSigma = 32.0f;
@@ -296,11 +280,11 @@ namespace Golfin.CourseImport
                 // Depress terrain under overlay meshes to prevent z-fighting
                 DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
 
-                // Patch tee meshes now that the terrain has been reshaped with flat
-                // platforms + skirt ramps. Interior verts flatten to platform Y;
-                // border outer verts re-sample the newly-ramped terrain so the
-                // collar sits flush.
-                PatchTeeMeshBorderVerts(terrainGO);
+                // Build tee meshes AFTER terrain reshaping so CDT naturally
+                // samples the already-flat platform + ramped skirt terrain.
+                // This eliminates the need for any post-patch vertex fixup.
+                CreateTeeMeshesPostDepression(terrainData, terrainGO,
+                    holeRoot.transform, exportPath, dataDir, projectRoot);
 
                 terrainData.SetHoles(0, 0, holes);
 
@@ -3225,13 +3209,9 @@ namespace Golfin.CourseImport
             // Per-region independence: each tee polygon is processed
             // independently, so multi-tee holes (Hole 1, 4, 18...) with back /
             // middle / forward tees at different elevations each get their own
-            // correct height. Region id → Y is recorded in
-            // _teePlatformYByRegionId for the post-patch to pick up.
+            // correct height.
             int teeFlatCount = 0;
             int teeSkirtCount = 0;
-
-            // Reset the static bookkeeping each import (don't leak between holes).
-            _teePlatformYByRegionId = new System.Collections.Generic.Dictionary<int, float>();
 
             {
                 string teePath = Path.Combine(exportPath, "zone-contours.json");
@@ -3242,8 +3222,6 @@ namespace Golfin.CourseImport
                     if (teeData.zones != null && teeData.zones.tee != null &&
                         teeData.zones.tee.Length > 0)
                     {
-                        float overlayDropNorm = OverlayDepressionMeters / elevRange;
-
                         float metersPerCell =
                             (terrainSize.x + terrainSize.z) * 0.5f / (hRes - 1);
                         int skirtRadiusCells = Mathf.Max(1, Mathf.RoundToInt(
@@ -3274,14 +3252,11 @@ namespace Golfin.CourseImport
 
                             samples.Sort();
                             float teeHeightNorm = samples[samples.Count / 2];
-                            float teeY_world = terrainPos.y + teeHeightNorm * elevRange;
 
-                            _teePlatformYByRegionId[region.id] = teeY_world;
-
-                            // Platform target = teeY − overlayDrop (mesh sits 0.4m above
-                            // for z-fight avoidance, same as fairway convention).
-                            float platformNorm = Mathf.Clamp01(
-                                teeHeightNorm - overlayDropNorm);
+                            // Flatten terrain to median height — no depression.
+                            // Tee mesh is built post-depression and samples this flat surface,
+                            // so it is automatically level without any post-patching.
+                            float platformNorm = teeHeightNorm;
 
                             // Write platform cells
                             for (int z = 0; z < hRes; z++)
@@ -3486,93 +3461,64 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
-        /// After DepressTerrainUnderOverlays has reshaped the terrain with flat
-        /// tee platforms + skirt ramps, re-sample terrain for each tee mesh and:
-        ///   1. Flatten interior verts (inside the original contour) to the
-        ///      platform Y. This drives the interior flatten from the same data
-        ///      that reshaped the terrain, which is less error-prone.
-        ///   2. Resample terrain for border outer verts (outside the original
-        ///      contour) so the mesh border sits flush on the now-ramped terrain.
-        /// Operates directly on Mesh.vertices. Expects mesh-local coordinates
-        /// (centered around mesh GO position).
+        /// Build tee meshes after DepressTerrainUnderOverlays has reshaped the terrain.
+        /// CDT naturally samples the already-flat platform terrain so interior verts are
+        /// level by construction. Border verts follow the skirt ramp automatically.
+        /// No post-patch vertex fixup needed.
         /// </summary>
-        private static void PatchTeeMeshBorderVerts(GameObject terrainGO)
+        private static void CreateTeeMeshesPostDepression(TerrainData terrainData,
+            GameObject terrainGO, Transform parentRoot,
+            string exportPath, string dataDir, string projectRoot)
         {
-            if (_teeMeshRegistryByRegionId == null ||
-                _teeMeshRegistryByRegionId.Count == 0)
+            string texDir = "Assets/Courses/Textures_2025(JPG)";
+            var terrain = terrainGO.GetComponent<Terrain>();
+            float terrainBaseY = terrainGO.transform.position.y;
+
+            string zcPath = Path.Combine(exportPath, "zone-contours.json");
+            if (!File.Exists(zcPath)) return;
+
+            var data = JsonUtility.FromJson<ZoneContoursFile>(File.ReadAllText(zcPath));
+            if (data.zones == null || data.zones.tee == null || data.zones.tee.Length == 0)
                 return;
 
-            var terrain = terrainGO.GetComponent<Terrain>();
-            if (terrain == null) return;
-            float terrainBaseY = terrainGO.transform.position.y;
-            const float yOffset = 0.02f; // must match CreateTeeMeshWithBorder
+            var teeRoot = new GameObject("Tees");
+            teeRoot.transform.SetParent(parentRoot);
 
-            int patchedInteriorCount = 0;
-            int patchedBorderCount = 0;
+            var teeMat = CreateTiledMaterial(texDir, "T_Tee_Albedo", "T_Tee_Normal", dataDir, 3f);
 
-            foreach (var kv in _teeMeshRegistryByRegionId)
+            var teeBorderMat = new Material(GetLitShader());
+            teeBorderMat.name = "MAT_TeeBorder";
+            teeBorderMat.mainTexture = FindTextureExact(texDir, "T_TeeDark_Albedo");
+            var teeBorderNormal = FindTextureExact(texDir, "T_TeeDark_Normal");
+            if (teeBorderNormal != null)
             {
-                int regionId = kv.Key;
-                var reg = kv.Value;
-                var mf = reg.meshFilter;
-                if (mf == null || mf.sharedMesh == null) continue;
+                teeBorderMat.SetTexture("_BumpMap", teeBorderNormal);
+                teeBorderMat.SetFloat("_BumpScale", 0.4f);
+                teeBorderMat.EnableKeyword("_NORMALMAP");
+            }
+            teeBorderMat.SetFloat("_Smoothness", 0f);
+            teeBorderMat.SetFloat("_Metallic", 0f);
 
-                // Original contour as a Vector2[] for IsInsideContour
-                int nc = reg.contour.Length;
-                var originalPoly = new Vector2[nc];
-                for (int i = 0; i < nc; i++)
-                    originalPoly[i] = new Vector2(reg.contour[i].x, reg.contour[i].z);
+            string teeBorderMatPath = $"{dataDir}/MAT_TeeBorder.mat";
+            var existingBorderMat = AssetDatabase.LoadAssetAtPath<Material>(teeBorderMatPath);
+            if (existingBorderMat != null) AssetDatabase.DeleteAsset(teeBorderMatPath);
+            AssetDatabase.CreateAsset(teeBorderMat, teeBorderMatPath);
 
-                var mesh = mf.sharedMesh;
-                var verts = mesh.vertices; // in mesh-local space
+            foreach (var region in data.zones.tee)
+            {
+                if (region.contour == null || region.contour.Length < 3) continue;
 
-                // Resolve this region's platform Y (world).
-                float platformY_world;
-                if (_teePlatformYByRegionId == null ||
-                    !_teePlatformYByRegionId.TryGetValue(regionId, out platformY_world))
-                {
-                    // Fallback: sample terrain at the mesh GO position
-                    platformY_world = terrainBaseY +
-                        terrain.SampleHeight(reg.meshCentroidWorld);
-                }
-
-                for (int i = 0; i < verts.Length; i++)
-                {
-                    // Convert mesh-local (x, z) to world (x, z) for contour test
-                    float wx = verts[i].x + reg.meshCentroidWorld.x;
-                    float wz = verts[i].z + reg.meshCentroidWorld.z;
-
-                    bool inside = IsInsideContour(wx, wz, originalPoly);
-                    if (inside)
-                    {
-                        // Interior vert — flatten to platformY (relative to mesh GO)
-                        float newLocalY = (platformY_world + yOffset)
-                            - reg.meshCentroidWorld.y;
-                        verts[i].y = newLocalY;
-                        patchedInteriorCount++;
-                    }
-                    else
-                    {
-                        // Border outer vert — re-sample terrain at current shape
-                        float terrH = terrain.SampleHeight(new Vector3(wx, 0, wz));
-                        float newWorldY = terrainBaseY + terrH + yOffset;
-                        verts[i].y = newWorldY - reg.meshCentroidWorld.y;
-                        patchedBorderCount++;
-                    }
-                }
-
-                mesh.vertices = verts;
-                mesh.RecalculateNormals();
-                mesh.RecalculateBounds();
-                // Refresh the collider (baked from the original mesh).
-                var mc = mf.GetComponent<MeshCollider>();
-                if (mc != null) { mc.sharedMesh = null; mc.sharedMesh = mesh; }
+                var meshGO = CreateTeeMeshWithBorder(
+                    region.id, "Tee", region.contour,
+                    terrain, terrainBaseY,
+                    teeMat, 3f,
+                    teeBorderMat, 0.5f, 3f,
+                    Golfin.Course.SurfaceType.Tee);
+                if (meshGO != null)
+                    meshGO.transform.SetParent(teeRoot.transform);
             }
 
-            Debug.Log($"[HoleGeoImporter] Patched tee meshes: " +
-                      $"{patchedInteriorCount} interior verts flattened, " +
-                      $"{patchedBorderCount} border verts resampled " +
-                      $"across {_teeMeshRegistryByRegionId.Count} tees.");
+            Debug.Log($"[HoleGeoImporter] Created {data.zones.tee.Length} tee mesh(es) post-depression");
         }
 
         /// <summary>
@@ -3832,87 +3778,9 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // ─── Tee & Cart Path meshes from zone-contours.json ─────
-            string zcPath = Path.Combine(exportPath, "zone-contours.json");
-            if (File.Exists(zcPath))
-            {
-                string json = File.ReadAllText(zcPath);
-                var data = JsonUtility.FromJson<ZoneContoursFile>(json);
-
-                // Tee meshes
-                if (data.zones != null && data.zones.tee != null && data.zones.tee.Length > 0)
-                {
-                    var teeRoot = new GameObject("Tees");
-                    teeRoot.transform.SetParent(parentRoot);
-
-                    var teeMat = CreateTiledMaterial(texDir, "T_Tee_Albedo",
-                        "T_Tee_Normal", dataDir, 3f);
-
-                    // Tee border material (gradient texture: light inside, dark outside)
-                    var teeBorderMat = new Material(GetLitShader());
-                    teeBorderMat.name = "MAT_TeeBorder";
-                    teeBorderMat.mainTexture = FindTextureExact(texDir, "T_TeeDark_Albedo");
-                    var teeBorderNormal = FindTextureExact(texDir, "T_TeeDark_Normal");
-                    if (teeBorderNormal != null)
-                    {
-                        teeBorderMat.SetTexture("_BumpMap", teeBorderNormal);
-                        teeBorderMat.SetFloat("_BumpScale", 0.4f);
-                        teeBorderMat.EnableKeyword("_NORMALMAP");
-                    }
-                    teeBorderMat.SetFloat("_Smoothness", 0f);
-                    teeBorderMat.SetFloat("_Metallic", 0f);
-
-                    string teeBorderMatPath = $"{dataDir}/MAT_TeeBorder.mat";
-                    var existingBorderMat = AssetDatabase.LoadAssetAtPath<Material>(teeBorderMatPath);
-                    if (existingBorderMat != null) AssetDatabase.DeleteAsset(teeBorderMatPath);
-                    AssetDatabase.CreateAsset(teeBorderMat, teeBorderMatPath);
-
-                    // Initialize registry for Part C post-patch.
-                    _teeMeshRegistryByRegionId =
-                        new System.Collections.Generic.Dictionary<int, TeeMeshRegistration>();
-
-                    foreach (var region in data.zones.tee)
-                    {
-                        if (region.contour == null || region.contour.Length < 3) continue;
-
-                        // platformY is null here — DepressTerrainUnderOverlays hasn't run yet.
-                        // PatchTeeMeshBorderVerts (Part C) handles the actual flatten post-depression.
-                        float? platformY = null;
-                        if (_teePlatformYByRegionId != null &&
-                            _teePlatformYByRegionId.TryGetValue(region.id, out var py))
-                            platformY = py;
-
-                        var meshGO = CreateTeeMeshWithBorder(
-                            region.id, "Tee", region.contour,
-                            terrain, terrainBaseY,
-                            teeMat, 3f,
-                            teeBorderMat, 0.5f, 3f,
-                            Golfin.Course.SurfaceType.Tee,
-                            platformY);
-                        if (meshGO != null)
-                        {
-                            meshGO.transform.SetParent(teeRoot.transform);
-
-                            // Register for post-depression border patch (Part C)
-                            var mf = meshGO.GetComponent<MeshFilter>();
-                            if (mf != null && mf.sharedMesh != null)
-                            {
-                                _teeMeshRegistryByRegionId[region.id] = new TeeMeshRegistration
-                                {
-                                    meshFilter = mf,
-                                    contour = region.contour,
-                                    meshCentroidWorld = meshGO.transform.position,
-                                };
-                            }
-                        }
-                    }
-
-                    Debug.Log($"[HoleLiteImporter] Created {data.zones.tee.Length} tee mesh(es) with border rings");
-                }
-
-            }
-
             // ─── Cart path meshes from cart-paths.json (spline-based) ─────
+            // NOTE: Tee meshes are built in CreateTeeMeshesPostDepression (after
+            // DepressTerrainUnderOverlays) so CDT samples the already-flat terrain.
             CreateSplineCartPaths(terrainData, terrainGO, parentRoot,
                 exportPath, dataDir, projectRoot);
 
@@ -4305,8 +4173,7 @@ namespace Golfin.CourseImport
             ContourPoint[] contour, Terrain terrain, float terrainBaseY,
             Material mat, float tileSize,
             Material borderMat, float borderWidth, float borderTileSize,
-            Golfin.Course.SurfaceType surfaceType,
-            float? platformY = null)
+            Golfin.Course.SurfaceType surfaceType)
         {
             int nc = contour.Length;
             if (nc < 3) return null;
