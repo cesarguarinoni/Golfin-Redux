@@ -3297,6 +3297,7 @@ namespace Golfin.CourseImport
                     }
 
                 int shoreRadiusCells = ShoreRadius;
+                bool[,] rampMask = new bool[hRes, hRes];
 
                 for (int z = 0; z < hRes; z++)
                     for (int x = 0; x < hRes; x++)
@@ -3321,9 +3322,48 @@ namespace Golfin.CourseImport
                         if (targetH < originalH)
                         {
                             heights[z, x] = Mathf.Max(0f, targetH);
+                            rampMask[z, x] = true;
                             shoreCount++;
                         }
                     }
+
+                // Masked box blur over ramp cells — kills chamfer quantization stripes.
+                // 3 iterations ≈ Gaussian with ~5x5 effective kernel.
+                float[,] tmpHeights = new float[hRes, hRes];
+                for (int pass = 0; pass < 3; pass++)
+                {
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                            tmpHeights[z, x] = heights[z, x];
+
+                    for (int z = 0; z < hRes; z++)
+                    {
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            if (!rampMask[z, x]) continue;
+
+                            float sum = 0f;
+                            int count = 0;
+                            for (int dz = -1; dz <= 1; dz++)
+                            {
+                                int nz = z + dz;
+                                if (nz < 0 || nz >= hRes) continue;
+                                for (int dx = -1; dx <= 1; dx++)
+                                {
+                                    int nx = x + dx;
+                                    if (nx < 0 || nx >= hRes) continue;
+                                    if (waterMask[nz, nx]) continue;
+                                    if (depress[nz, nx]) continue;
+                                    if (cartDepress[nz, nx]) continue;
+                                    sum += tmpHeights[nz, nx];
+                                    count++;
+                                }
+                            }
+                            if (count > 0)
+                                heights[z, x] = sum / count;
+                        }
+                    }
+                }
             }
 
             terrainData.SetHeights(0, 0, heights);
