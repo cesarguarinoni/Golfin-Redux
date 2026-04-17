@@ -2302,6 +2302,7 @@ namespace Golfin.CourseImport
 
             var greensRoot = new GameObject("Greens");
             greensRoot.transform.SetParent(parentRoot);
+            greensRoot.transform.localPosition = new Vector3(0f, -0.03f, 0f);
 
             var terrain = terrainGO.GetComponent<Terrain>();
             float terrainBaseY = terrainGO.transform.position.y;
@@ -2585,7 +2586,7 @@ namespace Golfin.CourseImport
             mesh.RecalculateBounds();
 
             var go = new GameObject($"Green_{id}");
-            go.transform.position = centroid + new Vector3(0f, -0.04f, 0f);
+            go.transform.position = centroid;
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterials = collarEnabled
