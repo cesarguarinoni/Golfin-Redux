@@ -493,7 +493,10 @@ namespace Golfin.CourseImport
             }
 
             // --- Smooth heightmap outside play area ---
-            if (loadedRaw)
+            // DISABLED: terrain generator now produces blur(rawDem) which is
+            // already smooth everywhere. The boundary-height propagation below
+            // was creating seesaw/ridge artifacts at play-area/OB zone edges.
+            if (false && loadedRaw)
             {
                 string zonesSmPath = Path.Combine(exportPath, "zones.json");
                 if (File.Exists(zonesSmPath))
