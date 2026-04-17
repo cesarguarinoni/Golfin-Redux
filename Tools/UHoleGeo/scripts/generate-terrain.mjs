@@ -620,7 +620,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
   // Two buffers are reused across all regions instead of allocating fresh
   // buffers per region — saves ~32 MB per extra region per blur buffer.
 
-  if (carvedRegions.length > 0) {
+  if (false && carvedRegions.length > 0) { // TEMP: carve disabled for boundary test
     const metersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
     const sigmaCells = RAVINE_KERNEL_SIGMA_M / metersPerCell;
 
