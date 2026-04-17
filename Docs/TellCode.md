@@ -7,449 +7,426 @@
 
 ---
 
-## Previous Task — Bunker Lip: Bake as Submesh of Bunker CDT (DONE)
+## Previous Task — Port Water Rework to HoleGeoImporter
 
-Add a sand-to-grass transition "lip" ring around each bunker using
-the same submesh pattern used for fairway fringe, tee border, and
-green collar. Read `Docs/LESSONS_FRINGE_BORDER_MESHES.md` first — the
-four-piece recipe there is mandatory.
+Hole 7 Geo shows a seesaw waterline and water edges that don't match the
+terrain edges. Cause: HoleGeoImporter still has the OLD per-vertex
+terrain-following water code. The 2026-04-14 water rework was applied to
+HoleLiteImporter.cs only; HoleGeoImporter.cs never got the port.
 
-### Why
+This task ports the rework to HoleGeoImporter.cs. The Lite version is the
+working reference — match its behavior.
 
-Bunker lip polish was previously deferred because overlapping meshes
-Z-fight. The submesh approach (dilated CDT + original contour as
-internal constraint + centroid classification + duplicated boundary
-verts) is now proven across fairway, tee, and green collars. Same
-recipe, new surface.
-
-### Scope
-
-**Both importers** — `HoleGeoImporter.cs` AND `HoleLiteImporter.cs`.
-Match parity exactly. `Re-import Current Hole` dispatches to either,
-so both must work.
-
-Touch only bunker mesh creation (the method inside `CreateZoneMeshes`
-or wherever bunker CDT lives in each importer) and any helper it
-calls. Do not touch fairway, tee, green, water, or cart path code.
-
-Applies to BOTH large bunkers (4-ring bowl) and small bunkers (5-ring
-shingle overlap v7). Each bunker mesh, regardless of variant, gets
-a lip submesh around its outer boundary.
-
-### Implementation
-
-Mirror the fairway/green submesh pattern on the bunker CDT:
-
-1. **Dilate bunker contour outward by `lipWidth`** (start with
-   `lipWidth = 0.4f` meters — adjustable). Run CDT on the dilated
-   shape, not the original.
-2. **Pass original bunker contour as internal CDT constraint** so
-   triangle edges align with the sand/lip boundary (no jaggies).
-3. **Classify triangles by CENTROID** against the original contour.
-   Inside = sand submesh (existing bunker material), outside (in
-   dilation ring) = lip submesh.
-4. **Duplicate boundary verts** referenced by lip triangles so each
-   material gets its own UVs.
-5. Set `subMeshCount = 2` and assign
-   `sharedMaterials = { bunkerSandMat, lipMat }`.
-
-### Materials & UVs
-
-- **Sand submesh:** keep current bunker material and current UV
-  scheme unchanged.
-- **Lip submesh:** use `MAT_Bunkers_Dark` — a gradient material where
-  the LEFT side of the texture points at the bunker (sand side) and
-  the RIGHT side points at the rough (outer side). This is the same
-  UV scheme as the tee border — u encodes normalized distance to the
-  original contour:
-
-  ```csharp
-  // For each lip-submesh vert:
-  float dist = Mathf.Sqrt(DistanceSqToContour(v.x, v.z, originalBunkerPoly));
-  float u = Mathf.Clamp01(dist / lipWidth);
-  // u = 0 at the sand edge (left side of texture, near bunker)
-  // u = 1 at the dilated outer boundary (right side of texture, rough)
-  float vCoord = (v.x + v.z) / tileSize; // arbitrary per-perimeter tiling
-  uv = new Vector2(u, vCoord);
-  ```
-
-  `DistanceSqToContour` already exists (used by tee border) — reuse.
-
-**Asset path:** `Assets/Courses/Materials (Shared by courses)/MAT_Bunkers_Dark.mat` — load via `AssetDatabase.LoadAssetAtPath<Material>(...)`. The parent folder name has spaces and parentheses — the path must be exact including those characters.
-
-**Texture tiling note:** the material has `m_Scale: {x: 1, y: 10}` on its `_BaseMap`, meaning the texture tiles 10x along v. The gradient direction is u (left→right, sand→rough). When computing UVs, make sure vCoord tiles in a range that interacts correctly with that 10x scale — a `tileSize` around 2–4 world meters on vCoord should land in a reasonable visible tile frequency. Adjust and eyeball.
-
-### yOffset
-
-- Sand interior: keep current bunker Y (the existing bowl depression
-  + mesh lift values). No change.
-- Lip: same Y as sand at the boundary — it's the same mesh, they
-  share boundary vert Y. That's the whole point of the submesh
-  approach. The old deferred "lip ~0.13m above terrain" idea is
-  OBSOLETE and does NOT apply here. Do not raise the lip separately.
-
-### Fallback
-
-If dilated CDT fails (degenerate / self-intersecting on tight bunker
-shapes, especially the small shingle-overlap bunkers), retry with
-original contour and skip lip. Log a warning. A bunker without a
-lip is better than a crash.
-
-### Surface Detection — follow green collar pattern
-
-The lip is a DIFFERENT gameplay surface from sand (it's essentially
-rough-over-sand transition — different lie, different stance rules).
-Follow the same marker pattern we set up for greens:
-
-- Add `BunkerSurfaceInfo` MonoBehaviour (new file,
-  `Assets/Scripts/Course/BunkerSurfaceInfo.cs`):
-
-  ```csharp
-  using UnityEngine;
-  namespace Golfin.Course
-  {
-      // Attached to bunker GameObjects. Submesh 0 = sand,
-      // submesh 1 = lip (sand-to-grass transition). Used by ball
-      // physics to determine surface-specific lie/friction.
-      public class BunkerSurfaceInfo : MonoBehaviour
-      {
-          public const int SubmeshSand = 0;
-          public const int SubmeshLip  = 1;
-      }
-  }
-  ```
-
-- Attach to each bunker GameObject in the importer. No runtime
-  wiring yet — just the marker.
-
-### What NOT to Change
-
-- Fairway / tee / green / water / cart path mesh generation
-- Splatmap painting under bunkers
-- Bunker bowl depression (heightmap `SetHoles` / depression logic)
-- Small bunker shingle overlap v7 logic — still ships the 1.13x scale
-  + 0.11m lift. The lip is additive to that.
-- Ball physics, anything gameplay
-- Existing `CDTTriangulate` signature — reuse the optional
-  `innerConstraint` param added for fairway. Don't duplicate.
-
-### Verification
-
-Reimport hole 1 (has multiple bunkers including small ones) via both
-`Import > Geo > Normal > Import Hole 01 Geo` AND
-`Import > Lite > Normal > Import Hole 01 Lite`:
-
-- [ ] Every bunker has a visible dark lip ring around its edge
-- [ ] Lip gradient points the right way — darker/sand-adjacent near
-      bunker, fading to rough at outer edge
-- [ ] No Z-fighting between sand and lip on sloped bunkers
-- [ ] Lip boundary follows the bunker contour smoothly (no jaggies)
-- [ ] Small bunkers (shingle overlap) don't crash — fallback logs
-      warning if CDT fails
-- [ ] Large bunkers render correctly with lip
-- [ ] Both Geo and Lite produce equivalent output
-- [ ] `BunkerSurfaceInfo` component is on each bunker GameObject
-- [ ] No console errors or warnings (other than intentional fallback)
+**Target file:** `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`
+**Reference file:** `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
+(only for cross-checking — do not edit)
+**No pipeline changes.** `water.json` is fine.
 
 ---
 
-## Previous Task — Green Collar: Bake as Submesh of Green CDT
+### Part 1 — Shore constants at top of class
 
-Apply the same pattern that solved fairway fringe Z-fighting to greens:
-bake the collar (green fringe / first cut around the putting surface)
-into the green CDT mesh as a second submesh. Read
-`Docs/LESSONS_FRINGE_BORDER_MESHES.md` first — the four-piece recipe
-there is mandatory.
-
-### Why
-
-Greens currently render as a contour mesh overlay with no collar.
-Adding a collar as a SEPARATE overlay mesh would Z-fight on slopes
-(same problem fairway had). The proven fix is dilated CDT + original
-contour as internal constraint + centroid classification + duplicated
-boundary verts for per-material UVs.
-
-### Scope
-
-**Both importers** — `HoleGeoImporter.cs` AND `HoleLiteImporter.cs`.
-Match parity exactly (Lite uses 90° CCW rotation, Geo uses direct
-mapping — see lessons doc). `Re-import Current Hole` dispatches to
-either, so both must work.
-
-Touch only `CreateGreenMeshes` (and any helper it calls). Do not
-touch fairway, tee, bunker, water, or cart path code.
-
-### Implementation
-
-Mirror the fairway submesh pattern in `CreateGreenMeshes`:
-
-1. **Dilate green contour outward by `collarWidth`** (start with
-   `collarWidth = 0.6f` meters — adjustable). Run CDT on the dilated
-   shape, not the original.
-2. **Pass original green contour as internal CDT constraint** so
-   triangle edges align with the green/collar boundary (no jaggies).
-3. **Classify triangles by CENTROID** against the original contour.
-   Inside = green submesh, outside (in dilation ring) = collar submesh.
-4. **Duplicate boundary verts** referenced by collar triangles so
-   each material gets its own UVs.
-5. Set `subMeshCount = 2` and assign
-   `sharedMaterials = { greenMat, collarMat }`.
-
-### Materials & UVs
-
-- **Green submesh:** keep current green material and current UV
-  scheme. No change.
-- **Collar submesh:** new material slot. For now, reuse the fairway
-  fringe material (`T_Fairway_Mix` or whatever the fairway fringe
-  uses) with simple world-XZ tile UVs:
-  `uv = new Vector2(v.x / tileSize, v.z / tileSize)` — same recipe as
-  fairway fringe in the lessons doc. We can swap to a dedicated
-  "first cut" texture later; for now functional > pretty.
-
-### yOffset & Green Raise
-
-Real greens sit slightly above the surrounding turf (~10–20cm). Since
-green + collar are now one mesh, we can't just bump the whole mesh’s
-Y (that would raise the collar too). Instead, lift only the green-side
-verts with a smooth ramp through the collar so the boundary is a
-gentle slope, not a cliff.
-
-Constants:
-```csharp
-const float GreenRaiseMeters = 0.15f; // putting surface above collar
-const float CollarYOffset    = 0.03f; // same as current green yOffset
-```
-
-Per-vertex Y after terrain sampling, before mesh assignment:
+Current (HoleGeoImporter.cs, around lines 18–21):
 
 ```csharp
-// d = perpendicular distance from vert to the ORIGINAL green contour
-//     (positive both inside and outside; use DistanceToContour helper)
-// inside  = vert is inside original contour (use IsInsideContour)
-//
-// Inside the green: full raise.
-// In the collar ring: ramp from 0 at outer boundary to full raise
-//                     at inner boundary (the original contour).
-float raise;
-if (inside) {
-    raise = GreenRaiseMeters;
-} else {
-    float t = 1f - Mathf.Clamp01(d / collarWidth); // 1 at contour, 0 at outer
-    t = t * t * (3f - 2f * t);                      // smoothstep
-    raise = GreenRaiseMeters * t;
-}
-v.y = terrainY + CollarYOffset + raise;
+public static int ShoreRadius = 2;
+public static float ShoreDepthMeters = 0.1f;
 ```
 
-Result: outer collar edge sits at terrain + 3cm (matches fairway
-fringe), ramps smoothly up across the collar, green proper sits at
-terrain + 18cm. No cliff at the green/collar boundary, no terrain
-depression needed, splatmap untouched.
+Change to:
 
-**Important:** classify inside/outside by VERT position against the
-original contour, not by which submesh the vert belongs to. Boundary
-verts (the duplicated pair) should both compute the same Y — they sit
-exactly on the contour, so `d ≈ 0` and ramp `t ≈ 1`, giving full raise
-on both copies. That keeps the boundary watertight.
+```csharp
+public static int ShoreRadius = 10;
+public static float ShoreDepthMeters = 0.4f;
 
-### Fallback
-
-If dilated CDT fails (degenerate / self-intersecting on tight green
-shapes), retry with original contour and skip collar. Log a warning.
-A green without a collar is better than a crash.
-
-### Surface Detection — IMPORTANT (note from Cesar)
-
-The collar is a DIFFERENT gameplay surface (first cut / fringe) from
-the green proper — different ball roll, different putting rules.
-We need a way at runtime to tell which submesh the ball is on.
-
-**Do NOT solve this in this task — just don't paint us into a corner.**
-Leave a clean hook so we can wire it up later. Suggested approach
-(implement only the marked-up part now):
-
-- Tag the spawned green GameObject with submesh metadata. Add a tiny
-  MonoBehaviour `GreenSurfaceInfo` (new file, in `Assets/Scripts/Course/`):
-
-  ```csharp
-  using UnityEngine;
-  namespace Golfin.Course
-  {
-      // Attached to green GameObjects. Submesh 0 = putting surface,
-      // submesh 1 = collar (first cut). Used by ball physics to
-      // determine surface-specific roll/friction.
-      public class GreenSurfaceInfo : MonoBehaviour
-      {
-          public const int SubmeshGreen  = 0;
-          public const int SubmeshCollar = 1;
-      }
-  }
-  ```
-
-- Add `GreenSurfaceInfo` to the green GameObject in `CreateGreenMeshes`.
-- Triangle-to-submesh lookup at runtime is straightforward via
-  `MeshCollider` raycast → `RaycastHit.triangleIndex` → walk submesh
-  triangle ranges. We'll wire that into ball physics later — out of
-  scope here.
-
-That's it for surface detection in this task. Just the component and
-the constants. No physics changes, no ball code edits.
-
-### What NOT to Change
-
-- Fairway / tee / bunker / water / cart path mesh generation
-- Splatmap painting
-- Terrain depression
-- Ball physics, putting code, anything gameplay
-- Existing `CDTTriangulate` signature — if you added an optional
-  `innerConstraint` param for fairway, reuse it. Don't duplicate.
-
-### Verification
-
-Reimport hole 1 (a hole with a clearly visible green) via both
-`Import > Geo > Normal > Import Hole 01 Geo` AND
-`Import > Lite > Normal > Import Hole 01 Lite`:
-
-- [ ] Green has a visible collar ring around it (fairway-fringe-like
-      texture, ~0.6m wide)
-- [ ] No Z-fighting between green and collar on sloped greens
-- [ ] Collar boundary follows the green contour smoothly (no jaggies)
-- [ ] Sharp concave green shapes don't crash — fallback logs warning
-- [ ] Both Geo and Lite produce equivalent output
-- [ ] `GreenSurfaceInfo` component is on each green GameObject
-- [ ] No console errors or warnings (other than intentional fallback)
-- [ ] Green proper sits visibly raised above surrounding terrain (~15cm)
-- [ ] No cliff at green/collar boundary — it ramps smoothly
-- [ ] Outer collar edge sits flush with surrounding turf (no gap)
+// ─── Terrain Y offset — headroom below flat terrain for water bed.
+// Must be ≥ ShoreDepthMeters + water surface depth (0.05m) + underwater margin (0.3m)
+// so heightmap can represent the full water bed without clamping.
+private static float TerrainYOffset => ShoreDepthMeters;
+```
 
 ---
 
-## Previous Task — Cart Path Depression: Flat Interior + Outward Ramp
+### Part 2 — Use `TerrainYOffset` for terrain placement
 
-Two problems that must BOTH be solved:
-1. **Center splotch** — gradient ramp gave 0% drop at edges, terrain
-   poked through mesh interior on concave slopes. Fixed by flat drop.
-2. **Edge cliff** — flat 40cm drop creates a visible step at the
-   path boundary. NEW problem from the flat drop fix.
+In `ImportHoleInternal`, the terrain object is positioned using
+`ShoreDepthMeters`. Change it to use `TerrainYOffset`.
 
-**Solution: flat drop INSIDE the footprint + gradual ramp OUTSIDE.**
-
-Same pattern as water shore depression: full depression under the
-overlay, smoothstep ramp outside it that returns terrain to its
-original height over a short distance.
-
-### Implementation
-
-In `HoleGeoImporter.cs`, `DepressTerrainUnderOverlays()`, replace
-the ENTIRE cart path depression section (everything from the
-`cartDepress` array through the cart path application loop) with:
+Find:
 
 ```csharp
-// Cart path: full flat drop inside, outward ramp outside
-int cartRampCells = 8; // ramp width in heightmap cells (~1m)
-int cartDepressedCount = 0;
+terrainGO.transform.position = new Vector3(-terrainX / 2f, -ShoreDepthMeters, -terrainZ / 2f);
+```
 
-// Step 1: Distance transform OUTWARD from cart path boundary
-// (distance from nearest cart-path cell, for cells OUTSIDE the path)
-float[,] distFromCart = new float[hRes, hRes];
-for (int hz = 0; hz < hRes; hz++)
-    for (int hx = 0; hx < hRes; hx++)
-        distFromCart[hz, hx] = cartDepress[hz, hx] ? 0f : 99999f;
+Replace with:
 
-// Forward pass
-for (int hz = 0; hz < hRes; hz++)
-    for (int hx = 0; hx < hRes; hx++)
-    {
-        if (hx > 0) distFromCart[hz, hx] = Mathf.Min(
-            distFromCart[hz, hx], distFromCart[hz, hx - 1] + 1f);
-        if (hz > 0) distFromCart[hz, hx] = Mathf.Min(
-            distFromCart[hz, hx], distFromCart[hz - 1, hx] + 1f);
-    }
-// Backward pass
-for (int hz = hRes - 1; hz >= 0; hz--)
-    for (int hx = hRes - 1; hx >= 0; hx--)
-    {
-        if (hx < hRes - 1) distFromCart[hz, hx] = Mathf.Min(
-            distFromCart[hz, hx], distFromCart[hz, hx + 1] + 1f);
-        if (hz < hRes - 1) distFromCart[hz, hx] = Mathf.Min(
-            distFromCart[hz, hx], distFromCart[hz + 1, hx] + 1f);
-    }
+```csharp
+terrainGO.transform.position = new Vector3(-terrainX / 2f, -TerrainYOffset, -terrainZ / 2f);
+```
 
-// Step 2: Apply depression
-for (int hz = 0; hz < hRes; hz++)
+Do not touch `CreateTerrain`'s use of `ShoreDepthMeters` in
+`elevRange`/`normalizedFlat` — those compute headroom, which is correct.
+
+---
+
+### Part 3 — Rewrite `CreateWaterMeshes`
+
+Find the method `CreateWaterMeshes` (signature:
+`private static void CreateWaterMeshes(TerrainData terrainData, GameObject terrainGO, Transform parentRoot, string exportPath, string dataDir, string projectRoot, bool[,] holes)`).
+
+The method has TWO sections:
+1. The per-water-body mesh-building `foreach (var water in waterFile.water)` loop
+2. A trailing "Shore slope pass" section that builds `isWater` mask and depresses terrain
+
+**Delete section 2 entirely.** That work moves to `DepressTerrainUnderOverlays`
+(Part 4). Keep only the final `File.Copy` of water.json to Assets and the final
+`Debug.Log`.
+
+**Rewrite section 1 (the per-water-body loop):**
+
+Currently each iteration samples terrain height per vertex and sets
+`wy = terrainBaseY + terrainH - 0.1f` — this creates uneven water surface that
+seesaws along sloped shores.
+
+Replace the loop body with flat-CDT construction. Here is the complete
+replacement for the entire `foreach` body:
+
+```csharp
+foreach (var water in waterFile.water)
 {
-    for (int hx = 0; hx < hRes; hx++)
-    {
-        float dist = distFromCart[hz, hx];
+    if (water.contour == null || water.contour.Length < 3) continue;
 
-        if (cartDepress[hz, hx])
+    int n = water.contour.Length;
+
+    // 3A. Flat water Y = min terrain height across contour − 0.05m
+    float minTerrainH = float.MaxValue;
+    for (int i = 0; i < n; i++)
+    {
+        float wx = water.contour[i].x;  // Geo: no rotation
+        float wz = water.contour[i].z;
+        float th = terrain.SampleHeight(new Vector3(wx, 0, wz));
+        if (th < minTerrainH) minTerrainH = th;
+    }
+    float waterY = terrainBaseY + minTerrainH - 0.05f;
+
+    // 3B. CDT triangulation — same pattern as fairway/tee.
+    // Water doesn't need fine terrain conformance (flat surface), but CDT
+    // needs interior Steiner points for clean triangulation of large
+    // concave shapes. 2.0m grid spacing is plenty.
+    float tileSize = 10f; // world-UV tiling for URPWater shader
+    System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+        new Vector2(wx / tileSize, wz / tileSize);
+
+    var (rawVerts, uvs, tris) = CDTTriangulate(
+        water.contour, terrain, terrainBaseY, 0f, 2.0f, uvFunc);
+
+    if (rawVerts == null || tris == null || tris.Length < 3)
+    {
+        Debug.LogWarning($"[HoleGeoImporter] Water {water.id}: CDT failed, skipping");
+        continue;
+    }
+
+    // 3C. Flatten all vertex Y to waterY (CDT sampled terrain heights;
+    // overwrite them so the surface is perfectly flat).
+    for (int i = 0; i < rawVerts.Length; i++)
+        rawVerts[i].y = waterY;
+
+    // 3D. Center mesh at centroid (Y=0 origin pattern, same as fairway).
+    float cx = 0f, cz = 0f;
+    for (int i = 0; i < rawVerts.Length; i++)
+    { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+    cx /= rawVerts.Length; cz /= rawVerts.Length;
+    Vector3 centroid = new Vector3(cx, 0f, cz);
+
+    for (int i = 0; i < rawVerts.Length; i++)
+        rawVerts[i] -= centroid;
+
+    // 3E. Winding check — ensure top faces up.
+    if (tris.Length >= 3)
+    {
+        Vector3 a = rawVerts[tris[0]];
+        Vector3 b = rawVerts[tris[1]];
+        Vector3 c = rawVerts[tris[2]];
+        float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+        if (cross > 0)
         {
-            // INSIDE path: full flat drop
-            heights[hz, hx] = Mathf.Max(0f,
-                heights[hz, hx] - dropNormalized);
-            cartDepressedCount++;
+            for (int t = 0; t < tris.Length; t += 3)
+            { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
         }
-        else if (dist > 0 && dist <= cartRampCells)
+    }
+
+    var mesh = new Mesh();
+    mesh.name = $"Water_{water.id}";
+    mesh.vertices = rawVerts;
+    mesh.uv = uvs;
+    mesh.triangles = tris;
+    mesh.RecalculateNormals();
+    mesh.RecalculateBounds();
+
+    var go = new GameObject($"Water_{water.id}");
+    go.transform.position = centroid;
+    go.AddComponent<MeshFilter>().sharedMesh = mesh;
+    go.AddComponent<MeshRenderer>().sharedMaterial = waterMat;
+
+    AddCleanMeshCollider(go, mesh);
+
+    var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+    marker.surfaceType = Golfin.Course.SurfaceType.Water;
+
+    go.transform.SetParent(waterRoot.transform);
+
+    Debug.Log($"[HoleGeoImporter] Water {water.id}: {n} contour verts, " +
+              $"{rawVerts.Length} CDT verts, {tris.Length / 3} tris, " +
+              $"waterY={waterY:F2}");
+}
+```
+
+**Notes:**
+- Keep the two existing `Debug.Log` lines at method top
+  (`terrainBaseY={...}` / `ShoreDepthMeters={...}`). They're useful.
+- Keep the `waterRoot`/`terrain`/`terrainBaseY`/`waterMat` setup at top
+  of the method — unchanged.
+- The old section 2 (shore slope, `isWater` mask, chamfer distance,
+  `underwaterDrop`, `terrainData.SetHeights`) is DELETED.
+
+---
+
+### Part 4 — Add water handling to `DepressTerrainUnderOverlays`
+
+`DepressTerrainUnderOverlays` currently handles fairway + tee + cart path.
+Add water.
+
+**4A. Add water contours to the `depress` bool[,] array.**
+
+In `DepressTerrainUnderOverlays`, find the tee contour section
+(immediately after fairway, uses `zone-contours.json` and the
+`data.zones.tee` loop with `MarkContourCells(region.contour, depress, ...)`).
+
+Immediately AFTER the closing brace of that tee block, BEFORE the cart path
+section (the `cartDepress` block), insert:
+
+```csharp
+// Water contours — use same flat depression as fairway/tee
+// but with shore slope ramp applied afterward.
+string waterPath = Path.Combine(exportPath, "water.json");
+if (File.Exists(waterPath))
+{
+    var waterData = JsonUtility.FromJson<WaterFileData>(
+        File.ReadAllText(waterPath));
+    if (waterData.water != null)
+    {
+        foreach (var w in waterData.water)
         {
-            // OUTSIDE path within ramp zone: smoothstep from
-            // full drop (at boundary) to zero drop (at rampCells)
-            float t = dist / cartRampCells;
-            t = t * t * (3f - 2f * t); // smoothstep
-            float rampDrop = dropNormalized * (1f - t);
-            heights[hz, hx] = Mathf.Max(0f,
-                heights[hz, hx] - rampDrop);
-            cartDepressedCount++;
+            if (w.contour != null && w.contour.Length >= 3)
+                MarkContourCells(w.contour, depress,
+                    hRes, terrainPos, terrainSize, 0f);
+                    // inset=0 — depress right up to the contour edge
         }
     }
 }
 ```
 
-### Key Difference from Previous Gradient
+This makes water cells receive the standard `OverlayDepressionMeters` (0.40m)
+flat drop in the existing apply loop. No separate water-depression needed.
 
-The OLD gradient ramped INSIDE the footprint (edge=0%, center=100%)
-→ mesh edges sat on un-depressed terrain → center splotch.
+**4B. Add shore slope pass after the existing apply loop.**
 
-The NEW ramp is OUTSIDE the footprint. Inside = 100% flat drop
-everywhere. The ramp only applies to cells beyond the path boundary,
-gradually returning to undepressed terrain. The mesh sits on fully
-depressed terrain everywhere. The terrain around the path gently
-slopes down to meet the depressed level instead of a cliff.
+The existing apply loop ends with `depressedCount += cartDepressedCount;` and
+then `terrainData.SetHeights(0, 0, heights);` followed by a Debug.Log.
 
-### What NOT to Change
+**BEFORE** `terrainData.SetHeights(0, 0, heights);`, insert the shore slope
+pass:
 
-- The `cartDepress` mask construction (spline polygon marking)
-- `_splineCartPathPolygons` population
-- Fairway/tee depression (already working)
-- Water shore depression
-- Spline mesh generation
+```csharp
+// ─── Shore slope pass: gradual ramp outside water contours ─────────
+// Creates a smooth transition from shoreline (full ShoreDepthMeters drop)
+// to surrounding terrain (no drop) over ShoreRadius cells.
+// Without this, water edges would cliff against un-depressed terrain.
+string waterShorePath = Path.Combine(exportPath, "water.json");
+int shoreCount = 0;
+if (File.Exists(waterShorePath) && ShoreRadius > 0 && ShoreDepthMeters > 0f)
+{
+    // 4B-1. Build water-only mask from water contours.
+    bool[,] waterMask = new bool[hRes, hRes];
+    var waterShoreData = JsonUtility.FromJson<WaterFileData>(
+        File.ReadAllText(waterShorePath));
+    if (waterShoreData.water != null)
+    {
+        foreach (var w in waterShoreData.water)
+        {
+            if (w.contour != null && w.contour.Length >= 3)
+                MarkContourCells(w.contour, waterMask,
+                    hRes, terrainPos, terrainSize, 0f);
+        }
+    }
 
-### Verification
+    // 4B-2. Chamfer distance transform from water boundary (cells not in water).
+    float[,] distToWater = new float[hRes, hRes];
+    for (int z = 0; z < hRes; z++)
+        for (int x = 0; x < hRes; x++)
+            distToWater[z, x] = waterMask[z, x] ? 0f : float.MaxValue;
 
-Reimport the hole with the splotch AND the cliff:
+    // Forward pass
+    for (int z = 0; z < hRes; z++)
+        for (int x = 0; x < hRes; x++)
+        {
+            if (x > 0)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z, x - 1] + 1f);
+            if (z > 0)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z - 1, x] + 1f);
+            if (x > 0 && z > 0)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z - 1, x - 1] + 1.414f);
+            if (x < hRes - 1 && z > 0)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z - 1, x + 1] + 1.414f);
+        }
+    // Backward pass
+    for (int z = hRes - 1; z >= 0; z--)
+        for (int x = hRes - 1; x >= 0; x--)
+        {
+            if (x < hRes - 1)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z, x + 1] + 1f);
+            if (z < hRes - 1)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z + 1, x] + 1f);
+            if (x < hRes - 1 && z < hRes - 1)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z + 1, x + 1] + 1.414f);
+            if (x > 0 && z < hRes - 1)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z + 1, x - 1] + 1.414f);
+        }
 
-- [ ] No terrain splotch showing through cart path interior
-- [ ] No visible cliff at cart path edges
-- [ ] Terrain gently slopes into the path boundary
-- [ ] Cart path mesh sits cleanly above depressed terrain
-- [ ] Other overlays unaffected
-- [ ] No console errors
+    // 4B-3. Apply ramp OUTSIDE water (full drop at boundary,
+    //       zero drop at ShoreRadius). Skip water cells (already
+    //       depressed in step 4A) and fairway/tee/cart cells
+    //       (already fully depressed — another drop would stack).
+    float shoreDropNorm = ShoreDepthMeters / elevRange;
+    int shoreRadiusCells = ShoreRadius;
 
-✅ DONE: 2026-04-16 — Flat inside + 8-cell outward smoothstep ramp implemented. Re-import to verify no splotch and no cliff.
+    for (int z = 0; z < hRes; z++)
+    {
+        for (int x = 0; x < hRes; x++)
+        {
+            if (waterMask[z, x]) continue;           // water cell: skip
+            if (depress[z, x]) continue;             // fairway/tee/water: skip
+            if (cartDepress[z, x]) continue;         // cart path: skip
+
+            float dist = distToWater[z, x];
+            if (dist <= 0f || dist > shoreRadiusCells) continue;
+
+            // smoothstep: 1 at boundary, 0 at shoreRadius
+            float t = 1f - (dist / shoreRadiusCells);
+            t = t * t * (3f - 2f * t);
+            float drop = shoreDropNorm * t;
+
+            heights[z, x] = Mathf.Max(0f, heights[z, x] - drop);
+            shoreCount++;
+        }
+    }
+}
+```
+
+Then update the final Debug.Log to include shore:
+
+```csharp
+Debug.Log($"[HoleGeoImporter] Terrain depression: {depressedCount}" +
+          $" cells lowered by {OverlayDepressionMeters:F2}m" +
+          $" (cart path: {cartDepressedCount} cells," +
+          $" water shore ramp: {shoreCount} cells)");
+```
+
+**Important:** The variable `cartDepress` is defined inside
+`DepressTerrainUnderOverlays` and is in scope at the insertion point — it's
+created above the fairway/tee sections. Verify the variable is accessible
+where you insert the shore pass. If for any reason the cart path mask is
+scoped differently in Geo, drop the `if (cartDepress[z, x]) continue;` line
+(worst case: cart-path grass gets an extra shore drop near water, visually
+harmless).
 
 ---
 
-✅ DONE: 2026-04-16 — Green collar CDT complete. Dilated CDT (0.6m), internal constraint, centroid classification, boundary vert duplication, GreenSurfaceInfo hook, MAT_Fringe collar with distance UV (light side faces green), 8cm smoothstep raise on putting surface.
+### Part 5 — Update water material depth settings
 
-✅ DONE: 2026-04-16 — Bunker lip submesh complete. Ring-based lip band (0.4m) baked as submesh 1 using OffsetContourOutward. Inner u=0 (sand side), outer u=1 (rough side). BunkerSurfaceInfo component attached. Both Geo and Lite importers updated for parity.
+In `CreateWaterMaterial`, find:
+
+```csharp
+mat.SetFloat("_DepthStart", 0f);
+mat.SetFloat("_DepthEnd", 0.3f);
+```
+
+Change to:
+
+```csharp
+mat.SetFloat("_DepthStart", 0f);
+mat.SetFloat("_DepthEnd", 0.8f);
+```
+
+This gives the depth-based color gradient room to work with the new 0.4m
+shore depression.
+
+---
+
+### Execution order
+
+1. Part 1 (constants)
+2. Part 2 (terrain position)
+3. Part 5 (material — trivial, do it while you're near the constants area)
+4. Part 3 (CreateWaterMeshes rewrite)
+5. Part 4 (DepressTerrainUnderOverlays — 4A then 4B)
+
+---
+
+### Verification
+
+Re-import Hole 07 Geo: `Import > Geo > Normal > Import Hole 07 Geo`
+
+- [ ] Water surface is perfectly flat (single Y per body, no seesaw)
+- [ ] Water edges line up with terrain edges (no dark cliff strip)
+- [ ] Shore slopes gradually into water
+- [ ] Depth-based color: shallower teal near edges, darker blue toward center
+- [ ] No z-fighting between water mesh and terrain
+- [ ] Fairways, tees, bunkers, greens, cart paths unaffected
+
+Then regression check with a hole without water:
+
+- [ ] `Import Hole 01 Geo` completes without errors (Hole 1 has no water —
+      make sure the water file handling degrades cleanly)
+
+And a hole with multiple water bodies:
+
+- [ ] `Import Hole 12 Geo` — waterways + pond, check both look flat
+
+---
+
+### Do NOT change
+
+- `CreateWaterMaterial` shader selection (URPWater/Standard)
+- Any other CreateWaterMeshes setup code (waterRoot, terrain, terrainBaseY,
+  waterMat vars, File.Copy at end)
+- Fairway/tee/green/bunker/cart path logic
+- UHoleGeo export pipeline — `water.json` is fine as-is
+- The disabled `if (false && loadedRaw)` boundary propagation block
+
+---
 
 ## Completed Tasks
-✅ 2026-04-16 — Bunker lip baked as submesh 1 of bunker mesh (0.4m ring, MAT_Bunkers_Dark, BunkerSurfaceInfo)
-✅ 2026-04-16 — Cart path outward smoothstep ramp (8 cells) — flat drop inside + gradual return outside
-✅ 2026-04-16 — Cart path flat depression (fixed center splotch BUT created edge cliff — needs outward ramp)
-✅ 2026-04-16 — Spline cart path depression footprint (matched to mesh, gradient ramp broke center)
-✅ 2026-04-16 — Spline cart path meshes (smoother curves, keeper)
+
+✅ DONE: 2026-04-17 — Water rework ported to HoleGeoImporter: flat CDT, TerrainYOffset, water depression in DepressTerrainUnderOverlays, shore slope ramp, _DepthEnd 0.8
+✅ DONE: 2026-04-16 — Flat inside + 8-cell outward smoothstep ramp implemented
+✅ DONE: 2026-04-16 — Green collar CDT complete
+✅ DONE: 2026-04-16 — Bunker lip submesh complete
+✅ 2026-04-16 — Bunker lip baked as submesh 1
+✅ 2026-04-16 — Cart path outward smoothstep ramp (8 cells)
+✅ 2026-04-16 — Cart path flat depression
+✅ 2026-04-16 — Spline cart path depression footprint
+✅ 2026-04-16 — Spline cart path meshes
 ✅ 2026-04-16 — Fringe/border baked into parent CDT mesh as submesh
-✅ 2026-04-14 — Water rework complete (6 iterations)
+✅ 2026-04-14 — Water rework complete (HoleLiteImporter only — Geo ported 2026-04-17)
 ✅ 2026-04-13 — Cart path flat depression + spine fixes
 ✅ 2026-04-13 — Natural OB↔Rough transition + Smooth OB
 ✅ 2026-04-12 — CDT triangulation for fairway/tee/cart path meshes
