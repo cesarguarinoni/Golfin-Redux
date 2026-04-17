@@ -641,42 +641,6 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
     console.log(`  Ravine carving: sigma=${RAVINE_KERNEL_SIGMA_M}m (${sigmaCells.toFixed(1)} cells), ` +
       `kernel radius=${kernelRadius} cells, size=${kernelSize}`);
 
-    // Build a soft playable mask by blurring isPlayable with the same
-    // kernel. Value = 1.0 deep inside playable, 0.0 in pure OB.
-    // Multiply (1 - mask) into the carve so it fades to zero at the
-    // playable boundary — no step or cliff where rough meets OB.
-    const playableSoftMask = new Float64Array(TOTAL_CELLS);
-    {
-      const psmH = new Float64Array(TOTAL_CELLS);
-      // Horizontal pass
-      for (let hy = 0; hy < RES; hy++) {
-        const rowBase = hy * RES;
-        for (let hx = 0; hx < RES; hx++) {
-          let sum = 0;
-          for (let k = -kernelRadius; k <= kernelRadius; k++) {
-            let sx = hx + k;
-            if (sx < 0) sx = 0;
-            else if (sx >= RES) sx = RES - 1;
-            sum += isPlayable[rowBase + sx] * kernel[k + kernelRadius];
-          }
-          psmH[rowBase + hx] = sum;
-        }
-      }
-      // Vertical pass
-      for (let hx = 0; hx < RES; hx++) {
-        for (let hy = 0; hy < RES; hy++) {
-          let sum = 0;
-          for (let k = -kernelRadius; k <= kernelRadius; k++) {
-            let sy = hy + k;
-            if (sy < 0) sy = 0;
-            else if (sy >= RES) sy = RES - 1;
-            sum += psmH[sy * RES + hx] * kernel[k + kernelRadius];
-          }
-          playableSoftMask[hy * RES + hx] = sum;
-        }
-      }
-    }
-
     // Reusable buffers for blur
     const bufA = new Float64Array(TOTAL_CELLS);
     const bufB = new Float64Array(TOTAL_CELLS);
@@ -721,11 +685,14 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
         if (bufA[i] < minAfter) minAfter = bufA[i];
       }
 
-      // Rescale so deepest = targetDepth, then feather out at playable boundaries
+      // Rescale so deepest = targetDepth and apply to full heightmap.
+      // The Gaussian naturally tapers to ~1% at 3*sigma from the region
+      // edge, so the fairway effect is negligible while the OB/rough
+      // transition is smooth with no artificial step.
       if (minAfter < -1e-6) {
         const rescale = region.targetDepth / minAfter;
         for (let i = 0; i < TOTAL_CELLS; i++) {
-          heightmap[i] += bufA[i] * rescale * (1 - playableSoftMask[i]);
+          heightmap[i] += bufA[i] * rescale;
         }
       }
     }
