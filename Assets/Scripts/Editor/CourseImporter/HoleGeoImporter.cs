@@ -3108,8 +3108,12 @@ namespace Golfin.CourseImport
                 if (grData.greens != null)
                     foreach (var gr in grData.greens)
                         if (gr.contour != null && gr.contour.Length >= 3)
-                            MarkContourCells(gr.contour, skipMask,
+                        {
+                            var grPts = System.Array.ConvertAll(gr.contour,
+                                v => new ContourPoint { x = v.x, z = v.z });
+                            MarkContourCells(grPts, skipMask,
                                 hRes, terrainPos, terrainSize, 0f);
+                        }
             }
 
             // Skirt sizing
@@ -3266,8 +3270,12 @@ namespace Golfin.CourseImport
                 if (grData.greens != null)
                     foreach (var gr in grData.greens)
                         if (gr.contour != null && gr.contour.Length >= 3)
-                            MarkContourCells(gr.contour, depress,
+                        {
+                            var grPts = System.Array.ConvertAll(gr.contour,
+                                v => new ContourPoint { x = v.x, z = v.z });
+                            MarkContourCells(grPts, depress,
                                 hRes, terrainPos, terrainSize);
+                        }
             }
 
             // Cart path depression — separate array for gradient ramp.
