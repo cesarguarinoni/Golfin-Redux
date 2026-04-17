@@ -344,7 +344,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
   // A large sigma removes 5m DEM grid noise while preserving real macro
   // topography in its actual orientation — no spline axis, no projection,
   // no synthetic surface, no diagonal artifacts.
-  const TERRAIN_SMOOTH_SIGMA_M = 10.0;
+  const TERRAIN_SMOOTH_SIGMA_M = 20.0;
   const tsmMetersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
   const tsmSigmaCells = TERRAIN_SMOOTH_SIGMA_M / tsmMetersPerCell;
   const tsmRadius = Math.max(1, Math.ceil(3 * tsmSigmaCells));
