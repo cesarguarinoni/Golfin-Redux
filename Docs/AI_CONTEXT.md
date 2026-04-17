@@ -22,6 +22,21 @@
 
 ---
 
+## Session Changes (2026-04-17 — Tee Platforms)
+
+### Completed
+- **Flat tee platforms (Parts A+B+C):** Each `zones.tee[]` polygon is now an absolute-Y flat platform with a 2m terrain skirt. Multi-tee holes get independent platforms at their own elevation. Tee meshes' interior verts are flattened and border verts resampled against the ramped terrain post-depression.
+  - `TeeSkirtMeters = 2.0f`, `TeeMeshRegistration` struct, `_teePlatformYByRegionId`, `_teeMeshRegistryByRegionId` added
+  - Tee removed from shared `depress` mask (no more tilted tee via relative drop)
+  - `PatchTeeMeshBorderVerts()` called from `ImportHoleInternal` after `DepressTerrainUnderOverlays`
+  - Log extended with `tee platforms:` and `tee skirts:` counts
+
+### Still Open
+- Verify on stress-test holes: Hole 4 (2 tees, different elevations), Hole 1 (3 tees), Hole 7 (tee near water), Hole 18 (6 tees)
+- Tuning `TeeSkirtMeters` if mounds look too steep/gradual
+
+---
+
 ## Session Changes (2026-04-15)
 
 ### Completed
