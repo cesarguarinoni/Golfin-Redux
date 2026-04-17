@@ -3135,6 +3135,7 @@ namespace Golfin.CourseImport
             // height leaves the upslope bed above waterY.
             bool[,] waterMask = new bool[hRes, hRes];
             float[,] waterFloorY = new float[hRes, hRes];
+            float[,] waterSurfaceY = new float[hRes, hRes];
             bool hasWater = false;
 
             string waterPath = Path.Combine(exportPath, "water.json");
@@ -3163,6 +3164,9 @@ namespace Golfin.CourseImport
                         float floorWorldY = minTerrainH - 0.05f - UnderwaterDepthMeters;
                         float floorNorm = Mathf.Clamp01(floorWorldY / elevRange);
 
+                        float surfaceWorldY = minTerrainH - 0.05f;
+                        float surfaceNorm = Mathf.Clamp01(surfaceWorldY / elevRange);
+
                         bool[,] bodyMask = new bool[hRes, hRes];
                         MarkContourCells(w.contour, bodyMask,
                             hRes, terrainPos, terrainSize, 0f);
@@ -3173,6 +3177,7 @@ namespace Golfin.CourseImport
                                 {
                                     waterMask[z, x] = true;
                                     waterFloorY[z, x] = floorNorm;
+                                    waterSurfaceY[z, x] = surfaceNorm;
                                 }
 
                         hasWater = true;
@@ -3222,48 +3227,75 @@ namespace Golfin.CourseImport
             int shoreCount = 0;
             if (hasWater && ShoreRadius > 0 && ShoreDepthMeters > 0f)
             {
-                // Chamfer distance transform from water boundary.
+                // Joint chamfer: distToWater + nearest-body surfaceY propagation.
                 float[,] distToWater = new float[hRes, hRes];
+                float[,] nearestSurfaceY = new float[hRes, hRes];
                 for (int z = 0; z < hRes; z++)
                     for (int x = 0; x < hRes; x++)
+                    {
                         distToWater[z, x] = waterMask[z, x] ? 0f : float.MaxValue;
+                        nearestSurfaceY[z, x] = waterSurfaceY[z, x];
+                    }
 
                 // Forward pass
                 for (int z = 0; z < hRes; z++)
                     for (int x = 0; x < hRes; x++)
                     {
                         if (x > 0)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x],
-                                distToWater[z, x - 1] + 1f);
+                        {
+                            float cand = distToWater[z, x - 1] + 1f;
+                            if (cand < distToWater[z, x])
+                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z, x - 1]; }
+                        }
                         if (z > 0)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x],
-                                distToWater[z - 1, x] + 1f);
+                        {
+                            float cand = distToWater[z - 1, x] + 1f;
+                            if (cand < distToWater[z, x])
+                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z - 1, x]; }
+                        }
                         if (x > 0 && z > 0)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x],
-                                distToWater[z - 1, x - 1] + 1.414f);
+                        {
+                            float cand = distToWater[z - 1, x - 1] + 1.414f;
+                            if (cand < distToWater[z, x])
+                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z - 1, x - 1]; }
+                        }
                         if (x < hRes - 1 && z > 0)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x],
-                                distToWater[z - 1, x + 1] + 1.414f);
+                        {
+                            float cand = distToWater[z - 1, x + 1] + 1.414f;
+                            if (cand < distToWater[z, x])
+                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z - 1, x + 1]; }
+                        }
                     }
                 // Backward pass
                 for (int z = hRes - 1; z >= 0; z--)
                     for (int x = hRes - 1; x >= 0; x--)
                     {
                         if (x < hRes - 1)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x],
-                                distToWater[z, x + 1] + 1f);
+                        {
+                            float cand = distToWater[z, x + 1] + 1f;
+                            if (cand < distToWater[z, x])
+                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z, x + 1]; }
+                        }
                         if (z < hRes - 1)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x],
-                                distToWater[z + 1, x] + 1f);
+                        {
+                            float cand = distToWater[z + 1, x] + 1f;
+                            if (cand < distToWater[z, x])
+                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z + 1, x]; }
+                        }
                         if (x < hRes - 1 && z < hRes - 1)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x],
-                                distToWater[z + 1, x + 1] + 1.414f);
+                        {
+                            float cand = distToWater[z + 1, x + 1] + 1.414f;
+                            if (cand < distToWater[z, x])
+                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z + 1, x + 1]; }
+                        }
                         if (x > 0 && z < hRes - 1)
-                            distToWater[z, x] = Mathf.Min(distToWater[z, x],
-                                distToWater[z + 1, x - 1] + 1.414f);
+                        {
+                            float cand = distToWater[z + 1, x - 1] + 1.414f;
+                            if (cand < distToWater[z, x])
+                            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z + 1, x - 1]; }
+                        }
                     }
 
-                float shoreDropNorm = ShoreDepthMeters / elevRange;
                 int shoreRadiusCells = ShoreRadius;
 
                 for (int z = 0; z < hRes; z++)
@@ -3276,12 +3308,21 @@ namespace Golfin.CourseImport
                         float dist = distToWater[z, x];
                         if (dist <= 0f || dist > shoreRadiusCells) continue;
 
-                        float t = 1f - (dist / shoreRadiusCells);
-                        t = t * t * (3f - 2f * t);
-                        float drop = shoreDropNorm * t;
+                        // t = 0 at boundary, 1 at shoreRadius
+                        float t = dist / shoreRadiusCells;
+                        t = t * t * (3f - 2f * t); // smoothstep
 
-                        heights[z, x] = Mathf.Max(0f, heights[z, x] - drop);
-                        shoreCount++;
+                        // Absolute lerp: boundary → water surface, shoreRadius → original height.
+                        float waterY = nearestSurfaceY[z, x];
+                        float originalH = heights[z, x];
+                        float targetH = Mathf.Lerp(waterY, originalH, t);
+
+                        // Only lower — never raise a natural low spot.
+                        if (targetH < originalH)
+                        {
+                            heights[z, x] = Mathf.Max(0f, targetH);
+                            shoreCount++;
+                        }
                     }
             }
 
