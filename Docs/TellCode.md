@@ -7,6 +7,151 @@
 
 ---
 
+## Previous Task — Smooth Shore Ramp Stripes (Hole 7 Geo)
+
+Absolute-target lerp works — no more cliff. But the shore ramp now shows
+vertical comb-like stripes running from the waterline up the slope.
+
+**Root cause:** The chamfer distance transform is a discrete approximation
+(1.0 for axial, 1.414 for diagonal). Along a curved water boundary, the
+forward+backward chamfer walks produce subtle directional banding in the
+distance field — cell-to-cell variations of ~0.05 in `t`. With the old
+ramp (0.4m max drop), 0.05 * 0.4m = 2cm — invisible. With the new
+absolute lerp (can span 2m+ on slopes), 0.05 * 2m = 10cm — very visible
+stripes.
+
+**Fix:** Blur the ramp heights after computing them. A light box-blur
+over the ramp zone averages out the chamfer quantization without
+damaging the overall ramp shape. Skip water cells and already-depressed
+cells during the blur so we don't smear water depth or fairway edges.
+
+**Target file:** `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`
+**No pipeline changes.**
+
+---
+
+### Change: Build a rampMask + add masked blur pass
+
+**Step 1 — Build `rampMask` during the shore lerp loop.**
+
+The existing shore lerp loop writes `heights[z, x]` and increments
+`shoreCount`. Add a `rampMask` bool[,] that tracks which cells the ramp
+touched.
+
+Just before the shore lerp loop (inside the `if (hasWater && ShoreRadius > 0 && ShoreDepthMeters > 0f)` block, after the joint chamfer transform), add:
+
+```csharp
+bool[,] rampMask = new bool[hRes, hRes];
+```
+
+Inside the existing lerp loop, in the `if (targetH < originalH)` branch
+where `heights[z, x]` is assigned, also set `rampMask[z, x] = true`:
+
+```csharp
+if (targetH < originalH)
+{
+    heights[z, x] = Mathf.Max(0f, targetH);
+    rampMask[z, x] = true;   // NEW
+    shoreCount++;
+}
+```
+
+**Step 2 — Add a 3-iteration masked box blur after the lerp loop.**
+
+Still inside the `if (hasWater ...)` block, immediately after the lerp
+loop closes, add:
+
+```csharp
+// Masked box blur over ramp cells only.
+// 3 iterations ≈ Gaussian with ~5x5 effective kernel.
+// Kills the chamfer quantization stripes (~10cm variation on 2m slopes).
+float[,] tmpHeights = new float[hRes, hRes];
+for (int pass = 0; pass < 3; pass++)
+{
+    // Snapshot current heights
+    for (int z = 0; z < hRes; z++)
+        for (int x = 0; x < hRes; x++)
+            tmpHeights[z, x] = heights[z, x];
+
+    for (int z = 0; z < hRes; z++)
+    {
+        for (int x = 0; x < hRes; x++)
+        {
+            if (!rampMask[z, x]) continue;
+
+            // 3x3 box average; skip water/depressed neighbors so their
+            // values don't leak into the ramp zone.
+            float sum = 0f;
+            int count = 0;
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                int nz = z + dz;
+                if (nz < 0 || nz >= hRes) continue;
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    int nx = x + dx;
+                    if (nx < 0 || nx >= hRes) continue;
+                    if (waterMask[nz, nx]) continue;
+                    if (depress[nz, nx]) continue;
+                    if (cartDepress[nz, nx]) continue;
+                    sum += tmpHeights[nz, nx];
+                    count++;
+                }
+            }
+            if (count > 0)
+                heights[z, x] = sum / count;
+        }
+    }
+}
+```
+
+---
+
+### Why a blur works
+
+- Chamfer distance has ~1-2% error bands aligned with the forward-pass
+  walk direction. Cells in the bands differ from their neighbors by small
+  amounts; across a 2m-span ramp that produces visible stripes.
+- A box blur averages each cell with its 8 neighbors — exactly the cells
+  that sampled the correct distance in one of the two chamfer passes.
+  Three iterations widens the effective kernel to ~5×5.
+- We only blur ramp cells, so water, fairway, tee, cart path, and
+  untouched terrain stay pixel-perfect.
+- We skip water/depressed neighbors in the kernel sum so depression
+  depth doesn't bleed up into the ramp (which would re-cliff the
+  boundary).
+
+---
+
+### Verification
+
+Re-import Hole 07 Geo: `Import > Geo > Normal > Import Hole 07 Geo`
+
+- [ ] No vertical stripes on the shore ramp
+- [ ] Ramp still smooth from shoreline to terrain
+- [ ] No cliff (regression check)
+- [ ] Water surface flat (regression check)
+- [ ] Full water mesh visible (regression check)
+
+Regression check:
+
+- [ ] `Import Hole 01 Geo` — no errors
+- [ ] `Import Hole 12 Geo` — multi-body still clean
+
+If stripes persist with 3 passes, raise to 5. If ramp looks muddy, drop
+to 2.
+
+---
+
+### Do NOT change
+
+- Everything from the previous three water tasks
+- The chamfer distance transform itself (blur fixes its output, not the
+  algorithm)
+- Shore constants
+
+---
+
 ## Previous Task — Shore Ramp Absolute Target (Hole 7 Geo Cliff)
 
 Water is no longer hidden — but there's now a ~1.6m vertical cliff at
@@ -979,6 +1124,7 @@ And a hole with multiple water bodies:
 
 ## Completed Tasks
 
+✅ DONE: 2026-04-17 — Masked 3-pass box blur on rampMask cells to kill chamfer quantization stripes
 ✅ DONE: 2026-04-17 — Absolute-target shore ramp: waterSurfaceY per body, joint chamfer propagates nearestSurfaceY, lerp replaces fixed-drop
 ✅ DONE: 2026-04-17 — Absolute water floor for sloped contours: per-body floorNorm, waterMask separate from depress, fairway/cart loops skip water cells, shore reuses waterMask
 ✅ DONE: 2026-04-17 — Water rework ported to HoleGeoImporter: flat CDT, TerrainYOffset, water depression in DepressTerrainUnderOverlays, shore slope ramp, _DepthEnd 0.8
