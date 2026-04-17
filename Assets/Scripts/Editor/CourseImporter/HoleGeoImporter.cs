@@ -3302,8 +3302,8 @@ namespace Golfin.CourseImport
                 // spokes in distToWater. A Gaussian blur on the continuous distance
                 // values produces sub-cell-accurate distances without jagged spokes.
                 {
-                    const int blurRadius = 3;
-                    const float blurSigma = 2.0f;
+                    const int blurRadius = 4;
+                    const float blurSigma = 3.0f;
                     int kernelSize = blurRadius * 2 + 1;
                     float[] kernel = new float[kernelSize];
                     float kernelSum = 0f;
