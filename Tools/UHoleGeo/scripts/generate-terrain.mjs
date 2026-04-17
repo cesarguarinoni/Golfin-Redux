@@ -334,138 +334,66 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
     if (rawDem[i] > rawMax) rawMax = rawDem[i];
   }
 
-  // Fit ONE quadratic surface to all playable zones combined
+  // Playable zones set — used by the ravine carving block below
   const playableZones = new Set([
     ZONES.fairway, ZONES.green, ZONES.tee_box, ZONES.bunker,
     ZONES.semi_rough, ZONES.cart_path, ZONES.rough,
   ]);
 
-  const surfacePoints = [];
-  for (let hy = 0; hy < RES; hy++) {
-    for (let hx = 0; hx < RES; hx++) {
-      const nx = hx / (RES - 1);
-      const ny = hy / (RES - 1);
-      const zx = Math.min(zw - 1, Math.floor(nx * (zw - 1)));
-      const zy = Math.min(zh - 1, Math.floor(ny * (zh - 1)));
-      const zone = zoneGrid[zy * zw + zx];
-
-      if (playableZones.has(zone)) {
-        const h = rawDem[hy * RES + hx];
-        if (h > -9000 && !isNaN(h)) {
-          surfacePoints.push({ x: hx, y: hy, h });
-        }
-      }
+  // Build heightmap as a Gaussian-smoothed rawDem.
+  // A large sigma removes 5m DEM grid noise while preserving real macro
+  // topography in its actual orientation — no spline axis, no projection,
+  // no synthetic surface, no diagonal artifacts.
+  const TERRAIN_SMOOTH_SIGMA_M = 10.0;
+  const tsmMetersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
+  const tsmSigmaCells = TERRAIN_SMOOTH_SIGMA_M / tsmMetersPerCell;
+  const tsmRadius = Math.max(1, Math.ceil(3 * tsmSigmaCells));
+  const tsmKernelSize = 2 * tsmRadius + 1;
+  const tsmKernel = new Float64Array(tsmKernelSize);
+  {
+    const s2 = 2 * tsmSigmaCells * tsmSigmaCells;
+    let kSum = 0;
+    for (let i = 0; i < tsmKernelSize; i++) {
+      const x = i - tsmRadius;
+      tsmKernel[i] = Math.exp(-(x * x) / s2);
+      kSum += tsmKernel[i];
     }
+    for (let i = 0; i < tsmKernelSize; i++) tsmKernel[i] /= kSum;
   }
 
-  const holeSurface = fitQuadratic(surfacePoints);
-  const slopeX = (holeSurface.d * (RES - 1)).toFixed(2);
-  const slopeY = (holeSurface.e * (RES - 1)).toFixed(2);
-  const curveX = (holeSurface.a * (RES - 1) * (RES - 1)).toFixed(2);
-  const curveY = (holeSurface.b * (RES - 1) * (RES - 1)).toFixed(2);
-  console.log(`  Quadratic surface: ${surfacePoints.length} pts, ` +
-    `slope dX=${slopeX}m dY=${slopeY}m, ` +
-    `curve dX²=${curveX}m dY²=${curveY}m`);
-
-  // ─── Spline + Quadratic Cross-Axis ───────────────────────────
-  const N_SPLINE_POINTS = 20;
-
-  // Tee and green centroids in heightmap coordinates
-  const teeHX = teeCentroid.x * (RES - 1);
-  const teeHY = teeCentroid.y * (RES - 1);
-  const greenHX = greenCentroid.x * (RES - 1);
-  const greenHY = greenCentroid.y * (RES - 1);
-
-  // Axis vector and length
-  const axDx = greenHX - teeHX;
-  const axDy = greenHY - teeHY;
-  const axisLen = Math.sqrt(axDx * axDx + axDy * axDy);
-
-  // Unit vectors: along-axis (A) and cross-axis (C)
-  const axUx = axisLen > 0 ? axDx / axisLen : 1;
-  const axUy = axisLen > 0 ? axDy / axisLen : 0;
-
-  // Sample DEM at N points along the axis
-  const splineXs = [];
-  const splineYs = [];
-  for (let i = 0; i < N_SPLINE_POINTS; i++) {
-    const t = i / (N_SPLINE_POINTS - 1); // 0..1
-    const along = t * axisLen;
-    const hx = teeHX + t * axDx;
-    const hy = teeHY + t * axDy;
-
-    // Map heightmap coords back to lat/lon for DEM sampling
-    const nx = hx / (RES - 1);
-    const ny = hy / (RES - 1);
-    const lat = bounds.north - ny * (bounds.north - bounds.south);
-    const lon = bounds.west + nx * (bounds.east - bounds.west);
-
-    const elev = sampleDemSafe(demTiles, lat, lon, avgElev);
-    splineXs.push(along);
-    splineYs.push(elev);
-  }
-
-  // Clip spline samples to the quadratic baseline so lateral features
-  // (ravines crossing the axis) don't contaminate the along-axis profile.
-  // The quadratic is fit to playable zones only — it represents the
-  // ambient hole terrain without the ravine. If a DEM sample dips more
-  // than MAX_DIP_BELOW_QUAD below that baseline, we clip it. Without
-  // this, the spline projects the ravine dip perpendicular to the axis,
-  // creating a diagonal band of fake low elevation across the map.
-  const MAX_DIP_BELOW_QUAD = 5.0;
-  const splineYsRaw = splineYs.slice();
-  let clippedCount = 0;
-  for (let i = 0; i < N_SPLINE_POINTS; i++) {
-    const t = i / (N_SPLINE_POINTS - 1);
-    const hx = teeHX + t * axDx;
-    const hy = teeHY + t * axDy;
-    const quadBaseline = evalQuadratic(holeSurface, hx, hy);
-    const floor = quadBaseline - MAX_DIP_BELOW_QUAD;
-    if (splineYs[i] < floor) {
-      splineYs[i] = floor;
-      clippedCount++;
-    }
-  }
-
-  const spline = monotoneCubicSpline(splineXs, splineYs);
-
-  console.log(`  Spline: ${N_SPLINE_POINTS} DEM samples along axis (${axisLen.toFixed(0)} cells)`);
-  console.log(`    Raw:      ${splineYsRaw.map(e => e.toFixed(1)).join(', ')} m ASL`);
-  if (clippedCount > 0) {
-    console.log(`    Clipped:  ${splineYs.map(e => e.toFixed(1)).join(', ')} m ASL (${clippedCount} samples)`);
-  }
-
-  // Build heightmap: spline(along) + quadratic cross-axis residual
   const heightmap = new Float64Array(RES * RES);
+  const tsmTempBuf = new Float64Array(RES * RES);
+
+  // Horizontal pass: rawDem → tsmTempBuf
   for (let hy = 0; hy < RES; hy++) {
+    const rowBase = hy * RES;
     for (let hx = 0; hx < RES; hx++) {
-      // Vector from tee to this cell
-      const dx = hx - teeHX;
-      const dy = hy - teeHY;
-
-      // Project onto axis (clamped to [0, axisLen])
-      let along = dx * axUx + dy * axUy;
-      along = Math.max(0, Math.min(axisLen, along));
-
-      // Spline elevation at this along-axis position
-      const splineH = spline(along);
-
-      // Quadratic at this cell
-      const quadHere = evalQuadratic(holeSurface, hx, hy);
-
-      // Quadratic at the axis point (projection of this cell onto axis)
-      const projHX = teeHX + along * axUx;
-      const projHY = teeHY + along * axUy;
-      const quadOnAxis = evalQuadratic(holeSurface, projHX, projHY);
-
-      // Cross-axis residual: how the quadratic varies perpendicular to axis
-      const crossResidual = quadHere - quadOnAxis;
-
-      heightmap[hy * RES + hx] = splineH + crossResidual;
+      let sum = 0;
+      for (let k = -tsmRadius; k <= tsmRadius; k++) {
+        let sx = hx + k;
+        if (sx < 0) sx = 0;
+        else if (sx >= RES) sx = RES - 1;
+        sum += rawDem[rowBase + sx] * tsmKernel[k + tsmRadius];
+      }
+      tsmTempBuf[rowBase + hx] = sum;
     }
   }
 
-  console.log(`  Mode: spline along-axis + quadratic cross-axis`);
+  // Vertical pass: tsmTempBuf → heightmap
+  for (let hx = 0; hx < RES; hx++) {
+    for (let hy = 0; hy < RES; hy++) {
+      let sum = 0;
+      for (let k = -tsmRadius; k <= tsmRadius; k++) {
+        let sy = hy + k;
+        if (sy < 0) sy = 0;
+        else if (sy >= RES) sy = RES - 1;
+        sum += tsmTempBuf[sy * RES + hx] * tsmKernel[k + tsmRadius];
+      }
+      heightmap[hy * RES + hx] = sum;
+    }
+  }
+
+  console.log(`  Mode: smoothed DEM (sigma=${TERRAIN_SMOOTH_SIGMA_M}m = ${tsmSigmaCells.toFixed(1)} cells, radius=${tsmRadius})`);
 
   // ─── Ravine Carving ──────────────────────────────────────────
   //
