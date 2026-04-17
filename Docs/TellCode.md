@@ -7,6 +7,349 @@
 
 ---
 
+## Previous Task — Flatten Terrain Under Water (Hole 7 Geo Follow-up)
+
+Water rework applied successfully — seesaw gone, shape clean. But on sloped
+contours (Hole 7), half the water mesh ends up below the terrain.
+
+**Root cause:** Water Y is `min(shoreTerrain) − 0.05m`. On a slope, the
+highest shore may be 1–2m above the lowest. The current depression drops
+terrain by a FIXED 0.4m off its original height — not enough to get the
+upslope side below the water plane.
+
+**Fix:** Flatten terrain under water to an ABSOLUTE normalized height
+(`waterY − underwaterDepth` in world units), not a relative drop off
+original height. This guarantees a flat bed below water regardless of
+slope.
+
+**Target file:** `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`
+**No pipeline changes.**
+
+---
+
+### Change: Separate water depression from fairway/tee
+
+The previous water port added water contours to the shared `depress` bool
+array and let the standard flat-drop loop handle them. Replace that with
+a dedicated absolute-height pass.
+
+**Step 1: Undo water's entry in the shared `depress` mask.**
+
+In `DepressTerrainUnderOverlays`, find the water-contour block that was
+added between the tee section and the cart path block:
+
+```csharp
+// Water contours — use same flat depression as fairway/tee
+// but with shore slope ramp applied afterward.
+string waterPath = Path.Combine(exportPath, "water.json");
+if (File.Exists(waterPath))
+{
+    var waterData = JsonUtility.FromJson<WaterFileData>(
+        File.ReadAllText(waterPath));
+    if (waterData.water != null)
+    {
+        foreach (var w in waterData.water)
+        {
+            if (w.contour != null && w.contour.Length >= 3)
+                MarkContourCells(w.contour, depress,
+                    hRes, terrainPos, terrainSize, 0f);
+        }
+    }
+}
+```
+
+**Delete this entire block.** Water needs its own mask + pass, not the
+shared one.
+
+**Step 2: Add a dedicated water mask, parallel to the others.**
+
+Just after the `cartDepress` block (and before the depression apply loops),
+build a water mask AND compute water Y per body:
+
+```csharp
+// Water cells — tracked separately because they get an ABSOLUTE height
+// floor (not a relative drop). Necessary for sloped contours where a
+// fixed drop off original height leaves the upslope bed above waterY.
+bool[,] waterMask = new bool[hRes, hRes];
+// Per-cell water Y in normalized heightmap units (height = [0..1])
+float[,] waterFloorY = new float[hRes, hRes];
+bool hasWater = false;
+
+string waterPath = Path.Combine(exportPath, "water.json");
+if (File.Exists(waterPath))
+{
+    var waterData = JsonUtility.FromJson<WaterFileData>(
+        File.ReadAllText(waterPath));
+    if (waterData.water != null)
+    {
+        // We need terrainBaseY for SampleHeight conversion.
+        Terrain terrainComp = terrainGO.GetComponent<Terrain>();
+        float terrainBaseY = terrainGO.transform.position.y;
+
+        // Underwater floor: 0.3m below water surface.
+        // Water surface = terrainBaseY + minShoreTerrainH - 0.05m,
+        // so floor = terrainBaseY + minShoreTerrainH - 0.35m.
+        const float UnderwaterDepthMeters = 0.3f;
+
+        foreach (var w in waterData.water)
+        {
+            if (w.contour == null || w.contour.Length < 3) continue;
+
+            // Recompute minTerrainH across contour — same as CreateWaterMeshes.
+            // (We can't share it easily because water was built earlier,
+            // but this is one float per body, cheap.)
+            float minTerrainH = float.MaxValue;
+            for (int i = 0; i < w.contour.Length; i++)
+            {
+                float wx = w.contour[i].x;
+                float wz = w.contour[i].z;
+                float th = terrainComp.SampleHeight(new Vector3(wx, 0, wz));
+                if (th < minTerrainH) minTerrainH = th;
+            }
+            // Floor Y in world units, then normalized to [0..1] against elevRange.
+            float floorWorldY = minTerrainH - 0.05f - UnderwaterDepthMeters;
+            // Clamp to ≥ 0 in case terrain Y offset eats the range
+            float floorNorm = Mathf.Clamp01(floorWorldY / elevRange);
+
+            // Mark cells inside this water contour with this body's floor Y.
+            // Build a local mask for THIS body, then write the Y value to
+            // waterFloorY for each cell in the mask.
+            bool[,] bodyMask = new bool[hRes, hRes];
+            MarkContourCells(w.contour, bodyMask,
+                hRes, terrainPos, terrainSize, 0f);
+
+            for (int z = 0; z < hRes; z++)
+                for (int x = 0; x < hRes; x++)
+                    if (bodyMask[z, x])
+                    {
+                        waterMask[z, x] = true;
+                        waterFloorY[z, x] = floorNorm;
+                    }
+
+            hasWater = true;
+        }
+    }
+}
+```
+
+**Step 3: Apply the water floor BEFORE the fairway/tee/cart apply loops.**
+
+Immediately after the water mask-building block above (still before the
+existing apply loops), add:
+
+```csharp
+// Apply water: flatten terrain to an absolute floor (not a relative drop).
+// Must run BEFORE fairway/tee/cart apply loops because any fairway that
+// overlaps water should keep the fairway drop, not the water floor.
+// We'll mask out water cells in the fairway/tee loops below.
+int waterFloorCount = 0;
+if (hasWater)
+{
+    for (int z = 0; z < hRes; z++)
+        for (int x = 0; x < hRes; x++)
+            if (waterMask[z, x])
+            {
+                // Set to absolute floor, not subtract
+                heights[z, x] = waterFloorY[z, x];
+                waterFloorCount++;
+            }
+}
+```
+
+**Step 4: Skip water cells in the fairway/tee apply loop.**
+
+Find the fairway/tee apply loop:
+
+```csharp
+int depressedCount = 0;
+for (int hz = 0; hz < hRes; hz++)
+    for (int hx = 0; hx < hRes; hx++)
+        if (depress[hz, hx])
+        {
+            heights[hz, hx] = Mathf.Max(0f,
+                heights[hz, hx] - dropNormalized);
+            depressedCount++;
+        }
+```
+
+Change the condition to skip water cells:
+
+```csharp
+int depressedCount = 0;
+for (int hz = 0; hz < hRes; hz++)
+    for (int hx = 0; hx < hRes; hx++)
+        if (depress[hz, hx] && !waterMask[hz, hx])
+        {
+            heights[hz, hx] = Mathf.Max(0f,
+                heights[hz, hx] - dropNormalized);
+            depressedCount++;
+        }
+```
+
+Same for the cart path apply loop:
+
+```csharp
+int cartDepressedCount = 0;
+for (int hz = 0; hz < hRes; hz++)
+    for (int hx = 0; hx < hRes; hx++)
+        if (cartDepress[hz, hx] && !waterMask[hz, hx])
+        {
+            heights[hz, hx] = Mathf.Max(0f,
+                heights[hz, hx] - dropNormalized);
+            cartDepressedCount++;
+        }
+```
+
+**Step 5: Shore slope pass — use existing water mask.**
+
+The shore slope pass already exists from the previous port. It currently
+re-reads water.json and builds its own `waterMask`. Simplify: reuse the
+mask built in Step 2.
+
+Find the shore slope section (begins with
+`string waterShorePath = Path.Combine(exportPath, "water.json");`).
+
+Replace the entire shore slope block (from `string waterShorePath = ...`
+through the closing brace of the outer `if (File.Exists(waterShorePath) ...)`)
+with:
+
+```csharp
+// ─── Shore slope pass: gradual ramp OUTSIDE water contours ─────────
+// Uses waterMask built above. Smooth ramp from shoreline
+// (full ShoreDepthMeters drop) to surrounding terrain (no drop)
+// over ShoreRadius cells.
+int shoreCount = 0;
+if (hasWater && ShoreRadius > 0 && ShoreDepthMeters > 0f)
+{
+    // Chamfer distance transform from water boundary.
+    float[,] distToWater = new float[hRes, hRes];
+    for (int z = 0; z < hRes; z++)
+        for (int x = 0; x < hRes; x++)
+            distToWater[z, x] = waterMask[z, x] ? 0f : float.MaxValue;
+
+    // Forward pass
+    for (int z = 0; z < hRes; z++)
+        for (int x = 0; x < hRes; x++)
+        {
+            if (x > 0)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z, x - 1] + 1f);
+            if (z > 0)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z - 1, x] + 1f);
+            if (x > 0 && z > 0)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z - 1, x - 1] + 1.414f);
+            if (x < hRes - 1 && z > 0)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z - 1, x + 1] + 1.414f);
+        }
+    // Backward pass
+    for (int z = hRes - 1; z >= 0; z--)
+        for (int x = hRes - 1; x >= 0; x--)
+        {
+            if (x < hRes - 1)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z, x + 1] + 1f);
+            if (z < hRes - 1)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z + 1, x] + 1f);
+            if (x < hRes - 1 && z < hRes - 1)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z + 1, x + 1] + 1.414f);
+            if (x > 0 && z < hRes - 1)
+                distToWater[z, x] = Mathf.Min(distToWater[z, x],
+                    distToWater[z + 1, x - 1] + 1.414f);
+        }
+
+    float shoreDropNorm = ShoreDepthMeters / elevRange;
+    int shoreRadiusCells = ShoreRadius;
+
+    for (int z = 0; z < hRes; z++)
+    {
+        for (int x = 0; x < hRes; x++)
+        {
+            if (waterMask[z, x]) continue;
+            if (depress[z, x]) continue;
+            if (cartDepress[z, x]) continue;
+
+            float dist = distToWater[z, x];
+            if (dist <= 0f || dist > shoreRadiusCells) continue;
+
+            float t = 1f - (dist / shoreRadiusCells);
+            t = t * t * (3f - 2f * t);
+            float drop = shoreDropNorm * t;
+
+            heights[z, x] = Mathf.Max(0f, heights[z, x] - drop);
+            shoreCount++;
+        }
+    }
+}
+```
+
+**Step 6: Update final Debug.Log.**
+
+Replace the current final log (the one updated in the previous port) with:
+
+```csharp
+Debug.Log($"[HoleGeoImporter] Terrain depression: {depressedCount}" +
+          $" cells lowered by {OverlayDepressionMeters:F2}m" +
+          $" (cart path: {cartDepressedCount} cells," +
+          $" water floor: {waterFloorCount} cells flattened," +
+          $" water shore ramp: {shoreCount} cells)");
+```
+
+---
+
+### Execution order
+
+1. Step 1 (remove old water-in-depress block)
+2. Step 2 (build waterMask + waterFloorY)
+3. Step 3 (apply water floor)
+4. Step 4 (skip water in fairway/tee/cart loops)
+5. Step 5 (replace shore slope block)
+6. Step 6 (log update)
+
+---
+
+### Verification
+
+Re-import Hole 07 Geo: `Import > Geo > Normal > Import Hole 07 Geo`
+
+- [ ] Entire water mesh visible (no hidden-under-terrain half)
+- [ ] Water surface still flat (no seesaw regression)
+- [ ] Shore ramp smooth (no cliff)
+- [ ] No Z-fighting between water mesh edge and terrain
+
+Regression check:
+
+- [ ] `Import Hole 01 Geo` — no water, no errors, no regression
+- [ ] `Import Hole 12 Geo` — multiple water bodies, each gets its own floor
+
+---
+
+### Why this approach
+
+- The previous "drop 0.4m off original" works for flat-land water but not
+  sloped water bodies. Absolute floor is slope-independent.
+- Per-body floorY handles holes with multiple water levels (e.g., a pond
+  and a stream at different elevations) — each body gets its own floor
+  from its own min shore height.
+- Shore ramp stays on original terrain heights (not the floor) because
+  ramp cells are OUTSIDE the water mask.
+
+---
+
+### Do NOT change
+
+- `CreateWaterMeshes` (from previous port — water mesh Y is still
+  `terrainBaseY + minTerrainH - 0.05f`, unchanged)
+- `CreateWaterMaterial` depth settings
+- Shore constants (ShoreRadius=10, ShoreDepthMeters=0.4)
+- Fairway/tee/green/bunker/cart path logic
+
+---
+
 ## Previous Task — Port Water Rework to HoleGeoImporter
 
 Hole 7 Geo shows a seesaw waterline and water edges that don't match the
@@ -416,6 +759,7 @@ And a hole with multiple water bodies:
 
 ## Completed Tasks
 
+✅ DONE: 2026-04-17 — Absolute water floor for sloped contours: per-body floorNorm, waterMask separate from depress, fairway/cart loops skip water cells, shore reuses waterMask
 ✅ DONE: 2026-04-17 — Water rework ported to HoleGeoImporter: flat CDT, TerrainYOffset, water depression in DepressTerrainUnderOverlays, shore slope ramp, _DepthEnd 0.8
 ✅ DONE: 2026-04-16 — Flat inside + 8-cell outward smoothstep ramp implemented
 ✅ DONE: 2026-04-16 — Green collar CDT complete
