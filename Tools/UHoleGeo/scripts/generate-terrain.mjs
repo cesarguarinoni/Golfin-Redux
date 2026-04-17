@@ -1005,6 +1005,30 @@ async function processHole(courseId, holeNumber, config, forcePerlin) {
     'utf-8'
   );
 
+  // --- Sync to export folder so Unity importer picks it up directly ---
+  const exportDir = path.join(ROOT, 'output', courseId, 'export', `hole-${nn}`);
+  if (fs.existsSync(exportDir)) {
+    // Copy heightmap.raw
+    fs.copyFileSync(rawPath, path.join(exportDir, 'heightmap.raw'));
+
+    // Patch hole-manifest.json terrain block
+    const manifestPath = path.join(exportDir, 'hole-manifest.json');
+    if (fs.existsSync(manifestPath)) {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+      manifest.terrain.terrain_width_m  = result.terrainWidth;
+      manifest.terrain.terrain_length_m = result.terrainLength;
+      manifest.terrain.min_elevation_m  = result.minElevation;
+      manifest.terrain.max_elevation_m  = result.maxElevation;
+      manifest.terrain.resolution       = RES;
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+      console.log(`  Synced to export: heightmap.raw + hole-manifest.json`);
+    } else {
+      console.log(`  Synced to export: heightmap.raw (no manifest to patch)`);
+    }
+  } else {
+    console.log(`  Export dir not found — skipping sync (${exportDir})`);
+  }
+
   return { meta, usedDem };
 }
 
