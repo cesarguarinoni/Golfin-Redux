@@ -7,264 +7,194 @@
 
 ---
 
-## Current Task — Drop the Tee Border Ring
+## Current Task — Smooth Tee Skirt Seesaw (Voronoi Spokes)
 
-The terrain skirt from the last task is working — tees are raised
-platforms with a gentle mound. But the dark border ring is still
-fighting the terrain on the downhill side (ragged tearing where the
-dilated CDT can't resolve the height differential) and floating on the
-uphill side. The ring is decorative at this point: the mound itself is
-the visual boundary, and the tee material is already distinct from
-fairway/rough. Real golf tees rarely have a visible dark collar.
+Tee platforms + skirt + borderless mesh all look great. One remaining
+visual: subtle diagonal/wavy banding on the sloped mound around raised
+tees. This is the same **Voronoi seesaw pattern** we diagnosed and fixed
+on the water shore ramp — the chamfer distance transform walks produce
+~1-cell-wide coherent radial spokes in the distance field, which become
+visible stripes when we lerp a 1m+ height differential across them.
 
-**This task: build tees as a simple single-submesh flat CDT, no
-border.** Pattern is identical to the water mesh — straight CDT of the
-contour, flatten all vert Y to the platform height, one material.
+**The fix is exactly the one we used for the water shore ramp (2026-04-17
+task): Gaussian-blur the distance field before the lerp.** See the
+lessons note and the `HoleGeoImporter.cs` water shore code for the
+proven pattern.
 
 **Target file:** `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`
-**No changes to:** `FlattenTerrainUnderTees`, `DepressTerrainUnderOverlays`,
-`CreateTeeMeshWithBorder` (leave intact — it's dead code for tees but we
-keep it in case something else wants it, and for future "inside inset"
-option if we change our minds).
+**Scope:** ONE contained change inside `FlattenTerrainUnderTees`, between
+the chamfer backward pass and the lerp loop.
+**No changes to:** anything outside that window. Tee mesh, tee skirt
+radius, platform Y computation, skip mask, `CreateTeeMeshFlat`,
+`DepressTerrainUnderOverlays`, or any other system.
 
 ---
 
-### Step 1 — Add a new borderless tee mesh builder
+### The change
 
-Add this new helper next to `CreateTeeMeshWithBorder` in the same class.
-Pattern mirrors `CreateWaterMeshes`'s per-body loop (lines 2851–2915).
-The key move: we **flatten all verts to a single platform Y** instead
-of sampling terrain, so the mesh is guaranteed level regardless of
-what `FlattenTerrainUnderTees` did to the heightmap.
+In `FlattenTerrainUnderTees` (around lines 3153–3210), the current flow
+per tee region is:
+
+1. Build `teeMask` and raise interior to `maxH` (unchanged)
+2. Initialize `dist[]` — 0 inside teeMask, MaxValue outside (unchanged)
+3. Forward chamfer pass (unchanged)
+4. Backward chamfer pass (unchanged)
+5. **[NEW] Gaussian blur on `dist[]`** ← insert here
+6. Lerp pass: `t = dist/skirtRadiusCells`, smoothstep, lerp maxH→baseline (unchanged)
+
+Insert the blur **immediately after the backward pass closes** (after
+the line `dist[z, x] = Mathf.Min(dist[z, x], dist[z + 1, x - 1] + 1.414f);`
+and its closing `}`), and **before** the `// Apply outward skirt ramp`
+comment and its loop.
 
 ```csharp
-/// <summary>
-/// Flat single-submesh tee mesh. CDTs the contour directly, flattens
-/// all verts to platformY, no border ring. Visual boundary comes from
-/// the raised terrain mound (built by FlattenTerrainUnderTees) rather
-/// than a dark collar mesh.
-/// </summary>
-private static GameObject CreateTeeMeshFlat(
-    int id, ContourPoint[] contour,
-    Terrain terrain, float terrainBaseY,
-    Material mat, float tileSize,
-    Golfin.Course.SurfaceType surfaceType)
+// ─── Smooth the distance field to kill Voronoi seesaw spokes ───
+// The teeMask has 1-cell boundary jaggies from polygon rasterization.
+// The chamfer transform propagates those as coherent radial spokes in
+// dist[], which become visible diagonal stripes when we lerp a 1m+
+// height differential across them.
+//
+// A separable Gaussian on the continuous distance values averages out
+// the per-spoke variation while preserving the overall gradient. Same
+// fix we applied to the water shore ramp (see
+// LESSONS_FRINGE_BORDER_MESHES.md / Docs/tasks history 2026-04-17).
+//
+// sigma=2.0 cells (radius=3) gives a ~5-cell effective kernel. The
+// skirt is typically 7–14 cells wide (2m / metersPerCell at 2049 res),
+// so the blur smooths spokes without softening the overall ramp.
 {
-    int nc = contour.Length;
-    if (nc < 3) return null;
-
-    float yOffset = 0.02f; // match CreateTeeMeshWithBorder convention
-
-    System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
-        new Vector2(wx / tileSize, wz / tileSize);
-
-    // CDT the tee contour directly — no dilation, no inner constraint.
-    var (rawVerts, uvs, tris) = CDTTriangulate(
-        contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
-
-    if (rawVerts == null || tris == null || tris.Length < 3)
+    const int blurRadius = 3;
+    const float blurSigma = 2.0f;
+    int kernelSize = blurRadius * 2 + 1;
+    float[] kernel = new float[kernelSize];
+    float kernelSum = 0f;
+    for (int i = 0; i < kernelSize; i++)
     {
-        Debug.LogWarning($"[HoleGeoImporter] Tee {id}: CDT failed");
-        return null;
+        float dk = i - blurRadius;
+        kernel[i] = Mathf.Exp(-(dk * dk) / (2f * blurSigma * blurSigma));
+        kernelSum += kernel[i];
     }
+    for (int i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
 
-    // Platform Y = max of sampled verts. FlattenTerrainUnderTees already
-    // raised the terrain under the contour to a single height, so all
-    // verts should already agree (up to bilinear interpolation noise).
-    // Taking max guarantees we never dip below the terrain and avoids
-    // any sub-cm sampling waviness on the mesh top.
-    float platformY = float.MinValue;
-    for (int i = 0; i < rawVerts.Length; i++)
-        if (rawVerts[i].y > platformY) platformY = rawVerts[i].y;
-
-    // Flatten all verts to platformY.
-    for (int i = 0; i < rawVerts.Length; i++)
-        rawVerts[i].y = platformY;
-
-    // Center mesh at centroid — same pattern as water/fairway.
-    float cx = 0f, cz = 0f;
-    for (int i = 0; i < rawVerts.Length; i++)
-    { cx += rawVerts[i].x; cz += rawVerts[i].z; }
-    cx /= rawVerts.Length; cz /= rawVerts.Length;
-    Vector3 centroid = new Vector3(cx, 0f, cz);
-
-    for (int i = 0; i < rawVerts.Length; i++)
-        rawVerts[i] -= centroid;
-
-    // Winding check — ensure top faces up.
-    if (tris.Length >= 3)
+    // Horizontal pass: dist → tmp
+    float[,] tmp = new float[hRes, hRes];
+    for (int z = 0; z < hRes; z++)
     {
-        Vector3 a = rawVerts[tris[0]];
-        Vector3 b = rawVerts[tris[1]];
-        Vector3 c = rawVerts[tris[2]];
-        float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
-        if (cross > 0)
+        for (int x = 0; x < hRes; x++)
         {
-            for (int t = 0; t < tris.Length; t += 3)
-            { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
+            float sum = 0f;
+            for (int k = 0; k < kernelSize; k++)
+            {
+                int sx = Mathf.Clamp(x + k - blurRadius, 0, hRes - 1);
+                sum += dist[z, sx] * kernel[k];
+            }
+            tmp[z, x] = sum;
         }
     }
 
-    var mesh = new Mesh();
-    mesh.name = $"Tee_{id}";
-    mesh.vertices = rawVerts;
-    mesh.uv = uvs;
-    mesh.triangles = tris;
-    mesh.RecalculateNormals();
-    mesh.RecalculateBounds();
-
-    var go = new GameObject($"Tee_{id}");
-    go.transform.position = centroid;
-    go.AddComponent<MeshFilter>().sharedMesh = mesh;
-    go.AddComponent<MeshRenderer>().sharedMaterial = mat;
-
-    AddCleanMeshCollider(go, mesh);
-
-    var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
-    marker.surfaceType = surfaceType;
-
-    return go;
+    // Vertical pass: tmp → dist (write back)
+    for (int z = 0; z < hRes; z++)
+    {
+        for (int x = 0; x < hRes; x++)
+        {
+            float sum = 0f;
+            for (int k = 0; k < kernelSize; k++)
+            {
+                int sz = Mathf.Clamp(z + k - blurRadius, 0, hRes - 1);
+                sum += tmp[sz, x] * kernel[k];
+            }
+            dist[z, x] = sum;
+        }
+    }
 }
 ```
 
----
-
-### Step 2 — Replace the tee mesh callsite
-
-In `CreateFlatZoneMeshes`, find this block (around line 3800–3815):
-
-```csharp
-foreach (var region in data.zones.tee)
-{
-    if (region.contour == null || region.contour.Length < 3) continue;
-    var meshGO = CreateTeeMeshWithBorder(
-        region.id, "Tee", region.contour,
-        terrain, terrainBaseY,
-        teeMat, 3f,
-        teeBorderMat, 0.5f, 3f,
-        Golfin.Course.SurfaceType.Tee);
-    if (meshGO != null)
-        meshGO.transform.SetParent(teeRoot.transform);
-}
-```
-
-Replace with:
-
-```csharp
-foreach (var region in data.zones.tee)
-{
-    if (region.contour == null || region.contour.Length < 3) continue;
-    var meshGO = CreateTeeMeshFlat(
-        region.id, region.contour,
-        terrain, terrainBaseY,
-        teeMat, 3f,
-        Golfin.Course.SurfaceType.Tee);
-    if (meshGO != null)
-        meshGO.transform.SetParent(teeRoot.transform);
-}
-```
+That's the entire change. Nothing else in the function or the file is
+touched.
 
 ---
 
-### Step 3 — Leave the border material block in place
+### Why this is low-risk
 
-**Do NOT delete the `teeBorderMat` setup block** above the foreach.
-Keep `MAT_TeeBorder.mat` being generated on every import. Rationale:
-
-- If we decide a collar/fringe would improve the look (e.g., switching
-  to an "inside-inset" border that lives fully on the flat platform),
-  the material is already built and wired, so reintroducing it is a
-  one-line change at the mesh-builder callsite.
-- The material asset is cheap — a `.mat` file with one albedo and one
-  normal, regenerated on import. No runtime cost if nothing references
-  it.
-
-The variable `teeBorderMat` will be declared but only used if the
-callsite ever passes it. On Unity's side this is harmless — C# doesn't
-warn about unused locals in this context, and the material file lives
-in `{dataDir}/MAT_TeeBorder.mat` as inert project data.
-
-Add a short comment above the block so future readers know it's
-intentional:
-
-```csharp
-// Tee border material — kept built & ready even though CreateTeeMeshFlat
-// doesn't use it. If we decide to bring back a fringe (e.g., inside-inset
-// variant that lives on the flat platform), swap the callsite back to a
-// border-using builder and this material is already wired up.
-var teeBorderMat = new Material(GetLitShader());
-// ...rest of existing block unchanged...
-```
-
-(Add the comment; don't touch anything else in the block.)
+- **The blur writes back to `dist[]` only.** `teeMask`, `heights`,
+  `baseline`, and `skipMask` are all untouched.
+- **The lerp loop unchanged.** It still reads `dist[z, x]`, still
+  guards `teeMask`, `skipMask`, and `if (rampedH > heights[z, x])`.
+- **Tee boundary cells (inside teeMask)** stay at dist=0 after the
+  chamfer, but after blur they get a small positive value (pulled up
+  by the blur's neighborhood sum from non-zero neighbors). That does
+  NOT matter, because the lerp loop has `if (teeMask[z, x]) continue;`
+  as its first guard — those cells are never overwritten. The
+  platform flat interior remains exactly maxH.
+- **Cells beyond `skirtRadiusCells`** were unaffected before (bailed on
+  `if (d > skirtRadiusCells) continue;`). After the blur, they're still
+  at a larger distance value and still bailed. Baseline terrain
+  beyond the skirt is never touched.
+- **Platform proven on water.** This exact pattern shipped on
+  2026-04-17 for the shore ramp and killed the equivalent stripes.
+- **Performance:** ~2049² × 14 ops × 2 passes per tee. On a typical
+  hole with 3 tees that's ~300M adds — under a second on modern
+  hardware. Negligible compared to overall import time.
 
 ---
 
-### Step 4 — Verification
+### Verification
 
-Re-import the pancake hole:
+Re-import the hole from the screenshot:
 
-- [ ] Flat elliptical top (unchanged from last iteration).
-- [ ] **No dark border ring** — the tee surface extends edge-to-edge
-      with a single material.
-- [ ] Clean edge where tee surface meets the terrain skirt — no tearing,
-      no floating arc, no ragged boundary.
-- [ ] Skirt mound still looks right (Step 4 of the previous task).
+- [ ] Tee top surface still flat (unchanged).
+- [ ] Tee edge still crisp (no border ring — unchanged).
+- [ ] Skirt mound: **stripes gone**, smooth gradient from tee edge to
+      surrounding terrain.
+- [ ] Mound gradient still feels right (not over-smoothed into a
+      pancake or under-smoothed with residual banding).
 
-Regression:
+Regression spot-checks:
+- [ ] Hole 4 — big tee and small forward tee both smooth.
+- [ ] Hole 1 — 3 tees, no new artifacts.
+- [ ] Hole 18 — 6 small tees; with σ=2 blur the skirts' spokes should
+      be gone on every one of them.
+- [ ] Fairway, green, water, bunker, cart path — no visual change
+      whatsoever on these. This change is tee-only.
+- [ ] `Debug.Log` `platform cells` / `skirt cells` counts should be
+      essentially unchanged (the lerp's guard conditions haven't
+      changed; only the `dist[]` values feeding into them).
 
-- [ ] Hole 1 — 3 tees, check big back tee and both small forward tees.
-      All should be borderless, flat, flush with skirt.
-- [ ] Hole 18 — 6 small tees. No ring visible on any of them.
-- [ ] Hole 7 — water-adjacent tee, border removal shouldn't affect
-      water. Skirt still skips water cells per `FlattenTerrainUnderTees`
-      (it doesn't — only skips fairway/green — so if there's a problem
-      near water, flag it and we'll add water to the skip mask.
-      Unlikely on Hole 7 since tees aren't near water.)
-- [ ] `Debug.Log` shows `Tee {id}: ... platformY=...` per tee, no CDT
-      failure warnings.
-- [ ] `MAT_TeeBorder.mat` still generated in each hole's `dataDir` —
-      unused but present, ready if we resurrect the fringe.
-- [ ] No compiler warnings about unused locals. (If the compiler does
-      complain, suppress with `_ = teeBorderMat;` as the last line of
-      the block — but this is unlikely for materials assigned to
-      `AssetDatabase`.)
+Tuning if needed:
+- If stripes still faintly visible: raise `blurSigma` to `3.0f` and
+  `blurRadius` to `4` (keep `radius = ceil(3*sigma)` relationship).
+- If the skirt's tee-boundary edge looks softened (unlikely — the
+  `teeMask` guard preserves the platform edge, but the *transition*
+  cell at d≈1 might go from 0.98→0.85 lerp → slight rounding of the
+  top-of-mound edge): drop `blurSigma` to `1.5f` and `blurRadius` to `2`.
 
 ---
 
 ### Do NOT change
 
-- `CreateTeeMeshWithBorder` — leave it in the file, even though nothing
-  calls it. If we want to resurrect the "inside inset" border option
-  later, it's our starting point.
-- `FlattenTerrainUnderTees` — the skirt ramp is exactly right.
-- `DepressTerrainUnderOverlays` — tees still go into the shared
-  `depress` mask and still get a 0.40m drop under the mesh (invisible
-  z-fight filler, same as fairway).
-- Green, fairway, bunker, water, cart path meshes.
-- The `T_TeeDark_Albedo` / `T_TeeDark_Normal` texture assets.
-- The `teeBorderMat` setup block — kept as-is, material still generated.
-- Any other `MAT_TeeBorder.mat` consumers.
+- `CreateTeeMeshFlat` — tee mesh is perfect.
+- The platform raise, the `skipMask` construction, the `baseline` clone.
+- `TeeSkirtMeters`, the skirt radius computation.
+- The lerp formula (smoothstep), the MAX-over-existing merge.
+- `DepressTerrainUnderOverlays` — tees still get 0.40m drop under the
+  mesh for z-fight clearance.
+- Anywhere else in the file.
 
 ---
 
 ### Design note
 
-Real golf tees are usually identified visually by two cues: (1) the
-raised mound, and (2) the tee box's distinct grass — typically a
-tighter-mown area than the surrounding fairway or rough. Our setup
-provides both: the skirt mound from `FlattenTerrainUnderTees` and the
-`T_Tee_Albedo` texture via `teeMat`. The dark border collar was a
-stylistic flourish that's not needed for zone identification, and
-removing it from the mesh eliminates the last class of geometric
-artifacts from the tee rendering.
-
-We keep the border material wired up because it's cheap insurance. If
-we later decide the transition from tee surface to skirt needs a
-visual seam — or if a specific hole's mow pattern looks weird without
-a collar — we can bring back a fringe by changing one callsite.
+The 2026-04-17 shore ramp fix taught us that chamfer distance is
+**correct enough for distance queries** (the values are close to true
+Euclidean distance) but **wrong in a structurally coherent way** at
+the ~5% level — it produces radial spokes that look terrible when the
+target quantity varies along the gradient. Blurring the distance field
+is the cheapest, lowest-risk workaround. The "proper" fix (exact
+polygon-edge distance like the final water shore ramp) is worth
+pursuing only if we run into cases where the blur can't keep up. For
+tees with ~1m vertical differential over 2m horizontal, the blur is
+more than enough.
 
 ---
 
-✅ DONE: 2026-04-17 — FlattenTerrainUnderTees extended with chamfer-distance skirt ramp (2m smoothstep). Green Y fixed by setting yOffset=0.00f in CreateGreenMeshCDT.
-✅ DONE: 2026-04-18 — Added CreateTeeMeshFlat (borderless, flat CDT, platformY from max vert). Callsite in CreateFlatZoneMeshes switched from CreateTeeMeshWithBorder to CreateTeeMeshFlat. teeBorderMat block kept with explanatory comment. CreateTeeMeshWithBorder left intact.
+✅ DONE: 2026-04-18 — Added separable Gaussian blur (sigma=2, radius=3) on dist[] in FlattenTerrainUnderTees, inserted between backward chamfer pass and skirt ramp lerp. No other changes.

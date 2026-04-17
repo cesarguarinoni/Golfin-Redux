@@ -3183,6 +3183,66 @@ namespace Golfin.CourseImport
                             dist[z, x] = Mathf.Min(dist[z, x], dist[z + 1, x - 1] + 1.414f);
                     }
 
+                // ─── Smooth the distance field to kill Voronoi seesaw spokes ───
+                // The teeMask has 1-cell boundary jaggies from polygon rasterization.
+                // The chamfer transform propagates those as coherent radial spokes in
+                // dist[], which become visible diagonal stripes when we lerp a 1m+
+                // height differential across them.
+                //
+                // A separable Gaussian on the continuous distance values averages out
+                // the per-spoke variation while preserving the overall gradient. Same
+                // fix we applied to the water shore ramp (see
+                // LESSONS_FRINGE_BORDER_MESHES.md / Docs/tasks history 2026-04-17).
+                //
+                // sigma=2.0 cells (radius=3) gives a ~5-cell effective kernel. The
+                // skirt is typically 7–14 cells wide (2m / metersPerCell at 2049 res),
+                // so the blur smooths spokes without softening the overall ramp.
+                {
+                    const int blurRadius = 3;
+                    const float blurSigma = 2.0f;
+                    int kernelSize = blurRadius * 2 + 1;
+                    float[] kernel = new float[kernelSize];
+                    float kernelSum = 0f;
+                    for (int i = 0; i < kernelSize; i++)
+                    {
+                        float dk = i - blurRadius;
+                        kernel[i] = Mathf.Exp(-(dk * dk) / (2f * blurSigma * blurSigma));
+                        kernelSum += kernel[i];
+                    }
+                    for (int i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
+
+                    // Horizontal pass: dist → tmp
+                    float[,] tmp = new float[hRes, hRes];
+                    for (int z = 0; z < hRes; z++)
+                    {
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            float sum = 0f;
+                            for (int k = 0; k < kernelSize; k++)
+                            {
+                                int sx = Mathf.Clamp(x + k - blurRadius, 0, hRes - 1);
+                                sum += dist[z, sx] * kernel[k];
+                            }
+                            tmp[z, x] = sum;
+                        }
+                    }
+
+                    // Vertical pass: tmp → dist (write back)
+                    for (int z = 0; z < hRes; z++)
+                    {
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            float sum = 0f;
+                            for (int k = 0; k < kernelSize; k++)
+                            {
+                                int sz = Mathf.Clamp(z + k - blurRadius, 0, hRes - 1);
+                                sum += tmp[sz, x] * kernel[k];
+                            }
+                            dist[z, x] = sum;
+                        }
+                    }
+                }
+
                 // Apply outward skirt ramp: smoothstep from maxH at boundary to
                 // baseline at skirtRadius. Take MAX so overlapping adjacent tee
                 // skirts don't pull a cell below a neighbor's ramp.
