@@ -395,13 +395,10 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
 
   console.log(`  Mode: smoothed DEM (sigma=${TERRAIN_SMOOTH_SIGMA_M}m = ${tsmSigmaCells.toFixed(1)} cells, radius=${tsmRadius})`);
 
-  // ─── Ravine Carving ──────────────────────────────────────────
-  //
-  // Detect big negative features (ravines, gullies) as connected
-  // regions where rawDem is significantly below the synthetic surface.
-  // Carve each qualifying region as a smooth Gaussian depression —
-  // this gives us visible ravines without importing DEM grid noise.
-  //
+  // ─── Ravine Carving (DISABLED) ───────────────────────────────
+  // Smoothed DEM preserves ravines at sufficient depth without carving.
+  // Detection + carve code kept for reference but never runs.
+  if (false) { // eslint-disable-line no-constant-condition
   // Tunable parameters (safe defaults — see notes at bottom of task)
   const RAVINE_MIN_DEPTH_M       = 3.0;   // cell counts as ravine if >= this deep below surface
   const RAVINE_MIN_AREA_CELLS    = 2000;  // min region size (rejects noise)
@@ -620,7 +617,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
   // Two buffers are reused across all regions instead of allocating fresh
   // buffers per region — saves ~32 MB per extra region per blur buffer.
 
-  if (false && carvedRegions.length > 0) { // TEMP: carve disabled for comparison
+  if (carvedRegions.length > 0) {
     const metersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
     const sigmaCells = RAVINE_KERNEL_SIGMA_M / metersPerCell;
 
@@ -697,6 +694,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
       }
     }
   }
+  } // end if (false) — ravine carving disabled
   // ─── End Ravine Carving ──────────────────────────────────────
 
   // Normalize — relative elevation
