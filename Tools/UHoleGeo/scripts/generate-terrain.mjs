@@ -395,10 +395,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
 
   console.log(`  Mode: smoothed DEM (sigma=${TERRAIN_SMOOTH_SIGMA_M}m = ${tsmSigmaCells.toFixed(1)} cells, radius=${tsmRadius})`);
 
-  // ─── Ravine Carving (DISABLED) ───────────────────────────────
-  // Smoothed DEM preserves ravines at sufficient depth without carving.
-  // Detection + carve code kept for reference but never runs.
-  if (false) { // eslint-disable-line no-constant-condition
+  // ─── Ravine Carving ──────────────────────────────────────────
   // Tunable parameters (safe defaults — see notes at bottom of task)
   const RAVINE_MIN_DEPTH_M       = 3.0;   // cell counts as ravine if >= this deep below surface
   const RAVINE_MIN_AREA_CELLS    = 2000;  // min region size (rejects noise)
@@ -694,7 +691,6 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
       }
     }
   }
-  } // end if (false) — ravine carving disabled
   // ─── End Ravine Carving ──────────────────────────────────────
 
   // Normalize — relative elevation
