@@ -4273,7 +4273,7 @@ namespace Golfin.CourseImport
             int nc = contour.Length;
             if (nc < 3) return null;
 
-            float yOffset = 0.001f; // 1mm lift to prevent z-fight with terrain at mesh edge
+            float yOffset = 0.005f; // 5mm lift to prevent z-fight with terrain at mesh edge
 
             System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
                 new Vector2(wx / tileSize, wz / tileSize);
