@@ -31,7 +31,7 @@ namespace Golfin.CourseImport
 
         // ─── Green Elevation ─────────────────────────────────────────
         /// <summary>How far the putting surface sits above the outer collar edge.</summary>
-        private const float GreenRaiseMeters = 0.04f;
+        private const float GreenRaiseMeters = 0.08f;
 
         // Spline cart path footprint polygons — populated by CreateSplineCartPaths(),
         // consumed by DepressTerrainUnderOverlays() to match depression to actual mesh.
@@ -2585,7 +2585,7 @@ namespace Golfin.CourseImport
             mesh.RecalculateBounds();
 
             var go = new GameObject($"Green_{id}");
-            go.transform.position = centroid;
+            go.transform.position = centroid + new Vector3(0f, -0.04f, 0f);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterials = collarEnabled
