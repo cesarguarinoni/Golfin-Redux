@@ -344,7 +344,15 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
   // A large sigma removes 5m DEM grid noise while preserving real macro
   // topography in its actual orientation — no spline axis, no projection,
   // no synthetic surface, no diagonal artifacts.
-  const TERRAIN_SMOOTH_SIGMA_M = 10.0;
+  // Sigma scales with hole length so smoothing strength stays consistent
+  // in *relative* terms across small (Hole 4, ~140m) and large (Hole 1,
+  // ~420m) holes. 2.5% of avg dimension is a good compromise: still kills
+  // 5m DEM grid noise on small holes, doesn't over-smooth big ones.
+  // Floor of 6m prevents tiny holes from getting jagged.
+  const TERRAIN_SMOOTH_SIGMA_M = Math.max(
+    6.0,
+    0.025 * (terrainWidthM + terrainLengthM) / 2
+  );
   const tsmMetersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
   const tsmSigmaCells = TERRAIN_SMOOTH_SIGMA_M / tsmMetersPerCell;
   const tsmRadius = Math.max(1, Math.ceil(3 * tsmSigmaCells));
@@ -393,7 +401,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
     }
   }
 
-  console.log(`  Mode: smoothed DEM (sigma=${TERRAIN_SMOOTH_SIGMA_M}m = ${tsmSigmaCells.toFixed(1)} cells, radius=${tsmRadius})`);
+  console.log(`  Mode: smoothed DEM (sigma=${TERRAIN_SMOOTH_SIGMA_M.toFixed(1)}m = ${tsmSigmaCells.toFixed(1)} cells, radius=${tsmRadius}, hole avg dim=${(((terrainWidthM + terrainLengthM) / 2)).toFixed(0)}m)`);
 
   // ─── Ravine Carving ──────────────────────────────────────────
   // Tunable parameters (safe defaults — see notes at bottom of task)
@@ -702,7 +710,10 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
   }
 
   const elevRange = maxElev - minElev || 1;
-  const MAX_PLAYABLE_RANGE = 25;
+  // Cap is purely a gameplay limit (don't make a 100m cliff).
+  // 50m gives Lomond's biggest holes (Hole 1 at 83m raw) their real hill
+  // character while staying walkable. Holes ≤50m raw stay at scale 1.0.
+  const MAX_PLAYABLE_RANGE = 50;
   const scaleFactor = elevRange > MAX_PLAYABLE_RANGE
     ? MAX_PLAYABLE_RANGE / elevRange : 1.0;
   const playableRange = elevRange * scaleFactor;
@@ -711,10 +722,12 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
     heightmap[i] = (heightmap[i] - minElev) * scaleFactor;
   }
 
-  // Single global blur pass
-  const smoothed = blur2D(heightmap, RES, RES, 1);
+  // No additional blur on DEM path — the σ=TERRAIN_SMOOTH_SIGMA_M Gaussian
+  // above already did targeted smoothing. The old blur2D(...,1) was a
+  // vestige of the Perlin pipeline and was making everything mushier.
+  const smoothed = heightmap;
 
-  // Recalculate min/max after smoothing
+  // Compute min/max for encoding
   let globalMin = Infinity, globalMax = -Infinity;
   for (let i = 0; i < RES * RES; i++) {
     if (smoothed[i] < globalMin) globalMin = smoothed[i];
