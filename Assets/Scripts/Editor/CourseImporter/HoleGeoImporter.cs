@@ -41,6 +41,15 @@ namespace Golfin.CourseImport
         /// <summary>Horizontal distance over which the tee platform skirt
         /// ramps back to natural terrain.</summary>
         private const float TeeSkirtMeters = 2.0f;
+        /// <summary>Maximum ramp slope (rise/run) on the tee skirt.
+        /// 0.35 ≈ 19°, a walkable golf mound slope. When natural
+        /// terrain is steeper than this, the skirt extends outward
+        /// per-cell so the rendered ramp never exceeds this slope.</summary>
+        private const float TeeMaxRampSlope = 0.35f;
+        /// <summary>Upper cap on per-cell adaptive skirt radius.
+        /// Present only to prevent pathological cases; normal terrain
+        /// never hits this.</summary>
+        private const float TeeMaxSkirtMeters = 60.0f;
 
         // ─── Heightmap Smoothing Parameters ─────────────────────────
         private const int SmoothRadius = 16;
@@ -3162,7 +3171,6 @@ namespace Golfin.CourseImport
 
                 float cellW = terrainSize.x / (hRes - 1);
                 float cellH = terrainSize.z / (hRes - 1);
-                float skirtRadiusM = skirtRadiusCells * (cellW + cellH) * 0.5f;
 
                 // Coarse chamfer — axial only, no diagonals needed for culling.
                 float[,] coarseDist = new float[hRes, hRes];
@@ -3186,6 +3194,35 @@ namespace Golfin.CourseImport
                             coarseDist[z, x] = coarseDist[z + 1, x] + 1f;
                     }
 
+                // Worst-case adaptive radius for coarse cull: scan the tee's
+                // bbox + TeeMaxSkirtMeters neighborhood for the steepest drop.
+                float worstDrop = 0f;
+                int neighborhoodCells = Mathf.RoundToInt(TeeMaxSkirtMeters / metersPerCell);
+                int minR = hRes, maxR = -1, minC = hRes, maxC = -1;
+                for (int z = 0; z < hRes; z++)
+                    for (int x = 0; x < hRes; x++)
+                        if (teeMask[z, x])
+                        {
+                            if (z < minR) minR = z;
+                            if (z > maxR) maxR = z;
+                            if (x < minC) minC = x;
+                            if (x > maxC) maxC = x;
+                        }
+                int bboxMinR = Mathf.Max(0, minR - neighborhoodCells);
+                int bboxMaxR = Mathf.Min(hRes - 1, maxR + neighborhoodCells);
+                int bboxMinC = Mathf.Max(0, minC - neighborhoodCells);
+                int bboxMaxC = Mathf.Min(hRes - 1, maxC + neighborhoodCells);
+                for (int z = bboxMinR; z <= bboxMaxR; z++)
+                    for (int x = bboxMinC; x <= bboxMaxC; x++)
+                    {
+                        float drop = maxH - baseline[z, x];
+                        if (drop > worstDrop) worstDrop = drop;
+                    }
+
+                float worstAdaptiveM = Mathf.Min(TeeMaxSkirtMeters,
+                    Mathf.Max(TeeSkirtMeters, 1.5f * worstDrop / TeeMaxRampSlope));
+                int worstAdaptiveCells = Mathf.CeilToInt(worstAdaptiveM / metersPerCell);
+
                 // Exact-distance pass.
                 int nContour = region.contour.Length;
                 for (int z = 0; z < hRes; z++)
@@ -3194,7 +3231,7 @@ namespace Golfin.CourseImport
                     {
                         if (teeMask[z, x]) continue;
                         if (skipMask[z, x]) continue;
-                        if (coarseDist[z, x] > skirtRadiusCells + 2f) continue;
+                        if (coarseDist[z, x] > worstAdaptiveCells + 2f) continue;
 
                         float wx = terrainPos.x + x * cellW;
                         float wz = terrainPos.z + z * cellH;
@@ -3216,9 +3253,18 @@ namespace Golfin.CourseImport
                             if (d < minDistM) minDistM = d;
                         }
 
-                        if (minDistM > skirtRadiusM) continue;
+                        // Per-cell adaptive skirt radius.
+                        // dR chosen so smoothstep peak slope (1.5× rise/run at t=0.5)
+                        // stays at or below TeeMaxRampSlope.
+                        float dropAbs = Mathf.Abs(maxH - baseline[z, x]);
+                        float adaptiveM = Mathf.Clamp(
+                            1.5f * dropAbs / TeeMaxRampSlope,
+                            TeeSkirtMeters,
+                            TeeMaxSkirtMeters);
 
-                        float t = minDistM / skirtRadiusM;
+                        if (minDistM > adaptiveM) continue;
+
+                        float t = minDistM / adaptiveM;
                         t = t * t * (3f - 2f * t); // smoothstep
 
                         float rampedH = Mathf.Lerp(maxH, baseline[z, x], t);
@@ -3232,8 +3278,10 @@ namespace Golfin.CourseImport
                 }
 
                 changed = true;
-                Debug.Log($"[HoleGeoImporter] Tee {region.id}: platform h={maxH:F4}, " +
-                          $"skirt radius={skirtRadiusCells} cells ({TeeSkirtMeters:F1}m)");
+                Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
+                          $"platform h={maxH:F4}, " +
+                          $"base skirt={TeeSkirtMeters:F1}m, " +
+                          $"worst adaptive skirt={worstAdaptiveM:F1}m");
             }
 
             if (changed)
