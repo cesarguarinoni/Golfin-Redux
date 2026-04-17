@@ -403,6 +403,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
   const RAVINE_MAX_PLAYABLE_FRAC = 0.05;  // skip region if more than 5% is in playable zones
   const RAVINE_KERNEL_SIGMA_M    = 8.0;   // Gaussian falloff (softness of carve edges)
   const RAVINE_DEPTH_PERCENTILE  = 0.20;  // use mean of deepest 20% of region cells as target depth
+  const RAVINE_DEPTH_MULTIPLIER  = 1.5;   // scale target depth by this factor (>1 = deeper)
 
   // Step 1: High-pass filter on rawDem to isolate sharp local features.
   // ravineResidual = rawDem - blur(rawDem, largeRadius)
@@ -584,7 +585,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
     const deepestCount = Math.max(1, Math.floor(stats.depths.length * RAVINE_DEPTH_PERCENTILE));
     let depthSum = 0;
     for (let i = 0; i < deepestCount; i++) depthSum += stats.depths[i];
-    const targetDepth = depthSum / deepestCount; // negative (below surface), meters
+    const targetDepth = (depthSum / deepestCount) * RAVINE_DEPTH_MULTIPLIER; // negative (below surface), meters
 
     carvedRegions.push({
       id: r,
