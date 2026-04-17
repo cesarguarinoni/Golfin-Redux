@@ -3763,6 +3763,10 @@ namespace Golfin.CourseImport
 
                         var teeMat = CreateTiledMaterial(texDir, "T_Tee_Albedo", "T_Tee_Normal", dataDir, 3f);
 
+                        // Tee border material — kept built & ready even though CreateTeeMeshFlat
+                        // doesn't use it. If we decide to bring back a fringe (e.g., inside-inset
+                        // variant that lives on the flat platform), swap the callsite back to a
+                        // border-using builder and this material is already wired up.
                         var teeBorderMat = new Material(GetLitShader());
                         teeBorderMat.name = "MAT_TeeBorder";
                         teeBorderMat.mainTexture = FindTextureExact(texDir, "T_TeeDark_Albedo");
@@ -3784,11 +3788,10 @@ namespace Golfin.CourseImport
                         foreach (var region in data.zones.tee)
                         {
                             if (region.contour == null || region.contour.Length < 3) continue;
-                            var meshGO = CreateTeeMeshWithBorder(
-                                region.id, "Tee", region.contour,
+                            var meshGO = CreateTeeMeshFlat(
+                                region.id, region.contour,
                                 terrain, terrainBaseY,
                                 teeMat, 3f,
-                                teeBorderMat, 0.5f, 3f,
                                 Golfin.Course.SurfaceType.Tee);
                             if (meshGO != null)
                                 meshGO.transform.SetParent(teeRoot.transform);
@@ -4182,6 +4185,92 @@ namespace Golfin.CourseImport
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
+            return go;
+        }
+
+        /// <summary>
+        /// Flat single-submesh tee mesh. CDTs the contour directly, flattens
+        /// all verts to platformY, no border ring. Visual boundary comes from
+        /// the raised terrain mound (built by FlattenTerrainUnderTees) rather
+        /// than a dark collar mesh.
+        /// </summary>
+        private static GameObject CreateTeeMeshFlat(
+            int id, ContourPoint[] contour,
+            Terrain terrain, float terrainBaseY,
+            Material mat, float tileSize,
+            Golfin.Course.SurfaceType surfaceType)
+        {
+            int nc = contour.Length;
+            if (nc < 3) return null;
+
+            float yOffset = 0.02f;
+
+            System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+                new Vector2(wx / tileSize, wz / tileSize);
+
+            var (rawVerts, uvs, tris) = CDTTriangulate(
+                contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
+
+            if (rawVerts == null || tris == null || tris.Length < 3)
+            {
+                Debug.LogWarning($"[HoleGeoImporter] Tee {id}: CDT failed");
+                return null;
+            }
+
+            // Platform Y = max of sampled verts. FlattenTerrainUnderTees already
+            // raised the terrain under the contour to a single height, so all
+            // verts should already agree (up to bilinear interpolation noise).
+            // Taking max guarantees we never dip below the terrain and avoids
+            // any sub-cm sampling waviness on the mesh top.
+            float platformY = float.MinValue;
+            for (int i = 0; i < rawVerts.Length; i++)
+                if (rawVerts[i].y > platformY) platformY = rawVerts[i].y;
+
+            for (int i = 0; i < rawVerts.Length; i++)
+                rawVerts[i].y = platformY;
+
+            float cx = 0f, cz = 0f;
+            for (int i = 0; i < rawVerts.Length; i++)
+            { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+            cx /= rawVerts.Length; cz /= rawVerts.Length;
+            Vector3 centroid = new Vector3(cx, 0f, cz);
+
+            for (int i = 0; i < rawVerts.Length; i++)
+                rawVerts[i] -= centroid;
+
+            if (tris.Length >= 3)
+            {
+                Vector3 a = rawVerts[tris[0]];
+                Vector3 b = rawVerts[tris[1]];
+                Vector3 c = rawVerts[tris[2]];
+                float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+                if (cross > 0)
+                {
+                    for (int t = 0; t < tris.Length; t += 3)
+                    { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
+                }
+            }
+
+            var mesh = new Mesh();
+            mesh.name = $"Tee_{id}";
+            mesh.vertices = rawVerts;
+            mesh.uv = uvs;
+            mesh.triangles = tris;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"Tee_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+
+            AddCleanMeshCollider(go, mesh);
+
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = surfaceType;
+
+            Debug.Log($"[HoleGeoImporter] Tee {id}: flat mesh built, platformY={platformY:F3}");
+
             return go;
         }
 

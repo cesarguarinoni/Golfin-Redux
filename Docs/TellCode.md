@@ -267,3 +267,4 @@ a collar — we can bring back a fringe by changing one callsite.
 ---
 
 ✅ DONE: 2026-04-17 — FlattenTerrainUnderTees extended with chamfer-distance skirt ramp (2m smoothstep). Green Y fixed by setting yOffset=0.00f in CreateGreenMeshCDT.
+✅ DONE: 2026-04-18 — Added CreateTeeMeshFlat (borderless, flat CDT, platformY from max vert). Callsite in CreateFlatZoneMeshes switched from CreateTeeMeshWithBorder to CreateTeeMeshFlat. teeBorderMat block kept with explanatory comment. CreateTeeMeshWithBorder left intact.
