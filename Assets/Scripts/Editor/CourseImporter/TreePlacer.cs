@@ -455,6 +455,58 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
+        /// Build overlay-exclusion polygons for the currently-active scene.
+        /// Resolves Lite-vs-Geo and the export folder from the scene name +
+        /// path (same logic as ImportTreesMenuItem).
+        /// Returns an empty list if the scene name doesn't match a hole or
+        /// the export folder is missing.
+        /// Used by TreeBrushTool to keep the brush off overlay surfaces.
+        /// </summary>
+        public static List<Vector2[]> BuildExclusionPolygonsForActiveScene()
+        {
+            var activeScene = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene();
+            string sceneName = activeScene.name;
+            string scenePath = activeScene.path ?? "";
+
+            bool isGeo = scenePath.IndexOf("_Geo", System.StringComparison.OrdinalIgnoreCase) >= 0
+                || sceneName.IndexOf("_Geo", System.StringComparison.OrdinalIgnoreCase) >= 0;
+            bool isFlat = scenePath.IndexOf("_Flat", System.StringComparison.OrdinalIgnoreCase) >= 0
+                || sceneName.IndexOf("_Flat", System.StringComparison.OrdinalIgnoreCase) >= 0;
+
+            string baseName = System.Text.RegularExpressions.Regex
+                .Replace(sceneName, "(_Geo)?(_Flat)?$", "",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            int holeNumber = -1;
+            if (baseName.StartsWith("Hole_") && baseName.Length >= 7)
+                int.TryParse(baseName.Substring(5, 2), out holeNumber);
+            if (holeNumber < 1 || holeNumber > 18)
+                return new List<Vector2[]>();
+
+            string toolFolder = isGeo ? "UHoleGeo" : "UHoleLite";
+            string holeFolder = isFlat ? $"hole-{holeNumber:D2}-flat" : $"hole-{holeNumber:D2}";
+            string exportPath = Path.Combine(
+                Application.dataPath, "..",
+                $"Tools/{toolFolder}/output/lomond-country-club/export",
+                holeFolder);
+
+            if (!Directory.Exists(exportPath))
+                return new List<Vector2[]>();
+
+            return BuildExclusionPolygons(exportPath, isGeo);
+        }
+
+        /// <summary>
+        /// Test if (worldX, worldZ) falls inside ANY of the supplied
+        /// overlay-exclusion polygons. Empty list = always returns false.
+        /// </summary>
+        public static bool IsBlockedByOverlay(
+            float worldX, float worldZ, List<Vector2[]> polygons)
+        {
+            if (polygons == null || polygons.Count == 0) return false;
+            return IsInsideAnyOverlay(worldX, worldZ, polygons);
+        }
+
+        /// <summary>
         /// Main entry point. Call after terrain is created.
         /// </summary>
         public static void PlaceTrees(
@@ -777,7 +829,7 @@ namespace Golfin.CourseImport
         /// Apply uniform LOD thresholds + CrossFade to a LODGroup.
         /// Works for both terrain prototype prefabs and standalone instances.
         /// </summary>
-        private static void NormalizeLODGroup(LODGroup lodGroup)
+        internal static void NormalizeLODGroup(LODGroup lodGroup)
         {
             var lods = lodGroup.GetLODs();
             if (lods.Length == 0) return;
