@@ -7,6 +7,226 @@
 
 ---
 
+## Previous Task — Shore Ramp Absolute Target (Hole 7 Geo Cliff)
+
+Water is no longer hidden — but there's now a ~1.6m vertical cliff at
+the upslope water boundary. Shore ramp runs its full 10 cells but the
+cliff remains because the ramp can only subtract `ShoreDepthMeters`
+(0.4m) — not enough on a slope that's 2m higher than the water surface.
+
+**Root cause in one sentence:** `drop = ShoreDepthMeters * smoothstep(t)`
+is a fixed-magnitude subtraction. When the terrain is 2m above waterY,
+subtracting 0.4m at the boundary still leaves a 1.6m cliff.
+
+**Fix:** Replace the subtractive ramp with a lerp that targets the water
+surface height as an absolute value. At the boundary the ramp should
+reach `waterSurfaceNorm` (the water mesh Y in normalized terrain units).
+At `ShoreRadius` it should reach the original terrain height. Everything
+in between is a smoothstep blend between those two absolute heights.
+
+**Target file:** `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`
+**No pipeline changes.**
+
+---
+
+### Step 1 — Add per-body water SURFACE Y tracking
+
+The previous task added `waterMask` and `waterFloorY` arrays. We now also
+need per-cell `waterSurfaceY` for the shore ramp target.
+
+In the water-mask building block, alongside `waterFloorY`:
+
+```csharp
+// Per-cell water SURFACE Y in normalized heightmap units.
+// Needed by shore ramp so land can lerp to the correct water level
+// per body (holes can have multiple bodies at different elevations).
+float[,] waterSurfaceY = new float[hRes, hRes];
+```
+
+Inside the `foreach (var w in waterData.water)` loop, compute the surface
+norm alongside the floor norm:
+
+```csharp
+// Water SURFACE Y in world units, then normalize.
+// (Surface is at minTerrainH - 0.05m, same as CreateWaterMeshes.)
+float surfaceWorldY = minTerrainH - 0.05f;
+float surfaceNorm = Mathf.Clamp01(surfaceWorldY / elevRange);
+```
+
+In the `for (int z) for (int x)` loop that writes `waterMask` and
+`waterFloorY`, also write `waterSurfaceY`:
+
+```csharp
+for (int z = 0; z < hRes; z++)
+    for (int x = 0; x < hRes; x++)
+        if (bodyMask[z, x])
+        {
+            waterMask[z, x] = true;
+            waterFloorY[z, x] = floorNorm;
+            waterSurfaceY[z, x] = surfaceNorm;
+        }
+```
+
+---
+
+### Step 2 — Joint chamfer: propagate nearest body's surface Y with distance
+
+The existing chamfer distance transform populates `distToWater[z, x]`.
+Extend it to also track the surface Y of the nearest water body.
+
+Replace the chamfer distance block in the shore slope pass with:
+
+```csharp
+// Joint chamfer: distToWater + nearest-body surfaceY propagation.
+// Water cells start with dist=0 and their own surfaceY.
+// Non-water cells inherit both from the nearest water neighbor.
+float[,] distToWater = new float[hRes, hRes];
+float[,] nearestSurfaceY = new float[hRes, hRes];
+for (int z = 0; z < hRes; z++)
+    for (int x = 0; x < hRes; x++)
+    {
+        distToWater[z, x] = waterMask[z, x] ? 0f : float.MaxValue;
+        nearestSurfaceY[z, x] = waterSurfaceY[z, x];
+    }
+
+// Forward pass
+for (int z = 0; z < hRes; z++)
+    for (int x = 0; x < hRes; x++)
+    {
+        if (x > 0)
+        {
+            float cand = distToWater[z, x - 1] + 1f;
+            if (cand < distToWater[z, x])
+            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z, x - 1]; }
+        }
+        if (z > 0)
+        {
+            float cand = distToWater[z - 1, x] + 1f;
+            if (cand < distToWater[z, x])
+            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z - 1, x]; }
+        }
+        if (x > 0 && z > 0)
+        {
+            float cand = distToWater[z - 1, x - 1] + 1.414f;
+            if (cand < distToWater[z, x])
+            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z - 1, x - 1]; }
+        }
+        if (x < hRes - 1 && z > 0)
+        {
+            float cand = distToWater[z - 1, x + 1] + 1.414f;
+            if (cand < distToWater[z, x])
+            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z - 1, x + 1]; }
+        }
+    }
+// Backward pass
+for (int z = hRes - 1; z >= 0; z--)
+    for (int x = hRes - 1; x >= 0; x--)
+    {
+        if (x < hRes - 1)
+        {
+            float cand = distToWater[z, x + 1] + 1f;
+            if (cand < distToWater[z, x])
+            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z, x + 1]; }
+        }
+        if (z < hRes - 1)
+        {
+            float cand = distToWater[z + 1, x] + 1f;
+            if (cand < distToWater[z, x])
+            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z + 1, x]; }
+        }
+        if (x < hRes - 1 && z < hRes - 1)
+        {
+            float cand = distToWater[z + 1, x + 1] + 1.414f;
+            if (cand < distToWater[z, x])
+            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z + 1, x + 1]; }
+        }
+        if (x > 0 && z < hRes - 1)
+        {
+            float cand = distToWater[z + 1, x - 1] + 1.414f;
+            if (cand < distToWater[z, x])
+            { distToWater[z, x] = cand; nearestSurfaceY[z, x] = nearestSurfaceY[z + 1, x - 1]; }
+        }
+    }
+```
+
+---
+
+### Step 3 — Replace the subtractive ramp with an absolute-target lerp
+
+Replace the shore-cell ramp loop:
+
+```csharp
+int shoreRadiusCells = ShoreRadius;
+
+for (int z = 0; z < hRes; z++)
+{
+    for (int x = 0; x < hRes; x++)
+    {
+        if (waterMask[z, x]) continue;
+        if (depress[z, x]) continue;
+        if (cartDepress[z, x]) continue;
+
+        float dist = distToWater[z, x];
+        if (dist <= 0f || dist > shoreRadiusCells) continue;
+
+        // t = 0 at the water boundary, 1 at shoreRadius.
+        float t = dist / shoreRadiusCells;
+        t = t * t * (3f - 2f * t); // smoothstep
+
+        // Absolute target: lerp from water surface Y (at boundary)
+        // to original terrain height (at shoreRadius). Works for any
+        // slope magnitude because we target an absolute Y, not a
+        // fixed-magnitude drop.
+        float waterY = nearestSurfaceY[z, x];
+        float originalH = heights[z, x];
+        float targetH = Mathf.Lerp(waterY, originalH, t);
+
+        // Only lower the terrain — never raise it. If the existing
+        // height is already below the interpolated target (e.g., a
+        // natural low spot next to water), leave it alone.
+        if (targetH < originalH)
+        {
+            heights[z, x] = Mathf.Max(0f, targetH);
+            shoreCount++;
+        }
+    }
+}
+```
+
+---
+
+### Verification
+
+Re-import Hole 07 Geo: `Import > Geo > Normal > Import Hole 07 Geo`
+
+- [ ] No cliff at water boundary — terrain meets water level smoothly
+- [ ] Ramp is gradual over the full ShoreRadius width (~3m at 2049 res)
+- [ ] Water surface still flat (no seesaw)
+- [ ] Full water mesh still visible (no re-regression to hidden half)
+
+Regression check:
+
+- [ ] `Import Hole 01 Geo` (no water) — no errors
+- [ ] `Import Hole 12 Geo` (multi-body) — each body's surrounding ramp
+      targets THAT body's surface Y, not some average
+
+---
+
+### Do NOT change
+
+- Water mesh construction (from the first port)
+- Water floor depression (from the second port)
+- Fairway/tee/cart path behavior
+- Shore constants (ShoreRadius=10, ShoreDepthMeters=0.4)
+- Shore ramp skip conditions (water/depress/cartDepress)
+
+**Note:** With this fix, `ShoreDepthMeters` becomes less directly meaningful
+for the ramp (the ramp now targets water surface absolutely, not a fixed
+drop). Keep the constant for now — it still controls water floor depth
+via the previous task's floor logic.
+
+---
+
 ## Previous Task — Flatten Terrain Under Water (Hole 7 Geo Follow-up)
 
 Water rework applied successfully — seesaw gone, shape clean. But on sloped
@@ -759,6 +979,7 @@ And a hole with multiple water bodies:
 
 ## Completed Tasks
 
+✅ DONE: 2026-04-17 — Absolute-target shore ramp: waterSurfaceY per body, joint chamfer propagates nearestSurfaceY, lerp replaces fixed-drop
 ✅ DONE: 2026-04-17 — Absolute water floor for sloped contours: per-body floorNorm, waterMask separate from depress, fairway/cart loops skip water cells, shore reuses waterMask
 ✅ DONE: 2026-04-17 — Water rework ported to HoleGeoImporter: flat CDT, TerrainYOffset, water depression in DepressTerrainUnderOverlays, shore slope ramp, _DepthEnd 0.8
 ✅ DONE: 2026-04-16 — Flat inside + 8-cell outward smoothstep ramp implemented
