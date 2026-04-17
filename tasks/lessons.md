@@ -95,6 +95,18 @@ if (Golfin.UI.PersistentUIManager.Instance != null)
 }
 ```
 
+## UHole Geo — CLI regen must sync to export folder for Unity to pick it up
+
+**Background:** CLI writes to `output/{courseId}/holes/{nn}/` but Unity's `HoleGeoImporter`
+reads from `output/{courseId}/export/hole-{nn}/`. These are different paths.
+
+**Fix applied (2026-04-17):** `generate-terrain.mjs` now copies `heightmap.raw` to the export
+folder and patches `hole-manifest.json`'s terrain block (width/length/min/max/resolution) after
+each regen. Unity import works directly after CLI regen — no UHole Geo GUI step needed.
+
+**If export dir doesn't exist yet:** The script logs "Export dir not found — skipping sync".
+In that case the user does need to run a full export from UHole Geo GUI first to create it.
+
 ---
 
 ## Course Importer — Shore Ramp Artifacts (2026-04-17)

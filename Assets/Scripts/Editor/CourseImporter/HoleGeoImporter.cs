@@ -280,12 +280,6 @@ namespace Golfin.CourseImport
                 // Depress terrain under overlay meshes to prevent z-fighting
                 DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
 
-                // Build tee meshes AFTER terrain reshaping so CDT naturally
-                // samples the already-flat platform + ramped skirt terrain.
-                // This eliminates the need for any post-patch vertex fixup.
-                CreateTeeMeshesPostDepression(terrainData, terrainGO,
-                    holeRoot.transform, exportPath, dataDir, projectRoot);
-
                 terrainData.SetHoles(0, 0, holes);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Building hierarchy...", 0.6f);
@@ -3088,6 +3082,18 @@ namespace Golfin.CourseImport
                                 FairwayFringeMeters);
             }
 
+            // Tee contours
+            string zcPath = Path.Combine(exportPath, "zone-contours.json");
+            if (File.Exists(zcPath))
+            {
+                var zcData = JsonUtility.FromJson<ZoneContoursFile>(File.ReadAllText(zcPath));
+                if (zcData.zones != null && zcData.zones.tee != null)
+                    foreach (var region in zcData.zones.tee)
+                        if (region.contour != null && region.contour.Length >= 3)
+                            MarkContourCells(region.contour, depress,
+                                hRes, terrainPos, terrainSize);
+            }
+
             // Cart path depression — separate array for gradient ramp.
             // Use spline footprint polygons (built during mesh generation) so the
             // depressed area exactly matches the visible mesh. Fall back to
@@ -3196,144 +3202,6 @@ namespace Golfin.CourseImport
                             heights[z, x] = waterFloorY[z, x];
                             waterFloorCount++;
                         }
-            }
-
-            // ─── Tee platform pass ────────────────────────────────────────
-            // Each zones.tee[i] polygon becomes a FLAT platform at its own
-            // absolute Y (median of terrain under it), with a smooth terrain
-            // skirt that ramps back to original terrain over TeeSkirtMeters.
-            //
-            // Real golf tees are built-up level pads. Without this, tees tilt
-            // on sloped ground because the tee mesh follows the DEM.
-            //
-            // Per-region independence: each tee polygon is processed
-            // independently, so multi-tee holes (Hole 1, 4, 18...) with back /
-            // middle / forward tees at different elevations each get their own
-            // correct height.
-            int teeFlatCount = 0;
-            int teeSkirtCount = 0;
-
-            {
-                string teePath = Path.Combine(exportPath, "zone-contours.json");
-                if (File.Exists(teePath))
-                {
-                    var teeData = JsonUtility.FromJson<ZoneContoursFile>(
-                        File.ReadAllText(teePath));
-                    if (teeData.zones != null && teeData.zones.tee != null &&
-                        teeData.zones.tee.Length > 0)
-                    {
-                        float metersPerCell =
-                            (terrainSize.x + terrainSize.z) * 0.5f / (hRes - 1);
-                        int skirtRadiusCells = Mathf.Max(1, Mathf.RoundToInt(
-                            TeeSkirtMeters / metersPerCell));
-
-                        // Capture pre-tee heights so all skirt lerps read from a
-                        // clean baseline (one tee's platform write never contaminates
-                        // another tee's skirt).
-                        float[,] baselineHeights = (float[,])heights.Clone();
-
-                        foreach (var region in teeData.zones.tee)
-                        {
-                            if (region.contour == null || region.contour.Length < 3)
-                                continue;
-
-                            // Per-region mask (inset=0 so mesh + platform align exactly)
-                            bool[,] teeMask = new bool[hRes, hRes];
-                            MarkContourCells(region.contour, teeMask,
-                                hRes, terrainPos, terrainSize, 0f);
-
-                            // Median terrain height under the tee, in normalized units
-                            var samples = new System.Collections.Generic.List<float>(256);
-                            for (int z = 0; z < hRes; z++)
-                                for (int x = 0; x < hRes; x++)
-                                    if (teeMask[z, x])
-                                        samples.Add(baselineHeights[z, x]);
-                            if (samples.Count == 0) continue;
-
-                            samples.Sort();
-                            float teeHeightNorm = samples[samples.Count / 2];
-
-                            // Flatten terrain to median height — no depression.
-                            // Tee mesh is built post-depression and samples this flat surface,
-                            // so it is automatically level without any post-patching.
-                            float platformNorm = teeHeightNorm;
-
-                            // Write platform cells
-                            for (int z = 0; z < hRes; z++)
-                                for (int x = 0; x < hRes; x++)
-                                    if (teeMask[z, x])
-                                    {
-                                        heights[z, x] = platformNorm;
-                                        teeFlatCount++;
-                                    }
-
-                            // Chamfer distance transform from this tee's boundary outward
-                            float[,] dist = new float[hRes, hRes];
-                            for (int z = 0; z < hRes; z++)
-                                for (int x = 0; x < hRes; x++)
-                                    dist[z, x] = teeMask[z, x] ? 0f : float.MaxValue;
-
-                            // Forward pass
-                            for (int z = 0; z < hRes; z++)
-                                for (int x = 0; x < hRes; x++)
-                                {
-                                    if (x > 0)
-                                        dist[z, x] = Mathf.Min(dist[z, x], dist[z, x - 1] + 1f);
-                                    if (z > 0)
-                                        dist[z, x] = Mathf.Min(dist[z, x], dist[z - 1, x] + 1f);
-                                    if (x > 0 && z > 0)
-                                        dist[z, x] = Mathf.Min(dist[z, x], dist[z - 1, x - 1] + 1.414f);
-                                    if (x < hRes - 1 && z > 0)
-                                        dist[z, x] = Mathf.Min(dist[z, x], dist[z - 1, x + 1] + 1.414f);
-                                }
-                            // Backward pass
-                            for (int z = hRes - 1; z >= 0; z--)
-                                for (int x = hRes - 1; x >= 0; x--)
-                                {
-                                    if (x < hRes - 1)
-                                        dist[z, x] = Mathf.Min(dist[z, x], dist[z, x + 1] + 1f);
-                                    if (z < hRes - 1)
-                                        dist[z, x] = Mathf.Min(dist[z, x], dist[z + 1, x] + 1f);
-                                    if (x < hRes - 1 && z < hRes - 1)
-                                        dist[z, x] = Mathf.Min(dist[z, x], dist[z + 1, x + 1] + 1.414f);
-                                    if (x > 0 && z < hRes - 1)
-                                        dist[z, x] = Mathf.Min(dist[z, x], dist[z + 1, x - 1] + 1.414f);
-                                }
-
-                            // Apply skirt: smoothstep lerp from platformNorm at the tee
-                            // edge to baselineHeights[z,x] at skirtRadiusCells.
-                            // Skip cells already claimed by fairway/cart/water — those
-                            // have their own intended heights.
-                            for (int z = 0; z < hRes; z++)
-                            {
-                                for (int x = 0; x < hRes; x++)
-                                {
-                                    if (teeMask[z, x]) continue;
-                                    if (depress[z, x]) continue;       // fairway/green
-                                    if (cartDepress[z, x]) continue;   // cart path
-                                    if (waterMask[z, x]) continue;     // water
-
-                                    float d = dist[z, x];
-                                    if (d <= 0f || d > skirtRadiusCells) continue;
-
-                                    float t = d / skirtRadiusCells; // 0 at edge, 1 at radius
-                                    t = t * t * (3f - 2f * t);      // smoothstep
-                                    float originalNorm = baselineHeights[z, x];
-                                    float target = Mathf.Lerp(
-                                        platformNorm, originalNorm, t);
-
-                                    // Take min so overlapping skirts on multi-tee holes
-                                    // never raise a cell above a neighboring platform.
-                                    if (target < heights[z, x])
-                                    {
-                                        heights[z, x] = Mathf.Max(0f, target);
-                                        teeSkirtCount++;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
 
             // Apply depression (fairway/tee — flat drop, skip water cells)
@@ -3455,70 +3323,7 @@ namespace Golfin.CourseImport
                       $" cells lowered by {OverlayDepressionMeters:F2}m" +
                       $" (cart path: {cartDepressedCount} cells," +
                       $" water floor: {waterFloorCount} cells flattened," +
-                      $" water shore ramp: {shoreCount} cells," +
-                      $" tee platforms: {teeFlatCount} cells flattened," +
-                      $" tee skirts: {teeSkirtCount} cells ramped)");
-        }
-
-        /// <summary>
-        /// Build tee meshes after DepressTerrainUnderOverlays has reshaped the terrain.
-        /// CDT naturally samples the already-flat platform terrain so interior verts are
-        /// level by construction. Border verts follow the skirt ramp automatically.
-        /// No post-patch vertex fixup needed.
-        /// </summary>
-        private static void CreateTeeMeshesPostDepression(TerrainData terrainData,
-            GameObject terrainGO, Transform parentRoot,
-            string exportPath, string dataDir, string projectRoot)
-        {
-            string texDir = "Assets/Courses/Textures_2025(JPG)";
-            var terrain = terrainGO.GetComponent<Terrain>();
-            float terrainBaseY = terrainGO.transform.position.y;
-
-            string zcPath = Path.Combine(exportPath, "zone-contours.json");
-            if (!File.Exists(zcPath)) return;
-
-            var data = JsonUtility.FromJson<ZoneContoursFile>(File.ReadAllText(zcPath));
-            if (data.zones == null || data.zones.tee == null || data.zones.tee.Length == 0)
-                return;
-
-            var teeRoot = new GameObject("Tees");
-            teeRoot.transform.SetParent(parentRoot);
-
-            var teeMat = CreateTiledMaterial(texDir, "T_Tee_Albedo", "T_Tee_Normal", dataDir, 3f);
-
-            var teeBorderMat = new Material(GetLitShader());
-            teeBorderMat.name = "MAT_TeeBorder";
-            teeBorderMat.mainTexture = FindTextureExact(texDir, "T_TeeDark_Albedo");
-            var teeBorderNormal = FindTextureExact(texDir, "T_TeeDark_Normal");
-            if (teeBorderNormal != null)
-            {
-                teeBorderMat.SetTexture("_BumpMap", teeBorderNormal);
-                teeBorderMat.SetFloat("_BumpScale", 0.4f);
-                teeBorderMat.EnableKeyword("_NORMALMAP");
-            }
-            teeBorderMat.SetFloat("_Smoothness", 0f);
-            teeBorderMat.SetFloat("_Metallic", 0f);
-
-            string teeBorderMatPath = $"{dataDir}/MAT_TeeBorder.mat";
-            var existingBorderMat = AssetDatabase.LoadAssetAtPath<Material>(teeBorderMatPath);
-            if (existingBorderMat != null) AssetDatabase.DeleteAsset(teeBorderMatPath);
-            AssetDatabase.CreateAsset(teeBorderMat, teeBorderMatPath);
-
-            foreach (var region in data.zones.tee)
-            {
-                if (region.contour == null || region.contour.Length < 3) continue;
-
-                var meshGO = CreateTeeMeshWithBorder(
-                    region.id, "Tee", region.contour,
-                    terrain, terrainBaseY,
-                    teeMat, 3f,
-                    teeBorderMat, 0.5f, 3f,
-                    Golfin.Course.SurfaceType.Tee);
-                if (meshGO != null)
-                    meshGO.transform.SetParent(teeRoot.transform);
-            }
-
-            Debug.Log($"[HoleGeoImporter] Created {data.zones.tee.Length} tee mesh(es) post-depression");
+                      $" water shore ramp: {shoreCount} cells)");
         }
 
         /// <summary>
@@ -3778,9 +3583,56 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // ─── Tee meshes from zone-contours.json ─────────────────────────
+            {
+                string zcPath = Path.Combine(exportPath, "zone-contours.json");
+                if (File.Exists(zcPath))
+                {
+                    var data = JsonUtility.FromJson<ZoneContoursFile>(File.ReadAllText(zcPath));
+                    if (data.zones != null && data.zones.tee != null && data.zones.tee.Length > 0)
+                    {
+                        var teeRoot = new GameObject("Tees");
+                        teeRoot.transform.SetParent(parentRoot);
+
+                        var teeMat = CreateTiledMaterial(texDir, "T_Tee_Albedo", "T_Tee_Normal", dataDir, 3f);
+
+                        var teeBorderMat = new Material(GetLitShader());
+                        teeBorderMat.name = "MAT_TeeBorder";
+                        teeBorderMat.mainTexture = FindTextureExact(texDir, "T_TeeDark_Albedo");
+                        var teeBorderNormal = FindTextureExact(texDir, "T_TeeDark_Normal");
+                        if (teeBorderNormal != null)
+                        {
+                            teeBorderMat.SetTexture("_BumpMap", teeBorderNormal);
+                            teeBorderMat.SetFloat("_BumpScale", 0.4f);
+                            teeBorderMat.EnableKeyword("_NORMALMAP");
+                        }
+                        teeBorderMat.SetFloat("_Smoothness", 0f);
+                        teeBorderMat.SetFloat("_Metallic", 0f);
+
+                        string teeBorderMatPath = $"{dataDir}/MAT_TeeBorder.mat";
+                        var existingBorderMat = AssetDatabase.LoadAssetAtPath<Material>(teeBorderMatPath);
+                        if (existingBorderMat != null) AssetDatabase.DeleteAsset(teeBorderMatPath);
+                        AssetDatabase.CreateAsset(teeBorderMat, teeBorderMatPath);
+
+                        foreach (var region in data.zones.tee)
+                        {
+                            if (region.contour == null || region.contour.Length < 3) continue;
+                            var meshGO = CreateTeeMeshWithBorder(
+                                region.id, "Tee", region.contour,
+                                terrain, terrainBaseY,
+                                teeMat, 3f,
+                                teeBorderMat, 0.5f, 3f,
+                                Golfin.Course.SurfaceType.Tee);
+                            if (meshGO != null)
+                                meshGO.transform.SetParent(teeRoot.transform);
+                        }
+
+                        Debug.Log($"[HoleGeoImporter] Created {data.zones.tee.Length} tee mesh(es)");
+                    }
+                }
+            }
+
             // ─── Cart path meshes from cart-paths.json (spline-based) ─────
-            // NOTE: Tee meshes are built in CreateTeeMeshesPostDepression (after
-            // DepressTerrainUnderOverlays) so CDT samples the already-flat terrain.
             CreateSplineCartPaths(terrainData, terrainGO, parentRoot,
                 exportPath, dataDir, projectRoot);
 
@@ -4218,6 +4070,27 @@ namespace Golfin.CourseImport
                 {
                     for (int t = 0; t < tris.Length; t += 3)
                     { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
+                }
+            }
+
+            // Flatten interior verts to their median Y so the tee surface is
+            // perfectly level regardless of terrain slope. Interior verts are
+            // those whose (x,z) falls inside the original (non-dilated) contour.
+            // Border ring verts (outside originalPoly) are left at natural terrain
+            // height so the ring blends into surrounding ground. Runs before
+            // centroid subtraction so all downstream code sees flattened positions.
+            {
+                var interiorYs = new System.Collections.Generic.List<float>(rawVerts.Length);
+                for (int i = 0; i < rawVerts.Length; i++)
+                    if (IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly))
+                        interiorYs.Add(rawVerts[i].y);
+                if (interiorYs.Count > 0)
+                {
+                    interiorYs.Sort();
+                    float flatY = interiorYs[interiorYs.Count / 2];
+                    for (int i = 0; i < rawVerts.Length; i++)
+                        if (IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly))
+                            rawVerts[i].y = flatY;
                 }
             }
 
