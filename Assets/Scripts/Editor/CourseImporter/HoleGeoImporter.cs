@@ -3344,6 +3344,7 @@ namespace Golfin.CourseImport
                 }
 
                 int shoreRadiusCells = ShoreRadius;
+                bool[,] rampMask = new bool[hRes, hRes];
 
                 for (int z = 0; z < hRes; z++)
                     for (int x = 0; x < hRes; x++)
@@ -3368,9 +3369,66 @@ namespace Golfin.CourseImport
                         if (targetH < originalH)
                         {
                             heights[z, x] = Mathf.Max(0f, targetH);
+                            rampMask[z, x] = true;
                             shoreCount++;
                         }
                     }
+
+                // Blur the ramp heights to eliminate Voronoi stripe artifacts.
+                // Voronoi boundaries in distToWater are real discontinuities that
+                // blurring the distance field can only soften, not remove. Blurring
+                // the resulting heights directly kills the stripes at their source.
+                // Strategy: apply a wide separable Gaussian to the full height array,
+                // then restore every non-ramp cell — fast (O(N*k)) and correct.
+                {
+                    const int rampBlurRadius = 6;
+                    const float rampBlurSigma = 4.0f;
+                    int kSize = rampBlurRadius * 2 + 1;
+                    float[] k = new float[kSize];
+                    float kSum = 0f;
+                    for (int i = 0; i < kSize; i++)
+                    {
+                        float d = i - rampBlurRadius;
+                        k[i] = Mathf.Exp(-(d * d) / (2f * rampBlurSigma * rampBlurSigma));
+                        kSum += k[i];
+                    }
+                    for (int i = 0; i < kSize; i++) k[i] /= kSum;
+
+                    // Snapshot originals so we can restore non-ramp cells after blur.
+                    float[,] snapshot = (float[,])heights.Clone();
+
+                    float[,] tmp = new float[hRes, hRes];
+                    // Horizontal pass
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            float sum = 0f;
+                            for (int ki = 0; ki < kSize; ki++)
+                            {
+                                int sx = Mathf.Clamp(x + ki - rampBlurRadius, 0, hRes - 1);
+                                sum += heights[z, sx] * k[ki];
+                            }
+                            tmp[z, x] = sum;
+                        }
+                    // Vertical pass
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            float sum = 0f;
+                            for (int ki = 0; ki < kSize; ki++)
+                            {
+                                int sz = Mathf.Clamp(z + ki - rampBlurRadius, 0, hRes - 1);
+                                sum += tmp[sz, x] * k[ki];
+                            }
+                            heights[z, x] = sum;
+                        }
+
+                    // Restore every cell that isn't in the ramp zone.
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                            if (!rampMask[z, x])
+                                heights[z, x] = snapshot[z, x];
+                }
             }
 
             terrainData.SetHeights(0, 0, heights);
