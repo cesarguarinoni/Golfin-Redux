@@ -2302,7 +2302,6 @@ namespace Golfin.CourseImport
 
             var greensRoot = new GameObject("Greens");
             greensRoot.transform.SetParent(parentRoot);
-            greensRoot.transform.localPosition = new Vector3(0f, -0.03f, 0f);
 
             var terrain = terrainGO.GetComponent<Terrain>();
             float terrainBaseY = terrainGO.transform.position.y;
@@ -2464,7 +2463,7 @@ namespace Golfin.CourseImport
             float collarWidth, float collarTileSize, float greenTileSize,
             float yBoost)
         {
-            const float yOffset = 0.03f;
+            const float yOffset = 0.00f;
             int nc = contour.Length;
             if (nc < 3) return null;
 
