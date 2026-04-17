@@ -3132,30 +3132,21 @@ namespace Golfin.CourseImport
                 var teeMask = new bool[hRes, hRes];
                 MarkContourCells(region.contour, teeMask, hRes, terrainPos, terrainSize, 0f);
 
-                // Platform Y = median of baseline heights inside the contour.
-                // Median (not max) means the tee sits at the ~average elevation
-                // of its footprint, so we CUT the uphill portion and FILL the
-                // downhill portion in the skirt pass below. This is how real
-                // golf tees are built on slopes — cut into the hillside — and
-                // it keeps the max height differential that the skirt has to
-                // bridge much smaller than using the peak elevation.
-                var samples = new System.Collections.Generic.List<float>(512);
+                // Peak height from BASELINE, not the mutating heights array
+                float maxH = float.MinValue;
                 for (int row = 0; row < hRes; row++)
                     for (int col = 0; col < hRes; col++)
-                        if (teeMask[row, col])
-                            samples.Add(baseline[row, col]);
+                        if (teeMask[row, col] && baseline[row, col] > maxH)
+                            maxH = baseline[row, col];
 
-                if (samples.Count == 0) continue;
+                if (maxH == float.MinValue) continue;
 
-                samples.Sort();
-                float platformY = samples[samples.Count / 2];
-
-                // Flatten interior to platformY
+                // Raise interior to maxH
                 for (int row = 0; row < hRes; row++)
                     for (int col = 0; col < hRes; col++)
                         if (teeMask[row, col])
                         {
-                            heights[row, col] = platformY;
+                            heights[row, col] = maxH;
                             flattenedCount++;
                         }
 
@@ -3230,42 +3221,18 @@ namespace Golfin.CourseImport
                         float t = minDistM / skirtRadiusM;
                         t = t * t * (3f - 2f * t); // smoothstep
 
-                        float rampedH = Mathf.Lerp(platformY, baseline[z, x], t);
+                        float rampedH = Mathf.Lerp(maxH, baseline[z, x], t);
 
-                        // Dual cut/fill merge:
-                        //   Downhill cells (baseline < platformY): the ramp goes
-                        //     from platformY at the edge DOWN to baseline at the
-                        //     ring edge. MAX raises terrain to form the mound.
-                        //   Uphill cells (baseline > platformY): the ramp goes
-                        //     from platformY at the edge UP to baseline at the
-                        //     ring edge. MIN lowers terrain to form the cut.
-                        //
-                        // Guard: adjacent tees' overlapping skirts keep whichever
-                        // write moves heights further FROM baseline, preventing seams.
-                        float baselineH = baseline[z, x];
-                        bool uphill = baselineH > platformY;
-
-                        if (uphill)
+                        if (rampedH > heights[z, x])
                         {
-                            if (rampedH < heights[z, x])
-                            {
-                                heights[z, x] = rampedH;
-                                skirtedCount++;
-                            }
-                        }
-                        else
-                        {
-                            if (rampedH > heights[z, x])
-                            {
-                                heights[z, x] = rampedH;
-                                skirtedCount++;
-                            }
+                            heights[z, x] = rampedH;
+                            skirtedCount++;
                         }
                     }
                 }
 
                 changed = true;
-                Debug.Log($"[HoleGeoImporter] Tee {region.id}: platform h={platformY:F4}, " +
+                Debug.Log($"[HoleGeoImporter] Tee {region.id}: platform h={maxH:F4}, " +
                           $"skirt radius={skirtRadiusCells} cells ({TeeSkirtMeters:F1}m)");
             }
 
