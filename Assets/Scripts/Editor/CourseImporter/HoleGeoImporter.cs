@@ -3374,60 +3374,38 @@ namespace Golfin.CourseImport
                         }
                     }
 
-                // Blur the ramp heights to eliminate Voronoi stripe artifacts.
-                // Voronoi boundaries in distToWater are real discontinuities that
-                // blurring the distance field can only soften, not remove. Blurring
-                // the resulting heights directly kills the stripes at their source.
-                // Strategy: apply a wide separable Gaussian to the full height array,
-                // then restore every non-ramp cell — fast (O(N*k)) and correct.
+                // Masked 2D Gaussian on ramp heights only.
+                // Only samples from other ramp cells — no cross-boundary leakage,
+                // no restore step, no spikes where ramp meets non-ramp terrain.
                 {
-                    const int rampBlurRadius = 6;
+                    const int rampBlurRadius = 8;
                     const float rampBlurSigma = 4.0f;
-                    int kSize = rampBlurRadius * 2 + 1;
-                    float[] k = new float[kSize];
-                    float kSum = 0f;
-                    for (int i = 0; i < kSize; i++)
-                    {
-                        float d = i - rampBlurRadius;
-                        k[i] = Mathf.Exp(-(d * d) / (2f * rampBlurSigma * rampBlurSigma));
-                        kSum += k[i];
-                    }
-                    for (int i = 0; i < kSize; i++) k[i] /= kSum;
-
-                    // Snapshot originals so we can restore non-ramp cells after blur.
                     float[,] snapshot = (float[,])heights.Clone();
-
-                    float[,] tmp = new float[hRes, hRes];
-                    // Horizontal pass
                     for (int z = 0; z < hRes; z++)
+                    {
                         for (int x = 0; x < hRes; x++)
                         {
-                            float sum = 0f;
-                            for (int ki = 0; ki < kSize; ki++)
+                            if (!rampMask[z, x]) continue;
+                            float wSum = 0f, hSum = 0f;
+                            for (int dz = -rampBlurRadius; dz <= rampBlurRadius; dz++)
                             {
-                                int sx = Mathf.Clamp(x + ki - rampBlurRadius, 0, hRes - 1);
-                                sum += heights[z, sx] * k[ki];
+                                int nz = z + dz;
+                                if (nz < 0 || nz >= hRes) continue;
+                                for (int dx = -rampBlurRadius; dx <= rampBlurRadius; dx++)
+                                {
+                                    int nx = x + dx;
+                                    if (nx < 0 || nx >= hRes) continue;
+                                    if (!rampMask[nz, nx]) continue;
+                                    float w = Mathf.Exp(-(dz * dz + dx * dx) /
+                                        (2f * rampBlurSigma * rampBlurSigma));
+                                    hSum += snapshot[nz, nx] * w;
+                                    wSum += w;
+                                }
                             }
-                            tmp[z, x] = sum;
+                            if (wSum > 0f)
+                                heights[z, x] = hSum / wSum;
                         }
-                    // Vertical pass
-                    for (int z = 0; z < hRes; z++)
-                        for (int x = 0; x < hRes; x++)
-                        {
-                            float sum = 0f;
-                            for (int ki = 0; ki < kSize; ki++)
-                            {
-                                int sz = Mathf.Clamp(z + ki - rampBlurRadius, 0, hRes - 1);
-                                sum += tmp[sz, x] * k[ki];
-                            }
-                            heights[z, x] = sum;
-                        }
-
-                    // Restore every cell that isn't in the ramp zone.
-                    for (int z = 0; z < hRes; z++)
-                        for (int x = 0; x < hRes; x++)
-                            if (!rampMask[z, x])
-                                heights[z, x] = snapshot[z, x];
+                    }
                 }
             }
 
