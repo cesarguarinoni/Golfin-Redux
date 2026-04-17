@@ -3090,23 +3090,6 @@ namespace Golfin.CourseImport
                                 hRes, terrainPos, terrainSize);
             }
 
-            // Water contours — depress right up to contour edge (inset=0).
-            string waterPath = Path.Combine(exportPath, "water.json");
-            if (File.Exists(waterPath))
-            {
-                var waterData = JsonUtility.FromJson<WaterFileData>(
-                    File.ReadAllText(waterPath));
-                if (waterData.water != null)
-                {
-                    foreach (var w in waterData.water)
-                    {
-                        if (w.contour != null && w.contour.Length >= 3)
-                            MarkContourCells(w.contour, depress,
-                                hRes, terrainPos, terrainSize, 0f);
-                    }
-                }
-            }
-
             // Cart path depression — separate array for gradient ramp.
             // Use spline footprint polygons (built during mesh generation) so the
             // depressed area exactly matches the visible mesh. Fall back to
@@ -3147,24 +3130,85 @@ namespace Golfin.CourseImport
                 }
             }
 
-            // Apply depression (fairway/tee — flat drop)
+            // Water cells — absolute height floor (not relative drop).
+            // Necessary for sloped contours where a fixed drop off original
+            // height leaves the upslope bed above waterY.
+            bool[,] waterMask = new bool[hRes, hRes];
+            float[,] waterFloorY = new float[hRes, hRes];
+            bool hasWater = false;
+
+            string waterPath = Path.Combine(exportPath, "water.json");
+            if (File.Exists(waterPath))
+            {
+                var waterData = JsonUtility.FromJson<WaterFileData>(
+                    File.ReadAllText(waterPath));
+                if (waterData.water != null)
+                {
+                    Terrain terrainComp = terrainGO.GetComponent<Terrain>();
+                    float terrainBaseY = terrainGO.transform.position.y;
+                    const float UnderwaterDepthMeters = 0.3f;
+
+                    foreach (var w in waterData.water)
+                    {
+                        if (w.contour == null || w.contour.Length < 3) continue;
+
+                        float minTerrainH = float.MaxValue;
+                        for (int i = 0; i < w.contour.Length; i++)
+                        {
+                            float wx = w.contour[i].x;
+                            float wz = w.contour[i].z;
+                            float th = terrainComp.SampleHeight(new Vector3(wx, 0, wz));
+                            if (th < minTerrainH) minTerrainH = th;
+                        }
+                        float floorWorldY = minTerrainH - 0.05f - UnderwaterDepthMeters;
+                        float floorNorm = Mathf.Clamp01(floorWorldY / elevRange);
+
+                        bool[,] bodyMask = new bool[hRes, hRes];
+                        MarkContourCells(w.contour, bodyMask,
+                            hRes, terrainPos, terrainSize, 0f);
+
+                        for (int z = 0; z < hRes; z++)
+                            for (int x = 0; x < hRes; x++)
+                                if (bodyMask[z, x])
+                                {
+                                    waterMask[z, x] = true;
+                                    waterFloorY[z, x] = floorNorm;
+                                }
+
+                        hasWater = true;
+                    }
+                }
+            }
+
+            // Apply water: flatten terrain to absolute floor before fairway/tee/cart loops.
+            int waterFloorCount = 0;
+            if (hasWater)
+            {
+                for (int z = 0; z < hRes; z++)
+                    for (int x = 0; x < hRes; x++)
+                        if (waterMask[z, x])
+                        {
+                            heights[z, x] = waterFloorY[z, x];
+                            waterFloorCount++;
+                        }
+            }
+
+            // Apply depression (fairway/tee — flat drop, skip water cells)
             int depressedCount = 0;
             for (int hz = 0; hz < hRes; hz++)
                 for (int hx = 0; hx < hRes; hx++)
-                    if (depress[hz, hx])
+                    if (depress[hz, hx] && !waterMask[hz, hx])
                     {
                         heights[hz, hx] = Mathf.Max(0f,
                             heights[hz, hx] - dropNormalized);
                         depressedCount++;
                     }
 
-            // Cart path: flat drop exactly under mesh footprint, nothing outside.
-            // The mesh covers the edge so no outward ramp is needed — it was
-            // depressing grass beyond the road boundary.
+            // Cart path: flat drop exactly under mesh footprint, skip water cells.
             int cartDepressedCount = 0;
             for (int hz = 0; hz < hRes; hz++)
                 for (int hx = 0; hx < hRes; hx++)
-                    if (cartDepress[hz, hx])
+                    if (cartDepress[hz, hx] && !waterMask[hz, hx])
                     {
                         heights[hz, hx] = Mathf.Max(0f,
                             heights[hz, hx] - dropNormalized);
@@ -3173,26 +3217,12 @@ namespace Golfin.CourseImport
 
             depressedCount += cartDepressedCount;
 
-            // ─── Shore slope pass: gradual ramp outside water contours ─────────
-            string waterShorePath = Path.Combine(exportPath, "water.json");
+            // ─── Shore slope pass: gradual ramp OUTSIDE water contours ─────────
+            // Uses waterMask built above. No file re-read needed.
             int shoreCount = 0;
-            if (File.Exists(waterShorePath) && ShoreRadius > 0 && ShoreDepthMeters > 0f)
+            if (hasWater && ShoreRadius > 0 && ShoreDepthMeters > 0f)
             {
-                // 4B-1. Build water-only mask from water contours.
-                bool[,] waterMask = new bool[hRes, hRes];
-                var waterShoreData = JsonUtility.FromJson<WaterFileData>(
-                    File.ReadAllText(waterShorePath));
-                if (waterShoreData.water != null)
-                {
-                    foreach (var w in waterShoreData.water)
-                    {
-                        if (w.contour != null && w.contour.Length >= 3)
-                            MarkContourCells(w.contour, waterMask,
-                                hRes, terrainPos, terrainSize, 0f);
-                    }
-                }
-
-                // 4B-2. Chamfer distance transform from water boundary.
+                // Chamfer distance transform from water boundary.
                 float[,] distToWater = new float[hRes, hRes];
                 for (int z = 0; z < hRes; z++)
                     for (int x = 0; x < hRes; x++)
@@ -3233,7 +3263,6 @@ namespace Golfin.CourseImport
                                 distToWater[z + 1, x - 1] + 1.414f);
                     }
 
-                // 4B-3. Apply ramp OUTSIDE water.
                 float shoreDropNorm = ShoreDepthMeters / elevRange;
                 int shoreRadiusCells = ShoreRadius;
 
@@ -3260,6 +3289,7 @@ namespace Golfin.CourseImport
             Debug.Log($"[HoleGeoImporter] Terrain depression: {depressedCount}" +
                       $" cells lowered by {OverlayDepressionMeters:F2}m" +
                       $" (cart path: {cartDepressedCount} cells," +
+                      $" water floor: {waterFloorCount} cells flattened," +
                       $" water shore ramp: {shoreCount} cells)");
         }
 
