@@ -97,6 +97,67 @@ if (Golfin.UI.PersistentUIManager.Instance != null)
 
 ---
 
+## Course Importer — Shore Ramp Artifacts (2026-04-17)
+
+### Never use chamfer distance for terrain ramps — use exact polygon-edge distance
+
+**Problem:** The shore ramp computes a t-value from `distToWater` (chamfer distance transform
+from the rasterized water mask) and lerps terrain height from `waterY` to `originalH`. The result
+showed persistent vertical stripe/spike artifacts along the waterline.
+
+**Root cause:** Any chamfer distance field computed from a rasterized polygon boundary has
+**Voronoi boundaries** — where adjacent cells are "owned" by different boundary pixels, their
+distances differ discontinuously. These discontinuities in t propagate directly into height
+discontinuities in the lerp. The more the terrain rises above water (larger `originalH - waterY`),
+the more visible the stripes become. **This cannot be fixed by blurring** — Voronoi edges are
+real discontinuities, not noise. Blurring the distance field softens them but doesn't remove them.
+Blurring the heights after the lerp creates new artifacts: the hard mask boundary turns into
+visible stairs where blurred ramp cells meet restored non-ramp cells.
+
+**Fix:** Compute the exact Euclidean distance from each terrain cell to the nearest **polygon
+edge** of the water contour, not the chamfer distance from the rasterized water mask.
+
+```csharp
+// For each candidate cell (pre-culled by coarse chamfer):
+float wx = terrainPos.x + x * cellW;
+float wz = terrainPos.z + z * cellH;
+
+float minDistM = float.MaxValue;
+foreach (var (pts, surfNorm) in waterContours)
+{
+    int n = pts.Length;
+    for (int i = 0; i < n; i++)
+    {
+        int j = (i + 1) % n;
+        float ax = pts[i].x, az = pts[i].z;
+        float bx = pts[j].x, bz = pts[j].z;
+        float edx = bx - ax, edz = bz - az;
+        float len2 = edx * edx + edz * edz;
+        float t2 = len2 > 1e-10f
+            ? Mathf.Clamp01(((wx - ax) * edx + (wz - az) * edz) / len2)
+            : 0f;
+        float px = ax + t2 * edx - wx;
+        float pz = az + t2 * edz - wz;
+        float d = Mathf.Sqrt(px * px + pz * pz);
+        if (d < minDistM) { minDistM = d; nearSurfY = surfNorm; }
+    }
+}
+float t = minDistM / shoreRadiusM;
+t = t * t * (3f - 2f * t); // smoothstep
+```
+
+**Why it works:** Polygon edges are smooth geometry. The distance from a point to a smooth
+polygon boundary is a smooth function — no Voronoi artifacts, no stripes. Use a coarse chamfer
+pass first to cull distant cells (performance), then exact distance only for the ramp zone.
+
+**What NOT to do (confirmed failures):**
+- Blurring `distToWater` (Gaussian, any sigma) — reduces stripes but can't eliminate Voronoi edges
+- Blurring ramp heights (separable Gaussian + restore non-ramp) — creates stair artifacts at mask boundary
+- Masked 2D Gaussian on ramp cells only — also creates stair artifacts where ramp meets terrain
+- Multiple blur passes — same failure modes, just slower
+
+---
+
 ## Course Importer — Spline Cart Paths (2026-04-16)
 
 ### Spline cart paths: use `com.unity.splines` (v2.8.4)

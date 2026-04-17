@@ -1298,7 +1298,7 @@ And a hole with multiple water bodies:
 
 ## Completed Tasks
 
-✅ DONE: 2026-04-17 — Gaussian blur on distToWater (sigma=2, radius=3) replaces masked heights box blur; rampMask removed
+✅ DONE: 2026-04-17 — Replaced chamfer distance with exact polygon-edge distance for shore ramp; all blur attempts failed (lesson written)
 
 ✅ DONE: 2026-04-17 — Masked 3-pass box blur on rampMask cells to kill chamfer quantization stripes
 ✅ DONE: 2026-04-17 — Absolute-target shore ramp: waterSurfaceY per body, joint chamfer propagates nearestSurfaceY, lerp replaces fixed-drop
