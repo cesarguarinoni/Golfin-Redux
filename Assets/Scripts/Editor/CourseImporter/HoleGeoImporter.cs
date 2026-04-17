@@ -3316,28 +3316,31 @@ namespace Golfin.CourseImport
                     for (int i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
 
                     float[,] tmp = new float[hRes, hRes];
-                    for (int z = 0; z < hRes; z++)
-                        for (int x = 0; x < hRes; x++)
-                        {
-                            float sum = 0f;
-                            for (int k = 0; k < kernelSize; k++)
+                    for (int pass = 0; pass < 3; pass++)
+                    {
+                        for (int z = 0; z < hRes; z++)
+                            for (int x = 0; x < hRes; x++)
                             {
-                                int sx = Mathf.Clamp(x + k - blurRadius, 0, hRes - 1);
-                                sum += distToWater[z, sx] * kernel[k];
+                                float sum = 0f;
+                                for (int k = 0; k < kernelSize; k++)
+                                {
+                                    int sx = Mathf.Clamp(x + k - blurRadius, 0, hRes - 1);
+                                    sum += distToWater[z, sx] * kernel[k];
+                                }
+                                tmp[z, x] = sum;
                             }
-                            tmp[z, x] = sum;
-                        }
-                    for (int z = 0; z < hRes; z++)
-                        for (int x = 0; x < hRes; x++)
-                        {
-                            float sum = 0f;
-                            for (int k = 0; k < kernelSize; k++)
+                        for (int z = 0; z < hRes; z++)
+                            for (int x = 0; x < hRes; x++)
                             {
-                                int sz = Mathf.Clamp(z + k - blurRadius, 0, hRes - 1);
-                                sum += tmp[sz, x] * kernel[k];
+                                float sum = 0f;
+                                for (int k = 0; k < kernelSize; k++)
+                                {
+                                    int sz = Mathf.Clamp(z + k - blurRadius, 0, hRes - 1);
+                                    sum += tmp[sz, x] * kernel[k];
+                                }
+                                distToWater[z, x] = sum;
                             }
-                            distToWater[z, x] = sum;
-                        }
+                    }
                 }
 
                 int shoreRadiusCells = ShoreRadius;
