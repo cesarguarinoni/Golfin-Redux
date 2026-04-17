@@ -3330,7 +3330,7 @@ namespace Golfin.CourseImport
                 // Masked box blur over ramp cells — kills chamfer quantization stripes.
                 // 3 iterations ≈ Gaussian with ~5x5 effective kernel.
                 float[,] tmpHeights = new float[hRes, hRes];
-                for (int pass = 0; pass < 3; pass++)
+                for (int pass = 0; pass < 5; pass++)
                 {
                     for (int z = 0; z < hRes; z++)
                         for (int x = 0; x < hRes; x++)
