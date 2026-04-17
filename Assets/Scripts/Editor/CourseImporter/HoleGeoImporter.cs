@@ -3094,6 +3094,19 @@ namespace Golfin.CourseImport
                                 hRes, terrainPos, terrainSize);
             }
 
+            // Green contours — depressed so terrain never pokes through the
+            // raised green surface on sloped terrain.
+            string grDeprPath = Path.Combine(exportPath, "greens.json");
+            if (File.Exists(grDeprPath))
+            {
+                var grData = JsonUtility.FromJson<GreensFileData>(File.ReadAllText(grDeprPath));
+                if (grData.greens != null)
+                    foreach (var gr in grData.greens)
+                        if (gr.contour != null && gr.contour.Length >= 3)
+                            MarkContourCells(gr.contour, depress,
+                                hRes, terrainPos, terrainSize);
+            }
+
             // Cart path depression — separate array for gradient ramp.
             // Use spline footprint polygons (built during mesh generation) so the
             // depressed area exactly matches the visible mesh. Fall back to
@@ -4087,7 +4100,7 @@ namespace Golfin.CourseImport
                 if (interiorYs.Count > 0)
                 {
                     interiorYs.Sort();
-                    float flatY = interiorYs[interiorYs.Count / 2];
+                    float flatY = interiorYs[interiorYs.Count - 1]; // max Y — terrain always below flat surface
                     for (int i = 0; i < rawVerts.Length; i++)
                         if (IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly))
                             rawVerts[i].y = flatY;
