@@ -3296,8 +3296,51 @@ namespace Golfin.CourseImport
                         }
                     }
 
+                // Smooth the distance field to eliminate Voronoi seesaw spokes.
+                // The water mask has 1-cell boundary jaggies from polygon rasterization.
+                // The chamfer transform propagates those jaggies as coherent radial
+                // spokes in distToWater. A Gaussian blur on the continuous distance
+                // values produces sub-cell-accurate distances without jagged spokes.
+                {
+                    const int blurRadius = 3;
+                    const float blurSigma = 2.0f;
+                    int kernelSize = blurRadius * 2 + 1;
+                    float[] kernel = new float[kernelSize];
+                    float kernelSum = 0f;
+                    for (int i = 0; i < kernelSize; i++)
+                    {
+                        float d = i - blurRadius;
+                        kernel[i] = Mathf.Exp(-(d * d) / (2f * blurSigma * blurSigma));
+                        kernelSum += kernel[i];
+                    }
+                    for (int i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
+
+                    float[,] tmp = new float[hRes, hRes];
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            float sum = 0f;
+                            for (int k = 0; k < kernelSize; k++)
+                            {
+                                int sx = Mathf.Clamp(x + k - blurRadius, 0, hRes - 1);
+                                sum += distToWater[z, sx] * kernel[k];
+                            }
+                            tmp[z, x] = sum;
+                        }
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            float sum = 0f;
+                            for (int k = 0; k < kernelSize; k++)
+                            {
+                                int sz = Mathf.Clamp(z + k - blurRadius, 0, hRes - 1);
+                                sum += tmp[sz, x] * kernel[k];
+                            }
+                            distToWater[z, x] = sum;
+                        }
+                }
+
                 int shoreRadiusCells = ShoreRadius;
-                bool[,] rampMask = new bool[hRes, hRes];
 
                 for (int z = 0; z < hRes; z++)
                     for (int x = 0; x < hRes; x++)
@@ -3322,48 +3365,9 @@ namespace Golfin.CourseImport
                         if (targetH < originalH)
                         {
                             heights[z, x] = Mathf.Max(0f, targetH);
-                            rampMask[z, x] = true;
                             shoreCount++;
                         }
                     }
-
-                // Masked box blur over ramp cells — kills chamfer quantization stripes.
-                // 3 iterations ≈ Gaussian with ~5x5 effective kernel.
-                float[,] tmpHeights = new float[hRes, hRes];
-                for (int pass = 0; pass < 5; pass++)
-                {
-                    for (int z = 0; z < hRes; z++)
-                        for (int x = 0; x < hRes; x++)
-                            tmpHeights[z, x] = heights[z, x];
-
-                    for (int z = 0; z < hRes; z++)
-                    {
-                        for (int x = 0; x < hRes; x++)
-                        {
-                            if (!rampMask[z, x]) continue;
-
-                            float sum = 0f;
-                            int count = 0;
-                            for (int dz = -1; dz <= 1; dz++)
-                            {
-                                int nz = z + dz;
-                                if (nz < 0 || nz >= hRes) continue;
-                                for (int dx = -1; dx <= 1; dx++)
-                                {
-                                    int nx = x + dx;
-                                    if (nx < 0 || nx >= hRes) continue;
-                                    if (waterMask[nz, nx]) continue;
-                                    if (depress[nz, nx]) continue;
-                                    if (cartDepress[nz, nx]) continue;
-                                    sum += tmpHeights[nz, nx];
-                                    count++;
-                                }
-                            }
-                            if (count > 0)
-                                heights[z, x] = sum / count;
-                        }
-                    }
-                }
             }
 
             terrainData.SetHeights(0, 0, heights);
