@@ -3183,52 +3183,6 @@ namespace Golfin.CourseImport
                             dist[z, x] = Mathf.Min(dist[z, x], dist[z + 1, x - 1] + 1.414f);
                     }
 
-                // ─── Blur dist[] to kill radial Voronoi spokes ──────────────
-                // Chamfer's 8-directional steps create coherent radial lines in
-                // the distance field that appear as visible stripes on the slope.
-                // Separable Gaussian smooths them out. Key: clamp sampled values
-                // to min 1f so interior (teeMask, dist=0) cells don't pull the
-                // first exterior ring downward and steepen the mound boundary.
-                {
-                    const int blurRadius = 3;
-                    const float blurSigma = 2.0f;
-                    int kernelSize = blurRadius * 2 + 1;
-                    float[] kernel = new float[kernelSize];
-                    float kernelSum = 0f;
-                    for (int i = 0; i < kernelSize; i++)
-                    {
-                        float dk = i - blurRadius;
-                        kernel[i] = Mathf.Exp(-(dk * dk) / (2f * blurSigma * blurSigma));
-                        kernelSum += kernel[i];
-                    }
-                    for (int i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
-
-                    float[,] tmp = new float[hRes, hRes];
-                    for (int z = 0; z < hRes; z++)
-                        for (int x = 0; x < hRes; x++)
-                        {
-                            float sum = 0f;
-                            for (int k = 0; k < kernelSize; k++)
-                            {
-                                int sx = Mathf.Clamp(x + k - blurRadius, 0, hRes - 1);
-                                sum += Mathf.Max(1f, dist[z, sx]) * kernel[k];
-                            }
-                            tmp[z, x] = sum;
-                        }
-
-                    for (int z = 0; z < hRes; z++)
-                        for (int x = 0; x < hRes; x++)
-                        {
-                            float sum = 0f;
-                            for (int k = 0; k < kernelSize; k++)
-                            {
-                                int sz = Mathf.Clamp(z + k - blurRadius, 0, hRes - 1);
-                                sum += Mathf.Max(1f, tmp[sz, x]) * kernel[k];
-                            }
-                            dist[z, x] = sum;
-                        }
-                }
-
                 // Apply outward skirt ramp: smoothstep from maxH at boundary to
                 // baseline at skirtRadius. Take MAX so overlapping adjacent tee
                 // skirts don't pull a cell below a neighbor's ramp.
@@ -3253,6 +3207,61 @@ namespace Golfin.CourseImport
                             skirtedCount++;
                         }
                     }
+                }
+
+                // ─── Blur heights[] in skirt to kill geometric spoke ridges ────
+                // Blurring dist[] had no effect because the stripes are already
+                // baked into heights[] by the smoothstep lerp. Blurring heights
+                // directly after the lerp removes the ridges at their source.
+                // Kernel spans the full skirt width so spokes of any width get
+                // smoothed. Only skirt cells are written; tee interior and terrain
+                // cells feed the kernel but are not modified.
+                {
+                    int bR = Mathf.Max(4, skirtRadiusCells);
+                    float bSigma = bR * 0.4f;
+                    int kSize = bR * 2 + 1;
+                    float[] bKernel = new float[kSize];
+                    float bKernelSum = 0f;
+                    for (int i = 0; i < kSize; i++)
+                    {
+                        float dk = i - bR;
+                        bKernel[i] = Mathf.Exp(-(dk * dk) / (2f * bSigma * bSigma));
+                        bKernelSum += bKernel[i];
+                    }
+                    for (int i = 0; i < kSize; i++) bKernel[i] /= bKernelSum;
+
+                    // Horizontal pass: heights → htmp (skirt cells only)
+                    float[,] htmp = (float[,])heights.Clone();
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            if (teeMask[z, x] || skipMask[z, x]) continue;
+                            float d = dist[z, x];
+                            if (d <= 0f || d > skirtRadiusCells) continue;
+                            float s = 0f;
+                            for (int k = 0; k < kSize; k++)
+                            {
+                                int sx = Mathf.Clamp(x + k - bR, 0, hRes - 1);
+                                s += heights[z, sx] * bKernel[k];
+                            }
+                            htmp[z, x] = s;
+                        }
+
+                    // Vertical pass: htmp → heights (skirt cells only)
+                    for (int z = 0; z < hRes; z++)
+                        for (int x = 0; x < hRes; x++)
+                        {
+                            if (teeMask[z, x] || skipMask[z, x]) continue;
+                            float d = dist[z, x];
+                            if (d <= 0f || d > skirtRadiusCells) continue;
+                            float s = 0f;
+                            for (int k = 0; k < kSize; k++)
+                            {
+                                int sz = Mathf.Clamp(z + k - bR, 0, hRes - 1);
+                                s += htmp[sz, x] * bKernel[k];
+                            }
+                            heights[z, x] = s;
+                        }
                 }
 
                 changed = true;
