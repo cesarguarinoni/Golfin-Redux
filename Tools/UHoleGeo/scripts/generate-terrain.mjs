@@ -344,7 +344,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
   // A large sigma removes 5m DEM grid noise while preserving real macro
   // topography in its actual orientation — no spline axis, no projection,
   // no synthetic surface, no diagonal artifacts.
-  const TERRAIN_SMOOTH_SIGMA_M = 20.0;
+  const TERRAIN_SMOOTH_SIGMA_M = 10.0;
   const tsmMetersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
   const tsmSigmaCells = TERRAIN_SMOOTH_SIGMA_M / tsmMetersPerCell;
   const tsmRadius = Math.max(1, Math.ceil(3 * tsmSigmaCells));
@@ -620,7 +620,7 @@ async function generateTerrainDEM(courseId, holeNumber, holeBounds, zonesData, c
   // Two buffers are reused across all regions instead of allocating fresh
   // buffers per region — saves ~32 MB per extra region per blur buffer.
 
-  if (false && carvedRegions.length > 0) { // TEMP: carve disabled for boundary test
+  if (carvedRegions.length > 0) {
     const metersPerCell = ((terrainWidthM + terrainLengthM) / 2) / (RES - 1);
     const sigmaCells = RAVINE_KERNEL_SIGMA_M / metersPerCell;
 
