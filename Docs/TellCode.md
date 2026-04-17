@@ -7,6 +7,180 @@
 
 ---
 
+## Current Task — Fix Voronoi Seesaw in Shore Ramp (Hole 7 Geo)
+
+The 3-pass box blur didn't help. Correct diagnosis: this is a **Voronoi
+seesaw pattern**, not per-cell chamfer quantization noise.
+
+**Root cause:** The water mask built by `MarkContourCells` has 1-cell
+jaggies along the curved boundary (inherent to rasterizing a smooth
+polygon onto a grid — each cell's centre is either inside or outside,
+no partial coverage). When the chamfer distance transform walks
+outward from this jagged mask, it produces *radial spokes* in the
+distance field, not random noise. Each spoke is a multi-cell-long
+coherent stripe aligned with a boundary jaggy.
+
+On a 2m slope, the absolute-target lerp turns those spokes into
+visible vertical stripes.
+
+A local box blur only averages adjacent cells, so it smooths pixel
+noise but can't fix coherent multi-cell spokes. The stripes persist
+because each stripe's cells all have similar (wrong) distance values.
+
+**Fix:** smooth the **distance field itself**, not the final heights.
+A Gaussian blur on `distToWater` (continuous float values) produces
+sub-cell-accurate distances with no jagged boundary spokes. The
+downstream lerp then gives smooth ramp heights.
+
+**Target file:** `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`
+**No pipeline changes.**
+
+---
+
+### Change: Blur the distance field before the lerp
+
+Remove the 3-pass box blur on `heights` (added in the previous task).
+It didn't help and just costs time.
+
+Add a Gaussian blur on `distToWater` immediately after the chamfer
+transform completes, before the shore lerp loop.
+
+#### Step 1 — Remove the heights-blur block
+
+Delete the entire 3-pass masked box blur on `heights` that was added
+in the previous task. Starts with comment
+`// Masked box blur over ramp cells only.` and ends with its closing
+brace. Remove the `rampMask` array declaration and the
+`rampMask[z, x] = true` line inside the shore lerp loop as well — no
+longer needed.
+
+#### Step 2 — Add distance field Gaussian blur
+
+After the joint chamfer transform finishes (after the backward pass,
+before the shore lerp loop), add:
+
+```csharp
+// Smooth the distance field to eliminate Voronoi seesaw spokes.
+// The water mask has 1-cell boundary jaggies from polygon rasterization.
+// The chamfer transform propagates those jaggies as coherent radial
+// spokes in distToWater. A Gaussian blur on the continuous distance
+// values produces sub-cell-accurate distances without jagged spokes.
+//
+// Blur radius should be comparable to the jaggies scale (~1-2 cells).
+// Sigma = 2.0 cells gives a ~5-cell effective kernel — enough to smooth
+// spokes without softening the overall distance gradient.
+{
+    const int blurRadius = 3;
+    const float blurSigma = 2.0f;
+    int kernelSize = blurRadius * 2 + 1;
+    float[] kernel = new float[kernelSize];
+    float kernelSum = 0f;
+    for (int i = 0; i < kernelSize; i++)
+    {
+        float d = i - blurRadius;
+        kernel[i] = Mathf.Exp(-(d * d) / (2f * blurSigma * blurSigma));
+        kernelSum += kernel[i];
+    }
+    for (int i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
+
+    // Horizontal pass
+    float[,] tmp = new float[hRes, hRes];
+    for (int z = 0; z < hRes; z++)
+    {
+        for (int x = 0; x < hRes; x++)
+        {
+            float sum = 0f;
+            for (int k = 0; k < kernelSize; k++)
+            {
+                int sx = Mathf.Clamp(x + k - blurRadius, 0, hRes - 1);
+                sum += distToWater[z, sx] * kernel[k];
+            }
+            tmp[z, x] = sum;
+        }
+    }
+
+    // Vertical pass, writing back to distToWater
+    for (int z = 0; z < hRes; z++)
+    {
+        for (int x = 0; x < hRes; x++)
+        {
+            float sum = 0f;
+            for (int k = 0; k < kernelSize; k++)
+            {
+                int sz = Mathf.Clamp(z + k - blurRadius, 0, hRes - 1);
+                sum += tmp[sz, x] * kernel[k];
+            }
+            distToWater[z, x] = sum;
+        }
+    }
+}
+```
+
+**Important:** do NOT blur `nearestSurfaceY` — it's already uniform on
+Hole 7 (single water body), and if we had multiple bodies we'd want
+it to stay discrete at body boundaries, not blend.
+
+**Important:** do NOT blur water cells' distToWater back upward. The
+blur writes over the 0-value boundary cells, making them non-zero,
+which would flag them as "ramp candidates" in the lerp loop. Two
+safeguards:
+1. The `if (waterMask[z, x]) continue;` guard in the lerp loop already
+   protects water cells from being touched.
+2. But the blur itself reads from water cells (dist=0) into neighbors,
+   which is what we want — it pulls the distance field smoothly toward
+   0 at the waterline. Keep this behavior.
+
+After the blur, water cells have `distToWater` values > 0 (blurred in
+from their non-water neighbors), but the `waterMask` guard skips them
+anyway, so this doesn't matter.
+
+---
+
+### Why this works
+
+- The water mask has ~1-cell jaggies → the chamfer propagates them as
+  ~1-cell-wide radial spokes in `distToWater`.
+- A 5-cell-wide separable Gaussian (σ=2, radius=3) averages each
+  distance value with ~25 neighbors → individual spoke contributions
+  average out, leaving a smooth gradient.
+- The overall distance gradient (smooth change from 0 at shore to
+  `shoreRadius` outward) is preserved because the blur's kernel width
+  (~5 cells) is much smaller than the ramp width (~10 cells).
+- The lerp then runs on smoothed distances → smooth ramp heights →
+  no stripes.
+
+---
+
+### Verification
+
+Re-import Hole 07 Geo: `Import > Geo > Normal > Import Hole 07 Geo`
+
+- [ ] No stripes on the shore ramp — smooth ramp surface
+- [ ] No cliff (regression)
+- [ ] Water surface flat (regression)
+- [ ] Full water mesh visible (regression)
+- [ ] Ramp still lerps smoothly from shore to terrain (not overflat)
+
+Regression check:
+
+- [ ] `Import Hole 01 Geo` (no water) — no errors
+- [ ] `Import Hole 12 Geo` (multi-body) — each body still handled
+
+If stripes persist, raise sigma to 3.0 (radius 4). If ramp looks too
+flat/soft, drop sigma to 1.5 (radius 2).
+
+---
+
+### Do NOT change
+
+- Everything from the previous three water tasks
+- The chamfer distance transform itself
+- `nearestSurfaceY` propagation (leave it as-is)
+- Shore constants
+- Water mesh, floor depression, or shore ramp lerp formula
+
+---
+
 ## Previous Task — Smooth Shore Ramp Stripes (Hole 7 Geo)
 
 Absolute-target lerp works — no more cliff. But the shore ramp now shows
@@ -1123,6 +1297,8 @@ And a hole with multiple water bodies:
 ---
 
 ## Completed Tasks
+
+✅ DONE: 2026-04-17 — Gaussian blur on distToWater (sigma=2, radius=3) replaces masked heights box blur; rampMask removed
 
 ✅ DONE: 2026-04-17 — Masked 3-pass box blur on rampMask cells to kill chamfer quantization stripes
 ✅ DONE: 2026-04-17 — Absolute-target shore ramp: waterSurfaceY per body, joint chamfer propagates nearestSurfaceY, lerp replaces fixed-drop
