@@ -184,6 +184,8 @@ namespace Golfin.CourseImport
                 TreePlacer.SavePreset();
             if (GUILayout.Button("Load Preset"))
             {
+                foreach (var entry in TreePlacer.TreePalette)
+                    entry.enabled = false;
                 TreePlacer.LoadPreset();
                 Repaint();
             }

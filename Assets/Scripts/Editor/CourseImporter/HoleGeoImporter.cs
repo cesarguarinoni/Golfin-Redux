@@ -122,6 +122,9 @@ namespace Golfin.CourseImport
         private static void ImportHoleInternal(string courseId, int holeNumber,
             string exportPath, string dataDir, string scenePath, string importType = "Geo")
         {
+            if (EditorApplication.isPlaying)
+                EditorApplication.isPlaying = false;
+
             string holeId = holeNumber.ToString("D2");
             string projectRoot = Path.GetDirectoryName(Application.dataPath);
             string generatedDir = Path.GetDirectoryName(scenePath);
