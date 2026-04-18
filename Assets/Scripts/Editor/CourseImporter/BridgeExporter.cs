@@ -8,7 +8,7 @@ namespace Golfin.CourseImport
 {
     public class BridgeExporter : EditorWindow
     {
-        [MenuItem("Window/Trees/Bridge Exporter")]
+        [MenuItem("Window/Bridge Exporter")]
         public static void ShowWindow()
         {
             var w = GetWindow<BridgeExporter>("Bridges");
