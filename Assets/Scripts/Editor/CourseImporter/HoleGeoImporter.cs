@@ -41,6 +41,10 @@ namespace Golfin.CourseImport
         /// <summary>Horizontal distance over which the tee platform skirt
         /// ramps back to natural terrain.</summary>
         private const float TeeSkirtMeters = 2.0f;
+        /// <summary>Width of the inside-inset tee border ring (metres).
+        /// Ring lives on top of the flat tee pad, between an inward-inset
+        /// contour and the original tee polygon boundary.</summary>
+        private const float TeeBorderWidth = 0.25f;
         /// <summary>Maximum ramp slope (rise/run) on the tee skirt.
         /// 0.35 ≈ 19°, a walkable golf mound slope. When natural
         /// terrain is steeper than this, the skirt extends outward
@@ -3858,10 +3862,11 @@ namespace Golfin.CourseImport
                         foreach (var region in data.zones.tee)
                         {
                             if (region.contour == null || region.contour.Length < 3) continue;
-                            var meshGO = CreateTeeMeshFlat(
+                            var meshGO = CreateTeeMeshWithInsetBorder(
                                 region.id, region.contour,
                                 terrain, terrainBaseY,
                                 teeMat, 3f,
+                                teeBorderMat, TeeBorderWidth, 3f,
                                 Golfin.Course.SurfaceType.Tee);
                             if (meshGO != null)
                                 meshGO.transform.SetParent(teeRoot.transform);
@@ -4255,6 +4260,135 @@ namespace Golfin.CourseImport
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
+            return go;
+        }
+
+        /// <summary>
+        /// Flat tee mesh with dark border ring baked in as a second submesh,
+        /// using an INSIDE-INSET constraint (ring sits ON TOP of the flat tee
+        /// pad, not extending outward onto the sloped skirt).
+        /// Submesh 0 = tee surface (inside inset contour).
+        /// Submesh 1 = border ring (between inset and original contour).
+        /// Falls back to borderless mesh if inset CDT fails.
+        /// </summary>
+        private static GameObject CreateTeeMeshWithInsetBorder(
+            int id, ContourPoint[] contour,
+            Terrain terrain, float terrainBaseY,
+            Material mat, float tileSize,
+            Material borderMat, float borderWidth, float borderTileSize,
+            Golfin.Course.SurfaceType surfaceType)
+        {
+            int nc = contour.Length;
+            if (nc < 3) return null;
+
+            float yOffset = 0.005f;
+
+            System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
+                new Vector2(wx / tileSize, wz / tileSize);
+
+            ContourPoint[] insetContour = DilateContour(contour, -borderWidth);
+
+            var (rawVerts, uvs, tris) = CDTTriangulate(
+                contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc,
+                innerConstraint: insetContour);
+
+            bool borderEnabled = rawVerts != null && tris != null && tris.Length >= 3;
+            if (!borderEnabled)
+            {
+                Debug.LogWarning($"[HoleGeoImporter] Tee {id}: inset CDT failed, fallback to borderless");
+                (rawVerts, uvs, tris) = CDTTriangulate(
+                    contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
+                if (rawVerts == null || tris == null || tris.Length < 3)
+                    return null;
+            }
+
+            // Platform Y = max of sampled verts.
+            float platformY = float.MinValue;
+            for (int i = 0; i < rawVerts.Length; i++)
+                if (rawVerts[i].y > platformY) platformY = rawVerts[i].y;
+            for (int i = 0; i < rawVerts.Length; i++)
+                rawVerts[i].y = platformY;
+
+            float cx = 0f, cz = 0f;
+            for (int i = 0; i < rawVerts.Length; i++)
+            { cx += rawVerts[i].x; cz += rawVerts[i].z; }
+            cx /= rawVerts.Length; cz /= rawVerts.Length;
+            Vector3 centroid = new Vector3(cx, 0f, cz);
+
+            if (tris.Length >= 3)
+            {
+                Vector3 a = rawVerts[tris[0]], b = rawVerts[tris[1]], c = rawVerts[tris[2]];
+                float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+                if (cross > 0)
+                    for (int t = 0; t < tris.Length; t += 3)
+                    { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
+            }
+
+            var insetPoly = new Vector2[insetContour.Length];
+            for (int i = 0; i < insetContour.Length; i++)
+                insetPoly[i] = new Vector2(insetContour[i].x, insetContour[i].z);
+
+            var teeTris = new System.Collections.Generic.List<int>();
+            var borderSrcTris = new System.Collections.Generic.List<int>();
+            for (int t = 0; t < tris.Length; t += 3)
+            {
+                Vector3 va = rawVerts[tris[t]], vb = rawVerts[tris[t + 1]], vc = rawVerts[tris[t + 2]];
+                float triCx = (va.x + vb.x + vc.x) / 3f;
+                float triCz = (va.z + vb.z + vc.z) / 3f;
+                bool insideInset = borderEnabled ? IsInsideContour(triCx, triCz, insetPoly) : true;
+                if (insideInset)
+                { teeTris.Add(tris[t]); teeTris.Add(tris[t + 1]); teeTris.Add(tris[t + 2]); }
+                else
+                { borderSrcTris.Add(tris[t]); borderSrcTris.Add(tris[t + 1]); borderSrcTris.Add(tris[t + 2]); }
+            }
+
+            var finalVerts = new System.Collections.Generic.List<Vector3>(rawVerts);
+            var finalUVs = new System.Collections.Generic.List<Vector2>(uvs);
+            var vertRemap = new System.Collections.Generic.Dictionary<int, int>();
+            var borderTris = new System.Collections.Generic.List<int>(borderSrcTris.Count);
+            foreach (int origIdx in borderSrcTris)
+            {
+                if (!vertRemap.TryGetValue(origIdx, out int newIdx))
+                {
+                    Vector3 src = rawVerts[origIdx];
+                    float dist = Mathf.Sqrt(DistanceSqToContour(src.x, src.z, insetPoly));
+                    float u = 1f - Mathf.Clamp01(dist / borderWidth);
+                    float v = (src.x + src.z) / borderTileSize;
+                    newIdx = finalVerts.Count;
+                    finalVerts.Add(src);
+                    finalUVs.Add(new Vector2(u, v));
+                    vertRemap[origIdx] = newIdx;
+                }
+                borderTris.Add(newIdx);
+            }
+
+            var vertsArr = finalVerts.ToArray();
+            for (int i = 0; i < vertsArr.Length; i++) vertsArr[i] -= centroid;
+
+            var mesh = new Mesh();
+            mesh.name = $"Tee_{id}";
+            mesh.vertices = vertsArr;
+            mesh.uv = finalUVs.ToArray();
+            mesh.subMeshCount = borderEnabled ? 2 : 1;
+            mesh.SetTriangles(teeTris.ToArray(), 0);
+            if (borderEnabled)
+                mesh.SetTriangles(borderTris.ToArray(), 1);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject($"Tee_{id}");
+            go.transform.position = centroid;
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var mr = go.AddComponent<MeshRenderer>();
+            mr.sharedMaterials = borderEnabled
+                ? new Material[] { mat, borderMat }
+                : new Material[] { mat };
+
+            AddCleanMeshCollider(go, mesh);
+
+            var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+            marker.surfaceType = surfaceType;
+
             return go;
         }
 
