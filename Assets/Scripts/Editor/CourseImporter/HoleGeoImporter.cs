@@ -44,7 +44,7 @@ namespace Golfin.CourseImport
         /// <summary>Width of the inside-inset tee border ring (metres).
         /// Ring lives on top of the flat tee pad, between an inward-inset
         /// contour and the original tee polygon boundary.</summary>
-        private const float TeeBorderWidth = 0.25f;
+        private const float TeeBorderWidth = 0.125f;
         /// <summary>Maximum ramp slope (rise/run) on the tee skirt.
         /// 0.35 ≈ 19°, a walkable golf mound slope. When natural
         /// terrain is steeper than this, the skirt extends outward
