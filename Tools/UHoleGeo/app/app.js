@@ -15,6 +15,9 @@ let showOB = true;
 let cartPathImg = null;
 let cartPathMask = null;
 let showCartPath = true;
+let bridges = null;
+let showBridges = true;
+let hoveredBridgeIdx = -1;
 
 // Layer system
 let activeLayer = "terrain";
@@ -138,10 +141,14 @@ function buildHoleNav() {
     btn.className = "nav-link";
     btn.dataset.hole = hole.number;
     const hasBounds = hole.hasHoleBounds;
+    const bridgeCount = hole.bridges?.bridges?.length || 0;
     btn.innerHTML =
       '<span class="bounds-dot ' + (hasBounds ? 'has-bounds' : 'no-bounds') + '"></span>' +
       "Hole " + hole.number +
-      '<span class="par-label">P' + (ch?.par ?? "?") + "</span>";
+      '<span class="par-label">P' + (ch?.par ?? "?") + "</span>" +
+      (bridgeCount > 0
+        ? '<span class="par-label" style="background:rgba(199,125,255,0.25);color:#c77dff">\uD83C\uDF09 ' + bridgeCount + '</span>'
+        : '');
     btn.addEventListener("click", () => selectHole(hole.number));
     nav.appendChild(btn);
   }
@@ -191,11 +198,11 @@ function buildLayerBar() {
       '" data-layer="' + l.id + '">' + l.label + '</button>'
     ).join("") +
     '</div>' +
-    '<div class="toolbar-spacer"></div>' +
     '<div class="layer-visibility">' +
     '<button id="btn-toggle-trees" class="is-active-toggle" title="Toggle Trees visibility">Trees</button>' +
     '<button id="btn-toggle-cartpath" class="is-active-toggle" title="Toggle Cart Path visibility">Cart Path</button>' +
     '<button id="btn-toggle-ob" class="is-active-toggle" title="Toggle OB visibility">OB</button>' +
+    '<button id="btn-toggle-bridges" class="is-active-toggle" title="Toggle Bridges visibility">Bridges</button>' +
     '</div>';
 
   bar.querySelectorAll(".layer-btn").forEach(btn => {
@@ -220,6 +227,13 @@ function buildLayerBar() {
   document.getElementById("btn-toggle-ob").addEventListener("click", function () {
     showOB = !showOB;
     this.classList.toggle("is-active-toggle", showOB);
+    drawCanvas();
+  });
+  document.getElementById("btn-toggle-bridges").addEventListener("click", function () {
+    showBridges = !showBridges;
+    this.classList.toggle("is-active-toggle", showBridges);
+    hoveredBridgeIdx = -1;
+    hideBridgeTooltip();
     drawCanvas();
   });
 }
@@ -278,14 +292,14 @@ function updateBrushUI() {
   }
   document.getElementById("btn-smooth-ob").hidden = activeBrushZone !== 9;
   document.getElementById("btn-smooth-cp").hidden = activeBrushZone !== 8;
+  const terrainZones = LAYER_ZONES.terrain || [];
+  document.getElementById("btn-smooth-terrain").hidden = !terrainZones.includes(activeBrushZone);
 }
 
 function updateLegendVisibility() {
   const legend = document.getElementById("zone-legend");
-  const layerBar = document.getElementById("layer-bar");
   const show = currentView === "both";
   legend.hidden = !show;
-  if (layerBar) layerBar.hidden = !show;
   if (!show && activeBrushZone >= 0) {
     activeBrushZone = -1;
     legend.querySelectorAll(".legend-item").forEach(i => i.classList.remove("is-active"));
@@ -318,6 +332,8 @@ async function selectHole(n) {
   zoomLevel = 1;
   panX = 0;
   panY = 0;
+  bridges = null;
+  hoveredBridgeIdx = -1;
 
   // Restore per-hole rotation
   canvasRotation = Number(currentHole.holeBounds?.canvas_rotation) || 0;
@@ -367,6 +383,7 @@ async function selectHole(n) {
   heightmapImg = await loadImage("/api/heightmap?course=" + COURSE_ID + "&hole=" + n);
 
   await loadZoneGrid(n);
+  await loadBridges(n);
 
   updateStats();
   updateLegendVisibility();
@@ -433,6 +450,35 @@ async function loadZoneGrid(holeNumber) {
     cartPathMask = null;
     cartPathImg = null;
   }
+}
+
+async function loadBridges(holeNumber) {
+  try {
+    const res = await fetch(
+      "/api/bridges?course=" + COURSE_ID + "&hole=" + holeNumber);
+    if (res.ok) {
+      const data = await res.json();
+      bridges = data.bridges || [];
+    } else {
+      bridges = [];
+    }
+  } catch {
+    bridges = [];
+  }
+}
+
+// World meters (Unity frame) → normalized canvas coords [0, 1].
+// The satellite image's (0,0) maps to the terrain's (-width/2, -length/2) corner
+// (terrain is centered on world origin in HoleGeoImporter).
+// Y is inverted because canvas Y=0 is north and Unity +Z is also north.
+function worldToNormalized(worldX, worldZ) {
+  const tm = currentHole?.terrainMeta;
+  if (!tm) return null;
+  const tw = tm.terrain_width_m;
+  const tl = tm.terrain_length_m;
+  const nx = (worldX + tw / 2) / tw;
+  const ny = 1 - (worldZ + tl / 2) / tl;
+  return { x: nx, y: ny };
 }
 
 function loadImage(src) {
@@ -653,6 +699,75 @@ function drawCanvas() {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("M", px, py);
+      }
+    }
+  }
+
+  // Bridge markers — read-only, authored in Unity.
+  if (showBridges && bridges && bridges.length > 0) {
+    const srcW2 = satelliteImg ? satelliteImg.width : zoneGridW;
+    const srcH2 = satelliteImg ? satelliteImg.height : zoneGridH;
+    const tm = currentHole?.terrainMeta;
+    if (srcW2 && srcH2 && tm) {
+      const mppX = tm.terrain_width_m / srcW2;
+      const mppY = tm.terrain_length_m / srcH2;
+
+      for (let bi = 0; bi < bridges.length; bi++) {
+        const b = bridges[bi];
+        const center = worldToNormalized(b.x, b.z);
+        const fA = worldToNormalized(b.anchor_forward.x, b.anchor_forward.z);
+        const bA = worldToNormalized(b.anchor_backward.x, b.anchor_backward.z);
+        if (!center || !fA || !bA) continue;
+
+        const cx2 = (center.x - 0.5) * srcW2 * drawScale;
+        const cy2 = (center.y - 0.5) * srcH2 * drawScale;
+        const fAx = (fA.x - 0.5) * srcW2 * drawScale;
+        const fAy = (fA.y - 0.5) * srcH2 * drawScale;
+        const bAx = (bA.x - 0.5) * srcW2 * drawScale;
+        const bAy = (bA.y - 0.5) * srcH2 * drawScale;
+
+        const mpp = (mppX + mppY) / 2;
+        const lenPx = (b.length_forward_m + b.length_backward_m) / mpp * drawScale;
+        const widPx = (b.expected_path_width_m || 2.5) / mpp * drawScale;
+
+        const isHover = bi === hoveredBridgeIdx;
+        const stroke = "#c77dff";
+        const fill = isHover ? "rgba(199,125,255,0.32)" : "rgba(199,125,255,0.18)";
+
+        ctx.save();
+        ctx.translate(cx2, cy2);
+        ctx.rotate(b.yaw_deg * Math.PI / 180);
+        ctx.fillStyle = fill;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = isHover ? 2.5 : 1.5;
+        ctx.beginPath();
+        ctx.rect(-widPx / 2, -lenPx / 2, widPx, lenPx);
+        ctx.fill();
+        ctx.stroke();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -lenPx / 2 * 0.9);
+        ctx.stroke();
+        ctx.restore();
+
+        for (const [ax, ay, label] of [[fAx, fAy, "F"], [bAx, bAy, "B"]]) {
+          ctx.beginPath();
+          ctx.arc(ax, ay, isHover ? 6 : 4, 0, Math.PI * 2);
+          ctx.fillStyle = stroke;
+          ctx.fill();
+          ctx.strokeStyle = "#000";
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+          if (isHover) {
+            ctx.fillStyle = "#000";
+            ctx.font = "bold 8px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(label, ax, ay);
+          }
+        }
       }
     }
   }
@@ -1089,6 +1204,12 @@ function setupCanvasInteraction() {
     }
 
     const teeIdx = hitTestTee(x, y);
+    const bridgeIdx = hitTestBridge(x, y);
+    if (bridgeIdx !== hoveredBridgeIdx) {
+      hoveredBridgeIdx = bridgeIdx;
+      drawCanvas();
+    }
+    updateBridgeTooltip(bridgeIdx, x, y);
     const hasBrush = activeBrushZone >= 0 && (currentView === "both");
     canvas.classList.toggle("hovering-tee", teeIdx >= 0);
     canvas.classList.toggle("painting", hasBrush && teeIdx < 0);
@@ -1122,6 +1243,7 @@ function setupCanvasInteraction() {
     isPainting = false;
     canvas.classList.remove("hovering-tee");
     hideTeeTooltip();
+    hideBridgeTooltip();
   });
 }
 
@@ -1151,6 +1273,68 @@ function updateTeeTooltip(idx, x, y) {
 function hideTeeTooltip() {
   const tooltip = document.getElementById("tee-tooltip");
   if (tooltip) tooltip.hidden = true;
+}
+
+function hitTestBridge(canvasX, canvasY) {
+  if (!showBridges || !bridges || bridges.length === 0) return -1;
+  const srcW = satelliteImg ? satelliteImg.width : zoneGridW;
+  const srcH = satelliteImg ? satelliteImg.height : zoneGridH;
+  const tm = currentHole?.terrainMeta;
+  if (!srcW || !srcH || !tm) return -1;
+
+  const hitRadius = 14;
+
+  for (let i = 0; i < bridges.length; i++) {
+    const b = bridges[i];
+    const center = worldToNormalized(b.x, b.z);
+    if (!center) continue;
+
+    let imgX = (center.x - 0.5) * srcW * drawScale;
+    let imgY = (center.y - 0.5) * srcH * drawScale;
+
+    if (canvasRotation !== 0) {
+      const rad = canvasRotation * Math.PI / 180;
+      const c = Math.cos(rad), s = Math.sin(rad);
+      const rx = imgX * c - imgY * s;
+      const ry = imgX * s + imgY * c;
+      imgX = rx; imgY = ry;
+    }
+
+    const cx = imgX * zoomLevel + canvas.width / 2 + panX;
+    const cy = imgY * zoomLevel + canvas.height / 2 + panY;
+
+    const dx = canvasX - cx, dy = canvasY - cy;
+    if (dx * dx + dy * dy <= hitRadius * hitRadius) return i;
+  }
+  return -1;
+}
+
+function updateBridgeTooltip(idx, x, y) {
+  let tooltip = document.getElementById("bridge-tooltip");
+  if (idx < 0) { hideBridgeTooltip(); return; }
+  const b = bridges[idx];
+  if (!tooltip) {
+    tooltip = document.createElement("div");
+    tooltip.id = "bridge-tooltip";
+    tooltip.className = "tee-tooltip";
+    document.getElementById("canvas-stage").appendChild(tooltip);
+  }
+  tooltip.innerHTML =
+    "<strong>Bridge: " + (b.id || "?") + "</strong><br>" +
+    "yaw " + b.yaw_deg.toFixed(1) + "\u00b0, width " +
+      (b.expected_path_width_m || 2.5).toFixed(1) + "m<br>" +
+    "F: (" + b.anchor_forward.x.toFixed(1) + ", " +
+             b.anchor_forward.z.toFixed(1) + ")<br>" +
+    "B: (" + b.anchor_backward.x.toFixed(1) + ", " +
+             b.anchor_backward.z.toFixed(1) + ")";
+  tooltip.style.left = (x + 15) + "px";
+  tooltip.style.top = (y - 10) + "px";
+  tooltip.hidden = false;
+}
+
+function hideBridgeTooltip() {
+  const t = document.getElementById("bridge-tooltip");
+  if (t) t.hidden = true;
 }
 
 // ── Controls ────────────────────────────────────────
@@ -1188,8 +1372,28 @@ function setupControls() {
 
   updateOpacityVisibility();
 
-  document.getElementById("overlay-opacity").addEventListener("input", function () {
+  const opacitySlider = document.getElementById("overlay-opacity");
+  const opacityToggle = document.getElementById("btn-opacity-toggle");
+  let lastNonZeroOpacity = 0.5;
+
+  opacitySlider.addEventListener("input", function () {
     overlayOpacity = this.value / 100;
+    if (overlayOpacity > 0) lastNonZeroOpacity = overlayOpacity;
+    opacityToggle.textContent = overlayOpacity === 0 ? "0%" : (overlayOpacity === 1 ? "100%" : "·");
+    drawCanvas();
+  });
+
+  opacityToggle.addEventListener("click", function () {
+    if (overlayOpacity > 0) {
+      lastNonZeroOpacity = overlayOpacity;
+      overlayOpacity = 0;
+      opacitySlider.value = 0;
+      this.textContent = "0%";
+    } else {
+      overlayOpacity = lastNonZeroOpacity;
+      opacitySlider.value = Math.round(overlayOpacity * 100);
+      this.textContent = overlayOpacity === 1 ? "100%" : "·";
+    }
     drawCanvas();
   });
 
@@ -1404,6 +1608,114 @@ function setupControls() {
     regenerateZonesImage();
     drawCanvas();
     showBanner("Smoothed " + totalPaths + " cart path(s) (" + (halfW*2+1) + "px = " + ROAD_WIDTH_M + "m)");
+  }
+
+  function smoothTerrainZones() {
+    if (!zoneGrid || !zoneGridW || !zoneGridH) return;
+    const w = zoneGridW, h = zoneGridH;
+
+    // Push undo
+    zoneUndoStack.push({
+      grid: new Uint8Array(zoneGrid),
+      trees: treesMask ? new Uint8Array(treesMask) : null,
+      ob: obMask ? new Uint8Array(obMask) : null,
+      cp: cartPathMask ? new Uint8Array(cartPathMask) : null
+    });
+    if (zoneUndoStack.length > MAX_UNDO) zoneUndoStack.shift();
+
+    // Terrain zones to smooth, in render order (back to front).
+    // Zone 0 (background) and zone 4 (rough) are left untouched as base fills —
+    // they cover large areas up to the image edge and smoothing their outer
+    // boundary rounds off the corners of the image.
+    // Only zones that represent distinct features GET smoothed.
+    const renderOrder = [3, 1, 6, 7, 2, 10]; // semi-rough, fairway, bunker, water, green, tee
+    const rdpEpsilon = 3.0;
+    const chaikinPasses = 3;
+
+    // Start from a copy of the current grid (preserves rough + background as-is)
+    const newGrid = new Uint8Array(zoneGrid);
+
+    // For each zone in render order, trace its contours, smooth, re-rasterize
+    let totalOrigPts = 0, totalSmoothPts = 0;
+    for (const zone of renderOrder) {
+      // Build binary mask of this zone
+      const mask = new Uint8Array(w * h);
+      let hasAny = false;
+      for (let i = 0; i < w * h; i++) {
+        if (zoneGrid[i] === zone) { mask[i] = 1; hasAny = true; }
+      }
+      if (!hasAny) continue;
+
+      // Find connected components via flood fill to trace each separately
+      const visited = new Uint8Array(w * h);
+      const regions = [];
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const idx = y * w + x;
+          if (!mask[idx] || visited[idx]) continue;
+          // Flood fill to get this region
+          const stack = [idx];
+          const region = [];
+          visited[idx] = 1;
+          while (stack.length > 0) {
+            const ci = stack.pop();
+            region.push(ci);
+            const cx = ci % w, cy = (ci - cx) / w;
+            for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+              const nx = cx + dx, ny = cy + dy;
+              if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+              const ni = ny * w + nx;
+              if (!mask[ni] || visited[ni]) continue;
+              visited[ni] = 1;
+              stack.push(ni);
+            }
+          }
+          if (region.length > 15) regions.push(region);
+        }
+      }
+
+      for (const region of regions) {
+        // Build region-local mask
+        const rMask = new Uint8Array(w * h);
+        for (const idx of region) rMask[idx] = 1;
+
+        // Trace contour using Moore neighborhood
+        const contour = traceOrderedContour(rMask, w, h);
+        if (!contour || contour.length < 6) {
+          // Too small to smooth — just paint as-is
+          for (const idx of region) newGrid[idx] = zone;
+          continue;
+        }
+
+        totalOrigPts += contour.length;
+
+        // Close the contour by appending start point
+        const closedContour = contour.concat([contour[0]]);
+
+        // RDP simplify
+        const simplified = rdpSimplify(closedContour, rdpEpsilon);
+        if (simplified.length < 3) {
+          for (const idx of region) newGrid[idx] = zone;
+          continue;
+        }
+
+        // Chaikin smooth (closed polygon)
+        const smoothed = chaikinSmooth(simplified, chaikinPasses);
+        totalSmoothPts += smoothed.length;
+
+        // Rasterize smoothed polygon
+        // Dilate by 1px to prevent gap artifacts between adjacent zones
+        rasterizePolygon(smoothed, newGrid, w, h, zone);
+      }
+    }
+
+    // Apply
+    for (let i = 0; i < w * h; i++) zoneGrid[i] = newGrid[i];
+
+    zonePaintDirty = true;
+    regenerateZonesImage();
+    drawCanvas();
+    showBanner("Smoothed terrain zones: " + totalOrigPts + " → " + totalSmoothPts + " contour points");
   }
 
   // ─── Contour Trace Helpers ─────────────────────────
@@ -1793,6 +2105,7 @@ function setupControls() {
 
   document.getElementById("btn-smooth-ob").addEventListener("click", () => smoothOBMask());
   document.getElementById("btn-smooth-cp").addEventListener("click", () => smoothCartPathMask());
+  document.getElementById("btn-smooth-terrain").addEventListener("click", () => smoothTerrainZones());
 
   // Undo (Ctrl+Z)
   window.addEventListener("keydown", (e) => {

@@ -97,6 +97,10 @@ async function loadCourseData(courseId) {
     } catch {}
     try { hole.manifest = JSON.parse(await readFile(path.join(exportDir, "hole-manifest.json"), "utf8")); } catch {}
     try { hole.anchors = JSON.parse(await readFile(path.join(exportDir, "anchors.json"), "utf8")); } catch {}
+    try {
+      hole.bridges = JSON.parse(
+        await readFile(path.join(exportDir, "bridges.json"), "utf8"));
+    } catch {}
 
     hole.hasSatellite = await fileExists(path.join(holeDir, "satellite.png"));
     hole.hasZonesPng = await fileExists(path.join(holeDir, "zones.png"));
@@ -164,6 +168,24 @@ const server = createServer(async (req, res) => {
       }
       return;
     }
+  }
+
+  // --- API: Get bridges (written by Unity BridgeExporter) ---
+  if (req.method === "GET" && url.pathname === "/api/bridges") {
+    const courseId = url.searchParams.get("course") || "lomond-country-club";
+    const hole = Number(url.searchParams.get("hole"));
+    const pad = String(hole).padStart(2, "0");
+    const bridgesPath = path.join(
+      root, "output", courseId, "export", `hole-${pad}`, "bridges.json");
+
+    try {
+      const data = await readFile(bridgesPath, "utf8");
+      sendJson(res, 200, JSON.parse(data));
+    } catch {
+      // 404 is expected for holes without bridges — not an error
+      sendJson(res, 404, { ok: false, message: "bridges.json not found" });
+    }
+    return;
   }
 
   // --- API: Fetch satellite tiles ---
