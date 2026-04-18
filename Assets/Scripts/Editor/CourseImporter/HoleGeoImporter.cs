@@ -4353,7 +4353,9 @@ namespace Golfin.CourseImport
                     Vector3 src = rawVerts[origIdx];
                     float dist = Mathf.Sqrt(DistanceSqToContour(src.x, src.z, insetPoly));
                     float u = Mathf.Clamp01(dist / borderWidth);
-                    float v = (src.x + src.z) / borderTileSize;
+                    // T_TeeDark_Albedo has no meaningful V content — pure L→R gradient.
+                    // World-XZ V causes visible twisting on the ring curve; constant V removes it.
+                    float v = 0.5f;
                     newIdx = finalVerts.Count;
                     finalVerts.Add(src);
                     finalUVs.Add(new Vector2(u, v));
