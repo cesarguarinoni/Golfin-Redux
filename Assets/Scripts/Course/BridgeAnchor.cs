@@ -31,8 +31,8 @@ namespace Golfin.Course
             Vector3 b = transform.position - transform.forward * lengthBackward;
             Gizmos.color = new Color(1f, 0.7f, 0.1f, 0.9f);
             Gizmos.DrawLine(a, b);
-            Gizmos.DrawSphere(a, 0.35f);
-            Gizmos.DrawSphere(b, 0.35f);
+            Gizmos.DrawSphere(a, 2f);
+            Gizmos.DrawSphere(b, 2f);
         }
 
         private void OnDrawGizmosSelected()
