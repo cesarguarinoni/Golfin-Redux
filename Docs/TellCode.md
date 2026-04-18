@@ -7,16 +7,512 @@
 
 ---
 
-# TellCode.md — Instructions from Claude (Architect) to Claude Code
+## Current Task — Bridge Viewer in UHoleGeo (consume bridges.json)
 
-> Claude Code: Read this file at the start of each task. Execute the latest instruction block.
-> After completing, add a status line at the bottom: `✅ DONE: [date] [brief summary]`
-> Claude (Architect) will update this file with new instructions as needed.
-> Handoff: `Docs/TellCode.md`
+The Unity side now writes `bridges.json` into each hole's UHoleGeo
+export folder (`Tools/UHoleGeo/output/lomond-country-club/export/hole-XX/bridges.json`).
+This task adds the UHoleGeo-side viewer so Cesar can paint the cart-path
+zone right up to a bridge's anchor endpoints with pixel-accurate visual
+feedback — no more screenshot guesswork.
+
+**Target files:**
+- `Tools/UHoleGeo/scripts/dev-server.mjs` (add one GET route)
+- `Tools/UHoleGeo/app/index.html` (one toggle button in the layer bar)
+- `Tools/UHoleGeo/app/app.js` (load + draw + hover + toggle)
+
+**No changes to:** `bridges.json` schema, UHoleGeo export pipeline,
+cart-path processing, the Unity `BridgeExporter` or `BridgeAnchor`,
+`classify-zones.mjs`, `generate-terrain.mjs`, or `export-hole.mjs`.
+
+This is a **viewer only**. Bridges are authored in Unity and are
+read-only in UHoleGeo. Dragging a bridge in UHoleGeo would desync from
+Unity — the whole point is that Unity is the source of truth.
 
 ---
 
-## Current Task — Bridge Placement Tool (Unity → UHoleGeo export)
+### Why viewer, not editor
+
+UHoleGeo paints cart paths as a **pixel mask** (`cartPathMask`), not a
+spline. "Snap spline endpoint to bridge" is not a thing here. What the
+artist actually needs is to **see** the bridge footprint and its two
+anchor endpoints on the canvas while painting, so the cart-path mask
+can be brushed to meet the anchors cleanly. That's all this task does.
+
+---
+
+### Data flow (already established)
+
+```
+Unity scene                                     UHoleGeo canvas
+─────────                                       ───────────────
+BridgeAnchor component ─► BridgeExporter ─► bridges.json
+                                              │
+                                              ▼
+                              Tools/UHoleGeo/output/{course}/
+                                export/hole-XX/bridges.json
+                                              │
+                                              ▼
+                              (this task)  GET /api/bridges
+                                              │
+                                              ▼
+                                       drawCanvas() → visible markers
+```
+
+---
+
+### Step 1 — Add `/api/bridges` route in `dev-server.mjs`
+
+Find the `/api/hole-bounds` handler (around line 138). Insert a new
+handler immediately after it (before the `/api/fetch-satellite`
+handler). The route reads `bridges.json` from the hole's `export/`
+folder, not its `holes/` folder — that's where Unity writes it.
+
+```javascript
+// --- API: Get bridges (written by Unity BridgeExporter) ---
+if (req.method === "GET" && url.pathname === "/api/bridges") {
+  const courseId = url.searchParams.get("course") || "lomond-country-club";
+  const hole = Number(url.searchParams.get("hole"));
+  const pad = String(hole).padStart(2, "0");
+  const bridgesPath = path.join(
+    root, "output", courseId, "export", `hole-${pad}`, "bridges.json");
+
+  try {
+    const data = await readFile(bridgesPath, "utf8");
+    sendJson(res, 200, JSON.parse(data));
+  } catch {
+    // 404 is expected for holes without bridges — not an error
+    sendJson(res, 404, { ok: false, message: "bridges.json not found" });
+  }
+  return;
+}
+```
+
+That's the entire server-side change. GET only — UHoleGeo never writes
+bridges (Unity is authoritative).
+
+Also add bridge loading to `loadCourseData()` so the course payload
+carries bridge metadata. Find the per-hole loop inside
+`loadCourseData` (the `for (let i = 1; i <= 18; i++)` block, around
+line 90). Alongside the existing `try { hole.anchors = ... }` line,
+add:
+
+```javascript
+try {
+  hole.bridges = JSON.parse(
+    await readFile(path.join(exportDir, "bridges.json"), "utf8"));
+} catch {}
+```
+
+Making bridges available in the initial `/api/course` response lets
+the hole-nav indicator show which holes have bridges (minor visual
+nice-to-have, see Step 4).
+
+---
+
+### Step 2 — Add a "Bridges" toggle button in `index.html`
+
+Find the layer-bar visibility toggles in `app/index.html` (they're
+generated in `buildLayerBar()` in app.js; the toolbar itself is in
+index.html). Actually the toggle buttons are created dynamically in
+`buildLayerBar()` in app.js — no HTML change needed for the button.
+**Skip to Step 3; index.html is unchanged.**
+
+---
+
+### Step 3 — Load, draw, hover, and toggle in `app.js`
+
+All of the following changes are in `Tools/UHoleGeo/app/app.js`.
+
+#### 3.1 — New state variables
+
+Add alongside the existing `let showTrees = true;`,
+`let showOB = true;`, `let showCartPath = true;` block (around line
+30):
+
+```javascript
+let bridges = null;         // [{ id, x, y, z, yaw_deg,
+                            //    length_forward_m, length_backward_m,
+                            //    expected_path_width_m,
+                            //    anchor_forward: {x, z},
+                            //    anchor_backward: {x, z} }, ...]
+let showBridges = true;
+let hoveredBridgeIdx = -1;
+```
+
+#### 3.2 — Fetch bridges on hole select
+
+In `selectHole(n)`, alongside the existing `await loadZoneGrid(n);`
+call, add:
+
+```javascript
+await loadBridges(n);
+```
+
+New helper next to `loadZoneGrid`:
+
+```javascript
+async function loadBridges(holeNumber) {
+  try {
+    const res = await fetch(
+      "/api/bridges?course=" + COURSE_ID + "&hole=" + holeNumber);
+    if (res.ok) {
+      const data = await res.json();
+      bridges = data.bridges || [];
+    } else {
+      bridges = [];
+    }
+  } catch {
+    bridges = [];
+  }
+}
+```
+
+Bridges that fail to load (404 or missing file) become an empty array,
+so the draw code below is safe for holes without bridges.
+
+#### 3.3 — World-meters → canvas coordinates
+
+UHoleGeo stores everything in **normalized [0, 1] canvas coords**. The
+bridge file has **Unity world meters**. Convert:
+
+```javascript
+// World meters (Unity frame) → normalized canvas coords [0, 1].
+// Uses the same pixel-per-meter ratio as placeTees(): the satellite
+// image's (0, 0) maps to the terrain's (-width/2, -length/2) corner
+// in Unity (terrain is centered on world origin in HoleGeoImporter).
+// The mapping is therefore:
+//     px = (worldX + terrainWidth/2) / terrainWidth
+//     py = (worldZ + terrainLength/2) / terrainLength
+// and finally flipped on Y because UHoleGeo canvas Y=0 is north
+// (matches the PNG top-down) while Unity +Z is also north, so we
+// invert: py = 1 - py.
+function worldToNormalized(worldX, worldZ) {
+  const tm = currentHole?.terrainMeta;
+  if (!tm) return null;
+  const tw = tm.terrain_width_m;
+  const tl = tm.terrain_length_m;
+  const nx = (worldX + tw / 2) / tw;
+  const ny = 1 - (worldZ + tl / 2) / tl;
+  return { x: nx, y: ny };
+}
+```
+
+**Verification note for Code:** compare this transform against how
+`cart-paths.json` coordinates align with the zone grid inside
+`export-hole.mjs`. If `cart-paths.json` contour points look flipped
+in the viewer, the Z-inversion in the formula above is the first
+place to adjust — drop the `1 -` prefix and retest. Hole 07 Geo is
+the best test case because it has both a cart path and a natural
+bridge location.
+
+#### 3.4 — Draw bridges in `drawCanvas()`
+
+At the end of `drawCanvas()`, just before `ctx.restore();` (after the
+tee-marker drawing block, before the final `ctx.restore()`), add:
+
+```javascript
+// Bridge markers — read-only, authored in Unity.
+// Footprint rect is drawn rotated by yaw_deg, then anchor endpoints
+// as small circles. Hovered bridge gets a thicker outline.
+if (showBridges && bridges && bridges.length > 0) {
+  const srcW = satelliteImg ? satelliteImg.width : zoneGridW;
+  const srcH = satelliteImg ? satelliteImg.height : zoneGridH;
+  const tm = currentHole?.terrainMeta;
+  if (srcW && srcH && tm) {
+    const mppX = tm.terrain_width_m / srcW;
+    const mppY = tm.terrain_length_m / srcH;
+
+    for (let bi = 0; bi < bridges.length; bi++) {
+      const b = bridges[bi];
+      const center = worldToNormalized(b.x, b.z);
+      const fA = worldToNormalized(b.anchor_forward.x, b.anchor_forward.z);
+      const bA = worldToNormalized(b.anchor_backward.x, b.anchor_backward.z);
+      if (!center || !fA || !bA) continue;
+
+      const cx = (center.x - 0.5) * srcW * drawScale;
+      const cy = (center.y - 0.5) * srcH * drawScale;
+      const fAx = (fA.x - 0.5) * srcW * drawScale;
+      const fAy = (fA.y - 0.5) * srcH * drawScale;
+      const bAx = (bA.x - 0.5) * srcW * drawScale;
+      const bAy = (bA.y - 0.5) * srcH * drawScale;
+
+      // Footprint rect: length along Z axis = length_forward + length_backward,
+      // width across X = expected_path_width_m. Convert to canvas pixels
+      // via the avg m/px ratio.
+      const mpp = (mppX + mppY) / 2;
+      const lenPx = (b.length_forward_m + b.length_backward_m) / mpp * drawScale;
+      const widPx = (b.expected_path_width_m || 2.5) / mpp * drawScale;
+
+      const isHover = bi === hoveredBridgeIdx;
+      const stroke = "#c77dff";  // light purple, high contrast on satellite
+      const fill   = isHover ? "rgba(199,125,255,0.32)"
+                             : "rgba(199,125,255,0.18)";
+
+      // yaw_deg is +Y CW rotation in Unity (left-handed Y-up). Canvas
+      // Y grows downward, so the effective rotation in canvas space is
+      // the SAME yaw_deg (both systems treat +CW around the vertical
+      // axis identically when viewed top-down). Rotate around center.
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(b.yaw_deg * Math.PI / 180);
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = isHover ? 2.5 : 1.5;
+      ctx.beginPath();
+      ctx.rect(-widPx / 2, -lenPx / 2, widPx, lenPx);
+      ctx.fill();
+      ctx.stroke();
+      // Forward-direction tick mark (short line from center toward +Z in
+      // local frame; helps disambiguate which end is "forward")
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -lenPx / 2 * 0.9);
+      ctx.stroke();
+      ctx.restore();
+
+      // Anchor endpoints (NOT rotated — already in world space)
+      for (const [ax, ay, label] of [[fAx, fAy, "F"], [bAx, bAy, "B"]]) {
+        ctx.beginPath();
+        ctx.arc(ax, ay, isHover ? 6 : 4, 0, Math.PI * 2);
+        ctx.fillStyle = stroke;
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        if (isHover) {
+          ctx.fillStyle = "#000";
+          ctx.font = "bold 8px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(label, ax, ay);
+        }
+      }
+    }
+  }
+}
+```
+
+#### 3.5 — Hit-test + tooltip
+
+Add a `hitTestBridge` alongside the existing `hitTestTee`:
+
+```javascript
+function hitTestBridge(canvasX, canvasY) {
+  if (!showBridges || !bridges || bridges.length === 0) return -1;
+  const srcW = satelliteImg ? satelliteImg.width : zoneGridW;
+  const srcH = satelliteImg ? satelliteImg.height : zoneGridH;
+  const tm = currentHole?.terrainMeta;
+  if (!srcW || !srcH || !tm) return -1;
+
+  const hitRadius = 14;
+
+  for (let i = 0; i < bridges.length; i++) {
+    const b = bridges[i];
+    const center = worldToNormalized(b.x, b.z);
+    if (!center) continue;
+
+    let imgX = (center.x - 0.5) * srcW * drawScale;
+    let imgY = (center.y - 0.5) * srcH * drawScale;
+
+    if (canvasRotation !== 0) {
+      const rad = canvasRotation * Math.PI / 180;
+      const c = Math.cos(rad), s = Math.sin(rad);
+      const rx = imgX * c - imgY * s;
+      const ry = imgX * s + imgY * c;
+      imgX = rx; imgY = ry;
+    }
+
+    const cx = imgX * zoomLevel + canvas.width / 2 + panX;
+    const cy = imgY * zoomLevel + canvas.height / 2 + panY;
+
+    const dx = canvasX - cx, dy = canvasY - cy;
+    if (dx * dx + dy * dy <= hitRadius * hitRadius) return i;
+  }
+  return -1;
+}
+```
+
+In the existing `mousemove` handler (where `hitTestTee` is called for
+hover cursor updates), also check bridges so the hovered marker
+re-renders with its thicker outline. Add right after the
+`const teeIdx = hitTestTee(x, y);` line:
+
+```javascript
+const bridgeIdx = hitTestBridge(x, y);
+if (bridgeIdx !== hoveredBridgeIdx) {
+  hoveredBridgeIdx = bridgeIdx;
+  drawCanvas();
+}
+updateBridgeTooltip(bridgeIdx, x, y);
+```
+
+And a tooltip mirroring `updateTeeTooltip`:
+
+```javascript
+function updateBridgeTooltip(idx, x, y) {
+  let tooltip = document.getElementById("bridge-tooltip");
+  if (idx < 0) { hideBridgeTooltip(); return; }
+  const b = bridges[idx];
+  if (!tooltip) {
+    tooltip = document.createElement("div");
+    tooltip.id = "bridge-tooltip";
+    tooltip.className = "tee-tooltip"; // reuse existing style
+    document.getElementById("canvas-stage").appendChild(tooltip);
+  }
+  tooltip.innerHTML =
+    "<strong>Bridge: " + (b.id || "?") + "</strong><br>" +
+    "yaw " + b.yaw_deg.toFixed(1) + "°, width " +
+      (b.expected_path_width_m || 2.5).toFixed(1) + "m<br>" +
+    "F: (" + b.anchor_forward.x.toFixed(1) + ", " +
+             b.anchor_forward.z.toFixed(1) + ")<br>" +
+    "B: (" + b.anchor_backward.x.toFixed(1) + ", " +
+             b.anchor_backward.z.toFixed(1) + ")";
+  tooltip.style.left = (x + 15) + "px";
+  tooltip.style.top = (y - 10) + "px";
+  tooltip.hidden = false;
+}
+
+function hideBridgeTooltip() {
+  const t = document.getElementById("bridge-tooltip");
+  if (t) t.hidden = true;
+}
+```
+
+Also call `hideBridgeTooltip()` alongside the existing
+`hideTeeTooltip()` in the canvas `mouseleave` handler.
+
+#### 3.6 — "Bridges" toggle button in the layer bar
+
+In `buildLayerBar()`, find the `<div class="layer-visibility">` block
+that generates the Trees / Cart Path / OB toggle buttons. Add a
+fourth:
+
+```javascript
+'<button id="btn-toggle-bridges" class="is-active-toggle" ' +
+  'title="Toggle Bridges visibility">Bridges</button>' +
+```
+
+And below, alongside the existing toggle handlers:
+
+```javascript
+document.getElementById("btn-toggle-bridges").addEventListener("click", function () {
+  showBridges = !showBridges;
+  this.classList.toggle("is-active-toggle", showBridges);
+  hoveredBridgeIdx = -1;
+  hideBridgeTooltip();
+  drawCanvas();
+});
+```
+
+No changes to `LAYER_ZONES` or `filterBrushesByLayer` — bridges aren't
+a paintable zone, they're a top-level overlay like the tee markers.
+
+---
+
+### Step 4 — Optional nice-to-have: bridge indicator in hole nav
+
+In `buildHoleNav()`, after the existing `hasBounds` dot, add a small
+indicator for holes that have bridges. Find this line:
+
+```javascript
+const hasBounds = hole.hasHoleBounds;
+```
+
+Right after it, add:
+
+```javascript
+const bridgeCount = hole.bridges?.bridges?.length || 0;
+```
+
+Then in the `btn.innerHTML` assignment, append a bridge chip after
+the par label:
+
+```javascript
+btn.innerHTML =
+  '<span class="bounds-dot ' + (hasBounds ? 'has-bounds' : 'no-bounds') + '"></span>' +
+  "Hole " + hole.number +
+  '<span class="par-label">P' + (ch?.par ?? "?") + "</span>" +
+  (bridgeCount > 0
+    ? '<span class="par-label" style="background:rgba(199,125,255,0.25);' +
+      'color:#c77dff">🌉 ' + bridgeCount + '</span>'
+    : '');
+```
+
+Pure cosmetic — skip if it conflicts with anything in the CSS.
+
+---
+
+### Verification
+
+1. In Unity, place a `BridgeAnchor` on Hole 07 Geo and export. Confirm
+   `Tools/UHoleGeo/output/lomond-country-club/export/hole-07/bridges.json`
+   exists.
+2. Start the UHoleGeo dev server: `node scripts/dev-server.mjs`.
+3. Open the app, click Hole 07.
+4. Switch to "Overlay" view (so the zone mask is visible).
+5. Expect to see:
+   - A light-purple rotated rectangle over the bridge location.
+   - A short white tick mark pointing "forward" (toward +Z in Unity).
+   - Two purple circles with black outlines at `anchor_forward` and
+     `anchor_backward`.
+6. Hover the bridge rect — outline thickens, circles show "F" and "B"
+   labels, tooltip appears with the bridge id, yaw, and both anchor
+   world coords.
+7. Paint the cart-path zone (zone 8) right up to one of the anchor
+   circles. The circle should stay visible over the painted mask.
+8. Click the "Bridges" toggle in the layer bar. Markers disappear /
+   reappear.
+9. Rotate the canvas (Q/E or the rotation buttons). Bridge markers
+   rotate with the satellite image.
+10. Open Hole 01 (no bridges). No bridge markers. No console errors.
+    Toggle button still works.
+
+Coordinate sanity check:
+- In Unity, note the bridge's world `(x, z)` from the exporter window.
+- In UHoleGeo, open `bridges.json` directly and confirm those values
+  match.
+- Check the bridge's rendered position on the canvas vs where the
+  water + cart path meet on the satellite image. If the marker is
+  offset by a consistent amount in one axis, the `worldToNormalized`
+  formula needs its Y-flip adjusted (see the verification note in
+  Step 3.3).
+
+Regression:
+- [ ] Tee markers still drag / draw / tooltip correctly.
+- [ ] Cart path painting still works on a hole with a bridge.
+- [ ] `Save` still saves zones (bridges are read-only, not touched by
+      Save).
+- [ ] `Regen Heightmap` still works — `bridges.json` is not read by
+      `generate-terrain.mjs` or `export-hole.mjs`.
+
+---
+
+### Do NOT change
+
+- `bridges.json` schema or the Unity exporter (`BridgeAnchor`,
+  `BridgeExporter`). Coordinates flow one way only: Unity → UHoleGeo.
+- `cart-paths.json` or the cart-path export/vectorization logic in
+  `export-hole.mjs`.
+- `classify-zones.mjs`, `generate-terrain.mjs`, or any terrain
+  pipeline.
+- The `LAYER_ZONES` map — bridges aren't a zone, they're an overlay.
+- The zone brush, paint modes, undo stack, or smoothing buttons.
+- Leaflet / bounds-setting UI.
+
+### Out of scope (future work)
+
+- Editing bridges in UHoleGeo (explicitly rejected — Unity is the
+  single source of truth).
+- Auto-snapping the cart-path mask to anchor points (could be a
+  future "Smooth Cart Path to Anchors" button; not this task).
+- Rendering the Unity bridge prefab's mesh (would require asset
+  extraction; the rectangle footprint is enough for alignment work).
+
+---
+
+## Completed Task — Bridge Placement Tool (Unity → UHoleGeo export)
 
 Cesar places bridge prefabs by hand in a hole scene. This tool captures
 their positions/rotations and exports them as `bridges.json` into the
@@ -516,3 +1012,5 @@ with V-direction content).
 ✅ DONE: 2026-04-18 Constant-V UV fix applied. Additionally fixed geometric crease: rebuilt ring as manual quad-strip (outer contour × inset contour vertex pairs by index) instead of CDT-classified triangles — eliminates long diagonal spanning tris. CDT now only triangulates the inset contour for submesh 0; submesh 1 is a clean N-quad strip with winding auto-checked.
 
 ✅ DONE: 2026-04-18 Bridge Placement Tool implemented. BridgeAnchor.cs (Golfin.Course) marker component with gizmo. BridgeExporter.cs EditorWindow at Window > Trees > Bridge Exporter — finds anchors, previews positions, exports bridges.json to UHoleGeo/UHoleLite export folder with auto-detection of Geo/Lite/Flat from scene name, mirrors to sibling pipeline folder.
+
+✅ DONE: 2026-04-18 Bridge Viewer in UHoleGeo implemented. dev-server: /api/bridges GET route + bridges loaded into hole nav data. app.js: loadBridges() fetches on hole select; worldToNormalized() converts Unity world meters to canvas coords; drawCanvas() draws purple rotated footprint rect + forward tick + anchor endpoint circles; hitTestBridge() + tooltip on hover; "Bridges" toggle in layer bar; bridge count chip in hole nav.
