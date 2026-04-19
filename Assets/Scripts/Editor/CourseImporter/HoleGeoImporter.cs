@@ -5015,10 +5015,11 @@ namespace Golfin.CourseImport
         /// skeleton extraction produces slightly different pixel-center
         /// endpoints for paths that logically share a junction point.
         /// </summary>
-        private static void SnapCartPathJunctionEndpoints(
-            CartPathRegionData[] cartPaths, float snapRadiusM)
+        private static List<(float cx, float cz, List<(int pathIdx, bool isLast)> members)>
+            SnapCartPathJunctionEndpoints(CartPathRegionData[] cartPaths, float snapRadiusM)
         {
-            if (cartPaths == null || cartPaths.Length == 0) return;
+            var result = new List<(float, float, List<(int, bool)>)>();
+            if (cartPaths == null || cartPaths.Length == 0) return result;
 
             var refs = new List<(int pathIdx, bool isLast)>();
             for (int i = 0; i < cartPaths.Length; i++)
@@ -5029,7 +5030,7 @@ namespace Golfin.CourseImport
                 refs.Add((i, true));
             }
 
-            if (refs.Count == 0) return;
+            if (refs.Count == 0) return result;
 
             float snapSqr = snapRadiusM * snapRadiusM;
             int[] cluster = new int[refs.Count];
@@ -5077,6 +5078,7 @@ namespace Golfin.CourseImport
                 }
                 cx /= members.Count; cz /= members.Count;
 
+                var memberPairs = new List<(int, bool)>();
                 foreach (int memberIdx in members)
                 {
                     var (pi, li) = refs[memberIdx];
@@ -5087,8 +5089,10 @@ namespace Golfin.CourseImport
                     e.x = cx;
                     e.z = cz;
                     if (dBefore > 0.001f) snappedCount++;
+                    memberPairs.Add(refs[memberIdx]);
                 }
 
+                result.Add((cx, cz, memberPairs));
                 junctionCount++;
                 Debug.Log($"[HoleGeoImporter] Junction cluster: " +
                           $"{members.Count} endpoints → centroid ({cx:F2}, {cz:F2})");
@@ -5098,6 +5102,128 @@ namespace Golfin.CourseImport
                 Debug.Log($"[HoleGeoImporter] Cart path junction snap: " +
                           $"{junctionCount} junction(s), {snappedCount} endpoint(s) " +
                           $"moved within {snapRadiusM:F2}m radius.");
+
+            return result;
+        }
+
+        /// <summary>
+        /// Builds a convex fill mesh at each N-way junction to cover the angular
+        /// voids between ribbon strip endpoints. Each patch fans from the junction
+        /// centroid through edge points computed from each meeting path's tangent
+        /// and half-width, extended 0.5m into each path to overlap the ribbon edges.
+        /// </summary>
+        private static void BuildJunctionFillPatches(
+            List<(float cx, float cz, List<(int pathIdx, bool isLast)> members)> junctions,
+            CartPathRegionData[] cartPaths,
+            Terrain terrain, float terrainBaseY, float yOffset, Material mat, Transform parent)
+        {
+            const float extendM = 0.5f;  // overlap into ribbon to hide any crack
+            const float tileSize = 4f;
+            const float patchYBump = 0.002f; // sit just above ribbon to avoid Z-fight
+
+            foreach (var (cx, cz, members) in junctions)
+            {
+                var edgePts = new List<Vector2>();
+
+                foreach (var (pathIdx, isLast) in members)
+                {
+                    var cp = cartPaths[pathIdx];
+                    float halfWidth = (cp.width_m > 0 ? cp.width_m : 2.5f) / 2f;
+
+                    // Direction FROM centroid INTO the path body
+                    float tx, tz;
+                    if (!isLast)
+                    {
+                        tx = cp.spine[1].x - cp.spine[0].x;
+                        tz = cp.spine[1].z - cp.spine[0].z;
+                    }
+                    else
+                    {
+                        int n = cp.spine.Length;
+                        tx = cp.spine[n - 1].x - cp.spine[n - 2].x;
+                        tz = cp.spine[n - 1].z - cp.spine[n - 2].z;
+                    }
+                    float len = Mathf.Sqrt(tx * tx + tz * tz);
+                    if (len < 0.001f) continue;
+                    tx /= len; tz /= len;
+
+                    // Extend center point into the path so the patch overlaps the ribbon
+                    float ex = cx + tx * extendM;
+                    float ez = cz + tz * extendM;
+
+                    // right = cross((0,1,0), tangent) in XZ = (tz, -tx)
+                    float rx = tz, rz = -tx;
+
+                    edgePts.Add(new Vector2(ex + rx * halfWidth, ez + rz * halfWidth));
+                    edgePts.Add(new Vector2(ex - rx * halfWidth, ez - rz * halfWidth));
+                }
+
+                if (edgePts.Count < 3) continue;
+
+                // Sort by angle around junction centroid → CCW polygon
+                edgePts.Sort((a, b) =>
+                    Mathf.Atan2(a.y - cz, a.x - cx)
+                          .CompareTo(Mathf.Atan2(b.y - cz, b.x - cx)));
+
+                int ep = edgePts.Count;
+
+                // Vertices: edge ring (0..ep-1) + centroid at ep
+                var verts = new Vector3[ep + 1];
+                var uvs   = new Vector2[ep + 1];
+
+                float th = terrain.SampleHeight(new Vector3(cx, 0, cz));
+                verts[ep] = new Vector3(cx, terrainBaseY + th + yOffset + patchYBump, cz);
+                uvs[ep]   = new Vector2(cx / tileSize, cz / tileSize);
+
+                for (int i = 0; i < ep; i++)
+                {
+                    float px = edgePts[i].x, pz = edgePts[i].y;
+                    th = terrain.SampleHeight(new Vector3(px, 0, pz));
+                    verts[i] = new Vector3(px, terrainBaseY + th + yOffset + patchYBump, pz);
+                    uvs[i]   = new Vector2(px / tileSize, pz / tileSize);
+                }
+
+                // Fan triangles from centroid
+                var tris = new int[ep * 3];
+                for (int i = 0; i < ep; i++)
+                {
+                    tris[i * 3 + 0] = ep;
+                    tris[i * 3 + 1] = i;
+                    tris[i * 3 + 2] = (i + 1) % ep;
+                }
+
+                // Center mesh at junction, then winding check (same pattern as ribbons)
+                var origin = new Vector3(cx, 0, cz);
+                for (int i = 0; i < verts.Length; i++) verts[i] -= origin;
+
+                if (tris.Length >= 3)
+                {
+                    Vector3 a = verts[tris[0]], b = verts[tris[1]], c = verts[tris[2]];
+                    float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+                    if (cross > 0)
+                    {
+                        for (int i = 0; i < tris.Length; i += 3)
+                        { int tmp = tris[i]; tris[i] = tris[i + 2]; tris[i + 2] = tmp; }
+                    }
+                }
+
+                var mesh = new Mesh();
+                mesh.name     = $"CartPathJunction_{cx:F0}_{cz:F0}";
+                mesh.vertices = verts;
+                mesh.triangles = tris;
+                mesh.uv       = uvs;
+                mesh.RecalculateNormals();
+                mesh.RecalculateBounds();
+
+                var go = new GameObject($"CartPathJunction_{cx:F0}_{cz:F0}");
+                go.transform.position = origin;
+                go.AddComponent<MeshFilter>().sharedMesh = mesh;
+                go.AddComponent<MeshRenderer>().sharedMaterial = mat;
+                AddCleanMeshCollider(go, mesh);
+                var surfMarker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+                surfMarker.surfaceType = Golfin.Course.SurfaceType.CartPath;
+                go.transform.SetParent(parent);
+            }
         }
 
         /// <summary>
@@ -5115,11 +5241,9 @@ namespace Golfin.CourseImport
                 File.ReadAllText(cpPath));
             if (cpData.cart_paths == null || cpData.cart_paths.Length == 0) return;
 
-            // Junction endpoint snapping — fixes grass wedges at 3+ way junctions
-            // where UHoleGeo's skeleton extraction gives each path a slightly
-            // different pixel-center endpoint. 0.75m radius chosen just above the
-            // observed 0.6m gap on Hole 1 (junction at (-234.x, -123.x), paths 6/7/8).
-            SnapCartPathJunctionEndpoints(cpData.cart_paths, 0.75f);
+            // Junction endpoint snapping — fixes grass wedges at 3+ way junctions.
+            // Returns cluster data used below to build fill patches.
+            var junctionClusters = SnapCartPathJunctionEndpoints(cpData.cart_paths, 0.75f);
 
             var terrain = terrainGO.GetComponent<Terrain>();
             float terrainBaseY = terrainGO.transform.position.y;
@@ -5310,6 +5434,11 @@ namespace Golfin.CourseImport
                 go.transform.SetParent(cartRoot.transform);
                 meshCount++;
             }
+
+            // Fill the angular voids between ribbon strips at each N-way junction
+            if (junctionClusters.Count > 0)
+                BuildJunctionFillPatches(junctionClusters, cpData.cart_paths,
+                    terrain, terrainBaseY, 0.017f, cartMat, cartRoot.transform);
 
             Debug.Log($"[HoleGeoImporter] Spline cart paths: {meshCount} meshes " +
                 $"(sampling every 0.5m)");
