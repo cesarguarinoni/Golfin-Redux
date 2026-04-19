@@ -5140,8 +5140,9 @@ namespace Golfin.CourseImport
                     else
                     {
                         int n = cp.spine.Length;
-                        tx = cp.spine[n - 1].x - cp.spine[n - 2].x;
-                        tz = cp.spine[n - 1].z - cp.spine[n - 2].z;
+                        // spine[n-1] is the centroid (snapped); direction toward path body
+                        tx = cp.spine[n - 2].x - cp.spine[n - 1].x;
+                        tz = cp.spine[n - 2].z - cp.spine[n - 1].z;
                     }
                     float len = Mathf.Sqrt(tx * tx + tz * tz);
                     if (len < 0.001f) continue;
