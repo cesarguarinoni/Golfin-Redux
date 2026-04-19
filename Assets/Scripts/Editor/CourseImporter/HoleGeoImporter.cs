@@ -1528,23 +1528,6 @@ namespace Golfin.CourseImport
             };
         }
 
-        private static bool[,] ErodeMask(bool[,] mask, int hRes, int passes)
-        {
-            for (int p = 0; p < passes; p++)
-            {
-                var eroded = new bool[hRes, hRes];
-                for (int z = 1; z < hRes - 1; z++)
-                for (int x = 1; x < hRes - 1; x++)
-                {
-                    if (!mask[z, x]) continue;
-                    if (mask[z - 1, x] && mask[z + 1, x] && mask[z, x - 1] && mask[z, x + 1])
-                        eroded[z, x] = true;
-                }
-                mask = eroded;
-            }
-            return mask;
-        }
-
         private static bool[] DilateMask(bool[] mask, int w, int h, int radius)
         {
             bool[] result = new bool[w * h];
@@ -3441,13 +3424,6 @@ namespace Golfin.CourseImport
                         bool[,] bodyMask = new bool[hRes, hRes];
                         MarkContourCells(w.contour, bodyMask,
                             hRes, terrainPos, terrainSize, 0f);
-
-                        // Erode by 2 cells: rasterizing the polygon creates staircase corner
-                        // cells that protrude beyond the smooth water mesh edge. Those cells
-                        // sit at floor level but aren't covered by the mesh → dark triangular
-                        // teeth on steep diagonal banks. Erosion moves them into the shore ramp
-                        // zone, which lifts them to waterY; the water mesh then covers them.
-                        bodyMask = ErodeMask(bodyMask, hRes, 2);
 
                         for (int z = 0; z < hRes; z++)
                             for (int x = 0; x < hRes; x++)
