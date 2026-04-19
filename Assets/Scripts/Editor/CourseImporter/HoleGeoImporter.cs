@@ -19,6 +19,14 @@ namespace Golfin.CourseImport
         public static int ShoreRadius = 10;
         /// <summary>Maximum depth of shore depression in meters below flat terrain.</summary>
         public static float ShoreDepthMeters = 0.4f;
+        /// <summary>Maximum shore ramp slope (rise/run). 0.35 ≈ 19°.
+        /// When the natural bank is steeper, the shore ramp extends outward
+        /// per-cell so the rendered slope never exceeds this.</summary>
+        private const float ShoreMaxRampSlope = 0.35f;
+        /// <summary>Upper cap on per-cell adaptive shore radius (meters).
+        /// Derived from Phase-1 sampling: worst-case drop 14m on Hole 12
+        /// → dR_needed 34.7m; 40m gives 1.15× safety margin.</summary>
+        private const float ShoreMaxRadiusMeters = 40.0f;
 
         // ─── Terrain Y offset — headroom below flat terrain for water bed.
         // Must be ≥ ShoreDepthMeters + water surface depth (0.05m) + underwater margin (0.3m)
@@ -3504,6 +3512,35 @@ namespace Golfin.CourseImport
                             coarseDist[z, x] = coarseDist[z + 1, x] + 1f;
                     }
 
+                // Pre-scan: find worst drop near any water contour to bound
+                // the adaptive radius used for the coarse cull below.
+                // Iterates contour vertices ± (ShoreRadius+2) cells — O(verts×(2r+1)²),
+                // fast even for large bodies.
+                float worstShoreDrop = 0f;
+                int scanBand = ShoreRadius + 2;
+                foreach (var (pts, surfNorm) in waterContours)
+                {
+                    foreach (var pt in pts)
+                    {
+                        int cCol = Mathf.RoundToInt((pt.x - terrainPos.x) / cellW);
+                        int cRow = Mathf.RoundToInt((pt.z - terrainPos.z) / cellH);
+                        for (int dz = -scanBand; dz <= scanBand; dz++)
+                        for (int dx = -scanBand; dx <= scanBand; dx++)
+                        {
+                            int zz = cRow + dz, xx = cCol + dx;
+                            if (zz < 0 || zz >= hRes || xx < 0 || xx >= hRes) continue;
+                            if (waterMask[zz, xx]) continue;
+                            float drop = heights[zz, xx] - surfNorm;
+                            if (drop > worstShoreDrop) worstShoreDrop = drop;
+                        }
+                    }
+                }
+                float worstAdaptiveShoreM = Mathf.Clamp(
+                    1.5f * worstShoreDrop / ShoreMaxRampSlope,
+                    shoreRadiusM,
+                    ShoreMaxRadiusMeters);
+                int worstAdaptiveShoreCells = Mathf.CeilToInt(worstAdaptiveShoreM / cellSize);
+
                 for (int z = 0; z < hRes; z++)
                 {
                     for (int x = 0; x < hRes; x++)
@@ -3511,7 +3548,7 @@ namespace Golfin.CourseImport
                         if (waterMask[z, x]) continue;
                         if (depress[z, x]) continue;
                         if (cartDepress[z, x]) continue;
-                        if (coarseDist[z, x] > ShoreRadius + 2) continue; // coarse cull
+                        if (coarseDist[z, x] > worstAdaptiveShoreCells + 2) continue; // coarse cull
 
                         // World position of this heightmap cell.
                         float wx = terrainPos.x + x * cellW;
@@ -3541,13 +3578,21 @@ namespace Golfin.CourseImport
                             }
                         }
 
-                        if (minDistM > shoreRadiusM) continue;
+                        // Per-cell adaptive radius: expand the ramp so smoothstep
+                        // peak slope (1.5× rise/run at t=0.5) stays ≤ ShoreMaxRampSlope.
+                        float originalH = heights[z, x];
+                        float dropAbs = Mathf.Abs(originalH - nearSurfY);
+                        float adaptiveM = Mathf.Clamp(
+                            1.5f * dropAbs / ShoreMaxRampSlope,
+                            shoreRadiusM,
+                            ShoreMaxRadiusMeters);
 
-                        // t = 0 at boundary, 1 at shoreRadius.
-                        float t = minDistM / shoreRadiusM;
+                        if (minDistM > adaptiveM) continue;
+
+                        // t = 0 at boundary, 1 at adaptiveM.
+                        float t = minDistM / adaptiveM;
                         t = t * t * (3f - 2f * t); // smoothstep
 
-                        float originalH = heights[z, x];
                         float targetH = Mathf.Lerp(nearSurfY, originalH, t);
 
                         if (targetH < originalH)
@@ -4288,21 +4333,35 @@ namespace Golfin.CourseImport
 
             ContourPoint[] insetContour = DilateContour(contour, -borderWidth);
 
-            var (rawVerts, uvs, tris) = CDTTriangulate(
-                contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc,
-                innerConstraint: insetContour);
+            // --- Submesh 0: CDT tee surface (inset contour only) ---
+            // CDT only the inset polygon so no ring triangles enter this submesh.
+            bool borderEnabled = insetContour != null && insetContour.Length >= 3;
 
-            bool borderEnabled = rawVerts != null && tris != null && tris.Length >= 3;
-            if (!borderEnabled)
-            {
-                Debug.LogWarning($"[HoleGeoImporter] Tee {id}: inset CDT failed, fallback to borderless");
+            Vector3[] rawVerts;
+            Vector2[] uvs;
+            int[] tris;
+
+            if (borderEnabled)
+                (rawVerts, uvs, tris) = CDTTriangulate(
+                    insetContour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
+            else
                 (rawVerts, uvs, tris) = CDTTriangulate(
                     contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
-                if (rawVerts == null || tris == null || tris.Length < 3)
-                    return null;
+
+            if (rawVerts == null || tris == null || tris.Length < 3)
+            {
+                if (borderEnabled)
+                {
+                    Debug.LogWarning($"[HoleGeoImporter] Tee {id}: inset CDT failed, fallback to borderless");
+                    borderEnabled = false;
+                    (rawVerts, uvs, tris) = CDTTriangulate(
+                        contour, terrain, terrainBaseY, yOffset, 1.0f, uvFunc);
+                    if (rawVerts == null || tris == null || tris.Length < 3) return null;
+                }
+                else return null;
             }
 
-            // Platform Y = max of sampled verts.
+            // Flatten to platform Y (max of sampled verts).
             float platformY = float.MinValue;
             for (int i = 0; i < rawVerts.Length; i++)
                 if (rawVerts[i].y > platformY) platformY = rawVerts[i].y;
@@ -4315,6 +4374,7 @@ namespace Golfin.CourseImport
             cx /= rawVerts.Length; cz /= rawVerts.Length;
             Vector3 centroid = new Vector3(cx, 0f, cz);
 
+            // Fix winding: ensure CW from above (cross <= 0 in XZ).
             if (tris.Length >= 3)
             {
                 Vector3 a = rawVerts[tris[0]], b = rawVerts[tris[1]], c = rawVerts[tris[2]];
@@ -4324,44 +4384,56 @@ namespace Golfin.CourseImport
                     { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
             }
 
-            var insetPoly = new Vector2[insetContour.Length];
-            for (int i = 0; i < insetContour.Length; i++)
-                insetPoly[i] = new Vector2(insetContour[i].x, insetContour[i].z);
-
-            var teeTris = new System.Collections.Generic.List<int>();
-            var borderSrcTris = new System.Collections.Generic.List<int>();
-            for (int t = 0; t < tris.Length; t += 3)
-            {
-                Vector3 va = rawVerts[tris[t]], vb = rawVerts[tris[t + 1]], vc = rawVerts[tris[t + 2]];
-                float triCx = (va.x + vb.x + vc.x) / 3f;
-                float triCz = (va.z + vb.z + vc.z) / 3f;
-                bool insideInset = borderEnabled ? IsInsideContour(triCx, triCz, insetPoly) : true;
-                if (insideInset)
-                { teeTris.Add(tris[t]); teeTris.Add(tris[t + 1]); teeTris.Add(tris[t + 2]); }
-                else
-                { borderSrcTris.Add(tris[t]); borderSrcTris.Add(tris[t + 1]); borderSrcTris.Add(tris[t + 2]); }
-            }
-
             var finalVerts = new System.Collections.Generic.List<Vector3>(rawVerts);
-            var finalUVs = new System.Collections.Generic.List<Vector2>(uvs);
-            var vertRemap = new System.Collections.Generic.Dictionary<int, int>();
-            var borderTris = new System.Collections.Generic.List<int>(borderSrcTris.Count);
-            foreach (int origIdx in borderSrcTris)
+            var finalUVs  = new System.Collections.Generic.List<Vector2>(uvs);
+            var teeTris   = new System.Collections.Generic.List<int>(tris);
+
+            // --- Submesh 1: Manual quad-strip ring ---
+            // Pair outer contour verts with inset contour verts by index (DilateContour
+            // preserves vertex count). No CDT involved → no diagonal spanning triangles.
+            System.Collections.Generic.List<int> borderTris = null;
+            if (borderEnabled)
             {
-                if (!vertRemap.TryGetValue(origIdx, out int newIdx))
+                int N = nc; // contour.Length == insetContour.Length
+                int ringBase = finalVerts.Count;
+
+                // Outer edge verts (u=1 → darker, terrain side of gradient)
+                for (int i = 0; i < N; i++)
                 {
-                    Vector3 src = rawVerts[origIdx];
-                    float dist = Mathf.Sqrt(DistanceSqToContour(src.x, src.z, insetPoly));
-                    float u = Mathf.Clamp01(dist / borderWidth);
-                    // T_TeeDark_Albedo has no meaningful V content — pure L→R gradient.
-                    // World-XZ V causes visible twisting on the ring curve; constant V removes it.
-                    float v = 0.5f;
-                    newIdx = finalVerts.Count;
-                    finalVerts.Add(src);
-                    finalUVs.Add(new Vector2(u, v));
-                    vertRemap[origIdx] = newIdx;
+                    finalVerts.Add(new Vector3(contour[i].x, platformY, contour[i].z));
+                    finalUVs.Add(new Vector2(1f, 0.5f));
                 }
-                borderTris.Add(newIdx);
+                // Inset edge verts (u=0 → lighter, tee-surface side of gradient)
+                for (int i = 0; i < N; i++)
+                {
+                    finalVerts.Add(new Vector3(insetContour[i].x, platformY, insetContour[i].z));
+                    finalUVs.Add(new Vector2(0f, 0.5f));
+                }
+
+                borderTris = new System.Collections.Generic.List<int>(N * 6);
+                for (int i = 0; i < N; i++)
+                {
+                    int ip1 = (i + 1) % N;
+                    int o0 = ringBase + i;       // outer[i]
+                    int o1 = ringBase + ip1;     // outer[i+1]
+                    int r0 = ringBase + N + i;   // inset[i]
+                    int r1 = ringBase + N + ip1; // inset[i+1]
+                    // Two triangles per quad; winding checked below.
+                    borderTris.Add(o0); borderTris.Add(r0); borderTris.Add(o1);
+                    borderTris.Add(o1); borderTris.Add(r0); borderTris.Add(r1);
+                }
+
+                // Verify ring winding matches tee surface; flip if needed.
+                if (borderTris.Count >= 3)
+                {
+                    Vector3 a = finalVerts[borderTris[0]];
+                    Vector3 b = finalVerts[borderTris[1]];
+                    Vector3 c = finalVerts[borderTris[2]];
+                    float cross = (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
+                    if (cross > 0)
+                        for (int t = 0; t < borderTris.Count; t += 3)
+                        { int tmp = borderTris[t]; borderTris[t] = borderTris[t + 2]; borderTris[t + 2] = tmp; }
+                }
             }
 
             var vertsArr = finalVerts.ToArray();
