@@ -229,10 +229,6 @@ namespace Golfin.CourseImport
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating greens...", 0.53f);
                 CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
-
-                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating water...", 0.59f);
-                CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
-
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating zone meshes...", 0.62f);
                 // Flatten terrain under each tee polygon to its peak height so CDT
                 // samples a naturally flat surface — no post-mesh hacks needed.
@@ -303,6 +299,12 @@ namespace Golfin.CourseImport
 
                 // Depress terrain under overlay meshes to prevent z-fighting
                 DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
+
+                // Water meshes must sample the already-depressed terrain so the mesh
+                // edge is co-planar with the shore floor — prevents the per-cell cliff
+                // face (serration artifact) seen when this ran before depression.
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating water...", 0.58f);
+                CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
                 terrainData.SetHoles(0, 0, holes);
 
