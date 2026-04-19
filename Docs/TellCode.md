@@ -7,7 +7,212 @@
 
 ---
 
-## Current Task — Bridge Viewer in UHoleGeo (consume bridges.json)
+## Current Task — Water Shore Adaptive Radius — Phase 1 (Sampling Script)
+
+Hole 12 shows the same serrated-grass artifact on a steep diagonal water
+bank that the tee skirt had before its adaptive-radius fix. Cause:
+fixed `ShoreRadius = 10 cells ≈ 5m` in `DepressTerrainUnderOverlays`
+compresses big drops into a steep ramp face → Unity's terrain shader
+stretches grass vertically per-triangle → reads as serrations.
+
+The fix is a direct port of the tee adaptive radius (`dR = clamp(1.5 ×
+dropAbs / MaxRampSlope, base, cap)`). But before applying it, we need
+data: how big is the worst drop, and what cap (`ShoreMaxRadiusMeters`)
+should the spec use? **Phase 1 = sampling script. Phase 2 (apply the
+spec) lands in a follow-up TellCode block, after Cesar reviews the
+numbers.**
+
+**Target file (new):** `Tools/sample-shore-heights.js`
+**No changes** to `HoleGeoImporter.cs`, the UHoleGeo pipeline, or any
+exported JSON.
+
+---
+
+### Reference
+
+Fork the existing `Tools/sample-tee-heights.js` — same height-sampling
+machinery (uint16be `.raw`, world↔cell math, point-in-polygon). The
+shore version differs in three ways:
+
+1. Reads `water.json` instead of `zone-contours.json` → tee bodies.
+2. Computes `nearSurfY = minTerrainH_inside_polygon - 0.05f` (the
+   formula `DepressTerrainUnderOverlays` uses for the water surface
+   level) instead of tee max height.
+3. Samples *outside* the polygon at increasing offsets (1m, 2m, 5m,
+   10m), to characterise drop-as-function-of-distance — that's what
+   determines whether a 5m fixed radius is too short.
+
+---
+
+### Step 1 — Iterate all holes with water
+
+Don't hardcode Hole 12. Walk the export tree and find every hole with
+a `water.json`:
+
+```javascript
+const exportRoot = 'C:/Users/cesar/GolfinRedux/Tools/UHoleGeo/output/lomond-country-club/export';
+const holesWithWater = [];
+for (let n = 1; n <= 18; n++) {
+  const pad = String(n).padStart(2, '0');
+  const wpath = `${exportRoot}/hole-${pad}/water.json`;
+  if (fs.existsSync(wpath)) holesWithWater.push(n);
+}
+```
+
+For each hole, load:
+- `Tools/UHoleGeo/output/lomond-country-club/holes/NN/heightmap.raw`
+  (pad to 2 digits, no leading zero stripped).
+- `Tools/UHoleGeo/output/lomond-country-club/export/hole-NN/water.json`.
+
+---
+
+### Step 2 — Per-hole terrain dimensions
+
+`sample-tee-heights.js` hardcodes `terrainWidthM = 151.6` /
+`terrainLengthM = 127.2` / `elevRangeM = 34.9` for Hole 04. These vary
+per hole. Read them from the hole's per-hole metadata.
+
+**NOTE for Code:** I don't know the exact filename / path that holds
+per-hole terrain dimensions in this project. Look for:
+
+- `Tools/UHoleGeo/output/lomond-country-club/holes/NN/*.json` (any
+  metadata sibling of `heightmap.raw` with `terrain_width_m` /
+  `terrain_length_m` / `elev_range_m`-ish fields).
+- Failing that, `Tools/UHoleGeo/output/lomond-country-club/export/hole-NN/`
+  for a `terrain-meta.json`, `hole-meta.json`, or similar.
+- Last resort: grep `generate-terrain.mjs` and `export-hole.mjs` for
+  where these dimensions are written. The values must already be
+  serialised somewhere because `HoleGeoImporter.cs` consumes them.
+
+If absolutely no per-hole metadata exists, fall back to Hole 04's
+constants and add a `// TODO: read per-hole terrain dims` comment plus
+a script-top warning. Don't silently use the wrong numbers.
+
+---
+
+### Step 3 — Per-water-body drop characterisation
+
+For each water body (`water.json` → `water[i].contour`):
+
+1. Compute `minTerrainH` over all cells **inside** the polygon (point-
+   in-polygon over bbox, same pattern as the tee script's interior
+   sweep). This mirrors the importer's `nearSurfY` formula:
+   `nearSurfY = minTerrainH - 0.05f`.
+
+2. Walk the contour vertices. For each vertex, sample the heightmap
+   at four offsets along the **outward normal**:
+   `[1m, 2m, 5m, 10m]`. Outward normal at vertex `i` ≈ rotate the
+   edge `(p[i+1] - p[i-1])` by 90° CCW, then check sign by testing
+   if `vertex + 0.5m × normal` is outside the polygon (flip if not).
+   Skip vertex if the sample lands outside the heightmap.
+
+3. For each sampled point, record `drop = h(sample) - nearSurfY`
+   (positive = bank rises above water surface, which is the case
+   we care about; negative = sample is already below water level,
+   discard).
+
+4. Per water body, report:
+   - `nearSurfY` (m)
+   - Number of contour vertices, number sampled
+   - At each offset (1m, 2m, 5m, 10m): min, median, p90, max drop
+   - **Adaptive radius needed** at the p90 drop:
+     `dR_needed_m = 1.5 × drop_p90 / 0.35` (using the tee fix's 0.35
+     `MaxRampSlope`). This is the headline number — it tells us what
+     `ShoreMaxRadiusMeters` cap the Phase 2 spec should use.
+
+5. Per hole summary: max drop across all bodies, max `dR_needed`.
+
+6. Course-wide summary at the end: max drop, max `dR_needed`, list of
+   `(hole, body_id, drop, dR_needed)` for the top 5 worst spots.
+
+---
+
+### Step 4 — Output format
+
+Console output, plain text, sectioned by hole. Example shape:
+
+```
+=== Hole 7 ===
+Terrain: 151.6m × 127.2m, elev range 34.9m
+
+  Water body 1 (12,453 px, 78 contour verts):
+    nearSurfY = 4.32m
+    Outward sampling (78 verts, 76 sampled):
+      offset  min     median  p90     max
+       1m    -0.10    0.45    1.20    2.10
+       2m     0.05    0.92    2.45    3.80
+       5m     0.40    1.85    4.10    5.95
+      10m    -0.20    2.30    5.20    7.40
+    Adaptive radius needed at 5m-offset p90 drop (4.10m):
+      dR_needed = 1.5 × 4.10 / 0.35 = 17.6m  ← cap recommendation
+
+=== Hole 12 ===
+...
+
+=== COURSE SUMMARY ===
+Holes with water: [7, 12, ...]
+Max drop course-wide: 7.4m (Hole 7, body 1)
+Max dR_needed:        31.7m (Hole 7, body 1)
+
+Top 5 worst spots:
+  Hole  7, body 1: drop 7.40m, dR_needed 31.7m
+  Hole 12, body 1: drop 5.80m, dR_needed 24.9m
+  ...
+
+→ Recommended ShoreMaxRadiusMeters cap for Phase 2 spec: 35m
+  (max dR_needed × 1.1 safety margin, rounded up to 5m)
+```
+
+The "recommended cap" line at the end is what Phase 2 will read.
+
+---
+
+### Step 5 — Run it
+
+```
+node Tools/sample-shore-heights.js
+```
+
+Paste the full console output back. Cesar will eyeball it against
+the screenshot evidence and the existing `NEXT_SESSION_WATER_SHORE.md`
+heuristics:
+
+- **Max drop < 1m course-wide** → skip Phase 2, fixed 5m is fine,
+  Hole 12 artifact is something else (re-investigate).
+- **Max drop 2–5m** → apply Phase 2 with cap = max `dR_needed` × 1.1.
+- **Max drop > 5m** → apply Phase 2, cap as above; this is the case
+  Hole 12 likely is.
+
+---
+
+### Verification
+
+- [x] Script runs to completion on all holes with water (no crashes
+      on holes without water).
+- [x] Hole 12 appears in the report with non-zero drop values
+      (matches the screenshot evidence — the steep bank is real).
+- [x] Per-hole terrain dimensions are read from real metadata, not
+      hardcoded — confirm the dims for at least one non-Hole-04 hole
+      look correct (e.g. compare against the Unity terrain in-scene).
+- [x] Course summary's recommended cap is a number Cesar can drop
+      directly into the Phase 2 spec.
+
+### Do NOT change
+
+- `HoleGeoImporter.cs` — Phase 2 only.
+- Any pipeline script (`generate-terrain.mjs`, `export-hole.mjs`,
+  `classify-zones.mjs`, `dev-server.mjs`).
+- The existing `Tools/sample-tee-heights.js` — fork, don't refactor.
+
+### Out of scope (Phase 2)
+
+- The actual fix in `DepressTerrainUnderOverlays`. Spec is staged in
+  `Docs/NEXT_SESSION_WATER_SHORE.md`; Phase 2 TellCode block lands
+  after sampling output is reviewed.
+
+---
+
+## Previous Task — Bridge Viewer in UHoleGeo (consume bridges.json)
 
 The Unity side now writes `bridges.json` into each hole's UHoleGeo
 export folder (`Tools/UHoleGeo/output/lomond-country-club/export/hole-XX/bridges.json`).
@@ -1012,5 +1217,7 @@ with V-direction content).
 ✅ DONE: 2026-04-18 Constant-V UV fix applied. Additionally fixed geometric crease: rebuilt ring as manual quad-strip (outer contour × inset contour vertex pairs by index) instead of CDT-classified triangles — eliminates long diagonal spanning tris. CDT now only triangulates the inset contour for submesh 0; submesh 1 is a clean N-quad strip with winding auto-checked.
 
 ✅ DONE: 2026-04-18 Bridge Placement Tool implemented. BridgeAnchor.cs (Golfin.Course) marker component with gizmo. BridgeExporter.cs EditorWindow at Window > Trees > Bridge Exporter — finds anchors, previews positions, exports bridges.json to UHoleGeo/UHoleLite export folder with auto-detection of Geo/Lite/Flat from scene name, mirrors to sibling pipeline folder.
+
+✅ DONE: 2026-04-19 Water Shore Phase 1 sampling script created at Tools/sample-shore-heights.js. Course-wide max drop 14.07m (Hole 12, body 1), max dR_needed 34.7m. Recommended ShoreMaxRadiusMeters cap for Phase 2 spec: 40m. Holes 7 (8.63m) and 13 (6.62m) also need the fix. Per-hole terrain dims read from terrain-meta.json (not hardcoded).
 
 ✅ DONE: 2026-04-18 Bridge Viewer in UHoleGeo implemented. dev-server: /api/bridges GET route + bridges loaded into hole nav data. app.js: loadBridges() fetches on hole select; worldToNormalized() converts Unity world meters to canvas coords; drawCanvas() draws purple rotated footprint rect + forward tick + anchor endpoint circles; hitTestBridge() + tooltip on hover; "Bridges" toggle in layer bar; bridge count chip in hole nav.
