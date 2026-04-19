@@ -3264,16 +3264,12 @@ namespace Golfin.CourseImport
                             if (d < minDistM) minDistM = d;
                         }
 
-                        // Per-cell adaptive skirt radius.
-                        // dR chosen so smoothstep peak slope (1.5× rise/run at t=0.5)
-                        // stays at or below TeeMaxRampSlope.
-                        float dropAbs = Mathf.Abs(maxH - baseline[z, x]);
-                        float adaptiveM = Mathf.Clamp(
-                            1.5f * dropAbs / TeeMaxRampSlope,
-                            TeeSkirtMeters,
-                            TeeMaxSkirtMeters);
-
-                        if (minDistM > adaptiveM) continue;
+                        // Uniform adaptive radius (per-tee worst case from pre-scan).
+                        // Per-cell radius was tried but varying adaptiveM creates an
+                        // irregular outer boundary that appears as sawtooth teeth at
+                        // the bottom of the mound. Uniform radius gives a clean edge.
+                        if (minDistM > worstAdaptiveM) continue;
+                        float adaptiveM = worstAdaptiveM;
 
                         float t = minDistM / adaptiveM;
                         t = t * t * (3f - 2f * t); // smoothstep
