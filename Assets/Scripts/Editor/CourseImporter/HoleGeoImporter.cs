@@ -1528,6 +1528,23 @@ namespace Golfin.CourseImport
             };
         }
 
+        private static bool[,] ErodeMask(bool[,] mask, int hRes, int passes)
+        {
+            for (int p = 0; p < passes; p++)
+            {
+                var eroded = new bool[hRes, hRes];
+                for (int z = 1; z < hRes - 1; z++)
+                for (int x = 1; x < hRes - 1; x++)
+                {
+                    if (!mask[z, x]) continue;
+                    if (mask[z - 1, x] && mask[z + 1, x] && mask[z, x - 1] && mask[z, x + 1])
+                        eroded[z, x] = true;
+                }
+                mask = eroded;
+            }
+            return mask;
+        }
+
         private static bool[] DilateMask(bool[] mask, int w, int h, int radius)
         {
             bool[] result = new bool[w * h];
@@ -3425,6 +3442,13 @@ namespace Golfin.CourseImport
                         MarkContourCells(w.contour, bodyMask,
                             hRes, terrainPos, terrainSize, 0f);
 
+                        // Erode by 2 cells: rasterizing the polygon creates staircase corner
+                        // cells that protrude beyond the smooth water mesh edge. Those cells
+                        // sit at floor level but aren't covered by the mesh → dark triangular
+                        // teeth on steep diagonal banks. Erosion moves them into the shore ramp
+                        // zone, which lifts them to waterY; the water mesh then covers them.
+                        bodyMask = ErodeMask(bodyMask, hRes, 2);
+
                         for (int z = 0; z < hRes; z++)
                             for (int x = 0; x < hRes; x++)
                                 if (bodyMask[z, x])
@@ -3516,11 +3540,8 @@ namespace Golfin.CourseImport
                 // the adaptive radius used for the coarse cull below.
                 // Iterates contour vertices ± (ShoreRadius+2) cells — O(verts×(2r+1)²),
                 // fast even for large bodies.
-                // Scan out to ShoreMaxRadiusMeters from each contour vertex.
-                // drop is converted to world metres: (normalized difference) × elevRange.
-                // ShoreMaxRampSlope is in m/m, so the formula yields metres correctly.
                 float worstShoreDrop = 0f;
-                int scanBand = Mathf.CeilToInt(ShoreMaxRadiusMeters / cellSize) + 2;
+                int scanBand = ShoreRadius + 2;
                 foreach (var (pts, surfNorm) in waterContours)
                 {
                     foreach (var pt in pts)
@@ -3533,7 +3554,7 @@ namespace Golfin.CourseImport
                             int zz = cRow + dz, xx = cCol + dx;
                             if (zz < 0 || zz >= hRes || xx < 0 || xx >= hRes) continue;
                             if (waterMask[zz, xx]) continue;
-                            float drop = (heights[zz, xx] - surfNorm) * elevRange; // world metres
+                            float drop = heights[zz, xx] - surfNorm;
                             if (drop > worstShoreDrop) worstShoreDrop = drop;
                         }
                     }
@@ -3551,7 +3572,7 @@ namespace Golfin.CourseImport
                         if (waterMask[z, x]) continue;
                         if (depress[z, x]) continue;
                         if (cartDepress[z, x]) continue;
-                        if (coarseDist[z, x] > (int)(worstAdaptiveShoreCells * 1.5f) + 2) continue; // coarse cull (×1.5 for L1→Euclidean)
+                        if (coarseDist[z, x] > worstAdaptiveShoreCells + 2) continue; // coarse cull
 
                         // World position of this heightmap cell.
                         float wx = terrainPos.x + x * cellW;
