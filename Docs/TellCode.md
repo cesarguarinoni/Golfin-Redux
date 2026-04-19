@@ -7,7 +7,90 @@
 
 ---
 
-## Current Task — Water Shore Adaptive Radius — Phase 1 (Sampling Script)
+## Current Task — Water Shore Phase 2b: Diagnostic Ablation (ShoreRadius=0)
+
+Three Phase 2 attempts all failed (see investigation findings further down). Code
+correctly flagged that the adaptive-radius approach is architecturally mismatched
+with hillside ponds. Before speccing a new fix, we need to **confirm which component
+is actually causing the screenshot artifact**. The tee→water analogy may be wrong
+at a more fundamental level than the radius size.
+
+### The key question
+
+Is the serrated grass in the Hole 12 screenshot caused by:
+- **(A)** the shore ramp itself — `Lerp(nearSurfY, originalH, t)` forcing boundary
+  cells to `surfNorm` while next-cell-in is at `originalH`, creating a steep
+  triangle face per cell whose grass billboards get stretched vertically by
+  Unity's terrain shader?
+- **(B)** the mesh-vs-terrain edge mismatch Code hypothesized — water mesh at
+  original terrain height floating above depressed shore cells, exposing a
+  rim of near-vertical terrain triangles?
+- **(C)** something else entirely — e.g. `SetHoles` edge rasterization, the
+  underwater-depth floor (`-0.3m`) exposing too much, etc.?
+
+These have different fixes. We need to know which before we spend another three
+rounds on a wrong-shaped solution.
+
+### The ablation
+
+Run a single diagnostic import with the shore ramp **disabled**. All of these
+changes are trivial and reversible:
+
+1. In `HoleGeoImporter.cs` (near line 19), change:
+   ```csharp
+   public static int ShoreRadius = 10;
+   ```
+   to:
+   ```csharp
+   public static int ShoreRadius = 0;
+   ```
+   (The shore-ramp block is already guarded by `ShoreRadius > 0` at roughly line
+   3480, so setting this to 0 skips the entire ramp pass — no other code changes
+   needed.)
+
+2. Re-import Hole 12 Geo.
+
+3. Take a screenshot from approximately the same angle as the previous Hole 12
+   screenshot (steep diagonal bank into water).
+
+4. Attach the screenshot to the next message back to the architect. **No other
+   analysis or code changes in this task.** Just flip the flag, reimport, screenshot,
+   report back.
+
+### What each outcome tells us
+
+- **Serrations gone** → shore ramp was causing them (hypothesis A). Next spec
+  will likely remove the ramp entirely for steep banks and keep a narrow
+  blend only for gentle ones (Code's Option C).
+- **Serrations remain, mesh edge now visibly misaligned** → both A and B are
+  partial causes. Next spec will reorder (Option A) AND restrict ramp scope.
+- **Serrations remain, mesh edge looks fine** → hypothesis C, re-investigate.
+  Possibilities include `SetHoles` rasterization, fairway/tee depression at
+  shore (cart-path-style flat drop is probably irrelevant since waterMask
+  excludes these cells, but worth confirming), or the terrain shader's
+  grass billboard LOD behavior on the per-cell terrain slope itself.
+
+### Do NOT
+
+- Re-attempt any of the three Phase 2 approaches.
+- Modify `DepressTerrainUnderOverlays`, `CreateWaterMeshes`, or any other
+  method in this task.
+- Revert the Phase-1 sampling script or the constants that were added for
+  Phase 2 (`ShoreMaxRampSlope`, `ShoreMaxRadiusMeters`). Those are harmless
+  when `ShoreRadius = 0` because the entire ramp block is skipped.
+- Worry about the fact that setting `ShoreRadius = 0` also disables the
+  shore on gentler banks (Holes 7, 13). This is a diagnostic — we'll restore
+  correct behavior in the follow-up spec.
+
+### After reporting back
+
+Set `ShoreRadius` back to `10` (or revert the change) so no one else gets
+confused by a half-configured state. We can always set it back to 0 in the
+follow-up spec if that's what the ablation indicated.
+
+---
+
+## Completed Task — Water Shore Adaptive Radius — Phase 1 (Sampling Script)
 
 Hole 12 shows the same serrated-grass artifact on a steep diagonal water
 bank that the tee skirt had before its adaptive-radius fix. Cause:
@@ -1274,3 +1357,5 @@ On a steep bank, the right transition is a 1-cell feather, not a 40m ramp. Cap t
 The shore ramp adaptive radius system is architecturally mismatched with hillside water bodies. Any further attempts without a clear re-spec will produce new variants of the same artifacts.
 
 ✅ DONE: 2026-04-18 Bridge Viewer in UHoleGeo implemented. dev-server: /api/bridges GET route + bridges loaded into hole nav data. app.js: loadBridges() fetches on hole select; worldToNormalized() converts Unity world meters to canvas coords; drawCanvas() draws purple rotated footprint rect + forward tick + anchor endpoint circles; hitTestBridge() + tooltip on hover; "Bridges" toggle in layer bar; bridge count chip in hole nav.
+
+✅ DONE: 2026-04-20 Phase 2b ablation complete. ShoreRadius=0 result: serrations remain and are worse (individual heightmap cell pillars fully exposed at water boundary). Hypothesis A ELIMINATED — shore ramp is not the cause. Confirms Hypothesis B: abrupt depression cliff at water polygon boundary. Water mesh samples original terrain height → floats above depressed floor → exposed cliff face per cell. Architect recommended fix: Option A (reorder CreateWaterMeshes to run AFTER DepressTerrainUnderOverlays). ShoreRadius restored to 10.
