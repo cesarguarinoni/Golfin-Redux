@@ -1220,4 +1220,57 @@ with V-direction content).
 
 ✅ DONE: 2026-04-19 Water Shore Phase 1 sampling script created at Tools/sample-shore-heights.js. Course-wide max drop 14.07m (Hole 12, body 1), max dR_needed 34.7m. Recommended ShoreMaxRadiusMeters cap for Phase 2 spec: 40m. Holes 7 (8.63m) and 13 (6.62m) also need the fix. Per-hole terrain dims read from terrain-meta.json (not hardcoded).
 
+---
+
+## 🔴 Phase 2 Investigation Findings (2026-04-20) — Unresolved
+
+**Three attempts, all reverted. Code is back to pre-Phase-2 state.**
+
+### What was tried
+
+**Attempt 1 — ErodeMask (2 passes, 4-connected) on bodyMask before writing to waterMask.**
+Result: teeth became DEEPER. Erosion shrinks the mask inward; cells removed from the boundary fall into the shore ramp zone at distance≈0, which sets them to `nearSurfY` ≈ floor level. Net effect: more dark exposed cells, not fewer.
+
+**Attempt 2 — Fixed unit mismatch in worstAdaptiveShoreM pre-scan.**
+`drop = heights[z,x] - surfNorm` is normalized (0–1). `ShoreMaxRampSlope = 0.35f` is in world m/m. Dividing directly gives ~1.2m radius instead of the intended 40m. Fix: `drop * elevRange`. The formula itself was correct conceptually.
+Result: **flattened the entire terrain bank around the water body** — a huge bowl was depressed 40m in all directions. Artifact still present. User rejected.
+
+**Attempt 3 — Combined: unit fix + scanBand increased from 12 cells to ceil(ShoreMaxRadiusMeters/cellSize) cells.**
+Same result as Attempt 2. The wide ramp is wrong for hillside ponds.
+
+---
+
+### Root cause analysis (not yet confirmed, needs architect review)
+
+**The shore ramp formula `Lerp(surfNorm, originalH, t)` is wrong for steep banks.**
+`surfNorm = (minTerrainH_inside_polygon - 0.05) / elevRange` = the water floor level (lowest point of the entire polygon interior). On Hole 12, the polygon boundary on the uphill side is 14m ABOVE `surfNorm`. The ramp drags that 14m-high terrain down toward `surfNorm` over 40m = a massive unnatural bowl. This is the wrong shape for a hillside pond.
+
+The correct `nearSurfY` for a shore ramp cell should be the water surface height **at that cell's closest polygon edge point**, not the global polygon minimum.
+
+**Structural issue: `CreateWaterMeshes` runs at line 234, `DepressTerrainUnderOverlays` runs at line 305.**
+The water mesh samples `terrain.SampleHeight()` on the ORIGINAL (undepressed) terrain. After depression, the mesh floats above the depressed floor. The mesh edge is at the original terrain height at polygon vertices. On the steep uphill side, this creates a visible cliff between the water mesh edge (high) and the depressed terrain just outside (set to surfNorm by the ramp). This is likely the direct cause of the teeth.
+
+**Hypothesis:** If `CreateWaterMeshes` were called AFTER `DepressTerrainUnderOverlays`, the water mesh would conform to the already-depressed terrain. The mesh edge would sample the shore-ramped terrain (already at surfNorm at distance=0). The mesh and terrain would be co-planar at the boundary → no cliff → no teeth.
+
+---
+
+### Proposed fix for architect to spec
+
+**Option A (recommended): Reorder pipeline — call `CreateWaterMeshes` AFTER `DepressTerrainUnderOverlays`.**
+- Water mesh samples depressed terrain → mesh edge at surfNorm at boundary → seamless join
+- No change to the shore ramp formula needed
+- Requires verifying no other side effect of the reorder (anchor placement at line 245 says it should run BEFORE depression; bridges/greens/zones all run before 305 too)
+- Clean, zero new parameters
+
+**Option B: Fix the shore ramp `nearSurfY` to use per-cell water surface, not global polygon minimum.**
+On a sloped water body, surfNorm should be the height of the polygon contour at the nearest edge point, not the minimum over the whole interior. This requires projecting each cell to its nearest polygon edge and sampling the terrain AT that edge point to get the local surface level. More complex, but makes the ramp physically correct.
+
+**Option C: Use a narrow blend only (2–3 cells) at the polygon boundary, not a wide ramp.**
+On a steep bank, the right transition is a 1-cell feather, not a 40m ramp. Cap the shore ramp at `min(worstAdaptiveShoreM, 3 cells)` for cells where `originalH - surfNorm > some_threshold`. Terrain away from the immediate boundary is left alone.
+
+---
+
+### Do NOT retry in Code without architect spec
+The shore ramp adaptive radius system is architecturally mismatched with hillside water bodies. Any further attempts without a clear re-spec will produce new variants of the same artifacts.
+
 ✅ DONE: 2026-04-18 Bridge Viewer in UHoleGeo implemented. dev-server: /api/bridges GET route + bridges loaded into hole nav data. app.js: loadBridges() fetches on hole select; worldToNormalized() converts Unity world meters to canvas coords; drawCanvas() draws purple rotated footprint rect + forward tick + anchor endpoint circles; hitTestBridge() + tooltip on hover; "Bridges" toggle in layer bar; bridge count chip in hole nav.
