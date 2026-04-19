@@ -229,6 +229,9 @@ namespace Golfin.CourseImport
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating greens...", 0.53f);
                 CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
+                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating water...", 0.59f);
+                CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
+
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating zone meshes...", 0.62f);
                 // Flatten terrain under each tee polygon to its peak height so CDT
                 // samples a naturally flat surface — no post-mesh hacks needed.
@@ -299,12 +302,6 @@ namespace Golfin.CourseImport
 
                 // Depress terrain under overlay meshes to prevent z-fighting
                 DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);
-
-                // Water meshes must sample the already-depressed terrain so the mesh
-                // edge is co-planar with the shore floor — prevents the per-cell cliff
-                // face (serration artifact) seen when this ran before depression.
-                EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating water...", 0.58f);
-                CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
                 terrainData.SetHoles(0, 0, holes);
 
@@ -3446,11 +3443,43 @@ namespace Golfin.CourseImport
             int waterFloorCount = 0;
             if (hasWater)
             {
+                // Inner collar: build chamfer distance from non-water cells inward
+                // into the water mask. Cells within ShoreRadius of the boundary ramp
+                // from surfaceNorm (at the edge) to floorNorm (ShoreRadius cells in),
+                // mirroring the outer shore ramp. Both sides of the polygon boundary
+                // end up at surfaceNorm → no cliff face → no serration artifact.
+                float[,] innerDist = new float[hRes, hRes];
+                for (int z = 0; z < hRes; z++)
+                    for (int x = 0; x < hRes; x++)
+                        innerDist[z, x] = waterMask[z, x] ? float.MaxValue : 0f;
+                for (int z = 0; z < hRes; z++)
+                    for (int x = 0; x < hRes; x++)
+                    {
+                        if (x > 0 && innerDist[z, x - 1] + 1f < innerDist[z, x]) innerDist[z, x] = innerDist[z, x - 1] + 1f;
+                        if (z > 0 && innerDist[z - 1, x] + 1f < innerDist[z, x]) innerDist[z, x] = innerDist[z - 1, x] + 1f;
+                    }
+                for (int z = hRes - 1; z >= 0; z--)
+                    for (int x = hRes - 1; x >= 0; x--)
+                    {
+                        if (x < hRes - 1 && innerDist[z, x + 1] + 1f < innerDist[z, x]) innerDist[z, x] = innerDist[z, x + 1] + 1f;
+                        if (z < hRes - 1 && innerDist[z + 1, x] + 1f < innerDist[z, x]) innerDist[z, x] = innerDist[z + 1, x] + 1f;
+                    }
+
                 for (int z = 0; z < hRes; z++)
                     for (int x = 0; x < hRes; x++)
                         if (waterMask[z, x])
                         {
-                            heights[z, x] = waterFloorY[z, x];
+                            float d = innerDist[z, x];
+                            if (ShoreRadius > 0 && d <= ShoreRadius)
+                            {
+                                float t = Mathf.Clamp01(d / ShoreRadius);
+                                t = t * t * (3f - 2f * t); // smoothstep
+                                heights[z, x] = Mathf.Lerp(waterSurfaceY[z, x], waterFloorY[z, x], t);
+                            }
+                            else
+                            {
+                                heights[z, x] = waterFloorY[z, x];
+                            }
                             waterFloorCount++;
                         }
             }
