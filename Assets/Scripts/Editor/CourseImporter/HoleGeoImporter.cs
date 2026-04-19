@@ -5006,6 +5006,101 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
+        /// Snap cart path spine endpoints (first + last knot of each spine)
+        /// to the centroid of any cluster of endpoints within snapRadiusM of
+        /// each other. Mutates the spine arrays in place. Interior knots are
+        /// untouched.
+        ///
+        /// Fixes visible grass wedges at 3+ way junctions where UHoleGeo's
+        /// skeleton extraction produces slightly different pixel-center
+        /// endpoints for paths that logically share a junction point.
+        /// </summary>
+        private static void SnapCartPathJunctionEndpoints(
+            CartPathRegionData[] cartPaths, float snapRadiusM)
+        {
+            if (cartPaths == null || cartPaths.Length == 0) return;
+
+            var refs = new List<(int pathIdx, bool isLast)>();
+            for (int i = 0; i < cartPaths.Length; i++)
+            {
+                var cp = cartPaths[i];
+                if (cp.spine == null || cp.spine.Length < 2) continue;
+                refs.Add((i, false));
+                refs.Add((i, true));
+            }
+
+            if (refs.Count == 0) return;
+
+            float snapSqr = snapRadiusM * snapRadiusM;
+            int[] cluster = new int[refs.Count];
+            for (int i = 0; i < cluster.Length; i++) cluster[i] = i;
+
+            for (int i = 0; i < refs.Count; i++)
+            {
+                var (pi, li) = refs[i];
+                var ei = li ? cartPaths[pi].spine[cartPaths[pi].spine.Length - 1]
+                            : cartPaths[pi].spine[0];
+                for (int j = i + 1; j < refs.Count; j++)
+                {
+                    if (cluster[j] != j) continue;
+                    var (pj, lj) = refs[j];
+                    var ej = lj ? cartPaths[pj].spine[cartPaths[pj].spine.Length - 1]
+                                : cartPaths[pj].spine[0];
+                    float dx = ei.x - ej.x, dz = ei.z - ej.z;
+                    if (dx * dx + dz * dz <= snapSqr)
+                        cluster[j] = cluster[i];
+                }
+            }
+
+            var groups = new Dictionary<int, List<int>>();
+            for (int i = 0; i < cluster.Length; i++)
+            {
+                if (!groups.TryGetValue(cluster[i], out var list))
+                { list = new List<int>(); groups[cluster[i]] = list; }
+                list.Add(i);
+            }
+
+            int snappedCount = 0;
+            int junctionCount = 0;
+            foreach (var kvp in groups)
+            {
+                var members = kvp.Value;
+                if (members.Count < 2) continue;
+
+                float cx = 0f, cz = 0f;
+                foreach (int memberIdx in members)
+                {
+                    var (pi, li) = refs[memberIdx];
+                    var e = li ? cartPaths[pi].spine[cartPaths[pi].spine.Length - 1]
+                               : cartPaths[pi].spine[0];
+                    cx += e.x; cz += e.z;
+                }
+                cx /= members.Count; cz /= members.Count;
+
+                foreach (int memberIdx in members)
+                {
+                    var (pi, li) = refs[memberIdx];
+                    int knotIdx = li ? cartPaths[pi].spine.Length - 1 : 0;
+                    var e = cartPaths[pi].spine[knotIdx];
+                    float dBefore = Mathf.Sqrt(
+                        (e.x - cx) * (e.x - cx) + (e.z - cz) * (e.z - cz));
+                    e.x = cx;
+                    e.z = cz;
+                    if (dBefore > 0.001f) snappedCount++;
+                }
+
+                junctionCount++;
+                Debug.Log($"[HoleGeoImporter] Junction cluster: " +
+                          $"{members.Count} endpoints → centroid ({cx:F2}, {cz:F2})");
+            }
+
+            if (junctionCount > 0)
+                Debug.Log($"[HoleGeoImporter] Cart path junction snap: " +
+                          $"{junctionCount} junction(s), {snappedCount} endpoint(s) " +
+                          $"moved within {snapRadiusM:F2}m radius.");
+        }
+
+        /// <summary>
         /// Build cart path strip meshes using Unity Splines for smooth
         /// curves and dense terrain-conforming vertex sampling.
         /// </summary>
@@ -5019,6 +5114,12 @@ namespace Golfin.CourseImport
             var cpData = JsonUtility.FromJson<CartPathsFile>(
                 File.ReadAllText(cpPath));
             if (cpData.cart_paths == null || cpData.cart_paths.Length == 0) return;
+
+            // Junction endpoint snapping — fixes grass wedges at 3+ way junctions
+            // where UHoleGeo's skeleton extraction gives each path a slightly
+            // different pixel-center endpoint. 0.75m radius chosen just above the
+            // observed 0.6m gap on Hole 1 (junction at (-234.x, -123.x), paths 6/7/8).
+            SnapCartPathJunctionEndpoints(cpData.cart_paths, 0.75f);
 
             var terrain = terrainGO.GetComponent<Terrain>();
             float terrainBaseY = terrainGO.transform.position.y;
