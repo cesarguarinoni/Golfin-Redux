@@ -3578,19 +3578,16 @@ namespace Golfin.CourseImport
                             }
                         }
 
-                        // Per-cell adaptive radius: expand the ramp so smoothstep
-                        // peak slope (1.5× rise/run at t=0.5) stays ≤ ShoreMaxRampSlope.
+                        // Uniform adaptive radius (per-hole worst case from pre-scan).
+                        // Per-cell radius was tried but varying adaptiveM along the bank
+                        // creates an irregular ramp boundary that appears as sawtooth teeth.
+                        // Uniform radius gives a clean circular boundary — no teeth.
                         float originalH = heights[z, x];
-                        float dropAbs = Mathf.Abs(originalH - nearSurfY);
-                        float adaptiveM = Mathf.Clamp(
-                            1.5f * dropAbs / ShoreMaxRampSlope,
-                            shoreRadiusM,
-                            ShoreMaxRadiusMeters);
 
-                        if (minDistM > adaptiveM) continue;
+                        if (minDistM > worstAdaptiveShoreM) continue;
 
-                        // t = 0 at boundary, 1 at adaptiveM.
-                        float t = minDistM / adaptiveM;
+                        // t = 0 at boundary, 1 at worstAdaptiveShoreM.
+                        float t = minDistM / worstAdaptiveShoreM;
                         t = t * t * (3f - 2f * t); // smoothstep
 
                         float targetH = Mathf.Lerp(nearSurfY, originalH, t);
