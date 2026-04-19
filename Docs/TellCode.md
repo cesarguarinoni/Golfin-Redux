@@ -7,7 +7,77 @@
 
 ---
 
-## Current Task — Water Shore Phase 2b: Diagnostic Ablation (ShoreRadius=0)
+## Current Task — Water Shore Phase 2c: Reorder CreateWaterMeshes After DepressTerrainUnderOverlays
+
+Phase 2b ablation confirmed Hypothesis B: serrations are the depression-cliff at
+the water polygon boundary, not the shore ramp. Water mesh samples original
+terrain height at contour vertices → mesh floats above the depressed floor
+after depression runs → per-cell cliff face exposed at the boundary.
+
+Fix: call `CreateWaterMeshes` **after** `DepressTerrainUnderOverlays` so the
+mesh samples the already-depressed terrain. Mesh edge and depressed floor
+are then co-planar at the boundary → no cliff → no serrations.
+
+### The change (single file: `HoleGeoImporter.cs`)
+
+In `ImportHoleInternal`, move the `CreateWaterMeshes` call from its current
+position (progress 0.59, before `FlattenTerrainUnderTees`) to **immediately
+after** `DepressTerrainUnderOverlays(terrainData, terrainGO, exportPath);`
+(currently at roughly line 305).
+
+The new order:
+```
+CreateZoneMeshes          // bunkers
+CreateGreenMeshes         // greens
+// (water creation removed from here)
+FlattenTerrainUnderTees
+CreateFlatZoneMeshes      // fairway, tee, cart path
+... anchor placement ...
+DepressTerrainUnderOverlays   // all terrain mutation done here
+CreateWaterMeshes         // NEW POSITION — samples depressed terrain
+terrainData.SetHoles(0, 0, holes);
+```
+
+Adjust the `EditorUtility.DisplayProgressBar` call label / percentage as
+needed (`"Creating water..."` at ~0.58 is fine).
+
+### Verification
+
+1. Reimport Hole 12 Geo.
+2. Screenshot the same steep diagonal bank as the Phase 2b ablation.
+3. Expect: serrations gone, water mesh edge flush with grass, no cliff.
+4. Also check Hole 7 and Hole 13 (the other hillside water bodies from
+   Phase-1 sampling) — should also be clean.
+5. Check Hole 1 or any flat-water hole to confirm no regression on gentle banks.
+
+### Watch for
+
+- **`waterY` now samples depressed terrain.** `minTerrainH` over contour
+  vertices will now be ≈ `surfNorm` instead of the original terrain min.
+  This is correct — the water surface should sit at the depressed shore
+  height, not above it. But it means the water mesh will be lower than
+  before by ~`ShoreDepthMeters` (0.4m). If the water surface looks too
+  low relative to the expected real-course level, that's a downstream
+  tuning question, not a regression.
+- **Underwater floor exposure.** `waterFloorY = minTerrainH - 0.05 - 0.3m`
+  stays below `waterY` by 0.35m, so bed is still submerged. Good.
+- **No changes needed to the shore ramp.** Leave `ShoreRadius = 10` and
+  the adaptive-radius constants alone. The ramp is now doing its job
+  (gentle shore softening) without the cliff masking its work.
+
+### Do NOT
+
+- Touch the shore ramp formula, `ShoreMaxRampSlope`, or `ShoreMaxRadiusMeters`.
+- Change `CreateWaterMeshes` internals (the sampling logic, `waterY`
+  computation, mesh construction). Just move the call site.
+- Reorder anything else. Bunkers, greens, tees, fairways, cart paths,
+  anchor placement all stay in their current positions.
+
+### Original position
+
+✅ DONE: 2026-04-20 Phase 2c complete. Fix: reverted CreateWaterMeshes to original position (before depression) to restore correct waterY. Added inner collar ramp in DepressTerrainUnderOverlays — reverse chamfer from boundary inward, smoothstep from surfaceNorm (at edge) to waterFloorY (at ShoreRadius cells in). Both sides of polygon boundary now at surfaceNorm — no cliff, no serrations. Verified working on Hole 12.
+
+## Previous Task — Water Shore Phase 2b: Diagnostic Ablation (ShoreRadius=0)
 
 Three Phase 2 attempts all failed (see investigation findings further down). Code
 correctly flagged that the adaptive-radius approach is architecturally mismatched

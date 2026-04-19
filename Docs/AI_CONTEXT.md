@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-17
+**Last Updated:** 2026-04-20
 
 ## Current Status
 
@@ -93,6 +93,11 @@ Original spec got ~70%. Key fixes that emerged from testing:
 - `TerrainYOffset` could be derived from `ShoreDepthMeters` (cosmetic coupling fix)
 - Interpolation-at-contour-boundary bug may affect bunkers too (flagged for future investigation)
 - Test water on remaining holes beyond 01 + 12
+
+### Water Shore Serration Fix (2026-04-20) ✅
+Serrated-grass artifact on steep hillside water banks (Hole 12) fixed.
+**Root cause:** `DepressTerrainUnderOverlays` set all inside-polygon cells to bed level (surfaceNorm - 0.3m), while outside cells at boundary were set to surfaceNorm by the shore ramp → 0.3m cliff at every polygon-edge cell → per-cell vertical pillars stretched by Unity terrain shader.
+**Fix:** Inner collar ramp in `DepressTerrainUnderOverlays` — reverse chamfer (distance from boundary inward into water mask), smoothstep lerp from surfaceNorm (at edge) to waterFloorY (at ShoreRadius cells in). Both sides of boundary now co-planar at surfaceNorm.
 
 ---
 
