@@ -36,6 +36,9 @@ namespace Golfin.CourseImport
         // ─── Overlay Terrain Depression ─────────────────────────────
         private const float OverlayDepressionMeters = 0.40f;
         private const float DepressionInsetMeters = 0.20f;
+        // Tee depression is tiny — just enough to prevent z-fighting (~0.005m needed).
+        // 0.4m created a 70° cliff at the inset boundary → stretched-grass serration teeth.
+        private const float TeeDepressionMeters = 0.05f;
 
         // ─── Green Elevation ─────────────────────────────────────────
         /// <summary>How far the putting surface sits above the outer collar edge.</summary>
@@ -3310,6 +3313,7 @@ namespace Golfin.CourseImport
             Vector3 terrainSize = terrainData.size;
 
             bool[,] depress = new bool[hRes, hRes];
+            bool[,] teeDepress = new bool[hRes, hRes];
 
             // --- Collect all contour polygons that have overlay meshes ---
             // Fairway contours
@@ -3326,7 +3330,9 @@ namespace Golfin.CourseImport
                                 FairwayFringeMeters);
             }
 
-            // Tee contours
+            // Tee contours — separate mask so we can apply a smaller depression.
+            // TeeDepressionMeters (0.05m) prevents z-fighting without creating the
+            // steep cliff that 0.4m caused at the inset boundary (grass teeth).
             string zcPath = Path.Combine(exportPath, "zone-contours.json");
             if (File.Exists(zcPath))
             {
@@ -3334,7 +3340,7 @@ namespace Golfin.CourseImport
                 if (zcData.zones != null && zcData.zones.tee != null)
                     foreach (var region in zcData.zones.tee)
                         if (region.contour != null && region.contour.Length >= 3)
-                            MarkContourCells(region.contour, depress,
+                            MarkContourCells(region.contour, teeDepress,
                                 hRes, terrainPos, terrainSize);
             }
 
@@ -3480,7 +3486,7 @@ namespace Golfin.CourseImport
                         }
             }
 
-            // Apply depression (fairway/tee — flat drop, skip water cells)
+            // Apply depression — fairways (0.4m drop, skip water cells)
             int depressedCount = 0;
             for (int hz = 0; hz < hRes; hz++)
                 for (int hx = 0; hx < hRes; hx++)
@@ -3488,6 +3494,17 @@ namespace Golfin.CourseImport
                     {
                         heights[hz, hx] = Mathf.Max(0f,
                             heights[hz, hx] - dropNormalized);
+                        depressedCount++;
+                    }
+
+            // Apply depression — tees (tiny drop, skip water cells)
+            float teeDropNormalized = TeeDepressionMeters / elevRange;
+            for (int hz = 0; hz < hRes; hz++)
+                for (int hx = 0; hx < hRes; hx++)
+                    if (teeDepress[hz, hx] && !waterMask[hz, hx] && !depress[hz, hx])
+                    {
+                        heights[hz, hx] = Mathf.Max(0f,
+                            heights[hz, hx] - teeDropNormalized);
                         depressedCount++;
                     }
 
@@ -3630,8 +3647,9 @@ namespace Golfin.CourseImport
 
             terrainData.SetHeights(0, 0, heights);
             Debug.Log($"[HoleGeoImporter] Terrain depression: {depressedCount}" +
-                      $" cells lowered by {OverlayDepressionMeters:F2}m" +
-                      $" (cart path: {cartDepressedCount} cells," +
+                      $" cells (fairway/cart {OverlayDepressionMeters:F2}m," +
+                      $" tee {TeeDepressionMeters:F2}m," +
+                      $" cart path: {cartDepressedCount} cells," +
                       $" water floor: {waterFloorCount} cells flattened," +
                       $" water shore ramp: {shoreCount} cells)");
         }
