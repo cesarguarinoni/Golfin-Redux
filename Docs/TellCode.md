@@ -348,7 +348,7 @@ of a 3×3 box blur on `heights` constrained to cells where
 `coarseDist > 0 && coarseDist <= worstAdaptiveCells`. Hold in reserve;
 don't apply preemptively.
 
-✅ DONE: 2026-04-20 Per-edge adaptive tee skirt implemented. Steps 1-4 complete: edgeAdaptiveM[] replaces worstAdaptiveM, nearestEdge tracked in exact-distance pass, cart-paths.json added to skipMask, debug log shows min/max edge radius. IsPointInContour(ContourPoint[]) helper added. Commit 6151e8d7.
+❌ REVERTED: 2026-04-20 Per-edge implementation caused every slope to stair-step. Commit 6151e8d7 reverted at b7f70112. Approach needs rethinking — see investigation notes below or in AI_CONTEXT.
 
 ---
 
