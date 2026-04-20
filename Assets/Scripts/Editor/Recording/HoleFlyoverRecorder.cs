@@ -480,14 +480,14 @@ namespace Golfin.CourseImport.Recording
                     float lt = (t - 0.15f) / 0.75f; // 0..1
 
                     Vector3 cruiseXZ = CatmullRomXZ(cruiseWaypoints, lt);
-                    float smoothY    = Mathf.Lerp(teePos.y + DroneCruiseHeight,
+                    // Start Y from DroneTeeHeight to match the end of phase 2 exactly — no jump.
+                    float smoothY    = Mathf.Lerp(teePos.y + DroneTeeHeight,
                                                   greenPos.y + DronePinHeight, lt);
                     pos = new Vector3(cruiseXZ.x, smoothY, cruiseXZ.z);
 
-                    // LookAt = slightly ahead along same spline at the same smooth Y
                     float tLook  = Mathf.Min(lt + 0.04f, 1f);
                     Vector3 laXZ = CatmullRomXZ(cruiseWaypoints, tLook);
-                    float laY    = Mathf.Lerp(teePos.y + DroneCruiseHeight,
+                    float laY    = Mathf.Lerp(teePos.y + DroneTeeHeight,
                                               greenPos.y + DronePinHeight, tLook);
                     lookAt = new Vector3(laXZ.x, laY, laXZ.z);
                 }
