@@ -7,7 +7,7 @@
 
 ---
 
-## Current Task — Linear-Slope Tee Skirt (extend ramp until it meets terrain)
+## Previous Task (DONE) — Linear-Slope Tee Skirt (extend ramp until it meets terrain)
 
 ### Root cause (finally nailed)
 
@@ -2390,6 +2390,248 @@ On a steep bank, the right transition is a 1-cell feather, not a 40m ramp. Cap t
 ### Do NOT retry in Code without architect spec
 The shore ramp adaptive radius system is architecturally mismatched with hillside water bodies. Any further attempts without a clear re-spec will produce new variants of the same artifacts.
 
+---
+
+## Current Task — Hole Flyover Recorder (drone back-tee → pin)
+
+Automated editor tool that records an MP4 flyover per hole. Camera
+starts as a small drone hovering behind/above the **back tee**, zooms
+in toward the tee surface, then flies a gentle arc following the
+fairway centerline down to the pin. Runs unattended over all 18 holes.
+
+**Output:** `Recordings/hole-XX.mp4` (1080p, ~20s each).
+
+**Dependencies:**
+- `com.unity.recorder` (Unity Recorder package — install via Package
+  Manager if not present)
+- `Unity.Splines` 2.8.4 (already installed)
+
+**New files only.** No changes to existing importers, terrain, or mesh
+code.
+
+---
+
+### Data sources (all already exist per hole)
+
+- `anchors.json` — anchors with `type` containing `"back"` / `"mid"` /
+  `"forward"` for tees, and the pin anchor. `anchor.local` is world
+  position (x, y, z) post-Geo import. Back tee is found by
+  `a => a.type.Contains("back")` (HoleGeoImporter.cs:1149 already
+  uses this pattern).
+- `greens.json` — green centroid (HoleGeoImporter.cs:3861).
+- `fairway-contours.json` via `ZoneContoursFile.zones.fairway[]` —
+  each region has a centroid that can be computed from its contour.
+  Chained tee → fairway centroids → green centroid gives a clean
+  centerline.
+- `terrain.SampleHeight(worldPos)` for per-sample camera elevation.
+
+If no "back" anchor exists on a hole, fall back to the tee region
+farthest from the green centroid, use its centroid as start.
+
+---
+
+### Part A — New file: `Assets/Scripts/Editor/Recording/HoleFlyoverRecorder.cs`
+
+Namespace: `Golfin.CourseImport.Recording` (lives in
+`Assets/Scripts/Editor/Recording/` — new folder).
+
+**Three menu items:**
+
+1. `Golfin → Recording → Record Current Hole Flyover` — records the
+   hole in the currently-open scene. No queue.
+2. `Golfin → Recording → Record All 18 Holes` — iterates hole scenes
+   `Assets/Courses/LomondCC/Holes/hole-01.unity` .. `hole-18.unity`,
+   opens each, imports if needed (skip — assume already imported),
+   records, moves to next.
+3. `Golfin → Recording → Cancel Recording Queue` — sets a static
+   `_cancelRequested = true` that the queue checks between holes.
+
+**Record All** runs on the editor update loop (coroutine-like) so
+Unity stays responsive. Do NOT use `Thread.Sleep` — use
+`EditorApplication.update += ...` state machine, or `async` with
+`Task.Yield()` + `EditorApplication.isPlaying` guard.
+
+---
+
+### Part B — Camera path builder
+
+Add a private helper `BuildFlyoverPath(...)` that returns:
+
+```csharp
+private struct FlyoverKeyframe
+{
+    public Vector3 camPos;       // world
+    public Vector3 lookAtPos;    // world
+    public float normalizedT;    // 0 .. 1 along flight
+}
+```
+
+**Path shape** (total duration = `FlyoverDurationSeconds = 20f`):
+
+- **t = 0.00 .. 0.15 — Drone opener (3s).** Camera at `backTee.xz`,
+  `y = terrainY + DroneStartHeight (25m)`, offset `-DroneStartBackset
+  (15m)` along the tee→green forward axis (i.e. behind the tee).
+  LookAt = tee surface. Camera essentially stationary — a very slow
+  drift downward from 25m to 18m and forward 3m. "Hovering, getting
+  ready to move."
+- **t = 0.15 .. 0.30 — Zoom toward tee (3s).** Camera descends to
+  `DroneTeeHeight (6m)` directly over the tee, forward offset 0.
+  LookAt = tee surface. Creates "zoom in" feel.
+- **t = 0.30 .. 0.90 — Cruise along fairway (12s).** Camera follows a
+  Catmull-Rom spline through: back tee → fairway centroids (in order
+  of distance from tee, ascending) → green centroid. Camera height =
+  `terrain.SampleHeight(sample) + DroneCruiseHeight (12m)`. LookAt
+  follows ~8m ahead along the same spline (sample at `t + 0.04`,
+  clamped to 1.0), so the camera is always looking slightly forward
+  down the fairway.
+- **t = 0.90 .. 1.00 — Arrive at pin (2s).** Camera descends to
+  `DronePinHeight (4m)` and orbits ~30° around the pin while looking
+  at it. Simple: LookAt = pin, camera pos =
+  `pin + Quaternion.Euler(0, lerp(-15°, +15°, localT), 0) * forward *
+  8m`.
+
+**Sampling rate:** evaluate the keyframe curve at 60 Hz
+(`FlyoverDurationSeconds * 60 = 1200` keyframes). Keyframes are
+applied per editor-update tick while the Recorder is running.
+
+**Camera setup** (fresh GO per recording, destroyed after):
+- `Camera` component, `fov = 55f` (tighter than WalkCamera's 75f for
+  a cinematic feel), `nearClipPlane = 0.3f`, `farClipPlane = 3000f`.
+- No `WalkCamera` component. No `AudioListener` (avoid double
+  listeners — the scene's WalkCamera has one).
+- Tag as `Untagged` (don't steal `MainCamera` from WalkCamera).
+- The Recorder will target THIS camera explicitly.
+
+---
+
+### Part C — Unity Recorder wiring
+
+Use `UnityEditor.Recorder` APIs:
+
+```csharp
+using UnityEditor.Recorder;
+using UnityEditor.Recorder.Input;
+using UnityEngine.Recorder.Input; // may differ by version
+```
+
+**Per-hole flow:**
+
+1. Create `RecorderControllerSettings` programmatically (don't load
+   from asset — avoid .asset churn in repo).
+2. Add a single `MovieRecorderSettings`:
+   - `OutputFormat = MovieRecorderSettings.VideoRecorderOutputFormat.MP4`
+   - `VideoBitRateMode = VideoBitrateMode.High`
+   - `CaptureAlpha = false`
+   - `ImageInputSettings = new CameraInputSettings { Source =
+     ImageSource.TaggedCamera, CameraTag = "FlyoverCam",
+     OutputWidth = 1920, OutputHeight = 1080 }`
+     (set the flyover camera's tag to `"FlyoverCam"` — add this tag
+     via `TagManager` if missing on first run)
+   - `FrameRate = 60`
+   - `FrameRatePlayback = FrameRatePlayback.Constant`
+   - `OutputFile = Path.Combine(Application.dataPath, "../Recordings",
+     $"hole-{holeNumber:00}")` (Recorder adds `.mp4` suffix)
+3. `RecorderController controller = new RecorderController(settings);`
+4. `controller.PrepareRecording();` `controller.StartRecording();`
+5. Drive the camera by updating its position each
+   `EditorApplication.update` tick based on elapsed wall-clock time
+   relative to record start. When `elapsed >= FlyoverDurationSeconds`,
+   call `controller.StopRecording();` and clean up.
+
+**Progress bar:** `EditorUtility.DisplayProgressBar("Recording Flyover",
+$"Hole {n} — {Mathf.RoundToInt(t*100)}%", t)`. Clear on finish.
+
+**NOTE for Claude Code:** The exact `UnityEditor.Recorder` API has
+shifted across package versions. If any symbol doesn't resolve, leave
+a `// NOTE: verify Recorder API signature — Unity Recorder X.Y.Z`
+comment and use the closest-matching constructor. Don't guess deeply
+— flag it and I'll confirm against the installed version.
+
+---
+
+### Part D — Scene loading for batch mode
+
+`Record All 18 Holes` walks scenes via:
+
+```csharp
+for (int h = 1; h <= 18; h++)
+{
+    string scenePath = $"Assets/Courses/LomondCC/Holes/hole-{h:00}.unity";
+    if (!File.Exists(scenePath)) { Debug.LogWarning(...); continue; }
+    EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+    yield return RecordOneHole(h);  // pseudo — see state machine note
+    if (_cancelRequested) break;
+}
+```
+
+Between holes: wait 1 frame via `EditorApplication.update` tick so
+the scene fully loads / terrain stabilizes before recording starts.
+
+---
+
+### Part E — Output directory
+
+`Recordings/` at the repo root (sibling of `Assets/`). Add to
+`.gitignore`:
+
+```
+Recordings/
+```
+
+Create the directory if missing via
+`Directory.CreateDirectory(Path.Combine(Application.dataPath,
+"../Recordings"))`.
+
+---
+
+### Tunable constants (top of `HoleFlyoverRecorder.cs`)
+
+```csharp
+private const float FlyoverDurationSeconds = 20f;
+private const float DroneStartHeight   = 25f;  // m above terrain
+private const float DroneStartBackset  = 15f;  // m behind tee
+private const float DroneTeeHeight     = 6f;   // at zoom-in apex
+private const float DroneCruiseHeight  = 12f;  // m above terrain while cruising
+private const float DronePinHeight     = 4f;
+private const float CameraFov          = 55f;
+private const int   OutputWidth        = 1920;
+private const int   OutputHeight       = 1080;
+private const int   OutputFrameRate    = 60;
+```
+
+---
+
+### Verification
+
+- [ ] `Golfin → Recording → Record Current Hole Flyover` with hole 1
+      open produces `Recordings/hole-01.mp4`, ~20s, 1080p60, file size
+      in 5–40 MB range.
+- [ ] Video shows: drone hover behind tee → zoom in → cruise down
+      fairway → arrival orbit at pin. No camera clipping through
+      terrain (if it does, raise `DroneCruiseHeight`).
+- [ ] Look direction is always forward along play direction — no
+      backwards glances, no wild swings.
+- [ ] WalkCamera's position/tag is untouched after recording ends
+      (flyover camera GO is destroyed in cleanup).
+- [ ] `Golfin → Recording → Record All 18 Holes` produces 18 MP4s
+      named `hole-01.mp4 .. hole-18.mp4`. Cancel button works
+      mid-queue (finishes current hole, stops).
+- [ ] Holes with no "back" anchor (if any) use the fallback
+      (farthest-tee-from-green) without crashing.
+- [ ] Holes with 1 vs 3 fairway regions both produce smooth cruise
+      (Catmull-Rom handles 2-point degenerate case — lerp instead if
+      fewer than 3 points total in path).
+
+### Do NOT change
+
+- WalkCamera setup in `HoleGeoImporter.cs`.
+- Any importer, mesh, terrain, or pipeline code.
+- Existing scene contents — recording is non-destructive.
+- Recorder settings in project `.asset` files (keep everything
+  programmatic).
+
 ✅ DONE: 2026-04-18 Bridge Viewer in UHoleGeo implemented. dev-server: /api/bridges GET route + bridges loaded into hole nav data. app.js: loadBridges() fetches on hole select; worldToNormalized() converts Unity world meters to canvas coords; drawCanvas() draws purple rotated footprint rect + forward tick + anchor endpoint circles; hitTestBridge() + tooltip on hover; "Bridges" toggle in layer bar; bridge count chip in hole nav.
+
+✅ DONE: 2026-04-20 Hole Flyover Recorder implemented. New file: Assets/Scripts/Editor/Recording/HoleFlyoverRecorder.cs. Three menu items under Golfin/Recording/. State machine: Idle → WaitingForPlayMode → Recording → WaitingForEditMode. Enters Play Mode, creates FlyoverCamera tagged "FlyoverCam" (no AudioListener), builds keyframe path from anchors/greens/fairway-contours.json, drives camera via EditorApplication.update, uses Unity Recorder 5.1.6 API (SetRecordModeToManual, CameraInputSettings with TaggedCamera). 4-phase path: drone hover → zoom in → Catmull-Rom cruise → pin orbit. Batch mode opens Video/ scenes for each hole. SessionState persists queue across domain reloads. Recordings/ added to .gitignore.
 
 ✅ DONE: 2026-04-20 Phase 2b ablation complete. ShoreRadius=0 result: serrations remain and are worse (individual heightmap cell pillars fully exposed at water boundary). Hypothesis A ELIMINATED — shore ramp is not the cause. Confirms Hypothesis B: abrupt depression cliff at water polygon boundary. Water mesh samples original terrain height → floats above depressed floor → exposed cliff face per cell. Architect recommended fix: Option A (reorder CreateWaterMeshes to run AFTER DepressTerrainUnderOverlays). ShoreRadius restored to 10.

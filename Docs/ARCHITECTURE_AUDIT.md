@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-04-15 07:38. Do not edit manually.
+> Auto-generated 2026-04-20 15:50. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -11,6 +11,9 @@ Assets/Scripts/BagManager.cs
 Assets/Scripts/BallManager.cs
 Assets/Scripts/CharacterManager.cs
 Assets/Scripts/ClubManager.cs
+Assets/Scripts/Course/BridgeAnchor.cs
+Assets/Scripts/Course/BunkerSurfaceInfo.cs
+Assets/Scripts/Course/GreenSurfaceInfo.cs
 Assets/Scripts/Course/SurfaceMarker.cs
 Assets/Scripts/Debug/RewardPointsDebugPanel.cs
 Assets/Scripts/Debug/WalkCamera.cs
@@ -32,12 +35,15 @@ Assets/Scripts/Editor/Archive/RosterSystemSetupTool.cs
 Assets/Scripts/Editor/BagDatabaseCSVSetup.cs
 Assets/Scripts/Editor/BagManagerSetup.cs
 Assets/Scripts/Editor/BagSelectionModalAutoWire.cs
+Assets/Scripts/Editor/CourseImporter/BridgeExporter.cs
 Assets/Scripts/Editor/CourseImporter/HoleDebugWindow.cs
 Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs
 Assets/Scripts/Editor/CourseImporter/HoleImporter.cs
 Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs
 Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs
 Assets/Scripts/Editor/CourseImporter/ReimportCurrentHole.cs
+Assets/Scripts/Editor/CourseImporter/TeeSkirtSettingsWindow.cs
+Assets/Scripts/Editor/CourseImporter/TreeBrushTool.cs
 Assets/Scripts/Editor/CourseImporter/TreePlacer.cs
 Assets/Scripts/Editor/CourseImporter/TreePlacerWindow.cs
 Assets/Scripts/Editor/ItemManagerSetup.cs
@@ -189,6 +195,9 @@ Assets/Data/README_HOLES.md.meta
 | HoleMetadata | Assets/Scripts/HoleMetadata.cs |  |  |
 | ItemManager | Assets/Scripts/ItemManager.cs | Yes |  |
 | AudioManager | Assets/Scripts/Audio/AudioManager.cs | Yes |  |
+| BridgeAnchor | Assets/Scripts/Course/BridgeAnchor.cs |  |  |
+| BunkerSurfaceInfo | Assets/Scripts/Course/BunkerSurfaceInfo.cs |  |  |
+| GreenSurfaceInfo | Assets/Scripts/Course/GreenSurfaceInfo.cs |  |  |
 | SurfaceMarker | Assets/Scripts/Course/SurfaceMarker.cs |  |  |
 | RewardPointsDebugPanel | Assets/Scripts/Debug/RewardPointsDebugPanel.cs | Yes |  |
 | WalkCamera | Assets/Scripts/Debug/WalkCamera.cs |  |  |
@@ -300,6 +309,7 @@ Assets/Data/README_HOLES.md.meta
 | CharacterManager | Assets/Scripts/CharacterManager.cs | 2 |
 | AudioManager | Assets/Scripts/Audio/AudioManager.cs | 3 |
 | BagSelectionModalAutoWire | Assets/Scripts/Editor/BagSelectionModalAutoWire.cs | 1 |
+| TreeBrushTool | Assets/Scripts/Editor/CourseImporter/TreeBrushTool.cs | 8 |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs | 5 |
 | FadeController | Assets/Scripts/UI/FadeController.cs | 1 |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | 2 |
