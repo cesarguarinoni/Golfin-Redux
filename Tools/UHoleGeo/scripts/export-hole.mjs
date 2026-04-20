@@ -549,32 +549,16 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     const dsW = Math.ceil(w / dsFactor);
     const dsH = Math.ceil(h / dsFactor);
 
-    // Build downsampled binary mask, clipping cart path pixels that
-    // overlap fairway, bunker, or tee zones.
+    // Build downsampled binary mask from cart path pixels only.
+    // Do NOT filter by terrain overlap zones here — cart paths often cross
+    // fairway terrain at junctions, and filtering removes the 1-2 pixel
+    // connections at pinch points, breaking skeleton connectivity for
+    // thin segments like the B→C linking path.
     const dsMask = new Uint8Array(dsW * dsH);
     for (const [px, py] of currentPixels) {
-      if (terrainGridBuf && overlapZones.has(terrainGridBuf[py * w + px])) continue;
       const dsx = Math.floor(px / dsFactor);
       const dsy = Math.floor(py / dsFactor);
       if (dsx < dsW && dsy < dsH) dsMask[dsy * dsW + dsx] = 1;
-    }
-
-    // Also clear DS pixels where the majority of underlying full-res
-    // pixels are overlap zones
-    if (terrainGridBuf) {
-      for (let dsy = 0; dsy < dsH; dsy++) {
-        for (let dsx = 0; dsx < dsW; dsx++) {
-          if (!dsMask[dsy * dsW + dsx]) continue;
-          let overlapCount = 0, total = 0;
-          for (let fy = dsy * dsFactor; fy < Math.min((dsy + 1) * dsFactor, h); fy++) {
-            for (let fx = dsx * dsFactor; fx < Math.min((dsx + 1) * dsFactor, w); fx++) {
-              if (overlapZones.has(terrainGridBuf[fy * w + fx])) overlapCount++;
-              total++;
-            }
-          }
-          if (overlapCount > total * 0.5) dsMask[dsy * dsW + dsx] = 0;
-        }
-      }
     }
 
     // Thin to 1-pixel-wide skeleton (on downsampled mask)
@@ -601,8 +585,31 @@ function extractCartPathContours(zonesData, terrainMeta, minWidthM = 2.5, minPix
     // Minimum spine length in downsampled pixels
     const minSpinePixels = Math.max(Math.ceil(dsEstWidth * 2), 5);
 
-    // Filter out short fragment chains
-    const significantChains = chains.filter(c => c.length >= minSpinePixels);
+    // Filter short fragments, but rescue chains that would upgrade a 2-way junction
+    // to 3-way in the long-chain set. A 2-way junction in long chains = two significant
+    // segments share an endpoint. If a filtered short chain connects to that endpoint,
+    // removing it causes the two long chains to 2-way-merge, swallowing a distinct
+    // path segment. Rescuing it preserves the correct 3-way topology.
+    const longChains = chains.filter(c => c.length >= minSpinePixels);
+    const longEpCount = new Map();
+    for (const chain of longChains) {
+      for (const pt of [chain[0], chain[chain.length - 1]]) {
+        const key = `${pt.x},${pt.y}`;
+        longEpCount.set(key, (longEpCount.get(key) || 0) + 1);
+      }
+    }
+    const longTwoWayJunctions = new Set();
+    for (const [key, count] of longEpCount) {
+      if (count === 2) longTwoWayJunctions.add(key);
+    }
+    const minBridgeLen = dsFactor * 2; // must span at least 2 DS pixels to be a real segment
+    const significantChains = chains.filter(c => {
+      if (c.length >= minSpinePixels) return true;
+      if (c.length < minBridgeLen) return false;
+      const firstKey = `${c[0].x},${c[0].y}`;
+      const lastKey = `${c[c.length - 1].x},${c[c.length - 1].y}`;
+      return longTwoWayJunctions.has(firstKey) || longTwoWayJunctions.has(lastKey);
+    });
 
     // If skeleton produced too many significant chains, fall back to contour spine
     const maxExpectedBranches = 12;
