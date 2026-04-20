@@ -7,7 +7,252 @@
 
 ---
 
-## Current Task — Water Shore Phase 2c: Reorder CreateWaterMeshes After DepressTerrainUnderOverlays
+## Current Task — Cart Path Junction Endpoint Snapping (Unity-side safety net)
+
+Hole 1 screenshot shows a grass triangle poking into the cart path at a
+3-way junction in the middle section. Cause confirmed from
+`cart-paths.json` data: at junction `(-234.x, -123.x)`, paths 6 and 7
+share an endpoint at `(-234.62, -123.27)` but path 8's nearest endpoint
+is at `(-234.19, -123.69)` — **0.60m off**.
+
+Each cart path renders as its own independent ribbon strip with an
+endcap at the last spine knot. At a clean junction, three endcaps butt
+together; at a drifted junction like this one, the 0.6m gap leaves a
+visible grass wedge. The other three 3-way junctions on Hole 1
+(`(228.99, 28.88)`, `(33.07, -10.85)`, `(-27.73, 0.14)`) have all
+endpoints coincident to 0.00m — those render cleanly already.
+
+### The fix: pre-pass endpoint clustering in `CreateSplineCartPaths`
+
+Before building any splines, walk all spine endpoints (first + last knot
+of every `cp.spine`) and cluster any within **0.75m** of each other.
+Snap every endpoint in a cluster to the cluster's centroid. Then proceed
+with normal spline construction using the snapped coordinates.
+
+This is a **Unity-side safety net** — UHoleGeo will get the proper
+skeleton-endpoint cleanup as a follow-up task. For now Unity fixes the
+symptom at import time without touching the pipeline. Clusters of size 1
+(non-junction endpoints) are skipped → zero effect on dead-end paths.
+
+### Target file
+
+`Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`, single
+method: `CreateSplineCartPaths` (near line 5012).
+
+**No changes to:**
+- `cart-paths.json` schema or the UHoleGeo export pipeline.
+- Any other mesh builder, depression pass, or material.
+- `HoleLiteImporter.cs` (Lite pipeline is not active; skip).
+
+### Step 1 — Add the snap helper (private static method in the same class)
+
+Place this method next to `CreateSplineCartPaths` (anywhere in the
+class is fine; adjacent is nicest for readability).
+
+```csharp
+/// <summary>
+/// Snap cart path spine endpoints (first + last knot of each spine)
+/// to the centroid of any cluster of endpoints within snapRadiusM of
+/// each other. Mutates the spine arrays in place. Interior knots are
+/// untouched.
+///
+/// Fixes visible grass wedges at 3+ way junctions where UHoleGeo's
+/// skeleton extraction produces slightly different pixel-center
+/// endpoints for paths that logically share a junction point.
+/// </summary>
+private static void SnapCartPathJunctionEndpoints(
+    CartPath[] cartPaths, float snapRadiusM)
+{
+    if (cartPaths == null || cartPaths.Length == 0) return;
+
+    // Collect all endpoint references as (pathIdx, isLast) pairs.
+    // Using index pairs (not direct refs) so we can mutate spine[0]
+    // or spine[last] in place after clustering.
+    var refs = new List<(int pathIdx, bool isLast)>();
+    for (int i = 0; i < cartPaths.Length; i++)
+    {
+        var cp = cartPaths[i];
+        if (cp.spine == null || cp.spine.Length < 2) continue;
+        refs.Add((i, false)); // first knot
+        refs.Add((i, true));  // last knot
+    }
+
+    if (refs.Count == 0) return;
+
+    // Simple O(N²) clustering — N is tiny (2 × number of cart paths,
+    // typically ≤ 20). Union-find would be more correct for transitive
+    // chains but isn't warranted here.
+    float snapSqr = snapRadiusM * snapRadiusM;
+    int[] cluster = new int[refs.Count];
+    for (int i = 0; i < cluster.Length; i++) cluster[i] = i;
+
+    for (int i = 0; i < refs.Count; i++)
+    {
+        var (pi, li) = refs[i];
+        var ei = li ? cartPaths[pi].spine[cartPaths[pi].spine.Length - 1]
+                    : cartPaths[pi].spine[0];
+        for (int j = i + 1; j < refs.Count; j++)
+        {
+            if (cluster[j] != j) continue; // already clustered
+            var (pj, lj) = refs[j];
+            var ej = lj ? cartPaths[pj].spine[cartPaths[pj].spine.Length - 1]
+                        : cartPaths[pj].spine[0];
+            float dx = ei.x - ej.x, dz = ei.z - ej.z;
+            if (dx * dx + dz * dz <= snapSqr)
+                cluster[j] = cluster[i];
+        }
+    }
+
+    // Group endpoints by cluster id; compute centroid; snap each member.
+    var groups = new Dictionary<int, List<int>>();
+    for (int i = 0; i < cluster.Length; i++)
+    {
+        if (!groups.TryGetValue(cluster[i], out var list))
+        { list = new List<int>(); groups[cluster[i]] = list; }
+        list.Add(i);
+    }
+
+    int snappedCount = 0;
+    int junctionCount = 0;
+    foreach (var kvp in groups)
+    {
+        var members = kvp.Value;
+        if (members.Count < 2) continue; // singleton = not a junction
+
+        float cx = 0f, cz = 0f;
+        foreach (int memberIdx in members)
+        {
+            var (pi, li) = refs[memberIdx];
+            var e = li ? cartPaths[pi].spine[cartPaths[pi].spine.Length - 1]
+                       : cartPaths[pi].spine[0];
+            cx += e.x; cz += e.z;
+        }
+        cx /= members.Count; cz /= members.Count;
+
+        foreach (int memberIdx in members)
+        {
+            var (pi, li) = refs[memberIdx];
+            int knotIdx = li ? cartPaths[pi].spine.Length - 1 : 0;
+            var e = cartPaths[pi].spine[knotIdx];
+            float dBefore = Mathf.Sqrt(
+                (e.x - cx) * (e.x - cx) + (e.z - cz) * (e.z - cz));
+            cartPaths[pi].spine[knotIdx] = new ContourPoint
+            {
+                x = cx,
+                z = cz,
+            };
+            if (dBefore > 0.001f) snappedCount++;
+        }
+
+        junctionCount++;
+        Debug.Log($"[HoleGeoImporter] Junction cluster: " +
+                  $"{members.Count} endpoints → centroid ({cx:F2}, {cz:F2})");
+    }
+
+    if (junctionCount > 0)
+        Debug.Log($"[HoleGeoImporter] Cart path junction snap: " +
+                  $"{junctionCount} junction(s), {snappedCount} endpoint(s) " +
+                  $"moved within {snapRadiusM:F2}m radius.");
+}
+```
+
+**NOTE for Code:** `ContourPoint` is a struct in this file, so
+`cartPaths[pi].spine[knotIdx] = new ContourPoint {...}` replaces the
+element in place. `CartPath` and `CartPathsFile` DTO types are defined
+elsewhere in the file — if `spine`'s actual type is `List<ContourPoint>`
+instead of `ContourPoint[]`, use `spine[knotIdx] = ...` and
+`spine.Count` / `spine[spine.Count - 1]` instead. Verify the exact field
+shape before compiling.
+
+### Step 2 — Call the helper at the top of `CreateSplineCartPaths`
+
+Immediately after loading `cpData`, before the foreach loop that
+iterates cart paths. The spot is ~4 lines into the method:
+
+```csharp
+var cpData = JsonUtility.FromJson<CartPathsFile>(
+    File.ReadAllText(cpPath));
+if (cpData.cart_paths == null || cpData.cart_paths.Length == 0) return;
+
+// Junction endpoint snapping — fixes grass wedges at 3+ way junctions
+// where UHoleGeo's skeleton extraction gives each path a slightly
+// different pixel-center endpoint. 0.75m radius chosen just above the
+// observed 0.6m gap on Hole 1 (junction at (-234.x, -123.x), paths 6/7/8).
+SnapCartPathJunctionEndpoints(cpData.cart_paths, 0.75f);
+```
+
+No other changes to `CreateSplineCartPaths`. The rest of the method
+(spline construction, ribbon mesh generation, depression polygon via
+`_splineCartPathPolygons`) consumes the already-snapped spines
+automatically.
+
+### Verification
+
+1. Reimport Hole 1 Geo.
+2. Screenshot the middle-section 3-way junction (the one in the attached
+   reference, approximately world `(-234, -123)`).
+3. Expect: grass wedge gone, three ribbons meet cleanly.
+4. Console log should show (approximately):
+   - Four `Junction cluster: ...` lines for Hole 1 (one per junction).
+   - The `(-234.x, -123.x)` cluster centroid ≈ average of the three
+     drifted endpoints.
+   - `Cart path junction snap: 4 junction(s), 1 endpoint(s) moved ...`
+     (path 8's endpoint moves ~0.6m, paths 6/7 were already at a common
+     point and shift <0.3m to the new centroid — only the 0.6m move
+     clears the 0.001m threshold; the three already-clean junctions
+     log but with 0 endpoints moved).
+5. The three clean junctions on Hole 1 (paths 1/3/4 at `(228.99, 28.88)`,
+   paths 2/3 at `(33.07, -10.85)`, paths 4/5 at `(-27.73, 0.14)`) render
+   identically to before — no visual regression.
+6. Check Holes 2–18: every hole with cart paths should import normally.
+   Watch console for unexpected cluster log lines that might indicate
+   unrelated paths being wrongly merged at 0.75m.
+
+### Watch for
+
+- **4-way+ junctions:** the clustering handles arbitrary N correctly —
+  centroid of N points, no special-case code.
+- **Non-junction endpoints:** paths whose first or last knot is a true
+  dead-end (no other path within 0.75m) land in singleton clusters and
+  are skipped, no mutation.
+- **Transitive chains** (A near B, B near C, A far from C): the simple
+  O(N²) clustering above does NOT merge these into one cluster. Current
+  course data does not exhibit this pattern. If a future hole does,
+  upgrade to union-find; for now keep the simpler code.
+- **`CartPath` DTO field access:** if `cp.spine` is `ContourPoint[]`,
+  the code above compiles as-is. If it's a `[Serializable]` list or
+  uses a different field name, adjust accordingly.
+
+### Do NOT
+
+- Modify `CreateSpineStripMesh`, `BuildSpinePolygon`, or the
+  ribbon-strip generation.
+- Touch `DepressTerrainUnderOverlays` or the cart path depression
+  polygon logic — those consume the snapped spines via
+  `_splineCartPathPolygons` automatically.
+- Make any change to UHoleGeo (`export-hole.mjs`, `classify-zones.mjs`,
+  skeleton extraction). Pipeline-side fix is a separate task.
+- Hardcode Hole 1 or specific junction coords. The pre-pass runs
+  unconditionally on every hole; singleton clusters are skipped.
+- Change the 0.75m radius without asking. Chosen just above the observed
+  0.6m gap; looser risks merging distinct nearby paths, tighter risks
+  missing the target.
+
+### Out of scope (future task)
+
+UHoleGeo-side fix: when extracting spines from the cart-path pixel mask,
+detect degree-3+ skeleton nodes and emit a single shared endpoint
+coordinate for all paths meeting there. Will land as a separate TellCode
+block against `Tools/UHoleGeo/scripts/export-hole.mjs` once the symptom
+is confirmed fixed by this Unity-side pass.
+
+✅ DONE: 2026-04-20 SnapCartPathJunctionEndpoints() added as private static method before CreateSplineCartPaths. Called immediately after cpData null check with 0.75m radius. ContourPoint is a class (not struct) so used e.x/e.z mutation in place. CartPathRegionData[] used (not CartPath[]). Commit 6eb1bc9e.
+
+✅ DONE: 2026-04-20 UHoleGeo pipeline fix: missing B-C cart path segment. Root cause: the minSpinePixels=20 filter removed chain[4] (len=15), making junction C a 2-way point, causing chains 3+5 (the B-C link) to merge and disappear. Fix: after building longChains (len>=minSpinePixels), identify 2-way junctions in that set and rescue any short chain (len>=dsFactor*2=6) whose endpoint touches a 2-way junction. This upgrades it to 3-way, preserving the B-C path. Hole 1 now exports 10 cart paths (was 6) including the B-C link as path 6. cart-paths.json copied to both hole-01 and hole-01-geo. Commit abd9f238.
+
+---
+
+## Previous Task — Water Shore Phase 2c: Reorder CreateWaterMeshes After DepressTerrainUnderOverlays
 
 Phase 2b ablation confirmed Hypothesis B: serrations are the depression-cliff at
 the water polygon boundary, not the shore ramp. Water mesh samples original
