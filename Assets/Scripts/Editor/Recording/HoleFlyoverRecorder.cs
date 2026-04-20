@@ -433,16 +433,48 @@ namespace Golfin.CourseImport.Recording
                 var fw = JsonUtility.FromJson<FairwayContoursFile>(File.ReadAllText(fairwayPath));
                 if (fw?.fairways != null)
                 {
-                    var centroids = fw.fairways
-                        .Where(r => r.center_local != null)
-                        .Select(r =>
+                    // For each fairway region, slice its contour polygon into strips along the
+                    // tee→green axis and use each strip's centroid as a waypoint. This handles
+                    // doglegs and large single-polygon fairways whose centroid would fall off-path.
+                    const int kStrips = 5;
+                    var waypoints = new List<Vector3>();
+
+                    foreach (var region in fw.fairways)
+                    {
+                        if (region.contour == null || region.contour.Length == 0) continue;
+
+                        // Project each contour vertex onto the tee→green axis to find its t value.
+                        float tMin = float.MaxValue, tMax = float.MinValue;
+                        foreach (var v in region.contour)
                         {
-                            float cy = terrain.SampleHeight(new Vector3(r.center_local.x, 0, r.center_local.z)) + terrainBaseY;
-                            return new Vector3(r.center_local.x, cy, r.center_local.z);
-                        })
-                        .OrderBy(p => Vector3.Distance(p, teePos))
-                        .ToList();
-                    cruiseWaypoints.AddRange(centroids);
+                            float proj = Vector3.Dot(new Vector3(v.x, 0, v.z) - new Vector3(teePos.x, 0, teePos.z), fwdXZ);
+                            if (proj < tMin) tMin = proj;
+                            if (proj > tMax) tMax = proj;
+                        }
+                        float stripSize = (tMax - tMin) / kStrips;
+                        if (stripSize < 0.1f) stripSize = 0.1f;
+
+                        for (int s = 0; s < kStrips; s++)
+                        {
+                            float lo = tMin + s * stripSize;
+                            float hi = lo + stripSize;
+                            float sx = 0, sz = 0; int cnt = 0;
+                            foreach (var v in region.contour)
+                            {
+                                float proj = Vector3.Dot(new Vector3(v.x, 0, v.z) - new Vector3(teePos.x, 0, teePos.z), fwdXZ);
+                                if (proj >= lo && proj < hi) { sx += v.x; sz += v.z; cnt++; }
+                            }
+                            if (cnt == 0) continue;
+                            float wx = sx / cnt, wz = sz / cnt;
+                            float wy = terrain.SampleHeight(new Vector3(wx, 0, wz)) + terrainBaseY;
+                            waypoints.Add(new Vector3(wx, wy, wz));
+                        }
+                    }
+
+                    // Order waypoints by distance from tee, then add to cruise path.
+                    waypoints.Sort((a, b) =>
+                        Vector3.Dot(a - teePos, fwdXZ).CompareTo(Vector3.Dot(b - teePos, fwdXZ)));
+                    cruiseWaypoints.AddRange(waypoints);
                 }
             }
             cruiseWaypoints.Add(greenPos);
