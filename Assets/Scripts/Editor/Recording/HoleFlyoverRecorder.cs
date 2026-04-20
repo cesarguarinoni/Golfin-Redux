@@ -611,7 +611,8 @@ namespace Golfin.CourseImport.Recording
                 else
                 {
                     float lt    = (t - kArcEnd) / kOrbit;
-                    float angle = Mathf.Lerp(-15f, 15f, lt);
+                    lt = lt * lt * (3f - 2f * lt); // smoothstep ease
+                    float angle = Mathf.Lerp(0f, 50f, lt); // sweep one direction from approach axis
                     Vector3 offset = Quaternion.Euler(0, angle, 0) * (-fwdXZ) * 15f;
                     pos    = greenPos + new Vector3(offset.x, DronePinHeight, offset.z);
                     lookAt = flagLookAt;
