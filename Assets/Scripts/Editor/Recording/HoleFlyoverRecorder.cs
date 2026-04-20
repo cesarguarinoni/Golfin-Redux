@@ -49,6 +49,7 @@ namespace Golfin.CourseImport.Recording
         private const string SK_CURHOLE  = "HoleFlyoverRec.CurrentHole";
         private const string SK_BATCHING = "HoleFlyoverRec.Batching";
         private const string SK_ACTIVE   = "HoleFlyoverRec.Active";
+        private const string SK_STATE    = "HoleFlyoverRec.State"; // persists _state across domain reload
 
         // ---------------------------------------------------------------
         // Boot / domain-reload recovery
@@ -68,12 +69,22 @@ namespace Golfin.CourseImport.Recording
         {
             if (!SessionState.GetBool(SK_ACTIVE, false)) return;
 
-            // A domain reload interrupted an in-progress recording. The current hole
-            // was partially recorded; skip it and continue the queue.
+            // Restore current hole and state so OnPlayModeChanged(EnteredPlayMode) fires correctly.
+            _currentHole = SessionState.GetInt(SK_CURHOLE, 0);
+            var savedState = (RecState)SessionState.GetInt(SK_STATE, (int)RecState.Idle);
+
+            if (savedState == RecState.WaitingForPlayMode)
+            {
+                // Domain reload happened mid-play-mode-entry. Restore so EnteredPlayMode picks it up.
+                _state = RecState.WaitingForPlayMode;
+                Debug.Log($"[HoleFlyoverRecorder] Restored WaitingForPlayMode for hole {_currentHole} after domain reload.");
+                return;
+            }
+
+            // Recording was interrupted mid-recording (rare). Skip hole and continue batch.
             bool batching = SessionState.GetBool(SK_BATCHING, false);
             if (!batching)
             {
-                // Single-hole run interrupted — just clean up.
                 SessionState.SetBool(SK_ACTIVE, false);
                 return;
             }
@@ -86,14 +97,9 @@ namespace Golfin.CourseImport.Recording
                     foreach (int h in remaining) _holeQueue.Enqueue(h);
             }
 
-            if (_holeQueue.Count == 0)
-            {
-                SessionState.SetBool(SK_ACTIVE, false);
-                return;
-            }
+            if (_holeQueue.Count == 0) { FinishBatch(); return; }
 
             Debug.Log($"[HoleFlyoverRecorder] Resuming batch after domain reload — {_holeQueue.Count} holes remaining.");
-            // Delay one frame before re-starting so the editor is stable.
             EditorApplication.delayCall += StartNextHole;
         }
 
@@ -187,6 +193,9 @@ namespace Golfin.CourseImport.Recording
         private static void EnterPlayMode()
         {
             _state = RecState.WaitingForPlayMode;
+            // Persist state + hole so domain reload (which clears static fields) doesn't lose them.
+            SessionState.SetInt(SK_STATE, (int)RecState.WaitingForPlayMode);
+            SessionState.SetInt(SK_CURHOLE, _currentHole);
             EditorApplication.isPlaying = true;
         }
 
@@ -195,6 +204,7 @@ namespace Golfin.CourseImport.Recording
             if (change == PlayModeStateChange.EnteredPlayMode && _state == RecState.WaitingForPlayMode)
             {
                 _state = RecState.Recording;
+                SessionState.SetInt(SK_STATE, (int)RecState.Recording);
                 BeginRecording();
             }
             else if (change == PlayModeStateChange.EnteredEditMode && _state == RecState.WaitingForEditMode)
@@ -209,19 +219,22 @@ namespace Golfin.CourseImport.Recording
         private static void OnUpdate()
         {
             if (_state != RecState.Recording) return;
-            if (_recorderController == null || !_recorderController.IsRecording()) return;
 
             float elapsed = (float)(EditorApplication.timeSinceStartup - _recordStartTime);
             float t       = Mathf.Clamp01(elapsed / FlyoverDurationSeconds);
 
+            // Always drive the camera — independent of whether the recorder is running.
             UpdateCameraFromPath(t);
-            EditorUtility.DisplayProgressBar("Recording Flyover",
-                $"Hole {_currentHole:D2} — {Mathf.RoundToInt(t * 100)}%", t);
+
+            if (_recorderController != null && _recorderController.IsRecording())
+                EditorUtility.DisplayProgressBar("Recording Flyover",
+                    $"Hole {_currentHole:D2} — {Mathf.RoundToInt(t * 100)}%", t);
 
             if (elapsed >= FlyoverDurationSeconds)
             {
                 StopAndCleanup();
                 _state = RecState.WaitingForEditMode;
+                SessionState.SetInt(SK_STATE, (int)RecState.WaitingForEditMode);
                 EditorApplication.isPlaying = false;
             }
         }
@@ -255,7 +268,11 @@ namespace Golfin.CourseImport.Recording
                 AbortCurrentHole(); return;
             }
 
-            // Create flyover camera
+            // Disable WalkCamera so FlyoverCamera becomes the active rendered view.
+            var walkCam = UnityEngine.Object.FindObjectOfType<WalkCamera>();
+            if (walkCam != null) walkCam.GetComponent<Camera>().enabled = false;
+
+            // Create flyover camera with higher depth so it renders on top.
             EnsureTag(FlyoverCamTag);
             _flyoverCamGO = new GameObject("FlyoverCamera");
             _flyoverCamGO.tag = FlyoverCamTag;
@@ -263,6 +280,7 @@ namespace Golfin.CourseImport.Recording
             cam.fieldOfView   = CameraFov;
             cam.nearClipPlane = 0.3f;
             cam.farClipPlane  = 3000f;
+            cam.depth         = 10f; // render above any existing cameras
             // No AudioListener here — WalkCamera already has one
 
             UpdateCameraFromPath(0f);
@@ -311,6 +329,10 @@ namespace Golfin.CourseImport.Recording
                 UnityEngine.Object.DestroyImmediate(_flyoverCamGO);
             _flyoverCamGO = null;
             _keyframes = null;
+
+            // Re-enable WalkCamera if it was disabled.
+            var walkCam = UnityEngine.Object.FindObjectOfType<WalkCamera>();
+            if (walkCam != null) walkCam.GetComponent<Camera>().enabled = true;
 
             EditorUtility.ClearProgressBar();
         }
