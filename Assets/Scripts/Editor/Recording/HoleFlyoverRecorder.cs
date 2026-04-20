@@ -73,11 +73,18 @@ namespace Golfin.CourseImport.Recording
             if (savedState == RecState.WaitingForPlayMode)
             {
                 _state = RecState.WaitingForPlayMode;
-                // If we're not yet in play mode (e.g. domain reload triggered by OpenScene rather
-                // than by isPlaying=true), re-schedule EnterPlayMode — the delayCall was lost.
+                // Restore queue so EnteredEditMode can continue the batch after this hole finishes.
+                string queueJson = SessionState.GetString(SK_QUEUE, "");
+                if (!string.IsNullOrEmpty(queueJson))
+                {
+                    int[] remaining = JsonHelper.FromJsonWrapped<int>(queueJson);
+                    if (remaining != null)
+                        foreach (int h in remaining) _holeQueue.Enqueue(h);
+                }
+                // If domain reload was triggered by OpenScene (not isPlaying), re-schedule entry.
                 if (!EditorApplication.isPlaying)
                     EditorApplication.delayCall += EnterPlayMode;
-                Debug.Log($"[HoleFlyoverRecorder] Restored WaitingForPlayMode for hole {_currentHole} after domain reload.");
+                Debug.Log($"[HoleFlyoverRecorder] Restored WaitingForPlayMode for hole {_currentHole}, queue={_holeQueue.Count} remaining.");
                 return;
             }
 
