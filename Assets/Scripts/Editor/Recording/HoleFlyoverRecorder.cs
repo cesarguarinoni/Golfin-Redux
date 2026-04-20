@@ -426,7 +426,7 @@ namespace Golfin.CourseImport.Recording
 
             // Fairway centroids sorted by distance from tee.
             List<Vector3> cruiseWaypoints = new List<Vector3>();
-            cruiseWaypoints.Add(teePos - fwdXZ * 7f);
+            cruiseWaypoints.Add(teePos - fwdXZ * 6f);
 
             if (File.Exists(fairwayPath))
             {
