@@ -16,7 +16,9 @@ namespace Golfin.CourseImport.Recording
     public static class HoleFlyoverRecorder
     {
         // --- Tunable constants ---
-        private const float FlyoverDurationSeconds = 20f;
+        private const float DroneSpeedMS      = 20f;  // m/s cruise speed (determines video length)
+        private const float PauseSeconds      = 1f;   // hold still at start
+        private const float OrbitSeconds      = 3f;   // orbit around flag at end
         private const float DroneTeeHeight    = 6f;   // start height above tee
         private const float DronePinHeight    = 4f;
         private const float CameraFov         = 55f;
@@ -38,6 +40,7 @@ namespace Golfin.CourseImport.Recording
         private static GameObject        _flyoverCamGO;
         private static RecorderController _recorderController;
         private static FlyoverKeyframe[] _keyframes;
+        private static float             _flyoverDuration; // computed per-hole from path length
         private static Terrain           _terrain;
         private static float             _terrainBaseY;
 
@@ -231,7 +234,7 @@ namespace Golfin.CourseImport.Recording
             if (_state != RecState.Recording) return;
 
             float elapsed = (float)(EditorApplication.timeSinceStartup - _recordStartTime);
-            float t       = Mathf.Clamp01(elapsed / FlyoverDurationSeconds);
+            float t       = Mathf.Clamp01(elapsed / _flyoverDuration);
 
             // Always drive the camera — independent of whether the recorder is running.
             UpdateCameraFromPath(t);
@@ -240,7 +243,7 @@ namespace Golfin.CourseImport.Recording
                 EditorUtility.DisplayProgressBar("Recording Flyover",
                     $"Hole {_currentHole:D2} — {Mathf.RoundToInt(t * 100)}%", t);
 
-            if (elapsed >= FlyoverDurationSeconds)
+            if (elapsed >= _flyoverDuration)
             {
                 StopAndCleanup();
                 _state = RecState.WaitingForEditMode;
@@ -271,7 +274,7 @@ namespace Golfin.CourseImport.Recording
             }
 
             string exportPath = GetExportPath(meta.courseId, meta.holeNumber);
-            _keyframes = BuildFlyoverPath(exportPath, _terrain, _terrainBaseY);
+            _keyframes = BuildFlyoverPath(exportPath, _terrain, _terrainBaseY, out _flyoverDuration);
             if (_keyframes == null || _keyframes.Length == 0)
             {
                 Debug.LogError($"[HoleFlyoverRecorder] Failed to build camera path for hole {meta.holeNumber}");
@@ -377,8 +380,9 @@ namespace Golfin.CourseImport.Recording
         }
 
         private static FlyoverKeyframe[] BuildFlyoverPath(
-            string exportPath, Terrain terrain, float terrainBaseY)
+            string exportPath, Terrain terrain, float terrainBaseY, out float totalDuration)
         {
+            totalDuration = PauseSeconds + 16f + OrbitSeconds; // safe default
             // --- Load data ---
             string anchorsPath  = Path.Combine(exportPath, "anchors.json");
             string greensPath   = Path.Combine(exportPath, "greens.json");
@@ -519,6 +523,9 @@ namespace Golfin.CourseImport.Recording
                 }
             }
             float totalArc = arcLen[kArcSamples - 1];
+            // Duration = 1s pause + flight time at DroneSpeedMS + 3s orbit — variable per hole.
+            totalDuration = PauseSeconds + (totalArc / DroneSpeedMS) + OrbitSeconds;
+
             System.Func<float, float> arcToT = (float uniformT) =>
             {
                 float target = Mathf.Clamp01(uniformT) * totalArc;
@@ -529,9 +536,9 @@ namespace Golfin.CourseImport.Recording
                 return Mathf.Lerp((float)lo / (kArcSamples-1), (float)hi / (kArcSamples-1), f);
             };
 
-            const float kPause  = 0.05f; // 1s hold at start
-            const float kOrbit  = 0.12f;
-            const float kArcEnd = 1f - kOrbit; // 0.88
+            float kPause  = PauseSeconds  / totalDuration;
+            float kOrbit  = OrbitSeconds  / totalDuration;
+            float kArcEnd = 1f - kOrbit;
 
             // Pre-sample terrain height at uniform arc-length positions, then smooth.
             const int kTerrainSamples = 256;
@@ -577,7 +584,7 @@ namespace Golfin.CourseImport.Recording
             Vector3 flagLookAt = greenPos + Vector3.up * 0.5f;
 
             // --- Build keyframes at 60 fps ---
-            int totalFrames = Mathf.RoundToInt(FlyoverDurationSeconds * OutputFrameRate);
+            int totalFrames = Mathf.RoundToInt(totalDuration * OutputFrameRate);
             var frames = new FlyoverKeyframe[totalFrames];
 
             for (int i = 0; i < totalFrames; i++)
