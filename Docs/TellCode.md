@@ -7,7 +7,352 @@
 
 ---
 
-## Current Task — Cart Path Junction Endpoint Snapping (Unity-side safety net)
+## Current Task — Per-Edge Adaptive Tee Skirt (fixes Hole 7 cliff + avoids cart-path wall + avoids hill erasure)
+
+Previous attempt landed the unit fix but exposed two real problems
+(documented in `Docs/TEE_SKIRT_INVESTIGATION.md`):
+
+1. **Cart path cliff:** a 30m uniform skirt raises terrain under the
+   cart paths; `DepressTerrainUnderOverlays` then cuts 0.4m out of
+   that raised terrain → visible 0.4m wall next to the cart path.
+2. **Hill topography erased:** a 30m uniform skirt raises the
+   uphill/side of the tee too, not just the steep downhill side.
+
+Per-cell adaptive radius is rejected because a prior attempt produced
+sawtooth teeth along the skirt's outer boundary (noted in the existing
+code comment at ~line 3281).
+
+### The fix — per-edge adaptive radius
+
+Compute `adaptiveM` **per contour edge segment**, not per cell or per
+tee. Each skirt cell then uses the `adaptiveM` of the contour edge it's
+closest to. Cells along the same edge share the same `adaptiveM` → no
+teeth along an edge. Transitions occur at polygon vertices, where the
+smoothstep ramp naturally blurs the seam.
+
+This gives:
+- Uphill side (drop ~0.5m): 2m skirt → hill shape preserved.
+- Downhill side (drop ~7m): ~30m skirt → gentle grade, no cliff.
+- Side edges: scaled proportionally.
+
+And it fixes the cart-path cliff because per-edge radii are localized
+to the side where drop exists; the skirt doesn't reach across the tee
+to lift a cart path 10m away. Belt-and-suspenders: **also add cart
+paths to the skipMask** (Step 3).
+
+---
+
+### Step 1 — Replace the uniform `worstAdaptiveM` with per-edge radii
+
+Target: `FlattenTerrainUnderTees` in
+`Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`,
+lines ~3211–3238.
+
+Replace the block that currently reads:
+
+```csharp
+// Worst-case adaptive radius for coarse cull: scan the tee's
+// bbox + TeeMaxSkirtMeters neighborhood for the steepest drop.
+float worstDrop = 0f;
+int neighborhoodCells = Mathf.RoundToInt(TeeMaxSkirtMeters / metersPerCell);
+// ... bbox computation ...
+for (int z = bboxMinR; z <= bboxMaxR; z++)
+    for (int x = bboxMinC; x <= bboxMaxC; x++)
+    {
+        float drop = maxH - baseline[z, x];
+        if (drop > worstDrop) worstDrop = drop;
+    }
+
+float worstAdaptiveM = Mathf.Min(TeeMaxSkirtMeters,
+    Mathf.Max(TeeSkirtMeters, 1.5f * worstDrop / TeeMaxRampSlope));
+int worstAdaptiveCells = Mathf.CeilToInt(worstAdaptiveM / metersPerCell);
+```
+
+With per-edge computation:
+
+```csharp
+// Per-edge adaptive radius. For each contour segment, sample drop
+// outward along the edge normal at 1m increments; take the MAX drop
+// observed and derive the edge's skirt radius from it. This gives
+// each side of the tee its own radius instead of forcing the uniform
+// worst case everywhere.
+float elevRange = terrainSize.y; // normalized → world metres
+
+int nContourEdges = region.contour.Length;
+float[] edgeAdaptiveM = new float[nContourEdges];
+float worstEdgeM = 0f; // for coarse-cull bbox expansion
+
+const float SamplingStepM = 1.0f;
+const int SamplingStepsMax = 40; // sample up to 40m outward per edge
+
+for (int ei = 0; ei < nContourEdges; ei++)
+{
+    int ej = (ei + 1) % nContourEdges;
+    float ax = region.contour[ei].x, az = region.contour[ei].z;
+    float bx = region.contour[ej].x, bz = region.contour[ej].z;
+
+    float edx = bx - ax, edz = bz - az;
+    float elen = Mathf.Sqrt(edx * edx + edz * edz);
+    if (elen < 1e-6f) { edgeAdaptiveM[ei] = TeeSkirtMeters; continue; }
+
+    // Outward normal. CCW contour → outward is (edz, -edx) normalized.
+    float nx = edz / elen;
+    float nzn = -edx / elen;
+
+    // Sanity-check outward direction: probe 0.5m along the normal
+    // from the edge midpoint; if inside the polygon, flip.
+    float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
+    if (IsPointInContour(region.contour, mx + nx * 0.5f, mz + nzn * 0.5f))
+    {
+        nx = -nx; nzn = -nzn;
+    }
+
+    // Max drop along this edge's outward normal.
+    float maxEdgeDropM = 0f;
+    for (int s = 1; s <= SamplingStepsMax; s++)
+    {
+        float sx = mx + nx * s * SamplingStepM;
+        float sz = mz + nzn * s * SamplingStepM;
+        int sCol = Mathf.RoundToInt((sx - terrainPos.x) / cellW);
+        int sRow = Mathf.RoundToInt((sz - terrainPos.z) / cellH);
+        if (sRow < 0 || sRow >= hRes || sCol < 0 || sCol >= hRes) break;
+        float dropNorm = maxH - baseline[sRow, sCol];
+        if (dropNorm <= 0f) continue; // uphill of platform — ignore
+        float dropM = dropNorm * elevRange;
+        if (dropM > maxEdgeDropM) maxEdgeDropM = dropM;
+    }
+
+    // Formula from the original adaptive design:
+    //   dR = clamp(1.5 * dropM / MaxRampSlope, BaseSkirt, MaxSkirt)
+    float rM = Mathf.Clamp(
+        1.5f * maxEdgeDropM / TeeMaxRampSlope,
+        TeeSkirtMeters,
+        TeeMaxSkirtMeters);
+    edgeAdaptiveM[ei] = rM;
+    if (rM > worstEdgeM) worstEdgeM = rM;
+}
+
+int worstAdaptiveCells = Mathf.CeilToInt(worstEdgeM / metersPerCell);
+```
+
+**NOTE for Code:** `IsPointInContour(ContourPoint[] contour, float x, float z)`
+may already exist in this file as a private helper. If not, add:
+
+```csharp
+private static bool IsPointInContour(ContourPoint[] c, float x, float z)
+{
+    bool inside = false;
+    for (int i = 0, j = c.Length - 1; i < c.Length; j = i++)
+    {
+        if (((c[i].z > z) != (c[j].z > z)) &&
+            (x < (c[j].x - c[i].x) * (z - c[i].z) /
+                 (c[j].z - c[i].z) + c[i].x))
+            inside = !inside;
+    }
+    return inside;
+}
+```
+
+---
+
+### Step 2 — In the exact-distance pass, pick per-cell `adaptiveM` from the nearest edge
+
+Current code (~lines 3264–3286) already computes `minDistM` as the
+distance to the nearest edge. Capture **which** edge is nearest and use
+that edge's `adaptiveM`.
+
+Replace:
+
+```csharp
+float minDistM = float.MaxValue;
+for (int i = 0; i < nContour; i++)
+{
+    int j = (i + 1) % nContour;
+    // ... per-edge distance math ...
+    if (d < minDistM) minDistM = d;
+}
+
+// Uniform adaptive radius (per-tee worst case from pre-scan).
+if (minDistM > worstAdaptiveM) continue;
+float adaptiveM = worstAdaptiveM;
+```
+
+With:
+
+```csharp
+float minDistM = float.MaxValue;
+int nearestEdge = 0;
+for (int i = 0; i < nContour; i++)
+{
+    int j = (i + 1) % nContour;
+    float ax = region.contour[i].x, az = region.contour[i].z;
+    float bx = region.contour[j].x, bz = region.contour[j].z;
+    float edx = bx - ax, edz = bz - az;
+    float len2 = edx * edx + edz * edz;
+    float t2 = len2 > 1e-10f
+        ? Mathf.Clamp01(((wx - ax) * edx + (wz - az) * edz) / len2)
+        : 0f;
+    float px = ax + t2 * edx - wx;
+    float pz = az + t2 * edz - wz;
+    float d = Mathf.Sqrt(px * px + pz * pz);
+    if (d < minDistM) { minDistM = d; nearestEdge = i; }
+}
+
+// Per-edge adaptive radius: cells along the same edge share a radius
+// → no sawtooth. Radius varies only across contour VERTICES, where
+// smoothstep naturally blurs the seam.
+float adaptiveM = edgeAdaptiveM[nearestEdge];
+if (minDistM > adaptiveM) continue;
+```
+
+The rest of the loop (smoothstep `t`, `rampedH`, raise-only guard) is
+unchanged.
+
+---
+
+### Step 3 — Add cart paths to the skipMask (defensive)
+
+Target: `FlattenTerrainUnderTees`, ~lines 3109–3140 (right after the
+fairway/green skipMask population).
+
+Add:
+
+```csharp
+// Cart-path cells: protect from tee-skirt raising. A wide adaptive
+// skirt that lifts cart-path terrain produces a 0.4m wall after
+// DepressTerrainUnderOverlays cuts the cart-path depression.
+string cpPathForSkip = Path.Combine(exportPath, "cart-paths.json");
+if (File.Exists(cpPathForSkip))
+{
+    var cpDataForSkip = JsonUtility.FromJson<CartPathsFile>(
+        File.ReadAllText(cpPathForSkip));
+    if (cpDataForSkip.cart_paths != null)
+        foreach (var cp in cpDataForSkip.cart_paths)
+        {
+            if (cp.spine != null && cp.spine.Length >= 2)
+            {
+                float halfW = (cp.width_m > 0 ? cp.width_m : 2.5f)
+                              / 2f + 0.30f;
+                var sp = BuildSpinePolygon(cp.spine, halfW);
+                if (sp != null)
+                    MarkWorldContourCells(sp, skipMask,
+                        hRes, terrainPos, terrainSize);
+            }
+            else if (cp.contour != null && cp.contour.Length >= 3)
+            {
+                MarkContourCells(cp.contour, skipMask,
+                    hRes, terrainPos, terrainSize, 0f);
+            }
+        }
+}
+```
+
+**NOTE for Code:** `FlattenTerrainUnderTees` runs *before*
+`CreateSplineCartPaths`, so `_splineCartPathPolygons` is null at this
+point — reconstruct from `cart-paths.json` directly. `BuildSpinePolygon`
+is deterministic and matches what `CreateSplineCartPaths` later
+builds. If `MarkWorldContourCells` isn't the right helper name, use
+whatever marks a `Vector2[]` polygon footprint into a `bool[,]` mask in
+world coords (mirror how `DepressTerrainUnderOverlays` ~line 3366 does
+it for `cartDepress`).
+
+Then in the exact-distance pass (~line 3246, just after
+`if (teeMask[z, x]) continue;`), **re-introduce** the skipMask check:
+
+```csharp
+if (teeMask[z, x]) continue;
+if (skipMask[z, x]) continue; // cart path / fairway / green
+```
+
+This reverses the earlier decision to ignore skipMask. With per-edge
+radii the "skirt can't bridge across fairway" concern is much smaller
+because downhill radii are applied only to the downhill edge, not
+forced uniformly on all sides.
+
+---
+
+### Step 4 — Update the debug log
+
+Replace the existing log line (~line 3302):
+
+```csharp
+Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
+          $"platform h={maxH:F4}, " +
+          $"base skirt={TeeSkirtMeters:F1}m, " +
+          $"worst adaptive skirt={worstAdaptiveM:F1}m");
+```
+
+With:
+
+```csharp
+float minEdgeM = float.MaxValue, maxEdgeM = 0f;
+for (int i = 0; i < edgeAdaptiveM.Length; i++)
+{
+    if (edgeAdaptiveM[i] < minEdgeM) minEdgeM = edgeAdaptiveM[i];
+    if (edgeAdaptiveM[i] > maxEdgeM) maxEdgeM = edgeAdaptiveM[i];
+}
+if (edgeAdaptiveM.Length == 0) { minEdgeM = TeeSkirtMeters; maxEdgeM = TeeSkirtMeters; }
+Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
+          $"platform h={maxH:F4}, " +
+          $"edge skirt min={minEdgeM:F1}m max={maxEdgeM:F1}m " +
+          $"({edgeAdaptiveM.Length} edges)");
+```
+
+Asymmetric `min` vs `max` is the success signal.
+
+---
+
+### Verification
+
+1. Reimport Hole 7 Geo.
+2. Console: Tee 5 should log something like
+   `edge skirt min=2.0m max=30.2m (32 edges)`. Tees on flatter terrain
+   (e.g. Tee 4) log `min=2.0m max=2.0m`.
+3. Screenshot the 3pm-clockwise side of Tees 3 and 5 — no cliff, gentle
+   grade into the downhill.
+4. Screenshot the OTHER sides (uphill, lateral) of the same tees — they
+   should look similar to before; natural hill shape preserved.
+5. Cart path next to any tee on Hole 7: no visible 0.4m wall.
+6. Regression — Hole 4 Tee 1 (original motivating case): should still
+   grade cleanly. Log shows `max=` around 15–30m.
+7. Regression — Hole 1: all tees log `min=2.0m max=2.0m`.
+8. Regression — Hole 12: tees near water hazard unchanged.
+
+### Watch for
+
+- **Contour winding.** Code assumes CCW; the midpoint-probe in Step 1
+  fixes wrong-winding automatically. If a visibly-steep side logs
+  `max=2.0m`, check the probe direction is firing.
+- **`SamplingStepsMax = 40` = 40m sample range.** Safe upper bound for
+  a golf hole; don't raise without evidence.
+- **Edge midpoint sampling only.** UHoleGeo emits ~1.5m segments
+  (RDP ε=1.0 + Chaikin), so midpoint is representative. If a future
+  contour has long edges, sample at 1/4 and 3/4 too.
+- **Cart paths and fairways are both in skipMask now** — same as the
+  safe baseline.
+
+### Do NOT change
+
+- The `Lerp(maxH, baseline[z, x], t)` ramp formula (both sides
+  normalized → correct).
+- `CreateTeeMeshWithInsetBorder` (platformY flatten is coupled to the
+  terrain flatten pass; leave it).
+- `DepressTerrainUnderOverlays` (0.05m tee depression is correct).
+- `TeeMaxRampSlope`, `TeeMaxSkirtMeters`, `TeeSkirtMeters` constants.
+
+### If per-edge produces visible seams at vertices
+
+Unlikely given typical UHoleGeo contours (adjacent edges within ~10°
+of each other), but if visible: after the ramp pass, run 2 iterations
+of a 3×3 box blur on `heights` constrained to cells where
+`coarseDist > 0 && coarseDist <= worstAdaptiveCells`. Hold in reserve;
+don't apply preemptively.
+
+✅ DONE: 2026-04-20 Per-edge adaptive tee skirt implemented. Steps 1-4 complete: edgeAdaptiveM[] replaces worstAdaptiveM, nearestEdge tracked in exact-distance pass, cart-paths.json added to skipMask, debug log shows min/max edge radius. IsPointInContour(ContourPoint[]) helper added. Commit 6151e8d7.
+
+---
+
+## Previous Task — Cart Path Junction Endpoint Snapping (Unity-side safety net)
 
 Hole 1 screenshot shows a grass triangle poking into the cart path at a
 3-way junction in the middle section. Cause confirmed from
