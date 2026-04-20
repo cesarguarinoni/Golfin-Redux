@@ -427,9 +427,13 @@ namespace Golfin.CourseImport.Recording
             Vector3 fwdXZ  = new Vector3(greenPos.x - teePos.x, 0, greenPos.z - teePos.z).normalized;
             if (fwdXZ == Vector3.zero) fwdXZ = Vector3.forward;
 
-            // Fairway centroids sorted by distance from tee
+            // Fairway centroids sorted by distance from tee.
+            // Start 15m behind the tee so the tee box is visible in the opening frame.
+            // Duplicate teePos gives the Catmull-Rom a zero-velocity start there.
             List<Vector3> cruiseWaypoints = new List<Vector3>();
-            cruiseWaypoints.Add(teePos);
+            cruiseWaypoints.Add(teePos - fwdXZ * 15f); // arc start: behind tee
+            cruiseWaypoints.Add(teePos);                // zero-velocity anchor at tee
+            cruiseWaypoints.Add(teePos);                // duplicate for zero tangent
 
             if (File.Exists(fairwayPath))
             {
