@@ -1500,27 +1500,6 @@ namespace Golfin.CourseImport
             layers[8].diffuseRemapMin = new Vector4(0f, 0f, 0f, 0f);
             layers[8].diffuseRemapMax = new Vector4(0.75f, 0.82f, 0.55f, 1f);
 
-            // ─── Per-zone color tints (match Lomond reference) ───
-            // diffuseRemapMax multiplies sampled albedo RGB. Normals unaffected.
-            // Layer map: 0 fairway light, 1 green, 2 semi-rough, 3 rough,
-            //            4 bunker, 5 tee, 6 cart path, 7 fairway dark, 8 OB (already set)
-            Vector4[] tintMax = {
-                new Vector4(0.70f, 0.78f, 0.33f, 1f), // 0 fairway light
-                new Vector4(0.40f, 0.53f, 0.12f, 1f), // 1 green
-                new Vector4(0.58f, 0.67f, 0.22f, 1f), // 2 semi-rough
-                new Vector4(0.48f, 0.59f, 0.14f, 1f), // 3 rough
-                new Vector4(0.80f, 0.72f, 0.53f, 1f), // 4 bunker (warm sand)
-                new Vector4(0.70f, 0.78f, 0.33f, 1f), // 5 tee
-                new Vector4(1.00f, 1.00f, 1.00f, 1f), // 6 cart path (no tint)
-                new Vector4(0.53f, 0.63f, 0.17f, 1f), // 7 fairway dark
-            };
-            for (int t = 0; t < tintMax.Length && t < layers.Length; t++)
-            {
-                if (t == 6) continue; // skip cart path
-                layers[t].diffuseRemapMin = new Vector4(0f, 0f, 0f, 0f);
-                layers[t].diffuseRemapMax = tintMax[t];
-            }
-
             terrainData.terrainLayers = layers;
             terrainData.SetAlphamaps(0, 0, alphamap);
 

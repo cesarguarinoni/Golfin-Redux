@@ -7,6 +7,84 @@
 
 ---
 
+## ACTIVE TASK — Per-Layer Terrain Tint Pass
+
+### Context
+
+Terrain renders via `TerrainLayer` assets, NOT via `MAT_*.mat` materials. Editing material `_BaseColor` has no visible effect on terrain.
+
+Correct knobs: `diffuseRemapMin` / `diffuseRemapMax` on each `TerrainLayer`. Layer 8 (OB) already uses this as precedent in `ApplySplatmap()` (around line ~1500 in `HoleGeoImporter.cs`).
+
+### Goal
+
+Add per-layer `diffuseRemapMax` tints to shift splatmap zones toward Lomond reference photo (brighter, more yellow-green; warmer sand). Normals untouched.
+
+### Files
+
+**Edit BOTH:**
+- `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`
+- `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
+
+### Where to insert
+
+In `ApplySplatmap()`, immediately AFTER the existing OB tint block:
+
+```csharp
+layers[8].diffuseRemapMin = new Vector4(0f, 0f, 0f, 0f);
+layers[8].diffuseRemapMax = new Vector4(0.75f, 0.82f, 0.55f, 1f);
+```
+
+…and BEFORE:
+
+```csharp
+terrainData.terrainLayers = layers;
+terrainData.SetAlphamaps(0, 0, alphamap);
+```
+
+### Insert this block
+
+```csharp
+// ─── Per-zone color tints (match Lomond reference) ───
+// diffuseRemapMax multiplies sampled albedo RGB. Normals unaffected.
+// Layer map: 0 fairway light, 1 green, 2 semi-rough, 3 rough,
+//            4 bunker, 5 tee, 6 cart path, 7 fairway dark, 8 OB (already set)
+Vector4[] tintMax = {
+    new Vector4(0.70f, 0.78f, 0.33f, 1f), // 0 fairway light
+    new Vector4(0.40f, 0.53f, 0.12f, 1f), // 1 green
+    new Vector4(0.58f, 0.67f, 0.22f, 1f), // 2 semi-rough
+    new Vector4(0.48f, 0.59f, 0.14f, 1f), // 3 rough
+    new Vector4(0.80f, 0.72f, 0.53f, 1f), // 4 bunker (warm sand)
+    new Vector4(0.70f, 0.78f, 0.33f, 1f), // 5 tee
+    new Vector4(1.00f, 1.00f, 1.00f, 1f), // 6 cart path (no tint)
+    new Vector4(0.53f, 0.63f, 0.17f, 1f), // 7 fairway dark
+};
+for (int t = 0; t < tintMax.Length && t < layers.Length; t++)
+{
+    if (t == 6) continue; // skip cart path
+    layers[t].diffuseRemapMin = new Vector4(0f, 0f, 0f, 0f);
+    layers[t].diffuseRemapMax = tintMax[t];
+}
+```
+
+### Verification
+
+Reimport Hole 1 via `Import > Geo > Normal > Import Hole 01 Geo`. Compare against Lomond reference. To iterate: change `tintMax[i]` values, save, reimport.
+
+### Revert
+
+`git checkout -- Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs`
+
+### DO NOT
+
+- Do not touch `MAT_*.mat` files — those are not the render path.
+- Do not modify `layers[8]` (OB) — already tinted correctly above.
+- Do not remove the existing OB tint block.
+
+✅ DONE: 2026-04-20 Per-layer tint block inserted after OB tint in ApplySplatmap() in both HoleGeoImporter.cs and HoleLiteImporter.cs. Layers 0–7 tinted; layer 6 (cart path) skipped; layer 8 (OB) left as-is. Commit 902251e4.
+⚠️ REVERTED: 2026-04-20 diffuseRemapMax on TerrainLayer had no visible effect in Unity. Code reverted to original (tint block removed from both importers). Root cause unknown — TerrainLayer assets may be baked/cached differently, or reimport didn't flush layer state. Architect needs to investigate the correct knob.
+
+---
+
 ## Previous Task (DONE) — Linear-Slope Tee Skirt (extend ramp until it meets terrain)
 
 ### Root cause (finally nailed)
