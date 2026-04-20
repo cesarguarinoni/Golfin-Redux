@@ -484,7 +484,7 @@ namespace Golfin.CourseImport.Recording
 
             // Smooth waypoints: weighted average of neighbours (keeps endpoints fixed).
             // Removes zigzag from noisy strip centroids.
-            for (int pass = 0; pass < 4; pass++)
+            for (int pass = 0; pass < 2; pass++)
                 for (int w = 1; w < cruiseWaypoints.Count - 1; w++)
                 {
                     float sx = (cruiseWaypoints[w-1].x + cruiseWaypoints[w].x*2f + cruiseWaypoints[w+1].x) / 4f;
