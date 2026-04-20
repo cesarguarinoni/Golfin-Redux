@@ -74,10 +74,10 @@ namespace Golfin.CourseImport.Recording
             {
                 _state = RecState.WaitingForPlayMode;
                 // Restore queue so EnteredEditMode can continue the batch after this hole finishes.
-                string queueJson = SessionState.GetString(SK_QUEUE, "");
-                if (!string.IsNullOrEmpty(queueJson))
+                string savedQueue = SessionState.GetString(SK_QUEUE, "");
+                if (!string.IsNullOrEmpty(savedQueue))
                 {
-                    int[] remaining = JsonHelper.FromJsonWrapped<int>(queueJson);
+                    int[] remaining = JsonHelper.FromJsonWrapped<int>(savedQueue);
                     if (remaining != null)
                         foreach (int h in remaining) _holeQueue.Enqueue(h);
                 }
