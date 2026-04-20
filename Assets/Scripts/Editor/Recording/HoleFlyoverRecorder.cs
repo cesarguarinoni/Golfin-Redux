@@ -461,23 +461,19 @@ namespace Golfin.CourseImport.Recording
 
                 if (t < 0.15f)
                 {
-                    // Phase 1: Drone opener — hover behind/above back tee
-                    float lt    = t / 0.15f; // 0..1 local
+                    // Phase 1: Drone hover directly above back tee — no horizontal offset to avoid trees.
+                    float lt     = t / 0.15f;
                     float height = Mathf.Lerp(DroneStartHeight, 18f, lt);
-                    float backset = Mathf.Lerp(DroneStartBackset, DroneStartBackset * 0.7f, lt);
-                    pos    = teePos + new Vector3(0, height, 0) - fwdXZ * backset;
-                    lookAt = teePos;
+                    pos    = teePos + new Vector3(0, height, 0);
+                    lookAt = teePos + fwdXZ * 20f; // look down the fairway from above
                 }
                 else if (t < 0.30f)
                 {
-                    // Phase 2: Zoom toward tee — descend to DroneTeeHeight
+                    // Phase 2: Descend to DroneTeeHeight, still directly above tee.
                     float lt = (t - 0.15f) / 0.15f;
                     lt = lt * lt * (3f - 2f * lt); // smoothstep
-                    float startH  = 18f;
-                    float startBS = DroneStartBackset * 0.7f;
-                    pos    = teePos + new Vector3(0, Mathf.Lerp(startH, DroneTeeHeight, lt), 0)
-                             - fwdXZ * Mathf.Lerp(startBS, 0f, lt);
-                    lookAt = teePos;
+                    pos    = teePos + new Vector3(0, Mathf.Lerp(18f, DroneTeeHeight, lt), 0);
+                    lookAt = teePos + fwdXZ * 20f;
                 }
                 else if (t < 0.90f)
                 {
