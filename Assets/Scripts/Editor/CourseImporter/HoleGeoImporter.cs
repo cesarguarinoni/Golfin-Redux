@@ -3139,34 +3139,6 @@ namespace Golfin.CourseImport
                         }
             }
 
-            // Cart-path cells: protect from tee-skirt raising. A wider adaptive
-            // skirt that lifts cart-path terrain would produce a 0.4m wall
-            // after DepressTerrainUnderOverlays cuts the cart-path depression.
-            string cpPathForSkip = Path.Combine(exportPath, "cart-paths.json");
-            if (File.Exists(cpPathForSkip))
-            {
-                var cpDataForSkip = JsonUtility.FromJson<CartPathsFile>(
-                    File.ReadAllText(cpPathForSkip));
-                if (cpDataForSkip.cart_paths != null)
-                    foreach (var cp in cpDataForSkip.cart_paths)
-                    {
-                        if (cp.spine != null && cp.spine.Length >= 2)
-                        {
-                            float halfW = (cp.width_m > 0 ? cp.width_m : 2.5f)
-                                          / 2f + 0.30f;
-                            var sp = BuildSpinePolygon(cp.spine, halfW);
-                            if (sp != null)
-                                MarkWorldContourCells(sp, skipMask,
-                                    hRes, terrainPos, terrainSize);
-                        }
-                        else if (cp.contour != null && cp.contour.Length >= 3)
-                        {
-                            MarkContourCells(cp.contour, skipMask,
-                                hRes, terrainPos, terrainSize, 0f);
-                        }
-                    }
-            }
-
             // Skirt sizing
             float metersPerCell = (terrainSize.x + terrainSize.z) * 0.5f / (hRes - 1);
             int skirtRadiusCells = Mathf.Max(1, Mathf.RoundToInt(
@@ -3254,11 +3226,10 @@ namespace Golfin.CourseImport
                 int bboxMaxR = Mathf.Min(hRes - 1, maxR + neighborhoodCells);
                 int bboxMinC = Mathf.Max(0, minC - neighborhoodCells);
                 int bboxMaxC = Mathf.Min(hRes - 1, maxC + neighborhoodCells);
-                float elevRange = terrainSize.y;
                 for (int z = bboxMinR; z <= bboxMaxR; z++)
                     for (int x = bboxMinC; x <= bboxMaxC; x++)
                     {
-                        float drop = (maxH - baseline[z, x]) * elevRange; // world metres
+                        float drop = maxH - baseline[z, x];
                         if (drop > worstDrop) worstDrop = drop;
                     }
 
@@ -3319,8 +3290,8 @@ namespace Golfin.CourseImport
                 changed = true;
                 Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
                           $"platform h={maxH:F4}, " +
-                          $"worst drop={worstDrop:F2}m, " +
-                          $"adaptive skirt={worstAdaptiveM:F1}m");
+                          $"base skirt={TeeSkirtMeters:F1}m, " +
+                          $"worst adaptive skirt={worstAdaptiveM:F1}m");
             }
 
             if (changed)
