@@ -426,7 +426,7 @@ namespace Golfin.CourseImport.Recording
 
             // Fairway centroids sorted by distance from tee.
             List<Vector3> cruiseWaypoints = new List<Vector3>();
-            cruiseWaypoints.Add(teePos - fwdXZ * 2f);
+            cruiseWaypoints.Add(teePos - fwdXZ * 4f);
 
             if (File.Exists(fairwayPath))
             {
@@ -462,6 +462,7 @@ namespace Golfin.CourseImport.Recording
                 float yStart = teePos.y  + DroneTeeHeight;
                 float yEnd   = greenPos.y + DronePinHeight;
 
+                const float kPause  = 0.05f; // 1s hold at start
                 const float kOrbit  = 0.12f;
                 const float kArcEnd = 1f - kOrbit; // 0.88
 
@@ -480,9 +481,14 @@ namespace Golfin.CourseImport.Recording
 
                 Vector3 flagLookAt = greenPos + Vector3.up * 0.5f;
 
-                if (t < kArcEnd)
+                if (t < kPause)
                 {
-                    float lt = t / kArcEnd;
+                    // 1s hold: stay at arc start, looking forward (lt=0).
+                    (pos, lookAt) = evalArc(0f);
+                }
+                else if (t < kArcEnd)
+                {
+                    float lt = (t - kPause) / (kArcEnd - kPause);
                     (pos, lookAt) = evalArc(lt);
 
                     // End of arc: blend lookAt toward the flag so we arrive pointing at it.
@@ -495,8 +501,6 @@ namespace Golfin.CourseImport.Recording
                 }
                 else
                 {
-                    // Orbit around pin. Base direction is -fwdXZ (tee side of green) so
-                    // orbit starts exactly where the cruise ends — no positional jump.
                     float lt    = (t - kArcEnd) / kOrbit;
                     float angle = Mathf.Lerp(-15f, 15f, lt);
                     Vector3 offset = Quaternion.Euler(0, angle, 0) * (-fwdXZ) * 15f;
