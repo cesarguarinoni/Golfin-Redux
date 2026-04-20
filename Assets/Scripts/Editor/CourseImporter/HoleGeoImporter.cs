@@ -49,8 +49,8 @@ namespace Golfin.CourseImport
         private static List<Vector2[]> _splineCartPathPolygons;
 
         // ─── Tee Platform Parameters ─────────────────────────────────
-        /// <summary>Horizontal distance over which the tee platform skirt
-        /// ramps back to natural terrain.</summary>
+        /// <summary>Minimum skirt width. TODO: remove, no longer used after
+        /// linear-slope ramp replaced the fixed-radius smoothstep.</summary>
         private const float TeeSkirtMeters = 2.0f;
         /// <summary>Width of the inside-inset tee border ring (metres).
         /// Ring lives on top of the flat tee pad, between an inward-inset
@@ -3139,10 +3139,7 @@ namespace Golfin.CourseImport
                         }
             }
 
-            // Skirt sizing
             float metersPerCell = (terrainSize.x + terrainSize.z) * 0.5f / (hRes - 1);
-            int skirtRadiusCells = Mathf.Max(1, Mathf.RoundToInt(
-                TeeSkirtMeters / metersPerCell));
 
             int flattenedCount = 0;
             int skirtedCount = 0;
@@ -3208,34 +3205,14 @@ namespace Golfin.CourseImport
                             coarseDist[z, x] = coarseDist[z + 1, x] + 1f;
                     }
 
-                // Worst-case adaptive radius for coarse cull: scan the tee's
-                // bbox + TeeMaxSkirtMeters neighborhood for the steepest drop.
-                float worstDrop = 0f;
-                int neighborhoodCells = Mathf.RoundToInt(TeeMaxSkirtMeters / metersPerCell);
-                int minR = hRes, maxR = -1, minC = hRes, maxC = -1;
-                for (int z = 0; z < hRes; z++)
-                    for (int x = 0; x < hRes; x++)
-                        if (teeMask[z, x])
-                        {
-                            if (z < minR) minR = z;
-                            if (z > maxR) maxR = z;
-                            if (x < minC) minC = x;
-                            if (x > maxC) maxC = x;
-                        }
-                int bboxMinR = Mathf.Max(0, minR - neighborhoodCells);
-                int bboxMaxR = Mathf.Min(hRes - 1, maxR + neighborhoodCells);
-                int bboxMinC = Mathf.Max(0, minC - neighborhoodCells);
-                int bboxMaxC = Mathf.Min(hRes - 1, maxC + neighborhoodCells);
-                for (int z = bboxMinR; z <= bboxMaxR; z++)
-                    for (int x = bboxMinC; x <= bboxMaxC; x++)
-                    {
-                        float drop = maxH - baseline[z, x];
-                        if (drop > worstDrop) worstDrop = drop;
-                    }
+                // Max possible ramp reach: from maxH descending at TeeMaxRampSlope
+                // until it hits any baseline. Capped to TeeMaxSkirtMeters safety ceiling.
+                float maxRampReachM = Mathf.Min(
+                    TeeMaxSkirtMeters,
+                    (maxH * terrainSize.y) / TeeMaxRampSlope);
+                int maxRampReachCells = Mathf.CeilToInt(maxRampReachM / metersPerCell);
 
-                float worstAdaptiveM = Mathf.Min(TeeMaxSkirtMeters,
-                    Mathf.Max(TeeSkirtMeters, 1.5f * worstDrop / TeeMaxRampSlope));
-                int worstAdaptiveCells = Mathf.CeilToInt(worstAdaptiveM / metersPerCell);
+                int prevSkirtedCount = skirtedCount;
 
                 // Exact-distance pass.
                 int nContour = region.contour.Length;
@@ -3245,7 +3222,7 @@ namespace Golfin.CourseImport
                     {
                         if (teeMask[z, x]) continue;
                         if (skipMask[z, x]) continue;
-                        if (coarseDist[z, x] > worstAdaptiveCells + 2f) continue;
+                        if (coarseDist[z, x] > maxRampReachCells + 2) continue;
 
                         float wx = terrainPos.x + x * cellW;
                         float wz = terrainPos.z + z * cellH;
@@ -3267,17 +3244,18 @@ namespace Golfin.CourseImport
                             if (d < minDistM) minDistM = d;
                         }
 
-                        // Uniform adaptive radius (per-tee worst case from pre-scan).
-                        // Per-cell radius was tried but varying adaptiveM creates an
-                        // irregular outer boundary that appears as sawtooth teeth at
-                        // the bottom of the mound. Uniform radius gives a clean edge.
-                        if (minDistM > worstAdaptiveM) continue;
-                        float adaptiveM = worstAdaptiveM;
+                        // Linear-slope descent from maxH at TeeMaxRampSlope (m/m world).
+                        // Ramp writes the cell only while the linearly-descending
+                        // surface is still above baseline. Where they meet is where
+                        // the skirt ends — no fixed radius, no cliff, C¹-continuous.
+                        float elevRange = terrainSize.y;
+                        float maxH_m  = maxH * elevRange;
+                        float base_m  = baseline[z, x] * elevRange;
+                        float rampH_m = maxH_m - minDistM * TeeMaxRampSlope;
 
-                        float t = minDistM / adaptiveM;
-                        t = t * t * (3f - 2f * t); // smoothstep
+                        if (rampH_m <= base_m) continue; // ramp has met or gone below terrain
 
-                        float rampedH = Mathf.Lerp(maxH, baseline[z, x], t);
+                        float rampedH = rampH_m / elevRange;
 
                         if (rampedH > heights[z, x])
                         {
@@ -3289,9 +3267,8 @@ namespace Golfin.CourseImport
 
                 changed = true;
                 Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
-                          $"platform h={maxH:F4}, " +
-                          $"base skirt={TeeSkirtMeters:F1}m, " +
-                          $"worst adaptive skirt={worstAdaptiveM:F1}m");
+                          $"platform h={maxH:F4}, max ramp reach={maxRampReachM:F1}m, " +
+                          $"skirt cells written={skirtedCount - prevSkirtedCount}");
             }
 
             if (changed)

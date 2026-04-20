@@ -22,6 +22,17 @@
 
 ---
 
+## Session Changes (2026-04-20 — Linear-Slope Tee Skirt)
+
+### Completed
+- **Linear-slope tee skirt (`FlattenTerrainUnderTees`):** Replaced the fixed-radius smoothstep ramp with a linear-slope descent from `maxH` at `TeeMaxRampSlope (0.35 m/m)`. Ramp writes a cell only while `rampH_m > base_m`; terminates naturally where it meets terrain — no fixed radius, no outer cliff, C¹-continuous. Coarse cull uses `maxRampReachCells = min(TeeMaxSkirtMeters, maxH_world/TeeMaxRampSlope)`. Cart paths not in skipMask (linear-slope usually terminates before reaching them). Debug log now shows `max ramp reach` and per-tee skirt cell count. `TeeSkirtMeters` marked as unused.
+
+### Still Open
+- Reimport Hole 15 / Hole 7 Geo to verify cliff is gone
+- Regression check: Hole 1 (flat tees), Hole 12 (steep tees)
+
+---
+
 ## Session Changes (2026-04-20 — Cart Path Junction & B-C Segment)
 
 ### Completed

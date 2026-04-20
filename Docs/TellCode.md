@@ -7,7 +7,381 @@
 
 ---
 
-## Current Task — Per-Edge Adaptive Tee Skirt (fixes Hole 7 cliff + avoids cart-path wall + avoids hill erasure)
+## Current Task — Linear-Slope Tee Skirt (extend ramp until it meets terrain)
+
+### Root cause (finally nailed)
+
+The skirt ramp stops writing at a fixed world-space radius. On moderate
+downhill terrain, the ramp's last-written cell is still well above the
+adjacent unwritten cell's natural baseline → **1m vertical cliff** at the
+boundary. Steep tees (Hole 12) don't show this because `baseline` drops
+fast enough to meet the ramp inside the radius; moderate downhill tees
+(Hole 15, Hole 7) show it because the ramp's outer boundary lands
+mid-descent.
+
+The fix Cesar proposed and I agree with: **stop clamping the ramp at a
+fixed radius. Descend at a constant max slope until the ramp meets
+actual baseline terrain.** Where they meet is where the ramp ends — by
+construction, C¹-continuous, no cliff, no crease.
+
+### Prior failed attempts (don't redo)
+
+1. Unit fix alone → 30m skirt raised cart paths → 0.4m wall.
+2. Mesh skirt ring → winding failures, concentric ring artifacts.
+3. Per-edge adaptive radii → stair-step boundaries everywhere.
+4. Unit fix + cart-path skipMask → exploded via `TeeMaxSkirtMeters=60`
+   cap becoming the dominant clamp.
+
+This approach sidesteps all four because there's no radius anymore —
+the ramp's geometry self-terminates at the terrain intersection.
+
+---
+
+### The change
+
+Target: `FlattenTerrainUnderTees` in
+`Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`,
+the exact-distance ramp block (~lines 3240–3287).
+
+Replace the smoothstep ramp with a linear-slope descent from `maxH`:
+
+**Remove** the pre-scan worstDrop/worstAdaptiveM block (~lines 3211–3238)
+entirely. It's no longer needed.
+
+**Keep** the coarse chamfer (~lines 3186–3208) for culling, but cap the
+coarse cull at a safe max physical radius (prevents runaway iteration
+on a tee perched above a cliff where the ramp would mathematically
+reach 30m+).
+
+**Replace** the exact-distance pass body. Current:
+
+```csharp
+if (minDistM > worstAdaptiveM) continue;
+float adaptiveM = worstAdaptiveM;
+float t = minDistM / adaptiveM;
+t = t * t * (3f - 2f * t); // smoothstep
+float rampedH = Mathf.Lerp(maxH, baseline[z, x], t);
+if (rampedH > heights[z, x])
+{
+    heights[z, x] = rampedH;
+    skirtedCount++;
+}
+```
+
+With:
+
+```csharp
+// Linear-slope descent from maxH at TeeMaxRampSlope (m/m world).
+// Ramp writes the cell if the linearly-descending ramp is still
+// above baseline at this cell's distance. Where ramp meets baseline
+// is where the skirt naturally ends — no radius clamp, no cliff.
+float elevRange = terrainSize.y;
+float maxH_m   = maxH * elevRange;        // world metres
+float base_m   = baseline[z, x] * elevRange;
+float rampH_m  = maxH_m - minDistM * TeeMaxRampSlope;
+
+if (rampH_m <= base_m) continue; // ramp has met or gone below terrain
+
+float rampedH = rampH_m / elevRange;     // back to normalized
+if (rampedH > heights[z, x])
+{
+    heights[z, x] = rampedH;
+    skirtedCount++;
+}
+```
+
+**Adjust the coarse cull** (line ~3248) to use a safe absolute cap,
+not the removed `worstAdaptiveCells`:
+
+```csharp
+// Max possible ramp reach: maxH above lowest possible baseline.
+// Clamped to TeeMaxSkirtMeters as a safety ceiling.
+float maxRampReachM = Mathf.Min(
+    TeeMaxSkirtMeters,
+    (maxH * terrainSize.y) / TeeMaxRampSlope);
+int maxRampReachCells = Mathf.CeilToInt(maxRampReachM / metersPerCell);
+// ... then in the inner loop:
+if (coarseDist[z, x] > maxRampReachCells + 2) continue;
+```
+
+`TeeMaxSkirtMeters = 60` stays as the hard ceiling — in practice the
+ramp terminates well before this on any real terrain.
+
+**Keep** the `skipMask` check for fairway/green cells (existing). Do
+**not** add cart paths to skipMask — with the linear-slope approach
+the ramp usually terminates before reaching a cart path, and if it
+does reach one the small write is harmless (the ramp is already close
+to baseline).
+
+**Update the debug log** to something useful:
+
+```csharp
+Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
+          $"platform h={maxH:F4}, max ramp reach={maxRampReachM:F1}m, " +
+          $"skirt cells written={skirtedCount - prevSkirtedCount}");
+```
+(Track `prevSkirtedCount` across the per-tee loop to get a per-tee count.)
+
+---
+
+### Why this works
+
+- **No outer boundary to tune.** Ramp geometry is fully determined by
+  `maxH`, `TeeMaxRampSlope`, and baseline. No radius parameter.
+- **C¹ continuous at the terminus.** The ramp's slope is
+  `TeeMaxRampSlope`; terrain's slope at the intersection is whatever
+  the DEM gives. They meet tangentially if terrain is steeper than
+  the ramp slope, with a gentle crease (not cliff) if terrain is
+  gentler.
+- **Hole 12 (steep) unchanged:** ramp meets terrain within 2–3m just
+  like before.
+- **Hole 15/7 (moderate):** ramp now extends 5–15m as needed until it
+  actually hits terrain. No 1m cliff.
+- **Flat tees (Hole 1):** `maxH` barely exceeds local baseline; ramp
+  meets terrain within ~1m. Visually identical to current.
+- **No sawtooth:** the ramp surface is a cone (perfect circular symmetry
+  around the tee in world space), sampled onto the grid. Rasterization
+  noise is ≤ 1 cell, orders of magnitude smaller than before.
+
+---
+
+### Verification
+
+1. Reimport Hole 15 Geo. The tee in the submitted screenshot should
+   now grade smoothly on both the right side (where the cliff was)
+   and the left side (which was already OK). No visible cliff, no
+   crease.
+2. Reimport Hole 7 Geo. Tees 3 and 5 — no cliff on the 3pm side.
+3. Reimport Hole 12 Geo. No regression — steep tees look the same.
+4. Reimport Hole 1 Geo. Flat-terrain tees unchanged.
+5. Console: each tee logs `max ramp reach` in metres. Expect 2–15m
+   range; anything hitting `TeeMaxSkirtMeters = 60` indicates the tee
+   has `maxH` way above any nearby terrain (pathological, investigate).
+6. Check near cart paths: no new 0.4m wall.
+
+### Do NOT change
+
+- `TeeMaxRampSlope = 0.35f` (the slope the ramp descends at).
+- `TeeMaxSkirtMeters = 60f` (now a pure safety ceiling, rarely hit).
+- `TeeSkirtMeters = 2f` — **this constant becomes unused.** Leave it
+  defined but add a `// TODO: remove, no longer used after linear-slope
+  ramp` comment. Don't delete yet in case rollback is needed.
+- The interior `heights[row, col] = maxH` flatten (it's fine).
+- `DepressTerrainUnderOverlays`, meshes, greens, water.
+
+### If it fails
+
+- **Ramp terminates too early on steep hills** → the linear descent
+  meets a rising hill inside 1m. That means the tee is actually in a
+  pit relative to the uphill side, and the ramp correctly doesn't raise
+  the hill (raise-only guard). Visual should still be seamless because
+  terrain is already above ramp — confirm this case isn't interpreted
+  as a bug.
+- **Visible crease on gentle terrain** → ramp slope (0.35) is steeper
+  than natural terrain (~0.05). Where they meet is a ~17° angle change,
+  mostly invisible but could show on camera-adjacent faces. If visible,
+  add a final-5%-smoothstep blend: within the last 1m of the ramp
+  (where `rampH_m - base_m < 0.3m`), lerp toward base_m with smoothstep.
+  Hold this in reserve.
+- **New runaway skirt** writing out 50m+ — check `TeeMaxSkirtMeters`
+  cap is being applied in the coarse cull. If terrain has a very deep
+  valley adjacent to a tee, the ramp can reach far; the cap prevents
+  pathological cases.
+
+✅ DONE: 2026-04-20 Linear-slope tee skirt implemented. Removed pre-scan (worstDrop/worstAdaptiveM/worstAdaptiveCells). Replaced smoothstep ramp with linear descent: rampH_m = maxH_m - minDistM * TeeMaxRampSlope; writes only while rampH_m > base_m. Coarse cull now uses maxRampReachCells (from (maxH*elevRange)/TeeMaxRampSlope capped at TeeMaxSkirtMeters). skipMask kept for fairway/green; cart paths NOT added. Debug log shows max ramp reach and per-tee skirt cell count. TeeSkirtMeters marked TODO:remove.
+
+---
+
+## Previous Task — Minimal Unit Fix for Tee Adaptive Skirt (third attempt, narrowest possible change)
+
+The pre-scan in `FlattenTerrainUnderTees` mixes units:
+`drop = maxH - baseline[z,x]` is **normalized [0,1]**, divided by
+`TeeMaxRampSlope = 0.35f` which is **world m/m**. Result: on a 35m
+elev range, a real 7m drop becomes `0.2 / 0.35 = 0.57m` → clamped up
+to `TeeSkirtMeters = 2m`. Every tee, every hole, worstAdaptiveM = 2m.
+2m only handles ~0.7m of real drop at 0.35 slope; the remaining drop
+sits in one heightmap cell at the skirt boundary → visible dark
+vertical cliff. See `Docs/TEE_SKIRT_INVESTIGATION.md`.
+
+Recent blur(rawDEM) made surrounding slopes smoother so the cliff
+stopped blending into stair-stepped noise. The bug predates the
+blur; only the visibility is new.
+
+### Prior failed attempts (important context)
+
+- **Attempt 1 (unit fix alone):** produced a uniform 30m skirt that
+  raised terrain under cart paths → `DepressTerrainUnderOverlays`
+  cut 0.4m into the raised terrain → visible 0.4m wall next to cart
+  paths. Reverted.
+- **Attempt 2 (mesh skirt ring):** disaster, reverted.
+- **Attempt 3 (per-edge radii):** overshot into uphill/flat sides
+  too, stair-steps everywhere. Reverted.
+
+### This attempt: unit fix + cart path skipMask ONLY
+
+Just two changes. Nothing else. Accept that the uniform-radius skirt
+may be slightly wider on benign sides — aesthetic cost is far smaller
+than the current cliff. If it still looks wrong we address the
+aesthetics in a separate task with fresh eyes.
+
+---
+
+### Change 1 — unit fix in the pre-scan
+
+Target: `FlattenTerrainUnderTees` in
+`Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs`, ~line 3232.
+
+Current:
+```csharp
+for (int z = bboxMinR; z <= bboxMaxR; z++)
+    for (int x = bboxMinC; x <= bboxMaxC; x++)
+    {
+        float drop = maxH - baseline[z, x];
+        if (drop > worstDrop) worstDrop = drop;
+    }
+
+float worstAdaptiveM = Mathf.Min(TeeMaxSkirtMeters,
+    Mathf.Max(TeeSkirtMeters, 1.5f * worstDrop / TeeMaxRampSlope));
+```
+
+Replace with:
+```csharp
+float elevRange = terrainSize.y; // terrainSize is already in scope
+for (int z = bboxMinR; z <= bboxMaxR; z++)
+    for (int x = bboxMinC; x <= bboxMaxC; x++)
+    {
+        float drop = (maxH - baseline[z, x]) * elevRange; // world metres
+        if (drop > worstDrop) worstDrop = drop;
+    }
+
+float worstAdaptiveM = Mathf.Min(TeeMaxSkirtMeters,
+    Mathf.Max(TeeSkirtMeters, 1.5f * worstDrop / TeeMaxRampSlope));
+```
+
+One-line change: add `* elevRange` to the drop computation. Nothing
+else in the pre-scan or the ramp-apply loop changes.
+
+---
+
+### Change 2 — add cart paths to `skipMask` so the skirt leaves cart-path cells alone
+
+Target: `FlattenTerrainUnderTees`, ~line 3140 (right after the
+fairway/green skipMask population).
+
+Add:
+```csharp
+// Cart-path cells: protect from tee-skirt raising. A wider adaptive
+// skirt that lifts cart-path terrain would produce a 0.4m wall
+// after DepressTerrainUnderOverlays cuts the cart-path depression.
+string cpPathForSkip = Path.Combine(exportPath, "cart-paths.json");
+if (File.Exists(cpPathForSkip))
+{
+    var cpDataForSkip = JsonUtility.FromJson<CartPathsFile>(
+        File.ReadAllText(cpPathForSkip));
+    if (cpDataForSkip.cart_paths != null)
+        foreach (var cp in cpDataForSkip.cart_paths)
+        {
+            if (cp.spine != null && cp.spine.Length >= 2)
+            {
+                float halfW = (cp.width_m > 0 ? cp.width_m : 2.5f)
+                              / 2f + 0.30f;
+                var sp = BuildSpinePolygon(cp.spine, halfW);
+                if (sp != null)
+                    MarkWorldContourCells(sp, skipMask,
+                        hRes, terrainPos, terrainSize);
+            }
+            else if (cp.contour != null && cp.contour.Length >= 3)
+            {
+                MarkContourCells(cp.contour, skipMask,
+                    hRes, terrainPos, terrainSize, 0f);
+            }
+        }
+}
+```
+
+Then in the exact-distance pass (~line 3246, right after
+`if (teeMask[z, x]) continue;`), add:
+```csharp
+if (skipMask[z, x]) continue; // cart path / fairway / green
+```
+
+**NOTE for Code:** the existing `skipMask` comment (~line 3247)
+says it was intentionally ignored because "the skirt couldn't bridge
+to terrain across the fairway cells." With the unit fix landing,
+the skirt now reaches farther on steep sides; the bridge-across
+problem is less likely to bite. If a regression appears on Hole 4
+Tee 1 or similar, log it and we'll revisit. Do not restore the old
+behavior silently.
+
+If `MarkWorldContourCells` isn't the right helper name, mirror
+how `DepressTerrainUnderOverlays` ~line 3354 marks `cartDepress`.
+
+---
+
+### Change 3 — make the log line diagnostic
+
+~line 3294, replace:
+```csharp
+Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
+          $"platform h={maxH:F4}, " +
+          $"base skirt={TeeSkirtMeters:F1}m, " +
+          $"worst adaptive skirt={worstAdaptiveM:F1}m");
+```
+With:
+```csharp
+Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
+          $"platform h={maxH:F4}, " +
+          $"worst drop={worstDrop:F2}m, " +
+          $"adaptive skirt={worstAdaptiveM:F1}m");
+```
+So we can see at a glance whether the unit fix worked (`worst drop`
+non-zero in metres, `adaptive skirt` > 2.0m on steep tees).
+
+---
+
+### Verification
+
+1. Reimport Hole 7 Geo. Console lines for tees should show `worst
+   drop` values in metres (e.g. 5–8m on Tees 3 and 5). `adaptive
+   skirt` should exceed 2.0m on those tees.
+2. Screenshot the 3pm-clockwise sides of Hole 7 Tees 3 and 5: cliff
+   gone, gentle grade.
+3. Reimport Hole 15 Geo. The tee in the submitted screenshot should
+   also grade cleanly.
+4. Regression — Hole 1: tees on flat terrain still log `worst drop`
+   small and `adaptive skirt=2.0m`. No visible change.
+5. Regression — Hole 4 Tee 1 (original motivating case): grades
+   cleanly, no new cart-path wall.
+6. Cart paths near any steep-terrain tee: no 0.4m wall at the
+   interface — skipMask prevents the skirt from lifting cart-path
+   cells.
+
+### Do NOT change
+
+- Ramp formula `Lerp(maxH, baseline[z,x], t)` — both sides
+  normalized, correct.
+- `TeeMaxRampSlope`, `TeeMaxSkirtMeters`, `TeeSkirtMeters` constants.
+- The exact-distance pass structure.
+- Greens, water, fairways, bunkers, bridges.
+- `DepressTerrainUnderOverlays`.
+- Any mesh builder.
+
+### If it still looks wrong
+
+- **New wall at cart paths:** the cart-path skipMask reconstruction
+  didn't match what `CreateSplineCartPaths` builds later. Check
+  `BuildSpinePolygon`'s halfWidth expansion matches.
+- **Hill topography erased on the non-steep sides of a tee:** the
+  uniform radius is reaching too far. Don't redesign — tell me and
+  we'll add a per-edge variant in a separate task.
+- **Sawtooth teeth at the skirt outer boundary:** unlikely with
+  uniform radius but if visible, existing code path already handles
+  this (smoothstep). Report and we'll add a post-pass box blur on
+  skirt cells only.
+
+---
+
+## Previous Task — Per-Edge Adaptive Tee Skirt (fixes Hole 7 cliff + avoids cart-path wall + avoids hill erasure)
 
 Previous attempt landed the unit fix but exposed two real problems
 (documented in `Docs/TEE_SKIRT_INVESTIGATION.md`):
