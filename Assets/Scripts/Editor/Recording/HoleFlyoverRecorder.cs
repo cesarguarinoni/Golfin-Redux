@@ -447,6 +447,57 @@ namespace Golfin.CourseImport.Recording
             }
             cruiseWaypoints.Add(greenPos);
 
+            // Cruise ends 15m before the green for a natural orbit entry.
+            cruiseWaypoints[cruiseWaypoints.Count - 1] = greenPos - fwdXZ * 15f;
+
+            const float kPause  = 0.05f; // 1s hold at start
+            const float kOrbit  = 0.12f;
+            const float kArcEnd = 1f - kOrbit; // 0.88
+
+            // Pre-sample terrain height along the arc, then smooth (box blur ×3 ≈ Gaussian).
+            // This makes the camera follow terrain in both directions with a smooth curve.
+            const int kTerrainSamples = 256;
+            float[] terrainProfile = new float[kTerrainSamples];
+            for (int s = 0; s < kTerrainSamples; s++)
+            {
+                float lt   = (float)s / (kTerrainSamples - 1);
+                Vector3 xz = CatmullRomXZ(cruiseWaypoints, lt);
+                terrainProfile[s] = terrain.SampleHeight(new Vector3(xz.x, 0, xz.z)) + terrainBaseY;
+            }
+            for (int pass = 0; pass < 3; pass++)
+            {
+                float[] tmp = new float[kTerrainSamples];
+                const int kR = 12;
+                for (int s = 0; s < kTerrainSamples; s++)
+                {
+                    float sum = 0; int cnt = 0;
+                    for (int r = -kR; r <= kR; r++)
+                    { sum += terrainProfile[Mathf.Clamp(s + r, 0, kTerrainSamples - 1)]; cnt++; }
+                    tmp[s] = sum / cnt;
+                }
+                terrainProfile = tmp;
+            }
+
+            System.Func<float, float> sampleTerrainY = (float lt) =>
+            {
+                float fi = Mathf.Clamp01(lt) * (kTerrainSamples - 1);
+                int lo   = Mathf.Clamp((int)fi, 0, kTerrainSamples - 2);
+                return Mathf.Lerp(terrainProfile[lo], terrainProfile[lo + 1], fi - lo) + DroneTeeHeight;
+            };
+
+            System.Func<float, (Vector3, Vector3)> evalArc = (float lt) =>
+            {
+                Vector3 xz  = CatmullRomXZ(cruiseWaypoints, lt);
+                Vector3 p   = new Vector3(xz.x, sampleTerrainY(lt), xz.z);
+
+                float tl    = Mathf.Min(lt + 0.03f, 1f);
+                Vector3 lxz = CatmullRomXZ(cruiseWaypoints, tl);
+                Vector3 la  = new Vector3(lxz.x, sampleTerrainY(tl), lxz.z);
+                return (p, la);
+            };
+
+            Vector3 flagLookAt = greenPos + Vector3.up * 0.5f;
+
             // --- Build keyframes at 60 fps ---
             int totalFrames = Mathf.RoundToInt(FlyoverDurationSeconds * OutputFrameRate);
             var frames = new FlyoverKeyframe[totalFrames];
@@ -456,37 +507,8 @@ namespace Golfin.CourseImport.Recording
                 float t = (float)i / (totalFrames - 1);
                 Vector3 pos, lookAt;
 
-                // Cruise ends 15m before the green for a natural orbit entry.
-                cruiseWaypoints[cruiseWaypoints.Count - 1] = greenPos - fwdXZ * 15f;
-
-                float yStart = teePos.y  + DroneTeeHeight;
-                float yEnd   = greenPos.y + DronePinHeight;
-
-                const float kPause  = 0.05f; // 1s hold at start
-                const float kOrbit  = 0.12f;
-                const float kArcEnd = 1f - kOrbit; // 0.88
-
-                System.Func<float, float, float> terrainFloor = (float wx, float wz) =>
-                    terrain.SampleHeight(new Vector3(wx, 0, wz)) + terrainBaseY + DroneTeeHeight;
-
-                System.Func<float, (Vector3, Vector3)> evalArc = (float lt) =>
-                {
-                    Vector3 xz  = CatmullRomXZ(cruiseWaypoints, lt);
-                    float cy    = Mathf.Max(Mathf.Lerp(yStart, yEnd, lt), terrainFloor(xz.x, xz.z));
-                    Vector3 p   = new Vector3(xz.x, cy, xz.z);
-
-                    float tl    = Mathf.Min(lt + 0.03f, 1f);
-                    Vector3 lxz = CatmullRomXZ(cruiseWaypoints, tl);
-                    float ly    = Mathf.Max(Mathf.Lerp(yStart, yEnd, tl), terrainFloor(lxz.x, lxz.z));
-                    Vector3 la  = new Vector3(lxz.x, ly, lxz.z);
-                    return (p, la);
-                };
-
-                Vector3 flagLookAt = greenPos + Vector3.up * 0.5f;
-
                 if (t < kPause)
                 {
-                    // 1s hold: stay at arc start, looking forward (lt=0).
                     (pos, lookAt) = evalArc(0f);
                 }
                 else if (t < kArcEnd)
@@ -494,7 +516,6 @@ namespace Golfin.CourseImport.Recording
                     float lt = (t - kPause) / (kArcEnd - kPause);
                     (pos, lookAt) = evalArc(lt);
 
-                    // End of arc: blend lookAt toward the flag so we arrive pointing at it.
                     if (lt > 0.80f)
                     {
                         float b = (lt - 0.80f) / 0.20f;
