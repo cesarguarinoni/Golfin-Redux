@@ -22,6 +22,19 @@
 
 ---
 
+## Session Changes (2026-04-20 — Cart Path Junction & B-C Segment)
+
+### Completed
+- **Cart path junction fill patches (Unity):** Added `BuildJunctionFillPatches` in `HoleGeoImporter.cs` to create convex fan meshes at each N-way junction, filling the triangular voids between ribbon strips. Fixed `isLast=true` tangent direction bug (was projecting into centroid instead of away from it).
+- **Missing B-C cart path segment (UHoleGeo pipeline):** Root cause: `minSpinePixels=20` filter removed a 15-pixel skeleton chain (chain[4]) that was the only branch defining junction C as 3-way. Without it, junction C became 2-way and the B-C link merged into an adjacent path. Fix: after building longChains (len≥minSpinePixels), identify 2-way junctions in that set and rescue any short chain (len≥dsFactor×2) whose endpoint touches a 2-way junction. Hole 1 now exports 10 cart paths (was 6) including the B-C link. cart-paths.json copied to both hole-01 and hole-01-geo.
+- Also removed the overlap-zone filter from dsMask building (was silently removing cart path pixels at fairway intersections).
+
+### Still Open
+- Reimport Hole 1 in Unity to verify the B-C segment renders correctly
+- Stress-test tee platforms on Hole 4, Hole 7, Hole 18
+
+---
+
 ## Session Changes (2026-04-17 — Tee Platforms + Green Fix)
 
 ### Completed
