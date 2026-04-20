@@ -337,4 +337,18 @@ namespace Golfin.CourseImport
         public int width;
         public int height;
     }
+
+    // tee-skirt-settings.json — per-tee ramp slope overrides
+    [System.Serializable]
+    public class TeeSkirtSettings
+    {
+        public TeeSkirtEntry[] tee_slopes;
+    }
+
+    [System.Serializable]
+    public class TeeSkirtEntry
+    {
+        public int id;
+        public float slope;
+    }
 }

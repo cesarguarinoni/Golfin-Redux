@@ -3141,6 +3141,19 @@ namespace Golfin.CourseImport
 
             float metersPerCell = (terrainSize.x + terrainSize.z) * 0.5f / (hRes - 1);
 
+            // Per-tee slope overrides from tee-skirt-settings.json (optional sidecar)
+            var slopeOverrides = new Dictionary<int, float>();
+            string skirtSettingsPath = Path.Combine(exportPath, "tee-skirt-settings.json");
+            if (File.Exists(skirtSettingsPath))
+            {
+                var ss = JsonUtility.FromJson<TeeSkirtSettings>(File.ReadAllText(skirtSettingsPath));
+                if (ss?.tee_slopes != null)
+                    foreach (var e in ss.tee_slopes)
+                        slopeOverrides[e.id] = e.slope;
+                if (slopeOverrides.Count > 0)
+                    Debug.Log($"[HoleGeoImporter] Tee skirt overrides loaded: {slopeOverrides.Count} tee(s).");
+            }
+
             int flattenedCount = 0;
             int skirtedCount = 0;
             bool changed = false;
@@ -3160,6 +3173,9 @@ namespace Golfin.CourseImport
                             maxH = baseline[row, col];
 
                 if (maxH == float.MinValue) continue;
+
+                float rampSlope = slopeOverrides.TryGetValue(region.id, out float ov)
+                    ? ov : TeeMaxRampSlope;
 
                 // Raise interior to maxH
                 for (int row = 0; row < hRes; row++)
@@ -3205,11 +3221,11 @@ namespace Golfin.CourseImport
                             coarseDist[z, x] = coarseDist[z + 1, x] + 1f;
                     }
 
-                // Max possible ramp reach: from maxH descending at TeeMaxRampSlope
+                // Max possible ramp reach: from maxH descending at rampSlope
                 // until it hits any baseline. Capped to TeeMaxSkirtMeters safety ceiling.
                 float maxRampReachM = Mathf.Min(
                     TeeMaxSkirtMeters,
-                    (maxH * terrainSize.y) / TeeMaxRampSlope);
+                    (maxH * terrainSize.y) / rampSlope);
                 int maxRampReachCells = Mathf.CeilToInt(maxRampReachM / metersPerCell);
 
                 int prevSkirtedCount = skirtedCount;
@@ -3251,7 +3267,7 @@ namespace Golfin.CourseImport
                         float elevRange = terrainSize.y;
                         float maxH_m  = maxH * elevRange;
                         float base_m  = baseline[z, x] * elevRange;
-                        float rampH_m = maxH_m - minDistM * TeeMaxRampSlope;
+                        float rampH_m = maxH_m - minDistM * rampSlope;
 
                         if (rampH_m <= base_m) continue; // ramp has met or gone below terrain
 
@@ -3267,7 +3283,8 @@ namespace Golfin.CourseImport
 
                 changed = true;
                 Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
-                          $"platform h={maxH:F4}, max ramp reach={maxRampReachM:F1}m, " +
+                          $"platform h={maxH:F4}, slope={rampSlope:F2}, " +
+                          $"max ramp reach={maxRampReachM:F1}m, " +
                           $"skirt cells written={skirtedCount - prevSkirtedCount}");
             }
 
