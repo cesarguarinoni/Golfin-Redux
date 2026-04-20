@@ -466,15 +466,18 @@ namespace Golfin.CourseImport.Recording
                 const float kOrbit  = 0.12f;
                 const float kArcEnd = 1f - kOrbit; // 0.88
 
+                System.Func<float, float, float> terrainFloor = (float wx, float wz) =>
+                    terrain.SampleHeight(new Vector3(wx, 0, wz)) + terrainBaseY + DroneTeeHeight;
+
                 System.Func<float, (Vector3, Vector3)> evalArc = (float lt) =>
                 {
-                    float cy    = Mathf.Lerp(yStart, yEnd, lt);
                     Vector3 xz  = CatmullRomXZ(cruiseWaypoints, lt);
+                    float cy    = Mathf.Max(Mathf.Lerp(yStart, yEnd, lt), terrainFloor(xz.x, xz.z));
                     Vector3 p   = new Vector3(xz.x, cy, xz.z);
 
                     float tl    = Mathf.Min(lt + 0.03f, 1f);
                     Vector3 lxz = CatmullRomXZ(cruiseWaypoints, tl);
-                    float ly    = Mathf.Lerp(yStart, yEnd, tl);
+                    float ly    = Mathf.Max(Mathf.Lerp(yStart, yEnd, tl), terrainFloor(lxz.x, lxz.z));
                     Vector3 la  = new Vector3(lxz.x, ly, lxz.z);
                     return (p, la);
                 };
