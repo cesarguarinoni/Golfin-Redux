@@ -428,12 +428,8 @@ namespace Golfin.CourseImport.Recording
             if (fwdXZ == Vector3.zero) fwdXZ = Vector3.forward;
 
             // Fairway centroids sorted by distance from tee.
-            // Start 15m behind the tee so the tee box is visible in the opening frame.
-            // Duplicate teePos gives the Catmull-Rom a zero-velocity start there.
             List<Vector3> cruiseWaypoints = new List<Vector3>();
-            cruiseWaypoints.Add(teePos - fwdXZ * 15f); // arc start: behind tee
-            cruiseWaypoints.Add(teePos);                // zero-velocity anchor at tee
-            cruiseWaypoints.Add(teePos);                // duplicate for zero tangent
+            cruiseWaypoints.Add(teePos);
 
             if (File.Exists(fairwayPath))
             {
@@ -498,8 +494,9 @@ namespace Golfin.CourseImport.Recording
 
                 if (t < kPause)
                 {
-                    // 1s pause: frozen at arc start — identical to lt=0, so no snap on release.
-                    (pos, lookAt) = evalArc(0f);
+                    // 1s pause: directly above tee, looking almost straight down (~90°).
+                    pos    = teePos + new Vector3(0f, DroneStartHeight, 0f);
+                    lookAt = teePos; // straight down
                 }
                 else if (t < kArcEnd)
                 {
@@ -508,10 +505,11 @@ namespace Golfin.CourseImport.Recording
                 }
                 else
                 {
-                    // Orbit around pin.
+                    // Orbit around pin. Base direction is -fwdXZ (tee side of green) so
+                    // the orbit starts exactly where the cruise approach ends — no jump.
                     float lt    = (t - kArcEnd) / kOrbit;
                     float angle = Mathf.Lerp(-15f, 15f, lt);
-                    Vector3 offset = Quaternion.Euler(0, angle, 0) * fwdXZ * 15f;
+                    Vector3 offset = Quaternion.Euler(0, angle, 0) * (-fwdXZ) * 15f;
                     pos    = greenPos + new Vector3(offset.x, DronePinHeight, offset.z);
                     lookAt = greenPos + Vector3.up * 0.5f;
                 }
