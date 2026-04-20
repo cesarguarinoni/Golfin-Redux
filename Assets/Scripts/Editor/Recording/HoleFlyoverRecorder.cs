@@ -459,36 +459,37 @@ namespace Golfin.CourseImport.Recording
                 float t = (float)i / (totalFrames - 1);
                 Vector3 pos, lookAt;
 
-                if (t < 0.15f)
+                if (t < 0.05f)
                 {
-                    // Phase 1: Drone hover directly above back tee — no horizontal offset to avoid trees.
-                    float lt     = t / 0.15f;
-                    float height = Mathf.Lerp(DroneStartHeight, 18f, lt);
-                    pos    = teePos + new Vector3(0, height, 0);
-                    lookAt = teePos + fwdXZ * 20f; // look down the fairway from above
+                    // Phase 1: 1s hover directly above back tee.
+                    pos    = teePos + new Vector3(0, DroneStartHeight, 0);
+                    lookAt = teePos + fwdXZ * 20f;
                 }
-                else if (t < 0.30f)
+                else if (t < 0.15f)
                 {
-                    // Phase 2: Descend to DroneTeeHeight, still directly above tee.
-                    float lt = (t - 0.15f) / 0.15f;
+                    // Phase 2: 2s descent to DroneTeeHeight, directly above tee.
+                    float lt = (t - 0.05f) / 0.10f;
                     lt = lt * lt * (3f - 2f * lt); // smoothstep
-                    pos    = teePos + new Vector3(0, Mathf.Lerp(18f, DroneTeeHeight, lt), 0);
+                    pos    = teePos + new Vector3(0, Mathf.Lerp(DroneStartHeight, DroneTeeHeight, lt), 0);
                     lookAt = teePos + fwdXZ * 20f;
                 }
                 else if (t < 0.90f)
                 {
-                    // Phase 3: Cruise along fairway centerline via Catmull-Rom
-                    float lt = (t - 0.30f) / 0.60f; // 0..1
+                    // Phase 3: Cruise along fairway. Y is a smooth lerp tee→green height
+                    // — no per-frame terrain sampling so the drone flies without bumps.
+                    float lt = (t - 0.15f) / 0.75f; // 0..1
 
                     Vector3 cruiseXZ = CatmullRomXZ(cruiseWaypoints, lt);
-                    float terrY = terrain.SampleHeight(new Vector3(cruiseXZ.x, 0, cruiseXZ.z)) + terrainBaseY;
-                    pos = new Vector3(cruiseXZ.x, terrY + DroneCruiseHeight, cruiseXZ.z);
+                    float smoothY    = Mathf.Lerp(teePos.y + DroneCruiseHeight,
+                                                  greenPos.y + DronePinHeight, lt);
+                    pos = new Vector3(cruiseXZ.x, smoothY, cruiseXZ.z);
 
-                    // LookAt = 8m ahead along same spline
-                    float tLook   = Mathf.Min(lt + 0.04f, 1f);
-                    Vector3 laXZ  = CatmullRomXZ(cruiseWaypoints, tLook);
-                    float laTerrY = terrain.SampleHeight(new Vector3(laXZ.x, 0, laXZ.z)) + terrainBaseY;
-                    lookAt = new Vector3(laXZ.x, laTerrY + 1f, laXZ.z);
+                    // LookAt = slightly ahead along same spline at the same smooth Y
+                    float tLook  = Mathf.Min(lt + 0.04f, 1f);
+                    Vector3 laXZ = CatmullRomXZ(cruiseWaypoints, tLook);
+                    float laY    = Mathf.Lerp(teePos.y + DroneCruiseHeight,
+                                              greenPos.y + DronePinHeight, tLook);
+                    lookAt = new Vector3(laXZ.x, laY, laXZ.z);
                 }
                 else
                 {
