@@ -3378,14 +3378,32 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // Per-body shore radius overrides from water-shore-settings.json (optional sidecar)
+            var shoreRadiusOverrides = new Dictionary<int, int>();
+            string waterShoreSettingsPath = Path.Combine(exportPath, "water-shore-settings.json");
+            if (File.Exists(waterShoreSettingsPath))
+            {
+                var wss = JsonUtility.FromJson<WaterShoreSettings>(File.ReadAllText(waterShoreSettingsPath));
+                if (wss?.water_bodies != null)
+                    foreach (var e in wss.water_bodies)
+                        shoreRadiusOverrides[e.id] = e.shore_radius;
+                if (shoreRadiusOverrides.Count > 0)
+                    Debug.Log($"[HoleGeoImporter] Water shore overrides loaded: {shoreRadiusOverrides.Count} body(ies).");
+            }
+
             // Water cells — absolute height floor (not relative drop).
             // Necessary for sloped contours where a fixed drop off original
             // height leaves the upslope bed above waterY.
             bool[,] waterMask = new bool[hRes, hRes];
+            int[,] waterBodyIdx = new int[hRes, hRes]; // index into waterContours; -1 = not water
+            for (int z = 0; z < hRes; z++)
+                for (int x = 0; x < hRes; x++)
+                    waterBodyIdx[z, x] = -1;
             float[,] waterFloorY = new float[hRes, hRes];
             float[,] waterSurfaceY = new float[hRes, hRes];
             bool hasWater = false;
-            var waterContours = new List<(ContourPoint[] pts, float surfaceNorm)>();
+            // (pts, surfaceNorm, shoreRCells) — shoreRCells: per-body override or global ShoreRadius
+            var waterContours = new List<(ContourPoint[] pts, float surfaceNorm, int shoreRCells)>();
 
             string waterPath = Path.Combine(exportPath, "water.json");
             if (File.Exists(waterPath))
@@ -3420,16 +3438,20 @@ namespace Golfin.CourseImport
                         MarkContourCells(w.contour, bodyMask,
                             hRes, terrainPos, terrainSize, 0f);
 
+                        int bodyListIdx = waterContours.Count;
                         for (int z = 0; z < hRes; z++)
                             for (int x = 0; x < hRes; x++)
                                 if (bodyMask[z, x])
                                 {
                                     waterMask[z, x] = true;
+                                    waterBodyIdx[z, x] = bodyListIdx;
                                     waterFloorY[z, x] = floorNorm;
                                     waterSurfaceY[z, x] = surfaceNorm;
                                 }
 
-                        waterContours.Add((w.contour, surfaceNorm));
+                        int perBodyR = shoreRadiusOverrides.TryGetValue(w.id, out int rov)
+                            ? rov : ShoreRadius;
+                        waterContours.Add((w.contour, surfaceNorm, perBodyR));
                         hasWater = true;
                     }
                 }
@@ -3466,9 +3488,11 @@ namespace Golfin.CourseImport
                         if (waterMask[z, x])
                         {
                             float d = innerDist[z, x];
-                            if (ShoreRadius > 0 && d <= ShoreRadius)
+                            int bi = waterBodyIdx[z, x];
+                            int innerR = bi >= 0 ? waterContours[bi].shoreRCells : ShoreRadius;
+                            if (innerR > 0 && d <= innerR)
                             {
-                                float t = Mathf.Clamp01(d / ShoreRadius);
+                                float t = Mathf.Clamp01(d / innerR);
                                 t = t * t * (3f - 2f * t); // smoothstep
                                 heights[z, x] = Mathf.Lerp(waterSurfaceY[z, x], waterFloorY[z, x], t);
                             }
@@ -3518,17 +3542,17 @@ namespace Golfin.CourseImport
             // ─── Shore slope pass: gradual ramp OUTSIDE water contours ─────────
             // Uses exact Euclidean distance to polygon edges — no chamfer, no
             // Voronoi artifacts, no need for any post-blur.
+            // Adaptive radius is computed per body: each body uses its own
+            // shoreRCells as the minimum, extended if the terrain drop is steep.
             int shoreCount = 0;
-            if (hasWater && ShoreRadius > 0 && ShoreDepthMeters > 0f && waterContours.Count > 0)
+            if (hasWater && ShoreDepthMeters > 0f && waterContours.Count > 0)
             {
-                // Cell size in world metres (average of X and Z).
                 float cellW = terrainSize.x / (hRes - 1);
                 float cellH = terrainSize.z / (hRes - 1);
                 float cellSize = (cellW + cellH) * 0.5f;
-                float shoreRadiusM = ShoreRadius * cellSize;
 
                 // Coarse chamfer for fast culling — only iterate exact distance
-                // on cells within shoreRadius of the rasterized waterMask.
+                // on cells within the max adaptive radius of any water body.
                 float[,] coarseDist = new float[hRes, hRes];
                 for (int z = 0; z < hRes; z++)
                     for (int x = 0; x < hRes; x++)
@@ -3550,14 +3574,15 @@ namespace Golfin.CourseImport
                             coarseDist[z, x] = coarseDist[z + 1, x] + 1f;
                     }
 
-                // Pre-scan: find worst drop near any water contour to bound
-                // the adaptive radius used for the coarse cull below.
-                // Iterates contour vertices ± (ShoreRadius+2) cells — O(verts×(2r+1)²),
-                // fast even for large bodies.
-                float worstShoreDrop = 0f;
-                int scanBand = ShoreRadius + 2;
-                foreach (var (pts, surfNorm) in waterContours)
+                // Per-body pre-scan: worst terrain drop near each body's contour.
+                // Each body's adaptive radius uses its own shoreRCells as minimum.
+                var bodyAdaptiveM = new float[waterContours.Count];
+                for (int bi = 0; bi < waterContours.Count; bi++)
                 {
+                    var (pts, surfNorm, shoreRCells) = waterContours[bi];
+                    float shoreRMeters = shoreRCells * cellSize;
+                    float worstDrop = 0f;
+                    int scanBand = shoreRCells + 2;
                     foreach (var pt in pts)
                     {
                         int cCol = Mathf.RoundToInt((pt.x - terrainPos.x) / cellW);
@@ -3569,15 +3594,18 @@ namespace Golfin.CourseImport
                             if (zz < 0 || zz >= hRes || xx < 0 || xx >= hRes) continue;
                             if (waterMask[zz, xx]) continue;
                             float drop = heights[zz, xx] - surfNorm;
-                            if (drop > worstShoreDrop) worstShoreDrop = drop;
+                            if (drop > worstDrop) worstDrop = drop;
                         }
                     }
+                    bodyAdaptiveM[bi] = Mathf.Clamp(
+                        1.5f * worstDrop / ShoreMaxRampSlope,
+                        shoreRMeters,
+                        ShoreMaxRadiusMeters);
                 }
-                float worstAdaptiveShoreM = Mathf.Clamp(
-                    1.5f * worstShoreDrop / ShoreMaxRampSlope,
-                    shoreRadiusM,
-                    ShoreMaxRadiusMeters);
-                int worstAdaptiveShoreCells = Mathf.CeilToInt(worstAdaptiveShoreM / cellSize);
+                float maxAdaptiveM = 0f;
+                for (int bi = 0; bi < bodyAdaptiveM.Length; bi++)
+                    if (bodyAdaptiveM[bi] > maxAdaptiveM) maxAdaptiveM = bodyAdaptiveM[bi];
+                int maxAdaptiveCells = Mathf.CeilToInt(maxAdaptiveM / cellSize);
 
                 for (int z = 0; z < hRes; z++)
                 {
@@ -3586,18 +3614,19 @@ namespace Golfin.CourseImport
                         if (waterMask[z, x]) continue;
                         if (depress[z, x]) continue;
                         if (cartDepress[z, x]) continue;
-                        if (coarseDist[z, x] > worstAdaptiveShoreCells + 2) continue; // coarse cull
+                        if (coarseDist[z, x] > maxAdaptiveCells + 2) continue; // coarse cull
 
-                        // World position of this heightmap cell.
                         float wx = terrainPos.x + x * cellW;
                         float wz = terrainPos.z + z * cellH;
 
-                        // Exact distance to nearest polygon edge across all water bodies,
-                        // plus find which body's surface Y to use.
+                        // Exact distance to nearest polygon edge; also track which body
+                        // is nearest so we use its per-body adaptive radius.
                         float minDistM = float.MaxValue;
                         float nearSurfY = 0f;
-                        foreach (var (pts, surfNorm) in waterContours)
+                        int nearBodyI = 0;
+                        for (int bi = 0; bi < waterContours.Count; bi++)
                         {
+                            var (pts, surfNorm, _) = waterContours[bi];
                             int n = pts.Length;
                             for (int i = 0; i < n; i++)
                             {
@@ -3612,24 +3641,23 @@ namespace Golfin.CourseImport
                                 float px = ax + t2 * edx - wx;
                                 float pz = az + t2 * edz - wz;
                                 float d = Mathf.Sqrt(px * px + pz * pz);
-                                if (d < minDistM) { minDistM = d; nearSurfY = surfNorm; }
+                                if (d < minDistM)
+                                {
+                                    minDistM = d;
+                                    nearSurfY = surfNorm;
+                                    nearBodyI = bi;
+                                }
                             }
                         }
 
-                        // Uniform adaptive radius (per-hole worst case from pre-scan).
-                        // Per-cell radius was tried but varying adaptiveM along the bank
-                        // creates an irregular ramp boundary that appears as sawtooth teeth.
-                        // Uniform radius gives a clean circular boundary — no teeth.
+                        float adaptiveM = bodyAdaptiveM[nearBodyI];
+                        if (adaptiveM <= 0f || minDistM > adaptiveM) continue;
+
                         float originalH = heights[z, x];
-
-                        if (minDistM > worstAdaptiveShoreM) continue;
-
-                        // t = 0 at boundary, 1 at worstAdaptiveShoreM.
-                        float t = minDistM / worstAdaptiveShoreM;
+                        float t = minDistM / adaptiveM;
                         t = t * t * (3f - 2f * t); // smoothstep
 
                         float targetH = Mathf.Lerp(nearSurfY, originalH, t);
-
                         if (targetH < originalH)
                         {
                             heights[z, x] = Mathf.Max(0f, targetH);

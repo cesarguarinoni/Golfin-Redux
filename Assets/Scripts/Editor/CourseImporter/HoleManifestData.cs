@@ -351,4 +351,18 @@ namespace Golfin.CourseImport
         public int id;
         public float slope;
     }
+
+    // water-shore-settings.json — per-water-body shore radius overrides
+    [System.Serializable]
+    public class WaterShoreSettings
+    {
+        public WaterShoreEntry[] water_bodies;
+    }
+
+    [System.Serializable]
+    public class WaterShoreEntry
+    {
+        public int id;
+        public int shore_radius; // cells; wider = gentler slope
+    }
 }
