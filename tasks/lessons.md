@@ -42,6 +42,13 @@ is cancelled entirely.
 positions. Bake the correction into the vertex Y values or into the child GO's
 world position AFTER parenting (set localPosition explicitly).
 
+## Unity Package Manager
+
+### Always commit manifest.json when a package is required by code
+**Mistake:** `com.unity.recorder` was installed locally in Unity but never added to `Packages/manifest.json`. A package resolve wiped it, breaking compilation.
+**Rule:** ANY time code has a `using UnityEditor.Recorder` (or any package namespace), verify the package is in `manifest.json` BEFORE writing that code. If it's missing, add it and commit `manifest.json` alongside the script — never let them diverge.
+**Check:** `grep -r "com.unity.recorder" Packages/manifest.json` — must return a result if the Recorder API is used anywhere in the project.
+
 ## Unity / C# Patterns
 
 ### CS0136 — duplicate local variable in same scope
