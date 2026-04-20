@@ -582,6 +582,7 @@ namespace Golfin.CourseImport.Recording
             };
 
             Vector3 flagLookAt = greenPos + Vector3.up * 0.5f;
+            float   arcEndY    = sampleTerrainY(1.0f); // height at the exact moment arc ends
 
             // --- Build keyframes at 60 fps ---
             int totalFrames = Mathf.RoundToInt(totalDuration * OutputFrameRate);
@@ -611,10 +612,16 @@ namespace Golfin.CourseImport.Recording
                 else
                 {
                     float lt    = (t - kArcEnd) / kOrbit;
-                    lt = lt * lt * (3f - 2f * lt); // smoothstep ease
-                    float angle = Mathf.Lerp(0f, 50f, lt); // sweep one direction from approach axis
+                    float ltSS  = lt * lt * (3f - 2f * lt); // smoothstep
+                    float angle = Mathf.Lerp(0f, 50f, ltSS);
                     Vector3 offset = Quaternion.Euler(0, angle, 0) * (-fwdXZ) * 15f;
-                    pos    = greenPos + new Vector3(offset.x, DronePinHeight, offset.z);
+                    float   wx     = greenPos.x + offset.x;
+                    float   wz     = greenPos.z + offset.z;
+                    float   targetY = terrain.SampleHeight(new Vector3(wx, 0, wz)) + terrainBaseY + DronePinHeight;
+                    // Blend height from arc end to orbit target over first 40% of orbit — no snap.
+                    float   heightBlend = Mathf.Clamp01(lt / 0.4f);
+                    heightBlend = heightBlend * heightBlend * (3f - 2f * heightBlend);
+                    pos    = new Vector3(wx, Mathf.Lerp(arcEndY, targetY, heightBlend), wz);
                     lookAt = flagLookAt;
                 }
 
