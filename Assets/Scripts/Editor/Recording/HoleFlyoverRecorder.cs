@@ -280,7 +280,7 @@ namespace Golfin.CourseImport.Recording
             ctrlSettings.ExitPlayMode = false; // we control Play Mode exit ourselves
 
             var movieSettings = ScriptableObject.CreateInstance<MovieRecorderSettings>();
-            movieSettings.enabled = true;
+            movieSettings.Enabled = true;
             movieSettings.OutputFormat = MovieRecorderSettings.VideoRecorderOutputFormat.MP4;
             movieSettings.CaptureAlpha = false;
             movieSettings.OutputFile = Path.Combine(recordingsDir, $"hole-{meta.holeNumber:D2}");
