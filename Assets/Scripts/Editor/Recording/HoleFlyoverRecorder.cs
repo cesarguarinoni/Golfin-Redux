@@ -492,26 +492,43 @@ namespace Golfin.CourseImport.Recording
                     return (p, la);
                 };
 
+                Vector3 flagLookAt = greenPos + Vector3.up * 0.5f;
+
                 if (t < kPause)
                 {
-                    // 1s pause: directly above tee, looking almost straight down (~90°).
+                    // 1s pause: directly above tee, looking straight down.
                     pos    = teePos + new Vector3(0f, DroneStartHeight, 0f);
-                    lookAt = teePos; // straight down
+                    lookAt = teePos;
                 }
                 else if (t < kArcEnd)
                 {
                     float lt = (t - kPause) / (kArcEnd - kPause);
                     (pos, lookAt) = evalArc(lt);
+
+                    // Start of arc: blend lookAt from straight-down into forward arc direction.
+                    if (lt < 0.15f)
+                    {
+                        float b = lt / 0.15f;
+                        b = b * b * (3f - 2f * b); // smoothstep
+                        lookAt = Vector3.Lerp(teePos, lookAt, b);
+                    }
+                    // End of arc: blend lookAt toward the flag so we arrive pointing at it.
+                    else if (lt > 0.80f)
+                    {
+                        float b = (lt - 0.80f) / 0.20f;
+                        b = b * b * (3f - 2f * b);
+                        lookAt = Vector3.Lerp(lookAt, flagLookAt, b);
+                    }
                 }
                 else
                 {
                     // Orbit around pin. Base direction is -fwdXZ (tee side of green) so
-                    // the orbit starts exactly where the cruise approach ends — no jump.
+                    // orbit starts exactly where the cruise ends — no positional jump.
                     float lt    = (t - kArcEnd) / kOrbit;
                     float angle = Mathf.Lerp(-15f, 15f, lt);
                     Vector3 offset = Quaternion.Euler(0, angle, 0) * (-fwdXZ) * 15f;
                     pos    = greenPos + new Vector3(offset.x, DronePinHeight, offset.z);
-                    lookAt = greenPos + Vector3.up * 0.5f;
+                    lookAt = flagLookAt;
                 }
 
                 frames[i] = new FlyoverKeyframe { camPos = pos, lookAtPos = lookAt, normalizedT = t };
