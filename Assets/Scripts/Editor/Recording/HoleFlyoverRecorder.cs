@@ -459,45 +459,55 @@ namespace Golfin.CourseImport.Recording
                 float t = (float)i / (totalFrames - 1);
                 Vector3 pos, lookAt;
 
+                // Approach point: stop the cruise 15m before the green so the
+                // orbit transition starts from a natural position near the flag.
+                Vector3 approachPos = greenPos - fwdXZ * 15f;
+
                 if (t < 0.05f)
                 {
-                    // Phase 1: 1s hover directly above back tee.
+                    // Phase 1 (1s): stationary hover above tee, looking down the fairway.
                     pos    = teePos + new Vector3(0, DroneStartHeight, 0);
                     lookAt = teePos + fwdXZ * 20f;
                 }
-                else if (t < 0.15f)
+                else if (t < 0.88f)
                 {
-                    // Phase 2: 2s descent to DroneTeeHeight, directly above tee.
-                    float lt = (t - 0.05f) / 0.10f;
-                    lt = lt * lt * (3f - 2f * lt); // smoothstep
-                    pos    = teePos + new Vector3(0, Mathf.Lerp(DroneStartHeight, DroneTeeHeight, lt), 0);
-                    lookAt = teePos + fwdXZ * 20f;
-                }
-                else if (t < 0.90f)
-                {
-                    // Phase 3: Cruise along fairway. Y is a smooth lerp tee→green height
-                    // — no per-frame terrain sampling so the drone flies without bumps.
-                    float lt = (t - 0.15f) / 0.75f; // 0..1
+                    // Phase 2 (16.6s): descent + cruise as ONE continuous arc.
+                    // XZ travels from teePos → approachPos via Catmull-Rom.
+                    // Y descends from DroneStartHeight to DroneTeeHeight in the first
+                    // 15% of this phase, then rises smoothly to DronePinHeight at the end.
+                    // LookAt always points ahead along the same arc at the same Y —
+                    // no direction snap anywhere.
+                    float lt = (t - 0.05f) / 0.83f; // 0..1 across full phase
 
-                    Vector3 cruiseXZ = CatmullRomXZ(cruiseWaypoints, lt);
-                    // Start Y from DroneTeeHeight to match the end of phase 2 exactly — no jump.
-                    float smoothY    = Mathf.Lerp(teePos.y + DroneTeeHeight,
-                                                  greenPos.y + DronePinHeight, lt);
-                    pos = new Vector3(cruiseXZ.x, smoothY, cruiseXZ.z);
+                    // Swap last waypoint for approachPos so cruise ends before the flag.
+                    cruiseWaypoints[cruiseWaypoints.Count - 1] = approachPos;
+                    Vector3 xzPos = CatmullRomXZ(cruiseWaypoints, lt);
 
-                    float tLook  = Mathf.Min(lt + 0.04f, 1f);
+                    // Y: smooth descent in first 15% of phase, then gentle rise to pin height.
+                    float yStart = teePos.y  + DroneStartHeight;
+                    float yMid   = teePos.y  + DroneTeeHeight;
+                    float yEnd   = greenPos.y + DronePinHeight;
+                    float yNorm  = lt / 0.15f;
+                    float camY   = lt < 0.15f
+                        ? Mathf.Lerp(yStart, yMid, yNorm * yNorm * (3f - 2f * yNorm))
+                        : Mathf.Lerp(yMid, yEnd, (lt - 0.15f) / 0.85f);
+
+                    pos = new Vector3(xzPos.x, camY, xzPos.z);
+
+                    // LookAt: same spline slightly ahead, same Y curve.
+                    float tLook  = Mathf.Min(lt + 0.03f, 1f);
                     Vector3 laXZ = CatmullRomXZ(cruiseWaypoints, tLook);
-                    float laY    = Mathf.Lerp(teePos.y + DroneTeeHeight,
-                                              greenPos.y + DronePinHeight, tLook);
+                    float laY    = tLook < 0.15f
+                        ? Mathf.Lerp(yStart, yMid, (tLook / 0.15f))
+                        : Mathf.Lerp(yMid, yEnd, (tLook - 0.15f) / 0.85f);
                     lookAt = new Vector3(laXZ.x, laY, laXZ.z);
                 }
                 else
                 {
-                    // Phase 4: Arrival orbit at pin
-                    float lt = (t - 0.90f) / 0.10f;
+                    // Phase 3 (2.4s): orbit around pin from approachPos distance.
+                    float lt    = (t - 0.88f) / 0.12f;
                     float angle = Mathf.Lerp(-15f, 15f, lt);
-                    Quaternion orbitRot = Quaternion.Euler(0, angle, 0);
-                    Vector3 offset      = orbitRot * fwdXZ * 8f;
+                    Vector3 offset = Quaternion.Euler(0, angle, 0) * fwdXZ * 15f;
                     pos    = greenPos + new Vector3(offset.x, DronePinHeight, offset.z);
                     lookAt = greenPos + Vector3.up * 0.5f;
                 }
