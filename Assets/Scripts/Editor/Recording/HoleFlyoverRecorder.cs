@@ -471,7 +471,7 @@ namespace Golfin.CourseImport.Recording
                         }
                     }
 
-                    // Order waypoints by distance from tee, then add to cruise path.
+                    // Sort by projection onto tee→green axis then add to cruise path.
                     waypoints.Sort((a, b) =>
                         Vector3.Dot(a - teePos, fwdXZ).CompareTo(Vector3.Dot(b - teePos, fwdXZ)));
                     cruiseWaypoints.AddRange(waypoints);
@@ -482,18 +482,51 @@ namespace Golfin.CourseImport.Recording
             // Cruise ends 15m before the green for a natural orbit entry.
             cruiseWaypoints[cruiseWaypoints.Count - 1] = greenPos - fwdXZ * 15f;
 
+            // Smooth waypoints: weighted average of neighbours (keeps endpoints fixed).
+            // Removes zigzag from noisy strip centroids.
+            for (int pass = 0; pass < 4; pass++)
+                for (int w = 1; w < cruiseWaypoints.Count - 1; w++)
+                {
+                    float sx = (cruiseWaypoints[w-1].x + cruiseWaypoints[w].x*2f + cruiseWaypoints[w+1].x) / 4f;
+                    float sz = (cruiseWaypoints[w-1].z + cruiseWaypoints[w].z*2f + cruiseWaypoints[w+1].z) / 4f;
+                    float sy = terrain.SampleHeight(new Vector3(sx, 0, sz)) + terrainBaseY;
+                    cruiseWaypoints[w] = new Vector3(sx, sy, sz);
+                }
+
+            // Arc-length LUT: maps uniform t → spline t so camera moves at constant speed.
+            const int kArcSamples = 512;
+            float[] arcLen = new float[kArcSamples];
+            {
+                Vector3 prev = CatmullRomXZ(cruiseWaypoints, 0f);
+                for (int s = 1; s < kArcSamples; s++)
+                {
+                    Vector3 curr = CatmullRomXZ(cruiseWaypoints, (float)s / (kArcSamples - 1));
+                    arcLen[s] = arcLen[s-1] + new Vector2(curr.x - prev.x, curr.z - prev.z).magnitude;
+                    prev = curr;
+                }
+            }
+            float totalArc = arcLen[kArcSamples - 1];
+            System.Func<float, float> arcToT = (float uniformT) =>
+            {
+                float target = Mathf.Clamp01(uniformT) * totalArc;
+                int lo = 0, hi = kArcSamples - 1;
+                while (hi - lo > 1) { int mid = (lo+hi)/2; if (arcLen[mid] < target) lo = mid; else hi = mid; }
+                float span = arcLen[hi] - arcLen[lo];
+                float f    = span > 0.001f ? (target - arcLen[lo]) / span : 0f;
+                return Mathf.Lerp((float)lo / (kArcSamples-1), (float)hi / (kArcSamples-1), f);
+            };
+
             const float kPause  = 0.05f; // 1s hold at start
             const float kOrbit  = 0.12f;
             const float kArcEnd = 1f - kOrbit; // 0.88
 
-            // Pre-sample terrain height along the arc, then smooth (box blur ×3 ≈ Gaussian).
-            // This makes the camera follow terrain in both directions with a smooth curve.
+            // Pre-sample terrain height at uniform arc-length positions, then smooth.
             const int kTerrainSamples = 256;
             float[] terrainProfile = new float[kTerrainSamples];
             for (int s = 0; s < kTerrainSamples; s++)
             {
-                float lt   = (float)s / (kTerrainSamples - 1);
-                Vector3 xz = CatmullRomXZ(cruiseWaypoints, lt);
+                float st   = arcToT((float)s / (kTerrainSamples - 1));
+                Vector3 xz = CatmullRomXZ(cruiseWaypoints, st);
                 terrainProfile[s] = terrain.SampleHeight(new Vector3(xz.x, 0, xz.z)) + terrainBaseY;
             }
             for (int pass = 0; pass < 3; pass++)
@@ -519,11 +552,11 @@ namespace Golfin.CourseImport.Recording
 
             System.Func<float, (Vector3, Vector3)> evalArc = (float lt) =>
             {
-                Vector3 xz  = CatmullRomXZ(cruiseWaypoints, lt);
+                Vector3 xz  = CatmullRomXZ(cruiseWaypoints, arcToT(lt));
                 Vector3 p   = new Vector3(xz.x, sampleTerrainY(lt), xz.z);
 
                 float tl    = Mathf.Min(lt + 0.03f, 1f);
-                Vector3 lxz = CatmullRomXZ(cruiseWaypoints, tl);
+                Vector3 lxz = CatmullRomXZ(cruiseWaypoints, arcToT(tl));
                 Vector3 la  = new Vector3(lxz.x, sampleTerrainY(tl), lxz.z);
                 return (p, la);
             };
