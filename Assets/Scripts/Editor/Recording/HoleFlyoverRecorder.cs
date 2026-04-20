@@ -466,33 +466,46 @@ namespace Golfin.CourseImport.Recording
                 float yMid   = teePos.y  + DroneTeeHeight;
                 float yEnd   = greenPos.y + DronePinHeight;
 
-                if (t < 0.88f)
+                // 1-second pause before the arc begins (t=0..0.05).
+                // Uses lt=0 of the arc so position/lookAt are identical when movement starts.
+                const float kPause  = 0.05f; // 1s at 20s total
+                const float kOrbit  = 0.12f;
+                const float kArcEnd = 1f - kOrbit; // 0.95
+
+                // Shared arc evaluator — used by both the pause (lt=0) and the moving arc.
+                System.Func<float, (Vector3, Vector3)> evalArc = (float lt) =>
                 {
-                    // Single continuous arc: descent + cruise, no phase boundary.
-                    // XZ follows Catmull-Rom from teePos → approachPos.
-                    // Y smoothstep-descends in first 20% then rises to pin height.
-                    float lt     = t / 0.88f;
-                    float yNorm  = Mathf.Clamp01(lt / 0.20f);
-                    float ySS    = yNorm * yNorm * (3f - 2f * yNorm); // smoothstep
-                    float camY   = lt < 0.20f
+                    float yNorm = Mathf.Clamp01(lt / 0.20f);
+                    float ySS   = yNorm * yNorm * (3f - 2f * yNorm);
+                    float cy    = lt < 0.20f
                         ? Mathf.Lerp(yStart, yMid, ySS)
                         : Mathf.Lerp(yMid, yEnd, (lt - 0.20f) / 0.80f);
+                    Vector3 xz  = CatmullRomXZ(cruiseWaypoints, lt);
+                    Vector3 p   = new Vector3(xz.x, cy, xz.z);
 
-                    Vector3 xzPos = CatmullRomXZ(cruiseWaypoints, lt);
-                    pos = new Vector3(xzPos.x, camY, xzPos.z);
+                    float tl    = Mathf.Min(lt + 0.03f, 1f);
+                    Vector3 lxz = CatmullRomXZ(cruiseWaypoints, tl);
+                    float ly    = tl < 0.20f
+                        ? Mathf.Lerp(yStart, yMid, Mathf.Clamp01(tl / 0.20f))
+                        : Mathf.Lerp(yMid, yEnd, (tl - 0.20f) / 0.80f);
+                    Vector3 la  = new Vector3(lxz.x, ly, lxz.z);
+                    return (p, la);
+                };
 
-                    // LookAt: same spline slightly ahead, same Y so direction never snaps.
-                    float tLook  = Mathf.Min(lt + 0.03f, 1f);
-                    Vector3 laXZ = CatmullRomXZ(cruiseWaypoints, tLook);
-                    float laY    = tLook < 0.20f
-                        ? Mathf.Lerp(yStart, yMid, Mathf.Clamp01(tLook / 0.20f))
-                        : Mathf.Lerp(yMid, yEnd, (tLook - 0.20f) / 0.80f);
-                    lookAt = new Vector3(laXZ.x, laY, laXZ.z);
+                if (t < kPause)
+                {
+                    // 1s pause: frozen at arc start — identical to lt=0, so no snap on release.
+                    (pos, lookAt) = evalArc(0f);
+                }
+                else if (t < kArcEnd)
+                {
+                    float lt = (t - kPause) / (kArcEnd - kPause);
+                    (pos, lookAt) = evalArc(lt);
                 }
                 else
                 {
-                    // Orbit around pin (2.4s).
-                    float lt    = (t - 0.88f) / 0.12f;
+                    // Orbit around pin.
+                    float lt    = (t - kArcEnd) / kOrbit;
                     float angle = Mathf.Lerp(-15f, 15f, lt);
                     Vector3 offset = Quaternion.Euler(0, angle, 0) * fwdXZ * 15f;
                     pos    = greenPos + new Vector3(offset.x, DronePinHeight, offset.z);
