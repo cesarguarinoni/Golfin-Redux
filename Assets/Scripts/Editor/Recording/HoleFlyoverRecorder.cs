@@ -17,10 +17,7 @@ namespace Golfin.CourseImport.Recording
     {
         // --- Tunable constants ---
         private const float FlyoverDurationSeconds = 20f;
-        private const float DroneStartHeight  = 25f;  // m above terrain
-        private const float DroneStartBackset = 15f;  // m behind tee
-        private const float DroneTeeHeight    = 6f;   // at zoom-in apex
-        private const float DroneCruiseHeight = 12f;  // m above terrain while cruising
+        private const float DroneTeeHeight    = 6f;   // start height above tee
         private const float DronePinHeight    = 4f;
         private const float CameraFov         = 55f;
         private const int   OutputWidth       = 1284;  // iPhone 12 Pro Max portrait
@@ -462,58 +459,34 @@ namespace Golfin.CourseImport.Recording
                 // Cruise ends 15m before the green for a natural orbit entry.
                 cruiseWaypoints[cruiseWaypoints.Count - 1] = greenPos - fwdXZ * 15f;
 
-                float yStart = teePos.y  + DroneStartHeight;
-                float yMid   = teePos.y  + DroneTeeHeight;
+                float yStart = teePos.y  + DroneTeeHeight;
                 float yEnd   = greenPos.y + DronePinHeight;
 
-                // 1-second pause before the arc begins (t=0..0.05).
-                // Uses lt=0 of the arc so position/lookAt are identical when movement starts.
-                const float kPause  = 0.05f; // 1s at 20s total
                 const float kOrbit  = 0.12f;
-                const float kArcEnd = 1f - kOrbit; // 0.95
+                const float kArcEnd = 1f - kOrbit; // 0.88
 
-                // Shared arc evaluator — used by both the pause (lt=0) and the moving arc.
                 System.Func<float, (Vector3, Vector3)> evalArc = (float lt) =>
                 {
-                    float yNorm = Mathf.Clamp01(lt / 0.20f);
-                    float ySS   = yNorm * yNorm * (3f - 2f * yNorm);
-                    float cy    = lt < 0.20f
-                        ? Mathf.Lerp(yStart, yMid, ySS)
-                        : Mathf.Lerp(yMid, yEnd, (lt - 0.20f) / 0.80f);
+                    float cy    = Mathf.Lerp(yStart, yEnd, lt);
                     Vector3 xz  = CatmullRomXZ(cruiseWaypoints, lt);
                     Vector3 p   = new Vector3(xz.x, cy, xz.z);
 
                     float tl    = Mathf.Min(lt + 0.03f, 1f);
                     Vector3 lxz = CatmullRomXZ(cruiseWaypoints, tl);
-                    float ly    = tl < 0.20f
-                        ? Mathf.Lerp(yStart, yMid, Mathf.Clamp01(tl / 0.20f))
-                        : Mathf.Lerp(yMid, yEnd, (tl - 0.20f) / 0.80f);
+                    float ly    = Mathf.Lerp(yStart, yEnd, tl);
                     Vector3 la  = new Vector3(lxz.x, ly, lxz.z);
                     return (p, la);
                 };
 
                 Vector3 flagLookAt = greenPos + Vector3.up * 0.5f;
 
-                if (t < kPause)
+                if (t < kArcEnd)
                 {
-                    // 1s pause: directly above tee, looking straight down.
-                    pos    = teePos + new Vector3(0f, DroneStartHeight, 0f);
-                    lookAt = teePos;
-                }
-                else if (t < kArcEnd)
-                {
-                    float lt = (t - kPause) / (kArcEnd - kPause);
+                    float lt = t / kArcEnd;
                     (pos, lookAt) = evalArc(lt);
 
-                    // Start of arc: blend lookAt from straight-down into forward arc direction.
-                    if (lt < 0.15f)
-                    {
-                        float b = lt / 0.15f;
-                        b = b * b * (3f - 2f * b); // smoothstep
-                        lookAt = Vector3.Lerp(teePos, lookAt, b);
-                    }
                     // End of arc: blend lookAt toward the flag so we arrive pointing at it.
-                    else if (lt > 0.80f)
+                    if (lt > 0.80f)
                     {
                         float b = (lt - 0.80f) / 0.20f;
                         b = b * b * (3f - 2f * b);
