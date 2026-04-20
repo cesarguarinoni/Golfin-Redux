@@ -72,8 +72,11 @@ namespace Golfin.CourseImport.Recording
 
             if (savedState == RecState.WaitingForPlayMode)
             {
-                // Domain reload happened mid-play-mode-entry. Restore so EnteredPlayMode picks it up.
                 _state = RecState.WaitingForPlayMode;
+                // If we're not yet in play mode (e.g. domain reload triggered by OpenScene rather
+                // than by isPlaying=true), re-schedule EnterPlayMode — the delayCall was lost.
+                if (!EditorApplication.isPlaying)
+                    EditorApplication.delayCall += EnterPlayMode;
                 Debug.Log($"[HoleFlyoverRecorder] Restored WaitingForPlayMode for hole {_currentHole} after domain reload.");
                 return;
             }
@@ -177,8 +180,11 @@ namespace Golfin.CourseImport.Recording
                     StartNextHole();
                     return;
                 }
+                // Persist WaitingForPlayMode BEFORE OpenScene — if OpenScene triggers a domain
+                // reload the delayCall would be lost, but TryResumeAfterReload will re-schedule it.
+                _state = RecState.WaitingForPlayMode;
+                SessionState.SetInt(SK_STATE, (int)RecState.WaitingForPlayMode);
                 EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-                // Wait one editor tick for the scene to settle before entering Play Mode
                 EditorApplication.delayCall += EnterPlayMode;
             }
             else
@@ -189,8 +195,8 @@ namespace Golfin.CourseImport.Recording
 
         private static void EnterPlayMode()
         {
+            if (EditorApplication.isPlaying) return; // guard against double-entry after domain reload
             _state = RecState.WaitingForPlayMode;
-            // Persist state + hole so domain reload (which clears static fields) doesn't lose them.
             SessionState.SetInt(SK_STATE, (int)RecState.WaitingForPlayMode);
             SessionState.SetInt(SK_CURHOLE, _currentHole);
             EditorApplication.isPlaying = true;
