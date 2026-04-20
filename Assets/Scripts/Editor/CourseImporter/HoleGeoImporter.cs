@@ -3139,34 +3139,6 @@ namespace Golfin.CourseImport
                         }
             }
 
-            // Cart-path cells: protect from tee-skirt raising. A wide adaptive
-            // skirt that lifts cart-path terrain produces a 0.4m wall after
-            // DepressTerrainUnderOverlays cuts the cart-path depression.
-            string cpPathForSkip = Path.Combine(exportPath, "cart-paths.json");
-            if (File.Exists(cpPathForSkip))
-            {
-                var cpDataForSkip = JsonUtility.FromJson<CartPathsFile>(
-                    File.ReadAllText(cpPathForSkip));
-                if (cpDataForSkip.cart_paths != null)
-                    foreach (var cp in cpDataForSkip.cart_paths)
-                    {
-                        if (cp.spine != null && cp.spine.Length >= 2)
-                        {
-                            float halfW = (cp.width_m > 0 ? cp.width_m : 2.5f)
-                                          / 2f + 0.30f;
-                            var sp = BuildSpinePolygon(cp.spine, halfW);
-                            if (sp != null)
-                                MarkWorldContourCells(sp, skipMask,
-                                    hRes, terrainPos, terrainSize);
-                        }
-                        else if (cp.contour != null && cp.contour.Length >= 3)
-                        {
-                            MarkContourCells(cp.contour, skipMask,
-                                hRes, terrainPos, terrainSize, 0f);
-                        }
-                    }
-            }
-
             // Skirt sizing
             float metersPerCell = (terrainSize.x + terrainSize.z) * 0.5f / (hRes - 1);
             int skirtRadiusCells = Mathf.Max(1, Mathf.RoundToInt(
@@ -3236,68 +3208,34 @@ namespace Golfin.CourseImport
                             coarseDist[z, x] = coarseDist[z + 1, x] + 1f;
                     }
 
-                // Per-edge adaptive radius. For each contour segment, sample drop
-                // outward along the edge normal at 1m increments; take the MAX drop
-                // observed and derive the edge's skirt radius from it. This gives
-                // each side of the tee its own radius instead of forcing the uniform
-                // worst case everywhere.
-                float elevRange = terrainSize.y; // normalized → world metres
-
-                int nContourEdges = region.contour.Length;
-                float[] edgeAdaptiveM = new float[nContourEdges];
-                float worstEdgeM = 0f; // for coarse-cull bbox expansion
-
-                const float SamplingStepM = 1.0f;
-                const int SamplingStepsMax = 40; // sample up to 40m outward per edge
-
-                for (int ei = 0; ei < nContourEdges; ei++)
-                {
-                    int ej = (ei + 1) % nContourEdges;
-                    float ax = region.contour[ei].x, az = region.contour[ei].z;
-                    float bx = region.contour[ej].x, bz = region.contour[ej].z;
-
-                    float edx = bx - ax, edz = bz - az;
-                    float elen = Mathf.Sqrt(edx * edx + edz * edz);
-                    if (elen < 1e-6f) { edgeAdaptiveM[ei] = TeeSkirtMeters; continue; }
-
-                    // Outward normal. CCW contour → outward is (edz, -edx) normalized.
-                    float nx = edz / elen;
-                    float nzn = -edx / elen;
-
-                    // Sanity-check outward direction: probe 0.5m along the normal
-                    // from the edge midpoint; if inside the polygon, flip.
-                    float mx = (ax + bx) * 0.5f, mz = (az + bz) * 0.5f;
-                    if (IsPointInContour(region.contour, mx + nx * 0.5f, mz + nzn * 0.5f))
+                // Worst-case adaptive radius for coarse cull: scan the tee's
+                // bbox + TeeMaxSkirtMeters neighborhood for the steepest drop.
+                float worstDrop = 0f;
+                int neighborhoodCells = Mathf.RoundToInt(TeeMaxSkirtMeters / metersPerCell);
+                int minR = hRes, maxR = -1, minC = hRes, maxC = -1;
+                for (int z = 0; z < hRes; z++)
+                    for (int x = 0; x < hRes; x++)
+                        if (teeMask[z, x])
+                        {
+                            if (z < minR) minR = z;
+                            if (z > maxR) maxR = z;
+                            if (x < minC) minC = x;
+                            if (x > maxC) maxC = x;
+                        }
+                int bboxMinR = Mathf.Max(0, minR - neighborhoodCells);
+                int bboxMaxR = Mathf.Min(hRes - 1, maxR + neighborhoodCells);
+                int bboxMinC = Mathf.Max(0, minC - neighborhoodCells);
+                int bboxMaxC = Mathf.Min(hRes - 1, maxC + neighborhoodCells);
+                for (int z = bboxMinR; z <= bboxMaxR; z++)
+                    for (int x = bboxMinC; x <= bboxMaxC; x++)
                     {
-                        nx = -nx; nzn = -nzn;
+                        float drop = maxH - baseline[z, x];
+                        if (drop > worstDrop) worstDrop = drop;
                     }
 
-                    // Max drop along this edge's outward normal.
-                    float maxEdgeDropM = 0f;
-                    for (int s = 1; s <= SamplingStepsMax; s++)
-                    {
-                        float sx = mx + nx * s * SamplingStepM;
-                        float sz = mz + nzn * s * SamplingStepM;
-                        int sCol = Mathf.RoundToInt((sx - terrainPos.x) / cellW);
-                        int sRow = Mathf.RoundToInt((sz - terrainPos.z) / cellH);
-                        if (sRow < 0 || sRow >= hRes || sCol < 0 || sCol >= hRes) break;
-                        float dropNorm = maxH - baseline[sRow, sCol];
-                        if (dropNorm <= 0f) continue; // uphill of platform — ignore
-                        float dropM = dropNorm * elevRange;
-                        if (dropM > maxEdgeDropM) maxEdgeDropM = dropM;
-                    }
-
-                    // Formula from the original adaptive design:
-                    //   dR = clamp(1.5 * dropM / MaxRampSlope, BaseSkirt, MaxSkirt)
-                    float rM = Mathf.Clamp(
-                        1.5f * maxEdgeDropM / TeeMaxRampSlope,
-                        TeeSkirtMeters,
-                        TeeMaxSkirtMeters);
-                    edgeAdaptiveM[ei] = rM;
-                    if (rM > worstEdgeM) worstEdgeM = rM;
-                }
-
-                int worstAdaptiveCells = Mathf.CeilToInt(worstEdgeM / metersPerCell);
+                float worstAdaptiveM = Mathf.Min(TeeMaxSkirtMeters,
+                    Mathf.Max(TeeSkirtMeters, 1.5f * worstDrop / TeeMaxRampSlope));
+                int worstAdaptiveCells = Mathf.CeilToInt(worstAdaptiveM / metersPerCell);
 
                 // Exact-distance pass.
                 int nContour = region.contour.Length;
@@ -3313,7 +3251,6 @@ namespace Golfin.CourseImport
                         float wz = terrainPos.z + z * cellH;
 
                         float minDistM = float.MaxValue;
-                        int nearestEdge = 0;
                         for (int i = 0; i < nContour; i++)
                         {
                             int j = (i + 1) % nContour;
@@ -3327,14 +3264,15 @@ namespace Golfin.CourseImport
                             float px = ax + t2 * edx - wx;
                             float pz = az + t2 * edz - wz;
                             float d = Mathf.Sqrt(px * px + pz * pz);
-                            if (d < minDistM) { minDistM = d; nearestEdge = i; }
+                            if (d < minDistM) minDistM = d;
                         }
 
-                        // Per-edge adaptive radius: cells along the same edge share a radius
-                        // → no sawtooth. Radius varies only across contour VERTICES, where
-                        // smoothstep naturally blurs the seam.
-                        float adaptiveM = edgeAdaptiveM[nearestEdge];
-                        if (minDistM > adaptiveM) continue;
+                        // Uniform adaptive radius (per-tee worst case from pre-scan).
+                        // Per-cell radius was tried but varying adaptiveM creates an
+                        // irregular outer boundary that appears as sawtooth teeth at
+                        // the bottom of the mound. Uniform radius gives a clean edge.
+                        if (minDistM > worstAdaptiveM) continue;
+                        float adaptiveM = worstAdaptiveM;
 
                         float t = minDistM / adaptiveM;
                         t = t * t * (3f - 2f * t); // smoothstep
@@ -3350,17 +3288,10 @@ namespace Golfin.CourseImport
                 }
 
                 changed = true;
-                float minEdgeM = float.MaxValue, maxEdgeM = 0f;
-                for (int i = 0; i < edgeAdaptiveM.Length; i++)
-                {
-                    if (edgeAdaptiveM[i] < minEdgeM) minEdgeM = edgeAdaptiveM[i];
-                    if (edgeAdaptiveM[i] > maxEdgeM) maxEdgeM = edgeAdaptiveM[i];
-                }
-                if (edgeAdaptiveM.Length == 0) { minEdgeM = TeeSkirtMeters; maxEdgeM = TeeSkirtMeters; }
                 Debug.Log($"[HoleGeoImporter] Tee {region.id}: " +
                           $"platform h={maxH:F4}, " +
-                          $"edge skirt min={minEdgeM:F1}m max={maxEdgeM:F1}m " +
-                          $"({edgeAdaptiveM.Length} edges)");
+                          $"base skirt={TeeSkirtMeters:F1}m, " +
+                          $"worst adaptive skirt={worstAdaptiveM:F1}m");
             }
 
             if (changed)
@@ -3727,19 +3658,6 @@ namespace Golfin.CourseImport
         /// Mark heightmap cells that fall inside a contour polygon.
         /// Contour uses local meter coords.
         /// </summary>
-        private static bool IsPointInContour(ContourPoint[] c, float x, float z)
-        {
-            bool inside = false;
-            for (int i = 0, j = c.Length - 1; i < c.Length; j = i++)
-            {
-                if (((c[i].z > z) != (c[j].z > z)) &&
-                    (x < (c[j].x - c[i].x) * (z - c[i].z) /
-                         (c[j].z - c[i].z) + c[i].x))
-                    inside = !inside;
-            }
-            return inside;
-        }
-
         private static void MarkContourCells(ContourPoint[] contour,
             bool[,] depress, int hRes, Vector3 terrainPos, Vector3 terrainSize,
             float inset = -1f)
