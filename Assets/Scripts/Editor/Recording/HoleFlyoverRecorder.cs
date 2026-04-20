@@ -23,8 +23,8 @@ namespace Golfin.CourseImport.Recording
         private const float DroneCruiseHeight = 12f;  // m above terrain while cruising
         private const float DronePinHeight    = 4f;
         private const float CameraFov         = 55f;
-        private const int   OutputWidth       = 1920;
-        private const int   OutputHeight      = 1080;
+        private const int   OutputWidth       = 1170;  // iPhone 12 portrait
+        private const int   OutputHeight      = 2532;
         private const int   OutputFrameRate   = 60;
         private const string FlyoverCamTag    = "FlyoverCam";
 
