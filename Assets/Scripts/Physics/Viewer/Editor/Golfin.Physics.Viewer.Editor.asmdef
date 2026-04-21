@@ -1,0 +1,19 @@
+{
+    "name": "Golfin.Physics.Viewer.Editor",
+    "rootNamespace": "Golfin.Physics.Viewer.Editor",
+    "references": [
+        "Golfin.Physics.Core",
+        "Golfin.Physics.Runtime",
+        "Golfin.Physics.Math",
+        "Golfin.Physics.Viewer"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
