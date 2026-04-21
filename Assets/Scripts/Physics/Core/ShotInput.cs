@@ -5,29 +5,33 @@ namespace Golfin.Physics
     /// <summary>
     /// Complete deterministic input for a single shot. Everything the simulator
     /// needs to produce an identical trajectory on any platform.
-    /// Phase 1 uses only origin, velocity, maxDuration. Spin / wind / surface
-    /// fields are reserved for Phases 2+ and can be default-valued for now.
+    /// Phase 1 uses only origin, velocity, maxDuration. Phase 2 adds Spin.
     /// </summary>
     public readonly struct ShotInput
     {
         public readonly fp3 origin;
         public readonly fp3 velocity;
         public readonly fp maxDuration;
-
-        // Phase 2+ fields — unused in Phase 1 but declared for ABI stability.
-        public readonly fp3 spinAxis;
-        public readonly fp spinRateRadPerSec;
+        public readonly SpinState Spin;
         public readonly uint seed;
 
-        public ShotInput(fp3 origin, fp3 velocity, fp maxDuration,
-                         fp3 spinAxis = default, fp spinRateRadPerSec = default,
-                         uint seed = 0)
+        // Phase 1 constructor — no spin. SpinState defaults to SpinState.None.
+        public ShotInput(fp3 origin, fp3 velocity, fp maxDuration, uint seed = 0)
         {
             this.origin = origin;
             this.velocity = velocity;
             this.maxDuration = maxDuration;
-            this.spinAxis = spinAxis;
-            this.spinRateRadPerSec = spinRateRadPerSec;
+            this.Spin = SpinState.None;
+            this.seed = seed;
+        }
+
+        // Phase 2 constructor — with spin.
+        public ShotInput(fp3 origin, fp3 velocity, fp maxDuration, SpinState spin, uint seed = 0)
+        {
+            this.origin = origin;
+            this.velocity = velocity;
+            this.maxDuration = maxDuration;
+            this.Spin = spin;
             this.seed = seed;
         }
     }

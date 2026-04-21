@@ -1,0 +1,15 @@
+{
+    "name": "Golfin.Physics.Editor",
+    "rootNamespace": "Golfin.Physics.Editor",
+    "references": [
+        "Golfin.Physics.Core",
+        "Golfin.Physics.Math",
+        "Golfin.Physics.Runtime"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

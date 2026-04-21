@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Researched & specced; Phase 0 baker COMPLETE; **Phase 1 vacuum integrator COMPLETE** |
+| Physics Architecture | ✅ Researched & specced; Phase 0 baker COMPLETE; Phase 1 vacuum integrator COMPLETE; **Phase 2 aerodynamics COMPLETE** |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +38,60 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-21 — Phase 2 Aerodynamics)
+
+### Completed
+- **`Assets/Scripts/Physics/Math/fp.cs`** — added `fp.Half`, `fp.Epsilon` statics.
+- **`Assets/Scripts/Physics/Math/fpMath.cs`** — added `Dot`, `Cross`, `Normalize`, `Clamp`.
+- **`Assets/Scripts/Physics/Core/SpinState.cs`** — new: spin axis (normalized fp3) + rate (rad/s). `IsSpinning` guard.
+- **`Assets/Scripts/Physics/Core/AeroConfig.cs`** — new: aerodynamic constants struct with `Default` and `Vacuum` (Cd=Cl=0) presets.
+- **`Assets/Scripts/Physics/Core/AeroModel.cs`** — new static class. `ComputeAeroForce(velocity, spin, cfg)` → drag + Magnus lift in Newtons.
+- **`Assets/Scripts/Physics/Core/ClubSpec.cs`** — new: one row of clubs.csv (id, ball_speed_mps, launch_angle_deg, spin_rate_rpm, expected_carry_yd).
+- **`Assets/Scripts/Physics/Core/ShotInput.cs`** — replaced `spinAxis`/`spinRateRadPerSec` fields with `SpinState Spin`. Added Phase 2 constructor; Phase 1 constructor kept (defaults to `SpinState.None`).
+- **`Assets/Scripts/Physics/Core/BallSimulation.cs`** — `Accel()` now evaluates `AeroModel.ComputeAeroForce` at each of the 4 RK4 sub-steps. Added `Simulate(input, ground, AeroConfig)` overload; no-arg overload uses `AeroConfig.Vacuum` (gravity-only, Phase 1 tests still pass).
+- **`Assets/Resources/Physics/aero.csv`** — aerodynamic constants (Cd=0.25, Cl_base=0.20, SpinRateRef=300, etc.).
+- **`Assets/Resources/Physics/clubs.csv`** — 7 clubs (Driver → SandWedge) with Trackman carry targets.
+- **`Assets/Scripts/Physics/Runtime/PhysicsConfigLoader.cs`** — new: `LoadAeroConfig()` + `LoadClubSpecs()`, parses CSVs via `Resources.Load<TextAsset>`.
+- **`Assets/Scripts/Physics/Runtime/PhaseTestController.cs`** — new MonoBehaviour. Fires both an aero shot (yellow LineRenderer) and a vacuum shot (cyan). Debug log shows `[PhaseTest] club=Iron7 | aero carry=196.2m (215yd) | vacuum carry=151.4m (166yd) expected=172yd`. Two lines confirmed distinct (Iron7 backspin lift > drag, so aero > vacuum as expected in real golf).
+- **`Assets/Scripts/Editor/Physics/PhysicsTuningWindow.cs`** — new EditorWindow at `Window > Physics > Tuning`. Sliders for Cd/Cl/SpinRef, Run Validation table, Save aero.csv button.
+- **`Assets/Scripts/Editor/Physics/Golfin.Physics.Editor.asmdef`** — new Editor-only assembly referencing Core, Math, Runtime.
+- **`Assets/Scripts/Physics/Tests/AerodynamicsTests.cs`** — 4 new EditMode tests.
+- **`Assets/Scenes/Physics/Phase2_AeroTest.unity`** — new scene: Ground plane, Ball, AeroLine (yellow LR), VacuumLine (cyan LR), PhaseTestController, Camera, Light.
+
+### Test Results: 7/8 pass
+- ✅ Phase 1 tests (4/4): all pass — vacuum path unchanged
+- ✅ `Aero_Off_MatchesPhase1_Within_Epsilon` — Cd=Cl=0 path matches Phase 1 within 0.1m ✓
+- ✅ `Aero_DragReducesCarry_MonotonicallyWithCd` — drag sweeps monotone ✓
+- ✅ `Aero_Backspin_ExtendsCarry_VsZeroSpin` — backspin gives ≥10% extra carry ✓
+- ❌ `Aero_ClubCarries_WithinTolerance_OfTrackmanTargets` — **ESCALATE TO LUT NEEDED**
+
+### Carry Table (AeroConfig.Default, Cd=0.25, Cl_base=0.20, SpinRateRef=300)
+| Club | Expected (yd) | Actual (yd) | Error % |
+|---|---|---|---|
+| Driver | 275 | 297 | 8.1% ✅ |
+| Iron3 | 212 | 270 | 27.3% ❌ |
+| Iron5 | 194 | 238 | 22.5% ❌ |
+| Iron7 | 172 | 215 | 24.7% ❌ |
+| Iron9 | 152 | 201 | 32.2% ❌ |
+| PitchingWedge | 136 | 194 | 43.0% ❌ |
+| SandWedge | 110 | 155 | 40.6% ❌ |
+
+### Root Cause Diagnosis
+Driver (low spin 281 rad/s) is close (8%). All irons/wedges (743–1047 rad/s) are 22–43% over. The **constant Cl model cannot span the driver/wedge range**:
+- For Driver (carry > vacuum): needs lift > drag → Cl must be large relative to Cd
+- For SandWedge (carry < vacuum): needs drag > lift → Cl must be small relative to Cd
+- Both requirements at fixed Cd/Cl_base are contradictory since SandWedge has HIGHER spin ratio (hits ClMaxMult cap) giving MORE relative lift, not less.
+- Per Bearman & Harvey (1976), real Cl at Iron7's spin parameter (Sp=0.30) is ~0.15 — our Cl_eff=0.30 is 2× too high. Driver (Sp=0.08) real Cl ≈ 0.08, our Cl_eff=0.19 is also 2× high but driver is within 8% because it's off-cap.
+- **Recommendation:** velocity-indexed Cd LUT + spin-parameter-based Cl LUT in aero.csv. This is Phase 2.1 — await architect decision.
+
+### Still Open
+- Phase 2.1: Cd/Cl LUT in aero.csv (architect decision needed — constant model can't span driver/wedge)
+- Phase 3: wind
+- Phase 4: surface interaction
+- Phase 5: putting
 
 ---
 

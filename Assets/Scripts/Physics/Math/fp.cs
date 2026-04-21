@@ -22,6 +22,8 @@ namespace Golfin.Physics.Math
 
         public static readonly fp Zero = new fp(0);
         public static readonly fp One = new fp(FracScale);
+        public static readonly fp Half = new fp(FracScale >> 1);           // 0.5
+        public static readonly fp Epsilon = new fp(1);                     // ~0.000015 (1/65536)
 
         public static fp operator +(fp a, fp b) => new fp(a.raw + b.raw);
         public static fp operator -(fp a, fp b) => new fp(a.raw - b.raw);

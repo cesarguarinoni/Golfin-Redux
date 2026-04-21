@@ -1,0 +1,8 @@
+key,value,units,notes
+air_density,1.225,kg/m^3,sea-level 15C
+ball_mass,0.04593,kg,USGA max
+ball_cross_section,0.001432,m^2,radius 0.02135m
+drag_coefficient,0.25,dimensionless,constant starting point
+lift_coefficient_base,0.20,dimensionless,scaled by spin in code
+spin_rate_reference,300,rad/s,~2865 rpm driver baseline
+lift_max_multiplier,1.5,dimensionless,cap on spin-scaled Cl

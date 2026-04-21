@@ -64,5 +64,30 @@ namespace Golfin.Physics.Math
                 + a4 / fp.FromInt(24)
                 - a6 / fp.FromInt(720);
         }
+
+        // Phase 2: added for aero model.
+        public static fp Dot(fp3 a, fp3 b) => a.x * b.x + a.y * b.y + a.z * b.z;
+
+        // Phase 2: added for aero model.
+        public static fp3 Cross(fp3 a, fp3 b) => new fp3(
+            a.y * b.z - a.z * b.y,
+            a.z * b.x - a.x * b.z,
+            a.x * b.y - a.y * b.x);
+
+        // Phase 2: added for aero model.
+        public static fp3 Normalize(fp3 v)
+        {
+            fp lenSq = Dot(v, v);
+            if (lenSq <= fp.Epsilon) return new fp3(fp.Zero, fp.Zero, fp.One);
+            return v / Sqrt(lenSq);
+        }
+
+        // Phase 2: added for aero model.
+        public static fp Clamp(fp value, fp min, fp max)
+        {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
+        }
     }
 }
