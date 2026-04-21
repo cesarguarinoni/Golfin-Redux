@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Researched & specced; Phase 0 baker COMPLETE; Phase 1 vacuum integrator COMPLETE; Phase 2 aerodynamics COMPLETE; **Phase 2.1 LUT aerodynamics COMPLETE** |
+| Physics Architecture | ✅ Researched & specced; Phase 0 baker COMPLETE; Phase 1 vacuum integrator COMPLETE; Phase 2 aerodynamics COMPLETE; Phase 2.1 LUT aerodynamics COMPLETE; **Phase 2.1 v3 REMEDIATION: Rung 3 — Architecture escalation to Phase 2.2 (2D LUT) needed** |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +38,40 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-21 — Phase 2.1 v3 Remediation)
+
+### Result: ❌ Rung 3 — Architecture Escalation to Phase 2.2
+
+All spec changes implemented: Bearman-Harvey Cl LUT, Cd floor 0.23, spin decay restored 0.02/s. Two tuning iterations exhausted within spec constraints (±0.01 per Cl breakpoint, Cd ≥ 0.23, spin decay ≥ 0.02/s). 12/13 tests pass; LUT-mode 8% gate fails.
+
+**Root cause diagnosed:** B-H Cl at driver S≈0.08 is 0.093; with Cd=0.23 at launch, drag/lift ratio = 2.5. Driver vacuum carry = 233yd, Trackman target = 275yd (+18%). No 1D Cl(S) model within B-H ±0.01 envelope can generate enough lift at low-S to close a 20%+ gap. Wedges (high S) are fine; short/mid irons and driver all undershoot.
+
+**Final LUT-mode table (iteration 2):**
+| Club | Expected | Actual | Error | Status |
+|---|---|---|---|---|
+| Driver | 275yd | 219yd | 20.5% | ❌ |
+| Iron3 | 212yd | 188yd | 11.4% | ❌ |
+| Iron5 | 194yd | 167yd | 13.9% | ❌ |
+| Iron7 | 172yd | 154yd | 10.7% | ❌ |
+| Iron9 | 152yd | 140yd | 8.1% | ❌ |
+| PW | 136yd | 130yd | 4.8% | ✅ |
+| SW | 110yd | 104yd | 5.5% | ✅ |
+
+Constant-mode: mid-irons all ≤10% ✅, endpoints (Driver 18.5%, SW 12.3%) ≤20% ✅.
+
+**Next:** Architect decides Phase 2.2 (2D LUT on speed × S) or accepts current accuracy.
+
+### Files modified this session (v3)
+- `Assets/Resources/Physics/aero_lift_lut.csv` — Bearman-Harvey Cl + 0.01 nudge
+- `Assets/Resources/Physics/aero_drag_lut.csv` — post-crisis floor 0.23
+- `Assets/Resources/Physics/aero.csv` — spin_decay_rate = 0.02
+- `Assets/Scripts/Physics/Core/AeroConfig.cs` — added SpinDecayRate field
+- `Assets/Scripts/Physics/Core/BallSimulation.cs` — exponential spin decay per RK4 step
+- `Assets/Scripts/Physics/Runtime/PhysicsConfigLoader.cs` — spin_decay_rate CSV key
+- `Assets/Scripts/Physics/Tests/AerodynamicsTests.cs` — renamed 5%→8% test, updated MakeLutConfig()
 
 ---
 

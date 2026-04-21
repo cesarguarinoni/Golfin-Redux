@@ -100,6 +100,14 @@ namespace Golfin.Physics
                     break;
                 }
 
+                // Exponential spin decay: ω(t+Δt) = ω(t) · (1 − λ·Δt)
+                // First-order approximation; safe for λ·Δt << 1 (0.04/240 = 0.000167).
+                if (aero.SpinDecayRate > fp.Epsilon && spin.IsSpinning)
+                {
+                    fp decayFactor = fp.One - (aero.SpinDecayRate * Dt);
+                    spin = new SpinState(spin.Axis, spin.Rate * decayFactor);
+                }
+
                 pos = posNext;
                 vel = velNext;
                 t = tNext;

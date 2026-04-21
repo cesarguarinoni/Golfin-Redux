@@ -1,12 +1,14 @@
 spin_parameter,cl,notes
 0.00,0.00,no spin
-0.02,0.08,
-0.05,0.18,approaching driver regime
-0.08,0.22,driver S target Aoki 2010
-0.12,0.26,
-0.15,0.27,long iron regime
-0.20,0.28,
-0.25,0.29,short iron regime
-0.30,0.29,saturation
-0.40,0.30,wedge regime
-0.60,0.30,deep saturation clamp
+0.02,0.034,Bearman-Harvey +0.01 nudge
+0.05,0.066,
+0.08,0.093,driver regime
+0.10,0.110,
+0.12,0.125,
+0.15,0.146,
+0.20,0.177,long iron regime
+0.25,0.202,
+0.30,0.224,Iron7 S
+0.40,0.260,Iron9 regime
+0.50,0.288,PW regime
+0.60,0.300,SW regime cap

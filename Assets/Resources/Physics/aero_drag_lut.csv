@@ -2,12 +2,13 @@ speed_mps,cd,notes
 5,0.50,very low speed laminar-ish
 10,0.48,
 15,0.45,pre-drag-crisis
-20,0.28,post-crisis onset Trackman-calibrated
-25,0.25,
-30,0.24,landing-zone
-40,0.22,mid-irons cruise
-50,0.22,
-60,0.21,long irons
-70,0.21,
-80,0.21,driver peak
-100,0.21,extrapolation safety
+18,0.40,drag crisis onset
+22,0.28,post-crisis Bearman
+26,0.24,
+30,0.23,minimum allowed floor
+40,0.23,
+50,0.23,
+60,0.23,
+70,0.23,
+80,0.23,driver peak
+100,0.23,extrapolation clamp

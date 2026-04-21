@@ -22,6 +22,7 @@ namespace Golfin.Physics
         public CoefficientLut LiftLut;  // Cl(S).     When IsValid=false, falls back to linear-capped Cl.
         public bool UseDragLut;
         public bool UseLiftLut;
+        public fp SpinDecayRate;    // 1/s, exponential spin decay; 0=no decay
 
         public static AeroConfig Default => new AeroConfig
         {
@@ -36,6 +37,7 @@ namespace Golfin.Physics
             // DragLut / LiftLut default-constructed (IsValid=false) — constant-mode fallback
             UseDragLut          = false,
             UseLiftLut          = false,
+            SpinDecayRate       = fp.FromFloat(0.02f),
         };
 
         // Vacuum variant — Cd=0, Cl=0. Degenerates to gravity-only integration.
@@ -52,6 +54,7 @@ namespace Golfin.Physics
             BallRadius          = fp.FromFloat(0.02135f),
             UseDragLut          = false,
             UseLiftLut          = false,
+            SpinDecayRate       = fp.Zero,
         };
     }
 }
