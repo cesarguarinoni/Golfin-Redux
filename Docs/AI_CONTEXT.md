@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-20
+**Last Updated:** 2026-04-21
 
 ## Current Status
 
@@ -17,8 +17,51 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
+| Physics Architecture | ✅ Researched & specced (`PHYSICS_RESEARCH.md` + `PHYSICS_TUNING_TARGETS.md`); Phase 0 baker COMPLETE |
 | Shop | Not started |
 | Gameplay | Not started |
+
+---
+
+## Workflow Update (2026-04-21) — Unity-MCP for Claude Code
+
+Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP) — a bridge exposing 50+ Unity Editor tools as MCP functions. This materially changes the implementation workflow:
+
+- **Before:** Cesar opens Unity, builds test scenes, runs tests, reports results back to Claude Code.
+- **Now:** Claude Code drives Unity directly — `scene-create`/`scene-open`, `gameobject-create`/`gameobject-component-add`, `script-execute` (Roslyn), `tests-run`, `console-get-logs`, `screenshot-game-view`. Claude Code iterates autonomously and reports back with screenshot evidence.
+
+**Implications for `TellCode.md` specs:**
+- Specs now include explicit autonomous validation criteria (e.g. "run `tests-run` on X, all cases must pass; capture `screenshot-game-view`; if any error in `console-get-logs`, iterate up to N times before reporting").
+- Cesar's role shifts from "implement and verify" to "design-decide and review phase boundaries."
+- Phase estimates have shrunk ~25–35% across the board.
+
+Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
+
+See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-21 — Physics Heightmap Baker)
+
+### Completed
+- **`Assets/Scripts/Editor/CourseImporter/PhysicsHeightmapBaker.cs`** — new Editor tool. 3 menu entry points (`Import > Bake Physics Heightmap > Bake Current Hole / Bake Hole 01-18 / Bake All Holes`). Reads Unity `TerrainData.GetHeights`, converts to Q16.16 fixed-point int32, writes binary `heightmap.bytes` with 36-byte header (`GHM1` magic, version, resolution, size, position). Round-trip validation (100 random samples, <1mm tolerance). Hole 1 baked successfully: **16.02 MB, 0/100 mismatches**, file at `Tools/UHoleGeo/output/lomond-country-club/export/hole-01/heightmap.bytes`.
+
+### Still Open
+- Remaining holes 2–18 need baking (run "Bake All Holes" when all Geo scenes exist)
+- Phase 1 (vacuum trajectory integrator) is next
+
+---
+
+## Session Changes (2026-04-21 — Physics Architecture & Tuning Research)
+
+### Completed
+- **`Docs/PHYSICS_RESEARCH.md`** — full architecture decision doc for the physics layer. Covers: deterministic vs non-deterministic (chose deterministic for multiplayer-readiness); fixed-point vs soft-floats (chose fixed-point Q48.16); custom integrator vs Photon Quantum vs PhysX (chose custom — Quantum is overkill, PhysX is non-deterministic); 6-phase implementation plan (Phase 0 baker → 1 vacuum → 2 aero → 3 wind → 4 surfaces → 5 putting); ~10–11 day estimate with Unity-MCP-accelerated workflow.
+- **`Docs/PHYSICS_TUNING_TARGETS.md`** — source-of-truth numbers. Carry distances per club (Iron 4 typo 220→195 fixed, Iron 7 typo 200→172 fixed); stat→physics modifier mappings (Specialized Roles model — each stat owns one physics input); RP cost curve; surface coefficient defaults; stat-stacking model with hard caps.
+- **All design questions resolved:** realism dial (middle, with assist toggle); tuning (CSV-driven, hot-reloadable, headless validator); Trackman data approach (public averages as targets + academic papers as starting params); stat coupling (Specialized Roles, Option D); putt model (reuse `BallSimulation` with fast-path, decouple later if needed); heightmap baking (separate post-import tool with per-hole/current/all menu options).
+
+### Still Open
+- Cesar to give green light to write Phase 0 spec into `Docs/TellCode.md`
+- A handful of secondary design items captured in `PHYSICS_TUNING_TARGETS.md` Section 9 (loft random ranges per club, ball stat list, stamina degradation curve) — non-blocking for Phase 0/1; resolve before Phase 2
 
 ---
 
@@ -208,7 +251,8 @@ contour-traced mesh overlays with smooth edges:
 - Small bunker lip polish (~0.13m above terrain)
 - UHole Lite GUI completion (cart path layer, layer button bar, brush visibility)
 - Remaining 17 holes beyond Hole 1 prototype
-- Shooting mechanics
+- **Physics implementation** (Phase 0 baker → Phase 5 putting) — fully specced in `PHYSICS_RESEARCH.md`
+- Shooting mechanics (built on top of completed physics layer)
 - Login and Reward Points integration
 - Character pipeline (VRoid Studio identified as primary path; deferred)
 
@@ -325,14 +369,18 @@ Official map → control points → affine transform → heightmap + aerial text
 ## Quick Architecture
 
 - **CSV-first** data, **Resources.Load** for sprites, **Event-driven UI**
-- **Namespaces:** `Golfin.Roster`, `Golfin.Inventory`, `Golfin.CourseImport`, `Golfin.Course`
+- **Namespaces:** `Golfin.Roster`, `Golfin.Inventory`, `Golfin.CourseImport`, `Golfin.Course`, `Golfin.Physics` (planned)
 - **Singletons:** CharacterManager, ClubManager, BallManager, BagManager, ItemManager
 - **Platform:** Windows (PowerShell)
+- **Workflow:** Architect Claude (claude.ai) writes specs → `Docs/TellCode.md` → Claude Code implements via Unity-MCP (autonomous test/fix/screenshot loop)
 
 ## Reference Docs
 
 - `Docs/INVENTORY_REFERENCE.md` — patterns, file locations, APIs for all inventory screens
+- `Docs/PHYSICS_RESEARCH.md` — physics architecture decisions, library survey, 6-phase implementation plan, Unity-MCP workflow notes
+- `Docs/PHYSICS_TUNING_TARGETS.md` — canonical physics numbers (carry distances, stat→modifier mappings, RP costs, surface coefficients, stacking model)
 - `Docs/TellCode.md` — architect → code instructions (Unity)
 - `Tools/UHoleLite/docs/TASK.md` — architect → code instructions (UHole Lite)
 - `Docs/BUNKER_RESEARCH.md`, `Docs/WATER_FINDINGS.md`, `Docs/WATER_REWORK_PLAN.md`, `Docs/WATER_REWORK_BRIEF.md`
 - `CLAUDE.md` — Claude Code session rules + project architecture
+- Unity-MCP — https://github.com/IvanMurzak/Unity-MCP (Claude Code's Unity Editor bridge)
