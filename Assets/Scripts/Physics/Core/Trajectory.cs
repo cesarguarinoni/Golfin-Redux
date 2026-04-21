@@ -40,23 +40,26 @@ namespace Golfin.Physics
         { this.time = time; this.position = position; this.velocity = velocity; }
     }
 
-    public readonly struct TerrainHit
+    public struct TerrainHit
     {
-        public readonly fp time;
-        public readonly fp3 position;
-        public readonly fp3 velocityBefore;
-        public readonly fp3 velocityAfter;
-        public readonly int surfaceId;
-        public TerrainHit(fp time, fp3 position, fp3 vBefore, fp3 vAfter, int surfaceId)
-        { this.time = time; this.position = position; this.velocityBefore = vBefore;
-          this.velocityAfter = vAfter; this.surfaceId = surfaceId; }
+        public fp Time;
+        public fp3 Position;
+        public fp3 VelocityIn;     // before bounce
+        public fp3 VelocityOut;    // after bounce (zero if this hit ended sim — water, stop)
+        public SurfaceType Surface;
+        public bool IsStop;        // true = final resting hit, not a bounce
+        public TerrainHit(fp time, fp3 position, fp3 vIn, fp3 vOut, SurfaceType surface, bool isStop)
+        { Time = time; Position = position; VelocityIn = vIn; VelocityOut = vOut;
+          Surface = surface; IsStop = isStop; }
     }
 
     public enum TerminationReason
     {
         MaxDurationReached,
-        HitGround,
-        StoppedRolling,     // Phase 4+
+        HitGround,          // first airborne→ground contact (Phase 1–3 endpoint)
         ExitedWorldBounds,
+        BallStopped,        // roll phase reached stop_speed on near-flat surface
+        HitWater,           // terminated by water hazard
+        MaxBouncesExceeded, // safety cap; shouldn't happen in practice
     }
 }

@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; **Phase 3 wind COMPLETE (2026-04-21) — 21/21 tests pass. Phase 4 (surface interaction) is next.** |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; **Phase 4 surface interaction COMPLETE (2026-04-21) — 29/29 tests pass. Phase 5 (putting) is next.** |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +38,48 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-21 — Phase 4 Surface Interaction)
+
+### Completed
+- **`Assets/Scripts/Physics/Core/HeightmapData.cs`** — new: bilinear Q16.16 heightmap, `SampleHeight` + `SampleNormal` (one-sided boundary differences to avoid gradient halving at edges).
+- **`Assets/Scripts/Physics/Runtime/HeightmapLoader.cs`** — new: loads `heightmap.bytes` (GHM1 format).
+- **`Assets/Scripts/Physics/Runtime/HeightProvider.cs`** — new MonoBehaviour: scene component holding loaded heightmap.
+- **`Assets/Scripts/Physics/Core/SurfaceType.cs`** — new enum: 11 surface types (Fairway through OOB).
+- **`Assets/Scripts/Physics/Core/ISurfaceProvider.cs`** — new interface + `ConstantSurfaceProvider` stub.
+- **`Assets/Scripts/Physics/Runtime/SceneSurfaceProvider.cs`** — new: PhysX raycast-based surface classifier + `SurfaceMarker` MonoBehaviour.
+- **`Assets/Resources/Physics/surfaces.csv`** — new: per-surface tunable coefficients.
+- **`Assets/Scripts/Physics/Core/SurfaceConfig.cs`** — new: `SurfaceCoefficients` struct + `SurfaceConfig.Default` with per-surface tuned values.
+- **`Assets/Scripts/Physics/Core/BallSimulation.cs`** — extended with Phase 4 overload: bounce handler (restitution + tangent friction), roll integrator (slope gravity + rolling resistance), stop detection (speed²-based using `fpMath.Dot` to avoid `fpMath.Sqrt` precision issues), water termination, max-bounce safety cap (12).
+- **`Assets/Scripts/Physics/Core/Trajectory.cs`** — added `TerrainHit` struct and new `TerminationReason` values (`BallStopped`, `HitWater`, `MaxBouncesExceeded`).
+- **`Assets/Scripts/Physics/Tests/SurfaceTests.cs`** — 8 new tests (see below).
+- **`Assets/Scripts/Physics/Runtime/PhysicsConfigLoader.cs`** — added `LoadSurfaceConfig()`.
+
+### Test Results: 29/29 pass ✅
+- Phase 1 (4), Phase 2/2.1 (11), Phase 3 wind (6), Phase 4 surface (8). Zero failures.
+
+### Phase 4 Tests
+1. `Surface_Phase3Overloads_BitExact` — bit-exact airborne path across all 4 overloads ✅
+2. `Surface_Bounce_OnGreenWithBackspin_Checks` — backspin ball stops within 20m ✅
+3. `Surface_Bounce_OnCartPath_HighRestitution` — Cr=0.70 from 10m gives ≥4.0m first bounce peak ✅
+4. `Surface_Roll_StopsOnFlatFairway` — 3 m/s horizontal stops within 35m as BallStopped ✅
+5. `Surface_Roll_AcceleratesDownSlope` — ball rolls ≥5m downhill on 10° synthetic slope ✅
+6. `Surface_Water_TerminatesSim` — HitWater + exactly 1 TerrainHit with IsStop=true ✅
+7. `Surface_MaxBounces_Capped` — Cr=0.95 terminates MaxBouncesExceeded in <5s ✅
+8. `Surface_Heightmap_BilinearInterpolation_SubCellPrecision` — Q16.16 bilinear within 1e-4 ✅
+
+### Key bugs fixed during implementation
+- `SceneSurfaceProvider`: `Physics.Raycast` inside `namespace Golfin.Physics.Runtime` resolved to `Golfin.Physics`, not `UnityEngine.Physics` → fixed with explicit `UnityEngine.Physics.Raycast`.
+- `SurfaceConfig.Default` had flat Cr=0.40 for all surfaces → replaced with per-surface values matching surfaces.csv (CartPath Cr=0.70, Sand Cr=0.15, etc.).
+- Roll stop detection used `fpMath.Sqrt` which underestimates for small velocities, causing spurious identical consecutive speed readings → switched to `fpMath.Dot(vel,vel)` (speed²) to eliminate Sqrt entirely.
+- `HeightmapData.SampleNormal` at grid boundary used clamped samples, halving the gradient → fixed with one-sided differences at boundaries.
+
+### Still Open
+- Phase 5: putting
+- Part G test scene (`Assets/Scenes/Physics/Phase4_SurfaceTest.unity`) — deferred; manual QA scene, not blocking.
+- Hole 1 zone mesh `SurfaceMarker` components — not yet added (Cesar to decide rollout).
 
 ---
 

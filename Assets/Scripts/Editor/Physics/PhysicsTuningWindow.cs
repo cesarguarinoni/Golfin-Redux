@@ -38,6 +38,11 @@ namespace Golfin.Physics.Editor
         private bool _showDragLutTable = false;
         private bool _showLiftLutTable = false;
 
+        // Surfaces section
+        private bool _showSurfacesSection = true;
+        private SurfaceConfig _surfaceConfig = SurfaceConfig.Default;
+        private string _dropTestResultText = "";
+
         // Wind section
         private bool _showWindSection = true;
         private float _windBaseX = 0f;
@@ -138,6 +143,44 @@ namespace Golfin.Physics.Editor
                 EditorGUI.indentLevel--;
             }
 
+            // ── Surfaces Section ──────────────────────────────────────────────────────
+            EditorGUILayout.Space();
+            _showSurfacesSection = EditorGUILayout.Foldout(_showSurfacesSection, "Surfaces", toggleOnLabelClick: true);
+            if (_showSurfacesSection)
+            {
+                EditorGUI.indentLevel++;
+                var surfaceNames = System.Enum.GetNames(typeof(SurfaceType));
+                for (int i = 0; i < surfaceNames.Length && i < _surfaceConfig.Coefficients.Length; i++)
+                {
+                    EditorGUILayout.LabelField(surfaceNames[i], EditorStyles.boldLabel);
+                    EditorGUI.indentLevel++;
+                    var c = _surfaceConfig.Coefficients[i];
+                    c.Restitution       = fp.FromFloat(EditorGUILayout.Slider("Restitution (Cr)",        c.Restitution.ToFloat(),       0f, 1f));
+                    c.TangentFriction   = fp.FromFloat(EditorGUILayout.Slider("Tangent Friction (μ)",    c.TangentFriction.ToFloat(),   0f, 1f));
+                    c.RollingResistance = fp.FromFloat(EditorGUILayout.Slider("Rolling Resistance (1/s)",c.RollingResistance.ToFloat(), 0f, 2f));
+                    c.StopSpeed         = fp.FromFloat(EditorGUILayout.Slider("Stop Speed (m/s)",        c.StopSpeed.ToFloat(),         0f, 1f));
+                    _surfaceConfig.Coefficients[i] = c;
+                    EditorGUI.indentLevel--;
+                }
+
+                EditorGUILayout.Space();
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Reload surfaces.csv"))
+                {
+                    _surfaceConfig = PhysicsConfigLoader.LoadSurfaceConfig();
+                    _dropTestResultText = "";
+                    Repaint();
+                }
+                if (GUILayout.Button("Simulate drop test"))
+                    RunDropTest();
+                EditorGUILayout.EndHorizontal();
+
+                if (_dropTestResultText.Length > 0)
+                    EditorGUILayout.HelpBox(_dropTestResultText, MessageType.Info);
+
+                EditorGUI.indentLevel--;
+            }
+
             if (_lastMode.Length > 0)
                 EditorGUILayout.LabelField($"Last run: {_lastMode}", EditorStyles.miniLabel);
 
@@ -221,8 +264,35 @@ namespace Golfin.Physics.Editor
             _clubs = PhysicsConfigLoader.LoadClubSpecs();
             _dragLut = PhysicsConfigLoader.LoadDragLut();
             _liftLut = PhysicsConfigLoader.LoadLiftLut();
+            _surfaceConfig = PhysicsConfigLoader.LoadSurfaceConfig();
             _actualCarries = new List<float>(new float[_clubs.Count]);
             for (int i = 0; i < _actualCarries.Count; i++) _actualCarries[i] = -1f;
+            Repaint();
+        }
+
+        private void RunDropTest()
+        {
+            // Ball dropped from 30m above origin, zero horizontal velocity, 3000 rpm backspin.
+            float rps  = 3000f * 2f * Mathf.PI / 60f;
+            var origin = new fp3(fp.Zero, fp.FromInt(30), fp.Zero);
+            var vel    = fp3.Zero;
+            var spin   = new SpinState(new fp3(fp.FromInt(-1), fp.Zero, fp.Zero), fp.FromFloat(rps));
+            var input  = new ShotInput(origin, vel, fp.FromInt(30), spin);
+            var aero   = BuildConfig();
+            var traj   = BallSimulation.Simulate(
+                input, new FlatGround(fp.Zero), aero, WindConfig.Calm,
+                new ConstantSurfaceProvider(SurfaceType.Green), _surfaceConfig);
+
+            float stopDist = Mathf.Sqrt(
+                traj.finalPosition.x.ToFloat() * traj.finalPosition.x.ToFloat() +
+                traj.finalPosition.z.ToFloat() * traj.finalPosition.z.ToFloat());
+            int bounces = 0;
+            foreach (var h in traj.terrainHits) if (!h.IsStop) bounces++;
+
+            _dropTestResultText =
+                $"Termination: {traj.termination}  |  Bounces: {bounces}  |  " +
+                $"Stop dist from drop: {stopDist:F2} m  |  " +
+                $"Final pos: ({traj.finalPosition.x.ToFloat():F2}, {traj.finalPosition.z.ToFloat():F2})";
             Repaint();
         }
 

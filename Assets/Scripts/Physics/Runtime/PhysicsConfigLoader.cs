@@ -152,6 +152,53 @@ namespace Golfin.Physics.Runtime
             return cfg;
         }
 
+        public static SurfaceConfig LoadSurfaceConfig()
+        {
+            var cfg = SurfaceConfig.Default;
+            var ta = Resources.Load<TextAsset>("Physics/surfaces");
+            if (ta == null)
+            {
+                Debug.LogWarning("[PhysicsConfigLoader] Physics/surfaces.csv not found — using defaults");
+                return cfg;
+            }
+
+            bool headerSkipped = false;
+            foreach (var raw in ta.text.Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#")) continue;
+                if (!headerSkipped) { headerSkipped = true; continue; }
+
+                var parts = line.Split(',');
+                if (parts.Length < 5) continue;
+
+                string name = parts[0].Trim();
+                if (!System.Enum.TryParse<SurfaceType>(name, out var st))
+                {
+                    Debug.LogWarning($"[PhysicsConfigLoader] surfaces.csv: unknown surface '{name}' — skipped");
+                    continue;
+                }
+
+                if (!float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float restitution)) continue;
+                if (!float.TryParse(parts[2].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float friction)) continue;
+                if (!float.TryParse(parts[3].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float rolling)) continue;
+                if (!float.TryParse(parts[4].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float stopSpeed)) continue;
+
+                cfg.Coefficients[(int)st] = new SurfaceCoefficients
+                {
+                    Restitution       = fp.FromFloat(restitution),
+                    TangentFriction   = fp.FromFloat(friction),
+                    RollingResistance = fp.FromFloat(rolling),
+                    StopSpeed         = fp.FromFloat(stopSpeed),
+                };
+            }
+            return cfg;
+        }
+
         public static List<ClubSpec> LoadClubSpecs()
         {
             var result = new List<ClubSpec>();
