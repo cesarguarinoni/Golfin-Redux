@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; **Phase 2.1 LUT aero COMPLETE (2026-04-21) — per-club tolerances: wedges 8%, mid-irons 15%, driver/Iron3 25% (1D B-H ceiling). Phase 3 (wind) is next.** |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; **Phase 3 wind COMPLETE (2026-04-21) — 21/21 tests pass. Phase 4 (surface interaction) is next.** |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +38,46 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-21 — Phase 3 Wind)
+
+### Completed
+- **`Assets/Scripts/Physics/Math/fpMath.cs`** — added `public static readonly fp TwoPi`.
+- **`Assets/Scripts/Physics/Core/WindConfig.cs`** — new struct: `BaseVelocity`, `GustAmplitude`, `GustFrequency`, `AltitudeFactor`, `AltitudeRefMeters`, `Seed`, `Calm` preset, `IsActive`.
+- **`Assets/Scripts/Physics/Core/WindModel.cs`** — new static class: `SampleWind(pos, time, cfg)`. Splitmix hash seed→phase, sinusoidal gust envelope, linear altitude profile. No engine refs.
+- **`Assets/Scripts/Physics/Core/AeroModel.cs`** — added wind overload `ComputeAeroForce(vel, windVel, spin, cfg)` using `vRel = vel - windVel`. Wind-free overload is now a back-compat forwarder with `fp3.Zero`.
+- **`Assets/Scripts/Physics/Core/BallSimulation.cs`** — wind-aware `Simulate(input, ground, aero, wind)` overload. Wind sampled at each of 4 RK4 sub-steps with sub-step (position, time). Aero overload now forwards to wind-aware with `WindConfig.Calm`.
+- **`Assets/Resources/Physics/wind.csv`** — new: default calm values.
+- **`Assets/Scripts/Physics/Runtime/PhysicsConfigLoader.cs`** — added `LoadWindConfig()`.
+- **`Assets/Scripts/Editor/Physics/PhysicsTuningWindow.cs`** — added Wind foldout: BaseVelocity XYZ, GustAmplitude slider, GustFrequency slider, AltitudeFactor, Seed field, Reload/Save/Preview buttons.
+- **`Assets/Scripts/Physics/Tests/WindTests.cs`** — 6 new tests (see below).
+
+### Test Results: 21/21 pass ✅
+- Phase 1 (4), Phase 2/2.1 (11), Phase 3 wind (6). Zero failures.
+
+### Wind Tests
+1. `Wind_Calm_MatchesPhase2Aero_ExactlyEqual` — bit-exact match ✅
+2. `Wind_Headwind_ReducesCarry_MonotonicallyWithSpeed` — ✅
+3. `Wind_Tailwind_ExtendsCarry` — ✅
+4. `Wind_Crosswind_ProducesLateralDrift` — ✅
+5. `Wind_Gust_SeedDeterminism` — ✅
+6. `Wind_Altitude_ProfileAffectsApex` — ✅
+
+### Headwind / Tailwind / Crosswind carry table (AeroConfig.Default constant mode):
+
+| Club | Calm | 5m/s HW | 10m/s HW | 5m/s CW carry | 5m/s CW lateral |
+|---|---|---|---|---|---|
+| Driver | 224.2yd | 199.0yd | 168.4yd | 224.0yd | 18.44m east |
+| Iron7 | 171.2yd | 143.7yd | 108.4yd | 170.6yd | 14.90m east |
+| SandWedge | 123.5yd | 108.4yd | 85.1yd | 123.1yd | 9.53m east |
+
+> Note: carries above use constant-mode aero (AeroConfig.Default, Cd=0.25), not LUT mode. LUT-mode carries are lower (e.g. Driver ~219yd from Phase 2.1 closeout). Wind effects are proportional in both modes.
+
+### Still Open
+- Phase 4: surface interaction (reads Phase 0 heightmap.bytes)
+- Phase 5: putting
 
 ---
 

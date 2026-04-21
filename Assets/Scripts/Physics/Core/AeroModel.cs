@@ -15,35 +15,39 @@ namespace Golfin.Physics
         /// Supports velocity-indexed Cd LUT and spin-parameter-indexed Cl LUT (Phase 2.1).
         /// Falls back to constant-mode coefficients when LUTs are absent or disabled.
         /// </summary>
-        public static fp3 ComputeAeroForce(fp3 velocity, SpinState spin, AeroConfig cfg)
+        /// <summary>
+        /// Aero force under wind. Drag and lift are computed against velocity_relative =
+        /// ball_velocity - wind_velocity. Result in Newtons.
+        /// </summary>
+        public static fp3 ComputeAeroForce(fp3 velocity, fp3 windVelocity, SpinState spin, AeroConfig cfg)
         {
-            fp speedSq = fpMath.Dot(velocity, velocity);
+            fp3 vRel = velocity - windVelocity;
+            fp speedSq = fpMath.Dot(vRel, vRel);
             if (speedSq <= fp.Epsilon) return fp3.Zero;
 
             fp speed = fpMath.Sqrt(speedSq);
-            fp3 vHat = velocity / speed;
+            fp3 vRelHat = vRel / speed;
 
-            // Drag: opposes velocity. Magnitude = ½ ρ A Cd(|v|) |v|²
+            // Drag: opposes relative velocity direction. Magnitude = ½ ρ A Cd(|vRel|) |vRel|²
             fp cd = (cfg.UseDragLut && cfg.DragLut.IsValid)
                 ? cfg.DragLut.Evaluate(speed)
                 : cfg.DragCoefficient;
 
             fp dragScalar = (cfg.AirDensity * cfg.BallCrossSection * cd * speedSq) * fp.Half;
-            fp3 drag = vHat * (-dragScalar);
+            fp3 drag = vRelHat * (-dragScalar);
 
             if (!spin.IsSpinning) return drag;
 
-            // Lift (Magnus): ½ ρ A Cl(S) |v|² (ŵ × v̂)
+            // Lift (Magnus): ½ ρ A Cl(S) |vRel|² (ŵ × v̂rel)
+            // Spin parameter uses relative speed — dimple flow responds to airflow, not ground speed.
             fp cl;
             if (cfg.UseLiftLut && cfg.LiftLut.IsValid)
             {
-                // Spin parameter S = r · ω / |v|
                 fp spinParam = (cfg.BallRadius * spin.Rate) / speed;
                 cl = cfg.LiftLut.Evaluate(spinParam);
             }
             else
             {
-                // Constant-mode legacy path: linear-capped Cl
                 fp spinScale = fpMath.Clamp(spin.Rate / cfg.SpinRateReference, fp.Zero, cfg.LiftMaxMultiplier);
                 cl = cfg.LiftCoefficientBase * spinScale;
             }
@@ -51,10 +55,12 @@ namespace Golfin.Physics
             if (cl <= fp.Epsilon) return drag;
 
             fp liftScalar = (cfg.AirDensity * cfg.BallCrossSection * cl * speedSq) * fp.Half;
-            fp3 liftDir = fpMath.Cross(spin.Axis, vHat);
-            fp3 lift = liftDir * liftScalar;
-
-            return drag + lift;
+            fp3 liftDir = fpMath.Cross(spin.Axis, vRelHat);
+            return drag + liftDir * liftScalar;
         }
+
+        // Back-compat: wind-free call forwards to wind-aware overload with zero wind.
+        public static fp3 ComputeAeroForce(fp3 velocity, SpinState spin, AeroConfig cfg)
+            => ComputeAeroForce(velocity, fp3.Zero, spin, cfg);
     }
 }

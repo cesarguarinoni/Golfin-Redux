@@ -105,6 +105,53 @@ namespace Golfin.Physics.Runtime
             return new CoefficientLut(xs.ToArray(), ys.ToArray());
         }
 
+        public static WindConfig LoadWindConfig()
+        {
+            var cfg = WindConfig.Calm;
+            var ta = Resources.Load<TextAsset>("Physics/wind");
+            if (ta == null)
+            {
+                Debug.LogWarning("[PhysicsConfigLoader] Physics/wind.csv not found — using calm defaults");
+                return cfg;
+            }
+
+            foreach (var raw in ta.text.Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#")) continue;
+                var parts = line.Split(',');
+                if (parts.Length < 2) continue;
+                string key = parts[0].Trim();
+
+                if (key == "seed")
+                {
+                    if (uint.TryParse(parts[1].Trim(),
+                            System.Globalization.NumberStyles.Integer,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out uint seed))
+                        cfg.Seed = seed;
+                    continue;
+                }
+
+                if (!float.TryParse(parts[1].Trim(),
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out float val)) continue;
+
+                switch (key)
+                {
+                    case "base_x":               cfg.BaseVelocity      = new Golfin.Physics.Math.fp3(fp.FromFloat(val), cfg.BaseVelocity.y, cfg.BaseVelocity.z); break;
+                    case "base_y":               cfg.BaseVelocity      = new Golfin.Physics.Math.fp3(cfg.BaseVelocity.x, fp.FromFloat(val), cfg.BaseVelocity.z); break;
+                    case "base_z":               cfg.BaseVelocity      = new Golfin.Physics.Math.fp3(cfg.BaseVelocity.x, cfg.BaseVelocity.y, fp.FromFloat(val)); break;
+                    case "gust_amplitude":       cfg.GustAmplitude     = fp.FromFloat(val); break;
+                    case "gust_frequency":       cfg.GustFrequency     = fp.FromFloat(val); break;
+                    case "altitude_factor":      cfg.AltitudeFactor    = fp.FromFloat(val); break;
+                    case "altitude_ref_meters":  cfg.AltitudeRefMeters = fp.FromFloat(val); break;
+                }
+            }
+            return cfg;
+        }
+
         public static List<ClubSpec> LoadClubSpecs()
         {
             var result = new List<ClubSpec>();

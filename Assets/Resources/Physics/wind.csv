@@ -1,0 +1,9 @@
+key,value,units,notes
+base_x,0.0,m/s,east-positive steady wind component
+base_y,0.0,m/s,vertical wind (updraft/downdraft); usually 0
+base_z,0.0,m/s,north-positive steady wind component
+gust_amplitude,0.0,dimensionless,0=calm 0.2=moderate gusts
+gust_frequency,0.5,Hz,gust oscillation rate
+altitude_factor,0.0,dimensionless,0=no altitude profile
+altitude_ref_meters,10.0,m,altitude reference
+seed,0,uint,PRNG seed for gust phase; 0=deterministic calm

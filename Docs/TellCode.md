@@ -7,158 +7,370 @@
 
 ---
 
-## ACTIVE TASK — Phase 2.1 CLOSEOUT: accept current state, annotate per-club tolerances, ship
+## ACTIVE TASK — Phase 3: Wind (steady + gusts + profile)
 
 ### Context
 
-v3 rung 3 (architecture escalation) hit honestly by Code. Bearman–Harvey Cl at driver S=0.08 = 0.083 genuinely cannot produce enough lift to match Trackman's 275 yd target from a 75 m/s / 10.9° launch. Confirmed by hand calculation: vacuum carry is 233 yd, lift at launch (0.45 N) barely equals gravity (0.45 N), net vertical force ≈ 0 at launch and strongly negative by mid-flight. Published simulators using the same B-H model claim 5–10% accuracy — **not 0%**. We are at the ceiling of a 1D physics model, not a tuning failure.
+Phase 2.1 closed with aero LUTs in the Bearman–Harvey envelope and honest per-club tolerances. Trajectories in still air are now physically grounded. Phase 3 adds wind so carry depends on conditions, not just launch parameters — headwinds shorten, tailwinds extend, crosswinds push the ball sideways, and gusts introduce shot-to-shot variance that makes the wind gauge in the UI actually matter.
 
-**Full lessons, reasoning, and future tightening recipes filed at `Docs/LESSONS_PHYSICS_AERO.md`. Read that before any future aero work.**
+The core integration change is small: replace `velocity` with `velocity - wind_velocity` inside `AeroModel.ComputeAeroForce`. Everything else in drag/lift already works with a relative-velocity vector. The complexity is in the wind model itself (steady + gust + optional altitude profile) and in making it deterministic (seeded PRNG) so the fixed-point integrator stays reproducible.
 
-Not escalating to Phase 2.2 right now. Three reasons:
+Out of scope: turbulence fields, ridge lift, thermals, wind shear across a hole, weather changes during a round. Wind is a per-shot condition, sampled at the ball's current position and time, returning a single vector. That's it.
 
-1. **A 2D LUT probably doesn't fix the root issue.** The wall is B-H Cl being too low at low S. A 2D LUT gives per-(v,S) flexibility but if we stay within B-H envelope, same wall. If we allow Cl > B-H, we're doing empirical calibration, which works but can be done cheaper than a 2D LUT overhaul.
-2. **Residuals are within published-simulator territory.** Wedges 5–5.5%, mid-irons 8–14%, driver 20%. Published ceiling is 5–10%. We're close for wedges, off for driver. Acceptable for a mobile game's first aero pass.
-3. **Phase 3–5 are blocking.** Wind, surface interaction, putt. Those matter more for game feel than hitting Trackman within 5%.
+Reference: `Docs/PHYSICS_RESEARCH.md` Section 4 (wind model), `Docs/LESSONS_PHYSICS_AERO.md` (aero invariants to respect when touching `AeroModel`).
 
-Decision: **accept current state as physics baseline**, annotate the test with per-club tolerances that reflect reality, move to Phase 3. If playtest shows driver feels too short, see Option A in `LESSONS_PHYSICS_AERO.md`.
+### Phase 2.1 invariants to respect
+
+- Hand-rolled Q16.16 math lib stays. No `Unity.Mathematics.FixedPoint` or float sneaking in.
+- `Golfin.Physics.Core` stays `noEngineReferences: true`. Wind config struct + wind sampler live in Core. CSV loading stays in Runtime.
+- RK4 precision pattern: multiply before divide. `(sum * Dt) / Two`, never `sum * (Dt / Two)`.
+- Aero is evaluated at each RK4 sub-step. Wind must be sampled at each sub-step too — using the position and time of that sub-step, not the start-of-step values — or the drag direction will drift across sub-steps when wind varies.
+- LUT CSVs and per-club tolerances from Phase 2.1 are locked. No changes to aero_drag_lut.csv, aero_lift_lut.csv, or clubs.csv.
 
 ---
 
-### Part A — Update the LUT-mode test with per-club tolerances
+### Part A — Data types (Core)
 
-Current single `Aero_ClubCarries_LutMode_AllClubs_Within8Percent` test fails on 5 of 7 clubs. Replace with per-club tolerances matching observed physics limits. This turns the test from aspirational to honest — same pattern as the constant-mode split into mid-irons-10% and endpoints-20%.
-
-**Edit `Assets/Scripts/Physics/Tests/AerodynamicsTests.cs`.** Replace the single test with three tests grouped by physics regime:
+#### `Assets/Scripts/Physics/Core/WindConfig.cs` — new
 
 ```csharp
-[Test]
-public void Aero_ClubCarries_LutMode_Wedges_Within8Percent()
-{
-    // Wedges (S > 0.4) land near Bearman-Harvey saturation Cl ≈ 0.29.
-    // B-H model is tightest here — lift is near its physical max.
-    var clubs = new[] { "PitchingWedge", "SandWedge" };
-    AssertClubCarriesWithinTolerance(clubs, useLuts: true, tolerance: 0.08f);
-}
+using Golfin.Physics.Math;
 
-[Test]
-public void Aero_ClubCarries_LutMode_MidIrons_Within15Percent()
+namespace Golfin.Physics
 {
-    // Mid-irons (S ≈ 0.2–0.4) are in the B-H rising region where 1D LUT
-    // accuracy falls off. Published simulators sit at 8–12% here; our
-    // Q16.16 fixed-point + RK4-at-1/240 gets us to ~14%. 15% is the
-    // honest ceiling for this model class at this implementation precision.
-    var clubs = new[] { "Iron5", "Iron7", "Iron9" };
-    AssertClubCarriesWithinTolerance(clubs, useLuts: true, tolerance: 0.15f);
-}
+    /// <summary>
+    /// Per-shot wind conditions. Steady base vector + optional gust envelope
+    /// + optional altitude-based speed multiplier. Deterministic given seed.
+    /// Pure data; loaded by PhysicsConfigLoader from Resources/Physics/wind.csv
+    /// or synthesized per-shot from design-side values.
+    /// </summary>
+    public struct WindConfig
+    {
+        /// <summary>Base wind vector in world-space m/s. +X east, +Z north is the convention used elsewhere in the sim.</summary>
+        public fp3 BaseVelocity;
 
-[Test]
-public void Aero_ClubCarries_LutMode_LongShots_Within25Percent()
-{
-    // Driver and Iron3 launch at low angles (10–11°) with low spin parameters
-    // (S ≈ 0.08–0.13). At these S values Bearman-Harvey Cl = 0.08–0.12 is
-    // barely enough to offset gravity at launch. Real Trackman 275 yd driver
-    // carry implies effective Cl closer to 0.12–0.15 at launch, outside B-H.
-    // This test gate reflects the 1D-B-H model ceiling, not a tuning failure.
-    // See Docs/LESSONS_PHYSICS_AERO.md for Options A/B/C to tighten later.
-    var clubs = new[] { "Driver", "Iron3" };
-    AssertClubCarriesWithinTolerance(clubs, useLuts: true, tolerance: 0.25f);
+        /// <summary>Gust amplitude as fraction of |BaseVelocity|. 0 = no gusts. 0.2 = ±20% variation.</summary>
+        public fp GustAmplitude;
+
+        /// <summary>Gust frequency in Hz — roughly how often the gust cycle oscillates. 0.3–0.8 Hz is typical.</summary>
+        public fp GustFrequency;
+
+        /// <summary>Altitude speed multiplier: wind at height Y scales as (1 + AltitudeFactor · Y / AltitudeRefMeters). 0 = no profile.</summary>
+        public fp AltitudeFactor;
+
+        /// <summary>Reference altitude in meters (typically 10m). Unused if AltitudeFactor is 0.</summary>
+        public fp AltitudeRefMeters;
+
+        /// <summary>PRNG seed for gusts. Same seed → same gust sequence → reproducible trajectories.</summary>
+        public uint Seed;
+
+        public static WindConfig Calm => new WindConfig
+        {
+            BaseVelocity      = fp3.Zero,
+            GustAmplitude     = fp.Zero,
+            GustFrequency     = fp.Zero,
+            AltitudeFactor    = fp.Zero,
+            AltitudeRefMeters = fp.FromInt(10),
+            Seed              = 0,
+        };
+
+        public bool IsActive =>
+            fpMath.Dot(BaseVelocity, BaseVelocity) > fp.Epsilon || GustAmplitude > fp.Epsilon;
+    }
 }
 ```
 
-Delete the old `Aero_ClubCarries_LutMode_AllClubs_Within8Percent`. Don't leave a commented-out version.
+#### `Assets/Scripts/Physics/Core/WindModel.cs` — new
 
-Bands are sized to pass current values with ~5% margin, giving playtest room to refine CSVs without tripping tests.
-
----
-
-### Part B — Document the physics ceiling in code
-
-Add a top-of-file comment to `AerodynamicsTests.cs` explaining the test structure:
+Pure-math wind sampler. No engine references, no CSV parsing.
 
 ```csharp
-// --- LUT-mode carry accuracy tests ---
-//
-// Target tolerances vary by club class because the 1D Cd(v) + Cl(S)
-// Bearman-Harvey model has different accuracy in different regimes:
-//
-//   Wedges (S > 0.4):         8% — B-H is near saturation, accurate.
-//   Mid-irons (S 0.2-0.4):   15% — B-H rising region, model gets looser.
-//   Long shots (S < 0.15):   25% — B-H under-predicts Cl at low S; the
-//                                  Trackman 275 yd driver is beyond what
-//                                  a pure 1D B-H LUT can produce.
-//
-// Full reasoning and future tightening options (cl_empirical_scale,
-// 2D LUT, hybrid) in Docs/LESSONS_PHYSICS_AERO.md.
+using Golfin.Physics.Math;
+
+namespace Golfin.Physics
+{
+    /// <summary>
+    /// Samples wind velocity at a given (position, time) from a WindConfig.
+    /// Deterministic: same config + same (pos, t) → same wind vector.
+    ///
+    /// Model: steady base vector, plus a gust envelope that sinusoidally
+    /// modulates magnitude over time with seed-derived phase, plus an
+    /// optional linear altitude profile.
+    /// </summary>
+    public static class WindModel
+    {
+        public static fp3 SampleWind(fp3 position, fp time, WindConfig cfg)
+        {
+            if (!cfg.IsActive) return fp3.Zero;
+
+            fp3 wind = cfg.BaseVelocity;
+
+            // Gust envelope: multiply magnitude by (1 + A · sin(2π·f·t + φ)).
+            // φ is derived from seed so different seeds give different gust timing.
+            if (cfg.GustAmplitude > fp.Epsilon && cfg.GustFrequency > fp.Epsilon)
+            {
+                fp phase = SeedToPhase(cfg.Seed);
+                fp angle = fpMath.TwoPi * cfg.GustFrequency * time + phase;
+                fp gust  = fp.One + cfg.GustAmplitude * fpMath.Sin(angle);
+                wind = wind * gust;
+            }
+
+            // Altitude profile: wind scales linearly with Y.
+            // At Y=0, multiplier is 1. At Y=AltitudeRefMeters, multiplier is 1 + AltitudeFactor.
+            if (cfg.AltitudeFactor > fp.Epsilon && cfg.AltitudeRefMeters > fp.Epsilon)
+            {
+                fp altScale = fp.One + cfg.AltitudeFactor * (position.y / cfg.AltitudeRefMeters);
+                // Clamp to prevent negative wind below ground level or absurdly high aloft.
+                altScale = fpMath.Clamp(altScale, fp.Half, fp.FromInt(3));
+                wind = wind * altScale;
+            }
+
+            return wind;
+        }
+
+        /// <summary>Deterministic uint-to-phase hash. Result is in [0, 2π).</summary>
+        private static fp SeedToPhase(uint seed)
+        {
+            // Simple splitmix-style hash, then scale into [0, 2π).
+            // Pure integer → fp; no float involved.
+            ulong x = seed;
+            x = (x ^ (x >> 16)) * 0x7FEB352Dul;
+            x = (x ^ (x >> 15)) * 0x846CA68Bul;
+            x = x ^ (x >> 16);
+            // Fractional part: bottom 16 bits / 65536, mapped to [0, 2π).
+            fp frac = fp.FromRaw((int)(x & 0xFFFFu));  // Q16.16: raw 0..65535 = 0..1.0
+            return frac * fpMath.TwoPi;
+        }
+    }
+}
 ```
+
+**fpMath additions needed:** `fpMath.TwoPi`, `fpMath.Sin`. If `Sin` isn't already in the math lib, add it using a Taylor series or CORDIC. Small-angle check: for our gust frequencies (0.3–0.8 Hz) and durations (up to 10 s), the angle stays bounded; a 6-term Taylor series after range-reduction to [-π, π] is sufficient. Keep it in `Assets/Scripts/Physics/Math/fpMath.cs`; no UnityEngine.
+
+If `fp.FromRaw(int)` doesn't exist but an equivalent does (e.g. `fp.FromRawBits`), use whatever the existing convention is. The point is: derive a deterministic sub-1.0 fraction from the seed without going through float.
 
 ---
 
-### Part C — Document Phase 2.1 as done in AI_CONTEXT.md
+### Part B — Thread wind through AeroModel + BallSimulation
 
-Update `Docs/AI_CONTEXT.md` physics section with the closeout state:
+#### `Assets/Scripts/Physics/Core/AeroModel.cs` — add relative-velocity overload
 
-```markdown
-### Physics: Phase 2.1 COMPLETE (2026-04-21) — with honest per-club tolerances
+Keep the existing `ComputeAeroForce(velocity, spin, cfg)` as a wind-free wrapper. Add a new overload that takes wind:
 
-Aero LUTs ship (velocity-indexed Cd, S-indexed Cl from Bearman-Harvey).
-Spin decay at 4%/s per Aoki 2010. Per-club test tolerances:
-- Wedges: 8% (model accurate at high S)
-- Mid-irons: 15% (B-H rising region)
-- Driver/Iron3: 25% (B-H under-predicts at low S — known 1D-LUT ceiling)
+```csharp
+/// <summary>
+/// Aero force under wind. Drag and lift are computed against velocity_relative =
+/// ball_velocity - wind_velocity. Ball velocity is returned in Newtons as before.
+/// </summary>
+public static fp3 ComputeAeroForce(fp3 velocity, fp3 windVelocity, SpinState spin, AeroConfig cfg)
+{
+    fp3 vRel = velocity - windVelocity;
+    fp speedSq = fpMath.Dot(vRel, vRel);
+    if (speedSq <= fp.Epsilon) return fp3.Zero;
 
-Full lessons + future tightening options: Docs/LESSONS_PHYSICS_AERO.md
-Moving to Phase 3 (wind).
+    fp speed = fpMath.Sqrt(speedSq);
+    fp3 vRelHat = vRel / speed;
+
+    // Drag opposes relative velocity direction.
+    fp cd = (cfg.UseDragLut && cfg.DragLut.IsValid)
+        ? cfg.DragLut.Evaluate(speed)
+        : cfg.DragCoefficient;
+    fp dragScalar = (cfg.AirDensity * cfg.BallCrossSection * cd * speedSq) * fp.Half;
+    fp3 drag = vRelHat * (-dragScalar);
+
+    if (!spin.IsSpinning) return drag;
+
+    // Lift direction is (spin × relative_velocity_direction), perpendicular to airflow.
+    fp cl;
+    if (cfg.UseLiftLut && cfg.LiftLut.IsValid)
+    {
+        fp spinParam = (cfg.BallRadius * spin.Rate) / speed;
+        cl = cfg.LiftLut.Evaluate(spinParam);
+    }
+    else
+    {
+        fp spinScale = fpMath.Clamp(spin.Rate / cfg.SpinRateReference, fp.Zero, cfg.LiftMaxMultiplier);
+        cl = cfg.LiftCoefficientBase * spinScale;
+    }
+    if (cl <= fp.Epsilon) return drag;
+
+    fp liftScalar = (cfg.AirDensity * cfg.BallCrossSection * cl * speedSq) * fp.Half;
+    fp3 liftDir = fpMath.Cross(spin.Axis, vRelHat);
+    return drag + liftDir * liftScalar;
+}
+
+// Back-compat: wind-free call forwards to the new overload with zero wind.
+public static fp3 ComputeAeroForce(fp3 velocity, SpinState spin, AeroConfig cfg)
+    => ComputeAeroForce(velocity, fp3.Zero, spin, cfg);
 ```
 
-Also add `Docs/LESSONS_PHYSICS_AERO.md` to the "always read at session start" list in AI_CONTEXT if aero work is on the horizon.
+**Note:** `cl <= fp.Epsilon` check and the fall-through to `return drag` stay. The spin parameter S = r·ω / |v_rel| uses relative speed, which is correct — a ball moving through still-air wind sees a different effective airflow speed, and that speed is what the dimple flow regime responds to.
+
+#### `Assets/Scripts/Physics/Core/BallSimulation.cs` — add wind-aware overload
+
+Add a third overload signature:
+
+```csharp
+public static Trajectory Simulate(ShotInput input, IGroundProvider ground, AeroConfig aero, WindConfig wind)
+```
+
+Inside the RK4 loop, sample wind at each sub-step using the sub-step's position estimate and time:
+
+```csharp
+// At each sub-step, sample wind at (sub-step position, sub-step time) and pass it to Accel.
+fp3 wind1 = WindModel.SampleWind(pos, t, wind);
+fp3 k1v = Accel(vel, wind1, spin, aero);
+fp3 k1p = vel;
+
+fp3 pos2 = pos + k1p * Dt / Two;
+fp3 vel2 = vel + k1v * Dt / Two;
+fp3 wind2 = WindModel.SampleWind(pos2, t + Dt / Two, wind);
+fp3 k2v = Accel(vel2, wind2, spin, aero);
+fp3 k2p = vel2;
+
+// ... same for k3, k4 ...
+```
+
+And `Accel` gets a wind overload:
+
+```csharp
+private static fp3 Accel(fp3 vel, fp3 wind, SpinState spin, AeroConfig cfg)
+{
+    fp3 gravity = new fp3(fp.Zero, Gravity, fp.Zero);
+    fp3 aeroForce = AeroModel.ComputeAeroForce(vel, wind, spin, cfg);
+    if (cfg.BallMass <= fp.Epsilon) return gravity;
+    fp3 aeroAccel = aeroForce / cfg.BallMass;
+    return gravity + aeroAccel;
+}
+```
+
+The existing `Simulate(input, ground, aero)` overload should become a one-liner that forwards to the wind-aware version with `WindConfig.Calm`. The existing `Simulate(input, ground)` wraps further with `AeroConfig.Vacuum`. Net effect: three overloads, each forwarding to the most general one, so Phase 1 and Phase 2 test paths are untouched.
+
+**Precision concern:** reordering `Dt / Two` to `(k1p * Dt) / Two` for position samples too. Same multiply-before-divide discipline as velocity.
 
 ---
 
-### Part D — Validation
+### Part C — Config loading (Runtime)
 
-1. Compile clean. `console-get-logs` after changes.
-2. Run full suite. All 14 tests should pass (4 Phase 1 + 10 aero after the split adds 2 net).
-3. Report pass/fail summary in done comment.
+#### `Assets/Resources/Physics/wind.csv` — new
 
-Should be a 30-minute task. No tuning. No new code. Test restructure + documentation.
+```csv
+key,value,units,notes
+base_x,0.0,m/s,east-positive steady wind component
+base_y,0.0,m/s,vertical wind (updraft/downdraft); usually 0
+base_z,0.0,m/s,north-positive steady wind component
+gust_amplitude,0.0,dimensionless,0=calm 0.2=moderate gusts
+gust_frequency,0.5,Hz,gust oscillation rate
+altitude_factor,0.0,dimensionless,0=no altitude profile
+altitude_ref_meters,10.0,m,altitude reference
+seed,0,uint,PRNG seed for gust phase; 0=deterministic calm
+```
+
+Default values = calm. Design-side tools will overwrite these per-shot or per-hole later.
+
+#### `Assets/Scripts/Physics/Runtime/PhysicsConfigLoader.cs` — extend
+
+Add `LoadWindConfig()` that reads `Resources/Physics/wind.csv` and returns a `WindConfig`. Follow the same pattern as `LoadAeroConfig`:
+
+- Tolerant of missing file → return `WindConfig.Calm` with a log warning.
+- Tolerant of missing keys → use `Calm` defaults for absent keys, log which ones.
+- Seed is parsed as uint; other fields as fp.
+
+No changes to `AeroConfig` loading. Wind is its own concern.
+
+---
+
+### Part D — Tuning window extension
+
+`Assets/Scripts/Editor/Physics/PhysicsTuningWindow.cs`:
+
+1. Add a "Wind" foldout section below the existing Aero section.
+2. Inside: three fp fields for BaseVelocity XYZ, a float slider for GustAmplitude (0 to 0.5), a slider for GustFrequency (0.1 to 2 Hz), an AltitudeFactor field, a Seed uint field, a "Reload wind.csv" button.
+3. A small preview: compute wind at the current time and at position (0, 0, 0) and display the resulting vector. Helps designers verify they're getting the expected magnitude.
+4. The existing "Run Validation" button should use `WindConfig.Calm` — wind is not part of the club-carry validation tests. Add a second button "Run Wind Test" that runs the wind-specific tests.
+
+Keep it functional, not pretty.
+
+---
+
+### Part E — Tests
+
+`Assets/Scripts/Physics/Tests/WindTests.cs` — new file. Golfin.Physics.Tests namespace.
+
+1. **`Wind_Calm_MatchesPhase2Aero_ExactlyEqual`** — simulate a 7-iron twice: once via the wind-free `Simulate(input, ground, aero)` overload, once via the wind-aware overload with `WindConfig.Calm`. Final positions must match bit-exactly (same raw Q16.16 values). Regression gate proving wind addition didn't perturb the wind-free path.
+
+2. **`Wind_Headwind_ReducesCarry_MonotonicallyWithSpeed`** — 7-iron, zero wind → carry A. 5 m/s headwind (BaseVelocity = (0, 0, -5), ball flies +Z) → carry B. 10 m/s headwind → carry C. Assert A > B > C, and each gap is at least 3 yards (headwind effect is real, not noise).
+
+3. **`Wind_Tailwind_ExtendsCarry`** — same setup but +Z wind. Tailwind carry > calm carry. Require at least +3 yd.
+
+4. **`Wind_Crosswind_ProducesLateralDrift`** — 7-iron in +Z direction, wind = (5, 0, 0). Assert `finalPosition.x` is > 2m (ball drifted east). Assert carry (|finalPosition.z|) is within 3% of calm carry (crosswind shouldn't change downrange distance much).
+
+5. **`Wind_Gust_SeedDeterminism`** — same gust config, two runs with same seed → identical trajectories. Same gust config, different seeds → different trajectories (landing positions differ by at least 0.5m). Covers determinism regression.
+
+6. **`Wind_Altitude_ProfileAffectsApex`** — 7-iron with AltitudeFactor = 0.5, headwind. Ball at apex (~25m) experiences stronger headwind than ball near ground. Carry should be shorter than flat-profile headwind of same surface speed. Assert at least 1 yard difference.
+
+Tolerances are directional + magnitude-sanity, not Trackman-precise. Wind tests check that the *shape* of the effect is correct, not specific numbers. Specific numbers come from playtesting, not physics.
+
+All existing tests must still pass. Total test count after Phase 3: 15 existing + 6 new = 21.
+
+---
+
+### Part F — Validation
+
+Drive yourself with Unity-MCP:
+
+1. Compile clean. `console-get-logs` after changes, max 5 iterations to resolve errors.
+2. Run full suite: `tests-run` filter `Golfin.Physics.Tests`. All 21 pass.
+3. Open `Window > Physics > Tuning`, verify wind foldout appears, click "Reload wind.csv", verify preview updates.
+4. Screenshot the scene with a 10 m/s crosswind applied, Play Mode ~2s. Trajectory should visibly curve compared to calm.
+
+### Done report
+
+- All 21 tests pass/fail summary.
+- `WindConfig` defaults loaded from `wind.csv` confirmed.
+- Headwind/tailwind/crosswind magnitude table: for 7-iron at 0/5/10 m/s in each direction, report the actual carry and the actual lateral offset.
+- Screenshot of crosswind trajectory.
+- Any anomalies. In particular, if `Wind_Calm_MatchesPhase2Aero_ExactlyEqual` fails with non-zero bit difference, that's a blocking issue — wind threading introduced numerical drift into the wind-free path. Report rather than tuning to hide.
 
 ### DO NOT
 
-- Tune LUT values. They are locked at current state.
-- Introduce a Cl scalar or empirical multiplier. That's a future playtest decision documented in LESSONS_PHYSICS_AERO.md.
-- Re-add `spin_drag_factor` or any other parameter.
-- Move wedge tolerance tighter than 8% or long-shot tolerance tighter than 25%. Current numbers are calibrated against the residual table.
+- Modify aero LUTs, clubs.csv, or Phase 2.1 test tolerances. They're locked.
+- Introduce UnityEngine imports to Core. Wind config + wind model are pure math.
+- Add turbulence fields, ridge lift, thermals, or 3D wind volumes. Scalar-profile wind only.
+- Use `System.Random` or `UnityEngine.Random` anywhere. Seed determinism is based on the uint seed + splitmix-style hash. The integrator must be reproducible.
+- Sample wind once per outer RK4 step and reuse. Sample at each sub-step with that sub-step's (position, time) — otherwise drag direction is wrong mid-step when wind varies fast.
+- Tune wind.csv values. Defaults are calm; test-time configs are built in code.
 
-### Done marker
+### Iteration budget
 
-Add to the top of the history log: `✅ DONE: [date] Phase 2.1 closeout — LUT-mode tests split by club class with honest per-club tolerances. Driver/Iron3 at 25%, mid-irons at 15%, wedges at 8%. All 14 tests pass. Lessons filed at LESSONS_PHYSICS_AERO.md. Physics baseline accepted; Phase 3 (wind) unblocked.`
+3 iterations on the code (compile + tests). If `Wind_Calm_MatchesPhase2Aero_ExactlyEqual` doesn't pass bit-exactly, stop and report — that indicates a threading issue in the wind-free path that needs architectural fix, not tuning.
 
 ---
 
+✅ DONE: 2026-04-21 Phase 3 Wind complete — 21/21 tests pass, WindConfig + WindModel + wind.csv + PhysicsConfigLoader.LoadWindConfig() + AeroModel wind overload + BallSimulation wind-aware Simulate overload + PhysicsTuningWindow Wind foldout. Wind_Calm_MatchesPhase2Aero_ExactlyEqual passes bit-exactly. See done report in AI_CONTEXT.md.
+
 ## History Log (completed tasks, most recent first)
 
-- ✅ DONE: 2026-04-21 Phase 2.1 closeout — LUT-mode tests split by club class with honest per-club tolerances. Driver/Iron3 at 25%, mid-irons at 15%, wedges at 8%. All 15 tests pass. Lessons filed at LESSONS_PHYSICS_AERO.md. Physics baseline accepted; Phase 3 (wind) unblocked.
-
-- ❌ **2026-04-21 REMEDIATION v3 — ARCHITECTURE ESCALATION HIT (Rung 3)** — All v3 parameter changes implemented correctly: Bearman–Harvey Cl LUT (+0.01 nudge per spec allowance), Cd floor 0.23, spin decay at 0.02/s (Aoki low-end tried during tuning). Final LUT-mode residuals: Driver 20.5%, Iron3 11.4%, Iron5 13.9%, Iron7 10.7%, Iron9 8.1%, PW 4.8%, SW 5.5%. Architect review confirmed: 1D Bearman-Harvey Cl at driver S=0.08 physically cannot produce 275 yd carry; lift barely balances gravity at launch. Published simulators sit at 5–10% ceiling on this regime. Not escalating to Phase 2.2 (2D LUT) — closeout instead with per-club tolerances reflecting physics limits. **Lessons filed: `Docs/LESSONS_PHYSICS_AERO.md`.**
-- ⚠️ **2026-04-21 REMEDIATION v2 COMPLETE — HONEST RESIDUAL** Code correctly executed v2 per spec. Tests restructured (mid-irons-10% + endpoints-20% + LUT-all-5%). Constant mode passed both gates. LUT mode failed: Driver 23.5% short, irons 11–19% short, wedges within 5%. Pattern matched Bearman–Harvey analysis: inflated Cl at low S caused over-lift and under-carry for shallow-launch clubs. Not a tuning failure or architecture failure — a seed-value error.
-- ⚠️ **2026-04-21 REMEDIATION v1** Reverted scope creep (`spin_drag_factor`, `spin_decay_rate`). Held constant-mode to unachievable 10% gate on Driver/SW. Code's pushback led to v2 restructure. Note: `spin_decay_rate` revert was wrong (see v3).
-- ⚠️ **2026-04-21 PARTIAL** Phase 2.1 LUT architecture landed (CoefficientLut, CSV-driven LUTs, mode toggles, test structure) but initial v0 tuning introduced unphysical LUT shapes and out-of-scope parameters. Series of remediations followed.
-- ✅ **2026-04-21** Phase 2 Aerodynamics (constant Cd + linear-capped Cl) — `SpinState`, `AeroConfig`, `AeroModel.ComputeAeroForce()`, `ClubSpec`, `aero.csv`, `clubs.csv`, `PhysicsConfigLoader`, `PhysicsTuningWindow`. `BallSimulation` calls `AeroModel` at each RK4 sub-step. Landed mid-irons cleanly at 10%; Driver and SW hit the single-Cd ceiling — the signal that 2D-LUT work (Phase 2.1) was needed. [Note: the original "10% on all clubs" claim was aspirational; Driver and SW cannot pass 10% with constant Cd. Honest ceiling: mid-irons-10% + endpoints-20%.]
-- ✅ **2026-04-21** Phase 1 Vacuum Trajectory — `Golfin.Physics` core types with hand-rolled Q16.16 `fp`/`fp3` math lib. RK4 integrator at dt=1/240s. 4 tests passing. 1000 random shots: 0 failures, worst error 0.164%. 50 m/s @ 25° → 195.3m (expected 195.27m). **Gotcha recorded:** `Dt/6` in Q16.16 truncates; must reorder as `(sum * Dt) / 6`.
-- ✅ **2026-04-21** Phase 0 Physics Heightmap Baker — `PhysicsHeightmapBaker.cs`. Q16.16 fixed-point binary `heightmap.bytes` with `GHM1` header. All 18 holes baked: 16.02 MB each, 0/100 round-trip mismatches.
+- ✅ **2026-04-21** Phase 2.1 closeout — LUT-mode tests split by club class with honest per-club tolerances. Driver/Iron3 at 25%, mid-irons at 15%, wedges at 8%. 15 tests pass. Lessons filed at LESSONS_PHYSICS_AERO.md. Physics baseline accepted.
+- ❌ **2026-04-21 REMEDIATION v3 — ARCHITECTURE ESCALATION HIT (Rung 3)** — Bearman–Harvey Cl at driver S=0.08 physically cannot produce 275 yd carry; lift barely balances gravity at launch. 1D-BH model ceiling. Not escalating to 2D LUT. Lessons filed: `Docs/LESSONS_PHYSICS_AERO.md`.
+- ⚠️ **2026-04-21 REMEDIATION v2** Seed-value error, not architecture — Cl too high at low S. Driver 23.5% short residual matched ratio of seed overshoot.
+- ⚠️ **2026-04-21 REMEDIATION v1** Correctly reverted `spin_drag_factor` scope creep; incorrectly reverted `spin_decay_rate` (real physics, restored in v3).
+- ⚠️ **2026-04-21 PARTIAL** Phase 2.1 LUT architecture landed (CoefficientLut, CSV-driven LUTs, mode toggles); v0 tuning produced unphysical shapes. Series of remediations followed.
+- ✅ **2026-04-21** Phase 2 Aerodynamics (constant Cd + linear-capped Cl) — `SpinState`, `AeroConfig`, `AeroModel.ComputeAeroForce()`, `ClubSpec`, `aero.csv`, `clubs.csv`, `PhysicsConfigLoader`, `PhysicsTuningWindow`. `BallSimulation` calls `AeroModel` at each RK4 sub-step.
+- ✅ **2026-04-21** Phase 1 Vacuum Trajectory — `Golfin.Physics` core types with hand-rolled Q16.16 `fp`/`fp3` math lib. RK4 at dt=1/240s. **Gotcha:** `Dt/6` in Q16.16 truncates; reorder as `(sum * Dt) / 6`.
+- ✅ **2026-04-21** Phase 0 Physics Heightmap Baker — Q16.16 fixed-point binary `heightmap.bytes`. All 18 holes baked.
 - ✅ **2026-04-20** Phase 2b water shore ablation — confirmed depression-cliff cause. `ShoreRadius` restored to 10.
-- ✅ **2026-04-20** Water Shore Phase 2c — inner collar ramp in `DepressTerrainUnderOverlays`.
-- ✅ **2026-04-20** Hole Flyover Recorder — `HoleFlyoverRecorder.cs` with 3 menu items, 4-phase path, batch mode across 18 holes.
-- ✅ **2026-04-20** UHoleGeo B-C cart path fix — rescue short chains whose endpoint touches a 2-way junction.
-- ✅ **2026-04-20** Cart path junction endpoint snapping — `SnapCartPathJunctionEndpoints()` with 0.75m radius clustering.
-- ✅ **2026-04-20** Linear-slope tee skirt — linear descent at `TeeMaxRampSlope=0.35 m/m`.
-- ❌ **2026-04-20 REVERTED** Per-edge adaptive tee skirt — stair-stepped every slope.
-- ⚠️ **2026-04-20 REVERTED** Per-layer terrain tint pass — `diffuseRemapMax` on TerrainLayer had no visible effect.
-- ✅ **2026-04-19** Water Shore Phase 1 sampling — course-wide max drop 14.07m.
-- ✅ **2026-04-18** Bridge Viewer in UHoleGeo — `/api/bridges` route + canvas rendering + tooltip.
-- ✅ **2026-04-18** Bridge Placement Tool (Unity) — `BridgeAnchor` + `BridgeExporter` EditorWindow.
-- ✅ **2026-04-18** Tee border ring UV fix — constant V + manual quad-strip.
+- ✅ **2026-04-20** Water Shore Phase 2c — inner collar ramp.
+- ✅ **2026-04-20** Hole Flyover Recorder — `HoleFlyoverRecorder.cs`.
+- ✅ **2026-04-20** UHoleGeo B-C cart path fix.
+- ✅ **2026-04-20** Cart path junction endpoint snapping.
+- ✅ **2026-04-20** Linear-slope tee skirt.
+- ❌ **2026-04-20 REVERTED** Per-edge adaptive tee skirt.
+- ⚠️ **2026-04-20 REVERTED** Per-layer terrain tint pass.
+- ✅ **2026-04-19** Water Shore Phase 1 sampling.
+- ✅ **2026-04-18** Bridge Viewer in UHoleGeo.
+- ✅ **2026-04-18** Bridge Placement Tool (Unity).
+- ✅ **2026-04-18** Tee border ring UV fix.
 
 ---
 
@@ -167,7 +379,7 @@ Add to the top of the history log: `✅ DONE: [date] Phase 2.1 closeout — LUT-
 - `Docs/AI_CONTEXT.md` — project state, pipeline overview, session changelog
 - `Docs/PHYSICS_RESEARCH.md` — physics architecture, 5+1 phase plan
 - `Docs/PHYSICS_TUNING_TARGETS.md` — canonical physics numbers
-- `Docs/LESSONS_PHYSICS_AERO.md` — **aero remediation lessons + future tightening options** (read before touching aero LUTs)
+- `Docs/LESSONS_PHYSICS_AERO.md` — aero remediation lessons + future tightening options (read before touching aero LUTs)
 - `Docs/INVENTORY_REFERENCE.md` — inventory system patterns
 - `Docs/LESSONS_FRINGE_BORDER_MESHES.md` — canonical submesh recipe
 - `CLAUDE.md` — Claude Code session rules
