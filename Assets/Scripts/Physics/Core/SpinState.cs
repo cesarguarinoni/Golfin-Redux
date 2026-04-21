@@ -19,6 +19,9 @@ namespace Golfin.Physics
 
         public bool IsSpinning => Rate > fp.Epsilon;
 
+        public SpinState WithRate(fp newRate) =>
+            new SpinState(Axis, newRate > fp.Zero ? newRate : fp.Zero);
+
         public static SpinState None => new SpinState(new fp3(fp.Zero, fp.Zero, fp.One), fp.Zero);
     }
 }

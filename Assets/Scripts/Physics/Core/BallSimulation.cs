@@ -103,6 +103,9 @@ namespace Golfin.Physics
                 pos = posNext;
                 vel = velNext;
                 t = tNext;
+                // Exponential spin decay: ω(t+dt) ≈ ω(t) × (1 − k·dt)
+                if (aero.SpinDecayRate > fp.Epsilon && spin.IsSpinning)
+                    spin = spin.WithRate(spin.Rate * (fp.One - aero.SpinDecayRate * Dt));
                 samples.Add(new TrajectorySample(t, pos, vel));
             }
 

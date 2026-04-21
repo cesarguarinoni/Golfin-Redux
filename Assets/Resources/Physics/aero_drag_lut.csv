@@ -1,0 +1,6 @@
+speed_mps,cd,notes
+5,0.16,"low-speed base — dimpled ball stays turbulent"
+57,0.16,"Iron5 launch — top of low-Cd flat zone"
+65,0.22,"Iron3/Driver boundary — Cd increases at high speed"
+75,0.22,"Driver launch speed"
+100,0.22,"extrapolation safety"

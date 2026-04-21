@@ -1,0 +1,11 @@
+spin_parameter,cl,notes
+0.00,0.00,"no spin = no lift"
+0.05,0.12,"driver regime S≈0.08"
+0.10,0.20,"long iron regime S≈0.15"
+0.15,0.25,
+0.20,0.26,"peak — Iron5 S≈0.21"
+0.25,0.25,"begin decline"
+0.30,0.22,"Iron7 S≈0.30"
+0.40,0.15,"Iron9 S≈0.40"
+0.50,0.11,"PW regime S≈0.45"
+0.60,0.08,"SW regime S≈0.56 — deep saturation/decline"

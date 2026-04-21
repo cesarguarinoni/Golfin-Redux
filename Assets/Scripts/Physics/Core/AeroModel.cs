@@ -12,6 +12,8 @@ namespace Golfin.Physics
         /// <summary>
         /// Returns drag + Magnus lift force in Newtons.
         /// Returns zero if speed is negligible or both Cd/Cl are zero (vacuum path).
+        /// Supports velocity-indexed Cd LUT and spin-parameter-indexed Cl LUT (Phase 2.1).
+        /// Falls back to constant-mode coefficients when LUTs are absent or disabled.
         /// </summary>
         public static fp3 ComputeAeroForce(fp3 velocity, SpinState spin, AeroConfig cfg)
         {
@@ -21,19 +23,41 @@ namespace Golfin.Physics
             fp speed = fpMath.Sqrt(speedSq);
             fp3 vHat = velocity / speed;
 
-            // Drag: opposes velocity. Magnitude = ½ ρ A Cd |v|²
-            // Reorder multiply before divide to preserve Q16.16 precision.
-            fp dragScalar = (cfg.AirDensity * cfg.BallCrossSection * cfg.DragCoefficient * speedSq) * fp.Half;
+            // Drag: opposes velocity. Magnitude = ½ ρ A Cd(|v|) |v|²
+            fp cd = (cfg.UseDragLut && cfg.DragLut.IsValid)
+                ? cfg.DragLut.Evaluate(speed)
+                : cfg.DragCoefficient;
+
+            // Spin-induced drag: Cd_total += SpinDragFactor × S²  (induced drag from lift)
+            if (cfg.SpinDragFactor > fp.Epsilon && spin.IsSpinning)
+            {
+                fp spinParam = (cfg.BallRadius * spin.Rate) / speed;
+                cd = cd + cfg.SpinDragFactor * spinParam * spinParam;
+            }
+
+            fp dragScalar = (cfg.AirDensity * cfg.BallCrossSection * cd * speedSq) * fp.Half;
             fp3 drag = vHat * (-dragScalar);
 
-            if (!spin.IsSpinning || cfg.LiftCoefficientBase <= fp.Epsilon)
-                return drag;
+            if (!spin.IsSpinning) return drag;
 
-            // Lift (Magnus): ½ ρ A Cl_eff |v|² (ŵ × v̂)
-            // Cl_eff = Cl_base * clamp(spinRate / spinRateRef, 0, ClMaxMult)
-            fp spinScale = fpMath.Clamp(spin.Rate / cfg.SpinRateReference, fp.Zero, cfg.LiftMaxMultiplier);
-            fp clEff = cfg.LiftCoefficientBase * spinScale;
-            fp liftScalar = (cfg.AirDensity * cfg.BallCrossSection * clEff * speedSq) * fp.Half;
+            // Lift (Magnus): ½ ρ A Cl(S) |v|² (ŵ × v̂)
+            fp cl;
+            if (cfg.UseLiftLut && cfg.LiftLut.IsValid)
+            {
+                // Spin parameter S = r · ω / |v|
+                fp spinParam = (cfg.BallRadius * spin.Rate) / speed;
+                cl = cfg.LiftLut.Evaluate(spinParam);
+            }
+            else
+            {
+                // Constant-mode legacy path: linear-capped Cl
+                fp spinScale = fpMath.Clamp(spin.Rate / cfg.SpinRateReference, fp.Zero, cfg.LiftMaxMultiplier);
+                cl = cfg.LiftCoefficientBase * spinScale;
+            }
+
+            if (cl <= fp.Epsilon) return drag;
+
+            fp liftScalar = (cfg.AirDensity * cfg.BallCrossSection * cl * speedSq) * fp.Half;
             fp3 liftDir = fpMath.Cross(spin.Axis, vHat);
             fp3 lift = liftDir * liftScalar;
 

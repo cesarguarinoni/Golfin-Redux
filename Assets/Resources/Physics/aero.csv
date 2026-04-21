@@ -2,7 +2,12 @@ key,value,units,notes
 air_density,1.225,kg/m^3,sea-level 15C
 ball_mass,0.04593,kg,USGA max
 ball_cross_section,0.001432,m^2,radius 0.02135m
-drag_coefficient,0.25,dimensionless,constant starting point
-lift_coefficient_base,0.20,dimensionless,scaled by spin in code
-spin_rate_reference,300,rad/s,~2865 rpm driver baseline
-lift_max_multiplier,1.5,dimensionless,cap on spin-scaled Cl
+ball_radius,0.02135,m,for spin parameter S = r·ω/v
+drag_coefficient,0.25,dimensionless,constant-mode Cd (LUT fallback)
+lift_coefficient_base,0.20,dimensionless,constant-mode Cl base (LUT fallback)
+spin_rate_reference,300,rad/s,constant-mode only
+lift_max_multiplier,1.5,dimensionless,constant-mode only
+use_drag_lut,1,bool,1=velocity-indexed Cd LUT 0=constant Cd
+use_lift_lut,1,bool,1=spin-parameter Cl LUT 0=linear-capped Cl
+spin_drag_factor,0.03,dimensionless,adds Cd_spin*S^2 to drag (induced drag from lift); 0=off
+spin_decay_rate,0.0,1/s,exponential spin decay per second; 0=no decay
