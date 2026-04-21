@@ -9,5 +9,3 @@ spin_rate_reference,300,rad/s,constant-mode only
 lift_max_multiplier,1.5,dimensionless,constant-mode only
 use_drag_lut,1,bool,1=velocity-indexed Cd LUT 0=constant Cd
 use_lift_lut,1,bool,1=spin-parameter Cl LUT 0=linear-capped Cl
-spin_drag_factor,0.03,dimensionless,adds Cd_spin*S^2 to drag (induced drag from lift); 0=off
-spin_decay_rate,0.0,1/s,exponential spin decay per second; 0=no decay

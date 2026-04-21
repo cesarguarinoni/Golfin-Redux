@@ -22,8 +22,6 @@ namespace Golfin.Physics
         public CoefficientLut LiftLut;  // Cl(S).     When IsValid=false, falls back to linear-capped Cl.
         public bool UseDragLut;
         public bool UseLiftLut;
-        public fp SpinDecayRate;        // 1/s — exponential spin decay. 0 = no decay (default, backward-compatible).
-        public fp SpinDragFactor;       // dimensionless — adds Cd_spin × S² to drag (induced drag). 0 = off (default).
 
         public static AeroConfig Default => new AeroConfig
         {

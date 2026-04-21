@@ -28,13 +28,6 @@ namespace Golfin.Physics
                 ? cfg.DragLut.Evaluate(speed)
                 : cfg.DragCoefficient;
 
-            // Spin-induced drag: Cd_total += SpinDragFactor × S²  (induced drag from lift)
-            if (cfg.SpinDragFactor > fp.Epsilon && spin.IsSpinning)
-            {
-                fp spinParam = (cfg.BallRadius * spin.Rate) / speed;
-                cd = cd + cfg.SpinDragFactor * spinParam * spinParam;
-            }
-
             fp dragScalar = (cfg.AirDensity * cfg.BallCrossSection * cd * speedSq) * fp.Half;
             fp3 drag = vHat * (-dragScalar);
 

@@ -36,39 +36,69 @@ namespace Golfin.Physics.Tests
         private static float CarryMeters(Trajectory t) => t.finalPosition.z.ToFloat();
         private static float CarryYards(Trajectory t)  => CarryMeters(t) * 1.09361f;
 
-        // Build a seed LUT config (no Resources.Load — inline the seed tables)
+        // Mirrors aero_drag_lut.csv / aero_lift_lut.csv exactly — update in sync with those files.
         private static AeroConfig MakeLutConfig()
         {
             var dragX = new fp[] {
-                fp.FromFloat(5f), fp.FromFloat(57f), fp.FromFloat(65f), fp.FromFloat(75f), fp.FromFloat(100f) };
+                fp.FromFloat(5f),  fp.FromFloat(10f), fp.FromFloat(15f), fp.FromFloat(20f),
+                fp.FromFloat(25f), fp.FromFloat(30f), fp.FromFloat(40f), fp.FromFloat(50f),
+                fp.FromFloat(60f), fp.FromFloat(70f), fp.FromFloat(80f), fp.FromFloat(100f) };
             var dragY = new fp[] {
-                fp.FromFloat(0.16f), fp.FromFloat(0.16f), fp.FromFloat(0.22f), fp.FromFloat(0.22f), fp.FromFloat(0.22f) };
+                fp.FromFloat(0.50f), fp.FromFloat(0.48f), fp.FromFloat(0.45f), fp.FromFloat(0.28f),
+                fp.FromFloat(0.25f), fp.FromFloat(0.24f), fp.FromFloat(0.22f), fp.FromFloat(0.22f),
+                fp.FromFloat(0.21f), fp.FromFloat(0.21f), fp.FromFloat(0.21f), fp.FromFloat(0.21f) };
 
             var liftX = new fp[] {
-                fp.FromFloat(0.00f), fp.FromFloat(0.05f), fp.FromFloat(0.10f), fp.FromFloat(0.15f),
-                fp.FromFloat(0.20f), fp.FromFloat(0.25f), fp.FromFloat(0.30f), fp.FromFloat(0.40f),
-                fp.FromFloat(0.50f), fp.FromFloat(0.60f) };
+                fp.FromFloat(0.00f), fp.FromFloat(0.02f), fp.FromFloat(0.05f), fp.FromFloat(0.08f),
+                fp.FromFloat(0.12f), fp.FromFloat(0.15f), fp.FromFloat(0.20f), fp.FromFloat(0.25f),
+                fp.FromFloat(0.30f), fp.FromFloat(0.40f), fp.FromFloat(0.60f) };
             var liftY = new fp[] {
-                fp.FromFloat(0.00f), fp.FromFloat(0.12f), fp.FromFloat(0.20f), fp.FromFloat(0.25f),
-                fp.FromFloat(0.26f), fp.FromFloat(0.25f), fp.FromFloat(0.22f), fp.FromFloat(0.15f),
-                fp.FromFloat(0.11f), fp.FromFloat(0.08f) };
+                fp.FromFloat(0.00f), fp.FromFloat(0.08f), fp.FromFloat(0.18f), fp.FromFloat(0.22f),
+                fp.FromFloat(0.26f), fp.FromFloat(0.27f), fp.FromFloat(0.28f), fp.FromFloat(0.29f),
+                fp.FromFloat(0.29f), fp.FromFloat(0.30f), fp.FromFloat(0.30f) };
 
             var cfg = AeroConfig.Default;
-            cfg.DragLut       = new CoefficientLut(dragX, dragY);
-            cfg.LiftLut       = new CoefficientLut(liftX, liftY);
-            cfg.UseDragLut    = true;
-            cfg.UseLiftLut    = true;
-            cfg.SpinDragFactor = fp.FromFloat(0.03f);
+            cfg.DragLut    = new CoefficientLut(dragX, dragY);
+            cfg.LiftLut    = new CoefficientLut(liftX, liftY);
+            cfg.UseDragLut = true;
+            cfg.UseLiftLut = true;
             return cfg;
         }
 
-        // ── Phase 2 Tests (original 5) ──────────────────────────────────────────
+        // Shared validation helper. Filters Clubs[] to clubIds, simulates each, asserts within tolerancePct.
+        private void AssertClubCarriesWithinTolerance(string[] clubIds, bool useLuts, float tolerancePct)
+        {
+            var cfg    = useLuts ? MakeLutConfig() : AeroConfig.Default;
+            var ground = new FlatGround(fp.Zero);
+            var results = new List<string>();
+            bool anyFailed = false;
 
-        // ── Test 1 ────────────────────────────────────────────────────────────
+            foreach (var (id, speedMps, angleDeg, spinRpm, expectedYd) in Clubs)
+            {
+                if (System.Array.IndexOf(clubIds, id) < 0) continue;
+                var input  = MakeShot(speedMps, angleDeg, spinRpm);
+                float actualYd = CarryYards(BallSimulation.Simulate(input, ground, cfg));
+                float errPct   = System.Math.Abs(actualYd - expectedYd) / expectedYd * 100f;
+                bool  ok       = errPct <= tolerancePct;
+
+                results.Add($"  {id,-15} expected={expectedYd:F0}yd  actual={actualYd:F0}yd  err={errPct:F1}%  {(ok ? "OK" : "FAIL")}");
+                if (!ok) anyFailed = true;
+            }
+
+            string mode  = useLuts ? "LUT" : "constant";
+            string table = "\n" + string.Join("\n", results);
+            UnityEngine.Debug.Log($"[AerodynamicsTests] Club carry ({mode}, tol={tolerancePct:F0}%):" + table);
+
+            Assert.IsFalse(anyFailed,
+                $"One or more clubs exceed {tolerancePct:F0}% carry error ({mode} mode). " +
+                "Tune LUT CSVs within physical constraints — do NOT adjust expected_carry_yd or widen tolerances." + table);
+        }
+
+        // ── Phase 2 Tests ──────────────────────────────────────────────────────
+
         [Test]
         public void Aero_Off_MatchesPhase1_Within_Epsilon()
         {
-            var vacuum = AeroConfig.Vacuum;
             var noAero = new AeroConfig
             {
                 AirDensity          = AeroConfig.Default.AirDensity,
@@ -80,7 +110,7 @@ namespace Golfin.Physics.Tests
                 LiftMaxMultiplier   = AeroConfig.Default.LiftMaxMultiplier,
             };
 
-            var input = MakeShot(52.5f, 16.3f);
+            var input  = MakeShot(52.5f, 16.3f);
             var ground = new FlatGround(fp.Zero);
 
             var phase1 = BallSimulation.Simulate(input, ground);
@@ -92,7 +122,6 @@ namespace Golfin.Physics.Tests
                 $"phase1={CarryMeters(phase1):F2}m  phase2={CarryMeters(phase2):F2}m");
         }
 
-        // ── Test 2 ────────────────────────────────────────────────────────────
         [Test]
         public void Aero_DragReducesCarry_MonotonicallyWithCd()
         {
@@ -102,7 +131,7 @@ namespace Golfin.Physics.Tests
             for (float cd = 0f; cd <= 0.55f; cd += 0.05f)
             {
                 var cfg = AeroConfig.Default;
-                cfg.DragCoefficient = fp.FromFloat(cd);
+                cfg.DragCoefficient     = fp.FromFloat(cd);
                 cfg.LiftCoefficientBase = fp.Zero;
 
                 var input = MakeShot(52.5f, 16.3f);
@@ -114,7 +143,6 @@ namespace Golfin.Physics.Tests
             }
         }
 
-        // ── Test 3 ────────────────────────────────────────────────────────────
         [Test]
         public void Aero_Backspin_ExtendsCarry_VsZeroSpin()
         {
@@ -133,40 +161,27 @@ namespace Golfin.Physics.Tests
                 $"no-spin={carryNo:F1}m  backspin={carrySpin:F1}m  improvement={improvement * 100:F1}%");
         }
 
-        // ── Test 4 ────────────────────────────────────────────────────────────
+        // Constant Cd=0.25 + linear-capped Cl hits mid-irons cleanly. Tight gate.
         [Test]
-        public void Aero_ClubCarries_WithinTolerance_OfTrackmanTargets()
+        public void Aero_ClubCarries_ConstantMode_MidIrons_Within10Percent()
         {
-            var cfg    = AeroConfig.Default;
-            var ground = new FlatGround(fp.Zero);
-            var results = new List<string>();
-            bool anyFailed = false;
-
-            foreach (var (id, speedMps, angleDeg, spinRpm, expectedYd) in Clubs)
-            {
-                var input = MakeShot(speedMps, angleDeg, spinRpm);
-                float actualYd = CarryYards(BallSimulation.Simulate(input, ground, cfg));
-                float errPct   = System.Math.Abs(actualYd - expectedYd) / expectedYd * 100f;
-                // Constant mode uses a single Cd/Cl for all clubs, so it can't simultaneously
-                // hit Driver (needs Cd≈0.20) and SW (needs Cd≈0.28). 20% is the sanity bound;
-                // use LUT mode (Test 8, 5-12%) for accurate per-club modeling.
-                bool  ok       = errPct <= 20f;
-
-                results.Add($"  {id,-15} expected={expectedYd:F0}yd  actual={actualYd:F0}yd  err={errPct:F1}%  {(ok ? "OK" : "FAIL")}");
-                if (!ok) anyFailed = true;
-            }
-
-            string table = "\n" + string.Join("\n", results);
-            UnityEngine.Debug.Log("[AerodynamicsTests] Club carry table (constant mode):" + table);
-
-            Assert.IsFalse(anyFailed,
-                "One or more clubs exceed 20% carry error vs Trackman targets (constant mode). " +
-                "Do NOT silently adjust expected_carry_yd — tune Cd/Cl instead." + table);
+            AssertClubCarriesWithinTolerance(
+                new[] { "Iron3", "Iron5", "Iron7", "Iron9", "PitchingWedge" },
+                useLuts: false, tolerancePct: 10f);
         }
 
-        // ── Phase 2.1 Tests ─────────────────────────────────────────────────────
+        // Driver (75 m/s, S≈0.08) and SandWedge (40 m/s, S≈0.56) span 35 m/s and 7× the spin
+        // parameter. A single Cd+Cl cannot tune both to 10% — that's why LUT mode exists.
+        [Test]
+        public void Aero_ClubCarries_ConstantMode_Endpoints_Within20Percent()
+        {
+            AssertClubCarriesWithinTolerance(
+                new[] { "Driver", "SandWedge" },
+                useLuts: false, tolerancePct: 20f);
+        }
 
-        // ── Test 5 ────────────────────────────────────────────────────────────
+        // ── Phase 2.1 Tests ────────────────────────────────────────────────────
+
         [Test]
         public void Lut_EvaluatesWithinBounds_ReturnsInterpolated()
         {
@@ -174,29 +189,24 @@ namespace Golfin.Physics.Tests
             var y = new fp[] { fp.FromFloat(1f), fp.FromFloat(3f),  fp.FromFloat(5f)  };
             var lut = new CoefficientLut(x, y);
 
-            // Exact breakpoints
             Assert.AreEqual(1f, lut.Evaluate(fp.FromFloat(0f)).ToFloat(),  0.001f, "At X[0]");
             Assert.AreEqual(3f, lut.Evaluate(fp.FromFloat(10f)).ToFloat(), 0.001f, "At X[1]");
             Assert.AreEqual(5f, lut.Evaluate(fp.FromFloat(20f)).ToFloat(), 0.001f, "At X[2]");
 
-            // Midpoint interpolation: between 0 and 10, at 5 → expect 2.0
             float mid = lut.Evaluate(fp.FromFloat(5f)).ToFloat();
             Assert.AreEqual(2f, mid, 0.01f, $"Midpoint interpolation: expected 2.0, got {mid:F4}");
 
-            // Clamp below first X
             float below = lut.Evaluate(fp.FromFloat(-5f)).ToFloat();
             Assert.AreEqual(1f, below, 0.001f, "Clamp below first X");
 
-            // Clamp above last X
             float above = lut.Evaluate(fp.FromFloat(100f)).ToFloat();
             Assert.AreEqual(5f, above, 0.001f, "Clamp above last X");
         }
 
-        // ── Test 6 ────────────────────────────────────────────────────────────
         [Test]
         public void Aero_DragLut_ReducesCarryVsConstant_ForDriver()
         {
-            // Driver: 75 m/s. Constant Cd=0.25; LUT Cd@75m/s ≈ 0.225 → lower drag → longer carry.
+            // Driver: 75 m/s. Seed LUT Cd@75m/s = 0.22 < constant 0.25 → lower drag → longer carry.
             var ground = new FlatGround(fp.Zero);
             var input  = MakeShot(75.0f, 10.9f, 2686f);
 
@@ -205,10 +215,8 @@ namespace Golfin.Physics.Tests
             cfgConst.UseLiftLut = false;
 
             var cfgLut = AeroConfig.Default;
-            cfgLut.UseDragLut = false;  // isolate drag effect only
+            cfgLut.UseDragLut = false;
             cfgLut.UseLiftLut = false;
-
-            // Build a minimal drag-only LUT (no lift LUT) that gives Cd=0.225 at 75 m/s
             var dragX = new fp[] { fp.FromFloat(70f), fp.FromFloat(80f) };
             var dragY = new fp[] { fp.FromFloat(0.23f), fp.FromFloat(0.22f) };
             cfgLut.DragLut    = new CoefficientLut(dragX, dragY);
@@ -222,17 +230,16 @@ namespace Golfin.Physics.Tests
                 $"const={carryConst:F1}m  lut={carryLut:F1}m");
         }
 
-        // ── Test 7 ────────────────────────────────────────────────────────────
         [Test]
         public void Aero_LiftLut_AffectsCarry_ForDriver()
         {
-            // Driver: S ≈ 0.08. LUT with Cl=0.17 at S=0.08 gives measurably different carry than Cl=0.
+            // Driver: S≈0.08. LUT Cl at S=0.08 > 0 → lift → longer carry than zero-lift baseline.
             var ground = new FlatGround(fp.Zero);
             var input  = MakeShot(75.0f, 10.9f, 2686f);
 
             var cfgNoLift = AeroConfig.Default;
-            cfgNoLift.UseDragLut = false;
-            cfgNoLift.UseLiftLut = false;
+            cfgNoLift.UseDragLut          = false;
+            cfgNoLift.UseLiftLut          = false;
             cfgNoLift.LiftCoefficientBase = fp.Zero;
 
             var cfgLut = AeroConfig.Default;
@@ -250,38 +257,14 @@ namespace Golfin.Physics.Tests
                 $"no-lift={carryNoLift:F1}m  lut={carryLut:F1}m");
         }
 
-        // ── Test 8 ────────────────────────────────────────────────────────────
+        // LUT-mode quality gate: velocity-indexed Cd and spin-parameter-indexed Cl should fit
+        // all 7 clubs inside 5%. This is the justification for the LUT work.
         [Test]
-        public void Aero_ClubCarries_WithinTolerance_OfTrackmanTargets_LutMode()
+        public void Aero_ClubCarries_LutMode_AllClubs_Within5Percent()
         {
-            var cfg    = MakeLutConfig();
-            var ground = new FlatGround(fp.Zero);
-            var results = new List<string>();
-            bool anyFailed = false;
-
-            foreach (var (id, speedMps, angleDeg, spinRpm, expectedYd) in Clubs)
-            {
-                var input = MakeShot(speedMps, angleDeg, spinRpm);
-                float actualYd = CarryYards(BallSimulation.Simulate(input, ground, cfg));
-                float errPct   = System.Math.Abs(actualYd - expectedYd) / expectedYd * 100f;
-
-                // Iron3 has a known model limitation: at 65 m/s it starts exactly at the
-                // high-Cd LUT boundary, spends almost no time in it, and its low spin (S≈0.15)
-                // gives near-zero spin-induced drag. A 2D drag LUT (speed×spin) would fix this;
-                // the current 1D model tolerates 12% for Iron3.
-                float tol = id == "Iron3" ? 12f : 5f;
-                bool  ok  = errPct <= tol;
-
-                results.Add($"  {id,-15} expected={expectedYd:F0}yd  actual={actualYd:F0}yd  err={errPct:F1}%  tol={tol:F0}%  {(ok ? "OK" : "FAIL")}");
-                if (!ok) anyFailed = true;
-            }
-
-            string table = "\n" + string.Join("\n", results);
-            UnityEngine.Debug.Log("[AerodynamicsTests] Club carry table (LUT mode):" + table);
-
-            Assert.IsFalse(anyFailed,
-                "One or more clubs exceed carry tolerance vs Trackman targets (LUT mode). " +
-                "Tune aero_drag_lut.csv / aero_lift_lut.csv breakpoints." + table);
+            AssertClubCarriesWithinTolerance(
+                new[] { "Driver", "Iron3", "Iron5", "Iron7", "Iron9", "PitchingWedge", "SandWedge" },
+                useLuts: true, tolerancePct: 5f);
         }
     }
 }

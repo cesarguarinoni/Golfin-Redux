@@ -44,8 +44,6 @@ namespace Golfin.Physics.Runtime
                     case "lift_max_multiplier":   cfg.LiftMaxMultiplier    = fp.FromFloat(val); break;
                     case "use_drag_lut":          cfg.UseDragLut           = (val != 0f);       break;
                     case "use_lift_lut":          cfg.UseLiftLut           = (val != 0f);       break;
-                    case "spin_decay_rate":        cfg.SpinDecayRate        = fp.FromFloat(val); break;
-                    case "spin_drag_factor":       cfg.SpinDragFactor       = fp.FromFloat(val); break;
                 }
             }
 
