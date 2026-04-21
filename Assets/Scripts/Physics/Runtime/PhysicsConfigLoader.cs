@@ -199,6 +199,52 @@ namespace Golfin.Physics.Runtime
             return cfg;
         }
 
+        public static PuttConfig LoadPuttConfig()
+        {
+            var cfg = PuttConfig.Default;
+            var ta = Resources.Load<TextAsset>("Physics/putt");
+            if (ta == null)
+            {
+                Debug.LogWarning("[PhysicsConfigLoader] Physics/putt.csv not found — using defaults");
+                return cfg;
+            }
+
+            bool headerSkipped = false;
+            foreach (var raw in ta.text.Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#")) continue;
+                if (!headerSkipped) { headerSkipped = true; continue; }
+
+                var parts = line.Split(',');
+                if (parts.Length < 2) continue;
+
+                string name = parts[0].Trim();
+                if (!System.Enum.TryParse<SurfaceType>(name, out var st))
+                {
+                    Debug.LogWarning($"[PhysicsConfigLoader] putt.csv: unknown surface '{name}' — skipped");
+                    continue;
+                }
+
+                if (!float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float rolling)) continue;
+
+                float stopSpeed = 0.04f;
+                if (parts.Length >= 3)
+                    float.TryParse(parts[2].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out stopSpeed);
+
+                cfg.Coefficients[(int)st] = new SurfaceCoefficients
+                {
+                    Restitution       = fp.Zero,
+                    TangentFriction   = fp.One,
+                    RollingResistance = fp.FromFloat(rolling),
+                    StopSpeed         = fp.FromFloat(stopSpeed),
+                };
+            }
+            return cfg;
+        }
+
         public static List<ClubSpec> LoadClubSpecs()
         {
             var result = new List<ClubSpec>();

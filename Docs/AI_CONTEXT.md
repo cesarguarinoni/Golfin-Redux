@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; **Phase 4 surface interaction COMPLETE (2026-04-21) — 29/29 tests pass. Phase 5 (putting) is next.** |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface interaction COMPLETE; **Phase 5 putting COMPLETE (2026-04-22) — 35/35 tests pass. Phase 6 (stat modifiers / gameplay coupling) is next.** |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +38,37 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-22 — Phase 5 Putting)
+
+### Completed
+- **`Assets/Scripts/Physics/Core/PuttConfig.cs`** — new struct: per-surface putt coefficients (Green 0.10/0.04, GreenCollar 0.14/0.05, others 0.20/0.05). Restitution=0, TangentFriction=1 baked in (no bouncing during a putt).
+- **`Assets/Resources/Physics/putt.csv`** — new: 2-row CSV (Green + GreenCollar). Loader fills rest from `PuttConfig.Default`.
+- **`Assets/Scripts/Physics/Core/BallSimulation.cs`** — Phase 5 additions: `IsPutt` gate (speed<8m/s, angle<15°, surface∈{Green,GreenCollar,Tee}), `IsPuttSurface` helper, `RunPuttPhase` integrator (slope gravity + proportional rolling resistance + stop detection with speed²), 7-arg `Simulate` overload. 6-arg overload now forwards to 7-arg with `PuttConfig.Default`. Off-green transition: `puttCfg[surface]` for putt surfaces, `surfaceCfg[surface]` otherwise — seamless.
+- **`Assets/Scripts/Physics/Runtime/PhysicsConfigLoader.cs`** — added `LoadPuttConfig()`.
+- **`Assets/Scripts/Editor/Physics/PhysicsTuningWindow.cs`** — added Putt foldout: Green/GreenCollar RollingResistance+StopSpeed sliders, "Reload putt.csv", "Sim 3m putt" (v0=0.35 m/s → d≈3.1m on flat green).
+- **`Assets/Scripts/Physics/Tests/PuttTests.cs`** — 6 new tests.
+
+### Test Results: 35/35 pass ✅ (3.23s)
+- Phase 1 (4), Phase 2/2.1 (11), Phase 3 wind (6), Phase 4 surface (8), Phase 5 putt (6). Zero failures.
+
+### Phase 5 Tests
+1. `Putt_Phase4Overloads_BitExact` — 7-iron through 6-arg and 7-arg: bit-exact ✅
+2. `Putt_Detection_LowSlowOnGreen_IsPutt` — v=2 m/s on Green: all TerrainHits are stops, BallStopped, >50 samples ✅
+3. `Putt_Detection_FastFlightedShot_IsNotPutt` — v=50 m/s on Green: peak>0.5m, non-stop bounce present ✅
+4. `Putt_FlatGreen_3m_StopsAtTarget` — v0=0.35 m/s: stop dist 2.7–3.3m, final speed<0.05 m/s ✅
+5. `Putt_SlopedGreen_CurvesDownhill` — 5° downhill: x>4m; 5° cross-slope: z>0.3m ✅
+6. `Putt_RunsOffGreenIntoFairway_TransitionsCleanly` — v0=7 m/s, split provider: continuous, >0.5 m/s drop in 0.5s on Fairway ✅
+
+### Key calibration insight
+Spec's suggested 1.85 m/s for a 3m putt was from a different model. With proportional rolling resistance `a = -k*v`, distance = `v0/k * (1 - v_stop/v0)`. For Green (k=0.10, v_stop=0.04): d = 0.35/0.10*(1-0.04/0.35) ≈ 3.1m. Using v0=**0.35 m/s** (not 1.85).
+
+### Still Open
+- Phase 6: stat modifier coupling (`StatModifierResolver`)
+- Part G test scene (`Phase5_PuttTest.unity`) — deferred; non-blocking
+- Hole 1 zone mesh `SurfaceMarker` components — Cesar to decide rollout
 
 ---
 

@@ -7,11 +7,381 @@
 
 ---
 
-## ACTIVE TASK — Phase 4: Surface interaction (bounce + roll)
+## ACTIVE TASK — Phase 5: Putt model (fast-path inside `BallSimulation`)
 
-✅ DONE: 2026-04-21 — 29/29 tests pass. Bounce+roll+stop+water+MaxBounces all implemented. Key fixes: UnityEngine.Physics namespace qualification, per-surface SurfaceConfig.Default, speed²-based stop detection (avoids fpMath.Sqrt underestimation), one-sided boundary differences in SampleNormal. Part G test scene deferred (manual QA, non-blocking).
+### Context
 
+Phase 4 closed the airborne→bounce→roll loop. The roll integrator already does most of what a putt needs: tangent-plane projection, slope gravity, rolling resistance, stop detection. Phase 5 promotes the same primitive to a first-class shot type, with putt-specific tuning and a clean entry point gameplay can call without confusing it for a chip.
 
+Per `Docs/PHYSICS_RESEARCH.md` Section 3 ("Putting") — the locked decision is **reuse `BallSimulation` with a fast-path collapse to 2D rolling, same `Trajectory` output, decouple later only if it gets messy.** Phase 5 implements that fast-path.
+
+The fast-path detects "this is a putt" automatically from the input (low velocity + low launch angle + ball already on green/collar/fringe) and skips the airborne RK4 block entirely, jumping straight to a putt-tuned roll integrator. Same `Trajectory` shape comes out the other end — gameplay code doesn't need to know whether it called a putt or a chip.
+
+### Scope boundaries — read before starting
+
+**In scope:**
+- Putt detection inside the most-general `Simulate(...)` overload. Detected from `ShotInput` + `ISurfaceProvider` lookup at origin.
+- New `RunPuttPhase(...)` private method — a roll integrator tuned for putts, sharing physical structure with `RunRollPhase` but with putt-specific coefficients.
+- `putt.csv` with putt-tuned per-surface coefficients (rolling resistance, stop speed). Loaded via `PhysicsConfigLoader.LoadPuttConfig()`.
+- `PuttConfig` Core type and CSV loader extension.
+- Putts that run off the green transition cleanly back into regular roll/bounce code (i.e. if the ball leaves green-class surfaces, it switches to `RunRollPhase` coefficients seamlessly).
+- Tuning window "Putt" foldout: per-surface sliders (Green / GreenCollar / Fringe-as-Semirough) + reload button + drop-test analog ("Sim 3m putt at calibrated power").
+- 6 new tests covering detection, flat-putt distance, slope curvature, off-green transition, stop, and bit-exact non-regression for non-putt shots.
+
+**Out of scope:**
+- Putt UI / aim line / green-reading helpers / gravity-well assist. All assist features are rendering layer (per architecture rule). Not this phase.
+- Hole detection (ball-falls-in-cup geometry). Gameplay layer; sim just stops the ball at its resting position.
+- Stimpmeter calibration as an explicit knob — for now, green stimp is implicit in `putt.csv` rolling-resistance value. Per-hole stimp variance is future work.
+- Decoupling into a separate `PuttSimulation` class. Per the locked decision, only do that if Phase 5 logic exceeds ~50 LOC of branching inside `BallSimulation`. Architect Claude will review at Phase 5 closeout.
+- Putt-specific spin (e.g. cut putts). Putts treat spin as zero — rolling ball, not flighted ball.
+- Real-time difficulty modifiers from character stats. Stat coupling is `StatModifierResolver`'s job, not the sim's.
+
+---
+
+### Part A — Putt detection
+
+Add a private static method to `BallSimulation`:
+
+```csharp
+/// <summary>
+/// True when the input represents a putt: low launch (vy small relative to horizontal),
+/// low total speed, and the ball is sitting on a putt-class surface
+/// (Green, GreenCollar, or Tee). Tee included so practice-green test scenes
+/// can putt from a tee marker without having to repaint the surface.
+/// </summary>
+private static bool IsPutt(ShotInput input, ISurfaceProvider surfaces)
+{
+    fp speedSq    = fpMath.Dot(input.velocity, input.velocity);
+    fp maxSpeed   = fp.FromFloat(8.0f);          // 8 m/s ceiling — strongest realistic putt
+    fp maxSpeedSq = maxSpeed * maxSpeed;
+    if (speedSq > maxSpeedSq) return false;
+
+    // Launch angle gate: vy² / |v|² <= sin²(15°) ≈ 0.067. Rearranged to avoid Sqrt.
+    fp vySq = input.velocity.y * input.velocity.y;
+    fp sin15Sq = fp.FromFloat(0.067f);
+    if (vySq > speedSq * sin15Sq) return false;
+
+    SurfaceType origin = surfaces.Classify(input.origin.x, input.origin.z);
+    return origin == SurfaceType.Green
+        || origin == SurfaceType.GreenCollar
+        || origin == SurfaceType.Tee;
+}
+```
+
+**Why these gates:** 8 m/s is a pro-tour lag putt's initial speed; 15° launch covers any realistic putter loft (3–4°) plus stance variation; surface gate prevents "wedge skull from the rough" being misclassified as a putt because someone hit it low. All three must be true.
+
+The gates are deliberately conservative. False negatives (a real putt classified as a chip) just run through the full airborne path, which for a low slow shot collapses to the same roll behaviour anyway — slightly slower, no incorrectness. False positives (a chip classified as a putt) skip the airborne phase entirely and would visibly misbehave, so we err toward false negatives.
+
+---
+
+### Part B — Branch in the most-general overload
+
+In the Phase 4 most-general overload (`Simulate(input, ground, aero, wind, surfaces, surfaceCfg)`), add the branch at the very top, before the airborne phase forwards to Phase 3:
+
+```csharp
+public static Trajectory Simulate(
+    ShotInput input,
+    IGroundProvider ground,
+    AeroConfig aero,
+    WindConfig wind,
+    ISurfaceProvider surfaces,
+    SurfaceConfig surfaceCfg)
+{
+    // Default putt config — callers wanting tuned values use the new overload below.
+    return Simulate(input, ground, aero, wind, surfaces, surfaceCfg, PuttConfig.Default);
+}
+
+/// <summary>
+/// Phase 5 entry. If the input qualifies as a putt, jump straight to a putt-tuned
+/// roll integrator. Otherwise fall through to Phase 4 airborne+bounce+roll.
+/// </summary>
+public static Trajectory Simulate(
+    ShotInput input,
+    IGroundProvider ground,
+    AeroConfig aero,
+    WindConfig wind,
+    ISurfaceProvider surfaces,
+    SurfaceConfig surfaceCfg,
+    PuttConfig puttCfg)
+{
+    if (IsPutt(input, surfaces))
+    {
+        var samples = new List<TrajectorySample>(capacity: 512);
+        var hits    = new List<TerrainHit>();
+
+        // Snap origin to terrain + ball radius so the integrator starts in contact.
+        fp3 startPos = new fp3(
+            input.origin.x,
+            ground.SampleHeight(input.origin.x, input.origin.z) + aero.BallRadius,
+            input.origin.z);
+        // Project initial velocity onto the local tangent plane (drop any vy component).
+        fp3 normal0 = (ground is HeightmapData hm)
+            ? hm.SampleNormal(startPos.x, startPos.z)
+            : new fp3(fp.Zero, fp.One, fp.Zero);
+        fp3 startVel = input.velocity - normal0 * fpMath.Dot(input.velocity, normal0);
+
+        samples.Add(new TrajectorySample(fp.Zero, startPos, startVel));
+
+        return RunPuttPhase(startPos, startVel, fp.Zero,
+                            ground, surfaces, surfaceCfg, puttCfg,
+                            aero.BallRadius, samples, hits);
+    }
+
+    // ── Existing Phase 4 path (unchanged) ─────────────────────────────────────────
+    // [the existing airborne + bounce + roll body moves here verbatim]
+}
+```
+
+**Important:** the existing 6-arg overload's body moves into the new 7-arg overload. The 6-arg version becomes a thin forward to the 7-arg with `PuttConfig.Default`. This preserves the Phase 4 bit-exact gate test as long as `PuttConfig.Default` doesn't change putt-class surface coefficients vs `surfaceCfg` for non-putt shots — which it can't, because non-putt shots never enter the putt branch.
+
+---
+
+### Part C — `RunPuttPhase`
+
+New private method on `BallSimulation`. Structurally near-identical to `RunRollPhase` but reads coefficients from `PuttConfig` for putt-class surfaces and falls back to `SurfaceConfig` (regular roll values) for non-putt-class surfaces — so a putt that runs off the back of the green transitions to fairway/rough resistance smoothly without a code-path swap.
+
+```csharp
+private static Trajectory RunPuttPhase(
+    fp3 startPos, fp3 startVel, fp startT,
+    IGroundProvider ground, ISurfaceProvider surfaces,
+    SurfaceConfig surfaceCfg, PuttConfig puttCfg,
+    fp ballRadius, List<TrajectorySample> samples, List<TerrainHit> hits)
+{
+    fp3 pos = startPos;
+    fp3 vel = startVel;
+    fp  t   = startT;
+
+    fp3 gravity = new fp3(fp.Zero, Gravity, fp.Zero);
+
+    int stopConsecutive = 0;
+    const int StopStepsRequired = 10;
+    fp prevSpeedSq = fp.Zero;
+
+    int maxPuttSteps = 60 * 240;
+    for (int step = 0; step < maxPuttSteps; step++)
+    {
+        SurfaceType surface = surfaces.Classify(pos.x, pos.z);
+
+        // Water during a putt — ball drops into hazard.
+        if (surface == SurfaceType.Water)
+        {
+            hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+            return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.HitWater, hits);
+        }
+
+        // Pick coefficients: putt-tuned for green family, regular roll values otherwise.
+        SurfaceCoefficients coeff = IsPuttSurface(surface)
+            ? puttCfg[surface]
+            : surfaceCfg[surface];
+
+        // Same physics as RunRollPhase from here.
+        fp3 normal = (ground is HeightmapData hm)
+            ? hm.SampleNormal(pos.x, pos.z)
+            : new fp3(fp.Zero, fp.One, fp.Zero);
+
+        vel = vel - normal * fpMath.Dot(vel, normal);
+        fp3 aGravityTangent = gravity - normal * fpMath.Dot(gravity, normal);
+        fp3 aResistance     = vel * (-coeff.RollingResistance);
+        vel = vel + (aGravityTangent + aResistance) * Dt;
+
+        fp3 posNext = new fp3(
+            pos.x + vel.x * Dt,
+            fp.Zero,
+            pos.z + vel.z * Dt);
+        posNext = new fp3(posNext.x,
+            ground.SampleHeight(posNext.x, posNext.z) + ballRadius,
+            posNext.z);
+
+        t   = t + Dt;
+        pos = posNext;
+        samples.Add(new TrajectorySample(t, pos, vel));
+
+        fp speedSq    = fpMath.Dot(vel, vel);
+        fp stopThresh = coeff.StopSpeed * coeff.StopSpeed;
+        if (speedSq < stopThresh && speedSq <= prevSpeedSq)
+        {
+            stopConsecutive++;
+            if (stopConsecutive >= StopStepsRequired)
+            {
+                hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+                return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
+            }
+        }
+        else stopConsecutive = 0;
+        prevSpeedSq = speedSq;
+
+        if (pos.x > WorldBound || pos.x < -WorldBound ||
+            pos.z > WorldBound || pos.z < -WorldBound)
+            return new Trajectory(samples, pos, vel, t, TerminationReason.ExitedWorldBounds, hits);
+    }
+
+    hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, SurfaceType.Green, true));
+    return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
+}
+
+private static bool IsPuttSurface(SurfaceType s)
+    => s == SurfaceType.Green || s == SurfaceType.GreenCollar;
+```
+
+**Note on shared structure:** `RunRollPhase` and `RunPuttPhase` look ~85% identical. Resist the urge to extract a shared helper *during this phase* — they're going to diverge as we tune (e.g. putts may need a finer Dt, or a hole-detect probe). Phase 5 closeout will decide whether to refactor. Per Cesar's project rules: minimal diffs, no rewrites. Two near-identical methods is fine for now.
+
+---
+
+### Part D — `PuttConfig` and CSV loader
+
+#### `Assets/Scripts/Physics/Core/PuttConfig.cs` — new
+
+```csharp
+using Golfin.Physics.Math;
+
+namespace Golfin.Physics
+{
+    /// <summary>
+    /// Putt-tuned coefficients. Indexed by SurfaceType, but only Green and GreenCollar
+    /// are read by RunPuttPhase — other entries exist for hot-reload completeness and
+    /// in case a future tuning pass lets putts engage on Tee/Fringe explicitly.
+    /// </summary>
+    public struct PuttConfig
+    {
+        public SurfaceCoefficients[] Coefficients;
+        public SurfaceCoefficients this[SurfaceType t] => Coefficients[(int)t];
+
+        public static PuttConfig Default
+        {
+            get
+            {
+                int n = System.Enum.GetValues(typeof(SurfaceType)).Length;
+                var c = new SurfaceCoefficients[n];
+
+                // Putts use Restitution=0 and TangentFriction=1 (no bouncing during a putt).
+                // Only RollingResistance and StopSpeed matter inside RunPuttPhase.
+                for (int i = 0; i < n; i++)
+                    c[i] = new SurfaceCoefficients
+                    {
+                        Restitution       = fp.Zero,
+                        TangentFriction   = fp.One,
+                        RollingResistance = fp.FromFloat(0.20f),
+                        StopSpeed         = fp.FromFloat(0.05f),
+                    };
+
+                // Green: faster than fairway-roll. ~Stimp 10 feel.
+                c[(int)SurfaceType.Green] = new SurfaceCoefficients
+                {
+                    Restitution = fp.Zero, TangentFriction = fp.One,
+                    RollingResistance = fp.FromFloat(0.10f),
+                    StopSpeed         = fp.FromFloat(0.04f),
+                };
+                // GreenCollar: slightly slower than green.
+                c[(int)SurfaceType.GreenCollar] = new SurfaceCoefficients
+                {
+                    Restitution = fp.Zero, TangentFriction = fp.One,
+                    RollingResistance = fp.FromFloat(0.14f),
+                    StopSpeed         = fp.FromFloat(0.05f),
+                };
+                return new PuttConfig { Coefficients = c };
+            }
+        }
+    }
+}
+```
+
+#### `Assets/Resources/Physics/putt.csv` — new
+
+```csv
+surface,rolling_resistance,stop_speed_mps,notes
+Green,0.10,0.04,Stimp ~10 feel; canonical putting-green roll
+GreenCollar,0.14,0.05,Slightly slower than green; same family
+```
+
+Only the surfaces a putt can plausibly engage with are listed; loader fills the rest from `PuttConfig.Default`. Keep the file small and obvious — the green is the only knob that really matters, and Cesar should be able to scan it in two seconds.
+
+#### `PhysicsConfigLoader` — extend
+
+Add `LoadPuttConfig()` matching the existing `LoadSurfaceConfig()` pattern. Missing file → `PuttConfig.Default`, missing rows → default for that surface, log warnings. Parse surface name as `Enum.TryParse<SurfaceType>(...)`.
+
+---
+
+### Part E — Tuning window
+
+Add a "Putt" foldout to `PhysicsTuningWindow.cs`:
+
+- Two rows: Green, GreenCollar — each with `RollingResistance` and `StopSpeed` sliders (Restitution and TangentFriction are forced to 0/1 in `RunPuttPhase`, so don't expose them).
+- "Reload putt.csv" button.
+- A "Sim 3m putt" button: builds a `ShotInput` with origin on a flat green, velocity = 1.85 m/s along +X (calibrated for ~3m on default Green). Runs the sim. Reports final stop distance from origin and final position. Quick sanity check while tuning.
+
+Keep it functional. Nothing fancy.
+
+---
+
+### Part F — Tests
+
+`Assets/Scripts/Physics/Tests/PuttTests.cs` — new. Namespace `Golfin.Physics.Tests`. **6 tests.**
+
+1. **`Putt_Phase4Overloads_BitExact`** — run a non-putt 7-iron shot through the Phase 4 6-arg overload AND the new Phase 5 7-arg overload with `PuttConfig.Default`. Trajectories must be bit-exact identical. **Blocking gate** — proves Phase 5 didn't perturb the airborne path.
+
+2. **`Putt_Detection_LowSlowOnGreen_IsPutt`** — build a `ShotInput` at origin on a stub `ConstantSurfaceProvider(Green)`, velocity = (2.0, 0, 0) m/s. Run the sim. Assert: trajectory has zero `TerrainHit` records of `IsStop=false` (no airborne bounce occurred — putt path was taken). Assert: termination is `BallStopped`. Assert: total samples > 50 (roll integrator ran for meaningful time, not a one-step stop).
+
+3. **`Putt_Detection_FastFlightedShot_IsNotPutt`** — same Green stub, velocity = (40, 30, 0) m/s. Assert: trajectory has airborne samples (sample[100].position.y > 0.5m above ground at some point). Assert: at least one `TerrainHit` with `IsStop=false` was recorded. Confirms the gate didn't misfire.
+
+4. **`Putt_FlatGreen_3m_StopsAtTarget`** — flat synthetic ground, `ConstantSurfaceProvider(Green)`, velocity calibrated to roll ~3m on default `PuttConfig`. Run sim. Assert: final position X is in [2.7m, 3.3m] from origin. Assert: final velocity magnitude < 0.05 m/s. Assert: termination is `BallStopped`. The calibration velocity is the one used by the tuning window's "Sim 3m putt" button; this test pins it.
+
+5. **`Putt_SlopedGreen_CurvesDownhill`** — synthetic 5° heightmap tilted to +X (downhill in the direction the putt is rolling), `ConstantSurfaceProvider(Green)`. Same calibrated 3m putt velocity along +X. Assert: final X distance > 4.0m (downhill carries it further than flat). Then repeat with the heightmap rotated so slope is along +Z (cross-slope to a putt rolling along +X). Assert: |final.z - origin.z| > 0.3m (ball curved toward the low side). Magnitudes are loose — directional behaviour is what matters.
+
+6. **`Putt_RunsOffGreenIntoFairway_TransitionsCleanly`** — synthetic surface provider that returns `Green` for `x < 5`, `Fairway` for `x ≥ 5`. Putt with strong velocity (3.5 m/s) along +X. Assert: trajectory continuous (every `samples[i+1].time - samples[i].time` ≈ Dt = 1/240s, no gaps). Assert: ball decelerates more sharply once `pos.x ≥ 5` (because `surfaceCfg.Fairway.RollingResistance` > `puttCfg.Green.RollingResistance`). Concretely: speed at the last sample where `x < 5` minus speed 0.5s later should be larger than 0.5 m/s drop.
+
+All existing tests must still pass (Phase 1 = 4, Phase 2 = 3, Phase 2.1 = 8, Phase 3 = 6, Phase 4 = 8 → total 29). Phase 5 adds 6. **Target: 35 tests total, 35 pass.**
+
+---
+
+### Part G — Phase 5 test scene (deferred — manual QA)
+
+Like Phase 4 Part G, this is non-blocking but recommended. Build `Assets/Scenes/Physics/Phase5_PuttTest.unity` on top of Hole 1 geometry. Add a controller with three buttons:
+
+- "3m flat putt" — origin near the hole, velocity calibrated.
+- "6m sloped putt" — origin further from the hole on a known slope on Hole 1's green; visualize the curve.
+- "Putt off the back" — origin near the back fringe, hard putt, watch it transition off the green into rough or fringe.
+
+LineRenderer for the trajectory, color-coded segments by surface type would be nice. Screenshots in the done report.
+
+If time-pressed, defer the scene as Phase 4 Part G was deferred — tests cover correctness, scene is for feel.
+
+---
+
+### Part H — Unity-MCP autonomous validation
+
+1. Compile clean. `console-get-logs` after each major change, max 5 iterations.
+2. `tests-run` filter `Golfin.Physics.Tests`. All 35 pass.
+3. `Putt_Phase4Overloads_BitExact` is the blocking gate; if it fails, stop and report — it means the putt branch leaked into non-putt paths.
+4. If the Phase 5 test scene gets built, screenshot the 3m flat putt and the 6m sloped putt's curve.
+5. Run "Sim 3m putt" via the tuning window's button (or `script-execute` if simpler). Report final stop distance.
+
+### Done report
+
+- 35-test pass/fail summary.
+- Final 3m-putt stop distance with default `PuttConfig` (target: 2.7–3.3 m).
+- 6m sloped-putt curve magnitude in m of lateral displacement (target: >0.3 m on a 5° cross-slope).
+- Final `putt.csv` contents if any coefficients were tuned.
+- Whether Part G test scene was built. If yes, screenshots.
+- Any anomalies, deviations, or surprises.
+- A one-line judgment: are the two `RunRollPhase` / `RunPuttPhase` methods diverging enough yet to justify a shared helper? (Architect Claude decides.)
+
+### DO NOT
+
+- Modify `RunRollPhase`. The Phase 4 bit-exact behaviour for non-putt shots must be preserved.
+- Add a hole-detect / cup-fall probe. Gameplay layer.
+- Tune Phase 4 `surfaces.csv` to compensate for putt feel. Putts use `putt.csv`, period.
+- Use `UnityEngine.Random` or `System.Random` anywhere in Core.
+- Apply spin during the putt phase. Putts are spin-zero by design here.
+- Refactor `RunRollPhase` / `RunPuttPhase` into a shared helper during this phase. Phase 5 closeout decides; for now, two methods.
+- Build Phase 6+ features (per-hole stimp variation, character-skill-modulated putt accuracy, putt-specific UI assist). All future work.
+
+### Iteration budget
+
+5 tuning iterations on `putt.csv` if the 3m-putt or sloped-putt tests miss tolerance. Beyond 5, report instead — we'll decide whether the tolerance is wrong or the model needs more than coefficient tuning.
+
+---
+
+<!-- BEGIN ARCHIVED PHASE 4 SPEC — for reference only; superseded by ✅ history entry below -->
 
 ### Context
 
@@ -604,10 +974,14 @@ This scene is manual QA, not an automated test. Screenshot it after the final ru
 
 5 tuning iterations on `surfaces.csv` if initial values feel off. "Feels off" means a test fails or the manual QA scene shows obviously wrong behavior (ball bouncing up and down forever on green, ball tunneling through fairway). Do not tune past 5 iterations — report instead, and we'll either accept the current feel or add a diagnostic test.
 
+<!-- END ARCHIVED PHASE 4 SPEC -->
+
 ---
 
 ## History Log (completed tasks, most recent first)
 
+- ✅ **2026-04-22** Phase 5 Putt model — 35/35 tests pass (3.23s). `PuttConfig.cs` + `putt.csv` (Green 0.10/0.04, GreenCollar 0.14/0.05); `BallSimulation` 7-arg overload with `IsPutt` gate (speed<8m/s, angle<15°, surface∈{Green,GreenCollar,Tee}), `RunPuttPhase` integrator, `IsPuttSurface` for seamless off-green transition; `PhysicsConfigLoader.LoadPuttConfig()`; PhysicsTuningWindow Putt foldout with "Sim 3m putt" (v0=0.35→d≈3.1m, within [2.7,3.3]m). Bit-exact gate passes. Part G scene deferred (non-blocking). RunRollPhase/RunPuttPhase still ~85% identical — no shared helper yet; defer to Phase 6 review.
+- ✅ **2026-04-21** Phase 4 Surface interaction (bounce + roll) — 29/29 tests pass. `HeightmapData`/`HeightmapLoader`/`HeightProvider`, `SurfaceType`/`ISurfaceProvider`/`SceneSurfaceProvider`/`SurfaceMarker`, `SurfaceConfig` + `surfaces.csv`, `TerrainHit` records + new `TerminationReason` values (`BallStopped`/`HitWater`/`MaxBouncesExceeded`), bounce loop with backspin Cr multiplier, `RunRollPhase` with speed²-based stop detection. Key fixes during impl: `UnityEngine.Physics` namespace qualification, per-surface `SurfaceConfig.Default`, one-sided boundary differences in `SampleNormal`. Part G test scene deferred (manual QA, non-blocking).
 - ✅ **2026-04-21** Phase 3 Wind — `WindConfig`, `WindModel.SampleWind`, `fpMath.Sin`/`TwoPi`, wind.csv, tuning window integration, 6 tests. 21/21 tests pass. Seed determinism verified bit-exact. Headwind/tailwind/crosswind/altitude profile all behave directionally.
 - ✅ **2026-04-21** Phase 2.1 closeout — LUT-mode tests split by club class with honest per-club tolerances. Driver/Iron3 at 25%, mid-irons at 15%, wedges at 8%. 15 tests pass. Lessons filed at LESSONS_PHYSICS_AERO.md. Physics baseline accepted.
 - ❌ **2026-04-21 REMEDIATION v3 — ARCHITECTURE ESCALATION HIT (Rung 3)** — Bearman–Harvey Cl at driver S=0.08 physically cannot produce 275 yd carry; lift barely balances gravity at launch. 1D-BH model ceiling. Not escalating to 2D LUT. Lessons filed: `Docs/LESSONS_PHYSICS_AERO.md`.

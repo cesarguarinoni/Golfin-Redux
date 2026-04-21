@@ -135,16 +135,14 @@ namespace Golfin.Physics
         }
 
         // ──────────────────────────────────────────────────────────────────────────────
-        // Phase 4: Surface interaction (bounce + roll). New most-general overload.
+        // Phase 4: Surface interaction (bounce + roll). 6-arg forwards to Phase 5 7-arg.
         // Phase 1–3 overloads remain unchanged above; they do NOT forward here so
         // their bit-exact behaviour is preserved.
         // ──────────────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Full Phase 4 integration. Runs airborne RK4 phase via Phase 3 overload,
-        /// then bounces and rolls the ball to a stop using per-surface coefficients.
-        /// With ConstantSurfaceProvider(Fairway) + SurfaceConfig.Default the airborne
-        /// portion is bit-exact identical to Simulate(input, ground, aero, wind).
+        /// Phase 4 overload — forwards to Phase 5 7-arg with PuttConfig.Default.
+        /// Non-putt shots are bit-exact identical to calling the 7-arg explicitly.
         /// </summary>
         public static Trajectory Simulate(
             ShotInput input,
@@ -153,7 +151,46 @@ namespace Golfin.Physics
             WindConfig wind,
             ISurfaceProvider surfaces,
             SurfaceConfig surfaceCfg)
+            => Simulate(input, ground, aero, wind, surfaces, surfaceCfg, PuttConfig.Default);
+
+        /// <summary>
+        /// Phase 5 entry. If the input qualifies as a putt, jump straight to a putt-tuned
+        /// roll integrator. Otherwise fall through to Phase 4 airborne+bounce+roll.
+        /// </summary>
+        public static Trajectory Simulate(
+            ShotInput input,
+            IGroundProvider ground,
+            AeroConfig aero,
+            WindConfig wind,
+            ISurfaceProvider surfaces,
+            SurfaceConfig surfaceCfg,
+            PuttConfig puttCfg)
         {
+            if (IsPutt(input, surfaces))
+            {
+                var samples = new List<TrajectorySample>(capacity: 512);
+                var hits    = new List<TerrainHit>();
+
+                // Snap origin to terrain + ball radius so the integrator starts in contact.
+                fp3 startPos = new fp3(
+                    input.origin.x,
+                    ground.SampleHeight(input.origin.x, input.origin.z) + aero.BallRadius,
+                    input.origin.z);
+                // Project initial velocity onto the local tangent plane (drop any vy component).
+                fp3 normal0 = (ground is HeightmapData hm0)
+                    ? hm0.SampleNormal(startPos.x, startPos.z)
+                    : new fp3(fp.Zero, fp.One, fp.Zero);
+                fp3 startVel = input.velocity - normal0 * fpMath.Dot(input.velocity, normal0);
+
+                samples.Add(new TrajectorySample(fp.Zero, startPos, startVel));
+
+                return RunPuttPhase(startPos, startVel, fp.Zero,
+                                    ground, surfaces, surfaceCfg, puttCfg,
+                                    aero.BallRadius, samples, hits);
+            }
+
+            // ── Existing Phase 4 path (unchanged) ────────────────────────────────────
+
             // ── Airborne phase ────────────────────────────────────────────────────────
             var airborne = Simulate(input, ground, aero, wind);
 
@@ -162,11 +199,11 @@ namespace Golfin.Physics
                     airborne.finalVelocity, airborne.finalTime, airborne.termination,
                     new List<TerrainHit>());
 
-            var samples    = new List<TrajectorySample>(airborne.samples);
-            var hits       = new List<TerrainHit>();
-            fp3 pos        = airborne.finalPosition;
-            fp3 vel        = airborne.finalVelocity;
-            fp  t          = airborne.finalTime;
+            var samplesList = new List<TrajectorySample>(airborne.samples);
+            var hitsList    = new List<TerrainHit>();
+            fp3 pos         = airborne.finalPosition;
+            fp3 vel         = airborne.finalVelocity;
+            fp  t           = airborne.finalTime;
 
             // Approximate spin state at impact (decay is slow; good enough for Cr multiplier).
             SpinState spin = input.Spin;
@@ -188,8 +225,8 @@ namespace Golfin.Physics
                 // Water: terminate immediately.
                 if (surface == SurfaceType.Water)
                 {
-                    hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
-                    return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.HitWater, hits);
+                    hitsList.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+                    return new Trajectory(samplesList, pos, fp3.Zero, t, TerminationReason.HitWater, hitsList);
                 }
 
                 // Ground normal: use heightmap gradient if available, else flat-up.
@@ -227,11 +264,11 @@ namespace Golfin.Physics
                 // ── Immediate stop ────────────────────────────────────────────────────
                 if (speed <= coeff.StopSpeed)
                 {
-                    hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
-                    return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
+                    hitsList.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+                    return new Trajectory(samplesList, pos, fp3.Zero, t, TerminationReason.BallStopped, hitsList);
                 }
 
-                hits.Add(new TerrainHit(t, pos, vel, velOut, surface, false));
+                hitsList.Add(new TerrainHit(t, pos, vel, velOut, surface, false));
                 vel = velOut;
 
                 // ── Roll transition ───────────────────────────────────────────────────
@@ -240,18 +277,18 @@ namespace Golfin.Physics
                     // Project velocity into the tangent plane to start roll.
                     fp3 vRoll = vel - normal * fpMath.Dot(vel, normal);
                     return RunRollPhase(pos, vRoll, t, ground, surfaces, surfaceCfg,
-                                        aero.BallRadius, samples, hits);
+                                        aero.BallRadius, samplesList, hitsList);
                 }
 
                 // ── Another airborne arc after bounce ─────────────────────────────────
-                var nextInput   = new ShotInput(pos, vel, fp.FromInt(30), new SpinState(input.Spin.Axis, fp.Zero));
+                var nextInput    = new ShotInput(pos, vel, fp.FromInt(30), new SpinState(input.Spin.Axis, fp.Zero));
                 var nextAirborne = Simulate(nextInput, ground, aero, wind);
 
                 // Append samples with absolute time offset (skip index 0 — duplicate of current pos).
                 for (int i = 1; i < nextAirborne.samples.Count; i++)
                 {
                     var s = nextAirborne.samples[i];
-                    samples.Add(new TrajectorySample(t + s.time, s.position, s.velocity));
+                    samplesList.Add(new TrajectorySample(t + s.time, s.position, s.velocity));
                 }
 
                 t   = t + nextAirborne.finalTime;
@@ -259,12 +296,12 @@ namespace Golfin.Physics
                 vel = nextAirborne.finalVelocity;
 
                 if (nextAirborne.termination != TerminationReason.HitGround)
-                    return new Trajectory(samples, pos, vel, t, nextAirborne.termination, hits);
+                    return new Trajectory(samplesList, pos, vel, t, nextAirborne.termination, hitsList);
 
                 // Continue bounce loop at new ground contact.
             }
 
-            return new Trajectory(samples, pos, vel, t, TerminationReason.MaxBouncesExceeded, hits);
+            return new Trajectory(samplesList, pos, vel, t, TerminationReason.MaxBouncesExceeded, hitsList);
         }
 
         /// <summary>
@@ -360,6 +397,125 @@ namespace Golfin.Physics
 
             // Time cap hit during roll — treat as stopped.
             hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, SurfaceType.Fairway, true));
+            return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────────
+        // Phase 5: Putt detection + putt roll integrator
+        // ──────────────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// True when the input represents a putt: low launch (vy small relative to horizontal),
+        /// low total speed, and the ball is sitting on a putt-class surface
+        /// (Green, GreenCollar, or Tee). Tee included so practice-green test scenes
+        /// can putt from a tee marker without having to repaint the surface.
+        /// </summary>
+        private static bool IsPutt(ShotInput input, ISurfaceProvider surfaces)
+        {
+            fp speedSq    = fpMath.Dot(input.velocity, input.velocity);
+            fp maxSpeed   = fp.FromFloat(8.0f);          // 8 m/s ceiling — strongest realistic putt
+            fp maxSpeedSq = maxSpeed * maxSpeed;
+            if (speedSq > maxSpeedSq) return false;
+
+            // Launch angle gate: vy² / |v|² <= sin²(15°) ≈ 0.067. Rearranged to avoid Sqrt.
+            fp vySq    = input.velocity.y * input.velocity.y;
+            fp sin15Sq = fp.FromFloat(0.067f);
+            if (vySq > speedSq * sin15Sq) return false;
+
+            SurfaceType origin = surfaces.Classify(input.origin.x, input.origin.z);
+            return origin == SurfaceType.Green
+                || origin == SurfaceType.GreenCollar
+                || origin == SurfaceType.Tee;
+        }
+
+        private static bool IsPuttSurface(SurfaceType s)
+            => s == SurfaceType.Green || s == SurfaceType.GreenCollar;
+
+        /// <summary>
+        /// Putt-tuned roll integrator. Uses PuttConfig coefficients for putt-class surfaces
+        /// and falls back to SurfaceConfig for non-putt surfaces, so a putt that runs off
+        /// the green transitions to fairway/rough resistance seamlessly.
+        /// Near-identical structure to RunRollPhase — resist extracting a shared helper
+        /// until Phase 5 closeout; these two methods are expected to diverge during tuning.
+        /// </summary>
+        private static Trajectory RunPuttPhase(
+            fp3 startPos, fp3 startVel, fp startT,
+            IGroundProvider ground, ISurfaceProvider surfaces,
+            SurfaceConfig surfaceCfg, PuttConfig puttCfg,
+            fp ballRadius, List<TrajectorySample> samples, List<TerrainHit> hits)
+        {
+            fp3 pos = startPos;
+            fp3 vel = startVel;
+            fp  t   = startT;
+
+            fp3 gravity = new fp3(fp.Zero, Gravity, fp.Zero);
+
+            int stopConsecutive = 0;
+            const int StopStepsRequired = 10;
+            fp prevSpeedSq = fp.Zero;
+
+            int maxPuttSteps = 60 * 240;
+            for (int step = 0; step < maxPuttSteps; step++)
+            {
+                SurfaceType surface = surfaces.Classify(pos.x, pos.z);
+
+                // Water during a putt — ball drops into hazard.
+                if (surface == SurfaceType.Water)
+                {
+                    hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+                    return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.HitWater, hits);
+                }
+
+                // Pick coefficients: putt-tuned for green family, regular roll values otherwise.
+                SurfaceCoefficients coeff = IsPuttSurface(surface)
+                    ? puttCfg[surface]
+                    : surfaceCfg[surface];
+
+                // Ground normal at current position.
+                fp3 normal = (ground is HeightmapData hm)
+                    ? hm.SampleNormal(pos.x, pos.z)
+                    : new fp3(fp.Zero, fp.One, fp.Zero);
+
+                // Project velocity onto tangent plane (same as RunRollPhase).
+                vel = vel - normal * fpMath.Dot(vel, normal);
+
+                fp3 aGravityTangent = gravity - normal * fpMath.Dot(gravity, normal);
+                fp3 aResistance     = vel * (-coeff.RollingResistance);
+                vel = vel + (aGravityTangent + aResistance) * Dt;
+
+                fp3 posNext = new fp3(
+                    pos.x + vel.x * Dt,
+                    fp.Zero,
+                    pos.z + vel.z * Dt);
+                posNext = new fp3(posNext.x,
+                    ground.SampleHeight(posNext.x, posNext.z) + ballRadius,
+                    posNext.z);
+
+                t   = t + Dt;
+                pos = posNext;
+                samples.Add(new TrajectorySample(t, pos, vel));
+
+                fp speedSq    = fpMath.Dot(vel, vel);
+                fp stopThresh = coeff.StopSpeed * coeff.StopSpeed;
+                if (speedSq < stopThresh && speedSq <= prevSpeedSq)
+                {
+                    stopConsecutive++;
+                    if (stopConsecutive >= StopStepsRequired)
+                    {
+                        hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+                        return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
+                    }
+                }
+                else stopConsecutive = 0;
+                prevSpeedSq = speedSq;
+
+                if (pos.x > WorldBound || pos.x < -WorldBound ||
+                    pos.z > WorldBound || pos.z < -WorldBound)
+                    return new Trajectory(samples, pos, vel, t, TerminationReason.ExitedWorldBounds, hits);
+            }
+
+            // Time cap — treat as stopped.
+            hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, SurfaceType.Green, true));
             return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
         }
 

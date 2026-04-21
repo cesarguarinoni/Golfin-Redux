@@ -43,6 +43,11 @@ namespace Golfin.Physics.Editor
         private SurfaceConfig _surfaceConfig = SurfaceConfig.Default;
         private string _dropTestResultText = "";
 
+        // Putt section
+        private bool _showPuttSection = true;
+        private PuttConfig _puttConfig = PuttConfig.Default;
+        private string _puttSimResultText = "";
+
         // Wind section
         private bool _showWindSection = true;
         private float _windBaseX = 0f;
@@ -181,6 +186,46 @@ namespace Golfin.Physics.Editor
                 EditorGUI.indentLevel--;
             }
 
+            // ── Putt Section ──────────────────────────────────────────────────────────
+            EditorGUILayout.Space();
+            _showPuttSection = EditorGUILayout.Foldout(_showPuttSection, "Putt", toggleOnLabelClick: true);
+            if (_showPuttSection)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.LabelField("Green", EditorStyles.boldLabel);
+                EditorGUI.indentLevel++;
+                var green = _puttConfig.Coefficients[(int)SurfaceType.Green];
+                green.RollingResistance = fp.FromFloat(EditorGUILayout.Slider("Rolling Resistance (1/s)", green.RollingResistance.ToFloat(), 0f, 1f));
+                green.StopSpeed         = fp.FromFloat(EditorGUILayout.Slider("Stop Speed (m/s)",         green.StopSpeed.ToFloat(),         0f, 0.5f));
+                _puttConfig.Coefficients[(int)SurfaceType.Green] = green;
+                EditorGUI.indentLevel--;
+
+                EditorGUILayout.LabelField("GreenCollar", EditorStyles.boldLabel);
+                EditorGUI.indentLevel++;
+                var collar = _puttConfig.Coefficients[(int)SurfaceType.GreenCollar];
+                collar.RollingResistance = fp.FromFloat(EditorGUILayout.Slider("Rolling Resistance (1/s)", collar.RollingResistance.ToFloat(), 0f, 1f));
+                collar.StopSpeed         = fp.FromFloat(EditorGUILayout.Slider("Stop Speed (m/s)",         collar.StopSpeed.ToFloat(),         0f, 0.5f));
+                _puttConfig.Coefficients[(int)SurfaceType.GreenCollar] = collar;
+                EditorGUI.indentLevel--;
+
+                EditorGUILayout.Space();
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Reload putt.csv"))
+                {
+                    _puttConfig = PhysicsConfigLoader.LoadPuttConfig();
+                    _puttSimResultText = "";
+                    Repaint();
+                }
+                if (GUILayout.Button("Sim 3m putt"))
+                    RunPuttSim();
+                EditorGUILayout.EndHorizontal();
+
+                if (_puttSimResultText.Length > 0)
+                    EditorGUILayout.HelpBox(_puttSimResultText, MessageType.Info);
+
+                EditorGUI.indentLevel--;
+            }
+
             if (_lastMode.Length > 0)
                 EditorGUILayout.LabelField($"Last run: {_lastMode}", EditorStyles.miniLabel);
 
@@ -265,8 +310,33 @@ namespace Golfin.Physics.Editor
             _dragLut = PhysicsConfigLoader.LoadDragLut();
             _liftLut = PhysicsConfigLoader.LoadLiftLut();
             _surfaceConfig = PhysicsConfigLoader.LoadSurfaceConfig();
+            _puttConfig    = PhysicsConfigLoader.LoadPuttConfig();
             _actualCarries = new List<float>(new float[_clubs.Count]);
             for (int i = 0; i < _actualCarries.Count; i++) _actualCarries[i] = -1f;
+            Repaint();
+        }
+
+        private void RunPuttSim()
+        {
+            // Calibrated velocity for ~3m stop on default Green (k=0.10, stop=0.04).
+            // d ≈ v0/k * (1 - v_stop/v0) = (0.35/0.10) * (1 - 0.04/0.35) ≈ 3.1m
+            float v0 = 0.35f;
+            var origin = fp3.Zero;
+            var vel    = new fp3(fp.FromFloat(v0), fp.Zero, fp.Zero);
+            var input  = new ShotInput(origin, vel, fp.FromInt(60));
+            var aero   = BuildConfig();
+            var traj   = BallSimulation.Simulate(
+                input, new FlatGround(fp.Zero), aero, WindConfig.Calm,
+                new ConstantSurfaceProvider(SurfaceType.Green), _surfaceConfig, _puttConfig);
+
+            float stopDist = traj.finalPosition.x.ToFloat();
+            float finalSpeed = Mathf.Sqrt(
+                traj.finalVelocity.x.ToFloat() * traj.finalVelocity.x.ToFloat() +
+                traj.finalVelocity.z.ToFloat() * traj.finalVelocity.z.ToFloat());
+
+            _puttSimResultText =
+                $"v0={v0:F2} m/s  |  Stop dist: {stopDist:F2} m  |  " +
+                $"Final speed: {finalSpeed:F4} m/s  |  Term: {traj.termination}";
             Repaint();
         }
 
