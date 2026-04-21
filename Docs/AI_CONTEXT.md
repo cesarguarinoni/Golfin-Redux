@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Researched & specced (`PHYSICS_RESEARCH.md` + `PHYSICS_TUNING_TARGETS.md`); Phase 0 baker COMPLETE |
+| Physics Architecture | ✅ Researched & specced; Phase 0 baker COMPLETE; **Phase 1 vacuum integrator COMPLETE** |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +38,31 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-21 — Phase 1 Vacuum Trajectory Integrator)
+
+### Completed
+- **`Assets/Scripts/Physics/Math/fp.cs`** — hand-rolled Q16.16 fixed-point struct + `fp3` vector. `noEngineReferences: true` assembly (`Golfin.Physics.Math`). Pure .NET, no Unity APIs.
+- **`Assets/Scripts/Physics/Math/fpMath.cs`** — deterministic `Sqrt` (Newton iteration), `Sin`/`Cos` (Taylor 7-term, angle-reduced).
+- **`Assets/Scripts/Physics/Math/Unity/FP3Extensions.cs`** — `ToVector3()` extension in separate `Golfin.Physics.Math.Unity` assembly (isolated Unity reference).
+- **`Assets/Scripts/Physics/Core/`** — `ShotInput`, `Trajectory`, `IGroundProvider`/`FlatGround`, `BallSimulation` (RK4 at 240Hz, vacuum). `noEngineReferences: true` asmdef. Zero Unity API references.
+- **`Assets/Scripts/Physics/Tests/ProjectileMathTests.cs`** — 4 EditMode tests. All **4/4 pass**: 1000 random shots 0 failures, worst error 0.164%; determinism verified; drop time verified; sample count reasonable.
+- **`Assets/Scripts/Physics/Runtime/Phase1TestController.cs`** — MonoBehaviour playback driver, orange trajectory LineRenderer, Inspector sliders.
+- **`Assets/Scenes/Physics/Phase1_VacuumTest.unity`** — driving range test scene: Ground cube, Ball sphere, TrajectoryLine, PhysicsTestController, Camera, Directional Light. Default shot: speed=50, angle=25°, range=195.3 m, flight=4.31s, HitGround ✓.
+- **Fixed-point precision fix:** Changed RK4 weighted-sum from `sum * (Dt/6)` → `(sum * Dt) / 6` to avoid Q16.16 truncation error accumulating over ~340 steps. Drop test went from failing (0.0156s over tolerance) to passing.
+
+### Key numbers
+- Math lib: hand-rolled (no package dependency)
+- Test results: 4/4 pass, 1000 shots 0 failures, worst error 0.164%
+- Default shot: 50 m/s, 25° → range 195.3 m, 4.31 s flight (analytical: 195.3 m ✓)
+
+### Still Open
+- Phase 2: aerodynamics (drag + Magnus lift) — needs `PHYSICS_RESEARCH.md` Section 4 coefficients
+- Phase 3: wind
+- Phase 4: surface interaction (reads Phase 0 heightmap.bytes)
+- Phase 5: putting
 
 ---
 

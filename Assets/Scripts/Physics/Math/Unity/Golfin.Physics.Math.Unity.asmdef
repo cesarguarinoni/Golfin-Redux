@@ -1,0 +1,13 @@
+{
+    "name": "Golfin.Physics.Math.Unity",
+    "rootNamespace": "Golfin.Physics.Math.Unity",
+    "references": [
+        "Golfin.Physics.Math"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

@@ -1,0 +1,68 @@
+namespace Golfin.Physics.Math
+{
+    public static class fpMath
+    {
+        // Babylonian/Newton integer sqrt on the raw long. Deterministic.
+        // Used sparingly; OK to be slower than platform sqrt.
+        public static fp Sqrt(fp x)
+        {
+            if (x.raw <= 0) return fp.Zero;
+            // Work in Q16.16: result.raw² / 2^16 ≈ x.raw
+            // → result.raw ≈ sqrt(x.raw * 2^16) = sqrt(x.raw) * 256
+            long v = x.raw;
+            long n = v << 16;
+            // Guard: if n overflowed (v >> 48 != 0 before shift), use double fallback
+            if ((v >> 48) != 0)
+            {
+                double d = System.Math.Sqrt(x.ToDouble());
+                return fp.FromDouble(d);
+            }
+            long r = n;
+            long prev;
+            for (int i = 0; i < 20 && r != 0; i++)
+            {
+                prev = r;
+                r = (r + n / r) >> 1;
+                if (r == prev) break;
+            }
+            return fp.FromRaw(r);
+        }
+
+        // Taylor-series sin/cos. 7 terms — deterministic, adequate for shot-setup time.
+        // Angle in radians, reduced to [-π, π] first.
+        private static readonly fp PI = fp.FromDouble(System.Math.PI);
+        private static readonly fp TwoPI = fp.FromDouble(2.0 * System.Math.PI);
+
+        private static fp ReduceAngle(fp a)
+        {
+            while (a > PI) a = a - TwoPI;
+            while (a < -PI) a = a + TwoPI;
+            return a;
+        }
+
+        public static fp Sin(fp a)
+        {
+            a = ReduceAngle(a);
+            fp a2 = a * a;
+            fp a3 = a2 * a;
+            fp a5 = a3 * a2;
+            fp a7 = a5 * a2;
+            return a
+                - a3 / fp.FromInt(6)
+                + a5 / fp.FromInt(120)
+                - a7 / fp.FromInt(5040);
+        }
+
+        public static fp Cos(fp a)
+        {
+            a = ReduceAngle(a);
+            fp a2 = a * a;
+            fp a4 = a2 * a2;
+            fp a6 = a4 * a2;
+            return fp.One
+                - a2 / fp.FromInt(2)
+                + a4 / fp.FromInt(24)
+                - a6 / fp.FromInt(720);
+        }
+    }
+}

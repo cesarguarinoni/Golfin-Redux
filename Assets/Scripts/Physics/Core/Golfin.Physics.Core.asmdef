@@ -1,0 +1,13 @@
+{
+    "name": "Golfin.Physics.Core",
+    "rootNamespace": "Golfin.Physics",
+    "references": [
+        "Golfin.Physics.Math"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": false,
+    "noEngineReferences": true
+}
