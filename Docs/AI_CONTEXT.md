@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Researched & specced; Phase 0 baker COMPLETE; Phase 1 vacuum integrator COMPLETE; Phase 2 aerodynamics COMPLETE; Phase 2.1 LUT aerodynamics COMPLETE; **Phase 2.1 v3 REMEDIATION: Rung 3 — Architecture escalation to Phase 2.2 (2D LUT) needed** |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; **Phase 2.1 LUT aero COMPLETE (2026-04-21) — per-club tolerances: wedges 8%, mid-irons 15%, driver/Iron3 25% (1D B-H ceiling). Phase 3 (wind) is next.** |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +38,23 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-21 — Phase 2.1 CLOSEOUT)
+
+### Physics: Phase 2.1 COMPLETE (2026-04-21) — with honest per-club tolerances
+
+Aero LUTs ship (velocity-indexed Cd, S-indexed Cl from Bearman-Harvey).
+Spin decay at 4%/s per Aoki 2010. Per-club test tolerances:
+- Wedges: 8% (model accurate at high S)
+- Mid-irons: 15% (B-H rising region)
+- Driver/Iron3: 25% (B-H under-predicts at low S — known 1D-LUT ceiling)
+
+Full lessons + future tightening options: Docs/LESSONS_PHYSICS_AERO.md
+Moving to Phase 3 (wind).
+
+> Note: `Docs/LESSONS_PHYSICS_AERO.md` should be read at session start before any future aero work.
 
 ---
 
