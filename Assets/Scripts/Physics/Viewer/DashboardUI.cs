@@ -114,7 +114,7 @@ namespace Golfin.Physics.Viewer
             AddButton(right, "Reload CSVs",         () => { controller?.ReloadConfigs(); RefreshFromController(); });
             AddButton(right, "Reset to defaults",   () => { controller?.ResetToDefaults(); RefreshFromController(); });
 
-            _readoutText = AddText(right, "No shot fired.", 13f);
+            _readoutText = AddText(right, "No shot fired.", 15f);
             var le = _readoutText.gameObject.GetComponent<LayoutElement>();
             if (le == null) le = _readoutText.gameObject.AddComponent<LayoutElement>();
             le.preferredHeight = 160f;
@@ -200,7 +200,7 @@ namespace Golfin.Physics.Viewer
             le.preferredHeight = 22f;
             var tmp = go.AddComponent<TextMeshProUGUI>();
             tmp.text     = $"── {text} ──";
-            tmp.fontSize = 13f;
+            tmp.fontSize = 16f;
             tmp.color    = new Color(0.9f, 0.75f, 0.3f, 1f);
         }
 
@@ -212,7 +212,7 @@ namespace Golfin.Physics.Viewer
             var le = go.AddComponent<LayoutElement>(); le.preferredHeight = 16f;
             var tmp = go.AddComponent<TextMeshProUGUI>();
             tmp.text     = text;
-            tmp.fontSize = 11f;
+            tmp.fontSize = 14f;
             tmp.color    = new Color(0.7f, 0.7f, 0.7f, 1f);
         }
 
@@ -245,14 +245,14 @@ namespace Golfin.Physics.Viewer
             lgo.transform.SetParent(row.transform, false);
             var lle = lgo.AddComponent<LayoutElement>(); lle.preferredWidth = 110f; lle.flexibleWidth = 0;
             var ltmp = lgo.AddComponent<TextMeshProUGUI>();
-            ltmp.text = label; ltmp.fontSize = 10f; ltmp.color = Color.white;
+            ltmp.text = label; ltmp.fontSize = 13f; ltmp.color = Color.white;
 
             // Value display
             var vgo = new GameObject("V", typeof(RectTransform), typeof(CanvasRenderer));
             vgo.transform.SetParent(row.transform, false);
             var vle = vgo.AddComponent<LayoutElement>(); vle.preferredWidth = 40f; vle.flexibleWidth = 0;
             var vtmp = vgo.AddComponent<TextMeshProUGUI>();
-            vtmp.text = current.ToString("F2"); vtmp.fontSize = 10f; vtmp.color = Color.white;
+            vtmp.text = current.ToString("F2"); vtmp.fontSize = 13f; vtmp.color = Color.white;
 
             // Slider
             var sgo = new GameObject("S", typeof(RectTransform));
@@ -321,7 +321,7 @@ namespace Golfin.Physics.Viewer
             txtRT.offsetMin = txtRT.offsetMax = Vector2.zero;
             var tmp = txtGO.AddComponent<TextMeshProUGUI>();
             tmp.text      = label;
-            tmp.fontSize  = 12f;
+            tmp.fontSize  = 15f;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color     = Color.white;
             return btn;
