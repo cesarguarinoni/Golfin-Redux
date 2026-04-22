@@ -1,0 +1,12 @@
+{
+    "name": "Golfin.SceneSnapshot.Tests",
+    "rootNamespace": "Golfin.SceneSnapshot.Tests",
+    "references": ["Golfin.SceneSnapshot", "Golfin.SceneSnapshot.Editor"],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

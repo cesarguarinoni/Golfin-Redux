@@ -490,6 +490,41 @@ Serrated-grass artifact on steep hillside water banks (Hole 12) fixed.
 
 ---
 
+## Session Changes (2026-04-22 — Manual Scene Snapshot Tool)
+
+### Completed
+- **`Assets/Scripts/SceneSnapshot/ManualPropId.cs`** — runtime MonoBehaviour stamp component (in `Golfin.SceneSnapshot` asmdef — NOT editor-only, must be runtime so `AddComponent` works on test GameObjects).
+- **`Assets/Scripts/SceneSnapshot/Golfin.SceneSnapshot.asmdef`** — runtime asmdef, autoReferenced: true.
+- **`Assets/Scripts/Editor/SceneSnapshot/SnapshotData.cs`** — `[Serializable]` POCOs: `SceneSnapshotData`, `PropEntry`, `TransformData`, `TerrainSnapshot`, `TreeInstanceData`, `DetailLayerData`. Uses `JsonUtility` (no Newtonsoft.Json).
+- **`Assets/Scripts/Editor/SceneSnapshot/SceneSnapshotCapture.cs`** — Capture pass: classifies scene roots (importer prefix/exact/namespace/extra vs manual), stamps `ManualPropId`, builds `PropEntry` list with prefab GUIDs + parent GUIDs, captures terrain trees + detail layers. `AuditRoots()` for pre-capture classification preview. `.bak` backup + wipe-guard safety check.
+- **`Assets/Scripts/Editor/SceneSnapshot/SceneSnapshotRestore.cs`** — Restore pass: topological sort (parent before child), GUID merge (update transform+active if found, instantiate from prefab if missing, leave unrecognized alone), terrain trees/details replaced wholesale with prototype remap. `RestoreReport` (Updated/Created/Skipped/Failed).
+- **`Assets/Scripts/Editor/SceneSnapshot/ManualSceneSnapshotWindow.cs`** — IMGUI editor window `Window > Golfin > Manual Scene Snapshot`. Audit → Capture flow (Capture disabled until Audit run). Snapshot summary (date, prop count, terrain). Restore button + report. Extra importer roots `ReorderableList` persisted to `EditorPrefs`. Help foldout.
+- **`Assets/Scripts/Editor/SceneSnapshot/Golfin.SceneSnapshot.Editor.asmdef`** — editor-only asmdef, references `Golfin.SceneSnapshot`.
+- **`Assets/Scripts/Editor/SceneSnapshot/Tests/SceneSnapshotTests.cs`** — 8 EditMode tests.
+- **`Assets/Scripts/Editor/SceneSnapshot/Tests/Golfin.SceneSnapshot.Tests.asmdef`** — test asmdef, references both runtime and editor assemblies.
+
+### Test Results: 8/8 pass ✅ (1.59s)
+1. `Snapshot_Capture_EmptySceneProducesEmptySnapshot` ✅
+2. `Snapshot_Capture_StampsGuidsOnManualProps` ✅
+3. `Snapshot_Capture_SkipsImporterRoots` ✅
+4. `Snapshot_Restore_UpdatesExistingPropTransform` ✅
+5. `Snapshot_Restore_AddsMissingPropFromPrefab` ✅
+6. `Snapshot_Restore_LeavesNewObjectsAlone` ✅
+7. `Snapshot_RoundTrip_JsonReadable` ✅
+8. `Snapshot_Terrain_TreeInstancesRoundTrip` ✅
+
+### Key implementation notes
+- `ManualPropId` MUST live in a runtime asmdef (not Editor folder) — Unity cannot `AddComponent` on types from editor-only assemblies.
+- `Undo.AddComponent<T>()` returns null in test runner; use `go.AddComponent<T>()` + `Undo.RegisterCreatedObjectUndo` instead.
+- `SetTreeInstances` positional args only in Unity 6 (named param `snapToAllHeights` doesn't exist — use `false` positionally).
+- Tests use `[TearDown]` + `AssetDatabase.DeleteAsset` for temp prefab cleanup; `File.Delete` for absolute paths.
+- Unity refuses `NewScene(Additive)` if any open scene is untitled — saved to temp path in test helper.
+
+### Snapshot file location
+`<SceneFolder>/<SceneName>.manual.json` next to the `.unity` file.
+
+---
+
 ## Active Work — Course Visual Polish
 
 ### Water Rework (2026-04-14) ✅

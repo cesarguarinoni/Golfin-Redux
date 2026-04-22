@@ -1,0 +1,11 @@
+{
+    "name": "Golfin.SceneSnapshot.Editor",
+    "rootNamespace": "Golfin.SceneSnapshot",
+    "references": ["Golfin.SceneSnapshot"],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": true,
+    "noEngineReferences": false
+}
