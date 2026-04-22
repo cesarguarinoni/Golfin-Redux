@@ -78,9 +78,9 @@ namespace Golfin.Physics.Tests
             // 60 × 0.005 = 0.30 → factor = 1.30; ball neutral → combined = 1.30
             var bundle = new StatBundle(IronClub(power: 60), NeutralBall, NeutralChar, FullCur, FullMax);
             var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
-            fp expected = fp.FromFloat(1.30f);
-            Assert.IsTrue(System.Math.Abs(r.VelocityMultiplier.raw - expected.raw) <= 1,
-                $"Club 60 pts → vel ~1.30 (expected {expected.raw}, got {r.VelocityMultiplier.raw})");
+            float actual = r.VelocityMultiplier.ToFloat();
+            Assert.IsTrue(System.Math.Abs(actual - 1.30f) < 0.001f,
+                $"Club 60 pts → vel ~1.30 (got {actual:F5})");
         }
 
         // ── Test 4: Ball Power is multiplicative with Club Power ───────────────────
@@ -92,9 +92,9 @@ namespace Golfin.Physics.Tests
             var ball   = new BallStats(10, 0, 0, 0, 0);
             var bundle = new StatBundle(IronClub(power: 60), ball, NeutralChar, FullCur, FullMax);
             var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
-            fp expected = fp.FromFloat(1.30f * 1.10f);
-            Assert.IsTrue(System.Math.Abs(r.VelocityMultiplier.raw - expected.raw) <= 2,
-                $"Combined vel ~1.43 (expected {expected.raw}, got {r.VelocityMultiplier.raw})");
+            float actual = r.VelocityMultiplier.ToFloat();
+            Assert.IsTrue(System.Math.Abs(actual - 1.43f) < 0.001f,
+                $"Combined vel ~1.43 (got {actual:F5})");
         }
 
         // ── Test 5: Velocity multiplier never exceeds 2.0 cap ─────────────────────
@@ -120,9 +120,9 @@ namespace Golfin.Physics.Tests
             var charStats = new CharacterStats(120, 0, 0, 0);
             var bundle    = new StatBundle(IronClub(), NeutralBall, charStats, fp.Zero, FullMax);
             var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
-            fp expected = fp.FromFloat(0.15f);
-            Assert.IsTrue(System.Math.Abs(r.OverpowerForgivenessFraction.raw - expected.raw) <= 2,
-                $"Zero-stamina overpower ~0.15 (expected {expected.raw}, got {r.OverpowerForgivenessFraction.raw})");
+            float actual = r.OverpowerForgivenessFraction.ToFloat();
+            Assert.IsTrue(System.Math.Abs(actual - 0.15f) < 0.001f,
+                $"Zero-stamina overpower ~0.15 (got {actual:F5})");
         }
 
         // ── Test 7: Ball Rebound +10 → ReboundMultiplier == 1.10 ─────────────────
@@ -133,9 +133,9 @@ namespace Golfin.Physics.Tests
             var ball   = new BallStats(0, 10, 0, 0, 0);
             var bundle = new StatBundle(IronClub(), ball, NeutralChar, FullCur, FullMax);
             var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
-            fp expected = fp.FromFloat(1.10f);
-            Assert.IsTrue(System.Math.Abs(r.BallPhysics.ReboundMultiplier.raw - expected.raw) <= 1,
-                $"Ball Rebound +10 → ReboundMultiplier ~1.10 (got {r.BallPhysics.ReboundMultiplier.raw})");
+            float actual = r.BallPhysics.ReboundMultiplier.ToFloat();
+            Assert.IsTrue(System.Math.Abs(actual - 1.10f) < 0.001f,
+                $"Ball Rebound +10 → ReboundMultiplier ~1.10 (got {actual:F5})");
         }
 
         // ── Test 8: Ball WindCut +10 → WindCutFraction == 0.10 ───────────────────
@@ -146,9 +146,9 @@ namespace Golfin.Physics.Tests
             var ball   = new BallStats(0, 0, 10, 0, 0);
             var bundle = new StatBundle(IronClub(), ball, NeutralChar, FullCur, FullMax);
             var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
-            fp expected = fp.FromFloat(0.10f);
-            Assert.IsTrue(System.Math.Abs(r.BallPhysics.WindCutFraction.raw - expected.raw) <= 1,
-                $"Ball WindCut +10 → WindCutFraction ~0.10 (got {r.BallPhysics.WindCutFraction.raw})");
+            float actual = r.BallPhysics.WindCutFraction.ToFloat();
+            Assert.IsTrue(System.Math.Abs(actual - 0.10f) < 0.001f,
+                $"Ball WindCut +10 → WindCutFraction ~0.10 (got {actual:F5})");
         }
 
         // ── Test 9: Ball Roll +10 → RollResistanceMultiplier == 0.90 ─────────────
@@ -160,9 +160,9 @@ namespace Golfin.Physics.Tests
             var ball   = new BallStats(0, 0, 0, 10, 0);
             var bundle = new StatBundle(IronClub(), ball, NeutralChar, FullCur, FullMax);
             var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
-            fp expected = fp.FromFloat(0.90f);
-            Assert.IsTrue(System.Math.Abs(r.BallPhysics.RollResistanceMultiplier.raw - expected.raw) <= 1,
-                $"Ball Roll +10 → RollResistanceMultiplier ~0.90 (got {r.BallPhysics.RollResistanceMultiplier.raw})");
+            float actual = r.BallPhysics.RollResistanceMultiplier.ToFloat();
+            Assert.IsTrue(System.Math.Abs(actual - 0.90f) < 0.001f,
+                $"Ball Roll +10 → RollResistanceMultiplier ~0.90 (got {actual:F5})");
             Assert.Less(r.BallPhysics.RollResistanceMultiplier.raw, fp.One.raw,
                 "Ball Roll +10 must reduce rolling resistance below 1.0");
         }
