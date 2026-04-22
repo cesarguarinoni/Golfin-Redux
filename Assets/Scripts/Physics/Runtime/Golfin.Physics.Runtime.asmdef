@@ -4,7 +4,8 @@
     "references": [
         "Golfin.Physics.Core",
         "Golfin.Physics.Math",
-        "Golfin.Physics.Math.Unity"
+        "Golfin.Physics.Math.Unity",
+        "Golfin.Physics.Stats"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

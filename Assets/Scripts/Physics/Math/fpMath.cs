@@ -97,5 +97,11 @@ namespace Golfin.Physics.Math
             if (value > max) return max;
             return value;
         }
+
+        public static fp Min(fp a, fp b) => a < b ? a : b;
+        public static fp Max(fp a, fp b) => a > b ? a : b;
+
+        public static readonly fp Pi        = fp.FromDouble(System.Math.PI);
+        public static readonly fp DegToRad  = fp.FromDouble(System.Math.PI / 180.0);
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Golfin.Physics.Math;
+using Golfin.Physics.Stats;
 
 namespace Golfin.Physics.Runtime
 {
@@ -243,6 +244,95 @@ namespace Golfin.Physics.Runtime
                 };
             }
             return cfg;
+        }
+
+        public static StatCoefficients LoadStatCoefficients()
+        {
+            var cfg = StatCoefficients.Default;
+            var ta = Resources.Load<TextAsset>("Physics/stats");
+            if (ta == null)
+            {
+                Debug.LogWarning("[PhysicsConfigLoader] Physics/stats.csv not found — using defaults");
+                return cfg;
+            }
+
+            bool headerSkipped = false;
+            foreach (var raw in ta.text.Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#")) continue;
+                if (!headerSkipped) { headerSkipped = true; continue; }
+
+                var parts = line.Split(',');
+                if (parts.Length < 2) continue;
+                string key = parts[0].Trim();
+                if (!float.TryParse(parts[1].Trim(),
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out float val)) continue;
+
+                switch (key)
+                {
+                    case "club_power_per_point":        cfg.ClubPowerPerPoint          = fp.FromFloat(val); break;
+                    case "club_accuracy_per_point":     cfg.ClubAccuracyPerPoint       = fp.FromFloat(val); break;
+                    case "club_lie_resistance_per_point": cfg.ClubLieResistancePerPoint = fp.FromFloat(val); break;
+                    case "ball_power_per_point":        cfg.BallPowerPerPoint          = fp.FromFloat(val); break;
+                    case "ball_rebound_per_point":      cfg.BallReboundPerPoint        = fp.FromFloat(val); break;
+                    case "ball_wind_cut_per_point":     cfg.BallWindCutPerPoint        = fp.FromFloat(val); break;
+                    case "ball_roll_per_point":         cfg.BallRollPerPoint           = fp.FromFloat(val); break;
+                    case "ball_spin_per_point":         cfg.BallSpinPerPoint           = fp.FromFloat(val); break;
+                    case "char_strength_per_point":     cfg.CharStrengthPerPoint       = fp.FromFloat(val); break;
+                    case "char_club_control_per_point": cfg.CharClubControlPerPoint    = fp.FromFloat(val); break;
+                    case "putter_control_per_point":    cfg.PutterControlPerPoint      = fp.FromFloat(val); break;
+                    case "putter_accuracy_per_point":   cfg.PutterAccuracyPerPoint     = fp.FromFloat(val); break;
+                    case "putter_weight_per_point":     cfg.PutterWeightPerPoint       = fp.FromFloat(val); break;
+                    case "stamina_floor_fraction":      cfg.StaminaFloorFraction       = fp.FromFloat(val); break;
+                }
+            }
+            return cfg;
+        }
+
+        public static StatCaps LoadStatCaps()
+        {
+            var caps = StatCaps.Default;
+            var ta = Resources.Load<TextAsset>("Physics/stat_caps");
+            if (ta == null)
+            {
+                Debug.LogWarning("[PhysicsConfigLoader] Physics/stat_caps.csv not found — using defaults");
+                return caps;
+            }
+
+            bool headerSkipped = false;
+            foreach (var raw in ta.text.Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#")) continue;
+                if (!headerSkipped) { headerSkipped = true; continue; }
+
+                var parts = line.Split(',');
+                if (parts.Length < 2) continue;
+                string key = parts[0].Trim();
+                if (!float.TryParse(parts[1].Trim(),
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out float val)) continue;
+
+                switch (key)
+                {
+                    case "velocity_multiplier_max":          caps.VelocityMultiplierMax         = fp.FromFloat(val); break;
+                    case "aim_cone_reduction_max":           caps.AimConeReductionMax           = fp.FromFloat(val); break;
+                    case "lie_resistance_max":               caps.LieResistanceMax              = fp.FromFloat(val); break;
+                    case "overpower_forgiveness_max":        caps.OverpowerForgivenessMax       = fp.FromFloat(val); break;
+                    case "stamina_cap_multiplier_max":       caps.StaminaCapMultiplierMax       = fp.FromFloat(val); break;
+                    case "putter_off_center_forgiveness_max": caps.PutterOffCenterForgivenessMax = fp.FromFloat(val); break;
+                    case "rebound_multiplier_max":           caps.ReboundMultiplierMax          = fp.FromFloat(val); break;
+                    case "rebound_multiplier_min":           caps.ReboundMultiplierMin          = fp.FromFloat(val); break;
+                    case "roll_multiplier_max":              caps.RollMultiplierMax             = fp.FromFloat(val); break;
+                    case "roll_multiplier_min":              caps.RollMultiplierMin             = fp.FromFloat(val); break;
+                    case "wind_cut_max":                     caps.WindCutMax                    = fp.FromFloat(val); break;
+                }
+            }
+            return caps;
         }
 
         public static List<ClubSpec> LoadClubSpecs()

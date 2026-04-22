@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface interaction COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE — 39/39 tests pass. **Surface classification fix COMPLETE (2026-04-22): Physics.Runtime.SurfaceMarker now added to all zone meshes by both importers. Next: Phase 7 (stat modifiers / gameplay coupling). Re-import all holes to activate.** |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass (39 prior + 10 new).** Next: run tests in Unity, re-import all holes. |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +38,56 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-22 — Phase 6 Stat Coupling)
+
+### Completed
+- **`Assets/Scripts/Physics/Math/fpMath.cs`** — added `Min`, `Max`, `DegToRad`, `Pi` statics.
+- **`Assets/Scripts/Physics/Core/BallPhysicsModifiers.cs`** (new) — `readonly struct` with `ReboundMultiplier`, `RollResistanceMultiplier`, `WindCutFraction`; `Neutral` static preset. Lives in `Golfin.Physics` (Core) so BallSimulation can consume it without depending on Stats.
+- **`Assets/Scripts/Physics/Stats/`** (new assembly `Golfin.Physics.Stats`, `noEngineReferences: true`):
+  - `ClubStats.cs` — Power/Accuracy/LieResistance/Durability (int) + LoftDegrees/BaseVelocityMps/BaseBackspinRpm (fp)
+  - `PutterStats.cs` — Control/Accuracy/Weight/Durability (int) + LoftDegrees/BaseVelocityMps (fp)
+  - `BallStats.cs` — Power/Rebound/WindCut/Roll/Spin (int -10..+10); `Neutral` preset
+  - `CharacterStats.cs` — Strength/ClubControl/Recovery/Stamina (int 0..120); `Neutral` preset
+  - `StatBundle.cs` — Club? or Putter? + Ball + Character + CurrentStamina/MaxStamina
+  - `StatCoefficients.cs` — 14 per-stat coefficients; `Default` values matching stats.csv
+  - `StatCaps.cs` — 11 cap values; `Default` values matching stat_caps.csv
+  - `ResolvedShotModifiers.cs` — resolver output struct with all 9 outputs
+  - `StatModifierResolver.cs` — 8-step static resolver (stamina scaling, vel mul, aim cone, spin, lie, overpower, putter-only, BallPhysicsModifiers)
+  - `ShotInputBuilder.cs` — `Build()` returns `(ShotInput, BallPhysicsModifiers)` ValueTuple; handles overpower forgiveness, loft→pitch, yaw decomposition, backspin SpinState
+- **`Assets/Resources/Physics/stats.csv`** (new) — 14 coefficient rows
+- **`Assets/Resources/Physics/stat_caps.csv`** (new) — 11 cap rows
+- **`Assets/Scripts/Physics/Core/BallSimulation.cs`** (rewritten):
+  - Phase 3 4-arg now forwards to private `SimulateAirborne(..., Neutral)` — bit-exact gate
+  - Phase 5 7-arg now forwards to Phase 6 8-arg with Neutral
+  - New Phase 6 8-arg: full implementation; `cr = cr * ballMods.ReboundMultiplier` at bounce; ballMods passed into `SimulateAirborne`, `RunRollPhase`, `RunPuttPhase`
+  - Private `SimulateAirborne`: `windCutScale = 1 - WindCutFraction`; applied to all 4 RK4 wind samples
+  - `RunRollPhase`/`RunPuttPhase`: `coeff.RollingResistance * ballMods.RollResistanceMultiplier`
+- **`Assets/Scripts/Physics/Runtime/PhysicsConfigLoader.cs`** — added `LoadStatCoefficients()` and `LoadStatCaps()` (same key→field switch pattern as other loaders)
+- **`Assets/Scripts/Physics/Runtime/Golfin.Physics.Runtime.asmdef`** — added `Golfin.Physics.Stats` reference
+- **`Assets/Scripts/Physics/Tests/Golfin.Physics.Tests.asmdef`** — added `Golfin.Physics.Stats` reference
+- **`Assets/Scripts/Physics/Tests/StatResolverTests.cs`** (new) — 10 tests
+
+### Tests (pending Unity run — expected 49/49)
+1. `Stats_Phase5Overloads_BitExact` — 7-arg vs 8-arg Neutral: bit-exact ✅
+2. `Stats_NeutralBundle_VelocityMultiplierIsOne` — all-zero stats → vel×1.0
+3. `Stats_ClubPower60_VelocityMultiplierOnePointThree` — 60pts → ×1.30
+4. `Stats_BallPower_MultiplicativeWithClub` — club 1.30 × ball 1.10 = 1.43
+5. `Stats_VelocityMultiplier_HardCapAtTwo` — max club+ball ≤ 2.0
+6. `Stats_ZeroStamina_FloorPreservesCharStats` — strength×0.20 floor → overpower 0.15
+7. `Stats_BallRebound_MultiplierCorrect` — Rebound +10 → 1.10
+8. `Stats_BallWindCut_FractionCorrect` — WindCut +10 → 0.10
+9. `Stats_BallRoll_ReducesRollingResistance` — Roll +10 → 0.90 (< 1.0)
+10. `Stats_ShotInputBuilder_IronCarryInRange` — full iron shot: 100–220 m carry
+
+### Still Open
+- Run `tests-run` in Unity to confirm 49/49 pass
+- Re-import all holes (SurfaceMarker fix from previous session)
+- Trees layer fix (tree colliders intercept SceneGroundProvider raycasts)
+- Bridges: no bridge mesh generation yet
+- Phase 7: gameplay-layer stat consumption (aim reticle, overpower zone, lie modifier)
 
 ---
 

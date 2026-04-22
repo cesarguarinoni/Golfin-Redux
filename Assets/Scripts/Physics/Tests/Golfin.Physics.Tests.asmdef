@@ -5,7 +5,8 @@
         "Golfin.Physics.Core",
         "Golfin.Physics.Math",
         "Golfin.Physics.Runtime",
-        "Golfin.Physics.Viewer"
+        "Golfin.Physics.Viewer",
+        "Golfin.Physics.Stats"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
