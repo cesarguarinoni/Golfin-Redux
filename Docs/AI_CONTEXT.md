@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface interaction COMPLETE; Phase 5 putting COMPLETE; **Phase 6 Viewer COMPLETE (2026-04-22) — 39/39 tests pass. 3 lab scenes built via Unity MCP. Next: Phase 7 (stat modifiers / gameplay coupling).** |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface interaction COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE — 39/39 tests pass. **Surface classification fix COMPLETE (2026-04-22): Physics.Runtime.SurfaceMarker now added to all zone meshes by both importers. Next: Phase 7 (stat modifiers / gameplay coupling). Re-import all holes to activate.** |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +38,28 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-22 — Surface Classification Fix)
+
+### Problem
+`SceneSurfaceProvider` reads `Golfin.Physics.Runtime.SurfaceMarker`. Both importers only ever added `Golfin.Course.SurfaceMarker` — a different type in a different assembly. Every zone (green, bunker, fairway, tee, cart path, water) defaulted to `SurfaceType.Fairway`, giving wrong bounce/roll/putt coefficients everywhere.
+
+### Fix
+- `Golfin.Physics.Core.asmdef` + `Golfin.Physics.Runtime.asmdef`: `autoReferenced: false → true`. This makes both assemblies visible to Assembly-CSharp-Editor (where the importers live) without needing a new asmdef.
+- `HoleGeoImporter.cs`: Added `Golfin.Physics.Runtime.SurfaceMarker` at 10 zone-creation sites (Bunker→Sand, Green CDT→Green, Collar→GreenCollar, RaisedSurface→Green, Water→Water, Fairway→Fairway, 3×Tee→Tee, 3×CartPath→CartPath).
+- `HoleLiteImporter.cs`: Same pattern, 8 sites.
+- `CreateRaisedMesh _Surface` GO (the flat inner putting surface) had NO marker at all — now gets `Green`.
+
+### Still Open
+- **Re-import all holes** to pick up new markers (existing Generated scenes still have only Course markers).
+- **Trees layer fix**: tree colliders intercept downward raycasts → positions near trees classify as Fairway. Fix: set tree GOs to a dedicated layer in `TreePlacer.cs` / `TreeBrushTool.cs`; exclude that layer from `SceneSurfaceProvider`'s `layerMask`. Awaiting architect decision.
+- **Bridges**: no bridge mesh generation in either importer yet. Add `SurfaceMarker(CartPath)` when implemented.
+- **Phase 7**: stat modifier coupling (`StatModifierResolver`).
+
+### Test Status: 39/39 pass ✅ (no regressions)
+### Report: `Docs/SURFACE_MARKER_FIX_REPORT.md`
 
 ---
 
