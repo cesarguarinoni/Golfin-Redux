@@ -1,0 +1,12 @@
+key,value,notes
+velocity_multiplier_max,2.0,Section 8 soft cap on combined Club x Ball velocity boost
+aim_cone_reduction_max,0.95,never less than 5% of base cone (some miss is always possible)
+lie_resistance_max,0.75,Section 8 hard cap
+overpower_forgiveness_max,0.75,Section 8 hard cap on Strength
+stamina_cap_multiplier_max,1.20,Character Stamina stat caps total stamina at 120% (informational)
+putter_off_center_forgiveness_max,0.50,Section 8 hard cap
+rebound_multiplier_max,1.20,Ball Rebound can boost restitution +20% max
+rebound_multiplier_min,0.80,Ball Rebound can reduce restitution to 80% min
+roll_multiplier_max,1.20,Ball Roll can swing rolling resistance +/-20%
+roll_multiplier_min,0.80,
+wind_cut_max,0.30,wind delta drag can be reduced by at most 30%
