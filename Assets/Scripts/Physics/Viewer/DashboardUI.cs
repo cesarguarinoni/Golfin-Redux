@@ -233,66 +233,90 @@ namespace Golfin.Physics.Viewer
         {
             var row = new GameObject("SliderRow_" + label.Trim(), typeof(RectTransform));
             row.transform.SetParent(parent.transform, false);
-            row.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 22f);
             var hl = row.AddComponent<HorizontalLayoutGroup>();
             hl.childForceExpandWidth  = false;
             hl.childForceExpandHeight = true;
             hl.spacing = 4f;
-            var le = row.AddComponent<LayoutElement>(); le.preferredHeight = 22f;
+            var rowLE = row.AddComponent<LayoutElement>();
+            rowLE.preferredHeight = 28f;
 
             // Label
             var lgo = new GameObject("L", typeof(RectTransform), typeof(CanvasRenderer));
             lgo.transform.SetParent(row.transform, false);
-            var lle = lgo.AddComponent<LayoutElement>(); lle.preferredWidth = 110f; lle.flexibleWidth = 0;
+            var lle = lgo.AddComponent<LayoutElement>();
+            lle.preferredWidth = 110f;
+            lle.flexibleWidth  = 0f;
             var ltmp = lgo.AddComponent<TextMeshProUGUI>();
             ltmp.text = label; ltmp.fontSize = 13f; ltmp.color = Color.white;
+            ltmp.alignment = TextAlignmentOptions.MidlineLeft;
 
             // Value display
             var vgo = new GameObject("V", typeof(RectTransform), typeof(CanvasRenderer));
             vgo.transform.SetParent(row.transform, false);
-            var vle = vgo.AddComponent<LayoutElement>(); vle.preferredWidth = 40f; vle.flexibleWidth = 0;
+            var vle = vgo.AddComponent<LayoutElement>();
+            vle.preferredWidth = 44f;
+            vle.flexibleWidth  = 0f;
             var vtmp = vgo.AddComponent<TextMeshProUGUI>();
             vtmp.text = current.ToString("F2"); vtmp.fontSize = 13f; vtmp.color = Color.white;
+            vtmp.alignment = TextAlignmentOptions.MidlineRight;
 
-            // Slider
-            var sgo = new GameObject("S", typeof(RectTransform));
+            // Slider container
+            var sgo = new GameObject("Slider", typeof(RectTransform));
             sgo.transform.SetParent(row.transform, false);
-            var sle = sgo.AddComponent<LayoutElement>(); sle.flexibleWidth = 1f;
+            var sle = sgo.AddComponent<LayoutElement>();
+            sle.flexibleWidth   = 1f;
+            sle.preferredHeight = 28f;
 
-            // Minimal slider setup
-            var bg = new GameObject("Bg", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            bg.transform.SetParent(sgo.transform, false);
-            var bgRT = bg.GetComponent<RectTransform>();
-            bgRT.anchorMin = new Vector2(0, 0.25f); bgRT.anchorMax = new Vector2(1, 0.75f);
+            // Background track (middle 40% of height)
+            var bgGO = new GameObject("Background", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            bgGO.transform.SetParent(sgo.transform, false);
+            var bgRT = bgGO.GetComponent<RectTransform>();
+            bgRT.anchorMin = new Vector2(0f, 0.3f);
+            bgRT.anchorMax = new Vector2(1f, 0.7f);
             bgRT.offsetMin = bgRT.offsetMax = Vector2.zero;
-            bg.GetComponent<Image>().color = new Color(0.25f, 0.25f, 0.25f);
+            bgGO.GetComponent<Image>().color = new Color(0.25f, 0.25f, 0.25f, 1f);
 
-            var fillArea = new GameObject("FA", typeof(RectTransform));
-            fillArea.transform.SetParent(sgo.transform, false);
-            var faRT = fillArea.GetComponent<RectTransform>();
-            faRT.anchorMin = new Vector2(0, 0.25f); faRT.anchorMax = new Vector2(1, 0.75f);
-            faRT.offsetMin = faRT.offsetMax = Vector2.zero;
+            // Fill Area (inset so fill doesn't overshoot at max)
+            var faGO = new GameObject("Fill Area", typeof(RectTransform));
+            faGO.transform.SetParent(sgo.transform, false);
+            var faRT = faGO.GetComponent<RectTransform>();
+            faRT.anchorMin = new Vector2(0f, 0.3f);
+            faRT.anchorMax = new Vector2(1f, 0.7f);
+            faRT.offsetMin = new Vector2(5f, 0f);
+            faRT.offsetMax = new Vector2(-14f, 0f);
 
-            var fill = new GameObject("F", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            fill.transform.SetParent(fillArea.transform, false);
-            var fillRT = fill.GetComponent<RectTransform>();
-            fillRT.anchorMin = Vector2.zero; fillRT.anchorMax = new Vector2(0.5f, 1f);
-            fill.GetComponent<Image>().color = new Color(0.25f, 0.55f, 0.85f);
+            // Fill (Slider sets anchorMax.x = normalizedValue)
+            var fillGO = new GameObject("Fill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fillGO.transform.SetParent(faGO.transform, false);
+            var fillRT = fillGO.GetComponent<RectTransform>();
+            fillRT.anchorMin = Vector2.zero;
+            fillRT.anchorMax = Vector2.one;
+            fillRT.offsetMin = fillRT.offsetMax = Vector2.zero;
+            fillGO.GetComponent<Image>().color = new Color(0.25f, 0.55f, 0.85f, 1f);
 
-            var hArea = new GameObject("HA", typeof(RectTransform));
-            hArea.transform.SetParent(sgo.transform, false);
-            var haRT = hArea.GetComponent<RectTransform>();
-            haRT.anchorMin = Vector2.zero; haRT.anchorMax = Vector2.one;
-            haRT.offsetMin = haRT.offsetMax = Vector2.zero;
+            // Handle Slide Area (inset by half handle width so handle stays in bounds)
+            var haGO = new GameObject("Handle Slide Area", typeof(RectTransform));
+            haGO.transform.SetParent(sgo.transform, false);
+            var haRT = haGO.GetComponent<RectTransform>();
+            haRT.anchorMin = Vector2.zero;
+            haRT.anchorMax = Vector2.one;
+            haRT.offsetMin = new Vector2(7f, 0f);
+            haRT.offsetMax = new Vector2(-7f, 0f);
 
-            var handleGO = new GameObject("H", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            handleGO.transform.SetParent(hArea.transform, false);
-            handleGO.GetComponent<RectTransform>().sizeDelta = new Vector2(12f, 0f);
+            // Handle
+            var handleGO = new GameObject("Handle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            handleGO.transform.SetParent(haGO.transform, false);
+            var handleRT = handleGO.GetComponent<RectTransform>();
+            handleRT.anchorMin = new Vector2(0f, 0f);
+            handleRT.anchorMax = new Vector2(0f, 1f);
+            handleRT.sizeDelta = new Vector2(14f, -4f);
+            handleRT.anchoredPosition = Vector2.zero;
             handleGO.GetComponent<Image>().color = Color.white;
 
             var slider = sgo.AddComponent<Slider>();
-            slider.fillRect   = fill.GetComponent<RectTransform>();
-            slider.handleRect = handleGO.GetComponent<RectTransform>();
+            slider.fillRect   = fillRT;
+            slider.handleRect = handleRT;
+            slider.direction  = Slider.Direction.LeftToRight;
             slider.minValue   = min;
             slider.maxValue   = max;
             slider.value      = current;
