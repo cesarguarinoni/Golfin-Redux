@@ -2129,6 +2129,7 @@ namespace Golfin.CourseImport
                 var marker = meshGO.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Bunker;
                 meshGO.AddComponent<Golfin.Course.BunkerSurfaceInfo>();
+                meshGO.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>().Type = Golfin.Physics.SurfaceType.Sand;
 
                 Debug.Log($"[HoleLiteImporter] Bunker {bunker.id}: unified (cut=90%, depth={bowlDepth:F1}m, axis={shorterAxis:F1}m), {bunker.contour.Length} verts");
             }
@@ -2717,6 +2718,7 @@ namespace Golfin.CourseImport
             go.AddComponent<Golfin.Course.GreenSurfaceInfo>();
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = Golfin.Course.SurfaceType.Green;
+            go.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>().Type = Golfin.Physics.SurfaceType.Green;
 
             Debug.Log($"[HoleLiteImporter] Green {id}: CDT submesh, " +
                 $"greenTris={greenTris.Count / 3}, " +
@@ -2833,6 +2835,7 @@ namespace Golfin.CourseImport
                 // SurfaceMarker for collar = SemiRough
                 var collarMarker = collarGO.AddComponent<Golfin.Course.SurfaceMarker>();
                 collarMarker.surfaceType = Golfin.Course.SurfaceType.SemiRough;
+                collarGO.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>().Type = Golfin.Physics.SurfaceType.GreenCollar;
             }
 
             // ── Putting surface mesh (flat top) ──
@@ -2910,6 +2913,7 @@ namespace Golfin.CourseImport
             surfaceGO.AddComponent<MeshFilter>().sharedMesh = surfaceMesh;
             surfaceGO.AddComponent<MeshRenderer>().sharedMaterial = surfaceMat;
             AddCleanMeshCollider(surfaceGO, surfaceMesh);
+            surfaceGO.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>().Type = Golfin.Physics.SurfaceType.Green;
             surfaceGO.transform.SetParent(parent.transform, false);
 
             Debug.Log($"[HoleLiteImporter] {zoneName} {id}: {n} contour verts, " +
@@ -3057,6 +3061,7 @@ namespace Golfin.CourseImport
 
                 var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
                 marker.surfaceType = Golfin.Course.SurfaceType.Water;
+                go.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>().Type = Golfin.Physics.SurfaceType.Water;
                 go.transform.SetParent(waterRoot.transform);
 
                 Debug.Log($"[HoleLiteImporter] Water {water.id}: {n} contour verts, " +
@@ -4278,6 +4283,7 @@ namespace Golfin.CourseImport
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = Golfin.Course.SurfaceType.Fairway;
+            go.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>().Type = Golfin.Physics.SurfaceType.Fairway;
             return go;
         }
 
@@ -4400,6 +4406,7 @@ namespace Golfin.CourseImport
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = surfaceType;
+            go.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>().Type = Golfin.Physics.SurfaceType.Tee;
             return go;
         }
 
@@ -4674,6 +4681,7 @@ namespace Golfin.CourseImport
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = surfaceType;
+            go.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>().Type = Golfin.Physics.SurfaceType.CartPath;
 
             return go;
         }
