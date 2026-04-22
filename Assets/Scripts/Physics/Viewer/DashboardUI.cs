@@ -90,9 +90,9 @@ namespace Golfin.Physics.Viewer
             // ── WIND section
             AddSectionHeader(content, "WIND (BASE)");
             AddFloatSlider(content, "Wind X m/s", -20f, 20f, _wind.BaseVelocity.x.ToFloat(),
-                v => { var bv = _wind.BaseVelocity; bv.x = fp.FromFloat(v); _wind.BaseVelocity = bv; controller.SetWindConfig(_wind); });
+                v => { _wind.BaseVelocity = new fp3(fp.FromFloat(v), _wind.BaseVelocity.y, _wind.BaseVelocity.z); controller.SetWindConfig(_wind); });
             AddFloatSlider(content, "Wind Z m/s", -20f, 20f, _wind.BaseVelocity.z.ToFloat(),
-                v => { var bv = _wind.BaseVelocity; bv.z = fp.FromFloat(v); _wind.BaseVelocity = bv; controller.SetWindConfig(_wind); });
+                v => { _wind.BaseVelocity = new fp3(_wind.BaseVelocity.x, _wind.BaseVelocity.y, fp.FromFloat(v)); controller.SetWindConfig(_wind); });
             AddFloatSlider(content, "Gust amplitude", 0f, 1f, _wind.GustAmplitude.ToFloat(),
                 v => { _wind.GustAmplitude = fp.FromFloat(v); controller.SetWindConfig(_wind); });
 

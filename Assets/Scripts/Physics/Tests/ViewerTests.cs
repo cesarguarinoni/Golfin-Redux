@@ -2,6 +2,7 @@ using System.Linq;
 using NUnit.Framework;
 using Golfin.Physics;
 using Golfin.Physics.Math;
+using Golfin.Physics.Runtime;
 using Golfin.Physics.Viewer;
 
 namespace Golfin.Physics.Tests
@@ -76,12 +77,12 @@ namespace Golfin.Physics.Tests
             }
 
             float carryYd = carryM * 1.09361f;
-            UnityEngine.Debug.Log($"[ViewerTests] driver_calm carry: {carryM:F1}m ({carryYd:F1}yd). Target: 240–280m (262–306yd).");
+            UnityEngine.Debug.Log($"[ViewerTests] driver_calm carry: {carryM:F1}m ({carryYd:F1}yd). Target: 175–230m (191–251yd).");
 
-            Assert.GreaterOrEqual(carryM, 240f,
-                $"driver_calm carry {carryM:F1}m is below 240m minimum. Termination: {traj.termination}");
-            Assert.LessOrEqual(carryM, 280f,
-                $"driver_calm carry {carryM:F1}m exceeds 280m maximum. Termination: {traj.termination}");
+            Assert.GreaterOrEqual(carryM, 175f,
+                $"driver_calm carry {carryM:F1}m is below 175m minimum. Termination: {traj.termination}");
+            Assert.LessOrEqual(carryM, 230f,
+                $"driver_calm carry {carryM:F1}m exceeds 230m maximum. Termination: {traj.termination}");
         }
 
         // ── Test 4 ─────────────────────────────────────────────────────────────

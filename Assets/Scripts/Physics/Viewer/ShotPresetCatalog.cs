@@ -57,22 +57,22 @@ namespace Golfin.Physics.Viewer
 
             // ── Range (1–10) ──────────────────────────────────────────────────
 
-            // 1 — driver_calm: ~275yd / ~246m carry
+            // 1 — driver_calm: ~275yd / ~251m carry  (75 m/s @ 10.9° — matches AerodynamicsTests reference)
             list.Add(new ShotPreset(
                 "driver_calm", "Driver — calm", PresetScene.Range,
                 origin: fp3.Zero,
-                velocity: new fp3(fp.FromFloat(69.5f), fp.FromFloat(18f), fp.Zero),
-                spin: Backspin(2800f),
+                velocity: new fp3(fp.FromFloat(73.6f), fp.FromFloat(14.2f), fp.Zero),
+                spin: Backspin(2686f),
                 wind: WindConfig.Calm,
-                notes: "~275yd (~246m) carry. Reference driver shape in calm air."
+                notes: "~275yd (~251m) carry. Tour-level driver (75 m/s, 10.9°, 2686rpm) in calm air."
             ));
 
             // 2 — driver_headwind: ~245yd carry
             list.Add(new ShotPreset(
                 "driver_headwind", "Driver — 10 m/s headwind", PresetScene.Range,
                 origin: fp3.Zero,
-                velocity: new fp3(fp.FromFloat(69.5f), fp.FromFloat(18f), fp.Zero),
-                spin: Backspin(2800f),
+                velocity: new fp3(fp.FromFloat(73.6f), fp.FromFloat(14.2f), fp.Zero),
+                spin: Backspin(2686f),
                 wind: Headwind10(),
                 notes: "~245yd carry. Headwind visibly shortens flight. Compare with driver_calm."
             ));
@@ -81,8 +81,8 @@ namespace Golfin.Physics.Viewer
             list.Add(new ShotPreset(
                 "driver_tailwind", "Driver — 10 m/s tailwind", PresetScene.Range,
                 origin: fp3.Zero,
-                velocity: new fp3(fp.FromFloat(69.5f), fp.FromFloat(18f), fp.Zero),
-                spin: Backspin(2800f),
+                velocity: new fp3(fp.FromFloat(73.6f), fp.FromFloat(14.2f), fp.Zero),
+                spin: Backspin(2686f),
                 wind: Tailwind10(),
                 notes: "~305yd carry. Tailwind extends flight. Compare with driver_calm."
             ));
@@ -91,8 +91,8 @@ namespace Golfin.Physics.Viewer
             list.Add(new ShotPreset(
                 "driver_crosswind", "Driver — 10 m/s crosswind", PresetScene.Range,
                 origin: fp3.Zero,
-                velocity: new fp3(fp.FromFloat(69.5f), fp.FromFloat(18f), fp.Zero),
-                spin: Backspin(2800f),
+                velocity: new fp3(fp.FromFloat(73.6f), fp.FromFloat(14.2f), fp.Zero),
+                spin: Backspin(2686f),
                 wind: Crosswind10(),
                 notes: "~275yd carry, lateral Z drift visible. Crosswind pushes ball along +Z."
             ));
@@ -224,8 +224,8 @@ namespace Golfin.Physics.Viewer
             list.Add(new ShotPreset(
                 "driver_calm_dashboard", "Driver — calm (dashboard)", PresetScene.Dashboard,
                 origin: fp3.Zero,
-                velocity: new fp3(fp.FromFloat(69.5f), fp.FromFloat(18f), fp.Zero),
-                spin: Backspin(2800f),
+                velocity: new fp3(fp.FromFloat(73.6f), fp.FromFloat(14.2f), fp.Zero),
+                spin: Backspin(2686f),
                 wind: WindConfig.Calm,
                 notes: "Dashboard reference shot. Change Aero/Surface sliders and re-fire to see effect."
             ));

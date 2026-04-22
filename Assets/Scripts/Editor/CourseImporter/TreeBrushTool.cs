@@ -270,7 +270,7 @@ namespace Golfin.CourseImport
             var mouse = Event.current.mousePosition;
             Ray ray = HandleUtility.GUIPointToWorldRay(mouse);
             RaycastHit hit;
-            bool gotHit = Physics.Raycast(ray, out hit, 5000f);
+            bool gotHit = UnityEngine.Physics.Raycast(ray, out hit, 5000f);
             if (!gotHit)
             {
                 if (!RaycastTerrain(terrain, ray, out hit))
