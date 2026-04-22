@@ -1,6 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime;
@@ -21,6 +23,12 @@ namespace Golfin.Physics.Viewer
         [SerializeField] BallAnimator       ballAnimator;
         [SerializeField] ChaseCamera        chaseCamera;
         [SerializeField] HeightProvider     heightProvider;   // Hole1 only
+
+        [Header("Hole Geometry")]
+        [Tooltip("Additively loaded so zone mesh SurfaceMarkers are visible to SceneSurfaceProvider. Re-import hole after terrain changes.")]
+        [SerializeField] string hole1GeneratedScenePath = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_01.unity";
+
+        Scene _additiveHoleScene;
 
         // Published after every Fire
         public event Action<ShotReadout> OnShotFired;
@@ -44,6 +52,27 @@ namespace Golfin.Physics.Viewer
             WindCfg    = PhysicsConfigLoader.LoadWindConfig();
             SurfaceCfg = PhysicsConfigLoader.LoadSurfaceConfig();
             PuttCfg    = PhysicsConfigLoader.LoadPuttConfig();
+        }
+
+        IEnumerator Start()
+        {
+            if (currentScene == PresetScene.Hole1 && !string.IsNullOrEmpty(hole1GeneratedScenePath))
+            {
+                yield return SceneManager.LoadSceneAsync(hole1GeneratedScenePath, LoadSceneMode.Additive);
+                _additiveHoleScene = SceneManager.GetSceneByPath(hole1GeneratedScenePath);
+                // Disable duplicate terrain from the generated scene; zone mesh colliders stay active.
+                foreach (var root in _additiveHoleScene.GetRootGameObjects())
+                {
+                    var t = root.GetComponentInChildren<Terrain>(true);
+                    if (t != null) t.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (_additiveHoleScene.IsValid() && _additiveHoleScene.isLoaded)
+                SceneManager.UnloadSceneAsync(_additiveHoleScene);
         }
 
         // ── Public API ─────────────────────────────────────────────────────────
