@@ -4,6 +4,13 @@ namespace Golfin.Physics.Stats
 {
     public readonly struct ClubStats
     {
+        public static readonly ClubStats DefaultDriver = new ClubStats(
+            power: 50, accuracy: 50, lieResistance: 50, durability: 100,
+            loftDegrees: fp.FromFloat(10.9f),
+            baseVelocityMps: fp.FromFloat(75f),
+            baseBackspinRpm: fp.FromFloat(2686f));
+
+
         public readonly int Power;            // 0..120 (effective points across all rarities)
         public readonly int Accuracy;         // 0..120
         public readonly int LieResistance;    // 0..120

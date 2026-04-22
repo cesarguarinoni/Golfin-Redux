@@ -1,0 +1,11 @@
+{
+    "name": "Golfin.Gameplay.Config",
+    "rootNamespace": "Golfin.Gameplay.Config",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

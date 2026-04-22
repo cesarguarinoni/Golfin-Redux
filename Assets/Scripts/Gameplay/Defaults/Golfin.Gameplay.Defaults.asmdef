@@ -1,0 +1,14 @@
+{
+    "name": "Golfin.Gameplay.Defaults",
+    "rootNamespace": "Golfin.Gameplay.Defaults",
+    "references": [
+        "Golfin.Physics.Stats",
+        "Golfin.Physics.Math"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

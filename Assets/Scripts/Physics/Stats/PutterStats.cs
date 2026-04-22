@@ -4,6 +4,12 @@ namespace Golfin.Physics.Stats
 {
     public readonly struct PutterStats
     {
+        public static readonly PutterStats DefaultPutter = new PutterStats(
+            control: 50, accuracy: 50, weight: 50, durability: 100,
+            loftDegrees: fp.FromFloat(4f),
+            baseVelocityMps: fp.FromFloat(5f));
+
+
         public readonly int Control;          // 0..120 — off-center forgiveness
         public readonly int Accuracy;         // 0..120 — gravity well radius (assist layer)
         public readonly int Weight;           // 0..120 — aim cycle count

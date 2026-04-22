@@ -1,0 +1,22 @@
+key,value,notes
+PullStartThresholdPx,30,minimum drag to enter Pulling
+MinUsefulPullPx,40,below this power is 0%
+Max100PercentPullPx,300,pull distance for full 100% power
+MaxOverpowerPullPx,360,pull distance for clamped 120% overpower
+FlickVelocityThresholdPxPerSec,1500,minimum upward flick velocity to commit
+FlickAngleDeviationMaxDeg,30,beyond this flick reads as outside-cone
+ConeHalfAngleAtAcc0Deg,5,cone half-angle for Accuracy=0 club
+ConeHalfAngleAtAcc100Deg,20,cone half-angle for Accuracy=100 club
+ConeIdleAlpha,0.25,cone opacity in Idle state (ghosted)
+ConeFadeInSeconds,0.15,fade-in duration on entering Aiming
+ConeFadeOutSeconds,0.30,fade-out duration on entering Resolving
+BallHitZoneRadiusPx,80,fixed-pixel radius around ball sprite for touch input
+TargetingLineLengthMeters,30,length of the in-game targeting line
+BaseArrowSpeedHzAtCC0,0.5,arrow cycles per second at ClubControl=0
+ArrowSpeedHzPerCC,0.025,additive cycles/sec per CC point
+MaxCleanPassesAtCC0,1,passes before degradation at CC=0
+CleanPassesPerCC,0.04,additive passes per CC point (CC=100 gives 5 passes)
+MaxTotalPasses,10,total before auto-cancel
+DegradationYawDegPerPass,2,aim error widening per pass past clean
+PuttArrowSpeedMultiplier,0.5,putts get slower arrows
+PuttBaseVelocityMps,5,override default putter velocity
