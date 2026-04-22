@@ -651,3 +651,21 @@ For tees: simulation of `dR = drop / maxSlope` showed my first adaptive formulat
 **CreateWaterMeshes must always sample original (undepressed) terrain** for `waterY` computation. Keep it before `DepressTerrainUnderOverlays`.
 
 ---
+
+## Session Conventions (Cesar's standing rules)
+
+### "See you space cowboy" — end of session only
+Only say "See you space cowboy" when Cesar explicitly signals the session is over. Never use it after completing a task mid-session.
+
+### Always end task reports with a file summary
+After completing any task, end the report with a table listing every file written/modified and its status (done, pending, etc.). Example:
+
+| File | Status |
+|---|---|
+| `Assets/Scripts/Physics/Tests/StatResolverTests.cs` | ✅ done |
+| `Docs/AI_CONTEXT.md` | ✅ done |
+
+### Always use Unity MCP to interact with Unity
+Use Unity MCP tools (`tests-run`, `script-execute`, `gameobject-create`, etc.) for all Unity Editor interactions. If Unity MCP is unavailable (not connected, Unity not open), say so explicitly — do NOT fall back to batch-mode CLI, editor scripts, or other workarounds without telling Cesar first.
+
+---
