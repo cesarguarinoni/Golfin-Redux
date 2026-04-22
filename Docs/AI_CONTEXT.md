@@ -41,6 +41,32 @@ See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools 
 
 ---
 
+## Session Changes (2026-04-22 — PhysicsLab Hole1 fixes)
+
+### Problem
+Ball spawned at terrain height (Y≈9.6m), 0.38m below the visible Green_1 mesh surface (Y≈10.0m). Also: camera was resetting underground (preset origin Y=0). Zone meshes in PhysicsLab_Hole1 were invisible (renderers disabled in Play mode change that didn't persist).
+
+### Fixes
+- **`SceneGroundProvider.cs`** (new, `Assets/Scripts/Physics/Runtime/`) — `IGroundProvider` that raycasts from Y=500 downward; returns `hit.point.y` (first physical surface — hits MeshCollider before terrain). Replaces `HeightmapData` for Hole1.
+- **`PhysicsLabController.BuildGroundProvider()`** — returns `new SceneGroundProvider()` for Hole1 (removed `heightProvider.Data` path). Without `HeightmapData`, `BallSimulation` uses flat normal (0,1,0) — no slope-driven acceleration, putt stops correctly at ~3m on green.
+- **Camera fix** (prev session): `FireInternal` now reads `trajectory.samples[0].position` for camera origin instead of `preset.Origin.y=0`.
+- **ZoneMeshes_Physics** (prev session): 28 zone meshes baked from Generated scene, MeshRenderers enabled+saved, SurfaceMarkers active.
+
+### Key insight
+`HeightmapData.SampleHeight` only knows terrain. Zone overlay meshes (greens, tees, cart paths) sit 0.3–0.5m above terrain. `SceneGroundProvider` uses PhysX raycasting to return the top physical surface, so the ball spawns correctly on top of whatever geometry is physically present.
+
+### Side benefit
+Putt phase: with flat normal (0,1,0) instead of terrain slope normal, `RunPuttPhase` gets no slope-gravity term → ball stays on flat green → stops at ~3m as designed. On sloped terrain outside the green, the ball uses Fairway surface coefficients (airborne → bounce → roll), which is also correct.
+
+### Still Open (PhysicsLab)
+- Trees layer fix (tree colliders intercept SceneSurfaceProvider raycasts). Awaiting architect decision.
+- PhysicsLab: `SceneGroundProvider` also hits tree colliders if a shot passes through a wooded area — may need same layer-exclusion fix as SceneSurfaceProvider.
+- Bridges: no bridge mesh generation yet.
+- Re-import all holes to pick up Physics.Runtime.SurfaceMarker.
+- Phase 7: stat modifier coupling.
+
+---
+
 ## Session Changes (2026-04-22 — Surface Classification Fix)
 
 ### Problem
