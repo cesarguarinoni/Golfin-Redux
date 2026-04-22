@@ -7,7 +7,366 @@
 
 ---
 
-## ACTIVE TASK — Phase 5: Putt model (fast-path inside `BallSimulation`)
+## ACTIVE TASK — Physics Viewer (lab scenes for visual/mechanical confirmation)
+
+### Context
+
+Physics is complete through Phase 5. 35 tests green. Determinism verified. But tests prove correctness, not *feel* — Cesar needs button-click visual confirmation that a 7-iron looks like a 7-iron, a ball checks on a green, wind visibly shortens a drive, and determinism shows up on screen as "same preset twice = same stop position."
+
+This task builds three lab scenes that fire canonical shots through `BallSimulation.Simulate(...)`, render the resulting `Trajectory` as a color-coded line, and animate a ball prefab along it. No gameplay coupling — it's a lab instrument. It also closes out three deferred threads from earlier phases:
+
+1. Phase 4 Part G (Hole 1 test scene — deferred as non-blocking)
+2. Phase 5 Part G (Hole 1 putt scene — deferred as non-blocking)
+3. Hole 1 `SurfaceMarker` audit + wiring (listed in Phase 4 done report, awaited Cesar's rollout decision)
+
+Reference: `Docs/PHYSICS_RESEARCH.md` for architecture, `Docs/PHYSICS_TUNING_TARGETS.md` Section 1 for club carry targets (the numbers the presets must visibly demonstrate).
+
+### Scope boundaries — read before starting
+
+**In scope:**
+- Three scenes under `Assets/Scenes/Physics/`: `PhysicsLab_Range.unity`, `PhysicsLab_Hole1.unity`, `PhysicsLab_Dashboard.unity`.
+- New scripts under `Assets/Scripts/Physics/Viewer/`: `TrajectoryRenderer`, `BallAnimator`, `ChaseCamera`, `PhysicsLabController`, `PhysicsLabUI`, `DashboardUI`, `ShotPreset` (data), `ShotPresetCatalog` (hardcoded list).
+- In-Play-Mode Unity UI Canvas with preset dropdown, camera-mode dropdown, play-rate slider, Fire / Fire&Compare / Clear / Fire×5 buttons, readout panel.
+- 15 preset shots (list below). Presets 1–10 run in Range; 11–15 run in Hole 1.
+- Dashboard sliders bound live to `AeroConfig`, `WindConfig`, `SurfaceConfig`, `PuttConfig`; "Reload CSVs" and "Reset to defaults" buttons.
+- Ball prefab: `Assets/Art/3D/Balls/Rare/Prefabs/Pf_GOLFIN_MK2_Ball.prefab` — instantiated per shot, any Rigidbody made kinematic, any Colliders disabled (see Part B).
+- `HeightProvider` + `SceneSurfaceProvider` wired on `PhysicsLab_Hole1.unity` using the existing Hole 1 `heightmap.bytes`.
+- Audit Hole 1 zone meshes for missing `SurfaceMarker` components; report list. Do NOT auto-add markers — Cesar decides rollout before Hole 1 presets are validated.
+- CSV hot-reload in Play Mode (Resources cache bypass helper if needed).
+
+**Out of scope:**
+- Flick-to-shoot input. UI panel only this phase.
+- Aim reticle, landing-zone preview, gravity-well putter, any assist. Assists are gameplay-layer per architecture rule.
+- `StatModifierResolver` integration. Lab uses raw `ShotInput` values; character stats are gameplay.
+- Hole-detect / cup-fall.
+- Power gauge, aim arrow, any shot-composition UI polish.
+- Replay export, photo mode, trajectory screenshots as files.
+- Adding `SurfaceMarker` components to Hole 1 meshes automatically.
+- Touching `BallSimulation` or any Core physics code. Lab is pure consumer.
+
+---
+
+### Part A — `TrajectoryRenderer`
+
+`Assets/Scripts/Physics/Viewer/TrajectoryRenderer.cs` — new. Namespace `Golfin.Physics.Viewer`.
+
+MonoBehaviour. Takes a `Trajectory`, draws it.
+
+- One `LineRenderer` for the main path. Width 0.08m.
+- Color segments by phase — read from the sample sequence and `TerrainHits`:
+  - White: airborne (before first `TerrainHit`)
+  - Orange: between bounces (after first hit, before the hit where `vnOut < RollTransitionThreshold`)
+  - Green: rolling (after the roll transition)
+  - Cyan: putting (if termination path came through `RunPuttPhase` — detect by `TerrainHits.Count == 1 && IsStop` AND no airborne arc, i.e. all samples have `pos.y <= startPos.y + 0.5m`)
+- LineRenderer supports per-vertex colors via `colorGradient` or the `SetColors` pattern; use whichever yields the fewest allocations. Prefer setting `positionCount` once and `SetPositions` with a preallocated `Vector3[]`.
+- Sphere marker at each `TerrainHit.Position`. Color by `Surface`:
+  - Fairway: light green · Green: bright green · GreenCollar: yellow-green · Rough: dark green · Sand: tan · CartPath: grey · Water: blue · Others: magenta ("unhandled surface" flag).
+  - Markers are primitive spheres, scale 0.3m, parented to the renderer GameObject.
+- One extra sphere at `Trajectory.finalPosition` — scale 0.5m, gold. The "rest" marker.
+- "Ghost mode": `SetGhost(bool)` that dims the LineRenderer alpha to 0.3 and hides markers. Used by Fire&Compare.
+- `Clear()` removes all markers and resets the LineRenderer.
+
+Non-goals: no animation, no physics, no input. Pure rendering of a completed `Trajectory`.
+
+---
+
+### Part B — `BallAnimator`
+
+`Assets/Scripts/Physics/Viewer/BallAnimator.cs` — new.
+
+MonoBehaviour. Given a `Trajectory` and a ball GameObject, moves the ball along `trajectory.samples` in real time.
+
+**Prefab handling (critical):**
+
+The lab instantiates `Pf_GOLFIN_MK2_Ball.prefab` per shot. The prefab is authored for gameplay and may carry a `Rigidbody` and/or `Collider`s. The animator does not want PhysX touching the ball — the trajectory is pre-computed and deterministic; PhysX would fight it.
+
+On `Awake` of the spawned instance:
+
+```csharp
+foreach (var rb in instance.GetComponentsInChildren<Rigidbody>())
+    rb.isKinematic = true;
+foreach (var col in instance.GetComponentsInChildren<Collider>())
+    col.enabled = false;
+```
+
+Log the component inventory once at spawn: `Debug.Log($"[BallAnimator] Ball prefab components: {string.Join(", ", comps.Select(c => c.GetType().Name))}");` — Cesar wants to know what's on the prefab for reference.
+
+**Animation:**
+
+- `Play(Trajectory t)` starts the animation at sample[0].
+- Update loop uses `Time.unscaledDeltaTime * PlayRate`, advances a `currentSimTime`, finds the bracketing samples, lerps position linearly between them. Trajectory sample rate is 240 Hz — linear lerp between adjacent samples is visually smooth.
+- `PlayRate` setter: 0.25, 1.0, 4.0, or a special `Instant` mode that snaps straight to `finalPosition`.
+- At end, ball parks at `finalPosition` and stays. Calling `Play(...)` again destroys the current instance and spawns a fresh one at the new trajectory's start.
+- Ball scale: pass through whatever the prefab ships with. Do not rescale. Realism of ball size vs. course is not the lab's concern.
+- Optional TrailRenderer: if the prefab has one, keep it enabled. If it doesn't, don't add one. Zero assumption.
+
+**Camera coupling:** the animator exposes `public Transform CurrentBall { get; }` so `ChaseCamera` can follow it.
+
+---
+
+### Part C — `ChaseCamera`
+
+`Assets/Scripts/Physics/Viewer/ChaseCamera.cs` — new.
+
+MonoBehaviour on a Camera. Three modes selectable at runtime via a public enum `Mode { Chase, Overhead, GroundLevel }`:
+
+- **Chase:** position = ball + offset (−8m behind initial launch direction, +3m up). Looks at ball. Offset direction is set once per shot from `ShotInput.velocity.xz` so the camera starts behind the shot direction and trails smoothly.
+- **Overhead:** position directly above the ball, 40m up. Looks straight down. Good for seeing lateral drift from wind or putt curves.
+- **GroundLevel:** fixed at the shot origin + 1.6m up. Does not follow the ball — watches it fly away. Good for driver shape.
+
+Smoothing: `Vector3.SmoothDamp` with 0.15s smoothing time for position; `Quaternion.Slerp` at `10 * Time.deltaTime` for rotation. Feels tracked, not glued.
+
+Public: `SetMode(Mode m)`, `SetTarget(Transform t)`, `ResetToOrigin(Vector3 origin, Vector3 launchDir)`.
+
+---
+
+### Part D — `ShotPreset` + `ShotPresetCatalog`
+
+`Assets/Scripts/Physics/Viewer/ShotPreset.cs` — new data struct.
+
+```csharp
+public enum PresetScene { Range, Hole1, Dashboard }
+
+public readonly struct ShotPreset
+{
+    public readonly string Id;              // stable, e.g. "driver_calm"
+    public readonly string DisplayName;     // "Driver — calm"
+    public readonly PresetScene Scene;
+    public readonly fp3 Origin;             // world-space; scene builder places ball here
+    public readonly fp3 Velocity;           // m/s
+    public readonly SpinState Spin;
+    public readonly WindConfig Wind;        // usually WindConfig.Calm; overridden for wind presets
+    public readonly string Notes;           // shown in readout panel (expected carry, what it demonstrates)
+
+    public ShotPreset(string id, string name, PresetScene scene, fp3 origin, fp3 velocity,
+                      SpinState spin, WindConfig wind, string notes) { ... }
+}
+```
+
+`Assets/Scripts/Physics/Viewer/ShotPresetCatalog.cs` — hardcoded static list of 15 presets. `public static IReadOnlyList<ShotPreset> All { get; }` and `public static IEnumerable<ShotPreset> ForScene(PresetScene s)`.
+
+**Presets (exact values are starting points; tune during implementation if a preset doesn't hit its target within ±10%):**
+
+Range scene (flat fairway, synthetic `ConstantSurfaceProvider`):
+
+| # | Id | Velocity (m/s) | Spin | Wind | Target demo |
+|---|---|---|---|---|---|
+| 1 | `driver_calm` | (69.5, 18, 0) at ~15° launch | 2800 rpm backspin | Calm | ~275yd carry |
+| 2 | `driver_headwind` | same | same | 10 m/s along −X | ~245yd carry |
+| 3 | `driver_tailwind` | same | same | 10 m/s along +X | ~305yd carry |
+| 4 | `driver_crosswind` | same | same | 10 m/s along +Z | lateral drift visible |
+| 5 | `iron7_calm` | (46, 22, 0) at ~26° launch | 6500 rpm backspin | Calm | ~155yd total |
+| 6 | `wedge_100_backspin` | (32, 28, 0) at ~41° launch | 9000 rpm backspin | Calm | Checks near landing |
+| 7 | `wedge_100_zerospin` | same velocity | Zero spin | Calm | Rolls out; contrast with #6 |
+| 8 | `cartpath_bounce` | (25, −10, 0) dropped from 10m | Zero | Calm | First bounce ≥60% drop height — requires synthetic `ConstantSurfaceProvider(CartPath)` |
+| 9 | `rough_landing` | (40, 15, 0) | Zero | Calm | Ball plugs; single bounce, short roll — synthetic `ConstantSurfaceProvider(Rough)` |
+| 10 | `water_terminates` | (30, 10, 0) | Zero | Calm | Sim terminates at water — synthetic `ConstantSurfaceProvider(Water)` |
+
+Hole 1 scene (real geometry, `SceneSurfaceProvider`):
+
+| # | Id | Origin | Velocity | Target demo |
+|---|---|---|---|---|
+| 11 | `putt_flat_3m` | on green, known flat spot | (0.35, 0, 0) | Stops at 3m ±0.3m |
+| 12 | `putt_uphill_6m` | on green, known uphill | calibrated ~6m power | Stops short |
+| 13 | `putt_downhill_6m` | same slope, opposite dir | calibrated ~6m power | Runs past |
+| 14 | `putt_crossslope_6m` | on green, cross-slope area | calibrated ~6m power | Curves to low side |
+| 15 | `putt_off_back` | near back of green | 3.5 m/s along +X | Green → fringe → rough transition |
+
+**Note:** Claude Code must identify flat / sloped / back-edge positions on Hole 1's green during implementation. Open the scene, inspect the green mesh's bounds, pick reasonable points, commit the coordinates. Report coordinates in the done report so Cesar can sanity-check.
+
+Dashboard scene runs #1 (`driver_calm`) as the tuning reference shot, scaled down to fit a 200×50m mini-range.
+
+---
+
+### Part E — `PhysicsLabController`
+
+`Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — new. MonoBehaviour. The scene's brain.
+
+Responsibilities:
+
+- Holds references to the ball prefab, `TrajectoryRenderer`, `BallAnimator`, `ChaseCamera`, ground provider, surface provider, current configs.
+- On `Awake`: loads `AeroConfig` + `WindConfig` + `SurfaceConfig` + `PuttConfig` via `PhysicsConfigLoader`. Caches them.
+- Builds the `ISurfaceProvider` appropriate for the scene:
+  - Range scene: holds a settable `ConstantSurfaceProvider` — default `Fairway`, overridden per-preset for presets 8/9/10.
+  - Hole1 scene: constructs a `SceneSurfaceProvider`.
+  - Dashboard scene: `ConstantSurfaceProvider(Fairway)`.
+- Builds the `IGroundProvider`:
+  - Range: a flat `IGroundProvider` implementation (`FlatGroundProvider` — new utility if one doesn't exist already, returning `fp.Zero` for everything, normal (0,1,0)).
+  - Hole1: `HeightProvider.Data` from the scene.
+  - Dashboard: `FlatGroundProvider`.
+- `Fire(ShotPreset preset)`:
+  1. Apply any per-preset surface override on the provider.
+  2. Build `ShotInput` from preset.
+  3. Call `BallSimulation.Simulate(input, ground, aero, wind, surfaces, surfaceCfg, puttCfg)`.
+  4. Hand the `Trajectory` to `TrajectoryRenderer.Draw(trajectory)` and `BallAnimator.Play(trajectory)`.
+  5. Reset `ChaseCamera` to the new origin + launch direction.
+  6. Compute readout metrics and publish to `PhysicsLabUI` via a `public event Action<ShotReadout> OnShotFired`.
+- `FireCompare(ShotPreset preset)`: before calling `Fire`, asks `TrajectoryRenderer` to promote the current trajectory to a ghost, then fires.
+- `FireRepeatability(ShotPreset preset, int count = 5)`: fires `count` times, records all `finalPosition` values, asserts bit-equality between them. Publishes a pass/fail badge to the UI.
+- `Clear()`: clears renderer + destroys current ball instance.
+
+**`ShotReadout` struct (new):**
+
+```csharp
+public struct ShotReadout
+{
+    public string PresetDisplayName;
+    public float CarryMeters;      // distance from origin to first ground hit, XZ only
+    public float TotalMeters;      // distance from origin to final stop, XZ only
+    public float MaxHeightMeters;  // peak Y above origin Y
+    public int   BounceCount;      // TerrainHits.Count - 1 (final stop is a hit too)
+    public string TerminationReason;
+    public SurfaceType FinalSurface;
+    public float SimDurationSeconds;
+}
+```
+
+All float conversions happen here at the boundary. The sim stays fp.
+
+---
+
+### Part F — `PhysicsLabUI`
+
+`Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs` — new. Unity UI Canvas, attached in the scene.
+
+Layout (top-left corner, fixed size 340×480, semi-transparent panel):
+
+- **Preset dropdown** — populated from `ShotPresetCatalog.ForScene(currentScene)`. Display uses `ShotPreset.DisplayName`.
+- **Camera mode dropdown** — `Chase / Overhead / GroundLevel`.
+- **Play-rate slider** — discrete: 0.25× / 1× / 4× / Instant. Labeled.
+- **Fire** button — calls `controller.Fire(selectedPreset)`.
+- **Fire & Compare** button — calls `controller.FireCompare(selectedPreset)`.
+- **Fire ×5 (determinism)** button — calls `controller.FireRepeatability(selectedPreset, 5)`.
+- **Clear** button — calls `controller.Clear()`.
+- **Readout panel** (below the buttons) — shows the most recent `ShotReadout`:
+  ```
+  Driver — calm
+  Carry:    251.3 m  (274.9 yd)
+  Total:    263.8 m  (288.6 yd)
+  Peak:      34.2 m
+  Bounces:   3
+  Ended:     BallStopped on Fairway
+  Duration:  6.42 s
+  ```
+- **Determinism badge** — small pill top-right of readout: `✓ 5/5 identical` in green, or `✗ drift detected` in red, after a Fire×5 run. Blank otherwise.
+- **Notes footer** — shows `selectedPreset.Notes` so Cesar knows what each preset is supposed to demonstrate.
+
+Use TextMeshPro for text. Standard Unity UI components otherwise. No animations, no fancy styling — readable and functional.
+
+---
+
+### Part G — `DashboardUI`
+
+`Assets/Scripts/Physics/Viewer/DashboardUI.cs` — new. Dashboard scene only.
+
+Bigger Canvas, 900×720. Left half: slider column grouped by foldout:
+
+- **Aero** — `Cd`, `Cl` ceiling, `SpinDecayRate`, `BallMass`, `BallRadius`.
+- **Wind** — base direction (two sliders — X, Z), magnitude, gust variance.
+- **Surfaces** — per surface (Fairway, Green, GreenCollar, Rough, Sand, CartPath): Restitution, TangentFriction, RollingResistance, StopSpeed. Collapsed by default; expand one at a time.
+- **Putt** — Green RollingResistance, Green StopSpeed, GreenCollar RollingResistance, GreenCollar StopSpeed.
+
+Each slider has a label, a numeric field (editable), and the slider. Edits update the in-memory `*Config` immediately — no Apply button. The next Fire picks them up automatically.
+
+Also:
+
+- **Reload CSVs** button — calls `PhysicsConfigLoader.Load*Config()` for all four configs, overwrites the in-memory state, resets the sliders to the reloaded values.
+- **Reset to defaults** button — loads `AeroConfig.Vacuum` / `WindConfig.Calm` / `SurfaceConfig.Default` / `PuttConfig.Default`.
+
+Right half of the canvas: the mini-range preview. A small orthographic camera shows a 200m×50m strip with the trajectory drawn. Fire button at the bottom runs preset `driver_calm` at the current config state.
+
+**CSV hot-reload caveat:** Unity caches `Resources.Load<TextAsset>(...)` results. A naive second call returns the cached asset even if the file changed on disk. `PhysicsConfigLoader.LoadSurfaceConfig()` etc. may need a wrapper that calls `Resources.UnloadAsset(asset)` before re-loading, or reads the CSV via `File.ReadAllText` during Play Mode in the Editor. If the existing loader already handles this, use it. If not, add a `ForceReload()` variant on each loader method for lab use only — do not change production load paths.
+
+---
+
+### Part H — Scene building
+
+**`PhysicsLab_Range.unity`:**
+
+- Flat ground plane, 2km × 2km, tiled fairway-green material. No colliders needed (animator is PhysX-free).
+- Directional light, skybox.
+- Empty GameObject `LabRoot` with `PhysicsLabController`.
+- Child GameObjects: `TrajectoryRenderer` (with its LineRenderer component), `BallAnimator`, UI Canvas with `PhysicsLabUI`.
+- Main camera with `ChaseCamera`.
+- Origin marker at (0, 0, 0).
+- 100m ruler markers along +X up to 400m, for visual scale.
+
+**`PhysicsLab_Hole1.unity`:**
+
+- Duplicate or additively-load Hole 1's scene geometry. Prefer duplicate — lab should not mutate the production Hole 1 scene.
+- Attach `HeightProvider` to `LabRoot`, reference the Hole 1 `heightmap.bytes` TextAsset.
+- Attach `SceneSurfaceProvider` (via a wrapper MonoBehaviour if it's not already a MB — construct in `Awake`).
+- **Run the surface marker audit:** walk the scene, find all zone mesh roots (the contour-based overlays: greens, bunkers, water, cart paths, fairways, rough, tee). List every root that lacks a `SurfaceMarker` component. Log the list. **Do not auto-add markers.** Write the list into the done report so Cesar can decide rollout.
+- Camera, UI canvas, LabRoot — same as Range.
+
+**`PhysicsLab_Dashboard.unity`:**
+
+- Flat mini-ground 200m × 50m.
+- Fixed overhead-side camera pointed at the mini-range.
+- `LabRoot` with controller + Dashboard UI canvas.
+
+---
+
+### Part I — Tests
+
+`Assets/Scripts/Physics/Tests/ViewerTests.cs` — new. Namespace `Golfin.Physics.Tests`. **4 tests, EditMode.**
+
+1. **`Viewer_PresetCatalog_AllIdsUnique`** — assert `ShotPresetCatalog.All` has distinct `Id` values.
+2. **`Viewer_PresetCatalog_SceneCountsCorrect`** — assert `ForScene(Range).Count() == 10`, `ForScene(Hole1).Count() == 5`, `ForScene(Dashboard).Count() >= 1`.
+3. **`Viewer_DriverCalm_CarryInExpectedRange`** — run preset `driver_calm` through `BallSimulation` directly (no scene). Assert carry distance in [240m, 280m] i.e. 262–306yd. Tolerance is wide because this test exists to catch regressions, not to pin yardage.
+4. **`Viewer_FireRepeatability_IsBitExact`** — run preset `driver_calm` five times through the sim. Assert all five `finalPosition` values bit-equal (compare `.raw` fields of each `fp`).
+
+All existing tests must still pass (Phases 1–5 = 35). Viewer adds 4. **Target: 39 tests total, 39 pass.**
+
+---
+
+### Part J — Unity-MCP autonomous validation
+
+1. Compile clean after each scene / script added. `console-get-logs` max 5 iterations.
+2. `tests-run` filter `Golfin.Physics.Tests`. All 39 pass.
+3. Open `PhysicsLab_Range.unity` in Play Mode. Fire preset `driver_calm`. Screenshot the Game view with the trajectory line visible. Verify carry readout is in the 240–280m window.
+4. Still in Range, Fire `driver_headwind` with Fire & Compare active; screenshot showing both trajectories with the headwind shot visibly shorter.
+5. Still in Range, Fire ×5 on `driver_calm`. Screenshot showing `✓ 5/5 identical` badge.
+6. Open `PhysicsLab_Hole1.unity`. Fire `putt_flat_3m`. Screenshot the green with the putt line + rest marker. Report final stop distance from origin.
+7. Fire `putt_crossslope_6m`. Screenshot the curve.
+8. Open `PhysicsLab_Dashboard.unity`. Drag Green RollingResistance to 0.25, fire the preview shot, screenshot. (If `driver_calm` is the dashboard preview, a different config change is appropriate — pick one that visibly affects the driver: e.g. drop `AeroConfig.Cd` multiplier by 50% and screenshot the longer carry.)
+9. Ball prefab component inventory: include the `Debug.Log` output from the first ball spawn in the done report.
+10. Hole 1 `SurfaceMarker` audit: include the missing-marker list in the done report.
+
+### Done report
+
+- 39-test pass/fail summary.
+- Driver calm carry readout (meters + yards).
+- Driver headwind delta from calm (meters).
+- Fire×5 determinism result (pass/fail).
+- 3m putt stop distance (should be 2.7–3.3m).
+- Cross-slope putt lateral displacement (magnitude in m).
+- Ball prefab component inventory (the Debug.Log line).
+- Hole 1 zone meshes missing `SurfaceMarker` — full list, grouped by zone type if recognizable.
+- Hole 1 putt origin coordinates chosen for presets 11–15.
+- Screenshots: driver-calm trajectory, driver vs headwind (ghost compare), Fire×5 determinism badge, flat putt on green, cross-slope putt curve, dashboard CSV edit result.
+- Any anomalies, preset velocities that needed tuning, or coefficients that didn't behave as the target range expected.
+
+### DO NOT
+
+- Modify `BallSimulation` or any file under `Assets/Scripts/Physics/Core/`. The lab is a consumer.
+- Modify the physics CSVs. Dashboard mutates in-memory configs only. CSV edits are Cesar's job via the existing editor tuning window.
+- Auto-add `SurfaceMarker` components to Hole 1 meshes. List missing ones in the done report.
+- Duplicate the `Pf_GOLFIN_MK2_Ball.prefab`. Reference the existing prefab directly. Handle Rigidbody/Colliders defensively at runtime per Part B.
+- Add flick controls, aim reticles, power gauges, or any gameplay input. Presets only.
+- Extend `ShotInput` or `Trajectory`. If the readout needs a field that's not in `Trajectory` today, compute it in `ShotReadout` from the existing samples/hits.
+- Build Hole 2–18 lab scenes. Hole 1 is sufficient to prove the architecture. Other holes come later (or not at all — this is a lab, not a product).
+- Touch `HoleGeoImporter.cs`, terrain baking, or any course pipeline code.
+
+### Iteration budget
+
+- 3 iterations per preset if its carry/stop distance misses the target range by more than 15%. Tune the `ShotPreset` velocity, not the underlying `clubs.csv` or `aero.csv` — preset velocities are free parameters, club data is production.
+- If a Range preset (1–10) exceeds 3 iterations without hitting target, report the divergence. Wide tolerance bands exist because the point is visual plausibility, not exact yardage pinning.
+- Hole 1 presets (11–15) depend on actual green geometry. If a preset doesn't fit the chosen spot (e.g. cross-slope turns out to be too gentle to curve visibly), move the origin to a better spot on the same green before changing the velocity.
+
+---
+
+<!-- BEGIN ARCHIVED PHASE 5 SPEC — for reference only; superseded by ✅ history entry below -->
 
 ### Context
 
@@ -378,6 +737,8 @@ If time-pressed, defer the scene as Phase 4 Part G was deferred — tests cover 
 ### Iteration budget
 
 5 tuning iterations on `putt.csv` if the 3m-putt or sloped-putt tests miss tolerance. Beyond 5, report instead — we'll decide whether the tolerance is wrong or the model needs more than coefficient tuning.
+
+<!-- END ARCHIVED PHASE 5 SPEC -->
 
 ---
 

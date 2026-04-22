@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-04-20 15:50. Do not edit manually.
+> Auto-generated 2026-04-22 06:36. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -41,15 +41,47 @@ Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs
 Assets/Scripts/Editor/CourseImporter/HoleImporter.cs
 Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs
 Assets/Scripts/Editor/CourseImporter/HoleManifestData.cs
+Assets/Scripts/Editor/CourseImporter/PhysicsHeightmapBaker.cs
 Assets/Scripts/Editor/CourseImporter/ReimportCurrentHole.cs
 Assets/Scripts/Editor/CourseImporter/TeeSkirtSettingsWindow.cs
 Assets/Scripts/Editor/CourseImporter/TreeBrushTool.cs
 Assets/Scripts/Editor/CourseImporter/TreePlacer.cs
 Assets/Scripts/Editor/CourseImporter/TreePlacerWindow.cs
+Assets/Scripts/Editor/CourseImporter/WaterShoreSettingsWindow.cs
 Assets/Scripts/Editor/ItemManagerSetup.cs
+Assets/Scripts/Editor/Physics/PhysicsTuningWindow.cs
+Assets/Scripts/Editor/Recording/HoleFlyoverRecorder.cs
 Assets/Scripts/Editor/ScreenshotTool.cs
 Assets/Scripts/HoleMetadata.cs
 Assets/Scripts/ItemManager.cs
+Assets/Scripts/Physics/Core/AeroConfig.cs
+Assets/Scripts/Physics/Core/AeroModel.cs
+Assets/Scripts/Physics/Core/BallSimulation.cs
+Assets/Scripts/Physics/Core/ClubSpec.cs
+Assets/Scripts/Physics/Core/CoefficientLut.cs
+Assets/Scripts/Physics/Core/HeightmapData.cs
+Assets/Scripts/Physics/Core/IGroundProvider.cs
+Assets/Scripts/Physics/Core/ISurfaceProvider.cs
+Assets/Scripts/Physics/Core/ShotInput.cs
+Assets/Scripts/Physics/Core/SpinState.cs
+Assets/Scripts/Physics/Core/SurfaceConfig.cs
+Assets/Scripts/Physics/Core/SurfaceType.cs
+Assets/Scripts/Physics/Core/Trajectory.cs
+Assets/Scripts/Physics/Core/WindConfig.cs
+Assets/Scripts/Physics/Core/WindModel.cs
+Assets/Scripts/Physics/Math/fp.cs
+Assets/Scripts/Physics/Math/fpMath.cs
+Assets/Scripts/Physics/Math/Unity/FP3Extensions.cs
+Assets/Scripts/Physics/Runtime/HeightmapLoader.cs
+Assets/Scripts/Physics/Runtime/HeightProvider.cs
+Assets/Scripts/Physics/Runtime/Phase1TestController.cs
+Assets/Scripts/Physics/Runtime/PhaseTestController.cs
+Assets/Scripts/Physics/Runtime/PhysicsConfigLoader.cs
+Assets/Scripts/Physics/Runtime/SceneSurfaceProvider.cs
+Assets/Scripts/Physics/Tests/AerodynamicsTests.cs
+Assets/Scripts/Physics/Tests/ProjectileMathTests.cs
+Assets/Scripts/Physics/Tests/SurfaceTests.cs
+Assets/Scripts/Physics/Tests/WindTests.cs
 Assets/Scripts/UI/AboutSubmenu.cs
 Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs
 Assets/Scripts/UI/FadeController.cs
@@ -203,6 +235,10 @@ Assets/Data/README_HOLES.md.meta
 | WalkCamera | Assets/Scripts/Debug/WalkCamera.cs |  |  |
 | ExampleAutoWireScreen | Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs |  |  |
 | ExampleFullyAutoWired | Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs |  |  |
+| HeightProvider | Assets/Scripts/Physics/Runtime/HeightProvider.cs |  |  |
+| Phase1TestController | Assets/Scripts/Physics/Runtime/Phase1TestController.cs |  |  |
+| PhaseTestController | Assets/Scripts/Physics/Runtime/PhaseTestController.cs |  |  |
+| SurfaceMarker | Assets/Scripts/Physics/Runtime/SceneSurfaceProvider.cs |  |  |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs |  |  |
 | FadeController | Assets/Scripts/UI/FadeController.cs | Yes |  |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | Yes |  |
@@ -310,6 +346,7 @@ Assets/Data/README_HOLES.md.meta
 | AudioManager | Assets/Scripts/Audio/AudioManager.cs | 3 |
 | BagSelectionModalAutoWire | Assets/Scripts/Editor/BagSelectionModalAutoWire.cs | 1 |
 | TreeBrushTool | Assets/Scripts/Editor/CourseImporter/TreeBrushTool.cs | 8 |
+| HeightProvider | Assets/Scripts/Physics/Runtime/HeightProvider.cs | 1 |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs | 5 |
 | FadeController | Assets/Scripts/UI/FadeController.cs | 1 |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | 2 |
