@@ -58,13 +58,30 @@ namespace Golfin.Physics.Viewer
         {
             if (currentScene == PresetScene.Hole1 && !string.IsNullOrEmpty(hole1GeneratedScenePath))
             {
-                yield return SceneManager.LoadSceneAsync(hole1GeneratedScenePath, LoadSceneMode.Additive);
+                AsyncOperation op;
+#if UNITY_EDITOR
+                // LoadSceneInPlayMode works in editor Play mode without requiring Build Settings.
+                op = UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
+                    hole1GeneratedScenePath,
+                    new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+                op = SceneManager.LoadSceneAsync(hole1GeneratedScenePath, LoadSceneMode.Additive);
+#endif
+                if (op != null) yield return op;
+
                 _additiveHoleScene = SceneManager.GetSceneByPath(hole1GeneratedScenePath);
-                // Disable duplicate terrain from the generated scene; zone mesh colliders stay active.
-                foreach (var root in _additiveHoleScene.GetRootGameObjects())
+                if (_additiveHoleScene.IsValid())
                 {
-                    var t = root.GetComponentInChildren<Terrain>(true);
-                    if (t != null) t.gameObject.SetActive(false);
+                    // Disable duplicate terrain — zone mesh colliders stay active for SceneSurfaceProvider.
+                    foreach (var root in _additiveHoleScene.GetRootGameObjects())
+                    {
+                        var t = root.GetComponentInChildren<Terrain>(true);
+                        if (t != null) t.gameObject.SetActive(false);
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[PhysicsLab] Generated hole scene not found — surface classification will default to Fairway. Re-import the hole and ensure the path is correct.");
                 }
             }
         }
