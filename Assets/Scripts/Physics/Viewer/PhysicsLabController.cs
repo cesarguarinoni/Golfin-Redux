@@ -167,8 +167,8 @@ namespace Golfin.Physics.Viewer
 
         IGroundProvider BuildGroundProvider()
         {
-            if (currentScene == PresetScene.Hole1 && heightProvider != null && heightProvider.Data != null)
-                return heightProvider.Data;
+            if (currentScene == PresetScene.Hole1)
+                return new SceneGroundProvider();
             return new FlatGround(fp.Zero);
         }
 
