@@ -1,8 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime;
@@ -23,12 +21,6 @@ namespace Golfin.Physics.Viewer
         [SerializeField] BallAnimator       ballAnimator;
         [SerializeField] ChaseCamera        chaseCamera;
         [SerializeField] HeightProvider     heightProvider;   // Hole1 only
-
-        [Header("Hole Geometry")]
-        [Tooltip("Additively loaded so zone mesh SurfaceMarkers are visible to SceneSurfaceProvider. Re-import hole after terrain changes.")]
-        [SerializeField] string hole1GeneratedScenePath = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_01.unity";
-
-        Scene _additiveHoleScene;
 
         // Published after every Fire
         public event Action<ShotReadout> OnShotFired;
@@ -52,49 +44,6 @@ namespace Golfin.Physics.Viewer
             WindCfg    = PhysicsConfigLoader.LoadWindConfig();
             SurfaceCfg = PhysicsConfigLoader.LoadSurfaceConfig();
             PuttCfg    = PhysicsConfigLoader.LoadPuttConfig();
-        }
-
-        IEnumerator Start()
-        {
-            if (currentScene == PresetScene.Hole1 && !string.IsNullOrEmpty(hole1GeneratedScenePath))
-            {
-#if UNITY_EDITOR
-                // LoadSceneInPlayMode needs an absolute path; GetSceneByPath won't match it afterwards,
-                // so look up by name (filename without extension) instead.
-                string fullPath = System.IO.Path.GetFullPath(hole1GeneratedScenePath).Replace('\\', '/');
-                string sceneName = System.IO.Path.GetFileNameWithoutExtension(hole1GeneratedScenePath);
-                Debug.Log($"[PhysicsLab] Loading hole scene: {fullPath}");
-                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
-                    fullPath,
-                    new LoadSceneParameters(LoadSceneMode.Additive));
-                yield return null; // wait for scene objects to initialise
-                _additiveHoleScene = SceneManager.GetSceneByName(sceneName);
-                Debug.Log($"[PhysicsLab] Additive scene valid={_additiveHoleScene.IsValid()} name={sceneName}");
-#else
-                var op = SceneManager.LoadSceneAsync(hole1GeneratedScenePath, LoadSceneMode.Additive);
-                if (op != null) yield return op;
-                _additiveHoleScene = SceneManager.GetSceneByPath(hole1GeneratedScenePath);
-#endif
-                if (_additiveHoleScene.IsValid())
-                {
-                    // Disable duplicate terrain — zone mesh colliders stay active for SceneSurfaceProvider.
-                    foreach (var root in _additiveHoleScene.GetRootGameObjects())
-                    {
-                        var t = root.GetComponentInChildren<Terrain>(true);
-                        if (t != null) t.gameObject.SetActive(false);
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning("[PhysicsLab] Generated hole scene not found — surface classification defaults to Fairway. Re-import the hole and verify the path.");
-                }
-            }
-        }
-
-        void OnDestroy()
-        {
-            if (_additiveHoleScene.IsValid() && _additiveHoleScene.isLoaded)
-                SceneManager.UnloadSceneAsync(_additiveHoleScene);
         }
 
         // ── Public API ─────────────────────────────────────────────────────────
@@ -181,8 +130,11 @@ namespace Golfin.Physics.Viewer
             trajectoryRenderer.Draw(trajectory);
             ballAnimator.Play(trajectory);
 
-            // Camera
-            Vector3 origin    = new Vector3(preset.Origin.x.ToFloat(), preset.Origin.y.ToFloat(), preset.Origin.z.ToFloat());
+            // Camera — use first trajectory sample so Y is terrain-snapped (not preset's raw Y=0)
+            var s0 = trajectory.samples != null && trajectory.samples.Count > 0
+                ? trajectory.samples[0].position
+                : preset.Origin;
+            Vector3 origin    = new Vector3(s0.x.ToFloat(), s0.y.ToFloat(), s0.z.ToFloat());
             Vector3 launchDir = new Vector3(preset.Velocity.x.ToFloat(), 0f, preset.Velocity.z.ToFloat()).normalized;
             if (launchDir == Vector3.zero) launchDir = Vector3.right;
 
