@@ -7,7 +7,9 @@
 
 ---
 
-## ACTIVE TASK — Physics Viewer (lab scenes for visual/mechanical confirmation)
+## ~~ACTIVE TASK~~ COMPLETED — Physics Viewer (lab scenes for visual/mechanical confirmation)
+
+✅ DONE: 2026-04-22 — All Viewer scripts written, 3 lab scenes built via Unity MCP (`PhysicsLab_Range`, `PhysicsLab_Hole1`, `PhysicsLab_Dashboard`). 39/39 tests pass. `PhysicsLabSceneBuilder.cs` editor script removed (scenes built directly via MCP). Committed + pushed.
 
 ### Context
 

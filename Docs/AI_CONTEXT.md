@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-21
+**Last Updated:** 2026-04-22
 
 ## Current Status
 
@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface interaction COMPLETE; **Phase 5 putting COMPLETE (2026-04-22) — 35/35 tests pass. Phase 6 (stat modifiers / gameplay coupling) is next.** |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface interaction COMPLETE; Phase 5 putting COMPLETE; **Phase 6 Viewer COMPLETE (2026-04-22) — 39/39 tests pass. 3 lab scenes built via Unity MCP. Next: Phase 7 (stat modifiers / gameplay coupling).** |
 | Shop | Not started |
 | Gameplay | Not started |
 
