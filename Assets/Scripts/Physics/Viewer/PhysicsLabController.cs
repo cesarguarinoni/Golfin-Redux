@@ -59,16 +59,22 @@ namespace Golfin.Physics.Viewer
             if (currentScene == PresetScene.Hole1 && !string.IsNullOrEmpty(hole1GeneratedScenePath))
             {
 #if UNITY_EDITOR
-                // LoadSceneInPlayMode returns Scene (not AsyncOperation) — no Build Settings needed.
+                // LoadSceneInPlayMode needs an absolute path; GetSceneByPath won't match it afterwards,
+                // so look up by name (filename without extension) instead.
+                string fullPath = System.IO.Path.GetFullPath(hole1GeneratedScenePath).Replace('\\', '/');
+                string sceneName = System.IO.Path.GetFileNameWithoutExtension(hole1GeneratedScenePath);
+                Debug.Log($"[PhysicsLab] Loading hole scene: {fullPath}");
                 UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
-                    hole1GeneratedScenePath,
+                    fullPath,
                     new LoadSceneParameters(LoadSceneMode.Additive));
-                yield return null; // one frame for scene objects to initialise
+                yield return null; // wait for scene objects to initialise
+                _additiveHoleScene = SceneManager.GetSceneByName(sceneName);
+                Debug.Log($"[PhysicsLab] Additive scene valid={_additiveHoleScene.IsValid()} name={sceneName}");
 #else
                 var op = SceneManager.LoadSceneAsync(hole1GeneratedScenePath, LoadSceneMode.Additive);
                 if (op != null) yield return op;
-#endif
                 _additiveHoleScene = SceneManager.GetSceneByPath(hole1GeneratedScenePath);
+#endif
                 if (_additiveHoleScene.IsValid())
                 {
                     // Disable duplicate terrain — zone mesh colliders stay active for SceneSurfaceProvider.
