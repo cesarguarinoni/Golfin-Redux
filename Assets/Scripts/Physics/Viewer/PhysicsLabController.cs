@@ -58,17 +58,16 @@ namespace Golfin.Physics.Viewer
         {
             if (currentScene == PresetScene.Hole1 && !string.IsNullOrEmpty(hole1GeneratedScenePath))
             {
-                AsyncOperation op;
 #if UNITY_EDITOR
-                // LoadSceneInPlayMode works in editor Play mode without requiring Build Settings.
-                op = UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
+                // LoadSceneInPlayMode returns Scene (not AsyncOperation) — no Build Settings needed.
+                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(
                     hole1GeneratedScenePath,
                     new LoadSceneParameters(LoadSceneMode.Additive));
+                yield return null; // one frame for scene objects to initialise
 #else
-                op = SceneManager.LoadSceneAsync(hole1GeneratedScenePath, LoadSceneMode.Additive);
-#endif
+                var op = SceneManager.LoadSceneAsync(hole1GeneratedScenePath, LoadSceneMode.Additive);
                 if (op != null) yield return op;
-
+#endif
                 _additiveHoleScene = SceneManager.GetSceneByPath(hole1GeneratedScenePath);
                 if (_additiveHoleScene.IsValid())
                 {
@@ -81,7 +80,7 @@ namespace Golfin.Physics.Viewer
                 }
                 else
                 {
-                    Debug.LogWarning("[PhysicsLab] Generated hole scene not found — surface classification will default to Fairway. Re-import the hole and ensure the path is correct.");
+                    Debug.LogWarning("[PhysicsLab] Generated hole scene not found — surface classification defaults to Fairway. Re-import the hole and verify the path.");
                 }
             }
         }
