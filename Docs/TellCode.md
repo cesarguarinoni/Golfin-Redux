@@ -162,6 +162,8 @@ Optional 9–10:
 - Architectural confirmation that ShotController has zero references to `BallSimulation` directly.
 - `ShotInputState` event firing cadence (per frame? on transition only?) — confirm matches design.
 
+✅ DONE: 2026-04-23 — 12/12 tests pass (Tests 1–10 implemented, including both optional). ShotController has zero direct BallSimulation references — only calls ShotInputBuilder.Build() and emits event. OnStateChanged fires every Tick (every frame), not just on transition — matches design doc intent (UI polls each frame). Spec deviation: Golfin.Gameplay.Input.asmdef references Golfin.Physics.Core (needed for ShotInput and BallPhysicsModifiers types in the OnShotResolved event signature). Semantic seam preserved — no direct BallSimulation calls. Pushed to GitHub.
+
 ---
 
 ### Part C — Input System wiring

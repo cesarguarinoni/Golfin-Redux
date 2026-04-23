@@ -17,7 +17,8 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass (39 prior + 10 new).** Next: run tests in Unity, re-import all holes. |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass.** |
+| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B COMPLETE (2026-04-23)**. Part C (Input System) next. |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -38,6 +39,35 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-23 — Phase 7 Parts A+B: Shot Controls)
+
+### Completed
+- **Phase 7 Part A** (config/data layer):
+  - `ClubStats.DefaultDriver` + `PutterStats.DefaultPutter` static presets
+  - `DefaultStatProvider.BuildSwingBundle()` / `BuildPuttBundle()` — always returns defaults (BagManager in Assembly-CSharp, deferred)
+  - `ControlsConfig` struct (21 fields) + `Default` preset matching design doc §7 seed values
+  - `controls.csv` in `Assets/Resources/Gameplay/`
+  - `ControlsConfigLoader.Load()` — mirrors PhysicsConfigLoader pattern
+  - `Golfin.Gameplay.Config.asmdef`, `Golfin.Gameplay.Defaults.asmdef`
+- **Phase 7 Part B** (state machine + tests):
+  - `ShotState` enum, `ShotInputState` readonly struct, `IShotInputSource`, `SyntheticInputSource`
+  - `ShotController` MonoBehaviour — full Idle→Aiming→Pulling→Timing→Flicking→Resolving state machine
+  - Arrow timing, degradation yaw, auto-cancel after MaxTotalPasses
+  - Power formula: linear 0-100%, overpower 100-120% (clamped), putt clamps at 100%
+  - On commit: calls `ShotInputBuilder.Build()`, fires `OnShotResolved(ShotInput, BallPhysicsModifiers)`
+  - `Golfin.Gameplay.Input.asmdef` (refs Core for ShotInput/BallPhysicsModifiers — noted deviation from spec)
+  - `ShotControllerTests` — 12/12 pass (all 8 required + 2 optional)
+
+### Deviations from spec
+- `Golfin.Gameplay.Defaults.asmdef` references `Golfin.Physics.Math` (needed for `fp` in StatBundle constructor)
+- `Golfin.Gameplay.Input.asmdef` references `Golfin.Physics.Core` (needed for ShotInput/BallPhysicsModifiers event types). Semantic seam preserved — no direct BallSimulation calls.
+
+### Still Open
+- Phase 7 Part C: Input System wiring (`Shot.inputactions`, `InputSystemSource`, mouse-as-touch)
+- Phase 7 Parts D–F: Cone UI, PhysicsLab integration, putt mode polish
 
 ---
 
