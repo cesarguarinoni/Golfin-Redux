@@ -160,16 +160,52 @@ namespace Golfin.Physics.Viewer
                 hasSurfaceOverride: true, surfaceOverride: SurfaceType.Water
             ));
 
-            // ── Hole 1 (11–15) ────────────────────────────────────────────────
+            // ── Hole 1 (11–18) ────────────────────────────────────────────────
             //
+            // Tee_2 world XZ: (167.7, 31.23). Green center: (-230, -73).
+            // Tee→Green direction (XZ normalized): (-0.967, -0.253).
+            // Full-swing presets fire from the tee; SceneGroundProvider snaps Y at runtime.
             // Green center_local from greens.json: x ≈ -230, z ≈ -73 (Unity world space).
             // Y is ignored by RunPuttPhase (snapped to heightmap + ball radius).
             // Origins chosen empirically from green polygon bounds (-241..−219, -85..−62).
 
+            fp tx = fp.FromFloat(167.7f);
+            fp tz = fp.FromFloat(31.23f);
+
+            // 11 — driver_hole1: ~275yd from tee toward green
+            list.Add(new ShotPreset(
+                "driver_hole1", "Driver — from tee", PresetScene.Hole1,
+                origin: new fp3(tx, fp.Zero, tz),
+                velocity: new fp3(fp.FromFloat(-71.2f), fp.FromFloat(14.2f), fp.FromFloat(-18.6f)),
+                spin: new SpinState(new fp3(fp.FromFloat(0.253f), fp.Zero, fp.FromFloat(-0.967f)), fp.FromFloat(2686f * 6.28318f / 60f)),
+                wind: WindConfig.Calm,
+                notes: "~275yd driver from Tee_2 toward green. 75 m/s, 10.9°, 2686rpm backspin."
+            ));
+
+            // 12 — iron7_hole1: ~155yd approach from mid-fairway
+            list.Add(new ShotPreset(
+                "iron7_hole1", "Iron 7 — mid fairway", PresetScene.Hole1,
+                origin: new fp3(fp.FromFloat(80f), fp.Zero, fp.FromFloat(10f)),
+                velocity: new fp3(fp.FromFloat(-43.6f), fp.FromFloat(21.7f), fp.FromFloat(-11.4f)),
+                spin: new SpinState(new fp3(fp.FromFloat(0.253f), fp.Zero, fp.FromFloat(-0.967f)), fp.FromFloat(6500f * 6.28318f / 60f)),
+                wind: WindConfig.Calm,
+                notes: "~155yd iron 7 from mid-fairway (80, 10) toward green. 50 m/s, 25.7°."
+            ));
+
+            // 13 — wedge_hole1: ~100yd approach from short fairway
+            list.Add(new ShotPreset(
+                "wedge_hole1", "Wedge — short approach", PresetScene.Hole1,
+                origin: new fp3(fp.FromFloat(-120f), fp.Zero, fp.FromFloat(-30f)),
+                velocity: new fp3(fp.FromFloat(-21.9f), fp.FromFloat(19.7f), fp.FromFloat(-5.7f)),
+                spin: new SpinState(new fp3(fp.FromFloat(0.253f), fp.Zero, fp.FromFloat(-0.967f)), fp.FromFloat(9000f * 6.28318f / 60f)),
+                wind: WindConfig.Calm,
+                notes: "~100yd wedge from short fairway (-120, -30) toward green. 30 m/s, 41°, 9000rpm."
+            ));
+
             fp gx = fp.FromFloat(-230f);
             fp gz = fp.FromFloat(-73f);
 
-            // 11 — putt_flat_3m: 0.35 m/s, flat spot, target stop ~3m
+            // 14 — putt_flat_3m: 0.35 m/s, flat spot, target stop ~3m
             list.Add(new ShotPreset(
                 "putt_flat_3m", "Putt — flat 3m", PresetScene.Hole1,
                 origin: new fp3(gx, fp.Zero, gz),
@@ -179,7 +215,7 @@ namespace Golfin.Physics.Viewer
                 notes: "0.35 m/s on flat green. Target stop: 3.0m ±0.3m. Calibrated from k=0.10."
             ));
 
-            // 12 — putt_uphill_6m: more power needed, stops short vs flat
+            // 15 — putt_uphill_6m: more power needed, stops short vs flat
             list.Add(new ShotPreset(
                 "putt_uphill_6m", "Putt — uphill 6m", PresetScene.Hole1,
                 origin: new fp3(gx + fp.FromFloat(3f), fp.Zero, gz),
@@ -189,7 +225,7 @@ namespace Golfin.Physics.Viewer
                 notes: "0.75 m/s uphill. Gravity fights the ball. Stops shorter than flat-6m equivalent."
             ));
 
-            // 13 — putt_downhill_6m: less power needed, runs past flat equivalent
+            // 16 — putt_downhill_6m: less power needed, runs past flat equivalent
             list.Add(new ShotPreset(
                 "putt_downhill_6m", "Putt — downhill 6m", PresetScene.Hole1,
                 origin: new fp3(gx - fp.FromFloat(3f), fp.Zero, gz),
@@ -199,7 +235,7 @@ namespace Golfin.Physics.Viewer
                 notes: "0.45 m/s downhill. Gravity assists. Runs past flat-6m equivalent."
             ));
 
-            // 14 — putt_crossslope_6m: curves to low side
+            // 17 — putt_crossslope_6m: curves to low side
             list.Add(new ShotPreset(
                 "putt_crossslope_6m", "Putt — cross-slope 6m", PresetScene.Hole1,
                 origin: new fp3(gx, fp.Zero, gz + fp.FromFloat(3f)),
@@ -209,7 +245,7 @@ namespace Golfin.Physics.Viewer
                 notes: "0.75 m/s across slope. Ball curves toward the low side of the green."
             ));
 
-            // 15 — putt_off_back: green → GreenCollar → rough transition
+            // 18 — putt_off_back: green → GreenCollar → rough transition
             list.Add(new ShotPreset(
                 "putt_off_back", "Putt — off back edge", PresetScene.Hole1,
                 origin: new fp3(fp.FromFloat(-221f), fp.Zero, gz),

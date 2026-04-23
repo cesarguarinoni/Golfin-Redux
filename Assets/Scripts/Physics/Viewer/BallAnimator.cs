@@ -53,6 +53,17 @@ namespace Golfin.Physics.Viewer
             _playing = false;
         }
 
+        // Place a resting ball at a world position without starting animation.
+        // Called by PhysicsLabController.Start() so the ball is visible before the first shot.
+        public void PlaceAtRest(Vector3 worldPos)
+        {
+            DestroyInstance();
+            SpawnInstance(new fp3(
+                fp.FromFloat(worldPos.x),
+                fp.FromFloat(worldPos.y),
+                fp.FromFloat(worldPos.z)));
+        }
+
         // ── Unity loop ─────────────────────────────────────────────────────────
 
         void Update()

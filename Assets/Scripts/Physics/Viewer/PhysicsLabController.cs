@@ -85,6 +85,10 @@ namespace Golfin.Physics.Viewer
                 cam.transform.position = teePos + Vector3.back * 8f + Vector3.up * 3f;
                 cam.transform.LookAt(teePos + Vector3.forward * 10f);
             }
+
+            // Show a resting ball at the tee before the first shot fires.
+            if (ballAnimator != null)
+                ballAnimator.PlaceAtRest(teePos);
         }
 
         // ── Public API ─────────────────────────────────────────────────────────
