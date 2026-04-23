@@ -26,6 +26,7 @@ namespace Golfin.Physics.Viewer
         [Header("Shot Controller (Live Touch)")]
         [SerializeField] ShotController _shotController;
         [SerializeField] ShotConeView   _shotConeView;
+        [SerializeField] Transform      _ballSpawnPoint;
 
         // Published after every Fire
         public event Action<ShotReadout> OnShotFired;
@@ -147,13 +148,27 @@ namespace Golfin.Physics.Viewer
 
         void HandleShotResolved(ShotInput input, BallPhysicsModifiers ballMods)
         {
-            // Replace origin with the ball's actual world position so the sim
-            // starts where the ball is sitting in the scene, not at fp3.Zero.
-            fp3 ballOrigin = input.origin;
+            fp3 ballOrigin;
             if (ballAnimator != null && ballAnimator.CurrentBall != null)
             {
+                // Subsequent shots: start from wherever the ball came to rest.
                 var p = ballAnimator.CurrentBall.position;
                 ballOrigin = new fp3(fp.FromFloat(p.x), fp.FromFloat(p.y), fp.FromFloat(p.z));
+            }
+            else if (_ballSpawnPoint != null)
+            {
+                // First shot: raycast at the spawn point XZ to find the surface Y.
+                Vector3 sp = _ballSpawnPoint.position;
+                RaycastHit hit;
+                float surfaceY = UnityEngine.Physics.Raycast(
+                    new Vector3(sp.x, 500f, sp.z), Vector3.down, out hit, 1000f)
+                    ? hit.point.y
+                    : sp.y;
+                ballOrigin = new fp3(fp.FromFloat(sp.x), fp.FromFloat(surfaceY), fp.FromFloat(sp.z));
+            }
+            else
+            {
+                ballOrigin = input.origin;
             }
             var correctedInput = new ShotInput(ballOrigin, input.velocity, input.maxDuration, input.Spin, input.seed);
 

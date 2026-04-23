@@ -89,21 +89,22 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         // ── Club handle ───────────────────────────────────────────────────────
 
-        // Slides horizontally inside the cone at a fixed height above the base.
+        // Follows touch: slides from apex (power=0) toward base (power=100%) vertically,
+        // and horizontally within the cone outline at that Y.
         private void UpdateClubHandle(ShotInputState state)
         {
             if (_clubHandle == null) return;
 
+            // Y: apex (top) at power=0, base (bottom) at power=100%.
+            float handleY       = _coneHeightPx * (1f - Mathf.Clamp01(state.PowerNormalized));
             float halfAngleRad  = _shotController.ConeHalfAngleDeg * Mathf.Deg2Rad;
             float halfBase      = _coneHeightPx * Mathf.Tan(halfAngleRad);
-            // Cone narrows toward apex; at _handleYPx from base, width fraction =
-            // (1 - handleY/height). Keeps handle inside the cone outline.
-            float widthFraction = 1f - Mathf.Clamp01(_handleYPx / _coneHeightPx);
+            float widthFraction = 1f - Mathf.Clamp01(handleY / _coneHeightPx);
             float maxX          = halfBase * widthFraction;
 
             _clubHandle.anchoredPosition = new Vector2(
                 state.ConeFinetuneX * maxX,
-                _handleYPx);
+                handleY);
         }
 
         // ── Arrows ────────────────────────────────────────────────────────────

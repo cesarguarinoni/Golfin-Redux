@@ -154,7 +154,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 80, y: -100}
-  m_SizeDelta: {x: 120, y: 60}
+  m_SizeDelta: {x: 54.15, y: 62.57}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &7755258
 CanvasRenderer:
@@ -195,7 +195,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4278190335
   m_fontColor: {r: 1, g: 0, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -208,7 +208,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -7004,6 +7004,7 @@ MonoBehaviour:
   chaseCamera: {fileID: 824114951}
   _shotController: {fileID: 1483952040}
   _shotConeView: {fileID: 1838493589}
+  _ballSpawnPoint: {fileID: 1733251866}
 --- !u!4 &1483952039
 Transform:
   m_ObjectHideFlags: 0
@@ -7150,7 +7151,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
+  m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
