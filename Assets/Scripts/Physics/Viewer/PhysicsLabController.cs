@@ -69,26 +69,32 @@ namespace Golfin.Physics.Viewer
                 _shotController.OnShotResolved -= HandleShotResolved;
         }
 
-        void Start()
+        void Start() => SetupAtTee();
+
+        public void ResetToTee()
         {
-            if (_ballSpawnPoint == null || chaseCamera == null) return;
+            if (_shotController != null) _shotController.CompleteShot();
+            SetupAtTee();
+        }
+
+        private void SetupAtTee()
+        {
+            if (_ballSpawnPoint == null) return;
             Vector3 sp = _ballSpawnPoint.position;
             RaycastHit hit;
             float surfaceY = UnityEngine.Physics.Raycast(
                 new Vector3(sp.x, 500f, sp.z), Vector3.down, out hit, 1000f)
                 ? hit.point.y : sp.y;
-            // Directly place the camera at tee level looking downrange before first shot.
             Vector3 teePos = new Vector3(sp.x, surfaceY, sp.z);
-            Camera cam = chaseCamera.GetComponent<Camera>();
+
+            if (ballAnimator != null) ballAnimator.PlaceAtRest(teePos);
+
+            Camera cam = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
             if (cam != null)
             {
                 cam.transform.position = teePos + Vector3.back * 8f + Vector3.up * 3f;
                 cam.transform.LookAt(teePos + Vector3.forward * 10f);
             }
-
-            // Show a resting ball at the tee before the first shot fires.
-            if (ballAnimator != null)
-                ballAnimator.PlaceAtRest(teePos);
         }
 
         // ── Public API ─────────────────────────────────────────────────────────

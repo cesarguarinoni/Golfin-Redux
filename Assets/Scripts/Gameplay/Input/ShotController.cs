@@ -55,6 +55,38 @@ namespace Golfin.Gameplay.Input
         // Call when the ball comes to rest (or explicitly from a test)
         public void CompleteShot() => TransitionToIdle();
 
+        // ── External drag API (ClubHandle → drives shot without pixel-pull math) ──
+
+        private bool _externalDragActive;
+
+        public void BeginExternalDrag()
+        {
+            if (State != ShotState.Idle) return;
+            _externalDragActive = true;
+            TransitionToAiming();
+            PublishState();
+        }
+
+        public void SetExternalPower(float powerNormalized, float coneFinetune)
+        {
+            if (!_externalDragActive) return;
+            PowerNormalized = Mathf.Clamp01(powerNormalized);
+            _coneFinetune   = Mathf.Clamp(coneFinetune, -1f, 1f);
+            if (State == ShotState.Aiming && powerNormalized > 0f)
+                TransitionToTiming();
+            PublishState();
+        }
+
+        public void EndExternalDrag()
+        {
+            if (!_externalDragActive) return;
+            _externalDragActive = false;
+            if (State == ShotState.Timing && PowerNormalized > 0f)
+                CommitFlick();
+            else
+                TransitionToIdle();
+        }
+
         private void Awake()
         {
             if (_inputSource == null && _inputSystemSource != null)
@@ -75,10 +107,11 @@ namespace Golfin.Gameplay.Input
             switch (State)
             {
                 case ShotState.Idle:
-                    if (justTouched) TransitionToAiming();
+                    if (!_externalDragActive && justTouched) TransitionToAiming();
                     break;
 
                 case ShotState.Aiming:
+                    if (_externalDragActive) break;
                     if (justLifted) { TransitionToIdle(); break; }
                     if (touching)
                     {
@@ -88,6 +121,7 @@ namespace Golfin.Gameplay.Input
                     break;
 
                 case ShotState.Pulling:
+                    if (_externalDragActive) break;
                     if (justLifted) { TransitionToIdle(); break; }
                     if (touching)
                     {
@@ -99,6 +133,7 @@ namespace Golfin.Gameplay.Input
                     break;
 
                 case ShotState.Timing:
+                    if (_externalDragActive) { TickArrow(dt); break; }
                     if (justLifted)
                     {
                         bool validFlick = ForcePerfectTiming ||

@@ -100,6 +100,8 @@ namespace Golfin.Physics.Viewer
             var row2 = MakeButtonRow(panel);
             AddButton(row2, "Fire ×5 (det.)", () => FireRepeatability());
             AddButton(row2, "Clear",           () => controller?.Clear());
+            var row3 = MakeButtonRow(panel);
+            AddButton(row3, "Reset to Tee", () => controller?.ResetToTee());
 
             _deterLabel = AddText(panel, "", 16f);
             _deterLabel.color = Color.white;
