@@ -154,6 +154,9 @@ namespace Golfin.Physics.Viewer
         {
             if (_shotController != null && _shotController.IsExternalDragActive) return;
 
+            // Orbit only makes sense in Chase mode; Overhead/Ground manage themselves.
+            if (chaseCamera != null && chaseCamera.CurrentMode != ChaseCamera.Mode.Chase) return;
+
             bool isPlaying = ballAnimator != null && ballAnimator.IsPlaying;
 
             if (_prevBallPlaying && !isPlaying)

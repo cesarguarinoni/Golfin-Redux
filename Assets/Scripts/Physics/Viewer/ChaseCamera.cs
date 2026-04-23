@@ -23,7 +23,8 @@ namespace Golfin.Physics.Viewer
 
         // ── Public API ─────────────────────────────────────────────────────────
 
-        public void SetMode(Mode m)   => _mode = m;
+        public Mode CurrentMode => _mode;
+        public void SetMode(Mode m)        => _mode   = m;
         public void SetTarget(Transform t) => _target = t;
 
         public void ResetToOrigin(Vector3 origin, Vector3 launchDir)
@@ -38,28 +39,31 @@ namespace Golfin.Physics.Viewer
 
         void LateUpdate()
         {
-            if (_target == null && _mode != Mode.GroundLevel) return;
+            // Chase requires a live target; Overhead/Ground work with or without one.
+            if (_target == null && _mode == Mode.Chase) return;
 
-            Vector3 desiredPos;
+            // Use live target position when available, fall back to last shot origin.
+            Vector3 focus = _target != null ? _target.position : _shotOrigin;
+
+            Vector3    desiredPos;
             Quaternion desiredRot;
 
             switch (_mode)
             {
-                case Mode.Chase:
-                    desiredPos = _target.position - _launchDir * 8f + Vector3.up * 3f;
-                    desiredRot = Quaternion.LookRotation(_target.position - desiredPos);
-                    break;
-
                 case Mode.Overhead:
-                    desiredPos = _target.position + Vector3.up * 40f;
+                    desiredPos = focus + Vector3.up * 40f;
                     desiredRot = Quaternion.Euler(90f, 0f, 0f);
                     break;
 
                 case Mode.GroundLevel:
-                default:
                     desiredPos = _shotOrigin + Vector3.up * 1.6f;
-                    Vector3 lookAt = _target != null ? _target.position : _shotOrigin + _launchDir * 10f;
+                    Vector3 lookAt = focus != _shotOrigin ? focus : _shotOrigin + _launchDir * 10f;
                     desiredRot = Quaternion.LookRotation(lookAt - desiredPos);
+                    break;
+
+                default: // Chase
+                    desiredPos = focus - _launchDir * 8f + Vector3.up * 3f;
+                    desiredRot = Quaternion.LookRotation(focus - desiredPos);
                     break;
             }
 
