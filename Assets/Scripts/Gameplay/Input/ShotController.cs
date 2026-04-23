@@ -11,6 +11,7 @@ namespace Golfin.Gameplay.Input
     public class ShotController : MonoBehaviour
     {
         // --- Injectable seams ---
+        [SerializeField] private InputSystemSource _inputSystemSource;
         private IShotInputSource _inputSource;
         private ControlsConfig   _config = ControlsConfig.Default;
         private StatBundle       _statBundle;
@@ -52,6 +53,12 @@ namespace Golfin.Gameplay.Input
 
         // Call when the ball comes to rest (or explicitly from a test)
         public void CompleteShot() => TransitionToIdle();
+
+        private void Awake()
+        {
+            if (_inputSource == null && _inputSystemSource != null)
+                _inputSource = _inputSystemSource;
+        }
 
         private void Update() => Tick(Time.deltaTime);
 

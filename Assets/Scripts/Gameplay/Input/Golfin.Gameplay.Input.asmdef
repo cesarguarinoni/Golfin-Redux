@@ -6,7 +6,8 @@
         "Golfin.Physics.Core",
         "Golfin.Physics.Math",
         "Golfin.Gameplay.Config",
-        "Golfin.Gameplay.Defaults"
+        "Golfin.Gameplay.Defaults",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
