@@ -46,17 +46,6 @@ namespace Golfin.Physics.Editor
                     markers.Add(sm.gameObject);
             }
 
-            // Fallback: search by Course.SurfaceMarker if Physics search returns nothing.
-            // Both markers live on the same GO so results are equivalent.
-            if (markers.Count == 0)
-            {
-                Debug.LogWarning("[PhysicsLabBaker] Physics.SurfaceMarker search returned 0 — falling back to Course.SurfaceMarker.");
-                foreach (var root in generatedScene.GetRootGameObjects())
-                {
-                    foreach (var csm in root.GetComponentsInChildren<Golfin.Course.SurfaceMarker>(true))
-                        markers.Add(csm.gameObject);
-                }
-            }
 
             Debug.Log($"[PhysicsLabBaker] Found {markers.Count} zone mesh objects in Generated scene.");
 
