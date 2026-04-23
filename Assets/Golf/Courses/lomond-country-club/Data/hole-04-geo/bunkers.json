@@ -6,7 +6,7 @@
   "bunkers": [
     {
       "id": 1,
-      "pixel_count": 16910,
+      "pixel_count": 16940,
       "contour": [
         {
           "x": -34.04,
@@ -108,7 +108,7 @@
     },
     {
       "id": 2,
-      "pixel_count": 11830,
+      "pixel_count": 11870,
       "contour": [
         {
           "x": -20.28,

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 public static class FunityCompareExporter
 {
-    [MenuItem("Funity/Export Selected UI For Compare")]
+    [MenuItem("GOLFIN/Export Selected UI For Compare")]
     public static void ExportSelectedUiForCompare()
     {
         var selected = Selection.activeGameObject;

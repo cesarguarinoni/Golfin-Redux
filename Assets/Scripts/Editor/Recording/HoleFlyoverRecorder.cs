@@ -117,7 +117,7 @@ namespace Golfin.CourseImport.Recording
         // Menu items
         // ---------------------------------------------------------------
 
-        [MenuItem("Golfin/Recording/Record Current Hole Flyover")]
+        [MenuItem("GOLFIN/Recording/Record Current Hole Flyover")]
         private static void MenuRecordCurrent()
         {
             if (_state != RecState.Idle)
@@ -139,7 +139,7 @@ namespace Golfin.CourseImport.Recording
             StartNextHole();
         }
 
-        [MenuItem("Golfin/Recording/Record All 18 Holes")]
+        [MenuItem("GOLFIN/Recording/Record All 18 Holes")]
         private static void MenuRecordAll()
         {
             if (_state != RecState.Idle)
@@ -155,7 +155,7 @@ namespace Golfin.CourseImport.Recording
             StartNextHole();
         }
 
-        [MenuItem("Golfin/Recording/Cancel Recording Queue")]
+        [MenuItem("GOLFIN/Recording/Cancel Recording Queue")]
         private static void MenuCancel()
         {
             _cancelRequested = true;

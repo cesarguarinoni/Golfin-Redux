@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-04-22 06:36. Do not edit manually.
+> Auto-generated 2026-04-23 08:54. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -49,19 +49,27 @@ Assets/Scripts/Editor/CourseImporter/TreePlacer.cs
 Assets/Scripts/Editor/CourseImporter/TreePlacerWindow.cs
 Assets/Scripts/Editor/CourseImporter/WaterShoreSettingsWindow.cs
 Assets/Scripts/Editor/ItemManagerSetup.cs
+Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs
 Assets/Scripts/Editor/Physics/PhysicsTuningWindow.cs
 Assets/Scripts/Editor/Recording/HoleFlyoverRecorder.cs
+Assets/Scripts/Editor/SceneSnapshot/ManualSceneSnapshotWindow.cs
+Assets/Scripts/Editor/SceneSnapshot/SceneSnapshotCapture.cs
+Assets/Scripts/Editor/SceneSnapshot/SceneSnapshotRestore.cs
+Assets/Scripts/Editor/SceneSnapshot/SnapshotData.cs
+Assets/Scripts/Editor/SceneSnapshot/Tests/SceneSnapshotTests.cs
 Assets/Scripts/Editor/ScreenshotTool.cs
 Assets/Scripts/HoleMetadata.cs
 Assets/Scripts/ItemManager.cs
 Assets/Scripts/Physics/Core/AeroConfig.cs
 Assets/Scripts/Physics/Core/AeroModel.cs
+Assets/Scripts/Physics/Core/BallPhysicsModifiers.cs
 Assets/Scripts/Physics/Core/BallSimulation.cs
 Assets/Scripts/Physics/Core/ClubSpec.cs
 Assets/Scripts/Physics/Core/CoefficientLut.cs
 Assets/Scripts/Physics/Core/HeightmapData.cs
 Assets/Scripts/Physics/Core/IGroundProvider.cs
 Assets/Scripts/Physics/Core/ISurfaceProvider.cs
+Assets/Scripts/Physics/Core/PuttConfig.cs
 Assets/Scripts/Physics/Core/ShotInput.cs
 Assets/Scripts/Physics/Core/SpinState.cs
 Assets/Scripts/Physics/Core/SurfaceConfig.cs
@@ -77,11 +85,34 @@ Assets/Scripts/Physics/Runtime/HeightProvider.cs
 Assets/Scripts/Physics/Runtime/Phase1TestController.cs
 Assets/Scripts/Physics/Runtime/PhaseTestController.cs
 Assets/Scripts/Physics/Runtime/PhysicsConfigLoader.cs
+Assets/Scripts/Physics/Runtime/SceneGroundProvider.cs
 Assets/Scripts/Physics/Runtime/SceneSurfaceProvider.cs
+Assets/Scripts/Physics/Stats/BallStats.cs
+Assets/Scripts/Physics/Stats/CharacterStats.cs
+Assets/Scripts/Physics/Stats/ClubStats.cs
+Assets/Scripts/Physics/Stats/PutterStats.cs
+Assets/Scripts/Physics/Stats/ResolvedShotModifiers.cs
+Assets/Scripts/Physics/Stats/ShotInputBuilder.cs
+Assets/Scripts/Physics/Stats/StatBundle.cs
+Assets/Scripts/Physics/Stats/StatCaps.cs
+Assets/Scripts/Physics/Stats/StatCoefficients.cs
+Assets/Scripts/Physics/Stats/StatModifierResolver.cs
 Assets/Scripts/Physics/Tests/AerodynamicsTests.cs
 Assets/Scripts/Physics/Tests/ProjectileMathTests.cs
+Assets/Scripts/Physics/Tests/PuttTests.cs
+Assets/Scripts/Physics/Tests/StatResolverTests.cs
 Assets/Scripts/Physics/Tests/SurfaceTests.cs
+Assets/Scripts/Physics/Tests/ViewerTests.cs
 Assets/Scripts/Physics/Tests/WindTests.cs
+Assets/Scripts/Physics/Viewer/BallAnimator.cs
+Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+Assets/Scripts/Physics/Viewer/DashboardUI.cs
+Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs
+Assets/Scripts/Physics/Viewer/ShotPreset.cs
+Assets/Scripts/Physics/Viewer/ShotPresetCatalog.cs
+Assets/Scripts/Physics/Viewer/TrajectoryRenderer.cs
+Assets/Scripts/SceneSnapshot/ManualPropId.cs
 Assets/Scripts/UI/AboutSubmenu.cs
 Assets/Scripts/UI/Editor/LocalizationEditorHelper.cs
 Assets/Scripts/UI/FadeController.cs
@@ -239,6 +270,13 @@ Assets/Data/README_HOLES.md.meta
 | Phase1TestController | Assets/Scripts/Physics/Runtime/Phase1TestController.cs |  |  |
 | PhaseTestController | Assets/Scripts/Physics/Runtime/PhaseTestController.cs |  |  |
 | SurfaceMarker | Assets/Scripts/Physics/Runtime/SceneSurfaceProvider.cs |  |  |
+| BallAnimator | Assets/Scripts/Physics/Viewer/BallAnimator.cs | Yes |  |
+| ChaseCamera | Assets/Scripts/Physics/Viewer/ChaseCamera.cs |  |  |
+| DashboardUI | Assets/Scripts/Physics/Viewer/DashboardUI.cs |  |  |
+| PhysicsLabController | Assets/Scripts/Physics/Viewer/PhysicsLabController.cs |  |  |
+| PhysicsLabUI | Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs |  |  |
+| TrajectoryRenderer | Assets/Scripts/Physics/Viewer/TrajectoryRenderer.cs |  |  |
+| ManualPropId | Assets/Scripts/SceneSnapshot/ManualPropId.cs |  |  |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs |  |  |
 | FadeController | Assets/Scripts/UI/FadeController.cs | Yes |  |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | Yes |  |
@@ -324,6 +362,8 @@ Assets/Data/README_HOLES.md.meta
 | ClubManager | `public event System.Action? OnInventoryChanged;` |
 | ClubManager | `public event System.Action<string>? OnClubRepaired;` |
 | ItemManager | `public event System.Action? OnInventoryChanged;` |
+| PhysicsLabController | `public event Action<ShotReadout> OnShotFired;` |
+| PhysicsLabController | `public event Action<bool, int> OnRepeatabilityResult;   // (passed, count)` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnExpanded;` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnCollapsed;` |
 | BagCarouselController | `public event System.Action<int>? OnBagSelected;` |
@@ -347,6 +387,12 @@ Assets/Data/README_HOLES.md.meta
 | BagSelectionModalAutoWire | Assets/Scripts/Editor/BagSelectionModalAutoWire.cs | 1 |
 | TreeBrushTool | Assets/Scripts/Editor/CourseImporter/TreeBrushTool.cs | 8 |
 | HeightProvider | Assets/Scripts/Physics/Runtime/HeightProvider.cs | 1 |
+| BallAnimator | Assets/Scripts/Physics/Viewer/BallAnimator.cs | 1 |
+| ChaseCamera | Assets/Scripts/Physics/Viewer/ChaseCamera.cs | 2 |
+| DashboardUI | Assets/Scripts/Physics/Viewer/DashboardUI.cs | 1 |
+| PhysicsLabController | Assets/Scripts/Physics/Viewer/PhysicsLabController.cs | 5 |
+| PhysicsLabUI | Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs | 2 |
+| ManualPropId | Assets/Scripts/SceneSnapshot/ManualPropId.cs | 1 |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs | 5 |
 | FadeController | Assets/Scripts/UI/FadeController.cs | 1 |
 | HoleDatabaseLoader | Assets/Scripts/UI/HoleDatabaseLoader.cs | 2 |

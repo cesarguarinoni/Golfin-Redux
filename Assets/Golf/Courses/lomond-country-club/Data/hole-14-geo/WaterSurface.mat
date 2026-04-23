@@ -20,6 +20,7 @@ Material:
   - _WORLD_UV
   m_InvalidKeywords:
   - _DISPLACEMENTMODE_OFF
+  - _REFLECTIONMODE_OFF
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -85,7 +86,7 @@ Material:
     - _CausticsStart: 0
     - _CausticsTiling3D: 0.5
     - _ColorMode: 0
-    - _CullMode: 2
+    - _CullMode: 0
     - _DepthEnd: 0.8
     - _DepthStart: 0
     - _DispMask: 0
@@ -144,8 +145,8 @@ Material:
     - _CausticsSpeed: {r: 1, g: 1, b: -1, a: -1}
     - _CausticsSpeed3D: {r: 1, g: 1, b: 1, a: 1}
     - _CausticsTiling: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.7735849, g: 0.41009322, b: 0, a: 1}
-    - _DepthColor: {r: 0.13207549, g: 0.11796355, b: 0.10528659, a: 1}
+    - _Color: {r: 0.15, g: 0.55, b: 0.65, a: 1}
+    - _DepthColor: {r: 0.02, g: 0.12, b: 0.2, a: 1}
     - _FlowTiling: {r: 1, g: 1, b: 0, a: 0}
     - _FoamColor: {r: 1, g: 1, b: 1, a: 1}
     - _FoamTiling: {r: 1, g: 1, b: 1, a: 1}

@@ -9,7 +9,7 @@ public class HoleDatabaseImporter : EditorWindow
     private TextAsset csvFile;
     private HoleDatabase targetDatabase;
 
-    [MenuItem("Golfin/Import Holes from CSV")]
+    [MenuItem("GOLFIN/Import Holes from CSV")]
     static void ShowWindow()
     {
         GetWindow<HoleDatabaseImporter>("Hole Database Importer");

@@ -1,0 +1,5 @@
+{
+  "csharpCode": "using System; using System.Reflection; using UnityEngine; using Golfin.Physics.Viewer;\npublic class Script {\n    public static string Main() {\n        var ctrl = UnityEngine.Object.FindObjectOfType<PhysicsLabController>(true);\n        if (ctrl == null) return \"No PhysicsLabController found\";\n        var scene = typeof(PhysicsLabController).GetField(\"currentScene\", BindingFlags.NonPublic | BindingFlags.Instance);\n        var lookDir = typeof(PhysicsLabController).GetField(\"_defaultLookDirection\", BindingFlags.NonPublic | BindingFlags.Instance);\n        var yaw = typeof(PhysicsLabController).GetField(\"_cameraYaw\", BindingFlags.NonPublic | BindingFlags.Instance);\n        return $\"currentScene={scene?.GetValue(ctrl)} _defaultLookDirection={lookDir?.GetValue(ctrl)} _cameraYaw={yaw?.GetValue(ctrl)}\";\n    }\n}",
+  "className": "Script",
+  "methodName": "Main"
+}
