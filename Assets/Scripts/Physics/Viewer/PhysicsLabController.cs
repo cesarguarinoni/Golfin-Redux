@@ -478,6 +478,25 @@ namespace Golfin.Physics.Viewer
         {
             _useSceneProviders = true;
 
+            // Disable any debug walk camera that ships inside hole scenes.
+            Scene loadedSceneEarly = SceneManager.GetSceneByName(sceneName);
+            if (loadedSceneEarly.IsValid())
+            {
+                System.Type walkCamType = System.Type.GetType("WalkCamera, Assembly-CSharp");
+                if (walkCamType != null)
+                {
+                    foreach (var root in loadedSceneEarly.GetRootGameObjects())
+                    foreach (var mb in root.GetComponentsInChildren<MonoBehaviour>(true))
+                    {
+                        if (mb != null && mb.GetType() == walkCamType)
+                        {
+                            mb.enabled = false;
+                            Debug.Log($"[PhysicsLab] WalkCamera disabled on '{mb.gameObject.name}'");
+                        }
+                    }
+                }
+            }
+
             System.Type smType = System.Type.GetType("Golfin.Course.SurfaceMarker, Assembly-CSharp");
             if (smType == null)
             {
