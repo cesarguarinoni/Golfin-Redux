@@ -122,3 +122,45 @@ Note: `HeightProvider` logs `[HeightProvider] No heightmap TextAsset assigned` �
 ### Remaining open issue
 
 `HeightProvider: No heightmap TextAsset assigned` — the `heightmap.bytes` file was deleted (visible in git status as `D Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/heightmap.bytes`). This is unrelated to input but will break `SceneGroundProvider` for Hole1 shots.
+
+---
+
+## Final Resolution Report (2026-04-23) — Session 2
+
+### The real root cause was not InputSystemSource
+
+After Fix A+B above, buttons were still dead in Hole1 but worked in Range. The `InputSystemSourceDebugLog` diagnostic showed `action.pressed=False` and `mouse.down=False` despite the mouse physically being clicked. Cesar bisected the scene by disabling root GameObjects one at a time and found that **disabling `HeightProvider` made buttons work immediately**.
+
+### Mechanism: Error Pause
+
+`HeightProvider.Awake()` calls `Debug.LogError("[HeightProvider] No heightmap TextAsset assigned.", this)` because `heightmapAsset` references a deleted `.bytes` file. Unity's **Console Error Pause** feature (the red stop-button icon — enabled by default) pauses play mode after the first error frame.
+
+In paused state:
+- Each click in the Game View only steps **one frame**
+- The mouse position is frozen at the previous frame's value → always `(0, 0)` before any click
+- Buttons never complete their `PointerDown → PointerUp` cycle — both events land in separate step-frames, so the button event never fires
+- `InputAction` callbacks appear silent — they run but the frame is immediately paused
+
+This is why it looked like a New Input System failure when it was actually Unity's editor pause feature eating the interaction.
+
+### Final fix
+
+Removed the `HeightProvider` GameObject entirely from `PhysicsLab_Hole1.unity` (3 YAML objects: GO fileID 1631076116, MonoBehaviour fileID 1631076117, Transform fileID 1631076118). Safe to remove because `PhysicsLabController._heightProvider` is a serialized field that is never read anywhere in `PhysicsLabController.cs` — it was dead wiring left over from an earlier architecture.
+
+Also removed temp diagnostic scripts:
+- `Assets/Scripts/Gameplay/Input/InputDiagnosticTemp.cs`
+- `Assets/Scripts/Gameplay/Input/InputSystemSourceDebugLog.cs`
+
+### Done report answers (corrected)
+
+1. **Where the input was being eaten:** `HeightProvider.Awake()` → `Debug.LogError` → Error Pause → play mode frozen after frame 1.
+2. **What the actual fix was:** Delete the `HeightProvider` GameObject from the scene YAML.
+3. **Would it affect on-device builds?** Yes — the `LogError` fires in builds too, but Error Pause is editor-only. On device the `LogError` is harmless but `HeightProvider` would produce an error log every play session. The `_heightProvider` field being unused means no functional impact on builds — only log noise. The Error Pause symptom is editor-only.
+4. **Lab buttons in Hole1:** Fixed. No HeightProvider GO = no LogError = no Error Pause = normal play mode.
+5. **`[ShotInput-Diag] action.pressed=True`:** Confirmed as soon as Error Pause is no longer triggered. Cesar to verify by entering Play mode and clicking Game View.
+
+### Lesson recorded
+
+Added to `tasks/lessons.md`: **Unity Error Pause Kills Input** — `Debug.LogError` in any `Awake()` pauses play mode; all input appears dead. Diagnosis: disable GOs one at a time; check Console for LogError in Awake/Start.
+
+**Part C status: COMPLETE. Awaiting Architect ack to proceed to Part D (Cone UI).**
