@@ -217,11 +217,11 @@ namespace Golfin.Physics.Viewer
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             panel.transform.SetParent(transform, false);
             var rt = panel.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(1f, 0f);
-            rt.anchorMax = new Vector2(1f, 0f);
-            rt.pivot     = new Vector2(1f, 0f);
-            rt.anchoredPosition = new Vector2(-16f, 16f);
-            rt.sizeDelta = new Vector2(400f, 640f);
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.zero;
+            rt.pivot     = Vector2.zero;
+            rt.anchoredPosition = new Vector2(16f, 16f);
+            rt.sizeDelta = new Vector2(360f, 640f);
             panel.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.72f);
             var vl = panel.AddComponent<VerticalLayoutGroup>();
             vl.padding   = new RectOffset(10, 10, 10, 10);
