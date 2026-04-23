@@ -35,9 +35,10 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private RectTransform   _targetingLine;
 
         // ── Runtime state ─────────────────────────────────────────────────────
-        private Camera    _worldCamera;
-        private Transform _ballTransform;
-        private float     _maxCarryYards = 250f;
+        private Camera       _worldCamera;
+        private Transform    _ballTransform;
+        private float        _maxCarryYards = 250f;
+        private ArrowGraphic _arrowGraphic;
 
         // ── Public API ────────────────────────────────────────────────────────
 
@@ -53,7 +54,34 @@ namespace Golfin.Gameplay.UI.ShotUI
         private void Awake()
         {
             if (_coneGraphic != null) _coneGraphic.HeightPx = _coneHeightPx;
-            HideArrows();
+            SetupArrows();
+        }
+
+        private void SetupArrows()
+        {
+            for (int i = 0; i < _arrows.Length; i++)
+            {
+                var rt = _arrows[i];
+                if (rt == null) continue;
+
+                if (i == 0)
+                {
+                    // Swap Image → ArrowGraphic on the single active arrow.
+                    if (!rt.TryGetComponent(out _arrowGraphic))
+                    {
+                        var img = rt.GetComponent<Image>();
+                        if (img != null) DestroyImmediate(img);
+                        _arrowGraphic = rt.gameObject.AddComponent<ArrowGraphic>();
+                    }
+                    rt.sizeDelta = new Vector2(24f, 40f);
+                    rt.gameObject.SetActive(false);
+                }
+                else
+                {
+                    // Extra arrows no longer used — disable permanently.
+                    rt.gameObject.SetActive(false);
+                }
+            }
         }
 
         private void OnEnable()
@@ -109,31 +137,34 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         // ── Arrows ────────────────────────────────────────────────────────────
 
-        private const float ArrowPhaseStep = 1f / 3f;
-
         private void HideArrows()
         {
-            foreach (var a in _arrows)
-                if (a != null) a.gameObject.SetActive(false);
+            if (_arrows.Length > 0 && _arrows[0] != null)
+                _arrows[0].gameObject.SetActive(false);
         }
 
         private void UpdateArrows(ShotInputState state)
         {
-            bool showArrows = state.State == ShotState.Timing;
-            for (int i = 0; i < _arrows.Length; i++)
-            {
-                var arrow = _arrows[i];
-                if (arrow == null) continue;
+            if (_arrows.Length == 0 || _arrows[0] == null) return;
+            var arrowRT = _arrows[0];
 
-                arrow.gameObject.SetActive(showArrows);
-                if (!showArrows) continue;
+            bool show = state.State == ShotState.Timing;
+            arrowRT.gameObject.SetActive(show);
+            if (!show) return;
 
-                float progress = (state.ArrowProgress01 + i * ArrowPhaseStep) % 1f;
-                float arrowY   = progress * _coneHeightPx;
+            float p = Mathf.Clamp01(state.ArrowProgress01);
+            arrowRT.anchoredPosition = new Vector2(0f, p * _coneHeightPx);
 
-                // X stays at center axis (arrows travel straight up the cone).
-                arrow.anchoredPosition = new Vector2(0f, arrowY);
-            }
+            if (_arrowGraphic != null)
+                _arrowGraphic.color = ArrowColorFromProgress(p);
+        }
+
+        // Red (bottom) → Yellow (mid) → Green (top).
+        private static Color ArrowColorFromProgress(float p)
+        {
+            return p < 0.5f
+                ? Color.Lerp(Color.red,    Color.yellow, p * 2f)
+                : Color.Lerp(Color.yellow, Color.green,  (p - 0.5f) * 2f);
         }
 
         // ── HUD ───────────────────────────────────────────────────────────────
