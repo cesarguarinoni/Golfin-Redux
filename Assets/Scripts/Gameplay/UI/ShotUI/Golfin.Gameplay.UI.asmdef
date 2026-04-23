@@ -1,0 +1,15 @@
+{
+    "name": "Golfin.Gameplay.UI",
+    "rootNamespace": "Golfin.Gameplay.UI",
+    "references": [
+        "Golfin.Gameplay.Input",
+        "Golfin.Gameplay.Config",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

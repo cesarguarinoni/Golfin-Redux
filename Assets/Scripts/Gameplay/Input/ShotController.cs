@@ -29,8 +29,9 @@ namespace Golfin.Gameplay.Input
         public bool DisableConeFinetuning  = false;  // aim = camera only
 
         // --- Readable state ---
-        public ShotState State          { get; private set; } = ShotState.Idle;
-        public float     PowerNormalized { get; private set; }
+        public ShotState State            { get; private set; } = ShotState.Idle;
+        public float     PowerNormalized  { get; private set; }
+        public float     ConeHalfAngleDeg => HalfConeAngleRad() * Mathf.Rad2Deg;
 
         // --- Internal state ---
         private float _pullDistancePx;
