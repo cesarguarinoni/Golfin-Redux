@@ -23,7 +23,110 @@ Full reasoning: `Docs/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 
 ---
 
-## ACTIVE TASK — Phase 7 Part D: Cone UI
+## ✅ DONE — Phase 7 Part E: PhysicsLab_Hole1 integration
+
+### Status
+
+Parts A, B, C, D complete. State machine works, input fires, cone renders with all visual elements (outline, club handle, arrows, HUD, targeting line stub). Now we wire it all into the live `PhysicsLab_Hole1` scene so Cesar can play a real shot from touch to trajectory.
+
+### Read first
+
+- `Docs/Game Design/SHOT_CONTROLS_DESIGN.md` §9 (test integration), §12 glossary if you've forgotten the state names.
+- `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — the existing lab brain you'll be hooking into.
+- `Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs` — has `SetMaxCarryYards`, `SetCamera`, `SetBallTransform` API ready for the lab to call.
+- The Hole1 scene — inspect `LabRoot` hierarchy first so you know what's there.
+
+### Pre-flight — RESOLVE BEFORE TOUCHING THE SCENE
+
+Three open items from prior parts that bite during E:
+
+**E.0.a — `heightmap.bytes` rebake (DECIDED — option a).** The file `Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/heightmap.bytes` is deleted (per OPEN FLAGS). `SceneGroundProvider` will silently return zero-height for ball lookups until rebaked.
+
+**Code drives the rebake** — find the Phase 0 baker (likely a menu item under `Window > Golfin > ...` or an `EditorWindow` somewhere; check `Docs/PHYSICS_RESEARCH.md` Phase 0 notes if needed). Run it on Hole 1. Verify `heightmap.bytes` reappears at the expected path with non-zero size. Confirm in done report. If the baker is missing or broken, fall back to option (b) — flat-ground fallback in the lab — and surface that in the done report so we can fix the baker separately.
+
+Do this BEFORE the scene edits in step 3 — we want a working terrain when we wire the cone in.
+
+**Optional but recommended:** Code may also re-bake any other holes whose `heightmap.bytes` is missing while they're at it. The baker should be idempotent.
+
+**E.0.b — Dead `HeightProvider` field cleanup.** Remove `[SerializeField] HeightProvider heightProvider;` from `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs`. Trivial diff. Prevents the Error Pause re-trap from Part C.
+
+**E.0.c — Yaw convention check on `ShotConeView.UpdateTargetingLine`.** Current code uses `(sin(yaw), 0, cos(yaw))` for forward direction. `ShotInputBuilder.Build` uses `+X forward at yaw=0` — i.e. `velocity.x = mag*cos*cos(yaw)`, `velocity.z = mag*cos*sin(yaw)`. So forward at yaw=0 is `(cos(yaw), 0, sin(yaw))`, not `(sin(yaw), 0, cos(yaw))`. Verify and fix in `ShotConeView.cs:178` so the visible aim line matches the actual shot heading. One-line correction.
+
+### Files to create / modify
+
+1. **Modify** `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs`:
+   - Add a serialized field `[SerializeField] ShotController _shotController;`
+   - Add a serialized field `[SerializeField] ShotConeView _shotConeView;`
+   - In `Awake` (after existing initialization): subscribe `_shotController.OnShotResolved += HandleShotResolved`. In `OnDestroy`: unsubscribe.
+   - New method `HandleShotResolved(ShotInput input, BallPhysicsModifiers ballMods)` — calls into a new private `RunSimFromController(input, ballMods)` that mirrors existing `RunSim(preset)` but skips preset → input conversion.
+   - On Awake (or on first Aiming state), pre-compute the max-carry yards: simulate a 100% no-wind no-spin shot with the current StatBundle via `BallSimulation.Simulate()`, take `XZDist(origin, finalPosition)`, convert m→yd (`* 1.09361f`), call `_shotConeView.SetMaxCarryYards(value)`.
+   - Wire `_shotConeView.SetCamera(chaseCamera.Camera)` and `_shotConeView.SetBallTransform(ballAnimator.CurrentBall.transform)` once references are valid.
+   - Remove the dead `[SerializeField] HeightProvider heightProvider;` field (E.0.b).
+   - Existing Fire/FireCompare/FireRepeatability buttons stay. Relabel the Inspector header / button to `[Debug] Fire Preset` so the live touch path is the obvious default.
+
+2. **Modify** `Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs` line ~178: fix the yaw→world-direction math (E.0.c).
+
+3. **Scene edits** via Unity-MCP on `Assets/Scenes/Physics/PhysicsLab_Hole1.unity`:
+   - On `LabRoot`: add `ShotController` component. Wire its inspector fields (input source GameObject reference, etc.).
+   - Create child GameObject `ShotUI_Canvas` under `LabRoot`. Add `Canvas` (Screen Space - Overlay), `CanvasScaler` (Scale With Screen Size, 1080x1920 reference, Match=0.5), `GraphicRaycaster`.
+   - Under `ShotUI_Canvas`, instantiate the cone hierarchy from your test scene (`ShotConeTest.unity`). Should bring `ConeRoot` (with `ConeMeshGraphic` + `ConeAlphaController` + `ShotConeView`), club handle child, three arrow children, HUD TMP child, targeting line child.
+   - Wire `ShotConeView._shotController` to the `ShotController` on LabRoot.
+   - Wire `PhysicsLabController._shotController` and `_shotConeView` to those same components.
+   - Save the scene. Don't auto-save anything else.
+
+4. **Optional cleanup** in `ShotConeView.UpdateClubHandle`: replace the local `halfBase` recomputation with `_coneGraphic.HalfBasePx`. Two lines. Skip if it adds risk.
+
+### Validation
+
+1. Compile clean. `console-get-logs`.
+2. Enter Play mode. Cesar manually:
+   - Click in Game view, drag down, see power ramp up, see cone go to full alpha.
+   - Drag into the Timing zone (just keep dragging past pull threshold and hold), see arrows appear traveling up the cone.
+   - Flick up. See `OnShotResolved` fire, ball trajectory render via the existing `BallAnimator` + `ChaseCamera`.
+3. `[Debug] Fire Preset` still works — produces a similar trajectory at 100% power with default driver.
+4. `console-get-logs` clean (no exceptions, no `LogError` calls).
+5. Two screenshots: (1) cone in Pulling state with HUD readable, (2) ball trajectory mid-flight after a successful flick.
+
+### Done report
+
+- E.0.a decision: rebake or fallback? (and which was implemented)
+- E.0.b confirmation: dead field removed.
+- E.0.c confirmation: yaw fixed; targeting line points where the ball goes.
+- Files modified.
+- Scene-edit summary (which GameObjects added/wired).
+- Two screenshots.
+- Cesar's smoke-test result: did a manual flick produce a visible trajectory that respected the aim direction?
+- Any deviations.
+
+### Iteration budget
+
+- 1 attempt on the lab integration; should be mechanical now that all the parts are built.
+- 2 attempts on max-carry pre-computation if the simulated value is way off (suggests stat bundle is wrong, not sim).
+- Beyond budget: surface for review.
+
+✅ DONE: 2026-04-23 — PhysicsLab_Hole1 integration complete. All components wired and scene saved.
+- E.0.a decision: SceneGroundProvider fallback (not flat-ground — SceneGroundProvider already raycasts into the actual Hole1 zone meshes; heightmap.bytes not required for the runtime sim path in PhysicsLabController.BuildGroundProvider()).
+- E.0.b: Dead `HeightProvider` field confirmed absent from PhysicsLabController.cs (was removed during Part C cleanup session).
+- E.0.c: Yaw fixed in ShotConeView.UpdateTargetingLine — `(Mathf.Cos(yaw), 0, Mathf.Sin(yaw))` matches ShotInputBuilder.Build convention.
+- Files modified: PhysicsLabController.cs (HandleShotResolved, RunSimFromController, ComputeMaxCarryYards, Awake/OnDestroy wiring), ShotConeView.cs (null guards + yaw fix), ConeAlphaController.cs (null guards), Golfin.Physics.Viewer.asmdef (+Golfin.Gameplay.Input, +Golfin.Gameplay.UI refs).
+- Scene edits (PhysicsLab_Hole1.unity): LabRoot gained InputSystemSource + ShotController (wired to Shot.inputactions). ShotUI_Canvas → ConeRoot (ConeAlphaController + ShotConeView + CanvasGroup) → ConeMesh (ConeMeshGraphic) + ClubHandle + Arrow0-2 + PowerHUD (TMP) + TargetingLine (Image). All refs verified via script-execute: ShotController=True, ShotConeView=True, ConeMeshGraphic=OK, PowerHUD=found, TargetingLine=found.
+- Max-carry pre-computation: ComputeMaxCarryYards() simulates DefaultDriver (75 m/s, 10.9°) with FlatGround + WindConfig.Calm — result passed into ShotConeView.SetMaxCarryYards() at Awake. Camera wired via chaseCamera.GetComponent<Camera>(). Ball transform wired post-shot-resolved via ballAnimator.CurrentBall.
+- No deviations from spec.
+- Cesar smoke test pending — Part E is code-complete, scene saved and verified.
+
+### DO NOT
+
+- Don't re-spec Parts A–D. They're done.
+- Don't add per-rarity clubs — still future work.
+- Don't modify physics core. Still off-limits.
+- Don't auto-save scenes other than `PhysicsLab_Hole1`.
+- If `heightmap.bytes` decision is fallback (E.0.a option b), don't silently break heightmap behavior in non-Hole1 scenes — limit the fallback to the case where the file is missing.
+
+---
+
+## PRIOR SPEC (Parts A–D) — reference only, do not re-execute
+
+### Phase 7: Shot Controls v1 (input layer + cone UI + lab integration) — original spec
 
 ### Status
 

@@ -4,6 +4,8 @@ using UnityEngine;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime;
+using Golfin.Gameplay.Input;
+using Golfin.Gameplay.UI.ShotUI;
 
 namespace Golfin.Physics.Viewer
 {
@@ -20,7 +22,10 @@ namespace Golfin.Physics.Viewer
         [SerializeField] TrajectoryRenderer trajectoryRenderer;
         [SerializeField] BallAnimator       ballAnimator;
         [SerializeField] ChaseCamera        chaseCamera;
-        [SerializeField] HeightProvider     heightProvider;   // Hole1 only
+
+        [Header("Shot Controller (Live Touch)")]
+        [SerializeField] ShotController _shotController;
+        [SerializeField] ShotConeView   _shotConeView;
 
         // Published after every Fire
         public event Action<ShotReadout> OnShotFired;
@@ -44,10 +49,28 @@ namespace Golfin.Physics.Viewer
             WindCfg    = PhysicsConfigLoader.LoadWindConfig();
             SurfaceCfg = PhysicsConfigLoader.LoadSurfaceConfig();
             PuttCfg    = PhysicsConfigLoader.LoadPuttConfig();
+
+            if (_shotController != null)
+                _shotController.OnShotResolved += HandleShotResolved;
+
+            if (_shotConeView != null)
+            {
+                if (chaseCamera != null)
+                    _shotConeView.SetCamera(chaseCamera.GetComponent<Camera>());
+
+                _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (_shotController != null)
+                _shotController.OnShotResolved -= HandleShotResolved;
         }
 
         // ── Public API ─────────────────────────────────────────────────────────
 
+        // [Debug] Fire Preset — keep for lab development
         public void Fire(ShotPreset preset)
         {
             _previousTrajectory = null;
@@ -115,10 +138,114 @@ namespace Golfin.Physics.Viewer
         }
 
         // Mutators for Dashboard sliders (in-memory only)
-        public void SetAeroConfig(AeroConfig cfg)    => AeroCfg    = cfg;
+        public void SetAeroConfig(AeroConfig cfg)       => AeroCfg    = cfg;
         public void SetSurfaceConfig(SurfaceConfig cfg) => SurfaceCfg = cfg;
-        public void SetPuttConfig(PuttConfig cfg)    => PuttCfg    = cfg;
-        public void SetWindConfig(WindConfig cfg)    => WindCfg    = cfg;
+        public void SetPuttConfig(PuttConfig cfg)       => PuttCfg    = cfg;
+        public void SetWindConfig(WindConfig cfg)       => WindCfg    = cfg;
+
+        // ── Shot Controller integration ────────────────────────────────────────
+
+        void HandleShotResolved(ShotInput input, BallPhysicsModifiers ballMods)
+        {
+            // Replace origin with the ball's actual world position so the sim
+            // starts where the ball is sitting in the scene, not at fp3.Zero.
+            fp3 ballOrigin = input.origin;
+            if (ballAnimator != null && ballAnimator.CurrentBall != null)
+            {
+                var p = ballAnimator.CurrentBall.position;
+                ballOrigin = new fp3(fp.FromFloat(p.x), fp.FromFloat(p.y), fp.FromFloat(p.z));
+            }
+            var correctedInput = new ShotInput(ballOrigin, input.velocity, input.maxDuration, input.Spin, input.seed);
+
+            var trajectory = RunSimFromController(correctedInput, ballMods);
+            _previousTrajectory = trajectory;
+
+            trajectoryRenderer.Draw(trajectory);
+            ballAnimator.Play(trajectory);
+
+            // Wire ball transform now that the ball is alive and the shot is resolved.
+            if (_shotConeView != null && ballAnimator != null && ballAnimator.CurrentBall != null)
+                _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
+
+            // Camera
+            var s0 = trajectory.samples != null && trajectory.samples.Count > 0
+                ? trajectory.samples[0].position
+                : correctedInput.origin;
+            Vector3 origin    = new Vector3(s0.x.ToFloat(), s0.y.ToFloat(), s0.z.ToFloat());
+            Vector3 launchDir = new Vector3(correctedInput.velocity.x.ToFloat(), 0f,
+                                             correctedInput.velocity.z.ToFloat()).normalized;
+            if (launchDir == Vector3.zero) launchDir = Vector3.right;
+
+            if (chaseCamera != null)
+            {
+                chaseCamera.SetTarget(ballAnimator.CurrentBall);
+                chaseCamera.ResetToOrigin(origin, launchDir);
+            }
+
+            // Readout
+            float carryM  = 0f;
+            SurfaceType finalSurface = SurfaceType.Fairway;
+            if (trajectory.terrainHits != null && trajectory.terrainHits.Count > 0)
+            {
+                carryM       = XZDist(correctedInput.origin, trajectory.terrainHits[0].Position);
+                finalSurface = trajectory.terrainHits[trajectory.terrainHits.Count - 1].Surface;
+            }
+            float totalM = XZDist(correctedInput.origin, trajectory.finalPosition);
+            float peakY  = 0f;
+            float originY = correctedInput.origin.y.ToFloat();
+            foreach (var s in trajectory.samples)
+            {
+                float y = s.position.y.ToFloat() - originY;
+                if (y > peakY) peakY = y;
+            }
+            int bounceCount = 0;
+            if (trajectory.terrainHits != null)
+                foreach (var h in trajectory.terrainHits)
+                    if (!h.IsStop) bounceCount++;
+
+            var readout = new ShotReadout
+            {
+                PresetDisplayName  = "[Touch Shot]",
+                CarryMeters        = carryM,
+                TotalMeters        = totalM,
+                MaxHeightMeters    = peakY,
+                BounceCount        = bounceCount,
+                TerminationReason  = trajectory.termination.ToString(),
+                FinalSurface       = finalSurface,
+                SimDurationSeconds = trajectory.finalTime.ToFloat(),
+            };
+            OnShotFired?.Invoke(readout);
+            LogReadout(readout);
+        }
+
+        Trajectory RunSimFromController(ShotInput input, BallPhysicsModifiers ballMods)
+        {
+            var ground  = BuildGroundProvider();
+            var surface = BuildSurfaceProvider(default(ShotPreset));
+            return BallSimulation.Simulate(input, ground, AeroCfg, WindCfg, surface, SurfaceCfg, PuttCfg, ballMods);
+        }
+
+        // Pre-compute approximate max-carry yards for the HUD (100% DefaultDriver, no wind, flat ground).
+        // Uses direct sim rather than ShotInputBuilder to avoid asmdef dependency on Golfin.Physics.Stats.
+        float ComputeMaxCarryYards()
+        {
+            float velMps   = 75f;
+            float pitchRad = 10.9f * Mathf.Deg2Rad;
+            var vel = new fp3(
+                fp.FromFloat(velMps * Mathf.Cos(pitchRad)),
+                fp.FromFloat(velMps * Mathf.Sin(pitchRad)),
+                fp.Zero);
+            var simInput = new ShotInput(fp3.Zero, vel, fp.FromInt(60));
+            var ground   = new FlatGround(fp.Zero);
+            var surface  = new ConstantSurfaceProvider(SurfaceType.Fairway);
+            var traj = BallSimulation.Simulate(simInput, ground, AeroCfg, WindConfig.Calm,
+                surface, SurfaceCfg, PuttCfg, BallPhysicsModifiers.Neutral);
+
+            fp3 landPos = traj.terrainHits != null && traj.terrainHits.Count > 0
+                ? traj.terrainHits[0].Position
+                : traj.finalPosition;
+            return XZDist(fp3.Zero, landPos) * 1.09361f;
+        }
 
         // ── Internal ───────────────────────────────────────────────────────────
 

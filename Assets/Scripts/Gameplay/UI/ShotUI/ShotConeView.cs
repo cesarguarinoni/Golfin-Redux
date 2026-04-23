@@ -52,12 +52,21 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private void Awake()
         {
-            _coneGraphic.HeightPx = _coneHeightPx;
+            if (_coneGraphic != null) _coneGraphic.HeightPx = _coneHeightPx;
             HideArrows();
         }
 
-        private void OnEnable()  => _shotController.OnStateChanged += HandleStateChanged;
-        private void OnDisable() => _shotController.OnStateChanged -= HandleStateChanged;
+        private void OnEnable()
+        {
+            if (_shotController != null)
+                _shotController.OnStateChanged += HandleStateChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (_shotController != null)
+                _shotController.OnStateChanged -= HandleStateChanged;
+        }
 
         // ── State handler ─────────────────────────────────────────────────────
 
@@ -165,7 +174,7 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (ballScreen.z < 0f) { _targetingLine.gameObject.SetActive(false); return; }
 
             Vector3 aimDir     = new Vector3(
-                Mathf.Sin(state.AimYawRadians), 0f, Mathf.Cos(state.AimYawRadians));
+                Mathf.Cos(state.AimYawRadians), 0f, Mathf.Sin(state.AimYawRadians));
             Vector3 targetWorld  = _ballTransform.position + aimDir * ControlsConfig.Default.TargetingLineLengthMeters;
             Vector3 targetScreen = _worldCamera.WorldToScreenPoint(targetWorld);
 

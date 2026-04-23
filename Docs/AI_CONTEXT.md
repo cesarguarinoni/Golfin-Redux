@@ -18,7 +18,7 @@
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
 | Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass.** |
-| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D COMPLETE (2026-04-23)**. Cone UI live in ShotConeTest.unity. Part E (PhysicsLab integration) next after Architect ack. |
+| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D+E COMPLETE (2026-04-23)**. Cone UI live in ShotConeTest.unity. PhysicsLab_Hole1 wired for live touch shots. Part F (putt mode + debug toggles) next. |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -39,6 +39,27 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-23 — Phase 7 Part E: PhysicsLab_Hole1 Integration)
+
+### Completed
+- **`PhysicsLabController.cs`** — added `[SerializeField] ShotController _shotController` + `[SerializeField] ShotConeView _shotConeView` under `[Header("Shot Controller (Live Touch)")]`. Removed dead `HeightProvider` field. `Awake()` subscribes `OnShotResolved`, calls `SetCamera(chaseCamera.GetComponent<Camera>())`, `SetMaxCarryYards(ComputeMaxCarryYards())`. `OnDestroy()` unsubscribes. New `HandleShotResolved(ShotInput, BallPhysicsModifiers)` — overrides origin with `ballAnimator.CurrentBall.position`, calls `RunSimFromController`, drives renderer/animator/camera/readout. New `RunSimFromController` uses `BuildGroundProvider()` (SceneGroundProvider for Hole1) + `BuildSurfaceProvider(default)`. New `ComputeMaxCarryYards()` simulates DefaultDriver (75 m/s, 10.9°) on FlatGround, WindConfig.Calm → yards for HUD. Post-shot: wires `_shotConeView.SetBallTransform(ballAnimator.CurrentBall)`.
+- **`ShotConeView.cs`** — null guard in `Awake` (`_coneGraphic != null` before HeightPx set). Null guards in `OnEnable`/`OnDisable` (`_shotController != null`). Yaw fix E.0.c: `(Mathf.Cos(yaw), 0, Mathf.Sin(yaw))` to match ShotInputBuilder convention (was Sin/Cos swapped).
+- **`ConeAlphaController.cs`** — null guards in `OnEnable`/`OnDisable` (`_shotController != null`).
+- **`Golfin.Physics.Viewer.asmdef`** — added `Golfin.Gameplay.Input` + `Golfin.Gameplay.UI` references.
+- **`PhysicsLab_Hole1.unity`** — LabRoot: `InputSystemSource` (wired to Shot.inputactions) + `ShotController`. `ShotUI_Canvas` → `ConeRoot` (CanvasGroup + ConeAlphaController + ShotConeView) → `ConeMesh` (ConeMeshGraphic) + ClubHandle + Arrow0-2 + PowerHUD (TMP) + TargetingLine (Image). All inspector refs wired via SerializedObject. Scene saved.
+
+### E.0.a — heightmap.bytes decision
+SceneGroundProvider fallback — `BuildGroundProvider()` already returns `new SceneGroundProvider()` for Hole1, which raycasts into zone meshes. `heightmap.bytes` not required for runtime sim. Baker can rebake later without blocking Part E.
+
+### Deviations
+- None from spec.
+
+### Next
+- Part F: putt mode flag, debug toggles, final validation pass.
+- Cesar smoke test: enter Play mode in PhysicsLab_Hole1, touch-drag-flick to produce trajectory.
 
 ---
 

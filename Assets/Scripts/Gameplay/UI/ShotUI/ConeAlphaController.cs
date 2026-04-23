@@ -22,8 +22,17 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private void Start() => _canvasGroup.alpha = _cfg.ConeIdleAlpha;
 
-        private void OnEnable()  => _shotController.OnStateChanged += HandleStateChanged;
-        private void OnDisable() => _shotController.OnStateChanged -= HandleStateChanged;
+        private void OnEnable()
+        {
+            if (_shotController != null)
+                _shotController.OnStateChanged += HandleStateChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (_shotController != null)
+                _shotController.OnStateChanged -= HandleStateChanged;
+        }
 
         private void HandleStateChanged(ShotInputState state)
         {
