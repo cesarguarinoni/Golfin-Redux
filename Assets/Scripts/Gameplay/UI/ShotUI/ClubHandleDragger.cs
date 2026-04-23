@@ -5,16 +5,23 @@ using Golfin.Gameplay.Input;
 namespace Golfin.Gameplay.UI.ShotUI
 {
     // Attach to the ClubHandle RectTransform.
-    // Drag down to set power, flick UP to fire at peak power.
-    // Cancels if released without an upward flick.
+    // Drag DOWN toward cone base to set power; flick UP to fire at peak power.
+    // _releaseToFire: enable in Inspector to fire on any release (old pull-and-hold behavior).
     [RequireComponent(typeof(RectTransform))]
     public class ClubHandleDragger : MonoBehaviour,
         IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
-        [SerializeField] private ShotController    _shotController;
-        [SerializeField] private RectTransform     _coneRect;
-        [SerializeField] private float             _coneHeightPx = 600f;
-        [SerializeField] private float             _flickThresholdPxPerFrame = 20f;
+        [SerializeField] private ShotController _shotController;
+        [SerializeField] private RectTransform  _coneRect;
+        [SerializeField] private float          _coneHeightPx = 600f;
+
+        [Header("Flick Settings")]
+        [Tooltip("Minimum upward screen-pixel delta per frame to count as a flick. Lower = more forgiving.")]
+        [Range(0f, 200f)]
+        [SerializeField] private float _flickThresholdPxPerFrame = 5f;
+
+        [Tooltip("If true, releasing the handle always fires (no flick required). Good for debugging.")]
+        [SerializeField] private bool _releaseToFire = false;
 
         private bool  _dragging;
         private float _peakPower;
@@ -41,10 +48,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (!_dragging) return;
             _dragging = false;
 
-            // Fire only when the pointer flicks upward (toward ball/apex).
-            // e.delta is in screen pixels per frame; positive Y = up.
-            bool isFlick = e.delta.y >= _flickThresholdPxPerFrame && _peakPower > 0.02f;
-            if (isFlick)
+            bool hasPower = _peakPower > 0.02f;
+            bool isFlick  = e.delta.y >= _flickThresholdPxPerFrame;
+            bool shouldFire = hasPower && (_releaseToFire || isFlick);
+
+            if (shouldFire)
             {
                 _shotController.SetExternalPower(_peakPower, _peakFinetune);
                 _shotController.EndExternalDrag();
@@ -73,7 +81,6 @@ namespace Golfin.Gameplay.UI.ShotUI
             float power    = 1f - handleY / _coneHeightPx;
             float finetune = maxX > 0.1f ? handleX / maxX : 0f;
 
-            // Track peak for flick-fire.
             if (power > _peakPower)
             {
                 _peakPower    = power;

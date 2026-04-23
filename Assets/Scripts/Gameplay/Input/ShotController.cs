@@ -105,6 +105,14 @@ namespace Golfin.Gameplay.Input
 
         public void Tick(float dt)
         {
+            // External drag path: arrow still ticks even with no input source.
+            if (_externalDragActive)
+            {
+                if (State == ShotState.Timing) TickArrow(dt);
+                PublishState();
+                return;
+            }
+
             if (_inputSource == null) return;
 
             bool touching    = _inputSource.IsTouching;

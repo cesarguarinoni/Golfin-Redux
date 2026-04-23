@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime;
@@ -30,8 +30,8 @@ namespace Golfin.Physics.Viewer
         [SerializeField] Transform      _ballSpawnPoint;
 
         [Header("Camera")]
-        [Tooltip("XZ look direction when the scene starts (toward the target hole). Set to match your hole orientation.")]
-        [SerializeField] Vector3 _defaultLookDirection = Vector3.forward;
+        [Tooltip("Initial look direction (XZ). Leave zero to auto-derive from scene type.")]
+        [SerializeField] Vector3 _defaultLookDirection = Vector3.zero;
         [SerializeField] float   _orbitSensitivity     = 0.5f;
 
         // Published after every Fire
@@ -51,6 +51,7 @@ namespace Golfin.Physics.Viewer
         float   _cameraYaw;
         Vector3 _orbitCenter;
         bool    _prevBallPlaying;
+        bool    _orbitDragActive;
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
@@ -68,7 +69,6 @@ namespace Golfin.Physics.Viewer
             {
                 if (chaseCamera != null)
                     _shotConeView.SetCamera(chaseCamera.GetComponent<Camera>());
-
                 _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
             }
         }
@@ -79,12 +79,16 @@ namespace Golfin.Physics.Viewer
                 _shotController.OnShotResolved -= HandleShotResolved;
         }
 
-        void Start() => SetupAtTee();
-
-        void Update()
+        void Start()
         {
-            HandleCameraOrbit();
+            // Disable raw-touch path — ClubHandle external drag API is the only input in this lab.
+            // This prevents camera drags and button clicks from accidentally starting a shot.
+            _shotController?.InjectInputSource(null);
+
+            SetupAtTee();
         }
+
+        void Update() => HandleCameraOrbit();
 
         // ── Public API ─────────────────────────────────────────────────────────
 
@@ -94,64 +98,81 @@ namespace Golfin.Physics.Viewer
             SetupAtTee();
         }
 
-        private void SetupAtTee()
+        // ── Setup ──────────────────────────────────────────────────────────────
+
+        void SetupAtTee()
         {
             if (_ballSpawnPoint == null) return;
             Vector3 sp = _ballSpawnPoint.position;
-            RaycastHit hit;
-            float surfaceY = UnityEngine.Physics.Raycast(
-                new Vector3(sp.x, 500f, sp.z), Vector3.down, out hit, 1000f)
-                ? hit.point.y : sp.y;
+            float surfaceY = SurfaceSnap(sp.x, sp.z, sp.y);
             Vector3 teePos = new Vector3(sp.x, surfaceY, sp.z);
 
             _orbitCenter = teePos;
 
             if (ballAnimator != null) ballAnimator.PlaceAtRest(teePos);
 
-            // Compute look direction from serialized field, fall back to +X
-            Vector3 lookDir = _defaultLookDirection.sqrMagnitude > 0.001f
-                ? new Vector3(_defaultLookDirection.x, 0f, _defaultLookDirection.z).normalized
-                : Vector3.right;
-
+            Vector3 lookDir = GetDefaultLookDirection();
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
 
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
 
-            Camera cam = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
-            if (cam != null)
-                ApplyCameraYaw(cam);
+            Camera cam = chaseCamera?.GetComponent<Camera>();
+            if (cam != null) ApplyCameraYaw(cam);
+        }
+
+        // Auto-derive look direction from scene type when not set in Inspector.
+        Vector3 GetDefaultLookDirection()
+        {
+            if (_defaultLookDirection.sqrMagnitude > 0.001f)
+                return new Vector3(_defaultLookDirection.x, 0f, _defaultLookDirection.z).normalized;
+
+            // Hole1: tee at (167.7, z, 31.23) → green at (-230, z, -73)
+            if (currentScene == PresetScene.Hole1)
+                return new Vector3(-0.967f, 0f, -0.253f);
+
+            return Vector3.right; // aimYaw=0 = +X default
         }
 
         // ── Camera orbit ───────────────────────────────────────────────────────
 
         void HandleCameraOrbit()
         {
-            // Don't orbit while the player is in the middle of a shot drag or ball is flying.
             if (_shotController != null && _shotController.IsExternalDragActive) return;
 
             bool isPlaying = ballAnimator != null && ballAnimator.IsPlaying;
 
-            // When the ball just stopped, park the camera and clear chase target.
             if (_prevBallPlaying && !isPlaying)
             {
                 if (ballAnimator?.CurrentBall != null)
                     _orbitCenter = ballAnimator.CurrentBall.position;
-
                 if (chaseCamera != null) chaseCamera.SetTarget(null);
             }
             _prevBallPlaying = isPlaying;
-
             if (isPlaying) return;
 
             var mouse = Mouse.current;
-            if (mouse == null || !mouse.leftButton.isPressed) return;
+            if (mouse == null) return;
+
+            bool pressing = mouse.leftButton.isPressed;
+
+            // Don't start a new orbit drag while pointer is over UI.
+            if (pressing && !_orbitDragActive)
+            {
+                bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+                if (overUI) return;
+                _orbitDragActive = true;
+            }
+            if (!pressing)
+            {
+                _orbitDragActive = false;
+                return;
+            }
 
             float dx = mouse.delta.x.ReadValue();
             if (Mathf.Abs(dx) < 0.5f) return;
 
             _cameraYaw += dx * _orbitSensitivity * Mathf.Deg2Rad;
-
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
 
@@ -161,7 +182,7 @@ namespace Golfin.Physics.Viewer
 
         void ApplyCameraYaw(Camera cam)
         {
-            // yaw=0 → +X forward (matching ShotInputBuilder convention)
+            // yaw=0 → +X forward (ShotInputBuilder convention: Vx=cos, Vz=sin)
             Vector3 lookDir = new Vector3(Mathf.Cos(_cameraYaw), 0f, Mathf.Sin(_cameraYaw));
             cam.transform.position = _orbitCenter - lookDir * 8f + Vector3.up * 3f;
             cam.transform.LookAt(_orbitCenter + lookDir * 3f + Vector3.up * 0.5f);
@@ -186,10 +207,7 @@ namespace Golfin.Physics.Viewer
         {
             var positions = new fp3[count];
             for (int i = 0; i < count; i++)
-            {
-                var t = RunSim(preset);
-                positions[i] = t.finalPosition;
-            }
+                positions[i] = RunSimForCamera(preset).finalPosition;
 
             bool bitExact = true;
             for (int i = 1; i < count; i++)
@@ -197,16 +215,13 @@ namespace Golfin.Physics.Viewer
                 if (positions[i].x.ToFloat() != positions[0].x.ToFloat() ||
                     positions[i].y.ToFloat() != positions[0].y.ToFloat() ||
                     positions[i].z.ToFloat() != positions[0].z.ToFloat())
-                {
-                    bitExact = false;
-                    break;
-                }
+                { bitExact = false; break; }
             }
 
             Debug.Log($"[PhysicsLab] Fire×{count}: {(bitExact ? "✓ BIT-EXACT" : "✗ DRIFT DETECTED")}");
             OnRepeatabilityResult?.Invoke(bitExact, count);
 
-            var last = RunSim(preset);
+            var last = RunSimForCamera(preset);
             trajectoryRenderer.Draw(last);
             ballAnimator.Play(last);
         }
@@ -242,27 +257,7 @@ namespace Golfin.Physics.Viewer
 
         void HandleShotResolved(ShotInput input, BallPhysicsModifiers ballMods)
         {
-            fp3 ballOrigin;
-            if (ballAnimator != null && ballAnimator.CurrentBall != null)
-            {
-                var p = ballAnimator.CurrentBall.position;
-                ballOrigin = new fp3(fp.FromFloat(p.x), fp.FromFloat(p.y), fp.FromFloat(p.z));
-            }
-            else if (_ballSpawnPoint != null)
-            {
-                Vector3 sp = _ballSpawnPoint.position;
-                RaycastHit hit;
-                float surfaceY = UnityEngine.Physics.Raycast(
-                    new Vector3(sp.x, 500f, sp.z), Vector3.down, out hit, 1000f)
-                    ? hit.point.y
-                    : sp.y;
-                ballOrigin = new fp3(fp.FromFloat(sp.x), fp.FromFloat(surfaceY), fp.FromFloat(sp.z));
-            }
-            else
-            {
-                ballOrigin = input.origin;
-            }
-
+            fp3 ballOrigin = GetCurrentOrigin(fallbackToInput: input.origin);
             var correctedInput = new ShotInput(ballOrigin, input.velocity, input.maxDuration, input.Spin, input.seed);
 
             var trajectory = RunSimFromController(correctedInput, ballMods);
@@ -271,16 +266,17 @@ namespace Golfin.Physics.Viewer
             trajectoryRenderer.Draw(trajectory);
             ballAnimator.Play(trajectory);
 
-            if (_shotConeView != null && ballAnimator != null && ballAnimator.CurrentBall != null)
+            if (_shotConeView != null && ballAnimator?.CurrentBall != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
 
             var s0 = trajectory.samples != null && trajectory.samples.Count > 0
-                ? trajectory.samples[0].position
-                : correctedInput.origin;
+                ? trajectory.samples[0].position : correctedInput.origin;
             Vector3 origin    = new Vector3(s0.x.ToFloat(), s0.y.ToFloat(), s0.z.ToFloat());
             Vector3 launchDir = new Vector3(correctedInput.velocity.x.ToFloat(), 0f,
                                              correctedInput.velocity.z.ToFloat()).normalized;
             if (launchDir == Vector3.zero) launchDir = Vector3.right;
+
+            _orbitCenter = origin;
 
             if (chaseCamera != null)
             {
@@ -288,18 +284,15 @@ namespace Golfin.Physics.Viewer
                 chaseCamera.ResetToOrigin(origin, launchDir);
             }
 
-            // Keep orbit center at launch so user can spin back to see the shot
-            _orbitCenter = origin;
-
-            float carryM  = 0f;
+            float carryM = 0f;
             SurfaceType finalSurface = SurfaceType.Fairway;
             if (trajectory.terrainHits != null && trajectory.terrainHits.Count > 0)
             {
                 carryM       = XZDist(correctedInput.origin, trajectory.terrainHits[0].Position);
                 finalSurface = trajectory.terrainHits[trajectory.terrainHits.Count - 1].Surface;
             }
-            float totalM = XZDist(correctedInput.origin, trajectory.finalPosition);
-            float peakY  = 0f;
+            float totalM  = XZDist(correctedInput.origin, trajectory.finalPosition);
+            float peakY   = 0f;
             float originY = correctedInput.origin.y.ToFloat();
             foreach (var s in trajectory.samples)
             {
@@ -346,10 +339,8 @@ namespace Golfin.Physics.Viewer
             var surface  = new ConstantSurfaceProvider(SurfaceType.Fairway);
             var traj = BallSimulation.Simulate(simInput, ground, AeroCfg, WindConfig.Calm,
                 surface, SurfaceCfg, PuttCfg, BallPhysicsModifiers.Neutral);
-
             fp3 landPos = traj.terrainHits != null && traj.terrainHits.Count > 0
-                ? traj.terrainHits[0].Position
-                : traj.finalPosition;
+                ? traj.terrainHits[0].Position : traj.finalPosition;
             return XZDist(fp3.Zero, landPos) * 1.09361f;
         }
 
@@ -357,18 +348,16 @@ namespace Golfin.Physics.Viewer
 
         void FireInternal(ShotPreset preset)
         {
-            var trajectory = RunSim(preset);
+            var trajectory = RunSimForCamera(preset);
             _previousTrajectory = trajectory;
 
             trajectoryRenderer.Draw(trajectory);
             ballAnimator.Play(trajectory);
 
             var s0 = trajectory.samples != null && trajectory.samples.Count > 0
-                ? trajectory.samples[0].position
-                : preset.Origin;
+                ? trajectory.samples[0].position : preset.Origin;
             Vector3 origin    = new Vector3(s0.x.ToFloat(), s0.y.ToFloat(), s0.z.ToFloat());
-            Vector3 launchDir = new Vector3(preset.Velocity.x.ToFloat(), 0f, preset.Velocity.z.ToFloat()).normalized;
-            if (launchDir == Vector3.zero) launchDir = Vector3.right;
+            Vector3 launchDir = new Vector3(Mathf.Cos(_cameraYaw), 0f, Mathf.Sin(_cameraYaw));
 
             _orbitCenter = origin;
 
@@ -383,24 +372,59 @@ namespace Golfin.Physics.Viewer
             LogReadout(readout);
         }
 
-        Trajectory RunSim(ShotPreset preset)
+        // Fire from current ball position in camera heading direction,
+        // preserving the preset's speed, pitch, and spin magnitude.
+        Trajectory RunSimForCamera(ShotPreset preset)
         {
-            // Surface-snap the origin Y for Hole1 presets (stored with Y=0).
-            fp3 origin = preset.Origin;
-            if (currentScene == PresetScene.Hole1)
+            fp3 origin = GetCurrentOrigin(fallbackToInput: preset.Origin);
+
+            // Rotate XZ velocity to camera yaw; keep Y (preserves pitch + speed).
+            float vx = preset.Velocity.x.ToFloat();
+            float vy = preset.Velocity.y.ToFloat();
+            float vz = preset.Velocity.z.ToFloat();
+            float xzSpeed = Mathf.Sqrt(vx * vx + vz * vz);
+            var newVelocity = new fp3(
+                fp.FromFloat(xzSpeed * Mathf.Cos(_cameraYaw)),
+                fp.FromFloat(vy),
+                fp.FromFloat(xzSpeed * Mathf.Sin(_cameraYaw)));
+
+            // Rotate backspin axis to match new heading.
+            SpinState spin = preset.Spin;
+            if (spin.IsSpinning)
             {
-                float ox = origin.x.ToFloat(), oz = origin.z.ToFloat();
-                if (UnityEngine.Physics.Raycast(new Vector3(ox, 500f, oz), Vector3.down,
-                    out RaycastHit hit, 1000f))
-                    origin = new fp3(origin.x, fp.FromFloat(hit.point.y), origin.z);
+                var newAxis = new fp3(
+                    fp.FromFloat(-Mathf.Sin(_cameraYaw)),
+                    fp.Zero,
+                    fp.FromFloat(Mathf.Cos(_cameraYaw)));
+                spin = new SpinState(newAxis, spin.Rate);
             }
 
-            var input = new ShotInput(origin, preset.Velocity, fp.FromInt(60), preset.Spin);
+            var input   = new ShotInput(origin, newVelocity, fp.FromInt(60), spin);
             var ground  = BuildGroundProvider();
             var surface = BuildSurfaceProvider(preset);
-            var wind    = preset.Wind;
+            return BallSimulation.Simulate(input, ground, AeroCfg, preset.Wind, surface, SurfaceCfg, PuttCfg);
+        }
 
-            return BallSimulation.Simulate(input, ground, AeroCfg, wind, surface, SurfaceCfg, PuttCfg);
+        // Returns current ball position snapped to terrain, or fallback if no ball.
+        fp3 GetCurrentOrigin(fp3 fallbackToInput)
+        {
+            Vector3 sp;
+            if (ballAnimator?.CurrentBall != null)
+                sp = ballAnimator.CurrentBall.position;
+            else if (_ballSpawnPoint != null)
+                sp = _ballSpawnPoint.position;
+            else
+                return fallbackToInput;
+
+            float y = SurfaceSnap(sp.x, sp.z, sp.y);
+            return new fp3(fp.FromFloat(sp.x), fp.FromFloat(y), fp.FromFloat(sp.z));
+        }
+
+        float SurfaceSnap(float x, float z, float defaultY)
+        {
+            return UnityEngine.Physics.Raycast(
+                new Vector3(x, 500f, z), Vector3.down, out RaycastHit hit, 1000f)
+                ? hit.point.y : defaultY;
         }
 
         IGroundProvider BuildGroundProvider()
@@ -414,7 +438,6 @@ namespace Golfin.Physics.Viewer
         {
             if (currentScene == PresetScene.Hole1)
                 return new SceneSurfaceProvider();
-
             SurfaceType surfaceType = preset.HasSurfaceOverride ? preset.SurfaceOverride : SurfaceType.Fairway;
             return new ConstantSurfaceProvider(surfaceType);
         }
@@ -423,13 +446,11 @@ namespace Golfin.Physics.Viewer
         {
             float carryM = 0f;
             SurfaceType finalSurface = SurfaceType.Fairway;
-
             if (t.terrainHits != null && t.terrainHits.Count > 0)
             {
                 carryM       = XZDist(preset.Origin, t.terrainHits[0].Position);
                 finalSurface = t.terrainHits[t.terrainHits.Count - 1].Surface;
             }
-
             float totalM  = XZDist(preset.Origin, t.finalPosition);
             float peakY   = 0f;
             float originY = preset.Origin.y.ToFloat();
@@ -438,7 +459,6 @@ namespace Golfin.Physics.Viewer
                 float y = s.position.y.ToFloat() - originY;
                 if (y > peakY) peakY = y;
             }
-
             int bounceCount = 0;
             if (t.terrainHits != null)
                 foreach (var h in t.terrainHits)
