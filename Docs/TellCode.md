@@ -190,6 +190,8 @@ Optional 9–10:
 - Confirmation that mouse-as-touch works in editor.
 - One short Debug.Log capture showing TouchPositionPx and TouchVelocityPxPerSec updating during a mouse drag in Play mode.
 
+✅ DONE: 2026-04-23 — Compile-clean. InputSystemSource correctly implements IShotInputSource (all 4 properties verified via reflection). Bootstrap calls EnhancedTouchSupport.Enable() + TouchSimulation.Enable() (both confirmed callable, no exception). ShotController [SerializeField] _inputSystemSource + Awake wiring confirmed. Golfin.Gameplay.Input.asmdef needed explicit Unity.InputSystem reference (not auto-included for custom asmdefs). Mouse-as-touch Live verification (drag + log) requires manual Play-mode test by Cesar — wire Shot.inputactions asset reference in InputSystemSource Inspector, enter Play mode, drag mouse, confirm IsTouching and position log output. Pushed to GitHub.
+
 ---
 
 ### Part D — Cone UI

@@ -18,7 +18,7 @@
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
 | Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass.** |
-| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B COMPLETE (2026-04-23)**. Part C (Input System) next. |
+| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C COMPLETE (2026-04-23)**. Part D (Cone UI) next after Architect ack. |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -65,9 +65,12 @@ See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools 
 - `Golfin.Gameplay.Defaults.asmdef` references `Golfin.Physics.Math` (needed for `fp` in StatBundle constructor)
 - `Golfin.Gameplay.Input.asmdef` references `Golfin.Physics.Core` (needed for ShotInput/BallPhysicsModifiers event types). Semantic seam preserved — no direct BallSimulation calls.
 
+- Phase 7 Part C: `Shot.inputactions` (two actions: Touch/PassThrough, TouchPress/Button; Touchscreen + Mouse bindings), `InputSystemSource` (5-sample ring buffer velocity, press→origin capture), `InputSimulationBootstrap` (BeforeSceneLoad; EnhancedTouchSupport + TouchSimulation). `Golfin.Gameplay.Input.asmdef` updated with Unity.InputSystem reference.
+  - Manual verification needed: Cesar wires Shot.inputactions in Inspector, enters Play mode, drags mouse to confirm IsTouching and velocity log.
+
 ### Still Open
-- Phase 7 Part C: Input System wiring (`Shot.inputactions`, `InputSystemSource`, mouse-as-touch)
-- Phase 7 Parts D–F: Cone UI, PhysicsLab integration, putt mode polish
+- Phase 7 Part D: Cone UI (`ShotConeView`) — awaiting Architect ack
+- Phase 7 Parts E–F: PhysicsLab integration, putt mode polish
 
 ---
 
