@@ -124,14 +124,28 @@ namespace Golfin.Physics.Viewer
         // Auto-derive look direction from scene type when not set in Inspector.
         Vector3 GetDefaultLookDirection()
         {
-            if (_defaultLookDirection.sqrMagnitude > 0.001f)
-                return new Vector3(_defaultLookDirection.x, 0f, _defaultLookDirection.z).normalized;
-
-            // Hole1: tee at (167.7, z, 31.23) → green at (-230, z, -73)
+            // Hole1: always use hardcoded tee→green direction regardless of serialized field.
+            // The old field default Vector3.forward=(0,0,1) is still in scene files, causing
+            // the sqrMagnitude check to wrongly accept it. Override unconditionally.
             if (currentScene == PresetScene.Hole1)
                 return new Vector3(-0.967f, 0f, -0.253f);
 
+            if (_defaultLookDirection.sqrMagnitude > 0.001f)
+                return new Vector3(_defaultLookDirection.x, 0f, _defaultLookDirection.z).normalized;
+
             return Vector3.right; // aimYaw=0 = +X default
+        }
+
+        public void SetReleaseToFire(bool value)
+        {
+            var dragger = GetComponentInChildren<ClubHandleDragger>(true);
+            if (dragger != null) dragger.ReleaseToFire = value;
+        }
+
+        public bool GetReleaseToFire()
+        {
+            var dragger = GetComponentInChildren<ClubHandleDragger>(true);
+            return dragger != null && dragger.ReleaseToFire;
         }
 
         // ── Camera orbit ───────────────────────────────────────────────────────

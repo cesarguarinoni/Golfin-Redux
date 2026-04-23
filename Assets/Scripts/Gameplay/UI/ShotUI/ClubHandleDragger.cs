@@ -23,6 +23,8 @@ namespace Golfin.Gameplay.UI.ShotUI
         [Tooltip("If true, releasing the handle always fires (no flick required). Good for debugging.")]
         [SerializeField] private bool _releaseToFire = false;
 
+        public bool ReleaseToFire { get => _releaseToFire; set => _releaseToFire = value; }
+
         private bool  _dragging;
         private float _peakPower;
         private float _peakFinetune;

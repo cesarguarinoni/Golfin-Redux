@@ -27,6 +27,7 @@ namespace Golfin.Physics.Viewer
         TMP_Text _readoutText;
         TMP_Text _deterLabel;
         TMP_Text _notesText;
+        TMP_Text _releaseFireLabel;
 
         static readonly float[]  PlayRates      = { 0.25f, 1f, 4f, float.MaxValue };
         static readonly string[] PlayRateLabels = { "0.25×", "1×", "4×", "Instant" };
@@ -103,6 +104,12 @@ namespace Golfin.Physics.Viewer
             var row3 = MakeButtonRow(panel);
             AddButton(row3, "Reset to Tee", () => controller?.ResetToTee());
 
+            // Release-to-fire toggle (prominent row)
+            var row4 = MakeButtonRow(panel);
+            _releaseFireLabel = null;
+            var releaseBtn = AddButton(row4, "Release Fire: OFF", () => ToggleReleaseFire());
+            _releaseFireLabel = releaseBtn.GetComponentInChildren<TMP_Text>();
+
             _deterLabel = AddText(panel, "", 16f);
             _deterLabel.color = Color.white;
 
@@ -112,6 +119,15 @@ namespace Golfin.Physics.Viewer
 
             _notesText = AddText(panel, "", 13f);
             _notesText.color = new Color(0.75f, 0.75f, 0.75f, 1f);
+        }
+
+        void ToggleReleaseFire()
+        {
+            if (controller == null) return;
+            bool next = !controller.GetReleaseToFire();
+            controller.SetReleaseToFire(next);
+            if (_releaseFireLabel != null)
+                _releaseFireLabel.text = next ? "Release Fire: ON" : "Release Fire: OFF";
         }
 
         // ── Cycle helpers ──────────────────────────────────────────────────────
@@ -201,11 +217,11 @@ namespace Golfin.Physics.Viewer
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             panel.transform.SetParent(transform, false);
             var rt = panel.GetComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.zero;
-            rt.pivot     = Vector2.zero;
-            rt.anchoredPosition = new Vector2(16f, 16f);
-            rt.sizeDelta = new Vector2(360f, 560f);
+            rt.anchorMin = new Vector2(1f, 0f);
+            rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot     = new Vector2(1f, 0f);
+            rt.anchoredPosition = new Vector2(-16f, 16f);
+            rt.sizeDelta = new Vector2(400f, 640f);
             panel.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.72f);
             var vl = panel.AddComponent<VerticalLayoutGroup>();
             vl.padding   = new RectOffset(10, 10, 10, 10);

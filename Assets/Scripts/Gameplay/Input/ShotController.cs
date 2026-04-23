@@ -113,7 +113,11 @@ namespace Golfin.Gameplay.Input
                 return;
             }
 
-            if (_inputSource == null) return;
+            if (_inputSource == null)
+            {
+                PublishState();
+                return;
+            }
 
             bool touching    = _inputSource.IsTouching;
             bool justLifted  = _wasTouching && !touching;
