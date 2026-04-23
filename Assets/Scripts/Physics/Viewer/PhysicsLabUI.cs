@@ -152,7 +152,7 @@ namespace Golfin.Physics.Viewer
         {
             _cameraIndex = (_cameraIndex + dir + CameraLabels.Length) % CameraLabels.Length;
             if (_cameraLabel != null) _cameraLabel.text = CameraLabels[_cameraIndex];
-            var cam = Object.FindObjectOfType<ChaseCamera>();
+            var cam = UnityEngine.Object.FindObjectOfType<ChaseCamera>();
             cam?.SetMode((ChaseCamera.Mode)_cameraIndex);
         }
 
