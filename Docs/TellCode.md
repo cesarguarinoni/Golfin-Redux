@@ -7,6 +7,50 @@
 
 ---
 
+## 🚨 PROBLEM REPORT — PhysicsLabZoneMeshBaker (SyncZoneMeshes) — 2026-04-23
+
+**Symptom:** Running `GOLFIN > Physics Lab > Sync Zone Meshes (Hole 1)` in edit mode deletes the existing zone meshes in `PhysicsLab_Hole1.unity` and replaces them with only 3 objects instead of the expected ~30. Bunker_1 is absent after every sync.
+
+**Scene state:**
+- `Assets/Golf/Courses/lomond-country-club/Generated/Hole_01_Geo.unity` — not git-tracked. Contains 30 `Golfin.Physics.Runtime.SurfaceMarker` components and 30 `Golfin.Course.SurfaceMarker` components (one pair per zone GO). Zone names: Bunker_1–7, BunkerContour_1–7, Fairway_1–3, Green_1, Tee_2–4, and others.
+- `Assets/Scenes/Physics/PhysicsLab_Hole1.unity` — git-tracked, currently restored to last known-good state via `git restore`.
+
+**Root cause (diagnosed but unresolved):**
+
+The 30 `Golfin.Physics.Runtime.SurfaceMarker` script refs in Hole_01_Geo.unity use a locally embedded MonoScript:
+
+```yaml
+--- !u!115 &1992067906
+MonoScript:
+  m_ClassName: SurfaceMarker
+  m_Namespace: Golfin.Physics.Runtime
+  m_AssemblyName: Golfin.Physics.Runtime
+```
+
+All 30 `Physics.Runtime.SurfaceMarker` components reference it as `m_Script: {fileID: 1992067906}`. This is the same format PhysicsLab_Hole1.unity uses for its own embedded MonoScript at `&118446399`. Despite this, Unity only resolves 3 of the 30 at runtime — `GetComponentsInChildren<Golfin.Physics.Runtime.SurfaceMarker>()` returns 3, not 30.
+
+Fallback to `Golfin.Course.SurfaceMarker` (GUID-based) also failed: `Golfin.Physics.Editor` asmdef cannot access `Golfin.Course` namespace — that class is in Assembly-CSharp and the editor asmdef's explicit references list doesn't include it (compile error CS0234).
+
+**What was tried and failed:**
+1. Patching refs to GUID format `{fileID: 11500000, guid: 1c2bdea8c6338274aa211ddbe774fb89}` — wrong, broke all 30.
+2. Adding Course.SurfaceMarker fallback to baker — CS0234 compile error.
+3. Restoring original local refs — still only 3 found at runtime.
+
+**Current file state (post-restore):**
+- `PhysicsLab_Hole1.unity` — restored from git, contains manually placed zone meshes (Bunkers 2–7, Fairways 1–3, Green_1, Tees 1–3; Bunker_1 absent).
+- `Hole_01_Geo.unity` — has correct local MonoScript ref at `&1992067906`; Course.SurfaceMarker refs use GUID format with `41a5e9f3c9ce4fa4f9ea872e45b244f4`.
+- `PhysicsLabZoneMeshBaker.cs` — has Physics.SurfaceMarker primary search + commented dead fallback. Compiles clean.
+
+**What the Architect needs to decide:**
+1. Why does Unity resolve only 3 of 30 embedded-MonoScript refs? Is the `Golfin.Physics.Runtime` asmdef not loaded when the generated scene is opened additively in the editor?
+2. Should the baker strategy change entirely — e.g. search by `MeshCollider` + name pattern instead of by component type?
+3. Should Bunker_1 be manually added to the lab scene for now (as a stopgap), or wait for the baker fix?
+4. Is this worth fixing, or should PhysicsLabZoneMeshBaker be deprecated now that Part E integration is complete and the lab uses live physics?
+
+**Current baker code:** `Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs`
+
+---
+
 ## 🚩 OPEN FLAGS — read before starting any new task
 
 > Architect-tracked open issues. Don't action without an explicit task block; just be aware they exist.
