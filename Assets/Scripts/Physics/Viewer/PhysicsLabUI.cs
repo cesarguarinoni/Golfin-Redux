@@ -71,6 +71,7 @@ namespace Golfin.Physics.Viewer
         public void ShowDeterminism(bool passed, int count)
         {
             if (_deterLabel == null) return;
+            _deterLabel.gameObject.SetActive(true);
             _deterLabel.text  = passed ? $"✓ {count}/{count} identical" : "✗ drift detected";
             _deterLabel.color = passed ? Color.green : Color.red;
         }
@@ -110,15 +111,22 @@ namespace Golfin.Physics.Viewer
             var releaseBtn = AddButton(row4, "Release Fire: OFF", () => ToggleReleaseFire());
             _releaseFireLabel = releaseBtn.GetComponentInChildren<TMP_Text>();
 
+            // Determinism result — hidden until Fire×5 runs
             _deterLabel = AddText(panel, "", 16f);
             _deterLabel.color = Color.white;
+            _deterLabel.gameObject.SetActive(false);
 
-            _readoutText = AddText(panel, "No shot fired.", 15f);
+            // Readout — 7 lines at ~22px each; Truncate prevents overflow
+            _readoutText = AddText(panel, "No shot fired.", 14f);
+            _readoutText.overflowMode = TMPro.TextOverflowModes.Truncate;
             var rdLE = EnsureLE(_readoutText.gameObject);
-            rdLE.preferredHeight = 130f;
+            rdLE.preferredHeight = 155f;
 
-            _notesText = AddText(panel, "", 13f);
+            // Notes — 2–3 lines of small grey text
+            _notesText = AddText(panel, "", 12f);
             _notesText.color = new Color(0.75f, 0.75f, 0.75f, 1f);
+            _notesText.overflowMode = TMPro.TextOverflowModes.Truncate;
+            EnsureLE(_notesText.gameObject).preferredHeight = 55f;
         }
 
         void ToggleReleaseFire()
