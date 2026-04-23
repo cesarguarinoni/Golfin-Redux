@@ -42,6 +42,24 @@ See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools 
 
 ---
 
+## Session Changes (2026-04-23 — Bug fixes post-git-restore)
+
+### Completed
+- **`PhysicsLabUI.cs`** — `CycleCamera()` fixed: was `GetComponentInChildren<ChaseCamera>()` (Main Camera is a root GO, not under LabRoot → always returned null → mode never changed). Now `UnityEngine.Object.FindObjectOfType<ChaseCamera>()`.
+- **`PhysicsLab_Hole1.unity`** — PowerHUD reparented from ConeRoot to ShotUI_Canvas root, anchor right-center at (-20, 100). Main Camera transform set to tee-facing position above terrain (raycasted surfaceY=10.36, camPos=(175.44, 13.36, 33.25)) so edit-mode view matches play-mode start.
+- **`PhysicsLabZoneMeshBaker.cs`** — Removed broken `Golfin.Course.SurfaceMarker` fallback (CS0234 — Assembly-CSharp not in asmdef refs). Problem report written to `Docs/TellCode.md` for Architect.
+- **Compile fixes** — `UnityEngine.Object` qualifier on `FindObjectOfType` (CS0104 ambiguous reference).
+
+### Open issues carried forward
+- ZoneMeshes baker still only finds 3/30 Physics.SurfaceMarker objects — see `TellCode.md` problem report.
+- Bunker_1 absent from PhysicsLab_Hole1 scene until baker is fixed.
+
+### Next
+- Part F: putt mode flag, debug toggles, final validation pass (awaiting Architect spec).
+- Cesar smoke test: enter Play mode in PhysicsLab_Hole1, touch-drag-flick to produce trajectory.
+
+---
+
 ## Session Changes (2026-04-23 — Phase 7 Part E: PhysicsLab_Hole1 Integration)
 
 ### Completed
