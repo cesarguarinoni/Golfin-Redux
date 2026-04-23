@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-22
+**Last Updated:** 2026-04-23
 
 ## Current Status
 
@@ -18,7 +18,7 @@
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
 | Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass.** |
-| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C COMPLETE (2026-04-23)**. Input verified working in Hole1. Part D (Cone UI) next after Architect ack. |
+| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D COMPLETE (2026-04-23)**. Cone UI live in ShotConeTest.unity. Part E (PhysicsLab integration) next after Architect ack. |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -39,6 +39,29 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-23 — Phase 7 Part D: Cone UI)
+
+### Completed
+- **`ConeMeshGraphic.cs`** — `MaskableGraphic` subclass; isoceles triangle via `OnPopulateMesh`. `HalfAngleDeg`/`HeightPx` properties call `SetVerticesDirty()` for cheap stat-driven width rebuilds. Pivot (0.5, 0) — apex up.
+- **`ConeAlphaController.cs`** — drives `CanvasGroup.alpha`: Idle=ConeIdleAlpha, Resolving=0, all others=1. `Mathf.MoveTowards` at ConeFadeIn/OutSeconds rate.
+- **`ShotConeView.cs`** — subscribes `OnStateChanged`; updates cone width (accuracy-driven), club handle (slides on X at `_handleYPx`), 3 stagger-phased arrows (Timing only), power%/yards HUD (active in Pulling+), targeting line with world→screen projection stub.
+- **`Golfin.Gameplay.UI.asmdef`** — refs Gameplay.Input, Gameplay.Config, Unity.TextMeshPro.
+- **`DebugShotInputSource.cs`** — IShotInputSource MonoBehaviour for in-scene test input.
+- **`ShotConeTestDriver.cs`** — drives controller to Timing state (frame 2: touch; frame 3: 170px pull → power 50%, immediately transitions to Timing).
+- **`ShotConeTest.unity`** — verified in Play mode: Idle (cone ghosted ~25% alpha, no arrows) and Timing (full alpha, 3 yellow stagger-phased arrows, HUD "50% / 125 yd", targeting line).
+- 12/12 ShotController tests still pass.
+
+### Deviations
+- Driver naturally reaches **Timing** (not Pulling) since `PowerNormalized > 0` triggers `TransitionToTiming()` in the same Pulling tick. Arrows are a Timing visual — this is correct behavior.
+- `DebugShotInputSource` + `ShotConeTestDriver` added to `Golfin.Gameplay.Input` assembly (not test-only) so they can be used as in-scene MonoBehaviours.
+
+### Still Open
+- Part E: wire ShotController + ShotConeView into PhysicsLab_Hole1 (awaiting Architect ack)
+- `InputSimulationBootstrap` still disabled — re-enable after Part E diagnosis
+- `heightmap.bytes` missing for Hole 1 — needs re-bake before Part E shot integration
 
 ---
 

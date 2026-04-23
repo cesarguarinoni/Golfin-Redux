@@ -16,16 +16,73 @@
 - **[2026-04-22] Bunker lip submesh classification deferred.** `SceneSurfaceProvider` is submesh-blind; whole bunker mesh classifies as `Sand` regardless of `BunkerLip` submesh. Polish item, not blocking. Don't proactively fix.
 - **[2026-04-22] Don't implement Code's "trees layer" proposal.** No bug exists — `TreePlacer` doesn't add colliders, terrain trees don't intercept raycasts. Audit confirmed in lessons file.
 - ✅ **[2026-04-22] Phase 6 Stat Coupling — COMPLETE.** 49/49 tests pass. See History Log.
+- **[2026-04-23] `heightmap.bytes` deleted from `Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/`.** `SceneGroundProvider` for Hole1 shots will fail until rebuilt. Either re-run the Phase 0 baker on Hole 1 or accept a flat-ground fallback in the lab. **Address before Part E shot integration** — without ground, ball goes nowhere visible.
+- **[2026-04-23] `HeightProvider` field on `PhysicsLabController` is dead wiring** — never read in code, but removing it from the scene was needed to fix Error Pause. Field itself is still in the .cs. Fold a `[SerializeField] HeightProvider heightProvider` removal into Part E cleanup.
 
 Full reasoning: `Docs/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 
 ---
 
-## ACTIVE TASK — Phase 7: Shot Controls v1 (input layer + cone UI + lab integration)
+## ACTIVE TASK — Phase 7 Part D: Cone UI
 
-### Context
+### Status
 
-Physics is complete through Phase 6 (`BallSimulation` + `ShotInputBuilder` + stat resolver). The gameplay input layer is the missing piece: nothing currently converts a player's touch input into the `(ShotInput, BallPhysicsModifiers)` tuple that `BallSimulation.Simulate()` consumes.
+Parts A, B, C complete. ShotController state machine works, Input System wires through, mouse-as-touch confirmed firing in editor. Now we render the cone, club, arrows, HUD, and targeting line so the player can see what they're doing.
+
+### Read first
+
+- `Docs/Game Design/SHOT_CONTROLS_DESIGN.md` §2 (visual layout), §3.1.2 (cone fade), §3.1.3 (targeting line), §3.3 (cone width = stat-driven), §3.4 (timing arrows), §7 (tunable constants).
+- `Docs/Game Design/In-Game - Shot Tests 5–9.png` for the visual reference.
+- `Assets/Scripts/Gameplay/Input/ShotController.cs` and `ShotInputState.cs` to see exactly what state the UI consumes.
+
+### Files to create
+
+1. `Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs` — MonoBehaviour on a Canvas child. Subscribes to `ShotController.OnStateChanged`. Renders cone outline, club trapezoid, timing arrows, power%/yards HUD, targeting line.
+2. `Assets/Scripts/Gameplay/UI/ShotUI/ConeAlphaController.cs` — fade per design §3.1.2 (ghost in Idle, fade in on Aiming, full in Pulling+, fade out on Resolving). Lerp + delta-time. No DOTween.
+3. `Assets/Scripts/Gameplay/UI/ShotUI/Golfin.Gameplay.UI.asmdef` — references `Golfin.Gameplay.Input`, `Golfin.Gameplay.Config`, `Unity.TextMeshPro` (verify exact name).
+
+### Architectural choices to make (Code decides, then justifies in done report)
+
+- **Cone outline render method.** Three options: (a) sprite Image, (b) `MaskableGraphic` subclass that builds `UIVertex` mesh at runtime, (c) `LineRenderer` in screen space. Option (b) is cleanest for stat-driven width changes — the mesh rebuilds on width change in `OnPopulateMesh`. Recommend (b) unless there's a reason not to.
+- **Targeting line.** Project world ball position to screen, draw forward `TargetingLineLengthMeters` along current aim heading projected onto the ground plane, then back to screen. Test on flat tee first, then a slope. uGUI Image stretched into a line is fine; `LineRenderer` in screen-space also fine.
+- **Timing arrows.** Object pool ~3 instances. Travel up the cone toward the apex per design §3.4. Speed = `BaseArrowSpeedHzAtCC0 + (CC * ArrowSpeedHzPerCC)` from `ControlsConfig`.
+- **HUD.** TextMeshPro at top-right of cone canvas. Live during Pulling. Yards = pre-cached max-carry for current club, scaled linearly by `PowerNormalized`. Compute the cached max-carry once on shot setup by simulating a 100% no-wind no-spin shot via `BallSimulation.Simulate()` — the lab controller can do this and pass the value into `ShotConeView` via a setter, since asmdef rules prevent `ShotConeView` itself from calling `BallSimulation`.
+
+### Visual standard
+
+Functional, not pretty. Placeholder colors: white/gray cone outline, blue trapezoid, yellow arrows, red HUD text. Cesar will style later. The bar to clear is: "Cesar can play a shot start-to-finish with feedback that matches what the design doc describes."
+
+Bottom-anchored, screen-fixed. Cone apex roughly at screen-center-Y; cone base at screen-bottom. Use a `CanvasScaler` Scale With Screen Size at 1080x1920 reference (mobile portrait).
+
+### Done report
+
+- Files added.
+- Cone outline rendering method chosen + 1-sentence justification.
+- Two screenshots via `screenshot-game-view`: (1) cone in Idle (ghosted ~25% alpha), (2) cone in Pulling at ~50% power with at least one arrow visible.
+- Confirmation that cone width changes when you flip the Club's Accuracy stat between low (e.g. 10) and high (e.g. 90) — a quick test scene tweak is fine.
+- Any deviations from the design doc with justification.
+
+### Iteration budget
+
+- 3 attempts on cone visual layout if positioning is off (mostly: cone size in screen pixels, arrow speed visibility, HUD legibility).
+- 1 attempt on targeting line projection if it jitters or drifts on slopes — if more, surface to Architect.
+- Beyond budget: surface for design re-tune, don't burn iterations.
+
+### DO NOT
+
+- Don't subscribe `ShotConeView` directly to `BallSimulation` — keep the asmdef boundary clean. Yards-cache value comes in via a setter.
+- Don't pre-build a fancy cone sprite asset — runtime mesh is more flexible for stat-driven width.
+- Don't use UI Toolkit (UITK). uGUI to match existing inventory screens.
+- Don't wire this into `PhysicsLab_Hole1` yet — that's Part E. For Part D, drop the canvas into a fresh empty test scene OR temporarily into Hole1's `LabRoot` for visual verification only.
+
+✅ DONE: 2026-04-23 — Part D complete. All 5 files created + ShotConeTest.unity verified in Play mode.
+- Cone method: (b) MaskableGraphic subclass (ConeMeshGraphic) — triangle via OnPopulateMesh; width rebuilds cheaply via SetVerticesDirty on stat change.
+- Screenshots: (1) Idle — cone ghosted at ~25% alpha, no arrows, targeting line visible; (2) Timing — full alpha, 3 stagger-phased yellow arrows traveling up cone, HUD "50% / 125 yd", targeting line above apex.
+- Cone width is accuracy-driven: HalfAngleDeg = lerp(ConeHalfAngleAtAcc0Deg, ConeHalfAngleAtAcc100Deg, accNorm) from ControlsConfig.
+- Deviations: (1) Driver drove to Timing state (not Pulling) due to ShotController transitioning immediately when PowerNormalized>0. Arrow display is in Timing, per spec arrows are a Timing visual. (2) HUD text showed in Idle (no state events fired when driver disabled — expected in test setup). (3) DebugShotInputSource + ShotConeTestDriver added as test-only helpers in Golfin.Gameplay.Input assembly.
+- 12/12 ShotController tests pass.
+
+
 
 This task builds the **flick-based shot control system** — a screen-anchored semi-cone UI that the player drags down (power) and flicks up through (commit), with timing arrows traveling up the cone and an aim-fine-tune via the club's lateral position inside the cone.
 
@@ -316,7 +373,10 @@ Beyond budget: surface for design re-tune, don't burn iterations.
 
 ## History Log (completed tasks, most recent first)
 
-- 🚧 **2026-04-23** Phase 7 Shot Controls v1 spec written — design doc `Docs/Game Design/SHOT_CONTROLS_DESIGN.md`. Awaiting Code execution. See ACTIVE TASK above.
+- 🚧 **2026-04-23** Phase 7 Shot Controls v1 — Parts A, B, C COMPLETE. Awaiting Part D (Cone UI).
+  - Part A: defaults + config + presets + controls.csv + loader. Compile clean, fields verified.
+  - Part B: ShotController + state machine + 12/12 EditMode tests pass. Zero direct BallSimulation refs (event seam preserved). Spec deviation: Input asmdef refs `Golfin.Physics.Core` for ShotInput/BallPhysicsModifiers types in event signature — accepted, semantic seam preserved.
+  - Part C: Input System wiring (no generated wrapper, string lookup; Unity.InputSystem explicitly in asmdef). 90-minute diagnostic detour: `HeightProvider.Awake()` LogError on missing heightmap.bytes → Unity Error Pause → all input symptoms looked like New Input System failure. Resolution: removed dead `HeightProvider` GO from scene. Lesson filed at `tasks/lessons.md`.
 
 - ✅ **2026-04-22** Manual Scene Snapshot tool — 6 files + 2 asmdefs. 8/8 EditMode tests pass (1.59s). Window at `Window > Golfin > Manual Scene Snapshot`. Capture/restore of manually-placed GameObjects, terrain trees, and detail layers via stable per-prop GUIDs (`ManualPropId`). Key deviation: ManualPropId moved to `Assets/Scripts/SceneSnapshot/` (runtime asmdef) — editor-only types can't be added via `AddComponent`.
 
