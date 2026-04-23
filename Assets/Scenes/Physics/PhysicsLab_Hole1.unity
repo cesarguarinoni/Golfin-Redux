@@ -167,6 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 118446399}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Runtime::Golfin.Physics.Runtime.SurfaceMarker
+  Type: 0
 --- !u!114 &46325247
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -485,6 +486,7 @@ MonoBehaviour:
   m_Script: {fileID: 118446399}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Runtime::Golfin.Physics.Runtime.SurfaceMarker
+  Type: 0
 --- !u!114 &90497937
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6581,51 +6583,6 @@ Transform:
   - {fileID: 1075126836}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1631076116
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1631076118}
-  - component: {fileID: 1631076117}
-  m_Layer: 0
-  m_Name: HeightProvider
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1631076117
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1631076116}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5a97c5ed0b23cfa49a82f0d224257610, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Golfin.Physics.Runtime::Golfin.Physics.Runtime.HeightProvider
-  heightmapAsset: {fileID: 4900000, guid: 6fb1b0270c4114244885c89d023bcb2c, type: 3}
---- !u!4 &1631076118
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1631076116}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1636042065
 GameObject:
   m_ObjectHideFlags: 0
@@ -7572,6 +7529,7 @@ GameObject:
   - component: {fileID: 1745967278}
   - component: {fileID: 1745967277}
   - component: {fileID: 1745967279}
+  - component: {fileID: 1745967280}
   m_Layer: 0
   m_Name: '_InputDebug '
   m_TagString: Untagged
@@ -7619,6 +7577,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95f469baf851e1a4783cba2d828dbf18, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.Input::Golfin.Gameplay.Input.InputSystemSourceDebugLog
+--- !u!114 &1745967280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1745967276}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c596676e8e79ef34b860bd22395c08a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.Input::Golfin.Gameplay.Input.InputDiagnosticTemp
 --- !u!1 &1750959304
 GameObject:
   m_ObjectHideFlags: 0

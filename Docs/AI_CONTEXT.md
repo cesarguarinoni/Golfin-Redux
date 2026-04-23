@@ -18,7 +18,7 @@
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
 | Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass.** |
-| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C COMPLETE (2026-04-23)**. Part D (Cone UI) next after Architect ack. |
+| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C COMPLETE (2026-04-23)**. Input verified working in Hole1. Part D (Cone UI) next after Architect ack. |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -39,6 +39,27 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-23 — Phase 7 Part C: Input Diagnostic & Fix)
+
+### Problem
+ALL input dead in `PhysicsLab_Hole1` — mouse (0,0), leftButton=False, UI buttons unresponsive. `PhysicsLab_Range` worked fine.
+
+### Root Cause
+`HeightProvider.Awake()` fires `Debug.LogError("[HeightProvider] No heightmap TextAsset assigned.")` because `heightmap.bytes` was deleted from git. Unity's **Error Pause** feature pauses play mode after the first error frame. In paused state, each Game View click only steps ONE frame — UI buttons appear dead, mouse reads stay at (0,0) from the previous frame.
+
+### Fix
+- Removed `HeightProvider` GameObject entirely from `PhysicsLab_Hole1.unity` (lines 6586-6630 in YAML: 3 objects — GO + MonoBehaviour + Transform).
+- `PhysicsLabController._heightProvider` field is unused in code, so removal is safe.
+- Deleted temp diagnostic scripts: `InputDiagnosticTemp.cs`, `InputSystemSourceDebugLog.cs`.
+
+### Verification needed by Cesar
+Enter Play mode in `PhysicsLab_Hole1` → click Game View → confirm lab Fire button works and `[ShotInput-Diag]` log shows `action.pressed=True`.
+
+### Would this affect builds?
+Yes — the `HeightProvider` component would throw on device too since `heightmap.bytes` is missing from git.
 
 ---
 

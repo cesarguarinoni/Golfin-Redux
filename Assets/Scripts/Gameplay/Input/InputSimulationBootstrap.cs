@@ -5,15 +5,14 @@ namespace Golfin.Gameplay.Input
 {
     internal static class InputSimulationBootstrap
     {
+        // DIAGNOSTIC: ALL bootstrap disabled to test whether EnhancedTouchSupport.Enable()
+        // at BeforeSceneLoad is the cause of UI buttons + raw mouse reads breaking.
+        // If input works with this commented out, we re-enable carefully and at a later phase.
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Init()
         {
-            // EnhancedTouchSupport must be enabled before Touch.activeTouches is valid.
-            // TouchSimulation routes mouse events through the touch pipeline in the editor.
-            EnhancedTouchSupport.Enable();
-#if UNITY_EDITOR
-            UnityEngine.InputSystem.EnhancedTouch.TouchSimulation.Enable();
-#endif
+            // EnhancedTouchSupport.Enable();
+            // UnityEngine.InputSystem.EnhancedTouch.TouchSimulation.Enable();
         }
     }
 }
