@@ -77,6 +77,8 @@ namespace Golfin.Physics.Viewer
             float surfaceY = UnityEngine.Physics.Raycast(
                 new Vector3(sp.x, 500f, sp.z), Vector3.down, out hit, 1000f)
                 ? hit.point.y : sp.y;
+            // GroundLevel mode works without a target — positions at tee until first shot.
+            chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
             chaseCamera.ResetToOrigin(new Vector3(sp.x, surfaceY, sp.z), Vector3.forward);
         }
 
@@ -204,6 +206,7 @@ namespace Golfin.Physics.Viewer
 
             if (chaseCamera != null)
             {
+                chaseCamera.SetMode(ChaseCamera.Mode.Chase);
                 chaseCamera.SetTarget(ballAnimator.CurrentBall);
                 chaseCamera.ResetToOrigin(origin, launchDir);
             }
