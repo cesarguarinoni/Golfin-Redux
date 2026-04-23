@@ -57,6 +57,7 @@ namespace Golfin.Gameplay.Input
 
         // ── External drag API (ClubHandle → drives shot without pixel-pull math) ──
 
+        public bool IsExternalDragActive => _externalDragActive;
         private bool _externalDragActive;
 
         public void BeginExternalDrag()
@@ -85,6 +86,13 @@ namespace Golfin.Gameplay.Input
                 CommitFlick();
             else
                 TransitionToIdle();
+        }
+
+        public void CancelExternalDrag()
+        {
+            if (!_externalDragActive) return;
+            _externalDragActive = false;
+            TransitionToIdle();
         }
 
         private void Awake()

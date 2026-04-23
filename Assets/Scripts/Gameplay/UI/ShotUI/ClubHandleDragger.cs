@@ -5,23 +5,27 @@ using Golfin.Gameplay.Input;
 namespace Golfin.Gameplay.UI.ShotUI
 {
     // Attach to the ClubHandle RectTransform.
-    // Pointer down on the handle → drives ShotController via external-drag API.
-    // Power and aim are derived from the handle's position within the cone geometry,
-    // so the handle follows the pointer 1:1 (clamped inside the cone outline).
+    // Drag down to set power, flick UP to fire at peak power.
+    // Cancels if released without an upward flick.
     [RequireComponent(typeof(RectTransform))]
     public class ClubHandleDragger : MonoBehaviour,
         IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
         [SerializeField] private ShotController    _shotController;
-        [SerializeField] private RectTransform     _coneRect;   // ConeMesh RectTransform
+        [SerializeField] private RectTransform     _coneRect;
         [SerializeField] private float             _coneHeightPx = 600f;
+        [SerializeField] private float             _flickThresholdPxPerFrame = 20f;
 
-        private bool _dragging;
+        private bool  _dragging;
+        private float _peakPower;
+        private float _peakFinetune;
 
         public void OnPointerDown(PointerEventData e)
         {
             if (_shotController == null || _coneRect == null) return;
-            _dragging = true;
+            _dragging     = true;
+            _peakPower    = 0f;
+            _peakFinetune = 0f;
             _shotController.BeginExternalDrag();
             ProcessDrag(e);
         }
@@ -36,32 +40,45 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             if (!_dragging) return;
             _dragging = false;
-            _shotController.EndExternalDrag();
+
+            // Fire only when the pointer flicks upward (toward ball/apex).
+            // e.delta is in screen pixels per frame; positive Y = up.
+            bool isFlick = e.delta.y >= _flickThresholdPxPerFrame && _peakPower > 0.02f;
+            if (isFlick)
+            {
+                _shotController.SetExternalPower(_peakPower, _peakFinetune);
+                _shotController.EndExternalDrag();
+            }
+            else
+            {
+                _shotController.CancelExternalDrag();
+            }
         }
 
         private void ProcessDrag(PointerEventData e)
         {
-            // Convert screen position to cone-local canvas space.
-            // Pass null camera for Screen Space Overlay canvas.
             Camera uiCam = e.pressEventCamera;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 _coneRect, e.position, uiCam, out var local);
 
-            // Clamp Y to [0, coneHeightPx]: 0 = base (max power), coneHeightPx = apex (zero power).
+            // Y=0 = cone base (max power), Y=coneHeightPx = apex (zero power).
             float handleY = Mathf.Clamp(local.y, 0f, _coneHeightPx);
 
-            // Cone width at this Y.
             float halfAngleRad  = _shotController.ConeHalfAngleDeg * Mathf.Deg2Rad;
             float halfBase      = _coneHeightPx * Mathf.Tan(halfAngleRad);
             float widthFraction = 1f - handleY / _coneHeightPx;
             float maxX          = halfBase * widthFraction;
+            float handleX       = Mathf.Clamp(local.x, -maxX, maxX);
 
-            // Clamp X inside cone outline.
-            float handleX = Mathf.Clamp(local.x, -maxX, maxX);
-
-            // Power: 0 at apex, 1 at base.
             float power    = 1f - handleY / _coneHeightPx;
             float finetune = maxX > 0.1f ? handleX / maxX : 0f;
+
+            // Track peak for flick-fire.
+            if (power > _peakPower)
+            {
+                _peakPower    = power;
+                _peakFinetune = finetune;
+            }
 
             _shotController.SetExternalPower(power, finetune);
         }

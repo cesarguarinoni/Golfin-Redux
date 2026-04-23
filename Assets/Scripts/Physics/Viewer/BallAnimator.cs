@@ -17,6 +17,7 @@ namespace Golfin.Physics.Viewer
         public float PlayRate { get; set; } = 1f;  // 0.25, 1, 4, or Instant (float.MaxValue)
 
         public Transform CurrentBall => _instance == null ? null : _instance.transform;
+        public bool IsPlaying => _playing;
 
         Trajectory  _trajectory;
         GameObject  _instance;
