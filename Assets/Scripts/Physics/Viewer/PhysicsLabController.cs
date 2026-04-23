@@ -566,10 +566,13 @@ namespace Golfin.Physics.Viewer
                                  $"({teeGOs.Count} tees, {greenGOs.Count} greens)");
             }
 
-            if (_shotConeView != null)
-                _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
-
             SetupAtTee();
+
+            if (_shotConeView != null)
+            {
+                try { _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards()); }
+                catch (System.Exception e) { Debug.LogWarning($"[PhysicsLab] ComputeMaxCarryYards failed: {e.Message}"); }
+            }
         }
 
         // Called by LabHoleBinder when the loaded hole scene is closed.
