@@ -4,7 +4,8 @@
     "references": [
         "Golfin.Gameplay.Input",
         "Golfin.Gameplay.Config",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "Unity.ugui"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

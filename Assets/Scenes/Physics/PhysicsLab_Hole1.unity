@@ -6584,6 +6584,7 @@ GameObject:
   - component: {fileID: 1443870532}
   - component: {fileID: 1443870534}
   - component: {fileID: 1443870533}
+  - component: {fileID: 1443870535}
   m_Layer: 0
   m_Name: ClubHandle
   m_TagString: Untagged
@@ -6648,6 +6649,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1443870531}
   m_CullTransparentMesh: 1
+--- !u!114 &1443870535
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1443870531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7a4da58bdb3d4a4dabac557a01247a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ClubHandleDragger
+  _shotController: {fileID: 1483952040}
+  _coneRect: {fileID: 1379986108}
+  _coneHeightPx: 600
 --- !u!1 &1455724831
 GameObject:
   m_ObjectHideFlags: 0
