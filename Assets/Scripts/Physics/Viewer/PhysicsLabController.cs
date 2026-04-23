@@ -93,6 +93,22 @@ namespace Golfin.Physics.Viewer
             // This prevents camera drags and button clicks from accidentally starting a shot.
             _shotController?.InjectInputSource(null);
 
+            // LabHoleBinder.OnEnable may not have fired if the hole was loaded in edit mode
+            // before entering play mode. Scan loaded scenes and call OnHoleLoaded if missed.
+            if (!_useSceneProviders)
+            {
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    var scene = SceneManager.GetSceneAt(i);
+                    string n = scene.name;
+                    if (n != null && n.StartsWith("Hole_") && n.EndsWith("_Geo") && scene.isLoaded)
+                    {
+                        OnHoleLoaded(n);
+                        break;
+                    }
+                }
+            }
+
             SetupAtTee();
         }
 

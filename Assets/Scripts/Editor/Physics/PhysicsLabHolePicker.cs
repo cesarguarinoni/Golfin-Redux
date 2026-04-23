@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using Golfin.Physics.Viewer;
 
 namespace Golfin.Physics.Editor
 {
@@ -103,6 +104,15 @@ namespace Golfin.Physics.Editor
             EditorSceneManager.OpenScene(hole.path, OpenSceneMode.Additive);
             EditorPrefs.SetInt(PREF_KEY, hole.number);
             Debug.Log($"[PhysicsLab] Loaded Hole {hole.number:D2}");
+
+            // Notify controller immediately (edit-mode: LabHoleBinder.OnEnable won't fire).
+            string holeName = Path.GetFileNameWithoutExtension(hole.path);
+            scaffoldScene = EditorSceneManager.GetSceneByPath(SCAFFOLD_PATH);
+            foreach (var root in scaffoldScene.GetRootGameObjects())
+            {
+                var ctrl = root.GetComponentInChildren<PhysicsLabController>(true);
+                if (ctrl != null) { ctrl.OnHoleLoaded(holeName); break; }
+            }
         }
 
         void UnloadCurrentHole()
@@ -112,6 +122,15 @@ namespace Golfin.Physics.Editor
             var scene = EditorSceneManager.GetSceneByName(name);
             if (scene.IsValid())
                 EditorSceneManager.CloseScene(scene, removeScene: true);
+
+            // Notify controller (edit-mode: LabHoleBinder.OnDisable won't fire).
+            var scaffoldScene = EditorSceneManager.GetSceneByPath(SCAFFOLD_PATH);
+            if (!scaffoldScene.IsValid()) return;
+            foreach (var root in scaffoldScene.GetRootGameObjects())
+            {
+                var ctrl = root.GetComponentInChildren<PhysicsLabController>(true);
+                if (ctrl != null) { ctrl.OnHoleUnloaded(); break; }
+            }
         }
 
         string GetLoadedHoleName()
