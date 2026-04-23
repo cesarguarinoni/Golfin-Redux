@@ -7,7 +7,131 @@
 
 ---
 
-## 🚨 PROBLEM REPORT — PhysicsLabZoneMeshBaker (SyncZoneMeshes) — 2026-04-23
+## 🔶 IN PROGRESS — PhysicsLab: migrate to scaffold + multi-hole picker — 2026-04-24
+
+### Background
+
+The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking invisible collider copies of zone meshes into a per-hole lab scene, the lab becomes a single `LabScaffold.unity` that loads any `Hole_XX_Geo.unity` additively at edit-time. Every hole becomes playable in the lab with zero per-hole scene maintenance.
+
+### Architecture
+
+- **`LabScaffold.unity`** (new, git-tracked) — LabRoot, ShotController, ShotUI_Canvas + cone hierarchy, ChaseCamera + Main Camera, BallAnimator, PhysicsLabController, PhysicsLabUI, InputSystemSource, TrajectoryRenderer. **No ground, no zones, no hole-specific refs.**
+- **`PhysicsLabHolePicker.cs`** (new editor window) — lists all `Hole_XX_Geo.unity` under `Assets/Golf/Courses/lomond-country-club/Generated/` (exclude `Video/` subfolder), "Load Hole N" button opens the selected hole additively atop `LabScaffold.unity`, "Unload" button closes it without saving.
+- **Auto tee anchor** — `PhysicsLabController.SetupAtTee()` locates a GO in the loaded hole scene carrying `Golfin.Course.SurfaceMarker` with `surfaceType == Tee (enum value 6)` via reflection (same pattern as the earlier baker fix decision) and spawns the ball at that GO's position. Multiple tees → pick the one closest to the scene bounds centroid (approximation of the back tee; refine later if wrong hole).
+- **Providers stay as they are.** `SceneGroundProvider` / `SceneSurfaceProvider` already raycast against whatever colliders are in the currently-loaded scenes — no rebinding needed. Loading a hole scene additively makes its zone-mesh colliders visible to the raycasts automatically.
+
+### Read first
+
+- `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — the existing scene brain. You'll move refs to it from `PhysicsLab_Hole1.unity` into `LabScaffold.unity`.
+- `Assets/Scenes/Physics/PhysicsLab_Hole1.unity` — source of the scaffold contents.
+- `Assets/Scripts/Course/SurfaceMarker.cs` — `SurfaceType` enum (Tee = 6, CartPath = 7).
+
+### Pre-flight
+
+- `Golfin.Course.SurfaceMarker` is in `Assembly-CSharp`. `Golfin.Physics.Viewer` asmdef cannot reference it directly — use reflection (`System.Type.GetType("Golfin.Course.SurfaceMarker, Assembly-CSharp")`) when searching for tee GOs.
+- `SurfaceType` enum value for Tee is **6** (hardcode it with a comment; adding the asmdef ref is out of scope).
+- `currentScene` field on `PhysicsLabController` is an enum (`PresetScene.Range | Hole1 | ...`). Extend only if needed — prefer a new `currentScene = PresetScene.HoleLoaded` value (or a bool `_useSceneProviders`) to indicate "use SceneGround/Surface providers" without hardcoding Hole1.
+
+### Files to create
+
+1. **`Assets/Scenes/Physics/LabScaffold.unity`** — new scene. Build by duplicating `PhysicsLab_Hole1.unity`, then stripping:
+   - `ZoneMeshes_Physics` root (the baked container)
+   - Any terrain GameObject (if present — terrain is in Hole_XX_Geo scenes, not the lab)
+   - Any hardcoded tee/ground visuals specific to Hole 1
+   - Skybox / lighting env stays
+   - Main Camera stays but reset transform to origin-ish (loader will reposition via SetupAtTee)
+   Keep: LabRoot + all children (ShotController, ShotUI_Canvas + cone hierarchy, chaseCamera, ballAnimator, trajectoryRenderer, physicsLabUI, InputSystemSource).
+
+2. **`Assets/Scripts/Editor/Physics/PhysicsLabHolePicker.cs`** — `EditorWindow` with:
+   - `[MenuItem("GOLFIN/Physics Lab/Hole Picker")]` to open.
+   - Scans `Assets/Golf/Courses/lomond-country-club/Generated/*.unity` (top level only, exclude subfolders like `Video/`). Extracts hole number from filename.
+   - Dropdown + "Load" button. On Load:
+     - Saves currently modified scenes (with user prompt).
+     - Ensures `LabScaffold.unity` is the active scene (opens it single-mode if not).
+     - Opens selected `Hole_XX_Geo.unity` additively.
+     - Saves preference: `EditorPrefs.SetInt("Golfin.PhysicsLab.CurrentHole", N)` so next time the picker opens it defaults to that hole.
+   - "Unload Current Hole" button: closes any loaded `Hole_XX_Geo.unity` scene without saving.
+   - "Reload" convenience: unload + load same hole.
+
+3. **`Assets/Scripts/Physics/Viewer/LabHoleBinder.cs`** (new, Runtime) — small component on LabRoot:
+   - Subscribes to `EditorSceneManager.sceneOpened` and `sceneClosed` (wrap in `#if UNITY_EDITOR`).
+   - On a Hole_XX_Geo scene opened, calls `PhysicsLabController.OnHoleLoaded(sceneName)` which (a) finds the tee GO by `Course.SurfaceMarker` type==Tee via reflection, (b) sets `_ballSpawnPoint` to that transform, (c) calls `SetupAtTee()`, (d) recomputes max-carry, (e) sets the providers flag to scene-mode.
+   - On scene closed (or when LabScaffold goes active alone), calls `PhysicsLabController.OnHoleUnloaded()` which reverts to flat-ground fallback.
+
+### Files to modify
+
+1. **`Assets/Scripts/Physics/Viewer/PhysicsLabController.cs`**:
+   - Replace `if (currentScene == PresetScene.Hole1)` with a new runtime flag `bool _useSceneProviders` (default false). `LabHoleBinder` flips it true on hole-load, false on unload.
+   - Remove the hardcoded Hole1 tee→green look direction in `GetDefaultLookDirection()`. Replace with: if `_useSceneProviders` is true, compute look direction from tee GO toward the Green_1 GO's centroid (find via reflection, `Course.SurfaceMarker` type==Green value 1); fall back to `_defaultLookDirection` or `Vector3.right` otherwise.
+   - New public method `OnHoleLoaded(string sceneName)`:
+     - Finds tee GO (Course.SurfaceMarker type==Tee value 6) in the scene matching `sceneName`, picks the one closest to the Green_1 centroid if multiple.
+     - Sets `_ballSpawnPoint` to the tee GO's transform (create a runtime empty child of LabRoot, position it there, assign).
+     - Sets `_useSceneProviders = true`.
+     - Calls `SetupAtTee()` and refreshes max-carry.
+   - New public method `OnHoleUnloaded()`:
+     - Sets `_useSceneProviders = false`.
+     - Nulls the runtime tee anchor (or resets to scaffold origin).
+
+2. **`Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs`** — leave untouched for now. Delete in step 5 of validation, AFTER Cesar confirms the scaffold works.
+
+3. **`Assets/Scenes/Physics/PhysicsLab_Hole1.unity`** — do not touch. Keep as reference until confirmed.
+
+### Validation
+
+**Step 1 — Scaffold builds.** `LabScaffold.unity` compiles, opens, no errors in `console-get-logs`. All non-hole-specific components present on LabRoot. Take screenshot of hierarchy.
+
+**Step 2 — Picker works for Hole 1.** `GOLFIN > Physics Lab > Hole Picker` opens. Select Hole 1. Click Load. Hole_01_Geo.unity loads additively. Console should log tee GO found, look direction computed. Ball spawns at tee. Enter play mode — fire `[Debug] Fire Preset`, get a visible trajectory on the Hole 1 terrain.
+
+**Step 3 — Picker generalizes.** Without exiting play mode (or unload first and re-enter edit mode), pick Hole 7 (or any mid-hole with varied terrain). Load. Confirm:
+   - Hole_07_Geo.unity loads.
+   - Ball respawns at Hole 7's tee.
+   - Look direction points roughly toward Hole 7's green.
+   - Fire a preset shot, ball rolls on Hole 7 terrain.
+
+**Step 4 — Unload works.** Click Unload. Hole scene closes. Ball returns to scaffold origin (or stays; either is fine as long as no exceptions). Firing a preset should fall back to flat-ground (or no-op if no anchor) without exceptions.
+
+**Step 5 — Cleanup (ONLY after Cesar confirms steps 1–4 work).**
+   - Delete `Assets/Scenes/Physics/PhysicsLab_Hole1.unity` + `.meta`.
+   - Delete `Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs` + `.meta`.
+   - Remove deferred-flag entries in `TellCode.md` covering the baker + Physics.Runtime.SurfaceMarker edit-time resolution issue (both obsoleted by the scaffold; play-time resolution is what the lab uses).
+   - **Do not commit these deletions yourself.** Note them in the done report and let Cesar run the cleanup.
+
+### Done report
+
+- Scaffold scene created, hierarchy screenshot.
+- Picker window screenshot.
+- Hole 1 load: trajectory screenshot mid-flight.
+- Hole 7 (or whichever second hole): trajectory screenshot mid-flight.
+- Unload behavior confirmation.
+- Cleanup checklist (steps 5 items) — flagged but NOT executed.
+- Any deviations, especially if tee detection fails for a hole (which hole, what the reflection query found).
+
+### Iteration budget
+
+- 2 attempts on scaffold construction (duplicate → strip).
+- 2 attempts on picker + binder wiring.
+- 2 attempts on per-hole tee detection if Green_1 centroid heuristic picks the wrong tee (fallback: pick any Tee GO; surface the issue).
+- If a hole's Green_1 isn't named exactly `Green_1` but follows a different pattern, log the actual names found and stop — don't guess.
+
+### DO NOT
+
+- Don't touch `HoleGeoImporter.cs`.
+- Don't modify any `Hole_XX_Geo.unity` file directly.
+- Don't delete `PhysicsLab_Hole1.unity` or `PhysicsLabZoneMeshBaker.cs` until Cesar confirms the scaffold works end-to-end on at least 2 different holes.
+- Don't add `Assembly-CSharp` to the `Golfin.Physics.Viewer` asmdef. Use reflection for Course.SurfaceMarker lookups.
+- Don't re-run any Phase 0 bakers — heightmaps are baked, per Cesar.
+
+---
+
+✅ CODE COMPLETE: 2026-04-24 — LabScaffold.unity created + picker + binder written. Compile-verified (both LabHoleBinder and PhysicsLabHolePicker types found at runtime). Awaiting Cesar validation steps 1–4 (open scaffold, load hole, confirm tee spawn + trajectory, unload). Step 5 cleanup (delete PhysicsLab_Hole1.unity + ZoneMeshBaker.cs) blocked on Cesar confirmation.
+
+## ✅ CANCELLED — reflection-based baker fix (2026-04-24)
+
+Superseded by the scaffold migration above. `PhysicsLabZoneMeshBaker` will be deleted after scaffold validation.
+
+---
+
+## PRIOR PROBLEM REPORT — PhysicsLabZoneMeshBaker (SyncZoneMeshes) — 2026-04-23
 
 **Symptom:** Running `GOLFIN > Physics Lab > Sync Zone Meshes (Hole 1)` in edit mode deletes the existing zone meshes in `PhysicsLab_Hole1.unity` and replaces them with only 3 objects instead of the expected ~30. Bunker_1 is absent after every sync.
 

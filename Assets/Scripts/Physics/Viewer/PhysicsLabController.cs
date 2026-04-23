@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime;
@@ -18,6 +19,13 @@ namespace Golfin.Physics.Viewer
     {
         [Header("Scene Identity")]
         [SerializeField] PresetScene currentScene = PresetScene.Range;
+
+        // Set true by LabHoleBinder when a Hole_XX_Geo scene is loaded additively.
+        // Drives BuildGroundProvider/BuildSurfaceProvider to use scene-raycast providers.
+        bool _useSceneProviders;
+        Vector3 _loadedHoleGreenCentroid;
+        bool    _greenCentroidValid;
+        Transform _runtimeTeeAnchor;
 
         [Header("References")]
         [SerializeField] TrajectoryRenderer trajectoryRenderer;
@@ -124,9 +132,15 @@ namespace Golfin.Physics.Viewer
         // Auto-derive look direction from scene type when not set in Inspector.
         Vector3 GetDefaultLookDirection()
         {
-            // Hole1: always use hardcoded tee→green direction regardless of serialized field.
-            // The old field default Vector3.forward=(0,0,1) is still in scene files, causing
-            // the sqrMagnitude check to wrongly accept it. Override unconditionally.
+            // When a hole is loaded via LabHoleBinder, compute direction tee → green centroid.
+            if (_useSceneProviders && _ballSpawnPoint != null && _greenCentroidValid)
+            {
+                Vector3 dir = _loadedHoleGreenCentroid - _ballSpawnPoint.position;
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.01f) return dir.normalized;
+            }
+
+            // Legacy Hole1 hardcoded direction (PhysicsLab_Hole1 scene, PresetScene.Hole1).
             if (currentScene == PresetScene.Hole1)
                 return new Vector3(-0.967f, 0f, -0.253f);
 
@@ -446,17 +460,106 @@ namespace Golfin.Physics.Viewer
 
         IGroundProvider BuildGroundProvider()
         {
-            if (currentScene == PresetScene.Hole1)
+            if (currentScene == PresetScene.Hole1 || _useSceneProviders)
                 return new SceneGroundProvider();
             return new FlatGround(fp.Zero);
         }
 
         ISurfaceProvider BuildSurfaceProvider(ShotPreset preset)
         {
-            if (currentScene == PresetScene.Hole1)
+            if (currentScene == PresetScene.Hole1 || _useSceneProviders)
                 return new SceneSurfaceProvider();
             SurfaceType surfaceType = preset.HasSurfaceOverride ? preset.SurfaceOverride : SurfaceType.Fairway;
             return new ConstantSurfaceProvider(surfaceType);
+        }
+
+        // Called by LabHoleBinder when a Hole_XX_Geo scene is opened additively.
+        public void OnHoleLoaded(string sceneName)
+        {
+            _useSceneProviders = true;
+
+            System.Type smType = System.Type.GetType("Golfin.Course.SurfaceMarker, Assembly-CSharp");
+            if (smType == null)
+            {
+                Debug.LogWarning("[PhysicsLab] Course.SurfaceMarker not found via reflection — tee detection skipped.");
+                SetupAtTee();
+                return;
+            }
+
+            System.Reflection.FieldInfo stField = smType.GetField("surfaceType");
+
+            var teeGOs   = new System.Collections.Generic.List<GameObject>();
+            var greenGOs = new System.Collections.Generic.List<GameObject>();
+
+            // Search only within the newly loaded scene.
+            Scene loadedScene = SceneManager.GetSceneByName(sceneName);
+            var roots = loadedScene.IsValid() ? loadedScene.GetRootGameObjects()
+                                              : new GameObject[0];
+            foreach (var root in roots)
+            {
+                foreach (var mb in root.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (mb == null || mb.GetType() != smType) continue;
+                    int val = (int)stField.GetValue(mb);
+                    if (val == 6) teeGOs.Add(mb.gameObject);   // Tee
+                    else if (val == 1) greenGOs.Add(mb.gameObject); // Green
+                }
+            }
+
+            // Compute green centroid.
+            _loadedHoleGreenCentroid = Vector3.zero;
+            _greenCentroidValid      = greenGOs.Count > 0;
+            foreach (var g in greenGOs) _loadedHoleGreenCentroid += g.transform.position;
+            if (_greenCentroidValid) _loadedHoleGreenCentroid /= greenGOs.Count;
+
+            // Pick tee closest to green centroid (back tee approximation).
+            GameObject teeGO = null;
+            if (teeGOs.Count > 0)
+            {
+                if (_greenCentroidValid)
+                {
+                    float best = float.MaxValue;
+                    foreach (var t in teeGOs)
+                    {
+                        float d = Vector3.Distance(t.transform.position, _loadedHoleGreenCentroid);
+                        if (d < best) { best = d; teeGO = t; }
+                    }
+                }
+                else teeGO = teeGOs[0];
+            }
+
+            if (teeGO != null)
+            {
+                if (_runtimeTeeAnchor == null)
+                {
+                    var go = new GameObject("_RuntimeTeeAnchor");
+                    go.transform.SetParent(transform);
+                    _runtimeTeeAnchor = go.transform;
+                }
+                _runtimeTeeAnchor.position = teeGO.transform.position;
+                _ballSpawnPoint = _runtimeTeeAnchor;
+                Debug.Log($"[PhysicsLab] OnHoleLoaded: {sceneName} — tee at {teeGO.transform.position:F2} " +
+                          $"({teeGOs.Count} tees, {greenGOs.Count} greens found)");
+            }
+            else
+            {
+                Debug.LogWarning($"[PhysicsLab] OnHoleLoaded: no Tee SurfaceMarker found in {sceneName}. " +
+                                 $"({teeGOs.Count} tees, {greenGOs.Count} greens)");
+            }
+
+            if (_shotConeView != null)
+                _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
+
+            SetupAtTee();
+        }
+
+        // Called by LabHoleBinder when the loaded hole scene is closed.
+        public void OnHoleUnloaded()
+        {
+            _useSceneProviders   = false;
+            _greenCentroidValid  = false;
+            _ballSpawnPoint      = null;
+            Debug.Log("[PhysicsLab] OnHoleUnloaded — reverted to flat-ground fallback.");
         }
 
         ShotReadout BuildReadout(ShotPreset preset, Trajectory t)

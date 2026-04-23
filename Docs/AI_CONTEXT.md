@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-23
+**Last Updated:** 2026-04-24
 
 ## Current Status
 
@@ -19,6 +19,7 @@
 | Leveling Economy | ✅ Rarity-based |
 | Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass.** |
 | Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D+E COMPLETE (2026-04-23)**. Cone UI live in ShotConeTest.unity. PhysicsLab_Hole1 wired for live touch shots. Part F (putt mode + debug toggles) next. |
+| PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -39,6 +40,33 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-24 — PhysicsLab Scaffold Migration)
+
+### Completed
+- **`PhysicsLabController.cs`** — Added `_useSceneProviders` bool flag (replaces `if (currentScene == PresetScene.Hole1)` in BuildGroundProvider/BuildSurfaceProvider). Added `_loadedHoleGreenCentroid`, `_greenCentroidValid`, `_runtimeTeeAnchor` fields. Updated `GetDefaultLookDirection()`: when `_useSceneProviders` is true, computes direction from tee→green centroid (falls back to legacy Hole1 hardcoded direction otherwise). Added `OnHoleLoaded(string sceneName)`: reflection-based tee detection via `Golfin.Course.SurfaceMarker` (Assembly-CSharp), picks tee closest to green centroid, creates `_RuntimeTeeAnchor` GO, sets `_ballSpawnPoint`, calls `SetupAtTee()`. Added `OnHoleUnloaded()`: resets `_useSceneProviders = false`. Added `using UnityEngine.SceneManagement`.
+- **`LabHoleBinder.cs`** (new, `Assets/Scripts/Physics/Viewer/`) — Runtime component on LabRoot. `#if UNITY_EDITOR` subscribes to `EditorSceneManager.sceneOpened/sceneClosed`; routes to `OnHoleLoaded`/`OnHoleUnloaded`. `OnEnable()` also scans currently loaded scenes (handles Play-mode start when hole was pre-loaded in Edit mode).
+- **`PhysicsLabHolePicker.cs`** (new, `Assets/Scripts/Editor/Physics/`) — `[MenuItem("GOLFIN/Physics Lab/Hole Picker")]` EditorWindow. Scans `Assets/Golf/Courses/lomond-country-club/Generated/*.unity` (TopDirectoryOnly). Dropdown + Load/Unload/Reload buttons. Saves selected hole to `EditorPrefs`. Ensures LabScaffold is active scene before loading hole additively.
+- **`LabScaffold.unity`** (new, `Assets/Scenes/Physics/`) — Duplicated from `PhysicsLab_Hole1.unity`. `ZoneMeshes_Physics` root destroyed. `PhysicsLabController.currentScene` set to `Range (0)`. `LabHoleBinder` component added to `LabRoot` with `_controller` wired to `PhysicsLabController`. Compile-verified: both new types resolved successfully via reflection in script-execute.
+
+### Architecture change
+- `PhysicsLab_Hole1.unity` is **untouched** (preserved as reference per spec).
+- `PhysicsLabZoneMeshBaker.cs` is **untouched** (deprecated but kept until Cesar confirms scaffold works end-to-end).
+- `LabScaffold.unity` is the new primary lab scene — loads any hole additively via the Hole Picker.
+
+### Next — Cesar's validation steps (per TellCode spec)
+1. **Step 1:** Open `LabScaffold.unity`, confirm hierarchy: LabRoot + ShotController, ShotUI_Canvas, ChaseCamera, BallAnimator, LabHoleBinder wired. No ZoneMeshes_Physics. Take hierarchy screenshot.
+2. **Step 2:** `GOLFIN > Physics Lab > Hole Picker` → select Hole 1 → Load. Confirm Hole_01_Geo loads additively. Ball spawns at tee. Enter Play mode → fire `[Debug] Fire Preset`, get trajectory.
+3. **Step 3:** Unload Hole 1, load Hole 7 (or any other). Ball respawns at that hole's tee. Fire preset, get trajectory on new terrain.
+4. **Step 4:** Unload. No exceptions.
+5. **Step 5 (only after Steps 1–4 pass):** Delete `PhysicsLab_Hole1.unity` and `PhysicsLabZoneMeshBaker.cs` — Cesar runs this, not Claude Code.
+
+### Open flags (carry-forward)
+- `heightmap.bytes` deleted for Hole 1 — SceneGroundProvider handles ground via raycast, no blocking issue.
+- Bunker_1 absent in old PhysicsLab_Hole1 — irrelevant now (scaffold uses live hole scenes).
+- Part F (putt mode + debug toggles) still pending after scaffold validation.
 
 ---
 
