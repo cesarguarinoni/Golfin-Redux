@@ -69,6 +69,17 @@ namespace Golfin.Physics.Viewer
                 _shotController.OnShotResolved -= HandleShotResolved;
         }
 
+        void Start()
+        {
+            if (_ballSpawnPoint == null || chaseCamera == null) return;
+            Vector3 sp = _ballSpawnPoint.position;
+            RaycastHit hit;
+            float surfaceY = UnityEngine.Physics.Raycast(
+                new Vector3(sp.x, 500f, sp.z), Vector3.down, out hit, 1000f)
+                ? hit.point.y : sp.y;
+            chaseCamera.ResetToOrigin(new Vector3(sp.x, surfaceY, sp.z), Vector3.forward);
+        }
+
         // ── Public API ─────────────────────────────────────────────────────────
 
         // [Debug] Fire Preset — keep for lab development
