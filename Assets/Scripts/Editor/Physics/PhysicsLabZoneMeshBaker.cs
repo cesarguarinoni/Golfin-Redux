@@ -3,8 +3,6 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Golfin.Physics.Runtime;
-
 namespace Golfin.Physics.Editor
 {
     public static class PhysicsLabZoneMeshBaker
@@ -39,14 +37,28 @@ namespace Golfin.Physics.Editor
                 return;
             }
 
-            // Collect all SurfaceMarker GOs from the generated scene
+            // Search by Course.SurfaceMarker (GUID-referenced, always resolves) to find zone GOs.
+            // Each zone GO also carries a Physics.Runtime.SurfaceMarker on the same object.
             var markers = new List<GameObject>();
             foreach (var root in generatedScene.GetRootGameObjects())
             {
-                foreach (var sm in root.GetComponentsInChildren<SurfaceMarker>(true))
+                foreach (var sm in root.GetComponentsInChildren<Golfin.Physics.Runtime.SurfaceMarker>(true))
                     markers.Add(sm.gameObject);
             }
-            Debug.Log($"[PhysicsLabBaker] Found {markers.Count} SurfaceMarker objects in Generated scene.");
+
+            // Fallback: search by Course.SurfaceMarker if Physics search returns nothing.
+            // Both markers live on the same GO so results are equivalent.
+            if (markers.Count == 0)
+            {
+                Debug.LogWarning("[PhysicsLabBaker] Physics.SurfaceMarker search returned 0 — falling back to Course.SurfaceMarker.");
+                foreach (var root in generatedScene.GetRootGameObjects())
+                {
+                    foreach (var csm in root.GetComponentsInChildren<Golfin.Course.SurfaceMarker>(true))
+                        markers.Add(csm.gameObject);
+                }
+            }
+
+            Debug.Log($"[PhysicsLabBaker] Found {markers.Count} zone mesh objects in Generated scene.");
 
             // Remove previous baked container from lab scene
             foreach (var root in labScene.GetRootGameObjects())
