@@ -4093,6 +4093,8 @@ namespace Golfin.CourseImport
 
             var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
             marker.surfaceType = surfaceType;
+            var physMarker = go.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>();
+            physMarker.Type = SurfaceMarkerMap.MapCourseToPhysics((int)surfaceType);
             return go;
         }
 
