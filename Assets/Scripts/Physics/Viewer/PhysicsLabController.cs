@@ -231,34 +231,19 @@ namespace Golfin.Physics.Viewer
         {
             if (_shotController != null) _shotController.CompleteShot();
 
-            // Clear camera target before PlaceAtRest destroys the old ball instance.
-            if (chaseCamera != null) chaseCamera.SetTarget(null);
-
-            float y     = SurfaceSnap(worldPos.x, worldPos.z, worldPos.y);
+            float y   = SurfaceSnap(worldPos.x, worldPos.z, worldPos.y);
             Vector3 pos = new Vector3(worldPos.x, y, worldPos.z);
 
             _orbitCenter = pos;
             if (ballAnimator != null) ballAnimator.PlaceAtRest(pos);
-
-            // Prevent HandleCameraOrbit from firing its "animation ended" block next frame
-            // if the ball was still animating when placement was requested.
-            _prevBallPlaying = false;
 
             Vector3 lookDir = GetDefaultLookDirection();
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
 
-            // Update _shotOrigin so GroundLevel camera positions itself at the new placement.
-            if (chaseCamera != null)
-                chaseCamera.ResetToOrigin(pos, lookDir);
-
             Camera cam = chaseCamera?.GetComponent<Camera>();
             if (cam != null) ApplyCameraYaw(cam);
-
-            // Update targeting line to track the newly spawned ball.
-            if (_shotConeView != null && ballAnimator?.CurrentBall != null)
-                _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
 
             if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
                 chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
