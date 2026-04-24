@@ -1,0 +1,43 @@
+# A2 — Hole_01_Geo Marker Audit
+# Date: 2026-04-25 08:07:20
+# Scene: Assets/Golf/Courses/lomond-country-club/Generated/Hole_01_Geo.unity
+
+## Summary
+Total collider GOs: 30
+ZERO valid Physics markers in parent chain: 21
+ONE valid Physics marker: 9
+MULTIPLE valid Physics markers (duplicate): 0
+Has at least one broken/missing-script component: 27
+Physics marker on PARENT (not direct GO): 0
+
+## Detail (status TAB goName TAB courseType TAB physCount TAB broken TAB markers TAB path)
+ZERO_PHYS+BROKEN	Bunker_1	course=Bunker	physCount=0	broken=3	markers=[MISSING_SCRIPT@Bunker_1,MISSING_SCRIPT@Bunker_1,MISSING_SCRIPT@Bunker_1]	path=HoleRoot/Bunkers/Bunker_1
+ZERO_PHYS+BROKEN	Bunker_2	course=Bunker	physCount=0	broken=3	markers=[MISSING_SCRIPT@Bunker_2,MISSING_SCRIPT@Bunker_2,MISSING_SCRIPT@Bunker_2]	path=HoleRoot/Bunkers/Bunker_2
+ZERO_PHYS+BROKEN	Bunker_3	course=Bunker	physCount=0	broken=3	markers=[MISSING_SCRIPT@Bunker_3,MISSING_SCRIPT@Bunker_3,MISSING_SCRIPT@Bunker_3]	path=HoleRoot/Bunkers/Bunker_3
+ZERO_PHYS+BROKEN	Bunker_4	course=Bunker	physCount=0	broken=3	markers=[MISSING_SCRIPT@Bunker_4,MISSING_SCRIPT@Bunker_4,MISSING_SCRIPT@Bunker_4]	path=HoleRoot/Bunkers/Bunker_4
+ZERO_PHYS+BROKEN	Bunker_5	course=Bunker	physCount=0	broken=3	markers=[MISSING_SCRIPT@Bunker_5,MISSING_SCRIPT@Bunker_5,MISSING_SCRIPT@Bunker_5]	path=HoleRoot/Bunkers/Bunker_5
+OK+BROKEN	Bunker_6	course=Bunker	physCount=1	broken=1	markers=[Physics.Sand@Bunker_6,MISSING_SCRIPT@Bunker_6]	path=HoleRoot/Bunkers/Bunker_6
+ZERO_PHYS+BROKEN	Bunker_7	course=Bunker	physCount=0	broken=3	markers=[MISSING_SCRIPT@Bunker_7,MISSING_SCRIPT@Bunker_7,MISSING_SCRIPT@Bunker_7]	path=HoleRoot/Bunkers/Bunker_7
+ZERO_PHYS+BROKEN	Green_1	course=Green	physCount=0	broken=3	markers=[MISSING_SCRIPT@Green_1,MISSING_SCRIPT@Green_1,MISSING_SCRIPT@Green_1]	path=HoleRoot/Greens/Green_1
+ZERO_PHYS+BROKEN	Fairway_1	course=Fairway	physCount=0	broken=3	markers=[MISSING_SCRIPT@Fairway_1,MISSING_SCRIPT@Fairway_1,MISSING_SCRIPT@Fairway_1]	path=HoleRoot/Fairways/Fairway_1
+OK	Fairway_2	course=Fairway	physCount=1	broken=0	markers=[Physics.Fairway@Fairway_2]	path=HoleRoot/Fairways/Fairway_2
+OK+BROKEN	Fairway_3	course=Fairway	physCount=1	broken=1	markers=[Physics.Fairway@Fairway_3,MISSING_SCRIPT@Fairway_3]	path=HoleRoot/Fairways/Fairway_3
+OK+BROKEN	Tee_1	course=Tee	physCount=1	broken=1	markers=[Physics.Tee@Tee_1,MISSING_SCRIPT@Tee_1]	path=HoleRoot/Tees/Tee_1
+ZERO_PHYS+BROKEN	Tee_2	course=Tee	physCount=0	broken=3	markers=[MISSING_SCRIPT@Tee_2,MISSING_SCRIPT@Tee_2,MISSING_SCRIPT@Tee_2]	path=HoleRoot/Tees/Tee_2
+ZERO_PHYS+BROKEN	Tee_3	course=Tee	physCount=0	broken=3	markers=[MISSING_SCRIPT@Tee_3,MISSING_SCRIPT@Tee_3,MISSING_SCRIPT@Tee_3]	path=HoleRoot/Tees/Tee_3
+ZERO_PHYS+BROKEN	Tee_4	course=Tee	physCount=0	broken=3	markers=[MISSING_SCRIPT@Tee_4,MISSING_SCRIPT@Tee_4,MISSING_SCRIPT@Tee_4]	path=HoleRoot/Tees/Tee_4
+OK+BROKEN	CartPath_Spline_1	course=CartPath	physCount=1	broken=1	markers=[Physics.CartPath@CartPath_Spline_1,MISSING_SCRIPT@CartPath_Spline_1]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_1
+ZERO_PHYS+BROKEN	CartPath_Spline_2	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPath_Spline_2,MISSING_SCRIPT@CartPath_Spline_2,MISSING_SCRIPT@CartPath_Spline_2]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_2
+ZERO_PHYS+BROKEN	CartPath_Spline_3	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPath_Spline_3,MISSING_SCRIPT@CartPath_Spline_3,MISSING_SCRIPT@CartPath_Spline_3]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_3
+OK	CartPath_Spline_4	course=CartPath	physCount=1	broken=0	markers=[Physics.CartPath@CartPath_Spline_4]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_4
+ZERO_PHYS+BROKEN	CartPath_Spline_5	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPath_Spline_5,MISSING_SCRIPT@CartPath_Spline_5,MISSING_SCRIPT@CartPath_Spline_5]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_5
+ZERO_PHYS+BROKEN	CartPath_Spline_6	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPath_Spline_6,MISSING_SCRIPT@CartPath_Spline_6,MISSING_SCRIPT@CartPath_Spline_6]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_6
+ZERO_PHYS+BROKEN	CartPath_Spline_7	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPath_Spline_7,MISSING_SCRIPT@CartPath_Spline_7,MISSING_SCRIPT@CartPath_Spline_7]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_7
+ZERO_PHYS+BROKEN	CartPath_Spline_8	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPath_Spline_8,MISSING_SCRIPT@CartPath_Spline_8,MISSING_SCRIPT@CartPath_Spline_8]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_8
+ZERO_PHYS+BROKEN	CartPath_Spline_9	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPath_Spline_9,MISSING_SCRIPT@CartPath_Spline_9,MISSING_SCRIPT@CartPath_Spline_9]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_9
+OK+BROKEN	CartPath_Spline_10	course=CartPath	physCount=1	broken=1	markers=[Physics.CartPath@CartPath_Spline_10,MISSING_SCRIPT@CartPath_Spline_10]	path=HoleRoot/CartPaths_Spline/CartPath_Spline_10
+OK	CartPathJunction_229_29	course=CartPath	physCount=1	broken=0	markers=[Physics.CartPath@CartPathJunction_229_29]	path=HoleRoot/CartPaths_Spline/CartPathJunction_229_29
+ZERO_PHYS+BROKEN	CartPathJunction_-31_-8	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPathJunction_-31_-8,MISSING_SCRIPT@CartPathJunction_-31_-8,MISSING_SCRIPT@CartPathJunction_-31_-8]	path=HoleRoot/CartPaths_Spline/CartPathJunction_-31_-8
+ZERO_PHYS+BROKEN	CartPathJunction_32_-10	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPathJunction_32_-10,MISSING_SCRIPT@CartPathJunction_32_-10,MISSING_SCRIPT@CartPathJunction_32_-10]	path=HoleRoot/CartPaths_Spline/CartPathJunction_32_-10
+ZERO_PHYS+BROKEN	CartPathJunction_24_1	course=CartPath	physCount=0	broken=3	markers=[MISSING_SCRIPT@CartPathJunction_24_1,MISSING_SCRIPT@CartPathJunction_24_1,MISSING_SCRIPT@CartPathJunction_24_1]	path=HoleRoot/CartPaths_Spline/CartPathJunction_24_1
+OK+BROKEN	CartPathJunction_-27_-1	course=CartPath	physCount=1	broken=1	markers=[Physics.CartPath@CartPathJunction_-27_-1,MISSING_SCRIPT@CartPathJunction_-27_-1]	path=HoleRoot/CartPaths_Spline/CartPathJunction_-27_-1

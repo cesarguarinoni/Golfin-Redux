@@ -151,13 +151,6 @@ public static class MarkerAuditTool
         EditorSceneManager.CloseScene(scene, true);
 
         Debug.Log($"[A2Audit] Done. {totalColliders} collider GOs. Zero={cntZero} One={cntOne} Multi={cntMulti} Broken={cntBroken}. Saved: {outPath}");
-        EditorUtility.DisplayDialog("A2 Marker Audit Complete",
-            $"Total collider GOs: {totalColliders}\n" +
-            $"Zero Physics markers: {cntZero}\n" +
-            $"One Physics marker: {cntOne}\n" +
-            $"Multi Physics markers: {cntMulti}\n" +
-            $"Broken components: {cntBroken}\n\n" +
-            $"Saved to:\n{outPath}", "OK");
     }
 
     static string GetHierarchyPath(GameObject go)
