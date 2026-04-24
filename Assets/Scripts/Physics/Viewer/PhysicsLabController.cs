@@ -79,6 +79,29 @@ namespace Golfin.Physics.Viewer
                     _shotConeView.SetCamera(chaseCamera.GetComponent<Camera>());
                 _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
             }
+
+            // Deactivate WalkCamera GOs in any pre-loaded hole scene before their Start() fires.
+            DeactivateWalkCamerasInLoadedScenes();
+        }
+
+        static void DeactivateWalkCamerasInLoadedScenes()
+        {
+            System.Type walkCamType = System.Type.GetType("WalkCamera, Assembly-CSharp");
+            if (walkCamType == null) return;
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded) continue;
+                foreach (var root in scene.GetRootGameObjects())
+                foreach (var mb in root.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (mb != null && mb.GetType() == walkCamType)
+                    {
+                        mb.gameObject.SetActive(false);
+                        Debug.Log($"[PhysicsLab] WalkCamera GO deactivated (Awake): '{mb.gameObject.name}'");
+                    }
+                }
+            }
         }
 
         void OnDestroy()
@@ -495,6 +518,7 @@ namespace Golfin.Physics.Viewer
             _useSceneProviders = true;
 
             // Disable any debug walk camera that ships inside hole scenes.
+            // Disable the GO (not just component) so Start() never fires and cursor is never stolen.
             Scene loadedSceneEarly = SceneManager.GetSceneByName(sceneName);
             if (loadedSceneEarly.IsValid())
             {
@@ -506,8 +530,8 @@ namespace Golfin.Physics.Viewer
                     {
                         if (mb != null && mb.GetType() == walkCamType)
                         {
-                            mb.enabled = false;
-                            Debug.Log($"[PhysicsLab] WalkCamera disabled on '{mb.gameObject.name}'");
+                            mb.gameObject.SetActive(false);
+                            Debug.Log($"[PhysicsLab] WalkCamera GO deactivated: '{mb.gameObject.name}'");
                         }
                     }
                 }
