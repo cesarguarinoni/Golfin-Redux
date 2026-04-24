@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass.** |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; Phase 6 Stat Coupling COMPLETE; **Terrain Fallthrough Fix COMPLETE (2026-04-24) — 111/111 tests pass (incl. 3500-shot stress).** |
 | Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D+E+F COMPLETE (2026-04-24)**. Cone UI live in ShotConeTest.unity. PhysicsLab wired for live touch shots. Putt mode + debug toggles + ball placement dropdown done. 83/83 tests pass. |
 | PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). **F-Hotfix COMPLETE (2026-04-24)**: type-aware SurfaceSnap, coroutine startup scan, camera depression lift. 12/12 regression tests pass. |
 | Shop | Not started |
@@ -40,6 +40,56 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Spec Organization (2026-04-25)
+
+To keep `TellCode.md` readable for Claude Code (file was getting long enough to risk context confusion), specs are now split from the handoff file.
+
+**Convention:**
+- **`Docs/TellCode.md`** — handoff index + short pointer blocks for active tasks + completion log. Pointers are ~15 lines each: task title, path to full spec, one-line summary, hard rules.
+- **`Docs/Specs/Active/<NAME>.md`** — full specification for any active task whose spec exceeds ~50 lines. Named in SCREAMING_SNAKE_CASE matching the task (e.g. `TERRAIN_FALLTHROUGH_FIX.md`).
+- **`Docs/Specs/Queued/<NAME>.md`** — specs written but not yet handed to Code (future work, deferred polish). Referenced by one-line stub in TellCode.md's "On the Horizon" / open-flag area.
+- **`Docs/Specs/Completed/<NAME>.md`** (optional) — archived specs after task is done, if the spec has long-term reference value. Otherwise, the one-line DONE entry in TellCode.md's history log is sufficient and the spec file can be deleted.
+
+**When Architect writes a spec:**
+- If ≤50 lines: inline directly in TellCode.md (current behavior for small tasks).
+- If >50 lines: full text goes to `Docs/Specs/Active/<NAME>.md`; pointer block goes in TellCode.md.
+
+**When Claude Code starts a session:**
+1. Read `TellCode.md` end-to-end.
+2. For any active task whose pointer says "Full spec: `Docs/Specs/Active/...`", open and read that spec file next.
+3. Proceed with the task. Reference docs in `Docs/Specs/Active/` are authoritative; TellCode.md pointer is a summary and may lag by a sentence or two on nuance.
+
+**When a task completes:**
+- Architect moves the DONE entry to TellCode.md history log (one-liner).
+- Spec file moves `Active/` → `Completed/` (if long-term reference) or is deleted.
+- Pointer block is removed from TellCode.md.
+
+---
+
+## Session Changes (2026-04-24 — Terrain Fallthrough Fix)
+
+### Completed
+- **`IGroundProvider.cs`** — Added default 3-arg `SampleHeight(x,z,preferred)` interface method (falls back to 2-arg for FlatGround/HeightmapData).
+- **`SceneGroundProvider.cs`** — 3-arg override: partitions RaycastAll hits by `SurfaceMarker.Type == preferred`; returns highest preferred-surface Y or fallback max-Y if no match.
+- **`BallSimulation.cs`** — 4 call sites in `RunRollPhase`/`RunPuttPhase` swapped to 3-arg SampleHeight. Added `#if UNITY_EDITOR` `CheckTerrainInvariant` assertion + static `DiagErrorLogger` callback (noEngineReferences safe).
+- **`PhysicsLabController.cs`** — Wires `BallSimulation.DiagErrorLogger = Debug.LogError` in `Start()`.
+- **`SyncPhysicsSurfaceMarkers.cs`** (new Editor tool) — `GOLFIN/Tools/Sync Physics Surface Markers`. Migration: iterate Course.SurfaceMarker, add Physics.Runtime.SurfaceMarker where absent. Result: Hole_01 +27 added, Hole_06 +1 updated.
+- **`GroundProviderSurfacePreferenceTests.cs`** (new, A-group) — 6 EditMode unit tests for 3-arg SampleHeight.
+- **`TerrainFallthroughIntegrationTests.cs`** (new, B-group) — 5 integration tests (T7–T11) using synthetic BoxCollider geometry + T11 real Hole_01 smoke test.
+- **`TerrainStressTests.cs`** (new, Phase 5) — 5 stress tests (T12–T16): 3500 shots across Green/Bunker/Fairway/Rough/ApproachLanding — zero fall-throughs.
+- **`Golfin.Gameplay.Tests.asmdef`** — Added explicit `Golfin.Physics.Runtime` reference (required due to `overrideReferences: true`).
+
+### Test Results: 111/111 pass ✅ (incl. 3500-shot stress, 44.9s)
+
+### Data Migration Finding
+Only Hole_01 had Course.SurfaceMarker data (others not yet imported via UHole pipeline). Holes 2–18 have zero Course markers → zero Physics markers. Re-importing remaining holes via UHole is required to extend surface-aware physics coverage.
+
+### Next
+- Re-import all holes via UHole to pick up SurfaceMarker data.
+- Phase 7 Part G (final gameplay integration) when Architect specs it.
 
 ---
 
