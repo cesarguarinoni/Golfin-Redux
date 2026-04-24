@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using UnityEngine.Rendering.Universal;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime;
@@ -82,6 +83,19 @@ namespace Golfin.Physics.Viewer
 
             // Deactivate WalkCamera GOs in any pre-loaded hole scene before their Start() fires.
             DeactivateWalkCamerasInLoadedScenes();
+
+            // URPWater/Standard needs depth + opaque textures; ensure they're on for this camera.
+            // Mobile URP asset has both disabled by default, which makes water render gray.
+            if (chaseCamera != null)
+            {
+                var cam = chaseCamera.GetComponent<Camera>();
+                var camData = cam != null ? cam.GetUniversalAdditionalCameraData() : null;
+                if (camData != null)
+                {
+                    camData.requiresDepthTexture  = true;
+                    camData.requiresColorTexture  = true;
+                }
+            }
         }
 
         static void DeactivateWalkCamerasInLoadedScenes()
