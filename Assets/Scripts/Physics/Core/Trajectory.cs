@@ -60,6 +60,7 @@ namespace Golfin.Physics
         ExitedWorldBounds,
         BallStopped,        // roll phase reached stop_speed on near-flat surface
         HitWater,           // terminated by water hazard
+        HitOOB,             // terminated by out-of-bounds zone
         MaxBouncesExceeded, // safety cap; shouldn't happen in practice
     }
 }

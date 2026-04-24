@@ -152,6 +152,11 @@ namespace Golfin.Physics
                     hitsList.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
                     return new Trajectory(samplesList, pos, fp3.Zero, t, TerminationReason.HitWater, hitsList);
                 }
+                if (surface == SurfaceType.OOB)
+                {
+                    hitsList.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+                    return new Trajectory(samplesList, pos, fp3.Zero, t, TerminationReason.HitOOB, hitsList);
+                }
 
                 fp3 normal = (ground is HeightmapData hm)
                     ? hm.SampleNormal(pos.x, pos.z)
@@ -363,6 +368,11 @@ namespace Golfin.Physics
                     hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
                     return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.HitWater, hits);
                 }
+                if (surface == SurfaceType.OOB)
+                {
+                    hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+                    return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.HitOOB, hits);
+                }
 
                 fp3 normal = (ground is HeightmapData hm)
                     ? hm.SampleNormal(pos.x, pos.z)
@@ -466,6 +476,11 @@ namespace Golfin.Physics
                 {
                     hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
                     return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.HitWater, hits);
+                }
+                if (surface == SurfaceType.OOB)
+                {
+                    hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+                    return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.HitOOB, hits);
                 }
 
                 SurfaceCoefficients coeff = IsPuttSurface(surface)
