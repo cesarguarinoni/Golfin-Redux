@@ -16,6 +16,23 @@ namespace Golfin.Physics
         private static readonly fp RollTransitionThreshold = fp.FromFloat(0.5f); // m/s vertical to switch to roll
         private static readonly fp BackspinCrMultiplier    = fp.FromFloat(1.15f);
 
+#if UNITY_EDITOR
+        // Wired by the runtime layer (PhysicsLabController) to UnityEngine.Debug.LogError.
+        // Null-safe: if not wired, assertion is silently skipped.
+        public static System.Action<string> DiagErrorLogger;
+
+        static void CheckTerrainInvariant(IGroundProvider ground, SurfaceType surface, fp3 pos)
+        {
+            if (DiagErrorLogger == null) return;
+            float gY = ground.SampleHeight(pos.x, pos.z, surface).ToFloat();
+            if (pos.y.ToFloat() < gY - 0.02f)
+                DiagErrorLogger(
+                    $"[Terrain] Ball below surface! surface={surface} " +
+                    $"ballY={pos.y.ToFloat():F3} groundY={gY:F3} " +
+                    $"xz=({pos.x.ToFloat():F2},{pos.z.ToFloat():F2})");
+        }
+#endif
+
         // ── Phase 1 ───────────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -399,6 +416,9 @@ namespace Golfin.Physics
 
                 t   = t + Dt;
                 pos = posNext;
+#if UNITY_EDITOR
+                CheckTerrainInvariant(ground, surface, pos);
+#endif
                 samples.Add(new TrajectorySample(t, pos, vel));
 
                 fp speedSq    = fpMath.Dot(vel, vel);
@@ -511,6 +531,9 @@ namespace Golfin.Physics
 
                 t   = t + Dt;
                 pos = posNext;
+#if UNITY_EDITOR
+                CheckTerrainInvariant(ground, surface, pos);
+#endif
                 samples.Add(new TrajectorySample(t, pos, vel));
 
                 fp speedSq    = fpMath.Dot(vel, vel);
