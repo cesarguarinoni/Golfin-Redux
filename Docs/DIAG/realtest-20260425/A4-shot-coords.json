@@ -1,0 +1,61 @@
+{
+  "_note": "Fixed shot sequence for A4 load-determinism test. Run identical shots across 3 cold-load cycles.",
+  "_note2": "UPDATE originX/Y/Z after running A2 audit — use actual zone centroid coordinates from A2-Hole01-marker-audit.txt",
+  "shots": [
+    {
+      "id": 1,
+      "label": "putt_on_green",
+      "originX": 0.0,
+      "originY": 0.0,
+      "originZ": 0.0,
+      "velX": 3.0,
+      "velY": 0.0,
+      "velZ": 0.0,
+      "_note": "PLACEHOLDER: replace with Green_1 centroid XZ from A2 audit"
+    },
+    {
+      "id": 2,
+      "label": "chip_from_rough",
+      "originX": 0.0,
+      "originY": 0.0,
+      "originZ": 0.0,
+      "velX": 15.0,
+      "velY": 8.0,
+      "velZ": 0.0,
+      "_note": "PLACEHOLDER: replace with rough XZ near Green_1"
+    },
+    {
+      "id": 3,
+      "label": "bunker_shot",
+      "originX": 0.0,
+      "originY": 0.0,
+      "originZ": 0.0,
+      "velX": 20.0,
+      "velY": 15.0,
+      "velZ": 0.0,
+      "_note": "PLACEHOLDER: replace with Bunker_1 centroid XZ from A2 audit"
+    },
+    {
+      "id": 4,
+      "label": "fairway_approach",
+      "originX": 0.0,
+      "originY": 0.0,
+      "originZ": 0.0,
+      "velX": 40.0,
+      "velY": 25.0,
+      "velZ": 0.0,
+      "_note": "PLACEHOLDER: replace with fairway XZ ~80yd from pin"
+    },
+    {
+      "id": 5,
+      "label": "tee_shot",
+      "originX": 0.0,
+      "originY": 0.0,
+      "originZ": 0.0,
+      "velX": 65.0,
+      "velY": 14.0,
+      "velZ": 0.0,
+      "_note": "PLACEHOLDER: replace with tee marker XZ from A2 audit"
+    }
+  ]
+}

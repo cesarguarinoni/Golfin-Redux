@@ -21,6 +21,13 @@ namespace Golfin.Physics
         // Null-safe: if not wired, assertion is silently skipped.
         public static System.Action<string> DiagErrorLogger;
 
+        // Phase A3 per-step diagnostic. When DiagPerStepEnabled=true, DiagPerStepSink receives
+        // one CSV row per sim step: frame,phase,surface,ballX,ballY,ballZ,groundY2arg,groundY3arg
+        // DiagStepFrame is a shared counter SceneGroundProvider uses for hit-list correlation.
+        public static System.Action<string> DiagPerStepSink;
+        public static bool DiagPerStepEnabled;
+        public static int  DiagStepFrame;
+
         static void CheckTerrainInvariant(IGroundProvider ground, SurfaceType surface, fp3 pos)
         {
             if (DiagErrorLogger == null) return;
@@ -418,6 +425,13 @@ namespace Golfin.Physics
                 pos = posNext;
 #if UNITY_EDITOR
                 CheckTerrainInvariant(ground, surface, pos);
+                if (DiagPerStepEnabled && DiagPerStepSink != null)
+                {
+                    DiagStepFrame++;
+                    float gY2 = ground.SampleHeight(pos.x, pos.z).ToFloat();
+                    float gY3 = ground.SampleHeight(pos.x, pos.z, surface).ToFloat();
+                    DiagPerStepSink($"{DiagStepFrame},roll,{surface},{pos.x.ToFloat():F4},{pos.y.ToFloat():F4},{pos.z.ToFloat():F4},{gY2:F4},{gY3:F4}");
+                }
 #endif
                 samples.Add(new TrajectorySample(t, pos, vel));
 
@@ -533,6 +547,13 @@ namespace Golfin.Physics
                 pos = posNext;
 #if UNITY_EDITOR
                 CheckTerrainInvariant(ground, surface, pos);
+                if (DiagPerStepEnabled && DiagPerStepSink != null)
+                {
+                    DiagStepFrame++;
+                    float gY2 = ground.SampleHeight(pos.x, pos.z).ToFloat();
+                    float gY3 = ground.SampleHeight(pos.x, pos.z, surface).ToFloat();
+                    DiagPerStepSink($"{DiagStepFrame},putt,{surface},{pos.x.ToFloat():F4},{pos.y.ToFloat():F4},{pos.z.ToFloat():F4},{gY2:F4},{gY3:F4}");
+                }
 #endif
                 samples.Add(new TrajectorySample(t, pos, vel));
 

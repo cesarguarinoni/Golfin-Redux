@@ -127,10 +127,46 @@ namespace Golfin.Physics.Viewer
                 _shotController.OnShotResolved -= HandleShotResolved;
         }
 
+#if UNITY_EDITOR
+        // Phase A3: wire per-step CSV sinks to files under Docs/DIAG/realtest-YYYYMMDD/.
+        // Called once from Start(). The test runner (RealHoleDiagShotsTests) sets DiagPerStepEnabled=true
+        // and calls BallSimulation.DiagStepFrame=0 before each shot, then sets DiagPerStepEnabled=false.
+        static System.IO.StreamWriter _diagStepWriter;
+        static System.IO.StreamWriter _diagHitWriter;
+
+        static void WireA3DiagSinks()
+        {
+            string diagDir = System.IO.Path.Combine(
+                UnityEngine.Application.dataPath, "..", "Docs", "DIAG", "realtest-20260425");
+            System.IO.Directory.CreateDirectory(diagDir);
+
+            string stepPath = System.IO.Path.Combine(diagDir, "A3-live-steps.csv");
+            string hitsPath = System.IO.Path.Combine(diagDir, "A3-live-hits.csv");
+
+            _diagStepWriter = new System.IO.StreamWriter(stepPath, append: false);
+            _diagStepWriter.WriteLine("frame,phase,surface,ballX,ballY,ballZ,groundY2arg,groundY3arg");
+
+            _diagHitWriter = new System.IO.StreamWriter(hitsPath, append: false);
+            _diagHitWriter.WriteLine("frame,worldX,worldZ,preferred,foundPreferred,nHits,hits(collider|markerType|hitY)");
+
+            Golfin.Physics.BallSimulation.DiagPerStepSink = line =>
+            {
+                _diagStepWriter?.WriteLine(line);
+                _diagStepWriter?.Flush();
+            };
+            Golfin.Physics.Runtime.SceneGroundProvider.DiagHitSink = line =>
+            {
+                _diagHitWriter?.WriteLine(line);
+                _diagHitWriter?.Flush();
+            };
+        }
+#endif
+
         void Start()
         {
 #if UNITY_EDITOR
             Golfin.Physics.BallSimulation.DiagErrorLogger = Debug.LogError;
+            WireA3DiagSinks();
 #endif
             // Disable raw-touch path — ClubHandle external drag API is the only input in this lab.
             // This prevents camera drags and button clicks from accidentally starting a shot.

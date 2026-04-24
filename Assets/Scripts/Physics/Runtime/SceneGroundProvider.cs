@@ -37,7 +37,13 @@ namespace Golfin.Physics.Runtime
             var origin = new Vector3(worldX.ToFloat(), RaycastFromY, worldZ.ToFloat());
             var hits = UnityEngine.Physics.RaycastAll(origin, Vector3.down, RaycastLength,
                                                       ~0, QueryTriggerInteraction.Ignore);
-            if (hits.Length == 0) return fp.Zero;
+            if (hits.Length == 0)
+            {
+#if UNITY_EDITOR
+                EmitDiagHits(worldX, worldZ, preferred, hits, false);
+#endif
+                return fp.Zero;
+            }
 
             float preferredBestY = float.NegativeInfinity;
             float fallbackBestY  = float.NegativeInfinity;
@@ -59,7 +65,45 @@ namespace Golfin.Physics.Runtime
                 }
             }
 
+#if UNITY_EDITOR
+            EmitDiagHits(worldX, worldZ, preferred, hits, foundPreferred);
+#endif
             return fp.FromFloat(foundPreferred ? preferredBestY : fallbackBestY);
         }
+
+#if UNITY_EDITOR
+        // Phase A3 per-step hit-list sink. Wire from PhysicsLabController alongside DiagPerStepSink.
+        // Row format: frame,worldX,worldZ,preferred,foundPreferred,nHits,collider|markerType|hitY;...
+        public static System.Action<string> DiagHitSink;
+
+        static void EmitDiagHits(fp worldX, fp worldZ, SurfaceType preferred,
+                                  UnityEngine.RaycastHit[] hits, bool foundPreferred)
+        {
+            if (!Golfin.Physics.BallSimulation.DiagPerStepEnabled || DiagHitSink == null) return;
+            var sb = new System.Text.StringBuilder();
+            sb.Append(Golfin.Physics.BallSimulation.DiagStepFrame);
+            sb.Append(',');
+            sb.Append(worldX.ToFloat().ToString("F4"));
+            sb.Append(',');
+            sb.Append(worldZ.ToFloat().ToString("F4"));
+            sb.Append(',');
+            sb.Append(preferred);
+            sb.Append(',');
+            sb.Append(foundPreferred ? '1' : '0');
+            sb.Append(',');
+            sb.Append(hits.Length);
+            foreach (var h in hits)
+            {
+                var sm = h.collider.GetComponentInParent<SurfaceMarker>();
+                sb.Append(';');
+                sb.Append(h.collider.name);
+                sb.Append('|');
+                sb.Append(sm != null ? sm.Type.ToString() : "none");
+                sb.Append('|');
+                sb.Append(h.point.y.ToString("F4"));
+            }
+            DiagHitSink(sb.ToString());
+        }
+#endif
     }
 }
