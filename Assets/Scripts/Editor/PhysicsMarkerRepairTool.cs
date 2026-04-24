@@ -139,12 +139,13 @@ public static class PhysicsMarkerRepairTool
             {
                 var go = ((Component)courseComp).gameObject;
 
-                // Step 1: remove broken/missing-script components (includes zombie markers)
-                int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+                // Step 1: remove zombie/missing-script components via SerializedObject
+                // (GameObjectUtility.RemoveMonoBehavioursWithMissingScript does not detect
+                // zombies with wrong-GUID m_Script in additively-loaded scenes)
+                int removed = RemoveZombieComponents(go);
                 if (removed > 0)
                 {
                     zombiesRemoved += removed;
-                    EditorUtility.SetDirty(go);
                     report?.AppendLine($"  REMOVED {removed} zombie(s) from {GetPath(go)}");
                 }
 
@@ -198,6 +199,38 @@ public static class PhysicsMarkerRepairTool
                     validCount++;
             }
         }
+    }
+
+    /// <summary>
+    /// Removes components whose m_Script GUID is null/unresolved (zombie missing-script
+    /// components) via SerializedObject m_Component array editing — the only approach
+    /// that reliably detects wrong-GUID zombies in additively-loaded scenes.
+    /// Returns count of removed components.
+    /// </summary>
+    static int RemoveZombieComponents(GameObject go)
+    {
+        SerializedObject so = new SerializedObject(go);
+        SerializedProperty compsProp = so.FindProperty("m_Component");
+        if (compsProp == null || !compsProp.isArray) return 0;
+
+        int removed = 0;
+        for (int i = compsProp.arraySize - 1; i >= 0; i--)
+        {
+            SerializedProperty elem = compsProp.GetArrayElementAtIndex(i);
+            SerializedProperty compRef = elem.FindPropertyRelative("component");
+            if (compRef != null && compRef.objectReferenceValue == null)
+            {
+                compsProp.DeleteArrayElementAtIndex(i);
+                removed++;
+            }
+        }
+
+        if (removed > 0)
+        {
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(go);
+        }
+        return removed;
     }
 
     static void WriteReport(StringBuilder sb, string filename)
