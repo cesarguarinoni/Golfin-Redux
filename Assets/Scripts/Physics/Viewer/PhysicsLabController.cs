@@ -133,22 +133,28 @@ namespace Golfin.Physics.Viewer
             // This prevents camera drags and button clicks from accidentally starting a shot.
             _shotController?.InjectInputSource(null);
 
-            // LabHoleBinder.OnEnable may not have fired if the hole was loaded in edit mode
-            // before entering play mode. Scan loaded scenes and call OnHoleLoaded if missed.
-            if (!_useSceneProviders)
+            // Wait 2 frames so any additively-loaded hole scene finishes loading,
+            // then scan for it. This replaces the fragile immediate scan.
+            StartCoroutine(ScanForLoadedHoleSceneAtStartup());
+        }
+
+        System.Collections.IEnumerator ScanForLoadedHoleSceneAtStartup()
+        {
+            yield return null;
+            yield return null;
+
+            for (int i = 0; i < SceneManager.sceneCount; i++)
             {
-                for (int i = 0; i < SceneManager.sceneCount; i++)
+                var scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded) continue;
+                if (scene.name != null && scene.name.StartsWith("Hole_") && scene.name.EndsWith("_Geo"))
                 {
-                    var scene = SceneManager.GetSceneAt(i);
-                    string n = scene.name;
-                    if (n != null && n.StartsWith("Hole_") && n.EndsWith("_Geo") && scene.isLoaded)
-                    {
-                        OnHoleLoaded(n);
-                        break;
-                    }
+                    Debug.Log($"[PhysicsLab] Coroutine detected loaded hole scene: {scene.name}");
+                    OnHoleLoaded(scene.name);
+                    yield break;
                 }
             }
-
+            Debug.Log("[PhysicsLab] No hole scene loaded at startup — flat-ground fallback.");
             SetupAtTee();
         }
 
@@ -204,7 +210,7 @@ namespace Golfin.Physics.Viewer
         {
             if (_ballSpawnPoint == null) return;
             Vector3 sp = _ballSpawnPoint.position;
-            float surfaceY = SurfaceSnap(sp.x, sp.z, sp.y);
+            float surfaceY = SurfaceSnap(sp.x, sp.z, sp.y, 6); // 6 = Golfin.Course.SurfaceType.Tee
             Vector3 teePos = new Vector3(sp.x, surfaceY, sp.z);
 
             _orbitCenter = teePos;
@@ -225,13 +231,14 @@ namespace Golfin.Physics.Viewer
                 chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
         }
 
-        // Teleport the ball to a world position (Y resolved via downward raycast).
+        // Teleport the ball to a world position (Y resolved via type-aware downward raycast).
+        // preferredSurfaceTypeValue: Golfin.Course.SurfaceType int value (1=Green, 4=Bunker, etc.) or null.
         // One-shot placement; subsequent shots continue from wherever the ball lands.
-        public void PlaceBallAt(Vector3 worldPos)
+        public void PlaceBallAt(Vector3 worldPos, int? preferredSurfaceTypeValue = null)
         {
             if (_shotController != null) _shotController.CompleteShot();
 
-            float y   = SurfaceSnap(worldPos.x, worldPos.z, worldPos.y);
+            float y   = SurfaceSnap(worldPos.x, worldPos.z, worldPos.y, preferredSurfaceTypeValue);
             Vector3 pos = new Vector3(worldPos.x, y, worldPos.z);
 
             _orbitCenter = pos;
@@ -247,6 +254,8 @@ namespace Golfin.Physics.Viewer
 
             if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
                 chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
+
+            AdjustCameraForDepression(pos);
         }
 
         // Update the HUD max-carry yards readout for the current StatBundle/club.
@@ -592,11 +601,30 @@ namespace Golfin.Physics.Viewer
             return new fp3(fp.FromFloat(sp.x), fp.FromFloat(y), fp.FromFloat(sp.z));
         }
 
-        float SurfaceSnap(float x, float z, float defaultY)
+        static float SurfaceSnap(float x, float z, float defaultY, int? preferredSurfaceTypeValue = null)
+            => PlacementSnapHelper.Snap(x, z, defaultY, preferredSurfaceTypeValue);
+
+        // Lifts chase-camera follow height when the ball is in a depression (e.g. bunker).
+        // Raycasts at 4 surrounding points; if ball is > 0.5m below terrain rim, raises camera.
+        void AdjustCameraForDepression(Vector3 ballPos)
         {
-            return UnityEngine.Physics.Raycast(
-                new Vector3(x, 500f, z), Vector3.down, out RaycastHit hit, 1000f)
-                ? hit.point.y : defaultY;
+            if (chaseCamera == null) return;
+
+            float maxSurroundY = ballPos.y;
+            float[] offsets = { 2f, -2f };
+            foreach (float ox in offsets)
+            {
+                if (UnityEngine.Physics.Raycast(
+                    new Vector3(ballPos.x + ox, 500f, ballPos.z), Vector3.down, out RaycastHit hx, 1000f))
+                    if (hx.point.y > maxSurroundY) maxSurroundY = hx.point.y;
+
+                if (UnityEngine.Physics.Raycast(
+                    new Vector3(ballPos.x, 500f, ballPos.z + ox), Vector3.down, out RaycastHit hz, 1000f))
+                    if (hz.point.y > maxSurroundY) maxSurroundY = hz.point.y;
+            }
+
+            float depth = maxSurroundY - ballPos.y;
+            chaseCamera.FollowHeightOffset = depth > 0.5f ? Mathf.Min(depth, 3f) : 0f;
         }
 
         IGroundProvider BuildGroundProvider()
@@ -748,19 +776,21 @@ namespace Golfin.Physics.Viewer
             PlacementEntries.Clear();
 
             // Tee — one entry using the same midpoint the scaffold already uses.
+            // preferredSurfaceTypeValue=6 (Golfin.Course.SurfaceType.Tee)
             if (teeFound)
-                PlacementEntries.Add(new BallPlacementEntry("Tee 1", teePos));
+                PlacementEntries.Add(new BallPlacementEntry("Tee 1", teePos, 6));
 
-            // Green entries.
-            AddSurfaceEntries(PlacementEntries, greenGOs,   "Green");
+            // Green entries (type 1).
+            AddSurfaceEntries(PlacementEntries, greenGOs,   "Green",   1);
 
-            // Bunker entries.
-            AddSurfaceEntries(PlacementEntries, bunkerGOs,  "Bunker");
+            // Bunker entries (type 4).
+            AddSurfaceEntries(PlacementEntries, bunkerGOs,  "Bunker",  4);
 
-            // Fairway entries.
-            AddSurfaceEntries(PlacementEntries, fairwayGOs, "Fairway");
+            // Fairway entries (type 0).
+            AddSurfaceEntries(PlacementEntries, fairwayGOs, "Fairway", 0);
 
             // Water entries — offset 1m toward the green centroid so the ball lands on grass.
+            // No preferred type (first-hit wins — we want whatever grass is there).
             for (int i = 0; i < waterGOs.Count; i++)
             {
                 Vector3 wPos   = waterGOs[i].transform.position;
@@ -768,17 +798,12 @@ namespace Golfin.Physics.Viewer
                 Vector3 dir    = target - wPos;
                 dir.y = 0f;
                 if (dir.sqrMagnitude > 0.01f) dir = dir.normalized;
-                PlacementEntries.Add(new BallPlacementEntry($"Near Water {i + 1}", wPos + dir * 1f));
+                PlacementEntries.Add(new BallPlacementEntry($"Near Water {i + 1}", wPos + dir * 1f, null));
             }
 
-            // Pre-snap all entry Y values via downward raycast so the fallback in PlaceBallAt
-            // is always the actual surface Y (zone mesh GOs may have centroid.y != surface y).
-            for (int i = 0; i < PlacementEntries.Count; i++)
-            {
-                var e = PlacementEntries[i];
-                e.WorldPos = new Vector3(e.WorldPos.x, SurfaceSnap(e.WorldPos.x, e.WorldPos.z, e.WorldPos.y), e.WorldPos.z);
-                PlacementEntries[i] = e;
-            }
+            // Y is resolved at placement time via SurfaceSnap; do NOT pre-snap here.
+            // Pre-snapping caused Bug 1: first-hit race between fringe and green colliders
+            // at build time is won non-deterministically. Type-aware snap at placement time fixes it.
 
             OnPlacementEntriesChanged?.Invoke();
             Debug.Log($"[PhysicsLab] PlacementEntries built: {PlacementEntries.Count} entries.");
@@ -787,10 +812,11 @@ namespace Golfin.Physics.Viewer
         static void AddSurfaceEntries(
             System.Collections.Generic.List<BallPlacementEntry> list,
             System.Collections.Generic.List<GameObject> gos,
-            string prefix)
+            string prefix,
+            int? preferredSurfaceTypeValue)
         {
             for (int i = 0; i < gos.Count; i++)
-                list.Add(new BallPlacementEntry($"{prefix} {i + 1}", gos[i].transform.position));
+                list.Add(new BallPlacementEntry($"{prefix} {i + 1}", gos[i].transform.position, preferredSurfaceTypeValue));
         }
 
         void CopyHoleLighting(Scene holeScene)
@@ -923,8 +949,15 @@ namespace Golfin.Physics.Viewer
     public struct BallPlacementEntry
     {
         public string  Label;
-        public Vector3 WorldPos; // XZ are the target; Y is resolved via downward raycast at placement time.
-        public BallPlacementEntry(string label, Vector3 worldPos) { Label = label; WorldPos = worldPos; }
+        public Vector3 WorldPos; // XZ are the target; Y is resolved via type-aware raycast at placement time.
+        public int?    PreferredSurfaceTypeValue; // Golfin.Course.SurfaceType int, or null = first-hit
+
+        public BallPlacementEntry(string label, Vector3 worldPos, int? preferredSurfaceTypeValue = null)
+        {
+            Label = label;
+            WorldPos = worldPos;
+            PreferredSurfaceTypeValue = preferredSurfaceTypeValue;
+        }
     }
 
     public struct ShotReadout

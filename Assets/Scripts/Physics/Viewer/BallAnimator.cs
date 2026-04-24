@@ -14,6 +14,8 @@ namespace Golfin.Physics.Viewer
     {
         [SerializeField] GameObject ballPrefab;
 
+        public static BallAnimator Instance { get; private set; }
+
         public float PlayRate { get; set; } = 1f;  // 0.25, 1, 4, or Instant (float.MaxValue)
 
         public Transform CurrentBall => _instance == null ? null : _instance.transform;
@@ -25,6 +27,9 @@ namespace Golfin.Physics.Viewer
         bool        _playing;
 
         const float InstantRate = float.MaxValue;
+
+        void Awake()   { if (Instance == null) Instance = this; }
+        void OnDestroy() { if (Instance == this) Instance = null; }
 
         // ── Public API ─────────────────────────────────────────────────────────
 
@@ -134,7 +139,11 @@ namespace Golfin.Physics.Viewer
         {
             if (_instance != null)
             {
+#if UNITY_EDITOR
+                DestroyImmediate(_instance);
+#else
                 Destroy(_instance);
+#endif
                 _instance = null;
             }
             _playing = false;

@@ -312,7 +312,8 @@ namespace Golfin.Physics.Viewer
         {
             if (controller == null || controller.PlacementEntries.Count == 0) return;
             _placementIndex = Mathf.Clamp(_placementIndex, 0, controller.PlacementEntries.Count - 1);
-            controller.PlaceBallAt(controller.PlacementEntries[_placementIndex].WorldPos);
+            var entry = controller.PlacementEntries[_placementIndex];
+            controller.PlaceBallAt(entry.WorldPos, entry.PreferredSurfaceTypeValue);
         }
 
         void RefreshPlacementPicker()

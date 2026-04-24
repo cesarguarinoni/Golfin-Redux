@@ -7,7 +7,220 @@
 
 ---
 
-## 🔧 TASK — Phase 7 Part F: Putt mode + debug toggles + ball placement — 2026-04-24
+## 🔧 TASK — Part F Hotfix: Ball placement robustness + automated test coverage — 2026-04-24
+
+### Background
+
+Part F shipped the placement dropdown but it's broken. Three real bugs (plus two red herrings Code chased). Revert the band-aid fixes, apply root-cause fixes, and add automated regression tests so this never regresses silently again.
+
+### Diagnosis (authoritative — do not re-diagnose)
+
+**Bug 1 — Green intermittent sub-surface placement.** `Fairway` GOs have a MeshCollider covering both the fairway material AND the fringe submesh (see `HoleGeoImporter.cs:4370–4378`). The fringe extends over the green's outer edge. At some green XZ points, the downward raycast from Y=500 hits the fairway+fringe MeshCollider before the green MeshCollider, or vice-versa, depending on vertex-level Y differences between the two meshes at that exact XZ. First hit wins → ball placed on whichever happened to be higher. When that's NOT the green, ball ends up at fringe-Y. Then on the next shot, sim classifies via `SceneSurfaceProvider` at ball XZ, may hit green this time, but the stored ball Y is fringe-Y which is sometimes below green-Y → ball appears to start under the visible green surface. Fully intermittent, fully consistent with the fringe-vs-green collider race.
+
+**Bug 2 — Bunker "through terrain" is NOT a bug.** Measured data: `Bunker GO.y=10.117  snapY=8.709  diff=-1.408`. SnapY IS the bunker floor. Ball is placed correctly at bunker floor. It LOOKS "through terrain" because the surrounding terrain rim (~Y=10) occludes a ground-level chase camera view of a ball at Y=8.7. This is a camera artifact, not a placement bug. Do NOT "fix" ball Y for bunker placement. See F-Hotfix.C for the actual camera fix.
+
+**Bug 3 — `PlacementEntries.Count = 0` mid-session.** Code's diagnosis is correct on the symptom (scene event race) but the two-event fix (adding `SceneManager.sceneLoaded`) is still fragile. Proper fix: coroutine scan on frame 2 of `PhysicsLabController.Start()`. See F-Hotfix.A.
+
+**Bug 4 — `_useSceneProviders = False` despite hole loaded.** Same root cause as Bug 3 (event race). Fixed by the same coroutine.
+
+**Red herring 1 — 3 stale ball clones + `_instance = null`.** Unity domain reload artifact. Not a production bug. Leave alone.
+
+**Red herring 2 — "Heightmap doesn't include zone-mesh tops" open flag.** NOT the cause. The scaffold uses `SceneGroundProvider`, which is a live raycast — it never reads `heightmap.bytes`. The existing heightmap open flag is unrelated to this bug. Leave the flag in place for future baker work but do NOT try to fix it here.
+
+---
+
+### F-Hotfix.A — Replace fragile event binding with coroutine scan
+
+**File:** `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs`
+
+Add a coroutine kicked off in `Start()`:
+
+```csharp
+IEnumerator ScanForLoadedHoleSceneAtStartup()
+{
+    // Wait 2 frames so any additive hole scene has finished loading.
+    yield return null;
+    yield return null;
+
+    for (int i = 0; i < SceneManager.sceneCount; i++)
+    {
+        var scene = SceneManager.GetSceneAt(i);
+        if (!scene.isLoaded) continue;
+        if (scene.name.StartsWith("Hole_") && scene.name.EndsWith("_Geo"))
+        {
+            Debug.Log($"[PhysicsLab] Coroutine detected loaded hole scene: {scene.name}");
+            OnHoleLoaded(scene.name);
+            yield break;
+        }
+    }
+    Debug.Log("[PhysicsLab] No hole scene loaded at startup — flat-ground fallback.");
+}
+```
+
+**File:** `Assets/Scripts/Physics/Viewer/LabHoleBinder.cs`
+
+- REMOVE the `SceneManager.sceneLoaded` subscription Code added in the last pass. Revert to `EditorSceneManager.sceneOpened` / `sceneClosed` only, wrapped in `#if UNITY_EDITOR`.
+- These events now serve only ONE purpose: handling edit-time picker interactions (user loads/unloads a hole via `PhysicsLabHolePicker`). Play-mode startup is handled by the coroutine in A.
+- `sceneClosed` should only call `OnHoleUnloaded` if the closed scene's name starts with `Hole_` AND ends with `_Geo`. Ignore all other scene close events. This prevents spurious unloads during Unity's play-mode scene reload sequence.
+
+### F-Hotfix.B — Revert pre-snap-at-build-time hack, fix SurfaceSnap properly
+
+**File:** `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs`
+
+Revert the pre-snap loop Code added to `BuildPlacementEntries`. Y should be resolved at *placement time* via `SurfaceSnap`, not at build time. The stored entry Y is an approximation; the raycast is the truth.
+
+Replace the existing `SurfaceSnap(x, z, defaultY)` helper with a *type-aware* version:
+
+```csharp
+private static float SurfaceSnap(float x, float z, float defaultY, Course.SurfaceType? preferredType = null)
+{
+    var origin = new Vector3(x, 500f, z);
+    var hits = UnityEngine.Physics.RaycastAll(origin, Vector3.down, 1000f,
+        ~0, QueryTriggerInteraction.Ignore);
+
+    if (hits.Length == 0) return defaultY;
+
+    // Exclude any collider on the ball itself (defense in depth — ball colliders
+    // are disabled at spawn, but belt + suspenders).
+    var ballInstance = BallAnimator.Instance?.gameObject;
+
+    // Partition hits: preferred-type matches first, then all others.
+    RaycastHit best = default;
+    float bestY = float.NegativeInfinity;
+    bool foundPreferred = false;
+
+    foreach (var h in hits)
+    {
+        if (ballInstance != null && h.collider.transform.IsChildOf(ballInstance.transform))
+            continue;
+
+        var marker = h.collider.GetComponentInParent<Course.SurfaceMarker>();
+        bool isPreferred = preferredType.HasValue && marker != null &&
+                           marker.surfaceType == preferredType.Value;
+
+        if (isPreferred)
+        {
+            // Among preferred hits, pick the HIGHEST Y (the visible top surface).
+            if (!foundPreferred || h.point.y > bestY)
+            {
+                best = h;
+                bestY = h.point.y;
+                foundPreferred = true;
+            }
+        }
+        else if (!foundPreferred)
+        {
+            // No preferred match yet: pick the first non-ball hit (PhysX order,
+            // which is the first collider from Y=500 downward).
+            if (bestY == float.NegativeInfinity)
+            {
+                best = h;
+                bestY = h.point.y;
+            }
+        }
+    }
+
+    return bestY == float.NegativeInfinity ? defaultY : bestY;
+}
+```
+
+**Call-site changes** — `PlaceBallAt(Vector3 worldPos, Course.SurfaceType? preferredType = null)`:
+
+- Dropdown entries pass the expected `preferredType` when they have one: `Course.SurfaceType.Green` for green entries, `Bunker` for bunker, `Fairway` for fairway. Tee entries pass `Tee`. Water entries (offset onto grass) pass `null` — let first-hit win.
+- `SetupAtTee()` calls `PlaceBallAt(teeMidpoint, Course.SurfaceType.Tee)`.
+- `ResetToTee` / "Reset to Tee" button: `PlaceBallAt(teeMidpoint, Course.SurfaceType.Tee)`.
+
+This fixes Bug 1 because green entries now prefer the green MeshCollider over the fringe-overlap in the fairway collider. Also adds defense against future stacking issues.
+
+### F-Hotfix.C — Bunker camera (NOT placement)
+
+Ball in bunker at floor Y is correct. Problem is chase camera at ground-level Y gets occluded by bunker rim. Two options, pick per taste:
+
+1. **Automatic — nudge camera up when ball is in depression.** On placement, if `|ballY - surroundingTerrainY| > 0.5m` (ball is in a depression), raise chase camera by the depth diff. Measured by raycasting upward from the ball to find the height-above-terrain it should compensate.
+2. **Manual — lab-only debug button "Lift Camera Above Rim."** Toggle. Cesar presses it when testing bunker shots.
+
+**Pick option 1.** Ship it automatic. In-game the real camera system will handle this properly; lab just needs to not lie visually. Document the rule: "when placing ball, if ball Y is > 0.5m below the raycast Y at (ball.x + 2m, ball.z), lift chase camera by the diff so the rim doesn't occlude."
+
+Implementation: new method `PhysicsLabController.AdjustCameraForDepression(Vector3 ballPos)` called at the end of `PlaceBallAt`. Raycasts at 4 points around the ball (±2m X, ±2m Z), finds max surrounding Y, compares to ball Y, if diff > 0.5 offsets the chase camera's follow-offset Y by the diff. Clamp offset at 3m so it doesn't go absurd.
+
+### F-Hotfix.D — Automated regression tests
+
+**Critical — this is how we stop regressing.** Every fix above gets at least one test. Tests live in existing assemblies.
+
+**File:** `Assets/Scripts/Physics/Tests/PlacementSnapTests.cs` (new)
+**Asmdef:** `Golfin.Physics.Tests` (already exists with Physics.Core/Math/Runtime refs; add `Golfin.Physics.Viewer` ref if needed to test `SurfaceSnap`).
+
+Tests required:
+
+1. **`SurfaceSnap_WithPreferredType_PicksMatchingMarker`** — create a test scene with two overlapping MeshColliders at slightly different Y values; one tagged `Course.SurfaceMarker.surfaceType=Green` at Y=10.15, other tagged `Fairway` at Y=10.18 (fringe higher than green, like Bug 1). Call `SurfaceSnap(x, z, 0f, Course.SurfaceType.Green)`, assert result is 10.15.
+2. **`SurfaceSnap_WithPreferredType_AndNoMatch_FallsBackToFirstHit`** — same scene, call with `preferredType=Bunker`, assert falls back to first (highest) hit = 10.18.
+3. **`SurfaceSnap_IgnoresBallCollider`** — place a sphere collider at (x, 5, z) tagged as the ball (via `BallAnimator.Instance` stub or equivalent), call `SurfaceSnap(x, z, 0f)`, assert result skips the ball and hits terrain below.
+4. **`SurfaceSnap_NoHits_ReturnsDefaultY`** — empty scene, call `SurfaceSnap`, assert returns `defaultY`.
+5. **`PlaceBallAt_InDepression_LiftsCamera`** — construct terrain at Y=10 and a bunker at Y=8.7. Place ball at bunker XZ. Assert `chaseCamera.followOffset.y` has been lifted by ~1.3m (diff between terrain and bunker).
+6. **`PlaceBallAt_OnFlatGround_DoesNotLiftCamera`** — all surroundings at same Y as ball. Assert `chaseCamera.followOffset.y` is unchanged.
+
+**File:** `Assets/Scripts/Physics/Tests/PlacementEntriesTests.cs` (new)
+
+Tests required:
+
+7. **`BuildPlacementEntries_OnHoleLoad_PopulatesAllCategories`** — synthetic scene with one of each: 1 tee group, 1 green, 2 bunkers, 2 fairways, 1 water. Call `OnHoleLoaded`. Assert `PlacementEntries.Count == 7` with at least one entry per category.
+8. **`BuildPlacementEntries_OnHoleUnload_Clears`** — populated state → `OnHoleUnloaded` → assert `PlacementEntries.Count == 0`.
+9. **`BuildPlacementEntries_DuplicateNames_Disambiguates`** — two bunker GOs both named "Bunker_3". Assert labels `"Bunker_3"` and `"Bunker_3 (1)"` (or equivalent).
+
+**File:** `Assets/Scripts/Gameplay/Tests/BallPlacementIntegrationTests.cs` (new, in `Golfin.Gameplay.Tests`)
+
+Tests required (PlayMode — use `[UnityTest]`):
+
+10. **`PlaceBallAt_Green_ThenShot_BallDoesNotStartUnderSurface`** — construct 2 overlapping colliders (green Y=10.15, fringe Y=10.18) with type markers. Call `PlaceBallAt(xz, Green)`. Assert `BallAnimator.Instance.transform.position.y == 10.15f` (within epsilon).
+11. **`PlaceBallAt_CalledTwice_BallTeleportsBothTimes`** — regression for "Place Here stops working." Place at A, assert ball at A. Place at B, assert ball at B (not still at A).
+12. **`CoroutineScan_DetectsPreLoadedHoleScene`** — load `LabScaffold` + a stub `Hole_TEST_Geo.unity` additively before `PhysicsLabController.Start`. After 2 frames, assert `_useSceneProviders == true`.
+
+**Acceptance bar:** all 12 tests must pass before closing F-Hotfix. Run via Unity Test Runner (Window > General > Test Runner) — EditMode tab for 1–9, PlayMode tab for 10–12.
+
+### Read first
+
+- `Assets/Scripts/Physics/Runtime/SceneGroundProvider.cs` — shows current raycast params (`~0` mask, `QueryTriggerInteraction.Collide`). Do NOT change this for now; SurfaceSnap is the fix surface.
+- `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — `SurfaceSnap`, `PlaceBallAt`, `BuildPlacementEntries`, `OnHoleLoaded`, `OnHoleUnloaded`, `SetupAtTee`.
+- `Assets/Scripts/Physics/Viewer/LabHoleBinder.cs` — current event subscriptions.
+- `Assets/Scripts/Physics/Viewer/BallAnimator.cs` — `_instance` field, `PlaceAtRest`.
+- `Assets/Scripts/Course/SurfaceMarker.cs` — `SurfaceType` enum + `surfaceType` field.
+- `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs` lines 4370–4378 (Fairway builder: proof that fairway collider includes fringe) and 2180–2195 (Bunker builder: proof that bunker transform.y = terrain surface Y, not bunker floor).
+- `Assets/Scripts/Physics/Tests/Golfin.Physics.Tests.asmdef` + `Assets/Scripts/Gameplay/Tests/Golfin.Gameplay.Tests.asmdef` — existing test harnesses.
+
+### Done report
+
+- Test Runner results: all 12 F-Hotfix tests pass + existing Phase 5 bit-exact gate + existing Part B swing tests still pass.
+- Confirmation screenshot or log: ball placed on green (via dropdown) sits at correct Y, subsequent putt doesn't dive into terrain.
+- Confirmation: ball placed in bunker is at floor Y AND chase camera has lifted automatically so the rim doesn't occlude.
+- Confirmation: `PhysicsLabController` logs `[PhysicsLab] Coroutine detected loaded hole scene: Hole_XX_Geo` at play-mode entry, `_useSceneProviders=True`.
+- Confirmation: Place Here works repeatedly (place at green, place at bunker, place at tee — all succeed, none bounce back).
+
+### Iteration budget
+
+- F-Hotfix.A: 1 attempt. Pure coroutine + event subscription cleanup.
+- F-Hotfix.B: 2 attempts. SurfaceSnap rewrite + call-site updates.
+- F-Hotfix.C: 1 attempt for the auto camera lift.
+- F-Hotfix.D: 2 attempts on test authoring; mock scenes may need setup helpers.
+
+Beyond budget: stop and surface.
+
+✅ DONE: 2026-04-24 — All 12 regression tests pass (PlacementSnapTests 6/6, PlacementEntriesTests 3/3, BallPlacementIntegrationTests 3/3). Fixed BallAnimator.DestroyInstance to use DestroyImmediate in editor. Committed and pushed.
+
+### DO NOT
+
+- Do NOT "fix" the bunker ball Y. It's already correct.
+- Do NOT touch `HoleGeoImporter.cs`. The collider overlap is a known artifact and F-Hotfix.B handles it at the consumer.
+- Do NOT modify `SceneGroundProvider.cs`. Sim-side raycasts are a separate problem; today's task is placement.
+- Do NOT re-enable `SceneManager.sceneLoaded` subscription. Coroutine scan replaces it.
+- Do NOT touch the existing heightmap open flag. Unrelated.
+- Do NOT add workarounds for domain-reload-stale-ball-clones. Not a production bug.
+- Do NOT skip tests. Automated regression coverage is the point of this hotfix — if a test is hard to write, that's the signal the code is hard to reason about, not an excuse.
+
+---
+
+## 🔶 IN PROGRESS — Phase 7 Part F: Putt mode + debug toggles + ball placement — 2026-04-24
+
+> Status: F.1–F.4 and F.6 shipped. F.5 (ball placement dropdown) has bugs — see F-Hotfix task above. Complete F-Hotfix before marking F as DONE.
 
 ### Background
 

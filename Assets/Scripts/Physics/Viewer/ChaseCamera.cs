@@ -23,9 +23,10 @@ namespace Golfin.Physics.Viewer
 
         // ── Public API ─────────────────────────────────────────────────────────
 
-        public Mode CurrentMode => _mode;
-        public void SetMode(Mode m)        => _mode   = m;
-        public void SetTarget(Transform t) => _target = t;
+        public Mode  CurrentMode       => _mode;
+        public float FollowHeightOffset { get; set; } = 0f;
+        public void  SetMode(Mode m)        => _mode   = m;
+        public void  SetTarget(Transform t) => _target = t;
 
         public void ResetToOrigin(Vector3 origin, Vector3 launchDir)
         {
@@ -62,7 +63,7 @@ namespace Golfin.Physics.Viewer
                     break;
 
                 default: // Chase
-                    desiredPos = focus - _launchDir * 8f + Vector3.up * 3f;
+                    desiredPos = focus - _launchDir * 8f + Vector3.up * (3f + FollowHeightOffset);
                     desiredRot = Quaternion.LookRotation(focus - desiredPos);
                     break;
             }

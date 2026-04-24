@@ -1,15 +1,15 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
 #endif
 
 namespace Golfin.Physics.Viewer
 {
     /// <summary>
     /// Bridges EditorSceneManager additive-load events to PhysicsLabController.
-    /// Attach to LabRoot alongside PhysicsLabController.
-    /// Also handles Play-mode start when a hole was pre-loaded in Edit mode.
+    /// Handles only EDIT-TIME scene picker interactions (load/unload via PhysicsLabHolePicker).
+    /// Play-mode startup detection is handled by PhysicsLabController.ScanForLoadedHoleSceneAtStartup().
     /// </summary>
     public class LabHoleBinder : MonoBehaviour
     {
@@ -17,36 +17,18 @@ namespace Golfin.Physics.Viewer
 
         void OnEnable()
         {
-            SceneManager.sceneLoaded += OnRuntimeSceneLoaded;
 #if UNITY_EDITOR
             EditorSceneManager.sceneOpened += OnEditorSceneOpened;
             EditorSceneManager.sceneClosed += OnEditorSceneClosed;
 #endif
-            // Handle Play-mode start: hole scene may already be loaded additively.
-            for (int i = 0; i < SceneManager.sceneCount; i++)
-            {
-                var scene = SceneManager.GetSceneAt(i);
-                if (IsHoleGeoScene(scene.name) && scene.isLoaded)
-                {
-                    _controller?.OnHoleLoaded(scene.name);
-                    break;
-                }
-            }
         }
 
         void OnDisable()
         {
-            SceneManager.sceneLoaded -= OnRuntimeSceneLoaded;
 #if UNITY_EDITOR
             EditorSceneManager.sceneOpened -= OnEditorSceneOpened;
             EditorSceneManager.sceneClosed -= OnEditorSceneClosed;
 #endif
-        }
-
-        void OnRuntimeSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            if (!IsHoleGeoScene(scene.name)) return;
-            _controller?.OnHoleLoaded(scene.name);
         }
 
 #if UNITY_EDITOR
@@ -58,6 +40,8 @@ namespace Golfin.Physics.Viewer
 
         void OnEditorSceneClosed(Scene scene)
         {
+            // Only react to actual hole-geo scenes closing; ignore Unity's play-mode
+            // scene reload sequence which closes and reopens the LabScaffold scene.
             if (!IsHoleGeoScene(scene.name)) return;
             _controller?.OnHoleUnloaded();
         }

@@ -4,10 +4,65 @@ using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Golfin.Physics.Viewer;
 
 namespace Golfin.Physics.Editor
 {
+    // Automatically reloads the last-used hole whenever LabScaffold is opened.
+    [InitializeOnLoad]
+    static class PhysicsLabAutoRestore
+    {
+        const string SCAFFOLD_PATH = "Assets/Scenes/Physics/LabScaffold.unity";
+        const string GEN_PATH      = "Assets/Golf/Courses/lomond-country-club/Generated";
+        const string PREF_KEY      = "Golfin.PhysicsLab.CurrentHole";
+
+        static PhysicsLabAutoRestore()
+        {
+            EditorSceneManager.sceneOpened += OnSceneOpened;
+        }
+
+        static void OnSceneOpened(Scene scene, OpenSceneMode mode)
+        {
+            if (scene.path != SCAFFOLD_PATH) return;
+            int savedHole = EditorPrefs.GetInt(PREF_KEY, -1);
+            if (savedHole < 0) return;
+
+            // Defer so the scene is fully initialised before we load additively.
+            EditorApplication.delayCall += () => RestoreHole(savedHole);
+        }
+
+        static void RestoreHole(int holeNumber)
+        {
+            // Skip if a hole is already loaded.
+            for (int i = 0; i < EditorSceneManager.sceneCount; i++)
+            {
+                var s = EditorSceneManager.GetSceneAt(i);
+                if (s.name.StartsWith("Hole_") && s.name.EndsWith("_Geo")) return;
+            }
+
+            string pattern = $"Hole_{holeNumber:D2}_Geo.unity";
+            if (!Directory.Exists(GEN_PATH)) return;
+
+            string[] matches = Directory.GetFiles(GEN_PATH, pattern, SearchOption.TopDirectoryOnly);
+            if (matches.Length == 0) return;
+
+            string holePath = matches[0].Replace('\\', '/');
+            EditorSceneManager.OpenScene(holePath, OpenSceneMode.Additive);
+            Debug.Log($"[PhysicsLab] Auto-restored Hole {holeNumber:D2}");
+
+            // Notify controller.
+            string holeName = Path.GetFileNameWithoutExtension(holePath);
+            var scaffoldScene = EditorSceneManager.GetSceneByPath(SCAFFOLD_PATH);
+            if (!scaffoldScene.IsValid()) return;
+            foreach (var root in scaffoldScene.GetRootGameObjects())
+            {
+                var ctrl = root.GetComponentInChildren<PhysicsLabController>(true);
+                if (ctrl != null) { ctrl.OnHoleLoaded(holeName); break; }
+            }
+        }
+    }
+
     public class PhysicsLabHolePicker : EditorWindow
     {
         const string GEN_PATH      = "Assets/Golf/Courses/lomond-country-club/Generated";

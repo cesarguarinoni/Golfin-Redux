@@ -268,6 +268,54 @@ t = t * t * (3f - 2f * t); // smoothstep
 polygon boundary is a smooth function — no Voronoi artifacts, no stripes. Use a coarse chamfer
 pass first to cull distant cells (performance), then exact distance only for the ramp zone.
 
+---
+
+## EditMode Physics Tests — Use BoxCollider, Not MeshCollider (Quad)
+
+**Problem:** `CreatePrimitive(PrimitiveType.Quad)` adds a `MeshCollider`, which requires async mesh cooking. After `yield return null`, the collider is not yet registered in PhysX. `Physics.RaycastAll` returns 0 hits → all snap tests return `defaultY` → tests fail silently.
+
+**Fix:** Create a bare `new GameObject()` and add `BoxCollider` directly:
+```csharp
+var go = new GameObject("FlatCollider");
+go.transform.position = new Vector3(x, y, z);
+go.AddComponent<BoxCollider>().size = new Vector3(size, 0.02f, size);
+```
+`BoxCollider` registers synchronously in PhysX. One `yield return null` is enough for it to appear in raycasts. The top face lands at `center.y + halfExtents.y = y + 0.01`, so assertions must account for this offset.
+
+**Rule:** In EditMode tests that need physics raycasts, always use `BoxCollider` (or `SphereCollider`). Never use `MeshCollider` or `CreatePrimitive` variants (Quad, Plane, Cube) — they all add `MeshCollider` internally.
+
+---
+
+## NUnit Float Tolerance — Use Assert.That, Not Assert.AreEqual
+
+**Problem:** `Assert.AreEqual(float expected, float actual, float delta, string msg)` causes `error CS1503` — NUnit's overload has `(object, object, string)` as the 3-arg form; the 4th arg expects `object` not `string`. Also `Assert.AreNotEqual` has no float-delta overload.
+
+**Fix:** Always use `Assert.That` with constraint syntax:
+```csharp
+Assert.That(result, Is.EqualTo(10.15f).Within(0.05f), "message");
+Assert.That(result, Is.GreaterThan(0.5f), "message");
+Assert.That(result, Is.LessThan(10.17f), "message");
+Assert.That(result, Is.LessThanOrEqualTo(0.5f), "message");
+Assert.That(a, Is.Not.EqualTo(b).Within(0.05f), "message");
+```
+**Rule:** Never use `Assert.AreEqual(float, float, float)` — always `Assert.That(..., Is.EqualTo(...).Within(...))`.
+
+---
+
+## BallAnimator.DestroyInstance — DestroyImmediate in EditMode
+
+**Problem:** `BallAnimator.DestroyInstance()` calls `Destroy(_instance)`. In EditMode tests (NUnit + UnityTest runner), Unity logs `[Error] Destroy may not be called from edit mode!` — the test runner treats unhandled error logs as test failures.
+
+**Fix:** Guard with `#if UNITY_EDITOR`:
+```csharp
+#if UNITY_EDITOR
+    DestroyImmediate(_instance);
+#else
+    Destroy(_instance);
+#endif
+```
+**Rule:** Any production code that destroys GameObjects and may run in EditMode tests must use this pattern. `Destroy` is runtime-only; `DestroyImmediate` is the editor equivalent.
+
 **What NOT to do (confirmed failures):**
 - Blurring `distToWater` (Gaussian, any sigma) — reduces stripes but can't eliminate Voronoi edges
 - Blurring ramp heights (separable Gaussian + restore non-ramp) — creates stair artifacts at mask boundary
@@ -663,6 +711,71 @@ For tees: simulation of `dR = drop / maxSlope` showed my first adaptive formulat
 **Fix:** Remove the offending GameObject. If the component is unused (as `PhysicsLabController._heightProvider` was — a serialized field never read in code), delete the GO entirely from the scene YAML.
 
 **Rule:** If input appears dead in a scene but works elsewhere, check Console for any `LogError` firing in `Awake()`/`Start()`. The Error Pause feature is the most likely culprit. Toggle Error Pause off temporarily to confirm (red stop-button icon in Console toolbar).
+
+---
+
+## Unity Additive Scene Lighting — CopyHoleLighting Pattern
+
+### RenderSettings are per-active-scene; additive loads don't inherit environment
+
+When a hole scene is loaded additively (`LoadSceneMode.Additive`), `RenderSettings` are still driven by the **active scene** (LabScaffold). Renderers in the hole scene (e.g. URPWater with `_REFLECTIONMODE_PROBES`) sample the active scene's environment — which may be a default skybox with no probes, causing the water to render gray.
+
+**Fix — `CopyHoleLighting(Scene holeScene)`:**
+1. Temporarily call `SceneManager.SetActiveScene(holeScene)` — this makes `RenderSettings` read from the hole.
+2. Snapshot every field: `skybox`, `ambientMode`, `ambientSkyColor/Equator/Ground`, `ambientLight`, `ambientIntensity`, `fog*`, `defaultReflectionMode`, `reflectionIntensity/Bounces`, `customReflectionTexture`, `sun`.
+3. Restore LabScaffold as active: `SceneManager.SetActiveScene(scaffoldScene)`.
+4. Write all snapshotted values into the now-active LabScaffold's `RenderSettings`.
+5. Call `DynamicGI.UpdateEnvironment()` to regenerate the ambient probe and env cubemap.
+
+**Call site:** at the end of `OnHoleLoaded`, BEFORE `SetupAtTee`.
+**Also restore active scene** in `OnHoleUnloaded` (set LabScaffold active again).
+
+### ReflectionProbeClearFlags — use `.Skybox` not `.Sky`
+
+`ReflectionProbeClearFlags.Sky` does not exist — it's `.Skybox`. CS0117 compile error otherwise.
+
+---
+
+## MCP script-execute Runs in Editor Context — Cannot Test Runtime Material Changes
+
+`script-execute` always executes in the Unity Editor (not play mode). `renderer.material` in a script-execute creates an **edit-mode material instance**, not the runtime play-mode instance. Any keyword changes made there will NOT be visible during play mode — the runtime creates its own instance.
+
+**Rule:** Do not use `script-execute` to verify or patch runtime material keywords. To confirm runtime material state, check `Debug.Log` output via Unity Console in play mode, or check the scene screenshot after entering play mode.
+
+---
+
+## Struct Fields Cannot Be Null-Checked — Use a Bool Flag Instead
+
+`AeroConfig`, `WindConfig`, `SurfaceConfig`, `PuttConfig` are **value types (structs)**. The compiler will reject `if (AeroCfg == null)` with CS0019 ("operator == cannot be applied to struct").
+
+**Pattern — `EnsureConfigsLoaded()` with bool guard:**
+```csharp
+bool _configsLoaded;
+void EnsureConfigsLoaded()
+{
+    if (_configsLoaded) return;
+    AeroCfg    = PhysicsConfigLoader.LoadAeroConfig();
+    WindCfg    = PhysicsConfigLoader.LoadWindConfig();
+    SurfaceCfg = PhysicsConfigLoader.LoadSurfaceConfig();
+    PuttCfg    = PhysicsConfigLoader.LoadPuttConfig();
+    _configsLoaded = true;
+}
+```
+Call from both `Awake()` and any method that needs configs (e.g. `ComputeMaxCarryYards`) for edit-mode safety.
+
+---
+
+## MCP script-execute — Use Skill/stdin, Not tmp JSON Files
+
+Use the `script-execute` MCP skill directly via `Skill` tool or stdin pipe, never intermediate JSON files:
+```bash
+npx unity-mcp-cli run-tool script-execute --input-file - <<'EOF'
+{"csharpCode": "...", "className": "Script", "methodName": "Main"}
+EOF
+```
+JSON files are no faster, add repo noise, and get left behind in the project root.
+
+**Rule:** For complex multi-line code, use a heredoc. Only write to a temp file if the shell escaping is genuinely unresolvable. Never leave `tmp_*.json` files in the project root.
 
 ---
 
