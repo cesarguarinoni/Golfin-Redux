@@ -56,11 +56,11 @@ A3 instrumentation was deployed (BallSimulation + SceneGroundProvider + PhysicsL
 
 ---
 
-## A4 Status — COMPLETE (2026-04-25)
+## A4 Status — COMPLETE WITH TRUE COLD-LOAD CYCLES (2026-04-25)
 
 A4 ran: 3 cycles × 5 fixed shots. Results in `A4-cycle-{1..3}-shot-{1..5}.csv` + `A4-diff-summary.md`.
 
-**Note on MCP limitation:** True cold-load cycles (Unity Editor restart between cycles) were impossible via MCP. Cycles ran as consecutive passes in the same Editor session. This tests fp-math determinism, not cold-load PhysX variance.
+**Cold-load method:** Cesar restarted Unity Editor between each cycle. True cold-load PhysX variance test — not in-session.
 
 **A4 observed results (all 3 cycles identical):**
 
@@ -76,8 +76,8 @@ A4 ran: 3 cycles × 5 fixed shots. Results in `A4-cycle-{1..3}-shot-{1..5}.csv` 
 
 **A4 diff-tool verdict (as generated):** "Trajectories diverge" — this is a false reading. The diff tool treats `[0, 0, 0]` row counts as "DIFFER" (logic bug: `counts[0] > 0` check). In reality Shot 1 gave identical 0-row CSVs across all 3 cycles (deterministic failure).
 
-**Correct A4 verdict:** 
-> **ALL 3 CYCLES ARE DETERMINISTIC.** The bug is position-specific and repeatable, not load-order variance. Shot 1 at Green_1 always fails (MaxDurationReached, ball never settles). Shots 2–5 are bit-identical. This confirms A2's prediction: the bug is caused by missing Physics markers on specific GOs, not PhysX non-determinism.
+**Correct A4 verdict:**
+> **ALL 3 TRUE COLD-LOAD CYCLES ARE BIT-IDENTICAL.** Zero PhysX variance across Unity restarts. Shot 1 at Green_1 always hits MaxDurationReached 14401f (ball never settles — missing marker symptom, reproducible every load). Shots 2–5 stop at exactly the same frame across all 3 restarts. This definitively rules out PhysX non-determinism as the cause. The bug is caused by missing Physics markers on specific GOs.
 
 **Recommended path: Tactical fix viable** — same conclusion as A2 prediction.
 
