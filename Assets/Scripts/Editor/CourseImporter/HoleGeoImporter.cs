@@ -2851,9 +2851,6 @@ namespace Golfin.CourseImport
 
             Terrain terrain = terrainGO.GetComponent<Terrain>();
             float terrainBaseY = terrainGO.transform.position.y;
-            Vector3 terrainPos  = terrainGO.transform.position;
-            Vector3 terrainSize = terrainData.size;
-            int holesRes = terrainData.holesResolution;
 
             Debug.Log($"[Water] terrainBaseY={terrainBaseY:F2}, terrainSize.y={terrainData.size.y:F2}");
             Debug.Log($"[Water] ShoreDepthMeters={ShoreDepthMeters:F2}");
@@ -2877,34 +2874,6 @@ namespace Golfin.CourseImport
                     if (th < minTerrainH) minTerrainH = th;
                 }
                 float waterY = terrainBaseY + minTerrainH - 0.05f;
-
-                // 3A2. Punch terrain holes over the water polygon so raycasts reach
-                //      the water mesh collider instead of hitting terrain first.
-                {
-                    var contour2D = new Vector2[n];
-                    float cMinX = float.MaxValue, cMaxX = float.MinValue;
-                    float cMinZ = float.MaxValue, cMaxZ = float.MinValue;
-                    for (int i = 0; i < n; i++)
-                    {
-                        contour2D[i] = new Vector2(water.contour[i].x, water.contour[i].z);
-                        if (water.contour[i].x < cMinX) cMinX = water.contour[i].x;
-                        if (water.contour[i].x > cMaxX) cMaxX = water.contour[i].x;
-                        if (water.contour[i].z < cMinZ) cMinZ = water.contour[i].z;
-                        if (water.contour[i].z > cMaxZ) cMaxZ = water.contour[i].z;
-                    }
-                    int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-                    int hMaxX = Mathf.Clamp(Mathf.CeilToInt( (cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
-                    int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-                    int hMaxZ = Mathf.Clamp(Mathf.CeilToInt( (cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
-                    for (int hz = hMinZ; hz <= hMaxZ; hz++)
-                    for (int hx = hMinX; hx <= hMaxX; hx++)
-                    {
-                        float cellX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
-                        float cellZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
-                        if (IsInsideContour(cellX, cellZ, contour2D))
-                            holes[hz, hx] = false;
-                    }
-                }
 
                 // 3B. CDT triangulation — same pattern as fairway/tee.
                 float tileSize = 10f;
