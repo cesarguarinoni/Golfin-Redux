@@ -39,6 +39,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         private Transform    _ballTransform;
         private float        _maxCarryYards = 250f;
         private ArrowGraphic _arrowGraphic;
+        private bool         _lastArrowTrailState;
 
         // ── Public API ────────────────────────────────────────────────────────
 
@@ -48,6 +49,12 @@ namespace Golfin.Gameplay.UI.ShotUI
         // Wired by the lab controller in Part E for world-space line projection.
         public void SetCamera(Camera cam)           => _worldCamera   = cam;
         public void SetBallTransform(Transform ball) => _ballTransform = ball;
+
+        // Show/hide the cone outline mesh. Called by HandleStateChanged when DebugFlags.ShowConeOutline changes.
+        public void SetOutlineVisible(bool visible)
+        {
+            if (_coneGraphic != null) _coneGraphic.gameObject.SetActive(visible);
+        }
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -105,6 +112,17 @@ namespace Golfin.Gameplay.UI.ShotUI
             UpdateArrows(state);
             UpdateHUD(state);
             UpdateTargetingLine(state);
+            ApplyDebugFlags();
+        }
+
+        private void ApplyDebugFlags()
+        {
+            if (_shotController == null) return;
+            SetOutlineVisible(_shotController.DebugFlags.ShowConeOutline);
+            bool showTrail = _shotController.DebugFlags.ShowArrowTrail;
+            if (showTrail && !_lastArrowTrailState)
+                Debug.Log("[Debug] Arrow trail not yet implemented");
+            _lastArrowTrailState = showTrail;
         }
 
         // ── Cone width ────────────────────────────────────────────────────────

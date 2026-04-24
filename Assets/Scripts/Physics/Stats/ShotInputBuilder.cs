@@ -24,7 +24,8 @@ namespace Golfin.Physics.Stats
             fp flickMagnitude01,
             fp aimYawRadians,
             fp originX, fp originY, fp originZ,
-            uint seed)
+            uint seed,
+            fp baseVelocityOverrideMps = default)
         {
             var resolved = StatModifierResolver.Resolve(bundle, coeffs, caps);
 
@@ -43,10 +44,13 @@ namespace Golfin.Physics.Stats
                 effectiveFlick = fp.Zero;
             }
 
-            // Base velocity from Club or Putter.
-            fp baseVelMps = bundle.IsPutt
-                ? bundle.Putter.Value.BaseVelocityMps
-                : bundle.Club.Value.BaseVelocityMps;
+            // Base velocity: explicit override (e.g. from ControlsConfig.PuttBaseVelocityMps) takes
+            // priority when > 0; otherwise falls back to the StatBundle's club/putter value.
+            fp baseVelMps = baseVelocityOverrideMps > fp.Zero
+                ? baseVelocityOverrideMps
+                : bundle.IsPutt
+                    ? bundle.Putter.Value.BaseVelocityMps
+                    : bundle.Club.Value.BaseVelocityMps;
             fp velMagnitude = baseVelMps * effectiveFlick * resolved.VelocityMultiplier;
 
             // Launch pitch from loft.

@@ -38,8 +38,8 @@ namespace Golfin.Physics.Tests
 
             Assert.AreEqual(10, rangeCount,
                 $"Expected 10 Range presets, got {rangeCount}.");
-            Assert.AreEqual(5, hole1Count,
-                $"Expected 5 Hole1 presets, got {hole1Count}.");
+            Assert.AreEqual(8, hole1Count,
+                $"Expected 8 Hole1 presets, got {hole1Count}.");
             Assert.GreaterOrEqual(dashboardCount, 1,
                 $"Expected ≥1 Dashboard presets, got {dashboardCount}.");
         }

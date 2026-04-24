@@ -47,6 +47,12 @@ namespace Golfin.Physics.Viewer
         public event Action<ShotReadout> OnShotFired;
         // Published after Fire×N
         public event Action<bool, int> OnRepeatabilityResult;
+        // Published when placement entries are rebuilt (hole load/unload)
+        public event Action OnPlacementEntriesChanged;
+
+        // Ball placement entries — populated on hole load, cleared on unload.
+        public System.Collections.Generic.List<BallPlacementEntry> PlacementEntries { get; private set; }
+            = new System.Collections.Generic.List<BallPlacementEntry>();
 
         // In-memory configs
         public AeroConfig    AeroCfg    { get; private set; }
@@ -66,10 +72,7 @@ namespace Golfin.Physics.Viewer
 
         void Awake()
         {
-            AeroCfg    = PhysicsConfigLoader.LoadAeroConfig();
-            WindCfg    = PhysicsConfigLoader.LoadWindConfig();
-            SurfaceCfg = PhysicsConfigLoader.LoadSurfaceConfig();
-            PuttCfg    = PhysicsConfigLoader.LoadPuttConfig();
+            EnsureConfigsLoaded();
 
             if (_shotController != null)
                 _shotController.OnShotResolved += HandleShotResolved;
@@ -159,6 +162,42 @@ namespace Golfin.Physics.Viewer
             SetupAtTee();
         }
 
+        // Canonical club stats for touch-shot play. Values match ShotPresetCatalog reference shots.
+        static readonly Golfin.Physics.Stats.ClubStats[] LabClubs =
+        {
+            new Golfin.Physics.Stats.ClubStats(50, 50, 50, 100, fp.FromFloat(10.9f),  fp.FromFloat(75f),  fp.FromFloat(2686f)), // Driver
+            new Golfin.Physics.Stats.ClubStats(50, 50, 50, 100, fp.FromFloat(25.5f),  fp.FromFloat(51f),  fp.FromFloat(6500f)), // Iron 7
+            new Golfin.Physics.Stats.ClubStats(50, 50, 50, 100, fp.FromFloat(41.2f),  fp.FromFloat(42f),  fp.FromFloat(9000f)), // Wedge
+            new Golfin.Physics.Stats.ClubStats(50, 50, 50, 100, fp.FromFloat(5f),     fp.FromFloat(5f),   fp.FromFloat(0f)),    // Putter
+        };
+        public static readonly string[] LabClubLabels = { "Driver", "Iron 7", "Wedge", "Putter" };
+
+        public void SetClub(int index)
+        {
+            if (_shotController == null || index < 0 || index >= LabClubs.Length) return;
+            bool isPutt = index == LabClubs.Length - 1;
+            _shotController.IsPutt = isPutt;
+            if (isPutt)
+            {
+                var putter = new Golfin.Physics.Stats.PutterStats(
+                    50, 50, 50, 100,
+                    LabClubs[index].LoftDegrees, LabClubs[index].BaseVelocityMps);
+                _shotController.InjectStatBundle(new Golfin.Physics.Stats.StatBundle(
+                    putter,
+                    Golfin.Physics.Stats.BallStats.Neutral,
+                    Golfin.Physics.Stats.CharacterStats.Neutral,
+                    fp.FromFloat(100f), fp.FromFloat(100f)));
+            }
+            else
+            {
+                _shotController.InjectStatBundle(new Golfin.Physics.Stats.StatBundle(
+                    LabClubs[index],
+                    Golfin.Physics.Stats.BallStats.Neutral,
+                    Golfin.Physics.Stats.CharacterStats.Neutral,
+                    fp.FromFloat(100f), fp.FromFloat(100f)));
+            }
+        }
+
         // ── Setup ──────────────────────────────────────────────────────────────
 
         void SetupAtTee()
@@ -180,6 +219,41 @@ namespace Golfin.Physics.Viewer
 
             Camera cam = chaseCamera?.GetComponent<Camera>();
             if (cam != null) ApplyCameraYaw(cam);
+
+            // Putt mode: switch to ground-level camera for close-range view.
+            if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
+                chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
+        }
+
+        // Teleport the ball to a world position (Y resolved via downward raycast).
+        // One-shot placement; subsequent shots continue from wherever the ball lands.
+        public void PlaceBallAt(Vector3 worldPos)
+        {
+            if (_shotController != null) _shotController.CompleteShot();
+
+            float y   = SurfaceSnap(worldPos.x, worldPos.z, worldPos.y);
+            Vector3 pos = new Vector3(worldPos.x, y, worldPos.z);
+
+            _orbitCenter = pos;
+            if (ballAnimator != null) ballAnimator.PlaceAtRest(pos);
+
+            Vector3 lookDir = GetDefaultLookDirection();
+            _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
+            if (_shotController != null)
+                _shotController.CameraHeadingRadians = _cameraYaw;
+
+            Camera cam = chaseCamera?.GetComponent<Camera>();
+            if (cam != null) ApplyCameraYaw(cam);
+
+            if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
+                chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
+        }
+
+        // Update the HUD max-carry yards readout for the current StatBundle/club.
+        public void RecomputeMaxCarry()
+        {
+            if (_shotConeView != null)
+                _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
         }
 
         // Auto-derive look direction from scene type when not set in Inspector.
@@ -231,6 +305,8 @@ namespace Golfin.Physics.Viewer
                 if (ballAnimator?.CurrentBall != null)
                     _orbitCenter = ballAnimator.CurrentBall.position;
                 if (chaseCamera != null) chaseCamera.SetTarget(null);
+                // Allow firing from current lie without requiring Reset to Tee.
+                _shotController?.CompleteShot();
             }
             _prevBallPlaying = isPlaying;
             if (isPlaying) return;
@@ -410,8 +486,20 @@ namespace Golfin.Physics.Viewer
             return BallSimulation.Simulate(input, ground, AeroCfg, WindCfg, surface, SurfaceCfg, PuttCfg, ballMods);
         }
 
+        bool _configsLoaded;
+        void EnsureConfigsLoaded()
+        {
+            if (_configsLoaded) return;
+            AeroCfg    = PhysicsConfigLoader.LoadAeroConfig();
+            WindCfg    = PhysicsConfigLoader.LoadWindConfig();
+            SurfaceCfg = PhysicsConfigLoader.LoadSurfaceConfig();
+            PuttCfg    = PhysicsConfigLoader.LoadPuttConfig();
+            _configsLoaded = true;
+        }
+
         float ComputeMaxCarryYards()
         {
+            EnsureConfigsLoaded();
             float velMps   = 75f;
             float pitchRad = 10.9f * Mathf.Deg2Rad;
             var vel = new fp3(
@@ -561,8 +649,11 @@ namespace Golfin.Physics.Viewer
 
             System.Reflection.FieldInfo stField = smType.GetField("surfaceType");
 
-            var teeGOs   = new System.Collections.Generic.List<GameObject>();
-            var greenGOs = new System.Collections.Generic.List<GameObject>();
+            var teeGOs     = new System.Collections.Generic.List<GameObject>();
+            var greenGOs   = new System.Collections.Generic.List<GameObject>();
+            var bunkerGOs  = new System.Collections.Generic.List<GameObject>();
+            var fairwayGOs = new System.Collections.Generic.List<GameObject>();
+            var waterGOs   = new System.Collections.Generic.List<GameObject>();
 
             // Search only within the newly loaded scene.
             Scene loadedScene = SceneManager.GetSceneByName(sceneName);
@@ -574,8 +665,11 @@ namespace Golfin.Physics.Viewer
                 {
                     if (mb == null || mb.GetType() != smType) continue;
                     int val = (int)stField.GetValue(mb);
-                    if (val == 6) teeGOs.Add(mb.gameObject);   // Tee
-                    else if (val == 1) greenGOs.Add(mb.gameObject); // Green
+                    if      (val == 6) teeGOs.Add(mb.gameObject);     // Tee
+                    else if (val == 1) greenGOs.Add(mb.gameObject);   // Green
+                    else if (val == 4) bunkerGOs.Add(mb.gameObject);  // Bunker
+                    else if (val == 0) fairwayGOs.Add(mb.gameObject); // Fairway
+                    else if (val == 5) waterGOs.Add(mb.gameObject);   // Water
                 }
             }
 
@@ -585,23 +679,36 @@ namespace Golfin.Physics.Viewer
             foreach (var g in greenGOs) _loadedHoleGreenCentroid += g.transform.position;
             if (_greenCentroidValid) _loadedHoleGreenCentroid /= greenGOs.Count;
 
-            // Pick tee closest to green centroid (back tee approximation).
-            GameObject teeGO = null;
-            if (teeGOs.Count > 0)
+            // Find TeeMarker_regular_* GOs directly by name — these are the physical tee marker props.
+            var regularMarkers = new System.Collections.Generic.List<Transform>();
+            foreach (var root in roots)
             {
-                if (_greenCentroidValid)
+                foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
                 {
-                    float best = float.MaxValue;
-                    foreach (var t in teeGOs)
-                    {
-                        float d = Vector3.Distance(t.transform.position, _loadedHoleGreenCentroid);
-                        if (d < best) { best = d; teeGO = t; }
-                    }
+                    if (t.name.IndexOf("TeeMarker_regular", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                        regularMarkers.Add(t);
                 }
-                else teeGO = teeGOs[0];
             }
 
-            if (teeGO != null)
+            // Fall back to SurfaceMarker tee zone GOs if no named markers found.
+            Vector3 teePos = Vector3.zero;
+            bool teeFound = false;
+            if (regularMarkers.Count > 0)
+            {
+                foreach (var t in regularMarkers) teePos += t.position;
+                teePos /= regularMarkers.Count;
+                teeFound = true;
+                Debug.Log($"[PhysicsLab] OnHoleLoaded: {sceneName} — tee midpoint from {regularMarkers.Count} TeeMarker_regular_* GOs at {teePos:F2}");
+            }
+            else if (teeGOs.Count > 0)
+            {
+                foreach (var g in teeGOs) teePos += g.transform.position;
+                teePos /= teeGOs.Count;
+                teeFound = true;
+                Debug.Log($"[PhysicsLab] OnHoleLoaded: {sceneName} — tee midpoint from {teeGOs.Count} SurfaceMarker tees (fallback) at {teePos:F2}");
+            }
+
+            if (teeFound)
             {
                 if (_runtimeTeeAnchor == null)
                 {
@@ -609,21 +716,127 @@ namespace Golfin.Physics.Viewer
                     go.transform.SetParent(transform);
                     _runtimeTeeAnchor = go.transform;
                 }
-                _runtimeTeeAnchor.position = teeGO.transform.position;
+                _runtimeTeeAnchor.position = teePos;
                 _ballSpawnPoint = _runtimeTeeAnchor;
-                Debug.Log($"[PhysicsLab] OnHoleLoaded: {sceneName} — tee at {teeGO.transform.position:F2} " +
-                          $"({teeGOs.Count} tees, {greenGOs.Count} greens found)");
             }
             else
             {
-                Debug.LogWarning($"[PhysicsLab] OnHoleLoaded: no Tee SurfaceMarker found in {sceneName}. " +
-                                 $"({teeGOs.Count} tees, {greenGOs.Count} greens)");
+                Debug.LogWarning($"[PhysicsLab] OnHoleLoaded: no tee markers found in {sceneName}.");
             }
 
             if (_shotConeView != null)
                 _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
 
+            // Populate ball placement entries for the Place Ball dropdown in the lab UI.
+            BuildPlacementEntries(teeFound, teePos, greenGOs, bunkerGOs, fairwayGOs, waterGOs);
+
+            // Copy all lighting settings from the hole scene into LabScaffold so URPWater
+            // gets the same environment (skybox, ambient, fog, reflections) it would have
+            // when the hole is loaded standalone.
+            CopyHoleLighting(SceneManager.GetSceneByName(sceneName));
+
             SetupAtTee();
+        }
+
+        void BuildPlacementEntries(
+            bool teeFound, Vector3 teePos,
+            System.Collections.Generic.List<GameObject> greenGOs,
+            System.Collections.Generic.List<GameObject> bunkerGOs,
+            System.Collections.Generic.List<GameObject> fairwayGOs,
+            System.Collections.Generic.List<GameObject> waterGOs)
+        {
+            PlacementEntries.Clear();
+
+            // Tee — one entry using the same midpoint the scaffold already uses.
+            if (teeFound)
+                PlacementEntries.Add(new BallPlacementEntry("Tee 1", teePos));
+
+            // Green entries.
+            AddSurfaceEntries(PlacementEntries, greenGOs,   "Green");
+
+            // Bunker entries.
+            AddSurfaceEntries(PlacementEntries, bunkerGOs,  "Bunker");
+
+            // Fairway entries.
+            AddSurfaceEntries(PlacementEntries, fairwayGOs, "Fairway");
+
+            // Water entries — offset 1m toward the green centroid so the ball lands on grass.
+            for (int i = 0; i < waterGOs.Count; i++)
+            {
+                Vector3 wPos   = waterGOs[i].transform.position;
+                Vector3 target = _greenCentroidValid ? _loadedHoleGreenCentroid : wPos + Vector3.right * 10f;
+                Vector3 dir    = target - wPos;
+                dir.y = 0f;
+                if (dir.sqrMagnitude > 0.01f) dir = dir.normalized;
+                PlacementEntries.Add(new BallPlacementEntry($"Near Water {i + 1}", wPos + dir * 1f));
+            }
+
+            OnPlacementEntriesChanged?.Invoke();
+            Debug.Log($"[PhysicsLab] PlacementEntries built: {PlacementEntries.Count} entries.");
+        }
+
+        static void AddSurfaceEntries(
+            System.Collections.Generic.List<BallPlacementEntry> list,
+            System.Collections.Generic.List<GameObject> gos,
+            string prefix)
+        {
+            for (int i = 0; i < gos.Count; i++)
+                list.Add(new BallPlacementEntry($"{prefix} {i + 1}", gos[i].transform.position));
+        }
+
+        void CopyHoleLighting(Scene holeScene)
+        {
+            if (!holeScene.IsValid() || !holeScene.isLoaded) return;
+
+            var scaffoldScene = SceneManager.GetSceneByName("LabScaffold");
+
+            // Temporarily make hole active so RenderSettings reads its values.
+            SceneManager.SetActiveScene(holeScene);
+            var skybox              = RenderSettings.skybox;
+            var ambientMode         = RenderSettings.ambientMode;
+            var ambientSkyColor     = RenderSettings.ambientSkyColor;
+            var ambientEquatorColor = RenderSettings.ambientEquatorColor;
+            var ambientGroundColor  = RenderSettings.ambientGroundColor;
+            var ambientLight        = RenderSettings.ambientLight;
+            var ambientIntensity    = RenderSettings.ambientIntensity;
+            var fog                 = RenderSettings.fog;
+            var fogColor            = RenderSettings.fogColor;
+            var fogMode             = RenderSettings.fogMode;
+            var fogStartDistance    = RenderSettings.fogStartDistance;
+            var fogEndDistance      = RenderSettings.fogEndDistance;
+            var fogDensity          = RenderSettings.fogDensity;
+            var defaultReflMode     = RenderSettings.defaultReflectionMode;
+            var reflectionIntensity = RenderSettings.reflectionIntensity;
+            var reflectionBounces   = RenderSettings.reflectionBounces;
+            var customReflection    = RenderSettings.customReflectionTexture;
+            var sun                 = RenderSettings.sun;
+
+            // Restore LabScaffold as active (keeps new-GO placement correct),
+            // then write the hole's settings into it.
+            if (scaffoldScene.IsValid())
+                SceneManager.SetActiveScene(scaffoldScene);
+
+            RenderSettings.skybox                  = skybox;
+            RenderSettings.ambientMode             = ambientMode;
+            RenderSettings.ambientSkyColor         = ambientSkyColor;
+            RenderSettings.ambientEquatorColor     = ambientEquatorColor;
+            RenderSettings.ambientGroundColor      = ambientGroundColor;
+            RenderSettings.ambientLight            = ambientLight;
+            RenderSettings.ambientIntensity        = ambientIntensity;
+            RenderSettings.fog                     = fog;
+            RenderSettings.fogColor                = fogColor;
+            RenderSettings.fogMode                 = fogMode;
+            RenderSettings.fogStartDistance        = fogStartDistance;
+            RenderSettings.fogEndDistance          = fogEndDistance;
+            RenderSettings.fogDensity              = fogDensity;
+            RenderSettings.defaultReflectionMode   = defaultReflMode;
+            RenderSettings.reflectionIntensity     = reflectionIntensity;
+            RenderSettings.reflectionBounces       = reflectionBounces;
+            RenderSettings.customReflectionTexture = customReflection;
+            RenderSettings.sun                     = sun;
+
+            DynamicGI.UpdateEnvironment();
+            Debug.Log($"[PhysicsLab] Copied lighting from {holeScene.name} into LabScaffold.");
         }
 
         // Called by LabHoleBinder when the loaded hole scene is closed.
@@ -632,6 +845,15 @@ namespace Golfin.Physics.Viewer
             _useSceneProviders   = false;
             _greenCentroidValid  = false;
             _ballSpawnPoint      = null;
+
+            PlacementEntries.Clear();
+            OnPlacementEntriesChanged?.Invoke();
+
+            // Restore LabScaffold as active scene.
+            Scene scaffoldScene = SceneManager.GetSceneByName("LabScaffold");
+            if (scaffoldScene.IsValid())
+                SceneManager.SetActiveScene(scaffoldScene);
+
             Debug.Log("[PhysicsLab] OnHoleUnloaded — reverted to flat-ground fallback.");
         }
 
@@ -687,6 +909,13 @@ namespace Golfin.Physics.Viewer
                       $"  Ended:   {r.TerminationReason} on {r.FinalSurface}\n" +
                       $"  Time:    {r.SimDurationSeconds:F2}s");
         }
+    }
+
+    public struct BallPlacementEntry
+    {
+        public string  Label;
+        public Vector3 WorldPos; // XZ are the target; Y is resolved via downward raycast at placement time.
+        public BallPlacementEntry(string label, Vector3 worldPos) { Label = label; WorldPos = worldPos; }
     }
 
     public struct ShotReadout

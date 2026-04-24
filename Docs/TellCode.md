@@ -7,7 +7,215 @@
 
 ---
 
-## 🔶 IN PROGRESS — PhysicsLab: migrate to scaffold + multi-hole picker — 2026-04-24
+## 🔧 TASK — Phase 7 Part F: Putt mode + debug toggles + ball placement — 2026-04-24
+
+### Background
+
+Phase 7 Parts A–E landed the swing loop (cone, state machine, input, lab integration, scaffold). Part F closes out Phase 7 by adding: (a) a putt-mode flag on `ShotController` that reshapes the input for putts, (b) 8 debug toggles per design §8, (c) a ball-placement dropdown in the lab so we can test any surface without shooting the ball there first.
+
+Gameplay rule (Cesar, 2026-04-24): putter is selected by the player and is only valid on the green. Driver/iron/wedge are never valid on the green. Auto-detection is NOT required — club selection drives `IsPutt`.
+
+Architectural note: we may iterate on the putting interface in the future (different gauge, different arrow shape, alternate gesture). Keep all putt-specific logic behind a single `if (IsPutt)` guard per behavior, with no scattered conditionals, so a future `PuttController` split is a move operation, not a rewrite.
+
+### Read first
+
+- `Docs/Game Design/SHOT_CONTROLS_DESIGN.md` §4 (putt mode), §8 (debug toggles).
+- `Assets/Scripts/Gameplay/Input/ShotController.cs` — where the mode flag + flag plumbing go.
+- `Assets/Scripts/Gameplay/Config/ControlsConfig.cs` — already has `PuttArrowSpeedMultiplier` (0.5) and `PuttBaseVelocityMps` (5) from Part A; confirm both are parsed from `controls.csv`.
+- `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — the controller the lab drives. Part E added `HandleShotResolved`, `ComputeMaxCarryYards`, `SetupAtTee`.
+- `Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs` — where the new dropdowns + debug panel go.
+- `Assets/Scripts/Physics/Stats/PutterStats.cs` + `StatBundle.cs` — putter path for stat resolution.
+- `Assets/Scripts/Physics/Runtime/SceneGroundProvider.cs` / `SceneSurfaceProvider.cs` — raycast contract; used by ball-placement Y snapping.
+
+### Pre-flight
+
+- `ControlsConfig` should already expose `PuttArrowSpeedMultiplier` and `PuttBaseVelocityMps`. If not, load them from `controls.csv` in `ControlsConfigLoader` and expose as properties.
+- Tee-marker convention: the scaffold already uses the midpoint of `TeeMarker_regular_*` GOs for auto tee placement. Reuse that exact logic for the "Tee N" placement dropdown entries (one entry per `TeeMarker_regular_N` group; see F.7).
+- Surface-marker lookup: use reflection (`Type.GetType("Golfin.Course.SurfaceMarker, Assembly-CSharp")`) + reflection on the `surfaceType` field for `Green/Bunker/Fairway/Water` placements. Same pattern LabScaffold migration established.
+- `ChaseCamera` has a `Mode` enum — confirm the ground-level name (likely `Ground`) before wiring F.4.
+
+---
+
+### F.1 — Putt mode flag on ShotController
+
+**File:** `Assets/Scripts/Gameplay/Input/ShotController.cs`
+
+- Add public property `bool IsPutt { get; set; }`. Default `false`. Settable externally; no internal auto-flip.
+- Putt-mode effects, each gated by a single `if (IsPutt)` guard at the relevant seam:
+  - **Power clamp.** In the power-mapping code path, clamp `flickMagnitude01` at `1.0f` instead of the normal 1.2 overpower ceiling.
+  - **Spin override.** In the `ShotInput` build, force `SpinState.None` regardless of any spin modal state.
+  - **Shot mode.** Force Straight (no fade/draw) regardless of UI state.
+  - **Base velocity.** When in putt mode, pass `controlsCfg.PuttBaseVelocityMps` into `ShotInputBuilder` as the base velocity override, instead of the club's `BaseVelocityMps`. If `ShotInputBuilder` has no override parameter today, add one and default to `-1f` ("use club").
+  - **Arrow speed.** Multiply the computed arrow speed by `controlsCfg.PuttArrowSpeedMultiplier`.
+  - **Per-pass degradation.** Skip entirely — `degradationYawDeg` stays at 0 regardless of pass count.
+- Do NOT split to `PuttController` yet. Single guarded `if` per behavior, as noted above.
+
+### F.2 — Lab club selector (manual)
+
+**File:** `Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs`
+
+- Add a dropdown "Club" with two entries: `Driver` (default), `Putter`.
+- On change:
+  - Call `_shotController.IsPutt = (selection == Putter)`.
+  - Swap the injected StatBundle: `Driver` → `StatBundle` with `ClubStats.DefaultDriver`; `Putter` → `StatBundle` with `PutterStats.DefaultPutter`. Use the existing `InjectStatBundle(...)` path added in the 2026-04-24 polish pass.
+  - Trigger `PhysicsLabController.RecomputeMaxCarry()` (expose as a public method if it isn't already) so the HUD max-yards updates.
+- Note in the UI tooltip or inline: "In-game, putter is auto-selected on green and unavailable off-green. Lab is manual for testing."
+
+### F.3 — Debug toggles
+
+**File (new):** `Assets/Scripts/Gameplay/Input/ShotDebugFlags.cs` — plain struct with 8 bool fields:
+
+```
+public struct ShotDebugFlags
+{
+    public bool ShowConeOutline;       // default true
+    public bool ShowArrowTrail;        // default false (arrow trail debug vis)
+    public bool CancelOnSlowFlick;     // default true (design §3.1 rule)
+    public bool SinglePassMode;        // default false (skip degradation system)
+    public bool DisableOverpower;      // default false (hard clamp at 1.0x)
+    public bool DisableConeFineTune;   // default false (aim is camera-only)
+    public bool ForcePerfectTiming;    // default false
+    public bool ForcePerfectAim;       // default false
+
+    public static ShotDebugFlags Defaults => new ShotDebugFlags
+    {
+        ShowConeOutline   = true,
+        ShowArrowTrail    = false,
+        CancelOnSlowFlick = true,
+        SinglePassMode    = false,
+        DisableOverpower  = false,
+        DisableConeFineTune = false,
+        ForcePerfectTiming  = false,
+        ForcePerfectAim     = false,
+    };
+}
+```
+
+**Modify `ShotController.cs`:**
+- Add field `public ShotDebugFlags DebugFlags = ShotDebugFlags.Defaults;`.
+- Apply flags at the relevant seams (one `if` per flag):
+  - `ShowConeOutline == false` → call `_shotConeView.SetOutlineVisible(false)` on state change (add the setter to `ShotConeView` if missing).
+  - `ShowArrowTrail == true` → enable an arrow-history visual on `ShotConeView` (new simple trail renderer; if cost is high, gate behind a TODO and log `[Debug] Arrow trail not yet implemented`).
+  - `CancelOnSlowFlick == false` → skip the slow-flick cancel check in `ShotController.OnTouchUp`.
+  - `SinglePassMode == true` → skip pass-degradation arithmetic entirely; treat every pass as clean.
+  - `DisableOverpower == true` → hard clamp `flickMagnitude01` at 1.0 (union with `IsPutt` behavior).
+  - `DisableConeFineTune == true` → zero out the cone-lateral contribution to `finalAimYaw`; keep camera heading only.
+  - `ForcePerfectTiming == true` → skip flick timing penalty; treat as apex-aligned.
+  - `ForcePerfectAim == true` → skip flick-deviation + per-pass-degradation contributions to yaw; treat as straight-line.
+
+**Modify `PhysicsLabUI.cs`:**
+- Add a collapsible "Debug Flags" foldout at the bottom of the Lab panel. Matches existing foldout style.
+- 8 checkboxes bound to `_shotController.DebugFlags`. Label each with the human-readable name (e.g. "Show Cone Outline", not `ShowConeOutline`).
+- "Reset to Defaults" button at the foldout bottom → assigns `ShotDebugFlags.Defaults`.
+
+### F.4 — Putt camera mode
+
+**File:** `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs`
+
+- In `SetupAtTee()` (and any other ball-placement entry point — see F.7), if `_shotController.IsPutt == true`, call `chaseCamera.SetMode(ChaseCamera.Mode.Ground)` (or whatever the ground-level enum value is). Otherwise leave camera mode as-is.
+- Camera-lock-on-Pulling behavior is unchanged.
+- If the `Ground` mode doesn't exist with that name, note the actual enum value in the done report and we'll correct the design doc.
+
+### F.5 — Ball placement dropdown
+
+**File:** `Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs` + placement API on `PhysicsLabController`.
+
+Add a "Place Ball" dropdown in the Lab panel. Populated on hole-load (hook into `LabHoleBinder.OnHoleLoaded` or `PhysicsLabController.OnHoleLoaded`).
+
+**Population rules** (runtime scan of the currently-loaded hole scene):
+
+1. **Tee entries.** Use the **same logic the scaffold already uses for auto tee placement** — i.e. group `TeeMarker_regular_*` GOs and take their midpoint. One dropdown entry per logical tee group (if the hole has more than one regular-tee cluster; otherwise one entry "Tee"). Label: `Tee 1`, `Tee 2`, etc.
+2. **Green entries.** For each GO in the hole scene with `Course.SurfaceMarker.surfaceType == Green (1)`: one entry at that GO's transform position (not centroid of mesh; transform position is fine — mesh centroid only matters if transform is zeroed, flag in done report if it is). Label: `Green 1`, `Green 2`, etc.
+3. **Bunker entries.** For each `surfaceType == Bunker (4)`: one entry. Label: `Bunker 1`, ..., `Bunker N`.
+4. **Fairway entries.** For each `surfaceType == Fairway (0)`: one entry. Label: `Fairway 1`, ..., `Fairway N`.
+5. **Water entries.** For each `surfaceType == Water (5)`: one entry at a point offset outward from the water's bounds toward `Green_1`'s position by ~1m. Intent: "next to water, on grass." Label: `Near Water 1`, ..., `Near Water N`.
+
+All entries: Y is resolved at placement time via downward raycast (same pattern as `SceneGroundProvider` / `SurfaceSnap` in `PhysicsLabController`). Never trust the raw transform Y.
+
+**Placement behavior** — when the player picks an entry:
+- `PhysicsLabController.PlaceBallAt(Vector3 worldPos)`:
+  - Raycast down at `(worldPos.x, 500, worldPos.z)`, get surface Y.
+  - `ballAnimator.PlaceAtRest(new Vector3(worldPos.x, surfaceY, worldPos.z))`.
+  - `_orbitCenter = ball position`.
+  - Recompute look direction toward `Green_1` centroid (reuse existing scaffold logic).
+  - Apply camera yaw.
+  - If in putt mode, set `ChaseCamera.Mode.Ground` (F.4).
+- The dropdown selection is a one-shot "teleport"; the selection itself does not persist across shots (ball continues from wherever it lands after the shot, per existing lie-continuation behavior).
+- Add a "Reset to Tee" button next to the dropdown — calls `PlaceBallAt(teeMidpoint)`. Same semantics as existing `ResetToTee()` in the controller; wire through or just delegate.
+
+**Edge cases:**
+- Empty dropdown (hole has no loaded scene): show "— no hole loaded —" disabled entry.
+- A surface type present but with 0 GOs: skip that section silently.
+- If `Green_1` isn't found (for Water offset direction), fall back to offsetting toward scene-bounds centroid.
+- Duplicate labels (e.g. two GOs both named "Bunker_3"): append `(1)`, `(2)` to disambiguate.
+
+### F.6 — Tests
+
+**File (new):** `Assets/Tests/EditMode/Gameplay/ShotControllerPuttModeTests.cs` (or wherever existing Part B tests live — match pattern).
+
+Minimum coverage:
+
+1. `IsPutt == true` clamps `flickMagnitude01` at 1.0 regardless of pull distance.
+2. `IsPutt == true` forces `SpinState.None` in the built `ShotInput`.
+3. `IsPutt == true` passes `PuttBaseVelocityMps` as the velocity base, not club's `BaseVelocityMps`.
+4. `IsPutt == true` produces an arrow speed of `normal × PuttArrowSpeedMultiplier`.
+5. `IsPutt == true` produces zero per-pass degradation regardless of pass index.
+6. Each of the 8 debug flags, when flipped from its default, measurably short-circuits the corresponding code path. One test per flag; tests assert on the observable output (e.g. `DisableOverpower` → `flickMagnitude01` capped at 1.0 when pulled to 1.2 with `IsPutt=false`).
+7. **Bit-exact gate.** With default flags and `IsPutt=true`, simulating a putt with `v0 = 0.35 m/s` on Green surface produces the same final-distance result as Phase 5's canonical 3m putt test (within the existing Phase 5 tolerance, which was `d ∈ [2.7, 3.3]m`). Runs `BallSimulation.Simulate` end-to-end; confirms Part F didn't regress Phase 5.
+
+Existing Part B tests must continue to pass. Don't rewrite them; add to the suite.
+
+### F.7 — Validation (manual, by Cesar)
+
+Cesar will run through this. Code should prepare for it:
+
+1. Open `LabScaffold.unity`, load Hole 1 via picker.
+2. In the Lab panel, open "Place Ball" dropdown. Confirm entries exist for Tee N, Green 1, each Bunker, each Fairway, Near Water N.
+3. Select `Green 1`. Ball teleports to green. Switch Club dropdown to `Putter`. Camera goes ground-level.
+4. Flick a putt. Ball rolls on green per Phase 5 model (visibly slower than a driver shot).
+5. Select `Bunker 1`. Ball teleports. Switch Club back to `Driver`. Flick a shot. Ball exits bunker.
+6. Try each debug flag one at a time: toggle on, flick a shot, observe effect, toggle off.
+7. `Reset to Tee` returns ball to Hole 1's tee.
+
+### Done report
+
+- Files modified + created.
+- Confirmation each of the 6 putt-mode behaviors fires on `IsPutt=true` (quote the guard location, e.g. "`ShotController.cs:142`").
+- Test count + pass rate. Phase 5 bit-exact gate result.
+- `ChaseCamera.Mode` value used for F.4 (confirm it's `Ground` or name the actual value).
+- Dropdown screenshot on Hole 1 showing all entry categories.
+- Short note on any deviations (especially around water offset direction if `Green_1` lookup failed on any hole).
+
+### Iteration budget
+
+- F.1: 1 attempt. Pure flag plumbing.
+- F.2: 1 attempt. UI + stat swap.
+- F.3: 2 attempts if any flag's effect isn't observable cleanly.
+- F.4: 1 attempt, 1 more if `ChaseCamera.Mode` naming differs from spec.
+- F.5: 2 attempts on dropdown population + placement math; 1 more if water-edge placement looks wrong on a specific hole.
+- F.6: 1 attempt. Tests mirror Part B structure.
+- F.7: Cesar runs; Code reports preparedness.
+
+Beyond budget: stop, surface for design review.
+
+✅ DONE: 2026-04-24 — Phase 7 Part F complete. ShotDebugFlags struct (8 flags), ShotController putt guards (power clamp, spin none, baseVelOverride, arrow multiplier, degradation skip, CancelOnSlowFlick), ShotInputBuilder baseVelocityOverrideMps param, ShotConeView debug flag support, PhysicsLabController PlaceBallAt + placement scan (tee/green/bunker/fairway/water) + putt camera (GroundLevel), PhysicsLabUI club picker + place-ball dropdown + debug panel. 14 new tests + 1 stale ViewerTests count fixed (5→8 Hole1 presets). 83/83 pass. Deviation: ChaseCamera.Mode.GroundLevel used (spec said Ground).
+
+### DO NOT
+
+- Don't split `ShotController` into a `PuttController` yet. Keep guarded `if (IsPutt)` branches single-line-ish.
+- Don't add auto-detection of putt mode (ball on green → auto-putter). Gameplay rule is: player selects putter, only valid on green. Lab is manual for testing.
+- Don't redesign the cone visual for putts yet. Same cone, slower arrows, narrower power range. Visual-mode iteration is future work.
+- Don't redesign the Spin modal. F respects whatever it produces and ignores it when `IsPutt=true`.
+- Don't add flag persistence across sessions. Debug flags reset to defaults on scene load.
+- Don't touch `BallSimulation`. Phase 5's putt model is the source of truth.
+
+---
+
+## ✅ DONE — PhysicsLab: migrate to scaffold + multi-hole picker — 2026-04-24
+
+**Status:** Validated by Cesar. Cleanup pending (Cesar to run):
+- Delete `Assets/Scenes/Physics/PhysicsLab_Hole1.unity` + `.meta`
+- Delete `Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs` + `.meta`
 
 ### Background
 
@@ -125,53 +333,14 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
 
 ✅ CODE COMPLETE: 2026-04-24 — LabScaffold.unity created + picker + binder written. Compile-verified (both LabHoleBinder and PhysicsLabHolePicker types found at runtime). Awaiting Cesar validation steps 1–4 (open scaffold, load hole, confirm tee spawn + trajectory, unload). Step 5 cleanup (delete PhysicsLab_Hole1.unity + ZoneMeshBaker.cs) blocked on Cesar confirmation.
 
-## ✅ CANCELLED — reflection-based baker fix (2026-04-24)
-
-Superseded by the scaffold migration above. `PhysicsLabZoneMeshBaker` will be deleted after scaffold validation.
-
----
-
-## PRIOR PROBLEM REPORT — PhysicsLabZoneMeshBaker (SyncZoneMeshes) — 2026-04-23
-
-**Symptom:** Running `GOLFIN > Physics Lab > Sync Zone Meshes (Hole 1)` in edit mode deletes the existing zone meshes in `PhysicsLab_Hole1.unity` and replaces them with only 3 objects instead of the expected ~30. Bunker_1 is absent after every sync.
-
-**Scene state:**
-- `Assets/Golf/Courses/lomond-country-club/Generated/Hole_01_Geo.unity` — not git-tracked. Contains 30 `Golfin.Physics.Runtime.SurfaceMarker` components and 30 `Golfin.Course.SurfaceMarker` components (one pair per zone GO). Zone names: Bunker_1–7, BunkerContour_1–7, Fairway_1–3, Green_1, Tee_2–4, and others.
-- `Assets/Scenes/Physics/PhysicsLab_Hole1.unity` — git-tracked, currently restored to last known-good state via `git restore`.
-
-**Root cause (diagnosed but unresolved):**
-
-The 30 `Golfin.Physics.Runtime.SurfaceMarker` script refs in Hole_01_Geo.unity use a locally embedded MonoScript:
-
-```yaml
---- !u!115 &1992067906
-MonoScript:
-  m_ClassName: SurfaceMarker
-  m_Namespace: Golfin.Physics.Runtime
-  m_AssemblyName: Golfin.Physics.Runtime
-```
-
-All 30 `Physics.Runtime.SurfaceMarker` components reference it as `m_Script: {fileID: 1992067906}`. This is the same format PhysicsLab_Hole1.unity uses for its own embedded MonoScript at `&118446399`. Despite this, Unity only resolves 3 of the 30 at runtime — `GetComponentsInChildren<Golfin.Physics.Runtime.SurfaceMarker>()` returns 3, not 30.
-
-Fallback to `Golfin.Course.SurfaceMarker` (GUID-based) also failed: `Golfin.Physics.Editor` asmdef cannot access `Golfin.Course` namespace — that class is in Assembly-CSharp and the editor asmdef's explicit references list doesn't include it (compile error CS0234).
-
-**What was tried and failed:**
-1. Patching refs to GUID format `{fileID: 11500000, guid: 1c2bdea8c6338274aa211ddbe774fb89}` — wrong, broke all 30.
-2. Adding Course.SurfaceMarker fallback to baker — CS0234 compile error.
-3. Restoring original local refs — still only 3 found at runtime.
-
-**Current file state (post-restore):**
-- `PhysicsLab_Hole1.unity` — restored from git, contains manually placed zone meshes (Bunkers 2–7, Fairways 1–3, Green_1, Tees 1–3; Bunker_1 absent).
-- `Hole_01_Geo.unity` — has correct local MonoScript ref at `&1992067906`; Course.SurfaceMarker refs use GUID format with `41a5e9f3c9ce4fa4f9ea872e45b244f4`.
-- `PhysicsLabZoneMeshBaker.cs` — has Physics.SurfaceMarker primary search + commented dead fallback. Compiles clean.
-
-**What the Architect needs to decide:**
-1. Why does Unity resolve only 3 of 30 embedded-MonoScript refs? Is the `Golfin.Physics.Runtime` asmdef not loaded when the generated scene is opened additively in the editor?
-2. Should the baker strategy change entirely — e.g. search by `MeshCollider` + name pattern instead of by component type?
-3. Should Bunker_1 be manually added to the lab scene for now (as a stopgap), or wait for the baker fix?
-4. Is this worth fixing, or should PhysicsLabZoneMeshBaker be deprecated now that Part E integration is complete and the lab uses live physics?
-
-**Current baker code:** `Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs`
+✅ SESSION COMPLETE: 2026-04-24 — PhysicsLab polish pass done.
+- Tee spawn: fixed to use midpoint of TeeMarker_regular_* GOs (not SurfaceMarker tee zones).
+- Lie continuation: ball fires from current lie after each shot without forced Reset.
+- Club selection: InjectStatBundle() now called on preset change; PRESET picker drives club stats.
+- Scene persistence: [InitializeOnLoad] + sceneOpened + delayCall auto-restores last hole when switching scenes.
+- NullRef in ComputeMaxCarryYards: fixed with _configsLoaded bool + EnsureConfigsLoaded() (struct configs can't be null-checked).
+- Water gray: CopyHoleLighting() snapshots all RenderSettings from hole scene and writes them into LabScaffold — skybox, ambient, fog, reflections all matched. DirectionalLight deleted from LabScaffold (hole's light is correct one).
+- Golfin.Physics.Stats added to Viewer asmdef references.
 
 ---
 
@@ -179,13 +348,9 @@ Fallback to `Golfin.Course.SurfaceMarker` (GUID-based) also failed: `Golfin.Phys
 
 > Architect-tracked open issues. Don't action without an explicit task block; just be aware they exist.
 
-- ~~**[2026-04-22] Surface markers wired but holes not re-imported.**~~ ✅ Resolved 2026-04-22 — Cesar manually re-imported all 18 holes. Generated scenes now carry `Golfin.Physics.Runtime.SurfaceMarker` on all zone meshes.
 - **[2026-04-22] Heightmap doesn't include zone-mesh tops (greens/tees).** `HeightmapData.SampleHeight` returns the depressed terrain Y; greens sit ~11cm above that (`+0.03 + GreenRaiseMeters 0.08`). Ball lands/rolls at heightmap Y, not visible mesh Y. Putts will look ~11cm sunk into the green. Surface *classification* is correct (raycast hits the mesh); the *Y* is wrong. Fix is a Phase 0.1 baker addendum — do NOT touch the runtime sim's height path. See `Docs/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 - **[2026-04-22] Bunker lip submesh classification deferred.** `SceneSurfaceProvider` is submesh-blind; whole bunker mesh classifies as `Sand` regardless of `BunkerLip` submesh. Polish item, not blocking. Don't proactively fix.
 - **[2026-04-22] Don't implement Code's "trees layer" proposal.** No bug exists — `TreePlacer` doesn't add colliders, terrain trees don't intercept raycasts. Audit confirmed in lessons file.
-- ✅ **[2026-04-22] Phase 6 Stat Coupling — COMPLETE.** 49/49 tests pass. See History Log.
-- **[2026-04-23] `heightmap.bytes` deleted from `Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/`.** `SceneGroundProvider` for Hole1 shots will fail until rebuilt. Either re-run the Phase 0 baker on Hole 1 or accept a flat-ground fallback in the lab. **Address before Part E shot integration** — without ground, ball goes nowhere visible.
-- **[2026-04-23] `HeightProvider` field on `PhysicsLabController` is dead wiring** — never read in code, but removing it from the scene was needed to fix Error Pause. Field itself is still in the .cs. Fold a `[SerializeField] HeightProvider heightProvider` removal into Part E cleanup.
 
 Full reasoning: `Docs/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 

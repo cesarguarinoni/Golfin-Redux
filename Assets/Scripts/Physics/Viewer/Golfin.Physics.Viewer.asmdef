@@ -5,6 +5,7 @@
         "Golfin.Physics.Core",
         "Golfin.Physics.Runtime",
         "Golfin.Physics.Math",
+        "Golfin.Physics.Stats",
         "Golfin.Gameplay.Input",
         "Golfin.Gameplay.UI",
         "Unity.InputSystem",

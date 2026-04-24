@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Golfin.Physics;
+using Golfin.Gameplay.Input;
 
 namespace Golfin.Physics.Viewer
 {
@@ -28,6 +29,19 @@ namespace Golfin.Physics.Viewer
         TMP_Text _deterLabel;
         TMP_Text _notesText;
         TMP_Text _releaseFireLabel;
+
+        // Club picker
+        int      _clubIndex;
+        TMP_Text _clubLabel;
+
+        // Place ball picker
+        int      _placementIndex;
+        TMP_Text _placeBallLabel;
+
+        // Debug flags panel
+        bool       _debugPanelOpen;
+        GameObject _debugContainer;
+        TMP_Text[] _debugFlagLabels = new TMP_Text[8];
 
         static readonly float[]  PlayRates      = { 0.25f, 1f, 4f, float.MaxValue };
         static readonly string[] PlayRateLabels = { "0.25×", "1×", "4×", "Instant" };
@@ -85,6 +99,11 @@ namespace Golfin.Physics.Viewer
             _presetLabel = AddCyclePicker(panel, "Loading…",
                 () => CyclePreset(-1), () => CyclePreset(+1));
 
+            // Club cycler (manual override; sync'd when preset changes)
+            AddLabel(panel, "CLUB");
+            _clubLabel = AddCyclePicker(panel, PhysicsLabController.LabClubLabels[0],
+                () => CycleClub(-1), () => CycleClub(+1));
+
             // Camera cycler
             AddLabel(panel, "CAMERA");
             _cameraLabel = AddCyclePicker(panel, CameraLabels[0],
@@ -111,7 +130,15 @@ namespace Golfin.Physics.Viewer
             var releaseBtn = AddButton(row4, "Release Fire: OFF", () => ToggleReleaseFire());
             _releaseFireLabel = releaseBtn.GetComponentInChildren<TMP_Text>();
 
-            // Determinism result — hidden until Fire×5 runs
+            // ── Place Ball section ─────────────────────────────────────────────
+            AddLabel(panel, "PLACE BALL");
+            _placeBallLabel = AddCyclePicker(panel, "— no hole loaded —",
+                () => CyclePlacement(-1), () => CyclePlacement(+1));
+            var placeRow = MakeButtonRow(panel);
+            AddButton(placeRow, "Place Here", () => DoPlaceBall());
+            AddButton(placeRow, "Reset to Tee", () => controller?.ResetToTee());
+
+            // ── Determinism result — hidden until Fire×5 runs ─────────────────
             _deterLabel = AddText(panel, "", 16f);
             _deterLabel.color = Color.white;
             _deterLabel.gameObject.SetActive(false);
@@ -127,7 +154,183 @@ namespace Golfin.Physics.Viewer
             _notesText.color = new Color(0.75f, 0.75f, 0.75f, 1f);
             _notesText.overflowMode = TMPro.TextOverflowModes.Truncate;
             EnsureLE(_notesText.gameObject).preferredHeight = 55f;
+
+            // ── Debug Flags foldout ────────────────────────────────────────────
+            var dbgHeaderRow = MakeButtonRow(panel);
+            AddButton(dbgHeaderRow, "▶ DEBUG FLAGS", () => ToggleDebugPanel());
+
+            _debugContainer = new GameObject("DebugFlagsPanel", typeof(RectTransform));
+            _debugContainer.transform.SetParent(panel.transform, false);
+            var vl2 = _debugContainer.AddComponent<VerticalLayoutGroup>();
+            vl2.spacing = 4f;
+            vl2.childForceExpandWidth  = true;
+            vl2.childForceExpandHeight = false;
+            vl2.childAlignment = TextAnchor.UpperCenter;
+            EnsureLE(_debugContainer).flexibleHeight = 1f;
+
+            // 8 flag toggle buttons
+            string[] flagNames = {
+                "Show Cone Outline", "Show Arrow Trail", "Cancel On Slow Flick",
+                "Single Pass Mode",  "Disable Overpower", "Disable Cone Fine Tune",
+                "Force Perfect Timing", "Force Perfect Aim"
+            };
+            for (int i = 0; i < 8; i++)
+            {
+                int idx = i; // capture
+                var flagRow = MakeButtonRow(_debugContainer);
+                bool initVal = GetDebugFlag(ShotDebugFlags.Defaults, idx);
+                var btn = AddButton(flagRow, $"{flagNames[idx]}: {BoolLabel(initVal)}", () => ToggleFlag(idx));
+                _debugFlagLabels[idx] = btn.GetComponentInChildren<TMP_Text>();
+            }
+
+            // Reset defaults button
+            var resetRow = MakeButtonRow(_debugContainer);
+            AddButton(resetRow, "Reset Defaults", () => ResetDebugDefaults());
+
+            _debugContainer.SetActive(false);
         }
+
+        // ── Debug panel helpers ────────────────────────────────────────────────
+
+        void ToggleDebugPanel()
+        {
+            _debugPanelOpen = !_debugPanelOpen;
+            if (_debugContainer != null) _debugContainer.SetActive(_debugPanelOpen);
+            RefreshDebugLabels();
+        }
+
+        void ToggleFlag(int flagIndex)
+        {
+            var sc = GetShotController();
+            if (sc == null) return;
+            var flags = sc.DebugFlags;
+            bool newVal = !GetDebugFlag(flags, flagIndex);
+            SetDebugFlag(ref flags, flagIndex, newVal);
+            sc.DebugFlags = flags;
+            if (_debugFlagLabels[flagIndex] != null)
+            {
+                string[] names = {
+                    "Show Cone Outline", "Show Arrow Trail", "Cancel On Slow Flick",
+                    "Single Pass Mode",  "Disable Overpower", "Disable Cone Fine Tune",
+                    "Force Perfect Timing", "Force Perfect Aim"
+                };
+                _debugFlagLabels[flagIndex].text = $"{names[flagIndex]}: {BoolLabel(newVal)}";
+            }
+        }
+
+        void ResetDebugDefaults()
+        {
+            var sc = GetShotController();
+            if (sc == null) return;
+            sc.DebugFlags = ShotDebugFlags.Defaults;
+            RefreshDebugLabels();
+        }
+
+        void RefreshDebugLabels()
+        {
+            var sc = GetShotController();
+            if (sc == null) return;
+            var flags = sc.DebugFlags;
+            string[] names = {
+                "Show Cone Outline", "Show Arrow Trail", "Cancel On Slow Flick",
+                "Single Pass Mode",  "Disable Overpower", "Disable Cone Fine Tune",
+                "Force Perfect Timing", "Force Perfect Aim"
+            };
+            for (int i = 0; i < 8; i++)
+            {
+                if (_debugFlagLabels[i] != null)
+                    _debugFlagLabels[i].text = $"{names[i]}: {BoolLabel(GetDebugFlag(flags, i))}";
+            }
+        }
+
+        static bool GetDebugFlag(ShotDebugFlags f, int idx) => idx switch
+        {
+            0 => f.ShowConeOutline,
+            1 => f.ShowArrowTrail,
+            2 => f.CancelOnSlowFlick,
+            3 => f.SinglePassMode,
+            4 => f.DisableOverpower,
+            5 => f.DisableConeFineTune,
+            6 => f.ForcePerfectTiming,
+            7 => f.ForcePerfectAim,
+            _ => false
+        };
+
+        static void SetDebugFlag(ref ShotDebugFlags f, int idx, bool val)
+        {
+            switch (idx)
+            {
+                case 0: f.ShowConeOutline     = val; break;
+                case 1: f.ShowArrowTrail      = val; break;
+                case 2: f.CancelOnSlowFlick   = val; break;
+                case 3: f.SinglePassMode      = val; break;
+                case 4: f.DisableOverpower    = val; break;
+                case 5: f.DisableConeFineTune = val; break;
+                case 6: f.ForcePerfectTiming  = val; break;
+                case 7: f.ForcePerfectAim     = val; break;
+            }
+        }
+
+        static string BoolLabel(bool v) => v ? "ON" : "OFF";
+
+        ShotController GetShotController()
+        {
+            return controller != null
+                ? controller.GetComponentInChildren<ShotController>(true)
+                : null;
+        }
+
+        // ── Club picker helpers ────────────────────────────────────────────────
+
+        void CycleClub(int dir)
+        {
+            int count = PhysicsLabController.LabClubLabels.Length;
+            _clubIndex = (_clubIndex + dir + count) % count;
+            ApplyClubIndex(_clubIndex);
+        }
+
+        void ApplyClubIndex(int index)
+        {
+            _clubIndex = index;
+            if (_clubLabel != null) _clubLabel.text = PhysicsLabController.LabClubLabels[index];
+            controller?.SetClub(index);
+            controller?.RecomputeMaxCarry();
+        }
+
+        // ── Place ball helpers ─────────────────────────────────────────────────
+
+        void CyclePlacement(int dir)
+        {
+            if (controller == null || controller.PlacementEntries.Count == 0) return;
+            int count = controller.PlacementEntries.Count;
+            _placementIndex = (_placementIndex + dir + count) % count;
+            if (_placeBallLabel != null)
+                _placeBallLabel.text = controller.PlacementEntries[_placementIndex].Label;
+        }
+
+        void DoPlaceBall()
+        {
+            if (controller == null || controller.PlacementEntries.Count == 0) return;
+            _placementIndex = Mathf.Clamp(_placementIndex, 0, controller.PlacementEntries.Count - 1);
+            controller.PlaceBallAt(controller.PlacementEntries[_placementIndex].WorldPos);
+        }
+
+        void RefreshPlacementPicker()
+        {
+            if (_placeBallLabel == null) return;
+            if (controller == null || controller.PlacementEntries.Count == 0)
+            {
+                _placeBallLabel.text = "— no hole loaded —";
+                _placementIndex = 0;
+            }
+            else
+            {
+                _placementIndex = Mathf.Clamp(_placementIndex, 0, controller.PlacementEntries.Count - 1);
+                _placeBallLabel.text = controller.PlacementEntries[_placementIndex].Label;
+            }
+        }
+
+        // ── Other cycle helpers ────────────────────────────────────────────────
 
         void ToggleReleaseFire()
         {
@@ -138,14 +341,24 @@ namespace Golfin.Physics.Viewer
                 _releaseFireLabel.text = next ? "Release Fire: ON" : "Release Fire: OFF";
         }
 
-        // ── Cycle helpers ──────────────────────────────────────────────────────
-
         void CyclePreset(int dir)
         {
             if (_presets.Count == 0) return;
             _selectedIndex = (_selectedIndex + dir + _presets.Count) % _presets.Count;
             if (_presetLabel != null) _presetLabel.text = _presets[_selectedIndex].DisplayName;
+            ApplyClubFromPreset();
             UpdateNotes();
+        }
+
+        void ApplyClubFromPreset()
+        {
+            if (_presets.Count == 0 || controller == null) return;
+            string name = _presets[_selectedIndex].DisplayName.ToLowerInvariant();
+            int club = 0; // Driver default
+            if (name.Contains("iron"))       club = 1;
+            else if (name.Contains("wedge")) club = 2;
+            else if (name.Contains("putt"))  club = 3;
+            ApplyClubIndex(club);
         }
 
         void CycleCamera(int dir)
@@ -172,21 +385,24 @@ namespace Golfin.Physics.Viewer
             _selectedIndex = 0;
             if (_presetLabel != null)
                 _presetLabel.text = _presets.Count > 0 ? _presets[0].DisplayName : "—";
+            ApplyClubFromPreset();
             UpdateNotes();
         }
 
         void SubscribeController()
         {
             if (controller == null) return;
-            controller.OnShotFired            += ShowReadout;
-            controller.OnRepeatabilityResult  += ShowDeterminism;
+            controller.OnShotFired               += ShowReadout;
+            controller.OnRepeatabilityResult     += ShowDeterminism;
+            controller.OnPlacementEntriesChanged += RefreshPlacementPicker;
         }
 
         void OnDestroy()
         {
             if (controller == null) return;
-            controller.OnShotFired            -= ShowReadout;
-            controller.OnRepeatabilityResult  -= ShowDeterminism;
+            controller.OnShotFired               -= ShowReadout;
+            controller.OnRepeatabilityResult     -= ShowDeterminism;
+            controller.OnPlacementEntriesChanged -= RefreshPlacementPicker;
         }
 
         void FireSelected()
@@ -229,7 +445,7 @@ namespace Golfin.Physics.Viewer
             rt.anchorMax = Vector2.zero;
             rt.pivot     = Vector2.zero;
             rt.anchoredPosition = new Vector2(16f, 16f);
-            rt.sizeDelta = new Vector2(360f, 640f);
+            rt.sizeDelta = new Vector2(360f, 800f);
             panel.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.72f);
             var vl = panel.AddComponent<VerticalLayoutGroup>();
             vl.padding   = new RectOffset(10, 10, 10, 10);

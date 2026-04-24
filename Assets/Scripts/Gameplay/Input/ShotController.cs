@@ -21,12 +21,8 @@ namespace Golfin.Gameplay.Input
         public bool  IsPutt                { get; set; }
         public float CameraHeadingRadians  { get; set; }
 
-        // --- Debug toggles ---
-        public bool DisableOverpower       = false;  // clamp at 100%
-        public bool ForcePerfectTiming     = false;  // flick always succeeds
-        public bool ForcePerfectAim        = false;  // degradation yaw zeroed
-        public bool SinglePassMode         = false;  // skip degradation
-        public bool DisableConeFinetuning  = false;  // aim = camera only
+        // --- Debug toggles (8 flags per design §8) ---
+        public ShotDebugFlags DebugFlags = ShotDebugFlags.Defaults;
 
         // --- Readable state ---
         public ShotState State            { get; private set; } = ShotState.Idle;
@@ -156,8 +152,10 @@ namespace Golfin.Gameplay.Input
                     if (_externalDragActive) { TickArrow(dt); break; }
                     if (justLifted)
                     {
-                        bool validFlick = ForcePerfectTiming ||
-                            _inputSource.TouchVelocityPxPerSec.y >= _config.FlickVelocityThresholdPxPerSec;
+                        // CancelOnSlowFlick=false skips the velocity threshold check.
+                        bool validFlick = DebugFlags.ForcePerfectTiming
+                            || !DebugFlags.CancelOnSlowFlick
+                            || _inputSource.TouchVelocityPxPerSec.y >= _config.FlickVelocityThresholdPxPerSec;
                         if (validFlick) CommitFlick();
                         else            TransitionToIdle();
                         break;
@@ -204,13 +202,17 @@ namespace Golfin.Gameplay.Input
         {
             State = ShotState.Flicking;
 
-            float degradYaw = ForcePerfectAim ? 0f : _degradationYawRad;
-            float finetune  = DisableConeFinetuning ? 0f : _coneFinetune;
+            float degradYaw = DebugFlags.ForcePerfectAim ? 0f : _degradationYawRad;
+            float finetune  = DebugFlags.DisableConeFineTune ? 0f : _coneFinetune;
 
             _aimYawRadians = CameraHeadingRadians + finetune * HalfConeAngleRad() + degradYaw;
 
             float flickMag = PowerNormalized;
-            if (IsPutt || DisableOverpower) flickMag = Mathf.Min(flickMag, 1f);
+            if (IsPutt || DebugFlags.DisableOverpower) flickMag = Mathf.Min(flickMag, 1f);
+
+            // Putt mode: pass PuttBaseVelocityMps as explicit override so ControlsConfig
+            // drives the velocity, not whatever is in the StatBundle.
+            fp baseVelOverride = IsPutt ? fp.FromFloat(_config.PuttBaseVelocityMps) : fp.Zero;
 
             var bundle = GetStatBundle();
             var (input, ballMods) = ShotInputBuilder.Build(
@@ -220,7 +222,8 @@ namespace Golfin.Gameplay.Input
                 fp.FromFloat(flickMag),
                 fp.FromFloat(_aimYawRadians),
                 fp.Zero, fp.Zero, fp.Zero,
-                (uint)UnityEngine.Random.Range(1, int.MaxValue));
+                (uint)UnityEngine.Random.Range(1, int.MaxValue),
+                baseVelOverride);
 
             State = ShotState.Resolving;
             OnShotResolved?.Invoke(input, ballMods);
@@ -241,7 +244,8 @@ namespace Golfin.Gameplay.Input
             _arrowProgress -= 1f;
             _passIndex++;
 
-            if (!SinglePassMode)
+            // Putt mode skips per-pass degradation entirely (design §4).
+            if (!DebugFlags.SinglePassMode && !IsPutt)
             {
                 int cleanPasses = Mathf.RoundToInt(_config.MaxCleanPassesAtCC0 + cc * _config.CleanPassesPerCC);
                 if (_passIndex >= cleanPasses)
@@ -267,7 +271,7 @@ namespace Golfin.Gameplay.Input
                 return (pullPx - _config.MinUsefulPullPx) /
                        (_config.Max100PercentPullPx - _config.MinUsefulPullPx);
 
-            if (IsPutt || DisableOverpower) return 1f;
+            if (IsPutt || DebugFlags.DisableOverpower) return 1f;
 
             float range = _config.MaxOverpowerPullPx - _config.Max100PercentPullPx;
             return Mathf.Min(1f + ((pullPx - _config.Max100PercentPullPx) / range) * 0.2f, 1.2f);

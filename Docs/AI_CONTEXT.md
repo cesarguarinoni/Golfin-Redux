@@ -18,7 +18,7 @@
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
 | Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; **Phase 6 Stat Coupling COMPLETE (2026-04-22) — 49/49 tests pass.** |
-| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D+E COMPLETE (2026-04-23)**. Cone UI live in ShotConeTest.unity. PhysicsLab_Hole1 wired for live touch shots. Part F (putt mode + debug toggles) next. |
+| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D+E+F COMPLETE (2026-04-24)**. Cone UI live in ShotConeTest.unity. PhysicsLab wired for live touch shots. Putt mode + debug toggles + ball placement dropdown done. 83/83 tests pass. |
 | PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). |
 | Shop | Not started |
 | Gameplay | Not started |
@@ -40,6 +40,37 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
 See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+
+---
+
+## Session Changes (2026-04-24 — Phase 7 Part F: Putt Mode + Debug Toggles + Ball Placement)
+
+### Completed
+- **`ShotDebugFlags.cs`** (new) — 8-bool struct: ShowConeOutline (default true), ShowArrowTrail, CancelOnSlowFlick (default true), SinglePassMode, DisableOverpower, DisableConeFineTune, ForcePerfectTiming, ForcePerfectAim.
+- **`ShotController.cs`** — migrated 5 scattered debug bools → `public ShotDebugFlags DebugFlags`. Added IsPutt degradation skip, CancelOnSlowFlick guard, baseVelOverride in CommitFlick (`IsPutt ? PuttBaseVelocityMps : fp.Zero`).
+- **`ShotInputBuilder.cs`** — added optional `fp baseVelocityOverrideMps = default` param; `fp.Zero` sentinel = "use bundle".
+- **`ShotConeView.cs`** — `SetOutlineVisible()` + `ApplyDebugFlags()` called from HandleStateChanged.
+- **`PhysicsLabController.cs`** — `PlaceBallAt()` (raycast Y snap + camera yaw + GroundLevel if putt), `RecomputeMaxCarry()`, placement scan (Tee/Green/Bunker/Fairway/Near Water entries from SurfaceMarker reflection), `OnHoleUnloaded` clears entries, `BallPlacementEntry` struct.
+- **`PhysicsLabUI.cs`** — Club picker (cycle arrows + label), Place Ball section (cycle picker + Place Here + Reset to Tee), Debug Flags foldout (8 toggle buttons + Reset Defaults). Panel height 640→800.
+- **`ShotControllerPuttModeTests.cs`** (new) — 14 tests: F1 (5 putt mode behaviors), F3 (8 debug flag behaviors), F6 bit-exact gate.
+- **`ViewerTests.cs`** — fixed stale Hole1 preset count assertion: 5→8 (putt presets 16–18 were added in Phase 6 but test wasn't updated).
+
+### Test Results: 83/83 pass ✅
+
+### Deviations
+- `ChaseCamera.Mode.GroundLevel` used (spec said `ChaseCamera.Mode.Ground` — enum value doesn't exist).
+
+### Cesar's validation checklist (F.7 — manual)
+1. Open LabScaffold.unity, load Hole 1 via Hole Picker, enter Play mode.
+2. Touch-drag-flick driver shot → trajectory renders.
+3. Open debug panel → toggle ShowConeOutline off → cone outline disappears.
+4. Enable IsPutt → verify "Putter" in club label, arrow speed ~4× slower.
+5. Place Ball dropdown → pick "Green 1" → ball teleports to green, camera goes GroundLevel.
+6. Flick putt → short trajectory on green.
+
+### Next
+- Part G (final gameplay integration) when Architect specs it.
+- Re-import all holes to pick up SurfaceMarker fix (still pending from earlier sessions).
 
 ---
 
