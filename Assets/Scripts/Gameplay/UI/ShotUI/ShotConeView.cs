@@ -53,7 +53,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         // Show/hide the cone outline mesh. Called by HandleStateChanged when DebugFlags.ShowConeOutline changes.
         public void SetOutlineVisible(bool visible)
         {
-            if (_coneGraphic != null) _coneGraphic.gameObject.SetActive(visible);
+            if (_coneGraphic != null) _coneGraphic.enabled = visible;
         }
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
