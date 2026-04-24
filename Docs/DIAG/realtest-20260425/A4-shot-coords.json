@@ -1,61 +1,61 @@
 {
-  "_note": "Fixed shot sequence for A4 load-determinism test. Run identical shots across 3 cold-load cycles.",
-  "_note2": "UPDATE originX/Y/Z after running A2 audit — use actual zone centroid coordinates from A2-Hole01-marker-audit.txt",
+  "_note": "Fixed shot sequence for A4 load-determinism test. Real coordinates from A2 audit.",
+  "_limitation": "Cycles were run in same Unity session (MCP cannot restart Editor). Tests trajectory determinism (fp-math), not cold-load PhysX variance.",
   "shots": [
     {
       "id": 1,
       "label": "putt_on_green",
-      "originX": 0.0,
-      "originY": 0.0,
-      "originZ": 0.0,
+      "originX": -230.3,
+      "originY": 10.1,
+      "originZ": -73.3,
       "velX": 3.0,
       "velY": 0.0,
       "velZ": 0.0,
-      "_note": "PLACEHOLDER: replace with Green_1 centroid XZ from A2 audit"
+      "_note": "Green_1 centroid — has ZERO valid Physics markers (A2). Classify returns Fairway. Expected to show fall-through."
     },
     {
       "id": 2,
-      "label": "chip_from_rough",
-      "originX": 0.0,
-      "originY": 0.0,
-      "originZ": 0.0,
-      "velX": 15.0,
+      "label": "chip_from_rough_near_green",
+      "originX": -215.0,
+      "originY": 9.5,
+      "originZ": -73.3,
+      "velX": 12.0,
       "velY": 8.0,
-      "velZ": 0.0,
-      "_note": "PLACEHOLDER: replace with rough XZ near Green_1"
+      "velZ": -5.0,
+      "_note": "Position west of Green_1, aimed toward green area."
     },
     {
       "id": 3,
       "label": "bunker_shot",
-      "originX": 0.0,
-      "originY": 0.0,
-      "originZ": 0.0,
-      "velX": 20.0,
-      "velY": 15.0,
+      "originX": -129.8,
+      "originY": 6.7,
+      "originZ": -35.0,
+      "velX": 18.0,
+      "velY": 14.0,
       "velZ": 0.0,
-      "_note": "PLACEHOLDER: replace with Bunker_1 centroid XZ from A2 audit"
+      "_note": "Bunker_1 centroid — has ZERO valid Physics markers (A2)."
     },
     {
       "id": 4,
       "label": "fairway_approach",
-      "originX": 0.0,
-      "originY": 0.0,
-      "originZ": 0.0,
-      "velX": 40.0,
-      "velY": 25.0,
-      "velZ": 0.0,
-      "_note": "PLACEHOLDER: replace with fairway XZ ~80yd from pin"
+      "originX": -89.7,
+      "originY": 8.6,
+      "originZ": 5.5,
+      "velX": 35.0,
+      "velY": 22.0,
+      "velZ": -8.0,
+      "_note": "Fairway_2 centroid — HAS valid Physics marker (A2). Expected to work correctly."
     },
     {
       "id": 5,
       "label": "tee_shot",
-      "originX": 0.0,
-      "originY": 0.0,
-      "originZ": 0.0,
-      "velX": 65.0,
+      "originX": 202.2,
+      "originY": 11.6,
+      "originZ": 38.4,
+      "velX": -60.0,
       "velY": 14.0,
-      "velZ": 0.0,
-      "_note": "PLACEHOLDER: replace with tee marker XZ from A2 audit"
+      "velZ": -5.0,
+      "_note": "Tee_1 centroid — HAS valid Physics marker (A2)."
     }
   ]
 }

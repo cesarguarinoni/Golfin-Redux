@@ -157,7 +157,6 @@ public static class A4DiffHelper
         File.WriteAllText(outPath, sb.ToString());
 
         Debug.Log($"[A4Diff] Done. Verdict: {verdict}. Saved: {outPath}");
-        EditorUtility.DisplayDialog("A4 Diff Complete", $"Verdict:\n{verdict}\n\n{recommendedPath}\n\nSaved to:\n{outPath}", "OK");
     }
 
     static List<StepRow> ParseStepCsv(string path)

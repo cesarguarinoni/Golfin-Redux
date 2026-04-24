@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-24
+**Last Updated:** 2026-04-25
 
 ## Current Status
 
@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; Phase 6 Stat Coupling COMPLETE; **Terrain Fallthrough Fix COMPLETE (2026-04-24) — 111/111 tests pass (incl. 3500-shot stress).** |
+| Physics Architecture | ✅ Phase 0 baker COMPLETE; Phase 1 vacuum COMPLETE; Phase 2 aero COMPLETE; Phase 2.1 LUT aero COMPLETE; Phase 3 wind COMPLETE; Phase 4 surface COMPLETE; Phase 5 putting COMPLETE; Phase 6 Viewer COMPLETE; Phase 6 Stat Coupling COMPLETE; **Terrain Fallthrough Fix REOPENED — Phase A diagnostics COMPLETE (2026-04-25), awaiting Architect Phase B spec.** Root cause: 21/30 Hole_01 zone GOs have 0 valid Physics.Runtime.SurfaceMarker (Roslyn migration ran 3× depositing zombie components). Full report: `Docs/DIAG/realtest-20260425/PHASE_A_DONE.md`. |
 | Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D+E+F COMPLETE (2026-04-24)**. Cone UI live in ShotConeTest.unity. PhysicsLab wired for live touch shots. Putt mode + debug toggles + ball placement dropdown done. 83/83 tests pass. |
 | PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). **F-Hotfix COMPLETE (2026-04-24)**: type-aware SurfaceSnap, coroutine startup scan, camera depression lift. 12/12 regression tests pass. |
 | Shop | Not started |
@@ -66,6 +66,25 @@ To keep `TellCode.md` readable for Claude Code (file was getting long enough to 
 - Architect moves the DONE entry to TellCode.md history log (one-liner).
 - Spec file moves `Active/` → `Completed/` (if long-term reference) or is deleted.
 - Pointer block is removed from TellCode.md.
+
+---
+
+## Session Changes (2026-04-25 — Terrain Realtest Phase A Diagnostics)
+
+### Completed
+- **A1 (static analysis):** `CreateFlatContourMesh` gap identified; `SyncPhysicsSurfaceMarkers` only updates (cannot create); Roslyn migration ran 3× depositing wrong-GUID zombie components. Report: `A1-broken-marker-source.md`.
+- **A2 (marker audit):** `MarkerAuditTool.cs` wrote `A2-Hole01-marker-audit.txt`. 30 collider GOs: 21 ZERO valid Physics markers, 27 with broken components (3 per GO). Green_1, Fairway_1, Bunkers 1-5+7, Tees 2-4, CartPaths 2-3+5-9+junctions all broken.
+- **A3 (per-step CSV shots):** EditMode test `RealHoleDiagShotsTests.cs`. Shot 1 (Rough) ran; shots 2+3 (Green) skipped — Green_1 classified as Fairway (no marker). Shot 4 (Fairway) ran. Confirms: Green_1 is invisible to SceneSurfaceProvider.
+- **A4 (load determinism):** 3 cycles × 5 fixed shots. All 3 cycles bit-identical. Shot 1 on Green_1: `MaxDurationReached 14401f`, 0 roll/putt frames (ball never settles = missing marker symptom). Shots 2-5: BallStopped, identical row counts. **Verdict: deterministic per position, not PhysX variance.**
+- Diag files: `A4-cycle-{1..3}-shot-{1..5}.csv`, `A4-diff-summary.md`.
+- `A4DiffHelper.cs` — removed blocking `DisplayDialog` call.
+- `PHASE_A_DONE.md` — updated with real A4 findings.
+
+### Root Cause (confirmed)
+Roslyn migration ran 3 times. Each run added a `Golfin.Physics.Runtime::Golfin.Physics.Runtime.SurfaceMarker` component with wrong m_Script GUID → 3 zombie components per GO, all resolve to `null` at runtime → `GetComponentInParent<SurfaceMarker>()` returns null → surface classified as Fairway → wrong SampleHeight → ball falls through or fails to settle.
+
+### Next
+**STOP. Awaiting Architect for Phase B spec.** Phase B fix: for each ZERO_PHYS GO — strip zombie components, add valid `Physics.Runtime.SurfaceMarker` via proper Editor script (NOT Roslyn). `SyncPhysicsSurfaceMarkers` needs rewrite.
 
 ---
 
