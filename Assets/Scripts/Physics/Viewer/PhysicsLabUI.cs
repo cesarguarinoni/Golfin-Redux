@@ -498,8 +498,13 @@ namespace Golfin.Physics.Viewer
 
             var mid = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             mid.transform.SetParent(row.transform, false);
-            mid.GetComponent<Image>().color = new Color(0.18f, 0.18f, 0.18f, 1f);
-            EnsureLE(mid).flexibleWidth = 1f;
+            var midImg = mid.GetComponent<Image>();
+            midImg.color = new Color(0.18f, 0.18f, 0.18f, 1f);
+            midImg.raycastTarget = false;
+            var midLE = EnsureLE(mid);
+            midLE.preferredWidth = 250f;
+            midLE.flexibleWidth  = 0f;
+            midLE.minWidth       = 250f;
 
             // TMP_Text must be on a child — a GameObject can only have one Graphic
             var midText = new GameObject("T", typeof(RectTransform), typeof(CanvasRenderer));
@@ -512,6 +517,10 @@ namespace Golfin.Physics.Viewer
             tmp.fontSize  = 15f;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color     = Color.white;
+            tmp.richText  = false;
+            tmp.raycastTarget = false;
+            tmp.enableWordWrapping = false;
+            tmp.overflowMode = TextOverflowModes.Ellipsis;
 
             MakeCycleBtn(row, ">", onNext, 40f);
             return tmp;
@@ -523,8 +532,16 @@ namespace Golfin.Physics.Viewer
             var go = new GameObject("Btn_" + label,
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             go.transform.SetParent(parent.transform, false);
+            var goRT = go.GetComponent<RectTransform>();
+            goRT.anchorMin = new Vector2(0f, 0f);
+            goRT.anchorMax = new Vector2(0f, 1f);
+            goRT.pivot     = new Vector2(0.5f, 0.5f);
             go.GetComponent<Image>().color = new Color(0.3f, 0.3f, 0.3f, 1f);
-            var le = EnsureLE(go); le.preferredWidth = width; le.flexibleWidth = 0f;
+            var le = EnsureLE(go);
+            le.preferredWidth  = width;
+            le.flexibleWidth   = 0f;
+            le.preferredHeight = 36f;
+            le.flexibleHeight  = 0f;
             go.AddComponent<Button>().onClick.AddListener(cb);
             var tgo = new GameObject("T", typeof(RectTransform), typeof(CanvasRenderer));
             tgo.transform.SetParent(go.transform, false);
@@ -533,6 +550,8 @@ namespace Golfin.Physics.Viewer
             trt.offsetMin = trt.offsetMax = Vector2.zero;
             var tmp = tgo.AddComponent<TextMeshProUGUI>();
             tmp.text = label; tmp.fontSize = 18f;
+            tmp.richText = false;
+            tmp.raycastTarget = false;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = Color.white;
         }

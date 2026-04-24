@@ -133,9 +133,24 @@ namespace Golfin.Physics.Viewer
             // This prevents camera drags and button clicks from accidentally starting a shot.
             _shotController?.InjectInputSource(null);
 
+            // Force cursor visible + unlocked. Hole scenes contain a WalkCamera that locks
+            // the cursor in Awake; we deactivate its GO but the global cursor state persists.
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible   = true;
+
             // Wait 2 frames so any additively-loaded hole scene finishes loading,
             // then scan for it. This replaces the fragile immediate scan.
             StartCoroutine(ScanForLoadedHoleSceneAtStartup());
+        }
+
+        void LateUpdate()
+        {
+            // Defense in depth: if anything re-locks the cursor mid-session, undo it.
+            if (Cursor.lockState != CursorLockMode.None || !Cursor.visible)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible   = true;
+            }
         }
 
         System.Collections.IEnumerator ScanForLoadedHoleSceneAtStartup()
