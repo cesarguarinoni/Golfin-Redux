@@ -17,6 +17,7 @@ namespace Golfin.Physics.Viewer
 
         void OnEnable()
         {
+            SceneManager.sceneLoaded += OnRuntimeSceneLoaded;
 #if UNITY_EDITOR
             EditorSceneManager.sceneOpened += OnEditorSceneOpened;
             EditorSceneManager.sceneClosed += OnEditorSceneClosed;
@@ -35,10 +36,17 @@ namespace Golfin.Physics.Viewer
 
         void OnDisable()
         {
+            SceneManager.sceneLoaded -= OnRuntimeSceneLoaded;
 #if UNITY_EDITOR
             EditorSceneManager.sceneOpened -= OnEditorSceneOpened;
             EditorSceneManager.sceneClosed -= OnEditorSceneClosed;
 #endif
+        }
+
+        void OnRuntimeSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (!IsHoleGeoScene(scene.name)) return;
+            _controller?.OnHoleLoaded(scene.name);
         }
 
 #if UNITY_EDITOR

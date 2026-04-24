@@ -771,6 +771,15 @@ namespace Golfin.Physics.Viewer
                 PlacementEntries.Add(new BallPlacementEntry($"Near Water {i + 1}", wPos + dir * 1f));
             }
 
+            // Pre-snap all entry Y values via downward raycast so the fallback in PlaceBallAt
+            // is always the actual surface Y (zone mesh GOs may have centroid.y != surface y).
+            for (int i = 0; i < PlacementEntries.Count; i++)
+            {
+                var e = PlacementEntries[i];
+                e.WorldPos = new Vector3(e.WorldPos.x, SurfaceSnap(e.WorldPos.x, e.WorldPos.z, e.WorldPos.y), e.WorldPos.z);
+                PlacementEntries[i] = e;
+            }
+
             OnPlacementEntriesChanged?.Invoke();
             Debug.Log($"[PhysicsLab] PlacementEntries built: {PlacementEntries.Count} entries.");
         }
