@@ -101,10 +101,9 @@ namespace Golfin.Physics
                 var samples = new List<TrajectorySample>(capacity: 512);
                 var hits    = new List<TerrainHit>();
 
-                SurfaceType originSurface = surfaces.Classify(input.origin.x, input.origin.z);
                 fp3 startPos = new fp3(
                     input.origin.x,
-                    ground.SampleHeight(input.origin.x, input.origin.z, originSurface) + aero.BallRadius,
+                    ground.SampleHeight(input.origin.x, input.origin.z) + aero.BallRadius,
                     input.origin.z);
                 fp3 normal0 = (ground is HeightmapData hm0)
                     ? hm0.SampleNormal(startPos.x, startPos.z)
@@ -352,9 +351,7 @@ namespace Golfin.Physics
 
             fp3 gravity = new fp3(fp.Zero, Gravity, fp.Zero);
 
-            // Classify once before the initial snap so we ground to the correct surface.
-            SurfaceType initSurface = surfaces.Classify(pos.x, pos.z);
-            pos = new fp3(pos.x, ground.SampleHeight(pos.x, pos.z, initSurface) + ballRadius, pos.z);
+            pos = new fp3(pos.x, ground.SampleHeight(pos.x, pos.z) + ballRadius, pos.z);
 
             int stopConsecutive = 0;
             const int StopStepsRequired = 10;
@@ -394,7 +391,7 @@ namespace Golfin.Physics
                     fp.Zero,
                     pos.z + vel.z * Dt);
                 posNext = new fp3(posNext.x,
-                    ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
+                    ground.SampleHeight(posNext.x, posNext.z) + ballRadius,
                     posNext.z);
 
                 t   = t + Dt;
@@ -506,7 +503,7 @@ namespace Golfin.Physics
                     fp.Zero,
                     pos.z + vel.z * Dt);
                 posNext = new fp3(posNext.x,
-                    ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
+                    ground.SampleHeight(posNext.x, posNext.z) + ballRadius,
                     posNext.z);
 
                 t   = t + Dt;

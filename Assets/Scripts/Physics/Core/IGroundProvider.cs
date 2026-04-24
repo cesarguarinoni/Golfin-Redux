@@ -11,6 +11,18 @@ namespace Golfin.Physics
     {
         /// <summary>World Y of the ground surface at (worldX, worldZ), meters.</summary>
         fp SampleHeight(fp worldX, fp worldZ);
+
+        /// <summary>
+        /// Surface-aware overload: prefer a collider whose SurfaceMarker.Type matches
+        /// <paramref name="preferred"/> when one exists. Falls back to max-Y if no
+        /// preferred-type collider is found (same behaviour as 2-arg). Used by sim-time
+        /// roll/putt ground sampling so a bunker ball stays in the bunker and a green
+        /// ball stays on the green even when a higher collider overlaps at that XZ.
+        /// Default implementation ignores preferred and delegates to 2-arg — correct for
+        /// FlatGround and HeightmapData providers that have no overlapping colliders.
+        /// </summary>
+        fp SampleHeight(fp worldX, fp worldZ, SurfaceType preferred)
+            => SampleHeight(worldX, worldZ);
     }
 
     public sealed class FlatGround : IGroundProvider
