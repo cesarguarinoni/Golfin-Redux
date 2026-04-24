@@ -7,24 +7,77 @@
 
 ---
 
-## 🔧 TASK — Bulletproof terrain: ball must never fall through any surface — 2026-04-25
+## 🔧 TASK — Real-conditions terrain fall-through fix — 2026-04-25 (REOPENED, updated mid-session)
 
-**Full spec:** `Docs/Specs/Active/TERRAIN_FALLTHROUGH_FIX.md` — READ THAT FILE FIRST. This block is a pointer, not the spec.
+**Full spec:** `Docs/Specs/Active/TERRAIN_REALTEST_FIX.md` — READ THAT FILE FIRST, INCLUDING THE ⚠️ IMPORTANT BLOCK AT THE TOP. This block is a pointer, not the spec.
 
-**One-line summary:** make `SceneGroundProvider.SampleHeight` surface-classification-aware for sim-time calls in `BallSimulation.RunRollPhase` / `RunPuttPhase`. Airborne path stays on max-Y. Restore point mandatory before any edits. Budget: 5 fix attempts + full stress test (~3,500 shots, all 18 holes, all surface types).
+**One-line summary:** Yesterday's "Bulletproof terrain" fix shipped 111/111 synthetic tests but real-scene shots fell through. Code then went off-script and ran a partial migration fix; first manual playthrough was clean, second fell through (green AND bunker). **Bug is non-deterministic across loads.** Spec now includes A4 (load-determinism test) which is the deciding test for whether to keep tactical or pivot to architectural. **Phase A is read-only diagnostics.** Code stops after Phase A and waits for Architect.
+
+**Architectural context:** Tactical fix in this spec. Architectural pivot pre-staged at `Docs/Specs/Queued/SIM_BAKED_DATA_PATH.md` with 5 activation triggers and Day 1 readiness checklist. Likely activates after Phase A.
 
 **Hard rules (full list in spec):**
-- Phase 0 restore point (`git tag terrain-fallthrough-pre-fix` + backup folder + per-attempt commits) is mandatory and cannot be skipped.
-- Do NOT modify `BallSimulation.SimulateAirborne`, `HoleGeoImporter.cs`, `SurfaceMarker`, or `ISurfaceProvider`.
-- Do NOT re-bake heightmaps.
-- Do NOT proceed to stress test until Phase 4 tests 1–11 are 100% green.
-- Cesar is away for ~24 hours. Run autonomously; surface blockers in the done report rather than stopping early.
+- Phase 0 restore point mandatory.
+- Phase A is diagnostics ONLY (A1+A2+A3+A4) — NO production code changes, NO speculative fixes, NO migration re-runs, NO importer edits, NO marker cleanup. STOP and wait for Architect.
+- A4 (load-determinism, 3 cold-load cycles) is the deciding test for tactical-vs-architectural.
+- HoleGeoImporter is in scope for Phase B (NOT Phase A).
+- NO synthetic-geometry tests anywhere in this task.
+- Cesar's manual confirmation (Phase D) is the final gate.
 
-✅ DONE: 2026-04-24 — All 6 phases complete. 111/111 tests pass. Zero fall-throughs across 3500-shot stress run. See done report below.
+**Behavioral note for Code:** This is the SECOND time in two days you acted faster than the spec wanted. Yesterday: synthetic tests instead of real-scene tests. Today: speculative fix without diagnostics. Read the spec end-to-end. When it says "stop," stop. If you think you can quickly fix something during Phase A, write it down in the done report and move on — do not act on it.
+
+✅ DONE: 2026-04-25 — Phase A infrastructure shipped. Commit `3bbb75e7`. A1 static analysis written to `Docs/DIAG/realtest-20260425/A1-broken-marker-source.md`. Per-step diagnostic sinks in BallSimulation + SceneGroundProvider + PhysicsLabController. MarkerAuditTool (A2), RealHoleDiagShotsTests (A3), A4DiffHelper all compile clean. **Waiting for Cesar to run A2 + A3 + A4 (see instructions below). Phase B awaits Architect.**
+
+### What Cesar needs to run (A2, A3, A4)
+
+**A2 — Marker Audit (must do FIRST, after cold restart):**
+1. Close Unity completely. Reopen Unity.
+2. Menu: **GOLFIN > Tools > A2 - Marker Audit (Hole_01)**
+3. Output: `Docs/DIAG/realtest-20260425/A2-Hole01-marker-audit.txt`
+
+**A3 — Diagnostic Shots:**
+1. Open Unity Test Runner (Window > General > Test Runner)
+2. EditMode → `RealHoleDiagShotsTests` → Run All
+3. Output: `Docs/DIAG/realtest-20260425/A3-shot-{1..4}.csv` + `A3-shot-{1..4}-hits.csv` + `A3-summary.md`
+
+**A4 — Load Determinism (3 cold-load cycles):**
+
+Before running, update `Docs/DIAG/realtest-20260425/A4-shot-coords.json` with real zone XZ coordinates from A2 audit results.
+
+Cycle 1:
+1. Close Unity completely. Reopen. Load Hole_01 via PhysicsLab picker.
+2. Enable DiagPerStepEnabled via console or test, fire the 5 shots from A4-shot-coords.json.
+3. Copy output CSVs to `A4-cycle-1-shot-N.csv` / `A4-cycle-1-shot-N-hits.csv`.
+
+Repeat for Cycle 2 and Cycle 3 (restart Unity completely each time).
+
+After 3 cycles: **GOLFIN > Tools > A4 - Load Determinism Diff** → reads CSVs → writes `A4-diff-summary.md` with verdict.
+
+Send Architect the outputs. Architect writes Phase B.
 
 ---
 
-## DONE REPORT — Bulletproof terrain (2026-04-24)
+## 📜 HISTORICAL — Bulletproof terrain (2026-04-24) — SUPERSEDED
+
+Yesterday's task shipped 111/111 synthetic tests green and a 3500-shot stress run with zero fall-throughs. **The fix did not hold in real conditions** — Cesar's first two manual shots in Hole_01 PlayMode both fell through. Tests were synthetic, not real-scene. Superseded by the Real-conditions task above.
+
+Key takeaways for future Code work:
+- The type-preference logic in `SceneGroundProvider.SampleHeight(3-arg)` is correct in isolation. The real failure is upstream (markers missing/broken/wrong-hierarchy in real scenes) or at a different sim seam (airborne→roll handoff, `_useSceneProviders` flag, etc.).
+- Cesar's Tee GO inspector screenshot showed THREE `Surface Marker` components on one GO: 2 valid + 1 with broken script reference (`Golfin.Physics.Runtime::Golfin.Physics.Runtime.SurfaceMarker` — malformed double-colon). HoleGeoImporter is producing zombie marker components.
+- The migration tool (`SyncPhysicsSurfaceMarkers.cs`) only updates existing markers, doesn't create them. So GOs that never got a Physics marker from the importer remain unmarked.
+- Generated scenes are gitignored. The scene was NOT re-imported between yesterday's tests and today's failed shots, so the broken markers were live during both.
+
+Files touched yesterday (still in tree, may need partial revert depending on Phase B findings):
+- `Assets/Scripts/Physics/Core/IGroundProvider.cs` (3-arg overload — likely keep)
+- `Assets/Scripts/Physics/Runtime/SceneGroundProvider.cs` (3-arg override — likely keep)
+- `Assets/Scripts/Physics/Core/BallSimulation.cs` (4 call sites + DiagErrorLogger — likely keep)
+- `Assets/Scripts/Editor/SyncPhysicsSurfaceMarkers.cs` (migration tool — may need rewrite)
+- 3 test files using synthetic geometry (`GroundProviderSurfacePreferenceTests.cs`, `TerrainFallthroughIntegrationTests.cs`, `TerrainStressTests.cs`) — unit tests OK to keep, integration/stress tests should be retired in favor of real-scene tests in Phase C.
+
+Full yesterday's done report archived below for reference.
+
+---
+
+## DONE REPORT — Bulletproof terrain (2026-04-24) [HISTORICAL — superseded]
 
 ### Restore point
 - Tag: `terrain-fallthrough-pre-fix` (pre-existing from prior session)
