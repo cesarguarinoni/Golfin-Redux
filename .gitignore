@@ -8,6 +8,10 @@
 # unity-mcp-cli from each machine's local Unity-MCP plugin config.
 .claude/settings.local.json
 .claude/skills/
+# Per-machine git worktrees (created by Claude Code's worktree isolation)
+.claude/worktrees/
+# Per-machine Claude Code memory storage (path-keyed, never read from repo)
+.claude/projects/
 
 # =========================
 # Unity Generated Folders
@@ -33,9 +37,12 @@ MemoryCaptures/
 # =========================
 
 .vs/
+.vscode/
+.idea/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user

@@ -5,7 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Session Startup (EVERY SESSION)
 
 Before doing anything else:
-1. Run: `powershell -File Docs/generate_audit.ps1 > Docs/ARCHITECTURE_AUDIT.md`
+1. Generate the architecture audit (use the variant for your platform):
+   - **Windows:** `powershell -File Docs/generate_audit.ps1 > Docs/ARCHITECTURE_AUDIT.md`
+   - **macOS / Linux:** `bash Docs/generate_audit.sh > Docs/ARCHITECTURE_AUDIT.md`
 2. Read `Docs/AI_CONTEXT.md` (tiny — current status and active work)
 3. Read `Docs/Tasks.md` (current checklist — what to do)
 4. Read `Docs/TellCode.md` for any pending architect instructions
@@ -30,7 +32,13 @@ Before closing:
 ## Debugging Unity
 
 ### Reading Unity Console without copy-paste
-Unity Editor logs to a fixed file on Windows. Read it directly:
+Unity Editor writes to a log file you can tail directly. Path differs by OS:
+
+- **Windows:** `%LOCALAPPDATA%\Unity\Editor\Editor.log`
+- **macOS:** `~/Library/Logs/Unity/Editor.log`
+- **Linux:** `~/.config/unity3d/Editor.log`
+
+**Windows (PowerShell):**
 ```powershell
 # Last 100 lines (quick check)
 Get-Content -Path "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 100
@@ -45,6 +53,23 @@ Get-Content -Path "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Tail 500 | Select
 Get-Content -Path "$env:LOCALAPPDATA\Unity\Editor\Editor.log" -Wait -Tail 10
 ```
 
+**macOS / Linux (bash):** (substitute the Linux path for `LOG` if applicable)
+```bash
+LOG=~/Library/Logs/Unity/Editor.log
+
+# Last 100 lines
+tail -n 100 "$LOG"
+
+# Filter for errors only
+tail -n 500 "$LOG" | grep -E "Error|Exception|NullReference"
+
+# Filter for game logs only
+tail -n 500 "$LOG" | grep -E "\[CharacterManager\]|\[CarouselController\]|\[ScreenManager\]|\[RosterScreenController\]|\[LevelUpModal\]|\[CompareController\]"
+
+# Watch live
+tail -f "$LOG"
+```
+
 Note: Log resets each time Unity Editor starts. Contains a lot of noise from asset imports and compilation — always filter.
 
 ### Screenshots for visual review
@@ -52,19 +77,20 @@ Take a screenshot of the Game View for Claude (architect) to compare against ref
 - In Unity Play mode, navigate to the screen you want to capture
 - Menu: **GOLFIN > Screenshot > Capture Game View**
 - Screenshot saves to `Assets/Screenshots/screenshot_YYYY-MM-DD_HH-mm-ss.png`
-- Claude (architect) reads it directly via filesystem access at `C:\Users\cesar\GolfinRedux`
+- Claude (architect) reads it directly via filesystem access (the local clone of this repo, wherever it lives — e.g. `C:\Users\<you>\GolfinRedux` on Windows or `~/Documents/GolfinRedux` on Mac)
 - Reference images are in `Assets/References/` with `_compressed` subfolders for comparison
-- Screenshots and references must be compressed (max 800px wide) for Claude to read them:
-  ```powershell
+- Screenshots and references must be compressed (max 800px wide) for Claude to read them. Use the cross-platform Python script:
+  ```bash
   pip install Pillow  # first time only
-  powershell -File Docs/compress_screenshots.ps1 "Assets/Screenshots"
+  python Docs/compress_screenshots.py Assets/Screenshots
   ```
+  (Windows users may also still run the PowerShell wrapper: `powershell -File Docs/compress_screenshots.ps1 "Assets/Screenshots"`.)
 
 Workflow:
 1. Claude Code builds/changes UI
 2. Navigate to the screen in Play mode
 3. Run GOLFIN > Screenshot > Capture Game View
-4. Compress: `powershell -File Docs/compress_screenshots.ps1 "Assets/Screenshots"`
+4. Compress: `python Docs/compress_screenshots.py Assets/Screenshots`
 5. Claude reads `Assets/Screenshots/_compressed/` and compares against references
 
 ### TellCode.md workflow
@@ -322,7 +348,7 @@ Canvas > ScreensRoot > RosterScreen
 - **UIAutoWire:** `Assets/Scripts/Utilities/UIAutoWire.cs` for component auto-discovery
 - **Unity null checks:** Always `== null` not `??` (see lessons.md)
 - **Input system:** Always `UnityEngine.InputSystem`, never `UnityEngine.Input`
-- **Platform:** Windows (PowerShell, no bash/chmod/sed)
+- **Platform:** Cross-platform team — contributors work on both Windows (PowerShell) and macOS (bash/zsh). Use the platform-appropriate variant of any helper script (`.ps1` on Windows, `.sh` / `.py` on Mac/Linux). Don't hardcode absolute paths or shell-specific syntax in shared docs or tooling.
 
 ---
 
@@ -376,7 +402,8 @@ Quick rules:
 | `Docs/Rules.md` | Design constraints, Figma specs, conventions |
 | `Docs/TellCode.md` | Architect instructions for Claude Code |
 | `Docs/ARCHITECTURE_AUDIT.md` | Auto-generated — file tree, singletons, events |
-| `Docs/generate_audit.ps1` | Script to regenerate the audit |
+| `Docs/generate_audit.ps1` / `Docs/generate_audit.sh` | Script to regenerate the audit (PowerShell on Windows, bash on Mac/Linux) |
+| `Docs/compress_screenshots.py` / `Docs/compress_screenshots.ps1` | Compress screenshots to ≤800px (Python is cross-platform; .ps1 is a Windows wrapper) |
 | `Docs/Game Design/GAME_DESIGN_CHANGELOG.md` | Game design changes from original GDD |
 | `Docs/Game Design/ASSET_NAMING_CONVENTION.md` | Asset & file naming rules |
 | `Docs/Game Design/GAMEPLAY_FORMULAS_PROPOSAL.md` | Simplified gameplay formulas (proposal) |
