@@ -83,13 +83,11 @@ namespace Golfin.Gameplay.Tests
 
             Assert.That(maxX - minX, Is.GreaterThan(10f), "Hole XZ extent suspiciously small");
 
-            // Sample 100 deterministic XZ points across the bounds.
-            // OB is currently raster-defined on the terrain alphamap and not yet
-            // baked into ZoneData (M1 limitation; flagged for follow-up). Compare
-            // only on samples where the scene classifier returns a non-OB type
-            // — that's the classifier's domain of overlap with M1's polygon set.
+            // Sample 100 deterministic XZ points across the bounds. M2.5a baked
+            // an OB mask from the Terrain alphamap, so OB samples now compare
+            // directly (no skip).
             var rng = new System.Random(SampleSeed);
-            int agree = 0, inScope = 0, obSamples = 0;
+            int agree = 0, total = 0;
             var disagreements = new StringBuilder();
 
             for (int i = 0; i < SampleCount; i++)
@@ -101,18 +99,16 @@ namespace Golfin.Gameplay.Tests
                 var sceneType = scene.Classify(fx, fz);
                 var bakedType = baked.Classify(fx, fz);
 
-                if (sceneType == SurfaceType.OOB) { obSamples++; continue; }
-
-                inScope++;
+                total++;
                 if (sceneType == bakedType) agree++;
                 else if (disagreements.Length < 2000)
                     disagreements.AppendLine($"  ({x:F2},{z:F2}): scene={sceneType} baked={bakedType}");
             }
 
-            float agreement = inScope == 0 ? 0f : (float)agree / inScope;
+            float agreement = total == 0 ? 0f : (float)agree / total;
+            int inScope = total;
             Debug.Log($"[M1] BakedClassifier vs SceneSurfaceProvider: "
-                    + $"{agree}/{inScope} agree (in scope), {obSamples} OB samples skipped, "
-                    + $"agreement={agreement:P1}");
+                    + $"{agree}/{total} agree, agreement={agreement:P1}");
 
             string reportPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..",
                 "Docs", "DIAG", "baked-pivot", "M1-classifier-agreement.md"));
@@ -123,11 +119,7 @@ namespace Golfin.Gameplay.Tests
             sb.AppendLine($"- Hole: Hole_01");
             sb.AppendLine($"- Samples: {SampleCount} (seed {SampleSeed})");
             sb.AppendLine($"- Bounds (XZ): ({minX:F2}, {minZ:F2}) → ({maxX:F2}, {maxZ:F2})");
-            sb.AppendLine($"- OB samples skipped: {obSamples}/{SampleCount} "
-                        + $"(BakedZoneClassifier does not yet cover terrain-alphamap-defined OB; "
-                        + $"flagged for follow-up before M3 sim switch)");
-            sb.AppendLine($"- In-scope samples: {inScope}");
-            sb.AppendLine($"- Agreement: {agree}/{inScope} = **{agreement:P1}**");
+            sb.AppendLine($"- Agreement: {agree}/{total} = **{agreement:P1}**");
             sb.AppendLine($"- Threshold: {AgreementThreshold:P0}");
             sb.AppendLine();
             if (disagreements.Length > 0)

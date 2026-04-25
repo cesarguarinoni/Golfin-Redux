@@ -208,6 +208,72 @@ namespace Golfin.Physics.Tests
 
         // ── 7. Non-convex polygon ─────────────────────────────────────────────
 
+        // ── 8. OB mask ────────────────────────────────────────────────────────
+
+        [Test]
+        public void Classify_PointInObMaskBit_ReturnsOOB_WhenNoPolygonOverlaps()
+        {
+            // 4×4 mask covering world (0..40, 0..40); cells (2,2) and (2,3) are OB.
+            int w = 4, h = 4;
+            byte[] bits = new byte[(w * h + 7) / 8];
+            void Set(int x, int z) { int i = z * w + x; bits[i >> 3] |= (byte)(1 << (i & 7)); }
+            Set(2, 2); Set(2, 3);
+
+            var data = new ZoneData
+            {
+                holeId = "OBMASK",
+                obMask = new ObMask
+                {
+                    width = w, height = h,
+                    worldOriginX = 0f, worldOriginZ = 0f,
+                    worldSizeX = 40f, worldSizeZ = 40f,
+                    maskBase64 = System.Convert.ToBase64String(bits),
+                },
+            };
+            var c = new BakedZoneClassifier(data);
+
+            // (25, 25) → cell (2, 2) → OB.
+            Assert.AreEqual(SurfaceType.OOB, c.Classify(F(25f), F(25f)));
+            // (25, 35) → cell (2, 3) → OB.
+            Assert.AreEqual(SurfaceType.OOB, c.Classify(F(25f), F(35f)));
+            // (5, 5) → cell (0, 0) → not OB → default Fairway.
+            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(5f), F(5f)));
+        }
+
+        [Test]
+        public void Classify_PolygonOverridesObMask()
+        {
+            int w = 4, h = 4;
+            byte[] bits = new byte[(w * h + 7) / 8];
+            for (int i = 0; i < w * h; i++) bits[i >> 3] |= (byte)(1 << (i & 7)); // ALL OB
+
+            var data = new ZoneData
+            {
+                holeId = "OBPOLY",
+                obMask = new ObMask
+                {
+                    width = w, height = h,
+                    worldOriginX = 0f, worldOriginZ = 0f,
+                    worldSizeX = 40f, worldSizeZ = 40f,
+                    maskBase64 = System.Convert.ToBase64String(bits),
+                },
+            };
+            // A Fairway polygon covering cells (1, 1)..(2, 2) — but OB mask
+            // says EVERYTHING is OB. Polygon must win.
+            data.zones.Add(new ZonePolygonGroup
+            {
+                type = SurfaceType.Fairway.ToString(),
+                yOffsetFromTerrain = 0.015f,
+                polygons = { Square(10f, 10f, 30f, 30f) },
+            });
+            var c = new BakedZoneClassifier(data);
+
+            // Inside the fairway polygon → Fairway (overrides mask).
+            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(20f), F(20f)));
+            // Outside the polygon → mask says OOB.
+            Assert.AreEqual(SurfaceType.OOB,     c.Classify(F(35f), F(5f)));
+        }
+
         [Test]
         public void Classify_NonConvexPolygon_HandlesCorrectly()
         {

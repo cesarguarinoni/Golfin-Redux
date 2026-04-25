@@ -44,6 +44,16 @@ namespace Golfin.Physics.Runtime.Baked
         private readonly CompiledPolygon[] polygons;
         private readonly Dictionary<SurfaceType, float> yOffsetByType;
 
+        // OB mask state (decoded once from base64 at construction).
+        private readonly byte[]  obMaskBits;
+        private readonly int     obMaskWidth;
+        private readonly int     obMaskHeight;
+        private readonly float   obWorldOriginX;
+        private readonly float   obWorldOriginZ;
+        private readonly float   obCellW;     // worldSizeX / width
+        private readonly float   obCellH;     // worldSizeZ / height
+        private readonly bool    hasObMask;
+
         /// <summary>The default surface returned when no polygon contains the test point.</summary>
         public const SurfaceType DefaultSurface = SurfaceType.Fairway;
 
@@ -54,6 +64,21 @@ namespace Golfin.Physics.Runtime.Baked
                 polygons = Array.Empty<CompiledPolygon>();
                 yOffsetByType = new Dictionary<SurfaceType, float>();
                 return;
+            }
+
+            // Decode OB mask if present.
+            if (data.obMask != null
+                && data.obMask.width > 0 && data.obMask.height > 0
+                && !string.IsNullOrEmpty(data.obMask.maskBase64))
+            {
+                obMaskBits     = Convert.FromBase64String(data.obMask.maskBase64);
+                obMaskWidth    = data.obMask.width;
+                obMaskHeight   = data.obMask.height;
+                obWorldOriginX = data.obMask.worldOriginX;
+                obWorldOriginZ = data.obMask.worldOriginZ;
+                obCellW        = data.obMask.worldSizeX / obMaskWidth;
+                obCellH        = data.obMask.worldSizeZ / obMaskHeight;
+                hasObMask      = obCellW > 0 && obCellH > 0 && obMaskBits.Length > 0;
             }
 
             yOffsetByType = new Dictionary<SurfaceType, float>(data.zones.Count);
@@ -114,13 +139,31 @@ namespace Golfin.Physics.Runtime.Baked
             float x = worldX.ToFloat();
             float z = worldZ.ToFloat();
 
+            // Polygon zones first — they always trump the OB mask (a fairway
+            // overlapping an OB-marked terrain cell IS fairway, not OOB).
             for (int i = 0; i < polygons.Length; i++)
             {
                 ref readonly var p = ref polygons[i];
                 if (x < p.minX || x > p.maxX || z < p.minZ || z > p.maxZ) continue;
                 if (PointInPolygon(p.xs, p.zs, x, z)) return p.type;
             }
+
+            // No polygon match: consult the OB mask if baked.
+            if (hasObMask && IsObAt(x, z)) return SurfaceType.OOB;
+
             return DefaultSurface;
+        }
+
+        private bool IsObAt(float x, float z)
+        {
+            int ix = (int)((x - obWorldOriginX) / obCellW);
+            int iz = (int)((z - obWorldOriginZ) / obCellH);
+            if (ix < 0 || ix >= obMaskWidth)  return false;
+            if (iz < 0 || iz >= obMaskHeight) return false;
+            int bitIdx  = iz * obMaskWidth + ix;
+            int byteIdx = bitIdx >> 3;
+            int bitMod  = bitIdx & 7;
+            return (obMaskBits[byteIdx] & (1 << bitMod)) != 0;
         }
 
         /// <summary>

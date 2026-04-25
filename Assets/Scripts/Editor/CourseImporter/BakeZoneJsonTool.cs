@@ -139,6 +139,9 @@ namespace Golfin.Editor.CourseImporter
             var data = new ZoneData { holeId = holeId };
             foreach (var kv in groups) data.zones.Add(kv.Value);
 
+            // Bake the OB mask from the scene's Terrain alphamap (if present).
+            data.obMask = BakeObMask(loaded);
+
             // Sort by enum value for stable JSON.
             data.zones.Sort((a, b) =>
                 ((int)a.SurfaceType).CompareTo((int)b.SurfaceType));
@@ -285,6 +288,81 @@ namespace Golfin.Editor.CourseImporter
                                           Dictionary<int, int> nextOf, int a, int b)
         {
             if (count[EdgeKey(a, b)] == 1) nextOf[a] = b;
+        }
+
+        // ── OB mask extraction ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Walk the loaded scene for a Terrain whose terrainData has at least
+        /// one TerrainLayer named *OB*. Read the alphamap, threshold OB-layer
+        /// weight at &gt;0.5 (matching <c>SceneSurfaceProvider.ClassifyTerrain</c>),
+        /// pack the resulting binary mask into a base64 string, and return an
+        /// <see cref="ObMask"/> describing world-space placement. Returns null
+        /// if no such Terrain exists.
+        /// </summary>
+        private static ObMask BakeObMask(Scene scene)
+        {
+            Terrain terrain = null;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                terrain = root.GetComponentInChildren<Terrain>();
+                if (terrain != null) break;
+            }
+            if (terrain == null || terrain.terrainData == null) return null;
+
+            var td     = terrain.terrainData;
+            var layers = td.terrainLayers;
+            int obLayer = -1;
+            for (int i = 0; i < layers.Length; i++)
+                if (layers[i] != null && layers[i].name.Contains("OB"))
+                { obLayer = i; break; }
+            if (obLayer < 0)
+            {
+                Debug.Log("[BakeZoneJsonTool] No OB-named terrain layer; skipping OB mask.");
+                return null;
+            }
+
+            int aw = td.alphamapWidth;
+            int ah = td.alphamapHeight;
+            float[,,] maps = td.GetAlphamaps(0, 0, aw, ah);
+            int layerCount = maps.GetLength(2);
+            if (obLayer >= layerCount)
+            {
+                Debug.LogWarning("[BakeZoneJsonTool] OB layer index out of range; skipping.");
+                return null;
+            }
+
+            // Pack bits — bit (z * aw + x) → maps[z, x, obLayer] > 0.5.
+            int totalBits  = aw * ah;
+            int totalBytes = (totalBits + 7) >> 3;
+            byte[] bits = new byte[totalBytes];
+            int obCount = 0;
+            for (int z = 0; z < ah; z++)
+                for (int x = 0; x < aw; x++)
+                {
+                    if (maps[z, x, obLayer] > 0.5f)
+                    {
+                        int idx = z * aw + x;
+                        bits[idx >> 3] |= (byte)(1 << (idx & 7));
+                        obCount++;
+                    }
+                }
+
+            Vector3 tp = terrain.transform.position;
+            var mask = new ObMask
+            {
+                width        = aw,
+                height       = ah,
+                worldOriginX = tp.x,
+                worldOriginZ = tp.z,
+                worldSizeX   = td.size.x,
+                worldSizeZ   = td.size.z,
+                maskBase64   = System.Convert.ToBase64String(bits),
+            };
+            Debug.Log($"[BakeZoneJsonTool] OB mask: {aw}×{ah} @ "
+                    + $"({tp.x:F1},{tp.z:F1}) size {td.size.x:F1}×{td.size.z:F1}; "
+                    + $"{obCount}/{totalBits} = {(100.0 * obCount / totalBits):F1}% OB.");
+            return mask;
         }
 
         // ── Active-hole detector ──────────────────────────────────────────────

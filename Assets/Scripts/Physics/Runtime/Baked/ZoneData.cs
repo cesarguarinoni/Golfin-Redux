@@ -40,8 +40,35 @@ namespace Golfin.Physics.Runtime.Baked
         public string holeId;
         public List<ZonePolygonGroup> zones = new List<ZonePolygonGroup>();
 
+        /// <summary>
+        /// Optional bit-packed mask covering the terrain extent. If a sample's
+        /// (x, z) maps to a "1" cell, the classifier returns <see cref="SurfaceType.OOB"/>
+        /// directly — replicates <c>SceneSurfaceProvider.ClassifyTerrain</c>'s
+        /// "OB layer &gt; 0.5" rule without needing to bake OB polygon contours.
+        /// Polygon zones still take priority over the mask (they're checked first).
+        /// </summary>
+        public ObMask obMask;
+
         public static ZoneData FromJson(string json) => JsonUtility.FromJson<ZoneData>(json);
         public string ToJson(bool pretty = true) => JsonUtility.ToJson(this, pretty);
+    }
+
+    /// <summary>
+    /// Bit-packed boolean grid covering the terrain extent. Cells outside the
+    /// grid are treated as "0" (not OB). Resolution typically matches the
+    /// terrain alphamap (~1024×1024).
+    /// </summary>
+    [Serializable]
+    public sealed class ObMask
+    {
+        public int    width;
+        public int    height;
+        public float  worldOriginX;
+        public float  worldOriginZ;
+        public float  worldSizeX;
+        public float  worldSizeZ;
+        /// <summary>Bit-packed: bit (z * width + x) → byte (idx >> 3) bit (idx &amp; 7).</summary>
+        public string maskBase64;
     }
 
     /// <summary>One zone-type entry: physics surface type + Y offset + N polygons.</summary>
