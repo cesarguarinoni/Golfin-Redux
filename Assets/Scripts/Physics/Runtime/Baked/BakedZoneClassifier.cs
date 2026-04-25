@@ -44,22 +44,18 @@ namespace Golfin.Physics.Runtime.Baked
         private readonly CompiledPolygon[] polygons;
         private readonly Dictionary<SurfaceType, float> yOffsetByType;
 
-        // Per-zone mesh-sample pools: surface type → flat list of (x, y, z).
-        // Populated by BakeZoneJsonTool from every mesh vertex of every mesh of
-        // that type. Used by TrySampleMeshY for k-nearest IDW interpolation —
-        // dramatically reduces IDW noise on large polygons compared to
-        // boundary-only sampling.
-        private struct MeshSamples
+        // Per-zone triangulated mesh: surface type → packed triangle data.
+        // Populated by BakeZoneJsonTool from every mesh + triangle index of
+        // every MeshFilter of that type. Used by TrySampleMeshY for exact
+        // barycentric Y interpolation — eliminates IDW residual entirely.
+        private struct CompiledMesh
         {
             public float[] xs;
             public float[] ys;
             public float[] zs;
+            public int[]   indices; // groups of 3
         }
-        private readonly Dictionary<SurfaceType, MeshSamples> meshSamplesByType;
-        // K nearest samples used by IDW. 16 picked empirically: 8 left
-        // ~5–10 cm spikes in mid-flight regression; 16 smooths those out
-        // (M2 height agreement: 99/100 within 5 cm, mean 0.006 m).
-        private const int KNearest = 16;
+        private readonly Dictionary<SurfaceType, CompiledMesh> meshByType;
 
         // OB mask state (decoded once from base64 at construction).
         private readonly byte[]  obMaskBits;
@@ -76,7 +72,7 @@ namespace Golfin.Physics.Runtime.Baked
 
         public BakedZoneClassifier(ZoneData data)
         {
-            meshSamplesByType = new Dictionary<SurfaceType, MeshSamples>();
+            meshByType = new Dictionary<SurfaceType, CompiledMesh>();
 
             if (data == null || data.zones == null)
             {
@@ -108,23 +104,28 @@ namespace Golfin.Physics.Runtime.Baked
                 SurfaceType st = group.SurfaceType;
                 yOffsetByType[st] = group.yOffsetFromTerrain;
 
-                // Compile mesh-sample pool for this zone (Path A enrichment).
-                if (group.meshSamples != null && group.meshSamples.Count > 0)
+                // Compile triangulated mesh for this zone (Path β).
+                if (group.mesh != null
+                    && group.mesh.vertices != null && group.mesh.vertices.Count > 0
+                    && group.mesh.indices  != null && group.mesh.indices.Count  >= 3)
                 {
-                    int m = group.meshSamples.Count;
-                    var ms = new MeshSamples
+                    int v = group.mesh.vertices.Count;
+                    var cm = new CompiledMesh
                     {
-                        xs = new float[m],
-                        ys = new float[m],
-                        zs = new float[m],
+                        xs = new float[v],
+                        ys = new float[v],
+                        zs = new float[v],
                     };
-                    for (int i = 0; i < m; i++)
+                    for (int i = 0; i < v; i++)
                     {
-                        ms.xs[i] = group.meshSamples[i].x;
-                        ms.ys[i] = group.meshSamples[i].y;
-                        ms.zs[i] = group.meshSamples[i].z;
+                        cm.xs[i] = group.mesh.vertices[i].x;
+                        cm.ys[i] = group.mesh.vertices[i].y;
+                        cm.zs[i] = group.mesh.vertices[i].z;
                     }
-                    meshSamplesByType[st] = ms;
+                    cm.indices = new int[group.mesh.indices.Count];
+                    for (int i = 0; i < cm.indices.Length; i++)
+                        cm.indices[i] = group.mesh.indices[i];
+                    meshByType[st] = cm;
                 }
 
                 if (group.polygons == null) continue;
@@ -240,13 +241,13 @@ namespace Golfin.Physics.Runtime.Baked
 
                 type = p.type;
 
-                // Path A IDW. Prefer the per-zone mesh-sample pool (much denser
-                // than boundary verts → much less interpolation noise on large
-                // polygons). Fall back to boundary verts if no pool was baked.
-                if (meshSamplesByType.TryGetValue(p.type, out MeshSamples pool)
-                    && pool.xs != null && pool.xs.Length > 0)
+                // Path β: barycentric interpolation over the per-zone triangulated
+                // mesh. Exact (no interpolation residual) when the test point
+                // lands inside any triangle of this zone.
+                if (meshByType.TryGetValue(p.type, out CompiledMesh mesh)
+                    && TryBarycentricSample(mesh, x, z, out float baryY))
                 {
-                    y = IdwKNearest(x, z, pool.xs, pool.ys, pool.zs, KNearest);
+                    y = baryY;
                     return true;
                 }
 
@@ -256,7 +257,7 @@ namespace Golfin.Physics.Runtime.Baked
                     return false;
                 }
 
-                // Fallback: boundary-only IDW (all points, p=2).
+                // Final fallback: boundary IDW (synthetic / single-mesh fixtures).
                 double sumW   = 0.0;
                 double sumWY  = 0.0;
                 int n = p.xs.Length;
@@ -299,67 +300,54 @@ namespace Golfin.Physics.Runtime.Baked
             }
         }
 
-        // ── IDW helper ────────────────────────────────────────────────────────
+        // ── Barycentric helper ────────────────────────────────────────────────
 
         /// <summary>
-        /// k-nearest-neighbor inverse-distance-weighted Y interpolation over a
-        /// pool of (xs, ys, zs) sample points. Walks the pool once, maintaining
-        /// a max-heap of the k closest by squared XZ distance, then computes
-        /// Σ(yi / d²) / Σ(1 / d²). p=2.
+        /// Walk the triangle list, find the first triangle whose XZ projection
+        /// contains (x, z), and return the barycentric-interpolated Y. Returns
+        /// false if no triangle contains the point (caller falls back to IDW).
         /// </summary>
-        private static float IdwKNearest(float x, float z,
-                                         float[] xs, float[] ys, float[] zs, int k)
+        private static bool TryBarycentricSample(in CompiledMesh mesh, float x, float z,
+                                                 out float y)
         {
-            int n = xs.Length;
-            if (n <= k)
+            int triCount = mesh.indices.Length / 3;
+            for (int t = 0; t < triCount; t++)
             {
-                // Pool small enough — use everything.
-                double sumW = 0.0, sumWY = 0.0;
-                for (int i = 0; i < n; i++)
-                {
-                    float dx = x - xs[i];
-                    float dz = z - zs[i];
-                    double d2 = dx * dx + dz * dz + 1e-9;
-                    double w = 1.0 / d2;
-                    sumW  += w;
-                    sumWY += w * ys[i];
-                }
-                return (float)(sumWY / sumW);
+                int i  = t * 3;
+                int ia = mesh.indices[i];
+                int ib = mesh.indices[i + 1];
+                int ic = mesh.indices[i + 2];
+
+                float ax = mesh.xs[ia], az = mesh.zs[ia];
+                float bx = mesh.xs[ib], bz = mesh.zs[ib];
+                float cx = mesh.xs[ic], cz = mesh.zs[ic];
+
+                // AABB pre-reject for speed.
+                float minX = ax < bx ? (ax < cx ? ax : cx) : (bx < cx ? bx : cx);
+                float maxX = ax > bx ? (ax > cx ? ax : cx) : (bx > cx ? bx : cx);
+                if (x < minX || x > maxX) continue;
+                float minZ = az < bz ? (az < cz ? az : cz) : (bz < cz ? bz : cz);
+                float maxZ = az > bz ? (az > cz ? az : cz) : (bz > cz ? bz : cz);
+                if (z < minZ || z > maxZ) continue;
+
+                // Barycentric coordinates in XZ projection.
+                float denom = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz);
+                if (denom > -1e-12f && denom < 1e-12f) continue; // degenerate
+
+                float u = ((bz - cz) * (x - cx) + (cx - bx) * (z - cz)) / denom;
+                float v = ((cz - az) * (x - cx) + (ax - cx) * (z - cz)) / denom;
+                float w = 1f - u - v;
+
+                // Inside (with 1e-5 slack on each edge for numerical safety).
+                const float Eps = 1e-5f;
+                if (u < -Eps || v < -Eps || w < -Eps) continue;
+
+                y = u * mesh.ys[ia] + v * mesh.ys[ib] + w * mesh.ys[ic];
+                return true;
             }
 
-            // Track k smallest d² + their ys via parallel arrays (small k → linear).
-            var bestD2 = new double[k];
-            var bestY  = new float[k];
-            for (int i = 0; i < k; i++) bestD2[i] = double.PositiveInfinity;
-            int worstIdx = 0;
-            double worstD2 = double.PositiveInfinity;
-
-            for (int i = 0; i < n; i++)
-            {
-                float dx = x - xs[i];
-                float dz = z - zs[i];
-                double d2 = dx * dx + dz * dz;
-                if (d2 >= worstD2) continue;
-
-                bestD2[worstIdx] = d2;
-                bestY[worstIdx]  = ys[i];
-
-                // Re-find the new worst.
-                worstD2  = bestD2[0];
-                worstIdx = 0;
-                for (int j = 1; j < k; j++)
-                    if (bestD2[j] > worstD2) { worstD2 = bestD2[j]; worstIdx = j; }
-            }
-
-            double sw = 0.0, swy = 0.0;
-            for (int i = 0; i < k; i++)
-            {
-                double d2 = bestD2[i] + 1e-9;
-                double w  = 1.0 / d2;
-                sw  += w;
-                swy += w * bestY[i];
-            }
-            return (float)(swy / sw);
+            y = 0f;
+            return false;
         }
 
         // ── Geometry helpers ──────────────────────────────────────────────────

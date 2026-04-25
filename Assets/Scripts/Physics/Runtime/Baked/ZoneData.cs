@@ -88,14 +88,12 @@ namespace Golfin.Physics.Runtime.Baked
         public List<Polygon2D> polygons = new List<Polygon2D>();
 
         /// <summary>
-        /// Path A enrichment: full pool of mesh-vertex samples (all mesh verts
-        /// across every MeshFilter contributing to this zone), used by
-        /// BakedZoneClassifier.TrySampleMeshY for k-nearest IDW interpolation.
-        /// Reduces IDW noise on large polygons whose boundary samples
-        /// under-represent interior terrain slope. Optional — empty for
-        /// synthetic test fixtures.
+        /// Path β: triangulated mesh per zone (pooled across every MeshFilter
+        /// of this surface type). Used by <see cref="BakedZoneClassifier.TrySampleMeshY"/>
+        /// for exact barycentric Y interpolation — no IDW residual.
+        /// Optional — null for synthetic test fixtures.
         /// </summary>
-        public List<Point2D> meshSamples = new List<Point2D>();
+        public ZoneMesh mesh = new ZoneMesh();
 
         /// <summary>Convenience accessor: parse <see cref="type"/> as a SurfaceType.</summary>
         public SurfaceType SurfaceType
@@ -107,6 +105,19 @@ namespace Golfin.Physics.Runtime.Baked
                 return SurfaceType.Fairway;
             }
         }
+    }
+
+    /// <summary>
+    /// Triangulated mesh covering one zone (pooled across all MeshFilters of
+    /// the same surface type). Vertices in world space (x stored in Point2D.x,
+    /// world-Y in Point2D.y, z in Point2D.z). Indices in groups of 3, indexing
+    /// into <see cref="vertices"/>.
+    /// </summary>
+    [Serializable]
+    public sealed class ZoneMesh
+    {
+        public List<Point2D> vertices = new List<Point2D>();
+        public List<int>     indices  = new List<int>();
     }
 
     /// <summary>Single closed polygon as an ordered ring of XZ points.</summary>

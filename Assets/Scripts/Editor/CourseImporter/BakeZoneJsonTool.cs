@@ -187,31 +187,36 @@ namespace Golfin.Editor.CourseImporter
                         type = type.ToString(),
                         yOffsetFromTerrain = YOffsets.TryGetValue(type, out float y) ? y : 0f,
                         polygons = new List<Polygon2D>(),
-                        meshSamples = new List<Point2D>(),
+                        mesh = new ZoneMesh(),
                     };
                     groups[type] = grp;
                 }
                 ExtractBoundaryPolygons(mf, grp.polygons);
-                CollectMeshSamples(mf, grp.meshSamples);
+                AddMeshTriangles(mf, grp.mesh);
             }
             for (int i = 0; i < t.childCount; i++)
                 CollectPolygons(t.GetChild(i), groups);
         }
 
         /// <summary>
-        /// Append every world-space mesh vertex of <paramref name="mf"/> into
-        /// the per-zone sample pool. Duplicates within a single mesh are
-        /// preserved (cheap; helps IDW give more weight to denser regions).
+        /// Path β: append all triangles of <paramref name="mf"/>'s mesh into
+        /// the per-zone <see cref="ZoneMesh"/>, rebasing indices so multiple
+        /// MeshFilters of the same surface type stay in one flat list.
         /// </summary>
-        private static void CollectMeshSamples(MeshFilter mf, List<Point2D> outSamples)
+        private static void AddMeshTriangles(MeshFilter mf, ZoneMesh outMesh)
         {
             var verts = mf.sharedMesh.vertices;
+            var tris  = mf.sharedMesh.triangles;
             var tx    = mf.transform;
+
+            int baseIdx = outMesh.vertices.Count;
             for (int i = 0; i < verts.Length; i++)
             {
                 Vector3 w = tx.TransformPoint(verts[i]);
-                outSamples.Add(new Point2D(w.x, w.y, w.z));
+                outMesh.vertices.Add(new Point2D(w.x, w.y, w.z));
             }
+            for (int i = 0; i < tris.Length; i++)
+                outMesh.indices.Add(baseIdx + tris[i]);
         }
 
         /// <summary>
