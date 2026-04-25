@@ -192,15 +192,215 @@ If you find yourself thinking "this would be quick to fix while I'm here" — st
 
 ---
 
-## Phase B — TACTICAL FIX (Architect spec'd after Phase A)
+## Phase B — TACTICAL FIX (Architect spec'd 2026-04-25 from Phase A data)
 
-Cannot pre-spec without diagnostic data. The fix likely involves one or more of:
-- Editing HoleGeoImporter to stop producing broken script refs.
-- Re-running the migration tool (or replacing it) to populate Physics markers correctly across all imported holes.
-- Possibly fixing `SceneGroundProvider.SampleHeight(3-arg)` if `GetComponentInParent` traversal is wrong for the actual hierarchy.
-- Possibly fixing the airborne→roll handoff if Phase A reveals fall-through happens at that exact transition.
+### Phase A summary (definitive findings)
 
-When Architect writes Phase B, it will appear as an updated section in this spec file (search for "## Phase B —"). Code reads the updated spec and proceeds.
+- **A1:** HoleGeoImporter has 12 valid `AddComponent<SurfaceMarker>` call sites that work correctly. The gap is `CreateFlatContourMesh` (HoleGeoImporter.cs:4191) which only adds Course marker. `SyncPhysicsSurfaceMarkers` cannot CREATE markers, only update existing ones.
+- **A2:** Hole_01 has 21 of 30 collider GOs with **zero valid Physics markers**, and 27 of 30 GOs have **broken/zombie components** (3 each, indicating the Roslyn migration ran 3 times). Critical zones with zero markers: Green_1, Fairway_1, all Bunkers 1–5 + 7 (only Bunker_6 OK), Tees 2–4, most CartPaths.
+- **A4:** All 3 cold-load cycles bit-identical. PhysX is NOT non-deterministic. The bug is purely missing markers; the apparent non-determinism in Cesar's earlier playthroughs was shot-placement variance (ball happened to land on the 9 OK GOs vs the 21 broken ones).
+- **Root cause:** Previous Roslyn migration script ran 3 times in Assembly-CSharp context, producing zombie components with wrong m_Script GUIDs instead of valid `Physics.Runtime.SurfaceMarker` components. The 9 GOs that DO have valid markers are the ones that escaped this flow (created via importer code paths that already had `AddComponent<SurfaceMarker>` working).
+
+### Phase B scope (three independent fixes)
+
+#### B1 — Cleanup tool for currently-broken scenes
+
+New Editor tool: `Assets/Scripts/Editor/PhysicsMarkerRepairTool.cs`. Menu: **GOLFIN > Tools > Repair Physics Markers (Hole_01)** and **GOLFIN > Tools > Repair Physics Markers (All Holes)**.
+
+For each loaded hole scene:
+1. Walk every GO that has a `Course.SurfaceMarker` (use reflection per `SyncPhysicsSurfaceMarkers` pattern — the asmdef wall still applies).
+2. **Remove all broken/missing-script components on that GO.** Use `SerializedObject` + `m_Component` array editing to remove components whose `m_Script` GUID is null. This is the canonical Unity API for this; do NOT use `Undo.DestroyObjectImmediate` on a missing-script component (it can fail silently).
+3. **Check for an existing valid `Physics.Runtime.SurfaceMarker`** via `GetComponent<SurfaceMarker>()`. If absent, `AddComponent<SurfaceMarker>()` and set `.Type` from `MapCourseToPhysics()` (reuse the existing mapping logic from `SyncPhysicsSurfaceMarkers.cs`).
+4. **If valid marker already exists, just update its `.Type`** (matches old SyncPhysicsSurfaceMarkers behavior).
+5. `EditorUtility.SetDirty` per modified GO. `EditorSceneManager.MarkSceneDirty(scene)`. `EditorSceneManager.SaveScene(scene)`.
+6. Log per-GO action (REMOVED N broken, ADDED marker / UPDATED marker / OK no change) to console + a summary `Docs/DIAG/realtest-20260425/B1-repair-Hole_XX.txt`.
+7. Final summary line: "Repaired N GOs across M scenes. Removed K broken components. Added P new markers. Updated Q existing markers."
+
+**Critical:** Use the editor's normal `gameObject.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>()` from the Editor asmdef (`Golfin.Editor.asmdef` or Assembly-CSharp-Editor) with explicit `using Golfin.Physics.Runtime;`. **Do NOT use Roslyn `script-execute` via MCP for the AddComponent call.** That's what created the zombies last time.
+
+**Verification step in the tool:** After save, re-run the audit logic (call into `MarkerAuditTool` programmatically). Print: "Post-repair Hole_XX: 30/30 GOs have ONE valid Physics marker, 0 broken components." If counts are wrong, log error and abort — do NOT pretend the fix worked.
+
+**Run order:** Code runs B1 on Hole_01 first. Verifies post-repair audit is clean. Then runs on all 18 holes (most will be no-ops since they have no zone meshes per yesterday's findings).
+
+#### B2 — Importer fix (prevent regression on future imports)
+
+File: `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs:4191` (`CreateFlatContourMesh` function) and `:4196` (`CreateEarClipContourMesh` which delegates to it).
+
+```csharp
+// Current (line ~4191):
+var marker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+marker.surfaceType = surfaceType;
+return go;
+
+// Fix: also add Physics.Runtime.SurfaceMarker with mapped Type.
+var courseMarker = go.AddComponent<Golfin.Course.SurfaceMarker>();
+courseMarker.surfaceType = surfaceType;
+var physMarker = go.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>();
+physMarker.Type = MapCourseToPhysics(surfaceType);
+return go;
+```
+
+`MapCourseToPhysics` should be a static method on `HoleGeoImporter` (or a shared helper in `Golfin.Editor`) with the same mapping `SyncPhysicsSurfaceMarkers.MapCourseToPhysics` uses. **Extract to a single source of truth** — do NOT duplicate the switch statement in two places. Code's call: put the shared mapper in either `HoleGeoImporter` and have SyncPhysicsSurfaceMarkers call it, OR put it in a new `Assets/Scripts/Editor/CourseImporter/SurfaceMarkerMap.cs` and have both call it. Code picks based on what's cleanest with the asmdef structure.
+
+Also check `HoleLiteImporter.cs` (per A1, has 8 `AddComponent<SurfaceMarker>` call sites). If it has any analogous gap (only-Course-marker creation paths), fix those too. If not, no change.
+
+#### B3 — Migration tool fix (`SyncPhysicsSurfaceMarkers.cs`)
+
+The existing migration tool only updates existing markers. Replace its `SyncMarkersInScene` with logic that does the full repair (same as B1 essentially, but as a callable function instead of a menu item).
+
+Actually: **make B1's PhysicsMarkerRepairTool the real implementation, and have SyncPhysicsSurfaceMarkers either delegate to it or be deleted.** No reason to maintain two near-identical tools. Code's call: delete `SyncPhysicsSurfaceMarkers.cs` and rename `PhysicsMarkerRepairTool` menu items to use the SyncPhysicsSurfaceMarkers menu paths for backward compatibility, OR keep both and have SyncPhysicsSurfaceMarkers call PhysicsMarkerRepairTool. Whatever produces less code.
+
+### Phase B execution order
+
+1. **Phase 0 restore point** (already done by Phase A — use the same `terrain-realtest-pre-fix` tag and `Docs/BACKUPS/terrain-realtest-20260425/` folder. Add new files to backup if needed before editing).
+2. Per-attempt commit discipline still applies: commit each of B1, B2, B3 separately (`realtest-attempt-B1: …`, `realtest-attempt-B2: …`, `realtest-attempt-B3: …`) for individual revertability.
+3. **B1 first.** Build the repair tool. Run on Hole_01. Verify post-repair audit shows 30/30 valid markers, 0 broken. Save scene.
+4. **Manual smoke test before B2/B3.** After B1, fire 1 putt + 1 bunker shot manually using the same diagnostic test infrastructure from Phase A (or just play in PhysicsLab). If they fall through, B1 isn't sufficient and we need to investigate further before continuing. Log result to `Docs/DIAG/realtest-20260425/B1-smoke-test.md`.
+5. **B2 next.** Fix HoleGeoImporter. Test by re-importing one hole (Code's choice — a small one, or Hole_01 again) and running the audit on the freshly-imported scene. Verify 30/30 valid markers post-import, 0 broken.
+6. **B3 last.** Consolidate migration tooling. Verify the menu items still work end-to-end on Hole_01.
+7. **Run B1 on all 18 holes** (final pass, in case B2 surfaces any issues with already-imported scenes that need re-repair).
+
+### Iteration budget
+
+- B1: 3 attempts. The hard part is the missing-script removal API; if `SerializedObject` editing of `m_Component` array doesn't work, fallback options are: (a) `Undo.DestroyObjectImmediate` per component (may fail), (b) GameObject removal + recreation (last resort, breaks references). Document each attempt.
+- B2: 2 attempts. Straightforward, just don't break the existing 12 working call sites.
+- B3: 1 attempt. Mostly delete + rename.
+
+If B1 exhausts its 3 attempts without producing a clean Hole_01, **STOP and surface to Architect** — this triggers architectural-pivot evaluation (matches activation trigger #1 in the queued spec).
+
+### Phase B done criteria (Code reports done when all of these are true)
+
+1. B1 repair tool exists and runs cleanly on Hole_01. Post-repair audit: 30/30 valid markers, 0 broken.
+2. B1 smoke test (1 putt + 1 bunker shot) shows no fall-through.
+3. B2 importer fix is in. Re-importing a hole produces 30/30 valid markers post-import.
+4. B3 tooling consolidation done.
+5. B1 final pass run on all 18 holes; per-hole repair counts logged.
+6. All commits made: `realtest-attempt-B1`, `realtest-attempt-B2`, `realtest-attempt-B3`, plus a final `realtest-attempt-B-final` summary commit.
+7. Done report appended to TellCode.md with: every commit hash, audit before/after numbers per hole, smoke test result, files modified.
+
+Then Code proceeds to Phase C (real-conditions test suite) and reports done again when Phase C passes.
+
+### Phase B DO NOT
+
+- Do NOT use Roslyn `script-execute` via MCP for any `AddComponent` call. Use proper Editor scripts only.
+- Do NOT change `SceneGroundProvider`, `SceneSurfaceProvider`, or `BallSimulation`. They're not the bug. (The 3-arg `SampleHeight` from yesterday stays.)
+- Do NOT skip the B1 smoke test. Phase A proved we don't trust "audit numbers look good" alone — we trust real shots.
+- Do NOT activate the architectural spec yet. Tactical fix gets a fair shot.
+- Do NOT retire the Phase A diagnostic infrastructure. Per-step CSV logging in `BallSimulation` stays in (behind `#if UNITY_EDITOR` + flag) for future debugging.
+
+---
+
+## Phase B' — High-velocity LAUNCH from depressed surface (Architect spec'd 2026-04-25 from B1 smoke test)
+
+### What B1 smoke test revealed (CORRECTED)
+
+- Putt FROM green: **PASS** (slow roll, ball stays on green)
+- Wedge FROM bunker: **PASS** (slow launch, ball clears bunker cleanly)
+- Driver FROM green: **FAIL sometimes** (depends on aim — fails more often toward green edge, less often toward center)
+- Driver FROM bunker: **FAIL always** (Bunker_1, every time)
+
+Markers are correctly populated (B1 fix worked for that). The remaining failure mode is **high-velocity launches FROM a depressed surface (green or bunker)**, NOT airborne landings. The failure is at the launch moment when ball XZ leaves the depressed-zone polygon within 1–2 sim frames.
+
+### Root-cause hypothesis (to be confirmed by B'1 diagnostic)
+
+Ball sits at depressed surface Y (green or bunker, both below surrounding terrain). Driver imparts ~70 m/s velocity. At 1/240s tick, that's ~30cm horizontal travel per frame — enough to exit a 7m bunker in 1–2 frames. After exit, `surfaces.Classify(x, z)` flips from Sand/Green to Fairway/Rough. `SampleHeight(x, z, Fairway)` returns surrounding terrain Y, which is HIGHER than ball's current Y. Ball is now below ground per the new classification. Sim either snaps ball UP onto terrain (visual pop) or fails to detect ground at all (fall-through), depending on which sim path runs.
+
+Why bunker always fails: bunkers small (~7m). Driver exits in 1–2 frames every time.
+Why green sometimes fails: greens larger (~20–30m). Aim toward edge → exit in few frames. Aim toward center → ball stays on green long enough for sim to handle the depression-edge transition correctly.
+
+### Phase B' is diagnostic-first (do NOT speculate-fix)
+
+We have ample evidence that speculative fixes blow up in our faces. Run the diagnostic FIRST, then Architect writes the actual fix from the data.
+
+#### B'1 — Reproduce with per-step diagnostic logger ON
+
+The per-step CSV infrastructure from Phase A still exists in `BallSimulation`. Reuse it.
+
+Write a new PlayMode test `Assets/Scripts/Gameplay/Tests/HighVelocityLaunchDiagTests.cs`:
+
+1. Additively load Hole_01_Geo via `LabHoleBinder` (same path PhysicsLab uses). Assert `_useSceneProviders == true` after binding.
+2. Set `BallSimulation.DiagPerStepEnabled = true`.
+3. Fire 6 scripted shots — all start AT the depressed surface, varying club + aim:
+   - **Shot 1: driver from Bunker_1 centroid** aimed straight out (any cardinal direction toward fairway). Captures the always-failing case.
+   - **Shot 2: driver from Bunker_1 centroid** aimed toward bunker edge. Should fail same way; control for aim direction.
+   - **Shot 3: driver from Green_1 centroid** aimed toward green edge. Should sometimes fail.
+   - **Shot 4: driver from Green_1 centroid** aimed toward green center / opposite edge. Should fail less often.
+   - **Shot 5: control — wedge from Bunker_1 centroid** any aim. Should pass (matches B1 smoke).
+   - **Shot 6: control — putter from Green_1 centroid** any aim. Should pass.
+4. Save to `Docs/DIAG/realtest-20260425/Bprime-shot-{1..6}.csv` with raycast hit lists.
+5. Set `BallSimulation.DiagPerStepEnabled = false`. Test passes if it ran all 6 shots without exceptions. Do NOT assert pass/fail of fall-through — that's for Architect to inspect.
+
+Also save `Docs/DIAG/realtest-20260425/Bprime-summary.md` with per-shot, focusing on the **first 30 sim frames** (the launch moment, NOT the landing):
+- Frame 0: ball position, velocity (full vector), surface classification, ground Y (2-arg), ground Y (3-arg).
+- Frames 1–10: same data per frame. Particularly note the frame at which surface classification CHANGES (e.g. Sand → Fairway when ball XZ leaves bunker polygon) and what happens to ball Y vs ground Y at that frame.
+- Frame at which airborne phase begins (if applicable — driver launch should be airborne almost immediately).
+- Whether `[Terrain]` debug assertion fires at any step (and at which step).
+- Final outcome: did the ball settle normally, fall through (ballY went very negative), or other anomaly?
+
+**STOP after B'1. Do not start B'2. Wait for Architect.**
+
+#### B'2 — Fix (Architect spec'd 2026-04-25 from B'1 data — PENDING ONE CESAR QUESTION)
+
+**B'1 finding summary:**
+- Shot 2 (driver +Z from Bunker_1) fell to Y=-2301 over 60 seconds. termination=`MaxDurationReached`, `diagFrames=0`, ball never entered roll/putt phase.
+- `SimulateAirborne`'s `HitGround` condition (`posNext.y <= groundY && pos.y > groundY`) never fired.
+- `SceneGroundProvider.SampleHeight` returns `fp.Zero` when `RaycastAll` finds zero hits — the sentinel-ambiguity bug. `Y=0` is also a legitimate ground value, so the airborne integrator can't distinguish "no terrain" from "terrain at Y=0".
+- `WorldBound = 2000` safety check covers X and Z but NOT Y. Ball Y can drop arbitrarily far without termination.
+- Direction-specific: same shot in +X direction terminated normally as `HitOOB`. Failure happens when trajectory exits the heightmap collider's XZ bounds.
+
+**Open question (must answer before fix):** Does Cesar's manual repro show ball visually flying off into the distance, or does it visually fall through the green/bunker right where it was launched? B'1's confirmed failure is the former (ball flies +Z into untextured space and free-falls). Cesar's described failure ("ball falls through") sounds like the latter. They might be different bugs, or the same bug seen from different angles.
+
+Fix plan, in two stages:
+
+##### B'2a — Add airborne per-step diagnostic logging (small, do first)
+
+Reuse `BallSimulation.DiagPerStepSink`. In `SimulateAirborne`'s integration loop, after `groundY = ground.SampleHeight(posNext.x, posNext.z)` is computed but before the HitGround check, emit one CSV row when `DiagPerStepEnabled` is true:
+
+```csharp
+#if UNITY_EDITOR
+if (DiagPerStepEnabled && DiagPerStepSink != null)
+{
+    DiagStepFrame++;
+    DiagPerStepSink($"{DiagStepFrame},air,{posNext.x.ToFloat():F4},{posNext.y.ToFloat():F4},{posNext.z.ToFloat():F4},{groundY.ToFloat():F4},{velNext.y.ToFloat():F4}");
+}
+#endif
+```
+
+Format: `frame,phase,x,y,z,groundY,velY`. Six fields. Same DiagStepFrame counter as roll/putt so the sequence is contiguous.
+
+Re-run `HighVelocityLaunchDiagTests` Shot 2 only (or write `AirborneDiagShot.cs` as a tiny new test). Save full per-step CSV to `Docs/DIAG/realtest-20260425/Bprime-air-shot-2.csv`. Generate a one-page summary `Bprime-air-summary.md` with:
+- Frame at which `groundY` first becomes 0 (ball exited terrain bounds).
+- Frame at which ball Y crosses 0 going down (potential HitGround trigger frame).
+- At that frame: what is `posNext.y` exactly? What is `pos.y` exactly? What is `groundY`? What does the HitGround condition evaluate to?
+- Frame at which ball.x or ball.z exceed 2000 (WorldBound trigger that didn't fire).
+- Final frame at which the integrator stopped (max-steps, max-duration, or break from a check).
+
+This gives us the exact mechanism. Stop after B'2a. Architect re-reads spec and finalizes B'2b.
+
+##### B'2b — Fix (Architect spec'd from B'2a data)
+
+Fix candidates ranked by likelihood from B'1 evidence:
+
+1. **Sentinel return from SceneGroundProvider.** Change `SampleHeight` (2-arg) to return `fp.FromFloat(-1e6f)` or a documented `NoGround` constant when zero hits. `SimulateAirborne` checks for the sentinel before the HitGround check. If sentinel: treat as OOB (ball is over the void). If normal value: existing HitGround check applies.
+2. **Y-axis safety bound.** In `SimulateAirborne`, after computing `posNext`, if `posNext.y < (origin.y - 100)`, force `termination = ExitedWorldBounds` (or new `BallLost` reason) and break. This catches any future regression where the ball escapes ground detection.
+3. **Fix HitGround edge case (low priority — only if B'2a shows it).** If the issue is the condition fires but then bounces into another HitGround that fails, the bounce loop in `Simulate` needs hardening. But B'1 said `diagFrames=0`, meaning roll/putt never entered, meaning no bounce loop ran. So this is unlikely.
+
+Likely fix is **#1 + #2 together** — sentinel for clarity, Y-bound as belt-and-suspenders. Architect commits to specifics after B'2a CSV.
+
+**B'2b will require its own smoke test before being declared done.** Same shape as B1: Cesar fires the same set (driver from green, driver from bunker, both directions) and confirms no fall-throughs. Only THEN proceed to Phase C.
+
+### Phase B' DO NOT
+
+- Do NOT touch HoleGeoImporter — B2 already fixed importer markers, that's done.
+- Do NOT touch the marker repair tool — B1 already worked correctly for marker placement.
+- Do NOT speculate-fix between B'1 and Architect's B'2 spec. The point of B'1 is to get data we don't have yet. Acting on a guess wastes another cycle.
+- Do NOT skip the control shots (Shot 3, Shot 4). The diff between failing high-velocity and passing low-velocity shots is the actual diagnostic signal.
+- Do NOT modify the Phase A diagnostic infrastructure. Reuse as-is.
+
+### Phase B' iteration budget
+
+- B'1: 1 attempt. Reproduces the failure with logging on. If repro fails (driver-into-green doesn't fall through in the test), STOP and surface — that's a finding too (suggests Cesar's manual repro had specific conditions we need to match).
+- B'2: TBD by Architect.
 
 ---
 

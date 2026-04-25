@@ -1,6 +1,6 @@
 # Architecture Audit
 
-> Auto-generated 2026-04-23 08:54. Do not edit manually.
+> Auto-generated 2026-04-25 08:45. Do not edit manually.
 
 ## File Tree (Scripts)
 
@@ -17,6 +17,7 @@ Assets/Scripts/Course/GreenSurfaceInfo.cs
 Assets/Scripts/Course/SurfaceMarker.cs
 Assets/Scripts/Debug/RewardPointsDebugPanel.cs
 Assets/Scripts/Debug/WalkCamera.cs
+Assets/Scripts/Editor/A4DiffHelper.cs
 Assets/Scripts/Editor/Archive/ClubDetailPanelBuilder.cs
 Assets/Scripts/Editor/Archive/ClubInventoryPatcher.cs
 Assets/Scripts/Editor/Archive/CompareRightPanelBuilder.cs
@@ -49,6 +50,8 @@ Assets/Scripts/Editor/CourseImporter/TreePlacer.cs
 Assets/Scripts/Editor/CourseImporter/TreePlacerWindow.cs
 Assets/Scripts/Editor/CourseImporter/WaterShoreSettingsWindow.cs
 Assets/Scripts/Editor/ItemManagerSetup.cs
+Assets/Scripts/Editor/MarkerAuditTool.cs
+Assets/Scripts/Editor/Physics/PhysicsLabHolePicker.cs
 Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs
 Assets/Scripts/Editor/Physics/PhysicsTuningWindow.cs
 Assets/Scripts/Editor/Recording/HoleFlyoverRecorder.cs
@@ -58,6 +61,29 @@ Assets/Scripts/Editor/SceneSnapshot/SceneSnapshotRestore.cs
 Assets/Scripts/Editor/SceneSnapshot/SnapshotData.cs
 Assets/Scripts/Editor/SceneSnapshot/Tests/SceneSnapshotTests.cs
 Assets/Scripts/Editor/ScreenshotTool.cs
+Assets/Scripts/Editor/SyncPhysicsSurfaceMarkers.cs
+Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+Assets/Scripts/Gameplay/Defaults/DefaultStatProvider.cs
+Assets/Scripts/Gameplay/Input/DebugShotInputSource.cs
+Assets/Scripts/Gameplay/Input/InputSimulationBootstrap.cs
+Assets/Scripts/Gameplay/Input/InputSystemSource.cs
+Assets/Scripts/Gameplay/Input/IShotInputSource.cs
+Assets/Scripts/Gameplay/Input/ShotConeTestDriver.cs
+Assets/Scripts/Gameplay/Input/ShotController.cs
+Assets/Scripts/Gameplay/Input/ShotDebugFlags.cs
+Assets/Scripts/Gameplay/Input/ShotInputState.cs
+Assets/Scripts/Gameplay/Input/ShotState.cs
+Assets/Scripts/Gameplay/Input/SyntheticInputSource.cs
+Assets/Scripts/Gameplay/Tests/RealHoleDiagShotsTests.cs
+Assets/Scripts/Gameplay/Tests/ShotControllerPuttModeTests.cs
+Assets/Scripts/Gameplay/Tests/ShotControllerTests.cs
+Assets/Scripts/Gameplay/Tests/TerrainFallthroughIntegrationTests.cs
+Assets/Scripts/Gameplay/UI/ShotUI/ArrowGraphic.cs
+Assets/Scripts/Gameplay/UI/ShotUI/ClubHandleDragger.cs
+Assets/Scripts/Gameplay/UI/ShotUI/ConeAlphaController.cs
+Assets/Scripts/Gameplay/UI/ShotUI/ConeMeshGraphic.cs
+Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs
 Assets/Scripts/HoleMetadata.cs
 Assets/Scripts/ItemManager.cs
 Assets/Scripts/Physics/Core/AeroConfig.cs
@@ -98,17 +124,24 @@ Assets/Scripts/Physics/Stats/StatCaps.cs
 Assets/Scripts/Physics/Stats/StatCoefficients.cs
 Assets/Scripts/Physics/Stats/StatModifierResolver.cs
 Assets/Scripts/Physics/Tests/AerodynamicsTests.cs
+Assets/Scripts/Physics/Tests/BallPlacementIntegrationTests.cs
+Assets/Scripts/Physics/Tests/GroundProviderSurfacePreferenceTests.cs
+Assets/Scripts/Physics/Tests/PlacementEntriesTests.cs
+Assets/Scripts/Physics/Tests/PlacementSnapTests.cs
 Assets/Scripts/Physics/Tests/ProjectileMathTests.cs
 Assets/Scripts/Physics/Tests/PuttTests.cs
 Assets/Scripts/Physics/Tests/StatResolverTests.cs
 Assets/Scripts/Physics/Tests/SurfaceTests.cs
+Assets/Scripts/Physics/Tests/TerrainStressTests.cs
 Assets/Scripts/Physics/Tests/ViewerTests.cs
 Assets/Scripts/Physics/Tests/WindTests.cs
 Assets/Scripts/Physics/Viewer/BallAnimator.cs
 Assets/Scripts/Physics/Viewer/ChaseCamera.cs
 Assets/Scripts/Physics/Viewer/DashboardUI.cs
+Assets/Scripts/Physics/Viewer/LabHoleBinder.cs
 Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
 Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs
+Assets/Scripts/Physics/Viewer/PlacementSnapHelper.cs
 Assets/Scripts/Physics/Viewer/ShotPreset.cs
 Assets/Scripts/Physics/Viewer/ShotPresetCatalog.cs
 Assets/Scripts/Physics/Viewer/TrajectoryRenderer.cs
@@ -266,6 +299,13 @@ Assets/Data/README_HOLES.md.meta
 | WalkCamera | Assets/Scripts/Debug/WalkCamera.cs |  |  |
 | ExampleAutoWireScreen | Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs |  |  |
 | ExampleFullyAutoWired | Assets/Scripts/Editor/Archive/ExampleAutoWireScreen.cs |  |  |
+| DebugShotInputSource | Assets/Scripts/Gameplay/Input/DebugShotInputSource.cs |  | IShotInputSource |
+| InputSystemSource | Assets/Scripts/Gameplay/Input/InputSystemSource.cs |  | IShotInputSource |
+| ShotConeTestDriver | Assets/Scripts/Gameplay/Input/ShotConeTestDriver.cs |  |  |
+| ShotController | Assets/Scripts/Gameplay/Input/ShotController.cs |  |  |
+| ClubHandleDragger | Assets/Scripts/Gameplay/UI/ShotUI/ClubHandleDragger.cs |  | IPointerDownHandler, IDragHandler, IPointerUpHandler |
+| ConeAlphaController | Assets/Scripts/Gameplay/UI/ShotUI/ConeAlphaController.cs |  |  |
+| ShotConeView | Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs |  |  |
 | HeightProvider | Assets/Scripts/Physics/Runtime/HeightProvider.cs |  |  |
 | Phase1TestController | Assets/Scripts/Physics/Runtime/Phase1TestController.cs |  |  |
 | PhaseTestController | Assets/Scripts/Physics/Runtime/PhaseTestController.cs |  |  |
@@ -273,6 +313,7 @@ Assets/Data/README_HOLES.md.meta
 | BallAnimator | Assets/Scripts/Physics/Viewer/BallAnimator.cs | Yes |  |
 | ChaseCamera | Assets/Scripts/Physics/Viewer/ChaseCamera.cs |  |  |
 | DashboardUI | Assets/Scripts/Physics/Viewer/DashboardUI.cs |  |  |
+| LabHoleBinder | Assets/Scripts/Physics/Viewer/LabHoleBinder.cs |  |  |
 | PhysicsLabController | Assets/Scripts/Physics/Viewer/PhysicsLabController.cs |  |  |
 | PhysicsLabUI | Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs |  |  |
 | TrajectoryRenderer | Assets/Scripts/Physics/Viewer/TrajectoryRenderer.cs |  |  |
@@ -339,6 +380,7 @@ Assets/Data/README_HOLES.md.meta
 - **ClubManager** (Assets/Scripts/ClubManager.cs) (DontDestroyOnLoad)
 - **ItemManager** (Assets/Scripts/ItemManager.cs) (DontDestroyOnLoad)
 - **AudioManager** (Assets/Scripts/Audio/AudioManager.cs) (DontDestroyOnLoad)
+- **BallAnimator** (Assets/Scripts/Physics/Viewer/BallAnimator.cs) 
 - **FadeController** (Assets/Scripts/UI/FadeController.cs) (DontDestroyOnLoad)
 - **PersistentUIManager** (Assets/Scripts/UI/PersistentUIManager.cs) (DontDestroyOnLoad)
 - **SettingsController** (Assets/Scripts/UI/SettingsController.cs) 
@@ -362,8 +404,11 @@ Assets/Data/README_HOLES.md.meta
 | ClubManager | `public event System.Action? OnInventoryChanged;` |
 | ClubManager | `public event System.Action<string>? OnClubRepaired;` |
 | ItemManager | `public event System.Action? OnInventoryChanged;` |
+| ShotController | `public event Action<ShotInputState>                     OnStateChanged;` |
+| ShotController | `public event Action<ShotInput, BallPhysicsModifiers>    OnShotResolved;` |
 | PhysicsLabController | `public event Action<ShotReadout> OnShotFired;` |
-| PhysicsLabController | `public event Action<bool, int> OnRepeatabilityResult;   // (passed, count)` |
+| PhysicsLabController | `public event Action<bool, int> OnRepeatabilityResult;` |
+| PhysicsLabController | `public event Action OnPlacementEntriesChanged;` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnExpanded;` |
 | SettingsMenuItem | `public event System.Action<SettingsMenuItem> OnCollapsed;` |
 | BagCarouselController | `public event System.Action<int>? OnBagSelected;` |
@@ -386,11 +431,20 @@ Assets/Data/README_HOLES.md.meta
 | AudioManager | Assets/Scripts/Audio/AudioManager.cs | 3 |
 | BagSelectionModalAutoWire | Assets/Scripts/Editor/BagSelectionModalAutoWire.cs | 1 |
 | TreeBrushTool | Assets/Scripts/Editor/CourseImporter/TreeBrushTool.cs | 8 |
+| InputSystemSource | Assets/Scripts/Gameplay/Input/InputSystemSource.cs | 1 |
+| ShotConeTestDriver | Assets/Scripts/Gameplay/Input/ShotConeTestDriver.cs | 3 |
+| ShotController | Assets/Scripts/Gameplay/Input/ShotController.cs | 1 |
+| ArrowGraphic | Assets/Scripts/Gameplay/UI/ShotUI/ArrowGraphic.cs | 3 |
+| ClubHandleDragger | Assets/Scripts/Gameplay/UI/ShotUI/ClubHandleDragger.cs | 5 |
+| ConeAlphaController | Assets/Scripts/Gameplay/UI/ShotUI/ConeAlphaController.cs | 2 |
+| ConeMeshGraphic | Assets/Scripts/Gameplay/UI/ShotUI/ConeMeshGraphic.cs | 2 |
+| ShotConeView | Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs | 8 |
 | HeightProvider | Assets/Scripts/Physics/Runtime/HeightProvider.cs | 1 |
 | BallAnimator | Assets/Scripts/Physics/Viewer/BallAnimator.cs | 1 |
 | ChaseCamera | Assets/Scripts/Physics/Viewer/ChaseCamera.cs | 2 |
 | DashboardUI | Assets/Scripts/Physics/Viewer/DashboardUI.cs | 1 |
-| PhysicsLabController | Assets/Scripts/Physics/Viewer/PhysicsLabController.cs | 5 |
+| LabHoleBinder | Assets/Scripts/Physics/Viewer/LabHoleBinder.cs | 1 |
+| PhysicsLabController | Assets/Scripts/Physics/Viewer/PhysicsLabController.cs | 9 |
 | PhysicsLabUI | Assets/Scripts/Physics/Viewer/PhysicsLabUI.cs | 2 |
 | ManualPropId | Assets/Scripts/SceneSnapshot/ManualPropId.cs | 1 |
 | AboutSubmenu | Assets/Scripts/UI/AboutSubmenu.cs | 5 |

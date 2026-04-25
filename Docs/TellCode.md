@@ -7,7 +7,34 @@
 
 ---
 
-## 🔧 TASK — Real-conditions terrain fall-through fix — 2026-04-25 (REOPENED, updated mid-session)
+## 🔧 TASK — ARCHITECTURAL PIVOT to baked-data sim — 2026-04-25
+
+**Full spec:** `Docs/Specs/Active/SIM_BAKED_DATA_PATH.md` — READ THAT FILE FIRST, INCLUDING THE ⚠️ ACTIVATION CONTEXT BLOCK AT THE TOP. This block is a pointer, not the spec.
+
+**One-line summary:** Tactical fix has whack-a-moled three distinct bugs in two days without solving Cesar's actual reproduction ("ball instantly falls through green/bunker into void below"). Pivoting to architectural fix: sim reads from baked JSON polygons + heightmap.bytes; Unity scene becomes purely visual. Eliminates the entire bug class (marker authoring, raycast non-determinism, scene-coupling fragility) by construction.
+
+**Cesar's hard constraints (spec'd in detail in the active doc):**
+1. **Branch first** — `git checkout -b sim-baked-data-path`. Tag pre-pivot: `git tag pre-baked-pivot`. All work on the branch; main untouched until final merge.
+2. **Code-driven validation** — Cesar does NOT manually test until Phase E (final gate). Every milestone is automated.
+3. **Maximum autonomy** — Code proceeds M0→M1→M2→M3→M4 without human approval if each milestone passes. Architect picks up state via `MILESTONE_N_DONE.md` files written to `Docs/DIAG/baked-pivot/`.
+4. **Final gate** — Cesar runs 5 manual shots ONLY after M4 passes; then Cesar merges to main.
+
+**The canonical regression test is mandatory.** M0 builds `RegressionTest_DriverFromBunker_DoesNotFallThrough` (8 directions). It must FAIL on current architecture (proves repro) and PASS on baked architecture (proves fix). If M0 cannot make it fail, surface to Architect.
+
+**Hard rules:**
+- M0 is read-only diagnostics + the regression test. NO architectural code yet.
+- Branch from clean `main`. If main is dirty, STOP and surface.
+- Do NOT modify BallSimulation's physics math (RK4, surface coeffs, putt classification). Only providers change.
+- Do NOT delete SceneGroundProvider/SceneSurfaceProvider in this spec — that's a future Phase F.
+- Do NOT speculate-fix during M0. Any "quick fix while I'm here" goes in Notes for Architect, not into code.
+- Do NOT bother Cesar between M0 and M4 — only Phase E requires Cesar.
+- Each milestone writes `Docs/DIAG/baked-pivot/MILESTONE_N_DONE.md` with the structured fields specified in the active spec's Rule 3.
+
+**Behavioral note for Code:** Three times in three days you've acted faster than the spec. We are out of patience for that pattern. The MILESTONE_N_DONE.md files exist precisely so you don't have to guess what's wanted next — write them honestly, mark FAIL/BLOCKED when something's wrong, and stop instead of guessing-and-shipping.
+
+---
+
+## 📜 ARCHIVED — Real-conditions terrain fall-through fix (2026-04-25, superseded by architectural pivot)
 
 **Full spec:** `Docs/Specs/Active/TERRAIN_REALTEST_FIX.md` — READ THAT FILE FIRST, INCLUDING THE ⚠️ IMPORTANT BLOCK AT THE TOP. This block is a pointer, not the spec.
 
@@ -96,6 +123,24 @@ Focus on FIRST 30 sim frames (launch moment, NOT landing). Per-step CSVs + summa
 **Diagnostic gap:** `DiagPerStepSink` is not wired in `SimulateAirborne`, so we cannot see the per-frame groundY values in the airborne phase. Recommend adding airborne logging in B'2 to confirm the exact frame where `SampleHeight` goes to 0.
 
 **STOP — waiting for Architect B'2 spec.**
+
+## ➡️ NEXT — Phase B'2 (spec'd 2026-04-25 in TERRAIN_REALTEST_FIX.md)
+
+**Note:** Architect has one open question for Cesar before finalizing the fix — is the manual repro "ball flies far away then falls into the void" or "ball falls straight through the green/bunker"? B'1 reproduced the former. Cesar's described failure sounds like the latter. They may be different bugs.
+
+**While Cesar answers, Code starts B'2a (the diagnostic-only step — cannot harm progress on either bug):**
+
+**B'2a:** Add airborne per-step logging to `SimulateAirborne` (next to existing roll/putt logging). Format: `frame,air,x,y,z,groundY,velY`. Re-run B'1 Shot 2 only. Save full CSV to `Docs/DIAG/realtest-20260425/Bprime-air-shot-2.csv` + summary `Bprime-air-summary.md` showing exact frame where groundY first becomes 0, frame where ball Y crosses 0, why HitGround didn't fire, and why WorldBound didn't fire.
+
+**B'2b (Architect spec'd after B'2a):** Two-part fix likely:
+1. Change `SceneGroundProvider.SampleHeight` (2-arg) to return a sentinel (e.g. `fp.FromFloat(-1e6f)`) when zero hits, instead of `fp.Zero`. Airborne treats sentinel as "over the void → OOB."
+2. Add Y-axis safety bound in `SimulateAirborne`: if `posNext.y < (origin.y - 100)`, force termination as ExitedWorldBounds.
+
+**Hard rules:**
+- B'2a is diagnostic-only. STOP and wait after B'2a CSV is dumped.
+- Reuse Phase A diagnostic infrastructure as-is.
+- No fixes until Architect specs B'2b from the CSV.
+- Cesar smoke test required before declaring B'2 done.
 
 ### What Cesar needs to run (A2, A3, A4)
 

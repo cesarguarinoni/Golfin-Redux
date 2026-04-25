@@ -1,0 +1,435 @@
+# B1 — Physics Marker Repair — All Holes
+# Date: 2026-04-25 09:03:42
+
+## Hole_01_Geo
+  YAML: found 30 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_6
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_7
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_2
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_7
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_8
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_9
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_10
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_229_29
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-31_-8
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_32_-10
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_24_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-27_-1
+  Markers: added 30, updated 0, ok 0.
+Post-repair Hole_01_Geo: 30 valid, 0 broken. [PASS]
+
+## Hole_02_Geo
+  YAML: found 13 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  Markers: added 13, updated 0, ok 0.
+Post-repair Hole_02_Geo: 13 valid, 0 broken. [PASS]
+
+## Hole_03_Geo
+  YAML: found 16 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_6
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_7
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_8
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  Markers: added 16, updated 0, ok 0.
+Post-repair Hole_03_Geo: 16 valid, 0 broken. [PASS]
+
+## Hole_04_Geo
+  YAML: found 10 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_29_-9
+  Markers: added 10, updated 0, ok 0.
+Post-repair Hole_04_Geo: 10 valid, 0 broken. [PASS]
+
+## Hole_05_Geo
+  YAML: found 21 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=Tee to HoleRoot/Tees/Tee_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-46_-32
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_62_-143
+  Markers: added 21, updated 0, ok 0.
+Post-repair Hole_05_Geo: 21 valid, 0 broken. [PASS]
+
+## Hole_06_Geo
+  YAML: found 15 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  Markers: added 15, updated 0, ok 0.
+Post-repair Hole_06_Geo: 12 valid, 0 broken. [PASS]
+
+## Hole_07_Geo
+  YAML: found 21 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_6
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Water to HoleRoot/Water/Water_2
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_201_-1
+  Markers: added 21, updated 0, ok 0.
+Post-repair Hole_07_Geo: 20 valid, 0 broken. [PASS]
+
+## Hole_08_Geo
+  YAML: found 28 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_6
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_7
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_8
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_9
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_10
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Water to HoleRoot/Water/Water_2
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_7
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_8
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-150_-182
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_167_102
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_62_204
+  Markers: added 28, updated 0, ok 0.
+Post-repair Hole_08_Geo: 28 valid, 0 broken. [PASS]
+
+## Hole_09_Geo
+  YAML: found 21 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=Tee to HoleRoot/Tees/Tee_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_7
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-202_-1
+  Markers: added 21, updated 0, ok 0.
+Post-repair Hole_09_Geo: 21 valid, 0 broken. [PASS]
+
+## Hole_10_Geo
+  YAML: found 21 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_6
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_7
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_8
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_9
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_115_151
+  Markers: added 21, updated 0, ok 0.
+Post-repair Hole_10_Geo: 21 valid, 0 broken. [PASS]
+
+## Hole_11_Geo
+  YAML: found 16 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_6
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_73_78
+  Markers: added 16, updated 0, ok 0.
+Post-repair Hole_11_Geo: 15 valid, 0 broken. [PASS]
+
+## Hole_12_Geo
+  YAML: found 18 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_5
+  Markers: added 18, updated 0, ok 0.
+Post-repair Hole_12_Geo: 18 valid, 0 broken. [PASS]
+
+## Hole_13_Geo
+  YAML: found 27 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Water to HoleRoot/Water/Water_2
+  ADDED Type=Water to HoleRoot/Water/Water_3
+  ADDED Type=Water to HoleRoot/Water/Water_4
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=Tee to HoleRoot/Tees/Tee_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_7
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-54_210
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_170_145
+  Markers: added 27, updated 0, ok 0.
+Post-repair Hole_13_Geo: 27 valid, 0 broken. [PASS]
+
+## Hole_14_Geo
+  YAML: found 15 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  Markers: added 15, updated 0, ok 0.
+Post-repair Hole_14_Geo: 15 valid, 0 broken. [PASS]
+
+## Hole_15_Geo
+  YAML: found 9 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  Markers: added 9, updated 0, ok 0.
+Post-repair Hole_15_Geo: 9 valid, 0 broken. [PASS]
+
+## Hole_16_Geo
+  YAML: found 16 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-8_79
+  Markers: added 16, updated 0, ok 0.
+Post-repair Hole_16_Geo: 16 valid, 0 broken. [PASS]
+
+## Hole_17_Geo
+  YAML: found 15 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-67_-135
+  Markers: added 15, updated 0, ok 0.
+Post-repair Hole_17_Geo: 15 valid, 0 broken. [PASS]
+
+## Hole_18_Geo
+  YAML: found 28 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_6
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_7
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_8
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Water to HoleRoot/Water/Water_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=Tee to HoleRoot/Tees/Tee_5
+  ADDED Type=Tee to HoleRoot/Tees/Tee_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_7
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_8
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-148_-1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-232_-63
+  Markers: added 28, updated 0, ok 0.
+Post-repair Hole_18_Geo: 28 valid, 0 broken. [PASS]
+
+
+TOTAL: 18 scenes processed, 680 total changes.

@@ -1,0 +1,38 @@
+# B1 — Physics Marker Repair — Hole_01
+# Date: 2026-04-25 09:03:07
+
+## Hole_01_Geo
+  YAML: found 80 zombie block(s) to remove.
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_1
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_2
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_3
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_4
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_5
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_6
+  ADDED Type=Sand to HoleRoot/Bunkers/Bunker_7
+  ADDED Type=Green to HoleRoot/Greens/Green_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_1
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_2
+  ADDED Type=Fairway to HoleRoot/Fairways/Fairway_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_1
+  ADDED Type=Tee to HoleRoot/Tees/Tee_2
+  ADDED Type=Tee to HoleRoot/Tees/Tee_3
+  ADDED Type=Tee to HoleRoot/Tees/Tee_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_2
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_3
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_4
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_5
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_6
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_7
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_8
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_9
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPath_Spline_10
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_229_29
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-31_-8
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_32_-10
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_24_1
+  ADDED Type=CartPath to HoleRoot/CartPaths_Spline/CartPathJunction_-27_-1
+  Markers: added 30, updated 0, ok 0.
+Post-repair Hole_01_Geo: 30 valid, 0 broken. [PASS]
+
