@@ -1,6 +1,6 @@
-# Phase E — Cesar's manual confirmation
+# Phase E — Cesar's manual confirmation (re-run after M5b fix)
 
-**Status:** READY. M0–M4 complete on `sim-baked-data-path`. Cesar fires 5 manual shots in PhysicsLab; if all pass visually, Cesar merges to `main`. Spec: `Docs/Specs/Active/SIM_BAKED_DATA_PATH.md` Phase E.
+**Status:** READY (POST-M5b). First Phase E run (2026-04-25) had shots 2 and 4 fall through; M5b applied the queued signed-distance level-detector fix to `BallSimulation.SimulateAirborne`; all 16 previously-Ignored fixtures now pass; 229/229 EditMode tests green; bit-exact gate held. Cesar re-fires the same 5 manual shots; if all 5 visibly clean, Cesar merges to `main`. Spec: `Docs/Specs/Active/SIM_BAKED_DATA_PATH.md` Phase E + `Docs/DIAG/baked-pivot/MILESTONE_5_DONE.md`.
 
 ---
 

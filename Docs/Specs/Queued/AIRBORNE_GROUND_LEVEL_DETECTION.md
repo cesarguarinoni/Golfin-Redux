@@ -1,10 +1,12 @@
 # SPEC (QUEUED) — Airborne ground-level detection (rising-ground tunneling fix)
 
 **Date:** 2026-04-25
-**Status:** Queued — activate when triggers fire (see below)
-**Pointer in:** `Docs/Specs/Active/SIM_BAKED_DATA_PATH.md` Phase E followup; recorded in `MILESTONE_3_DONE.md` notes
+**Status:** **Active — implemented in M5b on `sim-baked-data-path` (2026-04-25, commit pending)**
+**Pointer in:** `Docs/Specs/Active/SIM_BAKED_DATA_PATH.md` Phase E followup; recorded in `MILESTONE_3_DONE.md` notes; M5b execution recorded in `MILESTONE_5_DONE.md`
 **Estimated effort:** 0.5–1 day implementation + 0.5 day Phase 1–6 bit-exact re-verification
 **Prerequisite:** SIM_BAKED_DATA_PATH branch merged to main; M3.5 known-failing fixtures intact
+
+**Activation note (2026-04-25):** Phase E shot 4 fired Trigger #1 (real-play fall-through at bunker rim). Per architect's M5 spec the fix was applied directly on the `sim-baked-data-path` branch instead of a separate `airborne-ground-level-detection` branch (since pivot hadn't merged yet). Phase 1–6 bit-exact gate held: 229/229 tests pass with the fix in place; no goldens needed updating. All 16 previously-Ignored fixtures (5 BakedPivot + 11 RealHole) now pass unconditionally.
 
 ## Activation triggers
 

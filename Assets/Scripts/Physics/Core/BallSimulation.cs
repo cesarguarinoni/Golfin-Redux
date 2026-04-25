@@ -311,15 +311,25 @@ namespace Golfin.Physics
                 fp3 velNext = vel + (k1v + k2v * Two + k3v * Two + k4v) * Dt / Six;
                 fp  tNext   = t + Dt;
 
-                fp groundY = ground.SampleHeight(posNext.x, posNext.z);
-                if (posNext.y <= groundY && pos.y > groundY)
+                // M5b: signed-distance level-detector replaces the previous
+                // edge-detector (`posNext.y <= groundY && pos.y > groundY`).
+                // The old check compared previous-frame ball-Y against
+                // current-frame ground-Y at the new XZ — a category error that
+                // missed crossings when the ground rose between frames (ball
+                // tunneled into a slope at near-tangential incidence).
+                // See Docs/Specs/Queued/AIRBORNE_GROUND_LEVEL_DETECTION.md.
+                fp groundYprev = ground.SampleHeight(pos.x,     pos.z);
+                fp groundYnext = ground.SampleHeight(posNext.x, posNext.z);
+                fp signedPrev  = pos.y     - groundYprev;   // > 0 = above ground at start
+                fp signedNext  = posNext.y - groundYnext;   // < 0 = below ground at end
+
+                if (signedNext <= fp.Zero && signedPrev > fp.Zero)
                 {
-                    fp dy    = pos.y - posNext.y;
-                    fp above = pos.y - groundY;
-                    fp frac  = dy.raw == 0 ? fp.Zero : above / dy;
+                    fp denom = signedPrev - signedNext;
+                    fp frac  = denom.raw == 0 ? fp.Zero : signedPrev / denom;
                     fp3 hitPos = new fp3(
                         pos.x + (posNext.x - pos.x) * frac,
-                        groundY,
+                        groundYnext, // hit Y is the ground Y at the within-step crossing XZ
                         pos.z + (posNext.z - pos.z) * frac);
                     fp3 hitVel = new fp3(
                         vel.x + (velNext.x - vel.x) * frac,
