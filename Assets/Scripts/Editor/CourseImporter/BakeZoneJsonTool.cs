@@ -22,20 +22,43 @@ namespace Golfin.Editor.CourseImporter
     /// </summary>
     public static class BakeZoneJsonTool
     {
-        // Per-zone Y offset above terrain. Mirrors M0-zone-offsets-inventory.md.
+        // Per-zone Y offset above the BAKED HEIGHTMAP terrain. Mirrors mesh-build
+        // offsets in HoleGeoImporter (M0-zone-offsets-inventory.md).
+        //
+        // KNOWN M2 ISSUE — depression band: HoleGeoImporter creates overlay meshes
+        // (Fairway, CartPath, Tee) BEFORE depressing terrain under them
+        // (HoleGeoImporter.cs ordering: meshes at lines 230/233/242; depression at
+        // line 307). Effective visible mesh top is `un-depressed_terrain + meshOffset`
+        // EVERYWHERE within the dilated mesh boundary.
+        // The heightmap.bytes captures the POST-depression terrain, which is:
+        //   - inside the depression mask (the original contour): un-depressed - 0.40
+        //   - inside the dilated "ring" (between original and dilated boundary):
+        //     un-depressed (depression mask doesn't extend here)
+        //
+        // With these mesh offsets, sim is correct in the ring (heightmap matches
+        // un-depressed) but ~40 cm under the visible surface inside the depression.
+        // Inflating the offset to 0.415 inverts the problem (correct inside, ring
+        // off by +40 cm). The proper fix (M2-followup or M3 spec'd by Architect):
+        // bake mesh-Y-per-polygon instead of relying on heightmap + scalar offset,
+        // or have PhysicsHeightmapBaker bake from un-depressed terrain.
+        // See Docs/DIAG/baked-pivot/M2-height-agreement.md for the divergence
+        // histogram and proposed remediation paths.
         private static readonly Dictionary<SurfaceType, float> YOffsets = new Dictionary<SurfaceType, float>
         {
-            { SurfaceType.Green,       0.11f },  // 0.03 + GreenRaiseMeters(0.08)
-            { SurfaceType.GreenCollar, 0.04f },  // mean of smoothstep 0..0.08
-            { SurfaceType.Sand,        0.02f },
-            { SurfaceType.BunkerLip,   0.02f },  // submesh of bunker; same offset
-            { SurfaceType.Fairway,     0.015f },
-            { SurfaceType.Tee,         0.005f },
-            { SurfaceType.CartPath,    0.01f },
-            { SurfaceType.Semirough,   0.00f },
-            { SurfaceType.Rough,       0.00f },
-            { SurfaceType.Water,       0.00f },
-            { SurfaceType.OOB,         0.00f },
+            { SurfaceType.Green,       0.11f  },  // 0.03 + GreenRaiseMeters(0.08); no separate terrain depression
+            { SurfaceType.GreenCollar, 0.04f  },  // mean of smoothstep 0..0.08
+            { SurfaceType.Sand,        0.02f  },  // bunker bowl integral to mesh build
+            { SurfaceType.BunkerLip,   0.02f  },  // submesh of bunker; same offset
+            { SurfaceType.Fairway,     0.015f },  // mesh offset only; depression-band
+                                                   // divergence flagged for M2-followup
+            { SurfaceType.Tee,         0.005f },  // mesh offset only; depression-band
+                                                   // divergence (TeeDepression=0.05) flagged
+            { SurfaceType.CartPath,    0.01f  },  // mesh offset only; depression-band
+                                                   // divergence flagged for M2-followup
+            { SurfaceType.Semirough,   0.00f  },
+            { SurfaceType.Rough,       0.00f  },
+            { SurfaceType.Water,       0.00f  },
+            { SurfaceType.OOB,         0.00f  },
         };
 
         // Output path constants
