@@ -7,7 +7,25 @@
 
 ---
 
-## 🔧 TASK — ARCHITECTURAL PIVOT to baked-data sim — 2026-04-25
+## ✅ DONE: ARCHITECTURAL PIVOT to baked-data sim — 2026-04-25 (merged)
+
+**Result:** Pivot merged to main. All tests pass (BakedPivot regression 24/24, Phase 1–6 physics, RealHoleTerrainTests). Cesar's "ball into void" repro eliminated by construction.
+
+**Path taken:** M0→M1→M2→M3.5 on `sim-baked-data-path` branch. Phase E ran 3/5 PASS → M5a diagnosed (Hypothesis A confirmed for Shot 2: same airborne edge-detector bug as Shot 4, just at a different geometric apex) → M5b applied the queued signed-distance level-detector fix (~5 lines in `SimulateAirborne`) → Phase 1–6 bit-exact gate passed → BakedPivot 24/24 with `[Ignore]` markers removed → Phase E re-ran clean → merged.
+
+**Architecture state:** Sim reads `Assets/Resources/HoleData/Hole_XX/zones.json` + `heightmap.bytes`. Scene providers (`SceneGroundProvider`, `SceneSurfaceProvider`) demoted to editor-only placement helpers. `Course.SurfaceMarker` MonoBehaviours retained as authoring source for `BakeZoneJsonTool`. `Physics.Runtime.SurfaceMarker` no longer load-bearing for sim; deletion is a future Phase F.
+
+**Specs archived:**
+- `Docs/Specs/Active/SIM_BAKED_DATA_PATH.md` → `Docs/Specs/Completed/SIM_BAKED_DATA_PATH.md` (Code: move on next task)
+- `Docs/Specs/Queued/AIRBORNE_GROUND_LEVEL_DETECTION.md` → `Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md` (applied as M5b; Code: move on next task)
+
+**Open follow-ups (not blocking, no spec yet):**
+- Phase F — delete `SceneGroundProvider`, `SceneSurfaceProvider`, `Physics.Runtime.SurfaceMarker`, `PhysicsMarkerRepairTool`. None are referenced by sim anymore. ~1 day cleanup.
+- Other 17 holes — only Hole_01 has been fully exercised in real-conditions tests. `AllImportedHoles_Smoke` covers tee shots only. As more holes get imported and played, expect to discover hole-specific zone-authoring or terrain edge cases. Not a known bug — just a known coverage gap.
+
+---
+
+## 📜 HISTORICAL — ARCHITECTURAL PIVOT spec block (kept for reference; instructions superseded)
 
 **Full spec:** `Docs/Specs/Active/SIM_BAKED_DATA_PATH.md` — READ THAT FILE FIRST, INCLUDING THE ⚠️ ACTIVATION CONTEXT BLOCK AT THE TOP. This block is a pointer, not the spec.
 
