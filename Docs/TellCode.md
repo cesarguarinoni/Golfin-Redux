@@ -50,6 +50,53 @@
 - All-holes run: 680 total changes, 18/18 PASS. Report at `Docs/DIAG/realtest-20260425/B1-repair-All.txt`.
 - **Cesar: smoke test required** — 1 putt on Green (Hole_01) + 1 bunker shot (Bunker_1) in PhysicsLab Play mode. Ball must settle without falling through. Save result to `Docs/DIAG/realtest-20260425/B1-smoke-test.md`.
 
+✅ DONE: 2026-04-25 — B1 smoke test partial PASS. Putt FROM green PASS. Wedge FROM bunker PASS. **Driver FROM green FAIL (sometimes), Driver FROM bunker FAIL (always).** Marker fix worked, but high-velocity LAUNCHES from depressed surfaces still fall through. Failure is NOT in airborne landing — it's at the launch moment when ball XZ leaves the depressed-zone polygon within 1–2 sim frames at high velocity. See `B1-smoke-test.md`.
+
+## ➡️ NEXT — Phase B' diagnostic (spec'd 2026-04-25, ready to execute)
+
+**Spec section:** `Docs/Specs/Active/TERRAIN_REALTEST_FIX.md` → "Phase B' — High-velocity LAUNCH from depressed surface". Read it end-to-end before starting.
+
+**B'1 (this round):** Write `HighVelocityLaunchDiagTests.cs`. 6 PlayMode shots in real Hole_01 with `BallSimulation.DiagPerStepEnabled = true`. ALL shots start AT the depressed surface (bunker or green centroid):
+- Shot 1: driver from Bunker_1 aimed straight out (always-fail case)
+- Shot 2: driver from Bunker_1 aimed toward edge
+- Shot 3: driver from Green_1 aimed toward edge
+- Shot 4: driver from Green_1 aimed toward center
+- Shot 5: control — wedge from Bunker_1 (passes)
+- Shot 6: control — putter from Green_1 (passes)
+
+Focus on FIRST 30 sim frames (launch moment, NOT landing). Per-step CSVs + summary at `Docs/DIAG/realtest-20260425/Bprime-shot-{1..6}.csv` + `Bprime-summary.md`. Particularly note the frame at which surface classification flips (e.g. Sand → Fairway when ball XZ exits bunker polygon) and what happens to ball Y vs ground Y at that frame. Then **STOP and wait for Architect**.
+
+**B'2 (next round, after Architect reads the data):** Architect specs the fix from CSV evidence. Likely candidates: surface-classification hysteresis during airborne, verify airborne uses 2-arg SampleHeight (not 3-arg), launch-detection sub-step, or ground-Y monotonic constraint during airborne.
+
+**Hard rules:**
+- Phase B' is diagnostic-first. NO speculative fixes. Reproduce the failure with logging on, dump CSVs, stop.
+- Reuse Phase A diagnostic infrastructure as-is.
+- Do NOT touch HoleGeoImporter or PhysicsMarkerRepairTool — those are done.
+- Do NOT proceed to Phase C until B'2 is in and another smoke test passes.
+- If B'1 cannot reproduce the failure (drivers from bunker/green don't fall through in the test), STOP and surface — that's a finding too.
+
+✅ DONE: 2026-04-25 — B'1 complete. Tests ran via MCP. Commits `6f9cad03` (test file) + analysis in `Docs/DIAG/realtest-20260425/Bprime-summary.md`.
+
+**Results (7/7 pass):**
+| shot | surface | club | diagFrames | minBallY | termination |
+|------|---------|------|-----------|---------|-------------|
+| 1 | Sand | Driver (+X) | 0 | 3.723 | HitOOB |
+| 2 | Sand | Driver (+Z) | 0 | **-2301.558** | MaxDurationReached |
+| 3 | Green | Driver (+X) | 0 | 4.567 | HitOOB |
+| 4 | Green | Driver (180°) | 1935 | 0.000 | BallStopped |
+| 5 | Sand | Wedge (+X) | 0 | 4.041 | HitOOB |
+| 6 | Green | Putter (+X) | 3351 | 9.215 | BallStopped |
+
+**Definitive finding:** Shot 2 is the confirmed fall-through. `diagFrames=0` + `minBallY=-2301` + `MaxDurationReached(60s)` = the failure is 100% inside `SimulateAirborne`. Roll/putt phase never entered.
+
+**Root cause:** `SimulateAirborne` detects landing via `ballY <= SampleHeight(x,z)`. In the +Z direction from the bunker at (-216, 8.89, -86), `SampleHeight` returns 0 (no collider coverage) at all XZ positions along the trajectory. The HitGround condition never fires. Ball free-falls under gravity for 60 seconds to Y=-2301.
+
+**Direction-specificity confirmed:** Shot 1 (same origin, +X) → HitOOB normally (terrain exists in +X). Shot 2 (+Z) → falls through (no terrain in +Z). The bug is not driver velocity — it is a specific direction with missing terrain coverage.
+
+**Diagnostic gap:** `DiagPerStepSink` is not wired in `SimulateAirborne`, so we cannot see the per-frame groundY values in the airborne phase. Recommend adding airborne logging in B'2 to confirm the exact frame where `SampleHeight` goes to 0.
+
+**STOP — waiting for Architect B'2 spec.**
+
 ### What Cesar needs to run (A2, A3, A4)
 
 **A2 — Marker Audit (must do FIRST, after cold restart):**
