@@ -689,20 +689,13 @@ namespace Golfin.Physics.Viewer
 
         IGroundProvider BuildGroundProvider()
         {
-            // M3: prefer baked providers when a hole has been loaded. Falls back
-            // to SceneGroundProvider only if baked data isn't available — this
-            // path will go away in Phase F.
             if (_bakedGround != null) return _bakedGround;
-            if (currentScene == PresetScene.Hole1 || _useSceneProviders)
-                return new SceneGroundProvider();
             return new FlatGround(fp.Zero);
         }
 
         ISurfaceProvider BuildSurfaceProvider(ShotPreset preset)
         {
             if (_bakedClassifier != null) return _bakedClassifier;
-            if (currentScene == PresetScene.Hole1 || _useSceneProviders)
-                return new SceneSurfaceProvider();
             SurfaceType surfaceType = preset.HasSurfaceOverride ? preset.SurfaceOverride : SurfaceType.Fairway;
             return new ConstantSurfaceProvider(surfaceType);
         }
