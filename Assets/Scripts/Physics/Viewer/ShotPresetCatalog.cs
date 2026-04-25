@@ -164,7 +164,7 @@ namespace Golfin.Physics.Viewer
             //
             // Tee_2 world XZ: (167.7, 31.23). Green center: (-230, -73).
             // Tee→Green direction (XZ normalized): (-0.967, -0.253).
-            // Full-swing presets fire from the tee; SceneGroundProvider snaps Y at runtime.
+            // Full-swing presets fire from the tee; the baked height provider snaps Y at runtime.
             // Green center_local from greens.json: x ≈ -230, z ≈ -73 (Unity world space).
             // Y is ignored by RunPuttPhase (snapped to heightmap + ball radius).
             // Origins chosen empirically from green polygon bounds (-241..−219, -85..−62).

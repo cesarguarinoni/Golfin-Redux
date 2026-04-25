@@ -43,7 +43,7 @@ namespace Golfin.Physics.Runtime.Baked
         /// <summary>
         /// Optional bit-packed mask covering the terrain extent. If a sample's
         /// (x, z) maps to a "1" cell, the classifier returns <see cref="SurfaceType.OOB"/>
-        /// directly — replicates <c>SceneSurfaceProvider.ClassifyTerrain</c>'s
+        /// directly — replicates the legacy scene-raycast classifier's
         /// "OB layer &gt; 0.5" rule without needing to bake OB polygon contours.
         /// Polygon zones still take priority over the mask (they're checked first).
         /// </summary>

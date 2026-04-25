@@ -11,9 +11,9 @@ namespace Golfin.Physics.Runtime.Baked
     /// SampleHeight(x, z) = heightmap.SampleHeight(x, z) + classifier.GetYOffset(typeAt(x,z))
     ///
     /// Spec: Docs/Specs/Active/SIM_BAKED_DATA_PATH.md, Milestone 2.
-    /// Replaces <see cref="SceneGroundProvider"/> in the sim path post-M3.
-    /// Editor-time helpers (placement dropdown ray-snap) keep using SceneGroundProvider
-    /// until Phase F retires it.
+    /// Replaces the legacy scene-raycast ground provider (removed in Phase F)
+    /// in the sim path post-M3. Editor-time placement helpers now use
+    /// <c>PlacementSnapHelper</c> for ray-snap.
     /// </summary>
     public sealed class BakedHeightProvider : IGroundProvider
     {

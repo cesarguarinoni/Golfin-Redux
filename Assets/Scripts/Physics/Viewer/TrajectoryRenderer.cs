@@ -197,7 +197,7 @@ namespace Golfin.Physics.Viewer
             go.transform.position   = pos;
             go.transform.localScale = Vector3.one * size;
 
-            // Disable collider so it doesn't interfere with SceneSurfaceProvider raycasts
+            // Disable collider so trajectory markers don't interfere with placement raycasts
             var collider = go.GetComponent<Collider>();
             if (collider != null) collider.enabled = false;
 

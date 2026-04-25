@@ -320,7 +320,7 @@ namespace Golfin.Editor.CourseImporter
         /// <summary>
         /// Walk the loaded scene for a Terrain whose terrainData has at least
         /// one TerrainLayer named *OB*. Read the alphamap, threshold OB-layer
-        /// weight at &gt;0.5 (matching <c>SceneSurfaceProvider.ClassifyTerrain</c>),
+        /// weight at &gt;0.5 (matching the legacy scene-raycast classifier's OB rule),
         /// pack the resulting binary mask into a base64 string, and return an
         /// <see cref="ObMask"/> describing world-space placement. Returns null
         /// if no such Terrain exists.

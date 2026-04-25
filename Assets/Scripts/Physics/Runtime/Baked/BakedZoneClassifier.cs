@@ -9,9 +9,10 @@ namespace Golfin.Physics.Runtime.Baked
     /// ISurfaceProvider implementation that classifies a world XZ point against a
     /// baked set of zone polygons (loaded from <see cref="ZoneData"/> JSON).
     ///
-    /// Replaces <see cref="SceneSurfaceProvider"/> in the sim path post-pivot
-    /// (M3). Also exposes the matching zone-Y-offset so <see cref="BakedHeightProvider"/>
-    /// can layer the overlay-mesh offsets on top of the heightmap terrain Y.
+    /// Replaces the legacy scene-raycast surface provider (removed in Phase F)
+    /// in the sim path post-pivot (M3). Also exposes the matching zone-Y-offset
+    /// so <see cref="BakedHeightProvider"/> can layer the overlay-mesh offsets
+    /// on top of the heightmap terrain Y.
     ///
     /// Priority order (highest first; first matching polygon wins):
     ///
