@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -9,20 +10,24 @@ using Golfin.Physics;
 using Golfin.Physics.Runtime;
 
 /// <summary>
-/// B1 repair tool: for each hole scene, removes zombie/broken-script SurfaceMarker
-/// components from Course-marked zone GOs and ensures every one has a single valid
-/// Physics.Runtime.SurfaceMarker with the correct Type.
+/// B1 repair tool: for each hole scene,
+///   1. Removes zombie MonoBehaviour components (Roslyn-migration artifacts that have
+///      m_Script: {fileID: 1992067906} — no GUID) by direct YAML editing on disk.
+///   2. Adds/updates a valid Physics.Runtime.SurfaceMarker on every Course-marked GO.
 ///
-/// This replaces SyncPhysicsSurfaceMarkers.cs, which could only UPDATE existing markers
-/// (not CREATE them) and was the Roslyn migration that deposited zombies.
+/// Why YAML editing: Unity's m_Component array is read-only via SerializedObject, and
+/// GameObjectUtility.RemoveMonoBehavioursWithMissingScript doesn't detect the non-null
+/// wrong-fileID script references produced by Roslyn's Assembly-CSharp context.
 ///
 /// Usage:
-///   GOLFIN > Tools > Repair Physics Markers (Hole_01)   — single hole, quick
-///   GOLFIN > Tools > Repair Physics Markers (All Holes) — batch, all 18 holes
+///   GOLFIN > Tools > Repair Physics Markers (Hole_01)   — single hole
+///   GOLFIN > Tools > Repair Physics Markers (All Holes) — batch all 18 holes
 /// </summary>
 public static class PhysicsMarkerRepairTool
 {
     const string DiagDir = "Docs/DIAG/realtest-20260425";
+    // Zombie MonoBehaviours from Roslyn migration always have this m_Script fileID
+    const string ZombieScriptLine = "  m_Script: {fileID: 1992067906}";
 
     // ── Menu items ────────────────────────────────────────────────────────────
 
@@ -46,24 +51,25 @@ public static class PhysicsMarkerRepairTool
         sb.AppendLine($"# Date: {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine();
 
-        int totalRepaired = 0, totalScenes = 0;
+        int totalModified = 0, totalScenes = 0;
         for (int hole = 1; hole <= 18; hole++)
         {
             int count = RepairHole(hole, sb);
-            if (count >= 0) { totalRepaired += count; totalScenes++; }
+            if (count >= 0) { totalModified += count; totalScenes++; }
         }
 
-        string summary = $"TOTAL: {totalScenes} scenes processed, {totalRepaired} GOs modified.";
+        string summary = $"TOTAL: {totalScenes} scenes processed, {totalModified} total changes.";
         sb.AppendLine();
         sb.AppendLine(summary);
         Debug.Log($"[RepairTool] {summary}");
         WriteReport(sb, "B1-repair-All.txt");
     }
 
-    // ── Core API (callable from tests / other tools) ──────────────────────────
+    // ── Core API ──────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Repair one hole. Returns count of modified GOs, or -1 if scene not found.
+    /// Repair one hole. Returns total count of changes (zombies removed + markers added/updated).
+    /// Returns -1 if scene not found.
     /// </summary>
     public static int RepairHole(int holeNumber, StringBuilder report = null)
     {
@@ -83,45 +89,158 @@ public static class PhysicsMarkerRepairTool
         }
         if (scenePath == null) return -1;
 
-        Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+        string diskPath = Path.GetFullPath(
+            Path.Combine(Application.dataPath, scenePath.Substring("Assets/".Length)));
+
         report?.AppendLine($"## {sceneName}");
 
-        int repaired = RepairScene(scene, report);
+        // ── Step 1: Remove zombie components from scene YAML on disk ──────────
+        int zombiesRemoved = RemoveZombiesFromYAML(diskPath, report);
+        if (zombiesRemoved > 0)
+        {
+            Debug.Log($"[RepairTool] {sceneName}: removed {zombiesRemoved} zombie blocks from YAML.");
+            AssetDatabase.Refresh();
+        }
 
-        if (repaired > 0)
+        // ── Step 2: Open scene, add/update valid Physics markers ──────────────
+        Scene scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+        int markersChanged = AddOrUpdateMarkers(scene, report);
+
+        if (markersChanged > 0)
         {
             EditorSceneManager.MarkSceneDirty(scene);
             bool saved = EditorSceneManager.SaveScene(scene);
             if (!saved)
-                Debug.LogError($"[RepairTool] SaveScene FAILED for {sceneName}! Changes NOT persisted to disk.");
+                Debug.LogError($"[RepairTool] SaveScene FAILED for {sceneName}!");
             else
-                Debug.Log($"[RepairTool] {sceneName}: {repaired} GOs modified, scene saved.");
+                Debug.Log($"[RepairTool] {sceneName}: {markersChanged} marker changes, scene saved.");
+        }
+        else if (zombiesRemoved > 0)
+        {
+            // YAML was cleaned but markers already in place — mark dirty to force save
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[RepairTool] {sceneName}: markers already correct, saved YAML-cleaned scene.");
         }
         else
         {
             Debug.Log($"[RepairTool] {sceneName}: nothing to repair.");
         }
 
-        // Post-repair verification (always runs even if nothing was repaired)
+        // ── Step 3: Verify ────────────────────────────────────────────────────
         int validCount = 0, brokenCount = 0;
         VerifyScene(scene, ref validCount, ref brokenCount);
 
-        string verifyResult = brokenCount == 0 ? "PASS" : "FAIL";
-        string verifyLine = $"Post-repair {sceneName}: {validCount} GOs with valid Physics marker, {brokenCount} broken. [{verifyResult}]";
+        string result = brokenCount == 0 ? "PASS" : "FAIL";
+        string verifyLine = $"Post-repair {sceneName}: {validCount} valid, {brokenCount} broken. [{result}]";
         Debug.Log($"[RepairTool] {verifyLine}");
         report?.AppendLine(verifyLine);
         report?.AppendLine();
 
         if (brokenCount > 0)
-            Debug.LogError($"[RepairTool] Verification FAILED — {brokenCount} broken components remain in {sceneName}!");
+            Debug.LogError($"[RepairTool] Verification FAILED — {brokenCount} broken remain in {sceneName}!");
 
         EditorSceneManager.CloseScene(scene, true);
-        return repaired;
+        return zombiesRemoved + markersChanged;
     }
 
-    // ── Internal ─────────────────────────────────────────────────────────────
+    // ── YAML zombie removal ───────────────────────────────────────────────────
 
-    static int RepairScene(Scene scene, StringBuilder report)
+    /// <summary>
+    /// Removes MonoBehaviour blocks whose m_Script uses the Roslyn zombie fileID
+    /// ({fileID: 1992067906} with no GUID), plus removes their component list entries
+    /// from their parent GameObjects. Works directly on the scene file on disk.
+    /// Returns the count of zombie blocks removed.
+    /// </summary>
+    static int RemoveZombiesFromYAML(string diskPath, StringBuilder report)
+    {
+        if (!File.Exists(diskPath)) return 0;
+
+        string text = File.ReadAllText(diskPath, Encoding.UTF8);
+        string[] lines = text.Split('\n');
+
+        // Pass 1: collect fileIDs of zombie MonoBehaviour blocks
+        var zombieIds = new HashSet<string>();
+        string currentId = null;
+        bool inMonoBehaviour = false;
+
+        foreach (var rawLine in lines)
+        {
+            string line = rawLine.TrimEnd('\r');
+
+            if (line.StartsWith("--- !u!"))
+            {
+                currentId = null;
+                inMonoBehaviour = false;
+                int amp = line.LastIndexOf('&');
+                if (amp >= 0) currentId = line.Substring(amp + 1).Trim();
+            }
+            else if (line == "MonoBehaviour:")
+            {
+                inMonoBehaviour = true;
+            }
+            else if (inMonoBehaviour && line == ZombieScriptLine)
+            {
+                // Exact match: m_Script: {fileID: 1992067906} on its own line,
+                // meaning no GUID (valid scripts have guid:... after the fileID)
+                if (currentId != null) zombieIds.Add(currentId);
+            }
+        }
+
+        if (zombieIds.Count == 0) return 0;
+
+        report?.AppendLine($"  YAML: found {zombieIds.Count} zombie block(s) to remove.");
+
+        // Pass 2: rebuild file without zombie blocks and without their component refs
+        var sb = new StringBuilder(text.Length);
+        bool skipping = false;
+
+        foreach (var rawLine in lines)
+        {
+            string line = rawLine.TrimEnd('\r');
+
+            if (line.StartsWith("--- !u!"))
+            {
+                skipping = false;
+                int amp = line.LastIndexOf('&');
+                string id = amp >= 0 ? line.Substring(amp + 1).Trim() : null;
+                if (id != null && zombieIds.Contains(id))
+                {
+                    skipping = true;
+                    continue;
+                }
+            }
+
+            if (skipping) continue;
+
+            // Remove component list entries that reference zombie fileIDs
+            string trimmed = line.TrimStart();
+            if (trimmed.StartsWith("- component: {fileID: "))
+            {
+                int s = trimmed.IndexOf("fileID: ") + "fileID: ".Length;
+                int e = trimmed.IndexOf('}', s);
+                if (s > 0 && e > s)
+                {
+                    string refId = trimmed.Substring(s, e - s).Trim();
+                    if (zombieIds.Contains(refId)) continue;
+                }
+            }
+
+            sb.Append(rawLine.TrimEnd('\r')).Append('\n');
+        }
+
+        // Remove trailing newline added by the loop if original didn't have one
+        string result = sb.ToString();
+        if (!text.EndsWith("\n") && result.EndsWith("\n"))
+            result = result.TrimEnd('\n');
+
+        File.WriteAllText(diskPath, result, Encoding.UTF8);
+        return zombieIds.Count;
+    }
+
+    // ── Unity API marker repair ───────────────────────────────────────────────
+
+    static int AddOrUpdateMarkers(Scene scene, StringBuilder report)
     {
         System.Type courseSmType = System.Type.GetType("Golfin.Course.SurfaceMarker, Assembly-CSharp");
         FieldInfo stField = courseSmType?.GetField("surfaceType");
@@ -131,25 +250,13 @@ public static class PhysicsMarkerRepairTool
             return 0;
         }
 
-        int zombiesRemoved = 0, markersAdded = 0, markersUpdated = 0, markersOk = 0;
+        int added = 0, updated = 0, ok = 0;
 
         foreach (var root in scene.GetRootGameObjects())
         {
             foreach (var courseComp in root.GetComponentsInChildren(courseSmType, true))
             {
                 var go = ((Component)courseComp).gameObject;
-
-                // Step 1: remove zombie/missing-script components via SerializedObject
-                // (GameObjectUtility.RemoveMonoBehavioursWithMissingScript does not detect
-                // zombies with wrong-GUID m_Script in additively-loaded scenes)
-                int removed = RemoveZombieComponents(go);
-                if (removed > 0)
-                {
-                    zombiesRemoved += removed;
-                    report?.AppendLine($"  REMOVED {removed} zombie(s) from {GetPath(go)}");
-                }
-
-                // Step 2: ensure valid Physics.Runtime.SurfaceMarker with correct Type
                 int courseTypeInt = (int)stField.GetValue(courseComp);
                 SurfaceType physType = SurfaceMarkerMap.MapCourseToPhysics(courseTypeInt);
 
@@ -159,27 +266,27 @@ public static class PhysicsMarkerRepairTool
                     physMarker = go.AddComponent<SurfaceMarker>();
                     physMarker.Type = physType;
                     EditorUtility.SetDirty(go);
-                    markersAdded++;
-                    report?.AppendLine($"  ADDED marker Type={physType} to {GetPath(go)}");
+                    added++;
+                    report?.AppendLine($"  ADDED Type={physType} to {GetPath(go)}");
                 }
                 else if (physMarker.Type != physType)
                 {
                     physMarker.Type = physType;
                     EditorUtility.SetDirty(go);
-                    markersUpdated++;
-                    report?.AppendLine($"  UPDATED marker → Type={physType} on {GetPath(go)}");
+                    updated++;
+                    report?.AppendLine($"  UPDATED → Type={physType} on {GetPath(go)}");
                 }
                 else
                 {
-                    markersOk++;
+                    ok++;
                 }
             }
         }
 
-        string summary = $"Removed {zombiesRemoved} zombies, added {markersAdded}, updated {markersUpdated}, ok {markersOk}.";
+        string summary = $"Markers: added {added}, updated {updated}, ok {ok}.";
         Debug.Log($"[RepairTool] {scene.name}: {summary}");
-        report?.AppendLine($"  Summary: {summary}");
-        return zombiesRemoved + markersAdded + markersUpdated;
+        report?.AppendLine($"  {summary}");
+        return added + updated;
     }
 
     static void VerifyScene(Scene scene, ref int validCount, ref int brokenCount)
@@ -190,47 +297,13 @@ public static class PhysicsMarkerRepairTool
             {
                 if (!(col is MeshCollider) && !(col is BoxCollider)) continue;
 
-                // Count missing-script components remaining on this GO
                 foreach (var c in col.gameObject.GetComponents<Component>())
                     if (c == null) brokenCount++;
 
-                // Valid Physics marker anywhere in parent chain (including self)
                 if (col.GetComponentInParent<SurfaceMarker>() != null)
                     validCount++;
             }
         }
-    }
-
-    /// <summary>
-    /// Removes components whose m_Script GUID is null/unresolved (zombie missing-script
-    /// components) via SerializedObject m_Component array editing — the only approach
-    /// that reliably detects wrong-GUID zombies in additively-loaded scenes.
-    /// Returns count of removed components.
-    /// </summary>
-    static int RemoveZombieComponents(GameObject go)
-    {
-        SerializedObject so = new SerializedObject(go);
-        SerializedProperty compsProp = so.FindProperty("m_Component");
-        if (compsProp == null || !compsProp.isArray) return 0;
-
-        int removed = 0;
-        for (int i = compsProp.arraySize - 1; i >= 0; i--)
-        {
-            SerializedProperty elem = compsProp.GetArrayElementAtIndex(i);
-            SerializedProperty compRef = elem.FindPropertyRelative("component");
-            if (compRef != null && compRef.objectReferenceValue == null)
-            {
-                compsProp.DeleteArrayElementAtIndex(i);
-                removed++;
-            }
-        }
-
-        if (removed > 0)
-        {
-            so.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(go);
-        }
-        return removed;
     }
 
     static void WriteReport(StringBuilder sb, string filename)
