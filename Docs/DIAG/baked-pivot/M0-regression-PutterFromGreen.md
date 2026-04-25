@@ -1,10 +1,8 @@
-# M0 Regression — PutterFromGreen
+# Regression — PutterFromGreen
 
-- Origin GO: `Green_1`
-- Centroid (world XZ): (-230.320, -73.275)
-- Ground Y at centroid (BakedHeightProvider): 10.124
+- Provider: BakedHeightProvider + BakedZoneClassifier (post-pivot)
 - Invariant tolerance: 0.050 m
-- Provider: BakedHeightProvider + BakedZoneClassifier (M3)
+- Sustained-frame threshold: 3
 
 | dir | yaw | result | violFrame | ballY | groundY | minBallY | samples | termination |
 |-----|-----|--------|-----------|-------|---------|----------|---------|-------------|
