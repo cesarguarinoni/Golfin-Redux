@@ -3,7 +3,7 @@
 > **Status:** Parked, not yet active. Manual Scene Snapshot tool is the active task.
 > **Spec date:** 2026-04-22
 > **Estimated effort:** ~1 day Code work + ~half day Cesar coefficient calibration
-> **Reference docs:** `Docs/PHYSICS_TUNING_TARGETS.md` Section 8 (Specialized Roles), Section 4 (character stats), Section 2 (club stats), Section 3 (putter stats). This spec supersedes Section 5 (ball stats) — ball stat list locked below.
+> **Reference docs:** `Docs/Physics/PHYSICS_TUNING_TARGETS.md` Section 8 (Specialized Roles), Section 4 (character stats), Section 2 (club stats), Section 3 (putter stats). This spec supersedes Section 5 (ball stats) — ball stat list locked below.
 > **Promote to active by:** copying the body below into `Docs/TellCode.md` as the next ACTIVE TASK once the snapshot tool is done.
 
 ---

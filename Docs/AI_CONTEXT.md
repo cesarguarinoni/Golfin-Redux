@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phases 0–6 COMPLETE; Phase 6 Stat Coupling COMPLETE; **BAKED-DATA SIM PIVOT COMPLETE (2026-04-25).** Sim reads from baked `zones.json` (polygon classifier with bit-packed OB mask + per-zone triangulated mesh for exact barycentric Y interpolation) + `heightmap.bytes` (both ship under `Assets/Resources/HoleData/Hole_XX/`). Original "ball into the void" repro eliminated by construction. M0 regression: **24/24 PASS** post-M5b airborne signed-distance level-detector fix (`Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md`). M2 height agreement: **100/100 within 5 cm (mean 0.45 cm, max 1.6 cm)**. Full M4 real-conditions suite + Phase 1–6 bit-exact gate: **229/229 PASS, 0 Skipped**. Phase E manual confirmation: **5/5 PASS**. Full narrative: `Docs/DIAG/baked-pivot/FULL_PIVOT_REPORT.md`. Open follow-ups: Phase F cleanup (delete demoted scene providers, ~1 day, no spec yet); coverage expansion as Holes 2–18 are imported. |
+| Physics Architecture | ✅ Phases 0–6 COMPLETE; Phase 6 Stat Coupling COMPLETE; **BAKED-DATA SIM PIVOT COMPLETE (2026-04-25).** Sim reads from baked `zones.json` (polygon classifier with bit-packed OB mask + per-zone triangulated mesh for exact barycentric Y interpolation) + `heightmap.bytes` (both ship under `Assets/Resources/HoleData/Hole_XX/`). Original "ball into the void" repro eliminated by construction. M0 regression: **24/24 PASS** post-M5b airborne signed-distance level-detector fix (`Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md`). M2 height agreement: **100/100 within 5 cm (mean 0.45 cm, max 1.6 cm)**. Full M4 real-conditions suite + Phase 1–6 bit-exact gate: **229/229 PASS, 0 Skipped**. Phase E manual confirmation: **5/5 PASS**. Full narrative: `Docs/Diagnostics/baked-pivot/FULL_PIVOT_REPORT.md`. Open follow-ups: Phase F cleanup (delete demoted scene providers, ~1 day, no spec yet); coverage expansion as Holes 2–18 are imported. |
 | Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D+E+F COMPLETE (2026-04-24)**. Cone UI live in ShotConeTest.unity. PhysicsLab wired for live touch shots. Putt mode + debug toggles + ball placement dropdown done. 83/83 tests pass. |
 | PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). **F-Hotfix COMPLETE (2026-04-24)**: type-aware SurfaceSnap, coroutine startup scan, camera depression lift. 12/12 regression tests pass. |
 | Shop | Not started |
@@ -39,7 +39,7 @@ Claude Code now has access to Unity-MCP (https://github.com/IvanMurzak/Unity-MCP
 
 Architect Claude (claude.ai) → spec → `TellCode.md` handoff dance is unchanged. Claude Code now has a richer toolbox to execute against the spec.
 
-See `PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
+See `Docs/Physics/PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Unity-MCP tools relevant to physics development.
 
 ---
 
@@ -379,7 +379,7 @@ Putt phase: with flat normal (0,1,0) instead of terrain slope normal, `RunPuttPh
 - **Phase 7**: stat modifier coupling (`StatModifierResolver`).
 
 ### Test Status: 39/39 pass ✅ (no regressions)
-### Report: `Docs/SURFACE_MARKER_FIX_REPORT.md`
+### Report: `Docs/Physics/SURFACE_MARKER_FIX_REPORT.md`
 
 ---
 
@@ -506,10 +506,10 @@ Spin decay at 4%/s per Aoki 2010. Per-club test tolerances:
 - Mid-irons: 15% (B-H rising region)
 - Driver/Iron3: 25% (B-H under-predicts at low S — known 1D-LUT ceiling)
 
-Full lessons + future tightening options: Docs/LESSONS_PHYSICS_AERO.md
+Full lessons + future tightening options: Docs/Physics/LESSONS_PHYSICS_AERO.md
 Moving to Phase 3 (wind).
 
-> Note: `Docs/LESSONS_PHYSICS_AERO.md` should be read at session start before any future aero work.
+> Note: `Docs/Physics/LESSONS_PHYSICS_AERO.md` should be read at session start before any future aero work.
 
 ---
 
@@ -671,8 +671,8 @@ Driver (low spin 281 rad/s) is close (8%). All irons/wedges (743–1047 rad/s) a
 ## Session Changes (2026-04-21 — Physics Architecture & Tuning Research)
 
 ### Completed
-- **`Docs/PHYSICS_RESEARCH.md`** — full architecture decision doc for the physics layer. Covers: deterministic vs non-deterministic (chose deterministic for multiplayer-readiness); fixed-point vs soft-floats (chose fixed-point Q48.16); custom integrator vs Photon Quantum vs PhysX (chose custom — Quantum is overkill, PhysX is non-deterministic); 6-phase implementation plan (Phase 0 baker → 1 vacuum → 2 aero → 3 wind → 4 surfaces → 5 putting); ~10–11 day estimate with Unity-MCP-accelerated workflow.
-- **`Docs/PHYSICS_TUNING_TARGETS.md`** — source-of-truth numbers. Carry distances per club (Iron 4 typo 220→195 fixed, Iron 7 typo 200→172 fixed); stat→physics modifier mappings (Specialized Roles model — each stat owns one physics input); RP cost curve; surface coefficient defaults; stat-stacking model with hard caps.
+- **`Docs/Physics/PHYSICS_RESEARCH.md`** — full architecture decision doc for the physics layer. Covers: deterministic vs non-deterministic (chose deterministic for multiplayer-readiness); fixed-point vs soft-floats (chose fixed-point Q48.16); custom integrator vs Photon Quantum vs PhysX (chose custom — Quantum is overkill, PhysX is non-deterministic); 6-phase implementation plan (Phase 0 baker → 1 vacuum → 2 aero → 3 wind → 4 surfaces → 5 putting); ~10–11 day estimate with Unity-MCP-accelerated workflow.
+- **`Docs/Physics/PHYSICS_TUNING_TARGETS.md`** — source-of-truth numbers. Carry distances per club (Iron 4 typo 220→195 fixed, Iron 7 typo 200→172 fixed); stat→physics modifier mappings (Specialized Roles model — each stat owns one physics input); RP cost curve; surface coefficient defaults; stat-stacking model with hard caps.
 - **All design questions resolved:** realism dial (middle, with assist toggle); tuning (CSV-driven, hot-reloadable, headless validator); Trackman data approach (public averages as targets + academic papers as starting params); stat coupling (Specialized Roles, Option D); putt model (reuse `BallSimulation` with fast-path, decouple later if needed); heightmap baking (separate post-import tool with per-hole/current/all menu options).
 
 ### Still Open
@@ -822,7 +822,7 @@ Serrated-grass artifact on steep hillside water banks (Hole 12) fixed.
 ## Active Work — Course Visual Polish
 
 ### Water Rework (2026-04-14) ✅
-See session changes above. Full details in `Docs/WATER_REWORK_PLAN.md` (spec) and `Docs/WATER_REWORK_BRIEF.md` (implementation report).
+See session changes above. Full details in `Docs/Archive/WATER_REWORK_PLAN.md` (spec) and `Docs/Archive/WATER_REWORK_BRIEF.md` (implementation report).
 
 ### OB Feature Export Fix + Cart Path Overlap Avoidance (2026-04-13) ✅
 - Fixed export pipeline: trees/cart paths in OB zones were lost because merged grid gives OB priority. Now uses separate `trees_mask` and `cart_path_mask` overlays.
@@ -902,7 +902,7 @@ contour-traced mesh overlays with smooth edges:
 - Small bunker lip polish (~0.13m above terrain)
 - UHole Lite GUI completion (cart path layer, layer button bar, brush visibility)
 - Remaining 17 holes beyond Hole 1 prototype
-- **Physics implementation** (Phase 0 baker → Phase 5 putting) — fully specced in `PHYSICS_RESEARCH.md`
+- **Physics implementation** (Phase 0 baker → Phase 5 putting) — fully specced in `Docs/Physics/PHYSICS_RESEARCH.md`
 - Shooting mechanics (built on top of completed physics layer)
 - Login and Reward Points integration
 - Character pipeline (VRoid Studio identified as primary path; deferred)
@@ -942,7 +942,7 @@ contour-traced mesh overlays with smooth edges:
 - Config: `Tools/UHoleLite/config/lomond-country-club.json`
 - Output: `Tools/UHoleLite/output/lomond-country-club/`
 - GUI: `Tools/UHoleLite/app/`
-- Docs: `Docs/BUNKER_RESEARCH.md`, `Docs/WATER_FINDINGS.md`, `Docs/WATER_REWORK_PLAN.md`, `Docs/WATER_REWORK_BRIEF.md`
+- Docs: `Docs/Pipeline/BUNKER_RESEARCH.md`, `Docs/Archive/WATER_FINDINGS.md`, `Docs/Archive/WATER_REWORK_PLAN.md`, `Docs/Archive/WATER_REWORK_BRIEF.md`
 
 ### DEM Heightmap Pipeline (2026-04-09)
 
@@ -1027,11 +1027,18 @@ Official map → control points → affine transform → heightmap + aerial text
 
 ## Reference Docs
 
-- `Docs/INVENTORY_REFERENCE.md` — patterns, file locations, APIs for all inventory screens
-- `Docs/PHYSICS_RESEARCH.md` — physics architecture decisions, library survey, 6-phase implementation plan, Unity-MCP workflow notes
-- `Docs/PHYSICS_TUNING_TARGETS.md` — canonical physics numbers (carry distances, stat→modifier mappings, RP costs, surface coefficients, stacking model)
+- `Docs/README.md` — index map of what lives where in `Docs/`
+- `Docs/Architecture/INVENTORY_REFERENCE.md` — patterns, file locations, APIs for all inventory screens
+- `Docs/Architecture/UI_HIERARCHY.md` — scene UI paths reference
+- `Docs/Architecture/PATTERNS.md` — recurring patterns across the codebase
+- `Docs/Physics/PHYSICS_RESEARCH.md` — physics architecture decisions, library survey, 6-phase implementation plan, Unity-MCP workflow notes
+- `Docs/Physics/PHYSICS_TUNING_TARGETS.md` — canonical physics numbers (carry distances, stat→modifier mappings, RP costs, surface coefficients, stacking model)
+- `Docs/Physics/LESSONS_PHYSICS_AERO.md`, `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md` — hard-won physics lessons
+- `Docs/Pipeline/ADD_HOLE.md` — end-to-end procedure for adding a new hole
+- `Docs/Pipeline/LESSONS_FRINGE_BORDER_MESHES.md` — fringe / submesh baking lessons (read before touching fairway/tee fringe code)
+- `Docs/Pipeline/BUNKER_RESEARCH.md`, `Docs/Pipeline/BUNKER_V2_SPEC.md`, `Docs/Pipeline/TEE_SKIRT_INVESTIGATION.md`
+- `Docs/Archive/WATER_FINDINGS.md`, `Docs/Archive/WATER_REWORK_PLAN.md`, `Docs/Archive/WATER_REWORK_BRIEF.md` (historical water rework reports)
 - `Docs/TellCode.md` — architect → code instructions (Unity)
 - `Tools/UHoleLite/docs/TASK.md` — architect → code instructions (UHole Lite)
-- `Docs/BUNKER_RESEARCH.md`, `Docs/WATER_FINDINGS.md`, `Docs/WATER_REWORK_PLAN.md`, `Docs/WATER_REWORK_BRIEF.md`
 - `CLAUDE.md` — Claude Code session rules + project architecture
 - Unity-MCP — https://github.com/IvanMurzak/Unity-MCP (Claude Code's Unity Editor bridge)

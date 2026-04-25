@@ -391,7 +391,7 @@ terrain slope via `SampleHeight()`.
 | `Tools/UHoleLite/scripts/export-hole.mjs` | Add contour extraction, RDP, winding |
 | `Tools/UHoleLite/output/*/export/*/bunkers.json` | V2 schema with contour arrays |
 | `Assets/Scripts/Editor/CourseImporter/HoleLiteImporter.cs` | Replace CreateBunkers → CreateZoneMeshes |
-| `Docs/BUNKER_RESEARCH.md` | Update V2 status section |
+| `Docs/Pipeline/BUNKER_RESEARCH.md` | Update V2 status section |
 | `Docs/TellCode.md` | Task 2 handoff |
 | `Tools/UHoleLite/docs/TASK.md` | Task 1 handoff |
 

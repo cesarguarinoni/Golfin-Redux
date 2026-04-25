@@ -4,6 +4,16 @@
 > After completing, add a status line at the bottom of your task section: `✅ DONE: [date] [brief summary]`
 > Claude (Architect) will update this file with new instructions as needed.
 > Handoff: `Docs/TellCode.md`
+>
+> **Note (2026-04-25):** `Docs/` was reorganized. Historical entries below may reference old paths:
+> - `Docs/DIAG/...` → now `Docs/Diagnostics/...`
+> - `Docs/BACKUPS/...` → now `Docs/Backups/...`
+> - `Docs/PHYSICS_RESEARCH.md`, `PHYSICS_TUNING_TARGETS.md`, `LESSONS_PHYSICS_*.md` → now under `Docs/Physics/`
+> - `Docs/INVENTORY_REFERENCE.md`, `UI_HIERARCHY.md`, `PATTERNS.md`, `ARCHITECTURE_AUDIT.md` → now under `Docs/Architecture/`
+> - `Docs/LESSONS_FRINGE_BORDER_MESHES.md`, `BUNKER_*`, `TEE_SKIRT_*`, `ADD_HOLE.md` → now under `Docs/Pipeline/`
+> - `Docs/SURFACE_MARKER_FIX_REPORT.md`, `PHASE6_STAT_COUPLING_REPORT.md`, `SPEC_PHASE6_STAT_COUPLING.md` → now under `Docs/Physics/`
+> - `Docs/generate_audit.*`, `compress_screenshots.*`, `daily_report.py`, etc. → now under `Docs/Scripts/`
+> See `Docs/README.md` for the full index map.
 
 ---
 
@@ -924,11 +934,11 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
 
 > Architect-tracked open issues. Don't action without an explicit task block; just be aware they exist.
 
-- **[2026-04-22] Heightmap doesn't include zone-mesh tops (greens/tees).** `HeightmapData.SampleHeight` returns the depressed terrain Y; greens sit ~11cm above that (`+0.03 + GreenRaiseMeters 0.08`). Ball lands/rolls at heightmap Y, not visible mesh Y. Putts will look ~11cm sunk into the green. Surface *classification* is correct (raycast hits the mesh); the *Y* is wrong. Fix is a Phase 0.1 baker addendum — do NOT touch the runtime sim's height path. See `Docs/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
+- **[2026-04-22] Heightmap doesn't include zone-mesh tops (greens/tees).** `HeightmapData.SampleHeight` returns the depressed terrain Y; greens sit ~11cm above that (`+0.03 + GreenRaiseMeters 0.08`). Ball lands/rolls at heightmap Y, not visible mesh Y. Putts will look ~11cm sunk into the green. Surface *classification* is correct (raycast hits the mesh); the *Y* is wrong. Fix is a Phase 0.1 baker addendum — do NOT touch the runtime sim's height path. See `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 - **[2026-04-22] Bunker lip submesh classification deferred.** `SceneSurfaceProvider` is submesh-blind; whole bunker mesh classifies as `Sand` regardless of `BunkerLip` submesh. Polish item, not blocking. Don't proactively fix.
 - **[2026-04-22] Don't implement Code's "trees layer" proposal.** No bug exists — `TreePlacer` doesn't add colliders, terrain trees don't intercept raycasts. Audit confirmed in lessons file.
 
-Full reasoning: `Docs/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
+Full reasoning: `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 
 ---
 
@@ -1398,7 +1408,7 @@ Beyond budget: surface for design re-tune, don't burn iterations.
 - ✅ **2026-04-21** Phase 4 Surface interaction (bounce + roll) — 29/29 tests pass. `HeightmapData`/`HeightmapLoader`/`HeightProvider`, `SurfaceType`/`ISurfaceProvider`/`SceneSurfaceProvider`/`SurfaceMarker`, `SurfaceConfig` + `surfaces.csv`, `TerrainHit` records + new `TerminationReason` values (`BallStopped`/`HitWater`/`MaxBouncesExceeded`), bounce loop with backspin Cr multiplier, `RunRollPhase` with speed²-based stop detection. Key fixes during impl: `UnityEngine.Physics` namespace qualification, per-surface `SurfaceConfig.Default`, one-sided boundary differences in `SampleNormal`. Part G test scene deferred (manual QA, non-blocking).
 - ✅ **2026-04-21** Phase 3 Wind — `WindConfig`, `WindModel.SampleWind`, `fpMath.Sin`/`TwoPi`, wind.csv, tuning window integration, 6 tests. 21/21 tests pass. Seed determinism verified bit-exact. Headwind/tailwind/crosswind/altitude profile all behave directionally.
 - ✅ **2026-04-21** Phase 2.1 closeout — LUT-mode tests split by club class with honest per-club tolerances. Driver/Iron3 at 25%, mid-irons at 15%, wedges at 8%. 15 tests pass. Lessons filed at LESSONS_PHYSICS_AERO.md. Physics baseline accepted.
-- ❌ **2026-04-21 REMEDIATION v3 — ARCHITECTURE ESCALATION HIT (Rung 3)** — Bearman–Harvey Cl at driver S=0.08 physically cannot produce 275 yd carry; lift barely balances gravity at launch. 1D-BH model ceiling. Not escalating to 2D LUT. Lessons filed: `Docs/LESSONS_PHYSICS_AERO.md`.
+- ❌ **2026-04-21 REMEDIATION v3 — ARCHITECTURE ESCALATION HIT (Rung 3)** — Bearman–Harvey Cl at driver S=0.08 physically cannot produce 275 yd carry; lift barely balances gravity at launch. 1D-BH model ceiling. Not escalating to 2D LUT. Lessons filed: `Docs/Physics/LESSONS_PHYSICS_AERO.md`.
 - ⚠️ **2026-04-21 REMEDIATION v2** Seed-value error, not architecture — Cl too high at low S. Driver 23.5% short residual matched ratio of seed overshoot.
 - ⚠️ **2026-04-21 REMEDIATION v1** Correctly reverted `spin_drag_factor` scope creep; incorrectly reverted `spin_decay_rate` (real physics, restored in v3).
 - ⚠️ **2026-04-21 PARTIAL** Phase 2.1 LUT architecture landed (CoefficientLut, CSV-driven LUTs, mode toggles); v0 tuning produced unphysical shapes. Series of remediations followed.
@@ -1422,12 +1432,17 @@ Beyond budget: surface for design re-tune, don't burn iterations.
 
 ## Reference Docs
 
+- `Docs/README.md` — index map of what lives where in `Docs/`
 - `Docs/AI_CONTEXT.md` — project state, pipeline overview, session changelog
-- `Docs/PHYSICS_RESEARCH.md` — physics architecture, 5+1 phase plan
-- `Docs/PHYSICS_TUNING_TARGETS.md` — canonical physics numbers
-- `Docs/LESSONS_PHYSICS_AERO.md` — aero remediation lessons + future tightening options (read before touching aero LUTs)
-- `Docs/INVENTORY_REFERENCE.md` — inventory system patterns
-- `Docs/LESSONS_FRINGE_BORDER_MESHES.md` — canonical submesh recipe
+- `Docs/Physics/PHYSICS_RESEARCH.md` — physics architecture, 5+1 phase plan
+- `Docs/Physics/PHYSICS_TUNING_TARGETS.md` — canonical physics numbers
+- `Docs/Physics/LESSONS_PHYSICS_AERO.md` — aero remediation lessons + future tightening options (read before touching aero LUTs)
+- `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md` — surface-marker / heightmap rationale
+- `Docs/Architecture/INVENTORY_REFERENCE.md` — inventory system patterns
+- `Docs/Architecture/UI_HIERARCHY.md` — scene UI paths reference
+- `Docs/Architecture/PATTERNS.md` — recurring patterns across the codebase
+- `Docs/Pipeline/ADD_HOLE.md` — end-to-end procedure for adding a new hole
+- `Docs/Pipeline/LESSONS_FRINGE_BORDER_MESHES.md` — canonical submesh recipe
 - `Docs/Game Design/SHOT_CONTROLS_DESIGN.md` — shot control v1 design (authoritative for Phase 7)
 - `CLAUDE.md` — Claude Code session rules
 - Unity-MCP — https://github.com/IvanMurzak/Unity-MCP

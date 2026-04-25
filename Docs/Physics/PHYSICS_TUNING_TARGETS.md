@@ -2,7 +2,7 @@
 
 **Status:** Living document. Updated as design decisions land.
 **Source design sheet:** `New_Levels.xlsx` (Cesar's design guide — not source of truth, this doc is)
-**Companion:** `Docs/PHYSICS_RESEARCH.md` (architecture decisions)
+**Companion:** `Docs/Physics/PHYSICS_RESEARCH.md` (architecture decisions)
 **Last updated:** 2026-04-21
 
 ---

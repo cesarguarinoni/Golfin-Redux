@@ -144,5 +144,5 @@ To wire correctly: `SceneSurfaceProvider` would need to do `RaycastHit.triangleI
 - `Assets/Scripts/Physics/Runtime/Golfin.Physics.Runtime.asmdef` — `autoReferenced: true`
 - `Assets/Scripts/Editor/CourseImporter/PhysicsHeightmapBaker.cs` — Phase 0 baker, would need extension for Option A
 - `Assets/Resources/Physics/surfaces.csv` — surface coefficients incl. `BunkerLip` distinct from `Sand`
-- `Docs/PHYSICS_RESEARCH.md` Section 3 — surface interaction architecture
-- `Docs/LESSONS_PHYSICS_AERO.md` — companion lessons file (different concern)
+- `Docs/Physics/PHYSICS_RESEARCH.md` Section 3 — surface interaction architecture
+- `Docs/Physics/LESSONS_PHYSICS_AERO.md` — companion lessons file (different concern)
