@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-25
+**Last Updated:** 2026-04-26
 
 ## Current Status
 
@@ -17,7 +17,7 @@
 | UHole Tool | ✅ Alignment v2 (stacked overlay), export pipeline working |
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
-| Physics Architecture | ✅ Phases 0–6 COMPLETE; Phase 6 Stat Coupling COMPLETE; **BAKED-DATA SIM PIVOT COMPLETE (2026-04-25).** Sim reads from baked `zones.json` (polygon classifier with bit-packed OB mask + per-zone triangulated mesh for exact barycentric Y interpolation) + `heightmap.bytes` (both ship under `Assets/Resources/HoleData/Hole_XX/`). Original "ball into the void" repro eliminated by construction. M0 regression: **24/24 PASS** post-M5b airborne signed-distance level-detector fix (`Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md`). M2 height agreement: **100/100 within 5 cm (mean 0.45 cm, max 1.6 cm)**. Full M4 real-conditions suite + Phase 1–6 bit-exact gate: **229/229 PASS, 0 Skipped**. Phase E manual confirmation: **5/5 PASS**. Full narrative: `Docs/Diagnostics/baked-pivot/FULL_PIVOT_REPORT.md`. Open follow-ups: Phase F cleanup (delete demoted scene providers, ~1 day, no spec yet); coverage expansion as Holes 2–18 are imported. |
+| Physics Architecture | ✅ Phases 0–6 COMPLETE; Phase 6 Stat Coupling COMPLETE; **BAKED-DATA SIM PIVOT COMPLETE (2026-04-25).** Sim reads from baked `zones.json` (polygon classifier with bit-packed OB mask + per-zone triangulated mesh for exact barycentric Y interpolation) + `heightmap.bytes` (both ship under `Assets/Resources/HoleData/Hole_XX/`). Original "ball into the void" repro eliminated by construction. M0 regression: **24/24 PASS** post-M5b airborne signed-distance level-detector fix (`Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md`). M2 height agreement: **100/100 within 5 cm (mean 0.45 cm, max 1.6 cm)**. Full M4 real-conditions suite + Phase 1–6 bit-exact gate: **229/229 PASS, 0 Skipped**. Phase E manual confirmation: **5/5 PASS**. Full narrative: `Docs/Diagnostics/baked-pivot/FULL_PIVOT_REPORT.md`. **Phase F cleanup COMPLETE (2026-04-26):** SceneGroundProvider, SceneSurfaceProvider, PhysicsMarkerRepairTool, MarkerAuditTool, 8 pre-pivot diag/agreement test files, and the stale TERRAIN_REALTEST_FIX active spec all deleted. `Physics.Runtime.SurfaceMarker` retained for the import → bake bridge. Open follow-ups: hole coverage expansion as Holes 2–18 are imported; future housekeeping — eventually consolidate `Physics.Runtime.SurfaceMarker` and `Course.SurfaceMarker` to a single enum (bake tool reads two type systems today; not blocking). |
 | Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D+E+F COMPLETE (2026-04-24)**. Cone UI live in ShotConeTest.unity. PhysicsLab wired for live touch shots. Putt mode + debug toggles + ball placement dropdown done. 83/83 tests pass. |
 | PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). **F-Hotfix COMPLETE (2026-04-24)**: type-aware SurfaceSnap, coroutine startup scan, camera depression lift. 12/12 regression tests pass. |
 | Shop | Not started |
@@ -66,6 +66,29 @@ To keep `TellCode.md` readable for Claude Code (file was getting long enough to 
 - Architect moves the DONE entry to TellCode.md history log (one-liner).
 - Spec file moves `Active/` → `Completed/` (if long-term reference) or is deleted.
 - Pointer block is removed from TellCode.md.
+
+---
+
+## Session Changes (2026-04-26 — Phase F Cleanup)
+
+### Completed
+- **F.1 + amendment:** deleted 8 pre-pivot test files — `HighVelocityLaunchDiagTests`, `RealHoleDiagShotsTests`, `M5_Shot2DiagTest`, `TerrainStressTests`, `TerrainFallthroughIntegrationTests`, `GroundProviderSurfacePreferenceTests`, plus the M1/M2 agreement validators `BakedHeight_Hole01_Test` and `BakedClassifier_Hole01_Test` (those one-shot validators relied on the about-to-be-deleted scene providers as ground truth; coverage preserved by `BakedHeightProviderTests` / `BakedZoneClassifierTests` unit + `RealHoleTerrainTests` e2e).
+- **F.2:** deleted `PhysicsMarkerRepairTool.cs` and `MarkerAuditTool.cs` (Phase A/B Roslyn-zombie-component cleanup tools — bug eliminated by construction at pivot). `SurfaceMarkerMap.cs` retained (live consumers: importers).
+- **F.3:** stripped the `currentScene == Hole1 || _useSceneProviders` fallback branch from `PhysicsLabController.BuildGroundProvider` / `BuildSurfaceProvider`. Now returns baked providers or `FlatGround` / `ConstantSurfaceProvider(Fairway)`.
+- **F.3.5:** removed `WireA3DiagSinks` + the two static `StreamWriter` fields from `PhysicsLabController`. Phase-A test-runner CSV plumbing was dead post-F.1.
+- **F.4:** deleted `SceneGroundProvider.cs` + `SceneSurfaceProvider.cs`. Downgraded all surviving `<see cref>` xml-doc references to plain text / backticked names in `BakedHeightProvider`, `BakedZoneClassifier`, `ZoneData`, `BakeZoneJsonTool`. Updated comments in `TrajectoryRenderer` and `ShotPresetCatalog`.
+- **F.5:** archived `TERRAIN_REALTEST_FIX.md` → `Docs/Specs/Completed/`.
+
+### Retained
+- `Physics.Runtime.SurfaceMarker` — load-bearing for the import → bake bridge.
+- `SurfaceMarkerMap.cs` — used by both importers.
+- `BakeZoneJsonTool`, `HoleGeoImporter`, `HoleLiteImporter` — untouched per spec.
+- `BallSimulation.cs:26` has a stale `// comment` reference to `SceneGroundProvider`. Hard rule 8 forbids touching the file; flagged in done report.
+
+### Next
+- F.7 test gate (Cesar to run Window > General > Test Runner > Run All).
+- F.8 update `TellCode.md` history log.
+- F.9 archive `PHASE_F_CLEANUP.md` to `Docs/Specs/Completed/` with appended DONE REPORT.
 
 ---
 
