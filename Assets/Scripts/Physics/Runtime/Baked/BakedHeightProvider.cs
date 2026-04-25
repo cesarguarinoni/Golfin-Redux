@@ -33,6 +33,21 @@ namespace Golfin.Physics.Runtime.Baked
 
         public fp SampleHeight(fp worldX, fp worldZ)
         {
+            // Path A: prefer the matched polygon's interpolated mesh Y.
+            // This bypasses the heightmap-vs-mesh depression-band conflict
+            // documented in MILESTONE_2_DONE.md: zone meshes are built on
+            // un-depressed terrain, while heightmap.bytes captures the
+            // post-depression terrain. The mesh's own vertex Ys ARE the
+            // visible surface, so IDW-interpolating them per polygon is
+            // exact (and replaces the heightmap+offset approximation).
+            if (classifier != null
+                && classifier.TrySampleMeshY(worldX, worldZ, out _, out float meshY))
+            {
+                return fp.FromFloat(meshY);
+            }
+
+            // Fallback: outside any baked polygon. Use heightmap directly +
+            // the default offset (which is 0 for OOB / Rough — i.e. terrain).
             fp terrainY = heightmap == null ? fp.Zero : heightmap.SampleHeight(worldX, worldZ);
             if (classifier == null) return terrainY;
 
@@ -51,13 +66,24 @@ namespace Golfin.Physics.Runtime.Baked
         /// </summary>
         public fp SampleHeight(fp worldX, fp worldZ, SurfaceType preferred)
         {
+            // Path A: prefer mesh Y when the polygon containing (x, z) has it.
+            // The 2-arg path already picks the highest-priority polygon's mesh Y,
+            // which is the visible surface — no further preference adjustment
+            // needed in baked architecture (the heightmap-overlap race that
+            // motivated the legacy 3-arg simply doesn't exist here).
+            if (classifier != null
+                && classifier.TrySampleMeshY(worldX, worldZ, out _, out float meshY))
+            {
+                return fp.FromFloat(meshY);
+            }
+
             fp terrainY = heightmap == null ? fp.Zero : heightmap.SampleHeight(worldX, worldZ);
             if (classifier == null) return terrainY;
 
             SurfaceType actual = classifier.Classify(worldX, worldZ);
-            // Pick the higher of the two offsets — same intent as the legacy
-            // SceneGroundProvider 3-arg behaviour ("prefer the surface the caller
-            // is on, but never go BELOW the actually-classified surface").
+            // Fallback to scalar-offset path if no mesh Y is available (synthetic
+            // tests). Matches legacy 3-arg semantic: never go below the actually-
+            // classified surface even when the caller insists on a preferred one.
             float oA = classifier.GetYOffset(actual);
             float oP = classifier.GetYOffset(preferred);
             float chosen = oP > oA ? oP : oA;

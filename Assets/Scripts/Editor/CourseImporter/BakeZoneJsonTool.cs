@@ -255,7 +255,11 @@ namespace Golfin.Editor.CourseImporter
                 for (int i = 0; i < loopVerts.Count; i++)
                 {
                     Vector3 w = mf.transform.TransformPoint(verts[loopVerts[i]]);
-                    poly.points.Add(new Point2D(w.x, w.z));
+                    // Path A: store the actual mesh-vertex world Y so
+                    // BakedZoneClassifier.TrySampleMeshY can IDW-interpolate
+                    // across the polygon boundary without consulting the
+                    // (possibly-depressed) heightmap.
+                    poly.points.Add(new Point2D(w.x, w.y, w.z));
                 }
                 outPolys.Add(poly);
             }

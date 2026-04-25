@@ -7,26 +7,24 @@
 
 - In-scope samples: 100
 - Scene-zero samples skipped: 0 (raycast missed; void)
-- Within tolerance: 95/100
-- Diverged: 5/100
-- Max divergence: 0.408 m
-- Mean abs divergence: 0.0341 m
+- Within tolerance: 97/100
+- Diverged: 3/100
+- Max divergence: 0.401 m
+- Mean abs divergence: 0.0246 m
 
 ## Histogram
 
-- 0–1 cm:   2
+- 0–1 cm:   3
 - 1–2 cm:   93
-- 2–5 cm:   0
+- 2–5 cm:   1
 - 5–10 cm:  0
-- > 10 cm:  5
+- > 10 cm:  3
 
 ## Diverging samples (first 4 KB)
 
 | x | z | type | sceneY | bakedY | diff(m) |
 |---|---|------|--------|--------|---------|
-| -21.98 | 13.60 | Fairway | 9.535 | 9.136 | 0.400 |
-| 42.70 | -24.15 | CartPath | 7.181 | 6.773 | 0.408 |
-| 12.15 | -0.02 | CartPath | 9.067 | 8.660 | 0.406 |
-| 54.31 | 39.17 | Fairway | 11.116 | 10.716 | 0.400 |
-| -144.83 | -64.37 | CartPath | 6.112 | 5.706 | 0.406 |
+| -21.98 | 13.60 | Fairway | 9.535 | 9.783 | 0.248 |
+| 54.31 | 39.17 | Fairway | 11.116 | 11.489 | 0.373 |
+| -144.83 | -64.37 | Fairway | 6.112 | 5.711 | 0.401 |
 

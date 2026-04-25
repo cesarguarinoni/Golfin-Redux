@@ -79,12 +79,23 @@ namespace Golfin.Physics.Runtime.Baked
         public List<Point2D> points = new List<Point2D>();
     }
 
-    /// <summary>2D world-space point (XZ plane). Y is implicit per zone.</summary>
+    /// <summary>
+    /// World-space point. <c>x</c> and <c>z</c> are the XZ-plane coords used
+    /// for polygon point-in-polygon classification. <c>y</c> is the mesh
+    /// vertex's actual world Y at that XZ — populated by BakeZoneJsonTool from
+    /// the source MeshFilter (so Path A height interpolation reads the visible
+    /// surface, not heightmap+offset). Synthetic tests can leave <c>y</c>=0.
+    ///
+    /// Name is "Point2D" for legacy reasons (the original Polygon2D was 2D-only);
+    /// renaming would churn callers without semantic gain.
+    /// </summary>
     [Serializable]
     public struct Point2D
     {
         public float x;
+        public float y;
         public float z;
-        public Point2D(float x, float z) { this.x = x; this.z = z; }
+        public Point2D(float x, float z) { this.x = x; this.y = 0f; this.z = z; }
+        public Point2D(float x, float y, float z) { this.x = x; this.y = y; this.z = z; }
     }
 }
