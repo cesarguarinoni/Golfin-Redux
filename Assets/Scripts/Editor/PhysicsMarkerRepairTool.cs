@@ -26,8 +26,14 @@ using Golfin.Physics.Runtime;
 public static class PhysicsMarkerRepairTool
 {
     const string DiagDir = "Docs/DIAG/realtest-20260425";
-    // Zombie MonoBehaviours from Roslyn migration always have this m_Script fileID
-    const string ZombieScriptLine = "  m_Script: {fileID: 1992067906}";
+    // Zombie MonoBehaviours from Roslyn migration: m_Script references a built-in fileID
+    // with no guid field. Pattern: "  m_Script: {fileID: <digits>}" — NO "guid:" present.
+    static bool IsZombieScriptLine(string line)
+    {
+        if (!line.StartsWith("  m_Script: {fileID: ")) return false;
+        if (line.Contains("guid:")) return false; // valid script references include guid
+        return true;
+    }
 
     // ── Menu items ────────────────────────────────────────────────────────────
 
@@ -179,10 +185,8 @@ public static class PhysicsMarkerRepairTool
             {
                 inMonoBehaviour = true;
             }
-            else if (inMonoBehaviour && line == ZombieScriptLine)
+            else if (inMonoBehaviour && IsZombieScriptLine(line))
             {
-                // Exact match: m_Script: {fileID: 1992067906} on its own line,
-                // meaning no GUID (valid scripts have guid:... after the fileID)
                 if (currentId != null) zombieIds.Add(currentId);
             }
         }
