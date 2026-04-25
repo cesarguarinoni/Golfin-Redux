@@ -27,6 +27,29 @@
 
 ✅ DONE: 2026-04-25 — Phase A infrastructure shipped. Commit `3bbb75e7`. A1 static analysis written to `Docs/DIAG/realtest-20260425/A1-broken-marker-source.md`. Per-step diagnostic sinks in BallSimulation + SceneGroundProvider + PhysicsLabController. MarkerAuditTool (A2), RealHoleDiagShotsTests (A3), A4DiffHelper all compile clean. **Waiting for Cesar to run A2 + A3 + A4 (see instructions below). Phase B awaits Architect.**
 
+✅ DONE: 2026-04-25 — Phase A diagnostics complete (A1+A2+A4 ran; A3 deferred as confirmatory only). Outputs in `Docs/DIAG/realtest-20260425/`. **Verdict: tactical fix viable.** PhysX is fully deterministic across cold loads (A4 bit-identical x3 cycles); the bug is Hole_01 has 21 of 30 GOs with zero valid Physics markers + 27 of 30 GOs with broken/zombie components (3 each, from a Roslyn migration that ran 3 times in Assembly-CSharp context). See `PHASE_A_DONE.md`.
+
+## ➡️ NEXT — Phase B tactical fix (spec'd 2026-04-25, ready to execute)
+
+**Spec section:** `Docs/Specs/Active/TERRAIN_REALTEST_FIX.md` → "Phase B — TACTICAL FIX". Read it end-to-end before starting.
+
+**B1:** Build `PhysicsMarkerRepairTool.cs`. Removes broken/zombie components, adds + populates valid Physics.Runtime.SurfaceMarker on every Course-marked GO. Run on Hole_01. Audit must show 30/30 valid, 0 broken. Then **manual smoke test (1 putt + 1 bunker)** before continuing.
+
+**B2:** Fix HoleGeoImporter `CreateFlatContourMesh` (line 4191) to also add Physics marker. Check HoleLiteImporter for analogous gaps.
+
+**B3:** Consolidate SyncPhysicsSurfaceMarkers → PhysicsMarkerRepairTool (delete or delegate).
+
+**Then:** Run B1 final pass on all 18 holes. Then proceed to Phase C (real-conditions test suite).
+
+**Hard rules:** No Roslyn `script-execute` for AddComponent calls (that's what made the zombies). No changes to SceneGroundProvider/SceneSurfaceProvider/BallSimulation. Per-attempt commits. If B1 fails after 3 attempts, STOP and surface to Architect (architectural pivot evaluation).
+
+✅ DONE: 2026-04-25 — Phase B complete. All 18/18 holes PASS (0 broken components, all valid markers).
+- B1 commits: `7bd58375` (attempt 1 — GameObjectUtility, returned 0), `b1b` (SerializedObject, blocked), `6394e674` (B1c — YAML pass 1, only removed fileID 1992067906), `6c5aeee7` (B1d — generalized to all no-guid m_Script refs; 110 zombie types removed per hole).
+- B2 commits: HoleGeoImporter + HoleLiteImporter `CreateFlatContourMesh` now adds Physics marker at import time.
+- B3: `SyncPhysicsSurfaceMarkers.cs` deleted; backward-compat menu alias kept in PhysicsMarkerRepairTool.
+- All-holes run: 680 total changes, 18/18 PASS. Report at `Docs/DIAG/realtest-20260425/B1-repair-All.txt`.
+- **Cesar: smoke test required** — 1 putt on Green (Hole_01) + 1 bunker shot (Bunker_1) in PhysicsLab Play mode. Ball must settle without falling through. Save result to `Docs/DIAG/realtest-20260425/B1-smoke-test.md`.
+
 ### What Cesar needs to run (A2, A3, A4)
 
 **A2 — Marker Audit (must do FIRST, after cold restart):**
