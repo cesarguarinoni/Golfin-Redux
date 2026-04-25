@@ -46,7 +46,7 @@ namespace Golfin.Gameplay.Tests
         const string IgnoreReason = "Known-failing — see Docs/Specs/Queued/AIRBORNE_GROUND_LEVEL_DETECTION.md (M3.5).";
 
         const string ZonesJsonPathFmt      = "Assets/Resources/HoleData/{0}/zones.json";
-        const string HeightmapBytesPathFmt = "Tools/UHoleGeo/output/lomond-country-club/export/{0}/heightmap.bytes";
+        const string HeightmapBytesPathFmt = "Assets/Resources/HoleData/{0}/heightmap.bytes";
 
         struct HoleProviders
         {
@@ -103,10 +103,8 @@ namespace Golfin.Gameplay.Tests
             if (s_HoleCache.TryGetValue(holeId, out var hp) && hp.valid) return hp;
 
             string zonesPath = string.Format(ZonesJsonPathFmt, holeId);
-            string holeFolder = holeId.ToLowerInvariant().Replace("_", "-"); // Hole_01 → hole-01
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            string hmPath = Path.Combine(projectRoot,
-                string.Format(HeightmapBytesPathFmt, holeFolder));
+            // Both paths are relative to the project root (under Assets/Resources/).
+            string hmPath = string.Format(HeightmapBytesPathFmt, holeId);
 
             if (!File.Exists(zonesPath) || !File.Exists(hmPath))
             {

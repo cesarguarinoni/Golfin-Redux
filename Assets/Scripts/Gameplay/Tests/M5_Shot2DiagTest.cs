@@ -41,7 +41,7 @@ namespace Golfin.Gameplay.Tests
     public class M5_Shot2DiagTest
     {
         const string ZonesJsonPath      = "Assets/Resources/HoleData/Hole_01/zones.json";
-        const string HeightmapBytesPath = "Tools/UHoleGeo/output/lomond-country-club/export/hole-01/heightmap.bytes";
+        const string HeightmapBytesPath = "Assets/Resources/HoleData/Hole_01/heightmap.bytes";
 
         static Scene s_HoleScene;
         static AeroConfig    s_Aero;
@@ -75,13 +75,11 @@ namespace Golfin.Gameplay.Tests
             if (!s_HoleScene.IsValid()) Assert.Inconclusive("Open scene failed.");
 
             if (!File.Exists(ZonesJsonPath)) Assert.Inconclusive("zones.json not baked.");
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            string hmPath = Path.Combine(projectRoot, HeightmapBytesPath);
-            if (!File.Exists(hmPath)) Assert.Inconclusive("heightmap.bytes not baked.");
+            if (!File.Exists(HeightmapBytesPath)) Assert.Inconclusive("heightmap.bytes not baked.");
 
             var data = ZoneData.FromJson(File.ReadAllText(ZonesJsonPath));
             s_Classifier = new BakedZoneClassifier(data);
-            var hm = HeightmapLoader.LoadFromBytes(File.ReadAllBytes(hmPath));
+            var hm = HeightmapLoader.LoadFromBytes(File.ReadAllBytes(HeightmapBytesPath));
             s_Ground = new BakedHeightProvider(hm, s_Classifier);
         }
 

@@ -41,7 +41,7 @@ namespace Golfin.Gameplay.Tests
         const float BunkerEdgeOffsetMeters  = 1.5f;
 
         const string ZonesJsonPath      = "Assets/Resources/HoleData/Hole_01/zones.json";
-        const string HeightmapBytesPath = "Tools/UHoleGeo/output/lomond-country-club/export/hole-01/heightmap.bytes";
+        const string HeightmapBytesPath = "Assets/Resources/HoleData/Hole_01/heightmap.bytes";
 
         // Ignore reason linked from the 4 known-failing TestCases below.
         const string IgnoreReason = "Known-failing — see Docs/Specs/Queued/AIRBORNE_GROUND_LEVEL_DETECTION.md (M3.5).";
@@ -95,18 +95,16 @@ namespace Golfin.Gameplay.Tests
                     + "Run GOLFIN > Tools > Bake Zone JSON (Active Hole) on Hole_01_Geo first.");
                 return;
             }
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            string hmPath = Path.Combine(projectRoot, HeightmapBytesPath);
-            if (!File.Exists(hmPath))
+            if (!File.Exists(HeightmapBytesPath))
             {
-                Assert.Inconclusive($"heightmap.bytes not baked at {hmPath}.");
+                Assert.Inconclusive($"heightmap.bytes not baked at {HeightmapBytesPath}.");
                 return;
             }
 
             var data = ZoneData.FromJson(File.ReadAllText(ZonesJsonPath));
             s_Classifier = new BakedZoneClassifier(data);
-            var hm = HeightmapLoader.LoadFromBytes(File.ReadAllBytes(hmPath));
-            if (hm == null) Assert.Inconclusive($"Heightmap parse failed for {hmPath}.");
+            var hm = HeightmapLoader.LoadFromBytes(File.ReadAllBytes(HeightmapBytesPath));
+            if (hm == null) Assert.Inconclusive($"Heightmap parse failed for {HeightmapBytesPath}.");
             s_Ground = new BakedHeightProvider(hm, s_Classifier);
         }
 

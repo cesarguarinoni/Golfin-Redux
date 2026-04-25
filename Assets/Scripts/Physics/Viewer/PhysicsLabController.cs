@@ -719,36 +719,32 @@ namespace Golfin.Physics.Viewer
             _bakedClassifier = null;
             _bakedGround     = null;
 
-            string zonesPath = $"Assets/Resources/HoleData/{holeId}/zones.json";
-            if (!System.IO.File.Exists(zonesPath))
+            // Both files live under Assets/Resources/HoleData/<holeId>/ so they
+            // ship with built players AND survive cross-PC pulls (Tools/UHoleGeo/output/
+            // is gitignored — heightmap MUST live in Resources, not the bake-tool's
+            // staging folder).
+            var zonesAsset = Resources.Load<TextAsset>($"HoleData/{holeId}/zones");
+            var hmAsset    = Resources.Load<TextAsset>($"HoleData/{holeId}/heightmap");
+            if (zonesAsset == null)
             {
-                Debug.LogWarning($"[PhysicsLab] No baked zones at {zonesPath} — sim will use scene providers.");
+                Debug.LogWarning($"[PhysicsLab] No baked zones at Resources/HoleData/{holeId}/zones — sim will use scene providers.");
                 return;
             }
-
-            string projectRoot = System.IO.Path.GetFullPath(
-                System.IO.Path.Combine(Application.dataPath, ".."));
-            // Map "Hole_01" → "hole-01" for the heightmap export folder name.
-            string holeFolder = holeId.ToLowerInvariant().Replace("_", "-");
-            string hmPath = System.IO.Path.Combine(projectRoot,
-                $"Tools/UHoleGeo/output/lomond-country-club/export/{holeFolder}/heightmap.bytes");
-            if (!System.IO.File.Exists(hmPath))
+            if (hmAsset == null)
             {
-                Debug.LogWarning($"[PhysicsLab] No baked heightmap at {hmPath} — sim will use scene providers.");
+                Debug.LogWarning($"[PhysicsLab] No baked heightmap at Resources/HoleData/{holeId}/heightmap — sim will use scene providers.");
                 return;
             }
 
             try
             {
-                string json = System.IO.File.ReadAllText(zonesPath);
-                var data    = Golfin.Physics.Runtime.Baked.ZoneData.FromJson(json);
+                var data = Golfin.Physics.Runtime.Baked.ZoneData.FromJson(zonesAsset.text);
                 _bakedClassifier = new Golfin.Physics.Runtime.Baked.BakedZoneClassifier(data);
 
-                byte[] hmBytes = System.IO.File.ReadAllBytes(hmPath);
-                var hm         = Golfin.Physics.Runtime.HeightmapLoader.LoadFromBytes(hmBytes);
+                var hm = Golfin.Physics.Runtime.HeightmapLoader.LoadFromBytes(hmAsset.bytes);
                 if (hm == null)
                 {
-                    Debug.LogWarning($"[PhysicsLab] Heightmap parse failed for {hmPath}; sim will use scene providers.");
+                    Debug.LogWarning($"[PhysicsLab] Heightmap parse failed for {holeId}; sim will use scene providers.");
                     _bakedClassifier = null;
                     return;
                 }

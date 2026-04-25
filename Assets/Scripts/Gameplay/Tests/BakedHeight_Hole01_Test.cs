@@ -26,7 +26,7 @@ namespace Golfin.Gameplay.Tests
     {
         const string ScenePath          = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_01_Geo.unity";
         const string ZonesJsonPath      = "Assets/Resources/HoleData/Hole_01/zones.json";
-        const string HeightmapBytesPath = "Tools/UHoleGeo/output/lomond-country-club/export/hole-01/heightmap.bytes";
+        const string HeightmapBytesPath = "Assets/Resources/HoleData/Hole_01/heightmap.bytes";
         const float  DivergenceTolerance = 0.05f; // 5 cm
         const int    SampleCount         = 100;
         const int    SampleSeed          = 7777;
@@ -41,11 +41,9 @@ namespace Golfin.Gameplay.Tests
                 Assert.Inconclusive($"zones.json not baked at {ZonesJsonPath}");
                 return;
             }
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            string hmPath      = Path.Combine(projectRoot, HeightmapBytesPath);
-            if (!File.Exists(hmPath))
+            if (!File.Exists(HeightmapBytesPath))
             {
-                Assert.Inconclusive($"heightmap.bytes not found at {hmPath}");
+                Assert.Inconclusive($"heightmap.bytes not found at {HeightmapBytesPath}");
                 return;
             }
 
@@ -64,10 +62,8 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void BakedHeight_Agrees_WithSceneGround_OverHole01()
         {
-            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-
             // Load heightmap.
-            byte[] hmBytes = File.ReadAllBytes(Path.Combine(projectRoot, HeightmapBytesPath));
+            byte[] hmBytes = File.ReadAllBytes(HeightmapBytesPath);
             var hm         = HeightmapLoader.LoadFromBytes(hmBytes);
             Assert.IsNotNull(hm, "HeightmapLoader returned null");
 
@@ -175,8 +171,8 @@ namespace Golfin.Gameplay.Tests
                 sb.AppendLine(details.ToString());
             }
 
-            string reportPath = Path.GetFullPath(Path.Combine(projectRoot,
-                "Docs", "DIAG", "baked-pivot", "M2-height-agreement.md"));
+            string reportPath = Path.GetFullPath(Path.Combine(
+                Application.dataPath, "..", "Docs", "DIAG", "baked-pivot", "M2-height-agreement.md"));
             Directory.CreateDirectory(Path.GetDirectoryName(reportPath));
             File.WriteAllText(reportPath, sb.ToString());
 
