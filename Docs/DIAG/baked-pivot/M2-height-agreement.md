@@ -7,24 +7,22 @@
 
 - In-scope samples: 100
 - Scene-zero samples skipped: 0 (raycast missed; void)
-- Within tolerance: 97/100
-- Diverged: 3/100
-- Max divergence: 0.401 m
-- Mean abs divergence: 0.0246 m
+- Within tolerance: 99/100
+- Diverged: 1/100
+- Max divergence: 0.152 m
+- Mean abs divergence: 0.0067 m
 
 ## Histogram
 
-- 0–1 cm:   3
-- 1–2 cm:   93
-- 2–5 cm:   1
+- 0–1 cm:   68
+- 1–2 cm:   29
+- 2–5 cm:   2
 - 5–10 cm:  0
-- > 10 cm:  3
+- > 10 cm:  1
 
 ## Diverging samples (first 4 KB)
 
 | x | z | type | sceneY | bakedY | diff(m) |
 |---|---|------|--------|--------|---------|
-| -21.98 | 13.60 | Fairway | 9.535 | 9.783 | 0.248 |
-| 54.31 | 39.17 | Fairway | 11.116 | 11.489 | 0.373 |
-| -144.83 | -64.37 | Fairway | 6.112 | 5.711 | 0.401 |
+| -130.97 | -42.21 | Sand | 7.242 | 7.091 | 0.152 |
 

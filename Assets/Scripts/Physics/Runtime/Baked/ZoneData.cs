@@ -87,6 +87,16 @@ namespace Golfin.Physics.Runtime.Baked
 
         public List<Polygon2D> polygons = new List<Polygon2D>();
 
+        /// <summary>
+        /// Path A enrichment: full pool of mesh-vertex samples (all mesh verts
+        /// across every MeshFilter contributing to this zone), used by
+        /// BakedZoneClassifier.TrySampleMeshY for k-nearest IDW interpolation.
+        /// Reduces IDW noise on large polygons whose boundary samples
+        /// under-represent interior terrain slope. Optional — empty for
+        /// synthetic test fixtures.
+        /// </summary>
+        public List<Point2D> meshSamples = new List<Point2D>();
+
         /// <summary>Convenience accessor: parse <see cref="type"/> as a SurfaceType.</summary>
         public SurfaceType SurfaceType
         {

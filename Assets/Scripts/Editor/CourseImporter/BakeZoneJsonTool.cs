@@ -169,7 +169,9 @@ namespace Golfin.Editor.CourseImporter
         /// <summary>
         /// Recursively walk the transform tree. For every GO carrying a
         /// <see cref="SurfaceMarker"/> (Physics) AND a <see cref="MeshFilter"/>,
-        /// extract its mesh-boundary polygon(s) into the per-type group.
+        /// extract its mesh-boundary polygon(s) into the per-type group AND
+        /// pool all its mesh vertices into the group's meshSamples list (Path A
+        /// enrichment for IDW height interpolation).
         /// </summary>
         private static void CollectPolygons(Transform t, Dictionary<SurfaceType, ZonePolygonGroup> groups)
         {
@@ -185,13 +187,31 @@ namespace Golfin.Editor.CourseImporter
                         type = type.ToString(),
                         yOffsetFromTerrain = YOffsets.TryGetValue(type, out float y) ? y : 0f,
                         polygons = new List<Polygon2D>(),
+                        meshSamples = new List<Point2D>(),
                     };
                     groups[type] = grp;
                 }
                 ExtractBoundaryPolygons(mf, grp.polygons);
+                CollectMeshSamples(mf, grp.meshSamples);
             }
             for (int i = 0; i < t.childCount; i++)
                 CollectPolygons(t.GetChild(i), groups);
+        }
+
+        /// <summary>
+        /// Append every world-space mesh vertex of <paramref name="mf"/> into
+        /// the per-zone sample pool. Duplicates within a single mesh are
+        /// preserved (cheap; helps IDW give more weight to denser regions).
+        /// </summary>
+        private static void CollectMeshSamples(MeshFilter mf, List<Point2D> outSamples)
+        {
+            var verts = mf.sharedMesh.vertices;
+            var tx    = mf.transform;
+            for (int i = 0; i < verts.Length; i++)
+            {
+                Vector3 w = tx.TransformPoint(verts[i]);
+                outSamples.Add(new Point2D(w.x, w.y, w.z));
+            }
         }
 
         /// <summary>

@@ -9,30 +9,39 @@ using UnityEngine.SceneManagement;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime;
+using Golfin.Physics.Runtime.Baked;
 
 namespace Golfin.Gameplay.Tests
 {
     /// <summary>
-    /// M0 canonical regression suite for the baked-data sim pivot
+    /// Canonical regression suite for the baked-data sim pivot
     /// (spec: Docs/Specs/Active/SIM_BAKED_DATA_PATH.md).
     ///
     /// Three tests × 8 cardinal directions each. Invariant at every trajectory
-    /// sample: ball.Y >= classifier.SampleHeight(ball.x, ball.z) - 0.05.
+    /// sample: ball.Y >= ground.SampleHeight(ball.x, ball.z) - 0.05.
     ///
-    /// M0 wires the classifier to the CURRENT architecture (SceneGroundProvider) so
-    /// the test reproduces Cesar's fall-through bug (expected FAIL). M3 rewires the
-    /// invariant to the BakedHeightProvider (expected PASS).
+    /// M0 wired this to SceneGroundProvider/SceneSurfaceProvider (current
+    /// architecture) — expected FAIL on at least one direction.
+    /// M3 rewires sim AND invariant to BakedHeightProvider/BakedZoneClassifier
+    /// — expected PASS on all 24 directions.
     /// </summary>
     [TestFixture]
     public class BakedPivotRegressionTests
     {
         const float InvariantTolerance = 0.05f;
 
+        const string ZonesJsonPath      = "Assets/Resources/HoleData/Hole_01/zones.json";
+        const string HeightmapBytesPath = "Tools/UHoleGeo/output/lomond-country-club/export/hole-01/heightmap.bytes";
+
         static Scene         s_HoleScene;
         static AeroConfig    s_Aero;
         static WindConfig    s_Wind;
         static SurfaceConfig s_SurfCfg;
         static PuttConfig    s_PuttCfg;
+
+        // M3: baked providers shared across tests (read-only after setup).
+        static BakedZoneClassifier s_Classifier;
+        static BakedHeightProvider s_Ground;
 
         static string DiagDir => Path.GetFullPath(
             Path.Combine(Application.dataPath, "..", "Docs", "DIAG", "baked-pivot"));
@@ -60,6 +69,28 @@ namespace Golfin.Gameplay.Tests
 
             s_HoleScene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
             if (!s_HoleScene.IsValid()) Assert.Inconclusive("OpenScene returned invalid scene.");
+
+            // M3: load baked providers. Failure here renders the test inconclusive
+            // (we can't validate the architecture if the data isn't baked).
+            if (!File.Exists(ZonesJsonPath))
+            {
+                Assert.Inconclusive($"zones.json not baked at {ZonesJsonPath}. "
+                    + "Run GOLFIN > Tools > Bake Zone JSON (Active Hole) on Hole_01_Geo first.");
+                return;
+            }
+            string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            string hmPath = Path.Combine(projectRoot, HeightmapBytesPath);
+            if (!File.Exists(hmPath))
+            {
+                Assert.Inconclusive($"heightmap.bytes not baked at {hmPath}.");
+                return;
+            }
+
+            var data = ZoneData.FromJson(File.ReadAllText(ZonesJsonPath));
+            s_Classifier = new BakedZoneClassifier(data);
+            var hm = HeightmapLoader.LoadFromBytes(File.ReadAllBytes(hmPath));
+            if (hm == null) Assert.Inconclusive($"Heightmap parse failed for {hmPath}.");
+            s_Ground = new BakedHeightProvider(hm, s_Classifier);
         }
 
         [OneTimeTearDown]
@@ -215,12 +246,9 @@ namespace Golfin.Gameplay.Tests
 
             Vector3 centroid = CentroidXZ(originGo);
 
-            var ground   = new SceneGroundProvider();
-            var surfaces = new SceneSurfaceProvider();
-
-            // Snap origin Y to the current architecture's ground provider, not the raw
-            // transform — this is where the ball would visually rest at placement.
-            float groundY = ground.SampleHeight(
+            // M3: sim AND invariant both use the baked providers loaded in OneTimeSetUp.
+            // Snap origin Y to the baked surface (the visible mesh top via IDW).
+            float groundY = s_Ground.SampleHeight(
                 fp.FromFloat(centroid.x), fp.FromFloat(centroid.z)).ToFloat();
             if (Mathf.Abs(groundY) < 0.01f) groundY = centroid.y;
 
@@ -228,7 +256,8 @@ namespace Golfin.Gameplay.Tests
             for (int i = 0; i < s_CardinalYaws.Length; i++)
             {
                 var r = RunAndCheck(centroid, groundY, velFn(s_CardinalYaws[i]),
-                                    s_CardinalYaws[i], s_CardinalLabels[i], ground, surfaces);
+                                    s_CardinalYaws[i], s_CardinalLabels[i],
+                                    s_Ground, s_Classifier);
                 results.Add(r);
             }
 
@@ -248,9 +277,9 @@ namespace Golfin.Gameplay.Tests
             sb.AppendLine();
             sb.AppendLine($"- Origin GO: `{originName}`");
             sb.AppendLine($"- Centroid (world XZ): ({centroid.x:F3}, {centroid.z:F3})");
-            sb.AppendLine($"- Ground Y at centroid (SceneGroundProvider): {groundY:F3}");
+            sb.AppendLine($"- Ground Y at centroid (BakedHeightProvider): {groundY:F3}");
             sb.AppendLine($"- Invariant tolerance: {InvariantTolerance:F3} m");
-            sb.AppendLine($"- Classifier: SceneGroundProvider (current architecture)");
+            sb.AppendLine($"- Provider: BakedHeightProvider + BakedZoneClassifier (M3)");
             sb.AppendLine();
             sb.AppendLine("| dir | yaw | result | violFrame | ballY | groundY | minBallY | samples | termination |");
             sb.AppendLine("|-----|-----|--------|-----------|-------|---------|----------|---------|-------------|");
@@ -275,9 +304,9 @@ namespace Golfin.Gameplay.Tests
             var (pass, fail) = Run8Directions("DriverFromBunker", origin, MakeDriverVelocity);
             Debug.Log($"[M0] DriverFromBunker: {pass}/8 PASS, {fail}/8 FAIL.");
             Assert.AreEqual(0, fail,
-                $"DriverFromBunker: {fail}/8 directions fell through (ball.Y dropped >0.05m below "
-              + "SceneGroundProvider.SampleHeight). See Docs/DIAG/baked-pivot/M0-regression-DriverFromBunker.md. "
-              + "Expected FAIL on current architecture — this is the canonical M0 baseline.");
+                $"DriverFromBunker: {fail}/8 directions fell through under baked architecture "
+              + "(ball.Y dropped >0.05m below BakedHeightProvider.SampleHeight). "
+              + "See Docs/DIAG/baked-pivot/M0-regression-DriverFromBunker.md.");
         }
 
         [Test]
@@ -302,9 +331,8 @@ namespace Golfin.Gameplay.Tests
             var (pass, fail) = Run8Directions("DriverFromGreen", origin, MakeDriverVelocity);
             Debug.Log($"[M0] DriverFromGreen: {pass}/8 PASS, {fail}/8 FAIL.");
             Assert.AreEqual(0, fail,
-                $"DriverFromGreen: {fail}/8 directions fell through. "
-              + "See Docs/DIAG/baked-pivot/M0-regression-DriverFromGreen.md. "
-              + "Expected FAIL on current architecture — this is the canonical M0 baseline.");
+                $"DriverFromGreen: {fail}/8 directions fell through under baked architecture. "
+              + "See Docs/DIAG/baked-pivot/M0-regression-DriverFromGreen.md.");
         }
     }
 }

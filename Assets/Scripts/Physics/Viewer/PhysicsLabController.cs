@@ -22,11 +22,17 @@ namespace Golfin.Physics.Viewer
         [SerializeField] PresetScene currentScene = PresetScene.Range;
 
         // Set true by LabHoleBinder when a Hole_XX_Geo scene is loaded additively.
-        // Drives BuildGroundProvider/BuildSurfaceProvider to use scene-raycast providers.
+        // Drives BuildGroundProvider/BuildSurfaceProvider to use baked providers.
         bool _useSceneProviders;
         Vector3 _loadedHoleGreenCentroid;
         bool    _greenCentroidValid;
         Transform _runtimeTeeAnchor;
+
+        // M3: cached baked providers populated in OnHoleLoaded. When present
+        // they replace the scene-raycast providers; sim path no longer reads
+        // live colliders. Null on flat-ground / no-hole sessions.
+        Golfin.Physics.Runtime.Baked.BakedZoneClassifier _bakedClassifier;
+        Golfin.Physics.Runtime.Baked.BakedHeightProvider _bakedGround;
 
         [Header("References")]
         [SerializeField] TrajectoryRenderer trajectoryRenderer;
@@ -683,6 +689,10 @@ namespace Golfin.Physics.Viewer
 
         IGroundProvider BuildGroundProvider()
         {
+            // M3: prefer baked providers when a hole has been loaded. Falls back
+            // to SceneGroundProvider only if baked data isn't available — this
+            // path will go away in Phase F.
+            if (_bakedGround != null) return _bakedGround;
             if (currentScene == PresetScene.Hole1 || _useSceneProviders)
                 return new SceneGroundProvider();
             return new FlatGround(fp.Zero);
@@ -690,16 +700,82 @@ namespace Golfin.Physics.Viewer
 
         ISurfaceProvider BuildSurfaceProvider(ShotPreset preset)
         {
+            if (_bakedClassifier != null) return _bakedClassifier;
             if (currentScene == PresetScene.Hole1 || _useSceneProviders)
                 return new SceneSurfaceProvider();
             SurfaceType surfaceType = preset.HasSurfaceOverride ? preset.SurfaceOverride : SurfaceType.Fairway;
             return new ConstantSurfaceProvider(surfaceType);
         }
 
+        /// <summary>
+        /// Loads BakedZoneClassifier (zones.json) + BakedHeightProvider
+        /// (heightmap.bytes) for the given hole id (e.g. "Hole_01"). Sets
+        /// <see cref="_bakedClassifier"/> + <see cref="_bakedGround"/> on
+        /// success; logs and leaves them null on failure (sim falls back
+        /// to scene providers).
+        /// </summary>
+        void TryLoadBakedProviders(string holeId)
+        {
+            _bakedClassifier = null;
+            _bakedGround     = null;
+
+            string zonesPath = $"Assets/Resources/HoleData/{holeId}/zones.json";
+            if (!System.IO.File.Exists(zonesPath))
+            {
+                Debug.LogWarning($"[PhysicsLab] No baked zones at {zonesPath} — sim will use scene providers.");
+                return;
+            }
+
+            string projectRoot = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(Application.dataPath, ".."));
+            // Map "Hole_01" → "hole-01" for the heightmap export folder name.
+            string holeFolder = holeId.ToLowerInvariant().Replace("_", "-");
+            string hmPath = System.IO.Path.Combine(projectRoot,
+                $"Tools/UHoleGeo/output/lomond-country-club/export/{holeFolder}/heightmap.bytes");
+            if (!System.IO.File.Exists(hmPath))
+            {
+                Debug.LogWarning($"[PhysicsLab] No baked heightmap at {hmPath} — sim will use scene providers.");
+                return;
+            }
+
+            try
+            {
+                string json = System.IO.File.ReadAllText(zonesPath);
+                var data    = Golfin.Physics.Runtime.Baked.ZoneData.FromJson(json);
+                _bakedClassifier = new Golfin.Physics.Runtime.Baked.BakedZoneClassifier(data);
+
+                byte[] hmBytes = System.IO.File.ReadAllBytes(hmPath);
+                var hm         = Golfin.Physics.Runtime.HeightmapLoader.LoadFromBytes(hmBytes);
+                if (hm == null)
+                {
+                    Debug.LogWarning($"[PhysicsLab] Heightmap parse failed for {hmPath}; sim will use scene providers.");
+                    _bakedClassifier = null;
+                    return;
+                }
+                _bakedGround = new Golfin.Physics.Runtime.Baked.BakedHeightProvider(hm, _bakedClassifier);
+                Debug.Log($"[PhysicsLab] Baked providers wired for {holeId}: "
+                        + $"{data.zones.Count} zone groups, "
+                        + $"OB mask={(data.obMask != null ? "yes" : "no")}.");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[PhysicsLab] Baked provider load failed: {e.Message}; sim will use scene providers.");
+                _bakedClassifier = null;
+                _bakedGround     = null;
+            }
+        }
+
         // Called by LabHoleBinder when a Hole_XX_Geo scene is opened additively.
         public void OnHoleLoaded(string sceneName)
         {
             _useSceneProviders = true;
+
+            // M3: load baked providers for this hole. holeId is sceneName minus
+            // the "_Geo" suffix (e.g. "Hole_01_Geo" → "Hole_01").
+            string holeId = sceneName.EndsWith("_Geo")
+                ? sceneName.Substring(0, sceneName.Length - 4)
+                : sceneName;
+            TryLoadBakedProviders(holeId);
 
             // Disable any debug walk camera that ships inside hole scenes.
             // Disable the GO (not just component) so Start() never fires and cursor is never stolen.
@@ -934,6 +1010,8 @@ namespace Golfin.Physics.Viewer
             _useSceneProviders   = false;
             _greenCentroidValid  = false;
             _ballSpawnPoint      = null;
+            _bakedClassifier     = null;
+            _bakedGround         = null;
 
             PlacementEntries.Clear();
             OnPlacementEntriesChanged?.Invoke();
