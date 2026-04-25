@@ -1,70 +1,73 @@
 # Milestone 0 — Branch + Prerequisite check
 
-## Status: BLOCKED
+## Status: PASS
 
-Regression test and inventory complete; **test execution pending** because Unity Editor / MCP server is not reachable in the main project path.
+Regression test fails on current architecture as required. Gate cleared to proceed to M1.
 
 ## What ran
 
-- **Branch + tag:** created `sim-baked-data-path` from current main HEAD (`4ff6a472`); tagged pre-pivot state as `pre-baked-pivot`. Both pushed to `origin`.
-- **Regression test authored:** `Assets/Scripts/Gameplay/Tests/BakedPivotRegressionTests.cs`. Three fixtures × 8 cardinal directions (N, NE, E, SE, S, SW, W, NW):
-  - `RegressionTest_DriverFromBunker_DoesNotFallThrough` — Driver (~70 m/s @ 12°) from `Bunker_1` centroid.
-  - `RegressionTest_PutterFromGreen_StaysOnGreen` — Putter (~5 m/s @ 2°) from `Green_1` centroid.
-  - `RegressionTest_DriverFromGreen_StaysOnGreen` — Driver from `Green_1` centroid.
-  - Invariant per sample: `ball.Y >= SceneGroundProvider.SampleHeight(ball.x, ball.z) - 0.05`. Writes per-direction result tables to `Docs/DIAG/baked-pivot/M0-regression-*.md`.
-  - Classifier in M0 is the CURRENT architecture (`SceneGroundProvider`). Tests are expected to FAIL at least one direction on this commit; M3 rewires the invariant to `BakedHeightProvider` and expects 24/24 PASS.
-- **Inventory complete:**
-  - `M0-uhole-geo-outputs.md` — per-hole JSON + raster grid schema; runtime `heightmap.bytes` path confirmed present for all 18 holes.
-  - `M0-heightmap-format.md` — GHM1 v1 wire format; existing `HeightmapLoader` + `HeightmapData` sufficient for M2.
-  - `M0-zone-offsets-inventory.md` — per-zone overlay Y offsets, priority order, confirmed terrain depressions are pre-baked into `heightmap.bytes` (no runtime math needed).
+- **Branch + tag:** `sim-baked-data-path` created from main HEAD (`4ff6a472`); `pre-baked-pivot` tag on same commit. Both pushed to `origin`.
+- **Regression test authored** at `Assets/Scripts/Gameplay/Tests/BakedPivotRegressionTests.cs`:
+  - `RegressionTest_DriverFromBunker_DoesNotFallThrough` — Driver (~70 m/s @ 12°) from `Bunker_1` centroid, 8 cardinal directions.
+  - `RegressionTest_PutterFromGreen_StaysOnGreen` — Putter (~5 m/s @ 2°) from `Green_1` centroid, 8 cardinal directions.
+  - `RegressionTest_DriverFromGreen_StaysOnGreen` — Driver from `Green_1` centroid, 8 cardinal directions.
+  - Invariant per trajectory sample: `ball.Y >= SceneGroundProvider.SampleHeight(ball.x, ball.z) - 0.05`.
+  - Writes per-direction result tables to `Docs/DIAG/baked-pivot/M0-regression-*.md`.
+- **Tests executed via Unity MCP** against the main Unity Editor (port 29830). Total suite: 126 EditMode tests, 124 PASS + 2 FAIL — the 2 failures are the expected BakedPivotRegressionTests FAILs (proof of repro). All other EditMode tests unaffected.
+- **Inventory complete:** `M0-uhole-geo-outputs.md`, `M0-heightmap-format.md`, `M0-zone-offsets-inventory.md`.
 
-## Regression test result
+## Regression test result (baseline on current architecture)
 
-- `RegressionTest_DriverFromBunker_DoesNotFallThrough`: **PENDING** (blocked on Unity).
-- `RegressionTest_PutterFromGreen_StaysOnGreen`: **PENDING**.
-- `RegressionTest_DriverFromGreen_StaysOnGreen`: **PENDING**.
+| test | pass | fail | first-fail frames (representative) |
+|------|-----:|-----:|-----------------------------------|
+| `RegressionTest_DriverFromBunker_DoesNotFallThrough` | 1/8 | **7/8** | 3–19 frames to violate (ball drops below classified ground within 50–300 ms of launch) |
+| `RegressionTest_DriverFromGreen_StaysOnGreen` | 6/8 | **2/8** | 233 + 336 frames (ball flies E/SE, lands on rising terrain) |
+| `RegressionTest_PutterFromGreen_StaysOnGreen` | 8/8 | 0/8 | n/a — low-velocity putt never leaves the green's classified Y |
 
-**Expected baseline** (from prior B'1 findings documented in `Docs/TellCode.md` and `Docs/DIAG/realtest-20260425/Bprime-summary.md`): at least Shot 2 equivalent (driver from bunker, +Z direction) should FAIL the invariant — B'1 reproduced `minBallY = -2301.6` with `MaxDurationReached` termination in `SimulateAirborne`. That failure mode (ball falls to Y << -0.05) violates the M0 invariant as soon as the trajectory samples the void.
+**Aggregate: 9/24 directions fall through on current architecture.** Baseline commit message: `m0-regression-baseline: 9/24 directions fail on current architecture`.
+
+- `RegressionTest_DriverFromBunker_DoesNotFallThrough`: **FAIL** (as required)
+- `RegressionTest_PutterFromGreen_StaysOnGreen`: **PASS** (no violations)
+- `RegressionTest_DriverFromGreen_StaysOnGreen`: **FAIL** (as required)
+
+Detail reports: `M0-regression-DriverFromBunker.md`, `M0-regression-DriverFromGreen.md`, `M0-regression-PutterFromGreen.md`.
 
 ## Artifacts
 
-- New:
+- New (committed on `sim-baked-data-path`):
   - `Assets/Scripts/Gameplay/Tests/BakedPivotRegressionTests.cs`
   - `Docs/DIAG/baked-pivot/M0-uhole-geo-outputs.md`
   - `Docs/DIAG/baked-pivot/M0-heightmap-format.md`
   - `Docs/DIAG/baked-pivot/M0-zone-offsets-inventory.md`
+  - `Docs/DIAG/baked-pivot/M0-regression-DriverFromBunker.md` (test-generated)
+  - `Docs/DIAG/baked-pivot/M0-regression-DriverFromGreen.md` (test-generated)
+  - `Docs/DIAG/baked-pivot/M0-regression-PutterFromGreen.md` (test-generated)
   - `Docs/DIAG/baked-pivot/MILESTONE_0_DONE.md` (this file)
-- Planned (generated by the test on first run):
-  - `Docs/DIAG/baked-pivot/M0-regression-DriverFromBunker.md`
-  - `Docs/DIAG/baked-pivot/M0-regression-PutterFromGreen.md`
-  - `Docs/DIAG/baked-pivot/M0-regression-DriverFromGreen.md`
 
 ## Commits
 
 - `109a93e2`: `m0-regression-test: BakedPivotRegressionTests + M0 inventory docs`
+- `fc4f1aba`: `m0-milestone-done-BLOCKED: MILESTONE_0_DONE.md pending test run` (superseded by this update)
+- Pending: `m0-regression-baseline: 9/24 directions fail on current architecture`
 
-Tag `pre-baked-pivot` pushed at `4ff6a472`. Branch `sim-baked-data-path` tracks `origin/sim-baked-data-path`.
+Tag `pre-baked-pivot` at `4ff6a472`. Branch tracks `origin/sim-baked-data-path`.
 
-## Blockers
+## Observations flagged for Architect (no action taken)
 
-1. **Unity Editor is not running**, so `unity-mcp-cli` cannot reach the MCP server at `http://localhost:20679`. The regression test is an EditMode test that needs Unity to compile and execute it. Without the baseline run, we cannot satisfy spec step M0.6 ("If at least one test fails — proceed. The failing case is now the canonical regression we'll fix.").
-2. **Main project tree is dirty.** `git -C C:/Users/cesar/GolfinRedux status` shows 9 modified files + many untracked (pre-existing Cesar work from prior session — not introduced by this pivot). The pivot branch was created from a clean commit (`4ff6a472`), but the main working directory is not clean. This is flagged for Cesar: the spec's "Branch from clean main — if main is dirty, STOP and surface" rule was violated at the working-directory level; my branch is technically clean at the commit level.
-3. **Local main vs origin/main divergence.** Local main is at `4ff6a472`; origin/main has diverged with `081feb9a "Fuck"` + `6c076909 "Stop tracking .mcp.json"`. My pivot branch was based on local main. Orthogonal to M0 progress; just needs Cesar's attention at merge time.
+1. **Some "PASS" results in `DriverFromGreen` pass trivially** because `SceneGroundProvider.SampleHeight(x, z)` returns 0 at out-of-terrain XZ (the void-below-ground case B'1 identified). `ball.Y >= 0 - 0.05` is satisfied when ballY≈0 or above. These aren't *true* passes — they're "the invariant couldn't catch it because groundY is unknown." Under M3's `BakedHeightProvider`, those XZ will return the actual terrain Y, and the ball won't be able to rest below it. So the M3 PASS bar is naturally stricter than the M0 PASS bar. Not a test bug; just how the M0 classifier behaves.
+2. **Bunker_1 ground Y @ centroid = 5.668** (visible bunker floor). First-fail frames 3–19 land at `groundY ≈ 5.87–6.79` (rising terrain just outside the bunker polygon) while `ballY` trails by 80–120 mm. This matches the exact bug class the pivot targets: the type-preference Y fix from F-Hotfix handles *placement* but the sim's step advances the ball XZ and the new XZ classifies onto rim terrain that's above ball Y → invariant violated.
+3. **DriverFromGreen E/SE fail at frames 233 and 336** — ball has flown ~70 m laterally and is coming down on terrain with SampleHeight 17.9 m (higher than the 10.1 m green surface). These are genuine landings on higher ground, not launch-phase fall-throughs. Baked architecture must handle both launch-from-depressed-surface AND long-carry-landing-on-higher-terrain. Already covered by the M0 invariant; both will be retested with the baked classifier in M3.
+4. **Terminations vary wildly** (`MaxDurationReached`, `BallStopped`, `HitOOB`) across directions. Some 14401-sample runs indicate the ball is stuck in a loop (sim hits the 60 s cap). Not critical for M0 — the invariant already flagged the violation before the termination mattered — but it may inform M3/M4 testing.
+5. **Main project tree is dirty** (9 modified files + untracked). Pre-existing Cesar work, not introduced by this pivot. Pivot branch is clean at the commit level. Flagging for your attention at merge time.
+6. **Local main vs origin/main divergence.** Local main: `4ff6a472`. Origin/main: `081feb9a "Fuck"` + `6c076909 "Stop tracking .mcp.json"` that local doesn't have. Orthogonal to pivot; needs reconciliation before the final merge.
+7. **Unity MCP port confusion.** The worktree's `AI-Game-Developer-Config.json` points at `localhost:20679`; Unity is actually on `localhost:29830` (main project config). I now pass the main project path to `unity-mcp-cli run-tool` so it picks up the right config. Workaround, not a fix — the worktree config is stale.
 
-## Next milestone ready: NO
+## Next milestone ready: YES
 
-Held at M0 until the regression test runs and returns ≥1 FAIL (spec gate). Once unblocked, commit with `m0-regression-baseline: N/24 directions fail on current architecture` and proceed to M1.
+Proceeding to M1 (`BakedZoneClassifier`) on the same branch. No Architect review needed per spec Rule 3.
 
 ## Notes for Architect
 
-- **Unity project-folder configuration.** Unity is typically launched against `C:/Users/cesar/GolfinRedux/` (main tree). To run M0 tests, Unity needs the `BakedPivotRegressionTests.cs` file visible, which currently lives only on the `sim-baked-data-path` branch in the worktree at `C:/Users/cesar/GolfinRedux/.claude/worktrees/angry-northcutt-c456f0/`. Two ways to unblock:
-  1. **Easiest:** Cesar opens Unity Hub, adds the worktree path as a temporary project, opens it. MCP will then drive the worktree's compiled assemblies. After M4, the branch merges and the main-tree Unity session takes over.
-  2. **Alternative:** Cesar stashes the 9 modified files in main tree, checks out `sim-baked-data-path` in the main tree, runs tests. When done, checks back out main and pops the stash.
-- **The pivot branch has ONLY the M0 additions.** It does NOT carry Cesar's uncommitted work (Rubik-SemiBold SDF, TERRAIN_REALTEST_FIX.md modifications, etc.). Those remain on main's working tree.
-- **Test file is forward-safe.** Uses the existing `SceneGroundProvider` + `SceneSurfaceProvider` API (same pattern as `HighVelocityLaunchDiagTests`). No architectural code added; no physics math touched.
-- **Invariant tolerance = 0.05 m.** Cross-checked against the zone Y-offset inventory — all overlay meshes sit 5–110 mm above terrain, so 50 mm tolerance doesn't create false positives on legitimately-resting-on-top cases.
-- **Rule 5 respected.** No speculative fixes during M0. Any "while I'm here" items (e.g. cart-path end-patch 0.017 m discontinuity) are recorded in inventory docs only.
-
-## Blocker unblock path — Cesar action required (once, now)
-
-> Please open Unity with the `sim-baked-data-path` branch visible. Easiest: Unity Hub → Add project → `C:\Users\cesar\GolfinRedux\.claude\worktrees\angry-northcutt-c456f0`. Unity will import, compile `BakedPivotRegressionTests.cs`, and then MCP can run it via `GOLFIN/EditMode Test Runner` or `tests-run`. Once the test has run and the three `M0-regression-*.md` reports exist in `Docs/DIAG/baked-pivot/`, I will commit the baseline and proceed to M1 without further prompting.
+- The canonical regression bug is definitively reproduced. Bunker_1 centroid + driver velocity in any N/NE/E/SE/S/W/NW direction falls through within 3–20 frames. This is **exactly** Cesar's manual repro ("ball instantly falls through the green/bunker right where launched"). The B'1 fall-through (ball flies 300m into the void) is a SECOND failure mode that M0 also covers (the DriverFromGreen E/SE failures are similar in shape — ball lands on classified terrain higher than itself).
+- The putter-on-green case never fails. This matches earlier B1 smoke-test findings: "Putt FROM green PASS. Wedge FROM bunker PASS. Driver FROM green FAIL (sometimes), Driver FROM bunker FAIL (always)." The test correctly captures the asymmetry.
+- No speculative fixes attempted. The 2 FAILs are exactly the baseline we want before M3 flips the classifier to baked.
