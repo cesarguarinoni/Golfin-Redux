@@ -29,9 +29,9 @@
 - `Docs/Specs/Active/SIM_BAKED_DATA_PATH.md` → `Docs/Specs/Completed/SIM_BAKED_DATA_PATH.md` (Code: move on next task)
 - `Docs/Specs/Queued/AIRBORNE_GROUND_LEVEL_DETECTION.md` → `Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md` (applied as M5b; Code: move on next task)
 
-**Open follow-ups (not blocking, no spec yet):**
-- Phase F — delete `SceneGroundProvider`, `SceneSurfaceProvider`, `Physics.Runtime.SurfaceMarker`, `PhysicsMarkerRepairTool`. None are referenced by sim anymore. ~1 day cleanup.
-- Other 17 holes — only Hole_01 has been fully exercised in real-conditions tests. `AllImportedHoles_Smoke` covers tee shots only. As more holes get imported and played, expect to discover hole-specific zone-authoring or terrain edge cases. Not a known bug — just a known coverage gap.
+**Open follow-ups (not blocking):**
+- Phase F cleanup completed 2026-04-26 (see History Log). `Physics.Runtime.SurfaceMarker` retained for the import → bake bridge.
+- Other 17 holes — see OPEN FLAGS.
 
 ---
 
@@ -934,6 +934,10 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
 
 > Architect-tracked open issues. Don't action without an explicit task block; just be aware they exist.
 
+- **[2026-04-25] Holes 2–18 coverage gap.** Only Hole_01 has been fully exercised in post-pivot real-conditions tests. `AllImportedHoles_Smoke` covers tee shots only. As more holes get imported and played, expect to discover hole-specific zone-authoring or terrain edge cases. Not a known bug — a known coverage gap.
+- **[2026-04-26] Stale comment in `BallSimulation.cs:26` (`// SceneGroundProvider…`).** SceneGroundProvider was deleted in Phase F. Hard rule 8 forbade touching `BallSimulation` during Phase F so the comment was left as-is. Trivial cleanup; not load-bearing.
+- **[2026-04-26] `BallSimulation.DiagPerStepSink` field is now unwired.** `PhysicsLabController.WireA3DiagSinks` was removed in F.3.5. The field still exists in BallSimulation (untouched per hard rule 8) and is dead code; harmless. Future cleanup: delete the field along with the stale comment when sim-core is next opened.
+- **[2026-04-26] Future housekeeping: consolidate `Physics.Runtime.SurfaceMarker` and `Course.SurfaceMarker` into one enum.** Bake tool currently reads two type systems (one for authoring in scene, one for the bake-side enum), bridged by `SurfaceMarkerMap`. Workable; a single-enum refactor would simplify the importers. Not blocking.
 - **[2026-04-22] Heightmap doesn't include zone-mesh tops (greens/tees).** `HeightmapData.SampleHeight` returns the depressed terrain Y; greens sit ~11cm above that (`+0.03 + GreenRaiseMeters 0.08`). Ball lands/rolls at heightmap Y, not visible mesh Y. Putts will look ~11cm sunk into the green. Surface *classification* is correct (raycast hits the mesh); the *Y* is wrong. Fix is a Phase 0.1 baker addendum — do NOT touch the runtime sim's height path. See `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 - **[2026-04-22] Bunker lip submesh classification deferred.** `SceneSurfaceProvider` is submesh-blind; whole bunker mesh classifies as `Sand` regardless of `BunkerLip` submesh. Polish item, not blocking. Don't proactively fix.
 - **[2026-04-22] Don't implement Code's "trees layer" proposal.** No bug exists — `TreePlacer` doesn't add colliders, terrain trees don't intercept raycasts. Audit confirmed in lessons file.
@@ -1394,6 +1398,8 @@ Beyond budget: surface for design re-tune, don't burn iterations.
 ---
 
 ## History Log (completed tasks, most recent first)
+
+- ✅ **2026-04-26** Phase F cleanup complete — deleted `SceneGroundProvider`, `SceneSurfaceProvider`, `PhysicsMarkerRepairTool`, `MarkerAuditTool`, 8 pre-pivot diag/agreement test files (incl. amendment: `BakedHeight_Hole01_Test`, `BakedClassifier_Hole01_Test`), the Phase-A `WireA3DiagSinks` harness in `PhysicsLabController`, and the stale `TERRAIN_REALTEST_FIX` Active spec. **Mid-step fix:** `Physics.Runtime.SurfaceMarker` was defined inline in the deleted `SceneSurfaceProvider.cs` — extracted to its own file (`Assets/Scripts/Physics/Runtime/SurfaceMarker.cs`) to satisfy hard rule 5 + restore importer compilation. Lesson filed (`tasks/lessons.md`: grep ALL types in a file before deleting). Test gate: **198/198 EditMode PASS, 0 failed, 0 skipped, 43.5s** (project's tests are Editor-platform-only; no PlayMode runs by design). Per-step commits `phase-f.{1,1b,2,3,3.5,4,4-fix,4b,5,6}` on `main` (commits `32c73935..03744859` + lessons `8b2c82fc`).
 
 - 🚧 **2026-04-23** Phase 7 Shot Controls v1 — Parts A, B, C COMPLETE. Awaiting Part D (Cone UI).
   - Part A: defaults + config + presets + controls.csv + loader. Compile clean, fields verified.
