@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Single source of truth for Course.SurfaceType → Physics.SurfaceType mapping.
-/// Used by PhysicsMarkerRepairTool and HoleGeoImporter / HoleLiteImporter.
+/// Used by HoleGeoImporter / HoleLiteImporter.
 /// </summary>
 public static class SurfaceMarkerMap
 {
