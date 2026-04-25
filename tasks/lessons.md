@@ -1,5 +1,20 @@
 # Lessons Learned
 
+## Workflow — Before deleting a .cs file, grep for ALL public types it defines
+
+**Symptom:** Phase F.4 deleted `SceneSurfaceProvider.cs`. The file's primary type was `SceneSurfaceProvider`, but it ALSO defined `Physics.Runtime.SurfaceMarker` inline as a second `public sealed class` in the same namespace. Spec hard rule 5 explicitly retained `SurfaceMarker` (load-bearing for the import → bake bridge) — but I read the spec as "keep this type" without verifying where the type actually lived. Deleting the file silently took the marker with it. Result: CS0234 across all importers; entire main-repo project failed to compile until I extracted `SurfaceMarker` to its own file.
+
+**Rule:** Before `rm`-ing a `.cs` file, run a grep for `^\s*(public|internal|sealed|abstract|static)?\s*(class|struct|enum|interface|record)\s+\w+` over the file. If it defines more than one top-level type, treat each as a separate decision: which are kept, which are deleted, and where do the kept ones move to. Co-located types are common in legacy files.
+
+**Why:** `Glob`/`Grep` for the type *name* against the project finds usages but not the *definition*. The definition lives where you don't expect it. A spec saying "keep type X, delete file Y" is silently wrong if X is defined inside Y.
+
+**How to apply:** Anywhere a spec lists files to delete and types to retain, before deleting:
+1. `grep -nE "^\s*(public|internal|sealed|abstract|static)?\s*(class|struct|enum|interface|record)\s+\w+" <file>` to enumerate every type it defines.
+2. Cross-check each enumerated type against the spec's "retain" list and the codebase's references.
+3. If any retained type lives inside the to-be-deleted file, extract it first into its own file (in the same namespace), commit that move separately, then delete the original.
+
+---
+
 ## Physics — IGroundProvider and Zone Mesh Height (PhysicsLab Hole1)
 
 ### HeightmapData only knows terrain — use SceneGroundProvider for scene with zone meshes
