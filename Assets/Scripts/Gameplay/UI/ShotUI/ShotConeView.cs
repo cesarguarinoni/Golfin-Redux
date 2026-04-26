@@ -25,7 +25,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private RectTransform   _clubHandle;
         [SerializeField] private float           _handleYPx    = 80f;
 
-        [Header("Arrows (pool of 3)")]
+        [Header("Timing slab")]
+        [SerializeField] private TimingSlabGraphic _timingSlab;
+
+        // Legacy arrow pool — kept for inspector compatibility; all are disabled at runtime.
+        [Header("Arrows (legacy — disabled)")]
         [SerializeField] private RectTransform[] _arrows = new RectTransform[3];
 
         [Header("HUD")]
@@ -35,22 +39,18 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private RectTransform   _targetingLine;
 
         // ── Runtime state ─────────────────────────────────────────────────────
-        private Camera       _worldCamera;
-        private Transform    _ballTransform;
-        private float        _maxCarryYards = 250f;
-        private ArrowGraphic _arrowGraphic;
-        private bool         _lastArrowTrailState;
+        private Camera    _worldCamera;
+        private Transform _ballTransform;
+        private float     _maxCarryYards    = 250f;
+        private bool      _lastArrowTrailState;
 
         // ── Public API ────────────────────────────────────────────────────────
 
-        // Set before the shot to drive the yards readout.
         public void SetMaxCarryYards(float yards) => _maxCarryYards = yards;
 
-        // Wired by the lab controller in Part E for world-space line projection.
-        public void SetCamera(Camera cam)           => _worldCamera   = cam;
+        public void SetCamera(Camera cam)            => _worldCamera   = cam;
         public void SetBallTransform(Transform ball) => _ballTransform = ball;
 
-        // Show/hide the cone outline mesh. Called by HandleStateChanged when DebugFlags.ShowConeOutline changes.
         public void SetOutlineVisible(bool visible)
         {
             if (_coneGraphic != null) _coneGraphic.enabled = visible;
@@ -61,34 +61,30 @@ namespace Golfin.Gameplay.UI.ShotUI
         private void Awake()
         {
             if (_coneGraphic != null) _coneGraphic.HeightPx = _coneHeightPx;
-            SetupArrows();
+            SetupSlab();
         }
 
-        private void SetupArrows()
+        private void SetupSlab()
         {
-            for (int i = 0; i < _arrows.Length; i++)
-            {
-                var rt = _arrows[i];
-                if (rt == null) continue;
+            // Disable all legacy arrows
+            foreach (var rt in _arrows)
+                if (rt != null) rt.gameObject.SetActive(false);
 
-                if (i == 0)
-                {
-                    // Swap Image → ArrowGraphic on the single active arrow.
-                    if (!rt.TryGetComponent(out _arrowGraphic))
-                    {
-                        var img = rt.GetComponent<Image>();
-                        if (img != null) DestroyImmediate(img);
-                        _arrowGraphic = rt.gameObject.AddComponent<ArrowGraphic>();
-                    }
-                    rt.sizeDelta = new Vector2(24f, 40f);
-                    rt.gameObject.SetActive(false);
-                }
-                else
-                {
-                    // Extra arrows no longer used — disable permanently.
-                    rt.gameObject.SetActive(false);
-                }
+            // If _timingSlab not wired in Inspector, reuse _arrows[0]'s GO
+            if (_timingSlab == null && _arrows.Length > 0 && _arrows[0] != null)
+            {
+                var rt = _arrows[0];
+                var old = rt.GetComponent<ArrowGraphic>();
+                if (old != null) DestroyImmediate(old);
+                if (!rt.TryGetComponent(out _timingSlab))
+                    _timingSlab = rt.gameObject.AddComponent<TimingSlabGraphic>();
+                rt.sizeDelta        = new Vector2(400f, _coneHeightPx);
+                rt.pivot            = new Vector2(0.5f, 0f);
+                rt.anchoredPosition = Vector2.zero;
             }
+
+            if (_timingSlab != null)
+                _timingSlab.gameObject.SetActive(false);
         }
 
         private void OnEnable()
@@ -109,7 +105,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             UpdateConeWidth();
             UpdateClubHandle(state);
-            UpdateArrows(state);
+            UpdateSlab(state);
             UpdateHUD(state);
             UpdateTargetingLine(state);
             ApplyDebugFlags();
@@ -135,13 +131,10 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         // ── Club handle ───────────────────────────────────────────────────────
 
-        // Follows touch: slides from apex (power=0) toward base (power=100%) vertically,
-        // and horizontally within the cone outline at that Y.
         private void UpdateClubHandle(ShotInputState state)
         {
             if (_clubHandle == null) return;
 
-            // Y: apex (top) at power=0, base (bottom) at power=100%.
             float handleY       = _coneHeightPx * (1f - Mathf.Clamp01(state.PowerNormalized));
             float halfAngleRad  = _shotController.ConeHalfAngleDeg * Mathf.Deg2Rad;
             float halfBase      = _coneHeightPx * Mathf.Tan(halfAngleRad);
@@ -153,36 +146,36 @@ namespace Golfin.Gameplay.UI.ShotUI
                 handleY);
         }
 
-        // ── Arrows ────────────────────────────────────────────────────────────
+        // ── Timing slab ───────────────────────────────────────────────────────
 
-        private void HideArrows()
+        private void UpdateSlab(ShotInputState state)
         {
-            if (_arrows.Length > 0 && _arrows[0] != null)
-                _arrows[0].gameObject.SetActive(false);
-        }
-
-        private void UpdateArrows(ShotInputState state)
-        {
-            if (_arrows.Length == 0 || _arrows[0] == null) return;
-            var arrowRT = _arrows[0];
+            if (_timingSlab == null) return;
 
             bool show = state.State == ShotState.Timing;
-            arrowRT.gameObject.SetActive(show);
+            _timingSlab.gameObject.SetActive(show);
             if (!show) return;
 
             float p = Mathf.Clamp01(state.ArrowProgress01);
-            arrowRT.anchoredPosition = new Vector2(0f, p * _coneHeightPx);
-
-            if (_arrowGraphic != null)
-                _arrowGraphic.color = ArrowColorFromProgress(p);
+            _timingSlab.SetConeParams(_coneHeightPx, _shotController.ConeHalfAngleDeg);
+            _timingSlab.CurrentY01 = p;
+            _timingSlab.color      = SlabColorFromProgress(p);
         }
 
-        // Red (bottom) → Yellow (mid) → Green (top).
-        private static Color ArrowColorFromProgress(float p)
+        // Red (base) → amber (mid) → green (apex) using ConeBandPalette breakpoints.
+        private static Color SlabColorFromProgress(float p)
         {
-            return p < 0.5f
-                ? Color.Lerp(Color.red,    Color.yellow, p * 2f)
-                : Color.Lerp(Color.yellow, Color.green,  (p - 0.5f) * 2f);
+            if (p <= ConeBandPalette.BandGoldY01)
+            {
+                float t = Mathf.InverseLerp(ConeBandPalette.BandRedY01, ConeBandPalette.BandGoldY01, p);
+                return Color.Lerp(ConeBandPalette.ColorRed, ConeBandPalette.ColorGold, t);
+            }
+            if (p <= ConeBandPalette.BandGreenY01)
+            {
+                float t = Mathf.InverseLerp(ConeBandPalette.BandGoldY01, ConeBandPalette.BandGreenY01, p);
+                return Color.Lerp(ConeBandPalette.ColorGold, ConeBandPalette.ColorGreen, t);
+            }
+            return ConeBandPalette.ColorGreen;
         }
 
         // ── HUD ───────────────────────────────────────────────────────────────
@@ -198,15 +191,13 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             if (!showHUD) return;
 
-            int   pct  = Mathf.RoundToInt(state.PowerNormalized * 100f);
-            float yds  = _maxCarryYards * state.PowerNormalized;
+            int   pct = Mathf.RoundToInt(state.PowerNormalized * 100f);
+            float yds = _maxCarryYards * state.PowerNormalized;
             _powerHUD.text = $"{pct}%\n{yds:F0} yd";
         }
 
         // ── Targeting line ────────────────────────────────────────────────────
 
-        // Part D: placeholder thin vertical line above cone apex.
-        // Part E: replace with world→screen projection along aim heading.
         private void UpdateTargetingLine(ShotInputState state)
         {
             if (_targetingLine == null) return;
@@ -219,18 +210,17 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             if (!show || _worldCamera == null || _ballTransform == null) return;
 
-            // World-space projection (active once Part E wires camera + ball).
             Vector3 ballScreen = _worldCamera.WorldToScreenPoint(_ballTransform.position);
             if (ballScreen.z < 0f) { _targetingLine.gameObject.SetActive(false); return; }
 
-            Vector3 aimDir     = new Vector3(
+            Vector3 aimDir       = new Vector3(
                 Mathf.Cos(state.AimYawRadians), 0f, Mathf.Sin(state.AimYawRadians));
             Vector3 targetWorld  = _ballTransform.position + aimDir * ControlsConfig.Default.TargetingLineLengthMeters;
             Vector3 targetScreen = _worldCamera.WorldToScreenPoint(targetWorld);
 
-            Vector2 lineDir  = ((Vector2)targetScreen - (Vector2)ballScreen).normalized;
-            float   lineLen  = Vector2.Distance(ballScreen, targetScreen);
-            float   angle    = Mathf.Atan2(lineDir.y, lineDir.x) * Mathf.Rad2Deg - 90f;
+            Vector2 lineDir = ((Vector2)targetScreen - (Vector2)ballScreen).normalized;
+            float   lineLen = Vector2.Distance(ballScreen, targetScreen);
+            float   angle   = Mathf.Atan2(lineDir.y, lineDir.x) * Mathf.Rad2Deg - 90f;
 
             _targetingLine.anchoredPosition = (Vector2)ballScreen;
             _targetingLine.sizeDelta        = new Vector2(_targetingLine.sizeDelta.x, lineLen);
