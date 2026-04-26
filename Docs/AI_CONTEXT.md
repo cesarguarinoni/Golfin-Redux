@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-04-26
+**Last Updated:** 2026-04-27
 
 ## Current Status
 
@@ -18,7 +18,7 @@
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
 | Physics Architecture | ✅ Phases 0–6 COMPLETE; Phase 6 Stat Coupling COMPLETE; **BAKED-DATA SIM PIVOT COMPLETE (2026-04-25).** Sim reads from baked `zones.json` (polygon classifier with bit-packed OB mask + per-zone triangulated mesh for exact barycentric Y interpolation) + `heightmap.bytes` (both ship under `Assets/Resources/HoleData/Hole_XX/`). Original "ball into the void" repro eliminated by construction. M0 regression: **24/24 PASS** post-M5b airborne signed-distance level-detector fix (`Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md`). M2 height agreement: **100/100 within 5 cm (mean 0.45 cm, max 1.6 cm)**. Full M4 real-conditions suite + Phase 1–6 bit-exact gate: **229/229 PASS, 0 Skipped**. Phase E manual confirmation: **5/5 PASS**. Full narrative: `Docs/Diagnostics/baked-pivot/FULL_PIVOT_REPORT.md`. **Phase F cleanup COMPLETE (2026-04-26):** SceneGroundProvider, SceneSurfaceProvider, PhysicsMarkerRepairTool, MarkerAuditTool, 8 pre-pivot diag/agreement test files, and the stale TERRAIN_REALTEST_FIX active spec all deleted. `Physics.Runtime.SurfaceMarker` retained for the import → bake bridge. Open follow-ups: hole coverage expansion as Holes 2–18 are imported; future housekeeping — eventually consolidate `Physics.Runtime.SurfaceMarker` and `Course.SurfaceMarker` to a single enum (bake tool reads two type systems today; not blocking). |
-| Shot Controls | 🔶 Phase 7 in progress — **Parts A+B+C+D+E+F COMPLETE (2026-04-24)**. Cone UI live in ShotConeTest.unity. PhysicsLab wired for live touch shots. Putt mode + debug toggles + ball placement dropdown done. 83/83 tests pass. |
+| Shot Controls | 🔶 **Phase 7 COMPLETE (83/83 tests)**. **Phase 8 Shot UI Polish IN PROGRESS** — Part 8.1 code complete (2026-04-27): ConeMeshGraphic now renders semi-transparent grey fill + 3 band lines from ConeBandPalette; TimingSlabGraphic (new) renders trapezoidal slab; ShotConeView swapped ArrowGraphic for TimingSlabGraphic with ConeBandPalette-driven color lerp. **Awaiting Cesar visual smoke test in Play mode** (open Game View → LabScaffold → Play → pull back to see cone). Note: slab colors may render too dark vs. pastel reference — flag to Architect before Part 8.2. |
 | PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). **F-Hotfix COMPLETE (2026-04-24)**: type-aware SurfaceSnap, coroutine startup scan, camera depression lift. 12/12 regression tests pass. |
 | Shop | Not started |
 | Gameplay | Not started |
