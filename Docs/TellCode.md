@@ -17,6 +17,29 @@
 
 ---
 
+## 📅 ROADMAP — upcoming deliverables (planned 2026-04-26)
+
+> Architect-tracked roadmap for the next gameplay-loop closure. Order locked: A → B → C.
+
+**A — Shot UI polish.** Wire real Figma art + sprite assets into the existing cone hierarchy + add HUD elements (player card, hole card, wind/hole indicators, power gauge, action buttons, ball/club selectors, centerpiece ball, trail). Spec ready: `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md`. **STATUS: ready to execute, see NEXT block below.**
+
+**B — Controls finetuning.** Two sub-tasks, sequenced:
+  - **B.1** Putter velocity bug — putter shoots ~100yd instead of putt-range. Likely a stat-coupling/wiring issue (StatBundle not swapping, or `PuttBaseVelocityMps` override not respected, or power scaling math wrong for putt mode). Diagnosis-first: log what `ShotInputBuilder.Build` actually returns in putt mode.
+  - **B.2** Surface roll resistance — ball rolls forever regardless of surface. Either `surfaces.csv` rolling-resistance values are too low across the board, or there's a units/application bug. Diagnosis-first: fire test shots on each surface, log deceleration profiles, then re-tune CSV.
+  - Spec for B written after Phase 8 lands.
+
+**C — Menu → gameplay integration (superficial spec; deep dive when we get there).** Wire the existing main menu to a new Hole Picker screen, then to a runtime version of LabScaffold so pressing Play actually starts a hole. Scope:
+  1. **Hole Picker UI** — new scene/screen accessed from main menu's Play button. Lists 18 holes with thumbnails (probably greyed-out for unimported). Selects one → loads it.
+  2. **Runtime hole-load equivalent of `LabScaffold` + `PhysicsLabHolePicker`** — today's hole-load flow is editor-only via the picker EditorWindow. Need a runtime equivalent: a `GameplayScaffold` scene (lighter than LabScaffold — no debug UI/preset Fire button) that additively loads `Hole_XX_Geo.unity`, wires `ShotController`, `BallAnimator`, `ChaseCamera`, baked providers.
+  3. **Hole flow** — ball-in-cup detection (Z proximity to pin GO + speed threshold), shot counter, par tracking from hole metadata, hole-end summary panel (par/strokes/score), Next-Hole or Back-to-Menu buttons.
+  4. **Camera/UI flow** — ball-settled → next-shot transition (camera reframes, controller resets to Aiming, shot count increments).
+  - Scope deliberately stops at single-hole play — no full 18-hole round, no save state, no scoring leaderboard. Those come after C.
+  - Existing assets to leverage: `Mainmenu` prefab, `ShellScene.unity`, `LabScaffold.unity` (template for `GameplayScaffold`), `PhysicsLabHolePicker` (template for runtime hole picker logic).
+  - Deep-dive spec when A and B are settled.
+
+---
+
+
 ## ✅ DONE: ARCHITECTURAL PIVOT to baked-data sim — 2026-04-25 (merged)
 
 **Result:** Pivot merged to main. All tests pass (BakedPivot regression 24/24, Phase 1–6 physics, RealHoleTerrainTests). Cesar's "ball into void" repro eliminated by construction.
@@ -31,7 +54,29 @@
 
 **Open follow-ups (not blocking):**
 - Phase F cleanup completed 2026-04-26 (see History Log). `Physics.Runtime.SurfaceMarker` retained for the import → bake bridge.
-- Other 17 holes — see OPEN FLAGS.
+- See `## 🚩 OPEN FLAGS` section below for tracked open issues.
+
+---
+
+## ➡️ NEXT — Phase 8 Shot UI Polish (spec'd 2026-04-26)
+
+**Spec:** `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md` — read end-to-end before starting Part 8.1.
+
+**One-line summary:** Wire real Figma art into the shot UI. 8 parts (8.1–8.8), each with its own done report. Per-part 2-attempt budget. Branch: `phase-8-shot-ui`. Pre-merge tag: `pre-phase-8`. Total estimated ~10–11h of Code time.
+
+**Architecture decisions are LOCKED in the spec.** Each visible element has a bucket (procedural / sprite / TMP) assigned by the Architect. If an assignment looks wrong during impl, surface to Architect; do NOT swap silently.
+
+**Hard rules:** No `BallSimulation.cs` edits. No `Physics/Core/` edits. No third-party tween libs. Reuse `Golfin.Gameplay.UI` asmdef. Per-part commits with `phase-8.{N}: {summary}`.
+
+**Order:** 8.1 cone restyle → 8.2 power gauge → 8.3 player+hole card+settings → 8.4 wind+hole indicators → 8.5 action button row → 8.6 ball+club selectors → 8.7 centerpiece ball+trail → 8.8 polish/tests/smoke.
+
+**Stop after each part. Wait for Architect ack before next.**
+
+---
+
+## ✅ DONE — Housekeeping: BallSimulation A3 plumbing cleanup (2026-04-27)
+
+Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their two consumer blocks in `RunRollPhase` and `RunPuttPhase` (-21 lines). `DiagErrorLogger` and both `CheckTerrainInvariant` calls retained. 198/198 PASS. Commit: `238a8f67`.
 
 ---
 
@@ -934,12 +979,9 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
 
 > Architect-tracked open issues. Don't action without an explicit task block; just be aware they exist.
 
-- **[2026-04-25] Holes 2–18 coverage gap.** Only Hole_01 has been fully exercised in post-pivot real-conditions tests. `AllImportedHoles_Smoke` covers tee shots only. As more holes get imported and played, expect to discover hole-specific zone-authoring or terrain edge cases. Not a known bug — a known coverage gap.
-- **[2026-04-26] Stale comment in `BallSimulation.cs:26` (`// SceneGroundProvider…`).** SceneGroundProvider was deleted in Phase F. Hard rule 8 forbade touching `BallSimulation` during Phase F so the comment was left as-is. Trivial cleanup; not load-bearing.
-- **[2026-04-26] `BallSimulation.DiagPerStepSink` field is now unwired.** `PhysicsLabController.WireA3DiagSinks` was removed in F.3.5. The field still exists in BallSimulation (untouched per hard rule 8) and is dead code; harmless. Future cleanup: delete the field along with the stale comment when sim-core is next opened.
+- **[2026-04-26] Stale comment in `BallSimulation.cs:26` (`// SceneGroundProvider…`).** SceneGroundProvider was deleted in Phase F. Hard rule 8 forbade touching `BallSimulation` during Phase F so the comment was left as-is. Trivial cleanup; not load-bearing. Closing via `HOUSEKEEPING_BALLSIM` spec.
+- **[2026-04-26] `BallSimulation.DiagPerStepSink` field is now unwired.** `PhysicsLabController.WireA3DiagSinks` was removed in F.3.5. The field still exists in BallSimulation (untouched per hard rule 8) and is dead code; harmless. Closing via `HOUSEKEEPING_BALLSIM` spec.
 - **[2026-04-26] Future housekeeping: consolidate `Physics.Runtime.SurfaceMarker` and `Course.SurfaceMarker` into one enum.** Bake tool currently reads two type systems (one for authoring in scene, one for the bake-side enum), bridged by `SurfaceMarkerMap`. Workable; a single-enum refactor would simplify the importers. Not blocking.
-- **[2026-04-22] Heightmap doesn't include zone-mesh tops (greens/tees).** `HeightmapData.SampleHeight` returns the depressed terrain Y; greens sit ~11cm above that (`+0.03 + GreenRaiseMeters 0.08`). Ball lands/rolls at heightmap Y, not visible mesh Y. Putts will look ~11cm sunk into the green. Surface *classification* is correct (raycast hits the mesh); the *Y* is wrong. Fix is a Phase 0.1 baker addendum — do NOT touch the runtime sim's height path. See `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
-- **[2026-04-22] Bunker lip submesh classification deferred.** `SceneSurfaceProvider` is submesh-blind; whole bunker mesh classifies as `Sand` regardless of `BunkerLip` submesh. Polish item, not blocking. Don't proactively fix.
 - **[2026-04-22] Don't implement Code's "trees layer" proposal.** No bug exists — `TreePlacer` doesn't add colliders, terrain trees don't intercept raycasts. Audit confirmed in lessons file.
 
 Full reasoning: `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
