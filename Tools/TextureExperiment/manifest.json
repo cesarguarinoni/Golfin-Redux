@@ -1,0 +1,84 @@
+{
+  "_comment": "Source map for prepare-textures.mjs. Each source is downloaded once. Each output references a source by id.",
+  "sources": {
+    "grass001": {
+      "url": "https://ambientcg.com/get?file=Grass001_2K-JPG.zip",
+      "type": "ambientcg-zip",
+      "albedoFile": "Grass001_2K-JPG_Color.jpg",
+      "normalFile": "Grass001_2K-JPG_NormalGL.jpg",
+      "license": "CC0",
+      "attribution": "ambientCG.com - Grass001"
+    },
+    "grass002": {
+      "url": "https://ambientcg.com/get?file=Grass002_2K-JPG.zip",
+      "type": "ambientcg-zip",
+      "albedoFile": "Grass002_2K-JPG_Color.jpg",
+      "normalFile": "Grass002_2K-JPG_NormalGL.jpg",
+      "license": "CC0",
+      "attribution": "ambientCG.com - Grass002"
+    },
+    "grass003": {
+      "url": "https://ambientcg.com/get?file=Grass003_2K-JPG.zip",
+      "type": "ambientcg-zip",
+      "albedoFile": "Grass003_2K-JPG_Color.jpg",
+      "normalFile": "Grass003_2K-JPG_NormalGL.jpg",
+      "license": "CC0",
+      "attribution": "ambientCG.com - Grass003"
+    },
+    "grass004": {
+      "url": "https://ambientcg.com/get?file=Grass004_2K-JPG.zip",
+      "type": "ambientcg-zip",
+      "albedoFile": "Grass004_2K-JPG_Color.jpg",
+      "normalFile": "Grass004_2K-JPG_NormalGL.jpg",
+      "license": "CC0",
+      "attribution": "ambientCG.com - Grass004"
+    },
+    "ground054": {
+      "url": "https://ambientcg.com/get?file=Ground054_2K-JPG.zip",
+      "type": "ambientcg-zip",
+      "albedoFile": "Ground054_2K-JPG_Color.jpg",
+      "normalFile": "Ground054_2K-JPG_NormalGL.jpg",
+      "license": "CC0",
+      "attribution": "ambientCG.com - Ground054 (bunker sand)"
+    },
+    "asphalt012": {
+      "url": "https://ambientcg.com/get?file=Asphalt012_2K-JPG.zip",
+      "type": "ambientcg-zip",
+      "albedoFile": "Asphalt012_2K-JPG_Color.jpg",
+      "normalFile": "Asphalt012_2K-JPG_NormalGL.jpg",
+      "license": "CC0",
+      "attribution": "ambientCG.com - Asphalt012"
+    },
+    "polyhaven_aerial_grass_rock": {
+      "type": "polyhaven-direct",
+      "albedoUrl": "https://dl.polyhaven.com/file/ph-assets/Textures/jpg/2k/aerial_grass_rock/aerial_grass_rock_diff_2k.jpg",
+      "normalUrl": "https://dl.polyhaven.com/file/ph-assets/Textures/jpg/2k/aerial_grass_rock/aerial_grass_rock_nor_gl_2k.jpg",
+      "license": "CC0",
+      "attribution": "Poly Haven - aerial_grass_rock"
+    },
+    "polyhaven_sparse_grass": {
+      "type": "polyhaven-direct",
+      "albedoUrl": "https://dl.polyhaven.com/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg",
+      "normalUrl": "https://dl.polyhaven.com/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_nor_gl_2k.jpg",
+      "license": "CC0",
+      "attribution": "Poly Haven - sparse_grass"
+    }
+  },
+  "_outputComment": "Each output specifies: source id, output albedo + (optional) normal filename, target resolution, optional brightness multiplier (1.0 = unchanged, >1 brighter, <1 darker)",
+  "outputs": [
+    { "source": "grass001", "albedo": "T_Green_Albedo.jpg",         "normal": "T_Green_Normal.jpg",        "size": 1024 },
+    { "source": "grass002", "albedo": "T_Fairway_Mix.jpg",          "normal": "T_Fairway_Normal.jpg",      "size": 1024 },
+    { "source": "grass002", "albedo": "T_Fairway_Light.jpg",        "size": 1024, "brightness": 1.08 },
+    { "source": "grass002", "albedo": "T_Fairway_Dark.jpg",         "size": 1024, "brightness": 0.92 },
+    { "source": "grass003", "albedo": "T_Fringe_Albedo.jpg",        "normal": "T_Fringe_Normal.jpg",       "size": 1024 },
+    { "source": "grass004", "albedo": "T_Semirough_Albedo.jpg",     "normal": "T_Semirough_Normal.jpg",    "size": 1024 },
+    { "source": "polyhaven_aerial_grass_rock", "albedo": "T_Rough_Albedo.jpg", "normal": "T_Rough_Normal.jpg", "size": 1024 },
+    { "source": "ground054", "albedo": "T_Bunker_Albedo.jpg",       "normal": "T_Bunker_Normal.jpg",       "size": 1024 },
+    { "source": "ground054", "albedo": "T_BunkerDark_Albedo.jpg",   "size": 1024, "brightness": 0.85 },
+    { "source": "grass002", "albedo": "T_Tee_Albedo.jpg",           "normal": "T_Tee_Normal.jpg",          "size": 1024 },
+    { "source": "grass002", "albedo": "T_TeeDark_Albedo.jpg",       "normal": "T_TeeDark_Normal.jpg",      "size": 1024, "brightness": 0.90 },
+    { "source": "grass002", "albedo": "T_TeeDark_Albedo_NoBorder.jpg", "normal": "T_TeeDark_Albedo_NoBorder_Normal.jpg", "size": 1024, "brightness": 0.90 },
+    { "source": "polyhaven_sparse_grass", "albedo": "T_OOB_Albedo.jpg", "normal": "T_OOB_Normal.jpg", "size": 512 },
+    { "source": "asphalt012", "albedo": "T_RoadAsphalt_Albedo.jpg", "normal": "T_RoadAsphalt_Normal.jpg",  "size": 512 }
+  ]
+}
