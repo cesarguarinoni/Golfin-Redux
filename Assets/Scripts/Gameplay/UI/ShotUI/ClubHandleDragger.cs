@@ -11,9 +11,11 @@ namespace Golfin.Gameplay.UI.ShotUI
     public class ClubHandleDragger : MonoBehaviour,
         IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
-        [SerializeField] private ShotController _shotController;
-        [SerializeField] private RectTransform  _coneRect;
-        [SerializeField] private float          _coneHeightPx = 600f;
+        [SerializeField] private ShotController  _shotController;
+        [SerializeField] private RectTransform   _coneRect;
+        [SerializeField] private ConeMeshGraphic _coneGraphic;
+
+        private float ConeHeightPx => _coneGraphic != null ? _coneGraphic.HeightPx : 1009f;
 
         [Header("Flick Settings")]
         [Tooltip("Minimum upward screen-pixel delta per frame to count as a flick. Lower = more forgiving.")]
@@ -24,8 +26,6 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private bool _releaseToFire = false;
 
         public bool ReleaseToFire { get => _releaseToFire; set => _releaseToFire = value; }
-
-        public void SetConeHeight(float px) => _coneHeightPx = px;
 
         private bool  _dragging;
         private float _peakPower;
@@ -74,15 +74,15 @@ namespace Golfin.Gameplay.UI.ShotUI
                 _coneRect, e.position, uiCam, out var local);
 
             // Y=0 = cone base (max power), Y=coneHeightPx = apex (zero power).
-            float handleY = Mathf.Clamp(local.y, 0f, _coneHeightPx);
+            float handleY = Mathf.Clamp(local.y, 0f, ConeHeightPx);
 
             float halfAngleRad  = _shotController.ConeHalfAngleDeg * Mathf.Deg2Rad;
-            float halfBase      = _coneHeightPx * Mathf.Tan(halfAngleRad);
-            float widthFraction = 1f - handleY / _coneHeightPx;
+            float halfBase      = ConeHeightPx * Mathf.Tan(halfAngleRad);
+            float widthFraction = 1f - handleY / ConeHeightPx;
             float maxX          = halfBase * widthFraction;
             float handleX       = Mathf.Clamp(local.x, -maxX, maxX);
 
-            float power    = 1f - handleY / _coneHeightPx;
+            float power    = 1f - handleY / ConeHeightPx;
             float finetune = maxX > 0.1f ? handleX / maxX : 0f;
 
             if (power > _peakPower)

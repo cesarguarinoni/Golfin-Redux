@@ -24,6 +24,8 @@ namespace Golfin.Gameplay.UI.ShotUI
         [Header("Club handle")]
         [SerializeField] private RectTransform   _clubHandle;
         [SerializeField] private float           _handleYPx      = 80f;
+        [SerializeField] private float           _handleWidth    = 178f;
+        [SerializeField] private float           _handleHeight   = 100f;
         [SerializeField] private float           _minHandleScale = 1f;
         [SerializeField] private float           _maxHandleScale = 1.3f;
 
@@ -63,7 +65,8 @@ namespace Golfin.Gameplay.UI.ShotUI
         private void Awake()
         {
             if (_coneGraphic != null) _coneGraphic.HeightPx = _coneHeightPx;
-            _clubHandle?.GetComponent<ClubHandleDragger>()?.SetConeHeight(_coneHeightPx);
+            if (_clubHandle != null)
+                _clubHandle.sizeDelta = new Vector2(_handleWidth, _handleHeight);
             SetupSlab();
         }
 
