@@ -3,16 +3,20 @@ using UnityEngine.UI;
 
 namespace Golfin.Gameplay.UI.ShotUI
 {
-    // Filled isoceles-triangle cone with a semi-transparent grey fill and three
-    // horizontal colored band lines (red at base, gold mid, green near apex).
-    // Band Y positions and colors are read from ConeBandPalette but can be
-    // overridden per-instance via the Inspector for future timing redesigns.
+    // Filled isoceles-triangle cone with semi-transparent gradient fill and three
+    // curved horizontal band lines (red at base, gold mid, green near apex).
+    // Fill is subdivided into _strips vertical quads so:
+    //   - edges are smooth (no staircase artefact)
+    //   - alpha fades from full at center-line to transparent at outer edges
+    //   - base and band lines arc upward at the center (_curvaturePx)
     // Pivot must be (0.5, 0) — apex points up, base at y=0 in local space.
     [RequireComponent(typeof(CanvasRenderer))]
     public class ConeMeshGraphic : MaskableGraphic
     {
-        [SerializeField] private float _halfAngleDeg = 12.5f;
-        [SerializeField] private float _heightPx     = 600f;
+        [SerializeField] private float _halfAngleDeg  = 12.5f;
+        [SerializeField] private float _heightPx      = 600f;
+        [SerializeField] private int   _strips        = 64;
+        [SerializeField] private float _curvaturePx   = 15f;
 
         [Header("Fill")]
         [SerializeField] private Color _fillColor = new Color(200f / 255f, 200f / 255f, 200f / 255f, 90f / 255f);
@@ -24,7 +28,6 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private Color _bandRedColor     = new Color(0x8B / 255f, 0x2A / 255f, 0x2A / 255f);
         [SerializeField] private Color _bandGoldColor    = new Color(0xA7 / 255f, 0x7C / 255f, 0x2A / 255f);
         [SerializeField] private Color _bandGreenColor   = new Color(0x58 / 255f, 0x69 / 255f, 0x44 / 255f);
-        // Band half-height always reads from ConeBandPalette — not a per-instance override.
 
         public float HalfAngleDeg
         {
@@ -44,36 +47,74 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             vh.Clear();
 
-            float   hb   = HalfBasePx;
-            Color32 fill = _fillColor;
+            float hb = HalfBasePx;
+            int   N  = Mathf.Max(8, _strips);
 
-            // Filled cone triangle
-            AddVert(vh, new Vector2(0f,  _heightPx), fill);
-            AddVert(vh, new Vector2(-hb, 0f),        fill);
-            AddVert(vh, new Vector2( hb, 0f),        fill);
-            vh.AddTriangle(0, 1, 2);
+            // Cone fill: N vertical trapezoid strips.
+            //   - gradient alpha: 0 at x=±hb, full at x=0
+            //   - curved base: arcs up by _curvaturePx at center
+            for (int i = 0; i < N; i++)
+            {
+                float xL = Mathf.Lerp(-hb, hb, (float)i       / N);
+                float xR = Mathf.Lerp(-hb, hb, (float)(i + 1) / N);
 
-            // Three horizontal band lines
-            AddBandLine(vh, _bandRedY01,   (Color32)_bandRedColor);
-            AddBandLine(vh, _bandGoldY01,  (Color32)_bandGoldColor);
-            AddBandLine(vh, _bandGreenY01, (Color32)_bandGreenColor);
+                float nL = xL / hb;                          // −1 … +1
+                float nR = xR / hb;
+
+                float yTopL = _heightPx * (1f - Mathf.Abs(nL));  // cone silhouette at xL
+                float yTopR = _heightPx * (1f - Mathf.Abs(nR));
+
+                float yBotL = _curvaturePx * (1f - nL * nL);     // curved base
+                float yBotR = _curvaturePx * (1f - nR * nR);
+
+                if (yBotL >= yTopL && yBotR >= yTopR) continue;
+
+                float aL = 1f - Mathf.Abs(nL);
+                float aR = 1f - Mathf.Abs(nR);
+
+                int idx = vh.currentVertCount;
+                AddVert(vh, new Vector2(xL, yBotL), WithAlpha(_fillColor, _fillColor.a * aL));
+                AddVert(vh, new Vector2(xR, yBotR), WithAlpha(_fillColor, _fillColor.a * aR));
+                AddVert(vh, new Vector2(xR, yTopR), WithAlpha(_fillColor, _fillColor.a * aR));
+                AddVert(vh, new Vector2(xL, yTopL), WithAlpha(_fillColor, _fillColor.a * aL));
+                vh.AddTriangle(idx, idx + 1, idx + 2);
+                vh.AddTriangle(idx, idx + 2, idx + 3);
+            }
+
+            // Three curved band lines (same arc as the base)
+            AddBandLine(vh, _bandRedY01,   (Color32)_bandRedColor,   N / 2);
+            AddBandLine(vh, _bandGoldY01,  (Color32)_bandGoldColor,  N / 2);
+            AddBandLine(vh, _bandGreenY01, (Color32)_bandGreenColor, N / 2);
         }
 
-        private void AddBandLine(VertexHelper vh, float y01, Color32 c)
+        private void AddBandLine(VertexHelper vh, float y01, Color32 c, int N)
         {
             float yCenter = y01 * _heightPx;
             float hw      = HalfBasePx * Mathf.Max(0f, 1f - y01);
-            float top     = yCenter + ConeBandPalette.BandHalfHeightPx;
-            float bottom  = yCenter - ConeBandPalette.BandHalfHeightPx;
+            float halfH   = ConeBandPalette.BandHalfHeightPx;
 
-            int idx = vh.currentVertCount;
-            AddVert(vh, new Vector2(-hw, bottom), c);
-            AddVert(vh, new Vector2( hw, bottom), c);
-            AddVert(vh, new Vector2( hw, top),    c);
-            AddVert(vh, new Vector2(-hw, top),    c);
-            vh.AddTriangle(idx,     idx + 1, idx + 2);
-            vh.AddTriangle(idx,     idx + 2, idx + 3);
+            for (int i = 0; i < N; i++)
+            {
+                float xL = Mathf.Lerp(-hw, hw, (float)i       / N);
+                float xR = Mathf.Lerp(-hw, hw, (float)(i + 1) / N);
+
+                float nL     = hw > 0f ? xL / hw : 0f;
+                float nR     = hw > 0f ? xR / hw : 0f;
+                float curveL = _curvaturePx * (1f - nL * nL);   // same arc as base
+                float curveR = _curvaturePx * (1f - nR * nR);
+
+                int idx = vh.currentVertCount;
+                AddVert(vh, new Vector2(xL, yCenter - halfH + curveL), c);
+                AddVert(vh, new Vector2(xR, yCenter - halfH + curveR), c);
+                AddVert(vh, new Vector2(xR, yCenter + halfH + curveR), c);
+                AddVert(vh, new Vector2(xL, yCenter + halfH + curveL), c);
+                vh.AddTriangle(idx, idx + 1, idx + 2);
+                vh.AddTriangle(idx, idx + 2, idx + 3);
+            }
         }
+
+        private static Color32 WithAlpha(Color c, float a) =>
+            new Color(c.r, c.g, c.b, Mathf.Clamp01(a));
 
         private static void AddVert(VertexHelper vh, Vector2 pos, Color32 c)
         {
