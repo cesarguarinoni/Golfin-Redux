@@ -1,19 +1,15 @@
-# TellCode.md — Instructions from Claude (Architect) to Claude Code
+# [TellCode.md](http://TellCode.md) — Instructions from Claude (Architect) to Claude Code
 
-> Claude Code: Read this file at the start of each task. Execute the latest instruction block.
-> After completing, add a status line at the bottom of your task section: `✅ DONE: [date] [brief summary]`
-> Claude (Architect) will update this file with new instructions as needed.
-> Handoff: `Docs/TellCode.md`
+> Claude Code: Read this file at the start of each task. Execute the latest instruction block. After completing, add a status line at the bottom of your task section: `✅ DONE: [date] [brief summary]`Claude (Architect) will update this file with new instructions as needed. Handoff: `Docs/TellCode.md`
+> ****Note (2026-04-25):** `Docs/` was reorganized. Historical entries below may reference old paths:
 >
-> **Note (2026-04-25):** `Docs/` was reorganized. Historical entries below may reference old paths:
 > - `Docs/DIAG/...` → now `Docs/Diagnostics/...`
 > - `Docs/BACKUPS/...` → now `Docs/Backups/...`
 > - `Docs/PHYSICS_RESEARCH.md`, `PHYSICS_TUNING_TARGETS.md`, `LESSONS_PHYSICS_*.md` → now under `Docs/Physics/`
 > - `Docs/INVENTORY_REFERENCE.md`, `UI_HIERARCHY.md`, `PATTERNS.md`, `ARCHITECTURE_AUDIT.md` → now under `Docs/Architecture/`
 > - `Docs/LESSONS_FRINGE_BORDER_MESHES.md`, `BUNKER_*`, `TEE_SKIRT_*`, `ADD_HOLE.md` → now under `Docs/Pipeline/`
 > - `Docs/SURFACE_MARKER_FIX_REPORT.md`, `PHASE6_STAT_COUPLING_REPORT.md`, `SPEC_PHASE6_STAT_COUPLING.md` → now under `Docs/Physics/`
-> - `Docs/generate_audit.*`, `compress_screenshots.*`, `daily_report.py`, etc. → now under `Docs/Scripts/`
-> See `Docs/README.md` for the full index map.
+> - `Docs/generate_audit.*`, `compress_screenshots.*`, `daily_report.py`, etc. → now under `Docs/Scripts/`See `Docs/README.md` for the full index map.
 
 ---
 
@@ -24,35 +20,39 @@
 **A — Shot UI polish.** Wire real Figma art + sprite assets into the existing cone hierarchy + add HUD elements (player card, hole card, wind/hole indicators, power gauge, action buttons, ball/club selectors, centerpiece ball, trail). Spec ready: `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md`. **STATUS: ready to execute, see NEXT block below.**
 
 **B — Controls finetuning.** Two sub-tasks, sequenced:
-  - **B.1** Putter velocity bug — putter shoots ~100yd instead of putt-range. Likely a stat-coupling/wiring issue (StatBundle not swapping, or `PuttBaseVelocityMps` override not respected, or power scaling math wrong for putt mode). Diagnosis-first: log what `ShotInputBuilder.Build` actually returns in putt mode.
-  - **B.2** Surface roll resistance — ball rolls forever regardless of surface. Either `surfaces.csv` rolling-resistance values are too low across the board, or there's a units/application bug. Diagnosis-first: fire test shots on each surface, log deceleration profiles, then re-tune CSV.
-  - Spec for B written after Phase 8 lands.
+
+- **B.1** Putter velocity bug — putter shoots \~100yd instead of putt-range. Likely a stat-coupling/wiring issue (StatBundle not swapping, or `PuttBaseVelocityMps` override not respected, or power scaling math wrong for putt mode). Diagnosis-first: log what `ShotInputBuilder.Build` actually returns in putt mode.
+- **B.2** Surface roll resistance — ball rolls forever regardless of surface. Either `surfaces.csv` rolling-resistance values are too low across the board, or there's a units/application bug. Diagnosis-first: fire test shots on each surface, log deceleration profiles, then re-tune CSV.
+- Spec for B written after Phase 8 lands.
 
 **C — Menu → gameplay integration (superficial spec; deep dive when we get there).** Wire the existing main menu to a new Hole Picker screen, then to a runtime version of LabScaffold so pressing Play actually starts a hole. Scope:
-  1. **Hole Picker UI** — new scene/screen accessed from main menu's Play button. Lists 18 holes with thumbnails (probably greyed-out for unimported). Selects one → loads it.
-  2. **Runtime hole-load equivalent of `LabScaffold` + `PhysicsLabHolePicker`** — today's hole-load flow is editor-only via the picker EditorWindow. Need a runtime equivalent: a `GameplayScaffold` scene (lighter than LabScaffold — no debug UI/preset Fire button) that additively loads `Hole_XX_Geo.unity`, wires `ShotController`, `BallAnimator`, `ChaseCamera`, baked providers.
-  3. **Hole flow** — ball-in-cup detection (Z proximity to pin GO + speed threshold), shot counter, par tracking from hole metadata, hole-end summary panel (par/strokes/score), Next-Hole or Back-to-Menu buttons.
-  4. **Camera/UI flow** — ball-settled → next-shot transition (camera reframes, controller resets to Aiming, shot count increments).
-  - Scope deliberately stops at single-hole play — no full 18-hole round, no save state, no scoring leaderboard. Those come after C.
-  - Existing assets to leverage: `Mainmenu` prefab, `ShellScene.unity`, `LabScaffold.unity` (template for `GameplayScaffold`), `PhysicsLabHolePicker` (template for runtime hole picker logic).
-  - Deep-dive spec when A and B are settled.
+
+1. **Hole Picker UI** — new scene/screen accessed from main menu's Play button. Lists 18 holes with thumbnails (probably greyed-out for unimported). Selects one → loads it.
+2. **Runtime hole-load equivalent of** `LabScaffold` **+** `PhysicsLabHolePicker` — today's hole-load flow is editor-only via the picker EditorWindow. Need a runtime equivalent: a `GameplayScaffold` scene (lighter than LabScaffold — no debug UI/preset Fire button) that additively loads `Hole_XX_Geo.unity`, wires `ShotController`, `BallAnimator`, `ChaseCamera`, baked providers.
+3. **Hole flow** — ball-in-cup detection (Z proximity to pin GO + speed threshold), shot counter, par tracking from hole metadata, hole-end summary panel (par/strokes/score), Next-Hole or Back-to-Menu buttons.
+4. **Camera/UI flow** — ball-settled → next-shot transition (camera reframes, controller resets to Aiming, shot count increments).
+
+- Scope deliberately stops at single-hole play — no full 18-hole round, no save state, no scoring leaderboard. Those come after C.
+- Existing assets to leverage: `Mainmenu` prefab, `ShellScene.unity`, `LabScaffold.unity` (template for `GameplayScaffold`), `PhysicsLabHolePicker` (template for runtime hole picker logic).
+- Deep-dive spec when A and B are settled.
 
 ---
-
 
 ## ✅ DONE: ARCHITECTURAL PIVOT to baked-data sim — 2026-04-25 (merged)
 
 **Result:** Pivot merged to main. All tests pass (BakedPivot regression 24/24, Phase 1–6 physics, RealHoleTerrainTests). Cesar's "ball into void" repro eliminated by construction.
 
-**Path taken:** M0→M1→M2→M3.5 on `sim-baked-data-path` branch. Phase E ran 3/5 PASS → M5a diagnosed (Hypothesis A confirmed for Shot 2: same airborne edge-detector bug as Shot 4, just at a different geometric apex) → M5b applied the queued signed-distance level-detector fix (~5 lines in `SimulateAirborne`) → Phase 1–6 bit-exact gate passed → BakedPivot 24/24 with `[Ignore]` markers removed → Phase E re-ran clean → merged.
+**Path taken:** M0→M1→M2→M3.5 on `sim-baked-data-path` branch. Phase E ran 3/5 PASS → M5a diagnosed (Hypothesis A confirmed for Shot 2: same airborne edge-detector bug as Shot 4, just at a different geometric apex) → M5b applied the queued signed-distance level-detector fix (\~5 lines in `SimulateAirborne`) → Phase 1–6 bit-exact gate passed → BakedPivot 24/24 with `[Ignore]` markers removed → Phase E re-ran clean → merged.
 
 **Architecture state:** Sim reads `Assets/Resources/HoleData/Hole_XX/zones.json` + `heightmap.bytes`. Scene providers (`SceneGroundProvider`, `SceneSurfaceProvider`) demoted to editor-only placement helpers. `Course.SurfaceMarker` MonoBehaviours retained as authoring source for `BakeZoneJsonTool`. `Physics.Runtime.SurfaceMarker` no longer load-bearing for sim; deletion is a future Phase F.
 
 **Specs archived:**
+
 - `Docs/Specs/Active/SIM_BAKED_DATA_PATH.md` → `Docs/Specs/Completed/SIM_BAKED_DATA_PATH.md` (Code: move on next task)
 - `Docs/Specs/Queued/AIRBORNE_GROUND_LEVEL_DETECTION.md` → `Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md` (applied as M5b; Code: move on next task)
 
 **Open follow-ups (not blocking):**
+
 - Phase F cleanup completed 2026-04-26 (see History Log). `Physics.Runtime.SurfaceMarker` retained for the import → bake bridge.
 - See `## 🚩 OPEN FLAGS` section below for tracked open issues.
 
@@ -62,7 +62,7 @@
 
 **Spec:** `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md` — read end-to-end before starting Part 8.1.
 
-**One-line summary:** Wire real Figma art into the shot UI. 8 parts (8.1–8.8), each with its own done report. Per-part 2-attempt budget. Branch: `phase-8-shot-ui`. Pre-merge tag: `pre-phase-8`. Total estimated ~10–11h of Code time.
+**One-line summary:** Wire real Figma art into the shot UI. 8 parts (8.1–8.8), each with its own done report. Per-part 2-attempt budget. Branch: `phase-8-shot-ui`. Pre-merge tag: `pre-phase-8`. Total estimated \~10–11h of Code time.
 
 **Architecture decisions are LOCKED in the spec.** Each visible element has a bucket (procedural / sprite / TMP) assigned by the Architect. If an assignment looks wrong during impl, surface to Architect; do NOT swap silently.
 
@@ -77,18 +77,35 @@
 ## ✅ DONE — Phase 8.1: Cone restyle (2026-04-27)
 
 **Files created/modified:**
+
 - `ConeBandPalette.cs` (new) — shared constants: band Y positions, `BandHalfHeightPx=2f`, fill color, band-line colors (dark), slab colors (pastel/translucent: salmon, cream, mint)
 - `ConeMeshGraphic.cs` (rewritten) — filled grey triangle + 3 horizontal band-line quads; reads `ConeBandPalette` for all palette values; no serialized `_bandHalfHeightPx` (uses palette constant directly)
 - `TimingSlabGraphic.cs` (new) — trapezoidal slab travelling up the cone; width narrows toward apex; `_slabHalfHeightPx=30f` (60px total ≈ 10% of 600px cone); `SetConeParams()` + `CurrentY01` property
 - `ShotConeView.cs` (rewritten) — `SetupSlab()` replaces `SetupArrows()`; `UpdateSlab()` drives slab position/color; `SlabColorFromProgress()` lerps `SlabColorRed→SlabColorGold→SlabColorGreen` using palette breakpoints
 
 **Verified visually (autonomous screenshot):**
+
 - Grey semi-transparent cone fill ✅
-- 4px band lines at 0%, 45%, 85% (dark maroon/amber/olive) ✅  
+- 4px band lines at 0%, 45%, 85% (dark maroon/amber/olive) ✅
 - Salmon trapezoidal slab at Y01=0.3 correct shape + color ✅
 - Compared against `Docs/Reference/In-game UI/Timing Arrows.png` ✅
 
 **Awaiting Architect ack before Part 8.2.**
+
+---
+
+## ✅ DONE — Phase 8.2: Power gauge widget (2026-04-27)
+
+**Files created/modified:**
+
+- `PowerGaugeGraphic.cs` (new) — `MaskableGraphic` subclass; procedural arc ring (outer=100px, inner=80px, ring=20px on 200×200 widget); vertex-colored triangle fan; gradient baked into vertex colors: green(0°)→yellow(180°)→red(360°)→maroon(overpower); `Progress01` property drives `SetVerticesDirty()`
+- `PowerGaugeWidget.cs` (new) — coordinator MonoBehaviour; subscribes `ShotController.OnStateChanged`; `CanvasGroup.alpha` for show/hide (preserves event subscription); drives `Progress01`, `{pct}%` text (Rubik Medium 50), `{yards} yd` text (Rubik Medium 23)
+- `ShotConeTest.unity` (modified) — `PowerGaugeWidget` GO added under `ShotCanvas`; RT 200×200, anchor top-right, pos −180/−460; `Background` child with `Indicator - Power.png` sprite; `GaugeArc` child with `PowerGaugeGraphic`; `PctText` + `YardsText` TMP children; `ShotController` reference wired
+- `Assets/Art/In-Game UI/` (11 assets) — fixed `TextureType` from `Default` → `Sprite` for all in-game UI PNGs (needed by Parts 8.3–8.7 too)
+
+**Visually confirmed by Cesar:** gauge renders at 50% in ShotConeTest Play mode — green→yellow arc, navy background circle, "50%" + "125.0 yd" text correct.
+
+**Awaiting Architect ack before Part 8.3.**
 
 ---
 
@@ -105,6 +122,7 @@ Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their 
 **One-line summary:** Tactical fix has whack-a-moled three distinct bugs in two days without solving Cesar's actual reproduction ("ball instantly falls through green/bunker into void below"). Pivoting to architectural fix: sim reads from baked JSON polygons + heightmap.bytes; Unity scene becomes purely visual. Eliminates the entire bug class (marker authoring, raycast non-determinism, scene-coupling fragility) by construction.
 
 **Cesar's hard constraints (spec'd in detail in the active doc):**
+
 1. **Branch first** — `git checkout -b sim-baked-data-path`. Tag pre-pivot: `git tag pre-baked-pivot`. All work on the branch; main untouched until final merge.
 2. **Code-driven validation** — Cesar does NOT manually test until Phase E (final gate). Every milestone is automated.
 3. **Maximum autonomy** — Code proceeds M0→M1→M2→M3→M4 without human approval if each milestone passes. Architect picks up state via `MILESTONE_N_DONE.md` files written to `Docs/DIAG/baked-pivot/`.
@@ -113,6 +131,7 @@ Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their 
 **The canonical regression test is mandatory.** M0 builds `RegressionTest_DriverFromBunker_DoesNotFallThrough` (8 directions). It must FAIL on current architecture (proves repro) and PASS on baked architecture (proves fix). If M0 cannot make it fail, surface to Architect.
 
 **Hard rules:**
+
 - M0 is read-only diagnostics + the regression test. NO architectural code yet.
 - Branch from clean `main`. If main is dirty, STOP and surface.
 - Do NOT modify BallSimulation's physics math (RK4, surface coeffs, putt classification). Only providers change.
@@ -134,6 +153,7 @@ Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their 
 **Architectural context:** Tactical fix in this spec. Architectural pivot pre-staged at `Docs/Specs/Queued/SIM_BAKED_DATA_PATH.md` with 5 activation triggers and Day 1 readiness checklist. Likely activates after Phase A.
 
 **Hard rules (full list in spec):**
+
 - Phase 0 restore point mandatory.
 - Phase A is diagnostics ONLY (A1+A2+A3+A4) — NO production code changes, NO speculative fixes, NO migration re-runs, NO importer edits, NO marker cleanup. STOP and wait for Architect.
 - A4 (load-determinism, 3 cold-load cycles) is the deciding test for tactical-vs-architectural.
@@ -162,6 +182,7 @@ Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their 
 **Hard rules:** No Roslyn `script-execute` for AddComponent calls (that's what made the zombies). No changes to SceneGroundProvider/SceneSurfaceProvider/BallSimulation. Per-attempt commits. If B1 fails after 3 attempts, STOP and surface to Architect (architectural pivot evaluation).
 
 ✅ DONE: 2026-04-25 — Phase B complete. All 18/18 holes PASS (0 broken components, all valid markers).
+
 - B1 commits: `7bd58375` (attempt 1 — GameObjectUtility, returned 0), `b1b` (SerializedObject, blocked), `6394e674` (B1c — YAML pass 1, only removed fileID 1992067906), `6c5aeee7` (B1d — generalized to all no-guid m_Script refs; 110 zombie types removed per hole).
 - B2 commits: HoleGeoImporter + HoleLiteImporter `CreateFlatContourMesh` now adds Physics marker at import time.
 - B3: `SyncPhysicsSurfaceMarkers.cs` deleted; backward-compat menu alias kept in PhysicsMarkerRepairTool.
@@ -175,6 +196,7 @@ Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their 
 **Spec section:** `Docs/Specs/Active/TERRAIN_REALTEST_FIX.md` → "Phase B' — High-velocity LAUNCH from depressed surface". Read it end-to-end before starting.
 
 **B'1 (this round):** Write `HighVelocityLaunchDiagTests.cs`. 6 PlayMode shots in real Hole_01 with `BallSimulation.DiagPerStepEnabled = true`. ALL shots start AT the depressed surface (bunker or green centroid):
+
 - Shot 1: driver from Bunker_1 aimed straight out (always-fail case)
 - Shot 2: driver from Bunker_1 aimed toward edge
 - Shot 3: driver from Green_1 aimed toward edge
@@ -187,6 +209,7 @@ Focus on FIRST 30 sim frames (launch moment, NOT landing). Per-step CSVs + summa
 **B'2 (next round, after Architect reads the data):** Architect specs the fix from CSV evidence. Likely candidates: surface-classification hysteresis during airborne, verify airborne uses 2-arg SampleHeight (not 3-arg), launch-detection sub-step, or ground-Y monotonic constraint during airborne.
 
 **Hard rules:**
+
 - Phase B' is diagnostic-first. NO speculative fixes. Reproduce the failure with logging on, dump CSVs, stop.
 - Reuse Phase A diagnostic infrastructure as-is.
 - Do NOT touch HoleGeoImporter or PhysicsMarkerRepairTool — those are done.
@@ -196,14 +219,8 @@ Focus on FIRST 30 sim frames (launch moment, NOT landing). Per-step CSVs + summa
 ✅ DONE: 2026-04-25 — B'1 complete. Tests ran via MCP. Commits `6f9cad03` (test file) + analysis in `Docs/DIAG/realtest-20260425/Bprime-summary.md`.
 
 **Results (7/7 pass):**
-| shot | surface | club | diagFrames | minBallY | termination |
-|------|---------|------|-----------|---------|-------------|
-| 1 | Sand | Driver (+X) | 0 | 3.723 | HitOOB |
-| 2 | Sand | Driver (+Z) | 0 | **-2301.558** | MaxDurationReached |
-| 3 | Green | Driver (+X) | 0 | 4.567 | HitOOB |
-| 4 | Green | Driver (180°) | 1935 | 0.000 | BallStopped |
-| 5 | Sand | Wedge (+X) | 0 | 4.041 | HitOOB |
-| 6 | Green | Putter (+X) | 3351 | 9.215 | BallStopped |
+
+shotsurfaceclubdiagFramesminBallYtermination1SandDriver (+X)03.723HitOOB2SandDriver (+Z)0-**2301.558**MaxDurationReached3GreenDriver (+X)04.567HitOOB4GreenDriver (180°)19350.000BallStopped5SandWedge (+X)04.041HitOOB6GreenPutter (+X)33519.215BallStopped
 
 **Definitive finding:** Shot 2 is the confirmed fall-through. `diagFrames=0` + `minBallY=-2301` + `MaxDurationReached(60s)` = the failure is 100% inside `SimulateAirborne`. Roll/putt phase never entered.
 
@@ -224,10 +241,12 @@ Focus on FIRST 30 sim frames (launch moment, NOT landing). Per-step CSVs + summa
 **B'2a:** Add airborne per-step logging to `SimulateAirborne` (next to existing roll/putt logging). Format: `frame,air,x,y,z,groundY,velY`. Re-run B'1 Shot 2 only. Save full CSV to `Docs/DIAG/realtest-20260425/Bprime-air-shot-2.csv` + summary `Bprime-air-summary.md` showing exact frame where groundY first becomes 0, frame where ball Y crosses 0, why HitGround didn't fire, and why WorldBound didn't fire.
 
 **B'2b (Architect spec'd after B'2a):** Two-part fix likely:
+
 1. Change `SceneGroundProvider.SampleHeight` (2-arg) to return a sentinel (e.g. `fp.FromFloat(-1e6f)`) when zero hits, instead of `fp.Zero`. Airborne treats sentinel as "over the void → OOB."
 2. Add Y-axis safety bound in `SimulateAirborne`: if `posNext.y < (origin.y - 100)`, force termination as ExitedWorldBounds.
 
 **Hard rules:**
+
 - B'2a is diagnostic-only. STOP and wait after B'2a CSV is dumped.
 - Reuse Phase A diagnostic infrastructure as-is.
 - No fixes until Architect specs B'2b from the CSV.
@@ -236,12 +255,14 @@ Focus on FIRST 30 sim frames (launch moment, NOT landing). Per-step CSVs + summa
 ### What Cesar needs to run (A2, A3, A4)
 
 **A2 — Marker Audit (must do FIRST, after cold restart):**
+
 1. Close Unity completely. Reopen Unity.
-2. Menu: **GOLFIN > Tools > A2 - Marker Audit (Hole_01)**
+2. Menu: **GOLFIN &gt; Tools &gt; A2 - Marker Audit (Hole_01)**
 3. Output: `Docs/DIAG/realtest-20260425/A2-Hole01-marker-audit.txt`
 
 **A3 — Diagnostic Shots:**
-1. Open Unity Test Runner (Window > General > Test Runner)
+
+1. Open Unity Test Runner (Window &gt; General &gt; Test Runner)
 2. EditMode → `RealHoleDiagShotsTests` → Run All
 3. Output: `Docs/DIAG/realtest-20260425/A3-shot-{1..4}.csv` + `A3-shot-{1..4}-hits.csv` + `A3-summary.md`
 
@@ -250,13 +271,14 @@ Focus on FIRST 30 sim frames (launch moment, NOT landing). Per-step CSVs + summa
 Before running, update `Docs/DIAG/realtest-20260425/A4-shot-coords.json` with real zone XZ coordinates from A2 audit results.
 
 Cycle 1:
+
 1. Close Unity completely. Reopen. Load Hole_01 via PhysicsLab picker.
 2. Enable DiagPerStepEnabled via console or test, fire the 5 shots from A4-shot-coords.json.
 3. Copy output CSVs to `A4-cycle-1-shot-N.csv` / `A4-cycle-1-shot-N-hits.csv`.
 
 Repeat for Cycle 2 and Cycle 3 (restart Unity completely each time).
 
-After 3 cycles: **GOLFIN > Tools > A4 - Load Determinism Diff** → reads CSVs → writes `A4-diff-summary.md` with verdict.
+After 3 cycles: **GOLFIN &gt; Tools &gt; A4 - Load Determinism Diff** → reads CSVs → writes `A4-diff-summary.md` with verdict.
 
 Send Architect the outputs. Architect writes Phase B.
 
@@ -267,12 +289,14 @@ Send Architect the outputs. Architect writes Phase B.
 Yesterday's task shipped 111/111 synthetic tests green and a 3500-shot stress run with zero fall-throughs. **The fix did not hold in real conditions** — Cesar's first two manual shots in Hole_01 PlayMode both fell through. Tests were synthetic, not real-scene. Superseded by the Real-conditions task above.
 
 Key takeaways for future Code work:
+
 - The type-preference logic in `SceneGroundProvider.SampleHeight(3-arg)` is correct in isolation. The real failure is upstream (markers missing/broken/wrong-hierarchy in real scenes) or at a different sim seam (airborne→roll handoff, `_useSceneProviders` flag, etc.).
 - Cesar's Tee GO inspector screenshot showed THREE `Surface Marker` components on one GO: 2 valid + 1 with broken script reference (`Golfin.Physics.Runtime::Golfin.Physics.Runtime.SurfaceMarker` — malformed double-colon). HoleGeoImporter is producing zombie marker components.
 - The migration tool (`SyncPhysicsSurfaceMarkers.cs`) only updates existing markers, doesn't create them. So GOs that never got a Physics marker from the importer remain unmarked.
 - Generated scenes are gitignored. The scene was NOT re-imported between yesterday's tests and today's failed shots, so the broken markers were live during both.
 
 Files touched yesterday (still in tree, may need partial revert depending on Phase B findings):
+
 - `Assets/Scripts/Physics/Core/IGroundProvider.cs` (3-arg overload — likely keep)
 - `Assets/Scripts/Physics/Runtime/SceneGroundProvider.cs` (3-arg override — likely keep)
 - `Assets/Scripts/Physics/Core/BallSimulation.cs` (4 call sites + DiagErrorLogger — likely keep)
@@ -283,45 +307,37 @@ Full yesterday's done report archived below for reference.
 
 ---
 
-## DONE REPORT — Bulletproof terrain (2026-04-24) [HISTORICAL — superseded]
+## DONE REPORT — Bulletproof terrain (2026-04-24) \[HISTORICAL — superseded\]
 
 ### Restore point
+
 - Tag: `terrain-fallthrough-pre-fix` (pre-existing from prior session)
 - Backup folder: `Docs/BACKUPS/terrain-fallthrough-20260424/`
 - Stash: none used (tree was clean)
 - Commit hashes: `c340e718` (terrain-fix-attempt-1 — all phases in one commit)
 
 ### Baseline (Phase 1)
+
 - Prior to fix: all 95 existing Physics/Gameplay tests passed. No baseline B-group tests existed yet (written as part of this task).
 - The core bug: `Physics.Runtime.SurfaceMarker` was never populated by HoleGeoImporter — only 3 of 30 zone mesh GOs in Hole_01 had Physics markers (all defaulting to Fairway=0). Fix required both a code change AND a data migration.
 
 ### Fix — Attempt 1 (only attempt needed)
 
 **Code changes:**
+
 1. `IGroundProvider.cs` — added default 3-arg `SampleHeight(x,z,preferred)` that falls back to 2-arg (safe for FlatGround/HeightmapData)
 2. `SceneGroundProvider.cs` — implemented 3-arg override: partitions RaycastAll hits by `SurfaceMarker.Type == preferred`, returns highest preferred hit (or max-Y fallback)
 3. `BallSimulation.cs` — 4 call site swaps (putt-start snap, roll-init snap, roll-step snap, putt-step snap) + `DiagErrorLogger` callback + `CheckTerrainInvariant` helper
 
 **Data migration:**
-- `SyncPhysicsSurfaceMarkers.cs` — editor tool (GOLFIN > Tools > Sync Physics Surface Markers)
+
+- `SyncPhysicsSurfaceMarkers.cs` — editor tool (GOLFIN &gt; Tools &gt; Sync Physics Surface Markers)
 - Inline Roslyn script ran on all 18 hole scenes. Added Physics.Runtime.SurfaceMarker to every GO with Course.SurfaceMarker.
 - Result: Hole_01_Geo: +27 markers added (Green=1, Sand=7, Tee=4, CartPath=15, Fairway=30). Hole_06_Geo: 1 updated. Holes 2-5, 7-18: 0 Course markers (not yet imported — no change needed, fallback to max-Y is correct).
 
 ### Phase 3 + 4 results (tests 1–11): 11/11 PASS
 
-| Test | Description | Result |
-|------|-------------|--------|
-| T1 | Green over fringe (preferred Green, lower Y wins) | ✅ |
-| T2 | Bunker under terrain (preferred Sand, lower Y wins) | ✅ |
-| T3 | No preferred hit → fallback to max-Y | ✅ |
-| T4 | 2-arg regression (returns max-Y unchanged) | ✅ |
-| T5 | Empty scene → fp.Zero | ✅ |
-| T6 | Multiple Greens → highest preferred | ✅ |
-| T7 | Putt on green, fringe 3cm higher — stays on green | ✅ |
-| T8 | Approach landing on green below collar — roll stays on green | ✅ |
-| T9 | Bunker ball, terrain 1.3m above — stays on bunker floor | ✅ |
-| T10 | Fairway shot — no subsurface frames | ✅ |
-| T11 | Hole_01 smoke — all surface types return non-trivial Y | ✅ |
+TestDescriptionResultT1Green over fringe (preferred Green, lower Y wins)✅T2Bunker under terrain (preferred Sand, lower Y wins)✅T3No preferred hit → fallback to max-Y✅T42-arg regression (returns max-Y unchanged)✅T5Empty scene → fp.Zero✅T6Multiple Greens → highest preferred✅T7Putt on green, fringe 3cm higher — stays on green✅T8Approach landing on green below collar — roll stays on green✅T9Bunker ball, terrain 1.3m above — stays on bunker floor✅T10Fairway shot — no subsurface frames✅T11Hole_01 smoke — all surface types return non-trivial Y✅
 
 ### Phase 5 stress test (tests 12–16): 3500 SHOTS, 0 FALL-THROUGHS
 
@@ -341,12 +357,14 @@ All tests used synthetic BoxCollider geometry with overlapping higher-Y surface 
 Min Y-gap: not captured by test output (TestContext.WriteLine not accessible via MCP). Given 0 fall-throughs with Epsilon=0.005m, all gaps are ≥ +0.005m. Debug assertion threshold left at 0.02f (spec default — no data to tighten or loosen).
 
 ### Phase 6 — debug assertion
+
 - `BallSimulation.DiagErrorLogger` (static `Action<string>`, `#if UNITY_EDITOR`) — fires when `ballY < groundY - 0.02f`
 - Wired in `PhysicsLabController.Start()`: `BallSimulation.DiagErrorLogger = Debug.LogError`
 - Zero runtime cost in builds (fully gated)
 - Threshold: 0.02f (spec default, not tuned — stress test confirmed zero violations)
 
 ### Files modified (line-count diff)
+
 - `Assets/Scripts/Physics/Core/IGroundProvider.cs` — +14 lines (default interface method + FlatGround no change)
 - `Assets/Scripts/Physics/Runtime/SceneGroundProvider.cs` — +29 lines (3-arg override)
 - `Assets/Scripts/Physics/Core/BallSimulation.cs` — +33 lines (4 call sites + diagnostic infrastructure)
@@ -358,6 +376,7 @@ Min Y-gap: not captured by test output (TestContext.WriteLine not accessible via
 - `Assets/Scripts/Gameplay/Tests/Golfin.Gameplay.Tests.asmdef` — +1 line (Physics.Runtime ref)
 
 ### Blockers / surfaced findings
+
 - **Holes 2–18 lack Course.SurfaceMarker data** (not yet imported — no zone meshes). When these holes are imported in future, run `GOLFIN > Tools > Sync Physics Surface Markers (All Holes)` to populate Physics.Runtime.SurfaceMarker. The fix falls back to max-Y for unmarked GOs — same as pre-fix behavior, not a regression.
 - **Green zone mesh structure**: The Green GO in Hole_01 has its MeshCollider on a child GO, not directly on the SurfaceMarker GO. The migration correctly handles this (adds Physics.Runtime.SurfaceMarker to the Course.SurfaceMarker GO; SceneGroundProvider uses `GetComponentInParent` which traverses up from the collider's GO to find the marker). No action needed.
 - **Generated scenes are gitignored**: The SurfaceMarker data migration changes are saved to disk but not committed to git (by design — `Assets/Golf/Courses/*/Generated/` is in .gitignore). They persist locally.
@@ -367,79 +386,6 @@ Min Y-gap: not captured by test output (TestContext.WriteLine not accessible via
 ## 📦 ARCHIVED — Ball-through-green diagnosis: uphill vs downhill — 2026-04-25 (superseded)
 
 > This task is superseded by the Bulletproof terrain task above. The hypothesis-ranking + instrumentation approach was folded into the new spec's Phase 2 attempt sequence. Kept here for reference only.
-
-<!-- BEGIN ARCHIVED — superseded by Bulletproof terrain task 2026-04-25
-
-### Background
-
-After F-Hotfix, `SceneGroundProvider.SampleHeight` was changed from first-hit raycast to highest-hit (`RaycastAll` → max Y). Ball placement on green works correctly. However, shots onto/across the green still go through the surface periodically.
-
-**Cesar's hypothesis (to verify first):** ball goes through green only when traveling UPHILL (sim step lands short of visible mesh), not downhill. If true, it's a step-size issue where the integrator's next-frame position is below the green mesh even though the trajectory is ascending the slope.
-
-### Hypothesis ranking
-
-1. **Uphill step penetration (Cesar's theory).** Integrator step Δt × velocity lands below green Y because the green mesh slopes up faster than the sim compensates. `SampleHeight` after the step returns the new (higher) green Y, so the ball's Y < ground Y → "through surface." Only happens uphill because downhill the step overshoots above the mesh (harmless).
-
-2. **Green-vs-fringe still racing in sim path despite `RaycastAll` max-Y fix.** If the fringe mesh has vertices slightly above the green at some XZ points (vertex-level noise), max-Y returns fringe Y, not green Y. Ball classifies as fringe (semi-rough), different friction, plus may be ~1cm below visible green surface. Would look like "through green" briefly.
-
-3. **Rest detection snapping ball to wrong Y.** When ball comes to rest on green, the stop-handler writes final Y. If that writes pre-snap Y rather than post-SampleHeight Y, ball rests below surface.
-
-4. **Green mesh has back-faces or is single-sided.** RaycastAll from Y=500 hits the top face; fine. But if the green mesh triangles have some flipped, certain XZ points return no hit → `fp.Zero`. Would manifest as ball falling to Y=0.
-
-### Test plan
-
-**Step 1 — Reproduce deterministically.**
-- Load Hole 1 in LabScaffold.
-- Place ball at Fairway 1 (approach side of green).
-- Fire Preset "Wedge 100yd" toward green repeatedly (Fire×5 if available).
-- Record: how many shots sink through? At what XZ on the green? Screenshot each failure.
-
-**Step 2 — Confirm/deny uphill-only hypothesis.**
-- Place ball on the far side of the green (downhill approach).
-- Fire short putts/wedges ACROSS the green in both directions.
-- Compare failure rate uphill vs downhill. If uphill-only → hypothesis 1 confirmed.
-
-**Step 3 — Instrument `SceneGroundProvider.SampleHeight`.**
-- Add temporary `Debug.Log` inside SampleHeight: log `(worldX, worldZ, hitCount, chosenY, minHitY, maxHitY, topColliderName)`.
-- Reproduce through-green shot.
-- Check log: did `RaycastAll` return multiple hits at that XZ? Was the chosen Y actually the visible green top? Is there a fringe collider sitting higher than green at the failure point?
-- If `maxHitY` is correct green Y but ball still goes through → hypothesis 1 (integrator issue), not provider.
-- If `maxHitY` is fringe Y above green Y → hypothesis 2 (fringe-over-green collider geometry bug).
-
-**Step 4 — Instrument the sim step.**
-- In `BallSimulation.Simulate` (or the bounce/roll step that calls SampleHeight), log `(ballY_before_step, ballY_after_step, groundY_at_new_xz, delta)` for each surface-contact step on green.
-- If `ballY_after_step < groundY_at_new_xz` consistently when on a slope going up → hypothesis 1 confirmed.
-
-**Step 5 — Fix per confirmed hypothesis.**
-
-If hypothesis 1: clamp ball Y to `max(ballY, groundY)` after each step when on a rolling surface. Or: reduce step size on sloped rolling surfaces (expensive, last resort). Or: add a pre-step ground sample at the projected landing XZ and clamp the step if the slope exceeds a threshold.
-
-If hypothesis 2: inspect HoleGeoImporter fringe mesh generation. Fringe mesh may need to be Y-offset down by a small epsilon (1-2mm) to guarantee green wins max-Y everywhere. Or: SceneGroundProvider needs the same type-aware preference that `SurfaceSnap` uses — prefer Green marker over Fairway at same XZ.
-
-If hypothesis 3: audit the rest-detection code path for a pre-snap Y write.
-
-If hypothesis 4: inspect green mesh triangle winding in the importer.
-
-### Files to read first
-
-- `Assets/Scripts/Physics/Runtime/SceneGroundProvider.cs` (current highest-hit implementation).
-- `Assets/Scripts/Physics/Core/BallSimulation.cs` (step/roll/stop logic).
-- `Assets/Scripts/Physics/Core/SurfaceInteraction.cs` or whichever file handles the roll-and-stop phase.
-- `Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs` lines 2613-2740 (green + collar mesh builder).
-
-### Deliverables
-
-- Hypothesis confirmed with log evidence.
-- Minimal-diff fix targeted at the confirmed cause.
-- Regression test added to `Assets/Scripts/Physics/Tests/` that reproduces the pre-fix failure (e.g., simulated uphill putt on synthetic sloped green mesh, assert ball Y ≥ ground Y at every step).
-
-### DO NOT
-
-- Don't change `SceneGroundProvider` from RaycastAll max-Y without evidence. That fix is working for placement.
-- Don't modify BallSimulation's core integration step without confirming hypothesis 1 with logs.
-- Don't touch HoleGeoImporter mesh Y offsets without confirming hypothesis 2 with logs.
-
-END ARCHIVED -->
 
 ---
 
@@ -453,13 +399,13 @@ Part F shipped the placement dropdown but it's broken. Three real bugs (plus two
 
 **Bug 1 — Green intermittent sub-surface placement.** `Fairway` GOs have a MeshCollider covering both the fairway material AND the fringe submesh (see `HoleGeoImporter.cs:4370–4378`). The fringe extends over the green's outer edge. At some green XZ points, the downward raycast from Y=500 hits the fairway+fringe MeshCollider before the green MeshCollider, or vice-versa, depending on vertex-level Y differences between the two meshes at that exact XZ. First hit wins → ball placed on whichever happened to be higher. When that's NOT the green, ball ends up at fringe-Y. Then on the next shot, sim classifies via `SceneSurfaceProvider` at ball XZ, may hit green this time, but the stored ball Y is fringe-Y which is sometimes below green-Y → ball appears to start under the visible green surface. Fully intermittent, fully consistent with the fringe-vs-green collider race.
 
-**Bug 2 — Bunker "through terrain" is NOT a bug.** Measured data: `Bunker GO.y=10.117  snapY=8.709  diff=-1.408`. SnapY IS the bunker floor. Ball is placed correctly at bunker floor. It LOOKS "through terrain" because the surrounding terrain rim (~Y=10) occludes a ground-level chase camera view of a ball at Y=8.7. This is a camera artifact, not a placement bug. Do NOT "fix" ball Y for bunker placement. See F-Hotfix.C for the actual camera fix.
+**Bug 2 — Bunker "through terrain" is NOT a bug.** Measured data: `Bunker GO.y=10.117 snapY=8.709 diff=-1.408`. SnapY IS the bunker floor. Ball is placed correctly at bunker floor. It LOOKS "through terrain" because the surrounding terrain rim (\~Y=10) occludes a ground-level chase camera view of a ball at Y=8.7. This is a camera artifact, not a placement bug. Do NOT "fix" ball Y for bunker placement. See F-Hotfix.C for the actual camera fix.
 
-**Bug 3 — `PlacementEntries.Count = 0` mid-session.** Code's diagnosis is correct on the symptom (scene event race) but the two-event fix (adding `SceneManager.sceneLoaded`) is still fragile. Proper fix: coroutine scan on frame 2 of `PhysicsLabController.Start()`. See F-Hotfix.A.
+**Bug 3 —** `PlacementEntries.Count = 0` **mid-session.** Code's diagnosis is correct on the symptom (scene event race) but the two-event fix (adding `SceneManager.sceneLoaded`) is still fragile. Proper fix: coroutine scan on frame 2 of `PhysicsLabController.Start()`. See F-Hotfix.A.
 
-**Bug 4 — `_useSceneProviders = False` despite hole loaded.** Same root cause as Bug 3 (event race). Fixed by the same coroutine.
+**Bug 4 —** `_useSceneProviders = False` **despite hole loaded.** Same root cause as Bug 3 (event race). Fixed by the same coroutine.
 
-**Red herring 1 — 3 stale ball clones + `_instance = null`.** Unity domain reload artifact. Not a production bug. Leave alone.
+**Red herring 1 — 3 stale ball clones +** `_instance = null`**.** Unity domain reload artifact. Not a production bug. Leave alone.
 
 **Red herring 2 — "Heightmap doesn't include zone-mesh tops" open flag.** NOT the cause. The scaffold uses `SceneGroundProvider`, which is a live raycast — it never reads `heightmap.bytes`. The existing heightmap open flag is unrelated to this bug. Leave the flag in place for future baker work but do NOT try to fix it here.
 
@@ -575,43 +521,42 @@ Ball in bunker at floor Y is correct. Problem is chase camera at ground-level Y 
 1. **Automatic — nudge camera up when ball is in depression.** On placement, if `|ballY - surroundingTerrainY| > 0.5m` (ball is in a depression), raise chase camera by the depth diff. Measured by raycasting upward from the ball to find the height-above-terrain it should compensate.
 2. **Manual — lab-only debug button "Lift Camera Above Rim."** Toggle. Cesar presses it when testing bunker shots.
 
-**Pick option 1.** Ship it automatic. In-game the real camera system will handle this properly; lab just needs to not lie visually. Document the rule: "when placing ball, if ball Y is > 0.5m below the raycast Y at (ball.x + 2m, ball.z), lift chase camera by the diff so the rim doesn't occlude."
+**Pick option 1.** Ship it automatic. In-game the real camera system will handle this properly; lab just needs to not lie visually. Document the rule: "when placing ball, if ball Y is &gt; 0.5m below the raycast Y at (ball.x + 2m, ball.z), lift chase camera by the diff so the rim doesn't occlude."
 
-Implementation: new method `PhysicsLabController.AdjustCameraForDepression(Vector3 ballPos)` called at the end of `PlaceBallAt`. Raycasts at 4 points around the ball (±2m X, ±2m Z), finds max surrounding Y, compares to ball Y, if diff > 0.5 offsets the chase camera's follow-offset Y by the diff. Clamp offset at 3m so it doesn't go absurd.
+Implementation: new method `PhysicsLabController.AdjustCameraForDepression(Vector3 ballPos)` called at the end of `PlaceBallAt`. Raycasts at 4 points around the ball (±2m X, ±2m Z), finds max surrounding Y, compares to ball Y, if diff &gt; 0.5 offsets the chase camera's follow-offset Y by the diff. Clamp offset at 3m so it doesn't go absurd.
 
 ### F-Hotfix.D — Automated regression tests
 
 **Critical — this is how we stop regressing.** Every fix above gets at least one test. Tests live in existing assemblies.
 
-**File:** `Assets/Scripts/Physics/Tests/PlacementSnapTests.cs` (new)
-**Asmdef:** `Golfin.Physics.Tests` (already exists with Physics.Core/Math/Runtime refs; add `Golfin.Physics.Viewer` ref if needed to test `SurfaceSnap`).
+**File:** `Assets/Scripts/Physics/Tests/PlacementSnapTests.cs` (new) **Asmdef:** `Golfin.Physics.Tests` (already exists with Physics.Core/Math/Runtime refs; add `Golfin.Physics.Viewer` ref if needed to test `SurfaceSnap`).
 
 Tests required:
 
-1. **`SurfaceSnap_WithPreferredType_PicksMatchingMarker`** — create a test scene with two overlapping MeshColliders at slightly different Y values; one tagged `Course.SurfaceMarker.surfaceType=Green` at Y=10.15, other tagged `Fairway` at Y=10.18 (fringe higher than green, like Bug 1). Call `SurfaceSnap(x, z, 0f, Course.SurfaceType.Green)`, assert result is 10.15.
-2. **`SurfaceSnap_WithPreferredType_AndNoMatch_FallsBackToFirstHit`** — same scene, call with `preferredType=Bunker`, assert falls back to first (highest) hit = 10.18.
-3. **`SurfaceSnap_IgnoresBallCollider`** — place a sphere collider at (x, 5, z) tagged as the ball (via `BallAnimator.Instance` stub or equivalent), call `SurfaceSnap(x, z, 0f)`, assert result skips the ball and hits terrain below.
-4. **`SurfaceSnap_NoHits_ReturnsDefaultY`** — empty scene, call `SurfaceSnap`, assert returns `defaultY`.
-5. **`PlaceBallAt_InDepression_LiftsCamera`** — construct terrain at Y=10 and a bunker at Y=8.7. Place ball at bunker XZ. Assert `chaseCamera.followOffset.y` has been lifted by ~1.3m (diff between terrain and bunker).
-6. **`PlaceBallAt_OnFlatGround_DoesNotLiftCamera`** — all surroundings at same Y as ball. Assert `chaseCamera.followOffset.y` is unchanged.
+1. `SurfaceSnap_WithPreferredType_PicksMatchingMarker` — create a test scene with two overlapping MeshColliders at slightly different Y values; one tagged `Course.SurfaceMarker.surfaceType=Green` at Y=10.15, other tagged `Fairway` at Y=10.18 (fringe higher than green, like Bug 1). Call `SurfaceSnap(x, z, 0f, Course.SurfaceType.Green)`, assert result is 10.15.
+2. `SurfaceSnap_WithPreferredType_AndNoMatch_FallsBackToFirstHit` — same scene, call with `preferredType=Bunker`, assert falls back to first (highest) hit = 10.18.
+3. `SurfaceSnap_IgnoresBallCollider` — place a sphere collider at (x, 5, z) tagged as the ball (via `BallAnimator.Instance` stub or equivalent), call `SurfaceSnap(x, z, 0f)`, assert result skips the ball and hits terrain below.
+4. `SurfaceSnap_NoHits_ReturnsDefaultY` — empty scene, call `SurfaceSnap`, assert returns `defaultY`.
+5. `PlaceBallAt_InDepression_LiftsCamera` — construct terrain at Y=10 and a bunker at Y=8.7. Place ball at bunker XZ. Assert `chaseCamera.followOffset.y` has been lifted by \~1.3m (diff between terrain and bunker).
+6. `PlaceBallAt_OnFlatGround_DoesNotLiftCamera` — all surroundings at same Y as ball. Assert `chaseCamera.followOffset.y` is unchanged.
 
 **File:** `Assets/Scripts/Physics/Tests/PlacementEntriesTests.cs` (new)
 
 Tests required:
 
-7. **`BuildPlacementEntries_OnHoleLoad_PopulatesAllCategories`** — synthetic scene with one of each: 1 tee group, 1 green, 2 bunkers, 2 fairways, 1 water. Call `OnHoleLoaded`. Assert `PlacementEntries.Count == 7` with at least one entry per category.
-8. **`BuildPlacementEntries_OnHoleUnload_Clears`** — populated state → `OnHoleUnloaded` → assert `PlacementEntries.Count == 0`.
-9. **`BuildPlacementEntries_DuplicateNames_Disambiguates`** — two bunker GOs both named "Bunker_3". Assert labels `"Bunker_3"` and `"Bunker_3 (1)"` (or equivalent).
+7. `BuildPlacementEntries_OnHoleLoad_PopulatesAllCategories` — synthetic scene with one of each: 1 tee group, 1 green, 2 bunkers, 2 fairways, 1 water. Call `OnHoleLoaded`. Assert `PlacementEntries.Count == 7` with at least one entry per category.
+8. `BuildPlacementEntries_OnHoleUnload_Clears` — populated state → `OnHoleUnloaded` → assert `PlacementEntries.Count == 0`.
+9. `BuildPlacementEntries_DuplicateNames_Disambiguates` — two bunker GOs both named "Bunker_3". Assert labels `"Bunker_3"` and `"Bunker_3 (1)"` (or equivalent).
 
 **File:** `Assets/Scripts/Gameplay/Tests/BallPlacementIntegrationTests.cs` (new, in `Golfin.Gameplay.Tests`)
 
 Tests required (PlayMode — use `[UnityTest]`):
 
-10. **`PlaceBallAt_Green_ThenShot_BallDoesNotStartUnderSurface`** — construct 2 overlapping colliders (green Y=10.15, fringe Y=10.18) with type markers. Call `PlaceBallAt(xz, Green)`. Assert `BallAnimator.Instance.transform.position.y == 10.15f` (within epsilon).
-11. **`PlaceBallAt_CalledTwice_BallTeleportsBothTimes`** — regression for "Place Here stops working." Place at A, assert ball at A. Place at B, assert ball at B (not still at A).
-12. **`CoroutineScan_DetectsPreLoadedHoleScene`** — load `LabScaffold` + a stub `Hole_TEST_Geo.unity` additively before `PhysicsLabController.Start`. After 2 frames, assert `_useSceneProviders == true`.
+10. `PlaceBallAt_Green_ThenShot_BallDoesNotStartUnderSurface` — construct 2 overlapping colliders (green Y=10.15, fringe Y=10.18) with type markers. Call `PlaceBallAt(xz, Green)`. Assert `BallAnimator.Instance.transform.position.y == 10.15f` (within epsilon).
+11. `PlaceBallAt_CalledTwice_BallTeleportsBothTimes` — regression for "Place Here stops working." Place at A, assert ball at A. Place at B, assert ball at B (not still at A).
+12. `CoroutineScan_DetectsPreLoadedHoleScene` — load `LabScaffold` + a stub `Hole_TEST_Geo.unity` additively before `PhysicsLabController.Start`. After 2 frames, assert `_useSceneProviders == true`.
 
-**Acceptance bar:** all 12 tests must pass before closing F-Hotfix. Run via Unity Test Runner (Window > General > Test Runner) — EditMode tab for 1–9, PlayMode tab for 10–12.
+**Acceptance bar:** all 12 tests must pass before closing F-Hotfix. Run via Unity Test Runner (Window &gt; General &gt; Test Runner) — EditMode tab for 1–9, PlayMode tab for 10–12.
 
 ### Read first
 
@@ -740,7 +685,8 @@ public struct ShotDebugFlags
 }
 ```
 
-**Modify `ShotController.cs`:**
+**Modify** `ShotController.cs`**:**
+
 - Add field `public ShotDebugFlags DebugFlags = ShotDebugFlags.Defaults;`.
 - Apply flags at the relevant seams (one `if` per flag):
   - `ShowConeOutline == false` → call `_shotConeView.SetOutlineVisible(false)` on state change (add the setter to `ShotConeView` if missing).
@@ -752,7 +698,8 @@ public struct ShotDebugFlags
   - `ForcePerfectTiming == true` → skip flick timing penalty; treat as apex-aligned.
   - `ForcePerfectAim == true` → skip flick-deviation + per-pass-degradation contributions to yaw; treat as straight-line.
 
-**Modify `PhysicsLabUI.cs`:**
+**Modify** `PhysicsLabUI.cs`**:**
+
 - Add a collapsible "Debug Flags" foldout at the bottom of the Lab panel. Matches existing foldout style.
 - 8 checkboxes bound to `_shotController.DebugFlags`. Label each with the human-readable name (e.g. "Show Cone Outline", not `ShowConeOutline`).
 - "Reset to Defaults" button at the foldout bottom → assigns `ShotDebugFlags.Defaults`.
@@ -777,11 +724,12 @@ Add a "Place Ball" dropdown in the Lab panel. Populated on hole-load (hook into 
 2. **Green entries.** For each GO in the hole scene with `Course.SurfaceMarker.surfaceType == Green (1)`: one entry at that GO's transform position (not centroid of mesh; transform position is fine — mesh centroid only matters if transform is zeroed, flag in done report if it is). Label: `Green 1`, `Green 2`, etc.
 3. **Bunker entries.** For each `surfaceType == Bunker (4)`: one entry. Label: `Bunker 1`, ..., `Bunker N`.
 4. **Fairway entries.** For each `surfaceType == Fairway (0)`: one entry. Label: `Fairway 1`, ..., `Fairway N`.
-5. **Water entries.** For each `surfaceType == Water (5)`: one entry at a point offset outward from the water's bounds toward `Green_1`'s position by ~1m. Intent: "next to water, on grass." Label: `Near Water 1`, ..., `Near Water N`.
+5. **Water entries.** For each `surfaceType == Water (5)`: one entry at a point offset outward from the water's bounds toward `Green_1`'s position by \~1m. Intent: "next to water, on grass." Label: `Near Water 1`, ..., `Near Water N`.
 
 All entries: Y is resolved at placement time via downward raycast (same pattern as `SceneGroundProvider` / `SurfaceSnap` in `PhysicsLabController`). Never trust the raw transform Y.
 
 **Placement behavior** — when the player picks an entry:
+
 - `PhysicsLabController.PlaceBallAt(Vector3 worldPos)`:
   - Raycast down at `(worldPos.x, 500, worldPos.z)`, get surface Y.
   - `ballAnimator.PlaceAtRest(new Vector3(worldPos.x, surfaceY, worldPos.z))`.
@@ -793,6 +741,7 @@ All entries: Y is resolved at placement time via downward raycast (same pattern 
 - Add a "Reset to Tee" button next to the dropdown — calls `PlaceBallAt(teeMidpoint)`. Same semantics as existing `ResetToTee()` in the controller; wire through or just delegate.
 
 **Edge cases:**
+
 - Empty dropdown (hole has no loaded scene): show "— no hole loaded —" disabled entry.
 - A surface type present but with 0 GOs: skip that section silently.
 - If `Green_1` isn't found (for Water offset direction), fall back to offsetting toward scene-bounds centroid.
@@ -863,6 +812,7 @@ Beyond budget: stop, surface for design review.
 ## ✅ DONE — PhysicsLab: migrate to scaffold + multi-hole picker — 2026-04-24
 
 **Status:** Validated by Cesar. Cleanup pending (Cesar to run):
+
 - Delete `Assets/Scenes/Physics/PhysicsLab_Hole1.unity` + `.meta`
 - Delete `Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs` + `.meta`
 
@@ -872,8 +822,8 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
 
 ### Architecture
 
-- **`LabScaffold.unity`** (new, git-tracked) — LabRoot, ShotController, ShotUI_Canvas + cone hierarchy, ChaseCamera + Main Camera, BallAnimator, PhysicsLabController, PhysicsLabUI, InputSystemSource, TrajectoryRenderer. **No ground, no zones, no hole-specific refs.**
-- **`PhysicsLabHolePicker.cs`** (new editor window) — lists all `Hole_XX_Geo.unity` under `Assets/Golf/Courses/lomond-country-club/Generated/` (exclude `Video/` subfolder), "Load Hole N" button opens the selected hole additively atop `LabScaffold.unity`, "Unload" button closes it without saving.
+- `LabScaffold.unity` (new, git-tracked) — LabRoot, ShotController, ShotUI_Canvas + cone hierarchy, ChaseCamera + Main Camera, BallAnimator, PhysicsLabController, PhysicsLabUI, InputSystemSource, TrajectoryRenderer. **No ground, no zones, no hole-specific refs.**
+- `PhysicsLabHolePicker.cs` (new editor window) — lists all `Hole_XX_Geo.unity` under `Assets/Golf/Courses/lomond-country-club/Generated/` (exclude `Video/` subfolder), "Load Hole N" button opens the selected hole additively atop `LabScaffold.unity`, "Unload" button closes it without saving.
 - **Auto tee anchor** — `PhysicsLabController.SetupAtTee()` locates a GO in the loaded hole scene carrying `Golfin.Course.SurfaceMarker` with `surfaceType == Tee (enum value 6)` via reflection (same pattern as the earlier baker fix decision) and spawns the ball at that GO's position. Multiple tees → pick the one closest to the scene bounds centroid (approximation of the back tee; refine later if wrong hole).
 - **Providers stay as they are.** `SceneGroundProvider` / `SceneSurfaceProvider` already raycast against whatever colliders are in the currently-loaded scenes — no rebinding needed. Loading a hole scene additively makes its zone-mesh colliders visible to the raycasts automatically.
 
@@ -891,15 +841,16 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
 
 ### Files to create
 
-1. **`Assets/Scenes/Physics/LabScaffold.unity`** — new scene. Build by duplicating `PhysicsLab_Hole1.unity`, then stripping:
+1. `Assets/Scenes/Physics/LabScaffold.unity` — new scene. Build by duplicating `PhysicsLab_Hole1.unity`, then stripping:
+
    - `ZoneMeshes_Physics` root (the baked container)
    - Any terrain GameObject (if present — terrain is in Hole_XX_Geo scenes, not the lab)
    - Any hardcoded tee/ground visuals specific to Hole 1
    - Skybox / lighting env stays
-   - Main Camera stays but reset transform to origin-ish (loader will reposition via SetupAtTee)
-   Keep: LabRoot + all children (ShotController, ShotUI_Canvas + cone hierarchy, chaseCamera, ballAnimator, trajectoryRenderer, physicsLabUI, InputSystemSource).
+   - Main Camera stays but reset transform to origin-ish (loader will reposition via SetupAtTee) Keep: LabRoot + all children (ShotController, ShotUI_Canvas + cone hierarchy, chaseCamera, ballAnimator, trajectoryRenderer, physicsLabUI, InputSystemSource).
 
-2. **`Assets/Scripts/Editor/Physics/PhysicsLabHolePicker.cs`** — `EditorWindow` with:
+2. `Assets/Scripts/Editor/Physics/PhysicsLabHolePicker.cs` — `EditorWindow` with:
+
    - `[MenuItem("GOLFIN/Physics Lab/Hole Picker")]` to open.
    - Scans `Assets/Golf/Courses/lomond-country-club/Generated/*.unity` (top level only, exclude subfolders like `Video/`). Extracts hole number from filename.
    - Dropdown + "Load" button. On Load:
@@ -910,14 +861,16 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
    - "Unload Current Hole" button: closes any loaded `Hole_XX_Geo.unity` scene without saving.
    - "Reload" convenience: unload + load same hole.
 
-3. **`Assets/Scripts/Physics/Viewer/LabHoleBinder.cs`** (new, Runtime) — small component on LabRoot:
+3. `Assets/Scripts/Physics/Viewer/LabHoleBinder.cs` (new, Runtime) — small component on LabRoot:
+
    - Subscribes to `EditorSceneManager.sceneOpened` and `sceneClosed` (wrap in `#if UNITY_EDITOR`).
    - On a Hole_XX_Geo scene opened, calls `PhysicsLabController.OnHoleLoaded(sceneName)` which (a) finds the tee GO by `Course.SurfaceMarker` type==Tee via reflection, (b) sets `_ballSpawnPoint` to that transform, (c) calls `SetupAtTee()`, (d) recomputes max-carry, (e) sets the providers flag to scene-mode.
    - On scene closed (or when LabScaffold goes active alone), calls `PhysicsLabController.OnHoleUnloaded()` which reverts to flat-ground fallback.
 
 ### Files to modify
 
-1. **`Assets/Scripts/Physics/Viewer/PhysicsLabController.cs`**:
+1. `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs`:
+
    - Replace `if (currentScene == PresetScene.Hole1)` with a new runtime flag `bool _useSceneProviders` (default false). `LabHoleBinder` flips it true on hole-load, false on unload.
    - Remove the hardcoded Hole1 tee→green look direction in `GetDefaultLookDirection()`. Replace with: if `_useSceneProviders` is true, compute look direction from tee GO toward the Green_1 GO's centroid (find via reflection, `Course.SurfaceMarker` type==Green value 1); fall back to `_defaultLookDirection` or `Vector3.right` otherwise.
    - New public method `OnHoleLoaded(string sceneName)`:
@@ -929,9 +882,9 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
      - Sets `_useSceneProviders = false`.
      - Nulls the runtime tee anchor (or resets to scaffold origin).
 
-2. **`Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs`** — leave untouched for now. Delete in step 5 of validation, AFTER Cesar confirms the scaffold works.
+2. `Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs` — leave untouched for now. Delete in step 5 of validation, AFTER Cesar confirms the scaffold works.
 
-3. **`Assets/Scenes/Physics/PhysicsLab_Hole1.unity`** — do not touch. Keep as reference until confirmed.
+3. `Assets/Scenes/Physics/PhysicsLab_Hole1.unity` — do not touch. Keep as reference until confirmed.
 
 ### Validation
 
@@ -940,18 +893,20 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
 **Step 2 — Picker works for Hole 1.** `GOLFIN > Physics Lab > Hole Picker` opens. Select Hole 1. Click Load. Hole_01_Geo.unity loads additively. Console should log tee GO found, look direction computed. Ball spawns at tee. Enter play mode — fire `[Debug] Fire Preset`, get a visible trajectory on the Hole 1 terrain.
 
 **Step 3 — Picker generalizes.** Without exiting play mode (or unload first and re-enter edit mode), pick Hole 7 (or any mid-hole with varied terrain). Load. Confirm:
-   - Hole_07_Geo.unity loads.
-   - Ball respawns at Hole 7's tee.
-   - Look direction points roughly toward Hole 7's green.
-   - Fire a preset shot, ball rolls on Hole 7 terrain.
+
+- Hole_07_Geo.unity loads.
+- Ball respawns at Hole 7's tee.
+- Look direction points roughly toward Hole 7's green.
+- Fire a preset shot, ball rolls on Hole 7 terrain.
 
 **Step 4 — Unload works.** Click Unload. Hole scene closes. Ball returns to scaffold origin (or stays; either is fine as long as no exceptions). Firing a preset should fall back to flat-ground (or no-op if no anchor) without exceptions.
 
 **Step 5 — Cleanup (ONLY after Cesar confirms steps 1–4 work).**
-   - Delete `Assets/Scenes/Physics/PhysicsLab_Hole1.unity` + `.meta`.
-   - Delete `Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs` + `.meta`.
-   - Remove deferred-flag entries in `TellCode.md` covering the baker + Physics.Runtime.SurfaceMarker edit-time resolution issue (both obsoleted by the scaffold; play-time resolution is what the lab uses).
-   - **Do not commit these deletions yourself.** Note them in the done report and let Cesar run the cleanup.
+
+- Delete `Assets/Scenes/Physics/PhysicsLab_Hole1.unity` + `.meta`.
+- Delete `Assets/Scripts/Editor/Physics/PhysicsLabZoneMeshBaker.cs` + `.meta`.
+- Remove deferred-flag entries in `TellCode.md` covering the baker + Physics.Runtime.SurfaceMarker edit-time resolution issue (both obsoleted by the scaffold; play-time resolution is what the lab uses).
+- **Do not commit these deletions yourself.** Note them in the done report and let Cesar run the cleanup.
 
 ### Done report
 
@@ -983,11 +938,12 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
 ✅ CODE COMPLETE: 2026-04-24 — LabScaffold.unity created + picker + binder written. Compile-verified (both LabHoleBinder and PhysicsLabHolePicker types found at runtime). Awaiting Cesar validation steps 1–4 (open scaffold, load hole, confirm tee spawn + trajectory, unload). Step 5 cleanup (delete PhysicsLab_Hole1.unity + ZoneMeshBaker.cs) blocked on Cesar confirmation.
 
 ✅ SESSION COMPLETE: 2026-04-24 — PhysicsLab polish pass done.
-- Tee spawn: fixed to use midpoint of TeeMarker_regular_* GOs (not SurfaceMarker tee zones).
+
+- Tee spawn: fixed to use midpoint of TeeMarker_regular\_\* GOs (not SurfaceMarker tee zones).
 - Lie continuation: ball fires from current lie after each shot without forced Reset.
 - Club selection: InjectStatBundle() now called on preset change; PRESET picker drives club stats.
-- Scene persistence: [InitializeOnLoad] + sceneOpened + delayCall auto-restores last hole when switching scenes.
-- NullRef in ComputeMaxCarryYards: fixed with _configsLoaded bool + EnsureConfigsLoaded() (struct configs can't be null-checked).
+- Scene persistence: \[InitializeOnLoad\] + sceneOpened + delayCall auto-restores last hole when switching scenes.
+- NullRef in ComputeMaxCarryYards: fixed with \_configsLoaded bool + EnsureConfigsLoaded() (struct configs can't be null-checked).
 - Water gray: CopyHoleLighting() snapshots all RenderSettings from hole scene and writes them into LabScaffold — skybox, ambient, fog, reflections all matched. DirectionalLight deleted from LabScaffold (hole's light is correct one).
 - Golfin.Physics.Stats added to Viewer asmdef references.
 
@@ -997,7 +953,7 @@ The `PhysicsLabZoneMeshBaker` approach is being deprecated. Instead of baking in
 
 > Architect-tracked open issues. Don't action without an explicit task block; just be aware they exist.
 
-- **[2026-04-26] Stale comment in `BallSimulation.cs:26` (`// SceneGroundProvider…`).** SceneGroundProvider was deleted in Phase F. Hard rule 8 forbade touching `BallSimulation` during Phase F so the comment was left as-is. Trivial cleanup; not load-bearing. Closing via `HOUSEKEEPING_BALLSIM` spec.
+- **\[2026-04-26\] Stale comment in** `BallSimulation.cs:26` **(**`// SceneGroundProvider…`**).** SceneGroundProvider was deleted in Phase F. Hard rule 8 forbade touching `BallSimulation` during Phase F so the comment was left as-is. Trivial cleanup; not load-bearing. Closing via `HOUSEKEEPING_BALLSIM` spec.
 - **[2026-04-26] `BallSimulation.DiagPerStepSink` field is now unwired.** `PhysicsLabController.WireA3DiagSinks` was removed in F.3.5. The field still exists in BallSimulation (untouched per hard rule 8) and is dead code; harmless. Closing via `HOUSEKEEPING_BALLSIM` spec.
 - **[2026-04-26] Future housekeeping: consolidate `Physics.Runtime.SurfaceMarker` and `Course.SurfaceMarker` into one enum.** Bake tool currently reads two type systems (one for authoring in scene, one for the bake-side enum), bridged by `SurfaceMarkerMap`. Workable; a single-enum refactor would simplify the importers. Not blocking.
 - **[2026-04-22] Don't implement Code's "trees layer" proposal.** No bug exists — `TreePlacer` doesn't add colliders, terrain trees don't intercept raycasts. Audit confirmed in lessons file.
