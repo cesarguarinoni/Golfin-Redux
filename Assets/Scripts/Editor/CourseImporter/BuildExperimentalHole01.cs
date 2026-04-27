@@ -68,24 +68,16 @@ namespace Golfin.CourseImport
             }
             report.Add($"- Source scene: `{SRC_SCENE}` ✓");
 
-            // 3. Output paths — if they exist, ask to rebuild
+            // 3. Output paths — delete and rebuild if they already exist (no dialog)
             bool expSceneExists  = File.Exists(EXP_SCENE);
             bool dataDstExists   = Directory.Exists(DATA_DST);
             if (expSceneExists || dataDstExists)
             {
-                bool proceed = EditorUtility.DisplayDialog("Build Experimental Hole",
-                    "Output paths already exist. Delete and rebuild?",
-                    "Delete & Rebuild", "Cancel");
-                if (!proceed) return;
-
+                Debug.Log("[BuildExperimentalHole01] Output paths exist — deleting and rebuilding.");
                 if (expSceneExists)
-                {
                     AssetDatabase.DeleteAsset(EXP_SCENE);
-                    AssetDatabase.DeleteAsset(EXP_SCENE + ".meta");
-                }
                 if (dataDstExists)
                     AssetDatabase.DeleteAsset(DATA_DST);
-
                 AssetDatabase.Refresh();
             }
 
@@ -280,6 +272,9 @@ namespace Golfin.CourseImport
                 EditorUtility.SetDirty(mr);
             }
 
+            // Capture counts before CloseScene destroys scene objects
+            int layerCount = (terrain != null && terrain.terrainData != null) ? terrain.terrainData.terrainLayers.Length : 0;
+
             // ── Save and unload experimental scene ────────────────────────────────
             EditorSceneManager.SaveScene(expScene, EXP_SCENE);
             EditorSceneManager.CloseScene(expScene, true);
@@ -312,21 +307,13 @@ namespace Golfin.CourseImport
 
             sb.AppendLine();
             sb.AppendLine("## Summary");
-            sb.AppendLine($"- TerrainLayers duplicated: {(terrain?.terrainData != null ? terrain.terrainData.terrainLayers.Length : 0)}");
+            sb.AppendLine($"- TerrainLayers duplicated: {layerCount}");
             sb.AppendLine($"- Overlay materials duplicated: {duplicatedMats.Count}");
             sb.AppendLine($"- Warnings: {warnings.Count}");
 
             File.WriteAllText(REPORT_PATH, sb.ToString());
 
-            Debug.Log($"[BuildExperimentalHole01] Done. Report: {REPORT_PATH}");
-            EditorUtility.DisplayDialog("Build Experimental Hole",
-                $"Done!\n\n" +
-                $"Scene: {EXP_SCENE}\n" +
-                $"Layers duplicated: {(terrain?.terrainData != null ? terrain.terrainData.terrainLayers.Length : 0)}\n" +
-                $"Materials duplicated: {duplicatedMats.Count}\n" +
-                $"Warnings: {warnings.Count}\n\n" +
-                $"See {REPORT_PATH} for details.",
-                "OK");
+            Debug.Log($"[BuildExperimentalHole01] Done. Layers={layerCount} Mats={duplicatedMats.Count} Warnings={warnings.Count} Report={REPORT_PATH}");
         }
 
         static void SwapMatTex(Material mat, string slot, List<string> report, List<string> warnings)
