@@ -258,6 +258,127 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &138392977
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 138392978}
+  m_Layer: 0
+  m_Name: _RuntimeTeeAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &138392978
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 138392977}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 219.42775, y: 11.583316, z: 34.734093}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1483952039}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &508571711
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 508571714}
+  - component: {fileID: 508571713}
+  - component: {fileID: 508571712}
+  m_Layer: 0
+  m_Name: Pf_GOLFIN_Ball(Clone)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!23 &508571712
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 508571711}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 5c60713ec9e00f34cb2676f71f6bf360, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &508571713
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 508571711}
+  m_Mesh: {fileID: -5816000905847336366, guid: a7147d38dfd3d0b469db699d99f59192, type: 3}
+--- !u!4 &508571714
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 508571711}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 219.42775, y: 11.458084, z: 34.7341}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &639531372
 GameObject:
   m_ObjectHideFlags: 0
@@ -827,13 +948,13 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _halfAngleDeg: 12.5
-  _heightPx: 600
+  _heightPx: 1009
   _strips: 512
   _curvaturePx: 15
   _centerColor: {r: 0, g: 0, b: 0, a: 0.5}
   _fillColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.3529412}
   _centerDarkFraction: 0
-  _edgeFadePx: 2
+  _edgeFadePx: 8
   _bandRedY01: 0
   _bandGoldY01: 0.45
   _bandGreenY01: 0.85
@@ -1108,7 +1229,7 @@ MonoBehaviour:
   chaseCamera: {fileID: 824114951}
   _shotController: {fileID: 1483952040}
   _shotConeView: {fileID: 1838493589}
-  _ballSpawnPoint: {fileID: 1392941285}
+  _ballSpawnPoint: {fileID: 138392978}
   _defaultLookDirection: {x: 0, y: 0, z: 0}
   _orbitSensitivity: 0.5
 --- !u!4 &1483952039
@@ -1129,6 +1250,7 @@ Transform:
   - {fileID: 1552605528}
   - {fileID: 1411217031}
   - {fileID: 1392941285}
+  - {fileID: 138392978}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1483952040
@@ -1456,7 +1578,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ShotConeView
   _shotController: {fileID: 1483952040}
   _coneGraphic: {fileID: 1379986110}
-  _coneHeightPx: 600
+  _coneHeightPx: 1009
   _clubHandle: {fileID: 1443870532}
   _handleYPx: 80
   _timingSlab: {fileID: 0}
@@ -1685,3 +1807,4 @@ SceneRoots:
   - {fileID: 824114953}
   - {fileID: 1286964997}
   - {fileID: 639531375}
+  - {fileID: 508571714}

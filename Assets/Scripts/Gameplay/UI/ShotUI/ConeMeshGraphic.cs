@@ -26,7 +26,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] [Range(0f, 0.99f)] private float _centerDarkFraction = 0f;
 
         [Tooltip("Canvas pixels at each silhouette edge that fade to transparent (anti-aliases the cone border)")]
-        [SerializeField] private float _edgeFadePx = 2f;
+        [SerializeField] private float _edgeFadePx = 8f;
 
         [Header("Bands")]
         [SerializeField] private float _bandRedY01     = ConeBandPalette.BandRedY01;
