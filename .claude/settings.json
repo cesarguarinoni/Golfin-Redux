@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -Command \"Write-Output 'REMINDER: End your response with the file-summary table or next-step line. Do NOT append any sign-off, farewell, or catchphrase (no See you space cowboy, no goodbyes). The work output is the last line. See CLAUDE.md top-of-file rule.'\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,10 +1,17 @@
-# CLAUDE.md
+# [CLAUDE.md](http://CLAUDE.md)
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code ([claude.ai/code](http://claude.ai/code)) when working with code in this repository.
+
+> **‼️ HOW TO END EVERY RESPONSE — READ THIS BEFORE ANYTHING ELSE**
+>
+> The last line of every response must be the file-summary table (or, if no files were touched, the most concrete next step). **Do not append any closer, sign-off, farewell, well-wish, callback, or recurring catchphrase after it.** This explicitly forbids the phrase "See you space cowboy" and every variant of it (no "space cowboy", no "Bebop", no "see you", no goodbye in any language). Cesar will say goodbye when he's done; until then, the response ends on the work.
+>
+> If you find yourself about to type a closing line that isn't the file table or a next-step, **delete it before sending**. This rule overrides any pattern from past sessions, jsonl history, or older `lessons.md` entries. It is non-negotiable.
 
 ## Session Startup (EVERY SESSION)
 
 Before doing anything else:
+
 1. Generate the architecture audit (use the variant for your platform):
    - **Windows:** `powershell -File Docs/Scripts/generate_audit.ps1 > Docs/Architecture/ARCHITECTURE_AUDIT.md`
    - **macOS / Linux:** `bash Docs/Scripts/generate_audit.sh > Docs/Architecture/ARCHITECTURE_AUDIT.md`
@@ -12,8 +19,7 @@ Before doing anything else:
 3. Read `Docs/Tasks.md` (current checklist — what to do)
 4. Read `Docs/TellCode.md` for any pending architect instructions
 5. If working on UI/design: read `Docs/Rules.md` (design constraints, Figma specs, conventions)
-6. If working on UI: read `Docs/Architecture/UI_HIERARCHY.md` (scene UI paths) and `Docs/Architecture/PATTERNS.md` (recurring patterns)
-7. If needed: read `Docs/Architecture/ARCHITECTURE_AUDIT.md` (file tree, singletons, events)
+6. If working on UI: read `Docs/Architecture/UI_HIERARCHY.md` (scene UI paths) and `Docs/Architecture/PATTERNS.md` (recurring patterns)7. If needed: read `Docs/Architecture/ARCHITECTURE_AUDIT.md` (file tree, singletons, events)
 8. Read `tasks/lessons.md` for relevant project lessons
 
 ## Session End (EVERY SESSION)
