@@ -169,9 +169,9 @@ Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their 
 - If `sharp` install fails on Windows, surface to Cesar — don't try alternative image libs.
 - If the editor script can't safely identify a TerrainLayer or overlay material in 2 attempts, surface to Architect with the specific case.
 
-✅ DONE: 2026-04-27 (Step 1) / Pending Cesar menu run (Step 2)
+✅ DONE: 2026-04-27
 - Step 1: 25 textures generated, 12 MB total, 0 failed sources. Output: `Assets/Courses/Textures_Experimental/`
-- Step 2: Script written at `Assets/Scripts/Editor/CourseImporter/BuildExperimentalHole01.cs`. Compiles clean. **Cesar must run GOLFIN → Tools → Build Hole_01 Experimental Clone** in Unity Editor. Script cannot be invoked via MCP (editor-only assembly). Outputs will be at `Assets/Golf/Courses/lomond-country-club/Generated/Experimental/Hole_01_Experimental_Geo.unity` and `Data/hole-01-experimental/` + report at `Docs/Diagnostics/texture-experiment/HOLE01_CLONE_REPORT.md`.
+- Step 2: 9 TerrainLayers duplicated, 4 overlay materials duplicated, 0 warnings. Scene: `Assets/Golf/Courses/lomond-country-club/Generated/Experimental/Hole_01_Experimental_Geo.unity`. Report: `Docs/Diagnostics/texture-experiment/HOLE01_CLONE_REPORT.md`. Production untouched (verified git diff).
 
 ---
 

@@ -20,6 +20,7 @@
 | Physics Architecture | ✅ Phases 0–6 COMPLETE; Phase 6 Stat Coupling COMPLETE; **BAKED-DATA SIM PIVOT COMPLETE (2026-04-25).** Sim reads from baked `zones.json` (polygon classifier with bit-packed OB mask + per-zone triangulated mesh for exact barycentric Y interpolation) + `heightmap.bytes` (both ship under `Assets/Resources/HoleData/Hole_XX/`). Original "ball into the void" repro eliminated by construction. M0 regression: **24/24 PASS** post-M5b airborne signed-distance level-detector fix (`Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md`). M2 height agreement: **100/100 within 5 cm (mean 0.45 cm, max 1.6 cm)**. Full M4 real-conditions suite + Phase 1–6 bit-exact gate: **229/229 PASS, 0 Skipped**. Phase E manual confirmation: **5/5 PASS**. Full narrative: `Docs/Diagnostics/baked-pivot/FULL_PIVOT_REPORT.md`. **Phase F cleanup COMPLETE (2026-04-26):** SceneGroundProvider, SceneSurfaceProvider, PhysicsMarkerRepairTool, MarkerAuditTool, 8 pre-pivot diag/agreement test files, and the stale TERRAIN_REALTEST_FIX active spec all deleted. `Physics.Runtime.SurfaceMarker` retained for the import → bake bridge. Open follow-ups: hole coverage expansion as Holes 2–18 are imported; future housekeeping — eventually consolidate `Physics.Runtime.SurfaceMarker` and `Course.SurfaceMarker` to a single enum (bake tool reads two type systems today; not blocking). |
 | Shot Controls | 🔶 **Phase 7 COMPLETE (83/83 tests)**. **Phase 8 Shot UI Polish IN PROGRESS** — Parts 8.1 + 8.2 + 8.2.5 complete (2026-04-27). 8.1: cone restyle. 8.2: PowerGaugeGraphic + PowerGaugeWidget. 8.2.5: ClubHandleSpriteBinder + ClubSelectionBroadcast + scale-with-pull. Post-ack bugs fixed: ClubHandleDragger coneHeightPx stale (600→1009), ConeMesh base Y 120→50. Screenshot workflow fixed: ScreenshotHelper.cs (real MonoBehaviour coroutine, guards against TickArrow resets). **Awaiting Architect ack before Part 8.3 (player card + hole card + settings icon).** |
 | PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). **F-Hotfix COMPLETE (2026-04-24)**: type-aware SurfaceSnap, coroutine startup scan, camera depression lift. 12/12 regression tests pass. |
+| Texture Experiment | 🔶 **Spec'd 2026-04-27** — `Docs/Specs/Active/TEXTURE_EXPERIMENT.md`. Two-step: Node script downloads CC0 textures (ambientCG + Poly Haven), C# editor script clones Hole_01 with new textures wired in. Production hole untouched. Cesar reviews side-by-side. |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -43,29 +44,64 @@ See `Docs/Physics/PHYSICS_RESEARCH.md` Section 6.5 for the full breakdown of Uni
 
 ---
 
-## Spec Organization (2026-04-25)
+## Spec Organization (2026-04-25, slim'd 2026-04-27)
 
-To keep `TellCode.md` readable for Claude Code (file was getting long enough to risk context confusion), specs are now split from the handoff file.
+To keep `TellCode.md` readable for Claude Code (file was getting long enough to risk context confusion), specs are split from the handoff file. **As of 2026-04-27, the long History Log + completed task blocks have also been moved out of TellCode.md to `Docs/Archive/TELLCODE_HISTORY.md`.** TellCode.md now holds only the active phase + open flags + reference pointers (~200 lines, down from ~1500+).
 
 **Convention:**
-- **`Docs/TellCode.md`** — handoff index + short pointer blocks for active tasks + completion log. Pointers are ~15 lines each: task title, path to full spec, one-line summary, hard rules.
-- **`Docs/Specs/Active/<NAME>.md`** — full specification for any active task whose spec exceeds ~50 lines. Named in SCREAMING_SNAKE_CASE matching the task (e.g. `TERRAIN_FALLTHROUGH_FIX.md`).
-- **`Docs/Specs/Queued/<NAME>.md`** — specs written but not yet handed to Code (future work, deferred polish). Referenced by one-line stub in TellCode.md's "On the Horizon" / open-flag area.
-- **`Docs/Specs/Completed/<NAME>.md`** (optional) — archived specs after task is done, if the spec has long-term reference value. Otherwise, the one-line DONE entry in TellCode.md's history log is sufficient and the spec file can be deleted.
+- **`Docs/TellCode.md`** — handoff index + short pointer blocks for active tasks + open flags. Pointers are ~15 lines each: task title, path to full spec, one-line summary, hard rules. Header points to `Docs/Archive/TELLCODE_HISTORY.md` for completed task detail.
+- **`Docs/Specs/Active/<n>.md`** — full specification for any active task whose spec exceeds ~50 lines. Named in SCREAMING_SNAKE_CASE matching the task (e.g. `TEXTURE_EXPERIMENT.md`).
+- **`Docs/Specs/Queued/<n>.md`** — specs written but not yet handed to Code (future work, deferred polish). Referenced by one-line stub in TellCode.md's "On the Horizon" / open-flag area.
+- **`Docs/Specs/Completed/<n>.md`** (optional) — archived specs after task is done, if the spec has long-term reference value. Otherwise, the one-line DONE entry in `TELLCODE_HISTORY.md` is sufficient and the spec file can be deleted.
+- **`Docs/Archive/TELLCODE_HISTORY.md`** — completed TellCode task blocks (full done reports) + the long History Log of one-line summaries. Read here when you need detail on something old.
 
 **When Architect writes a spec:**
 - If ≤50 lines: inline directly in TellCode.md (current behavior for small tasks).
-- If >50 lines: full text goes to `Docs/Specs/Active/<NAME>.md`; pointer block goes in TellCode.md.
+- If >50 lines: full text goes to `Docs/Specs/Active/<n>.md`; pointer block goes in TellCode.md.
 
 **When Claude Code starts a session:**
 1. Read `TellCode.md` end-to-end.
 2. For any active task whose pointer says "Full spec: `Docs/Specs/Active/...`", open and read that spec file next.
-3. Proceed with the task. Reference docs in `Docs/Specs/Active/` are authoritative; TellCode.md pointer is a summary and may lag by a sentence or two on nuance.
+3. If you need context from a previously completed task, check `Docs/Archive/TELLCODE_HISTORY.md`.
+4. Proceed with the task. Reference docs in `Docs/Specs/Active/` are authoritative; TellCode.md pointer is a summary and may lag by a sentence or two on nuance.
 
 **When a task completes:**
-- Architect moves the DONE entry to TellCode.md history log (one-liner).
+- Architect adds a one-line entry to the History Log section in `Docs/Archive/TELLCODE_HISTORY.md`.
+- Full done report (the verbose ✅ DONE block) moves from TellCode.md to `Docs/Archive/TELLCODE_HISTORY.md`.
 - Spec file moves `Active/` → `Completed/` (if long-term reference) or is deleted.
 - Pointer block is removed from TellCode.md.
+
+---
+
+## Session Changes (2026-04-27 — Texture Experiment Spec + Docs Reorg)
+
+### Completed
+- **Texture Experiment spec** (`Docs/Specs/Active/TEXTURE_EXPERIMENT.md`):
+  - Goal: replace current "felty" terrain textures with higher-fidelity CC0 sources (ambientCG + Poly Haven).
+  - Mobile-friendly resolutions: 1024 for camera-close surfaces (green/fairway/fringe/semirough/rough/bunker/tee), 512 for OOB/asphalt.
+  - 14-output texture map covering all 25 expected production texture files (Mix/Light/Dark variants for fairway, BunkerDark, TeeDark, TeeDark_NoBorder all derived via brightness shift from base sources).
+  - Rough source: Poly Haven `aerial_grass_rock` (vibrant green, longer/wilder — NOT brown, per Cesar feedback).
+  - OOB source: Poly Haven `sparse_grass` (this is where the brown/dirt look belongs).
+  - Verified TerrainLayer setup: `m_SmoothnessSource: 1` (mask map alpha) → JPG albedos safe (no alpha smoothness bug).
+  - **Two-step workflow** (revised after Cesar feedback):
+    - **Step 1 (Node):** `Tools/TextureExperiment/prepare-textures.mjs` downloads + resizes + brightness-adjusts → `Assets/Courses/Textures_Experimental/`. Uses `sharp` for resize, PowerShell `Expand-Archive` for unzip. Handles ambientCG ZIPs + Poly Haven direct CDN URLs.
+    - **Step 2 (Unity C# editor script):** `BuildExperimentalHole01.cs` clones the Hole_01 scene + TerrainData + 8 TerrainLayers + overlay materials into `Hole_01_Experimental_Geo.unity` with experimental textures wired in. Production scene/assets untouched. Menu: `GOLFIN > Tools > Build Hole_01 Experimental Clone`. Writes clone report to `Docs/Diagnostics/texture-experiment/HOLE01_CLONE_REPORT.md`.
+  - Cesar then walks both scenes, compares side-by-side, decides go/no-go.
+  - Production safety: hard rules forbid edits to production scene, production TerrainLayers, production materials, splatmaps, mask maps, or `HoleGeoImporter.cs`.
+
+### Docs reorg (2026-04-27)
+- **Created `Docs/Archive/TELLCODE_HISTORY.md`** — moved out of `Docs/TellCode.md`: F-Hotfix, Phase 7 Part F, PhysicsLab scaffold migration, Phase 7 Parts A–E, bulletproof terrain B'/B'2 chain, bulletproof terrain Phase 1–6 synthetic, ball-through-green diagnosis, architectural pivot done report, real-conditions terrain fall-through chain, full History Log.
+- **`Docs/TellCode.md` slim'd from ~1500+ lines to ~200 lines** — kept only: header + roadmap + arch state recap + active phase (Phase 8 + texture experiment) + open flags + reference docs. Header explicitly points to `TELLCODE_HISTORY.md`.
+- **Convention update** in this AI_CONTEXT (Spec Organization section above): completed done-reports now move to `TELLCODE_HISTORY.md`, not stay in TellCode.md.
+
+### Files added
+- `Docs/Specs/Active/TEXTURE_EXPERIMENT.md` (full spec)
+- `Docs/Specs/Active/TEXTURE_EXPERIMENT_TELLCODE_BLOCK.md` (paste-into-TellCode pointer; deletable after paste)
+- `Docs/Archive/TELLCODE_HISTORY.md` (history archive)
+- `Tools/TextureExperiment/manifest.json`, `prepare-textures.mjs`, `package.json`
+
+### Next
+- Cesar acks Phase 8.3 OR runs the Texture Experiment first (parallel tracks; experiment is non-load-bearing).
 
 ---
 
@@ -1074,6 +1110,7 @@ Official map → control points → affine transform → heightmap + aerial text
 ## Reference Docs
 
 - `Docs/README.md` — index map of what lives where in `Docs/`
+- `Docs/Archive/TELLCODE_HISTORY.md` — completed TellCode task blocks + History Log (start here for anything older than current phase)
 - `Docs/Architecture/INVENTORY_REFERENCE.md` — patterns, file locations, APIs for all inventory screens
 - `Docs/Architecture/UI_HIERARCHY.md` — scene UI paths reference
 - `Docs/Architecture/PATTERNS.md` — recurring patterns across the codebase
