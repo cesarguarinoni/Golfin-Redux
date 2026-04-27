@@ -109,6 +109,10 @@
 
 **Awaiting Architect ack before Part 8.3.**
 
+**Post-ack bug fixes (2026-04-27):**
+- `ClubHandleDragger._coneHeightPx` was stale at 600px (old value) while `ShotConeView._coneHeightPx` = 1009px. Fixed: `ShotConeView.Awake()` now calls `_clubHandle.GetComponent<ClubHandleDragger>()?.SetConeHeight(_coneHeightPx)` to keep both in sync.
+- `ConeMesh` base Y was 120px → cone tip sat 70px above screen center. Fixed: base Y moved to 50px so tip aligns with canvas center (2118/2 = 1059). ClubHandle moved automatically as a child.
+
 ---
 
 ## ✅ DONE — Housekeeping: BallSimulation A3 plumbing cleanup (2026-04-27)

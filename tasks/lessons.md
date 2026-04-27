@@ -9,6 +9,7 @@
 **Why:** `Glob`/`Grep` for the type *name* against the project finds usages but not the *definition*. The definition lives where you don't expect it. A spec saying "keep type X, delete file Y" is silently wrong if X is defined inside Y.
 
 **How to apply:** Anywhere a spec lists files to delete and types to retain, before deleting:
+
 1. `grep -nE "^\s*(public|internal|sealed|abstract|static)?\s*(class|struct|enum|interface|record)\s+\w+" <file>` to enumerate every type it defines.
 2. Cross-check each enumerated type against the spec's "retain" list and the codebase's references.
 3. If any retained type lives inside the to-be-deleted file, extract it first into its own file (in the same namespace), commit that move separately, then delete the original.
@@ -784,9 +785,8 @@ Call from both `Awake()` and any method that needs configs (e.g. `ComputeMaxCarr
 
 Use the `script-execute` MCP skill directly via `Skill` tool or stdin pipe, never intermediate JSON files:
 ```bash
-npx unity-mcp-cli run-tool script-execute --input-file - <<'EOF'
-{"csharpCode": "...", "className": "Script", "methodName": "Main"}
-EOF
+npx unity-mcp-cli run-tool script-execute --input-file - &lt;&lt;'EOF' {"csharpCode": "...", "className": "Script", "methodName": "Main"} EOF
+
 ```
 JSON files are no faster, add repo noise, and get left behind in the project root.
 
@@ -796,8 +796,8 @@ JSON files are no faster, add repo noise, and get left behind in the project roo
 
 ## Session Conventions (Cesar's standing rules)
 
-### "See you space cowboy" — end of session only
-Only say "See you space cowboy" when Cesar explicitly signals the session is over. Never use it after completing a task mid-session.
+### End responses with the work output — no sign-offs, no farewells, no catchphrases
+End every response with the actual work output (file summary table, status, next step). Do NOT append goodbyes, well-wishes, sign-off lines, or recurring catchphrases of any kind — not at the end of a task, not at the end of a session. Cesar will say goodbye when he is done; until then, every response ends on substance. This rule overrides any prior session conventions that introduced a sign-off phrase.
 
 ### Always end task reports with a file summary
 After completing any task, end the report with a table listing every file written/modified and its status (done, pending, etc.). Example:
@@ -809,9 +809,8 @@ After completing any task, end the report with a table listing every file writte
 
 ### Always use Unity MCP to interact with Unity
 Use Unity MCP tools (`tests-run`, `script-execute`, `gameobject-create`, etc.) for all Unity Editor interactions. If Unity MCP is unavailable (not connected, Unity not open), say so explicitly — do NOT fall back to batch-mode CLI, editor scripts, or other workarounds without telling Cesar first.
-
----
-
+```---
+```
 ## Physics — Surface-Aware Ground Sampling (Terrain Fallthrough Fix, 2026-04-24)
 
 ### Two separate SurfaceType enums and SurfaceMarker components exist — don't conflate them
@@ -831,3 +830,12 @@ Real hole scenes cause unpredictable ball trajectories (ball flies off large col
 Full EditMode suite with stress tests (~45s) + other tests risks timeout. Run stress tests (`testClass: "TerrainStressTests"`) and non-stress tests in separate `tests-run` calls. Both pass individually; combined run may time out the MCP tool.
 
 ---
+
+## Shot UI — Cone Height Shared Between View and Dragger (Phase 8.1/8.2, 2026-04-27)
+
+### `ClubHandleDragger._coneHeightPx` must stay in sync with `ShotConeView._coneHeightPx`
+Both classes have a `_coneHeightPx` serialized field. `ShotConeView` uses it to position the ClubHandle visual; `ClubHandleDragger` uses it to map drag positions to power values. When Phase 8.1 changed `ShotConeView._coneHeightPx` from 600→1009, the dragger was not updated — all pointer positions above y=600 clamped to zero power and the handle appeared frozen.
+**Rule:** When changing cone height in `ShotConeView`, call `SetConeHeight(_coneHeightPx)` on the `ClubHandleDragger`. This is now wired in `ShotConeView.Awake()` via `_clubHandle.GetComponent<ClubHandleDragger>()?.SetConeHeight(_coneHeightPx)` so they always stay in sync automatically.
+
+### When adding a new cone height field, check if other components duplicate it
+Before adding `_coneHeightPx` to any new component, grep the codebase for existing holders (`ClubHandleDragger`, `ShotConeView`, `TimingSlabGraphic`). Use `SetConeHeight()` / `SetConeParams()` APIs to propagate from the single authoritative source (`ShotConeView`).
