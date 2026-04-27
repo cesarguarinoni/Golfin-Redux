@@ -121,12 +121,18 @@
 - `ClubSelectionBroadcast.cs` (new) — static event bus in `Golfin.Gameplay.UI.ShotUI`; avoids circular asmdef dep (Viewer already refs Gameplay.UI, so Viewer calls Raise() and UI subscribes)
 - `ClubHandleSpriteBinder.cs` (new) — caches 4 GOLFIN sprites in Awake, subscribes to `ClubSelectionBroadcast`; no direct Viewer reference
 - `PhysicsLabController.cs` (modified) — added `CurrentClubIndex` property, `OnClubChanged` event, fires `ClubSelectionBroadcast.Raise(index)` in `SetClub`
-- `ShotConeView.cs` (modified) — `UpdateClubHandle` now applies `localScale = Vector3.one * Lerp(1f, 1.3f, PowerNormalized)` so handle grows 30% at full pull, snaps to 1.0 at tip
-- `LabScaffold.unity` (modified) — `ClubHandleSpriteBinder` added to `ClubHandle` GO
+- `ShotConeView.cs` (modified) — `UpdateClubHandle` now applies `localScale = Vector3.one * Lerp(_minHandleScale, _maxHandleScale, PowerNormalized)` (inspector-tunable, defaults 1.0→1.3); `sizeDelta=(178,100)` applied in Awake from inspector fields
+- `ClubHandleDragger.cs` (modified) — removed hardcoded `_coneHeightPx = 600f`; reads live from `[SerializeField] ConeMeshGraphic _coneGraphic` via computed property `ConeHeightPx`
+- `LabScaffold.unity` (modified) — `ClubHandleSpriteBinder` added to `ClubHandle` GO; `ClubHandleDragger._coneGraphic` wired to `ConeMesh` GO
 
-**Edit-mode verification:** `ClubHandleSpriteBinder` PRESENT, `Image.sprite = S_Controls_Driver_GOLFIN`, `localScale = (1,1,1)` ✅
+**Play-mode verification (2026-04-27):**
+- 0% power: `anchoredPos=(0, 1009)`, `scale=(1.0, 1.0, 1.0)` ✅
+- 100% power (Timing state): `anchoredPos=(0, 0)`, `scale=(1.3, 1.3, 1.3)` ✅
+- Timing slab visible at 100% power, absent at 0% ✅
+- No compile errors ✅
+- Screenshots: `Assets/Screenshots/_compressed/screenshot_2026-04-27_17-17-54.png` (100%), `screenshot_2026-04-27_17-14-50.png` (0%)
 
-**Awaiting Cesar play-mode smoke test:** cycle lab club picker → verify handle sprite swaps; pull back → verify handle grows to ~1.3×; release → verify returns to 1.0.
+**Note for Cesar:** Please smoke test in play mode: cycle lab club picker (Driver→Iron→Wedge→Putter) → verify handle sprite swaps; drag handle down → verify handle grows to ~1.3×; release → verify returns to 1.0. Scale and position ranges are tunable via `ShotConeView` inspector fields `_minHandleScale` / `_maxHandleScale` / `_handleWidth` / `_handleHeight`.
 
 **Awaiting Architect ack before Part 8.3.**
 
