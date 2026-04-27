@@ -103,7 +103,9 @@
 - `ShotConeTest.unity` (modified) — `PowerGaugeWidget` GO added under `ShotCanvas`; RT 200×200, anchor top-right, pos −180/−460; `Background` child with `Indicator - Power.png` sprite; `GaugeArc` child with `PowerGaugeGraphic`; `PctText` + `YardsText` TMP children; `ShotController` reference wired
 - `Assets/Art/In-Game UI/` (11 assets) — fixed `TextureType` from `Default` → `Sprite` for all in-game UI PNGs (needed by Parts 8.3–8.7 too)
 
-**Visually confirmed by Cesar:** gauge renders at 50% in ShotConeTest Play mode — green→yellow arc, navy background circle, "50%" + "125.0 yd" text correct.
+**Visually confirmed by Cesar (ShotConeTest) + autonomous screenshot (LabScaffold):** gauge renders at 50% — green→yellow arc, navy background circle, "50%" + yards text correct. Screenshot: `Assets/Screenshots/_compressed/screenshot_gauge_lab_50pct.png`.
+
+**Font note:** PctText + YardsText should use `Rubik-VariableFont_wght SDF`, not `Rubik-SemiBold SDF`. Cesar corrected this manually; future build scripts must use `Assets/Fonts/Rubik-VariableFont_wght SDF.asset`.
 
 **Awaiting Architect ack before Part 8.3.**
 
