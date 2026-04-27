@@ -7,8 +7,9 @@ namespace Golfin.Gameplay.UI.ShotUI
     //   - gradient: semi-transparent black at center spine → semi-transparent gray at edges
     //   - curved base and band lines: center dips DOWN; all arcs share the same circle radius
     //   - shared-vertex grid: no seam artefacts between strips
-    //   - silhouette edge feather: outer _edgeFadePx canvas units fade to alpha=0
-    //   - band lines feathered top/bottom by BandFeatherPx for smooth anti-aliasing
+    //   - silhouette feather strips: separate transparent outer band along both edges,
+    //     offset in the perpendicular-to-silhouette direction for true diagonal anti-aliasing
+    //   - band lines feathered top/bottom by BandFeatherPx
     // Pivot must be (0.5, 0) — apex points up at y=_heightPx, base at y≈0 in local space.
     [RequireComponent(typeof(CanvasRenderer))]
     public class ConeMeshGraphic : MaskableGraphic
@@ -25,7 +26,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         [Tooltip("Fraction of half-width that stays at the dark center color (0 = point, 0.5 = 50% of cone is dark)")]
         [SerializeField] [Range(0f, 0.99f)] private float _centerDarkFraction = 0f;
 
-        [Tooltip("Canvas pixels at each silhouette edge that fade to transparent (anti-aliases the cone border)")]
+        [Tooltip("Width in canvas px of the perpendicular feather strip along each silhouette edge")]
         [SerializeField] private float _edgeFadePx = 8f;
 
         [Header("Bands")]
@@ -58,29 +59,20 @@ namespace Golfin.Gameplay.UI.ShotUI
             int   N  = Mathf.Max(8, _strips);
 
             // ── Cone fill ─────────────────────────────────────────────────────
-            // Shared-vertex column grid: (N+1) columns × 2 rows (bottom / top).
-            // Gradient: black at center spine → gray at edges, feathered at silhouette.
-            float edgeFadeN = hb > 0f ? _edgeFadePx / hb : 0f;  // fade zone in normalized coords
-
+            // Shared-vertex column grid: (N+1) columns × 2 rows (bot/top).
+            // No edge alpha here — silhouette anti-aliasing is handled by the
+            // separate feather strips below, which fade perpendicularly to the edge.
             int fillBase = vh.currentVertCount;
             for (int i = 0; i <= N; i++)
             {
                 float x    = Mathf.Lerp(-hb, hb, (float)i / N);
-                float absN = hb > 0f ? Mathf.Abs(x / hb) : 0f;  // 0 at center, 1 at edge
-                float yTop = _heightPx * (1f - absN);             // cone silhouette
-                float yBot = -_curvaturePx * (1f - absN * absN);  // concave base arc
-
-                // Gradient: flat dark zone then ramp to fill color
-                float t         = Mathf.Clamp01((absN - _centerDarkFraction) / Mathf.Max(0.001f, 1f - _centerDarkFraction));
-                Color baseColor = Color.Lerp(_centerColor, _fillColor, t);
-
-                // Silhouette edge feather: fade to alpha=0 in outer edgeFadePx canvas units
-                float edgeAlpha = Mathf.Clamp01(Mathf.InverseLerp(1f, 1f - edgeFadeN, absN));
-                baseColor.a    *= edgeAlpha;
-
-                var c = (Color32)baseColor;
-                AddVert(vh, new Vector2(x, yBot), c);   // index fillBase + 2*i
-                AddVert(vh, new Vector2(x, yTop), c);   // index fillBase + 2*i + 1
+                float absN = hb > 0f ? Mathf.Abs(x / hb) : 0f;
+                float yTop = _heightPx * (1f - absN);
+                float yBot = -_curvaturePx * (1f - absN * absN);
+                float t    = Mathf.Clamp01((absN - _centerDarkFraction) / Mathf.Max(0.001f, 1f - _centerDarkFraction));
+                var   c    = (Color32)Color.Lerp(_centerColor, _fillColor, t);
+                AddVert(vh, new Vector2(x, yBot), c);
+                AddVert(vh, new Vector2(x, yTop), c);
             }
             for (int i = 0; i < N; i++)
             {
@@ -90,24 +82,90 @@ namespace Golfin.Gameplay.UI.ShotUI
                 vh.AddTriangle(bl, tr, tl);
             }
 
+            // ── Silhouette feather strips ─────────────────────────────────────
+            // Two thin strips (left and right) whose inner vertices sit exactly
+            // on the cone silhouette (opaque) and outer vertices are offset by
+            // _edgeFadePx in the PERPENDICULAR direction to the silhouette
+            // (transparent). This produces true diagonal anti-aliasing.
+            AddSilhouetteFeather(vh, _edgeFadePx);
+
             // ── Band lines ────────────────────────────────────────────────────
             AddBandLine(vh, _bandRedY01,   (Color32)_bandRedColor);
             AddBandLine(vh, _bandGoldY01,  (Color32)_bandGoldColor);
             AddBandLine(vh, _bandGreenY01, (Color32)_bandGreenColor);
         }
 
+        // Feather strips along left and right silhouette edges.
+        // For right edge: inner vertex at (x, yTop), outer at (x+ox, yTop+oy)
+        // where (ox,oy) is the outward-perpendicular direction scaled by featherPx.
+        private void AddSilhouetteFeather(VertexHelper vh, float featherPx)
+        {
+            if (featherPx <= 0f) return;
+
+            float hb = HalfBasePx;
+            int   N  = Mathf.Max(8, _strips);
+
+            // Outward normal of right silhouette (pointing right+up away from cone).
+            // Silhouette direction: from (hb,0) to (0,heightPx) → (-hb, heightPx).
+            // Rotate 90° clockwise for outward normal: (heightPx, hb). Normalize.
+            float len = Mathf.Sqrt(hb * hb + _heightPx * _heightPx);
+            float ox  = featherPx * (_heightPx / len);
+            float oy  = featherPx * (hb        / len);
+
+            Color32 cTransp = new Color32(0, 0, 0, 0);
+
+            // Right silhouette: t=0 at base (hb,0), t=1 at apex (0,heightPx)
+            int rb = vh.currentVertCount;
+            for (int i = 0; i <= N; i++)
+            {
+                float t    = (float)i / N;
+                float x    = hb * (1f - t);
+                float y    = _heightPx * t;
+                float absN = 1f - t;
+                float tc   = Mathf.Clamp01((absN - _centerDarkFraction) / Mathf.Max(0.001f, 1f - _centerDarkFraction));
+                Color32 c  = (Color32)Color.Lerp(_centerColor, _fillColor, tc);
+                AddVert(vh, new Vector2(x,      y     ), c);       // inner — on silhouette, opaque
+                AddVert(vh, new Vector2(x + ox, y + oy), cTransp); // outer — beyond silhouette, transparent
+            }
+            for (int i = 0; i < N; i++)
+            {
+                int a = rb + 2 * i, b = rb + 2 * (i + 1);
+                vh.AddTriangle(a,     b,     b + 1);
+                vh.AddTriangle(a,     b + 1, a + 1);
+            }
+
+            // Left silhouette: mirror — outer offset goes in the -x direction
+            int lb = vh.currentVertCount;
+            for (int i = 0; i <= N; i++)
+            {
+                float t    = (float)i / N;
+                float x    = -hb * (1f - t);
+                float y    = _heightPx * t;
+                float absN = 1f - t;
+                float tc   = Mathf.Clamp01((absN - _centerDarkFraction) / Mathf.Max(0.001f, 1f - _centerDarkFraction));
+                Color32 c  = (Color32)Color.Lerp(_centerColor, _fillColor, tc);
+                AddVert(vh, new Vector2(x,      y     ), c);       // inner
+                AddVert(vh, new Vector2(x - ox, y + oy), cTransp); // outer
+            }
+            for (int i = 0; i < N; i++)
+            {
+                int a = lb + 2 * i, b = lb + 2 * (i + 1);
+                vh.AddTriangle(a,     b + 1, b    );  // reversed winding for left side
+                vh.AddTriangle(a,     a + 1, b + 1);
+            }
+        }
+
         // Each column has 4 vertices (outer-bottom → inner-bottom → inner-top → outer-top).
-        // Feather zones (BandFeatherPx) above/below the solid band fade alpha to 0,
-        // anti-aliasing both the top and bottom edges of the line.
+        // BandFeatherPx zones above/below fade alpha to 0 for smooth band edges.
         private void AddBandLine(VertexHelper vh, float y01, Color32 c)
         {
             float yCenter  = y01 * _heightPx;
             float hw       = HalfBasePx * Mathf.Max(0f, 1f - y01);
             float halfH    = ConeBandPalette.BandHalfHeightPx;
             float feather  = ConeBandPalette.BandFeatherPx;
-            int   N        = Mathf.Max(8, _strips);       // full strip count for smooth arc edges
+            int   N        = Mathf.Max(8, _strips / 2);
             float hb       = HalfBasePx;
-            Color32 c0     = new Color32(c.r, c.g, c.b, 0);  // transparent border color
+            Color32 c0     = new Color32(c.r, c.g, c.b, 0);
 
             int bandBase = vh.currentVertCount;
             for (int i = 0; i <= N; i++)
@@ -115,31 +173,20 @@ namespace Golfin.Gameplay.UI.ShotUI
                 float x      = Mathf.Lerp(-hw, hw, (float)i / N);
                 float n      = hw > 0f ? x / hw : 0f;
                 float wRatio = hb > 0f ? hw / hb : 0f;
-                // Scale to same circle radius as base: sagitta ∝ (half-width)²
                 float curve  = -_curvaturePx * wRatio * wRatio * (1f - n * n);
-
-                // 4 verts per column: outer-bottom, inner-bottom, inner-top, outer-top
-                AddVert(vh, new Vector2(x, yCenter - halfH - feather + curve), c0); // 4*i + 0
-                AddVert(vh, new Vector2(x, yCenter - halfH           + curve), c);  // 4*i + 1
-                AddVert(vh, new Vector2(x, yCenter + halfH           + curve), c);  // 4*i + 2
-                AddVert(vh, new Vector2(x, yCenter + halfH + feather + curve), c0); // 4*i + 3
+                AddVert(vh, new Vector2(x, yCenter - halfH - feather + curve), c0);
+                AddVert(vh, new Vector2(x, yCenter - halfH           + curve), c);
+                AddVert(vh, new Vector2(x, yCenter + halfH           + curve), c);
+                AddVert(vh, new Vector2(x, yCenter + halfH + feather + curve), c0);
             }
-
-            // 3 quad strips per column pair: bottom-feather, solid, top-feather
             for (int i = 0; i < N; i++)
             {
                 int b0 = bandBase + 4 * i;
                 int b1 = bandBase + 4 * (i + 1);
-
-                // bottom feather quad
-                vh.AddTriangle(b0 + 0, b1 + 0, b1 + 1);
-                vh.AddTriangle(b0 + 0, b1 + 1, b0 + 1);
-
-                // solid quad
+                vh.AddTriangle(b0,     b1,     b1 + 1);
+                vh.AddTriangle(b0,     b1 + 1, b0 + 1);
                 vh.AddTriangle(b0 + 1, b1 + 1, b1 + 2);
                 vh.AddTriangle(b0 + 1, b1 + 2, b0 + 2);
-
-                // top feather quad
                 vh.AddTriangle(b0 + 2, b1 + 2, b1 + 3);
                 vh.AddTriangle(b0 + 2, b1 + 3, b0 + 3);
             }
