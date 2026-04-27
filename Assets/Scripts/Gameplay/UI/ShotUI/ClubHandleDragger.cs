@@ -25,6 +25,8 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         public bool ReleaseToFire { get => _releaseToFire; set => _releaseToFire = value; }
 
+        public void SetConeHeight(float px) => _coneHeightPx = px;
+
         private bool  _dragging;
         private float _peakPower;
         private float _peakFinetune;

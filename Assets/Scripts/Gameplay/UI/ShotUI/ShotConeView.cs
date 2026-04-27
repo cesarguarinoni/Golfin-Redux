@@ -61,6 +61,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         private void Awake()
         {
             if (_coneGraphic != null) _coneGraphic.HeightPx = _coneHeightPx;
+            _clubHandle?.GetComponent<ClubHandleDragger>()?.SetConeHeight(_coneHeightPx);
             SetupSlab();
         }
 
