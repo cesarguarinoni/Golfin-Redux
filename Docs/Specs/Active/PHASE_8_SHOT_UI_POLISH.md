@@ -1,8 +1,8 @@
 # PHASE_8_SHOT_UI_POLISH — Wire real Figma art into the shot UI
 
 > **Handoff:** `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md`
-> **Status:** 8.1 + 8.2 DONE (2026-04-27). 8.2.5 next, then 8.3–8.8.
-> **Update 2026-04-27:** Inserted Part 8.2.5 (Club Handle sprite swap) — was missing from the original phasing. The `ClubHandle` Image needs to display the club-type-appropriate sprite from `Assets/Resources/Clubs/Controls/`.
+> **Status:** 8.1 + 8.2 + 8.2.5 DONE (2026-04-27). 8.3 next, then 8.4–8.8.
+> **Update 2026-04-27:** Inserted Part 8.2.5 (Club Handle sprite swap) mid-phase — was missing from the original phasing. Now landed.
 > **Branch:** `phase-8-shot-ui`. Pre-merge tag: `pre-phase-8`.
 >
 > **Input:** Cesar's Figma (`Docs/Reference/In-game UI/In-game GUI.fig`) + frames in same folder + assets already imported under `Assets/Resources/...` and `Assets/Art/In-Game UI/`. Reference frames PNGs:
@@ -153,7 +153,7 @@ Land each part, run tests if applicable, report, wait for Architect ack before n
 
 - **Part 8.1** — Cone restyle + timing arrow slabs. **✅ DONE 2026-04-27.** See `Docs/Diagnostics/CONE_MESH_ITERATION_LOG.md`.
 - **Part 8.2** — Power gauge widget. **✅ DONE 2026-04-27.**
-- **Part 8.2.5** — Club Handle sprite swap by club type. (~30min) Hardcoded brand-per-type for v1; binder reads from `PhysicsLabController` club index.
+- **Part 8.2.5** — Club Handle sprite swap by club type. **✅ DONE 2026-04-27.**
 - **Part 8.3** — Player card + hole card + settings icon. (~1.5h) Static-data widgets reading from `CharacterManager.Instance` (or fallback) and a new `HoleContext` static accessor.
 - **Part 8.4** — Wind indicator + hole-direction indicator with collision. (~2h) Both top-left/top-center area.
 - **Part 8.5** — Action button row (Spin / Ball / Mode / Club) + matching frames/icons. (~1.5h)
@@ -161,7 +161,7 @@ Land each part, run tests if applicable, report, wait for Architect ack before n
 - **Part 8.7** — Centerpiece ball thumbnail + targeting line restyle. (~30min)
 - **Part 8.8** — Final polish pass + tests + screenshots + Cesar smoke test. (~1h)
 
-Remaining estimate: ~8.5–9.5 hours of Code time (8.2.5 adds ~30min).
+Remaining estimate: ~8 hours of Code time.
 
 ---
 
