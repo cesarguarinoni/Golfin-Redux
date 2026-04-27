@@ -1,0 +1,13 @@
+{
+    "name": "Golfin.Dev",
+    "rootNamespace": "Golfin.Dev",
+    "references": [
+        "Golfin.Gameplay.Input"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": false,
+    "noEngineReferences": false
+}
