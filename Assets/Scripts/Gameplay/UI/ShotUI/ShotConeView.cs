@@ -23,7 +23,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         [Header("Club handle")]
         [SerializeField] private RectTransform   _clubHandle;
-        [SerializeField] private float           _handleYPx    = 80f;
+        [SerializeField] private float           _handleYPx      = 80f;
+        [SerializeField] private float           _minHandleScale = 1f;
+        [SerializeField] private float           _maxHandleScale = 1.3f;
 
         [Header("Timing slab")]
         [SerializeField] private TimingSlabGraphic _timingSlab;
@@ -132,9 +134,6 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         // ── Club handle ───────────────────────────────────────────────────────
 
-        // Max scale at full pull. Const so tuning goes here or into ConeBandPalette later.
-        private const float MaxHandleScale = 1.3f;
-
         private void UpdateClubHandle(ShotInputState state)
         {
             if (_clubHandle == null) return;
@@ -151,8 +150,8 @@ namespace Golfin.Gameplay.UI.ShotUI
                 handleY);
 
             // Grow handle as it moves away from tip; y01=1 at tip, 0 at base.
-            float y01        = 1f - power;
-            float handleScale = Mathf.Lerp(1f, MaxHandleScale, 1f - y01);
+            float y01         = 1f - power;
+            float handleScale = Mathf.Lerp(_minHandleScale, _maxHandleScale, 1f - y01);
             _clubHandle.localScale = Vector3.one * handleScale;
         }
 
