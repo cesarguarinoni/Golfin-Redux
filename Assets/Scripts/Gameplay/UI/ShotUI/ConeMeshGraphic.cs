@@ -27,7 +27,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] [Range(0f, 0.99f)] private float _centerDarkFraction = 0f;
 
         [Tooltip("Width in canvas px of the perpendicular feather strip along each silhouette edge")]
-        [SerializeField] private float _edgeFadePx = 2f;
+        [SerializeField] private float _edgeFadePx = 4f;
 
         [Header("Bands")]
         [SerializeField] private float _bandRedY01     = ConeBandPalette.BandRedY01;

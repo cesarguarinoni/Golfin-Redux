@@ -1301,7 +1301,7 @@ MonoBehaviour:
   _centerColor: {r: 0, g: 0, b: 0, a: 0.5}
   _fillColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.3529412}
   _centerDarkFraction: 0
-  _edgeFadePx: 2
+  _edgeFadePx: 4
   _bandRedY01: 0
   _bandGoldY01: 0.45
   _bandGreenY01: 0.85
