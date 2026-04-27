@@ -27,7 +27,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] [Range(0f, 0.99f)] private float _centerDarkFraction = 0f;
 
         [Tooltip("Width in canvas px of the perpendicular feather strip along each silhouette edge")]
-        [SerializeField] private float _edgeFadePx = 8f;
+        [SerializeField] private float _edgeFadePx = 2f;
 
         [Header("Bands")]
         [SerializeField] private float _bandRedY01     = ConeBandPalette.BandRedY01;
@@ -155,17 +155,14 @@ namespace Golfin.Gameplay.UI.ShotUI
             }
         }
 
-        // Each column has 4 vertices (outer-bottom → inner-bottom → inner-top → outer-top).
-        // BandFeatherPx zones above/below fade alpha to 0 for smooth band edges.
+        // Fully opaque band line: 2 vertices per column (bottom, top), no feather.
         private void AddBandLine(VertexHelper vh, float y01, Color32 c)
         {
-            float yCenter  = y01 * _heightPx;
-            float hw       = HalfBasePx * Mathf.Max(0f, 1f - y01);
-            float halfH    = ConeBandPalette.BandHalfHeightPx;
-            float feather  = ConeBandPalette.BandFeatherPx;
-            int   N        = Mathf.Max(8, _strips / 2);
-            float hb       = HalfBasePx;
-            Color32 c0     = new Color32(c.r, c.g, c.b, 0);
+            float yCenter = y01 * _heightPx;
+            float hw      = HalfBasePx * Mathf.Max(0f, 1f - y01);
+            float halfH   = ConeBandPalette.BandHalfHeightPx;
+            int   N       = Mathf.Max(8, _strips / 2);
+            float hb      = HalfBasePx;
 
             int bandBase = vh.currentVertCount;
             for (int i = 0; i <= N; i++)
@@ -174,21 +171,15 @@ namespace Golfin.Gameplay.UI.ShotUI
                 float n      = hw > 0f ? x / hw : 0f;
                 float wRatio = hb > 0f ? hw / hb : 0f;
                 float curve  = -_curvaturePx * wRatio * wRatio * (1f - n * n);
-                AddVert(vh, new Vector2(x, yCenter - halfH - feather + curve), c0);
-                AddVert(vh, new Vector2(x, yCenter - halfH           + curve), c);
-                AddVert(vh, new Vector2(x, yCenter + halfH           + curve), c);
-                AddVert(vh, new Vector2(x, yCenter + halfH + feather + curve), c0);
+                AddVert(vh, new Vector2(x, yCenter - halfH + curve), c);
+                AddVert(vh, new Vector2(x, yCenter + halfH + curve), c);
             }
             for (int i = 0; i < N; i++)
             {
-                int b0 = bandBase + 4 * i;
-                int b1 = bandBase + 4 * (i + 1);
+                int b0 = bandBase + 2 * i;
+                int b1 = bandBase + 2 * (i + 1);
                 vh.AddTriangle(b0,     b1,     b1 + 1);
                 vh.AddTriangle(b0,     b1 + 1, b0 + 1);
-                vh.AddTriangle(b0 + 1, b1 + 1, b1 + 2);
-                vh.AddTriangle(b0 + 1, b1 + 2, b0 + 2);
-                vh.AddTriangle(b0 + 2, b1 + 2, b1 + 3);
-                vh.AddTriangle(b0 + 2, b1 + 3, b0 + 3);
             }
         }
 
