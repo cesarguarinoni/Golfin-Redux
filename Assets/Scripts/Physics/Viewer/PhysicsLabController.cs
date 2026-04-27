@@ -202,9 +202,13 @@ namespace Golfin.Physics.Viewer
         };
         public static readonly string[] LabClubLabels = { "Driver", "Iron 7", "Wedge", "Putter" };
 
+        public int CurrentClubIndex { get; private set; }
+        public event System.Action<int> OnClubChanged;
+
         public void SetClub(int index)
         {
             if (_shotController == null || index < 0 || index >= LabClubs.Length) return;
+            CurrentClubIndex = index;
             bool isPutt = index == LabClubs.Length - 1;
             _shotController.IsPutt = isPutt;
             if (isPutt)
@@ -226,6 +230,8 @@ namespace Golfin.Physics.Viewer
                     Golfin.Physics.Stats.CharacterStats.Neutral,
                     fp.FromFloat(100f), fp.FromFloat(100f)));
             }
+            OnClubChanged?.Invoke(index);
+            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.Raise(index);
         }
 
         // ── Setup ──────────────────────────────────────────────────────────────

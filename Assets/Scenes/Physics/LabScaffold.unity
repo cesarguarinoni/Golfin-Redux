@@ -658,6 +658,37 @@ MonoBehaviour:
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
+--- !u!1 &746449927
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 746449928}
+  m_Layer: 0
+  m_Name: _RuntimeTeeAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &746449928
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 746449927}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 219.42775, y: 11.583316, z: 34.734093}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1483952039}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &824114950
 GameObject:
   m_ObjectHideFlags: 0
@@ -933,7 +964,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: 748c47432776ea1409500ea39569ea3a, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1301,13 +1332,13 @@ MonoBehaviour:
   _centerColor: {r: 0, g: 0, b: 0, a: 0.5}
   _fillColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.3529412}
   _centerDarkFraction: 0
-  _edgeFadePx: 4
+  _edgeFadePx: 2
   _bandRedY01: 0
   _bandGoldY01: 0.45
   _bandGreenY01: 0.85
   _bandRedColor: {r: 0.54509807, g: 0.16470589, b: 0.16470589, a: 1}
   _bandGoldColor: {r: 0.654902, g: 0.4862745, b: 0.16470589, a: 1}
-  _bandGreenColor: {r: 0.34509805, g: 0.4117647, b: 0.26666668, a: 1}
+  _bandGreenColor: {r: 0.28556862, g: 0.5283019, b: 0, a: 1}
 --- !u!1 &1392941284
 GameObject:
   m_ObjectHideFlags: 0
@@ -1457,6 +1488,7 @@ GameObject:
   - component: {fileID: 1443870534}
   - component: {fileID: 1443870533}
   - component: {fileID: 1443870535}
+  - component: {fileID: 1443870536}
   m_Layer: 0
   m_Name: ClubHandle
   m_TagString: Untagged
@@ -1538,6 +1570,18 @@ MonoBehaviour:
   _coneHeightPx: 600
   _flickThresholdPxPerFrame: 5
   _releaseToFire: 0
+--- !u!114 &1443870536
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1443870531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe8acfe329c1100409ca9dbc4184531b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ClubHandleSpriteBinder
 --- !u!1 &1483952037
 GameObject:
   m_ObjectHideFlags: 0
@@ -1576,7 +1620,7 @@ MonoBehaviour:
   chaseCamera: {fileID: 824114951}
   _shotController: {fileID: 1483952040}
   _shotConeView: {fileID: 1838493589}
-  _ballSpawnPoint: {fileID: 2106257192}
+  _ballSpawnPoint: {fileID: 746449928}
   _defaultLookDirection: {x: 0, y: 0, z: 0}
   _orbitSensitivity: 0.5
 --- !u!4 &1483952039
@@ -1600,6 +1644,7 @@ Transform:
   - {fileID: 138392978}
   - {fileID: 1488272537}
   - {fileID: 2106257192}
+  - {fileID: 746449928}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1483952040
@@ -2359,6 +2404,96 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1998324009
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1998324012}
+  - component: {fileID: 1998324011}
+  - component: {fileID: 1998324010}
+  m_Layer: 0
+  m_Name: Pf_GOLFIN_Ball(Clone)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!23 &1998324010
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1998324009}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 5c60713ec9e00f34cb2676f71f6bf360, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1998324011
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1998324009}
+  m_Mesh: {fileID: -5816000905847336366, guid: a7147d38dfd3d0b469db699d99f59192, type: 3}
+--- !u!4 &1998324012
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1998324009}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 219.42775, y: 11.458084, z: 34.7341}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2106257191
 GameObject:
   m_ObjectHideFlags: 0
@@ -2401,3 +2536,4 @@ SceneRoots:
   - {fileID: 508571714}
   - {fileID: 1983802840}
   - {fileID: 1892082227}
+  - {fileID: 1998324012}

@@ -132,11 +132,15 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         // ── Club handle ───────────────────────────────────────────────────────
 
+        // Max scale at full pull. Const so tuning goes here or into ConeBandPalette later.
+        private const float MaxHandleScale = 1.3f;
+
         private void UpdateClubHandle(ShotInputState state)
         {
             if (_clubHandle == null) return;
 
-            float handleY       = _coneHeightPx * (1f - Mathf.Clamp01(state.PowerNormalized));
+            float power         = Mathf.Clamp01(state.PowerNormalized);
+            float handleY       = _coneHeightPx * (1f - power);
             float halfAngleRad  = _shotController.ConeHalfAngleDeg * Mathf.Deg2Rad;
             float halfBase      = _coneHeightPx * Mathf.Tan(halfAngleRad);
             float widthFraction = 1f - Mathf.Clamp01(handleY / _coneHeightPx);
@@ -145,6 +149,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             _clubHandle.anchoredPosition = new Vector2(
                 state.ConeFinetuneX * maxX,
                 handleY);
+
+            // Grow handle as it moves away from tip; y01=1 at tip, 0 at base.
+            float y01        = 1f - power;
+            float handleScale = Mathf.Lerp(1f, MaxHandleScale, 1f - y01);
+            _clubHandle.localScale = Vector3.one * handleScale;
         }
 
         // ── Timing slab ───────────────────────────────────────────────────────
