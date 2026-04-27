@@ -3,31 +3,29 @@ using UnityEngine.UI;
 
 namespace Golfin.Gameplay.UI.ShotUI
 {
-    // Filled isoceles-triangle cone with semi-transparent gradient fill and three
-    // curved horizontal band lines (red at base, gold mid, green near apex).
-    // Fill is subdivided into _strips vertical quads so:
-    //   - edges are smooth (no staircase artefact)
-    //   - alpha fades from full at center-line to transparent at outer edges
-    //   - base and band lines arc upward at the center (_curvaturePx)
+    // Subdivided cone mesh with:
+    //   - gradient: transparent at center axis → opaque at sides (darker center, lighter borders)
+    //   - curved base and band lines: center dips DOWN (concave base, matching reference arc)
+    //   - shared-vertex grid: no seam artefacts between strips
     // Pivot must be (0.5, 0) — apex points up, base at y=0 in local space.
     [RequireComponent(typeof(CanvasRenderer))]
     public class ConeMeshGraphic : MaskableGraphic
     {
-        [SerializeField] private float _halfAngleDeg  = 12.5f;
-        [SerializeField] private float _heightPx      = 600f;
-        [SerializeField] private int   _strips        = 64;
-        [SerializeField] private float _curvaturePx   = 15f;
+        [SerializeField] private float _halfAngleDeg = 12.5f;
+        [SerializeField] private float _heightPx     = 600f;
+        [SerializeField] private int   _strips       = 128;
+        [SerializeField] private float _curvaturePx  = 15f;
 
         [Header("Fill")]
         [SerializeField] private Color _fillColor = new Color(200f / 255f, 200f / 255f, 200f / 255f, 90f / 255f);
 
         [Header("Bands")]
-        [SerializeField] private float _bandRedY01       = ConeBandPalette.BandRedY01;
-        [SerializeField] private float _bandGoldY01      = ConeBandPalette.BandGoldY01;
-        [SerializeField] private float _bandGreenY01     = ConeBandPalette.BandGreenY01;
-        [SerializeField] private Color _bandRedColor     = new Color(0x8B / 255f, 0x2A / 255f, 0x2A / 255f);
-        [SerializeField] private Color _bandGoldColor    = new Color(0xA7 / 255f, 0x7C / 255f, 0x2A / 255f);
-        [SerializeField] private Color _bandGreenColor   = new Color(0x58 / 255f, 0x69 / 255f, 0x44 / 255f);
+        [SerializeField] private float _bandRedY01     = ConeBandPalette.BandRedY01;
+        [SerializeField] private float _bandGoldY01    = ConeBandPalette.BandGoldY01;
+        [SerializeField] private float _bandGreenY01   = ConeBandPalette.BandGreenY01;
+        [SerializeField] private Color _bandRedColor   = new Color(0x8B / 255f, 0x2A / 255f, 0x2A / 255f);
+        [SerializeField] private Color _bandGoldColor  = new Color(0xA7 / 255f, 0x7C / 255f, 0x2A / 255f);
+        [SerializeField] private Color _bandGreenColor = new Color(0x58 / 255f, 0x69 / 255f, 0x44 / 255f);
 
         public float HalfAngleDeg
         {
@@ -50,66 +48,58 @@ namespace Golfin.Gameplay.UI.ShotUI
             float hb = HalfBasePx;
             int   N  = Mathf.Max(8, _strips);
 
-            // Cone fill: N vertical trapezoid strips.
-            //   - gradient alpha: 0 at x=±hb, full at x=0
-            //   - curved base: arcs up by _curvaturePx at center
+            // ── Cone fill ─────────────────────────────────────────────────────
+            // Shared-vertex column grid: (N+1) columns × 2 rows (bottom / top).
+            // Gradient: transparent at center (x=0), opaque at edges (x=±hb).
+            // Base arc: center dips down by _curvaturePx (concave base).
+            int fillBase = vh.currentVertCount;
+            for (int i = 0; i <= N; i++)
+            {
+                float x    = Mathf.Lerp(-hb, hb, (float)i / N);
+                float n    = x / hb;                                         // −1 … +1
+                float yTop = _heightPx * (1f - Mathf.Abs(n));               // cone silhouette
+                float yBot = -_curvaturePx * (1f - n * n);                  // concave base arc
+                float a    = Mathf.Lerp(0.05f, 1f, Mathf.Abs(n));           // edge brighter
+                var   c    = WithAlpha(_fillColor, _fillColor.a * a);
+                AddVert(vh, new Vector2(x, yBot), c);   // index fillBase + 2*i
+                AddVert(vh, new Vector2(x, yTop), c);   // index fillBase + 2*i + 1
+            }
             for (int i = 0; i < N; i++)
             {
-                float xL = Mathf.Lerp(-hb, hb, (float)i       / N);
-                float xR = Mathf.Lerp(-hb, hb, (float)(i + 1) / N);
-
-                float nL = xL / hb;                          // −1 … +1
-                float nR = xR / hb;
-
-                float yTopL = _heightPx * (1f - Mathf.Abs(nL));  // cone silhouette at xL
-                float yTopR = _heightPx * (1f - Mathf.Abs(nR));
-
-                float yBotL = _curvaturePx * (1f - nL * nL);     // curved base
-                float yBotR = _curvaturePx * (1f - nR * nR);
-
-                if (yBotL >= yTopL && yBotR >= yTopR) continue;
-
-                float aL = 1f - Mathf.Abs(nL);
-                float aR = 1f - Mathf.Abs(nR);
-
-                int idx = vh.currentVertCount;
-                AddVert(vh, new Vector2(xL, yBotL), WithAlpha(_fillColor, _fillColor.a * aL));
-                AddVert(vh, new Vector2(xR, yBotR), WithAlpha(_fillColor, _fillColor.a * aR));
-                AddVert(vh, new Vector2(xR, yTopR), WithAlpha(_fillColor, _fillColor.a * aR));
-                AddVert(vh, new Vector2(xL, yTopL), WithAlpha(_fillColor, _fillColor.a * aL));
-                vh.AddTriangle(idx, idx + 1, idx + 2);
-                vh.AddTriangle(idx, idx + 2, idx + 3);
+                int bl = fillBase + 2 * i,      tl = fillBase + 2 * i + 1;
+                int br = fillBase + 2 * (i + 1), tr = fillBase + 2 * (i + 1) + 1;
+                vh.AddTriangle(bl, br, tr);
+                vh.AddTriangle(bl, tr, tl);
             }
 
-            // Three curved band lines (same arc as the base)
-            AddBandLine(vh, _bandRedY01,   (Color32)_bandRedColor,   N / 2);
-            AddBandLine(vh, _bandGoldY01,  (Color32)_bandGoldColor,  N / 2);
-            AddBandLine(vh, _bandGreenY01, (Color32)_bandGreenColor, N / 2);
+            // ── Band lines ────────────────────────────────────────────────────
+            AddBandLine(vh, _bandRedY01,   (Color32)_bandRedColor);
+            AddBandLine(vh, _bandGoldY01,  (Color32)_bandGoldColor);
+            AddBandLine(vh, _bandGreenY01, (Color32)_bandGreenColor);
         }
 
-        private void AddBandLine(VertexHelper vh, float y01, Color32 c, int N)
+        private void AddBandLine(VertexHelper vh, float y01, Color32 c)
         {
             float yCenter = y01 * _heightPx;
             float hw      = HalfBasePx * Mathf.Max(0f, 1f - y01);
             float halfH   = ConeBandPalette.BandHalfHeightPx;
+            int   N       = Mathf.Max(8, _strips / 2);
 
+            int bandBase = vh.currentVertCount;
+            for (int i = 0; i <= N; i++)
+            {
+                float x     = Mathf.Lerp(-hw, hw, (float)i / N);
+                float n     = hw > 0f ? x / hw : 0f;
+                float curve = -_curvaturePx * (1f - n * n);   // same concave arc as base
+                AddVert(vh, new Vector2(x, yCenter - halfH + curve), c);  // 2*i
+                AddVert(vh, new Vector2(x, yCenter + halfH + curve), c);  // 2*i + 1
+            }
             for (int i = 0; i < N; i++)
             {
-                float xL = Mathf.Lerp(-hw, hw, (float)i       / N);
-                float xR = Mathf.Lerp(-hw, hw, (float)(i + 1) / N);
-
-                float nL     = hw > 0f ? xL / hw : 0f;
-                float nR     = hw > 0f ? xR / hw : 0f;
-                float curveL = _curvaturePx * (1f - nL * nL);   // same arc as base
-                float curveR = _curvaturePx * (1f - nR * nR);
-
-                int idx = vh.currentVertCount;
-                AddVert(vh, new Vector2(xL, yCenter - halfH + curveL), c);
-                AddVert(vh, new Vector2(xR, yCenter - halfH + curveR), c);
-                AddVert(vh, new Vector2(xR, yCenter + halfH + curveR), c);
-                AddVert(vh, new Vector2(xL, yCenter + halfH + curveL), c);
-                vh.AddTriangle(idx, idx + 1, idx + 2);
-                vh.AddTriangle(idx, idx + 2, idx + 3);
+                int bl = bandBase + 2 * i,       tl = bandBase + 2 * i + 1;
+                int br = bandBase + 2 * (i + 1), tr = bandBase + 2 * (i + 1) + 1;
+                vh.AddTriangle(bl, br, tr);
+                vh.AddTriangle(bl, tr, tl);
             }
         }
 
