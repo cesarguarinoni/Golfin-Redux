@@ -32,9 +32,14 @@ namespace Golfin.Gameplay.UI.ShotUI
         [Header("Timing slab")]
         [SerializeField] private TimingSlabGraphic _timingSlab;
 
-        // Legacy arrow pool — kept for inspector compatibility; all are disabled at runtime.
-        [Header("Arrows (legacy — disabled)")]
-        [SerializeField] private RectTransform[] _arrows = new RectTransform[3];
+        // Arrow0 only — wires the TimingSlabGraphic GO so SetupSlab can disable it on Awake.
+        [Header("Arrows (legacy)")]
+        [SerializeField] private RectTransform[] _arrows = new RectTransform[1];
+
+        [Header("Slab colors")]
+        [SerializeField] private Color _slabColorBase = new Color(1.00f, 0.60f, 0.60f, 0.70f);
+        [SerializeField] private Color _slabColorMid  = new Color(1.00f, 0.92f, 0.65f, 0.70f);
+        [SerializeField] private Color _slabColorTop  = new Color(0.68f, 0.92f, 0.68f, 0.70f);
 
         [Header("HUD")]
         [SerializeField] private TextMeshProUGUI _powerHUD;
@@ -175,20 +180,19 @@ namespace Golfin.Gameplay.UI.ShotUI
             _timingSlab.color      = SlabColorFromProgress(p);
         }
 
-        // Salmon (base) → cream (mid) → mint (apex) — pastel slab colors from Figma reference.
-        private static Color SlabColorFromProgress(float p)
+        private Color SlabColorFromProgress(float p)
         {
             if (p <= ConeBandPalette.BandGoldY01)
             {
                 float t = Mathf.InverseLerp(ConeBandPalette.BandRedY01, ConeBandPalette.BandGoldY01, p);
-                return Color.Lerp(ConeBandPalette.SlabColorRed, ConeBandPalette.SlabColorGold, t);
+                return Color.Lerp(_slabColorBase, _slabColorMid, t);
             }
             if (p <= ConeBandPalette.BandGreenY01)
             {
                 float t = Mathf.InverseLerp(ConeBandPalette.BandGoldY01, ConeBandPalette.BandGreenY01, p);
-                return Color.Lerp(ConeBandPalette.SlabColorGold, ConeBandPalette.SlabColorGreen, t);
+                return Color.Lerp(_slabColorMid, _slabColorTop, t);
             }
-            return ConeBandPalette.SlabColorGreen;
+            return _slabColorTop;
         }
 
         // ── HUD ───────────────────────────────────────────────────────────────

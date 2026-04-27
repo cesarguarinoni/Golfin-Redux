@@ -1004,8 +1004,6 @@ MonoBehaviour:
   _timingSlab: {fileID: 172949889}
   _arrows:
   - {fileID: 172949886}
-  - {fileID: 1616712598}
-  - {fileID: 2126778730}
   _powerHUD: {fileID: 1054536435}
   _targetingLine: {fileID: 671637014}
 --- !u!225 &900939895
