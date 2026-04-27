@@ -68,7 +68,7 @@
 
 **Hard rules:** No `BallSimulation.cs` edits. No `Physics/Core/` edits. No third-party tween libs. Reuse `Golfin.Gameplay.UI` asmdef. Per-part commits with `phase-8.{N}: {summary}`.
 
-**Order:** 8.1 cone restyle → 8.2 power gauge → 8.3 player+hole card+settings → 8.4 wind+hole indicators → 8.5 action button row → 8.6 ball+club selectors → 8.7 centerpiece ball+trail → 8.8 polish/tests/smoke.
+**Order:** 8.1 cone restyle → 8.2 power gauge → 8.2.5 club handle sprite → 8.3 player+hole card+settings → 8.4 wind+hole indicators → 8.5 action button row → 8.6 ball+club selectors → 8.7 centerpiece ball+trail → 8.8 polish/tests/smoke.
 
 **Stop after each part. Wait for Architect ack before next.**
 
@@ -112,6 +112,23 @@
 **Post-ack bug fixes (2026-04-27):**
 - `ClubHandleDragger._coneHeightPx` was stale at 600px (old value) while `ShotConeView._coneHeightPx` = 1009px. Fixed: `ShotConeView.Awake()` now calls `_clubHandle.GetComponent<ClubHandleDragger>()?.SetConeHeight(_coneHeightPx)` to keep both in sync.
 - `ConeMesh` base Y was 120px → cone tip sat 70px above screen center. Fixed: base Y moved to 50px so tip aligns with canvas center (2118/2 = 1059). ClubHandle moved automatically as a child.
+
+---
+
+## ✅ DONE — Phase 8.2.5: Club Handle sprite swap + scale-with-pull (2026-04-27)
+
+**Files created/modified:**
+- `ClubSelectionBroadcast.cs` (new) — static event bus in `Golfin.Gameplay.UI.ShotUI`; avoids circular asmdef dep (Viewer already refs Gameplay.UI, so Viewer calls Raise() and UI subscribes)
+- `ClubHandleSpriteBinder.cs` (new) — caches 4 GOLFIN sprites in Awake, subscribes to `ClubSelectionBroadcast`; no direct Viewer reference
+- `PhysicsLabController.cs` (modified) — added `CurrentClubIndex` property, `OnClubChanged` event, fires `ClubSelectionBroadcast.Raise(index)` in `SetClub`
+- `ShotConeView.cs` (modified) — `UpdateClubHandle` now applies `localScale = Vector3.one * Lerp(1f, 1.3f, PowerNormalized)` so handle grows 30% at full pull, snaps to 1.0 at tip
+- `LabScaffold.unity` (modified) — `ClubHandleSpriteBinder` added to `ClubHandle` GO
+
+**Edit-mode verification:** `ClubHandleSpriteBinder` PRESENT, `Image.sprite = S_Controls_Driver_GOLFIN`, `localScale = (1,1,1)` ✅
+
+**Awaiting Cesar play-mode smoke test:** cycle lab club picker → verify handle sprite swaps; pull back → verify handle grows to ~1.3×; release → verify returns to 1.0.
+
+**Awaiting Architect ack before Part 8.3.**
 
 ---
 
