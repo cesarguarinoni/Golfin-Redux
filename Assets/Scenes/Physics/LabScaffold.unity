@@ -965,7 +965,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI.ShotUI::Golfin.Gameplay.UI.ShotUI.TimingSlabGraphic
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.70196}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1855,9 +1855,9 @@ MonoBehaviour:
   _timingSlab: {fileID: 953677344}
   _arrows:
   - {fileID: 953677341}
-  _slabColorBase: {r: 1, g: 0.6, b: 0.6, a: 0.7}
-  _slabColorMid: {r: 1, g: 0.92, b: 0.65, a: 0.7}
-  _slabColorTop: {r: 0.68, g: 0.92, b: 0.68, a: 0.7}
+  _slabColorBase: {r: 1, g: 0, b: 0, a: 0.5019608}
+  _slabColorMid: {r: 0.73333335, g: 0.49803922, b: 0.11372549, a: 0.5019608}
+  _slabColorTop: {r: 0.3764706, g: 0.7137255, b: 0.06666667, a: 0.5019608}
   _powerHUD: {fileID: 0}
   _targetingLine: {fileID: 1417103398}
 --- !u!224 &1838493590
@@ -1891,7 +1891,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 43188cd0ffb54da4092a0c082e10d8a7, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ConeAlphaController
   _shotController: {fileID: 1483952040}
   _canvasGroup: {fileID: 1838493592}

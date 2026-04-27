@@ -169,7 +169,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Golfin.Gameplay.UI.ShotUI::Golfin.Gameplay.UI.ShotUI.TimingSlabGraphic
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.70196}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1004,6 +1004,9 @@ MonoBehaviour:
   _timingSlab: {fileID: 172949889}
   _arrows:
   - {fileID: 172949886}
+  _slabColorBase: {r: 1, g: 0.6, b: 0.6, a: 0.7}
+  _slabColorMid: {r: 1, g: 0.92, b: 0.65, a: 0.7}
+  _slabColorTop: {r: 0.68, g: 0.92, b: 0.68, a: 0.7}
   _powerHUD: {fileID: 1054536435}
   _targetingLine: {fileID: 671637014}
 --- !u!225 &900939895
