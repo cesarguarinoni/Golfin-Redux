@@ -15,6 +15,9 @@ namespace Golfin.Gameplay.UI.ShotUI
         // Band line half-height in canvas pixels (2px = 4px total — matches Figma reference line weight)
         public const float BandHalfHeightPx = 2f;
 
+        // Feather extent (canvas px) added beyond inner edges for smooth anti-aliased band borders
+        public const float BandFeatherPx = 2f;
+
         // Semi-transparent grey cone fill
         public static readonly Color FillColor  = new Color(200f / 255f, 200f / 255f, 200f / 255f, 90f / 255f);
 
