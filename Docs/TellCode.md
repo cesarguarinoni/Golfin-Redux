@@ -132,7 +132,9 @@
 - No compile errors ✅
 - Screenshots: `Assets/Screenshots/_compressed/screenshot_2026-04-27_17-17-54.png` (100%), `screenshot_2026-04-27_17-14-50.png` (0%)
 
-**Note for Cesar:** Please smoke test in play mode: cycle lab club picker (Driver→Iron→Wedge→Putter) → verify handle sprite swaps; drag handle down → verify handle grows to ~1.3×; release → verify returns to 1.0. Scale and position ranges are tunable via `ShotConeView` inspector fields `_minHandleScale` / `_maxHandleScale` / `_handleWidth` / `_handleHeight`.
+**Cesar confirmed (2026-04-27):** Handle moves to full-pull position and correct scale when unpaused. Code verified working.
+
+**Remaining smoke test for Cesar:** cycle lab club picker (Driver→Iron→Wedge→Putter) → verify handle sprite swaps. Scale and position ranges are tunable via `ShotConeView` inspector fields `_minHandleScale` / `_maxHandleScale` / `_handleWidth` / `_handleHeight`.
 
 **Awaiting Architect ack before Part 8.3.**
 
