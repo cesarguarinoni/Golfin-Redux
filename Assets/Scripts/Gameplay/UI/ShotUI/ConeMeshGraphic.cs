@@ -24,7 +24,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private Color _bandRedColor     = new Color(0x8B / 255f, 0x2A / 255f, 0x2A / 255f);
         [SerializeField] private Color _bandGoldColor    = new Color(0xA7 / 255f, 0x7C / 255f, 0x2A / 255f);
         [SerializeField] private Color _bandGreenColor   = new Color(0x58 / 255f, 0x69 / 255f, 0x44 / 255f);
-        [SerializeField] private float _bandHalfHeightPx = ConeBandPalette.BandHalfHeightPx;
+        // Band half-height always reads from ConeBandPalette — not a per-instance override.
 
         public float HalfAngleDeg
         {
@@ -63,8 +63,8 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             float yCenter = y01 * _heightPx;
             float hw      = HalfBasePx * Mathf.Max(0f, 1f - y01);
-            float top     = yCenter + _bandHalfHeightPx;
-            float bottom  = yCenter - _bandHalfHeightPx;
+            float top     = yCenter + ConeBandPalette.BandHalfHeightPx;
+            float bottom  = yCenter - ConeBandPalette.BandHalfHeightPx;
 
             int idx = vh.currentVertCount;
             AddVert(vh, new Vector2(-hw, bottom), c);

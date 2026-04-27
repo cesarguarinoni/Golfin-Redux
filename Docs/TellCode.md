@@ -74,6 +74,24 @@
 
 ---
 
+## ✅ DONE — Phase 8.1: Cone restyle (2026-04-27)
+
+**Files created/modified:**
+- `ConeBandPalette.cs` (new) — shared constants: band Y positions, `BandHalfHeightPx=2f`, fill color, band-line colors (dark), slab colors (pastel/translucent: salmon, cream, mint)
+- `ConeMeshGraphic.cs` (rewritten) — filled grey triangle + 3 horizontal band-line quads; reads `ConeBandPalette` for all palette values; no serialized `_bandHalfHeightPx` (uses palette constant directly)
+- `TimingSlabGraphic.cs` (new) — trapezoidal slab travelling up the cone; width narrows toward apex; `_slabHalfHeightPx=30f` (60px total ≈ 10% of 600px cone); `SetConeParams()` + `CurrentY01` property
+- `ShotConeView.cs` (rewritten) — `SetupSlab()` replaces `SetupArrows()`; `UpdateSlab()` drives slab position/color; `SlabColorFromProgress()` lerps `SlabColorRed→SlabColorGold→SlabColorGreen` using palette breakpoints
+
+**Verified visually (autonomous screenshot):**
+- Grey semi-transparent cone fill ✅
+- 4px band lines at 0%, 45%, 85% (dark maroon/amber/olive) ✅  
+- Salmon trapezoidal slab at Y01=0.3 correct shape + color ✅
+- Compared against `Docs/Reference/In-game UI/Timing Arrows.png` ✅
+
+**Awaiting Architect ack before Part 8.2.**
+
+---
+
 ## ✅ DONE — Housekeeping: BallSimulation A3 plumbing cleanup (2026-04-27)
 
 Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their two consumer blocks in `RunRollPhase` and `RunPuttPhase` (-21 lines). `DiagErrorLogger` and both `CheckTerrainInvariant` calls retained. 198/198 PASS. Commit: `238a8f67`.

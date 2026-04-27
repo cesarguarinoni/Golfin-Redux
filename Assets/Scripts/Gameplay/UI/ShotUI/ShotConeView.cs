@@ -162,20 +162,20 @@ namespace Golfin.Gameplay.UI.ShotUI
             _timingSlab.color      = SlabColorFromProgress(p);
         }
 
-        // Red (base) → amber (mid) → green (apex) using ConeBandPalette breakpoints.
+        // Salmon (base) → cream (mid) → mint (apex) — pastel slab colors from Figma reference.
         private static Color SlabColorFromProgress(float p)
         {
             if (p <= ConeBandPalette.BandGoldY01)
             {
                 float t = Mathf.InverseLerp(ConeBandPalette.BandRedY01, ConeBandPalette.BandGoldY01, p);
-                return Color.Lerp(ConeBandPalette.ColorRed, ConeBandPalette.ColorGold, t);
+                return Color.Lerp(ConeBandPalette.SlabColorRed, ConeBandPalette.SlabColorGold, t);
             }
             if (p <= ConeBandPalette.BandGreenY01)
             {
                 float t = Mathf.InverseLerp(ConeBandPalette.BandGoldY01, ConeBandPalette.BandGreenY01, p);
-                return Color.Lerp(ConeBandPalette.ColorGold, ConeBandPalette.ColorGreen, t);
+                return Color.Lerp(ConeBandPalette.SlabColorGold, ConeBandPalette.SlabColorGreen, t);
             }
-            return ConeBandPalette.ColorGreen;
+            return ConeBandPalette.SlabColorGreen;
         }
 
         // ── HUD ───────────────────────────────────────────────────────────────

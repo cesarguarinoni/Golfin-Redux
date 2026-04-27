@@ -12,7 +12,7 @@ namespace Golfin.Gameplay.UI.ShotUI
     {
         [SerializeField] private float _coneHeightPx     = 600f;
         [SerializeField] private float _coneHalfAngleDeg = 12.5f;
-        [SerializeField] private float _slabHalfHeightPx = 6f;
+        [SerializeField] private float _slabHalfHeightPx = 30f;
 
         private float _currentY01;
 
