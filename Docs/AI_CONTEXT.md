@@ -18,7 +18,7 @@
 | UHole Lite | ✅ Full pipeline + GUI. Mesh overlays for all zones. |
 | Leveling Economy | ✅ Rarity-based |
 | Physics Architecture | ✅ Phases 0–6 COMPLETE; Phase 6 Stat Coupling COMPLETE; **BAKED-DATA SIM PIVOT COMPLETE (2026-04-25).** Sim reads from baked `zones.json` (polygon classifier with bit-packed OB mask + per-zone triangulated mesh for exact barycentric Y interpolation) + `heightmap.bytes` (both ship under `Assets/Resources/HoleData/Hole_XX/`). Original "ball into the void" repro eliminated by construction. M0 regression: **24/24 PASS** post-M5b airborne signed-distance level-detector fix (`Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md`). M2 height agreement: **100/100 within 5 cm (mean 0.45 cm, max 1.6 cm)**. Full M4 real-conditions suite + Phase 1–6 bit-exact gate: **229/229 PASS, 0 Skipped**. Phase E manual confirmation: **5/5 PASS**. Full narrative: `Docs/Diagnostics/baked-pivot/FULL_PIVOT_REPORT.md`. **Phase F cleanup COMPLETE (2026-04-26):** SceneGroundProvider, SceneSurfaceProvider, PhysicsMarkerRepairTool, MarkerAuditTool, 8 pre-pivot diag/agreement test files, and the stale TERRAIN_REALTEST_FIX active spec all deleted. `Physics.Runtime.SurfaceMarker` retained for the import → bake bridge. Open follow-ups: hole coverage expansion as Holes 2–18 are imported; future housekeeping — eventually consolidate `Physics.Runtime.SurfaceMarker` and `Course.SurfaceMarker` to a single enum (bake tool reads two type systems today; not blocking). |
-| Shot Controls | 🔶 **Phase 7 COMPLETE (83/83 tests)**. **Phase 8 Shot UI Polish IN PROGRESS** — Parts 8.1 + 8.2 complete (2026-04-27). 8.1: cone restyle. 8.2: PowerGaugeGraphic + PowerGaugeWidget in ShotConeTest + LabScaffold; In-Game UI sprite imports fixed. Post-ack bugs fixed: ClubHandleDragger coneHeightPx stale (600→1009 synced via SetConeHeight), ConeMesh base Y 120→50 (tip now at screen center). **Awaiting Architect ack before Part 8.3 (player card + hole card + settings icon).** |
+| Shot Controls | 🔶 **Phase 7 COMPLETE (83/83 tests)**. **Phase 8 Shot UI Polish IN PROGRESS** — Parts 8.1 + 8.2 + 8.2.5 complete (2026-04-27). 8.1: cone restyle. 8.2: PowerGaugeGraphic + PowerGaugeWidget. 8.2.5: ClubHandleSpriteBinder + ClubSelectionBroadcast + scale-with-pull. Post-ack bugs fixed: ClubHandleDragger coneHeightPx stale (600→1009), ConeMesh base Y 120→50. Screenshot workflow fixed: ScreenshotHelper.cs (real MonoBehaviour coroutine, guards against TickArrow resets). **Awaiting Architect ack before Part 8.3 (player card + hole card + settings icon).** |
 | PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). **F-Hotfix COMPLETE (2026-04-24)**: type-aware SurfaceSnap, coroutine startup scan, camera depression lift. 12/12 regression tests pass. |
 | Shop | Not started |
 | Gameplay | Not started |
@@ -66,6 +66,29 @@ To keep `TellCode.md` readable for Claude Code (file was getting long enough to 
 - Architect moves the DONE entry to TellCode.md history log (one-liner).
 - Spec file moves `Active/` → `Completed/` (if long-term reference) or is deleted.
 - Pointer block is removed from TellCode.md.
+
+---
+
+## Session Changes (2026-04-27 — Phase 8.2.5 + Screenshot Workflow Fix)
+
+### Completed
+- **Phase 8.2.5 — Club handle sprite swap + scale-with-pull:**
+  - `ClubSelectionBroadcast.cs` (new) — static event bus; avoids circular asmdef dep
+  - `ClubHandleSpriteBinder.cs` (new) — caches 4 GOLFIN sprites in Awake, subscribes to broadcast
+  - `PhysicsLabController.cs` — added `CurrentClubIndex`, `OnClubChanged`, fires `ClubSelectionBroadcast.Raise(index)` in `SetClub`
+  - `ShotConeView.cs` — `UpdateClubHandle` applies `localScale = Lerp(min, max, PowerNormalized)` (inspector-tunable 1.0→1.3)
+  - `ClubHandleDragger.cs` — removed hardcoded `_coneHeightPx=600f`; reads live from wired `ConeMeshGraphic`
+  - `LabScaffold.unity` — `ClubHandleSpriteBinder` added, `ClubHandleDragger._coneGraphic` wired
+  - Verified: 0% → `anchoredPos=(0,1009) scale=(1,1,1)`, 100% → `anchoredPos=(0,0) scale=(1.3,1.3,1.3)`. Cesar confirmed play-mode.
+- **ScreenshotHelper workflow fix:**
+  - `Assets/Scripts/Debug/ScreenshotCapture/ScreenshotHelper.cs` (new) — real MonoBehaviour coroutine that re-asserts power each frame to guard against TickArrow resets, then fires `ExecuteMenuItem` after `stabiliseFrames` (default 4) frames
+  - `Assets/Scripts/Debug/ScreenshotCapture/Golfin.Dev.asmdef` (new) — isolated to subfolder only, avoids breaking `RewardPointsDebugPanel` + `WalkCamera` in parent `Debug/`
+  - Usage per session: Step 1 `AddComponent<ScreenshotHelper>()` on LabRoot; Step 2 `h.Capture(power01)`. Auto-destroys after capture.
+  - Verified working: `screenshot_2026-04-27_17-32-46.jpg` shows 100%/250yd gauge + handle at cone base.
+
+### Next
+- Smoke test (Cesar): cycle club picker Driver→Iron→Wedge→Putter in play mode, verify handle sprite swaps.
+- **Awaiting Architect ack before Part 8.3** (player card + hole card + settings icon). Per TellCode.md: stop after each part.
 
 ---
 
