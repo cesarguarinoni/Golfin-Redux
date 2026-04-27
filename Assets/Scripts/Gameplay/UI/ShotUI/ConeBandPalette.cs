@@ -16,7 +16,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         public const float BandHalfHeightPx = 2f;
 
         // Feather extent (canvas px) added beyond inner edges for smooth anti-aliased band borders
-        public const float BandFeatherPx = 2f;
+        public const float BandFeatherPx = 4f;
 
         // Semi-transparent grey cone fill
         public static readonly Color FillColor  = new Color(200f / 255f, 200f / 255f, 200f / 255f, 90f / 255f);

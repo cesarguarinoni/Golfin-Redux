@@ -105,7 +105,7 @@ namespace Golfin.Gameplay.UI.ShotUI
             float hw       = HalfBasePx * Mathf.Max(0f, 1f - y01);
             float halfH    = ConeBandPalette.BandHalfHeightPx;
             float feather  = ConeBandPalette.BandFeatherPx;
-            int   N        = Mathf.Max(8, _strips / 2);
+            int   N        = Mathf.Max(8, _strips);       // full strip count for smooth arc edges
             float hb       = HalfBasePx;
             Color32 c0     = new Color32(c.r, c.g, c.b, 0);  // transparent border color
 

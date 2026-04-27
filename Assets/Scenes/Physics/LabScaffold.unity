@@ -795,8 +795,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 400, y: 600}
+  m_AnchoredPosition: {x: 0, y: 120}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!222 &1379986109
 CanvasRenderer:
@@ -828,6 +828,18 @@ MonoBehaviour:
       m_Calls: []
   _halfAngleDeg: 12.5
   _heightPx: 600
+  _strips: 512
+  _curvaturePx: 15
+  _centerColor: {r: 0, g: 0, b: 0, a: 0.5}
+  _fillColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.3529412}
+  _centerDarkFraction: 0
+  _edgeFadePx: 2
+  _bandRedY01: 0
+  _bandGoldY01: 0.45
+  _bandGreenY01: 0.85
+  _bandRedColor: {r: 0.54509807, g: 0.16470589, b: 0.16470589, a: 1}
+  _bandGoldColor: {r: 0.654902, g: 0.4862745, b: 0.16470589, a: 1}
+  _bandGreenColor: {r: 0.34509805, g: 0.4117647, b: 0.26666668, a: 1}
 --- !u!1 &1392941284
 GameObject:
   m_ObjectHideFlags: 0
@@ -1447,6 +1459,7 @@ MonoBehaviour:
   _coneHeightPx: 600
   _clubHandle: {fileID: 1443870532}
   _handleYPx: 80
+  _timingSlab: {fileID: 0}
   _arrows:
   - {fileID: 953677341}
   - {fileID: 1830280248}
