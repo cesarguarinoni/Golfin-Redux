@@ -169,7 +169,8 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (!show) return;
 
             float p = Mathf.Clamp01(state.ArrowProgress01);
-            _timingSlab.SetConeParams(_coneHeightPx, _shotController.ConeHalfAngleDeg);
+            float curvePx = _coneGraphic != null ? _coneGraphic.CurvaturePx : 15f;
+            _timingSlab.SetConeParams(_coneHeightPx, _shotController.ConeHalfAngleDeg, curvePx);
             _timingSlab.CurrentY01 = p;
             _timingSlab.color      = SlabColorFromProgress(p);
         }

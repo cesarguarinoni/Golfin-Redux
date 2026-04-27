@@ -49,6 +49,8 @@ namespace Golfin.Gameplay.UI.ShotUI
             set { _heightPx = value; SetVerticesDirty(); }
         }
 
+        public float CurvaturePx => _curvaturePx;
+
         public float HalfBasePx => _heightPx * Mathf.Tan(_halfAngleDeg * Mathf.Deg2Rad);
 
         protected override void OnPopulateMesh(VertexHelper vh)

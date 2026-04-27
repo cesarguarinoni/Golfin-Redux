@@ -12,6 +12,7 @@ namespace Golfin.Gameplay.UI.ShotUI
     {
         [SerializeField] private float _coneHeightPx     = 1009f;
         [SerializeField] private float _coneHalfAngleDeg = 12.5f;
+        [SerializeField] private float _curvaturePx      = 15f;
         [SerializeField] private float _slabHalfHeightPx = 30f;
 
         private float _currentY01;
@@ -22,11 +23,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             set { _currentY01 = Mathf.Clamp01(value); SetVerticesDirty(); }
         }
 
-        // Called each tick when the cone dimensions change (e.g. accuracy stat update).
-        public void SetConeParams(float heightPx, float halfAngleDeg)
+        public void SetConeParams(float heightPx, float halfAngleDeg, float curvaturePx)
         {
             _coneHeightPx     = heightPx;
             _coneHalfAngleDeg = halfAngleDeg;
+            _curvaturePx      = curvaturePx;
             SetVerticesDirty();
         }
 
@@ -39,18 +40,38 @@ namespace Golfin.Gameplay.UI.ShotUI
             float topY       = centerY + _slabHalfHeightPx;
             float bottomY    = centerY - _slabHalfHeightPx;
 
-            // Half-width narrows toward apex: widthAtY = halfBase * (1 - y / height)
             float topHW    = Mathf.Max(0f, halfBasePx * (1f - topY    / _coneHeightPx));
             float bottomHW = Mathf.Max(0f, halfBasePx * (1f - bottomY / _coneHeightPx));
+            float wRatioTop = halfBasePx > 0f ? topHW    / halfBasePx : 0f;
+            float wRatioBot = halfBasePx > 0f ? bottomHW / halfBasePx : 0f;
 
             Color32 c = color;
-            Add(vh, -bottomHW, bottomY, c); // 0 BL
-            Add(vh,  bottomHW, bottomY, c); // 1 BR
-            Add(vh,  topHW,    topY,    c); // 2 TR
-            Add(vh, -topHW,    topY,    c); // 3 TL
+            const int N = 128;
+            int vBase = vh.currentVertCount;
 
-            vh.AddTriangle(0, 1, 2);
-            vh.AddTriangle(0, 2, 3);
+            for (int i = 0; i <= N; i++)
+            {
+                float t = (float)i / N;
+
+                float xBot = Mathf.Lerp(-bottomHW, bottomHW, t);
+                float nBot = bottomHW > 0f ? xBot / bottomHW : 0f;
+                float curveBot = -_curvaturePx * wRatioBot * wRatioBot * (1f - nBot * nBot);
+
+                float xTop = Mathf.Lerp(-topHW, topHW, t);
+                float nTop = topHW > 0f ? xTop / topHW : 0f;
+                float curveTop = -_curvaturePx * wRatioTop * wRatioTop * (1f - nTop * nTop);
+
+                Add(vh, xBot, bottomY + curveBot, c);
+                Add(vh, xTop, topY    + curveTop, c);
+            }
+
+            for (int i = 0; i < N; i++)
+            {
+                int bl = vBase + 2 * i,       tl = bl + 1;
+                int br = vBase + 2 * (i + 1), tr = br + 1;
+                vh.AddTriangle(bl, br, tr);
+                vh.AddTriangle(bl, tr, tl);
+            }
         }
 
         private static void Add(VertexHelper vh, float x, float y, Color32 c)

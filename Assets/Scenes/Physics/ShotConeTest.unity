@@ -178,6 +178,7 @@ MonoBehaviour:
       m_Calls: []
   _coneHeightPx: 1009
   _coneHalfAngleDeg: 12.5
+  _curvaturePx: 15
   _slabHalfHeightPx: 30
 --- !u!222 &172949888
 CanvasRenderer:
