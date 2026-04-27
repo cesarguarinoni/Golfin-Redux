@@ -19,7 +19,7 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         [Header("Cone")]
         [SerializeField] private ConeMeshGraphic _coneGraphic;
-        [SerializeField] private float           _coneHeightPx = 600f;
+        [SerializeField] private float           _coneHeightPx = 1009f;
 
         [Header("Club handle")]
         [SerializeField] private RectTransform   _clubHandle;

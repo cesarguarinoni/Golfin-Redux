@@ -10,7 +10,7 @@ namespace Golfin.Gameplay.UI.ShotUI
     [RequireComponent(typeof(CanvasRenderer))]
     public class TimingSlabGraphic : MaskableGraphic
     {
-        [SerializeField] private float _coneHeightPx     = 600f;
+        [SerializeField] private float _coneHeightPx     = 1009f;
         [SerializeField] private float _coneHalfAngleDeg = 12.5f;
         [SerializeField] private float _slabHalfHeightPx = 30f;
 
