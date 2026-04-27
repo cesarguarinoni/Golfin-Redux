@@ -1567,7 +1567,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ClubHandleDragger
   _shotController: {fileID: 1483952040}
   _coneRect: {fileID: 1379986108}
-  _coneHeightPx: 600
+  _coneGraphic: {fileID: 1379986110}
   _flickThresholdPxPerFrame: 5
   _releaseToFire: 0
 --- !u!114 &1443870536
@@ -2006,6 +2006,8 @@ MonoBehaviour:
   _coneHeightPx: 1009
   _clubHandle: {fileID: 1443870532}
   _handleYPx: 80
+  _handleWidth: 178
+  _handleHeight: 100
   _minHandleScale: 1
   _maxHandleScale: 1.3
   _timingSlab: {fileID: 0}
