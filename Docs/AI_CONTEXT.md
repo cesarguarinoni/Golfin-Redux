@@ -20,7 +20,7 @@
 | Physics Architecture | ✅ Phases 0–6 COMPLETE; Phase 6 Stat Coupling COMPLETE; **BAKED-DATA SIM PIVOT COMPLETE (2026-04-25).** Sim reads from baked `zones.json` (polygon classifier with bit-packed OB mask + per-zone triangulated mesh for exact barycentric Y interpolation) + `heightmap.bytes` (both ship under `Assets/Resources/HoleData/Hole_XX/`). Original "ball into the void" repro eliminated by construction. M0 regression: **24/24 PASS** post-M5b airborne signed-distance level-detector fix (`Docs/Specs/Completed/AIRBORNE_GROUND_LEVEL_DETECTION.md`). M2 height agreement: **100/100 within 5 cm (mean 0.45 cm, max 1.6 cm)**. Full M4 real-conditions suite + Phase 1–6 bit-exact gate: **229/229 PASS, 0 Skipped**. Phase E manual confirmation: **5/5 PASS**. Full narrative: `Docs/Diagnostics/baked-pivot/FULL_PIVOT_REPORT.md`. **Phase F cleanup COMPLETE (2026-04-26):** SceneGroundProvider, SceneSurfaceProvider, PhysicsMarkerRepairTool, MarkerAuditTool, 8 pre-pivot diag/agreement test files, and the stale TERRAIN_REALTEST_FIX active spec all deleted. `Physics.Runtime.SurfaceMarker` retained for the import → bake bridge. Open follow-ups: hole coverage expansion as Holes 2–18 are imported; future housekeeping — eventually consolidate `Physics.Runtime.SurfaceMarker` and `Course.SurfaceMarker` to a single enum (bake tool reads two type systems today; not blocking). |
 | Shot Controls | 🔶 **Phase 7 COMPLETE (83/83 tests)**. **Phase 8 Shot UI Polish IN PROGRESS** — Parts 8.1 + 8.2 + 8.2.5 complete (2026-04-27). 8.1: cone restyle. 8.2: PowerGaugeGraphic + PowerGaugeWidget. 8.2.5: ClubHandleSpriteBinder + ClubSelectionBroadcast + scale-with-pull. Post-ack bugs fixed: ClubHandleDragger coneHeightPx stale (600→1009), ConeMesh base Y 120→50. Screenshot workflow fixed: ScreenshotHelper.cs (real MonoBehaviour coroutine, guards against TickArrow resets). **Awaiting Architect ack before Part 8.3 (player card + hole card + settings icon).** |
 | PhysicsLab Scaffold | 🔶 **LabScaffold migration IN PROGRESS (2026-04-24)** — LabScaffold.unity created, PhysicsLabHolePicker.cs + LabHoleBinder.cs written, tee detection via reflection. Awaiting Cesar validation (Steps 1–4 of TellCode spec). **F-Hotfix COMPLETE (2026-04-24)**: type-aware SurfaceSnap, coroutine startup scan, camera depression lift. 12/12 regression tests pass. |
-| Texture Experiment | 🔶 **Spec'd 2026-04-27** — `Docs/Specs/Active/TEXTURE_EXPERIMENT.md`. Two-step: Node script downloads CC0 textures (ambientCG + Poly Haven), C# editor script clones Hole_01 with new textures wired in. Production hole untouched. Cesar reviews side-by-side. |
+| Texture Experiment | ✅ **Phase 2 COMPLETE (2026-04-28)** — 25 CC0 textures (ambientCG + Poly Haven), 9 TerrainLayers + 7 overlay materials duplicated (3 shared, 4 per-hole), all normals set NormalMap/linear, 0 warnings. Scene: `Generated/Experimental/Hole_01_Experimental_Geo.unity`. Report: `Docs/Diagnostics/texture-experiment/HOLE01_CLONE_REPORT.md`. Production hole untouched. Awaiting Cesar visual review. |
 | Shop | Not started |
 | Gameplay | Not started |
 
@@ -70,6 +70,19 @@ To keep `TellCode.md` readable for Claude Code (file was getting long enough to 
 - Full done report (the verbose ✅ DONE block) moves from TellCode.md to `Docs/Archive/TELLCODE_HISTORY.md`.
 - Spec file moves `Active/` → `Completed/` (if long-term reference) or is deleted.
 - Pointer block is removed from TellCode.md.
+
+---
+
+## Session Changes (2026-04-28 — Texture Experiment Phase 2 Complete)
+
+### Completed
+- **Texture Experiment Phase 2** fully executed:
+  - Track A: 25 CC0 textures regenerated (sources fixed for rough→Grass005, semirough→Grass002×0.9, tee variants→Grass001)
+  - Track B: `BuildExperimentalHole01.cs` updated — expanded SharedMatPattern (BunkerSand/GreenSurface), 16328 MeshRenderers walked, 7 overlay mats duplicated (3 shared + 4 per-hole), 9 TerrainLayers duplicated with swapped textures
+  - Key architectural fix: script now opens SOURCE scene directly (bypasses stale Unity artifact cache), saves to tracked temp path, then File.Copy to gitignored `Generated/Experimental/` directory
+  - Normal import fix confirmed: all 11 `_Normal.jpg` files set as `textureType=NormalMap`, `sRGBTexture=false`
+  - 0 warnings; experimental scene exists on disk
+- **Next:** Cesar opens `Hole_01_Experimental_Geo.unity` in Unity and reviews side-by-side with `Hole_01_Geo.unity`
 
 ---
 

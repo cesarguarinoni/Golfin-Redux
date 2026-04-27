@@ -10,19 +10,19 @@ All sources are CC0 (public domain). Attribution not required, but documented fo
 
 | Output texture | Source |
 |---|---|
-| `T_Green_Albedo.jpg` | ambientCG.com - Grass001 |
-| `T_Fairway_Mix.jpg` | ambientCG.com - Grass002 |
-| `T_Fairway_Light.jpg` | ambientCG.com - Grass002 |
-| `T_Fairway_Dark.jpg` | ambientCG.com - Grass002 |
-| `T_Fringe_Albedo.jpg` | ambientCG.com - Grass003 |
-| `T_Semirough_Albedo.jpg` | ambientCG.com - Grass004 |
-| `T_Rough_Albedo.jpg` | Poly Haven - aerial_grass_rock |
+| `T_Green_Albedo.jpg` | ambientCG.com - Grass001 (tight short grass — green, tee) |
+| `T_Fairway_Mix.jpg` | ambientCG.com - Grass002 (fairway, semirough) |
+| `T_Fairway_Light.jpg` | ambientCG.com - Grass002 (fairway, semirough) |
+| `T_Fairway_Dark.jpg` | ambientCG.com - Grass002 (fairway, semirough) |
+| `T_Fringe_Albedo.jpg` | ambientCG.com - Grass003 (fringe) |
+| `T_Semirough_Albedo.jpg` | ambientCG.com - Grass002 (fairway, semirough) |
+| `T_Rough_Albedo.jpg` | ambientCG.com - Grass005 (rough — tall wild meadow grass) |
 | `T_Bunker_Albedo.jpg` | ambientCG.com - Ground054 (bunker sand) |
 | `T_BunkerDark_Albedo.jpg` | ambientCG.com - Ground054 (bunker sand) |
-| `T_Tee_Albedo.jpg` | ambientCG.com - Grass002 |
-| `T_TeeDark_Albedo.jpg` | ambientCG.com - Grass002 |
-| `T_TeeDark_Albedo_NoBorder.jpg` | ambientCG.com - Grass002 |
-| `T_OOB_Albedo.jpg` | Poly Haven - sparse_grass |
+| `T_Tee_Albedo.jpg` | ambientCG.com - Grass001 (tight short grass — green, tee) |
+| `T_TeeDark_Albedo.jpg` | ambientCG.com - Grass001 (tight short grass — green, tee) |
+| `T_TeeDark_Albedo_NoBorder.jpg` | ambientCG.com - Grass001 (tight short grass — green, tee) |
+| `T_OOB_Albedo.jpg` | Poly Haven - sparse_grass (OOB) |
 | `T_RoadAsphalt_Albedo.jpg` | ambientCG.com - Asphalt012 |
 
 ## Swap-in (manual, Cesar)

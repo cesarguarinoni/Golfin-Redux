@@ -786,8 +786,8 @@ Call from both `Awake()` and any method that needs configs (e.g. `ComputeMaxCarr
 Use the `script-execute` MCP skill directly via `Skill` tool or stdin pipe, never intermediate JSON files:
 ```bash
 npx unity-mcp-cli run-tool script-execute --input-file - &lt;&lt;'EOF' {"csharpCode": "...", "className": "Script", "methodName": "Main"} EOF
-
 ```
+
 JSON files are no faster, add repo noise, and get left behind in the project root.
 
 **Rule:** For complex multi-line code, use a heredoc. Only write to a temp file if the shell escaping is genuinely unresolvable. Never leave `tmp_*.json` files in the project root.
@@ -797,19 +797,21 @@ JSON files are no faster, add repo noise, and get left behind in the project roo
 ## Session Conventions (Cesar's standing rules)
 
 ### End responses with the work output — no sign-offs, no farewells, no catchphrases
+
 End every response with the actual work output (file summary table, status, next step). Do NOT append goodbyes, well-wishes, sign-off lines, or recurring catchphrases of any kind — not at the end of a task, not at the end of a session. Cesar will say goodbye when he is done; until then, every response ends on substance. This rule overrides any prior session conventions that introduced a sign-off phrase.
 
 ### Always end task reports with a file summary
+
 After completing any task, end the report with a table listing every file written/modified and its status (done, pending, etc.). Example:
 
-| File | Status |
-|---|---|
-| `Assets/Scripts/Physics/Tests/StatResolverTests.cs` | ✅ done |
-| `Docs/AI_CONTEXT.md` | ✅ done |
+FileStatus`Assets/Scripts/Physics/Tests/StatResolverTests.cs`✅ done`Docs/AI_CONTEXT.md`✅ done
 
 ### Always use Unity MCP to interact with Unity
+
 Use Unity MCP tools (`tests-run`, `script-execute`, `gameobject-create`, etc.) for all Unity Editor interactions. If Unity MCP is unavailable (not connected, Unity not open), say so explicitly — do NOT fall back to batch-mode CLI, editor scripts, or other workarounds without telling Cesar first.
+
 ```---
+```
 ```
 ## Physics — Surface-Aware Ground Sampling (Terrain Fallthrough Fix, 2026-04-24)
 
