@@ -101,7 +101,10 @@ Assets/Screenshots/
 Assets/Packs/
 
 # Generated course scenes (regenerated from terrain data)
-Assets/Golf/Courses/*/Generated/
+# Use /* (not trailing /) so negation rules for Experimental/ are still evaluated
+Assets/Golf/Courses/*/Generated/*
+!Assets/Golf/Courses/*/Generated/Experimental/
+!Assets/Golf/Courses/*/Generated/Experimental/**
 
 # Original imported scene lightmaps & reflection probes
 Assets/Scenes/Original/
