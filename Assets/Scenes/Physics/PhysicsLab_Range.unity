@@ -1492,7 +1492,11 @@ MonoBehaviour:
   trajectoryRenderer: {fileID: 1649967518}
   ballAnimator: {fileID: 1183535223}
   chaseCamera: {fileID: 996875340}
-  heightProvider: {fileID: 0}
+  _shotController: {fileID: 0}
+  _shotConeView: {fileID: 0}
+  _ballSpawnPoint: {fileID: 0}
+  _defaultLookDirection: {x: 0, y: 0, z: 0}
+  _orbitSensitivity: 0.5
 --- !u!4 &671081394
 Transform:
   m_ObjectHideFlags: 0
@@ -2233,9 +2237,9 @@ MonoBehaviour:
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1080, y: 1920}
+  m_ReferenceResolution: {x: 1170, y: 2532}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0.5
+  m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96

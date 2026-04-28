@@ -8,6 +8,93 @@ This file provides guidance to Claude Code ([claude.ai/code](http://claude.ai/co
 >
 > If you find yourself about to type a closing line that isn't the file table or a next-step, **delete it before sending**. This rule overrides any pattern from past sessions, jsonl history, or older `lessons.md` entries. It is non-negotiable.
 
+## Multi-Agent Workflow (NEW 2026-04-28)
+
+UI tasks go through an automated pipeline of three subagents. Cesar's only job is to kick off and approve at the very end. **Do not invent your own workflow when this one applies.**
+
+For SMALL tasks where the full pipeline is overkill (bug fixes with obvious solutions, single-line tweaks, CSV field additions), use the lightweight workflow at `Docs/Specs/Quick/` instead — see `Docs/Specs/Quick/README.md`. Quick tasks skip the subagent chain entirely; Cesar eyeballs the result.
+
+### The pipeline
+
+```
+Cesar -> golfin-architect (writes spec)
+      -> golfin-implementer (builds + screenshots + self-PASS/FAIL checklist)
+      -> golfin-self-reviewer (catches false PASSes; routes back or forward)
+      -> golfin-architect (final review: visual fidelity + cross-cutting)
+      -> Cesar (final approval -> DONE)
+```
+
+### Where things live
+
+- **Subagent definitions:** `.claude/agents/golfin-architect.md`, `golfin-implementer.md`, `golfin-self-reviewer.md`
+- **Hooks:** `.claude/hooks/route_subagent.py` (state router + desktop notify + email + alerts.log), `enforce_implementer_done.py` (PreToolUse blocker), `capture_screenshot.py` (Implementer's screenshot helper)
+- **Notification config:** `.claude/notify_config.json` (toast always on; email opt-in)
+- **Per-task folder:** `Docs/Specs/Active/<task_slug>/` containing `SPEC.md`, `STATUS.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, `ARCHITECT_REVIEW.md`, `CESAR_REJECTION.md` (when applicable), `HEARTBEAT.log`, `screenshots/`
+- **Template:** `Docs/Specs/Active/_TEMPLATE/` (copy this to start a new task)
+- **Quick tasks:** `Docs/Specs/Quick/` (lightweight, no subagent chain)
+
+### STATUS.md states
+
+```
+SPEC_READY -> IMPLEMENTER_WORKING -> READY_FOR_SELF_REVIEW
+            -> (SELF_REVIEW_PASS | SELF_REVIEW_FAIL | READY_FOR_ARCHITECT_REVIEW)
+            -> (ARCHITECT_REVIEW_PASS | ARCHITECT_REVIEW_FAIL | ARCHITECT_REVIEW_ESCALATE)
+            -> (CESAR_REJECTED loops back) | (DONE finishes)
+
+IMPLEMENTER_BLOCKED  - implementer hit a circuit breaker; Cesar must unblock
+CESAR_REJECTED       - Cesar manually rejected after architect-pass; loop back to implementer
+```
+
+The `route_subagent.py` hook prints the next step in the terminal automatically after every subagent run, so neither you nor Cesar needs to check a log file. When STATUS reaches a state that needs Cesar (`ARCHITECT_REVIEW_PASS`, `*_ESCALATE`, `IMPLEMENTER_BLOCKED`), notifications fire via Windows toast + email (if configured) + always-logged at `.claude/alerts.log`.
+
+### Hard rules (these are enforced by hooks, not just convention)
+
+1. **Implementer cannot mark itself done.** The `enforce_implementer_done.py` hook blocks any STATUS write to `READY_FOR_SELF_REVIEW` or `READY_FOR_ARCHITECT_REVIEW` unless `IMPLEMENTER_REPORT.md` has every checklist item filled with PASS/FAIL + non-trivial justification + a real screenshot path that points to an actual file. No placeholder text allowed. FAIL items also block the SELF_REVIEW transition (must use ARCHITECT_REVIEW path).
+2. **STATUS is authoritative.** Do NOT "correct" STATUS based on review file contents. If STATUS contradicts a review verdict, Cesar may have rejected manually — check for `CESAR_REJECTION.md`. If still uncertain, set STATUS to `IMPLEMENTER_BLOCKED` and ask.
+3. **Implementer cannot write SELF_REVIEW.md or ARCHITECT_REVIEW.md.** Those are written by the other subagents.
+4. **Self-reviewer cannot modify scenes or write code.** It's a vision-heavy reviewer only; tools are scoped to Read/Write/Edit + Figma MCP.
+5. **Architect cannot modify scenes or write Unity code either.** Same scoping; the architect reviews and writes specs/reviews.
+6. **`STATUS.md = DONE` only after Cesar's manual approval.** No subagent writes DONE. Cesar moves the folder to `Docs/Specs/Completed/` when satisfied.
+7. **No white-box placeholders.** If `[SerializeField]` references aren't wired, wire them BEFORE marking IMPLEMENTER_REPORT done. Use `_default*` slots specified in the spec for fallback sprites.
+8. **Wait before screenshot.** After entering play mode, wait at least 3 seconds (5 if data-binding is involved) before capturing. Unity needs time to render the first few frames and run all OnEnable code.
+9. **Append to HEARTBEAT.log** every ~5 minutes of work. Stale heartbeat (>15min) triggers a stuck-session alert to Cesar.
+10. **Circuit breakers** — if the same Unity MCP tool fails 3 times, or you wait on Unity for >3 minutes with no progress, or you can't find an asset after 2 attempts: set STATUS to `IMPLEMENTER_BLOCKED` and stop. Don't loop indefinitely.
+
+### How to start a new UI task (Cesar)
+
+For a complex UI task: in Claude Code, say: `Use the golfin-architect subagent to write a spec for <task description>`. The architect will:
+
+1. Confirm the Figma page/frame/placeholder-vs-canonical with you (per Blueprint §8 standing rule).
+2. Create `Docs/Specs/Active/<task_slug>/` from the template.
+3. Fill `SPEC.md`.
+4. Set `STATUS.md` to `SPEC_READY`.
+
+The SubagentStop hook will then print: `[<task_slug>] STATUS=SPEC_READY -> Use the golfin-implementer subagent on "<task_slug>"`. You paste that command and the pipeline runs itself.
+
+For a small task: just say `Read Docs/Specs/Quick/<task_slug>.md and implement.` after writing the quick spec.
+
+### How to redo a failed iteration
+
+If the architect or self-reviewer kicks the task back, STATUS goes to `*_FAIL` and the hook prints `Use the golfin-implementer subagent on "<task_slug>"`. The Implementer reads the latest review file, addresses the fail list, and re-submits.
+
+If YOU manually reject after architect-pass: write `CESAR_REJECTION.md` in the task folder explaining why, then set STATUS to `CESAR_REJECTED`. The hook will route the implementer to redo with your notes.
+
+### When to escalate to claude.ai (Architect Claude in this chat)
+
+The Claude.ai chat (Opus 4.7, full repo access via filesystem MCP) is for:
+- Project-wide reasoning that doesn't fit one task (e.g., "should we restructure asmdefs?").
+- Ambiguous escalations where the architect-subagent writes `ARCHITECT_REVIEW_ESCALATE`.
+- Authoring a new spec for a task that affects multiple subsystems.
+- Workflow / pipeline improvements.
+
+For a single task in flight, prefer the subagent chain. Only ping Cesar's claude.ai chat when STATUS reaches `ARCHITECT_REVIEW_ESCALATE` or `IMPLEMENTER_BLOCKED`.
+
+### Migration from old TellCode.md workflow
+
+`Docs/TellCode.md` is the legacy handoff file. New tasks use the per-task folder convention above (or Quick for small ones). TellCode is being phased out; do not write new active tasks there. The completion log at the bottom of TellCode is preserved for historical reference.
+
+---
+
 ## Session Startup (EVERY SESSION)
 
 Before doing anything else:

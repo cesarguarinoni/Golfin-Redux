@@ -1,5 +1,11 @@
 # [TellCode.md](http://TellCode.md) — Instructions from Claude (Architect) to Claude Code
 
+> **DEPRECATION NOTE (2026-04-28):** This file is the legacy handoff channel. New active UI tasks use the multi-agent pipeline at `.claude/agents/` with per-task folders under `Docs/Specs/Active/<slug>/`. See `CLAUDE.md` § Multi-Agent Workflow for the new flow.
+>
+> Phase 8.3 redo has been migrated to `Docs/Specs/Active/8_3_topbar/`. The two attempt-rejection blocks below are preserved for historical context but are no longer the source-of-truth for the redo. Set the new task's STATUS.md to `SPEC_READY` and use the `golfin-implementer` subagent on `"8_3_topbar"` to begin.
+>
+> Existing TellCode entries (rejection blocks, completion log) remain readable. Do not write new active tasks here — write specs into per-task folders.
+
 > Claude Code: Read this file at the start of each task. Execute the latest instruction block. After completing, add a status line at the bottom of your task section: `✅ DONE: [date] [brief summary]`. Claude (Architect) will update this file with new instructions as needed. Handoff: `Docs/TellCode.md`.
 >
 > **Note (2026-04-25):** `Docs/` was reorganized. Historical entries in this file or in `Docs/Archive/TELLCODE_HISTORY.md` may reference old paths:
@@ -13,8 +19,7 @@
 > - `Docs/generate_audit.*`, `compress_screenshots.*`, `daily_report.py`, etc. → now under `Docs/Scripts/`
 >
 > See `Docs/README.md` for the full index map.
->
-> **History:** Completed task blocks and the long History Log live in `Docs/Archive/TELLCODE_HISTORY.md`. If you need detail on something old, check there first.
+> ****History:** Completed task blocks and the long History Log live in `Docs/Archive/TELLCODE_HISTORY.md`. If you need detail on something old, check there first.
 
 ---
 
@@ -24,9 +29,18 @@
 
 **A — Shot UI polish.** Wire real Figma art + sprite assets into the existing cone hierarchy + add HUD elements (player card, hole card, wind/hole indicators, power gauge, action buttons, ball/club selectors, centerpiece ball, trail). Spec ready: `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md`. **STATUS: Parts 8.1, 8.2, 8.2.5 done; 8.3 attempt 1 REJECTED 2026-04-28 — redo block below.**
 
+**A.0 — Canvas Scaler fix ✅ DONE 2026-04-29.** Investigation closed 2026-04-28: Figma↔Unity size mismatch root-caused to `CanvasScaler reference 1080×1920 + Match=0.5` producing a uniform \~1.31× scale factor at iPhone 12 Pro Max screens. Migration applied 2026-04-29: 7 scalers across 5 physics-lab scenes moved to `1170×2532 / Match=0`. Hypothesis validated via `Assets/Scenes/Tests/CanvasScalerTest.unity` matrix — row 4 (proposed config) yielded exactly 180×180 px. Tooling left in tree: `Assets/Scripts/Editor/CanvasScalerMigration/` (test scene builder + migration tool, both in `GOLFIN/Canvas Scaler/` menu). Blueprint updated with new §1 "UI Coordinate System". Standing rule established: **1 Figma px = 1 Unity unit at 1170 design ref — no conversion factor needed when speccing.**
+
+**A.0 follow-ups (small, deferred to 8.4 prep):**
+- ChipStack RectTransform width 248 → 298 on PlayerCard + HoleCard (lingering 8.3 authoring bug, surfaced in investigation).
+- Fresh `topbar-diff-v3.png` capture at 1170×2532 game view, 1:1 vs Figma. Expected: cards now match Figma exactly.
+- Cone/gauge/handle re-tune (Path 3b accepted): leave numbers as-is, accept the \~92% visual shrink. If power gauge text feels too small in playmode, bump TMP font sizes only (not gauge geometry).
+
+Menu screens NOT in scope yet — deferred to roadmap item C with audit pre-condition.
+
 **B — Controls finetuning.** Two sub-tasks, sequenced:
 
-- **B.1** Putter velocity bug — putter shoots ~100yd instead of putt-range. Likely a stat-coupling/wiring issue (StatBundle not swapping, or `PuttBaseVelocityMps` override not respected, or power scaling math wrong for putt mode). Diagnosis-first: log what `ShotInputBuilder.Build` actually returns in putt mode.
+- **B.1** Putter velocity bug — putter shoots \~100yd instead of putt-range. Likely a stat-coupling/wiring issue (StatBundle not swapping, or `PuttBaseVelocityMps` override not respected, or power scaling math wrong for putt mode). Diagnosis-first: log what `ShotInputBuilder.Build` actually returns in putt mode.
 - **B.2** Surface roll resistance — ball rolls forever regardless of surface. Either `surfaces.csv` rolling-resistance values are too low across the board, or there's a units/application bug. Diagnosis-first: fire test shots on each surface, log deceleration profiles, then re-tune CSV.
 - Spec for B written after Phase 8 lands.
 
@@ -39,6 +53,7 @@
 
 - Scope deliberately stops at single-hole play — no full 18-hole round, no save state, no scoring leaderboard.
 - Existing assets to leverage: `Mainmenu` prefab, `ShellScene.unity`, `LabScaffold.unity` (template for `GameplayScaffold`), `PhysicsLabHolePicker` (template for runtime hole picker logic).
+- **Pre-condition for closing item C:** audit all menu/inventory/roster/bags/items canvases. Confirm none are authored at `1080×1920 / Match=0.5` (the bad config that A.0 cleaned up). Any new canvases for the Hole Picker / GameplayScaffold MUST use `1170×2532 / Match=0` from the start (per Blueprint §1).
 - Deep-dive spec when A and B are settled.
 
 ---

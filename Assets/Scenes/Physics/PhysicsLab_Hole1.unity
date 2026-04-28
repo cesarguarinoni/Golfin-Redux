@@ -303,7 +303,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 46325244}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 118446399}
+  m_Script: {fileID: 11500000, guid: 5b0f945fb3f4f1b4ea87d4a862c258fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Runtime::Golfin.Physics.Runtime.SurfaceMarker
   Type: 0
@@ -622,7 +622,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 90497934}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 118446399}
+  m_Script: {fileID: 11500000, guid: 5b0f945fb3f4f1b4ea87d4a862c258fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Runtime::Golfin.Physics.Runtime.SurfaceMarker
   Type: 0
@@ -4692,6 +4692,14 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 400, y: 1009}
   m_Pivot: {x: 0.5, y: 0}
+--- !u!222 &953677343
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 953677340}
+  m_CullTransparentMesh: 1
 --- !u!114 &953677344
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4702,7 +4710,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: beda80298d24c3944840f4bd4c3c91cb, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI.ShotUI::Golfin.Gameplay.UI.ShotUI.TimingSlabGraphic
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -4716,14 +4724,6 @@ MonoBehaviour:
   _coneHalfAngleDeg: 12.5
   _curvaturePx: 15
   _slabHalfHeightPx: 30
---- !u!222 &953677343
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 953677340}
-  m_CullTransparentMesh: 1
 --- !u!43 &959368610
 Mesh:
   m_ObjectHideFlags: 0
@@ -6138,9 +6138,9 @@ MonoBehaviour:
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1080, y: 1920}
+  m_ReferenceResolution: {x: 1170, y: 2532}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0.5
+  m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -6478,6 +6478,18 @@ MonoBehaviour:
       m_Calls: []
   _halfAngleDeg: 12.5
   _heightPx: 600
+  _strips: 512
+  _curvaturePx: 15
+  _centerColor: {r: 0, g: 0, b: 0, a: 0.5}
+  _fillColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.3529412}
+  _centerDarkFraction: 0
+  _edgeFadePx: 4
+  _bandRedY01: 0
+  _bandGoldY01: 0.45
+  _bandGreenY01: 0.85
+  _bandRedColor: {r: 0.54509807, g: 0.16470589, b: 0.16470589, a: 1}
+  _bandGoldColor: {r: 0.654902, g: 0.4862745, b: 0.16470589, a: 1}
+  _bandGreenColor: {r: 0.34509805, g: 0.4117647, b: 0.26666668, a: 1}
 --- !u!1 &1388019060
 GameObject:
   m_ObjectHideFlags: 0
@@ -6702,7 +6714,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ClubHandleDragger
   _shotController: {fileID: 1483952040}
   _coneRect: {fileID: 1379986108}
-  _coneHeightPx: 600
+  _coneGraphic: {fileID: 0}
   _flickThresholdPxPerFrame: 5
   _releaseToFire: 0
 --- !u!1 &1455724831
@@ -7095,11 +7107,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.Input::Golfin.Gameplay.Input.ShotController
   _inputSystemSource: {fileID: 1483952041}
-  DisableOverpower: 0
-  ForcePerfectTiming: 0
-  ForcePerfectAim: 0
-  SinglePassMode: 0
-  DisableConeFinetuning: 0
 --- !u!114 &1483952041
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7185,9 +7192,9 @@ MonoBehaviour:
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 1080, y: 1920}
+  m_ReferenceResolution: {x: 1170, y: 2532}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0.5
+  m_MatchWidthOrHeight: 0
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -9230,6 +9237,10 @@ MonoBehaviour:
   _coneHeightPx: 600
   _clubHandle: {fileID: 1443870532}
   _handleYPx: 80
+  _handleWidth: 178
+  _handleHeight: 100
+  _minHandleScale: 1
+  _maxHandleScale: 1.3
   _timingSlab: {fileID: 953677344}
   _arrows:
   - {fileID: 953677341}
