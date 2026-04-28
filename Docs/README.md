@@ -22,6 +22,7 @@
 ### `Architecture/` — codebase reference
 Structural references to the live codebase. Read these when working on UI or system-wide changes.
 
+- `RUNTIME_BLUEPRINT.md` — **Living runtime architecture reference**: namespaces, asmdef boundaries, manager APIs, asset locations, hole-loading flow. Update whenever a session touches manager APIs / asmdef refs / asset paths. Maintenance rule for both Architect and Code is in the doc header.
 - `ARCHITECTURE_AUDIT.md` — auto-generated file tree, singletons, events. Regenerate via `Scripts/generate_audit.ps1` (Win) or `Scripts/generate_audit.sh` (Mac/Linux).
 - `PATTERNS.md` — recurring patterns across the codebase.
 - `UI_HIERARCHY.md` — scene UI paths reference.

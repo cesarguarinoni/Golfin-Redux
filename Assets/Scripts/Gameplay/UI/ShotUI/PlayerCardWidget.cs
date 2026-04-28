@@ -8,7 +8,7 @@ namespace Golfin.Gameplay.UI.ShotUI
     public class PlayerCardWidget : MonoBehaviour
     {
         [Header("Portrait")]
-        [SerializeField] Image _portrait;
+        [SerializeField] Image  _portrait;
         [SerializeField] Sprite _defaultPortrait;
 
         [Header("Chip rows")]
@@ -18,22 +18,25 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         void OnEnable()
         {
+            PlayerContext.OnChanged   += Refresh;
             GameSession.OnTurnChanged += Refresh;
             Refresh();
         }
 
         void OnDisable()
         {
+            PlayerContext.OnChanged   -= Refresh;
             GameSession.OnTurnChanged -= Refresh;
         }
 
         void Refresh()
         {
-            if (_portrait != null && _defaultPortrait != null)
-                _portrait.sprite = _defaultPortrait;
-            if (_nameText != null)  _nameText.text  = "PLAYER";
-            if (_levelText != null) _levelText.text = "Lv 1";
-            if (_turnText != null)  _turnText.text  = $"TURN {GameSession.TurnCount}";
+            if (_portrait != null)
+                _portrait.sprite = PlayerContext.Portrait != null ? PlayerContext.Portrait : _defaultPortrait;
+
+            if (_nameText  != null) _nameText.text  = PlayerContext.DisplayName;
+            if (_levelText != null) _levelText.text = $"Lv {PlayerContext.Level}";
+            if (_turnText  != null) _turnText.text  = $"TURN {GameSession.TurnCount}";
         }
     }
 }

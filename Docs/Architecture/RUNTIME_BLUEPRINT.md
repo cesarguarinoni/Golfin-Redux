@@ -1,0 +1,372 @@
+# Runtime Architecture Blueprint
+
+> **Purpose:** Living reference of how the runtime is wired today — namespaces, asmdef boundaries, singletons, public APIs, where assets live. Updated whenever a session touches manager APIs, namespaces, asmdef references, or asset paths.
+>
+> **Why this exists:** Multiple Phase 8 sessions burned tokens re-discovering the same facts ("does CharacterManager have DisplayName? what asmdef are the managers in? where do hole maps live?"). This doc front-loads those answers so future Architect/Code sessions can spec confidently without grep-and-read deep dives.
+>
+> **Maintenance rule (BOTH Claudes):**
+> - **Architect** — when writing a spec that surfaces a new manager API, asmdef ref, or asset path, update the relevant section here BEFORE handoff. If a NEEDS-VERIFICATION marker is consumed, replace it with the verified fact.
+> - **Code** — when implementing a task that adds/changes a manager API, asmdef ref, asset path, or namespace, add a "Blueprint updates:" line to the done report listing the diffs to this file. If Architect's spec already encoded the change, just confirm it landed.
+> - When in doubt, update. Stale > missing.
+>
+> **Last updated:** 2026-04-28 (initial — created during Phase 8.3 handoff prep)
+
+---
+
+## 1 — Asmdef Map
+
+The repo has TWO asmdef regions and one default `Assembly-CSharp` bucket. This boundary matters for every UI binder that wants to read manager state.
+
+| Folder | Asmdef | Notes |
+|---|---|---|
+| `Assets/Scripts/Gameplay/UI/ShotUI/` | `Golfin.Gameplay.UI` | Refs: `Golfin.Gameplay.Input`, `Golfin.Gameplay.Config`, `Unity.TextMeshPro`, `Unity.ugui`. **Does NOT reference `Assembly-CSharp`** → cannot see CharacterManager, BagManager, etc. without an additive ref. |
+| `Assets/Scripts/Gameplay/Config/` | `Golfin.Gameplay.Config` | Holds `ControlsConfig`, `ControlsConfigLoader`. |
+| `Assets/Scripts/Gameplay/Input/` | `Golfin.Gameplay.Input` | (assumed; verify when next touched) **NEEDS VERIFICATION: full ref list.** |
+| `Assets/Scripts/Gameplay/Defaults/` | `Golfin.Gameplay.Defaults` | (assumed) **NEEDS VERIFICATION: full ref list.** |
+| `Assets/Scripts/Gameplay/Tests/` | `Golfin.Gameplay.Tests` (assumed) | EditMode tests. **NEEDS VERIFICATION.** |
+| `Assets/Scripts/Physics/Viewer/` | `Golfin.Physics.Viewer` | Holds `PhysicsLabController`, `LabHoleBinder`, `BallAnimator`, `ChaseCamera`, `ShotPreset*`. References `Golfin.Gameplay.UI` (`PhysicsLabController.cs` imports `Golfin.Gameplay.UI.ShotUI`). |
+| `Assets/Scripts/Physics/Core/` | `Golfin.Physics` (assumed) | `BallSimulation`, `ShotInputBuilder`, etc. **NEEDS VERIFICATION.** |
+| `Assets/Scripts/` (root, **everything else**) | **`Assembly-CSharp` (default)** | All managers (CharacterManager, BagManager, ClubManager, BallManager, ItemManager, BagDatabaseCSV), data classes, UI screens (`Assets/Scripts/UI/...`), Course code, HoleMetadata. |
+
+**Practical implication for `Golfin.Gameplay.UI` widgets that need manager state:** add `Assembly-CSharp` to the asmdef references array. This is a one-time, additive change. Any new HUD widget that reads `CharacterManager.Instance` etc. depends on this — Code must add it before the first widget compiles. No reflection workarounds needed.
+
+**Update 2026-04-28 (from Phase 8.3 redo):** the simple "add Assembly-CSharp ref" path described above only works if `autoReferenced: false` (which is the default — in that case Assembly-CSharp doesn't auto-ref this asmdef back, so no cycle). If the asmdef is `autoReferenced: true` (so Assembly-CSharp auto-references it), then adding Assembly-CSharp to the asmdef's references creates a cycle and the project will not compile.
+
+The project currently has `Golfin.Gameplay.UI.autoReferenced = true` (set during 8.3 attempt 1 to let other Assembly-CSharp scripts use widget types). Switching back to `autoReferenced: false` would require auditing every Assembly-CSharp script that currently uses `Golfin.Gameplay.UI.*` types to add explicit asmdef refs — out of scope.
+
+**Workaround pattern:** when a widget in `Golfin.Gameplay.UI` needs Assembly-CSharp manager state, use a two-piece static-bus + populator pattern:
+
+1. **Static context class** in `Golfin.Gameplay.UI.HUD` namespace (the asmdef side). Holds the data + an `OnChanged` event. Example: `Golfin.Gameplay.UI.HUD.HoleContext` (8.3), `Golfin.Gameplay.UI.HUD.PlayerContext` (8.3 redo).
+2. **Populator MonoBehaviour** in `Assets/Scripts/UI/HUD/` or any other Assembly-CSharp folder. Subscribes to manager events, pulls state, writes to the static, raises `OnChanged`. Example: `Golfin.UI.HUD.PlayerContextPopulator` reads `CharacterManager.Instance` + `CharacterDatabaseCSV.Instance` and writes to `PlayerContext`.
+3. **Widget** in `Golfin.Gameplay.UI` reads from the static context class only — never references Assembly-CSharp types directly. Subscribes to `OnChanged`.
+
+The populator MonoBehaviour must be added to a scene GameObject that runs alongside the Assembly-CSharp manager (e.g. the same scene root that holds `CharacterManager`). If the manager isn't in the scene, the populator's `OnEnable` no-ops and the widget shows static-class defaults — acceptable for editor-only contexts like LabScaffold.
+
+Use this pattern for any future widget that needs to reach across the asmdef boundary into Assembly-CSharp.
+
+---
+
+## 2 — Singletons & Public APIs
+
+### PlayerContext + PlayerContextPopulator pattern (asmdef workaround)
+
+When a widget in `Golfin.Gameplay.UI` needs CharacterManager state but cannot reference `Assembly-CSharp` directly (because `autoReferenced: true` would create a cycle), use this two-piece pattern:
+
+- **PlayerContext** (`Golfin.Gameplay.UI.HUD` namespace, file: `Assets/Scripts/Gameplay/UI/ShotUI/HUD/PlayerContext.cs`) — static class that holds `DisplayName`, `Level`, `Portrait` + `OnChanged` event + `Raise()` + `Reset()`. Lives in the asmdef side.
+- **PlayerContextPopulator** (`Golfin.UI.HUD` namespace, file: `Assets/Scripts/UI/HUD/PlayerContextPopulator.cs`) — MonoBehaviour in the `Assembly-CSharp` bucket. Subscribes to `CharacterManager.OnCharacterSelected`, pulls `CharacterDatabaseCSV.GetCharacter(id).characterName` / `.portraitSprite` + `GetPlayerCharacter(id).currentLevel`, writes to `PlayerContext`, raises `OnChanged`.
+- **Widget** (`PlayerCardWidget`) subscribes to `PlayerContext.OnChanged` only — never touches Assembly-CSharp types.
+
+The same pattern applies to any future widget in `Golfin.Gameplay.UI` that needs Assembly-CSharp manager state. `HoleContext` (for hole metadata) uses a simpler variant where `PhysicsLabController` (in the Viewer asmdef) populates the static directly via reflection.
+
+**Asmdef note:** `Golfin.Gameplay.UI.asmdef` is `autoReferenced: true`. Adding `Assembly-CSharp` to its references array creates a build-order cycle (Unity's Bee system compiles named asmdefs before Assembly-CSharp). Switching back to `autoReferenced: false` would require auditing every Assembly-CSharp file that uses Gameplay.UI types — out of scope. Stay with `autoReferenced: true` + the static-bus pattern.
+
+All managers expose a `static Instance` and a `DontDestroyOnLoad` lifecycle. They live on a "Managers" GameObject in the boot scene (typically `ShellScene.unity`).
+
+### CharacterManager — `Golfin.Roster`
+File: `Assets/Scripts/CharacterManager.cs`
+
+```csharp
+public class CharacterManager : MonoBehaviour
+{
+    public static CharacterManager Instance { get; private set; }
+
+    public string GetSelectedCharacterId();           // "" if none
+    public PlayerCharacterData? GetPlayerCharacter(string id);  // alias of GetCharacterData
+    public CharacterData?       GetCharacter(string id);        // alias of GetCharacterTemplate (SO-based)
+    public List<PlayerCharacterData> GetAllOwnedCharacters();
+    public int GetMaxLevel(string id);
+    public int GetLevelUpCost(string id);
+    public int LevelUp(string id);                     // returns SP earned, 0 on fail
+    public void SelectCharacter(string id);
+    public void RefreshStatValues(string id);
+
+    public event Action<string>? OnCharacterLeveledUp;
+    public event Action<string>? OnCharacterSelected;
+    public event Action?         OnRosterChanged;
+}
+```
+
+**`PlayerCharacterData`** (`Golfin.Roster`, `Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs`) — INSTANCE data, per owned character:
+- `string characterId`
+- `int currentLevel` (default 10 for Common at start; rarity-driven)
+- `int totalSPEarned`, `int spentStrength/ClubControl/Recovery/Stamina`
+- `int currentStrength/ClubControl/Recovery/Stamina` (base + spent, capped)
+- `bool isSelected`, `bool isOwned`, `DateTime acquiredDate`
+- `float currentStaminaEnergy / maxStaminaEnergy` (NonSerialized; runtime energy bar)
+- **Does NOT have:** name, lastName, portrait, rarity. Those live on the template.
+
+### CharacterDatabaseCSV — `Golfin.Roster`
+File: `Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs`
+
+```csharp
+public class CharacterDatabaseCSV : MonoBehaviour
+{
+    public static CharacterDatabaseCSV Instance { get; private set; }
+
+    public CharacterDataRuntime?       GetCharacter(string id);
+    public List<CharacterDataRuntime>  GetAllCharacters();
+}
+```
+
+**`CharacterDataRuntime`** — TEMPLATE data, lightweight CSV-backed alternative to the SO `CharacterData`:
+- `string characterId`, `characterName`, `characterLastName`, `bio`
+- `CharacterRarity rarity`
+- `int baseStrength / baseClubControl / baseRecovery / baseStamina`
+- `int maxLevel` (default 199)
+- `string portraitSpriteName`, `Sprite? portraitSprite` ← **already loaded from `Resources/Portraits/Thumbnails/{name}`** at CSV parse time
+- `string portraitFullSpriteName`, `Sprite? portraitFullSprite` ← from `Resources/Portraits/FullBody/`
+- `Color GetRarityColor()`, `string GetRarityLabel()` (delegates to `RarityHelper`)
+- `string GetDisplayName()` → `"FIRSTNAME\nLASTNAME"` uppercase
+
+**Canonical lookup pattern for "current player's display info":**
+```csharp
+var id = CharacterManager.Instance.GetSelectedCharacterId();
+var rt = CharacterDatabaseCSV.Instance?.GetCharacter(id);
+var pc = CharacterManager.Instance.GetPlayerCharacter(id);
+// rt.characterName, rt.rarity, rt.portraitSprite, pc.currentLevel
+```
+
+### BagManager — *no namespace* (global)
+File: `Assets/Scripts/BagManager.cs`
+
+```csharp
+public class BagManager : MonoBehaviour
+{
+    public static BagManager Instance { get; private set; }
+    public static int MAX_BAGS;                          // CSV-driven, fallback 10
+    public const int  MAX_CLUBS_PER_BAG = 8;             // ← 8, not 14
+    public int        EquippedBagSlot { get; }           // 1-based, 0=none
+
+    public bool IsBagUnlocked(int bagSlot);
+    public bool IsBagFull(int bagSlot);
+    public int  GetClubCountInBag(int bagSlot);
+    public List<PlayerClubData> GetClubsInBag(int bagSlot);
+    public int  GetUnlockedBagCount();
+
+    public bool AssignClubToBag(string clubId, int bagSlot);
+    public void RemoveClubFromBag(string clubId);
+    public void EquipBag(int bagSlot);
+    public void UnlockNextBag();
+
+    public event Action<int>? OnBagChanged;          // arg = bagSlot that changed
+    public event Action<int>? OnEquippedBagChanged;  // arg = new equippedBagSlot
+}
+```
+
+Equipped bag's clubs: `BagManager.Instance.GetClubsInBag(BagManager.Instance.EquippedBagSlot)`.
+
+### Other singletons (NEEDS VERIFICATION — read on first use)
+- **ClubManager** — `Assets/Scripts/ClubManager.cs`. `Instance`. Owns `PlayerClubData` list (source of truth for `equippedBagSlot`). API: `GetAllOwnedClubs()`, `GetClubData(clubId)`, `EquipClub(clubId, bagSlot)`. **Full API: NEEDS VERIFICATION when 8.5 spec is written.**
+- **BallManager** — `Assets/Scripts/BallManager.cs`. **Full API: NEEDS VERIFICATION when 8.5/8.6 spec is written.**
+- **ItemManager** — `Assets/Scripts/ItemManager.cs`. **Full API: NEEDS VERIFICATION.**
+- **RewardPointsManager** — used by `CharacterManager.LevelUp` via `Instance.CanAfford(cost)` / `SpendPoints(cost)`. Location + namespace: **NEEDS VERIFICATION.**
+- **AudioManager** — `Assets/Scripts/Audio/AudioManager.cs`. **NEEDS VERIFICATION.**
+- **ScreenManager** — `Assets/Scripts/UI/ScreenManager.cs`. Drives Logo→Splash→Loading→Home→Roster screen flow. **API: NEEDS VERIFICATION when needed.**
+
+---
+
+## 3 — Hole-Loading Flow
+
+### Editor-time picker
+1. User picks a hole in `PhysicsLabHolePicker` (`Assets/Scripts/Editor/Physics/`) EditorWindow.
+2. Editor additively loads `Hole_XX_Geo.unity` from `Assets/Golf/Courses/lomond-country-club/Generated/`.
+3. `LabHoleBinder` (`Golfin.Physics.Viewer`, **editor-only via `#if UNITY_EDITOR`**) hears `EditorSceneManager.sceneOpened` and calls `_controller.OnHoleLoaded(scene.name)`.
+
+### Runtime hole load
+- **Does not exist yet.** Phase C (menu→gameplay integration) will add a `GameplayScaffold` scene + runtime hole picker. Until then: hole loading is editor-only.
+
+### `PhysicsLabController.OnHoleLoaded(string sceneName)` does today
+File: `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs`
+
+- Scans the loaded scene's roots for `SurfaceMarker` MonoBehaviours (uses reflection — `SurfaceMarker` lives in `Assembly-CSharp` originally, now in `Golfin.Physics.Runtime`).
+- Builds tee/green/bunker/fairway/water lists.
+- Computes green centroid → `_loadedHoleGreenCentroid` (private).
+- Finds `TeeMarker_regular_*` GOs by name → averages position → `_runtimeTeeAnchor` → `_ballSpawnPoint`.
+- Builds `PlacementEntries` for the lab UI placement dropdown.
+- Copies hole scene's lighting (skybox, ambient, fog, reflection) into `LabScaffold`.
+- Calls `SetupAtTee()`.
+
+**What it does NOT do (gaps for HUD widgets):**
+- Does NOT read `HoleMetadata` MonoBehaviour (par, holeNumber, championshipYards).
+- Does NOT publish a public event when hole changes. `OnPlacementEntriesChanged` exists but doesn't carry hole identity.
+- Does NOT expose pin world position. (No `Pin_*` GO confirmed in hole scenes — green centroid is the working proxy. **NEEDS VERIFICATION**: scan a hole scene for any pin/cup GO naming convention.)
+
+**Required additions for HUD widgets** (Phase 8.3 / 8.4):
+- Inside `OnHoleLoaded`, after the surface scan: find `HoleMetadata` MonoBehaviour on a scene root, populate a new `HoleContext` static, and fire a new `event Action<HoleMetadata> OnHoleMetadataChanged`. Spec'd in Phase 8.3.
+
+### `HoleMetadata` MonoBehaviour
+File: `Assets/Scripts/HoleMetadata.cs`. Namespace: `Golfin.CourseImport`. Sits on the root of every `Hole_XX_Geo.unity` scene.
+
+```csharp
+public class HoleMetadata : MonoBehaviour
+{
+    public string courseId;
+    public int    holeNumber;
+    public int    par;
+    public int    strokeIndex;
+    public int    championshipYards;
+    public string reviewStatus;
+    public string importType;         // "Lite" | "LiteFlat" | "Geo" | "GeoFlat"
+}
+```
+
+**No tee name field.** Tee selection is not currently part of the hole metadata. Hardcode `"REGULAR"` in HUD until tee picker lands (Phase C+).
+
+### `LabHoleBinder`
+- Editor-only (entire body wrapped in `#if UNITY_EDITOR`).
+- Pure plumbing — no public API for runtime consumers.
+- Note this in any spec that says "wire X via LabHoleBinder" — runtime consumers must subscribe to `PhysicsLabController` events instead.
+
+---
+
+## 4 — Asset Locations
+
+### Resources (loadable via `Resources.Load<Sprite>(path)` — NO file extension)
+| Path | Contents | Used by |
+|---|---|---|
+| `Resources/Portraits/Thumbnails/{Name}.png` | 12 character thumbnails (Camila, Ean, Elizabeth, Freda, Guillermo, James, Johan, Mike, Olivia, Richard, Roshana, Shae). | CSV pipeline auto-loads into `CharacterDataRuntime.portraitSprite`. |
+| `Resources/Portraits/Mini/{Name}.png` | 12 mini portraits (subtly different roster — has Sean, no Ean). | Manual `Resources.Load` if needed. |
+| `Resources/Portraits/FullBody/{Name}.png` | Full-body portraits. | CSV pipeline → `CharacterDataRuntime.portraitFullSprite`. |
+| `Resources/Rarities/{Common,Uncommon,Rare,Mythic,Legendary,Supreme,Mask}.png` | Rarity tiles. | Behind portraits / chip backgrounds. |
+| `Resources/Clubs/Controls/S_Controls_{Type}_{Brand}.png` | Club handle sprites for shot UI. | `ClubHandleSpriteBinder` (Phase 8.2.5). |
+| `Resources/Clubs/Portraits/S_Menu_{Type}_{Brand}.png` | Club menu portraits. | Phase 8.5 Club button. |
+| `Resources/Balls/Thumbnails/S_Controls_Ball_{n}.png` (also `Golfin.png`, `PuttAce.png` short variants) | Ball thumbnails. | Phase 8.5/8.6/8.7 ball widgets. |
+| `Resources/Bags/...` | Bag art. | Bags screen. |
+| `Resources/Items/...` | Item art. | Items screen. |
+| `Resources/Characters/...` | (legacy SO databases?) | **NEEDS VERIFICATION.** |
+| `Resources/Gameplay/...` | (config CSVs?) | **NEEDS VERIFICATION — likely controls.csv etc.** |
+| `Resources/HoleData/Hole_XX/zones.json` + `heightmap.bytes` | Baked physics data per hole (post-Phase F pivot). | `BallSimulation`. |
+| `Resources/Physics/...` | Physics configs (`AeroConfig`, `WindConfig`, `SurfaceConfig`, `PuttConfig` CSVs). | `PhysicsLabController.EnsureConfigsLoaded`. |
+
+### Art (NOT in Resources — must be inspector-assigned)
+| Path | Contents | How to consume |
+|---|---|---|
+| `Assets/Art/In-Game UI/*.png` | `Aiming Cone.png`, `Button - All.png`, `Icon - DrawFade/Flag/Settings/Spin/Straight.png`, `Indicator - Info/Power/Trail/Wind-Hole.png`. | Inspector-assigned `Sprite` field on the relevant widget MonoBehaviour (same pattern as `PowerGaugeWidget._backgroundSprite`). **Note (2026-04-28):** `Indicator - Wind-Hole.png` ships with `spriteBorder: {0,0,0,0}` — it is NOT 9-slice ready out of the box. Any widget using it as `Image Type: Sliced` requires Cesar to set borders manually via Sprite Editor first (suggested L=12, R=12, T=8, B=8). Otherwise sliced rendering distorts the sprite. |
+| `Assets/Art/In-Game UI/HoleMaps/Lomond - Hole {1..18}.png` | 18 hole map thumbnails. | Inspector-assigned `Sprite[18]` array on `HoleCardWidget`, OR move folder into `Resources/HoleMaps/` for path-based load. **Decision in Phase 8.3 spec: inspector-assigned array** (avoids invalidating other folder consumers + matches existing widget pattern). |
+| `Assets/Art/In-Game UI/HoleLayouts/...` | (sibling to HoleMaps) | **NEEDS VERIFICATION — purpose unclear.** |
+| `Assets/Art/3D/Props/TeeMarkers/...` | FBX tee markers. | TreePlacer / hole importer. |
+
+### Fonts
+- TMP font asset: `Assets/Fonts/Rubik-VariableFont_wght SDF.asset` ← canonical TMP font for shot UI. NOT `Rubik-SemiBold SDF` (that older asset path was used by accident in 8.2 power gauge; Cesar fixed manually).
+- Figma → Unity TMP scaling: **Figma font size ÷ 1.4 = Unity size.**
+
+---
+
+## 5 — Rarity System
+
+Enum: `CharacterRarity { Common, Uncommon, Rare, Mythic, Legendary, Supreme }` (6 tiers).
+
+Helpers:
+- `RarityHelper.GetRarityColor(rarity) → Color`
+- `RarityHelper.GetRarityLabel(rarity) → string`
+- `RarityStatCaps.GetStatCaps(rarity) → (strengthCap, clubControlCap, recoveryCap, staminaCap)`
+
+Starting level by rarity (for newly owned chars): Common 10 / Uncommon 40 / Rare 80 / Mythic 120 / Legendary 160 / Supreme 200.
+Max level by rarity: Common 39 / Uncommon 79 / Rare 119 / Mythic 159 / Legendary 199 / Supreme 239.
+
+Sprites: `Resources/Rarities/{Rarity}.png` + `Mask.png`.
+
+---
+
+## 6 — Phase 8 ShotUI Hierarchy (Existing)
+
+`LabScaffold.unity` → `ShotUI_Canvas` (CanvasScaler 1080×1920 reference) → children:
+- `ConeMesh` (RectTransform anchored at canvas center base; `ConeMeshGraphic` + `TimingSlabGraphic`)
+- `ClubHandle` (child of ConeMesh; `Image` + `ClubHandleDragger` + `ClubHandleSpriteBinder`)
+- `PowerGaugeWidget` (top-right, anchored `(-180, -460)`; size 200×200; children: `Background` Image + `GaugeArc` PowerGaugeGraphic + `PctText` + `YardsText` TMP)
+
+**To be added in Phase 8.3:**
+- `PlayerCard` (top-left)
+- `HoleCard` (top-right of `SettingsButton`)
+- `SettingsButton` (top-right corner)
+
+**Anchor convention:** all widgets anchored to corners of a 1080×1920 reference canvas. Position offsets in canvas units.
+
+---
+
+## 7 — Open NEEDS-VERIFICATION List
+
+These are markers Architect/Code should fill in next time the relevant area is touched. Don't dive on them just-in-case; fill them when their answer is needed.
+
+- [ ] Asmdef ref lists for `Golfin.Gameplay.Input`, `Golfin.Gameplay.Defaults`, `Golfin.Gameplay.Tests`, `Golfin.Physics` (core).
+- [ ] Whether the SO-based `CharacterData` template is still loaded anywhere, or if `CharacterDatabaseCSV` is the only source of truth in production. (CharacterManager has both code paths; reading whichever the boot scene wires.)
+- [ ] `ClubManager` full public API + namespace.
+- [ ] `BallManager` full public API + namespace.
+- [ ] `ItemManager` full public API + namespace.
+- [ ] `RewardPointsManager` location + namespace + full public API.
+- [ ] `AudioManager` full public API (which sounds it owns; how to play one-shot).
+- [ ] `ScreenManager` API + screen flow contract.
+- [ ] Pin / cup GO naming convention in `Hole_XX_Geo.unity` scenes — does any GO carry pin world position, or is "green centroid as proxy" the only path?
+- [ ] `Resources/Characters/` and `Resources/Gameplay/` contents.
+- [ ] `Assets/Art/In-Game UI/HoleLayouts/` purpose (sibling of HoleMaps).
+- [ ] Whether `WindContext` / `HoleContext` / `GameSession` static holders exist anywhere. (Spec'd as new in Phase 8.3 — confirm none collide.)
+
+---
+
+## 8 — Working with Figma references
+
+### Standing rule (set 2026-04-28)
+
+**Figma is the UI source-of-truth.** Reference PNGs in `Docs/Reference/` are companions for visual comparison only — Code uses them for side-by-side diffs during impl, but the canonical numbers (dimensions, fonts, colors, positions) come from Figma via the MCP, not from eyeballing the PNG.
+
+**Architect MUST confirm with Cesar BEFORE writing any UI spec:**
+1. Which Figma **page** is the source-of-truth for this task?
+2. Which **frame** within that page?
+3. Which parts of the visible content are **placeholder vs canonical** (e.g. "LADY'S" tee was placeholder for 8.3 — real default is REGULAR)?
+
+The Figma file is not curated yet (Cesar was working solo and didn't need it tidy). Don't guess which frame is current — ask. After Cesar confirms the page+frame+placeholder list, Architect extracts numbers via Figma MCP and writes the spec with those numbers baked in.
+
+**Don't do this:**
+- Pick a frame because the name looks right ("In-Game - Shot Tests 9" — there are 9+ versions, only one is current).
+- Assume text values in the frame are real (`"Lv 13"`, `"TURN 5"`, `"LADY'S"` were all mockup-only in 8.3).
+- Assume the frame's structure is final — Cesar may have a newer iteration on a WIP page.
+
+**Do this:**
+- Ask: "Which page/frame should I use as source-of-truth for [task]? And what's placeholder vs canonical in it?"
+- Wait for confirmation.
+- Then extract.
+
+### How to consume Figma
+
+Two ways:
+
+1. **Live Figma MCP (preferred).** Authoritative file as of 2026-04-28: **Cesar's personal file**, key `5gEAHjl6xAtW8iYY7NMvWd`, file name `Golfin Game Redux`. 42 pages including `In-game`, `Components`, `Master`, plus newer pages like `WIP- Hole Selection Screen`, `Export in-game`, `Export - Matchmaking`, `Export - Rankings`, `Export - Balls`, `Export - Bags`, `Export - Items`. Use `figma:use_figma` with `figma.getNodeByIdAsync(...)` walks. Now on a paid plan — rate limits should not be an issue.
+   - **Older file `hXFadl4O6HGKWakiEKgZbW`** is the previous shared-team file. Still readable but missing newer pages. Treat as a freeze point, not the source-of-truth.
+   - **Canonical 8.3 reference frame:** page `In-game`, frame `In-Game - Shot Tests 9`, id `4065:15675`. Maps to `Docs/Reference/In-game UI/Initial State.png`.
+2. **Local `.fig` file fallback** — `Docs/Reference/In-game UI/In-game GUI.fig`. Parseable in principle (ZIP archive containing Figma's Kiwi-encoded binary), but parsing it requires extra tooling (unzip + Kiwi schema decoder, or OSS extractors). Use as a frozen historical snapshot only.
+
+**Lesson learned 2026-04-28:** Architect dismissed the `.fig` file as "opaque" without inspecting it. It's actually a ZIP archive with `PK` magic bytes — readable in principle. **Future rule: try to open unfamiliar files before assuming they're inaccessible.** Worst case, one wasted tool call.
+
+**Cheap insurance against future unavailability:** when uploading a new reference PNG, also drop a 5-line text dump alongside it with frame name, canvas dimensions, and key node sizes/positions/fonts. Architect can always read text regardless of MCP availability or .fig parsing tooling.
+
+**Figma → Unity TMP scaling:** Unity TMP size = Figma size ÷ 1.4. Always read the Figma value directly when speccing fonts — do not guess.
+
+### Calibrated reference numbers (8.3 ground truth, from `In-Game - Shot Tests 9`)
+
+- **Canvas:** 1170×2532 (NOT 1080×1920 — the old spec was wrong).
+- **Top bar `Frame 2`:** at (48, 24), 1074×110.
+- **Settings button:** abs position (978, 24), size 86×86. White circle 86×86 (`#FDFFFE`, render as pure white) + navy gear glyph 63×65 at offset (12, 11) inside the circle. Gear color: navy `#001E39`. Right margin from screen edge: **106px** (NOT 48 — different from cards).
+- **Cards row `Content Container`:** starts at (48, 158), height 1396 (full vertical), but `First Row` is the top 180px section.
+- **Player card:** abs (48, 158), 478×180. Inside: portrait 180×180 cornerRadius 8 at (0, 0); chip stack 298×160 at (180, 10).
+- **Hole card:** abs right edge 1122 (= 1170 - 48), 478×180. Inside: chip stack 298×160 at (0, 10); hole map 180×180 cornerRadius 8 at (298, 0). Mirror layout of player card.
+- **Both cards 48px from screen edge.** Symmetric.
+- **Chip:** 298×48, navy fill `#001E39`, NO corner radius, NO sprite (flat rectangle). Three chips at y=0, 56, 112 within chip stack (56px row pitch = 48px chip + 8px gap).
+- **Chip text:** Rubik Medium, fontSize 33 (Unity TMP size 23), white, **right-aligned** on BOTH cards. Text frame inset 10px from chip top.
+- **Rarity background EXISTS** in the Figma `In-game Portrait` instance (subtle layer behind character art). Keep v1 simplification (omit); flag as polish follow-up.
+- **`Indicator - Wind-Hole.png` is NOT used** for chip backgrounds in the Figma design — the chips are flat navy rects. The 9-slice border concern doesn't apply to chips. (May still apply to the Wind/Hole indicators in 8.4 — verify when speccing.)
+
+### Color tokens (extracted 2026-04-28)
+
+- **Navy (chip fill, gear, dark accents):** `#001E39` (`r:0, g:0.118, b:0.224`).
+- **Near-white (settings circle):** `r:0.992, g:1, b:0.996` — use pure white `#FFFFFF` in Unity.
+- **White (chip text):** `#FFFFFF`.
+
+---
+
+## 9 — Update Log
+
+- **2026-04-28** — Initial creation during Phase 8.3 handoff prep. Verified CharacterManager / CharacterDatabaseCSV / PlayerCharacterData / CharacterDataRuntime / BagManager / HoleMetadata / LabHoleBinder / PhysicsLabController.OnHoleLoaded APIs and asset locations. Marked the rest NEEDS VERIFICATION.
+- **2026-04-28** — Phase 8.3 attempt 1 rejected. Added §1 asmdef workaround pattern (static context + Assembly-CSharp populator) after discovering `autoReferenced: true` blocks the simple Assembly-CSharp ref path. Added §4 9-slice border caveat for `Indicator - Wind-Hole.png` (sprite borders not set in importer; Image Type Sliced will distort without manual fix).
+- **2026-04-28** — Added §8 "Working with Figma references" with `.fig` lesson. Architect almost guessed at fonts/dimensions; should always pull live from Figma MCP, fall back to text dump, and only as last resort attempt to parse the `.fig` archive.
+- **2026-04-28** — Switched to Cesar's personal Figma file (`5gEAHjl6xAtW8iYY7NMvWd`) on paid plan. Re-extracted full layout numbers for 8.3 cards/settings; updated §8 with calibrated reference. Deprecated the chip-sprite (`Indicator - Wind-Hole.png`) approach for chips — they're flat navy rects in the design. Confirmed font is Rubik Medium 33 (Unity TMP 23), right-aligned on both cards, navy fill `#001E39`.
+- **2026-04-28** — Added §8 standing rule: Architect MUST confirm page/frame/placeholder-vs-canonical with Cesar before writing any UI spec. The Figma file is not yet curated; multiple frame versions exist with placeholder content. Don't guess which is current.

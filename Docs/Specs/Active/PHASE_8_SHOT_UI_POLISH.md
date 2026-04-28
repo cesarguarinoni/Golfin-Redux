@@ -463,68 +463,191 @@ Follow the visual fidelity protocol. Specifically:
 
 **Goal:** Three top-of-screen widgets.
 
-### Step A — reference walk-through
+> **Read before coding:** `Docs/Architecture/RUNTIME_BLUEPRINT.md` — the runtime architecture reference. The data-source paths below were verified against the live codebase on 2026-04-28 and the canonical lookup pattern lives in §2 of the blueprint. If you find a deviation between the blueprint and reality during implementation, update the blueprint as part of your done report (maintenance rule §0 of the blueprint).
 
-Open `Initial State.png`. For each widget, list every visual property: frame style, padding, font weight + size, portrait/thumbnail aspect ratio, rarity background blending, row separator style, alignment. Surface anything ambiguous to Architect before coding.
+### Step A — reference walk-through (already done by Architect 2026-04-28)
+
+Reference: `Docs/Reference/In-game UI/Initial State.png`. Visual properties confirmed by Architect side-by-side examination:
+
+- **Player card** — portrait square ~140×140 with subtle rounded corners (the image itself is clipped to a soft rounded square; no separate rarity ring/border around it). Portrait sits flush against three stacked navy chips on its right with no gap between portrait and chips. Each chip uses the `Indicator - Wind-Hole.png` 9-slice frame, ~50px tall, white text left-aligned, USERNAME row in bolder weight than Lv/TURN rows.
+- **Hole card** — mirror of player card. Three navy chips on the LEFT (right-aligned text), 140×140 hole-map thumbnail on the RIGHT. The hole map shows a green tile background with the rendered fairway shape on it.
+- **Settings gear** — white circle ~90×90, navy gear icon centered, no visible drop shadow.
+- **No rarity background tile is visible behind the portrait in `Initial State.png`.** The reference uses the portrait alone; the rarity tile assignment in the original spec was Architect's invention. Decision: omit rarity background for v1 to match the reference. If Cesar wants a rarity ring/halo later, file a follow-up.
+- **Tee name shown is `LADY'S`** in the reference, but per Cesar's note that's mockup-only. Hardcode `"REGULAR"` for v1.
+
+If any visual property *not* listed above strikes Code as ambiguous during impl, surface to Architect rather than guess (Rule 2 of the protocol).
 
 ### 8.3.a — Player card (top-left)
 
-Layout per `Initial State.png`:
-- Portrait square, ~140×140 px, top-left at `(40, -40)` from top-left anchor.
-- Rarity background fills the portrait square behind the portrait image.
-- Right of portrait: 3 stacked navy-rounded text rows (using `Indicator - Wind-Hole.png` 9-sliced as the row background):
-  - Row 1: `USERNAME` (bold).
-  - Row 2: `Lv {level}`.
-  - Row 3: `TURN {turn}`.
+Layout per reference:
+- Portrait Image, 140×140 px, anchored top-left at canvas position `(40, -40)`. Sprite source: `CharacterDataRuntime.portraitSprite` (already loaded — see data-source pattern below). No separate rarity background tile in v1 (matches reference).
+- Three stacked rows immediately to the right of the portrait. Each row: `Image` with `Indicator - Wind-Hole.png` (Image Type: Sliced) as background, child `TextMeshProUGUI` for the label. Row size ~190×50 px, vertical stack with 4px gap. Anchor each row's RectTransform to the player-card root.
+  - Row 1: `"USERNAME"` placeholder (display name when wired). Font: `Rubik-VariableFont_wght SDF`, weight bold, size 23, color white.
+  - Row 2: `"Lv {level}"`. Same font, weight medium, size 23, color white.
+  - Row 3: `"TURN {turn}"`. Same as Row 2.
 
-**Data sources:**
-- Username: `CharacterManager.Instance.CurrentCharacter.DisplayName` — verify field name; use reflection if asmdef boundary blocks. Fallback: `"Player"`.
-- Level: `CharacterManager.Instance.CurrentCharacter.Level`. Fallback: `1`.
-- Portrait sprite: `Portraits/Mini/<characterKey>.png` via `Resources.Load<Sprite>`.
-- Rarity bg: `Rarities/<rarityName>.png`.
-- Turn count: a new `GameSession.Instance.TurnCount` static — if it doesn't exist, create a stub in `Golfin.Gameplay.UI.HUD.GameSession.cs` that returns `1` for now and gets wired by Phase C (menu→gameplay integration).
+**Data sources (verified against live code on 2026-04-28):**
+
+```csharp
+// Asmdef prereq: add "Assembly-CSharp" to Golfin.Gameplay.UI asmdef references.
+// (Confirm and add before the first widget compiles. See blueprint §1.)
+
+string username = "PLAYER";
+int    level    = 1;
+Sprite portrait = null;
+
+var mgr = Golfin.Roster.CharacterManager.Instance;
+var db  = Golfin.Roster.CharacterDatabaseCSV.Instance;
+if (mgr != null && db != null)
+{
+    string id = mgr.GetSelectedCharacterId();
+    if (!string.IsNullOrEmpty(id))
+    {
+        var rt = db.GetCharacter(id);              // CharacterDataRuntime
+        var pc = mgr.GetPlayerCharacter(id);       // PlayerCharacterData
+        if (rt != null) { username = rt.characterName.ToUpper(); portrait = rt.portraitSprite; }
+        if (pc != null) { level = pc.currentLevel; }
+    }
+}
+```
+
+Fallbacks if any of the above are null: `username = "PLAYER"`, `level = 1`, `portrait` left to inspector-assigned default sprite (assign one of the 12 thumbnails on the widget for editor preview; runtime overrides).
+
+Subscribe to `mgr.OnCharacterSelected` in `OnEnable` and re-pull the values; unsubscribe in `OnDisable`.
+
+Turn count: create `Assets/Scripts/Gameplay/UI/HUD/GameSession.cs` as a static-only class:
+```csharp
+namespace Golfin.Gameplay.UI.HUD
+{
+    public static class GameSession
+    {
+        public static int TurnCount = 1;
+        public static event System.Action OnTurnChanged;
+        public static void SetTurn(int n) { TurnCount = n; OnTurnChanged?.Invoke(); }
+    }
+}
+```
+Leave at 1 for v1; Phase C will drive it.
 
 ### 8.3.b — Hole card (top-right, left of settings)
 
-Layout per `Initial State.png`:
-- Mirror of player card; portrait-equivalent is a 140×140 hole-map thumbnail on the right.
-- Three text rows on the left (right-aligned text):
-  - Row 1: course name (`LOMOND`).
-  - Row 2: `HOLE {n} - {teeName}` (e.g. `HOLE 1 - LADY'S`).
-  - Row 3: `PAR {n}`.
+Layout per reference:
+- Three rows on the LEFT, right-aligned text, same chip styling as player card. Hole-map Image 140×140 on the RIGHT.
+- Anchor: top-right. Position the hole card so its right edge sits at `(-150, -40)` (i.e. 150px in from screen-right to clear the settings gear at 90×90 + ~30px margin).
+  - Row 1: `"LOMOND"` (course name). Bold weight 23.
+  - Row 2: `"HOLE {n} - REGULAR"` (n from `HoleMetadata.holeNumber`; `"REGULAR"` hardcoded for v1).
+  - Row 3: `"PAR {par}"`.
 
-**Data sources:**
-- Course name: hardcode `"LOMOND"` for v1 (single course). When multi-course lands, pull from a `CourseContext` static.
-- Hole number, par, tee name: from a new `HoleContext` static that holds the currently-loaded hole's metadata. Read from the existing `Hole_XX_Geo.unity` scene's metadata GO if there is one; if not, parse from the scene name (`Hole_01_Geo` → `1`) and use `par.csv` or just hardcode par values inline (Architect can amend later).
-- Hole map: `Art/In-Game UI/HoleMaps/Lomond - Hole {n}.png`.
+**Data sources (verified):**
 
-**Tee name fallback:** if no tee metadata, show `"REGULAR"`.
+- Hole number + par: read from `HoleMetadata` MonoBehaviour (`Golfin.CourseImport.HoleMetadata`) on the loaded `Hole_XX_Geo.unity` scene root.
+- Course name: hardcode `"LOMOND"` for v1 (single course).
+- Tee name: hardcode `"REGULAR"` for v1 (no tee metadata exists yet — see blueprint §3).
+- Hole map sprite: from `Assets/Art/In-Game UI/HoleMaps/Lomond - Hole {n}.png`. **These sprites are NOT in `Resources/`** → use an inspector-assigned `Sprite[18]` array on `HoleCardWidget` indexed by `holeNumber - 1`. Cesar will populate the array in the LabScaffold scene.
+
+**Plumbing the hole-changed signal (this is the gap in the runtime today; must be added in this part):**
+
+1. Create `Assets/Scripts/Gameplay/UI/HUD/HoleContext.cs`:
+   ```csharp
+   namespace Golfin.Gameplay.UI.HUD
+   {
+       public static class HoleContext
+       {
+           public static int    HoleNumber  = 1;
+           public static int    Par         = 4;
+           public static int    ChampionshipYards = 0;
+           public static string CourseName  = "LOMOND";
+           public static string TeeName     = "REGULAR";   // v1: always REGULAR
+           public static UnityEngine.Vector3 GreenCentroidWorld; // populated from PhysicsLabController
+
+           public static event System.Action OnChanged;
+           public static void Raise() => OnChanged?.Invoke();
+       }
+   }
+   ```
+2. Modify `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — at the END of `OnHoleLoaded(string sceneName)` (after `SetupAtTee()`), find `HoleMetadata` on the loaded scene's roots and populate `HoleContext`:
+   ```csharp
+   // Populate HoleContext for HUD widgets.
+   var holeScene = SceneManager.GetSceneByName(sceneName);
+   if (holeScene.IsValid())
+   {
+       Golfin.CourseImport.HoleMetadata meta = null;
+       foreach (var root in holeScene.GetRootGameObjects())
+       {
+           meta = root.GetComponentInChildren<Golfin.CourseImport.HoleMetadata>(true);
+           if (meta != null) break;
+       }
+       if (meta != null)
+       {
+           Golfin.Gameplay.UI.HUD.HoleContext.HoleNumber        = meta.holeNumber;
+           Golfin.Gameplay.UI.HUD.HoleContext.Par               = meta.par;
+           Golfin.Gameplay.UI.HUD.HoleContext.ChampionshipYards = meta.championshipYards;
+           Golfin.Gameplay.UI.HUD.HoleContext.GreenCentroidWorld = _loadedHoleGreenCentroid;
+           Golfin.Gameplay.UI.HUD.HoleContext.Raise();
+       }
+       else
+       {
+           Debug.LogWarning($"[PhysicsLab] OnHoleLoaded: no HoleMetadata found in {sceneName}; HoleContext not updated.");
+       }
+   }
+   ```
+   Asmdef: `Golfin.Physics.Viewer` already references `Golfin.Gameplay.UI`, so no asmdef change needed for this controller edit. **Code: confirm `Assembly-CSharp` is reachable from `Golfin.Physics.Viewer` (where `Golfin.CourseImport.HoleMetadata` lives) before relying on the type — if not, that asmdef ref must be added.**
+3. In `OnHoleUnloaded()`, reset `HoleContext` to defaults (HoleNumber=1, Par=4, etc.) and `Raise()`.
+
+`HoleCardWidget` subscribes to `HoleContext.OnChanged` in `OnEnable` and re-renders.
 
 ### 8.3.c — Settings gear icon
 
-- Top-right corner, `(-50, -40)` from top-right.
-- 90×90 white circle with gear icon (`Icon - Settings.png`).
-- On tap: opens settings modal (defer modal implementation to a stub; for now just `Debug.Log("[Settings] tapped")`).
+- New GameObject `SettingsButton` under `ShotUI_Canvas`, anchored top-right at `(-50, -40)`.
+- 90×90 px. Background: `Image` with a 90×90 white sprite (use Unity's built-in `UI/Skin/UISprite.psd` knob OR a plain white circle PNG — verify what's available; if neither, use `Image` with `Color.white` and `Image Type: Sliced` on a generic disc sprite). Foreground: child `Image` with `Icon - Settings.png` at 60×60 centered.
+- Add `Button` component. `OnClick` → log `"[Settings] tapped"` for v1 (modal stub).
 
 ### Files to create
 
 1. `Assets/Scripts/Gameplay/UI/ShotUI/PlayerCardWidget.cs`
 2. `Assets/Scripts/Gameplay/UI/ShotUI/HoleCardWidget.cs`
 3. `Assets/Scripts/Gameplay/UI/ShotUI/SettingsButton.cs`
-4. `Assets/Scripts/Gameplay/UI/HUD/HoleContext.cs` — static holder. API: `int HoleNumber`, `int Par`, `string TeeName`, `string CourseName`, `event Action OnChanged`. Wired by `LabHoleBinder` on hole load.
-5. `Assets/Scripts/Gameplay/UI/HUD/GameSession.cs` — stub static for turn count.
+4. `Assets/Scripts/Gameplay/UI/HUD/HoleContext.cs` (in new `HUD/` subfolder; same asmdef `Golfin.Gameplay.UI`)
+5. `Assets/Scripts/Gameplay/UI/HUD/GameSession.cs`
 
 ### Files to modify
 
-1. `Assets/Scripts/Physics/Viewer/LabHoleBinder.cs` — on hole load, populate `HoleContext` (parse hole number from scene name; par from `par.csv` if exists, else fallback table).
+1. `Assets/Scripts/Gameplay/UI/ShotUI/Golfin.Gameplay.UI.asmdef` — add `"Assembly-CSharp"` to the `references` array. (One-line additive change. Compiles all of `Assembly-CSharp` against this asmdef; trade-off accepted because there's no clean alternative without splitting managers into their own asmdef — out of scope here.)
+2. `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — populate `HoleContext` at end of `OnHoleLoaded` and reset in `OnHoleUnloaded`. Snippet above.
+3. `Assets/Scenes/Physics/LabScaffold.unity` — instantiate the three new widgets under `ShotUI_Canvas` and wire inspector references (asmdef-friendly: drag refs in editor; `_charManager`, `_db` left null is fine since widgets resolve via `.Instance`). The 18-entry `_holeMaps[]` array on `HoleCardWidget` should be Cesar-assigned (note this in the done report as a manual step).
+
+### Data-flow contract
+
+- `PlayerCardWidget` reads `CharacterManager.Instance` + `CharacterDatabaseCSV.Instance` on `OnEnable` and on `OnCharacterSelected`. Reads `GameSession.TurnCount` on `OnEnable` and on `GameSession.OnTurnChanged`. Pure pull model — never writes.
+- `HoleCardWidget` reads `HoleContext` on `OnEnable` and on `HoleContext.OnChanged`. Pure pull. Hole map sprite resolved by `_holeMaps[HoleContext.HoleNumber - 1]`.
+- `SettingsButton` is stateless. Tap → `Debug.Log("[Settings] tapped")`. Modal wiring deferred.
 
 ### Done report 8.3
 
 Follow the visual fidelity protocol. Specifically:
 - Files added/modified.
-- Screenshot of full top bar with player card + hole card + settings populated.
-- **Side-by-side comparison** vs `Initial State.png`. Sub-elements to verify: portrait + rarity bg sizing, USERNAME/Lv/Turn row alignment, hole map thumbnail aspect ratio, course/hole/par text alignment (right-justified on the hole card), settings gear position + size.
-- Confirmation that switching holes via picker updates the hole card correctly.
+- Screenshot of full top bar with player card + hole card + settings populated. Take in PLAY mode in `LabScaffold` with Hole 1 loaded so `HoleContext` is populated; if the hole isn't loadable in play, take in editor with the hole pre-loaded and note the caveat.
+- **Side-by-side comparison** vs `Initial State.png`. Save to `Docs/Diagnostics/phase-8/8.3/topbar-diff-final.png`.
+  - Sub-elements to verify: portrait size (140×140) + position, USERNAME/Lv/Turn row alignment + chip frames, hole map thumbnail aspect ratio + position, course/hole/par text right-alignment on hole card, settings gear position + size + icon.
+- Confirmation that switching holes via the lab picker updates the hole card correctly (load Hole 1 → expect `HOLE 1 - REGULAR / PAR ?`; load Hole 2 → expect `HOLE 2 - REGULAR / PAR ?`).
+- Confirmation that `Assembly-CSharp` was added to `Golfin.Gameplay.UI` asmdef references and the project compiles.
+- Note in done report: `HoleCardWidget._holeMaps[18]` array is a manual Cesar-assignment (drag the 18 PNGs from `Assets/Art/In-Game UI/HoleMaps/`). Provide a `[ContextMenu]` helper on the widget to auto-populate via `AssetDatabase.LoadAssetAtPath` (editor-only via `#if UNITY_EDITOR`) so Cesar can right-click → Auto-Assign Hole Maps.
+
+### Iteration budgets
+
+- Functional: 2 attempts. The risky bits are (a) asmdef ref change + recompile, (b) `HoleContext` plumbing in `OnHoleLoaded`. Surface if either fails twice.
+- Visual: 5 rounds max. Top-bar layout is geometric and the reference is unambiguous; should land in 1–2 rounds.
+
+### Hard constraints 8.3
+
+- Do NOT add a rarity background tile in v1 (not in the reference; would be inventing visuals).
+- Do NOT modify `CharacterManager.cs`, `CharacterDatabaseCSV.cs`, `BagManager.cs`, or `HoleMetadata.cs`. Read-only consumers.
+- Do NOT modify `BallSimulation.cs` or anything in `Physics/Core/`. Only `PhysicsLabController.OnHoleLoaded` / `OnHoleUnloaded` are touched in `Physics/Viewer/`.
+- Do NOT add a runtime modal for settings. `Debug.Log` stub only.
+
+### Blueprint update obligation
+
+If any data source path or API differs from what `Docs/Architecture/RUNTIME_BLUEPRINT.md` describes (verified 2026-04-28), update the blueprint as part of the done report. If the spec is correct and the code matched the blueprint, just note `"Blueprint: no updates needed"` in the done report.
 
 ---
 

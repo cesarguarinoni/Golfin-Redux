@@ -8,7 +8,8 @@ namespace Golfin.Gameplay.UI.ShotUI
     public class HoleCardWidget : MonoBehaviour
     {
         [Header("Hole Map")]
-        [SerializeField] Image _holeMap;
+        [SerializeField] Image   _holeMap;
+        [SerializeField] Sprite  _defaultHoleMap;
         [SerializeField] Sprite[] _holeMaps; // 18-entry array; index = holeNumber - 1
 
         [Header("Chip rows")]
@@ -29,19 +30,19 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         void Refresh()
         {
-            int holeNum = HoleContext.HoleNumber;
-            int par     = HoleContext.Par;
-            string tee  = HoleContext.TeeName;
+            int    holeNum = HoleContext.HoleNumber;
+            int    par     = HoleContext.Par;
+            string tee     = HoleContext.TeeName;
 
             if (_courseText != null) _courseText.text = HoleContext.CourseName;
-            if (_holeText != null)   _holeText.text   = $"HOLE {holeNum} - {tee}";
-            if (_parText != null)    _parText.text     = $"PAR {par}";
+            if (_holeText   != null) _holeText.text   = $"HOLE {holeNum} - {tee}";
+            if (_parText    != null) _parText.text     = $"PAR {par}";
 
-            if (_holeMap != null && _holeMaps != null)
+            if (_holeMap != null)
             {
                 int idx = holeNum - 1;
-                if (idx >= 0 && idx < _holeMaps.Length && _holeMaps[idx] != null)
-                    _holeMap.sprite = _holeMaps[idx];
+                Sprite sp = (idx >= 0 && _holeMaps != null && idx < _holeMaps.Length) ? _holeMaps[idx] : null;
+                _holeMap.sprite = sp != null ? sp : _defaultHoleMap;
             }
         }
 
