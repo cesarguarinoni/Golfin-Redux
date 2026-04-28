@@ -853,6 +853,43 @@ namespace Golfin.Physics.Viewer
             CopyHoleLighting(SceneManager.GetSceneByName(sceneName));
 
             SetupAtTee();
+
+            // Populate HoleContext for HUD widgets (PlayerCardWidget, HoleCardWidget).
+            // HoleMetadata lives in Assembly-CSharp; use reflection to avoid a circular asmdef dep
+            // (Viewer has autoReferenced:true, so Viewer→Assembly-CSharp would be circular).
+            System.Type metaType = System.Type.GetType("Golfin.CourseImport.HoleMetadata, Assembly-CSharp");
+            if (metaType != null)
+            {
+                var holeSceneForMeta = SceneManager.GetSceneByName(sceneName);
+                Component meta = null;
+                if (holeSceneForMeta.IsValid())
+                {
+                    foreach (var root in holeSceneForMeta.GetRootGameObjects())
+                    {
+                        meta = root.GetComponentInChildren(metaType, true);
+                        if (meta != null) break;
+                    }
+                }
+                if (meta != null)
+                {
+                    var fHole = metaType.GetField("holeNumber");
+                    var fPar  = metaType.GetField("par");
+                    var fYds  = metaType.GetField("championshipYards");
+                    Golfin.Gameplay.UI.HUD.HoleContext.HoleNumber        = fHole != null ? (int)fHole.GetValue(meta) : 1;
+                    Golfin.Gameplay.UI.HUD.HoleContext.Par               = fPar  != null ? (int)fPar.GetValue(meta)  : 4;
+                    Golfin.Gameplay.UI.HUD.HoleContext.ChampionshipYards = fYds  != null ? (int)fYds.GetValue(meta)  : 0;
+                    Golfin.Gameplay.UI.HUD.HoleContext.GreenCentroidWorld = _loadedHoleGreenCentroid;
+                    Golfin.Gameplay.UI.HUD.HoleContext.Raise();
+                }
+                else
+                {
+                    Debug.LogWarning($"[PhysicsLab] OnHoleLoaded: no HoleMetadata found in {sceneName}; HoleContext not updated.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[PhysicsLab] HoleMetadata type not found via reflection; HoleContext not updated.");
+            }
         }
 
         void BuildPlacementEntries(
@@ -971,6 +1008,8 @@ namespace Golfin.Physics.Viewer
             _ballSpawnPoint      = null;
             _bakedClassifier     = null;
             _bakedGround         = null;
+
+            Golfin.Gameplay.UI.HUD.HoleContext.Reset();
 
             PlacementEntries.Clear();
             OnPlacementEntriesChanged?.Invoke();

@@ -1,5 +1,21 @@
 # Lessons Learned
 
+## Unity asmdef — Cannot reference Assembly-CSharp from a named asmdef (build order)
+
+**Symptom (Phase 8.3):** Added `"Assembly-CSharp"` to `Golfin.Gameplay.UI.asmdef` references so `PlayerCardWidget` could call `CharacterManager`/`CharacterDatabaseCSV`. Unity/Bee silently dropped the reference from the generated RSP and the DLL failed to build with no visible error. TundraBuildState updated but DLL timestamp stayed from the previous day.
+
+**Root cause:** Unity's Bee build system compiles named asmdefs BEFORE Assembly-CSharp. Adding Assembly-CSharp as a reference creates an impossible build-order dependency (Assembly-CSharp must exist before the asmdef can compile, but Assembly-CSharp is compiled after). Bee detects this and silently drops the reference, leaving the asmdef with unresolved types → build failure with no console output.
+
+**Fix:** Two-part:
+1. Remove `"Assembly-CSharp"` from the asmdef references entirely.
+2. Set `autoReferenced: true` on the asmdef — then Assembly-CSharp (and Assembly-CSharp-Editor) auto-reference your asmdef, so editor wire scripts in Assembly-CSharp-Editor can use the types.
+
+**For cross-boundary data (e.g. CharacterManager):** Use a static bus pattern (like `HoleContext`) that lives in the asmdef and gets populated by Assembly-CSharp code. Don't reference Assembly-CSharp types directly from a named asmdef.
+
+**How to apply:** If a named asmdef needs data from Assembly-CSharp types, create a static data class in the asmdef (e.g. `PlayerContext`) and have Assembly-CSharp code populate it. The UI reads from the static; the manager writes to it. Zero circular deps.
+
+---
+
 ## Workflow — Before deleting a .cs file, grep for ALL public types it defines
 
 **Symptom:** Phase F.4 deleted `SceneSurfaceProvider.cs`. The file's primary type was `SceneSurfaceProvider`, but it ALSO defined `Physics.Runtime.SurfaceMarker` inline as a second `public sealed class` in the same namespace. Spec hard rule 5 explicitly retained `SurfaceMarker` (load-bearing for the import → bake bridge) — but I read the spec as "keep this type" without verifying where the type actually lived. Deleting the file silently took the marker with it. Result: CS0234 across all importers; entire main-repo project failed to compile until I extracted `SurfaceMarker` to its own file.

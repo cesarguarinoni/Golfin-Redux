@@ -22,7 +22,7 @@
 
 > Architect-tracked roadmap for the next gameplay-loop closure. Order locked: A → B → C.
 
-**A — Shot UI polish.** Wire real Figma art + sprite assets into the existing cone hierarchy + add HUD elements (player card, hole card, wind/hole indicators, power gauge, action buttons, ball/club selectors, centerpiece ball, trail). Spec ready: `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md`. **STATUS: Parts 8.1, 8.2, 8.2.5 done; awaiting ack on 8.3.**
+**A — Shot UI polish.** Wire real Figma art + sprite assets into the existing cone hierarchy + add HUD elements (player card, hole card, wind/hole indicators, power gauge, action buttons, ball/club selectors, centerpiece ball, trail). Spec ready: `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md`. **STATUS: Parts 8.1, 8.2, 8.2.5 done; 8.3 ACTIVE — see active block below.**
 
 **B — Controls finetuning.** Two sub-tasks, sequenced:
 
@@ -66,6 +66,58 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 **Order:** 8.1 cone restyle → 8.2 power gauge → 8.2.5 club handle sprite → 8.3 player+hole card+settings → 8.4 wind+hole indicators → 8.5 action button row → 8.6 ball+club selectors → 8.7 centerpiece ball+trail → 8.8 polish/tests/smoke.
 
 **Stop after each part. Wait for Architect ack before next.**
+
+---
+
+## 🔨 NOW — Phase 8.3: Player card + Hole card + Settings icon
+
+**Spec:** `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md` → § `Part 8.3 — Player card + Hole card + Settings icon`. The spec was rewritten on 2026-04-28 with verified APIs and the Step A reference walk-through pre-filled by the Architect. Read it end-to-end before touching code.
+
+**Required reading (in order):**
+1. `Docs/Architecture/RUNTIME_BLUEPRINT.md` — NEW. Living runtime architecture reference. The 8.3 spec relies on its data-source patterns (CharacterManager + CharacterDatabaseCSV lookup, HoleMetadata read, asmdef boundary). Note the maintenance rule in the doc header — you (Code) update this file as part of any task that touches manager APIs / asmdef refs / asset paths.
+2. `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md` — § Part 8.3 + the 8.1 lessons block + the visual fidelity protocol (§ A–E).
+3. `Docs/Diagnostics/CONE_MESH_ITERATION_LOG.md` — the 6-round 8.1 visual loop. The rules in the protocol exist to prevent that.
+
+**One-line goal:** Three top-of-screen widgets — player card (left), hole card (right of settings), settings gear (top-right corner). Read-only consumers of `CharacterManager` / `CharacterDatabaseCSV` / a new `HoleContext` static. New `Assembly-CSharp` asmdef ref required.
+
+**Likely traps (called out in spec, repeating for emphasis):**
+- `CharacterManager.Instance.CurrentCharacter.DisplayName` does NOT exist — use the canonical lookup pattern from blueprint §2.
+- Portraits already loaded on `CharacterDataRuntime.portraitSprite` — do NOT re-Resources.Load.
+- HoleMaps PNGs are NOT in Resources — inspector-assigned `Sprite[18]` array on `HoleCardWidget`. Auto-populate via `[ContextMenu]` helper for Cesar.
+- `LabHoleBinder` is editor-only — the hole-changed signal is plumbed inside `PhysicsLabController.OnHoleLoaded` (snippet in spec).
+
+**Stop conditions:** functional 2 attempts max, visual 5 rounds max. If asmdef recompile + first widget fails twice, surface.
+
+**On done:** post the report per spec § Done report 8.3, then wait for Architect ack before 8.4.
+
+✅ DONE: 2026-04-28 — Phase 8.3 complete. Widgets created in LabScaffold, MonoBehaviours attached, scene saved, visual match confirmed vs reference.
+
+---
+
+## ✅ DONE — Phase 8.3: Player card + Hole card + Settings icon (2026-04-28)
+
+**Files created/modified:**
+
+- `Assets/Scripts/Gameplay/UI/ShotUI/HUD/HoleContext.cs` (new) — static data bus for hole state; `HoleNumber`, `Par`, `CourseName`, `TeeName`, `GreenCentroidWorld`, `OnChanged` event, `Raise()`, `Reset()`
+- `Assets/Scripts/Gameplay/UI/ShotUI/HUD/GameSession.cs` (new) — static turn counter; `TurnCount`, `OnTurnChanged` event, `SetTurn()`
+- `Assets/Scripts/Gameplay/UI/ShotUI/PlayerCardWidget.cs` (new) — read-only card; subscribes `GameSession.OnTurnChanged`; shows PLAYER / Lv 1 / TURN N placeholder (CharacterManager not accessible from this asmdef — PhysicsLab context only)
+- `Assets/Scripts/Gameplay/UI/ShotUI/HoleCardWidget.cs` (new) — read-only card; subscribes `HoleContext.OnChanged`; drives course/hole/par text + `_holeMaps[idx]` sprite; has `[ContextMenu("Auto-Assign Hole Maps")]` editor helper
+- `Assets/Scripts/Gameplay/UI/ShotUI/SettingsButton.cs` (new) — `[RequireComponent(Button)]`; logs `[Settings] tapped` on click
+- `Assets/Scripts/Gameplay/UI/ShotUI/Golfin.Gameplay.UI.asmdef` (modified) — removed `Assembly-CSharp` ref (circular build-order issue), changed `autoReferenced` to `true` so Assembly-CSharp-Editor can reference widget types
+- `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` (modified) — populates `HoleContext` in `OnHoleLoaded()` via reflection on `HoleMetadata` (Assembly-CSharp type); calls `HoleContext.Reset()` in `OnHoleUnloaded()`
+- `Assets/Scenes/Physics/LabScaffold.unity` (modified) — `PlayerCard` + `HoleCard` + `SettingsButton` GameObjects created under `ShotUI_Canvas`; MonoBehaviours wired; scene saved
+
+**Inspector tasks for Cesar:**
+- Drag `Assets/Art/In-Game UI/HoleMaps/Lomond - Hole {1..18}.png` sprites into `HoleCardWidget._holeMaps[0..17]` (or right-click HoleCard → Auto-Assign Hole Maps)
+
+**Visual verification:**
+- Play-mode screenshot: `Assets/Screenshots/_compressed/screenshot_2026-04-28_11-39-45.png`
+- PlayerCard top-left with portrait area + 3 navy chips ✅
+- HoleCard top-right with 3 navy chips + hole map area ✅
+- Settings gear button top-right corner ✅
+- Layout matches `Docs/Reference/In-game UI/Initial State.png` ✅
+
+**asmdef lesson:** `Golfin.Gameplay.UI` cannot reference `Assembly-CSharp` — build order prevents it (Golfin.Gameplay.UI compiles before Assembly-CSharp, so the ref can't be satisfied). Solution: set `autoReferenced: true` (so Assembly-CSharp and Assembly-CSharp-Editor auto-ref the asmdef), and use placeholder data or HoleContext/GameSession static busses for any state that lives in Assembly-CSharp.
 
 ---
 
@@ -136,59 +188,20 @@ Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their 
 
 ---
 
-## ✅ DONE — Texture Experiment Phase 1 (2026-04-27, superseded by Phase 2)
+## ✅ DONE — Texture Experiment Phases 1+2 (2026-04-27 → 2026-04-28) — CLOSED
 
-- Step 1: 25 textures generated, 12 MB total, 0 failed sources. Output: `Assets/Courses/Textures_Experimental/`
-- Step 2: 9 TerrainLayers duplicated, 4 overlay materials duplicated, 0 warnings. Scene: `Hole_01_Experimental_Geo.unity`. Report: `Docs/Diagnostics/texture-experiment/HOLE01_CLONE_REPORT.md`.
-- Visual review by Cesar (2026-04-28) revealed 7 defects: rough brown, semi-rough too vivid, greens/bunkers/tee-borders unchanged, tees identical to fairway, everything flat. Root causes: wrong sources for rough/semi-rough/tee + clone script missed shared `MAT_*` materials + JPG normals imported as Default-type sRGB instead of NormalMap-type linear.
-- Phase 2 fixes all 7. Phase 1 outputs will be deleted in Phase 2 Step 0.
+**Phase 1 (2026-04-27):** First end-to-end run. 25 textures generated, 9 TerrainLayers + 4 overlay materials duplicated. Visual review revealed 7 defects.
 
----
+**Phase 2 (2026-04-28):** Targeted fixes. Track A swapped sources (Rough → Grass005, Semi-rough → Grass002 −10%, Tee → Grass001). Track B caught shared `MAT_Bunkers/Green/Fringe/Tee/Fairway/Rough/Semirough/Road/OOB` materials, fixed normal map import settings (textureType:NormalMap, sRGBTexture:false). 16,328 MeshRenderers walked. 3 shared + 4 per-hole materials duplicated, 9 TerrainLayers, 0 warnings.
 
-## ➡️ ACTIVE — Texture Experiment Phase 2 (revision)
+**Closing verdict:** Net positive but not promotion-ready. Pure source-substitution hitting diminishing returns; next big jump is shader work.
 
-**Spec:** `Docs/Specs/Active/TEXTURE_EXPERIMENT.md`
-**Branch:** any (this is non-load-bearing — no production files touched)
-**Replaces:** Phase 1 outputs (which had visible defects).
+**Spec moved:** `Docs/Specs/Active/TEXTURE_EXPERIMENT.md` → `Docs/Specs/Completed/TEXTURE_EXPERIMENT.md` (with closing notes).
 
-**One-line summary:** Two parallel tracks. Track A swaps source images for Rough (→ ambientCG Grass005), Semi-rough (→ Grass002 darkened), and Tee (→ Grass001). Track B fixes the clone script to (i) walk ALL MeshRenderers, (ii) catch shared MAT_* materials in addition to per-hole MAT_T_* ones, (iii) duplicate them to `Materials (Shared by courses)/Experimental/`, (iv) set `textureType: NormalMap` + `sRGBTexture: false` on every `_Normal.jpg`. Then tear down Phase 1 outputs and re-run end-to-end.
+**Findings + future plan:** `Docs/Specs/Queued/TEXTURE_EXPERIMENT_FINDINGS_AND_PLAN.md` — covers Lomond CC reference, agronomic facts (bentgrass greens / Korai fairways / Noshiba rough / white silica bunker sand), and ranked future plans (mow stripe shader, macro variation, grain anisotropy, height blending, source pass v3).
 
-**Steps for Code:**
-
-**Step 0 — clean up Phase 1:**
-- Delete `Assets/Golf/Courses/lomond-country-club/Generated/Experimental/` (folder + meta)
-- Delete `Assets/Golf/Courses/lomond-country-club/Data/hole-01-experimental/` (folder + meta)
-- Delete `Docs/Diagnostics/texture-experiment/HOLE01_CLONE_REPORT.md`
-
-**Track A — Texture sources:**
-1. Edit `Tools/TextureExperiment/manifest.json` per spec section A.1 (rough → Grass005, semi-rough → Grass002 −10%, tee variants → Grass001)
-2. `cd Tools/TextureExperiment && node prepare-textures.mjs`
-3. Verify all 25 textures present, T_Rough_Albedo is visibly green wild grass (not brown/rocky)
-
-**Track B — Clone script:**
-4. Update `Assets/Scripts/Editor/CourseImporter/BuildExperimentalHole01.cs` per spec sections B.1–B.6:
-   - **B.1:** After Track A, set `textureType=NormalMap`, `sRGBTexture=false` on all `Textures_Experimental/*_Normal.jpg`. (CRITICAL — fixes the flat look.)
-   - **B.2:** Walk EVERY MeshRenderer in the duplicated scene; iterate ALL `sharedMaterials`; catch BOTH `MAT_T_*` (per-hole) AND `MAT_(Bunkers|Green|Fringe|Tee|Fairway|Rough|Semirough|Road|OOB)(_Dark)?` (shared)
-   - **B.3:** Use a filename → experimental-texture lookup dict; repoint `_BaseMap` + `_MainTex` + `_BumpMap`; preserve `m_Scale`, `_BaseColor`, all floats, all colors
-   - **B.4:** TerrainLayer duplicates must preserve `m_NormalScale: 0.4`, `m_SmoothnessSource: 1`, `m_MaskMapTexture` GUID, `m_TileSize`
-   - B.5 covered by Step 0 above
-   - **B.6:** HOLE01_CLONE_REPORT.md must list Bunkers, Green, Fringe, Tee duplications by name (acceptance gate)
-5. Run `GOLFIN > Tools > Build Hole_01 Experimental Clone`
-6. Verify production scene + production materials (excluding new `Experimental/` subfolders) are unmodified — `git status` shows only additions
-
-**Hard rules:**
-- No edits to production scene, production TerrainLayers, or production materials in `Materials (Shared by courses)/` outside the new `Experimental/` subfolder
-- No edits to `HoleGeoImporter.cs` or any other importer code
-- No splatmap or mask map regeneration
-- Preserve `_BaseColor` tints on duplicated materials (e.g. `MAT_Bunkers` warm cream tint `(1, 0.894, 0.703)` must survive)
-- Preserve `m_Scale` on duplicated materials (e.g. `MAT_Tee` scale of (14, 14) must stay (14, 14) on the experimental copy)
-- If Grass005 delivers wrong-looking output (brown/yellow/blue), surface to Architect WITH delivered images, do NOT swap to a third source silently
-- Iteration budget: 1 attempt for Track A, 2 attempts for Track B
-
-✅ DONE: 2026-04-28
-- Track A: 25 textures regenerated. Sources: grass001 (tee/green), grass002 (fairway/semirough), grass003 (fringe), grass005 (rough — wild meadow), ground054 (bunker), asphalt012 (road), polyhaven_sparse_grass (OOB). Brightness: semirough ×0.90, fairway_light ×1.08, fairway_dark ×0.92, bunker_dark ×0.85, tee_dark ×0.90. 0 failed sources.
-- Track B: 16328 MeshRenderers walked, 18 unique material names encountered. Duplicated: 3 shared (BunkerSand, GreenSurface, MAT_Fringe), 4 per-hole (MAT_T_Fairway_Mix, MAT_T_Semirough_Albedo, MAT_T_Tee_Albedo, MAT_T_RoadAsphalt_Albedo). 9 TerrainLayers duplicated. Normals: all 11 already correctly set as NormalMap/linear (0 reimported this run). 0 warnings. Report: `Docs/Diagnostics/texture-experiment/HOLE01_CLONE_REPORT.md`. Scene: `Assets/Golf/Courses/lomond-country-club/Generated/Experimental/Hole_01_Experimental_Geo.unity`.
-- Key fix applied to BuildExperimentalHole01.cs: open SOURCE scene directly (not copy+open-experimental) to bypass stale Unity artifact cache; save to tracked temp path then File.Copy to gitignored Generated/ directory.
+**One immediate standalone candidate:**
+- 🔶 **Bunker sand swap** (specced in findings doc § "Standalone promotion candidate"). Single-asset change, ~30min Code work + screenshot review across a few holes. Replaces production `T_Bunker_Albedo.jpg` with the experimental Ground054-derived version. Recommend doing this independently of any future visual experiment. Architect to write the standalone spec when Cesar is ready.
 
 ---
 
@@ -196,6 +209,7 @@ Deleted `DiagPerStepSink`, `DiagPerStepEnabled`, `DiagStepFrame` fields + their 
 
 > Architect-tracked open issues. Don't action without an explicit task block; just be aware they exist.
 
+- **[2026-04-28] Phase 2 experimental scene + assets remain in repo.** `Hole_01_Experimental_Geo.unity`, `hole-01-experimental/`, `Materials (Shared by courses)/Experimental/`, `Textures_Experimental/` — together ~60 MB. Keep as reference for next visual pass, OR delete on next cleanup spec. Cesar's call.
 - **[2026-04-26] Stale comment in** `BallSimulation.cs:26` **(**`// SceneGroundProvider…`**).** SceneGroundProvider was deleted in Phase F. Hard rule 8 forbade touching `BallSimulation` during Phase F so the comment was left as-is. Trivial cleanup; not load-bearing. Closing via `HOUSEKEEPING_BALLSIM` spec.
 - **[2026-04-26] `BallSimulation.DiagPerStepSink` field is now unwired.** `PhysicsLabController.WireA3DiagSinks` was removed in F.3.5. The field still exists in BallSimulation (untouched per hard rule 8) and is dead code; harmless. Closing via `HOUSEKEEPING_BALLSIM` spec.
 - **[2026-04-26] Future housekeeping: consolidate `Physics.Runtime.SurfaceMarker` and `Course.SurfaceMarker` into one enum.** Bake tool currently reads two type systems (one for authoring in scene, one for the bake-side enum), bridged by `SurfaceMarkerMap`. Workable; a single-enum refactor would simplify the importers. Not blocking.
@@ -208,6 +222,7 @@ Full reasoning: `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 ## Reference Docs
 
 - `Docs/Archive/TELLCODE_HISTORY.md` — completed task blocks + History Log (start here for anything older than current phase)
+- `Docs/Specs/Queued/TEXTURE_EXPERIMENT_FINDINGS_AND_PLAN.md` — texture experiment findings + ranked future plans (mow stripe shader, macro variation, grain anisotropy, height blending, source pass v3)
 - `Docs/README.md` — index map of what lives where in `Docs/`
 - `Docs/AI_CONTEXT.md` — project state, pipeline overview, session changelog
 - `Docs/Physics/PHYSICS_RESEARCH.md` — physics architecture, 5+1 phase plan
