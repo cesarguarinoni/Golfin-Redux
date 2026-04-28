@@ -1,0 +1,20 @@
+{
+  "_comment": "Notification config for .claude/hooks/route_subagent.py. Toast notifications work without this file. Email is opt-in.",
+  "_setup_for_email": [
+    "1. Set 'enabled' to true",
+    "2. Fill smtp_host/port/user/from_addr/to_addr",
+    "3. Set the password as an environment variable - the hook reads it from the env var named in 'smtp_password_env'",
+    "4. For Gmail: enable 2FA, generate an app password at https://myaccount.google.com/apppasswords, use that as the password (NOT your normal password)",
+    "5. Test from PowerShell: $env:GOLFIN_NOTIFY_PASSWORD='abcd efgh ijkl mnop'; python .claude/hooks/route_subagent.py",
+    "6. Make the env var permanent via System Properties > Environment Variables, or load it in your PowerShell profile"
+  ],
+  "email": {
+    "enabled": false,
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_user": "you@gmail.com",
+    "smtp_password_env": "GOLFIN_NOTIFY_PASSWORD",
+    "from_addr": "you@gmail.com",
+    "to_addr": "you@gmail.com"
+  }
+}

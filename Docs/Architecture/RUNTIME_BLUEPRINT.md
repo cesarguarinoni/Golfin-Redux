@@ -9,11 +9,38 @@
 > - **Code** — when implementing a task that adds/changes a manager API, asmdef ref, asset path, or namespace, add a "Blueprint updates:" line to the done report listing the diffs to this file. If Architect's spec already encoded the change, just confirm it landed.
 > - When in doubt, update. Stale > missing.
 >
-> **Last updated:** 2026-04-28 (initial — created during Phase 8.3 handoff prep)
+> **Last updated:** 2026-04-29 (added §1.5 UI Coordinate System after canvas-scaler migration)
 
 ---
 
-## 1 — Asmdef Map
+## 1 — UI Coordinate System
+
+Canonical reference: **1170×2532** (iPhone 14 Pro / 13 Pro point grid × 3, matches Figma source).
+Canonical scaler config: `Scale With Screen Size, Reference 1170×2532, Match Width Or Height, Match 0`.
+
+At 1170-wide screens, **1 Figma px = 1 Unity unit** (scale factor 1.000).
+At 1284-wide screens, scale factor ≈ 1.097 (uniform on both axes — pinned to width).
+At 1080-wide screens, scale factor ≈ 0.923.
+
+**When writing a UI spec, extract Figma values directly and use them 1:1 in Unity. No conversion factor needed.**
+
+### History
+
+Until 2026-04-29 the in-game canvases were authored at `1080×1920 / Match=0.5`. Combined with iPhone 12 Pro Max test screens (1284×2778), this produced a constant ~1.31× uniform scale that silently distorted every UI spec — biggest manifestation was Phase 8.3 attempt 1 (player/hole cards rendered ~31% oversized). Investigation findings: `Docs/Specs/Queued/FIGMA_UNITY_SIZE_MISMATCH.md`. Fix plan: `Docs/Specs/Queued/CANVAS_SCALER_FIX_PLAN.md`. Migration applied 2026-04-29 across 7 scalers in 5 physics-lab scenes; hypothesis validated via `Assets/Scenes/Tests/CanvasScalerTest.unity` matrix (red 180×180 box measured exactly 180×180 at row 4 = 1170×2532/Match=0).
+
+### Exceptions (canvases NOT migrated — intentional)
+
+- `Prefabs/UI/PersistentUI.prefab` and ShellScene's secondary canvases use **Constant Pixel Size** mode (`uiScaleMode = ConstantPixelSize`). Reference resolution is ignored in that mode, so the bug never affected them. These were authored before the design system standardized on 1170 and stay as-is.
+- `Scenes/ShellScene.unity` line 86681 + `Prefabs/Original/Gameplay/Hud/GameplayMonitorCanvas.prefab` are already at `1170×2532, Match=1`. Cesar authored these correctly. Left alone (the migration script confirms `[OK] already at target` and skips).
+- Menu / inventory / roster / bags / items screens — none currently authored against the bad config (all on Constant Pixel Size mode, or already at 1170). Audit pre-condition added to TellCode roadmap item C: re-verify when wiring menus to gameplay.
+
+### Standing rule
+
+Any new canvas added to the project should use `Scale With Screen Size, 1170×2532, Match=0` unless there's a specific reason to deviate. Document any deviation in this section.
+
+---
+
+## 2 — Asmdef Map
 
 The repo has TWO asmdef regions and one default `Assembly-CSharp` bucket. This boundary matters for every UI binder that wants to read manager state.
 
@@ -46,7 +73,7 @@ Use this pattern for any future widget that needs to reach across the asmdef bou
 
 ---
 
-## 2 — Singletons & Public APIs
+## 3 — Singletons & Public APIs
 
 ### PlayerContext + PlayerContextPopulator pattern (asmdef workaround)
 
@@ -165,7 +192,7 @@ Equipped bag's clubs: `BagManager.Instance.GetClubsInBag(BagManager.Instance.Equ
 
 ---
 
-## 3 — Hole-Loading Flow
+## 4 — Hole-Loading Flow
 
 ### Editor-time picker
 1. User picks a hole in `PhysicsLabHolePicker` (`Assets/Scripts/Editor/Physics/`) EditorWindow.
@@ -219,7 +246,7 @@ public class HoleMetadata : MonoBehaviour
 
 ---
 
-## 4 — Asset Locations
+## 5 — Asset Locations
 
 ### Resources (loadable via `Resources.Load<Sprite>(path)` — NO file extension)
 | Path | Contents | Used by |
@@ -252,7 +279,7 @@ public class HoleMetadata : MonoBehaviour
 
 ---
 
-## 5 — Rarity System
+## 6 — Rarity System
 
 Enum: `CharacterRarity { Common, Uncommon, Rare, Mythic, Legendary, Supreme }` (6 tiers).
 
@@ -268,9 +295,9 @@ Sprites: `Resources/Rarities/{Rarity}.png` + `Mask.png`.
 
 ---
 
-## 6 — Phase 8 ShotUI Hierarchy (Existing)
+## 7 — Phase 8 ShotUI Hierarchy (Existing)
 
-`LabScaffold.unity` → `ShotUI_Canvas` (CanvasScaler 1080×1920 reference) → children:
+`LabScaffold.unity` → `ShotUI_Canvas` (CanvasScaler **1170×2532 reference, Match=0** as of 2026-04-29) → children:
 - `ConeMesh` (RectTransform anchored at canvas center base; `ConeMeshGraphic` + `TimingSlabGraphic`)
 - `ClubHandle` (child of ConeMesh; `Image` + `ClubHandleDragger` + `ClubHandleSpriteBinder`)
 - `PowerGaugeWidget` (top-right, anchored `(-180, -460)`; size 200×200; children: `Background` Image + `GaugeArc` PowerGaugeGraphic + `PctText` + `YardsText` TMP)
@@ -280,11 +307,11 @@ Sprites: `Resources/Rarities/{Rarity}.png` + `Mask.png`.
 - `HoleCard` (top-right of `SettingsButton`)
 - `SettingsButton` (top-right corner)
 
-**Anchor convention:** all widgets anchored to corners of a 1080×1920 reference canvas. Position offsets in canvas units.
+**Anchor convention:** all widgets anchored to corners of a 1170×2532 reference canvas (Figma 1:1). Position offsets in canvas units = Figma px directly.
 
 ---
 
-## 7 — Open NEEDS-VERIFICATION List
+## 8 — Open NEEDS-VERIFICATION List
 
 These are markers Architect/Code should fill in next time the relevant area is touched. Don't dive on them just-in-case; fill them when their answer is needed.
 
@@ -303,9 +330,17 @@ These are markers Architect/Code should fill in next time the relevant area is t
 
 ---
 
-## 8 — Working with Figma references
+## 9 — Working with Figma references
 
-### Standing rule (set 2026-04-28)
+### Standing rule: Multi-Agent Pipeline (set 2026-04-28)
+
+**All UI tasks go through the subagent pipeline at `.claude/agents/`.** Architect (Opus) writes specs → Implementer (Sonnet) builds → Self-Reviewer (Opus) catches false PASSes → Architect (Opus) does final review → Cesar approves. Hooks at `.claude/hooks/` route the chain automatically and notify Cesar via desktop toast when his attention is needed. Full details in `CLAUDE.md` § Multi-Agent Workflow.
+
+**Per-task folder convention:** `Docs/Specs/Active/<task_slug>/` containing `SPEC.md`, `STATUS.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, `ARCHITECT_REVIEW.md`, `screenshots/`. Template at `Docs/Specs/Active/_TEMPLATE/`.
+
+The legacy `Docs/TellCode.md` workflow is deprecated for new active tasks. Don't write new active work there.
+
+### Standing rule: Figma source-of-truth (set 2026-04-28)
 
 **Figma is the UI source-of-truth.** Reference PNGs in `Docs/Reference/` are companions for visual comparison only — Code uses them for side-by-side diffs during impl, but the canonical numbers (dimensions, fonts, colors, positions) come from Figma via the MCP, not from eyeballing the PNG.
 
@@ -363,10 +398,12 @@ Two ways:
 
 ---
 
-## 9 — Update Log
+## 10 — Update Log
 
 - **2026-04-28** — Initial creation during Phase 8.3 handoff prep. Verified CharacterManager / CharacterDatabaseCSV / PlayerCharacterData / CharacterDataRuntime / BagManager / HoleMetadata / LabHoleBinder / PhysicsLabController.OnHoleLoaded APIs and asset locations. Marked the rest NEEDS VERIFICATION.
 - **2026-04-28** — Phase 8.3 attempt 1 rejected. Added §1 asmdef workaround pattern (static context + Assembly-CSharp populator) after discovering `autoReferenced: true` blocks the simple Assembly-CSharp ref path. Added §4 9-slice border caveat for `Indicator - Wind-Hole.png` (sprite borders not set in importer; Image Type Sliced will distort without manual fix).
 - **2026-04-28** — Added §8 "Working with Figma references" with `.fig` lesson. Architect almost guessed at fonts/dimensions; should always pull live from Figma MCP, fall back to text dump, and only as last resort attempt to parse the `.fig` archive.
 - **2026-04-28** — Switched to Cesar's personal Figma file (`5gEAHjl6xAtW8iYY7NMvWd`) on paid plan. Re-extracted full layout numbers for 8.3 cards/settings; updated §8 with calibrated reference. Deprecated the chip-sprite (`Indicator - Wind-Hole.png`) approach for chips — they're flat navy rects in the design. Confirmed font is Rubik Medium 33 (Unity TMP 23), right-aligned on both cards, navy fill `#001E39`.
 - **2026-04-28** — Added §8 standing rule: Architect MUST confirm page/frame/placeholder-vs-canonical with Cesar before writing any UI spec. The Figma file is not yet curated; multiple frame versions exist with placeholder content. Don't guess which is current.
+- **2026-04-28** — Added Multi-Agent Pipeline standing rule to §8. UI tasks now use the `.claude/agents/` subagent chain with `.claude/hooks/` routing. Per-task folders under `Docs/Specs/Active/<slug>/`. TellCode.md deprecated for new active work. See `CLAUDE.md` § Multi-Agent Workflow for full pipeline.
+- **2026-04-29** — Added new §1 (UI Coordinate System) and renumbered downstream sections. Migrated 7 in-scope CanvasScalers from `1080×1920 / Match=0.5` to `1170×2532 / Match=0` across 5 physics-lab scenes. Hypothesis validated via test scene matrix. Updated §7 ShotUI Hierarchy reference resolution. Standing rule: 1 Figma px = 1 Unity unit at design ref.
