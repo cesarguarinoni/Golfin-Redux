@@ -83,6 +83,10 @@ namespace Golfin.Physics.Viewer
             if (_shotController != null)
                 _shotController.OnShotResolved += HandleShotResolved;
 
+            // 8.5: consume club selection from the action button selector overlay.
+            // Re-entrancy guard inside handler prevents the loop when SetClub() itself raises ClubSelectionBroadcast.
+            ClubSelectionBroadcast.OnClubChanged += OnClubBroadcastReceived;
+
             if (_shotConeView != null)
             {
                 if (chaseCamera != null)
@@ -136,6 +140,18 @@ namespace Golfin.Physics.Viewer
         {
             if (_shotController != null)
                 _shotController.OnShotResolved -= HandleShotResolved;
+
+            // 8.5: unsubscribe from broadcast
+            ClubSelectionBroadcast.OnClubChanged -= OnClubBroadcastReceived;
+        }
+
+        // 8.5: handler called when the action-button selector overlay picks a club.
+        // Re-entrancy guard: SetClub() itself calls ClubSelectionBroadcast.Raise(), so guard
+        // against the infinite loop by checking if the index is already current.
+        void OnClubBroadcastReceived(int index)
+        {
+            if (index == CurrentClubIndex) return;
+            SetClub(index);
         }
 
         void Start()
