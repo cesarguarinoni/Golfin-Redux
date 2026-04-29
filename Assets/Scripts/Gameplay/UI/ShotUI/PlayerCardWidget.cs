@@ -10,6 +10,8 @@ namespace Golfin.Gameplay.UI.ShotUI
         [Header("Portrait")]
         [SerializeField] Image  _portrait;
         [SerializeField] Sprite _defaultPortrait;
+        [SerializeField] Image  _rarityBackground;
+        [SerializeField] Sprite _defaultRarityBackground;
 
         [Header("Chip rows")]
         [SerializeField] TMP_Text _nameText;
@@ -33,6 +35,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             if (_portrait != null)
                 _portrait.sprite = PlayerContext.Portrait != null ? PlayerContext.Portrait : _defaultPortrait;
+
+            if (_rarityBackground != null)
+                _rarityBackground.sprite = PlayerContext.RarityBackground != null
+                    ? PlayerContext.RarityBackground
+                    : _defaultRarityBackground;
 
             if (_nameText  != null) _nameText.text  = PlayerContext.DisplayName;
             if (_levelText != null) _levelText.text = $"Lv {PlayerContext.Level}";

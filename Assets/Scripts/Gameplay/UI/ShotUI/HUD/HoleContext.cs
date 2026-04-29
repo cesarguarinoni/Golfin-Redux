@@ -10,6 +10,7 @@ namespace Golfin.Gameplay.UI.HUD
         public static string CourseName         = "LOMOND";
         public static string TeeName            = "REGULAR";
         public static Vector3 GreenCentroidWorld;
+        public static Vector3 PinWorld = Vector3.zero;
 
         public static event System.Action OnChanged;
         public static void Raise() => OnChanged?.Invoke();
@@ -22,6 +23,7 @@ namespace Golfin.Gameplay.UI.HUD
             CourseName        = "LOMOND";
             TeeName           = "REGULAR";
             GreenCentroidWorld = Vector3.zero;
+            PinWorld = Vector3.zero;
             OnChanged?.Invoke();
         }
     }

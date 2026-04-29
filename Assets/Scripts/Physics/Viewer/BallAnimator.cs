@@ -29,7 +29,12 @@ namespace Golfin.Physics.Viewer
         const float InstantRate = float.MaxValue;
 
         void Awake()   { if (Instance == null) Instance = this; }
-        void OnDestroy() { if (Instance == this) Instance = null; }
+
+        void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+            DestroyInstance(); // clean up spawned ball clone so it doesn't orphan on scene unload
+        }
 
         // ── Public API ─────────────────────────────────────────────────────────
 
@@ -111,15 +116,16 @@ namespace Golfin.Physics.Viewer
         {
             if (ballPrefab == null)
             {
-                // Fallback: plain sphere
+                // Fallback: plain sphere — parent to this transform so it's cleaned up on destroy
                 _instance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                _instance.transform.SetParent(transform);
                 _instance.transform.localScale = Vector3.one * 0.043f; // 43mm diameter golf ball
                 var col = _instance.GetComponent<Collider>();
                 if (col != null) col.enabled = false;
             }
             else
             {
-                _instance = Instantiate(ballPrefab);
+                _instance = Instantiate(ballPrefab, transform); // parent to this transform
 
                 // Disable physics — trajectory is pre-computed
                 foreach (var rb in _instance.GetComponentsInChildren<Rigidbody>())

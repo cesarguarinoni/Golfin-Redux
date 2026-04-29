@@ -39,6 +39,8 @@ namespace GolfinRedux.UI
     {
         public string courseNameKey;    // Localization key (e.g., "HOLE_LOMOND_5")
         public int holeNumber;
+        public float windSpeedMph         = 0f;
+        public float windDirectionDegrees = 0f;
         public List<HoleReward> rewards = new();
 
         public HoleData(string courseNameKey, int holeNumber)

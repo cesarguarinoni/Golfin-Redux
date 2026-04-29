@@ -90,6 +90,11 @@ namespace Golfin.Physics.Viewer
                 _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
             }
 
+            // Wire HoleIndicatorWidget camera at startup (ball not yet spawned; widget falls back to BallAnimator.Instance)
+            var holeWidget = FindObjectOfType<Golfin.Gameplay.UI.ShotUI.HoleIndicatorWidget>();
+            if (holeWidget != null && chaseCamera != null)
+                holeWidget.SetCamera(chaseCamera.GetComponent<Camera>());
+
             // Deactivate WalkCamera GOs in any pre-loaded hole scene before their Start() fires.
             DeactivateWalkCamerasInLoadedScenes();
 
@@ -246,6 +251,11 @@ namespace Golfin.Physics.Viewer
             _orbitCenter = teePos;
 
             if (ballAnimator != null) ballAnimator.PlaceAtRest(teePos);
+
+            // Update HoleIndicatorWidget ball transform after ball is placed
+            var holeWidgetForTee = FindObjectOfType<Golfin.Gameplay.UI.ShotUI.HoleIndicatorWidget>();
+            if (holeWidgetForTee != null && ballAnimator != null)
+                holeWidgetForTee.SetBallTransform(ballAnimator.CurrentBall);
 
             Vector3 lookDir = GetDefaultLookDirection();
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
@@ -467,6 +477,13 @@ namespace Golfin.Physics.Viewer
 
             if (_shotConeView != null && ballAnimator?.CurrentBall != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
+
+            // Update HoleIndicatorWidget ball transform after shot resolves
+            if (ballAnimator?.CurrentBall != null)
+            {
+                var holeWidgetShot = FindObjectOfType<Golfin.Gameplay.UI.ShotUI.HoleIndicatorWidget>();
+                if (holeWidgetShot != null) holeWidgetShot.SetBallTransform(ballAnimator.CurrentBall);
+            }
 
             var s0 = trajectory.samples != null && trajectory.samples.Count > 0
                 ? trajectory.samples[0].position : correctedInput.origin;
@@ -879,6 +896,64 @@ namespace Golfin.Physics.Viewer
                     Golfin.Gameplay.UI.HUD.HoleContext.Par               = fPar  != null ? (int)fPar.GetValue(meta)  : 4;
                     Golfin.Gameplay.UI.HUD.HoleContext.ChampionshipYards = fYds  != null ? (int)fYds.GetValue(meta)  : 0;
                     Golfin.Gameplay.UI.HUD.HoleContext.GreenCentroidWorld = _loadedHoleGreenCentroid;
+
+                    // Find Flag GO for pin position — recursive walk, respects inactive children
+                    Scene loadedSceneForFlag = SceneManager.GetSceneByName(sceneName);
+                    GameObject flagGo = null;
+                    if (loadedSceneForFlag.IsValid())
+                    {
+                        foreach (var root in loadedSceneForFlag.GetRootGameObjects())
+                        {
+                            var found = FindDescendantByName(root.transform, "Flag");
+                            if (found != null) { flagGo = found.gameObject; break; }
+                        }
+                    }
+                    if (flagGo != null)
+                    {
+                        Golfin.Gameplay.UI.HUD.HoleContext.PinWorld = flagGo.transform.position;
+                        Debug.Log($"[PhysicsLab] Flag GO found at {flagGo.transform.position}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning(
+                            "[PhysicsLab] No 'Flag' GO found in hole scene; HoleIndicatorWidget will fall back to GreenCentroidWorld. " +
+                            "If you're loading Hole_01_Geo and seeing this, the Flag GO IS in the scene file at line ~762188 — " +
+                            "check whether OnHoleLoaded fires before the additive scene's GOs are fully registered.");
+                        Golfin.Gameplay.UI.HUD.HoleContext.PinWorld = Golfin.Gameplay.UI.HUD.HoleContext.GreenCentroidWorld;
+                    }
+
+                    // Populate WindContext from per-hole CSV via reflection (HoleDatabaseLoader is in Assembly-CSharp)
+                    int holeNumberLocal = Golfin.Gameplay.UI.HUD.HoleContext.HoleNumber;
+                    System.Type loaderType = System.Type.GetType("GolfinRedux.UI.HoleDatabaseLoader, Assembly-CSharp");
+                    if (loaderType != null)
+                    {
+                        var getHoleMethod = loaderType.GetMethod("GetHole", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        if (getHoleMethod != null)
+                        {
+                            var holeData = getHoleMethod.Invoke(null, new object[] { holeNumberLocal - 1 });
+                            if (holeData != null)
+                            {
+                                var fSpeed = holeData.GetType().GetField("windSpeedMph");
+                                var fDir   = holeData.GetType().GetField("windDirectionDegrees");
+                                if (fSpeed != null) Golfin.Gameplay.UI.HUD.WindContext.SpeedMph         = (float)fSpeed.GetValue(holeData);
+                                if (fDir   != null) Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees = (float)fDir.GetValue(holeData);
+                                Golfin.Gameplay.UI.HUD.WindContext.Raise();
+                                Debug.Log($"[PhysicsLab] Wind: {Golfin.Gameplay.UI.HUD.WindContext.SpeedMph:F1} mph @ {Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees:F0} deg");
+                            }
+                            else
+                            {
+                                Golfin.Gameplay.UI.HUD.WindContext.Reset();
+                                Debug.LogWarning($"[PhysicsLab] HoleDatabaseLoader.GetHole({holeNumberLocal - 1}) returned null; WindContext reset.");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Golfin.Gameplay.UI.HUD.WindContext.Reset();
+                        Debug.LogWarning("[PhysicsLab] HoleDatabaseLoader type not found; WindContext reset.");
+                    }
+
+                    // Fire HoleContext AFTER PinWorld is written
                     Golfin.Gameplay.UI.HUD.HoleContext.Raise();
                 }
                 else
@@ -889,6 +964,14 @@ namespace Golfin.Physics.Viewer
             else
             {
                 Debug.LogWarning("[PhysicsLab] HoleMetadata type not found via reflection; HoleContext not updated.");
+            }
+
+            // Wire HoleIndicatorWidget camera/ball (same pattern as _shotConeView wiring in Awake)
+            var holeWidget = FindObjectOfType<Golfin.Gameplay.UI.ShotUI.HoleIndicatorWidget>();
+            if (holeWidget != null)
+            {
+                holeWidget.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
+                holeWidget.SetBallTransform(ballAnimator != null ? ballAnimator.CurrentBall : null);
             }
         }
 
@@ -1073,6 +1156,22 @@ namespace Golfin.Physics.Viewer
                       $"  Bounces: {r.BounceCount}\n" +
                       $"  Ended:   {r.TerminationReason} on {r.FinalSurface}\n" +
                       $"  Time:    {r.SimDurationSeconds:F2}s");
+        }
+
+        // Helper — recursive descent by name prefix; walks every transform regardless of active state.
+        // Matches if the transform's name equals targetName or starts with targetName + "_" (e.g. "Flag_1").
+        static Transform FindDescendantByName(Transform parent, string targetName)
+        {
+            if (parent.name == targetName ||
+                parent.name.StartsWith(targetName + "_", System.StringComparison.OrdinalIgnoreCase))
+                return parent;
+            int childCount = parent.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                var found = FindDescendantByName(parent.GetChild(i), targetName);
+                if (found != null) return found;
+            }
+            return null;
         }
     }
 

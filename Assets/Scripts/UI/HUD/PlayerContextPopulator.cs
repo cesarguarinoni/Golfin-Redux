@@ -6,6 +6,9 @@ namespace Golfin.UI.HUD
 {
     public class PlayerContextPopulator : MonoBehaviour
     {
+        private const string InGamePortraitPath = "Portraits/InGame";
+        private const string RarityPath         = "Rarities";
+
         void OnEnable()
         {
             var mgr = CharacterManager.Instance;
@@ -37,20 +40,14 @@ namespace Golfin.UI.HUD
 
             if (mgr == null)
             {
-                PlayerContext.DisplayName = "PLAYER";
-                PlayerContext.Level       = 1;
-                PlayerContext.Portrait    = null;
-                PlayerContext.Raise();
+                ResetContext();
                 return;
             }
 
             string id = mgr.GetSelectedCharacterId();
             if (string.IsNullOrEmpty(id))
             {
-                PlayerContext.DisplayName = "PLAYER";
-                PlayerContext.Level       = 1;
-                PlayerContext.Portrait    = null;
-                PlayerContext.Raise();
+                ResetContext();
                 return;
             }
 
@@ -60,17 +57,37 @@ namespace Golfin.UI.HUD
             if (rt != null)
             {
                 PlayerContext.DisplayName = (rt.characterName ?? "PLAYER").ToUpperInvariant();
-                PlayerContext.Portrait    = rt.portraitSprite;
+
+                // In-game portrait (hi-res) — separate from CSV-loaded Thumbnails sprite.
+                // Falls back to the thumbnail if the InGame variant is missing.
+                Sprite ingame = null;
+                if (!string.IsNullOrEmpty(rt.portraitSpriteName))
+                    ingame = Resources.Load<Sprite>($"{InGamePortraitPath}/{rt.portraitSpriteName}");
+                PlayerContext.Portrait = ingame != null ? ingame : rt.portraitSprite;
+
+                // Rarity background sprite — loaded by enum name from Resources/Rarities/.
+                string rarityName = rt.rarity.ToString();
+                PlayerContext.RarityBackground = Resources.Load<Sprite>($"{RarityPath}/{rarityName}");
             }
             else
             {
-                PlayerContext.DisplayName = "PLAYER";
-                PlayerContext.Portrait    = null;
+                PlayerContext.DisplayName      = "PLAYER";
+                PlayerContext.Portrait         = null;
+                PlayerContext.RarityBackground = null;
             }
 
             if (pc != null)
                 PlayerContext.Level = pc.currentLevel;
 
+            PlayerContext.Raise();
+        }
+
+        void ResetContext()
+        {
+            PlayerContext.DisplayName      = "PLAYER";
+            PlayerContext.Level            = 1;
+            PlayerContext.Portrait         = null;
+            PlayerContext.RarityBackground = null;
             PlayerContext.Raise();
         }
     }
