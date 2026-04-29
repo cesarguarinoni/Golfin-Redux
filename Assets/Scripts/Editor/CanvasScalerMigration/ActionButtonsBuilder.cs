@@ -275,11 +275,16 @@ public static class ActionButtonsBuilder
         }
 
         // Wire SpinPanelWidget
+        var coneRootT = canvasGo.transform.Find("ConeRoot");
+        var coneRoot  = coneRootT != null ? coneRootT.gameObject : null;
+        if (coneRoot == null) Debug.LogWarning("[ActionButtonsBuilder] ConeRoot not found under ShotUI_Canvas — _aimingCone will be null on SpinPanelWidget.");
+
         var spinPanelSo = new SerializedObject(spinPanelWidget);
         spinPanelSo.FindProperty("_ballImage").objectReferenceValue        = ballImg;
         spinPanelSo.FindProperty("_spinDot").objectReferenceValue          = dotRt;
         spinPanelSo.FindProperty("_dimBackground").objectReferenceValue    = spinCatcher;
         spinPanelSo.FindProperty("_defaultBallSprite").objectReferenceValue = defaultBallThumbnail;
+        spinPanelSo.FindProperty("_aimingCone").objectReferenceValue       = coneRoot;
         spinPanelSo.ApplyModifiedProperties();
 
         spinCatcherGo.SetActive(false);

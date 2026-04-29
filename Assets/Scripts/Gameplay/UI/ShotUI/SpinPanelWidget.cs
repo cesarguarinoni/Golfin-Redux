@@ -9,8 +9,14 @@ namespace Golfin.Gameplay.UI.ShotUI
     {
         [SerializeField] private Image         _ballImage;
         [SerializeField] private RectTransform _spinDot;
-        [SerializeField] private OutsideClickCatcher _dimBackground;
         [SerializeField] private Sprite        _defaultBallSprite;
+        [SerializeField] private GameObject    _aimingCone;
+
+        // Kept for legacy wiring; actual close is driven by a runtime Button (see Open()).
+        [SerializeField] private OutsideClickCatcher _dimBackground;
+
+        Button   _dimCloseBtn;
+        GameObject _dimGo;
 
         readonly Vector2[] _positions = {
             new Vector2(   0f,    0f), // 0 center
@@ -24,14 +30,10 @@ namespace Golfin.Gameplay.UI.ShotUI
             new Vector2(-1f, 0f), new Vector2(1f, 0f)
         };
 
-        void OnEnable()
-        {
-            if (_dimBackground != null) _dimBackground.OnOutsideClick = Close;
-        }
-
         public void Open()
         {
-            if (_dimBackground != null) _dimBackground.gameObject.SetActive(true);
+            if (_aimingCone != null) _aimingCone.SetActive(false);
+            ActivateDim();
             gameObject.SetActive(true);
             if (_ballImage != null)
                 _ballImage.sprite = BallContext.SelectedThumbnail != null
@@ -43,7 +45,38 @@ namespace Golfin.Gameplay.UI.ShotUI
         public void Close()
         {
             gameObject.SetActive(false);
-            if (_dimBackground != null) _dimBackground.gameObject.SetActive(false);
+            if (_dimCloseBtn != null) _dimCloseBtn.onClick.RemoveListener(Close);
+            if (_dimGo != null) _dimGo.SetActive(false);
+            if (_aimingCone != null) _aimingCone.SetActive(true);
+        }
+
+        void ActivateDim()
+        {
+            // Resolve the dim GO: prefer serialized _dimBackground.gameObject, else find by name.
+            if (_dimGo == null)
+            {
+                if (_dimBackground != null)
+                    _dimGo = _dimBackground.gameObject;
+                else if (transform.parent != null)
+                {
+                    var t = transform.parent.Find("OutsideClickCatcher_Spin");
+                    if (t != null) _dimGo = t.gameObject;
+                }
+            }
+            if (_dimGo == null) return;
+
+            // Add a Button at runtime — guaranteed to survive play-mode serialization.
+            _dimCloseBtn = _dimGo.GetComponent<Button>();
+            if (_dimCloseBtn == null)
+            {
+                _dimCloseBtn = _dimGo.AddComponent<Button>();
+                var img = _dimGo.GetComponent<Image>();
+                if (img != null) _dimCloseBtn.targetGraphic = img;
+            }
+            _dimCloseBtn.onClick.RemoveListener(Close);
+            _dimCloseBtn.onClick.AddListener(Close);
+
+            _dimGo.SetActive(true);
         }
 
         void SnapDotToCurrent()

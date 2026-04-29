@@ -98,14 +98,4 @@ namespace Golfin.Gameplay.UI.ShotUI
         }
     }
 
-    /// <summary>
-    /// Full-screen transparent Image that catches outside-taps and fires a callback.
-    /// Sibling of the overlay, rendered BELOW it in the canvas hierarchy.
-    /// Builder makes one of these per overlay.
-    /// </summary>
-    public class OutsideClickCatcher : MonoBehaviour, IPointerClickHandler
-    {
-        public System.Action OnOutsideClick;
-        public void OnPointerClick(PointerEventData _) => OnOutsideClick?.Invoke();
-    }
 }

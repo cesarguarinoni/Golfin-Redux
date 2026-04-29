@@ -373,6 +373,56 @@ When using `sed -i 's/old/new/'` on Windows (Git bash `sed`), comment lines can 
 A corrupted `\` on a line causes a compile error that Unity silently ignores by running the
 last cached compiled version, making it look like the code ran but did nothing.
 
+---
+
+## Unity Serialization — One MonoBehaviour Per File
+
+**Symptom (Phase 8.5):** `OutsideClickCatcher` was defined as a second class inside `SelectorOverlayWidget.cs`. In edit mode, `AddComponent<OutsideClickCatcher>()` worked and `GetComponent` returned it. In play mode after domain reload, `GetComponent<OutsideClickCatcher>()` returned null and the Inspector showed "Missing Script".
+
+**Root cause:** Unity serializes MonoBehaviour component references using the MonoScript asset's file GUID. When two MonoBehaviours share a file, Unity can only reliably associate one script asset with one class per file. The secondary class gets an ambiguous MonoScript reference that fails to resolve during domain reload.
+
+**Fix:** Move every MonoBehaviour to its own `.cs` file. Class name must match file name (Unity convention enforced by the serializer at domain reload).
+
+**Rule:** Never define more than one `MonoBehaviour`/`ScriptableObject` subclass per `.cs` file. Non-MonoBehaviour helpers (plain C# classes, interfaces, enums) are fine to co-locate.
+
+---
+
+## Unity UI — Runtime Button is More Reliable Than Custom IPointerClickHandler for Close Triggers
+
+**Symptom (Phase 8.5):** `OutsideClickCatcher : IPointerClickHandler` was added as a component to a full-screen transparent Image GO to detect outside-taps and close a panel. Even after fixing the serialization issue above, the callback (`OnOutsideClick`) required careful `OnEnable` timing and was fragile across domain reloads.
+
+**Better pattern:** For "tap outside to close" overlays, add a `Button` component at runtime in `Open()` and wire `Close()` via `onClick.AddListener`. `Button` is built into Unity.UI, always serializes correctly, and its `onClick` event system is battle-tested:
+
+```csharp
+void ActivateDim()
+{
+    if (_dimGo == null)
+        _dimGo = transform.parent?.Find("OutsideClickCatcher_Spin")?.gameObject;
+    if (_dimGo == null) return;
+
+    var btn = _dimGo.GetComponent<Button>() ?? _dimGo.AddComponent<Button>();
+    var img = _dimGo.GetComponent<Image>();
+    if (img != null) btn.targetGraphic = img;
+    btn.onClick.RemoveListener(Close);
+    btn.onClick.AddListener(Close);
+    _dimGo.SetActive(true);
+}
+```
+
+**Rule:** Prefer `Button.onClick.AddListener(Close)` over custom `IPointerClickHandler` for overlay close triggers. Use `RemoveListener` before `AddListener` to prevent duplicate registrations on repeated Opens.
+
+---
+
+## ActionButtonsBuilder — Never Run in Play Mode; Preserve Manual Inspector Changes
+
+**Symptom (Phase 8.5):** Running `ActionButtonsBuilder.BuildActionButtons()` destroys and recreates the entire action button cluster, wiping all manual Inspector tweaks Cesar has applied (text auto-size settings, icon widths, custom sizes).
+
+**Rule:** The builder is a one-time scaffold tool. After Cesar has manually adjusted values in the Inspector:
+1. Do NOT re-run the builder unless absolutely necessary (e.g., adding a brand-new GO to the hierarchy).
+2. If a re-run is unavoidable, document every manual change beforehand and restore them programmatically or remind Cesar to re-apply.
+3. Prefer code-only fixes (modifying MonoBehaviour scripts) over builder re-runs when fixing runtime behavior.
+4. The builder must never run in Play mode — `EditorSceneManager.MarkSceneDirty` throws in play mode.
+
 ### Splatmap painting of cart path texture causes a visible border around the mesh
 
 The old splatmap code painted asphalt texture on the terrain using `BuildSpinePolygon()`,
