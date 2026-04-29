@@ -1,4 +1,4 @@
-# [TellCode.md](http://TellCode.md) — Instructions from Claude (Architect) to Claude Code
+﻿# [TellCode.md](http://TellCode.md) — Instructions from Claude (Architect) to Claude Code
 
 > **DEPRECATION NOTE (2026-04-28):** This file is the legacy handoff channel. New active UI tasks use the multi-agent pipeline at `.claude/agents/` with per-task folders under `Docs/Specs/Active/<slug>/`. See `CLAUDE.md` § Multi-Agent Workflow for the new flow.
 >
@@ -27,14 +27,23 @@
 
 > Architect-tracked roadmap for the next gameplay-loop closure. Order locked: A → B → C.
 
-**A — Shot UI polish.** Wire real Figma art + sprite assets into the existing cone hierarchy + add HUD elements (player card, hole card, wind/hole indicators, power gauge, action buttons, ball/club selectors, centerpiece ball, trail). Spec ready: `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md`. **STATUS: Parts 8.1, 8.2, 8.2.5 done; 8.3 attempt 1 REJECTED 2026-04-28 — redo block below.**
+**A — Shot UI polish.** Wire real Figma art + sprite assets into the existing cone hierarchy + add HUD elements (player card, hole card, wind/hole indicators, power gauge, action buttons, ball/club selectors, centerpiece ball, trail). Spec ready: `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md`. **STATUS: Parts 8.1, 8.2, 8.2.5, 8.3, 8.4 done; 8.5 next (action button row).**
 
 **A.0 — Canvas Scaler fix ✅ DONE 2026-04-29.** Investigation closed 2026-04-28: Figma↔Unity size mismatch root-caused to `CanvasScaler reference 1080×1920 + Match=0.5` producing a uniform \~1.31× scale factor at iPhone 12 Pro Max screens. Migration applied 2026-04-29: 7 scalers across 5 physics-lab scenes moved to `1170×2532 / Match=0`. Hypothesis validated via `Assets/Scenes/Tests/CanvasScalerTest.unity` matrix — row 4 (proposed config) yielded exactly 180×180 px. Tooling left in tree: `Assets/Scripts/Editor/CanvasScalerMigration/` (test scene builder + migration tool, both in `GOLFIN/Canvas Scaler/` menu). Blueprint updated with new §1 "UI Coordinate System". Standing rule established: **1 Figma px = 1 Unity unit at 1170 design ref — no conversion factor needed when speccing.**
 
-**A.0 follow-ups (small, deferred to 8.4 prep):**
+**A.0 follow-ups (resolved during 8.3/8.4 closeout — kept for trace):**
 - ChipStack RectTransform width 248 → 298 on PlayerCard + HoleCard (lingering 8.3 authoring bug, surfaced in investigation).
 - Fresh `topbar-diff-v3.png` capture at 1170×2532 game view, 1:1 vs Figma. Expected: cards now match Figma exactly.
 - Cone/gauge/handle re-tune (Path 3b accepted): leave numbers as-is, accept the \~92% visual shrink. If power gauge text feels too small in playmode, bump TMP font sizes only (not gauge geometry).
+
+**A.4 — Phase 8.4 Wind + Hole Indicators ✅ DONE 2026-04-29.** WindIndicator (top-left, second row) + HoleIndicator (top-right, sliding chip + fading tail). Three rounds total: v1 had 6 FAILs (asset format, scene wiring, deep-nested Flag GO lookup), v2 closed 4, v3 fixed the chip-slide hierarchy (top-LEFT anchored sliding root with DataChip + ArrowLine as static children) + the always-visible tail with distance-scaled length + off-screen rotation. Pin position sourced from `Flag_1` GO via prefix match in `PhysicsLabController.OnHoleLoaded`. Per-hole wind data added as new columns (`windSpeedMph`, `windDirectionDegrees`) in `Assets/Data/HoleDatabase.csv` with corresponding `HoleData.cs` fields. Ball multiplication bug also fixed (BallAnimator parents to transform + OnDestroy cleans up; editor cleanup script at `Assets/Scripts/Editor/CanvasScalerMigration/CleanupStaleBallClones.cs`). Spec archived: `Docs/Specs/Completed/8_4_indicators/`. Multi-agent pipeline second full run — chained successfully through implementer/self-reviewer/architect with architect-driven redos per round.
+
+**A.4 lessons filed:**
+- Anchor convention mismatch is a silent failure mode — if widget code computes canvas-space-from-left X but the RectTransform is right-anchored with right-pivot, math goes the wrong direction. Always verify anchor/pivot in the builder when reading widget coordinate assumptions.
+- Self-reviewer marking behavioral items "unverifiable in static screenshot" without re-running playmode lets visible bugs through. Specs that change behavior need an explicit "rebuild scene + take fresh playmode screenshot + verify visually" gate.
+- Asset-side fixes beat code-side compensations. The upside-down tail PNG was a 1-second asset fix from Cesar; my proposed `localScale.y = -1` compensation would have left a confusing artifact for whoever inherits the code.
+
+**A.5 — Phase 8.5: Action button row.** NEXT. Layout: bottom-row action buttons (the `Spin / Golfin / Driver / Fade-Draw` row in `In-Game - Shot Tests 9`). Spec to be written when ready.
 
 Menu screens NOT in scope yet — deferred to roadmap item C with audit pre-condition.
 

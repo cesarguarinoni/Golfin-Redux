@@ -43,7 +43,7 @@ public class HoleDatabaseImporter : EditorWindow
         }
 
         GUILayout.Space(10);
-        EditorGUILayout.HelpBox("CSV Format:\ncourseNameKey,holeNumber,reward1Type,reward1Amount,reward2Type,reward2Amount,reward3Type,reward3Amount\n\nReward types: Points, RepairKit, Ball\nLeave reward columns empty if not needed.", MessageType.Info);
+        EditorGUILayout.HelpBox("CSV Format:\ncourseNameKey,holeNumber,windSpeedMph,windDirectionDegrees,reward1Type,reward1Amount,reward2Type,reward2Amount,reward3Type,reward3Amount\n\nReward types: Points, RepairKit, Ball\nLeave reward columns empty if not needed.\nWind direction: 0=North, 90=East, clockwise.", MessageType.Info);
     }
 
     void ImportCSV()
@@ -74,11 +74,15 @@ public class HoleDatabaseImporter : EditorWindow
             {
                 HoleData hole = new HoleData(fields[0].Trim(), int.Parse(fields[1].Trim()));
 
-                // Parse up to 3 rewards (each reward has Type + Amount)
+                // NEW — parse wind columns (indices 2 and 3)
+                if (fields.Length > 2 && float.TryParse(fields[2].Trim(), out var ws)) hole.windSpeedMph = ws;
+                if (fields.Length > 3 && float.TryParse(fields[3].Trim(), out var wd)) hole.windDirectionDegrees = wd;
+
+                // Parse up to 3 rewards (each reward has Type + Amount) — rewards now start at index 4
                 for (int r = 0; r < 3; r++)
                 {
-                    int typeIdx = 2 + (r * 2);
-                    int amountIdx = 3 + (r * 2);
+                    int typeIdx = 4 + (r * 2);
+                    int amountIdx = 5 + (r * 2);
 
                     if (typeIdx >= fields.Length || amountIdx >= fields.Length)
                         break;
