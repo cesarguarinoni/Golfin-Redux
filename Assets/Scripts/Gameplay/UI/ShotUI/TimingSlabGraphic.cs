@@ -35,10 +35,12 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             vh.Clear();
 
-            float halfBasePx = _coneHeightPx * Mathf.Tan(_coneHalfAngleDeg * Mathf.Deg2Rad);
-            float centerY    = _currentY01 * _coneHeightPx;
-            float topY       = centerY + _slabHalfHeightPx;
-            float bottomY    = centerY - _slabHalfHeightPx;
+            float halfBasePx  = _coneHeightPx * Mathf.Tan(_coneHalfAngleDeg * Mathf.Deg2Rad);
+            // Remap so y01=0 → bottom edge at cone base, y01=1 → top edge at cone tip.
+            float usableRange = Mathf.Max(0f, _coneHeightPx - 2f * _slabHalfHeightPx);
+            float centerY     = _slabHalfHeightPx + _currentY01 * usableRange;
+            float topY        = centerY + _slabHalfHeightPx;
+            float bottomY     = centerY - _slabHalfHeightPx;
 
             float topHW    = Mathf.Max(0f, halfBasePx * (1f - topY    / _coneHeightPx));
             float bottomHW = Mathf.Max(0f, halfBasePx * (1f - bottomY / _coneHeightPx));
