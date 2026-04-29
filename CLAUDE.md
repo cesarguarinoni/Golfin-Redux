@@ -95,6 +95,36 @@ For a single task in flight, prefer the subagent chain. Only ping Cesar's claude
 
 ---
 
+## Screenshots — MANDATORY rules
+
+Code's screenshot history is full of timing failures. These rules eliminate the common ones.
+
+**Hard rules:**
+
+1. **NEVER call `ScreenCapture.CaptureScreenshot(path)`.** It is async, unreliable, and silently fails when paused. Use `CaptureHelper.SnapGameView()` instead — it is synchronous and works in EditMode, paused playmode, and running playmode.
+
+2. **NEVER pause before capturing.** The render loop stops emitting frames during pause, so any queued capture never completes. Always capture-then-pause, never pause-then-capture. `CaptureHelper.SnapAtEndOfFrameAndPause()` does this in the right order.
+
+3. **For UI-only verification, do NOT enter playmode.** Use `GOLFIN > Capture > Fake State - <preset>` from the Editor menu (or call `CaptureHelper.FakeMidAim()` etc. from a `[MenuItem]` script), then `CaptureHelper.SnapGameView()`. The static-bus contexts (PlayerContext, HoleContext, etc.) make this work without any game loop running.
+
+4. **For mid-animation verification,** start a coroutine that runs `yield return CaptureHelper.SnapAtEndOfFrameAndPause("label")`. Do NOT pause first.
+
+5. **Output location.** All captures land in `Docs/Diagnostics/_capture/`. After capture, copy/rename the relevant one(s) into the task's `screenshots/` folder under `Docs/Specs/Active/<task>/screenshots/`. Don't litter the diagnostics folder with task-specific names.
+
+**Quick reference:**
+
+| Situation                              | Tool                                                 |
+|----------------------------------------|------------------------------------------------------|
+| UI layout check, no playmode needed    | Fake State preset → `SnapGameView()`                 |
+| Verify scene contents in EditMode      | `SnapGameView()`                                     |
+| Frozen moment from playmode            | `SnapAtEndOfFrameAndPause("label")` in coroutine     |
+| Series of frames during animation      | Multiple `SnapGameViewWithLabel("step1"/"step2"/…)`  |
+| `ScreenCapture.CaptureScreenshot(path)` | **DO NOT USE — banned by this project**             |
+
+**Adding new fake-state presets:** when a new static-bus context is added under `Assets/Scripts/Gameplay/UI/ShotUI/HUD/`, the same task that adds it must (a) extend `CaptureHelper.FakeMidAim` to set sensible values for the new context, (b) extend `CaptureHelper.FakeReset` to call its `Reset()`, and (c) add a dedicated preset if the context has interesting variation. See `Docs/Specs/Active/capture_helper/SPEC.md` § Maintenance protocol.
+
+---
+
 ## Session Startup (EVERY SESSION)
 
 Before doing anything else:

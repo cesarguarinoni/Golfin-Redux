@@ -58,6 +58,16 @@ For "no white boxes" items specifically: zoom in mentally on every Image compone
 
 If you OVERRIDE-FAIL anything, propose a root cause IN THE FORM: "Visible defect: <X>. Likely cause: <Y>." Don't propose causes for things you didn't first identify as a defect. Don't pattern-match on a half-glimpsed clue (e.g. "only 2 chars visible → must be truncation") and invent reasoning to support it. Tie every cause statement to a specific visible defect from Step 1 or Step 2.
 
+### Step 5 — Capture-helper compliance check
+
+Before writing any verdict, verify two compliance items related to `Docs/Specs/Active/capture_helper/SPEC.md`:
+
+1. **Screenshot provenance.** The screenshot in `screenshots/` MUST have been generated via `CaptureHelper.SnapGameView()` or `CaptureHelper.SnapAtEndOfFrameAndPause()`. Check `IMPLEMENTER_REPORT.md` — the report should mention which capture method was used. If the report is silent on this OR cites `ScreenCapture.CaptureScreenshot` directly OR cites a manual OS-level screenshot tool, OVERRIDE-FAIL the screenshot's checklist item with reason "capture method not compliant with CLAUDE.md § Screenshots rules."
+
+2. **Maintenance protocol for new contexts.** If the diff in this task adds ANY new `*Context.cs` file under `Assets/Scripts/Gameplay/UI/ShotUI/HUD/` (or any equivalent static-bus context elsewhere), confirm `Assets/Scripts/Editor/CaptureHelper.cs` was extended per `Docs/Specs/Active/capture_helper/SPEC.md` § Maintenance protocol — specifically: (a) `FakeReset` calls the new context's `Reset()`, (b) `FakeMidAim` sets sensible values for it, (c) the closing Debug.Log line in `FakeMidAim` mentions the new context's values. If any of (a)–(c) is missing, OVERRIDE-FAIL with verdict `BACK_TO_IMPLEMENTER` and reason "capture_helper maintenance protocol not followed for new context <name>."
+
+These checks are non-negotiable. Even if every other item passes, missing capture-helper compliance is grounds for routing back.
+
 ## Verdict
 
 Write `SELF_REVIEW.md` using the template. Set the verdict to one of:

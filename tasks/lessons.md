@@ -901,6 +901,55 @@ Full EditMode suite with stress tests (~45s) + other tests risks timeout. Run st
 
 ## Shot UI — Cone Height Shared Between View and Dragger (Phase 8.1/8.2, 2026-04-27)
 
+## Editor Tooling — CaptureHelper (2026-04-29)
+
+### `ScreenCapture.CaptureScreenshotAsTexture()` is NOT the Game View — use RT reflection
+
+`ScreenCapture.CaptureScreenshotAsTexture()` reads the OS display swap chain. In the Unity Editor, the Game View renders to an **internal** `RenderTexture`, NOT to the swap chain. Calling it from a MenuItem produces black or Editor chrome.
+
+**Fix:** Read the GameView's internal RT via reflection:
+```csharp
+var gameViewType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
+var gv = EditorWindow.GetWindow(gameViewType, false, null, false);
+gv.Focus(); gv.Repaint();
+string[] candidates = { "m_RenderTexture", "m_TargetTexture", "m_RenderTarget" };
+RenderTexture rt = null;
+foreach (var name in candidates)
+{
+    var f = gameViewType.GetField(name, BindingFlags.NonPublic | BindingFlags.Instance);
+    rt = f?.GetValue(gv) as RenderTexture;
+    if (rt != null && rt.IsCreated()) break;
+}
+```
+Also: `ReadPixels` returns bottom-up (OpenGL). Flip Y before `EncodeToPNG()`.
+
+**Rule:** All future screenshot capture in Editor code must use `CaptureHelper.SnapGameView()` — never `ScreenCapture.CaptureScreenshot(path)` (async, banned) or `CaptureScreenshotAsTexture()` from a MenuItem (reads wrong buffer).
+
+### MenuItem mouse-stuck state — always call `ReleaseMouseAfterMenu()`
+
+When a `[MenuItem]` executes via mouse click, the corresponding MouseUp is never delivered to the Game View. Unity's input state thinks the left button is still held — moving back to the game canvas pans the camera.
+
+**Fix:** At the end of every MenuItem handler that runs while a Game View is open:
+```csharp
+private static void ReleaseMouseAfterMenu()
+{
+    GUIUtility.hotControl = 0;
+    EditorApplication.delayCall += () => {
+        GUIUtility.hotControl = 0;
+        var gvType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
+        var gv = gvType != null ? EditorWindow.GetWindow(gvType, false, null, false) : null;
+        gv?.Repaint();
+    };
+}
+```
+Call it as the last line of every `[MenuItem]` method that could be clicked while a Game View scene is loaded.
+
+### InGame portraits, not Thumbnails
+
+For in-game HUD widgets the correct portrait subfolder is `Resources/Portraits/InGame/` (the circular/framed in-game versions). `Resources/Portraits/Thumbnails/` and `Resources/Portraits/Rankings/` are for roster/leaderboard screens only.
+
+---
+
 ### `ClubHandleDragger._coneHeightPx` must stay in sync with `ShotConeView._coneHeightPx`
 Both classes have a `_coneHeightPx` serialized field. `ShotConeView` uses it to position the ClubHandle visual; `ClubHandleDragger` uses it to map drag positions to power values. When Phase 8.1 changed `ShotConeView._coneHeightPx` from 600→1009, the dragger was not updated — all pointer positions above y=600 clamped to zero power and the handle appeared frozen.
 **Rule:** When changing cone height in `ShotConeView`, call `SetConeHeight(_coneHeightPx)` on the `ClubHandleDragger`. This is now wired in `ShotConeView.Awake()` via `_clubHandle.GetComponent<ClubHandleDragger>()?.SetConeHeight(_coneHeightPx)` so they always stay in sync automatically.

@@ -17,8 +17,9 @@ Read these first, in order:
 1. `Docs/AI_CONTEXT.md` — current project state
 2. `Docs/Architecture/RUNTIME_BLUEPRINT.md` — the live architecture reference (asmdef boundaries, manager APIs, patterns, calibrated Figma values, font/scaling rules)
 3. `Docs/Architecture/PATTERNS.md` — recurring patterns to reuse
-4. `tasks/lessons.md` — past mistakes to avoid
-5. The Figma frame for the task — confirm the page/frame/placeholder-vs-canonical with Cesar BEFORE extracting numbers (per Blueprint §8 standing rule)
+4. `Docs/Specs/Active/capture_helper/SPEC.md` § Maintenance protocol — if the new task introduces any static-bus context, the spec MUST include an explicit "extend CaptureHelper" implementation step.
+5. `tasks/lessons.md` — past mistakes to avoid
+6. The Figma frame for the task — confirm the page/frame/placeholder-vs-canonical with Cesar BEFORE extracting numbers (per Blueprint §8 standing rule)
 
 Then write the spec to `Docs/Specs/Active/<task>/SPEC.md` using the template at `Docs/Specs/Active/_TEMPLATE/SPEC.md`. Set `STATUS.md` to `SPEC_READY`. Tell Cesar the spec is ready and to ping the Implementer.
 
@@ -39,6 +40,7 @@ Verify:
 - **Visual fidelity:** Compare the screenshot to the Figma reference, element by element. Cite specific deviations.
 - **Spec adherence in spirit, not just letter:** Did the Implementer follow the spec's intent, or just the surface text?
 - **Latent issues:** Are there bugs the screenshot doesn't show? Null refs, asset loading order, missing inspector wires that happen to work today but won't tomorrow?
+- **Capture-helper compliance:** the self-reviewer should have checked Step 5 (screenshot provenance + maintenance protocol for new contexts). Verify their finding is correct — if they missed a non-compliant capture method or a missing fake-state extension, FAIL the task with reason "capture_helper protocol violation, see SPEC.md § Maintenance protocol." This is a backstop in case the self-reviewer waved it through.
 
 Write your verdict to `Docs/Specs/Active/<task>/ARCHITECT_REVIEW.md` using the template. Update `STATUS.md` to one of:
 
