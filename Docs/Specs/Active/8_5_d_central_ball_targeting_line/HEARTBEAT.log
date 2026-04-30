@@ -9,3 +9,9 @@
 2026-04-30T19:08:00 Bug3 fix: PhysicsLabController.SetupAtTee and PlaceBallAt now call _shotConeView.SetBallTransform so line can pivot from startup
 2026-04-30T19:13:00 verified: CB sprite=Golfin thumb=Golfin SCV:cam=SET ball=SET â€” screenshot captured, ball icon visible, targeting line visible with correct pivot
 2026-04-30T19:15:00 done, awaiting review
+2026-04-30T21:00:00 activated for CESAR_REJECTED #2 — diagnosing canvas scaler coordinate space mismatch
+2026-04-30T21:05:00 ShotConeView.UpdateTargetingLine fixed — RectTransformUtility conversion; CentralBall anchor changed to fractional (0.459,0.489) + anchoredPos=(0,0)
+2026-04-30T21:10:00 code changes verified, entering play mode for screenshot
+2026-04-30T21:15:00 waiting for Unity to compile ShotConeView.cs and AutoScreenshotHUD.cs changes
+2026-04-30T21:20:00 waiting for Unity focus/recompile; code changes done, scene YAML updated
+2026-04-30T21:25:00 focused Unity window to trigger recompile, polling DLL timestamps

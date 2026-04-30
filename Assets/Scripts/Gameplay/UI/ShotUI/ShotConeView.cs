@@ -23,7 +23,7 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         [Header("Club handle")]
         [SerializeField] private RectTransform   _clubHandle;
-        [SerializeField] private float           _handleYPx      = 80f;
+        [SerializeField] private float           _handleStartYPx = 785f;
         [SerializeField] private float           _handleWidth    = 178f;
         [SerializeField] private float           _handleHeight   = 100f;
         [SerializeField] private float           _minHandleScale = 1f;
@@ -147,7 +147,8 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_clubHandle == null) return;
 
             float power         = Mathf.Clamp01(state.PowerNormalized);
-            float handleY       = _coneHeightPx * (1f - power);
+            // Handle rests below ball at _handleStartYPx; pulling drives it down toward base (y=0).
+            float handleY       = _handleStartYPx * (1f - power);
             float halfAngleRad  = _shotController.ConeHalfAngleDeg * Mathf.Deg2Rad;
             float halfBase      = _coneHeightPx * Mathf.Tan(halfAngleRad);
             float widthFraction = 1f - Mathf.Clamp01(handleY / _coneHeightPx);
@@ -157,9 +158,7 @@ namespace Golfin.Gameplay.UI.ShotUI
                 state.ConeFinetuneX * maxX,
                 handleY);
 
-            // Grow handle as it moves away from tip; y01=1 at tip, 0 at base.
-            float y01         = 1f - power;
-            float handleScale = Mathf.Lerp(_minHandleScale, _maxHandleScale, 1f - y01);
+            float handleScale = Mathf.Lerp(_minHandleScale, _maxHandleScale, power);
             _clubHandle.localScale = Vector3.one * handleScale;
         }
 
