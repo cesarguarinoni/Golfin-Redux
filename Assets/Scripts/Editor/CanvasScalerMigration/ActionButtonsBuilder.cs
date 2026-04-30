@@ -9,11 +9,15 @@ using Golfin.Gameplay.UI.HUD;
 
 /// <summary>
 /// Builds the 2x2 action button cluster in LabScaffold.unity under ShotUI_Canvas,
-/// per spec 8_5_action_buttons.
+/// per spec 8_5_action_buttons and 8_5_c_selector_redesign.
 /// Menu: GOLFIN/Build/Build Action Buttons (8.5)
 /// </summary>
 public static class ActionButtonsBuilder
 {
+    // CONFIG SNAPSHOT (synced from Cesar's manual adjustments — update here if you change values in the scene):
+    // IconArea width = 135, text width = 120, fontStyle = Bold, autoSize min=20 max=30
+    // GolfinButton icon = S_Controls_Ball_GOLFIN, DriverButton icon = S_Menu_Driver_GOLFIN
+    // Do NOT change these back to hardcoded fontSize=30 or width=0 or iconSprite=null.
     [MenuItem("GOLFIN/Build/Build Action Buttons (8.5)")]
     public static void BuildActionButtons()
     {
@@ -30,15 +34,20 @@ public static class ActionButtonsBuilder
         CoerceSprite("Assets/Art/In-Game UI/Icon - Spin.png");
         CoerceSprite("Assets/Art/In-Game UI/Icon - DrawFade.png");
         CoerceSprite("Assets/Art/In-Game UI/Icon - Straight.png");
+        CoerceSprite("Assets/Art/In-Game UI/Icon - Up Arrow.png");
+        CoerceSprite("Assets/Art/In-Game UI/Icon - Down Arrow.png");
 
         // ── Load sprites ───────────────────────────────────────────────────────
         Sprite btnAllSprite    = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Button - All.png");
         Sprite iconSpinSprite  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Icon - Spin.png");
         Sprite iconFadeSprite  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Icon - DrawFade.png");
         Sprite iconStraSprite  = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Icon - Straight.png");
+        Sprite iconUpArrow     = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Icon - Up Arrow.png");
+        Sprite iconDownArrow   = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Art/In-Game UI/Icon - Down Arrow.png");
+        if (iconUpArrow   == null) Debug.LogWarning("[ActionButtonsBuilder] Icon - Up Arrow.png not found as Sprite");
+        if (iconDownArrow == null) Debug.LogWarning("[ActionButtonsBuilder] Icon - Down Arrow.png not found as Sprite");
 
         // Default sprites for fallback (no managers active in LabScaffold)
-        // Coerce these to Sprite type first — they live in Resources/ which imports as Default by default.
         CoerceSprite("Assets/Resources/Clubs/Portraits/S_Menu_Driver_GOLFIN.png");
         CoerceSprite("Assets/Resources/Balls/Thumbnails/S_Controls_Ball_GOLFIN.png");
         CoerceSprite("Assets/Resources/Balls/Full/Golfin.png");
@@ -67,8 +76,10 @@ public static class ActionButtonsBuilder
         // ── Remove existing action button GOs ──────────────────────────────────
         RemoveChild(canvasGo.transform, "ActionButtons_Cluster");
         RemoveChild(canvasGo.transform, "SelectorOverlay");
+        RemoveChild(canvasGo.transform, "SelectorOverlay_Ball");
         RemoveChild(canvasGo.transform, "SpinPanel");
         RemoveChild(canvasGo.transform, "OutsideClickCatcher_Selector");
+        RemoveChild(canvasGo.transform, "OutsideClickCatcher_Selector_Ball");
         RemoveChild(canvasGo.transform, "OutsideClickCatcher_Spin");
 
         Color white     = Color.white;
@@ -76,7 +87,7 @@ public static class ActionButtonsBuilder
 
         // ══════════════════════════════════════════════════════════════════════
         // BUILD CARD PREFAB (built in-memory as a GO, saved as hidden prefab GO)
-        // Each selector card is 148×240, same skeleton as the bottom buttons.
+        // Each selector card is 145×240 (spec: 145×240).
         // ══════════════════════════════════════════════════════════════════════
         GameObject cardPrefabGo = BuildCardPrefabGo(btnAllSprite, rubikFont, white, navyColor);
 
@@ -84,17 +95,18 @@ public static class ActionButtonsBuilder
         // BUILD ActionButtons_Cluster
         // ══════════════════════════════════════════════════════════════════════
         var cluster = CreateRectTransform("ActionButtons_Cluster", canvasGo.transform);
-        // Cluster is full-screen, anchored stretch-stretch
         StretchFill(cluster);
-        // Add CanvasGroup + ActionButtonsRoot
-        var clusterCg   = cluster.gameObject.AddComponent<CanvasGroup>();
-        var abRoot      = cluster.gameObject.AddComponent<ActionButtonsRoot>();
 
-        // Wire ActionButtonsRoot._group via SO
+        // Cluster root CanvasGroup (used by ActionButtonsRoot for shot-state disable)
+        var clusterCg = cluster.gameObject.AddComponent<CanvasGroup>();
+        var abRoot    = cluster.gameObject.AddComponent<ActionButtonsRoot>();
+
         var abRootSo = new SerializedObject(abRoot);
         abRootSo.FindProperty("_group").objectReferenceValue = clusterCg;
-        // _shotController stays null in LabScaffold — widget tolerates null gracefully
         abRootSo.ApplyModifiedProperties();
+
+        // OtherButtonsFader lives on the cluster root
+        var fader = cluster.gameObject.AddComponent<OtherButtonsFader>();
 
         // ── SPIN button (top-left, BL anchor) ─────────────────────────────────
         var spinBtnRt = BuildButton("SpinButton", cluster,
@@ -105,133 +117,194 @@ public static class ActionButtonsBuilder
             rubikFont, out var spinBtn, out var spinIconImg, out var spinPrimaryTmp, out var _);
 
         var spinWidget = spinBtnRt.gameObject.AddComponent<SpinButtonWidget>();
+        // Per-button CanvasGroup for fader
+        var spinCg = spinBtnRt.gameObject.AddComponent<CanvasGroup>();
+        fader.RegisterGroup(spinCg);
 
         // ── FADE/DRAW button (top-right, BR anchor) ────────────────────────────
         var fadeBtnRt = BuildButton("FadeDrawButton", cluster,
             anchorMin: new Vector2(1f, 0f), anchorMax: new Vector2(1f, 0f),
             pivot: new Vector2(1f, 0f),
             anchoredPos: new Vector2(-58f, 360f), size: new Vector2(145f, 240f),
-            bgSprite: btnAllSprite, iconSprite: iconStraSprite,  // starts as STRAIGHT
+            bgSprite: btnAllSprite, iconSprite: iconStraSprite,
             primaryLabel: "STRAIGHT", secondaryLabel: null,
             rubikFont, out var fadeBtn, out var fadeIconImg, out var fadePrimaryTmp, out var _2);
 
         var fadeWidget = fadeBtnRt.gameObject.AddComponent<FadeDrawButtonWidget>();
+        var fadeCg = fadeBtnRt.gameObject.AddComponent<CanvasGroup>();
+        fader.RegisterGroup(fadeCg);
 
         // ── GOLFIN button (bottom-left, BL anchor) ────────────────────────────
         var ballBtnRt = BuildButton("GolfinButton", cluster,
             anchorMin: Vector2.zero, anchorMax: Vector2.zero, pivot: Vector2.zero,
             anchoredPos: new Vector2(58f, 96f), size: new Vector2(145f, 240f),
-            bgSprite: btnAllSprite, iconSprite: null,   // driven by BallContext at runtime
+            bgSprite: btnAllSprite, iconSprite: defaultBallThumbnail,
             primaryLabel: "GOLFIN", secondaryLabel: "∞",
             rubikFont, out var ballBtn, out var ballIconImg, out var ballPrimaryTmp, out var ballSecTmp);
 
         var ballWidget = ballBtnRt.gameObject.AddComponent<BallButtonWidget>();
+        var ballCg = ballBtnRt.gameObject.AddComponent<CanvasGroup>();
+        fader.RegisterGroup(ballCg);
 
         // ── DRIVER button (bottom-right, BR anchor) ────────────────────────────
         var clubBtnRt = BuildButton("DriverButton", cluster,
             anchorMin: new Vector2(1f, 0f), anchorMax: new Vector2(1f, 0f),
             pivot: new Vector2(1f, 0f),
             anchoredPos: new Vector2(-58f, 96f), size: new Vector2(145f, 240f),
-            bgSprite: btnAllSprite, iconSprite: null,   // driven by ClubContext at runtime
+            bgSprite: btnAllSprite, iconSprite: defaultClubPortrait,
             primaryLabel: "DRIVER", secondaryLabel: "0 yrds",
             rubikFont, out var clubBtn, out var clubIconImg, out var clubPrimaryTmp, out var clubSecTmp);
 
         var clubWidget = clubBtnRt.gameObject.AddComponent<ClubButtonWidget>();
+        var clubCg = clubBtnRt.gameObject.AddComponent<CanvasGroup>();
+        fader.RegisterGroup(clubCg);
 
         // ══════════════════════════════════════════════════════════════════════
         // BUILD OUTSIDE CLICK CATCHER for selector (full-screen transparent image)
-        // MUST be added to canvas before the overlay so it sits below in the hierarchy
         // ══════════════════════════════════════════════════════════════════════
         var selectorCatcherGo = new GameObject("OutsideClickCatcher_Selector");
         selectorCatcherGo.transform.SetParent(canvasGo.transform, false);
         var selectorCatcherRt = selectorCatcherGo.AddComponent<RectTransform>();
         StretchFill(selectorCatcherRt);
         var selectorCatcherImg = selectorCatcherGo.AddComponent<Image>();
-        selectorCatcherImg.color = new Color(0f, 0f, 0f, 0f);  // fully transparent
+        selectorCatcherImg.color = new Color(0f, 0f, 0f, 0f);
         var selectorCatcher = selectorCatcherGo.AddComponent<OutsideClickCatcher>();
         selectorCatcherGo.SetActive(false);
 
         // ══════════════════════════════════════════════════════════════════════
-        // BUILD SelectorOverlay (initially inactive, 148×744 max)
+        // BUILD SelectorOverlay (8.5.C redesign)
+        // Stack: VLG spacing=34, childAlignment=LowerCenter
+        // Arrows sit in 24px-padding containers, 8px gap between arrow container and cards.
+        // Total layout (top to bottom):
+        //   ArrowUpContainer (80×25 visible + 24px padding → 128×73 total)
+        //   8px gap
+        //   CardsContainer (content-size-fitter, VLG spacing=34)
+        //   8px gap
+        //   ArrowDownContainer (128×73 total)
+        //
+        // The overlay root is auto-sized by a VerticalLayoutGroup that wraps all three.
         // ══════════════════════════════════════════════════════════════════════
+
         var overlayGo = new GameObject("SelectorOverlay");
         overlayGo.transform.SetParent(canvasGo.transform, false);
         var overlayRt = overlayGo.AddComponent<RectTransform>();
-        overlayRt.sizeDelta = new Vector2(148f, 744f);
+        // Positioned for clubs (right side). Pivot=(1,0) means bottom-right corner is anchored.
+        // The selected card (bottom card) bottom edge sits at y=96 (same as DriverButton bottom).
         overlayRt.anchorMin = overlayRt.anchorMax = new Vector2(1f, 0f);
-        overlayRt.pivot = new Vector2(1f, 0f);
-        overlayRt.anchoredPosition = new Vector2(-58f, 348f);
+        overlayRt.pivot     = new Vector2(1f, 0f);
+        // 48px gap to LEFT of DriverButton. DriverButton left edge = 58+145=203px from right.
+        // Y=28 so ArrowDown bottom=28, gap 8, DRIVER card bottom=96 (matches DriverButton bottom).
+        overlayRt.anchoredPosition = new Vector2(-251f, 28f);
+        // Width = card width. Height grows via ContentSizeFitter on the overlay root VLG.
+        overlayRt.sizeDelta = new Vector2(145f, 0f);
 
-        // ArrowUp (use Straight icon rotated 180 degrees = pointing up chevron fallback)
-        var arrowUpRt = CreateRectTransform("ArrowUp", overlayGo.transform, new Vector2(96f, 48f));
-        arrowUpRt.anchorMin = arrowUpRt.anchorMax = new Vector2(0.5f, 1f);
-        arrowUpRt.pivot     = new Vector2(0.5f, 1f);
-        arrowUpRt.anchoredPosition = new Vector2(0f, -24f);
-        var arrowUpImg = arrowUpRt.gameObject.AddComponent<Image>();
-        arrowUpImg.sprite = iconStraSprite;
+        // Overlay root VLG stacks: ArrowUp, CardsContainer, ArrowDown
+        var overlayVlg = overlayGo.AddComponent<VerticalLayoutGroup>();
+        overlayVlg.spacing              = 8f;    // 8px gap between arrow containers and cards
+        overlayVlg.childAlignment       = TextAnchor.LowerCenter;
+        overlayVlg.childForceExpandWidth  = true;
+        overlayVlg.childForceExpandHeight = false;
+        overlayVlg.childControlWidth      = true;
+        overlayVlg.childControlHeight     = true;
+        overlayVlg.padding = new RectOffset(0, 0, 0, 0);
+
+        var overlayCsf = overlayGo.AddComponent<ContentSizeFitter>();
+        overlayCsf.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+        overlayCsf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        // ── ArrowUp container (24px padding, chevron 80×25 inside) ──────────
+        var arrowUpContainerRt = CreateRectTransform("ArrowUpContainer", overlayGo.transform);
+        var arrowUpContainerImg = arrowUpContainerRt.gameObject.AddComponent<Image>();
+        arrowUpContainerImg.color = new Color(0f, 0f, 0f, 0f);  // transparent hit area
+        // LayoutElement: preferred height = 25 + 24*2 = 73
+        var arrowUpContainerLe = arrowUpContainerRt.gameObject.AddComponent<LayoutElement>();
+        arrowUpContainerLe.preferredHeight = 60f;
+        arrowUpContainerLe.flexibleWidth   = 1f;
+
+        // Chevron image inside (80×25, centered).
+        // Icon - Straight.png points UP. preserveAspect=false fills the 80×25 rect (wide flat chevron).
+        // No rotation needed — icon already points up.
+        var arrowUpImgRt = CreateRectTransform("ArrowUpChevron", arrowUpContainerRt, new Vector2(80f, 50f));
+        SetAnchorCenter(arrowUpImgRt);
+        arrowUpImgRt.anchoredPosition = Vector2.zero;
+        var arrowUpImg = arrowUpImgRt.gameObject.AddComponent<Image>();
+        arrowUpImg.sprite = iconUpArrow;
         arrowUpImg.preserveAspect = true;
-        arrowUpImg.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
-        var arrowUpBtn = arrowUpRt.gameObject.AddComponent<Button>();
+        arrowUpImg.color = Color.white;
 
-        // CardsContainer (VerticalLayoutGroup)
-        var cardsContainerRt = CreateRectTransform("CardsContainer", overlayGo.transform, new Vector2(148f, 0f));
-        cardsContainerRt.anchorMin = cardsContainerRt.anchorMax = new Vector2(0.5f, 0.5f);
-        cardsContainerRt.pivot     = new Vector2(0.5f, 0.5f);
-        cardsContainerRt.anchoredPosition = Vector2.zero;
+        var arrowUpBtn = arrowUpContainerRt.gameObject.AddComponent<Button>();
+        arrowUpBtn.targetGraphic = arrowUpContainerImg;
+
+        // ── CardsContainer (VerticalLayoutGroup spacing=34, LowerCenter) ─────
+        var cardsContainerRt = CreateRectTransform("CardsContainer", overlayGo.transform);
         var vlg = cardsContainerRt.gameObject.AddComponent<VerticalLayoutGroup>();
-        vlg.spacing = 12f;
-        vlg.childAlignment = TextAnchor.MiddleCenter;
-        vlg.childForceExpandWidth  = false;
+        vlg.spacing              = 34f;
+        vlg.childAlignment       = TextAnchor.LowerCenter;
+        vlg.childForceExpandWidth  = true;   // stretch cards to container width (145)
         vlg.childForceExpandHeight = false;
         vlg.childControlWidth      = true;
         vlg.childControlHeight     = false;
         var csf = cardsContainerRt.gameObject.AddComponent<ContentSizeFitter>();
         csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var cardsLe = cardsContainerRt.gameObject.AddComponent<LayoutElement>();
+        cardsLe.flexibleWidth = 1f;
 
-        // ArrowDown
-        var arrowDownRt = CreateRectTransform("ArrowDown", overlayGo.transform, new Vector2(96f, 48f));
-        arrowDownRt.anchorMin = arrowDownRt.anchorMax = new Vector2(0.5f, 0f);
-        arrowDownRt.pivot     = new Vector2(0.5f, 0f);
-        arrowDownRt.anchoredPosition = new Vector2(0f, 24f);
-        var arrowDownImg = arrowDownRt.gameObject.AddComponent<Image>();
-        arrowDownImg.sprite = iconStraSprite;
+        // ── ArrowDown container ────────────────────────────────────────────────
+        var arrowDownContainerRt = CreateRectTransform("ArrowDownContainer", overlayGo.transform);
+        var arrowDownContainerImg = arrowDownContainerRt.gameObject.AddComponent<Image>();
+        arrowDownContainerImg.color = new Color(0f, 0f, 0f, 0f);
+        var arrowDownContainerLe = arrowDownContainerRt.gameObject.AddComponent<LayoutElement>();
+        arrowDownContainerLe.preferredHeight = 60f;
+        arrowDownContainerLe.flexibleWidth   = 1f;
+
+        // Icon - Straight.png points UP; rotate 180° so ArrowDown points down.
+        var arrowDownImgRt = CreateRectTransform("ArrowDownChevron", arrowDownContainerRt, new Vector2(80f, 50f));
+        SetAnchorCenter(arrowDownImgRt);
+        arrowDownImgRt.anchoredPosition = Vector2.zero;
+        var arrowDownImg = arrowDownImgRt.gameObject.AddComponent<Image>();
+        arrowDownImg.sprite = iconDownArrow;
         arrowDownImg.preserveAspect = true;
-        var arrowDownBtn = arrowDownRt.gameObject.AddComponent<Button>();
+        arrowDownImg.color = Color.white;
 
-        // Wire SelectorOverlayWidget
+        var arrowDownBtn = arrowDownContainerRt.gameObject.AddComponent<Button>();
+        arrowDownBtn.targetGraphic = arrowDownContainerImg;
+
+        // ── Wire SelectorOverlayWidget ──────────────────────────────────────
         var overlayWidget = overlayGo.AddComponent<SelectorOverlayWidget>();
         var overlaySo = new SerializedObject(overlayWidget);
-        overlaySo.FindProperty("_root").objectReferenceValue            = overlayRt;
-        overlaySo.FindProperty("_cardsContainer").objectReferenceValue  = cardsContainerRt.transform;
-        overlaySo.FindProperty("_cardPrefab").objectReferenceValue      = cardPrefabGo;
-        overlaySo.FindProperty("_arrowUp").objectReferenceValue         = arrowUpBtn;
-        overlaySo.FindProperty("_arrowDown").objectReferenceValue       = arrowDownBtn;
+        overlaySo.FindProperty("_root").objectReferenceValue               = overlayRt;
+        overlaySo.FindProperty("_cardsContainer").objectReferenceValue     = cardsContainerRt;
+        overlaySo.FindProperty("_cardPrefab").objectReferenceValue         = cardPrefabGo;
+        overlaySo.FindProperty("_arrowUpContainer").objectReferenceValue   = arrowUpContainerRt;
+        overlaySo.FindProperty("_arrowDownContainer").objectReferenceValue = arrowDownContainerRt;
+        overlaySo.FindProperty("_arrowUp").objectReferenceValue            = arrowUpBtn;
+        overlaySo.FindProperty("_arrowDown").objectReferenceValue          = arrowDownBtn;
         overlaySo.FindProperty("_outsideClickCatcher").objectReferenceValue = selectorCatcher;
+        // Clubs: pivot=(1,0), position aligned to DriverButton bottom edge
+        overlaySo.FindProperty("_anchoredPositionForClub").vector2Value    = new Vector2(-251f, 28f);
+        overlaySo.FindProperty("_anchoredPositionForBall").vector2Value    = new Vector2(251f, 28f);
         overlaySo.ApplyModifiedProperties();
 
         overlayGo.SetActive(false);
 
         // ══════════════════════════════════════════════════════════════════════
-        // BUILD SPIN PANEL (initially inactive, full-screen dim + ball + dot)
+        // BUILD SPIN PANEL
         // ══════════════════════════════════════════════════════════════════════
 
-        // Dim catcher for spin panel (full-screen transparent, below spin panel)
         var spinCatcherGo = new GameObject("OutsideClickCatcher_Spin");
         spinCatcherGo.transform.SetParent(canvasGo.transform, false);
         var spinCatcherRt = spinCatcherGo.AddComponent<RectTransform>();
         StretchFill(spinCatcherRt);
         var spinCatcherImg = spinCatcherGo.AddComponent<Image>();
-        spinCatcherImg.color = new Color(0f, 0f, 0f, 0.5f);  // semi-transparent dim
+        spinCatcherImg.color = new Color(0f, 0f, 0f, 0.5f);
         var spinCatcher = spinCatcherGo.AddComponent<OutsideClickCatcher>();
         spinCatcherGo.SetActive(false);
 
-        // SpinPanel root
         var spinPanelGo = new GameObject("SpinPanel");
         spinPanelGo.transform.SetParent(canvasGo.transform, false);
         var spinPanelRt = spinPanelGo.AddComponent<RectTransform>();
         StretchFill(spinPanelRt);
 
-        // Big ball image (600x600, anchored center)
         var ballImgRt = CreateRectTransform("BallImage", spinPanelGo.transform, new Vector2(600f, 600f));
         SetAnchorCenter(ballImgRt);
         ballImgRt.anchoredPosition = Vector2.zero;
@@ -239,17 +312,13 @@ public static class ActionButtonsBuilder
         ballImg.preserveAspect = true;
         ballImg.color = white;
 
-        // Spin dot (60x60, anchored center within ball)
         var dotRt = CreateRectTransform("SpinDot", ballImgRt);
         dotRt.sizeDelta = new Vector2(60f, 60f);
         SetAnchorCenter(dotRt);
         dotRt.anchoredPosition = Vector2.zero;
         var dotImg = dotRt.gameObject.AddComponent<Image>();
-        dotImg.color = new Color(1f, 0.2f, 0.2f, 1f);  // red dot
+        dotImg.color = new Color(1f, 0.2f, 0.2f, 1f);
 
-        // 5 invisible position buttons wired to SelectPosition(0..4)
-        // Positions: center(0), top(1), bottom(2), left(3), right(4)
-        // Each button is 200×200
         Vector2[] btnPositions = {
             new Vector2(   0f,    0f),
             new Vector2(   0f,  220f),
@@ -267,17 +336,16 @@ public static class ActionButtonsBuilder
             SetAnchorCenter(posRt);
             posRt.anchoredPosition = btnPositions[i];
             var posImg = posRt.gameObject.AddComponent<Image>();
-            posImg.color = new Color(0f, 0f, 0f, 0f);  // invisible
+            posImg.color = new Color(0f, 0f, 0f, 0f);
             var posBtn = posRt.gameObject.AddComponent<Button>();
             posBtn.targetGraphic = posImg;
             int captured = i;
             posBtn.onClick.AddListener(() => spinPanelWidget.SelectPosition(captured));
         }
 
-        // Wire SpinPanelWidget
         var coneRootT = canvasGo.transform.Find("ConeRoot");
         var coneRoot  = coneRootT != null ? coneRootT.gameObject : null;
-        if (coneRoot == null) Debug.LogWarning("[ActionButtonsBuilder] ConeRoot not found under ShotUI_Canvas — _aimingCone will be null on SpinPanelWidget.");
+        if (coneRoot == null) Debug.LogWarning("[ActionButtonsBuilder] ConeRoot not found — _aimingCone will be null on SpinPanelWidget.");
 
         var spinPanelSo = new SerializedObject(spinPanelWidget);
         spinPanelSo.FindProperty("_ballImage").objectReferenceValue        = ballImg;
@@ -290,7 +358,7 @@ public static class ActionButtonsBuilder
         spinCatcherGo.SetActive(false);
         spinPanelGo.SetActive(false);
 
-        // ── Wire SpinButtonWidget → SpinPanel ──────────────────────────────────
+        // ── Wire SpinButtonWidget ──────────────────────────────────────────────
         var spinBtnSo = new SerializedObject(spinWidget);
         spinBtnSo.FindProperty("_button").objectReferenceValue      = spinBtn;
         spinBtnSo.FindProperty("_iconImage").objectReferenceValue   = spinIconImg;
@@ -307,7 +375,7 @@ public static class ActionButtonsBuilder
         fadeBtnSo.FindProperty("_iconFadeDraw").objectReferenceValue  = iconFadeSprite;
         fadeBtnSo.ApplyModifiedProperties();
 
-        // ── Wire BallButtonWidget → SelectorOverlay ────────────────────────────
+        // ── Wire BallButtonWidget ──────────────────────────────────────────────
         var ballBtnSo = new SerializedObject(ballWidget);
         ballBtnSo.FindProperty("_button").objectReferenceValue            = ballBtn;
         ballBtnSo.FindProperty("_iconImage").objectReferenceValue         = ballIconImg;
@@ -317,7 +385,7 @@ public static class ActionButtonsBuilder
         ballBtnSo.FindProperty("_defaultThumbnail").objectReferenceValue  = defaultBallThumbnail;
         ballBtnSo.ApplyModifiedProperties();
 
-        // ── Wire ClubButtonWidget → SelectorOverlay ────────────────────────────
+        // ── Wire ClubButtonWidget ──────────────────────────────────────────────
         var clubBtnSo = new SerializedObject(clubWidget);
         clubBtnSo.FindProperty("_button").objectReferenceValue            = clubBtn;
         clubBtnSo.FindProperty("_iconImage").objectReferenceValue         = clubIconImg;
@@ -327,9 +395,132 @@ public static class ActionButtonsBuilder
         clubBtnSo.FindProperty("_defaultPortrait").objectReferenceValue   = defaultClubPortrait;
         clubBtnSo.ApplyModifiedProperties();
 
-        // ══════════════════════════════════════════════════════════════════════
-        // ADD POPULATORS to LabRoot
-        // ══════════════════════════════════════════════════════════════════════
+        // ── Add SelectorDragRouter to DriverButton and GolfinButton ───────────
+
+        // Driver (Club selector)
+        var clubDragRouter = clubBtnRt.gameObject.AddComponent<SelectorDragRouter>();
+        var clubRouterSo = new SerializedObject(clubDragRouter);
+        clubRouterSo.FindProperty("_selectorOverlay").objectReferenceValue = overlayWidget;
+        clubRouterSo.FindProperty("_fader").objectReferenceValue           = fader;
+        clubRouterSo.FindProperty("_myCanvasGroup").objectReferenceValue   = clubCg;
+        clubRouterSo.ApplyModifiedProperties();
+
+        // Golfin/Ball selector — needs its own overlay for balls
+        // Per spec: same overlay widget handles both kinds. Ball selector opens with Kind.Ball.
+        // We build a second overlay for balls (left side).
+        // Actually, spec says "Golfin selector (left side): mirror". They share the single overlay widget
+        // but it repositions on Open(). For hold-mode, the router needs the overlay to know the kind.
+        // The overlay infers kind from its pivot config: pivot.x<0.5 = Ball.
+        // Solution: build a SECOND SelectorOverlay for balls with pivot=(0,0).
+        var overlayGoBall = new GameObject("SelectorOverlay_Ball");
+        overlayGoBall.transform.SetParent(canvasGo.transform, false);
+        var overlayRtBall = overlayGoBall.AddComponent<RectTransform>();
+        overlayRtBall.anchorMin = overlayRtBall.anchorMax = new Vector2(0f, 0f);
+        overlayRtBall.pivot     = new Vector2(0f, 0f);
+        // 48px gap to RIGHT of GolfinButton. Y=28 matches DRIVER card to button bottom.
+        overlayRtBall.anchoredPosition = new Vector2(251f, 28f);
+        overlayRtBall.sizeDelta = new Vector2(145f, 0f);
+
+        var overlayVlgBall = overlayGoBall.AddComponent<VerticalLayoutGroup>();
+        overlayVlgBall.spacing              = 8f;
+        overlayVlgBall.childAlignment       = TextAnchor.LowerCenter;
+        overlayVlgBall.childForceExpandWidth  = true;
+        overlayVlgBall.childForceExpandHeight = false;
+        overlayVlgBall.childControlWidth      = true;
+        overlayVlgBall.childControlHeight     = true;
+
+        var overlayCsfBall = overlayGoBall.AddComponent<ContentSizeFitter>();
+        overlayCsfBall.verticalFit   = ContentSizeFitter.FitMode.PreferredSize;
+        overlayCsfBall.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+        // ArrowUp container for ball overlay
+        var arrowUpContBallRt = CreateRectTransform("ArrowUpContainer", overlayGoBall.transform);
+        var arrowUpContBallImg = arrowUpContBallRt.gameObject.AddComponent<Image>();
+        arrowUpContBallImg.color = new Color(0f, 0f, 0f, 0f);
+        var arrowUpContBallLe = arrowUpContBallRt.gameObject.AddComponent<LayoutElement>();
+        arrowUpContBallLe.preferredHeight = 73f;
+        arrowUpContBallLe.flexibleWidth   = 1f;
+        var arrowUpImgBallRt = CreateRectTransform("ArrowUpChevron", arrowUpContBallRt, new Vector2(80f, 50f));
+        SetAnchorCenter(arrowUpImgBallRt);
+        arrowUpImgBallRt.anchoredPosition = Vector2.zero;
+        var arrowUpImgBall = arrowUpImgBallRt.gameObject.AddComponent<Image>();
+        arrowUpImgBall.sprite = iconUpArrow;
+        arrowUpImgBall.preserveAspect = true;
+        arrowUpImgBall.color = Color.white;
+        var arrowUpBtnBall = arrowUpContBallRt.gameObject.AddComponent<Button>();
+        arrowUpBtnBall.targetGraphic = arrowUpContBallImg;
+
+        // CardsContainer for ball overlay
+        var cardsContBallRt = CreateRectTransform("CardsContainer", overlayGoBall.transform);
+        var vlgBall = cardsContBallRt.gameObject.AddComponent<VerticalLayoutGroup>();
+        vlgBall.spacing              = 34f;
+        vlgBall.childAlignment       = TextAnchor.LowerCenter;
+        vlgBall.childForceExpandWidth  = true;   // stretch cards to container width
+        vlgBall.childForceExpandHeight = false;
+        vlgBall.childControlWidth      = true;
+        vlgBall.childControlHeight     = false;
+        var csfBall = cardsContBallRt.gameObject.AddComponent<ContentSizeFitter>();
+        csfBall.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var cardsLeBall = cardsContBallRt.gameObject.AddComponent<LayoutElement>();
+        cardsLeBall.flexibleWidth = 1f;
+
+        // ArrowDown container for ball overlay
+        var arrowDownContBallRt = CreateRectTransform("ArrowDownContainer", overlayGoBall.transform);
+        var arrowDownContBallImg = arrowDownContBallRt.gameObject.AddComponent<Image>();
+        arrowDownContBallImg.color = new Color(0f, 0f, 0f, 0f);
+        var arrowDownContBallLe = arrowDownContBallRt.gameObject.AddComponent<LayoutElement>();
+        arrowDownContBallLe.preferredHeight = 73f;
+        arrowDownContBallLe.flexibleWidth   = 1f;
+        var arrowDownImgBallRt = CreateRectTransform("ArrowDownChevron", arrowDownContBallRt, new Vector2(80f, 50f));
+        SetAnchorCenter(arrowDownImgBallRt);
+        arrowDownImgBallRt.anchoredPosition = Vector2.zero;
+        var arrowDownImgBall = arrowDownImgBallRt.gameObject.AddComponent<Image>();
+        arrowDownImgBall.sprite = iconDownArrow;
+        arrowDownImgBall.preserveAspect = true;
+        arrowDownImgBall.color = Color.white;
+        var arrowDownBtnBall = arrowDownContBallRt.gameObject.AddComponent<Button>();
+        arrowDownBtnBall.targetGraphic = arrowDownContBallImg;
+
+        // Build a second OutsideClickCatcher for ball overlay
+        var selectorCatcherBallGo = new GameObject("OutsideClickCatcher_Selector_Ball");
+        selectorCatcherBallGo.transform.SetParent(canvasGo.transform, false);
+        var selectorCatcherBallRt = selectorCatcherBallGo.AddComponent<RectTransform>();
+        StretchFill(selectorCatcherBallRt);
+        var selectorCatcherBallImg = selectorCatcherBallGo.AddComponent<Image>();
+        selectorCatcherBallImg.color = new Color(0f, 0f, 0f, 0f);
+        var selectorCatcherBall = selectorCatcherBallGo.AddComponent<OutsideClickCatcher>();
+        selectorCatcherBallGo.SetActive(false);
+
+        var overlayWidgetBall = overlayGoBall.AddComponent<SelectorOverlayWidget>();
+        var overlaySoBall = new SerializedObject(overlayWidgetBall);
+        overlaySoBall.FindProperty("_root").objectReferenceValue               = overlayRtBall;
+        overlaySoBall.FindProperty("_cardsContainer").objectReferenceValue     = cardsContBallRt;
+        overlaySoBall.FindProperty("_cardPrefab").objectReferenceValue         = cardPrefabGo;
+        overlaySoBall.FindProperty("_arrowUpContainer").objectReferenceValue   = arrowUpContBallRt;
+        overlaySoBall.FindProperty("_arrowDownContainer").objectReferenceValue = arrowDownContBallRt;
+        overlaySoBall.FindProperty("_arrowUp").objectReferenceValue            = arrowUpBtnBall;
+        overlaySoBall.FindProperty("_arrowDown").objectReferenceValue          = arrowDownBtnBall;
+        overlaySoBall.FindProperty("_outsideClickCatcher").objectReferenceValue = selectorCatcherBall;
+        overlaySoBall.FindProperty("_anchoredPositionForClub").vector2Value    = new Vector2(-251f, 96f);
+        overlaySoBall.FindProperty("_anchoredPositionForBall").vector2Value    = new Vector2(251f, 96f);
+        overlaySoBall.ApplyModifiedProperties();
+
+        overlayGoBall.SetActive(false);
+
+        // Wire BallButtonWidget to ball overlay instead
+        var ballBtnSo2 = new SerializedObject(ballWidget);
+        ballBtnSo2.FindProperty("_selectorOverlay").objectReferenceValue = overlayWidgetBall;
+        ballBtnSo2.ApplyModifiedProperties();
+
+        // Golfin drag router
+        var ballDragRouter = ballBtnRt.gameObject.AddComponent<SelectorDragRouter>();
+        var ballRouterSo = new SerializedObject(ballDragRouter);
+        ballRouterSo.FindProperty("_selectorOverlay").objectReferenceValue = overlayWidgetBall;
+        ballRouterSo.FindProperty("_fader").objectReferenceValue           = fader;
+        ballRouterSo.FindProperty("_myCanvasGroup").objectReferenceValue   = ballCg;
+        ballRouterSo.ApplyModifiedProperties();
+
+        // ── Add populators to LabRoot ──────────────────────────────────────────
         var labRoot = GameObject.Find("LabRoot");
         if (labRoot != null)
         {
@@ -341,14 +532,14 @@ public static class ActionButtonsBuilder
         }
         else
         {
-            Debug.LogWarning("[ActionButtonsBuilder] LabRoot not found — populators not added. Add ClubContextPopulator + BallContextPopulator manually.");
+            Debug.LogWarning("[ActionButtonsBuilder] LabRoot not found — populators not added.");
         }
 
         // ── Mark scene dirty and save ──────────────────────────────────────────
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
 
-        Debug.Log("[ActionButtonsBuilder] DONE — ActionButtons_Cluster, SelectorOverlay, SpinPanel built and wired in LabScaffold.unity.");
+        Debug.Log("[ActionButtonsBuilder] DONE — ActionButtons_Cluster (8.5.C redesign), SelectorOverlay x2, SpinPanel built and wired in LabScaffold.unity.");
     }
 
     /// <summary>Non-interactive version for MCP script execution (no dialog boxes).</summary>
@@ -362,11 +553,9 @@ public static class ActionButtonsBuilder
     static GameObject BuildCardPrefabGo(Sprite bgSprite, TMP_FontAsset font,
         Color white, Color navyColor)
     {
-        // Build an in-scene GO that acts as the card prefab for the selector overlay.
-        // It gets Instantiate()'d at runtime; builder assigns it to _cardPrefab field.
         var go = new GameObject("SelectorCard_Prefab");
         var rt = go.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(148f, 240f);
+        rt.sizeDelta = new Vector2(145f, 240f);
 
         // CardBG
         var bgRt = CreateRectTransform("CardBG", go.transform);
@@ -375,14 +564,14 @@ public static class ActionButtonsBuilder
         bgImg.sprite = bgSprite;
         bgImg.type   = Image.Type.Simple;
 
-        // IconArea (180x120, anchored top-center, overflow allowed, no mask)
-        var iconAreaRt = CreateRectTransform("IconArea", go.transform, new Vector2(180f, 120f));
+        // IconArea (135×120, top-center, overflow allowed)
+        var iconAreaRt = CreateRectTransform("IconArea", go.transform, new Vector2(135f, 120f));
         iconAreaRt.anchorMin = new Vector2(0.5f, 1f);
         iconAreaRt.anchorMax = new Vector2(0.5f, 1f);
         iconAreaRt.pivot     = new Vector2(0.5f, 1f);
         iconAreaRt.anchoredPosition = Vector2.zero;
 
-        // Icon inside IconArea (stretch with side insets 33,0,-33,0)
+        // Icon (stretch inside IconArea, insets 33)
         var iconRt = CreateRectTransform("Icon", iconAreaRt);
         StretchFill(iconRt);
         iconRt.offsetMin = new Vector2(33f, 0f);
@@ -391,58 +580,59 @@ public static class ActionButtonsBuilder
         iconImg.preserveAspect = true;
         iconImg.color = white;
 
-        // PrimaryText (bottom stretch, anchoredPos y=65, h=36)
+        // PrimaryText (bottom-anchored, center anchor so width=120 takes effect)
         var priGo = new GameObject("PrimaryText");
         priGo.transform.SetParent(go.transform, false);
         var priRt = priGo.AddComponent<RectTransform>();
-        priRt.anchorMin = new Vector2(0f, 0f);
-        priRt.anchorMax = new Vector2(1f, 0f);
+        priRt.anchorMin = new Vector2(0.5f, 0f);
+        priRt.anchorMax = new Vector2(0.5f, 0f);
         priRt.pivot     = new Vector2(0.5f, 0f);
         priRt.anchoredPosition = new Vector2(0f, 65f);
-        priRt.sizeDelta = new Vector2(0f, 36f);
+        priRt.sizeDelta = new Vector2(120f, 36f);
         var priTmp = priGo.AddComponent<TextMeshProUGUI>();
-        priTmp.fontSize  = 30;
+        priTmp.enableAutoSizing = true; priTmp.fontSizeMin = 20f; priTmp.fontSizeMax = 30f;
+        priTmp.fontStyle = FontStyles.Bold;
         priTmp.color     = white;
         priTmp.alignment = TextAlignmentOptions.Center;
         priTmp.textWrappingMode = TextWrappingModes.NoWrap;
         if (font != null) priTmp.font = font;
 
-        // SecondaryText (bottom stretch, anchoredPos y=24, h=36)
+        // SecondaryText (center anchor so width=120 takes effect)
         var secGo = new GameObject("SecondaryText");
         secGo.transform.SetParent(go.transform, false);
         var secRt = secGo.AddComponent<RectTransform>();
-        secRt.anchorMin = new Vector2(0f, 0f);
-        secRt.anchorMax = new Vector2(1f, 0f);
+        secRt.anchorMin = new Vector2(0.5f, 0f);
+        secRt.anchorMax = new Vector2(0.5f, 0f);
         secRt.pivot     = new Vector2(0.5f, 0f);
         secRt.anchoredPosition = new Vector2(0f, 24f);
-        secRt.sizeDelta = new Vector2(0f, 36f);
+        secRt.sizeDelta = new Vector2(120f, 36f);
         var secTmp = secGo.AddComponent<TextMeshProUGUI>();
-        secTmp.fontSize  = 30;
+        secTmp.enableAutoSizing = true; secTmp.fontSizeMin = 20f; secTmp.fontSizeMax = 30f;
+        secTmp.fontStyle = FontStyles.Bold;
         secTmp.color     = white;
         secTmp.alignment = TextAlignmentOptions.Center;
         secTmp.richText  = true;
         if (font != null) secTmp.font = font;
 
-        // Button component for tap
+        // Transparent button hit area
         var btnImgGo = new GameObject("BtnBackground");
         btnImgGo.transform.SetParent(go.transform, false);
         var btnImgRt = btnImgGo.AddComponent<RectTransform>();
         StretchFill(btnImgRt);
         var btnImg = btnImgGo.AddComponent<Image>();
-        btnImg.color = new Color(0f, 0f, 0f, 0f); // transparent hit area
+        btnImg.color = new Color(0f, 0f, 0f, 0f);
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = btnImg;
 
         // Wire SelectorCardWidget
         var cardWidget = go.AddComponent<SelectorCardWidget>();
         var cardSo = new SerializedObject(cardWidget);
-        cardSo.FindProperty("_button").objectReferenceValue      = btn;
-        cardSo.FindProperty("_icon").objectReferenceValue        = iconImg;
-        cardSo.FindProperty("_primaryText").objectReferenceValue = priTmp;
+        cardSo.FindProperty("_button").objectReferenceValue        = btn;
+        cardSo.FindProperty("_icon").objectReferenceValue          = iconImg;
+        cardSo.FindProperty("_primaryText").objectReferenceValue   = priTmp;
         cardSo.FindProperty("_secondaryText").objectReferenceValue = secTmp;
         cardSo.ApplyModifiedProperties();
 
-        // Hide from scene hierarchy by placing it under the canvas as inactive
         go.SetActive(false);
         return go;
     }
@@ -475,14 +665,13 @@ public static class ActionButtonsBuilder
         bgImg.sprite = bgSprite;
         bgImg.type   = Image.Type.Simple;
 
-        // IconArea (180×120, top-center, no mask — intentional overflow)
-        var iconAreaRt = CreateRectTransform("IconArea", go.transform, new Vector2(180f, 120f));
+        // IconArea (width=135 per Cesar's config)
+        var iconAreaRt = CreateRectTransform("IconArea", go.transform, new Vector2(135f, 120f));
         iconAreaRt.anchorMin = new Vector2(0.5f, 1f);
         iconAreaRt.anchorMax = new Vector2(0.5f, 1f);
         iconAreaRt.pivot     = new Vector2(0.5f, 1f);
         iconAreaRt.anchoredPosition = Vector2.zero;
 
-        // Icon (stretch-stretch inside IconArea, insets 33,0,-33,0)
         var iconRt = CreateRectTransform("Icon", iconAreaRt);
         StretchFill(iconRt);
         iconRt.offsetMin = new Vector2(33f, 0f);
@@ -499,30 +688,37 @@ public static class ActionButtonsBuilder
         priRt.anchorMin = new Vector2(0f, 0f);
         priRt.anchorMax = new Vector2(1f, 0f);
         priRt.pivot     = new Vector2(0.5f, 0f);
+        // Fixed width=120 requires center anchor (not stretch) — sizeDelta.x is ignored on stretch anchors
+        priRt.anchorMin = new Vector2(0.5f, 0f);
+        priRt.anchorMax = new Vector2(0.5f, 0f);
+        priRt.pivot     = new Vector2(0.5f, 0f);
         priRt.anchoredPosition = new Vector2(0f, secondaryLabel != null ? 65f : 54f);
-        priRt.sizeDelta = new Vector2(0f, 36f);
+        priRt.sizeDelta = new Vector2(120f, 36f);
         primaryTmp = priGo.AddComponent<TextMeshProUGUI>();
         primaryTmp.text      = primaryLabel ?? "";
-        primaryTmp.fontSize  = 30;
+        primaryTmp.enableAutoSizing = true; primaryTmp.fontSizeMin = 20f; primaryTmp.fontSizeMax = 30f;
+        primaryTmp.fontStyle = FontStyles.Bold;
         primaryTmp.color     = Color.white;
         primaryTmp.alignment = TextAlignmentOptions.Center;
-        primaryTmp.textWrappingMode = TextWrappingModes.Normal;  // needed for FADE/DRAW two-liner
+        primaryTmp.textWrappingMode = TextWrappingModes.Normal;
         if (font != null) primaryTmp.font = font;
 
-        // SecondaryText (only if needed)
+        // SecondaryText
         if (secondaryLabel != null)
         {
             var secGo = new GameObject("SecondaryText");
             secGo.transform.SetParent(go.transform, false);
             var secRt = secGo.AddComponent<RectTransform>();
-            secRt.anchorMin = new Vector2(0f, 0f);
-            secRt.anchorMax = new Vector2(1f, 0f);
+            // Fixed width=120 requires center anchor (not stretch)
+            secRt.anchorMin = new Vector2(0.5f, 0f);
+            secRt.anchorMax = new Vector2(0.5f, 0f);
             secRt.pivot     = new Vector2(0.5f, 0f);
             secRt.anchoredPosition = new Vector2(0f, 24f);
-            secRt.sizeDelta = new Vector2(0f, 36f);
+            secRt.sizeDelta = new Vector2(120f, 36f);
             secondaryTmp = secGo.AddComponent<TextMeshProUGUI>();
             secondaryTmp.text      = secondaryLabel;
-            secondaryTmp.fontSize  = 30;
+            secondaryTmp.enableAutoSizing = true; secondaryTmp.fontSizeMin = 20f; secondaryTmp.fontSizeMax = 30f;
+            secondaryTmp.fontStyle = FontStyles.Bold;
             secondaryTmp.color     = Color.white;
             secondaryTmp.alignment = TextAlignmentOptions.Center;
             secondaryTmp.richText  = true;
@@ -533,7 +729,7 @@ public static class ActionButtonsBuilder
             secondaryTmp = null;
         }
 
-        // Transparent full-card button (hit area)
+        // Hit area button
         var hitGo = new GameObject("HitArea");
         hitGo.transform.SetParent(go.transform, false);
         var hitRt = hitGo.AddComponent<RectTransform>();
@@ -546,12 +742,12 @@ public static class ActionButtonsBuilder
         return rt;
     }
 
-    // ── Coerce PNG to Sprite import type ──────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     static void CoerceSprite(string assetPath)
     {
         var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
-        if (sprite != null) return;  // already imported as Sprite
+        if (sprite != null) return;
 
         var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
         if (importer == null)
@@ -565,8 +761,6 @@ public static class ActionButtonsBuilder
         AssetDatabase.Refresh();
         Debug.Log($"[ActionButtonsBuilder] Coerced {assetPath} to Sprite type.");
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     static RectTransform CreateRectTransform(string name, Transform parent, Vector2 size = default)
     {

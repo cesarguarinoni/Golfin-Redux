@@ -1,0 +1,5 @@
+2026-04-30T10:00:00 activated — reading spec and API sources
+2026-04-30T10:05:00 API verification complete, writing LabInventoryStub.cs
+2026-04-30T10:10:00 scene wiring complete — ClubDatabaseCSV + BallDatabaseCSV + LabInventoryStub on LabRoot
+2026-04-30T10:15:00 play mode verified — 4 clubs + 2 balls seeded, screenshots taken
+2026-04-30T10:20:00 done, awaiting review

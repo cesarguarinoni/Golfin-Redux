@@ -15,7 +15,7 @@ namespace Golfin.Physics.Runtime
         [Header("Shot Mode")]
         public bool UseAero = true;
         [Tooltip("Club ID from clubs.csv — used when UseAero is true")]
-        public string ClubId = "Iron7";
+        public string ClubId = "club_iron7_mireo";
 
         [Header("Manual Override (when UseAero = false)")]
         [Range(5f, 80f)] public float ManualSpeedMps = 52.5f;

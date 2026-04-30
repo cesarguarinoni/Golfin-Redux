@@ -13,6 +13,9 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private TMP_Text _primaryText;
         [SerializeField] private TMP_Text _secondaryText;
 
+        [Tooltip("Scale multiplier applied when this card is highlighted in hold-mode.")]
+        [SerializeField] private float _highlightScale = 1.05f;
+
         Action _onTap;
 
         public void SetClub(ClubEntry e, Action onTap)
@@ -39,6 +42,27 @@ namespace Golfin.Gameplay.UI.ShotUI
                 _secondaryText.text = e.QuantityDisplay;
             }
             WireButton();
+        }
+
+        /// <summary>
+        /// Visually highlight (scale to <paramref name="targetScale"/>) or de-highlight (scale to 1).
+        /// Called by SelectorOverlayWidget during hold-mode hover tracking.
+        /// When called without a targetScale (e.g. from non-router path) falls back to _highlightScale.
+        /// </summary>
+        public void SetHighlight(bool on, float targetScale = -1f)
+        {
+            if (targetScale < 0f) targetScale = _highlightScale;
+            float scale = on ? targetScale : 1f;
+            transform.localScale = new Vector3(scale, scale, 1f);
+        }
+
+        /// <summary>
+        /// Programmatically invoke the selection callback.
+        /// Called by SelectorOverlayWidget.CommitHighlighted().
+        /// </summary>
+        public void InvokeSelection()
+        {
+            _onTap?.Invoke();
         }
 
         void WireButton()

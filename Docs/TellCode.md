@@ -43,7 +43,7 @@
 - Self-reviewer marking behavioral items "unverifiable in static screenshot" without re-running playmode lets visible bugs through. Specs that change behavior need an explicit "rebuild scene + take fresh playmode screenshot + verify visually" gate.
 - Asset-side fixes beat code-side compensations. The upside-down tail PNG was a 1-second asset fix from Cesar; my proposed `localScale.y = -1` compensation would have left a confusing artifact for whoever inherits the code.
 
-**A.5 — Phase 8.5: Action button row.** NEXT. Layout: bottom-row action buttons (the `Spin / Golfin / Driver / Fade-Draw` row in `In-Game - Shot Tests 9`). Spec to be written when ready.
+**A.5 — Phase 8.5: Action button row.** SPEC_READY 2026-04-29. Migrated to per-task folder: `Docs/Specs/Active/8_5_action_buttons/`. Layout is the 2x2 corner cluster (SPIN top-left, FADE/DRAW top-right, GOLFIN bottom-left, DRIVER bottom-right) per Figma `In-Game - Shot Tests 9` (4065:15675). DRIVER + GOLFIN are real selectors driven by `BagManager`/`BallManager` via new `ClubContext`/`BallContext` static-bus + populator pattern (mirrors PlayerContext from 8.3). FADE/DRAW toggles between Straight <-> Fade/Draw (visual + state only; physics deferred to roadmap B). SPIN opens a placeholder big-ball center modal with 5 cardinal-position dot picker. Selector overlay (per Figma `Selector - Club` 10550:99728 / `Selector - Ball` 10550:99730) is shared between both selectors. Kickoff: `Use the golfin-implementer subagent on "8_5_action_buttons"`.
 
 Menu screens NOT in scope yet — deferred to roadmap item C with audit pre-condition.
 

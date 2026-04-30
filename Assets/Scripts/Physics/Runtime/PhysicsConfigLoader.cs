@@ -338,35 +338,69 @@ namespace Golfin.Physics.Runtime
         public static List<ClubSpec> LoadClubSpecs()
         {
             var result = new List<ClubSpec>();
-            var ta = Resources.Load<TextAsset>("Physics/clubs");
+            var ta = Resources.Load<TextAsset>("Data/Clubs");   // CHANGED from "Physics/clubs"
             if (ta == null)
             {
-                Debug.LogWarning("[PhysicsConfigLoader] Physics/clubs.csv not found");
+                Debug.LogWarning("[PhysicsConfigLoader] Data/Clubs.csv not found");
                 return result;
             }
 
-            bool headerSkipped = false;
-            foreach (var raw in ta.text.Split('\n'))
+            string[] lines = ta.text.Split('\n');
+            if (lines.Length < 2) return result;
+
+            // Build header index (column name -> index)
+            var headerCells = lines[0].Split(',');
+            var headerIndex = new Dictionary<string, int>();
+            for (int h = 0; h < headerCells.Length; h++)
+                headerIndex[headerCells[h].Trim()] = h;
+
+            // Required physics columns
+            if (!headerIndex.ContainsKey("id") ||
+                !headerIndex.ContainsKey("ballSpeedMps") ||
+                !headerIndex.ContainsKey("launchAngleDeg") ||
+                !headerIndex.ContainsKey("spinRateRpm") ||
+                !headerIndex.ContainsKey("expectedCarryYd"))
             {
-                var line = raw.Trim();
+                Debug.LogWarning("[PhysicsConfigLoader] Data/Clubs.csv is missing one or more required physics columns " +
+                                 "(id, ballSpeedMps, launchAngleDeg, spinRateRpm, expectedCarryYd) — physics will use defaults");
+                return result;
+            }
+
+            int idxId    = headerIndex["id"];
+            int idxSpeed = headerIndex["ballSpeedMps"];
+            int idxAngle = headerIndex["launchAngleDeg"];
+            int idxSpin  = headerIndex["spinRateRpm"];
+            int idxCarry = headerIndex["expectedCarryYd"];
+
+            for (int i = 1; i < lines.Length; i++)
+            {
+                var line = lines[i].Trim();
                 if (line.Length == 0 || line.StartsWith("#")) continue;
-                if (!headerSkipped) { headerSkipped = true; continue; }
 
-                var parts = line.Split(',');
-                if (parts.Length < 5) continue;
+                // CSV may contain quoted fields with embedded commas in the `info` column —
+                // reuse the quote-aware parser pattern (see ClubDatabaseCSV.ParseCSVLine).
+                var parts = ParseCSVLine(line);
+                if (parts.Count <= idxCarry) continue;  // not enough cells
 
-                if (!float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float,
+                string id = parts[idxId].Trim().Trim('"');
+                if (string.IsNullOrEmpty(id)) continue;
+
+                if (!float.TryParse(parts[idxSpeed].Trim(),
+                        System.Globalization.NumberStyles.Float,
                         System.Globalization.CultureInfo.InvariantCulture, out float speed)) continue;
-                if (!float.TryParse(parts[2].Trim(), System.Globalization.NumberStyles.Float,
+                if (!float.TryParse(parts[idxAngle].Trim(),
+                        System.Globalization.NumberStyles.Float,
                         System.Globalization.CultureInfo.InvariantCulture, out float angle)) continue;
-                if (!float.TryParse(parts[3].Trim(), System.Globalization.NumberStyles.Float,
+                if (!float.TryParse(parts[idxSpin].Trim(),
+                        System.Globalization.NumberStyles.Float,
                         System.Globalization.CultureInfo.InvariantCulture, out float spin)) continue;
-                if (!float.TryParse(parts[4].Trim(), System.Globalization.NumberStyles.Float,
+                if (!float.TryParse(parts[idxCarry].Trim(),
+                        System.Globalization.NumberStyles.Float,
                         System.Globalization.CultureInfo.InvariantCulture, out float carry)) continue;
 
                 result.Add(new ClubSpec
                 {
-                    Id              = parts[0].Trim().Trim('"'),
+                    Id              = id,
                     BallSpeedMps    = fp.FromFloat(speed),
                     LaunchAngleDeg  = fp.FromFloat(angle),
                     SpinRateRpm     = fp.FromFloat(spin),
@@ -374,6 +408,31 @@ namespace Golfin.Physics.Runtime
                 });
             }
             return result;
+        }
+
+        // Quote-aware CSV line parser — handles quoted fields containing commas.
+        static List<string> ParseCSVLine(string line)
+        {
+            var fields  = new List<string>();
+            var current = new System.Text.StringBuilder();
+            bool inQuotes = false;
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+                if (c == '"')
+                {
+                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                    { current.Append('"'); i++; }
+                    else
+                    { inQuotes = !inQuotes; }
+                }
+                else if (c == ',' && !inQuotes)
+                { fields.Add(current.ToString()); current.Clear(); }
+                else
+                { current.Append(c); }
+            }
+            fields.Add(current.ToString());
+            return fields;
         }
     }
 }

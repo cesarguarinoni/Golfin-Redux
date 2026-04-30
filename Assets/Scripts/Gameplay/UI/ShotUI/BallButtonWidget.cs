@@ -37,6 +37,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         protected override void OnClick()
         {
+            // If SelectorDragRouter is present, it owns the open/close lifecycle.
+            // Suppress legacy direct open to avoid double-open after router's OnPointerUp.
+            if (GetComponent<SelectorDragRouter>() != null) return;
             if (_selectorOverlay != null) _selectorOverlay.Open(SelectorOverlayWidget.Kind.Ball);
         }
     }

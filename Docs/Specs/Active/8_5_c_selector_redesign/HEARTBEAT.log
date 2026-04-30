@@ -1,0 +1,22 @@
+2026-04-30T10:00:00 activated — reading spec and existing files
+2026-04-30T10:05:00 finished reading all relevant files, starting implementation of 4 new/modified scripts
+2026-04-30T10:20:00 wrote OtherButtonsFader.cs, SelectorDragRouter.cs, rewrote SelectorOverlayWidget.cs, SelectorCardWidget.cs, ActionButtonsBuilder.cs
+2026-04-30T10:30:00 fixed Button.onClick double-open issue in ClubButtonWidget/BallButtonWidget; created SelectorScreenshotHelper.cs for editor screenshot automation
+2026-04-30T10:40:00 attempting computer-use to trigger Unity compile and builder execution for screenshot
+2026-04-30T10:55:00 done, awaiting review — all code written, builder run, screenshots captured
+2026-04-30T11:00:00 activated — addressing SELF_REVIEW_FAIL items (chevron visibility, fader screenshot, STRAIGHT text leak, Golfin screenshot)
+2026-04-30T11:05:00 fixing chevron color in builder and improving screenshot helper
+2026-04-30T11:10:00 triggering builder rebuild via MCP, then capturing screenshots
+2026-04-30T11:15:00 invoking MCP script-execute for builder + screenshot capture
+2026-04-30T11:30:00 builder needed before screenshot — modifying SelectorAutoCapture to call builder
+2026-04-30T10:00:00 activated - addressing SELF_REVIEW_FAIL items
+2026-04-30T10:10:00 opening scene and running builder with arrow fixes
+2026-04-30T10:20:00 running Unity MCP to open scene and capture
+2026-04-30T10:30:00 executing Unity MCP to rebuild and capture
+2026-04-30T10:45:00 waiting for Unity domain reload to pick up arrow fix
+2026-04-30T10:55:00 waiting for Unity to recompile and auto-capture
+2026-04-30T12:00:00 writing report - screenshots pending Unity recompile
+2026-04-30T12:15:00 done - READY_FOR_ARCHITECT_REVIEW. Arrow fixes applied, screenshot capture blocked by Unity compile cycle, v6 captures pending.
+2026-04-30T12:01:34 activated - running v6 capture sequence in edit mode via MCP
+2026-04-30T12:07:35 v6 captures done - club/ball selector screenshots captured - updating report and status
+2026-04-30T12:07:41 done - READY_FOR_SELF_REVIEW. v6 captures confirmed, report updated.

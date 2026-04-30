@@ -1,0 +1,8 @@
+[Verify] LoadClubSpecs returned 7 clubs
+  - club_driver_gf
+  - club_wood_gf
+  - club_iron9_klyro
+  - club_iron7_mireo
+  - club_awedge_fyloe
+  - club_pwedge_royal
+  - club_putter_golfinx

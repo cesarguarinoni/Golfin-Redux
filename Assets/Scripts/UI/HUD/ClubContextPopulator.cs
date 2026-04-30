@@ -33,6 +33,8 @@ namespace Golfin.UI.HUD
 
         void Refresh()
         {
+            if (FakeStateLock.IsLocked) return;
+
             var bag = BagManager.Instance;
             var db  = ClubDatabaseCSV.Instance;
             if (bag == null || db == null) { ClubContext.Reset(); return; }

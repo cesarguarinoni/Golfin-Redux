@@ -1,8 +1,0 @@
-id,ball_speed_mps,launch_angle_deg,spin_rate_rpm,expected_carry_yd,notes
-Driver,75.0,10.9,2686,275,PGA Tour avg
-Iron3,65.0,10.4,4404,212,
-Iron5,57.0,14.1,5280,194,
-Iron7,52.5,16.3,7097,172,per TUNING §7
-Iron9,48.5,20.0,8647,152,
-PitchingWedge,46.0,24.0,9300,136,
-SandWedge,40.0,28.0,10000,110,

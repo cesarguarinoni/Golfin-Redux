@@ -101,14 +101,16 @@ namespace Golfin.Inventory
                     baseDistance       = GetInt("baseDistance"),
                     portraitSpriteName = Get("portraitSprite"),
                     portraitFullName   = Get("portraitFull"),
+                    controlSpriteName  = Get("controlSprite"),
                     maxLevel           = GetInt("maxLevel", 119),
                     info               = Get("info"),
                 };
 
                 if (string.IsNullOrEmpty(club.clubId)) return null;
 
-                club.portraitSprite = LoadSprite(PortraitPath, club.portraitSpriteName);
-                club.portraitFull   = LoadSprite(FullPath,     club.portraitFullName);
+                club.portraitSprite = LoadSprite(PortraitPath,      club.portraitSpriteName);
+                club.portraitFull   = LoadSprite(FullPath,          club.portraitFullName);
+                club.controlSprite  = LoadSprite("Clubs/Controls",  club.controlSpriteName);
 
                 return club;
             }

@@ -35,6 +35,8 @@ namespace Golfin.UI.HUD
 
         void Refresh()
         {
+            if (FakeStateLock.IsLocked) return;
+
             var mgr = CharacterManager.Instance;
             var db  = CharacterDatabaseCSV.Instance;
 

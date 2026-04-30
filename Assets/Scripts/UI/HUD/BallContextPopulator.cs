@@ -25,6 +25,8 @@ namespace Golfin.UI.HUD
 
         void Refresh()
         {
+            if (FakeStateLock.IsLocked) return;
+
             var bm = BallManager.Instance;
             var db = BallDatabaseCSV.Instance;
             if (bm == null || db == null) { BallContext.Reset(); return; }

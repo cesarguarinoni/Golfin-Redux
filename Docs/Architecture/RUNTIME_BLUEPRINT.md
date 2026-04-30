@@ -9,7 +9,7 @@
 > - **Code** — when implementing a task that adds/changes a manager API, asmdef ref, asset path, or namespace, add a "Blueprint updates:" line to the done report listing the diffs to this file. If Architect's spec already encoded the change, just confirm it landed.
 > - When in doubt, update. Stale > missing.
 >
-> **Last updated:** 2026-04-29 (added §1.5 UI Coordinate System after canvas-scaler migration)
+> **Last updated:** 2026-04-30 (added §10 Editor Tooling — CaptureHelper + FakeStateLock; renumbered §10→§11)
 
 ---
 
@@ -69,7 +69,7 @@ The project currently has `Golfin.Gameplay.UI.autoReferenced = true` (set during
 
 The populator MonoBehaviour must be added to a scene GameObject that runs alongside the Assembly-CSharp manager (e.g. the same scene root that holds `CharacterManager`). If the manager isn't in the scene, the populator's `OnEnable` no-ops and the widget shows static-class defaults — acceptable for editor-only contexts like LabScaffold.
 
-Use this pattern for any future widget that needs to reach across the asmdef boundary into Assembly-CSharp.
+Use this pattern for any future widget that needs to reach across the asmdef boundary into Assembly-CSharp. *(See §10 — Editor Tooling for the `FakeStateLock` + `CaptureHelper` fake-state injection pattern that builds on top of these contexts.)*
 
 ---
 
@@ -83,7 +83,7 @@ When a widget in `Golfin.Gameplay.UI` needs CharacterManager state but cannot re
 - **PlayerContextPopulator** (`Golfin.UI.HUD` namespace, file: `Assets/Scripts/UI/HUD/PlayerContextPopulator.cs`) — MonoBehaviour in the `Assembly-CSharp` bucket. Subscribes to `CharacterManager.OnCharacterSelected`, pulls `CharacterDatabaseCSV.GetCharacter(id).characterName` / `.portraitSprite` + `GetPlayerCharacter(id).currentLevel`, writes to `PlayerContext`, raises `OnChanged`.
 - **Widget** (`PlayerCardWidget`) subscribes to `PlayerContext.OnChanged` only — never touches Assembly-CSharp types.
 
-The same pattern applies to any future widget in `Golfin.Gameplay.UI` that needs Assembly-CSharp manager state. `HoleContext` (for hole metadata) uses a simpler variant where `PhysicsLabController` (in the Viewer asmdef) populates the static directly via reflection.
+The same pattern applies to any future widget in `Golfin.Gameplay.UI` that needs Assembly-CSharp manager state. `HoleContext` (for hole metadata) uses a simpler variant where `PhysicsLabController` (in the Viewer asmdef) populates the static directly via reflection. *(For editor-time fake population — driving these contexts without entering playmode and without the populator overwriting the fakes — see §10 — Editor Tooling.)*
 
 **Asmdef note:** `Golfin.Gameplay.UI.asmdef` is `autoReferenced: true`. Adding `Assembly-CSharp` to its references array creates a build-order cycle (Unity's Bee system compiles named asmdefs before Assembly-CSharp). Switching back to `autoReferenced: false` would require auditing every Assembly-CSharp file that uses Gameplay.UI types — out of scope. Stay with `autoReferenced: true` + the static-bus pattern.
 
@@ -398,7 +398,73 @@ Two ways:
 
 ---
 
-## 10 — Update Log
+## 10 — Editor Tooling
+
+Editor-only utilities that exist purely to support development workflow. Not part of the runtime, not shipped to device.
+
+### CaptureHelper — synchronous Game View screenshots + fake-state presets
+
+**File:** `Assets/Scripts/Editor/CaptureHelper.cs` (`Golfin.EditorTools` namespace, `Assembly-CSharp-Editor`).
+**Lock flag:** `Assets/Scripts/Gameplay/UI/ShotUI/HUD/FakeStateLock.cs` (`Golfin.Gameplay.UI.HUD.FakeStateLock`, runtime asmdef so populators can reference it).
+
+**Why this exists.** Multiple Phase 8 tasks failed verification because of screenshot-timing issues: `ScreenCapture.CaptureScreenshot(path)` is async and silently no-ops while the editor is paused (the render loop stops emitting `WaitForEndOfFrame` during pause); pausing-then-capturing yields nothing; capturing-then-pausing risks losing the state of interest. CaptureHelper replaces that path with a synchronous reflection-based grab of the GameView's internal `RenderTexture`, plus fake-state preset menu items so UI verification doesn't require playmode at all.
+
+**The two problems it solves:**
+
+1. **Capture timing.** `CaptureHelper.SnapGameView()` (menu: `GOLFIN > Capture > Snap Game View`, shortcut Ctrl+Shift+Alt+S) reads the GameView RenderTexture directly via reflection (`m_RenderTexture` / `m_TargetTexture` / `m_RenderTarget`) and writes a Y-flipped PNG to `Docs/Diagnostics/_capture/`. Synchronous, works in EditMode, works while paused, works during running playmode. Falls back to `ScreenCapture.CaptureScreenshotAsTexture()` with a warning if reflection fails (future Unity field renames). For mid-animation captures from a coroutine, use `CaptureHelper.SnapAtEndOfFrameAndPause(label)` — captures FIRST, pauses AFTER, never the other way.
+
+2. **Fake state injection.** Menu items `GOLFIN > Capture > Fake State - <preset>` populate the static-bus contexts (PlayerContext, HoleContext, WindContext, BallContext, ClubContext, ShotModeContext, SpinContext, GameSession) with sensible scenario data so widgets render without any game loop running. Current presets:
+   - `Reset All` — clears all contexts to defaults; clears `FakeStateLock`.
+   - `Mid Aim (Camila, Lomond H1, Driver, GOLFIN ball)` — full populated tee shot.
+   - `Putt (Olivia, Lomond H7, Putter)` — putt scenario, alternate character.
+   - `Strong Wind (extreme indicator test)` — Wind context only.
+   - `Fake State Lock - ON` / `Fake State Lock - OFF` — manual lock toggle.
+
+### FakeStateLock + populator cooperation
+
+Runtime `*Populator` MonoBehaviours (PlayerContextPopulator, BallContextPopulator, ClubContextPopulator) subscribe to manager events and call `Refresh()` to rewrite the contexts from authoritative sources. In a fake-state session, this would stomp the injected values within milliseconds.
+
+The `FakeStateLock.IsLocked` flag (default `false`) gates this. Each preset sets `FakeStateLock.IsLocked = true` before populating. Each populator's `Refresh()` early-returns if the lock is set:
+
+```csharp
+void Refresh()
+{
+    if (FakeStateLock.IsLocked) return;
+    // ...normal sync logic...
+}
+```
+
+Production playmode is unaffected — the lock is only ever set by editor menu actions. Restart playmode (or hit `Reset All`) to clear it.
+
+### Maintenance protocol — STANDING RULE
+
+When any future task introduces a new static-bus context under `Assets/Scripts/Gameplay/UI/ShotUI/HUD/` (or any equivalent), that same task MUST:
+
+1. Extend `CaptureHelper.FakeReset` to call the new context's `Reset()`.
+2. Extend `CaptureHelper.FakeMidAim` to set sensible non-default values for the new context.
+3. Update `FakeMidAim`'s closing `Debug.Log` line to include the new context's values.
+4. Add a dedicated preset if the new context has interesting variation worth isolating (e.g. `Strong Wind` for `WindContext`).
+5. **If the new context has a runtime `*Populator` companion**, add `if (FakeStateLock.IsLocked) return;` as the first line of its `Refresh()` so the lock works.
+
+The Architect MUST flag missing fake-state extensions during architect-review when reviewing tasks that add new contexts. Self-reviewer also has a checkpoint for this (see `.claude/agents/golfin-self-reviewer.md` Step 5).
+
+### Output convention
+
+All captures land in `Docs/Diagnostics/_capture/` with timestamped filenames. After capture, copy/rename the relevant ones into the task's `Docs/Specs/Active/<task>/screenshots/` folder. Don't litter `_capture/` with task-specific names — keep it as a scratchpad.
+
+### Banned
+
+- `ScreenCapture.CaptureScreenshot(path)` — async, fails silently when paused, banned project-wide. Only `ScreenCapture.CaptureScreenshotAsTexture()` is acceptable, and only as the internal fallback inside `CaptureHelper`. Code session rules in `CLAUDE.md` § Screenshots enforce this.
+
+### Lesson — `CaptureScreenshotAsTexture` reads OS swap chain, not GameView
+
+In the Unity Editor, `ScreenCapture.CaptureScreenshotAsTexture()` returns the OS display's swap chain frame, NOT the GameView's render target. In editor mode this means it captures Editor chrome or returns black (depending on whether GameView is the active focused window). The reliable path is reflection into `UnityEditor.GameView`'s internal `RenderTexture` field, then `ReadPixels` into a `Texture2D` (with Y-flip — Unity's RT origin is bottom-left). This is documented in `tasks/lessons.md` for future reference.
+
+---
+
+## 11 — Update Log
+
+- **2026-04-30** — Added §10 Editor Tooling. Documents `CaptureHelper.cs` (synchronous GameView RT reflection capture, replacing async `ScreenCapture.CaptureScreenshot`), `FakeStateLock` runtime flag, fake-state preset menu items, populator cooperation pattern, and the standing maintenance protocol when adding new static-bus contexts. Cross-referenced from §2 and §3. Renumbered Update Log §10 → §11. Built on the `capture_helper` task (Cesar approved 2026-04-29) plus the populator-lock follow-up (2026-04-30).
 
 - **2026-04-28** — Initial creation during Phase 8.3 handoff prep. Verified CharacterManager / CharacterDatabaseCSV / PlayerCharacterData / CharacterDataRuntime / BagManager / HoleMetadata / LabHoleBinder / PhysicsLabController.OnHoleLoaded APIs and asset locations. Marked the rest NEEDS VERIFICATION.
 - **2026-04-28** — Phase 8.3 attempt 1 rejected. Added §1 asmdef workaround pattern (static context + Assembly-CSharp populator) after discovering `autoReferenced: true` blocks the simple Assembly-CSharp ref path. Added §4 9-slice border caveat for `Indicator - Wind-Hole.png` (sprite borders not set in importer; Image Type Sliced will distort without manual fix).

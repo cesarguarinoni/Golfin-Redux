@@ -4,7 +4,8 @@
 Fires on SubagentStop and Stop events. Walks every active task folder under
 Docs/Specs/Active/, reads STATUS.md, and prints the next action to STDOUT (which
 Claude Code surfaces in the terminal). For state changes that need Cesar's
-attention, also fires a Windows toast notification AND optionally an email.
+attention, also fires a desktop notification (Windows / macOS / Linux) AND
+optionally an email.
 
 This hook does NOT spawn subagents directly (Claude Code handles delegation
 based on subagent description fields). It just makes the next-step crystal
@@ -33,7 +34,10 @@ State transitions handled:
 
 Notification channels:
 
-  - Windows toast (always tried; opt-out via NOTIFY_TOAST=0 env)
+  - Desktop notification (always tried; opt-out via NOTIFY_TOAST=0 env)
+      * Windows: PowerShell System.Windows.Forms.NotifyIcon
+      * macOS:   osascript display notification
+      * Linux:   notify-send (if available)
   - Email via SMTP (opt-in via .claude/notify_config.json - see template)
 
 Config file (optional): .claude/notify_config.json
@@ -59,6 +63,7 @@ from datetime import datetime, timezone
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 ACTIVE_DIR = REPO_ROOT / "Docs" / "Specs" / "Active"
+COMPLETED_DIR = REPO_ROOT / "Docs" / "Specs" / "Completed"
 TEMPLATE_NAME = "_TEMPLATE"
 CONFIG_PATH = REPO_ROOT / ".claude" / "notify_config.json"
 
@@ -121,12 +126,9 @@ def load_notify_config():
         return defaults
 
 
-def notify_windows(title, message):
-    """Fire a Windows toast. Best-effort; never raises."""
-    if os.environ.get("NOTIFY_TOAST", "1") == "0":
-        return
+def _notify_windows(title, message):
+    """Windows toast via PowerShell. Best-effort; never raises."""
     try:
-        # Escape single quotes in inputs for PowerShell safety.
         title_esc = title.replace("'", "''")
         message_esc = message.replace("'", "''")
         ps_script = (
@@ -148,6 +150,52 @@ def notify_windows(title, message):
         )
     except Exception:
         pass
+
+
+def _notify_macos(title, message):
+    """macOS notification via osascript. Best-effort; never raises.
+
+    Strips double-quotes and backslashes from inputs to avoid breaking the
+    AppleScript string literal. Newlines collapse to spaces (display
+    notification doesn't render multi-line bodies anyway)."""
+    try:
+        def _sanitize(s):
+            return s.replace("\\", "").replace('"', "").replace("\n", " ")
+        title_s = _sanitize(title)
+        message_s = _sanitize(message)
+        applescript = f'display notification "{message_s}" with title "{title_s}"'
+        subprocess.Popen(
+            ["osascript", "-e", applescript],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        pass
+
+
+def _notify_linux(title, message):
+    """Linux notification via notify-send. Best-effort; never raises."""
+    try:
+        subprocess.Popen(
+            ["notify-send", title, message],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        pass
+
+
+def notify_desktop(title, message):
+    """Fire a desktop notification on the current OS. Best-effort; never raises."""
+    if os.environ.get("NOTIFY_TOAST", "1") == "0":
+        return
+    platform = sys.platform
+    if platform == "win32":
+        _notify_windows(title, message)
+    elif platform == "darwin":
+        _notify_macos(title, message)
+    else:
+        _notify_linux(title, message)
 
 
 def notify_email(title, message, config):
@@ -179,9 +227,9 @@ def notify_email(title, message, config):
 
 
 def alert_cesar(task, status, summary, where_lines, config):
-    """Fire toast + email + log to file + return formatted lines for terminal output."""
+    """Fire desktop notification + email + log to file + return formatted lines for terminal output."""
     body = f"Task: {task}\n" + "\n".join(where_lines)
-    notify_windows(f"GOLFIN: {summary}", body)
+    notify_desktop(f"GOLFIN: {summary}", body)
     notify_email(f"{summary} ({task})", body, config)
     log_alert(task, status, summary, where_lines)
     out = [f"  [{task}] {status}", f"    -> {summary}"]
@@ -228,6 +276,17 @@ def main():
             next_steps.append(
                 f"  [{task}] STATUS={status} (UNKNOWN STATE; check STATUS.md)"
             )
+        elif status == "DONE":
+            # Auto-move to Completed/. Idempotent: if target already exists, skip.
+            try:
+                COMPLETED_DIR.mkdir(parents=True, exist_ok=True)
+                target = COMPLETED_DIR / task
+                if not target.exists():
+                    task_dir.rename(target)
+                    next_steps.append(f"  [{task}] DONE -> moved to Docs/Specs/Completed/")
+            except Exception as e:
+                next_steps.append(f"  [{task}] DONE but move failed: {e}")
+            continue
         elif next_agent == "":
             # In progress (IMPLEMENTER_WORKING) or done. Check heartbeat staleness.
             if status == "IMPLEMENTER_WORKING":

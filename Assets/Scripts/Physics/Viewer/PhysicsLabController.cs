@@ -358,6 +358,13 @@ namespace Golfin.Physics.Viewer
 
         void HandleCameraOrbit()
         {
+            // Block orbit while any action-button selector overlay is open.
+            if (Golfin.Gameplay.UI.ShotUI.OtherButtonsFader.AnyOverlayOpen)
+            {
+                _orbitDragActive = false;  // cancel any in-progress drag
+                return;
+            }
+
             if (_shotController != null && _shotController.IsExternalDragActive) return;
 
             // Orbit only makes sense in Chase mode; Overhead/Ground manage themselves.

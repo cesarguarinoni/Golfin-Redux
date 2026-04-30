@@ -1,5 +1,53 @@
 # Lessons Learned
 
+## ActionButtonsBuilder regeneration WIPES Cesar's manual button configs
+
+**Symptom:** Every time `ActionButtonsBuilder.BuildActionButtons()` is run, it destroys and recreates the button GameObjects, losing any manual changes Cesar made in the Inspector (text width, font style, auto-size, icon sprites, IconArea size).
+
+**Rule:** Before regenerating buttons, check the current scene config. If values differ from the builder defaults, update the builder constants FIRST. The authoritative config snapshot is in the comment block at the top of `BuildActionButtons()`.
+
+**Current authoritative values (as of 2026-04-30):**
+- `IconArea` width = **135** (not 180)
+- Text field width = **120** (not 0/stretch)
+- `fontStyle` = **Bold**
+- `enableAutoSizing` = true, min = 20, max = 30 (not hardcoded 30)
+- `GolfinButton` icon = `S_Controls_Ball_GOLFIN.png`
+- `DriverButton` icon = `S_Menu_Driver_GOLFIN.png`
+
+**Fix applied:** Updated all `BuildButton()` and `BuildCardPrefabGo()` calls in `ActionButtonsBuilder.cs` to use these values. The scene was also patched in-place via script-execute (no regeneration needed).
+
+**Critical Unity layout rule:** A fixed `sizeDelta.x` (e.g. width=120) is IGNORED when `anchorMin.x != anchorMax.x` (stretch anchor). To get a fixed pixel width, you MUST use a non-stretch anchor — e.g. `anchorMin = anchorMax = new Vector2(0.5f, y)` (Middle/Bottom Center). Cesar had to manually change the anchor from stretch to Middle Center to make width=120 work. All text fields in the builder now use center anchors.
+
+
+## Unity Editor screenshots — `ScreenCapture.CaptureScreenshotAsTexture()` reads the OS swap chain, not the GameView
+
+**Symptom (Phase 8 capture_helper task):** First implementation of `CaptureHelper.SnapGameView()` called `ScreenCapture.CaptureScreenshotAsTexture()` and wrote the resulting bytes as a PNG. In editor mode the result was either solid black, or showed the Editor chrome (Hierarchy / Inspector panels) instead of the Game View contents.
+
+**Root cause:** `ScreenCapture.CaptureScreenshotAsTexture()` reads from the OS display's current swap chain frame, not from the Game View's render target. When the Editor is the focused window, that swap chain contains the Editor UI — not the GameView's RT. There is no Unity public API that returns the GameView RT directly.
+
+**Compounding constraint:** the more obvious-looking `ScreenCapture.CaptureScreenshot(path)` (the file-writing variant) is async — it queues the write for the next end-of-frame. While the editor is paused, `WaitForEndOfFrame` never fires, so the capture silently never completes. Pause-then-capture yields nothing. Confirmed Unity bug, multiple issuetracker entries, no fix in user code.
+
+**Fix:** Reflect into `UnityEditor.GameView`'s internal `RenderTexture` field, then `ReadPixels` into a `Texture2D`. Field name varies across Unity versions — try `m_RenderTexture` / `m_TargetTexture` / `m_RenderTarget` and use whichever resolves. Also Y-flip the result — `ReadPixels` returns OpenGL-coordinate-space data (origin bottom-left), so the PNG comes out upside-down without an explicit flip pass.
+
+Code skeleton:
+```csharp
+var gvType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
+var gv = EditorWindow.GetWindow(gvType, false, null, false);
+gv.Repaint();
+foreach (var name in new[] { "m_RenderTexture", "m_TargetTexture", "m_RenderTarget" })
+{
+    var rt = gvType.GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)
+                  ?.GetValue(gv) as RenderTexture;
+    if (rt != null && rt.IsCreated()) { /* ReadPixels + Y-flip + EncodeToPNG */ break; }
+}
+```
+
+**How to apply:** Use `CaptureHelper.SnapGameView()` for all editor-side captures. `ScreenCapture.CaptureScreenshot(path)` is banned project-wide (per `CLAUDE.md` § Screenshots and `RUNTIME_BLUEPRINT.md` §10). `ScreenCapture.CaptureScreenshotAsTexture()` is acceptable only as the internal fallback inside `CaptureHelper` for the case where reflection fails (future Unity field renames) — with a `Debug.LogWarning` so we notice.
+
+**Bonus lesson:** the `WaitForEndOfFrame`-doesn't-fire-while-paused issue means **always capture FIRST, pause AFTER**, never the other way around. `CaptureHelper.SnapAtEndOfFrameAndPause(label)` does this in the right order.
+
+---
+
 ## Unity asmdef — Cannot reference Assembly-CSharp from a named asmdef (build order)
 
 **Symptom (Phase 8.3):** Added `"Assembly-CSharp"` to `Golfin.Gameplay.UI.asmdef` references so `PlayerCardWidget` could call `CharacterManager`/`CharacterDatabaseCSV`. Unity/Bee silently dropped the reference from the generated RSP and the DLL failed to build with no visible error. TundraBuildState updated but DLL timestamp stayed from the previous day.

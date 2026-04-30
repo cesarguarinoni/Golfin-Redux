@@ -44,6 +44,8 @@ namespace Golfin.Inventory
         public Sprite? portraitSprite     = null;
         public string  portraitFullName   = "";
         public Sprite? portraitFull       = null;
+        public string  controlSpriteName  = "";
+        public Sprite? controlSprite      = null;
 
         public int    maxLevel = 119;
         public string info     = "";

@@ -21,16 +21,14 @@ namespace Golfin.Physics.Tests
 {
     public class AerodynamicsTests
     {
-        // Club data matching Resources/Physics/clubs.csv (hardcoded so tests need no Resources.Load)
+        // Club data matching Assets/Resources/Data/Clubs.csv (hardcoded so tests need no Resources.Load)
+        // IDs updated to canonical schema (8.5.A consolidation). Iron3, Iron5, SandWedge dropped — not in canonical CSV.
         private static readonly (string id, float speedMps, float angleDeg, float spinRpm, float expectedYd)[] Clubs =
         {
-            ("Driver",        75.0f, 10.9f,  2686f, 275f),
-            ("Iron3",         65.0f, 10.4f,  4404f, 212f),
-            ("Iron5",         57.0f, 14.1f,  5280f, 194f),
-            ("Iron7",         52.5f, 16.3f,  7097f, 172f),
-            ("Iron9",         48.5f, 20.0f,  8647f, 152f),
-            ("PitchingWedge", 46.0f, 24.0f,  9300f, 136f),
-            ("SandWedge",     40.0f, 28.0f, 10000f, 110f),
+            ("club_driver_gf",    75.0f, 10.9f,  2686f, 275f),
+            ("club_iron7_mireo",  52.5f, 16.3f,  7097f, 172f),
+            ("club_iron9_klyro",  48.5f, 20.0f,  8647f, 152f),
+            ("club_pwedge_royal", 46.0f, 24.0f,  9300f, 136f),
         };
 
         private static ShotInput MakeShot(float speedMps, float angleDeg, float spinRpm = 0f)
@@ -186,17 +184,17 @@ namespace Golfin.Physics.Tests
         public void Aero_ClubCarries_ConstantMode_MidIrons_Within10Percent()
         {
             AssertClubCarriesWithinTolerance(
-                new[] { "Iron3", "Iron5", "Iron7", "Iron9", "PitchingWedge" },
+                new[] { "club_iron7_mireo", "club_iron9_klyro", "club_pwedge_royal" },
                 useLuts: false, tolerancePct: 10f);
         }
 
-        // Driver (75 m/s, S≈0.08) and SandWedge (40 m/s, S≈0.56) span 35 m/s and 7× the spin
-        // parameter. A single Cd+Cl cannot tune both to 10% — that's why LUT mode exists.
+        // Driver (75 m/s, S≈0.08) spans a regime where a single Cd+Cl cannot achieve 10%.
+        // That's why LUT mode exists.
         [Test]
         public void Aero_ClubCarries_ConstantMode_Endpoints_Within20Percent()
         {
             AssertClubCarriesWithinTolerance(
-                new[] { "Driver", "SandWedge" },
+                new[] { "club_driver_gf" },
                 useLuts: false, tolerancePct: 20f);
         }
 
@@ -280,10 +278,10 @@ namespace Golfin.Physics.Tests
         [Test]
         public void Aero_ClubCarries_LutMode_Wedges_Within8Percent()
         {
-            // Wedges (S > 0.4) land near Bearman-Harvey saturation Cl ≈ 0.29.
+            // P.Wedge (S > 0.4) lands near Bearman-Harvey saturation Cl ≈ 0.29.
             // B-H model is tightest here — lift is near its physical max.
             AssertClubCarriesWithinTolerance(
-                new[] { "PitchingWedge", "SandWedge" },
+                new[] { "club_pwedge_royal" },
                 useLuts: true, tolerancePct: 8f);
         }
 
@@ -295,21 +293,21 @@ namespace Golfin.Physics.Tests
             // Q16.16 fixed-point + RK4-at-1/240 gets us to ~14%. 15% is the
             // honest ceiling for this model class at this implementation precision.
             AssertClubCarriesWithinTolerance(
-                new[] { "Iron5", "Iron7", "Iron9" },
+                new[] { "club_iron7_mireo", "club_iron9_klyro" },
                 useLuts: true, tolerancePct: 15f);
         }
 
         [Test]
         public void Aero_ClubCarries_LutMode_LongShots_Within25Percent()
         {
-            // Driver and Iron3 launch at low angles (10–11°) with low spin parameters
-            // (S ≈ 0.08–0.13). At these S values Bearman-Harvey Cl = 0.08–0.12 is
+            // Driver launches at low angle (10.9°) with low spin parameter
+            // (S ≈ 0.08). At this S value Bearman-Harvey Cl = 0.08–0.12 is
             // barely enough to offset gravity at launch. Real Trackman 275 yd driver
             // carry implies effective Cl closer to 0.12–0.15 at launch, outside B-H.
             // This test gate reflects the 1D-B-H model ceiling, not a tuning failure.
             // See Docs/LESSONS_PHYSICS_AERO.md for Options A/B/C to tighten later.
             AssertClubCarriesWithinTolerance(
-                new[] { "Driver", "Iron3" },
+                new[] { "club_driver_gf" },
                 useLuts: true, tolerancePct: 25f);
         }
     }

@@ -28,6 +28,22 @@ namespace Golfin.EditorTools
             return SnapGameViewWithLabel("snap");
         }
 
+        // ────────────────────────────────────────────────────────────────────────
+        // Open the capture output folder in OS file browser (Explorer / Finder).
+        // Creates the folder first if it doesn't exist yet, so the menu item never
+        // silently fails on a fresh checkout.
+        // ────────────────────────────────────────────────────────────────────────
+        [MenuItem("GOLFIN/Capture/Open Capture Folder")]
+        public static void OpenCaptureFolder()
+        {
+            Directory.CreateDirectory(OUT_DIR);
+            string absolute = Path.GetFullPath(OUT_DIR);
+            // RevealInFinder is the cross-platform Unity API — opens Explorer on Windows,
+            // Finder on macOS. The name is a misnomer; it works everywhere Unity runs.
+            EditorUtility.RevealInFinder(absolute);
+            Debug.Log($"[CaptureHelper] Opened {absolute}");
+        }
+
         /// <summary>
         /// Attempts to read the GameView's internal RenderTexture via reflection.
         /// This is the only reliable way to capture Game View content in the Unity Editor —
@@ -141,15 +157,41 @@ namespace Golfin.EditorTools
         // UI widgets can be verified without entering playmode. Every preset ends
         // with a single Debug.Log line summarising what was injected.
         //
+        // Each preset also engages FakeStateLock so runtime *Populator components
+        // (PlayerContextPopulator, BallContextPopulator, ClubContextPopulator) skip
+        // their Refresh() and don't overwrite injected values. Toggle the lock off
+        // via GOLFIN > Capture > Fake State Lock OFF (or restart playmode) to return
+        // to normal runtime population.
+        //
         // STANDING RULE: when a new *Context.cs is added to HUD/, extend:
         //   1. FakeReset  — add Reset() call
         //   2. FakeMidAim — add sensible values + update the closing Debug.Log
         //   3. Add a dedicated preset if the context has interesting variation
+        //   4. If the new context has a runtime *Populator, add a `if (FakeStateLock.IsLocked) return;`
+        //      guard at the top of its Refresh() so the lock works.
         // ────────────────────────────────────────────────────────────────────────
+
+        [MenuItem("GOLFIN/Capture/Fake State Lock - ON")]
+        public static void FakeStateLockOn()
+        {
+            FakeStateLock.IsLocked = true;
+            Debug.Log("[FakeStateLock] ON — runtime populators will skip Refresh()");
+            ReleaseMouseAfterMenu();
+        }
+
+        [MenuItem("GOLFIN/Capture/Fake State Lock - OFF")]
+        public static void FakeStateLockOff()
+        {
+            FakeStateLock.IsLocked = false;
+            Debug.Log("[FakeStateLock] OFF — runtime populators resume Refresh()");
+            ReleaseMouseAfterMenu();
+        }
 
         [MenuItem("GOLFIN/Capture/Fake State - Reset All")]
         public static void FakeReset()
         {
+            FakeStateLock.IsLocked = false; // Reset clears the lock so runtime populators take over again.
+
             PlayerContext.Reset();
             HoleContext.Reset();
             WindContext.Reset();
@@ -166,6 +208,8 @@ namespace Golfin.EditorTools
         [MenuItem("GOLFIN/Capture/Fake State - Mid Aim (Camila, Lomond H1, Driver, GOLFIN ball)")]
         public static void FakeMidAim()
         {
+            FakeStateLock.IsLocked = true; // engage lock so populators don't stomp injected values
+
             // Fix 3: use InGame portraits (not Thumbnails)
             PlayerContext.DisplayName = "CAMILA";
             PlayerContext.Level       = 13;
@@ -222,6 +266,8 @@ namespace Golfin.EditorTools
         [MenuItem("GOLFIN/Capture/Fake State - Putt (Olivia, Lomond H7, Putter)")]
         public static void FakePutt()
         {
+            FakeStateLock.IsLocked = true; // engage lock so populators don't stomp injected values
+
             // Fix 3: use InGame portraits (not Thumbnails)
             PlayerContext.DisplayName = "OLIVIA";
             PlayerContext.Level       = 7;
@@ -277,6 +323,8 @@ namespace Golfin.EditorTools
         [MenuItem("GOLFIN/Capture/Fake State - Strong Wind (extreme indicator test)")]
         public static void FakeStrongWind()
         {
+            FakeStateLock.IsLocked = true; // engage lock — Wind has no populator today, but harmless and consistent
+
             WindContext.SpeedMph         = 25f;
             WindContext.DirectionDegrees = 135f; // SE
             WindContext.Raise();

@@ -1,7 +1,7 @@
 ---
 name: golfin-architect
 description: Use as the FINAL reviewer of UI tasks before Cesar sees them. Activates after the self-reviewer routes a task forward (verdict=FORWARD_TO_ARCHITECT or ESCALATE_TO_ARCHITECT). Reads SPEC.md, IMPLEMENTER_REPORT.md, SELF_REVIEW.md, the screenshot, and the Figma reference. Verifies architectural soundness and visual fidelity, then either approves the task for Cesar or routes back to the Implementer with a concrete fail list. Also use this agent to AUTHOR new specs when Cesar requests one.
-tools: Read, Write, Edit, Glob, Grep, WebFetch, mcp__figma__use_figma, mcp__figma__get_design_context
+tools: Read, Write, Edit, Glob, Grep, WebFetch
 model: claude-opus-4-7
 ---
 
