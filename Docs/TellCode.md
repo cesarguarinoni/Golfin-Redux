@@ -63,9 +63,11 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ## 📌 NEXT — Putter P1 (Roadmap items 1a–1d)
 
-**Spec:** TBD — Architect to write per-task folder under `Docs/Specs/Active/` once Cesar provides putter UI requirements.
+**Spec:** `Docs/Specs/Active/putter_p1_ui/SPEC.md` — SPEC_READY 2026-05-01.
 
-**One-line goal:** Putter mode in lab — toggle, green-only camera, distance-only power, aim-line on green (slope arrows v1). The putter has its own UI variant (similar to the standard shot UI with some changes — to be specified). Phase 2 (in-context tuning) deferred to Loop v1 (Roadmap item 2f).
+**One-line goal:** Putter mode in lab — cone replaced by 140×1000 vertical track with three coloured bands; standard targeting line replaced by a live `BallSimulation`-driven curved polyline; gauge + HoleIndicator switch to meters; top action button row hides; ball selector locks at 50% alpha. The state machine is unchanged — visual re-skin + live prediction. Camera deferred per Cesar ("leave camera for last").
+
+**Kickoff:** `Use the golfin-implementer subagent on "putter_p1_ui"`.
 
 **Roadmap reference:** `Docs/Roadmap.md` §1. Putter Mechanics — Phase 1.
 
