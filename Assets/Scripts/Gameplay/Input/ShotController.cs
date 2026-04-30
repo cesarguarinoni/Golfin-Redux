@@ -312,10 +312,17 @@ namespace Golfin.Gameplay.Input
             if (OnStateChanged == null) return;
             float cc = GetStatBundle().Character.ClubControl;
             int cleanPasses = Mathf.RoundToInt(_config.MaxCleanPassesAtCC0 + cc * _config.CleanPassesPerCC);
+
+            // Compute live aim every frame so the targeting line and any aim-driven UI
+            // can pivot during Idle/Aiming/Pulling/Timing. Final committed aim still uses
+            // the same formula at CommitFlick (which adds degradation).
+            float finetune = DebugFlags.DisableConeFineTune ? 0f : _coneFinetune;
+            float liveAim  = CameraHeadingRadians + finetune * HalfConeAngleRad();
+
             OnStateChanged.Invoke(new ShotInputState(
                 State, PowerNormalized, _coneFinetune, _arrowProgress,
                 _passIndex, _passIndex >= cleanPasses,
-                IsPutt, _aimYawRadians, CameraHeadingRadians));
+                IsPutt, liveAim, CameraHeadingRadians));
         }
     }
 }

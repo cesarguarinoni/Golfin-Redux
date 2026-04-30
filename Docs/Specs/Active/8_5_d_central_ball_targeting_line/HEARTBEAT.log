@@ -1,0 +1,11 @@
+2026-04-30T17:30:00 activated — reading spec and source files
+2026-04-30T17:35:00 code changes done: ShotController.cs liveAim, ShotConeView.cs Idle state, CentralBallWidget.cs created
+2026-04-30T17:40:00 scene wiring: LabScaffold.unity and PhysicsLab_Hole1.unity CentralBall GO added
+2026-04-30T17:45:00 compile verified via unity-mcp-cli npx — Golfin.Gameplay.UI.dll recompiled at 15:49, no errors
+2026-04-30T17:52:00 screenshot taken in play mode — targeting line visible in Idle, CentralBall active with Golfin sprite
+2026-04-30T17:58:00 done, awaiting review
+2026-04-30T19:00:00 activated for CESAR_REJECTED — fixing Bug1 (thumbnail), Bug2 (pivot), Bug3 (targeting line static)
+2026-04-30T19:05:00 Bug1 fix: CentralBallWidget.RefreshSprite now uses SelectedThumbnail ?? SelectedFullSprite
+2026-04-30T19:08:00 Bug3 fix: PhysicsLabController.SetupAtTee and PlaceBallAt now call _shotConeView.SetBallTransform so line can pivot from startup
+2026-04-30T19:13:00 verified: CB sprite=Golfin thumb=Golfin SCV:cam=SET ball=SET — screenshot captured, ball icon visible, targeting line visible with correct pivot
+2026-04-30T19:15:00 done, awaiting review

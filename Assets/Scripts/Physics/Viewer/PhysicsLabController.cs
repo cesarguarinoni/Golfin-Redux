@@ -268,6 +268,10 @@ namespace Golfin.Physics.Viewer
 
             if (ballAnimator != null) ballAnimator.PlaceAtRest(teePos);
 
+            // Update ShotConeView ball transform so targeting line can pivot in Idle state.
+            if (_shotConeView != null && ballAnimator != null)
+                _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
+
             // Update HoleIndicatorWidget ball transform after ball is placed
             var holeWidgetForTee = FindObjectOfType<Golfin.Gameplay.UI.ShotUI.HoleIndicatorWidget>();
             if (holeWidgetForTee != null && ballAnimator != null)
@@ -299,6 +303,10 @@ namespace Golfin.Physics.Viewer
 
             _orbitCenter = pos;
             if (ballAnimator != null) ballAnimator.PlaceAtRest(pos);
+
+            // Update ShotConeView ball transform so targeting line can pivot from the new position.
+            if (_shotConeView != null && ballAnimator != null)
+                _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
 
             Vector3 lookDir = GetDefaultLookDirection();
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);

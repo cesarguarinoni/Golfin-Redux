@@ -219,7 +219,8 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             if (_targetingLine == null) return;
 
-            bool show = state.State is ShotState.Aiming
+            bool show = state.State is ShotState.Idle
+                                    or ShotState.Aiming
                                     or ShotState.Pulling
                                     or ShotState.Timing
                                     or ShotState.Flicking;
