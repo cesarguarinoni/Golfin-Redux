@@ -19,13 +19,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private Image          _image;
         [SerializeField] private RectTransform  _rect;
         [SerializeField] private ShotController _shotController;
-        [SerializeField] private Vector2        _sizePx = new Vector2(100f, 100f);
 
         void Awake()
         {
             if (_rect == null)  _rect  = GetComponent<RectTransform>();
             if (_image == null) _image = GetComponent<Image>();
-            if (_rect != null)  _rect.sizeDelta = _sizePx;
         }
 
         void OnEnable()
