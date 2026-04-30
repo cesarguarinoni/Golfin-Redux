@@ -228,20 +228,28 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             if (!show || _worldCamera == null || _ballTransform == null) return;
 
-            Vector3 ballScreen = _worldCamera.WorldToScreenPoint(_ballTransform.position);
+            // Line is always anchored at canvas center (same position as CentralBallWidget).
+            // Only rotation is computed from world-space aim direction.
+            Vector3 aimDir      = new Vector3(Mathf.Cos(state.AimYawRadians), 0f, Mathf.Sin(state.AimYawRadians));
+            Vector3 targetWorld = _ballTransform.position + aimDir * ControlsConfig.Default.TargetingLineLengthMeters;
+
+            RectTransform parentRect = _targetingLine.parent as RectTransform;
+            Vector3 ballScreen   = _worldCamera.WorldToScreenPoint(_ballTransform.position);
+            Vector3 targetScreen = _worldCamera.WorldToScreenPoint(targetWorld);
             if (ballScreen.z < 0f) { _targetingLine.gameObject.SetActive(false); return; }
 
-            Vector3 aimDir       = new Vector3(
-                Mathf.Cos(state.AimYawRadians), 0f, Mathf.Sin(state.AimYawRadians));
-            Vector3 targetWorld  = _ballTransform.position + aimDir * ControlsConfig.Default.TargetingLineLengthMeters;
-            Vector3 targetScreen = _worldCamera.WorldToScreenPoint(targetWorld);
+            Vector2 ballCanvasPos   = Vector2.zero;
+            Vector2 targetCanvasPos = Vector2.zero;
+            if (parentRect != null)
+            {
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, ballScreen,   null, out ballCanvasPos);
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, targetScreen, null, out targetCanvasPos);
+            }
 
-            Vector2 lineDir = ((Vector2)targetScreen - (Vector2)ballScreen).normalized;
-            float   lineLen = Vector2.Distance(ballScreen, targetScreen);
+            Vector2 lineDir = (targetCanvasPos - ballCanvasPos).normalized;
             float   angle   = Mathf.Atan2(lineDir.y, lineDir.x) * Mathf.Rad2Deg - 90f;
 
-            _targetingLine.anchoredPosition = (Vector2)ballScreen;
-            _targetingLine.sizeDelta        = new Vector2(_targetingLine.sizeDelta.x, lineLen);
+            _targetingLine.anchoredPosition = Vector2.zero;
             _targetingLine.localRotation    = Quaternion.Euler(0f, 0f, angle);
         }
     }
