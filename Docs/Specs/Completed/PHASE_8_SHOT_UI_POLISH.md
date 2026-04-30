@@ -1,7 +1,16 @@
 # PHASE_8_SHOT_UI_POLISH — Wire real Figma art into the shot UI
 
-> **Handoff:** `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md`
-> **Status:** 8.1 + 8.2 + 8.2.5 DONE (2026-04-27). 8.3 next, then 8.4–8.8.
+> **✅ CLOSED 2026-05-01 JST.** Phase 8 declared done.
+>
+> **Closing notes:**
+> - 8.1, 8.2, 8.2.5, 8.3, 8.4 delivered as authored.
+> - 8.5 expanded mid-phase into sub-tasks 8.5.A (csv consolidation), 8.5.B (lab inventory seeder), 8.5.C (selector redesign), 8.5.D (central ball + targeting line). All in `Docs/Specs/Completed/8_5_*/`.
+> - **8.6 (ball+club selectors) — DELIVERED as 8.5.C.** Selector overlay (hold-to-slide + tap-to-modal) shipped against Figma frame `12942:1079`.
+> - **8.7 (centerpiece ball + trail) — DELIVERED as 8.5.D.** Central ball UI sprite + always-on targeting line shipped against Figma frame `12941:7178`.
+> - **8.8 (polish/tests/smoke) — SKIPPED.** Polish folded into Loop v1 (next roadmap item, where putter HUD will exercise the same elements in real gameplay context). The 6 unit tests listed in 8.8 were nice-to-have but not load-bearing — Phase 7 already covers state machine behavior with 83 tests. The full-screen pixel-diff integration check is rolled into Putter P1 lab UI work.
+>
+> **Original handoff path:** `Docs/Specs/Active/PHASE_8_SHOT_UI_POLISH.md` (now in `Completed/`).
+> **Original status:** 8.1 + 8.2 + 8.2.5 DONE (2026-04-27). 8.3 next, then 8.4–8.8.
 > **Update 2026-04-27:** Inserted Part 8.2.5 (Club Handle sprite swap) mid-phase — was missing from the original phasing. Now landed.
 > **Branch:** `phase-8-shot-ui`. Pre-merge tag: `pre-phase-8`.
 >

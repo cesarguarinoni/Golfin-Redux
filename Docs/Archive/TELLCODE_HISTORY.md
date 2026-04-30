@@ -4,19 +4,56 @@
 >
 > **Index** (most recent first):
 >
-> 1. Phase 7 Part F-Hotfix — Ball placement robustness + automated tests (DONE 2026-04-24)
-> 2. Phase 7 Part F — Putt mode + debug toggles + ball placement (DONE 2026-04-24)
-> 3. PhysicsLab migrate to scaffold + multi-hole picker (DONE 2026-04-24)
-> 4. Phase 7 Part E — PhysicsLab_Hole1 integration (DONE 2026-04-23)
-> 5. Phase 7 Parts A–D — Shot Controls v1 input layer + cone UI (DONE 2026-04-23)
-> 6. Bulletproof terrain B/B'/B'2 diagnostic chain (SUPERSEDED 2026-04-25)
-> 7. Bulletproof terrain (SUPERSEDED 2026-04-24)
-> 8. Ball-through-green diagnosis (SUPERSEDED 2026-04-25)
-> 9. ARCHITECTURAL PIVOT to baked-data sim (DONE merged 2026-04-25)
-> 10. Real-conditions terrain fall-through fix (SUPERSEDED 2026-04-25)
-> 11. History Log — one-line summaries of all completed tasks (most recent first)
+> 1. **Phase 8 Shot UI Polish — CLOSED 2026-05-01** ⭐ NEW
+> 2. Phase 7 Part F-Hotfix — Ball placement robustness + automated tests (DONE 2026-04-24)
+> 3. Phase 7 Part F — Putt mode + debug toggles + ball placement (DONE 2026-04-24)
+> 4. PhysicsLab migrate to scaffold + multi-hole picker (DONE 2026-04-24)
+> 5. Phase 7 Part E — PhysicsLab_Hole1 integration (DONE 2026-04-23)
+> 6. Phase 7 Parts A–D — Shot Controls v1 input layer + cone UI (DONE 2026-04-23)
+> 7. Bulletproof terrain B/B'/B'2 diagnostic chain (SUPERSEDED 2026-04-25)
+> 8. Bulletproof terrain (SUPERSEDED 2026-04-24)
+> 9. Ball-through-green diagnosis (SUPERSEDED 2026-04-25)
+> 10. ARCHITECTURAL PIVOT to baked-data sim (DONE merged 2026-04-25)
+> 11. Real-conditions terrain fall-through fix (SUPERSEDED 2026-04-25)
+> 12. History Log — one-line summaries of all completed tasks (most recent first)
 >
 > Anything load-bearing for current work stays in `Docs/TellCode.md`. If you need detail on something old, it's here.
+
+---
+
+## ✅ DONE — Phase 8 Shot UI Polish — CLOSED 2026-05-01
+
+Umbrella spec: `Docs/Specs/Completed/PHASE_8_SHOT_UI_POLISH.md` (with closing notes).
+
+**What shipped (parts in execution order):**
+
+- **8.1 — Cone restyle** (DONE 2026-04-27). `ConeBandPalette`, `ConeMeshGraphic` (filled grey triangle + 3 horizontal band-line quads), `TimingSlabGraphic` (trapezoidal slab travelling up the cone), `ShotConeView.SetupSlab/UpdateSlab`. Verified visually against `Docs/Reference/In-game UI/Timing Arrows.png`.
+- **8.2 — Power gauge widget** (DONE 2026-04-27). `PowerGaugeGraphic` (procedural arc ring with vertex-color gradient: green→yellow→red→maroon-overpower), `PowerGaugeWidget` coordinator, `Indicator - Power.png` background, pct + yards TMP children. 11 in-game UI PNG TextureType fixes (Default → Sprite). Post-ack bug fixes: handle/cone height sync, cone base-Y alignment.
+- **8.2.5 — Club Handle sprite swap + scale-with-pull** (DONE 2026-04-27). `ClubSelectionBroadcast` static event bus (avoids circular asmdef dep), `ClubHandleSpriteBinder` (caches 4 GOLFIN sprites), `PhysicsLabController.OnClubChanged`, `ShotConeView.UpdateClubHandle` localScale lerp 1.0→1.3 with PowerNormalized, `ClubHandleDragger._coneGraphic` live-read (no more hardcoded 600px).
+- **8.3 — Player card + Hole card + Settings icon** (DONE redo 2026-04-28; rejected attempt 1 + redo blocks archived in spec folder). Established the **PlayerContext + PlayerContextPopulator pattern** (static bus in `Golfin.Gameplay.UI.HUD` namespace + populator in `Assembly-CSharp` side that reads `CharacterManager` + `CharacterDatabaseCSV` and writes to the static bus). Three top-of-screen widgets: PlayerCard (left), HoleCard (right), SettingsButton (top-right corner). Per-task folder: `Docs/Specs/Completed/8_3_topbar/`.
+- **8.4 — Wind + Hole indicators** (DONE 2026-04-29). `WindIndicator` (top-left, second row) + `HoleIndicator` (top-right, sliding chip + fading tail). Per-hole wind data via new `windSpeedMph`, `windDirectionDegrees` columns in `Assets/Data/HoleDatabase.csv`. Pin position sourced via prefix match on `Flag_1` GO in `PhysicsLabController.OnHoleLoaded`. Three rounds total in the multi-agent pipeline (v1 had 6 FAILs, v2 closed 4, v3 fixed chip-slide hierarchy + always-visible distance-scaled tail). Ball multiplication bug also fixed (BallAnimator parents to transform + OnDestroy cleans up). Per-task folder: `Docs/Specs/Completed/8_4_indicators/`.
+- **8.5 — Action button row** (expanded into A/B/C/D sub-tasks 2026-04-30):
+  - **8.5.A** — CSV consolidation (clubs.csv + balls.csv → unified inventory schema). Per-task folder: `Docs/Specs/Completed/8_5_a_csv_consolidation/`.
+  - **8.5.B** — Lab inventory seeder (default Driver/PuttAce in lab; populated `BagManager`/`BallManager` static busses). Per-task folder: `Docs/Specs/Completed/8_5_b_lab_inventory_seeder/`.
+  - **8.5.C** — Selector redesign (hold-to-slide + tap-to-modal). Replaced original 8.6 scope. Per-task folder: `Docs/Specs/Completed/8_5_c_selector_redesign/`.
+  - **8.5.D** — Central ball sprite + always-on TargetingLine. Replaced original 8.7 scope. `ShotController._aimYawRadians` now computed continuously in `PublishState` (was only at fire time). Per-task folder: `Docs/Specs/Completed/8_5_d_central_ball_targeting_line/`.
+  - 2×2 SPIN/FADE-DRAW/GOLFIN/DRIVER cluster + SpinPanel from the original 8.5 spec landed in `Docs/Specs/Completed/8_5_action_buttons/`.
+- **8.6 (ball+club selectors) — DELIVERED as 8.5.C.** Selector overlay shipped against Figma frame `12942:1079`.
+- **8.7 (centerpiece ball + trail) — DELIVERED as 8.5.D.** Central ball UI sprite + always-on targeting line shipped against Figma frame `12941:7178`.
+- **8.8 (polish/tests/smoke) — SKIPPED.** Polish folded into Loop v1 (next roadmap item, where putter HUD will exercise the same elements in real gameplay context). The 6 unit tests listed in 8.8 were nice-to-have but not load-bearing — Phase 7 already covers state machine behavior with 83 tests. The full-screen pixel-diff integration check is rolled into Putter P1 lab UI work.
+
+**Adjacent housekeeping closed in the same window:**
+- BallSimulation A3 plumbing cleanup (2026-04-27) — deleted `DiagPerStepSink`/`DiagPerStepEnabled`/`DiagStepFrame` fields + their two consumer blocks in `RunRollPhase`/`RunPuttPhase`. 198/198 PASS. Commit `238a8f67`.
+- Texture Experiment Phases 1+2 (2026-04-27 → 2026-04-28) — 25 CC0 textures, 9 TerrainLayers + 7 overlay materials duplicated for `Hole_01_Experimental_Geo.unity`. Closing verdict: net positive but not promotion-ready; pure source-substitution hitting diminishing returns; next big jump is shader work. Findings + ranked future plans: `Docs/Specs/Queued/TEXTURE_EXPERIMENT_FINDINGS_AND_PLAN.md`. One immediate standalone candidate: bunker sand swap (specced in findings doc).
+- capture_helper tooling (DONE 2026-04-29) — `Assets/Scripts/Editor/CaptureHelper.cs`: synchronous GameView capture via RT reflection (`GrabGameViewRT()`), Y-flip, 4 fake-state presets (Reset/MidAim/Putt/StrongWind), all 8 HUD contexts wired with real sprites. `GOLFIN > Capture` menu live. Known follow-on: `fake_state_populator_gate` — PlayerContextPopulator in LabScaffold overrides fake player name; needs a FakeStateGate flag across runtime populators.
+
+**Pipeline lessons filed during Phase 8:**
+- Anchor convention mismatch is a silent failure mode — if widget code computes canvas-space-from-left X but the RectTransform is right-anchored with right-pivot, math goes the wrong direction. Always verify anchor/pivot in the builder when reading widget coordinate assumptions.
+- Self-reviewer marking behavioral items "unverifiable in static screenshot" without re-running playmode lets visible bugs through. Specs that change behavior need an explicit "rebuild scene + take fresh playmode screenshot + verify visually" gate.
+- Asset-side fixes beat code-side compensations. Upside-down tail PNG was a 1-second asset fix from Cesar; proposed `localScale.y = -1` compensation would have left a confusing artifact for whoever inherits the code.
+- Static-context-bus + populator + widget pattern now has 6 instances (PlayerContext, HoleContext, GameSession, ClubContext, BallContext, plus the ShotInputState publisher). Skill candidate flagged for the 7th instance (memory #23).
+
+**Multi-agent pipeline run rate during Phase 8:** four full chains (8.4, 8.5.A, 8.5.B, 8.5.C, 8.5.D) — each going implementer → self-reviewer → architect, with architect-driven redos per round where needed. Pipeline policy locked 2026-04-30 (memory #23): architect-as-final-reviewer stays, per-role models already optimal, contract-style lighter specs to be tested cautiously on next small task, fan-out candidates flagged for Loop v1 ball state machine.
 
 ---
 
