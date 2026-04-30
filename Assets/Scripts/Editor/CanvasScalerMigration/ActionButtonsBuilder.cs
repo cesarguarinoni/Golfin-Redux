@@ -570,6 +570,11 @@ public static class ActionButtonsBuilder
         iconAreaRt.anchorMax = new Vector2(0.5f, 1f);
         iconAreaRt.pivot     = new Vector2(0.5f, 1f);
         iconAreaRt.anchoredPosition = Vector2.zero;
+        // Dark navy background covers the white top area of Button-All so it fades cleanly
+        var iconAreaBg = iconAreaRt.gameObject.AddComponent<Image>();
+        iconAreaBg.sprite = null;
+        iconAreaBg.color  = new Color(0f, 30f/255f, 57f/255f, 1f);
+        iconAreaBg.raycastTarget = false;
 
         // Icon (stretch inside IconArea, insets 33)
         var iconRt = CreateRectTransform("Icon", iconAreaRt);
@@ -671,6 +676,11 @@ public static class ActionButtonsBuilder
         iconAreaRt.anchorMax = new Vector2(0.5f, 1f);
         iconAreaRt.pivot     = new Vector2(0.5f, 1f);
         iconAreaRt.anchoredPosition = Vector2.zero;
+        // Dark navy background covers the white top area of Button-All so it fades cleanly
+        var iconAreaBg2 = iconAreaRt.gameObject.AddComponent<Image>();
+        iconAreaBg2.sprite = null;
+        iconAreaBg2.color  = new Color(0f, 30f/255f, 57f/255f, 1f);
+        iconAreaBg2.raycastTarget = false;
 
         var iconRt = CreateRectTransform("Icon", iconAreaRt);
         StretchFill(iconRt);

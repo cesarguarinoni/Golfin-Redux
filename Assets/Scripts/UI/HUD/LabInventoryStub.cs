@@ -36,6 +36,9 @@ namespace Golfin.UI.HUD
             "club_putter_golfinx",  // 3 — Putter
         };
 
+        // True once stub is running in manager-absent mode; used to guard event handlers.
+        bool _active;
+
         void Start()
         {
             // Skip if real managers are present — let the real populators do their thing.
@@ -47,8 +50,53 @@ namespace Golfin.UI.HUD
                 return;
             }
 
+            _active = true;
             SeedClubs();
             SeedBalls();
+
+            // Own selection-request events so overlay card taps update the contexts.
+            // BallContextPopulator / ClubContextPopulator no-op in stub mode (no managers),
+            // so without these handlers the RequestSelection calls go unanswered.
+            BallContext.OnSelectionRequested  += SelectBallByIndex;
+            ClubContext.OnSelectionRequested  += SelectClubByIndex;
+        }
+
+        void OnDestroy()
+        {
+            if (!_active) return;
+            BallContext.OnSelectionRequested  -= SelectBallByIndex;
+            ClubContext.OnSelectionRequested  -= SelectClubByIndex;
+        }
+
+        void SelectBallByIndex(int idx)
+        {
+            var balls = BallContext.OwnedBalls;
+            if (balls.Count == 0) return;
+            idx = Mathf.Clamp(idx, 0, balls.Count - 1);
+            var e = balls[idx];
+            BallContext.SelectedBallId          = e.BallId;
+            BallContext.SelectedNameLabel       = e.NameLabel;
+            BallContext.SelectedQuantityDisplay = e.QuantityDisplay;
+            BallContext.SelectedThumbnail       = e.Thumbnail;
+            BallContext.SelectedFullSprite      = e.FullSprite;
+            BallContext.SelectedIndex           = idx;
+            BallContext.RaiseSelectedChanged();
+            Debug.Log($"[LabInventoryStub] Ball selected: {e.NameLabel} (idx={idx})");
+        }
+
+        void SelectClubByIndex(int idx)
+        {
+            var bag = ClubContext.EquippedBag;
+            if (bag.Count == 0) return;
+            idx = Mathf.Clamp(idx, 0, bag.Count - 1);
+            var e = bag[idx];
+            ClubContext.SelectedClubId    = e.ClubId;
+            ClubContext.SelectedTypeLabel = e.TypeLabel;
+            ClubContext.SelectedDistance  = e.Distance;
+            ClubContext.SelectedPortrait  = e.Portrait;
+            ClubContext.SelectedIndex     = idx;
+            ClubContext.RaiseSelectedChanged();
+            Debug.Log($"[LabInventoryStub] Club selected: {e.TypeLabel} (idx={idx})");
         }
 
         void SeedClubs()
