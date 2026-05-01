@@ -590,7 +590,9 @@ MonoBehaviour:
   _shotController: {fileID: 1483952040}
   _gauge: {fileID: 1124004900}
   _pctText: {fileID: 552882226}
-  _yardsText: {fileID: 312228809}
+  _distanceText: {fileID: 312228809}
+  _unitMode: 0
+  _maxPuttRangeMeters: 25
 --- !u!1 &9990001
 GameObject:
   m_ObjectHideFlags: 0
@@ -15008,6 +15010,7 @@ GameObject:
   - component: {fileID: 1483952044}
   - component: {fileID: 1483952043}
   - component: {fileID: 1483952045}
+  - component: {fileID: 2300000009}
   m_Layer: 0
   m_Name: LabRoot
   m_TagString: Untagged
@@ -15036,6 +15039,15 @@ MonoBehaviour:
   _ballSpawnPoint: {fileID: 384471843}
   _defaultLookDirection: {x: 0, y: 0, z: 0}
   _orbitSensitivity: 0.5
+  _putterTrack: {fileID: 2300000001}
+  _puttPathRoot: {fileID: 2300000005}
+  _puttPathPredictor: {fileID: 2300000009}
+  _actionButtonRowTop: {fileID: 158318066}
+  _actionButtonFadeDrawButton: {fileID: 109504458}
+  _ballSelectorCanvasGroup: {fileID: 1750912433}
+  _centralBall: {fileID: 2200000005}
+  _powerGaugeWidget: {fileID: 7755260}
+  _holeIndicatorWidget: {fileID: 1466718883}
 --- !u!4 &1483952039
 Transform:
   m_ObjectHideFlags: 0
@@ -15796,6 +15808,7 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 2300000002}
   - {fileID: 1838493590}
   - {fileID: 7755257}
   - {fileID: 1156248956}
@@ -15811,6 +15824,7 @@ RectTransform:
   - {fileID: 693134995}
   - {fileID: 1903183937}
   - {fileID: 2200000002}
+  - {fileID: 2300000006}
   m_Father: {fileID: 1483952039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -17248,6 +17262,37 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &1754648320
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1754648321}
+  m_Layer: 0
+  m_Name: PutterTimingSlab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1754648321
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1754648320}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1761639298
 GameObject:
   m_ObjectHideFlags: 0
@@ -18072,6 +18117,8 @@ MonoBehaviour:
   _slabColorTop: {r: 0.3764706, g: 0.7137255, b: 0.06666667, a: 0.5019608}
   _powerHUD: {fileID: 0}
   _targetingLine: {fileID: 1417103398}
+  _putterTimingSlabRT: {fileID: 2022230116}
+  _putterTrackHeightPx: 1000
 --- !u!224 &1838493590
 RectTransform:
   m_ObjectHideFlags: 0
@@ -19767,6 +19814,81 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -66, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &2022230115
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2022230116}
+  - component: {fileID: 2022230118}
+  - component: {fileID: 2022230117}
+  m_Layer: 0
+  m_Name: PutterTimingSlab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &2022230116
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2022230115}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2300000002}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 140, y: 60}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2022230117
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2022230115}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &2022230118
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2022230115}
+  m_CullTransparentMesh: 1
 --- !u!1 &2032076354
 GameObject:
   m_ObjectHideFlags: 0
@@ -21103,6 +21225,169 @@ MonoBehaviour:
   _image: {fileID: 2200000003}
   _rect: {fileID: 2200000002}
   _shotController: {fileID: 1483952040}
+  _normalSize: 80
+  _puttModeSize: 150
+--- !u!1 &2300000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2300000002}
+  - component: {fileID: 2300000003}
+  - component: {fileID: 2300000004}
+  m_Layer: 0
+  m_Name: PutterTrack
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &2300000002
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300000001}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2022230116}
+  m_Father: {fileID: 1552605528}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
+  m_AnchoredPosition: {x: 0, y: -1453}
+  m_SizeDelta: {x: 140, y: 1000}
+  m_Pivot: {x: 0.5, y: 1}
+--- !u!222 &2300000003
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300000001}
+  m_CullTransparentMesh: 1
+--- !u!114 &2300000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34bb17111e587bf4988382892a2bc867, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.UI.ShotUI::Golfin.Gameplay.UI.ShotUI.PutterTrackGraphic
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  _width: 140
+  _height: 1000
+  _greenBandHeight: 200
+  _amberBandHeight: 300
+  _bandLineThickness: 4
+  _greenBandColor: {r: 0.38431373, g: 0.4509804, b: 0.32156864, a: 1}
+  _amberBandColor: {r: 0.56078434, g: 0.44705883, b: 0.2509804, a: 1}
+  _redBandColor: {r: 0.47843137, g: 0.24313726, b: 0.24313726, a: 1}
+  _gradientEdge: {r: 0, g: 0, b: 0, a: 0.15}
+  _gradientCenter: {r: 0, g: 0, b: 0, a: 0.5}
+--- !u!1 &2300000005
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2300000006}
+  - component: {fileID: 2300000007}
+  - component: {fileID: 2300000008}
+  m_Layer: 0
+  m_Name: PuttPathRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &2300000006
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300000005}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1552605528}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &2300000007
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300000005}
+  m_CullTransparentMesh: 1
+--- !u!114 &2300000008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2300000005}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ccc48e5aae6235a4c95c81edcc035229, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.UI.ShotUI::Golfin.Gameplay.UI.ShotUI.PuttPathRenderer
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &2300000009
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483952037}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 214108b3eee6815409554ccf16662fa5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.PuttPathPredictor
+  _shotController: {fileID: 1483952040}
+  _worldCamera: {fileID: 824114952}
+  _ballTransform: {fileID: 384471843}
+  _renderer: {fileID: 2300000008}
+  _canvasRect: {fileID: 1552605528}
+  _aimDeltaThresholdDeg: 0.3
+  _powerDeltaThreshold: 0.01
+  _sampleIntervalSec: 0.05
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -21123,3 +21408,4 @@ SceneRoots:
   - {fileID: 1468656616}
   - {fileID: 279776946}
   - {fileID: 137113980}
+  - {fileID: 1754648321}

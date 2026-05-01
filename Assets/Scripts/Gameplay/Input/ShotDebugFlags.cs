@@ -10,6 +10,7 @@ namespace Golfin.Gameplay.Input
         public bool DisableConeFineTune;   // default false — aim is camera-only
         public bool ForcePerfectTiming;    // default false
         public bool ForcePerfectAim;       // default false
+        public bool PuttPathHeatmap;       // default false — putter path color-codes ball speed
 
         public static ShotDebugFlags Defaults => new ShotDebugFlags
         {
@@ -21,6 +22,7 @@ namespace Golfin.Gameplay.Input
             DisableConeFineTune = false,
             ForcePerfectTiming  = false,
             ForcePerfectAim     = false,
+            PuttPathHeatmap     = false,
         };
     }
 }

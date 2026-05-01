@@ -5,8 +5,14 @@ namespace Golfin.Gameplay.UI.ShotUI
 {
     public class ClubButtonWidget : ActionButtonWidget
     {
+        public enum DistanceUnit { Yards, Meters }
+
         [SerializeField] private SelectorOverlayWidget _selectorOverlay;
         [SerializeField] private Sprite _defaultPortrait;
+
+        private DistanceUnit _unitMode = DistanceUnit.Yards;
+
+        public void SetUnitMode(DistanceUnit mode) { _unitMode = mode; Refresh(); }
 
         protected override void OnEnable()
         {
@@ -32,7 +38,15 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_secondaryText != null)
             {
                 _secondaryText.richText = true;
-                _secondaryText.text = $"{ClubContext.SelectedDistance}<size=20><b> yrds</b></size>";
+                if (_unitMode == DistanceUnit.Meters)
+                {
+                    int mts = Mathf.RoundToInt(ClubContext.SelectedDistance * 0.9144f);
+                    _secondaryText.text = $"{mts}<size=20><b> mts</b></size>";
+                }
+                else
+                {
+                    _secondaryText.text = $"{ClubContext.SelectedDistance}<size=20><b> yrds</b></size>";
+                }
             }
         }
 

@@ -1,11 +1,13 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering.Universal;
 using Golfin.Physics;
 using Golfin.Physics.Math;
+using Golfin.Physics.Stats;
 using Golfin.Physics.Runtime;
 using Golfin.Gameplay.Input;
 using Golfin.Gameplay.UI.ShotUI;
@@ -87,6 +89,12 @@ namespace Golfin.Physics.Viewer
             // Re-entrancy guard inside handler prevents the loop when SetClub() itself raises ClubSelectionBroadcast.
             ClubSelectionBroadcast.OnClubChanged += OnClubBroadcastReceived;
 
+            // Putter mode: hook into OnClubChanged (local event) to toggle UI.
+            OnClubChanged += OnClubIndexChanged;
+
+            // Note: PuttPathPredictor subscribes to ShotController.OnStateChanged itself
+            // (in its own OnEnable). No bridging subscription needed here.
+
             if (_shotConeView != null)
             {
                 if (chaseCamera != null)
@@ -143,6 +151,17 @@ namespace Golfin.Physics.Viewer
 
             // 8.5: unsubscribe from broadcast
             ClubSelectionBroadcast.OnClubChanged -= OnClubBroadcastReceived;
+
+            // Putter mode: unsubscribe local club-change event.
+            OnClubChanged -= OnClubIndexChanged;
+        }
+
+        // Putter mode: called when the local OnClubChanged event fires (after SetClub).
+        void OnClubIndexChanged(int index)
+        {
+            bool isPutter = (index == LabClubs.Length - 1); // Putter is last in LabClubs (index 3)
+            if (isPutter) EnterPutterMode();
+            else          ExitPutterMode();
         }
 
         // 8.5: handler called when the action-button selector overlay picks a club.
@@ -205,7 +224,122 @@ namespace Golfin.Physics.Viewer
 
         void Update() => HandleCameraOrbit();
 
+        // ── Putter UI ──────────────────────────────────────────────────────────
+
+        [Header("Putter UI")]
+        [SerializeField] private GameObject        _putterTrack;
+        [SerializeField] private GameObject        _puttPathRoot;
+        [SerializeField] private PuttPathPredictor  _puttPathPredictor;
+        [SerializeField] private GameObject        _actionButtonRowTop;       // SpinButton GO
+        [SerializeField] private GameObject        _actionButtonFadeDrawButton; // FadeDrawButton GO (sibling of SpinButton)
+        [SerializeField] private CanvasGroup       _ballSelectorCanvasGroup;
+        [SerializeField] private CentralBallWidget _centralBall;
+        [SerializeField] private PowerGaugeWidget  _powerGaugeWidget;
+        [SerializeField] private HoleIndicatorWidget _holeIndicatorWidget;
+
+        // ── Public accessors for PuttPathPredictor ─────────────────────────────
+
+        public IGroundProvider  GetGround()   => BuildGroundProvider();
+        public ISurfaceProvider GetSurfaces() => BuildSurfaceProvider(default(ShotPreset));
+
         // ── Public API ─────────────────────────────────────────────────────────
+
+        // ── Putter mode API ────────────────────────────────────────────────────
+
+        private void EnterPutterMode()
+        {
+            if (_shotConeView   != null) _shotConeView.SetPuttMode(true);
+            if (_powerGaugeWidget != null)
+            {
+                _powerGaugeWidget.SetUnitMode(PowerGaugeWidget.DistanceUnit.Meters);
+                _powerGaugeWidget.SetMaxPuttRangeMeters(ComputeMaxPuttRangeMeters());
+            }
+            if (_holeIndicatorWidget != null) _holeIndicatorWidget.SetUnitMode(HoleIndicatorWidget.DistanceUnit.Meters);
+            var clubBtn = UnityEngine.Object.FindObjectOfType<ClubButtonWidget>();
+            if (clubBtn != null) clubBtn.SetUnitMode(ClubButtonWidget.DistanceUnit.Meters);
+            if (_putterTrack   != null) _putterTrack.SetActive(true);
+            AlignPutterTrackToBall();
+            if (_puttPathRoot  != null) _puttPathRoot.SetActive(true);
+            if (_puttPathPredictor != null) _puttPathPredictor.enabled = true;
+            if (_actionButtonRowTop != null) _actionButtonRowTop.SetActive(false);
+            if (_actionButtonFadeDrawButton != null) _actionButtonFadeDrawButton.SetActive(false);
+            if (_ballSelectorCanvasGroup != null)
+            {
+                _ballSelectorCanvasGroup.alpha          = 0.5f;
+                _ballSelectorCanvasGroup.interactable   = false;
+                _ballSelectorCanvasGroup.blocksRaycasts = false;
+            }
+            if (_centralBall != null) _centralBall.SetPuttMode(true);
+        }
+
+        private void ExitPutterMode()
+        {
+            if (_shotConeView   != null) _shotConeView.SetPuttMode(false);
+            if (_powerGaugeWidget != null) _powerGaugeWidget.SetUnitMode(PowerGaugeWidget.DistanceUnit.Yards);
+            if (_holeIndicatorWidget != null) _holeIndicatorWidget.SetUnitMode(HoleIndicatorWidget.DistanceUnit.Yards);
+            var clubBtn = UnityEngine.Object.FindObjectOfType<ClubButtonWidget>();
+            if (clubBtn != null) clubBtn.SetUnitMode(ClubButtonWidget.DistanceUnit.Yards);
+            if (_putterTrack   != null) _putterTrack.SetActive(false);
+            if (_puttPathRoot  != null) _puttPathRoot.SetActive(false);
+            if (_puttPathPredictor != null) _puttPathPredictor.enabled = false;
+            if (_actionButtonRowTop != null) _actionButtonRowTop.SetActive(true);
+            if (_actionButtonFadeDrawButton != null) _actionButtonFadeDrawButton.SetActive(true);
+            if (_ballSelectorCanvasGroup != null)
+            {
+                _ballSelectorCanvasGroup.alpha          = 1f;
+                _ballSelectorCanvasGroup.interactable   = true;
+                _ballSelectorCanvasGroup.blocksRaycasts = true;
+            }
+            if (_centralBall != null) _centralBall.SetPuttMode(false);
+        }
+
+        // Aligns the putter track's top edge with the ball widget centre at runtime,
+        // regardless of canvas resolution. Called each time putter mode is entered.
+        private void AlignPutterTrackToBall()
+        {
+            if (_putterTrack == null || _centralBall == null) return;
+            var trackRT = _putterTrack.GetComponent<RectTransform>();
+            var ballRT  = _centralBall.GetComponent<RectTransform>();
+            if (trackRT == null || ballRT == null) return;
+            if (trackRT.parent is not RectTransform parentRT) return;
+
+            var canvas  = parentRT.GetComponentInParent<Canvas>();
+            Camera uiCam = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay
+                           ? canvas.worldCamera : null;
+            Vector2 screenPt = RectTransformUtility.WorldToScreenPoint(uiCam, ballRT.position);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRT, screenPt, uiCam, out Vector2 localPt);
+            // localPt is in parent's pivot-relative local space (origin at center).
+            // anchoredPosition for anchor (0.5,1) is measured from the top edge, so subtract half height.
+            trackRT.anchoredPosition = new Vector2(0f, localPt.y - parentRT.rect.height * 0.5f);
+        }
+
+        private float ComputeMaxPuttRangeMeters()
+        {
+            EnsureConfigsLoaded();
+            var putter = PutterStats.DefaultPutter;
+            var bundle = new Golfin.Physics.Stats.StatBundle(
+                putter,
+                Golfin.Physics.Stats.BallStats.Neutral,
+                Golfin.Physics.Stats.CharacterStats.Neutral,
+                fp.FromFloat(100f), fp.FromFloat(100f));
+            var (input, ballMods) = Golfin.Physics.Stats.ShotInputBuilder.Build(
+                bundle,
+                Golfin.Physics.Stats.StatCoefficients.Default,
+                Golfin.Physics.Stats.StatCaps.Default,
+                fp.One,
+                fp.Zero,
+                fp.Zero, fp.Zero, fp.Zero,
+                seed: 0u,
+                baseVelocityOverrideMps: fp.FromFloat(5f)); // PuttBaseVelocityMps
+            var traj = BallSimulation.Simulate(
+                input, new FlatGround(fp.Zero),
+                AeroCfg, WindConfig.Calm,
+                new ConstantSurfaceProvider(SurfaceType.Green), SurfaceCfg,
+                PuttCfg, ballMods);
+            float dx = traj.finalPosition.x.ToFloat();
+            float dz = traj.finalPosition.z.ToFloat();
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
 
         public void ResetToTee()
         {
@@ -260,6 +394,9 @@ namespace Golfin.Physics.Viewer
         void SetupAtTee()
         {
             if (_ballSpawnPoint == null) return;
+            // Refresh putter predictor providers whenever terrain providers change.
+            if (_puttPathPredictor != null)
+                _puttPathPredictor.RefreshProviders(BuildGroundProvider(), BuildSurfaceProvider(default(ShotPreset)));
             Vector3 sp = _ballSpawnPoint.position;
             float surfaceY = SurfaceSnap(sp.x, sp.z, sp.y, 6); // 6 = Golfin.Course.SurfaceType.Tee
             Vector3 teePos = new Vector3(sp.x, surfaceY, sp.z);
@@ -271,6 +408,11 @@ namespace Golfin.Physics.Viewer
             // Update ShotConeView ball transform so targeting line can pivot in Idle state.
             if (_shotConeView != null && ballAnimator != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
+            if (_puttPathPredictor != null && ballAnimator != null)
+            {
+                _puttPathPredictor.SetBallTransform(ballAnimator.CurrentBall);
+                _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
+            }
 
             // Update HoleIndicatorWidget ball transform after ball is placed
             var holeWidgetForTee = FindObjectOfType<Golfin.Gameplay.UI.ShotUI.HoleIndicatorWidget>();
@@ -307,6 +449,11 @@ namespace Golfin.Physics.Viewer
             // Update ShotConeView ball transform so targeting line can pivot from the new position.
             if (_shotConeView != null && ballAnimator != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
+            if (_puttPathPredictor != null && ballAnimator != null)
+            {
+                _puttPathPredictor.SetBallTransform(ballAnimator.CurrentBall);
+                _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
+            }
 
             Vector3 lookDir = GetDefaultLookDirection();
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
@@ -508,6 +655,11 @@ namespace Golfin.Physics.Viewer
 
             if (_shotConeView != null && ballAnimator?.CurrentBall != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
+            if (_puttPathPredictor != null && ballAnimator?.CurrentBall != null)
+            {
+                _puttPathPredictor.SetBallTransform(ballAnimator.CurrentBall);
+                _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
+            }
 
             // Update HoleIndicatorWidget ball transform after shot resolves
             if (ballAnimator?.CurrentBall != null)
@@ -1004,6 +1156,10 @@ namespace Golfin.Physics.Viewer
                 holeWidget.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
                 holeWidget.SetBallTransform(ballAnimator != null ? ballAnimator.CurrentBall : null);
             }
+
+            // Sync predictor camera on hole load (camera mode may change in SetupAtTee below)
+            if (_puttPathPredictor != null)
+                _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
         }
 
         void BuildPlacementEntries(

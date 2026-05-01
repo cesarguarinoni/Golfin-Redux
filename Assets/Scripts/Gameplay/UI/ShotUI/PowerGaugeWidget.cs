@@ -1,20 +1,30 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.Serialization;
 using Golfin.Gameplay.Input;
 
 namespace Golfin.Gameplay.UI.ShotUI
 {
     public class PowerGaugeWidget : MonoBehaviour
     {
+        public enum DistanceUnit { Yards, Meters }
+
         [SerializeField] private ShotController    _shotController;
         [SerializeField] private PowerGaugeGraphic _gauge;
         [SerializeField] private TMP_Text          _pctText;
-        [SerializeField] private TMP_Text          _yardsText;
+
+        [FormerlySerializedAs("_yardsText")]
+        [SerializeField] private TMP_Text          _distanceText;
+
+        [SerializeField] private DistanceUnit _unitMode           = DistanceUnit.Yards;
+        [SerializeField] private float        _maxPuttRangeMeters = 25f;
 
         private CanvasGroup _group;
         private float       _maxCarryYards = 250f;
 
-        public void SetMaxCarryYards(float yards) => _maxCarryYards = yards;
+        public void SetMaxCarryYards(float yards)              => _maxCarryYards         = yards;
+        public void SetUnitMode(DistanceUnit u)                => _unitMode              = u;
+        public void SetMaxPuttRangeMeters(float m)             => _maxPuttRangeMeters    = m;
 
         private void Awake()
         {
@@ -46,11 +56,25 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_gauge != null)
                 _gauge.Progress01 = state.PowerNormalized;
 
-            int   pct   = Mathf.RoundToInt(state.PowerNormalized * 100f);
-            float yards = _maxCarryYards * state.PowerNormalized;
+            int   pct = Mathf.RoundToInt(state.PowerNormalized * 100f);
+            if (_pctText != null) _pctText.text = $"{pct}%";
 
-            if (_pctText   != null) _pctText.text   = $"{pct}%";
-            if (_yardsText != null) _yardsText.text  = $"{yards:F1} yd";
+            if (_distanceText != null)
+            {
+                float distance;
+                string suffix;
+                if (_unitMode == DistanceUnit.Meters)
+                {
+                    distance = _maxPuttRangeMeters * state.PowerNormalized;
+                    suffix   = "mts";
+                }
+                else
+                {
+                    distance = _maxCarryYards * state.PowerNormalized;
+                    suffix   = "yd";
+                }
+                _distanceText.text = $"{distance:F1} {suffix}";
+            }
         }
     }
 }

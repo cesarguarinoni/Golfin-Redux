@@ -47,22 +47,41 @@ namespace Golfin.Gameplay.UI.ShotUI
         [Header("Targeting line")]
         [SerializeField] private RectTransform   _targetingLine;
 
+        [Header("Putter timing slab")]
+        [SerializeField] private RectTransform   _putterTimingSlabRT;
+        [SerializeField] private float           _putterTrackHeightPx = 1000f;
+
         // ── Runtime state ─────────────────────────────────────────────────────
         private Camera    _worldCamera;
         private Transform _ballTransform;
         private float     _maxCarryYards    = 250f;
         private bool      _lastArrowTrailState;
+        private bool      _puttMode;
+        private UnityEngine.UI.Image _putterTimingSlabImage;
 
         // ── Public API ────────────────────────────────────────────────────────
 
         public void SetMaxCarryYards(float yards) => _maxCarryYards = yards;
+
+        public void SetPuttMode(bool on)
+        {
+            _puttMode = on;
+            if (_coneGraphic  != null) _coneGraphic.enabled = !on;
+            if (_targetingLine != null) _targetingLine.gameObject.SetActive(!on);
+            // Cache Image for putter slab on first enable.
+            if (on && _putterTimingSlabRT != null && _putterTimingSlabImage == null)
+                _putterTimingSlabImage = _putterTimingSlabRT.GetComponent<UnityEngine.UI.Image>();
+            // Ensure the correct slab is visible/hidden when mode changes.
+            if (_timingSlab      != null) _timingSlab.gameObject.SetActive(false);
+            if (_putterTimingSlabRT != null) _putterTimingSlabRT.gameObject.SetActive(false);
+        }
 
         public void SetCamera(Camera cam)            => _worldCamera   = cam;
         public void SetBallTransform(Transform ball) => _ballTransform = ball;
 
         public void SetOutlineVisible(bool visible)
         {
-            if (_coneGraphic != null) _coneGraphic.enabled = visible;
+            if (_coneGraphic != null) _coneGraphic.enabled = visible && !_puttMode;
         }
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
@@ -136,6 +155,7 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private void UpdateConeWidth()
         {
+            if (_puttMode) return;  // cone is disabled; skip dirty-marking the mesh
             _coneGraphic.HalfAngleDeg = _shotController.ConeHalfAngleDeg;
             _coneGraphic.HeightPx     = _coneHeightPx;
         }
@@ -154,9 +174,8 @@ namespace Golfin.Gameplay.UI.ShotUI
             float widthFraction = 1f - Mathf.Clamp01(handleY / _coneHeightPx);
             float maxX          = halfBase * widthFraction;
 
-            _clubHandle.anchoredPosition = new Vector2(
-                state.ConeFinetuneX * maxX,
-                handleY);
+            float xOffset = _puttMode ? 0f : state.ConeFinetuneX * maxX;
+            _clubHandle.anchoredPosition = new Vector2(xOffset, handleY);
 
             float handleScale = Mathf.Lerp(_minHandleScale, _maxHandleScale, power);
             _clubHandle.localScale = Vector3.one * handleScale;
@@ -166,17 +185,31 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private void UpdateSlab(ShotInputState state)
         {
-            if (_timingSlab == null) return;
-
             bool show = state.State == ShotState.Timing;
+
+            if (_puttMode)
+            {
+                if (_timingSlab != null) _timingSlab.gameObject.SetActive(false);
+                if (_putterTimingSlabRT == null) return;
+                _putterTimingSlabRT.gameObject.SetActive(show);
+                if (!show) return;
+
+                float p = Mathf.Clamp01(state.ArrowProgress01);
+                // p=1 → top of track (y=0), p=0 → bottom (y=-trackHeight).
+                _putterTimingSlabRT.anchoredPosition = new Vector2(0f, -_putterTrackHeightPx * (1f - p));
+                if (_putterTimingSlabImage != null) _putterTimingSlabImage.color = SlabColorFromProgress(p);
+                return;
+            }
+
+            if (_timingSlab == null) return;
             _timingSlab.gameObject.SetActive(show);
             if (!show) return;
 
-            float p = Mathf.Clamp01(state.ArrowProgress01);
+            float prog = Mathf.Clamp01(state.ArrowProgress01);
             float curvePx = _coneGraphic != null ? _coneGraphic.CurvaturePx : 15f;
             _timingSlab.SetConeParams(_coneHeightPx, _shotController.ConeHalfAngleDeg, curvePx);
-            _timingSlab.CurrentY01 = p;
-            _timingSlab.color      = SlabColorFromProgress(p);
+            _timingSlab.CurrentY01 = prog;
+            _timingSlab.color      = SlabColorFromProgress(prog);
         }
 
         private Color SlabColorFromProgress(float p)
@@ -216,6 +249,7 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private void UpdateTargetingLine(ShotInputState state)
         {
+            if (_puttMode) { if (_targetingLine != null) _targetingLine.gameObject.SetActive(false); return; }
             if (_targetingLine == null) return;
 
             bool show = state.State is ShotState.Idle

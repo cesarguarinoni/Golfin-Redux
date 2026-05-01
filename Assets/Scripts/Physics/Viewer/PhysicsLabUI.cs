@@ -41,7 +41,7 @@ namespace Golfin.Physics.Viewer
         // Debug flags panel
         bool       _debugPanelOpen;
         GameObject _debugContainer;
-        TMP_Text[] _debugFlagLabels = new TMP_Text[8];
+        TMP_Text[] _debugFlagLabels = new TMP_Text[9];
 
         static readonly float[]  PlayRates      = { 0.25f, 1f, 4f, float.MaxValue };
         static readonly string[] PlayRateLabels = { "0.25×", "1×", "4×", "Instant" };
@@ -168,13 +168,13 @@ namespace Golfin.Physics.Viewer
             vl2.childAlignment = TextAnchor.UpperCenter;
             EnsureLE(_debugContainer).flexibleHeight = 1f;
 
-            // 8 flag toggle buttons
+            // 9 flag toggle buttons (8 standard + PuttPathHeatmap)
             string[] flagNames = {
                 "Show Cone Outline", "Show Arrow Trail", "Cancel On Slow Flick",
                 "Single Pass Mode",  "Disable Overpower", "Disable Cone Fine Tune",
-                "Force Perfect Timing", "Force Perfect Aim"
+                "Force Perfect Timing", "Force Perfect Aim", "Putt Path Heatmap"
             };
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 9; i++)
             {
                 int idx = i; // capture
                 var flagRow = MakeButtonRow(_debugContainer);
@@ -212,7 +212,7 @@ namespace Golfin.Physics.Viewer
                 string[] names = {
                     "Show Cone Outline", "Show Arrow Trail", "Cancel On Slow Flick",
                     "Single Pass Mode",  "Disable Overpower", "Disable Cone Fine Tune",
-                    "Force Perfect Timing", "Force Perfect Aim"
+                    "Force Perfect Timing", "Force Perfect Aim", "Putt Path Heatmap"
                 };
                 _debugFlagLabels[flagIndex].text = $"{names[flagIndex]}: {BoolLabel(newVal)}";
             }
@@ -234,9 +234,9 @@ namespace Golfin.Physics.Viewer
             string[] names = {
                 "Show Cone Outline", "Show Arrow Trail", "Cancel On Slow Flick",
                 "Single Pass Mode",  "Disable Overpower", "Disable Cone Fine Tune",
-                "Force Perfect Timing", "Force Perfect Aim"
+                "Force Perfect Timing", "Force Perfect Aim", "Putt Path Heatmap"
             };
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 9; i++)
             {
                 if (_debugFlagLabels[i] != null)
                     _debugFlagLabels[i].text = $"{names[i]}: {BoolLabel(GetDebugFlag(flags, i))}";
@@ -253,6 +253,7 @@ namespace Golfin.Physics.Viewer
             5 => f.DisableConeFineTune,
             6 => f.ForcePerfectTiming,
             7 => f.ForcePerfectAim,
+            8 => f.PuttPathHeatmap,
             _ => false
         };
 
@@ -268,6 +269,7 @@ namespace Golfin.Physics.Viewer
                 case 5: f.DisableConeFineTune = val; break;
                 case 6: f.ForcePerfectTiming  = val; break;
                 case 7: f.ForcePerfectAim     = val; break;
+                case 8: f.PuttPathHeatmap     = val; break;
             }
         }
 

@@ -7,6 +7,8 @@ namespace Golfin.Gameplay.UI.ShotUI
 {
     public class HoleIndicatorWidget : MonoBehaviour
     {
+        public enum DistanceUnit { Yards, Meters }
+
         [Header("Refs")]
         [SerializeField] RectTransform _root;          // sliding root — top-LEFT anchored to canvas; widget mutates anchoredPosition.x
         [SerializeField] RectTransform _dataChip;      // static child of _root (the 100x100 chip visual; doesn't move independently)
@@ -18,12 +20,14 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] float _leftMinX      = 164f;  // wind indicator right edge (148) + 16px gap
         [SerializeField] float _fadeStartDot  = 0.3f;  // dot(cam.forward, toPin) at which fade begins; 0=90°, 0.3≈73°, 0.5=60°
 
+        DistanceUnit _unitMode = DistanceUnit.Yards;
         Camera      _cam;
         Transform   _ballTransform;
         CanvasGroup _canvasGroup;
 
         public void SetCamera(Camera cam)            => _cam           = cam;
         public void SetBallTransform(Transform ball) => _ballTransform = ball;
+        public void SetUnitMode(DistanceUnit u)      => _unitMode      = u;
 
         void Awake()
         {
@@ -47,8 +51,16 @@ namespace Golfin.Gameplay.UI.ShotUI
             // Distance text
             Transform ball = _ballTransform;
             float meters = ball != null ? Vector3.Distance(ball.position, HoleContext.PinWorld) : 0f;
-            float yards  = meters * 1.0936133f;
-            if (_distanceText != null) _distanceText.text = $"{yards:F0} yds";
+            if (_distanceText != null)
+            {
+                if (_unitMode == DistanceUnit.Meters)
+                    _distanceText.text = $"{meters:F0} mts";
+                else
+                {
+                    float yards = meters * 1.0936133f;
+                    _distanceText.text = $"{yards:F0} yds";
+                }
+            }
 
             // Project pin to canvas coords
             Vector3 pinScreen = _cam.WorldToScreenPoint(HoleContext.PinWorld);

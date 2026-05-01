@@ -20,6 +20,17 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private RectTransform  _rect;
         [SerializeField] private ShotController _shotController;
 
+        [Header("Putter mode")]
+        [SerializeField] private float _normalSize   = 80f;
+        [SerializeField] private float _puttModeSize = 150f;
+
+        public void SetPuttMode(bool on)
+        {
+            if (_rect == null) return;
+            float s = on ? _puttModeSize : _normalSize;
+            _rect.sizeDelta = new Vector2(s, s);
+        }
+
         void Awake()
         {
             if (_rect == null)  _rect  = GetComponent<RectTransform>();
