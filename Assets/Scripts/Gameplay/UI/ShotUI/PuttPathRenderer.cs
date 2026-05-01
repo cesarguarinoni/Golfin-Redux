@@ -16,9 +16,15 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         // Public API -----------------------------------------------------------
 
+        [SerializeField] private float _lineWidthPx = 16f;
+
         public bool  HeatmapMode  { get; set; } = false;
         public float TopSpeedMps  { get; set; } = 5f;
-        public float LineWidthPx  { get; set; } = 6f;
+        public float LineWidthPx
+        {
+            get => _lineWidthPx;
+            set { _lineWidthPx = value; SetVerticesDirty(); }
+        }
 
         /// <summary>
         /// Set the path to render. Pass null / empty to hide.
