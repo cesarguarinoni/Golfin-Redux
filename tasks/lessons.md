@@ -1004,3 +1004,42 @@ Both classes have a `_coneHeightPx` serialized field. `ShotConeView` uses it to 
 
 ### When adding a new cone height field, check if other components duplicate it
 Before adding `_coneHeightPx` to any new component, grep the codebase for existing holders (`ClubHandleDragger`, `ShotConeView`, `TimingSlabGraphic`). Use `SetConeHeight()` / `SetConeParams()` APIs to propagate from the single authoritative source (`ShotConeView`).
+
+---
+
+## matchmaking_modal closeout (2026-05-02)
+
+### `ModalController.modalPanel` wires to ContentArea, NEVER the root
+`ModalController.Awake()` calls `modalPanel.SetActive(false)`. If `modalPanel` is wired to the controller's own root GameObject, the controller self-deactivates before any of its coroutines (dot cycle, opponent scan) can run. Wire `modalPanel` to a child GameObject — typically `ContentArea` — that holds everything the modal animates. The controller stays active; only the visible content gets toggled.
+
+**Rule:** Every `ModalController` subclass must declare its `modalPanel` reference as a child sub-tree (e.g. `ContentArea`), never the same GameObject the controller component lives on. Codified into the matchmaking_modal spec on 2026-05-02 — now treat as canonical for all future modal tasks.
+
+### Figma reward / level / content values are placeholders, NOT canonical
+When a UI surface mirrors a CSV or database value (rewards, hole names, character stats, etc.), the values shown in Figma are typically placeholders. The implementer must NOT "fix" the runtime to match Figma if the runtime is correctly sourcing from CSV. Spec must explicitly tag these fields as placeholder-vs-canonical.
+
+**Concrete example from matchmaking_modal:** Figma frame `12865:1095` shows reward x10/x10/x10 across all three slots. The actual contract was "modal matches home screen / CSV" — Lomond 5 in `LevelUpCosts.csv` is x100/x10/x30. iter-1 self-review caught the desync where the modal was reading from a stale `.asset` while the home screen was reading from the CSV.
+
+**Rule:** Any UI spec covering data-driven content must include a "Placeholder vs canonical content notes" section listing which Figma values are placeholders and which are pixel-precise contracts.
+
+### `Application.runInBackground = true` for editor screenshot workflows
+When capturing play-mode screenshots from `script-execute` or any agent-driven editor pipeline, the Game View often loses OS focus during the capture sequence. Unity's default `runInBackground=false` then stops driving frames — coroutines pause, animations freeze, the modal never reaches its final state, and `CaptureHelper.SnapGameView()` returns whatever was rendered when focus was lost (often the splash logo if capture happens early in the boot flow).
+
+**Rule:** At the start of any agent-driven editor capture session that needs play-mode coroutines to advance, set `Application.runInBackground = true` via `script-execute`. Pair with `EditorApplication.isPaused = false` after `EditorApplication.isPlaying = true`. Both are needed: `isPaused=false` unfreezes the editor's frame loop; `runInBackground=true` keeps the loop driving when focus shifts. Belt-and-suspenders: also call them again immediately before the snap.
+
+### Editor scripts run by agents must log via `Debug.Log`, not `EditorUtility.DisplayDialog`
+When an agent runs an editor script (AutoWire, capture helpers, scene migrators), each `EditorUtility.DisplayDialog` call opens a modal popup that blocks the editor until clicked. Across multiple agent invocations these popups stack, requiring manual dismissal of each. `Debug.Log("[Tag] result: ...")` writes to the Console — non-blocking, accumulates cleanly, filterable via the existing log-grep recipes in CLAUDE.md.
+
+**Rule:** New editor utilities target `Debug.Log` with bracketed prefixes. The exception is one-shot `[MenuItem]` actions Cesar himself invokes from `GOLFIN/...` — a single dialog there is fine. Agent-driven, repeated, or batched invocations must use the Console.
+
+### Editing `.unity` / `.asset` YAML directly triggers a Unity Reload modal
+Direct YAML mutations of scene or `.asset` files via `assets-modify` while Unity has them open trigger a "Scene/asset has been modified externally — Reload?" modal. The popup blocks Unity's main thread; no frames render; the GameView render texture freezes; every subsequent MCP call hangs or returns stale data. To the agent it looks like a Unity bug.
+
+**Rule:** Prefer Unity-API mutations: `gameobject-modify`, `gameobject-component-modify`, `scene-save`, `assets-prefab-open`/`save` for prefabs, `object-modify` for ScriptableObjects. Only fall back to raw `assets-modify` on YAML when the API path can't accomplish the change, and explicitly tell Cesar the popup will appear before the next snap. If the GameView returns identical pixels across 3+ snap attempts after a scene/asset write, assume a popup is up — surface to Cesar, do not loop.
+
+### Unity playmode entry does NOT guarantee `IsPaused=false`
+`editor-application-set-state isPlaying:true` enters play mode, but if "Pause On Enter Play Mode" is enabled (or pause carries over from prior state), play mode starts paused. `script-execute` calls during pause set `activeSelf` flags immediately at editor time, but no Awake/Start/Update runs and no frame renders until unpaused. So a "scene state shows X active" diagnostic from `script-execute` while paused is meaningless for what the user actually sees.
+
+**Rule:** After every `editor-application-set-state isPlaying:true`, follow with an explicit `script-execute` call setting `EditorApplication.isPaused = false`. Then assert `IsPaused=false` via `editor-application-get-state` before any timing-sensitive operation. If a screenshot looks like a stale splash, suspect pause first — not focus, not the capture helper.
+
+### `CaptureHelper.SnapGameView()` does NOT need GameView focus
+The capture helper reads the GameView's RenderTexture via reflection, bypassing the focus requirement. If a screenshot looks wrong, focus is almost never the cause — pause state and/or `runInBackground=false` are. Don't blame focus before checking those two.

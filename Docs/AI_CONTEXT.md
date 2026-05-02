@@ -93,6 +93,35 @@ To keep `TellCode.md` readable for Claude Code (file was getting long enough to 
 
 ---
 
+## Session Changes (2026-05-02 — Matchmaking Modal Complete)
+
+### Completed
+- **`matchmaking_modal` task DONE** — first full pass of the multi-agent pipeline (architect → implementer → self-reviewer → architect → Cesar) executed end-to-end on macOS. 4 implementer iterations: iter 1 code+wiring, iter 2 reward-sync + username trim + BG anchors + DisplayDialog removal, iter 3 dot-jitter fixed-width via `<alpha=#00>` + backdrop α 0.85 + Figma reference + real OPPONENT FOUND screenshot, iter 4 hide MaintenanceNotice + bottom NextHolePanel while modal open (restore via OnHide/OnDisable safety net).
+- **Code added/modified:**
+  - `Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs` (new, namespace `Golfin.UI.Matchmaking`, subclasses `ModalController`)
+  - `Assets/Scripts/UI/Matchmaking/Editor/MatchmakingModalAutoWire.cs` (new, `GOLFIN/Wire/Matchmaking Modal`, 29 fields wired / 0 failed)
+  - `Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs` (added `InitializeFromTemplate(string, int)` public)
+  - `Assets/Scripts/UI/HomeScreenController.cs` (matchmakingModal ref + `OnPlayClicked` hookup)
+  - `Assets/Scenes/ShellScene.unity` (MatchmakingModal instance + BG anchor/alpha overrides)
+  - `Assets/Data/HoleDatabase.asset` (Lomond 5 rewards 100/10/30 to match CSV/home contract)
+- **Pipeline lessons codified into SPEC.md by architect** (canonical for future modal tasks):
+  1. `ModalController.modalPanel` SerializeField wires to a `ContentArea` sub-tree, NEVER the controller's own root (root self-deactivates via `Awake()`).
+  2. Figma reward values are placeholders when the surface mirrors a CSV/database; spec must explicitly tag canonical-vs-placeholder.
+  3. Username container max length = 8 chars per current TMP rect; formalized in spec.
+  4. Backdrop alpha 0.85 canonical for ModalController-style modals.
+  5. Home-element hide/restore requirement when modals open over screens with overlapping content.
+- **Pipeline lessons captured for future agent runs** — see `tasks/lessons.md` § matchmaking_modal closeout for the three new entries (modalPanel wiring rule, Figma placeholder gotcha, `Application.runInBackground=true` for editor capture workflows).
+
+### Mid-pipeline trapdoors uncovered (now in agent memory)
+- Editing `.unity`/`.asset` YAML directly while Unity is open triggers a "Reload?" modal that blocks the editor's main thread and freezes GameView capture. Prefer Unity-API mutations.
+- Unity playmode does NOT guarantee `IsPaused=false`. Always force `EditorApplication.isPaused=false` AND `Application.runInBackground=true` after `isPlaying=true` and before timing-sensitive captures.
+- Editor scripts agents run should log to `Debug.Log` not `EditorUtility.DisplayDialog` (modal popups stack and need manual dismissal).
+
+### Next
+- Putter P1 (next on Roadmap, items 1a–1d).
+
+---
+
 ## Session Changes (2026-04-28 — Texture Experiment Phase 2 Complete)
 
 ### Completed

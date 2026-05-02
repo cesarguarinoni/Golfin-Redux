@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using Golfin.UI;
 using Golfin.Roster;
+using Golfin.UI.Matchmaking;
 
 namespace GolfinRedux.UI
 {
@@ -92,6 +93,9 @@ namespace GolfinRedux.UI
         [Header("Optional: Hole Database")]
         [SerializeField] private HoleDatabase holeDatabase;
         [SerializeField] private int currentHoleIndex = 0;
+
+        [Header("Matchmaking")]
+        [SerializeField] private MatchmakingModalController matchmakingModal;
 
         private void Awake()
         {
@@ -428,6 +432,12 @@ namespace GolfinRedux.UI
         private void OnPlayClicked()
         {
             Debug.Log("[HomeScreen] PLAY clicked");
+            if (matchmakingModal != null)
+            {
+                matchmakingModal.Open(currentHoleIndex);
+                return;
+            }
+            // Legacy fallback if matchmaking isn't wired in this scene
             if (screenManager != null)
                 screenManager.ShowScreen(ScreenId.Loading);
         }

@@ -204,6 +204,61 @@ namespace Golfin.Roster
         }
         
         /// <summary>
+        /// Populate the card from CSV template data only — no PlayerCharacterData required.
+        /// Used by matchmaking and other UI that displays characters the player doesn't own.
+        /// Status icons (selected / level-up-ready / stamina) are forced off in this mode.
+        /// </summary>
+        public void InitializeFromTemplate(string charId, int displayLevel)
+        {
+            characterId = charId;
+
+            var csvData = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
+            if (csvData == null)
+            {
+                Debug.LogError($"[CharacterThumbnailCard] InitializeFromTemplate: character {charId} not in CSV.");
+                return;
+            }
+
+            CharacterRarity rarity = csvData.rarity;
+            var rarityLabel = RarityHelper.GetRarityLabel(rarity);
+            var rarityBadgeTextColor = RarityHelper.GetRarityBadgeTextColor(rarity);
+
+            if (portraitImage != null && csvData.portraitSprite != null)
+                portraitImage.sprite = csvData.portraitSprite;
+
+            if (nameText != null)
+                nameText.text = csvData.characterName;
+
+            if (rarityBadgeImage != null)
+                rarityBadgeImage.enabled = false;
+
+            if (rarityLabelText != null)
+            {
+                rarityLabelText.text = rarityLabel;
+                rarityLabelText.color = rarityBadgeTextColor;
+            }
+
+            if (levelText != null)
+                levelText.text = $"Lv {displayLevel}";
+
+            if (backgroundImage != null)
+            {
+                var bgSprite = Resources.Load<Sprite>($"Rarities/{rarity}");
+                if (bgSprite != null)
+                {
+                    backgroundImage.sprite = bgSprite;
+                    backgroundImage.color  = Color.white;
+                }
+            }
+
+            // No button wiring in template mode — opponents aren't tappable.
+            // Force all status icons off — no PlayerCharacterData to query.
+            if (selectedIcon != null)      selectedIcon.SetActive(false);
+            if (levelUpReadyIcon != null)  levelUpReadyIcon.SetActive(false);
+            if (staminaIcon != null)       staminaIcon.SetActive(false);
+        }
+
+        /// <summary>
         /// Get character ID
         /// </summary>
         public string GetCharacterId() => characterId;

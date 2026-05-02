@@ -1,7 +1,7 @@
 ---
 name: golfin-implementer
 description: Use to implement a UI or code task in the GOLFIN Redux Unity project. Activates when STATUS.md is SPEC_READY or ARCHITECT_REVIEW_FAIL or SELF_REVIEW_FAIL. Reads the spec, makes Unity changes, takes a play-mode screenshot, fills the implementer report with a fully-justified PASS/FAIL checklist, then sets STATUS to READY_FOR_SELF_REVIEW. Cannot mark a task done; only the architect can.
-tools: Read, Edit, Write, Glob, Grep, Bash, mcp__ai-game-developer__*
+tools: Read, Edit, Write, Glob, Grep, Bash, mcp__ai-game-developer__*, mcp__d0f20b77-0273-460e-9241-835faf707de9__*
 model: claude-sonnet-4-6
 ---
 

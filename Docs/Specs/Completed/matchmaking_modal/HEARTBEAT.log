@@ -1,0 +1,27 @@
+2026-05-02T10:00:00 activated — reading SPEC.md and planning implementation
+2026-05-02T10:05:00 created MatchmakingModalController.cs, modified CharacterThumbnailCard.cs and HomeScreenController.cs, created AutoWire script
+2026-05-02T10:20:00 Unity MCP disconnected — Editor plugin lost connection to unity-mcp server. Using direct HTTP to remote MCP service.
+2026-05-02T10:40:00 Code compiled, auto-wire ran (27 wired/0 failed), component added, modal activated in scene. Taking final screenshot.
+2026-05-02T10:55:00 Screenshot captured showing OPPONENT FOUND state. Report written. Setting READY_FOR_SELF_REVIEW.
+2026-05-02T10:55:00 done, awaiting review
+2026-05-02T03:57:44 iter2 activated - reading source files for fixes
+2026-05-02T04:02:27 fixing rewards asset, username truncation, backdrop
+2026-05-02T04:04:06 attempting screenshot capture - MCP not available, trying filesystem approach
+2026-05-02T04:21:55 code fixes complete - attempting play mode screenshot
+2026-05-02T04:32:01 screenshot capture attempts via CaptureHelper showing Logo - navigating to Home and capturing
+2026-05-02T04:50:00 iter2 - all 4 code fixes verified, screenshot blocked after 8+ attempts
+2026-05-02T04:55:00 done - all 4 code fixes applied, screenshot blocked, IMPLEMENTER_BLOCKED set
+2026-05-02T05:11:25 activated — iter3 starting
+2026-05-02T05:12:55 Fix A (dot jitter) and Fix B (backdrop alpha) applied to CS and ShellScene YAML
+2026-05-02T05:21:44 done — Fix A (dot jitter) + Fix B (backdrop alpha 0.85) applied. Blocked on: Unity MCP disconnected (screenshot impossible), Figma MCP not in .mcp.json (figma-reference.png impossible)
+2026-05-02T05:53:00Z activated - iter3 resuming, Unity MCP responsive
+2026-05-02T05:58:21Z screenshot capture: 4 identical frames from 2 paths - Game View RT stale (no OS focus), circuit breaker hit, writing report
+2026-05-02T06:00:24Z done, awaiting architect review (1 FAIL: screenshot RT stale)
+2026-05-02T07:25:58 iter3-retry activated - setting status to IMPLEMENTER_WORKING
+2026-05-02T07:28:19 triggering matchmaking modal via script-execute
+2026-05-02T07:30:30 capturing screenshot via CaptureHelper.SnapGameView()
+2026-05-02T07:32:15 updating IMPLEMENTER_REPORT.md
+2026-05-02T07:33:40 done, awaiting review
+2026-05-02T07:35:38Z activated — iter4 additive requirement: hide maintenance notice + next hole strip when modal opens
+2026-05-02T07:38:19Z AutoWire complete: 29 wired, 0 failed. homeNoticePanel + homeNextHolePanel wired. Scene saved. Starting play mode for screenshot.
+2026-05-02T07:41:45Z done, awaiting review — iter4 hide/restore of NoticePanel+NextHolePanel verified, screenshot captured, all checklist PASS

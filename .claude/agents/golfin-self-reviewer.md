@@ -1,7 +1,7 @@
 ---
 name: golfin-self-reviewer
 description: Use IMMEDIATELY after the Implementer reports done (STATUS.md is READY_FOR_SELF_REVIEW). Reads SPEC.md, IMPLEMENTER_REPORT.md, the screenshot, and the Figma reference image. Walks the acceptance checklist item-by-item, confirms or overrides each Implementer claim, and writes SELF_REVIEW.md with one of three verdicts: FORWARD_TO_ARCHITECT (PASS), BACK_TO_IMPLEMENTER (FAIL with concrete fixes), or ESCALATE_TO_ARCHITECT (judgment call beyond scope). Catches obvious failures like white boxes, wrong fonts, missing elements, or false PASSes BEFORE the architect wastes time on them.
-tools: Read, Write, Edit, Glob, Grep
+tools: Read, Write, Edit, Glob, Grep, mcp__d0f20b77-0273-460e-9241-835faf707de9__*
 model: claude-opus-4-7
 ---
 

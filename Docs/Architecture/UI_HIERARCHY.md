@@ -353,6 +353,32 @@ BagClubCard
     └── SwapText                                 (TMP — action label)
 ```
 
+### MatchMakingModal (MatchmakingModalController : ModalController, namespace `Golfin.UI.Matchmaking`)
+```
+MatchMakingModal                                 (root — controller stays active)
+├── BG                                           (Image — backdrop, alpha 0.85, anchors full-stretch via PrefabInstance overrides)
+└── ContentArea                                  (= modalPanel field; toggled by Show/Hide)
+    ├── TitleText                                (TMP — "FINDING OPPONENT" → "OPPONENT FOUND")
+    │                                              dot cycle uses 3 fixed-width <alpha=#00> slots so base text never shifts
+    ├── PlayerCard                               (CharacterThumbnailCard — uses InitializeFromTemplate(charId, level))
+    │   ├── Portrait + Rim
+    │   ├── LevelBadge / RarityBadge
+    │   ├── UsernameText                         (TMP — fake usernames capped at ≤8 chars)
+    │   └── RankText                             (TMP — "RANK: #NNN")
+    ├── VsLabel                                  (TMP — "Vs.")
+    ├── OpponentCard                             (CharacterThumbnailCard)
+    ├── NextHoleSection
+    │   ├── NextHoleLabel                        (TMP — "NEXT HOLE")
+    │   ├── HoleNameText                         (TMP — "Lomond Country Club - Hole 5")
+    │   └── RewardRow                            (3 reward slot icons + values from CSV/home contract)
+    └── CancelButton                             (Button — dismisses modal, restores hidden home elements)
+        └── Text                                 (TMP — "CANCEL")
+```
+
+**Home elements hidden while modal is open** (refs serialized on the controller, restored via `OnHide()` and `OnDisable()` safety net):
+- `homeMaintenanceNotice` → `HomeScreen/.../NoticePanel`
+- `homeNextHolePanel` → `HomeScreen/.../NextHolePanel` (the bottom strip with the gold PLAY button — duplicate of modal content)
+
 ---
 
 ## Key Notes
