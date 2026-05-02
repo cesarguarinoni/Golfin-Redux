@@ -1,2 +1,4 @@
 2026-05-02T00:00:00 activated — reading SPEC.md and existing codebase files
 2026-05-02T00:10:00 Steps 1-9 code written: HoleData, CSV, parsers, HoleProgressionService, HoleCardController, HoleSelectionScreenController, ScreenManager, PersistentUIManager, HomeScreenController, AutoWire — triggering compile check
+2026-05-02T00:25:00 Step 4 complete: 19 HoleImages PNGs generated (Missing.png + Hole_01..18), Hole_01 downloaded from Figma
+2026-05-02T00:35:00 Step 1.5 complete: 18 Lomond GIFs downloaded, OCR'd via EasyOCR, cleaned Japanese text saved to lomond-source/ — setting WAITING_ON_ARCHITECT_TRANSLATION
