@@ -22,26 +22,28 @@ namespace GolfinRedux.UI.HoleSelection.Editor
         private const string HOLE_CARD_PREFAB_PATH   = "Assets/Prefabs/UI/HoleSelection/HoleCard.prefab";
         private const string HOLE_DATABASE_PATH      = "Assets/Data/HoleDatabase.asset";
 
+        // Mutable holder so local functions can update counters (lambdas can't capture ref/out params).
+        private class Counters { public int Wired; public int Failed; }
+
         [MenuItem("GOLFIN/Wire/Hole Selection")]
         public static void Run()
         {
-            int totalWired  = 0;
-            int totalFailed = 0;
+            var c = new Counters();
 
             // ── Part A: Wire HoleCard prefab ─────────────────────────────────
-            WireHoleCardPrefab(ref totalWired, ref totalFailed);
+            WireHoleCardPrefab(c);
 
             // ── Part B: Wire HoleSelectionScreen in active scene ──────────────
-            WireHoleSelectionScreen(ref totalWired, ref totalFailed);
+            WireHoleSelectionScreen(c);
 
             // ── Part C: Wire ScreenManager._holeSelectionScreen ───────────────
-            WireScreenManager(ref totalWired, ref totalFailed);
+            WireScreenManager(c);
 
             EditorSceneManager.MarkSceneDirty(
                 UnityEngine.SceneManagement.SceneManager.GetActiveScene());
 
-            string msg = $"Hole Selection auto-wire complete.\n{totalWired} fields wired, {totalFailed} failed." +
-                         (totalFailed > 0
+            string msg = $"Hole Selection auto-wire complete.\n{c.Wired} fields wired, {c.Failed} failed." +
+                         (c.Failed > 0
                              ? "\nCheck Console for missing paths — some fields need manual assignment."
                              : "\nAll fields wired successfully! Save the scene (Cmd+S / Ctrl+S).");
 
@@ -50,13 +52,13 @@ namespace GolfinRedux.UI.HoleSelection.Editor
 
         // ── Part A ────────────────────────────────────────────────────────────
 
-        private static void WireHoleCardPrefab(ref int wired, ref int failed)
+        private static void WireHoleCardPrefab(Counters counters)
         {
             var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(HOLE_CARD_PREFAB_PATH);
             if (prefabAsset == null)
             {
                 Debug.LogWarning($"[HoleSelectionAutoWire] HoleCard prefab not found at '{HOLE_CARD_PREFAB_PATH}'. Skipping Part A.");
-                failed++;
+                counters.Failed++;
                 return;
             }
 
@@ -65,7 +67,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             if (prefabStage == null)
             {
                 Debug.LogWarning("[HoleSelectionAutoWire] Could not open HoleCard prefab in isolation. Skipping Part A.");
-                failed++;
+                counters.Failed++;
                 return;
             }
 
@@ -75,7 +77,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             {
                 Debug.LogWarning("[HoleSelectionAutoWire] HoleCardController not found on HoleCard prefab root. Skipping Part A.");
                 StageUtility.GoToMainStage();
-                failed++;
+                counters.Failed++;
                 return;
             }
 
@@ -84,7 +86,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             void FailA(string prop, string path, string reason = "path not found")
             {
                 Debug.LogWarning($"[HoleSelectionAutoWire] PREFAB FAIL '{prop}' at '{path}' — {reason}. Wire manually.");
-                failed++;
+                counters.Failed++;
             }
 
             int WireTMP(string prop, string path)
@@ -94,7 +96,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 var c = t.GetComponent<TextMeshProUGUI>();
                 if (c == null) { FailA(prop, path, "no TMP component"); return 0; }
                 so.FindProperty(prop).objectReferenceValue = c;
-                Debug.Log($"[HoleSelectionAutoWire] OK prefab:{prop}"); wired++; return 1;
+                Debug.Log($"[HoleSelectionAutoWire] OK prefab:{prop}"); counters.Wired++; return 1;
             }
 
             int WireImage(string prop, string path)
@@ -104,7 +106,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 var c = t.GetComponent<Image>();
                 if (c == null) { FailA(prop, path, "no Image component"); return 0; }
                 so.FindProperty(prop).objectReferenceValue = c;
-                Debug.Log($"[HoleSelectionAutoWire] OK prefab:{prop}"); wired++; return 1;
+                Debug.Log($"[HoleSelectionAutoWire] OK prefab:{prop}"); counters.Wired++; return 1;
             }
 
             int WireButton(string prop, string path)
@@ -114,7 +116,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 var c = t.GetComponent<Button>();
                 if (c == null) { FailA(prop, path, "no Button component"); return 0; }
                 so.FindProperty(prop).objectReferenceValue = c;
-                Debug.Log($"[HoleSelectionAutoWire] OK prefab:{prop}"); wired++; return 1;
+                Debug.Log($"[HoleSelectionAutoWire] OK prefab:{prop}"); counters.Wired++; return 1;
             }
 
             int WireGO(string prop, string path)
@@ -122,12 +124,12 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 var t = prefabRoot.transform.Find(path);
                 if (t == null) { FailA(prop, path); return 0; }
                 so.FindProperty(prop).objectReferenceValue = t.gameObject;
-                Debug.Log($"[HoleSelectionAutoWire] OK prefab:{prop}"); wired++; return 1;
+                Debug.Log($"[HoleSelectionAutoWire] OK prefab:{prop}"); counters.Wired++; return 1;
             }
 
             // rootRect — the controller itself
             so.FindProperty("rootRect").objectReferenceValue = prefabRoot.GetComponent<RectTransform>();
-            Debug.Log("[HoleSelectionAutoWire] OK prefab:rootRect"); wired++;
+            Debug.Log("[HoleSelectionAutoWire] OK prefab:rootRect"); counters.Wired++;
 
             WireGO("collapsedContainer", "CollapsedContainer");
             WireGO("expandedContainer",  "ExpandedContainer");
@@ -156,17 +158,17 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 string amountPath = $"CollapsedContainer/RewardsRow/RewardSlot{n}/Reward{n}Amount";
 
                 var slotT = prefabRoot.transform.Find(slotPath);
-                if (slotT != null) { collapsedSlotsArr.GetArrayElementAtIndex(i).objectReferenceValue = slotT.gameObject; wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:collapsedRewardSlots[{i}]"); }
+                if (slotT != null) { collapsedSlotsArr.GetArrayElementAtIndex(i).objectReferenceValue = slotT.gameObject; counters.Wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:collapsedRewardSlots[{i}]"); }
                 else { FailA($"collapsedRewardSlots[{i}]", slotPath); }
 
                 var iconT = prefabRoot.transform.Find(iconPath);
                 var iconC = iconT != null ? iconT.GetComponent<Image>() : null;
-                if (iconC != null) { collapsedIconsArr.GetArrayElementAtIndex(i).objectReferenceValue = iconC; wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:collapsedRewardIcons[{i}]"); }
+                if (iconC != null) { collapsedIconsArr.GetArrayElementAtIndex(i).objectReferenceValue = iconC; counters.Wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:collapsedRewardIcons[{i}]"); }
                 else { FailA($"collapsedRewardIcons[{i}]", iconPath); }
 
                 var amtT = prefabRoot.transform.Find(amountPath);
                 var amtC = amtT != null ? amtT.GetComponent<TextMeshProUGUI>() : null;
-                if (amtC != null) { collapsedAmountsArr.GetArrayElementAtIndex(i).objectReferenceValue = amtC; wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:collapsedRewardAmounts[{i}]"); }
+                if (amtC != null) { collapsedAmountsArr.GetArrayElementAtIndex(i).objectReferenceValue = amtC; counters.Wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:collapsedRewardAmounts[{i}]"); }
                 else { FailA($"collapsedRewardAmounts[{i}]", amountPath); }
             }
 
@@ -186,17 +188,17 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 string amountPath = $"ExpandedContainer/RewardsRowExp/RewardSlot{n}Exp/Reward{n}AmountExp";
 
                 var slotT = prefabRoot.transform.Find(slotPath);
-                if (slotT != null) { expandedSlotsArr.GetArrayElementAtIndex(i).objectReferenceValue = slotT.gameObject; wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:expandedRewardSlots[{i}]"); }
+                if (slotT != null) { expandedSlotsArr.GetArrayElementAtIndex(i).objectReferenceValue = slotT.gameObject; counters.Wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:expandedRewardSlots[{i}]"); }
                 else { FailA($"expandedRewardSlots[{i}]", slotPath); }
 
                 var iconT = prefabRoot.transform.Find(iconPath);
                 var iconC = iconT != null ? iconT.GetComponent<Image>() : null;
-                if (iconC != null) { expandedIconsArr.GetArrayElementAtIndex(i).objectReferenceValue = iconC; wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:expandedRewardIcons[{i}]"); }
+                if (iconC != null) { expandedIconsArr.GetArrayElementAtIndex(i).objectReferenceValue = iconC; counters.Wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:expandedRewardIcons[{i}]"); }
                 else { FailA($"expandedRewardIcons[{i}]", iconPath); }
 
                 var amtT = prefabRoot.transform.Find(amountPath);
                 var amtC = amtT != null ? amtT.GetComponent<TextMeshProUGUI>() : null;
-                if (amtC != null) { expandedAmountsArr.GetArrayElementAtIndex(i).objectReferenceValue = amtC; wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:expandedRewardAmounts[{i}]"); }
+                if (amtC != null) { expandedAmountsArr.GetArrayElementAtIndex(i).objectReferenceValue = amtC; counters.Wired++; Debug.Log($"[HoleSelectionAutoWire] OK prefab:expandedRewardAmounts[{i}]"); }
                 else { FailA($"expandedRewardAmounts[{i}]", amountPath); }
             }
 
@@ -219,19 +221,19 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 var rkIcon = homeSO.FindProperty("repairKitIcon")?.objectReferenceValue as Sprite;
                 var bIcon  = homeSO.FindProperty("ballIcon")?.objectReferenceValue      as Sprite;
 
-                if (pIcon  != null) { so.FindProperty("pointsIcon").objectReferenceValue    = pIcon;  wired++; Debug.Log("[HoleSelectionAutoWire] OK prefab:pointsIcon"); }
+                if (pIcon  != null) { so.FindProperty("pointsIcon").objectReferenceValue    = pIcon;  counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK prefab:pointsIcon"); }
                 else { FailA("pointsIcon",    "(HomeScreenController)", "HomeScreen has no pointsIcon assigned"); }
 
-                if (rkIcon != null) { so.FindProperty("repairKitIcon").objectReferenceValue = rkIcon; wired++; Debug.Log("[HoleSelectionAutoWire] OK prefab:repairKitIcon"); }
+                if (rkIcon != null) { so.FindProperty("repairKitIcon").objectReferenceValue = rkIcon; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK prefab:repairKitIcon"); }
                 else { FailA("repairKitIcon", "(HomeScreenController)", "HomeScreen has no repairKitIcon assigned"); }
 
-                if (bIcon  != null) { so.FindProperty("ballIcon").objectReferenceValue      = bIcon;  wired++; Debug.Log("[HoleSelectionAutoWire] OK prefab:ballIcon"); }
+                if (bIcon  != null) { so.FindProperty("ballIcon").objectReferenceValue      = bIcon;  counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK prefab:ballIcon"); }
                 else { FailA("ballIcon",       "(HomeScreenController)", "HomeScreen has no ballIcon assigned"); }
             }
             else
             {
                 Debug.LogWarning("[HoleSelectionAutoWire] HomeScreenController not found in scene — reward icons must be wired manually on HoleCard prefab.");
-                failed += 3;
+                counters.Failed += 3;
             }
 
             so.ApplyModifiedProperties();
@@ -243,7 +245,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
 
         // ── Part B ────────────────────────────────────────────────────────────
 
-        private static void WireHoleSelectionScreen(ref int wired, ref int failed)
+        private static void WireHoleSelectionScreen(Counters counters)
         {
             HoleSelectionScreenController ctrl = null;
             foreach (var c in Resources.FindObjectsOfTypeAll<HoleSelectionScreenController>())
@@ -254,7 +256,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             if (ctrl == null)
             {
                 Debug.LogWarning("[HoleSelectionAutoWire] HoleSelectionScreenController not found in active scene. Add it to a HoleSelectionScreen GameObject first. Skipping Part B.");
-                failed++;
+                counters.Failed++;
                 return;
             }
 
@@ -264,7 +266,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             void FailB(string prop, string path, string reason = "path not found")
             {
                 Debug.LogWarning($"[HoleSelectionAutoWire] SCENE FAIL '{prop}' at '{path}' — {reason}. Wire manually.");
-                failed++;
+                counters.Failed++;
             }
 
             // cardsScrollRect
@@ -273,7 +275,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 if (t != null)
                 {
                     var sr = t.GetComponent<ScrollRect>();
-                    if (sr != null) { so.FindProperty("cardsScrollRect").objectReferenceValue = sr; wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:cardsScrollRect"); }
+                    if (sr != null) { so.FindProperty("cardsScrollRect").objectReferenceValue = sr; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:cardsScrollRect"); }
                     else { FailB("cardsScrollRect", "Content/CardsScrollView", "no ScrollRect component"); }
                 }
                 else { FailB("cardsScrollRect", "Content/CardsScrollView"); }
@@ -285,7 +287,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 if (t != null)
                 {
                     var rt = t.GetComponent<RectTransform>();
-                    if (rt != null) { so.FindProperty("cardsContent").objectReferenceValue = rt; wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:cardsContent"); }
+                    if (rt != null) { so.FindProperty("cardsContent").objectReferenceValue = rt; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:cardsContent"); }
                     else { FailB("cardsContent", "Content/CardsScrollView/Viewport/Content", "no RectTransform"); }
                 }
                 else { FailB("cardsContent", "Content/CardsScrollView/Viewport/Content"); }
@@ -294,7 +296,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             // filtersContainer
             {
                 var t = root.Find("Content/Filters");
-                if (t != null) { so.FindProperty("filtersContainer").objectReferenceValue = t.gameObject; wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:filtersContainer"); }
+                if (t != null) { so.FindProperty("filtersContainer").objectReferenceValue = t.gameObject; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:filtersContainer"); }
                 else { FailB("filtersContainer", "Content/Filters"); }
             }
 
@@ -302,14 +304,14 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             {
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HOLE_CARD_PREFAB_PATH);
                 var prefabCtrl = prefab != null ? prefab.GetComponent<HoleCardController>() : null;
-                if (prefabCtrl != null) { so.FindProperty("cardPrefab").objectReferenceValue = prefabCtrl; wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:cardPrefab"); }
+                if (prefabCtrl != null) { so.FindProperty("cardPrefab").objectReferenceValue = prefabCtrl; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:cardPrefab"); }
                 else { FailB("cardPrefab", HOLE_CARD_PREFAB_PATH, "no HoleCardController on prefab root"); }
             }
 
             // holeDatabase
             {
                 var holeDb = AssetDatabase.LoadAssetAtPath<HoleDatabase>(HOLE_DATABASE_PATH);
-                if (holeDb != null) { so.FindProperty("holeDatabase").objectReferenceValue = holeDb; wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:holeDatabase"); }
+                if (holeDb != null) { so.FindProperty("holeDatabase").objectReferenceValue = holeDb; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:holeDatabase"); }
                 else { FailB("holeDatabase", HOLE_DATABASE_PATH); }
             }
 
@@ -320,7 +322,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 {
                     if (m.gameObject.scene.isLoaded) { modal = m; break; }
                 }
-                if (modal != null) { so.FindProperty("matchmakingModal").objectReferenceValue = modal; wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:matchmakingModal"); }
+                if (modal != null) { so.FindProperty("matchmakingModal").objectReferenceValue = modal; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:matchmakingModal"); }
                 else { FailB("matchmakingModal", "(scene MatchmakingModalController)", "not found in scene"); }
             }
 
@@ -332,7 +334,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
 
         // ── Part C ────────────────────────────────────────────────────────────
 
-        private static void WireScreenManager(ref int wired, ref int failed)
+        private static void WireScreenManager(Counters counters)
         {
             ScreenManager sm = null;
             foreach (var s in Resources.FindObjectsOfTypeAll<ScreenManager>())
@@ -343,7 +345,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             if (sm == null)
             {
                 Debug.LogWarning("[HoleSelectionAutoWire] ScreenManager not found in active scene. Skipping Part C.");
-                failed++;
+                counters.Failed++;
                 return;
             }
 
@@ -357,7 +359,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             if (holeCtrl == null)
             {
                 Debug.LogWarning("[HoleSelectionAutoWire] HoleSelectionScreenController not found in scene — cannot wire ScreenManager._holeSelectionScreen.");
-                failed++;
+                counters.Failed++;
                 return;
             }
 
@@ -365,7 +367,7 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             so.FindProperty("_holeSelectionScreen").objectReferenceValue = holeCtrl.gameObject;
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(sm);
-            wired++;
+            counters.Wired++;
 
             Debug.Log("[HoleSelectionAutoWire] OK scene:ScreenManager._holeSelectionScreen");
             Debug.Log("[HoleSelectionAutoWire] Part C complete — ScreenManager wired.");
