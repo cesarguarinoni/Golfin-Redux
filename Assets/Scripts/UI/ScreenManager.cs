@@ -9,7 +9,8 @@ namespace GolfinRedux.UI
         Loading,
         Home,
         Roster,
-        Inventory
+        Inventory,
+        HoleSelection
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -31,6 +32,7 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _homeScreen;
         [SerializeField] private GameObject _rosterScreen;
         [SerializeField] private GameObject _inventoryScreen;
+        [SerializeField] private GameObject _holeSelectionScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         private ScreenId _currentScreen;
@@ -116,12 +118,16 @@ namespace GolfinRedux.UI
             if (_inventoryScreen != null)
                 _inventoryScreen.SetActive(screenId == ScreenId.Inventory);
 
+            if (_holeSelectionScreen != null)
+                _holeSelectionScreen.SetActive(screenId == ScreenId.HoleSelection);
+
             // Settings is an overlay (SettingsController), not managed here
 
-            // Show persistent bars on Home, Roster, and Inventory; hide on Logo/Splash/Loading
+            // Show persistent bars on Home, Roster, Inventory, and HoleSelection; hide on Logo/Splash/Loading
             bool showBars = screenId == ScreenId.Home
                          || screenId == ScreenId.Roster
-                         || screenId == ScreenId.Inventory;
+                         || screenId == ScreenId.Inventory
+                         || screenId == ScreenId.HoleSelection;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
                 if (showBars) Golfin.UI.PersistentUIManager.Instance.ShowBars();

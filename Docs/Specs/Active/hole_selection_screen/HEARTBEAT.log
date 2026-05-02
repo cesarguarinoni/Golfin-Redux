@@ -1,0 +1,2 @@
+2026-05-02T00:00:00 activated — reading SPEC.md and existing codebase files
+2026-05-02T00:10:00 Steps 1-9 code written: HoleData, CSV, parsers, HoleProgressionService, HoleCardController, HoleSelectionScreenController, ScreenManager, PersistentUIManager, HomeScreenController, AutoWire — triggering compile check

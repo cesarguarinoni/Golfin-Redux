@@ -114,7 +114,7 @@ namespace GolfinRedux.UI
             // Bottom nav
             if (navHomeButton != null)       navHomeButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));
             if (navGachaButton != null)      navGachaButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));      // TODO: Gacha
-            if (navTeeButton != null)        navTeeButton.onClick.AddListener(() => OnNavClicked(ScreenId.Loading));     // TODO: Hole select
+            if (navTeeButton != null)        navTeeButton.onClick.AddListener(() => OnNavClicked(ScreenId.HoleSelection));
             if (navInventoryButton != null)  navInventoryButton.onClick.AddListener(() => OnNavClicked(ScreenId.Inventory));
             if (navCharactersButton != null) navCharactersButton.onClick.AddListener(() => OnNavClicked(ScreenId.Roster)); // Roster Screen
         }
@@ -472,6 +472,10 @@ namespace GolfinRedux.UI
                     Debug.Log("[HomeScreenController] Showing Inventory screen...");
                     screenManager.ShowScreen(ScreenId.Inventory);
                     break;
+                case ScreenId.HoleSelection:
+                    Debug.Log("[HomeScreenController] Showing Hole Selection screen...");
+                    screenManager.ShowScreen(ScreenId.HoleSelection);
+                    break;
                 // For now other tabs just keep you on Home or are TODO
                 default:
                     screenManager.ShowScreen(ScreenId.Home);
@@ -486,7 +490,7 @@ namespace GolfinRedux.UI
             if (navGachaIcon != null)
                 navGachaIcon.color = navNormalColor; // no separate screen yet
             if (navTeeIcon != null)
-                navTeeIcon.color = active == ScreenId.Loading ? navActiveColor : navNormalColor;
+                navTeeIcon.color = active == ScreenId.HoleSelection ? navActiveColor : navNormalColor;
             if (navInventoryIcon != null)
                 navInventoryIcon.color = active == ScreenId.Inventory ? navActiveColor : navNormalColor;
             if (navCharactersIcon != null)

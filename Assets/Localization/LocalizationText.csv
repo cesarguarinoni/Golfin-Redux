@@ -29,11 +29,24 @@ HOME_NAV_PLAY,PLAY,プレイ
 HOME_NAV_BAG,BAG,バッグ
 HOME_NAV_MORE,MORE,その他
 HOME_SETTINGS,SETTINGS,設定
-HOLE_LOMOND_5,Lomond Country Club - Hole 5,ロモンドカントリークラブ - ホール5
-HOLE_RIVERSIDE_1,Riverside Golf Club - Hole 1,リバーサイドゴルフクラブ - ホール1
-HOLE_HIGHLAND_3,Highland Hills - Hole 3,ハイランドヒルズ - ホール3
-HOLE_LOMOND_6,Lomond Country Club - Hole 6,ロモンドカントリークラブ - ホール6
-HOLE_RIVERSIDE_2,Riverside Golf Club - Hole 2,リバーサイドゴルフクラブ - ホール2
+HOLE_LOMOND_1,Lomond Country Club  - Hole 1,ロモンドカントリークラブ  - ホール1
+HOLE_LOMOND_2,Lomond Country Club  - Hole 2,ロモンドカントリークラブ  - ホール2
+HOLE_LOMOND_3,Lomond Country Club  - Hole 3,ロモンドカントリークラブ  - ホール3
+HOLE_LOMOND_4,Lomond Country Club  - Hole 4,ロモンドカントリークラブ  - ホール4
+HOLE_LOMOND_5,Lomond Country Club  - Hole 5,ロモンドカントリークラブ  - ホール5
+HOLE_LOMOND_6,Lomond Country Club  - Hole 6,ロモンドカントリークラブ  - ホール6
+HOLE_LOMOND_7,Lomond Country Club  - Hole 7,ロモンドカントリークラブ  - ホール7
+HOLE_LOMOND_8,Lomond Country Club  - Hole 8,ロモンドカントリークラブ  - ホール8
+HOLE_LOMOND_9,Lomond Country Club  - Hole 9,ロモンドカントリークラブ  - ホール9
+HOLE_LOMOND_10,Lomond Country Club  - Hole 10,ロモンドカントリークラブ  - ホール10
+HOLE_LOMOND_11,Lomond Country Club  - Hole 11,ロモンドカントリークラブ  - ホール11
+HOLE_LOMOND_12,Lomond Country Club  - Hole 12,ロモンドカントリークラブ  - ホール12
+HOLE_LOMOND_13,Lomond Country Club  - Hole 13,ロモンドカントリークラブ  - ホール13
+HOLE_LOMOND_14,Lomond Country Club  - Hole 14,ロモンドカントリークラブ  - ホール14
+HOLE_LOMOND_15,Lomond Country Club  - Hole 15,ロモンドカントリークラブ  - ホール15
+HOLE_LOMOND_16,Lomond Country Club  - Hole 16,ロモンドカントリークラブ  - ホール16
+HOLE_LOMOND_17,Lomond Country Club  - Hole 17,ロモンドカントリークラブ  - ホール17
+HOLE_LOMOND_18,Lomond Country Club  - Hole 18,ロモンドカントリークラブ  - ホール18
 SETTINGS_PROFILE,User Profile,ユーザープロフィール
 SETTINGS_USERNAME,Username,ユーザー名
 SETTINGS_NAME,Name,[hfghh​]

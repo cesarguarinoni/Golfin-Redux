@@ -210,6 +210,9 @@ namespace Golfin.UI
                 case Screen.Characters:
                     sm.ShowScreen(GolfinRedux.UI.ScreenId.Roster);
                     break;
+                case Screen.MainPlay:
+                    sm.ShowScreen(GolfinRedux.UI.ScreenId.HoleSelection);
+                    break;
                 default:
                     Debug.LogWarning($"[PersistentUI] Navigation to {screen} not yet implemented.");
                     break;

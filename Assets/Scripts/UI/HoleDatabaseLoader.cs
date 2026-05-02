@@ -62,29 +62,57 @@ namespace GolfinRedux.UI
                 {
                     HoleData hole = new HoleData(fields[0].Trim(), int.Parse(fields[1].Trim()));
 
-                    // NEW — parse wind columns (indices 2 and 3)
-                    if (fields.Length > 2 && float.TryParse(fields[2].Trim(), out var ws)) hole.windSpeedMph = ws;
-                    if (fields.Length > 3 && float.TryParse(fields[3].Trim(), out var wd)) hole.windDirectionDegrees = wd;
+                    // Parse par (col 2)
+                    if (fields.Length > 2 && int.TryParse(fields[2].Trim(), out var par)) hole.par = par;
 
-                    // Parse up to 3 rewards (each reward has Type + Amount) — rewards now start at index 4
+                    // Parse descriptionKey (col 3) and holeImageName (col 4)
+                    if (fields.Length > 3) hole.descriptionKey = fields[3].Trim();
+                    if (fields.Length > 4) hole.holeImageName  = fields[4].Trim();
+
+                    // Wind columns shifted to indices 5 and 6
+                    if (fields.Length > 5 && float.TryParse(fields[5].Trim(), out var ws)) hole.windSpeedMph = ws;
+                    if (fields.Length > 6 && float.TryParse(fields[6].Trim(), out var wd)) hole.windDirectionDegrees = wd;
+
+                    // Parse up to 3 play rewards — columns 7–12: typeIdx = 7 + r*2, amountIdx = 8 + r*2
                     for (int r = 0; r < 3; r++)
                     {
-                        int typeIdx = 4 + (r * 2);
-                        int amountIdx = 5 + (r * 2);
+                        int typeIdx   = 7 + (r * 2);
+                        int amountIdx = 8 + (r * 2);
 
                         if (typeIdx >= fields.Length || amountIdx >= fields.Length)
                             break;
 
-                        string typeStr = fields[typeIdx].Trim();
+                        string typeStr   = fields[typeIdx].Trim();
                         string amountStr = fields[amountIdx].Trim();
 
                         if (string.IsNullOrEmpty(typeStr) || string.IsNullOrEmpty(amountStr))
                             continue;
 
-                        RewardType type = ParseRewardType(typeStr);
-                        int amount = int.Parse(amountStr);
+                        if (!int.TryParse(amountStr, out int amount)) continue;
 
+                        RewardType type = ParseRewardType(typeStr);
                         hole.AddReward(type, amount);
+                    }
+
+                    // Parse up to 3 replay rewards — columns 13–18: typeIdx = 13 + r*2, amountIdx = 14 + r*2
+                    for (int r = 0; r < 3; r++)
+                    {
+                        int typeIdx   = 13 + (r * 2);
+                        int amountIdx = 14 + (r * 2);
+
+                        if (typeIdx >= fields.Length || amountIdx >= fields.Length)
+                            break;
+
+                        string typeStr   = fields[typeIdx].Trim();
+                        string amountStr = fields[amountIdx].Trim();
+
+                        if (string.IsNullOrEmpty(typeStr) || string.IsNullOrEmpty(amountStr))
+                            continue;
+
+                        if (!int.TryParse(amountStr, out int amount)) continue;
+
+                        RewardType type = ParseRewardType(typeStr);
+                        hole.AddReplayReward(type, amount);
                     }
 
                     _runtimeDatabase.holes.Add(hole);

@@ -39,9 +39,13 @@ namespace GolfinRedux.UI
     {
         public string courseNameKey;    // Localization key (e.g., "HOLE_LOMOND_5")
         public int holeNumber;
+        public int par;
+        public string descriptionKey;             // Localization key for strategy text (e.g. "HOLE_LOMOND_1_DESC")
+        public string holeImageName;              // Name of combined hole+green image in Resources/HoleImages/ (e.g. "Hole_01")
         public float windSpeedMph         = 0f;
         public float windDirectionDegrees = 0f;
         public List<HoleReward> rewards = new();
+        public List<HoleReward> replayRewards = new();   // Rewards shown when REPLAY button is shown (hole already played)
 
         public HoleData(string courseNameKey, int holeNumber)
         {
@@ -52,6 +56,11 @@ namespace GolfinRedux.UI
         public void AddReward(RewardType type, int amount)
         {
             rewards.Add(new HoleReward(type, amount));
+        }
+
+        public void AddReplayReward(RewardType type, int amount)
+        {
+            replayRewards.Add(new HoleReward(type, amount));
         }
     }
 }
