@@ -2,7 +2,20 @@
 
 > STATUS: READY_FOR_CESAR_MANUAL_BUILD — Step 1.5 round-trip complete; all code + localization done; Step 8 (prefab + scene) must be built by Cesar in the Unity Editor; smoke test (Step 10) deferred to Cesar.
 
-## Implementation summary (updated 2026-05-02 — RESUME run)
+## Implementation summary (updated 2026-05-03 — Architect compile-fix pass)
+
+**Run 3 (Architect, post-Run 2):**
+- Verified all code compiles by triggering Unity AssetDatabase refresh and checking console.
+- **Caught a real compile error in `HoleSelectionAutoWire.cs` that Run 2's brace-balance check missed:** local functions inside Wire* methods were capturing `ref int wired, ref int failed` parameters, which C# disallows (CS1628). Fixed by introducing a small `private class Counters { public int Wired; public int Failed; }` mutable holder and threading that through all three Wire* methods. The fix is mechanical — same logic, same fail/wire counting behaviour, just the closure-capture problem solved.
+- Re-refreshed AssetDatabase: zero CS errors. The only remaining errors are pre-existing meta-file GUID warnings on Rindo Course lightmaps + the chronic `PersistentUIManager.cs` GUID-conflict log — none related to this task.
+- Attempted to run Localization importer + Hole Images sprite configuration + Hole Database import via Unity MCP `script-execute`. The MCP service connection dropped mid-session and did not recover. **Cesar must run those three menu items manually** — see "Remaining for Cesar" list below.
+- Committed compile fix: `c5945a80 hole_selection: fix CS1628 — capture counters via mutable holder instead of ref params`.
+
+**Run 1 (prior session):** Steps 1, 2, 3, 4, 5, 6, 7, 9 — all code DONE and compile-clean. Step 1.5 GIF download + OCR complete. Status set to WAITING_ON_ARCHITECT_TRANSLATION.
+
+**Architect translation:** Architect translated all 18 Japanese strategy paragraphs to English, wrote `desc_keys_en.csv` and `all_holes_en.txt`, set STATUS to READY_FOR_IMPLEMENTATION_RESUME.
+
+**Run 2 (this session):** 
 
 **Run 1 (prior session):** Steps 1, 2, 3, 4, 5, 6, 7, 9 — all code DONE and compile-clean. Step 1.5 GIF download + OCR complete. Status set to WAITING_ON_ARCHITECT_TRANSLATION.
 
@@ -16,14 +29,15 @@
 - The localization importer must be manually run by Cesar via `Tools/Localization/Import Text CSV` to push the new keys into `LocalizationTextTable.asset`.
 
 **Remaining for Cesar to do in Unity Editor (Step 8 + follow-up):**
-1. Run `Tools/Localization/Import Text CSV` — pushes 181 rows (18 DESC + 18 name + existing) into `LocalizationTextTable.asset`.
-2. Run `GOLFIN > Setup > Configure Hole Images as Sprites` — sets TextureType=Sprite for HoleImages/ PNGs.
-3. Run `GOLFIN > Import Holes from CSV` — imports HoleDatabase.asset (confirm "18 holes").
-4. Build `Assets/Prefabs/UI/HoleSelection/HoleCard.prefab` per hierarchy in SPEC.md §8.
-5. Add `HoleSelectionScreen` GameObject to ShellScene (child of Canvas, stretch-stretch), add `HoleSelectionScreenController` component.
-6. Add `HoleProgressionDebug` component to `ShellSceneRoot`.
-7. Run `GOLFIN > Wire > Hole Selection` auto-wire.
-8. Run smoke test sequence (Step 10 in spec).
+1. **`git push origin main`** — 7 hole_selection commits + 1 architect-translation commit + 1 compile-fix commit are sitting locally. Push helper not available in non-interactive shell (no SSH key, no credential helper, no `gh`).
+2. Run `Tools/Localization/Import Text CSV` — pushes 181 rows (18 DESC + 18 name + existing) into `LocalizationTextTable.asset`.
+3. Run `GOLFIN > Setup > Configure Hole Images as Sprites` — sets TextureType=Sprite for HoleImages/ PNGs.
+4. Run `GOLFIN > Import Holes from CSV` — opens an EditorWindow; assign `Assets/Data/HoleDatabase.csv` → `Assets/Data/HoleDatabase.asset` and click Import (confirm "18 holes" dialog).
+5. Build `Assets/Prefabs/UI/HoleSelection/HoleCard.prefab` per hierarchy in SPEC.md §8.
+6. Add `HoleSelectionScreen` GameObject to ShellScene (child of Canvas, stretch-stretch), add `HoleSelectionScreenController` component.
+7. Add `HoleProgressionDebug` component to `ShellSceneRoot`.
+8. Run `GOLFIN > Wire > Hole Selection` auto-wire (fixed in Run 3 — was a compile error before, now compiles clean).
+9. Run smoke test sequence (Step 10 in spec).
 
 ## Files modified or created
 
