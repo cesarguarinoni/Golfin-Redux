@@ -92,6 +92,18 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
+## 📌 NEXT — Matchmaking Modal (Mac env test, off-roadmap)
+
+**Spec:** `Docs/Specs/Active/matchmaking_modal/SPEC.md` — SPEC_READY 2026-05-02.
+
+**One-line goal:** Wire fake-matchmaking behaviour onto the existing `MatchMakingModal` prefab. Tap Home screen's Next-Hole PLAY button → modal opens, "FINDING OPPONENT…" cycles dots, opponent portrait/name/rank cycles every ~0.3 s, hole + rewards mirror the Home screen's Next Hole panel, after `searchDurationSeconds` (default 5 s) the title flips to "OPPONENT FOUND" and the opponent locks. Cancel hides the modal. No networking, no save-state changes. **Off-roadmap** — first end-to-end smoke test of the Mac dev environment; runs in parallel with item C.
+
+**Kickoff:** `Use the golfin-implementer subagent on "matchmaking_modal"`.
+
+**Files touched:** `CharacterThumbnailCard.cs` (one new method), `HomeScreenController.cs` (1 SerializeField + 5-line edit to `OnPlayClicked`), new `MatchmakingModalController.cs` + auto-wire, `ShellScene.unity` (controller component + inspector wiring). Prefab itself is NOT modified. Nothing physics-related is touched — item C's bugs are explicitly out-of-scope.
+
+---
+
 ## 🚩 OPEN FLAGS — read before starting any new task
 
 > Architect-tracked open issues. Don't action without an explicit task block; just be aware they exist.
