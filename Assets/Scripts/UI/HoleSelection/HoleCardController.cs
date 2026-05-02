@@ -169,6 +169,9 @@ namespace GolfinRedux.UI.HoleSelection
             float alpha = isLocked ? 0.4f : 1f;
             ApplyRewardAlpha(collapsedRewardIcons, collapsedRewardAmounts, alpha);
             ApplyRewardAlpha(expandedRewardIcons,  expandedRewardAmounts,  alpha);
+
+            if (rootRect != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
         }
 
         // ── Private helpers ───────────────────────────────────────────────────
