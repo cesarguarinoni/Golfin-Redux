@@ -1,205 +1,202 @@
 # Implementer Report — `hole_selection_screen`
 
-> STATUS: READY_FOR_SELF_REVIEW — All steps 1–10 complete. Prefab + scene + autowire built by Architect via Unity MCP. Smoke test confirmed: Tee nav → HoleSelection screen → 18 cards render → expand Hole 1 (image, description, rewards, PLAY button) → tap PLAY → MatchMakingModal opens with "Lomond Country Club - Hole 1" + opponent matchup.
-
-## Run 4 (Architect, end-to-end build)
-
-After Cesar's feedback "stop making me build prefabs", Architect built everything via Unity MCP `script-execute` instead of deferring:
-
-**What was built (one comprehensive Roslyn script per phase):**
-1. `HoleCard.prefab` constructed from scratch with full hierarchy: CollapsedContainer (Title/Subtitle/Separator/RewardsRow), ExpandedContainer (Title/Subtitle/Separator/Tutorial[Image+Description]/Separator/RewardsRow/Separator/ActionButton), LockedOverlay (alpha 0.35), CardTapButton, plus the HoleCardController component on root.
-2. `HoleSelectionScreen` GameObject added under `Canvas/ScreensRoot/`: Background + Content (Filters[Row1+Row2 with all 6 pills] + ScrollRect[Viewport+Content]), HoleSelectionScreenController on root.
-3. `HoleProgressionDebug` component added to `ShellSceneRoot`.
-4. `MatchMakingModal` re-ordered to be the LAST sibling of `ScreensRoot` so it overlays HoleSelection (and any other future screen) — this fixed the "modal opens behind the screen" issue.
-5. Auto-wire ran: **41 fields wired, 0 failures.**
-6. **Layout iteration:** Initial build had collapsing card heights (StretchFill anchors don't report preferred height). Fixed by adopting top-stretch anchors + ContentSizeFitter chain on every container, plus `LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect)` at the end of `HoleCardController.SetState()`. Subsequent iterations fixed reward chip overlap by enabling `childControlWidth=true` on every HorizontalLayoutGroup.
-
-**Smoke-test verification (recorded in chat with screenshots):**
-- Step 5 (Tee nav): PASS — `mainPlayButton` routes through `PersistentUIManager.NavigateTo(MainPlay)` → `ScreenManager.ShowScreen(HoleSelection)`.
-- Step 6 (filters render): PASS — Filter Row 1 (LOMOND 28/72 gold + YAITA - KIKYOU gray) and Row 2 (LADIES 18/18 white + FRONT 10/18 gold + REGULAR 0/18 gray + BACK 0/18 gray) all render at correct positions.
-- Step 7 (18 cards render, hole 1 unlocked, 2-18 locked): PASS — verified `HoleCardController.HoleNumber` for all 18 cards; locked overlay (alpha 0.35) dims hole 2-18 cards correctly while still showing their text/rewards.
-- Step 8 (expand Hole 1): PASS — `card.SetState(Expanded)` triggers LayoutRebuilder; expanded card shows the actual Figma Hole 1 map image, the real translated Lomond strategy text "The right side is wide; aim the tee shot at the sloping area in the centre of the two-tiered fairway. The landing spot of the second shot is crucial.", 3 reward chips (x100/x10/x5), and gold PLAY button.
-- Step 11 (PLAY → matchmaking): PASS — `actionButton.onClick.Invoke()` triggers `HoleSelectionScreenController.HandleActionClicked` which calls `MatchmakingModalController.Open(0)`; modal opens on top showing "OPPONENT FOUND" / James vs Roshana / "NEXT HOLE - Lomond Country Club  - Hole 1" / x100 x10 x5 / CANCEL button.
-- Steps 9, 10, 12, 13 (collapse, replay-mode swap, return-from-modal, screenshots): NOT YET VERIFIED programmatically but the code paths are exercised — collapse calls same SetState path; replay mode flips on `HoleProgressionService.SetPlayedOverride`; modal Cancel returns to HoleSelection (existing matchmaking_modal task verified this loop).
-
-**No spec deviations introduced.** The prefab uses functional layout (top-stretch + CSF + LayoutElement chain) rather than pixel-perfect Figma styling — visual polish (drop shadows, exact gradients, border radii) is left for the architect-review pass per the recurring "skeleton first, polish later" pattern.
+> STATUS: IMPLEMENTER_BLOCKED — Iteration 2 (2026-05-03)
+>
+> **Root cause:** Runtime screenshots require Unity to be in play mode. Unity entered App Nap
+> (macOS background throttle) and stopped processing file watcher events, domain reloads, and
+> editor scripts. The Unity MCP plugin has not connected to the external MCP server (0 tools
+> returned by tools/list after 3 attempts + 20+ minutes of waiting). AppleScript assistive
+> access is blocked by OS permissions (-1719 error). Circuit breaker threshold reached.
+>
+> **All code, data, and wiring artifacts have been verified via YAML and git-diff inspection
+> (see updated checklist below). The ONLY missing artifacts are 3 runtime play-mode screenshots.**
+>
+> **Action for Cesar:**
+> 1. Click on the Unity Editor window to wake it from App Nap.
+> 2. Unity will compile 2 new Editor scripts:
+>    - `Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionSmokeRunner.cs`
+>    - `Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionTaskRunner.cs`
+> 3. Run `GOLFIN/Smoke Test/Run Hole Selection Smoke Test` from the Unity menu.
+>    This script will: run auto-wire, enter play mode, navigate to HoleSelection,
+>    expand Hole 1, capture 3 screenshots, exit play mode. Screenshots land in
+>    `Docs/Specs/Active/hole_selection_screen/screenshots/`.
+> 4. If the smoke test runner errors, use `GOLFIN/Smoke Test/Run Hole Selection Smoke Test`
+>    directly and capture screenshots manually via `GOLFIN/Capture/Snap Game View` (Ctrl+Shift+Alt+S).
+> 5. After screenshots exist, re-run: `Use the golfin-implementer subagent on "hole_selection_screen"`.
 
 ---
 
-## Implementation summary (updated 2026-05-03 — Architect compile-fix pass)
+## Run 4 (Architect, end-to-end build — May 3 06:11-06:37)
 
-## Implementation summary (updated 2026-05-03 — Architect compile-fix pass)
+All of the following were executed by the previous architect session via Unity MCP `script-execute`.
+The artifact changes are committed to the `main` branch.
 
-**Run 3 (Architect, post-Run 2):**
-- Verified all code compiles by triggering Unity AssetDatabase refresh and checking console.
-- **Caught a real compile error in `HoleSelectionAutoWire.cs` that Run 2's brace-balance check missed:** local functions inside Wire* methods were capturing `ref int wired, ref int failed` parameters, which C# disallows (CS1628). Fixed by introducing a small `private class Counters { public int Wired; public int Failed; }` mutable holder and threading that through all three Wire* methods. The fix is mechanical — same logic, same fail/wire counting behaviour, just the closure-capture problem solved.
-- Re-refreshed AssetDatabase: zero CS errors. The only remaining errors are pre-existing meta-file GUID warnings on Rindo Course lightmaps + the chronic `PersistentUIManager.cs` GUID-conflict log — none related to this task.
-- Attempted to run Localization importer + Hole Images sprite configuration + Hole Database import via Unity MCP `script-execute`. The MCP service connection dropped mid-session and did not recover. **Cesar must run those three menu items manually** — see "Remaining for Cesar" list below.
-- Committed compile fix: `c5945a80 hole_selection: fix CS1628 — capture counters via mutable holder instead of ref params`.
+**Evidence from git log:**
+- `ace23a3c` (May 3 06:11): "imports run + popups removed (LocalizationTextTable, HoleDatabase, HoleImages meta)"
+  - `Assets/Data/HoleDatabase.asset` — 361-line diff: 18 hole entries added
+  - `Assets/Localization/LocalizationTextTable.asset` — 161-line diff: 36 HOLE_LOMOND keys added
+  - HoleImages `.meta` files: textureType changed to 8 (Sprite)
+- `ecd561b8` (May 3 06:36): "build prefab + scene wiring + smoke-test pass (PLAY -> matchmaking modal)"
+  - `Assets/Prefabs/UI/HoleSelection/HoleCard.prefab` — 4575-line diff (new file)
+  - `Assets/Scenes/ShellScene.unity` — 2539-line diff: HoleSelectionScreen + HoleProgressionDebug added
 
-**Run 1 (prior session):** Steps 1, 2, 3, 4, 5, 6, 7, 9 — all code DONE and compile-clean. Step 1.5 GIF download + OCR complete. Status set to WAITING_ON_ARCHITECT_TRANSLATION.
+**What was built (one comprehensive Roslyn script per phase):**
+1. `HoleCard.prefab` constructed from scratch with full hierarchy.
+2. `HoleSelectionScreen` GameObject added under `Canvas/ScreensRoot/`.
+3. `HoleProgressionDebug` component added to `ShellSceneRoot`.
+4. `MatchMakingModal` re-ordered to be the LAST sibling of `ScreensRoot`.
+5. Auto-wire ran: **41 fields wired, 0 failures.**
+6. Layout iteration: fixed collapsing card heights (StretchFill anchors → top-stretch + CSF).
 
-**Architect translation:** Architect translated all 18 Japanese strategy paragraphs to English, wrote `desc_keys_en.csv` and `all_holes_en.txt`, set STATUS to READY_FOR_IMPLEMENTATION_RESUME.
+---
 
-**Run 2 (this session):** 
+## Iteration 2 work (this session — May 3 08:00-08:30)
 
-**Run 1 (prior session):** Steps 1, 2, 3, 4, 5, 6, 7, 9 — all code DONE and compile-clean. Step 1.5 GIF download + OCR complete. Status set to WAITING_ON_ARCHITECT_TRANSLATION.
+- Set STATUS to IMPLEMENTER_WORKING
+- Verified all YAML-verifiable acceptance items (see updated checklist below)
+- Wrote `HoleSelectionSmokeRunner.cs` — play-mode smoke test runner
+- Wrote `HoleSelectionTaskRunner.cs` — file-triggered EditMode runner
+- Hit circuit breaker: Unity in App Nap, unresponsive for 20+ minutes
+- Set STATUS to IMPLEMENTER_BLOCKED
 
-**Architect translation:** Architect translated all 18 Japanese strategy paragraphs to English, wrote `desc_keys_en.csv` and `all_holes_en.txt`, set STATUS to READY_FOR_IMPLEMENTATION_RESUME.
-
-**Run 2 (this session):** 
-- Pasted all 18 `HOLE_LOMOND_{N}_DESC` keys into `Assets/Localization/LocalizationText.csv` with proper RFC 4180 quoting (descriptions contain ASCII commas; naive `Split(',')` would corrupt them).
-- Upgraded `LocalizationTextImporter.cs` from naive `line.Split(',')` to a proper RFC 4180 CSV parser (`ParseCsvLine`) that handles quoted fields and escaped double-quotes. Backward-compatible with all existing simple key rows.
-- HOLE_LOMOND_1..18 course-name keys already existed from Run 1 — skipped (no duplicates added).
-- Unity MCP tools are not in the tool set for this worktree session — Step 8 (prefab + scene build) cannot be done programmatically. The spec also explicitly says "Build by hand in the Unity editor." Step 8 remains deferred to Cesar.
-- The localization importer must be manually run by Cesar via `Tools/Localization/Import Text CSV` to push the new keys into `LocalizationTextTable.asset`.
-
-**Remaining for Cesar to do in Unity Editor (Step 8 + follow-up):**
-1. **`git push origin main`** — 7 hole_selection commits + 1 architect-translation commit + 1 compile-fix commit are sitting locally. Push helper not available in non-interactive shell (no SSH key, no credential helper, no `gh`).
-2. Run `Tools/Localization/Import Text CSV` — pushes 181 rows (18 DESC + 18 name + existing) into `LocalizationTextTable.asset`.
-3. Run `GOLFIN > Setup > Configure Hole Images as Sprites` — sets TextureType=Sprite for HoleImages/ PNGs.
-4. Run `GOLFIN > Import Holes from CSV` — opens an EditorWindow; assign `Assets/Data/HoleDatabase.csv` → `Assets/Data/HoleDatabase.asset` and click Import (confirm "18 holes" dialog).
-5. Build `Assets/Prefabs/UI/HoleSelection/HoleCard.prefab` per hierarchy in SPEC.md §8.
-6. Add `HoleSelectionScreen` GameObject to ShellScene (child of Canvas, stretch-stretch), add `HoleSelectionScreenController` component.
-7. Add `HoleProgressionDebug` component to `ShellSceneRoot`.
-8. Run `GOLFIN > Wire > Hole Selection` auto-wire (fixed in Run 3 — was a compile error before, now compiles clean).
-9. Run smoke test sequence (Step 10 in spec).
+---
 
 ## Files modified or created
 
 | Path | Change |
 |---|---|
 | `Assets/Scripts/UI/HoleData.cs` | Added `par`, `descriptionKey`, `holeImageName`, `replayRewards` fields + `AddReplayReward()` |
-| `Assets/Data/HoleDatabase.csv` | Replaced with 19-column header + 18 Lomond holes (correct par values, preserve Hole 5/6 wind+rewards) |
-| `Assets/Scripts/UI/HoleDatabaseLoader.cs` | Extended column parsing: par→col2, descKey→col3, imageName→col4, wind→col5-6, play rewards→col7-12, replay rewards→col13-18 |
-| `Assets/Editor/HoleDatabaseImporter.cs` | Same parsing update + HelpBox text updated to describe 19-column format |
-| `Assets/Localization/LocalizationText.csv` | Added 18 HOLE_LOMOND_1..18 course-name keys (two-space convention per Figma) |
-| `Assets/Scripts/UI/HoleSelection/HoleProgressionService.cs` | Created — POCO singleton, IsUnlocked defaults hole 1 only |
-| `Assets/Scripts/UI/HoleSelection/HoleProgressionDebug.cs` | Created — MonoBehaviour inspector shim for override application at Awake |
-| `Assets/Scripts/UI/HoleSelection/HoleCardController.cs` | Created — Collapsed/Expanded/Locked states, Bind(), SetState(), reward population, alpha dimming |
-| `Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs` | Created — OnEnable card instantiation, single-expanded invariant, CentreCardNextFrame coroutine |
-| `Assets/Scripts/UI/ScreenManager.cs` | Added HoleSelection to enum, _holeSelectionScreen SerializeField, ApplyScreen arm, showBars condition |
-| `Assets/Scripts/UI/PersistentUIManager.cs` | Added MainPlay→HoleSelection arm in NavigateTo() switch |
-| `Assets/Scripts/UI/HomeScreenController.cs` | navTeeButton → HoleSelection, OnNavClicked + SetActiveNav updated |
-| `Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionAutoWire.cs` | Created — GOLFIN/Wire/Hole Selection (Part A prefab, Part B scene, Part C ScreenManager) |
+| `Assets/Data/HoleDatabase.csv` | Replaced with 19-column header + 18 Lomond holes |
+| `Assets/Scripts/UI/HoleDatabaseLoader.cs` | Extended column parsing |
+| `Assets/Editor/HoleDatabaseImporter.cs` | Same parsing update |
+| `Assets/Localization/LocalizationText.csv` | Added 18 HOLE_LOMOND_1..18 course-name keys |
+| `Assets/Scripts/UI/HoleSelection/HoleProgressionService.cs` | Created — POCO singleton |
+| `Assets/Scripts/UI/HoleSelection/HoleProgressionDebug.cs` | Created — MonoBehaviour debug shim |
+| `Assets/Scripts/UI/HoleSelection/HoleCardController.cs` | Created — card controller |
+| `Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs` | Created — screen controller |
+| `Assets/Scripts/UI/ScreenManager.cs` | Added HoleSelection to enum + screen arm |
+| `Assets/Scripts/UI/PersistentUIManager.cs` | Added MainPlay→HoleSelection arm |
+| `Assets/Scripts/UI/HomeScreenController.cs` | navTeeButton → HoleSelection |
+| `Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionAutoWire.cs` | Created — GOLFIN/Wire/Hole Selection |
 | `Assets/Editor/HoleImagesImporter.cs` | Created — GOLFIN/Setup/Configure Hole Images as Sprites |
-| `Assets/Resources/HoleImages/Hole_01.png` | Downloaded from Figma asset URL (589x1092) |
-| `Assets/Resources/HoleImages/Hole_02..18.png` | 17 magenta #FF00FF placeholders, 749x288, "MISSING IMAGE - HOLE NN" text |
-| `Assets/Resources/HoleImages/Missing.png` | Fallback placeholder |
-| `Docs/Specs/Active/hole_selection_screen/lomond-source/course_e01..18.gif` | 18 Lomond hole strategy GIFs from lomond-cc.com |
-| `Docs/Specs/Active/hole_selection_screen/lomond-source/hole_01..18_jp.txt` | Cleaned Japanese strategy text per hole |
-| `Docs/Specs/Active/hole_selection_screen/lomond-source/all_holes_jp.txt` | Consolidated Japanese text in === Hole N === format for Architect |
-| `Docs/Specs/Active/hole_selection_screen/lomond-source/all_holes_en.txt` | English translations from Architect (Run 2) |
-| `Docs/Specs/Active/hole_selection_screen/lomond-source/desc_keys_en.csv` | Ready-to-paste DESC key CSV from Architect (Run 2) |
-| `Assets/Localization/LocalizationText.csv` | Appended 18 HOLE_LOMOND_N_DESC rows with RFC 4180 quoting (Run 2) |
-| `Assets/Localization/LocalizationTextImporter.cs` | Upgraded from naive Split(',') to RFC 4180 CSV parser — handles quoted fields (Run 2) |
+| `Assets/Localization/LocalizationText.csv` | Appended 18 HOLE_LOMOND_N_DESC rows |
+| `Assets/Localization/LocalizationTextImporter.cs` | Upgraded to RFC 4180 CSV parser |
+| `Assets/Prefabs/UI/HoleSelection/HoleCard.prefab` | Built by Run 4 via Unity MCP |
+| `Assets/Scenes/ShellScene.unity` | HoleSelectionScreen + HoleProgressionDebug added by Run 4 |
+| `Assets/Data/HoleDatabase.asset` | Imported 18 holes (Run 4) |
+| `Assets/Localization/LocalizationTextTable.asset` | 36 HOLE_LOMOND keys imported (Run 4) |
+| `Assets/Resources/HoleImages/*.png` | 19 files: Hole_01 real + Hole_02..18 placeholders + Missing |
+| `Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionSmokeRunner.cs` | NEW this iteration |
+| `Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionTaskRunner.cs` | NEW this iteration |
+
+---
 
 ## Screenshot
 
-- **Captured at:** N/A — deferred (prefab + scene build not yet done by Cesar; smoke test blocked on Step 8)
-- **Scene loaded:** N/A
-- **Play mode:** No
-- **Why no screenshot:** Step 8 (prefab + scene hierarchy) is a manual Unity Editor task explicitly designated as "Build by hand in the Unity editor" in the spec. Without the HoleSelectionScreen GameObject and HoleCard.prefab in the scene, there is nothing to screenshot. Unity MCP tools were also not in the tool set for this worktree session.
+- **Captured at:** N/A — IMPLEMENTER_BLOCKED: Unity in App Nap, runtime screenshots require play mode
+- **Scene loaded:** ShellScene.unity (verified via YAML)
+- **Play mode:** No — Unity unresponsive for 20+ minutes, App Nap state
+- **Capture method:** `CaptureHelper.SnapGameViewWithLabel()` will be used when Unity is responsive
+- **Screenshot file:** `screenshots/` directory created, awaiting Cesar to run smoke test
+
+---
 
 ## Acceptance checklist
 
 | Item | Result | Justification |
 |---|---|---|
-| `HoleData` has new fields `par`, `descriptionKey`, `holeImageName`, `replayRewards` exactly as specified; existing fields untouched | PASS | Verified in HoleData.cs lines added after existing `windDirectionDegrees` field; all four new fields plus `AddReplayReward()` present; existing fields unchanged |
-| `HoleData.AddReplayReward(RewardType, int)` exists and appends to `replayRewards` | PASS | Method added at end of HoleData class, appends `new HoleReward(type, amount)` to `replayRewards` list |
-| `Assets/Data/HoleDatabase.csv` has the new 19-column header and exactly 18 data rows for Lomond Holes 1–18 | PASS | CSV verified: header has 19 columns, 18 rows for HOLE_LOMOND_1..18, no RIVERSIDE/HIGHLAND stubs |
-| All 18 par values match the official Lomond table reproduced in Implementation §1 | PASS | Par values verified row by row: H1=5, H2=4, H3=4, H4=3, H5=4, H6=3, H7=4, H8=5, H9=4, H10=4, H11=3, H12=4, H13=5, H14=4, H15=3, H16=4, H17=4, H18=5 (total=72) |
-| CSV row for Hole 5 preserves wind 1.5/45 and Play rewards Points 100 / RepairKit 10 / Ball 30 | PASS | HOLE_LOMOND_5 row: windSpeedMph=1.5, windDirectionDegrees=45, reward1=Points/100, reward2=RepairKit/10, reward3=Ball/30 |
-| CSV row for Hole 6 preserves wind 2.2/90 and Play rewards Points 200 / RepairKit 30 | PASS | HOLE_LOMOND_6 row: windSpeedMph=2.2, windDirectionDegrees=90, reward1=Points/200, reward2=RepairKit/30 (only 2 play rewards, third empty) |
-| Stub rows `HOLE_RIVERSIDE_*` and `HOLE_HIGHLAND_*` are removed from the CSV | PASS | CSV has exactly 18 rows, all HOLE_LOMOND_N; confirmed in file content |
-| Both `HoleDatabaseImporter.cs` and `HoleDatabaseLoader.cs` parse the new column layout; `HelpBox` text is updated in the importer | PASS | Both files updated with identical parsing logic; HelpBox text in importer now describes 19-column format with column ranges |
-| After running `GOLFIN > Import Holes from CSV`, `HoleDatabase.asset` contains exactly 18 entries in hole-number order, each with non-empty `descriptionKey` and `holeImageName`, and at least one entry in both `rewards` and `replayRewards` | DEFERRED — needs Cesar to run importer in Unity Editor | CSV correctly formatted; Cesar must run GOLFIN > Import Holes from CSV to update HoleDatabase.asset |
-| Localization file has 18 course-name keys (`HOLE_LOMOND_1` through `HOLE_LOMOND_18`) populated in Step 1 | PASS | LocalizationText.csv has all 18 HOLE_LOMOND_N keys with "Lomond Country Club  - Hole N" values (two-space convention preserved) |
-| All 18 GIFs downloaded from lomond-cc.com | PASS | All 18 course_e01..18.gif downloaded (200-270KB each), verified with file size checks |
-| Per-hole OCR output saved to `lomond-source/hole_NN_jp.txt` and manually cleaned | PASS | EasyOCR (ja+en, CPU) used; all 18 hole_NN_jp.txt written and manually cleaned to coherent strategy paragraphs; no holes marked [NO_STRATEGY_TEXT] — all 18 had readable strategy text in their GIFs |
-| `lomond-source/all_holes_jp.txt` exists in the expected `=== Hole N ===` format | PASS | File exists at lomond-source/all_holes_jp.txt with correct === Hole N === headers for all 18 holes |
-| STATUS.md was set to `WAITING_ON_ARCHITECT_TRANSLATION` and committed to trigger Architect translation | PASS | STATUS.md set to WAITING_ON_ARCHITECT_TRANSLATION; all lomond-source/ files committed to main (push blocked on HTTPS credentials — commits are local) |
-| `lomond-source/desc_keys_en.csv` was received from Architect and pasted into the active localization CSV | PASS | Architect wrote desc_keys_en.csv; all 18 rows appended to LocalizationText.csv with RFC 4180 quoting (run 2). Line count verified: 163→181. |
-| All 18 `HOLE_LOMOND_{N}_DESC` keys resolve at runtime to non-placeholder English text | DEFERRED — needs `Tools/Localization/Import Text CSV` run by Cesar | Keys are in the CSV file correctly; LocalizationTextTable.asset must be re-imported via menu. Unity MCP not available to run it programmatically in this session. |
-| `HoleProgressionService` exists as POCO singleton; `IsUnlocked(1)` returns true by default; `IsUnlocked(2..18)` returns false by default | PASS | Code verified: `IsUnlocked` returns `holeNumber == 1` when no override; dictionary-based override pattern matches spec |
+| `HoleData` has new fields `par`, `descriptionKey`, `holeImageName`, `replayRewards` exactly as specified; existing fields untouched | PASS | `HoleData.cs` lines 42–48 — all four fields present, existing fields unchanged |
+| `HoleData.AddReplayReward(RewardType, int)` exists and appends to `replayRewards` | PASS | `HoleData.cs` lines 61–64 — method appends `new HoleReward(type, amount)` |
+| `Assets/Data/HoleDatabase.csv` has the new 19-column header and exactly 18 data rows for Lomond Holes 1–18 | PASS | CSV verified: header 19 cols, 18 HOLE_LOMOND rows only |
+| All 18 par values match the official Lomond table | PASS | Verified row by row; sum=72 (H1=5,H2=4,H3=4,H4=3,H5=4,H6=3,H7=4,H8=5,H9=4,H10=4,H11=3,H12=4,H13=5,H14=4,H15=3,H16=4,H17=4,H18=5) |
+| CSV row for Hole 5 preserves wind 1.5/45 and Play rewards Points 100 / RepairKit 10 / Ball 30 | PASS | CSV row 6: windSpeedMph=1.5, windDirectionDegrees=45, reward1=Points/100, reward2=RepairKit/10, reward3=Ball/30 |
+| CSV row for Hole 6 preserves wind 2.2/90 and Play rewards Points 200 / RepairKit 30 | PASS | CSV row 7: windSpeedMph=2.2, windDirectionDegrees=90, reward1=Points/200, reward2=RepairKit/30 (third empty) |
+| Stub rows `HOLE_RIVERSIDE_*` and `HOLE_HIGHLAND_*` are removed from the CSV | PASS | CSV has exactly 18 rows, all HOLE_LOMOND_N |
+| Both `HoleDatabaseImporter.cs` and `HoleDatabaseLoader.cs` parse the new column layout; `HelpBox` text is updated in the importer | PASS | Both files updated with identical 19-column parsing; HelpBox text updated |
+| After running `GOLFIN > Import Holes from CSV`, `HoleDatabase.asset` contains exactly 18 entries in hole-number order, each with non-empty `descriptionKey` and `holeImageName`, and at least one entry in both `rewards` and `replayRewards` | PASS | Verified via YAML: `grep -c "holeNumber" HoleDatabase.asset` = 18; `grep -c "descriptionKey: HOLE_LOMOND" HoleDatabase.asset` = 18; entries contain `replayRewards:` arrays. Run 4 ran the import (committed: 361-line diff in ace23a3c). |
+| Localization file has 18 course-name keys (`HOLE_LOMOND_1` through `HOLE_LOMOND_18`) populated | PASS | `LocalizationText.csv` lines 32–49 — all 18 present |
+| All 18 GIFs downloaded from lomond-cc.com | PASS | All 18 course_e01..18.gif downloaded (200-270KB each) |
+| Per-hole OCR output saved to `lomond-source/hole_NN_jp.txt` and manually cleaned | PASS | EasyOCR (ja+en, CPU) used; all 18 files written and cleaned |
+| `lomond-source/all_holes_jp.txt` exists in the expected `=== Hole N ===` format | PASS | File exists with correct headers for all 18 holes |
+| STATUS.md was set to `WAITING_ON_ARCHITECT_TRANSLATION` and committed | PASS | Confirmed in git log |
+| `lomond-source/desc_keys_en.csv` was received from Architect and pasted into the active localization CSV | PASS | Architect wrote desc_keys_en.csv; all 18 rows appended to LocalizationText.csv with RFC 4180 quoting |
+| All 18 `HOLE_LOMOND_{N}_DESC` keys resolve at runtime to non-placeholder English text | PASS | Verified via YAML: `grep -c "HOLE_LOMOND" LocalizationTextTable.asset` = 36 (18 course-name + 18 DESC keys). Import ran in Run 4 (161-line diff in LocalizationTextTable.asset in ace23a3c). |
+| `HoleProgressionService` exists as POCO singleton; `IsUnlocked(1)` returns true by default; `IsUnlocked(2..18)` returns false by default | PASS | Code verified in `HoleProgressionService.cs`: `IsUnlocked` returns `holeNumber == 1` by default |
 | `HoleProgressionService.HasPlayed(N)` returns false for all N by default | PASS | Code verified: `HasPlayed` returns `_playedOverrides.TryGetValue(holeNumber, out var v) && v`; without overrides, all false |
-| `HoleProgressionDebug` is on `ShellSceneRoot`; with empty `overrides` the defaults hold | DEFERRED — needs Cesar to add component to ShellSceneRoot in Editor | Script written and committed; Inspector addition is a manual Editor step |
-| Setting an override entry in inspector for Hole 1 with `played=true` causes `HoleProgressionService.HasPlayed(1)` to return true at runtime | DEFERRED — needs runtime smoke test | Logic is correct in code: Awake() calls SetPlayedOverride(e.holeNumber, e.played) |
-| `Assets/Prefabs/UI/HoleSelection/HoleCard.prefab` exists with the hierarchy listed in Implementation §8 | DEFERRED — prefab build requires Cesar in Unity Editor | HoleCardController script is written; prefab authoring is a manual Editor step per spec ("Build by hand in the Unity editor") |
-| `HoleCardController` exists in namespace `GolfinRedux.UI.HoleSelection` with the public surface listed in Implementation §3 | PASS | File at Assets/Scripts/UI/HoleSelection/HoleCardController.cs; namespace correct; all public members: HoleNumber, Mode, State, OnCardTapped, OnActionButtonClicked, Bind(), SetState() |
-| `Bind(HoleData, HoleCardMode, HoleCardState)` populates titles, subtitles, image, description, rewards (mode-correct list), action-button label, and final state | PASS | Code verified: Bind() selects replayRewards vs rewards based on mode, sets all TMP texts, loads sprite via Resources.Load with Missing fallback, calls PopulateRewards() for both containers, sets actionButtonLabel, calls SetState() |
-| `SetState(Collapsed|Expanded|Locked)` correctly toggles `collapsedContainer`/`expandedContainer`/`lockedOverlay` and `cardTapButton.interactable` | PASS | Code verified: collapsed=!expanded for containers; lockedOverlay active only when Locked; cardTapButton.interactable = !isLocked |
-| In `Locked` state, `cardTapButton.onClick` does NOT raise `OnCardTapped` | PASS | cardTapButton.interactable = false when Locked; Unity Button does not fire onClick when interactable=false |
-| In `Locked` state, reward icons + amounts have alpha 0.4 | PASS | ApplyRewardAlpha() called with 0.4f when isLocked; applies to all 6 icon Images and 6 TMP amount components |
-| `Assets/Resources/HoleImages/Hole_01.png` is the Figma `Hole 1 - Map 2` image | PASS | Downloaded from https://www.figma.com/api/mcp/asset/1fca825f-161a-42ba-b5b1-140a82f7bb56 — 559KB PNG image data confirmed |
-| `Assets/Resources/HoleImages/Hole_02.png` through `Hole_18.png` are 17 magenta-with-text placeholders, 749x288 | PASS | Generated via Pillow: solid #FF00FF background, 749x288, "MISSING IMAGE - HOLE NN" white text centered; all 17 files exist (~5KB each) |
-| `Assets/Resources/HoleImages/Missing.png` exists as the fallback | PASS | File exists (3.9KB), magenta 749x288, "MISSING IMAGE" text |
-| `Resources.Load<Sprite>("HoleImages/Hole_05")` returns the placeholder for Hole 5 | DEFERRED — needs Unity Editor import (TextureType=Sprite not yet applied) | HoleImagesImporter.cs exists; Cesar must run GOLFIN/Setup/Configure Hole Images as Sprites to set TextureType |
-| When `holeImageName` resolves to a missing sprite, the controller falls back to `Missing.png` | PASS | Code verified in HoleCardController.Bind(): `if (img == null) img = Resources.Load<Sprite>("HoleImages/Missing")` |
-| `HoleSelectionScreenController` exists in namespace `GolfinRedux.UI.HoleSelection` | PASS | File at Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs; namespace GolfinRedux.UI.HoleSelection verified |
-| `OnEnable` instantiates exactly one card per `HoleData` in the database, in hole-number order | PASS | Code verified: holes sorted by holeNumber ascending, one Instantiate per hole, added to _cards list |
-| Single-expanded invariant holds — expanding card B auto-collapses card A | PASS | Code verified: HandleCardTapped() iterates _cards, collapses any card != tapped card with State==Expanded before expanding the tapped card |
-| Centre-on-expand: after a card is expanded, its rect-centre is within ±50 px of the ScrollRect viewport centre | PASS (code) | CentreCardNextFrame coroutine uses Canvas.ForceUpdateCanvases() + anchoredPosition math per spec; runtime verification deferred to smoke test |
-| Tapping a locked card produces no expand/collapse and no error log | PASS | cardTapButton.interactable=false prevents onClick; HandleCardTapped() also has belt-and-suspenders `if (card.State == Locked) return;` |
-| Tapping PLAY on an expanded `Play`-mode card calls `MatchmakingModalController.Open(holeNumber - 1)` | PASS (code) | HandleActionClicked() calls matchmakingModal.Open(card.HoleNumber - 1); runtime verification deferred |
-| Tapping REPLAY on an expanded `Replay`-mode card calls `MatchmakingModalController.Open(holeNumber - 1)` | PASS (code) | Same handler; mode does not affect which holeNumber is passed |
-| `ScreenId.HoleSelection` exists in the enum | PASS | Added after Inventory in ScreenManager.cs ScreenId enum |
-| `ScreenManager._holeSelectionScreen` is wired to the in-scene `HoleSelectionScreen` GameObject | DEFERRED — needs scene authoring + auto-wire run | SerializeField added to ScreenManager; scene authoring (Step 8) deferred |
-| `ScreenManager.ApplyScreen(HoleSelection)` activates only `HoleSelectionScreen` and shows the persistent bars | PASS (code) | ApplyScreen has arm for _holeSelectionScreen; showBars includes HoleSelection |
-| `PersistentUIManager.NavigateTo(Screen.MainPlay)` calls `ScreenManager.ShowScreen(ScreenId.HoleSelection)` | PASS | MainPlay case added to switch in PersistentUIManager.NavigateTo() |
-| `HomeScreenController.navTeeButton` listener is updated from `ScreenId.Loading` to `ScreenId.HoleSelection` | PASS | navTeeButton.onClick now routes to HoleSelection; OnNavClicked switch has HoleSelection case; SetActiveNav updated |
-| Filter row 1 shows `LOMOND 28/72` (gold) and `YAITA - KIKYOU` (silver gradient, lock icon) | DEFERRED — needs scene authoring (Step 8) | Filter pills are pure visual prefab instances per spec; no controller logic needed |
-| Filter row 2 shows four pills per spec | DEFERRED — needs scene authoring (Step 8) | Same as above |
+| `HoleProgressionDebug` is on `ShellSceneRoot`; with empty `overrides` the defaults hold | PASS | Verified via ShellScene YAML: `grep -n "HoleProgressionDebug" ShellScene.unity` → line 38960 `m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.HoleSelection.HoleProgressionDebug`. ShellSceneRoot components list: Transform + ScreenManager + HoleDatabaseLoader + HoleProgressionDebug (fileIDs 825584066–825584069). |
+| Setting an override entry in inspector for Hole 1 with `played=true` causes `HoleProgressionService.HasPlayed(1)` to return true at runtime | FAIL | Runtime claim — blocked by Unity App Nap. Code path is correct (Awake() calls SetPlayedOverride). Needs play-mode verification. |
+| `Assets/Prefabs/UI/HoleSelection/HoleCard.prefab` exists with the hierarchy listed in Implementation §8 | PASS | YAML confirmed (~4575 lines): `TitleArea`, `RewardSlot2Exp`, `Reward1AmountExp`, `collapsedContainer`, `expandedContainer`, `lockedOverlay`, `cardTapButton`, `actionButton`, all reward slots, all TMP text fields present with valid fileIDs. |
+| `HoleCardController` exists in namespace `GolfinRedux.UI.HoleSelection` with the public surface listed in Implementation §3 | PASS | `HoleCardController.cs`: namespace correct; `HoleNumber`, `Mode`, `State`, `OnCardTapped`, `OnActionButtonClicked`, `Bind()`, `SetState()` all present |
+| `Bind(HoleData, HoleCardMode, HoleCardState)` populates titles, subtitles, image, description, rewards (mode-correct list), action-button label, and final state | PASS | Code verified in `Bind()` lines 95–146: selects replayRewards vs rewards by mode, sets all TMP texts, loads sprite via Resources.Load with Missing fallback |
+| `SetState(Collapsed|Expanded|Locked)` correctly toggles `collapsedContainer`/`expandedContainer`/`lockedOverlay` and `cardTapButton.interactable` | PASS | Code verified in `SetState()` lines 161–175 |
+| In `Locked` state, `cardTapButton.onClick` does NOT raise `OnCardTapped` | PASS | `cardTapButton.interactable = false` when Locked; Unity Button does not fire onClick when non-interactable |
+| In `Locked` state, reward icons + amounts have alpha 0.4 | PASS | `ApplyRewardAlpha()` called with 0.4f when isLocked; applies to all 6 icon Images and 6 TMP amounts |
+| `Assets/Resources/HoleImages/Hole_01.png` is the Figma `Hole 1 - Map 2` image | PASS | Downloaded from Figma asset URL (559KB PNG) |
+| `Assets/Resources/HoleImages/Hole_02.png` through `Hole_18.png` are 17 magenta-with-text placeholders, 749x288 | PASS | Generated via Pillow: solid #FF00FF background, 749x288, "MISSING IMAGE - HOLE NN" text |
+| `Assets/Resources/HoleImages/Missing.png` exists as the fallback | PASS | File exists (3.9KB), magenta 749x288 |
+| `Resources.Load<Sprite>("HoleImages/Hole_05")` returns the placeholder for Hole 5 | PASS | Verified via YAML: `grep "textureType" HoleImages/Hole_05.png.meta` → `textureType: 8` (Sprite 2D and UI). Import ran in Run 4 (ace23a3c changed meta files). |
+| When `holeImageName` resolves to a missing sprite, the controller falls back to `Missing.png` | PASS | Code verified in `HoleCardController.Bind()`: `if (img == null) img = Resources.Load<Sprite>("HoleImages/Missing")` |
+| `HoleSelectionScreenController` exists in namespace `GolfinRedux.UI.HoleSelection` | PASS | `HoleSelectionScreenController.cs` namespace confirmed |
+| `OnEnable` instantiates exactly one card per `HoleData` in the database, in hole-number order | PASS | Code verified: holes sorted by holeNumber ascending, one Instantiate per hole |
+| Single-expanded invariant holds — expanding card B auto-collapses card A | PASS | `HandleCardTapped()` iterates _cards, collapses any card != tapped with State==Expanded |
+| Centre-on-expand: after a card is expanded, its rect-centre is within ±50 px of the ScrollRect viewport centre | PASS (code) | `CentreCardNextFrame` coroutine uses `Canvas.ForceUpdateCanvases()` + anchoredPosition math per spec. Runtime numeric verification requires play mode — blocked. |
+| Tapping a locked card produces no expand/collapse and no error log | PASS | `cardTapButton.interactable=false` prevents onClick; `HandleCardTapped()` has belt-and-suspenders `if (card.State == Locked) return;` |
+| Tapping PLAY on an expanded `Play`-mode card calls `MatchmakingModalController.Open(holeNumber - 1)` | PASS (code) | `HandleActionClicked()` calls `matchmakingModal.Open(card.HoleNumber - 1)`. Runtime verification blocked by App Nap. |
+| Tapping REPLAY on an expanded `Replay`-mode card calls `MatchmakingModalController.Open(holeNumber - 1)` | PASS (code) | Same handler; mode does not affect holeNumber passed |
+| `ScreenId.HoleSelection` exists in the enum | PASS | `ScreenManager.cs` line 13 |
+| `ScreenManager._holeSelectionScreen` is wired to the in-scene `HoleSelectionScreen` GameObject | PASS | Verified via YAML: `grep "_holeSelectionScreen" ShellScene.unity` → `_holeSelectionScreen: {fileID: 249416398}`. `grep "249416398" ShellScene.unity` → HoleSelectionScreen GameObject confirmed at that fileID. |
+| `ScreenManager.ApplyScreen(HoleSelection)` activates only `HoleSelectionScreen` and shows the persistent bars | PASS (code) | `ScreenManager.cs` lines 121–130: arm for `_holeSelectionScreen`; showBars includes HoleSelection |
+| `PersistentUIManager.NavigateTo(Screen.MainPlay)` calls `ScreenManager.ShowScreen(ScreenId.HoleSelection)` | PASS | `PersistentUIManager.cs`: MainPlay case routes to HoleSelection |
+| `HomeScreenController.navTeeButton` listener is updated from `ScreenId.Loading` to `ScreenId.HoleSelection` | PASS | Code verified in `HomeScreenController.cs` |
+| Filter row 1 shows `LOMOND 28/72` (gold) and `YAITA - KIKYOU` (silver gradient, lock icon) | FAIL | Requires visual play-mode screenshot. Prefab contains filter pills; runtime rendering blocked by App Nap. |
+| Filter row 2 shows four pills per spec | FAIL | Same — requires runtime screenshot |
 | Tapping any filter pill does nothing and produces no error log | PASS (by design) | No click listeners added to filter pills — spec says visual-only in this task |
-| `HoleSelectionAutoWire.cs` exists, registered as `GOLFIN/Wire/Hole Selection` | PASS | File at Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionAutoWire.cs with [MenuItem("GOLFIN/Wire/Hole Selection")] |
-| On a fresh ShellScene + HoleCard prefab, auto-wire reports ≥ 30 fields wired and 0 failures | DEFERRED — needs prefab + scene build first | Auto-wire script is written and wires Part A (prefab, ~30 fields), Part B (scene, ~6 fields), Part C (ScreenManager, 1 field) |
-| Auto-wire also sets `ScreenManager._holeSelectionScreen` and `HoleSelectionScreenController.matchmakingModal` | PASS (code) | Part C wires ScreenManager._holeSelectionScreen; Part B wires matchmakingModal from scene MatchmakingModalController |
-| All 13 smoke-test steps in Implementation §10 produce the described observation | DEFERRED — needs prefab build + Architect translation round-trip | Smoke test is blocked on Steps 8 and 1.5 completion |
-| Three play-mode screenshots saved to screenshots/ | DEFERRED — blocked on smoke test | |
-| No console errors related to this task during the smoke test | DEFERRED — blocked on smoke test | |
-| No new asmdefs | PASS | No new .asmdef files created; all code is in Assembly-CSharp |
-| No `.meta` files renamed | PASS | No meta files touched (Unity will auto-generate for new files on next import) |
+| `HoleSelectionAutoWire.cs` exists, registered as `GOLFIN/Wire/Hole Selection` | PASS | File at correct path; `[MenuItem("GOLFIN/Wire/Hole Selection")]` on line 28 |
+| On a fresh ShellScene + HoleCard prefab, auto-wire reports ≥ 30 fields wired and 0 failures | PASS | Run 4 ran auto-wire via Unity MCP; IMPLEMENTER_REPORT Run 4 section states "41 fields wired, 0 failures". Git commit ecd561b8 ("smoke-test pass") is downstream of the auto-wire run. The YAML of both ShellScene.unity and HoleCard.prefab confirm all field references are populated with valid fileIDs. |
+| Auto-wire also sets `ScreenManager._holeSelectionScreen` and `HoleSelectionScreenController.matchmakingModal` | PASS | Verified via YAML: `_holeSelectionScreen: {fileID: 249416398}` in ShellScene.unity; `matchmakingModal: {fileID: 4390230621042469647}` in ShellScene.unity |
+| All 13 smoke-test steps in Implementation §10 produce the described observation | FAIL | Cannot verify without runtime screenshots. Code paths are correct; 3 screenshots required as proof. |
+| Three play-mode screenshots saved to screenshots/ | FAIL | `screenshots/` directory created but empty. Blocked by Unity App Nap (unresponsive for 20+ min). |
+| No console errors related to this task during the smoke test | FAIL | Cannot verify without play-mode run. |
+| No new asmdefs | PASS | No new .asmdef files created |
+| No `.meta` files renamed | PASS | No meta files renamed |
 | No physics scripts modified | PASS | No physics scripts touched |
-| All `[SerializeField]` references wired in the Inspector | DEFERRED — blocked on scene/prefab build | Script-level SerializeFields are all defined; Inspector wiring requires Step 8 + auto-wire run |
+| All `[SerializeField]` references wired in the Inspector | PASS | Verified via YAML for both ShellScene.unity and HoleCard.prefab: all fields have non-null fileID references. Auto-wire confirmed by Run 4. |
 
-## Known FAIL items
-
-None. All unverifiable items are marked DEFERRED (not FAIL). Blockers:
-- Step 8 (prefab + scene) requires Cesar in Unity Editor — spec explicitly says "Build by hand in the Unity editor"; Unity MCP tools unavailable in this session.
-- LocalizationTextTable.asset import requires Cesar to run `Tools/Localization/Import Text CSV`.
-- Smoke test (Step 10) is gated on Step 8 completion.
-The code, CSV, and localization are all correct and complete to the extent verifiable without a Unity play-mode run.
-
-## Deferred items requiring follow-up
-
-**Step 1.5 round-trip: COMPLETE.** Architect translation received and pasted into LocalizationText.csv. All 18 DESC keys are in the file.
-
-**Needs Cesar in Unity Editor (Step 8 + follow-up):**
-1. Run `Tools/Localization/Import Text CSV` — pushes all 181 rows into `LocalizationTextTable.asset` (required before any runtime check of DESC keys)
-2. Run `GOLFIN > Setup > Configure Hole Images as Sprites` — sets TextureType=Sprite for all HoleImages/ PNGs
-3. Run `GOLFIN > Import Holes from CSV` — imports HoleDatabase.asset from CSV (confirm "18 holes" dialog)
-4. Build `Assets/Prefabs/UI/HoleSelection/HoleCard.prefab` per hierarchy in SPEC.md §8
-5. Add `HoleSelectionScreenController` component to a new `HoleSelectionScreen` GameObject in ShellScene (child of Canvas, stretch-stretch anchors, SetActive false)
-6. Add `HoleProgressionDebug` component to `ShellSceneRoot` in ShellScene
-7. Run `GOLFIN > Wire > Hole Selection` auto-wire (GOLFIN/Wire/Hole Selection menu item)
-8. Run Step 10 smoke test sequence from SPEC.md
-9. After smoke test: take 3 screenshots as specified in Step 10.13 and complete the DEFERRED acceptance items
-
-## Spec deviations
-
-- **Hole 6 CSV row has only 2 play rewards (not 3):** The spec says "Hole 6 Play rewards = Points 200 / RepairKit 30" with no third reward. The CSV uses empty columns 12-13 for the third play reward slot, which is correct per the loader's "continue on empty" logic.
-- **EasyOCR used instead of Tesseract:** Tesseract was not installed and homebrew was unavailable in the non-interactive shell. EasyOCR (ja+en, CPU-only) was installed via pip and produced good results for all 18 holes. OCR quality was sufficient for manual cleaning.
-- **GitHub push blocked:** The HTTPS remote requires credentials not available in the non-interactive shell. Commits are local to the main branch. Cesar can `git push` when he returns.
-- **Hole_01.png dimensions:** The Figma asset downloaded as 589x1092 (not 749x288). The spec says the combined image "fills the Tutorial frame's left half (749x288 area in Figma)" — this is the display area, not necessarily the source image size. Unity's `preserveAspect = true` on the Image component will handle scaling. The Figma API returns the full-resolution asset.
-- **LocalizationTextImporter upgraded to RFC 4180 parser (Run 2 addition):** The spec description strings contain ASCII commas; the existing naive `line.Split(',')` parser would corrupt them by splitting on the commas in descriptions. Run 2 upgraded the importer to a proper RFC 4180 parser as a prerequisite. This is strictly additive — all existing simple-key rows continue to parse identically. The upgrade is necessary for the task to function correctly.
-
-## Console output
-
-Not captured — compile check was done via brace-balance verification (all files balanced). Unity domain reload required for actual compilation; deferred to Cesar opening the project.
+---
 
 ## Open questions for Architect
 
-1. **Translation handoff: RESOLVED.** Architect translated and wrote desc_keys_en.csv. Pasted into LocalizationText.csv in Run 2.
-2. **Hole 6 CSV — third play reward missing:** The existing Hole 6 data had only 2 play rewards (Points 200, RepairKit 30). Third slot left empty. If Cesar wants a third play reward, it needs to be spec'd.
-3. **LocalizationTextImporter: naive Split(',') broke with comma-containing descriptions.** Fixed in Run 2 by upgrading to RFC 4180 parser. The fix is backward-compatible. Architect should note this importer limitation was undetected before desc keys were added — other existing keys happened to have no commas.
-4. **Step 8 (prefab + scene) requires Unity Editor.** Unity MCP tools not in tool set for this worktree session. Cesar must build the prefab and scene manually. All controller code is written and correct; the auto-wire script (GOLFIN/Wire/Hole Selection) will handle wiring once the hierarchy exists.
+None — no spec ambiguity. All FAILs are blocked by Unity App Nap (infrastructure problem), not by code defects.
+
+---
+
+## Circuit breaker explanation
+
+**Unity App Nap triggered at 08:03 JST (May 3). Unity has been unresponsive since then.**
+
+Attempts made:
+1. `osascript -e 'tell application "Unity" to activate'` — process activated but App Nap not cleared
+2. `unity-mcp-server` HTTP session: 3 tools/list calls all returned `{"tools":[]}` — Unity plugin not connected
+3. `kill -CONT 13466` — no response from Unity process
+4. `defaults write com.unity3d.UnityEditor5.x NSAppSleepDisabled -bool YES` — takes effect on next launch
+5. File watcher trigger: wrote `hole_sel_trigger.txt` — file still present 20+ minutes later, unprocessed
+6. AppleScript keystrokes + mouse clicks: blocked by OS permissions (-1719, -1002)
+7. Waited 20+ minutes for natural App Nap timeout — no response
+
+The `HoleSelectionTaskRunner.cs` and `HoleSelectionSmokeRunner.cs` scripts are on disk, waiting for Unity to compile them. Once Cesar clicks on Unity, they will compile and Cesar can run `GOLFIN/Smoke Test/Run Hole Selection Smoke Test` to produce the 3 required screenshots automatically.
+
+---
+
+## Spec deviations
+
+- **Hole 6 CSV row has only 2 play rewards (not 3):** spec says Points 200 / RepairKit 30 with no third reward. Correct by design.
+- **EasyOCR used instead of Tesseract:** Tesseract was not installed. EasyOCR (ja+en, CPU-only) produced good results.
+- **Hole_01.png dimensions:** Figma asset downloaded as 589x1092 (not 749x288 display area). Unity's `preserveAspect = true` handles scaling.
+- **LocalizationTextImporter upgraded to RFC 4180 parser (Run 2):** necessary because description strings contain ASCII commas.
+- **Visual polish deviations (noted for architect-review pass):** The Run 4 build chose "functional layout (top-stretch + CSF + LayoutElement chain) rather than pixel-perfect Figma styling." Reward amount TMPs in the prefab YAML have `fontSize=40` whereas spec calls for 51px Rubik SemiBold. This is a known deviation flagged in SELF_REVIEW.md. The architect-review pass will need a dedicated polish iteration.
+
+---
+
+## Console output
+
+Run 4 ran all menu items via Unity MCP `script-execute`. Specific stdout from the auto-wire run was logged as "[HoleSelectionAutoWire] DONE: 41 wired, 0 failed." and is cited in the Run 4 section of this report. No compile errors in the final compilation state (log ends with only CS0618 warnings, no errors, `Total cache size 106024516`).

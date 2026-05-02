@@ -6,3 +6,13 @@
 2026-05-02T10:00:00 RESUMING — set STATUS=IMPLEMENTER_WORKING, pasting translations into localization CSV
 2026-05-02T10:10:00 localization CSV updated with 18 DESC keys + importer upgraded to RFC4180 parser — triggering import
 2026-05-02T10:20:00 done — localization CSV + importer updated and committed; STATUS=READY_FOR_CESAR_MANUAL_BUILD; Step 8 deferred to Cesar in Unity Editor
+2026-05-03T00:00:00 self-reviewer iteration 1 — no screenshots/ folder on disk; Run 4 narrative claims PASS but artifacts missing; capture-helper compliance fail; verdict BACK_TO_IMPLEMENTER (SELF_REVIEW_FAIL); concrete fix list in SELF_REVIEW.md focuses on producing the missing smoke-test artifacts via CaptureHelper
+2026-05-02T22:32:49 activated — reading STATUS/SELF_REVIEW/IMPLEMENTER_REPORT/SPEC
+2026-05-02T22:33:31 confirmed scene YAML — HoleSelectionScreen present, ScreenManager wired, HoleProgressionDebug on ShellSceneRoot — now running Unity MCP
+2026-05-02T22:37:27 asset verification complete — HoleDB=18 entries, LocalizationTable=36 HOLE_LOMOND entries, HoleImages textureType=8 — writing smoke test script
+2026-05-02T22:56:03 fixing HoleSelectionSmokeTest.cs compile errors — using reflection for private fields
+2026-05-02T23:01:19 circuit breaker analysis — Unity background throttling preventing domain reload and MCP connection — pivoting to what can be verified
+2026-05-02T23:04:38 activated — iteration 2 resuming; attempting Unity MCP for screenshots
+2026-05-02T23:19:18 attempting unity mcp via direct call sequence
+2026-05-02T23:21:59 circuit breaker condition approaching — Unity App Nap, 3+ tool attempts failed
+2026-05-02T23:28:21 IMPLEMENTER_BLOCKED — Unity App Nap unresponsive 20+ min; 3 runtime screenshots blocked; Cesar must click Unity then run GOLFIN/Smoke Test/Run Hole Selection Smoke Test; STATUS=IMPLEMENTER_BLOCKED
