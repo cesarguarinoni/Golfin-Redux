@@ -57,14 +57,14 @@ Deep-dive spec written after C lands.
 
 **E — Gameplay Loop v2 (Roadmap §3, items 3a–3e). Menu-to-menu.** Wire the existing main menu to a Hole Picker, then to a runtime version of LabScaffold so pressing Play actually starts a hole. Scope:
 
-1. **3a — Menu wiring:** Character → Clubs → Hole → Play.
-2. **3b — Hole Picker UI** — new scene/screen accessed from main menu's Play button. Lists 18 holes with thumbnails (probably greyed-out for unimported). Selects one → loads it.
+1. **3a — Menu wiring:** Character → Clubs → Hole → Play. **(Partially landed early via off-roadmap Mac env tasks: matchmaking_modal ✅ 2026-05-02 + hole_selection_screen 📌 NEXT.)**
+2. **3b — Hole Picker UI** — **superseded by `hole_selection_screen` task** (full per-hole list with expandable cards + Lomond data + lock/played progression). Item E.3b retained as the spec for upgrading the resulting screen with per-hole thumbnails captured from Lomond website + functional filters + persistence hookup once save state lands.
 3. **Runtime hole-load equivalent of** `LabScaffold` **+** `PhysicsLabHolePicker` — today's hole-load flow is editor-only via the picker EditorWindow. Need a runtime equivalent: a `GameplayScaffold` scene (lighter than LabScaffold — no debug UI/preset Fire button) that additively loads `Hole_XX_Geo.unity`, wires `ShotController`, `BallAnimator`, `ChaseCamera`, baked providers.
 4. **3c — Result screen polish** (score breakdown, optional shot-replay link).
 5. **3d — Next Hole / Back to Menu transitions.**
 6. **3e — Save state:** persist character/clubs/score across sessions.
 
-- Existing assets to leverage: `Mainmenu` prefab, `ShellScene.unity`, `LabScaffold.unity` (template for `GameplayScaffold`), `PhysicsLabHolePicker` (template for runtime hole picker logic).
+- Existing assets to leverage: `Mainmenu` prefab, `ShellScene.unity`, `LabScaffold.unity` (template for `GameplayScaffold`), `PhysicsLabHolePicker` (template for runtime hole picker logic), `HoleSelectionScreen` (built ahead-of-roadmap by `hole_selection_screen` task).
 - **Pre-condition for closing item E:** audit all menu/inventory/roster/bags/items canvases. Confirm none are authored at `1080×1920 / Match=0.5` (the bad config that A.0 cleaned up). Any new canvases for the Hole Picker / GameplayScaffold MUST use `1170×2532 / Match=0` from the start (per Blueprint §1).
 - Deep-dive spec when D is settled.
 
@@ -76,7 +76,19 @@ Deep-dive spec written after C lands.
 
 **Phase F cleanup:** deleted `SceneGroundProvider`, `SceneSurfaceProvider`, `PhysicsMarkerRepairTool`, `MarkerAuditTool`, 8 pre-pivot diag/agreement test files, the Phase-A `WireA3DiagSinks` harness in `PhysicsLabController`, and the stale `TERRAIN_REALTEST_FIX` Active spec. **Mid-step fix:** `Physics.Runtime.SurfaceMarker` was defined inline in the deleted `SceneSurfaceProvider.cs` — extracted to its own file (`Assets/Scripts/Physics/Runtime/SurfaceMarker.cs`) to satisfy hard rule 5 + restore importer compilation. Lesson filed (`tasks/lessons.md`: grep ALL types in a file before deleting). Test gate: **198/198 EditMode PASS, 0 failed, 0 skipped, 43.5s**. Per-step commits `phase-f.{1,1b,2,3,3.5,4,4-fix,4b,5,6}` on `main` (commits `32c73935..03744859` + lessons `8b2c82fc`).
 
+**Mac dev environment ✅ 2026-05-02.** First end-to-end pipeline run on Mac (`matchmaking_modal` task) succeeded. Filesystem MCP + Desktop Commander + multi-agent kickoff all functional on Mac side. Cross-platform `route_subagent.py` confirmed working.
+
 Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
+
+---
+
+## ✅ DONE — Matchmaking Modal (Mac env test, off-roadmap)
+
+**Spec:** `Docs/Specs/Completed/matchmaking_modal/` (move from `Active/` on next housekeeping pass).
+
+**Result 2026-05-02:** Wired fake-matchmaking behaviour onto the existing `MatchMakingModal` prefab. Tap Home screen's Next-Hole PLAY button → modal opens, "FINDING OPPONENT…" cycles dots, opponent portrait/name/rank cycles every ~0.3 s, hole + rewards mirror the Home screen's Next Hole panel, after `searchDurationSeconds` (default 5 s) the title flips to "OPPONENT FOUND" and the opponent locks. Cancel hides the modal. Mac pipeline working as expected. **`MatchmakingModalController.Open(int holeIndex)` is now the canonical entrypoint** for any "tap PLAY" flow — re-used by the hole_selection_screen task next.
+
+**Files landed:** `CharacterThumbnailCard.cs` (one new method `InitializeFromTemplate`), `HomeScreenController.cs` (1 SerializeField + 5-line edit to `OnPlayClicked`), new `MatchmakingModalController.cs` + auto-wire, `ShellScene.unity` (controller component + inspector wiring). Prefab itself NOT modified.
 
 ---
 
@@ -92,15 +104,25 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — Matchmaking Modal (Mac env test, off-roadmap)
+## 📌 NEXT — Hole Selection Screen (Mac env test, off-roadmap)
 
-**Spec:** `Docs/Specs/Active/matchmaking_modal/SPEC.md` — SPEC_READY 2026-05-02.
+**Spec:** `Docs/Specs/Active/hole_selection_screen/SPEC.md` — SPEC_READY 2026-05-02.
 
-**One-line goal:** Wire fake-matchmaking behaviour onto the existing `MatchMakingModal` prefab. Tap Home screen's Next-Hole PLAY button → modal opens, "FINDING OPPONENT…" cycles dots, opponent portrait/name/rank cycles every ~0.3 s, hole + rewards mirror the Home screen's Next Hole panel, after `searchDurationSeconds` (default 5 s) the title flips to "OPPONENT FOUND" and the opponent locks. Cancel hides the modal. No networking, no save-state changes. **Off-roadmap** — first end-to-end smoke test of the Mac dev environment; runs in parallel with item C.
+**One-line goal:** New `HoleSelection` screen reachable from PersistentUI's centre Tee button (`mainPlayButton`). Vertical scrolling list of 18 Lomond hole cards. Each card collapsed by default → tap to expand-and-centre (single-expanded invariant) → tap PLAY/REPLAY to open the existing matchmaking modal. Cards have three states (Collapsed / Expanded / Locked); Hole 1 starts unlocked, 2–18 locked, all overrideable from inspector via `HoleProgressionDebug` (no save state yet). REPLAY shown when player has played the hole, PLAY otherwise; rewards differ between modes (`HoleData.rewards` vs new `HoleData.replayRewards`). Filter rows are visual-only placeholders matching Figma exactly. **Off-roadmap** — second Mac env task in a row, lands ahead of Roadmap item E.3b which is now downscoped to "polish + filter + persistence".
 
-**Kickoff:** `Use the golfin-implementer subagent on "matchmaking_modal"`.
+**Kickoff:** `Use the golfin-implementer subagent on "hole_selection_screen"`.
 
-**Files touched:** `CharacterThumbnailCard.cs` (one new method), `HomeScreenController.cs` (1 SerializeField + 5-line edit to `OnPlayClicked`), new `MatchmakingModalController.cs` + auto-wire, `ShellScene.unity` (controller component + inspector wiring). Prefab itself is NOT modified. Nothing physics-related is touched — item C's bugs are explicitly out-of-scope.
+**⚠ Mid-task handback:** Step 1.5 of the spec includes a STATUS-flip handback to Architect. After Implementer downloads + OCRs the 18 Lomond strategy GIFs (Japanese), it sets STATUS to `WAITING_ON_ARCHITECT_TRANSLATION` and pushes. Architect (claude.ai) translates and writes back `lomond-source/desc_keys_en.csv`, then sets STATUS to `READY_FOR_IMPLEMENTATION_RESUME`. Implementer pulls and resumes from Step 2. Cesar coordinates the round-trip — paste the kickoff above to start, then ping me here when STATUS hits `WAITING_ON_ARCHITECT_TRANSLATION`.
+
+**Files touched:** Extends `HoleData.cs` (4 new fields + 1 method), rewrites `HoleDatabase.csv` (18 Lomond rows, 19 columns), updates `HoleDatabaseLoader.cs` + `HoleDatabaseImporter.cs` parsing, adds `HoleSelection` to `ScreenManager` enum, retargets `PersistentUIManager.NavigateTo(MainPlay)` and `HomeScreenController.navTeeButton`. Creates `HoleSelectionScreenController`, `HoleCardController`, `HoleProgressionService`, `HoleProgressionDebug`, auto-wire script, `HoleCard.prefab`, 18 placeholder hole images + `Missing.png`. Hole 1 image is the Figma `Hole 1 - Map 2` asset; Holes 2–18 are screaming-magenta placeholders. Localization gets 36 new keys: 18 course names (Step 1) + 18 description keys populated from real translated Lomond strategy text (Step 1.5). NO physics scripts touched. NO save state introduced.
+
+**Notable decisions baked into the spec:**
+- **Dual reward sets per hole.** `HoleData.rewards` = Play rewards (existing semantics, also read by HomeScreen NextHole + matchmaking modal — unchanged). New `HoleData.replayRewards` = shown when REPLAY button is shown. Default Replay = halved Play (Cesar can re-tune from CSV).
+- **Lock + played state in inspector.** `HoleProgressionService` is a POCO singleton with default `IsUnlocked(1)=true, IsUnlocked(2..18)=false, HasPlayed(any)=false`. `HoleProgressionDebug` MonoBehaviour on `ShellSceneRoot` exposes per-hole overrides for testing. When real save state lands (Loop v2), the service's read methods become save-layer reads — call sites unchanged.
+- **Filters are visual placeholders.** `LOMOND 28/72`, `YAITA - KIKYOU`, `LADIES 18/18`, `FRONT 10/18`, `REGULAR 0/18`, `BACK 0/18` render exactly per Figma but click-to-filter is out of scope (separate spec). Counts are hardcoded literal strings.
+- **Single-expanded invariant + centre-on-expand.** Expanding card B auto-collapses card A; the freshly-expanded card snaps to viewport centre instantly (no tween — polish item later).
+- **Strategy text captured from Lomond website.** Step 1.5 round-trip: Implementer downloads the 18 `course_eNN.gif` files from `lomond-cc.com`, OCRs the Japanese, hands JP to Architect; Architect translates to English in golf-strategy register matching the Figma sample tone. Per-hole par values are captured from the official Lomond table now (full 18, totalling 72).
+- **Both Tee buttons retargeted.** Persistent `mainPlayButton` AND HomeScreen-internal `navTeeButton` both now route to `ScreenId.HoleSelection`. Matches dual-wire precedent for Home/Inventory/Roster.
 
 ---
 
@@ -115,6 +137,8 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 - **[2026-04-22] Don't implement Code's "trees layer" proposal.** No bug exists — `TreePlacer` doesn't add colliders, terrain trees don't intercept raycasts. Audit confirmed in lessons file.
 - **[2026-04-29] capture_helper follow-on: `fake_state_populator_gate`.** PlayerContextPopulator in LabScaffold overrides fake player name. Needs a `FakeStateGate` flag across runtime populators so `GOLFIN > Capture > Fake State` presets aren't trampled. Non-blocking; surface when next capture session needs it.
 - **[2026-05-01] Ball penetrates green when rolling onto it from the fairway.** Observed by Cesar during Putter P1 visual review: a ball rolling toward the green from a fairway lie visibly dips below the green surface as it crosses onto the green. Likely related to the documented memory item *putt model: green sits ~11cm above heightmap Y; putts visually roll below green surface without mesh-level correction* — but this case is a **fairway → green transition**, not a putt initiated on the green, so it may be a distinct seam/marker-snap issue at the fringe boundary rather than the standing putt-Y offset. No repro file yet; flag for investigation alongside Putter P1 caveats. Not blocking the next roadmap item, but should be triaged before Loop v1 ball-rest visuals.
+- **[2026-05-02] Hole-image art is screaming-magenta placeholders for Holes 2–18.** `hole_selection_screen` task ships with 17 obvious-missing placeholders. Cesar captures real art from Lomond official website later — drop replacement PNGs in `Assets/Resources/HoleImages/Hole_NN.png` to cut over (no code change needed).
+- **[2026-05-02] Filter functionality deferred.** Two filter rows on Hole Selection are visual-only. Functional filtering by Course / Tee is a follow-up spec. Counts (`28/72`, etc.) are hardcoded.
 
 Full reasoning: `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 

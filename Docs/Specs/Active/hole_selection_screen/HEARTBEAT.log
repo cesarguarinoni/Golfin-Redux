@@ -3,3 +3,5 @@
 2026-05-02T00:25:00 Step 4 complete: 19 HoleImages PNGs generated (Missing.png + Hole_01..18), Hole_01 downloaded from Figma
 2026-05-02T00:35:00 Step 1.5 complete: 18 Lomond GIFs downloaded, OCR'd via EasyOCR, cleaned Japanese text saved to lomond-source/ — setting WAITING_ON_ARCHITECT_TRANSLATION
 2026-05-02T00:45:00 done — all code committed, STATUS=WAITING_ON_ARCHITECT_TRANSLATION, IMPLEMENTER_REPORT.md written, awaiting Architect translation
+2026-05-02T10:00:00 RESUMING — set STATUS=IMPLEMENTER_WORKING, pasting translations into localization CSV
+2026-05-02T10:10:00 localization CSV updated with 18 DESC keys + importer upgraded to RFC4180 parser — triggering import
