@@ -113,25 +113,78 @@ MonoBehaviour:
   - key: HOME_SETTINGS
     english: SETTINGS
     japanese: "\u8A2D\u5B9A"
-  - key: HOLE_LOMOND_5
-    english: Lomond Country Club - Hole 5
-    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6
-      - \u30DB\u30FC\u30EB5"
-  - key: HOLE_RIVERSIDE_1
-    english: Riverside Golf Club - Hole 1
-    japanese: "\u30EA\u30D0\u30FC\u30B5\u30A4\u30C9\u30B4\u30EB\u30D5\u30AF\u30E9\u30D6
+  - key: HOLE_LOMOND_1
+    english: Lomond Country Club  - Hole 1
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
       - \u30DB\u30FC\u30EB1"
-  - key: HOLE_HIGHLAND_3
-    english: Highland Hills - Hole 3
-    japanese: "\u30CF\u30A4\u30E9\u30F3\u30C9\u30D2\u30EB\u30BA - \u30DB\u30FC\u30EB3"
-  - key: HOLE_LOMOND_6
-    english: Lomond Country Club - Hole 6
-    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6
-      - \u30DB\u30FC\u30EB6"
-  - key: HOLE_RIVERSIDE_2
-    english: Riverside Golf Club - Hole 2
-    japanese: "\u30EA\u30D0\u30FC\u30B5\u30A4\u30C9\u30B4\u30EB\u30D5\u30AF\u30E9\u30D6
+  - key: HOLE_LOMOND_2
+    english: Lomond Country Club  - Hole 2
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
       - \u30DB\u30FC\u30EB2"
+  - key: HOLE_LOMOND_3
+    english: Lomond Country Club  - Hole 3
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB3"
+  - key: HOLE_LOMOND_4
+    english: Lomond Country Club  - Hole 4
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB4"
+  - key: HOLE_LOMOND_5
+    english: Lomond Country Club  - Hole 5
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB5"
+  - key: HOLE_LOMOND_6
+    english: Lomond Country Club  - Hole 6
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB6"
+  - key: HOLE_LOMOND_7
+    english: Lomond Country Club  - Hole 7
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB7"
+  - key: HOLE_LOMOND_8
+    english: Lomond Country Club  - Hole 8
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB8"
+  - key: HOLE_LOMOND_9
+    english: Lomond Country Club  - Hole 9
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB9"
+  - key: HOLE_LOMOND_10
+    english: Lomond Country Club  - Hole 10
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB10"
+  - key: HOLE_LOMOND_11
+    english: Lomond Country Club  - Hole 11
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB11"
+  - key: HOLE_LOMOND_12
+    english: Lomond Country Club  - Hole 12
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB12"
+  - key: HOLE_LOMOND_13
+    english: Lomond Country Club  - Hole 13
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB13"
+  - key: HOLE_LOMOND_14
+    english: Lomond Country Club  - Hole 14
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB14"
+  - key: HOLE_LOMOND_15
+    english: Lomond Country Club  - Hole 15
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB15"
+  - key: HOLE_LOMOND_16
+    english: Lomond Country Club  - Hole 16
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB16"
+  - key: HOLE_LOMOND_17
+    english: Lomond Country Club  - Hole 17
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB17"
+  - key: HOLE_LOMOND_18
+    english: Lomond Country Club  - Hole 18
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6 
+      - \u30DB\u30FC\u30EB18"
   - key: SETTINGS_PROFILE
     english: User Profile
     japanese: "\u30E6\u30FC\u30B6\u30FC\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB"
@@ -475,3 +528,81 @@ MonoBehaviour:
   - key: BAG_CANCEL
     english: CANCEL
     japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  - key: HOLE_LOMOND_1_DESC
+    english: The right side is wide; aim the tee shot at the sloping area in the
+      centre of the two-tiered fairway. The landing spot of the second shot is crucial.
+    japanese: "\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u53F3\u5074\u304C\u5E83\u304F\u3001\u4E8C\u6BB5\u306E\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4\u30BB\u30F3\u30BF\u30FC\u306E\u50BE\u659C\u90E8\u304C\u72D9\u3044\u76EE\u3067\u3059\u30022\u6253\u76EE\u306E\u843D\u3068\u3057\u6240\u304C\u91CD\u8981\u3002"
+  - key: HOLE_LOMOND_2_DESC
+    english: "A nearly straight hole. The fairway is tight on both sides \u2014 play
+      the tee shot carefully. The area behind the green is also tight, so beware."
+    japanese: "\u307B\u307C\u30B9\u30C8\u30EC\u30FC\u30C8\u306A\u30DB\u30FC\u30EB\u3002\u5DE6\u53F3\u304C\u72ED\u3044\u306E\u3067\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u614E\u91CD\u306B\u3002\u30B0\u30EA\u30FC\u30F3\u5965\u306F\u72ED\u3044\u306E\u3067\u6CE8\u610F\u3002"
+  - key: HOLE_LOMOND_3_DESC
+    english: A short par-4. Both sides of the fairway are tight, so a reliable tee
+      shot is essential. Watch the area behind the green, which also narrows.
+    japanese: "\u8DDD\u96E2\u306E\u77ED\u3044\u30DF\u30C9\u30EB\u30DB\u30FC\u30EB\u3002\u5DE6\u53F3\u3068\u3082\u306B\u72ED\u3044\u306E\u3067\u78BA\u5B9F\u306A\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u304C\u5FC5\u8981\u3068\u3055\u308C\u308B\u30DB\u30FC\u30EB\u3002\u30B0\u30EA\u30FC\u30F3\u5965\u3082\u72ED\u3044\u306E\u3067\u6CE8\u610F\u3002"
+  - key: HOLE_LOMOND_4_DESC
+    english: The shortest par-3 on the course. The green slopes from right to left,
+      so attacking from the right side is best. Missing into the slope below the
+      green's left edge spells trouble.
+    japanese: "\u6700\u3082\u77ED\u3044\u30B7\u30E7\u30FC\u30C8\u30DB\u30FC\u30EB\u3002\u30B0\u30EA\u30FC\u30F3\u53F3\u304B\u3089\u50BE\u659C\u306E\u70BA\u3001\u53F3\u30B5\u30A4\u30C9\u304B\u3089\u653B\u3081\u308B\u306E\u304C\u30D9\u30B9\u30C8\u3002\u30B0\u30EA\u30FC\u30F3\u5DE6\u659C\u9762\u4E0B\u306B\u843D\u3061\u308B\u3068\u82E6\u6226\u3057\u307E\u3059\u3002"
+  - key: HOLE_LOMOND_5_DESC
+    english: "A long par-4. Aim the tee shot at the left hillside. The fairway is
+      wide \u2014 swing freely. From the approach, beware the pond left of the green."
+    japanese: "\u8DDD\u96E2\u306E\u9577\u3044\u30DF\u30C9\u30EB\u30DB\u30FC\u30EB\u3002\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u5DE6\u5C71\u5074\u72D9\u3044\u3002\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4\u306F\u5E83\u3044\u306E\u3067\u601D\u3044\u5207\u3063\u3066\u98DB\u3070\u3057\u3066\u4E0B\u3055\u3044\u3002\u30BB\u30AB\u30F3\u30C9\u304B\u3089\u306F\u30B0\u30EA\u30FC\u30F3\u5DE6\u5074\u306E\u6C60\u306B\u6CE8\u610F\u3002"
+  - key: HOLE_LOMOND_6_DESC
+    english: "A par-3 over water. Don't force it \u2014 aim for the centre of the
+      green. The pond is a lateral water hazard."
+    japanese: "\u6C60\u8D8A\u3048\u306E\u30B7\u30E7\u30FC\u30C8\u30DB\u30FC\u30EB\u3002\u7121\u7406\u3092\u305B\u305A\u30B0\u30EA\u30FC\u30F3\u4E2D\u592E\u72D9\u3044\u3067\u3059\u3002\u6C60\u306F\u30E9\u30C6\u30E9\u30EB\u30A6\u30A9\u30FC\u30BF\u30FC\u30CF\u30B6\u30FC\u30C9\u3002"
+  - key: HOLE_LOMOND_7_DESC
+    english: "The signature valley-carry hole. With the valley waiting ahead, longer
+      hitters should choose their club carefully. The green is split into two tiers
+      left and right \u2014 landing on the same level as the pin is the key."
+    japanese: "\u540D\u7269\u8C37\u8D8A\u3048\u30DB\u30FC\u30EB\u3002\u524D\u65B9\u306B\u8C37\u304C\u3042\u308B\u70BA\u3001\u8DDD\u96E2\u306E\u51FA\u308B\u4EBA\u306F\u30AF\u30E9\u30D6\u9078\u629E\u3092\u614E\u91CD\u306B\u3002\u30B0\u30EA\u30FC\u30F3\u3082\u5DE6\u53F3\u3067\u4E8C\u6BB5\u306B\u306A\u3063\u3066\u3044\u308B\u70BA\u3001\u30D4\u30F3\u4F4D\u7F6E\u3068\u540C\u3058\u9762\u306B\u4E57\u305B\u308B\u306E\u304C\u30AB\u30AE\u3002"
+  - key: HOLE_LOMOND_8_DESC
+    english: A par-5 dogleg right. Aim the tee shot just left of fairway centre.
+      The fairway narrows on both sides from the second shot on, so playing it safe
+      is wise. Long hitters can reach the green in two.
+    japanese: "\u53F3\u30C9\u30C3\u30B0\u30EC\u30C3\u30B0\u306E\u30ED\u30F3\u30B0\u30DB\u30FC\u30EB\u3002\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4\u30BB\u30F3\u30BF\u30FC\u3084\u3084\u5DE6\u72D9\u3044\u3002\u30BB\u30AB\u30F3\u30C9\u4EE5\u964D\u306F\u5DE6\u53F3\u304C\u72ED\u3044\u306E\u3067\u624B\u5805\u304F\u304D\u3056\u3080\u306E\u304C\u7121\u96E3\u3002\u8DDD\u96E2\u306E\u51FA\u308B\u4EBA\u306F\u30AA\u30F3\u53EF\u80FD\u306A\u30DB\u30FC\u30EB\u3002"
+  - key: HOLE_LOMOND_9_DESC
+    english: A par-4 with a wide fairway. The approach plays uphill, so choose your
+      club carefully.
+    japanese: "\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4\u306E\u5E83\u3044\u30DF\u30C9\u30EB\u30DB\u30FC\u30EB\u3002\u30BB\u30AB\u30F3\u30C9\u30B7\u30E7\u30C3\u30C8\u304B\u3089\u6253\u3061\u4E0A\u3052\u3068\u306A\u308B\u306E\u3067\u30AF\u30E9\u30D6\u9078\u629E\u3092\u614E\u91CD\u306B\u3002"
+  - key: HOLE_LOMOND_10_DESC
+    english: "A par-4 dogleg left. Aim the tee shot at the left hillside. The approach
+      plays downhill \u2014 judge the distance and club choice carefully."
+    japanese: "\u5DE6\u30C9\u30C3\u30B0\u30EC\u30C3\u30B0\u306E\u30DF\u30C9\u30EB\u30DB\u30FC\u30EB\u3002\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u5DE6\u5C71\u5074\u72D9\u3044\u3002\u30BB\u30AB\u30F3\u30C9\u304B\u3089\u306F\u6253\u3061\u4E0B\u308D\u3057\u3068\u306A\u308B\u306E\u3067\u8DDD\u96E2\u611F\u3068\u30AF\u30E9\u30D6\u9078\u629E\u306F\u614E\u91CD\u306B\u3002"
+  - key: HOLE_LOMOND_11_DESC
+    english: "A downhill par-3. Both sides of the green and the area behind it are
+      tight \u2014 attacking from short of the green is the play."
+    japanese: "\u6253\u3061\u4E0B\u308D\u3057\u306E\u30B7\u30E7\u30FC\u30C8\u30DB\u30FC\u30EB\u3002\u5DE6\u53F3\u3068\u30B0\u30EA\u30FC\u30F3\u5965\u304C\u72ED\u304F\u3001\u624B\u524D\u304B\u3089\u653B\u3081\u3066\u884C\u304F\u306E\u304C\u30DD\u30A4\u30F3\u30C8\u3002"
+  - key: HOLE_LOMOND_12_DESC
+    english: "An uphill par-4. The tee shot from the front tee isn't difficult, but
+      the approach plays uphill \u2014 choose your club carefully."
+    japanese: "\u6253\u3061\u4E0A\u3052\u306E\u30DF\u30C9\u30EB\u30DB\u30FC\u30EB\u3002\u30D5\u30ED\u30F3\u30C8\u30C6\u30A3\u304B\u3089\u306E\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u96E3\u3057\u304F\u306A\u3044\u304C\u3001\u30BB\u30AB\u30F3\u30C9\u304B\u3089\u6253\u3061\u4E0A\u3052\u3068\u306A\u3063\u3066\u3044\u308B\u306E\u3067\u30AF\u30E9\u30D6\u9078\u629E\u306F\u614E\u91CD\u306B\u3002"
+  - key: HOLE_LOMOND_13_DESC
+    english: A par-5 dogleg left. The entire left side is OB, so aim the tee shot
+      at the centre. A pond guards the left of the green, so play the second shot
+      safely down the centre and decide the hole on your third.
+    japanese: "\u5DE6\u30C9\u30C3\u30B0\u30EC\u30C3\u30B0\u306E\u30ED\u30F3\u30B0\u30DB\u30FC\u30EB\u3002\u5DE6\u306F\u5168\u3066OB\u3068\u306A\u3063\u3066\u3044\u308B\u70BA\u3001\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u30BB\u30F3\u30BF\u30FC\u72D9\u3044\u3067\u884C\u304F\u3068\u826F\u3044\u3002\u30BB\u30AB\u30F3\u30C9\u304B\u3089\u306F\u30B0\u30EA\u30FC\u30F3\u5DE6\u304C\u6C60\u306B\u306A\u3063\u3066\u3044\u308B\u70BA\u3001\u30BB\u30AB\u30F3\u30C9\u3082\u30BB\u30F3\u30BF\u30FC\u72D9\u3044\u306B\u78BA\u5B9F\u306B\u304D\u3056\u3093\u30673\u6253\u76EE\u52DD\u8CA0\u3002"
+  - key: HOLE_LOMOND_14_DESC
+    english: A downhill par-4. The valley sits left and a pond sits right, so aim
+      at the right side of the two-tiered fairway. Take one extra club for the approach.
+    japanese: "\u6253\u3061\u4E0B\u308D\u3057\u306E\u30DF\u30C9\u30EB\u30DB\u30FC\u30EB\u3002\u5DE6\u304C\u8C37\u3001\u53F3\u306F\u6C60\u306B\u306A\u3063\u3066\u3044\u308B\u70BA\u3001\u4E8C\u6BB5\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4\u306E\u53F3\u72D9\u3044\u3002\u30BB\u30AB\u30F3\u30C9\u306F1\u30AF\u30E9\u30D6\u5927\u304D\u3044\u30AF\u30E9\u30D6\u9078\u629E\u3092\u3002"
+  - key: HOLE_LOMOND_15_DESC
+    english: An uphill par-3. The green is hidden from the tee, making distance tough
+      to judge. Aiming at the left side works well. Beware the large bunker fronting
+      the green.
+    japanese: "\u6253\u3061\u4E0A\u3052\u306E\u30B7\u30E7\u30FC\u30C8\u30DB\u30FC\u30EB\u3002\u30B0\u30EA\u30FC\u30F3\u9762\u304C\u898B\u3048\u306A\u3044\u70BA\u3001\u8DDD\u96E2\u611F\u304C\u96E3\u3057\u3044\u3002\u5DE6\u30B5\u30A4\u30C9\u72D9\u3044\u3067\u884C\u304F\u3068\u826F\u3044\u3002\u624B\u524D\u306E\u5927\u304D\u306A\u30D0\u30F3\u30AB\u30FC\u306F\u8981\u6CE8\u610F\u3002"
+  - key: HOLE_LOMOND_16_DESC
+    english: A short par-4. Both sides of the fairway are tight, so a reliable tee
+      shot is essential. The area behind the green is also tight, so beware.
+    japanese: "\u8DDD\u96E2\u306E\u77ED\u3044\u30DF\u30C9\u30EB\u30DB\u30FC\u30EB\u3002\u5DE6\u53F3\u3068\u3082\u306B\u72ED\u3044\u306E\u3067\u78BA\u5B9F\u306A\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u304C\u5FC5\u8981\u3068\u3055\u308C\u308B\u3002\u30B0\u30EA\u30FC\u30F3\u5965\u3082\u72ED\u3044\u306E\u3067\u6CE8\u610F\u3002"
+  - key: HOLE_LOMOND_17_DESC
+    english: Beware the pond right of the tee shot landing area. Aiming just left
+      of centre works well. The approach plays uphill, so choose your club carefully.
+    japanese: "\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u53F3\u306B\u6C60\u304C\u3042\u308B\u306E\u3067\u6CE8\u610F\u3002\u30BB\u30F3\u30BF\u30FC\u3088\u308A\u5DE6\u72D9\u3044\u3067\u884C\u304F\u3068\u826F\u3044\u3002\u30BB\u30AB\u30F3\u30C9\u304B\u3089\u306F\u6253\u3061\u4E0A\u3052\u306B\u306A\u3063\u3066\u3044\u308B\u70BA\u3001\u30AF\u30E9\u30D6\u9078\u629E\u3092\u614E\u91CD\u306B\u3002"
+  - key: HOLE_LOMOND_18_DESC
+    english: A par-5 dogleg right. Aim the tee shot just left of fairway centre.
+      Before your second shot, check the position of the group ahead to avoid hitting
+      into them. With a pond on the right, aiming a touch left is the play.
+    japanese: "\u53F3\u30C9\u30C3\u30B0\u30EC\u30C3\u30B0\u306E\u30ED\u30F3\u30B0\u30DB\u30FC\u30EB\u3002\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u30BB\u30F3\u30BF\u30FC\u5DE6\u72D9\u3044\u3002\u30BB\u30AB\u30F3\u30C9\u30B7\u30E7\u30C3\u30C8\u306E\u969B\u3001\u524D\u306E\u7D44\u306E\u4F4D\u7F6E\u3092\u78BA\u8A8D\u3057\u3001\u6253\u3061\u8FBC\u307F\u306E\u7121\u3044\u3088\u3046\u6CE8\u610F\u3057\u3066\u4E0B\u3055\u3044\u3002\u53F3\u30B5\u30A4\u30C9\u306B\u6C60\u304C\u3042\u308B\u70BA\u3001\u5DE6\u76EE\u72D9\u3044\u304C\u826F\u3044\u3002"

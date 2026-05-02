@@ -42,12 +42,10 @@ namespace GolfinRedux.UI.HoleSelection.Editor
             EditorSceneManager.MarkSceneDirty(
                 UnityEngine.SceneManagement.SceneManager.GetActiveScene());
 
-            string msg = $"Hole Selection auto-wire complete.\n{c.Wired} fields wired, {c.Failed} failed." +
-                         (c.Failed > 0
-                             ? "\nCheck Console for missing paths — some fields need manual assignment."
-                             : "\nAll fields wired successfully! Save the scene (Cmd+S / Ctrl+S).");
-
-            EditorUtility.DisplayDialog("GOLFIN — Wire Hole Selection", msg, "OK");
+            string tail = c.Failed > 0
+                ? " — check console for missing paths."
+                : " — all fields wired. Save the scene (Cmd+S).";
+            Debug.Log($"[HoleSelectionAutoWire] DONE: {c.Wired} wired, {c.Failed} failed.{tail}");
         }
 
         // ── Part A ────────────────────────────────────────────────────────────

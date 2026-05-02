@@ -13,8 +13,97 @@ MonoBehaviour:
   m_Name: HoleDatabase
   m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.HoleDatabase
   holes:
+  - courseNameKey: HOLE_LOMOND_1
+    holeNumber: 1
+    par: 5
+    descriptionKey: HOLE_LOMOND_1_DESC
+    holeImageName: Hole_01
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_2
+    holeNumber: 2
+    par: 4
+    descriptionKey: HOLE_LOMOND_2_DESC
+    holeImageName: Hole_02
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_3
+    holeNumber: 3
+    par: 4
+    descriptionKey: HOLE_LOMOND_3_DESC
+    holeImageName: Hole_03
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_4
+    holeNumber: 4
+    par: 3
+    descriptionKey: HOLE_LOMOND_4_DESC
+    holeImageName: Hole_04
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
   - courseNameKey: HOLE_LOMOND_5
     holeNumber: 5
+    par: 4
+    descriptionKey: HOLE_LOMOND_5_DESC
+    holeImageName: Hole_05
+    windSpeedMph: 1.5
+    windDirectionDegrees: 45
     rewards:
     - type: 0
       amount: 100
@@ -22,33 +111,281 @@ MonoBehaviour:
       amount: 10
     - type: 2
       amount: 30
-  - courseNameKey: HOLE_RIVERSIDE_1
-    holeNumber: 1
-    rewards:
+    replayRewards:
     - type: 0
       amount: 50
-    - type: 2
-      amount: 2
-  - courseNameKey: HOLE_HIGHLAND_3
-    holeNumber: 3
-    rewards:
-    - type: 0
-      amount: 150
     - type: 1
-      amount: 2
-    - type: 2
       amount: 5
+    - type: 2
+      amount: 2
   - courseNameKey: HOLE_LOMOND_6
     holeNumber: 6
+    par: 3
+    descriptionKey: HOLE_LOMOND_6_DESC
+    holeImageName: Hole_06
+    windSpeedMph: 2.2
+    windDirectionDegrees: 90
     rewards:
     - type: 0
       amount: 200
     - type: 1
-      amount: 3
-  - courseNameKey: HOLE_RIVERSIDE_2
-    holeNumber: 2
+      amount: 30
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_7
+    holeNumber: 7
+    par: 4
+    descriptionKey: HOLE_LOMOND_7_DESC
+    holeImageName: Hole_07
+    windSpeedMph: 0
+    windDirectionDegrees: 0
     rewards:
     - type: 0
-      amount: 75
+      amount: 100
+    - type: 1
+      amount: 10
     - type: 2
-      amount: 3
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_8
+    holeNumber: 8
+    par: 5
+    descriptionKey: HOLE_LOMOND_8_DESC
+    holeImageName: Hole_08
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_9
+    holeNumber: 9
+    par: 4
+    descriptionKey: HOLE_LOMOND_9_DESC
+    holeImageName: Hole_09
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_10
+    holeNumber: 10
+    par: 4
+    descriptionKey: HOLE_LOMOND_10_DESC
+    holeImageName: Hole_10
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_11
+    holeNumber: 11
+    par: 3
+    descriptionKey: HOLE_LOMOND_11_DESC
+    holeImageName: Hole_11
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_12
+    holeNumber: 12
+    par: 4
+    descriptionKey: HOLE_LOMOND_12_DESC
+    holeImageName: Hole_12
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_13
+    holeNumber: 13
+    par: 5
+    descriptionKey: HOLE_LOMOND_13_DESC
+    holeImageName: Hole_13
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_14
+    holeNumber: 14
+    par: 4
+    descriptionKey: HOLE_LOMOND_14_DESC
+    holeImageName: Hole_14
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_15
+    holeNumber: 15
+    par: 3
+    descriptionKey: HOLE_LOMOND_15_DESC
+    holeImageName: Hole_15
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_16
+    holeNumber: 16
+    par: 4
+    descriptionKey: HOLE_LOMOND_16_DESC
+    holeImageName: Hole_16
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_17
+    holeNumber: 17
+    par: 4
+    descriptionKey: HOLE_LOMOND_17_DESC
+    holeImageName: Hole_17
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2
+  - courseNameKey: HOLE_LOMOND_18
+    holeNumber: 18
+    par: 5
+    descriptionKey: HOLE_LOMOND_18_DESC
+    holeImageName: Hole_18
+    windSpeedMph: 0
+    windDirectionDegrees: 0
+    rewards:
+    - type: 0
+      amount: 100
+    - type: 1
+      amount: 10
+    - type: 2
+      amount: 5
+    replayRewards:
+    - type: 0
+      amount: 50
+    - type: 1
+      amount: 5
+    - type: 2
+      amount: 2

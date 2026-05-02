@@ -30,8 +30,7 @@ public static class HoleImagesImporter
             }
         }
 
-        Debug.Log($"[HoleImagesImporter] Done — {configured} images configured as Sprites.");
-        EditorUtility.DisplayDialog("Hole Images", $"Configured {configured} images as Sprites in Resources/HoleImages/.", "OK");
+        Debug.Log($"[HoleImagesImporter] Done — {configured} images configured as Sprites in Resources/HoleImages/.");
     }
 }
 #endif
