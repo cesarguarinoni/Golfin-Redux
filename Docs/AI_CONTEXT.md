@@ -2,7 +2,26 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-05-01 (Phase 8 CLOSED — 8.6 delivered as 8.5.C, 8.7 as 8.5.D, 8.8 skipped. Putter P1 next.)
+**Last Updated:** 2026-05-02 (GOLFIN_Roadmap Notion DB created; Putter P1 closed; C — Controls finetuning is next.)
+
+## Roadmap
+
+**Source of truth:** `Docs/Roadmap.md` (canonical phases) + `Docs/TellCode.md` (active task pointer).
+
+**Notion mirror:** [GOLFIN_Roadmap](https://app.notion.com/p/3995e790b0e64aac828bd12055b64c15) — clean architect-tracked board with 54 entries (Phase / Status / Order / Estimate / Description / Notes / Closed). Created 2026-05-02. **NOT** the legacy `GOLFIN_Task_Board` — keep that one untouched.
+
+**Maintenance protocol:** when a roadmap task closes, flip Status → `Done`, set `Closed` date, mirror any waivers/follow-ups into `Notes`. New work added inline at the right `Order` slot (100s = Putter P1, 200s = Loop v1, 300s = Loop v2, etc.; sub-items step by 10).
+
+## Multi-machine git discipline
+
+Cesar works across **3 computers** (main desktop + Mac + secondary). To keep them in sync:
+
+- **Always `git pull` at session start** — before reading `TellCode.md`, `AI_CONTEXT.md`, or any spec.
+- **Always `git push` at session end** — and any time `TellCode.md`, `AI_CONTEXT.md`, or active specs in `Docs/Specs/Active/` change. These are the coordination files; stale copies on another machine cause divergence.
+- **Especially `TellCode.md`** — it's the live handoff channel. Push immediately after Architect writes a new task block, after Code adds a `✅ DONE`, or after any open-flag/roadmap edit.
+- `.gitattributes` already has `merge=union` for handoff files so concurrent edits across machines auto-merge instead of conflicting.
+
+Architect responsibility: when writing a TellCode update or AI_CONTEXT edit in a session, end the response with a reminder like "remember to push before switching machines" if the edit landed late in the session.
 
 ## Current Status
 
