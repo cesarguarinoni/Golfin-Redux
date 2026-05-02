@@ -98,3 +98,14 @@ Putter P1 → Loop v1 (incl. Putter P2) → Loop v2 → Save System
 - Holes 2–18 import (all 18 already in `Assets/Resources/HoleData/`)
 - Power Gauge (done in 8.2 or 8.3)
 - Phase 8.5 — action buttons + selectors + central ball + targeting line
+
+
+---
+
+## Tooling & workflow (candidates, not scheduled)
+
+Patterns worth borrowing from OpenAI Symphony (read 2026-04-30). Full Symphony adoption not pursued — the win is decoupling implementation from supervision, but Cesar is the only reviewer, so higher throughput just moves the bottleneck. These three patterns are the parts that pay even at solo-dev scale. Stub: `Docs/Specs/Queued/SYMPHONY_PATTERNS.md`.
+
+- **STATUS dashboard command.** A single script (PowerShell or Python) that scans `Docs/Specs/Active/*/STATUS.md` and reports: per-task state, idle-since duration, blocked vs ready-for-review counts, missing artifacts (e.g. IMPLEMENTER_REPORT exists but SELF_REVIEW doesn't). Run on demand, not autonomous. Cheap. Removes "where am I?" cognitive load when context-switching between days or machines.
+- **Proof-of-work bar in `IMPLEMENTER_REPORT.md`.** Tighten the implementer agent definition so every report MUST include: (a) screenshot diff vs reference (when visual), (b) test output snippet, (c) `git diff --stat` summary. Procedural rejection if missing. Mirrors Symphony's "agents provide proof of work" pattern. Reduces self-review and architect-review churn.
+- **`depends_on:` field in spec front-matter.** Formalize task dependencies (Architect already does this implicitly — 8.5 a→b→c→d was dependency-aware). Adding `depends_on: [task-slug, task-slug]` to spec front-matter makes the dependency machine-readable and lets the dashboard surface "X is ready, but waiting on Y."
