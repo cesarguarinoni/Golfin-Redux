@@ -14,3 +14,4 @@
 2026-05-03T10:38:04 taking screenshots via CaptureHelper
 2026-05-03T10:51:36 committing all iter4 file changes
 2026-05-03T10:52:53 STATUS=IMPLEMENTER_BLOCKED — screenshot capture blocked, all file changes committed
+2026-05-03T04:42:35 iter5 — drove smoke test via MCP reflection (bypassed broken static listener), 3 screenshots captured, STATUS=READY_FOR_SELF_REVIEW
