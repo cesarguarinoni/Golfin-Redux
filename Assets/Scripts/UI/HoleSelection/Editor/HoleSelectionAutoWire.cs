@@ -306,6 +306,30 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 else { FailB("filtersContainer", "Content/Filters"); }
             }
 
+            // courseFilterRow (Iter4 — needed for divider injection)
+            {
+                var t = root.Find("Content/Filters/FilterRow1");
+                if (t != null)
+                {
+                    var rt = t.GetComponent<RectTransform>();
+                    if (rt != null) { so.FindProperty("courseFilterRow").objectReferenceValue = rt; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:courseFilterRow"); }
+                    else { FailB("courseFilterRow", "Content/Filters/FilterRow1", "no RectTransform"); }
+                }
+                else { FailB("courseFilterRow", "Content/Filters/FilterRow1"); }
+            }
+
+            // teeFilterRow (Iter4 — needed for divider injection)
+            {
+                var t = root.Find("Content/Filters/FilterRow2");
+                if (t != null)
+                {
+                    var rt = t.GetComponent<RectTransform>();
+                    if (rt != null) { so.FindProperty("teeFilterRow").objectReferenceValue = rt; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:teeFilterRow"); }
+                    else { FailB("teeFilterRow", "Content/Filters/FilterRow2", "no RectTransform"); }
+                }
+                else { FailB("teeFilterRow", "Content/Filters/FilterRow2"); }
+            }
+
             // cardPrefab
             {
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(HOLE_CARD_PREFAB_PATH);

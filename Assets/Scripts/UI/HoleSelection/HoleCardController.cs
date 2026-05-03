@@ -57,11 +57,23 @@ namespace GolfinRedux.UI.HoleSelection
         [Header("Action Button")]
         [SerializeField] private Button actionButton;
         [SerializeField] private TextMeshProUGUI actionButtonLabel;
+        [SerializeField] private Sprite playButtonSprite;    // Assets/Art/HoleSelectScreen/Button - Play.png
+        [SerializeField] private Sprite replayButtonSprite;  // Assets/Art/HoleSelectScreen/Button - Replay.png
 
         // ── Tap + Locked overlay ──────────────────────────────────────────────
         [Header("Interaction")]
         [SerializeField] private Button cardTapButton;
         [SerializeField] private GameObject lockedOverlay;
+
+        // ── Chevron arrow (Open/Close indicator) ──────────────────────────────
+        [Header("Chevron Arrow")]
+        [SerializeField] private GameObject chevronCollapsed; // ▼ shown when collapsed/locked
+        [SerializeField] private GameObject chevronExpanded;  // ▲ shown when expanded
+
+        // ── Lock icon (in title row, like the YAITA filter pill) ──────────────
+        [Header("Lock Icon")]
+        [SerializeField] private GameObject lockIconCollapsed; // shown in collapsed title when locked
+        [SerializeField] private GameObject lockIconExpanded;  // never shown (locked never expands), but wired for completeness
 
         // ── Public state ──────────────────────────────────────────────────────
         public int HoleNumber { get; private set; }
@@ -138,9 +150,29 @@ namespace GolfinRedux.UI.HoleSelection
             PopulateRewards(rewards, collapsedRewardSlots, collapsedRewardIcons, collapsedRewardAmounts);
             PopulateRewards(rewards, expandedRewardSlots,  expandedRewardIcons,  expandedRewardAmounts);
 
-            // Action button label
+            // Action button label + colour + sprite (Cesar correction 8)
             if (actionButtonLabel != null)
-                actionButtonLabel.text = (mode == HoleCardMode.Replay) ? "REPLAY" : "PLAY";
+            {
+                if (mode == HoleCardMode.Replay)
+                {
+                    actionButtonLabel.text = "REPLAY";
+                    actionButtonLabel.color = new Color32(0x1E, 0x29, 0x3B, 255); // #1E293B dark navy
+                }
+                else
+                {
+                    actionButtonLabel.text = "PLAY";
+                    actionButtonLabel.color = new Color32(0x32, 0x15, 0x06, 255); // #321506 dark brown
+                }
+            }
+
+            // Action button background sprite (Cesar correction 8)
+            if (actionButton != null && actionButton.image != null)
+            {
+                bool replay = (mode == HoleCardMode.Replay);
+                Sprite btnSprite = replay ? replayButtonSprite : playButtonSprite;
+                if (btnSprite != null)
+                    actionButton.image.sprite = btnSprite;
+            }
 
             SetState(state);
         }
@@ -169,6 +201,14 @@ namespace GolfinRedux.UI.HoleSelection
             float alpha = isLocked ? 0.4f : 1f;
             ApplyRewardAlpha(collapsedRewardIcons, collapsedRewardAmounts, alpha);
             ApplyRewardAlpha(expandedRewardIcons,  expandedRewardAmounts,  alpha);
+
+            // Chevron arrow (down when collapsed/locked, up when expanded)
+            if (chevronCollapsed != null) chevronCollapsed.SetActive(!isExpanded);
+            if (chevronExpanded  != null) chevronExpanded.SetActive(isExpanded);
+
+            // Lock icon (in title row, only when state is Locked)
+            if (lockIconCollapsed != null) lockIconCollapsed.SetActive(isLocked);
+            if (lockIconExpanded  != null) lockIconExpanded.SetActive(false); // locked never expands
 
             if (rootRect != null)
                 LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);

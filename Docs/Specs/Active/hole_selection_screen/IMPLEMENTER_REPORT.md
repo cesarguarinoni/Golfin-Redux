@@ -197,9 +197,65 @@ The code, CSV, and localization are all correct and complete to the extent verif
 
 Not captured — compile check was done via brace-balance verification (all files balanced). Unity domain reload required for actual compilation; deferred to Cesar opening the project.
 
+---
+
+## Iteration 4 (2026-05-03) — Cesar's 8 corrections
+
+### What was applied
+
+All 8 corrections have been applied at the file level. Summary:
+
+| Correction | Status | Evidence |
+|---|---|---|
+| 1. BG in MatchMakingModal: Background.png sprite + white color | DONE | `MatchMakingModal.prefab` line 2223: `m_Sprite guid=2e5476ee` + `m_Color {r:1,g:1,b:1,a:1}` |
+| 2. Rounded corners on HoleCard (50px = Next Hole Panel sprite, Sliced) | DONE | `HoleCard.prefab` root Image: `m_Sprite guid=3663aafe` (Next Hole Panel), `m_Type: 1` (Sliced) |
+| 3. YAITA filter single-line: minWidth=380, NoWrap | DONE | `ShellScene.unity` LayoutElement `&2093966076`: `m_MinWidth: 380`, `m_PreferredWidth: 400`; TMP `m_TextWrappingMode: 0`; also fixed at runtime via `p.label.textWrappingMode = NoWrap` |
+| 4. Gold gradient on active pills | ALREADY IN CODE | `HoleSelectionScreenController.UpdatePillVisuals()` calls `TextGradients.ApplyGold/ApplySilver` per pill state since Iter 3; no change needed |
+| 5. Filter dividers between pills | DONE | `HoleSelectionScreenController.InjectDividers()` method added (mirrors `ClubFilterBar.InjectDividers`); `courseFilterRow`+`teeFilterRow` SerializeFields added; wired in `ShellScene.unity` `&249416400` |
+| 6. HomeScreen NextHolePanel as model (same rounded-corner sprite) | DONE | Same as correction 2; HoleCard root uses `3663aafeba2bd1f42a04eabf9d34c220` = `Next Hole Panel.png` |
+| 7. Inventory filters as model (dividers + TextGradients) | ALREADY IN CODE | Covered by corrections 4 + 5 |
+| 8. PLAY=#321506 / REPLAY=#1E293B text colors + button sprites as SerializeFields | DONE | `HoleCardController.Bind()` sets `actionButtonLabel.color` per mode; `playButtonSprite`/`replayButtonSprite` SerializeFields wired in prefab via YAML (`&4981`, `&4980`) |
+
+### Additional work applied
+
+| Item | Status | Evidence |
+|---|---|---|
+| Arrow.png meta: textureType=Sprite | DONE | `Arrow.png.meta`: textureType=8, spriteMode=1, alphaIsTransparency=1 |
+| Background.png meta: textureType=Sprite | DONE | `Background.png.meta`: same settings |
+| Lock.png meta: textureType=Sprite | DONE | `Lock.png.meta`: same settings |
+| Button-Play.png meta: textureType=Sprite, 9-slice border=40 | DONE | `Button - Play.png.meta`: textureType=8, spriteBorder={x:40,y:40,z:40,w:40} |
+| Button-Replay.png meta: textureType=Sprite, 9-slice border=40 | DONE | `Button - Replay.png.meta`: same |
+| ChevronCollapsed: Arrow.png, rotation (0,0,0) | DONE | `HoleCard.prefab` line 69: `m_Sprite guid=0121f128` (Arrow.png) |
+| ChevronExpanded: Arrow.png, rotation (0,0,-90) | DONE | `HoleCard.prefab`: ChevronExpanded RT rotation `{x:0,y:0,z:-0.7071,w:0.7071}`, EulerHint `z:-90` |
+| LockIconCollapsed: Lock.png | DONE | `HoleCard.prefab` line 1163: `m_Sprite guid=7e22af39` (Lock.png) |
+| LockIconExpanded: Lock.png | DONE | `HoleCard.prefab` line 1490: same guid |
+| LockIcon sprites in ShellScene filter pills (×4) | DONE | `ShellScene.unity`: all instances of old lock GUIDs replaced with `7e22af3928c343f48a6da2eae193170d` (Lock.png) — 4 replacements at lines 10856, 12164, 13389, 26189, 52896, 98599 |
+| ActionButton: Button-Play.png (Sliced, was gold solid) | DONE | `HoleCard.prefab` line 1350-1351: `m_Sprite guid=7e5fb364` (Button-Play), `m_Type: 1` |
+| courseFilterRow + teeFilterRow wired in scene YAML | DONE | `ShellScene.unity` `&249416400`: `courseFilterRow: {fileID: 752680238}`, `teeFilterRow: {fileID: 1329021953}` |
+| HoleSelectionAutoWire updated to wire courseFilterRow/teeFilterRow | DONE | `HoleSelectionAutoWire.cs` lines 309-331: new wiring blocks for FilterRow1/FilterRow2 |
+
+### Screenshot capture — BLOCKED
+
+Screenshot capture is blocked. All three paths attempted:
+
+- **Path A** (`mcp__unity__screenshot-game-view`): Unity MCP tools are not wired in this agent session. The unity-mcp-server process is running at port 8080 but has no tools registered (empty `tools/list` response) because the Unity plugin's connection failed with `"Connection not available and auto-reconnect disabled for endpoint: /hub/mcp-server"`.
+- **Path B** (`CaptureHelper.SnapGameView()` via MCP script-execute): Same root cause — MCP has no tools, script-execute is unavailable.
+- **Path C** (manual): Cesar must take screenshots manually.
+
+**What Cesar must do to complete the screenshot requirement:**
+1. Open Unity (the project is at `Assets/Scenes/ShellScene.unity` — already open based on log evidence)
+2. Run `GOLFIN > Wire > Hole Selection` from the menu bar
+3. Run `GOLFIN > Capture > Fake State - Play` (or enter play mode via the Play button)
+4. Navigate to the HoleSelection screen (press the Tee nav button on the HomeScreen)
+5. Run `GOLFIN > Screenshot > Capture Game View` for 3 screenshots:
+   - Filter row showing gold LOMOND + silver YAITA pill (single-line, dividers visible)
+   - Hole 1 expanded, showing gold PLAY button with dark brown text + correct sprite
+   - MatchMakingModal open, showing Background.png (should show the course background image, not a black scrim)
+
 ## Open questions for Architect
 
 1. **Translation handoff: RESOLVED.** Architect translated and wrote desc_keys_en.csv. Pasted into LocalizationText.csv in Run 2.
 2. **Hole 6 CSV — third play reward missing:** The existing Hole 6 data had only 2 play rewards (Points 200, RepairKit 30). Third slot left empty. If Cesar wants a third play reward, it needs to be spec'd.
 3. **LocalizationTextImporter: naive Split(',') broke with comma-containing descriptions.** Fixed in Run 2 by upgrading to RFC 4180 parser. The fix is backward-compatible. Architect should note this importer limitation was undetected before desc keys were added — other existing keys happened to have no commas.
 4. **Step 8 (prefab + scene) requires Unity Editor.** Unity MCP tools not in tool set for this worktree session. Cesar must build the prefab and scene manually. All controller code is written and correct; the auto-wire script (GOLFIN/Wire/Hole Selection) will handle wiring once the hierarchy exists.
+5. **Screenshot capture blocked (Iteration 4):** Unity MCP transport is active but has no tools registered due to Unity plugin connectivity failure. Cesar must take screenshots manually as described in the Iteration 4 section above. The file-level changes are all complete and verified by direct YAML/code inspection.
