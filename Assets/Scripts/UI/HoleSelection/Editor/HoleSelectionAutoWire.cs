@@ -1,3 +1,4 @@
+// iteration3-fix: labelComp cast corrected v2
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -38,6 +39,9 @@ namespace GolfinRedux.UI.HoleSelection.Editor
 
             // ── Part C: Wire ScreenManager._holeSelectionScreen ───────────────
             WireScreenManager(c);
+
+            // ── Part D: Wire coursePills + teePills (filter pill lists) ──────
+            WireFilterPills(c);
 
             EditorSceneManager.MarkSceneDirty(
                 UnityEngine.SceneManagement.SceneManager.GetActiveScene());
@@ -267,28 +271,32 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 counters.Failed++;
             }
 
-            // cardsScrollRect
+            // cardsScrollRect — try both possible paths (scene may have CardsContainer wrapper)
             {
-                var t = root.Find("Content/CardsScrollView");
+                Transform t = root.Find("Content/CardsContainer/CardsScrollView")
+                           ?? root.Find("Content/CardsScrollView");
+                string foundPath = t != null ? t.name : "not found";
                 if (t != null)
                 {
                     var sr = t.GetComponent<ScrollRect>();
                     if (sr != null) { so.FindProperty("cardsScrollRect").objectReferenceValue = sr; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:cardsScrollRect"); }
-                    else { FailB("cardsScrollRect", "Content/CardsScrollView", "no ScrollRect component"); }
+                    else { FailB("cardsScrollRect", foundPath, "no ScrollRect component"); }
                 }
-                else { FailB("cardsScrollRect", "Content/CardsScrollView"); }
+                else { FailB("cardsScrollRect", "Content/CardsContainer/CardsScrollView"); }
             }
 
-            // cardsContent
+            // cardsContent — try both possible paths
             {
-                var t = root.Find("Content/CardsScrollView/Viewport/Content");
+                Transform t = root.Find("Content/CardsContainer/CardsScrollView/Viewport/Content")
+                           ?? root.Find("Content/CardsScrollView/Viewport/Content");
+                string foundPath2 = t != null ? t.name : "not found";
                 if (t != null)
                 {
                     var rt = t.GetComponent<RectTransform>();
                     if (rt != null) { so.FindProperty("cardsContent").objectReferenceValue = rt; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:cardsContent"); }
-                    else { FailB("cardsContent", "Content/CardsScrollView/Viewport/Content", "no RectTransform"); }
+                    else { FailB("cardsContent", foundPath2, "no RectTransform"); }
                 }
-                else { FailB("cardsContent", "Content/CardsScrollView/Viewport/Content"); }
+                else { FailB("cardsContent", "Content/CardsContainer/CardsScrollView/Viewport/Content"); }
             }
 
             // filtersContainer
@@ -369,6 +377,111 @@ namespace GolfinRedux.UI.HoleSelection.Editor
 
             Debug.Log("[HoleSelectionAutoWire] OK scene:ScreenManager._holeSelectionScreen");
             Debug.Log("[HoleSelectionAutoWire] Part C complete — ScreenManager wired.");
+        }
+
+        // ── Part D ────────────────────────────────────────────────────────────
+
+        private static void WireFilterPills(Counters counters)
+        {
+            HoleSelectionScreenController ctrl = null;
+            foreach (var c in Resources.FindObjectsOfTypeAll<HoleSelectionScreenController>())
+            {
+                if (c.gameObject.scene.isLoaded) { ctrl = c; break; }
+            }
+            if (ctrl == null)
+            {
+                Debug.LogWarning("[HoleSelectionAutoWire] Part D: HoleSelectionScreenController not in scene — skip filter pills.");
+                counters.Failed++;
+                return;
+            }
+
+            const string LOCK_PATH = "Assets/Resources/UI/HoleSelection/S_HoleSel_FilterLock.png";
+            var lockSprite = AssetDatabase.LoadAssetAtPath<Sprite>(LOCK_PATH);
+
+            var so = new SerializedObject(ctrl);
+            var courseProp = so.FindProperty("coursePills");
+            var teeProp    = so.FindProperty("teePills");
+
+            // Helper: find pill GO by name fragment
+            Transform FindPillT(string nameContains)
+            {
+                foreach (var rt in Resources.FindObjectsOfTypeAll<RectTransform>())
+                {
+                    if (rt.gameObject.scene.isLoaded && rt.name.Contains(nameContains))
+                        return rt;
+                }
+                return null;
+            }
+
+            // Helper: get or create LockIcon child on a pill
+            GameObject GetOrCreateLockIcon(Transform pillT, bool create)
+            {
+                if (!create || pillT == null) return null;
+                var ex = pillT.Find("LockIcon");
+                if (ex != null) return ex.gameObject;
+
+                var go = new GameObject("LockIcon");
+                go.transform.SetParent(pillT, false);
+                go.transform.SetAsFirstSibling();
+                var rt = go.AddComponent<RectTransform>();
+                rt.sizeDelta        = new Vector2(21f, 26f);
+                rt.anchorMin        = new Vector2(0f, 0.5f);
+                rt.anchorMax        = new Vector2(0f, 0.5f);
+                rt.pivot            = new Vector2(0f, 0.5f);
+                rt.anchoredPosition = new Vector2(10f, 0f);
+                var img = go.AddComponent<Image>();
+                img.sprite         = lockSprite;
+                img.preserveAspect = true;
+                img.color          = Color.white;
+                img.raycastTarget  = false;
+                go.AddComponent<CanvasRenderer>();
+                EditorUtility.SetDirty(go);
+                return go;
+            }
+
+            void AddPill(SerializedProperty arr, string nameContains, string filterId, bool locked)
+            {
+                var pillT = FindPillT(nameContains);
+                if (pillT == null)
+                {
+                    Debug.LogWarning($"[HoleSelectionAutoWire] Part D: pill '{nameContains}' not found.");
+                    counters.Failed++;
+                    return;
+                }
+
+                arr.arraySize++;
+                var elem = arr.GetArrayElementAtIndex(arr.arraySize - 1);
+
+                elem.FindPropertyRelative("button").objectReferenceValue = pillT.GetComponent<Button>();
+
+                // Label may be at "Label" or "Inner/Label"
+                Transform labelT = pillT.Find("Label") ?? pillT.Find("Inner/Label");
+                TextMeshProUGUI labelComp = labelT != null ? labelT.GetComponent<TextMeshProUGUI>() : null;
+                elem.FindPropertyRelative("label").objectReferenceValue = labelComp;
+
+                elem.FindPropertyRelative("background").objectReferenceValue = pillT.GetComponent<Image>();
+                elem.FindPropertyRelative("lockIcon").objectReferenceValue   = GetOrCreateLockIcon(pillT, locked);
+                elem.FindPropertyRelative("locked").boolValue                = locked;
+                elem.FindPropertyRelative("filterId").stringValue            = filterId;
+
+                counters.Wired++;
+                Debug.Log($"[HoleSelectionAutoWire] OK scene:pill:{filterId}");
+            }
+
+            courseProp.arraySize = 0;
+            teeProp.arraySize    = 0;
+
+            AddPill(courseProp, "Pill_LOMOND", "Lomond", false);
+            AddPill(courseProp, "Pill_YAITA",  "Yaita",  true);
+            AddPill(teeProp, "Pill_LADIES",  "Ladies",  false);
+            AddPill(teeProp, "Pill_FRONT",   "Front",   false);
+            AddPill(teeProp, "Pill_REGULAR", "Regular", true);
+            AddPill(teeProp, "Pill_BACK",    "Back",    true);
+
+            so.ApplyModifiedProperties();
+            EditorUtility.SetDirty(ctrl);
+
+            Debug.Log("[HoleSelectionAutoWire] Part D complete — filter pills wired.");
         }
     }
 }
