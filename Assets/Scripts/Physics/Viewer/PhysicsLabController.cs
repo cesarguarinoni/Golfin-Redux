@@ -177,6 +177,10 @@ namespace Golfin.Physics.Viewer
         {
 #if UNITY_EDITOR
             Golfin.Physics.BallSimulation.DiagErrorLogger = Debug.LogError;
+            Golfin.Physics.BallSimulation.DiagShotLogger        = Debug.Log;
+            Golfin.Physics.BallSimulation.DiagRollLogger        = Debug.Log;
+            Golfin.Physics.Stats.ShotInputBuilder.DiagBuildLogger = Debug.Log;
+            if (_shotController != null) _shotController.LogResolution = true;
 #endif
             // Disable raw-touch path — ClubHandle external drag API is the only input in this lab.
             // This prevents camera drags and button clicks from accidentally starting a shot.

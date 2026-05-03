@@ -21,6 +21,23 @@ namespace Golfin.Physics
         // Null-safe: if not wired, assertion is silently skipped.
         public static System.Action<string> DiagErrorLogger;
 
+        /// <summary>
+        /// Wired by the runtime layer to Debug.Log. Emits a single line at sim entry
+        /// (with the result of IsPutt() and the gate inputs) and another at termination.
+        /// Null-safe; zero overhead when unwired.
+        /// </summary>
+        public static System.Action<string> DiagShotLogger;
+
+        /// <summary>
+        /// Wired by the runtime layer to Debug.Log. Emits a throttled snapshot every
+        /// `RollLogStrideSteps` (default 24 = 10 Hz at the 240 Hz sim rate) from
+        /// inside RunRollPhase and RunPuttPhase. Null-safe; zero overhead when unwired.
+        /// </summary>
+        public static System.Action<string> DiagRollLogger;
+
+        /// <summary>How often (in sim steps) DiagRollLogger fires. 24 = 10 Hz at 240 Hz dt.</summary>
+        public static int RollLogStrideSteps = 24;
+
         static void CheckTerrainInvariant(IGroundProvider ground, SurfaceType surface, fp3 pos)
         {
             if (DiagErrorLogger == null) return;
@@ -113,6 +130,28 @@ namespace Golfin.Physics
             PuttConfig puttCfg,
             BallPhysicsModifiers ballMods)
         {
+#if UNITY_EDITOR
+            if (DiagShotLogger != null)
+            {
+                SurfaceType originSurface = surfaces.Classify(input.origin.x, input.origin.z);
+                fp speedSq = fpMath.Dot(input.velocity, input.velocity);
+                fp speed   = fpMath.Sqrt(speedSq);
+                fp vySq    = input.velocity.y * input.velocity.y;
+                bool puttGateEligibleSurface =
+                    originSurface == SurfaceType.Green ||
+                    originSurface == SurfaceType.GreenCollar ||
+                    originSurface == SurfaceType.Tee;
+                bool puttGateSpeedOk = speed.ToFloat() < 8.0f;
+                bool puttGateAngleOk = vySq.ToFloat() <= speedSq.ToFloat() * 0.067f;
+                DiagShotLogger(
+                    $"[ShotEntry] origin=({input.origin.x.ToFloat():F2},{input.origin.y.ToFloat():F2},{input.origin.z.ToFloat():F2}) " +
+                    $"vel=({input.velocity.x.ToFloat():F3},{input.velocity.y.ToFloat():F3},{input.velocity.z.ToFloat():F3}) " +
+                    $"|v|={speed.ToFloat():F3}m/s spin={input.Spin.Rate.ToFloat():F1}rad/s " +
+                    $"originSurface={originSurface} " +
+                    $"isPuttGate=(speedOk={puttGateSpeedOk}, angleOk={puttGateAngleOk}, surfaceOk={puttGateEligibleSurface}) " +
+                    $"ballMods=(rebound={ballMods.ReboundMultiplier.ToFloat():F3}, roll={ballMods.RollResistanceMultiplier.ToFloat():F3}, windCut={ballMods.WindCutFraction.ToFloat():F3})");
+            }
+#endif
             if (IsPutt(input, surfaces))
             {
                 var samples = new List<TrajectorySample>(capacity: 512);
@@ -139,9 +178,18 @@ namespace Golfin.Physics
             var airborne = SimulateAirborne(input, ground, aero, wind, ballMods);
 
             if (airborne.termination != TerminationReason.HitGround)
+            {
+#if UNITY_EDITOR
+                if (DiagShotLogger != null)
+                    DiagShotLogger(
+                        $"[ShotExit] termination={airborne.termination} " +
+                        $"finalPos=({airborne.finalPosition.x.ToFloat():F2},{airborne.finalPosition.y.ToFloat():F2},{airborne.finalPosition.z.ToFloat():F2}) " +
+                        $"finalT={airborne.finalTime.ToFloat():F2}s samples={airborne.samples.Count} hits=0");
+#endif
                 return new Trajectory(airborne.samples, airborne.finalPosition,
                     airborne.finalVelocity, airborne.finalTime, airborne.termination,
                     new List<TerrainHit>());
+            }
 
             var samplesList = new List<TrajectorySample>(airborne.samples);
             var hitsList    = new List<TerrainHit>();
@@ -168,11 +216,25 @@ namespace Golfin.Physics
                 if (surface == SurfaceType.Water)
                 {
                     hitsList.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+#if UNITY_EDITOR
+                    if (DiagShotLogger != null)
+                        DiagShotLogger(
+                            $"[ShotExit] termination={TerminationReason.HitWater} " +
+                            $"finalPos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                            $"finalT={t.ToFloat():F2}s samples={samplesList.Count} hits={hitsList.Count}");
+#endif
                     return new Trajectory(samplesList, pos, fp3.Zero, t, TerminationReason.HitWater, hitsList);
                 }
                 if (surface == SurfaceType.OOB)
                 {
                     hitsList.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+#if UNITY_EDITOR
+                    if (DiagShotLogger != null)
+                        DiagShotLogger(
+                            $"[ShotExit] termination={TerminationReason.HitOOB} " +
+                            $"finalPos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                            $"finalT={t.ToFloat():F2}s samples={samplesList.Count} hits={hitsList.Count}");
+#endif
                     return new Trajectory(samplesList, pos, fp3.Zero, t, TerminationReason.HitOOB, hitsList);
                 }
 
@@ -207,6 +269,13 @@ namespace Golfin.Physics
                 if (speed <= coeff.StopSpeed)
                 {
                     hitsList.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+#if UNITY_EDITOR
+                    if (DiagShotLogger != null)
+                        DiagShotLogger(
+                            $"[ShotExit] termination={TerminationReason.BallStopped} " +
+                            $"finalPos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                            $"finalT={t.ToFloat():F2}s samples={samplesList.Count} hits={hitsList.Count}");
+#endif
                     return new Trajectory(samplesList, pos, fp3.Zero, t, TerminationReason.BallStopped, hitsList);
                 }
 
@@ -234,9 +303,25 @@ namespace Golfin.Physics
                 vel = nextAirborne.finalVelocity;
 
                 if (nextAirborne.termination != TerminationReason.HitGround)
+                {
+#if UNITY_EDITOR
+                    if (DiagShotLogger != null)
+                        DiagShotLogger(
+                            $"[ShotExit] termination={nextAirborne.termination} " +
+                            $"finalPos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                            $"finalT={t.ToFloat():F2}s samples={samplesList.Count} hits={hitsList.Count}");
+#endif
                     return new Trajectory(samplesList, pos, vel, t, nextAirborne.termination, hitsList);
+                }
             }
 
+#if UNITY_EDITOR
+            if (DiagShotLogger != null)
+                DiagShotLogger(
+                    $"[ShotExit] termination={TerminationReason.MaxBouncesExceeded} " +
+                    $"finalPos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                    $"finalT={t.ToFloat():F2}s samples={samplesList.Count} hits={hitsList.Count}");
+#endif
             return new Trajectory(samplesList, pos, vel, t, TerminationReason.MaxBouncesExceeded, hitsList);
         }
 
@@ -408,6 +493,24 @@ namespace Golfin.Physics
                     ? hm.SampleNormal(pos.x, pos.z)
                     : new fp3(fp.Zero, fp.One, fp.Zero);
 
+#if UNITY_EDITOR
+                if (DiagRollLogger != null && step > 0 && (step % RollLogStrideSteps) == 0)
+                {
+                    fp gDotN  = fpMath.Dot(gravity, normal);
+                    fp3 gTan  = gravity - normal * gDotN;
+                    fp slopeMag = fpMath.Sqrt(fpMath.Dot(gTan, gTan));
+                    fp speed    = fpMath.Sqrt(fpMath.Dot(vel, vel));
+                    DiagRollLogger(
+                        $"[RollStep] t={t.ToFloat():F3}s step={step} " +
+                        $"pos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                        $"surface={surface} k={coeff.RollingResistance.ToFloat():F3} " +
+                        $"rollMul={ballMods.RollResistanceMultiplier.ToFloat():F3} " +
+                        $"stopSpeed={coeff.StopSpeed.ToFloat():F3} " +
+                        $"|gTan|={slopeMag.ToFloat():F3}m/s² " +
+                        $"|v|={speed.ToFloat():F4}m/s stopConsec={stopConsecutive}");
+                }
+#endif
+
                 vel = vel - normal * fpMath.Dot(vel, normal);
 
                 fp3 aGravityTangent = gravity - normal * fpMath.Dot(gravity, normal);
@@ -523,6 +626,24 @@ namespace Golfin.Physics
                 fp3 normal = (ground is HeightmapData hm)
                     ? hm.SampleNormal(pos.x, pos.z)
                     : new fp3(fp.Zero, fp.One, fp.Zero);
+
+#if UNITY_EDITOR
+                if (DiagRollLogger != null && step > 0 && (step % RollLogStrideSteps) == 0)
+                {
+                    fp gDotN  = fpMath.Dot(gravity, normal);
+                    fp3 gTan  = gravity - normal * gDotN;
+                    fp slopeMag = fpMath.Sqrt(fpMath.Dot(gTan, gTan));
+                    fp speed    = fpMath.Sqrt(fpMath.Dot(vel, vel));
+                    DiagRollLogger(
+                        $"[PuttStep] t={t.ToFloat():F3}s step={step} " +
+                        $"pos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                        $"surface={surface} k={coeff.RollingResistance.ToFloat():F3} " +
+                        $"rollMul={ballMods.RollResistanceMultiplier.ToFloat():F3} " +
+                        $"stopSpeed={coeff.StopSpeed.ToFloat():F3} " +
+                        $"|gTan|={slopeMag.ToFloat():F3}m/s² " +
+                        $"|v|={speed.ToFloat():F4}m/s stopConsec={stopConsecutive}");
+                }
+#endif
 
                 vel = vel - normal * fpMath.Dot(vel, normal);
 

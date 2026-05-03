@@ -4,6 +4,14 @@ namespace Golfin.Physics.Stats
 {
     public static class ShotInputBuilder
     {
+#if UNITY_EDITOR
+        /// <summary>
+        /// Wired by the runtime layer to Debug.Log. Emits a snapshot of bundle + inputs +
+        /// resolved values at the end of Build(). Null-safe; zero overhead when unwired.
+        /// </summary>
+        public static System.Action<string> DiagBuildLogger;
+#endif
+
         /// <summary>
         /// Build a ShotInput from resolved stats + per-shot inputs.
         /// Returns the ShotInput plus the BallPhysicsModifiers to pass into BallSimulation.
@@ -88,6 +96,23 @@ namespace Golfin.Physics.Stats
             var origin = new fp3(originX, originY, originZ);
             var input  = new Golfin.Physics.ShotInput(origin, velocity, fp.FromFloat(60f), spin, seed);
 
+#if UNITY_EDITOR
+            if (DiagBuildLogger != null)
+            {
+                string clubVel    = bundle.Club.HasValue   ? bundle.Club.Value.BaseVelocityMps.ToFloat().ToString("F2")   : "n/a";
+                string putterVel  = bundle.Putter.HasValue ? bundle.Putter.Value.BaseVelocityMps.ToFloat().ToString("F2") : "n/a";
+                string overrideStr = baseVelocityOverrideMps.ToFloat().ToString("F2");
+                DiagBuildLogger(
+                    $"[Build] isPutt={bundle.IsPutt} " +
+                    $"override={overrideStr}m/s clubVel={clubVel}m/s putterVel={putterVel}m/s " +
+                    $"-> baseVelMps={baseVelMps.ToFloat():F2} " +
+                    $"effectiveFlick={effectiveFlick.ToFloat():F3} " +
+                    $"velMultiplier={resolved.VelocityMultiplier.ToFloat():F3} " +
+                    $"-> velMagnitude={velMagnitude.ToFloat():F2}m/s " +
+                    $"loft={loftDeg.ToFloat():F1}deg aimYaw={aimYawRadians.ToFloat():F3}rad " +
+                    $"finalVel=({velocity.x.ToFloat():F2},{velocity.y.ToFloat():F2},{velocity.z.ToFloat():F2})");
+            }
+#endif
             return (input, resolved.BallPhysics);
         }
     }

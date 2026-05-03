@@ -24,6 +24,9 @@ namespace Golfin.Gameplay.Input
         // --- Debug toggles (8 flags per design §8) ---
         public ShotDebugFlags DebugFlags = ShotDebugFlags.Defaults;
 
+        /// <summary>When true, emits a one-line snapshot at CommitFlick entry naming the bundle, override, and gate inputs.</summary>
+        public bool LogResolution;
+
         // --- Readable state ---
         public ShotState State            { get; private set; } = ShotState.Idle;
         public float     PowerNormalized  { get; private set; }
@@ -215,6 +218,21 @@ namespace Golfin.Gameplay.Input
             fp baseVelOverride = IsPutt ? fp.FromFloat(_config.PuttBaseVelocityMps) : fp.Zero;
 
             var bundle = GetStatBundle();
+#if UNITY_EDITOR
+            if (LogResolution)
+            {
+                string clubVel    = bundle.Club.HasValue   ? bundle.Club.Value.BaseVelocityMps.ToFloat().ToString("F2")   : "n/a";
+                string putterVel  = bundle.Putter.HasValue ? bundle.Putter.Value.BaseVelocityMps.ToFloat().ToString("F2") : "n/a";
+                UnityEngine.Debug.Log(
+                    $"[CommitFlick] IsPutt={IsPutt} bundle.IsPutt={bundle.IsPutt} " +
+                    $"bundle.Club.HasValue={bundle.Club.HasValue} clubVel={clubVel}m/s " +
+                    $"bundle.Putter.HasValue={bundle.Putter.HasValue} putterVel={putterVel}m/s " +
+                    $"PowerNormalized={PowerNormalized:F3} flickMag={flickMag:F3} " +
+                    $"PuttBaseVelocityMps={_config.PuttBaseVelocityMps:F2} " +
+                    $"baseVelOverride={baseVelOverride.ToFloat():F2}m/s " +
+                    $"aimYawRadians={_aimYawRadians:F3}rad");
+            }
+#endif
             var (input, ballMods) = ShotInputBuilder.Build(
                 bundle,
                 StatCoefficients.Default,
