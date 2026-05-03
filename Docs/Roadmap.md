@@ -19,6 +19,8 @@ Putter P1 → Loop v1 (incl. Putter P2) → Loop v2 → Save System
 - 1b. Putt physics validation (known issue: green sits ~11cm above heightmap Y)
 - 1c. Aim-line on green (slope arrows v1)
 - 1d. *Defer to Loop v1: full break visualization*
+- 1e. **C.3 — Surface-aware club picker: putter forced when ball is on green** (paired with 1f; needs ball-surface read)
+- 1f. **C.4 — Surface-aware club picker: putter blocked when ball is off green** (inverse of 1e; same surface read)
 
 ## 2. Gameplay Loop v1 (single hole, lab-launched)
 - 2a. Ball state machine: Aiming → Flying → Rolling → AtRest → InCup | OB

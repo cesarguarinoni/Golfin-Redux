@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-05-02 (GOLFIN_Roadmap Notion DB created; Putter P1 closed; C — Controls finetuning is next.)
+**Last Updated:** 2026-05-04 (Controls C diagnosis spec written + Notion flipped to In Progress; subagent pipeline kickoff queued.)
 
 ## Roadmap
 
@@ -90,6 +90,43 @@ To keep `TellCode.md` readable for Claude Code (file was getting long enough to 
 - Full done report (the verbose ✅ DONE block) moves from TellCode.md to `Docs/Archive/TELLCODE_HISTORY.md`.
 - Spec file moves `Active/` → `Completed/` (if long-term reference) or is deleted.
 - Pointer block is removed from TellCode.md.
+
+---
+
+## Session Changes (2026-05-04 — Controls C Diagnostic Instrumentation Spec)
+
+### Completed (architect side, pre-pipeline)
+- **Read TellCode.md, AI_CONTEXT.md, Roadmap.md, and Notion `GOLFIN_Roadmap` data source** to confirm next-task framing.
+- **Inspected source code paths** referenced in the upcoming spec: `BallSimulation.cs` (Phase 6 entry, RunRollPhase, RunPuttPhase, IsPutt gate, existing DiagErrorLogger pattern), `ShotInputBuilder.cs` (Build resolution path), `ShotController.cs` (CommitFlick, GetStatBundle, IsPutt-driven baseVelOverride), `PhysicsLabController.cs` (SetClub, OnClubBroadcastReceived, Start wire-up site), `ControlsConfig.cs` (PuttBaseVelocityMps default = 5f), `surfaces.csv`, `putt.csv`, and `DefaultStatProvider.BuildPuttBundle()`.
+- **Static-analysis read of the wiring path:** `PhysicsLabController.SetClub(3)` constructs a `PutterStats` and injects via `_shotController.InjectStatBundle(...)`; sets `_shotController.IsPutt = true`. `ShotController.CommitFlick` reads `_config.PuttBaseVelocityMps` (5f default) and passes it as `baseVelOverride` to `ShotInputBuilder.Build`, which honors override > 0. **The wiring is correct on paper.** This means C.1 (putter shoots ~100yd) is one of: (a) bundle.IsPutt false at Build time; (b) PuttBaseVelocityMps zeroed by CSV reload; (c) IsPutt() gate denies putt path; (d) VelocityMultiplier amplified past cap; (e) ClubSelectionBroadcast re-entrancy lands wrong club. Logs needed to disambiguate.
+- **Static-analysis insight on C.2:** `RunRollPhase` uses proportional resistance `a = -k*v`. Combined with slope gravity tangent `g·sin(θ)`, steady-state speed `v_ss = g·sin(θ) / k`. For Fairway (k=0.18) on a 1° slope: v_ss ≈ 0.95 m/s, well above StopSpeed=0.10. **Likely a model issue, not a CSV-tuning issue** — ball reaches terminal velocity instead of stopping on any non-flat surface. Logs from `RunRollPhase` per-step will confirm.
+
+### Architecture decisions
+- **Diagnosis-first approach** (per Cesar's Notion entry instruction). This task adds instrumentation only; no fixes. Architect writes the C.1 / C.2 fix specs in separate iterations after captured logs land.
+- **Tier 3 (full subagent pipeline)** chosen over Tier 2 (per Cesar's call this session). More eyes given the file lists `BallSimulation.cs` and the bit-exact 198/198 EditMode gate is sacred.
+- **Null-safe static `Action<string>` loggers** chosen as the instrumentation pattern (mirrors existing `BallSimulation.DiagErrorLogger`). Loggers wired in `PhysicsLabController.Start()` to `Debug.Log`; null elsewhere. Zero overhead in production builds; zero test-suite impact (tests don't go through PhysicsLabController). 
+- **No log emission inside `SimulateAirborne`** — 240 Hz airborne RK4 over up to 60 s would flood console; entry/exit logs at the Phase 6 entry method are sufficient.
+- **Throttled per-step logging** in roll/putt phases at `RollLogStrideSteps=24` (= 10 Hz at 240 Hz dt) to keep volume readable.
+
+### Files added
+- `Docs/Specs/Active/controls_c_diagnosis/SPEC.md` (full spec, ~280 lines)
+- `Docs/Specs/Active/controls_c_diagnosis/STATUS.md` (`SPEC_READY`)
+- `Docs/Specs/Active/controls_c_diagnosis/screenshots/` (empty, Implementer fills)
+
+### Files updated
+- `Docs/TellCode.md` — "📌 NEXT — Controls finetuning" pointer block replaced with "🔄 IN PROGRESS" pointer with kickoff line.
+- Notion `GOLFIN_Roadmap` page `35331e0e-9a36-81ac-b476-fd0f095fe765` (`C — Controls finetuning`) — Status flipped `Next → In Progress`, Notes updated to point at active spec.
+
+### Next
+- Cesar pastes kickoff line into a fresh Claude Code chat: `Use the golfin-implementer subagent on "controls_c_diagnosis"`.
+- Implementer adds the 4 logger fields + 5 emit sites + wires loggers in `PhysicsLabController.Start()`.
+- Implementer captures logs from one putter shot + one driver shot in LabScaffold + Hole 1, pastes verbatim into IMPLEMENTER_REPORT.
+- Self-reviewer + architect-review pass; Cesar approves.
+- Architect writes C.1 fix spec from captured `[CommitFlick]` / `[Build]` / `[ShotEntry]` evidence.
+- Architect writes C.2 fix spec from captured `[RollStep]` evidence.
+
+### Hole Selection Screen status (parallel)
+Cesar said "hole_selection_screen is almost done, just needs my review." Spec status `ARCHITECT_REVIEW_PASS`. Awaiting Cesar's final approval. Not blocking C work.
 
 ---
 

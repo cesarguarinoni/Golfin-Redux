@@ -38,11 +38,13 @@
 - **Lab-only verification gap.** HoleIndicator `mts`, club-exit reversion, and power=0 path-hide all need a real hole-loop session. Consider a "Putter QA" affordance on `PhysicsLabUI` that populates `HoleContext.PinWorld` and cycles clubs.
 - **Housekeeping.** Delete the Assembly-CSharp stub at `Assets/Scripts/UI/HUD/PuttPathPredictor.cs`; document iter-3 capture provenance in `screenshots/README`; capture missing `figma-reference.png`.
 
-**C — Controls finetuning (NEXT — gates Loop v1).** Two sub-tasks, sequenced. Both block Loop v1's ball state machine (`Rolling → AtRest`):
+**C — Controls finetuning (NEXT — gates Loop v1).** Sub-tasks, sequenced. Both blockers (C.1, C.2) gate Loop v1's ball state machine (`Rolling → AtRest`); the picker rules (C.3, C.4) live in Phase 01 with the rest of the Putter cluster:
 
-- **C.1** Putter velocity bug — putter shoots \~100yd instead of putt-range. Likely a stat-coupling/wiring issue (StatBundle not swapping, or `PuttBaseVelocityMps` override not respected, or power scaling math wrong for putt mode). Diagnosis-first: log what `ShotInputBuilder.Build` actually returns in putt mode.
-- **C.2** Surface roll resistance — ball rolls forever regardless of surface. Either `surfaces.csv` rolling-resistance values are too low across the board, or there's a units/application bug. Diagnosis-first: fire test shots on each surface, log deceleration profiles, then re-tune CSV.
-- Spec for C written after the B-followups land.
+- **C.1** Putter velocity bug — putter shoots \~100yd instead of putt-range. Likely a stat-coupling/wiring issue (StatBundle not swapping, or `PuttBaseVelocityMps` override not respected, or power scaling math wrong for putt mode). Diagnosis-first: log what `ShotInputBuilder.Build` actually returns in putt mode. **🔄 IN PROGRESS** — diagnostic instrumentation spec at `Docs/Specs/Active/controls_c_diagnosis/SPEC.md`.
+- **C.2** Surface roll resistance — ball rolls forever regardless of surface. Either `surfaces.csv` rolling-resistance values are too low across the board, or there's a units/application bug. Diagnosis-first: fire test shots on each surface, log deceleration profiles, then re-tune CSV. **Diagnostics share the same instrumentation spec as C.1.**
+- **C.3** — Surface-aware club picker: when ball rests on Green/GreenCollar, force Putter (other clubs hidden/disabled). Notion entry `35531e0e-9a36-811b-b5a6-c93e62e3ef25`. Queued; spec written after C.1/C.2 fixes land. Likely depends on Loop v1 §2a (ball state machine) for auto-switch on landing; lab-time prototype possible sooner via `PlaceBallAt` surface knowledge.
+- **C.4** — Surface-aware club picker (inverse): when ball is off Green/GreenCollar, hide/disable Putter. Notion entry `35531e0e-9a36-81a4-9060-d1602ee11b5d`. Paired with C.3; same surface read drives both rules. Will likely land in the same PR as C.3.
+- Spec for C.1/C.2 fixes written after the diagnostic logs land; C.3/C.4 spec written after that.
 
 **D — Gameplay Loop v1 (Roadmap §2, items 2a–2f). Single hole, lab-launched.** No menu wiring at this stage — `LabScaffold` (or a thin variant) remains the entry point. Scope per `Docs/Roadmap.md`:
 
@@ -92,13 +94,17 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — Controls finetuning (item C → gates Loop v1)
+## 🔄 IN PROGRESS — Controls finetuning C — Diagnostic instrumentation (item C, phase 1 of N)
 
-**No active spec yet.** Putter P1 closed 2026-05-01; B-followups (predictor perf measurement + lab-only verification gaps + housekeeping) should run before or alongside C.
+**Spec:** `Docs/Specs/Active/controls_c_diagnosis/SPEC.md` — SPEC_READY 2026-05-04 07:12 JST. Notion `C — Controls finetuning` flipped to In Progress.
 
-**One-line goal:** Diagnose and fix the two physics issues that block Loop v1's ball state machine — putter shoots \~100 yd instead of putt-range, and ball rolls forever regardless of surface. Diagnosis-first on both; spec written after we see the logs.
+**One-line goal:** Add null-safe, opt-in static loggers to `BallSimulation` + `ShotInputBuilder` + `ShotController`, wire them in `PhysicsLabController.Start()`, then capture console output from one putter shot + one driver shot in `LabScaffold` with Hole 1 loaded. **No fixes in this task.** Architect writes C.1 / C.2 fix specs from the captured logs in subsequent iterations.
 
-**Kickoff:** TBD — Cesar to confirm whether B-followups (predictor perf, housekeeping) run first or in parallel.
+**Kickoff:** `Use the golfin-implementer subagent on "controls_c_diagnosis"`.
+
+**Hard rules:** must keep 198/198 EditMode tests green (bit-exact gate); no `*.csv` / `*.asmdef` / `*.unity` / `*.prefab` edits; no log emission inside `SimulateAirborne`. Full out-of-scope list in spec.
+
+**Files touched:** `BallSimulation.cs`, `ShotInputBuilder.cs`, `ShotController.cs`, `PhysicsLabController.cs` — all additive, no existing logic changed.
 
 **Roadmap reference:** `Docs/Roadmap.md` §1 closed; this is the gating cleanup before §2 (Loop v1).
 
