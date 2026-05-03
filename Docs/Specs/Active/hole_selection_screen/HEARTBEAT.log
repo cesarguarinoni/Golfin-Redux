@@ -16,3 +16,9 @@
 2026-05-02T23:19:18 attempting unity mcp via direct call sequence
 2026-05-02T23:21:59 circuit breaker condition approaching — Unity App Nap, 3+ tool attempts failed
 2026-05-02T23:28:21 IMPLEMENTER_BLOCKED — Unity App Nap unresponsive 20+ min; 3 runtime screenshots blocked; Cesar must click Unity then run GOLFIN/Smoke Test/Run Hole Selection Smoke Test; STATUS=IMPLEMENTER_BLOCKED
+2026-05-03T10:00:00 Iteration 3 activated — merged main (fa2b0878), reading architect changes
+2026-05-03T10:05:00 planning comprehensive MCP script for tasks 1-4
+2026-05-03T10:15:00 step1 meta files updated (textureType=8 for 3 sprites), writing iteration3 script to main project
+2026-05-03T10:30:00 iteration3 logic ran via trigger — all 6 pills wired, chevron+button upgrades done; fixing label references directly
+2026-05-03T00:51:03 Iteration3: RUN_ITERATION3 complete, screenshots captured, updating report
+2026-05-03T00:53:16 done, awaiting review
