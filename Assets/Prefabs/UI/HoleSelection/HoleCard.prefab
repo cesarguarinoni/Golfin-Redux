@@ -1337,7 +1337,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -4861,7 +4861,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -4971,14 +4971,14 @@ MonoBehaviour:
   ballIcon: {fileID: 21300000, guid: f7d5810099048784e8fbe582c498c4e8, type: 3}
   actionButton: {fileID: 931386118360014363}
   actionButtonLabel: {fileID: 9069125685380216788}
+  playButtonSprite: {fileID: 21300000, guid: 7e5fb364be3f11446acfaec3e6e61a8d, type: 3}
+  replayButtonSprite: {fileID: 21300000, guid: b12a4fedb7d5a1047a98106361ddb1e9, type: 3}
   cardTapButton: {fileID: 2060342281201547811}
   lockedOverlay: {fileID: 7238268433285359656}
   chevronCollapsed: {fileID: 278361844359668396}
   chevronExpanded: {fileID: 7835250876541768788}
   lockIconCollapsed: {fileID: 2701615009254586583}
   lockIconExpanded: {fileID: 2243452311979848155}
-  playButtonSprite: {fileID: 21300000, guid: 7e5fb364be3f11446acfaec3e6e61a8d, type: 3}
-  replayButtonSprite: {fileID: 21300000, guid: b12a4fedb7d5a1047a98106361ddb1e9, type: 3}
 --- !u!1 &8281206232086576561
 GameObject:
   m_ObjectHideFlags: 0

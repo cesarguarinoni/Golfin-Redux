@@ -1,0 +1,11 @@
+COMMAND: ALL
+TIME: 2026-05-03 10:53:41
+GOLFIN/Wire/Hole Selection: executed
+Tools/Localization/Import Text CSV: executed
+GOLFIN/Setup/Configure Hole Images as Sprites: executed
+ERROR: Passed in texture is invalid (null).
+STACK:   at (wrapper managed-to-native) UnityEngine.ImageConversion.EncodeToPNG_Injected(intptr,UnityEngine.Bindings.BlittableArrayWrapper&)
+  at UnityEngine.ImageConversion.EncodeToPNG (UnityEngine.Texture2D tex) [0x00006] in <7d6fd91b8a5b43bd8ae2a15d2ce230a8>:0 
+  at Golfin.EditorTools.CaptureHelper.SnapGameViewWithLabel (System.String label) [0x00051] in /Users/cesar/Documents/GolfinRedux/Assets/Scripts/Editor/CaptureHelper.cs:121 
+  at GolfinRedux.UI.HoleSelection.Editor.HoleSelectionTaskRunner.CheckTrigger () [0x0065e] in /Users/cesar/Documents/GolfinRedux/Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionTaskRunner.cs:207 
+STATUS: FAIL
