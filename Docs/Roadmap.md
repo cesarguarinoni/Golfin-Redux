@@ -1,6 +1,6 @@
-# GOLFIN Redux — Roadmap
+﻿# GOLFIN Redux — Roadmap
 
-**Last updated:** 2026-04-30 19:45 JST
+**Last updated:** 2026-05-03 JST
 
 ## Sequence
 
@@ -109,3 +109,5 @@ Patterns worth borrowing from OpenAI Symphony (read 2026-04-30). Full Symphony a
 - **STATUS dashboard command.** A single script (PowerShell or Python) that scans `Docs/Specs/Active/*/STATUS.md` and reports: per-task state, idle-since duration, blocked vs ready-for-review counts, missing artifacts (e.g. IMPLEMENTER_REPORT exists but SELF_REVIEW doesn't). Run on demand, not autonomous. Cheap. Removes "where am I?" cognitive load when context-switching between days or machines.
 - **Proof-of-work bar in `IMPLEMENTER_REPORT.md`.** Tighten the implementer agent definition so every report MUST include: (a) screenshot diff vs reference (when visual), (b) test output snippet, (c) `git diff --stat` summary. Procedural rejection if missing. Mirrors Symphony's "agents provide proof of work" pattern. Reduces self-review and architect-review churn.
 - **`depends_on:` field in spec front-matter.** Formalize task dependencies (Architect already does this implicitly — 8.5 a→b→c→d was dependency-aware). Adding `depends_on: [task-slug, task-slug]` to spec front-matter makes the dependency machine-readable and lets the dashboard surface "X is ready, but waiting on Y."
+- **Auto-dirty layout cleanup (Foundations).** Eliminate every `ContentSizeFitter + LayoutGroup` co-located pair across all scenes/prefabs to stop the "Open Scenes have been modified externally" modal that blocks Code's pipeline. Confirmed offenders in `LabScaffold.unity` and `ShellScene.unity` (line-pair scan 2026-05-03; full GameObject-accurate audit is part of the spec). Visual-invariance gate: before/after screenshots per touched scene/prefab; rows that can't be cleaned without restructuring spin out as separate Architect specs. Spec: `Docs/Specs/Queued/AUTO_DIRTY_LAYOUT_CLEANUP.md`.
+
