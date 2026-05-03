@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using GolfinRedux.UI;
 using Golfin.UI.Matchmaking;
+using Golfin.Utilities;
 
 namespace GolfinRedux.UI.HoleSelection
 {
@@ -52,36 +53,12 @@ namespace GolfinRedux.UI.HoleSelection
         private CourseFilter _activeCourse = CourseFilter.Lomond;
         private TeeFilter    _activeTee    = TeeFilter.Ladies;
 
-        // Pill colours per Figma. Locked uses a silver vertex gradient (white top → steel bottom)
-        // applied via TMP's colorGradient — never alpha. Inactive (selectable) is a dim version
-        // of the active colour at full alpha so it never reads as "ghosted".
-        private static readonly Color GoldActive    = new Color(0.922f, 0.820f, 0.439f, 1f); // #EBD170
-        private static readonly Color GoldInactive  = new Color(0.502f, 0.443f, 0.231f, 1f); // dim gold, full alpha
-        private static readonly Color WhiteActive   = new Color(1f, 1f, 1f, 1f);
-        private static readonly Color WhiteInactive = new Color(0.55f, 0.55f, 0.55f, 1f);    // dim white, full alpha
-        private static readonly Color SilverGradTop    = new Color(1f, 1f, 1f, 1f);             // #FFFFFF
-        private static readonly Color SilverGradMid    = new Color(0.820f, 0.835f, 0.859f, 1f); // #D1D5DB
-        private static readonly Color SilverGradBottom = new Color(0.506f, 0.557f, 0.631f, 1f); // #818EA1
-
-        private static void ApplyLockedSilverGradient(TMPro.TextMeshProUGUI label)
-        {
-            if (label == null) return;
-            label.color = Color.white; // base color is overwritten by gradient
-            label.enableVertexGradient = true;
-            label.colorGradient = new TMPro.VertexGradient(
-                SilverGradTop,    // top-left
-                SilverGradTop,    // top-right
-                SilverGradBottom, // bottom-left
-                SilverGradBottom  // bottom-right
-            );
-        }
-
-        private static void ClearLockedGradient(TMPro.TextMeshProUGUI label, Color solid)
-        {
-            if (label == null) return;
-            label.enableVertexGradient = false;
-            label.color = solid;
-        }
+        // Pill colour rules per Figma + project convention (mirrors ClubFilterBar / InventoryScreenController):
+        //   active selectable → gold gradient (TextGradients.ApplyGold)
+        //   inactive selectable → silver gradient (TextGradients.ApplySilver)
+        //   locked → silver gradient + lock icon visible
+        // The two LADIES/FRONT pills in row 2 are independent toggles per spec, so "white active"
+        // doesn't apply — they share the gold/silver convention with everything else.
 
         private void OnEnable()
         {
@@ -143,22 +120,21 @@ namespace GolfinRedux.UI.HoleSelection
             {
                 if (p == null || p.label == null) continue;
                 if (p.lockIcon != null) p.lockIcon.SetActive(p.locked);
-                if (p.locked) { ApplyLockedSilverGradient(p.label); continue; }
+                if (p.label != null) p.label.enableWordWrapping = false; // single-line pills (fixes YAITA - KIKYOU wrap)
+                if (p.locked) { TextGradients.ApplySilver(p.label); continue; }
                 bool isActive = string.Equals(p.filterId, _activeCourse.ToString(), System.StringComparison.OrdinalIgnoreCase);
-                ClearLockedGradient(p.label, isActive ? GoldActive : GoldInactive);
+                if (isActive) TextGradients.ApplyGold(p.label);
+                else          TextGradients.ApplySilver(p.label);
             }
             foreach (var p in teePills)
             {
                 if (p == null || p.label == null) continue;
                 if (p.lockIcon != null) p.lockIcon.SetActive(p.locked);
-                if (p.locked) { ApplyLockedSilverGradient(p.label); continue; }
+                if (p.label != null) p.label.enableWordWrapping = false;
+                if (p.locked) { TextGradients.ApplySilver(p.label); continue; }
                 bool isActive = string.Equals(p.filterId, _activeTee.ToString(), System.StringComparison.OrdinalIgnoreCase);
-                Color target;
-                if (string.Equals(p.filterId, "Front", System.StringComparison.OrdinalIgnoreCase))
-                    target = isActive ? GoldActive : GoldInactive;
-                else
-                    target = isActive ? WhiteActive : WhiteInactive;
-                ClearLockedGradient(p.label, target);
+                if (isActive) TextGradients.ApplyGold(p.label);
+                else          TextGradients.ApplySilver(p.label);
             }
         }
 
