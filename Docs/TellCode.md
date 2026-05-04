@@ -40,8 +40,8 @@
 
 **C — Controls finetuning (NEXT — gates Loop v1).** Sub-tasks, sequenced. Both blockers (C.1, C.2) gate Loop v1's ball state machine (`Rolling → AtRest`); the picker rules (C.3, C.4) live in Phase 01 with the rest of the Putter cluster:
 
-- **C.1** Putter velocity bug — putter shoots \~100yd instead of putt-range. Likely a stat-coupling/wiring issue (StatBundle not swapping, or `PuttBaseVelocityMps` override not respected, or power scaling math wrong for putt mode). Diagnosis-first: log what `ShotInputBuilder.Build` actually returns in putt mode. **🔄 IN PROGRESS** — diagnostic instrumentation spec at `Docs/Specs/Active/controls_c_diagnosis/SPEC.md`.
-- **C.2** Surface roll resistance — ball rolls forever regardless of surface. Either `surfaces.csv` rolling-resistance values are too low across the board, or there's a units/application bug. Diagnosis-first: fire test shots on each surface, log deceleration profiles, then re-tune CSV. **Diagnostics share the same instrumentation spec as C.1.**
+- **C.1 + C.2** — Diagnosis ✅ DONE 2026-05-04 17:45 JST (`Docs/Specs/Completed/controls_c_diagnosis/`). Captures revealed C.1 was misframed (putter pipeline correct end-to-end; "100yd" symptom is rolling-resistance integration `d_max=v/k` producing 17m on Green→Fairway transition). C.2 root cause: `stopConsecutive` clause 2 fails on real heightmap due to sub-mm slope re-acceleration. Both collapse into one fix spec: tune `surfaces.csv`+`putt.csv` k values + repair stop-check + add integrator-based unit tests. **Fix spec to be written 2026-05-05** — architect notes at `Docs/Specs/Queued/controls_c_fix/NOTES.md`. Notion fix entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f).
+- **C.5** — Velocity cap diagnostic (bonus finding from C diagnosis). Build resolves 93.77 m/s on driver full-power but ShotEntry observes `|v|=64.000 m/s`. Hard cap somewhere between Build and Phase-6 entry. Q16.16 fp doesn't overflow at 100 m/s. Notion [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6). Diagnostic micro-spec (instrumentation only, mirrors controls_c_diagnosis pattern). Run after C.1+C.2 fix lands.
 - **C.3** — Surface-aware club picker: when ball rests on Green/GreenCollar, force Putter (other clubs hidden/disabled). Notion entry `35531e0e-9a36-811b-b5a6-c93e62e3ef25`. Queued; spec written after C.1/C.2 fixes land. Likely depends on Loop v1 §2a (ball state machine) for auto-switch on landing; lab-time prototype possible sooner via `PlaceBallAt` surface knowledge.
 - **C.4** — Surface-aware club picker (inverse): when ball is off Green/GreenCollar, hide/disable Putter. Notion entry `35531e0e-9a36-81a4-9060-d1602ee11b5d`. Paired with C.3; same surface read drives both rules. Will likely land in the same PR as C.3.
 - Spec for C.1/C.2 fixes written after the diagnostic logs land; C.3/C.4 spec written after that.
@@ -94,41 +94,44 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 🔄 IN PROGRESS — Controls finetuning C — Diagnostic instrumentation (item C, phase 1 of N)
+## ✅ DONE — controls_c_diagnosis (2026-05-04 17:45 JST)
 
-**Spec:** `Docs/Specs/Active/controls_c_diagnosis/SPEC.md` — SPEC_READY 2026-05-04 07:12 JST. Notion `C — Controls finetuning` flipped to In Progress.
+**Spec archived:** `Docs/Specs/Completed/controls_c_diagnosis/`. Architect verdict PASS. Diagnostic instrumentation in (4 loggers + 5 emit sites + lab wire-up); 198/198 EditMode tests green; bit-exact gate intact.
 
-**One-line goal:** Add null-safe, opt-in static loggers to `BallSimulation` + `ShotInputBuilder` + `ShotController`, wire them in `PhysicsLabController.Start()`, then capture console output from one putter shot + one driver shot in `LabScaffold` with Hole 1 loaded. **No fixes in this task.** Architect writes C.1 / C.2 fix specs from the captured logs in subsequent iterations.
+**Headline findings (collapsed from C.1+C.2 hypotheses):**
+- **C.1 was misframed.** Putter pipeline is correct end-to-end: override 5 m/s, IsPutt=True, all gate clauses pass, captured velMagnitude=2.05 m/s at 41% effort. The "100 yd" symptom is rolling-resistance integration: `d_max = v₀/k` produces 17.30 m for a 41% putt on Green→Fairway transition.
+- **C.2 root cause: stopConsecutive clause 2 (`speedSq <= prevSpeedSq`) intermittently fails.** Sub-mm slope re-acceleration breaks the "speed non-increasing" check on real heightmap. Counter went 0→8 over 336 steps on Shot 1; never advanced from 0 in 75s on Shot 2.
+- **Bonus finding (out of scope for fix):** ShotEntry observes `|v|=64.000 m/s` when Build resolved 93.77 m/s on driver full-power. Suspiciously round number. Hard cap somewhere between Build and Phase-6 entry. Q16.16 fp doesn't overflow at 100 m/s, so it's not arithmetic. Tracked separately as Notion C.5.
 
-**Kickoff:** `Use the golfin-implementer subagent on "controls_c_diagnosis"`.
-
-**Hard rules:** must keep 198/198 EditMode tests green (bit-exact gate); no `*.csv` / `*.asmdef` / `*.unity` / `*.prefab` edits; no log emission inside `SimulateAirborne`. Full out-of-scope list in spec.
-
-**Files touched:** `BallSimulation.cs`, `ShotInputBuilder.cs`, `ShotController.cs`, `PhysicsLabController.cs` — all additive, no existing logic changed.
-
-**Roadmap reference:** `Docs/Roadmap.md` §1 closed; this is the gating cleanup before §2 (Loop v1).
+**Pipeline lessons captured:**
+- `[ShotExit]` absence is itself diagnostic evidence — capture missing termination tag = sim never terminated, exactly the C.2 evidence.
+- Diagnostic-only specs ship without screenshots when logs are load-bearing evidence (per spec's own Step 8 wording).
+- The stop-check has TWO clauses, not one. Future fix work touching `RunRollPhase` or `RunPuttPhase` must reason about both.
+- `screenshot-game-view` MCP returned null on three retries; `CaptureHelper.SnapGameViewWithLabel` (project-mandated path) worked fine. Implementer subagent prompt may benefit from defaulting to CaptureHelper.
 
 ---
 
-## 📌 NEXT — Hole Selection Screen (Mac env test, off-roadmap)
+## 📌 NEXT — controls_c_fix (C.1 + C.2 collapsed, fix + tuning + test)
 
-**Spec:** `Docs/Specs/Active/hole_selection_screen/SPEC.md` — SPEC_READY 2026-05-02.
+**Spec to be written 2026-05-05.** Notion entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f) (P0 Critical, M 1–2 days, Order 125).
 
-**One-line goal:** New `HoleSelection` screen reachable from PersistentUI's centre Tee button (`mainPlayButton`). Vertical scrolling list of 18 Lomond hole cards. Each card collapsed by default → tap to expand-and-centre (single-expanded invariant) → tap PLAY/REPLAY to open the existing matchmaking modal. Cards have three states (Collapsed / Expanded / Locked); Hole 1 starts unlocked, 2–18 locked, all overrideable from inspector via `HoleProgressionDebug` (no save state yet). REPLAY shown when player has played the hole, PLAY otherwise; rewards differ between modes (`HoleData.rewards` vs new `HoleData.replayRewards`). Filter rows are visual-only placeholders matching Figma exactly. **Off-roadmap** — second Mac env task in a row, lands ahead of Roadmap item E.3b which is now downscoped to "polish + filter + persistence".
+**Architect working notes:** `Docs/Specs/Queued/controls_c_fix/NOTES.md` — captures architect's three-concern breakdown (CSV tuning + stop-check repair + integrator-based unit test) and three repair-option candidates for clause 2 of the stop-check. Cesar reviews the open questions in NOTES.md before kickoff so SPEC.md can be written with intent.
 
-**Kickoff:** `Use the golfin-implementer subagent on "hole_selection_screen"`.
+**Files touched (predicted):** `BallSimulation.cs:537-552` + `:670-687` (stop-check repair, identical fix to both phases), `surfaces.csv` (k tuning), `putt.csv` (k tuning), new EditMode tests (5 new — 198 → 203). **Tier 3 pipeline.**
 
-**⚠ Mid-task handback:** Step 1.5 of the spec includes a STATUS-flip handback to Architect. After Implementer downloads + OCRs the 18 Lomond strategy GIFs (Japanese), it sets STATUS to `WAITING_ON_ARCHITECT_TRANSLATION` and pushes. Architect (claude.ai) translates and writes back `lomond-source/desc_keys_en.csv`, then sets STATUS to `READY_FOR_IMPLEMENTATION_RESUME`. Implementer pulls and resumes from Step 2. Cesar coordinates the round-trip — paste the kickoff above to start, then ping me here when STATUS hits `WAITING_ON_ARCHITECT_TRANSLATION`.
+**Out of scope, deferred to follow-up specs:**
+- **C.5 — Velocity cap diagnostic** (the 64 m/s mystery). Notion [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6). Run after C.1+C.2 fix lands.
+- **C.3 / C.4 — Surface-aware club picker rules.** Notion `35531e0e-9a36-811b-b5a6-c93e62e3ef25` and `35531e0e-9a36-81a4-9060-d1602ee11b5d`. Same surface read drives both — wait until classifier behavior is settled.
 
-**Files touched:** Extends `HoleData.cs` (4 new fields + 1 method), rewrites `HoleDatabase.csv` (18 Lomond rows, 19 columns), updates `HoleDatabaseLoader.cs` + `HoleDatabaseImporter.cs` parsing, adds `HoleSelection` to `ScreenManager` enum, retargets `PersistentUIManager.NavigateTo(MainPlay)` and `HomeScreenController.navTeeButton`. Creates `HoleSelectionScreenController`, `HoleCardController`, `HoleProgressionService`, `HoleProgressionDebug`, auto-wire script, `HoleCard.prefab`, 18 placeholder hole images + `Missing.png`. Hole 1 image is the Figma `Hole 1 - Map 2` asset; Holes 2–18 are screaming-magenta placeholders. Localization gets 36 new keys: 18 course names (Step 1) + 18 description keys populated from real translated Lomond strategy text (Step 1.5). NO physics scripts touched. NO save state introduced.
+**Roadmap reference:** `Docs/Roadmap.md` §1 closes after this lands. Then §2 (Loop v1) opens.
 
-**Notable decisions baked into the spec:**
-- **Dual reward sets per hole.** `HoleData.rewards` = Play rewards (existing semantics, also read by HomeScreen NextHole + matchmaking modal — unchanged). New `HoleData.replayRewards` = shown when REPLAY button is shown. Default Replay = halved Play (Cesar can re-tune from CSV).
-- **Lock + played state in inspector.** `HoleProgressionService` is a POCO singleton with default `IsUnlocked(1)=true, IsUnlocked(2..18)=false, HasPlayed(any)=false`. `HoleProgressionDebug` MonoBehaviour on `ShellSceneRoot` exposes per-hole overrides for testing. When real save state lands (Loop v2), the service's read methods become save-layer reads — call sites unchanged.
-- **Filters are visual placeholders.** `LOMOND 28/72`, `YAITA - KIKYOU`, `LADIES 18/18`, `FRONT 10/18`, `REGULAR 0/18`, `BACK 0/18` render exactly per Figma but click-to-filter is out of scope (separate spec). Counts are hardcoded literal strings.
-- **Single-expanded invariant + centre-on-expand.** Expanding card B auto-collapses card A; the freshly-expanded card snaps to viewport centre instantly (no tween — polish item later).
-- **Strategy text captured from Lomond website.** Step 1.5 round-trip: Implementer downloads the 18 `course_eNN.gif` files from `lomond-cc.com`, OCRs the Japanese, hands JP to Architect; Architect translates to English in golf-strategy register matching the Figma sample tone. Per-hole par values are captured from the official Lomond table now (full 18, totalling 72).
-- **Both Tee buttons retargeted.** Persistent `mainPlayButton` AND HomeScreen-internal `navTeeButton` both now route to `ScreenId.HoleSelection`. Matches dual-wire precedent for Home/Inventory/Roster.
+---
+
+## ✅ DONE — Hole Selection Screen (Mac env test, off-roadmap)
+
+**Spec archived:** `Docs/Specs/Completed/hole_selection_screen/`. STATUS=DONE; Cesar approved after Architect verdict PASS. Lomond-source GIFs OCR'd + translated mid-task; 18 hole cards rendering with real strategy text + lock/played progression service + dual reward sets.
+
+**Carry-forward open flags** (already in OPEN FLAGS below): hole-image art is magenta placeholders for Holes 2–18; filter functionality deferred to a follow-up spec.
 
 ---
 
