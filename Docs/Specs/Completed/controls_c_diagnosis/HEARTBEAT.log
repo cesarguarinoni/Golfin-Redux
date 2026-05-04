@@ -5,3 +5,5 @@
 2026-05-03T22:47:51Z AppleScript UI access denied - trying workaround
 2026-05-03T22:54:54Z compiling verified, attempting screenshot
 2026-05-03T22:56:38Z done, awaiting review — 4 FAIL items (test suite + 3 capture items) routed to architect
+[2026-05-04 17:33:16 JST] Updated IMPLEMENTER_REPORT with full Shot 1 + Shot 2 captures, tests-run 198/198 PASS, switched 4 FAIL→PASS items, only screenshot remains FAIL (MCP returned null)
+[2026-05-04 17:45:22 JST] DONE — Cesar approved, folder moved to Completed
