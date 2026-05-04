@@ -2,7 +2,7 @@
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
-**Last Updated:** 2026-05-04 (Controls C diagnosis spec written + Notion flipped to In Progress; subagent pipeline kickoff queued.)
+**Last Updated:** 2026-05-04 (Controls C diagnosis COMPLETE — `Docs/Specs/Completed/controls_c_diagnosis/`. Captures show C.1+C.2 collapse to a single fix: per-surface `RollingResistance` is too low AND the `stopConsec` increment is broken on near-flat heightmaps that re-accelerate the ball by sub-mm amounts. Bonus separate-spec finding: hard 64 m/s velocity cap between `ShotInputBuilder.Build` (resolved 93.77 m/s on full driver) and `BallSimulation.Simulate` (saw 64.000 m/s) — proposed micro-spec name `controls_d_velocity_cap_diagnosis`. Also: Unity MCP switched from cloud relay (`https://ai-game.dev/mcp`) to local stdio (`http://localhost:21573`, `connectionMode: Custom` in `UserSettings/AI-Game-Developer-Config.json`) — kills the mid-session "transport dropped" class entirely.)
 
 ## Roadmap
 
