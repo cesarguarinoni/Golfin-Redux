@@ -85,12 +85,18 @@ Don't blindly delete clause 2. It guards against "ball rolling uphill should not
 
 **Tier 3 (full pipeline).** Touches `BallSimulation.cs` (the bit-exact-gate file) and adds new EditMode tests. Visual fidelity not at stake but spatial-math + bit-exact gate are. More eyes, no fan-out (single file does most of the work).
 
-## Three open questions for Cesar before writing SPEC.md
+## Decisions locked (Cesar, 2026-05-04 evening)
 
-(Updated 2026-05-04 18:40 JST after the realism check.)
+1. ✅ **Green k: 0.10 → 0.50** (Stimpmeter PGA Tour Stimp 12 feel). GreenCollar k: 0.14 → 0.40 follows.
+2. ✅ **CartPath k: 0.06 → 0.30** (real concrete-stops-balls feel; balls bounce off, don't skate forever).
+3. ⚠ **Validate Fairway/Rough first** — Cesar suspects these also have more roll than real golf. The fix spec runs the validation tests; if Fairway/Rough show drift from real-golf bands (Fairway: tour drives roll out 15–30m post-landing on flat ground; Rough: typically 3–8m), follow up with a separate tuning pass.
+4. ✅ **Stop-check option 2** (tolerance window) per Cesar's "you pick the best" instruction.
 
-1. **Green k: 0.10 → 0.50** to match Stimpmeter standard (PGA Tour Stimp 12 = ball at 1.83 m/s rolls 3.66m). Yes / no / different target Stimp? Default if no answer: yes (Stimp 12 PGA Tour feel).
-2. **CartPath k: 0.06 → 0.30** so the ball actually stops on cart paths instead of skating forever. Yes / no? Default if no answer: yes.
-3. **Leave Fairway/Rough/Sand/Tee/Semirough alone** — they produce realistic total-travel distances when combined with the Green/CartPath tuning above. Verify via test, no preemptive change. Yes / no? Default if no answer: yes (validate first, tune later if tests show drift from real-golf bands).
+## Sequencing implication for the fix spec
 
-Stop-check repair choice (option 2, tolerance window) **already chosen** per Cesar's 2026-05-04 "you pick the best" instruction.
+Because Cesar wants Fairway/Rough validated before any change, the fix spec splits into two phases:
+
+- **Phase A (this spec, `controls_c_fix`):** stop-check repair + Green/GreenCollar/CartPath tuning + the 5 validation tests. The Fairway and Rough tests **report observed roll distance** for Cesar to compare against real-golf bands; they do NOT assert a tight band on those surfaces (yet). A loose sanity assertion (e.g. "Fairway full-driver roll-out < 100m") catches catastrophic drift but doesn't lock in a target.
+- **Phase B (queued, `controls_c_fairway_rough_tuning`):** if Phase A's observation tests show Fairway/Rough are too slow, this follow-up bumps their k values and tightens the assertion bands. Notion entry to be created when Phase A lands.
+
+Rationale: Cesar's instinct is that Fairway/Rough are too slow, but we don't have captured data on those surfaces yet (Shot 1 was Green→Fairway with putter speeds; Shot 2 was airborne→CartPath roll). Don't tune blind. Phase A's validation tests will give us the numbers; Phase B adjusts.
