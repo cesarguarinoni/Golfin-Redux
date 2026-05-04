@@ -36,9 +36,6 @@ namespace GolfinRedux.UI.HoleSelection
         [SerializeField] private GameObject filtersContainer;
         [SerializeField] private List<FilterPill> coursePills = new List<FilterPill>();
         [SerializeField] private List<FilterPill> teePills    = new List<FilterPill>();
-        // Parent RectTransforms of each pill row — dividers are injected here (Cesar correction 5)
-        [SerializeField] private RectTransform courseFilterRow;
-        [SerializeField] private RectTransform teeFilterRow;
 
         [Header("Cards List")]
         [SerializeField] private ScrollRect cardsScrollRect;
@@ -52,7 +49,6 @@ namespace GolfinRedux.UI.HoleSelection
         [SerializeField] private HoleDatabase holeDatabase;
 
         private readonly List<HoleCardController> _cards = new List<HoleCardController>();
-        private bool _dividersInjected = false;
 
         private CourseFilter _activeCourse = CourseFilter.Lomond;
         private TeeFilter    _activeTee    = TeeFilter.Ladies;
@@ -66,45 +62,12 @@ namespace GolfinRedux.UI.HoleSelection
 
         private void OnEnable()
         {
-            // Inject dividers once (they persist — no need to re-inject on each enable)
-            if (!_dividersInjected)
-            {
-                InjectDividers(courseFilterRow, coursePills.Count);
-                InjectDividers(teeFilterRow,    teePills.Count);
-                _dividersInjected = true;
-            }
+            // NOTE: We deliberately do NOT inject runtime dividers anymore. Cesar baked
+            // the dividers into the filter row background sprites
+            // (Background - Filter 1.png / Background - Filter 2.png) during his polish pass.
+            // Injecting them at runtime here was duplicating those bars and visually fighting them.
             BuildFilterPillListeners();
             RebuildCards();
-        }
-
-        /// <summary>
-        /// Injects 1-px white-30%-alpha vertical line dividers between adjacent pills.
-        /// Mirrors ClubFilterBar.InjectDividers() — ignoreLayout=true, anchored at fractional x.
-        /// Cesar correction 5.
-        /// </summary>
-        private void InjectDividers(RectTransform row, int pillCount)
-        {
-            if (row == null || pillCount < 2) return;
-            int dividerCount = pillCount - 1;
-            for (int i = 0; i < dividerCount; i++)
-            {
-                var divGO = new GameObject("FilterDivider");
-                divGO.transform.SetParent(row, false);
-
-                var le = divGO.AddComponent<LayoutElement>();
-                le.ignoreLayout = true;
-
-                float xPos = (float)(i + 1) / pillCount;
-                var rt = divGO.GetComponent<RectTransform>();
-                rt.anchorMin        = new Vector2(xPos, 0.15f);
-                rt.anchorMax        = new Vector2(xPos, 0.85f);
-                rt.sizeDelta        = new Vector2(1f, 0f); // 1 px wide; height from anchors
-                rt.anchoredPosition = Vector2.zero;
-
-                var img = divGO.AddComponent<Image>();
-                img.color         = new Color(1f, 1f, 1f, 0.3f);
-                img.raycastTarget = false;
-            }
         }
 
         private void BuildFilterPillListeners()
@@ -157,25 +120,30 @@ namespace GolfinRedux.UI.HoleSelection
 
         private void UpdatePillVisuals()
         {
+            // IMPORTANT: do NOT overwrite the active pill's text colour at runtime.
+            // Cesar's polish pass set the active text manually in the prefab/scene
+            // (yellow per Figma). Calling TextGradients.ApplyGold here was clobbering it.
+            // Only the locked / inactive states get a runtime restyle, and only via the
+            // Silver gradient that Cesar explicitly approved. Active = leave the prefab
+            // colour untouched. Word-wrap is also no longer overridden here — Cesar set
+            // textWrappingMode = NoWrap on each label in the prefab.
             foreach (var p in coursePills)
             {
                 if (p == null || p.label == null) continue;
                 if (p.lockIcon != null) p.lockIcon.SetActive(p.locked);
-                if (p.label != null) p.label.textWrappingMode = TMPro.TextWrappingModes.NoWrap; // single-line pills (fixes YAITA - KIKYOU wrap)
                 if (p.locked) { TextGradients.ApplySilver(p.label); continue; }
                 bool isActive = string.Equals(p.filterId, _activeCourse.ToString(), System.StringComparison.OrdinalIgnoreCase);
-                if (isActive) TextGradients.ApplyGold(p.label);
-                else          TextGradients.ApplySilver(p.label);
+                if (!isActive) TextGradients.ApplySilver(p.label);
+                // active: keep prefab colour
             }
             foreach (var p in teePills)
             {
                 if (p == null || p.label == null) continue;
                 if (p.lockIcon != null) p.lockIcon.SetActive(p.locked);
-                if (p.label != null) p.label.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
                 if (p.locked) { TextGradients.ApplySilver(p.label); continue; }
                 bool isActive = string.Equals(p.filterId, _activeTee.ToString(), System.StringComparison.OrdinalIgnoreCase);
-                if (isActive) TextGradients.ApplyGold(p.label);
-                else          TextGradients.ApplySilver(p.label);
+                if (!isActive) TextGradients.ApplySilver(p.label);
+                // active: keep prefab colour
             }
         }
 
@@ -235,6 +203,8 @@ namespace GolfinRedux.UI.HoleSelection
             var holes = new List<HoleData>(db.holes);
             holes.Sort((a, b) => a.holeNumber.CompareTo(b.holeNumber));
 
+            HoleCardController nextCard = null;
+
             foreach (var hole in holes)
             {
                 if (cardPrefab == null)
@@ -258,10 +228,22 @@ namespace GolfinRedux.UI.HoleSelection
                 card.OnActionButtonClicked += HandleActionClicked;
 
                 _cards.Add(card);
+
+                // "Next" hole = first unlocked, not-yet-played card. Remember it so we
+                // can auto-expand it after the layout pass settles.
+                if (nextCard == null && mode == HoleCardMode.Play && state == HoleCardState.Collapsed)
+                    nextCard = card;
             }
 
-            if (cardsScrollRect != null)
+            if (nextCard != null)
+            {
+                nextCard.SetState(HoleCardState.Expanded);
+                StartCoroutine(CentreCardNextFrame(nextCard));
+            }
+            else if (cardsScrollRect != null)
+            {
                 cardsScrollRect.verticalNormalizedPosition = 1f;
+            }
         }
 
         private void OnDisable()

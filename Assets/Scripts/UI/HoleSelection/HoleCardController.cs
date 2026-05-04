@@ -22,6 +22,8 @@ namespace GolfinRedux.UI.HoleSelection
         [SerializeField] private GameObject expandedContainer;
 
         // ── Title + Subtitle ─────────────────────────────────────────────────
+        // Title fields are kept here for backward compat with auto-wire but are no
+        // longer written to at runtime. Cesar's prefab text wins.
         [Header("Text — Collapsed")]
         [SerializeField] private TextMeshProUGUI titleTextCollapsed;
         [SerializeField] private TextMeshProUGUI subtitleTextCollapsed;
@@ -115,15 +117,18 @@ namespace GolfinRedux.UI.HoleSelection
             List<HoleReward> rewards = (mode == HoleCardMode.Replay) ? hole.replayRewards : hole.rewards;
 
             // Titles
-            string titleStr    = (mode == HoleCardMode.Replay) ? "REPLAY HOLE" : "PLAY HOLE";
+            // IMPORTANT: do NOT overwrite the title at runtime. Cesar's polish pass set the
+            // title text manually in the prefab to match the Figma reference (e.g. "NEXT")
+            // — overwriting it with "PLAY HOLE" / "REPLAY HOLE" was clobbering his copy.
+            // Only the subtitle gets a runtime write because it carries the dynamic
+            // "Lomond Country Club  - Hole N - Par P" payload.
             string subtitleStr = $"Lomond Country Club  - Hole {hole.holeNumber} - Par {hole.par}";
-
-            if (titleTextCollapsed != null)    titleTextCollapsed.text    = titleStr;
             if (subtitleTextCollapsed != null) subtitleTextCollapsed.text = subtitleStr;
-            if (titleTextExpanded != null)     titleTextExpanded.text     = titleStr;
-            if (subtitleTextExpanded != null)  subtitleTextExpanded.text  = subtitleStr;
+            if (subtitleTextExpanded  != null) subtitleTextExpanded.text  = subtitleStr;
 
             // Hole image
+            // Don't override preserveAspect — Cesar configured the prefab Image's
+            // preserveAspect / Image Type / 9-slice settings during his polish pass.
             if (holeImage != null)
             {
                 Sprite img = null;
@@ -134,7 +139,6 @@ namespace GolfinRedux.UI.HoleSelection
                     img = Resources.Load<Sprite>("HoleImages/Missing");
 
                 holeImage.sprite = img;
-                holeImage.preserveAspect = true;
             }
 
             // Description
@@ -202,9 +206,11 @@ namespace GolfinRedux.UI.HoleSelection
             ApplyRewardAlpha(collapsedRewardIcons, collapsedRewardAmounts, alpha);
             ApplyRewardAlpha(expandedRewardIcons,  expandedRewardAmounts,  alpha);
 
-            // Chevron arrow (down when collapsed/locked, up when expanded)
-            if (chevronCollapsed != null) chevronCollapsed.SetActive(!isExpanded);
-            if (chevronExpanded  != null) chevronExpanded.SetActive(isExpanded);
+            // Chevron arrow — Cesar's polish pass deactivated this entirely (the old
+            // implementation was a no-op anyway). We deliberately don't touch it here so
+            // any stale GameObject reference stays in whatever active-state Cesar set in
+            // the prefab. Fields kept SerializeField for backward compatibility with the
+            // pre-polish auto-wire script.
 
             // Lock icon (in title row, only when state is Locked)
             if (lockIconCollapsed != null) lockIconCollapsed.SetActive(isLocked);

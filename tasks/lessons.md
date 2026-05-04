@@ -1,5 +1,22 @@
 # Lessons Learned
 
+## "Functionally working" is not "matches the reference" — stop conflating them
+
+**Symptom (hole_selection_screen, 2026-05-03):** After 5 iterations of pipeline work, the screen worked end-to-end (filters + cards + expand/collapse + PLAY → matchmaking modal), but Cesar's response was "looks nothing like the reference. I will fix it myself." Five rounds of "skeleton first, polish later" never converged on the polish.
+
+**What I actually did wrong:**
+- Treated matching the Figma TOKENS (gradient stops, corner radius, font sizes) as visual fidelity. It's not. Visual fidelity is the COMPOSITION — the Tutorial frame split (map LEFT spanning 749×288, description RIGHT — not a small thumbnail in the corner), the structural filter containers (rounded backgrounds + dividers + proper spacing, not text floating over a scenic backdrop), button proportions with sheen overlay, title typography hierarchy.
+- When Cesar pushed back, added the canonical sprites (Arrow / Lock / Button-Play / Button-Replay / Background) but kept the procedurally-built layout. Wrong move. The layout itself is the gap.
+- Repeatedly said "good enough for skeleton, polish later in architect-review" — but architect-review can't redesign a layout, only review one. Polish never happened, and the architect kept passing because I framed it as "follow-up nits" instead of "the layout doesn't match."
+
+**Rule:** When implementing a UI task with a Figma reference, before declaring done:
+1. Open both screenshots side-by-side and ask "would Cesar's designer eye see these as the same screen?" If the answer is no, it's not done.
+2. If a Figma layout requires asset/RectTransform/structural changes that I can do via prefab YAML or Unity MCP, do them — don't ship a procedural approximation.
+3. If a layout requires designer judgment I can't replicate (typography hierarchy, spacing rhythm, depth/shadow treatment), be honest in the report: "implementer reached functional parity, visual fidelity gap remains — Cesar to author the final layout in the Editor."
+4. Never frame visual misses as "polish nits" if they're structural (image dimensions, container layouts, button proportions). Those are the layout itself.
+
+**Pattern recognition:** if I find myself adding 3+ "this is borderline OK, will polish later" caveats, the iteration isn't done — call it FAIL on my side and re-attempt the layout, or hand off to Cesar explicitly with a "this is past my visual-fidelity ceiling" note.
+
 ## ActionButtonsBuilder regeneration WIPES Cesar's manual button configs
 
 **Symptom:** Every time `ActionButtonsBuilder.BuildActionButtons()` is run, it destroys and recreates the button GameObjects, losing any manual changes Cesar made in the Inspector (text width, font style, auto-size, icon sprites, IconArea size).
