@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
+using Golfin.Utilities;
 
 namespace GolfinRedux.UI.HoleSelection
 {
@@ -116,12 +117,21 @@ namespace GolfinRedux.UI.HoleSelection
             // Determine reward list based on mode
             List<HoleReward> rewards = (mode == HoleCardMode.Replay) ? hole.replayRewards : hole.rewards;
 
-            // Titles
-            // IMPORTANT: do NOT overwrite the title at runtime. Cesar's polish pass set the
-            // title text manually in the prefab to match the Figma reference (e.g. "NEXT")
-            // — overwriting it with "PLAY HOLE" / "REPLAY HOLE" was clobbering his copy.
-            // Only the subtitle gets a runtime write because it carries the dynamic
-            // "Lomond Country Club  - Hole N - Par P" payload.
+            // Title text per (mode, state) — three valid states for an active card:
+            //   Locked      → "LOCKED" + silver gradient (lock icon comes from SetState)
+            //   Replay      → "REPLAY HOLE" + silver gradient
+            //   Play (next) → "NEXT" — prefab's gold/yellow colour stays untouched
+            // Both Title (collapsed) and TitleExp (expanded) get the same string.
+            string titleStr;
+            bool titleSilver;
+            if (state == HoleCardState.Locked)        { titleStr = "LOCKED";      titleSilver = true;  }
+            else if (mode == HoleCardMode.Replay)     { titleStr = "REPLAY HOLE"; titleSilver = true;  }
+            else                                       { titleStr = "NEXT";        titleSilver = false; }
+
+            ApplyTitle(titleTextCollapsed, titleStr, titleSilver);
+            ApplyTitle(titleTextExpanded,  titleStr, titleSilver);
+
+            // Subtitle is always the dynamic "Lomond Country Club  - Hole N - Par P"
             string subtitleStr = $"Lomond Country Club  - Hole {hole.holeNumber} - Par {hole.par}";
             if (subtitleTextCollapsed != null) subtitleTextCollapsed.text = subtitleStr;
             if (subtitleTextExpanded  != null) subtitleTextExpanded.text  = subtitleStr;
@@ -221,6 +231,20 @@ namespace GolfinRedux.UI.HoleSelection
         }
 
         // ── Private helpers ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Set a title TMP's text and apply the silver gradient when needed.
+        /// When useSilver is false, leave the colour exactly as the prefab has it
+        /// (Cesar's polish pass set the "NEXT" gold/yellow manually — runtime must
+        /// not clobber it).
+        /// </summary>
+        private static void ApplyTitle(TextMeshProUGUI tmp, string text, bool useSilver)
+        {
+            if (tmp == null) return;
+            tmp.text = text;
+            if (useSilver) TextGradients.ApplySilver(tmp);
+            else           tmp.enableVertexGradient = false; // restore prefab solid colour after a Replay/Locked card was previously bound to this slot
+        }
 
         private void PopulateRewards(List<HoleReward> rewards,
                                      GameObject[] slots, Image[] icons, TextMeshProUGUI[] amounts)
