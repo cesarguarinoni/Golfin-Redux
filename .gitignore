@@ -95,6 +95,7 @@ Assets/Screenshots/
 # =========================
 
 Assets/Fonts/*.asset
+Assets/Fonts/*.asset.meta
 
 # =========================
 # Node.js (Tools/)
