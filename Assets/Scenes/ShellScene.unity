@@ -11317,8 +11317,6 @@ MonoBehaviour:
     lockIcon: {fileID: 0}
     locked: 1
     filterId: Back
-  courseFilterRow: {fileID: 752680238}
-  teeFilterRow: {fileID: 1329021953}
   cardsScrollRect: {fileID: 1977601622}
   cardsContent: {fileID: 1638972377}
   cardPrefab: {fileID: 5359315399421949491, guid: 6717663c8484640909c58d78cd02f8c2, type: 3}
@@ -61662,8 +61660,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4285583851
+  m_fontColor: {r: 0.92156863, g: 0.81960785, b: 0.4392157, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -64002,8 +64000,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4288601069
-  m_fontColor: {r: 0.93, g: 0.86, b: 0.62, a: 1}
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:

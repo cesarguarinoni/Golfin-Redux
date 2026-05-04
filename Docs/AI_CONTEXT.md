@@ -126,7 +126,14 @@ To keep `TellCode.md` readable for Claude Code (file was getting long enough to 
 - Architect writes C.2 fix spec from captured `[RollStep]` evidence.
 
 ### Hole Selection Screen status (parallel)
-Cesar said "hole_selection_screen is almost done, just needs my review." Spec status `ARCHITECT_REVIEW_PASS`. Awaiting Cesar's final approval. Not blocking C work.
+**DONE (2026-05-04).** Cesar approved in chat. Folder moved to `Docs/Specs/Completed/hole_selection_screen/`.
+
+Final shape after iter5 + iter6:
+- Iter1-5: pipeline produced functional skeleton — nav → screen → 18 cards → expand → PLAY → matchmaking modal. All 8 of Cesar's iter4 corrections landed visually (Background.png on screen, rounded corners, single-line YAITA, gradient pills, lock icons, NextHolePanel-pattern card, ClubFilterBar-pattern filters, PLAY/REPLAY text colors).
+- Cesar then did a manual polish pass on prefab + scene. He flagged that his prefab values were being overwritten by controller code at runtime (most importantly the active pill yellow → gold, the "PLAY HOLE" title overwriting "NEXT", chevron forced active, etc).
+- **Iter6 (commit `196a9b40`):** stripped runtime overwrites from `HoleSelectionScreenController` and `HoleCardController`. Active pill text colour, title text, `holeImage.preserveAspect`, chevron toggle, and the `InjectDividers` runtime helper are all gone — prefab is the source of truth. Subtitle (`Lomond Country Club  - Hole N - Par P`), description (localized), hole image sprite, reward population, action button label/colour/sprite, locked overlay, locked reward alpha, container active states, and `LayoutRebuilder.ForceRebuildLayoutImmediate` remain runtime-controlled because they carry dynamic data. Also added `<color=#EEDC9A>...</color>` rich-text tags around golf-strategy nouns in all 18 `HOLE_LOMOND_*_DESC` rows for the Figma yellow highlights.
+- Lesson captured in `tasks/lessons.md` under "'Functionally working' is not 'matches the reference'" — flag visual-fidelity ceilings explicitly instead of shipping a procedural approximation and calling it polish-later.
+- Pre-polish snapshot tagged `hole-selection-iter5-pre-polish` for any future diff against Cesar's manual polish pass.
 
 ---
 
