@@ -40,7 +40,7 @@
 
 **C — Controls finetuning (NEXT — gates Loop v1).** Sub-tasks, sequenced. Both blockers (C.1, C.2) gate Loop v1's ball state machine (`Rolling → AtRest`); the picker rules (C.3, C.4) live in Phase 01 with the rest of the Putter cluster:
 
-- **C.1 + C.2** — Diagnosis ✅ DONE 2026-05-04 17:45 JST (`Docs/Specs/Completed/controls_c_diagnosis/`). Captures revealed C.1 was misframed (putter pipeline correct end-to-end; "100yd" symptom is rolling-resistance integration `d_max=v/k` producing 17m on Green→Fairway transition). C.2 root cause: `stopConsecutive` clause 2 fails on real heightmap due to sub-mm slope re-acceleration. Both collapse into one fix spec: tune `surfaces.csv`+`putt.csv` k values + repair stop-check + add integrator-based unit tests. **Fix spec to be written 2026-05-05** — architect notes at `Docs/Specs/Queued/controls_c_fix/NOTES.md`. Notion fix entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f).
+- **C.1 + C.2** — Diagnosis ✅ DONE 2026-05-04 17:45 JST (`Docs/Specs/Completed/controls_c_diagnosis/`). Captures revealed C.1 was misframed (putter pipeline correct end-to-end; "100yd" symptom is rolling-resistance integration `d_max=v/k` producing 17m on Green→Fairway transition). C.2 root cause: `stopConsecutive` clause 2 fails on real heightmap due to sub-mm slope re-acceleration. **Fix spec written 2026-05-05** — `Docs/Specs/Active/controls_c_fix/SPEC.md` (Phase A: stop-check repair + Green/GreenCollar/CartPath tuning + 5 validation tests; Fairway/Rough observation-only and deferred to Phase B). STATUS=SPEC_READY. Notion fix entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f) flipped to In Progress. Phase B Notion entry [`35631e0e-9a36-8102-b217-d00dac3c3d92`](https://www.notion.so/35631e0e9a368102b217d00dac3c3d92) created and Queued.
 - **C.5** — Velocity cap diagnostic (bonus finding from C diagnosis). Build resolves 93.77 m/s on driver full-power but ShotEntry observes `|v|=64.000 m/s`. Hard cap somewhere between Build and Phase-6 entry. Q16.16 fp doesn't overflow at 100 m/s. Notion [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6). Diagnostic micro-spec (instrumentation only, mirrors controls_c_diagnosis pattern). Run after C.1+C.2 fix lands.
 - **C.3** — Surface-aware club picker: when ball rests on Green/GreenCollar, force Putter (other clubs hidden/disabled). Notion entry `35531e0e-9a36-811b-b5a6-c93e62e3ef25`. Queued; spec written after C.1/C.2 fixes land. Likely depends on Loop v1 §2a (ball state machine) for auto-switch on landing; lab-time prototype possible sooner via `PlaceBallAt` surface knowledge.
 - **C.4** — Surface-aware club picker (inverse): when ball is off Green/GreenCollar, hide/disable Putter. Notion entry `35531e0e-9a36-81a4-9060-d1602ee11b5d`. Paired with C.3; same surface read drives both rules. Will likely land in the same PR as C.3.
@@ -111,19 +111,24 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — controls_c_fix (C.1 + C.2 collapsed, fix + tuning + test)
+## 📌 NEXT — controls_c_fix Phase A (SPEC_READY 2026-05-05, awaiting implementer kickoff)
 
-**Spec to be written 2026-05-05.** Notion entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f) (P0 Critical, M 1–2 days, Order 125).
+**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_c_fix/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f) flipped to **In Progress** (P0 Critical, M 1–2 days, Order 125).
 
-**Architect working notes:** `Docs/Specs/Queued/controls_c_fix/NOTES.md` — captures architect's three-concern breakdown (CSV tuning + stop-check repair + integrator-based unit test) and three repair-option candidates for clause 2 of the stop-check. Cesar reviews the open questions in NOTES.md before kickoff so SPEC.md can be written with intent.
+**Phase A scope (this spec, locked):** stop-check repair (tolerance window option 2 — `speedSq <= prevSpeedSq + epsilon`, `epsilon = stopSpeed²·0.01`, applied identically to both `RunRollPhase` lines 537–552 and `RunPuttPhase` lines 670–682) + narrow CSV tuning (`putt.csv` Green k 0.10→0.50, GreenCollar 0.14→0.40; `surfaces.csv` CartPath 0.06→0.30 — NO other surface touched) + 5 new EditMode tests in new file `Assets/Scripts/Physics/Tests/RollAndPuttTuningTests.cs` (Stimpmeter band-asserted, LongPutt band-asserted, DriverFairwayRollOut observation-only, CartPathStop band-asserted, StopCheckCorrectness structural). Bit-exact gate 198 → 203.
 
-**Files touched (predicted):** `BallSimulation.cs:537-552` + `:670-687` (stop-check repair, identical fix to both phases), `surfaces.csv` (k tuning), `putt.csv` (k tuning), new EditMode tests (5 new — 198 → 203). **Tier 3 pipeline.**
+**Architect working notes (informational):** `Docs/Specs/Active/controls_c_fix/NOTES.md` (moved with the folder). Realism check + three-options stop-check trade-off + locked decisions are there. Implementer reads SPEC.md as work definition; NOTES.md is context only.
+
+**Files touched (Phase A):** `BallSimulation.cs` (two stop-check blocks), `Assets/Resources/Physics/surfaces.csv` (CartPath row), `Assets/Resources/Physics/putt.csv` (Green + GreenCollar rows), new `Assets/Scripts/Physics/Tests/RollAndPuttTuningTests.cs`. No asmdef / scene / prefab / PuttConfig.Default / SurfaceConfig.Default changes. Existing 198 tests bit-exact preserved (tests use `*.Default` constants; CSVs only override at runtime via `PhysicsConfigLoader`).
+
+**Phase B queued (separate Notion entry):** [`35631e0e-9a36-8102-b217-d00dac3c3d92`](https://www.notion.so/35631e0e9a368102b217d00dac3c3d92) — `C — Fairway/Rough/etc tuning`. Opens after Phase A's observation-only tests give us captured numbers for Fairway/Rough/etc. Spec written then.
 
 **Out of scope, deferred to follow-up specs:**
 - **C.5 — Velocity cap diagnostic** (the 64 m/s mystery). Notion [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6). Run after C.1+C.2 fix lands.
+- **C — Fairway/Rough/etc tuning (Phase B)**. Notion [`35631e0e-9a36-8102-b217-d00dac3c3d92`](https://www.notion.so/35631e0e9a368102b217d00dac3c3d92). Opens after Phase A.
 - **C.3 / C.4 — Surface-aware club picker rules.** Notion `35531e0e-9a36-811b-b5a6-c93e62e3ef25` and `35531e0e-9a36-81a4-9060-d1602ee11b5d`. Same surface read drives both — wait until classifier behavior is settled.
 
-**Roadmap reference:** `Docs/Roadmap.md` §1 closes after this lands. Then §2 (Loop v1) opens.
+**Roadmap reference:** `Docs/Roadmap.md` §1 closes after this lands (Phase A = the closer; Phase B is fine-tuning that doesn't gate Loop v1). Then §2 (Loop v1) opens.
 
 ---
 
