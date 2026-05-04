@@ -1060,3 +1060,8 @@ Direct YAML mutations of scene or `.asset` files via `assets-modify` while Unity
 
 ### `CaptureHelper.SnapGameView()` does NOT need GameView focus
 The capture helper reads the GameView's RenderTexture via reflection, bypassing the focus requirement. If a screenshot looks wrong, focus is almost never the cause — pause state and/or `runInBackground=false` are. Don't blame focus before checking those two.
+
+### Use `CaptureHelper.SnapGameView()`, not `mcp__ai-game-developer__screenshot-game-view`
+The MCP tool `screenshot-game-view` is a generic capture in the IvanMurzak package — it returned `Response data is null` repeatedly under the local-stdio MCP build, with no actionable error. The project's own `Golfin.EditorTools.CaptureHelper.SnapGameView()` (mandated in CLAUDE.md) reads the GameView's internal `RenderTexture` via reflection across known field names (`m_RenderTexture` / `m_TargetTexture` / `m_RenderTarget`), Y-flips for the OpenGL coordinate space, and writes a PNG synchronously to `Docs/Diagnostics/_capture/`. It works from EditMode, paused playmode, and running playmode — exactly the matrix CLAUDE.md cares about.
+
+**Rule:** For every play-mode or scene screenshot, invoke `Golfin.EditorTools.CaptureHelper.SnapGameView()` (or `SnapGameViewWithLabel("tag")`) via `script-execute`. Do NOT call `mcp__ai-game-developer__screenshot-game-view` — it bypasses the project's tested capture path. After capture, copy the PNG from `Docs/Diagnostics/_capture/` into the relevant `Docs/Specs/Active/<task>/screenshots/` folder before committing.
