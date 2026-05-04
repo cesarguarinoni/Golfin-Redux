@@ -216,11 +216,10 @@ namespace GolfinRedux.UI.HoleSelection
             ApplyRewardAlpha(collapsedRewardIcons, collapsedRewardAmounts, alpha);
             ApplyRewardAlpha(expandedRewardIcons,  expandedRewardAmounts,  alpha);
 
-            // Chevron arrow — Cesar's polish pass deactivated this entirely (the old
-            // implementation was a no-op anyway). We deliberately don't touch it here so
-            // any stale GameObject reference stays in whatever active-state Cesar set in
-            // the prefab. Fields kept SerializeField for backward compatibility with the
-            // pre-polish auto-wire script.
+            // Chevron — locked cards can't expand, so the ">" icon is misleading.
+            // Hide it on locked, leave it active otherwise (the prefab default).
+            // chevronExpanded is left untouched (Cesar's polish has it deactivated).
+            if (chevronCollapsed != null) chevronCollapsed.SetActive(!isLocked);
 
             // Lock icon (in title row, only when state is Locked)
             if (lockIconCollapsed != null) lockIconCollapsed.SetActive(isLocked);
@@ -234,16 +233,26 @@ namespace GolfinRedux.UI.HoleSelection
 
         /// <summary>
         /// Set a title TMP's text and apply the silver gradient when needed.
-        /// When useSilver is false, leave the colour exactly as the prefab has it
-        /// (Cesar's polish pass set the "NEXT" gold/yellow manually — runtime must
-        /// not clobber it).
+        /// When useSilver is true the base colour is forced to white so the silver
+        /// vertex gradient (white -> #818EA1) renders cleanly — without this the
+        /// prefab's NEXT-yellow base tint multiplies into the gradient and the
+        /// LOCKED / REPLAY HOLE titles read as yellow-tinted instead of silver.
+        /// When useSilver is false the base colour stays whatever the prefab has
+        /// (Cesar's polish set the NEXT yellow there) and the gradient is off.
         /// </summary>
         private static void ApplyTitle(TextMeshProUGUI tmp, string text, bool useSilver)
         {
             if (tmp == null) return;
             tmp.text = text;
-            if (useSilver) TextGradients.ApplySilver(tmp);
-            else           tmp.enableVertexGradient = false; // restore prefab solid colour after a Replay/Locked card was previously bound to this slot
+            if (useSilver)
+            {
+                tmp.color = Color.white; // clean base for the silver gradient
+                TextGradients.ApplySilver(tmp);
+            }
+            else
+            {
+                tmp.enableVertexGradient = false;
+            }
         }
 
         private void PopulateRewards(List<HoleReward> rewards,
