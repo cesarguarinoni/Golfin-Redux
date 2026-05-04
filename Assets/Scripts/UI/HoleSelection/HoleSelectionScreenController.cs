@@ -203,6 +203,8 @@ namespace GolfinRedux.UI.HoleSelection
             var holes = new List<HoleData>(db.holes);
             holes.Sort((a, b) => a.holeNumber.CompareTo(b.holeNumber));
 
+            HoleCardController nextCard = null;
+
             foreach (var hole in holes)
             {
                 if (cardPrefab == null)
@@ -226,10 +228,22 @@ namespace GolfinRedux.UI.HoleSelection
                 card.OnActionButtonClicked += HandleActionClicked;
 
                 _cards.Add(card);
+
+                // "Next" hole = first unlocked, not-yet-played card. Remember it so we
+                // can auto-expand it after the layout pass settles.
+                if (nextCard == null && mode == HoleCardMode.Play && state == HoleCardState.Collapsed)
+                    nextCard = card;
             }
 
-            if (cardsScrollRect != null)
+            if (nextCard != null)
+            {
+                nextCard.SetState(HoleCardState.Expanded);
+                StartCoroutine(CentreCardNextFrame(nextCard));
+            }
+            else if (cardsScrollRect != null)
+            {
                 cardsScrollRect.verticalNormalizedPosition = 1f;
+            }
         }
 
         private void OnDisable()
