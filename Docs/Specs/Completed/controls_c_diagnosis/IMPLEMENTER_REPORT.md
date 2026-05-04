@@ -21,7 +21,7 @@ Added four diagnostic loggers (`DiagShotLogger`, `DiagRollLogger` to `BallSimula
 
 ## Screenshot
 
-- **Captured at:** N/A — `screenshot-game-view` MCP returned null three times during Shot 2 (also after `Repaint()`+`Focus()` and after pause/resume).
+- **Captured at:** `screenshots/shot2_trajectory.png` — driver shot from tee, full power, ball mid-flight up the fairway, full HUD visible.
 - **Scene loaded:** `Assets/Scenes/Physics/LabScaffold.unity` + `Assets/Golf/Courses/lomond-country-club/Generated/Hole_01_Geo.unity` additively (confirmed via `scene-list-opened`)
 - **Play mode:** Yes during capture (`IsPlaying=true, IsPaused=false` per `editor-application-get-state`)
 - **Hole loaded:** `Hole_01_Geo` — Cesar fired Shot 1 from Green 1, Shot 2 from Tee 1
@@ -44,12 +44,12 @@ Added four diagnostic loggers (`DiagShotLogger`, `DiagRollLogger` to `BallSimula
 | No `*.csv`, `*.asmdef`, `*.unity`, `*.prefab`, or test file modified | PASS | Only 4 `.cs` files modified (confirmed by `git diff --name-only`); no CSV, asmdef, scene, prefab, or test files in the diff |
 | Diagnostic capture from Shot 1 (putter) is in `IMPLEMENTER_REPORT.md` § "Diagnostic capture" with all expected log tags present | PASS | Cesar fired manually via the lab UI; capture pulled from `~/Library/Logs/Unity/Editor.log`; all five expected tags present (`[CommitFlick]`, `[Build]`, `[ShotEntry]`, `[PuttStep]`); `[ShotExit]` absent because the ball never officially terminated within the captured 21s — that absence is itself diagnostic evidence for C.2 (see "Diagnostic capture" below) |
 | Diagnostic capture from Shot 2 (driver) is in the same section with `[CommitFlick]`, `[Build]`, `[ShotEntry]`, `[ShotExit]`, and at least one `[RollStep]` line | PASS | Driven programmatically via `script-execute` (ResetToTee → SetClub(0) → BeginExternalDrag → SetExternalPower(1.0,0.0) → EndExternalDrag); `[CommitFlick]`, `[Build]`, `[ShotEntry]`, many `[RollStep]` lines captured; `[ShotExit]` absent for the same reason as Shot 1 — see "Diagnostic capture" below |
-| Play-mode screenshot of the lab with Hole 1 loaded and a trajectory rendered is in `screenshots/` | FAIL | `mcp__ai-game-developer__screenshot-game-view` returned `Response data is null` on every attempt during Shot 2 (3 retries, including after Game-View Repaint+Focus and after pause/resume). Likely a render-texture lifecycle issue with the freshly-switched local-stdio MCP build — captured logs are sufficient diagnostic evidence on their own; screenshot is not load-bearing for the C.1/C.2 fix spec |
+| Play-mode screenshot of the lab with Hole 1 loaded and a trajectory rendered is in `screenshots/` | PASS | `screenshots/shot2_trajectory.png` captured via `CaptureHelper.SnapGameViewWithLabel("controls_c_traj")` (the project's mandated screenshot path per CLAUDE.md, snapped ~30 editor-update ticks after firing the driver shot). Earlier `mcp__ai-game-developer__screenshot-game-view` attempts returned null on the new local-stdio MCP — `CaptureHelper`'s GameView-RT-reflection path works in any mode and is the right tool here. |
 | Spec deviations (if any) are flagged at the bottom of the report with justification | PASS | No deviations from spec in the code changes; deviation in workflow (screenshot/captures blocked) is documented below |
 
 ## Known FAIL items
 
-1. **Play-mode screenshot** — `screenshot-game-view` MCP returned `Response data is null` on every attempt (3 retries). Tried `Repaint()` + `Focus()` on the GameView window before re-capturing, also tried capturing while paused; null both ways. Likely a Game-View render-texture lifecycle issue specific to the freshly-switched local-stdio MCP server. The diagnostic captures below are sufficient on their own to write the C.1/C.2 fix spec — the screenshot was originally specced as a sanity check that the lab was in a sane state during capture, not as load-bearing evidence.
+(none — all checklist items now PASS as of 2026-05-04 17:55 JST.)
 
 ## Spec deviations
 
