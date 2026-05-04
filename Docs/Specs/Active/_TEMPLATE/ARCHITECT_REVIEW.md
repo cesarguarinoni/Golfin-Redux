@@ -1,6 +1,6 @@
 # Architect Review — `<task name>`
 
-> Written by `golfin-architect` subagent (final review pass). Reads `SPEC.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, the screenshot, the Figma reference, and the broader project context. Final gatekeeper before Cesar sees the work.
+> Written by `golfin-reviewer` subagent (final review pass). Reads `SPEC.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, the screenshot, the Figma reference, and the broader project context. Final gatekeeper before Cesar sees the work. (Filename retained as `ARCHITECT_REVIEW.md` for historical continuity — the file holds the architectural-review verdict; the agent that writes it is `golfin-reviewer`.)
 
 ## Verdict
 

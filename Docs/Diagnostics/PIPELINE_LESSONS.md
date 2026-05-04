@@ -109,7 +109,7 @@ In `8_3_topbar` iteration 3, the Implementer attempted Fix 5 (rounded corners ra
 
 ## How to use this file
 
-When updating the self-reviewer or architect-review subagent prompts (`.claude/agents/golfin-self-reviewer.md`, `golfin-architect.md`), look for **patterns across multiple entries** here. A single one-off doesn't justify a prompt edit. Two or more entries flagging the same kind of failure justify one.
+When updating the self-reviewer or reviewer subagent prompts (`.claude/agents/golfin-self-reviewer.md`, `golfin-reviewer.md`), look for **patterns across multiple entries** here. A single one-off doesn't justify a prompt edit. Two or more entries flagging the same kind of failure justify one.
 
 Each entry should follow this format:
 1. **Date — task — what failed**

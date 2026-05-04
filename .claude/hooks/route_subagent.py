@@ -17,9 +17,9 @@ State transitions handled:
   SPEC_READY                    -> "Use the golfin-implementer subagent on <task>"
   IMPLEMENTER_WORKING           -> (heartbeat check; warn if stale)
   READY_FOR_SELF_REVIEW         -> "Use the golfin-self-reviewer subagent on <task>"
-  SELF_REVIEW_PASS              -> "Use the golfin-architect subagent on <task>"
+  SELF_REVIEW_PASS              -> "Use the golfin-reviewer subagent on <task>"
   SELF_REVIEW_FAIL              -> "Use the golfin-implementer subagent on <task>" (redo)
-  READY_FOR_ARCHITECT_REVIEW    -> "Use the golfin-architect subagent on <task>"
+  READY_FOR_ARCHITECT_REVIEW    -> "Use the golfin-reviewer subagent on <task>"
   ARCHITECT_REVIEW_PASS         -> Notify Cesar: "Ready for your final approval"
   ARCHITECT_REVIEW_FAIL         -> "Use the golfin-implementer subagent on <task>" (redo)
   ARCHITECT_REVIEW_ESCALATE     -> Notify Cesar: "Architect needs your input"
@@ -76,9 +76,9 @@ NEXT_AGENT = {
     "SPEC_READY": "golfin-implementer",
     "IMPLEMENTER_WORKING": "",                         # in progress
     "READY_FOR_SELF_REVIEW": "golfin-self-reviewer",
-    "SELF_REVIEW_PASS": "golfin-architect",
+    "SELF_REVIEW_PASS": "golfin-reviewer",
     "SELF_REVIEW_FAIL": "golfin-implementer",
-    "READY_FOR_ARCHITECT_REVIEW": "golfin-architect",
+    "READY_FOR_ARCHITECT_REVIEW": "golfin-reviewer",
     "ARCHITECT_REVIEW_PASS": None,                     # Cesar's turn
     "ARCHITECT_REVIEW_FAIL": "golfin-implementer",
     "ARCHITECT_REVIEW_ESCALATE": None,                 # Cesar's turn

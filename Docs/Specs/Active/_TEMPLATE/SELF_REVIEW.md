@@ -6,9 +6,9 @@
 
 `PASS` / `FAIL` / `ESCALATE`
 
-- **PASS** — All checklist items genuinely PASS in the screenshot. Routes to `golfin-architect` for final review.
+- **PASS** — All checklist items genuinely PASS in the screenshot. Routes to `golfin-reviewer` for final review.
 - **FAIL** — Implementer's report contained false PASSes, OR obvious failures visible in screenshot, OR mandatory items unfilled. Routes back to `golfin-implementer` with fail list.
-- **ESCALATE** — Spec ambiguity, missing information, or judgment call beyond self-reviewer's scope. Routes to `golfin-architect`.
+- **ESCALATE** — Spec ambiguity, missing information, or judgment call beyond self-reviewer's scope. Routes to `golfin-reviewer`.
 
 ## Checklist verification
 
@@ -38,9 +38,11 @@ Free-form observations comparing the screenshot to the Figma reference. Things t
 Final routing decision (one of):
 
 - `BACK_TO_IMPLEMENTER` with fail list above
-- `FORWARD_TO_ARCHITECT` for final review
-- `ESCALATE_TO_ARCHITECT` with question(s) for Cesar
+- `FORWARD_TO_ARCHITECT` for final review (routes to `golfin-reviewer`)
+- `ESCALATE_TO_ARCHITECT` with question(s) for Cesar (routes to `golfin-reviewer`)
+
+(Routing labels retain the `_ARCHITECT` suffix to match the existing STATUS values — `READY_FOR_ARCHITECT_REVIEW` etc. — which are still used throughout the pipeline. The agent they route to is now `golfin-reviewer`.)
 
 ## Iteration count
 
-This is iteration **<N>** of self-review for this task. If N ≥ 3, escalate regardless of verdict — three rounds of FAIL means the spec or the approach has a deeper problem only the architect can resolve.
+This is iteration **<N>** of self-review for this task. If N ≥ 3, escalate regardless of verdict — three rounds of FAIL means the spec or the approach has a deeper problem only the reviewer can resolve.
