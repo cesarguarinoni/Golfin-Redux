@@ -91,13 +91,6 @@ sysinfo.txt
 Assets/Screenshots/
 
 # =========================
-# TMP Font Assets (Unity rewrites glyph tables locally)
-# =========================
-
-Assets/Fonts/*.asset
-Assets/Fonts/*.asset.meta
-
-# =========================
 # Node.js (Tools/)
 # =========================
 
