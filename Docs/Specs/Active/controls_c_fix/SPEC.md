@@ -18,7 +18,11 @@ See `STATUS.md` for current pipeline state.
 Fix the two issues that the diagnosis collapsed into a single root-cause bundle:
 
 - **C.1** "Putter shoots ~100 yd" — turned out to NOT be a velocity-resolution bug. The putter pipeline is correct end-to-end (override 5 m/s → IsPutt=true → captured `velMagnitude=2.05 m/s` at 41% effort). The "100 yd" symptom was actually the rolling-resistance integration `d_max = v₀/k` producing **17.30 m total roll** for a 41% putt on a Green→Fairway transition combined with the broken stop-check (so the ball never visibly stopped, making Cesar assume launch was wrong).
-- **C.2** "Ball rolls forever regardless of surface" — root cause is `stopConsecutive` clause 2 (`speedSq <= prevSpeedSq`) intermittently failing on real heightmap. Sub-mm slope re-acceleration breaks the "speed non-increasing" check. Counter went 0→8 over 336 steps on Shot 1; never advanced from 0 in 75 s on Shot 2.
+- **C.2** "Ball rolls forever regardless of surface" — root cause is `stopConsecutive` clause 2 (`speedSq <= prevSpeedSq`) failing under fp-rounding noise at very low speeds. Two interacting mechanisms (re-derived from the captured Shot 1 + Shot 2 evidence — `gTan=0.000m/s²` printed yet `stopConsec=0` for the full 75 s on CartPath, which rules out the slope-re-acceleration story we initially proposed in NOTES.md):
+  - **(i) Per-component fp16.16 rounding ticks `speedSq` up.** `speedSq = vx² + vy² + vz²` is computed in fp16.16 (LSB ≈ 1.5e-5). When one component rounds down by 1 LSB and another doesn't, the sum can tick UP between steps even on flat ground with no real acceleration. This breaks strict `<=` non-increase.
+  - **(ii) When `k·|v|·Dt < 1 LSB`, resistance is a no-op.** At |v|=0.0625 m/s with the OLD CartPath k=0.06 and Dt=1/240, per-step velocity-decrement = `0.06·0.0625/240 = 1.56e-5` ≈ 1 LSB. Most steps round to zero and the ball doesn't slow at all. Fairway in Shot 1 (k=0.18) gave `4.69e-5` ≈ 3 LSBs of resistance per step — beatable some of the time, which is exactly why Shot 1's counter advanced 0→8 sporadically over 336 steps while Shot 2's counter never left 0 for the full 75 s.
+
+  The CSV bumps in Step 3 + Step 4 directly fix mechanism (ii) by raising k so that resistance per step always exceeds the LSB floor at sub-stopSpeed velocities. The tolerance-window epsilon in Step 1 + Step 2 absorbs mechanism (i) — the residual fp/rounding noise that no value of k can eliminate.
 
 Phase A delivers three orthogonal changes that together close C.1 + C.2:
 
@@ -30,11 +34,11 @@ After this lands, the Notion entries for **C.5** (velocity cap diagnostic) and t
 
 ## Why these three changes (and only these three)
 
-- **Stop-check repair only on clause 2.** Clause 1 (`speedSq < stopThresh`) is the canonical "ball is below stop speed" check and is correct. Clause 2 (`speedSq <= prevSpeedSq`) is a guard against false-positive stops while the ball is rolling **uphill** at sub-stopSpeed (it should NOT count as stopped because it's about to roll back). The bug is that on real heightmap, sub-mm slopes intermittently re-accelerate the ball at sub-stopSpeed by amounts that exceed the resistance term, breaking strict non-increase.
+- **Stop-check repair only on clause 2.** Clause 1 (`speedSq < stopThresh`) is the canonical "ball is below stop speed" check and is correct. Clause 2 (`speedSq <= prevSpeedSq`) is a guard against false-positive stops while the ball is rolling **uphill** at sub-stopSpeed (it should NOT count as stopped because it's about to roll back). The bug is mechanism (i) above: per-component fp16.16 rounding ticks `speedSq` up by ~1 LSB at sub-stopSpeed even on flat ground, which breaks strict `<=` non-increase.
 
   **Three options were weighed (NOTES.md § "stop-check repair candidates"):**
   - Drop clause 2 entirely → loses the uphill safety. Rejected.
-  - **Tolerance window** (option 2): `speedSq <= prevSpeedSq + epsilon` where `epsilon = stopSpeed² · 0.01`. Closest to original intent without dropping safety. **CHOSEN.**
+  - **Tolerance window** (option 2): `speedSq <= prevSpeedSq + epsilon` where `epsilon = stopSpeed² · 0.05`. Closest to original intent without dropping safety. **CHOSEN.** Sized at 5% of `stopSpeed²` because: (a) at typical stopSpeeds (0.04–0.10), 5% of stopSpeed² is 6.4e-5 to 5e-4 — comfortably above the 1.5e-5 fp16.16 LSB so the tolerance survives fp-rounding to a meaningful value, and (b) genuine uphill re-acceleration on a real golf-course slope (e.g. 2° on a green = `g·sin(2°) ≈ 0.34 m/s²`) bumps `speedSq` per step by `2·v·a·Dt ≈ 1.4e-4` at v=0.05 m/s — about 3× our 5% epsilon at Green stopThresh, so genuine accelerations still fail clause 2 and the uphill safety is preserved. The 1% value originally proposed was too tight (would equal 1 LSB at Green's stopThresh, providing no meaningful tolerance over fp noise).
   - Two-stage stop with slope-aware override → overkill for the symptom. Rejected.
 
 - **CSV tuning narrowly scoped to Green/GreenCollar/CartPath.** Cesar's "you pick the best" instruction (NOTES.md § "Decisions locked") authorised these three values. Other surfaces (Fairway, Rough, Semirough, Sand, BunkerLip, Tee) **are not touched in this task** because we don't yet have captured data for them — the diagnosis only produced evidence on Green→Fairway transition (Shot 1) and airborne→CartPath (Shot 2). Phase A's validation tests will surface real numbers for the un-tuned surfaces; Phase B (`controls_c_fairway_rough_tuning`) tightens those values once observed.
@@ -46,7 +50,10 @@ After this lands, the Notion entries for **C.5** (velocity cap diagnostic) and t
 - **Predecessor evidence:** `Docs/Specs/Completed/controls_c_diagnosis/IMPLEMENTER_REPORT.md` § "Diagnostic capture" — both shots' captured logs.
 - **Architect review of predecessor:** `Docs/Specs/Completed/controls_c_diagnosis/ARCHITECT_REVIEW.md`.
 - **Architect working notes for this task:** `Docs/Specs/Queued/controls_c_fix/NOTES.md` (also moves to `Active/` with the SPEC; informational only — do NOT treat as work definition).
-- **Realism source for Green tuning:** Stimpmeter standard (PGA Tour green Stimp ~12 = ball released at 1.83 m/s rolls 3.66 m on a flat green). Reference numbers in NOTES.md § "Realism check".
+- **Realism source for Green tuning:** USGA Stimpmeter standard (release velocity 6.00 ft/s = **1.829 m/s**; "fast" green roll-out = 12 ft = **3.66 m**; "slow" = 6 ft = 1.83 m). Sources cross-checked: Stanford PH210 Kolkowitz 2007 (citing Holmes 1991 + Werner & Greig 2000) and the Wikipedia Stimpmeter article citing Brede 1990 USGA-validated work.
+  - https://en.wikipedia.org/wiki/Stimpmeter
+  - http://171.67.100.116/courses/2007/ph210/kolkowitz2/
+- **Cart-path k=0.30 source:** **playability-calibrated, NOT literature-calibrated.** No published rolling-friction coefficient for golf-ball-on-concrete-cart-path was found in 6 academic-search passes. Value chosen to stop a 5 m/s post-bounce ball within ~16 m, which is the playable-distance bound; bumped from k=0.06 which produced 100m+ infinite roll-out (Shot 2 evidence). Phase B will tighten if lab observation flags drift.
 - **No Figma reference** — this is sim-internal physics; nothing visual to diff.
 
 ## Architecture context
@@ -67,6 +74,23 @@ No asmdef edits, no new asmdefs, no scene/prefab changes.
 - `Assets/Scripts/Physics/Tests/PuttTests.cs` — existing patterns to mirror in the new test file (`SplitSurfaceProvider` inner class, helper `IronInput`, NUnit `[Test]` attributes, fp construction).
 
 **Manager APIs added (NEW):** none. This task adds no new public API. The four diagnostic loggers added by `controls_c_diagnosis` (`DiagShotLogger`, `DiagRollLogger`, `DiagBuildLogger`, `LogResolution`) are **kept in place unchanged** — they're useful for verifying the fix in lab.
+
+## Model choice & literature alignment
+
+This section anchors the implementer (and future-you) so nobody second-guesses the modeling choice mid-task.
+
+**Our model is linear viscous damping** — `dv/dt = -k·v + g_tangent` per `BallSimulation.cs:652` and Phase 5 spec. Chosen deliberately in `Docs/Physics/PHYSICS_RESEARCH.md` for clean math + CSV tunability + bit-exact determinism.
+
+**Published academic literature uses Coulomb friction** — `dv/dt = -(5/7)·μ·g + g_tangent`. Every paper found in the literature search uses this form: Penner 2002 "The Run of a Golf Ball," Penner 2003 "The Physics of Golf," Holmes 1991, Werner & Greig 2000, Roh 2010 (ScienceDirect S1877705810003929) reports **green μ_r 0.05–0.1**, Rim 2012 (IEEE 6316601) confirms the same range, and Brown & McPhee 2024 (Springer 10.1007/s12283-024-00481-5) extended this with a variable-friction model noting that *constant Coulomb deceleration underestimates roll distance* — which means our viscous model rolling slightly further than published Coulomb sims is not a bug, it's expected.
+
+**Calibration mapping for k=0.50 (Green):** USGA Stimpmeter releases at v₀=1.829 m/s; fast green = 3.66 m roll. Our viscous integral `d_max = v₀/k` gives `1.829/0.50 = 3.66 m` exactly. The viscous k=0.50 is therefore the **direct viscous-equivalent of Stimp 12 PGA Tour fast green**. Coulomb-equivalent for the same roll distance would be μ ≈ 0.046 — neither value is wrong; they're the same calibration target through different equations.
+
+**Why this matters for the spec:** future-you searching the literature for "k=0.50 putt" will find nothing (Coulomb sims use μ); searching for "viscous damping golf ball roll" will also find nothing (literature is Coulomb). Both are normal — we're using a non-standard model deliberately. **Switching from viscous → Coulomb is OUT OF SCOPE for Phase A.** That would invalidate every existing physics test (≥184 tests use the current model), require re-tuning every surface k value to a new μ value, and is a substantial separate spec.
+
+**Implications for the stop-check fix:**
+- Coulomb has finite stop time; viscous asymptotes to zero. **The stop-check is structurally more important under viscous than under Coulomb** — there is no "the ball naturally stops" fallback. Every stuck stop-check is an infinite roll. This is why C.2 manifests this severely.
+- The fp-rounding mechanisms documented in C.2 above are also more severe under viscous because the dynamics live longer at sub-stopSpeed velocities.
+- Linear viscous + Stimp-12 calibration produces the same TOTAL roll distance as published Coulomb sims by construction. We diverge from literature only on the *shape* of the deceleration curve (asymptotic vs. linear), not on the stopping distance. That's a fair trade for clean math.
 
 ## Implementation
 
@@ -123,11 +147,16 @@ Replace the `RunRollPhase` block (lines 537–552) with:
 fp speedSq    = fpMath.Dot(vel, vel);
 fp stopThresh = coeff.StopSpeed * coeff.StopSpeed;
 // Phase A C.1+C.2 fix: tolerance window on clause 2.
-// On real heightmap, sub-mm slopes can re-accelerate the ball by sub-stopSpeed
-// amounts that exceed the proportional resistance term, intermittently breaking
-// strict non-increase. We allow speedSq to "tick up" by up to 1% of stopSpeed²
-// per step and still count the step toward the stop streak.
-fp stopEpsilon = stopThresh * fp.FromFloat(0.01f);
+// At sub-stopSpeed velocities, per-component fp16.16 rounding (LSB ≈ 1.5e-5)
+// can tick speedSq UP by 1 LSB even on flat ground with no real acceleration
+// — when one velocity component rounds down and another doesn't, vx²+vy²+vz²
+// nets a 1-LSB increase. That breaks strict <= non-increase and stalls the
+// stop-counter (captured: 75 s on flat CartPath with stopConsec stuck at 0).
+// We allow speedSq to tick up by up to 5% of stopSpeed² per step and still
+// count the step toward the stop streak. 5% sized so: (a) >> 1 LSB at all
+// realistic stopSpeeds (0.04–0.10), and (b) << genuine uphill re-acceleration
+// on a 2° real-course slope, which preserves clause 2's uphill safety guard.
+fp stopEpsilon = stopThresh * fp.FromFloat(0.05f);
 if (speedSq < stopThresh && speedSq <= prevSpeedSq + stopEpsilon)
 {
     stopConsecutive++;
@@ -146,7 +175,7 @@ prevSpeedSq = speedSq;
 
 **Critical:** the `+ stopEpsilon` goes on the right-hand side of `<=`, NOT on the left. (Rewriting as `speedSq - stopEpsilon <= prevSpeedSq` gives the same algebra in real numbers but a different result in fp because of subtraction-underflow at very low magnitudes.)
 
-`fp.FromFloat(0.01f)` is the canonical way to construct a 1% scalar in this codebase (see `BallSimulation.cs:16` `fp.FromFloat(0.5f)` for `RollTransitionThreshold`). Do not introduce a `private static readonly fp StopEpsilonScale` constant — keep the literal inline so the comment + magic-number relationship is obvious at the edit site.
+`fp.FromFloat(0.05f)` is the canonical way to construct a 5% scalar in this codebase (see `BallSimulation.cs:16` `fp.FromFloat(0.5f)` for `RollTransitionThreshold`). Do not introduce a `private static readonly fp StopEpsilonScale` constant — keep the literal inline so the comment + magic-number relationship is obvious at the edit site.
 
 ### Step 2 — Apply the same fix to `RunPuttPhase`
 
@@ -156,7 +185,9 @@ Replace the `RunPuttPhase` block (lines 670–682) with the structurally identic
 fp speedSq    = fpMath.Dot(vel, vel);
 fp stopThresh = coeff.StopSpeed * coeff.StopSpeed;
 // Phase A C.1+C.2 fix: tolerance window on clause 2 (same fix as RunRollPhase).
-fp stopEpsilon = stopThresh * fp.FromFloat(0.01f);
+// 5% of stopSpeed² absorbs fp-rounding noise without admitting genuine slope
+// re-acceleration. See RunRollPhase comment for full derivation.
+fp stopEpsilon = stopThresh * fp.FromFloat(0.05f);
 if (speedSq < stopThresh && speedSq <= prevSpeedSq + stopEpsilon)
 {
     stopConsecutive++;
@@ -186,8 +217,8 @@ Replace with:
 
 ```
 surface,rolling_resistance,stop_speed_mps,notes
-Green,0.50,0.04,Stimp ~12 PGA Tour feel; 1.83 m/s release rolls 3.66m on flat
-GreenCollar,0.40,0.05,Slightly slower than green; matches Stimp ~10
+Green,0.50,0.04,Stimp ~12 PGA Tour fast; v0/k = 1.829/0.50 = 3.66m matches USGA Stimpmeter (Kolkowitz 2007, Wikipedia Stimpmeter)
+GreenCollar,0.40,0.05,Slightly slower than green; v0/k = 4.57m, between Stimp ~10 (medium) and ~12 (fast)
 ```
 
 Only `rolling_resistance` and `notes` change; `stop_speed_mps` stays at the existing values (0.04 / 0.05).
@@ -203,7 +234,7 @@ CartPath,0.70,0.18,0.06,0.08,very bouncy; very low friction
 Replace it with:
 
 ```
-CartPath,0.70,0.18,0.30,0.08,very bouncy; very low friction; k bumped to stop balls within reasonable distance (was 0.06; produced 100m+ roll-out in C diagnosis Shot 2)
+CartPath,0.70,0.18,0.30,0.08,very bouncy; very low friction; PLAYABILITY-CALIBRATED (no published academic value for golf-ball-on-concrete); k bumped from 0.06 (which produced 100m+ infinite roll-out in C diagnosis Shot 2) to 0.30 (which stops a 5 m/s post-bounce ball within ~16 m); also raises per-step resistance above the fp16.16 LSB floor so the ball can actually slow at sub-stopSpeed velocities
 ```
 
 **Do NOT touch any other row.** Specifically:
@@ -259,7 +290,9 @@ Load `PuttConfig` from CSV. Create a `ConstantSurfaceProvider(SurfaceType.Green)
 
 Assert:
 - `traj.termination == TerminationReason.BallStopped`.
-- `traj.finalPosition.x.ToFloat()` in `[3.0f, 4.5f]` (Stimp 10–12 band; target is 3.66 m at exact k=0.50 with no slope, integrator drift puts realistic outcome in this band).
+- `traj.finalPosition.x.ToFloat()` in `[3.0f, 4.5f]` (Stimp 10–12 band).
+  - **Theoretical asymptote:** `d_max = v₀/k = 1.83/0.50 = 3.66 m` (the USGA Stimp 12 target).
+  - **Realistic target:** ~**3.58 m**, because the integrator stops at `|v| < stopSpeed=0.04` rather than at v=0. Subtracted-tail = `(v_stop)/k ≈ 0.04/0.50 = 0.08 m`, so the ball arrests ~0.08 m short of the asymptote. The `[3.0, 4.5]` band tolerates fp-integration drift around this 3.58 m target.
 
 If the test fails because the value is *outside* the band on either side, that's a meaningful diagnostic — surface in `IMPLEMENTER_REPORT.md` "Open questions for Architect" with the observed value.
 
@@ -275,11 +308,13 @@ Log the observed distance via `TestContext.WriteLine` so Cesar can read it from 
 
 #### Test 3: `DriverFairwayRollOut_ObservationOnly_TerminatesAndLogs`
 
-This is the **observation-only** test for Phase A. Load `surfaceCfg` from CSV. Use `ConstantSurfaceProvider(SurfaceType.Fairway)` and `FlatGround(fp.Zero)`. Construct a driver-class `ShotInput` (use the `IronInput()` helper from `PuttTests.cs` as a starting template, but with driver-class numbers: 64 m/s, 11° launch, 2700 rpm backspin — match the captured driver shot from C diagnosis Shot 2).
+This is the **observation-only** test for Phase A. Load `surfaceCfg` from CSV. Use `ConstantSurfaceProvider(SurfaceType.Fairway)` and `FlatGround(fp.Zero)`. Construct a driver-class `ShotInput` (use the `IronInput()` helper from `PuttTests.cs` as a starting template, but with driver-class numbers: **64 m/s**, 11° launch, 2700 rpm backspin).
+
+**On the 64 m/s figure:** `Clubs.csv` defines driver `ballSpeedMps=75.0`, but the captured C diagnosis Shot 2 observed `|v|=64.000 m/s` at `[ShotEntry]` after the unexplained C.5 cap (Build said 93.77 m/s; ShotEntry showed 64.000 m/s exactly). For this test to give numbers comparable to the captured Shot 2 evidence (~296 m total travel pre-fix), use 64 m/s — the post-cap value the sim actually receives today. Once C.5 is diagnosed and fixed in its own spec, this test can be re-tuned to match the new resolved velocity.
 
 Run the sim. Assert:
 - `traj.termination == TerminationReason.BallStopped` (the simulation completes; if it fails this, the stop-check is still broken or the ball goes OOB/water).
-- `traj.finalPosition` total horizontal distance from origin `<= 400.0f` (loose catch-catastrophic-drift band; was 296 m before the fix, with most of the tail being broken roll-out).
+- `traj.finalPosition` total horizontal distance from origin in `[100.0f, 400.0f]` (lower bound catches a stuck-bounce-loop or aero regression that nukes carry; upper bound catches catastrophic-roll-out — was 296 m before the fix, with most of the tail being broken roll-out).
 
 Log the observed total distance and the post-first-bounce roll-out distance (i.e., distance from the first `IsStop=false` `TerrainHit` to the final position) via `TestContext.WriteLine`. Cesar uses these numbers to decide Phase B Fairway tuning.
 
@@ -299,9 +334,9 @@ Log the observed total distance and step count via `TestContext.WriteLine`.
 
 Two sub-assertions in one test method (both must pass):
 
-(a) Putt sub-test: a 2.0 m/s putt on Green via `PuttConfig` from CSV terminates as `BallStopped` with `samples.Count < 6000` (well under the `60 * 240 = 14400` putt cap).
+(a) Putt sub-test: a 2.0 m/s putt on Green via `PuttConfig` from CSV terminates as `BallStopped` with `samples.Count < 10000` (well under the `60 * 240 = 14400` putt cap; at k=0.50, v=2 decays to stopSpeed=0.04 in ~`ln(2/0.04)/0.50 ≈ 7.83 s` = 1880 steps + 10 stop-required = ~1900 steps; 10000 cap leaves 5x margin).
 
-(b) Roll sub-test: same driver setup as Test 3 on Fairway, terminates as `BallStopped` with `samples.Count < 6000` (well under the `60 * 240 = 14400` roll cap).
+(b) Roll sub-test: same driver setup as Test 3 on Fairway, terminates as `BallStopped` with `samples.Count < 10000` (well under the `60 * 240 = 14400` roll cap; airborne ~1500 steps + Fairway k=0.18 roll-out from ~6 m/s post-bounce decays to stopSpeed=0.10 in ~`ln(6/0.10)/0.18 ≈ 22.7 s` = 5460 steps; total ~7000 steps, the 10000 cap leaves headroom for slope-driven longer rolls without being so loose that a real bug hides).
 
 Both numbers are deliberately loose; the point is to prove the stop-check fires at all (NOTES.md captured Shot 2 hitting `step=336` without ever incrementing `stopConsecutive` past 0). If either sub-test hits the cap, the stop-check fix is wrong.
 
@@ -342,7 +377,7 @@ Pipeline lesson from the diagnosis: "*`[ShotExit]` absence is itself diagnostic 
 
 Each item below MUST be marked `PASS` or `FAIL` with a one-sentence justification citing what was measured.
 
-- [ ] `RunRollPhase` stop-check (lines 537–552) modified per Step 1: tolerance window `+ stopEpsilon` added to clause 2; comment present; `stopEpsilon = stopThresh * fp.FromFloat(0.01f)`
+- [ ] `RunRollPhase` stop-check (lines 537–552) modified per Step 1: tolerance window `+ stopEpsilon` added to clause 2; comment present (must mention fp-rounding mechanism, NOT slope re-acceleration — that narrative is wrong); `stopEpsilon = stopThresh * fp.FromFloat(0.05f)`
 - [ ] `RunPuttPhase` stop-check (lines 670–682) modified per Step 2: same tolerance-window fix, single-line `else` style preserved
 - [ ] `Assets/Resources/Physics/putt.csv` Green row updated: `Green,0.50,0.04,...`
 - [ ] `Assets/Resources/Physics/putt.csv` GreenCollar row updated: `GreenCollar,0.40,0.05,...`
@@ -356,7 +391,7 @@ Each item below MUST be marked `PASS` or `FAIL` with a one-sentence justificatio
 - [ ] Test 2 `LongPutt_GreenToFairwayTransition_TotalRollUnder45m` PASSES with observed value in `[8.0, 45.0]` band — log actual value
 - [ ] Test 3 `DriverFairwayRollOut_ObservationOnly_TerminatesAndLogs` PASSES with `BallStopped` termination — log total distance + post-first-bounce roll-out distance
 - [ ] Test 4 `CartPathStop_DriverLanding_TerminatesAsBallStopped` PASSES with `BallStopped` termination + `samples.Count < 14400` — log total distance + step count
-- [ ] Test 5 `StopCheckCorrectness_BothPhasesTerminateWellUnderCap` PASSES with both sub-assertions green — log both observed step counts
+- [ ] Test 5 `StopCheckCorrectness_BothPhasesTerminateWellUnderCap` PASSES with both sub-assertions green (`samples.Count < 10000` for both) — log both observed step counts
 - [ ] EditMode Test Runner reports **203/203 PASS** (full suite, not subset). If any existing test fails, STOP and surface the failure
 - [ ] No new compiler warnings in Unity Console attributable to this task
 - [ ] No `*.asmdef`, `*.unity`, `*.prefab`, or test file other than `RollAndPuttTuningTests.cs` modified
