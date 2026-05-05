@@ -111,7 +111,44 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — controls_d_velocity_cap_diagnosis kicked back to implementer (ARCHITECT_REVIEW_FAIL 2026-05-05)
+## ✅ DONE — controls_d_velocity_cap_diagnosis (closed end-to-end 2026-05-05)
+
+**Spec archived:** `Docs/Specs/Completed/controls_d_velocity_cap_diagnosis/`. Pipeline ran the full loop: implementer (Sqrt fix + 6 fpMath tests + re-snapshots) → self-reviewer PASS → reviewer PASS → Cesar ESCALATE (carry numbers smelled wrong) → human Architect FAIL with single tripwire fail item → implementer redo (added `Aero_AllClubs_WithinTourCarryRange_PerSpinRegime` to `AeroCalibrationTripwireTests.cs`, `[Ignore]`-tagged) → self-reviewer PASS → reviewer PASS → Cesar approve. Test gate now **209 PASS + 1 IGNORED**. Notion entry [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6) flipped to **Done**, Closed=2026-05-05.
+
+**What landed:** `fpMath.Sqrt` body replaced with libfixmath digit-by-digit shift-and-subtract port (single-pass int64). Driver `|v|` now returns true ~103 m/s instead of capped 64; putter ~2.24 instead of capped 2.0. Bit-exact gate broke as expected; ~14 tests re-snapshotted (carries shifted to true post-Sqrt-fix values). One ignored tripwire test pointing at `controls_e_aero_overlay_pass` for the lift-LUT recalibration definition-of-done.
+
+**Phase B (Cos/Sin) still queued:** [`35731e0e-9a36-8132-96e4-cc27c4d2a734`](https://www.notion.so/35731e0e9a36813296e4cc27c4d2a734) `C.6 — fpMath.Cos/Sin range-reduction repair (Phase B)`. Lands after Loop v1.
+
+## 📌 NEXT — controls_e_aero_overlay_pass (SPEC_READY 2026-05-05, awaiting implementer kickoff)
+
+**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_e_aero_overlay_pass/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) flipped to **In Progress** (P1 High, M 1–2 days, Order 150).
+
+**Phase A scope (locked, 5 questions answered 2026-05-05):**
+- **Trackman year:** 2025 (most recent published; implementer sources and verifies)
+- **Calibration set:** 8 clubs (driver, 3-wood, 5–9 irons, PW)
+- **Tolerance:** ±10% per club (matches the tripwire test from `controls_d`)
+- **Harness UI:** CLI-callable from Code's pipeline AND `MenuItem("GOLFIN/Physics/Run Aero Calibration Sweep")` for manual spot-checks. Both surfaces invoke the same `AeroCalibrationHarness.RunCalibrationSweep()` method.
+- **Overlay format:** Flat CSV (`spin_parameter,cl_multiplier,notes`)
+
+**What this implements:** A new `aero_lift_overlay.csv` applies a multiplicative correction to `Cl` only past the Bearman-Harvey valid range (S > 0.30) where the LUT is currently extrapolating. Smoothstep blend across `S ∈ [0.25, 0.35]` (formula `t² × (3 − 2t)`) prevents seam discontinuity. In Layer-1-valid territory (S ≤ 0.25), overlay multiplier is forced to 1.0 — Bearman-Harvey is trusted as-is. New `LiftOverlay` field on `AeroConfig`, new `LoadLiftOverlay()` in `PhysicsConfigLoader`, new overlay seam in `AeroModel.ComputeAeroForce` with `BlendOverlay` private helper.
+
+**Critical deliverable beyond the overlay:** `Docs/Physics/CALIBRATION_METHODOLOGY.md` (NEW) documents the two-layer architecture frame (Layer 1 = real physics, Layer 2 = corner-case overlay), Trackman calibration target reference, Bearman-Harvey valid range, harness usage, smoothstep math, "when to recalibrate" triggers, and the Layer-1-sanctity rule. Plus top-of-file Layer-status headers added to `aero_lift_lut.csv` (Layer 1), `aero_drag_lut.csv` (Layer 1, audit pending), `surfaces.csv` (Layer 2), `putt.csv` (Layer 2). The doc is the durable deliverable; overlay multipliers are just the first instantiation.
+
+**Calibration loop:** harness runs sim with Trackman launch params for each calibration club, prints per-club error table; iterative tuning of `aero_lift_overlay.csv` multipliers until all 8 within ±10% (~30–40 min implementer time, expected 4–8 iterations). Then `[Ignore]` removed from `Aero_AllClubs_WithinTourCarryRange_PerSpinRegime`. Final test gate: **210/210 PASS** (209 pre-existing + tripwire now-enabled).
+
+**Files this task touches:** new `aero_lift_overlay.csv` + new `AeroCalibrationHarness.cs` + new `CALIBRATION_METHODOLOGY.md`; modified `AeroConfig.cs` / `AeroModel.cs` / `PhysicsConfigLoader.cs` / `aero.csv` (one new row); header-only edits to 4 existing CSVs; one `[Ignore]` removal in `AeroCalibrationTripwireTests.cs`. No asmdef / scene / prefab / `BallSimulation.cs` / `fpMath.cs` / 209 pre-existing test files changed.
+
+**Critical risk:** if the 209 pre-existing tests fail after the overlay is enabled, that means the overlay is leaking into Layer-1-valid territory (likely cause: `BlendOverlay` not returning exactly `fp.One` for `spinParam ≤ 0.25`). SPEC.md § "Mid-task escalation paths" handles it via `IMPLEMENTER_BLOCKED`.
+
+**Sibling P3 task** [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) `C.8 — Drag LUT calibration audit (Layer 2 sibling)` Queued, runs after this lands.
+
+**Roadmap reference:** `Docs/Roadmap.md` §1 (Putter P1) closing follow-up. Does NOT gate §2 (Loop v1) start. Recommended to land before Loop v1 *playtest* feel.
+
+---
+
+## 📜 HISTORY — controls_d_velocity_cap_diagnosis kicked back to implementer (ARCHITECT_REVIEW_FAIL 2026-05-05)
+
+(Final state of this iteration: implementer added the `[Ignore]`-tagged tripwire test, pipeline closed end-to-end 2026-05-05. See "DONE" block above. Original FAIL kickoff details preserved below for retrospective.)
 
 **Status flipped from `ARCHITECT_REVIEW_PASS` → `ARCHITECT_REVIEW_ESCALATE` → `ARCHITECT_REVIEW_FAIL`** by human Architect after Cesar walked the post-fix carry numbers and surfaced the lift-LUT issue. Sqrt fix itself is correct; iron/wedge carries 10–46% above Tour-pro is the masked-by-Sqrt-bug lift-LUT extrapolation issue. Adversarial review (PGA TOUR 2K23 dev blog, Bearman-Harvey 1976 paper, Cornell SimScience golf physics, Quora deterministic-physics-engines, libfixmath, IronWarrior IL2CPP determinism repo) confirmed the lift LUT extrapolates Bearman-Harvey 1976 data past its valid range S∈[0.03, 0.30] — our wedges live at S≈0.45 in pure extrapolation territory.
 
@@ -119,7 +156,9 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 **Path to PASS:** implementer adds tripwire → self-reviewer confirms `[Ignore]` tag + message format → reviewer subagent re-runs review → Cesar approves.
 
-## 📅 QUEUED — controls_e_aero_overlay_pass (data-anchored plan ready, NOTES.md drafted)
+## 📜 HISTORY — controls_e_aero_overlay_pass queued plan (drafted 2026-05-05, now in Active)
+
+(Status: locked + moved to Active 2026-05-05 with all 5 open questions answered. See "NEXT" block above for current work definition. Original Queued plan preserved below for retrospective.)
 
 **Notion:** [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) — `C.7 — Aero lift overlay calibration pass (Layer 2)` — P1 High, M (1–2 days), Order 150, Queued.
 
