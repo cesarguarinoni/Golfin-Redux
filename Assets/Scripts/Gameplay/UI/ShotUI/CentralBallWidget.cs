@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using Golfin.Gameplay.Input;
 using Golfin.Gameplay.UI.HUD;
 
@@ -13,16 +14,29 @@ namespace Golfin.Gameplay.UI.ShotUI
     /// Decoupled from world ball position — a future game-camera pass may switch
     /// to projecting the world ball's screen position, but for now this is a
     /// fixed-anchor UI element matching the Figma reference.
+    ///
+    /// Tapping the ball in Idle state toggles the DebugShotPanel (if wired).
     /// </summary>
-    public class CentralBallWidget : MonoBehaviour
+    public class CentralBallWidget : MonoBehaviour, IPointerClickHandler
     {
         [SerializeField] private Image          _image;
         [SerializeField] private RectTransform  _rect;
         [SerializeField] private ShotController _shotController;
 
+        [Header("Debug")]
+        [SerializeField] private DebugShotPanel _debugPanel;
+
         [Header("Putter mode")]
         [SerializeField] private float _normalSize   = 80f;
         [SerializeField] private float _puttModeSize = 150f;
+
+        private ShotState _currentState = ShotState.Idle;
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (_currentState == ShotState.Idle && _debugPanel != null)
+                _debugPanel.Toggle();
+        }
 
         public void SetPuttMode(bool on)
         {
@@ -70,6 +84,7 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         void HandleStateChanged(ShotInputState state)
         {
+            _currentState = state.State;
             bool show = state.State is ShotState.Idle
                                     or ShotState.Aiming
                                     or ShotState.Pulling

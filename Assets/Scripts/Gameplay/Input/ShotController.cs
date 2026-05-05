@@ -94,6 +94,24 @@ namespace Golfin.Gameplay.Input
             TransitionToIdle();
         }
 
+        // Fires a shot directly without gesture input. Maps accuracy preset to degradation yaw.
+        // power range: 0–1.2 (same as PowerNormalized; 1.0 = 100%).
+        public void FireDebugShot(float power, DebugShotAccuracy accuracy)
+        {
+            TransitionToIdle();
+            PowerNormalized    = Mathf.Clamp(power, 0f, 1.2f);
+            _coneFinetune      = 0f;
+            _externalDragActive = false;
+            _degradationYawRad = accuracy switch
+            {
+                DebugShotAccuracy.Green  => 0f,
+                DebugShotAccuracy.Yellow => _config.DegradationYawDegPerPass * Mathf.Deg2Rad,
+                DebugShotAccuracy.Red    => _config.DegradationYawDegPerPass * 4f * Mathf.Deg2Rad,
+                _                        => 0f,
+            };
+            CommitFlick();
+        }
+
         private void Awake()
         {
             if (_inputSource == null && _inputSystemSource != null)
