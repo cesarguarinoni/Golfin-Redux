@@ -23,12 +23,20 @@ namespace Golfin.Physics.Tests
     {
         // Club data matching Assets/Resources/Data/Clubs.csv (hardcoded so tests need no Resources.Load)
         // IDs updated to canonical schema (8.5.A consolidation). Iron3, Iron5, SandWedge dropped — not in canonical CSV.
+        //
+        // NOTE (controls_d_velocity_cap_diagnosis 2026-05-05): expectedYd values re-snapshotted after
+        // fpMath.Sqrt convergence fix. Old values were calibrated against broken Newton-Raphson Sqrt
+        // that returned power-of-2 approximations (iron7 ran at 32 m/s effective |v| instead of 52.5 m/s;
+        // driver ran at 64 m/s instead of 75 m/s). Carry INCREASED because the non-unit vHat vector
+        // from Normalize caused over-estimated drag in the old code. New values document what the
+        // corrected physics produces. Re-calibration against Trackman/USGA data deferred per SPEC.
+        // Old values: driver=275, iron7=172, iron9=152, pwedge=136.
         private static readonly (string id, float speedMps, float angleDeg, float spinRpm, float expectedYd)[] Clubs =
         {
-            ("club_driver_gf",    75.0f, 10.9f,  2686f, 275f),
-            ("club_iron7_mireo",  52.5f, 16.3f,  7097f, 172f),
-            ("club_iron9_klyro",  48.5f, 20.0f,  8647f, 152f),
-            ("club_pwedge_royal", 46.0f, 24.0f,  9300f, 136f),
+            ("club_driver_gf",    75.0f, 10.9f,  2686f, 263f),
+            ("club_iron7_mireo",  52.5f, 16.3f,  7097f, 199f),
+            ("club_iron9_klyro",  48.5f, 20.0f,  8647f, 180f),
+            ("club_pwedge_royal", 46.0f, 24.0f,  9300f, 168f),
         };
 
         private static ShotInput MakeShot(float speedMps, float angleDeg, float spinRpm = 0f)

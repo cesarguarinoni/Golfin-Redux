@@ -17,16 +17,18 @@ For SMALL tasks where the full pipeline is overkill (bug fixes with obvious solu
 ### The pipeline
 
 ```
-Cesar -> golfin-architect (writes spec)
-      -> golfin-implementer (builds + screenshots + self-PASS/FAIL checklist)
-      -> golfin-self-reviewer (catches false PASSes; routes back or forward)
-      -> golfin-architect (final review: visual fidelity + cross-cutting)
-      -> Cesar (final approval -> DONE)
+Cesar (with Architect Claude on claude.ai) -> writes SPEC.md
+                                            -> golfin-implementer (builds + screenshots + self-PASS/FAIL checklist)
+                                            -> golfin-self-reviewer (catches false PASSes; routes back or forward)
+                                            -> golfin-reviewer (final review: visual fidelity + cross-cutting)
+                                            -> Cesar (final approval -> DONE)
 ```
+
+Spec authoring is done by Cesar with the human Architect (claude.ai chat), NOT a subagent. The subagent chain handles implementation, self-review, and final review only.
 
 ### Where things live
 
-- **Subagent definitions:** `.claude/agents/golfin-architect.md`, `golfin-implementer.md`, `golfin-self-reviewer.md`
+- **Subagent definitions:** `.claude/agents/golfin-reviewer.md`, `golfin-implementer.md`, `golfin-self-reviewer.md`
 - **Hooks:** `.claude/hooks/route_subagent.py` (state router + desktop notify + email + alerts.log), `enforce_implementer_done.py` (PreToolUse blocker), `capture_screenshot.py` (Implementer's screenshot helper)
 - **Notification config:** `.claude/notify_config.json` (toast always on; email opt-in)
 - **Per-task folder:** `Docs/Specs/Active/<task_slug>/` containing `SPEC.md`, `STATUS.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, `ARCHITECT_REVIEW.md`, `CESAR_REJECTION.md` (when applicable), `HEARTBEAT.log`, `screenshots/`
@@ -53,7 +55,7 @@ The `route_subagent.py` hook prints the next step in the terminal automatically 
 2. **STATUS is authoritative.** Do NOT "correct" STATUS based on review file contents. If STATUS contradicts a review verdict, Cesar may have rejected manually — check for `CESAR_REJECTION.md`. If still uncertain, set STATUS to `IMPLEMENTER_BLOCKED` and ask.
 3. **Implementer cannot write SELF_REVIEW.md or ARCHITECT_REVIEW.md.** Those are written by the other subagents.
 4. **Self-reviewer cannot modify scenes or write code.** It's a vision-heavy reviewer only; tools are scoped to Read/Write/Edit + Figma MCP.
-5. **Architect cannot modify scenes or write Unity code either.** Same scoping; the architect reviews and writes specs/reviews.
+5. **Reviewer cannot modify scenes or write Unity code either.** Same scoping; the reviewer reads files and writes the review verdict.
 6. **`STATUS.md = DONE` only after Cesar's manual approval.** No subagent writes DONE. Cesar moves the folder to `Docs/Specs/Completed/` when satisfied.
 7. **No white-box placeholders.** If `[SerializeField]` references aren't wired, wire them BEFORE marking IMPLEMENTER_REPORT done. Use `_default*` slots specified in the spec for fallback sprites.
 8. **Wait before screenshot.** After entering play mode, wait at least 3 seconds (5 if data-binding is involved) before capturing. Unity needs time to render the first few frames and run all OnEnable code.
@@ -62,28 +64,28 @@ The `route_subagent.py` hook prints the next step in the terminal automatically 
 
 ### How to start a new UI task (Cesar)
 
-For a complex UI task: in Claude Code, say: `Use the golfin-architect subagent to write a spec for <task description>`. The architect will:
+For a complex UI task: write the spec with the human Architect (Cesar's claude.ai chat). The Architect will:
 
 1. Confirm the Figma page/frame/placeholder-vs-canonical with you (per Blueprint §8 standing rule).
 2. Create `Docs/Specs/Active/<task_slug>/` from the template.
 3. Fill `SPEC.md`.
 4. Set `STATUS.md` to `SPEC_READY`.
 
-The SubagentStop hook will then print: `[<task_slug>] STATUS=SPEC_READY -> Use the golfin-implementer subagent on "<task_slug>"`. You paste that command and the pipeline runs itself.
+The SubagentStop hook will then print: `[<task_slug>] STATUS=SPEC_READY -> Use the golfin-implementer subagent on "<task_slug>"`. You paste that command into Claude Code and the pipeline runs itself.
 
 For a small task: just say `Read Docs/Specs/Quick/<task_slug>.md and implement.` after writing the quick spec.
 
 ### How to redo a failed iteration
 
-If the architect or self-reviewer kicks the task back, STATUS goes to `*_FAIL` and the hook prints `Use the golfin-implementer subagent on "<task_slug>"`. The Implementer reads the latest review file, addresses the fail list, and re-submits.
+If the reviewer or self-reviewer kicks the task back, STATUS goes to `*_FAIL` and the hook prints `Use the golfin-implementer subagent on "<task_slug>"`. The Implementer reads the latest review file, addresses the fail list, and re-submits.
 
-If YOU manually reject after architect-pass: write `CESAR_REJECTION.md` in the task folder explaining why, then set STATUS to `CESAR_REJECTED`. The hook will route the implementer to redo with your notes.
+If YOU manually reject after reviewer-pass: write `CESAR_REJECTION.md` in the task folder explaining why, then set STATUS to `CESAR_REJECTED`. The hook will route the implementer to redo with your notes.
 
 ### When to escalate to claude.ai (Architect Claude in this chat)
 
 The Claude.ai chat (Opus 4.7, full repo access via filesystem MCP) is for:
 - Project-wide reasoning that doesn't fit one task (e.g., "should we restructure asmdefs?").
-- Ambiguous escalations where the architect-subagent writes `ARCHITECT_REVIEW_ESCALATE`.
+- Ambiguous escalations where the reviewer subagent writes `ARCHITECT_REVIEW_ESCALATE`.
 - Authoring a new spec for a task that affects multiple subsystems.
 - Workflow / pipeline improvements.
 
@@ -120,6 +122,9 @@ Code's screenshot history is full of timing failures. These rules eliminate the 
 | Frozen moment from playmode            | `SnapAtEndOfFrameAndPause("label")` in coroutine     |
 | Series of frames during animation      | Multiple `SnapGameViewWithLabel("step1"/"step2"/…)`  |
 | `ScreenCapture.CaptureScreenshot(path)` | **DO NOT USE — banned by this project**             |
+| Physics-lab ball-at-rest after a shot   | `SnapAtEndOfFrameAndPause("shotN_<config>_atrest")` in coroutine — `mcp__ai-game-developer__screenshot-game-view` does NOT refresh between calls in the same `script-execute` scope and will return the pre-shot frame |
+
+**Physics-lab capture rule (controls_c_fix postmortem):** when a SPEC asks for ball-at-rest evidence after firing a lab shot, the spec's verification step MUST mandate `CaptureHelper.SnapAtEndOfFrameAndPause` — NOT `screenshot-game-view`. The MCP tool reads the Game View RT, which is not synchronously refreshed inside one `script-execute` call, so two sequential `screenshot-game-view` calls after two different shots produce visually identical PNGs of the pre-shot tee. Self-reviewer/reviewer must FAIL any physics-lab task whose two at-rest captures show the same pre-shot frame, regardless of byte-count delta.
 
 **Adding new fake-state presets:** when a new static-bus context is added under `Assets/Scripts/Gameplay/UI/ShotUI/HUD/`, the same task that adds it must (a) extend `CaptureHelper.FakeMidAim` to set sensible values for the new context, (b) extend `CaptureHelper.FakeReset` to call its `Reset()`, and (c) add a dedicated preset if the context has interesting variation. See `Docs/Specs/Active/capture_helper/SPEC.md` § Maintenance protocol.
 

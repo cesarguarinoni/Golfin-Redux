@@ -536,12 +536,30 @@ namespace Golfin.Physics
 
                 fp speedSq    = fpMath.Dot(vel, vel);
                 fp stopThresh = coeff.StopSpeed * coeff.StopSpeed;
-                if (speedSq < stopThresh && speedSq <= prevSpeedSq)
+                // Phase A C.1+C.2 fix: tolerance window on clause 2.
+                // At sub-stopSpeed velocities, per-component fp16.16 rounding (LSB ≈ 1.5e-5)
+                // can tick speedSq UP by 1 LSB even on flat ground with no real acceleration
+                // — when one velocity component rounds down and another doesn't, vx²+vy²+vz²
+                // nets a 1-LSB increase. That breaks strict <= non-increase and stalls the
+                // stop-counter (captured: 75 s on flat CartPath with stopConsec stuck at 0).
+                // We allow speedSq to tick up by up to 5% of stopSpeed² per step and still
+                // count the step toward the stop streak. 5% sized so: (a) >> 1 LSB at all
+                // realistic stopSpeeds (0.04–0.10), and (b) << genuine uphill re-acceleration
+                // on a 2° real-course slope, which preserves clause 2's uphill safety guard.
+                fp stopEpsilon = stopThresh * fp.FromFloat(0.05f);
+                if (speedSq < stopThresh && speedSq <= prevSpeedSq + stopEpsilon)
                 {
                     stopConsecutive++;
                     if (stopConsecutive >= StopStepsRequired)
                     {
                         hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+#if UNITY_EDITOR
+                        if (DiagShotLogger != null)
+                            DiagShotLogger(
+                                $"[ShotExit] termination={TerminationReason.BallStopped} " +
+                                $"finalPos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                                $"finalT={t.ToFloat():F2}s samples={samples.Count} hits={hits.Count}");
+#endif
                         return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
                     }
                 }
@@ -557,6 +575,13 @@ namespace Golfin.Physics
             }
 
             hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, SurfaceType.Fairway, true));
+#if UNITY_EDITOR
+            if (DiagShotLogger != null)
+                DiagShotLogger(
+                    $"[ShotExit] termination={TerminationReason.BallStopped} " +
+                    $"finalPos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                    $"finalT={t.ToFloat():F2}s samples={samples.Count} hits={hits.Count}");
+#endif
             return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
         }
 
@@ -669,12 +694,23 @@ namespace Golfin.Physics
 
                 fp speedSq    = fpMath.Dot(vel, vel);
                 fp stopThresh = coeff.StopSpeed * coeff.StopSpeed;
-                if (speedSq < stopThresh && speedSq <= prevSpeedSq)
+                // Phase A C.1+C.2 fix: tolerance window on clause 2 (same fix as RunRollPhase).
+                // 5% of stopSpeed² absorbs fp-rounding noise without admitting genuine slope
+                // re-acceleration. See RunRollPhase comment for full derivation.
+                fp stopEpsilon = stopThresh * fp.FromFloat(0.05f);
+                if (speedSq < stopThresh && speedSq <= prevSpeedSq + stopEpsilon)
                 {
                     stopConsecutive++;
                     if (stopConsecutive >= StopStepsRequired)
                     {
                         hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, surface, true));
+#if UNITY_EDITOR
+                        if (DiagShotLogger != null)
+                            DiagShotLogger(
+                                $"[ShotExit] termination={TerminationReason.BallStopped} " +
+                                $"finalPos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                                $"finalT={t.ToFloat():F2}s samples={samples.Count} hits={hits.Count}");
+#endif
                         return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
                     }
                 }
@@ -687,6 +723,13 @@ namespace Golfin.Physics
             }
 
             hits.Add(new TerrainHit(t, pos, vel, fp3.Zero, SurfaceType.Green, true));
+#if UNITY_EDITOR
+            if (DiagShotLogger != null)
+                DiagShotLogger(
+                    $"[ShotExit] termination={TerminationReason.BallStopped} " +
+                    $"finalPos=({pos.x.ToFloat():F2},{pos.y.ToFloat():F2},{pos.z.ToFloat():F2}) " +
+                    $"finalT={t.ToFloat():F2}s samples={samples.Count} hits={hits.Count}");
+#endif
             return new Trajectory(samples, pos, fp3.Zero, t, TerminationReason.BallStopped, hits);
         }
 

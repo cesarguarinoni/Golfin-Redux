@@ -45,6 +45,16 @@ namespace Golfin.Physics
             {
                 fp spinParam = (cfg.BallRadius * spin.Rate) / speed;
                 cl = cfg.LiftLut.Evaluate(spinParam);
+
+                // Layer 2 corner-case overlay. Smoothstep blend across S in [0.25, 0.35]
+                // prevents discontinuity between Layer 1 (Bearman-Harvey valid) and overlay
+                // (extrapolation territory). See Docs/Physics/CALIBRATION_METHODOLOGY.md.
+                if (cfg.UseLiftOverlay && cfg.LiftOverlay.IsValid)
+                {
+                    fp multRaw = cfg.LiftOverlay.Evaluate(spinParam);
+                    fp mult    = BlendOverlay(spinParam, multRaw);
+                    cl = cl * mult;
+                }
             }
             else
             {
@@ -62,5 +72,25 @@ namespace Golfin.Physics
         // Back-compat: wind-free call forwards to wind-aware overload with zero wind.
         public static fp3 ComputeAeroForce(fp3 velocity, SpinState spin, AeroConfig cfg)
             => ComputeAeroForce(velocity, fp3.Zero, spin, cfg);
+
+        // Smoothstep-blended overlay multiplier. Returns 1.0 below S=0.25, full multiplier
+        // above S=0.35, smoothstep interpolation between. This preserves Layer 1
+        // (Bearman-Harvey) as canonical inside its valid range.
+        private static fp BlendOverlay(fp spinParam, fp overlayMultiplier)
+        {
+            fp lo = fp.FromFloat(0.25f);
+            fp hi = fp.FromFloat(0.35f);
+            if (spinParam <= lo) return fp.One;
+            if (spinParam >= hi) return overlayMultiplier;
+
+            // Smoothstep: t² × (3 − 2t)
+            fp t       = (spinParam - lo) / (hi - lo);
+            fp two     = fp.FromFloat(2f);
+            fp three   = fp.FromFloat(3f);
+            fp smoothT = (t * t) * (three - (two * t));
+
+            // Linear blend between 1.0 and overlayMultiplier using the smoothed t
+            return fp.One + (overlayMultiplier - fp.One) * smoothT;
+        }
     }
 }

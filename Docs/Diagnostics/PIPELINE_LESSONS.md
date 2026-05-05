@@ -107,9 +107,50 @@ In `8_3_topbar` iteration 3, the Implementer attempted Fix 5 (rounded corners ra
 
 ---
 
+## 2026-05-05 — `controls_e_aero_overlay_pass` architect picked unit-mismatched values from a multi-unit reference document
+
+The architect (claude.ai chat) sourced Trackman PGA Tour carry distances for a tripwire test calibration. The Trackman PDF reference had **two tables**: one in METERS, one in YARDS, with identical column headers except for the units in the header row. Architect read the METERS table values (135, 124) and asserted them as YARDS targets. Result: 9-iron and PW carry targets were off by ~10% (135 m→148 yd, 124 m→136 yd). The mistake was caught only because Cesar pushed back hard on "are you sure these numbers are right?" and forced a re-verification.
+
+This is the same failure mode that destroyed NASA's **Mars Climate Orbiter (1999)**: Lockheed Martin sent thrust impulse data in pound-seconds, JPL navigation software expected newton-seconds, the 4.45× unit mismatch put the spacecraft 170 km too low into Mars atmosphere, $327M lost. The lesson was "verify units at every interface boundary" — and yet here we are 27 years later, repeating it on a much smaller scale.
+
+### Lesson K — Verify the unit header before transcribing any numerical value from a source document (HARD RULE)
+
+Whenever the architect sources a numerical value from an external reference (PDF, web page, table, dataset, paper), the architect MUST:
+
+1. **Identify the unit explicitly.** Read the column header, the row header, the table title, AND any unit-suffix glyph on the value itself (yards/y/yd, meters/m, degrees/°, mph, m/s, etc.).
+2. **Check whether the source has multiple unit variants of the same data.** Trackman's PDF, for instance, presents PGA Tour averages in BOTH meters and yards on the same page. So do many physics datasets, NASA tech docs, USGA equipment specs, and most international engineering references. If multiple unit variants exist, **explicitly pick which one** and write the chosen unit into the spec/notes/test alongside the value.
+3. **Cross-source verify** against at least one independent secondary source (a different publication citing the same primary source). If the secondary source disagrees by more than expected rounding, **stop**. Either the primary, the secondary, or your reading is wrong. Resolve before proceeding.
+4. **Annotate the value with its unit at the point of use.** In code: `float driverCarryYd = 275f;` not `float driverCarry = 275f;`. In specs: "Driver carry: 275 yd (Trackman PDF YARDS table)" not "Driver carry: 275". The annotation defends against future-self or future-implementer mis-reading.
+5. **If the value will drive a physics simulation or test threshold**, add a comment naming the source URL + which table/column/row/unit was used. The Trackman PDF has 26 numerical values; saying "from Trackman" is not enough.
+
+### Why this matters more than it might seem
+
+- A unit mismatch on a calibration target produces silently wrong tuning. The implementer in this task tuned the lift overlay multiplier to m40=0.55 — too aggressive — because they were chasing the architect's wrong (too-low) wedge target. With correct targets, the same overlay should land near m40≈0.85, a much smaller correction that respects the Bearman-Harvey curve more.
+- This means **wrong unit → wrong tuning → wrong physics → wrong gameplay feel**. The downstream cost compounds; the upstream fix is one line of verification.
+- The mistake nearly shipped: it was caught only because Cesar pressed on the numbers, not because any test or self-reviewer caught it. **No automated check would have caught this** — the test was passing against the wrong target. Verification is a human-in-the-loop responsibility at the data-entry boundary.
+
+### Fix in architect-side workflow (this Claude, claude.ai)
+
+Whenever the architect pulls a numerical value from any external source for use in a spec, test, or code:
+- Quote the source URL + table/section/row identifier.
+- Quote the column header verbatim (including unit specifier).
+- State explicitly: "Value X = Y [unit]" with the unit named.
+- If the source has multiple unit variants, name which variant was chosen.
+- Cross-source against one independent secondary source before locking the value into a spec.
+
+Add this checklist to the architect's mental ritual for any numerical sourcing. The cost is ~30 seconds per value. The cost of skipping it is silent compounding error.
+
+### Suggested addition to subagent prompts
+
+Neither the implementer nor the self-reviewer nor the reviewer subagents are currently in a position to catch a unit mismatch in architect-sourced reference values — they trust the spec's targets as ground truth. So the prompt-side fix is architect-side only (this Claude). However, it would be useful to add a line to the **reviewer** subagent prompt:
+
+> **When the spec asserts a numerical target sourced from an external reference, spot-check the value against the cited source if the source URL is included.** If the source has multiple unit variants and the spec doesn't specify which was chosen, flag it as a potential unit-mismatch risk. Do not assume the architect picked correctly.
+
+---
+
 ## How to use this file
 
-When updating the self-reviewer or architect-review subagent prompts (`.claude/agents/golfin-self-reviewer.md`, `golfin-architect.md`), look for **patterns across multiple entries** here. A single one-off doesn't justify a prompt edit. Two or more entries flagging the same kind of failure justify one.
+When updating the self-reviewer or reviewer subagent prompts (`.claude/agents/golfin-self-reviewer.md`, `golfin-reviewer.md`), look for **patterns across multiple entries** here. A single one-off doesn't justify a prompt edit. Two or more entries flagging the same kind of failure justify one.
 
 Each entry should follow this format:
 1. **Date — task — what failed**

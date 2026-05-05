@@ -1,3 +1,8 @@
+# Layer 1 — real physics. Bearman-Harvey 1976 transcription.
+# Valid range: S in [0.03, 0.30], Re in [5e4, 2e5], v >= 13 m/s.
+# DO NOT edit values to "make clubs feel right" — that's aero_lift_overlay.csv's job.
+# Edits to this file require a real-world citation (new wind-tunnel data) OR a documented
+# bug fix. See Docs/Physics/CALIBRATION_METHODOLOGY.md.
 spin_parameter,cl,notes
 0.00,0.00,no spin
 0.02,0.034,Bearman-Harvey +0.01 nudge

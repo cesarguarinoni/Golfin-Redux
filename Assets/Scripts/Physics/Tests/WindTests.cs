@@ -176,12 +176,17 @@ namespace Golfin.Physics.Tests
             Assert.AreEqual(t1a.finalPosition.x.raw, t1b.finalPosition.x.raw, "Same seed: x must be bit-exact");
             Assert.AreEqual(t1a.finalPosition.z.raw, t1b.finalPosition.z.raw, "Same seed: z must be bit-exact");
 
-            // Different seeds → different trajectories (at least 0.5m apart).
+            // Different seeds → different trajectories (at least 0.1m apart).
+            // NOTE (controls_d_velocity_cap_diagnosis 2026-05-05): threshold re-snapshotted from 0.5m to 0.1m
+            // after fpMath.Sqrt fix. With corrected |v| in gust-wind integration the per-step velocity
+            // perturbation is smaller relative to shot energy, so seed 42 vs 99 now differ by ~0.19m
+            // instead of the previous ~0.5m+. The test still validates that seed variation produces
+            // measurably different trajectories; the magnitude of difference shifted with correct physics.
             var t2 = BallSimulation.Simulate(input, ground, aero, Gusty(99));
             float dx = System.Math.Abs(t1a.finalPosition.x.ToFloat() - t2.finalPosition.x.ToFloat());
             float dz = System.Math.Abs(t1a.finalPosition.z.ToFloat() - t2.finalPosition.z.ToFloat());
             float dist = System.Math.Max(dx, dz);
-            Assert.Greater(dist, 0.5f, "Different seeds should produce landing positions differing by > 0.5m");
+            Assert.Greater(dist, 0.1f, "Different seeds should produce landing positions differing by > 0.1m");
         }
 
         // ── Test 6 ─────────────────────────────────────────────────────────────

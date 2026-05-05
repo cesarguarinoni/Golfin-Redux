@@ -9,4 +9,5 @@ spin_rate_reference,300,rad/s,constant-mode only
 lift_max_multiplier,1.5,dimensionless,constant-mode only
 use_drag_lut,1,bool,1=velocity-indexed Cd LUT 0=constant Cd
 use_lift_lut,1,bool,1=spin-parameter Cl LUT 0=linear-capped Cl
+use_lift_overlay,1,bool,1=Layer-2 lift overlay active 0=overlay disabled
 spin_decay_rate,0.02,1/s,exponential spin decay per Aoki 2010 low-end

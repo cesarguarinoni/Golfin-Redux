@@ -40,11 +40,12 @@
 
 **C — Controls finetuning (NEXT — gates Loop v1).** Sub-tasks, sequenced. Both blockers (C.1, C.2) gate Loop v1's ball state machine (`Rolling → AtRest`); the picker rules (C.3, C.4) live in Phase 01 with the rest of the Putter cluster:
 
-- **C.1 + C.2** — Diagnosis ✅ DONE 2026-05-04 17:45 JST (`Docs/Specs/Completed/controls_c_diagnosis/`). Captures revealed C.1 was misframed (putter pipeline correct end-to-end; "100yd" symptom is rolling-resistance integration `d_max=v/k` producing 17m on Green→Fairway transition). C.2 root cause: `stopConsecutive` clause 2 fails on real heightmap due to sub-mm slope re-acceleration. **Fix spec written 2026-05-05** — `Docs/Specs/Active/controls_c_fix/SPEC.md` (Phase A: stop-check repair + Green/GreenCollar/CartPath tuning + 5 validation tests; Fairway/Rough observation-only and deferred to Phase B). STATUS=SPEC_READY. Notion fix entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f) flipped to In Progress. Phase B Notion entry [`35631e0e-9a36-8102-b217-d00dac3c3d92`](https://www.notion.so/35631e0e9a368102b217d00dac3c3d92) created and Queued.
-- **C.5** — Velocity cap diagnostic (bonus finding from C diagnosis). Build resolves 93.77 m/s on driver full-power but ShotEntry observes `|v|=64.000 m/s`. Hard cap somewhere between Build and Phase-6 entry. Q16.16 fp doesn't overflow at 100 m/s. Notion [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6). Diagnostic micro-spec (instrumentation only, mirrors controls_c_diagnosis pattern). Run after C.1+C.2 fix lands.
-- **C.3** — Surface-aware club picker: when ball rests on Green/GreenCollar, force Putter (other clubs hidden/disabled). Notion entry `35531e0e-9a36-811b-b5a6-c93e62e3ef25`. Queued; spec written after C.1/C.2 fixes land. Likely depends on Loop v1 §2a (ball state machine) for auto-switch on landing; lab-time prototype possible sooner via `PlaceBallAt` surface knowledge.
-- **C.4** — Surface-aware club picker (inverse): when ball is off Green/GreenCollar, hide/disable Putter. Notion entry `35531e0e-9a36-81a4-9060-d1602ee11b5d`. Paired with C.3; same surface read drives both rules. Will likely land in the same PR as C.3.
-- Spec for C.1/C.2 fixes written after the diagnostic logs land; C.3/C.4 spec written after that.
+- **C.1 + C.2** ✅ DONE 2026-05-05 (`Docs/Specs/Completed/controls_c_fix/`). Phase A landed: stop-check tolerance window (`stopEpsilon = stopThresh × 0.05`) in both `RunRollPhase` + `RunPuttPhase`; `putt.csv` Green k 0.10→0.50, GreenCollar 0.14→0.40; `surfaces.csv` CartPath 0.06→0.30; 5 new EditMode tests; **203/203 PASS** bit-exact gate held. Pipeline ran end-to-end (implementer → self-reviewer FAIL iter 1 → implementer redo → reviewer PASS option a → Cesar approve). Predecessor diagnosis: `Docs/Specs/Completed/controls_c_diagnosis/`. Two Quick follow-ups also DONE: (1) added 4 `[ShotExit]` `DiagShotLogger` calls at BallSimulation.cs phase exits; (2) baked physics-lab capture rule into `CLAUDE.md` (`mcp__ai-game-developer__screenshot-game-view` does NOT refresh in same script-execute scope; mandate `CaptureHelper.SnapAtEndOfFrameAndPause` for at-rest evidence). Notion entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f) flipped to **Done**, Closed=2026-05-05.
+- **C.5** — fpMath.Sqrt convergence repair. Was originally framed as "velocity cap diagnostic" but adversarial review revealed the 64 m/s cap was a Newton-Raphson early-exit bug returning the power-of-2 initial guess, not a real velocity cap. ✅ DONE 2026-05-05 (`Docs/Specs/Completed/controls_d_velocity_cap_diagnosis/`). Replaced `fpMath.Sqrt` body with libfixmath digit-by-digit shift-and-subtract port (single-pass int64). 209 PASS + 1 IGNORED tripwire pointing at controls_e for the unmasked lift-LUT issue. Notion [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6) flipped Done.
+- **C.7** — Aero lift overlay calibration pass (Layer 2). Two-layer architecture frame established with Cesar 2026-05-05: Layer 1 = real physics (Bearman-Harvey 1976) kept faithful in valid range; Layer 2 = corner-case overlay tuning past published-valid range. ✅ DONE 2026-05-05 (`Docs/Specs/Completed/controls_e_aero_overlay_pass/`). Lift overlay m40=0.850, smoothstep blend S∈[0.25, 0.35], iron/wedge errors all within ±10%. New `Docs/Physics/CALIBRATION_METHODOLOGY.md` documents the two-layer pattern. Notion [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) flipped Done. Lesson K (unit-mismatch, Mars Climate Orbiter parallel) added to `Docs/Diagnostics/PIPELINE_LESSONS.md`.
+- **C.8** — Drag LUT calibration audit (driver carry blocker). NEXT after Cesar's signal. Driver carries −12.7% short of Trackman 275yd target at S=0.08 (Bearman-Harvey valid range — lift overlay correctly excludes by design). Suspect: Cd=0.23 floor at v≥30 m/s likely too high vs supercritical-Re golf-ball Cd ~0.18–0.22. Notion [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c), P1 Queued. Definition-of-done: removing `[Ignore]` from `Aero_Driver_KnownPending_LayerOneAudit` (gate goes 211 PASS + 0 IGNORED).
+- **C (Phase B — Fairway/Rough/etc tuning).** Notion `35631e0e-9a36-8102-b217-d00dac3c3d92`. Queued; lands when observation numbers from `controls_c_fix` Phase A's tests give us captured values. Spec written then.
+- **fpMath.Cos/Sin range-reduction repair (Phase B of fpMath).** Notion [`35731e0e-9a36-8132-96e4-cc27c4d2a734`](https://www.notion.so/35731e0e9a36813296e4cc27c4d2a734). Queued; lands after Loop v1 — quieter ~12% bug than the Sqrt cap.
 
 **D — Gameplay Loop v1 (Roadmap §2, items 2a–2f). Single hole, lab-launched.** No menu wiring at this stage — `LabScaffold` (or a thin variant) remains the entry point. Scope per `Docs/Roadmap.md`:
 
@@ -111,26 +112,155 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — controls_c_fix Phase A (SPEC_READY 2026-05-05, awaiting implementer kickoff)
+## ✅ DONE — controls_d_velocity_cap_diagnosis (closed end-to-end 2026-05-05)
 
-**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_c_fix/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f) flipped to **In Progress** (P0 Critical, M 1–2 days, Order 125).
+**Spec archived:** `Docs/Specs/Completed/controls_d_velocity_cap_diagnosis/`. Pipeline ran the full loop: implementer (Sqrt fix + 6 fpMath tests + re-snapshots) → self-reviewer PASS → reviewer PASS → Cesar ESCALATE (carry numbers smelled wrong) → human Architect FAIL with single tripwire fail item → implementer redo (added `Aero_AllClubs_WithinTourCarryRange_PerSpinRegime` to `AeroCalibrationTripwireTests.cs`, `[Ignore]`-tagged) → self-reviewer PASS → reviewer PASS → Cesar approve. Test gate now **209 PASS + 1 IGNORED**. Notion entry [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6) flipped to **Done**, Closed=2026-05-05.
 
-**Phase A scope (this spec, locked, hardened by adversarial review 2026-05-05):** stop-check repair (tolerance window option 2 — `speedSq <= prevSpeedSq + epsilon`, **`epsilon = stopSpeed²·0.05`** [bumped from 0.01 after adversarial review showed 0.01 = 1 LSB at Green stopThresh, providing no real tolerance; 0.05 sized to absorb fp16.16 per-component rounding noise without admitting genuine 2°-slope re-acceleration], applied identically to both `RunRollPhase` lines 537–552 and `RunPuttPhase` lines 670–682) + narrow CSV tuning (`putt.csv` Green k 0.10→0.50, GreenCollar 0.14→0.40; `surfaces.csv` CartPath 0.06→0.30 — NO other surface touched) + 5 new EditMode tests in new file `Assets/Scripts/Physics/Tests/RollAndPuttTuningTests.cs` (Stimpmeter band-asserted with realistic target 3.58 m, LongPutt band-asserted, DriverFairwayRollOut observation-only with `[100, 400]` m bounds, CartPathStop band-asserted, StopCheckCorrectness structural with `samples.Count < 10000`). Bit-exact gate 198 → 203.
+**What landed:** `fpMath.Sqrt` body replaced with libfixmath digit-by-digit shift-and-subtract port (single-pass int64). Driver `|v|` now returns true ~103 m/s instead of capped 64; putter ~2.24 instead of capped 2.0. Bit-exact gate broke as expected; ~14 tests re-snapshotted (carries shifted to true post-Sqrt-fix values). One ignored tripwire test pointing at `controls_e_aero_overlay_pass` for the lift-LUT recalibration definition-of-done.
 
-**Adversarial review notes (2026-05-05, all applied to SPEC.md):** SPEC now includes (a) corrected C.2 root-cause narrative — fp-rounding noise + sub-LSB resistance, NOT slope re-acceleration as originally proposed in NOTES.md; (b) new "Model choice & literature alignment" section anchoring the viscous-vs-Coulomb modeling choice with citations to Kolkowitz/Holmes/Werner&Greig/Roh/Penner/Brown&McPhee; (c) cited USGA Stimpmeter source for k=0.50 calibration (Wikipedia + Stanford PH210); (d) honest framing of CartPath k=0.30 as playability-calibrated, not literature-calibrated. Web channels confirmed working: Wikipedia API, Google Scholar, Bing, primary-source URLs. (DDG blocks PowerShell UAs with anti-bot 202 — not used.)
+**Phase B (Cos/Sin) still queued:** [`35731e0e-9a36-8132-96e4-cc27c4d2a734`](https://www.notion.so/35731e0e9a36813296e4cc27c4d2a734) `C.6 — fpMath.Cos/Sin range-reduction repair (Phase B)`. Lands after Loop v1.
 
-**Architect working notes (informational):** `Docs/Specs/Active/controls_c_fix/NOTES.md` (moved with the folder). Realism check + three-options stop-check trade-off + locked decisions are there. Implementer reads SPEC.md as work definition; NOTES.md is context only.
+## ✅ DONE — controls_e_aero_overlay_pass (closed end-to-end 2026-05-05 19:57 JST)
 
-**Files touched (Phase A):** `BallSimulation.cs` (two stop-check blocks), `Assets/Resources/Physics/surfaces.csv` (CartPath row), `Assets/Resources/Physics/putt.csv` (Green + GreenCollar rows), new `Assets/Scripts/Physics/Tests/RollAndPuttTuningTests.cs`. No asmdef / scene / prefab / PuttConfig.Default / SurfaceConfig.Default changes. Existing 198 tests bit-exact preserved (tests use `*.Default` constants; CSVs only override at runtime via `PhysicsConfigLoader`).
+**Spec archived:** `Docs/Specs/Completed/controls_e_aero_overlay_pass/`. Pipeline ran the full loop including iteration 1 → IMPLEMENTER_BLOCKED escalation → architect FAIL with three items → implementer iteration 2 → self-reviewer PASS → reviewer PASS → Cesar approve. Test gate now **210 PASS + 1 IGNORED** (211 total). Notion entry [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) flipped to **Done**, Closed=2026-05-05.
 
-**Phase B queued (separate Notion entry):** [`35631e0e-9a36-8102-b217-d00dac3c3d92`](https://www.notion.so/35631e0e9a368102b217d00dac3c3d92) — `C — Fairway/Rough/etc tuning`. Opens after Phase A's observation-only tests give us captured numbers for Fairway/Rough/etc. Spec written then.
+**What landed:**
+- New `aero_lift_overlay.csv` with m40=0.850 (architect predicted [0.80, 0.90] band; landed mid-band).
+- Lift overlay seam in `AeroModel.cs` with `BlendOverlay` smoothstep helper (S∈[0.25, 0.35]).
+- New `AeroConfig` fields `LiftOverlay` + `UseLiftOverlay`; `PhysicsConfigLoader.LoadLiftOverlay()` mirroring `LoadLiftLut()` pattern.
+- New `Assets/Scripts/Editor/Physics/AeroCalibrationHarness.cs` with both CLI + `MenuItem("GOLFIN/Physics/Run Aero Calibration Sweep")` surfaces.
+- Tripwire split into two tests: active `Aero_MidHighSpinClubs_WithinTourCarryRange` (PASS for iron7/iron9/PW) + `[Ignore]`-tagged `Aero_Driver_KnownPending_LayerOneAudit` referencing `controls_f`.
+- New `Docs/Physics/CALIBRATION_METHODOLOGY.md` with all 8 sections (two-layer architecture, Trackman targets, Bearman-Harvey valid range, harness usage, smoothstep math, when-to-recalibrate, Layer-1 sanctity rule, what-to-do-when-in-BH-range-club-misses).
+- Layer-status headers added to `aero_lift_lut.csv` (Layer 1), `aero_drag_lut.csv` (Layer 1, audit pending), `surfaces.csv` (Layer 2), `putt.csv` (Layer 2).
+- Final per-club errors: iron7 −0.1%, iron9 −6.2%, PW −5.6% — all within ±10%. Driver −12.7% intentionally tracked in controls_f.
 
-**Out of scope, deferred to follow-up specs:**
-- **C.5 — Velocity cap diagnostic** (the 64 m/s mystery). Notion [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6). Run after C.1+C.2 fix lands.
-- **C — Fairway/Rough/etc tuning (Phase B)**. Notion [`35631e0e-9a36-8102-b217-d00dac3c3d92`](https://www.notion.so/35631e0e9a368102b217d00dac3c3d92). Opens after Phase A.
-- **C.3 / C.4 — Surface-aware club picker rules.** Notion `35531e0e-9a36-811b-b5a6-c93e62e3ef25` and `35531e0e-9a36-81a4-9060-d1602ee11b5d`. Same surface read drives both — wait until classifier behavior is settled.
+**Lesson K written** to `Docs/Diagnostics/PIPELINE_LESSONS.md` documenting the unit-mismatch failure mode (Mars Climate Orbiter parallel; architect picked METERS table values from Trackman PDF mistaking them for YARDS).
 
-**Roadmap reference:** `Docs/Roadmap.md` §1 closes after this lands (Phase A = the closer; Phase B is fine-tuning that doesn't gate Loop v1). Then §2 (Loop v1) opens.
+**`controls_f` is the natural next move:** Notion [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) `C.8 — Drag LUT calibration audit (driver carry blocker)` Queued, P1 High. Definition of done: removing `[Ignore]` from `Aero_Driver_KnownPending_LayerOneAudit` test (gate becomes 211 PASS + 0 IGNORED). Architect to write SPEC + NOTES when ready.
+
+## 📜 HISTORY — controls_e_aero_overlay_pass kicked back to implementer (ARCHITECT_REVIEW_FAIL 2026-05-05)
+
+**STATUS flipped from `IMPLEMENTER_BLOCKED` → `ARCHITECT_REVIEW_FAIL`** by human Architect after escalation review. Three FAIL items, all tightly scoped. Architect's full response in `Docs/Specs/Active/controls_e_aero_overlay_pass/ARCHITECT_REVIEW.md` (newly written for this iteration since pipeline reviewer didn't run).
+
+**FAIL summary:**
+1. **Correct the Trackman target values.** Architect picked unit-mismatched values from the Trackman PDF (METERS table mistaken for YARDS table). Real values verified against two independent sources: driver 290→**275**, 7-iron 175→**172**, 9-iron 145→**148**, PW 115→**136** (all yards). New `Docs/Diagnostics/PIPELINE_LESSONS.md` Lesson K written documenting the failure mode (Mars Climate Orbiter parallel).
+2. **Re-tune the lift overlay against corrected targets.** The implementer's m40=0.55 was driven by chasing wrong (too-low) PW target of 115 instead of real 136. With correct targets, overlay should relax upward to ~m40=0.80–0.90 — a much smaller correction that respects more of the Bearman-Harvey curve. Healthier outcome.
+3. **Split the tripwire test in two.** Cesar locked: "don't want other clubs braking the 10% rule" — so unified ±15% gate is rejected. Driver gets its own `[Ignore]`-tagged test pointing at controls_f. Irons + wedge stay tight at ±10% in `Aero_MidHighSpinClubs_WithinTourCarryRange`. Architecture stays unified; one overlay, one blend, one methodology. Driver carve-out is a TEST split, not a system split.
+
+**Architecture decision locked with Cesar (2026-05-05):** Driver miss is a Layer-1 drag-LUT issue (Cd=0.23 floor at v≥30 m/s likely too high vs supercritical-Re golf-ball Cd ~0.18–0.22). Layer-2 lift overlay correctly excludes the S≤0.25 regime by design — the gap belongs to controls_f, not controls_e. CALIBRATION_METHODOLOGY.md gets a new section: "What to do when an in-Bearman-Harvey-valid-range club misses target" — answer: it's a Layer-1 issue, separate audit task, NOT an overlay extension. This preserves the Layer 1/Layer 2 boundary going forward.
+
+**Notion:** controls_f entry [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) escalated **P3 → P1**, renamed "C.8 — Drag LUT calibration audit (driver carry blocker)". SPEC writing scheduled by architect once controls_e closes end-to-end.
+
+**Path to PASS after this addendum:** implementer corrects targets → re-runs calibration (expected ~30 min) → splits tripwire → adds methodology section → documents Trackman citation properly per Lesson K → self-reviewer → reviewer subagent → Cesar approve. Final gate: **210 PASS + 1 IGNORED** (driver test ignored pending controls_f).
+
+## 📜 HISTORY — controls_e_aero_overlay_pass implementer escalation (IMPLEMENTER_BLOCKED 2026-05-05)
+
+(Implementer correctly identified that driver cannot be calibrated by lift overlay because it sits at S=0.08 inside Bearman-Harvey valid range. Diagnosis was right — architecture decision needed from human Architect to handle the known Layer-1 miss. See "NEXT" block above for resolution. Original IMPLEMENTER_REPORT.md preserved at `Docs/Specs/Active/controls_e_aero_overlay_pass/IMPLEMENTER_REPORT.md`.)
+
+---
+
+## 📜 HISTORY — controls_e_aero_overlay_pass initial SPEC writing (SPEC_READY 2026-05-05)
+
+(SPEC was written, implementer ran iteration 1, escalated mid-pipeline to IMPLEMENTER_BLOCKED — see HISTORY blocks above for that escalation and the architect's FAIL response. SPEC content preserved below for retrospective.)
+
+**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_e_aero_overlay_pass/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) flipped to **In Progress** (P1 High, M 1–2 days, Order 150).
+
+**Phase A scope (locked, 5 questions answered 2026-05-05):**
+- **Trackman year:** Trackman 2024 published Tour averages, adjusted with 2025 trend updates from Trackman's blog where applicable. Trackman 2026 has NOT published a full annual report yet; implementer sources the latest available at implementation time and cites URL + date.
+- **Calibration set:** 8 clubs (driver, 3-wood, 5–9 irons, PW)
+- **Tolerance:** ±10% per club (matches the tripwire test from `controls_d`)
+- **Harness UI:** CLI-callable from Code's pipeline AND `MenuItem("GOLFIN/Physics/Run Aero Calibration Sweep")` for manual spot-checks. Both surfaces invoke the same `AeroCalibrationHarness.RunCalibrationSweep()` method.
+- **Overlay format:** Flat CSV (`spin_parameter,cl_multiplier,notes`)
+
+**What this implements:** A new `aero_lift_overlay.csv` applies a multiplicative correction to `Cl` only past the Bearman-Harvey valid range (S > 0.30) where the LUT is currently extrapolating. Smoothstep blend across `S ∈ [0.25, 0.35]` (formula `t² × (3 − 2t)`) prevents seam discontinuity. In Layer-1-valid territory (S ≤ 0.25), overlay multiplier is forced to 1.0 — Bearman-Harvey is trusted as-is. New `LiftOverlay` field on `AeroConfig`, new `LoadLiftOverlay()` in `PhysicsConfigLoader`, new overlay seam in `AeroModel.ComputeAeroForce` with `BlendOverlay` private helper.
+
+**Critical deliverable beyond the overlay:** `Docs/Physics/CALIBRATION_METHODOLOGY.md` (NEW) documents the two-layer architecture frame (Layer 1 = real physics, Layer 2 = corner-case overlay), Trackman calibration target reference, Bearman-Harvey valid range, harness usage, smoothstep math, "when to recalibrate" triggers, and the Layer-1-sanctity rule. Plus top-of-file Layer-status headers added to `aero_lift_lut.csv` (Layer 1), `aero_drag_lut.csv` (Layer 1, audit pending), `surfaces.csv` (Layer 2), `putt.csv` (Layer 2). The doc is the durable deliverable; overlay multipliers are just the first instantiation.
+
+**Calibration loop:** harness runs sim with Trackman launch params for each calibration club, prints per-club error table; iterative tuning of `aero_lift_overlay.csv` multipliers until all 8 within ±10% (~30–40 min implementer time, expected 4–8 iterations). Then `[Ignore]` removed from `Aero_AllClubs_WithinTourCarryRange_PerSpinRegime`. Final test gate: **210/210 PASS** (209 pre-existing + tripwire now-enabled).
+
+**Files this task touches:** new `aero_lift_overlay.csv` + new `AeroCalibrationHarness.cs` + new `CALIBRATION_METHODOLOGY.md`; modified `AeroConfig.cs` / `AeroModel.cs` / `PhysicsConfigLoader.cs` / `aero.csv` (one new row); header-only edits to 4 existing CSVs; one `[Ignore]` removal in `AeroCalibrationTripwireTests.cs`. No asmdef / scene / prefab / `BallSimulation.cs` / `fpMath.cs` / 209 pre-existing test files changed.
+
+**Critical risk:** if the 209 pre-existing tests fail after the overlay is enabled, that means the overlay is leaking into Layer-1-valid territory (likely cause: `BlendOverlay` not returning exactly `fp.One` for `spinParam ≤ 0.25`). SPEC.md § "Mid-task escalation paths" handles it via `IMPLEMENTER_BLOCKED`.
+
+**Sibling P3 task** [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) `C.8 — Drag LUT calibration audit (Layer 2 sibling)` Queued, runs after this lands.
+
+**Roadmap reference:** `Docs/Roadmap.md` §1 (Putter P1) closing follow-up. Does NOT gate §2 (Loop v1) start. Recommended to land before Loop v1 *playtest* feel.
+
+---
+
+## 📜 HISTORY — controls_d_velocity_cap_diagnosis kicked back to implementer (ARCHITECT_REVIEW_FAIL 2026-05-05)
+
+(Final state of this iteration: implementer added the `[Ignore]`-tagged tripwire test, pipeline closed end-to-end 2026-05-05. See "DONE" block above. Original FAIL kickoff details preserved below for retrospective.)
+
+**Status flipped from `ARCHITECT_REVIEW_PASS` → `ARCHITECT_REVIEW_ESCALATE` → `ARCHITECT_REVIEW_FAIL`** by human Architect after Cesar walked the post-fix carry numbers and surfaced the lift-LUT issue. Sqrt fix itself is correct; iron/wedge carries 10–46% above Tour-pro is the masked-by-Sqrt-bug lift-LUT extrapolation issue. Adversarial review (PGA TOUR 2K23 dev blog, Bearman-Harvey 1976 paper, Cornell SimScience golf physics, Quora deterministic-physics-engines, libfixmath, IronWarrior IL2CPP determinism repo) confirmed the lift LUT extrapolates Bearman-Harvey 1976 data past its valid range S∈[0.03, 0.30] — our wedges live at S≈0.45 in pure extrapolation territory.
+
+**Single fail item (small scope-extension):** add `Aero_AllClubs_WithinTourCarryRange_PerSpinRegime` tripwire test to `Assets/Scripts/Physics/Tests/AeroCalibrationTripwireTests.cs` (NEW file). Tagged `[Ignore("Awaiting controls_e_aero_overlay_pass calibration. See ESCALATION_TO_ARCHITECT.md.")]`. Asserts each of 4 clubs (driver, iron7, iron9, pwedge) carries within ±10% of Trackman composite Tour-pro target. Test gate goes 209→210 with 209 PASS + 1 IGNORED. Full fail item details in `ARCHITECT_REVIEW.md` § "ADDENDUM — Human Architect override."
+
+**Path to PASS:** implementer adds tripwire → self-reviewer confirms `[Ignore]` tag + message format → reviewer subagent re-runs review → Cesar approves.
+
+## 📜 HISTORY — controls_e_aero_overlay_pass queued plan (drafted 2026-05-05, now in Active)
+
+(Status: locked + moved to Active 2026-05-05 with all 5 open questions answered. See "NEXT" block above for current work definition. Original Queued plan preserved below for retrospective.)
+
+**Notion:** [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) — `C.7 — Aero lift overlay calibration pass (Layer 2)` — P1 High, M (1–2 days), Order 150, Queued.
+
+**Architecture frame (locked with Cesar 2026-05-05):** Two-layer aero model. Layer 1 = real physics (Bearman-Harvey 1976 transcription, kept faithful in published valid range S∈[0.03, 0.30]). Layer 2 = corner-case overlay (multiplicative `aero_lift_overlay.csv` applied past Bearman-Harvey valid range OR where outcomes diverge from Trackman Tour-pro reality). Smoothstep blend across S∈[0.25, 0.35] prevents seam discontinuity. Matches AAA-studio practice (PGA TOUR 2K23 dev blog: "refine the extremes"; Quora deterministic-physics consensus: "tunable for feel").
+
+**Real-world data anchors:**
+- **PRIMARY:** Trackman composite PGA Tour averages — 8 calibration clubs (driver, 3-wood, 5–9 irons, PW). Carry targets in NOTES.md table (e.g., 7-iron 172yd, 9-iron 148yd, PW 136yd). Tolerance ±10% per club.
+- **CROSS-CHECK:** USGA equipment-test data on Cd/Cl as functions of S, Re. Used to verify Bearman-Harvey at low S still defensible.
+- **LAYER 1 TRUTH:** Bearman-Harvey 1976. Valid range S∈[0.03, 0.30], Re∈[5e4, 2e5], v≥13 m/s.
+- **TERTIARY:** Aoki 2010 / Libii 2012 (extends to supercritical Re, reverse-Magnus). NOT planned for ingestion; future option.
+
+**Calibration loop (the meaty part):** Build `AeroCalibrationHarness.cs` (menu item, NOT a regular test). For each calibration club, run `BallSimulation.Simulate` with Trackman launch params, compute carry, compare to target. Iteratively tune `aero_lift_overlay.csv` multipliers until all clubs within ±10%. Expected 4–8 iterations, ~30–40 minutes total implementer time. Then enable the tripwire test from `controls_d` (remove `[Ignore]`). Definition-of-done: tripwire goes from IGNORED to PASS, test gate becomes 210/210.
+
+**New deliverables:** `Docs/Physics/CALIBRATION_METHODOLOGY.md` (NEW) documents two-layer architecture + harness + "when to recalibrate" triggers. Top-of-file headers added to four Layer-2 CSVs (aero_lift_overlay, surfaces, putt + reaffirm aero_lift_lut as Layer 1).
+
+**Out of scope (deferred):** Drag LUT audit (`controls_f_drag_calibration_audit`, P3 Queued, Notion `35731e0e-9a36-818d-9a4c-ee8dd9ca511c`) — may report "no overlay needed" since drag is implicitly co-tuned via the lift overlay. 2D Cl(S, Re) LUT — over-engineering. Aoki/Libii Layer-1 extension — future option only.
+
+**5 open questions for Cesar (lock before SPEC writing):** (1) Trackman year, (2) 8-club vs 12-club calibration set, (3) tolerance ±5/10/15%, (4) harness UI location, (5) flat CSV vs Bezier overlay. Architect leans: most-recent year, 8-club, ±10%, dedicated menu item, flat CSV.
+
+**Sequencing:** controls_d (Sqrt + tripwire) → controls_e (this) → Loop v1 §2a (Ball state machine). Phase A is NOT on Loop v1's critical path; Phase E is also not strictly blocking but should land before Loop v1 playtest feel.
+
+---
+
+## 📜 HISTORY — controls_d_velocity_cap_diagnosis Phase A (SPEC_READY → ARCHITECT_REVIEW_FAIL, 2026-05-05)
+
+**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_d_velocity_cap_diagnosis/SPEC.md` — implementer ran the full pipeline; reviewer subagent issued PASS; Cesar overrode to ESCALATE; human Architect overrode to FAIL with single tripwire-test fail item. See “NEXT” block above for current state.
+
+**Phase A scope (this spec, locked, hardened by adversarial review 2026-05-05):** Replace the entire body of `fpMath.Sqrt` with a port of libfixmath's `fix16_sqrt` digit-by-digit shift-and-subtract algorithm (Wikipedia "Methods of computing square roots → Binary numeral system"), single-pass int64 version. New `Assets/Scripts/Physics/Tests/fpMathTests.cs` with 6 Sqrt assertions including regression guards for the captured 64 m/s and 2 m/s outputs. Re-snapshot affected EditMode tests (203 → 209 expected, with some subset of the original 203 having their expected values updated). Add a warning section at the top of `Docs/Physics/PHYSICS_TUNING_TARGETS.md` noting the carry/putt numbers were calibrated against the broken sqrt and need re-validation when convenient (not blocking).
+
+**Adversarial review notes (2026-05-05, all in NOTES.md):** SPEC includes (a) bug analysis verified via independent Newton-Raphson convergence proof + cap-value calculation matching captured logs for both putter and driver shots; (b) algorithm decision verified against canonical libfixmath source + Wikipedia + Hacker's Delight (digit-by-digit chosen over Newton-fix and System.Math.Sqrt for structural robustness + integer-only-determinism preservation); (c) IronWarrior IL2CPP determinism tests confirmed System.Math.Sqrt is OK on iOS/Android but rejected to preserve project contract; (d) stale comment in current Sqrt body flagged as evidence of previous misdiagnosis ("loop only runs 20" — actually runs 40, but bug is structural in early-exit). Web sources used: PetteriAimonen/libfixmath, mitsuhiko/libfixmath, en.wikipedia.org/wiki/Methods_of_computing_square_roots, IronWarrior/UnityCrossPlatformDeterministicFloats.
+
+**Architect working notes (informational):** `Docs/Specs/Active/controls_d_velocity_cap_diagnosis/NOTES.md` — full diagnosis journal + decision tree (Path A/B/B-narrow/C) + adversarial review section. Implementer reads SPEC.md as work definition; NOTES.md is context only.
+
+**Files touched (Phase A):** `Assets/Scripts/Physics/Math/fpMath.cs` (Sqrt body only), new `Assets/Scripts/Physics/Tests/fpMathTests.cs`, subset of `Assets/Scripts/Physics/Tests/*.cs` (re-snapshot only, no logic change), new top section in `Docs/Physics/PHYSICS_TUNING_TARGETS.md`. No asmdef / scene / prefab / CSV changes.
+
+**Phase B queued (separate Notion entry):** [`35731e0e-9a36-8132-96e4-cc27c4d2a734`](https://www.notion.so/35731e0e9a36813296e4cc27c4d2a734) — `C.6 — fpMath.Cos/Sin range-reduction repair (Phase B)`. Lands AFTER Loop v1; not on its critical path. Same Taylor accuracy bug surfaced in the same controls_c_diagnosis captures (~12% error at angles near ±π). Fix: extend ReduceAngle to [-π/2, π/2] using cos(π−x) / sin(π−x) identities. Same fpMathTests.cs file extends with Cos/Sin assertions in that phase.
+
+**Critical risk:** the bit-exact 203/203 EditMode gate WILL break when this lands. SPEC.md Step 4 has the re-snapshot protocol. Implementer escalates as `IMPLEMENTER_BLOCKED` if any test produces NaN, Infinity, or sign-flipped values (genuine regression rather than re-snapshot territory).
+
+**Roadmap reference:** This task is a closing follow-up under `Docs/Roadmap.md` §1 (Putter P1) cluster. Does NOT gate §2 (Loop v1) start — Loop v1 spec writing can begin in parallel. Phase B is fully off Loop v1's critical path.
+
+---
+
+## ✅ DONE — controls_c_fix Phase A (closed 2026-05-05)
+
+**Spec archived:** `Docs/Specs/Completed/controls_c_fix/`. Pipeline ran end-to-end: implementer → self-reviewer (BACK_TO_IMPLEMENTER iter 1 on false-PASS lab-shot evidence) → implementer redo → reviewer (ARCHITECT_REVIEW_PASS option a) → Cesar approve. **203/203 PASS** bit-exact gate held.
+
+**What landed:** stop-check tolerance window (`stopEpsilon = stopThresh × 0.05`) in both `RunRollPhase` + `RunPuttPhase`; `putt.csv` Green k 0.10→0.50, GreenCollar 0.14→0.40; `surfaces.csv` CartPath 0.06→0.30; 5 new EditMode tests in `RollAndPuttTuningTests.cs`. Notion entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f) flipped to **Done**, Closed=2026-05-05.
+
+**Two Quick follow-ups also DONE in same session:**
+1. Added 4 `[ShotExit]` `DiagShotLogger` calls at `BallSimulation.cs` `RunRollPhase` / `RunPuttPhase` exits to close the diagnostic-logger gap surfaced during lab validation.
+2. Baked physics-lab capture rule into `CLAUDE.md` Screenshots section: `mcp__ai-game-developer__screenshot-game-view` does NOT refresh between calls in same script-execute scope; future physics-lab specs MUST mandate `CaptureHelper.SnapAtEndOfFrameAndPause` for at-rest evidence.
+
+**Roadmap impact:** `Docs/Roadmap.md` §1 (Putter P1) is now fully closed. §2 (Loop v1) is the next umbrella.
+
+**Phase B queued (separate Notion entry):** [`35631e0e-9a36-8102-b217-d00dac3c3d92`](https://www.notion.so/35631e0e9a368102b217d00dac3c3d92) — `C — Fairway/Rough/etc tuning`. Fine-tuning that doesn't gate Loop v1; opens when we have observation numbers from Phase A's tests to feed it.
+
+**Other follow-ups now actionable** (no longer blocked by Phase A):
+- **C.5 — Velocity cap diagnostic** (the 64 m/s mystery). Notion [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6). Diagnostic micro-spec, instrumentation only, mirrors `controls_c_diagnosis` pattern.
+- **C.3 / C.4 — Surface-aware club picker rules.** Notion `35531e0e-9a36-811b-b5a6-c93e62e3ef25` and `35531e0e-9a36-81a4-9060-d1602ee11b5d`. Same surface read drives both — likely lands in one PR.
 
 ---
 

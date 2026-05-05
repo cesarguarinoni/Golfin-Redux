@@ -1,4 +1,4 @@
-using Golfin.Physics.Math;
+using Golfin.Physics.Math; // COMPILE_TRIGGER_v2
 
 namespace Golfin.Physics
 {
@@ -24,6 +24,11 @@ namespace Golfin.Physics
         public bool UseLiftLut;
         public fp SpinDecayRate;    // 1/s, exponential spin decay; 0=no decay
 
+        // Layer 2 — corner-case overlay (controls_e_aero_overlay_pass).
+        // Cl multiplier(S). When IsValid=false OR UseLiftOverlay=false, no-op (multiplier=1.0).
+        public CoefficientLut LiftOverlay;
+        public bool UseLiftOverlay;
+
         public static AeroConfig Default => new AeroConfig
         {
             AirDensity          = fp.FromFloat(1.225f),
@@ -34,10 +39,12 @@ namespace Golfin.Physics
             SpinRateReference   = fp.FromFloat(300f),
             LiftMaxMultiplier   = fp.FromFloat(1.5f),
             BallRadius          = fp.FromFloat(0.02135f),
-            // DragLut / LiftLut default-constructed (IsValid=false) — constant-mode fallback
+            // DragLut / LiftLut / LiftOverlay default-constructed (IsValid=false) — constant-mode fallback
             UseDragLut          = false,
             UseLiftLut          = false,
             SpinDecayRate       = fp.FromFloat(0.02f),
+            UseLiftOverlay      = false,
+            // LiftOverlay default-constructed (IsValid=false) — overlay is opt-in via CSV
         };
 
         // Vacuum variant — Cd=0, Cl=0. Degenerates to gravity-only integration.
@@ -55,6 +62,8 @@ namespace Golfin.Physics
             UseDragLut          = false,
             UseLiftLut          = false,
             SpinDecayRate       = fp.Zero,
+            UseLiftOverlay      = false,
+            // LiftOverlay default-constructed (IsValid=false)
         };
     }
 }
