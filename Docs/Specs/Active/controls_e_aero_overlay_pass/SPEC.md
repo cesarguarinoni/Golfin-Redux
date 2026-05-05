@@ -33,15 +33,15 @@ Naming this boundary is the point. It's the universal pattern in deterministic-p
 
 | Q | Lock |
 |---|---|
-| Trackman year | **2025 (most recent published)** |
+| Trackman year | **Trackman 2024 published Tour averages, adjusted with 2025 trend updates from Trackman's blog where applicable.** Trackman 2026 has NOT published a full annual report at task time (verified 2026-05-05; Trackman's most recent comprehensive Tour-averages publication is the March 2025 update which references 2024 PGA Tour season data, with 2025 ball-speed/spin trend notes in subsequent blog posts). The implementer sources the latest Trackman publication available at implementation time and cites the exact URL + publication date. If Trackman publishes a 2025 or 2026 full annual between now and implementation, use that instead. |
 | Calibration set | **8 clubs:** driver, 3-wood, 5-iron, 6-iron, 7-iron, 8-iron, 9-iron, PW |
 | Tolerance | **±10% per club** (matches the tripwire test from `controls_d`) |
-| Harness UI | **CLI-callable from Code's pipeline** (deterministic, captured in IMPLEMENTER_REPORT) **AND** a `MenuItem("GOLFIN/Physics/Run Aero Calibration Sweep")` for manual spot-checks. Both surfaces invoke the same harness method. |
+| Harness UI | **CLI-callable from Code's pipeline as the primary surface** (deterministic iteration loop captured in IMPLEMENTER_REPORT) **AND** a `MenuItem("GOLFIN/Physics/Run Aero Calibration Sweep")` for Cesar's manual spot-checks. Both surfaces invoke the same `AeroCalibrationHarness.RunCalibrationSweep()` method. |
 | Overlay format | **Flat CSV** with one multiplier per spin-parameter row. Same parsing pattern as `aero_lift_lut.csv`. |
 
 ## Reference
 
-- **Trackman PGA Tour 2025 averages.** Per-club ball-speed / launch-angle / spin-rate / carry. The implementer locks the exact 8-row table from Trackman's 2025 published numbers (or, if not available, from the latest Trackman annual; cite which year). The values in NOTES.md are an architect-time approximation — they need verification before the harness runs.
+- **Trackman PGA Tour averages.** Per-club ball-speed / launch-angle / spin-rate / carry. The implementer locks the exact 8-row table from the latest Trackman publication available at implementation time, citing URL + publication date. As of architect time (2026-05-05), Trackman has not yet published a 2026 full annual; most recent comprehensive set is the March 2025 update (covering 2024 PGA Tour season) with 2025 trend notes scattered across later blog posts. The implementer pulls from `https://www.trackman.com/blog/golf/introducing-updated-tour-averages` and `https://blog.trackmangolf.com/trackman-average-tour-stats/` (and any newer Trackman-published pages found at implementation time). The values in NOTES.md are an architect-time approximation — they need verification before the harness runs.
 - **Bearman-Harvey 1976.** Already the basis of `aero_lift_lut.csv`. Published valid range: S ∈ [0.03, 0.30], Re ∈ [5×10⁴, 2×10⁵], v ≥ 13 m/s. Cited at top of `aero_lift_lut.csv` (NEW header, Step 7).
 - **`controls_d_velocity_cap_diagnosis`** — predecessor task. The `Aero_AllClubs_WithinTourCarryRange_PerSpinRegime` tripwire test is in `Assets/Scripts/Physics/Tests/AeroCalibrationTripwireTests.cs`. This spec removes its `[Ignore]` attribute as the final step.
 - **`Assets/Scripts/Physics/Core/CoefficientLut.cs`** — the existing piecewise-linear LUT struct. Reused unchanged for the overlay.
@@ -73,9 +73,14 @@ Naming this boundary is the point. It's the universal pattern in deterministic-p
 
 ## Implementation
 
-### Step 0 — Lock the Trackman 2025 calibration table
+### Step 0 — Lock the Trackman calibration table
 
-Open Trackman's 2025 PGA Tour averages publication (or the equivalent industry reference if Trackman 2025 is not published yet at implementation time — cite which source and year is used). Lock the following 8 rows. Use Trackman's native units in the source-of-truth table:
+Fetch the latest Trackman PGA Tour averages publication. Recommended starting URLs:
+- `https://www.trackman.com/blog/golf/introducing-updated-tour-averages`
+- `https://blog.trackmangolf.com/trackman-average-tour-stats/`
+- `https://www.trackman.media/tour-averages` (PDF mirror)
+
+If any newer Trackman publication exists (a 2025 or 2026 full annual), use it instead and cite it. Lock the following 8 rows. Use Trackman's native units in the source-of-truth table:
 
 ```
 Club     | BallSpd(mph) | Launch(°) | Spin(rpm) | Carry(yd)
@@ -90,9 +95,9 @@ Driver   |     ?        |     ?     |     ?     |     ?
 PW       |     ?        |     ?     |     ?     |     ?
 ```
 
-**The implementer fills this table in `IMPLEMENTER_REPORT.md` § "Calibration targets" with the actual sourced values, citing the URL or document name.** The architect-time approximation in `NOTES.md` is a starting reference but MUST be verified.
+**The implementer fills this table in `IMPLEMENTER_REPORT.md` § "Calibration targets" with the actual sourced values, citing the URL or document name + publication date.** The architect-time approximation in `NOTES.md` is a starting reference but MUST be verified against Trackman's actual published numbers.
 
-If Trackman 2025 numbers differ from `NOTES.md` by more than 5% on any club, the implementer flags it but proceeds with the verified Trackman 2025 values. If they cannot be verified at all (e.g., Trackman has not published yet), use the most recent published year and cite it.
+If the sourced Trackman numbers differ from `NOTES.md` by more than 5% on any club, the implementer flags it but proceeds with the verified Trackman values. The Trackman publication date and URL go in the IMPLEMENTER_REPORT and propagate into `CALIBRATION_METHODOLOGY.md` (Step 9) as the canonical citation.
 
 ### Step 1 — Create `aero_lift_overlay.csv`
 
@@ -440,11 +445,12 @@ Each item below MUST be marked `PASS` or `FAIL` with a one-sentence justificatio
 
 ## Mid-task escalation paths
 
-- **If Trackman 2025 numbers are not published / cannot be sourced:** use the most recent published year, cite which one in IMPLEMENTER_REPORT, proceed.
+- **If a newer Trackman publication is found between now and implementation:** use the newest. Cite it.
+- **If Trackman publication links are stale or moved:** search for the latest Trackman tour-averages page; cite whatever URL is reachable + publication date. Do NOT use third-party reproductions of Trackman data unless the original is unreachable.
 - **If a club cannot be brought within ±10% by single-row overlay adjustment:** add a new row at the worst-error club's S value, re-iterate. If after adding 2 rows the club still drifts, escalate as `IMPLEMENTER_BLOCKED` — may need a non-multiplicative correction (additive bias) or a smoothstep window adjustment.
 - **If the smoothstep seam check shows a kink:** widen window to `[0.20, 0.40]` and re-run Step 7. If still kinked, escalate.
 - **If the 209 pre-existing tests fail after the overlay is enabled:** STOP. The overlay is leaking into Layer-1-valid territory. Likely cause: `BlendOverlay` not returning exactly `fp.One` for `spinParam ≤ 0.25`. Set STATUS to `IMPLEMENTER_BLOCKED`.
-- **If `Editor/` folder doesn't exist under `Physics/`:** create it. Add an `.asmdef` if needed mirroring the existing physics editor pattern (check `Assets/Scripts/Physics/Editor/Golfin.Physics.Editor.asmdef` if it exists). If creating an asmdef is needed, that's escalation territory — surface the question.
+- **If the Editor folder doesn't exist** under `Assets/Scripts/Physics/`: create it AND add an asmdef mirroring the existing physics editor pattern (check `Assets/Scripts/Physics/Editor/Golfin.Physics.Editor.asmdef` if it exists; if not, create `Golfin.Physics.Editor.asmdef` referencing `Golfin.Physics.Runtime`, `Golfin.Physics.Core`, `Golfin.Physics.Stats`, and any UnityEditor module needed). This is the cleanest separation and matches existing `Golfin.Physics.*` asmdef organization. **Do this without escalating** — it's the canonical Unity pattern and avoids polluting the test asmdef with a non-test class.
 - **If MenuItem path conflicts with an existing menu:** check `GOLFIN/` namespace; if `Physics/` submenu exists, slot under it; otherwise create. Document the choice.
 
 ## Notion & roadmap administrivia (architect-side, NOT implementer's responsibility)

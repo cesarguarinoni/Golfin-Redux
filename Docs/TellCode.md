@@ -124,7 +124,7 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 **Spec written and folder moved to Active.** `Docs/Specs/Active/controls_e_aero_overlay_pass/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) flipped to **In Progress** (P1 High, M 1–2 days, Order 150).
 
 **Phase A scope (locked, 5 questions answered 2026-05-05):**
-- **Trackman year:** 2025 (most recent published; implementer sources and verifies)
+- **Trackman year:** Trackman 2024 published Tour averages, adjusted with 2025 trend updates from Trackman's blog where applicable. Trackman 2026 has NOT published a full annual report yet; implementer sources the latest available at implementation time and cites URL + date.
 - **Calibration set:** 8 clubs (driver, 3-wood, 5–9 irons, PW)
 - **Tolerance:** ±10% per club (matches the tripwire test from `controls_d`)
 - **Harness UI:** CLI-callable from Code's pipeline AND `MenuItem("GOLFIN/Physics/Run Aero Calibration Sweep")` for manual spot-checks. Both surfaces invoke the same `AeroCalibrationHarness.RunCalibrationSweep()` method.
