@@ -111,9 +111,41 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — controls_d_velocity_cap_diagnosis Phase A (SPEC_READY 2026-05-05, awaiting implementer kickoff)
+## 📌 NEXT — controls_d_velocity_cap_diagnosis kicked back to implementer (ARCHITECT_REVIEW_FAIL 2026-05-05)
 
-**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_d_velocity_cap_diagnosis/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6) renamed to **"C.5 — fpMath.Sqrt convergence repair (Phase A)"** and flipped to **In Progress** (P2 Medium, S half-day, Order 145).
+**Status flipped from `ARCHITECT_REVIEW_PASS` → `ARCHITECT_REVIEW_ESCALATE` → `ARCHITECT_REVIEW_FAIL`** by human Architect after Cesar walked the post-fix carry numbers and surfaced the lift-LUT issue. Sqrt fix itself is correct; iron/wedge carries 10–46% above Tour-pro is the masked-by-Sqrt-bug lift-LUT extrapolation issue. Adversarial review (PGA TOUR 2K23 dev blog, Bearman-Harvey 1976 paper, Cornell SimScience golf physics, Quora deterministic-physics-engines, libfixmath, IronWarrior IL2CPP determinism repo) confirmed the lift LUT extrapolates Bearman-Harvey 1976 data past its valid range S∈[0.03, 0.30] — our wedges live at S≈0.45 in pure extrapolation territory.
+
+**Single fail item (small scope-extension):** add `Aero_AllClubs_WithinTourCarryRange_PerSpinRegime` tripwire test to `Assets/Scripts/Physics/Tests/AeroCalibrationTripwireTests.cs` (NEW file). Tagged `[Ignore("Awaiting controls_e_aero_overlay_pass calibration. See ESCALATION_TO_ARCHITECT.md.")]`. Asserts each of 4 clubs (driver, iron7, iron9, pwedge) carries within ±10% of Trackman composite Tour-pro target. Test gate goes 209→210 with 209 PASS + 1 IGNORED. Full fail item details in `ARCHITECT_REVIEW.md` § "ADDENDUM — Human Architect override."
+
+**Path to PASS:** implementer adds tripwire → self-reviewer confirms `[Ignore]` tag + message format → reviewer subagent re-runs review → Cesar approves.
+
+## 📅 QUEUED — controls_e_aero_overlay_pass (data-anchored plan ready, NOTES.md drafted)
+
+**Notion:** [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) — `C.7 — Aero lift overlay calibration pass (Layer 2)` — P1 High, M (1–2 days), Order 150, Queued.
+
+**Architecture frame (locked with Cesar 2026-05-05):** Two-layer aero model. Layer 1 = real physics (Bearman-Harvey 1976 transcription, kept faithful in published valid range S∈[0.03, 0.30]). Layer 2 = corner-case overlay (multiplicative `aero_lift_overlay.csv` applied past Bearman-Harvey valid range OR where outcomes diverge from Trackman Tour-pro reality). Smoothstep blend across S∈[0.25, 0.35] prevents seam discontinuity. Matches AAA-studio practice (PGA TOUR 2K23 dev blog: "refine the extremes"; Quora deterministic-physics consensus: "tunable for feel").
+
+**Real-world data anchors:**
+- **PRIMARY:** Trackman composite PGA Tour averages — 8 calibration clubs (driver, 3-wood, 5–9 irons, PW). Carry targets in NOTES.md table (e.g., 7-iron 172yd, 9-iron 148yd, PW 136yd). Tolerance ±10% per club.
+- **CROSS-CHECK:** USGA equipment-test data on Cd/Cl as functions of S, Re. Used to verify Bearman-Harvey at low S still defensible.
+- **LAYER 1 TRUTH:** Bearman-Harvey 1976. Valid range S∈[0.03, 0.30], Re∈[5e4, 2e5], v≥13 m/s.
+- **TERTIARY:** Aoki 2010 / Libii 2012 (extends to supercritical Re, reverse-Magnus). NOT planned for ingestion; future option.
+
+**Calibration loop (the meaty part):** Build `AeroCalibrationHarness.cs` (menu item, NOT a regular test). For each calibration club, run `BallSimulation.Simulate` with Trackman launch params, compute carry, compare to target. Iteratively tune `aero_lift_overlay.csv` multipliers until all clubs within ±10%. Expected 4–8 iterations, ~30–40 minutes total implementer time. Then enable the tripwire test from `controls_d` (remove `[Ignore]`). Definition-of-done: tripwire goes from IGNORED to PASS, test gate becomes 210/210.
+
+**New deliverables:** `Docs/Physics/CALIBRATION_METHODOLOGY.md` (NEW) documents two-layer architecture + harness + "when to recalibrate" triggers. Top-of-file headers added to four Layer-2 CSVs (aero_lift_overlay, surfaces, putt + reaffirm aero_lift_lut as Layer 1).
+
+**Out of scope (deferred):** Drag LUT audit (`controls_f_drag_calibration_audit`, P3 Queued, Notion `35731e0e-9a36-818d-9a4c-ee8dd9ca511c`) — may report "no overlay needed" since drag is implicitly co-tuned via the lift overlay. 2D Cl(S, Re) LUT — over-engineering. Aoki/Libii Layer-1 extension — future option only.
+
+**5 open questions for Cesar (lock before SPEC writing):** (1) Trackman year, (2) 8-club vs 12-club calibration set, (3) tolerance ±5/10/15%, (4) harness UI location, (5) flat CSV vs Bezier overlay. Architect leans: most-recent year, 8-club, ±10%, dedicated menu item, flat CSV.
+
+**Sequencing:** controls_d (Sqrt + tripwire) → controls_e (this) → Loop v1 §2a (Ball state machine). Phase A is NOT on Loop v1's critical path; Phase E is also not strictly blocking but should land before Loop v1 playtest feel.
+
+---
+
+## 📜 HISTORY — controls_d_velocity_cap_diagnosis Phase A (SPEC_READY → ARCHITECT_REVIEW_FAIL, 2026-05-05)
+
+**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_d_velocity_cap_diagnosis/SPEC.md` — implementer ran the full pipeline; reviewer subagent issued PASS; Cesar overrode to ESCALATE; human Architect overrode to FAIL with single tripwire-test fail item. See “NEXT” block above for current state.
 
 **Phase A scope (this spec, locked, hardened by adversarial review 2026-05-05):** Replace the entire body of `fpMath.Sqrt` with a port of libfixmath's `fix16_sqrt` digit-by-digit shift-and-subtract algorithm (Wikipedia "Methods of computing square roots → Binary numeral system"), single-pass int64 version. New `Assets/Scripts/Physics/Tests/fpMathTests.cs` with 6 Sqrt assertions including regression guards for the captured 64 m/s and 2 m/s outputs. Re-snapshot affected EditMode tests (203 → 209 expected, with some subset of the original 203 having their expected values updated). Add a warning section at the top of `Docs/Physics/PHYSICS_TUNING_TARGETS.md` noting the carry/putt numbers were calibrated against the broken sqrt and need re-validation when convenient (not blocking).
 
