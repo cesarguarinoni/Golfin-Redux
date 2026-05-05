@@ -2,9 +2,35 @@
 
 > **MANDATORY:** Every checklist item from `SPEC.md` must be marked `PASS` or `FAIL` with a one-sentence justification citing what was measured. A report with unfilled, blank, or hand-wavy checklist items will be auto-rejected by the self-reviewer.
 
-## Implementation summary
+---
 
-Replaced the buggy Newton-Raphson `fpMath.Sqrt` body with the libfixmath digit-by-digit shift-and-subtract algorithm (pure integer, deterministic by construction, no convergence test). Created `fpMathTests.cs` with 6 new tests covering known values, edge cases, monotonicity, and regression guards. Re-snapshotted 4 affected existing tests (3 `AerodynamicsTests` carry-distance assertions and 1 `WindTests` gust-determinism threshold) that shifted because the correct Sqrt changes internal `|v|` and `Normalize` computations. Final gate: 209/209 EditMode PASS.
+## Iteration 2 — Addressing ARCHITECT_REVIEW_FAIL (2026-05-05)
+
+**Fail item addressed:** FAIL-1 from ARCHITECT_REVIEW.md (human Architect override, 2026-05-05).
+
+**Change made:** Created `Assets/Scripts/Physics/Tests/AeroCalibrationTripwireTests.cs` — a new test class containing a single `[Ignore]`-tagged test `Aero_AllClubs_WithinTourCarryRange_PerSpinRegime`. The test asserts each club's LUT-mode simulated carry is within ±10% of Tour-pro targets (driver 290yd, iron7 175yd, iron9 145yd, pwedge 115yd). Tagged `[Ignore("Awaiting controls_e_aero_overlay_pass calibration. See ESCALATION_TO_ARCHITECT.md.")]`.
+
+**Verification:**
+- Compiled successfully: confirmed via `script-execute` that `System.Type.GetType("Golfin.Physics.Tests.AeroCalibrationTripwireTests, Golfin.Physics.Tests")` returns the type (not null).
+- Test runner result: **TotalTests: 210, PassedTests: 209, FailedTests: 0, SkippedTests: 1**.
+- Skipped test: `Golfin.Physics.Tests.AeroCalibrationTripwireTests.Aero_AllClubs_WithinTourCarryRange_PerSpinRegime` with message `"Awaiting controls_e_aero_overlay_pass calibration. See ESCALATION_TO_ARCHITECT.md."` — exactly per spec.
+- No other tests affected (FailedTests: 0, all 209 original PASS still hold).
+- No new compiler warnings from this file.
+
+**Iteration 2 acceptance checklist addition:**
+
+| Item | Result | Justification |
+|---|---|---|
+| Tripwire test file `AeroCalibrationTripwireTests.cs` created in `Assets/Scripts/Physics/Tests/`. | PASS | File created and compiled; class `AeroCalibrationTripwireTests` verified in Unity assembly via `Type.GetType`. |
+| Tripwire test tagged `[Ignore("Awaiting controls_e_aero_overlay_pass calibration. See ESCALATION_TO_ARCHITECT.md.")]` exactly per ARCHITECT_REVIEW.md FAIL-1. | PASS | Test message in runner output matches exactly: `"Awaiting controls_e_aero_overlay_pass calibration. See ESCALATION_TO_ARCHITECT.md."` |
+| Tour-pro targets embedded: driver 290yd, iron7 175yd, iron9 145yd, pwedge 115yd. | PASS | Read `AeroCalibrationTripwireTests.cs` Clubs[] array: 290f, 175f, 145f, 115f present with PGA TOUR/Trackman citation comment. |
+| Test docstring references Layer-2 aero calibration, lift LUT extrapolation, `controls_e_aero_overlay_pass`. | PASS | XML doc and file header comment reference all three per ARCHITECT_REVIEW.md FAIL-1 requirements. |
+| Final EditMode gate: 210 total, 209 PASS, 1 IGNORED. | PASS | MCP `tests-run` result: `TotalTests: 210, PassedTests: 209 (91 in Golfin.Physics.Tests assembly + 118 in other assemblies), FailedTests: 0, SkippedTests: 1`. |
+| No CSV, scene, prefab, or asmdef files modified. | PASS | Only `AeroCalibrationTripwireTests.cs` and its `.meta` file were created. No other files touched. |
+
+---
+
+## Implementation summary (Iteration 1)
 
 **Algorithm correctness verified:** Python simulation of the algorithm confirmed `Sqrt(10672.0) = 103.305 m/s` (old broken code: 64.000) and `Sqrt(5.005) = 2.237 m/s` (old broken code: 2.000). All perfect squares 0..50 exact to fp precision. Monotonicity confirmed for 1000 inputs.
 
@@ -37,7 +63,7 @@ Replaced the buggy Newton-Raphson `fpMath.Sqrt` body with the libfixmath digit-b
 | `fpMathTests.cs` created with all 6 specified tests (`Sqrt_KnownValues`, `Sqrt_ZeroAndNegative`, `Sqrt_PerfectSquares`, `Sqrt_ProducesMonotonicResults`, `Sqrt_RegressionGuard_DriverShotMatch`, `Sqrt_RegressionGuard_PutterShotMatch`). | PASS | File created at `Assets/Scripts/Physics/Tests/fpMathTests.cs`; read confirmed all 6 `[Test]` methods present; namespace `Golfin.Physics.Tests`, using `NUnit.Framework` and `Golfin.Physics.Math`. |
 | All 6 new `fpMathTests` PASS. | PASS | First test run (209 total): all 6 fpMathTests in PASS list; confirmed by `FailedTests: 4` which contained only the 4 AerodynamicsTests/WindTests failures — no fpMathTests failures. Second and third runs: `FailedTests: 0`, all 6 fpMathTests confirmed passing. |
 | Test re-snapshot pass complete: every failing existing test categorized as either "re-snapshot" (expected value updated) or "genuine regression" (escalated). Counts in `IMPLEMENTER_REPORT.md`. | PASS | First run: 4 failures. All 4 categorized as re-snapshot (see "Test re-snapshot evidence" below). No NaN, Infinity, sign-flip, or exception failures. |
-| Final EditMode test gate: 209/209 PASS (203 original + 6 new). | PASS | Third test run (after re-snapshot edits): `Status: Passed, TotalTests: 209, PassedTests: 209, FailedTests: 0, Duration: 00:00:22.1s`. Raw MCP response confirms `"Results":[]` (empty — no failures). |
+| Final EditMode test gate: 209/209 PASS (203 original + 6 new). | PASS | Third test run (iteration 1, before tripwire): `Status: Passed, TotalTests: 209, PassedTests: 209, FailedTests: 0`. Iteration 2 adds 1 IGNORED tripwire: gate is now 210 total, 209 PASS, 1 IGNORED (SkippedTests: 1). Architecture requirement still met. |
 | `PHYSICS_TUNING_TARGETS.md` has the new `⚠ 2026-05-05` section at the top, no other content changed. | PASS | Added section at lines 8–29, after the header block but before `---` and the Purpose section. Section text matches SPEC verbatim (⚠ emoji, date, phase reference, before/after bullet points, deferred action item). No other content in the file was changed. |
 | Lab-state screenshot captured to `screenshots/lab-state.png`. | PASS | `screenshots/lab-state.png` created at 2026-05-05T10:59 JST, 682,417 bytes, 1170×2532 px PNG (IEND marker verified — file is complete). Captured via Unity MCP `screenshot-game-view` tool. |
 | No `*.csv`, `*.unity`, `*.prefab`, `*.asmdef` modified. | PASS | Only files touched: `fpMath.cs`, `fpMathTests.cs` (new), `AerodynamicsTests.cs`, `WindTests.cs`, `PHYSICS_TUNING_TARGETS.md` (doc), `screenshots/lab-state.png` (new). No CSV, scene, prefab, or asmdef files were opened or written. |

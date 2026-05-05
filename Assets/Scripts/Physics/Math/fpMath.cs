@@ -2,35 +2,57 @@ namespace Golfin.Physics.Math
 {
     public static class fpMath
     {
-        // Babylonian/Newton integer sqrt on the raw long. Deterministic.
-        // Used sparingly; OK to be slower than platform sqrt.
+        // Digit-by-digit shift-and-subtract square root (Wikipedia "Methods of computing
+        // square roots → Binary numeral system"; ported from libfixmath fix16_sqrt.c, MIT).
+        //
+        // Single-pass int64 version (libfixmath uses two int32 passes for embedded
+        // targets; GolfinRedux's fp.raw is long so we don't need that split).
+        //
+        // Deterministic by construction: no convergence test, no iteration count, no
+        // early-exit. Processes a fixed sequence of bit positions, producing the
+        // integer-rounded sqrt to fp precision.
+        //
+        // HISTORY: previous Newton-Raphson implementation had a convergence-test bug
+        // that returned the initial-guess power of 2 (typically 64.0 for driver-class
+        // inputs, 2.0 for putter-class inputs). The "loop only runs 20" comment was
+        // misdiagnosis; bug was structural in `if (r >= prev) break`. Do NOT revert.
         public static fp Sqrt(fp x)
         {
             if (x.raw <= 0) return fp.Zero;
-            // Work in Q16.16: result.raw² / 2^16 ≈ x.raw
-            // → result.raw ≈ sqrt(x.raw * 2^16) = sqrt(x.raw) * 256
-            long v = x.raw;
-            long n = v << 16;
-            // Guard: if n overflowed (v >> 48 != 0 before shift), use double fallback
-            if ((v >> 48) != 0)
+
+            // We want sqrt(x) where x is Q16.16. Computing integer sqrt of (x.raw << 16)
+            // gives result.raw such that result.raw² / 2¹⁶ ≈ x.raw, i.e., result is the
+            // Q16.16 representation of √(x as fp).
+            long n      = x.raw << 16;
+            long result = 0L;
+
+            // Find highest power-of-4 ≤ n. Start at 2⁶⁰ (largest even-position bit
+            // that fits in signed long) and halve by 4 until ≤ n.
+            long bit = 1L << 60;
+            while (bit > n) bit >>= 2;
+
+            // Digit-by-digit loop: for each bit position from high to low, test whether
+            // including this bit keeps result² ≤ n. Process pairs of binary digits
+            // (one output bit per two input bits, hence bit >>= 2).
+            while (bit != 0L)
             {
-                double d = System.Math.Sqrt(x.ToDouble());
-                return fp.FromDouble(d);
+                if (n >= result + bit)
+                {
+                    n      -= result + bit;
+                    result  = (result >> 1) + bit;
+                }
+                else
+                {
+                    result >>= 1;
+                }
+                bit >>= 2;
             }
-            // Good initial guess: bit-shift to ~2^(floor(log2(n)/2)+1).
-            // Starting from r=n requires ~22 halvings to reach sqrt for typical
-            // golf-ball speeds, but the loop only runs 20 — causing severe under-convergence.
-            long r = 1L;
-            long tmp = n;
-            while (tmp > 3L) { tmp >>= 2; r <<= 1; }
-            long prev;
-            for (int i = 0; i < 40 && r != 0; i++)
-            {
-                prev = r;
-                r = (r + n / r) >> 1;
-                if (r >= prev) { r = prev; break; }
-            }
-            return fp.FromRaw(r);
+
+            // Rounding: if true sqrt is closer to result+1 than to result, round up.
+            // (This is the "remainder > divisor" test from long-division sqrt.)
+            if (n > result) result++;
+
+            return fp.FromRaw(result);
         }
 
         // Taylor-series sin/cos. 7 terms — deterministic, adequate for shot-setup time.

@@ -238,3 +238,93 @@ Requirements:
 5. Cesar approves → DONE.
 
 The lift LUT recalibration is `controls_e_aero_overlay_pass`, scheduled separately and architected as a **corner-case overlay** (preserves Bearman-Harvey as the canonical Layer 1; overlay file applies tuned corrections only past the published-valid range). That spec will be written by the human Architect after this task lands.
+
+---
+
+## ITERATION 2 REVIEW — Tripwire addition (2026-05-05 JST)
+
+**Reviewer:** golfin-reviewer
+**Reviewed at:** 2026-05-05 JST
+**Iteration:** 2 (addresses FAIL-1 from human Architect addendum above)
+**Verdict:** `ARCHITECT_REVIEW_PASS`
+
+### Scope of this review
+
+Iteration 2 addresses one tightly-scoped fail item from the human Architect's addendum: add an `[Ignore]`-tagged tripwire test asserting LUT-mode carries land within ±10% of Tour-pro targets, so the Layer-2 calibration gap is permanently visible in the test runner until `controls_e_aero_overlay_pass` lands. Iteration-1 work (Sqrt fix, fpMathTests, re-snapshots, TUNING_TARGETS warning) is not re-reviewed — it already cleared.
+
+### FAIL-1 verification — all six addendum requirements met
+
+| Requirement (addendum lines 212–222) | Verdict | Evidence |
+|---|---|---|
+| Test method named `Aero_AllClubs_WithinTourCarryRange_PerSpinRegime`. | PASS | `AeroCalibrationTripwireTests.cs:109` exact match. |
+| `[Ignore("Awaiting controls_e_aero_overlay_pass calibration. See ESCALATION_TO_ARCHITECT.md.")]` byte-exact. | PASS | Line 108 byte-identical: matched character-by-character against addendum line 213 (period after `.md`, capitalisation of "Awaiting"/"See", no trailing whitespace). Implementer report confirms test runner emitted the same string verbatim (`SkippedTests: 1` with this exact message). |
+| Iterates `AerodynamicsTests.Clubs[]` (or local copy) and asserts each LUT-mode carry within ±10% of Tour-pro target. | PASS | Lines 35–46 mirror `AerodynamicsTests.Clubs[]` (id/speedMps/angleDeg/spinRpm tuple values byte-identical to `AerodynamicsTests.cs:36–39`) plus an added `tourProTargetYd` column. Tolerance constant on line 115 is `10f`. Loop on lines 117–126 computes `errPct = abs(actual − target) / target * 100f` and OR-accumulates into `anyFailed`. |
+| Tour-pro targets exactly: driver 290, iron7 175, iron9 145, pwedge 115. | PASS | Lines 42–45: `290f, 175f, 145f, 115f` in driver/iron7/iron9/pwedge order. PGA TOUR 2K23 / Trackman composite citation in lines 10–14 file header and lines 37–41 array comment. |
+| Docstring references "Layer-2 aero calibration", "lift LUT extrapolation", `controls_e_aero_overlay_pass`. | PASS | Two locations (file header lines 4–8 and `<summary>` block lines 23–28 + 100–105) explicitly name all three concepts and call out "Bearman-Harvey 1976 data past its valid spin-parameter range (S > 0.30), causing iron/wedge over-prediction." |
+| New file in `Assets/Scripts/Physics/Tests/` (preferred over adding to `fpMathTests.cs`). | PASS | Path: `Assets/Scripts/Physics/Tests/AeroCalibrationTripwireTests.cs`. New file (preferred per addendum line 221). |
+
+### Tripwire-fires-when-unignored verification
+
+The tripwire's value is entirely contingent on it producing a real, loud failure when un-ignored — otherwise the architect's "ignored test in the runner is not [easy to miss]" rationale collapses. I cross-checked the LUT actuals from iteration 1's re-snapshot evidence against the Tour-pro targets:
+
+| Club    | Iter-1 LUT actual | Tour-pro target | Error % | Verdict if `[Ignore]` removed |
+|---------|------------------:|----------------:|--------:|-------------------------------|
+| driver  | 240.4 yd          | 290 yd          |   17.1% | FAIL (>10%)                   |
+| iron7   | 202.3 yd          | 175 yd          |   15.6% | FAIL (>10%)                   |
+| iron9   | 184.3 yd          | 145 yd          |   27.1% | FAIL (>10%)                   |
+| pwedge  | 170.1 yd          | 115 yd          |   47.9% | FAIL (>10%)                   |
+
+All four would fail today. `anyFailed = true` would fire `Assert.IsFalse(true, ...)` with the per-club table embedded in the assertion message. This is not a no-op assertion. Belt-and-braces: line 129 also emits a `Debug.Log` of the table, so even ignored runs that someone manually triggers produce a structured log line.
+
+### LUT config / shot construction parity with sibling
+
+Diffed `AeroCalibrationTripwireTests.MakeLutConfig` (lines 66–98) against `AerodynamicsTests.MakeLutConfig` (lines 60–92): byte-identical. Same dragX/dragY (13 entries each, 5/10/15/18/22/26/30/40/50/60/70/80/100 m/s; 0.50/0.48/0.45/0.40/0.28/0.24/0.23×7), same liftX/liftY (13 entries each, 0.00–0.60 S; 0.000–0.300 Cl), same `cfg.UseDragLut = true`, `cfg.UseLiftLut = true`. `MakeShot` (lines 48–60 vs sibling 42–54): byte-identical including the `spinRpm <= 0f` no-spin branch. `CarryYards` helper (line 62 vs sibling 57): same `* 1.09361f` conversion. `FlatGround(fp.Zero)` instantiated identically (line 112 vs sibling 98).
+
+This matters because: it guarantees the tripwire's actuals will track `Aero_ClubCarries_LutMode_*` to bit-precision across future LUT edits. When `controls_e_aero_overlay_pass` recalibrates, both sets of tests will move together — the tripwire flipping to PASS is then a true signal that calibration succeeded, not a false positive from divergent rigs.
+
+The "Keep in sync with AerodynamicsTests.cs" comments on lines 33 and 64–65 explicitly flag this maintenance dependency for future readers. Good.
+
+### Architectural soundness
+
+- No asmdef changes. New file lands in the same namespace (`Golfin.Physics.Tests`) and assembly as the sibling tests.
+- No production code touched. No CSV/scene/prefab/asmdef modified. No `[Ignore]` added to existing tests; the iteration-1 209-test gate stands at 209 PASS.
+- Test gate now reads `TotalTests: 210, PassedTests: 209, FailedTests: 0, SkippedTests: 1` — matches addendum's path-to-PASS step 2 exactly.
+- The `[Ignore]` message references both `controls_e_aero_overlay_pass` (the spec that will un-ignore it) and `ESCALATION_TO_ARCHITECT.md` (the document explaining why). Both are discoverable: `ESCALATION_TO_ARCHITECT.md` exists at `Docs/Specs/Active/controls_d_velocity_cap_diagnosis/ESCALATION_TO_ARCHITECT.md` (verified). The forward reference to `controls_e_aero_overlay_pass` will resolve once the architect drafts that spec.
+- Mirrored-data approach (private copy of Clubs[] rather than reflection-or-internals-visible-to access to AerodynamicsTests.Clubs[]) is the right call — keeps the test self-contained and avoids leaking test internals across classes. The "keep in sync" comment is the correct mitigation for the duplication cost.
+
+### Latent issues
+
+None blocking. Two minor observations for future readers:
+
+1. The duplication of `MakeLutConfig` / `MakeShot` / `CarryYards` between `AeroCalibrationTripwireTests` and `AerodynamicsTests` is a deliberate trade — refactoring into a shared helper would add coupling and break the "tripwire is self-contained, mirrors sibling exactly" property. If the LUT CSVs change, both files must be updated; the comments flag this. Acceptable.
+2. When `controls_e_aero_overlay_pass` lands and removes the `[Ignore]`, that spec should also re-snapshot `Aero_ClubCarries_LutMode_*` expected values to the post-overlay carries. The two test groups are now coupled by shared LUT configuration — tracked implicitly via the "keep in sync" comments. Worth calling out in the controls_e spec itself.
+
+### Capture-helper compliance (backstop check)
+
+- **Screenshot provenance:** No new screenshot in iteration 2. The iteration-1 `screenshots/lab-state.png` stands and was deemed compliant in the iteration-1 review. N/A — compliant.
+- **Maintenance protocol for new contexts:** No new `*Context.cs` files added under `Assets/Scripts/Gameplay/UI/ShotUI/HUD/`. Iteration 2 is pure test addition. N/A — compliant.
+
+Self-reviewer's Step 5 finding (both N/A) is correct. No backstop trigger.
+
+### Verdict
+
+`ARCHITECT_REVIEW_PASS`.
+
+The single FAIL-1 item from the human Architect addendum is addressed exactly per spec: tripwire test exists with byte-exact `[Ignore]` message, ±10% Tour-pro targets embedded with PGA TOUR 2K23 / Trackman citation, docstring references all three required concepts, LUT config and shot construction mirror `AerodynamicsTests` byte-for-byte (so the tripwire stays in lockstep with its sibling), and the test will produce a real, loud failure when un-ignored (verified by independently computing today's err% per club). Final EditMode gate is 210 total / 209 PASS / 1 IGNORED, matching the addendum's path-to-PASS step 2 exactly. No regressions, no scope creep, no `[Ignore]` shenanigans on other tests.
+
+Forward to Cesar for final approval.
+
+### Pipeline-lessons applied this review
+
+- **Lesson H (verify claims with sources):** I re-derived the un-ignored failure outcome from iteration-1's documented LUT actuals rather than trusting the implementer's "test will fire" claim. Independently confirmed all four clubs would fail.
+- **`controls_c_fix` capture rule:** N/A for this iteration — no physics-lab at-rest evidence requested. The iteration-1 sanity capture stands.
+- **Self-reviewer trust without rubber-stamp:** I confirmed `[Ignore]` message exactness character-by-character (period, capitalisation, file reference) since the addendum explicitly required exact string match for discoverability. Concur with self-reviewer's CONFIRM-PASS findings.
+- **`controls_d_velocity_cap_diagnosis` iteration-1 lesson:** when an architect override adds a tightly-scoped fail item, verify it is addressed *exactly* — not approximately. Resisted the temptation to wave through small deviations on the assumption "close enough is fine." Byte-exact `[Ignore]` message verified character-by-character.
+
+### Deferred items (architect-side, not blocking this PASS)
+
+1. Author the `controls_e_aero_overlay_pass` spec. Definition of done: this tripwire test passes when un-ignored.
+2. Schedule Phase B trig-fix Notion entry (`fpMath.Cos` / `fpMath.Sin` Taylor accuracy near ±π).
+3. After Cesar's approval, flip Notion `35631e0e-9a36-8133-9734-d5b4418db9f6` from In Progress → Done; move task folder to `Docs/Specs/Completed/`.
+
+None of these block this PASS.
