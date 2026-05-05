@@ -46,6 +46,7 @@ namespace Golfin.Physics.Runtime
                     case "use_drag_lut":          cfg.UseDragLut           = (val != 0f);       break;
                     case "use_lift_lut":          cfg.UseLiftLut           = (val != 0f);       break;
                     case "use_lift_overlay":      cfg.UseLiftOverlay       = (val != 0f);       break;
+                    case "use_drag_overlay":      cfg.UseDragOverlay       = (val != 0f);       break;
                     case "spin_decay_rate":       cfg.SpinDecayRate        = fp.FromFloat(val); break;
                 }
             }
@@ -53,6 +54,7 @@ namespace Golfin.Physics.Runtime
             cfg.DragLut     = LoadDragLut();
             cfg.LiftLut     = LoadLiftLut();
             cfg.LiftOverlay = LoadLiftOverlay();
+            cfg.DragOverlay = LoadDragOverlay();
             return cfg;
         }
 
@@ -69,6 +71,11 @@ namespace Golfin.Physics.Runtime
         public static CoefficientLut LoadLiftOverlay()
         {
             return LoadLut("Physics/aero_lift_overlay", "spin_parameter", "cl_multiplier");
+        }
+
+        public static CoefficientLut LoadDragOverlay()
+        {
+            return LoadLut("Physics/aero_drag_overlay", "speed_mps", "cd_multiplier");
         }
 
         // Parses a two-column CSV (x, y, optional notes). Returns default(CoefficientLut) on failure.

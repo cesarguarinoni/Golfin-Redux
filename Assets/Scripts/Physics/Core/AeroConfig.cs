@@ -29,6 +29,11 @@ namespace Golfin.Physics
         public CoefficientLut LiftOverlay;
         public bool UseLiftOverlay;
 
+        // Layer 2 drag — corner-case overlay (controls_f_drag_calibration_audit).
+        // Cd multiplier(speed). When IsValid=false OR UseDragOverlay=false, no-op (multiplier=1.0).
+        public CoefficientLut DragOverlay;
+        public bool UseDragOverlay;
+
         public static AeroConfig Default => new AeroConfig
         {
             AirDensity          = fp.FromFloat(1.225f),
@@ -39,12 +44,14 @@ namespace Golfin.Physics
             SpinRateReference   = fp.FromFloat(300f),
             LiftMaxMultiplier   = fp.FromFloat(1.5f),
             BallRadius          = fp.FromFloat(0.02135f),
-            // DragLut / LiftLut / LiftOverlay default-constructed (IsValid=false) — constant-mode fallback
+            // DragLut / LiftLut / LiftOverlay / DragOverlay default-constructed (IsValid=false) — constant-mode fallback
             UseDragLut          = false,
             UseLiftLut          = false,
             SpinDecayRate       = fp.FromFloat(0.02f),
             UseLiftOverlay      = false,
             // LiftOverlay default-constructed (IsValid=false) — overlay is opt-in via CSV
+            UseDragOverlay      = false,
+            // DragOverlay default-constructed (IsValid=false) — overlay is opt-in via CSV
         };
 
         // Vacuum variant — Cd=0, Cl=0. Degenerates to gravity-only integration.
@@ -64,6 +71,8 @@ namespace Golfin.Physics
             SpinDecayRate       = fp.Zero,
             UseLiftOverlay      = false,
             // LiftOverlay default-constructed (IsValid=false)
+            UseDragOverlay      = false,
+            // DragOverlay default-constructed (IsValid=false)
         };
     }
 }

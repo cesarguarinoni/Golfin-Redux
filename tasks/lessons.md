@@ -1065,3 +1065,14 @@ The capture helper reads the GameView's RenderTexture via reflection, bypassing 
 The MCP tool `screenshot-game-view` is a generic capture in the IvanMurzak package — it returned `Response data is null` repeatedly under the local-stdio MCP build, with no actionable error. The project's own `Golfin.EditorTools.CaptureHelper.SnapGameView()` (mandated in CLAUDE.md) reads the GameView's internal `RenderTexture` via reflection across known field names (`m_RenderTexture` / `m_TargetTexture` / `m_RenderTarget`), Y-flips for the OpenGL coordinate space, and writes a PNG synchronously to `Docs/Diagnostics/_capture/`. It works from EditMode, paused playmode, and running playmode — exactly the matrix CLAUDE.md cares about.
 
 **Rule:** For every play-mode or scene screenshot, invoke `Golfin.EditorTools.CaptureHelper.SnapGameView()` (or `SnapGameViewWithLabel("tag")`) via `script-execute`. Do NOT call `mcp__ai-game-developer__screenshot-game-view` — it bypasses the project's tested capture path. After capture, copy the PNG from `Docs/Diagnostics/_capture/` into the relevant `Docs/Specs/Active/<task>/screenshots/` folder before committing.
+
+### Surface MCP issues clearly BEFORE falling back to manual
+When an MCP tool fails ("tool not available", "transport dropped", "no such tool", null response) the wrong move is to silently default to "Cesar do it manually." The right sequence:
+
+1. **Retry first** — per `feedback_unity_mcp_transport_recovers.md`, transport errors are transient. Retry every 30–60s for up to 5 attempts.
+2. **Surface in chat clearly** — name the tool, the input, the exact error, retry count, and the fallback (if any). Quote Cesar's rule when relevant: *"If you run into MCP issues and have to surface them, do so. Do not just fallback to me manually doing things without mentioning the issues clearly first."*
+3. **Don't lead with "you do it manually"** — the chat must lead with the failure context. Manual instructions are the last resort, not the default.
+
+**Specific rule for test runs:** `mcp__ai-game-developer__tests-run` is granted to `golfin-implementer` only. Reviewer/self-reviewer cannot run tests. If a SPEC requires test results and the implementer didn't capture them, the correct verdict is `ARCHITECT_REVIEW_FAIL` routing back to the implementer — NOT escalation to Cesar with "manually run tests" as the fix. The implementer agent definition (`.claude/agents/golfin-implementer.md` Hard rules) now mandates this and the reviewer definition (`.claude/agents/golfin-reviewer.md` "Test runner verification" section) routes back accordingly.
+
+Symptom that this rule is being violated: Cesar reads "Window → General → Test Runner → EditMode → Run All" without first being told why the automated path failed.

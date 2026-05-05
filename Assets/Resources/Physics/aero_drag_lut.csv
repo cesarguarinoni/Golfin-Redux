@@ -1,6 +1,6 @@
 # Layer 1 — real physics. Bearman-Harvey 1976 transcription (drag side).
-# Layer 2 audit pending: see controls_f_drag_calibration_audit.
-# DO NOT edit to "make trajectories feel right" — that's a future drag overlay's job.
+# Layer 2 overlay applied: see aero_drag_overlay.csv and CALIBRATION_METHODOLOGY.md §9.
+# DO NOT edit to "make trajectories feel right" — that's aero_drag_overlay.csv's job.
 # See Docs/Physics/CALIBRATION_METHODOLOGY.md.
 speed_mps,cd,notes
 5,0.50,very low speed laminar-ish

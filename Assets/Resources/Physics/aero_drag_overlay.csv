@@ -1,0 +1,18 @@
+# Layer 2 — corner-case overlay. Tunable for game feel.
+# This file applies a multiplicative correction to the Layer 1 drag coefficient
+# (aero_drag_lut.csv, Bearman-Harvey 1976 transcription) ONLY where Layer 1 is
+# extrapolating past its valid Reynolds-number range (v > ~70 m/s) OR where
+# outcomes diverge from observed Tour-pro reality (Trackman 2024 PGA Tour driver
+# carry: 275 yd; verified Trackman PDF YARDS table per Lesson K).
+# Smoothstep blend across v ∈ [45, 55] m/s prevents seam discontinuity.
+# See Docs/Physics/CALIBRATION_METHODOLOGY.md §9 for full architecture frame.
+# Iteration 1: initial estimate — target ~12% drag reduction at v=75 m/s (driver).
+speed_mps,cd_multiplier,notes
+0,1.000,Layer 1 valid; no overlay
+22,1.000,Bearman-Harvey valid range
+40,1.000,Layer 1 valid; smoothstep blend starts at 45
+50,1.000,Smoothstep midpoint (seam zone); irons unaffected
+60,0.920,Above seam; driver operating range begins
+70,0.890,Bearman-Harvey upper edge; driver peak range
+80,0.880,Driver peak operating speed
+100,0.880,Extrapolation clamp

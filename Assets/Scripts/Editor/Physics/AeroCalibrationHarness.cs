@@ -1,9 +1,12 @@
 // AeroCalibrationHarness — Layer-2 aero calibration sweep runner.
 // Created by controls_e_aero_overlay_pass (2026-05-05).
 // Updated with corrected targets (iteration 2, 2026-05-05) per ARCHITECT_REVIEW.md FAIL-1 (Lesson K).
+// Extended (controls_f_drag_calibration_audit, 2026-05-05): speed-bracket diagnostic columns
+//   (vMax, %above seam, %below seam, %in seam). New menu item: Run Drag Calibration Sweep.
 //
 // Usage:
-//   Menu: GOLFIN > Physics > Run Aero Calibration Sweep
+//   Menu: GOLFIN > Physics > Run Aero Calibration Sweep      (lift overlay focus)
+//   Menu: GOLFIN > Physics > Run Drag Calibration Sweep      (drag overlay + speed-bracket diagnostics)
 //   Code: string report = AeroCalibrationHarness.RunCalibrationSweep();
 //
 // Trackman source (corrected per Lesson K — unit-mismatch fix):
@@ -55,12 +58,24 @@ namespace Golfin.Physics.Editor
             Debug.Log(report);
         }
 
+        [MenuItem("GOLFIN/Physics/Run Drag Calibration Sweep")]
+        public static void RunDragFromMenu()
+        {
+            string report = RunCalibrationSweep(includeDragDiagnostics: true);
+            Debug.Log(report);
+        }
+
         /// <summary>
         /// Public entry point usable from CLI / pipeline / EditMode tests.
         /// Returns a multi-line report string suitable for pasting into IMPLEMENTER_REPORT.md.
-        /// Uses LUT values hardcoded to match the tripwire test, plus overlay from Resources.
+        /// Uses LUT values hardcoded to match the tripwire test, plus overlays from Resources.
         /// </summary>
-        public static string RunCalibrationSweep()
+        /// <param name="includeDragDiagnostics">
+        /// When true, adds speed-bracket diagnostic columns:
+        /// vMax, %flight above seam (v&gt;55), %flight in seam (45≤v≤55), %flight below seam (v&lt;45).
+        /// Controlled by the drag overlay seam constants (lo=45, hi=55 m/s).
+        /// </param>
+        public static string RunCalibrationSweep(bool includeDragDiagnostics = false)
         {
             // Build AeroConfig with hardcoded LUT values (mirrors MakeLutConfig in AeroCalibrationTripwireTests)
             // plus overlay loaded from Resources.
@@ -72,6 +87,9 @@ namespace Golfin.Physics.Editor
 
             float worstErrPct  = 0f;
             string worstClub   = "";
+
+            const float seam_lo = 45f;
+            const float seam_hi = 55f;
 
             foreach (var (id, speedMps, launchDeg, spinRpm, targetYd) in CalibrationClubs)
             {
@@ -85,9 +103,44 @@ namespace Golfin.Physics.Editor
                 float rps      = spinRpm * 2f * (float)System.Math.PI / 60f;
                 float spinParam = 0.02135f * rps / speedMps;
 
+                string dragDiagCol = "";
+                if (includeDragDiagnostics)
+                {
+                    // Speed-bracket diagnostic: simplified Euler pass to track vMax and seam time fractions.
+                    // Drag force only (no lift, no wind) for speed magnitude; matches the aero seam concern.
+                    float vMax = speedMps;
+                    int stepsAbove = 0, stepsIn = 0, stepsBelow = 0;
+                    float v = speedMps;
+                    float dt = 1f / 240f;
+                    float airDens = 1.225f;
+                    float xsec    = 0.001432f;
+                    float mass    = 0.04593f;
+                    float cd      = 0.23f; // supercritical Bearman-Harvey floor
+                    // Run until speed < 10 m/s or time > 30s (airborne phase only approximation)
+                    for (int step = 0; step < 7200 && v > 10f; step++)
+                    {
+                        if (v > seam_hi) stepsAbove++;
+                        else if (v >= seam_lo) stepsIn++;
+                        else stepsBelow++;
+                        if (v > vMax) vMax = v;
+                        // Simple drag decel: a = -F_drag/m = -(0.5 * rho * A * Cd * v^2) / m
+                        float decel = 0.5f * airDens * xsec * cd * v * v / mass;
+                        v -= decel * dt;
+                        if (v < 0f) v = 0f;
+                    }
+                    int totalSteps = stepsAbove + stepsIn + stepsBelow;
+                    float pctAbove = totalSteps > 0 ? stepsAbove * 100f / totalSteps : 0f;
+                    float pctIn    = totalSteps > 0 ? stepsIn    * 100f / totalSteps : 0f;
+                    float pctBelow = totalSteps > 0 ? stepsBelow * 100f / totalSteps : 0f;
+                    dragDiagCol = string.Format(CultureInfo.InvariantCulture,
+                        "  vMax={0:F1}m/s  above55={1:F0}%  seam={2:F0}%  below45={3:F0}%",
+                        vMax, pctAbove, pctIn, pctBelow);
+                }
+
                 results.Add(string.Format(CultureInfo.InvariantCulture,
-                    "  {0,-22} target={1,5:F0}yd  actual={2,5:F0}yd  err={3,+6.1f}%  S={4:F3}  {5}",
-                    id, targetYd, actual, actual - targetYd > 0 ? errPct : -errPct, spinParam, ok ? "PASS" : "FAIL"));
+                    "  {0,-22} target={1,5:F0}yd  actual={2,5:F0}yd  err={3,+6.1f}%  S={4:F3}  {5}{6}",
+                    id, targetYd, actual, actual - targetYd > 0 ? errPct : -errPct, spinParam,
+                    ok ? "PASS" : "FAIL", dragDiagCol));
 
                 if (ok) passCount++;
 
@@ -97,9 +150,11 @@ namespace Golfin.Physics.Editor
             int total = CalibrationClubs.Length;
             string header = string.Format(CultureInfo.InvariantCulture,
                 "[AeroCalibrationHarness] Sweep — Trackman 2024 PGA Tour averages (PDF YARDS row, corrected per Lesson K)\n" +
-                "  Overlay active: {0}, IsValid: {1}\n" +
-                "  Tolerance: ±{2:F0}%\n",
-                cfg.UseLiftOverlay, cfg.LiftOverlay.IsValid, TolerancePct);
+                "  LiftOverlay active: {0}, IsValid: {1}\n" +
+                "  DragOverlay active: {2}, IsValid: {3}\n" +
+                "  Tolerance: ±{4:F0}%\n",
+                cfg.UseLiftOverlay, cfg.LiftOverlay.IsValid,
+                cfg.UseDragOverlay, cfg.DragOverlay.IsValid, TolerancePct);
 
             string summary = string.Format(CultureInfo.InvariantCulture,
                 "  Summary: {0}/{1} clubs PASS  worst={2} ({3:F1}%)",
@@ -141,9 +196,12 @@ namespace Golfin.Physics.Editor
             cfg.UseDragLut  = true;
             cfg.UseLiftLut  = true;
 
-            // Load overlay from Resources CSV so callers see the current-file state.
+            // Load overlays from Resources CSVs so callers see the current-file state.
             cfg.LiftOverlay    = PhysicsConfigLoader.LoadLiftOverlay();
             cfg.UseLiftOverlay = cfg.LiftOverlay.IsValid;
+
+            cfg.DragOverlay    = PhysicsConfigLoader.LoadDragOverlay();
+            cfg.UseDragOverlay = cfg.DragOverlay.IsValid;
 
             return cfg;
         }

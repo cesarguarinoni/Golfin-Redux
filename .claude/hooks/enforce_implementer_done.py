@@ -33,6 +33,14 @@ Why this asymmetry: the self-reviewer's job is catching false PASSes, not
 relitigating known FAILs. If the Implementer ALREADY knows something failed, it
 should be surfaced to the architect for a judgment call, not run through the
 self-reviewer (which would just FAIL it back, wasting Opus tokens).
+
+Additional rule for ALL gating statuses:
+8. If SPEC.md mentions the test runner (`tests-run`, `Test Runner`,
+   `EditMode test`, `PlayMode test`), IMPLEMENTER_REPORT.md must contain
+   test-result evidence (counts of Total/Passed/Failed/Skipped, or an "N/N PASS"
+   summary). This stops the implementer from escalating around the test runner
+   to Cesar with "MCP wasn't available" — the test runner is granted to the
+   implementer agent only, so the implementer is the only role that can run it.
 """
 import json
 import re
@@ -226,6 +234,65 @@ def validate_report(report_path: Path) -> list[str]:
     return errors
 
 
+def spec_requires_tests(spec_path: Path) -> bool:
+    """True if SPEC.md mentions the Unity test runner.
+
+    Triggers on: 'tests-run', 'Test Runner' (case-insensitive),
+    'EditMode test', 'PlayMode test'. Plain words like 'test' or 'testing'
+    alone are NOT enough — we want explicit reference to the runner so we
+    don't false-positive on every spec that mentions QA.
+    """
+    if not spec_path.exists():
+        return False
+    content = spec_path.read_text(encoding="utf-8", errors="ignore")
+    patterns = [
+        r"tests-run",
+        r"Test\s+Runner",
+        r"EditMode\s+test",
+        r"PlayMode\s+test",
+        r"\bTestRunnerApi\b",
+    ]
+    for pat in patterns:
+        if re.search(pat, content, re.IGNORECASE):
+            return True
+    return False
+
+
+def report_has_test_evidence(report_path: Path) -> bool:
+    """True if the report contains test-runner result evidence.
+
+    Accepts any of these shapes:
+      - 'Total: 211' AND 'Passed: 211'  (named counts)
+      - 'TotalTests: 211' AND 'PassedTests: 211'  (raw JSON shape)
+      - '211/211 PASS' or '211 / 211 pass'  (compact summary)
+      - '211 tests pass' / '0 failed' / '0 skipped' (sentence form is OK as long as at least two of these appear)
+    """
+    if not report_path.exists():
+        return False
+    content = report_path.read_text(encoding="utf-8", errors="ignore")
+
+    # Compact summary: "N/N PASS" or "N / N pass"
+    if re.search(r"\b\d+\s*/\s*\d+\s*(?:tests?\s*)?(?:PASS|pass|passed)\b", content):
+        return True
+
+    # Named counts: must have at least Total + Passed (or TotalTests + PassedTests).
+    has_total = bool(re.search(r"\bTotal(?:Tests)?\s*[:=]\s*\d+", content, re.IGNORECASE))
+    has_passed = bool(re.search(r"\bPassed(?:Tests)?\s*[:=]\s*\d+", content, re.IGNORECASE))
+    if has_total and has_passed:
+        return True
+
+    # Sentence form fallback: at least two of {N tests pass, N failed, N skipped}.
+    sentence_hits = 0
+    for pat in [
+        r"\b\d+\s+tests?\s+(?:pass|passed)",
+        r"\b\d+\s+(?:test\s+)?(?:failure|failed)",
+        r"\b\d+\s+(?:test\s+)?(?:skipped|ignored)",
+    ]:
+        if re.search(pat, content, re.IGNORECASE):
+            sentence_hits += 1
+    return sentence_hits >= 2
+
+
 def has_open_fails(report_path: Path) -> bool:
     """True if the Acceptance checklist contains any rows with Result=FAIL."""
     if not report_path.exists():
@@ -255,6 +322,7 @@ def main() -> int:
 
     task_dir = target.parent
     report_path = task_dir / "IMPLEMENTER_REPORT.md"
+    spec_path = task_dir / "SPEC.md"
 
     # Rules 1-6 apply to both gating statuses.
     errors = validate_report(report_path)
@@ -268,6 +336,22 @@ def main() -> int:
             "READY_FOR_SELF_REVIEW. Either fix the FAILs and re-mark them PASS, "
             "or set STATUS to READY_FOR_ARCHITECT_REVIEW (escalation path). "
             "Self-review is for confident-PASS submissions only."
+        )
+
+    # Rule 8: if SPEC.md asks for test-runner verification, the report must
+    # contain test-result counts. Applies to BOTH gating statuses — the
+    # implementer is the only agent with `tests-run` access, so escalating
+    # around the test runner to the architect/Cesar is never valid.
+    if spec_requires_tests(spec_path) and not report_has_test_evidence(report_path):
+        errors.append(
+            "SPEC.md references the Unity test runner (tests-run / Test Runner / "
+            "EditMode/PlayMode test) but IMPLEMENTER_REPORT.md has no test-result "
+            "evidence. Invoke `mcp__ai-game-developer__tests-run` (or the "
+            "TestRunnerApi via script-execute fallback) and append a summary "
+            "with Total/Passed/Failed/Skipped counts (or an N/N PASS line) to "
+            "the report. Escalating 'MCP wasn't available' is not valid: "
+            "tests-run is granted to the implementer agent only — no other role "
+            "can run it on your behalf."
         )
 
     if errors:

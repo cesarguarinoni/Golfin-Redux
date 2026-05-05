@@ -29,9 +29,26 @@ namespace Golfin.Physics
             fp3 vRelHat = vRel / speed;
 
             // Drag: opposes relative velocity direction. Magnitude = ½ ρ A Cd(|vRel|) |vRel|²
-            fp cd = (cfg.UseDragLut && cfg.DragLut.IsValid)
-                ? cfg.DragLut.Evaluate(speed)
-                : cfg.DragCoefficient;
+            fp cd;
+            if (cfg.UseDragLut && cfg.DragLut.IsValid)
+            {
+                cd = cfg.DragLut.Evaluate(speed);
+
+                // Layer 2 corner-case overlay (controls_f_drag_calibration_audit).
+                // Smoothstep blend across v ∈ [45, 55] m/s prevents discontinuity between
+                // Layer 1 (Bearman-Harvey valid) and overlay (extrapolation territory).
+                // See Docs/Physics/CALIBRATION_METHODOLOGY.md §9.
+                if (cfg.UseDragOverlay && cfg.DragOverlay.IsValid)
+                {
+                    fp multRaw = cfg.DragOverlay.Evaluate(speed);
+                    fp mult    = BlendDragOverlay(speed, multRaw);
+                    cd = cd * mult;
+                }
+            }
+            else
+            {
+                cd = cfg.DragCoefficient;
+            }
 
             fp dragScalar = (cfg.AirDensity * cfg.BallCrossSection * cd * speedSq) * fp.Half;
             fp3 drag = vRelHat * (-dragScalar);
@@ -85,6 +102,26 @@ namespace Golfin.Physics
 
             // Smoothstep: t² × (3 − 2t)
             fp t       = (spinParam - lo) / (hi - lo);
+            fp two     = fp.FromFloat(2f);
+            fp three   = fp.FromFloat(3f);
+            fp smoothT = (t * t) * (three - (two * t));
+
+            // Linear blend between 1.0 and overlayMultiplier using the smoothed t
+            return fp.One + (overlayMultiplier - fp.One) * smoothT;
+        }
+
+        // Smoothstep-blended drag overlay multiplier. Returns 1.0 below v=45 m/s,
+        // full multiplier above v=55 m/s, smoothstep interpolation between.
+        // This preserves Layer 1 (Bearman-Harvey) as canonical inside its valid range.
+        private static fp BlendDragOverlay(fp speed, fp overlayMultiplier)
+        {
+            fp lo = fp.FromFloat(45f);
+            fp hi = fp.FromFloat(55f);
+            if (speed <= lo) return fp.One;
+            if (speed >= hi) return overlayMultiplier;
+
+            // Smoothstep: t² × (3 − 2t)
+            fp t       = (speed - lo) / (hi - lo);
             fp two     = fp.FromFloat(2f);
             fp three   = fp.FromFloat(3f);
             fp smoothT = (t * t) * (three - (two * t));
