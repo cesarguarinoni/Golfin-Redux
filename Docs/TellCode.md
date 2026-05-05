@@ -120,6 +120,33 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 **Phase B (Cos/Sin) still queued:** [`35731e0e-9a36-8132-96e4-cc27c4d2a734`](https://www.notion.so/35731e0e9a36813296e4cc27c4d2a734) `C.6 — fpMath.Cos/Sin range-reduction repair (Phase B)`. Lands after Loop v1.
 
+## 📌 NEXT — controls_f_drag_calibration_audit (SPEC_READY 2026-05-05 evening, awaiting implementer kickoff)
+
+**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_f_drag_calibration_audit/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) flipped to **In Progress** (P1 High, S half-day, Order 160).
+
+**Phase A scope (locked, all 5 open questions answered 2026-05-05 evening):**
+- **Seam location:** `v ∈ [45, 55]` m/s (surgical — driver fully affected ~60% of flight, irons mostly unaffected, only 5-iron grazes the seam zone)
+- **Iron tolerance after drag tune:** strict ±10% per club (matches `controls_e` and tripwire)
+- **Correction shape:** multiplicative (Cd × m), mirrors lift overlay pattern
+- **Drag-crisis transition (v<22):** untouched
+- **Trackman re-validation:** documented as trigger in methodology, no auto-action
+
+**What this implements:** New `aero_drag_overlay.csv` applies a multiplicative correction to `Cd` only past Bearman-Harvey valid Re range. Smoothstep blend across `v ∈ [45, 55]` m/s prevents seam discontinuity. In Layer-1-valid territory (v ≤ 45), overlay multiplier is forced to 1.0 — Bearman-Harvey is trusted as-is. New `LiftOverlay`-mirroring fields on `AeroConfig` (`DragOverlay`, `UseDragOverlay`), new `LoadDragOverlay()` in `PhysicsConfigLoader`, new overlay seam in `AeroModel.ComputeAeroForce` with `BlendDragOverlay` private helper. Existing `AeroCalibrationHarness.cs` extended with vMax / time-above-seam / time-below-seam diagnostic columns.
+
+**Real-world data verified per Lesson K** (NOTES.md): Trackman 275yd driver carry target (already triple-checked from `controls_e`); Bearman-Harvey 1976 (Layer-1 truth, Cd ≈0.22 supercritical); Smith et al. 2010 Kobe Univ. CFD (validation, Cd 0.22 "nearly constant"); Alam et al. 2011 multi-ball comparison (Cd range 0.21–0.27 across Tour balls; our 0.23 LUT is plausible midpoint).
+
+**Architect-time prediction:** final multipliers will land around **0.90 at v=80 m/s** (back-of-envelope: ~9% drag reduction in driver speed range, ~25–30 yd added carry, bringing 240→~265–270yd). Actual response measured by harness during iteration.
+
+**Definition-of-done:** Remove `[Ignore]` from `Aero_Driver_KnownPending_LayerOneAudit` test. Final gate: **211/211 PASS, 0 IGNORED.**
+
+**Critical deliverables beyond the overlay:** `Docs/Physics/CALIBRATION_METHODOLOGY.md` adds **§9 (When to add a Layer-2 drag overlay)** mirroring the existing §3 (lift overlay). §8 updated to close the open follow-up. Layer-status header on `aero_drag_lut.csv` updated to point at the new overlay.
+
+**Risk profile:** very low. Architecture is symmetric to `controls_e`; harness exists; the only structural unknowns are (a) does multiplier 0.85–0.95 close the gap (architect predicts yes; if no, drag isn't the issue and we escalate), (b) does the seam at [45, 55] perturb iron carries (5-iron is the canary; predicted to stay in tolerance). Both are caught by SPEC's escalation paths.
+
+**Sequencing:** controls_f is the **last C-cluster physics task**. After it lands clean, Loop v1 §2a (Ball state machine) is the next umbrella spec — estimated half-day to 1 day total for controls_f, leaving tomorrow free for Loop v1 phase 2 work as Cesar requested.
+
+---
+
 ## ✅ DONE — controls_e_aero_overlay_pass (closed end-to-end 2026-05-05 19:57 JST)
 
 **Spec archived:** `Docs/Specs/Completed/controls_e_aero_overlay_pass/`. Pipeline ran the full loop including iteration 1 → IMPLEMENTER_BLOCKED escalation → architect FAIL with three items → implementer iteration 2 → self-reviewer PASS → reviewer PASS → Cesar approve. Test gate now **210 PASS + 1 IGNORED** (211 total). Notion entry [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) flipped to **Done**, Closed=2026-05-05.
@@ -136,7 +163,7 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 **Lesson K written** to `Docs/Diagnostics/PIPELINE_LESSONS.md` documenting the unit-mismatch failure mode (Mars Climate Orbiter parallel; architect picked METERS table values from Trackman PDF mistaking them for YARDS).
 
-**`controls_f` is the natural next move:** Notion [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) `C.8 — Drag LUT calibration audit (driver carry blocker)` Queued, P1 High. Definition of done: removing `[Ignore]` from `Aero_Driver_KnownPending_LayerOneAudit` test (gate becomes 211 PASS + 0 IGNORED). Architect to write SPEC + NOTES when ready.
+**`controls_f` is the natural next move:** ✅ SPEC.md written 2026-05-05 evening, moved to Active. See "📌 NEXT — controls_f_drag_calibration_audit" block above for full state.
 
 ## 📜 HISTORY — controls_e_aero_overlay_pass kicked back to implementer (ARCHITECT_REVIEW_FAIL 2026-05-05)
 
