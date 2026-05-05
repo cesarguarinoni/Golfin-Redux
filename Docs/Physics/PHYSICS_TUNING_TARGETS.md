@@ -5,6 +5,28 @@
 **Companion:** `Docs/Physics/PHYSICS_RESEARCH.md` (architecture decisions)
 **Last updated:** 2026-04-21
 
+## ⚠ 2026-05-05 — Sqrt fix landed; numbers below need re-validation
+
+Phase A of `controls_d_velocity_cap_diagnosis` repaired the `fpMath.Sqrt`
+convergence bug. Every `|v|` reading the simulation produced before this
+fix was quantized to a power of 2 (typically 64 m/s for driver-class
+shots, 2 m/s for putter-class shots). All carry/putt numbers documented
+below were calibrated against that broken behavior.
+
+After the fix:
+- Driver `|v|` increased from a capped 64 m/s to its true ~103 m/s.
+- Aero drag and rolling resistance now operate on real speeds.
+- Net effect on carry/putt distances: shifts; not yet re-validated against
+  Trackman/USGA reference data.
+
+**Action item (deferred, not blocking):** re-validate all carry/putt
+numbers in this document against real-world reference data. If lab
+testing shows distances feel off by more than ~10%, schedule a tuning
+spec.
+
+Until that re-validation lands, treat the numbers below as "what the
+current physics produces" rather than "what was designed."
+
 ---
 
 ## Purpose

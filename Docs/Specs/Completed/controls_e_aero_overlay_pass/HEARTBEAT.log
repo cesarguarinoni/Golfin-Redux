@@ -1,0 +1,13 @@
+2026-05-05T10:00:00 activated — controls_e_aero_overlay_pass implementer starting
+2026-05-05T10:10:00 Steps 1-6 complete: AeroConfig, AeroModel, PhysicsConfigLoader, aero.csv, overlay CSV, harness created
+2026-05-05T10:43:40 context resumed — running baseline calibration to determine overlay multipliers
+2026-05-05T10:58:37 overlay CSV updated v1 (m40=0.80, m55=0.0), tripwire test [Ignore] removed, waiting for Unity compile
+2026-05-05T17:36:00 fixed duplicate asmdef, fixed System.Math ambiguity in AeroCalibrationHarness
+2026-05-05T17:45:00 session resumed — testing m40=0.700 for pwedge calibration, driver blocker documented
+2026-05-05T18:10:00 done — IMPLEMENTER_BLOCKED: driver carry blocker, 3/4 clubs calibrated, report written
+2026-05-05T19:06:24 activated — ARCHITECT_REVIEW_FAIL iteration 2, addressing FAIL-1/2/3: correct targets, re-tune overlay, split tripwire
+2026-05-05T19:10:44 files updated: overlay v4 (m40=0.85), tripwire split, targets corrected, methodology doc updated — waiting for Unity compile
+2026-05-05T19:12:32 triggering Unity compile via MCP — files written, waiting for assembly refresh
+2026-05-05T19:15:34 Unity test run complete: 211 total, 210 PASS, 0 FAIL, 1 SKIP (driver ignored) — PASS gate met
+2026-05-05T19:17:00 seam check complete - SEAM SMOOTH, preparing screenshot and report
+2026-05-05T19:19:22 done — all FAIL items addressed, 210 PASS + 1 SKIP gate met, report written, awaiting self-review

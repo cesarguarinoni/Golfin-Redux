@@ -1,0 +1,33 @@
+# Layer 2 — corner-case overlay. Tunable for game feel.
+# This file applies a multiplicative correction to the Layer 1 lift coefficient
+# (aero_lift_lut.csv, Bearman-Harvey 1976 transcription) ONLY where Layer 1 is
+# extrapolating past its valid range (S > 0.30) OR where outcomes diverge from
+# observed Tour-pro reality (Trackman 2024 PGA Tour averages, March 2025 update).
+# Smoothstep blend across S in [0.25, 0.35] prevents seam discontinuity.
+# See Docs/Physics/CALIBRATION_METHODOLOGY.md for full architecture frame.
+#
+# v4 calibration (controls_e_aero_overlay_pass iteration 2, 2026-05-05):
+#   Targets corrected per ARCHITECT_REVIEW.md FAIL-1 (Lesson K: unit mismatch fix):
+#     driver   (S_peak~0.08): UNAFFECTED by overlay (S < 0.25 blend window) → ~240yd
+#              NOTE: driver under-carries 275yd target by ~12.7% — overlay cannot fix this.
+#              Driver S_peak=0.08 is in Layer 1 valid range; overlay is forced to 1.0 for S<0.25.
+#              Tracked as controls_f_drag_calibration_audit (drag LUT Layer-1 issue).
+#     iron7    (S_peak~0.30): m40=0.850 reduces carry: ~170yd (target 172±10%=158-189yd → PASS)
+#     iron9    (S_peak~0.40): m40=0.850 reduces carry: ~138yd (target 148±10%=133-163yd → PASS)
+#     pwedge   (S_peak~0.45): m40=0.850 reduces carry: ~127yd (target 136±10%=122-150yd → PASS)
+#
+# Targets sourced from Trackman PDF YARDS row:
+#   https://teeituprva.com/wp-content/uploads/2019/03/PGA-AVERAGES-INTERACTIVE.pdf
+# Cross-verified: Maryland Golf Camps (https://marylandgolfcamps.com/how-far-do-professionals-hit-each-club-golf.html)
+# See IMPLEMENTER_REPORT.md § "Calibration targets" for the full 8-club table.
+spin_parameter,cl_multiplier,notes
+0.00,1.000,Layer 1 valid; no overlay
+0.20,1.000,Layer 1 valid; no overlay
+0.25,1.000,Layer 1 valid; blend window starts
+0.30,1.000,Bearman-Harvey upper bound; blend active
+0.35,1.000,Blend window ends; overlay fully active
+0.40,0.850,Tuned v4: iron7/iron9/pwedge calibration against corrected Trackman YARDS targets
+0.55,0.000,Tuned v1: iron9/pwedge mid-S cutoff
+0.70,0.000,Tuned v1: pwedge high-S regime
+0.90,0.000,Extrapolation territory
+1.20,0.000,Extrapolation territory
