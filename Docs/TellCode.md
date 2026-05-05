@@ -119,7 +119,30 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 **Phase B (Cos/Sin) still queued:** [`35731e0e-9a36-8132-96e4-cc27c4d2a734`](https://www.notion.so/35731e0e9a36813296e4cc27c4d2a734) `C.6 — fpMath.Cos/Sin range-reduction repair (Phase B)`. Lands after Loop v1.
 
-## 📌 NEXT — controls_e_aero_overlay_pass (SPEC_READY 2026-05-05, awaiting implementer kickoff)
+## 📌 NEXT — controls_e_aero_overlay_pass kicked back to implementer (ARCHITECT_REVIEW_FAIL 2026-05-05)
+
+**STATUS flipped from `IMPLEMENTER_BLOCKED` → `ARCHITECT_REVIEW_FAIL`** by human Architect after escalation review. Three FAIL items, all tightly scoped. Architect's full response in `Docs/Specs/Active/controls_e_aero_overlay_pass/ARCHITECT_REVIEW.md` (newly written for this iteration since pipeline reviewer didn't run).
+
+**FAIL summary:**
+1. **Correct the Trackman target values.** Architect picked unit-mismatched values from the Trackman PDF (METERS table mistaken for YARDS table). Real values verified against two independent sources: driver 290→**275**, 7-iron 175→**172**, 9-iron 145→**148**, PW 115→**136** (all yards). New `Docs/Diagnostics/PIPELINE_LESSONS.md` Lesson K written documenting the failure mode (Mars Climate Orbiter parallel).
+2. **Re-tune the lift overlay against corrected targets.** The implementer's m40=0.55 was driven by chasing wrong (too-low) PW target of 115 instead of real 136. With correct targets, overlay should relax upward to ~m40=0.80–0.90 — a much smaller correction that respects more of the Bearman-Harvey curve. Healthier outcome.
+3. **Split the tripwire test in two.** Cesar locked: "don't want other clubs braking the 10% rule" — so unified ±15% gate is rejected. Driver gets its own `[Ignore]`-tagged test pointing at controls_f. Irons + wedge stay tight at ±10% in `Aero_MidHighSpinClubs_WithinTourCarryRange`. Architecture stays unified; one overlay, one blend, one methodology. Driver carve-out is a TEST split, not a system split.
+
+**Architecture decision locked with Cesar (2026-05-05):** Driver miss is a Layer-1 drag-LUT issue (Cd=0.23 floor at v≥30 m/s likely too high vs supercritical-Re golf-ball Cd ~0.18–0.22). Layer-2 lift overlay correctly excludes the S≤0.25 regime by design — the gap belongs to controls_f, not controls_e. CALIBRATION_METHODOLOGY.md gets a new section: "What to do when an in-Bearman-Harvey-valid-range club misses target" — answer: it's a Layer-1 issue, separate audit task, NOT an overlay extension. This preserves the Layer 1/Layer 2 boundary going forward.
+
+**Notion:** controls_f entry [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) escalated **P3 → P1**, renamed "C.8 — Drag LUT calibration audit (driver carry blocker)". SPEC writing scheduled by architect once controls_e closes end-to-end.
+
+**Path to PASS after this addendum:** implementer corrects targets → re-runs calibration (expected ~30 min) → splits tripwire → adds methodology section → documents Trackman citation properly per Lesson K → self-reviewer → reviewer subagent → Cesar approve. Final gate: **210 PASS + 1 IGNORED** (driver test ignored pending controls_f).
+
+## 📜 HISTORY — controls_e_aero_overlay_pass implementer escalation (IMPLEMENTER_BLOCKED 2026-05-05)
+
+(Implementer correctly identified that driver cannot be calibrated by lift overlay because it sits at S=0.08 inside Bearman-Harvey valid range. Diagnosis was right — architecture decision needed from human Architect to handle the known Layer-1 miss. See "NEXT" block above for resolution. Original IMPLEMENTER_REPORT.md preserved at `Docs/Specs/Active/controls_e_aero_overlay_pass/IMPLEMENTER_REPORT.md`.)
+
+---
+
+## 📜 HISTORY — controls_e_aero_overlay_pass initial SPEC writing (SPEC_READY 2026-05-05)
+
+(SPEC was written, implementer ran iteration 1, escalated mid-pipeline to IMPLEMENTER_BLOCKED — see HISTORY blocks above for that escalation and the architect's FAIL response. SPEC content preserved below for retrospective.)
 
 **Spec written and folder moved to Active.** `Docs/Specs/Active/controls_e_aero_overlay_pass/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) flipped to **In Progress** (P1 High, M 1–2 days, Order 150).
 
