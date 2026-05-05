@@ -43,7 +43,7 @@
 - **C.1 + C.2** ✅ DONE 2026-05-05 (`Docs/Specs/Completed/controls_c_fix/`). Phase A landed: stop-check tolerance window (`stopEpsilon = stopThresh × 0.05`) in both `RunRollPhase` + `RunPuttPhase`; `putt.csv` Green k 0.10→0.50, GreenCollar 0.14→0.40; `surfaces.csv` CartPath 0.06→0.30; 5 new EditMode tests; **203/203 PASS** bit-exact gate held. Pipeline ran end-to-end (implementer → self-reviewer FAIL iter 1 → implementer redo → reviewer PASS option a → Cesar approve). Predecessor diagnosis: `Docs/Specs/Completed/controls_c_diagnosis/`. Two Quick follow-ups also DONE: (1) added 4 `[ShotExit]` `DiagShotLogger` calls at BallSimulation.cs phase exits; (2) baked physics-lab capture rule into `CLAUDE.md` (`mcp__ai-game-developer__screenshot-game-view` does NOT refresh in same script-execute scope; mandate `CaptureHelper.SnapAtEndOfFrameAndPause` for at-rest evidence). Notion entry [`35631e0e-9a36-8176-add4-e5bc40877f0f`](https://www.notion.so/35631e0e9a368176add4e5bc40877f0f) flipped to **Done**, Closed=2026-05-05.
 - **C.5** — fpMath.Sqrt convergence repair. Was originally framed as "velocity cap diagnostic" but adversarial review revealed the 64 m/s cap was a Newton-Raphson early-exit bug returning the power-of-2 initial guess, not a real velocity cap. ✅ DONE 2026-05-05 (`Docs/Specs/Completed/controls_d_velocity_cap_diagnosis/`). Replaced `fpMath.Sqrt` body with libfixmath digit-by-digit shift-and-subtract port (single-pass int64). 209 PASS + 1 IGNORED tripwire pointing at controls_e for the unmasked lift-LUT issue. Notion [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6) flipped Done.
 - **C.7** — Aero lift overlay calibration pass (Layer 2). Two-layer architecture frame established with Cesar 2026-05-05: Layer 1 = real physics (Bearman-Harvey 1976) kept faithful in valid range; Layer 2 = corner-case overlay tuning past published-valid range. ✅ DONE 2026-05-05 (`Docs/Specs/Completed/controls_e_aero_overlay_pass/`). Lift overlay m40=0.850, smoothstep blend S∈[0.25, 0.35], iron/wedge errors all within ±10%. New `Docs/Physics/CALIBRATION_METHODOLOGY.md` documents the two-layer pattern. Notion [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) flipped Done. Lesson K (unit-mismatch, Mars Climate Orbiter parallel) added to `Docs/Diagnostics/PIPELINE_LESSONS.md`.
-- **C.8** — Drag LUT calibration audit (driver carry blocker). NEXT after Cesar's signal. Driver carries −12.7% short of Trackman 275yd target at S=0.08 (Bearman-Harvey valid range — lift overlay correctly excludes by design). Suspect: Cd=0.23 floor at v≥30 m/s likely too high vs supercritical-Re golf-ball Cd ~0.18–0.22. Notion [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c), P1 Queued. Definition-of-done: removing `[Ignore]` from `Aero_Driver_KnownPending_LayerOneAudit` (gate goes 211 PASS + 0 IGNORED).
+- **C.8** — Drag LUT calibration audit (driver carry blocker). ✅ DONE 2026-05-06 (`Docs/Specs/Completed/controls_f_drag_calibration_audit/`). Layer-2 drag overlay landed: `aero_drag_overlay.csv` with multipliers 0.920/0.890/0.880 at v=60/70/80 m/s; smoothstep blend across v∈[45,55]. Driver carry 240→249yd (-9.5% error vs Trackman 275yd target, inside ±10% gate). Tripwire `Aero_Driver_KnownPending_LayerOneAudit` un-ignored and PASSes. CALIBRATION_METHODOLOGY.md §9 added (drag overlay) mirroring §3 (lift overlay); §8 closed. Test gate: **211/211 PASS, 0 IGNORED**. Notion [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) flipped Done. **🎉 C-cluster physics work COMPLETE.**
 - **C (Phase B — Fairway/Rough/etc tuning).** Notion `35631e0e-9a36-8102-b217-d00dac3c3d92`. Queued; lands when observation numbers from `controls_c_fix` Phase A's tests give us captured values. Spec written then.
 - **fpMath.Cos/Sin range-reduction repair (Phase B of fpMath).** Notion [`35731e0e-9a36-8132-96e4-cc27c4d2a734`](https://www.notion.so/35731e0e9a36813296e4cc27c4d2a734). Queued; lands after Loop v1 — quieter ~12% bug than the Sqrt cap.
 
@@ -120,9 +120,53 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 **Phase B (Cos/Sin) still queued:** [`35731e0e-9a36-8132-96e4-cc27c4d2a734`](https://www.notion.so/35731e0e9a36813296e4cc27c4d2a734) `C.6 — fpMath.Cos/Sin range-reduction repair (Phase B)`. Lands after Loop v1.
 
-## 📌 NEXT — controls_f_drag_calibration_audit (SPEC_READY 2026-05-05 evening, awaiting implementer kickoff)
+## ✅ DONE — controls_f_drag_calibration_audit (closed end-to-end 2026-05-06 06:47 JST)
 
-**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_f_drag_calibration_audit/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) flipped to **In Progress** (P1 High, S half-day, Order 160).
+**Spec archived:** `Docs/Specs/Completed/controls_f_drag_calibration_audit/`. Pipeline ran clean: implementer → reviewer (ARCHITECT_REVIEW_PASS-with-caveat, since Unity MCP was unavailable to literally execute Test Runner) → Cesar manually verified `Window > Test Runner > EditMode > Run All` → **211 PASS, 0 IGNORED** confirmed. Notion entry [`35731e0e-9a36-818d-9a4c-ee8dd9ca511c`](https://www.notion.so/35731e0e9a36818d9a4cee8dd9ca511c) flipped to **Done**, Closed=2026-05-06.
+
+**What landed:**
+- New `aero_drag_overlay.csv` with multipliers `1.000` below v=45 m/s and `0.920 / 0.890 / 0.880` at v=60/70/80 m/s. Smoothstep blend across `v∈[45,55]` m/s prevents seam discontinuity.
+- Drag overlay seam in `AeroModel.ComputeAeroForce` with `BlendDragOverlay` smoothstep helper, mirroring the lift overlay pattern from `controls_e` verbatim.
+- New `AeroConfig` fields `DragOverlay` + `UseDragOverlay`; `PhysicsConfigLoader.LoadDragOverlay()` mirroring `LoadLiftOverlay()`.
+- `AeroCalibrationHarness.cs` extended with vMax + time-above/below/in-seam diagnostic columns.
+- `[Ignore]` removed from `Aero_Driver_KnownPending_LayerOneAudit` test — now PASSing.
+- Driver carry: 240.4yd → **249.0yd** (-9.5% error vs Trackman 275yd target, inside ±10% gate). Iron/wedge errors stay tight: 7-iron -0.5%, 9-iron -6.6%, PW -6.1%.
+- Driver flight breakdown: ~61% above seam (full overlay active), ~12% in seam zone, ~27% below seam (Layer 1 only). Matches spec's design exactly.
+- `Docs/Physics/CALIBRATION_METHODOLOGY.md` adds **§9 (When to add a Layer-2 drag overlay)** mirroring §3 (lift overlay). §8 closed with cross-reference to §9.
+- Layer-status header on `aero_drag_lut.csv` updated to point at the new overlay (no value changes).
+
+**Smoothstep seam verified smooth:** 9-point sweep at v∈{40, 43, 45, 48, 50, 52, 55, 58, 60} shows monotonically increasing carry with rate-of-change decreasing smoothly. No kink at v=45 or v=55.
+
+**Two cleanup notes (handled or to handle):**
+- Temporary utility `Assets/Scripts/Editor/Physics/RunHarnessMenuItem.cs` was added by implementer for verification; can be deleted now (Cesar's manual cleanup or next implementer touch).
+- Spec wording "8/8 clubs PASS" was carried over from controls_e (where calibration set was already 4 clubs); actual harness is 4 clubs, gate is 4/4. Future spec edits should drop the 8 reference.
+
+**🎉 C-cluster physics work: COMPLETE.** Roadmap §1 (Putter P1) closing follow-ups all delivered:
+- `controls_c_diagnosis` ✅ — stop-check + velocity-cap symptoms triaged
+- `controls_c_fix` ✅ — stop-check tolerance window + Green/GreenCollar/CartPath tuning
+- `controls_d_velocity_cap_diagnosis` ✅ — fpMath.Sqrt convergence repair
+- `controls_e_aero_overlay_pass` ✅ — Layer-2 lift overlay + CALIBRATION_METHODOLOGY.md
+- `controls_f_drag_calibration_audit` ✅ — Layer-2 drag overlay
+
+Loop v1 §2a (Ball state machine) is the next umbrella.
+
+## ✅ DONE — controls_e_aero_overlay_pass (closed end-to-end 2026-05-05 19:57 JST)
+
+**Spec archived:** `Docs/Specs/Completed/controls_e_aero_overlay_pass/`. Pipeline ran the full loop including iteration 1 → IMPLEMENTER_BLOCKED escalation → architect FAIL with three items → implementer iteration 2 → self-reviewer PASS → reviewer PASS → Cesar approve. Test gate now **210 PASS + 1 IGNORED** (211 total). Notion entry [`35731e0e-9a36-8172-84e4-cdb4df5a0f81`](https://www.notion.so/35731e0e9a36817284e4cdb4df5a0f81) flipped to **Done**, Closed=2026-05-05.
+
+**What landed:**
+- New `aero_lift_overlay.csv` with m40=0.850 (architect predicted [0.80, 0.90] band; landed mid-band).
+- Lift overlay seam in `AeroModel.cs` with `BlendOverlay` smoothstep helper (S∈[0.25, 0.35]).
+- New `AeroConfig` fields `LiftOverlay` + `UseLiftOverlay`; `PhysicsConfigLoader.LoadLiftOverlay()` mirroring `LoadLiftLut()` pattern.
+- New `Assets/Scripts/Editor/Physics/AeroCalibrationHarness.cs` with both CLI + `MenuItem("GOLFIN/Physics/Run Aero Calibration Sweep")` surfaces.
+- Tripwire split into two tests: active `Aero_MidHighSpinClubs_WithinTourCarryRange` (PASS for iron7/iron9/PW) + `[Ignore]`-tagged `Aero_Driver_KnownPending_LayerOneAudit` referencing `controls_f` (now removed by controls_f).
+- New `Docs/Physics/CALIBRATION_METHODOLOGY.md` with all 8 sections (two-layer architecture, Trackman targets, Bearman-Harvey valid range, harness usage, smoothstep math, when-to-recalibrate, Layer-1 sanctity rule, what-to-do-when-in-BH-range-club-misses).
+- Layer-status headers added to `aero_lift_lut.csv` (Layer 1), `aero_drag_lut.csv` (Layer 1, audit pending), `surfaces.csv` (Layer 2), `putt.csv` (Layer 2).
+- Final per-club errors: iron7 −0.1%, iron9 −6.2%, PW −5.6% — all within ±10%. Driver −12.7% intentionally tracked in controls_f (since closed).
+
+**Lesson K written** to `Docs/Diagnostics/PIPELINE_LESSONS.md` documenting the unit-mismatch failure mode (Mars Climate Orbiter parallel; architect picked METERS table values from Trackman PDF mistaking them for YARDS).
+
+## 📜 HISTORY — controls_f scope and rationale (kept for reference)
 
 **Phase A scope (locked, all 5 open questions answered 2026-05-05 evening):**
 - **Seam location:** `v ∈ [45, 55]` m/s (surgical — driver fully affected ~60% of flight, irons mostly unaffected, only 5-iron grazes the seam zone)
