@@ -111,6 +111,26 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
+## 📌 NEXT — controls_d_velocity_cap_diagnosis Phase A (SPEC_READY 2026-05-05, awaiting implementer kickoff)
+
+**Spec written and folder moved to Active.** `Docs/Specs/Active/controls_d_velocity_cap_diagnosis/SPEC.md` — STATUS=SPEC_READY. Tier 3 pipeline. Notion entry [`35631e0e-9a36-8133-9734-d5b4418db9f6`](https://www.notion.so/35631e0e9a3681339734d5b4418db9f6) renamed to **"C.5 — fpMath.Sqrt convergence repair (Phase A)"** and flipped to **In Progress** (P2 Medium, S half-day, Order 145).
+
+**Phase A scope (this spec, locked, hardened by adversarial review 2026-05-05):** Replace the entire body of `fpMath.Sqrt` with a port of libfixmath's `fix16_sqrt` digit-by-digit shift-and-subtract algorithm (Wikipedia "Methods of computing square roots → Binary numeral system"), single-pass int64 version. New `Assets/Scripts/Physics/Tests/fpMathTests.cs` with 6 Sqrt assertions including regression guards for the captured 64 m/s and 2 m/s outputs. Re-snapshot affected EditMode tests (203 → 209 expected, with some subset of the original 203 having their expected values updated). Add a warning section at the top of `Docs/Physics/PHYSICS_TUNING_TARGETS.md` noting the carry/putt numbers were calibrated against the broken sqrt and need re-validation when convenient (not blocking).
+
+**Adversarial review notes (2026-05-05, all in NOTES.md):** SPEC includes (a) bug analysis verified via independent Newton-Raphson convergence proof + cap-value calculation matching captured logs for both putter and driver shots; (b) algorithm decision verified against canonical libfixmath source + Wikipedia + Hacker's Delight (digit-by-digit chosen over Newton-fix and System.Math.Sqrt for structural robustness + integer-only-determinism preservation); (c) IronWarrior IL2CPP determinism tests confirmed System.Math.Sqrt is OK on iOS/Android but rejected to preserve project contract; (d) stale comment in current Sqrt body flagged as evidence of previous misdiagnosis ("loop only runs 20" — actually runs 40, but bug is structural in early-exit). Web sources used: PetteriAimonen/libfixmath, mitsuhiko/libfixmath, en.wikipedia.org/wiki/Methods_of_computing_square_roots, IronWarrior/UnityCrossPlatformDeterministicFloats.
+
+**Architect working notes (informational):** `Docs/Specs/Active/controls_d_velocity_cap_diagnosis/NOTES.md` — full diagnosis journal + decision tree (Path A/B/B-narrow/C) + adversarial review section. Implementer reads SPEC.md as work definition; NOTES.md is context only.
+
+**Files touched (Phase A):** `Assets/Scripts/Physics/Math/fpMath.cs` (Sqrt body only), new `Assets/Scripts/Physics/Tests/fpMathTests.cs`, subset of `Assets/Scripts/Physics/Tests/*.cs` (re-snapshot only, no logic change), new top section in `Docs/Physics/PHYSICS_TUNING_TARGETS.md`. No asmdef / scene / prefab / CSV changes.
+
+**Phase B queued (separate Notion entry):** [`35731e0e-9a36-8132-96e4-cc27c4d2a734`](https://www.notion.so/35731e0e9a36813296e4cc27c4d2a734) — `C.6 — fpMath.Cos/Sin range-reduction repair (Phase B)`. Lands AFTER Loop v1; not on its critical path. Same Taylor accuracy bug surfaced in the same controls_c_diagnosis captures (~12% error at angles near ±π). Fix: extend ReduceAngle to [-π/2, π/2] using cos(π−x) / sin(π−x) identities. Same fpMathTests.cs file extends with Cos/Sin assertions in that phase.
+
+**Critical risk:** the bit-exact 203/203 EditMode gate WILL break when this lands. SPEC.md Step 4 has the re-snapshot protocol. Implementer escalates as `IMPLEMENTER_BLOCKED` if any test produces NaN, Infinity, or sign-flipped values (genuine regression rather than re-snapshot territory).
+
+**Roadmap reference:** This task is a closing follow-up under `Docs/Roadmap.md` §1 (Putter P1) cluster. Does NOT gate §2 (Loop v1) start — Loop v1 spec writing can begin in parallel. Phase B is fully off Loop v1's critical path.
+
+---
+
 ## ✅ DONE — controls_c_fix Phase A (closed 2026-05-05)
 
 **Spec archived:** `Docs/Specs/Completed/controls_c_fix/`. Pipeline ran end-to-end: implementer → self-reviewer (BACK_TO_IMPLEMENTER iter 1 on false-PASS lab-shot evidence) → implementer redo → reviewer (ARCHITECT_REVIEW_PASS option a) → Cesar approve. **203/203 PASS** bit-exact gate held.

@@ -1,6 +1,6 @@
 # NOTES — `controls_d_velocity_cap_diagnosis` — Architect working notes
 
-> **Working draft.** SPEC.md to follow once Cesar locks the open questions at the bottom of this file. Implementer reads SPEC.md, NOT this file. STATUS.md tracks pipeline state.
+> **DECISIONS LOCKED 2026-05-05.** SPEC.md written. Implementer reads SPEC.md, NOT this file. NOTES.md retained as diagnosis journal + adversarial-review record.
 
 **Created:** 2026-05-05 JST
 **Architect:** Claude (claude.ai)
@@ -237,3 +237,121 @@ No asmdef, no scene, no prefab, no CSV.
 - Re-tuning gameplay coefficients (CSVs) beyond what the test re-baseline forces.
 - Touching `BallSimulation` integrator logic.
 - Performance optimization of `fpMath.Sqrt` beyond what's needed to make it correct.
+
+---
+
+## ADVERSARIAL REVIEW (2026-05-05) — verification before SPEC.md lock
+
+Cesar instruction: *"Follow recommendation. Double check everything with other people's implementations online and adversarial review. Be 100% sure of the path before fixing or over engineering."* This section is the verification log.
+
+### Verification 1 — Bug analysis (independent derivation)
+
+**Claim:** The early-exit `if (r >= prev) { r = prev; break; }` fires on iteration 0 because Newton-Raphson always steps UP from a power-of-2 undershoot.
+
+**Proof:** For input N, Newton iteration is `r' = (r + N/r) / 2`. If `r < √N`, then `N/r > √N > r`, so `r' = (r + N/r)/2 > r`. Therefore `r' > prev` ALWAYS holds on iteration 0 when initial guess undershoots. The early-exit triggers, returning `r = prev` (the initial guess). ✅ Confirmed.
+
+**Cap-value calculation:** Halving loop produces `r = 2^k` where `k` is the number of iterations until `tmp ≤ 3`. For input fp value 10672 (driver dot product), `n = 10672 × 2^16 × 2^16 = 4.58×10¹³`, `log₂(n) ≈ 45.4`, halving runs 22 times, `r = 2²² = 4,194,304` raw. fp value = `2²² / 2¹⁶ = 2⁶ = 64.0`. ✅ Matches captured log.
+
+For input fp value 5.005 (putter), `r = 2¹⁷ = 131,072` raw → fp value `2.0`. ✅ Matches captured log.
+
+### Verification 2 — Canonical algorithm comparison (libfixmath)
+
+Fetched `mitsuhiko/libfixmath/libfixmath/fix16_sqrt.c` (the canonical Q16.16 sqrt implementation, MIT-licensed, ~14 years deployed). **Key finding: libfixmath does NOT use Newton-Raphson.** It uses the **digit-by-digit shift-and-subtract method** from Wikipedia's "Methods of computing square roots → Binary numeral system."
+
+libfixmath's algorithm:
+1. Pick a starting bit (highest power-of-2 ≤ sqrt of input).
+2. For each bit from high to low: test if `result + bit` would keep partial sum ≤ num. If yes, include it.
+3. Run main loop twice (two-pass) to avoid 64-bit intermediate values, since libfixmath targets embedded platforms with only 32-bit math.
+4. Optional final rounding bit.
+
+This is **deterministic by construction** — no convergence test, no iteration count tuning, no early-exit. Bit count is fixed: 32 bits in, 16 bits out (for Q16.16 → Q16.16 sqrt).
+
+GolfinRedux's `fp.raw` is `long` (verified at `Assets/Scripts/Physics/Math/fp.cs` line 14), so the two-pass split is unnecessary — a **single-pass int64 version** is cleaner and equally correct.
+
+### Verification 3 — Other algorithms surveyed
+
+- **Hacker's Delight (Warren)** — covers integer sqrt with explicit Newton + canonical seeder. Uses `nlz` (number of leading zeros) for the seeder, which is a more principled bit-counting approach than the halving-loop. Still requires a careful convergence test.
+- **Wikipedia "Methods of computing square roots"** — documents both Newton (Heron's method) and digit-by-digit. Notes that Newton needs care at integer boundaries (oscillation between `k` and `k+1`).
+- **Bombelli's algorithm (arxiv 2406.07751, 2024)** — a faster digit-by-digit variant for multi-precision; out of scope here.
+- **Goldschmidt** — multiplicative iteration for FPGA / FPU; not applicable to pure-integer code.
+
+Conclusion: digit-by-digit and Newton are the two canonical options. **Digit-by-digit is more structurally robust** for the GolfinRedux use case (avoids convergence-test bugs entirely).
+
+### Verification 4 — Determinism of `System.Math.Sqrt` on iOS/Android (rejected alternative)
+
+IronWarrior/UnityCrossPlatformDeterministicFloats GitHub repo tests basic float ops across IL2CPP on Windows/Mac/Android/iOS/WebGL. Their finding: "the only non-deterministic results reported were in trig functions contained in `System.Math`." `System.Math.Sqrt` was NOT flagged as non-deterministic.
+
+**However:** GolfinRedux's physics architecture is deliberately integer-only Q16.16 to dodge float-determinism risk on edge platforms (older ARM, denormals, NaN handling). Adding a `System.Math.Sqrt` dependency in core sim path would expand the existing fallback's float-dependency surface. **Rejected** to preserve the project's architectural contract.
+
+(The existing `(v >> 48) != 0` fallback to `System.Math.Sqrt` for very-large-input safety also gets removed in the SPEC — the new digit-by-digit handles inputs up to 2⁶² safely without needing a fallback.)
+
+### Verification 5 — Stale comment in existing code
+
+The existing `fpMath.Sqrt` has a comment:
+```csharp
+// Starting from r=n requires ~22 halvings to reach sqrt for typical
+// golf-ball speeds, but the loop only runs 20 — causing severe under-convergence.
+```
+But the loop actually runs **40** iterations (`for (int i = 0; i < 40 && r != 0; i++)`). Evidence: someone previously identified the bug AS "iteration count too low" and bumped it from 20 to 40, but the bug is structural (early-exit fires on iteration 0). The fix didn't work; the comment is stale; the actual root cause was missed. **Worth flagging in SPEC** so the next reader doesn't repeat the same misdiagnosis.
+
+### Final algorithm decision
+
+**Port libfixmath's `fix16_sqrt` digit-by-digit shift-and-subtract method, single-pass int64 version**, replacing the entire body of `fpMath.Sqrt`. Specifically:
+
+```csharp
+public static fp Sqrt(fp x)
+{
+    if (x.raw <= 0) return fp.Zero;
+
+    // We want sqrt(x) where x is Q16.16. Result.raw² / 2¹⁶ ≈ x.raw,
+    // so result.raw ≈ sqrt(x.raw × 2¹⁶). Compute integer sqrt of (x.raw << 16).
+    long n = x.raw << 16;
+    long result = 0L;
+
+    // Find highest power-of-4 ≤ n. Start at 2⁶° (largest even-position bit in long).
+    long bit = 1L << 60;
+    while (bit > n) bit >>= 2;
+
+    // Digit-by-digit shift-and-subtract (Wikipedia / libfixmath).
+    while (bit != 0L)
+    {
+        if (n >= result + bit)
+        {
+            n      -= result + bit;
+            result = (result >> 1) + bit;
+        }
+        else
+        {
+            result >>= 1;
+        }
+        bit >>= 2;
+    }
+
+    // Rounding: if true sqrt is closer to result+1 than to result, round up.
+    if (n > result) result++;
+
+    return fp.FromRaw(result);
+}
+```
+
+Properties:
+- **Deterministic by construction** (no convergence test).
+- **Pure integer** (preserves Q16.16 architecture).
+- **Correctness:** for any input `x.raw ∈ [0, 2⁴⁶]` (i.e., fp values up to ~2³⁰ ≈ 1e9), result is the integer-rounded `√x` to fp precision.
+- **Bit-exact:** returns the same value on every IL2CPP/Mono platform with int64 support.
+- **Performance:** ~32 iterations of simple integer ops; bounded by bit-width of `n`. Equal or faster than the current broken Newton on modern HW.
+
+No `System.Math.Sqrt` dependency. No fallback path. No stale comments.
+
+### Final Path B-narrow lock-in
+
+| Decision | Locked value |
+|---|---|
+| Path | **B-narrow** (Sqrt only; Trig deferred to Phase B) |
+| Algorithm | **libfixmath digit-by-digit port, single-pass int64** |
+| Bit-exact gate | **(a) Re-snapshot tests** as needed |
+| Notion rename | **Yes** — "C.5 — fpMath.Sqrt convergence repair" |
+| Trig follow-up | **After Loop v1** (separate Notion entry, P2) |
+| Tuning targets | Document new numbers in `PHYSICS_TUNING_TARGETS.md`; re-validate against Trackman/USGA when convenient (not blocking) |
+
+SPEC.md written from these locks. Folder moved to `Active/`. STATUS=SPEC_READY.
