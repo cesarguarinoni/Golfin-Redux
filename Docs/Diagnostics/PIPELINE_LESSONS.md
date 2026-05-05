@@ -148,6 +148,42 @@ Neither the implementer nor the self-reviewer nor the reviewer subagents are cur
 
 ---
 
+## 2026-05-06 — Architect skipped the automatic end-of-day handoff message after task closure
+
+Cesar's user-memory rule: *"End-of-day handoff: When Cesar closes the day, automatically (1) verify specs/TellCode/AI_CONTEXT reflect actual state, fix stale lines; (2) produce kickoff message as a quoted paste-into-fresh-chat block. Don't wait to be asked."*
+
+When Cesar closed the C-cluster work on 2026-05-06 ("All passed. Done."), the architect did (1) — Notion flip, TellCode update, AI_CONTEXT update, commit + push. The architect then stopped, when the rule explicitly says BOTH steps fire automatically. Cesar had to ask for the kickoff message. When Cesar pointed out the miss, the architect responded "logged" — which is itself a lie unless the lesson is actually written to disk where future-Claude can see it. This file is that fix.
+
+### Lesson L — Day-close handoff is two steps, both automatic, fired together (HARD RULE)
+
+When Cesar signals end-of-day (explicit "done for the day," "closing out," or implicitly when a major task closes end-to-end and the conversation pauses), the architect MUST do BOTH:
+
+1. **Verify and update persistence layer.** Specs, TellCode.md, AI_CONTEXT.md reflect actual state. Notion flipped. Stale lines fixed. Commit + push.
+2. **Produce the kickoff message.** A quoted paste-into-fresh-chat block at the end of the response, summarizing state-at-start-of-tomorrow + the planned action sequence + the structural decisions to lock first. Don't wait to be asked. Don't make Cesar prompt for it.
+
+Both steps fire on every day-close. Step 1 without Step 2 is a violation. Step 2 without Step 1 is also a violation.
+
+### Why this matters
+
+- Cesar's workflow depends on chat-to-chat continuity. The kickoff block is how a fresh chat ramps up without re-reading the full prior conversation. Skipping it costs Cesar real time the next day reconstructing context.
+- The rule exists in user memory specifically because it's been needed before. Skipping it is regressing on a known-fixed pattern.
+- "Logged" or "noted" without actually writing the lesson somewhere persistent is theater. Any acknowledgment of a process miss must produce a durable artifact (this file, a code comment, a doc edit) that future-Claude will actually encounter.
+
+### Fix in architect-side workflow
+
+- After EVERY end-to-end task closure where Cesar approves and the chat naturally ends:
+  - Step 1 first (housekeeping): Notion + TellCode + AI_CONTEXT + commit + push.
+  - Step 2 immediately after, in the SAME response: produce the kickoff block as a fenced code block at the bottom.
+- After EVERY explicit day-close signal ("done for the day," "signing off," "see you tomorrow"): same two steps.
+- If unsure whether a moment counts as day-close, default to producing the kickoff block. Cost of being wrong: Cesar ignores it. Cost of skipping: Cesar has to ask, and the rule is broken.
+- Acknowledgment of a procedural miss MUST come with a durable artifact — doc edit, code comment, lesson file. "Logged" alone is meaningless if the conversation ends and the chat is gone.
+
+### Suggested addition to subagent prompts
+
+Not applicable — this is a Claude.ai architect-side workflow rule, not a subagent rule.
+
+---
+
 ## How to use this file
 
 When updating the self-reviewer or reviewer subagent prompts (`.claude/agents/golfin-self-reviewer.md`, `golfin-reviewer.md`), look for **patterns across multiple entries** here. A single one-off doesn't justify a prompt edit. Two or more entries flagging the same kind of failure justify one.
