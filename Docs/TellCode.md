@@ -85,6 +85,33 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
+## 📌 NEXT — loop_v1_2b_camera_transitions (SPEC_READY 2026-05-07 JST)
+
+**Folder:** `Docs/Specs/Active/loop_v1_2b_camera_transitions/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
+
+**Kickoff for Code:** `Use the golfin-implementer subagent on "loop_v1_2b_camera_transitions"`
+
+**One-line:** Centralize camera lifecycle into a `LoopCameraDirector` MonoBehaviour subscribed to `BallStateMachine.OnStateChanged` (§2a). Add three new `ChaseCamera` modes (`Downrange` for cinematic mid-flight cut at 65% of carry, `CupZoom` for ball-drops-in tween, `OBFreeze` for OB tracking with locked pivot). Tighten chase framing (8m→5m back, 3m→2.5m up). Co-ship CaptureHelper consolidation — closes both halves of the §2a OPEN FLAG (asmdef move into new `Golfin.Diagnostics.Runtime` + new SM-state-gated capture API).
+
+**Hard rules** (full set in SPEC.md §11):
+1. Do NOT modify `BallSimulation.cs`, `Trajectory.cs`, `BallStateMachine.cs`, `BallState.cs`, any CSV in `Resources/Configs/`, any test outside `LoopCameraDirectorTests.cs`.
+2. Do NOT delete `PhysicsLabUI.CycleCamera` or its button — Cesar locked: lab debug stays as transient (Director stomps overrides on next state transition).
+3. Do NOT widen the cinematic cut to putts — `isPutt` skip is load-bearing.
+4. Do NOT change Camera FOV — only the chase-distance/height numbers.
+5. Director uses `Time.deltaTime` freely (visual layer); SM stays deterministic.
+6. Smoke evidence per §2a Lessons M+N: file persisted on disk + parallel-path Read verification + content-sanity. No Roslyn-only captures pass review.
+7. Director needs `IModeSetter` test seam — tests must run without instantiating a Camera GO.
+
+**Definition-of-done:** Director shipped + Inspector-wired in LabScaffold; 3 new ChaseCamera modes implemented; chase retuned to 5m/2.5m; relocated `SetTarget`/`ResetToOrigin` from `PhysicsLabController.HandleShotResolved`/`HandleShotComplete` to Director; `TrajectoryRenderer._showInGameplay` flag added; `Golfin.Diagnostics.Runtime` asmdef created with `CaptureCore` + `SnapWhenStateReached` API; 9+ new EditMode tests; **236/236 PASS, 0 IGNORED** (227 pre-existing + 9 additive); smoke evidence on 4–6 captures using new SM-gated API. Two §2a OPEN FLAGs (CaptureHelper consolidation + capture-timing reliability) closed.
+
+**Estimate:** 1–1.5 working days. Critical path is 2b.1 (Director spine); CaptureHelper Part 1 (asmdef move) can run in parallel.
+
+**Spinoff spec created:** `Docs/Specs/Queued/puttpath_predictor_perf_and_design/NOTES.md` — perf measurement + sim-vs-arcade design redesign for PuttPathPredictor. Hidden in §2b gameplay scaffold default; real disposition lands when that spec ships. NOT on Loop v1 critical path.
+
+**Notion entry:** [`35831e0e-9a36-81aa-b6db-cf9b781a7af0`](https://www.notion.so/35831e0e9a3681aab6dbcf9b781a7af0) — created 2026-05-07 JST. Phase=`02. Loop v1`, Order=210, Priority=P1—High, Estimate=M (1-2 days), Status=`In Progress`. Flip Status→Done + set Closed date when pipeline closes.
+
+---
+
 ## ✅ DONE — Matchmaking Modal (Mac env test, off-roadmap)
 
 **Spec:** `Docs/Specs/Completed/matchmaking_modal/` (move from `Active/` on next housekeeping pass).
