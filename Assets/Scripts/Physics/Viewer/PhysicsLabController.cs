@@ -70,9 +70,15 @@ namespace Golfin.Physics.Viewer
 
         Trajectory _previousTrajectory;
 
+        // §2a ball state machine
+        Golfin.Gameplay.Loop.BallStateMachine _ballSM;
+
         // Camera orbit state
         float   _cameraYaw;
         Vector3 _orbitCenter;
+        // §2a: _prevBallPlaying retained only for the orbit-reset on preset shots.
+        // Touch-shot re-arm is handled by HandleShotComplete via the SM; preset shots
+        // (FireInternal path) still need the camera reset on animator-stop.
         bool    _prevBallPlaying;
         bool    _orbitDragActive;
 
@@ -81,6 +87,10 @@ namespace Golfin.Physics.Viewer
         void Awake()
         {
             EnsureConfigsLoaded();
+
+            // §2a: create ball state machine with a default surface provider.
+            _ballSM = new Golfin.Gameplay.Loop.BallStateMachine(BuildSurfaceProvider(default(ShotPreset)));
+            _ballSM.OnShotComplete += HandleShotComplete;
 
             if (_shotController != null)
                 _shotController.OnShotResolved += HandleShotResolved;
@@ -148,6 +158,9 @@ namespace Golfin.Physics.Viewer
         {
             if (_shotController != null)
                 _shotController.OnShotResolved -= HandleShotResolved;
+
+            // §2a: unsubscribe ball SM handler.
+            if (_ballSM != null) _ballSM.OnShotComplete -= HandleShotComplete;
 
             // 8.5: unsubscribe from broadcast
             ClubSelectionBroadcast.OnClubChanged -= OnClubBroadcastReceived;
@@ -226,7 +239,14 @@ namespace Golfin.Physics.Viewer
             SetupAtTee();
         }
 
-        void Update() => HandleCameraOrbit();
+        void Update()
+        {
+            // §2a: tick the ball SM before camera orbit so that OnShotComplete fires
+            // (and re-arms the controller) before HandleCameraOrbit reads IsExternalDragActive.
+            bool isPlaying = ballAnimator != null && ballAnimator.IsPlaying;
+            _ballSM?.Tick(isPlaying);
+            HandleCameraOrbit();
+        }
 
         // ── Putter UI ──────────────────────────────────────────────────────────
 
@@ -529,15 +549,17 @@ namespace Golfin.Physics.Viewer
             // Orbit only makes sense in Chase mode; Overhead/Ground manage themselves.
             if (chaseCamera != null && chaseCamera.CurrentMode != ChaseCamera.Mode.Chase) return;
 
+            // §2a: touch-shot at-rest is handled by HandleShotComplete (SM path).
+            // Preset-shot camera reset (orbit center + SetTarget) still uses the falling-edge here.
             bool isPlaying = ballAnimator != null && ballAnimator.IsPlaying;
-
             if (_prevBallPlaying && !isPlaying)
             {
                 if (ballAnimator?.CurrentBall != null)
                     _orbitCenter = ballAnimator.CurrentBall.position;
                 if (chaseCamera != null) chaseCamera.SetTarget(null);
-                // Allow firing from current lie without requiring Reset to Tee.
-                _shotController?.CompleteShot();
+                // Note: CompleteShot is NOT called here anymore.
+                // Touch-shot re-arm comes from HandleShotComplete → _ballSM.ReArm.
+                // Preset shots use a pre-armed controller (Idle already).
             }
             _prevBallPlaying = isPlaying;
             if (isPlaying) return;
@@ -654,6 +676,9 @@ namespace Golfin.Physics.Viewer
             var trajectory = RunSimFromController(correctedInput, ballMods);
             _previousTrajectory = trajectory;
 
+            // §2a: feed the SM before playback starts.
+            _ballSM?.OnTrajectoryComputed(correctedInput.origin, trajectory, AeroCfg.BallRadius);
+
             trajectoryRenderer.Draw(trajectory);
             ballAnimator.Play(trajectory);
 
@@ -720,6 +745,27 @@ namespace Golfin.Physics.Viewer
             };
             OnShotFired?.Invoke(readout);
             LogReadout(readout);
+        }
+
+        /// <summary>
+        /// §2a: Called by BallStateMachine when a shot reaches a terminal state (AtRest, InCup, OB).
+        /// Resets camera target and re-arms the shot controller.
+        /// §2d will gate this on result.TerminalState == AtRest later.
+        /// </summary>
+        void HandleShotComplete(Golfin.Gameplay.Loop.ShotResult result)
+        {
+            Debug.Log($"[PhysicsLab][§2a] OnShotComplete: terminal={result.TerminalState}" +
+                      (result.OBReason.HasValue ? $" OBReason={result.OBReason.Value}" : "") +
+                      $" end={result.EndPosition}");
+
+            // Reset camera target (was inline in HandleCameraOrbit before §2a).
+            if (ballAnimator?.CurrentBall != null)
+                _orbitCenter = ballAnimator.CurrentBall.position;
+            if (chaseCamera != null) chaseCamera.SetTarget(null);
+
+            // Re-arm shot controller for the next shot.
+            _shotController?.CompleteShot();
+            _ballSM.ReArm();
         }
 
         Trajectory RunSimFromController(ShotInput input, BallPhysicsModifiers ballMods)
@@ -939,6 +985,10 @@ namespace Golfin.Physics.Viewer
                 ? sceneName.Substring(0, sceneName.Length - 4)
                 : sceneName;
             TryLoadBakedProviders(holeId);
+
+            // §2a: refresh SM surface provider now that baked providers are loaded.
+            if (_ballSM != null)
+                _ballSM.SetSurfaceProvider(BuildSurfaceProvider(default(ShotPreset)));
 
             // Disable any debug walk camera that ships inside hole scenes.
             // Disable the GO (not just component) so Start() never fires and cursor is never stolen.
@@ -1282,6 +1332,10 @@ namespace Golfin.Physics.Viewer
             _ballSpawnPoint      = null;
             _bakedClassifier     = null;
             _bakedGround         = null;
+
+            // §2a: revert SM surface provider to flat-ground fallback.
+            if (_ballSM != null)
+                _ballSM.SetSurfaceProvider(BuildSurfaceProvider(default(ShotPreset)));
 
             Golfin.Gameplay.UI.HUD.HoleContext.Reset();
 
