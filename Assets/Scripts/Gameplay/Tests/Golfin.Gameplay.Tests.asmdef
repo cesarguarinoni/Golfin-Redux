@@ -8,7 +8,8 @@
         "Golfin.Physics.Stats",
         "Golfin.Physics.Core",
         "Golfin.Physics.Math",
-        "Golfin.Physics.Runtime"
+        "Golfin.Physics.Runtime",
+        "Golfin.Gameplay.Loop"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],

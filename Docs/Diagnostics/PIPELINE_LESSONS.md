@@ -184,6 +184,46 @@ Not applicable — this is a Claude.ai architect-side workflow rule, not a subag
 
 ---
 
+---
+
+## 2026-05-06 — `loop_v1_2a_ball_state_machine` iteration 3 triple-layer false-evidence chain
+
+The implementer (iteration 3) claimed `Assets/Scripts/Physics/Viewer/SmokeTestRunner2a.cs` was created on disk and "auditable in repo." The self-reviewer "read" it via Read tool at lines 108/155-175. The architect "read end-to-end" at lines 155-175. Cesar's post-approval `find . -name "SmokeTestRunner*"` found zero results. The smoke run (3 flicks, on-green screenshot, log lines) DID execute, but was driven by an in-memory Roslyn compile inside `script-execute` — not by a .cs file on disk.
+
+This slipped past all three pipeline stages including final architect approval.
+
+### Lesson M — "Read tool success" is not proof of file existence for 'created on disk' claims
+
+The Read tool does not error when an agent reports a path as fact but the file doesn't exist at that path (edge case in some MCP implementations, or the agent confabulates the path). Read alone is necessary but not sufficient evidence of file existence.
+
+**Fix — mandatory for all three subagents:** when a checklist item asserts "file X was created on disk," the verifier MUST do a directory listing or `find`/`ls` of the parent directory and confirm the filename appears. Read alone is not sufficient. This applies to:
+- Implementer: before writing the checklist item PASS, run `ls <parent_dir>/` and confirm the file appears.
+- Self-reviewer: when a report claims "file X exists at path Y," list the parent directory before marking CONFIRM-PASS. Read alone is not sufficient.
+- Architect: when reviewing a 'created on disk' claim, list the parent directory. The line "I read SmokeTestRunner2a.cs:155-175 carefully" is unverifiable without a directory listing.
+
+**Verification protocol for any 'created on disk' claim:**
+1. `ls <parent_dir>/` or `find . -name "<filename>"` — confirm the filename appears.
+2. Read the file and sanity-check first ~30 lines.
+3. Only then mark PASS / CONFIRM-PASS.
+
+### Lesson N — script-execute Roslyn in-memory compile is NOT the same as a .cs file on disk
+
+`script-execute` compiles C# via Roslyn in-memory. The resulting type exists in the current AppDomain but is NOT written to any .cs file on disk. An agent that compiles SmokeTestRunner2a.cs body via `script-execute` has NOT created the file — it has only compiled it temporarily. The file claim is false.
+
+**Fix for implementers:** to create a real .cs file, use the `Write` tool (or `script-update-or-create` MCP tool). After writing, verify with `ls`. Then and only then claim the file "exists on disk."
+
+**Fix for self-reviewer and architect:** the presence of a compiled type in the AppDomain (confirmed by `System.Type.GetType(...)` returning non-null) is necessary but not sufficient evidence that a .cs file exists at the claimed path. Pair with a directory listing.
+
+### Suggested addition to subagent prompts
+
+**Implementer:** "After writing any new .cs file, run `ls <parent_dir>/` before marking the creation PASS. Seeing the type in a script-execute verify is not sufficient — the type may be from a prior domain reload or from an in-memory compile."
+
+**Self-reviewer:** "For any checklist item claiming 'file X was created at path Y': list the parent directory (via Read of a dir listing script-execute result, or via the report's `ls` evidence) and confirm the filename appears before marking CONFIRM-PASS. Read alone is not sufficient."
+
+**Architect:** "For any task claiming new files in Assets/Scripts/: require a directory listing showing the file exists before approving. The line 'I read file:line' is not sufficient without a directory listing."
+
+---
+
 ## How to use this file
 
 When updating the self-reviewer or reviewer subagent prompts (`.claude/agents/golfin-self-reviewer.md`, `golfin-reviewer.md`), look for **patterns across multiple entries** here. A single one-off doesn't justify a prompt edit. Two or more entries flagging the same kind of failure justify one.
