@@ -175,15 +175,43 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — loop_v1_2c_turn_counter_and_shot_history (SPEC_READY 2026-05-07 21:15 JST)
+## 📌 NEXT — controls_h_chase_camera_regression (SPEC_READY 2026-05-07 17:20 JST) — BLOCKS §2c
+
+**Folder:** `Docs/Specs/Active/controls_h_chase_camera_regression/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
+
+**Kickoff for Code:** `Use the golfin-implementer subagent on "controls_h_chase_camera_regression"`
+
+**Notion:** [`35931e0e-9a36-8179-a1f3-cf6bde4fc340`](https://www.notion.so/35931e0e9a368179a1f3cf6bde4fc340) — P1 — High, S (half-day), Order 250, Status=In Progress.
+
+**Why P1 + blocks §2c:** Chase camera doesn't visually track ball during touch/flick shots (Cesar manual play 2026-05-07). Driver/Iron/OB all broken. §2b smoke captures missed it because `OnModeChanged` proves dispatch fired, not that camera tracked anything — a fundamental methodology gap that this SPEC also closes. §2c subscribes to the same SM events and ships TURN counter on top of broken camera flow; fix this first.
+
+**One-line:** Reorder `HandleShotResolved` (cache `_lastShotOrigin/Dir` + call `BallAnimator.Play()` BEFORE `_ballSM.OnTrajectoryComputed`) so the synchronous Aiming→Flying SM transition sees fresh data + the post-Play ball Transform. Kill `FireInternal`'s legacy direct chase-camera calls (route through SM/Director like touch path). Add 1 EditMode integration test asserting `setter.GetTarget() == ballAnimator.CurrentBall` after `HandleShotResolved` returns. Add new Pipeline Lesson O codifying "`OnModeChanged` is dispatch evidence, not visual evidence." Update SPEC template with visual-fidelity sub-section. Archive SmokeTestRunner2a/2b out of Assets/.
+
+**Hard rules** (full set in SPEC.md § Hard rules):
+1. Do NOT modify `BallStateMachine.cs` source logic. ONLY the docstring at lines 62-66 changes.
+2. Do NOT modify `BallSimulation.cs`, `Trajectory.cs`, `AeroModel.cs`, `BallAnimator.cs`, `ChaseCamera.cs`, `LoopCameraDirector.cs` source logic. Only PhysicsLabController.HandleShotResolved + FireInternal change in this task.
+3. Do NOT add new events to BallAnimator (Option C rejected).
+4. Do NOT defer the SM synchronous fire (Option B rejected).
+5. Do NOT modify `LabScaffold.unity` via raw YAML — use Unity Editor MCP if SmokeTestRunner removal triggers scene reference issues.
+6. **Do NOT skip the 5 manual content-sanity descriptions.** Per Lesson O — written by THIS spec, applied to THIS spec — runtime event-dispatch captures are not sufficient. Implementer must drive the lab manually for all 5 cases (Driver full-power, Iron half-power, Driver into OB lake, Putter, two consecutive shots) and write descriptions in IMPLEMENTER_REPORT § Visual Verification.
+7. Do NOT use `OnModeChanged`-only captures as visual verification. That's the failure mode this spec exists to fix.
+8. Bit-exact 248-test PASS gate must hold; +1 new test = 249/249 target. NO snapshot updates without architect approval.
+
+**Definition-of-done:** HandleShotResolved reordered; FireInternal SM/Director-routed; BallStateMachine docstring updated; new EditMode integration test PASS; Lesson O written; SPEC template updated with visual-fidelity sub-section; SmokeTestRunner2a/2b moved to Docs/Specs/Completed/loop_v1_2{a,b}_*/; **249/249 PASS, 0 IGNORED**; 5 manual content-sanity descriptions + 3 file artifacts under `Docs/Specs/Active/controls_h_chase_camera_regression/screenshots/`; Cesar manually verifies the 5 cases pass.
+
+**Estimate:** half-day. §2c stays SPEC_READY but kickoff WAITS for this fix to land. Cesar's camera tuning session also waits.
+
+---
+
+## ⏸️ BLOCKED ON controls_h — loop_v1_2c_turn_counter_and_shot_history (SPEC_READY 2026-05-07 21:15 JST)
 
 **Folder:** `Docs/Specs/Active/loop_v1_2c_turn_counter_and_shot_history/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
 
-**Kickoff for Code:** `Use the golfin-implementer subagent on "loop_v1_2c_turn_counter_and_shot_history"`
+**Kickoff for Code:** `Use the golfin-implementer subagent on "loop_v1_2c_turn_counter_and_shot_history"` — **AFTER controls_h closes.**
 
 **Notion:** [`35931e0e-9a36-812e-b0ca-ff6ac972d7cd`](https://www.notion.so/35931e0e9a36812eb0caff6ac972d7cd) — P1 — High, S (half-day), Order 240, Status=In Progress.
 
-**Why P1 and small:** First persistent-per-hole state on the §2a/§2b foundation. Most of the UI plumbing already exists — `GameSession.cs` (7-line static class with TurnCount + OnTurnChanged) and `PlayerCardWidget` (already binds the TURN label) are wired. Today nobody calls `SetTurn`, so TURN stays at 1 forever. This task makes it move + adds shot history alongside.
+**Why blocked:** §2c subscribes to `BallStateMachine.OnShotComplete` and reads `LastTrajectory` / `LastShotOrigin` from PhysicsLabController. controls_h's reorder of `HandleShotResolved` changes WHEN those fields are valid relative to SM transitions. §2c spec was written assuming the buggy order; needs re-verification against the fixed order before kickoff. Re-verification is small (10 minutes architect work) but blocking.
 
 **One-line:** Extend `GameSession.cs` with `ShotHistory` list + `ResetForNewHole()` method. Add new `HoleSessionDriver` MonoBehaviour (mirrors `LoopCameraDirector` precedent) that subscribes to `BallStateMachine.OnShotComplete`, builds a `ShotRecord`, appends to history, schedules `SetTurn(turn+1)` after a configurable 1.5s settling delay. Add 2 calls in `PhysicsLabController` (OnHoleLoaded after `HoleContext.Raise()`, OnHoleUnloaded after `HoleContext.Reset()`) to fire `GameSession.ResetForNewHole()`.
 
