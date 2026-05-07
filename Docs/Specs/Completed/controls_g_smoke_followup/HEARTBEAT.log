@@ -1,0 +1,16 @@
+2026-05-07T20:00:00 activated — reading SPEC, STATUS, source files
+2026-05-07T20:10:00 implementing A (OnModeChanged event), B (SnapWhenModeReached), D (new test)
+2026-05-07T20:20:00 C (SmokeTestRunner2b rewrite) written, triggering compile verification
+2026-05-07T20:30:00 compile PASS (0 errors, only pre-existing warnings) — running EditMode tests
+2026-05-07T20:35:00 241/241 EditMode PASS — SmokeTestRunner2b added to scene, entering play mode
+2026-05-07T13:00:00 resuming from context summary — 2a disabled, entering play mode for OBFreeze
+2026-05-07T13:05:00 entering play mode for C.1+C.2+C.3 captures
+2026-05-07T13:20:00 CaptureCore.cs fixed (no AssetDatabase.Refresh during play) — re-entering play mode
+2026-05-07T13:45:00 debugging play mode crashes — MCP plugin thread finalization; skipPause=true added to all captures; C.1 Downrange confirmed, C.2 putter in progress
+2026-05-07T14:00:00 resuming — C.1 captures valid (f745/f731), C.2 putter still needed, entering play mode with new inline-polling code
+2026-05-07T14:10:00 fixed OBFreeze root cause — shots at 0.85 power fly over water, using 0.35 power now; entering play mode
+2026-05-07T14:15:00 play mode entered — monitoring smoke test C.1+C.2+C.3
+2026-05-07T14:25:00 power values updated (0.75/0.70/0.80) based on terrain offset analysis — entering play mode again
+2026-05-07T14:40:00 fixing OBFreeze: grid-scan confirmed water at x[-35,-25] z=-20; power calibration corrected to 0.535/0.54/0.545; PlaceBallAt retry fix compiled
+2026-05-07T15:25:00 resumed from context summary — v3 code compiled (15:19), entering play mode for heading-override OBFreeze run
+2026-05-07T15:35:00 all 3 captures PASS, 241/241 PASS, TellCode.md CLOSED — done, awaiting review

@@ -143,7 +143,7 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ## ✅ DONE — controls_g_smoke_followup (closed end-to-end 2026-05-07 16:05 JST as ARCHITECT_REVIEW_PASS — clean, no deferral)
 
-**Spec at:** `Docs/Specs/Active/controls_g_smoke_followup/`. STATUS=`ARCHITECT_REVIEW_PASS`. Move to `Completed/` on next housekeeping.
+**Spec at:** `Docs/Specs/Completed/controls_g_smoke_followup/`. Cesar approved 2026-05-07; folder moved to Completed.
 
 **Pipeline:** implementer (3 disclosed deviations: late-bound `SnapWhenModeReached` signature for asmdef-cycle, Putter late-fallback capture, OBFreeze heading override) → self-reviewer FORWARD_TO_ARCHITECT with 3 visual-content concerns flagged (Putter shows predictor widget, OBFreeze frame doesn't show water, Downrange ball-in-flight faint) → reviewer subagent ARCHITECT_REVIEW_PASS → human Architect ruling all 3 visual concerns ACCEPTED. Notion entry [`35931e0e-9a36-81b3-a724-ef1e42678928`](https://www.notion.so/35931e0e9a3681b3a724ef1e42678928) flipped to **Done**, Closed=2026-05-07.
 
