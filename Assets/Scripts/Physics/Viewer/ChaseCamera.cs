@@ -3,12 +3,17 @@ using UnityEngine;
 namespace Golfin.Physics.Viewer
 {
     /// <summary>
-    /// Camera controller with three modes for the physics lab.
+    /// Camera controller with six modes for the physics lab.
     /// Attach to the scene's Main Camera.
+    ///
+    /// Modes added in §2b:
+    ///   Downrange  — static position past landing zone, looks back along flight line.
+    ///   CupZoom    — tweens from current position to hover above cup (L11: flat circle, hover only).
+    ///   OBFreeze   — camera frozen at OB-crossing pivot, rotation tracks ball.
     /// </summary>
-    public class ChaseCamera : MonoBehaviour
+    public class ChaseCamera : MonoBehaviour, IModeSetter
     {
-        public enum Mode { Chase, Overhead, GroundLevel }
+        public enum Mode { Chase, Overhead, GroundLevel, Downrange, CupZoom, OBFreeze }
 
         [SerializeField] Mode  startMode = Mode.Chase;
         [SerializeField] float smoothTime = 0.15f;
@@ -19,14 +24,37 @@ namespace Golfin.Physics.Viewer
         Vector3   _launchDir;    // normalized XZ
         Vector3   _velocity;     // for SmoothDamp
 
+        // ── §2b: Downrange state ───────────────────────────────────────────────
+        Vector3 _downrangePos;
+        Vector3 _downrangeLookAt;
+
+        // ── §2b: CupZoom state ────────────────────────────────────────────────
+        Vector3 _cupZoomFocus;
+        float   _cupZoomStartTime;
+        Vector3 _cupZoomStartPos;
+
+        // ── §2b: OBFreeze state ───────────────────────────────────────────────
+        Vector3 _obFreezePivot;
+
         void Awake() => _mode = startMode;
 
         // ── Public API ─────────────────────────────────────────────────────────
 
         public Mode  CurrentMode       => _mode;
         public float FollowHeightOffset { get; set; } = 0f;
-        public void  SetMode(Mode m)        => _mode   = m;
-        public void  SetTarget(Transform t) => _target = t;
+
+        public void SetMode(Mode m)
+        {
+            // CupZoom: capture entry time and start position for tween.
+            if (m == Mode.CupZoom && _mode != Mode.CupZoom)
+            {
+                _cupZoomStartTime = Time.time;
+                _cupZoomStartPos  = transform.position;
+            }
+            _mode = m;
+        }
+
+        public void SetTarget(Transform t) => _target = t;
 
         public void ResetToOrigin(Vector3 origin, Vector3 launchDir)
         {
@@ -35,6 +63,18 @@ namespace Golfin.Physics.Viewer
             if (_launchDir == Vector3.zero) _launchDir = Vector3.forward;
             _velocity   = Vector3.zero;
         }
+
+        // ── §2b: New public API ────────────────────────────────────────────────
+
+        public void SetDownrangeFraming(Vector3 pos, Vector3 lookAt)
+        {
+            _downrangePos    = pos;
+            _downrangeLookAt = lookAt;
+        }
+
+        public void SetCupZoomFocus(Vector3 focus) => _cupZoomFocus = focus;
+
+        public void SetOBFreezePivot(Vector3 pivot) => _obFreezePivot = pivot;
 
         // ── Unity loop ─────────────────────────────────────────────────────────
 
@@ -62,8 +102,35 @@ namespace Golfin.Physics.Viewer
                     desiredRot = Quaternion.LookRotation(lookAt - desiredPos);
                     break;
 
-                default: // Chase
-                    desiredPos = focus - _launchDir * 8f + Vector3.up * (3f + FollowHeightOffset);
+                case Mode.Downrange:
+                    desiredPos = _downrangePos;
+                    desiredRot = Quaternion.LookRotation(_downrangeLookAt - desiredPos);
+                    break;
+
+                case Mode.CupZoom:
+                {
+                    // Tween from start position to hover above cup over 1 second. L11: hover, don't dive.
+                    float t        = Mathf.Clamp01((Time.time - _cupZoomStartTime) / 1.0f);
+                    Vector3 hoverPos = _cupZoomFocus + Vector3.up * 2.5f;
+                    desiredPos     = Vector3.Lerp(_cupZoomStartPos, hoverPos, EaseOutCubic(t));
+                    Vector3 lookDir = _cupZoomFocus - desiredPos;
+                    desiredRot     = lookDir != Vector3.zero
+                        ? Quaternion.LookRotation(lookDir)
+                        : transform.rotation;
+                    break;
+                }
+
+                case Mode.OBFreeze:
+                    // Position frozen at pivot; rotation tracks ball.
+                    desiredPos = _obFreezePivot;
+                    Vector3 toBall = focus - _obFreezePivot;
+                    desiredRot = toBall != Vector3.zero
+                        ? Quaternion.LookRotation(toBall)
+                        : transform.rotation;
+                    break;
+
+                default: // Chase — §2b L10: retuned to 5m back / 2.5m up (was 8m / 3m)
+                    desiredPos = focus - _launchDir * 5f + Vector3.up * (2.5f + FollowHeightOffset);
                     desiredRot = Quaternion.LookRotation(focus - desiredPos);
                     break;
             }
@@ -73,5 +140,9 @@ namespace Golfin.Physics.Viewer
             transform.rotation = Quaternion.Slerp(transform.rotation, desiredRot,
                                                    10f * Time.deltaTime);
         }
+
+        // ── Helpers ────────────────────────────────────────────────────────────
+
+        static float EaseOutCubic(float t) => 1f - Mathf.Pow(1f - t, 3f);
     }
 }

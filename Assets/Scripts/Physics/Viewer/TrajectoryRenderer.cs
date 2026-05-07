@@ -13,6 +13,10 @@ namespace Golfin.Physics.Viewer
     [RequireComponent(typeof(LineRenderer))]
     public class TrajectoryRenderer : MonoBehaviour
     {
+        [Header("Visibility")]
+        [SerializeField] bool _showInGameplay = false;
+        public bool ShowInGameplay { get => _showInGameplay; set => _showInGameplay = value; }
+
         LineRenderer _line;
         readonly List<GameObject> _markers = new List<GameObject>();
         GameObject _restMarker;
@@ -37,6 +41,10 @@ namespace Golfin.Physics.Viewer
 
         public void Draw(Trajectory t)
         {
+            // §2b L13: hide in gameplay builds unless explicitly allowed.
+            if (!_showInGameplay && !Application.isEditor)
+                return;
+
             Clear();
             if (t == null || t.samples == null || t.samples.Count == 0) return;
 

@@ -9,15 +9,18 @@ namespace Golfin.Physics
     /// </summary>
     public static class AeroModel
     {
-        /// <summary>
-        /// Returns drag + Magnus lift force in Newtons.
-        /// Returns zero if speed is negligible or both Cd/Cl are zero (vacuum path).
-        /// Supports velocity-indexed Cd LUT and spin-parameter-indexed Cl LUT (Phase 2.1).
-        /// Falls back to constant-mode coefficients when LUTs are absent or disabled.
-        /// </summary>
+        // AERO DIVIDE AUDIT (controls_g, 2026-05-07):
+        // Line 29 (vRel/speed):                    safe via line-26 epsilon gate.
+        // Line 63 (LUT spinParam):                 safe via line-26 epsilon gate.
+        // Line 78 (constant-mode spinScale):       safe via AeroConfig.AssertValid at config-load time.
+        // If you add a new divide, audit it here and document the safety invariant.
+
         /// <summary>
         /// Aero force under wind. Drag and lift are computed against velocity_relative =
         /// ball_velocity - wind_velocity. Result in Newtons.
+        /// Returns zero if speed is negligible or both Cd/Cl are zero (vacuum path).
+        /// Supports velocity-indexed Cd LUT and spin-parameter-indexed Cl LUT (Phase 2.1).
+        /// Falls back to constant-mode coefficients when LUTs are absent or disabled.
         /// </summary>
         public static fp3 ComputeAeroForce(fp3 velocity, fp3 windVelocity, SpinState spin, AeroConfig cfg)
         {

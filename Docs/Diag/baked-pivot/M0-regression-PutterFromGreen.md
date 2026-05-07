@@ -6,11 +6,11 @@
 
 | dir | yaw | result | violFrame | ballY | groundY | minBallY | samples | termination |
 |-----|-----|--------|-----------|-------|---------|----------|---------|-------------|
-| N | 0 | PASS | - | 0.000 | 0.000 | 8.480 | 2175 | BallStopped |
-| NE | 45 | PASS | - | 0.000 | 0.000 | 9.909 | 5390 | BallStopped |
-| E | 90 | PASS | - | 0.000 | 0.000 | 10.145 | 5394 | BallStopped |
-| SE | 135 | PASS | - | 0.000 | 0.000 | 10.145 | 5572 | BallStopped |
-| S | 180 | PASS | - | 0.000 | 0.000 | 10.145 | 5654 | BallStopped |
-| SW | 225 | PASS | - | 0.000 | 0.000 | 9.793 | 5724 | BallStopped |
-| W | 270 | PASS | - | 0.000 | 0.000 | 7.322 | 5664 | BallStopped |
-| NW | 315 | PASS | - | 0.000 | 0.000 | 7.267 | 5513 | BallStopped |
+| N | 0 | PASS | - | 0.000 | 0.000 | 9.831 | 2287 | BallStopped |
+| NE | 45 | PASS | - | 0.000 | 0.000 | 10.078 | 2270 | BallStopped |
+| E | 90 | PASS | - | 0.000 | 0.000 | 10.145 | 2287 | BallStopped |
+| SE | 135 | PASS | - | 0.000 | 0.000 | 10.145 | 2332 | BallStopped |
+| S | 180 | PASS | - | 0.000 | 0.000 | 10.145 | 2376 | BallStopped |
+| SW | 225 | PASS | - | 0.000 | 0.000 | 10.101 | 2395 | BallStopped |
+| W | 270 | PASS | - | 0.000 | 0.000 | 9.767 | 2376 | BallStopped |
+| NW | 315 | PASS | - | 0.000 | 0.000 | 9.683 | 2332 | BallStopped |

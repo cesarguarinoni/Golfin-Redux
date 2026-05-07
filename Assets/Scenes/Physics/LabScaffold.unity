@@ -11458,6 +11458,7 @@ Transform:
   - {fileID: 1358598961}
   - {fileID: 1313501689}
   - {fileID: 751968445}
+  - {fileID: 1092786689}
   m_Father: {fileID: 1483952039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1081066033
@@ -11618,6 +11619,96 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1081066033}
   m_CullTransparentMesh: 1
+--- !u!1 &1092786688
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1092786689}
+  - component: {fileID: 1092786691}
+  - component: {fileID: 1092786690}
+  m_Layer: 0
+  m_Name: Pf_GOLFIN_Ball(Clone)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1092786689
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1092786688}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 219.42775, y: 11.458084, z: 34.7341}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1075126836}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!23 &1092786690
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1092786688}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 5c60713ec9e00f34cb2676f71f6bf360, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1092786691
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1092786688}
+  m_Mesh: {fileID: -5816000905847336366, guid: a7147d38dfd3d0b469db699d99f59192, type: 3}
 --- !u!1 &1093008622
 GameObject:
   m_ObjectHideFlags: 0
@@ -17228,6 +17319,7 @@ GameObject:
   - component: {fileID: 1483952043}
   - component: {fileID: 1483952045}
   - component: {fileID: 2300000009}
+  - component: {fileID: 2300000010}
   m_Layer: 0
   m_Name: LabRoot
   m_TagString: Untagged
@@ -17253,7 +17345,7 @@ MonoBehaviour:
   chaseCamera: {fileID: 824114951}
   _shotController: {fileID: 1483952040}
   _shotConeView: {fileID: 1838493589}
-  _ballSpawnPoint: {fileID: 1738658243}
+  _ballSpawnPoint: {fileID: 1973670323}
   _defaultLookDirection: {x: 0, y: 0, z: 0}
   _orbitSensitivity: 0.5
   _putterTrack: {fileID: 2300000001}
@@ -17300,6 +17392,7 @@ Transform:
   - {fileID: 1238838152}
   - {fileID: 471554019}
   - {fileID: 1738658243}
+  - {fileID: 1973670323}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1483952040
@@ -18524,6 +18617,50 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &1580960772
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1580960774}
+  - component: {fileID: 1580960773}
+  m_Layer: 0
+  m_Name: SmokeTestRunner2a_GO
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &1580960773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1580960772}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d26adae08cd84616b70e93049c37084, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.SmokeTestRunner2a
+--- !u!4 &1580960774
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1580960772}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1581496288
 GameObject:
   m_ObjectHideFlags: 0
@@ -21890,6 +22027,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7523d0bdf02771c4a8b865571a593fb4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.TrajectoryRenderer
+  _showInGameplay: 0
 --- !u!1 &1903183936
 GameObject:
   m_ObjectHideFlags: 0
@@ -22533,6 +22671,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1963079413}
   m_CullTransparentMesh: 1
+--- !u!1 &1973670322
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1973670323}
+  m_Layer: 0
+  m_Name: _RuntimeTeeAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1973670323
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1973670322}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 219.42775, y: 11.583316, z: 34.734093}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1483952039}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1975901404
 GameObject:
   m_ObjectHideFlags: 0
@@ -23006,6 +23175,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2022230115}
   m_CullTransparentMesh: 1
+--- !u!1 &2026567602
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2026567604}
+  - component: {fileID: 2026567603}
+  m_Layer: 0
+  m_Name: SmokeTestRunner2b_GO
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2026567603
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2026567602}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cf3b2a7e41d48f5b8e1c6d0a2f7e934, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.SmokeTestRunner2b
+--- !u!4 &2026567604
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2026567602}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2032076354
 GameObject:
   m_ObjectHideFlags: 0
@@ -24501,12 +24714,33 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.PuttPathPredictor
   _shotController: {fileID: 1483952040}
   _worldCamera: {fileID: 824114952}
-  _ballTransform: {fileID: 751968445}
+  _ballTransform: {fileID: 1092786689}
   _renderer: {fileID: 2300000008}
   _canvasRect: {fileID: 1552605528}
   _aimDeltaThresholdDeg: 0.3
   _powerDeltaThreshold: 0.01
   _sampleIntervalSec: 0.05
+--- !u!114 &2300000010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483952037}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1225a8bf7c53e4e349f3445df3708cc2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.LoopCameraDirector
+  chaseCamera: {fileID: 824114951}
+  controller: {fileID: 1483952038}
+  cinematicCutAtCarryFraction: 0.65
+  minCarryForCinematicMeters: 30
+  downrangePastLandingMeters: 12
+  downrangeHeightMeters: 4
+  cupZoomHoverHeightMeters: 2.5
+  cupZoomTweenSeconds: 1
+  obFreezeHeightAboveTerrain: 5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -24528,3 +24762,5 @@ SceneRoots:
   - {fileID: 279776946}
   - {fileID: 137113980}
   - {fileID: 1754648321}
+  - {fileID: 1580960774}
+  - {fileID: 2026567604}

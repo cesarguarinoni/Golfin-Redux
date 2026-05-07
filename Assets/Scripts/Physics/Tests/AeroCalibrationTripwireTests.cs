@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using Golfin.Physics;
 using Golfin.Physics.Math;
+using Golfin.Physics.Runtime;
 
 namespace Golfin.Physics.Tests
 {
@@ -229,6 +230,34 @@ namespace Golfin.Physics.Tests
                 $"Driver exceeds ±{tolerancePct:F0}% of Trackman 275yd YARDS target. " +
                 "This is a Layer-1 drag-LUT issue, NOT an overlay calibration issue. " +
                 "Definition of done: controls_f_drag_calibration_audit.\n" + result);
+        }
+
+        /// <summary>
+        /// Integration tripwire: a full driver shot through BallSimulation.Simulate must not throw.
+        /// Uses PhysicsConfigLoader.LoadAeroConfig() (Resources.Load path) — the same path that
+        /// would have caught the controls_g regression if this test existed at controls_f closeout.
+        /// Added by controls_g_aero_constant_mode_crash (2026-05-07).
+        /// </summary>
+        [Test]
+        public void Aero_DriverShot_DoesNotThrow()
+        {
+            // Driver: 80 m/s ball speed, 11° launch, 2700 RPM backspin — Trackman composite Tour-pro driver.
+            // Uses LoadAeroConfig() (Resources.Load path) so any future CSV regression is caught here.
+            AeroConfig cfg     = default;
+            Assert.DoesNotThrow(() => { cfg = PhysicsConfigLoader.LoadAeroConfig(); },
+                "PhysicsConfigLoader.LoadAeroConfig() threw (likely AeroConfig.AssertValid failed — " +
+                "check aero.csv spin_rate_reference / ball_mass rows).");
+
+            var ground = new FlatGround(fp.Zero);
+            var input  = MakeShot(75.0f, 10.9f, 2686f); // driver Trackman composite
+
+            Trajectory traj = null;
+            Assert.DoesNotThrow(() => { traj = BallSimulation.Simulate(input, ground, cfg); },
+                "BallSimulation.Simulate threw for a driver shot (DivideByZeroException in AeroModel? " +
+                "Check controls_g_aero_constant_mode_crash diagnosis).");
+            Assert.That(traj, Is.Not.Null, "Simulate returned null trajectory.");
+            Assert.That(traj.samples.Count, Is.GreaterThan(0),
+                "Trajectory has no samples — simulation may have crashed silently.");
         }
     }
 }

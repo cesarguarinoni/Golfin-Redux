@@ -55,6 +55,8 @@ namespace Golfin.Physics.Runtime
             cfg.LiftLut     = LoadLiftLut();
             cfg.LiftOverlay = LoadLiftOverlay();
             cfg.DragOverlay = LoadDragOverlay();
+
+            cfg.AssertValid();
             return cfg;
         }
 

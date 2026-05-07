@@ -54,6 +54,24 @@ namespace Golfin.Physics
             // DragOverlay default-constructed (IsValid=false) — overlay is opt-in via CSV
         };
 
+        /// <summary>
+        /// Throws InvalidOperationException if any field has a value that would cause
+        /// AeroModel.ComputeAeroForce to divide by zero. Call after LoadAeroConfig returns,
+        /// or in tests after constructing a custom config.
+        /// </summary>
+        public void AssertValid()
+        {
+            if (SpinRateReference <= fp.Zero)
+                throw new System.InvalidOperationException(
+                    $"AeroConfig.SpinRateReference must be > 0 (got {SpinRateReference.ToFloat()}). " +
+                    $"Constant-mode lift branch divides by this. Check Resources/Physics/aero.csv 'spin_rate_reference' row.");
+
+            if (BallMass <= fp.Zero)
+                throw new System.InvalidOperationException(
+                    $"AeroConfig.BallMass must be > 0 (got {BallMass.ToFloat()}). " +
+                    $"BallSimulation divides by this. Check Resources/Physics/aero.csv 'ball_mass' row.");
+        }
+
         // Vacuum variant — Cd=0, Cl=0. Degenerates to gravity-only integration.
         // Used by the no-aero Simulate overload so Phase 1 tests remain valid.
         public static AeroConfig Vacuum => new AeroConfig

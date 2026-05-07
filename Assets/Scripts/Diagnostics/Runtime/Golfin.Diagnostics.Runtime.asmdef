@@ -1,0 +1,14 @@
+{
+    "name": "Golfin.Diagnostics.Runtime",
+    "rootNamespace": "Golfin.Diagnostics.Runtime",
+    "references": ["Golfin.Gameplay.Loop"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

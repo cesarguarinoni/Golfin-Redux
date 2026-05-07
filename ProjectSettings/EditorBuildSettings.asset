@@ -11,6 +11,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Golf/Courses/lomond-country-club/Generated/Hole_01.unity
     guid: 00000000000000000000000000000000
+  - enabled: 1
+    path: Assets/Golf/Courses/lomond-country-club/Generated/Hole_01_Geo.unity
+    guid: e0618bca20e779d4d85bc0e89f351853
+  - enabled: 1
+    path: Assets/Golf/Courses/lomond-country-club/Generated/Hole_06_Geo.unity
+    guid: 748822982a1366c4490178f242382fc2
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

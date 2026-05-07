@@ -73,6 +73,18 @@ namespace Golfin.Physics.Viewer
         // §2a ball state machine
         Golfin.Gameplay.Loop.BallStateMachine _ballSM;
 
+        // §2b: cached per-shot origin and launch direction for LoopCameraDirector.
+        Vector3 _lastShotOrigin;
+        Vector3 _lastShotLaunchDir;
+
+        // ── §2b internal accessors for LoopCameraDirector ──────────────────────
+        internal Golfin.Gameplay.Loop.BallStateMachine BallSM        => _ballSM;
+        internal Trajectory                            LastTrajectory => _previousTrajectory;
+        internal Vector3                               LastShotOrigin    => _lastShotOrigin;
+        internal Vector3                               LastShotLaunchDir => _lastShotLaunchDir;
+        internal Transform                             CurrentBall    => ballAnimator?.CurrentBall;
+        internal bool                                  CurrentShotIsPutt => _shotController != null && _shotController.IsPutt;
+
         // Camera orbit state
         float   _cameraYaw;
         Vector3 _orbitCenter;
@@ -706,11 +718,10 @@ namespace Golfin.Physics.Viewer
 
             _orbitCenter = origin;
 
-            if (chaseCamera != null)
-            {
-                chaseCamera.SetTarget(ballAnimator.CurrentBall);
-                chaseCamera.ResetToOrigin(origin, launchDir);
-            }
+            // §2b: cache for LoopCameraDirector. Director handles SetTarget + ResetToOrigin
+            // on the Aiming→Flying SM transition. No direct chaseCamera calls here.
+            _lastShotOrigin    = origin;
+            _lastShotLaunchDir = launchDir;
 
             float carryM = 0f;
             SurfaceType finalSurface = SurfaceType.Fairway;
@@ -758,10 +769,11 @@ namespace Golfin.Physics.Viewer
                       (result.OBReason.HasValue ? $" OBReason={result.OBReason.Value}" : "") +
                       $" end={result.EndPosition}");
 
-            // Reset camera target (was inline in HandleCameraOrbit before §2a).
+            // Reset orbit center to final ball position.
             if (ballAnimator?.CurrentBall != null)
                 _orbitCenter = ballAnimator.CurrentBall.position;
-            if (chaseCamera != null) chaseCamera.SetTarget(null);
+            // §2b: chaseCamera.SetTarget(null) relocated to LoopCameraDirector.HandleStateChanged
+            // on terminal states (AtRest / InCup / OB). No direct chaseCamera call here.
 
             // Re-arm shot controller for the next shot.
             _shotController?.CompleteShot();

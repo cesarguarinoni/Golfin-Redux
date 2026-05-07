@@ -8,10 +8,9 @@
 //   For shot 3 (putter), manually positions the ball near the green using PlaceAtRest()
 //   so the camera shows ball on green, not OB.
 //
-// WHY NOT CaptureHelper.SnapAtEndOfFrameAndPause:
-//   CaptureHelper is in Golfin.EditorTools (Editor-only assembly).
-//   Golfin.Physics.Viewer is not an Editor assembly — it cannot reference Editor-only assemblies.
-//   The inline RT capture below mirrors the same logic exactly, under #if UNITY_EDITOR guards.
+// §2b: now delegates to Golfin.Diagnostics.Runtime.CaptureCore.SnapAtEndOfFrameAndPause,
+//   which lives in a runtime-accessible assembly. The inline capture method below is
+//   preserved as a fallback comment but the active path calls CaptureCore directly.
 //
 // ITERATION HISTORY:
 //   Iter 1: smoke ran via inline script-execute; file not persisted to disk.
@@ -23,16 +22,12 @@
 //            confirmed with ls before running smoke. Smoke driven from compiled assembly.
 
 using System.Collections;
-using System.IO;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Golfin.Gameplay.Input;
 using Golfin.Gameplay.Loop;
-
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
+using Golfin.Diagnostics.Runtime;
 
 namespace Golfin.Physics.Viewer
 {
@@ -197,12 +192,14 @@ namespace Golfin.Physics.Viewer
             Debug.Log("[SmokeTest2a] All 3 shots complete. Capturing at-rest frame at next end-of-frame...");
 
             // =========================================================
-            // CAPTURE — yield to end-of-frame so the render loop has
-            // produced a fresh frame showing the ball at rest on green.
+            // CAPTURE — §2b: delegates to CaptureCore.SnapAtEndOfFrameAndPause
+            // (formerly an inline copy; now factored into Golfin.Diagnostics.Runtime).
             // Capture-then-pause (correct order per CLAUDE.md rules).
             // =========================================================
-            yield return new WaitForEndOfFrame();
-            CapturedScreenshotPath = SnapAndPauseAtEndOfFrame("loop_v1_2a_iter4_real_flick3_atrest");
+            const string capLabel = "loop_v1_2a_iter4_real_flick3_atrest";
+            string capPath = $"{CaptureCore.OutDir}/{capLabel}_f{Time.frameCount}.png";
+            CapturedScreenshotPath = capPath;
+            yield return StartCoroutine(CaptureCore.SnapAtEndOfFrameAndPause(capLabel));
             Debug.Log($"[SmokeTest2a] Screenshot written: {CapturedScreenshotPath}");
 
             // Unsubscribe
@@ -222,81 +219,5 @@ namespace Golfin.Physics.Viewer
             Debug.Log($"[SmokeTest2a][§2a-debug] OnShotComplete #{_shotsComplete}: terminal={result.TerminalState}{obPart} end={result.EndPosition}");
         }
 
-        // ── Inline RT capture (mirrors CaptureHelper.SnapAtEndOfFrameAndPause) ──
-        // CaptureHelper is in Golfin.EditorTools (Editor-only assembly) which
-        // Golfin.Physics.Viewer cannot reference. Identical logic inline under
-        // #if UNITY_EDITOR guards. Capture-then-pause is the correct order.
-        static string SnapAndPauseAtEndOfFrame(string label)
-        {
-            const string outDir = "Docs/Diagnostics/_capture";
-            Directory.CreateDirectory(outDir);
-            string path = $"{outDir}/{label}_f{Time.frameCount}.png";
-
-            Texture2D tex = null;
-
-#if UNITY_EDITOR
-            var gameViewType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
-            if (gameViewType != null)
-            {
-                var gv = EditorWindow.GetWindow(gameViewType, false, null, false);
-                if (gv != null)
-                {
-                    gv.Focus();
-                    gv.Repaint();
-                    string[] rtCandidates = { "m_RenderTexture", "m_TargetTexture", "m_RenderTarget" };
-                    RenderTexture rt = null;
-                    foreach (var name in rtCandidates)
-                    {
-                        var f = gameViewType.GetField(name, BindingFlags.NonPublic | BindingFlags.Instance);
-                        rt = f?.GetValue(gv) as RenderTexture;
-                        if (rt != null && rt.IsCreated()) break;
-                    }
-                    if (rt != null)
-                    {
-                        int w = rt.width, h = rt.height;
-                        tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-                        var prev = RenderTexture.active;
-                        RenderTexture.active = rt;
-                        tex.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-                        tex.Apply();
-                        RenderTexture.active = prev;
-                        // Flip vertically (OpenGL bottom-left origin)
-                        var pixels  = tex.GetPixels();
-                        var flipped = new Color[pixels.Length];
-                        for (int y = 0; y < h; y++)
-                            for (int x = 0; x < w; x++)
-                                flipped[y * w + x] = pixels[(h - 1 - y) * w + x];
-                        tex.SetPixels(flipped);
-                        tex.Apply();
-                        Debug.Log("[SmokeTest2a] Capture: using GameView RT reflection path");
-                    }
-                }
-            }
-#endif
-            if (tex == null)
-            {
-                Debug.LogWarning("[SmokeTest2a] Capture: RT reflection failed — fallback to CaptureScreenshotAsTexture");
-                tex = ScreenCapture.CaptureScreenshotAsTexture();
-            }
-
-            if (tex != null)
-            {
-                File.WriteAllBytes(path, tex.EncodeToPNG());
-                UnityEngine.Object.DestroyImmediate(tex);
-                Debug.Log($"[SmokeTest2a] Wrote {path}");
-            }
-            else
-            {
-                Debug.LogError("[SmokeTest2a] CAPTURE FAILED");
-                return "CAPTURE_FAILED";
-            }
-
-#if UNITY_EDITOR
-            EditorApplication.isPaused = true;
-            AssetDatabase.Refresh();
-            Debug.Log($"[SmokeTest2a] Editor paused after capture at frame {Time.frameCount}");
-#endif
-            return path;
-        }
     }
 }

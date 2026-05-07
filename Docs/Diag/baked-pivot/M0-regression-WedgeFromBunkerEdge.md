@@ -6,11 +6,11 @@
 
 | dir | yaw | result | violFrame | ballY | groundY | minBallY | samples | termination |
 |-----|-----|--------|-----------|-------|---------|----------|---------|-------------|
-| N | 0 | PASS | - | 0.000 | 0.000 | 5.605 | 2430 | BallStopped |
-| NE | 45 | PASS | - | 0.000 | 0.000 | 5.705 | 2379 | BallStopped |
-| E | 90 | PASS | - | 0.000 | 0.000 | 6.185 | 4229 | BallStopped |
-| SE | 135 | PASS | - | 0.000 | 0.000 | 6.337 | 3318 | BallStopped |
-| S | 180 | PASS | - | 0.000 | 0.000 | 6.082 | 3516 | BallStopped |
-| SW | 225 | PASS | - | 0.000 | 0.000 | 5.743 | 1707 | BallStopped |
-| W | 270 | PASS | - | 0.000 | 0.000 | 2.790 | 961 | HitOOB |
-| NW | 315 | PASS | - | 0.000 | 0.000 | 3.730 | 948 | HitOOB |
+| N | 0 | PASS | - | 0.000 | 0.000 | 5.605 | 1437 | HitOOB |
+| NE | 45 | PASS | - | 0.000 | 0.000 | 5.705 | 3779 | BallStopped |
+| E | 90 | PASS | - | 0.000 | 0.000 | 6.185 | 1330 | HitOOB |
+| SE | 135 | PASS | - | 0.000 | 0.000 | 6.337 | 2269 | HitOOB |
+| S | 180 | PASS | - | 0.000 | 0.000 | 6.082 | 2932 | BallStopped |
+| SW | 225 | PASS | - | 0.000 | 0.000 | 5.287 | 1471 | HitOOB |
+| W | 270 | PASS | - | 0.000 | 0.000 | 1.455 | 1062 | HitOOB |
+| NW | 315 | PASS | - | 0.000 | 0.000 | 2.766 | 1046 | HitOOB |
