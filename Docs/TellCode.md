@@ -175,6 +175,34 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
+## 📌 NEXT — loop_v1_2c_turn_counter_and_shot_history (SPEC_READY 2026-05-07 21:15 JST)
+
+**Folder:** `Docs/Specs/Active/loop_v1_2c_turn_counter_and_shot_history/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
+
+**Kickoff for Code:** `Use the golfin-implementer subagent on "loop_v1_2c_turn_counter_and_shot_history"`
+
+**Notion:** [`35931e0e-9a36-812e-b0ca-ff6ac972d7cd`](https://www.notion.so/35931e0e9a36812eb0caff6ac972d7cd) — P1 — High, S (half-day), Order 240, Status=In Progress.
+
+**Why P1 and small:** First persistent-per-hole state on the §2a/§2b foundation. Most of the UI plumbing already exists — `GameSession.cs` (7-line static class with TurnCount + OnTurnChanged) and `PlayerCardWidget` (already binds the TURN label) are wired. Today nobody calls `SetTurn`, so TURN stays at 1 forever. This task makes it move + adds shot history alongside.
+
+**One-line:** Extend `GameSession.cs` with `ShotHistory` list + `ResetForNewHole()` method. Add new `HoleSessionDriver` MonoBehaviour (mirrors `LoopCameraDirector` precedent) that subscribes to `BallStateMachine.OnShotComplete`, builds a `ShotRecord`, appends to history, schedules `SetTurn(turn+1)` after a configurable 1.5s settling delay. Add 2 calls in `PhysicsLabController` (OnHoleLoaded after `HoleContext.Raise()`, OnHoleUnloaded after `HoleContext.Reset()`) to fire `GameSession.ResetForNewHole()`.
+
+**Hard rules** (full set in SPEC.md § Hard rules):
+1. Do NOT modify `BallStateMachine.cs`, `BallState.cs`, `ShotResult.cs`, `BallSimulation.cs`, `Trajectory.cs`, `AeroModel.cs`, any aero CSV, any test currently in PASS state outside `HoleSessionDriverTests.cs`.
+2. Do NOT modify `PlayerCardWidget.cs` — already correctly wired; touching risks breaking existing render.
+3. Do NOT modify `LabScaffold.unity` via raw YAML — use Unity Editor MCP APIs (`gameobject-component-add`, `gameobject-component-modify`, `scene-save`). Per controls_g deviation #3 lesson.
+4. Do NOT use `WaitForSeconds(N)` for state-dependent CAPTURES (state-gate via `SnapWhenStateReached`). The 1.5s `postShotDelaySeconds` is allowed because it's a deliberate user-facing settling delay, NOT a capture trigger.
+5. Do NOT add InCup handling beyond what falls out automatically — §2d wires the real ICupDetector.
+6. Do NOT proliferate static-bus files — extend `GameSession`, do not create `HoleSessionContext` / `ShotHistoryContext` / etc.
+7. Smoke evidence per §2a Lessons M+N + reviewer's controls_g lesson: file persisted on disk + parallel-path Read verification + content-sanity description + Director mode history.
+8. Bit-exact 241-test PASS gate must hold; +7 new tests = 248/248 target. NO snapshot updates without architect approval.
+
+**Definition-of-done:** `GameSession` extended; `ShotRecord` struct shipped; `HoleSessionDriver` MonoBehaviour shipped + Inspector-wired in LabScaffold via Unity Editor MCP; `PhysicsLabController` calls `GameSession.ResetForNewHole()` from both `OnHoleLoaded` (after `HoleContext.Raise()`) and `OnHoleUnloaded` (after `HoleContext.Reset()`); 7 new EditMode tests; **248/248 PASS, 0 IGNORED**; 3 captures + 1 history-log artifact under `Docs/Specs/Active/loop_v1_2c_turn_counter_and_shot_history/screenshots/` with `controls_2c_*` prefix; TURN label visibly increments shot-to-shot AND resets on hole reload.
+
+**Estimate:** half-day. Can run in parallel with PuttPathPredictor spinoff or HUD ClubContext drift triage if Cesar wants concurrent work.
+
+---
+
 ## ✅ DONE — Matchmaking Modal (Mac env test, off-roadmap)
 
 **Spec:** `Docs/Specs/Completed/matchmaking_modal/` (move from `Active/` on next housekeeping pass).
