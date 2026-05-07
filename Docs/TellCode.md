@@ -114,19 +114,33 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — controls_g_aero_constant_mode_crash (NOTES_DRAFT 2026-05-07 09:20 JST)
+## 📌 NEXT — controls_g_aero_constant_mode_crash (SPEC_READY 2026-05-07 09:35 JST)
 
-**Folder:** `Docs/Specs/Queued/controls_g_aero_constant_mode_crash/`. STATUS=`NOTES_DRAFT`. Tier 3 pipeline (when SPEC writes).
+**Folder:** `Docs/Specs/Active/controls_g_aero_constant_mode_crash/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
 
-**Notion:** [`35931e0e-9a36-8163-a839-d5190f134f0f`](https://www.notion.so/35931e0e9a368163a839d5190f134f0f) — P0 — Critical, S (half-day), Order 220, Status=Next.
+**Kickoff for Code:** `Use the golfin-implementer subagent on "controls_g_aero_constant_mode_crash"`
 
-**Why P0:** Blocks §2b deferred-smoke validation, blocks any driver-shot smoke for §2c+ Loop v1 work. Real diagnosis task with a non-trivial root cause (config-load regression silently falling back to constant-mode lift).
+**Notion:** [`35931e0e-9a36-8163-a839-d5190f134f0f`](https://www.notion.so/35931e0e9a368163a839d5190f134f0f) — P0 — Critical, S (half-day), Order 220, Status=In Progress.
 
-**One-line:** Driver shots throw `DivideByZeroException` at `AeroModel.cs:78` (`spin.Rate / cfg.SpinRateReference` in constant-mode lift branch) on every fire. Diagnosis target: identify which of `cfg.UseLiftLut`, `cfg.LiftLut.IsValid`, `cfg.SpinRateReference` is the broken value. Audit all 3 aero divides (lines 29, 63, 78). Re-run controls_e/f gate (211/211 PASS) to confirm fix doesn't regress driver/iron carries. Closeout includes §2b's deferred smoke captures using the new `CaptureCore.SnapWhenStateReached` API.
+**Why P0:** Blocks §2b deferred-smoke validation, blocks any driver-shot smoke for §2c+ Loop v1 work. Latent regression — §2a's putter shots returned at IsSpinning early-out without entering the lift branch; §2b's driver shots are the first lift-branch executions since `controls_f` closed.
 
-**Five open questions in NOTES.md** (architect-leaned, awaiting Cesar lock): scope ambition, test additions, smoke dual-purpose confirmation, diagnosis-log lifecycle, parallel-with-§2c run order.
+**One-line:** Driver shots throw `DivideByZeroException` at `AeroModel.cs:78` (`spin.Rate / cfg.SpinRateReference` in constant-mode lift branch) on every fire. Three-phase task: (A) diagnose via temporary Console prints to identify which of `cfg.UseLiftLut`, `cfg.LiftLut.IsValid`, `cfg.SpinRateReference` is the broken value; (B) fix the root cause + add `AeroConfig.AssertValid` defense-in-depth + audit all 3 aero divides holistically; (C) validate via 211-PASS gate hold + 4 new tests + 4–6 §2b deferred smoke captures using new `CaptureCore.SnapWhenStateReached` API. Closes §2b smoke debt.
 
-**Estimate:** half-day to 1 day. Can run in parallel with §2c.
+**Architect-verified critical context:** `AeroConfig.Default.SpinRateReference = 300f` (NON-ZERO) and `AeroConfig.Default.UseLiftLut = false`. So defaults alone don't crash; the regression is either (a) `aero.csv` parsed `spin_rate_reference` as 0, OR (b) some loader bug zeroed the field. Diagnosis Phase A dumps the loaded `cfg` to identify which.
+
+**Hard rules** (full set in SPEC.md § Hard rules):
+1. Do NOT modify `BallSimulation.cs`, `Trajectory.cs`, `fpMath.cs`, `BallStateMachine.cs`, any test currently in PASS state outside `AeroConstantModeTests.cs` and one new tripwire row.
+2. Do NOT change LUT or overlay CSV data values — calibration outputs from controls_e/f.
+3. Do NOT add inline guards at AeroModel lines 29 or 63 (architect-verified safe via line-26 epsilon gate).
+4. Do NOT add an inline guard at line 78 either — `AeroConfig.AssertValid` is the correct defense layer.
+5. Do NOT skip Phase A diagnosis — don't jump to fixing favored hypothesis without Console output proving it.
+6. Do NOT leave `[CONTROLS_G]` prints in codebase — Phase C.5 removes them all (`grep -rn "CONTROLS_G" Assets/Scripts/` MUST return zero).
+7. Smoke evidence per §2a Lessons M+N — file persisted on disk + parallel-path Read verification + content-sanity. Use `CaptureCore.SnapWhenStateReached` exclusively.
+8. Bit-exact 211-test gate must hold through Phase B — escalate `IMPLEMENTER_BLOCKED` if you suspect snapshot updates needed.
+
+**Definition-of-done:** Phase A findings logged + root cause identified; Phase B fix shipped + `AeroConfig.AssertValid` wired + audit comment in `AeroModel.cs`; Phase C **215/215 PASS, 0 IGNORED** (211 + 3 unit + 1 integration tripwire); 4–6 smoke captures filed under `Docs/Specs/Active/loop_v1_2b_camera_transitions/screenshots/` with `controls_g_*` prefix; all `[CONTROLS_G]` logs removed; §2b deferred-smoke OPEN flag CLOSED.
+
+**Estimate:** half-day to 1 day. Can run in parallel with §2c (no shared files).
 
 ---
 
