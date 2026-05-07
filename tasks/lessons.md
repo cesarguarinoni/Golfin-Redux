@@ -1076,3 +1076,41 @@ When an MCP tool fails ("tool not available", "transport dropped", "no such tool
 **Specific rule for test runs:** `mcp__ai-game-developer__tests-run` is granted to `golfin-implementer` only. Reviewer/self-reviewer cannot run tests. If a SPEC requires test results and the implementer didn't capture them, the correct verdict is `ARCHITECT_REVIEW_FAIL` routing back to the implementer — NOT escalation to Cesar with "manually run tests" as the fix. The implementer agent definition (`.claude/agents/golfin-implementer.md` Hard rules) now mandates this and the reviewer definition (`.claude/agents/golfin-reviewer.md` "Test runner verification" section) routes back accordingly.
 
 Symptom that this rule is being violated: Cesar reads "Window → General → Test Runner → EditMode → Run All" without first being told why the automated path failed.
+
+---
+
+## Defense-in-Depth Fixes Can Mask the Original Regression Site (controls_g, 2026-05-07)
+
+**Symptom:** controls_g shipped `AeroConfig.AssertValid()` wired into `LoadAeroConfig` to defend against zero-init structs causing a `DivideByZeroException` at `AeroModel.cs:78`. The fix worked — 240/240 tests PASS, driver shots no longer crash. But the ACTUAL code path that was producing a zero-initialized `AeroConfig` was never identified. Implementer's stated "Hypothesis C — zero-init struct" was empirically wrong: an architect grep for `new AeroConfig()` and `default(AeroConfig)` across the entire `Assets/` tree returned ZERO hits.
+
+**Why this matters:** AssertValid catches the symptom (zeroed `SpinRateReference`) at config-load time with a clear error message. So practical risk is contained. But the *mechanism* that produced the zero value is still in the codebase — likely either (a) an `AeroConfig` field cached on a long-lived object and read before `LoadAeroConfig` populated it (race / order-of-init), (b) Unity serializer round-trip on a struct field zeroing it during scene reload or domain reload, or (c) a different code path that AssertValid happened to also cover, distinct from the one that originally crashed.
+
+**Rule:** When a fix lands via defense-in-depth (an assertion, a guard, a fallback) without identifying the actual regression site, document the gap explicitly in the implementer report and architect review. The masked cause may resurface in a different config struct (`WindConfig`, `SurfaceConfig`, `PuttConfig`, `StatCoefficients`, `StatCaps`) under the same mechanism. Do NOT assume "it's a different bug" — assume it MAY be the same masked mechanism resurfacing, and run the equivalent grep + add equivalent AssertValid for the new struct.
+
+**Diagnostic checklist when zero-init suspected:**
+1. `grep -rn "new <StructName>()"` and `grep -rnE "default\(<StructName>\)"` across `Assets/` — zero hits means it's NOT a direct construction site.
+2. Search for serialized fields of the struct type on MonoBehaviours / ScriptableObjects — these can deserialize as zero.
+3. Search for static fields of the struct type — these initialize to zero before `Awake` runs in any subscriber.
+4. Search for `[NonSerialized]` fields and per-frame structs — these stay zero unless explicitly assigned.
+
+Without finding a root cause via at least one of those four, document the unresolved mystery in the architect review and lessons file. Don't pretend the AssertValid "explained" the bug — it backstopped it.
+
+---
+
+## Smoke-Runner Timed Waits Are Fragile Against Shot-Power and Carry Changes (controls_g, 2026-05-07)
+
+**Symptom:** `SmokeTestRunner2b.cs` in controls_g used 3-second `WaitForSeconds(3f)` waits to schedule camera-mode captures (Downrange after the 65%-carry cinematic cut). The wait was tuned for a specific lab driver power level. When the actual shot at 0.8 power didn't reach 65% carry within 3 seconds, the capture fired during the Aiming charge frame instead of mid-flight — captured the HUD power ring, not the Downrange cinematic.
+
+**Three failure modes from this pattern:**
+1. **Wrong moment captured** — the obvious one. Shot was still in earlier state.
+2. **Inconclusive frame** — the capture fires somewhere but with no terrain backdrop loaded (LabScaffold doesn't include Hole_01_Geo by default), so the captured frame technically shows the right state but visually proves nothing.
+3. **Drift over time** — even if you tune the timing perfectly today, any future change to lab power calibration or carry distance breaks the gating, and the smoke runner silently captures wrong frames again.
+
+**Rule:** Prefer state-driven captures (`CaptureCore.SnapWhenStateReached(sm, BallState.X, label)` for SM transitions, or a future `SnapWhenModeReached(director, ChaseCamera.Mode.X, label)` for Director mode changes) over time-driven captures (`yield return new WaitForSeconds(N)` followed by snap) whenever the state machine or director exposes the transition.
+
+**When state-driven isn't available:** if the moment of interest is INSIDE a state (e.g. Director's mid-flight cinematic cut at 65% carry happens inside `Flying` state, not at a state boundary), the right fix is to ADD an event for the moment (e.g. `LoopCameraDirector.OnModeChanged`) rather than time-gate around it. Adding the event is usually <30 minutes of dev and pays back across every future smoke runner that needs to observe that transition.
+
+**Last resort — if you must time-gate:** compute the time threshold from sim data, not a magic number. For a 65%-carry cut: read `controller.LastTrajectory` after the shot fires, compute predicted carry, time-gate on a percentage of the predicted carry. NEVER hardcode `WaitForSeconds(3f)` for a moment that depends on physics.
+
+**Pattern recognition:** if the smoke runner writes any `WaitForSeconds(N)` with N > 0.5s and N is not a deliberately-chosen settling delay, that's a code smell. Replace with state-gating.
+

@@ -114,33 +114,48 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — controls_g_aero_constant_mode_crash (SPEC_READY 2026-05-07 09:35 JST)
+## ✅ DONE — controls_g_aero_constant_mode_crash (closed end-to-end 2026-05-07 19:10 JST as PASS_WITH_DEFERRAL)
 
-**Folder:** `Docs/Specs/Active/controls_g_aero_constant_mode_crash/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
+**Spec at:** `Docs/Specs/Active/controls_g_aero_constant_mode_crash/`. STATUS=`ARCHITECT_REVIEW_PASS_WITH_DEFERRAL`. Move to `Completed/` on next housekeeping.
 
-**Kickoff for Code:** `Use the golfin-implementer subagent on "controls_g_aero_constant_mode_crash"`
+**Pipeline:** implementer Phase A (static analysis only — GUI automation could not bring editor to foreground; deviation #1 self-flagged) → Phase B (`AeroConfig.AssertValid` wired into `LoadAeroConfig` + audit comment block at top of `AeroModel.ComputeAeroForce` documenting all 3 divides) → Phase C tests (240/240 PASS, 0 IGNORED — 4 new tests: 3 in `AeroConstantModeTests.cs` + 1 new `Aero_DriverShot_DoesNotThrow` integration tripwire in `AeroCalibrationTripwireTests.cs`) → self-review skipped per CLAUDE.md hard rule #1 (IMPLEMENTER_REPORT contained 2 self-flagged FAIL items) → reviewer subagent APPROVED_WITH_DEFERRAL → human Architect ruling. Notion entry [`35931e0e`](https://www.notion.so/35931e0e9a368163a839d5190f134f0f) flipped to **Done**, Closed=2026-05-07.
 
-**Notion:** [`35931e0e-9a36-8163-a839-d5190f134f0f`](https://www.notion.so/35931e0e9a368163a839d5190f134f0f) — P0 — Critical, S (half-day), Order 220, Status=In Progress.
+**What landed:**
+- `AeroConfig.AssertValid()` public method on the struct — throws `InvalidOperationException` if `SpinRateReference <= 0` or `BallMass <= 0` with descriptive error message pointing at `Resources/Physics/aero.csv`. Wired into `PhysicsConfigLoader.LoadAeroConfig` immediately before `return cfg;`.
+- `AeroModel.ComputeAeroForce` audit comment block at top documenting all 3 divides: line 29 (`vRel/speed` — safe via line-26 epsilon gate), line 63 (LUT spinParam — safe via same gate), line 78 (constant-mode spinScale — safe via AeroConfig.AssertValid at config-load).
+- 3 new unit tests in `AeroConstantModeTests.cs`: `Aero_ConstantModeFallback_DoesNotCrashWithDefaultConfig`, `Aero_AssertValid_ThrowsOnZeroSpinRateReference`, `Aero_AssertValid_PassesOnDefaultConfig`.
+- 1 new integration tripwire `Aero_DriverShot_DoesNotThrow` — the test that would have caught controls_f's regression at controls_f closeout had it existed.
+- `SmokeTestRunner2b.cs` shipped (lives in `Assets/Scripts/Physics/Viewer/`, mirrors SmokeTestRunner2a precedent) — attempted §2b deferred-smoke captures using `CaptureCore.SnapWhenStateReached`.
 
-**Why P0:** Blocks §2b deferred-smoke validation, blocks any driver-shot smoke for §2c+ Loop v1 work. Latent regression — §2a's putter shots returned at IsSpinning early-out without entering the lift branch; §2b's driver shots are the first lift-branch executions since `controls_f` closed.
+**Two spec deviations accepted:**
+1. Phase A used static analysis instead of live Console diagnostic prints — GUI automation could not bring the editor to the foreground. Implementer's stated diagnosis ("Hypothesis C — zero-init struct") was empirically wrong: architect grep for `new AeroConfig()` and `default(AeroConfig)` across all of `Assets/` returned ZERO hits. The fix works regardless (240/240 PASS), so AssertValid backstops the symptom even though the masked mechanism is unidentified. **Lesson written to `tasks/lessons.md`** (Defense-in-Depth Fixes Can Mask the Original Regression Site).
+2. `LabScaffold.unity` modified via raw YAML edit (deviation #3 in IMPLEMENTER_REPORT) because Unity was in play mode when SmokeTestRunner2b cleanup was attempted. Per `feedback_avoid_raw_scene_asset_modify.md`, this may trigger a blocking Unity reload popup. **Manual eyeball check by Cesar before merging required.**
 
-**One-line:** Driver shots throw `DivideByZeroException` at `AeroModel.cs:78` (`spin.Rate / cfg.SpinRateReference` in constant-mode lift branch) on every fire. Three-phase task: (A) diagnose via temporary Console prints to identify which of `cfg.UseLiftLut`, `cfg.LiftLut.IsValid`, `cfg.SpinRateReference` is the broken value; (B) fix the root cause + add `AeroConfig.AssertValid` defense-in-depth + audit all 3 aero divides holistically; (C) validate via 211-PASS gate hold + 4 new tests + 4–6 §2b deferred smoke captures using new `CaptureCore.SnapWhenStateReached` API. Closes §2b smoke debt.
+**Two FAIL items (deferred per spec's Phase C.4 escape hatch):**
+1. **Downrange visual smoke** — SmokeTestRunner2b's 3-second timed wait fired before the 0.8-power lab driver shot reached the 65%-carry cinematic cut threshold. Captured the Aiming HUD with charge ring, not Downrange. **Lesson written to `tasks/lessons.md`** (Smoke-Runner Timed Waits Are Fragile).
+2. **OBFreeze visual smoke** — not attempted; requires Water-bordered tee setup not currently in LabScaffold.
 
-**Architect-verified critical context:** `AeroConfig.Default.SpinRateReference = 300f` (NON-ZERO) and `AeroConfig.Default.UseLiftLut = false`. So defaults alone don't crash; the regression is either (a) `aero.csv` parsed `spin_rate_reference` as 0, OR (b) some loader bug zeroed the field. Diagnosis Phase A dumps the loaded `cfg` to identify which.
+**Both deferred** to followup task `controls_g_smoke_followup`. Director logic IS verified at the model layer by 9 LoopCameraDirectorTests in the 240/240 PASS gate — these are P1 evidence-of-already-tested-logic.
 
-**Hard rules** (full set in SPEC.md § Hard rules):
-1. Do NOT modify `BallSimulation.cs`, `Trajectory.cs`, `fpMath.cs`, `BallStateMachine.cs`, any test currently in PASS state outside `AeroConstantModeTests.cs` and one new tripwire row.
-2. Do NOT change LUT or overlay CSV data values — calibration outputs from controls_e/f.
-3. Do NOT add inline guards at AeroModel lines 29 or 63 (architect-verified safe via line-26 epsilon gate).
-4. Do NOT add an inline guard at line 78 either — `AeroConfig.AssertValid` is the correct defense layer.
-5. Do NOT skip Phase A diagnosis — don't jump to fixing favored hypothesis without Console output proving it.
-6. Do NOT leave `[CONTROLS_G]` prints in codebase — Phase C.5 removes them all (`grep -rn "CONTROLS_G" Assets/Scripts/` MUST return zero).
-7. Smoke evidence per §2a Lessons M+N — file persisted on disk + parallel-path Read verification + content-sanity. Use `CaptureCore.SnapWhenStateReached` exclusively.
-8. Bit-exact 211-test gate must hold through Phase B — escalate `IMPLEMENTER_BLOCKED` if you suspect snapshot updates needed.
+**Architectural significance:** `AssertValid` defense-in-depth pattern now established as the canonical response to value-type config validation. The `Aero_DriverShot_DoesNotThrow` integration tripwire is the test that would have caught controls_f's regression — carry that pattern (a one-shot "thing-doesn't-throw" tripwire per major code path) into future calibration tasks. Audit comment block in `AeroModel.cs` is the durable record so future-you doesn't re-litigate divide safety.
 
-**Definition-of-done:** Phase A findings logged + root cause identified; Phase B fix shipped + `AeroConfig.AssertValid` wired + audit comment in `AeroModel.cs`; Phase C **215/215 PASS, 0 IGNORED** (211 + 3 unit + 1 integration tripwire); 4–6 smoke captures filed under `Docs/Specs/Active/loop_v1_2b_camera_transitions/screenshots/` with `controls_g_*` prefix; all `[CONTROLS_G]` logs removed; §2b deferred-smoke OPEN flag CLOSED.
+---
 
-**Estimate:** half-day to 1 day. Can run in parallel with §2c (no shared files).
+## 📌 NEXT — controls_g_smoke_followup (NOTES_DRAFT 2026-05-07 19:10 JST)
+
+**Folder:** `Docs/Specs/Queued/controls_g_smoke_followup/`. STATUS=`NOTES_DRAFT`. Tier 3 pipeline (when SPEC writes).
+
+**Notion:** [`35931e0e-9a36-81b3-a724-ef1e42678928`](https://www.notion.so/35931e0e9a3681b3a724ef1e42678928) — P1 — High, S (half-day), Order 230, Status=Next.
+
+**Why P1 (not P0):** Director logic is already verified at model layer by 9 LoopCameraDirectorTests in the 240/240 PASS gate; this task confirms runtime visual rendering matches model assertions. Closes §2b deferred-smoke OPEN flag below.
+
+**One-line:** Three captures needed — (1) Downrange driver shot at 65%+ carry, (2) putter GroundLevel preserved through Flying state, (3) OBFreeze with locked pivot. Architect-recommended fix: Option A (add `LoopCameraDirector.OnModeChanged` event + new `CaptureCore.SnapWhenModeReached` API) + Option C (load Hole_01_Geo additively for real terrain backdrop). State-driven captures replace controls_g's fragile `WaitForSeconds(3f)` approach.
+
+**Five open questions in NOTES.md** (architect-leaned, awaiting Cesar lock): A+C combined vs A-alone, OB Test Tee placement (or skip OBFreeze visual entirely), new EditMode test for OnModeChanged event, where SnapWhenModeReached lives, PASS gate target.
+
+**Estimate:** half-day. Can run in parallel with §2c.
+
+**Cesar manual TODO before kickoff:** scene-save eyeball check on `LabScaffold.unity` — controls_g modified the scene via raw YAML (deviation #3) which may trigger a Unity reload popup on next editor open. Five-second check; if popup appears, accept reload and save.
 
 ---
 
@@ -437,7 +452,7 @@ Loop v1 §2a (Ball state machine) is the next umbrella.
 - **[2026-05-02] Filter functionality deferred.** Two filter rows on Hole Selection are visual-only. Functional filtering by Course / Tee is a follow-up spec. Counts (`28/72`, etc.) are hardcoded.
 - **[2026-05-06] HUD ClubContext static-bus drift — club name doesn't update across shots.** Iter-4 §2a smoke screenshot showed `DRIVER 229 mts` in the bottom-right club pill while shot 3 was using the putter on the green. Architect-accepted as out-of-scope for §2a, but the same drift will be far more visible during Putter P2 (§2f, in-context tuning) where club switching is the explicit feature. Triage before §2f. Likely a missing populator wire or a stale `ClubContext.Raise()` at `SetCurrentClub` time. Adjacent concern: see CaptureHelper flag below — the iter-4 screenshot's evidence value is itself reduced because the SmokeTestRunner's inline RT capture has no synchronized "wait for shot lifecycle idle" gate, so we can't fully rule out "capture fired before HUD updated" as an alternative explanation for the drift. Real triage needs a deterministic capture trigger.
 - **[2026-05-06] CaptureHelper asmdef consolidation + capture-timing reliability.** ~~Two related issues to fold into one follow-up.~~ **CLOSED 2026-05-07 by §2b.** `CaptureCore` factored into runtime-side `Golfin.Diagnostics.Runtime` asmdef; `SmokeTestRunner2a` inline duplicate removed; new `CaptureCore.SnapWhenStateReached(MonoBehaviour owner, BallStateMachine sm, BallState target, string label, ...)` API gates capture timing on SM state instead of frame-count or animator-IsPlaying polling. Both halves of original flag delivered in one spec.
-- **[2026-05-07 09:20 JST] §2b deferred-smoke debt.** Visual smoke evidence for Downrange / putter-stays-GroundLevel / OBFreeze deferred to `controls_g_aero_constant_mode_crash` closeout. §2b is architecturally PASS_WITH_DEFERRAL (236/236 PASS, 9/9 EditMode Director tests cover dispatch correctness); visual rendering correctness pending. controls_g closeout protocol locked: run `CaptureCore.SnapWhenStateReached(sm, BallState.Flying, "downrange", ...)`, `... AtRest, "putter_groundlevel", ...`, `... OB, "obfreeze", ...` after physics fix lands; closes this debt as part of controls_g validation. Smoke captures will be filed under `Docs/Specs/Active/loop_v1_2b_camera_transitions/screenshots/` with controls_g-dated filenames.
+- **[2026-05-07 09:20 JST] §2b deferred-smoke debt.** ~~Visual smoke evidence for Downrange / putter-stays-GroundLevel / OBFreeze deferred to `controls_g_aero_constant_mode_crash` closeout.~~ **Updated 2026-05-07 19:10 JST: NARROWED, NOT closed.** controls_g shipped the aero crash fix clean (240/240 PASS) but the smoke captures don't visually depict the cinematic modes — SmokeTestRunner2b's 3-second timed wait fired before the 65%-carry cinematic cut threshold. Director logic is verified by 9 LoopCameraDirectorTests in the PASS gate; only RUNTIME VISUAL RENDERING confirmation remains. Narrowed scope: 3 captures (Downrange driver mid-flight, putter GroundLevel preserved through Flying, OBFreeze with locked pivot), state-driven via new `LoopCameraDirector.OnModeChanged` event + new `CaptureCore.SnapWhenModeReached` API + Hole_01_Geo additively loaded for real terrain backdrop. Tracked under followup task `controls_g_smoke_followup` ([Notion `35931e0e-9a36-81b3`](https://www.notion.so/35931e0e9a3681b3a724ef1e42678928), P1—High, NOTES_DRAFT). Closes when followup ships. **CaptureCore consolidation + asmdef halves DID ship clean and remain CLOSED.**
 
 Full reasoning: `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 
