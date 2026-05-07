@@ -85,30 +85,48 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — loop_v1_2b_camera_transitions (SPEC_READY 2026-05-07 JST)
+## ✅ DONE — loop_v1_2b_camera_transitions (closed end-to-end 2026-05-07 09:20 JST as PASS_WITH_DEFERRAL)
 
-**Folder:** `Docs/Specs/Active/loop_v1_2b_camera_transitions/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
+**Spec at:** `Docs/Specs/Active/loop_v1_2b_camera_transitions/`. STATUS=`ARCHITECT_REVIEW_PASS_WITH_DEFERRAL`. Move to `Completed/` on next housekeeping.
 
-**Kickoff for Code:** `Use the golfin-implementer subagent on "loop_v1_2b_camera_transitions"`
+**Pipeline ran clean:** implementer → self-reviewer → reviewer subagent (ARCHITECT_REVIEW_ESCALATE — 18 PASS items + 3 FAIL items on live smoke captures blocked by pre-existing aero crash) → human Architect ruling. 9/9 new EditMode Director tests PASS, **236/236 total PASS, 0 IGNORED** (227 pre-existing + 9 additive). Notion entry [`35831e0e-9a36-81aa-b6db-cf9b781a7af0`](https://www.notion.so/35831e0e9a3681aab6dbcf9b781a7af0) flipped to **Done**, Closed=2026-05-07.
 
-**One-line:** Centralize camera lifecycle into a `LoopCameraDirector` MonoBehaviour subscribed to `BallStateMachine.OnStateChanged` (§2a). Add three new `ChaseCamera` modes (`Downrange` for cinematic mid-flight cut at 65% of carry, `CupZoom` for ball-drops-in tween, `OBFreeze` for OB tracking with locked pivot). Tighten chase framing (8m→5m back, 3m→2.5m up). Co-ship CaptureHelper consolidation — closes both halves of the §2a OPEN FLAG (asmdef move into new `Golfin.Diagnostics.Runtime` + new SM-state-gated capture API).
+**What landed:**
+- New `LoopCameraDirector` MonoBehaviour at `Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs` — subscribes to `BallStateMachine.OnStateChanged`, dispatches camera modes via pure-data `Dictionary<BallState, ChaseCamera.Mode?>` map. Includes `IControllerAccessor` test seam and inner `PhysicsLabControllerAdapter`.
+- Three new `ChaseCamera.Mode` values: `Downrange` (cinematic mid-flight cut at 65% of carry, behind landing zone looking back), `CupZoom` (1.0s EaseOutCubic tween hovering above flat-circle cup), `OBFreeze` (locked pivot at first OB sample XZ + 5m above terrain Y, rotation tracks ball). Existing `Chase` retuned 8m→5m back, 3m→2.5m up; FOV unchanged.
+- `IModeSetter` test seam interface implemented by `ChaseCamera`. All 9 EditMode tests instantiate Director without a Camera GO using `RecordingModeSetter` + `StubControllerAccessor` + `DirectorFactory.Create` helpers.
+- `PhysicsLabController` relocations: `HandleShotResolved` no longer calls `chaseCamera.SetTarget`/`ResetToOrigin` (replaced by `_lastShotOrigin`/`_lastShotLaunchDir` caching); `HandleShotComplete` no longer calls `chaseCamera.SetTarget(null)`; `FireInternal` (preset path) keeps its calls verbatim. 6 internal accessors (BallSM, LastTrajectory, LastShotOrigin, LastShotLaunchDir, CurrentBall, CurrentShotIsPutt) added.
+- `TrajectoryRenderer._showInGameplay` flag with editor-or-flag visibility gate.
+- New `Golfin.Diagnostics.Runtime` asmdef (`autoReferenced: true`, references `Golfin.Gameplay.Loop`). `CaptureCore` factored out of editor-side `CaptureHelper` — owns `SnapGameViewWithLabel`, `SnapAtEndOfFrameAndPause`, and the new SM-gated `SnapWhenStateReached(MonoBehaviour owner, BallStateMachine sm, BallState target, string label, ...)`. `CaptureHelper.cs` thinned to a wrapper preserving editor menu items + Fake-State presets. `SmokeTestRunner2a` inline byte-equivalent capture removed; calls `CaptureCore` directly.
+- Putts skip cinematic cut entirely (Q1'c lock); load-bearing `isPutt` check on Flying entry. `PhysicsLabUI.CycleCamera` button kept as transient lab debug per Cesar lock; Director stomps overrides on next state transition.
 
-**Hard rules** (full set in SPEC.md §11):
-1. Do NOT modify `BallSimulation.cs`, `Trajectory.cs`, `BallStateMachine.cs`, `BallState.cs`, any CSV in `Resources/Configs/`, any test outside `LoopCameraDirectorTests.cs`.
-2. Do NOT delete `PhysicsLabUI.CycleCamera` or its button — Cesar locked: lab debug stays as transient (Director stomps overrides on next state transition).
-3. Do NOT widen the cinematic cut to putts — `isPutt` skip is load-bearing.
-4. Do NOT change Camera FOV — only the chase-distance/height numbers.
-5. Director uses `Time.deltaTime` freely (visual layer); SM stays deterministic.
-6. Smoke evidence per §2a Lessons M+N: file persisted on disk + parallel-path Read verification + content-sanity. No Roslyn-only captures pass review.
-7. Director needs `IModeSetter` test seam — tests must run without instantiating a Camera GO.
+**Two spec deviations accepted:**
+1. `SnapWhenStateReached(MonoBehaviour owner, ...)` — owner-first signature is the minimal correct fix for coroutine host requirement; spec's 4-arg version was non-functional.
+2. Director self-wires in own Awake via `GetComponentInParent<PhysicsLabController>()` — cleaner separation than wiring from PhysicsLabController.Awake; behavior-identical and consistent with L14.
 
-**Definition-of-done:** Director shipped + Inspector-wired in LabScaffold; 3 new ChaseCamera modes implemented; chase retuned to 5m/2.5m; relocated `SetTarget`/`ResetToOrigin` from `PhysicsLabController.HandleShotResolved`/`HandleShotComplete` to Director; `TrajectoryRenderer._showInGameplay` flag added; `Golfin.Diagnostics.Runtime` asmdef created with `CaptureCore` + `SnapWhenStateReached` API; 9+ new EditMode tests; **236/236 PASS, 0 IGNORED** (227 pre-existing + 9 additive); smoke evidence on 4–6 captures using new SM-gated API. Two §2a OPEN FLAGs (CaptureHelper consolidation + capture-timing reliability) closed.
-
-**Estimate:** 1–1.5 working days. Critical path is 2b.1 (Director spine); CaptureHelper Part 1 (asmdef move) can run in parallel.
+**Two §2a OPEN FLAGs CLOSED by this spec:** CaptureHelper asmdef consolidation + capture-timing reliability — `CaptureCore.SnapWhenStateReached` is the deterministic SM-state-gated capture API the §2a flag asked for.
 
 **Spinoff spec created:** `Docs/Specs/Queued/puttpath_predictor_perf_and_design/NOTES.md` — perf measurement + sim-vs-arcade design redesign for PuttPathPredictor. Hidden in §2b gameplay scaffold default; real disposition lands when that spec ships. NOT on Loop v1 critical path.
 
-**Notion entry:** [`35831e0e-9a36-81aa-b6db-cf9b781a7af0`](https://www.notion.so/35831e0e9a3681aab6dbcf9b781a7af0) — created 2026-05-07 JST. Phase=`02. Loop v1`, Order=210, Priority=P1—High, Estimate=M (1-2 days), Status=`In Progress`. Flip Status→Done + set Closed date when pipeline closes.
+**Deferred smoke debt (tracked in OPEN FLAGS below):** Visual smoke for Downrange / putter-stays-GroundLevel / OBFreeze deferred to `controls_g_aero_constant_mode_crash` closeout. Reviewer subagent surfaced 3 FAIL items on live captures because `AeroModel.ComputeAeroForce` at line 78 throws `DivideByZeroException` in the constant-mode (non-LUT) lift branch on every shot. Architect-verified: line 78 IS `spin.Rate / cfg.SpinRateReference`; implementer's proposed line-29 guard targets a different divide (`vRel/speed`) and would not fix it. Latent regression — §2a's putter shots returned at IsSpinning early-out without entering the lift branch; §2b's driver shots are the first lift-branch executions since `controls_f` closed. §2b is doing its job by surfacing the bug; not punishing §2b for finding it. controls_g spec'd at `Docs/Specs/Queued/controls_g_aero_constant_mode_crash/`.
+
+**Architectural significance:** §2b is the second pillar of Loop v1 after §2a's BallStateMachine. §2c (turn counter) and §2d (result screen) can now subscribe to the centralized camera lifecycle instead of re-deriving "which mode should be active" independently. CaptureCore consolidation gives every future spec a deterministic SM-gated screenshot API — closes the iter-3/iter-4 false-evidence failure class systemically.
+
+---
+
+## 📌 NEXT — controls_g_aero_constant_mode_crash (NOTES_DRAFT 2026-05-07 09:20 JST)
+
+**Folder:** `Docs/Specs/Queued/controls_g_aero_constant_mode_crash/`. STATUS=`NOTES_DRAFT`. Tier 3 pipeline (when SPEC writes).
+
+**Notion:** [`35931e0e-9a36-8163-a839-d5190f134f0f`](https://www.notion.so/35931e0e9a368163a839d5190f134f0f) — P0 — Critical, S (half-day), Order 220, Status=Next.
+
+**Why P0:** Blocks §2b deferred-smoke validation, blocks any driver-shot smoke for §2c+ Loop v1 work. Real diagnosis task with a non-trivial root cause (config-load regression silently falling back to constant-mode lift).
+
+**One-line:** Driver shots throw `DivideByZeroException` at `AeroModel.cs:78` (`spin.Rate / cfg.SpinRateReference` in constant-mode lift branch) on every fire. Diagnosis target: identify which of `cfg.UseLiftLut`, `cfg.LiftLut.IsValid`, `cfg.SpinRateReference` is the broken value. Audit all 3 aero divides (lines 29, 63, 78). Re-run controls_e/f gate (211/211 PASS) to confirm fix doesn't regress driver/iron carries. Closeout includes §2b's deferred smoke captures using the new `CaptureCore.SnapWhenStateReached` API.
+
+**Five open questions in NOTES.md** (architect-leaned, awaiting Cesar lock): scope ambition, test additions, smoke dual-purpose confirmation, diagnosis-log lifecycle, parallel-with-§2c run order.
+
+**Estimate:** half-day to 1 day. Can run in parallel with §2c.
 
 ---
 
@@ -404,7 +422,8 @@ Loop v1 §2a (Ball state machine) is the next umbrella.
 - **[2026-05-02] Hole-image art is screaming-magenta placeholders for Holes 2–18.** `hole_selection_screen` task ships with 17 obvious-missing placeholders. Cesar captures real art from Lomond official website later — drop replacement PNGs in `Assets/Resources/HoleImages/Hole_NN.png` to cut over (no code change needed).
 - **[2026-05-02] Filter functionality deferred.** Two filter rows on Hole Selection are visual-only. Functional filtering by Course / Tee is a follow-up spec. Counts (`28/72`, etc.) are hardcoded.
 - **[2026-05-06] HUD ClubContext static-bus drift — club name doesn't update across shots.** Iter-4 §2a smoke screenshot showed `DRIVER 229 mts` in the bottom-right club pill while shot 3 was using the putter on the green. Architect-accepted as out-of-scope for §2a, but the same drift will be far more visible during Putter P2 (§2f, in-context tuning) where club switching is the explicit feature. Triage before §2f. Likely a missing populator wire or a stale `ClubContext.Raise()` at `SetCurrentClub` time. Adjacent concern: see CaptureHelper flag below — the iter-4 screenshot's evidence value is itself reduced because the SmokeTestRunner's inline RT capture has no synchronized "wait for shot lifecycle idle" gate, so we can't fully rule out "capture fired before HUD updated" as an alternative explanation for the drift. Real triage needs a deterministic capture trigger.
-- **[2026-05-06] CaptureHelper asmdef consolidation + capture-timing reliability.** Two related issues to fold into one follow-up. **(a)** `CaptureHelper.SnapAtEndOfFrameAndPause` lives in editor-only `Golfin.EditorTools` and is unreferenceable from runtime asmdefs (`Golfin.Physics.Viewer`, `Golfin.Gameplay.Loop`). The §2a `SmokeTestRunner2a` inlined a byte-equivalent copy, so the capture path now exists in two places — Skill candidate per the existing flag. **(b)** Cesar reports captures still fire at the wrong moment / on the wrong action — wrong frame, ball mid-action instead of at-rest, HUD pre-update. Inline RT capture uses `WaitForEndOfFrame` then RT reflection; it does NOT gate on "shot lifecycle is idle". Combined fix: (1) factor capture core into a runtime-side helper assembly (e.g. `Golfin.Diagnostics.Runtime`) consumable from both editor and runtime; (2) add a "wait for `BallStateMachine.OnShotComplete` then capture" gate as a first-class API so capture timing is deterministic against the SM, not against frame-count or animator-IsPlaying polling. Loop v1 §2c (turn counter) is the natural place to seed the gate since it's the first downstream consumer of `OnShotComplete`. Until this lands, treat any iter screenshot as a "frame at unspecified moment" rather than a "frame at known SM state".
+- **[2026-05-06] CaptureHelper asmdef consolidation + capture-timing reliability.** ~~Two related issues to fold into one follow-up.~~ **CLOSED 2026-05-07 by §2b.** `CaptureCore` factored into runtime-side `Golfin.Diagnostics.Runtime` asmdef; `SmokeTestRunner2a` inline duplicate removed; new `CaptureCore.SnapWhenStateReached(MonoBehaviour owner, BallStateMachine sm, BallState target, string label, ...)` API gates capture timing on SM state instead of frame-count or animator-IsPlaying polling. Both halves of original flag delivered in one spec.
+- **[2026-05-07 09:20 JST] §2b deferred-smoke debt.** Visual smoke evidence for Downrange / putter-stays-GroundLevel / OBFreeze deferred to `controls_g_aero_constant_mode_crash` closeout. §2b is architecturally PASS_WITH_DEFERRAL (236/236 PASS, 9/9 EditMode Director tests cover dispatch correctness); visual rendering correctness pending. controls_g closeout protocol locked: run `CaptureCore.SnapWhenStateReached(sm, BallState.Flying, "downrange", ...)`, `... AtRest, "putter_groundlevel", ...`, `... OB, "obfreeze", ...` after physics fix lands; closes this debt as part of controls_g validation. Smoke captures will be filed under `Docs/Specs/Active/loop_v1_2b_camera_transitions/screenshots/` with controls_g-dated filenames.
 
 Full reasoning: `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md`.
 
