@@ -141,17 +141,31 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## 📌 NEXT — controls_g_smoke_followup (NOTES_DRAFT 2026-05-07 19:10 JST)
+## 📌 NEXT — controls_g_smoke_followup (SPEC_READY 2026-05-07 19:25 JST)
 
-**Folder:** `Docs/Specs/Queued/controls_g_smoke_followup/`. STATUS=`NOTES_DRAFT`. Tier 3 pipeline (when SPEC writes).
+**Folder:** `Docs/Specs/Active/controls_g_smoke_followup/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
 
-**Notion:** [`35931e0e-9a36-81b3-a724-ef1e42678928`](https://www.notion.so/35931e0e9a3681b3a724ef1e42678928) — P1 — High, S (half-day), Order 230, Status=Next.
+**Kickoff for Code:** `Use the golfin-implementer subagent on "controls_g_smoke_followup"`
 
-**Why P1 (not P0):** Director logic is already verified at model layer by 9 LoopCameraDirectorTests in the 240/240 PASS gate; this task confirms runtime visual rendering matches model assertions. Closes §2b deferred-smoke OPEN flag below.
+**Notion:** [`35931e0e-9a36-81b3-a724-ef1e42678928`](https://www.notion.so/35931e0e9a3681b3a724ef1e42678928) — P1 — High, S (half-day), Order 230, Status=In Progress.
 
-**One-line:** Three captures needed — (1) Downrange driver shot at 65%+ carry, (2) putter GroundLevel preserved through Flying state, (3) OBFreeze with locked pivot. Architect-recommended fix: Option A (add `LoopCameraDirector.OnModeChanged` event + new `CaptureCore.SnapWhenModeReached` API) + Option C (load Hole_01_Geo additively for real terrain backdrop). State-driven captures replace controls_g's fragile `WaitForSeconds(3f)` approach.
+**Why P1 (not P0):** Director logic is verified at model layer by 9 LoopCameraDirectorTests in the 240/240 PASS gate; this task confirms runtime visual rendering matches model assertions. Closes §2b deferred-smoke OPEN flag below in same commit.
 
-**Five open questions in NOTES.md** (architect-leaned, awaiting Cesar lock): A+C combined vs A-alone, OB Test Tee placement (or skip OBFreeze visual entirely), new EditMode test for OnModeChanged event, where SnapWhenModeReached lives, PASS gate target.
+**One-line:** Three captures — (1) Downrange driver mid-flight at 65%+ carry on Hole_01, (2) putter GroundLevel preserved through Flying on Hole_01, (3) OBFreeze with locked pivot on Hole_06 (Hole_01's water hazard removed long ago per Cesar). State-driven via NEW `LoopCameraDirector.OnModeChanged` event + NEW `CaptureCore.SnapWhenModeReached` API. Hole_NN_Geo loaded additively for real terrain backdrop. Replaces controls_g's fragile `WaitForSeconds(3f)` approach.
+
+**Hard rules** (full set in SPEC.md § Hard rules):
+1. Do NOT change Director cinematic-cut math, dispatch table, or behavior — only ADD `OnModeChanged` event + route existing `SetMode` calls through `ApplyMode` helper. Existing 9 LoopCameraDirectorTests must still PASS unchanged.
+2. Do NOT modify `BallSimulation.cs`, `BallStateMachine.cs`, `AeroModel.cs`, `AeroConfig.cs`, any aero CSV, any test currently in PASS state outside `LoopCameraDirectorTests.cs` (where the 1 new test lands).
+3. Do NOT use `WaitForSeconds(N)` for state-dependent captures (N > 0.5s = code smell + SPEC violation). State-gate via `SnapWhenStateReached` or `SnapWhenModeReached`. Only allowable wait: < 0.5s settling delays.
+4. Do NOT skip OBFreeze without trying 2+ Hole_06 tee placements first; document each attempt's XZ + outcome before escalating.
+5. Do NOT modify `LabScaffold.unity` via raw YAML — use Unity Editor APIs (`gameobject-create`, `gameobject-component-modify`, `scene-save` MCP tools). controls_g deviation #3 lesson.
+6. Smoke evidence per §2a Lessons M+N + reviewer's controls_g lesson: file persisted on disk + parallel-path Read verification + content-sanity description + Director mode history.
+7. Captures filed under `Docs/Specs/Active/loop_v1_2b_camera_transitions/screenshots/` with `controls_g_followup_*` prefix. When all 3 land, mark §2b deferred-smoke OPEN flag CLOSED in same commit.
+8. Bit-exact 240-test PASS gate must hold; +1 new test = 241/241 target. NO snapshot updates without architect approval.
+
+**Architect-flagged risk:** adding `Golfin.Physics.Viewer` reference to `Golfin.Diagnostics.Runtime` (so CaptureCore can take a `LoopCameraDirector` param) may be circular — Viewer already references Diagnostics.Runtime per §2b. If circular, escalate `IMPLEMENTER_BLOCKED`; architect resolves with late binding via `Action<int>` cast OR moving `ChaseCamera.Mode` enum to Diagnostics.Runtime. Try direct ref first.
+
+**Definition-of-done:** Director.OnModeChanged shipped + ALL SetMode routed through ApplyMode; CaptureCore.SnapWhenModeReached shipped; SmokeTestRunner2b rewritten zero state-dependent WaitForSeconds; Hole_01 + Hole_06 additive loads working; 1 new EditMode test PASS; **241/241 PASS, 0 IGNORED**; 3 captures filed with full verification protocol; §2b deferred-smoke OPEN flag CLOSED.
 
 **Estimate:** half-day. Can run in parallel with §2c.
 
