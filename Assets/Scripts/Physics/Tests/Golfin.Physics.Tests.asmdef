@@ -8,6 +8,7 @@
         "Golfin.Physics.Viewer",
         "Golfin.Physics.Stats",
         "Golfin.Gameplay.Loop",
+        "Golfin.Gameplay.UI",
         "Golfin.Diagnostics.Runtime"
     ],
     "includePlatforms": ["Editor"],

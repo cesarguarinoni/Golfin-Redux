@@ -9023,6 +9023,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.ChaseCamera
   startMode: 0
   smoothTime: 0.15
+  _followDistance: 3
+  _followHeight: 1.8
 --- !u!20 &824114952
 Camera:
   m_ObjectHideFlags: 0
@@ -17352,6 +17354,7 @@ GameObject:
   - component: {fileID: 1483952045}
   - component: {fileID: 2300000009}
   - component: {fileID: 2300000010}
+  - component: {fileID: 2300000011}
   m_Layer: 0
   m_Name: LabRoot
   m_TagString: Untagged
@@ -24776,6 +24779,20 @@ MonoBehaviour:
   cupZoomHoverHeightMeters: 2.5
   cupZoomTweenSeconds: 1
   obFreezeHeightAboveTerrain: 5
+--- !u!114 &2300000011
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483952037}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16ae90eedf397424d9f51714272d0cc4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.HoleSessionDriver
+  controller: {fileID: 1483952038}
+  postShotDelaySeconds: 1.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

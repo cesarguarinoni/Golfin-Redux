@@ -1244,6 +1244,8 @@ namespace Golfin.Physics.Viewer
 
                     // Fire HoleContext AFTER PinWorld is written
                     Golfin.Gameplay.UI.HUD.HoleContext.Raise();
+                    // §2c: reset session state for the new hole. Fires OnTurnChanged so PlayerCardWidget renders fresh "TURN 1".
+                    Golfin.Gameplay.UI.HUD.GameSession.ResetForNewHole();
                 }
                 else
                 {
@@ -1390,6 +1392,9 @@ namespace Golfin.Physics.Viewer
                 _ballSM.SetSurfaceProvider(BuildSurfaceProvider(default(ShotPreset)));
 
             Golfin.Gameplay.UI.HUD.HoleContext.Reset();
+            // §2c: clear session state on hole unload (defensive — next hole load will reset again,
+            // but this guarantees clean state if we go to a no-hole flat-ground fallback).
+            Golfin.Gameplay.UI.HUD.GameSession.ResetForNewHole();
 
             PlacementEntries.Clear();
             OnPlacementEntriesChanged?.Invoke();

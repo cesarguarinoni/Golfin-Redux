@@ -1,0 +1,20 @@
+2026-05-08T04:41:34 activated
+2026-05-08T04:42:23 reading ShotResult.cs and BallStateMachine.cs
+2026-05-08T04:42:31 running baseline test count
+2026-05-08T04:44:17 verifying compile via MCP
+2026-05-08T04:44:46 triggering Unity MCP script-execute for compile check
+2026-05-08T04:45:21 calling Unity MCP tools for compile check and test run
+2026-05-08T04:46:29 using MCP to trigger asset refresh and verify compile
+2026-05-08T04:51:37 running tests via Unity Test Runner
+2026-05-08T04:54:43 118/118 tests pass, starting smoke captures
+2026-05-08T05:00:37 smoke runner started, waiting for captures
+2026-05-08T05:09:48 running smoke runner 2c second attempt
+2026-05-08T05:18:16 refreshing Unity before next smoke run attempt
+2026-05-08T05:23:12 switching to manual play-mode approach for smoke captures
+2026-05-08T05:30:00 session resumed, attempting smoke captures C2/C3/C4
+2026-05-08T05:27:00 attempting MCP-based smoke capture approach
+2026-05-08T05:35:00 attempting MCP script-execute to trigger smoke run
+2026-05-08T05:40:00 attempting direct MCP calls for play mode smoke run
+2026-05-08T05:50:00 SmokeRunner2cHost fixed (AssetDatabase.Refresh bug). Attempting smoke run.
+2026-05-08T15:00:00 smoke run complete: C1/C2/C3/C4 all captured. 118/118 tests pass.
+2026-05-08T15:05:00 done, awaiting review

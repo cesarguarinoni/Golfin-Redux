@@ -1,0 +1,2 @@
+ShotHistory count=1 (captured after C2):
+  Entry[0]: ShotNumber=1 Club=Driver Terminal=AtRest OBReason=null Surface=Fairway DistXZ=258.7m Origin=(219.43, 11.46, 34.73) Final=(-32.18, 7.03, -25.32)
