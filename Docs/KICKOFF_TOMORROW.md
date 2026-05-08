@@ -37,8 +37,8 @@
 **§2d scope (estimated half-day to one day):**
 1. **Real CupDetector** — class implementing `ICupDetector.IsInCup(fp3 position, fp ballRadius)`. Reads pin position via constructor injection (or static `HoleContext.PinWorld`). Returns true if `XZ distance from position to pin < cupRadius - ballRadius` AND `position.y < pin.y + cupDepth`. Cup radius is regulation 54mm (0.054m); cup depth is at least 4 inches (0.1016m). Architectural note: detector reads in fp3, so values pass through `fp.FromFloat` once at construction.
 2. **Wire on hole load** — `PhysicsLabController.OnHoleLoaded`, after `HoleContext.Raise()` and `GameSession.ResetForNewHole()`, call `_ballSM.SetCupDetector(new RealCupDetector(HoleContext.PinWorld, ...))`.
-3. **Result screen UI** — minimal modal/overlay. Shows: hole number, par, strokes (= `GameSession.ShotHistory.Count`), score-to-par (= strokes - par formatted as "+1" / "−1" / "Par"). One "Continue" button that hides the modal. NOT a polished UI — just the data.
-4. **Fire result screen** — new MonoBehaviour subscribed to `BallStateMachine.OnShotComplete`. On terminal=InCup, show modal. Lives in `Golfin.Physics.Viewer` or `Golfin.Gameplay.UI.ShotUI`, mirroring `HoleSessionDriver` (§2c) pattern. Probably named `HoleCompleteDriver`.
+3. **Result screen UI** — use the Figma + asset references below. Two states: Success (ball in cup) and Failed (?). Includes Hole Card background, banner, score readout, action buttons (Replay / Retry / Play / Continue — set TBD when reading Figma).
+4. **Fire result screen** — new MonoBehaviour subscribed to `BallStateMachine.OnShotComplete`. On terminal=InCup, show Success modal. Lives in `Golfin.Physics.Viewer` or `Golfin.Gameplay.UI.ShotUI`, mirroring `HoleSessionDriver` (§2c) pattern. Probably named `HoleCompleteDriver`.
 5. **Tests** — 4-6 EditMode tests:
    - `RealCupDetector_BallInsideCup_ReturnsTrue`
    - `RealCupDetector_BallOutsideCupRadius_ReturnsFalse`
@@ -48,11 +48,44 @@
    - `HoleCompleteDriver_OnAtRestTerminal_DoesNotShowModal`
 6. **Manual verification per Lesson O** — fire a putter shot on Hole 1 close to cup, verify InCup terminal fires, modal appears with correct strokes/par.
 
-**Open questions for SPEC-lock time:**
+## Reference materials for the result screen (provided 2026-05-08 EOD)
+
+**Figma node (canonical UI source-of-truth):**
+- File: `5gEAHjl6xAtW8iYY7NMvWd` (Golfin Game Redux, paid plan)
+- Node: `12987-4556`
+- URL: https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/Golfin-Game-Redux?node-id=12987-4556
+
+**Reference screenshots (visual diff companions):**
+- `Docs/Reference/Results Screen/Results - Success (Replay).png`
+- `Docs/Reference/Results Screen/Results - Success (Replay)-1.png`
+- `Docs/Reference/Results Screen/Results - Failed (Replay).png`
+- `Docs/Reference/Results Screen/Results - Failed (Replay)-1.png`
+
+Note: the existence of "Failed" state suggests holes can be failed, not just completed. **Open question for SPEC:** what triggers Failed in §2d's lab context? Out of bounds? Stroke limit? Just a visual placeholder for future logic? Architect needs Cesar's lock here — my lean is to NOT implement Failed in §2d (defer to §2e or later) and only ship Success. Confirm tomorrow.
+
+**Imported PNG assets** (already in Unity project at `Assets/Art/ResultScreen/`):
+- `Background - Banner.png` (66 KB)
+- `Background - HoleCard.png` (267 KB)
+- `Button - Play.png` (46 KB)
+- `Button - Replay.png` (40 KB)
+- `Button - Retry.png` (41 KB)
+- `Icon - Check.png` (500 B — small, likely vector-style success indicator)
+- `Icon - X.png` (1.3 KB — likely fail indicator)
+
+Three buttons (Play / Replay / Retry) suggest different next-action flows depending on result state. Architect to map button → action when Figma is consulted tomorrow.
+
+**Tomorrow's Figma protocol** (per project rules):
+1. Architect FIRST asks Cesar: is node `12987-4556` the canonical Result Screen design, or a placeholder version?
+2. Only after Cesar confirms canonical, run `Figma:get_design_context` with `fileKey=5gEAHjl6xAtW8iYY7NMvWd`, `nodeId=12987-4556`
+3. Use the screenshot references and the imported PNG assets as visual diff companions during SPEC writing
+4. Map button text/icon → action semantics (Play = next hole? Replay = view shot history? Retry = re-fire current shot?). Lock these with Cesar before SPEC finalizes.
+
+**Open questions for SPEC-lock time** (some now updated with Figma context):
 - Where does `PinWorld` live for the detector — constructor inject (immutable) or static read (live-updates if pin moves)? Lean: constructor inject; pin doesn't move during a hole.
 - Cup detection: instantaneous (any sample inside the cup) or sustained (ball must rest inside)? §2a's existing code samples during Rolling so any-sample-inside is the current contract. Lean: keep as-is.
-- Result modal — bare HUD overlay or proper modal pattern with `ModalController`? Lean: minimal HUD overlay first, polish in §3c.
-- Continue button next action — fire `BallStateMachine.ReArm()`? Move to next hole? Just hide the modal? Lean: just hide modal for §2d scope; §3d handles inter-hole flow.
+- Result modal UI — follow Figma node `12987-4556` design, use `Assets/Art/ResultScreen/` imported PNGs. Architect confirms canonical with Cesar before extracting.
+- Failed state in scope for §2d? Lean: NO, ship Success only; Failed deferred to §2e or later.
+- Continue/Replay/Retry/Play button next actions: lock from Figma + Cesar.
 - Test seam for `HoleCompleteDriver` — same as §2c's HoleSessionDriver pattern (`InjectForTests` helper).
 
 **Files §2d will touch:**
