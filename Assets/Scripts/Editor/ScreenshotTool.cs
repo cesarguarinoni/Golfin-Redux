@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using Golfin.EditorTools;
 
 public static class ScreenshotTool
 {
@@ -12,21 +13,19 @@ public static class ScreenshotTool
         if (!Directory.Exists(ScreenshotDir))
             Directory.CreateDirectory(ScreenshotDir);
 
-        string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        string pngPath = $"{ScreenshotDir}/screenshot_{timestamp}.png";
-
-        ScreenCapture.CaptureScreenshot(pngPath);
-        Debug.Log($"[ScreenshotTool] Captured to {pngPath}");
-
-        // Schedule compression after Unity writes the file (two frames to be safe)
-        EditorApplication.delayCall += () =>
+        string capturePath = CaptureHelper.SnapGameViewWithLabel("screenshot");
+        if (string.IsNullOrEmpty(capturePath) || !File.Exists(capturePath))
         {
-            EditorApplication.delayCall += () =>
-            {
-                CompressToJpg(pngPath, 800);
-                AssetDatabase.Refresh();
-            };
-        };
+            Debug.LogError("[ScreenshotTool] Capture failed — no file at: " + capturePath);
+            return;
+        }
+
+        string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        string destPath = $"{ScreenshotDir}/screenshot_{timestamp}.png";
+        File.Copy(capturePath, destPath, overwrite: true);
+
+        CompressToJpg(destPath, 800);
+        AssetDatabase.Refresh();
     }
 
     [MenuItem("GOLFIN/Screenshot/Capture Named")]
@@ -36,12 +35,18 @@ public static class ScreenshotTool
             Directory.CreateDirectory(ScreenshotDir);
 
         string path = EditorUtility.SaveFilePanel("Save Screenshot", ScreenshotDir, "screenshot", "png");
-        if (!string.IsNullOrEmpty(path))
+        if (string.IsNullOrEmpty(path)) return;
+
+        string capturePath = CaptureHelper.SnapGameViewWithLabel("named");
+        if (string.IsNullOrEmpty(capturePath) || !File.Exists(capturePath))
         {
-            ScreenCapture.CaptureScreenshot(path);
-            Debug.Log($"[ScreenshotTool] Saved to {path}");
-            EditorApplication.delayCall += () => AssetDatabase.Refresh();
+            Debug.LogError("[ScreenshotTool] Capture failed — no file at: " + capturePath);
+            return;
         }
+
+        File.Copy(capturePath, path, overwrite: true);
+        Debug.Log($"[ScreenshotTool] Saved to {path}");
+        EditorApplication.delayCall += () => AssetDatabase.Refresh();
     }
 
     private static void CompressToJpg(string pngPath, int maxWidth)
@@ -69,7 +74,6 @@ public static class ScreenshotTool
         string jpgPath = pngPath.Replace(".png", ".jpg");
         File.WriteAllBytes(jpgPath, jpg);
 
-        // Clean up the large PNG and its .meta
         File.Delete(pngPath);
         string metaPath = pngPath + ".meta";
         if (File.Exists(metaPath)) File.Delete(metaPath);

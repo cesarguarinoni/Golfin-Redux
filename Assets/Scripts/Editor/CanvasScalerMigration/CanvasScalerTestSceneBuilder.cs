@@ -198,8 +198,16 @@ namespace Golfin.Editor.CanvasScalerMigration
             }
             string filename = $"CanvasScalerTest_{tag}_{System.DateTime.Now:yyyyMMdd_HHmmss}.png";
             string fullPath = Path.Combine(ScreenshotFolder, filename);
-            ScreenCapture.CaptureScreenshot(fullPath);
-            Debug.Log($"[CanvasScalerTest] Screenshot queued -> {fullPath} (will write next frame).");
+            string capturePath = Golfin.EditorTools.CaptureHelper.SnapGameViewWithLabel("canvastest");
+            if (!string.IsNullOrEmpty(capturePath) && System.IO.File.Exists(capturePath))
+            {
+                System.IO.File.Copy(capturePath, fullPath, overwrite: true);
+                Debug.Log($"[CanvasScalerTest] Screenshot captured -> {fullPath}");
+            }
+            else
+            {
+                Debug.LogError($"[CanvasScalerTest] Capture failed — no file at: {capturePath}");
+            }
         }
     }
 }

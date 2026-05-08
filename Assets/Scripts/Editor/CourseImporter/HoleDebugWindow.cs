@@ -194,16 +194,18 @@ namespace Golfin.CourseImport
         private static void CaptureGame()
         {
             string name = SceneName();
-            string path = $"{ScreenshotDir()}/{name} - Game - {Timestamp()}.png";
+            string destPath = $"{ScreenshotDir()}/{name} - Game - {Timestamp()}.png";
 
-            ScreenCapture.CaptureScreenshot(path);
-
-            // Refresh after Unity finishes writing the file
-            EditorApplication.delayCall += () =>
+            string capturePath = Golfin.EditorTools.CaptureHelper.SnapGameViewWithLabel("game");
+            if (string.IsNullOrEmpty(capturePath) || !System.IO.File.Exists(capturePath))
             {
-                AssetDatabase.Refresh();
-                Debug.Log($"[HoleDebug] Game captured → {path}");
-            };
+                Debug.LogError("[HoleDebug] Capture failed — no file at: " + capturePath);
+                return;
+            }
+
+            System.IO.File.Copy(capturePath, destPath, overwrite: true);
+            AssetDatabase.Refresh();
+            Debug.Log($"[HoleDebug] Game captured → {destPath}");
         }
     }
 }
