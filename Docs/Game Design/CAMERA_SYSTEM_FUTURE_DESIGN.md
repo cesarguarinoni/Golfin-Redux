@@ -134,3 +134,40 @@ Update this doc whenever:
 - A future iteration discovers a new failure mode the principles missed — write it down.
 
 Don't let this doc rot. The whole point is that the next person to touch cameras reads it BEFORE making the same mistakes.
+
+## Research note 2026-05-08 — what shipped golf games actually do
+
+Researched after Cesar asked about apex zoom-out post-iter-8. Findings inform why apex zoom-out was rejected and validate the Apex Cam (hard cut, not zoom) approach in § "Concrete design sketches" above.
+
+### PGA TOUR (EA, recent titles) — three modes the player toggles between
+
+From EA forums player commentary on PGA TOUR camera modes:
+- **Follow camera:** always tracks ball, no cuts. Closest to what GOLFIN currently has post-iter-8.
+- **Pro camera:** tracks at first, then HARD CUTS to a downrange camera near landing. Players complained the cut happens at ~95% of travel — want it at 70–75% to better see the finish. Player feedback: when the cut moment is right, this mode is preferred.
+- **Broadcast camera:** TV-style with multiple cuts. Players reported it "flat out feels broken" — cuts to obscured/distant views often. Cautionary tale: complex camera systems are easy to get wrong.
+
+**Player sentiment:** "Follow takes immersion away too soon" — implies serious players prefer the discrete cut over continuous tracking.
+
+### PGA TOUR 2K23 — player-triggered cuts
+
+2K23 lets the player press spacebar mid-flight to cut to a ball-cam view. Without spacebar, default is continuous follow. **The player decides when to cut.** This is widely praised in player communities.
+
+Design implication: a default-OFF Apex Cam toggle (per item #1 in § "What to design first") aligns with this proven pattern. Player opt-in beats designer-imposed cinematic.
+
+### TV broadcast — multiple physical cameras, hard cuts
+
+From Quora answers on televised golf coverage: TV uses multiple positioned cameras with skilled operators. The director cuts between them at meaningful moments (tee-off, mid-flight establishing shot, near-green, putting). Each camera is a fixed framing; movement during a take is minor (slow zoom or pan, not full repositioning).
+
+Design implication: real golf production NEVER does a continuous zoom-out during flight. They use cuts. The Apex Cam sketch in § "Concrete design sketches" matches this.
+
+### Why apex zoom-out (continuous Chase pulls back as altitude rises) was REJECTED
+
+Architect proposed apex zoom-out 2026-05-08 as a way to give Cesar a "Chase with proposed zooms" enhancement. Research showed this pattern doesn't exist in shipped golf games. Continuous tracking at varying distance is neither what TV broadcast does nor what player-favored game modes do. The pattern that works is hard-cut to a pre-positioned framing — which is exactly what the Future Design doc already specified.
+
+Cesar's call 2026-05-08 ~14:30 JST: don't ship apex zoom-out. Keep cameras as they are post-iter-8. If apex moment is ever added, do it as Apex Cam (hard cut) per item #1 in § "What to design first."
+
+### Three takeaways for future camera work
+
+1. **Default to continuous follow.** It's the right default for casual mobile audiences and minimizes design risk. PGA TOUR's "Follow" mode and Mario Golf's tracking cam both work fine in this register.
+2. **Add discrete modes via opt-in toggles.** When you want cinematic, ship it as a player-toggleable setting (Apex Cam, Broadcast Cam) not as automatic mid-flight behavior. The PGA TOUR 2K23 spacebar pattern is the model.
+3. **Never compromise between continuous and discrete.** "Smoothly zoom out" or "smoothly cut" or "track-then-cut-then-track" is exactly the kind of compromise that ate iter-1–6. Pick one paradigm per mode. Modes are switchable; modes are not blendable.
