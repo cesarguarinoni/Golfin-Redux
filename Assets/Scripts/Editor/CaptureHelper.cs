@@ -51,6 +51,15 @@ namespace Golfin.EditorTools
             => CaptureCore.SnapAtEndOfFrameAndPause(label);
 
         // ────────────────────────────────────────────────────────────────────────
+        // For play-mode coroutines that need a captured frame + path string back,
+        // without calling AssetDatabase.Refresh (which would force a domain reload
+        // and kill the coroutine) or pausing the editor.
+        // Delegates to CaptureCore.SnapPlayModeSafe.
+        // ────────────────────────────────────────────────────────────────────────
+        public static string SnapPlayModeSafe(string label)
+            => CaptureCore.SnapPlayModeSafe(label);
+
+        // ────────────────────────────────────────────────────────────────────────
         // FAKE STATE PRESETS
         // ────────────────────────────────────────────────────────────────────────
 

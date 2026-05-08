@@ -48,10 +48,9 @@ namespace Golfin.Physics.Viewer
             // ── C1: Capture TURN 1 at Aiming ─────────────────────────────────────
             // ScanForLoadedHoleSceneAtStartup should have fired OnHoleLoaded -> ResetForNewHole -> TurnCount=1.
             yield return new WaitForSeconds(AimRenderWait);
-            // NOTE: Use SnapPlayMode (not SnapGameViewWithLabel) to avoid AssetDatabase.Refresh()
-            // in play mode. AssetDatabase.Refresh() while scripts are pending recompile forces
-            // Unity to EXIT play mode, killing this coroutine. SnapPlayMode skips the refresh.
-            string c1Path = SnapPlayMode("controls_2c_turn1_aiming");
+            // CaptureCore.SnapPlayModeSafe skips AssetDatabase.Refresh() (which would force
+            // a domain reload and kill this coroutine) and returns the written path.
+            string c1Path = CaptureCore.SnapPlayModeSafe("controls_2c_turn1_aiming");
             Debug.Log($"[SmokeRunner2cHost] C1 captured: {c1Path} | TurnCount={GameSession.TurnCount}");
 
             // ── Fire shot 1 (Driver, calm preset) ────────────────────────────────
@@ -111,7 +110,7 @@ namespace Golfin.Physics.Viewer
 
             // ── C2: Capture TURN 2 ────────────────────────────────────────────────
             yield return new WaitForSeconds(AimRenderWait);
-            string c2Path = SnapPlayMode("controls_2c_turn2_after_first_shot");
+            string c2Path = CaptureCore.SnapPlayModeSafe("controls_2c_turn2_after_first_shot");
             Debug.Log($"[SmokeRunner2cHost] C2 captured: {c2Path} | TurnCount={GameSession.TurnCount}");
 
             // ── C4: Dump ShotHistory ──────────────────────────────────────────────
@@ -139,40 +138,11 @@ namespace Golfin.Physics.Viewer
 
             // ── C3: Capture TURN 1 after reload ──────────────────────────────────
             yield return new WaitForSeconds(AimRenderWait);
-            string c3Path = SnapPlayMode("controls_2c_turn1_after_hole_reload");
+            string c3Path = CaptureCore.SnapPlayModeSafe("controls_2c_turn1_after_hole_reload");
             Debug.Log($"[SmokeRunner2cHost] C3 captured: {c3Path} | TurnCount={GameSession.TurnCount}");
 
             Debug.Log("[SmokeRunner2cHost] SMOKE RUN COMPLETE.");
             Destroy(this);
-        }
-
-        /// <summary>
-        /// Play-mode-safe snapshot. Uses CaptureCore.GrabGameViewRT() WITHOUT calling
-        /// AssetDatabase.Refresh() — which would trigger a domain reload and kill the coroutine.
-        /// The PNG is written to disk; Unity will pick it up on the next edit-mode entry.
-        /// </summary>
-        static string SnapPlayMode(string label)
-        {
-            Directory.CreateDirectory(CaptureCore.OutDir);
-            string path = $"{CaptureCore.OutDir}/{label}_{System.DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
-
-            var tex = CaptureCore.GrabGameViewRT();
-            if (tex == null)
-                tex = ScreenCapture.CaptureScreenshotAsTexture();
-
-            if (tex != null)
-            {
-                File.WriteAllBytes(path, tex.EncodeToPNG());
-                // Use Destroy (deferred) in play mode to avoid GC issues with MCP plugin threads.
-                UnityEngine.Object.Destroy(tex);
-            }
-            else
-            {
-                Debug.LogWarning($"[SmokeRunner2cHost] SnapPlayMode: texture was null for label={label}");
-            }
-
-            Debug.Log($"[SmokeRunner2cHost] Wrote {path} (no AssetDatabase.Refresh — play-mode safe)");
-            return System.IO.Path.GetFullPath(path);
         }
 
         static string BuildHistoryLog()

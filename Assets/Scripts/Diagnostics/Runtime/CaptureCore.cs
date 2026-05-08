@@ -100,6 +100,54 @@ namespace Golfin.Diagnostics.Runtime
             return Path.GetFullPath(path);
         }
 
+        // ── SnapPlayModeSafe ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Synchronous play-mode-safe snapshot. Use from inside a play-mode coroutine
+        /// when you need a captured frame and the file path back, but you must NOT
+        /// call <c>AssetDatabase.Refresh()</c> (which forces a domain reload and kills
+        /// the coroutine) or pause the editor.
+        ///
+        /// Difference from <see cref="SnapGameViewWithLabel"/>: skips
+        /// <c>AssetDatabase.Refresh()</c>. The PNG is on disk; Unity picks it up
+        /// automatically on next edit-mode entry.
+        ///
+        /// Difference from <see cref="SnapAtEndOfFrameAndPause"/>: synchronous (no
+        /// end-of-frame yield), returns the absolute path string, and does not
+        /// pause the editor regardless of <c>skipPause</c>. Caller is responsible for
+        /// any frame-timing yields before invoking.
+        /// </summary>
+        public static string SnapPlayModeSafe(string label)
+        {
+            Directory.CreateDirectory(OutDir);
+            string path = $"{OutDir}/{label}_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
+
+            Texture2D tex = GrabGameViewRT();
+            if (tex == null)
+                tex = ScreenCapture.CaptureScreenshotAsTexture();
+
+            if (tex != null)
+            {
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+                // Use Destroy (deferred) in play mode to avoid GC paths that can
+                // collect MCP plugin background threads. DestroyImmediate is only safe
+                // in edit mode; SnapPlayModeSafe is intended for play-mode callers.
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(tex);
+                else
+                    UnityEngine.Object.DestroyImmediate(tex);
+            }
+            else
+            {
+                Debug.LogWarning($"[CaptureCore] SnapPlayModeSafe: texture was null for label={label}");
+            }
+
+            // Intentionally NO AssetDatabase.Refresh() — would force domain reload
+            // and exit play mode, killing the calling coroutine.
+            Debug.Log($"[CaptureCore] Wrote {path} (play-mode safe — no AssetDatabase.Refresh)");
+            return Path.GetFullPath(path);
+        }
+
         // ── SnapAtEndOfFrameAndPause ───────────────────────────────────────────
 
         /// <summary>

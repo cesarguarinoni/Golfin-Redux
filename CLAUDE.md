@@ -121,8 +121,11 @@ Code's screenshot history is full of timing failures. These rules eliminate the 
 | Verify scene contents in EditMode      | `SnapGameView()`                                     |
 | Frozen moment from playmode            | `SnapAtEndOfFrameAndPause("label")` in coroutine     |
 | Series of frames during animation      | Multiple `SnapGameViewWithLabel("step1"/"step2"/…)`  |
+| Play-mode coroutine that must keep running (smoke runner) | `CaptureCore.SnapPlayModeSafe("label")` — sync, returns absolute path, **does NOT** call `AssetDatabase.Refresh` (which would force a domain reload and kill the coroutine), does NOT pause |
 | `ScreenCapture.CaptureScreenshot(path)` | **DO NOT USE — banned by this project**             |
 | Physics-lab ball-at-rest after a shot   | `SnapAtEndOfFrameAndPause("shotN_<config>_atrest")` in coroutine — `mcp__ai-game-developer__screenshot-game-view` does NOT refresh between calls in the same `script-execute` scope and will return the pre-shot frame |
+
+**`SnapPlayModeSafe` vs `SnapAtEndOfFrameAndPause`:** use `SnapPlayModeSafe` when a long-running coroutine needs to capture *and continue* (e.g. fire shot → capture → reload hole → capture again). It is synchronous, returns the path string for logging, never pauses, and never calls `AssetDatabase.Refresh()` — so the coroutine survives. Use `SnapAtEndOfFrameAndPause` when you want a single frozen moment and the coroutine can end — it yields one frame and pauses (or skips pause with `skipPause: true`), and is the right choice for at-rest verification snaps. Both live in `Golfin.Diagnostics.Runtime.CaptureCore` and are mirrored on the editor-side `CaptureHelper`.
 
 **Physics-lab capture rule (controls_c_fix postmortem):** when a SPEC asks for ball-at-rest evidence after firing a lab shot, the spec's verification step MUST mandate `CaptureHelper.SnapAtEndOfFrameAndPause` — NOT `screenshot-game-view`. The MCP tool reads the Game View RT, which is not synchronously refreshed inside one `script-execute` call, so two sequential `screenshot-game-view` calls after two different shots produce visually identical PNGs of the pre-shot tee. Self-reviewer/reviewer must FAIL any physics-lab task whose two at-rest captures show the same pre-shot frame, regardless of byte-count delta.
 
