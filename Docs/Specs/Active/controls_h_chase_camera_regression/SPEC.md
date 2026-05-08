@@ -453,10 +453,105 @@ These captures DO NOT replace the human-in-the-loop descriptions per Lesson O �
 ## Hard rules for implementer
 
 1. **Do NOT modify** `BallStateMachine.cs` source logic. ONLY the docstring at lines 62-66 changes.
-2. **Do NOT modify** `BallSimulation.cs`, `Trajectory.cs`, `AeroModel.cs`, `AeroConfig.cs`, any aero CSV, `BallAnimator.cs`, `ChaseCamera.cs` source logic, `LoopCameraDirector.cs` source logic.
+2. **Do NOT modify** `BallSimulation.cs`, `Trajectory.cs`, `AeroModel.cs`, `AeroConfig.cs`, any aero CSV, `BallAnimator.cs`. `ChaseCamera.cs` and `LoopCameraDirector.cs` ARE editable as of iteration 5 (see § Iteration 5 amendments) — only the listed aero/animation files remain locked.
 3. **Do NOT add** new events to `BallAnimator` (Option C rejected).
 4. **Do NOT defer** the SM synchronous fire (Option B rejected).
 5. **Do NOT modify** `LabScaffold.unity` via raw YAML. If the SmokeTestRunner removal triggers any scene reference issue, use Unity Editor MCP. Per controls_g deviation #3 lesson.
 6. **Do NOT skip the 5 manual content-sanity descriptions.** Per Lesson O — written by THIS spec, applied to THIS spec — runtime event-dispatch captures are not sufficient. Implementer must drive the lab manually for all 5 cases and write the descriptions.
 7. **Do NOT use `OnModeChanged`-only captures as visual verification.** That's the failure mode this spec exists to fix. Mode history captures are NOT acceptable evidence for the camera-tracking checklist items.
 8. **Bit-exact 248-test PASS gate must hold.** Adding 1 test → 249/249. If any of the 248 starts failing, escalate `IMPLEMENTER_BLOCKED` immediately — do NOT "fix" by editing existing tests.
+
+---
+
+## Iteration 5 amendments (Cesar 2026-05-08)
+
+After iter-4 the self-reviewer escalated two questions to Cesar:
+
+- **Q1** — should the camera chase the ball during the visual roll-out (Rolling state), or should the Downrange cinematic stay parked through the roll?
+- **Q2** — how should visual evidence be produced given the off-screen-RT capture path keeps producing temporally misaligned frames?
+
+Cesar's rulings (chat, 2026-05-08):
+
+- **Q1 → Option B.** Camera must chase through the visual roll-out. The Downrange cinematic must release at touchdown (ball reaches terrain) and Rolling stays in `Chase` mode. The current behaviour ("snaps to ground violently and stays parked while the ball rolls away") is unacceptable.
+- **Q2 → Cesar verifies visuals manually in chat.** Implementer no longer needs to produce mid-Rolling, Downrange, or any chase-camera screenshot. The instance-ID log + the EditMode test gate + Cesar's manual confirmation in chat are the evidence path.
+
+Plus one new regression Cesar surfaced in the same chat round:
+
+- **Aiming for the second shot is broken — sideways camera pan specifically does not respond.** R4 in the iter-3 rejection covered first-shot pan dead. Iter-3's `Start()` priming fixed first-shot pan but introduced (or unmasked) a second-shot pan failure.
+
+### R3-revised — Downrange releases at touchdown; Rolling stays in Chase
+
+**Replaces** the iter-3 R3 narrow fix (AtRest→Chase ModeMap entry).
+
+In `LoopCameraDirector.cs`:
+
+- `TickCinematicCut` may still fire Downrange during Flying for shots that meet the threshold. That's fine — the cinematic still plays through the air phase.
+- Add a release condition: when `BallStateMachine` transitions Flying→Rolling (i.e. the ball touches down), the Director must immediately switch the active mode away from `Downrange` and back into `Chase`, with the same `_target` (the live ball Transform).
+- Rolling must stay in `Chase` until the ball reaches AtRest. AtRest can stay in Chase (carry-over from iter-3's ModeMap entry), or transition out — Cesar's ruling does not require a specific AtRest behaviour, only that the roll-out itself is chased.
+- The "snaps to ground violently" symptom Cesar described is the Downrange→Chase transition the existing camera-mode dispatch isn't smoothing. The implementer must either smooth this transition (lerp `_followDistance`/`_followHeight` over a short blend window) or position the camera at a sensible Chase pose at touchdown such that the visible jump is minimal.
+
+Implementation hint: the Flying→Rolling transition fires on the falling edge of `BallAnimator.IsPlaying` per the SM. `LoopCameraDirector` already subscribes to `OnStateChanged` (or can subscribe). Hook the release there.
+
+Acceptance per § R3-revised:
+
+- Driver full-power shot: camera Chase during flight → Downrange cinematic plays through air → at touchdown, mode releases to Chase and the camera follows the ball through Rolling until AtRest, with no violent snap.
+- Iron short shot (under cinematic threshold): mode stays in Chase end-to-end (no Downrange, no transition needed). Already worked in iter-3, must continue to work.
+- Putt: mode stays in GroundLevel end-to-end. No Downrange, no Chase. Already worked.
+
+### R5 — Second-shot aiming sideways pan is broken
+
+New in iter-5. After firing a first shot and re-arming for a second shot from the rest position (or from a re-aim), pressing left/right pan input does nothing.
+
+**Likely culprits to investigate:**
+
+- The first-shot pan input handler is wired in `Start()` (R4 fix from iter-3). On Aiming entry for shot 2, something tears down or replaces the input subscription. Trace `EnableInput` / `DisableInput` / equivalent calls in `PhysicsLabController` around `OnShotComplete` and the next Aiming entry.
+- The `CameraHeadingRadians` field is reset on Aiming entry but the ChaseCamera or pan controller is reading from a different cached value that wasn't reset.
+- `HandleCameraOrbit` (the orbit-input handler edited in iter-3 — "removed double-clear") may have lost a re-arm path.
+- The pan input action is subscribed via `Input System` and the action map is being disabled and not re-enabled on Aiming re-entry.
+
+Acceptance per § R5:
+
+- Fire shot 1 from tee. Pan left/right during Aiming — works (R4 carry-over).
+- Wait for ball to settle. Shot 1 resolves; lab returns to Aiming for shot 2.
+- Pan left/right during Aiming for shot 2 — must work identically to shot 1.
+- Repeat for shot 3, 4 — must work indefinitely.
+
+### R6 — Eliminate the violent ground snap on Downrange→Chase transition
+
+Subsumed under R3-revised but worth calling out explicitly: the implementer must verify visually (via Cesar) that the touchdown transition does not cause a visible camera jolt. Any snap of more than ~0.5s of camera-position discontinuity counts as "violent" for purposes of this acceptance.
+
+### Smoke evidence — iter-5 update
+
+The original § Smoke evidence section (file-on-disk artifacts requirement) is **superseded for iter-5+** by Cesar's Q2 ruling.
+
+Implementer must:
+
+1. Run the full EditMode test gate via `mcp__ai-game-developer__tests-run` and record PASS count + failure count + skip count in IMPLEMENTER_REPORT § Tests. Continue retrying transient MCP transport drops every 30–60s — do NOT pre-declare blocked.
+2. Drive the lab manually in play mode and verify in chat with Cesar:
+   - R3-revised: driver full-power shot — confirm Chase→Downrange→Chase-during-roll behaviour with no violent snap.
+   - R5: second-shot sideways pan works.
+3. The `controls_h_two_consecutive_shots_log.txt` instance-ID log from iter-2 still stands; do not re-produce.
+4. **No new screenshot files required.** No mid-Rolling, no Downrange, no chase-camera PNGs. Cesar verifies visuals in chat.
+
+### Definition of Done — iter-5 update
+
+Items dropped from original DoD:
+
+- ~~3 file-on-disk captures~~ (Q2 ruling).
+- ~~Mid-Rolling chase screenshot~~ (Q2 ruling).
+- ~~Downrange cinematic screenshot~~ (Q2 ruling).
+- ~~5 manual content-sanity descriptions in IMPLEMENTER_REPORT~~ — replaced with R3-revised + R5 acceptance descriptions only.
+
+Items added:
+
+- R3-revised landed and verified by Cesar in chat: Downrange releases at touchdown, Rolling stays in Chase, no violent snap.
+- R5 landed and verified by Cesar in chat: second-shot sideways pan works.
+- New tests covering R3-revised (Downrange→Chase release on Flying→Rolling) and R5 (pan input wired on every Aiming entry, not just first). At least 2 new tests; total expected suite count adjusts accordingly.
+- Hard rule 2 (don't modify `LoopCameraDirector.cs`) is loosened — implementer MUST modify `LoopCameraDirector.cs` for R3-revised. Document the change in IMPLEMENTER_REPORT § Spec Deviations as expected per this amendment, not flagged as a deviation.
+
+### Hard rules — iter-5 amendments
+
+- Hard rule 2 amended above to permit `LoopCameraDirector.cs` and `ChaseCamera.cs` edits.
+- Hard rule 6 (5 manual content-sanity descriptions) — superseded by Q2 ruling. Implementer writes only R3-revised + R5 descriptions in IMPLEMENTER_REPORT § Visual Verification.
+- Hard rule 7 (don't use OnModeChanged-only captures) — still in force as a methodology lesson, but the consequence (file-on-disk PNG captures) is no longer required given Q2.
+- All other hard rules (1, 3, 4, 5, 8) unchanged.

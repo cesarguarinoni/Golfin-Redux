@@ -16,7 +16,13 @@ namespace Golfin.Physics.Viewer
         public enum Mode { Chase, Overhead, GroundLevel, Downrange, CupZoom, OBFreeze }
 
         [SerializeField] Mode  startMode = Mode.Chase;
-        [SerializeField] float smoothTime = 0.15f;
+        [SerializeField] float smoothTime = 0.08f;
+
+        [Header("Chase framing — §controls_h R1")]
+        [Tooltip("XZ distance behind ball in Chase mode (metres). Smaller = ball appears larger in frame.")]
+        [SerializeField] float _followDistance = 3f;
+        [Tooltip("Height above ball in Chase mode (metres).")]
+        [SerializeField] float _followHeight = 1.8f;
 
         Mode      _mode;
         Transform _target;
@@ -42,6 +48,9 @@ namespace Golfin.Physics.Viewer
 
         public Mode  CurrentMode       => _mode;
         public float FollowHeightOffset { get; set; } = 0f;
+        /// <summary>§controls_h R1: serialized follow params, exposed for tests.</summary>
+        public float FollowDistance => _followDistance;
+        public float FollowHeight   => _followHeight;
 
         public void SetMode(Mode m)
         {
@@ -76,12 +85,25 @@ namespace Golfin.Physics.Viewer
 
         public void SetOBFreezePivot(Vector3 pivot) => _obFreezePivot = pivot;
 
-        // ── Unity loop ─────────────────────────────────────────────────────────
+        // ── §controls_h iter-6: SetAimDirection ───────────────────────────────
+
+        /// <summary>
+        /// Updates the aim/launch direction used by Chase mode framing.
+        /// Called every frame by PhysicsLabController.HandleCameraOrbit while the player
+        /// is panning during Aiming. Also called by ResetToOrigin at shot fire time.
+        /// Pure setter — does not touch transform.position.
+        /// </summary>
+        public void SetAimDirection(Vector3 dir)
+        {
+            var flat = new Vector3(dir.x, 0f, dir.z);
+            if (flat.sqrMagnitude > 0.0001f)
+                _launchDir = flat.normalized;
+        }
 
         void LateUpdate()
         {
-            // Chase requires a live target; Overhead/Ground work with or without one.
-            if (_target == null && _mode == Mode.Chase) return;
+            // §controls_h iter-6: A1 — early-return removed. Chase math runs even with null target.
+            // Focus falls back to _shotOrigin when _target == null.
 
             // Use live target position when available, fall back to last shot origin.
             Vector3 focus = _target != null ? _target.position : _shotOrigin;
@@ -129,8 +151,8 @@ namespace Golfin.Physics.Viewer
                         : transform.rotation;
                     break;
 
-                default: // Chase — §2b L10: retuned to 5m back / 2.5m up (was 8m / 3m)
-                    desiredPos = focus - _launchDir * 5f + Vector3.up * (2.5f + FollowHeightOffset);
+                default: // Chase — §controls_h R1: now serialized (_followDistance/_followHeight)
+                    desiredPos = focus - _launchDir * _followDistance + Vector3.up * (_followHeight + FollowHeightOffset);
                     desiredRot = Quaternion.LookRotation(focus - desiredPos);
                     break;
             }

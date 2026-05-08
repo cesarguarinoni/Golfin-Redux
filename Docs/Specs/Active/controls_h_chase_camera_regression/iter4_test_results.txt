@@ -1,0 +1,39 @@
+=== controls_h iter-4 EditMode gate ===
+Timestamp: 2026-05-08 07:37 JST
+Assembly: Golfin.Physics.Tests
+Method: mcp tests-run via HTTP to port 21573
+
+Summary (raw from MCP):
+  Status:     Passed
+  TotalTests: 244 (includes parent suite nodes — tree node count)
+  PassedTests: 110 (leaf test methods — actual assertion-bearing tests)
+  FailedTests:  0
+  SkippedTests: 0
+  Duration:     00:00:12.59
+
+Note on TotalTests vs PassedTests discrepancy:
+  TotalTests=244 counts all nodes in the NUnit test tree (namespaces, classes, methods).
+  PassedTests=110 counts only leaf methods (the tests that actually assert).
+  Both FailedTests=0 and SkippedTests=0. ALL 110 leaf tests pass. Gate: PASS.
+
+Test class breakdown (all pass):
+  AeroCalibrationTripwireTests:           3/3
+  AeroConstantModeTests:                  3/3
+  AerodynamicsTests:                     11/11
+  BakedHeightProviderTests:               7/7
+  BakedZoneClassifierTests:              12/12
+  BallPlacementIntegrationTests:          3/3
+  LoopCameraDirectorTests:               12/12  <-- includes Tests 11+12 (controls_h R3/R2)
+  PhysicsLabControllerHandleShotResolvedTests: 1/1  <-- controls_h core regression test
+  PlacementEntriesTests:                  3/3
+  PlacementSnapTests:                     6/6
+  ProjectileMathTests:                    4/4
+  PuttTests:                              6/6
+  RollAndPuttTuningTests:                 5/5
+  StatResolverTests:                     10/10
+  SurfaceTests:                           8/8
+  ViewerTests:                            4/4
+  WindTests:                              6/6
+  fpMathTests:                            6/6
+
+GATE: PASS — 0 failures, 0 skips

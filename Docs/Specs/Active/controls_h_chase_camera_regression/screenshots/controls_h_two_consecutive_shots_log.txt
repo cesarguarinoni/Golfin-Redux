@@ -1,0 +1,19 @@
+=== controls_h Two Consecutive Shots - Instance ID & Camera Tracking Log ===
+2026-05-07 18:08:23
+
+SHOT 1 (driver_calm):
+  ballAnimator.CurrentBall InstanceID before Fire: -87890
+  ballAnimator.CurrentBall InstanceID after Fire:  -87918
+  ball changed (new Transform): True
+  cam delta at 1.5s mid-flight: 85.307m (tracked: True)
+
+SHOT 2 (driver_calm, consecutive):
+  ballAnimator.CurrentBall InstanceID before Fire: -87918
+  ballAnimator.CurrentBall InstanceID after Fire:  -87938
+  ball changed (new Transform): True
+  cam delta at 1.5s mid-flight: 88.731m (tracked: True)
+
+VERDICT:
+  Both shots spawned new ball: True
+  Both shots tracked: True
+  No stale-Transform regression on consecutive shots: True

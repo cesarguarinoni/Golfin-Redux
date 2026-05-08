@@ -55,6 +55,20 @@ Each item below MUST be marked `PASS` or `FAIL` with a one-sentence justificatio
 - <path 1> — <what changes>
 - <path 2> — <what changes>
 
+## Smoke evidence
+
+Describe how the implementation will be verified before marking IMPLEMENTER_REPORT done.
+
+### Visual-fidelity verification (Lesson O)
+
+When the spec involves visual fidelity — camera tracking, animation timing, ball/ribbon rendering, mode transitions, SmoothDamp targets, or any deliverable where player-perceived behavior is the success criterion — runtime event-dispatch captures (e.g., `OnModeChanged`, `OnStateChanged`, `OnShotComplete`) are NECESSARY but NOT SUFFICIENT.
+
+Visual fidelity REQUIRES one of:
+- **Human-in-the-loop play-and-confirm.** Implementer loads the scene, drives the flow manually, and writes a content-sanity description in IMPLEMENTER_REPORT.md describing what the camera/animation/ball visually did. Auditable by Cesar and reviewer.
+- **Position-trace assertion.** EditMode or PlayMode test reads actual Transform positions over multiple frames and asserts tracking against the expected reference.
+
+Mode-history captures + screenshot files alone are dispatch evidence, not visual evidence. See `Docs/Diagnostics/PIPELINE_LESSONS.md` Lesson O for the full failure analysis.
+
 ## Out of scope (do NOT do these)
 
 - <explicit non-goals so Implementer doesn't scope-creep>

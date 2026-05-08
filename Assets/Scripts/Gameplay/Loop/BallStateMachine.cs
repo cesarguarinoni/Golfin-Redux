@@ -61,9 +61,11 @@ namespace Golfin.Gameplay.Loop
         // ── Core API ───────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Called by PhysicsLabController immediately after BallSimulation.Simulate() returns,
-        /// BEFORE BallAnimator.Play() is invoked. Pre-computes the canonical transition list
-        /// from the trajectory + cup scan and stores it for live polling.
+        /// Called by PhysicsLabController immediately after BallSimulation.Simulate() returns
+        /// AND after BallAnimator.Play() has spawned the new ball Transform. Pre-computes the
+        /// canonical transition list from the trajectory + cup scan and stores it for live polling.
+        /// Caller MUST invoke this synchronously while the animator is still playing the new shot,
+        /// so the falling-edge detection in Tick() correctly fires when the animation later completes.
         /// In Headless mode, drains all transitions synchronously before returning.
         /// </summary>
         public void OnTrajectoryComputed(fp3 startPos, Trajectory trajectory, fp ballRadius)

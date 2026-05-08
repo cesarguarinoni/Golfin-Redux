@@ -139,39 +139,9 @@ namespace Golfin.Physics.Viewer
         /// </summary>
         public void TickCinematicCut()
         {
-            var ctrl = ActiveController;
-            if (ctrl == null) return;
-
-            // Cinematic cut: only during Flying, non-putt, before the cut fires.
-            if (ctrl.BallSM == null) return;
-            if (ctrl.BallSM.State != BallState.Flying) return;
-            if (ctrl.CurrentShotIsPutt) return;
-
-            var setter = ActiveSetter;
-            if (setter == null) return;
-            if (setter.CurrentMode == ChaseCamera.Mode.Downrange) return; // already cut
-
-            var traj = ctrl.LastTrajectory;
-            if (traj == null) return;
-
-            float predictedCarry = ComputePredictedCarry(traj, ctrl.LastShotOrigin);
-            if (predictedCarry < minCarryForCinematicMeters) return;
-
-            float currentProgress = ComputeCurrentXZProgress(
-                ctrl.CurrentBall != null ? ctrl.CurrentBall.position : ctrl.LastShotOrigin,
-                ctrl.LastShotOrigin,
-                ctrl.LastShotLaunchDir);
-
-            if (predictedCarry > 0f && (currentProgress / predictedCarry) >= cinematicCutAtCarryFraction)
-            {
-                Vector3 landingPos = ComputeLandingPos(traj);
-                Vector3 downrangePos = landingPos
-                    - ctrl.LastShotLaunchDir * downrangePastLandingMeters
-                    + Vector3.up * downrangeHeightMeters;
-
-                setter.SetDownrangeFraming(downrangePos, landingPos);
-                ApplyMode(ChaseCamera.Mode.Downrange);
-            }
+            // §controls_h iter-6: cinematic cut deleted. Chase runs the entire shot.
+            // Method preserved as a no-op for tests that may call it; can be removed
+            // entirely after the iter-6 test suite lands.
         }
 
         // ── SM subscription handler ────────────────────────────────────────────
@@ -189,6 +159,16 @@ namespace Golfin.Physics.Viewer
             {
                 if (ctrl != null)
                     ArmChaseForShot(ctrl.LastShotOrigin, ctrl.LastShotLaunchDir, ctrl.CurrentBall);
+            }
+
+            // § controls_h R3: Flying → Rolling (or Rolling → Rolling on bounce):
+            // re-arm the target with the current ball so Chase continues tracking
+            // through the rolling/settling phase. The ball Transform is still valid
+            // at this point (BallAnimator has not destroyed it yet).
+            if (change.Next == BallState.Rolling)
+            {
+                if (ctrl != null && ctrl.CurrentBall != null)
+                    setter.SetTarget(ctrl.CurrentBall);
             }
 
             // InCup: set cup zoom focus before mode switch.
@@ -224,9 +204,10 @@ namespace Golfin.Physics.Viewer
                 ApplyMode(mode.Value);
             }
 
-            // Terminal states: clear the chase target.
-            if (change.Next == BallState.AtRest
-             || change.Next == BallState.InCup
+            // § controls_h R3: Do NOT clear target on AtRest — camera should stay
+            // Chase-tracking the stationary ball until the next shot arms a new target.
+            // InCup / OB still clear the target (camera pivots to special framing there).
+            if (change.Next == BallState.InCup
              || change.Next == BallState.OB)
             {
                 setter.SetTarget(null);

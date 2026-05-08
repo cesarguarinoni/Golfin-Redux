@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
@@ -11,6 +12,8 @@ using Golfin.Physics.Stats;
 using Golfin.Physics.Runtime;
 using Golfin.Gameplay.Input;
 using Golfin.Gameplay.UI.ShotUI;
+
+[assembly: InternalsVisibleTo("Golfin.Physics.Tests")]
 
 namespace Golfin.Physics.Viewer
 {
@@ -84,6 +87,16 @@ namespace Golfin.Physics.Viewer
         internal Vector3                               LastShotLaunchDir => _lastShotLaunchDir;
         internal Transform                             CurrentBall    => ballAnimator?.CurrentBall;
         internal bool                                  CurrentShotIsPutt => _shotController != null && _shotController.IsPutt;
+
+        // ── §controls_h: test injection helpers ───────────────────────────────
+        // Allow EditMode integration tests to inject dependencies without a full scene.
+        internal void InjectForTests(BallAnimator ba, Golfin.Gameplay.Loop.BallStateMachine sm)
+        {
+            ballAnimator = ba;
+            _ballSM      = sm;
+            // Load default configs so RunSimFromController doesn't crash.
+            EnsureConfigsLoaded();
+        }
 
         // Camera orbit state
         float   _cameraYaw;
@@ -215,6 +228,15 @@ namespace Golfin.Physics.Viewer
             // the cursor in Awake; we deactivate its GO but the global cursor state persists.
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible   = true;
+
+            // § controls_h R4 / iter-6: Prime the camera heading using GetDefaultLookDirection()
+            // so ALL branches are covered — Hole1 hardcoded, tee→green, explicit, and fallback.
+            // Iter-6: replaced ApplyCameraYaw with ChaseCamera.SetAimDirection — single writer.
+            Vector3 r4dir = GetDefaultLookDirection();
+            _cameraYaw = Mathf.Atan2(r4dir.z, r4dir.x);
+            if (_shotController != null)
+                _shotController.CameraHeadingRadians = _cameraYaw;
+            chaseCamera?.SetAimDirection(r4dir);
 
             // Wait 2 frames so any additively-loaded hole scene finishes loading,
             // then scan for it. This replaces the fragile immediate scan.
@@ -441,6 +463,15 @@ namespace Golfin.Physics.Viewer
 
             if (ballAnimator != null) ballAnimator.PlaceAtRest(teePos);
 
+            // §controls_h iter-6: seed ChaseCamera so first-shot Aiming framing is correct.
+            // Without this, ChaseCamera._shotOrigin = (0,0,0) and _launchDir = forward default,
+            // so the camera renders at world origin until the first shot fires.
+            if (chaseCamera != null)
+            {
+                chaseCamera.SetTarget(ballAnimator?.CurrentBall);
+                chaseCamera.ResetToOrigin(teePos, GetDefaultLookDirection());
+            }
+
             // Update ShotConeView ball transform so targeting line can pivot in Idle state.
             if (_shotConeView != null && ballAnimator != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
@@ -461,9 +492,6 @@ namespace Golfin.Physics.Viewer
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
 
-            Camera cam = chaseCamera?.GetComponent<Camera>();
-            if (cam != null) ApplyCameraYaw(cam);
-
             // Putt mode: switch to ground-level camera for close-range view.
             if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
                 chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
@@ -482,6 +510,13 @@ namespace Golfin.Physics.Viewer
             _orbitCenter = pos;
             if (ballAnimator != null) ballAnimator.PlaceAtRest(pos);
 
+            // §controls_h iter-6: same as SetupAtTee — seed ChaseCamera with new resting position.
+            if (chaseCamera != null)
+            {
+                chaseCamera.SetTarget(ballAnimator?.CurrentBall);
+                chaseCamera.ResetToOrigin(pos, GetDefaultLookDirection());
+            }
+
             // Update ShotConeView ball transform so targeting line can pivot from the new position.
             if (_shotConeView != null && ballAnimator != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
@@ -495,9 +530,6 @@ namespace Golfin.Physics.Viewer
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
-
-            Camera cam = chaseCamera?.GetComponent<Camera>();
-            if (cam != null) ApplyCameraYaw(cam);
 
             if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
                 chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
@@ -552,7 +584,7 @@ namespace Golfin.Physics.Viewer
             // Block orbit while any action-button selector overlay is open.
             if (Golfin.Gameplay.UI.ShotUI.OtherButtonsFader.AnyOverlayOpen)
             {
-                _orbitDragActive = false;  // cancel any in-progress drag
+                _orbitDragActive = false;
                 return;
             }
 
@@ -561,17 +593,15 @@ namespace Golfin.Physics.Viewer
             // Orbit only makes sense in Chase mode; Overhead/Ground manage themselves.
             if (chaseCamera != null && chaseCamera.CurrentMode != ChaseCamera.Mode.Chase) return;
 
-            // §2a: touch-shot at-rest is handled by HandleShotComplete (SM path).
-            // Preset-shot camera reset (orbit center + SetTarget) still uses the falling-edge here.
+            // §controls_h iter-6: When ball animation finishes (falling edge of isPlaying),
+            // update the orbit center to the resting ball position so subsequent panning
+            // orbits around the new resting position. ChaseCamera owns the actual position
+            // write — we only update _cameraYaw and seed ChaseCamera's aim direction.
             bool isPlaying = ballAnimator != null && ballAnimator.IsPlaying;
             if (_prevBallPlaying && !isPlaying)
             {
                 if (ballAnimator?.CurrentBall != null)
                     _orbitCenter = ballAnimator.CurrentBall.position;
-                if (chaseCamera != null) chaseCamera.SetTarget(null);
-                // Note: CompleteShot is NOT called here anymore.
-                // Touch-shot re-arm comes from HandleShotComplete → _ballSM.ReArm.
-                // Preset shots use a pre-armed controller (Idle already).
             }
             _prevBallPlaying = isPlaying;
             if (isPlaying) return;
@@ -580,8 +610,6 @@ namespace Golfin.Physics.Viewer
             if (mouse == null) return;
 
             bool pressing = mouse.leftButton.isPressed;
-
-            // Don't start a new orbit drag while pointer is over UI.
             if (pressing && !_orbitDragActive)
             {
                 bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
@@ -598,19 +626,18 @@ namespace Golfin.Physics.Viewer
             if (Mathf.Abs(dx) < 0.5f) return;
 
             _cameraYaw += dx * _orbitSensitivity * Mathf.Deg2Rad;
+
+            // Compute the new aim direction from yaw (yaw=0 → +X forward).
+            Vector3 lookDir = new Vector3(Mathf.Cos(_cameraYaw), 0f, Mathf.Sin(_cameraYaw));
+
+            // Update ShotController so the aim cone follows the new yaw.
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
 
-            Camera cam = chaseCamera?.GetComponent<Camera>();
-            if (cam != null) ApplyCameraYaw(cam);
-        }
-
-        void ApplyCameraYaw(Camera cam)
-        {
-            // yaw=0 → +X forward (ShotInputBuilder convention: Vx=cos, Vz=sin)
-            Vector3 lookDir = new Vector3(Mathf.Cos(_cameraYaw), 0f, Mathf.Sin(_cameraYaw));
-            cam.transform.position = _orbitCenter - lookDir * 8f + Vector3.up * 3f;
-            cam.transform.LookAt(_orbitCenter + lookDir * 3f + Vector3.up * 0.5f);
+            // §controls_h iter-6: ChaseCamera is the single writer of cam.transform.position.
+            // We feed it the new aim direction; its LateUpdate handles framing relative to
+            // the current target (or _shotOrigin fallback when no target).
+            chaseCamera?.SetAimDirection(lookDir);
         }
 
         // ── Preset firing ──────────────────────────────────────────────────────
@@ -688,11 +715,30 @@ namespace Golfin.Physics.Viewer
             var trajectory = RunSimFromController(correctedInput, ballMods);
             _previousTrajectory = trajectory;
 
-            // §2a: feed the SM before playback starts.
-            _ballSM?.OnTrajectoryComputed(correctedInput.origin, trajectory, AeroCfg.BallRadius);
+            // ── §controls_h: cache origin + launchDir BEFORE SM transition fires ────
+            // Director's ArmChaseForShot reads LastShotOrigin/LastShotLaunchDir on the
+            // synchronous Aiming→Flying transition. They MUST be fresh before OnTrajectoryComputed.
+            var s0 = trajectory.samples != null && trajectory.samples.Count > 0
+                ? trajectory.samples[0].position : correctedInput.origin;
+            Vector3 origin    = new Vector3(s0.x.ToFloat(), s0.y.ToFloat(), s0.z.ToFloat());
+            Vector3 launchDir = new Vector3(correctedInput.velocity.x.ToFloat(), 0f,
+                                             correctedInput.velocity.z.ToFloat()).normalized;
+            if (launchDir == Vector3.zero) launchDir = Vector3.right;
 
-            trajectoryRenderer.Draw(trajectory);
+            _orbitCenter       = origin;
+            _lastShotOrigin    = origin;
+            _lastShotLaunchDir = launchDir;
+
+            // ── §controls_h: spawn the new ball BEFORE SM transition fires ──────────
+            // BallAnimator.Play() destroys the previous ball Transform and creates a new one.
+            // The Director's ArmChaseForShot reads CurrentBall during the synchronous SM
+            // transition — it MUST see the post-Play() Transform, not the pre-Play() one
+            // that's about to be destroyed.
+            trajectoryRenderer?.Draw(trajectory);
             ballAnimator.Play(trajectory);
+
+            // ── §2a: now feed the SM. Director sees fresh cache + fresh ball. ───────
+            _ballSM?.OnTrajectoryComputed(correctedInput.origin, trajectory, AeroCfg.BallRadius);
 
             if (_shotConeView != null && ballAnimator?.CurrentBall != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
@@ -708,20 +754,6 @@ namespace Golfin.Physics.Viewer
                 var holeWidgetShot = FindObjectOfType<Golfin.Gameplay.UI.ShotUI.HoleIndicatorWidget>();
                 if (holeWidgetShot != null) holeWidgetShot.SetBallTransform(ballAnimator.CurrentBall);
             }
-
-            var s0 = trajectory.samples != null && trajectory.samples.Count > 0
-                ? trajectory.samples[0].position : correctedInput.origin;
-            Vector3 origin    = new Vector3(s0.x.ToFloat(), s0.y.ToFloat(), s0.z.ToFloat());
-            Vector3 launchDir = new Vector3(correctedInput.velocity.x.ToFloat(), 0f,
-                                             correctedInput.velocity.z.ToFloat()).normalized;
-            if (launchDir == Vector3.zero) launchDir = Vector3.right;
-
-            _orbitCenter = origin;
-
-            // §2b: cache for LoopCameraDirector. Director handles SetTarget + ResetToOrigin
-            // on the Aiming→Flying SM transition. No direct chaseCamera calls here.
-            _lastShotOrigin    = origin;
-            _lastShotLaunchDir = launchDir;
 
             float carryM = 0f;
             SurfaceType finalSurface = SurfaceType.Fairway;
@@ -757,6 +789,14 @@ namespace Golfin.Physics.Viewer
             OnShotFired?.Invoke(readout);
             LogReadout(readout);
         }
+
+        /// <summary>
+        /// §controls_h: Test seam. Exposes the private HandleShotResolved for integration tests
+        /// in Golfin.Physics.Tests without requiring a full scene setup. Tests must wire
+        /// ballAnimator, _ballSM, and configs before calling this.
+        /// </summary>
+        internal void HandleShotResolvedForTests(ShotInput input, BallPhysicsModifiers ballMods)
+            => HandleShotResolved(input, ballMods);
 
         /// <summary>
         /// §2a: Called by BallStateMachine when a shot reaches a terminal state (AtRest, InCup, OB).
@@ -824,21 +864,24 @@ namespace Golfin.Physics.Viewer
             var trajectory = RunSimForCamera(preset);
             _previousTrajectory = trajectory;
 
-            trajectoryRenderer.Draw(trajectory);
-            ballAnimator.Play(trajectory);
-
             var s0 = trajectory.samples != null && trajectory.samples.Count > 0
                 ? trajectory.samples[0].position : preset.Origin;
             Vector3 origin    = new Vector3(s0.x.ToFloat(), s0.y.ToFloat(), s0.z.ToFloat());
             Vector3 launchDir = new Vector3(Mathf.Cos(_cameraYaw), 0f, Mathf.Sin(_cameraYaw));
 
-            _orbitCenter = origin;
+            // ── §controls_h: same ordering contract as HandleShotResolved ──────────
+            // Cache origin + launchDir BEFORE SM transition fires, spawn new ball BEFORE SM.
+            _orbitCenter       = origin;
+            _lastShotOrigin    = origin;
+            _lastShotLaunchDir = launchDir;
 
-            if (chaseCamera != null)
-            {
-                chaseCamera.SetTarget(ballAnimator.CurrentBall);
-                chaseCamera.ResetToOrigin(origin, launchDir);
-            }
+            trajectoryRenderer?.Draw(trajectory);
+            ballAnimator.Play(trajectory);
+
+            // Route through Director (SM → Aiming→Flying → ArmChaseForShot) instead of
+            // calling chaseCamera directly. Keeps preset path and touch path in sync.
+            fp3 origin_fp = new fp3(fp.FromFloat(origin.x), fp.FromFloat(origin.y), fp.FromFloat(origin.z));
+            _ballSM?.OnTrajectoryComputed(origin_fp, trajectory, AeroCfg.BallRadius);
 
             var readout = BuildReadout(preset, trajectory);
             OnShotFired?.Invoke(readout);

@@ -224,6 +224,31 @@ The Read tool does not error when an agent reports a path as fact but the file d
 
 ---
 
+## Lesson O — `OnModeChanged` is dispatch evidence, not visual evidence (controls_h, 2026-05-07)
+
+**Symptom:** `controls_g_smoke_followup` shipped 3 captures verified via `LoopCameraDirector.OnModeChanged` mode history (`[Chase, Downrange, ...]` etc.). All 3 captures passed reviewer + architect. Cesar then loaded the lab and discovered the chase camera doesn't visually track the ball during flight at all — `_target` was null for the entire shot due to an order-of-operations bug introduced in the same PR.
+
+**Methodology gap:** `OnModeChanged` fires whenever `ApplyMode` is called regardless of whether the camera Transform actually moves to track the ball. So mode history `[Chase, Downrange]` proved the dispatch table fired in the correct sequence — but said NOTHING about whether `_target` was a valid Transform during Chase, or whether the camera position equation `pos = ball - launchDir·5m + up·2.5m` actually evaluated against a real ball reference. The reviewer flagged three "visual concerns" (faint ball-in-flight, putter showing predictor, OBFreeze missing water) that were ALL downstream symptoms of the root cause; we accepted them on the runtime mode-history evidence.
+
+**Rule:** When a spec involves visual fidelity (camera tracking, animation timing, ball/ribbon rendering, mode transitions, SmoothDamp targets, anything where the player-perceived behavior is the deliverable), runtime event-dispatch captures are NECESSARY but NOT SUFFICIENT. They prove dispatch fired. They do NOT prove the visual responded.
+
+**Visual fidelity requires one of:**
+1. **Human-in-the-loop play-and-confirm.** The implementer (or Cesar) loads the scene, drives the relevant flow manually, and writes a short content-sanity description in the IMPLEMENTER_REPORT: "I drove the touch-path driver shot 5 times. Each time the camera tracked the ball through Chase mode for ~2 seconds before the cinematic cut to Downrange at 65% carry. Roll camera tracked the ball back to rest." That description is auditable evidence.
+2. **Position-trace assertion.** Read the actual camera/object Transform position over multiple frames during the flow, assert it tracks the expected reference (e.g., `Mathf.Abs(cam.position.x - (ball.position.x - launchDir.x * 5)) < 0.5f` over 30 frames). Coded into an EditMode or PlayMode test.
+
+**Forbidden as sole evidence for visual fidelity:**
+- Mode-history list (proves dispatch only)
+- Single-frame screenshot at a specific state (might be coincident with bug; tells you nothing about transition)
+- "Test gate green" (unit tests cover dispatch, not visual)
+
+**Spec template implication:** the SPEC.md template (`Docs/Specs/Active/_TEMPLATE/SPEC.md`) gets a new sub-section under § Smoke evidence: *"When the spec involves visual fidelity, runtime event-dispatch captures are necessary but not sufficient. Visual fidelity requires either (a) human-in-the-loop play-and-confirm in IMPLEMENTER_REPORT, or (b) position-trace assertions over multiple frames."*
+
+**Pattern recognition for future specs:** any spec that says "verify mode X fires" is a dispatch verification. Any spec that says "verify the camera tracks the ball" is a visual verification. The two are NOT the same. SPEC reviews must distinguish.
+
+**Platform addendum (controls_h iteration 2, 2026-05-07):** On macOS Unity 6 (6000.3.9f1) with the MCP server running, `CaptureCore.GrabGameViewRT()` — which reads the Game View's internal RenderTexture via reflection — returns a STALE frame when the Game View window is not in focus (running in background under MCP). The RT only updates when the Game View window is actively rendered (i.e., the window is visible and the editor is in the foreground). Coroutine-based captures using `WaitForEndOfFrame` do NOT fix this — the RT was already stale before the coroutine ran. Fix: use `screenshot-camera` (MCP `screenshot-camera` tool) which renders directly from the camera's RenderTexture off-screen, bypassing the Game View RT entirely. This approach works correctly when the Unity editor is running in background and captures the camera's actual current view. Note: `screenshot-camera` renders only the 3D scene — screen-space Canvas overlays (HUD) are not included. For captures requiring HUD, use the physical computer-use screenshot while Unity is in the foreground.
+
+---
+
 ## How to use this file
 
 When updating the self-reviewer or reviewer subagent prompts (`.claude/agents/golfin-self-reviewer.md`, `golfin-reviewer.md`), look for **patterns across multiple entries** here. A single one-off doesn't justify a prompt edit. Two or more entries flagging the same kind of failure justify one.
