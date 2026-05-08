@@ -335,7 +335,9 @@ public static ShotRecord BuildShotRecordStatic(
 
 **Test isolation note:** because `GameSession` is a static class with global state, tests MUST call `GameSession.ResetForNewHole()` in `[SetUp]` to avoid order-dependent failures. Document in the test file's class header.
 
-**Test gate:** **241 → 248/248 PASS, 0 IGNORED.** 7 new tests additive.
+**Test gate:** **N → N+7 PASS, 0 IGNORED** where N is the current baseline. The original spec wrote 241 → 248 but controls_h iter-8 (closed 2026-05-08) added/removed tests since then. **Implementer runs test gate first, records actual N in IMPLEMENTER_REPORT, then adds 7 new tests for the N+7 target.** If any pre-existing test fails on the baseline run, escalate `IMPLEMENTER_BLOCKED` BEFORE adding new tests — don't "fix" by editing existing tests.
+
+**Architect note 2026-05-08 13:30 JST:** The original 241 → 248 numbers were correct on 2026-05-07; the post-controls_h-iter-8 baseline differs. Confirm and proceed.
 
 ## Smoke evidence
 
@@ -357,7 +359,7 @@ Use `CaptureCore.SnapWhenStateReached` from §2b for state-gated captures. NO `W
 - New `HoleSessionDriver` MonoBehaviour shipped + Inspector-wired in `LabScaffold.unity` (via Unity Editor MCP, NOT raw YAML).
 - `PhysicsLabController.OnHoleLoaded` calls `GameSession.ResetForNewHole()` after `HoleContext.Raise()`.
 - `PhysicsLabController.OnHoleUnloaded` calls `GameSession.ResetForNewHole()` after `HoleContext.Reset()`.
-- 7 new EditMode tests in `HoleSessionDriverTests.cs`, all PASS. Test gate: **248/248 PASS, 0 IGNORED.**
+- 7 new EditMode tests in `HoleSessionDriverTests.cs`, all PASS. Test gate: **N+7 PASS, 0 IGNORED** where N is the baseline confirmed in IMPLEMENTER_REPORT.
 - 3 captures + 1 log file filed under `Docs/Specs/Active/loop_v1_2c_turn_counter_and_shot_history/screenshots/`.
 - TURN label visibly updates from "TURN 1" → "TURN 2" between shots and resets on hole reload (load Hole_01, fire 2 shots, see TURN 3, cycle to Hole_06, see TURN 1).
 
@@ -390,4 +392,4 @@ Use `CaptureCore.SnapWhenStateReached` from §2b for state-gated captures. NO `W
 5. **Do NOT add InCup handling beyond what falls out automatically.** §2c's RecordShot will record InCup TerminalState if SM ever transitions to it, but §2d wires the real ICupDetector. Don't preempt §2d.
 6. **Do NOT proliferate static-bus files.** Extend `GameSession` per L1/L2; do not create `HoleSessionContext`, `ShotHistoryContext`, etc.
 7. **Smoke evidence per §2a Lessons M+N + reviewer's controls_g lesson:** file persisted on disk + parallel-path Read verification + content-sanity description.
-8. **Bit-exact 241-test PASS gate must hold.** Adding 7 tests → 248/248. If any of the 241 starts failing, escalate `IMPLEMENTER_BLOCKED` immediately — do NOT "fix" by editing existing tests.
+8. **Bit-exact pre-existing test gate must hold.** Adding 7 tests to baseline N → N+7. If any pre-existing test starts failing, escalate `IMPLEMENTER_BLOCKED` immediately — do NOT "fix" by editing existing tests.

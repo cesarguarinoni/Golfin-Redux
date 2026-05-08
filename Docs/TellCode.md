@@ -223,7 +223,7 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 5. Do NOT add InCup handling beyond what falls out automatically — §2d wires the real ICupDetector.
 6. Do NOT proliferate static-bus files — extend `GameSession`, do not create `HoleSessionContext` / `ShotHistoryContext` / etc.
 7. Smoke evidence per §2a Lessons M+N + reviewer's controls_g lesson: file persisted on disk + parallel-path Read verification + content-sanity description + Director mode history.
-8. Bit-exact 241-test PASS gate must hold; +7 new tests = 248/248 target. NO snapshot updates without architect approval.
+8. Bit-exact pre-existing test gate must hold; +7 new tests = baseline+7 target. NO snapshot updates without architect approval. Implementer records actual baseline in IMPLEMENTER_REPORT (the 241/248 numbers in the original spec are stale post-controls_h-iter-8).
 
 **Definition-of-done:** `GameSession` extended; `ShotRecord` struct shipped; `HoleSessionDriver` MonoBehaviour shipped + Inspector-wired in LabScaffold via Unity Editor MCP; `PhysicsLabController` calls `GameSession.ResetForNewHole()` from both `OnHoleLoaded` (after `HoleContext.Raise()`) and `OnHoleUnloaded` (after `HoleContext.Reset()`); 7 new EditMode tests; **248/248 PASS, 0 IGNORED**; 3 captures + 1 history-log artifact under `Docs/Specs/Active/loop_v1_2c_turn_counter_and_shot_history/screenshots/` with `controls_2c_*` prefix; TURN label visibly increments shot-to-shot AND resets on hole reload.
 
