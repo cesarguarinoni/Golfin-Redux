@@ -1,0 +1,3 @@
+iter-7 visual verification is pending Cesar's manual play-session.
+Per the spec's non-negotiable Lesson O protocol, screenshots are not substitutes.
+Cesar must play the lab (LabScaffold.unity + Hole 1) and visually confirm all 5 cases.

@@ -244,15 +244,15 @@ namespace Golfin.Physics.Tests
         // ── Test 6 ─────────────────────────────────────────────────────────────
 
         [Test]
-        public void Director_OnAtRest_ChaseModePersists_TargetNotClearedByTerminalHandler()
+        public void Director_OnAtRest_ChaseMode_TargetClearedByTerminalHandler()
         {
-            // § controls_h R3: AtRest should NOT clear the chase target via the terminal-state
-            // handler — the camera should stay in Chase mode tracking the stationary ball.
-            // InCup / OB still clear the target (special framing there).
+            // §controls_h iter-8 fallback: AtRest DOES clear the chase target —
+            // ApplyCameraYaw (the pre-§2b two-writer) takes over Aiming-camera position.
+            // Mode is still Chase (ModeMap dispatches Chase on AtRest); only the target is cleared.
             var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false);
 
             // Assign a real Transform as CurrentBall so ArmChaseForShot sets a non-null target.
-            var ballGO = new GameObject("TestBall_R3");
+            var ballGO = new GameObject("TestBall_iter8");
             ctrl.CurrentBall = ballGO.transform;
 
             var traj = TrajectoryBuilder.Simple(new fp3(fp.FromFloat(50f), fp.Zero, fp.Zero));
@@ -260,78 +260,20 @@ namespace Golfin.Physics.Tests
 
             // After Aiming→Flying→AtRest drains in headless mode:
             // 1. ArmChaseForShot set the target to the ball Transform.
-            // 2. AtRest should NOT clear it (§controls_h R3 fix).
-            // The LAST SetTarget call should be the ball (not null).
-            Assert.IsNotNull(setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
-                "Last SetTarget call should be the ball Transform, not null — AtRest should NOT clear the target (§controls_h R3)");
+            // 2. AtRest clears it — the LAST SetTarget call should be null.
+            Assert.IsNull(setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
+                "Last SetTarget call should be null — AtRest CLEARS target (iter-8 fallback; ApplyCameraYaw owns Aiming position)");
 
-            // Mode should remain Chase (not switched to Idle or Static).
+            // Mode should still be Chase (ModeMap dispatches Chase on AtRest).
             Assert.AreEqual(ChaseCamera.Mode.Chase, setter.CurrentMode,
-                "Mode should remain Chase after AtRest (§controls_h R3 — camera tracks stationary ball at rest)");
+                "Mode should be Chase after AtRest (ModeMap dispatches Chase; target cleared but mode unchanged)");
 
             UnityEngine.Object.DestroyImmediate(ballGO);
         }
 
-        // ── Test 7 ─────────────────────────────────────────────────────────────
-
-        [Test]
-        public void Director_CinematicCut_FiresAt65PercentCarry()
-        {
-            // Trajectory with first non-stop hit at X=100 (carry=100m).
-            var landingPos = new fp3(fp.FromFloat(100f), fp.Zero, fp.Zero);
-            var hits = new List<TerrainHit>
-            {
-                TrajectoryBuilder.NonStopHit(landingPos),
-                TrajectoryBuilder.StopHit(new fp3(fp.FromFloat(120f), fp.Zero, fp.Zero)),
-            };
-            var traj = new Trajectory(
-                new List<TrajectorySample>
-                {
-                    new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
-                    new TrajectorySample(fp.One, new fp3(fp.FromFloat(120f), fp.Zero, fp.Zero), fp3.Zero),
-                },
-                new fp3(fp.FromFloat(120f), fp.Zero, fp.Zero),
-                fp3.Zero, fp.One, TerminationReason.BallStopped, hits);
-
-            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
-            ctrl.LastTrajectory    = traj;
-            ctrl.LastShotOrigin    = Vector3.zero;
-            ctrl.LastShotLaunchDir = Vector3.forward; // +Z forward
-
-            // Put the SM into Flying state directly (headless drain puts it past Flying in full run).
-            // For this test we need SM.State == Flying so Update runs.
-            // Use a separate SM that we drive to Flying manually.
-            var sm2 = new BallStateMachine(new ConstantSurfaceProvider(SurfaceType.Fairway));
-            sm2.Headless = false; // live mode — SM stays Flying after OnTrajectoryComputed until Tick
-            ctrl.BallSM = sm2;
-            director.SetControllerAccessor(ctrl);
-
-            // OnTrajectoryComputed fires Aiming→Flying synchronously in live mode (first transition only).
-            sm2.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
-            // SM state should be Flying now (first transition was Aiming→Flying).
-            Assert.AreEqual(BallState.Flying, sm2.State, "SM should be in Flying state");
-
-            // Simulate ball at 70% of carry (70m on Z axis since launchDir=forward).
-            var ballGO = new GameObject("Ball");
-            ballGO.transform.position = new Vector3(0f, 5f, 70f); // 70m along Z (forward)
-            ctrl.CurrentBall = ballGO.transform;
-            ctrl.CurrentShotIsPutt = false;
-
-            // Reset setter to see only the tick's side effects.
-            setter.SetModeCalls.Clear();
-
-            // Call TickCinematicCut directly (avoids MonoBehaviour ShouldRunBehaviour assertion
-            // that fires when SendMessage("Update") is used in EditMode tests).
-            director.TickCinematicCut();
-
-            Assert.IsTrue(setter.SetModeCalls.Contains(ChaseCamera.Mode.Downrange),
-                $"Expected Downrange at 70% carry. SetMode calls: [{string.Join(", ", setter.SetModeCalls)}]");
-            Assert.IsTrue(setter.LastDownrangePos.HasValue,
-                "SetDownrangeFraming should have been called");
-
-            Object.DestroyImmediate(ballGO);
-            Object.DestroyImmediate(director.gameObject);
-        }
+        // ── Test 7 — DELETED §controls_h iter-6 ───────────────────────────────
+        // Director_CinematicCut_FiresAt65PercentCarry — deleted because cinematic cut
+        // is removed in iter-6. TickCinematicCut is now a no-op; Downrange mode is gone.
 
         // ── Test 8 ─────────────────────────────────────────────────────────────
 
@@ -491,129 +433,101 @@ namespace Golfin.Physics.Tests
                 Assert.IsFalse(setter.SetModeCalls.Contains(m),
                     $"Mode {m} should not have been set during Flying→Rolling→AtRest sequence");
 
-            // Target should NOT be null after AtRest (R3 fix: target kept for Chase-at-rest).
-            Assert.IsNotNull(setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
-                "Target must not be null after AtRest — camera should track stationary ball (§controls_h R3)");
+            // Target IS null after AtRest (iter-8 fallback: ApplyCameraYaw owns position during Aiming).
+            Assert.IsNull(setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
+                "Target must be null after AtRest — ApplyCameraYaw owns Aiming-camera position (iter-8 fallback)");
 
             UnityEngine.Object.DestroyImmediate(ballGO);
         }
 
-        // ── Test 12 — §controls_h R4 ───────────────────────────────────────────
+        // ── Test 12 — DELETED §controls_h iter-6 ──────────────────────────────
+        // Director_DownrangeCut_Fires_WhenProgressExceedsThreshold — deleted because
+        // cinematic cut (Downrange) is removed in iter-6. TickCinematicCut is a no-op.
+
+        // ── Test 13 — DELETED §controls_h iter-6 ──────────────────────────────
+        // Director_DownrangeReleased_WhenBallPassesTouchdown — deleted because the
+        // release-at-touchdown logic is gone. The entire cinematic cut is deleted.
+
+        // ── Test 14 — §controls_h iter-8 fallback ─────────────────────────────
+        // Replaces the deleted iter-6 test (LateUpdateRunsWithNullTarget_UsesShotOriginAsFocus).
+        // Pre-§2b early-return restored: LateUpdate does NOT modify transform when target is null
+        // in Chase mode (ApplyCameraYaw owns position during Aiming instead).
 
         [Test]
-        public void Director_DownrangeCut_Fires_WhenProgressExceedsThreshold()
+        public void ChaseCamera_LateUpdate_EarlyReturnsWhenNullTargetInChaseMode()
         {
-            // § controls_h R2: Downrange cinematic cut must fire when progress >= 65% of carry.
-            // This verifies the TickCinematicCut logic fires correctly.
-            var landingPos = new fp3(fp.FromFloat(100f), fp.Zero, fp.Zero);
-            var hits = new List<TerrainHit>
-            {
-                TrajectoryBuilder.NonStopHit(landingPos),
-                TrajectoryBuilder.StopHit(new fp3(fp.FromFloat(120f), fp.Zero, fp.Zero)),
-            };
-            var traj = new Trajectory(
-                new List<TrajectorySample>
-                {
-                    new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
-                    new TrajectorySample(fp.One, new fp3(fp.FromFloat(120f), fp.Zero, fp.Zero), fp3.Zero),
-                },
-                new fp3(fp.FromFloat(120f), fp.Zero, fp.Zero),
-                fp3.Zero, fp.One, TerminationReason.BallStopped, hits);
+            // Verify A: with null target in Chase mode, LateUpdate does NOT modify transform.
+            var go = new GameObject("ChaseCam");
+            var cam = go.AddComponent<ChaseCamera>();
+            cam.SetMode(ChaseCamera.Mode.Chase);
+            cam.SetTarget(null);
+            cam.ResetToOrigin(Vector3.zero, Vector3.right);
 
-            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            Vector3 initialPos = new Vector3(123f, 456f, 789f);
+            cam.transform.position = initialPos;
 
-            // Non-headless SM so we stay in Flying state after OnTrajectoryComputed.
-            var sm2 = new BallStateMachine(new ConstantSurfaceProvider(SurfaceType.Fairway));
-            sm2.Headless = false;
-            ctrl.BallSM  = sm2;
-            ctrl.LastTrajectory    = traj;
-            ctrl.LastShotLaunchDir = Vector3.right;   // +X direction
-            ctrl.LastShotOrigin    = Vector3.zero;
-            director.SetControllerAccessor(ctrl);
+            for (int i = 0; i < 60; i++) cam.FrameCamera(1f / 60f);
 
-            sm2.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
-            // SM is now in Flying state (only Aiming→Flying fires synchronously in non-headless).
+            Assert.That(cam.transform.position, Is.EqualTo(initialPos),
+                "LateUpdate should early-return on null target in Chase mode; transform should be unchanged.");
 
-            // Ball at 70m along +X — that's 70% of 100m carry. Above 65% threshold.
-            var ballGO = new GameObject("BallR2");
-            ballGO.transform.position = new Vector3(70f, 0f, 0f);
-            ctrl.CurrentBall = ballGO.transform;
-
-            setter.SetModeCalls.Clear();
-            director.TickCinematicCut();
-
-            Assert.IsTrue(setter.SetModeCalls.Contains(ChaseCamera.Mode.Downrange),
-                "Downrange cut must fire at 70% carry (above 65% threshold) — §controls_h R2 regression check");
-
-            UnityEngine.Object.DestroyImmediate(ballGO);
-            UnityEngine.Object.DestroyImmediate(director.gameObject);
+            Object.DestroyImmediate(go);
         }
 
-        // ── Test 13 — §controls_h R3-revised ──────────────────────────────────────
+        // ── Test 15 — DELETED §controls_h iter-8 fallback ────────────────────
+        // ChaseCamera_SetAimDirection_UpdatesChasePose — SetAimDirection is deleted in iter-8.
 
         [Test]
-        public void Director_DownrangeReleased_WhenBallPassesTouchdown()
+        public void Director_NeverEntersDownrange_DuringFlying()
         {
-            // § controls_h R3-revised: after the Downrange cinematic fires, if the ball's XZ
-            // progress exceeds the predicted carry (touchdown), TickCinematicCut must release
-            // Downrange back to Chase with the live ball as target.
-            // This happens DURING BallState.Flying (while the animator plays the visual roll),
-            // before the SM's Flying→Rolling transition fires (which only fires when animator stops).
-            var landingPos = new fp3(fp.FromFloat(100f), fp.Zero, fp.Zero);
-            var hits = new List<TerrainHit>
-            {
-                TrajectoryBuilder.NonStopHit(landingPos),
-                TrajectoryBuilder.StopHit(new fp3(fp.FromFloat(130f), fp.Zero, fp.Zero)),
-            };
-            var traj = new Trajectory(
-                new List<TrajectorySample>
-                {
-                    new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
-                    new TrajectorySample(fp.One, new fp3(fp.FromFloat(130f), fp.Zero, fp.Zero), fp3.Zero),
-                },
-                new fp3(fp.FromFloat(130f), fp.Zero, fp.Zero),
-                fp3.Zero, fp.One, TerminationReason.BallStopped, hits);
+            // Verify C1: cinematic cut is gone. No matter how long a shot flies, Director
+            // does not promote Chase to Downrange.
+            var (director, modeSetter, controllerStub) = DirectorFactory.Create();
 
-            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            // Drive Aiming→Flying.
+            controllerStub.BallSM.OnTrajectoryComputed(
+                fp3.Zero,
+                TrajectoryBuilder.Simple(new fp3(fp.FromFloat(200f), fp.Zero, fp.Zero)),
+                fp.FromFloat(0.02f));
 
-            // Non-headless SM — stays in Flying after OnTrajectoryComputed
-            var sm2 = new BallStateMachine(new ConstantSurfaceProvider(SurfaceType.Fairway));
-            sm2.Headless = false;
-            ctrl.BallSM = sm2;
-            ctrl.LastTrajectory    = traj;
-            ctrl.LastShotLaunchDir = Vector3.right; // +X direction
-            ctrl.LastShotOrigin    = Vector3.zero;
-            director.SetControllerAccessor(ctrl);
+            // Simulate a long shot: 500 frames of cinematic-cut tick.
+            modeSetter.SetModeCalls.Clear();
+            for (int i = 0; i < 500; i++) director.TickCinematicCut();
 
-            sm2.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
-            Assert.AreEqual(BallState.Flying, sm2.State, "SM should be Flying");
+            // Mode must NOT be Downrange (TickCinematicCut is now a no-op).
+            Assert.That(modeSetter.SetModeCalls, Has.None.EqualTo(ChaseCamera.Mode.Downrange),
+                "TickCinematicCut must never set Downrange — cinematic cut deleted in iter-6");
+        }
 
-            // Ball at 70% carry — fire the Downrange cinematic cut
-            var ballGO = new GameObject("BallTouchdown");
-            ballGO.transform.position = new Vector3(70f, 5f, 0f); // 70% of 100m carry
-            ctrl.CurrentBall = ballGO.transform;
-            setter.SetModeCalls.Clear();
-            director.TickCinematicCut();
-            Assert.IsTrue(setter.SetModeCalls.Contains(ChaseCamera.Mode.Downrange),
-                "Downrange cut should fire at 70% carry");
+        // ── Test 17 — §controls_h iter-8 fallback ─────────────────────────────
+        // Replaces the deleted iter-3 R3 test (Director_AtRestKeepsTargetOnBall).
+        // Director now CLEARS target on AtRest — ApplyCameraYaw owns Aiming-camera position.
 
-            // Now advance ball PAST the predicted carry (touchdown)
-            ballGO.transform.position = new Vector3(105f, 0f, 0f); // past 100m carry
-            setter.SetModeCalls.Clear();
-            setter.SetTargetCalls.Clear();
-            director.TickCinematicCut();
+        [Test]
+        public void Director_AtRest_ClearsTarget()
+        {
+            // Verify H: Director clears _target on AtRest entry.
+            var (director, modeSetter, controllerStub) = DirectorFactory.Create();
+            var ballGO = new GameObject("Ball");
+            controllerStub.CurrentBall = ballGO.transform;
 
-            // Assert: Downrange released → Chase re-applied, target set to live ball
-            Assert.IsTrue(setter.SetModeCalls.Contains(ChaseCamera.Mode.Chase),
-                $"Downrange should release to Chase at touchdown (ball past carry). SetMode calls: [{string.Join(", ", setter.SetModeCalls)}]");
-            Assert.IsTrue(setter.SetTargetCalls.Count > 0,
-                "SetTarget should be called on touchdown release with the live ball");
-            Assert.AreEqual(ballGO.transform, setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
-                "Target should be the live ball Transform on touchdown release");
+            controllerStub.BallSM.OnTrajectoryComputed(
+                fp3.Zero,
+                TrajectoryBuilder.Simple(new fp3(fp.FromFloat(50f), fp.Zero, fp.Zero)),
+                fp.FromFloat(0.02f));
+
+            // After Aiming→Flying→AtRest drains in headless mode:
+            // ArmChaseForShot set the target to the ball Transform, then AtRest clears it.
+            Assert.That(modeSetter.SetTargetCalls[modeSetter.SetTargetCalls.Count - 1],
+                Is.Null,
+                "Target should be CLEARED on AtRest — ApplyCameraYaw owns Aiming-camera position.");
 
             Object.DestroyImmediate(ballGO);
-            Object.DestroyImmediate(director.gameObject);
         }
+
+        // ── Tests 18–19: DELETED §controls_h iter-8 fallback ─────────────────
+        // ChaseCamera_SetAiming_TrueUsesAimFraming — SetAiming is deleted in iter-8.
+        // ChaseCamera_SetAiming_FalseUsesFollowFraming — SetAiming is deleted in iter-8.
 
         // ── Teardown ────────────────────────────────────────────────────────────
 

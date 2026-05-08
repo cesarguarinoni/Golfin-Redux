@@ -49,20 +49,23 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             if (_rect == null)  _rect  = GetComponent<RectTransform>();
             if (_image == null) _image = GetComponent<Image>();
-        }
 
-        void OnEnable()
-        {
+            // Subscribe in Awake (not OnEnable) so the widget keeps receiving state updates
+            // even after it self-deactivates via gameObject.SetActive(false) during a shot.
+            // OnDisable would unsubscribe and the widget would never re-show on the return
+            // to Idle (the second-shot regression). C# event delegates fire regardless of
+            // GameObject active state, so HandleStateChanged still runs and reactivates us.
             BallContext.OnSelectedChanged += RefreshSprite;
             if (_shotController != null) _shotController.OnStateChanged += HandleStateChanged;
-            RefreshSprite();
         }
 
-        void OnDisable()
+        void OnDestroy()
         {
             BallContext.OnSelectedChanged -= RefreshSprite;
             if (_shotController != null) _shotController.OnStateChanged -= HandleStateChanged;
         }
+
+        void OnEnable() => RefreshSprite();
 
         void RefreshSprite()
         {

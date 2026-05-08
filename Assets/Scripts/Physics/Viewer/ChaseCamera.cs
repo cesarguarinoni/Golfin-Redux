@@ -85,25 +85,22 @@ namespace Golfin.Physics.Viewer
 
         public void SetOBFreezePivot(Vector3 pivot) => _obFreezePivot = pivot;
 
-        // ── §controls_h iter-6: SetAimDirection ───────────────────────────────
-
         /// <summary>
-        /// Updates the aim/launch direction used by Chase mode framing.
-        /// Called every frame by PhysicsLabController.HandleCameraOrbit while the player
-        /// is panning during Aiming. Also called by ResetToOrigin at shot fire time.
-        /// Pure setter — does not touch transform.position.
+        /// Extracted from LateUpdate for EditMode test access (same as TickCinematicCut pattern).
+        /// SendMessage("LateUpdate") triggers a ShouldRunBehaviour assertion in EditMode;
+        /// this overload accepts an explicit deltaTime so tests can drive convergence.
+        /// Production path calls FrameCamera(Time.deltaTime).
         /// </summary>
-        public void SetAimDirection(Vector3 dir)
-        {
-            var flat = new Vector3(dir.x, 0f, dir.z);
-            if (flat.sqrMagnitude > 0.0001f)
-                _launchDir = flat.normalized;
-        }
+        internal void FrameCamera(float dt) => RunLateUpdateLogic(dt);
 
-        void LateUpdate()
+        void LateUpdate() => RunLateUpdateLogic(Time.deltaTime);
+
+        void RunLateUpdateLogic(float dt)
         {
-            // §controls_h iter-6: A1 — early-return removed. Chase math runs even with null target.
-            // Focus falls back to _shotOrigin when _target == null.
+            // Pre-§2b behavior: when no target and in Chase mode, do nothing.
+            // PhysicsLabController.ApplyCameraYaw owns the camera position during Aiming
+            // (when Director has cleared the target on AtRest/InCup/OB).
+            if (_target == null && _mode == Mode.Chase) return;
 
             // Use live target position when available, fall back to last shot origin.
             Vector3 focus = _target != null ? _target.position : _shotOrigin;
@@ -151,16 +148,16 @@ namespace Golfin.Physics.Viewer
                         : transform.rotation;
                     break;
 
-                default: // Chase — §controls_h R1: now serialized (_followDistance/_followHeight)
+                default: // Chase
                     desiredPos = focus - _launchDir * _followDistance + Vector3.up * (_followHeight + FollowHeightOffset);
                     desiredRot = Quaternion.LookRotation(focus - desiredPos);
                     break;
             }
 
             transform.position = Vector3.SmoothDamp(transform.position, desiredPos,
-                                                     ref _velocity, smoothTime);
+                                                     ref _velocity, smoothTime, Mathf.Infinity, dt);
             transform.rotation = Quaternion.Slerp(transform.rotation, desiredRot,
-                                                   10f * Time.deltaTime);
+                                                   10f * dt);
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────

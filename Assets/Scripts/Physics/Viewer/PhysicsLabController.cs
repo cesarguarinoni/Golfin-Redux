@@ -229,14 +229,14 @@ namespace Golfin.Physics.Viewer
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible   = true;
 
-            // § controls_h R4 / iter-6: Prime the camera heading using GetDefaultLookDirection()
+            // §controls_h R4: Prime the camera heading using GetDefaultLookDirection()
             // so ALL branches are covered — Hole1 hardcoded, tee→green, explicit, and fallback.
-            // Iter-6: replaced ApplyCameraYaw with ChaseCamera.SetAimDirection — single writer.
+            // iter-8 fallback: ApplyCameraYaw owns camera position during Aiming; we only prime
+            // _cameraYaw and _shotController.CameraHeadingRadians here.
             Vector3 r4dir = GetDefaultLookDirection();
             _cameraYaw = Mathf.Atan2(r4dir.z, r4dir.x);
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
-            chaseCamera?.SetAimDirection(r4dir);
 
             // Wait 2 frames so any additively-loaded hole scene finishes loading,
             // then scan for it. This replaces the fragile immediate scan.
@@ -463,15 +463,6 @@ namespace Golfin.Physics.Viewer
 
             if (ballAnimator != null) ballAnimator.PlaceAtRest(teePos);
 
-            // §controls_h iter-6: seed ChaseCamera so first-shot Aiming framing is correct.
-            // Without this, ChaseCamera._shotOrigin = (0,0,0) and _launchDir = forward default,
-            // so the camera renders at world origin until the first shot fires.
-            if (chaseCamera != null)
-            {
-                chaseCamera.SetTarget(ballAnimator?.CurrentBall);
-                chaseCamera.ResetToOrigin(teePos, GetDefaultLookDirection());
-            }
-
             // Update ShotConeView ball transform so targeting line can pivot in Idle state.
             if (_shotConeView != null && ballAnimator != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
@@ -509,13 +500,6 @@ namespace Golfin.Physics.Viewer
 
             _orbitCenter = pos;
             if (ballAnimator != null) ballAnimator.PlaceAtRest(pos);
-
-            // §controls_h iter-6: same as SetupAtTee — seed ChaseCamera with new resting position.
-            if (chaseCamera != null)
-            {
-                chaseCamera.SetTarget(ballAnimator?.CurrentBall);
-                chaseCamera.ResetToOrigin(pos, GetDefaultLookDirection());
-            }
 
             // Update ShotConeView ball transform so targeting line can pivot from the new position.
             if (_shotConeView != null && ballAnimator != null)
@@ -593,10 +577,8 @@ namespace Golfin.Physics.Viewer
             // Orbit only makes sense in Chase mode; Overhead/Ground manage themselves.
             if (chaseCamera != null && chaseCamera.CurrentMode != ChaseCamera.Mode.Chase) return;
 
-            // §controls_h iter-6: When ball animation finishes (falling edge of isPlaying),
-            // update the orbit center to the resting ball position so subsequent panning
-            // orbits around the new resting position. ChaseCamera owns the actual position
-            // write — we only update _cameraYaw and seed ChaseCamera's aim direction.
+            // When ball animation finishes (falling edge of isPlaying), update the orbit center
+            // to the resting ball position so subsequent panning orbits around the new position.
             bool isPlaying = ballAnimator != null && ballAnimator.IsPlaying;
             if (_prevBallPlaying && !isPlaying)
             {
@@ -627,17 +609,22 @@ namespace Golfin.Physics.Viewer
 
             _cameraYaw += dx * _orbitSensitivity * Mathf.Deg2Rad;
 
-            // Compute the new aim direction from yaw (yaw=0 → +X forward).
-            Vector3 lookDir = new Vector3(Mathf.Cos(_cameraYaw), 0f, Mathf.Sin(_cameraYaw));
-
-            // Update ShotController so the aim cone follows the new yaw.
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
 
-            // §controls_h iter-6: ChaseCamera is the single writer of cam.transform.position.
-            // We feed it the new aim direction; its LateUpdate handles framing relative to
-            // the current target (or _shotOrigin fallback when no target).
-            chaseCamera?.SetAimDirection(lookDir);
+            Camera cam = chaseCamera?.GetComponent<Camera>();
+            if (cam != null) ApplyCameraYaw(cam);
+        }
+
+        // Pre-§2b: ChaseCamera owns position only when _target != null (Flying/Rolling).
+        // During Aiming when Director has cleared _target, ApplyCameraYaw writes the camera
+        // transform directly. Two writers don't conflict because each gates on a different
+        // condition (target null vs ball not playing).
+        void ApplyCameraYaw(Camera cam)
+        {
+            Vector3 lookDir = new Vector3(Mathf.Cos(_cameraYaw), 0f, Mathf.Sin(_cameraYaw));
+            cam.transform.position = _orbitCenter - lookDir * 8f + Vector3.up * 3f;
+            cam.transform.LookAt(_orbitCenter + lookDir * 3f + Vector3.up * 0.5f);
         }
 
         // ── Preset firing ──────────────────────────────────────────────────────
@@ -814,6 +801,16 @@ namespace Golfin.Physics.Viewer
                 _orbitCenter = ballAnimator.CurrentBall.position;
             // §2b: chaseCamera.SetTarget(null) relocated to LoopCameraDirector.HandleStateChanged
             // on terminal states (AtRest / InCup / OB). No direct chaseCamera call here.
+
+            // On AtRest, snap the camera to the Aiming pose around the new orbit center.
+            // Director clears the chase target so ChaseCamera early-returns; without this
+            // snap the camera would visually freeze at the last Chase frame until the user
+            // mouse-drags. InCup/OB intentionally keep their CupZoom/OBFreeze framing.
+            if (result.TerminalState == Golfin.Gameplay.Loop.BallState.AtRest)
+            {
+                Camera cam = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
+                if (cam != null) ApplyCameraYaw(cam);
+            }
 
             // Re-arm shot controller for the next shot.
             _shotController?.CompleteShot();

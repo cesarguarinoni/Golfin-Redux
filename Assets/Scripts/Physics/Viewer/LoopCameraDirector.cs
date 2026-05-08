@@ -204,10 +204,10 @@ namespace Golfin.Physics.Viewer
                 ApplyMode(mode.Value);
             }
 
-            // § controls_h R3: Do NOT clear target on AtRest — camera should stay
-            // Chase-tracking the stationary ball until the next shot arms a new target.
-            // InCup / OB still clear the target (camera pivots to special framing there).
-            if (change.Next == BallState.InCup
+            // Pre-iter-3 behavior: clear target on ALL terminal states. Aiming-camera owner
+            // (ApplyCameraYaw) takes over via ChaseCamera.LateUpdate's null-target early-return.
+            if (change.Next == BallState.AtRest
+             || change.Next == BallState.InCup
              || change.Next == BallState.OB)
             {
                 setter.SetTarget(null);
