@@ -203,11 +203,11 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
-## ⏸️ BLOCKED ON controls_h — loop_v1_2c_turn_counter_and_shot_history (SPEC_READY 2026-05-07 21:15 JST)
+## 📌 NEXT — loop_v1_2c_turn_counter_and_shot_history (SPEC_READY 2026-05-07 21:15 JST)
 
 **Folder:** `Docs/Specs/Active/loop_v1_2c_turn_counter_and_shot_history/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
 
-**Kickoff for Code:** `Use the golfin-implementer subagent on "loop_v1_2c_turn_counter_and_shot_history"` — **AFTER controls_h closes.**
+**Kickoff for Code:** `Use the golfin-implementer subagent on "loop_v1_2c_turn_counter_and_shot_history"`
 
 **Notion:** [`35931e0e-9a36-812e-b0ca-ff6ac972d7cd`](https://www.notion.so/35931e0e9a36812eb0caff6ac972d7cd) — P1 — High, S (half-day), Order 240, Status=In Progress.
 
