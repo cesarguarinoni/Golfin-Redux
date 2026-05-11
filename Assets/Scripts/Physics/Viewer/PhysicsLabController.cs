@@ -812,9 +812,23 @@ namespace Golfin.Physics.Viewer
                 if (cam != null) ApplyCameraYaw(cam);
             }
 
-            // Re-arm shot controller for the next shot.
+            // §2d: re-arm only on AtRest/OB. InCup → HoleCompleteDriver owns re-arm via modal close.
+            // Docstring: re-arms the shot controller on AtRest/OB; on InCup, re-arm is deferred to
+            // HoleCompleteDriver's modal close (§2d).
+            if (result.TerminalState == Golfin.Gameplay.Loop.BallState.AtRest
+                || result.TerminalState == Golfin.Gameplay.Loop.BallState.OB)
+            {
+                _shotController?.CompleteShot();
+                _ballSM.ReArm();
+            }
+            // else InCup: see RearmAfterHoleComplete().
+        }
+
+        // §2d: invoked by HoleCompleteDriver after the modal is dismissed.
+        internal void RearmAfterHoleComplete()
+        {
             _shotController?.CompleteShot();
-            _ballSM.ReArm();
+            _ballSM?.ReArm();
         }
 
         Trajectory RunSimFromController(ShotInput input, BallPhysicsModifiers ballMods)
@@ -1246,6 +1260,14 @@ namespace Golfin.Physics.Viewer
                     Golfin.Gameplay.UI.HUD.HoleContext.Raise();
                     // §2c: reset session state for the new hole. Fires OnTurnChanged so PlayerCardWidget renders fresh "TURN 1".
                     Golfin.Gameplay.UI.HUD.GameSession.ResetForNewHole();
+                    // §2d: install a real cup detector keyed to this hole's pin position.
+                    if (_ballSM != null)
+                    {
+                        Vector3 pinW = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+                        var pinFp = new fp3(fp.FromFloat(pinW.x), fp.FromFloat(pinW.y), fp.FromFloat(pinW.z));
+                        _ballSM.SetCupDetector(new Golfin.Gameplay.Loop.RealCupDetector(pinFp));
+                        Debug.Log($"[PhysicsLab][§2d] RealCupDetector installed at pin={pinW:F3}");
+                    }
                 }
                 else
                 {
@@ -1395,6 +1417,9 @@ namespace Golfin.Physics.Viewer
             // §2c: clear session state on hole unload (defensive — next hole load will reset again,
             // but this guarantees clean state if we go to a no-hole flat-ground fallback).
             Golfin.Gameplay.UI.HUD.GameSession.ResetForNewHole();
+            // §2d: revert to NullCupDetector for flat-ground fallback.
+            if (_ballSM != null)
+                _ballSM.SetCupDetector(new Golfin.Gameplay.Loop.NullCupDetector());
 
             PlacementEntries.Clear();
             OnPlacementEntriesChanged?.Invoke();

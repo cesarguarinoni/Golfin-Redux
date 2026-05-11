@@ -175,6 +175,34 @@ Full history in `Docs/Archive/TELLCODE_HISTORY.md`.
 
 ---
 
+## 📌 NEXT — loop_v1_2d_hole_complete_and_result_screen (SPEC_READY 2026-05-09 07:15 JST)
+
+**Folder:** `Docs/Specs/Active/loop_v1_2d_hole_complete_and_result_screen/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
+
+**Kickoff for Code:** `Use the golfin-implementer subagent on "loop_v1_2d_hole_complete_and_result_screen"`
+
+**Notion:** TBD — Cesar to add P1 entry under §2 Loop v1, Order 230 (between §2c=240 and §2e).
+
+**One-line:** Ship `RealCupDetector` (regulation 0.054m, height-gated XZ math). Wire it in `PhysicsLabController.OnHoleLoaded` after `GameSession.ResetForNewHole()`; revert to `NullCupDetector` in `OnHoleUnloaded`. Gate `HandleShotComplete` re-arm to AtRest/OB only; InCup defers to `internal void RearmAfterHoleComplete()`. Build full Result Screen widget matching all 4 Figma frames (12988-5223 / 4902 / 5466, 12987-4316) with **3 visual states** (Success-Replay, Failed-no-PB-Retry-Locked, Failed-has-PB-Replay-Unlocked). Card 1 (current hole) + Card 2 (next hole) Inspector-wired in LabScaffold via Editor MCP — top bar + bottom nav explicitly skipped per Q3 (full-impl phase). Add `HoleCompleteDriver` MonoBehaviour subscribing to `BallStateMachine.OnShotComplete` filtering on InCup, plus a `DebugShotPanel` "Hole Out" button calling `ShowForDebug()`. All §2d buttons close + re-arm only — no real Play/Retry/Replay flows yet (§2e+).
+
+**8 locks confirmed by Cesar (Q1–Q8)** — see SPEC.md § Locked decisions and STATUS.md § History for the chat log.
+
+**Hard rules summary** (full set in SPEC.md):
+1. Do NOT modify `BallStateMachine.cs`, `BallState.cs`, `ShotResult.cs`, `BallSimulation.cs`, `Trajectory.cs`, `ICupDetector.cs`, `NullCupDetector.cs`, `HoleContext.cs`, `GameSession.cs`, `HoleSessionDriver.cs`, `LoopCameraDirector.cs`, `PlayerCardWidget.cs`, `CentralBallWidget.cs`, any aero CSV, or any test currently in PASS state outside the 2 new test files.
+2. Do NOT modify `LabScaffold.unity` via raw YAML — Unity Editor MCP only.
+3. Do NOT use `WaitForSeconds(N)` for state-dependent captures — state-gate via `SnapWhenStateReached`.
+4. Do NOT alter the design — render every Figma element; placeholders for missing data only.
+5. Do NOT add top bar / bottom nav to LabScaffold in §2d.
+6. Do NOT pre-bake button→action flows beyond "close + re-arm".
+7. Bit-exact pre-existing test gate must hold; +9 new tests = baseline+9 target.
+8. **Read `FIGMA_EXTRACT.md` for layout truth** — exact px values, colors, font weights are there.
+
+**Definition-of-done:** `RealCupDetector` shipped + `SetCupDetector` wired in OnHoleLoaded/OnHoleUnloaded; `HandleShotComplete` re-arm gate + `RearmAfterHoleComplete()` accessor; `HoleCompleteDriver` shipped + Inspector-wired with `ShowForDebug()` entrypoint; `HoleCompleteWidget` + `HoleCompleteCardWidget` + `HoleCompleteData` shipped; `DebugShotPanel` "Hole Out" button shipped + wired; 9 EditMode tests PASS, **N+9 PASS, 0 IGNORED**; 3 captures (modal hidden + Success at par + Failed over par) + 1 ShotHistory log under `screenshots/`; manual play-and-confirm of Hole Out → modal → close → SM returns to Aiming for both Success and Failed paths; IMPLEMENTER_REPORT content-sanity description per Lesson O.
+
+**Estimate:** 1 day (richer UI than originally scoped after full Figma extraction surfaced the 2-card design).
+
+---
+
 ## 📌 NEXT — controls_h_chase_camera_regression (SPEC_READY 2026-05-07 17:20 JST) — BLOCKS §2c
 
 **Folder:** `Docs/Specs/Active/controls_h_chase_camera_regression/`. STATUS=`SPEC_READY`. Tier 3 pipeline.
