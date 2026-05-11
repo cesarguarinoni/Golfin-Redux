@@ -37,3 +37,6 @@
 2026-05-11T09:50:00Z activated iter-7: F1 divider height fix + F2 description text fix
 2026-05-11T09:55:00Z F1+F2 code changes complete — verifying compile via MCP
 2026-05-11T10:05:00Z code verified clean, invoking Unity MCP for compile check + builder run
+2026-05-11T21:37:50Z resumed after Mac restart — verifying compile + running builder
+2026-05-11T21:58:37Z iter-7 builder ran, S1/S2/S3 captured via SmokeRunner2d with Unity in foreground
+2026-05-11T22:01:02Z done — iter-7 F1+F2 fixed, YAML verified, S1/S2/S3 captured, IMPLEMENTER_REPORT updated, awaiting self-review

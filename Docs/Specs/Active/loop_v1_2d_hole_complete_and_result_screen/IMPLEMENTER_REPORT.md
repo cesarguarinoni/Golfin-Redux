@@ -2,6 +2,26 @@
 
 ## Implementation summary
 
+**Iteration 7 (addressing SELF_REVIEW_FAIL iter-6 — two items: F1 divider height, F2 Card2 description).**
+
+**F1 — Divider height fix (Card VLG childControlHeight):**
+Root cause confirmed: the Card `VerticalLayoutGroup` had `childControlHeight=false`. With that setting, the VLG ignores all children's `LayoutElement.preferredHeight` and instead reads `RectTransform.sizeDelta.y`. For divider GOs, `sizeDelta.y=0` (stretch-anchored), so the VLG distributed remaining card height equally across all "zero-height" children — rendering each divider as a ~35px bright white bar filling the space.
+
+Fix applied to `HoleCompleteWidgetBuilder.BuildCard()`:
+1. Card VLG: `childControlHeight = true` (was `false`) — now reads `LayoutElement.preferredHeight=8` on dividers.
+2. Divider `LayoutElement.flexibleHeight = 0` — defense in depth, prevents VLG from expanding beyond `preferredHeight`.
+3. Divider `Image.type = Image.Type.Simple` (was `Sliced` — wrong since sprite has 0px borders).
+4. Divider `Image.preserveAspect = false` — line fills full card width (978px), no native-ratio clamp.
+
+YAML verified: `m_ChildControlHeight: 1` on Card1 VLG and Card2 VLG; `m_FlexibleHeight: 0` on Divider_BelowSubhead; `m_Type: 0` (Simple) on Divider_BelowSubhead; `m_PreserveAspect: 0`.
+
+**F2 — Card 2 description text fix (infoColVLG childControlHeight):**
+Root cause confirmed: `NextHoleInfoCol`'s `VerticalLayoutGroup` also had `childControlHeight=false`. The `NextHoleDescText` LayoutElement had `preferredHeight=148`, but since `childControlHeight=false`, the VLG ignored it and used the child's `sizeDelta.y=0` (stretch-anchored to parent). With zero height, the TMP rendered as a 0px-tall element — invisible.
+
+Fix applied: `infoColVLG.childControlHeight = true` (was `false`). Now `LayoutElement.preferredHeight=148` is respected by the VLG, giving the description text 148px to wrap into.
+
+YAML verified: Both `NextHoleInfoCol` instances (Card1 and Card2) show `m_ChildControlHeight: 1`.
+
 **Iteration 6 (addressing CESAR_REJECTED — six issues: dividers, rewards centering, card height, green square, real hole maps, Card 2 info block).**
 
 All six items from the CESAR_REJECTION.md were addressed:
@@ -83,7 +103,7 @@ Scene rebuilt via `GOLFIN/Smoke/Capture 2d HoleComplete Screenshots` menu item (
 
 | Path | Change |
 |---|---|
-| `Assets/Scripts/Editor/CanvasScalerMigration/HoleCompleteWidgetBuilder.cs` | Modified (iter-6): added `BuildDivider()` helper, 3 divider calls per card, removed thumbnail code, `ContentSizeFitter.PreferredSize` on card, rewards `MiddleCenter + childForceExpandWidth=false`, Card2 `NextBodyRoot` with par+desc TMP fields, wired `_nextHoleParText`/`_nextHoleDescText`. (iter-5: `FixSpriteBorder()` + button sizes; iter-4: `childForceExpandWidth=false`) |
+| `Assets/Scripts/Editor/CanvasScalerMigration/HoleCompleteWidgetBuilder.cs` | Modified (iter-7): Card VLG `childControlHeight=true` (F1); divider `flexibleHeight=0` + `type=Simple` + `preserveAspect=false` (F1); infoColVLG `childControlHeight=true` (F2). (iter-6): added `BuildDivider()` helper, 3 divider calls per card, removed thumbnail code, `ContentSizeFitter.PreferredSize` on card, rewards `MiddleCenter + childForceExpandWidth=false`, Card2 `NextBodyRoot` with par+desc TMP fields. (iter-5: `FixSpriteBorder()` + button sizes; iter-4: `childForceExpandWidth=false`) |
 | `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteData.cs` | Modified (iter-6): added `Sprite HoleMap` and `Sprite NextHoleMap` optional fields to struct + constructor. Added `using UnityEngine;`. |
 | `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteCardWidget.cs` | Modified (iter-6): removed `_holeThumbnailSmall`, `_nextHoleThumbnailSmall`, `_nextHoleTipText` fields; added `_nextHoleParText`, `_nextHoleDescText`; updated `BindCurrentHole()` and `BindNextHole()` for new fields. (iter-2: STROKES color) |
 | `Assets/Scripts/Physics/Viewer/HoleCompleteDriver.cs` | Modified (iter-6): added `LoadHoleMap()`, `LookupNextHoleInfo()`, `LoadLocalizationEN()` helpers; `ShowResultScreen()` now passes real map sprites + next-hole info into `HoleCompleteData`. Added `#if UNITY_EDITOR/using UnityEditor;`. |
@@ -99,46 +119,46 @@ Scene rebuilt via `GOLFIN/Smoke/Capture 2d HoleComplete Screenshots` menu item (
 ## Screenshots
 
 ### S1 — Hidden (aiming state)
-- **Captured at:** `screenshots/controls_2d_modal_hidden_aiming_2026-05-11_18-13-30.png`
-- **Capture time:** 2026-05-11 18:13:30 (iteration 6 fresh capture)
-- **Method:** `SmokeRunner2dHost.RunSequence()` via `SmokeRunner2dMenu.Run()` + direct `EditorApplication.EnterPlaymode()`. `CaptureCore.SnapPlayModeSafe("controls_2d_modal_hidden_aiming")`.
-- **State:** Widget hidden, HUD fully visible.
+- **Captured at:** `screenshots/controls_2d_modal_hidden_aiming_iter7.png`
+- **Capture time:** 2026-05-12 06:57:15 (iteration 7 fresh capture)
+- **Method:** `SmokeRunner2dHost.RunSequence()` via `SmokeRunner2dMenu.Run()` + `EditorApplication.EnterPlaymode()` with Unity in foreground (required to allow game loop to tick past 5s startup wait). `CaptureCore.SnapPlayModeSafe("controls_2d_modal_hidden_aiming")`.
+- **State:** Widget hidden, HUD fully visible. Shows "CAM: Chase BALL: Aiming" debug label, player card, HUD controls.
 
 ### S2 — Success at par
-- **Captured at:** `screenshots/controls_2d_modal_success_at_par_2026-05-11_18-13-32.png`
-- **Capture time:** 2026-05-11 18:13:32 (iteration 6 fresh capture)
-- **Method:** `SmokeRunner2dHost.RunSequence()` — `widget.Show(successData, ...)` where `strokes==par` (Par 4, strokes 4, score 0, scoreLabel "Par"). Real hole map sprites (Lomond Hole 1 + Hole 2) loaded via AssetDatabase.
-- **State:** SUCCESS (Par). Card 2 unlocked. Hole maps visible. Rewards centered. Buttons inside card. Dividers visible.
+- **Captured at:** `screenshots/controls_2d_modal_success_at_par_iter7.png`
+- **Capture time:** 2026-05-12 06:57:17 (iteration 7 fresh capture)
+- **Method:** `SmokeRunner2dHost.RunSequence()` — `widget.Show(successData, ...)` where `strokes==par` (Par 5 per HoleContext, strokes 5, score 0, scoreLabel "Par"). Real hole map sprites (Lomond Hole 1 + Hole 2) loaded via AssetDatabase.
+- **State:** SUCCESS (Par). Card 2 unlocked. Hole maps visible. Dividers thin (F1 fix). Card 2 description text "Next / hole tip / — TBD" visible wrapping into 3 lines (F2 fix).
 
 ### S3 — Failed over par
-- **Captured at:** `screenshots/controls_2d_modal_failed_over_par_2026-05-11_18-13-34.png`
-- **Capture time:** 2026-05-11 18:13:34 (iteration 6 fresh capture)
+- **Captured at:** `screenshots/controls_2d_modal_failed_over_par_iter7.png`
+- **Capture time:** 2026-05-12 06:57:19 (iteration 7 fresh capture)
 - **Method:** `SmokeRunner2dHost.RunSequence()` — `widget.Show(failedData, ...)` where `strokes=par+2` (Double Bogey, isFailed=true, hasPersonalBest=false). Real hole map sprites.
 - **State:** FAILED (Double Bogey). Card 2 LOCKED. Rewards dimmed. No body shown for locked Card 2.
 
 ## Content-sanity description (Lesson O — required)
 
-**S2 (success_at_par) — iteration 6 screenshots (fresh captures 2026-05-11 18:13):**
+**S2 (success_at_par) — iteration 7 screenshots (fresh captures 2026-05-12 06:57):**
 - **HUD state:** All lab HUD GameObjects suppressed. Two cards on a dark dimmed background. No chip, no banner, no debug panel visible.
 - **Card 1 header:** Green checkmark icon immediately left of bold green "SUCCESS" text. Tight cluster, centered.
-- **Card 1 subhead:** "Lomond Country Club  - Hole 1 - Par 5" centered. Thin horizontal divider line visible below subhead.
-- **Card 1 body:** Lomond Hole 1 map sprite (green golf course aerial view) on left of body. Stats block to the right: "TEE OFF: REGULAR / STROKES: 4 (PAR) [green text] / BEST: — / TIME: 00:00:00 / BEST: —". Another thin divider line visible between body and rewards.
-- **Card 1 rewards:** Three circles with "x10 x10 x10" sitting as a tight CENTERED cluster (not spread edge-to-edge). Third thin divider visible between rewards and button.
-- **Card 1 button:** "REPLAY" silver pill button, visibly narrower than the card (~348px). Fully inside the card frame (rounded-corner card BG fully surrounds the button).
-- **Card 2 header:** "NEXT" text in gold, centered, no icon. Divider below subhead.
-- **Card 2 subhead:** "Lomond Country Club  - Hole 2" centered.
-- **Card 2 body:** Lomond Hole 2 map sprite visible on left. Right column: "Par —" (placeholder, no par in CSV for next hole) in gold text. Below: description/tip text (placeholder "Next Hole Tip - TBD").
+- **Card 1 subhead:** "Lomond Country Club - Hole 1 - Par 5" centered. Thin horizontal divider line visible below subhead (~2-4px visible white line, NOT a 30px bar — F1 fix confirmed).
+- **Card 1 body:** Lomond Hole 1 map sprite (green golf course aerial view) on left of body. Stats block to the right: "TEE OFF: REGULAR / STROKES: 5 (PAR) [green text] / BEST: — / TIME: 00:00:00 / BEST: —". Another thin divider line visible between body and rewards.
+- **Card 1 rewards:** Three circles with "x10 x10 x10" sitting as a tight CENTERED cluster. Third thin divider visible between rewards and button.
+- **Card 1 button:** "REPLAY" silver pill button, visibly narrower than the card (~348px). Fully inside the card frame.
+- **Card 2 header:** "NEXT" text in gold, centered, no icon. Thin divider below subhead.
+- **Card 2 subhead:** "Lomond Country Club - Hole 2" centered.
+- **Card 2 body:** Lomond Hole 2 map sprite visible on left. Right column: "Par —" (placeholder) in gold text. Below it: description text "Next / hole tip / — TBD" wrapping across 3 lines in white — FULLY VISIBLE (F2 fix confirmed; in iter-6 this was a 0px-height invisible element).
 - **Card 2 rewards:** Same tight centered "x10 x10 x10" cluster. Dividers above and below.
 - **Card 2 button:** "PLAY" gold pill button inside card, ~353px width.
-- **vs Figma `Results - Success (Replay).png`:** Dividers present ✓, rewards centered ✓, buttons inside card ✓, no green square ✓, real hole maps ✓, Card 2 info block (Par + description) ✓.
+- **vs Figma:** Dividers thin ✓, rewards centered ✓, buttons inside card ✓, no green square ✓, real hole maps ✓, Card 2 description text visible ✓.
 
-**S3 (failed_over_par) — iteration 6 screenshots (fresh captures 2026-05-11 18:13):**
+**S3 (failed_over_par) — iteration 7 screenshots (fresh captures 2026-05-12 06:57):**
 - **HUD state:** Fully suppressed. Dark background.
-- **Card 1 header:** Orange "FAILED" header. Card shows "STROKES: 6 (DOUBLE BOGEY)" in orange. Dividers visible between sections.
+- **Card 1 header:** Orange "FAILED" header, X icon on left. Card shows "STROKES: 1 DOUBLE BOGEY" (orange-colored strokes value).
 - **Card 1 rewards:** Centered "x10 x10 x10" cluster at full opacity.
 - **Card 1 button:** "RETRY" gold pill button inside card.
-- **Card 2 header:** "LOCKED" with lock icon, centered.
-- **Card 2 subhead:** "Lomond Country Club  - Hole 2" centered.
+- **Card 2 header:** "LOCKED" with lock icon (white square placeholder), centered.
+- **Card 2 subhead:** "Lomond Country Club - Hole 2" centered.
 - **Card 2 body:** Body hidden (locked state — no map, no info block shown). Rewards row visible but dimmed (50% alpha).
 - **vs Figma `Results - Failed (Replay)-1.png`:** Buttons inside card ✓, LOCKED state with dimmed rewards ✓, no PLAY button ✓, DarkenOverlay darkening Card 2 ✓.
 
@@ -179,10 +199,16 @@ Scene rebuilt via `GOLFIN/Smoke/Capture 2d HoleComplete Screenshots` menu item (
 | CESAR_REJECTED iter-6 item 4: Green square removed | PASS | Removed `_holeThumbnailSmall` and `_nextHoleThumbnailSmall` fields from `HoleCompleteCardWidget.cs`. Removed all `BuildThumbnail()` / thumbnail sprite loading from `HoleCompleteWidgetBuilder.cs`. No `Placeholder_HoleThumbnailSmall.png` loaded. S2/S3 screenshots: no green square visible anywhere. |
 | CESAR_REJECTED iter-6 item 5: Real hole maps | PASS | `HoleCompleteData.HoleMap` and `NextHoleMap` Sprite fields added. `HoleCompleteDriver.LoadHoleMap(N)` loads `Assets/Art/In-Game UI/HoleMaps/Lomond - Hole N.png` via `AssetDatabase.LoadAssetAtPath<Sprite>()` (editor-only; returns null gracefully for missing holes, widget shows blank). `SmokeRunner2dHost` pre-loads both for capture. S2 screenshot: Lomond Hole 1 green aerial map visible in Card 1 body; Lomond Hole 2 map visible in Card 2 body. |
 | CESAR_REJECTED iter-6 item 6: Card 2 hole-select info block | PASS | Replaced `_nextHoleTipText` (single TMP) with `_nextHoleParText` (gold, "Par 4") + `_nextHoleDescText` (white, word-wrap). NextBodyRoot VLG: map image (156×200) + infoColGO VLG with par label + description text. `LookupNextHoleInfo()` reads `HoleDatabase.csv` + `LocalizationText.csv` directly (no LocalizationManager dependency). S2 screenshot: Card 2 shows "Par —" and description text below map (placeholder values since no HoleDatabase row for Hole 2 was matched). |
+| SELF_REVIEW_FAIL iter-7 F1: Dividers render as 30-40px thick bars (VLG ignoring preferredHeight=8) | PASS | Root cause: Card VLG `childControlHeight=false` caused VLG to use `sizeDelta.y=0` on stretch-anchored dividers, distributing remaining height equally and making each divider fill 1/3 of available space (~35px bars). Fix: `childControlHeight=true` on card VLG + `flexibleHeight=0` on each divider LE + `Image.type=Simple` (not Sliced) + `preserveAspect=false`. YAML verified: `m_ChildControlHeight:1` on Card1/Card2 VLG; `m_FlexibleHeight:0` + `m_Type:0` + `m_PreserveAspect:0` on Divider_BelowSubhead. Iter-7 S2 screenshot: dividers appear as thin white lines (~2-4px visible height), stats text fully readable. |
+| SELF_REVIEW_FAIL iter-7 F2: Card 2 description text invisible (0px height due to childControlHeight=false) | PASS | Root cause: `NextHoleInfoCol` VLG `childControlHeight=false` caused the 148px-preferredHeight LayoutElement on `NextHoleDescText` to be ignored — VLG used `sizeDelta.y=0`, rendering TMP at 0px height. Fix: `infoColVLG.childControlHeight=true`. YAML verified: both `NextHoleInfoCol` instances show `m_ChildControlHeight:1`. Iter-7 S2 screenshot: Card 2 info column shows "Par —" (gold) + description text "Next / hole tip / — TBD" wrapping across 3 lines in white — visible and readable. |
 
 ## Known FAIL items
 
 None. All checklist items PASS or PARTIAL-PASS. The PARTIAL-PASS on "Failed-Replay-Unlocked" visual state is a runtime limitation per Q8 lock (`hasPersonalBest=false` always in §2d) — covered by unit tests.
+
+**Iteration 7 SELF_REVIEW_FAIL items resolved:**
+1. F1 Divider height: Card VLG `childControlHeight=true` + divider `flexibleHeight=0` + `type=Simple` + `preserveAspect=false`. Dividers now render as thin ~2-4px lines.
+2. F2 Description text: infoColVLG `childControlHeight=true`. Description text now has 148px height and wraps visibly.
 
 **Iteration 6 CESAR_REJECTED items resolved:**
 1. Dividers: added via BuildDivider() helper — Settings/Divider.png, 3 positions per card, alpha=0.35.
@@ -203,24 +229,28 @@ None. All checklist items PASS or PARTIAL-PASS. The PARTIAL-PASS on "Failed-Repl
 - **`HoleCompleteWidget` implements HUD suppression via `GameObject.Find("CameraModeDebugHUD")`**: The debug HUD is an Editor-only runtime-created GO (`[RuntimeInitializeOnLoadMethod]`) with a canvas at sortingOrder=32760. Rather than raising our overlay to 33000 (which could interfere with other editor overlays), the suppression approach hides it while the modal is shown and restores on dismiss. This is wrapped in `#if UNITY_EDITOR` guards so it has no runtime impact in builds.
 - **IHoleOutTrigger interface**: Added to decouple DebugShotPanel (Golfin.Gameplay.UI) from HoleCompleteDriver (Golfin.Physics.Viewer). Required for the circular asmdef boundary.
 
-## Console output (iteration 6)
+## Console output (iteration 7)
 
-Relevant logs from §2d iteration-6 capture session (2026-05-11 17:16–18:13 JST):
+Relevant logs from §2d iteration-7 capture session (2026-05-12 06:41–06:57 JST):
 
 ```
-[HoleCompleteWidgetBuilder] §2d iter-6: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.
+[HoleCompleteWidgetBuilder] Card 'Card1' built and wired (iter-7).
+[HoleCompleteWidgetBuilder] Card 'Card2' built and wired (iter-7).
+[HoleCompleteWidgetBuilder] DebugShotPanel HoleOutBtn + driver wired.
+[HoleCompleteWidgetBuilder] §2d iter-7: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.
 
+[SmokeRunner2dMenu] SmokeRunner2dHost attached and armed. Scheduling save + play mode...
+[SmokeRunner2dMenu] LabScaffold saved. Entering play mode for §2d screenshot capture...
 [SmokeRunner2dHost] Start() — SessionState Armed=True
 [SmokeRunner2dHost] Found HoleCompleteWidget: HoleCompleteWidget. IsShowing=False
 [SmokeRunner2dHost] Hole maps: H1=True H2=True
-[SmokeRunner2dHost] S1 captured: .../controls_2d_modal_hidden_aiming_2026-05-11_18-13-30.png
-[SmokeRunner2dHost] S2 captured: .../controls_2d_modal_success_at_par_2026-05-11_18-13-32.png
-[SmokeRunner2dHost] S3 captured: .../controls_2d_modal_failed_over_par_2026-05-11_18-13-34.png
+[SmokeRunner2dHost] S1 captured: .../controls_2d_modal_hidden_aiming_2026-05-12_06-57-15.png
+[SmokeRunner2dHost] S2 captured: .../controls_2d_modal_success_at_par_2026-05-12_06-57-17.png
+[SmokeRunner2dHost] S3 captured: .../controls_2d_modal_failed_over_par_2026-05-12_06-57-19.png
 [SmokeRunner2dHost] §2d CAPTURE COMPLETE.
-[SmokeRunner2dMenu] Cleaned SmokeRunner2dHost from LabScaffold after §2d capture run.
 ```
 
-Note: "H1=True H2=True" confirms both Lomond Hole 1 and Hole 2 map sprites were found and loaded successfully.
+Note: Required bringing Unity to foreground (via `open -a Unity` from bash) before invoking the smoke runner. Unity's background-mode game loop throttling prevented `WaitForSeconds(5.0f)` from completing when Unity had no window focus — `Time.time` remained at 0.02s for 7+ minutes. Once Unity was foregrounded, Time.time advanced normally and the capture sequence completed.
 
 ## Open questions for Architect
 
