@@ -1,0 +1,37 @@
+2026-05-09T00:24:52 activated
+2026-05-09T00:27:44 wrote 7 new C# files, modifying PhysicsLabController and DebugShotPanel
+2026-05-09T00:30:20 starting compile verification via Unity MCP
+2026-05-09T00:35:14 MCP unavailable, writing builder script + will retry MCP
+2026-05-09T00:41:45 session resumed, retrying Unity MCP
+2026-05-09T00:54:00 compile clean, running tests
+2026-05-09T01:00:00 262/262 tests pass, now wiring scene via builder
+2026-05-09T01:05:00 entering play mode for screenshots
+2026-05-09T01:15:00 building widget in-scene for screenshots
+2026-05-09T10:20:00 screenshots captured via play-mode coroutine with runInBackground=true
+2026-05-09T10:25:00 done, awaiting review
+2026-05-09T01:30:11 activated — addressing SELF_REVIEW_FAIL items
+2026-05-09T01:32:32 verifying compile via MCP
+2026-05-09T01:40:49 builder ran successfully — all fixes applied. Running tests.
+2026-05-09T01:42:39 tests passed 262/262, taking screenshots
+2026-05-09T10:55:00 done — all 10 SELF_REVIEW_FAIL items fixed, screenshots S1/S2/S3 re-captured, IMPLEMENTER_REPORT updated, awaiting self-review
+2026-05-09T02:01:41 activated — iteration 3, fixing BuildIconTextHeader ContentSizeFitter Option A
+2026-05-09T02:09:25 ContentSizeFitter fix applied + S2/S3 recaptured — icon+label clustering confirmed tight in screenshots
+2026-05-09T02:09:30 done, awaiting review
+2026-05-09T02:17:39 re-activated for ARCHITECT_REVIEW_FAIL fix — applying HLG force-expand fix
+2026-05-09T02:18:04 applied HLG childForceExpandWidth/Height=false fix to both clusters in builder
+2026-05-09T02:22:11 builder rebake confirmed — all 6 header HLGs have forceExpand=0, entering play mode for screenshots
+2026-05-09T02:30:20 done, awaiting review — all 6 header HLGs patched, YAML verified, S2/S3 screenshots confirm tight cluster, STATUS=READY_FOR_SELF_REVIEW
+2026-05-11T10:00:00 activated — iteration 5 addressing CESAR_REJECTED: sprite borders + button sizes
+2026-05-11T10:20:00 measured button dimensions from reference PNGs: REPLAY=348px, RETRY=307px, PLAY=353px
+2026-05-11T07:23:00 sprite borders fixed (HoleCard=50, Replay=61, Retry/Play=65) + builder rerun with new button sizes (348/307/353) — YAML verified
+2026-05-11T07:40:00 captures S1/S2/S3 fresh at 16:40 — pixel analysis confirms rounded corners + 262/262 tests pass
+2026-05-11T07:52:00 done, awaiting review
+2026-05-11T08:04:53Z activated
+2026-05-11T08:06:21Z planning iter-6 changes: dividers, rewards centering, card height, map sprites, Card2 info block
+2026-05-11T08:12:27Z code changes complete — verifying compile
+2026-05-11T08:28:48Z code changes complete, Unity compile pending (log stuck at 17:13 pre-fix)
+2026-05-11T08:37:42Z compile clean, running builder
+2026-05-11T08:42:00Z smoke runner launched — waiting for play mode + captures
+2026-05-11T09:44:16Z iter-6 complete: 6 Cesar items fixed, 262/262 tests pass, S1/S2/S3 captured at 18:13 JST
+2026-05-11T09:44:16Z done, awaiting review
+2026-05-11T09:50:00Z activated iter-7: F1 divider height fix + F2 description text fix

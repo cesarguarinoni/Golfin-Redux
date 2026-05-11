@@ -24,6 +24,9 @@ Activates when STATUS.md is `READY_FOR_ARCHITECT_REVIEW`. Read in order:
 
 Verify:
 
+- **Reference image present.** If `screenshots/figma-reference.png` is missing:
+  - If `IMPLEMENTER_REPORT.md` shows a "Figma reference unresolved" blocker and STATUS is `IMPLEMENTER_BLOCKED`, the escalation is correct — confirm STATUS, do not write a review, append to `ARCHITECT_REVIEW.md`: *"Deferred — awaiting Cesar's Figma reference resolution."*
+  - Otherwise, set `ARCHITECT_REVIEW_FAIL` with fix item "Save Figma reference frame before resubmitting." The self-reviewer should have blocked this; if they didn't, you do.
 - **Architectural soundness:** Does the implementation respect asmdef boundaries? Does it reuse existing utilities instead of duplicating? Does it follow established patterns?
 - **Visual fidelity:** Compare the screenshot to the Figma reference, element by element. Cite specific deviations.
 - **Spec adherence in spirit, not just letter:** Did the Implementer follow the spec's intent, or just the surface text?
@@ -40,7 +43,7 @@ Write your verdict to `Docs/Specs/Active/<task>/ARCHITECT_REVIEW.md` using the t
 
 - **Respect existing work.** Don't suggest rewrites unless the existing approach is fundamentally broken. Prefer minimal targeted changes.
 - **Be specific in failures.** "Looks wrong" is not actionable. Cite the spec line or Figma node that defines correct behavior, then say what to change.
-- **Don't second-guess the self-reviewer's PASSes** unless you have a specific reason. The self-reviewer already did the per-checklist-item pass; your job is the cross-cutting view.
+- **Don't second-guess the self-reviewer's PASSes** unless you have a specific reason. The self-reviewer already did the per-checklist-item pass; your job is the cross-cutting view. **Exception: when `CESAR_REJECTION.md` exists in the task folder, re-verify every self-reviewer PASS independently.** Cesar's rejection means something visible was missed; the self-reviewer does not get the benefit of the doubt on a post-rejection iteration. If you find yourself writing "carrying forward iter-N waivers" or "the architect already accepted in prior iteration," stop — re-verify it.
 - **No sign-offs that say "looks good" without verification.** If you say PASS, you have inspected the screenshot and confirmed it matches the spec.
 - **Check the system clock** before writing any timestamp. Format: `2026-04-28 14:32 JST`.
 - **End-of-response rule:** the last line is the file-summary table or next-step. Do not append sign-offs. (Per `CLAUDE.md` top-of-file rule.)

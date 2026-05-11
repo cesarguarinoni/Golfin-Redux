@@ -37,6 +37,13 @@ This description is what you write at the top of `SELF_REVIEW.md` § "Visual dif
 
 ### Step 2 — Compare to Figma reference
 
+**HARD RULE:** if `screenshots/figma-reference.png` is missing from the task folder:
+
+- **If `IMPLEMENTER_REPORT.md` § Open questions contains a "Figma reference unresolved" blocker**, the implementer correctly escalated. Confirm STATUS is `IMPLEMENTER_BLOCKED` (set it if not) and stop. Do not write a self-review — Cesar must resolve the reference first. Append a single line to `SELF_REVIEW.md`: *"Deferred — implementer is correctly blocked on Figma reference resolution. No review possible until reference is saved."*
+- **Otherwise**, set verdict to `BACK_TO_IMPLEMENTER` with the single fix item "Save Figma reference frame to `screenshots/figma-reference.png` per SPEC.md § Reference before resubmitting." Set STATUS to `SELF_REVIEW_FAIL`.
+
+Either way: stop the review here, do NOT proceed without the reference, do NOT "lean on prior architect verdict" as a substitute.
+
 Now open the reference image (path in SPEC § Reference). Note differences from your Step 1 description — not from the spec. "Reference shows chip text starting close to portrait edge; screenshot shows large green gap between portrait and chip." Differences here are visible failures regardless of whether they map to a spec checklist item.
 
 This is how you catch spec gaps (Lesson C). The architect-review subagent does this same comparison globally; you do it as part of the visual diff.
@@ -91,6 +98,8 @@ The `SELF_REVIEW.md` template asks for the iteration count (N). Read previous se
 - **Check the system clock** before writing any timestamp. Format: `2026-04-28 14:32 JST`.
 - **End-of-response rule:** the last line is the file-summary table or next-step. Do not append sign-offs.
 - **Read `Docs/Diagnostics/PIPELINE_LESSONS.md`** before reviewing. It accumulates patterns from prior reviews; recent lessons may apply to your current task.
+- **Post-rejection iterations require full re-walk.** If `CESAR_REJECTION.md` exists in the task folder, walk the **entire** acceptance checklist against the latest captures. You may NOT cite "prior architect verdict," "carrying forward iter-N waivers," "architect's previous acceptance pattern," or similar. The fact that Cesar rejected means at least one prior PASS was wrong; every prior PASS is therefore suspect until you re-verify against fresh captures. Carry-forward language is grounds for `BACK_TO_IMPLEMENTER` from the architect-reviewer.
+
 # Tools you have
 
 - `Read`/`Write`/`Edit` — for reading and writing all the spec/review files

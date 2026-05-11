@@ -41,6 +41,11 @@ Additional rule for ALL gating statuses:
    summary). This stops the implementer from escalating around the test runner
    to Cesar with "MCP wasn't available" — the test runner is granted to the
    implementer agent only, so the implementer is the only role that can run it.
+9. If SPEC.md § Reference cites a Figma frame, screenshots/figma-reference.png
+   must exist. This backstops the golfin-implementer.md Step 5a instruction
+   that implementer save the Figma frame on activation. If the spec's Figma
+   reference is ambiguous/broken, implementer must escalate via STATUS =
+   IMPLEMENTER_BLOCKED — NOT proceed without it.
 """
 import json
 import re
@@ -309,6 +314,34 @@ def has_open_fails(report_path: Path) -> bool:
     return False
 
 
+def spec_requires_figma_reference(spec_path: Path) -> bool:
+    """True if SPEC.md has a § Reference section that mentions Figma.
+
+    Detection is conservative: look for a Markdown `## Reference` (or `## Visual
+    Reference`, `## References`) heading AND the substring `figma` within that
+    section. Non-UI tasks (physics, backend) typically have no Reference
+    section, so they're naturally exempt. This is the gate that backstops the
+    `golfin-implementer` prompt's Step 5a: if the implementer skips saving
+    figma-reference.png and tries to move STATUS to review, this rule blocks
+    the transition.
+    """
+    if not spec_path.exists():
+        return False
+    content = spec_path.read_text(encoding="utf-8", errors="ignore")
+    m = re.search(r"^##\s+(?:Visual\s+)?References?\b.*$", content, re.MULTILINE)
+    if not m:
+        return False
+    after = content[m.end():]
+    next_header = re.search(r"^##\s+\S", after, re.MULTILINE)
+    section = after[: next_header.start()] if next_header else after
+    return "figma" in section.lower()
+
+
+def figma_reference_present(task_dir: Path) -> bool:
+    """True if screenshots/figma-reference.png exists in the task folder."""
+    return (task_dir / "screenshots" / "figma-reference.png").exists()
+
+
 def main() -> int:
     payload = read_payload()
     target = get_target_path(payload)
@@ -352,6 +385,26 @@ def main() -> int:
             "the report. Escalating 'MCP wasn't available' is not valid: "
             "tests-run is granted to the implementer agent only — no other role "
             "can run it on your behalf."
+        )
+
+    # Rule 9: if SPEC.md § Reference cites a Figma frame, the figma-reference.png
+    # must exist before the implementer can transition to a review state. This
+    # is the structural backstop for the putter_p1_ui failure mode: implementer
+    # captured Game View but never saved the Figma frame, so reviewers had no
+    # left-hand pane for the side-by-side diff and rubber-stamped.
+    # If the Figma reference itself is ambiguous/broken, the implementer should
+    # set STATUS to IMPLEMENTER_BLOCKED (per golfin-implementer.md Step 5a) and
+    # surface to Cesar rather than reaching this hook.
+    if spec_requires_figma_reference(spec_path) and not figma_reference_present(task_dir):
+        errors.append(
+            "SPEC.md § Reference cites a Figma frame but "
+            "screenshots/figma-reference.png is missing. Save the Figma frame "
+            "to the task's screenshots/ folder before moving to review. Use "
+            "`mcp__figma__get_design_context` or `get_screenshot` on the node "
+            "id in SPEC.md § Reference. If the Figma reference is "
+            "missing/ambiguous/broken in the spec, set STATUS to "
+            "IMPLEMENTER_BLOCKED and surface to Cesar rather than guessing — "
+            "see golfin-implementer.md Step 5a."
         )
 
     if errors:
