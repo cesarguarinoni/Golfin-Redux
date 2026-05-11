@@ -9,18 +9,30 @@ using Golfin.Gameplay.UI.ShotUI;
 using Golfin.Physics.Viewer;
 
 /// <summary>
-/// §2d iter-6: Builds the HoleCompleteWidget + HoleCompleteDriver hierarchy in LabScaffold.unity.
+/// §2d iter-7: Builds the HoleCompleteWidget + HoleCompleteDriver hierarchy in LabScaffold.unity.
 ///
 /// Menu: GOLFIN/Build/Build HoleComplete Widgets (§2d)
 ///
-/// Iter-6 changes:
+/// Iter-7 changes (F1 + F2 from SELF_REVIEW_FAIL iter-6):
+/// F1 — Divider height fix:
+///   - Card VLG: childControlHeight=true (was false) → VLG now reads LayoutElement.preferredHeight
+///     on ALL children including dividers. Previously the VLG ignored preferredHeight=8 on dividers
+///     and instead used their RectTransform.sizeDelta, which defaulted to 0 and caused dividers to
+///     stretch to fill available card height — rendering as 30-40px bright bars obscuring content.
+///   - Divider LayoutElement: flexibleHeight=0 (defense in depth — prevents VLG expansion).
+///   - Divider Image: type=Simple (not Sliced — sprite has 0-px borders, Sliced was wrong type).
+///   - Divider Image: preserveAspect=false (divider fills full card width, not native 978:2 aspect).
+/// F2 — Card 2 description text fix:
+///   - NextBody infoColVLG: childControlHeight=true (same root cause as F1 — was false).
+///     Now the NextHoleDescText LayoutElement.preferredHeight=148 is respected.
+///
+/// Iter-6 changes (preserved):
 /// - Added horizontal dividers between card sections (Figma: 2px white separator lines)
-/// - Rewards row: MiddleCenter alignment + childForceExpandWidth=false (was MiddleLeft → spread)
-/// - Card BG: ContentSizeFitter verticalFit=PreferredSize (was hardcoded 600 → buttons clipped)
-/// - Removed green-square thumbnail (Placeholder_HoleThumbnailSmall.png) — was visually broken
+/// - Rewards row: MiddleCenter alignment + childForceExpandWidth=false
+/// - Card BG: ContentSizeFitter verticalFit=PreferredSize
+/// - Removed green-square thumbnail
 /// - Card 2 NextBody: hole-select-style layout (map + par label + description text)
-/// - New SerializeField wiring: _holeMapLarge / _nextHoleMapLarge use placeholder at build time;
-///   HoleCompleteDriver.ShowResultScreen() overrides with real maps at runtime.
+/// - HoleCompleteDriver.ShowResultScreen() overrides maps at runtime.
 /// </summary>
 public static class HoleCompleteWidgetBuilder
 {
@@ -218,7 +230,7 @@ public static class HoleCompleteWidgetBuilder
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
 
-        Debug.Log("[HoleCompleteWidgetBuilder] §2d iter-6: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.");
+        Debug.Log("[HoleCompleteWidgetBuilder] §2d iter-7: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.");
     }
 
     // ── Card builder ─────────────────────────────────────────────────────────
@@ -515,7 +527,7 @@ public static class HoleCompleteWidgetBuilder
         cardSO.FindProperty("_darkenOverlay").objectReferenceValue     = darkenGO;
         cardSO.ApplyModifiedProperties();
 
-        Debug.Log($"[HoleCompleteWidgetBuilder] Card '{name}' built and wired (iter-6).");
+        Debug.Log($"[HoleCompleteWidgetBuilder] Card '{name}' built and wired (iter-7).");
         return cardGO;
     }
 
