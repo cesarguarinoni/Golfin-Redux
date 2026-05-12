@@ -913,7 +913,18 @@ namespace Golfin.Physics.Viewer
         bool _configsLoaded;
         void EnsureConfigsLoaded()
         {
-            if (_configsLoaded) return;
+            // Defensive: under "Reload Domain Only" Enter Play Mode setting, the
+            // auto-property AeroCfg's backing field gets reset to default(AeroConfig)
+            // across the Edit→Play boundary but plain private bool _configsLoaded does
+            // NOT (asymmetric reset, observed 2026-05-12 in hole-picker repro). Without
+            // this validation, the guard short-circuits and AeroCfg stays zero-init,
+            // causing DivideByZeroException in AeroModel.ComputeAeroForce on first shot.
+            // Also retroactively explains the non-Hole-1 ball-spawn bug: the same
+            // DivideByZero fired inside ComputeMaxCarryYards in OnHoleLoaded, aborting
+            // before SetupAtTee() could run.
+            if (_configsLoaded && _aeroCfg.SpinRateReference > fp.Zero) return;
+            if (_configsLoaded)
+                Debug.LogWarning("[PhysicsLab] EnsureConfigsLoaded: _configsLoaded=true but AeroCfg.SpinRateReference=0 \u2014 reloading (Edit\u2192Play asymmetric-reset recovery).");
             AeroCfg    = PhysicsConfigLoader.LoadAeroConfig();
             WindCfg    = PhysicsConfigLoader.LoadWindConfig();
             SurfaceCfg = PhysicsConfigLoader.LoadSurfaceConfig();
