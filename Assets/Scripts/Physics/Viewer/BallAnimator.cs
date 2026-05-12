@@ -32,7 +32,45 @@ namespace Golfin.Physics.Viewer
 
         const float InstantRate = float.MaxValue;
 
-        void Awake()   { if (Instance == null) Instance = this; }
+        void Awake()
+        {
+            if (Instance == null) Instance = this;
+
+            // Sweep persisted ghost clones (2026-05-12 fix).
+            // PhysicsLabHolePicker calls PhysicsLabController.OnHoleLoaded in Edit Mode,
+            // which chains through SetupAtTee → ballAnimator.PlaceAtRest → SpawnInstance,
+            // and SpawnInstance does Instantiate(ballPrefab, transform). In Edit Mode this
+            // makes the new clone a serialized child of BallAnimator — persisted to
+            // LabScaffold.unity on next scene save. DestroyInstance only clears _instance;
+            // every Edit-Mode invocation leaves a ghost child behind. Over many picker
+            // actions, dozens of ghosts accumulate at whatever tee positions they were
+            // spawned at, and they all render on PlayMode entry until a real shot or
+            // PlaceAtRest spawns a 9th (correct) ball that obscures one of them.
+            //
+            // Sweep them here so PlayMode always starts with zero ball clones; the next
+            // SetupAtTee in OnHoleLoaded spawns the single correct ball. Scoped to
+            // children matching the ball prefab name so unrelated future children stay.
+            string ballPrefabName = ballPrefab != null ? ballPrefab.name : null;
+            var orphans = new System.Collections.Generic.List<GameObject>();
+            foreach (Transform child in transform)
+            {
+                if (ballPrefabName != null && !child.name.StartsWith(ballPrefabName)) continue;
+                if (ballPrefabName == null && !child.name.Contains("(Clone)")) continue;
+                orphans.Add(child.gameObject);
+            }
+            for (int i = 0; i < orphans.Count; i++)
+            {
+#if UNITY_EDITOR
+                DestroyImmediate(orphans[i]);
+#else
+                Destroy(orphans[i]);
+#endif
+            }
+            if (orphans.Count > 0)
+                Debug.Log($"[BallAnimator] Awake: swept {orphans.Count} persisted ghost ball clone(s).");
+            _instance = null;
+            _playing = false;
+        }
 
         void OnDestroy()
         {
@@ -164,6 +202,15 @@ namespace Golfin.Physics.Viewer
             _instance.transform.position = ToVec3(startPos);
             _instance.transform.rotation = Quaternion.identity;  // §controls_i: reset orientation per shot
             _previousPos = _instance.transform.position;          // §controls_i: seed rotation derivation
+
+#if UNITY_EDITOR
+            // Edit-Mode spawns (from PhysicsLabHolePicker → OnHoleLoaded → SetupAtTee chain)
+            // must NOT be persisted to LabScaffold.unity. DontSaveInEditor prevents the
+            // scene-dirty propagation; combined with the Awake sweep, this kills the ghost
+            // clone accumulation entirely.
+            if (!Application.isPlaying)
+                _instance.hideFlags = HideFlags.DontSaveInEditor;
+#endif
         }
 
         void DestroyInstance()
