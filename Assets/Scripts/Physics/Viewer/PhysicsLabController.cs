@@ -148,7 +148,8 @@ namespace Golfin.Physics.Viewer
             {
                 if (chaseCamera != null)
                     _shotConeView.SetCamera(chaseCamera.GetComponent<Camera>());
-                _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
+                try { _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards()); }
+                catch (System.Exception ex) { Debug.LogWarning($"[PhysicsLab] Awake ComputeMaxCarryYards failed: {ex.Message}"); }
             }
 
             // Wire HoleIndicatorWidget camera at startup (ball not yet spawned; widget falls back to BallAnimator.Instance)
@@ -1170,6 +1171,14 @@ namespace Golfin.Physics.Viewer
 
             if (teeFound)
             {
+                // Always scan children first — non-serialized _runtimeTeeAnchor goes null in
+                // Edit Mode between operations even without a full domain reload.
+                foreach (Transform child in transform)
+                {
+                    if (child.name != "_RuntimeTeeAnchor") continue;
+                    if (_runtimeTeeAnchor == null) _runtimeTeeAnchor = child;
+                    else DestroyImmediate(child.gameObject);
+                }
                 if (_runtimeTeeAnchor == null)
                 {
                     var go = new GameObject("_RuntimeTeeAnchor");
