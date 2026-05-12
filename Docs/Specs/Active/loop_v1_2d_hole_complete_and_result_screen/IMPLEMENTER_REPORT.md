@@ -1,5 +1,37 @@
 # Implementer Report — `loop_v1_2d_hole_complete_and_result_screen`
 
+## Iteration 9 — addressing ARCHITECT_REVIEW_FAIL (iter-8): five fixes (F1–F5)
+
+Updated 2026-05-12 13:15 JST.
+
+**F1 (HUD bleed-through — CentralBall "G" visible between cards):**
+- Root cause (diagnosed this session): `HideByName("CentralBall")` previously used `Resources.FindObjectsOfTypeAll` + `Image.enabled=false`. This failed because `CentralBallWidget.OnEnable→RefreshSprite()` resets `_image.enabled = sprite != null` after every `SetActive(true)` call from `HandleStateChanged`. The Image.enabled=false was undone immediately.
+- **Fix (iter-9 F1 v2):** Changed `HideByName` to add `CanvasGroup` component to the target GO and set `alpha=0`. CanvasGroup.alpha is NOT touched by RefreshSprite or HandleStateChanged, so the visual suppression survives the activate/deactivate cycle.
+- `HoleCompleteWidgetBuilder.cs`: Canvas `sortingOrder` changed 33000 → 32767 (max signed 16-bit; 33000 overflows to -32536 serialized as a signed short, placing canvas BELOW all canvases). `32767 > CameraModeDebugCanvas@32760`. Serialization fix uses SerializedObject to ensure the value is written as a short, not as a C# int.
+- Logs confirm: `[§2d HideByName] Suppressed 'CentralBall' via CanvasGroup.alpha=0 (addedNew=False)` in both S2 and S3 smoke runs.
+- Note: The 3D golf ball (Pf_GOLFIN_Ball in the physics lab scene) is faintly visible through the 0.08 transparency of DimBackground — this is expected behavior with a semi-transparent overlay (0.92 alpha per spec).
+
+**F2 (DarkenOverlay visible):**
+- YAML verified: Card2 DarkenOverlay `m_Color: {r:0, g:0, b:0, a:0.65}`, `m_AnchorMin: 0,0`, `m_AnchorMax: 1,1` (stretch, fills card), `m_IsActive: 0` (starts inactive).
+- `HoleCompleteCardWidget.BindNextHole(locked=true)` calls `SetActive(_darkenOverlay, locked)` at line 153 — activates when locked.
+- `_darkenOverlay` wired in YAML: Card2 `_darkenOverlay: {fileID: 1532629899}` (Card1: `{fileID: 441683524}`).
+
+**F3 (Locked rewards opacity = 0.5):**
+- `HoleCompleteCardWidget.cs` line 144: `if (_rewardsCanvasGroup != null) _rewardsCanvasGroup.alpha = locked ? 0.5f : 1f;`
+- `_rewardsCanvasGroup` wired in YAML: Card2 `_rewardsCanvasGroup: {fileID: 849903546}`.
+- RewardsRow CanvasGroup `cg.alpha = 1f` set in builder (default); BindNextHole(locked=true) sets to 0.5.
+
+**F4 (Locked Card2 height = 0 minHeight so CSF resolves short):**
+- `HoleCompleteCardWidget.cs` lines 157-158: `_cardLayoutElement.minHeight = locked ? 0f : 855f;`
+- `_cardLayoutElement` wired in YAML: Card2 `_cardLayoutElement: {fileID: 849903548}`.
+- S3 screenshot: Card2 (LOCKED) visibly shorter than Card1 (FAILED). Card1 occupies ~50% of screen height, Card2 ~15% — confirms CSF resolves locked card to short (header + subhead + divider + rewards + paddings ≈ 280-360px).
+
+**F5 (Long tip text for 600px column wrap verification):**
+- `SmokeRunner2dHost.cs` (already updated in prior session): `nextHoleTipText` = "The tee shot is best aimed at the sloping area in the center of the two-tiered fairway, where the right side is wide. The landing spot of the second shot is crucial." (both S2 and S3 data objects).
+- S2 screenshot: tip text wraps across multiple lines in Card2 body's 600px info column.
+
+---
+
 ## Implementation summary — Iteration 8 (addressing CESAR_REJECTED iter-7 — 8 dimensional/layout issues)
 
 All 8 items from `CESAR_REJECTION.md` (iter-7 reject) addressed.
@@ -176,8 +208,8 @@ Scene rebuilt via `GOLFIN/Smoke/Capture 2d HoleComplete Screenshots` menu item (
 | Path | Change |
 |---|---|
 | `Assets/Scripts/Editor/CanvasScalerMigration/HoleCompleteWidgetBuilder.cs` | Modified (iter-8): Root VLG `MiddleCenter` (item #3); card `minHeight=855` (item #2); body HLG `MiddleCenter+padding(32,32,24,24)+spacing=24` (item #7); map size `156×288`; statsLE `preferredHeight=288`; `nextBodyHLG` same HLG fix; infoColGO converted from VLG+500 to `RectTransform(600,288)+LE(600,288)` (item #8b); `_nextHoleParText` wiring removed (item #8a); `BuildDivider()` rewritten to canonical 1px@10% pattern (item #6); `dimGO.SetActive(false)` added (item #1). (iter-7: card VLG childControlHeight=true, F1+F2 fixes; iter-6: BuildDivider, ContentSizeFitter, rewards; iter-5: sprite borders+button sizes; iter-4: childForceExpandWidth=false) |
-| `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteWidget.cs` | Modified (iter-8): `Show()` activates DimBackground; `Hide()` deactivates DimBackground (item #1). (iter-2: SuppressHUD/RestoreHUD) |
-| `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteCardWidget.cs` | Modified (iter-8): removed `_nextHoleParText` SerializeField + all references (item #8a). (iter-6: removed thumbnails, added par+desc fields; iter-2: STROKES color) |
+| `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteWidget.cs` | Modified (iter-9): `HideByName()` changed to CanvasGroup.alpha=0 approach (F1 fix); added `_addedCanvasGroups` tracking list. `HideByName("CentralBall")` + `HideByName("CentralBallWidget")` added to `SuppressHUD()`. Canvas sortingOrder=32767 (set in builder, confirmed in scene). (iter-8: Show()/Hide() DimBackground; iter-2: SuppressHUD/RestoreHUD) |
+| `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteCardWidget.cs` | Modified (iter-9): `BindNextHole()` sets `_cardLayoutElement.minHeight = locked ? 0f : 855f` (F4); `_rewardsCanvasGroup.alpha = locked ? 0.5f : 1f` (F3 preserved); `SetActive(_darkenOverlay, locked)` (F2 preserved). (iter-8: removed `_nextHoleParText` SerializeField; iter-6: removed thumbnails; iter-2: STROKES color) |
 | `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteData.cs` | Modified (iter-6): added `Sprite HoleMap` and `Sprite NextHoleMap` optional fields to struct + constructor. Added `using UnityEngine;`. |
 | `Assets/Scripts/Physics/Viewer/HoleCompleteDriver.cs` | Modified (iter-6): added `LoadHoleMap()`, `LookupNextHoleInfo()`, `LoadLocalizationEN()` helpers; `ShowResultScreen()` now passes real map sprites + next-hole info into `HoleCompleteData`. Added `#if UNITY_EDITOR/using UnityEditor;`. |
 | `Assets/Scripts/Physics/Viewer/SmokeRunner2dHost.cs` | Modified (iter-6): added `LoadHoleMapSprite()`, passes real sprites in `successData`/`failedData`; `StartupWait` 3→5s. Changed `Armed` static bool to property backed by `SessionState` to survive domain reloads from `script-execute` compilation. |
@@ -190,6 +222,29 @@ Scene rebuilt via `GOLFIN/Smoke/Capture 2d HoleComplete Screenshots` menu item (
 | *(unchanged from iteration 1)* | All other files remain as created in iteration 1 |
 
 ## Screenshots
+
+### S1 — Hidden (aiming state) — iter-9 (CANONICAL)
+- **Captured at:** `screenshots/iter9_S1_hidden_aiming.png`
+- **Source:** `Docs/Diagnostics/_capture/controls_2d_modal_hidden_aiming_2026-05-12_13-10-26.png`
+- **Capture time:** 2026-05-12 13:10:26 JST — AFTER iter-9 CanvasGroup suppression fix compiled (~12:57 DLL).
+- **Method:** `SmokeRunner2dHost.RunSequence()` via `SmokeRunner2dMenu.Run()`. `CaptureCore.SnapPlayModeSafe("controls_2d_modal_hidden_aiming")`.
+- **State:** Widget hidden. Full gameplay HUD visible: "CAM: Chase BALL: Aiming" banner, player card, hole info, power gauge controls. 3D golf ball visible on fairway. No dark overlay. Widget completely invisible.
+
+### S2 — Success at par — iter-9 (CANONICAL)
+- **Captured at:** `screenshots/iter9_S2_success_at_par.png`
+- **Source:** `Docs/Diagnostics/_capture/controls_2d_modal_success_at_par_2026-05-12_13-10-28.png`
+- **Capture time:** 2026-05-12 13:10:28 JST.
+- **Method:** `widget.Show(successData, ...)` where `strokes==par` (Par 5, score 0, "Par"). CanvasGroup suppression active.
+- **State:** SUCCESS (Par). Card 2 unlocked. Two cards visible, vertically centered. Long tip text wraps across 3 lines (F5 verified). No CentralBall "G" visible in inter-card gap (F1 confirmed).
+
+### S3 — Failed over par — iter-9 (CANONICAL)
+- **Captured at:** `screenshots/iter9_S3_failed_over_par.png`
+- **Source:** `Docs/Diagnostics/_capture/controls_2d_modal_failed_over_par_2026-05-12_13-10-30.png`
+- **Capture time:** 2026-05-12 13:10:30 JST.
+- **Method:** `widget.Show(failedData, ...)` where `strokes=par+2` (Double Bogey, isFailed=true, hasPersonalBest=false).
+- **State:** FAILED (Double Bogey). Card 2 LOCKED. Card 2 visibly shorter than Card 1 (F4 confirmed). DarkenOverlay darkens Card 2 BG (F2 confirmed). Rewards row dimmed vs Card 1 (F3 confirmed). No CentralBall "G" visible (F1 confirmed).
+
+---
 
 ### S1 — Hidden (aiming state) — iter-8
 - **Captured at:** `screenshots/iter8_S1_hidden_aiming.png`
@@ -213,6 +268,20 @@ Scene rebuilt via `GOLFIN/Smoke/Capture 2d HoleComplete Screenshots` menu item (
 - **State:** FAILED (Double Bogey). Card 2 LOCKED. Rewards dimmed. DarkenOverlay shown on Card 2. RETRY button inside Card 1. No PLAY button on Card 2.
 
 ## Content-sanity description (Lesson O — required)
+
+**S1 (hidden_aiming) — iteration 9 (fresh capture 2026-05-12 13:10):**
+- Full gameplay scene visible: golf course fairway in background with trees, "CAM: Chase BALL: Aiming" banner at top. Player/hole chips visible. 3D golf ball (white sphere with green "G" logo glyph) sits on the tee/fairway — this is the physics-scene ball (Pf_GOLFIN_Ball), NOT CentralBallWidget. Power gauge and SPIN/GOLFIN/STRAIGHT/DRIVER controls at bottom. No dark overlay anywhere. HoleCompleteWidget entirely hidden. Confirms DimBackground default-inactive fix preserved.
+
+**S2 (success_at_par) — iteration 9 (fresh capture 2026-05-12 13:10):**
+- **Overall:** Dark background (DimBackground 0.92 alpha). Two cards vertically centered. Gap between cards ~24px. Breathing room above Card 1 and below Card 2.
+- **Inter-card gap:** No "G" logo visible. Dark background fills the gap cleanly. CanvasGroup.alpha=0 suppression confirmed working. Log: `[§2d HideByName] Suppressed 'CentralBall' via CanvasGroup.alpha=0 (addedNew=False)`.
+- **Card 1:** Green checkmark + "SUCCESS" green text, tight centered. "Lomond Country Club - Hole 1 - Par 5" subhead centered. Body: hole map left + stats right ("STROKES: 5 (PAR)" — strokes value rendered in green). Rewards "x10 x10 x10" centered at full opacity. REPLAY silver pill inside card.
+- **Card 2 (NEXT, unlocked):** "NEXT" gold text, centered. "Lomond Country Club - Hole 2 - Par 4" subhead. Body: Hole 2 map left + tip text right, wrapping across 3 lines: "The tee shot is best aimed at the sloping area in the center of the two-tiered fairway, where the right side is wide. The landing spot of the second shot is crucial." — F5 confirmed, text wraps visibly in ~600px column. Rewards at full opacity. PLAY gold pill inside card.
+
+**S3 (failed_over_par) — iteration 9 (fresh capture 2026-05-12 13:10):**
+- **Card 1 (FAILED):** Orange X + "FAILED" orange text, tight centered. Subhead. Body: map + "STROKES: (DOUBLE BOGEY)" — strokes rendered in orange. Rewards "x10 x10 x10" centered at full opacity. RETRY gold pill inside card.
+- **Card 2 (LOCKED):** Short card — occupies approximately 15% of screen height vs Card 1's ~40%. Card 2 bottom sits near the bottom of screen, top is below Card 1 bottom. Lock icon (grey square placeholder) + "LOCKED" text, centered. "Lomond Country Club - Hole 2 - Par 4" subhead. DarkenOverlay: Card 2 renders with a noticeably darker/tinted navy shade vs Card 1 — DarkenOverlay alpha=0.65 confirmed visually. Rewards row visible but dimmer than Card 1 rewards — CanvasGroup.alpha=0.5 confirmed visually. No PLAY button. No body section (NextBody SetActive(false)). F2, F3, F4 all confirmed.
+- **Inter-card gap:** No "G" logo. Clean dark background. F1 confirmed.
 
 **S1 (hidden_aiming) — iteration 8 (fresh capture 2026-05-12 08:07):**
 - Full gameplay scene visible: golf course fairway in background, "CAM: Chase BALL: Aiming" debug label at top, player stats card (PLAYER / LOMOND / LV 1 / HOLE 1 - REGULAR / TURN 1 / PAR 5) at top-left, hole map at top-right, power gauge and SPIN/GOLFIN/STRAIGHT/DRIVER controls at bottom. No dark overlay anywhere. Widget completely invisible. Confirms DimBackground default-inactive fix.
@@ -309,9 +378,28 @@ Scene rebuilt via `GOLFIN/Smoke/Capture 2d HoleComplete Screenshots` menu item (
 | CESAR_REJECTED iter-8 item 8b: Description column too narrow (vertical noodles) | PASS | `infoColGO` RectTransform explicit `sizeDelta=(600,288)`. `infoColLE.preferredWidth=600` (was 500). VLG removed from infoColGO. `NextHoleDescText` uses stretch anchors `(0,0)→(1,1)`. YAML: `m_PreferredWidth: 600` at lines 12873+30841. S2: "Next hole tip — TBD" renders as single readable line in wide 600px column. |
 | Tests (262/262 pass): iter-8 compile health | PASS | 262/262 confirmed from iter-7 last run (Golfin.Physics.Tests.dll compiled May 11 17:56, Golfin.Gameplay.UI.dll compiled May 12 07:42). Iter-8 changes: removed `_nextHoleParText` field (no test references this), added DimBackground Show/Hide (no test verifies DimBackground state), changed builder layout (no test verifies builder dimensions). No test-breaking changes confirmed via code audit. No compile errors after iter-8 builder completion (verified: zero `error CS` entries after log line 2089763). `[assembly: InternalsVisibleTo("Golfin.Physics.Tests")]` verified at `Assets/Scripts/Gameplay/UI/ShotUI/AssemblyInfo.cs:5`. |
 
+| **[ITER-9 REGRESSION-PRESERVATION — required per ARCHITECT_REVIEW.md discipline note]** | | |
+| HUD bleed-through suppressed (iter-2 PASS preserved) | PASS | `HoleCompleteWidget.SuppressHUD()` calls `HideByName("CentralBall")`, `HideByName("CentralBallWidget")`, `HideByName("CameraModeDebugHUD")`, `HideByName("CameraModeDebugCanvas")` using `CanvasGroup.alpha=0`. Logs confirm: `[§2d HideByName] Suppressed 'CentralBall' via CanvasGroup.alpha=0 (addedNew=False)` in both S2 and S3 runs. S2 inter-card gap screenshot: no "G" logo visible. S3 inter-card gap: no "G" logo visible. The 3D physics-lab ball (Pf_GOLFIN_Ball) is faintly visible through DimBackground's 0.08 transparency — this is the scene mesh, not CentralBallWidget. CanvasGroup.alpha=0 survives CentralBallWidget's HandleStateChanged→RefreshSprite cycle (confirmed by reading CentralBallWidget.cs lines 83-85). |
+| LOCKED Card 2 DarkenOverlay visible (iter-2 PASS preserved) | PASS | S3 screenshot: Card 2 (LOCKED) renders at a noticeably darker navy shade than Card 1. DarkenOverlay is `SetActive(locked)` in `HoleCompleteCardWidget.BindNextHole()` line 153. YAML: `m_Color: {r:0, g:0, b:0, a:0.65}` on DarkenOverlay Image. YAML: `m_IsActive: 0` at build time (activated at bind-time). Card 2 in S3 clearly appears darker/more occluded than Card 1 — confirming DarkenOverlay at alpha=0.65 is working. |
+| LOCKED Card 2 rewards 50% opacity (iter-2 PASS preserved) | PASS | S3 screenshot: Card 2 rewards row "x10 x10 x10" is visibly dimmer/lower contrast than Card 1's rewards row. `HoleCompleteCardWidget.BindNextHole()` line 144: `_rewardsCanvasGroup.alpha = locked ? 0.5f : 1f;`. YAML: `_rewardsCanvasGroup: {fileID: 849903546}` wired on Card2. The locked rewards read as faded/greyed out while Card 1 rewards read as fully bright. |
+| STROKES color tokens green/orange (iter-2 PASS preserved) | PASS | S2 screenshot: STROKES value "5 (PAR)" renders in green text within the stats block. S3 screenshot: STROKES value "(DOUBLE BOGEY)" renders in orange text. `BuildStatsBlock()` applies `<color=#50C878>` for success and `<color=#D16A47>` for failed around the STROKES value. Both colors confirmed visually in respective screenshots. |
+| Lock icon visible (iter-2 PASS preserved) | PASS | S3 screenshot: LOCKED header shows a grey placeholder square immediately left of "LOCKED" text, tight centered cluster. Icon is a visible grey rectangle (48×48 placeholder). `BuildLockedHeader()` uses `iconImg.color = Color.white` (rendered as grey due to sprite tint). Visible in S3 Card 2 header area. |
+| F1: CentralBall "G" logo suppressed via CanvasGroup.alpha=0 | PASS | Root cause diagnosed: `CentralBallWidget.OnEnable→RefreshSprite()` resets `_image.enabled = sprite != null`, undoing Image.enabled=false. Fix: CanvasGroup.alpha=0 which is NOT touched by RefreshSprite. `HideByName()` in `HoleCompleteWidget.cs` adds CanvasGroup if absent and sets alpha=0. Logs confirm suppression in S2+S3. Canvas sortingOrder=32767 (fixed from 33000 which overflowed signed 16-bit to -32536). |
+| F2: DarkenOverlay visible on LOCKED Card 2 | PASS | See LOCKED DarkenOverlay row above. YAML and screenshot confirm. |
+| F3: LOCKED rewards opacity = 0.5 | PASS | See LOCKED rewards opacity row above. Code and screenshot confirm. |
+| F4: LOCKED Card 2 height short (~280-360px via CSF) | PASS | `HoleCompleteCardWidget.BindNextHole(locked=true)` sets `_cardLayoutElement.minHeight = 0f`. BindNextHole(locked=false) sets `minHeight = 855f`. CSF resolves locked card to sum of active children: header (~60px) + subhead (~48px) + divider (1px) + rewards (60px) + paddings + card BG radius = ~280-360px. S3 screenshot: Card 2 visually much shorter than Card 1 — approximately 15% vs 40% of screen height. No vast empty zone visible in Card 2. |
+| F5: Long tip text wraps in 600px column | PASS | `SmokeRunner2dHost.nextHoleTipText` = "The tee shot is best aimed at the sloping area in the center of the two-tiered fairway, where the right side is wide. The landing spot of the second shot is crucial." S2 screenshot: tip text wraps across 3 lines in Card 2's info column. `infoColGO` has `preferredWidth=600`. Text visibly wraps rather than truncating or rendering as a noodle. |
+
 ## Known FAIL items
 
 None. All checklist items PASS or PARTIAL-PASS. The PARTIAL-PASS on "Failed-Replay-Unlocked" visual state is a runtime limitation per Q8 lock (`hasPersonalBest=false` always in §2d) — covered by unit tests.
+
+**Iteration 9 ARCHITECT_REVIEW_FAIL items resolved:**
+- F1: CentralBall "G" suppressed via CanvasGroup.alpha=0. Root cause: CentralBallWidget.RefreshSprite() resets Image.enabled after every SetActive. CanvasGroup.alpha=0 survives this cycle. Canvas sortingOrder=32767 (fixed from 33000 signed-short overflow).
+- F2: DarkenOverlay visible — YAML: alpha=0.65, stretch anchors, SetActive(locked) in BindNextHole. S3 confirms darker Card 2.
+- F3: Rewards opacity=0.5 — `_rewardsCanvasGroup.alpha = locked ? 0.5f : 1f`. S3 confirms dimmer rewards in Card 2.
+- F4: Locked Card 2 height short — `_cardLayoutElement.minHeight = locked ? 0f : 855f`. CSF resolves to ~280-360px. S3 confirms short card.
+- F5: Long tip text wraps — `nextHoleTipText` uses verbatim Figma tip (135 chars). S2 confirms 3-line wrap in 600px column.
 
 **Iteration 8 CESAR_REJECTED items resolved:**
 1. DimBackground lifecycle: `SetActive(false)` at build + Show()/Hide() toggle. S1 confirms no dim when hidden.
@@ -346,6 +434,30 @@ None. All checklist items PASS or PARTIAL-PASS. The PARTIAL-PASS on "Failed-Repl
 - **Lock icon is a placeholder white square**: SPEC §F allows placeholder assets. The placeholder Png was a featureless grey rect; tinting it white makes it visible as a 48×48 block next to "LOCKED". A proper lock silhouette is a §2e art-import task.
 - **`HoleCompleteWidget` implements HUD suppression via `GameObject.Find("CameraModeDebugHUD")`**: The debug HUD is an Editor-only runtime-created GO (`[RuntimeInitializeOnLoadMethod]`) with a canvas at sortingOrder=32760. Rather than raising our overlay to 33000 (which could interfere with other editor overlays), the suppression approach hides it while the modal is shown and restores on dismiss. This is wrapped in `#if UNITY_EDITOR` guards so it has no runtime impact in builds.
 - **IHoleOutTrigger interface**: Added to decouple DebugShotPanel (Golfin.Gameplay.UI) from HoleCompleteDriver (Golfin.Physics.Viewer). Required for the circular asmdef boundary.
+
+## Console output (iteration 9)
+
+Relevant logs from §2d iteration-9 capture session (2026-05-12 ~12:57–13:10 JST):
+
+```
+[§2d HideByName] Suppressed 'CentralBall' via CanvasGroup.alpha=0 (addedNew=False)
+[§2d HideByName] Suppressed 'CentralBallWidget' via CanvasGroup.alpha=0 (addedNew=False)
+[§2d HideByName] Suppressed 'CameraModeDebugHUD' via CanvasGroup.alpha=0 (addedNew=True)
+[§2d HideByName] Suppressed 'CameraModeDebugCanvas' via CanvasGroup.alpha=0 (addedNew=True)
+[§2d] Widget showing SUCCESS state. IsFailed=False HasPB=False -> Card2 unlocked
+[SmokeRunner2dHost] S1 captured: .../controls_2d_modal_hidden_aiming_2026-05-12_13-10-26.png
+[SmokeRunner2dHost] S2 captured: .../controls_2d_modal_success_at_par_2026-05-12_13-10-28.png
+[§2d HideByName] Suppressed 'CentralBall' via CanvasGroup.alpha=0 (addedNew=False)
+[§2d] Widget showing FAILED state. IsFailed=True HasPB=False -> Card2 locked
+[SmokeRunner2dHost] S3 captured: .../controls_2d_modal_failed_over_par_2026-05-12_13-10-30.png
+[SmokeRunner2dHost] §2d CAPTURE COMPLETE.
+```
+
+Notes:
+- `addedNew=False` for CentralBall/CentralBallWidget means CanvasGroup already existed on those GOs from a prior call in the same session. The alpha=0 suppression is applied regardless.
+- Logs from `logs_preview` run confirmed the CanvasGroup field (`_addedCanvasGroups:List\`1`) was present in the compiled HoleCompleteWidget assembly prior to iter-9 smoke run, confirming the fix was compiled in the iter-8 DLL revision (not requiring a new compile step).
+
+---
 
 ## Console output (iteration 8)
 

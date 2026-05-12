@@ -128,8 +128,9 @@ namespace Golfin.Physics.Viewer
                 rewardRepairX:    10,
                 rewardBallX:      10,
                 nextHoleNumber:   nextNum,
-                nextHolePar:      0,
-                nextHoleTipText:  "Next hole tip — TBD",
+                nextHolePar:      4,
+                // §2d iter-9 F5: use long tip text to demonstrate 600px column wrapping (per ARCHITECT_REVIEW Fix 5).
+                nextHoleTipText:  "The tee shot is best aimed at the sloping area in the center of the two-tiered fairway, where the right side is wide. The landing spot of the second shot is crucial.",
                 holeMap:          holeMapSprite,
                 nextHoleMap:      nextHoleMapSprite
             );
@@ -162,8 +163,9 @@ namespace Golfin.Physics.Viewer
                 rewardRepairX:    10,
                 rewardBallX:      10,
                 nextHoleNumber:   nextNum,
-                nextHolePar:      0,
-                nextHoleTipText:  "Next hole tip — TBD",
+                nextHolePar:      4,
+                // §2d iter-9 F5: use long tip text (same as S2 for consistency in locked-state review).
+                nextHoleTipText:  "The tee shot is best aimed at the sloping area in the center of the two-tiered fairway, where the right side is wide. The landing spot of the second shot is crucial.",
                 holeMap:          holeMapSprite,
                 nextHoleMap:      nextHoleMapSprite
             );

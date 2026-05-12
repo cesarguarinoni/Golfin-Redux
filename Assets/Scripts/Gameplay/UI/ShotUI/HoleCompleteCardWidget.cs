@@ -53,6 +53,9 @@ namespace Golfin.Gameplay.UI.ShotUI
         [Header("Locked overlay")]
         [SerializeField] GameObject _darkenOverlay;       // shown only when locked
 
+        [Header("Card layout (for locked height adjustment)")]
+        [SerializeField] LayoutElement _cardLayoutElement; // minHeight=855 unlocked, 0 locked
+
         Action _onButtonTap;
 
         public void BindCurrentHole(HoleCompleteData data, Action onButtonTap)
@@ -148,6 +151,11 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             // Darken overlay shown only when locked.
             SetActive(_darkenOverlay, locked);
+
+            // §2d iter-9 F4: LOCKED card skips the 855px minHeight so CSF resolves the shorter
+            // header+subhead+divider+rewards height (~280-360px per Figma).
+            if (_cardLayoutElement != null)
+                _cardLayoutElement.minHeight = locked ? 0f : 855f;
         }
 
         // ── Expose internal state for unit tests ─────────────────────────────────

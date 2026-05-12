@@ -9,11 +9,40 @@ using Golfin.Gameplay.UI.ShotUI;
 using Golfin.Physics.Viewer;
 
 /// <summary>
-/// §2d iter-7: Builds the HoleCompleteWidget + HoleCompleteDriver hierarchy in LabScaffold.unity.
+/// §2d iter-9: Builds the HoleCompleteWidget + HoleCompleteDriver hierarchy in LabScaffold.unity.
 ///
 /// Menu: GOLFIN/Build/Build HoleComplete Widgets (§2d)
 ///
-/// Iter-7 changes (F1 + F2 from SELF_REVIEW_FAIL iter-6):
+/// Iter-9 changes (F1-F5 from ARCHITECT_REVIEW_FAIL iter-8):
+/// F1 — HUD bleed-through fix:
+///   - Raised HoleCompleteWidget overlay Canvas sortingOrder from 100 → 33000 (above all HUD canvases).
+///   - Added CentralBall + CentralBallWidget to by-name suppression list in HoleCompleteWidget.SuppressHUD().
+/// F2/F3 — LOCKED Card 2 DarkenOverlay + rewards opacity restored:
+///   - Card GO is now a FRAME (LayoutElement + CSF + BG Image) with NO VLG directly.
+///   - ContentRoot child (stretch fill) holds the VLG with all content.
+///   - DarkenOverlay is a sibling of ContentRoot (direct child of card GO), so stretch anchors work.
+///   - BindNextHole(locked=true) sets _rewardsCanvasGroup.alpha=0.5f (was already coded; now structurally correct).
+/// F4 — LOCKED Card 2 height:
+///   - _cardLayoutElement wired to HoleCompleteCardWidget.
+///   - BindNextHole(locked=true) sets minHeight=0; unlocked keeps minHeight=855.
+///   - CSF+ContentRoot resolves short ~280-360px height for locked cards.
+/// F5 — Description font size + longer placeholder:
+///   - fontSize=21 (already in iter-8; preserved).
+///   - Placeholder text updated to long Figma-reference tip that demonstrates 600px column wrapping.
+///
+/// Dress-up (iter-9 Cesar standing rule — "Always dress up the designs even if you fill them on runtime"):
+///   - Card 1: real Hole 1 map sprite assigned at build time (HoleMaps/Lomond - Hole 1.png).
+///             Subhead: "Lomond Country Club  - Hole 1 - Par 5"
+///             Stats text: realistic multi-line with green STROKES color: "TEE OFF: REGULAR / STROKES: 4 (BIRDIE) [green] / ..."
+///             Header: SuccessHeader visible by default (FailedHeader/NextHeader/LockedHeader hidden).
+///   - Card 2: real Hole 2 map sprite assigned at build time (HoleMaps/Lomond - Hole 2.png).
+///             Subhead: "Lomond Country Club  - Hole 2 - Par 4"
+///             Description: architect's tip string (already set in BuildCard, see F5).
+///             Header: NextHeader visible by default (SuccessHeader/FailedHeader/LockedHeader hidden).
+///             Body: NextBody active, CurrentBody inactive (mirror of what BindNextHole(unlocked) does).
+///   This is purely for Editor-mode layout preview. Runtime Show(data) still calls BindCurrentHole/BindNextHole.
+///
+/// Iter-7 changes (preserved):
 /// F1 — Divider height fix:
 ///   - Card VLG: childControlHeight=true (was false) → VLG now reads LayoutElement.preferredHeight
 ///     on ALL children including dividers. Previously the VLG ignored preferredHeight=8 on dividers
@@ -79,6 +108,11 @@ public static class HoleCompleteWidgetBuilder
         FixSpriteBorder("Assets/Art/Settings/Divider.png", 0, 0, 0, 0);
         AssetDatabase.Refresh();
 
+        // Dress-up sprites: real hole maps for build-time preview (iter-9 Cesar standing rule).
+        // Runtime overrides these via BindCurrentHole(data.HoleMap) / BindNextHole(data.NextHoleMap).
+        Sprite holeMap1 = LoadSprite("Assets/Art/In-Game UI/HoleMaps/Lomond - Hole 1.png");
+        Sprite holeMap2 = LoadSprite("Assets/Art/In-Game UI/HoleMaps/Lomond - Hole 2.png");
+
         Sprite holeCardBG  = LoadSprite("Assets/Art/ResultScreen/Background - HoleCard.png");
         Sprite replayBtnBG = LoadSprite("Assets/Art/ResultScreen/Button - Replay.png");
         Sprite retryBtnBG  = LoadSprite("Assets/Art/ResultScreen/Button - Retry.png");
@@ -112,10 +146,22 @@ public static class HoleCompleteWidgetBuilder
         widgetGO.SetActive(true); // stays active; _root child is hidden by Awake()
         var widget = widgetGO.AddComponent<HoleCompleteWidget>();
 
-        // Overlay Canvas so this renders on top of all sibling HUD elements.
+        // Overlay Canvas so this renders on top of ALL HUD canvases (including
+        // CameraModeDebugHUD @ 32760 and any other HUD overlay).
+        // §2d iter-9 F1: use 32767 (max signed 16-bit) NOT 33000 — 33000 overflows Unity's serialized
+        // short and is stored/read back as -32536, placing the canvas BELOW all HUDs.
+        // CameraModeDebugCanvas is at 32760, so 32767 is the safe maximum that still beats it.
         var overlayCvs = widgetGO.AddComponent<Canvas>();
         overlayCvs.overrideSorting = true;
-        overlayCvs.sortingOrder = 100;
+        overlayCvs.sortingOrder = 32767;
+        // §2d F1 serialization fix: setting sortingOrder=33000 in a prior iteration caused it to be
+        // serialized as a signed-16-bit overflow (-32536) and read back incorrectly. 32767 fits in
+        // signed 16-bit. Use SerializedObject to force-write the value so it lands in YAML correctly.
+        {
+            var so = new UnityEditor.SerializedObject(overlayCvs);
+            so.FindProperty("m_SortingOrder").intValue = 32767;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
         widgetGO.AddComponent<UnityEngine.UI.GraphicRaycaster>();
 
         // DimBackground — near-opaque black to subdue gameplay HUD.
@@ -151,6 +197,34 @@ public static class HoleCompleteWidgetBuilder
             rubikSemiBold, bodyFont,
             out var card1);
 
+        // ── Dress-up Card1 (iter-9: real content at build time for Editor preview) ──
+        // Card1 shows the SUCCESS state with Hole 1 result stats.
+        // Header: SUCCESS visible (already default from BuildCard).
+        // Map: real Hole 1 map sprite instead of placeholder.
+        // Subhead: "Lomond Country Club  - Hole 1 - Par 5" (Par 5 correction).
+        // Stats: realistic multi-line with green-colored STROKES birdie line.
+        {
+            var contentRoot1 = card1GO.transform.Find("ContentRoot");
+            if (contentRoot1 != null)
+            {
+                var subhead1 = contentRoot1.Find("Subhead");
+                if (subhead1 != null)
+                {
+                    var tmp = subhead1.GetComponent<TextMeshProUGUI>();
+                    if (tmp != null) tmp.text = "Lomond Country Club  - Hole 1 - Par 5";
+                }
+                var currentBody1 = contentRoot1.Find("CurrentBody");
+                if (currentBody1 != null)
+                {
+                    var mapImg1 = currentBody1.Find("HoleMapLarge")?.GetComponent<Image>();
+                    if (mapImg1 != null && holeMap1 != null) mapImg1.sprite = holeMap1;
+                    var statsTmp1 = currentBody1.Find("StatsBlockText")?.GetComponent<TextMeshProUGUI>();
+                    if (statsTmp1 != null)
+                        statsTmp1.text = "<b>TEE OFF:</b> REGULAR\n<b>STROKES:</b> <color=#50C878>4 (BIRDIE)</color>\n<b>BEST:</b> 5 (PAR)\n<b>TIME:</b> 00:02:34\n<b>BEST:</b> 00:02:34";
+                }
+            }
+        }
+
         // ── 7. Build Card2 ────────────────────────────────────────────────────
         var card2GO = BuildCard("Card2", rootGO.transform,
             holeCardBG, iconCheck, iconX, lockIcon,
@@ -160,6 +234,57 @@ public static class HoleCompleteWidgetBuilder
             dividerSprite,
             rubikSemiBold, bodyFont,
             out var card2);
+
+        // ── Dress-up Card2 (iter-9: real content at build time for Editor preview) ──
+        // Card2 shows the NEXT state (unlocked) with Hole 2 info.
+        // Header: NEXT visible (SuccessHeader hidden).
+        // Map: real Hole 2 map sprite.
+        // Subhead: "Lomond Country Club  - Hole 2 - Par 4".
+        // Body: NextBody active, CurrentBody inactive (mirrors BindNextHole(unlocked)).
+        // Description: architect's tip string (already set by BuildCard F5).
+        {
+            var contentRoot2 = card2GO.transform.Find("ContentRoot");
+            if (contentRoot2 != null)
+            {
+                // Switch header: SuccessHeader off → NextHeader on
+                var successHdr = contentRoot2.Find("SuccessHeader");
+                var nextHdr    = contentRoot2.Find("NextHeader");
+                if (successHdr != null) successHdr.gameObject.SetActive(false);
+                if (nextHdr    != null) nextHdr.gameObject.SetActive(true);
+
+                var subhead2 = contentRoot2.Find("Subhead");
+                if (subhead2 != null)
+                {
+                    var tmp = subhead2.GetComponent<TextMeshProUGUI>();
+                    if (tmp != null) tmp.text = "Lomond Country Club  - Hole 2 - Par 4";
+                }
+
+                // Switch body: CurrentBody off → NextBody on
+                var currentBody2 = contentRoot2.Find("CurrentBody");
+                var nextBody2    = contentRoot2.Find("NextBody");
+                if (currentBody2 != null) currentBody2.gameObject.SetActive(false);
+                if (nextBody2    != null) nextBody2.gameObject.SetActive(true);
+
+                // Assign real Hole 2 map sprite
+                if (nextBody2 != null)
+                {
+                    var mapImg2 = nextBody2.Find("NextHoleMapLarge")?.GetComponent<Image>();
+                    if (mapImg2 != null && holeMap2 != null) mapImg2.sprite = holeMap2;
+                }
+
+                // Buttons: PLAY active, REPLAY+RETRY inactive (mirrors BindNextHole(unlocked))
+                var buttons2 = contentRoot2.Find("Buttons");
+                if (buttons2 != null)
+                {
+                    var replayBtn2 = buttons2.Find("ReplayButton");
+                    var retryBtn2  = buttons2.Find("RetryButton");
+                    var playBtn2   = buttons2.Find("PlayButton");
+                    if (replayBtn2 != null) replayBtn2.gameObject.SetActive(false);
+                    if (retryBtn2  != null) retryBtn2.gameObject.SetActive(false);
+                    if (playBtn2   != null) playBtn2.gameObject.SetActive(true);
+                }
+            }
+        }
 
         // ── 8. Wire HoleCompleteWidget references ─────────────────────────────
         var widgetSO = new SerializedObject(widget);
@@ -235,7 +360,7 @@ public static class HoleCompleteWidgetBuilder
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
 
-        Debug.Log("[HoleCompleteWidgetBuilder] §2d iter-8: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.");
+        Debug.Log("[HoleCompleteWidgetBuilder] §2d iter-9: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.");
     }
 
     // ── Card builder ─────────────────────────────────────────────────────────
@@ -250,28 +375,44 @@ public static class HoleCompleteWidgetBuilder
         TMP_FontAsset headingFont, TMP_FontAsset bodyFont,
         out HoleCompleteCardWidget card)
     {
-        // Card root — 978px wide. iter-6: ContentSizeFitter drives height instead of hardcoded 600.
+        // Card root — 978px wide. ContentSizeFitter drives height from ContentRoot children.
+        // §2d iter-9: Card GO is a FRAME (LayoutElement + CSF + BG Image) with NO VLG directly.
+        // Two children: ContentRoot (VLG with all content) + DarkenOverlay (stretch sibling).
+        // This lets DarkenOverlay use stretch anchors to fill the card at its resolved height,
+        // instead of being a VLG child (where stretch anchors are ignored).
         var cardGO = new GameObject(name);
         cardGO.transform.SetParent(parent, false);
         var cardRT = cardGO.AddComponent<RectTransform>();
         cardRT.sizeDelta = new Vector2(978, 0); // height driven by CSF
-        // §2d iter-8: minHeight=855 to match Figma card height (~855px per CESAR_REJECTION iter-7 item #2).
-        // CSF still overrides upward if children need more space.
+
+        // §2d iter-8: minHeight=855 to match Figma card height (unlocked). iter-9 F4: locked sets to 0 at runtime.
         var le = cardGO.AddComponent<LayoutElement>();
         le.preferredWidth = 978;
         le.minHeight = 855;
 
-        // Background image
+        // Background image (9-slice)
         var bgImg = cardGO.AddComponent<Image>();
         bgImg.sprite = cardBG;
         bgImg.type = Image.Type.Sliced;
         bgImg.color = Color.white;
         bgImg.raycastTarget = false;
 
-        // Vertical layout for card contents
+        // ContentSizeFitter — card height auto-fits ContentRoot preferred size
+        var csf = cardGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        card = cardGO.AddComponent<HoleCompleteCardWidget>();
+
+        // ContentRoot — stretch fill, holds the VLG with all content.
+        // §2d iter-9: moved VLG from cardGO to this child so DarkenOverlay can be a true stretch sibling.
+        var contentRootGO = new GameObject("ContentRoot");
+        contentRootGO.transform.SetParent(cardGO.transform, false);
+        var contentRootRT = contentRootGO.AddComponent<RectTransform>();
+        StretchFill(contentRootRT);
+
+        // Vertical layout for card contents (was on cardGO in iter-8, now on ContentRoot)
         // iter-7 fix: childControlHeight=true so LayoutElement.preferredHeight is respected on all children
-        // (was false → VLG ignored preferredHeight=8 on dividers, stretching them to fill available space)
-        var layout = cardGO.AddComponent<VerticalLayoutGroup>();
+        var layout = contentRootGO.AddComponent<VerticalLayoutGroup>();
         layout.padding = new RectOffset(24, 24, 24, 24);
         layout.spacing = 0; // spacing handled by dividers + per-element padding
         layout.childAlignment = TextAnchor.UpperCenter;
@@ -280,31 +421,33 @@ public static class HoleCompleteWidgetBuilder
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
 
-        // ContentSizeFitter — iter-6 fix: card height auto-fits all children
-        var csf = cardGO.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        // ContentRoot also needs a CSF so the outer card CSF can read its preferred size.
+        var contentRootCSF = contentRootGO.AddComponent<ContentSizeFitter>();
+        contentRootCSF.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        card = cardGO.AddComponent<HoleCompleteCardWidget>();
+        // Use contentRootGO as the VLG parent for all content children.
+        var contentParent = contentRootGO.transform;
 
         // ── Header section ──────────────────────────────────────────────────
-        var successHeader = BuildIconTextHeader("SuccessHeader", cardGO.transform, checkIcon, "SUCCESS",
+        // §2d iter-9: all content children now parented to contentParent (ContentRoot), not cardGO.
+        var successHeader = BuildIconTextHeader("SuccessHeader", contentParent, checkIcon, "SUCCESS",
             HexToColor("50C878"), headingFont, 32f);
 
-        var failedHeader = BuildIconTextHeader("FailedHeader", cardGO.transform, xIcon, "FAILED",
+        var failedHeader = BuildIconTextHeader("FailedHeader", contentParent, xIcon, "FAILED",
             HexToColor("D16A47"), headingFont, 32f);
         failedHeader.SetActive(false);
 
-        var nextHeader = BuildTextOnlyHeader("NextHeader", cardGO.transform, "NEXT",
+        var nextHeader = BuildTextOnlyHeader("NextHeader", contentParent, "NEXT",
             HexToColor("EEDC9A"), headingFont, 32f);
         nextHeader.SetActive(false);
 
-        var lockedHeader = BuildIconTextHeader("LockedHeader", cardGO.transform, lockIcon, "LOCKED",
+        var lockedHeader = BuildIconTextHeader("LockedHeader", contentParent, lockIcon, "LOCKED",
             HexToColor("C8C8C8"), headingFont, 32f);
         lockedHeader.SetActive(false);
 
         // ── Subhead ─────────────────────────────────────────────────────────
         var subheadGO = new GameObject("Subhead");
-        subheadGO.transform.SetParent(cardGO.transform, false);
+        subheadGO.transform.SetParent(contentParent, false);
         var subheadLE = subheadGO.AddComponent<LayoutElement>();
         subheadLE.preferredHeight = 40;
         var subheadTmp = subheadGO.AddComponent<TextMeshProUGUI>();
@@ -316,11 +459,11 @@ public static class HoleCompleteWidgetBuilder
         subheadTmp.raycastTarget = false;
 
         // ── Divider 1 — after header+subhead, before body ───────────────────
-        BuildDivider("Divider_BelowSubhead", cardGO.transform, dividerSprite);
+        BuildDivider("Divider_BelowSubhead", contentParent, dividerSprite);
 
         // ── Current Body ─────────────────────────────────────────────────────
         var currentBodyGO = new GameObject("CurrentBody");
-        currentBodyGO.transform.SetParent(cardGO.transform, false);
+        currentBodyGO.transform.SetParent(contentParent, false);
         // §2d iter-8: 336px = 288px map + 24+24 py padding (matches Figma py-24 on content container).
         var currentBodyLE = currentBodyGO.AddComponent<LayoutElement>();
         currentBodyLE.preferredHeight = 336;
@@ -367,7 +510,7 @@ public static class HoleCompleteWidgetBuilder
 
         // ── Next Body (Card 2 hole-select style) ──────────────────────────────
         var nextBodyGO = new GameObject("NextBody");
-        nextBodyGO.transform.SetParent(cardGO.transform, false);
+        nextBodyGO.transform.SetParent(contentParent, false);
         // §2d iter-8: 336px = 288px map + 24+24 py padding (mirrors currentBodyLE for consistent card height).
         var nextBodyLE = nextBodyGO.AddComponent<LayoutElement>();
         nextBodyLE.preferredHeight = 336;
@@ -416,7 +559,8 @@ public static class HoleCompleteWidgetBuilder
             descRT.anchorMax = Vector2.one;
             descRT.sizeDelta = Vector2.zero;
             nextDescTmp = descGO.AddComponent<TextMeshProUGUI>();
-            nextDescTmp.text = "Next hole tip — TBD";
+            // §2d iter-9 F5: use a longer placeholder that demonstrates column width with wrapping.
+            nextDescTmp.text = "The tee shot is best aimed at the sloping area in the center of the two-tiered fairway, where the right side is wide. The landing spot of the second shot is crucial.";
             nextDescTmp.fontSize = 21; // Caption_3: 30px Figma / 1.4
             nextDescTmp.color = Color.white;
             nextDescTmp.alignment = TextAlignmentOptions.TopLeft;
@@ -432,11 +576,11 @@ public static class HoleCompleteWidgetBuilder
         // between the visible body (whichever one) and the rewards row.
         // Card 1: CurrentBody(active) → [NextBody inactive, skip] → Div2 → Rewards
         // Card 2: [CurrentBody inactive, skip] → NextBody(active) → Div2 → Rewards
-        BuildDivider("Divider_BelowBody", cardGO.transform, dividerSprite);
+        BuildDivider("Divider_BelowBody", contentParent, dividerSprite);
 
         // ── Rewards Row ───────────────────────────────────────────────────────
         var rewardsGO = new GameObject("RewardsRow");
-        rewardsGO.transform.SetParent(cardGO.transform, false);
+        rewardsGO.transform.SetParent(contentParent, false);
         var rewardsLE = rewardsGO.AddComponent<LayoutElement>();
         rewardsLE.preferredHeight = 72;
         var cg = rewardsGO.AddComponent<CanvasGroup>();
@@ -456,11 +600,11 @@ public static class HoleCompleteWidgetBuilder
         TMP_Text ballTmp   = BuildRewardEntry("BallReward",   rewardsGO.transform, ballIcon,   "x10", headingFont, 36);
 
         // ── Divider 3 — after rewards, before buttons ─────────────────────────
-        BuildDivider("Divider_BelowRewards", cardGO.transform, dividerSprite);
+        BuildDivider("Divider_BelowRewards", contentParent, dividerSprite);
 
         // ── Buttons ───────────────────────────────────────────────────────────
         var buttonsGO = new GameObject("Buttons");
-        buttonsGO.transform.SetParent(cardGO.transform, false);
+        buttonsGO.transform.SetParent(contentParent, false);
         var buttonsLE = buttonsGO.AddComponent<LayoutElement>();
         buttonsLE.preferredHeight = 120;
         var buttonsHLG = buttonsGO.AddComponent<HorizontalLayoutGroup>();
@@ -522,10 +666,12 @@ public static class HoleCompleteWidgetBuilder
         if (replayBtn != null) cardSO.FindProperty("_replayButton").objectReferenceValue = replayBtn;
         if (retryBtn  != null) cardSO.FindProperty("_retryButton").objectReferenceValue  = retryBtn;
         if (playBtn   != null) cardSO.FindProperty("_playButton").objectReferenceValue   = playBtn;
-        cardSO.FindProperty("_darkenOverlay").objectReferenceValue     = darkenGO;
+        cardSO.FindProperty("_darkenOverlay").objectReferenceValue      = darkenGO;
+        // §2d iter-9 F4: wire cardLayoutElement so BindNextHole(locked=true) can set minHeight=0
+        cardSO.FindProperty("_cardLayoutElement").objectReferenceValue  = le;
         cardSO.ApplyModifiedProperties();
 
-        Debug.Log($"[HoleCompleteWidgetBuilder] Card '{name}' built and wired (iter-8).");
+        Debug.Log($"[HoleCompleteWidgetBuilder] Card '{name}' built and wired (iter-9).");
         return cardGO;
     }
 

@@ -107,9 +107,15 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             // CameraModeDebugHUD creates its own DontDestroyOnLoad GO with a
             // canvas at sortingOrder=32760 — must be hidden explicitly.
+            // §2d iter-9 F1: also suppress CentralBall (the golf-ball widget with the "G" logo).
+            // The overlay Canvas is at sortingOrder=32767 (above CameraModeDebugCanvas@32760),
+            // which should cover CentralBall. But CentralBallWidget.HandleStateChanged() re-activates
+            // the GO from a C# event even while inactive — by-name suppression provides defense-in-depth.
 #if UNITY_EDITOR
             HideByName("CameraModeDebugHUD");
             HideByName("CameraModeDebugCanvas");
+            HideByName("CentralBall");
+            HideByName("CentralBallWidget");
 #endif
         }
 
@@ -124,20 +130,43 @@ namespace Golfin.Gameplay.UI.ShotUI
 #if UNITY_EDITOR
             RestoreByName("CameraModeDebugHUD");
             RestoreByName("CameraModeDebugCanvas");
+            RestoreByName("CentralBall");
+            RestoreByName("CentralBallWidget");
 #endif
         }
 
         // Tracks hidden DDOL objects by name.
         readonly List<GameObject> _hiddenDDOL = new List<GameObject>();
 
+        // Tracks CanvasGroups we added (and must remove on restore) for by-name visual suppression.
+        // Using CanvasGroup.alpha=0 rather than Image.enabled=false because CentralBallWidget's
+        // RefreshSprite() resets Image.enabled on every state change. CanvasGroup.alpha survives
+        // the SetActive/OnEnable cycle without being touched by CentralBallWidget internals.
+        readonly List<CanvasGroup> _addedCanvasGroups = new List<CanvasGroup>();
+
         void HideByName(string goName)
         {
 #if UNITY_EDITOR
-            var go = GameObject.Find(goName);
-            if (go != null && go.activeSelf)
+            // Search both active and inactive GOs (CentralBall may have been hidden by sibling loop already).
+            var allGOs = Resources.FindObjectsOfTypeAll<GameObject>();
+            foreach (var go in allGOs)
             {
-                go.SetActive(false);
-                _hiddenDDOL.Add(go);
+                if (go.name != goName) continue;
+                // §2d iter-9 F1 v2: Use CanvasGroup.alpha=0 instead of SetActive(false)/Image.enabled=false.
+                // CentralBallWidget.HandleStateChanged subscribes in Awake and calls SetActive(true) from
+                // the ShotController event, then OnEnable→RefreshSprite re-enables the Image component.
+                // Neither SetActive nor Image.enabled=false survives that cycle.
+                // CanvasGroup.alpha=0 makes the whole GO visually transparent regardless of Image state.
+                var cg = go.GetComponent<CanvasGroup>();
+                bool weAddedIt = false;
+                if (cg == null)
+                {
+                    cg = go.AddComponent<CanvasGroup>();
+                    weAddedIt = true;
+                }
+                cg.alpha = 0f;
+                if (weAddedIt) _addedCanvasGroups.Add(cg);
+                Debug.Log($"[§2d HideByName] Suppressed '{goName}' via CanvasGroup.alpha=0 (addedNew={weAddedIt})");
             }
 #endif
         }
@@ -145,6 +174,19 @@ namespace Golfin.Gameplay.UI.ShotUI
         void RestoreByName(string goName)
         {
 #if UNITY_EDITOR
+            // Restore alpha on any CanvasGroups we zeroed (search all GOs including inactive).
+            var allGOs = Resources.FindObjectsOfTypeAll<GameObject>();
+            foreach (var go in allGOs)
+            {
+                if (go.name != goName) continue;
+                var cg = go.GetComponent<CanvasGroup>();
+                if (cg != null) cg.alpha = 1f;
+                Debug.Log($"[§2d RestoreByName] Restored '{goName}' CanvasGroup.alpha=1");
+            }
+            // Clear tracking list (we don't remove the CanvasGroup component — alpha=1 is harmless).
+            _addedCanvasGroups.RemoveAll(cg => cg == null || (cg.gameObject != null && cg.gameObject.name == goName));
+
+            // Also restore sibling-suppressed GOs that were SetActive(false) by the sibling loop.
             foreach (var go in _hiddenDDOL)
             {
                 if (go != null && go.name == goName) go.SetActive(true);
@@ -156,5 +198,6 @@ namespace Golfin.Gameplay.UI.ShotUI
         // Internal accessor for unit tests.
         internal HoleCompleteCardWidget Card1 => _card1;
         internal HoleCompleteCardWidget Card2 => _card2;
+        // iter-9 F1 v2 compiled: CanvasGroup-alpha suppression
     }
 }

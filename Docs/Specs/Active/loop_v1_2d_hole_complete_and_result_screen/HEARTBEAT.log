@@ -52,3 +52,23 @@
 2026-05-12T23:40:00Z running Iter8TestRunner tests to verify compile health
 2026-05-12T23:55:00Z IMPLEMENTER_REPORT updated with iter-8 section — all 8 Cesar items addressed and verified
 2026-05-12T23:58:00Z done — all 8 Cesar iter-7-rejected items fixed, screenshots S1/S2/S3 captured at 08:07 JST after iter-8 builder, IMPLEMENTER_REPORT updated, STATUS=READY_FOR_SELF_REVIEW
+2026-05-12T00:11:18Z git push complete — all iter-8 commits on remote, task fully handed off
+2026-05-12T00:21:10 activated — iter-9 starting F1-F5 fixes
+2026-05-12T00:28:26 reading SPEC and prior review files before implementing
+2026-05-12T00:30:38 verifying compile via MCP
+2026-05-12T00:31:33 attempting MCP compile check
+2026-05-12T00:32:29 running builder via MCP
+2026-05-12T01:03:48 MCP returning null - Unity likely in domain reload post-compile
+2026-05-12T01:08:32 waiting for Unity domain reload to complete
+2026-05-12T01:13:45 waiting for post-compile domain reload, will retry MCP
+2026-05-12T01:23:07 waiting for Unity 100pct CPU to settle (domain reload or font regen)
+2026-05-12T01:33:37 BLOCKED - Unity stuck in ContainerWindow::MakeModal for 50+ mins, needs manual dismiss
+2026-05-12T10:36:50 resumed — checking Unity MCP state after blocking modal
+2026-05-12T10:37:50 Unity appears responsive (log idle since 10:16), attempting MCP script-execute to run iter-9 builder
+2026-05-12T10:46:35 BLOCKED — MCP tools/list returns 0 tools after 5 retries. Unity MCP plugin deregistered after domain reload churn. Cesar must restart Unity or manually run builder. STATUS=IMPLEMENTER_BLOCKED
+2026-05-12T02:24:07Z activated — iter-9 resume, checking MCP
+2026-05-12T02:28:06Z wrote _TempIter9Builder.cs — waiting for Unity to compile + auto-run builder
+2026-05-12T02:38:46Z builder ran successfully — dress-up confirmed in YAML, taking edit-mode screenshot
+2026-05-12T02:50:43Z running smoke runner for S1/S2/S3 play-mode screenshots
+2026-05-12T03:16:31 fixed Canvas sortingOrder overflow: 33000→32767, re-running smoke runner
+2026-05-12T13:45:00 done, awaiting review — iter-9 F1-F5 all PASS, regression-preservation rows added, STATUS→READY_FOR_SELF_REVIEW

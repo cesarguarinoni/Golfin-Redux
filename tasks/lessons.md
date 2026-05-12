@@ -1144,3 +1144,20 @@ Without finding a root cause via at least one of those four, document the unreso
 
 **Pattern recognition:** if the smoke runner writes any `WaitForSeconds(N)` with N > 0.5s and N is not a deliberately-chosen settling delay, that's a code smell. Replace with state-gating.
 
+
+---
+
+## Dress Up Designs at Build Time, Even When Runtime Overrides Them (Cesar workflow rule, 2026-05-12)
+
+**Rule:** Every Editor-built UI prefab/scene hierarchy must include realistic placeholder content (real sprites, real-looking text strings, real fonts, real colors) at BUILD time, not at runtime only. This applies even when `Show()` / data-binding overrides the content at play time.
+
+**Why:** Cesar does the Inspector work — tweaking RectTransforms, adjusting fonts, repositioning anchors. He can't see if a layout works if every TMP says "Sample Text" or every Image has no sprite. Empty / placeholder-only widgets force him to enter Play mode just to validate a layout tweak, which is slow and error-prone.
+
+**Pattern in builders:**
+- Card 1 (current hole) — assign actual Hole 1 map sprite, fill stats with realistic example strings ("STROKES: 4 (BIRDIE)", "BEST: 5 (PAR)", "TIME: 00:02:34"), use real reward icons + plausible counts ("x10").
+- Card 2 (next hole) — assign actual Hole 2 map sprite, fill description with a realistic 3-4-line hole tip string, not "TBD" or "Lorem ipsum".
+- Headers, subheads, buttons — real localized-style strings ("Lomond Country Club - Hole 1 - Par 5"), not "[HEADER]" or "Card1.Subhead.Default".
+
+**What this is NOT:** baking gameplay state into the prefab. The runtime `Show(data)` still overrides everything based on the actual hole/strokes/score. The build-time content is purely for Editor preview fidelity.
+
+**Pattern recognition:** if a builder method writes `tmp.text = ""` or `img.sprite = null` for any UI element that will eventually display content, that's a workflow regression. Always write a realistic placeholder instead.
