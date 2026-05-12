@@ -547,6 +547,16 @@ namespace Golfin.Physics.Viewer
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
 
+            // Commit the camera transform NOW (2026-05-12 fix). Without this, the camera
+            // stays at whatever LabScaffold's serialized default was — typically near
+            // Hole 1's tee — until the user click-swipes to trigger HandleCameraOrbit.
+            // Symptom: ball appears "under the terrain" on any hole other than Hole 1
+            // because the user is looking across the course at the distant new tee.
+            // ApplyCameraYaw uses the same math HandleCameraOrbit uses, so this is the
+            // same teleport the user gets from a click-swipe — just done up front.
+            Camera teeCamForApply = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
+            if (teeCamForApply != null) ApplyCameraYaw(teeCamForApply);
+
             // Putt mode: switch to ground-level camera for close-range view.
             if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
                 chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
@@ -578,6 +588,10 @@ namespace Golfin.Physics.Viewer
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
+
+            // Commit the camera transform NOW (same fix as SetupAtTee — see notes there).
+            Camera placeCamForApply = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
+            if (placeCamForApply != null) ApplyCameraYaw(placeCamForApply);
 
             if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
                 chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
