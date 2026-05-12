@@ -32,6 +32,9 @@ namespace Golfin.Physics.Viewer
         Vector3 _loadedHoleGreenCentroid;
         bool    _greenCentroidValid;
         Transform _runtimeTeeAnchor;
+        // Serialized so it survives Play Mode reload. Set by OnHoleLoaded; authoritative tee pos.
+        [SerializeField] Vector3 _savedTeeWorldPos;
+        bool _savedTeePosValid;
 
         // M3: cached baked providers populated in OnHoleLoaded. When present
         // they replace the scene-raycast providers; sim path no longer reads
@@ -124,6 +127,11 @@ namespace Golfin.Physics.Viewer
                 else
                     Destroy(child.gameObject);
             }
+
+            // _savedTeePosValid is non-serialized — recover from the serialized vector.
+            // A non-zero _savedTeeWorldPos means a hole was previously loaded.
+            if (_savedTeeWorldPos != Vector3.zero)
+                _savedTeePosValid = true;
 
             EnsureConfigsLoaded();
 
@@ -466,11 +474,16 @@ namespace Golfin.Physics.Viewer
 
         void SetupAtTee()
         {
-            if (_ballSpawnPoint == null) return;
+            // _savedTeeWorldPos is [SerializeField] and survives Play Mode reload.
+            // Use it when valid so we don't rely on the potentially-stale _ballSpawnPoint GO.
+            Vector3 spRaw = _savedTeePosValid ? _savedTeeWorldPos
+                          : (_ballSpawnPoint != null ? _ballSpawnPoint.position : Vector3.zero);
+            if (!_savedTeePosValid && _ballSpawnPoint == null) return;
+
             // Refresh putter predictor providers whenever terrain providers change.
             if (_puttPathPredictor != null)
                 _puttPathPredictor.RefreshProviders(BuildGroundProvider(), BuildSurfaceProvider(default(ShotPreset)));
-            Vector3 sp = _ballSpawnPoint.position;
+            Vector3 sp = spRaw;
             float surfaceY = SurfaceSnap(sp.x, sp.z, sp.y, 6); // 6 = Golfin.Course.SurfaceType.Tee
             Vector3 teePos = new Vector3(sp.x, surfaceY, sp.z);
 
@@ -1187,6 +1200,9 @@ namespace Golfin.Physics.Viewer
                 }
                 _runtimeTeeAnchor.position = teePos;
                 _ballSpawnPoint = _runtimeTeeAnchor;
+                // Persist so PlayMode reload can recover without re-scanning tee markers.
+                _savedTeeWorldPos = teePos;
+                _savedTeePosValid = true;
             }
             else
             {
@@ -1442,6 +1458,7 @@ namespace Golfin.Physics.Viewer
             _useSceneProviders   = false;
             _greenCentroidValid  = false;
             _ballSpawnPoint      = null;
+            _savedTeePosValid    = false;
             _bakedClassifier     = null;
             _bakedGround         = null;
 
