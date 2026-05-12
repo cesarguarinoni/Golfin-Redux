@@ -72,7 +72,3 @@
 2026-05-12T02:50:43Z running smoke runner for S1/S2/S3 play-mode screenshots
 2026-05-12T03:16:31 fixed Canvas sortingOrder overflow: 33000→32767, re-running smoke runner
 2026-05-12T13:45:00 done, awaiting review — iter-9 F1-F5 all PASS, regression-preservation rows added, STATUS→READY_FOR_SELF_REVIEW
-2026-05-12T05:29:13Z activated iter-10: CESAR_REJECTED bugs A+B+C+D
-2026-05-12T05:34:00Z verifying compile via Unity MCP
-2026-05-12T14:45:00Z iter-10 fixes applied, screenshots captured, updating IMPLEMENTER_REPORT
-2026-05-12T14:52:00Z iter-10 complete — setting READY_FOR_SELF_REVIEW

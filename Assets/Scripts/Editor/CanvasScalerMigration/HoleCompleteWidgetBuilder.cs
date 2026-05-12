@@ -9,30 +9,9 @@ using Golfin.Gameplay.UI.ShotUI;
 using Golfin.Physics.Viewer;
 
 /// <summary>
-/// §2d iter-10: Builds the HoleCompleteWidget + HoleCompleteDriver hierarchy in LabScaffold.unity.
+/// §2d iter-9: Builds the HoleCompleteWidget + HoleCompleteDriver hierarchy in LabScaffold.unity.
 ///
 /// Menu: GOLFIN/Build/Build HoleComplete Widgets (§2d)
-///
-/// Iter-10 changes (from CESAR_REJECTED iter-9):
-/// Bug A — LOCKED Card 2 background only covered the rewards row:
-///   - Root cause: bgImg was the Image component on cardGO itself. Unity sizes that Image
-///     to the RectTransform bounds, which is correct in principle — but the CSF chain
-///     (ContentRoot CSF → card CSF) sometimes doesn't propagate the full preferred height
-///     to the card RT before the Image renders in the locked (minHeight=0) state. The result:
-///     the card RT height can remain 0 until the next layout pass, so the Image shows 0px.
-///   - Fix: CardBG is now a dedicated stretch-fill child of cardGO (like DarkenOverlay),
-///     added BEFORE ContentRoot so it renders behind all content. This ensures the Image
-///     always fills the card's resolved RT bounds regardless of CSF evaluation order.
-/// Bug B — Divider below rewards showed when locked (no button below it):
-///   - Added _dividerBelowRewards SerializeField to HoleCompleteCardWidget.
-///   - BindNextHole(locked=true) sets it inactive; BindCurrentHole always keeps it active.
-///   - Builder captures the third divider GO and wires it to _dividerBelowRewards.
-/// Rule C — Use canonical Divider.prefab instead of inline-built GameObjects:
-///   - LoadPrefab() helper added alongside LoadSprite().
-///   - BuildDivider() replaced with InstantiateDividerPrefab() using PrefabUtility.
-///   - Instantiated dividers get a LayoutElement added (preferredHeight=2, minHeight=2,
-///     flexibleHeight=0) since Divider.prefab has no LayoutElement baked in.
-///   - Third divider GO captured for _dividerBelowRewards wiring.
 ///
 /// Iter-9 changes (F1-F5 from ARCHITECT_REVIEW_FAIL iter-8):
 /// F1 — HUD bleed-through fix:
@@ -149,8 +128,6 @@ public static class HoleCompleteWidgetBuilder
         Sprite ballIcon    = LoadSprite("Assets/Art/ResultScreen/Placeholders/Placeholder_RewardBall.png");
         // iter-6: horizontal divider — use Settings/Divider.png (horizontal thin white line)
         Sprite dividerSprite = LoadSprite("Assets/Art/Settings/Divider.png");
-        // iter-10 Rule C: load canonical Divider prefab for instantiation
-        GameObject dividerPrefab = LoadPrefab("Assets/Prefabs/UI/Divider.prefab");
 
         TMP_FontAsset rubikSemiBold = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/Rubik-SemiBold SDF.asset");
         TMP_FontAsset rubikVar      = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Fonts/Rubik-VariableFont_wght SDF.asset");
@@ -216,7 +193,7 @@ public static class HoleCompleteWidgetBuilder
             holeMap, darkenImg,
             coinIcon, repairIcon, ballIcon,
             replayBtnBG, retryBtnBG, null,
-            dividerSprite, dividerPrefab,
+            dividerSprite,
             rubikSemiBold, bodyFont,
             out var card1);
 
@@ -254,7 +231,7 @@ public static class HoleCompleteWidgetBuilder
             holeMap, darkenImg,
             coinIcon, repairIcon, ballIcon,
             null, null, playBtnBG,
-            dividerSprite, dividerPrefab,
+            dividerSprite,
             rubikSemiBold, bodyFont,
             out var card2);
 
@@ -383,7 +360,7 @@ public static class HoleCompleteWidgetBuilder
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
 
-        Debug.Log("[HoleCompleteWidgetBuilder] §2d iter-10: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.");
+        Debug.Log("[HoleCompleteWidgetBuilder] §2d iter-9: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.");
     }
 
     // ── Card builder ─────────────────────────────────────────────────────────
@@ -394,16 +371,15 @@ public static class HoleCompleteWidgetBuilder
         Sprite map, Sprite darken,
         Sprite coinIcon, Sprite repairIcon, Sprite ballIcon,
         Sprite replayBtnBG, Sprite retryBtnBG, Sprite playBtnBG,
-        Sprite dividerSprite, GameObject dividerPrefab,
+        Sprite dividerSprite,
         TMP_FontAsset headingFont, TMP_FontAsset bodyFont,
         out HoleCompleteCardWidget card)
     {
         // Card root — 978px wide. ContentSizeFitter drives height from ContentRoot children.
-        // §2d iter-9: Card GO is a FRAME (LayoutElement + CSF) with NO VLG directly.
-        // §2d iter-10 Bug A fix: CardBG is now a dedicated stretch-fill child (first child),
-        // NOT the Image component on cardGO itself. This ensures CardBG always fills the
-        // card's resolved RT bounds regardless of CSF evaluation order.
-        // Children order: CardBG (stretch) → ContentRoot (stretch VLG) → DarkenOverlay (stretch).
+        // §2d iter-9: Card GO is a FRAME (LayoutElement + CSF + BG Image) with NO VLG directly.
+        // Two children: ContentRoot (VLG with all content) + DarkenOverlay (stretch sibling).
+        // This lets DarkenOverlay use stretch anchors to fill the card at its resolved height,
+        // instead of being a VLG child (where stretch anchors are ignored).
         var cardGO = new GameObject(name);
         cardGO.transform.SetParent(parent, false);
         var cardRT = cardGO.AddComponent<RectTransform>();
@@ -414,24 +390,17 @@ public static class HoleCompleteWidgetBuilder
         le.preferredWidth = 978;
         le.minHeight = 855;
 
-        // ContentSizeFitter — card height auto-fits ContentRoot preferred size
-        var csf = cardGO.AddComponent<ContentSizeFitter>();
-        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        // §2d iter-10 Bug A: CardBG as a dedicated stretch-fill child (added before ContentRoot).
-        // This ensures the background Image fills the card's resolved height from CSF,
-        // instead of being on cardGO itself where CSF timing can leave sizeDelta.y=0 on first frame.
-        var cardBGGO = new GameObject("CardBG");
-        cardBGGO.transform.SetParent(cardGO.transform, false);
-        var cardBGRT = cardBGGO.AddComponent<RectTransform>();
-        StretchFill(cardBGRT);
-        var bgImg = cardBGGO.AddComponent<Image>();
+        // Background image (9-slice)
+        var bgImg = cardGO.AddComponent<Image>();
         bgImg.sprite = cardBG;
         bgImg.type = Image.Type.Sliced;
         bgImg.color = Color.white;
         bgImg.raycastTarget = false;
 
-        // HoleCompleteCardWidget on the card root GO.
+        // ContentSizeFitter — card height auto-fits ContentRoot preferred size
+        var csf = cardGO.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
         card = cardGO.AddComponent<HoleCompleteCardWidget>();
 
         // ContentRoot — stretch fill, holds the VLG with all content.
@@ -490,8 +459,7 @@ public static class HoleCompleteWidgetBuilder
         subheadTmp.raycastTarget = false;
 
         // ── Divider 1 — after header+subhead, before body ───────────────────
-        // iter-10 Rule C: instantiate canonical Divider.prefab instead of building inline.
-        InstantiateDividerPrefab("Divider_BelowSubhead", contentParent, dividerPrefab);
+        BuildDivider("Divider_BelowSubhead", contentParent, dividerSprite);
 
         // ── Current Body ─────────────────────────────────────────────────────
         var currentBodyGO = new GameObject("CurrentBody");
@@ -608,8 +576,7 @@ public static class HoleCompleteWidgetBuilder
         // between the visible body (whichever one) and the rewards row.
         // Card 1: CurrentBody(active) → [NextBody inactive, skip] → Div2 → Rewards
         // Card 2: [CurrentBody inactive, skip] → NextBody(active) → Div2 → Rewards
-        // iter-10 Rule C: instantiate canonical Divider.prefab instead of building inline.
-        InstantiateDividerPrefab("Divider_BelowBody", contentParent, dividerPrefab);
+        BuildDivider("Divider_BelowBody", contentParent, dividerSprite);
 
         // ── Rewards Row ───────────────────────────────────────────────────────
         var rewardsGO = new GameObject("RewardsRow");
@@ -633,9 +600,7 @@ public static class HoleCompleteWidgetBuilder
         TMP_Text ballTmp   = BuildRewardEntry("BallReward",   rewardsGO.transform, ballIcon,   "x10", headingFont, 36);
 
         // ── Divider 3 — after rewards, before buttons ─────────────────────────
-        // iter-10 Rule C: instantiate canonical Divider.prefab.
-        // iter-10 Bug B: capture this GO so we can wire _dividerBelowRewards.
-        GameObject divider3GO = InstantiateDividerPrefab("Divider_BelowRewards", contentParent, dividerPrefab);
+        BuildDivider("Divider_BelowRewards", contentParent, dividerSprite);
 
         // ── Buttons ───────────────────────────────────────────────────────────
         var buttonsGO = new GameObject("Buttons");
@@ -702,49 +667,33 @@ public static class HoleCompleteWidgetBuilder
         if (retryBtn  != null) cardSO.FindProperty("_retryButton").objectReferenceValue  = retryBtn;
         if (playBtn   != null) cardSO.FindProperty("_playButton").objectReferenceValue   = playBtn;
         cardSO.FindProperty("_darkenOverlay").objectReferenceValue      = darkenGO;
-        // §2d iter-10 Bug B: wire _dividerBelowRewards so BindNextHole(locked=true) can hide it.
-        if (divider3GO != null) cardSO.FindProperty("_dividerBelowRewards").objectReferenceValue = divider3GO;
         // §2d iter-9 F4: wire cardLayoutElement so BindNextHole(locked=true) can set minHeight=0
         cardSO.FindProperty("_cardLayoutElement").objectReferenceValue  = le;
         cardSO.ApplyModifiedProperties();
 
-        Debug.Log($"[HoleCompleteWidgetBuilder] Card '{name}' built and wired (iter-10).");
+        Debug.Log($"[HoleCompleteWidgetBuilder] Card '{name}' built and wired (iter-9).");
         return cardGO;
     }
 
-    // ── Divider builder (iter-10: uses canonical Divider.prefab) ─────────────
+    // ── Divider builder (iter-8) ─────────────────────────────────────────────
 
     /// <summary>
-    /// §2d iter-10 Rule C: Instantiates the canonical Divider.prefab (300×2px white Image
-    /// with specific sprite guid 9e62d8f4ffd01e7468d07912ccba967a) instead of building inline.
-    /// Adds a LayoutElement (preferredHeight=2, minHeight=2, flexibleHeight=0) since the prefab
-    /// has no LayoutElement baked in — the VLG needs it to size the divider correctly.
-    /// Fallback: if prefab is null, builds an inline divider (old iter-8 behavior).
-    /// Returns the instantiated (or built) GameObject for optional wiring.
+    /// §2d iter-8: Canonical divider pattern from ClubCompareRightPanelBuilder.BuildDivider().
+    /// DIVIDER_H = 1f (per ClubCompareRightPanelBuilder line 48).
+    /// White Image at 10% alpha, no sprite, no 9-slicing.
+    /// Per CESAR_REJECTION iter-7 item #6: "just copy the existing divider implementation."
     /// </summary>
-    static GameObject InstantiateDividerPrefab(string nameOverride, Transform parent, GameObject dividerPrefab)
+    static void BuildDivider(string name, Transform parent, Sprite dividerSprite)
     {
-        GameObject go;
-        if (dividerPrefab != null)
-        {
-            go = (GameObject)PrefabUtility.InstantiatePrefab(dividerPrefab, parent);
-            go.name = nameOverride;
-        }
-        else
-        {
-            // Fallback: inline build (old iter-8 behavior) if prefab missing.
-            go = new GameObject(nameOverride);
-            go.transform.SetParent(parent, false);
-            go.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.1f);
-        }
-        // Add LayoutElement so the VLG respects the divider height.
-        // Divider.prefab has no LayoutElement — we add it here.
-        var le = go.GetComponent<LayoutElement>();
-        if (le == null) le = go.AddComponent<LayoutElement>();
-        le.preferredHeight = 2f;
-        le.minHeight       = 2f;
-        le.flexibleHeight  = 0f;
-        return go;
+        const float DIVIDER_H = 1f; // canonical ClubCompareRightPanelBuilder.DIVIDER_H
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        var le = go.AddComponent<LayoutElement>();
+        le.preferredHeight = DIVIDER_H;
+        le.minHeight       = DIVIDER_H;
+        le.flexibleHeight  = 0;
+        // Canonical pattern: plain white Image at 10% alpha, no sprite.
+        go.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.1f);
     }
 
     // ── Sub-builders ─────────────────────────────────────────────────────────
@@ -954,18 +903,6 @@ public static class HoleCompleteWidgetBuilder
         }
         if (sprite == null) Debug.LogWarning($"[HoleCompleteWidgetBuilder] Sprite not found: {path}");
         return sprite;
-    }
-
-    /// <summary>
-    /// §2d iter-10 Rule C: Loads a prefab asset from the given path.
-    /// Returns null with a warning if not found (callers fall back gracefully).
-    /// </summary>
-    static GameObject LoadPrefab(string path)
-    {
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-        if (prefab == null)
-            Debug.LogWarning($"[HoleCompleteWidgetBuilder] Prefab not found: {path}");
-        return prefab;
     }
 
     static Color HexToColor(string hex)
