@@ -62,6 +62,20 @@ The `route_subagent.py` hook prints the next step in the terminal automatically 
 9. **Append to HEARTBEAT.log** every ~5 minutes of work. Stale heartbeat (>15min) triggers a stuck-session alert to Cesar.
 10. **Circuit breakers** — if the same Unity MCP tool fails 3 times, or you wait on Unity for >3 minutes with no progress, or you can't find an asset after 2 attempts: set STATUS to `IMPLEMENTER_BLOCKED` and stop. Don't loop indefinitely.
 
+### Visual review checklist (enforced by both reviewer agents)
+
+Drafted 2026-05-13 after `loop_v1_2d_hole_complete_and_result_screen` iter-6, 8, 11, 12 all green-lit visible text-outside-container bugs that Cesar caught in seconds. Full diagnosis in `Docs/Architecture/REVIEW_PIPELINE_FIXES.md`. Both `.claude/agents/golfin-self-reviewer.md` and `.claude/agents/golfin-reviewer.md` enforce these in order:
+
+1. **Independent pixel scan FIRST.** Reviewer opens the canonical screenshot and writes a 3–5 sentence pixel-level description BEFORE reading IMPLEMENTER_REPORT, SELF_REVIEW, or any prior verdict. Confirmation bias is the named failure mode this fixes.
+2. **Figma side-by-side comparison.** Per-element differences with specific pixels/colors; "matches" is not acceptable.
+3. **Bbox geometry MCP check for containment claims.** Programmatic `script-execute` for any "text inside BG", "child inside parent", "modal inside canvas" claim. ANY `inside=false` → hard FAIL.
+4. **Scene-mutation audit via `git diff`.** No `m_IsActive: 0`, `sizeDelta`, or position changes to GameObjects outside the documented fix. Capture paths that mutate scene state are a hard FAIL.
+5. **Implementer-graded PARTIAL → FAIL default.** Uncertainty in the implementer's report = FAIL unless the reviewer can articulate specific pixel-level reasoning for PASS.
+6. **Production-flow capture verification.** Layout-affecting changes need a real-gameplay-path screenshot in addition to any smoke-runner output.
+7. **Read implementer narrative ONLY AFTER 1–6.** If narrative contradicts pixel evidence, FAIL.
+
+The reviewer agents have full pixel access, Figma access, and read-only Unity MCP + Bash access for bbox/git-diff checks. The pipeline has all the tools — what was previously missing was the discipline to use them in this specific independent order.
+
 ### How to start a new UI task (Cesar)
 
 For a complex UI task: write the spec with the human Architect (Cesar's claude.ai chat). The Architect will:
@@ -112,6 +126,8 @@ Code's screenshot history is full of timing failures. These rules eliminate the 
 4. **For mid-animation verification,** start a coroutine that runs `yield return CaptureHelper.SnapAtEndOfFrameAndPause("label")`. Do NOT pause first.
 
 5. **Output location.** All captures land in `Docs/Diagnostics/_capture/`. After capture, copy/rename the relevant one(s) into the task's `screenshots/` folder under `Docs/Specs/Active/<task>/screenshots/`. Don't litter the diagnostics folder with task-specific names.
+
+6. **`CaptureHelper` / `CaptureCore` is the only sanctioned capture path (Lesson 2026-05-13).** No per-task screenshot workarounds. If `SnapGameView`, `SnapAtEndOfFrameAndPause`, or `SnapPlayModeSafe` fails in your environment (MCP-frozen-time, domain reload in flight, anything else), STOP and surface the blocker per the `IMPLEMENTER_BLOCKED` protocol. Do NOT invent a custom capture path. Iter-12 of `loop_v1_2d_hole_complete_and_result_screen` hit MCP-frozen-time and the implementer wrote a custom ortho-camera-render workaround that deactivated 10 ShotUI GameObjects in `LabScaffold.unity` as a side effect; the scene corruption was invisible until Cesar launched normal play. If `CaptureCore` doesn't cover a case, that's a backlog item to extend `CaptureCore` (see `Docs/Specs/Queued/capture_core_frozen_time_fallback/SPEC.md`), not a license to bypass it.
 
 **Quick reference:**
 
