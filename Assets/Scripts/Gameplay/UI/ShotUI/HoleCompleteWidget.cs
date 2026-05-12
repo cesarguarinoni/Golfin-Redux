@@ -48,6 +48,9 @@ namespace Golfin.Gameplay.UI.ShotUI
             // Suppress competing HUD GOs so only the result cards are visible.
             SuppressHUD();
 
+            // §2d iter-8: activate DimBackground when showing (disabled by default at build time).
+            if (_dimBackground != null) _dimBackground.gameObject.SetActive(true);
+
             if (_root != null) _root.SetActive(true);
 
             // Card 1 → current-hole variant
@@ -69,6 +72,8 @@ namespace Golfin.Gameplay.UI.ShotUI
         public void Hide()
         {
             if (_root != null) _root.SetActive(false);
+            // §2d iter-8: deactivate DimBackground when hiding.
+            if (_dimBackground != null) _dimBackground.gameObject.SetActive(false);
             _closeCallback = null;
             RestoreHUD();
         }

@@ -33,8 +33,9 @@ namespace Golfin.Gameplay.UI.ShotUI
         [Header("Body — Next Hole (hole-select style)")]
         [SerializeField] GameObject _nextBodyRoot;
         [SerializeField] Image    _nextHoleMapLarge;     // real map at runtime
-        [SerializeField] TMP_Text _nextHoleParText;      // "Par 4"
-        [SerializeField] TMP_Text _nextHoleDescText;     // tip / description text
+        // §2d iter-8: _nextHoleParText removed — Figma does NOT have a separate Par title in Card 2 body.
+        // Par is already in the subhead. The rogue "Par 4" gold title was eliminated per CESAR_REJECTION iter-7 item #8.
+        [SerializeField] TMP_Text _nextHoleDescText;     // tip / description text (wide column)
 
         [Header("Rewards row")]
         [SerializeField] CanvasGroup _rewardsCanvasGroup; // dim via .alpha=0.5 when locked
@@ -127,11 +128,8 @@ namespace Golfin.Gameplay.UI.ShotUI
                 if (_nextHoleMapLarge != null && data.NextHoleMap != null)
                     _nextHoleMapLarge.sprite = data.NextHoleMap;
 
-                // Par label
-                if (_nextHoleParText != null)
-                    _nextHoleParText.text = data.NextHolePar > 0 ? $"Par {data.NextHolePar}" : "Par —";
-
-                // Description / tip text
+                // §2d iter-8: _nextHoleParText removed — Par label was a rogue element not in Figma.
+                // Par is in the subhead. Description / tip text is the sole content of the info column.
                 if (_nextHoleDescText != null)
                     _nextHoleDescText.text = string.IsNullOrEmpty(data.NextHoleTipText) ? "—" : data.NextHoleTipText;
             }

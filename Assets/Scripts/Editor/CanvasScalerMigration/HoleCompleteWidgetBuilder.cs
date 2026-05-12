@@ -119,18 +119,23 @@ public static class HoleCompleteWidgetBuilder
         widgetGO.AddComponent<UnityEngine.UI.GraphicRaycaster>();
 
         // DimBackground — near-opaque black to subdue gameplay HUD.
+        // §2d iter-8: SetActive(false) at build time. HoleCompleteWidget.Show() re-enables it;
+        // Hide() disables it. Previously it was always-active, dimming gameplay even when modal was hidden.
         var dimGO = CreateStretchGO("DimBackground", widgetGO.transform);
         var dimImg = dimGO.AddComponent<Image>();
         dimImg.color = new Color(0f, 0f, 0f, 0.92f);
         dimImg.raycastTarget = true;
+        dimGO.SetActive(false); // §2d iter-8: default inactive — enabled by Show(), disabled by Hide()
 
         // Root — child content; Awake hides this
         var rootGO = CreateStretchGO("Root", widgetGO.transform);
-        // Vertical layout for two cards stacked with gap
+        // §2d iter-8: MiddleCenter so the two cards cluster vertically centered on screen.
+        // childControlHeight=false so each card's own ContentSizeFitter drives its height.
+        // childForceExpandHeight=false prevents cards from being stretched to fill the screen.
         var vLayout = rootGO.AddComponent<VerticalLayoutGroup>();
         vLayout.padding = new RectOffset(48, 48, 24, 24);
         vLayout.spacing = 24;
-        vLayout.childAlignment = TextAnchor.UpperCenter;
+        vLayout.childAlignment = TextAnchor.MiddleCenter; // iter-8: was UpperCenter → cards at top
         vLayout.childControlHeight = false;
         vLayout.childControlWidth = true;
         vLayout.childForceExpandHeight = false;
@@ -230,7 +235,7 @@ public static class HoleCompleteWidgetBuilder
         EditorSceneManager.SaveScene(scene);
         AssetDatabase.SaveAssets();
 
-        Debug.Log("[HoleCompleteWidgetBuilder] §2d iter-7: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.");
+        Debug.Log("[HoleCompleteWidgetBuilder] §2d iter-8: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.");
     }
 
     // ── Card builder ─────────────────────────────────────────────────────────
@@ -250,9 +255,11 @@ public static class HoleCompleteWidgetBuilder
         cardGO.transform.SetParent(parent, false);
         var cardRT = cardGO.AddComponent<RectTransform>();
         cardRT.sizeDelta = new Vector2(978, 0); // height driven by CSF
+        // §2d iter-8: minHeight=855 to match Figma card height (~855px per CESAR_REJECTION iter-7 item #2).
+        // CSF still overrides upward if children need more space.
         var le = cardGO.AddComponent<LayoutElement>();
         le.preferredWidth = 978;
-        le.minHeight = 200;
+        le.minHeight = 855;
 
         // Background image
         var bgImg = cardGO.AddComponent<Image>();
@@ -314,35 +321,39 @@ public static class HoleCompleteWidgetBuilder
         // ── Current Body ─────────────────────────────────────────────────────
         var currentBodyGO = new GameObject("CurrentBody");
         currentBodyGO.transform.SetParent(cardGO.transform, false);
+        // §2d iter-8: 336px = 288px map + 24+24 py padding (matches Figma py-24 on content container).
         var currentBodyLE = currentBodyGO.AddComponent<LayoutElement>();
-        currentBodyLE.preferredHeight = 220;
+        currentBodyLE.preferredHeight = 336;
+        // §2d iter-8: MiddleCenter so map + stats cluster centered horizontally+vertically in body row.
+        // childForceExpand=false so children stay at their natural sizes and are centered as a unit.
         var currentBodyHLG = currentBodyGO.AddComponent<HorizontalLayoutGroup>();
-        currentBodyHLG.padding = new RectOffset(8, 8, 12, 12);
-        currentBodyHLG.spacing = 16;
-        currentBodyHLG.childAlignment = TextAnchor.UpperLeft;
+        currentBodyHLG.padding = new RectOffset(32, 32, 24, 24); // matches Figma px-32 py-24 on content container
+        currentBodyHLG.spacing = 24; // Figma gap-24
+        currentBodyHLG.childAlignment = TextAnchor.MiddleCenter; // iter-8: was UpperLeft → left-aligned
         currentBodyHLG.childControlHeight = false;
         currentBodyHLG.childControlWidth = false;
         currentBodyHLG.childForceExpandWidth = false;
         currentBodyHLG.childForceExpandHeight = false;
 
-        // Map: 156x200 (current hole). No thumbnail — removed green-square placeholder (iter-6).
+        // Map: 156×288 per FIGMA_EXTRACT (node "Hole 1 - Map 2": 155.61×288.5 — rounded up).
+        // iter-8: height corrected from 200 → 288 to match Figma.
         Image mapImg = null;
         {
             var mapGO = new GameObject("HoleMapLarge");
             mapGO.transform.SetParent(currentBodyGO.transform, false);
-            mapGO.AddComponent<RectTransform>().sizeDelta = new Vector2(156, 200);
+            mapGO.AddComponent<RectTransform>().sizeDelta = new Vector2(156, 288);
             mapImg = mapGO.AddComponent<Image>();
             mapImg.sprite = map;
             mapImg.preserveAspect = true;
             mapImg.raycastTarget = false;
         }
 
-        // Stats block
+        // Stats block: Goals Container 500w per Figma. Give it flexible width to fill remaining space.
         var statsGO = new GameObject("StatsBlockText");
         statsGO.transform.SetParent(currentBodyGO.transform, false);
         var statsLE = statsGO.AddComponent<LayoutElement>();
         statsLE.preferredWidth = 500;
-        statsLE.preferredHeight = 200;
+        statsLE.preferredHeight = 288; // match map height
         var statsTmp = statsGO.AddComponent<TextMeshProUGUI>();
         statsTmp.text = "<b>TEE OFF:</b> REGULAR\n<b>STROKES:</b> 1 (BIRDIE)\n<b>BEST:</b> —\n<b>TIME:</b> 00:00:00\n<b>BEST:</b> —";
         statsTmp.fontSize = 24;
@@ -357,66 +368,53 @@ public static class HoleCompleteWidgetBuilder
         // ── Next Body (Card 2 hole-select style) ──────────────────────────────
         var nextBodyGO = new GameObject("NextBody");
         nextBodyGO.transform.SetParent(cardGO.transform, false);
+        // §2d iter-8: 336px = 288px map + 24+24 py padding (mirrors currentBodyLE for consistent card height).
         var nextBodyLE = nextBodyGO.AddComponent<LayoutElement>();
-        nextBodyLE.preferredHeight = 220;
+        nextBodyLE.preferredHeight = 336;
         nextBodyGO.SetActive(false);
 
         Image nextMapImg   = null;
-        TMP_Text nextParTmp  = null;
         TMP_Text nextDescTmp = null;
         {
+            // §2d iter-8: MiddleCenter so map + description cluster centered horizontally.
+            // childForceExpand=false so children stay at natural sizes.
             var nextBodyHLG = nextBodyGO.AddComponent<HorizontalLayoutGroup>();
-            nextBodyHLG.padding = new RectOffset(8, 8, 12, 12);
-            nextBodyHLG.spacing = 16;
-            nextBodyHLG.childAlignment = TextAnchor.UpperLeft;
+            nextBodyHLG.padding = new RectOffset(32, 32, 24, 24); // Figma px-32 py-24
+            nextBodyHLG.spacing = 24; // Figma gap-24
+            nextBodyHLG.childAlignment = TextAnchor.MiddleCenter; // iter-8: was UpperLeft → left-aligned
             nextBodyHLG.childControlHeight = false;
             nextBodyHLG.childControlWidth = false;
             nextBodyHLG.childForceExpandWidth = false;
             nextBodyHLG.childForceExpandHeight = false;
 
-            // Map: 156x200 (next hole)
+            // Map: 156×288 per Figma (next hole). iter-8: height corrected from 200 → 288.
             var mapGO2 = new GameObject("NextHoleMapLarge");
             mapGO2.transform.SetParent(nextBodyGO.transform, false);
-            mapGO2.AddComponent<RectTransform>().sizeDelta = new Vector2(156, 200);
+            mapGO2.AddComponent<RectTransform>().sizeDelta = new Vector2(156, 288);
             nextMapImg = mapGO2.AddComponent<Image>();
             nextMapImg.sprite = map; // placeholder at build time; overridden at runtime
             nextMapImg.preserveAspect = true;
             nextMapImg.raycastTarget = false;
 
-            // Info column: par label + description (hole-select style) — iter-6
+            // §2d iter-8: Info column is ONLY description text — no par label (Figma has no separate
+            // "Par 4" title in Card 2 body; Par is already in the subhead line).
+            // Width widened from 500 → 600px so text wraps into readable lines, not vertical noodles.
+            // The remaining width after map: 978 - 64(px-32×2) - 156(map) - 24(gap) = 734px; 600 fits.
             var infoColGO = new GameObject("NextHoleInfoCol");
             infoColGO.transform.SetParent(nextBodyGO.transform, false);
+            // Add RectTransform with explicit sizeDelta so the HLG (childControlHeight=false) can read the height.
+            infoColGO.AddComponent<RectTransform>().sizeDelta = new Vector2(600, 288);
             var infoColLE = infoColGO.AddComponent<LayoutElement>();
-            infoColLE.preferredWidth = 500;
-            infoColLE.preferredHeight = 200;
-            var infoColVLG = infoColGO.AddComponent<VerticalLayoutGroup>();
-            infoColVLG.padding = new RectOffset(8, 8, 0, 0);
-            infoColVLG.spacing = 12;
-            infoColVLG.childAlignment = TextAnchor.UpperLeft;
-            infoColVLG.childControlHeight = true;  // iter-7: must be true so LE.preferredHeight is used
-            infoColVLG.childControlWidth = true;
-            infoColVLG.childForceExpandWidth = true;
-            infoColVLG.childForceExpandHeight = false;
+            infoColLE.preferredWidth = 600; // iter-8: was 500 → widened for readable word wrap
+            infoColLE.preferredHeight = 288;
 
-            // Par label — "Par 4" (mirrors hole-select subtitle / par display)
-            var parGO = new GameObject("NextHoleParText");
-            parGO.transform.SetParent(infoColGO.transform, false);
-            var parLE = parGO.AddComponent<LayoutElement>();
-            parLE.preferredHeight = 40;
-            nextParTmp = parGO.AddComponent<TextMeshProUGUI>();
-            nextParTmp.text = "Par —";
-            nextParTmp.fontSize = 28; // Footnote: 39px Figma / 1.4
-            nextParTmp.color = HexToColor("EEDC9A"); // mission gold for par callout
-            nextParTmp.fontStyle = FontStyles.Bold;
-            nextParTmp.alignment = TextAlignmentOptions.TopLeft;
-            nextParTmp.raycastTarget = false;
-            if (headingFont != null) nextParTmp.font = headingFont;
-
-            // Description text (hole strategy tip from localization CSV)
+            // Description text fills the full info column width with word wrap enabled.
             var descGO = new GameObject("NextHoleDescText");
             descGO.transform.SetParent(infoColGO.transform, false);
-            var descLE = descGO.AddComponent<LayoutElement>();
-            descLE.preferredHeight = 148;
+            var descRT = descGO.AddComponent<RectTransform>();
+            descRT.anchorMin = Vector2.zero;
+            descRT.anchorMax = Vector2.one;
+            descRT.sizeDelta = Vector2.zero;
             nextDescTmp = descGO.AddComponent<TextMeshProUGUI>();
             nextDescTmp.text = "Next hole tip — TBD";
             nextDescTmp.fontSize = 21; // Caption_3: 30px Figma / 1.4
@@ -514,8 +512,8 @@ public static class HoleCompleteWidgetBuilder
         cardSO.FindProperty("_statsBlockText").objectReferenceValue    = statsTmp;
         cardSO.FindProperty("_nextBodyRoot").objectReferenceValue      = nextBodyGO;
         cardSO.FindProperty("_nextHoleMapLarge").objectReferenceValue  = nextMapImg;
-        // iter-6: wire new par + desc fields (renamed from _nextHoleTipText)
-        if (nextParTmp  != null) cardSO.FindProperty("_nextHoleParText").objectReferenceValue  = nextParTmp;
+        // §2d iter-8: _nextHoleParText removed from CardWidget — not wired here.
+        // Only _nextHoleDescText remains for the description column.
         if (nextDescTmp != null) cardSO.FindProperty("_nextHoleDescText").objectReferenceValue = nextDescTmp;
         cardSO.FindProperty("_rewardsCanvasGroup").objectReferenceValue = cg;
         cardSO.FindProperty("_rewardCoinText").objectReferenceValue    = coinTmp;
@@ -527,36 +525,29 @@ public static class HoleCompleteWidgetBuilder
         cardSO.FindProperty("_darkenOverlay").objectReferenceValue     = darkenGO;
         cardSO.ApplyModifiedProperties();
 
-        Debug.Log($"[HoleCompleteWidgetBuilder] Card '{name}' built and wired (iter-7).");
+        Debug.Log($"[HoleCompleteWidgetBuilder] Card '{name}' built and wired (iter-8).");
         return cardGO;
     }
 
-    // ── Divider builder (iter-7) ─────────────────────────────────────────────
+    // ── Divider builder (iter-8) ─────────────────────────────────────────────
 
     /// <summary>
-    /// Adds a horizontal thin white separator line as a LayoutElement child.
-    /// iter-7 fix: flexibleHeight=0 prevents VLG from expanding beyond preferredHeight=8.
-    ///             Image.Type.Simple (not Sliced) — the 978×2 sprite has 0-px borders so
-    ///             Sliced is a no-op and causes stretching artifacts.
-    ///             preserveAspect=false — line is meant to fill the full card width.
+    /// §2d iter-8: Canonical divider pattern from ClubCompareRightPanelBuilder.BuildDivider().
+    /// DIVIDER_H = 1f (per ClubCompareRightPanelBuilder line 48).
+    /// White Image at 10% alpha, no sprite, no 9-slicing.
+    /// Per CESAR_REJECTION iter-7 item #6: "just copy the existing divider implementation."
     /// </summary>
     static void BuildDivider(string name, Transform parent, Sprite dividerSprite)
     {
+        const float DIVIDER_H = 1f; // canonical ClubCompareRightPanelBuilder.DIVIDER_H
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
         var le = go.AddComponent<LayoutElement>();
-        le.preferredHeight = 8;  // thin line (~2px line + 3px padding each side)
-        le.minHeight       = 4;
-        le.flexibleHeight  = 0;  // iter-7: prevent VLG from expanding beyond preferredHeight
-        var img = go.AddComponent<Image>();
-        if (dividerSprite != null)
-        {
-            img.sprite = dividerSprite;
-            img.type   = Image.Type.Simple;   // not Sliced: border=0, Simple is correct
-        }
-        img.preserveAspect = false;            // line fills full card width, no aspect clamp
-        img.color          = new Color(1f, 1f, 1f, 0.35f); // subtle white, 35% alpha
-        img.raycastTarget  = false;
+        le.preferredHeight = DIVIDER_H;
+        le.minHeight       = DIVIDER_H;
+        le.flexibleHeight  = 0;
+        // Canonical pattern: plain white Image at 10% alpha, no sprite.
+        go.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.1f);
     }
 
     // ── Sub-builders ─────────────────────────────────────────────────────────

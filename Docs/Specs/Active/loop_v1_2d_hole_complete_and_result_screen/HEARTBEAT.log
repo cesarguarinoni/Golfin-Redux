@@ -40,3 +40,15 @@
 2026-05-11T21:37:50Z resumed after Mac restart — verifying compile + running builder
 2026-05-11T21:58:37Z iter-7 builder ran, S1/S2/S3 captured via SmokeRunner2d with Unity in foreground
 2026-05-11T22:01:02Z done — iter-7 F1+F2 fixed, YAML verified, S1/S2/S3 captured, IMPLEMENTER_REPORT updated, awaiting self-review
+2026-05-12T22:36:42Z activated iter-8: addressing CESAR_REJECTED iter-7 — 8 dimensional/layout issues
+2026-05-12T22:41:15Z all code changes complete — verifying compile via MCP
+2026-05-12T22:43:10Z Unity fully loaded — running editor-application-get-state via MCP
+2026-05-12T22:44:53Z wrote _TempIter8Trigger.cs — waiting for Unity to compile + auto-run builder
+2026-05-12T23:05:00Z resumed iter-8 — scene YAML verified: DimBackground inactive, minHeight=855, Root VLG MiddleCenter, divider=1px, no NextHoleParText, infoCol=600px
+2026-05-12T23:10:00Z verifying Unity state + preparing to run smoke runner
+2026-05-12T23:15:00Z discovered screenshots from 06:57 JST pre-date iter-8 builder; need fresh capture
+2026-05-12T23:18:00Z wrote _TempIter8SmokeRunner.cs — triggering smoke runner to capture iter-8 screenshots
+2026-05-12T23:30:00Z screenshots captured — running visual analysis
+2026-05-12T23:40:00Z running Iter8TestRunner tests to verify compile health
+2026-05-12T23:55:00Z IMPLEMENTER_REPORT updated with iter-8 section — all 8 Cesar items addressed and verified
+2026-05-12T23:58:00Z done — all 8 Cesar iter-7-rejected items fixed, screenshots S1/S2/S3 captured at 08:07 JST after iter-8 builder, IMPLEMENTER_REPORT updated, STATUS=READY_FOR_SELF_REVIEW
