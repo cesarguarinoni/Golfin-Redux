@@ -69,10 +69,35 @@ namespace Golfin.Physics.Viewer
             = new System.Collections.Generic.List<BallPlacementEntry>();
 
         // In-memory configs
-        public AeroConfig    AeroCfg    { get; private set; }
+        // DIAG (2026-05-12 hole-picker DivideByZero): AeroCfg converted from auto-property
+        // to backing field + logging setter. Logs every write with stack trace so we can
+        // pinpoint who zeroes SpinRateReference between hole swaps. REMOVE once root-caused.
+        AeroConfig _aeroCfg;
+        public AeroConfig AeroCfg
+        {
+            get => _aeroCfg;
+            private set
+            {
+                float oldRef = _aeroCfg.SpinRateReference.ToFloat();
+                float newRef = value.SpinRateReference.ToFloat();
+                _aeroCfg = value;
+                Debug.Log($"[AeroDiag][SET] id={GetInstanceID()} SpinRateRef {oldRef:F2}→{newRef:F2} frame={Time.frameCount}\n{System.Environment.StackTrace}");
+            }
+        }
         public WindConfig    WindCfg    { get; private set; }
         public SurfaceConfig SurfaceCfg { get; private set; }
         public PuttConfig    PuttCfg    { get; private set; }
+
+        // DIAG (2026-05-12): per-frame poll to detect SILENT AeroCfg zeroing
+        // (memory wipe / domain reload / hot-reload that bypasses the setter).
+        float _aeroDiagPrevSpinRateRef = -1f;
+
+        // DIAG (2026-05-12): structured checkpoint log. Compact line; pair with [AeroDiag][SET] / [POLL].
+        void DiagAero(string label)
+        {
+            int count = FindObjectsOfType<PhysicsLabController>(true).Length;
+            Debug.Log($"[AeroDiag][{label}] id={GetInstanceID()} count={count} SpinRateRef={_aeroCfg.SpinRateReference.ToFloat():F2} _configsLoaded={_configsLoaded} frame={Time.frameCount}");
+        }
 
         Trajectory _previousTrajectory;
         bool       _predictionVisible = false;
@@ -116,6 +141,7 @@ namespace Golfin.Physics.Viewer
 
         void Awake()
         {
+            DiagAero("Awake.start");
             // Recover _runtimeTeeAnchor after domain reload: the field is non-serialised so it
             // becomes null after every script compilation, but the GO stays in the scene.
             // Scan children, keep the first match, destroy extras accumulated from prior reloads.
@@ -180,6 +206,8 @@ namespace Golfin.Physics.Viewer
                     camData.requiresColorTexture  = true;
                 }
             }
+
+            DiagAero("Awake.end");
         }
 
         static void DeactivateWalkCamerasInLoadedScenes()
@@ -298,6 +326,12 @@ namespace Golfin.Physics.Viewer
 
         void Update()
         {
+            // DIAG (2026-05-12): detect silent AeroCfg zeroing (e.g. domain reload that bypasses setter).
+            float currentSpinRateRef = _aeroCfg.SpinRateReference.ToFloat();
+            if (_aeroDiagPrevSpinRateRef >= 0f && currentSpinRateRef != _aeroDiagPrevSpinRateRef)
+                Debug.LogError($"[AeroDiag][POLL] id={GetInstanceID()} SILENT CHANGE: SpinRateRef {_aeroDiagPrevSpinRateRef:F2}→{currentSpinRateRef:F2} frame={Time.frameCount} (no setter call between frames — domain reload / memory wipe suspected)");
+            _aeroDiagPrevSpinRateRef = currentSpinRateRef;
+
             // §2a: tick the ball SM before camera orbit so that OnShotComplete fires
             // (and re-arms the controller) before HandleCameraOrbit reads IsExternalDragActive.
             bool isPlaying = ballAnimator != null && ballAnimator.IsPlaying;
@@ -733,6 +767,7 @@ namespace Golfin.Physics.Viewer
 
         void HandleShotResolved(ShotInput input, BallPhysicsModifiers ballMods)
         {
+            DiagAero("HandleShotResolved.start");
             fp3 ballOrigin = GetCurrentOrigin(fallbackToInput: input.origin);
             var correctedInput = new ShotInput(ballOrigin, input.velocity, input.maxDuration, input.Spin, input.seed);
 
@@ -1080,6 +1115,7 @@ namespace Golfin.Physics.Viewer
         // Called by LabHoleBinder when a Hole_XX_Geo scene is opened additively.
         public void OnHoleLoaded(string sceneName)
         {
+            DiagAero($"OnHoleLoaded.start[{sceneName}]");
             _useSceneProviders = true;
 
             // M3: load baked providers for this hole. holeId is sceneName minus
@@ -1342,6 +1378,8 @@ namespace Golfin.Physics.Viewer
             // Sync predictor camera on hole load (camera mode may change in SetupAtTee below)
             if (_puttPathPredictor != null)
                 _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
+
+            DiagAero($"OnHoleLoaded.end[{sceneName}]");
         }
 
         void BuildPlacementEntries(
@@ -1455,6 +1493,7 @@ namespace Golfin.Physics.Viewer
         // Called by LabHoleBinder when the loaded hole scene is closed.
         public void OnHoleUnloaded()
         {
+            DiagAero("OnHoleUnloaded.start");
             _useSceneProviders   = false;
             _greenCentroidValid  = false;
             _ballSpawnPoint      = null;
@@ -1483,6 +1522,7 @@ namespace Golfin.Physics.Viewer
                 SceneManager.SetActiveScene(scaffoldScene);
 
             Debug.Log("[PhysicsLab] OnHoleUnloaded — reverted to flat-ground fallback.");
+            DiagAero("OnHoleUnloaded.end");
         }
 
         ShotReadout BuildReadout(ShotPreset preset, Trajectory t)
