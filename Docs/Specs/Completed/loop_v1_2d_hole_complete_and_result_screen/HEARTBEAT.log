@@ -83,3 +83,16 @@
 2026-05-12T07:05:00 MCP working again — writing CS file via script-update-or-create to trigger recompile
 2026-05-12T07:12:00 smoke runner triggered — waiting for captures
 2026-05-12T07:15:00 done — iter-11 Bug A + Bug B fixed, S3 captured, IMPLEMENTER_REPORT updated, STATUS=READY_FOR_SELF_REVIEW
+2026-05-13T00:00:00Z activated — iter-12 surgical fixes for Bug A (Divider(1) hide when locked), Bug B (fixed 285px height), Bug C (DarkenOverlay darken)
+2026-05-13T00:05:00Z code changes done (Bug A + B), verifying compile via MCP, then applying scene wiring
+2026-05-13T00:12:00Z prefab YAML modified: Bug A (_dividerBelowBody wired Card1+Card2), Bug B iter-11 fields wired (_contentRoot, _cardContentSizeFitter), Bug C (DarkenOverlay alpha 0.75)
+2026-05-13T00:17:00Z verified _dividerBelowBody in compiled assembly, triggering smoke runner for screenshots
+2026-05-12T09:00:47Z orthographic camera render approach working — capturing S1/S2/S3
+2026-05-12T09:05:39Z iter-12 IMPLEMENTER_REPORT written, all checklist items assessed, setting STATUS→READY_FOR_SELF_REVIEW
+2026-05-12T09:37:57Z activated — iter-13 DarkenOverlay fix
+2026-05-12T09:42:51 activated - iter-13 DarkenOverlay fix
+2026-05-12T09:44:15 prefab edit done - DarkenOverlay sprite set to Background-HoleCard sliced 0.65 alpha
+2026-05-12T09:46:35 attempting computer-use to invoke GOLFIN smoke menu
+2026-05-12T09:53:21 prefab verified in Unity - entering play mode for bbox check + capture
+2026-05-12T10:01:04 ortho capture complete, exiting play mode, writing report
+2026-05-12T10:02:05 report written, setting status READY_FOR_ARCHITECT_REVIEW (LockedHeader bbox=False due to Cesar's 144px padding)

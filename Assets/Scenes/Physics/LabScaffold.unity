@@ -24885,6 +24885,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: HoleCompleteWidget
       objectReference: {fileID: 0}
+    - target: {fileID: 6608723283621830768, guid: f7b3614594db6d44197b5b4411c07247, type: 3}
+      propertyPath: m_Padding.m_Top
+      value: 144
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

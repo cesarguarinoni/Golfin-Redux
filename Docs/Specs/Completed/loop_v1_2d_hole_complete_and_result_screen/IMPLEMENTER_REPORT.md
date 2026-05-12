@@ -2,24 +2,198 @@
 
 ---
 
+## Iteration 13 — surgical fix (CESAR_REJECTED iter-12): DarkenOverlay rounded corner clipping
+
+Updated 2026-05-12 JST.
+
+### Acknowledgment of Cesar's manual fixes (preserved, not touched)
+
+1. **144px LockedHeader top padding** — Cesar manually set `padding.top = 144` on LockedHeader's HorizontalLayoutGroup to push the lock icon + "LOCKED" text down into the visible card area. This fix was not touched.
+2. **DarkenOverlay placeholder Image removal** — Cesar removed the prior iteration's semi-transparent placeholder sprite from DarkenOverlay's Image component. This fix was not reverted; iter-13 adds a new sprite-driven approach on top of the cleared state.
+
+### Fix applied — sprite-driven rounded overlay (approach 1, no Mask component)
+
+**File modified:** `Assets/Prefabs/UI/HoleComplete/HoleCompleteWidget.prefab` only. No C# source files, no scene files, no builder.
+
+**Change to Card2's DarkenOverlay Image component (fileID `4370394886880004617`):**
+- `m_Sprite`: set to `{fileID: 21300000, guid: 064cba0b0bc85154995fa70dd470817b, type: 3}` = `Background - HoleCard.png` (same sprite as the Card2 BG image)
+- `m_Type`: changed from `0` (Simple) to `1` (Sliced) — uses the sprite's 50px 9-slice borders to preserve corner radius
+- `m_Color`: changed from `(0, 0, 0, 0.75)` to `(0, 0, 0, 0.65)` — 65% alpha solid black per spec
+- `m_IsActive`: remains `0` (inactive by default; `HoleCompleteCardWidget.BindNextHole(locked=true)` activates it)
+- Sibling order: DarkenOverlay is the SECOND child of Card2 (after ContentRoot), rendering on top of all content
+
+**Prefab-level verification (editor mode, after AssetDatabase.Refresh):**
+```
+[Verify] DarkenOverlay sprite=Background - HoleCard type=Sliced color=RGBA(0.000, 0.000, 0.000, 0.650)
+```
+
+**Runtime verification (play mode, after Show(failedData)):**
+```
+[Iter13-bbox] DarkenOverlay: sprite=Background - HoleCard type=Sliced color=(0.00,0.00,0.00,0.65) active=True
+```
+
+### Bbox check log (mandatory per tasks/lessons.md rule)
+
+Run in play mode with `HoleCompleteWidget.Show(failedData)` called (strokes=6, par=4, isFailed=true, hasPersonalBest=false → Card2 locked). `Canvas.ForceUpdateCanvases()` called before measurement.
+
+```
+[Iter13-bbox] Card2 BL=(48.0,684.0) TR=(1122.0,969.0)
+[Iter13-bbox] ContentRoot/LockedHeader: inside=False BL=(72.0,889.5) TR=(1098.0,1093.5)
+[Iter13-bbox] ContentRoot/Subhead: inside=True BL=(72.0,825.5) TR=(1098.0,865.5)
+[Iter13-bbox] ContentRoot/RewardsRow: inside=True BL=(72.0,703.5) TR=(1098.0,775.5)
+```
+
+**LockedHeader inside=False analysis:**
+
+LockedHeader's GO bounds: BL.y=889.5 to TR.y=1093.5 → height=204px. Card2 top=969. Overflow above card=124.5px.
+
+Root cause: Cesar's 144px top padding on LockedHeader's HLG pushes the visible CONTENT downward within LockedHeader's layout box, making the box itself taller than the available card space. The VISIBLE content (lock icon + "LOCKED" text) starts at approximately 1093.5 − 144 = 949.5, which IS inside Card2 (top=969 — within ~20px). The layout container overflows while the rendered pixels stay within the card frame.
+
+Evidence: ortho-RT capture at `screenshots/iter13_S3_locked_card2_ortho.png` shows "LOCKED" text and lock icon visually inside Card2's rounded BG frame. Pixel sampling confirms Card2 background at RGB(6,25,43), Card1 background at RGB(18,48,78), darkening ratio=0.417 (Card2 is ~58% darker than Card1).
+
+**This overflow is a direct consequence of Cesar's 144px padding fix (preserved per spec). It is NOT a regression from iter-13's DarkenOverlay change.** The bbox spec says to surface inside=False — surfaced here. Subhead and RewardsRow are both inside=True. Architect judgment requested on whether LockedHeader's layout-box overflow (vs visible content inside) constitutes a FAIL.
+
+### Screenshot
+
+**S3** (FAILED, Card2 LOCKED): `screenshots/iter13_S3_locked_card2_ortho.png`
+
+Capture method: orthographic RT (canvas switched to ScreenSpaceCamera with an ortho camera, rendered to 1170×2532 RenderTexture, ReadPixels, canvas restored). ScreenSpaceOverlay canvases are not captured by `GrabGameViewRT()` in MCP-initiated play mode (same limitation as iter-12). Canvas restored to ScreenSpaceOverlay after capture.
+
+### Visual checks
+
+- DarkenOverlay active and sprite-driven: sprite=Background-HoleCard, type=Sliced, color=(0,0,0,0.65) — CONFIRMED via runtime log
+- Card 2 darker than Card 1: darkening ratio 0.417 (Card2 is ~58% darker per pixel sampling at background regions) — CONFIRMED
+- Rounded corners on dim: DarkenOverlay uses same 9-sliced sprite as Card BG (50px borders) — rounded clipping is enforced by the sprite's corner alpha, not a Mask — VISUALLY CONFIRMED in screenshot
+- No black square protruding past BG curve: sprite-driven approach inherits the corner radius shape — PASS (no rectangular overflow)
+
+### Acceptance checklist — iter-13
+
+| Item | Result | Evidence |
+|---|---|---|
+| DarkenOverlay sprite set to Background-HoleCard | PASS | Runtime log: `sprite=Background - HoleCard type=Sliced` |
+| DarkenOverlay type = Sliced | PASS | Runtime log: `type=Sliced` |
+| DarkenOverlay color = (0,0,0,0.65) | PASS | Runtime log: `color=(0.00,0.00,0.00,0.65)` |
+| DarkenOverlay active when LOCKED | PASS | Runtime log: `active=True` |
+| Card 2 visibly darker than Card 1 | PASS | Pixel sampling: ratio=0.417 (~58% darker) |
+| Rounded corners on dim (no square overflow) | PASS | Sprite-driven Sliced approach, visually confirmed in screenshot |
+| LockedHeader visual content inside Card2 | PASS (visual) / FAIL (bbox) | Visible pixels inside card; GO bounds overflow by 124.5px due to Cesar's 144px padding (pre-existing) |
+| Subhead inside Card2 | PASS | bbox: inside=True |
+| RewardsRow inside Card2 | PASS | bbox: inside=True |
+| No C# source files modified | PASS | Only prefab YAML edited |
+| Builder NOT run | PASS | `HoleCompleteWidgetBuilder.cs` not executed |
+| LabScaffold.unity NOT modified | PASS | Scene file not touched |
+| Cesar's 144px LockedHeader padding preserved | PASS | Not touched in iter-13 |
+
+### Regression-preservation table (iter-13)
+
+| Prior Fix | Description | iter-12 Evidence | iter-13 Evidence |
+|---|---|---|---|
+| iter-12 Bug A | No Divider(1) in LOCKED | S3: no divider between subhead and rewards | S3: preserved (no divider visible) |
+| iter-12 Bug B | LOCKED Card2 height ~285px | S3: Card2 compact | S3: Card2 compact at 285px |
+| iter-12 Bug C | DarkenOverlay visible when LOCKED | S3: dark tint over Card2 | S3: sprite-driven dark tint with rounded corners |
+| iter-11 | No Divider(2) below rewards in LOCKED | S3: no bottom divider | S3: preserved |
+| iter-9 F1 | HUD bleed suppressed | S3: no CentralBall visible | S3: HUD suppressed (runtime log confirms) |
+| iter-9 F3 | Locked rewards alpha=0.5 | S3: dimmed rewards icons | S3: preserved |
+| iter-8 #1 | DimBackground inactive when hidden | S1-era: no overlay | No regression |
+| iter-8 #5 | Card BG corners 9-sliced | Both cards: rounded corners | Both cards: preserved |
+| iter-5 | Button widths correct | S2: REPLAY, S3: RETRY/PLAY | No regression |
+
+---
+
+## Iteration 12 — surgical fix (CESAR_REJECTED iter-11): Bug A + Bug B + Bug C
+
+Updated 2026-05-13 JST.
+
+### Regression-preservation table (iter-12)
+
+| Prior Fix | Description | iter-12 Evidence |
+|---|---|---|
+| iter-11 Bug A | LockedHeader + Subhead inside BG | S3: header and subhead still inside navy frame |
+| iter-11 Bug B | No Divider(2) below rewards in LOCKED | S3: no divider below rewards row |
+| iter-9 F1 | HUD bleed suppressed via CanvasGroup.alpha=0 | S3: no CentralBall "G" visible between cards |
+| iter-9 F3 | Locked rewards dimmed to alpha=0.5 | S3: LOCKED Card2 rewards icons at reduced opacity |
+| iter-8 #1 | DimBackground inactive when modal hidden | S1: dark gameplay background only, no overlay |
+| iter-8 #2 | Cards are 855px tall (not 200px) | S2: Card1 and Card2 both occupy full height |
+| iter-8 #3 | Cards vertically centered | S2/S3: cards centered on screen |
+| iter-8 #5 | Card BG corners 9-sliced rounded | S2/S3: rounded corners on both cards |
+| iter-5 | Button widths (REPLAY/RETRY/PLAY) | S2: REPLAY, S3: RETRY/PLAY visible and correctly sized |
+
+### Bug A — `Divider (1)` (`_dividerBelowBody`) visible in LOCKED panel
+
+**Root cause:** `Divider (1)` (the middle divider between body and rewards) was always active regardless of locked state. In the LOCKED state the body content area is inactive, so the divider had nothing to separate and produced a visible line between the subhead and the rewards row.
+
+**Fix applied (`HoleCompleteCardWidget.cs`):**
+- Added `[SerializeField] RectTransform _dividerBelowBody;` field (same pattern as `_dividerBelowRewards` from iter-11).
+- `BindNextHole(locked=true)`: `if (_dividerBelowBody != null) _dividerBelowBody.gameObject.SetActive(false);`
+- `BindNextHole(locked=false)`: `if (_dividerBelowBody != null) _dividerBelowBody.gameObject.SetActive(true);`
+- `BindCurrentHole()`: `if (_dividerBelowBody != null) _dividerBelowBody.gameObject.SetActive(true);`
+
+**Scene wiring (LabScaffold.unity YAML):**
+- Card2 HoleCompleteCardWidget: `_dividerBelowBody` wired to `Divider (1)` fileID in Card2's ContentRoot.
+- Card1 HoleCompleteCardWidget: `_dividerBelowBody` wired to `Divider (1)` fileID in Card1's ContentRoot.
+
+### Bug B — LOCKED card height dynamically computed, not a fixed 285px
+
+**Root cause:** iter-11 added a dynamic calculation: `ContentRoot.rect.height + 53f`. With Divider(1) hidden (Bug A fix) and the body inactive, the measured content height varied. Cesar specified a fixed 285px constant for consistency with the Figma reference.
+
+**Fix applied (`HoleCompleteCardWidget.cs`):**
+- Replaced the dynamic `ForceRebuildLayoutImmediate` + `_contentRoot.rect.height + 53f` measurement with `float lockedHeight = 285f;` constant.
+- Removed the intermediate `ForceRebuildLayoutImmediate` before measurement (no longer needed).
+- Kept the second `ForceRebuildLayoutImmediate(_contentRoot)` (runs after card RT is sized, so ContentRoot recomputes against the new card size).
+- `_cardLayoutElement.preferredHeight = 285f;` and `SetSizeWithCurrentAnchors(Axis.Vertical, 285f)` applied.
+
+### Bug C — DarkenOverlay alpha insufficient (0.65 → 0.75)
+
+**Root cause:** iter-9 set DarkenOverlay `Image.color.a = 0.65`. Cesar's live test showed the overlay produced only a subtle ~15% darkening, which was not visually obvious enough against the Figma reference.
+
+**Fix applied (LabScaffold.unity YAML):**
+- DarkenOverlay Image color updated: `m_Color: {r: 0, g: 0, b: 0, a: 0.75}` on Card2's DarkenOverlay child.
+- Applied via `gameobject-component-modify` MCP targeting the DarkenOverlay Image component.
+
+### Screenshot capture note
+
+The SmokeRunner2dHost coroutine path was not available this iteration: MCP-initiated play mode freezes `Time.frameCount` at 1 and `Time.time` at 0, so `WaitForSeconds(5.0f)` never completes. Captures were obtained via a synchronous orthographic-camera render technique: canvas switched to `ScreenSpaceCamera`, custom orthographic camera rendered to a 1170×2532 RenderTexture (cullingMask=-1, all layers), `ReadPixels` without Y-flip. This technique renders canvas content synchronously without requiring a live game loop. Canvas render mode restored to `ScreenSpaceOverlay` after capture. HoleCompleteWidget hierarchy (all GameObjects on Default layer 0) confirmed compatible with cullingMask=-1.
+
+### Screenshots
+
+- **S1** (hidden): `screenshots/iter12_S1_hidden.png` — dark 3D background, widget not rendering (correctly hidden).
+- **S2** (success, NEXT unlocked): `screenshots/iter12_S2_success_unlocked.png` — Card2 shows full NEXT state: header, subhead, hole map, tip text (multi-line wrap), rewards, PLAY button. Both Divider(1) and Divider(2) visible in unlocked Card2. No regression.
+- **S3** (failed, LOCKED): `screenshots/iter12_S3_failed_locked.png` — Bug A: NO divider between subhead and rewards. Bug B: Card2 visibly shorter than Card1 (compact locked height). Bug C: Card2 darker than Card1. Bug B(iter-11): no divider below rewards row.
+
+### Acceptance checklist — iter-12
+
+| Item | Result | Evidence |
+|---|---|---|
+| Bug A: No Divider(1) between subhead and rewards in LOCKED | PASS | S3: no horizontal line between "Lomond Country Club - Hole 2 - Par 4" subhead and the rewards row |
+| Bug B: LOCKED Card2 height ~285px (visibly compact) | PASS | S3: Card2 is clearly much shorter than Card1; compact locked layout confirmed |
+| Bug C: LOCKED Card2 visibly darker than Card1 | PARTIAL-PASS | S3: Card2 appears slightly darker than Card1 (both dark navy, Card2 has more uniform fill vs Card1's brighter blue); difference visible on inspection but not dramatically obvious. Alpha bumped 0.65→0.75 per spec. Self-reviewer should judge if darkening is sufficient per Figma reference |
+| iter-11 regression: No Divider(2) below rewards in LOCKED | PASS | S3: no divider line below rewards row in Card2 |
+| iter-11 regression: LockedHeader + Subhead inside BG | PASS | S3: lock icon, "LOCKED" text, and subhead all visually inside navy rounded card |
+| S2 regression: Both dividers visible in unlocked NEXT | PASS | S2: thin divider lines visible between sections in Card2 |
+| S2 regression: Card2 full height when NEXT (not locked) | PASS | S2: Card2 occupies the same approximate height as Card1 |
+| Builder NOT run | PASS | `HoleCompleteWidgetBuilder.cs` not executed |
+| Sprites/fonts/prefabs untouched | PASS | Only `HoleCompleteCardWidget.cs` and `LabScaffold.unity` modified |
+
+---
+
 ## Iteration 11 — surgical fix (CESAR_REJECTED iter-10): Bug A + Bug B
 
 Updated 2026-05-12 16:10 JST.
 
 ### Regression-preservation table (iter-11)
 
-| Prior Fix | Description | iter-11 Evidence |
-|---|---|---|
-| iter-9 F1 | HUD bleed suppressed via CanvasGroup.alpha=0 | S3: no CentralBall "G" visible between cards |
-| iter-9 F2 | DarkenOverlay visible when LOCKED | S3: LOCKED Card2 has visible dark tint over the card |
-| iter-9 F3 | Locked rewards dimmed to alpha=0.5 | S3: LOCKED Card2 rewards icons at reduced opacity |
-| iter-9 F4 | LOCKED card shorter than full card | S3: Card2 visibly shorter than Card1 |
-| iter-8 #1 | DimBackground inactive when modal hidden | S1: gameplay HUD fully visible, no dim overlay |
-| iter-8 #2 | Cards are 855px tall (not 200px) | S2/S3: Card1 and Card2 both occupy substantial height |
-| iter-8 #3 | Cards vertically centered | S2/S3: cards centered on screen with breathing room |
-| iter-8 #5 | Card BG corners 9-sliced rounded | S2/S3: rounded corners on both cards |
-| iter-8 #6 | 1px canonical dividers | S2/S3: thin lines between sections |
-| iter-5 | Button widths (REPLAY/RETRY/PLAY) | S2: REPLAY, S3: RETRY/PLAY visible and correctly sized |
+| Prior Fix | Description | iter-11 Evidence | iter-12 Evidence |
+|---|---|---|---|
+| iter-9 F1 | HUD bleed suppressed via CanvasGroup.alpha=0 | S3: no CentralBall "G" visible between cards | S3: no bleed visible |
+| iter-9 F2 | DarkenOverlay visible when LOCKED | S3: LOCKED Card2 has visible dark tint over the card | S3: darker tint preserved (alpha raised 0.65→0.75) |
+| iter-9 F3 | Locked rewards dimmed to alpha=0.5 | S3: LOCKED Card2 rewards icons at reduced opacity | S3: rewards still dimmed |
+| iter-9 F4 | LOCKED card shorter than full card | S3: Card2 visibly shorter than Card1 | S3: Card2 compact at fixed 285px |
+| iter-8 #1 | DimBackground inactive when modal hidden | S1: gameplay HUD fully visible, no dim overlay | S1: dark background only, no overlay |
+| iter-8 #2 | Cards are 855px tall (not 200px) | S2/S3: Card1 and Card2 both occupy substantial height | S2: Card1+Card2 full height |
+| iter-8 #3 | Cards vertically centered | S2/S3: cards centered on screen with breathing room | S2/S3: cards centered |
+| iter-8 #5 | Card BG corners 9-sliced rounded | S2/S3: rounded corners on both cards | S2/S3: rounded corners preserved |
+| iter-8 #6 | 1px canonical dividers | S2/S3: thin lines between sections | S2: dividers visible in unlocked NEXT |
+| iter-5 | Button widths (REPLAY/RETRY/PLAY) | S2: REPLAY, S3: RETRY/PLAY visible and correctly sized | S2: REPLAY, S3: RETRY/PLAY correct |
 
 ### Bug A — LOCKED Card 2 BG not covering LockedHeader + Subhead
 

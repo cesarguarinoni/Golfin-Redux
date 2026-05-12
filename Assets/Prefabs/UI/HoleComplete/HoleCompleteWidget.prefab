@@ -1179,7 +1179,7 @@ MonoBehaviour:
   m_Padding:
     m_Left: 0
     m_Right: 0
-    m_Top: 0
+    m_Top: 144
     m_Bottom: 0
   m_ChildAlignment: 4
   m_Spacing: 16
@@ -2926,8 +2926,11 @@ MonoBehaviour:
   _retryButton: {fileID: 2610157023520352078}
   _playButton: {fileID: 4683003762748042447}
   _darkenOverlay: {fileID: 7875706701494638854}
-  _dividerBelowRewards: {fileID: 0}
   _cardLayoutElement: {fileID: 2601079331146281584}
+  _contentRoot: {fileID: 948663023086447496}
+  _cardContentSizeFitter: {fileID: 6033962693662343314}
+  _dividerBelowRewards: {fileID: 8372425509601188835}
+  _dividerBelowBody: {fileID: 6797737817357544892}
 --- !u!1 &3500298685905723225
 GameObject:
   m_ObjectHideFlags: 0
@@ -4966,8 +4969,11 @@ MonoBehaviour:
   _retryButton: {fileID: 1919116852190663864}
   _playButton: {fileID: 2288976695980591762}
   _darkenOverlay: {fileID: 1603944746032149141}
-  _dividerBelowRewards: {fileID: 0}
   _cardLayoutElement: {fileID: 7201555668546491537}
+  _contentRoot: {fileID: 1782439461635255326}
+  _cardContentSizeFitter: {fileID: 8444199216607333938}
+  _dividerBelowRewards: {fileID: 334117953538409944}
+  _dividerBelowBody: {fileID: 8786664700650081508}
 --- !u!1 &5577199801941931311
 GameObject:
   m_ObjectHideFlags: 0
@@ -7484,7 +7490,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0.65}
@@ -7494,8 +7500,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: ef8f85ef6024f47ccb961e6d49f184b9, type: 3}
-  m_Type: 0
+  m_Sprite: {fileID: 21300000, guid: 064cba0b0bc85154995fa70dd470817b, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
