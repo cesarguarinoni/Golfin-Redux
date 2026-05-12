@@ -1161,3 +1161,124 @@ Without finding a root cause via at least one of those four, document the unreso
 **What this is NOT:** baking gameplay state into the prefab. The runtime `Show(data)` still overrides everything based on the actual hole/strokes/score. The build-time content is purely for Editor preview fidelity.
 
 **Pattern recognition:** if a builder method writes `tmp.text = ""` or `img.sprite = null` for any UI element that will eventually display content, that's a workflow regression. Always write a realistic placeholder instead.
+
+---
+
+## 5-Minute Surface Rule for MCP / Unity Blockers (Cesar workflow rule, 2026-05-13)
+
+**Rule:** If a subagent (especially the implementer) is not making productive progress for 5 wall-clock minutes — for ANY reason — it must IMMEDIATELY surface the blocker to Cesar by setting STATUS to `IMPLEMENTER_BLOCKED`, writing the symptom to `HEARTBEAT.log`, and returning to the orchestrator.
+
+**Forbidden:** silent waiting beyond 5 minutes hoping Unity MCP recovers. Cesar has no other signal that the agent is stuck; if you wait 30 minutes silently, that is 30 minutes of his wall-clock time lost.
+
+**What counts as "not making productive progress":**
+- MCP `tools/list` returns empty after a domain reload
+- `script-execute` returns success but the actual side effect (recompile, builder bake, scene save) never lands
+- `editor-application-get-state` reports `IsCompiling=true` indefinitely
+- A modal dialog has Unity frozen (`ContainerWindow::MakeModal` stuck — Unity logs show this)
+- Same MCP tool call retried 3-5 times with the same null/error response
+- ANY tool call sequence where the elapsed clock time has crossed 5 minutes since the last useful tool result
+
+**What does NOT count:**
+- A single long-running call that's making known progress (e.g., a test run that takes 3 minutes to complete and prints incremental output)
+- A `Bash sleep 30` followed by a working retry — that's productive, you got the result
+
+**The implementer-agent definition (`.claude/agents/golfin-implementer.md`) enforces this rule. The 5-minute wall-clock starts at the first symptom, not at the agent's activation. After surfacing, Cesar restarts Unity / dismisses modal / does whatever's needed and reactivates the implementer.**
+
+**Postmortem motivating this rule:** iter-11 surgical fix took 66 minutes wall-clock. ~22 minutes was actual work; ~33 minutes was MCP unresponsive after a domain reload while the agent retried silently. Cesar had no way to know the agent was stuck until it finally returned. Surfacing at 5 minutes would have cut wall-clock to ~25 minutes total.
+
+---
+
+## Capture Paths Must Never Mutate Live Scene State Without Try/Finally Restore (Cesar workflow rule, 2026-05-13)
+
+**Rule:** Any screenshot / capture path that toggles scene state (SetActive, RectTransform position/size, component enabled, color/alpha overrides) MUST wrap the mutation in `try/finally` with full restoration in the `finally` block. If the capture saves the scene mid-execution, the toggled state will persist into normal play — gameplay UI elements vanish, RectTransforms shift permanently.
+
+**Forbidden:**
+- `gameObject.SetActive(false)` followed by capture followed by `gameObject.SetActive(true)` outside a try/finally. An exception or async-await break between the toggle and the restore leaves the scene corrupted.
+- Capture paths that call `EditorSceneManager.SaveScene` while mutated-state is live.
+- Capture paths that "temporarily" reposition RectTransforms for framing without an unconditional restore.
+
+**Required pattern:**
+```csharp
+var snapshot = TakeStateSnapshot(targets); // captures m_IsActive, sizeDelta, color, etc.
+try {
+    foreach (var go in targets) go.SetActive(false);
+    CaptureCore.SnapPlayModeSafe("label");
+} finally {
+    RestoreFromSnapshot(snapshot); // unconditionally restores every mutated field
+}
+```
+
+**Stronger guarantee:** use `CaptureHelper.SnapGameView` / `SnapPlayModeSafe` — they're rendering-pipeline-level captures that don't require scene mutation. If you find yourself needing to SetActive things to suppress HUD for a screenshot, the right answer is to raise the result-screen Canvas sortingOrder ABOVE all HUDs (iter-9 F1 approach) so visible suppression is rendering-order-based, not scene-state-based.
+
+**Postmortem motivating this rule:** iter-12 (2026-05-13) implementer's custom ortho-camera capture path deactivated 10 ShotUI GameObjects in `LabScaffold.unity` (PowerHUD, ActionButtons_Cluster, HoleCard, SettingsButton, DebugShotPanelController, WindIndicator, HoleIndicator, ConeRoot, PlayerCard, CentralBall) and repositioned several RectTransforms. Restore step was missing. Scene saved with the broken state. Result: gameplay shotUI was invisible on next play. Required emergency `git restore` of the scene file. Architect-pass + self-reviewer both missed it because the reported screenshots looked correct (they were taken in the deactivated state).
+
+**Reviewer note:** when reviewing a capture-heavy iter, ALWAYS diff `LabScaffold.unity` (or whichever scene was modified) at the m_IsActive / sizeDelta / position level. False PASSes happen when the screenshot looks right but the scene was mutated in unintended ways to make it look right.
+
+---
+
+## Bounding-Box Containment Must Be Programmatically Verified, Not Eyeballed (Cesar workflow rule, 2026-05-13)
+
+**Rule:** For any review where the question is "is child element X visually contained inside parent container Y" — modals containing text, panels containing children, BGs covering content stacks — the reviewer MUST verify programmatically via MCP, not by eyeballing a screenshot.
+
+**Why eyeballing fails:**
+- Screenshots are typically cropped tight around the element being reviewed. Text floating OUTSIDE the container's BG against a similar-color backdrop is indistinguishable from text INSIDE the container against the same color in a single static crop.
+- The reviewer agent inherits the implementer's chosen framing — if the implementer cropped to hide the violation (intentionally or accidentally), the reviewer has no signal.
+- Production play-flow layout timing differs from smoke-runner timing. A CSF/SetSize trick can produce a clean smoke screenshot while breaking in actual gameplay (iter-11 hit this exact failure mode).
+- The card BG color and the dimmed-screen backdrop color are often both dark — the boundary between them is hard to see by eye.
+
+**Required verification pattern:**
+
+```csharp
+// MCP script-execute or direct reflection
+var card = GameObject.Find("Card2");
+var cardRT = card.GetComponent<RectTransform>();
+var cardRect = cardRT.GetWorldRect();
+foreach (var childName in new[] { "LockedHeader", "Subhead", "RewardsRow" }) {
+    var child = card.transform.Find($"ContentRoot/{childName}");
+    if (!child) continue;
+    var childRT = child.GetComponent<RectTransform>();
+    var childRect = childRT.GetWorldRect();
+    bool contained = cardRect.Contains(childRect.min) && cardRect.Contains(childRect.max);
+    Debug.Log($"[bbox-check] {childName}: contained={contained} child={childRect} card={cardRect}");
+}
+```
+
+The reviewer reads the log and verifies `contained=true` for every child that's supposed to be inside the BG. ANY `contained=false` → FAIL.
+
+**Also required for modal/panel reviews:**
+1. Capture BOTH a tight crop AND a full-screen frame so the BG outline is visible against the dimmed backdrop.
+2. For any "does container size to its content" change, verify in normal play flow (trigger via gameplay debug button), not just smoke-runner — layout-pass timing differs between contexts.
+3. If the implementer used `LayoutRebuilder.ForceRebuildLayoutImmediate` + manual `SetSizeWithCurrentAnchors` to work around CSF/VLG limits, that's a yellow flag — the runtime path can race against parent VLG layout in production. Prefer structural fixes (add a VLG, fix anchors, etc.) when allowed.
+
+**Reviewer note for the future Cesar/Architect chats:** the iter-6 / iter-8 / iter-11 / iter-12 false-PASS pattern for this task was rooted in this exact qualitative-eyeball failure. The full pipeline (implementer + self-reviewer + architect-reviewer) all green-lit modals that had text floating outside the BG on multiple iterations. Cesar caught every one in live play. The fix is programmatic geometry verification, not better screenshots.
+
+**Postmortem motivating this rule:** iter-12 (2026-05-13) was approved by self-reviewer AND architect-reviewer with text floating mostly ABOVE the LOCKED card BG. The smoke screenshot looked clean (partly because the capture path had also broken ShotUI GO state in the scene, which itself was a separate regression). Cesar saw the floating text immediately in live play and had to manually add 144px top padding to LockedHeader's HLG to push the content inside the BG.
+
+---
+
+## Bbox Containment Rule — Padding Edge Case (refinement 2026-05-13)
+
+**Refinement to the bbox-containment rule:** when a child element is a `HorizontalLayoutGroup` / `VerticalLayoutGroup` container with `padding.top > 0`, the LG's RectTransform bounds INCLUDE the padding area. Its `GetWorldCorners()` will report a top edge `padding.top` pixels ABOVE the visible rendered content. Naive bbox check (`childCorners[2].y <= parentCorners[2].y`) will report `inside=false` even when the visible content is inside the parent.
+
+**Example (iter-13):** LockedHeader is an HLG with `padding.top = 144` (Cesar's manual fix). The container top extends 124.5px above the card BG top, but the visible lock icon + "LOCKED" text are positioned at `top + 144`, well inside the card. Bbox check on LockedHeader.rect reports `inside=false`; visual check reports content inside.
+
+**Refined rule:** when bbox check returns `inside=false` for a Layout-Group-with-padding child, also compute the LG's RENDERED content rect:
+```csharp
+var lg = child.GetComponent<HorizontalLayoutGroup>(); // or VerticalLayoutGroup
+if (lg != null) {
+    // Account for padding: the actual content rect is the LG bounds inset by padding.
+    var contentMinX = childCorners[0].x + lg.padding.left;
+    var contentMaxX = childCorners[2].x - lg.padding.right;
+    var contentMinY = childCorners[0].y + lg.padding.bottom; // Unity Y is bottom-up
+    var contentMaxY = childCorners[2].y - lg.padding.top;
+    bool visualInside = contentMinX >= parentCorners[0].x && contentMaxX <= parentCorners[2].x &&
+                         contentMinY >= parentCorners[0].y && contentMaxY <= parentCorners[2].y;
+    Debug.Log($"[bbox-rendered] {childName}: visualInside={visualInside}");
+}
+```
+
+If `visualInside=true`, the failed naive bbox is a padding-layout artifact — PASS that element. If `visualInside=false`, real overflow — FAIL.
+
+**For non-LG children (plain images, TMPs without LG wrapping), the naive bbox check is correct as-is.**
+
+**The reviewer must run both checks** — naive bbox AND padding-adjusted visualInside — and treat ONLY a `visualInside=false` as a hard FAIL. Document both values in the review.
