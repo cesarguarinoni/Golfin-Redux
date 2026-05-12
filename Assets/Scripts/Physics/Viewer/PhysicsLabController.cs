@@ -72,6 +72,8 @@ namespace Golfin.Physics.Viewer
         public PuttConfig    PuttCfg    { get; private set; }
 
         Trajectory _previousTrajectory;
+        bool       _predictionVisible = false;
+        public bool PredictionVisible => _predictionVisible;
 
         // §2a ball state machine
         Golfin.Gameplay.Loop.BallStateMachine _ballSM;
@@ -637,7 +639,7 @@ namespace Golfin.Physics.Viewer
 
         public void FireCompare(ShotPreset preset)
         {
-            if (_previousTrajectory != null)
+            if (_predictionVisible && _previousTrajectory != null)
                 trajectoryRenderer.SetGhost(true);
             FireInternal(preset);
         }
@@ -661,7 +663,7 @@ namespace Golfin.Physics.Viewer
             OnRepeatabilityResult?.Invoke(bitExact, count);
 
             var last = RunSimForCamera(preset);
-            trajectoryRenderer.Draw(last);
+            if (_predictionVisible) trajectoryRenderer.Draw(last);
             ballAnimator.Play(last);
         }
 
@@ -669,6 +671,15 @@ namespace Golfin.Physics.Viewer
         {
             trajectoryRenderer.Clear();
             _previousTrajectory = null;
+        }
+
+        public void TogglePrediction()
+        {
+            _predictionVisible = !_predictionVisible;
+            if (_predictionVisible && _previousTrajectory != null)
+                trajectoryRenderer.Draw(_previousTrajectory);
+            else
+                trajectoryRenderer.Clear();
         }
 
         public void ReloadConfigs()
@@ -721,7 +732,7 @@ namespace Golfin.Physics.Viewer
             // The Director's ArmChaseForShot reads CurrentBall during the synchronous SM
             // transition — it MUST see the post-Play() Transform, not the pre-Play() one
             // that's about to be destroyed.
-            trajectoryRenderer?.Draw(trajectory);
+            if (_predictionVisible) trajectoryRenderer?.Draw(trajectory);
             ballAnimator.Play(trajectory);
 
             // ── §2a: now feed the SM. Director sees fresh cache + fresh ball. ───────
@@ -886,7 +897,7 @@ namespace Golfin.Physics.Viewer
             _lastShotOrigin    = origin;
             _lastShotLaunchDir = launchDir;
 
-            trajectoryRenderer?.Draw(trajectory);
+            if (_predictionVisible) trajectoryRenderer?.Draw(trajectory);
             ballAnimator.Play(trajectory);
 
             // Route through Director (SM → Aiming→Flying → ArmChaseForShot) instead of

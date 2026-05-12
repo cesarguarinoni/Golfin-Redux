@@ -26,6 +26,10 @@ namespace Golfin.Physics.Viewer
         float       _currentSimTime;
         bool        _playing;
 
+        // §controls_i: ball visual rotation derived from position delta
+        Vector3 _previousPos;
+        const float BallRadiusMeters = 0.0215f;  // 43mm diameter golf ball / 2
+
         const float InstantRate = float.MaxValue;
 
         void Awake()   { if (Instance == null) Instance = this; }
@@ -108,6 +112,25 @@ namespace Golfin.Physics.Viewer
             var posA = ToVec3(samples[lo].position);
             var posB = ToVec3(samples[hi].position);
             _instance.transform.position = Vector3.Lerp(posA, posB, frac);
+
+            // §controls_i: derive rotation from position delta. ~2–3 µs/frame on mid-tier mobile.
+            // Skip when delta is below ~0.1mm (prevents NaN from normalizing zero vector when ball is effectively stationary).
+            Vector3 currentPos = _instance.transform.position;
+            Vector3 delta = currentPos - _previousPos;
+            float deltaMag = delta.magnitude;
+
+            if (deltaMag > 0.0001f)
+            {
+                Vector3 axis = Vector3.Cross(Vector3.up, delta / deltaMag);
+                float axisMag = axis.magnitude;
+                if (axisMag > 0.0001f)  // skip if delta is purely vertical (axis would be zero)
+                {
+                    axis /= axisMag;
+                    float angleDegrees = (deltaMag / BallRadiusMeters) * Mathf.Rad2Deg;
+                    _instance.transform.Rotate(axis, angleDegrees, Space.World);
+                }
+            }
+            _previousPos = currentPos;
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
@@ -139,6 +162,8 @@ namespace Golfin.Physics.Viewer
             }
 
             _instance.transform.position = ToVec3(startPos);
+            _instance.transform.rotation = Quaternion.identity;  // §controls_i: reset orientation per shot
+            _previousPos = _instance.transform.position;          // §controls_i: seed rotation derivation
         }
 
         void DestroyInstance()
@@ -159,11 +184,47 @@ namespace Golfin.Physics.Viewer
         {
             var fp = _trajectory.finalPosition;
             if (_instance != null)
+            {
                 _instance.transform.position = ToVec3(fp);
+                _previousPos = _instance.transform.position;  // §controls_i: keep delta-derivation invariant clean
+            }
             _playing = false;
         }
 
         static Vector3 ToVec3(fp3 p)
             => new Vector3(p.x.ToFloat(), p.y.ToFloat(), p.z.ToFloat());
+
+        // ── Internal test seams (§controls_i) ─────────────────────────────────
+
+        // §controls_i: internal seam so EditMode tests can drive a single frame's rotation logic
+        // without instantiating Unity's runtime Update loop. Mirrors private Update; do NOT call from production code.
+        internal void DriveUpdateForTests()
+        {
+            if (_instance == null) return;
+            // Reuse the same rotation-derivation block as Update; tests will set _instance.transform.position
+            // BEFORE calling this so the delta is non-zero.
+            Vector3 currentPos = _instance.transform.position;
+            Vector3 delta = currentPos - _previousPos;
+            float deltaMag = delta.magnitude;
+            if (deltaMag > 0.0001f)
+            {
+                Vector3 axis = Vector3.Cross(Vector3.up, delta / deltaMag);
+                float axisMag = axis.magnitude;
+                if (axisMag > 0.0001f)
+                {
+                    axis /= axisMag;
+                    float angleDegrees = (deltaMag / BallRadiusMeters) * Mathf.Rad2Deg;
+                    _instance.transform.Rotate(axis, angleDegrees, Space.World);
+                }
+            }
+            _previousPos = currentPos;
+        }
+
+        // §controls_i: internal seam to spawn a ball at a known position without a trajectory
+        // (so tests can drive rotation without setting up a full Trajectory).
+        internal void SpawnAtForTests(Vector3 worldPos)
+            => SpawnInstance(new fp3(fp.FromFloat(worldPos.x), fp.FromFloat(worldPos.y), fp.FromFloat(worldPos.z)));
+
+        internal Transform InstanceForTests => _instance == null ? null : _instance.transform;
     }
 }

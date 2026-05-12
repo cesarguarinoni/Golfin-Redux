@@ -1,0 +1,27 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.3/staging' branch; Version is '6000.3.9f1 (7a9955a4f2fa) revision 8034645'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-cesar" at "2026-05-11T23:08:10.8458866Z"
+OS: 'Windows 11  (10.0.26200) Core' Language: 'en' Physical Memory: 64569 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-05-11T23:08:10Z
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.3.9f1\Editor\Unity.exe
+-projectPath
+C:\Users\cesar\GolfinRedux
+-runTests
+-testPlatform
+EditMode
+-testFilter
+Golfin.Physics.Tests.BallAnimatorTests
+-testResults
+C:\Users\cesar\GolfinRedux\Docs\Specs\Active\controls_i_ball_visual_rotation\test_results.xml
+-logFile
+C:\Users\cesar\GolfinRedux\Docs\Specs\Active\controls_i_ball_visual_rotation\batch_test_run.log
+-batchmode
+-quit
+Successfully changed project path to: C:\Users\cesar\GolfinRedux
+C:/Users/cesar/GolfinRedux
+Exiting without the bug reporter. Application will terminate with return code 1

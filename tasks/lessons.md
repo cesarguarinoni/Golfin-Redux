@@ -97,6 +97,36 @@ foreach (var name in new[] { "m_RenderTexture", "m_TargetTexture", "m_RenderTarg
 
 ---
 
+## NUnit `Assert.AreNotEqual` has no delta-tolerance overload
+
+**Symptom (`controls_i_ball_visual_rotation`, 2026-05-12):** Compiler error CS1503 — `Assert.AreNotEqual(0f, angle, 1e-4f, "message")` fails because argument 3 is `float`, not `string`. Only `Assert.AreEqual` has a `(expected, actual, delta, message)` overload; `AreNotEqual` does not.
+
+**Fix:** Use `Assert.Greater(Mathf.Abs(value), threshold, "message")` to assert a float is meaningfully non-zero.
+
+**How to apply:** Any time a test wants "value is not approximately zero", use `Assert.Greater(Mathf.Abs(x), epsilon)`, not `Assert.AreNotEqual(0f, x, epsilon)`.
+
+---
+
+## Ball visual rotation — cross product order determines spin direction
+
+**Symptom (`controls_i_ball_visual_rotation`, 2026-05-12):** `Vector3.Cross(delta / deltaMag, Vector3.up)` produces a backspin-looking rotation — logo on the ball descends as the ball moves forward. The correct forward-rolling appearance requires the swapped order.
+
+**Rule:**
+- `Cross(delta_normalized, Vector3.up)` → axis produces **backspin appearance** (logo goes down as ball moves forward)
+- `Cross(Vector3.up, delta_normalized)` → axis produces **forward-roll appearance** (logo rises as ball moves forward)
+
+**How to apply:** For any position-delta–derived rotation where the intent is "ball rolling forward", always use `Cross(Vector3.up, delta_normalized)`.
+
+---
+
+## Subagent — stop Unity Play Mode via MCP rather than blocking
+
+**Symptom (`controls_i_ball_visual_rotation`, 2026-05-12):** Implementer declared `IMPLEMENTER_BLOCKED` because Unity was in Play Mode, preventing test execution and screenshots. Unity MCP provides tools to stop play mode directly.
+
+**Rule:** Before declaring `IMPLEMENTER_BLOCKED` for a locked Unity editor, attempt to stop Play Mode via Unity MCP (`editor-application-set-state` or equivalent). Only escalate to BLOCKED if the MCP call itself fails.
+
+---
+
 ## Physics — IGroundProvider and Zone Mesh Height (PhysicsLab Hole1)
 
 ### HeightmapData only knows terrain — use SceneGroundProvider for scene with zone meshes

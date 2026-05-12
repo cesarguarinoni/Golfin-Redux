@@ -29,6 +29,7 @@ namespace Golfin.Physics.Viewer
         TMP_Text _deterLabel;
         TMP_Text _notesText;
         TMP_Text _releaseFireLabel;
+        TMP_Text _predictionLabel;
 
         // Club picker
         int      _clubIndex;
@@ -120,7 +121,8 @@ namespace Golfin.Physics.Viewer
             AddButton(row1, "Fire & Compare", () => FireCompare());
             var row2 = MakeButtonRow(panel);
             AddButton(row2, "Fire ×5 (det.)", () => FireRepeatability());
-            AddButton(row2, "Clear",           () => controller?.Clear());
+            var predBtn = AddButton(row2, "Prediction: OFF", () => TogglePrediction());
+            _predictionLabel = predBtn.GetComponentInChildren<TMP_Text>();
             var row3 = MakeButtonRow(panel);
             AddButton(row3, "Reset to Tee", () => controller?.ResetToTee());
 
@@ -334,6 +336,15 @@ namespace Golfin.Physics.Viewer
         }
 
         // ── Other cycle helpers ────────────────────────────────────────────────
+
+        void TogglePrediction()
+        {
+            if (controller == null) return;
+            controller.TogglePrediction();
+            bool on = controller.PredictionVisible;
+            if (_predictionLabel != null)
+                _predictionLabel.text = on ? "Prediction: ON" : "Prediction: OFF";
+        }
 
         void ToggleReleaseFire()
         {
