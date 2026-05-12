@@ -249,22 +249,24 @@ The Read tool does not error when an agent reports a path as fact but the file d
 
 ---
 
-## 2026-05-12 — controls_i_ball_visual_rotation — architect-side spec sign error caught only by physical correctness, not by tests
+## 2026-05-12 — controls_i_ball_visual_rotation — architect-side spec sign error, caught only by human eye in live play
 
 **Lesson P:** When speccing rotation-derivation math (cross products, axis-angle constructions, quaternion compositions), the SIGN of the axis matters and is trivially easy to get wrong in the SPEC. The natural test ("rotation magnitude is non-zero, axis is along expected coordinate") accepts either sign of the axis and provides zero evidence that the rotation direction is correct.
 
-**What happened:** SPEC pseudocode for `BallAnimator.Update()` had `Vector3.Cross(delta_norm, Vector3.up)` which produces axis = (-1, 0, 0) for a ball moving in +Z. Correct physics for rolling-without-slipping requires axis = (+1, 0, 0) (top of ball moves in direction of travel). Implementer's code used `Vector3.Cross(Vector3.up, delta_norm)` — the correct order — either because they re-derived it or by lucky arg flip. The implementer's report said "No spec deviations" without flagging the change. Tests asserted `Mathf.Abs(axis.x) == 1f` (magnitude), passed either way. The bug surfaced ONLY because Cesar's live play-and-confirm visually confirmed the ball rolled the right way — had the implementer copied the SPEC literally, ball would have rolled backward, tests would still have passed, and the wrong behavior would have shipped.
+**What happened:** SPEC pseudocode for `BallAnimator.Update()` had `Vector3.Cross(delta_norm, Vector3.up)` which produces axis = (-1, 0, 0) for a ball moving in +Z. Correct physics for rolling-without-slipping requires axis = (+1, 0, 0) (top of ball moves in direction of travel). Implementer copied the SPEC literally. Ball rolled visually backward in play. Cesar caught it by eye, told Code to fix it, Code flipped the argument order to `Vector3.Cross(Vector3.up, delta_norm)`. Fix landed mid-iteration before final report.
+
+The new EditMode tests passed both before AND after the fix because they asserted `Mathf.Abs(axis.x) == 1f` — magnitude only. The bit-exact gate would have stayed green if the wrong sign had shipped. The ONLY thing standing between the bug and production was the human-in-the-loop visual check.
 
 **Rule:** Rotation-axis / cross-product assertions must check the SIGN, not just the magnitude or the axis-of-rotation coordinate. Specifically:
 - For `axis.x`: assert `axis.x == 1f` (or `-1f`), not `Mathf.Abs(axis.x) == 1f`
 - For quaternion derivation: assert that a chosen reference point on the rotating body moves in the EXPECTED direction after one `transform.Rotate` call, not just that the rotation angle is non-zero
 - Better still: assert against a derived ground-truth from the rolling-without-slipping equation (`v_top = 2 * v_center` in direction of motion, for example)
 
-**Spec implication for future rotation/axis work:** the SPEC should call out the expected sign in pseudocode comments (e.g., `// Cross(up, delta) gives +X for delta in +Z — correct for forward-rolling`) and the acceptance checklist should require a sign-check assertion in tests, not just a magnitude assertion.
+**Spec implication for future rotation/axis work:** the SPEC should derive the expected sign by hand FIRST and call it out in pseudocode comments (e.g., `// Cross(up, delta) gives +X for delta in +Z — correct for forward-rolling`). The acceptance checklist should require a sign-check assertion in tests, not just a magnitude assertion.
 
-**Subagent prompt implication:** the architect-reviewer subagent prompt could add a check: "If the SPEC contains any cross-product or quaternion construction, verify by hand that the implementer-written code produces the expected sign for a canonical input case. Do not accept 'test passes' as proof of sign correctness when the test uses `Mathf.Abs`."
+**Subagent prompt implication:** the architect-reviewer subagent prompt could add a check: "If the SPEC contains any cross-product or quaternion construction, derive the expected sign by hand for one canonical input case before approving. Do not accept 'test passes' as proof of sign correctness when the test uses `Mathf.Abs`."
 
-**Cross-reference:** Lesson O established that visual fidelity requires human-in-the-loop play-and-confirm. Lesson P is the specific failure mode where dispatch evidence (test green) AND code review can both miss a sign-flip bug that only the player's eye catches.
+**Cross-reference:** Lesson O established that visual fidelity requires human-in-the-loop play-and-confirm. Lesson P is a specific subspecies of that: dispatch evidence + green tests + code-mirroring-SPEC can ALL be present and the wrong behavior still ship, because none of those signals interact with the physical interpretation of the rotation axis. Only the human's eye on the running game caught it.
 
 ---
 
