@@ -13,6 +13,7 @@ namespace Golfin.Gameplay.UI.ShotUI
     ///     rewards row, and the Play button (or hidden if locked).
     ///
     /// Iter-6: added runtime HoleMap sprite binding and hole-select-style Card 2 info fields.
+    /// Iter-10: added _dividerBelowRewards — hidden when locked (no button below it).
     /// </summary>
     public class HoleCompleteCardWidget : MonoBehaviour
     {
@@ -52,6 +53,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         [Header("Locked overlay")]
         [SerializeField] GameObject _darkenOverlay;       // shown only when locked
+
+        [Header("Dividers")]
+        [SerializeField] GameObject _dividerBelowRewards; // hidden when locked — no button below it
 
         [Header("Card layout (for locked height adjustment)")]
         [SerializeField] LayoutElement _cardLayoutElement; // minHeight=855 unlocked, 0 locked
@@ -102,6 +106,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             // Card 1 never shows the darken overlay.
             SetActive(_darkenOverlay, false);
+
+            // Card 1 always has a button below rewards — divider stays visible.
+            SetActive(_dividerBelowRewards, true);
         }
 
         public void BindNextHole(HoleCompleteData data, bool locked, Action onButtonTap)
@@ -151,6 +158,10 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             // Darken overlay shown only when locked.
             SetActive(_darkenOverlay, locked);
+
+            // §2d iter-10 Bug B: Divider below rewards hidden when locked — no button below it.
+            // When unlocked, PLAY button is visible so the divider must be shown.
+            SetActive(_dividerBelowRewards, !locked);
 
             // §2d iter-9 F4: LOCKED card skips the 855px minHeight so CSF resolves the shorter
             // header+subhead+divider+rewards height (~280-360px per Figma).

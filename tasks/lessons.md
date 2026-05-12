@@ -1161,3 +1161,36 @@ Without finding a root cause via at least one of those four, document the unreso
 **What this is NOT:** baking gameplay state into the prefab. The runtime `Show(data)` still overrides everything based on the actual hole/strokes/score. The build-time content is purely for Editor preview fidelity.
 
 **Pattern recognition:** if a builder method writes `tmp.text = ""` or `img.sprite = null` for any UI element that will eventually display content, that's a workflow regression. Always write a realistic placeholder instead.
+
+---
+
+## Prefer Canonical Prefabs to Inline-Built Components (Cesar workflow rule, 2026-05-12)
+
+**When the project has `Assets/Prefabs/UI/*.prefab` for a recurring component (divider, button, modal frame, stat row, etc.), builders MUST instantiate the prefab via `PrefabUtility.InstantiatePrefab(prefab, parent)`, NOT build the component inline.**
+
+Why:
+- Centralizes canonical style — one prefab edit propagates to every consumer.
+- Survives manual designer tweaks across rebakes (the prefab IS the source of truth).
+- Reduces builder code size + duplication.
+- When Cesar updates a canonical prefab (sprite, size, color), every instantiation gets the update automatically on next rebake.
+
+**Pattern:**
+```csharp
+// WRONG: inline build
+var go = new GameObject(name);
+go.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.1f);
+
+// RIGHT: instantiate canonical prefab
+var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Divider.prefab");
+var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+go.name = nameOverride;
+// Add LayoutElement if the prefab doesn't have one baked in
+var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
+le.preferredHeight = 2f;
+```
+
+**When no canonical prefab exists yet:** ask Cesar/architect whether one should be created BEFORE building inline. Inline builds are a workflow regression.
+
+**Pattern recognition:** builder code that creates `new GameObject(...)` + adds Image/Layout/etc components is suspect. Check `Assets/Prefabs/UI/` first. If a prefab exists for the component you're building, use it.
+
+**Why this matters for rebakes:** if a builder uses inline GameObjects for a component that Cesar manually updated to a prefab instance, the next rebake wipes Cesar's prefab instance and replaces it with the inferior inline version. This is exactly what happened with Divider.prefab in iter-9/10 of `loop_v1_2d_hole_complete_and_result_screen`.

@@ -1,139 +1,92 @@
-# Cesar Rejection — 2026-05-12 (iter 7 reject)
+# Cesar Rejection — 2026-05-12 (iter 9 reject)
 
-Iteration 7 architect-pass approved. Thoroughly rejected by Cesar after eyeballing in LabScaffold play mode.
+Iteration 9 architect-pass approved. Cesar pulled to PC, did manual fixes (committed as `3fb839de Results fixes`), then identified two remaining issues with the LOCKED panel.
 
-Cesar's overall directive: **RESPECT FIGMA SIZES AND POSITIONS**. The whole thing is off-spec dimensionally.
+## What Cesar did manually (now committed — preserve these going forward)
 
-He attached a current-implementation screenshot and the canonical Figma reference. Implementer must pull every dimension from Figma, not eyeball.
+1. **Created `Assets/Prefabs/UI/Divider.prefab`** — canonical reusable Divider:
+   - Size: 300×2px
+   - Plain white Image (alpha 1.0)
+   - Uses a specific divider sprite (guid `9e62d8f4ffd01e7468d07912ccba967a`)
+   - This is the divider style Cesar wants for ALL future modals/panels.
 
-## Issues (in priority order)
+2. **Replaced builder-generated inline dividers** with `PrefabInstance` references to the prefab. The three old `Divider_BelowSubhead` / `Divider_BelowBody` / `Divider_BelowRewards` GameObjects are gone; the prefab instances are now named `Divider`, `Divider (1)`, `Divider (2)`.
 
-### 1. DimBackground lifecycle is broken
+3. **Updated `Lock.png`** — larger lock icon (the iter-8/9 self-reviewer flagged it overlapping the "O" glyph in LOCKED).
 
-**Symptom:** When the game starts (no HoleComplete showing), the DimBackground is ACTIVE — it dims the whole screen even though the modal is hidden. If Cesar manually deactivates it, it does NOT reactivate when `HoleCompleteWidget` is shown.
+4. **Updated `Background - HoleCard.png`** — re-saved, possibly with different 9-slice config (file shrunk from 267KB → 207KB).
 
-**Likely root cause:** `HoleCompleteCardWidget.cs` has no Show/Hide method that toggles `_dimBackground` — DimBackground is built as a sibling of Card1/Card2 under the `HoleCompleteWidget` parent GameObject, but nothing toggles it in code. The widget root or DimBackground GO needs to be active=false on start, and `HoleCompleteDriver.ShowResultScreen` must activate it.
+5. **Updated Rubik font SDF atlas** — additional glyphs.
 
-**Fix:**
-- Inspect `HoleCompleteWidget` (the parent of Card1/Card2/DimBackground) — should be inactive by default; `ShowResultScreen` should activate it; dismissal (REPLAY/PLAY/RETRY click) should deactivate it.
-- OR if the widget root must stay active (e.g., for raycasting), toggle the DimBackground GameObject directly inside `HoleCompleteCardWidget.Show*` / `Hide*` methods.
-- Build-time default: DimBackground GO should be `SetActive(false)` after build.
-- Verify with a screenshot showing the modal HIDDEN + gameplay HUD visible WITHOUT any dim overlay (S1 baseline).
+## Remaining issues (fix in iter-10)
 
-### 2. Panels are too short
+### A. LOCKED background only covers the rewards row
 
-Figma reference shows cards at **~855px tall**. Current implementation cards are visibly much shorter (~half height).
+The LOCKED Card 2's BACKGROUND (the navy rounded rectangle) is short — only encompasses the rewards row. The LOCKED header and subhead text render ABOVE the BG, floating outside the panel frame.
 
-**Fix:**
-- Read the exact card height from the canonical Figma frame (use `mcp__d0f20b77-*__get_design_context` / `get_metadata`). Record the node ID.
-- Either remove the ContentSizeFitter and use a fixed Figma height (≈855), or set `LayoutElement.minHeight = 855` and let CSF handle overflow only.
-- Update body row, info column heights to match the proportional Figma layout (taller cards have more room for the map, stats, description).
+**Likely root cause** (in `HoleCompleteWidgetBuilder.cs` and `HoleCompleteCardWidget.cs`):
+- F4 from iter-9 sets `_cardLayoutElement.minHeight = 0` when locked, letting CSF resolve the card height from active children.
+- BUT the Card's `ContentSizeFitter` is either driven by the wrong child OR the CardBG Image is stretch-anchored to `ContentRoot` (which doesn't contain header/subhead) instead of the whole Card.
+- The architect's iter-8 Figma call expected: "Card auto-sizes to (active) header + subhead + dimmed rewards stack." Currently it auto-sizes to just the rewards stack.
 
-### 3. Panels are not centered on screen
+**Fix:** ensure the Card's CSF + CardBG Image cover header + subhead + (dividers) + rewards when locked. The header / subhead must be inside whatever the CSF and CardBG measure. Two cleaner options:
+- (a) Header + subhead become children of `ContentRoot` (the VLG that drives CSF) so their height contributes.
+- (b) CardBG becomes a stretch-anchored child of the Card outer GO (not of ContentRoot), so it fills whatever height CSF gives the Card.
 
-Current impl shows Card 1 starting at the very top of the screen with no breathing room, Card 2 below it. Figma reference has both cards centered horizontally AND vertically within the screen.
+Investigate the current structure and pick the smaller fix. The iter-8 IMPLEMENTER_REPORT described "frame pattern — DarkenOverlay is a true stretch sibling of ContentRoot, not a VLG child" — verify CardBG follows the same pattern, AND verify header/subhead are inside ContentRoot.
 
-**Fix:**
-- The `HoleCompleteWidget` root should have a centered VLG / layout so the two cards cluster centered on screen.
-- Per Figma, there's also a "RESULTS" title at the top of the modal area and the cards stack below it with consistent gaps. But the spec may have deferred the RESULTS title — confirm from SPEC §E. If deferred, still center the two cards vertically as a unit.
-- Pull the X/Y offsets and the inter-card spacing from Figma.
+### B. Bottom divider (Divider_BelowRewards / "Divider (2)") should not appear when LOCKED
 
-### 4. Buttons (REPLAY/PLAY) still go outside the panel
+In the LOCKED state, the PLAY button is hidden — so the divider that normally separates rewards from the button is dangling at the bottom with nothing below it.
 
-In the current-impl screenshot Cesar attached, PLAY is partially below the card bottom edge. The ContentSizeFitter solution from iter-6 was supposed to fix this — clearly didn't fully land or regressed.
+**Fix:** In `HoleCompleteCardWidget.BindNextHole(locked=true)`:
+- Add a `[SerializeField] GameObject _dividerBelowRewards` (or repurpose an existing wiring).
+- Set it `SetActive(!locked)` so it hides when locked.
 
-**Fix:**
-- Check the card's VLG padding bottom — should be ≥ button height / 2 + breathing room.
-- Verify the button row's `LayoutElement.preferredHeight` matches the button's actual size (currently 120).
-- Verify the card BG Image is actually sized to encompass all VLG children (CSF must be applied AFTER all children have correct preferredHeight).
-- If `LayoutElement.minHeight = 855` is added per item #2, that gives buffer.
+The Card 1 (success/failed) state always has a button, so this divider should remain active there. Only `BindNextHole(locked)` is affected.
 
-### 5. Panels are not properly sliced (corner stretching)
+## Two builder-side rules to ABSORB going forward (don't undo Cesar's manual work)
 
-Cesar: "If you can't fix this let me know and I'll do it manually."
+### Rule 1: Use the canonical Divider prefab
 
-The card BG is supposed to be 9-sliced (iter-5 set spriteBorder to 50,50,50,50 on `Background - HoleCard.png`). The corners should stay at 50px regardless of card size. If they're stretching, the slicing isn't being applied OR the sprite is being rendered with `Image.Type.Simple` somewhere along the line.
+When rebuilding the widget, instantiate `Assets/Prefabs/UI/Divider.prefab` via `PrefabUtility.InstantiatePrefab(prefab, parent)` rather than building inline GameObjects. This:
+- Preserves Cesar's exact divider styling (size, color, sprite, alpha).
+- Future divider-style changes propagate by editing the prefab.
 
-**Fix:**
-- Verify the card Image component on the live scene has `type = Sliced` AND the sprite asset has non-zero spriteBorder.
-- Investigate whether `gameobject-component-modify` or the builder is silently flipping the Image type back to Simple after build.
-- Run the builder fresh, inspect the YAML for `m_Type: 1` (Sliced) on the card Image, and confirm the `.png.meta` has `spriteBorder: {x: 50, y: 50, z: 50, w: 50}`.
-- If after thorough investigation the slicing still won't render correctly, STOP and report — Cesar will do it manually in the Inspector.
+The current `BuildDivider(name, parent, dividerSprite)` helper should be replaced with `InstantiateDividerPrefab(name, parent)`.
 
-### 6. Dividers are wider than the others present in the game
+Add a `LoadPrefab("Assets/Prefabs/UI/Divider.prefab")` helper alongside the existing `LoadSprite` and use it.
 
-Cesar's directive: **just copy the existing divider implementation**, don't roll a new one.
+### Rule 2: Add this to lessons.md (general for future screens)
 
-**Canonical existing divider pattern** (from `Assets/Scripts/UI/Inventory/Editor/ClubCompareRightPanelBuilder.cs` line 442):
+> **Prefer reusable canonical prefabs to inline-built components.** When the project has a `Assets/Prefabs/UI/*.prefab` for a recurring component (divider, button, modal frame, stat row, etc.), builders should INSTANTIATE the prefab via `PrefabUtility.InstantiatePrefab`, not build the component inline. This:
+> - Centralizes the canonical style — one edit propagates to every consumer.
+> - Survives manual designer tweaks across rebakes (the prefab IS the source of truth).
+> - Reduces builder code size and duplication.
+>
+> When no canonical prefab exists yet, ask the architect/Cesar whether one should be created before building inline.
 
-```csharp
-private static void BuildDivider(Transform parent)
-{
-    var go = new GameObject("Divider");
-    go.transform.SetParent(parent, false);
-    AddLayoutElement(go, preferredHeight: DIVIDER_H);
-    go.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.1f);
-}
-```
-
-`DIVIDER_H` is a small const (probably 1-2px). Just a white image at 10% alpha — no sprite, no slicing.
-
-**Fix:**
-- Replace the current `BuildDivider` helper with the pattern above. Drop the `Settings/Divider.png` sprite entirely.
-- Use whatever DIVIDER_H value matches Cesar's other in-game dividers (look at the const in `ClubCompareRightPanelBuilder.cs`).
-- Also check `ItemUseModalBuilder.cs` (refs TopDivider / BottomDivider) for the same pattern if there's any variation.
-
-### 7. Map and info text are not centered
-
-In the current-impl Card 2, the map is hard left and the "Par 4 / description" column is jammed against the map with no breathing room. Figma reference shows them centered as a horizontal unit within the card body, with consistent padding.
-
-**Fix:**
-- The body row HLG should center its children horizontally as a unit (currently UpperLeft → left-aligned).
-- Apply iter-4's HLG fix: `childAlignment = MiddleCenter`, `childForceExpandWidth = false`, `childForceExpandHeight = false`.
-- Pull the map width AND info column width from Figma. The info column needs MORE space than current (item #8).
-- Vertical centering: the map and info text should align vertically as a unit within the body row.
-
-### 8. Info text on lower (NEXT) panel has wrong title + insufficient width
-
-Two problems:
-
-(a) Current impl shows a small gold "Par 4" title above the description text. Cesar says: "**title in different font size that does not exist in reference**" — Figma does NOT show a separate "Par 4" title. The Par is in the subhead ("Lomond Country Club - Hole 2 - Par 4"). Remove the redundant title.
-
-(b) The description text column is too narrow (looks like ~5-char-wide column in the current impl, where the words wrap aggressively into vertical noodles). Figma shows a wide column with ~3-4 readable lines of normal-width text.
-
-**Fix:**
-- Remove the `_nextHoleParText` field and its TMP child entirely. Description text is now the sole content of the NextBody info column.
-- Widen the description TMP RectTransform / LayoutElement.preferredWidth to match Figma (probably ~500-600px in a 930-wide card with a smaller map).
-- Verify word wrap is on so the text fills naturally.
+Add this to `tasks/lessons.md` under a new section.
 
 ## What I want back
 
-1. Updated screenshots (S1 hidden-aiming, S2 success-at-par, S3 failed-over-par) showing every item above resolved.
-2. **S1 specifically must show NO dim overlay** — gameplay HUD fully visible with no darkening.
-3. `IMPLEMENTER_REPORT.md` updated with:
-   - Card height pulled from Figma (with node ID)
-   - DimBackground lifecycle fix explanation
-   - Confirmation the canonical `BuildDivider` pattern was adopted (file/line reference)
-   - Card centering strategy
-   - Info column widening with new preferredWidth
-   - Removal of the rogue "Par 4" title
-   - Card BG slicing verification (or escalation note if slicing can't be fixed in code)
-4. STATUS → `READY_FOR_SELF_REVIEW`
+1. Iter-10 builder + scene updates:
+   - LOCKED Card 2 BG now covers header + subhead + rewards (Issue A fixed)
+   - Divider_BelowRewards hidden when locked (Issue B fixed)
+   - Builder now instantiates `Divider.prefab` instead of building inline dividers (preserves Cesar's manual work across rebakes)
+2. Fresh S3 (failed-over-par) screenshot showing the LOCKED Card 2 with:
+   - Full BG covering header + subhead + rewards
+   - No dangling bottom divider
+3. The regression-preservation table at the top of `IMPLEMENTER_REPORT.md` must remain intact and all-Y.
+4. `tasks/lessons.md` updated with the canonical-prefab rule.
+5. STATUS → `READY_FOR_SELF_REVIEW`.
 
 ## Out of scope (still don't touch)
 
-- Header / subhead alignment (iter-4 PASS)
-- HUD bleed-through (iter-2 PASS) — though the DimBackground lifecycle is in scope
-- STROKES color tokens (iter-2 PASS)
-- Sprite slicing on buttons (iter-5 PASS — the BUTTONS are sliced fine; only the CARD BG slicing needs verification)
-- Button widths 348/307/353 (iter-5 PASS)
-- PLAY button on Card 2 (Cesar confirmed correct)
-- HoleCompleteDriver/ShotPipeline/cup detection (beyond DimBackground toggle wiring)
-
-## Notes for the Implementer
-
-Cesar attached a side-by-side: current implementation vs. Figma reference. The current implementation looks visibly different — tiny cramped cards in the top-left, no dim toggling, "Par 4" stub title, vertical-noodle wrapped description, dividers too thick. The Figma is centered, tall, breathing room everywhere, clean dividers, real description text.
-
-Stop eyeballing. Open the canonical Figma frames listed in SPEC §E, read every dimension, record every node ID in IMPLEMENTER_REPORT. If a dimension isn't in the SPEC, ask Cesar before guessing.
-
-If after thorough work item #5 (panel slicing) still can't be made to work in code, escalate by saying so clearly in the report — Cesar offered to fix it manually.
+- Card BG sprite + slicing (Cesar updated it manually — keep his version)
+- Lock.png (Cesar updated it — keep his version)
+- Rubik SDF (Cesar updated it — keep his version)
+- Iter-9 F1-F5 fixes (PASS)
+- Iter-8 PASSes (panel height 855 for UNLOCKED, panel centering, dress-up, etc.)
+- Iter-5 button widths/slicing
+- ShotPipeline / cup detection

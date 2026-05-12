@@ -1,5 +1,93 @@
 # Implementer Report — `loop_v1_2d_hole_complete_and_result_screen`
 
+## Iteration 10 — addressing CESAR_REJECTED (iter-9): Bugs A+B + Rule C+D
+
+Updated 2026-05-12 14:50 JST.
+
+### Cesar's manual work preserved (do not credit to implementer)
+
+Cesar committed `3fb839de Results fixes` before this iteration. The following are preserved and untouched:
+- `Assets/Prefabs/UI/Divider.prefab` — canonical 300×2px white Image divider (created by Cesar)
+- `Assets/Art/ResultScreen/Background - HoleCard.png` — updated by Cesar (shrunk 267→207KB)
+- `Assets/Art/ResultScreen/Placeholders/Placeholder_LockIcon.png` — updated by Cesar (larger lock icon)
+- Rubik SDF font atlas — updated by Cesar (additional glyphs)
+
+### Bug A — LOCKED Card 2 background only covered rewards row (now fixed)
+
+**Root cause investigated:** The `bgImg` was added as an `Image` component directly on `cardGO` (the card root). In Unity, a `ContentSizeFitter` on a GO sets the GO's `RectTransform.sizeDelta` — but the Image component on the same GO would reflect the RT's bounds. The issue is CSF evaluation order: when `minHeight=0` (locked state), the outer card CSF reads ContentRoot's preferred height, but the Image may render at `sizeDelta.y=0` for one frame before CSF resolves and updates the RT. This manifested as the BG covering only the ContentRoot area that had rendered by the time the BG sampled the RT.
+
+**Fix:** CardBG is now a **dedicated stretch-fill child GO** named "CardBG", added as the FIRST child of cardGO (before ContentRoot and DarkenOverlay). Its RectTransform uses `anchorMin=(0,0), anchorMax=(1,1), sizeDelta=(0,0)` — stretch fill. This ensures the Image always fills the card's resolved height from CSF, matching how DarkenOverlay works (which was already stretch-anchored). YAML verified: CardBG RT at line 2101 shows `m_AnchorMin:{x:0,y:0}` `m_AnchorMax:{x:1,y:1}` `m_SizeDelta:{x:0,y:0}`.
+
+### Bug B — Divider below rewards shown when locked (no button below it) (now fixed)
+
+**Fix:** Added `[SerializeField] GameObject _dividerBelowRewards` to `HoleCompleteCardWidget`.
+- `BindCurrentHole()`: sets `_dividerBelowRewards.SetActive(true)` (Card 1 always has a button)
+- `BindNextHole(locked=true)`: sets `_dividerBelowRewards.SetActive(false)` — no button below rewards
+- `BindNextHole(locked=false)`: sets `_dividerBelowRewards.SetActive(true)` — PLAY button below
+Builder: the third divider GO (Divider_BelowRewards) is now captured from `InstantiateDividerPrefab()` and wired to `_dividerBelowRewards` via SerializedObject. YAML verified: both Card1 and Card2 have `_dividerBelowRewards` wired to stripped prefab instances of `Divider.prefab`.
+
+### Rule C — Canonical Divider.prefab used instead of inline GameObjects
+
+**Fix:** `BuildDivider(name, parent, sprite)` replaced with `InstantiateDividerPrefab(name, parent, dividerPrefab)`:
+- `LoadPrefab("Assets/Prefabs/UI/Divider.prefab")` added alongside `LoadSprite`.
+- Uses `PrefabUtility.InstantiatePrefab(dividerPrefab, parent)` cast to `GameObject`.
+- A `LayoutElement` is added at instantiation time (`preferredHeight=2, minHeight=2, flexibleHeight=0`) since Divider.prefab has no LayoutElement baked in.
+- Fallback: if prefab is null, falls back to inline build (silent degradation).
+- Returns the GO for optional wiring (used by Bug B fix above).
+YAML verified: Divider.prefab GUID `1a82e31874eb982439d1315358c56d3d` appears 150 times in the scene; 6 PrefabInstance entries (3 per card) use this GUID as `m_SourcePrefab`.
+
+### Rule D — Canonical prefab rule added to tasks/lessons.md
+
+Added "Prefer Canonical Prefabs to Inline-Built Components" section to `tasks/lessons.md` with code example showing `PrefabUtility.InstantiatePrefab` pattern.
+
+---
+
+## Acceptance checklist — iter-10 specific items
+
+| Item | Result | Justification |
+|---|---|---|
+| LOCKED Card 2 BG covers LOCKED header + subhead + rewards | PASS | S3 screenshot: Card 2 (LOCKED) shows the navy rounded rectangle covering all of: lock icon + "LOCKED" header, "Lomond Country Club - Hole 2 - Par 4" subhead, and rewards row x5/x1/x0 (dimmed). No text floating above the card boundary. Bug A fixed. |
+| No divider below rewards in LOCKED card | PASS | S3 screenshot: Card 2 (LOCKED) rewards row (x5/x1/x0) is the last visible element — no divider line below it, no orphaned separator. `_dividerBelowRewards.SetActive(!locked)` wired and confirmed. Bug B fixed. |
+| Dividers are PrefabInstances of Divider.prefab | PASS | Scene YAML: Divider.prefab GUID `1a82e31874eb982439d1315358c56d3d` found 150 times; 6 `PrefabInstance` entries reference it (3 per card). `!u!1001` PrefabInstance entries at lines 12360, 14963, 15744 (Card1), 23926, 27486, 33651 (Card2). Rule C implemented. |
+| _dividerBelowRewards wired in both cards | PASS | YAML: Card1 `_dividerBelowRewards: {fileID: 1006050744}` (stripped prefab instance of Divider.prefab, PrefabInstance 1006050743). Card2 `_dividerBelowRewards: {fileID: 1045531778}` (stripped prefab instance, PrefabInstance 1045531776). Both point to Divider.prefab GUID. |
+| lessons.md updated with canonical-prefab rule | PASS | Section "Prefer Canonical Prefabs to Inline-Built Components" added to `tasks/lessons.md` with before/after code example and pattern recognition guidance. |
+| Iter-9 regressions preserved (DarkenOverlay, rewards opacity, short card height, F1-F5) | PASS | S3 iter-10 screenshot shows: (1) Card 2 visibly shorter than Card 1; (2) Card 2 darker than Card 1 (DarkenOverlay active); (3) Card 2 rewards dimmer than Card 1 (CanvasGroup.alpha=0.5); (4) No "G" ball visible between cards. All iter-9 F1-F5 behaviors confirmed in S3. |
+| Builder docstring updated to iter-10 | PASS | Builder comment header: "§2d iter-10: Builds the HoleCompleteWidget..." with Bug A, B, C descriptions. Build log: "[HoleCompleteWidgetBuilder] §2d iter-10: ... built and saved to LabScaffold.unity." |
+| Compile clean — new field `_dividerBelowRewards` resolves | PASS | Reflection test at runtime: `typeof(HoleCompleteCardWidget).GetField("_dividerBelowRewards", ...) != null` → `Debug.Log("[iter-10 compile check] _dividerBelowRewards field EXISTS - compile OK"` — confirmed in Unity log. No `error CS` in log after rebuild. |
+
+### S3 — Failed over par — iter-10 (CANONICAL for iter-10)
+
+- **Captured at:** `screenshots/iter10_S3_locked_card2_2026-05-12_14-43-12.png`
+- **Source:** `Docs/Diagnostics/_capture/iter10_S3_locked_paused_2026-05-12_14-43-12.png`
+- **Capture method:** `CaptureCore.SnapPlayModeSafe("iter10_S3_locked_paused")` while IsPaused=true (paused play mode). Previous SnapPlayModeSafe calls in running play mode returned pre-show RT frame; pausing first allowed canvas to render.
+- **State:** `widget.Show(data, null)` where `isFailed=true, hasPersonalBest=false` (Card2 locked). Manually triggered via script-execute in play mode.
+- **Visual verification:**
+  - Card 1 (FAILED): Red X + "FAILED", "Lomond Country Club - Hole 1 - Par 5", Hole 1 map sprite + stats, rewards x5/x1/x0 at full opacity, divider, RETRY button. All enclosed within navy rounded rectangle.
+  - Card 2 (LOCKED): Lock icon + "LOCKED", "Lomond Country Club - Hole 2 - Par 4", rewards x5/x1/x0 at ~50% opacity (dimmed), NO divider below rewards, NO button. Card is visually much shorter than Card 1. Card background covers entire LOCKED header + subhead + rewards region.
+  - Bug A confirmed fixed: LOCKED header and subhead are inside the navy card background.
+  - Bug B confirmed fixed: No divider line below the rewards row in the LOCKED card.
+  - DarkenOverlay: Card 2 appears darker than Card 1 — alpha=0.65 confirmed visually.
+
+### Console output (iteration 10)
+
+```
+[iter-10 compile check] _dividerBelowRewards field EXISTS - compile OK
+[iter-10] Running Build HoleComplete Widgets
+[HoleCompleteWidgetBuilder] Removed existing HoleCompleteWidget.
+[HoleCompleteWidgetBuilder] Card 'Card1' built and wired (iter-10).
+[HoleCompleteWidgetBuilder] Card 'Card2' built and wired (iter-10).
+[HoleCompleteWidgetBuilder] DebugShotPanel HoleOutBtn + driver wired.
+[HoleCompleteWidgetBuilder] §2d iter-10: HoleCompleteWidget + HoleCompleteDriver built and saved to LabScaffold.unity.
+[iter-10] Build complete
+[§2d HideByName] Suppressed 'CentralBall' via CanvasGroup.alpha=0 (addedNew=False)
+[§2d] Widget showing FAILED state. IsFailed=True HasPB=False -> Card2 locked
+[iter-10 S3] HoleCompleteWidget.Show() called - FAILED state, Card2 locked
+[CaptureCore] Wrote Docs/Diagnostics/_capture/iter10_S3_locked_paused_2026-05-12_14-43-12.png (play-mode safe)
+[iter-10 S3] Screenshot saved: .../iter10_S3_locked_paused_2026-05-12_14-43-12.png
+```
+
+---
+
 ## Iteration 9 — addressing ARCHITECT_REVIEW_FAIL (iter-8): five fixes (F1–F5)
 
 Updated 2026-05-12 13:15 JST.
@@ -207,9 +295,9 @@ Scene rebuilt via `GOLFIN/Smoke/Capture 2d HoleComplete Screenshots` menu item (
 
 | Path | Change |
 |---|---|
-| `Assets/Scripts/Editor/CanvasScalerMigration/HoleCompleteWidgetBuilder.cs` | Modified (iter-8): Root VLG `MiddleCenter` (item #3); card `minHeight=855` (item #2); body HLG `MiddleCenter+padding(32,32,24,24)+spacing=24` (item #7); map size `156×288`; statsLE `preferredHeight=288`; `nextBodyHLG` same HLG fix; infoColGO converted from VLG+500 to `RectTransform(600,288)+LE(600,288)` (item #8b); `_nextHoleParText` wiring removed (item #8a); `BuildDivider()` rewritten to canonical 1px@10% pattern (item #6); `dimGO.SetActive(false)` added (item #1). (iter-7: card VLG childControlHeight=true, F1+F2 fixes; iter-6: BuildDivider, ContentSizeFitter, rewards; iter-5: sprite borders+button sizes; iter-4: childForceExpandWidth=false) |
+| `Assets/Scripts/Editor/CanvasScalerMigration/HoleCompleteWidgetBuilder.cs` | Modified (iter-10): CardBG moved to dedicated stretch-fill child GO (Bug A); `BuildDivider()` → `InstantiateDividerPrefab()` using `PrefabUtility.InstantiatePrefab` (Rule C); `LoadPrefab()` helper added; third divider captured for `_dividerBelowRewards` wiring (Bug B); `dividerPrefab` param added to `BuildCard()`; docstring updated to iter-10. (iter-9: Canvas sortingOrder=32767 serialization fix, frame-pattern restructure; iter-8: card minHeight=855, root VLG MiddleCenter, body HLG MiddleCenter, description 600px, canonical dividers; iter-7: card VLG childControlHeight=true; iter-5: sprite borders+button sizes; iter-4: childForceExpandWidth=false) |
+| `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteCardWidget.cs` | Modified (iter-10): Added `[SerializeField] GameObject _dividerBelowRewards`; `BindCurrentHole()` sets `_dividerBelowRewards.SetActive(true)`; `BindNextHole(locked)` sets `_dividerBelowRewards.SetActive(!locked)` (Bug B). (iter-9: `_cardLayoutElement.minHeight = locked ? 0f : 855f` F4; F2/F3 preserved; iter-8: removed `_nextHoleParText`; iter-6: removed thumbnails; iter-2: STROKES color) |
 | `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteWidget.cs` | Modified (iter-9): `HideByName()` changed to CanvasGroup.alpha=0 approach (F1 fix); added `_addedCanvasGroups` tracking list. `HideByName("CentralBall")` + `HideByName("CentralBallWidget")` added to `SuppressHUD()`. Canvas sortingOrder=32767 (set in builder, confirmed in scene). (iter-8: Show()/Hide() DimBackground; iter-2: SuppressHUD/RestoreHUD) |
-| `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteCardWidget.cs` | Modified (iter-9): `BindNextHole()` sets `_cardLayoutElement.minHeight = locked ? 0f : 855f` (F4); `_rewardsCanvasGroup.alpha = locked ? 0.5f : 1f` (F3 preserved); `SetActive(_darkenOverlay, locked)` (F2 preserved). (iter-8: removed `_nextHoleParText` SerializeField; iter-6: removed thumbnails; iter-2: STROKES color) |
 | `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteData.cs` | Modified (iter-6): added `Sprite HoleMap` and `Sprite NextHoleMap` optional fields to struct + constructor. Added `using UnityEngine;`. |
 | `Assets/Scripts/Physics/Viewer/HoleCompleteDriver.cs` | Modified (iter-6): added `LoadHoleMap()`, `LookupNextHoleInfo()`, `LoadLocalizationEN()` helpers; `ShowResultScreen()` now passes real map sprites + next-hole info into `HoleCompleteData`. Added `#if UNITY_EDITOR/using UnityEditor;`. |
 | `Assets/Scripts/Physics/Viewer/SmokeRunner2dHost.cs` | Modified (iter-6): added `LoadHoleMapSprite()`, passes real sprites in `successData`/`failedData`; `StartupWait` 3→5s. Changed `Armed` static bool to property backed by `SessionState` to survive domain reloads from `script-execute` compilation. |
@@ -509,4 +597,4 @@ Note: Required bringing Unity to foreground (via `open -a Unity` from bash) befo
 
 ## Open questions for Architect
 
-None. All CESAR_REJECTED items have been addressed. The PARTIAL-PASS on state 3 (Failed-Replay-Unlocked) is pre-existing per Q8 lock.
+None. All CESAR_REJECTED iter-10 items have been addressed. The PARTIAL-PASS on state 3 (Failed-Replay-Unlocked) is pre-existing per Q8 lock.
