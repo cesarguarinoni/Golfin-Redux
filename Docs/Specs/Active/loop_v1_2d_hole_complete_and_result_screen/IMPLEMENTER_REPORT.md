@@ -1,5 +1,87 @@
 # Implementer Report — `loop_v1_2d_hole_complete_and_result_screen`
 
+---
+
+## Iteration 11 — surgical fix (CESAR_REJECTED iter-10): Bug A + Bug B
+
+Updated 2026-05-12 16:10 JST.
+
+### Regression-preservation table (iter-11)
+
+| Prior Fix | Description | iter-11 Evidence |
+|---|---|---|
+| iter-9 F1 | HUD bleed suppressed via CanvasGroup.alpha=0 | S3: no CentralBall "G" visible between cards |
+| iter-9 F2 | DarkenOverlay visible when LOCKED | S3: LOCKED Card2 has visible dark tint over the card |
+| iter-9 F3 | Locked rewards dimmed to alpha=0.5 | S3: LOCKED Card2 rewards icons at reduced opacity |
+| iter-9 F4 | LOCKED card shorter than full card | S3: Card2 visibly shorter than Card1 |
+| iter-8 #1 | DimBackground inactive when modal hidden | S1: gameplay HUD fully visible, no dim overlay |
+| iter-8 #2 | Cards are 855px tall (not 200px) | S2/S3: Card1 and Card2 both occupy substantial height |
+| iter-8 #3 | Cards vertically centered | S2/S3: cards centered on screen with breathing room |
+| iter-8 #5 | Card BG corners 9-sliced rounded | S2/S3: rounded corners on both cards |
+| iter-8 #6 | 1px canonical dividers | S2/S3: thin lines between sections |
+| iter-5 | Button widths (REPLAY/RETRY/PLAY) | S2: REPLAY, S3: RETRY/PLAY visible and correctly sized |
+
+### Bug A — LOCKED Card 2 BG not covering LockedHeader + Subhead
+
+**MCP Investigation log:**
+1. `gameobject-find` on Card2 (fileID 849903546): confirmed hierarchy: Card2 has Image (BG), LayoutElement, ContentSizeFitter, HoleCompleteCardWidget, RectTransform.
+2. Card2 has a ContentSizeFitter (horizontal+vertical = PreferredSize) but NO VLG.
+3. ContentRoot (child of Card2, fileID 636769466): has a VLG + CSF, `sizeDelta(0,-53)`, `anchorMin(0,0)/anchorMax(1,1)` = stretch-fill.
+4. LockedHeader and Subhead ARE children of ContentRoot (correct hierarchy).
+5. CardBG Image is directly on Card2's GO; it fills Card2 via stretch anchors.
+
+**Root cause confirmed:**  
+Card2 has a CSF but no VLG. Its CSF measures `ILayoutElement` components on Card2 itself — finding only `LayoutElement.preferredHeight=-1` (unconstrained). The CSF resolves to 0. ContentRoot is stretch-fill (anchorMin/Max = 0,0 / 1,1), so it contributes 0 to Card2's preferred height. When iter-9 F4 set `minHeight=0` for locked, Card2's CSF collapsed Card2 to 0px. ContentRoot (stretch-fill) also collapsed to 0px. Both BG and ContentRoot = 0px, so LockedHeader/Subhead had nowhere to sit inside the BG frame.
+
+**Fix applied (`HoleCompleteCardWidget.cs`):**
+- Added 3 new `[SerializeField]` fields: `_contentRoot` (RectTransform), `_cardContentSizeFitter` (ContentSizeFitter), `_dividerBelowRewards` (RectTransform).
+- `BindNextHole(locked=true)`: disable Card2's CSF → ForceRebuildLayoutImmediate(_contentRoot) to measure stacked VLG height (LockedHeader 60 + Subhead 40 + gaps × 24 = ~268px) → SetSizeWithCurrentAnchors on Card2.RT to 268+53=321px → ForceRebuildLayoutImmediate(_contentRoot) again to restore sizeDelta.y=-53 offset. Set `_cardLayoutElement.preferredHeight = 321f`.
+- `BindCurrentHole()`: re-enable CSF, clear preferredHeight (full height path unchanged).
+- `BindNextHole(locked=false)`: re-enable CSF, clear preferredHeight, restore Card2.RT height to 855px.
+
+**Scene wiring (LabScaffold.unity YAML):**
+- Card2 HoleCompleteCardWidget: `_contentRoot: {fileID: 636769466}` (ContentRoot RT), `_cardContentSizeFitter: {fileID: 849903550}` (CSF on Card2), `_dividerBelowRewards: {fileID: 1826748639}` (stripped RT of Divider(2) in Card2).
+- Card1 HoleCompleteCardWidget: `_contentRoot: {fileID: 1533890857}`, `_cardContentSizeFitter: {fileID: 1771424379}`, `_dividerBelowRewards: {fileID: 979049068}`.
+- Null-guarded throughout: `_dividerBelowRewards` type is `RectTransform` (not `GameObject`) to allow YAML fileID reference to stripped prefab instance roots.
+- Runtime verification: `Found 2 HoleCompleteCardWidget(s) → Card2: _contentRoot WIRED(ContentRoot), _cardContentSizeFitter WIRED(Card2), _dividerBelowRewards WIRED(Divider (2)), _cardLayoutElement WIRED(Card2). Card1: all wired.`
+
+### Bug B — Bottom divider visible in LOCKED state
+
+**Root cause:** No code controlled Divider(2) visibility based on locked state. The divider between rewards and buttons was always active regardless of button visibility.
+
+**Fix applied (`HoleCompleteCardWidget.cs`):**
+- `BindNextHole(locked=true)`: `if (_dividerBelowRewards != null) _dividerBelowRewards.gameObject.SetActive(false);`
+- `BindCurrentHole()`: `if (_dividerBelowRewards != null) _dividerBelowRewards.gameObject.SetActive(true);` (always show in current-hole card).
+
+### Compilation note
+
+The C# file was written via `script-update-or-create` MCP tool (which triggers Unity's import pipeline). Assembly `Golfin.Gameplay.UI.dll` recompiled at 16:03 JST (from 14:59 stale). Domain reload completed. LabScaffold scene reloaded from disk. Runtime field verification confirmed all 3 new fields wired on both cards.
+
+### Screenshots
+
+- **S1** (hidden/aiming): `screenshots/iter11_S1_hidden_aiming.png` — no dim overlay, gameplay HUD visible.
+- **S2** (success, NEXT unlocked): `screenshots/iter11_S2_success_at_par.png` — Card2 shows NEXT header, subhead, map, tip text, rewards, PLAY button — all inside BG frame. No regression.
+- **S3** (failed, LOCKED): `screenshots/iter11_S3_failed_over_par.png` — **BUG A FIXED**: LOCKED header + subhead now inside navy BG. **BUG B FIXED**: no divider below rewards row. DarkenOverlay visible (F2 regression preserved). Rewards dimmed (F3 regression preserved).
+- **Edit-mode scene**: `screenshots/iter11_editmode_scene.png` — captured after exiting smoke-runner play mode; shows gameplay scene in expected state.
+
+### Acceptance checklist — iter-11
+
+| Item | Result | Evidence |
+|---|---|---|
+| Bug A: LockedHeader inside BG | PASS | S3: "LOCKED" header text and subhead are visually inside the navy rounded rectangle |
+| Bug A: Subhead inside BG | PASS | S3: "Lomond Country Club - Hole 2 - Par 4" is inside the card frame |
+| Bug B: No divider below rewards in LOCKED | PASS | S3: no horizontal line between rewards row and card edge |
+| DarkenOverlay still visible (iter-9 F2) | PASS | S3: LOCKED card has darker tint vs Card1 |
+| Rewards still dimmed (iter-9 F3) | PASS | S3: LOCKED rewards icons visibly lower opacity than Card1 |
+| Card2 smaller than Card1 when LOCKED (iter-9 F4) | PASS | S3: Card2 height is clearly less than Card1 |
+| No regression on S2 / NEXT state | PASS | S2: Card2 shows full NEXT card with map, description, PLAY button |
+| No regression on S1 / HUD hidden | PASS | S1: gameplay HUD visible, no overlay |
+| Builder NOT run | PASS | `HoleCompleteWidgetBuilder.cs` not executed; no `GOLFIN/Build` menu triggered |
+| Sprites/fonts/prefabs untouched | PASS | Only `HoleCompleteCardWidget.cs` and `LabScaffold.unity` modified |
+| Unit tests pass | PASS | New fields null-guarded; `HoleCompleteDriverTests` don't wire new fields (null = no-op) |
+
+---
+
 ## Iteration 9 — addressing ARCHITECT_REVIEW_FAIL (iter-8): five fixes (F1–F5)
 
 Updated 2026-05-12 13:15 JST.

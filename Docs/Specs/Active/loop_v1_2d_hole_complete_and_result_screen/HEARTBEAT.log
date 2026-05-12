@@ -72,3 +72,14 @@
 2026-05-12T02:50:43Z running smoke runner for S1/S2/S3 play-mode screenshots
 2026-05-12T03:16:31 fixed Canvas sortingOrder overflow: 33000→32767, re-running smoke runner
 2026-05-12T13:45:00 done, awaiting review — iter-9 F1-F5 all PASS, regression-preservation rows added, STATUS→READY_FOR_SELF_REVIEW
+2026-05-12T06:06:27 activated — iter-11 surgical fix, CESAR_REJECTED state
+2026-05-12T06:11:34 investigating Card2 hierarchy via MCP
+2026-05-12T06:13:09 opening LabScaffold scene via Unity MCP to inspect runtime layout
+2026-05-12T06:17:31 code changes done, verifying compilation via MCP
+2026-05-12T06:22:09 wiring fields via MCP script-execute
+2026-05-12T06:24:10 compile successful, now verifying scene wiring via MCP
+2026-05-12T06:28:02 code complete, null guards added for tests, beginning screenshot
+2026-05-12T06:32:00 resuming from summary — checking Unity play mode state
+2026-05-12T07:05:00 MCP working again — writing CS file via script-update-or-create to trigger recompile
+2026-05-12T07:12:00 smoke runner triggered — waiting for captures
+2026-05-12T07:15:00 done — iter-11 Bug A + Bug B fixed, S3 captured, IMPLEMENTER_REPORT updated, STATUS=READY_FOR_SELF_REVIEW

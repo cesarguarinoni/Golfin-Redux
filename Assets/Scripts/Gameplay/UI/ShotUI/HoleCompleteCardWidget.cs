@@ -56,6 +56,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         [Header("Card layout (for locked height adjustment)")]
         [SerializeField] LayoutElement _cardLayoutElement; // minHeight=855 unlocked, 0 locked
 
+        [Header("Locked card sizing (Bug A fix — §2d iter-11)")]
+        [SerializeField] RectTransform _contentRoot;           // ContentRoot RT — used to measure locked height
+        [SerializeField] ContentSizeFitter _cardContentSizeFitter; // CSF on Card2 itself — disabled when locked
+        [SerializeField] RectTransform _dividerBelowRewards;   // Divider (2): hide when locked (Bug B fix). RectTransform so we can reference stripped prefab instances via YAML fileID.
+
         Action _onButtonTap;
 
         public void BindCurrentHole(HoleCompleteData data, Action onButtonTap)
@@ -102,6 +107,13 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             // Card 1 never shows the darken overlay.
             SetActive(_darkenOverlay, false);
+
+            // Divider below rewards: always visible in current-hole card.
+            if (_dividerBelowRewards != null) _dividerBelowRewards.gameObject.SetActive(true);
+
+            // §2d iter-11 Bug A: restore CSF + clear preferredHeight (current-hole is always full height).
+            if (_cardContentSizeFitter != null) _cardContentSizeFitter.enabled = true;
+            if (_cardLayoutElement     != null) _cardLayoutElement.preferredHeight = -1f;
         }
 
         public void BindNextHole(HoleCompleteData data, bool locked, Action onButtonTap)
@@ -156,6 +168,57 @@ namespace Golfin.Gameplay.UI.ShotUI
             // header+subhead+divider+rewards height (~280-360px per Figma).
             if (_cardLayoutElement != null)
                 _cardLayoutElement.minHeight = locked ? 0f : 855f;
+
+            // §2d iter-11 Bug B: hide the divider below rewards when locked (button is hidden, divider should be too).
+            if (_dividerBelowRewards != null) _dividerBelowRewards.gameObject.SetActive(!locked);
+
+            // §2d iter-11 Bug A: when locked the BG (on Card2) wasn't covering LockedHeader/Subhead.
+            // Root cause: Card2 has a CSF but no VLG, so its CSF resolves preferred=0 because ContentRoot
+            // is stretch-fill and contributes 0 to Card2's CSF. Card2 collapses to 0px, BG collapses too.
+            // Fix: disable Card2's CSF when locked; force-rebuild ContentRoot (which has VLG+CSF and
+            // correctly measures its stacked children), then set LayoutElement.preferredHeight = ContentRoot
+            // height + 53 (the offset from ContentRoot's sizeDelta.y = -53 stretch fill).
+            if (locked)
+            {
+                if (_cardContentSizeFitter != null) _cardContentSizeFitter.enabled = false;
+                if (_contentRoot != null && _cardLayoutElement != null)
+                {
+                    // Step 1: measure ContentRoot's VLG sum at CURRENT Card2 size (855px from YAML).
+                    // ContentRoot is stretch-fill (sizeDelta.y=-53), so its initial height = 855-53=802.
+                    // ForceRebuild makes ContentRoot's CSF set sizeDelta.y = preferred_height - 855.
+                    // After rebuild, ContentRoot.rect.height = VLG stacked sum of active locked children.
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(_contentRoot);
+                    float contentHeight = _contentRoot.rect.height;
+                    // Card2.height = ContentRoot.height + 53 (ContentRoot sizeDelta.y offset = -53).
+                    float lockedHeight = contentHeight + 53f;
+
+                    // Step 2: set Card2's RT height directly to locked size.
+                    // IMPORTANT: do this BEFORE any further layout rebuild so that ContentRoot
+                    // (stretch-fill) doesn't compute a stale size. Parent Root VLG has
+                    // ChildControlHeight=false so it won't resize Card2 — we must set it explicitly.
+                    var cardRT = GetComponent<RectTransform>();
+                    if (cardRT != null)
+                        cardRT.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, lockedHeight);
+
+                    // Step 3: rebuild ContentRoot again now that Card2 is the right size.
+                    // ContentRoot's CSF will set its sizeDelta.y = contentHeight - lockedHeight = -53
+                    // (restoring the original offset), and ContentRoot.height = contentHeight. ✓
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(_contentRoot);
+
+                    // Record preferred height for any external layout queries.
+                    _cardLayoutElement.preferredHeight = lockedHeight;
+                }
+            }
+            else
+            {
+                // Unlocked (NEXT): restore Card2 to full 855px height and re-enable CSF.
+                if (_cardContentSizeFitter != null) _cardContentSizeFitter.enabled = true;
+                if (_cardLayoutElement     != null) _cardLayoutElement.preferredHeight = -1f;
+                // Restore full-height RT (may have been set to locked height).
+                var cardRTUnlocked = GetComponent<RectTransform>();
+                if (cardRTUnlocked != null)
+                    cardRTUnlocked.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 855f);
+            }
         }
 
         // ── Expose internal state for unit tests ─────────────────────────────────
