@@ -113,6 +113,18 @@ namespace Golfin.Physics.Viewer
 
         void Awake()
         {
+            // Recover _runtimeTeeAnchor after domain reload: the field is non-serialised so it
+            // becomes null after every script compilation, but the GO stays in the scene.
+            // Scan children, keep the first match, destroy extras accumulated from prior reloads.
+            foreach (Transform child in transform)
+            {
+                if (child.name != "_RuntimeTeeAnchor") continue;
+                if (_runtimeTeeAnchor == null)
+                    _runtimeTeeAnchor = child;
+                else
+                    Destroy(child.gameObject);
+            }
+
             EnsureConfigsLoaded();
 
             // §2a: create ball state machine with a default surface provider.
