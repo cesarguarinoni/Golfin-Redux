@@ -19,8 +19,9 @@
 ### Bug 2 + Bug 3 — Ball-clone accumulation
 
 - **Bug 3 (original sin):** `063ff2ff` — "Phase 6 — Physics Viewer lab" (the very first BallAnimator). `DestroyInstance` only cleared the `_instance` field; never swept other children. Harmless under the original assumption: PlayMode-only usage, one ball at a time.
-- **Bug 2 (activator):** `1f1c4fce` — "fix: ball spawns underground — notify controller on hole load/unload in edit mode" (2026-04-24). HolePicker started calling `OnHoleLoaded` directly from Edit Mode. That chained through `SetupAtTee → ballAnimator.PlaceAtRest → SpawnInstance → Instantiate(ballPrefab, transform)`. In Edit Mode, the new clone becomes a serialized child of BallAnimator → scene dirty → persisted to `LabScaffold.unity`. Every picker action left a ghost behind. After enough picker actions, 8+ ghosts in the scene file.
-- **Why undetected:** When `1f1c4fce` was authored, "Edit Mode notification" was thought of as a notification-only change. The fact that the notification chain executed `Instantiate(..., transform)` as a side effect was invisible from the picker's perspective.
+- **Bug 2 (activator — Edit-Mode invocation path):** `1f1c4fce` — "fix: ball spawns underground — notify controller on hole load/unload in edit mode" (2026-04-24). HolePicker started calling `OnHoleLoaded` directly from Edit Mode. That chained through `SetupAtTee → ballAnimator.PlaceAtRest → SpawnInstance → Instantiate(ballPrefab)`. At this point the spawned clone was unparented — an orphan in the scene, not yet a serialized child of BallAnimator.
+- **Bug 2 (persistence trigger):** `41e5cba0` — "phase-8.4: wind + hole indicators complete" (2026-04-29). Changed `Instantiate(ballPrefab)` → `Instantiate(ballPrefab, transform)` with the well-intentioned comment "parent to this transform" so the ball would be cleaned up on scene unload via the new `OnDestroy → DestroyInstance` chain. With the parenting in place, every Edit-Mode invocation made the new clone a serialized child of BallAnimator → scene dirty → persisted to `LabScaffold.unity`. Every picker action left a ghost behind. After enough picker actions, 8+ ghosts in the scene file.
+- **Why undetected:** When `1f1c4fce` was authored, "Edit Mode notification" was thought of as a notification-only change. When `41e5cba0` added parenting, the existing Edit-Mode call paths weren't audited — the parenting was reasoned about as a runtime-only cleanup mechanism.
 - **Why it surfaced now:** Hole 1 used the same coords as the original LabScaffold defaults, so accumulated ghosts there overlapped the legitimate ball position visually. Any other hole = ghosts at Hole 1 coords, ball at the new hole's tee = visually noticeable.
 - **Fix:** `9f4160f4` — two-part. `BallAnimator.Awake` sweeps existing ghost children matching `ballPrefab.name` (self-heals the disk legacy). `SpawnInstance` tags new Edit-Mode clones with `HideFlags.DontSaveInEditor` (stops new ghosts at the source).
 
@@ -99,7 +100,8 @@ The controls_h iter-8 comment said "ApplyCameraYaw owns camera position during A
 |---|---|---|
 | `063ff2ff` | Phase 6 BallAnimator (no child sweep in DestroyInstance) | original sin for Bug 3 |
 | `1dba77d0` | Phase 7 Part F (`EnsureConfigsLoaded` short-circuit added) | sets up Bug 1 |
-| `1f1c4fce` | Edit-Mode picker → controller notification | activates Bug 2 |
+| `1f1c4fce` | Edit-Mode picker → controller notification | Bug 2 activator (Edit-Mode call path) |
+| `41e5cba0` | Phase 8.4 — `Instantiate(ballPrefab, transform)` parenting | Bug 2 persistence trigger (parenting → scene-file pollution) |
 | `0b64566f` | controls_h iter-8 fallback (camera ownership) | introduces Bug 4 |
 | `78a48b6e` | FIX Bug 1 — sentinel check on cached config | 2026-05-12 |
 | `9f4160f4` | FIX Bug 2+3 — sweep ghosts + DontSaveInEditor | 2026-05-12 |
