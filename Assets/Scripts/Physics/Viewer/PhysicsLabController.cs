@@ -512,6 +512,7 @@ namespace Golfin.Physics.Viewer
             // Use it when valid so we don't rely on the potentially-stale _ballSpawnPoint GO.
             Vector3 spRaw = _savedTeePosValid ? _savedTeeWorldPos
                           : (_ballSpawnPoint != null ? _ballSpawnPoint.position : Vector3.zero);
+            Debug.Log($"[TeeDiag] SetupAtTee: _savedTeePosValid={_savedTeePosValid} _savedTeeWorldPos={_savedTeeWorldPos:F2} _ballSpawnPoint={(_ballSpawnPoint!=null?$"{_ballSpawnPoint.name}@{_ballSpawnPoint.position:F2}":"null")} -> spRaw={spRaw:F2}");
             if (!_savedTeePosValid && _ballSpawnPoint == null) return;
 
             // Refresh putter predictor providers whenever terrain providers change.
@@ -524,6 +525,7 @@ namespace Golfin.Physics.Viewer
             _orbitCenter = teePos;
 
             if (ballAnimator != null) ballAnimator.PlaceAtRest(teePos);
+            Debug.Log($"[TeeDiag] SetupAtTee: placed ball at teePos={teePos:F2} (sp={sp:F2}, surfaceY={surfaceY:F2}) ballAnimator.CurrentBall.pos={(ballAnimator!=null && ballAnimator.CurrentBall!=null?ballAnimator.CurrentBall.position.ToString("F2"):"null")}");
 
             // Update ShotConeView ball transform so targeting line can pivot in Idle state.
             if (_shotConeView != null && ballAnimator != null)
@@ -1180,6 +1182,7 @@ namespace Golfin.Physics.Viewer
             Scene loadedScene = SceneManager.GetSceneByName(sceneName);
             var roots = loadedScene.IsValid() ? loadedScene.GetRootGameObjects()
                                               : new GameObject[0];
+            Debug.Log($"[TeeDiag] OnHoleLoaded scan: sceneName={sceneName} IsValid={loadedScene.IsValid()} isLoaded={loadedScene.isLoaded} rootCount={roots.Length}");
             foreach (var root in roots)
             {
                 foreach (var mb in root.GetComponentsInChildren<MonoBehaviour>(true))
@@ -1231,6 +1234,7 @@ namespace Golfin.Physics.Viewer
 
             if (teeFound)
             {
+                Debug.Log($"[TeeDiag] teeFound=true teePos={teePos:F2} regularMarkers={regularMarkers.Count} teeGOs={teeGOs.Count}");
                 // Always scan children first — non-serialized _runtimeTeeAnchor goes null in
                 // Edit Mode between operations even without a full domain reload.
                 foreach (Transform child in transform)
@@ -1250,10 +1254,12 @@ namespace Golfin.Physics.Viewer
                 // Persist so PlayMode reload can recover without re-scanning tee markers.
                 _savedTeeWorldPos = teePos;
                 _savedTeePosValid = true;
+                Debug.Log($"[TeeDiag] after assign: _runtimeTeeAnchor.pos={_runtimeTeeAnchor.position:F2} _ballSpawnPoint={(_ballSpawnPoint!=null?_ballSpawnPoint.name:"null")} _savedTeeWorldPos={_savedTeeWorldPos:F2} _savedTeePosValid={_savedTeePosValid}");
             }
             else
             {
                 Debug.LogWarning($"[PhysicsLab] OnHoleLoaded: no tee markers found in {sceneName}.");
+                Debug.LogWarning($"[TeeDiag] teeFound=FALSE — regularMarkers={regularMarkers.Count} teeGOs={teeGOs.Count} (stale _savedTeeWorldPos={_savedTeeWorldPos:F2} valid={_savedTeePosValid} will be used by SetupAtTee)");
             }
 
             // SetupAtTee BEFORE anything that might throw, so the ball is always placed.
