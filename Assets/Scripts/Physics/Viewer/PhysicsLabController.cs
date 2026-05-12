@@ -1184,8 +1184,14 @@ namespace Golfin.Physics.Viewer
                 Debug.LogWarning($"[PhysicsLab] OnHoleLoaded: no tee markers found in {sceneName}.");
             }
 
+            // SetupAtTee BEFORE anything that might throw, so the ball is always placed.
+            SetupAtTee();
+
             if (_shotConeView != null)
-                _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards());
+            {
+                try { _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards()); }
+                catch (System.Exception ex) { Debug.LogWarning($"[PhysicsLab] ComputeMaxCarryYards failed: {ex.Message}"); }
+            }
 
             // Populate ball placement entries for the Place Ball dropdown in the lab UI.
             BuildPlacementEntries(teeFound, teePos, greenGOs, bunkerGOs, fairwayGOs, waterGOs);
@@ -1194,8 +1200,6 @@ namespace Golfin.Physics.Viewer
             // gets the same environment (skybox, ambient, fog, reflections) it would have
             // when the hole is loaded standalone.
             CopyHoleLighting(SceneManager.GetSceneByName(sceneName));
-
-            SetupAtTee();
 
             // Populate HoleContext for HUD widgets (PlayerCardWidget, HoleCardWidget).
             // HoleMetadata lives in Assembly-CSharp; use reflection to avoid a circular asmdef dep
