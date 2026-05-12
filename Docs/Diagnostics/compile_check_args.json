@@ -1,0 +1,5 @@
+{
+  "csharpCode": "using UnityEngine;\npublic class CompileCheck { public static void Run() { Debug.Log(\"[CompileCheck] OK\"); } }",
+  "className": "CompileCheck",
+  "methodName": "Run"
+}
