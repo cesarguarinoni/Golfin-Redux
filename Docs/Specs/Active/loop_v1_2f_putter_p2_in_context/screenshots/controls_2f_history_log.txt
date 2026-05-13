@@ -1,0 +1,26 @@
+=== controls_2f_history_log (iter-3: L9 Option B) ===
+GameSession.TurnCount=5
+
+--- L9 Option B: GreenTuningPanel mirrors Green to BOTH SurfaceConfig AND PuttConfig ---
+    BallSimulation.RunPuttPhase reads PuttConfig[Green]; without this mirror slider has no effect.
+
+--- SurfaceConfig[Green] + PuttConfig[Green] at Awake ---
+  SurfaceConfig.RollingResistance=0.1200 (initial)
+
+--- After dragging RR slider to 0.05 (via slider.value + OnRollingResistanceChanged — production UI path) ---
+  SurfaceConfig[Green].RollingResistance=0.0500
+  SurfaceConfig[Green].StopSpeed=0.0500
+  PuttConfig[Green].RollingResistance=0.0500  (should=0.0500 — mirrored by L9 Option B)
+
+--- After Reset button (resets both SurfaceConfig and PuttConfig Green entry) ---
+  SurfaceConfig[Green].RollingResistance=0.1200
+  SurfaceConfig[Green].StopSpeed=0.0500
+  PuttConfig[Green].RollingResistance=0.1000  (should be default ~0.10)
+
+--- Roll-distance comparison (same preset, same origin, same yaw) ---
+  S5 Baseline (SurfRR+PuttRR=0.1200): rolled 2.733m
+  S6 Tuned    (SurfRR+PuttRR=0.0500):     rolled 5.055m
+  Delta: +2.322m  (tuned rolls FARTHER — L9 Option B working)
+
+--- Note: L8 — runtime-only edits, no persistence across play-mode exit ---
+  _persistEdits=false (confirmed in GreenTuningPanel inspector)

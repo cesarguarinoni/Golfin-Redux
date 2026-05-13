@@ -54,7 +54,7 @@ Verified by code walk 2026-05-13 18:45 JST.
 - **L6 — Tuning panel is a separate widget**, not a DashboardUI extension. Two sliders only: Green Rolling Resistance (0–0.5, default 0.12) + Green Stop Speed (0–0.2, default 0.05). Live-apply on slider change via `PhysicsLabController.SetSurfaceConfig`. Reset button → re-load `PhysicsConfigLoader.LoadSurfaceConfig()` Green entry only (preserve user edits to other surfaces).
 - **L7 — Tuning panel access: gear-icon toggle button** in the existing action-button row area. Hotkey alternative `G` for debug builds. Panel is hidden by default.
 - **L8 — No persistence of tuning values across play-mode exit.** Edits are runtime-only; reset on Play→Edit boundary. Persistence is a Loop v2 / settings spec concern. Make this a `[SerializeField] bool _persistEdits = false` so it's explicit.
-- **L9 — Tuning panel does NOT touch PuttConfig.** P1's putt-specific roll resistance lives in `PuttConfig`, edited via DashboardUI's `AddPuttSliders`. §2f's panel only touches `SurfaceConfig[Green]`. PuttConfig tuning stays in DashboardUI (lab-only).
+- **L9 — Tuning panel mirrors Green edits to BOTH `SurfaceConfig[Green]` AND `PuttConfig[Green]`.** ⚠️ AMENDED 2026-05-13 by Cesar (Option B). Original L9 forbade touching `PuttConfig`, but `BallSimulation.RunPuttPhase` (lines 607-649) routes putts through `PuttConfig[Green]`, not `SurfaceConfig[Green]` — so an L9-strict panel cannot satisfy smoke evidence #4 (visible putt-distance delta). Resolution: the panel writes the same Rolling Resistance and Stop Speed values to **both** configs, so putt physics and non-putt green physics both respond to the slider. Implementation: in `OnRollingResistanceChanged` and `OnStopSpeedChanged`, after `controller.SetSurfaceConfig(cfg)`, also fetch `controller.PuttCfg` (or the equivalent putt-config accessor on `PhysicsLabController`), write the corresponding `Green` field, and call the public mutator (mirror whatever `DashboardUI`'s `AddPuttSliders` calls). If `PuttConfig` only has `RollingResistance` (no `StopSpeed`), mirror only what exists. The full DashboardUI putt slider set still stays in DashboardUI — this panel only mirrors the Green entry.
 
 ## Architecture context
 
@@ -424,7 +424,7 @@ Use `CaptureCore.SnapWhenStateReached` for state-gated captures. NO `WaitForSeco
 
 - **Overhead / top-down green camera.** Cesar locked L4: reuse `GroundLevel`. New overhead mode is future polish.
 - **Stimp-meter computation.** No "estimated stimp 9.5" readout. Just raw RollingResistance + StopSpeed values. Stimp math is Loop v2 / polish phase.
-- **PuttConfig tuning surfacing.** L9 — PuttConfig stays in DashboardUI. §2f's panel only touches `SurfaceConfig[Green]`.
+- **Full PuttConfig tuning surfacing.** ⚠️ AMENDED 2026-05-13 — L9 now allows the panel to mirror Green RR/StopSpeed to `PuttConfig[Green]`. The remaining PuttConfig surfaces and fields (non-Green entries, any non-mirrored fields) stay in DashboardUI.
 - **Persistence of tuning edits.** L8 — runtime-only. Settings spec / Loop v2 handles persistence.
 - **Per-hole or per-green tuning.** §2f tunes the global `SurfaceConfig[Green]`. Per-hole green variation is Loop v2+.
 - **Modifying DashboardUI.** Lab debug pane is untouched. §2f's panel is a peer, not a replacement.

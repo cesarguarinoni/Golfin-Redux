@@ -59,6 +59,12 @@ namespace Golfin.UI.HUD
             // so without these handlers the RequestSelection calls go unanswered.
             BallContext.OnSelectionRequested  += SelectBallByIndex;
             ClubContext.OnSelectionRequested  += SelectClubByIndex;
+
+            // §2f: also mirror ClubSelectionBroadcast → ClubContext so auto-switch
+            // (PhysicsLabController.SetClub from HandleShotComplete) refreshes the
+            // ClubButtonWidget. SetClub fires ClubSelectionBroadcast.Raise(index) but
+            // does NOT call ClubContext.RequestSelection — bridging that gap here.
+            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.OnClubChanged += SelectClubByIndex;
         }
 
         void OnDestroy()
@@ -66,6 +72,8 @@ namespace Golfin.UI.HUD
             if (!_active) return;
             BallContext.OnSelectionRequested  -= SelectBallByIndex;
             ClubContext.OnSelectionRequested  -= SelectClubByIndex;
+            // §2f: unsubscribe from ClubSelectionBroadcast mirror.
+            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.OnClubChanged -= SelectClubByIndex;
         }
 
         void SelectBallByIndex(int idx)

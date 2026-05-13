@@ -128,6 +128,12 @@ namespace Golfin.Physics.Viewer
             EnsureConfigsLoaded();
         }
 
+        // ── §2f smoke-runner helpers ──────────────────────────────────────────
+        // Allow SmokeRunner2fHost to temporarily set Instant PlayRate for comparison
+        // shots (S5/S6) without exposing the entire BallAnimator reference.
+        internal float GetBallAnimatorPlayRate() => ballAnimator != null ? ballAnimator.PlayRate : 1f;
+        internal void  SetBallAnimatorPlayRate(float rate) { if (ballAnimator != null) ballAnimator.PlayRate = rate; }
+
         // Camera orbit state
         float   _cameraYaw;
         Vector3 _orbitCenter;
@@ -208,6 +214,9 @@ namespace Golfin.Physics.Viewer
             }
 
             DiagAero("Awake.end");
+
+            // §2f: cache initial non-putter club so auto-exit has a valid fallback target.
+            _lastNonPutterClubIndex = (CurrentClubIndex == PutterIndex) ? 0 : CurrentClubIndex;
         }
 
         static void DeactivateWalkCamerasInLoadedScenes()
@@ -363,6 +372,15 @@ namespace Golfin.Physics.Viewer
 
         private void EnterPutterMode()
         {
+            // §2f: switch camera to GroundLevel immediately so the debug overlay label
+            // matches the actual camera mode in the same frame. Previously the label lagged
+            // because SetMode was only called from RepositionBallWithLookDir on the NEXT
+            // PlaceBallAt call. Moving it here ensures capture #1 shows "CAM: GroundLevel".
+            if (chaseCamera != null)
+            {
+                chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
+                Debug.Log($"[§2f] EnterPutterMode at frame {Time.frameCount} — ChaseCamera.SetMode(GroundLevel) called");
+            }
             if (_shotConeView   != null) _shotConeView.SetPuttMode(true);
             if (_powerGaugeWidget != null)
             {
@@ -389,6 +407,13 @@ namespace Golfin.Physics.Viewer
 
         private void ExitPutterMode()
         {
+            // §2f: switch camera back to Chase immediately so the debug overlay label
+            // matches actual camera mode in the same frame. Mirror of the EnterPutterMode fix.
+            if (chaseCamera != null)
+            {
+                chaseCamera.SetMode(ChaseCamera.Mode.Chase);
+                Debug.Log($"[§2f] ExitPutterMode at frame {Time.frameCount} — ChaseCamera.SetMode(Chase) called");
+            }
             if (_shotConeView   != null) _shotConeView.SetPuttMode(false);
             if (_powerGaugeWidget != null) _powerGaugeWidget.SetUnitMode(PowerGaugeWidget.DistanceUnit.Yards);
             if (_holeIndicatorWidget != null) _holeIndicatorWidget.SetUnitMode(HoleIndicatorWidget.DistanceUnit.Yards);
@@ -472,6 +497,15 @@ namespace Golfin.Physics.Viewer
         };
         public static readonly string[] LabClubLabels = { "Driver", "Iron 7", "Wedge", "Putter" };
 
+        // §2f: Named constant for the putter index. Matches LabClubs.Length - 1.
+        public static readonly int PutterIndex = LabClubs.Length - 1;
+
+        // §2f: Tracks the last non-putter club the player used.
+        // Initialized in Awake to whatever the Inspector default CurrentClubIndex is
+        // (typically Driver = 0). Updated on every SetClub(index != PutterIndex) call.
+        // Used by auto-exit to revert from putter when the ball comes to rest off-green.
+        int _lastNonPutterClubIndex = 0;
+
         public int CurrentClubIndex { get; private set; }
         public event System.Action<int> OnClubChanged;
 
@@ -479,6 +513,8 @@ namespace Golfin.Physics.Viewer
         {
             if (_shotController == null || index < 0 || index >= LabClubs.Length) return;
             CurrentClubIndex = index;
+            // §2f: remember the last non-putter selection for auto-exit.
+            if (index != PutterIndex) _lastNonPutterClubIndex = index;
             bool isPutt = index == LabClubs.Length - 1;
             _shotController.IsPutt = isPutt;
             if (isPutt)
@@ -913,7 +949,37 @@ namespace Golfin.Physics.Viewer
             {
                 case Golfin.Gameplay.Loop.BallState.AtRest:
                 {
-                    // §2e: rotate camera yaw to face the pin before snapping into Aiming pose.
+                    // §2f: surface-based auto-switch BEFORE §2e camera rotation.
+                    // If we flip into putter mode, EnterPutterMode sets ChaseCamera to
+                    // GroundLevel — we must NOT then call ApplyCameraYaw which would
+                    // override the GroundLevel framing. Hence the early-return path below.
+                    int target = PutterModeSurfaceController.DecideTargetClub(
+                        currentClubIndex: CurrentClubIndex,
+                        putterIndex: PutterIndex,
+                        endSurface: result.EndSurface,
+                        lastNonPutterClubIndex: _lastNonPutterClubIndex);
+
+                    bool willFlipToPutter   = target == PutterIndex && CurrentClubIndex != PutterIndex;
+                    bool willFlipFromPutter = target != PutterIndex && target >= 0 && CurrentClubIndex == PutterIndex;
+
+                    if (target >= 0)
+                    {
+                        Debug.Log($"[PhysicsLab][§2f] AtRest surface={result.EndSurface} " +
+                                  $"auto-switch club {CurrentClubIndex}→{target} " +
+                                  $"(willFlipToPutter={willFlipToPutter} willFlipFromPutter={willFlipFromPutter})");
+                        SetClub(target);
+                    }
+
+                    if (willFlipToPutter)
+                    {
+                        // Putter mode owns camera framing (GroundLevel). Skip pin-aim rotation
+                        // and ApplyCameraYaw. Still re-arm.
+                        _shotController?.CompleteShot();
+                        _ballSM.ReArm();
+                        break;
+                    }
+
+                    // §2e: existing pin-aim rotation path (unchanged).
                     Vector3 ballPos = ballAnimator?.CurrentBall != null
                         ? ballAnimator.CurrentBall.position
                         : _orbitCenter;

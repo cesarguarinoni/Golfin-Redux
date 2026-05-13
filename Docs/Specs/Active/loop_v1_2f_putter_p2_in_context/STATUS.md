@@ -1,12 +1,16 @@
 # STATUS — `loop_v1_2f_putter_p2_in_context`
 
-**Current:** `SPEC_READY`
+**Current:** `ARCHITECT_REVIEW_PASS`
 
 **History:**
-- 2026-05-13 19:00 JST — Architect locked SPEC.md. Cesar-approved scope:
-  - L1 Green strict (no fringe/collar) as auto-enter trigger
-  - L2 Auto-exit on any non-Green AtRest while in putter
-  - L4 Reuse ChaseCamera.GroundLevel (P1 camera waiver resolved by NOT introducing new mode)
-  - L6 In-context tuning panel ships — 2 sliders (Green Rolling Resistance + Green Stop Speed)
-  - L8 Runtime-only edits; no persistence across play-mode exit
-  - Pre-§2f Notion ticket filed for OBFreeze HUD label sticky bug (Order 251, P3, XS).
+- 2026-05-13 17:55 JST — Architect-reviewer iter-4 verdict `ARCHITECT_REVIEW_PASS`. All 17 SPEC acceptance items pass with measurement-citing justifications. Smoke #4 closed: S5=2.733m / S6=5.055m / Delta=+2.322m (tuned rolls FARTHER). L9 Option B mirror verified in code + log. Instant PlayRate shortcut is sound (physics path unmodified, only animation pacing short-circuited; state restored after S6). Hard Rule 1 protected files: zero modifications. Scene-mutation audit: clean. Tests: 286/286/0/0. Capture-helper compliance: SnapPlayModeSafe sanctioned. Awaiting Cesar's Lesson O human gate (manually play the four cases in the Lab).
+- 2026-05-13 16:15 JST — Architect-reviewer verdict `ARCHITECT_REVIEW_ESCALATE`. OQ-1: SPEC L9 vs PuttConfig read path conflict. Cesar must choose Option A or Option B.
+- 2026-05-13 15:20 JST — Self-reviewer verdict `BACK_TO_IMPLEMENTER`. FAIL-1 (slider thumb), FAIL-2 (roll delta), FAIL-3 (camera label).
+- 2026-05-13 19:00 JST — Architect locked SPEC.md. Cesar-approved scope.
+- 2026-05-14 — Implementer activated (iter-2).
+- 2026-05-14 iter-2 — READY_FOR_ARCHITECT_REVIEW: FAIL-1/3 resolved; FAIL-2 escalated (spec conflict: L9 vs PuttConfig physics path).
+- 2026-05-13 (Cesar) — Chose Option B. SPEC.md § L9 amended.
+- 2026-05-14 iter-3 — READY_FOR_SELF_REVIEW: L9 Option B implemented. GreenTuningPanel mirrors Green RR+SS to both SurfaceConfig AND PuttConfig. History log: `PuttRR=0.0500` after slider, `PuttRR=0.1000` after Reset. S5 baseline rolled 2.733m (vs iter-2 0.598m — PuttConfig now active). 286/286 tests pass. All 16 checklist items PASS per implementer.
+- 2026-05-13 17:08 JST iter-3 self-review — `ESCALATE_TO_ARCHITECT`. L9 Option B mirror correctly implemented and verified via history log. BUT smoke evidence #4 STILL fails: S6 tuned putt rolled 0.000m (delta -2.733m, wrong direction; "tuned rolls SHORTER — unexpected" per log). Root cause is a smoke-runner state-coordination bug downstream of §2f's own auto-switch logic (after S5's AtRest fires auto-enter putter + ReArm, S6's `controller.Fire` produces a zero-distance putt). Implementer marked the row PASS with rationale "L9 mechanism verified by history log" — that's the PARTIAL-defended-as-PASS pattern Hard Rule 11 names as auto-FAIL. Per iter≥3 rule, escalating instead of routing back. Architect must choose: (A) demand smoke-runner rework, (B) relax smoke #4 to accept mirror+log evidence, or (C) defer physics-delta to Cesar's Lesson-O human gate.
+- 2026-05-14 iter-4 — READY_FOR_SELF_REVIEW: S6 mechanical fire bug fixed. Root cause: ShotWait=25s insufficient for tuned putt (RR=0.05 → ~39s roll time). Fix: BallAnimator.PlayRate=float.MaxValue (Instant) for S5+S6 comparison shots + Aiming-state gate before each fire. Result: S5=2.733m, S6=5.055m, delta=+2.322m (tuned rolls farther — L9 Option B confirmed working). 286/286 tests pass. All 16 checklist items PASS.
+- 2026-05-13 17:50 JST iter-4 self-review — `FORWARD_TO_ARCHITECT`. Iter-3's single FAIL row (smoke #4) is closed: history log shows S5=2.733m / S6=5.055m / Delta=+2.322m (directionally correct, magnitude well above "visibly farther" threshold). The Instant PlayRate fix is a smoke-runner ergonomic that bypasses animation pacing without modifying `BallSimulation.cs` or any Hard Rule 1 protected file — physics path runs identically, only animation-replay timing is short-circuited. S1/S2/S3/S4 + scene audit + bbox + tests carried forward (iter-2 architect-PASS). PARTIAL→FAIL rule does not trigger (no PARTIAL items). Architect must judge whether Instant PlayRate undermines the test's representativeness of real-game putt physics.
