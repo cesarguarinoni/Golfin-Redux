@@ -567,6 +567,14 @@ namespace Golfin.Physics.Viewer
         // One-shot placement; subsequent shots continue from wherever the ball lands.
         public void PlaceBallAt(Vector3 worldPos, int? preferredSurfaceTypeValue = null)
         {
+            RepositionBallWithLookDir(worldPos, preferredSurfaceTypeValue, GetDefaultLookDirection());
+        }
+
+        // §2e: private helper that owns the ball-placement + camera-yaw logic.
+        // PlaceBallAt delegates here with GetDefaultLookDirection(); the OB-drop
+        // path calls this directly with the pin-facing direction.
+        void RepositionBallWithLookDir(Vector3 worldPos, int? preferredSurfaceTypeValue, Vector3 lookDir)
+        {
             if (_shotController != null) _shotController.CompleteShot();
 
             float y   = SurfaceSnap(worldPos.x, worldPos.z, worldPos.y, preferredSurfaceTypeValue);
@@ -584,7 +592,6 @@ namespace Golfin.Physics.Viewer
                 _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
             }
 
-            Vector3 lookDir = GetDefaultLookDirection();
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
@@ -637,6 +644,18 @@ namespace Golfin.Physics.Viewer
         {
             var dragger = GetComponentInChildren<ClubHandleDragger>(true);
             return dragger != null && dragger.ReleaseToFire;
+        }
+
+        /// <summary>
+        /// §2e smoke runner test seam: overrides _cameraYaw so the next Fire() call
+        /// sends the ball in the specified direction (radians, XZ plane, Atan2 convention).
+        /// Only call from smoke runners / Editor test tools — never from production code.
+        /// </summary>
+        internal void SetCameraYawRadians(float yawRadians)
+        {
+            _cameraYaw = yawRadians;
+            if (_shotController != null)
+                _shotController.CameraHeadingRadians = _cameraYaw;
         }
 
         // ── Camera orbit ───────────────────────────────────────────────────────
@@ -875,8 +894,8 @@ namespace Golfin.Physics.Viewer
 
         /// <summary>
         /// §2a: Called by BallStateMachine when a shot reaches a terminal state (AtRest, InCup, OB).
-        /// Resets camera target and re-arms the shot controller.
-        /// §2d will gate this on result.TerminalState == AtRest later.
+        /// §2e: extended with pin-aim rotation on AtRest and OB drop + teleport + penalty stroke.
+        /// §2d will gate InCup on HoleCompleteDriver modal close (unchanged).
         /// </summary>
         void HandleShotComplete(Golfin.Gameplay.Loop.ShotResult result)
         {
@@ -890,26 +909,57 @@ namespace Golfin.Physics.Viewer
             // §2b: chaseCamera.SetTarget(null) relocated to LoopCameraDirector.HandleStateChanged
             // on terminal states (AtRest / InCup / OB). No direct chaseCamera call here.
 
-            // On AtRest, snap the camera to the Aiming pose around the new orbit center.
-            // Director clears the chase target so ChaseCamera early-returns; without this
-            // snap the camera would visually freeze at the last Chase frame until the user
-            // mouse-drags. InCup/OB intentionally keep their CupZoom/OBFreeze framing.
-            if (result.TerminalState == Golfin.Gameplay.Loop.BallState.AtRest)
+            switch (result.TerminalState)
             {
-                Camera cam = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
-                if (cam != null) ApplyCameraYaw(cam);
-            }
+                case Golfin.Gameplay.Loop.BallState.AtRest:
+                {
+                    // §2e: rotate camera yaw to face the pin before snapping into Aiming pose.
+                    Vector3 ballPos = ballAnimator?.CurrentBall != null
+                        ? ballAnimator.CurrentBall.position
+                        : _orbitCenter;
+                    Vector3 pinPos  = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+                    float   newYaw  = AimRotationHelper.ComputeYawTowardPin(ballPos, pinPos, _cameraYaw);
+                    if (!Mathf.Approximately(newYaw, _cameraYaw))
+                    {
+                        _cameraYaw = newYaw;
+                        if (_shotController != null)
+                            _shotController.CameraHeadingRadians = _cameraYaw;
+                    }
 
-            // §2d: re-arm only on AtRest/OB. InCup → HoleCompleteDriver owns re-arm via modal close.
-            // Docstring: re-arms the shot controller on AtRest/OB; on InCup, re-arm is deferred to
-            // HoleCompleteDriver's modal close (§2d).
-            if (result.TerminalState == Golfin.Gameplay.Loop.BallState.AtRest
-                || result.TerminalState == Golfin.Gameplay.Loop.BallState.OB)
-            {
-                _shotController?.CompleteShot();
-                _ballSM.ReArm();
+                    Camera cam = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
+                    if (cam != null) ApplyCameraYaw(cam);
+
+                    _shotController?.CompleteShot();
+                    _ballSM.ReArm();
+                    break;
+                }
+
+                case Golfin.Gameplay.Loop.BallState.OB:
+                {
+                    // §2e: compute drop point from the just-finished trajectory.
+                    Vector3 dropPos = OBDropResolver.Resolve(_previousTrajectory, _lastShotOrigin);
+                    Vector3 pinPos  = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+                    float   newYaw  = AimRotationHelper.ComputeYawTowardPin(dropPos, pinPos, _cameraYaw);
+                    Vector3 lookDir = new Vector3(Mathf.Cos(newYaw), 0f, Mathf.Sin(newYaw));
+
+                    Debug.Log($"[PhysicsLab][§2e] OB drop: from end={result.EndPosition} " +
+                              $"to drop={dropPos:F2} yawRad={newYaw:F3} (penalty stroke +1)");
+
+                    // Reposition ball at drop point. RepositionBallWithLookDir calls
+                    // _shotController.CompleteShot() internally — no need to call it again.
+                    RepositionBallWithLookDir(dropPos, preferredSurfaceTypeValue: null, lookDir: lookDir);
+
+                    _ballSM.ReArm();
+                    break;
+                }
+
+                case Golfin.Gameplay.Loop.BallState.InCup:
+                {
+                    // §2d owns re-arm via HoleCompleteDriver / RearmAfterHoleComplete on modal close.
+                    // No CompleteShot/ReArm here.
+                    break;
+                }
             }
-            // else InCup: see RearmAfterHoleComplete().
         }
 
         // §2d: invoked by HoleCompleteDriver after the modal is dismissed.

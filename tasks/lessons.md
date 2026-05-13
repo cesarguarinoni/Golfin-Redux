@@ -1,5 +1,21 @@
 # Lessons Learned
 
+## Architect investigates root causes BEFORE re-running implementer on a FAIL
+
+**Symptom (loop_v1_2e_next_shot_handoff, 2026-05-13):** Self-reviewer iter-1 FAILed two procedural items — S2 visually unconvincing ("uniform dark brown around the ball — looks like OOB") and S3 byte-identical to S2. Reflex would be to hand the implementer a generic "redo the captures" and let them figure it out. Cesar's prompt was sharper: **"Go, but first understand why the visual evidence turned out wrong."** That instruction inverted the failure mode.
+
+**What digging revealed (in ~5 min of code reading, before re-running):**
+- S3 duplicate: two `CaptureCore.SnapPlayModeSafe` calls back-to-back in the same coroutine frame at `SmokeRunner2eHost.cs:280-285`, no `yield return null` between them. Pure sequencing bug, trivial to fix once spotted.
+- S2 visual: `LoopCameraDirector.ModeMap[BallState.Aiming] = null` ("leave whatever was set") means the Director never promotes back to Chase after OB→Aiming. The SPEC § Architecture context's claim that "Director already returns Chase on OB→Aiming" was **factually wrong**. Compounded by Hole_06's drop-zone terrain rendering dark even when it's classified as Rough — making the resolver's behavior look broken to a reviewer even though it was correct.
+
+**Why this matters:** without the root-cause dig, the implementer would have spent another full iteration churning on scenarios + camera reframes blindly, possibly landing wrong fixes. With the dig, the prompt I handed back named the actual mechanisms ("smoke runner needs yield + reframe", "Director mode-map gap is real but out-of-scope per L7 — use Chase-mode override in smoke runner only") and the implementer landed iter-2 in one shot.
+
+**Rule:** When a pipeline FAIL surfaces a fact that *might* be a deeper bug ("the camera's wrong", "the surface looks wrong", "the value's wrong"), the architect (Claude.ai chat) does a read-only root-cause pass — `grep`, `Read`, `git log` — and writes the re-run prompt with named mechanisms, not vague directives. Don't delegate understanding to the implementer when the architect has the broader context. The implementer prompt should answer "what's actually broken and which file/line/concept" before "what to do about it."
+
+**Counter-rule (don't over-apply):** if the FAIL is purely cosmetic ("text is the wrong color"), skip the dig and just route it back. The architect-investigates pattern is for FAILs where the surfaced symptom contradicts the spec's stated mechanism — that's a signal there's a gap between spec assumption and runtime reality, and the implementer alone can't reconcile it.
+
+**Bonus side-effect:** the dig surfaces real bugs that *are* out-of-scope for the current task but worth filing as backlog. From this session: `LoopCameraDirector.ModeMap[Aiming] = null` is a follow-up Director ticket; queued at `Docs/Specs/Queued/director_obfreeze_to_chase_on_aiming/`.
+
 ## "Functionally working" is not "matches the reference" — stop conflating them
 
 **Symptom (hole_selection_screen, 2026-05-03):** After 5 iterations of pipeline work, the screen worked end-to-end (filters + cards + expand/collapse + PLAY → matchmaking modal), but Cesar's response was "looks nothing like the reference. I will fix it myself." Five rounds of "skeleton first, polish later" never converged on the polish.

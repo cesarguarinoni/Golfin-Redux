@@ -64,7 +64,21 @@ namespace Golfin.Physics.Viewer
              && change.Previous != BallState.InCup
              && change.Previous != BallState.OB) return;
 
-            GameSession.SetTurn(GameSession.TurnCount + 1);
+            // §2e: OB transitions add a penalty stroke. Order-independent — reads from
+            // BallStateChange.Previous, not from ShotHistory (which may not be populated
+            // yet due to subscription order).
+            int penalty = (change.Previous == BallState.OB) ? 1 : 0;
+            GameSession.SetTurn(ComputeNextTurn(GameSession.TurnCount, penalty));
+        }
+
+        /// <summary>
+        /// §2e: pure helper for unit tests. Caller passes current turn + penalty stroke
+        /// count; returns the new turn value. Negative penalty clamped to 0.
+        /// </summary>
+        public static int ComputeNextTurn(int currentTurn, int penaltyStrokes)
+        {
+            if (penaltyStrokes < 0) penaltyStrokes = 0;
+            return currentTurn + 1 + penaltyStrokes;
         }
 
         ShotRecord BuildShotRecord(ShotResult result)
@@ -96,6 +110,9 @@ namespace Golfin.Physics.Viewer
 
             string obReason = result.OBReason.HasValue ? result.OBReason.Value.ToString() : null;
 
+            // §2e: OB shots get +1 penalty stroke.
+            int penaltyStrokes = (result.TerminalState == BallState.OB) ? 1 : 0;
+
             return new ShotRecord(
                 shotNumber: GameSession.TurnCount,
                 clubLabel: clubLabel,
@@ -104,7 +121,8 @@ namespace Golfin.Physics.Viewer
                 distanceXZMeters: distXZ,
                 terminalState: result.TerminalState.ToString(),
                 obReason: obReason,
-                finalSurface: finalSurface);
+                finalSurface: finalSurface,
+                penaltyStrokes: penaltyStrokes);
         }
 
         /// <summary>
@@ -121,6 +139,22 @@ namespace Golfin.Physics.Viewer
             float distXZ = Mathf.Sqrt(dx * dx + dz * dz);
             return new ShotRecord(shotNumber, clubLabel, origin, finalPos, distXZ,
                                   terminalState, obReason, finalSurface);
+        }
+
+        /// <summary>
+        /// §2e: test seam overload with penaltyStrokes parameter.
+        /// </summary>
+        public static ShotRecord BuildShotRecordStatic(
+            int shotNumber, string clubLabel,
+            Vector3 origin, Vector3 finalPos,
+            string terminalState, string obReason, string finalSurface,
+            int penaltyStrokes)
+        {
+            float dx = finalPos.x - origin.x;
+            float dz = finalPos.z - origin.z;
+            float distXZ = Mathf.Sqrt(dx * dx + dz * dz);
+            return new ShotRecord(shotNumber, clubLabel, origin, finalPos, distXZ,
+                                  terminalState, obReason, finalSurface, penaltyStrokes);
         }
     }
 }

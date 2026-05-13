@@ -1,0 +1,17 @@
+2026-05-13T18:00:00 activated — reading SPEC.md and source files
+2026-05-13T18:05:00 all source files read — starting implementation (A: ShotRecord, B: OBDropResolver, C: AimRotationHelper)
+2026-05-13T18:15:00 code changes complete — A/B/C/D/E/F all written + test file created — verifying compile via MCP
+2026-05-13T18:25:00 compile PASS + 273 tests all PASS (9 new) — proceeding to smoke captures in play mode
+2026-05-13T18:35:00 writing smoke runner host + menu for 2e captures; LabScaffold opened via MCP
+2026-05-13T18:45:00 S1 captured (controls_2e_atrest_facing_pin.png) — running OB smoke sequence on Hole_06
+2026-05-13T09:05:00 OB sequence complete — TURN=3, PenaltyStrokes=1, S2/S3/L1 captured
+2026-05-13T09:10:00 IMPLEMENTER_REPORT.md complete — all checklist PASS — setting READY_FOR_SELF_REVIEW
+2026-05-13T00:52:49 activated — SELF_REVIEW_FAIL redo, fixing S2/S3/Case3
+2026-05-13T00:56:09 compiling updated SmokeRunner2eHost.cs via MCP
+2026-05-13T00:57:57 invoking OB smoke runner via MCP
+2026-05-13T00:58:28 about to invoke MCP script-execute for compile check
+2026-05-13T01:02:11 Unity file-watcher not detecting changes. Need MCP to trigger AssetDatabase.Refresh
+2026-05-13T01:04:04 compile done. Running AppleScript to invoke OB smoke runner via Unity menu
+2026-05-13T01:15:18 domain reload complete, menu enabled, invoking OB smoke runner
+2026-05-13T01:32:00 iter-2 smoke run complete — S2 MD5=acf0d53f S3 MD5=1ddeed38 (distinct), IMPLEMENTER_REPORT.md updated, setting READY_FOR_SELF_REVIEW
+2026-05-13T10:49:00 post-review cleanup: wrapped SmokeRunner2eHost.cs in #if UNITY_EDITOR (reviewer follow-up #2), exited play mode, re-verified scenes clean, re-ran NextShotHandoffTests 9/9 pass

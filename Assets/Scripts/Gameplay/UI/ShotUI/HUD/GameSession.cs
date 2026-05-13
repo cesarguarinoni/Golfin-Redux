@@ -51,12 +51,15 @@ namespace Golfin.Gameplay.UI.HUD
         public readonly string  TerminalState;      // "AtRest" / "InCup" / "OB"
         public readonly string  OBReason;           // "Water" / "OutOfBounds" / "ExitedWorldBounds" / null
         public readonly string  FinalSurface;       // best-effort; "Unknown" if not derivable
+        public readonly int     PenaltyStrokes;     // §2e: 0 normally, 1 on OB
 
+        // §2e: 9-arg constructor with PenaltyStrokes.
         public ShotRecord(
             int shotNumber, string clubLabel,
             Vector3 originPosition, Vector3 finalPosition,
             float distanceXZMeters,
-            string terminalState, string obReason, string finalSurface)
+            string terminalState, string obReason, string finalSurface,
+            int penaltyStrokes)
         {
             ShotNumber       = shotNumber;
             ClubLabel        = clubLabel;
@@ -66,6 +69,17 @@ namespace Golfin.Gameplay.UI.HUD
             TerminalState    = terminalState;
             OBReason         = obReason;
             FinalSurface     = finalSurface;
+            PenaltyStrokes   = penaltyStrokes;
         }
+
+        // §2c: existing 8-arg constructor preserved — forwards to new ctor with PenaltyStrokes=0.
+        public ShotRecord(
+            int shotNumber, string clubLabel,
+            Vector3 originPosition, Vector3 finalPosition,
+            float distanceXZMeters,
+            string terminalState, string obReason, string finalSurface)
+            : this(shotNumber, clubLabel, originPosition, finalPosition,
+                   distanceXZMeters, terminalState, obReason, finalSurface, 0)
+        { }
     }
 }
