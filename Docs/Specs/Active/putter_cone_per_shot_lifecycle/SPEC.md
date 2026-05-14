@@ -48,14 +48,14 @@ if (_targetingLine != null) _targetingLine.gameObject.SetActive(!on);
    - Frame 4: ball at rest, next shot ready — visualization visible again.
 5. **Tests:** 2 EditMode tests asserting visibility flips on `OnStateChanged` for both Aiming↔Flying transitions in putter mode.
 
-### Piece 2: central ball sprite size parity (added 2026-05-14 10:00 JST)
+### Piece 2: central ball sprite size parity (added 2026-05-14 10:00 JST, narrative corrected 10:30 JST)
 
-**Bug:** Cesar Lesson O 2026-05-14: "the putter interface is using a smaller center ball sprite than the regular shots." Visual inspection by architect (file: scene `LabScaffold.unity` + `CentralBallWidget.cs`) shows the scene currently has `_normalSize=80, _puttModeSize=150` — i.e. putter mode is LARGER per code, opposite of Cesar's observed direction. Field naming ambiguity may be the source of confusion, but the directive is unambiguous: both sizes must match for now, keeping fields separate for future divergence.
+**Bug:** `CentralBallWidget._normalSize = 80f` (code default) and the matching scene Inspector value of `80` are wrong. Cesar's manually-authored RectTransform `m_SizeDelta = 150` on the CentralBallWidget GO in `LabScaffold.unity` IS the correct size for both regular and putter mode shots. The bug surfaces whenever `SetPuttMode(false)` fires — it writes `sizeDelta = _normalSize = 80`, overriding Cesar's authored 150. Cesar observed this happening after teleport-then-shot scenarios via LabCanvas, but the trigger is just "any code path that calls `SetPuttMode(false)`" — i.e. `ExitPutterMode` (whether triggered by manual club switch or §2f auto-exit from putter). Verified via scene YAML: `m_SizeDelta: {x: 150, y: 150}` is authored, `_normalSize: 80` is what overrides it at runtime.
 
 **Architect-locked fix:**
-6. **Set `_normalSize = 150f` and `_puttModeSize = 150f`** in both the `CentralBallWidget.cs` field defaults AND the `LabScaffold.unity` Inspector values for the `CentralBallWidget` MonoBehaviour instance. Both fields stay as separate `[SerializeField]`. Do NOT collapse to a single field — Cesar wants the option to diverge later.
-7. **Verify scene change via Unity Editor MCP** (`gameobject-component-modify`), NOT raw YAML (controls_g lesson).
-8. **Smoke capture for parity:** add a 5th frame to the per-shot lifecycle capture sequence — a side-by-side or sequential pair showing (a) regular-shot ball at Aiming and (b) putter-mode ball at Aiming. Both must be visually identical in size (150×150).
+6. **Set `_normalSize = 150f` and `_puttModeSize = 150f`** in both the `CentralBallWidget.cs` field defaults AND the `LabScaffold.unity` Inspector values for the `CentralBallWidget` MonoBehaviour instance. Both fields stay as separate `[SerializeField]`. Do NOT collapse to a single field — Cesar wants the option to diverge later. The mode-based resize becomes a no-op for current values; that's intentional.
+7. **Verify scene change via Unity Editor MCP** (`gameobject-component-modify`), NOT raw YAML (controls_g lesson). The RectTransform `m_SizeDelta` value must remain `150,150` (do NOT touch it). Only the two `[SerializeField]` floats on the MonoBehaviour are changing.
+8. **Smoke capture for parity:** capture three frames in the per-shot lifecycle: (a) regular-shot ball at Aiming, (b) putter-mode ball at Aiming, (c) regular-mode ball at Aiming AGAIN after a putter→regular auto-switch (triggers `SetPuttMode(false)`). All three frames must show the central ball at identical visible size (150×150). Frame (c) is the regression-proof capture.
 9. **No new tests required for Piece 2** — it's a data-only change. The existing visibility tests from Piece 1 will exercise both code paths.
 
 ## Out of scope
