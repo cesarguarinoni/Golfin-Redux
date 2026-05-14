@@ -33,6 +33,8 @@ if (_targetingLine != null) _targetingLine.gameObject.SetActive(!on);
 
 ## Scope
 
+### Piece 1: per-shot lifecycle (original)
+
 1. **Add a per-shot show/hide cycle inside puttMode.** Putt mode keeps its specialized visualization (puttTrack / putter-specific cone variant) but follows the same lifecycle: visible at Aiming, hidden on fire (`Aiming → Flying` or equivalent), visible again at `Resolving → Aiming`.
 2. **Decide what "the cone" means in putter mode.** Options:
    - A: re-use the same `_coneGraphic` but parameterize it for short-distance putts (different size/colors).
@@ -46,11 +48,23 @@ if (_targetingLine != null) _targetingLine.gameObject.SetActive(!on);
    - Frame 4: ball at rest, next shot ready — visualization visible again.
 5. **Tests:** 2 EditMode tests asserting visibility flips on `OnStateChanged` for both Aiming↔Flying transitions in putter mode.
 
+### Piece 2: central ball sprite size parity (added 2026-05-14 10:00 JST)
+
+**Bug:** Cesar Lesson O 2026-05-14: "the putter interface is using a smaller center ball sprite than the regular shots." Visual inspection by architect (file: scene `LabScaffold.unity` + `CentralBallWidget.cs`) shows the scene currently has `_normalSize=80, _puttModeSize=150` — i.e. putter mode is LARGER per code, opposite of Cesar's observed direction. Field naming ambiguity may be the source of confusion, but the directive is unambiguous: both sizes must match for now, keeping fields separate for future divergence.
+
+**Architect-locked fix:**
+6. **Set `_normalSize = 150f` and `_puttModeSize = 150f`** in both the `CentralBallWidget.cs` field defaults AND the `LabScaffold.unity` Inspector values for the `CentralBallWidget` MonoBehaviour instance. Both fields stay as separate `[SerializeField]`. Do NOT collapse to a single field — Cesar wants the option to diverge later.
+7. **Verify scene change via Unity Editor MCP** (`gameobject-component-modify`), NOT raw YAML (controls_g lesson).
+8. **Smoke capture for parity:** add a 5th frame to the per-shot lifecycle capture sequence — a side-by-side or sequential pair showing (a) regular-shot ball at Aiming and (b) putter-mode ball at Aiming. Both must be visually identical in size (150×150).
+9. **No new tests required for Piece 2** — it's a data-only change. The existing visibility tests from Piece 1 will exercise both code paths.
+
 ## Out of scope
 
 - Non-putter cone behavior. It already works correctly per CLAUDE.md's `_coneGraphic` lifecycle; don't touch what isn't broken.
 - Putter-specific cone styling/coloring redesign. Reuse existing visuals; this is a visibility fix, not a re-skin.
 - Auto-toggle logic itself (§2f, shipped).
+- **Refactoring `_normalSize` + `_puttModeSize` into a single field.** Keep them separate per Cesar's directive 2026-05-14.
+- **Renaming `_normalSize` to clarify it's the non-putter-mode size.** Naming clarity is a future polish; this spec is the size-parity fix.
 
 ## Hard rules
 
@@ -64,14 +78,19 @@ if (_targetingLine != null) _targetingLine.gameObject.SetActive(!on);
 - In putter mode (auto-entered or manually selected), the aim visualization (cone or putter-specific equivalent) is visible at Aiming, hidden during Flying/Rolling, visible again at the next Aiming.
 - 4-frame smoke capture sequence shows the cycle clearly.
 - 2 new EditMode tests PASS; baseline+2 target met.
-- Cesar Lesson O verification: cone behaves like other clubs across multiple putts.
+- **Central ball sprite renders at identical visible size (150×150) in both regular and putter modes** — 5th smoke frame proves parity.
+- **`CentralBallWidget.cs` field defaults updated to `_normalSize = 150f, _puttModeSize = 150f`** AND `LabScaffold.unity` Inspector values match (verified via Unity Editor MCP).
+- Cesar Lesson O verification: cone behaves like other clubs across multiple putts AND ball stays the same size when crossing the auto-switch boundary.
 
 ## Estimate
 
-Half-day. Small surface area; the work is mostly subscribing to existing events and gating visibility correctly.
+Half-day to 1 day (was half-day pre-amendment). Piece 1 mostly subscribing to existing events + gating visibility. Piece 2 is a 2-field Inspector tweak + smoke capture parity proof.
 
 ## References
 
 - [PhysicsLabController.cs:384, 417](Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:384) — `EnterPutterMode` / `ExitPutterMode` call `SetPuttMode(true/false)`.
-- [ShotConeView.cs:69-70](Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs:69) — the permanent-hide on `_puttMode=true`.
-- `Docs/Specs/Completed/loop_v1_2f_putter_p2_in_context/` — Cesar's Lesson O surfaced this.
+- [PhysicsLabController.cs:405, 433](Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:405) — `_centralBall.SetPuttMode(true/false)` (Piece 2 call sites).
+- [ShotConeView.cs:69-70](Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs:69) — the permanent-hide on `_puttMode=true` (Piece 1 bug location).
+- [CentralBallWidget.cs:27-29, 41-46](Assets/Scripts/Gameplay/UI/ShotUI/CentralBallWidget.cs:27) — `_normalSize` / `_puttModeSize` fields + `SetPuttMode` (Piece 2 fix location).
+- [LabScaffold.unity:26429-26435](Assets/Scenes/Physics/LabScaffold.unity:26429) — scene Inspector values for the `CentralBallWidget` MonoBehaviour instance.
+- `Docs/Specs/Completed/loop_v1_2f_putter_p2_in_context/` — Cesar's Lesson O surfaced both pieces.
