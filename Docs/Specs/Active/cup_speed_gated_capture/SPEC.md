@@ -21,8 +21,8 @@ This was acceptable in pre-loop-v1 when putts were tested in isolation at low sp
 ## Scope
 
 1. **Add a speed gate to `RealCupDetector`.** When a ball intersects the cup volume, check `ball.velocity.magnitude` (or fp-equivalent) at the moment of contact. If above threshold, treat as a fly-over (ball continues on its trajectory, possibly lipping the cup edge per existing rim-physics). If below threshold, capture as before.
-2. **Threshold determination.** USGA guidance is ~5 ft/s (~1.5 m/s) at the cup rim is the "lip-out" threshold; faster than that and the ball skips. Architect should anchor on this via web research (existing `Docs/Physics/CALIBRATION_METHODOLOGY.md` lesson on real-world targets applies — cite the source per Lesson K). Sane initial guess: **1.5 m/s** with the option to tune via `PuttConfig.Green.CupCaptureSpeed` (new field) so future Cesar tuning is data-driven.
-3. **Trajectory consequence when speed > threshold.** Define what happens: ball continues with reduced velocity (rim impact damping), OR ball deflects off the rim, OR ball continues straight (cheap version). Architect picks during spec authoring. **Cheap version is acceptable for v1** — just don't capture; let the ball continue along its existing trajectory.
+2. **Threshold determination.** **ARCHITECT-LOCKED 2026-05-14 09:30 JST: 1.5 m/s** sourced from USGA "lip-out" guidance (~5 ft/s at cup rim). Cited via Lesson K methodology in code comments + CSV header. Exposed as new `PuttConfig.Green.CupCaptureSpeed` field for future data-driven tuning. Default value persists at 1.5 m/s until Cesar tunes via DashboardUI or in-loop GreenTuningPanel (P2 follow-up).
+3. **Trajectory consequence when speed > threshold.** **ARCHITECT-LOCKED 2026-05-14 09:30 JST: cheap version.** Above-threshold contact does NOT capture; ball continues on existing trajectory uninterrupted. No rim impact damping, no deflection in v1. Rim-physics realism deferred to a future polish task.
 4. **Tests:** 3-4 EditMode tests:
    - Putt at 0.5 m/s into cup → captured.
    - Putt at 1.0 m/s into cup → captured (under threshold).

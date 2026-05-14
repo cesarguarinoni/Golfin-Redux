@@ -37,7 +37,7 @@ if (_targetingLine != null) _targetingLine.gameObject.SetActive(!on);
 2. **Decide what "the cone" means in putter mode.** Options:
    - A: re-use the same `_coneGraphic` but parameterize it for short-distance putts (different size/colors).
    - B: introduce a putter-specific aim visualization (e.g., `PutterTrack` already mentioned in §2f SPEC) and apply the same show/hide cycle to it.
-   - Architect picks during spec authoring. Approach B respects the existing P1 design where putts have their own visualization layer.
+   - **ARCHITECT-LOCKED 2026-05-14 09:30 JST: Approach A.** Reuse `_coneGraphic` with putt-mode styling parameters (smaller scale, putt-distinct color). DO NOT introduce a separate visualization component — Approach B's "PutterTrack" risks coupling to `PuttPathPredictor` which is slated for deletion under Order 110 redesign. Approach A is the minimum-coupling fix.
 3. **Wire `ShotController.OnStateChanged` (or `BallStateMachine.OnStateChanged`) subscription** in either `ShotConeView` or a new `PutterAimVisibility` controller so the show/hide tracks ball state. Idempotent — entering puttMode subscribes; exiting unsubscribes.
 4. **Smoke evidence:** capture 4 frames in a single putt sequence:
    - Frame 1: aiming a putt — visualization visible.

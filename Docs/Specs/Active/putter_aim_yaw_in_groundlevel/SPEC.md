@@ -33,7 +33,7 @@ This was always the case in P1's manual putter selection. §2f's auto-switch jus
 1. **Allow yaw rotation in `Mode.GroundLevel`** while preserving the ground-level eye-height framing (~1.6m up, looking out from ball origin, NOT orbiting around the ball).
    - Approach A: replace pin-locked `lookAt` with a yaw-driven `lookAt`. Camera stays at `_shotOrigin + 1.6m`, looks along `Vector3(cos(yaw), 0, sin(yaw))` at distance, with a small downward pitch.
    - Approach B: keep current GroundLevel behavior but add a separate "putter aim" sub-mode that allows yaw rotation; toggle on putter entry.
-   - Architect picks one during spec authoring. **Approach A is cleaner** because it makes GroundLevel a single coherent mode (camera-at-eye + yaw-driven look), not two sub-states.
+   - **ARCHITECT-LOCKED 2026-05-14 09:30 JST: Approach A.** Single coherent mode (camera-at-eye + yaw-driven look). Pitch: ~10° downward (configurable constant `kGroundLevelPitchDeg = 10f`). LookAt distance: 10m (same as current). Eye height: 1.6m (unchanged).
 2. **Verify aim heading propagates to shot launch direction.** `_shotController.CameraHeadingRadians = _cameraYaw` already sets this in `HandleCameraOrbit`, but confirm the shot fire path uses this value in putter mode (it may be overridden by some pin-aim helper).
 3. **Tests:** 2-3 EditMode tests covering GroundLevel + yaw rotation; assert camera `transform.position` stays near-pinned but `transform.rotation.eulerAngles.y` tracks `_cameraYaw`.
 4. **Smoke evidence:** capture 3 frames: putter at rest, after dragging aim left ~30°, after dragging aim right ~30°. Three distinct camera headings, ball position fixed.
