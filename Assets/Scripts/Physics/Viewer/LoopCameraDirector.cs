@@ -152,7 +152,6 @@ namespace Golfin.Physics.Viewer
             if (setter == null) return;
 
             var ctrl = ActiveController;
-            bool isPutt = ctrl != null && ctrl.CurrentShotIsPutt;
 
             // Aiming → Flying: arm chase target + reset origin.
             if (change.Next == BallState.Flying && change.Previous == BallState.Aiming)
@@ -195,12 +194,6 @@ namespace Golfin.Physics.Viewer
             // Apply mode mapping (null = leave unchanged).
             if (ModeMap.TryGetValue(change.Next, out var mode) && mode.HasValue)
             {
-                // Q1'c: putts skip mode changes for Flying/Rolling/AtRest — stay in putter framing.
-                if (isPutt && (change.Next == BallState.Flying
-                            || change.Next == BallState.Rolling
-                            || change.Next == BallState.AtRest))
-                    return;
-
                 ApplyMode(mode.Value);
             }
 

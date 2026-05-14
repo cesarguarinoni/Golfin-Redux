@@ -132,7 +132,7 @@ namespace Golfin.Physics.Tests
         // ── Test 2 ─────────────────────────────────────────────────────────────
 
         [Test]
-        public void Director_OnFlyingEntry_Putt_SkipsModeChange()
+        public void Director_OnFlyingEntry_Putt_DispatchesChaseMode()
         {
             var (director, setter, ctrl) = DirectorFactory.Create(isPutt: true);
 
@@ -141,9 +141,12 @@ namespace Golfin.Physics.Tests
                 TrajectoryBuilder.Simple(new fp3(fp.FromFloat(5f), fp.Zero, fp.Zero)),
                 fp.FromFloat(0.02f));
 
-            // Putt: Flying / Rolling / AtRest should all be skipped.
-            Assert.IsFalse(setter.SetModeCalls.Contains(ChaseCamera.Mode.Chase),
-                $"Putt should skip Chase mode dispatch. Got: [{string.Join(", ", setter.SetModeCalls)}]");
+            // Post-§2f-revert (2026-05-14): putts dispatch Mode.Chase identically to iron.
+            // Pre-revert, the Director early-returned for putts on Flying/Rolling/AtRest to
+            // preserve a putter-specific GroundLevel framing; that divergence is deleted
+            // and putts now share the iron camera path. Regression guard.
+            Assert.IsTrue(setter.SetModeCalls.Contains(ChaseCamera.Mode.Chase),
+                $"Putt must dispatch Chase mode post-§2f-revert. Got: [{string.Join(", ", setter.SetModeCalls)}]");
         }
 
         // ── Test 3 ─────────────────────────────────────────────────────────────

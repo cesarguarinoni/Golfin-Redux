@@ -1298,3 +1298,48 @@ If `visualInside=true`, the failed naive bbox is a padding-layout artifact — P
 **For non-LG children (plain images, TMPs without LG wrapping), the naive bbox check is correct as-is.**
 
 **The reviewer must run both checks** — naive bbox AND padding-adjusted visualInside — and treat ONLY a `visualInside=false` as a hard FAIL. Document both values in the review.
+
+
+---
+
+## Lesson Q — Iteration Spirals Signal Structural Debt, Not Bugs To Patch (2026-05-14 JST)
+
+**Origin:** `putter_aim_yaw_in_groundlevel`, iterated 5× by the implementer before architect-executed rollback.
+
+**The spiral:**
+- iter-1 — original SPEC's L4 said "Reuse `ChaseCamera.GroundLevel`" for putter Aiming. Implementer added orbit-driven `Mode.GroundLevel` framing. First putt camera wrong.
+- iter-2 — patched the framing math. Wobble appeared on 2nd putt.
+- iter-3 — added defensive guard. Wobble moved to different state.
+- iter-4 — added another guard. Wobble moved again.
+- iter-5 — early-return in `ChaseCamera` for `GroundLevel + null target`. Wobble fixed *but* first-putt camera now unseeded ("doesn't update unless you move the mouse"). 5th iter introduced a new bug while fixing an old one.
+
+**Root cause** (only spotted at iter-5 close): `GroundLevel` and `ApplyCameraYaw` were both trying to own the camera transform during putter Aiming. Every iter was an attempt to make them coexist. They structurally can't — one of them has to cede ownership.
+
+**The fix:** delete `GroundLevel` from the putter code paths entirely. Putter uses `Mode.Chase` for everything. No camera divergence between putter and iron.
+
+**The rule:**
+
+> When a task enters its 3rd consecutive iteration on the same bug class (camera wobble, ball position drift, UI element misalignment, etc.), STOP. The iteration count is the signal — not a goal-post to push through.
+>
+> The architect must ask: "What invariant is the implementer trying to preserve that's making each fix break something else?" If the answer is a design decision from an earlier task (in this case, `loop_v1_2f`'s L4), revisit that decision. Often the design decision is the bug.
+>
+> Tactical fix → 6th iter. Structural revert → 0th iter of new approach.
+
+**Specific anti-patterns to watch for in implementer reports:**
+
+1. **Defensive guards stacking up.** Each iter's diff adds an `if (someEdgeCase) return;` or a `bool wasInPutterMode = ...; if (wasInPutterMode) ...`. Three of these in one method = structural problem, not edge cases.
+2. **"This iteration's fix had a side effect."** Frequently followed by another fix that introduces another side effect. Defense-in-depth masking the root cause (cf. `Docs/Diagnostics/2026-05-12-physics-lab-postmortem.md` failure class C).
+3. **The fix description references the previous iter's fix.** ("iter-5 fixed the wobble *but* now the camera doesn't seed..."). Means each iter is patching the patch.
+4. **The implementer asks the architect for a fundamentally different approach.** Trust them. They've seen the code more recently than the architect has.
+
+**Architect-execution vs implementer-routing escape valve:**
+
+When this pattern emerges, the architect should consider executing the surgery directly rather than routing back to the implementer. The implementer's pattern-matching defaults to the "add a guard" reflex. A clean architect-written revert + guardrail can finish in one pass what 6+ implementer iterations couldn't.
+
+**Mea culpa from this case:** the §2f L4 ("Reuse `ChaseCamera.GroundLevel`") was architect-locked, not implementer-introduced. The architect carries the design debt, not the implementer. When the architect's earlier design decision is the root cause, the architect should own the cleanup.
+
+**Pre-iter-3 architect questions (use these at every implementer-stop callback):**
+1. What invariant from a previous spec is the implementer trying to preserve?
+2. Is that invariant still load-bearing, or is it the actual bug?
+3. Has the implementer added defensive guards in this method that didn't exist before this task started?
+4. If yes to #3, what's the structural alternative that removes both the guards and the bug?

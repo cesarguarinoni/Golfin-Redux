@@ -97,10 +97,19 @@ namespace Golfin.Physics.Viewer
 
         void RunLateUpdateLogic(float dt)
         {
-            // Pre-§2b behavior: when no target and in Chase mode, do nothing.
-            // PhysicsLabController.ApplyCameraYaw owns the camera position during Aiming
-            // (when Director has cleared the target on AtRest/InCup/OB).
-            if (_target == null && _mode == Mode.Chase) return;
+            // GUARDRAIL (2026-05-14): orbit-based modes (Chase, GroundLevel) cede the
+            // camera transform to PhysicsLabController.ApplyCameraYaw when target is null.
+            // Pivot/focus-based modes (Overhead, Downrange, CupZoom, OBFreeze) operate
+            // from explicit world points (_obFreezePivot, _cupZoomFocus, etc.) and run
+            // with null target after a Director-driven terminal-state transition that
+            // cleared the target on InCup/OB — their cinematics depend on that.
+            //
+            // Pre-2026-05-14: this early-return only applied to Mode.Chase, which let
+            // the GroundLevel branch race with ApplyCameraYaw in Aiming. Extending to
+            // GroundLevel is forward-looking: post-§2f-revert, GroundLevel is unused in
+            // production, but any future low-angle mode work (Order 110 predictor redesign
+            // etc.) will inherit this guardrail automatically.
+            if (_target == null && (_mode == Mode.Chase || _mode == Mode.GroundLevel)) return;
 
             // Use live target position when available, fall back to last shot origin.
             Vector3 focus = _target != null ? _target.position : _shotOrigin;

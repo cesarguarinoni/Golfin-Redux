@@ -372,15 +372,6 @@ namespace Golfin.Physics.Viewer
 
         private void EnterPutterMode()
         {
-            // §2f: switch camera to GroundLevel immediately so the debug overlay label
-            // matches the actual camera mode in the same frame. Previously the label lagged
-            // because SetMode was only called from RepositionBallWithLookDir on the NEXT
-            // PlaceBallAt call. Moving it here ensures capture #1 shows "CAM: GroundLevel".
-            if (chaseCamera != null)
-            {
-                chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
-                Debug.Log($"[§2f] EnterPutterMode at frame {Time.frameCount} — ChaseCamera.SetMode(GroundLevel) called");
-            }
             if (_shotConeView   != null) _shotConeView.SetPuttMode(true);
             if (_powerGaugeWidget != null)
             {
@@ -407,13 +398,6 @@ namespace Golfin.Physics.Viewer
 
         private void ExitPutterMode()
         {
-            // §2f: switch camera back to Chase immediately so the debug overlay label
-            // matches actual camera mode in the same frame. Mirror of the EnterPutterMode fix.
-            if (chaseCamera != null)
-            {
-                chaseCamera.SetMode(ChaseCamera.Mode.Chase);
-                Debug.Log($"[§2f] ExitPutterMode at frame {Time.frameCount} — ChaseCamera.SetMode(Chase) called");
-            }
             if (_shotConeView   != null) _shotConeView.SetPuttMode(false);
             if (_powerGaugeWidget != null) _powerGaugeWidget.SetUnitMode(PowerGaugeWidget.DistanceUnit.Yards);
             if (_holeIndicatorWidget != null) _holeIndicatorWidget.SetUnitMode(HoleIndicatorWidget.DistanceUnit.Yards);
@@ -592,10 +576,6 @@ namespace Golfin.Physics.Viewer
             // same teleport the user gets from a click-swipe — just done up front.
             Camera teeCamForApply = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
             if (teeCamForApply != null) ApplyCameraYaw(teeCamForApply);
-
-            // Putt mode: switch to ground-level camera for close-range view.
-            if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
-                chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
         }
 
         // Teleport the ball to a world position (Y resolved via type-aware downward raycast).
@@ -635,9 +615,6 @@ namespace Golfin.Physics.Viewer
             // Commit the camera transform NOW (same fix as SetupAtTee — see notes there).
             Camera placeCamForApply = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
             if (placeCamForApply != null) ApplyCameraYaw(placeCamForApply);
-
-            if (_shotController != null && _shotController.IsPutt && chaseCamera != null)
-                chaseCamera.SetMode(ChaseCamera.Mode.GroundLevel);
 
             AdjustCameraForDepression(pos);
         }
@@ -949,37 +926,25 @@ namespace Golfin.Physics.Viewer
             {
                 case Golfin.Gameplay.Loop.BallState.AtRest:
                 {
-                    // §2f: surface-based auto-switch BEFORE §2e camera rotation.
-                    // If we flip into putter mode, EnterPutterMode sets ChaseCamera to
-                    // GroundLevel — we must NOT then call ApplyCameraYaw which would
-                    // override the GroundLevel framing. Hence the early-return path below.
+                    // §2f: surface-based auto-switch. EnterPutterMode handles UI changes
+                    // (track, ball selector, action buttons, central ball putter flag);
+                    // camera mode is unchanged post-§2f-revert (2026-05-14). Putter uses
+                    // Mode.Chase for all states; §2e pin-aim rotation runs for ALL clubs
+                    // since putter no longer owns special camera framing.
                     int target = PutterModeSurfaceController.DecideTargetClub(
                         currentClubIndex: CurrentClubIndex,
                         putterIndex: PutterIndex,
                         endSurface: result.EndSurface,
                         lastNonPutterClubIndex: _lastNonPutterClubIndex);
 
-                    bool willFlipToPutter   = target == PutterIndex && CurrentClubIndex != PutterIndex;
-                    bool willFlipFromPutter = target != PutterIndex && target >= 0 && CurrentClubIndex == PutterIndex;
-
                     if (target >= 0)
                     {
                         Debug.Log($"[PhysicsLab][§2f] AtRest surface={result.EndSurface} " +
-                                  $"auto-switch club {CurrentClubIndex}→{target} " +
-                                  $"(willFlipToPutter={willFlipToPutter} willFlipFromPutter={willFlipFromPutter})");
+                                  $"auto-switch club {CurrentClubIndex}→{target}");
                         SetClub(target);
                     }
 
-                    if (willFlipToPutter)
-                    {
-                        // Putter mode owns camera framing (GroundLevel). Skip pin-aim rotation
-                        // and ApplyCameraYaw. Still re-arm.
-                        _shotController?.CompleteShot();
-                        _ballSM.ReArm();
-                        break;
-                    }
-
-                    // §2e: existing pin-aim rotation path (unchanged).
+                    // §2e: pin-aim rotation runs uniformly (including putter post-§2f-revert).
                     Vector3 ballPos = ballAnimator?.CurrentBall != null
                         ? ballAnimator.CurrentBall.position
                         : _orbitCenter;
