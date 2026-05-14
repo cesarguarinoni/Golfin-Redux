@@ -2,6 +2,17 @@
 
 > **STATUS:** Queued (drafted 2026-05-14 by architect chain, surfaced by Cesar Lesson O on `loop_v1_2f_putter_p2_in_context`). **Priority: HIGH — pick up immediately. §2f auto-toggle makes this bug front-and-center.**
 
+## ⚠️ POST-REVERT ADDENDUM (2026-05-14 14:30 JST)
+
+This spec was written before the `putter_aim_yaw_in_groundlevel` revert (committed 2026-05-14 14:00 JST, see Lesson Q). Two things to know:
+
+1. **Stale line refs.** The revert deleted ~30 lines in `PhysicsLabController.cs`. Line numbers in the References section below are approximate — grep for `EnterPutterMode` / `ExitPutterMode` / `_centralBall.SetPuttMode` to find current locations.
+2. **Putter no longer uses `Mode.GroundLevel`.** Putter mode now uses `ChaseCamera.Mode.Chase` for everything (Aiming, Flying, Rolling, AtRest). Visual smoke captures will frame the cone against Chase camera, not the previous low-angle GroundLevel view. The visibility lifecycle the spec tests is identical; only the rendered framing differs.
+
+**HARD RULE (Lesson Q):** This fix MUST NOT re-introduce any putter-specific divergence. The bug fix is "putter follows the same per-shot visibility lifecycle as iron" — NOT "add a special putter visibility branch." If you find yourself writing `if (isPutt) hide_cone(); else default_lifecycle();`, STOP. The correct fix is to make the SetPuttMode(true) path NOT permanently disable `_coneGraphic` — instead, the cone subscribes to the same state transitions both modes use, and the puttMode-specific styling is applied on top (Approach A, locked).
+
+---
+
 ## One-line
 
 In putter mode, the shooting cone (or putter-equivalent aim visualization) should follow the same per-shot lifecycle as every other club: visible while aiming, hidden the moment the shot fires, visible again once the ball comes to rest and the player is aiming the next shot. Today the cone is permanently hidden the moment putter mode is entered and stays hidden for every subsequent putt.
