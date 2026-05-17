@@ -27,7 +27,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private DebugShotPanel _debugPanel;
 
         [Header("Putter mode")]
-        [SerializeField] private float _normalSize   = 80f;
+        [SerializeField] private float _normalSize   = 150f;
         [SerializeField] private float _puttModeSize = 150f;
 
         private ShotState _currentState = ShotState.Idle;

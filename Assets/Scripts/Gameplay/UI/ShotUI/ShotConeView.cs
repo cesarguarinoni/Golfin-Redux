@@ -51,6 +51,9 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private RectTransform   _putterTimingSlabRT;
         [SerializeField] private float           _putterTrackHeightPx = 1000f;
 
+        [Header("Putter track (per-shot lifecycle)")]
+        [SerializeField] private GameObject      _putterTrack;
+
         // ── Runtime state ─────────────────────────────────────────────────────
         private Camera    _worldCamera;
         private Transform _ballTransform;
@@ -63,11 +66,33 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         public void SetMaxCarryYards(float yards) => _maxCarryYards = yards;
 
+        /// <summary>
+        /// Test injection point. Wires _shotController, _coneGraphic, and _putterTrack
+        /// without requiring Unity Inspector serialization. Call before any other method
+        /// in EditMode tests. Subscribes to OnStateChanged so HandleStateChanged fires on Tick().
+        /// </summary>
+        public void InjectForTests(ShotController controller, ConeMeshGraphic coneGraphic,
+            GameObject putterTrack = null)
+        {
+            if (_shotController != null)
+                _shotController.OnStateChanged -= HandleStateChanged;
+            _shotController = controller;
+            _coneGraphic    = coneGraphic;
+            _putterTrack    = putterTrack;
+            if (_shotController != null)
+                _shotController.OnStateChanged += HandleStateChanged;
+        }
+
         public void SetPuttMode(bool on)
         {
             _puttMode = on;
+            // APPROACH C: iron cone is permanently disabled in putter mode (original behavior).
+            // PutterTrack is the actual putter aim viz; it follows per-shot lifecycle via HandleStateChanged.
             if (_coneGraphic  != null) _coneGraphic.enabled = !on;
             if (_targetingLine != null) _targetingLine.gameObject.SetActive(!on);
+            // Belt-and-suspenders: ensure PutterTrack is off when exiting putter mode.
+            // (EnterPutterMode sets it true; per-shot toggle from HandleStateChanged rides on top.)
+            if (!on && _putterTrack != null) _putterTrack.SetActive(false);
             // Cache Image for putter slab on first enable.
             if (on && _putterTimingSlabRT != null && _putterTimingSlabImage == null)
                 _putterTimingSlabImage = _putterTimingSlabRT.GetComponent<UnityEngine.UI.Image>();
@@ -79,9 +104,21 @@ namespace Golfin.Gameplay.UI.ShotUI
         public void SetCamera(Camera cam)            => _worldCamera   = cam;
         public void SetBallTransform(Transform ball) => _ballTransform = ball;
 
+        /// <summary>
+        /// Wire the PutterTrack GameObject without requiring Inspector serialization.
+        /// PhysicsLabController owns the canonical reference and hands it to ShotConeView
+        /// in Awake so the per-shot lifecycle subscription in HandleStateChanged can drive it.
+        /// Single source of truth — do NOT also wire _putterTrack in the Inspector.
+        /// </summary>
+        public void SetPutterTrack(GameObject putterTrack) => _putterTrack = putterTrack;
+
         public void SetOutlineVisible(bool visible)
         {
-            if (_coneGraphic != null) _coneGraphic.enabled = visible && !_puttMode;
+            // Non-putter mode: the debug flag toggles cone outline.
+            // In putter mode, _coneGraphic is permanently disabled (set in SetPuttMode).
+            // Do not re-enable it here — that would be wrong.
+            if (_puttMode) return;
+            if (_coneGraphic != null) _coneGraphic.enabled = visible;
         }
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
@@ -133,12 +170,30 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private void HandleStateChanged(ShotInputState state)
         {
+            UpdatePutterTrackVisibility(state);
             UpdateConeWidth();
             UpdateClubHandle(state);
             UpdateSlab(state);
             UpdateHUD(state);
             UpdateTargetingLine(state);
             ApplyDebugFlags();
+        }
+
+        // ── PutterTrack visibility (per-shot lifecycle) ───────────────────────
+        // APPROACH C: PutterTrack (the actual putter aim viz) follows the same
+        // per-shot lifecycle as the iron cone in non-putter mode:
+        //   visible at Aiming states → hidden when shot fires (Resolving).
+        // Iron cone (_coneGraphic) remains permanently disabled in putter mode
+        // (set by SetPuttMode(true)) — it never re-enables here.
+        private void UpdatePutterTrackVisibility(ShotInputState state)
+        {
+            if (!_puttMode || _putterTrack == null) return;
+            bool aiming = state.State is ShotState.Idle
+                                      or ShotState.Aiming
+                                      or ShotState.Pulling
+                                      or ShotState.Timing
+                                      or ShotState.Flicking;
+            _putterTrack.SetActive(aiming);
         }
 
         private void ApplyDebugFlags()
@@ -155,7 +210,7 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private void UpdateConeWidth()
         {
-            if (_puttMode) return;  // cone is disabled; skip dirty-marking the mesh
+            if (_puttMode) return;  // putter uses default cone geometry; skip dirty-marking the mesh
             _coneGraphic.HalfAngleDeg = _shotController.ConeHalfAngleDeg;
             _coneGraphic.HeightPx     = _coneHeightPx;
         }

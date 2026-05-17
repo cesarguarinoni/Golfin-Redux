@@ -5,6 +5,7 @@
         "Golfin.Gameplay.Input",
         "Golfin.Gameplay.Config",
         "Golfin.Gameplay.Defaults",
+        "Golfin.Gameplay.UI",
         "Golfin.Physics.Stats",
         "Golfin.Physics.Core",
         "Golfin.Physics.Math",

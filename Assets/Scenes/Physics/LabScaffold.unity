@@ -23012,6 +23012,7 @@ MonoBehaviour:
   _targetingLine: {fileID: 1417103398}
   _putterTimingSlabRT: {fileID: 2022230116}
   _putterTrackHeightPx: 1000
+  _putterTrack: {fileID: 2300000001}
 --- !u!224 &1838493590
 RectTransform:
   m_ObjectHideFlags: 0
@@ -26431,7 +26432,7 @@ MonoBehaviour:
   _rect: {fileID: 2200000002}
   _shotController: {fileID: 1483952040}
   _debugPanel: {fileID: 1268943445}
-  _normalSize: 80
+  _normalSize: 150
   _puttModeSize: 150
 --- !u!225 &2200000006
 CanvasGroup:

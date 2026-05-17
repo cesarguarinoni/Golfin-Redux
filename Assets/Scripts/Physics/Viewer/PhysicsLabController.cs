@@ -190,6 +190,10 @@ namespace Golfin.Physics.Viewer
                     _shotConeView.SetCamera(chaseCamera.GetComponent<Camera>());
                 try { _shotConeView.SetMaxCarryYards(ComputeMaxCarryYards()); }
                 catch (System.Exception ex) { Debug.LogWarning($"[PhysicsLab] Awake ComputeMaxCarryYards failed: {ex.Message}"); }
+                // Hand the PutterTrack ref to ShotConeView so its per-shot lifecycle
+                // subscription (Approach C) can SetActive(true/false) on Aiming/Resolving
+                // without requiring a duplicate Inspector wire on ShotConeView.
+                if (_putterTrack != null) _shotConeView.SetPutterTrack(_putterTrack);
             }
 
             // Wire HoleIndicatorWidget camera at startup (ball not yet spawned; widget falls back to BallAnimator.Instance)
