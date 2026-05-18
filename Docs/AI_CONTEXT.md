@@ -59,7 +59,7 @@ Surfaced by Cesar's Lesson O playthrough on `loop_v1_2f_putter_p2_in_context`. P
 
 **Source of truth:** `Docs/Roadmap.md` (canonical phases) + `Docs/TellCode.md` (active task pointer).
 
-**Notion mirror:** [GOLFIN_Roadmap](https://app.notion.com/p/3995e790b0e64aac828bd12055b64c15) — clean architect-tracked board with 54 entries (Phase / Status / Order / Estimate / Description / Notes / Closed). Created 2026-05-02. **NOT** the legacy `GOLFIN_Task_Board` — keep that one untouched.
+**Notion mirror:** [GOLFIN_Roadmap](https://www.notion.so/364b3e9702b7819ba734dfe5a3a087a9) — clean architect-tracked board with 54 entries (Phase / Status / Order / Estimate / Description / Notes / Closed). Migrated to personal Notion workspace 2026-05-18 (was on company workspace; old DB UUID `400b667c-8110-4d2f-93f8-da890edb1e66` is DEFUNCT, new UUID is `364b3e97-02b7-819b-a734-dfe5a3a087a9`). Created 2026-05-02. **NOT** the legacy `GOLFIN_Task_Board` — keep that one untouched.
 
 **Maintenance protocol:** when a roadmap task closes, flip Status → `Done`, set `Closed` date, mirror any waivers/follow-ups into `Notes`. New work added inline at the right `Order` slot (100s = Putter P1, 200s = Loop v1, 300s = Loop v2, etc.; sub-items step by 10).
 
