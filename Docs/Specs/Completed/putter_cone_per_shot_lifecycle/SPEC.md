@@ -13,6 +13,80 @@ This spec was written before the `putter_aim_yaw_in_groundlevel` revert (committ
 
 ---
 
+## 🛑 SCENE-TRUTH AMENDMENT — APPROACH A REPLACED BY APPROACH C (2026-05-14, post-manual-smoke)
+
+**Status of prior iteration:** Code per Approach A was implemented faithfully and EditMode tests pass. Manual smoke by Cesar in real Play mode (after MCP frozen-time blocker prevented automated capture) revealed Approach A was wrong on its premise. Iteration reverted.
+
+### What Approach A got wrong
+
+Approach A locked the decision "reuse `_coneGraphic` with putt-mode styling — `_coneGraphic` IS the putter aim viz, just restyled." That assumed `_coneGraphic` is the player-visible aim feedback in putter mode. **It is not.**
+
+Scene truth, confirmed by Cesar 2026-05-14:
+
+- **`ConeRoot`** (parent GameObject under the shot Canvas) contains two distinct visual elements:
+  - **`_coneGraphic`** (`ConeMeshGraphic` component) — the long iron-style cone mesh. Visually correct *only* for non-putter clubs.
+  - **`_clubHandle`** (the GameObject Cesar calls **"ClubHead"** in the Hierarchy) — the club-head proxy that scales/animates with power. Must remain visible during putter aim (the player still sees their putter head animate).
+- **`PutterTrack`** (separate scene GameObject, wired as `PhysicsLabController._putterTrack`, has `PutterTrackGraphic` component) — **this** is the actual putter aim viz the player reads. The vertical track on the green.
+
+Today, `PutterTrack` visibility is gated on MODE: `EnterPutterMode` does `_putterTrack.SetActive(true)`, `ExitPutterMode` does `_putterTrack.SetActive(false)`. It never followed per-shot state. That is the bug Lesson O actually surfaced — just on the wrong object name.
+
+### What the player sees today (post-Approach-A iteration)
+
+- **Putter aiming:** `_coneGraphic` (iron cone) visible AND `PutterTrack` visible — they overlap. Bug #1.
+- **After fire (putter):** `_coneGraphic` correctly flips off via Approach A subscription. `PutterTrack` stays on because nothing wired it to state. Bug #2.
+
+Both bugs share one root cause: Approach A flipped the wrong object's visibility.
+
+### Approach C (locked 2026-05-14)
+
+1. **Revert Piece 1 in `ShotConeView.cs` to the original visual behavior on `_coneGraphic`:**
+   - `SetPuttMode(on)` restores `if (_coneGraphic != null) _coneGraphic.enabled = !on;` — `_coneGraphic` is permanently disabled while in putter mode (matches original code, visually correct).
+   - Remove the `UpdateConeVisibility(state)` putter branch added in the prior iteration. (Keep the method only if needed for non-putter; non-putter cone visibility is already managed via `ApplyDebugFlags → SetOutlineVisible`, so `UpdateConeVisibility` can be deleted entirely.)
+   - Remove the putter early-return guard in `SetOutlineVisible`.
+   - Remove the `if (_coneGraphic != null) _coneGraphic.enabled = true;` line at the end of `SetPuttMode`.
+   - `InjectForTests` can stay (harmless, useful for the rewritten tests).
+
+2. **Wire `PutterTrack` to the per-shot lifecycle.** Recommended placement: `ShotConeView`, since it already owns shot-state subscriptions and the `_puttMode` flag.
+   - Add `[SerializeField] private GameObject _putterTrack;` to `ShotConeView`. Wire the same scene GameObject `PhysicsLabController._putterTrack` already references — both serialized refs point at the same GO. (Or: refactor to have `PhysicsLabController` hand the reference to `ShotConeView` via a setter on enter/exit. Inspector wire is simpler.)
+   - In `HandleStateChanged`, when `_puttMode == true`, set `_putterTrack.SetActive(aiming)` where `aiming = state.State is Idle or Aiming or Pulling or Timing or Flicking`. (Same bool the prior iteration used for cone.) When `_puttMode == false`, do nothing — `PhysicsLabController.ExitPutterMode` already handles the deactivation.
+   - `SetPuttMode(false)`: belt-and-suspenders, set `_putterTrack.SetActive(false)` if non-null. Prevents stale-on if mode is exited mid-Resolving.
+
+3. **`PhysicsLabController` is mostly unchanged.** Keep `EnterPutterMode._putterTrack.SetActive(true)` and `ExitPutterMode._putterTrack.SetActive(false)` — they bracket the mode lifetime. The per-shot toggle from `ShotConeView` rides on top and is idempotent.
+
+4. **EditMode tests rewrite (`PutterConeLifecycleTests.cs`):**
+   - G1 renamed/replaced: `G1_PutterMode_PutterTrackHiddenOnResolving` — assert `_putterTrack.activeSelf == false` after driving state to `Resolving` in putter mode.
+   - G2 renamed/replaced: `G2_PutterMode_PutterTrackVisibleAgainAtNextAiming` — assert `_putterTrack.activeSelf == true` after returning to `Aiming`.
+   - **Add G3:** `G3_PutterMode_ConeGraphicStaysDisabledAcrossAllStates` — assert `_coneGraphic.enabled == false` at Aiming, Timing, Resolving, and back to Aiming. The iron cone never re-enables in putter mode.
+   - **Add G4:** `G4_NonPutterMode_PutterTrackUntouched` — sanity check that non-putter state changes don't toggle `_putterTrack`.
+
+5. **Smoke evidence requirement updated** (replaces Piece 1 § Smoke evidence point 4):
+   - Frame 1 (putter, Aiming): **PutterTrack visible**, iron cone hidden, ClubHead/`_clubHandle` visible.
+   - Frame 2 (putter, just fired / Resolving): **PutterTrack hidden**, iron cone hidden, ClubHead visible.
+   - Frame 3 (putter, ball rolling / Resolving): same as Frame 2.
+   - Frame 4 (putter, next Aiming): same as Frame 1.
+   - HUD `BALL:` state label must be readable and match the claimed state in each frame.
+   - If MCP frozen-time still blocks, capture via the `GOLFIN/Smoke/Capture PutterCone Lifecycle` menu item in a normal (non-MCP) Play session — Cesar will run it.
+
+### Hard rules added by this amendment
+
+- **NEVER `SetActive(false)` on `ConeRoot` or any parent of `_clubHandle`.** `_clubHandle` (the ClubHead GameObject) must remain visible during putter aim. The cone-hide must be component-level only (`_coneGraphic.enabled = false`). Disabling the parent GameObject would hide the ClubHead and is wrong.
+- **Lesson Q's HARD RULE is superseded by this amendment for the putter case.** Approach C *is* a putter-specific visibility branch — `if (_puttMode) PutterTrack.SetActive(aiming); else /* non-putter path unchanged */;`. That's correct, because putter and non-putter mode use different aim viz GameObjects in the scene; making them share one code path was the spec error. The Lesson Q ban on "putter-specific divergence" still applies to *physics/camera* behavior, not to visibility wiring of different scene objects.
+- Piece 2 (central ball sprite size parity) is unaffected by this amendment. That fix is correct, keep it as-is.
+
+### References added
+
+- [PutterTrackGraphic.cs](Assets/Scripts/Gameplay/UI/ShotUI/PutterTrackGraphic.cs) — the actual putter aim viz component.
+- [PhysicsLabController.cs:354](Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:354) — `_putterTrack` serialized GameObject ref.
+- [PhysicsLabController.cs:384, 406](Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:384) — `_putterTrack.SetActive(true/false)` on mode enter/exit. Keep these; per-shot toggle from `ShotConeView` rides on top.
+
+### Iteration trail
+
+- **Iter 1 (Approach A):** 8 code PASS / 4 smoke FAIL → SELF_REVIEW_FAIL (smoke proved cone never hid) → IMPLEMENTER_BLOCKED (MCP frozen-time).
+- **Cesar manual smoke 2026-05-14:** revealed Approach A premise wrong. Two visual bugs surfaced. Approach C replaces Approach A.
+- **Iter 2 (Approach C):** to be done. STATUS → SPEC_READY.
+
+---
+
 ## One-line
 
 In putter mode, the shooting cone (or putter-equivalent aim visualization) should follow the same per-shot lifecycle as every other club: visible while aiming, hidden the moment the shot fires, visible again once the ball comes to rest and the player is aiming the next shot. Today the cone is permanently hidden the moment putter mode is entered and stays hidden for every subsequent putt.

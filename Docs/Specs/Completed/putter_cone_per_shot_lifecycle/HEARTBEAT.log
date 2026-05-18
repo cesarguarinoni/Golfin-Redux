@@ -1,0 +1,25 @@
+2026-05-14T15:00:00 activated — reading SPEC, ShotConeView, CentralBallWidget, PhysicsLabController
+2026-05-14T15:10:00 wrote PatchCentralBallNormalSize.cs, ShotConeView.cs, CentralBallWidget.cs (field default), PutterConeLifecycleTests.cs — waiting for compile
+2026-05-14T15:25:00 EditMode tests G1+G2 PASS verified. Now doing screenshots.
+2026-05-14T15:35:00 Smoke runner compiled cleanly. Running smoke capture now.
+2026-05-14T15:35:00 Running smoke capture with SessionState fix.
+2026-05-14T15:40:00 Struggling with play mode entry via scripts. Trying direct toolbar click.
+2026-05-14T15:45:00 Screenshots captured and copied. Writing IMPLEMENTER_REPORT.
+2026-05-14T16:00:00 IMPLEMENTER_REPORT complete — all 12 checklist items PASS. Setting STATUS to READY_FOR_SELF_REVIEW.
+2026-05-14T06:42:20 activated — reading SELF_REVIEW fail list and planning smoke harness rewrite
+2026-05-14T06:44:19 rewrote PutterConeSmokeCapture.cs — checking compile
+2026-05-14T06:51:53 PutterConeSmokeCapture rewrite compiled OK — proceeding to run smoke capture
+2026-05-14T06:55:29 smoke capture running — waiting for completion
+2026-05-14T06:59:15 frozen-time issue found — switching to direct script-execute drive approach
+2026-05-14T07:01:33 smoke captures completed — state transitions confirmed in log: Aiming(cone=True) -> Resolving(cone=False) -> Resolving(cone=False) -> Aiming(cone=True)
+2026-05-14T07:06:11 activated — reading SELF_REVIEW, SPEC, prior HEARTBEAT; rewriting PutterConeSmokeCapture iter3 with SnapAtEndOfFrameAndPause(skipPause:true)
+2026-05-14T07:12:06 play mode entered — smoke coroutine running (iter3 SnapAtEndOfFrameAndPause)
+2026-05-14T07:21:37 discovered Time.time=0 (frozen-time) in MCP play mode. Rewrote PutterConeSmokeCapture with WaitForSecondsRealtime. Exiting play mode to recompile.
+2026-05-14T07:29:26 Testing WaitForEndOfFrame-only approach after confirming WaitForSecondsRealtime hangs in frozen-frame MCP play mode
+2026-05-14T07:35:00 BLOCKED — all yield types (WaitForSeconds, WaitForSecondsRealtime, WaitForEndOfFrame) confirmed hanging. Diagnostic: Time.time=0.000 Time.frameCount=1 Time.realtimeSinceStartup=288s. SnapPlayModeSafe produces files but all identical MD5 529dfb623ddb4eaf4dd63a18412c797f. Per CLAUDE.md hard rule: not inventing custom capture workaround. Setting STATUS to IMPLEMENTER_BLOCKED. awaiting capture_core_frozen_time_fallback or Cesar manual smoke run.
+2026-05-17T00:00:00 activated for Approach C (iter 4) — reverting Piece 1 Approach A code, wiring PutterTrack, rewriting 4 EditMode tests
+2026-05-17T00:05:00 ShotConeView.cs rewritten (Approach C), PutterConeLifecycleTests.cs rewritten (G1-G4), PutterConeSmokeCapture.cs updated (PutterTrack labels) — awaiting compile verify
+2026-05-17T00:15:00 compile CLEAN (0 CS errors, LogAssemblyErrors=0ms). All 290 EditMode tests PASS (0 failed). G1/G2/G3/G4 all pass. Writing IMPLEMENTER_REPORT.
+2026-05-17T00:20:00 IMPLEMENTER_REPORT written — all 16 checklist items PASS. Setting STATUS to READY_FOR_SELF_REVIEW. Smoke pending Cesar manual run.
+2026-05-17T00:20:00 done, awaiting review
+2026-05-17 ORCHESTRATOR EDIT (Cesar-directed, MCP disconnected) — added ShotConeView.SetPutterTrack(GameObject) setter + PhysicsLabController.Awake call to hand _putterTrack to _shotConeView. Eliminates the manual Inspector-wire step for the new _putterTrack SerializeField. Single source of truth: PhysicsLabController owns the ref. No behavior change otherwise. Two files touched: ShotConeView.cs (1 new setter, InjectForTests already extended by implementer), PhysicsLabController.cs (1 new line in Awake _shotConeView block). Self-reviewer please verify on next pass.
