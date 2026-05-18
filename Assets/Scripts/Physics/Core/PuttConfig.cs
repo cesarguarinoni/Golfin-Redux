@@ -11,6 +11,22 @@ namespace Golfin.Physics
         public SurfaceCoefficients[] Coefficients;
         public SurfaceCoefficients this[SurfaceType t] => Coefficients[(int)t];
 
+        /// <summary>
+        /// Speed gate for cup capture. If the ball's speed (magnitude of velocity vector)
+        /// at the moment of cup-volume entry exceeds this threshold, the capture is rejected
+        /// and the ball continues on its existing trajectory (fly-over / lip-out behaviour).
+        ///
+        /// Source: USGA lip-out guidance — a putt travelling faster than ~5 ft/s (≈1.524 m/s)
+        /// at the cup rim has sufficient momentum to lip-out rather than drop.
+        /// Architect-locked 2026-05-14 at 1.5 m/s as the design anchor value.
+        /// Per Lesson K: real-world citation required for all calibrated constants.
+        /// Reference: USGA "The Physics of Putting" + Penner (2002) Am. J. Physics
+        ///            "The physics of putting," § IV — lip-out condition at rim speed ≈5 ft/s.
+        ///
+        /// Exposed here for data-driven tuning via putt.csv and DashboardUI / GreenTuningPanel.
+        /// </summary>
+        public fp CupCaptureSpeed;
+
         public static PuttConfig Default
         {
             get
@@ -44,7 +60,14 @@ namespace Golfin.Physics
                     RollingResistance = fp.FromFloat(0.14f),
                     StopSpeed         = fp.FromFloat(0.05f),
                 };
-                return new PuttConfig { Coefficients = c };
+                // CupCaptureSpeed: 1.5 m/s — USGA lip-out anchor (≈5 ft/s).
+                // See Penner (2002) Am. J. Physics "The physics of putting," § IV.
+                // Architect-locked 2026-05-14. Tunable via putt.csv "cup_capture_speed".
+                return new PuttConfig
+                {
+                    Coefficients     = c,
+                    CupCaptureSpeed  = fp.FromFloat(1.5f),
+                };
             }
         }
     }

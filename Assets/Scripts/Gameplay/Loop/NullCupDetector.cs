@@ -5,5 +5,6 @@ namespace Golfin.Gameplay.Loop
     public sealed class NullCupDetector : ICupDetector
     {
         public bool IsInCup(fp3 position, fp ballRadius) => false;
+        public bool IsInCup(fp3 position, fp ballRadius, fp3 velocity) => false;
     }
 }
