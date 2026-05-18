@@ -80,10 +80,10 @@ def get_day_note() -> str:
     return "\n".join(notes) if notes else ""
 
 
-def get_todays_commits() -> str:
-    """Pull today's git log from the repo — chronological order (oldest first)."""
+def get_todays_commits(since: str = "midnight") -> str:
+    """Pull git log from the repo — chronological order (oldest first)."""
     result = subprocess.run(
-        ["git", "log", "--since=midnight", "--reverse", "--format=%h %s (%an, %ar)", "--no-merges"],
+        ["git", "log", f"--since={since}", "--reverse", "--format=%h %s (%an, %ar)", "--no-merges"],
         cwd=REPO_PATH,
         capture_output=True,
         text=True,
@@ -91,10 +91,10 @@ def get_todays_commits() -> str:
     return result.stdout.strip()
 
 
-def get_commit_count() -> int:
-    """Count today's commits."""
+def get_commit_count(since: str = "midnight") -> int:
+    """Count commits since the given time."""
     result = subprocess.run(
-        ["git", "rev-list", "--count", "--since=midnight", "HEAD", "--no-merges"],
+        ["git", "rev-list", "--count", f"--since={since}", "HEAD", "--no-merges"],
         cwd=REPO_PATH,
         capture_output=True,
         text=True,
@@ -105,10 +105,10 @@ def get_commit_count() -> int:
         return 0
 
 
-def get_changed_files() -> str:
-    """Get a summary of files changed today."""
+def get_changed_files(since: str = "midnight") -> str:
+    """Get a summary of files changed since the given time."""
     result = subprocess.run(
-        ["git", "log", "--since=midnight", "--reverse", "--stat", "--format=", "--no-merges"],
+        ["git", "log", f"--since={since}", "--reverse", "--stat", "--format=", "--no-merges"],
         cwd=REPO_PATH,
         capture_output=True,
         text=True,
@@ -337,13 +337,14 @@ def post_to_telegram(text: str):
 def main():
     parser = argparse.ArgumentParser(description="GOLFIN daily report")
     parser.add_argument("--note", default="", help="Extra note to include in today's report")
+    parser.add_argument("--since", default="midnight", help="Git --since value (e.g. '2026-05-14 00:00:00') to backfill missed days")
     args = parser.parse_args()
 
     print(f"[{datetime.now().isoformat()}] Starting daily report...")
 
-    commits = get_todays_commits()
-    commit_count = get_commit_count()
-    file_changes = get_changed_files()
+    commits = get_todays_commits(args.since)
+    commit_count = get_commit_count(args.since)
+    file_changes = get_changed_files(args.since)
     ai_context = read_ai_context()
     day_note = get_day_note()
 

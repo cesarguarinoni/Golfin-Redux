@@ -1,15 +1,15 @@
 ﻿# GOLFIN Redux — Roadmap
 
-**Last updated:** 2026-05-03 JST
+**Last updated:** 2026-05-17 JST
 
 ## Sequence
 
 ```
-Putter P1 → Loop v1 (incl. Putter P2) → Loop v2 → Save System
-                                                       ↓
-                   Rankings → Matchmaking → Perf Baseline
-                                                       ↓
-              Shop → Gacha → Optimization → Polish → Server
+Putter P1 → Loop v1 (incl. Putter P2) → Multi-Club Foundation → Loop v2 → Save System
+                                                                              ↓
+                                                Rankings → Matchmaking → Perf Baseline
+                                                                              ↓
+                                                Shop → Gacha → Optimization → Polish → Server
 ```
 
 ---
@@ -30,9 +30,13 @@ Putter P1 → Loop v1 (incl. Putter P2) → Loop v2 → Save System
 - 2e. "Next shot" handoff (ball at rest → re-arm controls)
 - 2f. Putter Phase 2: in-context tuning
 
+## 2.5 Multi-Club Foundation (sidequest, gates Loop v2 hole picker)
+- 2.5a. **Multi-club architecture refactor** — course-namespace the sim-data path (`Resources/HoleData/<course>/Hole_XX/`), `ActiveCourseContext` static bus, course-aware bake tools + importer menus, 6-tee schema with 2 empty slots for Lomond. Spec stub at `Docs/Specs/Queued/multi_club_architecture_refactor/NOTES.md`. P1, ~1 day. **Gates Loop v2 §3b hole picker.**
+- 2.5b. **Taiheiyo Club Gotenba content drop** — second course, 18 holes via canonical `ADD_HOLE.md` flow. Mt. Fuji foothills; Rees Jones + Hideki Matsuyama 2018 renovation; hosts 三井住友VISA太平洋マスターズ. Spec stub at `Docs/Specs/Queued/taiheiyo_club_gotenba_content/NOTES.md`. P2/P3, ~2 days mostly Cesar-driven. **Depends on 2.5a.**
+
 ## 3. Gameplay Loop v2 (menu-to-menu)
 - 3a. Menu wiring: Character → Clubs → Hole → Play
-- 3b. Hole picker UI (mini-map, par, distance)
+- 3b. Hole picker UI (mini-map, par, distance) — **course-aware after 2.5a**
 - 3c. Result screen polish (score breakdown, optional shot replay link)
 - 3d. Next Hole / Back to Menu transitions
 - 3e. Save state: persist character/clubs/score across sessions
@@ -112,4 +116,3 @@ Patterns worth borrowing from OpenAI Symphony (read 2026-04-30). Full Symphony a
 - **Proof-of-work bar in `IMPLEMENTER_REPORT.md`.** Tighten the implementer agent definition so every report MUST include: (a) screenshot diff vs reference (when visual), (b) test output snippet, (c) `git diff --stat` summary. Procedural rejection if missing. Mirrors Symphony's "agents provide proof of work" pattern. Reduces self-review and architect-review churn.
 - **`depends_on:` field in spec front-matter.** Formalize task dependencies (Architect already does this implicitly — 8.5 a→b→c→d was dependency-aware). Adding `depends_on: [task-slug, task-slug]` to spec front-matter makes the dependency machine-readable and lets the dashboard surface "X is ready, but waiting on Y."
 - **Auto-dirty layout cleanup (Foundations).** Eliminate every `ContentSizeFitter + LayoutGroup` co-located pair across all scenes/prefabs to stop the "Open Scenes have been modified externally" modal that blocks Code's pipeline. Confirmed offenders in `LabScaffold.unity` and `ShellScene.unity` (line-pair scan 2026-05-03; full GameObject-accurate audit is part of the spec). Visual-invariance gate: before/after screenshots per touched scene/prefab; rows that can't be cleaned without restructuring spin out as separate Architect specs. Spec: `Docs/Specs/Queued/AUTO_DIRTY_LAYOUT_CLEANUP.md`.
-
