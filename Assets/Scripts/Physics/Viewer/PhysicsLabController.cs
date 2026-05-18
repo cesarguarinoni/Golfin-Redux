@@ -110,6 +110,11 @@ namespace Golfin.Physics.Viewer
         Vector3 _lastShotOrigin;
         Vector3 _lastShotLaunchDir;
 
+        // §phase_b iter-7: airborne-origin override set by PlaceBallAtAirborne().
+        // When non-null, GetCurrentOrigin() returns this value verbatim (no surface snap)
+        // and clears the override so subsequent shots use the normal surface-snap path.
+        fp3? _airborneOriginOverride;
+
         // ── §2b internal accessors for LoopCameraDirector ──────────────────────
         internal Golfin.Gameplay.Loop.BallStateMachine BallSM        => _ballSM;
         internal Trajectory                            LastTrajectory => _previousTrajectory;
@@ -588,6 +593,30 @@ namespace Golfin.Physics.Viewer
         public void PlaceBallAt(Vector3 worldPos, int? preferredSurfaceTypeValue = null)
         {
             RepositionBallWithLookDir(worldPos, preferredSurfaceTypeValue, GetDefaultLookDirection());
+        }
+
+        /// <summary>
+        /// Places the ball at an airborne world position (no surface snap) with an
+        /// optional initial velocity hint (stored for diagnostics only — velocity is
+        /// supplied separately to HandleShotResolvedForTests via ShotInput).
+        ///
+        /// Used by SurfaceRolloutHarness for above-surface drop tests; production gameplay
+        /// never spawns balls airborne, so the placement-snap pipeline is unaffected.
+        ///
+        /// The override is single-shot: GetCurrentOrigin() consumes it on the very next
+        /// HandleShotResolved call, then falls back to the normal surface-snap path.
+        /// </summary>
+        internal void PlaceBallAtAirborne(Vector3 worldPos)
+        {
+            // Place the visual ball at the exact airborne position (no SurfaceSnap).
+            if (_shotController != null) _shotController.CompleteShot();
+            if (ballAnimator != null) ballAnimator.PlaceAtRest(worldPos);
+
+            // Store the override so the sim uses this exact Y instead of snapping to surface.
+            _airborneOriginOverride = new fp3(
+                fp.FromFloat(worldPos.x),
+                fp.FromFloat(worldPos.y),
+                fp.FromFloat(worldPos.z));
         }
 
         // §2e: private helper that owns the ball-placement + camera-yaw logic.
@@ -1117,8 +1146,18 @@ namespace Golfin.Physics.Viewer
         }
 
         // Returns current ball position snapped to terrain, or fallback if no ball.
+        // §phase_b iter-7: if _airborneOriginOverride is set (by PlaceBallAtAirborne),
+        // return it verbatim and clear it — no surface snap.
         fp3 GetCurrentOrigin(fp3 fallbackToInput)
         {
+            // Airborne-origin path: bypass surface snap, consume override (single-shot).
+            if (_airborneOriginOverride.HasValue)
+            {
+                var o = _airborneOriginOverride.Value;
+                _airborneOriginOverride = null;
+                return o;
+            }
+
             Vector3 sp;
             if (ballAnimator?.CurrentBall != null)
                 sp = ballAnimator.CurrentBall.position;
