@@ -226,17 +226,53 @@ namespace Golfin.Physics.Runtime
                 return cfg;
             }
 
+            // Detect whether the CSV uses the new header format (with cup_capture_speed column)
+            // or the legacy two/three-column format.
+            // New header: surface,rolling_resistance,stop_speed_mps,cup_capture_speed_mps,notes
+            // Legacy:     surface,rolling_resistance,stop_speed_mps[,notes]
+            int  cupCaptureSpeedColIndex = -1;
             bool headerSkipped = false;
+
             foreach (var raw in ta.text.Split('\n'))
             {
                 var line = raw.Trim();
                 if (line.Length == 0 || line.StartsWith("#")) continue;
-                if (!headerSkipped) { headerSkipped = true; continue; }
+
+                if (!headerSkipped)
+                {
+                    // Parse header to find cup_capture_speed_mps column index.
+                    var headers = line.Split(',');
+                    for (int h = 0; h < headers.Length; h++)
+                    {
+                        if (headers[h].Trim() == "cup_capture_speed_mps")
+                        {
+                            cupCaptureSpeedColIndex = h;
+                            break;
+                        }
+                    }
+                    headerSkipped = true;
+                    continue;
+                }
 
                 var parts = line.Split(',');
                 if (parts.Length < 2) continue;
 
                 string name = parts[0].Trim();
+
+                // Global row: cup_capture_speed key applies to the whole PuttConfig.
+                if (name == "cup_capture_speed")
+                {
+                    if (parts.Length >= 2 &&
+                        float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out float ccs))
+                    {
+                        // cup_capture_speed: 1.5 m/s default (USGA lip-out anchor).
+                        // Source: Penner, A.R. (2002) "The physics of putting." Canadian Journal of Physics 80(2): 83–96 (see lip-out analysis).
+                        cfg.CupCaptureSpeed = fp.FromFloat(ccs);
+                    }
+                    continue;
+                }
+
                 if (!System.Enum.TryParse<SurfaceType>(name, out var st))
                 {
                     Debug.LogWarning($"[PhysicsConfigLoader] putt.csv: unknown surface '{name}' — skipped");
@@ -250,6 +286,20 @@ namespace Golfin.Physics.Runtime
                 if (parts.Length >= 3)
                     float.TryParse(parts[2].Trim(), System.Globalization.NumberStyles.Float,
                         System.Globalization.CultureInfo.InvariantCulture, out stopSpeed);
+
+                // Load cup_capture_speed from the per-surface row if a named column exists.
+                // (Schema v2 puts it as an extra column on each surface row; we use the
+                //  Green row's value as the authoritative threshold since it's a global setting.)
+                if (cupCaptureSpeedColIndex >= 0 && parts.Length > cupCaptureSpeedColIndex
+                    && st == SurfaceType.Green)
+                {
+                    if (float.TryParse(parts[cupCaptureSpeedColIndex].Trim(),
+                            System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out float ccs))
+                    {
+                        cfg.CupCaptureSpeed = fp.FromFloat(ccs);
+                    }
+                }
 
                 cfg.Coefficients[(int)st] = new SurfaceCoefficients
                 {

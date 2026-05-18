@@ -106,6 +106,10 @@ namespace Golfin.Physics.Viewer
             AddSectionHeader(content, "PUTT");
             AddPuttSliders(content, SurfaceType.Green,       "Green");
             AddPuttSliders(content, SurfaceType.GreenCollar, "GreenCollar");
+            // Cup capture speed gate (USGA lip-out anchor: 1.5 m/s).
+            // Source: Penner, A.R. (2002) "The physics of putting." Canadian Journal of Physics 80(2): 83–96 (see lip-out analysis). Architect-locked 2026-05-14.
+            AddFloatSlider(content, "  Cup capture m/s", 0f, 5f, _putt.CupCaptureSpeed.ToFloat(),
+                v => { _putt.CupCaptureSpeed = fp.FromFloat(v); controller.SetPuttConfig(_putt); });
 
             // ── Right column: buttons + readout
             var right = MakeColumn(root, 260f);

@@ -548,5 +548,7 @@ namespace Golfin.Physics.Tests
     sealed class AlwaysInCupDetector : ICupDetector
     {
         public bool IsInCup(fp3 pos, fp radius) => true;
+        // Velocity-aware overload: always returns true (test-only stub ignores speed gate).
+        public bool IsInCup(fp3 pos, fp radius, fp3 velocity) => true;
     }
 }

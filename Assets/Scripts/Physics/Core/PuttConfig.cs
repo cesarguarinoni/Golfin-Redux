@@ -20,8 +20,9 @@ namespace Golfin.Physics
         /// at the cup rim has sufficient momentum to lip-out rather than drop.
         /// Architect-locked 2026-05-14 at 1.5 m/s as the design anchor value.
         /// Per Lesson K: real-world citation required for all calibrated constants.
-        /// Reference: USGA "The Physics of Putting" + Penner (2002) Am. J. Physics
-        ///            "The physics of putting," § IV — lip-out condition at rim speed ≈5 ft/s.
+        /// Reference: USGA "The Physics of Putting" + Penner, A.R. (2002) "The physics of putting."
+        ///            Canadian Journal of Physics 80(2): 83–96 (see lip-out analysis) — lip-out
+        ///            condition at rim speed ≈5 ft/s.
         ///
         /// Exposed here for data-driven tuning via putt.csv and DashboardUI / GreenTuningPanel.
         /// </summary>
@@ -61,7 +62,7 @@ namespace Golfin.Physics
                     StopSpeed         = fp.FromFloat(0.05f),
                 };
                 // CupCaptureSpeed: 1.5 m/s — USGA lip-out anchor (≈5 ft/s).
-                // See Penner (2002) Am. J. Physics "The physics of putting," § IV.
+                // See Penner, A.R. (2002) "The physics of putting." Canadian Journal of Physics 80(2): 83–96 (see lip-out analysis).
                 // Architect-locked 2026-05-14. Tunable via putt.csv "cup_capture_speed".
                 return new PuttConfig
                 {

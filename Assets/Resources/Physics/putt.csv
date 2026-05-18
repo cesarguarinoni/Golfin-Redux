@@ -1,7 +1,15 @@
 # Layer 2 — designable. Calibrated against putt feel and Stimpmeter targets.
 # These are NOT real physics constants — they're putt-specific resistance values.
 # Re-tuned in controls_c_fix (2026-05-05).
+# cup_capture_speed added in cup_speed_gated_capture (2026-05-18).
 # See Docs/Physics/CALIBRATION_METHODOLOGY.md.
+#
+# cup_capture_speed_mps: speed gate for cup capture (USGA lip-out rule).
+# A putt faster than ~5 ft/s (1.524 m/s) at the cup rim lips out rather than drops.
+# Source: Penner, A.R. (2002) "The physics of putting." Canadian Journal of Physics 80(2): 83-96 (see lip-out analysis).
+# Architect-locked 2026-05-14 at 1.5 m/s. Tunable here for future data-driven adjustment.
+# NOTE: cup_capture_speed row must appear AFTER the header line so the loader reads it as data.
 surface,rolling_resistance,stop_speed_mps,notes
 Green,0.50,0.04,Stimp ~12 PGA Tour fast; v0/k = 1.829/0.50 = 3.66m matches USGA Stimpmeter (Kolkowitz 2007, Wikipedia Stimpmeter)
 GreenCollar,0.40,0.05,Slightly slower than green; v0/k = 4.57m, between Stimp ~10 (medium) and ~12 (fast)
+cup_capture_speed,1.5

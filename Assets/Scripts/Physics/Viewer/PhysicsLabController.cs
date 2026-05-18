@@ -1465,12 +1465,17 @@ namespace Golfin.Physics.Viewer
                     // §2c: reset session state for the new hole. Fires OnTurnChanged so PlayerCardWidget renders fresh "TURN 1".
                     Golfin.Gameplay.UI.HUD.GameSession.ResetForNewHole();
                     // §2d: install a real cup detector keyed to this hole's pin position.
+                    // Speed gate passed from PuttCfg.CupCaptureSpeed (tunable via putt.csv).
+                    // Default 1.5 m/s per USGA lip-out anchor (architect-locked 2026-05-14).
                     if (_ballSM != null)
                     {
                         Vector3 pinW = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
                         var pinFp = new fp3(fp.FromFloat(pinW.x), fp.FromFloat(pinW.y), fp.FromFloat(pinW.z));
-                        _ballSM.SetCupDetector(new Golfin.Gameplay.Loop.RealCupDetector(pinFp));
-                        Debug.Log($"[PhysicsLab][§2d] RealCupDetector installed at pin={pinW:F3}");
+                        _ballSM.SetCupDetector(new Golfin.Gameplay.Loop.RealCupDetector(
+                            pinFp,
+                            Golfin.Gameplay.Loop.RealCupDetector.DefaultCupRadius,
+                            PuttCfg.CupCaptureSpeed));
+                        Debug.Log($"[PhysicsLab][§2d] RealCupDetector installed at pin={pinW:F3} cupCaptureSpeed={PuttCfg.CupCaptureSpeed.ToFloat():F2} m/s");
                     }
                 }
                 else

@@ -1,0 +1,13 @@
+2026-05-18T00:00:00 activated — reading spec and codebase
+2026-05-18T00:10:00 implemented ICupDetector/NullCupDetector/RealCupDetector/PuttConfig/BallStateMachine/PhysicsConfigLoader/putt.csv/DashboardUI changes, wrote 4 new tests
+2026-05-18T00:20:00 compilation succeeded (52 items updated, 0 errors) — running tests
+2026-05-18T00:30:00 294 tests PASS 0 FAIL — screenshot captured — writing IMPLEMENTER_REPORT
+2026-05-18T00:35:00 done, awaiting review
+2026-05-18T03:15:54 Fix1 citations done — all Am. J. Physics occurrences corrected. Starting Fix2 smoke captures.
+2026-05-18T03:17:30 Checking Unity editor state before smoke captures
+2026-05-18T03:17:59 Attempting MCP connection to get editor state
+2026-05-18T03:22:19 Switching approach: LabScaffold + Hole_01_Geo additive is the correct path for RealCupDetector
+2026-05-18T03:29:48 Entering play mode for smoke captures. SmokeCaptureCupSpeedGate added to LabScaffold.
+2026-05-18T03:34:46 Play mode entered for corrected smoke capture run. Waiting for completion.
+2026-05-18T03:38:08 Running EditMode tests to verify 294/294 still pass after citation fixes.
+2026-05-18T07:45:00 iter-2 done: citation fixes (7 files) + smoke captures (fast flyover + slow InCup) complete; all 17 checklist items PASS; STATUS=READY_FOR_SELF_REVIEW

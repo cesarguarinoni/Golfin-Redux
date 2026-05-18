@@ -6,8 +6,12 @@ using Golfin.Physics.Math;
 namespace Golfin.Physics.Tests
 {
     /// <summary>
-    /// §2d — RealCupDetector unit tests (5 required).
-    /// Uses the static IsInCupStatic seam to avoid Vector3 pin construction complexity.
+    /// §2d — RealCupDetector unit tests (5 original + 4 speed-gate tests added in cup_speed_gated_capture).
+    /// Uses static seams to avoid Vector3 pin construction complexity.
+    ///
+    /// Speed-gate source: Penner, A.R. (2002) "The physics of putting." Canadian Journal of Physics 80(2): 83–96 (see lip-out analysis).
+    /// USGA lip-out condition at cup rim speed ≈ 5 ft/s = 1.524 m/s.
+    /// Architect-locked threshold: 1.5 m/s (2026-05-14 09:30 JST).
     /// </summary>
     public class RealCupDetectorTests
     {
@@ -15,6 +19,12 @@ namespace Golfin.Physics.Tests
         static readonly fp DefaultCupRadius = RealCupDetector.DefaultCupRadius; // 0.054 m
         static readonly fp BallRadius = fp.FromFloat(0.021f);   // standard golf ball radius
         static readonly fp3 PinAtOrigin = new fp3(fp.Zero, fp.Zero, fp.Zero);
+
+        // Speed gate threshold (USGA lip-out anchor, architect-locked 2026-05-14).
+        static readonly fp CupCaptureSpeed = RealCupDetector.DefaultCupCaptureSpeed; // 1.5 m/s
+
+        // Ball position dead-centre over the cup, just below pin Y.
+        static readonly fp3 CentrePosition = new fp3(fp.Zero, fp.FromFloat(-0.01f), fp.Zero);
 
         [SetUp]
         public void SetUp()
@@ -106,6 +116,99 @@ namespace Golfin.Physics.Tests
 
             Assert.IsFalse(result,
                 "When ball radius >= cup radius, effRadius <= 0 → always false (ball cannot fit).");
+        }
+
+        // ── Speed gate tests (cup_speed_gated_capture, 2026-05-18) ────────────────
+        //
+        // Source: Penner, A.R. (2002) "The physics of putting." Canadian Journal of Physics 80(2): 83–96 (see lip-out analysis).
+        // USGA lip-out at cup rim ≈ 5 ft/s = 1.524 m/s. Threshold = 1.5 m/s.
+        //
+        // All speed-gate tests use the velocity-aware static seam:
+        //   IsInCupStatic(position, ballRadius, velocity, pin, cupRadius, cupCaptureSpeed)
+
+        // ── Test 6: Slow putt (0.5 m/s) → captured ───────────────────────────────
+
+        [Test]
+        public void RealCupDetector_SlowPutt_0p5mps_InCup_Captured()
+        {
+            // 0.5 m/s is well below the 1.5 m/s threshold → should be captured.
+            var velocity = new fp3(fp.Zero, fp.Zero, fp.FromFloat(0.5f)); // rolling toward pin
+
+            bool result = RealCupDetector.IsInCupStatic(
+                CentrePosition, BallRadius, velocity,
+                PinAtOrigin, DefaultCupRadius, CupCaptureSpeed);
+
+            Assert.IsTrue(result,
+                "Putt at 0.5 m/s (below 1.5 m/s threshold) inside cup geometry should be captured.");
+        }
+
+        // ── Test 7: Medium putt (1.0 m/s) → captured (under threshold) ──────────
+
+        [Test]
+        public void RealCupDetector_MediumPutt_1p0mps_InCup_Captured()
+        {
+            // 1.0 m/s < 1.5 m/s threshold → should be captured.
+            var velocity = new fp3(fp.Zero, fp.Zero, fp.FromFloat(1.0f));
+
+            bool result = RealCupDetector.IsInCupStatic(
+                CentrePosition, BallRadius, velocity,
+                PinAtOrigin, DefaultCupRadius, CupCaptureSpeed);
+
+            Assert.IsTrue(result,
+                "Putt at 1.0 m/s (below 1.5 m/s threshold) inside cup geometry should be captured.");
+        }
+
+        // ── Test 8: Fast putt (3.0 m/s) → NOT captured (over threshold) ─────────
+
+        [Test]
+        public void RealCupDetector_FastPutt_3p0mps_InCup_NotCaptured()
+        {
+            // 3.0 m/s >> 1.5 m/s threshold → fly-over, NOT captured.
+            var velocity = new fp3(fp.Zero, fp.Zero, fp.FromFloat(3.0f));
+
+            bool result = RealCupDetector.IsInCupStatic(
+                CentrePosition, BallRadius, velocity,
+                PinAtOrigin, DefaultCupRadius, CupCaptureSpeed);
+
+            Assert.IsFalse(result,
+                "Putt at 3.0 m/s (above 1.5 m/s threshold) should NOT be captured (lip-out / fly-over).");
+        }
+
+        // ── Test 9: Boundary — at threshold + epsilon → NOT captured; − epsilon → captured ──
+
+        [Test]
+        public void RealCupDetector_BoundarySpeed_Deterministic()
+        {
+            // At threshold (1.5 m/s): speedSq == thresholdSq → NOT captured (condition is >, not >=).
+            // One epsilon above → NOT captured.
+            // One epsilon below → captured.
+            fp threshold = CupCaptureSpeed; // 1.5 m/s
+            fp epsilon   = fp.FromFloat(0.001f);
+
+            // Exactly at threshold — speedSq == thresholdSq. Condition is (speedSq > thresholdSq),
+            // so equal is NOT rejected → should be captured.
+            var velExact = new fp3(fp.Zero, fp.Zero, threshold);
+            bool atThreshold = RealCupDetector.IsInCupStatic(
+                CentrePosition, BallRadius, velExact,
+                PinAtOrigin, DefaultCupRadius, CupCaptureSpeed);
+            Assert.IsTrue(atThreshold,
+                "Putt at exactly threshold (1.5 m/s) should be captured (boundary: > not >=).");
+
+            // Epsilon above threshold → NOT captured.
+            var velAbove = new fp3(fp.Zero, fp.Zero, threshold + epsilon);
+            bool aboveThreshold = RealCupDetector.IsInCupStatic(
+                CentrePosition, BallRadius, velAbove,
+                PinAtOrigin, DefaultCupRadius, CupCaptureSpeed);
+            Assert.IsFalse(aboveThreshold,
+                "Putt at threshold + 0.001 m/s should NOT be captured (above threshold).");
+
+            // Epsilon below threshold → captured.
+            var velBelow = new fp3(fp.Zero, fp.Zero, threshold - epsilon);
+            bool belowThreshold = RealCupDetector.IsInCupStatic(
+                CentrePosition, BallRadius, velBelow,
+                PinAtOrigin, DefaultCupRadius, CupCaptureSpeed);
+            Assert.IsTrue(belowThreshold,
+                "Putt at threshold − 0.001 m/s should be captured (below threshold).");
         }
     }
 }

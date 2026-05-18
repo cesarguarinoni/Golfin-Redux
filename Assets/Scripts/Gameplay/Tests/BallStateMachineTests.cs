@@ -24,6 +24,9 @@ namespace Golfin.Gameplay.Tests
         public StubCupDetector(fp3 cupPos) { _cupPos = cupPos; }
         public bool IsInCup(fp3 position, fp ballRadius)
             => position.x == _cupPos.x && position.y == _cupPos.y && position.z == _cupPos.z;
+        // Velocity-aware overload: stub ignores velocity gate (geometry-only, for test isolation).
+        public bool IsInCup(fp3 position, fp ballRadius, fp3 velocity)
+            => IsInCup(position, ballRadius);
     }
 
     /// <summary>Utility builders for synthetic Trajectory objects.</summary>

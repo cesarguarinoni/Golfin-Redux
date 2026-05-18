@@ -181,7 +181,9 @@ namespace Golfin.Gameplay.Loop
                         for (int si = 0; si < trajectory.samples.Count; si++)
                         {
                             var sample = trajectory.samples[si];
-                            if (_cupDetector.IsInCup(sample.position, ballRadius))
+                            // Use velocity-aware overload so the speed gate (USGA lip-out rule)
+                            // is applied: fast putts above CupCaptureSpeed do not register InCup.
+                            if (_cupDetector.IsInCup(sample.position, ballRadius, sample.velocity))
                             {
                                 cupPos     = sample.position;
                                 cupTime    = sample.time;
