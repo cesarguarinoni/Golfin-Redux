@@ -28,22 +28,30 @@ Three digital data sources explored:
 
 ---
 
-## Data acquisition workflow (Phase 4 mechanics)
+## Data acquisition workflow (Phase 4 mechanics) — ✅ COMPLETE 2026-05-18
+
+**Captures landed:** 36 PNGs in `screenshots/`:
+- 18 × `lomond_hole_NN_shotnavi_strategy.png` (distance/yardage view)
+- 18 × `lomond_hole_NN_shotnavi_heatmap.png` (topographic, rainbow icon active)
+
+**Original capture workflow (kept for reference / future re-captures):**
 
 1. **Install Shot Navi 3DX** from Google Play (global access) or App Store JP (iOS requires Japanese App Store account). Android device recommended.
 2. **First launch triggers 3-day premium trial** — note the date. Phase 4 work must complete inside this window.
 3. **Search for "ローモンド"** (Lomond) in-app. Course ID 806 should appear at the top.
-4. **Per hole, capture four screenshots:**
-   - Green Strategy Mode view → `lomond_hole_NN_shotnavi_strategy.png`
-   - Cross-section mode view → `lomond_hole_NN_shotnavi_crosssection.png`
-   - Elevation Difference Map 2D → `lomond_hole_NN_shotnavi_elevation2d.png`
-   - Elevation Difference Map 3D → `lomond_hole_NN_shotnavi_elevation3d.png`
-5. **Commit screenshots** to `Docs/Specs/Queued/green_topology_and_pin_authoring/screenshots/` (folder gets created when promoted to Active).
-6. **Use screenshots as backdrops** in `GreenTopologyEditor` Phase 2 tool.
+4. **Per hole, capture two screenshots:**
+   - Default Green Strategy view (distance/yardage) → `lomond_hole_NN_shotnavi_strategy.png`
+   - Tap rainbow icon to toggle heatmap → `lomond_hole_NN_shotnavi_heatmap.png`
+5. **Commit screenshots** to `Docs/Specs/Queued/green_topology_and_pin_authoring/screenshots/`.
+6. **Use screenshots as backdrops** in `GreenTopologyEditor` Phase 2 tool (drop both per hole, trace heatmap arrows + pull pin position from strategy flag).
 
 **Tip:** Capture all 18 holes in one focused session on day 1 of the trial. Leaves a 2-day buffer for re-captures if any screenshots are bad framing / wrong zoom level.
 
-**Tip:** Recording the Shot Navi UI as a video while panning the green view captures angular information that single screenshots may miss. Use Android's built-in screen recorder, frame-grab interesting angles in post.
+## Critical calibration notes (2026-05-18)
+
+- **Shot Navi green-view distances are METERS, not yards.** Course-level distances (scorecard yardages, tee distances) ARE yards. Inside the green-zoom view, the perimeter scale (`0/5/10/15/20`) and inline distance numbers (e.g. `13`, `11`, `16`) are meters. This matches our `cellSize: 0.5` (m) data format — 1 visible Shot Navi grid square = 1 m. When aligning the backdrop in Phase 2 tool, treat the grid as meters.
+- **Default pin = Shot Navi flag location.** Each `_strategy` capture shows a white flag glyph on the green; that's the canonical default pin. Read it from the image and store as `pinCandidates[0]` with `defaultPinIndex = 0`. 2-4 alternate candidates authored manually based on visible green topology in the `_heatmap` capture.
+- **Lomond character is subtle.** Most heatmap captures show mostly-green coloring with light accents — matches the "balanced with limited undulation" character from Japanese course reviews. Hole 9 (`lomond_hole_09_shotnavi_heatmap.png`) is the visible outlier with yellow/orange. Don't author slope where the heatmap shows uniformly green; that's the data telling us the green is flat.
 
 ---
 

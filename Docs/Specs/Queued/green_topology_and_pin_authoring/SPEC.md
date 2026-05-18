@@ -17,6 +17,9 @@ Replace flat greens with real Lomond topology by (1) building an editor tool to 
 ## Locked decisions (Architect ↔ Cesar, 2026-05-18 chat)
 
 - **L1 — Data source: Shot Navi 3DX free tier + first-launch 3-day premium trial.** Lomond confirmed in Shot Navi database (course ID 806; elevation refreshed 2023-09-03, map updated 2024-07-09). PuttView book rejected for shipping risk to Spain. PuttView app rejected (Lomond Japan not in their digital library — they only have Loch Lomond in Scotland). StrackaLine left as fallback if Shot Navi data quality is insufficient.
+- **L6 — Captures already in hand (2026-05-18):** 36 PNGs in `screenshots/` — 18 × `_strategy` (distance/yardage view) + 18 × `_heatmap` (topographic view, rainbow icon active). Heatmap is the slope-authoring source; Strategy is the green-shape + pin-position reference.
+- **L7 — Shot Navi green-view distances are METERS, not yards.** Course-level yardage (back/regular/front tees, scorecard) is yards; green-zoom distances in Shot Navi (perimeter `0/5/10/15/20`, inline `13`, `11`, `16` numbers) are meters. Cesar locked: course = yards, green = meters. Matches `cellSize: 0.5` (m) in the data format below — 1 Shot Navi grid cell = 1 m, so cellSize 0.5 = 2 cells per visible grid square.
+- **L8 — Pin position: derived from Shot Navi flag location.** The white flag visible in each Shot Navi capture IS the canonical default pin. `defaultPinIndex = 0` maps to the Shot Navi-displayed flag; 2-4 alternate candidates authored manually based on visible green topology.
 - **L2 — Storage: dense grid at 0.5 m resolution.** `{slopeDirX, slopeDirZ, magnitudePercent}` per cell over each green's axis-aligned bounding rect; cells outside the green polygon stored as `(0,0,0)`.
 - **L3 — Heightmap reconciliation: option (b).** Bake slope into `heightmap.bytes` so the visual mesh matches the sim data. Closes the 2026-05-01 open flag (ball dips at fairway→green seam) in the same pass.
 - **L4 — Pin authoring: 3-5 candidates per green, `defaultPinIndex = 0`.** Day-of pin rotation deferred to Loop v2+.
@@ -78,13 +81,13 @@ New editor window. Menu: `GOLFIN > Green Authoring > Open Editor`. Files:
 
 1. Hole picker (1-18). Reuse `PhysicsLabHolePicker` patterns where reasonable.
 2. Loads existing `green.json` if present, else generates procedural baseline from `zones.json` (green polygon) + `heightmap.bytes` (macro slope hints).
-3. **Backdrop slot:** drop a Shot Navi screenshot PNG, align by clicking 2 green-edge anchor points on the screenshot, then the corresponding 2 points on the heightmap-derived green polygon. Stores affine transform per-hole in `green.json` as `editorBackdrop` metadata (optional, ignored at runtime).
+3. **Backdrop slot:** drop a Shot Navi screenshot PNG, align by clicking 2 green-edge anchor points on the screenshot, then the corresponding 2 points on the heightmap-derived green polygon. Stores affine transform per-hole in `green.json` as `editorBackdrop` metadata (optional, ignored at runtime). **Note:** Shot Navi green-view grid is in METERS (1 visible grid square = 1 m). When alignment uses perimeter distance markers (`0/5/10/15/20`), interpret as meters, not yards.
 4. **Paint mode:** click-drag draws slope vectors into grid cells under cursor. Brush radius (1-5 cells) + magnitude scrubber. Right-click clears cells.
 5. **Auto-procedural fill button:** runs `GreenAuthoringMath.ComputeProceduralSlopeField(polygon, heightmap)`. Heuristic:
    - 1.5% back-to-front baseline (drainage convention) along estimated drain axis.
    - False-front detection: if green polygon's front 20% has heightmap below median by >0.3m, add steepened 2.5% in that region.
    - Tier-break detection: if heightmap range across polygon exceeds 0.5m, place a 4% ridge perpendicular to drain axis at the elevation midpoint.
-6. **Pin candidate panel:** click on green view to add pin candidate, label dropdown (front-L/C/R, mid-L/C/R, back-L/C/R, custom), drag to reorder, radio button for default.
+6. **Pin candidate panel:** click on green view to add pin candidate, label dropdown (front-L/C/R, mid-L/C/R, back-L/C/R, custom), drag to reorder, radio button for default. **First pin = canonical default** derived from Shot Navi flag (`_strategy` backdrop shows the white flag glyph most clearly). 2-4 alternates authored manually based on visible heatmap topology.
 7. **Save button:** writes `green.json` to `Assets/Resources/HoleData/Hole_XX/green.json`, calls `AssetDatabase.Refresh()` + `GreenTopologyCache.Invalidate(holeNumber)`.
 
 **Hard rules:**
@@ -110,13 +113,25 @@ Cesar opens `GreenTopologyEditor` for each of 18 holes, hits "Auto-procedural fi
 
 ---
 
-### Phase 4 — Shot Navi tracing pass (Cesar manual, 1 day, time-boxed by trial window)
+### Phase 4 — Shot Navi tracing pass (Cesar manual, ~1 day of focused tracing)
 
-Per `NOTES.md` § Data acquisition workflow. Capture all 18 greens' Shot Navi screenshots into `Docs/Specs/Queued/green_topology_and_pin_authoring/screenshots/lomond_hole_NN_shotnavi_{strategy,crosssection,elevation2d,elevation3d}.png` during the 3-day trial window. Then open `GreenTopologyEditor` per hole, drop screenshot into Backdrop slot, trace slope arrows over the Phase 3 procedural baseline.
+**Status (2026-05-18):** Captures complete. 36 PNGs in `screenshots/`:
+- `lomond_hole_NN_shotnavi_strategy.png` (18 ×) — yardage/distance view; useful for green polygon shape + canonical pin position (white flag glyph)
+- `lomond_hole_NN_shotnavi_heatmap.png` (18 ×) — topographic view with rainbow icon active; primary slope source
+
+**Tracing workflow (per hole):**
+1. Open `GreenTopologyEditor` for hole NN.
+2. Drop `lomond_hole_NN_shotnavi_strategy.png` into Backdrop slot. Align using green-edge anchor points (remember: grid is METERS). Use this view to confirm green polygon shape + capture canonical pin position from the visible white flag as `pinCandidates[0]`.
+3. Swap Backdrop to `lomond_hole_NN_shotnavi_heatmap.png`. Re-align using same anchor points.
+4. Trace slope arrows over the heatmap. Color cue: green = flat or subtle, yellow = noticeable slope, orange/red = steep. Magnitude scrubber: 1-2% for green-coloring, 3-4% for yellow, 5-8%+ for orange/red. Dashed lines on heatmap are fall-line / slope-direction references.
+5. Add 2-4 alternate pin candidates beyond the canonical default — typically one per visible tier or flat zone in the heatmap.
+6. Save.
+
+**Note on Lomond character:** Per Japanese course reviews, Lomond is "balanced with limited undulation." Most greens in heatmap mode show mostly-green coloring with subtle accents. Hole 9 (`lomond_hole_09_shotnavi_heatmap.png`) is the visible exception — notably yellow/orange. Author conservatively; don't fabricate slope where the heatmap shows green.
 
 **Out-of-band data:** also sweep Japanese golf review sites for any qualitative green descriptions; capture in `NOTES.md` § Known green features as bullet points per hole.
 
-**DoD:** 18 `green.json` files with `sourceTag = "shotnavi_traced_v1"` (or `manual_refined_v1` for hole 7 + any others manually augmented). Screenshots committed under `screenshots/`.
+**DoD:** 18 `green.json` files with `sourceTag = "shotnavi_traced_v1"` (or `manual_refined_v1` for hole 7 + any others manually augmented). Screenshots already committed under `screenshots/`.
 
 ---
 
