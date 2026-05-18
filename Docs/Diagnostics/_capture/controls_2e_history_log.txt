@@ -1,0 +1,13 @@
+=== controls_2e_history_log ===
+GameSession.TurnCount=3
+GameSession.ShotHistory.Count=1
+--- ShotHistory[0] ---
+  ShotNumber=3
+  ClubLabel=Driver
+  OriginPosition=(20.00, 7.71, -24.00)
+  FinalPosition=(-111.28, 8.50, -24.00)
+  DistanceXZMeters=131.28
+  TerminalState=OB
+  OBReason=OutOfBounds
+  FinalSurface=OOB
+  PenaltyStrokes=1
