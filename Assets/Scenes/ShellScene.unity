@@ -108766,6 +108766,7 @@ GameObject:
   - component: {fileID: 7421823951479733209}
   - component: {fileID: 3990875876304803566}
   - component: {fileID: 6198033636136956899}
+  - component: {fileID: 7421823951479733210}
   m_Layer: 5
   m_Name: PersistentUI
   m_TagString: Untagged
@@ -109176,6 +109177,20 @@ MonoBehaviour:
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
   m_PresetInfoIsWorld: 0
+--- !u!114 &7421823951479733210
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6774924928607091794}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6b86759c12d54ef5ad804c86aa97610, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.GameplayTransition.GameplaySceneLoader
+  loadingScreen: {fileID: 1921467786}
+  persistentUI: {fileID: 6198033636136956899}
 --- !u!224 &7436101568948063965
 RectTransform:
   m_ObjectHideFlags: 0

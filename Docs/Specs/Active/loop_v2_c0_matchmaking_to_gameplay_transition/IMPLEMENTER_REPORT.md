@@ -53,21 +53,18 @@ Per the SPEC, the visual gate is by-design Cesar's first-end-to-end production p
 - [ ] Tap CANCEL on matchmaking before OPPONENT FOUND → returns cleanly to Home, no scene-load fires
 - [ ] Repeat from Hole Selection: select Hole 2 → PLAY → loads Hole 2 (verify hole number shows on HUD)
 
-## Scene wiring (paste-for-Cesar — must be done before visual gate)
+## Scene wiring (DONE — via MCP, no manual Editor work)
 
-`GameplaySceneLoader.Awake` auto-wires `loadingScreen` (via `FindObjectOfType<LoadingScreenController>`) and `persistentUI` (via `PersistentUIManager.Instance` then `FindObjectOfType<PersistentUIManager>`) if the SerializeFields are left null, so manual wiring is optional but recommended for determinism. The steps:
+Wired via MCP `script-execute`:
+- `GameplaySceneLoader` component added to root GameObject `PersistentUI` in `Assets/Scenes/ShellScene.unity`.
+- SerializeField `loadingScreen` → `Canvas/ScreensRoot/LoadingScreen` (the inactive `LoadingScreenController` instance).
+- SerializeField `persistentUI` → `PersistentUI` (the `PersistentUIManager` instance).
+- `EditorUtility.SetDirty` on both objects + `EditorSceneManager.MarkSceneDirty + SaveScene` to persist. Saved=True.
+- Re-read via fresh `SerializedObject` to verify: `loadingScreen=LoadingScreen, persistentUI=PersistentUI`.
 
-1. Open `Assets/Scenes/ShellScene.unity` in the Unity Editor.
-2. In the Hierarchy, find the GameObject that hosts `PersistentUIManager` (likely `PersistentUI` or similar — see `Docs/Architecture/UI_HIERARCHY.md`).
-3. Add the `GameplaySceneLoader` component to that GameObject (or to a sibling under the same Canvas root — either works; Awake registers the static `Instance`).
-4. In the Inspector for the new `GameplaySceneLoader`:
-   - Drag the `LoadingScreenController` instance from the scene into the `loadingScreen` slot.
-   - Drag the `PersistentUIManager` instance into the `persistentUI` slot.
-5. On `PersistentUIManager` in the Inspector, confirm `bottomNavPanel` is wired to the bottom-nav container GameObject (existing field — should already be wired from Stage A; if not, drag the bottom-nav container in).
-6. Save the scene (`File → Save` or Ctrl/Cmd+S).
-7. (Optional) commit the scene change separately; this implementer's commit covers code only.
+`bottomNavPanel` on `PersistentUIManager` was already wired from Stage A (confirmed via probe before the change).
 
-Sanity check after wiring: enter Play mode from ShellScene, open Matchmaking, wait through OPPONENT FOUND — the loading screen should appear briefly, then the gameplay scene with the ball at the seeded hole's tee.
+Sanity check next: Cesar enters Play mode from ShellScene, taps PLAY → matchmaking → OPPONENT FOUND → loading screen → gameplay scene with ball at the seeded hole's tee.
 
 ## Known FAIL items
 
