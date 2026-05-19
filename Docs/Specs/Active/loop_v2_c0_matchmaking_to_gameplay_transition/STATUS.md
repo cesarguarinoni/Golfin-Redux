@@ -1,21 +1,20 @@
+READY_FOR_SELF_REVIEW
+
 # STATUS — loop_v2_c0_matchmaking_to_gameplay_transition
 
-**Status:** SPEC_READY (architect, 2026-05-19)
-**Type:** TELLCODE — but Cesar-visual gate is heavier than typical TELLCODE (first end-to-end production playthrough in project history)
+**Status:** READY_FOR_SELF_REVIEW (implementer, 2026-05-19)
+**Type:** TELLCODE — Cesar-visual gate is heavier than typical TELLCODE (first end-to-end production playthrough)
 **Parent:** `Docs/Specs/Active/loop_v2_scope/SPEC.md` (Stage C splits into C0 + C1)
 **Root cause:** `Docs/Specs/Queued/ARCHITECT_NOTE_matchmaking_to_gameplay_transition.md` (Stage B finding)
 **Notion:** Loop v2 Order 330 (sub-item of 300)
 
 ## History
-- 2026-05-19 — Stage B surfaced the missing transition: no production code loads any gameplay scene. Modal seeds GameSession then sits at OPPONENT FOUND. Architect note filed.
-- 2026-05-19 — Cesar: "Do it." Architect recon found:
-  - `GameplayScene.unity` exists but is empty March 2026 stub.
-  - `Hole_01.unity` referenced in build settings has zero GUID — file doesn't exist (ghost entry).
-  - `Hole_NN_Geo.unity` (1-47MB each, all 18 exist) at `Assets/Golf/Courses/lomond-country-club/Generated/` — production geometry, additively loadable.
-  - `LabScaffold.unity` is canonical dev host with full physics stack; `PhysicsLabController.LoadHole(n)` already wires additive geo load.
-- 2026-05-19 — SPEC.md written. Three architecture decisions locked: (D1) LabScaffold as gameplay host scene, (D2) additive load, (D3) all 18 holes via existing LoadHole(n). Build settings change is non-trivial (17 new Hole_NN_Geo entries + LabScaffold + remove ghost Hole_01).
+- 2026-05-19 — Stage B surfaced the missing transition: no production code loads any gameplay scene.
+- 2026-05-19 (architect) — SPEC.md written. Three architecture decisions locked: D1 LabScaffold as gameplay host scene, D2 additive load, D3 all 18 holes via existing LoadHole(n).
+- 2026-05-19 (implementer) — All audit grep PASS. Build settings: LabScaffold + 18 Hole_NN_Geo added, ghost Hole_01.unity removed. GameplaySceneLoader created. LoadingScreenController generalized with LoadTarget enum. MatchmakingModalController.OpponentScanRoutine hands off to BeginGameplayLoad. PersistentUIManager.SetBottomNavVisible added as alias. PhysicsLabController.Start logs GameSession.CurrentHoleNumber; ScanForLoadedHoleSceneAtStartup now polls 5s for the seeded hole. 5 new EditMode tests pass; full suite 305/305. Compile clean. Scene wiring is manual, paste-for-Cesar steps in IMPLEMENTER_REPORT.md. Cesar visual gate is the canonical proof per SPEC.
 
-## Notes for implementer
-- Pre-flight grep is mandatory; PhysicsLabController.Start conflict is the single biggest risk (Risk #5 in SPEC).
-- LoadingScreenController generalization (Stage D Part 1 work from scoping SPEC) is folded into C0 — natural fit since the loader is what shows during the scene-load wait.
-- 5 new EditMode tests target 305/305. Cesar visual gate is the real gate.
+## Notes for self-reviewer
+- Pre-flight grep confirmed Risk #5 (PhysicsLabController.Start conflict): merged not duplicated; new logic is additive (log + extended scan timeout).
+- Pre-flight also caught a SPEC inaccuracy: `PhysicsLabController.LoadHole(int)` does NOT exist on the controller; the editor `PhysicsLabHolePicker.LoadHole` does. Implementer chose to have GameplaySceneLoader own both additive loads rather than add a new runtime method (see IMPLEMENTER_REPORT § Spec deviations §1).
+- Tests use reflection due to asmdef constraint (see IMPLEMENTER_REPORT § Spec deviations §2). All 5 still exercise real code paths.
+- Screenshot is a smoke artifact (EditMode capture). Cesar's visual gate is the canonical proof per SPEC §Goal.

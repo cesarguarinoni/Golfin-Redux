@@ -1,0 +1,14 @@
+{
+    "name": "Golfin.UI.Tests",
+    "rootNamespace": "Golfin.UI.Tests",
+    "references": [
+        "Golfin.Gameplay.Loop"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

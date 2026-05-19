@@ -257,5 +257,12 @@ namespace Golfin.UI
             if (bottomNavPanel != null)
                 bottomNavPanel.SetActive(show);
         }
+
+        /// <summary>
+        /// Stage C0: explicit bottom-nav visibility toggle.
+        /// Alias for ShowBottomNav(visible) — exposed so GameplaySceneLoader
+        /// has a self-documenting call site for the gameplay-transition flow.
+        /// </summary>
+        public void SetBottomNavVisible(bool visible) => ShowBottomNav(visible);
     }
 }

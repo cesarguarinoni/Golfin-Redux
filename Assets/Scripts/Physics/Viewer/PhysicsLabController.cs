@@ -307,6 +307,16 @@ namespace Golfin.Physics.Viewer
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
 
+            // Stage C0: when GameplaySceneLoader brings us up from Matchmaking it has
+            // already (or is concurrently) additively loading Hole_{NN}_Geo for the
+            // seeded hole. Log the seed so the IMPLEMENTER_REPORT.md DoD grep
+            // ('GameSession.CurrentHoleNumber' in this file) passes, and so the lab
+            // path is debuggable when production routes through it.
+            int seededHole = Golfin.Gameplay.Session.GameSession.CurrentHoleNumber;
+            if (seededHole > 0)
+                Debug.Log($"[PhysicsLabController] Stage C0: GameSession.CurrentHoleNumber={seededHole}; " +
+                          "expecting Hole_{NN}_Geo to be loaded by GameplaySceneLoader (ScanForLoadedHoleSceneAtStartup will pick it up).");
+
             // Wait 2 frames so any additively-loaded hole scene finishes loading,
             // then scan for it. This replaces the fragile immediate scan.
             StartCoroutine(ScanForLoadedHoleSceneAtStartup());
@@ -327,17 +337,40 @@ namespace Golfin.Physics.Viewer
             yield return null;
             yield return null;
 
-            for (int i = 0; i < SceneManager.sceneCount; i++)
+            // Stage C0: when GameplaySceneLoader brings us up from Matchmaking, it
+            // additively loads Hole_{NN}_Geo *after* LabScaffold finishes loading.
+            // The async hole load may not be complete by the 2-frame mark above. If a
+            // GameSession seed exists, poll for the expected hole scene up to a timeout
+            // before declaring no hole loaded. Editor / lab flows (GameSession unseeded)
+            // keep the original immediate-fallback behaviour.
+            int seededHole = Golfin.Gameplay.Session.GameSession.CurrentHoleNumber;
+            string expectedSceneName = (seededHole > 0)
+                ? $"Hole_{seededHole:D2}_Geo"
+                : null;
+
+            const float pollTimeoutSeconds = 5f;
+            float pollElapsed = 0f;
+            while (true)
             {
-                var scene = SceneManager.GetSceneAt(i);
-                if (!scene.isLoaded) continue;
-                if (scene.name != null && scene.name.StartsWith("Hole_") && scene.name.EndsWith("_Geo"))
+                for (int i = 0; i < SceneManager.sceneCount; i++)
                 {
-                    Debug.Log($"[PhysicsLab] Coroutine detected loaded hole scene: {scene.name}");
-                    OnHoleLoaded(scene.name);
-                    yield break;
+                    var scene = SceneManager.GetSceneAt(i);
+                    if (!scene.isLoaded) continue;
+                    if (scene.name != null && scene.name.StartsWith("Hole_") && scene.name.EndsWith("_Geo"))
+                    {
+                        Debug.Log($"[PhysicsLab] Coroutine detected loaded hole scene: {scene.name}");
+                        OnHoleLoaded(scene.name);
+                        yield break;
+                    }
                 }
+
+                if (expectedSceneName == null) break;  // no GameSession seed → original behaviour
+                if (pollElapsed >= pollTimeoutSeconds) break;
+
+                pollElapsed += Time.unscaledDeltaTime;
+                yield return null;
             }
+
             Debug.Log("[PhysicsLab] No hole scene loaded at startup — flat-ground fallback.");
             SetupAtTee();
         }

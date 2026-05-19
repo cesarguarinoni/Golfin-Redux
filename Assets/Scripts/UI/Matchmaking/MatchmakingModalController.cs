@@ -403,6 +403,22 @@ namespace Golfin.UI.Matchmaking
 #endif
 
             _opponentScanCoroutine = null;
+
+            // Stage C0: brief beat on "OPPONENT FOUND" so the player registers it,
+            // then hide the modal and hand off to GameplaySceneLoader.
+            yield return new WaitForSeconds(0.6f);
+            Hide();
+
+            var loader = Golfin.UI.GameplayTransition.GameplaySceneLoader.Instance;
+            if (loader != null)
+            {
+                loader.BeginGameplayLoad(seededHole);
+            }
+            else
+            {
+                Debug.LogError("[MatchmakingModalController] GameplaySceneLoader.Instance is null — " +
+                               "gameplay scene will not load. Verify GameplaySceneLoader is wired in ShellScene.");
+            }
         }
     }
 }

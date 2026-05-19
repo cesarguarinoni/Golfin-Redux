@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using TMPro;
 using GolfinRedux.UI; // for ScreenManager & ScreenId
@@ -7,10 +8,14 @@ using GolfinRedux.UI; // for ScreenManager & ScreenId
 /// - Drives LoadingBar
 /// - Shows percentage text
 /// - Applies a minimum display time
-/// - After loading, goes to Home screen.
+/// - For LegacyBootHome target (default), navigates to Home when done.
+/// - For HoleLoad target (Stage C0), driven by external progress and finishes via
+///   FinishLoadingCoroutine (no auto-navigate; GameplaySceneLoader owns the transition).
 /// </summary>
 public class LoadingScreenController : MonoBehaviour
 {
+    public enum LoadTarget { LegacyBootHome, HoleLoad }
+
     [Header("References")]
     [SerializeField] private LoadingBar loadingBar;
     [SerializeField] private TextMeshProUGUI progressText;
@@ -26,6 +31,13 @@ public class LoadingScreenController : MonoBehaviour
     private bool _useExternalProgress;
     private bool _isLoading;
 
+    // Stage C0: target + hole-number plumbing for the gameplay-scene transition.
+    private LoadTarget _target = LoadTarget.LegacyBootHome;
+    private int        _targetHoleNumber;
+
+    public LoadTarget Target => _target;
+    public int TargetHoleNumber => _targetHoleNumber;
+
     private void OnEnable()
     {
         BeginLoading();
@@ -37,7 +49,8 @@ public class LoadingScreenController : MonoBehaviour
         _timer = 0f;
         _realProgress = 0f;
         _displayProgress = 0f;
-        _useExternalProgress = false;
+        // HoleLoad uses external progress; LegacyBootHome uses internal fake bar.
+        _useExternalProgress = (_target == LoadTarget.HoleLoad);
         _isLoading = true;
 
         if (loadingBar != null)
@@ -54,6 +67,39 @@ public class LoadingScreenController : MonoBehaviour
     public void SetRealProgress(float progress01)
     {
         _realProgress = Mathf.Clamp01(progress01);
+        _useExternalProgress = true;
+    }
+
+    /// <summary>
+    /// Stage C0: configure this loading session as a hole-load transition.
+    /// Must be called BEFORE the loading screen GameObject is activated (OnEnable runs BeginLoading).
+    /// </summary>
+    public void PrepareForHoleLoad(int holeNumber)
+    {
+        _target = LoadTarget.HoleLoad;
+        _targetHoleNumber = holeNumber;
+        // External progress driver flag is also set here so BeginLoading (running on
+        // the same frame the loader is activated) picks up the right mode.
+        _useExternalProgress = true;
+    }
+
+    /// <summary>
+    /// Stage C0: reset to the legacy boot path. Call before showing the loading screen
+    /// from any non-gameplay flow.
+    /// </summary>
+    public void ClearTarget()
+    {
+        _target = LoadTarget.LegacyBootHome;
+        _targetHoleNumber = 0;
+        _useExternalProgress = false;
+    }
+
+    /// <summary>
+    /// Stage C0: external progress driver (GameplaySceneLoader feeds SceneManager.LoadSceneAsync progress).
+    /// </summary>
+    public void SetProgress(float p)
+    {
+        _realProgress = Mathf.Clamp01(p);
         _useExternalProgress = true;
     }
 
@@ -80,7 +126,8 @@ public class LoadingScreenController : MonoBehaviour
         bool minTimeReached = _timer >= minLoadingTime;
         bool uiDone = _displayProgress >= 0.999f;
 
-        if (realDone && minTimeReached && uiDone)
+        // Stage C0: HoleLoad target is driven by FinishLoadingCoroutine; do not auto-finish here.
+        if (_target == LoadTarget.LegacyBootHome && realDone && minTimeReached && uiDone)
         {
             FinishLoading();
         }
@@ -94,5 +141,31 @@ public class LoadingScreenController : MonoBehaviour
             screenManager.ShowScreen(ScreenId.Home);
         else
             Debug.LogWarning("[LoadingScreenController] ScreenManager not assigned.");
+    }
+
+    /// <summary>
+    /// Stage C0: awaitable finish for the HoleLoad target.
+    /// Waits until the display bar catches up to the external progress and the minimum
+    /// display time has elapsed, then hides the loading screen GameObject (no navigation).
+    /// </summary>
+    public IEnumerator FinishLoadingCoroutine()
+    {
+        // Force the external progress to 1.0 so the bar drives to completion.
+        _realProgress = 1f;
+        _useExternalProgress = true;
+
+        while (_isLoading && (_displayProgress < 0.999f || _timer < minLoadingTime))
+            yield return null;
+
+        _isLoading = false;
+
+        // Hide the loading screen GameObject so the additively-loaded gameplay scene
+        // becomes visible. Do NOT call screenManager.ShowScreen(Home) — gameplay is taking over.
+        gameObject.SetActive(false);
+
+        // Reset for the next show.
+        _target = LoadTarget.LegacyBootHome;
+        _targetHoleNumber = 0;
+        _useExternalProgress = false;
     }
 }
