@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI; // for ScreenManager & ScreenId
 
@@ -37,6 +38,19 @@ public class LoadingScreenController : MonoBehaviour
 
     public LoadTarget Target => _target;
     public int TargetHoleNumber => _targetHoleNumber;
+
+    private void Awake()
+    {
+        // Stage C0: ensure the LoadingScreen renders ON TOP of any additively-loaded
+        // gameplay canvases (LabScaffold's ShotUI_canvas at sortOrder 0). The ShellScene
+        // root Canvas runs at sortOrder=-1, so without this override the loaded gameplay
+        // UI would punch through the loading screen.
+        var canvas = GetComponent<Canvas>();
+        if (canvas == null) canvas = gameObject.AddComponent<Canvas>();
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 1000;
+        if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
+    }
 
     private void OnEnable()
     {
