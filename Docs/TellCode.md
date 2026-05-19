@@ -21,6 +21,26 @@
 
 ---
 
+## 🔴 ACTIVE — loop_v2_a_singletons_consolidation (2026-05-19)
+
+**Task slug:** `loop_v2_a_singletons_consolidation`
+**Type:** TELLCODE (Architect spec → Code implements → Cesar visual verify)
+**SPEC:** `Docs/Specs/Active/loop_v2_a_singletons_consolidation/SPEC.md`
+**Parent scope:** `Docs/Specs/Active/loop_v2_scope/SPEC.md` (Stage A of Loop v2)
+**Notion:** Order 300
+
+**One-line goal:** One bottom-nav controller (PersistentUI). One SettingsController (Phase 2 renamed).
+
+**Two parts:**
+1. Strip nav buttons from `HomeScreenController.cs` (PersistentUIManager owns them).
+2. Delete `SettingsController.cs` (Phase 1). Rename `SettingsControllerPhase2.cs` → `SettingsController.cs` (`git mv` to preserve .meta GUID). Update class name + 2 call sites.
+
+Full file list, verification grep commands, and DoD in the SPEC.
+
+**Cesar gate:** visual verification of bottom-nav highlight behavior + Settings panel still opens from Home and Roster.
+
+---
+
 ## 📅 ROADMAP — upcoming deliverables (planned 2026-04-26, updated 2026-05-01)
 
 > Architect-tracked roadmap for the next gameplay-loop closure. Aligned with `Docs/Roadmap.md`. Order locked: A → B → C → D → E.
