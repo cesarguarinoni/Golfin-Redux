@@ -49,7 +49,7 @@ namespace Golfin.Physics.Viewer
             if (!sessionArmed)
             {
                 Debug.LogWarning("[LoopV2SmokeBot] Not armed — destroying self.");
-                Destroy(this);
+                Destroy(gameObject);
                 return;
             }
 
@@ -126,7 +126,7 @@ namespace Golfin.Physics.Viewer
             driver.FlushLog();
 
             Debug.Log($"[LoopV2SmokeBot] Done. Destroying self.");
-            Destroy(this);
+            Destroy(gameObject);
         }
 
         /// <summary>

@@ -122,6 +122,10 @@ namespace Golfin.Physics.Viewer
         internal Vector3                               LastShotLaunchDir => _lastShotLaunchDir;
         internal Transform                             CurrentBall    => ballAnimator?.CurrentBall;
         internal bool                                  CurrentShotIsPutt => _shotController != null && _shotController.IsPutt;
+        /// <summary>Bot seam: current ball world position (Vector3.zero if ball not yet spawned).</summary>
+        public Vector3 BallPosition => ballAnimator != null && ballAnimator.CurrentBall != null
+            ? ballAnimator.CurrentBall.position
+            : Vector3.zero;
 
         // ── §controls_h: test injection helpers ───────────────────────────────
         // Allow EditMode integration tests to inject dependencies without a full scene.

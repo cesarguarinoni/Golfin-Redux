@@ -436,11 +436,14 @@ namespace Golfin.Physics.Viewer.Bot
                 yield break;
             }
 
-            // Build a direction vector from current ball position toward the target.
-            var ballAnimator = UnityEngine.Object.FindObjectOfType<BallAnimator>();
-            Vector3 origin = ballAnimator != null
-                ? ballAnimator.transform.position
-                : ctrl.transform.position;
+            // Use the public BallPosition getter (bot seam on PhysicsLabController) to get
+            // the live ball world position. Falls back to ctrl.transform if ball not spawned.
+            Vector3 origin = ctrl.BallPosition;
+            if (origin == Vector3.zero)
+            {
+                origin = ctrl.transform.position;
+                LogStep($"  FireShot: BallPosition=(0,0,0) — falling back to ctrl.transform={origin}");
+            }
 
             Vector3 dir = (worldTarget - origin).normalized;
             // Putter speed range ~1-5 m/s; scale by power.
@@ -600,38 +603,65 @@ namespace Golfin.Physics.Viewer.Bot
         }
 
         /// <summary>
-        /// Find the pin/cup position in the active hole scene.
-        /// Searches for common names: Pin, Flag, Cup, FlagGO, PinTransform, CupMarker.
-        /// Returns Vector3.zero if nothing found.
+        /// Find the pin/cup world position in the active hole scene.
+        ///
+        /// Primary source: Golfin.Gameplay.UI.HUD.HoleContext.PinWorld — the canonical
+        /// static-bus value set by PhysicsLabController when the hole scene loads (line 1492).
+        /// Read via reflection to avoid a cross-assembly static reference.
+        ///
+        /// Fallback: recursive descendant-by-name walk for "Flag" in all scene roots,
+        /// mirroring PhysicsLabController's own flag-search logic.
         /// </summary>
         public Vector3 FindCupPosition()
         {
-            string[] candidates = { "Pin", "Flag", "Cup", "FlagGO", "PinTransform",
-                                    "CupMarker", "CupCenter", "HolePin" };
-            foreach (var name in candidates)
+            // Primary: read HoleContext.PinWorld via reflection.
+            // HoleContext lives in Golfin.Gameplay.UI.asmdef (not Assembly-CSharp).
+            Type holeCtxType = Type.GetType("Golfin.Gameplay.UI.HUD.HoleContext, Golfin.Gameplay.UI");
+            if (holeCtxType != null)
             {
-                var go = GameObject.Find(name);
-                if (go != null)
+                FieldInfo pinField = holeCtxType.GetField("PinWorld",
+                    BindingFlags.Public | BindingFlags.Static);
+                if (pinField != null)
                 {
-                    LogStep($"FindCupPosition: found '{name}' at {go.transform.position}");
-                    return go.transform.position;
+                    var pw = (Vector3)pinField.GetValue(null);
+                    if (pw != Vector3.zero)
+                    {
+                        LogStep($"FindCupPosition: HoleContext.PinWorld = {pw}");
+                        return pw;
+                    }
                 }
             }
 
-            // Fallback: any GO with "pin" or "flag" or "cup" in its name.
-            var allGos = UnityEngine.Object.FindObjectsOfType<GameObject>(includeInactive: false);
-            foreach (var go in allGos)
+            // Fallback: recursive descendant walk for "Flag" (same search PhysicsLabController uses).
+            for (int i = 0; i < SceneManager.sceneCount; i++)
             {
-                string n = go.name.ToLowerInvariant();
-                if (n.Contains("pin") || n.Contains("flag") || n.Contains("cup"))
+                var scene = SceneManager.GetSceneAt(i);
+                if (!scene.isLoaded) continue;
+                foreach (var root in scene.GetRootGameObjects())
                 {
-                    LogStep($"FindCupPosition: fuzzy match '{go.name}' at {go.transform.position}");
-                    return go.transform.position;
+                    Transform flag = FindDescendantByName(root.transform, "Flag");
+                    if (flag != null)
+                    {
+                        LogStep($"FindCupPosition: fallback 'Flag' descendant at {flag.position}");
+                        return flag.position;
+                    }
                 }
             }
 
-            LogStep("FindCupPosition WARN: no pin/flag/cup GO found — using Vector3.zero");
+            LogStep("FindCupPosition WARN: HoleContext.PinWorld is zero and no 'Flag' descendant found — using Vector3.zero");
             return Vector3.zero;
+        }
+
+        /// <summary>Recursive depth-first search for the first descendant Transform with the given name.</summary>
+        Transform FindDescendantByName(Transform root, string name)
+        {
+            if (root.name.Equals(name, StringComparison.OrdinalIgnoreCase)) return root;
+            foreach (Transform child in root)
+            {
+                var found = FindDescendantByName(child, name);
+                if (found != null) return found;
+            }
+            return null;
         }
     }
 }

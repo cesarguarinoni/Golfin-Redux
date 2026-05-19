@@ -1,6 +1,6 @@
 # STATUS — loop_v2_smoke_bot
 
-**Status:** READY_FOR_ARCHITECT_REVIEW
+**Status:** IMPLEMENTER_WORKING
 **Type:** TELLCODE — broader scope than typical (reusable framework, not single-scenario script)
 **Parent:** `Docs/Specs/Active/loop_v2_scope/SPEC.md` (inserted between C0 and C1)
 **Notion:** Loop v2 Order 335
@@ -15,6 +15,7 @@ Stage C0 unlocked the production playthrough. Stages C1/D/E/F each carry a Cesar
   - **Scenarios** (Scenarios.cs) — thin composable test flows, 30-50 lines each
   - Three scenarios at ship: Hole 1 Playthrough (Stage C1 gate), Settings Round Trip (Stage A surviving flow smoke), Hole Selection Browse (Stage E gate)
   - New scenarios for Stage D/E/F land as additions to Scenarios.cs, not new bot files
+- 2026-05-19 (iter-2) — ARCHITECT_REVIEW_FAIL. Addressing: ShellScene contamination, FindCupPosition fix, HoleSelection rework, PNG count SPEC fix, tests-run evidence.
 
 ## Pattern alignment
 - Asmdef: `Golfin.Physics.Viewer` (same as §2c-§2f hosts)

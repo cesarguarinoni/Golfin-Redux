@@ -405,10 +405,12 @@ None.
 - [ ] EditMode test gate **305/305 PASS** unchanged
 
 **Self-evidence** (one capture set per scenario):
-- [ ] `tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/` — 7 MD5-distinct PNGs + history.log
-- [ ] `tasks/loop_v2_smoke_bot/settings_round_trip/screenshots/` — 5 MD5-distinct PNGs + history.log
-- [ ] `tasks/loop_v2_smoke_bot/hole_selection_browse/screenshots/` — 5 MD5-distinct PNGs + history.log
+- [ ] `tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/` — 6 MD5-distinct PNGs + history.log
+- [ ] `tasks/loop_v2_smoke_bot/settings_round_trip/screenshots/` — 4 MD5-distinct PNGs + history.log
+- [ ] `tasks/loop_v2_smoke_bot/hole_selection_browse/screenshots/` — 4 MD5-distinct PNGs + history.log
 - [ ] Each `history.log` ends with `=== Scenario complete ===` (not `INCOMPLETE`)
+
+_Note (iter-2 edit): PNG counts corrected from 7/5/5 to 6/4/4 to match scenario code verbatim. HoleSelection scenario reworked to drive CardTapButton collapse (Hole 1 auto-expands; no collapsed→expanded drive possible with only Hole 1 unlocked). ARCHITECT_REVIEW.md §PNG-count calls this a spec-bookkeeping edit, not a functional change._
 
 **Cesar visual gate:** light. Review the three capture sets + logs. If each scenario captures look right, approve. No manual play required.
 

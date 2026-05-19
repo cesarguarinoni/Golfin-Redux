@@ -11,3 +11,7 @@
 2026-05-19T13:29:20 Hole Selection Browse running, waiting for completion
 2026-05-19T13:31:14 running EditMode tests
 2026-05-19T13:35:36 done, IMPLEMENTER_REPORT written, known FAILs: FindCupPosition, HoleCard click, PNG count. Setting READY_FOR_ARCHITECT_REVIEW
+2026-05-19T13:46:09Z activated — addressing ARCHITECT_REVIEW_FAIL fixes
+2026-05-19T13:51:17Z code changes complete — verifying compile, reverting scene, preparing scenario runs
+2026-05-19T14:03:47Z waiting for Unity to recompile modified files
+2026-05-19T14:08:51Z compile clean at 16:08:21 — running EditMode tests then launching scenarios
