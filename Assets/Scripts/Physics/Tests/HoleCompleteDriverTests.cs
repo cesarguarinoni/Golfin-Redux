@@ -7,6 +7,7 @@ using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Gameplay.Loop;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 using Golfin.Gameplay.UI.ShotUI;
 using Golfin.Physics.Viewer;
 
@@ -209,6 +210,50 @@ namespace Golfin.Physics.Tests
             // Assert: widget should remain hidden.
             Assert.IsFalse(_widget.IsShowing,
                 "Widget must NOT show when terminal state is OB.");
+        }
+
+        // ── Stage B Test 6: InCup → GameSession.OnHoleComplete fires with correct payload ──
+
+        [Test]
+        public void HoleCompleteDriver_OnInCupTerminal_FiresMarkHoleComplete()
+        {
+            // Arrange
+            GameSession.SetTurn(3);
+            HoleContext.Par         = 4;
+            HoleContext.HoleNumber  = 11;
+            // CurrentHoleNumber stays 0 (set in SeedSession only) — fallback to HoleContext.
+
+            HoleCompletionData? received = null;
+            int fireCount = 0;
+            System.Action<HoleCompletionData> listener = d =>
+            {
+                received = d;
+                fireCount++;
+            };
+            GameSession.OnHoleComplete += listener;
+
+            try
+            {
+                // Act
+                FireShotComplete(BallState.InCup);
+
+                // Assert
+                Assert.AreEqual(1, fireCount,
+                    "MarkHoleComplete must fire exactly once on InCup terminal.");
+                Assert.IsTrue(received.HasValue, "Listener must have received a payload.");
+                Assert.AreEqual(BallState.InCup, received.Value.TerminalState,
+                    "Payload TerminalState must match ShotResult terminal.");
+                Assert.AreEqual(3, received.Value.Strokes,
+                    "Payload Strokes must equal GameSession.TurnCount at fire time.");
+                Assert.AreEqual(0, received.Value.PenaltyStrokes,
+                    "Payload PenaltyStrokes must equal sum of ShotHistory penalties (none here).");
+                Assert.AreEqual(11, received.Value.HoleNumber,
+                    "Payload HoleNumber must fall back to HoleContext.HoleNumber when CurrentHoleNumber is 0.");
+            }
+            finally
+            {
+                GameSession.OnHoleComplete -= listener;
+            }
         }
 
         // ── ScoreLabelFor table-driven bonus test ─────────────────────────────────

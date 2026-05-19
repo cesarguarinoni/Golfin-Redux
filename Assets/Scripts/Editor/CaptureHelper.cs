@@ -3,6 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 using Golfin.Diagnostics.Runtime;
 // §2b: CaptureHelper is now a thin editor-side wrapper around Golfin.Diagnostics.Runtime.CaptureCore.
 // The capture implementation lives in CaptureCore so it can be used from non-editor assemblies.

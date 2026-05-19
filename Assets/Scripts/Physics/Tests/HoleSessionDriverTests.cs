@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
-using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 using Golfin.Physics.Viewer;
 
 namespace Golfin.Physics.Tests

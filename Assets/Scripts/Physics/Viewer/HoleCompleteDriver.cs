@@ -1,6 +1,7 @@
 using UnityEngine;
 using Golfin.Gameplay.Loop;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 using Golfin.Gameplay.UI.ShotUI;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -44,7 +45,29 @@ namespace Golfin.Physics.Viewer
         void HandleShotComplete(ShotResult result)
         {
             if (result.TerminalState != BallState.InCup) return;
+
+            // Stage B: fire cross-scene signal so the ShellScene Result modal
+            // (lands in Stage C) can react regardless of whether the lab widget
+            // is hosting the modal locally.
+            var completionData = new HoleCompletionData(
+                terminalState:  result.TerminalState,
+                strokes:        GameSession.TurnCount,
+                penaltyStrokes: ComputePenaltyStrokesFromHistory(),
+                holeNumber:     GameSession.CurrentHoleNumber > 0
+                                    ? GameSession.CurrentHoleNumber
+                                    : HoleContext.HoleNumber
+            );
+            GameSession.MarkHoleComplete(completionData);
+
+            // Existing lab path (kept for now; Stage C migrates this off):
             ShowResultScreen(GameSession.TurnCount);
+        }
+
+        static int ComputePenaltyStrokesFromHistory()
+        {
+            int sum = 0;
+            foreach (var rec in GameSession.ShotHistory) sum += rec.PenaltyStrokes;
+            return sum;
         }
 
         // Public entrypoint — used by both the real InCup path and DebugShotPanel.

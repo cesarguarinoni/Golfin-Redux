@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 
 namespace Golfin.Gameplay.UI.ShotUI
 {

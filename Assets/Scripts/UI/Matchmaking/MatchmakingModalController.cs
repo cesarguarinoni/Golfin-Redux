@@ -87,6 +87,10 @@ namespace Golfin.UI.Matchmaking
         private Coroutine? _opponentScanCoroutine;
         private List<CharacterDataRuntime> _opponentPool = new List<CharacterDataRuntime>();
 
+        // Stage B: captured at Open(); read in OpponentScanRoutine to seed GameSession.
+        private int       _resolvedIndex;
+        private HoleData? _resolvedHoleData;
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         protected override void Awake()
@@ -145,8 +149,9 @@ namespace Golfin.UI.Matchmaking
         /// </summary>
         public void Open(int holeIndex)
         {
-            // 1. Resolve hole index
-            int resolvedIndex = holeIndex >= 0 ? holeIndex : defaultHoleIndex;
+            // 1. Resolve hole index (Stage B: lifted to field so OpponentScanRoutine can read it)
+            _resolvedIndex = holeIndex >= 0 ? holeIndex : defaultHoleIndex;
+            int resolvedIndex = _resolvedIndex;
 
             // 2. Resolve player character
             string playerCharId = CharacterManager.Instance?.GetSelectedCharacterId() ?? string.Empty;
@@ -207,6 +212,9 @@ namespace Golfin.UI.Matchmaking
             }
 
             ApplyHole(hole);
+
+            // Stage B: remember the resolved hole so OpponentScanRoutine can seed GameSession.
+            _resolvedHoleData = hole;
 
             // 7. Show (kicks OnShow → coroutines)
             Show();
@@ -366,6 +374,24 @@ namespace Golfin.UI.Matchmaking
 
             if (statusText != null)
                 statusText.text = statusFoundText;
+
+            // Stage B: seed GameSession at OPPONENT FOUND so downstream
+            // gameplay code (PhysicsLab, ShellScene Result modal, etc.) can
+            // read the current hole / character / bag without re-resolving
+            // singletons every frame.
+            int seededHole = (_resolvedHoleData != null)
+                                ? _resolvedHoleData.holeNumber
+                                : (_resolvedIndex + 1);
+            string charId = CharacterManager.Instance != null
+                                ? CharacterManager.Instance.GetSelectedCharacterId()
+                                : string.Empty;
+            int bagSlot   = BagManager.Instance != null
+                                ? BagManager.Instance.EquippedBagSlot
+                                : 0;
+            Golfin.Gameplay.Session.GameSession.SeedSession(seededHole, charId, bagSlot);
+#if UNITY_EDITOR
+            Debug.Log($"[Stage B] GameSession seeded — Hole={seededHole}, CharacterId='{charId}', BagSlot={bagSlot}");
+#endif
 
             _opponentScanCoroutine = null;
         }

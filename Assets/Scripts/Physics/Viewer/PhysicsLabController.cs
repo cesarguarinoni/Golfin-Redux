@@ -1502,7 +1502,7 @@ namespace Golfin.Physics.Viewer
                     // Fire HoleContext AFTER PinWorld is written
                     Golfin.Gameplay.UI.HUD.HoleContext.Raise();
                     // §2c: reset session state for the new hole. Fires OnTurnChanged so PlayerCardWidget renders fresh "TURN 1".
-                    Golfin.Gameplay.UI.HUD.GameSession.ResetForNewHole();
+                    Golfin.Gameplay.Session.GameSession.ResetForNewHole();
                     // §2d: install a real cup detector keyed to this hole's pin position.
                     // Speed gate passed from PuttCfg.CupCaptureSpeed (tunable via putt.csv).
                     // Default 1.5 m/s per USGA lip-out anchor (architect-locked 2026-05-14).
@@ -1668,7 +1668,7 @@ namespace Golfin.Physics.Viewer
             Golfin.Gameplay.UI.HUD.HoleContext.Reset();
             // §2c: clear session state on hole unload (defensive — next hole load will reset again,
             // but this guarantees clean state if we go to a no-hole flat-ground fallback).
-            Golfin.Gameplay.UI.HUD.GameSession.ResetForNewHole();
+            Golfin.Gameplay.Session.GameSession.ResetForNewHole();
             // §2d: revert to NullCupDetector for flat-ground fallback.
             if (_ballSM != null)
                 _ballSM.SetCupDetector(new Golfin.Gameplay.Loop.NullCupDetector());

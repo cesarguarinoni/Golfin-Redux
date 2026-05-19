@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using Golfin.Diagnostics.Runtime;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 using Golfin.Gameplay.UI.ShotUI;
 #if UNITY_EDITOR
 using UnityEditor;

@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using Golfin.Diagnostics.Runtime;
 using Golfin.Gameplay.Loop;
-using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 
 namespace Golfin.Physics.Viewer
 {

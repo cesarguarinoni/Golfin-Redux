@@ -1,14 +1,22 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Golfin.Gameplay.UI.HUD
+namespace Golfin.Gameplay.Session
 {
     /// <summary>
-    /// Per-hole ephemeral session state. Reset on every hole load.
-    /// Not persisted across app restarts (Loop v2 / save state spec handles persistence).
+    /// Session-wide state for the active gameplay run.
+    /// Holds (a) the session seed set at Matchmaking "OPPONENT FOUND"
+    /// (character / bag / hole pointer — survives across holes within the same
+    /// session), and (b) per-hole ephemeral state (turn counter, shot history —
+    /// cleared on each hole start). Not persisted across app restarts.
     /// </summary>
     public static class GameSession
     {
+        // ── Session seed (set at Matchmaking "OPPONENT FOUND"; persists between holes) ──
+        public static int    CurrentHoleNumber;
+        public static string SelectedCharacterId = string.Empty;
+        public static int    EquippedBagSlot;
+
         // ── Turn counter ──────────────────────────────────────────────────────
         public static int TurnCount = 1;
         public static event System.Action OnTurnChanged;
@@ -23,9 +31,13 @@ namespace Golfin.Gameplay.UI.HUD
             OnHistoryChanged?.Invoke();
         }
 
+        // ── Cross-scene completion signal (Stage B) ───────────────────────────
+        public static event System.Action<HoleCompletionData> OnHoleComplete;
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
         /// <summary>
-        /// Reset session state for a new hole. Clears history, sets turn back to 1.
+        /// Per-hole reset: clears history, sets turn back to 1.
+        /// Preserves seed fields (CurrentHoleNumber / SelectedCharacterId / EquippedBagSlot).
         /// Fires both OnTurnChanged and OnHistoryChanged so subscribers re-render cleanly.
         /// </summary>
         public static void ResetForNewHole()
@@ -35,6 +47,44 @@ namespace Golfin.Gameplay.UI.HUD
             OnTurnChanged?.Invoke();
             OnHistoryChanged?.Invoke();
         }
+
+        /// <summary>
+        /// Initial seed at Matchmaking "OPPONENT FOUND".
+        /// Sets all three seed fields and also runs ResetForNewHole.
+        /// </summary>
+        public static void SeedSession(int holeNumber, string characterId, int bagSlot)
+        {
+            CurrentHoleNumber   = holeNumber;
+            SelectedCharacterId = characterId ?? string.Empty;
+            EquippedBagSlot     = bagSlot;
+            ResetForNewHole();
+        }
+
+        /// <summary>
+        /// PLAY NEXT path: re-points to a new hole, resets per-hole state, keeps seed.
+        /// </summary>
+        public static void SetCurrentHole(int holeNumber)
+        {
+            CurrentHoleNumber = holeNumber;
+            ResetForNewHole();
+        }
+
+        /// <summary>
+        /// Full session clear — used on MENU / back-to-Home path (Stage D).
+        /// </summary>
+        public static void ResetSession()
+        {
+            CurrentHoleNumber   = 0;
+            SelectedCharacterId = string.Empty;
+            EquippedBagSlot     = 0;
+            ResetForNewHole();
+        }
+
+        /// <summary>
+        /// Fire OnHoleComplete with the given payload. Called by HoleCompleteDriver
+        /// when the ball state machine reaches BallState.InCup.
+        /// </summary>
+        public static void MarkHoleComplete(HoleCompletionData data) => OnHoleComplete?.Invoke(data);
     }
 
     /// <summary>

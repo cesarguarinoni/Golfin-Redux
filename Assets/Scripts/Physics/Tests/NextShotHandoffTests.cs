@@ -4,7 +4,7 @@ using UnityEngine;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Viewer;
-using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 
 namespace Golfin.Physics.Tests
 {

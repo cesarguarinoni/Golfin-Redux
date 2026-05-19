@@ -4,6 +4,7 @@
     "references": [
         "Golfin.Gameplay.Input",
         "Golfin.Gameplay.Config",
+        "Golfin.Gameplay.Loop",
         "Unity.TextMeshPro",
         "Unity.ugui"
     ],

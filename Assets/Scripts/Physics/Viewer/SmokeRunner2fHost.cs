@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Diagnostics.Runtime;
-using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 using Golfin.Gameplay.Loop;
 using Golfin.Physics.Math;
 using Golfin.Physics;
