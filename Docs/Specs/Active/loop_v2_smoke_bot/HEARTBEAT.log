@@ -26,3 +26,5 @@
 2026-05-19T14:55:00Z launching hole_selection_browse scenario
 2026-05-19T15:02:00Z waiting for Unity to compile RunEditModeTests.cs — background polling
 2026-05-19T15:02:00Z running AllEditModeTestRunner
+2026-05-19T15:15:00Z setting STATUS to READY_FOR_ARCHITECT_REVIEW — WaitForBallState still FAIL
+2026-05-19T15:15:30Z done, awaiting architect review

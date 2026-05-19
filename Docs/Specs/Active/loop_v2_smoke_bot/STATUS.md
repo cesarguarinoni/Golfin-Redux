@@ -1,6 +1,6 @@
 # STATUS — loop_v2_smoke_bot
 
-**Status:** IMPLEMENTER_WORKING
+**Status:** READY_FOR_ARCHITECT_REVIEW
 **Type:** TELLCODE — broader scope than typical (reusable framework, not single-scenario script)
 **Parent:** `Docs/Specs/Active/loop_v2_scope/SPEC.md` (inserted between C0 and C1)
 **Notion:** Loop v2 Order 335
