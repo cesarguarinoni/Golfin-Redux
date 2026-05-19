@@ -216,6 +216,15 @@ namespace Golfin.UI.Matchmaking
             // Stage B: remember the resolved hole so OpponentScanRoutine can seed GameSession.
             _resolvedHoleData = hole;
 
+            // Stage B fix (pre-existing bug exposed by Stage B smoke test): the
+            // MatchMakingModal root GO is saved inactive in ShellScene (see
+            // commit 49d16d36 "Hole Selection Fixes"). ModalController.Show()
+            // activates the inner modalPanel but does NOT activate self — so
+            // the panel stays masked by the inactive parent AND OnShow's
+            // coroutines silently fail to start (StartCoroutine on an inactive
+            // MonoBehaviour is a no-op). Activate self before Show().
+            if (!gameObject.activeSelf) gameObject.SetActive(true);
+
             // 7. Show (kicks OnShow → coroutines)
             Show();
         }

@@ -115,10 +115,23 @@ After grep + per-file inspection (which HUD symbols each file references), I spl
 
 | # | Check | Implementer status | Notes |
 |---|-------|--------------------|-------|
-| 1 | Play from Home → Hole Select → tap PLAY → Matchmaking → OPPONENT FOUND → ball spawns at tee. No regression. | ⏳ **PENDING Cesar / reviewer playmode test** | Code path is identical to pre-Stage-B except for the added `GameSession.SeedSession(...)` call at OPPONENT FOUND — which is non-blocking (writes static fields, fires no synchronous downstream). |
-| 2 | Console log "Stage B: GameSession seeded" appears | ⏳ **PENDING playmode test** | Editor-only `Debug.Log` added behind `#if UNITY_EDITOR`. Will print: `[Stage B] GameSession seeded — Hole={n}, CharacterId='{id}', BagSlot={n}` |
-| 3 | Fire a putt into the cup → lab `HoleCompleteWidget` still shows (existing behavior preserved) | ⏳ **PENDING playmode test** | `HoleCompleteDriver.HandleShotComplete` keeps the existing `ShowResultScreen(...)` call AFTER the new `MarkHoleComplete(...)` call. Order is: fire event → show existing widget. |
-| 4 | Optional: subscribe a test logger to `GameSession.OnHoleComplete` and verify it fires once per InCup terminal | ✅ **COVERED BY TEST** | Test #6 (`HoleCompleteDriver_OnInCupTerminal_FiresMarkHoleComplete`) asserts exactly this — `fireCount == 1` after one InCup terminal. |
+| 1 | Play from Home → tap PLAY → Matchmaking modal shows → cycles → OPPONENT FOUND → CANCEL restores home panels. No regression. | ✅ **VERIFIED via MCP playmode (2026-05-19)** | Smoke test exposed a pre-existing scene bug: the `MatchMakingModal` GameObject was saved inactive in `ShellScene.unity` by commit `49d16d36 "Hole Selection Fixes"` (not Stage B). `ModalController.Show()` activates only the inner `modalPanel` child — not self — so the panel stayed masked AND OnShow's coroutines silently failed (StartCoroutine on inactive MonoBehaviour is a no-op). Added a one-line guard to `MatchmakingModalController.Open()` to activate self before `Show()`. Verified end-to-end: modal renders correctly, OPPONENT FOUND state lands, CANCEL restores home panels. See iter-2 fix log in this report. |
+| 2 | Console log "Stage B: GameSession seeded" appears | ✅ **VERIFIED via MCP playmode** | Actual log captured: `[Stage B] GameSession seeded — Hole=1, CharacterId='char_james', BagSlot=1` — fires at exactly the right moment (end of OpponentScanRoutine, after `statusText.text = statusFoundText`). |
+| 3 | Fire a putt into the cup → lab `HoleCompleteWidget` still shows (existing behavior preserved) | ⏳ **PENDING playmode test on a hole** | The MCP playmode session verified Home → Modal but not yet end-to-end through a hole. `HoleCompleteDriver.HandleShotComplete` keeps the existing `ShowResultScreen(...)` call AFTER the new `MarkHoleComplete(...)` call. Order is: fire event → show existing widget. Covered structurally by test #6. |
+| 4 | Subscribe a test logger to `GameSession.OnHoleComplete` and verify it fires once per InCup terminal | ✅ **COVERED BY TEST** | Test #6 (`HoleCompleteDriver_OnInCupTerminal_FiresMarkHoleComplete`) asserts exactly this — `fireCount == 1` after one InCup terminal. |
+
+### Iter-2 fix log (2026-05-19, post Cesar feedback)
+
+Cesar's smoke test reported "Hole card and Notice disappears, multiplayer modal does not appear" from both Home and Hole Select. Reproduced via MCP playmode. Root cause: `MatchMakingModal` GO is inactive in scene (commit `49d16d36`, pre-Stage-B); `Open()` never activated self before calling `Show()`. Pre-existing — Stage B exposed it because the smoke test was the first time anyone actually pressed PLAY since the scene-level deactivation.
+
+**Fix** in `Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs:225` — single guarded `gameObject.SetActive(true)` before the existing `Show()` call.
+
+**Verification:**
+- Re-ran 300/300 EditMode test gate → still PASS.
+- MCP playmode: `modal.activeInHierarchy=True` immediately after PLAY click ✅
+- `[Stage B] GameSession seeded — Hole=1, CharacterId='char_james', BagSlot=1` fires ✅
+- CANCEL → home panels restored (`notice.activeSelf=False → True`, `nextHole.activeSelf=False → True`) ✅
+- Visual: modal renders correctly over Home backdrop, OPPONENT FOUND state shows the player vs opponent cards, hole info, rewards, CANCEL button (screenshot taken).
 
 ---
 
