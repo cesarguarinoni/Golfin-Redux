@@ -1,0 +1,23 @@
+[t=299.77] === LoopV2SmokeBot started: scenario='settings_round_trip' ===
+[t=299.77] === Settings Round Trip ===
+[t=299.77] NavigateToHome: waiting for app startup sequence…
+[t=303.85]   NavigateToHome: on Splash after 4.0s — clicking StartButton
+[t=304.35] Click: 'StartButton'
+[t=304.36]   → clicked StartButton
+[t=306.86]   NavigateToHome: reached Home after 7.0s
+[t=308.05] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/settings_round_trip/screenshots/s01_home_2026-05-19_15-22-24.png
+[t=308.05] Click: 'SettingsButton'
+[t=308.08]   → clicked SettingsButton
+[t=309.08] WaitForGameObject: SettingsPanel (timeout=10s)
+[t=309.08]   WaitForGameObject OK: 'SettingsPanel' found after 0.0s
+[t=309.74] Capture: s02_settings_open → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/settings_round_trip/screenshots/s02_settings_open_2026-05-19_15-22-25.png
+[t=309.74] Click: 'SoundSettingsRow'
+[t=309.74]   → clicked SoundSettingsRow
+[t=311.21] Capture: s03_settings_sound_expanded → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/settings_round_trip/screenshots/s03_settings_sound_expanded_2026-05-19_15-22-27.png
+[t=311.21] Click: 'CloseButton'
+[t=311.21]   → clicked CloseButton
+[t=312.21] WaitForScreen: Home (timeout=10s)
+[t=312.21]   WaitForScreen OK: on 'Home' after 0.0s
+[t=312.37] Capture: s04_home_returned → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/settings_round_trip/screenshots/s04_home_returned_2026-05-19_15-22-28.png
+[t=312.37] === Settings Round Trip: all captures done ===
+[t=312.37] === Scenario complete ===

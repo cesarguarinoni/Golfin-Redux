@@ -1,0 +1,13 @@
+2026-05-19T00:00:00 activated
+2026-05-19T00:05:00 pre-flight complete: CaptureCore.SnapPlayModeSafe confirmed, MatchmakingModalController has no public State, ScreenManager._currentScreen private, assembly boundary confirmed (no direct static ref from Viewer to Assembly-CSharp). Starting file creation.
+2026-05-19T00:10:00 all 4 files created: BotDriver.cs, LoopV2SmokeBot.cs, Scenarios.cs, Editor/LoopV2SmokeBotMenu.cs. MatchmakingModalController.Phase added. Triggering Unity compile check.
+2026-05-19T00:12:00 Unity file watcher triggered via osascript Assets>Refresh. Meta files created for Bot/. Waiting for compilation.
+2026-05-19T00:22:00 Fixed fp cast errors in BotDriver.cs FireShot (used fp.FromFloat() instead of explicit cast). Clean compile confirmed — Golfin.Physics.Viewer.dll updated to 245248 bytes at 14:22.
+2026-05-19T00:32:00 Hole1Playthrough ran — scenario completed but hit timeouts (WaitForScreen Home 15s too short, app was on Splash). Fixed Scenarios.cs with 45s WaitForScreen timeouts. Recompiled clean. Running scenarios again.
+2026-05-19T00:36:00 Key finding: Splash screen requires click to proceed. Added NavigateToHome() to BotDriver that clicks StartButton. Also fixed button names: SoundSettingsRow, NavTeeButton, NavHomeButton, HoleCard(Clone). Recompiling.
+2026-05-19T12:55:58 diagnosing failed runs, fixing BotDriver absolute path, preparing re-runs
+2026-05-19T13:04:49 launched Hole 1 Playthrough, waiting for run to complete
+2026-05-19T13:22:46 Settings Round Trip running in background
+2026-05-19T13:29:20 Hole Selection Browse running, waiting for completion
+2026-05-19T13:31:14 running EditMode tests
+2026-05-19T13:35:36 done, IMPLEMENTER_REPORT written, known FAILs: FindCupPosition, HoleCard click, PNG count. Setting READY_FOR_ARCHITECT_REVIEW

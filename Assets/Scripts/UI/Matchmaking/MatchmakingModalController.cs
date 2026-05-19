@@ -82,6 +82,16 @@ namespace Golfin.UI.Matchmaking
         [SerializeField] private HoleDatabase? holeDatabase;
         [SerializeField] private int defaultHoleIndex = 0;
 
+        // ── Public state enum (bot test seam — loop_v2_smoke_bot) ────────────
+        public enum MatchmakingPhase { Idle, Searching, OpponentFound }
+
+        /// <summary>
+        /// Current matchmaking phase. Read by BotDriver to know when to proceed.
+        /// Idle = modal not open. Searching = opponent search in progress.
+        /// OpponentFound = search complete (statusText == statusFoundText).
+        /// </summary>
+        public MatchmakingPhase Phase { get; private set; } = MatchmakingPhase.Idle;
+
         // ── Private state ─────────────────────────────────────────────────────
         private Coroutine? _dotCycleCoroutine;
         private Coroutine? _opponentScanCoroutine;
@@ -108,12 +118,14 @@ namespace Golfin.UI.Matchmaking
             if (homeNoticePanel != null)   homeNoticePanel.SetActive(false);
             if (homeNextHolePanel != null) homeNextHolePanel.SetActive(false);
 
+            Phase = MatchmakingPhase.Searching;
             _dotCycleCoroutine    = StartCoroutine(DotCycleRoutine());
             _opponentScanCoroutine = StartCoroutine(OpponentScanRoutine());
         }
 
         protected override void OnHide()
         {
+            Phase = MatchmakingPhase.Idle;
             if (_dotCycleCoroutine != null)    { StopCoroutine(_dotCycleCoroutine);    _dotCycleCoroutine    = null; }
             if (_opponentScanCoroutine != null) { StopCoroutine(_opponentScanCoroutine); _opponentScanCoroutine = null; }
 
@@ -383,6 +395,8 @@ namespace Golfin.UI.Matchmaking
 
             if (statusText != null)
                 statusText.text = statusFoundText;
+
+            Phase = MatchmakingPhase.OpponentFound;
 
             // Stage B: seed GameSession at OPPONENT FOUND so downstream
             // gameplay code (PhysicsLab, ShellScene Result modal, etc.) can
