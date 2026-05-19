@@ -9,16 +9,21 @@ namespace Golfin.Physics.Viewer.Editor
     /// Menu launcher for Loop v2 smoke bot scenarios.
     ///
     /// Option B host-creation pattern: the [LoopV2SmokeBot] GameObject is created ONLY
-    /// at EnteringPlayMode (via playModeStateChanged), never saved to disk. This means
-    /// ShellScene.unity is never mutated by the launcher — zero scene contamination.
+    /// at EnteredPlayMode via playModeStateChanged, never saved to disk. ShellScene is
+    /// never mutated by the launcher — zero scene contamination.
+    ///
+    /// Robustness note: [InitializeOnLoadMethod] re-registers the playModeStateChanged
+    /// handler after every domain reload, so it survives the compile cycle that may
+    /// occur between clicking the menu item and Unity actually entering play mode.
+    /// The handler is a no-op unless SessionState Armed=true.
     ///
     /// Each menu item:
     ///   1. Verifies not already in play mode.
-    ///   2. Opens ShellScene.unity (single mode).
+    ///   2. Opens ShellScene.unity (single mode — never saves).
     ///   3. Sets SessionState scenario key + armed flag.
-    ///   4. Registers a one-shot playModeStateChanged handler that creates the host GO
-    ///      on EnteringPlayMode (before Start() runs). The GO is never saved to disk.
-    ///   5. Enters play mode. The host GO lives only in the in-memory play-mode scene.
+    ///   4. Enters play mode. The playModeStateChanged handler (re-registered on every
+    ///      domain reload by [InitializeOnLoadMethod]) injects the host GO at
+    ///      EnteredPlayMode time. The GO is never saved to disk.
     ///
     /// The bot self-destructs (Destroy(gameObject)) after the scenario completes.
     /// Captures land in tasks/loop_v2_smoke_bot/<scenario>/screenshots/.
@@ -59,7 +64,7 @@ namespace Golfin.Physics.Viewer.Editor
 
             Debug.Log($"[LoopV2SmokeBotMenu] Launching scenario: '{scenarioKey}'");
 
-            // 1. Open ShellScene (single mode — does NOT save the current scene).
+            // 1. Open ShellScene (single mode). Does NOT save the file.
             var shell = EditorSceneManager.OpenScene(ShellScenePath, OpenSceneMode.Single);
             if (!shell.IsValid())
             {
@@ -67,40 +72,45 @@ namespace Golfin.Physics.Viewer.Editor
                 return;
             }
 
-            // 2. Arm via SessionState (survives domain reloads; does NOT touch any scene file).
+            // 2. Arm via SessionState (survives domain reloads; does NOT touch scene files).
             Golfin.Physics.Viewer.LoopV2SmokeBot.Scenario = scenarioKey;
             Golfin.Physics.Viewer.LoopV2SmokeBot.Armed    = true;
 
             Debug.Log($"[LoopV2SmokeBotMenu] Armed. Scenario='{scenarioKey}'. Entering play mode…");
 
-            // 3. Register a one-shot handler that injects the host GO the moment Unity
-            //    enters play mode (before any MonoBehaviour.Start() runs). The GO is
-            //    created in-memory only — never saved to the scene file on disk.
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-
-            // 4. Enter play mode. Unity will fire playModeStateChanged(EnteringPlayMode)
-            //    synchronously before the scene starts, giving us the injection window.
+            // 3. Enter play mode. The [InitializeOnLoadMethod]-registered handler will
+            //    fire at EnteredPlayMode and inject the host GO (because Armed=true).
             EditorApplication.EnterPlaymode();
+        }
+
+        // ── Play-mode injection handler ───────────────────────────────────────
+
+        /// <summary>
+        /// Re-register the playModeStateChanged handler after every domain reload.
+        /// This ensures the handler survives any compile cycle that occurs between
+        /// clicking the menu item and Unity actually entering play mode.
+        /// The handler is a no-op unless SessionState Armed=true.
+        /// </summary>
+        [UnityEditor.Callbacks.DidReloadScripts]
+        static void OnScriptsReloaded()
+        {
+            // Remove then re-add to avoid double-subscription.
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
         static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
-            if (state == PlayModeStateChange.EnteredPlayMode)
-            {
-                // We're now in play mode with the scene loaded. Create the host GO here.
-                // This GO exists only in the in-memory play-mode scene, never on disk.
-                var go = new GameObject("[LoopV2SmokeBot]");
-                go.AddComponent<Golfin.Physics.Viewer.LoopV2SmokeBot>();
-                Debug.Log("[LoopV2SmokeBotMenu] Injected [LoopV2SmokeBot] host into play-mode scene (not saved to disk).");
+            if (state != PlayModeStateChange.EnteredPlayMode) return;
 
-                // Unsubscribe immediately — one-shot only.
-                EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-            }
-            else if (state == PlayModeStateChange.ExitingPlayMode)
-            {
-                // Clean up subscription if play mode exits before EnteredPlayMode fires.
-                EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-            }
+            // Only inject if the bot is armed (set by a menu item invocation).
+            if (!Golfin.Physics.Viewer.LoopV2SmokeBot.Armed) return;
+
+            // Create the host GO in-memory (in the play-mode scene). Never saved to disk.
+            var go = new GameObject("[LoopV2SmokeBot]");
+            go.AddComponent<Golfin.Physics.Viewer.LoopV2SmokeBot>();
+            Debug.Log($"[LoopV2SmokeBotMenu] Injected [LoopV2SmokeBot] host into play-mode scene " +
+                      $"(scenario={Golfin.Physics.Viewer.LoopV2SmokeBot.Scenario}, not saved to disk).");
         }
     }
 }
