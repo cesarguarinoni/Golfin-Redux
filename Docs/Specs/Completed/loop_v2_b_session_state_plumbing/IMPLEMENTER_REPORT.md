@@ -120,6 +120,24 @@ After grep + per-file inspection (which HUD symbols each file references), I spl
 | 3 | Fire a putt into the cup → lab `HoleCompleteWidget` still shows (existing behavior preserved) | ⏳ **PENDING playmode test on a hole** | The MCP playmode session verified Home → Modal but not yet end-to-end through a hole. `HoleCompleteDriver.HandleShotComplete` keeps the existing `ShowResultScreen(...)` call AFTER the new `MarkHoleComplete(...)` call. Order is: fire event → show existing widget. Covered structurally by test #6. |
 | 4 | Subscribe a test logger to `GameSession.OnHoleComplete` and verify it fires once per InCup terminal | ✅ **COVERED BY TEST** | Test #6 (`HoleCompleteDriver_OnInCupTerminal_FiresMarkHoleComplete`) asserts exactly this — `fireCount == 1` after one InCup terminal. |
 
+### Iter-3 fix log (2026-05-19, post Cesar feedback round 2) — Hole Selection PLAY click bubbling
+
+Cesar tested Hole Selection PLAY: action button click was being intercepted by a transparent `CardTapButton` overlay (renders on top of `ExpandedContainer/ActionButton` because it was saved as the LAST sibling of the HoleCard prefab). The button's click was registering as a card-tap → toggle-collapse, never reaching the action button.
+
+**Fix** in `HoleCardController.Awake` — one line: `cardTapButton.transform.SetAsFirstSibling()`. Puts CardTapButton at the bottom of the render stack so ExpandedContainer/ActionButton (sibling 2 post-shift) and LockedOverlay (sibling 3 post-shift) render above it and intercept clicks first. CardTapButton still catches taps on the empty card body (no other raycast targets there).
+
+**Verification:**
+- MCP: `CardTapButton siblingIndex (should be 0): 0` ✅
+- Sibling order confirmed: `[0] CardTapButton, [1] CollapsedContainer, [2] ExpandedContainer, [3] LockedOverlay`
+- Action button click → modal opens → `[Stage B] GameSession seeded — Hole=16, CharacterId='char_james', BagSlot=1` ✅
+- 300/300 EditMode test gate still PASS
+
+### Architect note for the missing matchmaking → gameplay transition
+
+The user reported "hole never loads after OPPONENT FOUND." Root cause is **pre-existing scope creep** that predates Stage B: there is no production code path from the matchmaking modal into gameplay (no `SceneManager.LoadScene("GameplayScene")` call exists anywhere outside an editor utility). The matchmaking modal was committed as "complete" in `661de726` but it's a cosmetic stub — it just freezes on OPPONENT FOUND.
+
+This is **not Stage B's mandate** (Stage B's mandate is the seed + OnHoleComplete event). The architect needs to spec the transition for Stage C (or a dedicated transition stage). Full architect note written to `Docs/Specs/Queued/ARCHITECT_NOTE_matchmaking_to_gameplay_transition.md` with: evidence (greps), git archaeology, scope of missing transition, suggested Stage C hook, and what Stage B leaves the next stage.
+
 ### Iter-2 fix log (2026-05-19, post Cesar feedback)
 
 Cesar's smoke test reported "Hole card and Notice disappears, multiplayer modal does not appear" from both Home and Hole Select. Reproduced via MCP playmode. Root cause: `MatchMakingModal` GO is inactive in scene (commit `49d16d36`, pre-Stage-B); `Open()` never activated self before calling `Show()`. Pre-existing — Stage B exposed it because the smoke test was the first time anyone actually pressed PLAY since the scene-level deactivation.

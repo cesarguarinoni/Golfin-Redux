@@ -98,7 +98,18 @@ namespace GolfinRedux.UI.HoleSelection
         private void Awake()
         {
             if (cardTapButton != null)
+            {
+                // The prefab saves CardTapButton as the LAST child of HoleCard, which
+                // means it renders ON TOP of every sibling — including ExpandedContainer
+                // and the ActionButton inside it. Because CardTapButton's Image has
+                // raycastTarget=true and fully overlaps the action button, every tap on
+                // PLAY/REPLAY is intercepted as a card-tap (which then toggles the
+                // expanded state and collapses the card). Force it to the bottom of
+                // the sibling stack so children of ExpandedContainer (and LockedOverlay)
+                // render — and raycast — above it. Pure code fix; no prefab edit needed.
+                cardTapButton.transform.SetAsFirstSibling();
                 cardTapButton.onClick.AddListener(() => OnCardTapped?.Invoke(this));
+            }
 
             if (actionButton != null)
                 actionButton.onClick.AddListener(() => OnActionButtonClicked?.Invoke(this));
