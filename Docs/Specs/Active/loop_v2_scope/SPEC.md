@@ -149,13 +149,74 @@ We do NOT retrofit interfaces over `CharacterManager`, `BagManager`, etc. in thi
 
 ---
 
-## Open questions for Cesar (answer before Stage B kicks off)
+## Open questions for Cesar (LOCKED 2026-05-19)
 
-1. **Stage A scope.** Do we land BOTH P0-1 (nav bar consolidation) AND P0-2 (settings consolidation) in Stage A, or split them? My take: bundle, both are surgical and same risk profile.
-2. **Sub-spec firing cadence.** Stage A → B → C as separate full-pipeline runs (implementer → self-reviewer → reviewer → Cesar)? Or roll A+B as one task since they're both small and don't overlap files? My take: separate. A is "delete + rename"; B is "extend + namespace move." Different review surfaces.
-3. **Result modal placement.** Lives in the **gameplay scene's UI canvas** (alongside `HoleCompleteWidget`'s current home), or as part of the **ShellScene** that survives scene loads? My take: gameplay scene for now — keeps the modal close to the signal it listens for (`BallStateMachine.OnShotComplete`). Promote to ShellScene only if Stage D's scene-load work creates a transition flicker.
-4. **Reward grant on REPLAY.** Replay rewards are usually smaller (per `HoleData.replayRewards`). Confirm: should they grant **every** replay clear, or only the first replay clear after the original first-completion? My take: every clear grants `replayRewards`. Daily caps live in a future progression system.
-5. **PLAY NEXT vs MENU defaults.** On hole 18 (last hole), PLAY NEXT becomes invalid. Show only MENU? Or replace PLAY NEXT with "MAIN MENU" and keep two buttons for muscle memory? My take: show only MENU, prominent. Add a "you cleared the course" toast.
+1. **Stage A scope.** ✅ Bundle P0-1 + P0-2 into one Stage A.
+2. **Sub-spec firing cadence.** ✅ Separate. A → B → C as their own pipeline runs.
+3. **Result modal placement.** ✅ Option A — gameplay scene UI canvas (where `HoleCompleteWidget` already lives). Stage D stays in-lab (scene-swap via `PhysicsLabController.LoadHole`), so cross-scene isn't a problem yet. Promote to ShellScene later if a real scene loader makes A flicker.
+4. **Reward grant on REPLAY.** ✅ Every replay clear grants `replayRewards`. Daily caps live in a future progression system.
+5. **Hole 18 PLAY NEXT.** ✅ Hide PLAY NEXT, MENU styled prominent, fire a "course cleared" toast.
+
+---
+
+## Per-stage goals + Definition of Done (acceptance criteria)
+
+### Stage A — Singletons consolidation
+**Goal:** One bottom-nav controller. One SettingsController.
+**DoD (testable):**
+- `HomeScreenController` has zero nav button SerializeFields and zero `OnNavClicked` references. `PersistentUIManager` is the only writer to `ScreenManager.ShowScreen` from a nav-bar context.
+- `SettingsController.cs` (Phase 1) is deleted. `SettingsControllerPhase2.cs` is renamed to `SettingsController.cs`, class renamed to `SettingsController`, `Instance` type updated. Both call sites (`PersistentUIManager:OnSettingsButtonClick`, `HomeScreenController:OnSettingsClicked`) point at the single controller.
+- Visual: tap settings from Home → opens. Tap settings from Roster → opens. Bottom nav highlights correctly when switching screens. No double-fire / double-highlight.
+- Compile clean, test gate still green.
+
+### Stage B — Session state plumbing
+**Goal:** One read-back surface for "what character / bag / hole am I on right now." No subscriber re-resolves singletons.
+**DoD:**
+- `GameSession` lives in `Golfin.Gameplay.Session` (moved from `Golfin.Gameplay.UI.HUD`). All subscribers updated.
+- New fields: `CurrentHoleNumber`, `SelectedCharacterId`, `EquippedBagSlot`. `ResetForNewHole` clears them.
+- Capture point: `MatchmakingModalController.OpponentScanRoutine` end (the "OPPONENT FOUND" moment) writes the three values before fading the modal out.
+- New `ISessionStore` interface exposes the three fields as read-only.
+- 4 new EditMode tests: capture-at-found-event, reset-clears-all, getter-returns-seeded-values, reset-fires-OnTurnChanged-and-OnHistoryChanged.
+- Compile clean. Subscribers (HUD turn label, shot history view) still render correctly.
+
+### Stage C — Result modal (production)
+**Goal:** End-of-hole shows score, history, rewards, and a clear next-action. Failed and SUCCESS share one modal, different visuals.
+**DoD:**
+- `HoleCompleteWidget` extends `ModalController` (free fade-in/fade-out + backdrop). Lives on the gameplay scene's UI canvas.
+- Listens to `BallStateMachine.OnShotComplete` for terminal-state-InCup (SUCCESS) or stroke-cap-reached (FAILED).
+- SUCCESS card shows: hole number, strokes (`ShotHistory.Count + penalties`), par, score-vs-par badge (Eagle/Birdie/Par/Bogey/etc.), shot history scrollable, rewards earned.
+- FAILED card shows: "FAILED" badge, no rewards, RETRY + MENU only.
+- SUCCESS PLAY NEXT writes `HoleProgressionService.SetPlayedOverride(current, true)` + `SetUnlockedOverride(current + 1, true)` if `current < 18`.
+- SUCCESS grants rewards: iterate `HoleData.rewards` (or `replayRewards` if already played), call `RewardPointsManager.AddPoints`, `ItemManager.AddItem`, `BallManager.AddBall`. Every clear grants `replayRewards` on replays (no daily cap).
+- Hole 18 SUCCESS: PLAY NEXT button hidden, MENU button styled prominent, "course cleared" toast fires.
+- Visual review pass per `loop_v1_2d_hole_complete_and_result_screen` lessons N–O — Cesar's eyeballs gate the close.
+
+### Stage D — PLAY NEXT auto-flow
+**Goal:** Tapping PLAY NEXT lands in the next hole's tee, ready to fire, no menu round-trip.
+**DoD:**
+- PLAY NEXT handler: `GameSession.ResetForNewHole()` → `GameSession.CurrentHoleNumber = next` → `ScreenManager.ShowScreen(Loading)` → on Loading finish, `PhysicsLabController.LoadHole(GameSession.CurrentHoleNumber)` → ball arms at next tee.
+- MENU handler: `GameSession.ResetForNewHole()` → `ScreenManager.ShowScreen(Home)`.
+- Loading screen shows the right hole's loading hint / image if `HoleData` provides one.
+- No flicker between modal-close and Loading-screen-show (FadeController bridges).
+- Visual confirmation: clear hole → PLAY NEXT → next hole tee visible within ~2–3s.
+
+### Stage E — Hole Selection entry path
+**Goal:** Tapping a hole card's PLAY/REPLAY button reaches gameplay with the correct hole seeded.
+**DoD:**
+- `HoleSelectionScreenController.HandleActionClicked` → `MatchmakingModalController.Open(holeIndex)` (already wired; verify).
+- Matchmaking found → GameSession seeded (Stage B) → Loading → gameplay at the correct hole's tee.
+- Locked holes refuse entry (`HoleProgressionService.IsUnlocked` already gates the card).
+- Replay holes use `replayRewards` (Stage C consumes this correctly).
+- Visual: tap REPLAY on a played hole → matchmaking → gameplay at that hole's tee. Complete it → Result shows replay rewards.
+
+### Stage F — Animated UI polish
+**Goal:** No instant cuts on user-driven transitions; buttons feel responsive.
+**DoD:**
+- All `ScreenManager.ShowScreen` calls in user-driven paths go through `FadeController.FadeOutThenIn` (already the default; verify no `instant: true` shortcuts crept in).
+- Result modal uses `ModalController`'s built-in fade (free from Stage C).
+- New `ButtonPressFeedback` component (~30 lines): drop on any `Button`, scales 1.0 → 0.95 → 1.0 over 0.12s on tap. Hand-rolled coroutine, no DOTween dependency.
+- Applied to: PLAY (Home, hole card, matchmaking), PLAY NEXT, MENU, RETRY, all bottom-nav buttons, Settings open/close.
+- No new dependencies. No shader work. No Lottie. (All deferred to a future polish pass.)
 
 ---
 
