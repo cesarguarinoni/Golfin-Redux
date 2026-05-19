@@ -20995,7 +20995,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!1 &479768025
 GameObject:
   m_ObjectHideFlags: 0
@@ -21201,7 +21201,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &480620545
 RectTransform:
   m_ObjectHideFlags: 0
@@ -80733,7 +80733,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1728394276
 RectTransform:
   m_ObjectHideFlags: 0
@@ -108662,11 +108662,13 @@ MonoBehaviour:
   mainPlayButton: {fileID: 4123466008247632389}
   inventoryButton: {fileID: 640800338055750507}
   charactersButton: {fileID: 1007594119629403689}
-  homeHighlight: {fileID: 0}
-  gachaHighlight: {fileID: 0}
-  mainPlayHighlight: {fileID: 0}
-  inventoryHighlight: {fileID: 0}
-  charactersHighlight: {fileID: 0}
+  homeIcon: {fileID: 5978081412369470027}
+  gachaIcon: {fileID: 8813100397896905959}
+  mainPlayIcon: {fileID: 386201079674013646}
+  inventoryIcon: {fileID: 6973283510636091049}
+  charactersIcon: {fileID: 1993292270318137641}
+  iconNormalColor: {r: 1, g: 1, b: 1, a: 1}
+  iconActiveColor: {r: 0, g: 1, b: 1, a: 1}
 --- !u!222 &6218578391308469590
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -109104,18 +109106,6 @@ MonoBehaviour:
   repairKitIcon: {fileID: 21300000, guid: daa7c57f705cdf04f8ad1dbef6eb02a7, type: 3}
   ballIcon: {fileID: 21300000, guid: f7d5810099048784e8fbe582c498c4e8, type: 3}
   playButton: {fileID: 1492293184912304135}
-  navHomeButton: {fileID: 8235811263572598204}
-  navGachaButton: {fileID: 2709620742506824120}
-  navTeeButton: {fileID: 4123466008247632389}
-  navInventoryButton: {fileID: 640800338055750507}
-  navCharactersButton: {fileID: 1007594119629403689}
-  navHomeIcon: {fileID: 5978081412369470027}
-  navGachaIcon: {fileID: 8813100397896905959}
-  navTeeIcon: {fileID: 386201079674013646}
-  navInventoryIcon: {fileID: 6973283510636091049}
-  navCharactersIcon: {fileID: 1993292270318137641}
-  navNormalColor: {r: 1, g: 1, b: 1, a: 1}
-  navActiveColor: {r: 0, g: 1, b: 1, a: 1}
   holeDatabase: {fileID: 0}
   currentHoleIndex: 0
   matchmakingModal: {fileID: 4390230621042469647}

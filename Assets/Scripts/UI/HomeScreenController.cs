@@ -9,11 +9,9 @@ namespace GolfinRedux.UI
 {
     /// <summary>
     /// Home screen controller: top bar, news/announcement, character,
-    /// GPS promo banner, next hole panel, and bottom navigation.
+    /// GPS promo banner, and next hole panel. Bottom navigation is
+    /// owned by PersistentUIManager.
     /// Screen switching is handled by ScreenManager on ShellSceneRoot.
-    /// 
-    /// NEW: Added localization support, auto-cycle timer for news panel,
-    /// and reward icon support for Next Hole panel.
     /// </summary>
     public class HomeScreenController : MonoBehaviour
     {
@@ -72,23 +70,6 @@ namespace GolfinRedux.UI
 
         [SerializeField] private Button playButton;
 
-        // -------- Bottom Navigation --------
-        [Header("Bottom Navigation")]
-        [SerializeField] private Button navHomeButton;
-        [SerializeField] private Button navGachaButton;
-        [SerializeField] private Button navTeeButton;
-        [SerializeField] private Button navInventoryButton;
-        [SerializeField] private Button navCharactersButton;
-
-        [SerializeField] private Image navHomeIcon;
-        [SerializeField] private Image navGachaIcon;
-        [SerializeField] private Image navTeeIcon;
-        [SerializeField] private Image navInventoryIcon;
-        [SerializeField] private Image navCharactersIcon;
-
-        [SerializeField] private Color navNormalColor = Color.white;
-        [SerializeField] private Color navActiveColor = Color.cyan;
-
         // -------- Optional: Hole Database --------
         [Header("Optional: Hole Database")]
         [SerializeField] private HoleDatabase holeDatabase;
@@ -110,13 +91,6 @@ namespace GolfinRedux.UI
             // Next hole
             if (playButton != null)
                 playButton.onClick.AddListener(OnPlayClicked);
-
-            // Bottom nav
-            if (navHomeButton != null)       navHomeButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));
-            if (navGachaButton != null)      navGachaButton.onClick.AddListener(() => OnNavClicked(ScreenId.Home));      // TODO: Gacha
-            if (navTeeButton != null)        navTeeButton.onClick.AddListener(() => OnNavClicked(ScreenId.HoleSelection));
-            if (navInventoryButton != null)  navInventoryButton.onClick.AddListener(() => OnNavClicked(ScreenId.Inventory));
-            if (navCharactersButton != null) navCharactersButton.onClick.AddListener(() => OnNavClicked(ScreenId.Roster)); // Roster Screen
         }
 
         private void OnEnable()
@@ -151,9 +125,6 @@ namespace GolfinRedux.UI
 
             // Next hole panel
             LoadNextHole();
-
-            // Bottom nav highlight Home
-            SetActiveNav(ScreenId.Home);
         }
 
         private void OnDisable()
@@ -442,59 +413,5 @@ namespace GolfinRedux.UI
                 screenManager.ShowScreen(ScreenId.Loading);
         }
 
-        // ---------- Bottom Navigation ----------
-
-        private void OnNavClicked(ScreenId target)
-        {
-            Debug.Log($"[HomeScreenController] OnNavClicked: {target}");
-            
-            SetActiveNav(target);
-
-            if (screenManager == null)
-            {
-                Debug.LogError("[HomeScreenController] ScreenManager is null! Cannot show screen.");
-                return;
-            }
-
-            switch (target)
-            {
-                case ScreenId.Home:
-                    screenManager.ShowScreen(ScreenId.Home);
-                    break;
-                case ScreenId.Loading:
-                    screenManager.ShowScreen(ScreenId.Loading);
-                    break;
-                case ScreenId.Roster:
-                    Debug.Log("[HomeScreenController] Showing Roster screen...");
-                    screenManager.ShowScreen(ScreenId.Roster);
-                    break;
-                case ScreenId.Inventory:
-                    Debug.Log("[HomeScreenController] Showing Inventory screen...");
-                    screenManager.ShowScreen(ScreenId.Inventory);
-                    break;
-                case ScreenId.HoleSelection:
-                    Debug.Log("[HomeScreenController] Showing Hole Selection screen...");
-                    screenManager.ShowScreen(ScreenId.HoleSelection);
-                    break;
-                // For now other tabs just keep you on Home or are TODO
-                default:
-                    screenManager.ShowScreen(ScreenId.Home);
-                    break;
-            }
-        }
-
-        private void SetActiveNav(ScreenId active)
-        {
-            if (navHomeIcon != null)
-                navHomeIcon.color = active == ScreenId.Home ? navActiveColor : navNormalColor;
-            if (navGachaIcon != null)
-                navGachaIcon.color = navNormalColor; // no separate screen yet
-            if (navTeeIcon != null)
-                navTeeIcon.color = active == ScreenId.HoleSelection ? navActiveColor : navNormalColor;
-            if (navInventoryIcon != null)
-                navInventoryIcon.color = active == ScreenId.Inventory ? navActiveColor : navNormalColor;
-            if (navCharactersIcon != null)
-                navCharactersIcon.color = active == ScreenId.Roster ? navActiveColor : navNormalColor;
-        }
     }
 }

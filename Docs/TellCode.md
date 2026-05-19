@@ -21,23 +21,49 @@
 
 ---
 
-## 🔴 ACTIVE — loop_v2_a_singletons_consolidation (2026-05-19)
+## ✅ DONE — loop_v2_a_singletons_consolidation (closed end-to-end 2026-05-19 as PASS, Stage A of Loop v2)
 
-**Task slug:** `loop_v2_a_singletons_consolidation`
-**Type:** TELLCODE (Architect spec → Code implements → Cesar visual verify)
-**SPEC:** `Docs/Specs/Active/loop_v2_a_singletons_consolidation/SPEC.md`
-**Parent scope:** `Docs/Specs/Active/loop_v2_scope/SPEC.md` (Stage A of Loop v2)
-**Notion:** Order 300
+**Spec at:** `Docs/Specs/Completed/loop_v2_a_singletons_consolidation/`. STATUS=`DONE`. Parent scope: `Docs/Specs/Active/loop_v2_scope/SPEC.md` (Stage A). Notion: Order 300.
 
-**One-line goal:** One bottom-nav controller (PersistentUI). One SettingsController (Phase 2 renamed).
+**Pipeline:** TELLCODE (Architect spec → Code implements → Cesar visual verify). Two iterations — first delivery hit a visual regression Cesar caught; root-cause + fix landed in iter 2 then PASS.
 
-**Two parts:**
-1. Strip nav buttons from `HomeScreenController.cs` (PersistentUIManager owns them).
-2. Delete `SettingsController.cs` (Phase 1). Rename `SettingsControllerPhase2.cs` → `SettingsController.cs` (`git mv` to preserve .meta GUID). Update class name + 2 call sites.
+**What landed (Part 1 — bottom-nav consolidation):**
+- `Assets/Scripts/UI/HomeScreenController.cs`: stripped 5 nav button SerializeFields + 5 nav icon SerializeFields + `navNormalColor` / `navActiveColor`, removed `OnNavClicked(ScreenId)` and `SetActiveNav(ScreenId)` methods, removed the nav `AddListener` block in `Awake` and `SetActiveNav(ScreenId.Home)` call in `OnEnable`, updated class docstring. 500 → 322 lines.
+- `PersistentUIManager` becomes the sole owner of bottom-nav wiring per spec.
 
-Full file list, verification grep commands, and DoD in the SPEC.
+**What landed (Part 2 — Settings consolidation):**
+- `Assets/Scripts/UI/SettingsController.cs` (Phase 1, GUID `b2c3d4e5f67890123456789012345abc`) **deleted** with `git rm`.
+- `Assets/Scripts/UI/SettingsControllerPhase2.cs` **renamed** to `Assets/Scripts/UI/SettingsController.cs` via `git mv` (file + `.meta` together) so the Phase 2 GUID `b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7` rides into the new filename — scene component references survive intact.
+- Class renamed: `SettingsControllerPhase2` → `SettingsController`. `public static SettingsControllerPhase2 Instance` → `public static SettingsController Instance`. Updated class docstring.
+- `Assets/Scripts/UI/PersistentUIManager.cs` `OnSettingsButtonClick`: dropped the Phase 1 fallback branch. Single call to `SettingsController.Instance.OpenSettings()`.
+- `Assets/Scripts/UI/HomeScreenController.cs` `OnSettingsClicked`: `using Golfin.UI;` already resolved correctly to the renamed class — verified via reflection. No code change required at the call site.
 
-**Cesar gate:** visual verification of bottom-nav highlight behavior + Settings panel still opens from Home and Roster.
+**Iter-2 fixes (regression-driven, after Cesar's first visual round):**
+- **Bottom-nav highlight regression:** the old `HomeScreenController.SetActiveNav` was the only thing color-tinting nav icons (`navHomeIcon.color = navActiveColor` etc.). `PersistentUIManager` had its own parallel `*Highlight` Image-enable mechanism but **all 5 Image refs were never wired in `ShellScene`**, so stripping HomeScreenController left no working highlight path. Fix: replaced the dead `homeHighlight`/`gachaHighlight`/`mainPlayHighlight`/`inventoryHighlight`/`charactersHighlight` Image fields with icon refs (`homeIcon` etc.) + `iconNormalColor` / `iconActiveColor` Color fields, matching the old working mechanic. Rewrote `UpdateScreenHighlight()` to color-tint icons. Added public `HighlightScreen(ScreenId)` method (maps `ScreenId` → internal `Screen` enum, sets `currentScreen`, calls `UpdateScreenHighlight`) so the highlight tracks any navigation path — initial load, programmatic transitions, AND nav button clicks. `ScreenManager.ApplyScreen` updated to call `PersistentUIManager.Instance.HighlightScreen(screenId)` after `ShowBars()`.
+- **Settings opens nothing regression:** `SettingsScreen` root GameObject was saved inactive in `ShellScene` — with the consolidated controller, inactive root means `Awake` never runs → `SettingsController.Instance` stays null → click does nothing. Phase 1 fallback used to mask this. Fix: activated `SettingsScreen` root in scene; ensured inner `background` + `settingsPanel` children are saved inactive so play-mode startup is clean (their `Start()` then runs as designed).
+- Wired the 5 icon Image refs in `ShellScene` via MCP (each nav button's own Image: `NavHomeButton`, `NavGachaButton`, `NavTeeButton`, `NavInventoryButton`, `NavCharactersButton`).
+
+**Verification:**
+- `grep -n "navHome\|navGacha\|navTee\|navInventory\|navCharacters\|OnNavClicked\|SetActiveNav" Assets/Scripts/UI/HomeScreenController.cs` → 0 matches.
+- `grep -rn "SettingsControllerPhase2" --include='*.cs' Assets/Scripts/` → 0 matches. (`.bak` files in `Assets/Scripts/UI/Editor/` still mention the legacy name — explicit out-of-scope per SPEC § Out of scope; housekeeping deferred to a P2 pass.)
+- `find Assets/Scripts/UI -name 'SettingsController*.cs'` → exactly 1 file.
+- Reflection in-process: `Golfin.UI.SettingsController` loaded, `Golfin.UI.SettingsControllerPhase2` GONE, 1 SettingsController in scene on `SettingsScreen` (no orphan).
+- Compile clean (`scriptCompilationFailed=False`). EditMode test gate **294/294 PASS, 0 IGNORED** (run twice — after each iteration).
+- Cesar visual round 2: bottom-nav highlight tracks correctly (cyan on active, white on others), Settings opens from Home AND Roster without manual scene toggling.
+
+**Files touched:**
+- `Assets/Scripts/UI/HomeScreenController.cs` (modified)
+- `Assets/Scripts/UI/PersistentUIManager.cs` (modified)
+- `Assets/Scripts/UI/ScreenManager.cs` (modified — highlight hook in `ApplyScreen`)
+- `Assets/Scripts/UI/SettingsController.cs` (renamed from Phase 2 + class rename; Phase 1 .cs deleted)
+- `Assets/Scripts/UI/SettingsController.cs.meta` (Phase 2 GUID preserved here)
+- `Assets/Scripts/UI/SettingsControllerPhase2.cs` (deleted)
+- `Assets/Scripts/UI/SettingsControllerPhase2.cs.meta` (deleted)
+- `Assets/Scenes/ShellScene.unity` (icon refs wired, `SettingsScreen` activated, inner panels deactivated)
+
+**Architectural significance:** Two singleton parallels (P0-1 + P0-2 in `Docs/Architecture/CODE_AUDIT_2026-05-19.md`) collapsed before Loop v2's new screens land. `PersistentUIManager` is now the sole bottom-nav writer to `ScreenManager.ShowScreen` from a nav-bar context. `SettingsController` is one class, one file. Highlight wiring is now event-driven from `ScreenManager.ApplyScreen` — future screens slot in by extending the `HighlightScreen(ScreenId)` switch, not by touching individual controllers.
+
+**Lesson logged:** `PersistentUIManager` had a parallel highlight mechanism that was never wired and never working — confirmation that the *scene* state is authoritative, not the *script* state, when reasoning about which path is live in production. Reviewer/self-reviewer checklists for future singleton consolidations should include a scene-component-reference dump per affected MonoBehaviour, not just a code grep.
 
 ---
 

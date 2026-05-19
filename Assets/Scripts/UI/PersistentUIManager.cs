@@ -26,12 +26,16 @@ namespace Golfin.UI
         public Button inventoryButton;
         public Button charactersButton;
 
-        [Header("Current Screen Highlight")]
-        public Image homeHighlight;
-        public Image gachaHighlight;
-        public Image mainPlayHighlight;
-        public Image inventoryHighlight;
-        public Image charactersHighlight;
+        [Header("Bottom Nav Icon Highlight")]
+        [Tooltip("Image component on each nav button. Tinted activeColor when its screen is active, normalColor otherwise.")]
+        public Image homeIcon;
+        public Image gachaIcon;
+        public Image mainPlayIcon;
+        public Image inventoryIcon;
+        public Image charactersIcon;
+
+        public Color iconNormalColor = Color.white;
+        public Color iconActiveColor = Color.cyan;
 
         public enum Screen
         {
@@ -172,12 +176,7 @@ namespace Golfin.UI
 
         private void OnSettingsButtonClick()
         {
-            // Open Settings Screen (support both Phase 1 and Phase 2 controllers)
-            if (SettingsControllerPhase2.Instance != null)
-            {
-                SettingsControllerPhase2.Instance.OpenSettings();
-            }
-            else if (SettingsController.Instance != null)
+            if (SettingsController.Instance != null)
             {
                 SettingsController.Instance.OpenSettings();
             }
@@ -219,34 +218,32 @@ namespace Golfin.UI
             }
         }
 
+        /// <summary>
+        /// Called by ScreenManager whenever the active shell screen changes,
+        /// so the bottom-nav highlight tracks navigation that bypasses the nav buttons
+        /// (e.g. initial load, programmatic transitions).
+        /// </summary>
+        public void HighlightScreen(GolfinRedux.UI.ScreenId screenId)
+        {
+            switch (screenId)
+            {
+                case GolfinRedux.UI.ScreenId.Home:          currentScreen = Screen.Home; break;
+                case GolfinRedux.UI.ScreenId.Roster:        currentScreen = Screen.Characters; break;
+                case GolfinRedux.UI.ScreenId.Inventory:     currentScreen = Screen.Inventory; break;
+                case GolfinRedux.UI.ScreenId.HoleSelection: currentScreen = Screen.MainPlay; break;
+                default:
+                    return; // Logo/Splash/Loading: bars hidden, no highlight needed.
+            }
+            UpdateScreenHighlight();
+        }
+
         private void UpdateScreenHighlight()
         {
-            // Disable all highlights
-            if (homeHighlight != null) homeHighlight.enabled = false;
-            if (gachaHighlight != null) gachaHighlight.enabled = false;
-            if (mainPlayHighlight != null) mainPlayHighlight.enabled = false;
-            if (inventoryHighlight != null) inventoryHighlight.enabled = false;
-            if (charactersHighlight != null) charactersHighlight.enabled = false;
-
-            // Enable current screen highlight
-            switch (currentScreen)
-            {
-                case Screen.Home:
-                    if (homeHighlight != null) homeHighlight.enabled = true;
-                    break;
-                case Screen.Gacha:
-                    if (gachaHighlight != null) gachaHighlight.enabled = true;
-                    break;
-                case Screen.MainPlay:
-                    if (mainPlayHighlight != null) mainPlayHighlight.enabled = true;
-                    break;
-                case Screen.Inventory:
-                    if (inventoryHighlight != null) inventoryHighlight.enabled = true;
-                    break;
-                case Screen.Characters:
-                    if (charactersHighlight != null) charactersHighlight.enabled = true;
-                    break;
-            }
+            if (homeIcon != null)       homeIcon.color       = (currentScreen == Screen.Home)       ? iconActiveColor : iconNormalColor;
+            if (gachaIcon != null)      gachaIcon.color      = (currentScreen == Screen.Gacha)      ? iconActiveColor : iconNormalColor;
+            if (mainPlayIcon != null)   mainPlayIcon.color   = (currentScreen == Screen.MainPlay)   ? iconActiveColor : iconNormalColor;
+            if (inventoryIcon != null)  inventoryIcon.color  = (currentScreen == Screen.Inventory)  ? iconActiveColor : iconNormalColor;
+            if (charactersIcon != null) charactersIcon.color = (currentScreen == Screen.Characters) ? iconActiveColor : iconNormalColor;
         }
 
         public void ShowTopBar(bool show)

@@ -1,62 +1,48 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
+using Golfin.UI.Modals;
 
 namespace Golfin.UI
 {
     /// <summary>
-    /// Controller for the Settings Screen (Phase 1: Static panel with all buttons)
+    /// Controller for the Settings Screen.
+    /// Manages expand/collapse of accordion menu items (only one open at a time),
+    /// submenus, and modal integration (About, Log Out).
     /// </summary>
     public class SettingsController : MonoBehaviour
     {
         public static SettingsController Instance { get; private set; }
 
         [Header("Settings Panel")]
-        public GameObject background;           // Semi-transparent overlay
-        public GameObject settingsPanel;        // The actual settings panel
+        public GameObject background;
+        public GameObject settingsPanel;
         public Button closeButton;
 
-        [Header("Settings Menu Items")]
-        public Button userProfileButton;
-        public Button soundSettingsButton;
-        public Button languageButton;
+        [Header("Menu Items with Accordion")]
+        public SettingsMenuItem userProfileItem;
+        public SettingsMenuItem soundSettingsItem;
+        public SettingsMenuItem languageItem;
+        public SettingsMenuItem aboutItem;
+
+        [Header("Simple Menu Buttons (No Accordion)")]
         public Button termsOfUseButton;
         public Button privacyPolicyButton;
         public Button faqButton;
-        public Button aboutButton;
         public Button contactButton;
         public Button logOutButton;
 
-        [Header("Menu Item Icons")]
-        public Image userProfileIcon;
-        public Image soundSettingsIcon;
-        public Image languageIcon;
-        public Image termsOfUseIcon;
-        public Image privacyPolicyIcon;
-        public Image faqIcon;
-        public Image aboutIcon;
-        public Image contactIcon;
-        public Image logOutIcon;
+        [Header("Submenus")]
+        public UserProfileSubmenu userProfileSubmenu;
+        public SoundSettingsSubmenu soundSettingsSubmenu;
+        public LanguageSubmenu languageSubmenu;
+        public AboutSubmenu aboutSubmenu;
+        
+        [Header("Modals (Phase 3)")]
+        public ModalController logOutModal;
 
-        [Header("Menu Item Labels")]
-        public TMPro.TextMeshProUGUI userProfileLabel;
-        public TMPro.TextMeshProUGUI soundSettingsLabel;
-        public TMPro.TextMeshProUGUI languageLabel;
-        public TMPro.TextMeshProUGUI termsOfUseLabel;
-        public TMPro.TextMeshProUGUI privacyPolicyLabel;
-        public TMPro.TextMeshProUGUI faqLabel;
-        public TMPro.TextMeshProUGUI aboutLabel;
-        public TMPro.TextMeshProUGUI contactLabel;
-        public TMPro.TextMeshProUGUI logOutLabel;
-
-        [Header("Menu Item Right Arrows")]
-        public Image userProfileArrow;
-        public Image soundSettingsArrow;
-        public Image languageArrow;
-        public Image termsOfUseArrow;
-        public Image privacyPolicyArrow;
-        public Image faqArrow;
-        public Image aboutArrow;
-        public Image contactArrow;
+        private List<SettingsMenuItem> _accordionItems = new List<SettingsMenuItem>();
+        private SettingsMenuItem _currentlyExpandedItem;
 
         private void Awake()
         {
@@ -67,41 +53,59 @@ namespace Golfin.UI
             }
 
             Instance = this;
+            InitializeAccordionItems();
             InitializeButtons();
         }
 
         private void Start()
         {
-            // Start with settings closed (hide both background and panel)
-            if (background != null)
+            // Start with settings closed
+            if (background != null) background.SetActive(false);
+            if (settingsPanel != null) settingsPanel.SetActive(false);
+        }
+
+        /// <summary>
+        /// Initialize accordion menu items and subscribe to events.
+        /// </summary>
+        private void InitializeAccordionItems()
+        {
+            // Collect all accordion items
+            if (userProfileItem != null)
             {
-                background.SetActive(false);
+                _accordionItems.Add(userProfileItem);
+                userProfileItem.OnExpanded += OnMenuItemExpanded;
             }
-            
-            if (settingsPanel != null)
+
+            if (soundSettingsItem != null)
             {
-                settingsPanel.SetActive(false);
+                _accordionItems.Add(soundSettingsItem);
+                soundSettingsItem.OnExpanded += OnMenuItemExpanded;
+            }
+
+            if (languageItem != null)
+            {
+                _accordionItems.Add(languageItem);
+                languageItem.OnExpanded += OnMenuItemExpanded;
+            }
+
+            if (aboutItem != null)
+            {
+                _accordionItems.Add(aboutItem);
+                aboutItem.OnExpanded += OnMenuItemExpanded;
             }
         }
 
+        /// <summary>
+        /// Initialize button click handlers.
+        /// </summary>
         private void InitializeButtons()
         {
-            // Close button
             if (closeButton != null)
             {
                 closeButton.onClick.AddListener(CloseSettings);
             }
 
-            // Menu item buttons
-            if (userProfileButton != null)
-                userProfileButton.onClick.AddListener(OnUserProfileClick);
-
-            if (soundSettingsButton != null)
-                soundSettingsButton.onClick.AddListener(OnSoundSettingsClick);
-
-            if (languageButton != null)
-                languageButton.onClick.AddListener(OnLanguageClick);
-
+            // Simple buttons (no accordion)
             if (termsOfUseButton != null)
                 termsOfUseButton.onClick.AddListener(OnTermsOfUseClick);
 
@@ -111,116 +115,142 @@ namespace Golfin.UI
             if (faqButton != null)
                 faqButton.onClick.AddListener(OnFaqClick);
 
-            if (aboutButton != null)
-                aboutButton.onClick.AddListener(OnAboutClick);
-
             if (contactButton != null)
                 contactButton.onClick.AddListener(OnContactClick);
 
             if (logOutButton != null)
                 logOutButton.onClick.AddListener(OnLogOutClick);
+            
+            // Note: About is now an accordion item (aboutItem), not a simple button
         }
 
+        /// <summary>
+        /// Called when any menu item is expanded.
+        /// Ensures only one item is expanded at a time.
+        /// </summary>
+        private void OnMenuItemExpanded(SettingsMenuItem expandedItem)
+        {
+            Debug.Log($"[SettingsController] OnMenuItemExpanded called for: {expandedItem.gameObject.name}");
+            Debug.Log($"[SettingsController] Total accordion items: {_accordionItems.Count}");
+            
+            // Collapse all other items
+            foreach (var item in _accordionItems)
+            {
+                if (item != expandedItem && item.IsExpanded)
+                {
+                    Debug.Log($"[SettingsController] Auto-collapsing: {item.gameObject.name}");
+                    item.ForceCollapse();
+                }
+            }
+
+            _currentlyExpandedItem = expandedItem;
+            Debug.Log($"[SettingsController] Expanded: {expandedItem.gameObject.name}");
+        }
+
+        /// <summary>
+        /// Open the settings panel.
+        /// </summary>
         public void OpenSettings()
         {
-            // Show background (semi-transparent overlay)
-            if (background != null)
-            {
-                background.SetActive(true);
-            }
-            
-            // Show settings panel
-            if (settingsPanel != null)
-            {
-                settingsPanel.SetActive(true);
-            }
+            if (background != null) background.SetActive(true);
+            if (settingsPanel != null) settingsPanel.SetActive(true);
+
+            Debug.Log("[SettingsController] Settings opened");
         }
 
+        /// <summary>
+        /// Close the settings panel and collapse all items.
+        /// </summary>
         public void CloseSettings()
         {
-            // Hide settings panel
-            if (settingsPanel != null)
+            // Collapse all accordion items
+            foreach (var item in _accordionItems)
             {
-                settingsPanel.SetActive(false);
+                if (item.IsExpanded)
+                {
+                    item.ForceCollapse();
+                }
             }
-            
-            // Hide background overlay
-            if (background != null)
-            {
-                background.SetActive(false);
-            }
+
+            _currentlyExpandedItem = null;
+
+            if (settingsPanel != null) settingsPanel.SetActive(false);
+            if (background != null) background.SetActive(false);
+
+            Debug.Log("[SettingsController] Settings closed");
         }
 
-        // Menu Item Click Handlers (Phase 1: Just logs, Phase 2 will add expand/collapse)
-        private void OnUserProfileClick()
-        {
-            Debug.Log("User Profile clicked - TODO: Expand submenu");
-            // Phase 2: Expand to show account linking options
-        }
-
-        private void OnSoundSettingsClick()
-        {
-            Debug.Log("Sound Settings clicked - TODO: Expand submenu");
-            // Phase 2: Expand to show Music Volume + SFX Volume sliders
-        }
-
-        private void OnLanguageClick()
-        {
-            Debug.Log("Language clicked - TODO: Open language selection");
-            // Phase 2: Open language selection screen (English/Japanese)
-        }
+        // Simple menu item handlers (Phase 3 features)
 
         private void OnTermsOfUseClick()
         {
-            Debug.Log("Terms of Use clicked - TODO: Open webview");
-            // Phase 3: Open webview with Terms of Use document
+            Debug.Log("[SettingsController] Terms of Use clicked");
             OpenWebView("https://golfin.io/terms-of-use");
         }
 
         private void OnPrivacyPolicyClick()
         {
-            Debug.Log("Privacy Policy clicked - TODO: Open webview");
-            // Phase 3: Open webview with Privacy Policy document
+            Debug.Log("[SettingsController] Privacy Policy clicked");
             OpenWebView("https://golfin.io/privacy-policy");
         }
 
         private void OnFaqClick()
         {
-            Debug.Log("FAQ clicked - TODO: Open webview");
-            // Phase 3: Open webview with FAQ screen
+            Debug.Log("[SettingsController] FAQ clicked");
             OpenWebView("https://golfin.io/faq");
         }
 
-        private void OnAboutClick()
-        {
-            Debug.Log("About clicked - TODO: Show version + licenses");
-            // Phase 3: Show app version, licenses modal
-        }
+        // Note: About is now handled as an accordion item (aboutItem + AboutSubmenu)
+        // No OnAboutClick needed - the SettingsMenuItem handles expansion automatically
 
         private void OnContactClick()
         {
-            Debug.Log("Contact clicked - TODO: Open contact form");
-            // Phase 3: Open webview with contact form
+            Debug.Log("[SettingsController] Contact clicked");
             OpenWebView("https://golfin.io/contact");
         }
 
         private void OnLogOutClick()
         {
-            Debug.Log("Log Out clicked - TODO: Show confirmation modal");
-            // Phase 3: Show confirmation modal, clear session, return to login
+            Debug.Log("[SettingsController] Log Out clicked - TODO: Show confirmation");
+            // Phase 3: Confirmation modal → Clear session → Login screen
         }
 
+        /// <summary>
+        /// Open a URL in webview or external browser.
+        /// </summary>
         private void OpenWebView(string url)
         {
-            // Placeholder for webview opening
-            Debug.Log($"Opening webview: {url}");
-            // Use platform-specific webview plugin (e.g., UniWebView, Vuplex)
+            Debug.Log($"[SettingsController] Opening URL: {url}");
+            
 #if UNITY_ANDROID || UNITY_IOS
             Application.OpenURL(url);
 #else
             Debug.LogWarning("Webview not supported on this platform. Opening in external browser.");
             Application.OpenURL(url);
 #endif
+        }
+
+        /// <summary>
+        /// Collapse all accordion items (useful for external control).
+        /// </summary>
+        public void CollapseAllItems()
+        {
+            foreach (var item in _accordionItems)
+            {
+                if (item.IsExpanded)
+                {
+                    item.Collapse();
+                }
+            }
+            _currentlyExpandedItem = null;
+        }
+
+        /// <summary>
+        /// Get the currently expanded menu item.
+        /// </summary>
+        public SettingsMenuItem GetCurrentlyExpandedItem()
+        {
+            return _currentlyExpandedItem;
         }
     }
 }

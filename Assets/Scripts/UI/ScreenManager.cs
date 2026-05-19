@@ -130,8 +130,15 @@ namespace GolfinRedux.UI
                          || screenId == ScreenId.HoleSelection;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
-                if (showBars) Golfin.UI.PersistentUIManager.Instance.ShowBars();
-                else          Golfin.UI.PersistentUIManager.Instance.HideBars();
+                if (showBars)
+                {
+                    Golfin.UI.PersistentUIManager.Instance.ShowBars();
+                    Golfin.UI.PersistentUIManager.Instance.HighlightScreen(screenId);
+                }
+                else
+                {
+                    Golfin.UI.PersistentUIManager.Instance.HideBars();
+                }
             }
         }
     }
