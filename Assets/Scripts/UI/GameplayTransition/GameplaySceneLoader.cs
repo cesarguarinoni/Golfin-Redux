@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using GolfinRedux.UI;
 using Golfin.UI;
+using Golfin.UI.Modals;
 using Golfin.Gameplay.Session;
 
 namespace Golfin.UI.GameplayTransition
@@ -48,24 +49,29 @@ namespace Golfin.UI.GameplayTransition
         void OnDestroy() { if (Instance == this) Instance = null; }
 
         /// <summary>
-        /// Entry point. MatchmakingModalController calls this after seeding GameSession
-        /// and after its fade-out completes. The hole number is read off GameSession
-        /// (passed in for explicitness and testability).
+        /// Entry point. MatchmakingModalController calls this after seeding GameSession.
+        /// Pass <paramref name="modalToHideOnMidpoint"/> to have the loader hide the
+        /// matchmaking modal under the fade-to-black so the modal and the home backdrop
+        /// disappear together (Stage C0 visual-gate fix).
         /// </summary>
-        public void BeginGameplayLoad(int holeNumber)
+        public void BeginGameplayLoad(int holeNumber, ModalController modalToHideOnMidpoint = null)
         {
-            StartCoroutine(LoadCoroutine(holeNumber));
+            StartCoroutine(LoadCoroutine(holeNumber, modalToHideOnMidpoint));
         }
 
         /// <summary>
         /// Synchronous prelude — extracted so EditMode tests can verify the immediate
         /// side effects of BeginGameplayLoad without ticking coroutine frames or running
-        /// scene async loads. Called as the first action of LoadCoroutine.
+        /// scene async loads. Used by the FadeController midpoint callback in production
+        /// (so the screen swap happens under the full-black overlay).
         /// </summary>
         internal void ApplyPreloadSetup(int holeNumber)
         {
             if (loadingScreen != null) loadingScreen.PrepareForHoleLoad(holeNumber);
-            if (ScreenManager.Instance != null) ScreenManager.Instance.ShowScreen(ScreenId.Loading);
+            // instant: true — the outer FadeController.FadeOutThenIn already owns the
+            // fade-to-black-and-back. Re-triggering ScreenManager's fade here would
+            // overlap two fade systems (the bug the visual gate caught).
+            if (ScreenManager.Instance != null) ScreenManager.Instance.ShowScreen(ScreenId.Loading, instant: true);
 
             // Belt-and-suspenders: ScreenManager.ApplyScreen already hides bars on Loading,
             // but call SetBottomNavVisible(false) explicitly so the contract is enforced
@@ -73,10 +79,34 @@ namespace Golfin.UI.GameplayTransition
             if (persistentUI != null) persistentUI.SetBottomNavVisible(false);
         }
 
-        IEnumerator LoadCoroutine(int holeNumber)
+        IEnumerator LoadCoroutine(int holeNumber, ModalController modalToHideOnMidpoint)
         {
-            // 1. Synchronous prelude: prepare loading screen, navigate, hide bottom nav.
-            ApplyPreloadSetup(holeNumber);
+            // 1. Unified fade: FadeController fades EVERYTHING visible (modal + home) to
+            //    black together. At full black, hide modal + swap to LoadingScreen + hide
+            //    bottom nav in one frame, all invisible behind the overlay. Then fade back
+            //    from black to reveal the LoadingScreen.
+            bool midpointFired = false;
+            var fadeCtrl = FadeController.Instance;
+            if (fadeCtrl != null && ScreenManager.Instance != null)
+            {
+                fadeCtrl.FadeOutThenIn(() =>
+                {
+                    if (modalToHideOnMidpoint != null) modalToHideOnMidpoint.Hide();
+                    ApplyPreloadSetup(holeNumber);
+                    midpointFired = true;
+                });
+                while (!midpointFired) yield return null;
+                // Let the fade-back-from-black complete before kicking off the async scene
+                // loads, so the LoadingScreen reveal feels smooth. FadeController's default
+                // duration is 0.5s total (0.25s out + 0.25s in) — wait the back half.
+                yield return new WaitForSeconds(0.3f);
+            }
+            else
+            {
+                // No FadeController available — fall back to an instant cut.
+                if (modalToHideOnMidpoint != null) modalToHideOnMidpoint.Hide();
+                ApplyPreloadSetup(holeNumber);
+            }
 
             // 3. Additively load the gameplay host scene (LabScaffold).
             var hostOp = SceneManager.LoadSceneAsync(GAMEPLAY_SCENE_NAME, LoadSceneMode.Additive);
