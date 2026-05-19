@@ -65,9 +65,7 @@ namespace Golfin.UI.GameplayTransition
         internal void ApplyPreloadSetup(int holeNumber)
         {
             if (loadingScreen != null) loadingScreen.PrepareForHoleLoad(holeNumber);
-            // instant:true so we don't trigger a full FadeOutThenIn black-fade between the
-            // matchmaking-modal hide and the loading-screen visible state (Open Question 3).
-            if (ScreenManager.Instance != null) ScreenManager.Instance.ShowScreen(ScreenId.Loading, instant: true);
+            if (ScreenManager.Instance != null) ScreenManager.Instance.ShowScreen(ScreenId.Loading);
 
             // Belt-and-suspenders: ScreenManager.ApplyScreen already hides bars on Loading,
             // but call SetBottomNavVisible(false) explicitly so the contract is enforced

@@ -408,6 +408,12 @@ namespace Golfin.UI.Matchmaking
             // then hide the modal and hand off to GameplaySceneLoader.
             yield return new WaitForSeconds(0.6f);
             Hide();
+            // Wait for the modal's CanvasGroup fade-out (ModalController animationDuration
+            // = 0.2s) to finish BEFORE kicking off the loader. Without this, the
+            // ScreenManager's FadeController-driven fade-to-black runs concurrently with
+            // the modal fade, producing the "background dims then modal snaps away"
+            // staging the visual gate caught.
+            yield return new WaitForSeconds(0.25f);
 
             var loader = Golfin.UI.GameplayTransition.GameplaySceneLoader.Instance;
             if (loader != null)
