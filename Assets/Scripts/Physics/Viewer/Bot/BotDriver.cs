@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
@@ -10,6 +11,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Golfin.Diagnostics.Runtime;
+using Golfin.Gameplay.Loop;
 
 namespace Golfin.Physics.Viewer.Bot
 {
@@ -420,14 +422,28 @@ namespace Golfin.Physics.Viewer.Bot
         // ── Gameplay primitives ───────────────────────────────────────────────
 
         /// <summary>
-        /// Fire a shot via PhysicsLabController.Fire(). Builds a minimal ShotPreset
-        /// aimed at worldTarget using the controller's current tee position as origin.
-        /// power01 scales the default putt velocity. Waits until BallState reaches
-        /// a terminal state (AtRest, InCup, OB) or timeoutSeconds elapses.
+        /// Fire a putt toward worldTarget using the §2f scaffolding pattern from SmokeRunner2fHost.
+        ///
+        /// Pattern (mirrors SmokeRunner2fHost.cs:454-565):
+        ///   1. SetClub(PutterIndex) — select putter so IsPutt=true
+        ///   2. SetBallAnimatorPlayRate(float.MaxValue) — Instant mode: SnapToEnd fires inside
+        ///      Play(), the SM drain runs on the very next Tick (~1 frame), deterministic.
+        ///   3. PlaceBallAt(nearCup, 1) — 3m from cup on green surface type 1 (green).
+        ///   4. SetCameraYawRadians(yaw) — orient toward cup so RunSimForCamera doesn't
+        ///      redirect the shot to +X (RunSimForCamera:1131 uses _cameraYaw, not the
+        ///      preset velocity direction).
+        ///   5. Gate on State==Aiming before firing.
+        ///   6. Subscribe sm.OnShotComplete BEFORE ctrl.Fire() — sets a bool flag.
+        ///   7. ctrl.Fire(puttPreset) — "putt_flat_3m" from ShotPresetCatalog.
+        ///   8. Poll flag (frame-by-frame) up to timeoutSeconds.
+        ///   9. Restore original PlayRate.
+        ///
+        /// worldTarget is used only to compute the yaw angle; actual ball placement is 3m
+        /// from cup so a calibrated putt preset can reach InCup reliably.
         /// </summary>
         public IEnumerator FireShot(Vector3 worldTarget, float power01 = 1f, float timeoutSeconds = 30f)
         {
-            LogStep($"FireShot: target={worldTarget} power={power01:F2}");
+            LogStep($"FireShot: target={worldTarget} power={power01:F2} (§2f pattern)");
 
             var ctrl = UnityEngine.Object.FindObjectOfType<PhysicsLabController>();
             if (ctrl == null)
@@ -436,68 +452,207 @@ namespace Golfin.Physics.Viewer.Bot
                 yield break;
             }
 
-            // Use the public BallPosition getter (bot seam on PhysicsLabController) to get
-            // the live ball world position. Falls back to ctrl.transform if ball not spawned.
-            Vector3 origin = ctrl.BallPosition;
-            if (origin == Vector3.zero)
+            // 1. Switch to putter.
+            try
             {
-                origin = ctrl.transform.position;
-                LogStep($"  FireShot: BallPosition=(0,0,0) — falling back to ctrl.transform={origin}");
+                ctrl.SetClub(PhysicsLabController.PutterIndex);
+                LogStep($"  FireShot: SetClub(PutterIndex={PhysicsLabController.PutterIndex})");
+            }
+            catch (Exception ex)
+            {
+                LogStep($"  FireShot WARN: SetClub failed: {ex.Message}");
             }
 
-            Vector3 dir = (worldTarget - origin).normalized;
-            // Putter speed range ~1-5 m/s; scale by power.
-            float speed = Mathf.Lerp(1f, 5f, power01);
-            var velocity = new Golfin.Physics.Math.fp3(
-                Golfin.Physics.Math.fp.FromFloat(dir.x * speed),
-                Golfin.Physics.Math.fp.Zero,
-                Golfin.Physics.Math.fp.FromFloat(dir.z * speed));
+            // 2. Save and set Instant PlayRate.
+            float savedPlayRate = 1f;
+            try
+            {
+                savedPlayRate = ctrl.GetBallAnimatorPlayRate();
+                ctrl.SetBallAnimatorPlayRate(float.MaxValue);
+                LogStep($"  FireShot: PlayRate saved={savedPlayRate:F2} → Instant (float.MaxValue)");
+            }
+            catch (Exception ex)
+            {
+                LogStep($"  FireShot WARN: SetBallAnimatorPlayRate failed: {ex.Message}");
+            }
 
-            var preset = new ShotPreset(
-                id: "bot_shot",
-                name: "Bot Shot",
-                scene: PresetScene.Hole1,
-                origin: new Golfin.Physics.Math.fp3(
-                    Golfin.Physics.Math.fp.FromFloat(origin.x),
-                    Golfin.Physics.Math.fp.FromFloat(origin.y),
-                    Golfin.Physics.Math.fp.FromFloat(origin.z)),
-                velocity: velocity,
-                spin: default,
-                wind: default,
-                notes: "BotDriver auto-shot");
+            // 3. Place ball 3m from target along the approach direction so a putt_flat_3m
+            //    preset can reach InCup in one shot.
+            Vector3 nearCup = worldTarget; // default: place AT cup if offset fails
+            try
+            {
+                // 3m offset away from cup along the line from cup to ball spawn origin.
+                // If ball already at a valid pos, offset from there; else use arbitrary offset.
+                Vector3 ballPos = ctrl.BallPosition;
+                Vector3 approachDir = (ballPos != Vector3.zero)
+                    ? (ballPos - worldTarget).normalized
+                    : new Vector3(1f, 0f, 0f); // fallback +X offset
+                nearCup = worldTarget + approachDir * 3f;
+                ctrl.PlaceBallAt(nearCup, preferredSurfaceTypeValue: 1);
+                LogStep($"  FireShot: PlaceBallAt({nearCup}) — 3m from cup");
+            }
+            catch (Exception ex)
+            {
+                LogStep($"  FireShot WARN: PlaceBallAt failed: {ex.Message}");
+            }
 
-            ctrl.Fire(preset);
-            LogStep($"  FireShot fired: origin={origin} dir={dir} speed={speed:F2}");
+            // 4. Set camera yaw toward the cup so RunSimForCamera uses the correct direction.
+            try
+            {
+                Vector3 towardCup = worldTarget - nearCup;
+                float yaw = Mathf.Atan2(towardCup.z, towardCup.x);
+                ctrl.SetCameraYawRadians(yaw);
+                LogStep($"  FireShot: SetCameraYawRadians({yaw:F3} rad) toward cup");
+            }
+            catch (Exception ex)
+            {
+                LogStep($"  FireShot WARN: SetCameraYawRadians failed: {ex.Message}");
+            }
 
-            // Wait for terminal state.
-            yield return WaitForBallState("terminal", timeoutSeconds);
+            // 5. Gate on Aiming state before firing (state guard, not fixed wait).
+            var sm = ctrl.BallSM;
+            if (sm != null)
+            {
+                float gateElapsed = 0f;
+                while (sm.State != BallState.Aiming && gateElapsed < 3f)
+                {
+                    gateElapsed += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+                LogStep($"  FireShot: pre-fire Aiming gate done: State={sm.State} gateElapsed={gateElapsed:F3}s");
+            }
+
+            // 6. Subscribe OnShotComplete BEFORE firing.
+            bool shotComplete = false;
+            ShotResult shotResult = default;
+            Action<ShotResult> onComplete = r =>
+            {
+                shotComplete = true;
+                shotResult = r;
+                Debug.Log($"[BotDriver] OnShotComplete fired: terminal={r.TerminalState} endSurface={r.EndSurface}");
+            };
+            if (sm != null)
+                sm.OnShotComplete += onComplete;
+
+            // 7. Select putt preset and fire.
+            ShotPreset puttPreset = default;
+            try
+            {
+                puttPreset = ShotPresetCatalog.All.FirstOrDefault(p => p.Id == "putt_flat_3m");
+                if (puttPreset.Id == null)
+                    puttPreset = ShotPresetCatalog.All.FirstOrDefault(p => p.Id != null && p.Id.StartsWith("putt"));
+                if (puttPreset.Id == null)
+                    LogStep("  FireShot WARN: no putt preset found in ShotPresetCatalog");
+                else
+                    LogStep($"  FireShot: using preset '{puttPreset.Id}'");
+            }
+            catch (Exception ex)
+            {
+                LogStep($"  FireShot WARN: preset lookup failed: {ex.Message}");
+            }
+
+            try
+            {
+                if (puttPreset.Id != null)
+                {
+                    ctrl.Fire(puttPreset);
+                    LogStep("  FireShot: ctrl.Fire(puttPreset) called — Instant mode, shot completes in ~1 frame");
+                }
+                else
+                {
+                    LogStep("  FireShot FAIL: no valid preset — cannot fire");
+                    if (sm != null) sm.OnShotComplete -= onComplete;
+                    // Restore PlayRate before bailing.
+                    try { ctrl.SetBallAnimatorPlayRate(savedPlayRate); } catch { /* best-effort */ }
+                    yield break;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogStep($"  FireShot FAIL: ctrl.Fire threw: {ex.Message}");
+                if (sm != null) sm.OnShotComplete -= onComplete;
+                try { ctrl.SetBallAnimatorPlayRate(savedPlayRate); } catch { /* best-effort */ }
+                yield break;
+            }
+
+            // 8. Poll flag frame-by-frame (Instant mode: should complete in <0.1s realtime).
+            const float InstantShotWait = 5f;
+            float elapsed = 0f;
+            while (!shotComplete && elapsed < InstantShotWait)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            if (sm != null) sm.OnShotComplete -= onComplete;
+
+            if (shotComplete)
+                LogStep($"  FireShot OK: OnShotComplete fired after {elapsed:F3}s — terminal={shotResult.TerminalState}");
+            else
+                LogStep($"  FireShot TIMEOUT: OnShotComplete not fired within {InstantShotWait}s (Instant mode)");
+
+            // 9. Restore PlayRate.
+            try
+            {
+                ctrl.SetBallAnimatorPlayRate(savedPlayRate);
+                LogStep($"  FireShot: PlayRate restored to {savedPlayRate:F2}");
+            }
+            catch (Exception ex)
+            {
+                LogStep($"  FireShot WARN: PlayRate restore failed: {ex.Message}");
+            }
         }
 
         /// <summary>
         /// Wait until the BallStateMachine reaches any terminal state (AtRest, InCup, OB),
         /// or specifically the named state. stateName="terminal" matches any of the three.
-        /// Reads BallSM via PhysicsLabController.BallSM (internal property) using reflection.
+        /// Reads BallSM via PhysicsLabController.BallSM (internal property, same asmdef).
+        /// NOTE: With §2f Instant-mode FireShot, this is typically called AFTER FireShot has
+        /// already confirmed OnShotComplete fired. This method is kept for scenarios that need
+        /// to verify the terminal state independently.
         /// </summary>
         public IEnumerator WaitForBallState(string stateName, float timeoutSeconds = 30f)
         {
             LogStep($"WaitForBallState: {stateName} (timeout={timeoutSeconds}s)");
-            float elapsed = 0f;
-            while (elapsed < timeoutSeconds)
+            var ctrl = UnityEngine.Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
             {
-                string current = GetBallStateName();
-                bool matched = stateName.Equals("terminal", StringComparison.OrdinalIgnoreCase)
-                    ? (current == "AtRest" || current == "InCup" || current == "OB")
-                    : (current != null && current.Equals(stateName, StringComparison.OrdinalIgnoreCase));
-
-                if (matched)
-                {
-                    LogStep($"  WaitForBallState OK: state='{current}' after {elapsed:F1}s");
-                    yield break;
-                }
-                yield return new WaitForSecondsRealtime(0.5f);
-                elapsed += 0.5f;
+                LogStep("  WaitForBallState SKIP: PhysicsLabController not found");
+                yield break;
             }
-            LogStep($"  WaitForBallState TIMEOUT: '{stateName}' not reached after {timeoutSeconds}s. Current={GetBallStateName()}");
+            var sm = ctrl.BallSM;
+            if (sm == null)
+            {
+                LogStep("  WaitForBallState SKIP: BallSM is null");
+                yield break;
+            }
+
+            // Subscribe to OnShotComplete to eliminate the polling race.
+            bool reached = false;
+            BallState reachedState = BallState.Aiming;
+            Action<ShotResult> handler = r =>
+            {
+                bool isTerminal = r.TerminalState == BallState.AtRest
+                    || r.TerminalState == BallState.InCup
+                    || r.TerminalState == BallState.OB;
+                bool matches = stateName.Equals("terminal", StringComparison.OrdinalIgnoreCase)
+                    ? isTerminal
+                    : r.TerminalState.ToString().Equals(stateName, StringComparison.OrdinalIgnoreCase);
+                if (matches) { reached = true; reachedState = r.TerminalState; }
+            };
+            sm.OnShotComplete += handler;
+
+            float elapsed = 0f;
+            while (!reached && elapsed < timeoutSeconds)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            sm.OnShotComplete -= handler;
+
+            if (reached)
+                LogStep($"  WaitForBallState OK: '{reachedState}' reached after {elapsed:F3}s");
+            else
+                LogStep($"  WaitForBallState TIMEOUT: '{stateName}' not reached after {timeoutSeconds}s. Current={sm.State}");
         }
 
         // ── Reflection helpers (Assembly-CSharp bridge) ───────────────────────

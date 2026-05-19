@@ -1,32 +1,36 @@
-[t=11.55] === LoopV2SmokeBot started: scenario='hole1_playthrough' ===
-[t=11.55] === Hole 1 Playthrough ===
-[t=11.55] NavigateToHome: waiting for app startup sequence…
-[t=11.55]   NavigateToHome: on Splash after 0.0s — clicking StartButton
-[t=12.05] Click: 'StartButton'
-[t=12.06]   → clicked StartButton
-[t=14.57]   NavigateToHome: reached Home after 3.0s
-[t=15.75] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s01_home_2026-05-19_16-23-43.png
-[t=15.75] Click: 'PLAY'
-[t=15.76]   → clicked PlayButton
-[t=17.26] WaitForModalVisible: MatchMakingModal (timeout=15s)
-[t=17.27]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
-[t=17.43] Capture: s02_matchmaking_searching → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s02_matchmaking_searching_2026-05-19_16-23-45.png
-[t=17.43] WaitFor: matchmaking opponent found (timeout=30s)
-[t=20.96]   WaitFor OK: matchmaking opponent found after 3.5s
-[t=21.65] Capture: s03_opponent_found → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s03_opponent_found_2026-05-19_16-23-49.png
-[t=21.65] WaitForSceneLoaded: LabScaffold (timeout=40s)
-[t=22.80]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 0.5s
-[t=22.80] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
-[t=23.30]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
-[t=27.57] Capture: s04_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s04_gameplay_armed_2026-05-19_16-23-55.png
-[t=27.57] FindCupPosition: HoleContext.PinWorld = (-230.50, 10.18, -72.48)
-[t=27.57] FireShot: target=(-230.50, 10.18, -72.48) power=0.65
-[t=27.66]   FireShot fired: origin=(219.43, 11.46, 34.73) dir=(-0.97, 0.00, -0.23) speed=3.60
-[t=27.66] WaitForBallState: terminal (timeout=35s)
-[t=63.45]   WaitForBallState TIMEOUT: 'terminal' not reached after 35s. Current=Aiming
-[t=63.45] WaitForBallState: InCup (timeout=35s)
-[t=99.30]   WaitForBallState TIMEOUT: 'InCup' not reached after 35s. Current=Aiming
-[t=99.55] Capture: s05_ball_in_cup → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s05_ball_in_cup_2026-05-19_16-25-07.png
-[t=102.82] Capture: s06_result_modal → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s06_result_modal_2026-05-19_16-25-10.png
-[t=102.82] === Hole 1 Playthrough: all captures done ===
-[t=102.82] === Scenario complete ===
+[t=12.16] === LoopV2SmokeBot started: scenario='hole1_playthrough' ===
+[t=12.16] === Hole 1 Playthrough ===
+[t=12.17] NavigateToHome: waiting for app startup sequence…
+[t=12.17]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=12.67] Click: 'StartButton'
+[t=12.67]   → clicked StartButton
+[t=15.18]   NavigateToHome: reached Home after 3.0s
+[t=16.35] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s01_home_2026-05-19_17-35-38.png
+[t=16.35] Click: 'PLAY'
+[t=16.37]   → clicked PlayButton
+[t=17.87] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=17.87]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=18.03] Capture: s02_matchmaking_searching → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s02_matchmaking_searching_2026-05-19_17-35-39.png
+[t=18.03] WaitFor: matchmaking opponent found (timeout=30s)
+[t=21.55]   WaitFor OK: matchmaking opponent found after 3.5s
+[t=22.22] Capture: s03_opponent_found → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s03_opponent_found_2026-05-19_17-35-44.png
+[t=22.22] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=23.28]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 0.5s
+[t=23.28] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=23.78]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
+[t=28.02] Capture: s04_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s04_gameplay_armed_2026-05-19_17-35-49.png
+[t=28.02] FindCupPosition: HoleContext.PinWorld = (-230.50, 10.18, -72.48)
+[t=28.02] FireShot: target=(-230.50, 10.18, -72.48) power=0.65 (§2f pattern)
+[t=28.04]   FireShot: SetClub(PutterIndex=3)
+[t=28.04]   FireShot: PlayRate saved=1.00 → Instant (float.MaxValue)
+[t=28.04]   FireShot: PlaceBallAt((-227.58, 10.19, -71.79)) — 3m from cup
+[t=28.04]   FireShot: SetCameraYawRadians(-2.908 rad) toward cup
+[t=28.04]   FireShot: pre-fire Aiming gate done: State=Aiming gateElapsed=0.000s
+[t=28.04]   FireShot: using preset 'putt_flat_3m'
+[t=28.05]   FireShot: ctrl.Fire(puttPreset) called — Instant mode, shot completes in ~1 frame
+[t=28.06]   FireShot OK: OnShotComplete fired after 0.009s — terminal=AtRest
+[t=28.06]   FireShot: PlayRate restored to 1.00
+[t=28.82] Capture: s05_ball_in_cup → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s05_ball_in_cup_2026-05-19_17-35-50.png
+[t=32.03] Capture: s06_result_modal → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/s06_result_modal_2026-05-19_17-35-53.png
+[t=32.03] === Hole 1 Playthrough: all captures done ===
+[t=32.03] === Scenario complete ===

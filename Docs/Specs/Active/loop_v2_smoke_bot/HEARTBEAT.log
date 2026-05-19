@@ -28,3 +28,13 @@
 2026-05-19T15:02:00Z running AllEditModeTestRunner
 2026-05-19T15:15:00Z setting STATUS to READY_FOR_ARCHITECT_REVIEW — WaitForBallState still FAIL
 2026-05-19T15:15:30Z done, awaiting architect review
+2026-05-19T15:16:29 activated — iter-3, addressing FireShot polling race + HoleSelection s02==s03 byte-identical
+2026-05-19T15:19:38 BotDriver.FireShot rewritten with §2f pattern, HoleSelectionBrowse rewritten to 3-capture, verifying compile
+2026-05-19T15:21:17 code written, calling Unity MCP to compile
+2026-05-19T15:25:22 waiting for Unity to pick up file changes and compile
+2026-05-19T15:29:40 waiting for Unity to compile new BotDriver.cs (watching DLL timestamp)
+2026-05-19T15:30:52 compile clean — 0 CS errors, DLL 251392 bytes; running scenarios
+2026-05-19T15:34:19 hole_selection_browse scenario launched, monitoring...
+2026-05-19T15:35:26 hole1_playthrough scenario launched, monitoring for completion
+2026-05-19T15:40:11 all 3 scenarios complete, IMPLEMENTER_REPORT written, setting STATUS
+2026-05-19T15:41:59 done, awaiting review — STATUS=READY_FOR_ARCHITECT_REVIEW. FAIL: terminal=AtRest not InCup (result modal absent). All other items PASS.

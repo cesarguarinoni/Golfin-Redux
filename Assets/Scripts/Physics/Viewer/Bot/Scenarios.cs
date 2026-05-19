@@ -62,14 +62,19 @@ namespace Golfin.Physics.Viewer.Bot
             yield return d.Capture("gameplay_armed");
 
             // 6. Find cup position and fire a putt.
+            //    FireShot (§2f pattern): places ball 3m from cup, sets Instant PlayRate,
+            //    orients camera yaw toward cup, subscribes OnShotComplete, fires putt_flat_3m,
+            //    polls flag frame-by-frame. OnShotComplete fires in <1 frame (Instant mode).
+            //    After FireShot returns, terminal state has already been observed.
             Vector3 cupPos = d.FindCupPosition();
             yield return d.FireShot(cupPos, power01: 0.65f, timeoutSeconds: 35f);
 
-            // 7. Wait for InCup (or any terminal state).
-            yield return d.WaitForBallState("InCup", timeoutSeconds: 35f);
+            // 7. Capture ball position after shot (OnShotComplete already fired inside FireShot).
+            //    Allow 1 frame settle for any post-shot UI updates (turn counter, score).
+            yield return new WaitForSecondsRealtime(0.5f);
             yield return d.Capture("ball_in_cup");
 
-            // 8. Wait for result modal (HoleCompleteWidget animates in).
+            // 8. Wait for result modal (HoleCompleteWidget animates in, typically ~1-2s).
             yield return new WaitForSecondsRealtime(3f);
             yield return d.Capture("result_modal");
 
@@ -119,19 +124,20 @@ namespace Golfin.Physics.Viewer.Bot
         // ── Scenario 3: Hole Selection Browse ────────────────────────────────
 
         /// <summary>
-        /// Home → Hole Selection (bottom-nav) → collapse Hole 1 card → back to Home.
+        /// Home → Hole Selection (bottom-nav) → browse grid → back to Home.
         /// Smoke test for Stage E's hole-selection entry point.
         ///
-        /// Design note (iter-2): Only Hole 1 is unlocked and auto-expands on screen open.
-        /// There is no collapsed→expanded transition to drive (Holes 2-4 are LOCKED).
-        /// This scenario instead drives the COLLAPSE of the already-expanded Hole 1 card
-        /// by clicking "CardTapButton" — the toggle-expand button on HoleCard(Clone) that
-        /// is separate from the PLAY/REPLAY action button. This exercises real UI state
-        /// change (expanded → collapsed) even though only one hole is unlocked.
-        /// When Stage E unlocks more holes, this scenario can be updated to drive
-        /// a collapsed→expanded transition on a different hole card.
+        /// Design note (iter-3): Only Hole 1 is unlocked and auto-expands on screen open.
+        /// CardTapButton appears 18 times in the scene (one per HoleCard prefab instance +
+        /// locked duplicates), making unscoped FindButton("CardTapButton") ambiguous —
+        /// clicking the wrong one produces no visible state change (iter-2 bug: s02==s03
+        /// byte-identical). Rather than adding a scoped-search overload to BotDriver for a
+        /// single-hole-unlocked gate that has no second unlocked state to toggle, we use
+        /// the honest 3-capture flow: home → hole_selection_grid → home_returned.
+        /// TODO: When Stage E unlocks Hole 2+, extend this scenario to click a collapsed
+        /// unlocked card and verify its expanded state is pixel-distinct.
         ///
-        /// Captures: home, hole_selection_expanded, hole_selection_collapsed, home_returned.
+        /// Captures: home, hole_selection_grid, home_returned.
         /// </summary>
         public static IEnumerator HoleSelectionBrowse(BotDriver d)
         {
@@ -148,21 +154,13 @@ namespace Golfin.Physics.Viewer.Bot
             // 3. Wait for HoleSelection screen (ScreenManager navigates to HoleSelection).
             yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 10f);
             yield return new WaitForSecondsRealtime(0.5f);
-            // Hole 1 is already expanded on screen open — capture this initial state.
-            yield return d.Capture("hole_selection_expanded");
+            // Hole 1 is auto-expanded on screen open — capture the grid showing the expanded card.
+            yield return d.Capture("hole_selection_grid");
 
-            // 4. Click the CardTapButton on the expanded Hole 1 card to collapse it.
-            //    "CardTapButton" is the toggle-expand button child of HoleCard(Clone)
-            //    (HoleCardController.cs:68 — [SerializeField] private Button cardTapButton).
-            //    It is a standard UnityEngine.UI.Button, interactable on unlocked cards.
-            yield return d.Click("CardTapButton", settleSeconds: 1.0f);
-            yield return new WaitForSecondsRealtime(0.5f); // collapse animation
-            yield return d.Capture("hole_selection_collapsed");
-
-            // 5. Navigate back to Home. Bottom-nav home button is "NavHomeButton".
+            // 4. Navigate back to Home. Bottom-nav home button is "NavHomeButton".
             yield return d.Click("NavHomeButton", settleSeconds: 1.0f);
 
-            // 6. Confirm Home screen.
+            // 5. Confirm Home screen.
             yield return d.WaitForScreen("Home", timeoutSeconds: 10f);
             yield return d.Capture("home_returned");
 
