@@ -3,13 +3,13 @@
 # for gameplay. Re-tuned in controls_c_fix (2026-05-05).
 # See Docs/Physics/CALIBRATION_METHODOLOGY.md.
 surface,restitution,tangent_friction,rolling_resistance,stop_speed_mps,notes
-Fairway,0.50,0.55,0.23,0.10,closely-mown grass baseline; k bumped 0.18→0.23 (Phase B Stage 2, 2026-05-18) — Trackman 2024 PGA driver carry+roll mid-band 15-30yd
-Green,0.40,0.75,0.34,0.05,checks quickly; k bumped 0.12→0.34 (Phase B Stage 2, 2026-05-18) — addresses approach-shot over-roll; PGA mid-iron approach checks 2-4m at driver landing speed
+Fairway,0.50,0.55,0.18,0.10,closely-mown grass baseline
+Green,0.40,0.75,0.12,0.05,checks quickly; low roll
 GreenCollar,0.45,0.65,0.15,0.08,between fairway and green
 Semirough,0.38,0.70,0.28,0.15,mower-height intermediate
 Rough,0.25,0.82,0.45,0.22,ball plugs; high resistance
 Tee,0.55,0.45,0.15,0.10,tight mown
-Sand,0.15,0.85,1.02,0.25,bunker; heavy damping; k bumped 0.70→1.02 (Phase B Stage 2, 2026-05-18) — H9-anchored (Cesar caveat: Sand H1 over-damped); ball plugs rapidly per Penner 2002 + Cochran 1968
+Sand,0.15,0.85,0.70,0.25,bunker; heavy damping
 BunkerLip,0.20,0.80,0.55,0.20,lip; redirects downward
 CartPath,0.70,0.18,0.30,0.08,very bouncy; very low friction; PLAYABILITY-CALIBRATED (no published academic value for golf-ball-on-concrete); k bumped from 0.06 (which produced 100m+ infinite roll-out in C diagnosis Shot 2) to 0.30 (which stops a 5 m/s post-bounce ball within ~16 m); also raises per-step resistance above the fp16.16 LSB floor so the ball can actually slow at sub-stopSpeed velocities
 Water,0.00,1.00,1.00,0.00,ball stops immediately; marked hazard
