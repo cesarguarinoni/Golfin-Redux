@@ -125,8 +125,10 @@ namespace Golfin.Physics.Viewer
 
             driver.FlushLog();
 
-            Debug.Log($"[LoopV2SmokeBot] Done. Destroying self.");
+            Debug.Log($"[LoopV2SmokeBot] Done. Exiting play mode.");
             Destroy(gameObject);
+            // Exit play mode so the next scenario can be launched via the menu.
+            UnityEditor.EditorApplication.ExitPlaymode();
         }
 
         /// <summary>

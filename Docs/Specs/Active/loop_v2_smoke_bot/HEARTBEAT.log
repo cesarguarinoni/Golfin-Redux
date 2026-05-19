@@ -15,3 +15,14 @@
 2026-05-19T13:51:17Z code changes complete — verifying compile, reverting scene, preparing scenario runs
 2026-05-19T14:03:47Z waiting for Unity to recompile modified files
 2026-05-19T14:08:51Z compile clean at 16:08:21 — running EditMode tests then launching scenarios
+2026-05-19T14:12:03Z launching Hole 1 Playthrough scenario
+2026-05-19T14:16:28Z waiting for iter-2 Hole1 run to start — launcher fired
+2026-05-19T14:23:18Z launching Hole1 scenario with fixed DidReloadScripts injection
+2026-05-19T14:34:01Z Hole1 scenario running — bot injection confirmed, waiting for completion
+2026-05-19T14:37:32Z resumed from compaction — committing LoopV2SmokeBotMenu.cs, running settings_round_trip scenario
+2026-05-19T14:42:00Z launching settings_round_trip via script-execute
+2026-05-19T14:45:00Z using computer-use to trigger Unity menu items for scenario runs
+2026-05-19T14:52:00Z launching settings_round_trip scenario
+2026-05-19T14:55:00Z launching hole_selection_browse scenario
+2026-05-19T15:02:00Z waiting for Unity to compile RunEditModeTests.cs — background polling
+2026-05-19T15:02:00Z running AllEditModeTestRunner
