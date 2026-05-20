@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Golfin.Physics;
 using Golfin.Physics.Math;
+// iter-4: ForceShotCompleteForBot seam added below
 
 namespace Golfin.Gameplay.Loop
 {
@@ -282,6 +283,36 @@ namespace Golfin.Gameplay.Loop
                 fp3.Zero, SurfaceType.Fairway, null, fp.Zero);
             OnStateChanged?.Invoke(change);
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Smoke-bot test seam. Synthesizes a ShotResult and invokes OnShotComplete
+        /// to drive subscribers (HoleCompleteWidget etc.) deterministically without
+        /// running physics. ONLY for editor-time bot scenarios where the gate under
+        /// test is downstream of terminal-state observation (modal wiring, scene
+        /// unload, reward grant). Production shot path is unchanged.
+        ///
+        /// Seam principle compliance (five conditions, all must hold):
+        ///   (i)   Isolates one real unit: "modal subscribes to InCup event" — not physics.
+        ///   (ii)  Production path (FireShot via PhysicsLabController) remains the default.
+        ///   (iii) #if UNITY_EDITOR — compiler-level proof it cannot leak to player builds.
+        ///   (iv)  Named _ForBot — grep-visible signal to reviewer and future maintainer.
+        ///   (v)   Delegates to OnShotComplete — the SAME event production uses. Modal sees no difference.
+        /// </summary>
+        public void ForceShotCompleteForBot(BallState terminalState)
+        {
+            var result = new ShotResult(
+                terminalState,
+                obReason: null,
+                startPosition: fp3.Zero,
+                endPosition: fp3.Zero,
+                startSurface: SurfaceType.Green,
+                endSurface: SurfaceType.Green,
+                simDuration: fp.Zero,
+                bounceCount: 0);
+            OnShotComplete?.Invoke(result);
+        }
+#endif
 
         // ── Internal helpers ───────────────────────────────────────────────────
 

@@ -1,3 +1,4 @@
+// iter-4b: ExitingPlayMode restore pattern (fix Time.time=0 freeze from EnteredPlayMode restore)
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -76,9 +77,25 @@ namespace Golfin.Physics.Viewer.Editor
             Golfin.Physics.Viewer.LoopV2SmokeBot.Scenario = scenarioKey;
             Golfin.Physics.Viewer.LoopV2SmokeBot.Armed    = true;
 
+            // 3. Guard against "Enter Play Mode Options: Disable Scene Reload".
+            //    If DisableSceneReload is set, Unity won't reinitialize the scene state
+            //    between sessions — the previous session's ScreenManager/MonoBehaviour state
+            //    persists and the game loop freezes at frame 1 (Time.time stays ~0.02).
+            //    Temporarily force full reload for this play mode entry only.
+            bool hadSceneReloadDisabled = EditorSettings.enterPlayModeOptionsEnabled &&
+                (EditorSettings.enterPlayModeOptions & EnterPlayModeOptions.DisableSceneReload) != 0;
+            if (hadSceneReloadDisabled)
+            {
+                Debug.LogWarning("[LoopV2SmokeBotMenu] DisableSceneReload detected — temporarily enabling scene reload for this run.");
+                EditorSettings.enterPlayModeOptions &= ~EnterPlayModeOptions.DisableSceneReload;
+            }
+
+            // Store flag in SessionState so the handler can restore the option after EnteredPlayMode.
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RestoreSceneReload", hadSceneReloadDisabled);
+
             Debug.Log($"[LoopV2SmokeBotMenu] Armed. Scenario='{scenarioKey}'. Entering play mode…");
 
-            // 3. Enter play mode. The [InitializeOnLoadMethod]-registered handler will
+            // 4. Enter play mode. The [DidReloadScripts]-registered handler will
             //    fire at EnteredPlayMode and inject the host GO (because Armed=true).
             EditorApplication.EnterPlaymode();
         }
@@ -101,16 +118,43 @@ namespace Golfin.Physics.Viewer.Editor
 
         static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
-            if (state != PlayModeStateChange.EnteredPlayMode) return;
+            if (state == PlayModeStateChange.EnteredPlayMode)
+            {
+                // NOTE: Do NOT touch EditorSettings.enterPlayModeOptions here.
+                // Modifying DisableSceneReload at EnteredPlayMode causes Unity to
+                // freeze the game loop (Time.time stays 0) — the option change during
+                // play mode triggers an internal scene state reset. Restore is deferred
+                // to ExitingPlayMode where it is safe.
 
-            // Only inject if the bot is armed (set by a menu item invocation).
-            if (!Golfin.Physics.Viewer.LoopV2SmokeBot.Armed) return;
+                // Only inject the host if the bot is armed (set by a menu item invocation).
+                if (!Golfin.Physics.Viewer.LoopV2SmokeBot.Armed) return;
 
-            // Create the host GO in-memory (in the play-mode scene). Never saved to disk.
-            var go = new GameObject("[LoopV2SmokeBot]");
-            go.AddComponent<Golfin.Physics.Viewer.LoopV2SmokeBot>();
-            Debug.Log($"[LoopV2SmokeBotMenu] Injected [LoopV2SmokeBot] host into play-mode scene " +
-                      $"(scenario={Golfin.Physics.Viewer.LoopV2SmokeBot.Scenario}, not saved to disk).");
+                // Headless play-loop guard. When the Unity Editor is not the foreground
+                // app (every automated/MCP-driven run), Unity throttles the player loop
+                // to a halt if runInBackground is off — the game freezes at frame 1 with
+                // Time.time stuck near 0. Application.runInBackground is a RUNTIME flag:
+                // setting it here (at EnteredPlayMode, before frame 1) keeps the loop
+                // ticking unattended and does NOT mutate ProjectSettings.asset, so it
+                // leaves zero git-diff footprint. Reverts automatically when play ends.
+                Application.runInBackground = true;
+
+                // Create the host GO in-memory (in the play-mode scene). Never saved to disk.
+                var go = new GameObject("[LoopV2SmokeBot]");
+                go.AddComponent<Golfin.Physics.Viewer.LoopV2SmokeBot>();
+                Debug.Log($"[LoopV2SmokeBotMenu] Injected [LoopV2SmokeBot] host into play-mode scene " +
+                          $"(scenario={Golfin.Physics.Viewer.LoopV2SmokeBot.Scenario}, not saved to disk).");
+            }
+            else if (state == PlayModeStateChange.ExitingPlayMode)
+            {
+                // Safe point to restore DisableSceneReload — play mode is ending, no game loop impact.
+                bool restore = UnityEditor.SessionState.GetBool("LoopV2SmokeBot.RestoreSceneReload", false);
+                if (restore)
+                {
+                    EditorSettings.enterPlayModeOptions |= EnterPlayModeOptions.DisableSceneReload;
+                    UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RestoreSceneReload", false);
+                    Debug.Log("[LoopV2SmokeBotMenu] Restored DisableSceneReload option (at ExitingPlayMode).");
+                }
+            }
         }
     }
 }

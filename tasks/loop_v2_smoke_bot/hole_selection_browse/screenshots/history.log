@@ -1,20 +1,20 @@
-[t=12.07] === LoopV2SmokeBot started: scenario='hole_selection_browse' ===
-[t=12.07] === Hole Selection Browse ===
-[t=12.07] NavigateToHome: waiting for app startup sequence…
-[t=12.07]   NavigateToHome: on Splash after 0.0s — clicking StartButton
-[t=12.57] Click: 'StartButton'
-[t=12.57]   → clicked StartButton
-[t=15.09]   NavigateToHome: reached Home after 3.0s
-[t=16.26] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_browse/screenshots/s01_home_2026-05-19_17-31-23.png
-[t=16.26] Click: 'NavTeeButton'
-[t=16.26]   → clicked NavTeeButton
-[t=17.26] WaitForScreen: HoleSelection (timeout=10s)
-[t=17.27]   WaitForScreen OK: on 'HoleSelection' after 0.0s
-[t=17.91] Capture: s02_hole_selection_grid → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_browse/screenshots/s02_hole_selection_grid_2026-05-19_17-31-25.png
-[t=17.91] Click: 'NavHomeButton'
-[t=17.91]   → clicked NavHomeButton
-[t=18.92] WaitForScreen: Home (timeout=10s)
-[t=18.92]   WaitForScreen OK: on 'Home' after 0.0s
-[t=19.10] Capture: s03_home_returned → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_browse/screenshots/s03_home_returned_2026-05-19_17-31-26.png
-[t=19.10] === Hole Selection Browse: all captures done ===
-[t=19.10] === Scenario complete ===
+[t=9.74] === LoopV2SmokeBot started: scenario='hole_selection_browse' ===
+[t=9.74] === Hole Selection Browse ===
+[t=9.74] NavigateToHome: waiting for app startup sequence…
+[t=9.74]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=10.24] Click: 'StartButton'
+[t=10.24]   → clicked StartButton
+[t=12.77]   NavigateToHome: reached Home after 3.0s
+[t=13.98] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_browse/screenshots/s01_home_2026-05-20_08-50-12.png
+[t=13.98] Click: 'NavTeeButton'
+[t=13.98]   → clicked NavTeeButton
+[t=14.98] WaitForScreen: HoleSelection (timeout=10s)
+[t=14.99]   WaitForScreen OK: on 'HoleSelection' after 0.0s
+[t=15.64] Capture: s02_hole_selection_grid → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_browse/screenshots/s02_hole_selection_grid_2026-05-20_08-50-13.png
+[t=15.64] Click: 'NavHomeButton'
+[t=15.64]   → clicked NavHomeButton
+[t=16.64] WaitForScreen: Home (timeout=10s)
+[t=16.64]   WaitForScreen OK: on 'Home' after 0.0s
+[t=16.82] Capture: s03_home_returned → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_browse/screenshots/s03_home_returned_2026-05-20_08-50-15.png
+[t=16.82] === Hole Selection Browse: all captures done ===
+[t=16.82] === Scenario complete ===

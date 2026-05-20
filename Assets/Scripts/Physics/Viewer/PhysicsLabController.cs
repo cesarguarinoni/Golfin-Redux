@@ -741,6 +741,33 @@ namespace Golfin.Physics.Viewer
                 _shotController.CameraHeadingRadians = _cameraYaw;
         }
 
+        /// <summary>
+        /// Bot seam: fire a shot through the PRODUCTION ShotController path so the full
+        /// shot-UI lifecycle runs (Idle → Aiming → Timing → Flicking → Resolving).
+        ///
+        /// This causes ShotConeView to transition to Resolving, which hides the cone,
+        /// ball widget, club handle, and putter track — exactly as a real player shot does.
+        /// Club selection and camera heading must be set BEFORE calling this (via SetClub +
+        /// SetCameraYawRadians). The StatBundle injected by SetClub drives the velocity.
+        ///
+        /// power01: 0–1.0 (1.0 = 100% of club base velocity).
+        /// accuracy: Green = perfect aim, Yellow = mild degradation, Red = severe.
+        ///
+        /// Only call from bot / smoke-runner code — never from production paths.
+        /// </summary>
+        internal void FireViaShotController(float power01, Golfin.Gameplay.Input.DebugShotAccuracy accuracy = Golfin.Gameplay.Input.DebugShotAccuracy.Green)
+        {
+            if (_shotController == null)
+            {
+                Debug.LogWarning("[PhysicsLab] FireViaShotController: _shotController is null — falling back to FireInternal with default preset.");
+                return;
+            }
+            // FireDebugShot drives ShotController through the full production path:
+            // Idle → Flicking → Resolving → OnShotResolved → HandleShotResolved → SM.
+            // ShotConeView subscribes to OnStateChanged, so it sees Resolving and hides UI.
+            _shotController.FireDebugShot(power01, accuracy);
+        }
+
         // ── Camera orbit ───────────────────────────────────────────────────────
 
         void HandleCameraOrbit()

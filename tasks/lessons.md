@@ -1343,3 +1343,31 @@ When this pattern emerges, the architect should consider executing the surgery d
 2. Is that invariant still load-bearing, or is it the actual bug?
 3. Has the implementer added defensive guards in this method that didn't exist before this task started?
 4. If yes to #3, what's the structural alternative that removes both the guards and the bug?
+
+---
+
+## Lesson — headless play mode + iteration discipline (2026-05-20, loop_v2_smoke_bot)
+
+**`Application.runInBackground = true` is mandatory for any automated play-mode run.**
+When the Unity Editor is not the foreground OS app — i.e. every MCP/headless run — Unity
+throttles the play-mode loop to a halt: the game freezes at frame 1, `Time.time` stuck
+near 0, while `EditorApplication.update` keeps ticking (so MCP still answers — misleading).
+Symptom misdiagnosed for a full iteration as "Game View not visible". Any tool that enters
+play mode unattended must set `Application.runInBackground = true` at play-mode entry.
+
+**Don't build fragile log-grep wait loops to detect run completion.** A background
+`until grep "<line>" <(tail -c NK Editor.log)` loop silently fails when the target line
+scrolls out of the tail window — the loop spins forever and no notification ever fires
+(cost Cesar a 20-minute idle stall). Poll authoritative state directly
+(`editor-application-get-state` → `IsPlaying`), or check the actual artifact file.
+
+**Match the tool to the user's mode.** When the user is iterating live (watching Unity,
+correcting every few minutes), do NOT delegate to a background subagent — it can't be
+steered mid-run and there's no message-in channel, so you end up structurally stuck
+waiting. Background agents are for genuinely independent long work, not hands-on co-iteration.
+
+**Drive player-facing UI through its real input path, not a debug seam, when visuals must
+look real.** Firing shots via `ShotController.FireDebugShot` works physically but is
+instant — the cone/ball/club-handle never hide and the handle never animates. Mirroring the
+real drag path (`BeginExternalDrag` → ramped `SetExternalPower` → `EndExternalDrag`, exactly
+as `ClubHandleDragger` does) runs the real state machine and the UI behaves correctly.

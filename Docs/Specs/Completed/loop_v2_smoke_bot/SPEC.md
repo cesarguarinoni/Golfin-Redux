@@ -238,15 +238,18 @@ namespace Golfin.Physics.Viewer.Bot
 
             yield return d.WaitForSceneLoaded("LabScaffold");
             yield return d.WaitForSceneLoaded("Hole_01_Geo");
-            yield return new WaitForSecondsRealtime(2f); // settle
-            yield return d.Capture("gameplay_armed");
+            yield return new WaitForSecondsRealtime(1.5f); // fade-in completes
+            yield return d.Capture("gameplay_armed");      // s04: gameplay on load
 
-            yield return d.FireShot(FindCupPosition(), power01: 0.65f);
-            yield return d.WaitForBallState("InCup", 25f);
-            yield return d.Capture("ball_in_cup");
+            yield return new WaitForSecondsRealtime(3f);   // HUD/Awake settle
+            yield return d.Capture("gameplay_pre_shot");   // s05: real pre-modal gameplay frame
 
-            yield return new WaitForSecondsRealtime(2f); // result modal animate-in
-            yield return d.Capture("result_modal");
+            // iter-4 Option B: ForceShotComplete drives terminal=InCup via the same
+            // OnShotComplete event production fires — no physics. See ARCHITECT_VERDICT_INCUP.md.
+            yield return d.ForceShotComplete("InCup");
+
+            yield return new WaitForSecondsRealtime(2f);   // result modal animate-in
+            yield return d.Capture("result_modal");        // s06: HoleCompleteWidget — C1 gate
         }
 
         /// <summary>
@@ -368,10 +371,27 @@ namespace Golfin.Physics.Viewer.Editor
 
 ### Files POTENTIALLY EDITED (only if test seam missing — minimal)
 
-- `Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs` — public `State` getter if not already exposed.
-- `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — public putt-fire seam if not already exposed.
+Three pre-authorized seams (ceiling raised 2→3 per iter-4 architect verdict ARCHITECT_VERDICT_INCUP.md):
 
-Everything else MUST go through existing public APIs. If the implementer finds itself adding test seams beyond these two, **escalate** before continuing.
+- `Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs` — public `Phase` getter (seam 1, iter-1).
+- `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — public putt-fire seam if not already exposed (seam 2, iter-1).
+- `Assets/Scripts/Gameplay/Loop/BallStateMachine.cs` — `ForceShotCompleteForBot(BallState)` (seam 3, iter-4).
+
+Everything else MUST go through existing public APIs. If the implementer finds itself needing a **fourth** seam beyond these three, **escalate** before continuing. The escalation IS the scope-control mechanism.
+
+#### The seam principle (verbatim from ARCHITECT_VERDICT_INCUP.md)
+
+A test seam is justified if and only if all five conditions hold:
+
+1. **The seam isolates a real unit of behavior under test.** "Modal subscribes to InCup event" is one unit. "Putt physics produces InCup on Hole 1 green" is a different unit. Conflating them via placement tricks tests neither cleanly.
+
+2. **The production path remains the default for scenarios that genuinely exercise it.** `Fire(preset)` stays the bot's primary shot path. The seam is only for scenarios whose gate is downstream of the terminal state (modal wiring, scene unload, reward grant, progression write).
+
+3. **The seam is `#if UNITY_EDITOR` guarded.** Compiler-level proof it cannot leak into a player build. No "carefully gated at runtime" — out of the binary entirely.
+
+4. **Production code names the seam for what it is.** Suffix the method `_ForBot` — e.g. `ForceShotCompleteForBot`. Signals reviewer + future maintainer alike on any grep.
+
+5. **The seam delegates to the same final entry point production uses.** Fire `BallStateMachine.OnShotComplete` with a synthetic `ShotResult { TerminalState = InCup }` — the SAME event production fires. Modal sees no difference. We're not bypassing the test; we're driving its input deterministically.
 
 ### Files DELETED
 
@@ -405,7 +425,7 @@ None.
 - [ ] EditMode test gate **305/305 PASS** unchanged
 
 **Self-evidence** (one capture set per scenario):
-- [ ] `tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/` — 6 MD5-distinct PNGs + history.log
+- [ ] `tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/` — 6 MD5-distinct PNGs + history.log. s04 `gameplay_armed` (gameplay scene on load) and s05 `gameplay_pre_shot` (real live-gameplay frame, ball armed on tee) are both honest pre-modal gameplay captures taken BEFORE the ForceShotComplete seam — s05 is NOT a duplicate of the s06 modal (iter-4b Cesar architect call: ForceShotComplete skips physics, so no distinct "ball-in-cup" visual exists; s05 is the genuine pre-modal frame instead). s06 `result_modal` MUST show `HoleCompleteWidget` visible pixels (modal animated in via OnShotComplete subscription) — pixel evidence is non-negotiable for this capture; absent or blank modal is a hard FAIL.
 - [ ] `tasks/loop_v2_smoke_bot/settings_round_trip/screenshots/` — 4 MD5-distinct PNGs + history.log
 - [ ] `tasks/loop_v2_smoke_bot/hole_selection_browse/screenshots/` — 3 MD5-distinct PNGs + history.log
 - [ ] Each `history.log` ends with `=== Scenario complete ===` (not `INCOMPLETE`)

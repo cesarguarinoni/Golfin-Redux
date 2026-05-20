@@ -1,10 +1,14 @@
 === ALL EditMode Test Gate — loop_v2_smoke_bot ===
-Timestamp: 2026-05-19 17:01:17
-
+Timestamp: 2026-05-20 06:46 (iter-4b — re-run after runInBackground fix + s05 capture-order change)
+Runner: mcp__ai-game-developer__tests-run (testMode=EditMode)
 
 TOTAL  : 305
 PASSED : 305
 FAILED : 0
 SKIPPED: 0
+Duration: 00:00:23.75
 
 GATE: PASS
+
+Note: iter-4b changes are editor-only (LoopV2SmokeBotMenu.cs runInBackground guard,
+Scenarios.cs capture order). No runtime/test assembly touched. Gate re-run regardless.

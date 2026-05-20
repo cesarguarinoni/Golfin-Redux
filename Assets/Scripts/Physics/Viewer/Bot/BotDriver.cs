@@ -11,6 +11,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Golfin.Diagnostics.Runtime;
+using Golfin.Gameplay.Input;
 using Golfin.Gameplay.Loop;
 
 namespace Golfin.Physics.Viewer.Bot
@@ -599,6 +600,261 @@ namespace Golfin.Physics.Viewer.Bot
             catch (Exception ex)
             {
                 LogStep($"  FireShot WARN: PlayRate restore failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Drives the ball-state machine directly to a terminal state, skipping physics.
+        /// Use ONLY for scenarios whose gate is downstream of terminal-state observation
+        /// (modal wiring, scene unload, reward grant, progression write). For scenarios
+        /// that genuinely test shot mechanics, use FireShot instead.
+        ///
+        /// Delegates to BallStateMachine.ForceShotCompleteForBot (a #if UNITY_EDITOR seam
+        /// that fires the same OnShotComplete event production uses). Modal sees no difference.
+        /// </summary>
+        public IEnumerator ForceShotComplete(string terminalStateName, float settleSeconds = 0.5f)
+        {
+            LogStep($"ForceShotComplete: driving terminal={terminalStateName}");
+            var ctrl = UnityEngine.Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            {
+                LogStep("ForceShotComplete FAIL: no PhysicsLabController in scene");
+                yield break;
+            }
+
+            if (!System.Enum.TryParse<BallState>(terminalStateName, out var target))
+            {
+                LogStep($"ForceShotComplete FAIL: unknown BallState '{terminalStateName}'");
+                yield break;
+            }
+
+            ctrl.BallSM.ForceShotCompleteForBot(target);
+            LogStep($"ForceShotComplete OK: terminal={target}");
+            yield return new WaitForSecondsRealtime(settleSeconds);
+        }
+
+        /// <summary>
+        /// Plays the current hole with REAL physics shots. Each stroke aims the camera at
+        /// the cup and fires via the PRODUCTION ShotController path (FireViaShotController)
+        /// so the shot UI (cone, ball widget, club handle) hides during ball flight exactly
+        /// as it does for a real player. Club selection follows Cesar's fix #2: Driver only
+        /// on stroke 1; subsequent strokes use Iron 7, Wedge, or Putter by distance.
+        ///
+        /// Loops until the ball is InCup or the stroke count reaches par+3 (safety net seam).
+        /// Normal PlayRate is left untouched so each shot animates its full trajectory.
+        /// </summary>
+        public IEnumerator PlayHoleToCup(int par)
+        {
+            int maxStrokes = par + 3;
+            LogStep($"=== PlayHoleToCup: par={par}, stroke cap={maxStrokes} ===");
+
+            var ctrl = UnityEngine.Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null) { LogStep("PlayHoleToCup FAIL: no PhysicsLabController"); yield break; }
+            var sm = ctrl.BallSM;
+
+            // ShotController drives the production drag path so the club handle visibly
+            // pulls down for each shot (Cesar fix #3).
+            var shotCtl = UnityEngine.Object.FindObjectOfType<Golfin.Gameplay.Input.ShotController>();
+            if (shotCtl == null)
+                LogStep("PlayHoleToCup WARN: no ShotController found — club-handle animation unavailable, will fall back to instant fire");
+
+            Vector3 cup = FindCupPosition();
+            int strokes = 0;
+            bool inCup = false;
+            bool isFirstStroke = true;
+
+            while (!inCup && strokes < maxStrokes)
+            {
+                strokes++;
+                Vector3 ball = ctrl.BallPosition;
+                Vector3 flat = new Vector3(cup.x - ball.x, 0f, cup.z - ball.z);
+                float dist = flat.magnitude;
+
+                SelectShot(dist, isFirstStroke, out int club, out float power01, out string label);
+                isFirstStroke = false;
+
+                LogStep($"Stroke {strokes}: ball={ball:F1} cup={cup:F1} dist={dist:F1}m — {label} club={club} power={power01:F2}");
+
+                try { ctrl.SetClub(club); } catch (Exception ex) { LogStep($"  SetClub warn: {ex.Message}"); }
+
+                float yaw = Mathf.Atan2(flat.z, flat.x);
+                try { ctrl.SetCameraYawRadians(yaw); }
+                catch (Exception ex) { LogStep($"  SetCameraYaw warn: {ex.Message}"); }
+
+                // Gate on BallSM in Aiming state before firing.
+                if (sm != null)
+                {
+                    float g = 0f;
+                    while (sm.State != BallState.Aiming && g < 3f)
+                    {
+                        g += Time.unscaledDeltaTime;
+                        yield return null;
+                    }
+                    LogStep($"  Pre-fire state: SM={sm.State} (gated {g:F2}s)");
+                }
+
+                // Subscribe OnShotComplete BEFORE firing.
+                bool done = false;
+                ShotResult res = default;
+                Action<ShotResult> handler = r => { done = true; res = r; };
+                if (sm != null) sm.OnShotComplete += handler;
+
+                // Fire via the production ShotController DRAG path — mirrors ClubHandleDragger
+                // (a real player): BeginExternalDrag → ramped SetExternalPower → EndExternalDrag.
+                // Ramping the power over ~0.85s makes the club handle visibly pull DOWN before
+                // the shot releases (Cesar fix #3 — the handle must move like a player taking
+                // the shot). The release → CommitFlick → Resolving still hides the cone / handle
+                // / ball widget during flight (fix #1).
+                bool fired = false;
+                if (shotCtl != null)
+                {
+                    // Wait for ShotController to return to Idle (previous shot fully cleared).
+                    float si = 0f;
+                    while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 4f)
+                    {
+                        si += Time.unscaledDeltaTime;
+                        yield return null;
+                    }
+
+                    shotCtl.BeginExternalDrag(); // Idle → Aiming; the handle starts at rest
+
+                    const float rampSeconds = 0.85f; // visible handle pull-down
+                    float rt = 0f;
+                    while (rt < rampSeconds)
+                    {
+                        rt += Time.unscaledDeltaTime;
+                        shotCtl.SetExternalPower(Mathf.Lerp(0f, power01, rt / rampSeconds), 0f);
+                        yield return null;
+                    }
+                    shotCtl.SetExternalPower(power01, 0f);
+                    yield return new WaitForSecondsRealtime(0.18f); // brief hold at full pull
+                    shotCtl.EndExternalDrag(); // Timing → CommitFlick → Resolving → shot fires
+                    fired = true;
+                    LogStep($"  Fired via ShotController drag path — handle ramped to power={power01:F2}");
+                }
+                else
+                {
+                    // Fallback: no ShotController — instant fire (handle will not animate).
+                    try
+                    {
+                        ctrl.FireViaShotController(power01, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+                        fired = true;
+                        LogStep($"  FireViaShotController(power={power01:F2}) — instant fallback (no handle anim)");
+                    }
+                    catch (Exception ex)
+                    {
+                        LogStep($"  FireViaShotController threw: {ex.Message}");
+                    }
+                }
+
+                if (fired)
+                {
+                    // Wait up to 30s realtime for OnShotComplete (flight + roll + terminal state).
+                    float e = 0f;
+                    while (!done && e < 30f)
+                    {
+                        e += Time.unscaledDeltaTime;
+                        yield return null;
+                    }
+                    LogStep($"  Shot wait: done={done} elapsed={e:F1}s");
+                }
+                if (sm != null) sm.OnShotComplete -= handler;
+
+                if (done)
+                {
+                    inCup = res.TerminalState == BallState.InCup;
+                    LogStep($"  Stroke {strokes} terminal={res.TerminalState} endSurface={res.EndSurface} ball={ctrl.BallPosition:F1}");
+                }
+                else
+                {
+                    LogStep($"  Stroke {strokes} -> OnShotComplete not observed (timeout or fire failed)");
+                }
+
+                // Short pause so the settled ball frame is visible in the video.
+                yield return new WaitForSecondsRealtime(1.0f);
+                yield return Capture($"stroke{strokes}");
+            }
+
+            if (!inCup)
+            {
+                LogStep($"PlayHoleToCup: not holed in {strokes} real strokes — ForceShotComplete safety net (Cesar spec: par+3 cap).");
+                yield return ForceShotComplete("InCup");
+            }
+            LogStep($"=== PlayHoleToCup done: {strokes} strokes, holed={(inCup ? "real" : "seam")} ===");
+        }
+
+        /// <summary>
+        /// Select club and power for a shot of the given horizontal distance (metres).
+        ///
+        /// Fix #2 (Cesar 2026-05-20): Driver ONLY on the first stroke. For subsequent strokes:
+        ///   dist > 90m   → Wedge  (club 2)  at ~70% power  → aim to land in front of green (~55-65m)
+        ///   dist > 40m   → Wedge  (club 2)  at reduced power → ~40-55m carry
+        ///   dist > 15m   → Wedge  (club 2)  at low power → 15-40m carry
+        ///   dist > 6m    → Putter (club 3)  at scaled power → long putt
+        ///   dist <= 6m   → Putter (club 3)  at scaled power → short putt
+        ///
+        /// Strategy rationale (iter-5, 2026-05-20): After iter-4 playthrough, the ball landed
+        /// in sand ~118m from cup. Iron 7 shots from there all went OB because the trajectory
+        /// overshot the green (no safe terrain hit → OB drop back to origin → infinite loop).
+        /// Root cause: Iron 7 from sand at 84% power carries ~100-120m, overshoots the
+        /// green boundary into OB. Fix: use Wedge (max carry ~91m) for all post-driver
+        /// approach shots. Power = dist/130 gives conservative carry well short of OB.
+        ///
+        /// Power tuning reference (StatBundle production path, not preset path):
+        ///   Wedge base 42 m/s; carry scales as power^1.8 approximately.
+        ///   power=0.70 → ~0.55 * 91m ≈ 50m carry
+        ///   power=0.85 → ~0.75 * 91m ≈ 68m carry
+        ///   power=1.00 → 91m carry (full)
+        ///
+        /// Club indices: 0=Driver, 1=Iron 7, 2=Wedge, 3=Putter (PhysicsLabController.PutterIndex)
+        /// </summary>
+        void SelectShot(float dist, bool isFirstStroke, out int club, out float power01, out string label)
+        {
+            int putter = PhysicsLabController.PutterIndex;
+
+            // First stroke: always Driver at full power (~250m carry for Par 5).
+            if (isFirstStroke)
+            {
+                club    = 0;
+                power01 = 1.0f;
+                label   = $"Driver full power (first stroke, dist={dist:F0}m to cup)";
+                return;
+            }
+
+            // Subsequent strokes: use Wedge for all approach shots (avoids OB overshoot).
+            if (dist > 40f)
+            {
+                // Approach: Wedge at conservative power.
+                // Target: carry ~65% of remaining distance, leaving next shot in good range.
+                // Clamp to 0.75 to avoid overshooting green into OB.
+                // Wedge full power carry ~91m. power=0.75 → ~0.75^1.8 * 91 ≈ 55m carry.
+                // dist=118m → power=0.75 (cap) → carry~55m → 63m left → chip + putt.
+                // dist=60m  → power=0.60        → carry~35m → 25m left → chip.
+                club    = 2;
+                power01 = Mathf.Min(Mathf.Clamp01(dist / 130f), 0.75f);
+                label   = $"Wedge approach (dist={dist:F0}m) power={power01:F2}";
+            }
+            else if (dist > 15f)
+            {
+                // Short approach: Wedge at low power.
+                // power = dist / 80 → 40m → 0.50 (≈23m carry), 15m → 0.19 (≈7m carry)
+                club    = 2;
+                power01 = Mathf.Clamp01(dist / 80f);
+                label   = $"Wedge chip (dist={dist:F0}m) power={power01:F2}";
+            }
+            else if (dist > 6f)
+            {
+                // Long putt: Putter. Putter base 5 m/s; scale conservatively.
+                club    = putter;
+                power01 = Mathf.Clamp01(dist / 18f);
+                label   = $"Putter long putt (dist={dist:F0}m) power={power01:F2}";
+            }
+            else
+            {
+                // Short putt: Putter at moderate power.
+                club    = putter;
+                power01 = Mathf.Clamp01(dist / 8f);
+                label   = $"Putter short putt (dist={dist:F0}m) power={power01:F2}";
             }
         }
 

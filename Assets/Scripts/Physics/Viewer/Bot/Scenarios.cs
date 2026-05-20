@@ -22,11 +22,27 @@ namespace Golfin.Physics.Viewer.Bot
 
         /// <summary>
         /// Cold launch → PLAY → matchmaking → wait for OpponentFound → wait for
-        /// gameplay scenes to load → fire putt toward cup → wait for InCup →
+        /// gameplay scenes to load → force InCup terminal state (bot seam) →
         /// result modal appears. This is the default visual gate for Stage C1.
         ///
+        /// Design note (iter-4): Stage C1's gate is "HoleCompleteWidget subscribes
+        /// to OnShotComplete terminal=InCup". That is a modal-wiring gate, NOT a
+        /// physics gate. ForceShotComplete("InCup") drives the terminal state
+        /// deterministically via the same OnShotComplete event production fires —
+        /// the modal sees no difference. FireShot (real physics) remains available
+        /// for scenarios that genuinely test shot mechanics (future Hole1RealPhysicsShot).
+        ///
         /// Captures: home, matchmaking_searching, opponent_found, gameplay_armed,
-        ///           ball_in_cup, result_modal.
+        ///           gameplay_pre_shot (real gameplay frame, ball armed on tee, captured
+        ///           BEFORE the seam fires), result_modal (HoleCompleteWidget).
+        ///
+        /// Capture-order note (iter-4b, Cesar architect call): ForceShotComplete drives
+        /// the terminal state with NO physics, so the HoleCompleteWidget appears the same
+        /// frame the seam fires — there is no distinct "ball rolling into cup" visual.
+        /// To keep every capture honest, s05 is taken from the live gameplay scene
+        /// BEFORE ForceShotComplete (ball still armed on the tee) and s06 is the modal
+        /// AFTER. s05 is therefore a real pre-modal gameplay frame, never a duplicate of
+        /// the s06 modal.
         /// </summary>
         public static IEnumerator Hole1Playthrough(BotDriver d)
         {
@@ -58,25 +74,19 @@ namespace Golfin.Physics.Viewer.Bot
             //    FadeController transition + scene load can take up to 30s.
             yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
             yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
-            yield return new WaitForSecondsRealtime(4f); // let Awake/Start settle
-            yield return d.Capture("gameplay_armed");
+            yield return new WaitForSecondsRealtime(3f); // fade-in + Awake/Start/HUD settle
+            yield return d.Capture("gameplay_armed"); // gameplay scene, ball armed on the tee
 
-            // 6. Find cup position and fire a putt.
-            //    FireShot (§2f pattern): places ball 3m from cup, sets Instant PlayRate,
-            //    orients camera yaw toward cup, subscribes OnShotComplete, fires putt_flat_3m,
-            //    polls flag frame-by-frame. OnShotComplete fires in <1 frame (Instant mode).
-            //    After FireShot returns, terminal state has already been observed.
-            Vector3 cupPos = d.FindCupPosition();
-            yield return d.FireShot(cupPos, power01: 0.65f, timeoutSeconds: 35f);
+            // 6. Play Hole 1 (Par 5) with REAL physics shots — each stroke aims at the cup
+            //    and fires a power-appropriate preset from the ball's rest position.
+            //    Loops to the cup; if it runs past par+3 strokes the ForceShotComplete
+            //    seam finishes the hole (Cesar spec, 2026-05-20). PlayHoleToCup captures
+            //    one still per stroke.
+            yield return d.PlayHoleToCup(par: 5);
 
-            // 7. Capture ball position after shot (OnShotComplete already fired inside FireShot).
-            //    Allow 1 frame settle for any post-shot UI updates (turn counter, score).
-            yield return new WaitForSecondsRealtime(0.5f);
-            yield return d.Capture("ball_in_cup");
-
-            // 8. Wait for result modal (HoleCompleteWidget animates in, typically ~1-2s).
-            yield return new WaitForSecondsRealtime(3f);
-            yield return d.Capture("result_modal");
+            // 7. Wait for the result modal (HoleCompleteWidget) and capture it.
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal"); // HoleCompleteWidget — C1 gate
 
             d.LogStep("=== Hole 1 Playthrough: all captures done ===");
         }

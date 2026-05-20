@@ -38,3 +38,24 @@
 2026-05-19T15:35:26 hole1_playthrough scenario launched, monitoring for completion
 2026-05-19T15:40:11 all 3 scenarios complete, IMPLEMENTER_REPORT written, setting STATUS
 2026-05-19T15:41:59 done, awaiting review — STATUS=READY_FOR_ARCHITECT_REVIEW. FAIL: terminal=AtRest not InCup (result modal absent). All other items PASS.
+2026-05-19T16:06:44Z activated iter-4 — adding ForceShotCompleteForBot seam on BallStateMachine, ForceShotComplete primitive on BotDriver, revising Hole1Playthrough
+2026-05-19T16:09:22Z code edits complete — BallStateMachine seam + BotDriver ForceShotComplete + Scenarios revised; checking compile
+2026-05-19T16:12:36Z static analysis clean — calling Unity MCP for compile verify + scenario runs
+2026-05-19T16:21:21Z Unity not compiling after multiple Refresh/ReimportAll attempts — triggering via MCP script-execute
+2026-05-19T16:23:04Z calling Unity MCP script-execute directly as Claude tool to force compile
+2026-05-19T16:28:24Z compile successful: Golfin.Gameplay.Loop.dll 14848 bytes, Golfin.Physics.Viewer.dll 252416 bytes — no CS errors. Running EditMode tests.
+2026-05-19T16:33:37Z Unity Reimport All still in progress (triggered by meta file creation) — will run EditMode tests when done
+2026-05-19T16:38:12Z Unity Reimport All complete — starting EditMode test run via TestRunnerApi
+2026-05-19T16:46:01Z EditMode 305/305 PASS. Running Hole1Playthrough scenario.
+2026-05-19T18:50:00 resuming iter-4 — triggering Hole1Playthrough scenario to collect fresh captures
+2026-05-19T19:01:00 Hole1Playthrough scenario running in Unity play mode — log frozen, waiting for BotDriver progress
+2026-05-19T19:05:00 Unity game view frozen (same frame for 12+ min) — checking via MCP if in play mode
+2026-05-19T19:07:00 BLOCKED — Unity play mode entered at 18:52, all logs frozen since (13 min). Game view shows static Logo screen frame. Scenario not producing captures. 5-minute blocked-surface rule triggered.
+2026-05-19T19:10:00 IMPLEMENTER_BLOCKED — Unity hung in fullscreen play mode 17+ min. All code changes complete (BallStateMachine seam, BotDriver ForceShotComplete, Scenarios revised, SPEC updated, EditMode 305/305 PASS). Cesar must exit play mode manually.
+2026-05-19T17:29:01Z activated (iter-4 resume) — Cesar confirmed Unity in edit mode. Checking editor state via MCP before launching scenarios.
+2026-05-19T17:33:07Z Unity confirmed in edit mode (PID 71054 alive, log frozen since 19:27 = idle, OnApplicationQuitting was MCP plugin cleanup not actual quit). Launching Hole1Playthrough scenario via script-execute.
+2026-05-19T17:57:47Z ROOT CAUSE FOUND: Time.time=0.02 (1 frame) after 1020s of realtime. Game loop frozen after 1 frame. Coroutine WaitForSecondsRealtime never advances. Exiting play mode to investigate. Need to check what is blocking Update frames.
+2026-05-19T18:01:29Z FIX APPLIED: EnterPlayModeOptions=DisableSceneReload was enabled. Fixed by clearing DisableSceneReload before EnterPlaymode in BotLauncherFixed script + updated LoopV2SmokeBotMenu.cs permanently. DLL recompiled at 20:01 (252928 bytes). Launching Hole1 with fix.
+2026-05-19T18:17:39Z Diagnosing Time.time=0 freeze — game loop not running despite scene load. Investigating DisableSceneReload restore timing and alternative freeze causes.
+2026-05-19T18:30:55Z CIRCUIT BREAKER: 5 consecutive runs all show Time.time=0/frame=1 frozen game loop. Play mode starts but no Update/Start frames advance. Game View likely not visible/rendering. Surfacing as IMPLEMENTER_BLOCKED.
+2026-05-19T18:31:57Z STATUS set to IMPLEMENTER_BLOCKED. All code changes complete. Unity game loop frozen at frame=1 across 5 runs. Cesar must run scenarios manually with Game View visible.
