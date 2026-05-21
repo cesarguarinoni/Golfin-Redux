@@ -81,4 +81,24 @@ public class BallManager : MonoBehaviour
         if (!ownedBalls.TryGetValue(ballId, out var data)) return "x0";
         return data.IsUnlimited ? "∞" : $"x{data.quantity}";
     }
+
+    /// <summary>
+    /// Add balls (from hole rewards, etc.). Capped at 99.
+    /// If the ball is unlimited (quantity == -1), the add is a no-op but
+    /// OnInventoryChanged still fires so subscribers can re-render.
+    /// Mirrors ItemManager.AddItems pattern. Added in Stage C1.
+    /// </summary>
+    public void AddBalls(string ballId, int count)
+    {
+        if (!ownedBalls.TryGetValue(ballId, out var data))
+        {
+            data = new Golfin.Inventory.PlayerBallData { ballId = ballId, quantity = 0 };
+            ownedBalls[ballId] = data;
+        }
+
+        if (!data.IsUnlimited)
+            data.quantity = Mathf.Min(data.quantity + count, 99);
+
+        OnInventoryChanged?.Invoke();
+    }
 }

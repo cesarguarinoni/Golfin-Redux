@@ -9,6 +9,27 @@
 
 ---
 
+## 0. ITERATION-6 REDIRECTION (Cesar override — 2026-05-21)
+
+Iterations 1–5 are rejected. **See `CESAR_REJECTION.md` — it is authoritative and
+overrides every conflicting clause below, including the "single card / no Card 2" wording
+in §1, §2, §6, §7.** Summary:
+- The production modal reuses the **FULL lab widget**
+  `Assets/Prefabs/UI/HoleComplete/HoleCompleteWidget.prefab` — **BOTH cards**: Card 1
+  (current hole) + Card 2 (next hole), including Card 2's NEXT and LOCKED states. The lab
+  design in LabScaffold is correct and must be replicated verbatim. Do NOT author new
+  layout, do NOT reduce to one card.
+- Card 2 LOCKED appears when the hole was FAILED and the next hole was never unlocked.
+- The "scrollable shot history list" (§2) stays DROPPED — the lab uses a stats block
+  (TEE OFF / STROKES / BEST / TIME) + a next-hole description. `ShotHistoryRowView.cs` /
+  `ShotHistoryRow.prefab` remain deleted.
+- Buttons = the lab set: REPLAY/RETRY on Card 1, PLAY on Card 2. No standalone MENU button.
+- All verified-GOOD C1 behavior C# (HoleCompletionBridge, BallManager.AddBalls,
+  reward/progression, double-fire strip) stays.
+- Hole 18 success: no Hole 19 → hide Card 2, fire the "COURSE CLEARED!" toast.
+
+---
+
 ## 1. Goal
 
 Build the production end-of-hole Result modal as a **ShellScene-resident** `ModalController` subscriber to `GameSession.OnHoleComplete`. Replace the lab `HoleCompleteWidget` for production runs. On SUCCESS, write hole progression (close audit P0-3) and grant rewards. Three actions: **PLAY NEXT** (load next hole via the C0 path), **MENU** (unload gameplay, return Home), **RETRY** (FAILED state only — reload same hole). Hole 18 SUCCESS hides PLAY NEXT and fires a "course cleared" toast.

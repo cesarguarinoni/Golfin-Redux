@@ -10,12 +10,16 @@ using UnityEditor;
 namespace Golfin.Physics.Viewer
 {
     /// <summary>
-    /// §2d: subscribes to BallStateMachine.OnShotComplete; on terminal=InCup,
-    /// reads strokes/par/course/hole context, computes score, and shows the
-    /// HoleCompleteWidget Result Screen. The widget's button handlers call back
-    /// via PhysicsLabController.RearmAfterHoleComplete() when dismissed.
+    /// [DEPRECATED in Stage C1] Lab-debug-only result screen driver.
     ///
-    /// Also exposes ShowForDebug() for the DebugShotPanel "Hole Out" button.
+    /// Production MarkHoleComplete + FAILED-state detection is now owned by
+    /// HoleCompletionBridge (Assets/Scripts/Physics/Viewer/HoleCompletionBridge.cs).
+    /// The ShellScene-resident HoleCompleteModalController subscribes to
+    /// GameSession.OnHoleComplete for the production result modal.
+    ///
+    /// HandleShotComplete no longer fires MarkHoleComplete or widget.Show —
+    /// those calls were stripped in Stage C1 to prevent double-fire.
+    /// ShowForDebug() is preserved for the DebugShotPanel "Hole Out" button.
     ///
     /// Iter-6: loads real hole-map sprites from
     ///   Assets/Art/In-Game UI/HoleMaps/Lomond - Hole N.png
@@ -24,6 +28,7 @@ namespace Golfin.Physics.Viewer
     /// </summary>
     public class HoleCompleteDriver : MonoBehaviour, Golfin.Gameplay.UI.ShotUI.IHoleOutTrigger
     {
+        [Header("DEPRECATED — lab debug only (Stage C1). Production uses HoleCompletionBridge + HoleCompleteModalController.")]
         [SerializeField] PhysicsLabController controller;
         [SerializeField] HoleCompleteWidget widget;
 
@@ -42,25 +47,13 @@ namespace Golfin.Physics.Viewer
             if (_sm != null) _sm.OnShotComplete -= HandleShotComplete;
         }
 
+        // STAGE C1: HandleShotComplete no longer calls GameSession.MarkHoleComplete
+        // (owned by HoleCompletionBridge) or widget.Show (owned by HoleCompleteModalController).
+        // This handler is now a no-op in production. ShowForDebug() is the lab debug entry.
         void HandleShotComplete(ShotResult result)
         {
-            if (result.TerminalState != BallState.InCup) return;
-
-            // Stage B: fire cross-scene signal so the ShellScene Result modal
-            // (lands in Stage C) can react regardless of whether the lab widget
-            // is hosting the modal locally.
-            var completionData = new HoleCompletionData(
-                terminalState:  result.TerminalState,
-                strokes:        GameSession.TurnCount,
-                penaltyStrokes: ComputePenaltyStrokesFromHistory(),
-                holeNumber:     GameSession.CurrentHoleNumber > 0
-                                    ? GameSession.CurrentHoleNumber
-                                    : HoleContext.HoleNumber
-            );
-            GameSession.MarkHoleComplete(completionData);
-
-            // Existing lab path (kept for now; Stage C migrates this off):
-            ShowResultScreen(GameSession.TurnCount);
+            // No-op in production. MarkHoleComplete + widget.Show stripped in Stage C1.
+            // See HoleCompletionBridge for production logic.
         }
 
         static int ComputePenaltyStrokesFromHistory()

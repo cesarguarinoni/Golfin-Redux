@@ -131,6 +131,204 @@ namespace Golfin.Physics.Viewer.Bot
             d.LogStep("=== Settings Round Trip: all captures done ===");
         }
 
+        // ── Scenario 4: Hole 1 Play Next ─────────────────────────────────────
+
+        /// <summary>
+        /// Clears Hole 1 via ForceShotComplete("InCup"), waits for the result modal
+        /// (HoleCompleteModal on ShellScene), taps PLAY NEXT, waits for the loading screen
+        /// and Hole 2 geo to load, then captures hole2_armed.
+        ///
+        /// Visual gate: modal dismisses under fade + Hole 2 scene loads.
+        ///
+        /// Captures: home, matchmaking_searching, opponent_found, gameplay_armed,
+        ///           result_modal, hole2_armed.
+        /// </summary>
+        public static IEnumerator Hole1PlayNext(BotDriver d)
+        {
+            d.LogStep("=== Hole 1 Play Next ===");
+
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("home");
+
+            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return d.Capture("matchmaking_searching");
+
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("opponent_found");
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+
+            // Force InCup to trigger result modal.
+            yield return d.ForceShotComplete("InCup", settleSeconds: 1f);
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal");
+
+            // Click PLAY (Card 2 PLAY button — lab widget names it "PlayButton").
+            yield return d.Click("PlayButton", settleSeconds: 1.5f);
+
+            // Wait for loading screen and Hole 2 geo to load.
+            yield return d.WaitForSceneLoaded("Hole_02_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("hole2_armed");
+
+            d.LogStep("=== Hole 1 Play Next: all captures done ===");
+        }
+
+        // ── Scenario 5: Hole 1 Menu ───────────────────────────────────────────
+
+        /// <summary>
+        /// Clears Hole 1, taps REPLAY (Card 1 button), confirms hole 1 re-arms.
+        ///
+        /// Iteration 6 note: The new two-card lab-widget design has NO standalone MENU button.
+        /// Card 1 has REPLAY (success) or RETRY (failed). This scenario tests the REPLAY path
+        /// to verify the hole reloads correctly.
+        ///
+        /// Captures: home, matchmaking_searching, opponent_found, gameplay_armed,
+        ///           result_modal, hole1_rearmed_from_replay.
+        /// </summary>
+        public static IEnumerator Hole1Menu(BotDriver d)
+        {
+            d.LogStep("=== Hole 1 Menu (REPLAY path — no MENU button in lab widget) ===");
+
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("home");
+
+            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return d.Capture("matchmaking_searching");
+
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("opponent_found");
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+
+            yield return d.ForceShotComplete("InCup", settleSeconds: 1f);
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal");
+
+            // REPLAY reloads same hole (success path — no MENU button in lab widget design).
+            yield return d.Click("ReplayButton", settleSeconds: 2f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("hole1_rearmed_from_replay");
+
+            d.LogStep("=== Hole 1 Menu: all captures done ===");
+        }
+
+        // ── Scenario 6: Hole 1 Retry After Fail ──────────────────────────────
+
+        /// <summary>
+        /// Seeds GameSession.TurnCount to par+5 (stroke cap), forces AtRest terminal
+        /// to trigger FAILED modal, taps RETRY, waits for Hole 1 to re-arm.
+        ///
+        /// Par for Hole 1 is 5 → cap = 10. GameSession.SetTurn(10) then ForceShotComplete("AtRest").
+        ///
+        /// Captures: home, matchmaking_searching, gameplay_armed,
+        ///           result_modal_failed, hole1_rearmed.
+        /// </summary>
+        public static IEnumerator Hole1RetryAfterFail(BotDriver d)
+        {
+            d.LogStep("=== Hole 1 Retry After Fail ===");
+
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("home");
+
+            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return d.Capture("matchmaking_searching");
+
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+
+            // Hole 1 par = 5 → cap = par + 5 = 10. Bump TurnCount to cap.
+            // HoleContext.Par is set after hole loads; use default par+5=10 as fallback.
+            int par = Golfin.Gameplay.UI.HUD.HoleContext.Par > 0
+                ? Golfin.Gameplay.UI.HUD.HoleContext.Par
+                : 5;
+            int cap = par + 5;
+            d.LogStep($"  Hole1RetryAfterFail: par={par} cap={cap} — bumping TurnCount to cap");
+            Golfin.Gameplay.Session.GameSession.SetTurn(cap);
+
+            yield return d.ForceShotComplete("AtRest", settleSeconds: 1f);
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal_failed");
+
+            // Tap RETRY — should reload Hole 1.
+            yield return d.Click("RetryButton", settleSeconds: 2f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("hole1_rearmed");
+
+            d.LogStep("=== Hole 1 Retry After Fail: all captures done ===");
+        }
+
+        // ── Scenario 7: Hole 18 Course Cleared ───────────────────────────────
+
+        /// <summary>
+        /// Seeds GameSession.CurrentHoleNumber to 18, forces InCup, waits for
+        /// SUCCESS modal with no PLAY NEXT + "COURSE CLEARED!" toast visible.
+        ///
+        /// Captures: gameplay_armed_h18, result_modal_h18_cleared.
+        /// </summary>
+        public static IEnumerator Hole18CourseCleared(BotDriver d)
+        {
+            d.LogStep("=== Hole 18 Course Cleared ===");
+
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+
+            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+
+            // Seed hole 18 before forcing shot so modal reads HoleNumber=18.
+            d.LogStep("  Hole18CourseCleared: setting CurrentHoleNumber = 18");
+            Golfin.Gameplay.Session.GameSession.SetCurrentHole(18);
+
+            yield return d.Capture("gameplay_armed_h18");
+
+            yield return d.ForceShotComplete("InCup", settleSeconds: 1f);
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal_h18_cleared");
+
+            d.LogStep("=== Hole 18 Course Cleared: all captures done ===");
+        }
+
         // ── Scenario 3: Hole Selection Browse ────────────────────────────────
 
         /// <summary>

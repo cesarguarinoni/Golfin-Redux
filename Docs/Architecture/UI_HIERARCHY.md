@@ -381,6 +381,35 @@ MatchMakingModal                                 (root — controller stays acti
 
 ---
 
+### HoleCompleteModal (HoleCompleteModalController, ShellScene Canvas — `Golfin.UI.Modals.Result`)
+```
+HoleCompleteModal                                (root — child Canvas overrideSorting=true, sortingOrder=900, + GraphicRaycaster)
+└── HoleCompleteWidget                           (the lab two-card widget reused verbatim — HoleCompleteWidget.cs)
+    ├── DimBackground                            (Image — full-screen scene dim)
+    ├── Card1 (HoleCompleteCardWidget)           (current hole)
+    │   ├── SuccessHeader / FailedHeader         (one shown per terminal state)
+    │   ├── Subhead                              (TMP — "Lomond Country Club  - Hole N - Par P")
+    │   ├── CurrentBody → HoleMapLarge + StatsBlockText  (TEE OFF / STROKES / BEST / TIME / BEST)
+    │   ├── RewardsRow                           (CoinReward / RepairReward / BallReward)
+    │   └── ReplayButton / RetryButton           (REPLAY on success, RETRY on failed)
+    └── Card2 (HoleCompleteCardWidget)           (next hole — hidden on Hole 18)
+        ├── NextHeader / LockedHeader            (NEXT gold when unlocked, LOCKED gray when failed + next not unlocked)
+        ├── NextBody → NextHoleMapLarge + NextHoleDescText
+        ├── RewardsRow
+        └── PlayButton                           (PLAY — loads next hole; hidden when LOCKED)
+```
+Driven by `HoleCompleteModalController` (subscribes `GameSession.OnHoleComplete`). Card2 reward `CountText`/slot widths were widened (120/180 px) so "x100" fits on one line.
+
+### Toast (ToastController, ShellScene Canvas — `Golfin.UI.Toast`)
+```
+Toast                                            (root — child Canvas overrideSorting=true, sortingOrder=950)
+├── CanvasGroup                                  (fade in/hold/out)
+└── Text                                         (TMP — e.g. "COURSE CLEARED!")
+```
+Singleton; `ToastController.Show(message, seconds)`. Fired by the modal on Hole 18 success.
+
+---
+
 ## Key Notes
 
 - **Character stat rows** use `Name+Bar/StatsName`, `Name+Bar/Bar`, `DiffLabel`, `StatNumber`

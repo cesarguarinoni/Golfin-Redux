@@ -77,8 +77,10 @@ namespace Golfin.Physics.Viewer.Bot
         /// </summary>
         public IEnumerator Capture(string label)
         {
-            // Yield one frame so Unity flushes any pending render commands.
-            yield return null;
+            // WaitForEndOfFrame ensures the full render cycle completes (including
+            // Screen Space Overlay UI canvases). ScreenCapture.CaptureScreenshotAsTexture()
+            // must be called at end-of-frame; a plain "yield return null" is insufficient.
+            yield return new WaitForEndOfFrame();
 
             string counterLabel = $"s{_captureCounter:D2}_{label}";
             _captureCounter++;

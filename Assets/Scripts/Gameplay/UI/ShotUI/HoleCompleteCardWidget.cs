@@ -210,6 +210,28 @@ namespace Golfin.Gameplay.UI.ShotUI
             }
         }
 
+        // ── Production seams — add specific-button listeners from outside ────────
+        // Called by HoleCompleteModalController AFTER widget.Show() so the production
+        // controller can distinguish REPLAY / RETRY / PLAY without a shared close callback.
+
+        /// <summary>Adds an onClick listener to the REPLAY button (Card 1 — success/failed-with-PB).</summary>
+        public void AddReplayListener(Action action)
+        {
+            if (_replayButton != null) _replayButton.onClick.AddListener(() => action());
+        }
+
+        /// <summary>Adds an onClick listener to the RETRY button (Card 1 — failed-no-PB).</summary>
+        public void AddRetryListener(Action action)
+        {
+            if (_retryButton != null) _retryButton.onClick.AddListener(() => action());
+        }
+
+        /// <summary>Adds an onClick listener to the PLAY button (Card 2 — next hole, unlocked).</summary>
+        public void AddPlayListener(Action action)
+        {
+            if (_playButton != null) _playButton.onClick.AddListener(() => action());
+        }
+
         // ── Expose internal state for unit tests ─────────────────────────────────
 
         internal bool IsSuccessHeaderActive  => _successHeaderRoot != null && _successHeaderRoot.activeSelf;

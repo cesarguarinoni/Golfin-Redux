@@ -95,6 +95,19 @@ namespace Golfin.Physics.Viewer
                 case "hole_selection_browse":
                     scenarioRoutine = Bot.Scenarios.HoleSelectionBrowse(driver);
                     break;
+                // Stage C1 scenarios:
+                case "hole1_play_next":
+                    scenarioRoutine = Bot.Scenarios.Hole1PlayNext(driver);
+                    break;
+                case "hole1_menu":
+                    scenarioRoutine = Bot.Scenarios.Hole1Menu(driver);
+                    break;
+                case "hole1_retry_after_fail":
+                    scenarioRoutine = Bot.Scenarios.Hole1RetryAfterFail(driver);
+                    break;
+                case "hole18_course_cleared":
+                    scenarioRoutine = Bot.Scenarios.Hole18CourseCleared(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

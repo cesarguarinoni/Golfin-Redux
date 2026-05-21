@@ -195,9 +195,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 #endif
         }
 
-        // Internal accessor for unit tests.
-        internal HoleCompleteCardWidget Card1 => _card1;
-        internal HoleCompleteCardWidget Card2 => _card2;
+        // Accessors — internal for unit tests, public for production controller seams.
+        public HoleCompleteCardWidget Card1 => _card1;
+        public HoleCompleteCardWidget Card2 => _card2;
         // iter-9 F1 v2 compiled: CanvasGroup-alpha suppression
     }
 }

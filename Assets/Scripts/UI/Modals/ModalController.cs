@@ -135,14 +135,16 @@ namespace Golfin.UI.Modals
         private System.Collections.IEnumerator FadeIn()
         {
             float elapsedTime = 0f;
-            
+
             while (elapsedTime < animationDuration)
             {
-                elapsedTime += Time.deltaTime;
+                // Use unscaledDeltaTime so the fade works even when timeScale=0
+                // (e.g. during pause or after transition animations that halt the clock).
+                elapsedTime += Time.unscaledDeltaTime;
                 _canvasGroup.alpha = Mathf.Lerp(0f, 1f, elapsedTime / animationDuration);
                 yield return null;
             }
-            
+
             _canvasGroup.alpha = 1f;
         }
 
@@ -152,14 +154,14 @@ namespace Golfin.UI.Modals
         private System.Collections.IEnumerator FadeOut()
         {
             float elapsedTime = 0f;
-            
+
             while (elapsedTime < animationDuration)
             {
-                elapsedTime += Time.deltaTime;
+                elapsedTime += Time.unscaledDeltaTime;
                 _canvasGroup.alpha = Mathf.Lerp(1f, 0f, elapsedTime / animationDuration);
                 yield return null;
             }
-            
+
             _canvasGroup.alpha = 0f;
             HideImmediate();
         }

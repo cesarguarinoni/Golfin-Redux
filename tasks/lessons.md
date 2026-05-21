@@ -1,5 +1,16 @@
 # Lessons Learned
 
+## A SPEC clause that contradicts an existing working asset Cesar points to — the asset wins
+
+**Symptom (loop_v2_c1_result_modal, 2026-05-21):** The C1 SPEC said the Result modal should be a single card ("no Card 2 stacking") and the kickoff prompt repeated it. But the working lab `HoleCompleteWidget` Cesar referenced as "the design that already worked" is a TWO-card widget (Card 1 current hole + Card 2 next hole, with a Locked state). I followed the SPEC text and stripped Card 2 — twice. Iterations 4 and 5 both shipped a single-card modal; iter-5 even passed architect review. Cesar rejected it: *"The whole design in LabScaffold was correct. I'm not sure why it was changed."* Eight iterations total; the first five were spent before the design was even correct.
+
+**Root cause:** I treated the SPEC text as authoritative over an observable, working, Cesar-endorsed asset. When Cesar said "reuse the lab widget" (the iteration-4 interrupt), I STILL let the SPEC's "one card" clause override what the lab widget actually IS. I even asked a clarifying question ("lab body vs spec shot-history") whose two options BOTH silently assumed a single card — so Cesar's terse answer ("1") inherited the wrong frame.
+
+**Rules:**
+1. When the SPEC and a concrete existing asset disagree, and Cesar points at the asset, the asset is the spec. Surface the contradiction explicitly ("SPEC §X says one card; the lab widget you referenced has two — which governs?") instead of silently following the SPEC text.
+2. A terse answer ("1", "go", "yes") is only as correct as the question's premises. Before asking, audit your own options for a buried wrong assumption. If you later get redirected, re-examine the question you asked — not just the answer.
+3. "Reuse the working asset" means reuse its STRUCTURE, not just its art tokens. Don't reinterpret "reuse" as "rebuild a subset."
+
 ## Architect investigates root causes BEFORE re-running implementer on a FAIL
 
 **Symptom (loop_v1_2e_next_shot_handoff, 2026-05-13):** Self-reviewer iter-1 FAILed two procedural items — S2 visually unconvincing ("uniform dark brown around the ball — looks like OOB") and S3 byte-identical to S2. Reflex would be to hand the implementer a generic "redo the captures" and let them figure it out. Cesar's prompt was sharper: **"Go, but first understand why the visual evidence turned out wrong."** That instruction inverted the failure mode.

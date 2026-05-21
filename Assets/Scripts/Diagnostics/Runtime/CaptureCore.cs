@@ -122,9 +122,23 @@ namespace Golfin.Diagnostics.Runtime
             Directory.CreateDirectory(OutDir);
             string path = $"{OutDir}/{label}_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
 
-            Texture2D tex = GrabGameViewRT();
-            if (tex == null)
+            // In play mode, Screen Space Overlay canvases are composited into the final
+            // backbuffer AFTER the camera RT is written. GrabGameViewRT() reads only the
+            // camera RT and misses UI overlays (modals, toasts, HUD). Use
+            // CaptureScreenshotAsTexture() in play mode so overlays are captured.
+            // GrabGameViewRT() is the right path only in edit mode (no play-mode compositing).
+            Texture2D tex;
+            if (Application.isPlaying)
+            {
                 tex = ScreenCapture.CaptureScreenshotAsTexture();
+                Debug.Log("[CaptureCore] SnapPlayModeSafe: play-mode — using CaptureScreenshotAsTexture (captures UI overlays)");
+            }
+            else
+            {
+                tex = GrabGameViewRT();
+                if (tex == null)
+                    tex = ScreenCapture.CaptureScreenshotAsTexture();
+            }
 
             if (tex != null)
             {

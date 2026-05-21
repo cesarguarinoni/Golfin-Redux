@@ -116,7 +116,11 @@ namespace Golfin.Physics.Tests
 
         // ── Test 6: InCup + at-par → Success header + REPLAY ──────────────────────
 
+        // Stage C1: HoleCompleteDriver.HandleShotComplete is now a no-op (widget.Show stripped).
+        // These tests covered pre-C1 behavior. Marked Ignored rather than deleted
+        // so they serve as documentation of what changed.
         [Test]
+        [Ignore("Stage C1: HandleShotComplete is now a no-op. widget.Show stripped. See HoleCompleteModalController for production path.")]
         public void HoleCompleteDriver_OnInCupTerminal_AtPar_ShowsSuccessReplay()
         {
             // Arrange: TurnCount=4, Par=4 → score=0 → SUCCESS.
@@ -148,6 +152,7 @@ namespace Golfin.Physics.Tests
         // ── Test 7: InCup + over-par → Failed header + RETRY + Card 2 LOCKED ──────
 
         [Test]
+        [Ignore("Stage C1: HandleShotComplete is now a no-op. widget.Show stripped. See HoleCompleteModalController for production path.")]
         public void HoleCompleteDriver_OnInCupTerminal_OverPar_ShowsFailedRetryAndLockedNext()
         {
             // Arrange: TurnCount=5, Par=4 → score=+1 → FAILED, no PB.
@@ -215,6 +220,7 @@ namespace Golfin.Physics.Tests
         // ── Stage B Test 6: InCup → GameSession.OnHoleComplete fires with correct payload ──
 
         [Test]
+        [Ignore("Stage C1: HandleShotComplete no longer fires MarkHoleComplete. HoleCompletionBridge is the sole caller. See HoleCompletionBridgeTests.")]
         public void HoleCompleteDriver_OnInCupTerminal_FiresMarkHoleComplete()
         {
             // Arrange

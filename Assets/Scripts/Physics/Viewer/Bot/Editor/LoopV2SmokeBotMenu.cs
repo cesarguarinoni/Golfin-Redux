@@ -42,16 +42,42 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole Selection Browse")]
         public static void RunHoleSelectionBrowse() => Launch("hole_selection_browse");
 
+        // Stage C1 menu items:
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 1 Play Next")]
+        public static void RunHole1PlayNext()        => Launch("hole1_play_next");
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 1 Menu")]
+        public static void RunHole1Menu()            => Launch("hole1_menu");
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 1 Retry After Fail")]
+        public static void RunHole1RetryAfterFail()  => Launch("hole1_retry_after_fail");
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 18 Course Cleared")]
+        public static void RunHole18CourseCleared()  => Launch("hole18_course_cleared");
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]
-        static bool ValidateRunHole1()          => !EditorApplication.isPlaying;
+        static bool ValidateRunHole1()               => !EditorApplication.isPlaying;
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Settings Round Trip", isValidateFunction: true)]
-        static bool ValidateRunSettings()       => !EditorApplication.isPlaying;
+        static bool ValidateRunSettings()            => !EditorApplication.isPlaying;
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole Selection Browse", isValidateFunction: true)]
-        static bool ValidateRunHoleSelection()  => !EditorApplication.isPlaying;
+        static bool ValidateRunHoleSelection()       => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 1 Play Next", isValidateFunction: true)]
+        static bool ValidateHole1PlayNext()          => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 1 Menu", isValidateFunction: true)]
+        static bool ValidateHole1Menu()              => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 1 Retry After Fail", isValidateFunction: true)]
+        static bool ValidateHole1RetryAfterFail()    => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 18 Course Cleared", isValidateFunction: true)]
+        static bool ValidateHole18CourseCleared()    => !EditorApplication.isPlaying;
 
         // ── Launcher ─────────────────────────────────────────────────────────
 
