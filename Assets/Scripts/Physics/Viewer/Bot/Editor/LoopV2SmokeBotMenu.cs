@@ -179,17 +179,15 @@ namespace Golfin.Physics.Viewer.Editor
                 Debug.Log($"[LoopV2SmokeBotMenu] Injected [LoopV2SmokeBot] host into play-mode scene " +
                           $"(scenario={Golfin.Physics.Viewer.LoopV2SmokeBot.Scenario}, not saved to disk).");
 
-                // Optional companion frame recorder for demo-video capture. Injected only
-                // when armed (BotFrameRecorder.RecordVideo); also in-memory, never saved.
-                if (Golfin.Physics.Viewer.BotFrameRecorder.RecordVideo)
-                {
-                    var recGo = new GameObject("[BotFrameRecorder]");
-                    recGo.AddComponent<Golfin.Physics.Viewer.BotFrameRecorder>();
-                    Debug.Log("[LoopV2SmokeBotMenu] Injected [BotFrameRecorder] (video recording armed).");
-                }
+                // Optional demo-video capture via the Unity Recorder. No-op unless
+                // BotVideoRecorder.RecordVideo is armed. Editor-driven — no scene object.
+                BotVideoRecorder.Begin();
             }
             else if (state == PlayModeStateChange.ExitingPlayMode)
             {
+                // Finalize any in-progress demo-video recording before play mode tears down.
+                BotVideoRecorder.End();
+
                 // Safe point to restore DisableSceneReload — play mode is ending, no game loop impact.
                 bool restore = UnityEditor.SessionState.GetBool("LoopV2SmokeBot.RestoreSceneReload", false);
                 if (restore)

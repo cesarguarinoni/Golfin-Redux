@@ -1,32 +1,31 @@
 #!/usr/bin/env python3
 """
-build_bot_video.py — assemble a captioned demo video from a Loop v2 smoke-bot run.
+build_bot_video.py — burn captions into a Loop v2 smoke-bot demo recording.
 
-Reusable, data-driven replacement for the removed in-engine BotVideoRecorder
-(see Docs/Architecture/BOT_FRAMEWORK.md §8). The Unity side only dumps raw PNG
-frames (BotFrameRecorder.cs); ALL encoding and captioning happens here, in ffmpeg.
+The Unity Recorder (driven by BotVideoRecorder.cs) captures a smooth, full-framerate
+MP4 of a bot run. This script is the caption pass: it reads that recording + the bot's
+history.log and burns in ffmpeg drawtext captions, producing the final demo video.
 
-Inputs (produced by a bot run with video recording armed):
-  - frames    : Docs/Diagnostics/_capture/botframe_NNNNN_*.png
-  - manifest  : tasks/loop_v2_smoke_bot/<scenario>/video/frames_manifest.csv
-                (frame index -> Time.realtimeSinceStartup)
+Inputs (produced by a bot run with video recording armed — BotVideoRecorder.RecordVideo):
+  - raw video : tasks/loop_v2_smoke_bot/<scenario>/video/raw.mp4
+  - sidecar   : tasks/loop_v2_smoke_bot/<scenario>/video/record_info.json
+                ({record_start_realtime, mp4, fps}) — record_start_realtime is the
+                bot-clock Time.realtimeSinceStartup at record start, the SAME clock
+                BotDriver.LogStep stamps history.log with, so captions sync exactly.
   - log       : tasks/loop_v2_smoke_bot/<scenario>/screenshots/history.log
-                ([t=NN.NN] step lines — SAME clock as the manifest, so captions
-                 sync exactly)
 
 Output:
-  - Docs/Videos/<scenario>_<suffix>.mp4   (H.264, real-time, burned-in captions)
+  - Docs/Videos/<scenario>_<suffix>.mp4   (H.264, burned-in captions)
 
-Captions are auto-derived from the log's `Click: '<name>'` lines, plus a title
-card. Edit CAPTION logic below to recaption — no Unity rebuild needed.
+Captions are auto-derived from the log's `Click: '<name>'` lines plus a title card.
+Edit parse_captions() to recaption — no Unity rebuild, no re-record needed.
 
 Usage:
   python3 Docs/Scripts/build_bot_video.py --scenario settings_round_trip
-  python3 Docs/Scripts/build_bot_video.py --scenario hole1_play_next \\
-      --title "Loop v2 Stage F — Button Press Feedback" --keep-frames
+  python3 Docs/Scripts/build_bot_video.py --scenario hole1_play_next --keep-raw
 """
 import argparse
-import glob
+import json
 import os
 import re
 import shutil
@@ -35,8 +34,11 @@ import sys
 import tempfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-CAPTURE_DIR = os.path.join(REPO, "Docs/Diagnostics/_capture")
-FRAME_GLOB = "botframe_*.png"
+
+# The Unity Recorder takes a short spin-up between StartRecording() (when
+# record_start_realtime is stamped) and its first actually-recorded frame.
+# Measured ~0.4 s; this shifts captions earlier to compensate. Tune if needed.
+RECORDER_LEAD = 0.40
 
 FONT_CANDIDATES = [
     "/System/Library/Fonts/Helvetica.ttc",
@@ -48,13 +50,10 @@ FONT_CANDIDATES = [
 
 def find_bin(name):
     """Locate a binary on PATH or in ~/.local/bin."""
-    p = shutil.which(name)
-    if p:
-        return p
-    local = os.path.expanduser(f"~/.local/bin/{name}")
-    if os.path.exists(local):
-        return local
-    sys.exit(f"ERROR: '{name}' not found (PATH or ~/.local/bin). Install it first.")
+    p = shutil.which(name) or os.path.expanduser(f"~/.local/bin/{name}")
+    if not (p and os.path.exists(p)):
+        sys.exit(f"ERROR: '{name}' not found (PATH or ~/.local/bin). Install it first.")
+    return p
 
 
 def find_font():
@@ -64,33 +63,14 @@ def find_font():
     sys.exit("ERROR: no usable system font found. Add one to FONT_CANDIDATES.")
 
 
-def read_manifest(path):
-    """Return list of (frame_index, realtime) from frames_manifest.csv."""
-    if not os.path.exists(path):
-        sys.exit(f"ERROR: manifest not found: {path}\n"
-                 f"Run the bot scenario with video recording armed first.")
-    rows = []
-    with open(path) as fh:
-        next(fh, None)  # header
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
-            idx, rt = line.split(",")
-            rows.append((int(idx), float(rt)))
-    if not rows:
-        sys.exit(f"ERROR: manifest is empty: {path}")
-    return rows
-
-
 def parse_captions(log_path, rec_start, rec_end):
     """
-    Parse history.log -> [(start, end, text)] in video-relative seconds.
-    Caption every `Click: '<name>'`; each shows until the next click (capped).
+    history.log -> [(start, end, text)] in video-relative seconds.
+    Caption every `Click: '<name>'`; each shows until the next click (capped ~2.6s).
     """
     events = []
     if not os.path.exists(log_path):
-        print(f"WARN: history.log not found ({log_path}) — captions will be title only.")
+        print(f"WARN: history.log not found ({log_path}) — title caption only.")
         return events
     click_re = re.compile(r"\[t=([\d.]+)\]\s+Click:\s+'([^']+)'")
     raw = []
@@ -99,20 +79,22 @@ def parse_captions(log_path, rec_start, rec_end):
             m = click_re.search(line)
             if m:
                 raw.append((float(m.group(1)), m.group(2)))
+    span = rec_end - rec_start
     for i, (t, name) in enumerate(raw):
         start = t - rec_start
-        nxt = (raw[i + 1][0] - rec_start) if i + 1 < len(raw) else (rec_end - rec_start)
+        nxt = (raw[i + 1][0] - rec_start) if i + 1 < len(raw) else span
         end = min(start + 2.6, nxt)
         if end <= start:
             end = start + 1.2
-        if start < 0:
-            start = 0.0
+        start = max(start, 0.0)
+        if start >= span:
+            continue
         # Plain ASCII marker — fancy arrow glyphs tofu in most system fonts.
-        events.append((start, end, f"Tap   {name}"))
+        events.append((start, min(end, span), f"Tap   {name}"))
     return events
 
 
-def esc_path(p):
+def esc(p):
     """Escape a path for an ffmpeg filter option value."""
     return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
@@ -122,58 +104,50 @@ def main():
     ap.add_argument("--scenario", required=True, help="smoke-bot scenario key")
     ap.add_argument("--title", default="Loop v2 — Stage F\nButton Press Feedback")
     ap.add_argument("--suffix", default="stageF_buttons", help="output filename suffix")
-    ap.add_argument("--fps", type=int, default=30, help="output framerate")
-    ap.add_argument("--keep-frames", action="store_true", help="do not delete PNG frames after")
+    ap.add_argument("--keep-raw", action="store_true", help="keep the raw Recorder mp4 + sidecar")
     args = ap.parse_args()
 
     ffmpeg = find_bin("ffmpeg")
     ffprobe = find_bin("ffprobe")
     font = find_font()
 
-    scen_dir = os.path.join(REPO, "tasks/loop_v2_smoke_bot", args.scenario)
-    manifest = read_manifest(os.path.join(scen_dir, "video/frames_manifest.csv"))
-    log_path = os.path.join(scen_dir, "screenshots/history.log")
+    vdir = os.path.join(REPO, "tasks/loop_v2_smoke_bot", args.scenario, "video")
+    info_path = os.path.join(vdir, "record_info.json")
+    if not os.path.exists(info_path):
+        sys.exit(f"ERROR: {info_path} not found.\n"
+                 f"Run the scenario with video recording armed "
+                 f"(BotVideoRecorder.RecordVideo = true) first.")
+    with open(info_path) as fh:
+        info = json.load(fh)
+    rec_start = float(info["record_start_realtime"]) + RECORDER_LEAD
+    raw = info["mp4"]
+    if not os.path.isabs(raw):
+        raw = os.path.join(REPO, raw)
+    if not os.path.exists(raw):
+        sys.exit(f"ERROR: raw recording not found: {raw}")
 
-    frames = sorted(glob.glob(os.path.join(CAPTURE_DIR, FRAME_GLOB)))
-    if not frames:
-        sys.exit(f"ERROR: no frames matching {FRAME_GLOB} in {CAPTURE_DIR}")
-    n = min(len(frames), len(manifest))
-    if len(frames) != len(manifest):
-        print(f"WARN: {len(frames)} frames vs {len(manifest)} manifest rows — using {n}.")
-    frames = frames[:n]
-    times = [manifest[i][1] for i in range(n)]
-    rec_start, rec_end = times[0], times[-1]
-    duration = rec_end - rec_start
-    print(f"Frames: {n}  |  span: {duration:.1f}s real-time")
+    # Probe the raw video: width, height (stream) then duration (format).
+    probe = subprocess.check_output(
+        [ffprobe, "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width,height:format=duration",
+         "-of", "default=nw=1:nk=1", raw]
+    ).decode().split()
+    w, h, duration = int(probe[0]), int(probe[1]), float(probe[2])
+    print(f"Raw recording: {w}x{h}, {duration:.1f}s")
 
-    captions = parse_captions(log_path, rec_start, rec_end)
+    log_path = os.path.join(REPO, "tasks/loop_v2_smoke_bot", args.scenario,
+                            "screenshots/history.log")
+    captions = parse_captions(log_path, rec_start, rec_start + duration)
     captions.insert(0, (0.0, 3.6, args.title))
     print(f"Captions: {len(captions)}")
 
-    # Probe first frame size; ensure even dimensions for yuv420p.
-    dims = subprocess.check_output(
-        [ffprobe, "-v", "error", "-select_streams", "v:0",
-         "-show_entries", "stream=width,height", "-of", "csv=p=0", frames[0]]
-    ).decode().strip().split(",")
-    w, h = int(dims[0]), int(dims[1])
     fontsize = max(22, h // 32)
     title_fontsize = max(28, h // 40)  # smaller — title is 2 lines, must not clip width
 
     tmp = tempfile.mkdtemp(prefix="botvid_")
     try:
-        # 1. concat list with per-frame real-time durations.
-        concat_path = os.path.join(tmp, "concat.txt")
-        with open(concat_path, "w") as fh:
-            fh.write("ffconcat version 1.0\n")
-            for i in range(n):
-                dur = (times[i + 1] - times[i]) if i + 1 < n else (1.0 / args.fps)
-                dur = max(dur, 0.001)
-                fh.write(f"file '{frames[i]}'\n")
-                fh.write(f"duration {dur:.4f}\n")
-            fh.write(f"file '{frames[-1]}'\n")  # concat-demuxer last-frame quirk
-
-        # 2. drawtext filter per caption (textfile= avoids all text escaping).
-        draw = [f"scale=trunc(iw/2)*2:trunc(ih/2)*2"]
+        # drawtext per caption — textfile= avoids all text-escaping headaches.
+        draw = ["scale=trunc(iw/2)*2:trunc(ih/2)*2"]
         for i, (start, end, text) in enumerate(captions):
             cap_file = os.path.join(tmp, f"cap_{i}.txt")
             with open(cap_file, "w", encoding="utf-8") as fh:
@@ -182,8 +156,8 @@ def main():
             fs = title_fontsize if is_title else fontsize
             y = "(h-text_h)/2" if is_title else f"h-text_h-{max(80, h // 12)}"
             draw.append(
-                f"drawtext=textfile='{esc_path(cap_file)}'"
-                f":fontfile='{esc_path(font)}'"
+                f"drawtext=textfile='{esc(cap_file)}'"
+                f":fontfile='{esc(font)}'"
                 f":fontsize={fs}:fontcolor=white"
                 f":box=1:boxcolor=black@0.62:boxborderw={max(10, fs // 3)}"
                 f":x=(w-text_w)/2:y={y}"
@@ -191,17 +165,14 @@ def main():
             )
         vf = ",".join(draw)
 
-        # 3. encode.
         out_dir = os.path.join(REPO, "Docs/Videos")
         os.makedirs(out_dir, exist_ok=True)
         out_path = os.path.join(out_dir, f"{args.scenario}_{args.suffix}.mp4")
         cmd = [
-            ffmpeg, "-y",
-            "-f", "concat", "-safe", "0", "-i", concat_path,
+            ffmpeg, "-y", "-i", raw,
             "-vf", vf,
-            "-r", str(args.fps),
             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "medium", "-crf", "23",
-            "-movflags", "+faststart",
+            "-movflags", "+faststart", "-an",
             out_path,
         ]
         print(f"Encoding -> {out_path}")
@@ -211,14 +182,13 @@ def main():
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
-    # 4. clean up frames unless asked to keep.
-    if not args.keep_frames:
-        for f in frames:
+    if not args.keep_raw:
+        for f in (raw, info_path):
             try:
                 os.remove(f)
             except OSError:
                 pass
-        print(f"Cleaned up {len(frames)} PNG frames from {CAPTURE_DIR}")
+        print("Cleaned up raw recording + sidecar.")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,19 @@
+{
+    "name": "Golfin.Physics.Viewer.BotEditor",
+    "rootNamespace": "Golfin.Physics.Viewer.Editor",
+    "references": [
+        "Golfin.Physics.Viewer",
+        "Unity.Recorder.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

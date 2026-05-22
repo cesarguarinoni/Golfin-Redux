@@ -194,43 +194,44 @@ That's it — the launcher, host lifecycle, capture, and logging are all shared.
 
 ---
 
-## 8. Demo video pipeline (`BotFrameRecorder` + `build_bot_video.py`)
+## 8. Demo video pipeline (Unity Recorder + `build_bot_video.py`)
 
-Bot runs can be assembled into captioned demo videos. The pipeline is split so that ALL
-encoding and captioning is data-driven (ffmpeg), not baked into the engine. This replaces
-the original temporary `BotVideoRecorder.cs` (in-engine `MediaEncoder` + a live caption
-canvas — removed after the first demos; that approach was custom and cumbersome).
+Bot runs can be turned into captioned demo videos. Capture uses the **Unity Recorder
+package** (`com.unity.recorder`) — a true 60 fps recording with no per-frame stall;
+captioning is a separate data-driven ffmpeg pass. (An earlier PNG-dump approach was
+capped at ~8 fps by synchronous `CaptureScreenshotAsTexture` + encode — too coarse for
+the 0.12 s press-pulse. The Recorder's async pipeline records at full framerate.)
 
-**Capture (Unity) — `Assets/Scripts/Physics/Viewer/Bot/BotFrameRecorder.cs`**
-- A companion MonoBehaviour injected by `LoopV2SmokeBotMenu` at `EnteredPlayMode`, but
-  ONLY when `BotFrameRecorder.RecordVideo` is armed (SessionState; clears itself on
-  `Start`, like `LoopV2SmokeBot.Armed`). In-memory, never saved to a scene.
-- Each frame: `yield return new WaitForEndOfFrame()` **(mandatory** —
-  `CaptureScreenshotAsTexture` returns null otherwise), then `CaptureCore.SnapPlayModeSafe`
-  dumps a PNG to `Docs/Diagnostics/_capture/botframe_NNNNN_*.png`. Only frames that
-  produced a real file are counted, so the manifest stays 1:1 with the PNGs.
-- On play-mode exit writes `tasks/loop_v2_smoke_bot/<scenario>/video/frames_manifest.csv`
-  (per-frame `Time.realtimeSinceStartup` — the SAME clock `BotDriver.LogStep` uses, so
-  captions sync exactly).
-- It ONLY dumps frames — no MediaEncoder, no in-game caption canvas.
+**Capture (Unity) — `Assets/Scripts/Physics/Viewer/Bot/Editor/BotVideoRecorder.cs`**
+- A static editor class (its own editor asmdef `Golfin.Physics.Viewer.BotEditor`, which
+  references `Unity.Recorder.Editor`). Driven entirely from `LoopV2SmokeBotMenu`'s
+  `playModeStateChanged` hook — `Begin()` at `EnteredPlayMode`, `End()` at
+  `ExitingPlayMode`. No MonoBehaviour, no scene object.
+- Active only when `BotVideoRecorder.RecordVideo` is armed (SessionState; cleared on
+  `Begin` so it never leaks into a later run).
+- Builds a `MovieRecorderSettings` (MP4, Game View input at the live resolution) +
+  `RecorderControllerSettings` with `FrameRatePlayback.Variable` — **variable = real-time
+  recording**, so video time == the bot's real-time clock (constant playback would drive
+  `Time.captureFramerate` and stretch the video to game-time, desyncing captions).
+- Output: `tasks/loop_v2_smoke_bot/<scenario>/video/raw.mp4` plus a `record_info.json`
+  sidecar (`record_start_realtime` — the bot-clock realtime at record start).
 
-**Assemble (ffmpeg) — `Docs/Scripts/build_bot_video.py`**
-- `python3 Docs/Scripts/build_bot_video.py --scenario <key> [--title "..."] [--keep-frames]`
-- Reads the manifest + the bot's `history.log`, builds an ffmpeg concat list with
-  per-frame real-time durations, derives `drawtext` captions from the log's
-  `Click: '<name>'` lines, encodes `Docs/Videos/<scenario>_stageF_buttons.mp4`, and
-  deletes the PNG frames (unless `--keep-frames`).
-- Captions are data — edit `parse_captions` in the script to recaption; no Unity rebuild.
+**Caption (ffmpeg) — `Docs/Scripts/build_bot_video.py`**
+- `python3 Docs/Scripts/build_bot_video.py --scenario <key> [--title "..."] [--keep-raw]`
+- Reads `raw.mp4` + `record_info.json` + the bot's `history.log`, burns in `drawtext`
+  captions derived from the log's `Click: '<name>'` lines, encodes
+  `Docs/Videos/<scenario>_stageF_buttons.mp4`, and deletes the raw mp4 (unless
+  `--keep-raw`).
+- Captions sync via `record_start_realtime`; a `RECORDER_LEAD` constant (~0.4 s)
+  compensates for the Recorder's spin-up between `StartRecording()` and its first frame.
+- Captions are data — edit `parse_captions` to recaption; no Unity rebuild, no re-record.
 
 **Arming a recorded run** (e.g. via MCP `script-execute`):
-`BotFrameRecorder.RecordVideo = true; LoopV2SmokeBotMenu.RunSettingsRoundTrip();`
+`BotVideoRecorder.RecordVideo = true; LoopV2SmokeBotMenu.RunSettingsRoundTrip();`
 
 **Requires** `ffmpeg` + `ffprobe` on PATH or in `~/.local/bin` (no Homebrew needed —
-static builds from evermeet.cx work).
-
-**Known limitation:** capture runs ~8–12 fps (PNG-encode bound), so the 0.12 s
-`ButtonPressFeedback` pulse is only marginally sampled. For a pulse-focused showcase,
-drop the Game View resolution before the run to lift the capture frame rate.
+static builds from evermeet.cx work). `com.unity.recorder` must be in the project
+(it is — 5.1.6).
 
 ---
 
