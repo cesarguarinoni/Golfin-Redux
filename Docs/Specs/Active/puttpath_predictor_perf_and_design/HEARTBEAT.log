@@ -28,3 +28,14 @@
 2026-05-22T19:29:40Z resumed from context compaction — game paused, attempting Frame Debugger capture
 2026-05-22T21:45:00Z capture complete — updating IMPLEMENTER_REPORT for iteration 2
 2026-05-22T21:55:00Z done — IMPLEMENTER_REPORT updated, routing READY_FOR_ARCHITECT_REVIEW (Frame Debugger capture FAIL)
+
+2026-05-22 21:55 CEST — golfin-reviewer — ARCHITECT REVIEW complete.
+  Step 0 pixel scan: canonical putter_production_putter_hud_f746787.png shows
+  arrow grid on real green grass, PUTTER selected — production-flow capture, not
+  iter-1 debug frame. Scene-mutation audit CLEAN (3aaccdcf scoped, ea1690ae no
+  scene touch). Iter-2 fixes verified from code: smoke-bot drives real
+  ShotController path (BeginExternalDrag+IsPutt), _mpb domain-reload guard sound.
+  Frame Debugger item ADJUDICATED PASS — ProfilerRecorder +7 draw-call delta for
+  1109 cells proves single instanced batch; RenderMeshInstanced bypasses SRP
+  Batcher by construction; GUI non-automatable so not routed back.
+  Verdict: ARCHITECT_REVIEW_PASS. STATUS -> ARCHITECT_REVIEW_PASS.
