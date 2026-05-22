@@ -83,6 +83,75 @@ namespace Golfin.Save.PlayMode.Tests
             yield return null; // let OnDestroy run
         }
 
+        // ── Test C: App-pause flush path — sync-over-async must not deadlock ────
+        //
+        // This is the regression test for ARCHITECT_REVIEW FAIL 1.
+        //
+        // SaveDataHost.OnApplicationPause(true) calls FlushNow().GetAwaiter().GetResult() on
+        // Unity's main thread (which carries UnitySynchronizationContext). Without
+        // ConfigureAwait(false) on the flush path, each continuation is posted back to the
+        // main-thread message queue which .GetResult() is blocking → deadlock. The fix is
+        // ConfigureAwait(false) on both SaveDataHost.FlushNow() and LocalJsonPersister.SaveAsync().
+        //
+        // How this test catches the regression:
+        //   - It calls FlushNow().GetAwaiter().GetResult() from inside a [UnityTest] coroutine,
+        //     which runs on Unity's main thread (same UnitySynchronizationContext that
+        //     OnApplicationPause has). If ConfigureAwait(false) is absent, .GetResult() deadlocks
+        //     and the test runner hangs forever (itself the failure signal).
+        //   - After the call returns, we assert the file was written.
+        //
+        // IMPORTANT: This test has no explicit timeout in C# — Unity's [UnityTest] framework
+        // will surface a hang as a test timeout in the editor. A passing result proves the
+        // sync-block completes without deadlocking. A regression (removing ConfigureAwait(false))
+        // will cause this test to never return.
+
+        [UnityTest]
+        public IEnumerator AppPauseFlush_SyncOverAsync_CompletesWithoutDeadlock()
+        {
+            // Arrange: create a real SaveDataHost with a real LocalJsonPersister.
+            // Using LocalJsonPersister directly (not SpyPersister) because:
+            //   a) This is exactly the production code path OnApplicationPause uses.
+            //   b) SpyPersister.SaveAsync does not have ConfigureAwait(false) on its
+            //      internal await; if SpyPersister were used here, it would re-introduce
+            //      the exact deadlock we're testing against (its continuation would post
+            //      back to UnitySynchronizationContext via the missing ConfigureAwait(false),
+            //      even though LocalJsonPersister + FlushNow both have ConfigureAwait(false)).
+            //      The deadlock regression test must only exercise code that actually uses
+            //      ConfigureAwait(false) — i.e. the production LocalJsonPersister path.
+            var go   = new GameObject("TestSaveDataHost_AppPause");
+            var host = go.AddComponent<SaveDataHost>();
+            // Awake fires; default LocalJsonPersister is created (pointing to Application.persistentDataPath).
+            // We inject a LocalJsonPersister that points to our temp dir for isolation.
+            var savePath    = Path.Combine(_testDir, "save_app_pause_test.json");
+            var persister   = new LocalJsonPersister(savePath);
+            host.SetPersister(persister);
+
+            // Mark dirty so FlushNow has work to do (identical condition as OnApplicationPause)
+            host.MarkDirty();
+
+            // Act: simulate exactly what OnApplicationPause(true) does —
+            // call FlushNow().GetAwaiter().GetResult() synchronously on the main thread.
+            // This BLOCKS the main thread until FlushNow's Task completes.
+            // With ConfigureAwait(false) in place on both FlushNow and LocalJsonPersister.SaveAsync:
+            //   - SaveAsync's continuation runs on a thread-pool thread (not UnitySynchronizationContext)
+            //   - File.WriteAllTextAsync + File.Move complete on the thread pool
+            //   - FlushNow's Task completes → .GetResult() unblocks the main thread
+            // Without ConfigureAwait(false): each await posts continuation back to the blocked main
+            // thread → File.Replace step never executes → deadlock (ANR / watchdog kill on mobile).
+            //
+            // If this line never returns, the test hangs (= deadlock regression caught).
+            host.FlushNow().GetAwaiter().GetResult();
+
+            // Assert: FlushNow returned (no deadlock), and save.json was written to disk.
+            Assert.IsTrue(File.Exists(savePath),
+                "save.json must exist on disk after the synchronous app-pause flush " +
+                "(FlushNow().GetAwaiter().GetResult()) completes without deadlocking.");
+
+            // Cleanup
+            Object.Destroy(go);
+            yield return null; // let OnDestroy run
+        }
+
         // ── Test B: Debounce coalesces 10 rapid MarkDirty calls into 1 write ──
         //
         // Instantiates a SaveDataHost, injects a SpyPersister, calls MarkDirty() 10
@@ -148,7 +217,9 @@ namespace Golfin.Save.PlayMode.Tests
 
         public async Task SaveAsync(string json)
         {
-            await _inner.SaveAsync(json);
+            // ConfigureAwait(false): prevents deadlock when SaveAsync is called from a context
+            // that blocks on the result (e.g. .GetAwaiter().GetResult() from the main thread).
+            await _inner.SaveAsync(json).ConfigureAwait(false);
             _onWrite(); // increments counter AFTER the real disk write completes
         }
     }

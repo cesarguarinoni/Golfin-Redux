@@ -1,0 +1,24 @@
+[t=12.27] === LoopV2SmokeBot started: scenario='hole18_course_cleared' ===
+[t=12.28] === Hole 18 Course Cleared ===
+[t=12.28] NavigateToHome: waiting for app startup sequence…
+[t=12.28]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=12.78] Click: 'StartButton'
+[t=12.78]   → clicked StartButton
+[t=15.29]   NavigateToHome: reached Home after 3.0s
+[t=16.29] Click: 'PLAY'
+[t=16.30]   → clicked PlayButton
+[t=17.80] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=17.80]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=17.80] WaitFor: matchmaking opponent found (timeout=30s)
+[t=21.58]   WaitFor OK: matchmaking opponent found after 3.8s
+[t=22.08] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=23.22]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 1.0s
+[t=23.22] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=23.74]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
+[t=26.75]   Hole18CourseCleared: setting CurrentHoleNumber = 18
+[t=26.95] Capture: s01_gameplay_armed_h18 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole18_course_cleared/screenshots/s01_gameplay_armed_h18_2026-05-21_19-24-08.png
+[t=26.95] ForceShotComplete: driving terminal=InCup
+[t=26.98] ForceShotComplete OK: terminal=InCup
+[t=30.16] Capture: s02_result_modal_h18_cleared → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole18_course_cleared/screenshots/s02_result_modal_h18_cleared_2026-05-21_19-24-11.png
+[t=30.17] === Hole 18 Course Cleared: all captures done ===
+[t=30.17] === Scenario complete ===

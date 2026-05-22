@@ -10,3 +10,15 @@
 2026-05-22T10:46:49 PlayMode tests written, EditMode tests updated, preparing to trigger Unity compile
 2026-05-22T10:51:36 EditMode tests: 9/9 PASS. Running PlayMode tests now.
 2026-05-22T10:55:10 done — Fails A/B/C/D addressed; EditMode 9/9 PASS, PlayMode 2/2 PASS; report updated; awaiting review
+2026-05-22T11:02:12Z activated — redo iter 3: fix OnApplicationPause deadlock, delete loose Newtonsoft DLL, add app-pause PlayMode test
+2026-05-22T11:03:17Z deleted loose Newtonsoft.Json.dll, triggering Unity recompile
+2026-05-22T11:03:39Z calling Unity MCP assets-refresh after DLL deletion
+2026-05-22T11:04:14Z calling MCP tools for assets-refresh + compile verify
+2026-05-22T11:04:35Z attempting MCP assets-refresh + compile check
+2026-05-22T11:07:08Z compile verified clean, running EditMode tests
+2026-05-22T11:10:40Z running PlayMode tests synchronously
+2026-05-22T11:15:50Z fixing SpyPersister deadlock in test — adding ConfigureAwait(false) to SpyPersister.SaveAsync OR using bare LocalJsonPersister in AppPause test
+2026-05-22T11:18:19Z Unity deadlocked on hung test - attempting computer-use to exit play mode
+2026-05-22T11:18:57Z Unity killed (SIGTERM) and relaunched
+2026-05-22T11:22:29Z waiting for Unity to finish startup + compilation
+2026-05-22T11:30:00Z redo iter 3 resumed — Unity restarted; checking MCP connectivity + compile state

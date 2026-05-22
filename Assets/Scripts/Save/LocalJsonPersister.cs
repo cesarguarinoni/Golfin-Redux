@@ -58,11 +58,20 @@ namespace Golfin.Save
         /// <summary>
         /// Atomic async write. Never blocks main thread.
         /// Step 1: write to tmp. Step 2: atomically replace dest with tmp.
+        ///
+        /// ConfigureAwait(false) on every await is REQUIRED:
+        ///   OnApplicationPause calls FlushNow().GetAwaiter().GetResult() (sync-over-async).
+        ///   UnitySynchronizationContext is installed on the main thread. Without ConfigureAwait(false),
+        ///   each continuation is posted back to the main-thread context which .GetResult() is blocking
+        ///   → classic deadlock. ConfigureAwait(false) resumes continuations on a thread-pool thread
+        ///   instead, so they can complete while the main thread waits.
         /// </summary>
         public async Task SaveAsync(string json)
         {
             // Step 1: write to temp file (async, never blocks main thread)
-            await File.WriteAllTextAsync(_tmpPath, json);
+            // ConfigureAwait(false): continuation must NOT marshal back to UnitySynchronizationContext
+            // (prevents deadlock when called via .GetAwaiter().GetResult() from OnApplicationPause)
+            await File.WriteAllTextAsync(_tmpPath, json).ConfigureAwait(false);
 
             // Step 2: atomic rename
             if (File.Exists(_savePath))

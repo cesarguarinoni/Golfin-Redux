@@ -1,0 +1,31 @@
+[t=12.09] === LoopV2SmokeBot started: scenario='hole1_menu' ===
+[t=12.09] === Hole 1 Menu (REPLAY path — no MENU button in lab widget) ===
+[t=12.09] NavigateToHome: waiting for app startup sequence…
+[t=12.09]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=12.59] Click: 'StartButton'
+[t=12.59]   → clicked StartButton
+[t=15.10]   NavigateToHome: reached Home after 3.0s
+[t=16.26] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_menu/screenshots/s01_home_2026-05-21_17-49-52.png
+[t=16.26] Click: 'PLAY'
+[t=16.26]   → clicked PlayButton
+[t=17.77] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=17.77]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=17.91] Capture: s02_matchmaking_searching → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_menu/screenshots/s02_matchmaking_searching_2026-05-21_17-49-53.png
+[t=17.91] WaitFor: matchmaking opponent found (timeout=30s)
+[t=21.44]   WaitFor OK: matchmaking opponent found after 3.5s
+[t=22.08] Capture: s03_opponent_found → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_menu/screenshots/s03_opponent_found_2026-05-21_17-49-57.png
+[t=22.08] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=23.11]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 0.5s
+[t=23.11] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=23.62]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
+[t=26.87] Capture: s04_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_menu/screenshots/s04_gameplay_armed_2026-05-21_17-50-02.png
+[t=26.87] ForceShotComplete: driving terminal=InCup
+[t=26.92] ForceShotComplete OK: terminal=InCup
+[t=30.13] Capture: s05_result_modal → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_menu/screenshots/s05_result_modal_2026-05-21_17-50-05.png
+[t=30.14] Click: 'ReplayButton'
+[t=30.17]   → clicked ReplayButton
+[t=32.28] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=32.28]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.0s
+[t=35.74] Capture: s06_hole1_rearmed_from_replay → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_menu/screenshots/s06_hole1_rearmed_from_replay_2026-05-21_17-50-11.png
+[t=35.74] === Hole 1 Menu: all captures done ===
+[t=35.74] === Scenario complete ===

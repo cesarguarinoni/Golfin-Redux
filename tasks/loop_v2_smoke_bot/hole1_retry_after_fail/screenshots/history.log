@@ -1,0 +1,31 @@
+[t=12.49] === LoopV2SmokeBot started: scenario='hole1_retry_after_fail' ===
+[t=12.49] === Hole 1 Retry After Fail ===
+[t=12.49] NavigateToHome: waiting for app startup sequence…
+[t=12.49]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=12.99] Click: 'StartButton'
+[t=13.00]   → clicked StartButton
+[t=15.51]   NavigateToHome: reached Home after 3.0s
+[t=16.66] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_retry_after_fail/screenshots/s01_home_2026-05-21_18-44-54.png
+[t=16.66] Click: 'PLAY'
+[t=16.66]   → clicked PlayButton
+[t=18.17] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=18.17]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=18.31] Capture: s02_matchmaking_searching → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_retry_after_fail/screenshots/s02_matchmaking_searching_2026-05-21_18-44-55.png
+[t=18.31] WaitFor: matchmaking opponent found (timeout=30s)
+[t=21.84]   WaitFor OK: matchmaking opponent found after 3.5s
+[t=22.34] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=22.88]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 0.5s
+[t=22.88] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=24.00]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 1.0s
+[t=27.23] Capture: s03_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_retry_after_fail/screenshots/s03_gameplay_armed_2026-05-21_18-45-04.png
+[t=27.23]   Hole1RetryAfterFail: par=5 cap=10 — bumping TurnCount to cap
+[t=27.23] ForceShotComplete: driving terminal=AtRest
+[t=27.31] ForceShotComplete OK: terminal=AtRest
+[t=30.52] Capture: s04_result_modal_failed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_retry_after_fail/screenshots/s04_result_modal_failed_2026-05-21_18-45-08.png
+[t=30.52] Click: 'RetryButton'
+[t=30.56]   → clicked RetryButton
+[t=32.60] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=32.60]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.0s
+[t=35.98] Capture: s05_hole1_rearmed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole1_retry_after_fail/screenshots/s05_hole1_rearmed_2026-05-21_18-45-13.png
+[t=35.98] === Hole 1 Retry After Fail: all captures done ===
+[t=35.98] === Scenario complete ===

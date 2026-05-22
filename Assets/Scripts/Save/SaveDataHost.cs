@@ -98,7 +98,11 @@ namespace Golfin.Save
                     _debounceCoroutine = null;
                 }
 
-                // Flush synchronously using Task.Wait — acceptable at app-pause (no frame budget)
+                // Flush synchronously — acceptable at app-pause (no frame budget).
+                // FlushNow + LocalJsonPersister.SaveAsync both use ConfigureAwait(false) so their
+                // continuations run on thread-pool threads instead of the blocked main-thread context;
+                // this breaks the sync-over-async deadlock that would otherwise occur under
+                // UnitySynchronizationContext.
                 FlushNow().GetAwaiter().GetResult();
             }
         }
@@ -180,6 +184,19 @@ namespace Golfin.Save
         /// <summary>
         /// Flush in-memory SaveData to disk. Returns a Task that resolves after the write completes.
         /// Fires OnSaved on success.
+        ///
+        /// ConfigureAwait(false) on the SaveAsync await is REQUIRED:
+        ///   OnApplicationPause calls this method via .GetAwaiter().GetResult() (sync-over-async).
+        ///   UnitySynchronizationContext is installed on Unity's main thread. Without ConfigureAwait(false),
+        ///   SaveAsync's continuation is posted back onto the main-thread context which .GetResult() is
+        ///   blocking → neither the File.WriteAllTextAsync continuation nor the File.Replace step ever
+        ///   execute → SaveAsync never completes → deadlock (ANR on Android, watchdog kill on iOS).
+        ///   ConfigureAwait(false) makes SaveAsync's continuation run on a thread-pool thread, allowing
+        ///   it to complete while the main thread waits in .GetResult().
+        ///
+        ///   Note: OnSaved?.Invoke() and the Debug.Log below run on the thread-pool continuation after
+        ///   ConfigureAwait(false). This is safe because both are null-conditional or Debug-only calls;
+        ///   they do not touch Unity scene objects.
         /// </summary>
         public async Task FlushNow()
         {
@@ -188,7 +205,9 @@ namespace Golfin.Save
             string json = JsonConvert.SerializeObject(_data, Formatting.Indented);
             try
             {
-                await _persister.SaveAsync(json);
+                // ConfigureAwait(false): continuation must NOT marshal back to UnitySynchronizationContext
+                // (prevents deadlock when called via .GetAwaiter().GetResult() from OnApplicationPause)
+                await _persister.SaveAsync(json).ConfigureAwait(false);
                 _pendingWrite = false;
                 OnSaved?.Invoke();
                 Debug.Log("[SaveDataHost] Saved to disk.");

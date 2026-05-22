@@ -1,0 +1,39 @@
+[t=12.99] === LoopV2SmokeBot started: scenario='hole_selection_entry_to_replay_rewards' ===
+[t=12.99] === Hole Selection Entry → Replay Rewards ===
+[t=12.99] NavigateToHome: waiting for app startup sequence…
+[t=12.99]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=13.49] Click: 'StartButton'
+[t=13.49]   → clicked StartButton
+[t=16.00]   NavigateToHome: reached Home after 3.0s
+[t=17.15] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_entry_to_replay_rewards/screenshots/s01_home_2026-05-22_07-30-52.png
+[t=17.15] Click: 'NavTeeButton'
+[t=17.15]   → clicked NavTeeButton
+[t=18.15] WaitForScreen: HoleSelection (timeout=10s)
+[t=18.15]   WaitForScreen OK: on 'HoleSelection' after 0.0s
+[t=18.79] Capture: s02_hole_selection → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_entry_to_replay_rewards/screenshots/s02_hole_selection_2026-05-22_07-30-53.png
+[t=18.79] Click: 'ActionButton'
+[t=18.79]   → clicked ActionButton
+[t=20.30] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=20.30]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=20.43] Capture: s03_matchmaking_searching → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_entry_to_replay_rewards/screenshots/s03_matchmaking_searching_2026-05-22_07-30-55.png
+[t=20.43] WaitFor: matchmaking opponent found (timeout=30s)
+[t=23.96]   WaitFor OK: matchmaking opponent found after 3.5s
+[t=24.58] Capture: s04_opponent_found → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_entry_to_replay_rewards/screenshots/s04_opponent_found_2026-05-22_07-30-59.png
+[t=24.58] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=25.64]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 0.5s
+[t=25.64] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=26.14]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
+[t=29.33] Capture: s05_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_entry_to_replay_rewards/screenshots/s05_gameplay_armed_2026-05-22_07-31-04.png
+[t=29.33] ForceShotComplete: driving terminal=InCup
+[t=29.37] ForceShotComplete OK: terminal=InCup
+[t=32.58] Capture: s06_result_modal_first_clear → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_entry_to_replay_rewards/screenshots/s06_result_modal_first_clear_2026-05-22_07-31-07.png
+[t=32.58] Click: 'ReplayButton'
+[t=32.61]   → clicked ReplayButton
+[t=34.65] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=34.65]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.0s
+[t=38.02] Capture: s07_gameplay_armed_after_replay → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_entry_to_replay_rewards/screenshots/s07_gameplay_armed_after_replay_2026-05-22_07-31-12.png
+[t=38.02] ForceShotComplete: driving terminal=InCup
+[t=38.11] ForceShotComplete OK: terminal=InCup
+[t=41.42] Capture: s08_result_modal_replay_clear → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole_selection_entry_to_replay_rewards/screenshots/s08_result_modal_replay_clear_2026-05-22_07-31-16.png
+[t=41.42] === Hole Selection Entry → Replay Rewards: all captures done ===
+[t=41.42] === Scenario complete ===
