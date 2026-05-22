@@ -56,6 +56,12 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 18 Course Cleared")]
         public static void RunHole18CourseCleared()  => Launch("hole18_course_cleared");
 
+        // Stage E menu item:
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Hole Selection Entry → Replay Rewards")]
+        public static void RunHoleSelectionEntryToReplayRewards()
+            => Launch("hole_selection_entry_to_replay_rewards");
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]
@@ -78,6 +84,9 @@ namespace Golfin.Physics.Viewer.Editor
 
         [MenuItem("GOLFIN/Smoke/Loop v2/C1 - Hole 18 Course Cleared", isValidateFunction: true)]
         static bool ValidateHole18CourseCleared()    => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Hole Selection Entry → Replay Rewards", isValidateFunction: true)]
+        static bool ValidateHoleSelectionEntryToReplayRewards() => !EditorApplication.isPlaying;
 
         // ── Launcher ─────────────────────────────────────────────────────────
 

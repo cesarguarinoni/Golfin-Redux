@@ -374,6 +374,85 @@ namespace Golfin.Physics.Viewer.Bot
 
             d.LogStep("=== Hole Selection Browse: all captures done ===");
         }
+
+        // ── Scenario 8: Hole Selection Entry → Replay Rewards ─────────────────
+
+        /// <summary>
+        /// Stage E gate — proves the Hole-Selection entry path AND the Part A
+        /// REPLAY-writes-progression fix end-to-end:
+        ///
+        ///   Home → bottom-nav to Hole Selection → tap PLAY on the auto-expanded
+        ///   Hole 1 card → matchmaking → gameplay → force InCup (first clear) →
+        ///   tap REPLAY → Hole 1 reloads → force InCup again (replay clear).
+        ///
+        /// The hole-card action button's GameObject name is "ActionButton" (HoleCard
+        /// prefab; the SerializeField is `actionButton` on HoleCardController). Only
+        /// Hole 1's card is expanded on screen open, and the action button lives inside
+        /// expandedContainer — so it is the single ACTIVE Button by that name and
+        /// FindButton (active-only) resolves it without ambiguity.
+        ///
+        /// Visual gate (Cesar): result_modal_first_clear shows the `rewards` pool;
+        /// result_modal_replay_clear shows the `replayRewards` pool. For Hole 1 these
+        /// differ in the CSV (Points 100/RepairKit 10/Ball 5 vs Points 50/RepairKit
+        /// 5/Ball 2), so the two captures must be visibly distinct.
+        ///
+        /// Captures: home, hole_selection, matchmaking_searching, opponent_found,
+        ///           gameplay_armed, result_modal_first_clear,
+        ///           gameplay_armed_after_replay, result_modal_replay_clear.
+        /// </summary>
+        public static IEnumerator HoleSelectionEntryToReplayRewards(BotDriver d)
+        {
+            d.LogStep("=== Hole Selection Entry → Replay Rewards ===");
+
+            // 1. Cold launch → Home.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("home");
+
+            // 2. Bottom-nav to Hole Selection (button GO "NavTeeButton").
+            yield return d.Click("NavTeeButton", settleSeconds: 1.0f);
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 10f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("hole_selection");
+
+            // 3. Tap PLAY on the auto-expanded Hole 1 card (action button GO "ActionButton").
+            yield return d.Click("ActionButton", settleSeconds: 1.5f);
+
+            // 4. Matchmaking modal opens → wait for OpponentFound → gameplay scenes load.
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return d.Capture("matchmaking_searching");
+
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("opponent_found");
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+
+            // 5. Force InCup → first-clear SUCCESS modal.
+            yield return d.ForceShotComplete("InCup", settleSeconds: 1f);
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal_first_clear");
+
+            // 6. Tap REPLAY (Card 1) → modal dismisses, Hole 1 reloads. Per the Part A
+            //    fix, OnReplay now writes progression + grants rewards before the reset.
+            yield return d.Click("ReplayButton", settleSeconds: 2f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed_after_replay");
+
+            // 7. Force InCup again → replay-clear SUCCESS modal (_wasReplay = true).
+            yield return d.ForceShotComplete("InCup", settleSeconds: 1f);
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal_replay_clear");
+
+            d.LogStep("=== Hole Selection Entry → Replay Rewards: all captures done ===");
+        }
     }
 }
 #endif
