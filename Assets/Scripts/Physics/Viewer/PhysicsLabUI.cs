@@ -44,6 +44,9 @@ namespace Golfin.Physics.Viewer
         GameObject _debugContainer;
         TMP_Text[] _debugFlagLabels = new TMP_Text[9];
 
+        // Green reader — wired at Start so heatmap toggle propagates correctly (Q5).
+        PutterGreenReader _greenReader;
+
         static readonly float[]  PlayRates      = { 0.25f, 1f, 4f, float.MaxValue };
         static readonly string[] PlayRateLabels = { "0.25×", "1×", "4×", "Instant" };
         static readonly string[] CameraLabels   = { "Chase", "Overhead", "Ground" };
@@ -54,6 +57,9 @@ namespace Golfin.Physics.Viewer
         {
             if (controller == null)
                 controller = GetComponentInParent<PhysicsLabController>();
+            // Discover PutterGreenReader on the same parent hierarchy.
+            if (controller != null)
+                _greenReader = controller.GetComponentInChildren<PutterGreenReader>(true);
             _scene = initialScene;
         }
 
@@ -209,6 +215,11 @@ namespace Golfin.Physics.Viewer
             bool newVal = !GetDebugFlag(flags, flagIndex);
             SetDebugFlag(ref flags, flagIndex, newVal);
             sc.DebugFlags = flags;
+
+            // Q5: propagate heatmap flag (index 8) to PutterGreenReader.
+            if (flagIndex == 8 && _greenReader != null)
+                _greenReader.HeatmapMode = newVal;
+
             if (_debugFlagLabels[flagIndex] != null)
             {
                 string[] names = {
@@ -225,6 +236,8 @@ namespace Golfin.Physics.Viewer
             var sc = GetShotController();
             if (sc == null) return;
             sc.DebugFlags = ShotDebugFlags.Defaults;
+            // Reset heatmap mode on green reader (default = false per ShotDebugFlags.Defaults).
+            if (_greenReader != null) _greenReader.HeatmapMode = false;
             RefreshDebugLabels();
         }
 

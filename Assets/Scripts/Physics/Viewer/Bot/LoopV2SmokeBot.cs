@@ -116,6 +116,10 @@ namespace Golfin.Physics.Viewer
                 case "save_layer_durability":
                     scenarioRoutine = Bot.Scenarios.SaveLayerDurability(driver);
                     break;
+                // Putter green reader smoke test:
+                case "putter_aim_green_reader_visible":
+                    scenarioRoutine = Bot.Scenarios.PutterAimGreenReaderVisible(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;
