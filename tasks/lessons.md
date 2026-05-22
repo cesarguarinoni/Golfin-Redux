@@ -1382,3 +1382,35 @@ look real.** Firing shots via `ShotController.FireDebugShot` works physically bu
 instant — the cone/ball/club-handle never hide and the handle never animates. Mirroring the
 real drag path (`BeginExternalDrag` → ramped `SetExternalPower` → `EndExternalDrag`, exactly
 as `ClubHandleDragger` does) runs the real state machine and the UI behaves correctly.
+
+---
+
+## Lesson R — Always Commit `.cs.meta` When Shipping a New Unity Script via SURGICAL (2026-05-22, loop_v2_f_button_press_feedback)
+
+**Origin:** Stage F Part A. Architect committed `Assets/Scripts/UI/ButtonPressFeedback.cs` without its `.cs.meta`. Code spotted the gap in Part B's IMPLEMENTER_REPORT (Finding 4) and included the meta in its Part B commit, closing the hole before it caused damage.
+
+**Why it matters:** Unity script GUIDs only live in the `.cs.meta` sidecar file. Every prefab, scene, and ScriptableObject reference to a script is by GUID, not by path or class name. Without the meta in version control:
+
+- The script appears as `<Missing Mono Script>` on any other machine — Cesar's PC, CI, a fresh Code subagent session.
+- Prefab/scene asset operations later in the pipeline that reference the script (e.g. Part B's MCP `add_component` calls) silently bind to a phantom GUID. The reference works on the original dev box because Unity has its own AssetDatabase entry; everywhere else, it's a missing-script warning at best and a runtime null at worst.
+- The bug is invisible until someone else opens the project. Both authoring machines (Cesar's Mac + PC) plus CI mean an architect-only test never catches it.
+
+**The rule:**
+
+> When Architect ships a SURGICAL new `.cs` file, the commit MUST include the matching `.cs.meta`. Before staging:
+>
+> 1. Confirm Unity Editor has been opened in the project at least once since the file was created — meta is generated on import.
+> 2. `git status` should show BOTH `Foo.cs` AND `Foo.cs.meta` as untracked or modified. If only the `.cs` shows up, the meta hasn't been generated yet — open Unity, let it import, then re-check.
+> 3. Scope the commit accordingly: `git add path/to/Foo.cs path/to/Foo.cs.meta`. Never rely on `git add .` to catch it — the meta might be gitignored or hidden under a folder you didn't intend to stage.
+>
+> Same rule applies to new `.asmdef` files (need `.asmdef.meta`), new prefab variants, new ScriptableObject assets, and any other new Unity-imported asset — the `.meta` IS the asset's identity.
+
+**Symptom to watch for** in IMPLEMENTER_REPORTs after a SURGICAL script ships: prefab/scene operations succeed locally but Code reports `<Missing Mono Script>` warnings in the Editor console on first open of the modified asset. Almost always traces back to a missing meta.
+
+**Self-check sequence Architect runs before pushing any SURGICAL new-file commit:**
+```
+git status path/to/new/file.cs path/to/new/file.cs.meta
+# Expect both lines. If only the .cs is listed, STOP. Open Unity. Re-check.
+```
+
+**Why this happened:** Architect operates on claude.ai with Filesystem MCP, which can write files but does NOT run the Unity Editor or trigger asset imports. Cesar's Unity Editor on the Mac would have generated the meta the next time it gained focus, but the commit went out before that focus event happened. Future SURGICAL ships should either (a) ask Cesar to focus Unity briefly before push, or (b) trust the next Code session to catch it and bundle the meta into its first commit — which is what happened here.
