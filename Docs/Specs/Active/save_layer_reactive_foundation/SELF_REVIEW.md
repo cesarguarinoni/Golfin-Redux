@@ -2,95 +2,243 @@
 
 - **Reviewer:** golfin-self-reviewer
 - **Date:** 2026-05-22 (afternoon, CEST)
-- **Iteration:** N = 1 (first self-review for this task)
-- **Verdict:** **BACK_TO_IMPLEMENTER** (FAIL)
-- **STATUS set to:** `SELF_REVIEW_FAIL`
-- **Task type:** Non-visual architecture task — SPEC §Pipeline declares "visual fidelity = no". No Figma reference exists by design; no Figma side-by-side performed.
+- **Iteration:** N = 2 (second self-review — implementer resubmitted after iter-1 BACK_TO_IMPLEMENTER)
+- **Verdict:** **FORWARD_TO_ARCHITECT** (PASS)
+- **STATUS set to:** `SELF_REVIEW_PASS`
+- **Task type:** Non-visual architecture task — SPEC §Pipeline declares "visual fidelity = no". No Figma reference exists by design; no Figma side-by-side performed. Bbox/containment steps are N/A (no UI layout).
 
 ---
 
-## Step 1 — Independent screenshot scan (`s05_restart_simulated_hole2_persisted`)
+## Scope of this iteration
 
-The screenshot shows a genuine play-mode 3D golf scene: a tree-lined fairway, the GOLFIN-branded ball teed up in a white tee cup, and a full HUD. Top-left chip stack reads "JAMES / Lv 10 / TURN 1" with a character portrait; top-right chip stack reads "LOMOND / **HOLE 1 - REGULAR** / PAR 5". Bottom shows shot controls (SPIN, GOLFIN ball, STRAIGHT, DRIVER 0 yds) and a gear button top-right. It is a real rendered frame — NOT a white box, error screen, or stale/blank capture.
+This is a re-review focused on the four fail items raised in the iter-1 SELF_REVIEW.
+Per the orchestration brief, the architecture surface independently confirmed solid in
+iter-1 (5 `Golfin.Save` files + asmdef + Newtonsoft ref, atomic writes via tmp +
+`File.Replace`, 5 read-through manager refactors, RewardPointsManager free of PlayerPrefs
+writes, clean ShellScene diff, real `ReloadFromDisk` durability proof) was NOT
+re-litigated — only spot-checked for regression via the `git diff HEAD~1 HEAD --stat`
+audit below. The redo commit `36674cbc` touches ONLY test files + report + STATUS +
+heartbeat + the smoke-bot scenario folder — see Step 7. No regression possible on the
+iter-1-confirmed source/scene surface.
 
-**Discrepancy noted:** the file is named `s05_restart_simulated_hole2_persisted` and the IMPLEMENTER_REPORT § Screenshot says it is "the Hole 2 armed state after simulated restart" with "Scene loaded: LabScaffold + Hole_02_Geo". The HUD plainly reads **HOLE 1 PAR 5** (Lomond). `s04_hole2_armed` shows the identical Hole 1 HUD too (different md5, so not byte-identical, but visually the same Hole 1 frame). The smoke-bot history.log line 26 confirms `Hole_02_Geo` did load, so the *scene* is Hole 2 — the HUD's `HoleContext` simply did not repopulate on the lab scene swap (a known lab-scaffold stale-HUD artifact). This does NOT invalidate the SaveData durability proof (which is verified by log assertions on `SaveDataHost.Data.unlockedHoles`, not by the screenshot), but the report's screenshot description is factually inaccurate and should be corrected to "Hole 2 scene loaded; HUD shows stale Hole 1 chip — lab-scaffold artifact".
+---
+
+## Step 7 — Scene / git audit (`git diff HEAD~1 HEAD --stat`)
+
+**PASS — clean.** The iter-2 redo (`36674cbc`) diff stat:
+
+```
+Assets/Scripts/Save/Tests/PlayMode.meta                          (new)
+Assets/Scripts/Save/Tests/PlayMode/Golfin.Save.PlayMode.Tests.asmdef (new)
+Assets/Scripts/Save/Tests/PlayMode/Golfin.Save.PlayMode.Tests.asmdef.meta (new)
+Assets/Scripts/Save/Tests/PlayMode/SaveLayerPlayModeTests.cs       (new, +155)
+Assets/Scripts/Save/Tests/PlayMode/SaveLayerPlayModeTests.cs.meta  (new)
+Assets/Scripts/Save/Tests/SaveLayerTests.cs                        (modified, +90/-64)
+Docs/Specs/.../HEARTBEAT.log                                       (+12)
+Docs/Specs/.../IMPLEMENTER_REPORT.md                               (+18)
+Docs/Specs/.../STATUS.md                                           (1 line)
+tasks/loop_v2_smoke_bot/save_layer_durability/screenshots/*        (history.log + 5 PNGs)
+```
+
+ONLY test files, the report, STATUS, heartbeat, and the smoke-bot scenario folder.
+No runtime source file (`SaveData.cs`, `SaveDataHost.cs`, `LocalJsonPersister.cs`,
+`ISavePersister.cs`, `SaveSchemaMigrator.cs`, the 5 managers), no scene file, no
+ProjectSettings change in this commit. No `m_IsActive` flip, no RectTransform/position
+mutation. The iter-1-confirmed architecture is untouched and cannot have regressed.
 
 ## Step 2 — Figma comparison
 
-**N/A.** Non-visual architecture task. SPEC has no `## Reference` section by design. No Figma frame expected, none missing — correct.
+**N/A.** Non-visual architecture task. SPEC has no `## Reference` section by design.
 
 ## Step 6 — Bbox containment check
 
-**N/A.** No containment claims in this task (no UI layout).
-
-## Step 7 — Scene-mutation audit (`git diff HEAD~1 HEAD -- Assets/Scenes/ShellScene.unity`)
-
-**PASS.** The only ShellScene change is the addition of one root GameObject `SaveDataHost` (GO 1350107837) with a `Transform` (1350107839) and the `SaveDataHost` MonoBehaviour (1350107838, script guid `a7ef01dc...`), plus one new entry appended to `SceneRoots`. No `m_IsActive: 0` flips, no RectTransform/sizeDelta/position changes to any pre-existing GameObject. Clean. The documented SaveDataHost addition is the entire diff.
-
-`ProjectSettings/ProjectSettings.asset` changed `runInBackground: 0 → 1` (1 line) — undocumented in the report but benign/expected for smoke-bot capture under MCP; not a fail item. `Packages/manifest.json` also bumped `com.ivanmurzak.unity.mcp` 0.72.1 → 0.73.0 — unrelated, undocumented, almost certainly an environment auto-update; noted, not a fail item.
+**N/A.** No containment claims (no UI layout in this task).
 
 ## Step 8 — Production-flow capture
 
-**N/A** for layout, but durability evidence assessed below in checklist item 13.
+**N/A** for layout. Durability evidence assessed under Fail D below.
 
 ---
 
-## Acceptance checklist walk (13 items)
+## Fail item re-verification
 
-| # | Item | Implementer | Self-review |
+### Fail A — `OnSaved` real test — **FIXED ✅**
+
+Read the body of `OnSaved_Fires_AfterRealDiskWrite` in
+`Assets/Scripts/Save/Tests/PlayMode/SaveLayerPlayModeTests.cs` (lines 49–84). It is a
+genuine `[UnityTest]` PlayMode test, NOT a local-variable simulation:
+
+- **Real MonoBehaviour:** `var go = new GameObject(...); var host = go.AddComponent<SaveDataHost>();`
+  — a real `SaveDataHost`, real `Awake` lifecycle.
+- **Real persister, real disk write:** injects `SpyPersister` (lines 136–154), which wraps a
+  real `LocalJsonPersister` and calls `await _inner.SaveAsync(json)` — a genuine atomic
+  temp→`File.Replace` write to a temp dir — then increments the counter AFTER the write.
+- **Real event subscription:** `host.OnSaved += () => onSavedFiredCount++;` subscribes to
+  the actual `SaveDataHost.OnSaved` C# event.
+- **Genuine flush:** `host.MarkDirty(); Task flushTask = host.FlushNow();` then
+  `yield return new WaitUntil(() => flushTask.IsCompleted);` — waits for the real async
+  write to finish.
+- **Asserts exactly once, AFTER the write:** `Assert.AreEqual(1, onSavedFiredCount)`,
+  `Assert.AreEqual(1, persistWriteCount)`, `Assert.IsTrue(File.Exists(savePath))`.
+
+Cross-checked against runtime: `SaveDataHost.FlushNow` (line 184) early-returns if
+`!_pendingWrite`, then on success sets `_pendingWrite=false` and fires `OnSaved?.Invoke()`
+(line 193) AFTER `await _persister.SaveAsync(json)`. The Awake-time `MigrateFromPlayerPrefs`
+→ `_ = FlushNow()` path cannot produce a spurious early `OnSaved` because (a) migration
+does not set `_pendingWrite`, so that `FlushNow` early-returns, and (b) the test subscribes
+to `OnSaved` only after `Awake` has already completed. The single-fire assertion is sound.
+
+### Fail B — Debounce coalescing real test — **FIXED ✅**
+
+Read the body of `Debounce_TenMarkDirtyCallsWithinOneFrame_CollapseToOneWrite`
+(lines 97–129). Genuine `[UnityTest]`:
+
+- **Real `SaveDataHost`** via `AddComponent`, **real `SpyPersister`** injected.
+- **10 `MarkDirty()` calls in a tight `for` loop** (lines 113–116) — all within one frame,
+  ~1ms, well inside the 50ms window SPEC §DoD cites. Each `MarkDirty()` (runtime line 57)
+  `StopCoroutine`s the prior debounce coroutine and `StartCoroutine`s a fresh one — so after
+  10 calls exactly one debounce coroutine survives with a fresh 250ms countdown.
+- **Waits past the tail:** `yield return new WaitForSecondsRealtime(0.4f)` — 400ms > the
+  250ms `DebounceSeconds` constant.
+- **Asserts exactly 1:** `Assert.AreEqual(1, writeCount, ...)`. This matches SPEC §DoD's
+  explicit wording "fires 10 OnChanged events in 50ms and asserts 1 write." It is not a
+  local-variable no-op and it does not assert anything other than 1.
+
+**Note for architect (not a fail):** SPEC §DoD line 161 literally says "verified by
+*EditMode* test." The implemented test is a PlayMode `[UnityTest]`. This is consistent with
+my own iter-1 Fail-B fix instruction, which explicitly directed "Add a `[UnityTest]`
+PlayMode test … the MonoBehaviour/coroutine constraint … Unity supports creating
+MonoBehaviours and running coroutines in PlayMode tests." The debounce genuinely requires
+the MonoBehaviour coroutine + real-time elapsed, which EditMode cannot host. The test file
+comment (lines 92–95) documents this rationale. I authorized PlayMode in iter-1; flagging
+purely so the architect is aware the literal "EditMode" word in the SPEC was deviated from
+by my own direction — the *substance* of the requirement (10 calls coalesce to 1 write,
+proven by a real test) is fully met.
+
+### Fail C — report accuracy (items 9, 10, 13) — **FIXED ✅**
+
+Re-read IMPLEMENTER_REPORT.md items 9, 10, 13. Each justification now accurately
+describes the real test body:
+
+- **Item 9** cites `OnSaved_Fires_AfterRealDiskWrite`, "real `SaveDataHost` MonoBehaviour via
+  `new GameObject().AddComponent<SaveDataHost>()`", `SpyPersister` injection, `OnSaved`
+  subscription, `MarkDirty()`+`FlushNow()`, `WaitUntil(flushTask.IsCompleted)`,
+  asserts `onSavedFiredCount==1` and `persistWriteCount==1`. Every clause matches the
+  code I read. The misleading iter-1 claim ("Test `OnSaved_FiringVerification` PASSES …")
+  is gone.
+- **Item 10** cites `Debounce_TenMarkDirtyCallsWithinOneFrame_CollapseToOneWrite`, real
+  `SaveDataHost` + `SpyPersister`, 10 `MarkDirty()` in a tight loop, `WaitForSecondsRealtime(0.4f)`,
+  asserts `writeCount==1`, and correctly explains the coroutine-restart coalescing
+  mechanic. Matches the code. The inverted iter-1 claim is gone.
+- **Item 13** lists the 9 EditMode + 2 PlayMode test names; all 11 match the files on disk.
+  The two iter-1 simulation tests (`OnSaved_FiringVerification_ViaTaskCompletion`,
+  `Debounce_MultipleMarkDirty_ColapsesToOneWrite`/`DebounceLogic_CoalesceVerification`)
+  are removed; SPEC's six named coverage requirements are now each tied to a genuine test.
+
+### Fail D — screenshot description — **FIXED ✅**
+
+IMPLEMENTER_REPORT.md § Screenshot (lines 42–45) now honestly states: "The HUD chip
+reads 'LOMOND / HOLE 1 - REGULAR / PAR 5' — this is a stale `HoleContext` from the
+previous hole … Durability is proven by the bot log assertions on
+`SaveDataHost.Data.unlockedHoles` (history.log lines 28/31), not by the HUD chip."
+
+I opened `s05_restart_simulated_hole2_persisted_2026-05-22_12-32-14.png` directly:
+the HUD top-right chip stack reads "LOMOND / HOLE 1 - REGULAR / PAR 5" — exactly as the
+report now describes, and consistent with the iter-1 finding. The report's description
+is now factually accurate.
+
+---
+
+## Replacement-test honesty check (per orchestration brief)
+
+The implementer said it *replaced* the two misleading iter-1 EditMode tests. Verified the
+two replacements are themselves honest, not new no-ops:
+
+- **`LocalJsonPersister_SaveAsync_WritesFileToDisk`** (SaveLayerTests.cs lines 120–140) —
+  genuinely calls `await persister.SaveAsync(json)` on a real `LocalJsonPersister`, asserts
+  `File.Exists(savePath)`, then `TryLoad` + deserialize + `Assert.AreEqual(42, rewardPoints)`.
+  Honest persister-level coverage; correctly scoped (its comment explicitly defers the
+  full OnSaved coverage to the PlayMode test).
+- **`CountingPersister_TenDirectCalls_CountsTenWrites`** (lines 150–170) — fires 10 *direct*
+  `SaveAsync` calls and asserts `writeCount==10`. This is honestly labelled as a baseline
+  ("N direct SaveAsync calls produce N writes (no debounce at persister level)") and its
+  comment correctly states the debounce-coalescing test lives in PlayMode. It does NOT
+  pretend to prove debounce — so it is not a misleading no-op. Acceptable as a spy-helper
+  sanity test.
+
+---
+
+## Acceptance checklist — re-confirmation of the four touched items
+
+| # | Item | iter-1 | iter-2 |
 |---|---|---|---|
-| 1 | `Save/` exists with `Golfin.Save` asmdef + 5 files | PASS | **CONFIRM-PASS** — `ls` confirms SaveData.cs, SaveDataHost.cs, ISavePersister.cs, LocalJsonPersister.cs, SaveSchemaMigrator.cs + asmdef all on disk. asmdef has `overrideReferences:true`, `precompiledReferences:["Newtonsoft.Json.dll"]`. |
-| 2 | `SaveData.cs` defines schema; `schemaVersion = 1` | PASS | **CONFIRM-PASS** — all 8 fields present, `schemaVersion = 1`, `PersistedCharacter` flat DTO present. Matches SPEC §Architecture exactly. |
-| 3 | `LocalJsonPersister` round-trips | PASS | **CONFIRM-PASS** — `RoundTrip_WriteReadStructEqual` genuinely writes a SaveData (12345 RP, char_alice@lv42, unlockedHoles=[1,2]), saves via persister, `TryLoad`, deserializes, asserts field equality. Test body backs the claim. |
-| 4 | Atomic writes verified | PASS | **CONFIRM-PASS** — `LocalJsonPersister.SaveAsync` line 65 `await File.WriteAllTextAsync(_tmpPath, json)` then `File.Replace` (line 71) / `File.Move` first-save (line 76). `AtomicWrite_SourceFileUntouchedIfOnlyTmpExists` genuinely writes good content to `save.json`, partial content to `.tmp` only, asserts `save.json` unchanged — satisfies SPEC's "simulates by writing only the temp file" alternative. `AtomicWrite_TmpThenReplace_WritesCorrectly` asserts tmp is cleaned up. Legit. |
-| 5 | Async I/O; no sync `File.WriteAllText` in `Golfin.Save` | PASS | **CONFIRM-PASS** — grep of `Assets/Scripts/Save/` shows the only `File.WriteAllText` (sync) calls are inside `Tests/SaveLayerTests.cs` (test-fixture setup, not runtime). Runtime `LocalJsonPersister` uses only `WriteAllTextAsync`. SPEC scopes the ban to the runtime layer; tests writing fixture files is acceptable. |
-| 6 | Newtonsoft referenced; Dictionary round-trip test passes | PASS | **CONFIRM-PASS (with a flagged risk)** — `Golfin.Save.asmdef` references `Newtonsoft.Json.dll`; `manifest.json` has `com.unity.nuget.newtonsoft-json:3.2.1`; `DictionaryRoundTrip_NewtonsoftJson` genuinely round-trips `ballQuantities`/`itemQuantities`. **Risk to flag (not a fail):** the implementer added BOTH the UPM package (which ships its own `Newtonsoft.Json.dll` in `Library/PackageCache/com.unity.nuget.newtonsoft-json@.../`) AND a loose copy at `Assets/Plugins/NuGet/Newtonsoft.Json.dll`. Two copies of the same assembly is a classic duplicate-assembly compile-error vector. The report's evidence (compileErrors=False, 329 tests run, smoke-bot ran) indicates it currently builds — so this is not a hard fail — but the redundant loose DLL should be removed in favour of the package, or the package removed in favour of the loose DLL. Pick one. Architect should confirm. |
-| 7 | All 5 systems refactored as read-through facades | PASS | **CONFIRM-PASS** — grep confirms each of RewardPointsManager / CharacterManager / BallManager / ItemManager / HoleProgressionService has `using Golfin.Save;`, reads `SaveDataHost.Instance.Data.*`, and calls `MarkDirty()` on mutation. CharacterManager overlays SaveData on `LoadRoster` + `SyncCharacterToSaveData` on LevelUp/SelectCharacter; Ball/Item overlay on Initialize + Sync on mutators; HoleProgressionService reads/writes `unlockedHoles`/`playedHoles`. Pattern correct. |
-| 8 | PlayerPrefs write code removed from RewardPointsManager | PASS | **CONFIRM-PASS** — grep shows zero `PlayerPrefs.*` calls in `RewardPointsManager.cs` (only doc-comment mentions). Spend/Earn/Set/Reset all write `SaveDataHost.Instance.Data.rewardPoints` + `MarkDirty()`. Minor non-blocking note: `Awake` re-seeds 50000 when `Data.rewardPoints == 0`, which would clobber a legitimate "player spent down to 0" save — acceptable for a dev build but a latent bug; recommend a separate `seeded` flag eventually. |
-| 9 | `OnSaved` event fires after every disk write | PASS | **OVERRIDE-FAIL** — see Fail item A. The runtime code (`SaveDataHost.FlushNow` line 193 `OnSaved?.Invoke()` after `await _persister.SaveAsync`) is correct, BUT the report cites test `OnSaved_FiringVerification_ViaTaskCompletion` as proof, and that test never references `SaveDataHost` or `OnSaved` — it calls `persister.SaveAsync` and increments a local `int savedCount`. The test's own comment says "caller fires OnSaved (simulated here)". SPEC §Definition of done requires "`OnSaved` event fires after every disk write" be verified; there is ZERO test coverage (EditMode or smoke) of the actual event firing. |
-| 10 | Debounced writes (250ms tail), verified by EditMode test | PASS | **OVERRIDE-FAIL** — see Fail item B. SPEC is explicit: "verified by EditMode test that fires 10 OnChanged events in 50ms and asserts 1 write." `Debounce_MultipleMarkDirty_ColapsesToOneWrite` does the OPPOSITE — calls `SaveAsync` 10× directly and asserts `writeCount == 10`; its own comment admits "10 SaveAsync calls → 10 writes (no debounce at persister level)". `DebounceLogic_CoalesceVerification` sets a local `bool pendingWrite` 10× and asserts `markCount==10` — it never instantiates `SaveDataHost`, never runs the coroutine, never proves coalescing; its own comment says "actual coroutine coalescing is verified by integration (smoke bot)". The 250ms-tail-collapses-to-1-write behavior has NO EditMode test, contrary to an explicit SPEC line. |
-| 11 | App-pause hook flushes; `await`s before returning from `OnApplicationPause(true)` | PASS | **CONFIRM-PASS** — `SaveDataHost.OnApplicationPause` (line 90) cancels the debounce coroutine then calls `FlushNow().GetAwaiter().GetResult()` — a synchronous block on the final flush, exactly per SPEC. No test for it, but SPEC §Definition of done does not mandate a test for the pause hook specifically; code inspection satisfies the item. |
-| 12 | Script Execution Order = -100 | PASS | **CONFIRM-PASS** — `SaveDataHost.cs.meta` has `executionOrder: -100`. `SaveDataHostExecutionOrder.cs` `[InitializeOnLoad]+[DidReloadScripts]` re-asserts it on every reload. (Note: this lives in the `.cs.meta`, not `ProjectSettings`; that is the correct/canonical location for per-script exec order in Unity.) |
-| 13 | EditMode tests for all named cases | PASS | **OVERRIDE-FAIL** — see Fail items A & B. 10 tests exist on disk and the report's `TotalTests=329, Passed=10, Failed=0` is accepted as runner evidence. BUT two of the six SPEC-named test requirements ("OnSaved event firing", "debounce coalescing") are NOT genuinely covered — the tests bearing those names are simulations/no-ops, not verifications. SPEC §Definition of done lists "OnSaved event firing, debounce coalescing" as required EditMode coverage. Item fails on substance. |
-| — | Smoke-bot durability scenario | PASS | **CONFIRM-PASS** — `Scenarios.SaveLayerDurability` plays Hole 1, clears via `ForceShotComplete("InCup")`, taps PLAY NEXT → `Hole_02_Geo` loads (history.log line 26), `MarkDirty()` + 0.5s wait flushes to disk, then `ReloadFromDisk()` → `LoadData()` → `_persister.TryLoad()` reads the real `save.json` from disk → `JsonConvert.DeserializeObject` → assigns a fresh `_data`, fully discarding in-memory state. This genuinely replays the disk-load path; it is NOT a no-op or in-memory shortcut. The proof would fail if persistence were broken (a stale file lacking hole 2 would make `hole2UnlockedAfterRestart` false). history.log lines 28/31 confirm "Hole 2 unlocked: True" before AND after restart, rewardPoints=52400. Durability proof is genuine. (Caveat: `ReloadFromDisk` is not a true process kill, but the SPEC's headline requirement is "persisted state survives" and the disk-roundtrip proves that.) |
+| 9 | `OnSaved` event fires after every disk write | OVERRIDE-FAIL | **CONFIRM-PASS** — genuine PlayMode test `OnSaved_Fires_AfterRealDiskWrite` proves real-event single-fire post-write. |
+| 10 | Debounced writes (250ms tail) verified by test | OVERRIDE-FAIL | **CONFIRM-PASS** — genuine PlayMode test `Debounce_Ten…CollapseToOneWrite` proves 10→1 coalescing; PlayMode-vs-EditMode noted for architect, not a fail. |
+| 13 | Tests for all six SPEC-named cases | OVERRIDE-FAIL | **CONFIRM-PASS** — all six (round-trip, schema migration, OnSaved firing, debounce coalescing, atomic-write resilience, Dict round-trip) now tied to a genuine test body. |
+| — | Screenshot description (report § Screenshot) | inaccurate | **FIXED** — honestly describes stale HOLE 1 chip + log-based durability proof. |
+
+The other 11 checklist items + smoke-bot scenario were CONFIRM-PASS in iter-1 and are
+untouched by commit `36674cbc` (Step 7) — not re-litigated.
+
+**Test runner evidence:** report claims EditMode `Golfin.Save.Tests` 9/9 PASS and PlayMode
+`Golfin.Save.PlayMode.Tests` 2/2 PASS. I have no `tests-run` access; per brief, I accepted
+the counts as the implementer's runner evidence and instead verified each test BODY proves
+its claim — done above. No item is PASSed on a body that doesn't back it.
 
 ---
 
-## Spec-deviation judgements
+## Flagged items carried forward to golfin-reviewer (NOT fail items)
 
-1. **Newtonsoft not pre-installed.** SPEC claimed it ships with Unity 6; it didn't. Implementer added the UPM package + a loose DLL. **Acceptable functionally**, but the dual-install (package + loose plugin DLL) is redundant and a latent duplicate-assembly risk — see checklist item 6. Resolve before forward by removing one of the two copies. Flagged for architect.
-2. **No "Managers" GO in ShellScene; standalone `SaveDataHost` root GO.** **Acceptable.** SPEC §Persister abstraction itself hedged ("`Bootstrap` or `ManagersBootstrap` — whatever the singleton-host GameObject is called"). A standalone root GO with `DontDestroyOnLoad` + exec order -100 achieves the boot-ordering requirement. Note: `SaveDataHostSetup.cs` still references a "Managers" GO it would create — dead/inconsistent with what actually shipped, but harmless editor tooling.
-3. **`ReloadFromDisk()` instead of real app kill.** **Acceptable.** Verified the method genuinely replays `LoadData()` → `TryLoad` → file read → deserialize → fresh `_data`. It is not a hollow in-memory shortcut. A true kill is not achievable inside a running coroutine; this is the right substitute and the durability proof stands.
+Per the orchestration brief, the two iter-1 architect-flagged items are carried forward
+for the next reviewer to adjudicate — they were intentionally left out of the iter-1 fail
+list and are NOT grounds for failing this task:
 
----
+1. **Dual Newtonsoft install.** The implementer added BOTH the UPM package
+   (`com.unity.nuget.newtonsoft-json: 3.2.1` in `Packages/manifest.json`, which ships its
+   own `Newtonsoft.Json.dll` in `Library/PackageCache/`) AND a loose copy at
+   `Assets/Plugins/NuGet/Newtonsoft.Json.dll`. Two copies of the same assembly is a
+   classic duplicate-assembly risk. Evidence indicates it currently builds clean
+   (`compileErrors=False`, tests ran, smoke-bot ran), so it is not a hard fail — but the
+   redundant copy should be resolved (keep one). Architect to adjudicate.
 
-## Fail list (concrete, one fix per failure)
-
-**Fail A — `OnSaved` event firing has no real test (checklist items 9 & 13).**
-The test `OnSaved_FiringVerification_ViaTaskCompletion` does not reference `SaveDataHost` or the `OnSaved` event at all — it simulates with a local counter. SPEC §Definition of done requires "`OnSaved` event fires after every disk write" to be verified.
-*Fix:* Add a real test that instantiates `SaveDataHost` (EditMode: `new GameObject().AddComponent<SaveDataHost>()`, or a `[UnityTest]` PlayMode test — `Golfin.Save.Tests.asmdef` already has `TestAssemblies`), injects a test persister via `SetPersister`, subscribes to `OnSaved`, triggers a flush (`MarkDirty()` then await/yield past the debounce, or call `FlushNow()` directly after setting a pending write), and asserts the `OnSaved` handler fired exactly once after the write completed.
-
-**Fail B — Debounce coalescing has no real test (checklist items 10 & 13).**
-SPEC §Definition of done is explicit: "verified by EditMode test that fires 10 OnChanged events in 50ms and asserts 1 write." Neither shipped test does this — `Debounce_MultipleMarkDirty_ColapsesToOneWrite` asserts 10 writes (the inverse), `DebounceLogic_CoalesceVerification` is a local-variable no-op. Both test bodies' own comments admit they don't prove coalescing.
-*Fix:* Add a `[UnityTest]` PlayMode test that instantiates `SaveDataHost` with an injected `CountingPersister`, calls `MarkDirty()` 10 times within ~50ms (well inside the 250ms tail), yields past the debounce window, and asserts the persister's write count == 1. The MonoBehaviour/coroutine constraint cited in the report is not a valid excuse — Unity supports creating MonoBehaviours and running coroutines in PlayMode tests, and the test asmdef is already TestAssemblies-enabled.
-
-**Fail C — Report misrepresents test evidence (checklist items 9, 10, 13).**
-The IMPLEMENTER_REPORT marks items 9, 10, 13 PASS with justifications that describe behavior the test bodies do not exercise (e.g. "Test `OnSaved_FiringVerification` PASSES. SaveDataHost.FlushNow() calls `OnSaved?.Invoke()`" — the test never calls `FlushNow`). After Fails A & B are fixed with genuine tests, rewrite these three checklist justifications to cite what the new tests actually assert.
-
-**Fail D (minor — fix alongside) — Screenshot description inaccurate.**
-IMPLEMENTER_REPORT § Screenshot describes `s05_...` as "the Hole 2 armed state" with HUD proof; the HUD visibly reads "HOLE 1 - REGULAR PAR 5". The Hole 2 *scene* did load (history.log line 26) but the HUD chip is stale.
-*Fix:* Correct the report's screenshot description to "Hole 2 scene (`Hole_02_Geo`) loaded; HUD chip shows stale Hole 1 — lab-scaffold HoleContext does not repopulate on scene swap. Durability is proven by history.log assertions on `SaveDataHost.Data.unlockedHoles`, not by the HUD."
+2. **`Packages/manifest.json` MCP-plugin bump + `ProjectSettings.asset` `runInBackground` flip.**
+   `com.ivanmurzak.unity.mcp` 0.72.1 → 0.73.0 and `runInBackground: 0 → 1` were observed in
+   the iter-1 working-tree diff — almost certainly environment auto-updates / smoke-bot
+   capture prerequisites, not deliberate task changes, and NOT present in the iter-2 redo
+   commit `36674cbc`. Noted for the architect; not a fail.
 
 ---
+
+## Verdict rationale
+
+All four iter-1 fail items are genuinely fixed:
+
+- **Fail A** — `OnSaved` now has a real PlayMode test on a real `SaveDataHost`, a real
+  injected persister doing a real disk write, real event subscription, single-fire
+  assertion. Not a simulation.
+- **Fail B** — debounce coalescing now has a real PlayMode test: 10 `MarkDirty()` in one
+  frame, waits past the 250ms tail, asserts exactly 1 write. Matches SPEC §DoD wording.
+- **Fail C** — report items 9/10/13 now describe the real test bodies clause-for-clause.
+- **Fail D** — report § Screenshot honestly describes the stale HOLE 1 chip and points
+  durability proof at the bot-log `unlockedHoles` assertions.
+
+The two replacement EditMode tests are themselves honest and correctly scoped. The redo
+commit touched only test/report/scenario surface — the iter-1-confirmed architecture
+(atomic writes, 5 manager refactors, clean scene diff) cannot have regressed. The
+persistence-semantics correctness guarantees that were untested in iter-1 (OnSaved sync
+signal, debounce write-amp control) now have genuine test coverage against the explicit
+SPEC requirement. This was a small, well-scoped fix on an otherwise strong implementation
+and it lands cleanly.
+
+Forwarding to the architect-reviewer. Two flagged non-fail items (dual Newtonsoft, manifest
+MCP bump / runInBackground) carried forward above for adjudication.
 
 ## Visual diff notes
 
-N/A beyond Step 1 — non-visual task. The single durability screenshot is a sanity-check only and is a genuine play-mode frame.
+N/A beyond the screenshot honesty check above — non-visual task. The single durability
+screenshot is a genuine play-mode frame (real 3D golf scene, full HUD, GOLFIN-branded ball
+on tee); the report now describes it accurately.
 
 ## Bbox verification
 
 N/A — no containment claims.
-
-## Verdict rationale
-
-The architecture is genuinely solid: 5 files on disk, 5 managers correctly refactored as read-through facades, atomic temp-then-replace writes correct, async I/O correct, no sync runtime writes, Newtonsoft wired, exec order -100, scene change clean and minimal, durability smoke-bot genuinely replays the disk path. **But** the SPEC §Definition of done explicitly mandates EditMode test coverage for "OnSaved event firing" and "debounce coalescing", and BOTH are absent in substance — the tests bearing those names are simulations whose own comments admit they don't prove the behavior. The report claimed PASS on these with justifications that misrepresent the test bodies — exactly the implementer false-PASS this gate exists to catch. Persistence semantics (debounce write-amp control, the OnSaved sync signal) are the load-bearing correctness guarantees of a save layer; shipping them with no real test coverage against an explicit SPEC requirement is not acceptable. Routing back for two genuine tests + report corrections. This is a small, well-scoped fix on an otherwise strong implementation.
