@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Current state | **PART_A_SHIPPED / PART_B_SPEC_READY** |
+| Current state | **PART_A_SHIPPED / PART_B_IMPLEMENTED — AWAITING_CESAR_VISUAL_GATE** |
 | Created | 2026-05-22 ~09:30 CET |
 | Architect | claude.ai |
 | Implementer | Claude Code (Part B only) |
@@ -12,15 +12,20 @@
 ## Timeline
 
 - **2026-05-22 ~09:30 CET** — Pre-flight audit during Stage E preflight already confirmed zero `instant: true` offenders. Architect wrote `ButtonPressFeedback.cs` as a SURGICAL file, wrote this SPEC, and prepared the Part B attach table.
-- **2026-05-22 — TBD** — Part B handed off to Code via TELLCODE.
+- **2026-05-22 — Part B implemented** — Claude Code attached `ButtonPressFeedback`
+  to 11 button surfaces via Unity MCP. See `IMPLEMENTER_REPORT.md`. Awaiting Cesar's
+  visual gate (press-pulse confirmed in next bot run or manual session) + approval.
 
 ## Part A change-set (for git scoping)
 
 - `Assets/Scripts/UI/ButtonPressFeedback.cs` (new file)
 
-## Part B change-set (anticipated)
+## Part B change-set (actual)
 
-- Prefab/scene edits via Unity MCP `add_component` on ~10 button surfaces (no code files touched).
+- `Assets/Scripts/UI/ButtonPressFeedback.cs.meta` (new — closes Part A meta omission)
+- `Assets/Prefabs/UI/HoleSelection/HoleCard.prefab`
+- `Assets/Prefabs/UI/HoleComplete/HoleCompleteWidget.prefab`
+- `Assets/Scenes/ShellScene.unity`
 
 ## Open notes
 

@@ -21008,6 +21008,7 @@ GameObject:
   - component: {fileID: 888261926}
   - component: {fileID: 888261928}
   - component: {fileID: 888261927}
+  - component: {fileID: 888261929}
   m_Layer: 5
   m_Name: CloseButton
   m_TagString: Untagged
@@ -42636,6 +42637,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 479768025}
   m_CullTransparentMesh: 1
+--- !u!114 &888261929
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 479768025}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &889837086
 GameObject:
   m_ObjectHideFlags: 0
@@ -103572,6 +103587,7 @@ GameObject:
   - component: {fileID: 5949810747103632696}
   - component: {fileID: 7490569048194502931}
   - component: {fileID: 1492293184912304135}
+  - component: {fileID: 7490569048194502932}
   m_Layer: 5
   m_Name: PlayButton
   m_TagString: Untagged
@@ -103971,6 +103987,7 @@ GameObject:
   - component: {fileID: 735529699376955106}
   - component: {fileID: 8125802698727210051}
   - component: {fileID: 7406069229650165988}
+  - component: {fileID: 8125802698727210052}
   m_Layer: 5
   m_Name: SettingsButton
   m_TagString: Untagged
@@ -105920,6 +105937,7 @@ GameObject:
   - component: {fileID: 1001800813625383435}
   - component: {fileID: 5978081412369470027}
   - component: {fileID: 8235811263572598204}
+  - component: {fileID: 8235811263572598205}
   m_Layer: 5
   m_Name: NavHomeButton
   m_TagString: Untagged
@@ -106198,6 +106216,7 @@ GameObject:
   - component: {fileID: 1007594119629403689}
   - component: {fileID: 5224705115781771356}
   - component: {fileID: 1993292270318137641}
+  - component: {fileID: 5224705115781771357}
   m_Layer: 5
   m_Name: NavCharactersButton
   m_TagString: Untagged
@@ -106213,6 +106232,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5211100292097469753}
   m_CullTransparentMesh: 1
+--- !u!114 &5224705115781771357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5211100292097469753}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!222 &5252955842755802466
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -109115,6 +109148,7 @@ GameObject:
   - component: {fileID: 982068753714912172}
   - component: {fileID: 386201079674013646}
   - component: {fileID: 4123466008247632389}
+  - component: {fileID: 6516711020394961405}
   m_Layer: 5
   m_Name: NavTeeButton
   m_TagString: Untagged
@@ -109122,6 +109156,20 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &6516711020394961405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6516711020394961404}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!222 &6521746961327505837
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -109437,6 +109485,7 @@ GameObject:
   - component: {fileID: 640800338055750507}
   - component: {fileID: 325813023710260791}
   - component: {fileID: 6973283510636091049}
+  - component: {fileID: 7854629021055388413}
   m_Layer: 5
   m_Name: NavInventoryButton
   m_TagString: Untagged
@@ -109641,6 +109690,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &7490569048194502932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 765015278787560298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!114 &7574226172779559416
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -109962,6 +110025,20 @@ RectTransform:
   m_AnchoredPosition: {x: 847.80005, y: -98}
   m_SizeDelta: {x: 156, y: 156}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &7854629021055388413
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7233036736096470954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!114 &7910933110930945515
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -110176,6 +110253,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8125802698727210052
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1792590274843344638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &8210917382043089687
 RectTransform:
   m_ObjectHideFlags: 0
@@ -110239,6 +110330,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &8235811263572598205
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4544344980323371797}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!222 &8287474986839005074
 CanvasRenderer:
   m_ObjectHideFlags: 0

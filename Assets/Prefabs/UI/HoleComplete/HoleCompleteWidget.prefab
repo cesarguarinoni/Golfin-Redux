@@ -5666,6 +5666,7 @@ GameObject:
   - component: {fileID: 4228322402318080509}
   - component: {fileID: 4742769544171275808}
   - component: {fileID: 6997695647010444274}
+  - component: {fileID: 4138757499580825913}
   m_Layer: 0
   m_Name: ReplayButton
   m_TagString: Untagged
@@ -5775,6 +5776,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4138757499580825913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6346313236528326987}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &6353416969639639732
 GameObject:
   m_ObjectHideFlags: 0
@@ -6105,6 +6120,7 @@ GameObject:
   - component: {fileID: 3804888860793687601}
   - component: {fileID: 5472412296196397839}
   - component: {fileID: 1919116852190663864}
+  - component: {fileID: 6783324449169371359}
   m_Layer: 0
   m_Name: RetryButton
   m_TagString: Untagged
@@ -6214,6 +6230,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6783324449169371359
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6612402086467682426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &6659080538931476324
 GameObject:
   m_ObjectHideFlags: 0
@@ -7490,7 +7520,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0.65}
@@ -7674,6 +7704,7 @@ GameObject:
   - component: {fileID: 1599266650083978400}
   - component: {fileID: 5021971573443360021}
   - component: {fileID: 4683003762748042447}
+  - component: {fileID: 1316819216919564553}
   m_Layer: 0
   m_Name: PlayButton
   m_TagString: Untagged
@@ -7783,6 +7814,20 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1316819216919564553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8433055556681714793}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &8454883932161912091
 GameObject:
   m_ObjectHideFlags: 0
