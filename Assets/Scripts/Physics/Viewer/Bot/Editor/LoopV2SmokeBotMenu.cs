@@ -178,6 +178,15 @@ namespace Golfin.Physics.Viewer.Editor
                 go.AddComponent<Golfin.Physics.Viewer.LoopV2SmokeBot>();
                 Debug.Log($"[LoopV2SmokeBotMenu] Injected [LoopV2SmokeBot] host into play-mode scene " +
                           $"(scenario={Golfin.Physics.Viewer.LoopV2SmokeBot.Scenario}, not saved to disk).");
+
+                // Optional companion frame recorder for demo-video capture. Injected only
+                // when armed (BotFrameRecorder.RecordVideo); also in-memory, never saved.
+                if (Golfin.Physics.Viewer.BotFrameRecorder.RecordVideo)
+                {
+                    var recGo = new GameObject("[BotFrameRecorder]");
+                    recGo.AddComponent<Golfin.Physics.Viewer.BotFrameRecorder>();
+                    Debug.Log("[LoopV2SmokeBotMenu] Injected [BotFrameRecorder] (video recording armed).");
+                }
             }
             else if (state == PlayModeStateChange.ExitingPlayMode)
             {
