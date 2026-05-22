@@ -3,6 +3,13 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+// =====================================================================
+//  LESSON S (tasks/lessons.md): every player-facing Button gets this.
+//  When adding a new Button to any production prefab or scene, attach
+//  Golfin.UI.Polish.ButtonPressFeedback as a sibling component. Treat
+//  Button + ButtonPressFeedback as a pair.
+// =====================================================================
+
 namespace Golfin.UI.Polish
 {
     /// <summary>

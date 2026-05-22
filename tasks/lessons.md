@@ -1414,3 +1414,32 @@ git status path/to/new/file.cs path/to/new/file.cs.meta
 ```
 
 **Why this happened:** Architect operates on claude.ai with Filesystem MCP, which can write files but does NOT run the Unity Editor or trigger asset imports. Cesar's Unity Editor on the Mac would have generated the meta the next time it gained focus, but the commit went out before that focus event happened. Future SURGICAL ships should either (a) ask Cesar to focus Unity briefly before push, or (b) trust the next Code session to catch it and bundle the meta into its first commit — which is what happened here.
+
+---
+
+## Lesson S — Every new player-facing Button gets `ButtonPressFeedback` (2026-05-22, loop_v2_f + loop_v2_f-followup)
+
+**Origin:** Cesar's note on Stage F shipping: *"Buttons working beautifully. Make sure any new buttons in the future match this behavior."* This is a permanent UX rule, not a per-task call.
+
+**Why it matters:** Tactile press-feedback (1.0 → 0.95 → 1.0 over 0.12s) is the floor for what a 2026-era mobile golf game's UI is expected to feel like. Without it, taps feel dead even when the game responds. The component is universal (drop-on, zero config), runs on unscaled time so it fires during paused state, respects `Button.interactable`, and costs nothing at idle.
+
+**The rule:**
+
+> Every Unity `Button` that a player can tap from a production surface MUST have `Golfin.UI.Polish.ButtonPressFeedback` attached. Defaults stay (`_pressedScale=0.95`, `_duration=0.12`) unless Cesar requests a feel tweak for a specific button.
+>
+> This applies to:
+>
+> - New buttons added to existing prefabs (HoleCard, HoleCompleteWidget, etc.)
+> - New buttons in new prefabs or scenes
+> - New buttons in screens still being built (Rankings, Shop, Gacha, Settings sub-panels, etc.)
+> - New buttons in modal overlays
+>
+> Exception: matchmaking-modal-style auto-dismiss buttons (cancel during a timed scan) — the pulse can race the dismiss animation. When in doubt, attach it; remove later if it visibly conflicts.
+>
+> Implementer convention: when adding a new Button via MCP `add_component(UnityEngine.UI.Button)`, immediately follow with `add_component(Golfin.UI.Polish.ButtonPressFeedback)` in the same operation. Treat them as a pair.
+
+**Self-check for Code at task close:** before reporting a UI task DONE, grep new `.prefab` / `ShellScene.unity` diffs for `m_Script: {fileID: 11500000, guid: <Button-GUID>}` references; for every match, confirm there's also a sibling reference to the `ButtonPressFeedback` GUID. Single missing pair = missed button.
+
+**Test surface:** if a smoke-bot scenario exercises a new button surface (typical for new screens), the visual gate from the bot recording automatically covers Lesson S — the pulse is visible on every tapped button. A button that doesn't pulse in the bot video = lesson violation.
+
+**Sister rule:** see Lesson R — if Architect ships a new `Button` styling component via SURGICAL, the `.cs.meta` must ship with it. Same reflex applies.

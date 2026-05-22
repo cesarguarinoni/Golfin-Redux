@@ -61,6 +61,7 @@ The `route_subagent.py` hook prints the next step in the terminal automatically 
 8. **Wait before screenshot.** After entering play mode, wait at least 3 seconds (5 if data-binding is involved) before capturing. Unity needs time to render the first few frames and run all OnEnable code.
 9. **Append to HEARTBEAT.log** every ~5 minutes of work. Stale heartbeat (>15min) triggers a stuck-session alert to Cesar.
 10. **Circuit breakers** — if the same Unity MCP tool fails 3 times, or you wait on Unity for >3 minutes with no progress, or you can't find an asset after 2 attempts: set STATUS to `IMPLEMENTER_BLOCKED` and stop. Don't loop indefinitely.
+11. **Every new player-facing `Button` gets `Golfin.UI.Polish.ButtonPressFeedback`.** When adding any new `UnityEngine.UI.Button` to a production prefab or scene via Unity MCP, immediately follow `add_component(UnityEngine.UI.Button)` with `add_component(Golfin.UI.Polish.ButtonPressFeedback)` in the same operation. Defaults stay (`_pressedScale=0.95`, `_duration=0.12`). Full rationale in `tasks/lessons.md` Lesson S. Self-check at task close: grep new `.prefab` / scene diffs for Button GUID references; every match must have a sibling `ButtonPressFeedback` reference. One missing pair = task FAIL.
 
 ### Visual review checklist (enforced by both reviewer agents)
 
