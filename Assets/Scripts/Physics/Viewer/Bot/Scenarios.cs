@@ -623,36 +623,58 @@ namespace Golfin.Physics.Viewer.Bot
                 yield return new WaitForSecondsRealtime(0.3f); // EnterPutterMode → PutterGreenReader.enabled = true
             }
 
-            // 5. Enter putter aim via ShotController (Idle → Aiming).
-            //    Use SetCameraYawRadians to aim in a specific direction, then the bot
-            //    calls the production FireViaShotController which drives Aiming state.
-            //    However, we only need Aiming — not a full shot. The bot seam
-            //    FireViaShotController fires the entire shot path. Instead, we poke
-            //    the ShotController directly to reach Aiming state without firing.
+            // 5. Activate putter aim via the production ShotController path.
+            //    ShotController.PublishState() fires OnStateChanged every frame, which calls
+            //    PutterGreenReader.OnShotStateChanged. That handler sets _aimActive based on
+            //    IsPutt && (State == Aiming | Pulling | Timing). We drive this production path
+            //    by:
+            //      (a) setting IsPutt=true on the ShotController, and
+            //      (b) calling BeginExternalDrag() which transitions State → Aiming and fires
+            //          PublishState() → OnShotStateChanged → _aimActive=true.
+            //    This is the same code path that real putter gameplay uses (minus touch input).
+            //    After 2 frames, Update() runs and populates LastVisibleCellCount.
             var sc = labCtrl != null ? labCtrl.GetComponentInChildren<ShotController>(true) : null;
-            if (sc != null)
+            var reader5 = labCtrl != null ? labCtrl.GetComponentInChildren<PutterGreenReader>(true) : null;
+            if (sc != null && reader5 != null)
             {
-                // Drive ShotController into Aiming manually (simulates first touch-down).
-                // We use the production FireViaShotController at very low power to get
-                // Aiming state captured BEFORE the shot resolves. After the shot, check
-                // LastVisibleCellCount from the render loop's most recent visible count.
-                //
-                // For simplest verification: set putter aim active directly by checking
-                // the reader's state after a brief frame delay with putter active.
-                d.LogStep("  Putter club active. Waiting one frame for PutterGreenReader update...");
-                yield return new WaitForSecondsRealtime(0.1f);
+                d.LogStep("  Setting IsPutt=true and calling BeginExternalDrag() on ShotController...");
+                sc.IsPutt = true;
+                sc.BeginExternalDrag(); // transitions State → Aiming and fires OnStateChanged
+                // Wait 3 frames so PutterGreenReader.Update() runs with _aimActive=true.
+                yield return null;
+                yield return null;
+                yield return null;
+                d.LogStep($"  After 3 frames: LastVisibleCellCount={reader5.LastVisibleCellCount}");
+                // NOTE: Do NOT cancel external drag here — keep aim active through capture + assert.
+            }
+            else
+            {
+                d.LogStep($"  WARNING: sc={sc != null} reader={reader5 != null} — cannot activate putter aim via production path.");
+                // Fallback: use test seam directly.
+                if (reader5 != null)
+                {
+                    reader5.SetAimActiveForTest(true);
+                    yield return null;
+                    yield return null;
+                    yield return null;
+                    d.LogStep($"  Fallback after 3 frames: LastVisibleCellCount={reader5.LastVisibleCellCount}");
+                }
             }
 
-            // 6. Capture putter aim frame.
-            yield return new WaitForSecondsRealtime(0.5f);
+            // 6. Capture putter aim frame (aim is still ACTIVE at this point).
+            yield return new WaitForSecondsRealtime(0.3f);
             yield return d.Capture("putter_aim_green_reader_visible");
 
-            // 7. Assert visible cell count.
+            // 7. Assert visible cell count (aim still active — LastVisibleCellCount reflects current frame).
             var reader = labCtrl != null ? labCtrl.GetComponentInChildren<PutterGreenReader>(true) : null;
             int bakedCount = reader != null ? reader.BakedCellCount : 0;
             int visibleCount = reader != null ? reader.LastVisibleCellCount : 0;
             d.LogStep($"  PutterGreenReader: baked={bakedCount} visible={visibleCount} " +
                       $"(need >=50 visible for PASS)");
+
+            // 8. Clean up: end external drag to restore Idle state.
+            if (sc != null) { sc.CancelExternalDrag(); sc.IsPutt = false; }
+            if (reader5 != null) reader5.SetAimActiveForTest(false);
 
             if (bakedCount < 1)
                 d.LogStep("=== PutterAimGreenReaderVisible: FAIL — no cells baked (green classifier not available?) ===");

@@ -83,7 +83,7 @@ namespace Golfin.Physics.Viewer
         // We batch in chunks of MaxBatch.
         private const int MaxBatch = 1000;
         private readonly Matrix4x4[] _matBuf   = new Matrix4x4[MaxBatch];
-        private MaterialPropertyBlock _mpb;   // Initialized in Awake — MaterialPropertyBlock.ctor calls Unity native API
+        private MaterialPropertyBlock _mpb;   // Initialized in Awake; also re-created in OnEnable + Update guard for domain-reload safety
         private Color[]               _colorBuf = new Color[MaxBatch];
 
         // Test seam: last visible-cell count for smoke-bot assertion.
@@ -104,6 +104,10 @@ namespace Golfin.Physics.Viewer
 
         private void OnEnable()
         {
+            // Guard against domain-reload null: Awake only fires once per MonoBehaviour
+            // instance creation, but domain reloads in play mode reset managed fields to
+            // default without re-calling Awake. Re-create if null.
+            if (_mpb == null) _mpb = new MaterialPropertyBlock();
             LoadConfig();
             HoleContext.OnChanged += OnHoleContextChanged;
             if (_shotController != null)
@@ -254,6 +258,7 @@ namespace Golfin.Physics.Viewer
         {
             if (!_aimActive || _cells.Length == 0) return;
             if (_arrowMesh == null || _arrowMaterial == null) return;
+            if (_mpb == null) _mpb = new MaterialPropertyBlock(); // domain-reload safety net
 
             Vector3 ballPos = Vector3.zero;
             if (_labController != null) ballPos = _labController.BallPosition;
