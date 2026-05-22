@@ -150,8 +150,12 @@ namespace Golfin.Physics.Viewer.Bot
         }
 
         /// <summary>
-        /// Click a button found by FindButton. Logs success or miss. Waits settleSeconds
-        /// (realtime) after invoking onClick so the UI can respond before the next step.
+        /// Click a button found by FindButton. Fires a real pointer-down → up sequence
+        /// through ExecuteEvents so IPointerDownHandler components react exactly as they
+        /// would to a human tap — notably the Stage F ButtonPressFeedback press-pulse,
+        /// which onClick.Invoke() alone bypasses (it never raises a pointer event). The
+        /// explicit onClick.Invoke() afterwards guarantees the action fires regardless of
+        /// EventSystem / raycast state. Waits settleSeconds (realtime) after.
         /// </summary>
         public IEnumerator Click(string nameOrText, float settleSeconds = 0.8f)
         {
@@ -159,8 +163,17 @@ namespace Golfin.Physics.Viewer.Bot
             var btn = FindButton(nameOrText);
             if (btn != null)
             {
+                // Real pointer-down/up so press-feedback (and the Button's own tint
+                // transition) animate like a genuine tap. ExecuteEvents.Execute targets
+                // the GameObject directly, so no raycast/EventSystem wiring is required.
+                var ped = new PointerEventData(EventSystem.current);
+                ExecuteEvents.Execute(btn.gameObject, ped, ExecuteEvents.pointerDownHandler);
+                yield return new WaitForSecondsRealtime(0.10f);   // brief press hold
+                ExecuteEvents.Execute(btn.gameObject, ped, ExecuteEvents.pointerUpHandler);
+
+                // Guarantee the action fires (down+up alone does not synthesize a click).
                 btn.onClick.Invoke();
-                LogStep($"  → clicked {btn.gameObject.name}");
+                LogStep($"  → clicked {btn.gameObject.name} (pointer-down/up + onClick)");
             }
             else
             {
