@@ -226,6 +226,48 @@ public void Open(int bagSlot, BagClubModalMode mode, string? existingClubId)
 
 ---
 
+## 10. SaveData Read-Through Facade Pattern
+
+**When:** A manager owns persisted player state (currency, inventory quantities, progression).
+
+**Layer:** `Golfin.Save` asmdef (`Assets/Scripts/Save/`) — `SaveData` (canonical record),
+`SaveDataHost` (MonoBehaviour singleton, persists to `Application.persistentDataPath/save.json`),
+`ISavePersister` / `LocalJsonPersister`, `SaveSchemaMigrator`.
+
+**Pattern:** the manager keeps its business logic and its own `OnChanged` event, but its
+persisted fields become read-through over `SaveDataHost.Instance.Data`:
+
+```csharp
+// On init: build runtime state from the CSV template, then overlay player data from SaveData.
+// On mutation: write the change into SaveData, fire the manager's own OnChanged,
+//              then call SaveDataHost.Instance.MarkDirty().
+public int CurrentPoints
+{
+    get => SaveDataHost.Instance.Data.rewardPoints;
+    private set
+    {
+        SaveDataHost.Instance.Data.rewardPoints = value;
+        SaveDataHost.Instance.MarkDirty();
+    }
+}
+```
+
+**Rules:**
+- `MarkDirty()` debounces (250ms tail) — never write the file directly from a manager.
+- Persist storage DTOs (e.g. `PersistedCharacter`), not runtime types — keeps UI-only fields out of the save.
+- `SaveDataHost` runs at Script Execution Order `-100` (before CSV databases and managers).
+- `OnSaved` fires after each disk write; it may run on a thread-pool thread — subscribers
+  must not assume main-thread context.
+- Schema bumps: increment `SaveData.schemaVersion`, add a migration function in
+  `SaveSchemaMigrator` (never remove an old one). A file newer than the code fails hard.
+
+**Used by:** `RewardPointsManager`, `CharacterManager`, `BallManager`, `ItemManager`,
+`HoleProgressionService`. Every post-Loop-v2 system that owns player state (Rankings, Shop,
+Gacha) follows this pattern. Cloud sync = a future `CloudSyncPersister` swapped in at boot,
+zero consumer refactor.
+
+---
+
 ## Quick Reference: File Locations
 
 | Pattern | Character (Roster) | Club (Inventory) | Bag (Inventory) |
