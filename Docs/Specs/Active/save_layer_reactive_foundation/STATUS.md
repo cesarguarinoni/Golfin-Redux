@@ -2,22 +2,29 @@
 
 | Field | Value |
 |---|---|
-| Current state | **SPEC_READY pending Cesar Q-locks (Q1/Q2/Q3 in SPEC §4)** |
+| Current state | **PIPELINE_READY** |
 | Created | 2026-05-22 ~13:00 CEST |
+| Q-locks recorded | 2026-05-22 ~14:30 CEST |
+| Best-practice patches | 2026-05-22 ~14:35 CEST |
 | Architect | claude.ai |
-| Implementer | Claude Code (pending Q-locks) |
-| Pipeline | FULL PIPELINE recommended |
+| Implementer | Claude Code |
+| Pipeline | FULL PIPELINE |
 
 ## Timeline
 
-- **2026-05-22 13:00 CEST** — Pre-flight + SPEC authored. Audit of 5 state-holders complete; surface decisions locked except Q1/Q2/Q3.
+- **2026-05-22 13:00 CEST** — Pre-flight + SPEC authored. Audit of 5 state-holders complete.
+- **2026-05-22 14:30 CEST** — Cesar locked Q1 (single), Q2 (fail-hard), Q3 (debounced).
+- **2026-05-22 14:35 CEST** — Best-practice scan run. Three additive patches landed:
+  - Atomic file writes via temp + `File.Replace` (non-negotiable; prevents save corruption on power loss)
+  - Async I/O via `File.WriteAllTextAsync` (prevents mobile frame hitches)
+  - Newtonsoft.Json over JsonUtility (native Dictionary support, ships with Unity 6)
+- **2026-05-22 — TBD** — Kickoff fired to Code.
 
-## Open questions
+## Q-locks (§4 of SPEC)
 
-See SPEC §4. Three locks needed before kickoff:
-- Q1 — single save slot vs multi-slot (lean: single for v1)
-- Q2 — schema-bump fail-hard vs fail-soft (lean: fail-hard)
-- Q3 — write trigger granularity (lean: debounced 250ms on every OnChanged)
+- Q1 — Single slot for v1
+- Q2 — Fail-hard on schema bump
+- Q3 — Debounced 250ms writes
 
 ## Notes
 

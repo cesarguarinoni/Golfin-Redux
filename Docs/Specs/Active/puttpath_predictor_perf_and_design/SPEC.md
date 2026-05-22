@@ -4,7 +4,7 @@
 
 ## Status
 
-See `STATUS.md`. Initial: **SPEC_READY pending Cesar Q-locks (5 questions in §4).** Architecture is DESIGN_LOCKED from NOTES.md (Cesar 2026-05-13); this SPEC fills in the implementation details on top of that.
+See `STATUS.md`. **PIPELINE_READY** — Q-locks recorded in §4, best-practice patches applied in §5. Architecture DESIGN_LOCKED 2026-05-13 (NOTES.md); Q-locks from Cesar 2026-05-22; fires FULL PIPELINE on Implementer kickoff.
 
 ## Goal
 
@@ -66,7 +66,11 @@ Procedure:
 1. For each cached cell within distance `Q3` of the current ball position AND in front of the camera:
    - Build a transformation matrix at the cell center (Y = sampled mesh height + small offset), rotated so the arrow texture's "forward" aligns with the slope vector direction (where the ball would roll).
    - Color from the magnitude → green/yellow/red ramp (Q2 thresholds).
-2. Single `Graphics.DrawMeshInstanced` call per frame with all visible cells. No GameObjects per cell.
+2. Single `Graphics.RenderMeshInstanced` call per frame with all visible cells. No GameObjects per cell.
+
+**Use `Graphics.RenderMeshInstanced` (Unity 2022+), NOT `Graphics.DrawMeshInstanced`.** Project is on Unity 6 + URP 17.3.0. `RenderMeshInstanced` is the modern API; the legacy `DrawMeshInstanced` has documented per-frame ImmediateRenderer queue overhead. With proper CPU-side frustum + distance culling, `RenderMeshInstanced` does 10k+ instances in 1–3 draw calls.
+
+**Material setup.** The arrow material must have **"Enable GPU Instancing"** checked in its inspector (URP-Lit material supports this natively). Under URP, **SRP Batcher takes precedence over GPU Instancing for the same renderer** — we want GPU Instancing here, so the arrow material must opt out of SRP Batcher (set its `DisableBatching` tag in the shader, or use a non-SRP-Batcher-compatible material). Implementer flags this during the bake-step PR for Architect to verify the material choice. Without this flag, all 3600 cells will draw individually, defeating the whole render strategy.
 
 ### Removal
 
@@ -80,17 +84,25 @@ Delete:
 - **EditMode:** unit tests for the bake step on a synthetic 5m × 5m green with a known constant slope; assert slope vectors point downhill and magnitude matches the height delta to within fp tolerance.
 - **Smoke-bot:** new scenario `PutterAimGreenReaderVisible` — load Hole 1, enter putter aim on the green, capture screenshot, assert at least 50 visible cells in the render call (via test seam exposed on `PutterGreenReader`).
 
-## §4 — Open questions for Cesar
+## §4 — Q-LOCKS (locked by Cesar 2026-05-22 ~14:30 CEST)
 
-| # | Question | Architect lean | Lock? |
+| # | Question | Lock | Notes |
 |---|---|---|---|
-| Q1 | **Cell size for the bake grid.** | **0.5m.** ~3600 cells per typical green, sub-50ms main-thread bake. Tune down to 0.25m if visual density looks sparse on the first Hole 1 review. | ☐ |
-| Q2 | **Color ramp thresholds.** Where do green→yellow→red transitions sit? | **Green <2% grade, yellow 2–5%, red >5%.** Calibrated to USGA "tournament-fast" green target of ~3% max. Color values configurable in a CSV with reasonable defaults; not a per-hole config. | ☐ |
-| Q3 | **Visible-cell culling distance.** | **10m radius around ball + camera-frustum cull.** Distance-only would be simpler; frustum adds 5 lines for a meaningful perf win when the player is at the back of a long green. | ☐ |
-| Q4 | **GreenCollar included?** Or Green-only? | **Green only for v1.** GreenCollar is fringe transition territory; putters on the collar are an edge case. Adding GreenCollar later is a one-line `GetPolygonAABBsForType` call. | ☐ |
-| Q5 | **Heatmap mode (P1 waiver carryover).** Original Putter P1 spec listed a heatmap mode that was never built. Does it survive as "tint each cell by magnitude in addition to drawing arrows"? | **Yes — free with arrow magnitude already computed.** Toggle on the dashboard, no separate compute cost. | ☐ |
+| Q1 | Bake grid cell size. | **0.5m.** | ~3600 cells per typical green; sub-50ms main-thread bake. Tune down to 0.25m if visual density looks sparse on the first Hole 1 review. |
+| Q2 | Color ramp thresholds. | **<2% green / 2–5% yellow / >5% red.** | Calibrated to USGA tournament-fast green target ~3% max. CSV-configurable defaults. |
+| Q3 | Visible-cell culling distance. | **10m radius around ball + camera-frustum cull.** | Distance + frustum. |
+| Q4 | GreenCollar included? | **No — Green only for v1.** | Adding GreenCollar later is a one-line `GetPolygonAABBsForType` call. |
+| Q5 | Heatmap mode survives? | **Yes — free with arrow magnitude already computed.** | Toggle on the dashboard, no separate compute cost. |
 
-All 5 are Architect-decidable during SPEC if Cesar prefers a single-pass lock. Recommend Cesar override only where the leans feel wrong.
+## §5 — Best-practice scan (locked 2026-05-22 ~14:30 CEST)
+
+Before committing this SPEC, Architect ran a best-practice scan against current Unity-mobile rendering + golf-game green-reading literature. Two technical additions landed in §Architecture (Render step) + one design note for the polish backlog:
+
+1. **`Graphics.RenderMeshInstanced` (Unity 2022+) over `Graphics.DrawMeshInstanced`.** Modern API, no ImmediateRenderer queue overhead. Project is on Unity 6000.3.9f1 + URP 17.3.0, so the new API is available. **Mandatory.**
+2. **GPU Instancing material flag + SRP Batcher precedence note.** Under URP, SRP Batcher takes precedence over GPU Instancing for the same renderer. The arrow material must explicitly opt out of SRP Batcher to get GPU Instancing for our 3600-cell case. Without this, the render strategy collapses to per-cell draw calls. **Mandatory.**
+3. **Future polish — animated beads.** Best-practice scan confirmed PGA Tour 2K23/2K25 uses **animated beads flowing along slope-flow lines** (not static arrows) for green-reading. The grid lets us know if any slopes could alter the ball's path; directions and speed of beads tell us the direction in which the green is sloping and by how much. Static arrows match GOLFIN's Sim positioning lock (L1) and are correct for v1, but the data layer (baked slope vectors per cell) supports both renderers. A future polish ticket can swap the renderer from arrows to animated beads with zero refactor to the bake step. This is **NOT a v1 deliverable** — ship arrows first, beads later if Cesar wants the 2K-flavor polish. Tracked as out-of-scope; SPEC stays arrows for v1.
+
+All three are additive. Architecture and Q-locks unchanged.
 
 ## Definition of done
 
@@ -100,6 +112,8 @@ All 5 are Architect-decidable during SPEC if Cesar prefers a single-pass lock. R
 - [ ] `PuttPathRenderer.cs` deleted
 - [ ] All 8 `PhysicsLabController.cs` references migrated; lab compiles clean
 - [ ] Arrow asset present (colorblock placeholder is acceptable for v1 per NOTES); arrow texture path in a SerializeField
+- [ ] **Material configured for GPU Instancing:** "Enable GPU Instancing" checked; SRP Batcher opt-out verified (Frame Debugger shows a single `RenderMeshInstanced` call covering all visible cells, not per-cell draws)
+- [ ] **Uses `Graphics.RenderMeshInstanced` (Unity 2022+), not `Graphics.DrawMeshInstanced`**
 - [ ] EditMode tests: synthetic-slope bake correctness; magnitude calculation; cell-classification gating
 - [ ] Smoke-bot scenario `PutterAimGreenReaderVisible` added, captures rendered grid on Hole 1
 - [ ] Dashboard toggle exposes `HeatmapMode` (Q5)
@@ -110,6 +124,7 @@ All 5 are Architect-decidable during SPEC if Cesar prefers a single-pass lock. R
 
 - Per-hole green-reading authoring tools (separate task at `Docs/Specs/Queued/green_topology_and_pin_authoring/`)
 - Arrow art polish (placeholder colorblock is the v1 ship)
+- **Animated beads** along slope-flow lines (PGA 2K23/2K25 style) — future polish ticket, swaps the renderer over the same bake data
 - Slope simulation accuracy improvements (existing `BakedZoneClassifier.TrySampleMeshY` is the source of truth; we render whatever it gives us)
 - Cross-club use of the grid (driver/iron get nothing — putter only)
 

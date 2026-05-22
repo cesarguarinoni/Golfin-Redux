@@ -4,7 +4,7 @@
 
 ## Status
 
-See `STATUS.md`. Initial: **SPEC_READY pending Cesar Q-locks (3 questions in §4).** Once Q1/Q2/Q3 are locked, fire FULL PIPELINE.
+See `STATUS.md`. **PIPELINE_READY** — Q-locks recorded in §4, best-practice patches applied in §5. Fires FULL PIPELINE on Implementer kickoff.
 
 ## Goal
 
@@ -75,11 +75,23 @@ public class SaveData
 public interface ISavePersister
 {
     bool TryLoad(out string json);
-    void Save(string json);
+    Task SaveAsync(string json);
 }
 ```
 
 `LocalJsonPersister` writes to `Application.persistentDataPath + "/save.json"`. Future `CloudSyncPersister` swaps in here. SaveDataHost owns one `ISavePersister` reference; injection happens at boot via a single line in `Bootstrap` (or `ManagersBootstrap` — whatever the singleton-host GameObject is called).
+
+**CRITICAL: Atomic file writes (non-negotiable).** A naive `File.WriteAllText(path, json)` is a well-documented save-corruption vector: power loss or app kill mid-write leaves a partially-written or zero-byte file, and cloud-sync layers (Steam, iCloud, Google Play Saves) will happily overwrite the previous good save with the corrupted one. Industry-standard fix is the temp-file-rename pattern, which is what `LocalJsonPersister` MUST use:
+
+1. `await File.WriteAllTextAsync(tmpPath, json)` where `tmpPath = path + ".tmp"`
+2. `File.Replace(tmpPath, path, destinationBackupFileName: null)` — atomic on both POSIX (`rename`) and Windows (`MoveFileExW(MOVEFILE_REPLACE_EXISTING)`)
+3. If `path` doesn't exist yet (first save), use `File.Move(tmpPath, path)` instead
+
+No `fsync` needed — .NET's `WriteAllTextAsync` flushes its stream on dispose, and `File.Replace` is durable across kernel-level write reorderings on the platforms we ship to.
+
+**Async disk I/O.** All persister writes run async on a background thread (`File.WriteAllTextAsync`) so the main thread never blocks on disk. The in-memory mutation in each manager stays sync (it's just dict updates); only the disk write goes async. This is critical on mobile where a sync write during a hole-complete can cause a perceptible frame hitch.
+
+**Dictionary serialization.** Unity's `JsonUtility` does NOT serialize `Dictionary<TKey, TValue>` directly. SaveData uses **Newtonsoft.Json** (`com.unity.nuget.newtonsoft-json`, ships with Unity 6, already available in this project) for native dict + nested-object support. SaveData class itself does not need `[Serializable]` — Newtonsoft picks up public fields by default. This is cleaner than the alternative of wrapping every dict as a `List<{key, value}>` pair list.
 
 ### Schema versioning
 
@@ -116,29 +128,40 @@ Script Execution Order matters. New requirement:
 
 `SaveDataHost` is configured in Project Settings → Script Execution Order with priority `-100` (or whatever slot is one before the CSVs at `-50`).
 
-## §4 — Open questions for Cesar
+## §4 — Q-LOCKS (locked by Cesar 2026-05-22 ~14:30 CEST)
 
-| # | Question | Architect lean | Lock? |
+| # | Question | Lock | Notes |
 |---|---|---|---|
-| Q1 | **SaveData identity model.** One save slot per device (single player), or multiple slots from day 1 (anticipating Switch User / cloud sync per-account)? | **Single slot for v1.** Cloud sync makes the account-vs-slot distinction the cloud's problem; locally there's one player. Multiple slots adds UI work we don't need. | ☐ |
-| Q2 | **Migration on schema bump — fail-hard or fail-soft?** If a v2 file is loaded on an old client that only knows v1, do we (a) refuse to load and show a "Please update" toast, or (b) load v1 fields only and lose the rest? | **(a) fail-hard.** Silent data loss is worse than a clear "update required" message. Mobile updates are routine. | ☐ |
-| Q3 | **Write trigger granularity.** Save (a) on every system OnChanged event with 250ms debounce, or (b) only at meaningful boundaries (hole-complete, modal-close, app-pause)? | **(a) debounce.** Pre-buffers against "what if the user force-quits mid-modal" classes of bug — every meaningful state change gets persisted within 250ms, no thinking required from callers. App-pause is still hooked as a final flush. | ☐ |
+| Q1 | SaveData identity model. | **Single slot for v1.** | Multi-slot is its own future task; cloud sync makes the account-vs-slot distinction the cloud's problem. |
+| Q2 | Migration on schema bump — fail-hard or fail-soft? | **Fail-hard.** | If schemaVersion in file > schemaVersion in code, refuse to load and surface a toast/log. Silent data loss is worse than a clear "please update" message. |
+| Q3 | Write trigger granularity. | **Debounced 250ms.** | Every system OnChanged event triggers a tail-debounced write; app-pause still hooks a final synchronous flush. |
 
-Once locked, this SPEC compiles to a FULL PIPELINE kickoff. Estimate stays ~1-2 days because most of the work is wiring + tests, not architecture.
+## §5 — Best-practice scan (locked 2026-05-22 ~14:30 CEST)
+
+Before committing this SPEC, Architect ran a best-practice scan against current Unity-mobile save-system literature. Three additions landed in §Architecture + §Definition of done:
+
+1. **Atomic file writes via temp + `File.Replace`.** A naive `File.WriteAllText` is a documented save-corruption vector when the app is killed mid-write (Steam Cloud / iCloud / Google Play Saves will then overwrite the previous good save with the corrupted one). Mandatory.
+2. **Async I/O (`File.WriteAllTextAsync`) on the disk path.** Prevents frame hitches on mobile during hole-complete writes.
+3. **Newtonsoft.Json over JsonUtility.** Project is on Unity 6 + `com.unity.nuget.newtonsoft-json` ships with the engine. Newtonsoft serializes `Dictionary<TKey, TValue>` natively; JsonUtility doesn't.
+
+All three are additive. Architecture and Q-locks unchanged.
 
 ## Definition of done
 
 - [ ] `Assets/Scripts/Save/` exists with `Golfin.Save` asmdef and the 5 files listed above
 - [ ] `SaveData.cs` defines the schema in §Architecture; `schemaVersion = 1`
 - [ ] `LocalJsonPersister` round-trips: write → read → struct-equal
+- [ ] **Atomic writes verified:** `LocalJsonPersister.SaveAsync` writes to `save.json.tmp` then `File.Replace`s; an EditMode test that kills the write mid-stream (or simulates by writing only the temp file then asserting `save.json` is untouched) proves the source file is never partially overwritten
+- [ ] **Async I/O verified:** persister uses `File.WriteAllTextAsync`; no `File.WriteAllText` synchronous calls anywhere in `Golfin.Save`
+- [ ] **Newtonsoft.Json** referenced from the `Golfin.Save` asmdef; `Dictionary<string, int>` round-trip test passes
 - [ ] One-time PlayerPrefs migration: if save.json missing AND `GOLFIN_REWARD_POINTS` key present, hydrate rewardPoints and write save.json on first Awake
 - [ ] All 5 systems refactored: RewardPointsManager / CharacterManager / BallManager / ItemManager / HoleProgressionService — each reads/writes through SaveData
 - [ ] PlayerPrefs write code removed from RewardPointsManager (the legacy read can stay for migration only — gated to "save.json doesn't exist yet")
-- [ ] `OnSaved` event fires after every disk write
+- [ ] `OnSaved` event fires after every disk write (post-`File.Replace`)
 - [ ] Debounced writes (250ms tail) — verified by EditMode test that fires 10 OnChanged events in 50ms and asserts 1 write
-- [ ] App-pause hook flushes pending writes (Application.focusChanged or OnApplicationPause handler in SaveDataHost)
+- [ ] App-pause hook flushes pending writes (Application.focusChanged or OnApplicationPause handler in SaveDataHost) — must `await` the final flush before returning from OnApplicationPause(true)
 - [ ] Script Execution Order updated; SaveDataHost slot is `-100` (or earliest manager slot)
-- [ ] EditMode tests: SaveData round-trip, schema v1 migration from PlayerPrefs, OnSaved event firing, debounce coalescing
+- [ ] EditMode tests: SaveData round-trip, schema v1 migration from PlayerPrefs, OnSaved event firing, debounce coalescing, **atomic-write resilience**, **Dictionary round-trip via Newtonsoft**
 - [ ] Smoke-bot scenario added (or extends existing Hole1PlayNext): play hole, exit to menu, restart bot, confirm hole 2 is unlocked + rewards are persisted
 
 ## Out of scope
