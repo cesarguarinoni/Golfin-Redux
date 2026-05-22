@@ -104693,6 +104693,7 @@ GameObject:
   - component: {fileID: 2709620742506824120}
   - component: {fileID: 735328406839766050}
   - component: {fileID: 8813100397896905959}
+  - component: {fileID: 8813100397896905960}
   m_Layer: 5
   m_Name: NavGachaButton
   m_TagString: Untagged
@@ -110587,6 +110588,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8813100397896905960
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3054028515257406404}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!224 &8827000913294508241 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 801199882529505357, guid: 8bf3740e2df52a640abd4d4e609f576e, type: 3}
