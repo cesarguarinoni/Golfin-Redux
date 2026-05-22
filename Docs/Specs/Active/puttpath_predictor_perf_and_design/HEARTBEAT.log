@@ -17,3 +17,4 @@
 2026-05-22T18:23:21 attempting MCP tests-run on Golfin.Physics.Tests
 2026-05-22T18:34:00 verifications complete — exiting play mode, updating IMPLEMENTER_REPORT
 2026-05-22T18:36:03 done, awaiting self-review — all 3 FAIL items resolved, BLOCKER.md deleted, STATUS=READY_FOR_SELF_REVIEW
+2026-05-22T20:42:00 self-review complete — verdict BACK_TO_IMPLEMENTER (SELF_REVIEW_FAIL); 4 fails: SRP-Batcher opt-out not done, dead smoke-bot scenario, non-compliant/non-production screenshot, no draw-call evidence
