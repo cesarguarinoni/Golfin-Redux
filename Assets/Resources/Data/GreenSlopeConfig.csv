@@ -1,0 +1,9 @@
+# Green slope color ramp configuration
+# Thresholds in grade fraction (rise/run). E.g. 0.02 = 2%.
+# Per SPEC §4 Q2: <2% green, 2-5% yellow, >5% red (USGA tournament-fast calibration).
+# Edit values here; PutterGreenReader loads on startup.
+Key,Value
+GreenThreshold,0.02
+YellowThreshold,0.05
+CellSize,0.5
+VisibleRadiusMeters,10.0

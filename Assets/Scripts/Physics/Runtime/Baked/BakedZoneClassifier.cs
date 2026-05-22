@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Golfin.Physics;
 using Golfin.Physics.Math;
+using UnityEngine;
 
 namespace Golfin.Physics.Runtime.Baked
 {
@@ -298,6 +299,33 @@ namespace Golfin.Physics.Runtime.Baked
                 case SurfaceType.Rough:       return 10;
                 case SurfaceType.OOB:         return 5;
                 default:                      return 0;
+            }
+        }
+
+        // ── Green-reader accessor ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns axis-aligned bounding boxes (XZ plane) for all polygons of the given type.
+        /// Used by <see cref="Golfin.Physics.Viewer.PutterGreenReader"/> to seed the bake-step
+        /// iteration: enumerate only cells that fall inside a green AABB, then verify via
+        /// <see cref="Classify"/> to filter the AABB superset down to the exact polygon interior.
+        ///
+        /// Returns <see cref="System.Collections.Generic.IEnumerable{UnityEngine.Rect}"/> —
+        /// each Rect is xMin/yMin = (minX, minZ), width = maxX-minX, height = maxZ-minZ.
+        /// Caller maps Rect.x/y to world X/Z and Rect.width/height to world extents.
+        /// </summary>
+        public System.Collections.Generic.IEnumerable<UnityEngine.Rect> GetPolygonAABBsForType(SurfaceType type)
+        {
+            for (int i = 0; i < polygons.Length; i++)
+            {
+                // Copy fields to plain locals — by-reference locals are disallowed in iterators (CS8176).
+                var pType = polygons[i].type;
+                if (pType != type) continue;
+                var minX = polygons[i].minX;
+                var maxX = polygons[i].maxX;
+                var minZ = polygons[i].minZ;
+                var maxZ = polygons[i].maxZ;
+                yield return new UnityEngine.Rect(minX, minZ, maxX - minX, maxZ - minZ);
             }
         }
 

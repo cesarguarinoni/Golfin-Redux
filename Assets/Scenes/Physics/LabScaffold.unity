@@ -18923,6 +18923,7 @@ GameObject:
   - component: {fileID: 2300000020}
   - component: {fileID: 2300000021}
   - component: {fileID: 2300000022}
+  - component: {fileID: 2300000023}
   m_Layer: 0
   m_Name: LabRoot
   m_TagString: Untagged
@@ -18954,7 +18955,7 @@ MonoBehaviour:
   _orbitSensitivity: 0.5
   _putterTrack: {fileID: 2300000001}
   _puttPathRoot: {fileID: 2300000005}
-  _puttPathPredictor: {fileID: 2300000009}
+  _putterGreenReader: {fileID: 2300000023}
   _actionButtonRowTop: {fileID: 158318066}
   _actionButtonFadeDrawButton: {fileID: 109504458}
   _ballSelectorCanvasGroup: {fileID: 1750912433}
@@ -26625,15 +26626,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ccc48e5aae6235a4c95c81edcc035229, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI.ShotUI::Golfin.Gameplay.UI.ShotUI.PuttPathRenderer
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 0
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  _lineWidthPx: 16
 --- !u!114 &2300000009
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26646,14 +26638,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 214108b3eee6815409554ccf16662fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.PuttPathPredictor
-  _shotController: {fileID: 1483952040}
-  _worldCamera: {fileID: 824114952}
-  _ballTransform: {fileID: 0}
-  _renderer: {fileID: 2300000008}
-  _canvasRect: {fileID: 1552605528}
-  _aimDeltaThresholdDeg: 0.3
-  _powerDeltaThreshold: 0.01
-  _sampleIntervalSec: 0.05
 --- !u!114 &2300000010
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26726,6 +26710,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c053377ad07d492a907ce654311bcf3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.SmokeRunner2fHost
+--- !u!114 &2300000023
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483952037}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9ed5bb1b01f74a66a7ec78f74e6ae76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.PutterGreenReader
+  _arrowMesh: {fileID: 4300000, guid: 6e71fbbbaa85b4e2f97609a81d711380, type: 2}
+  _arrowMaterial: {fileID: 2100000, guid: fcc5970785f184871b19abe4a21bab70, type: 2}
+  _worldCamera: {fileID: 824114952}
+  _labController: {fileID: 1483952038}
+  _shotController: {fileID: 1483952040}
 --- !u!1001 &1596199216455870784
 PrefabInstance:
   m_ObjectHideFlags: 0

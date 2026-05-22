@@ -190,7 +190,7 @@ namespace Golfin.Physics.Viewer
             // Putter mode: hook into OnClubChanged (local event) to toggle UI.
             OnClubChanged += OnClubIndexChanged;
 
-            // Note: PuttPathPredictor subscribes to ShotController.OnStateChanged itself
+            // Note: PutterGreenReader subscribes to ShotController.OnStateChanged itself
             // (in its own OnEnable). No bridging subscription needed here.
 
             if (_shotConeView != null)
@@ -397,17 +397,17 @@ namespace Golfin.Physics.Viewer
         // ── Putter UI ──────────────────────────────────────────────────────────
 
         [Header("Putter UI")]
-        [SerializeField] private GameObject        _putterTrack;
-        [SerializeField] private GameObject        _puttPathRoot;
-        [SerializeField] private PuttPathPredictor  _puttPathPredictor;
-        [SerializeField] private GameObject        _actionButtonRowTop;       // SpinButton GO
-        [SerializeField] private GameObject        _actionButtonFadeDrawButton; // FadeDrawButton GO (sibling of SpinButton)
-        [SerializeField] private CanvasGroup       _ballSelectorCanvasGroup;
-        [SerializeField] private CentralBallWidget _centralBall;
-        [SerializeField] private PowerGaugeWidget  _powerGaugeWidget;
+        [SerializeField] private GameObject         _putterTrack;
+        [SerializeField] private GameObject         _puttPathRoot;
+        [SerializeField] private PutterGreenReader  _putterGreenReader;
+        [SerializeField] private GameObject         _actionButtonRowTop;       // SpinButton GO
+        [SerializeField] private GameObject         _actionButtonFadeDrawButton; // FadeDrawButton GO (sibling of SpinButton)
+        [SerializeField] private CanvasGroup        _ballSelectorCanvasGroup;
+        [SerializeField] private CentralBallWidget  _centralBall;
+        [SerializeField] private PowerGaugeWidget   _powerGaugeWidget;
         [SerializeField] private HoleIndicatorWidget _holeIndicatorWidget;
 
-        // ── Public accessors for PuttPathPredictor ─────────────────────────────
+        // ── Public accessors (used by PutterGreenReader + other viewers) ──────────
 
         public IGroundProvider  GetGround()   => BuildGroundProvider();
         public ISurfaceProvider GetSurfaces() => BuildSurfaceProvider(default(ShotPreset));
@@ -427,10 +427,10 @@ namespace Golfin.Physics.Viewer
             if (_holeIndicatorWidget != null) _holeIndicatorWidget.SetUnitMode(HoleIndicatorWidget.DistanceUnit.Meters);
             var clubBtn = UnityEngine.Object.FindObjectOfType<ClubButtonWidget>();
             if (clubBtn != null) clubBtn.SetUnitMode(ClubButtonWidget.DistanceUnit.Meters);
-            if (_putterTrack   != null) _putterTrack.SetActive(true);
+            if (_putterTrack        != null) _putterTrack.SetActive(true);
             AlignPutterTrackToBall();
-            if (_puttPathRoot  != null) _puttPathRoot.SetActive(true);
-            if (_puttPathPredictor != null) _puttPathPredictor.enabled = true;
+            if (_puttPathRoot       != null) _puttPathRoot.SetActive(true);
+            if (_putterGreenReader  != null) _putterGreenReader.enabled = true;
             if (_actionButtonRowTop != null) _actionButtonRowTop.SetActive(false);
             if (_actionButtonFadeDrawButton != null) _actionButtonFadeDrawButton.SetActive(false);
             if (_ballSelectorCanvasGroup != null)
@@ -449,9 +449,9 @@ namespace Golfin.Physics.Viewer
             if (_holeIndicatorWidget != null) _holeIndicatorWidget.SetUnitMode(HoleIndicatorWidget.DistanceUnit.Yards);
             var clubBtn = UnityEngine.Object.FindObjectOfType<ClubButtonWidget>();
             if (clubBtn != null) clubBtn.SetUnitMode(ClubButtonWidget.DistanceUnit.Yards);
-            if (_putterTrack   != null) _putterTrack.SetActive(false);
-            if (_puttPathRoot  != null) _puttPathRoot.SetActive(false);
-            if (_puttPathPredictor != null) _puttPathPredictor.enabled = false;
+            if (_putterTrack        != null) _putterTrack.SetActive(false);
+            if (_puttPathRoot       != null) _puttPathRoot.SetActive(false);
+            if (_putterGreenReader  != null) _putterGreenReader.enabled = false;
             if (_actionButtonRowTop != null) _actionButtonRowTop.SetActive(true);
             if (_actionButtonFadeDrawButton != null) _actionButtonFadeDrawButton.SetActive(true);
             if (_ballSelectorCanvasGroup != null)
@@ -581,9 +581,8 @@ namespace Golfin.Physics.Viewer
             Debug.Log($"[TeeDiag] SetupAtTee: _savedTeePosValid={_savedTeePosValid} _savedTeeWorldPos={_savedTeeWorldPos:F2} _ballSpawnPoint={(_ballSpawnPoint!=null?$"{_ballSpawnPoint.name}@{_ballSpawnPoint.position:F2}":"null")} -> spRaw={spRaw:F2}");
             if (!_savedTeePosValid && _ballSpawnPoint == null) return;
 
-            // Refresh putter predictor providers whenever terrain providers change.
-            if (_puttPathPredictor != null)
-                _puttPathPredictor.RefreshProviders(BuildGroundProvider(), BuildSurfaceProvider(default(ShotPreset)));
+            // PutterGreenReader pulls its BakedZoneClassifier via GetSurfaces() on hole-load
+            // (HoleContext.OnChanged); no RefreshProviders / SetBallTransform / SetCamera needed.
             Vector3 sp = spRaw;
             float surfaceY = SurfaceSnap(sp.x, sp.z, sp.y, 6); // 6 = Golfin.Course.SurfaceType.Tee
             Vector3 teePos = new Vector3(sp.x, surfaceY, sp.z);
@@ -596,11 +595,6 @@ namespace Golfin.Physics.Viewer
             // Update ShotConeView ball transform so targeting line can pivot in Idle state.
             if (_shotConeView != null && ballAnimator != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
-            if (_puttPathPredictor != null && ballAnimator != null)
-            {
-                _puttPathPredictor.SetBallTransform(ballAnimator.CurrentBall);
-                _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
-            }
 
             // Update HoleIndicatorWidget ball transform after ball is placed
             var holeWidgetForTee = FindObjectOfType<Golfin.Gameplay.UI.ShotUI.HoleIndicatorWidget>();
@@ -672,11 +666,7 @@ namespace Golfin.Physics.Viewer
             // Update ShotConeView ball transform so targeting line can pivot from the new position.
             if (_shotConeView != null && ballAnimator != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
-            if (_puttPathPredictor != null && ballAnimator != null)
-            {
-                _puttPathPredictor.SetBallTransform(ballAnimator.CurrentBall);
-                _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
-            }
+            // PutterGreenReader reads ball position via BallPosition each frame — no manual sync needed.
 
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
             if (_shotController != null)
@@ -946,11 +936,7 @@ namespace Golfin.Physics.Viewer
 
             if (_shotConeView != null && ballAnimator?.CurrentBall != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
-            if (_puttPathPredictor != null && ballAnimator?.CurrentBall != null)
-            {
-                _puttPathPredictor.SetBallTransform(ballAnimator.CurrentBall);
-                _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
-            }
+            // PutterGreenReader reads ball position via BallPosition each frame — no manual sync needed.
 
             // Update HoleIndicatorWidget ball transform after shot resolves
             if (ballAnimator?.CurrentBall != null)
@@ -1599,9 +1585,9 @@ namespace Golfin.Physics.Viewer
                 holeWidget.SetBallTransform(ballAnimator != null ? ballAnimator.CurrentBall : null);
             }
 
-            // Sync predictor camera on hole load (camera mode may change in SetupAtTee below)
-            if (_puttPathPredictor != null)
-                _puttPathPredictor.SetCamera(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
+            // PutterGreenReader subscribes to HoleContext.OnChanged and calls GetSurfaces()
+            // (which returns the new _bakedClassifier) to trigger a rebake automatically.
+            // No manual camera/ball sync needed — reader polls BallPosition each frame.
 
             DiagAero($"OnHoleLoaded.end[{sceneName}]");
         }
