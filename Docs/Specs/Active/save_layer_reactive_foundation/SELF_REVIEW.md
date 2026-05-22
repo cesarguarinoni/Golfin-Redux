@@ -1,244 +1,137 @@
 # SELF_REVIEW — `save_layer_reactive_foundation`
 
 - **Reviewer:** golfin-self-reviewer
-- **Date:** 2026-05-22 (afternoon, CEST)
-- **Iteration:** N = 2 (second self-review — implementer resubmitted after iter-1 BACK_TO_IMPLEMENTER)
+- **Date:** 2026-05-22 13:37 CEST
+- **Iteration:** N = 3 (third self-review — implementer resubmitted after the **final reviewer's** `ARCHITECT_REVIEW_FAIL`, not a prior self-review FAIL)
 - **Verdict:** **FORWARD_TO_ARCHITECT** (PASS)
 - **STATUS set to:** `SELF_REVIEW_PASS`
-- **Task type:** Non-visual architecture task — SPEC §Pipeline declares "visual fidelity = no". No Figma reference exists by design; no Figma side-by-side performed. Bbox/containment steps are N/A (no UI layout).
+- **Task type:** Non-visual architecture task — SPEC §Pipeline declares "visual fidelity = no". No Figma reference, no `## Reference` section by design. Figma side-by-side (Step 2) and bbox-geometry containment (Step 6) are **N/A** — there is no UI layout and no containment claim in this task. Production-flow capture (Step 8) is **N/A** — no layout change. Step 1 visual-description is replaced by source-code reading per the brief.
 
 ---
 
 ## Scope of this iteration
 
-This is a re-review focused on the four fail items raised in the iter-1 SELF_REVIEW.
-Per the orchestration brief, the architecture surface independently confirmed solid in
-iter-1 (5 `Golfin.Save` files + asmdef + Newtonsoft ref, atomic writes via tmp +
-`File.Replace`, 5 read-through manager refactors, RewardPointsManager free of PlayerPrefs
-writes, clean ShellScene diff, real `ReloadFromDisk` durability proof) was NOT
-re-litigated — only spot-checked for regression via the `git diff HEAD~1 HEAD --stat`
-audit below. The redo commit `36674cbc` touches ONLY test files + report + STATUS +
-heartbeat + the smoke-bot scenario folder — see Step 7. No regression possible on the
-iter-1-confirmed source/scene surface.
+Re-review focused on the **two reviewer fail items** raised in `ARCHITECT_REVIEW.md` (iter-2 review) plus the one documentation fix. Per the orchestration brief, the architecture surface confirmed solid in iter-1/iter-2 and re-confirmed by the architect-reviewer (5 `Golfin.Save` files, atomic writes, 5 read-through manager refactors, Q-locks, Stage E durability proof, boot ordering, the OnSaved + debounce PlayMode tests, clean ShellScene diff) was NOT re-litigated — only spot-checked for regression via the git audit below. The architect-reviewer's verdict was explicit: "Everything else … is sound and does NOT need rework."
+
+This is a post-rejection-by-architect iteration, not a post-Cesar-rejection iteration; `CESAR_REJECTION.md` does not exist, so a full acceptance re-walk is not mandated — but the git audit confirms the iter-3 diff touches only the 4 task files, so no prior PASS can have regressed.
 
 ---
 
-## Step 7 — Scene / git audit (`git diff HEAD~1 HEAD --stat`)
+## Step 7 — Scene / git-diff audit (unusual three-commit history)
 
-**PASS — clean.** The iter-2 redo (`36674cbc`) diff stat:
+Unity Editor crashed mid-test-run during iter-3; the changes are spread across three commits exactly as the brief described. Audited each:
 
-```
-Assets/Scripts/Save/Tests/PlayMode.meta                          (new)
-Assets/Scripts/Save/Tests/PlayMode/Golfin.Save.PlayMode.Tests.asmdef (new)
-Assets/Scripts/Save/Tests/PlayMode/Golfin.Save.PlayMode.Tests.asmdef.meta (new)
-Assets/Scripts/Save/Tests/PlayMode/SaveLayerPlayModeTests.cs       (new, +155)
-Assets/Scripts/Save/Tests/PlayMode/SaveLayerPlayModeTests.cs.meta  (new)
-Assets/Scripts/Save/Tests/SaveLayerTests.cs                        (modified, +90/-64)
-Docs/Specs/.../HEARTBEAT.log                                       (+12)
-Docs/Specs/.../IMPLEMENTER_REPORT.md                               (+18)
-Docs/Specs/.../STATUS.md                                           (1 line)
-tasks/loop_v2_smoke_bot/save_layer_durability/screenshots/*        (history.log + 5 PNGs)
-```
+- **`90217bd5` "Diagnostics"** (Cesar's catch-all crash-recovery commit, 824 files). The **only** files relevant to this task — confirmed via `git show 90217bd5 --stat -- Assets/Scripts/Save/ Assets/Plugins/NuGet/Newtonsoft.Json.dll*`:
+  - `Assets/Scripts/Save/LocalJsonPersister.cs` (+11 / genuine `ConfigureAwait(false)` change)
+  - `Assets/Scripts/Save/SaveDataHost.cs` (+23 / genuine `ConfigureAwait(false)` change)
+  - `Assets/Scripts/Save/Tests/PlayMode/SaveLayerPlayModeTests.cs` (+73 / new deadlock regression test)
+  - `Assets/Plugins/NuGet/Newtonsoft.Json.dll` + `.meta` (`Bin 696320 -> 0 bytes` — deleted)
+  The other ~819 files in this commit (font asset, McpPlugin DLLs, `.nuget-installed.json`, the pile of `Docs/Diagnostics/_capture/_compressed/*.png` and `tasks/.../screenshots/*`) are **pre-existing environment churn swept in by Cesar's manual catch-all commit** — explicitly out of scope per the brief; not reviewed, not failed.
+- **`2d03e1f3` "save_layer iter3 (impl)"** — IMPLEMENTER_REPORT.md + STATUS.md + HEARTBEAT.log only. Clean.
+- **`54f80087` "chore: remove orphaned Unity Test Runner bootstrap scene"** — deletes `Assets/InitTestScene772c6a1c-*.unity` (a Unity Test Framework PlayMode bootstrap scene orphaned by the crash and wrongly swept into `90217bd5`). Correct cleanup per the brief; not a task change, not failed.
 
-ONLY test files, the report, STATUS, heartbeat, and the smoke-bot scenario folder.
-No runtime source file (`SaveData.cs`, `SaveDataHost.cs`, `LocalJsonPersister.cs`,
-`ISavePersister.cs`, `SaveSchemaMigrator.cs`, the 5 managers), no scene file, no
-ProjectSettings change in this commit. No `m_IsActive` flip, no RectTransform/position
-mutation. The iter-1-confirmed architecture is untouched and cannot have regressed.
+**No scene-mutation defect.** `ShellScene.unity` is untouched this iteration (was audited clean in prior iterations). No `m_IsActive` flip, no `sizeDelta`/position mutation. The InitTestScene removal is the *deletion of an orphaned scene*, not a mutation of a live scene — and is explicitly explained as correct cleanup. **PASS.**
 
 ## Step 2 — Figma comparison
 
-**N/A.** Non-visual architecture task. SPEC has no `## Reference` section by design.
+**N/A** — non-visual architecture task, no Figma reference exists by design.
 
 ## Step 6 — Bbox containment check
 
-**N/A.** No containment claims (no UI layout in this task).
+**N/A** — no UI-containment claims in SPEC or report.
 
 ## Step 8 — Production-flow capture
 
-**N/A** for layout. Durability evidence assessed under Fail D below.
+**N/A** — no layout change in this task.
 
 ---
 
-## Fail item re-verification
+## FAIL 1 (P1) — `OnApplicationPause` sync-over-async deadlock — **FIXED ✅**
 
-### Fail A — `OnSaved` real test — **FIXED ✅**
+Read both runtime files end-to-end and traced the complete flush path the blocked main thread reaches.
 
-Read the body of `OnSaved_Fires_AfterRealDiskWrite` in
-`Assets/Scripts/Save/Tests/PlayMode/SaveLayerPlayModeTests.cs` (lines 49–84). It is a
-genuine `[UnityTest]` PlayMode test, NOT a local-variable simulation:
+**The deadlock-prone call site:** `SaveDataHost.OnApplicationPause` (SaveDataHost.cs:106) — `FlushNow().GetAwaiter().GetResult();` — runs on Unity's main thread, which carries `UnitySynchronizationContext`. `.GetResult()` blocks that thread.
 
-- **Real MonoBehaviour:** `var go = new GameObject(...); var host = go.AddComponent<SaveDataHost>();`
-  — a real `SaveDataHost`, real `Awake` lifecycle.
-- **Real persister, real disk write:** injects `SpyPersister` (lines 136–154), which wraps a
-  real `LocalJsonPersister` and calls `await _inner.SaveAsync(json)` — a genuine atomic
-  temp→`File.Replace` write to a temp dir — then increments the counter AFTER the write.
-- **Real event subscription:** `host.OnSaved += () => onSavedFiredCount++;` subscribes to
-  the actual `SaveDataHost.OnSaved` C# event.
-- **Genuine flush:** `host.MarkDirty(); Task flushTask = host.FlushNow();` then
-  `yield return new WaitUntil(() => flushTask.IsCompleted);` — waits for the real async
-  write to finish.
-- **Asserts exactly once, AFTER the write:** `Assert.AreEqual(1, onSavedFiredCount)`,
-  `Assert.AreEqual(1, persistWriteCount)`, `Assert.IsTrue(File.Exists(savePath))`.
+**The complete await chain reached by that blocked thread, and the `ConfigureAwait(false)` coverage of each link** (verified by `grep -rn "ConfigureAwait\|await " Assets/Scripts/Save/`):
 
-Cross-checked against runtime: `SaveDataHost.FlushNow` (line 184) early-returns if
-`!_pendingWrite`, then on success sets `_pendingWrite=false` and fires `OnSaved?.Invoke()`
-(line 193) AFTER `await _persister.SaveAsync(json)`. The Awake-time `MigrateFromPlayerPrefs`
-→ `_ = FlushNow()` path cannot produce a spurious early `OnSaved` because (a) migration
-does not set `_pendingWrite`, so that `FlushNow` early-returns, and (b) the test subscribes
-to `OnSaved` only after `Awake` has already completed. The single-fire assertion is sound.
+1. `SaveDataHost.FlushNow` (line 210) — `await _persister.SaveAsync(json).ConfigureAwait(false);` ✅
+2. `LocalJsonPersister.SaveAsync` (line 74) — `await File.WriteAllTextAsync(_tmpPath, json).ConfigureAwait(false);` ✅
 
-### Fail B — Debounce coalescing real test — **FIXED ✅**
+Both context-capturing awaits on the path now carry `ConfigureAwait(false)`. There are exactly two `await` statements in the entire `Golfin.Save` runtime (lines 210 and 74) — both fixed. The reasoning holds: with `ConfigureAwait(false)`, each continuation (the `File.Replace`/`File.Move` step inside `SaveAsync`, and the `_pendingWrite=false`/`OnSaved`/`Debug.Log` tail of `FlushNow`) resumes on a **thread-pool thread**, not by being posted to the blocked main-thread message queue. The blocked main thread no longer needs to pump its queue for the flush Task to complete → `.GetResult()` unblocks. The classic sync-over-async deadlock is broken.
 
-Read the body of `Debounce_TenMarkDirtyCallsWithinOneFrame_CollapseToOneWrite`
-(lines 97–129). Genuine `[UnityTest]`:
+There is exactly one `.GetResult()` in runtime code (SaveDataHost.cs:106); no `.Wait()`, no `.Result`. The fix is complete and the threading reasoning is sound. The implementer's doc-comment (SaveDataHost.cs:188-199) also correctly notes that `OnSaved?.Invoke()` and the `Debug.Log` now run on a thread-pool continuation, and correctly observes this is safe because neither touches Unity scene objects (`OnSaved` is a plain C# event; `Debug.Log` is thread-safe). That caveat is accurate and worth the architect's awareness — subscribers to `OnSaved` must not assume main-thread context — but it is not a defect in this layer.
 
-- **Real `SaveDataHost`** via `AddComponent`, **real `SpyPersister`** injected.
-- **10 `MarkDirty()` calls in a tight `for` loop** (lines 113–116) — all within one frame,
-  ~1ms, well inside the 50ms window SPEC §DoD cites. Each `MarkDirty()` (runtime line 57)
-  `StopCoroutine`s the prior debounce coroutine and `StartCoroutine`s a fresh one — so after
-  10 calls exactly one debounce coroutine survives with a fresh 250ms countdown.
-- **Waits past the tail:** `yield return new WaitForSecondsRealtime(0.4f)` — 400ms > the
-  250ms `DebounceSeconds` constant.
-- **Asserts exactly 1:** `Assert.AreEqual(1, writeCount, ...)`. This matches SPEC §DoD's
-  explicit wording "fires 10 OnChanged events in 50ms and asserts 1 write." It is not a
-  local-variable no-op and it does not assert anything other than 1.
+**Regression test `AppPauseFlush_SyncOverAsync_CompletesWithoutDeadlock`** (SaveLayerPlayModeTests.cs:108-153) — read the full body. It is a **genuine regression guard**, not a no-op:
 
-**Note for architect (not a fail):** SPEC §DoD line 161 literally says "verified by
-*EditMode* test." The implemented test is a PlayMode `[UnityTest]`. This is consistent with
-my own iter-1 Fail-B fix instruction, which explicitly directed "Add a `[UnityTest]`
-PlayMode test … the MonoBehaviour/coroutine constraint … Unity supports creating
-MonoBehaviours and running coroutines in PlayMode tests." The debounce genuinely requires
-the MonoBehaviour coroutine + real-time elapsed, which EditMode cannot host. The test file
-comment (lines 92–95) documents this rationale. I authorized PlayMode in iter-1; flagging
-purely so the architect is aware the literal "EditMode" word in the SPEC was deviated from
-by my own direction — the *substance* of the requirement (10 calls coalesce to 1 write,
-proven by a real test) is fully met.
+- Runs inside a `[UnityTest]` coroutine, which executes on Unity's main thread carrying `UnitySynchronizationContext` — **the same context `OnApplicationPause` runs on**. This is the load-bearing property: the test reproduces the exact threading condition.
+- Uses a **real `LocalJsonPersister`** (the production code path), deliberately NOT `SpyPersister`, with a documented rationale (lines 113-120).
+- Calls `host.MarkDirty()` first so `_pendingWrite == true` — the identical precondition `OnApplicationPause` requires before flushing (without it `FlushNow` early-returns).
+- Calls `host.FlushNow().GetAwaiter().GetResult();` (line 143) — the **identical critical line** as `OnApplicationPause` (SaveDataHost.cs:106).
+- If `ConfigureAwait(false)` were removed from either flush-path await, this line would deadlock the test-runner thread and the test would hang → surface as a `[UnityTest]` timeout. That is a real failure signal. The test would genuinely hang/fail on the regression.
+- After the sync block returns, asserts `File.Exists(savePath)` — proving the write actually completed, not just that the call returned.
 
-### Fail C — report accuracy (items 9, 10, 13) — **FIXED ✅**
+The test calls `FlushNow().GetAwaiter().GetResult()` directly rather than invoking the private `OnApplicationPause(true)` Unity message via reflection. This is acceptable: it exercises the identical critical statement under the identical `_pendingWrite==true` precondition on the identical synchronization context. It faithfully reproduces the deadlock-prone path. **CONFIRM-PASS.**
 
-Re-read IMPLEMENTER_REPORT.md items 9, 10, 13. Each justification now accurately
-describes the real test body:
+## FAIL 2 (P2) — dual Newtonsoft install — **FIXED ✅**
 
-- **Item 9** cites `OnSaved_Fires_AfterRealDiskWrite`, "real `SaveDataHost` MonoBehaviour via
-  `new GameObject().AddComponent<SaveDataHost>()`", `SpyPersister` injection, `OnSaved`
-  subscription, `MarkDirty()`+`FlushNow()`, `WaitUntil(flushTask.IsCompleted)`,
-  asserts `onSavedFiredCount==1` and `persistWriteCount==1`. Every clause matches the
-  code I read. The misleading iter-1 claim ("Test `OnSaved_FiringVerification` PASSES …")
-  is gone.
-- **Item 10** cites `Debounce_TenMarkDirtyCallsWithinOneFrame_CollapseToOneWrite`, real
-  `SaveDataHost` + `SpyPersister`, 10 `MarkDirty()` in a tight loop, `WaitForSecondsRealtime(0.4f)`,
-  asserts `writeCount==1`, and correctly explains the coroutine-restart coalescing
-  mechanic. Matches the code. The inverted iter-1 claim is gone.
-- **Item 13** lists the 9 EditMode + 2 PlayMode test names; all 11 match the files on disk.
-  The two iter-1 simulation tests (`OnSaved_FiringVerification_ViaTaskCompletion`,
-  `Debounce_MultipleMarkDirty_ColapsesToOneWrite`/`DebounceLogic_CoalesceVerification`)
-  are removed; SPEC's six named coverage requirements are now each tied to a genuine test.
+- `git ls-files | grep -i newtonsoft` → **empty** (no loose DLL tracked anywhere in the repo).
+- `ls Assets/Plugins/NuGet/Newtonsoft.Json.dll` → **"No such file or directory"** (gone from working tree).
+- `git show 90217bd5` confirms `Assets/Plugins/NuGet/Newtonsoft.Json.dll` `Bin 696320 -> 0 bytes` and `.meta` `28 deletions` — both genuinely deleted in this task's iter-3 commit.
+- `Packages/manifest.json` still has `"com.unity.nuget.newtonsoft-json": "3.2.1"` — the UPM package (the Unity-sanctioned distribution channel) remains.
+- `Golfin.Save.asmdef` still has `"overrideReferences": true` + `"precompiledReferences": ["Newtonsoft.Json.dll"]`. With the loose DLL gone, the filename `Newtonsoft.Json.dll` now resolves **unambiguously** to the single copy shipped by the UPM package in `Library/PackageCache/` — the duplicate-assembly hazard the architect flagged is eliminated.
 
-### Fail D — screenshot description — **FIXED ✅**
+The implementer cannot run the build here and I have no Unity MCP; per the brief I accept the implementer's reported runner counts as runner evidence (EditMode `Golfin.Save.Tests` Passed 325/0/3-unrelated-skips; PlayMode `Golfin.Save.PlayMode.Tests` 3/3) and verified the report's evidence is internally consistent — the EditMode test file `SaveLayerTests.cs` was NOT touched in iter-3 (only the 4 task files were), so the EditMode suite is identical to the iter-2 PASS state and its count is credible. The 3-skip note ("3 Stage C1 skips in `Golfin.Physics.Tests`, unrelated") matches the iter-2 report. **CONFIRM-PASS.**
 
-IMPLEMENTER_REPORT.md § Screenshot (lines 42–45) now honestly states: "The HUD chip
-reads 'LOMOND / HOLE 1 - REGULAR / PAR 5' — this is a stale `HoleContext` from the
-previous hole … Durability is proven by the bot log assertions on
-`SaveDataHost.Data.unlockedHoles` (history.log lines 28/31), not by the HUD chip."
+## Documentation fix — **PRESENT ✅**
 
-I opened `s05_restart_simulated_hole2_persisted_2026-05-22_12-32-14.png` directly:
-the HUD top-right chip stack reads "LOMOND / HOLE 1 - REGULAR / PAR 5" — exactly as the
-report now describes, and consistent with the iter-1 finding. The report's description
-is now factually accurate.
+IMPLEMENTER_REPORT.md § Spec deviations now contains the two required notes:
+- Line 86 — `com.ivanmurzak.unity.mcp` 0.72.1 → 0.73.0 MCP-plugin bump, flagged intentional (editor tooling only, zero shipped-code impact).
+- Line 87 — `ProjectSettings runInBackground` 0 → 1 flip, flagged intentional (smoke-bot capture prerequisite; mobile ignores the setting).
+
+Both match the architect-reviewer's adjudication ("acceptable, do not block; document").
 
 ---
 
-## Replacement-test honesty check (per orchestration brief)
+## Replacement / regression honesty check
 
-The implementer said it *replaced* the two misleading iter-1 EditMode tests. Verified the
-two replacements are themselves honest, not new no-ops:
+- The new `SpyPersister.SaveAsync` (SaveLayerPlayModeTests.cs:218-224) also gained `ConfigureAwait(false)` on its internal `await _inner.SaveAsync(json)`. This is consistent and correct — it keeps the existing `OnSaved` and debounce PlayMode tests deadlock-free too. Not a regression.
+- The two pre-existing PlayMode tests (`OnSaved_Fires_AfterRealDiskWrite`, `Debounce_TenMarkDirtyCallsWithinOneFrame_CollapseToOneWrite`) are untouched in body — confirmed by the `90217bd5` diff hunk boundaries (the new test was inserted between Test A and Test B; the only other change is the `SpyPersister` line). The iter-2-confirmed coverage is intact.
+- `WriteAsync` (SaveDataHost.cs:175-182) — the debounced non-pause write path — calls `FlushNow()` and yields on `WaitUntil(flushTask.IsCompleted)` inside a coroutine; it does NOT block the main thread, so `ConfigureAwait(false)` is harmless-and-correct there too (it never needed the main-thread context). No regression.
 
-- **`LocalJsonPersister_SaveAsync_WritesFileToDisk`** (SaveLayerTests.cs lines 120–140) —
-  genuinely calls `await persister.SaveAsync(json)` on a real `LocalJsonPersister`, asserts
-  `File.Exists(savePath)`, then `TryLoad` + deserialize + `Assert.AreEqual(42, rewardPoints)`.
-  Honest persister-level coverage; correctly scoped (its comment explicitly defers the
-  full OnSaved coverage to the PlayMode test).
-- **`CountingPersister_TenDirectCalls_CountsTenWrites`** (lines 150–170) — fires 10 *direct*
-  `SaveAsync` calls and asserts `writeCount==10`. This is honestly labelled as a baseline
-  ("N direct SaveAsync calls produce N writes (no debounce at persister level)") and its
-  comment correctly states the debounce-coalescing test lives in PlayMode. It does NOT
-  pretend to prove debounce — so it is not a misleading no-op. Acceptable as a spy-helper
-  sanity test.
+## MCP-workaround assessment (per brief)
+
+The iter-3 implementer reported the Unity MCP transport dropped after the crash and tests were run via direct HTTP to the Unity MCP server at `localhost:21573`. Per the brief I treat the reported results as runner evidence. I do not find this concerning enough to ESCALATE: direct HTTP to the MCP server is the same server the MCP tool wraps — the transport layer differs, not the test runner. The reported EditMode/PlayMode counts are internally consistent with the iter-2 baseline (EditMode file untouched; PlayMode gained exactly one test → 2 → 3, matching `TotalTests=3`). The evidence is not thin. PASS, not ESCALATE.
 
 ---
 
-## Acceptance checklist — re-confirmation of the four touched items
+## Acceptance checklist — re-confirmation of the three touched concerns
 
-| # | Item | iter-1 | iter-2 |
-|---|---|---|---|
-| 9 | `OnSaved` event fires after every disk write | OVERRIDE-FAIL | **CONFIRM-PASS** — genuine PlayMode test `OnSaved_Fires_AfterRealDiskWrite` proves real-event single-fire post-write. |
-| 10 | Debounced writes (250ms tail) verified by test | OVERRIDE-FAIL | **CONFIRM-PASS** — genuine PlayMode test `Debounce_Ten…CollapseToOneWrite` proves 10→1 coalescing; PlayMode-vs-EditMode noted for architect, not a fail. |
-| 13 | Tests for all six SPEC-named cases | OVERRIDE-FAIL | **CONFIRM-PASS** — all six (round-trip, schema migration, OnSaved firing, debounce coalescing, atomic-write resilience, Dict round-trip) now tied to a genuine test body. |
-| — | Screenshot description (report § Screenshot) | inaccurate | **FIXED** — honestly describes stale HOLE 1 chip + log-based durability proof. |
+| Concern | iter-2 (architect) | iter-3 |
+|---|---|---|
+| FAIL 1 — `OnApplicationPause` sync-over-async deadlock | ARCHITECT FAIL | **FIXED** — `ConfigureAwait(false)` on both flush-path awaits (FlushNow line 210, LocalJsonPersister line 74); genuine regression test `AppPauseFlush_SyncOverAsync_CompletesWithoutDeadlock` exercises the exact `.GetAwaiter().GetResult()` path on the main-thread sync context. |
+| FAIL 2 — dual Newtonsoft install | ARCHITECT FAIL | **FIXED** — loose `Assets/Plugins/NuGet/Newtonsoft.Json.dll` + `.meta` deleted (`git ls-files` empty, `ls` absent, `90217bd5` shows `696320 -> 0 bytes`); UPM package retained; asmdef `precompiledReferences` now resolves unambiguously. |
+| Documentation — MCP bump + runInBackground notes | ARCHITECT FAIL (doc) | **FIXED** — both notes present in IMPLEMENTER_REPORT.md § Spec deviations lines 86-87. |
 
-The other 11 checklist items + smoke-bot scenario were CONFIRM-PASS in iter-1 and are
-untouched by commit `36674cbc` (Step 7) — not re-litigated.
-
-**Test runner evidence:** report claims EditMode `Golfin.Save.Tests` 9/9 PASS and PlayMode
-`Golfin.Save.PlayMode.Tests` 2/2 PASS. I have no `tests-run` access; per brief, I accepted
-the counts as the implementer's runner evidence and instead verified each test BODY proves
-its claim — done above. No item is PASSed on a body that doesn't back it.
-
----
-
-## Flagged items carried forward to golfin-reviewer (NOT fail items)
-
-Per the orchestration brief, the two iter-1 architect-flagged items are carried forward
-for the next reviewer to adjudicate — they were intentionally left out of the iter-1 fail
-list and are NOT grounds for failing this task:
-
-1. **Dual Newtonsoft install.** The implementer added BOTH the UPM package
-   (`com.unity.nuget.newtonsoft-json: 3.2.1` in `Packages/manifest.json`, which ships its
-   own `Newtonsoft.Json.dll` in `Library/PackageCache/`) AND a loose copy at
-   `Assets/Plugins/NuGet/Newtonsoft.Json.dll`. Two copies of the same assembly is a
-   classic duplicate-assembly risk. Evidence indicates it currently builds clean
-   (`compileErrors=False`, tests ran, smoke-bot ran), so it is not a hard fail — but the
-   redundant copy should be resolved (keep one). Architect to adjudicate.
-
-2. **`Packages/manifest.json` MCP-plugin bump + `ProjectSettings.asset` `runInBackground` flip.**
-   `com.ivanmurzak.unity.mcp` 0.72.1 → 0.73.0 and `runInBackground: 0 → 1` were observed in
-   the iter-1 working-tree diff — almost certainly environment auto-updates / smoke-bot
-   capture prerequisites, not deliberate task changes, and NOT present in the iter-2 redo
-   commit `36674cbc`. Noted for the architect; not a fail.
+All 17 SPEC §DoD items + smoke-bot scenario were CONFIRM-PASS in iter-1/iter-2 and re-confirmed by the architect-reviewer; the iter-3 diff touches only the 4 task files (2 runtime, 1 PlayMode test, 1 deleted DLL) — no prior PASS can have regressed.
 
 ---
 
 ## Verdict rationale
 
-All four iter-1 fail items are genuinely fixed:
+Both architect-raised fail items are genuinely and minimally fixed:
 
-- **Fail A** — `OnSaved` now has a real PlayMode test on a real `SaveDataHost`, a real
-  injected persister doing a real disk write, real event subscription, single-fire
-  assertion. Not a simulation.
-- **Fail B** — debounce coalescing now has a real PlayMode test: 10 `MarkDirty()` in one
-  frame, waits past the 250ms tail, asserts exactly 1 write. Matches SPEC §DoD wording.
-- **Fail C** — report items 9/10/13 now describe the real test bodies clause-for-clause.
-- **Fail D** — report § Screenshot honestly describes the stale HOLE 1 chip and points
-  durability proof at the bot-log `unlockedHoles` assertions.
+- **FAIL 1** — every context-capturing `await` on the `OnApplicationPause` → `FlushNow` → `LocalJsonPersister.SaveAsync` → `File.WriteAllTextAsync` chain now carries `ConfigureAwait(false)`. There are exactly two such awaits and both are fixed. The continuations resume on thread-pool threads, so the blocked main thread is no longer required to pump its message queue — the deadlock is broken. The new PlayMode test is a real regression guard that hangs/fails if the fix is reverted, and it exercises the identical synchronous main-thread `.GetAwaiter().GetResult()` path.
+- **FAIL 2** — the redundant hand-copied DLL and its meta are deleted; the UPM package is the sole Newtonsoft source; the asmdef filename reference is now unambiguous.
+- **Documentation** — the two environment-churn notes are present.
 
-The two replacement EditMode tests are themselves honest and correctly scoped. The redo
-commit touched only test/report/scenario surface — the iter-1-confirmed architecture
-(atomic writes, 5 manager refactors, clean scene diff) cannot have regressed. The
-persistence-semantics correctness guarantees that were untested in iter-1 (OnSaved sync
-signal, debounce write-amp control) now have genuine test coverage against the explicit
-SPEC requirement. This was a small, well-scoped fix on an otherwise strong implementation
-and it lands cleanly.
+The fix is surgically scoped (4 files, +107/-32 of which the DLL is the bulk of the deletions), introduces no new defect, and does not disturb the iter-1/iter-2-confirmed architecture. This iteration lands cleanly.
 
-Forwarding to the architect-reviewer. Two flagged non-fail items (dual Newtonsoft, manifest
-MCP bump / runInBackground) carried forward above for adjudication.
+Forwarding to the architect-reviewer.
 
 ## Visual diff notes
 
-N/A beyond the screenshot honesty check above — non-visual task. The single durability
-screenshot is a genuine play-mode frame (real 3D golf scene, full HUD, GOLFIN-branded ball
-on tee); the report now describes it accurately.
+**N/A** — non-visual architecture task. No screenshot review applies to this iteration (the iter-2 durability screenshot was already verified honest by the prior self-review and architect-reviewer and is untouched here).
 
 ## Bbox verification
 
-N/A — no containment claims.
+**N/A** — no containment claims.
