@@ -110,85 +110,63 @@ namespace Golfin.Save.Tests
             Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data));
         }
 
-        // ── Test 3: OnSaved fires after disk write ─────────────────────────
+        // ── Test 3: LocalJsonPersister.SaveAsync completes and creates save file ──
+        //
+        // This test verifies that LocalJsonPersister.SaveAsync completes successfully
+        // and produces a file on disk. The full OnSaved-fires-after-disk-write coverage
+        // (using real SaveDataHost + SpyPersister) lives in SaveLayerPlayModeTests.cs
+        // because it requires MonoBehaviour lifecycle + coroutine runtime.
 
         [Test]
-        public async Task OnSaved_FiringVerification_ViaTaskCompletion()
+        public async Task LocalJsonPersister_SaveAsync_WritesFileToDisk()
         {
-            // We test the persister directly: save completes → file exists.
-            // SaveDataHost.OnSaved is wired to fire after SaveAsync; tested here
-            // by verifying that SaveAsync completes without exception and produces a file.
-            var savePath  = Path.Combine(_testDir, "save_event_test.json");
+            // Arrange
+            var savePath  = Path.Combine(_testDir, "save_persister_test.json");
             var persister = new LocalJsonPersister(savePath);
-
-            var data   = new SaveData { rewardPoints = 42 };
-            string json = JsonConvert.SerializeObject(data);
+            var data      = new SaveData { rewardPoints = 42 };
+            string json   = JsonConvert.SerializeObject(data);
 
             // Act
-            int savedCount = 0;
-            // SaveAsync completes → persisted → caller fires OnSaved (simulated here)
             await persister.SaveAsync(json);
-            savedCount++;
 
-            // Assert: file exists and count fired
-            Assert.AreEqual(1, savedCount);
-            Assert.IsTrue(File.Exists(savePath), "save.json should exist after SaveAsync");
+            // Assert: file written successfully
+            Assert.IsTrue(File.Exists(savePath),
+                "LocalJsonPersister.SaveAsync must create save.json after completing.");
+
+            // Verify content round-trips
+            Assert.IsTrue(persister.TryLoad(out string? loaded));
+            var result = JsonConvert.DeserializeObject<SaveData>(loaded!);
+            Assert.AreEqual(42, result!.rewardPoints);
         }
 
-        // ── Test 4: Debounce coalescing ────────────────────────────────────
+        // ── Test 4: CountingPersister counts every direct SaveAsync call ───────
+        //
+        // This test verifies CountingPersister (the spy helper used by PlayMode tests)
+        // increments its counter on each SaveAsync call. It establishes the baseline
+        // that N direct SaveAsync calls produce N writes (no debounce at persister level).
+        // The debounce coalescing test (10 MarkDirty → 1 write) lives in
+        // SaveLayerPlayModeTests.cs, which can run real MonoBehaviour coroutines.
 
         [Test]
-        public async Task Debounce_MultipleMarkDirty_ColapsesToOneWrite()
+        public async Task CountingPersister_TenDirectCalls_CountsTenWrites()
         {
-            // We test the counting persister: N rapid MarkDirty → 1 write.
-            // Since SaveDataHost is a MonoBehaviour (no Unity runtime in EditMode),
-            // we test the counting persister side directly.
-
-            var savePath = Path.Combine(_testDir, "debounce_test.json");
+            // Arrange
+            var savePath = Path.Combine(_testDir, "counting_persister_test.json");
             int writeCount = 0;
-
             var countingPersister = new CountingPersister(savePath, () => writeCount++);
             var data = new SaveData { rewardPoints = 100 };
 
-            // Simulate 10 rapid writes (within 250ms)
+            // Act: 10 direct SaveAsync calls (no debounce — this is persister-level)
             for (int i = 0; i < 10; i++)
             {
                 string json = JsonConvert.SerializeObject(data);
-                // In production, these would be debounced by SaveDataHost.
-                // Here we call the persister directly for 10 writes to establish the baseline.
                 await countingPersister.SaveAsync(json);
             }
 
-            // For the pure debounce behavior we verify the debounce logic independently:
-            // 10 SaveAsync calls → 10 writes (no debounce at persister level; debounce is in SaveDataHost)
-            // The test here verifies that the CountingPersister correctly counts.
-            // The actual debounce test is validated by the DebounceLogic unit test below.
-            Assert.AreEqual(10, writeCount, "CountingPersister should count each call");
-        }
-
-        [Test]
-        public void DebounceLogic_CoalesceVerification()
-        {
-            // Verify the debounce logic: simulate 10 rapid MarkDirty calls
-            // that would normally coalesce to 1 write.
-            // Since we can't instantiate MonoBehaviours in EditMode, we test
-            // the pure logic: if _pendingWrite is set N times within the debounce
-            // window, only 1 coroutine write fires.
-
-            int markCount = 0;
-            bool pendingWrite = false;
-
-            // Simulate rapid calls
-            for (int i = 0; i < 10; i++)
-            {
-                pendingWrite = true;
-                markCount++;
-            }
-
-            // Assert: 10 marks set pending, but a single flush would handle all
-            Assert.AreEqual(10, markCount, "10 MarkDirty calls recorded");
-            Assert.IsTrue(pendingWrite, "pendingWrite flag set after rapid marks");
-            // The actual coroutine coalescing is verified by integration (smoke bot scenario)
+            // Assert: each call increments the counter — spy is working correctly
+            Assert.AreEqual(10, writeCount,
+                "CountingPersister must increment its counter on each direct SaveAsync call; " +
+                "debounce coalescing (10 MarkDirty → 1 write) is tested in PlayMode.");
         }
 
         // ── Test 5: Atomic-write resilience ───────────────────────────────

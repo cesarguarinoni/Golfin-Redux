@@ -1,0 +1,34 @@
+[t=14.38] === LoopV2SmokeBot started: scenario='save_layer_durability' ===
+[t=14.38] === Save Layer Durability ===
+[t=14.38] NavigateToHome: waiting for app startup sequence…
+[t=14.38]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=14.88] Click: 'StartButton'
+[t=15.02]   → clicked StartButton (pointer-down/up + onClick)
+[t=17.54]   NavigateToHome: reached Home after 3.0s
+[t=18.71] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/save_layer_durability/screenshots/s01_home_2026-05-22_12-31-53.png
+[t=18.71] Click: 'PLAY'
+[t=18.82]   → clicked PlayButton (pointer-down/up + onClick)
+[t=20.32] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=20.32]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=20.33] WaitFor: matchmaking opponent found (timeout=30s)
+[t=24.12]   WaitFor OK: matchmaking opponent found after 3.8s
+[t=24.62] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=25.93]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 1.0s
+[t=25.93] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=26.46]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
+[t=29.68] Capture: s02_gameplay_armed_h1 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/save_layer_durability/screenshots/s02_gameplay_armed_h1_2026-05-22_12-32-04.png
+[t=29.69] ForceShotComplete: driving terminal=InCup
+[t=29.74] ForceShotComplete OK: terminal=InCup
+[t=32.97] Capture: s03_result_modal → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/save_layer_durability/screenshots/s03_result_modal_2026-05-22_12-32-08.png
+[t=32.97] Click: 'PlayButton'
+[t=33.08]   → clicked PlayButton (pointer-down/up + onClick)
+[t=34.62] WaitForSceneLoaded: Hole_02_Geo (timeout=40s)
+[t=34.62]   WaitForSceneLoaded OK: 'Hole_02_Geo' loaded after 0.0s
+[t=38.16] Capture: s04_hole2_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/save_layer_durability/screenshots/s04_hole2_armed_2026-05-22_12-32-13.png
+[t=38.16]   [Durability] Hole 2 unlocked in SaveData: True
+[t=38.71]   [Durability] Flushed save to disk before simulated restart.
+[t=39.31]   [Durability] Simulated restart: ReloadFromDisk() called.
+[t=39.31]   [Durability] After restart — Hole 2 unlocked: True, rewardPoints: 52400
+[t=39.76] Capture: s05_restart_simulated_hole2_persisted → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/save_layer_durability/screenshots/s05_restart_simulated_hole2_persisted_2026-05-22_12-32-14.png
+[t=39.77] === Save Layer Durability: PASS — hole 2 unlocked + rewards persisted across restart ===
+[t=39.77] === Scenario complete ===
