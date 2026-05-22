@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Current state | **TELLCODE_DONE — awaiting Cesar eyeball** |
+| Current state | **DONE — Cesar-approved 2026-05-22** |
 | Created | 2026-05-22 ~15:00 CEST |
 | Architect | claude.ai |
 | Implementer | Claude Code (TELLCODE) |
@@ -13,6 +13,7 @@
 
 - **2026-05-22 ~15:00 CEST** — SPEC authored after Architect review of Stage F's IMPLEMENTER_REPORT findings F2 (NavGachaButton omission) + F3 (dormant Card buttons). Lesson R also written into `tasks/lessons.md` from the same review.
 - **2026-05-22 ~15:47 CEST** — TELLCODE executed by Claude Code. T1: `Golfin.UI.Polish.ButtonPressFeedback` attached to `PersistentUI/BottomNavBar/NavGachaButton` in `ShellScene.unity` (defaults `_pressedScale: 0.95`, `_duration: 0.12`; scene diff is the single new component + reference, no other mutations). T2: `Assets/Prefabs/UI/HoleComplete/README.md` created with the dormant-button paragraph (+ Unity-generated `.meta`). No code files touched. Production wiring re-verified at `HoleCompleteModalController.cs:132-138` (spec cited 145-150 — stale line numbers, substance correct).
+- **2026-05-22 — Cesar approved.** Visual gate judged below the video threshold (no new animation; component identical-by-construction to `NavHomeButton`, a Stage F sibling Cesar already eyeballed; attachment deterministically proven by scene diff). Folder moved to `Docs/Specs/Completed/`.
 
 ## Notes
 
