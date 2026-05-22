@@ -22,3 +22,8 @@
 2026-05-22T11:18:57Z Unity killed (SIGTERM) and relaunched
 2026-05-22T11:22:29Z waiting for Unity to finish startup + compilation
 2026-05-22T11:30:00Z redo iter 3 resumed — Unity restarted; checking MCP connectivity + compile state
+2026-05-22T13:30:00Z MCP transport dropped after Unity restart — server live at :21573, using direct HTTP. Verified: no compile errors, assets-refresh OK
+2026-05-22T13:33:00Z EditMode tests via direct MCP HTTP: Status=Passed, TotalTests=328, PassedTests=325, FailedTests=0
+2026-05-22T13:33:30Z PlayMode tests via direct MCP HTTP: Status=Passed, TotalTests=3, PassedTests=3, FailedTests=0 (includes new AppPauseFlush deadlock test)
+2026-05-22T13:35:00Z updating IMPLEMENTER_REPORT.md with iter 3 results, committing all changes
+2026-05-22T13:38:00Z done — all 3 ARCHITECT_REVIEW_FAIL items addressed, STATUS = READY_FOR_SELF_REVIEW
