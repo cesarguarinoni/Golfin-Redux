@@ -189,6 +189,57 @@ namespace Golfin.HoleCompleteModal.Tests
                 "UnlockHole(6) should be called for hole=5 → unlock 6.");
         }
 
+        // ── Test 4b: REPLAY on SUCCESS also writes progression (Stage E fix) ──
+        // Regression guard for the bug where tapping REPLAY instead of PLAY NEXT
+        // silently swallowed first-clear rewards and never unlocked the next hole.
+        // OnReplay must behave like OnPlayNext on SUCCESS: progression + rewards write.
+
+        [Test]
+        public void Modal_ReplayOnSuccessWritesProgression()
+        {
+            GameSession.SeedSession(5, "char_a", 0);
+            ModalTestHelper.InvokeHandleHoleComplete(_modal, ModalTestHelper.SuccessData(hole: 5));
+
+            // Invoke OnReplay via reflection (the loader-not-found error log is expected;
+            // OnReplay still hits WriteProgressionIfSuccess + GrantRewards before the
+            // loader call, which is what we're asserting).
+            var method = ModalTestHelper.ModalType.GetMethod("OnReplay",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(method, "OnReplay should exist");
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Error,
+                "[HoleCompleteModalController] GameplaySceneLoader not found.");
+            method.Invoke(_modal, null);
+
+            Assert.AreEqual(5, _store.LastMarkPlayedHole,
+                "REPLAY on SUCCESS must call MarkHolePlayed(current) — same as PLAY NEXT.");
+            Assert.AreEqual(6, _store.LastUnlockHole,
+                "REPLAY on SUCCESS must call UnlockHole(current+1) — same as PLAY NEXT.");
+        }
+
+        // ── Test 4c: REPLAY on FAILED never writes progression ─────────────────
+        // OnReplay is wired on the SUCCESS button (the lab widget shows RETRY on FAILED).
+        // But defense-in-depth: even if OnReplay is invoked when _lastSuccess is false,
+        // WriteProgressionIfSuccess + GrantRewards must early-return without writing.
+
+        [Test]
+        public void Modal_ReplayOnFailedDoesNotWriteProgression()
+        {
+            ModalTestHelper.InvokeHandleHoleComplete(_modal, ModalTestHelper.FailedData(hole: 3));
+
+            var method = ModalTestHelper.ModalType.GetMethod("OnReplay",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Error,
+                "[HoleCompleteModalController] GameplaySceneLoader not found.");
+            method.Invoke(_modal, null);
+
+            Assert.AreEqual(0, _store.MarkPlayedCallCount,
+                "OnReplay on FAILED state must NOT write MarkHolePlayed.");
+            Assert.AreEqual(0, _store.UnlockHoleCallCount,
+                "OnReplay on FAILED state must NOT call UnlockHole.");
+        }
+
         // ── Test 5: MENU on FAILED does not write progression ─────────────────
 
         [Test]

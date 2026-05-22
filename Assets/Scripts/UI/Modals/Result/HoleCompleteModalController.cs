@@ -25,7 +25,8 @@ namespace Golfin.UI.Modals.Result
     ///     production routing (REPLAY → reload same hole; RETRY → reload same hole;
     ///     PLAY → next hole load + progression write; Hole 18 → COURSE CLEARED toast).
     ///   - Grants rewards on SUCCESS.
-    ///   - Writes hole progression on PLAY NEXT or MENU (SUCCESS only).
+    ///   - Writes hole progression on PLAY NEXT or REPLAY (SUCCESS only). RETRY (FAILED)
+    ///     reloads the same hole without any progression or reward writes.
     ///
     /// The VIEW (HoleCompleteWidget) is the unmodified lab widget with Card 1 (current
     /// hole) + Card 2 (next hole). Card 2 is LOCKED when FAILED and next hole was never
@@ -279,11 +280,17 @@ namespace Golfin.UI.Modals.Result
 
         // ── Action handlers ───────────────────────────────────────────────────
 
-        // REPLAY: SUCCESS state — replay the same hole (no PB tracking yet, hasPersonalBest=false
-        // means REPLAY button shows on success). Same routing as RETRY.
+        // REPLAY: SUCCESS state — replay the same hole. MUST write progression +
+        // grant rewards on SUCCESS (same as PLAY NEXT) so that tapping REPLAY instead
+        // of PLAY NEXT still unlocks the next hole and pays out first-clear rewards.
+        // Without these two calls a player who picks REPLAY silently loses both —
+        // they'd come back to Hole Selection with Hole 2 still locked and no points.
+        // (Stage E fix, 2026-05-22.)
         void OnReplay()
         {
             int current = _lastSessionData.HoleNumber;
+            WriteProgressionIfSuccess();
+            GrantRewards();
             GameSession.ResetForNewHole();
             Hide();  // delegates to _widget.Hide()
 
