@@ -265,6 +265,9 @@ bot contract. To extend:
 | `Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs` | Scenario library |
 | `Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs` | Play-mode host |
 | `Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs` | Launcher + menu items |
+| `Assets/Scripts/Physics/Viewer/Bot/Editor/BotVideoRecorder.cs` | Demo-video capture — drives the Unity Recorder (§8) |
+| `Assets/Scripts/Physics/Viewer/Bot/Editor/Golfin.Physics.Viewer.BotEditor.asmdef` | Editor asmdef for `Bot/Editor/` — references `Unity.Recorder.Editor` |
+| `Docs/Scripts/build_bot_video.py` | ffmpeg caption pass — assembles the final captioned demo video (§8) |
 | `Assets/Scripts/Gameplay/Loop/BallStateMachine.cs` | `ForceShotCompleteForBot` seam |
 | `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` | `Fire`, `FireViaShotController`, `SetClub`, `SetCameraYawRadians`, `BallPosition` |
 | `Assets/Scripts/Gameplay/Input/ShotController.cs` | Production shot state machine + `BeginExternalDrag/SetExternalPower/EndExternalDrag` |
