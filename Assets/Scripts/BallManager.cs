@@ -3,10 +3,15 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using Golfin.Inventory;
+using Golfin.Save;
 
 /// <summary>
 /// Singleton — owns all player ball data (quantities).
 /// Mirrors ClubManager pattern but much simpler (no equip, no level, no durability).
+///
+/// Read-through facade over SaveData.ballQuantities.
+/// On Awake: seeds defaults from CSV, then overlays quantities from SaveData.
+/// Mutators (AddBalls) write through to SaveData and call MarkDirty.
 ///
 /// Execution order: after BallDatabaseCSV (set in Project Settings > Script Execution Order).
 /// </summary>
@@ -35,6 +40,7 @@ public class BallManager : MonoBehaviour
     /// <summary>
     /// Seeds PlayerBallData for every ball in the database.
     /// First ball (Golfin) gets unlimited quantity (-1), others get test quantity.
+    /// Then overlays quantities from SaveData (player-specific persistence).
     /// </summary>
     private void InitializeBalls()
     {
@@ -48,6 +54,7 @@ public class BallManager : MonoBehaviour
         ownedBalls.Clear();
         bool first = true;
 
+        // Step 1: seed defaults from CSV
         foreach (var template in db.GetAllBalls())
         {
             var playerBall = new PlayerBallData
@@ -59,10 +66,28 @@ public class BallManager : MonoBehaviour
             first = false;
         }
 
+        // Step 2: overlay quantities from SaveData
+        if (SaveDataHost.Instance != null)
+        {
+            var saveData = SaveDataHost.Instance.Data;
+            foreach (var kvp in saveData.ballQuantities)
+            {
+                if (ownedBalls.TryGetValue(kvp.Key, out var playerBall))
+                    playerBall.quantity = kvp.Value;
+                else
+                    ownedBalls[kvp.Key] = new PlayerBallData { ballId = kvp.Key, quantity = kvp.Value };
+            }
+            Debug.Log($"[BallManager] Overlaid SaveData ball quantities ({saveData.ballQuantities.Count} entries)");
+        }
+        else
+        {
+            Debug.LogWarning("[BallManager] SaveDataHost.Instance is null — ball quantities NOT loaded from save.");
+        }
+
         Debug.Log($"[BallManager] Initialized {ownedBalls.Count} balls.");
     }
 
-    // ── Public API ────────────────────────────────────────────────────────
+    // ── Public API ────────────────────────────────────────────────────
 
     public PlayerBallData? GetBallData(string ballId)
         => ownedBalls.TryGetValue(ballId, out var data) ? data : null;
@@ -86,7 +111,7 @@ public class BallManager : MonoBehaviour
     /// Add balls (from hole rewards, etc.). Capped at 99.
     /// If the ball is unlimited (quantity == -1), the add is a no-op but
     /// OnInventoryChanged still fires so subscribers can re-render.
-    /// Mirrors ItemManager.AddItems pattern. Added in Stage C1.
+    /// Writes through to SaveData and calls MarkDirty.
     /// </summary>
     public void AddBalls(string ballId, int count)
     {
@@ -99,6 +124,15 @@ public class BallManager : MonoBehaviour
         if (!data.IsUnlimited)
             data.quantity = Mathf.Min(data.quantity + count, 99);
 
+        // Sync to SaveData
+        SyncBallToSaveData(ballId, data.quantity);
         OnInventoryChanged?.Invoke();
+    }
+
+    private void SyncBallToSaveData(string ballId, int quantity)
+    {
+        if (SaveDataHost.Instance == null) return;
+        SaveDataHost.Instance.Data.ballQuantities[ballId] = quantity;
+        SaveDataHost.Instance.MarkDirty();
     }
 }

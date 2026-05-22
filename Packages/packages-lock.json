@@ -11,7 +11,7 @@
       "hash": "14ef3aacbcc9cba1f859c5a11d27b23903adcde3"
     },
     "com.ivanmurzak.unity.mcp": {
-      "version": "0.72.1",
+      "version": "0.73.0",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -126,6 +126,13 @@
     "com.unity.nuget.mono-cecil": {
       "version": "1.11.6",
       "depth": 2,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.nuget.newtonsoft-json": {
+      "version": "3.2.1",
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"

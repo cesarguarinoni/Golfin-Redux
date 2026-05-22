@@ -2,13 +2,18 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Golfin.Save;
 
 namespace Golfin.Roster
 {
     /// <summary>
-    /// Central manager for all character operations
-    /// Handles level-up, SP allocation, stat updates, roster management
-    /// Works with CharacterLevelUpDatabase for economy data
+    /// Central manager for all character operations.
+    /// Handles level-up, SP allocation, stat updates, roster management.
+    ///
+    /// Read-through facade over SaveData.ownedCharacters.
+    /// On Awake: builds ownedCharacters dict from CSV templates, then overlays
+    /// player-specific data (level, SP) from SaveData.ownedCharacters by characterId.
+    /// After LevelUp: syncs changes back to SaveData entry and calls MarkDirty.
     /// </summary>
     public class CharacterManager : MonoBehaviour
     {
@@ -41,7 +46,6 @@ namespace Golfin.Roster
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // Assuming ManualSPAllocation inherits from StatAllocationStrategy
             allocationStrategy = new ManualSPAllocation(this);
             LoadRoster();
         }
@@ -50,7 +54,7 @@ namespace Golfin.Roster
         {
             ownedCharacters.Clear();
 
-            // Load from CSV database (primary data source)
+            // Step 1: Build dict from CSV templates (or ScriptableObject fallback)
             var csvDb = CharacterDatabaseCSV.Instance;
             if (csvDb != null)
             {
@@ -58,11 +62,11 @@ namespace Golfin.Roster
                 foreach (var charTemplate in allChars)
                 {
                     var playerData = new PlayerCharacterData(charTemplate.characterId);
-                    playerData.currentLevel = GetStartingLevel(charTemplate.rarity);
-                    playerData.currentStrength = charTemplate.baseStrength;
+                    playerData.currentLevel      = GetStartingLevel(charTemplate.rarity);
+                    playerData.currentStrength   = charTemplate.baseStrength;
                     playerData.currentClubControl = charTemplate.baseClubControl;
-                    playerData.currentRecovery = charTemplate.baseRecovery;
-                    playerData.currentStamina = charTemplate.baseStamina;
+                    playerData.currentRecovery   = charTemplate.baseRecovery;
+                    playerData.currentStamina    = charTemplate.baseStamina;
                     ownedCharacters[charTemplate.characterId] = playerData;
                 }
 
@@ -75,11 +79,11 @@ namespace Golfin.Roster
                 foreach (var charTemplate in allChars)
                 {
                     var playerData = new PlayerCharacterData(charTemplate.characterId);
-                    playerData.currentLevel = GetStartingLevel(charTemplate.rarity);
-                    playerData.currentStrength = charTemplate.baseStrength;
+                    playerData.currentLevel      = GetStartingLevel(charTemplate.rarity);
+                    playerData.currentStrength   = charTemplate.baseStrength;
                     playerData.currentClubControl = charTemplate.baseClubControl;
-                    playerData.currentRecovery = charTemplate.baseRecovery;
-                    playerData.currentStamina = charTemplate.baseStamina;
+                    playerData.currentRecovery   = charTemplate.baseRecovery;
+                    playerData.currentStamina    = charTemplate.baseStamina;
                     ownedCharacters[charTemplate.characterId] = playerData;
                 }
 
@@ -90,15 +94,81 @@ namespace Golfin.Roster
                 Debug.LogWarning("[CharacterManager] No character data source available!");
             }
 
-            // Select first character by default
-            if (ownedCharacters.Count > 0)
+            // Step 2: Overlay player-specific data from SaveData
+            if (SaveDataHost.Instance != null)
             {
-                var firstId = ownedCharacters.Keys.First();
-                selectedCharacterId = firstId;
-                ownedCharacters[firstId].isSelected = true;
+                var saveData = SaveDataHost.Instance.Data;
+                foreach (var persisted in saveData.ownedCharacters)
+                {
+                    if (ownedCharacters.TryGetValue(persisted.characterId, out var playerData))
+                    {
+                        playerData.currentLevel     = persisted.currentLevel;
+                        playerData.spentStrength    = persisted.spentStrength;
+                        playerData.spentClubControl = persisted.spentClubControl;
+                        playerData.spentRecovery    = persisted.spentRecovery;
+                        playerData.spentStamina     = persisted.spentStamina;
+                        playerData.totalSPEarned    = persisted.totalSPEarned;
+                        playerData.isSelected       = persisted.isSelected;
+                    }
+                }
+
+                // Restore selected character from SaveData
+                if (!string.IsNullOrEmpty(saveData.selectedCharacterId) &&
+                    ownedCharacters.ContainsKey(saveData.selectedCharacterId))
+                {
+                    selectedCharacterId = saveData.selectedCharacterId;
+                }
+                else if (ownedCharacters.Count > 0)
+                {
+                    selectedCharacterId = ownedCharacters.Keys.First();
+                    ownedCharacters[selectedCharacterId].isSelected = true;
+                }
+
+                Debug.Log($"[CharacterManager] Overlaid SaveData — selectedChar={selectedCharacterId}");
+            }
+            else
+            {
+                // No SaveDataHost available (e.g. EditMode tests): use first character as default
+                if (ownedCharacters.Count > 0)
+                {
+                    var firstId = ownedCharacters.Keys.First();
+                    selectedCharacterId = firstId;
+                    ownedCharacters[firstId].isSelected = true;
+                }
+
+                Debug.LogWarning("[CharacterManager] SaveDataHost.Instance is null — character progress NOT loaded from save.");
             }
 
             OnRosterChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Sync a character's runtime state back to SaveData.ownedCharacters.
+        /// Call after any mutation to currentLevel, spentStrength, etc.
+        /// </summary>
+        private void SyncCharacterToSaveData(string characterId)
+        {
+            if (SaveDataHost.Instance == null) return;
+
+            if (!ownedCharacters.TryGetValue(characterId, out var playerData)) return;
+
+            var saveData = SaveDataHost.Instance.Data;
+            var existing = saveData.ownedCharacters.Find(c => c.characterId == characterId);
+            if (existing == null)
+            {
+                existing = new PersistedCharacter { characterId = characterId };
+                saveData.ownedCharacters.Add(existing);
+            }
+
+            existing.currentLevel     = playerData.currentLevel;
+            existing.spentStrength    = playerData.spentStrength;
+            existing.spentClubControl = playerData.spentClubControl;
+            existing.spentRecovery    = playerData.spentRecovery;
+            existing.spentStamina     = playerData.spentStamina;
+            existing.totalSPEarned    = playerData.totalSPEarned;
+            existing.isSelected       = playerData.isSelected;
+
+            SaveDataHost.Instance.MarkDirty();
         }
 
         // Return type updated to exactly match the dictionary value type
@@ -117,7 +187,7 @@ namespace Golfin.Roster
         }
 
         /// <summary>
-        /// Select a character by ID and fire OnCharacterSelected event
+        /// Select a character by ID and fire OnCharacterSelected event.
         /// </summary>
         public void SelectCharacter(string characterId)
         {
@@ -131,17 +201,27 @@ namespace Golfin.Roster
             if (!string.IsNullOrEmpty(selectedCharacterId) && ownedCharacters.TryGetValue(selectedCharacterId, out var prev))
             {
                 prev.isSelected = false;
+                SyncCharacterToSaveData(selectedCharacterId);
             }
 
             selectedCharacterId = characterId;
             ownedCharacters[characterId].isSelected = true;
+            SyncCharacterToSaveData(characterId);
+
+            // Update SaveData selectedCharacterId
+            if (SaveDataHost.Instance != null)
+            {
+                SaveDataHost.Instance.Data.selectedCharacterId = characterId;
+                SaveDataHost.Instance.MarkDirty();
+            }
+
             OnCharacterSelected?.Invoke(characterId);
 
             Debug.Log($"[CharacterManager] Selected character: {characterId}");
         }
 
         /// <summary>
-        /// Get the base CharacterData template from the database
+        /// Get the base CharacterData template from the database.
         /// </summary>
         public CharacterData? GetCharacterTemplate(string characterId)
         {
@@ -153,15 +233,11 @@ namespace Golfin.Roster
             return characterDatabase.GetCharacter(characterId);
         }
 
-        /// <summary>
-        /// Alias for GetCharacterData (thumbnail card calls it by this name)
-        /// </summary>
+        /// <summary>Alias for GetCharacterData (thumbnail card calls it by this name).</summary>
         public PlayerCharacterData? GetPlayerCharacter(string characterId)
             => GetCharacterData(characterId);
 
-        /// <summary>
-        /// Alias for GetCharacterTemplate (thumbnail card calls it by this name)
-        /// </summary>
+        /// <summary>Alias for GetCharacterTemplate (thumbnail card calls it by this name).</summary>
         public CharacterData? GetCharacter(string characterId)
             => GetCharacterTemplate(characterId);
 
@@ -187,9 +263,7 @@ namespace Golfin.Roster
             _                         => 39
         };
 
-        /// <summary>
-        /// Get max level based on rarity
-        /// </summary>
+        /// <summary>Get max level based on rarity.</summary>
         public int GetMaxLevel(string characterId)
         {
             var csv = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
@@ -201,9 +275,7 @@ namespace Golfin.Roster
             return 39;
         }
 
-        /// <summary>
-        /// Get the cost to level up a character to the next level
-        /// </summary>
+        /// <summary>Get the cost to level up a character to the next level.</summary>
         public int GetLevelUpCost(string characterId)
         {
             var playerChar = GetCharacterData(characterId);
@@ -214,8 +286,9 @@ namespace Golfin.Roster
         }
 
         /// <summary>
-        /// Level up a character: deduct RP, increment level, earn SP
-        /// Returns SP earned (0 if failed)
+        /// Level up a character: deduct RP, increment level, earn SP.
+        /// Returns SP earned (0 if failed).
+        /// Syncs changes to SaveData and calls MarkDirty.
         /// </summary>
         public int LevelUp(string characterId)
         {
@@ -247,6 +320,9 @@ namespace Golfin.Roster
             int spReward = levelUpDatabase.GetSPReward(nextLevel);
             playerChar.totalSPEarned += spReward;
 
+            // Sync to SaveData
+            SyncCharacterToSaveData(characterId);
+
             OnCharacterLeveledUp?.Invoke(characterId);
 
             Debug.Log($"[CharacterManager] {characterId} leveled up to {nextLevel}, earned {spReward} SP");
@@ -254,7 +330,7 @@ namespace Golfin.Roster
         }
 
         /// <summary>
-        /// Recalculate current stat values from base stats + SP allocation
+        /// Recalculate current stat values from base stats + SP allocation.
         /// </summary>
         public void RefreshStatValues(string characterId)
         {
@@ -286,11 +362,12 @@ namespace Golfin.Roster
             playerChar.currentClubControl = Mathf.Min(bCtrl + playerChar.spentClubControl, caps.clubControlCap);
             playerChar.currentRecovery    = Mathf.Min(bRec  + playerChar.spentRecovery,    caps.recoveryCap);
             playerChar.currentStamina     = Mathf.Min(bStam + playerChar.spentStamina,     caps.staminaCap);
+
+            // Sync stat changes to SaveData
+            SyncCharacterToSaveData(characterId);
         }
 
-        /// <summary>
-        /// Get the currently selected character ID
-        /// </summary>
+        /// <summary>Get the currently selected character ID.</summary>
         public string GetSelectedCharacterId() => selectedCharacterId;
 
         // Singleton cleanup to prevent Domain Reload bugs

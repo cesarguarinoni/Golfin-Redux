@@ -3,10 +3,15 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using Golfin.Inventory;
+using Golfin.Save;
 
 /// <summary>
 /// Singleton — owns all player item data (quantities).
 /// Replaces RepairKitManager as the single source of truth for item inventory.
+///
+/// Read-through facade over SaveData.itemQuantities.
+/// On Awake: seeds defaults from CSV, then overlays quantities from SaveData.
+/// Mutators (UseItem, AddItems) write through to SaveData and call MarkDirty.
 ///
 /// No namespace (matches ClubManager, BallManager pattern).
 /// Attach to: Managers GameObject.
@@ -49,6 +54,7 @@ public class ItemManager : MonoBehaviour
 
         ownedItems.Clear();
 
+        // Step 1: seed defaults from CSV
         foreach (var template in db.GetAllItems())
         {
             ownedItems[template.itemId] = new PlayerItemData
@@ -56,6 +62,24 @@ public class ItemManager : MonoBehaviour
                 itemId   = template.itemId,
                 quantity = 99,  // test data
             };
+        }
+
+        // Step 2: overlay quantities from SaveData
+        if (SaveDataHost.Instance != null)
+        {
+            var saveData = SaveDataHost.Instance.Data;
+            foreach (var kvp in saveData.itemQuantities)
+            {
+                if (ownedItems.TryGetValue(kvp.Key, out var playerItem))
+                    playerItem.quantity = kvp.Value;
+                else
+                    ownedItems[kvp.Key] = new PlayerItemData { itemId = kvp.Key, quantity = kvp.Value };
+            }
+            Debug.Log($"[ItemManager] Overlaid SaveData item quantities ({saveData.itemQuantities.Count} entries)");
+        }
+        else
+        {
+            Debug.LogWarning("[ItemManager] SaveDataHost.Instance is null — item quantities NOT loaded from save.");
         }
 
         Debug.Log($"[ItemManager] Initialized {ownedItems.Count} items.");
@@ -85,7 +109,7 @@ public class ItemManager : MonoBehaviour
 
     /// <summary>
     /// Uses one or more of an item. Does nothing if quantity is insufficient.
-    /// Returns true if successful.
+    /// Returns true if successful. Writes through to SaveData.
     /// </summary>
     public bool UseItem(string itemId, int count = 1)
     {
@@ -94,11 +118,12 @@ public class ItemManager : MonoBehaviour
         if (data.quantity < count) return false;
 
         data.quantity -= count;
+        SyncItemToSaveData(itemId, data.quantity);
         OnInventoryChanged?.Invoke();
         return true;
     }
 
-    /// <summary>Add items (from mission rewards, etc.). Capped at MAX_STACK.</summary>
+    /// <summary>Add items (from mission rewards, etc.). Capped at MAX_STACK. Writes through to SaveData.</summary>
     public void AddItems(string itemId, int count)
     {
         if (!ownedItems.TryGetValue(itemId, out var data))
@@ -110,7 +135,15 @@ public class ItemManager : MonoBehaviour
         if (!data.IsUnlimited)
             data.quantity = Mathf.Min(data.quantity + count, MAX_STACK);
 
+        SyncItemToSaveData(itemId, data.quantity);
         OnInventoryChanged?.Invoke();
+    }
+
+    private void SyncItemToSaveData(string itemId, int quantity)
+    {
+        if (SaveDataHost.Instance == null) return;
+        SaveDataHost.Instance.Data.itemQuantities[itemId] = quantity;
+        SaveDataHost.Instance.MarkDirty();
     }
 
     // ── Repair Kit convenience ────────────────────────────────────────────────

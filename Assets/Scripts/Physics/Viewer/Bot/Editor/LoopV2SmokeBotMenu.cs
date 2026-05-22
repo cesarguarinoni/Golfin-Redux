@@ -62,6 +62,12 @@ namespace Golfin.Physics.Viewer.Editor
         public static void RunHoleSelectionEntryToReplayRewards()
             => Launch("hole_selection_entry_to_replay_rewards");
 
+        // Save layer durability:
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Save Layer Durability")]
+        public static void RunSaveLayerDurability()
+            => Launch("save_layer_durability");
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]
@@ -87,6 +93,9 @@ namespace Golfin.Physics.Viewer.Editor
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole Selection Entry → Replay Rewards", isValidateFunction: true)]
         static bool ValidateHoleSelectionEntryToReplayRewards() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Save Layer Durability", isValidateFunction: true)]
+        static bool ValidateSaveLayerDurability() => !EditorApplication.isPlaying;
 
         // ── Launcher ─────────────────────────────────────────────────────────
 

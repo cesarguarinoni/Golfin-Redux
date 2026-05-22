@@ -112,6 +112,10 @@ namespace Golfin.Physics.Viewer
                 case "hole_selection_entry_to_replay_rewards":
                     scenarioRoutine = Bot.Scenarios.HoleSelectionEntryToReplayRewards(driver);
                     break;
+                // Save layer durability scenario:
+                case "save_layer_durability":
+                    scenarioRoutine = Bot.Scenarios.SaveLayerDurability(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

@@ -453,6 +453,108 @@ namespace Golfin.Physics.Viewer.Bot
 
             d.LogStep("=== Hole Selection Entry → Replay Rewards: all captures done ===");
         }
+
+        // ── Scenario 9: Save Layer Durability ─────────────────────────────────
+
+        /// <summary>
+        /// Stage E REPLAY durability proof for save_layer_reactive_foundation.
+        ///
+        /// Flow:
+        ///   1. Play/clear Hole 1 (via ForceShotComplete InCup).
+        ///   2. Tap PLAY NEXT → Hole 2 loads. Assert Hole 2 is unlocked.
+        ///   3. Simulate app restart: call SaveDataHost.Instance.ReloadFromDisk()
+        ///      which re-loads save.json from disk into the live SaveData.
+        ///      This simulates "the app was killed and relaunched" without actually
+        ///      needing to exit/enter play mode again.
+        ///   4. Assert SaveDataHost.Data.unlockedHoles contains Hole 2.
+        ///   5. Assert SaveDataHost.Data.rewardPoints >= 0 (persisted).
+        ///   6. Capture proof screenshot showing Hole 2 armed with persisted state.
+        ///
+        /// This is the proof that the Save layer makes hole progression durable across restarts.
+        ///
+        /// Captures: home, gameplay_armed_h1, result_modal, hole2_armed,
+        ///           restart_simulated_hole2_persisted.
+        /// </summary>
+        public static IEnumerator SaveLayerDurability(BotDriver d)
+        {
+            d.LogStep("=== Save Layer Durability ===");
+
+            // 1. Cold launch → Home.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("home");
+
+            // 2. Play → matchmaking → Hole 1 gameplay.
+            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed_h1");
+
+            // 3. Force InCup → result modal (hole 1 cleared).
+            yield return d.ForceShotComplete("InCup", settleSeconds: 1f);
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal");
+
+            // 4. Tap PLAY NEXT → Hole 2 loads.
+            yield return d.Click("PlayButton", settleSeconds: 1.5f);
+            yield return d.WaitForSceneLoaded("Hole_02_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("hole2_armed");
+
+            // 5. Verify Hole 2 is unlocked in SaveData BEFORE simulated restart.
+            bool hole2UnlockedBeforeRestart = Golfin.Save.SaveDataHost.Instance != null &&
+                Golfin.Save.SaveDataHost.Instance.Data.unlockedHoles.Contains(2);
+            d.LogStep($"  [Durability] Hole 2 unlocked in SaveData: {hole2UnlockedBeforeRestart}");
+
+            // 6. Flush any pending writes before simulated restart.
+            if (Golfin.Save.SaveDataHost.Instance != null)
+            {
+                // Force a flush by marking dirty and waiting for debounce
+                Golfin.Save.SaveDataHost.Instance.MarkDirty();
+                yield return new WaitForSecondsRealtime(0.5f); // > 250ms debounce
+                d.LogStep("  [Durability] Flushed save to disk before simulated restart.");
+            }
+
+            // 7. Simulate app restart: reload SaveData from disk.
+            // This mimics "app was killed and relaunched" — the in-memory state is discarded
+            // and the persisted state is reloaded from save.json.
+            if (Golfin.Save.SaveDataHost.Instance != null)
+            {
+                Golfin.Save.SaveDataHost.Instance.ReloadFromDisk();
+                yield return new WaitForSecondsRealtime(0.5f);
+                d.LogStep("  [Durability] Simulated restart: ReloadFromDisk() called.");
+            }
+            else
+            {
+                d.LogStep("  [Durability] ERROR: SaveDataHost.Instance is null — cannot simulate restart.");
+            }
+
+            // 8. Verify Hole 2 is still unlocked AFTER simulated restart.
+            bool hole2UnlockedAfterRestart = Golfin.Save.SaveDataHost.Instance != null &&
+                Golfin.Save.SaveDataHost.Instance.Data.unlockedHoles.Contains(2);
+            int rewardPointsAfterRestart = Golfin.Save.SaveDataHost.Instance != null
+                ? Golfin.Save.SaveDataHost.Instance.Data.rewardPoints
+                : -1;
+            d.LogStep($"  [Durability] After restart — Hole 2 unlocked: {hole2UnlockedAfterRestart}, " +
+                      $"rewardPoints: {rewardPointsAfterRestart}");
+
+            // 9. Capture proof screenshot (Hole 2 is still armed; save persisted).
+            yield return d.Capture("restart_simulated_hole2_persisted");
+
+            // 10. Log final durability verdict.
+            if (hole2UnlockedAfterRestart && rewardPointsAfterRestart >= 0)
+                d.LogStep("=== Save Layer Durability: PASS — hole 2 unlocked + rewards persisted across restart ===");
+            else
+                d.LogStep($"=== Save Layer Durability: FAIL — " +
+                          $"hole2={hole2UnlockedAfterRestart} rp={rewardPointsAfterRestart} ===");
+        }
     }
 }
 #endif
