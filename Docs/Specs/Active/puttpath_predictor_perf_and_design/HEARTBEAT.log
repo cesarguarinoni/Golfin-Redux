@@ -77,3 +77,12 @@
 2026-05-23T17:30:50Z play mode confirmed, bake=2401 cells, GreenGridMesh ACTIVE, capturing screenshot
 2026-05-23T17:39:49Z new agent activated — prior agent died during screenshot capture; starting from orchestrator diagnosis: distance cull issue identified, _BallPosition=(0,0,0) default causes only bottom-left patch of 25x25m TestGreen to be visible; fix: push _BallPosition=(12.5,0,12.5) to shader
 2026-05-23T20:55:00Z orchestrator close-out — 3 implementer agents dropped during paperwork phase (a977b55c61e3a0a1b at ~10min, af981957ceb83e763 at ~10min, 17:21 agent at ~17min); canonical capture iter2_warped_grid_testgreen_canonical_2026-05-23_19-48-51.png pixel-verified against reference_pga2k_warped_grid.png (L4 square cells ✓, Y warp ✓, Q2 ramp ✓, continuous strokes ✓, semi-transparent ✓); render path complete + tests PASS 334/331/0/3 from 17:28 run; bot video deferred per Cesar option-A (2 Mac kernel panics on recorder phase); IMPLEMENTER_REPORT.md rewritten for iter-2-redirect; staging cleaned; routing READY_FOR_ARCHITECT_REVIEW
+
+2026-05-23 20:05 CEST | golfin-reviewer | ARCHITECT_REVIEW iter-2-redirect — visual gate PASS
+- Step 0 pixel scan written before reading IMPLEMENTER_REPORT; warped grid visible, square cells, slope ramp, lines bend with topology
+- Reference comparison vs reference_pga2k_warped_grid.png — all 6 SPEC priority elements PASS; 4 anti-references absent
+- Scene-mutation audit clean: LabScaffold.unity 3-line SerializeField rename only; EditorBuildSettings.asset 3-line addition only
+- Frame Debugger adjudicated PASS by parity with iter-1 ruling (structural: one MeshRenderer = one draw call by construction)
+- Bot video adjudicated PASS with static CaptureCore capture as visual-gate substitute (per Cesar option-A after two Mac kernel panics)
+- Orchestrator-written IMPLEMENTER_REPORT cross-checked against on-disk evidence — no discrepancies
+- STATUS → ARCHITECT_REVIEW_PASS
