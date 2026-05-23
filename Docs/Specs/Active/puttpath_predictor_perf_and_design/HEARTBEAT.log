@@ -29,6 +29,9 @@
 2026-05-22T21:45:00Z capture complete — updating IMPLEMENTER_REPORT for iteration 2
 2026-05-22T21:55:00Z done — IMPLEMENTER_REPORT updated, routing READY_FOR_ARCHITECT_REVIEW (Frame Debugger capture FAIL)
 
+2026-05-23T04:27:09Z gap-fill activated — producing BotVideoRecorder mp4 for PutterAimGreenReaderVisible
+2026-05-23T04:37:00Z BotVideoRecorder started — recording to tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/video/raw.mp4 (1170x2532@60fps); bot running scenario
+2026-05-23T04:47:00Z scenario PASS (baked=5515 visible=1110); video finalized 25.8MB; copied to task videos/ folder; IMPLEMENTER_REPORT updated — done
 2026-05-22 21:55 CEST — golfin-reviewer — ARCHITECT REVIEW complete.
   Step 0 pixel scan: canonical putter_production_putter_hud_f746787.png shows
   arrow grid on real green grass, PUTTER selected — production-flow capture, not

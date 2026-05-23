@@ -55,6 +55,19 @@ Replaced `PuttPathPredictor.cs` + `PuttPathRenderer.cs` with a new `PutterGreenR
 - **Visible cells at capture:** 1109 (confirmed via `reader.LastVisibleCellCount` in same coroutine, 3 frames after `BeginExternalDrag`)
 - **Arrow grid:** Clearly visible as gray/white quad grid covering the green grass surface
 
+## Bot recording (gap-fill 2026-05-23)
+
+- **Video file:** `videos/putter_aim_green_reader_visible_20260523_063614.mp4`
+- **Source path:** `tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/video/raw.mp4`
+- **Duration:** Full scenario run (~13 seconds of play-mode time at 60fps; 25.8 MB)
+- **Resolution:** 1170×2532 @ 60fps (device screen size)
+- **Capture method:** Unity Recorder `MovieRecorderSettings` + `RecorderController` API, driven by `BotVideoRecorder.Begin()` / `BotVideoRecorder.End()` at `EnteredPlayMode` / `ExitingPlayMode` via the existing `LoopV2SmokeBotMenu.OnPlayModeStateChanged` hook. `BotVideoRecorder.RecordVideo = true` was set before calling `EditorApplication.EnterPlaymode()` via MCP `script-execute`.
+- **Scenario:** `PutterAimGreenReaderVisible` — full production path: Home → matchmaking → LabScaffold/Hole_01_Geo load → ball placed on green → putter selected → `BeginExternalDrag()` → putter aim active → capture → assert → cleanup.
+- **Scenario result:** PASS — `baked=5515 cells, visible=1110 arrows in frame` (logged at line 2436076 of Editor.log)
+- **Bot captures included:** `s01_home`, `s02_matchmaking_searching`, `s03_gameplay_armed`, `s04_putter_aim_green_reader_visible` — all saved to `tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/screenshots/`
+- **Recording stopped cleanly:** `[BotVideoRecorder] Recording stopped.` confirmed in Editor.log at ExitingPlayMode.
+- **What the video shows:** arrow grid appearing on the green as putter aim activates, color ramp rendering on real green grass (Hole 1), grid at full 1110-cell density, scenario flow from Home through matchmaking to gameplay.
+
 ## Acceptance checklist (copy from SPEC.md, fill every line)
 
 | Item | Result | Justification |
