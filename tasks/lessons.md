@@ -1491,3 +1491,34 @@ and Lesson S (every new player-facing Button gets `ButtonPressFeedback`)
 share the same pattern: a standing rule that must be translated by the
 orchestrator/architect into per-task implementer deliverables. Standing
 rules don't self-propagate through the pipeline.
+
+---
+
+## Lesson U — Visual-fidelity SPECs require a reference image in the task folder, not just paradigm words
+
+**Symptom (`puttpath_predictor_perf_and_design` iter-1, rejected 2026-05-22 ~18:00 CEST):** The original SPEC's design-lock L1 said *"GOLFIN sits closer to PGA 2K than Everybody's Golf. Sim positioning. Player reads the green; the game does not pre-compute the full putt path."* That language is a **paradigm declaration**, not a visual spec. The implementer correctly read "Sim positioning + slope arrows" from the literal SPEC text and shipped an arrow grid on flat cells. Both pipeline reviewers cleared it. Architect-review PASSed at commit `a2fd9850`. Cesar gated and rejected — the intended visual was the **PGA 2K warped wireframe grid** (square cells in world-XZ, lines bending in Y with the surface topology), not arrows. Iter-1 sunk a full pipeline chain on a paradigm mismatch that no agent in the chain could have caught from the SPEC text alone.
+
+**Root cause:** the SPEC had no reference image and no §Visual reference section. Phrases like "PGA 2K style", "Sim positioning", "green-reading aid", "arrow grid showing slope direction" all sound mutually consistent in prose but produce wildly different visuals when implemented. Without an image to anchor them, the SPEC's literal text ("arrow grid") won by default. The architect (this chat) held a clearer mental picture from prior PGA 2K reference watching, but it never made it into the spec folder — so every downstream agent worked from words alone.
+
+**The rule:**
+
+> For any task involving visual fidelity (UI layouts, rendering paradigms, visual effects, animation feel, anything where "looks right" is part of done), the SPEC MUST include:
+>
+> 1. **At least one concrete reference image saved to the task folder** (`Docs/Specs/Active/<slug>/<descriptive_name>.png`).
+> 2. **A §Visual reference section in the SPEC** that links the image, describes what the image shows in priority order (most-important visual property first), and lists **anti-references** — i.e., "NOT arrows", "NOT contour lines", "NOT a screen-space grid" — naming the visual paradigms the reader might confuse with the intended one.
+> 3. **Implementation language in §Architecture / §Render step / §UI layout that matches the image**, not abstract design-lock language. "World-XZ square grid lines emerging from `frac(worldPos.xz / cellSize)` in the fragment shader" cannot be misread as "arrows on cells".
+> 4. **Reference link in the kickoff prompt to the implementer**, not just buried in the SPEC. Implementer agents prioritize what the orchestrator surfaces; if the visual reference is only in §Visual reference and the kickoff doesn't name it, the agent may still treat the literal SPEC text as authoritative.
+
+**Counter-rule:** for purely structural / data / refactor tasks (asmdef moves, schema migration, log plumbing, test runner config), no reference image needed — words are enough because there's no visual paradigm to anchor.
+
+**Sister rules:**
+- Lesson G ("Functionally working" is not "matches the reference") covers the same gap from the implementer side — the implementer must side-by-side the screenshot against the reference, not just verify functional parity.
+- Lesson T (kickoff visual-gate criteria as separate deliverables) covers the orchestrator's responsibility to propagate visual gates into implementer prompts.
+- This lesson (U) covers the **architect's** responsibility at SPEC-authoring time: an image-less visual SPEC is structurally underspecified, full stop.
+
+**Self-check at SPEC-authoring time:** before STATUS goes from `DRAFT` to `SPEC_READY` on any task touching rendering / UI / animation, the architect asks:
+> "If I handed this SPEC to a skilled stranger who had never seen PGA 2K (or whatever the visual reference is), could they implement the intended visual from these words alone?"
+
+If the answer is no, the SPEC is missing the §Visual reference. Pause STATUS bump. Find or capture the reference image. Add the section. Re-read the §Architecture language for paradigm-drift words ("style", "like", "aesthetic") and replace with image-anchored implementation language. Then bump STATUS.
+
+**Postmortem cost of skipping this on iter-1:** one full pipeline chain (implementer + self-reviewer + architect-reviewer iterations), the wall-clock to detect the gap at Cesar's gate, plus the iter-2 redirect with revised SPEC + new test green scene + render-path swap. Roughly a half-day of pipeline time that a 5-minute image paste at SPEC-authoring would have prevented.
