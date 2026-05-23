@@ -1443,3 +1443,51 @@ git status path/to/new/file.cs path/to/new/file.cs.meta
 **Test surface:** if a smoke-bot scenario exercises a new button surface (typical for new screens), the visual gate from the bot recording automatically covers Lesson S — the pulse is visible on every tapped button. A button that doesn't pulse in the bot video = lesson violation.
 
 **Sister rule:** see Lesson R — if Architect ships a new `Button` styling component via SURGICAL, the `.cs.meta` must ship with it. Same reflex applies.
+
+## Lesson T — Kickoff visual-gate criteria are separate deliverables from the SPEC DoD
+
+**Symptom (puttpath_predictor_perf_and_design, 2026-05-22 → 23):** The kickoff
+prompt listed Cesar's visual-gate criteria including *"Bot recording from
+PutterAimGreenReaderVisible serves as the primary visual gate."* The SPEC DoD
+covered the same scenario differently — "Smoke-bot scenario added, captures
+rendered grid on Hole 1" — i.e. a screenshot via the scenario, not a video.
+Two reviewers cleared the work on the SPEC DoD; the chain passed all the way
+to `ARCHITECT_REVIEW_PASS` with a still production screenshot. At Cesar's gate
+the gap surfaced: the kickoff named a *video*, the pipeline shipped a
+*screenshot*. Cesar called it out directly: *"If you know the video is
+required, why did it not get produced?"*
+
+**Root cause:** the orchestrator transmitted the SPEC DoD line into each
+implementer prompt faithfully but never separately surfaced the kickoff's
+"bot recording" line as a distinct deliverable. The pipeline subagents work
+from the SPEC; if the SPEC DoD doesn't list an artifact, no agent in the
+chain will produce it, even when the kickoff names it as the primary gate.
+The SPEC and the kickoff were each correct in isolation — the bug was at the
+translation layer, owned by the orchestrator.
+
+**Rule (orchestrator at kickoff parse):** when the kickoff names a specific
+artifact (bot recording, Profiler capture, Frame Debugger screenshot, log
+dump, scene snapshot, etc.) as a visual-gate / acceptance mechanism, treat
+it as a **MANDATORY deliverable** and propagate it verbatim into the
+implementer prompt **in addition to** transmitting the SPEC DoD. If the
+SPEC DoD's verification artifact differs in kind from the kickoff's gate
+artifact (screenshot vs video, programmatic measurement vs GUI capture,
+etc.), include BOTH explicitly. Do not assume the SPEC subsumes the kickoff.
+
+**Sub-rule:** for any task touching animation, gameplay flow, or render
+lifecycle (appear / disappear / cull / animate), the bot-recorded video via
+Unity Recorder is the default visual-gate artifact — not a still screenshot
+— even when the SPEC DoD only names a screenshot. The project has
+`BotVideoRecorder` wired into `LoopV2SmokeBotMenu.OnPlayModeStateChanged`;
+setting `BotVideoRecorder.RecordVideo = true` before arming the smoke bot
+auto-records the run. See `feedback_prefer_bot_videos.md`.
+
+**Counter-rule:** if the kickoff doesn't name a video and the task is purely
+static (UI layout with no state transitions, a one-off data file, a
+refactor), a still screenshot is fine — don't over-deliver.
+
+**Sister rules:** Lesson R (Architect ships `.cs.meta` files with new `.cs`)
+and Lesson S (every new player-facing Button gets `ButtonPressFeedback`)
+share the same pattern: a standing rule that must be translated by the
+orchestrator/architect into per-task implementer deliverables. Standing
+rules don't self-propagate through the pipeline.
