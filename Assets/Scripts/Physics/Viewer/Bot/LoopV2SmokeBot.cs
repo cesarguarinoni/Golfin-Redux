@@ -120,6 +120,10 @@ namespace Golfin.Physics.Viewer
                 case "putter_aim_green_reader_visible":
                     scenarioRoutine = Bot.Scenarios.PutterAimGreenReaderVisible(driver);
                     break;
+                // Iter-2 warped grid visual gate (TestGreen scene):
+                case "putter_aim_warped_grid_on_test_green":
+                    scenarioRoutine = Bot.Scenarios.PutterAimWarpedGridOnTestGreen(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

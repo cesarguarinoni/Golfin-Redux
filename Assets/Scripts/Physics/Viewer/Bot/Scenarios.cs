@@ -685,6 +685,134 @@ namespace Golfin.Physics.Viewer.Bot
                 d.LogStep($"=== PutterAimGreenReaderVisible: PASS — baked={bakedCount} cells, " +
                           $"visible={visibleCount} arrows in frame ===");
         }
+
+        // ── Scenario: Putter Aim Warped Grid on TestGreen ─────────────────────
+
+        /// <summary>
+        /// Visual gate for iter-2 warped wireframe grid — runs on PhysicsLab_TestGreen.
+        ///
+        /// The TestGreen scene has a sinusoidally sculpted green (y = 0.30*sin(x/4) + 0.20*cos(z/3))
+        /// so the warped-grid visual is actually visible: lines bend with the topology.
+        ///
+        /// Flow:
+        ///   1. Load PhysicsLab_TestGreen.unity directly (no matchmaking — it's a lab scene).
+        ///   2. Wait for BakedZoneClassifier to bake (HoleContext.OnChanged fires on scene load).
+        ///   3. Place ball at green center, enter putter aim via ShotController production path.
+        ///   4. Capture screenshot — visual gate: lines must visibly bend over humps/swales.
+        ///   5. Assert baked >= 50 cells AND mesh was generated (MeshVertexCount > 0).
+        ///
+        /// Captures: test_green_baked, putter_aim_warped_grid_on_test_green.
+        /// </summary>
+        public static IEnumerator PutterAimWarpedGridOnTestGreen(BotDriver d)
+        {
+            d.LogStep("=== Putter Aim Warped Grid on TestGreen ===");
+
+            // 1. Load PhysicsLab_TestGreen directly via SceneManager.LoadSceneAsync.
+            //    PhysicsLab_TestGreen is a standalone lab scene registered in the build settings
+            //    (added by TestGreenMeshBuilder or scene setup editor utility).
+            const string TestGreenSceneName = "PhysicsLab_TestGreen";
+            d.LogStep($"  Loading scene '{TestGreenSceneName}'...");
+
+            var op = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                TestGreenSceneName, UnityEngine.SceneManagement.LoadSceneMode.Single);
+            if (op == null)
+            {
+                d.LogStep($"=== PutterAimWarpedGridOnTestGreen: FAIL — LoadSceneAsync returned null. " +
+                          "Is 'PhysicsLab_TestGreen' in the Build Settings scenes list? ===");
+                yield break;
+            }
+
+            // Wait for load to complete.
+            float loadWait = 0f;
+            while (!op.isDone && loadWait < 30f)
+            {
+                yield return new WaitForSecondsRealtime(0.25f);
+                loadWait += 0.25f;
+            }
+            if (!op.isDone)
+            {
+                d.LogStep($"=== PutterAimWarpedGridOnTestGreen: FAIL — scene load timed out after {loadWait}s ===");
+                yield break;
+            }
+
+            yield return new WaitForSecondsRealtime(5f);  // allow Awake/Start + HoleContext.OnChanged + bake
+
+            // 2. Capture initial state (bake should have completed).
+            yield return d.Capture("test_green_baked");
+
+            // 3. Find PhysicsLabController.
+            var labCtrl = Object.FindObjectOfType<PhysicsLabController>();
+            if (labCtrl == null)
+            {
+                d.LogStep("=== PutterAimWarpedGridOnTestGreen: FAIL — PhysicsLabController not found in TestGreen scene ===");
+                yield break;
+            }
+
+            // 4. Place ball at green center (approximately 12.5m x 12.5m for a 25m green).
+            d.LogStep("  Placing ball at green center...");
+            var greenEntry = labCtrl.PlacementEntries.Find(e => e.Label != null && e.Label.StartsWith("Green"));
+            if (greenEntry.Label != null)
+            {
+                labCtrl.PlaceBallAt(greenEntry.WorldPos, greenEntry.PreferredSurfaceTypeValue);
+            }
+            else
+            {
+                // Fallback: place at hardcoded green center.
+                labCtrl.PlaceBallAt(new Vector3(12.5f, 0.2f, 12.5f), 1);
+            }
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            // 5. Switch to putter.
+            labCtrl.SetClub(PhysicsLabController.PutterIndex);
+            yield return new WaitForSecondsRealtime(0.3f);
+
+            // 6. Enter putter aim via production ShotController path.
+            var sc      = labCtrl.GetComponentInChildren<Golfin.Gameplay.Input.ShotController>(true);
+            var reader6 = labCtrl.GetComponentInChildren<PutterGreenReader>(true);
+
+            if (sc != null && reader6 != null)
+            {
+                d.LogStep("  Entering putter aim via BeginExternalDrag()...");
+                sc.IsPutt = true;
+                sc.BeginExternalDrag();
+                yield return null;
+                yield return null;
+                yield return null;
+                d.LogStep($"  After 3 frames: BakedCellCount={reader6.BakedCellCount} MeshVertexCount={reader6.MeshVertexCount}");
+            }
+            else if (reader6 != null)
+            {
+                d.LogStep("  Fallback: using SetAimActiveForTest(true)...");
+                reader6.SetAimActiveForTest(true);
+                yield return null;
+                yield return null;
+                yield return null;
+            }
+
+            // 7. Wait a moment then capture the warped grid visual.
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("putter_aim_warped_grid_on_test_green");
+
+            // 8. Assert.
+            var reader = labCtrl.GetComponentInChildren<PutterGreenReader>(true);
+            int bakedCount  = reader != null ? reader.BakedCellCount   : 0;
+            int meshVerts   = reader != null ? reader.MeshVertexCount   : 0;
+
+            d.LogStep($"  PutterGreenReader: baked={bakedCount} meshVerts={meshVerts} (need >=50 baked AND meshVerts>0 for PASS)");
+
+            // 9. Clean up.
+            if (sc != null) { sc.CancelExternalDrag(); sc.IsPutt = false; }
+            if (reader != null) reader.SetAimActiveForTest(false);
+
+            if (bakedCount < 1)
+                d.LogStep("=== PutterAimWarpedGridOnTestGreen: FAIL — no cells baked (BakedZoneClassifier not classifying TestGreen mesh as Green?) ===");
+            else if (meshVerts < 1)
+                d.LogStep($"=== PutterAimWarpedGridOnTestGreen: FAIL — baked={bakedCount} cells but mesh has 0 vertices (BuildGridMesh did not run?) ===");
+            else if (bakedCount < 50)
+                d.LogStep($"=== PutterAimWarpedGridOnTestGreen: PARTIAL — baked={bakedCount} (< 50 threshold) meshVerts={meshVerts} ===");
+            else
+                d.LogStep($"=== PutterAimWarpedGridOnTestGreen: PASS — baked={bakedCount} cells, meshVerts={meshVerts} ===");
+        }
     }
 }
 #endif

@@ -42,3 +42,38 @@
   1109 cells proves single instanced batch; RenderMeshInstanced bypasses SRP
   Batcher by construction; GUI non-automatable so not routed back.
   Verdict: ARCHITECT_REVIEW_PASS. STATUS -> ARCHITECT_REVIEW_PASS.
+2026-05-23T06:10:24Z activated — iter-2 render-path redesign (CESAR_REJECTED), warped wireframe grid implementation
+2026-05-23T06:16:47Z core scripts written — triggering Unity asset refresh via MCP
+2026-05-23T06:18:22Z attempting Unity MCP editor-application-get-state
+2026-05-23T06:20:55Z attempting first MCP call (editor-application-get-state attempt 1/5)
+2026-05-23T06:25:37Z scripts written — TestGreenSceneBuilder, TestGreenLabSetup, zones.json created; attempting MCP
+2026-05-23T06:27:50Z MCP attempt 1 — calling editor-application-get-state
+2026-05-23T06:28:30Z MCP down ~80min — attempting computer-use to interact with Unity directly
+2026-05-23T06:29:16Z attempting computer-use to bring Unity to focus
+2026-05-23T06:29:51Z unity-mcp-server IS running on port 21573 — MCP tools should work
+2026-05-23T06:30:23Z calling MCP script-execute for asset setup
+2026-05-23T06:31:19Z pre-MCP check complete — proceeding with MCP tool calls
+2026-05-23T06:34:29 resumed from context compaction — triggering Unity refresh
+2026-05-23T06:35:06 attempting MCP editor-application-get-state (attempt 1)
+2026-05-23T06:35:33 testing MCP via claude MCP client
+2026-05-23T06:35:52 direct MCP call attempt via script
+2026-05-23T06:40:24 running EditMode tests
+2026-05-23T06:51:17 running tests after sharedMesh fix
+2026-05-23T06:52:31 running smoke-bot PutterAimWarpedGridOnTestGreen
+2026-05-23T08:02:37Z resumed — prior agent killed by Mac reset at smoke-bot run; reading reference image, probing Unity MCP
+2026-05-23T08:07:01Z MCP server confirmed alive on port 21573 — attempting editor-application-get-state
+2026-05-23T08:10:00Z staged sharedMesh fix for both PutterGreenReader.cs and BakeTests.cs; staged all untracked iter-2 files
+2026-05-23T08:10:30Z attempting Unity MCP tests-run on Golfin.Physics.Tests
+2026-05-23T08:14:00Z tests PASS: 334 total, 331 pass, 0 fail, 3 skip — PutterGreenReader 6/6 pass (81 cells, 81 verts, 128 tris); running smoke bot
+2026-05-23T08:19:25Z smoke bot PutterAimWarpedGridOnTestGreen running — 2401 cells baked, 2401 verts, 4608 tris; video recording to tasks/.../raw.mp4; awaiting completion
+2026-05-23T17:21:13Z activated — iter-2 finalization (static screenshot only, no video)
+2026-05-23T17:22:14Z calling Unity MCP editor-application-get-state
+2026-05-23T17:23:10Z attempting MCP editor-application-get-state (attempt 1/5)
+2026-05-23T17:23:51Z need to verify Unity connection - checking if there's any recent Unity activity in the log since 15:22 UTC
+2026-05-23T17:24:26Z attempting MCP tool call - will try editor-application-get-state via MCP protocol
+2026-05-23T17:25:32Z Unity MCP confirmed alive — IsCompiling=false IsPlaying=false — running tests
+2026-05-23T17:28:08Z tests PASS 334/331/0/3 — opening TestGreen scene
+2026-05-23T17:28:58Z TestGreen scene loaded (4 root GOs) — entering play mode
+2026-05-23T17:30:50Z play mode confirmed, bake=2401 cells, GreenGridMesh ACTIVE, capturing screenshot
+2026-05-23T17:39:49Z new agent activated — prior agent died during screenshot capture; starting from orchestrator diagnosis: distance cull issue identified, _BallPosition=(0,0,0) default causes only bottom-left patch of 25x25m TestGreen to be visible; fix: push _BallPosition=(12.5,0,12.5) to shader
+2026-05-23T20:55:00Z orchestrator close-out — 3 implementer agents dropped during paperwork phase (a977b55c61e3a0a1b at ~10min, af981957ceb83e763 at ~10min, 17:21 agent at ~17min); canonical capture iter2_warped_grid_testgreen_canonical_2026-05-23_19-48-51.png pixel-verified against reference_pga2k_warped_grid.png (L4 square cells ✓, Y warp ✓, Q2 ramp ✓, continuous strokes ✓, semi-transparent ✓); render path complete + tests PASS 334/331/0/3 from 17:28 run; bot video deferred per Cesar option-A (2 Mac kernel panics on recorder phase); IMPLEMENTER_REPORT.md rewritten for iter-2-redirect; staging cleaned; routing READY_FOR_ARCHITECT_REVIEW

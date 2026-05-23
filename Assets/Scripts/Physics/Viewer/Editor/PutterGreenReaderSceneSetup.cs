@@ -1,3 +1,12 @@
+// PutterGreenReaderSceneSetup.cs — Editor utility for wiring PutterGreenReader.
+//
+// ITER-2 REVISED: Arrow material/mesh wiring removed. PutterGreenReader now uses
+// a procedural mesh + PutterGreenGrid material instead of arrow instancing.
+//
+// Run: GOLFIN > Setup > Wire PutterGreenReader in LabScaffold
+// Also: GOLFIN > Setup > Wire PutterGreenReader in PhysicsLab_TestGreen
+//
+// Safe to run multiple times (idempotent — skips if already wired).
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
@@ -5,34 +14,32 @@ using Golfin.Physics.Viewer;
 
 namespace Golfin.Physics.Viewer.Editor
 {
-    /// <summary>
-    /// One-shot scene setup for puttpath_predictor_perf_and_design task.
-    ///
-    /// Replaces the deleted PuttPathPredictor component on LabRoot with a new
-    /// PutterGreenReader component, wires the _putterGreenReader SerializeField
-    /// on PhysicsLabController, and creates a placeholder arrow material + mesh.
-    ///
-    /// Run: GOLFIN > Setup > Wire PutterGreenReader in LabScaffold
-    ///
-    /// Safe to run multiple times (idempotent — skips if already wired).
-    /// </summary>
     public static class PutterGreenReaderSceneSetup
     {
+        private const string GridMatPath = "Assets/Materials/PutterGreenGrid.mat";
+
         [MenuItem("GOLFIN/Setup/Wire PutterGreenReader in LabScaffold")]
         public static void WirePutterGreenReader()
+            => WireInCurrentScene();
+
+        [MenuItem("GOLFIN/Setup/Wire PutterGreenReader in PhysicsLab_TestGreen")]
+        public static void WirePutterGreenReaderTestGreen()
+            => WireInCurrentScene();
+
+        public static PutterGreenReader WireInCurrentScene()
         {
             var labCtrl = Object.FindObjectOfType<PhysicsLabController>();
             if (labCtrl == null)
             {
-                Debug.LogError("[PutterGreenReaderSetup] PhysicsLabController not found in scene. Open LabScaffold.unity first.");
-                return;
+                Debug.LogError("[PutterGreenReaderSetup] PhysicsLabController not found in scene. Open the target scene first.");
+                return null;
             }
 
-            // Check if already wired.
-            var existing = labCtrl.GetComponent<PutterGreenReader>();
-            if (existing == null)
+            // Ensure PutterGreenReader exists on the LabController GO.
+            var reader = labCtrl.GetComponent<PutterGreenReader>();
+            if (reader == null)
             {
-                existing = labCtrl.gameObject.AddComponent<PutterGreenReader>();
+                reader = labCtrl.gameObject.AddComponent<PutterGreenReader>();
                 Debug.Log("[PutterGreenReaderSetup] Added PutterGreenReader to LabRoot.");
             }
             else
@@ -40,30 +47,21 @@ namespace Golfin.Physics.Viewer.Editor
                 Debug.Log("[PutterGreenReaderSetup] PutterGreenReader already present on LabRoot.");
             }
 
-            // Wire the _putterGreenReader SerializeField on PhysicsLabController via SerializedObject.
-            var so = new SerializedObject(labCtrl);
-            var prop = so.FindProperty("_putterGreenReader");
-            if (prop != null)
+            // Wire _putterGreenReader on PhysicsLabController.
+            var soCtrl = new SerializedObject(labCtrl);
+            var readerProp = soCtrl.FindProperty("_putterGreenReader");
+            if (readerProp != null && readerProp.objectReferenceValue != (Object)reader)
             {
-                if (prop.objectReferenceValue == null || prop.objectReferenceValue != existing)
-                {
-                    prop.objectReferenceValue = existing;
-                    so.ApplyModifiedProperties();
-                    EditorUtility.SetDirty(labCtrl.gameObject);
-                    Debug.Log("[PutterGreenReaderSetup] Wired _putterGreenReader on PhysicsLabController.");
-                }
-                else
-                {
-                    Debug.Log("[PutterGreenReaderSetup] _putterGreenReader already wired.");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[PutterGreenReaderSetup] _putterGreenReader field not found on PhysicsLabController. Recompile may be needed.");
+                readerProp.objectReferenceValue = reader;
+                soCtrl.ApplyModifiedProperties();
+                EditorUtility.SetDirty(labCtrl.gameObject);
+                Debug.Log("[PutterGreenReaderSetup] Wired _putterGreenReader on PhysicsLabController.");
             }
 
-            // Wire _shotController on PutterGreenReader.
-            var soReader = new SerializedObject(existing);
+            // Wire SerializeFields on PutterGreenReader.
+            var soReader = new SerializedObject(reader);
+
+            // _shotController
             var shotProp = soReader.FindProperty("_shotController");
             if (shotProp != null && shotProp.objectReferenceValue == null)
             {
@@ -71,21 +69,19 @@ namespace Golfin.Physics.Viewer.Editor
                 if (sc != null)
                 {
                     shotProp.objectReferenceValue = sc;
-                    soReader.ApplyModifiedProperties();
                     Debug.Log("[PutterGreenReaderSetup] Wired _shotController on PutterGreenReader.");
                 }
             }
 
-            // Wire _labController on PutterGreenReader.
+            // _labController
             var labProp = soReader.FindProperty("_labController");
             if (labProp != null && labProp.objectReferenceValue == null)
             {
                 labProp.objectReferenceValue = labCtrl;
-                soReader.ApplyModifiedProperties();
                 Debug.Log("[PutterGreenReaderSetup] Wired _labController on PutterGreenReader.");
             }
 
-            // Wire _worldCamera on PutterGreenReader.
+            // _worldCamera
             var camProp = soReader.FindProperty("_worldCamera");
             if (camProp != null && camProp.objectReferenceValue == null)
             {
@@ -96,116 +92,36 @@ namespace Golfin.Physics.Viewer.Editor
                     if (cam != null)
                     {
                         camProp.objectReferenceValue = cam;
-                        soReader.ApplyModifiedProperties();
                         Debug.Log("[PutterGreenReaderSetup] Wired _worldCamera on PutterGreenReader.");
                     }
                 }
             }
 
-            // Create placeholder arrow material if not already present.
-            EnsureArrowMaterialExists();
+            // _gridMaterial — PutterGreenGrid.mat (iter-2 warped wireframe shader).
+            var matProp = soReader.FindProperty("_gridMaterial");
+            if (matProp != null && matProp.objectReferenceValue == null)
+            {
+                var gridMat = AssetDatabase.LoadAssetAtPath<Material>(GridMatPath);
+                if (gridMat != null)
+                {
+                    matProp.objectReferenceValue = gridMat;
+                    Debug.Log($"[PutterGreenReaderSetup] Wired _gridMaterial ({GridMatPath}) on PutterGreenReader.");
+                }
+                else
+                {
+                    Debug.LogWarning($"[PutterGreenReaderSetup] Grid material not found at {GridMatPath}. " +
+                                     "Create it first via the Unity MCP or import the asset.");
+                }
+            }
 
-            // Create placeholder arrow mesh (flat quad) if not already present.
-            EnsureArrowMeshExists();
+            soReader.ApplyModifiedProperties();
 
-            // Wire arrow mesh + material on PutterGreenReader.
-            soReader = new SerializedObject(existing); // re-fetch after ApplyModifiedProperties
-            WireArrowAssets(soReader);
-
-            // Save scene.
+            // Mark scene dirty.
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
                 UnityEngine.SceneManagement.SceneManager.GetActiveScene());
 
             Debug.Log("[PutterGreenReaderSetup] Done. Save the scene to persist the wiring.");
-        }
-
-        private static void EnsureArrowMaterialExists()
-        {
-            const string MatPath = "Assets/Art/UI/GreenReader/MAT_GreenArrow.mat";
-            if (AssetDatabase.LoadAssetAtPath<Material>(MatPath) != null) return;
-
-            // Create a URP/Lit material with GPU instancing enabled.
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            if (mat.shader == null || mat.shader.name == "Hidden/InternalErrorShader")
-            {
-                // Fallback to Unlit if URP/Lit not found.
-                mat = new Material(Shader.Find("Universal Render Pipeline/Unlit") ??
-                                   Shader.Find("Standard") ??
-                                   Shader.Find("Hidden/InternalErrorShader"));
-            }
-
-            mat.name = "MAT_GreenArrow";
-            mat.enableInstancing = true;
-
-            // Set DisableBatching tag to opt out of SRP Batcher so GPU Instancing takes effect.
-            // The material must be a non-SRP-Batcher-compatible variant for RenderMeshInstanced
-            // to batch all cells into one draw call. NOTE: For URP/Lit, the correct approach is
-            // to use a custom shader with "DisableBatching" = "True" in the SubShader Tags.
-            // For the placeholder, we note this requirement for the Architect/Cesar to verify.
-            // The mat.enableInstancing flag ensures instancing is requested; SRP Batcher behavior
-            // depends on the shader implementation.
-
-            System.IO.Directory.CreateDirectory(
-                System.IO.Path.GetDirectoryName(
-                    Application.dataPath + "/../" + MatPath.Replace("Assets/", "")));
-            AssetDatabase.CreateAsset(mat, MatPath);
-            AssetDatabase.SaveAssets();
-            Debug.Log($"[PutterGreenReaderSetup] Created placeholder arrow material at {MatPath}. " +
-                      "Verify 'Enable GPU Instancing' is checked and SRP Batcher is opted out.");
-        }
-
-        private static void EnsureArrowMeshExists()
-        {
-            const string MeshPath = "Assets/Art/UI/GreenReader/MESH_GreenArrow.asset";
-            if (AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath) != null) return;
-
-            // Create a simple quad mesh (2 triangles) as placeholder.
-            // Arrow texture direction: forward = +Z, backward = -Z.
-            var mesh = new Mesh { name = "GreenArrowQuad" };
-            mesh.vertices = new Vector3[]
-            {
-                new Vector3(-0.5f, 0f,  0.5f),  // top-left
-                new Vector3( 0.5f, 0f,  0.5f),  // top-right
-                new Vector3( 0.5f, 0f, -0.5f),  // bottom-right
-                new Vector3(-0.5f, 0f, -0.5f),  // bottom-left
-            };
-            mesh.uv = new Vector2[]
-            {
-                new Vector2(0, 1), new Vector2(1, 1),
-                new Vector2(1, 0), new Vector2(0, 0),
-            };
-            mesh.triangles = new int[] { 0, 1, 2, 0, 2, 3 };
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
-            AssetDatabase.CreateAsset(mesh, MeshPath);
-            AssetDatabase.SaveAssets();
-            Debug.Log($"[PutterGreenReaderSetup] Created placeholder arrow mesh at {MeshPath}.");
-        }
-
-        private static void WireArrowAssets(SerializedObject soReader)
-        {
-            const string MatPath  = "Assets/Art/UI/GreenReader/MAT_GreenArrow.mat";
-            const string MeshPath = "Assets/Art/UI/GreenReader/MESH_GreenArrow.asset";
-
-            var mat  = AssetDatabase.LoadAssetAtPath<Material>(MatPath);
-            var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(MeshPath);
-
-            var meshProp = soReader.FindProperty("_arrowMesh");
-            if (meshProp != null && mesh != null && meshProp.objectReferenceValue == null)
-            {
-                meshProp.objectReferenceValue = mesh;
-                soReader.ApplyModifiedProperties();
-                Debug.Log("[PutterGreenReaderSetup] Wired _arrowMesh on PutterGreenReader.");
-            }
-
-            var matProp = soReader.FindProperty("_arrowMaterial");
-            if (matProp != null && mat != null && matProp.objectReferenceValue == null)
-            {
-                matProp.objectReferenceValue = mat;
-                soReader.ApplyModifiedProperties();
-                Debug.Log("[PutterGreenReaderSetup] Wired _arrowMaterial on PutterGreenReader.");
-            }
+            return reader;
         }
     }
 }

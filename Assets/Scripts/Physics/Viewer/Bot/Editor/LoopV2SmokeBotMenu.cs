@@ -74,6 +74,12 @@ namespace Golfin.Physics.Viewer.Editor
         public static void RunPutterAimGreenReaderVisible()
             => Launch("putter_aim_green_reader_visible");
 
+        // Iter-2 warped grid visual gate (TestGreen scene):
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Putter Aim Warped Grid On TestGreen")]
+        public static void RunPutterAimWarpedGridOnTestGreen()
+            => Launch("putter_aim_warped_grid_on_test_green");
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]
@@ -105,6 +111,9 @@ namespace Golfin.Physics.Viewer.Editor
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Putter Aim Green Reader Visible", isValidateFunction: true)]
         static bool ValidatePutterAimGreenReaderVisible() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Putter Aim Warped Grid On TestGreen", isValidateFunction: true)]
+        static bool ValidatePutterAimWarpedGridOnTestGreen() => !EditorApplication.isPlaying;
 
         // ── Launcher ─────────────────────────────────────────────────────────
 

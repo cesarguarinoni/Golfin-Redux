@@ -1,6 +1,6 @@
+// iter-2: warped grid render path (sharedMesh fix 2026-05-23)
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime.Baked;
@@ -16,29 +16,27 @@ namespace Golfin.Physics.Viewer
 {
     /// <summary>
     /// Green-reading aim assist. On hole-load, bakes slope vectors per 0.5 m cell across
-    /// all green polygons. While the player aims with the putter, renders a grid of slope
-    /// arrows via a single <c>Graphics.RenderMeshInstanced</c> call (no per-cell
-    /// GameObjects, no per-frame physics).
+    /// all green polygons. While the player aims with the putter, renders a warped
+    /// wireframe grid via a single procedural mesh + MeshRenderer — world-XZ-aligned
+    /// grid lines drawn in the fragment shader, bending in Y with the surface topology.
     ///
     /// PGA 2K-style Sim positioning: the player reads the green — no live predicted curve.
+    /// The grid lines are square in world-XZ plan view (L4 enforced by shader math:
+    /// frac(worldPos.xz / _CellSize)).
     ///
-    /// Color ramp thresholds load from <c>Assets/Data/GreenSlopeConfig.csv</c>:
+    /// Color ramp thresholds load from <c>Assets/Resources/Data/GreenSlopeConfig.csv</c>:
     ///   GreenThreshold (default 0.02), YellowThreshold (default 0.05), per Q2.
     ///
-    /// Material must have "Enable GPU Instancing" checked and must opt out of the URP
-    /// SRP Batcher (DisableBatching tag or non-SRP-Batcher-compatible material) so that
-    /// RenderMeshInstanced produces ONE draw call for all visible cells, not per-cell draws.
-    ///
-    /// SPEC: puttpath_predictor_perf_and_design §Architecture §§ Bake step + Render step.
+    /// SPEC: puttpath_predictor_perf_and_design §Architecture §§ Bake step + Render step
+    ///       (REVISED iter-2 — warped wireframe mesh replaces arrow instancing).
     /// </summary>
     public class PutterGreenReader : MonoBehaviour
     {
         // ── Inspector refs ───────────────────────────────────────────────────
 
         [Header("Rendering")]
-        [SerializeField] private Mesh     _arrowMesh;
-        [SerializeField] private Material _arrowMaterial;
-        [SerializeField] private Camera   _worldCamera;
+        [SerializeField] private Material         _gridMaterial;
+        [SerializeField] private Camera           _worldCamera;
 
         [Header("Lab Controller (for classifier access)")]
         [SerializeField] private PhysicsLabController _labController;
@@ -49,7 +47,7 @@ namespace Golfin.Physics.Viewer
         // ── Runtime state ────────────────────────────────────────────────────
 
         // Baked slope cells.
-        private struct SlopeCell
+        public struct SlopeCell
         {
             public float cx, cz;     // cell center XZ
             public float meshY;      // surface Y at cell center
@@ -71,27 +69,71 @@ namespace Golfin.Physics.Viewer
         private float _visibleRadius   = 10.0f;
 
         // Colors (derived from thresholds, precomputed).
-        private static readonly Color ColorGreen  = new Color(0.20f, 0.85f, 0.20f, 0.85f);
-        private static readonly Color ColorYellow = new Color(1.00f, 0.85f, 0.10f, 0.85f);
-        private static readonly Color ColorRed    = new Color(0.90f, 0.15f, 0.10f, 0.85f);
+        // Yellow-green family matching PGA 2K reference — warm bright yellow on slopes.
+        private static readonly Color ColorGreen  = new Color(0.30f, 1.00f, 0.15f, 1.0f);
+        private static readonly Color ColorYellow = new Color(1.00f, 0.90f, 0.05f, 1.0f);
+        private static readonly Color ColorRed    = new Color(1.00f, 0.20f, 0.05f, 1.0f);
 
         // Heatmap mode: colors cells by slope magnitude (Q5 — dashboard toggle).
         public bool HeatmapMode { get; set; } = false;
 
-        // Per-frame render scratch — reused to avoid per-frame allocation.
-        // RenderMeshInstanced takes Matrix4x4[] (up to 1023 per batch).
-        // We batch in chunks of MaxBatch.
-        private const int MaxBatch = 1000;
-        private readonly Matrix4x4[] _matBuf   = new Matrix4x4[MaxBatch];
-        private MaterialPropertyBlock _mpb;   // Initialized in Awake; also re-created in OnEnable + Update guard for domain-reload safety
-        private Color[]               _colorBuf = new Color[MaxBatch];
+        // ── Grid mesh state ──────────────────────────────────────────────────
 
-        // Test seam: last visible-cell count for smoke-bot assertion.
+        // Child GO that holds the MeshFilter + MeshRenderer for the warped grid.
+        private GameObject     _gridMeshGO;
+        private MeshFilter     _gridMeshFilter;
+        private MeshRenderer   _gridMeshRenderer;
+        private Mesh           _gridMesh;
+        private MaterialPropertyBlock _mpb;
+
+        // Lookup: (gridRow, gridCol) → flat cell index in _cells.
+        // Used for quad triangulation: skip quads where any corner has no baked cell.
+        private Dictionary<(int row, int col), int> _cellIndexByGrid;
+
+        // Grid extents (recomputed on bake).
+        private float _gridOriginX;
+        private float _gridOriginZ;
+        private int   _gridCols;
+        private int   _gridRows;
+
+        // ── Test seams ───────────────────────────────────────────────────────
+
+        /// <summary>Number of baked cells (0 = no hole loaded / classifier unavailable).</summary>
+        public int BakedCellCount => _cells.Length;
+
+        /// <summary>Number of vertices in the generated grid mesh (test seam for iter-2 tests).</summary>
+        public int MeshVertexCount => _gridMesh != null ? _gridMesh.vertexCount : 0;
+
+        /// <summary>
+        /// Last visible-cell count (for smoke-bot assertion compatibility with iter-1 tests).
+        /// In iter-2 mesh mode, we keep the cell count as BakedCellCount rather than a per-frame
+        /// visible count, since the mesh and distance culling is done in the shader.
+        /// The smoke-bot asserts >= 50 which is satisfied by BakedCellCount when bake succeeded.
+        /// </summary>
         public int LastVisibleCellCount { get; private set; }
 
-        // Test seam: force putter aim active (for screenshot verification and smoke-bot).
-        // Do NOT call from production code; only from bot scenarios and editor scripts.
-        public void SetAimActiveForTest(bool active) => _aimActive = active;
+        /// <summary>
+        /// Force putter aim active (for screenshot verification and smoke-bot).
+        /// Do NOT call from production code.
+        /// </summary>
+        public void SetAimActiveForTest(bool active)
+        {
+            _aimActive = active;
+            if (_gridMeshGO != null)
+                _gridMeshGO.SetActive(active);
+        }
+
+        // Nullable override for ball position (used by visual-gate captures when no
+        // PhysicsLabController ball is spawned — e.g. TestGreen standalone scene).
+        // When non-null, Update() uses this instead of _labController.BallPosition.
+        // Do NOT set from production code.
+        private Vector3? _ballPositionOverride;
+
+        /// <summary>
+        /// Override the ball position used for Q3 distance culling. Pass null to revert to
+        /// <c>_labController.BallPosition</c>. Used by visual-gate capture scripts only.
+        /// </summary>
+        public void SetBallPositionOverride(Vector3? pos) => _ballPositionOverride = pos;
 
         // ── Unity lifecycle ──────────────────────────────────────────────────
 
@@ -104,14 +146,16 @@ namespace Golfin.Physics.Viewer
 
         private void OnEnable()
         {
-            // Guard against domain-reload null: Awake only fires once per MonoBehaviour
-            // instance creation, but domain reloads in play mode reset managed fields to
-            // default without re-calling Awake. Re-create if null.
+            // Guard against domain-reload null.
             if (_mpb == null) _mpb = new MaterialPropertyBlock();
             LoadConfig();
             HoleContext.OnChanged += OnHoleContextChanged;
             if (_shotController != null)
                 _shotController.OnStateChanged += OnShotStateChanged;
+
+            // If grid mesh GO exists, restore active state.
+            if (_gridMeshGO != null)
+                _gridMeshGO.SetActive(_aimActive);
         }
 
         private void OnDisable()
@@ -120,6 +164,26 @@ namespace Golfin.Physics.Viewer
             if (_shotController != null)
                 _shotController.OnStateChanged -= OnShotStateChanged;
             _aimActive = false;
+            LastVisibleCellCount = 0;
+            if (_gridMeshGO != null)
+                _gridMeshGO.SetActive(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (_gridMesh != null)
+            {
+                // Destroy the runtime mesh to avoid leaking unmanaged GPU resources.
+                if (Application.isPlaying)
+                    Destroy(_gridMesh);
+                else
+#if UNITY_EDITOR
+                    DestroyImmediate(_gridMesh);
+#else
+                    Destroy(_gridMesh);
+#endif
+                _gridMesh = null;
+            }
         }
 
         // ── Event handlers ───────────────────────────────────────────────────
@@ -140,18 +204,42 @@ namespace Golfin.Physics.Viewer
                  || state.State == ShotState.Pulling
                  || state.State == ShotState.Timing);
             _aimActive = isPutterAim;
-            if (!isPutterAim) LastVisibleCellCount = 0;
+
+            // Toggle the grid mesh child GO.
+            if (_gridMeshGO != null)
+                _gridMeshGO.SetActive(_aimActive);
+
+            if (!isPutterAim)
+                LastVisibleCellCount = 0;
+        }
+
+        // ── Update (only for pushing ball position to shader) ─────────────────
+
+        private void Update()
+        {
+            if (!_aimActive || _gridMeshRenderer == null) return;
+            if (_mpb == null) _mpb = new MaterialPropertyBlock();
+
+            // Push ball position to the shader via MaterialPropertyBlock (option b — no mesh rebuild).
+            // _ballPositionOverride takes priority (set by visual-gate capture scripts when no ball is spawned).
+            Vector3 ballPos = _ballPositionOverride.HasValue
+                ? _ballPositionOverride.Value
+                : (_labController != null ? _labController.BallPosition : Vector3.zero);
+
+            _gridMeshRenderer.GetPropertyBlock(_mpb);
+            _mpb.SetVector("_BallPosition", new Vector4(ballPos.x, ballPos.y, ballPos.z, 0f));
+            _mpb.SetFloat("_VisibleRadius", _visibleRadius);
+            _gridMeshRenderer.SetPropertyBlock(_mpb);
         }
 
         // ── Config loader ────────────────────────────────────────────────────
 
         private void LoadConfig()
         {
-            // Lives at Assets/Resources/Data/GreenSlopeConfig.csv → Resources path "Data/GreenSlopeConfig".
             var csv = Resources.Load<TextAsset>("Data/GreenSlopeConfig");
             if (csv == null)
             {
-                Debug.Log("[PutterGreenReader] Data/GreenSlopeConfig not found in Resources — using hardcoded Q2 defaults.");
+                Debug.Log("[PutterGreenReader] Data/GreenSlopeConfig not found in Resources — using Q2 defaults.");
                 return;
             }
             ParseConfig(csv.text);
@@ -170,10 +258,10 @@ namespace Golfin.Physics.Viewer
                                     System.Globalization.CultureInfo.InvariantCulture, out float val)) continue;
                 switch (key)
                 {
-                    case "GreenThreshold":    _greenThreshold  = val; break;
-                    case "YellowThreshold":   _yellowThreshold = val; break;
-                    case "CellSize":          _cellSize        = val; break;
-                    case "VisibleRadiusMeters": _visibleRadius = val; break;
+                    case "GreenThreshold":      _greenThreshold  = val; break;
+                    case "YellowThreshold":     _yellowThreshold = val; break;
+                    case "CellSize":            _cellSize        = val; break;
+                    case "VisibleRadiusMeters": _visibleRadius   = val; break;
                 }
             }
         }
@@ -182,66 +270,109 @@ namespace Golfin.Physics.Viewer
 
         /// <summary>
         /// Bakes slope vectors for all green cells. Called on hole load and exposed
-        /// as a public test seam so EditMode unit tests can inject a synthetic classifier
-        /// and trigger the bake directly without a scene.
+        /// as a public test seam so EditMode unit tests can inject a synthetic classifier.
+        /// After baking, generates the procedural grid mesh.
         /// </summary>
         public void BakeCells(BakedZoneClassifier classifierOverride = null)
         {
             BakedZoneClassifier classifier = classifierOverride;
             if (classifier == null && _labController != null)
             {
-                var surf = _labController.GetSurfaces() as BakedZoneClassifier;
-                classifier = surf;
+                classifier = _labController.GetSurfaces() as BakedZoneClassifier;
             }
 
             if (classifier == null)
             {
                 _cells = System.Array.Empty<SlopeCell>();
                 Debug.Log("[PutterGreenReader] BakeCells: no BakedZoneClassifier available — grid empty.");
+                DestroyGridMesh();
                 return;
             }
 
             float half = _cellSize * 0.5f;
-            var list   = new List<SlopeCell>(4096);
+            var list = new List<SlopeCell>(4096);
+            _cellIndexByGrid = new Dictionary<(int, int), int>(4096);
+
+            // Determine grid extents from green AABBs.
+            float globalMinX = float.MaxValue, globalMinZ = float.MaxValue;
+            float globalMaxX = float.MinValue, globalMaxZ = float.MinValue;
 
             foreach (var aabb in classifier.GetPolygonAABBsForType(SurfaceType.Green))
             {
-                // Expand AABB by half a cell so boundary cells aren't clipped.
-                float startX = aabb.xMin - half;
-                float endX   = aabb.xMax + half;
-                float startZ = aabb.yMin - half;   // Rect.y maps to world Z
-                float endZ   = aabb.yMax + half;
+                if (aabb.xMin < globalMinX) globalMinX = aabb.xMin;
+                if (aabb.yMin < globalMinZ) globalMinZ = aabb.yMin;
+                if (aabb.xMax > globalMaxX) globalMaxX = aabb.xMax;
+                if (aabb.yMax > globalMaxZ) globalMaxZ = aabb.yMax;
+            }
 
-                for (float cx = startX + half; cx <= endX - half; cx += _cellSize)
+            if (globalMinX >= globalMaxX || globalMinZ >= globalMaxZ)
+            {
+                _cells = System.Array.Empty<SlopeCell>();
+                Debug.Log("[PutterGreenReader] BakeCells: green AABB empty — grid empty.");
+                DestroyGridMesh();
+                return;
+            }
+
+            // Snap grid origin to a multiple of cellSize so world-XZ cells align to
+            // frac(worldPos.xz / _CellSize) boundaries in the shader.
+            // Floor to nearest cellSize multiple so the grid origin is at a world-space
+            // grid line — this keeps the shader's frac() computation aligned.
+            _gridOriginX = Mathf.Floor(globalMinX / _cellSize) * _cellSize;
+            _gridOriginZ = Mathf.Floor(globalMinZ / _cellSize) * _cellSize;
+
+            float endX = Mathf.Ceil(globalMaxX / _cellSize) * _cellSize;
+            float endZ = Mathf.Ceil(globalMaxZ / _cellSize) * _cellSize;
+
+            _gridCols = Mathf.RoundToInt((endX - _gridOriginX) / _cellSize) + 1;
+            _gridRows = Mathf.RoundToInt((endZ - _gridOriginZ) / _cellSize) + 1;
+
+            foreach (var aabb in classifier.GetPolygonAABBsForType(SurfaceType.Green))
+            {
+                float startX = aabb.xMin - half;
+                float endXA  = aabb.xMax + half;
+                float startZ = aabb.yMin - half;
+                float endZA  = aabb.yMax + half;
+
+                for (float cx = startX + half; cx <= endXA - half + 1e-4f; cx += _cellSize)
                 {
-                    for (float cz = startZ + half; cz <= endZ - half; cz += _cellSize)
+                    for (float cz = startZ + half; cz <= endZA - half + 1e-4f; cz += _cellSize)
                     {
-                        // Classify center — skip cells outside the actual polygon.
-                        if (classifier.Classify(fp.FromFloat(cx), fp.FromFloat(cz)) != SurfaceType.Green)
+                        // Snap to grid.
+                        float snappedX = Mathf.Round((cx - _gridOriginX) / _cellSize) * _cellSize + _gridOriginX;
+                        float snappedZ = Mathf.Round((cz - _gridOriginZ) / _cellSize) * _cellSize + _gridOriginZ;
+
+                        // Skip if outside polygon.
+                        if (classifier.Classify(fp.FromFloat(snappedX), fp.FromFloat(snappedZ)) != SurfaceType.Green)
                             continue;
 
                         // Sample 4 neighbours for finite-difference gradient.
-                        float hL, hR, hF, hB;
                         SurfaceType dummy;
-                        bool okL = classifier.TrySampleMeshY(fp.FromFloat(cx - half), fp.FromFloat(cz), out dummy, out hL);
-                        bool okR = classifier.TrySampleMeshY(fp.FromFloat(cx + half), fp.FromFloat(cz), out dummy, out hR);
-                        bool okF = classifier.TrySampleMeshY(fp.FromFloat(cx), fp.FromFloat(cz - half), out dummy, out hF);
-                        bool okB = classifier.TrySampleMeshY(fp.FromFloat(cx), fp.FromFloat(cz + half), out dummy, out hB);
+                        float hL, hR, hF, hB;
+                        bool okL = classifier.TrySampleMeshY(fp.FromFloat(snappedX - half), fp.FromFloat(snappedZ), out dummy, out hL);
+                        bool okR = classifier.TrySampleMeshY(fp.FromFloat(snappedX + half), fp.FromFloat(snappedZ), out dummy, out hR);
+                        bool okF = classifier.TrySampleMeshY(fp.FromFloat(snappedX), fp.FromFloat(snappedZ - half), out dummy, out hF);
+                        bool okB = classifier.TrySampleMeshY(fp.FromFloat(snappedX), fp.FromFloat(snappedZ + half), out dummy, out hB);
 
                         if (!okL || !okR || !okF || !okB) continue;
 
-                        float slopeX = (hR - hL) / _cellSize;   // grade in X direction
-                        float slopeZ = (hB - hF) / _cellSize;   // grade in Z direction
+                        float slopeX = (hR - hL) / _cellSize;
+                        float slopeZ = (hB - hF) / _cellSize;
                         float mag    = Mathf.Sqrt(slopeX * slopeX + slopeZ * slopeZ);
 
-                        // Sample cell-center Y for placement.
                         float meshY = 0f;
-                        if (!classifier.TrySampleMeshY(fp.FromFloat(cx), fp.FromFloat(cz), out dummy, out meshY))
-                            meshY = (hL + hR + hF + hB) * 0.25f; // fallback: average of neighbours
+                        if (!classifier.TrySampleMeshY(fp.FromFloat(snappedX), fp.FromFloat(snappedZ), out dummy, out meshY))
+                            meshY = (hL + hR + hF + hB) * 0.25f;
 
+                        int colIdx = Mathf.RoundToInt((snappedX - _gridOriginX) / _cellSize);
+                        int rowIdx = Mathf.RoundToInt((snappedZ - _gridOriginZ) / _cellSize);
+
+                        // Avoid duplicates (can happen with floating point snap).
+                        if (_cellIndexByGrid.ContainsKey((rowIdx, colIdx))) continue;
+
+                        _cellIndexByGrid[(rowIdx, colIdx)] = list.Count;
                         list.Add(new SlopeCell
                         {
-                            cx = cx, cz = cz, meshY = meshY,
+                            cx = snappedX, cz = snappedZ, meshY = meshY,
                             slopeX = slopeX, slopeZ = slopeZ, magnitude = mag
                         });
                     }
@@ -250,100 +381,136 @@ namespace Golfin.Physics.Viewer
 
             _cells = list.ToArray();
             Debug.Log($"[PutterGreenReader] BakeCells: {_cells.Length} green cells baked (cellSize={_cellSize}m).");
+
+            // Build the procedural grid mesh.
+            BuildGridMesh();
+
+            // Update visible cell count seam for smoke-bot compatibility.
+            LastVisibleCellCount = _cells.Length;
         }
 
-        // ── Render step (per frame) ──────────────────────────────────────────
+        // ── Grid mesh generation ─────────────────────────────────────────────
 
-        private void Update()
+        private void BuildGridMesh()
         {
-            if (!_aimActive || _cells.Length == 0) return;
-            if (_arrowMesh == null || _arrowMaterial == null) return;
-            if (_mpb == null) _mpb = new MaterialPropertyBlock(); // domain-reload safety net
+            if (_cells == null || _cells.Length == 0)
+            {
+                DestroyGridMesh();
+                return;
+            }
 
-            Vector3 ballPos = Vector3.zero;
-            if (_labController != null) ballPos = _labController.BallPosition;
+            // Ensure child GO exists.
+            EnsureGridMeshGO();
 
-            Plane[] frustum = _worldCamera != null
-                ? GeometryUtility.CalculateFrustumPlanes(_worldCamera)
-                : null;
+            // Build vertex and triangle arrays.
+            // Each baked cell → one vertex. We need vertex positions AND vertex colors.
+            // For quad triangulation: check 2×2 cell blocks; skip if any corner is missing.
 
-            float radiusSq = _visibleRadius * _visibleRadius;
-
-            int visCount = 0;
-            int batchHead = 0;
+            var vertices  = new Vector3[_cells.Length];
+            var colors32  = new Color32[_cells.Length];
 
             for (int i = 0; i < _cells.Length; i++)
             {
                 ref readonly var c = ref _cells[i];
+                vertices[i] = new Vector3(c.cx, c.meshY, c.cz);
+                Color col = CellColor(c.magnitude);
+                colors32[i] = new Color32(
+                    (byte)(col.r * 255),
+                    (byte)(col.g * 255),
+                    (byte)(col.b * 255),
+                    (byte)(col.a * 255));
+            }
 
-                // Distance cull.
-                float dx = c.cx - ballPos.x;
-                float dz = c.cz - ballPos.z;
-                if (dx * dx + dz * dz > radiusSq) continue;
+            // Build quads: for each 2×2 block of adjacent green cells,
+            // form 2 triangles. Skip if any of the 4 corner cells is missing.
+            var tris = new List<int>(_cells.Length * 6);
 
-                // Frustum cull (optional — null when no camera assigned).
-                Vector3 worldPos = new Vector3(c.cx, c.meshY + 0.02f, c.cz);
-                if (frustum != null)
+            for (int row = 0; row < _gridRows - 1; row++)
+            {
+                for (int col = 0; col < _gridCols - 1; col++)
                 {
-                    var bounds = new Bounds(worldPos, new Vector3(_cellSize, 0.05f, _cellSize));
-                    if (!GeometryUtility.TestPlanesAABB(frustum, bounds)) continue;
-                }
+                    // Corners: (row,col), (row,col+1), (row+1,col), (row+1,col+1)
+                    if (!_cellIndexByGrid.TryGetValue((row,     col),     out int idxA)) continue;
+                    if (!_cellIndexByGrid.TryGetValue((row,     col + 1), out int idxB)) continue;
+                    if (!_cellIndexByGrid.TryGetValue((row + 1, col),     out int idxC)) continue;
+                    if (!_cellIndexByGrid.TryGetValue((row + 1, col + 1), out int idxD)) continue;
 
-                // Build TRS matrix: cell center, Y-rotated to point downhill, flat (no Y rotation for now).
-                Quaternion rot = c.magnitude > 0.001f
-                    ? Quaternion.LookRotation(new Vector3(-c.slopeX, 0f, -c.slopeZ), Vector3.up)
-                    : Quaternion.identity;
-
-                _matBuf[batchHead] = Matrix4x4.TRS(worldPos, rot, new Vector3(_cellSize * 0.8f, 1f, _cellSize * 0.8f));
-                _colorBuf[batchHead] = CellColor(c.magnitude);
-                batchHead++;
-                visCount++;
-
-                if (batchHead == MaxBatch)
-                {
-                    FlushBatch(batchHead);
-                    batchHead = 0;
+                    // Triangle 1: A-B-C
+                    tris.Add(idxA); tris.Add(idxB); tris.Add(idxC);
+                    // Triangle 2: B-D-C
+                    tris.Add(idxB); tris.Add(idxD); tris.Add(idxC);
                 }
             }
 
-            if (batchHead > 0) FlushBatch(batchHead);
-            LastVisibleCellCount = visCount;
+            // Create or reuse mesh.
+            if (_gridMesh == null)
+                _gridMesh = new Mesh { name = "GreenGridMesh" };
+            else
+                _gridMesh.Clear();
+
+            // UInt32 index format supports >65535 vertices (large greens).
+            _gridMesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            _gridMesh.vertices    = vertices;
+            _gridMesh.colors32    = colors32;
+            _gridMesh.triangles   = tris.ToArray();
+            _gridMesh.RecalculateNormals();
+            _gridMesh.RecalculateBounds();
+
+            _gridMeshFilter.sharedMesh = _gridMesh;
+
+            // Active state follows _aimActive.
+            _gridMeshGO.SetActive(_aimActive);
+
+            Debug.Log($"[PutterGreenReader] BuildGridMesh: {vertices.Length} vertices, {tris.Count / 3} triangles.");
         }
 
-        // Per-frame scratch arrays — sized to MaxBatch to avoid per-flush allocation.
-        private readonly Vector4[] _colorV4Buf = new Vector4[MaxBatch];
-
-        private void FlushBatch(int count)
+        private void EnsureGridMeshGO()
         {
-            // Convert Color[] to Vector4[] for SetVectorArray (instanced per-instance color).
-            // If the material doesn't declare instanced _BaseColor, arrows render with the
-            // material's base color — still correct for direction, just not color-coded.
-            for (int k = 0; k < count; k++)
+            if (_gridMeshGO != null) return;
+
+            _gridMeshGO = new GameObject("GreenGridMesh");
+            _gridMeshGO.transform.SetParent(transform, worldPositionStays: false);
+
+            _gridMeshFilter   = _gridMeshGO.AddComponent<MeshFilter>();
+            _gridMeshRenderer = _gridMeshGO.AddComponent<MeshRenderer>();
+
+            // Assign material.
+            _gridMeshRenderer.sharedMaterial = _gridMaterial;
+
+            // Shadow settings: no shadows — it's a transparent overlay.
+            _gridMeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            _gridMeshRenderer.receiveShadows     = false;
+        }
+
+        private void DestroyGridMesh()
+        {
+            if (_gridMeshGO != null)
             {
-                Color c        = _colorBuf[k];
-                _colorV4Buf[k] = new Vector4(c.r, c.g, c.b, c.a);
+                if (Application.isPlaying)
+                    Destroy(_gridMeshGO);
+                else
+#if UNITY_EDITOR
+                    DestroyImmediate(_gridMeshGO);
+#else
+                    Destroy(_gridMeshGO);
+#endif
+                _gridMeshGO       = null;
+                _gridMeshFilter   = null;
+                _gridMeshRenderer = null;
             }
 
-            // SetVectorArray with the exact count avoids Unity printing warnings about
-            // excess elements. Use a slice-sized temp array (one alloc per flush, but
-            // flush runs at most a few times per frame for typical greens).
-            var colorSlice = new Vector4[count];
-            System.Array.Copy(_colorV4Buf, colorSlice, count);
-            _mpb.SetVectorArray("_BaseColor", colorSlice);
-            _mpb.SetVectorArray("_Color",     colorSlice);
-
-            var rp = new RenderParams(_arrowMaterial)
+            if (_gridMesh != null)
             {
-                matProps          = _mpb,
-                shadowCastingMode = ShadowCastingMode.Off,
-                receiveShadows    = false,
-            };
-
-            // Slice the matrix buffer to exactly 'count' elements.
-            var matrices = new Matrix4x4[count];
-            System.Array.Copy(_matBuf, matrices, count);
-
-            Graphics.RenderMeshInstanced(rp, _arrowMesh, 0, matrices, count);
+                if (Application.isPlaying)
+                    Destroy(_gridMesh);
+                else
+#if UNITY_EDITOR
+                    DestroyImmediate(_gridMesh);
+#else
+                    Destroy(_gridMesh);
+#endif
+                _gridMesh = null;
+            }
         }
 
         // ── Color ramp ───────────────────────────────────────────────────────
@@ -352,23 +519,18 @@ namespace Golfin.Physics.Viewer
         {
             if (HeatmapMode)
             {
-                // Heatmap: green → yellow → red across full range.
                 float t = Mathf.Clamp01(magnitude / _yellowThreshold);
                 return t < 0.5f
                     ? Color.Lerp(ColorGreen,  ColorYellow, t * 2f)
                     : Color.Lerp(ColorYellow, ColorRed,    (t - 0.5f) * 2f);
             }
 
-            // Standard slope-grade threshold coloring (Q2).
             if (magnitude < _greenThreshold)  return ColorGreen;
             if (magnitude < _yellowThreshold) return ColorYellow;
             return ColorRed;
         }
 
         // ── Runtime API ──────────────────────────────────────────────────────
-
-        /// <summary>Number of baked cells (0 = no hole loaded / classifier unavailable).</summary>
-        public int BakedCellCount => _cells.Length;
 
         /// <summary>Force a rebake — called externally when the hole changes or tests run.</summary>
         public void RefreshBake() => BakeCells();

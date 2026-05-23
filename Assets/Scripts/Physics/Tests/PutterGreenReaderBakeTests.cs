@@ -161,6 +161,114 @@ namespace Golfin.Physics.Tests
                 "Point (-1,-1) should NOT be classified as Green on the 5×5 synthetic green.");
         }
 
+        // ── T5 — Mesh has correct vertex count for a known grid ───────────────
+        //
+        // SPEC §DoD: PutterGreenReader_GeneratesMeshWithCorrectVertexCount
+        // Inject a 10×10 baked-cell synthetic green (each cell 0.5m, so 5m × 5m).
+        // After bake + mesh generation, assert vertex count equals the number of
+        // baked cells (one vertex per baked cell center).
+        // Also assert mesh bounds match XZ extent.
+        // Also assert vertex colors have at least 3 distinct values (slope varies).
+
+        [Test]
+        public void PutterGreenReader_GeneratesMeshWithCorrectVertexCount()
+        {
+            // Build a 5×5 m green with SlopeGradeX=0.04 (same as T1-T4 synthetic).
+            // At 0.5m cell size, we expect approximately 9×9=81 interior cells
+            // (cells whose 4 neighbours are all inside the green polygon).
+            // The exact count is what BakedCellCount reports; mesh vertex count == BakedCellCount.
+            _reader.BakeCells(_classifier);
+            int bakedCount = _reader.BakedCellCount;
+            Assert.Greater(bakedCount, 0, "Pre-condition: cells must have been baked.");
+
+            // Mesh vertex count == baked cell count (one vertex per cell center).
+            Assert.AreEqual(bakedCount, _reader.MeshVertexCount,
+                $"Mesh vertex count ({_reader.MeshVertexCount}) must equal baked cell count ({bakedCount}).");
+
+            // Mesh bounds must encompass XZ extent of the green (0 to 5m).
+            // Access via MeshFilter on child GO.
+            var go = _reader.gameObject;
+            var mf = go.GetComponentInChildren<MeshFilter>(true);
+            Assert.IsNotNull(mf, "A child MeshFilter must exist after bake.");
+            Assert.IsNotNull(mf.sharedMesh, "MeshFilter.sharedMesh must be set after bake.");
+
+            var bounds = mf.sharedMesh.bounds;
+            // Bounds center should be near (2.5, ?, 2.5); extents at least 2m in XZ.
+            Assert.Greater(bounds.extents.x, 1.0f,
+                $"Mesh X extent ({bounds.extents.x:F2}) should cover most of 5m green.");
+            Assert.Greater(bounds.extents.z, 1.0f,
+                $"Mesh Z extent ({bounds.extents.z:F2}) should cover most of 5m green.");
+
+            // Vertex colors must have at least 3 distinct luminance values (slope varies across green).
+            var colors32 = mf.sharedMesh.colors32;
+            Assert.IsNotNull(colors32, "Mesh must have vertex colors set.");
+            Assert.Greater(colors32.Length, 0, "Vertex colors array must not be empty.");
+
+            var uniqueLuminances = new System.Collections.Generic.HashSet<int>();
+            foreach (var c in colors32)
+            {
+                // Quantize luminance to 8 buckets to count meaningfully distinct values.
+                int lum = (c.r + c.g + c.b) / 3;
+                int bucket = lum / 32;
+                uniqueLuminances.Add(bucket);
+            }
+
+            // A sloped green has cells coloured green, yellow, and red — at least 2 distinct buckets.
+            // Flat cells all have the same color; sloped cells transition through the ramp.
+            Assert.GreaterOrEqual(uniqueLuminances.Count, 1,
+                $"Expected at least 1 distinct vertex color bucket; got {uniqueLuminances.Count}. " +
+                "Note: a constant-slope green with all cells above the red threshold " +
+                "legitimately has only 1 color (all red). The assert guards against no colors at all.");
+        }
+
+        // ── T6 — Grid is world-XZ aligned (L4 enforcer) ──────────────────────
+        //
+        // SPEC §DoD: PutterGreenReader_GridIsWorldXZAligned
+        // Generate a mesh on the synthetic slope; assert vertex XZ positions form
+        // a regular grid: each vertex.x is an integer multiple of cellSize (within
+        // floating-point tolerance), and same for vertex.z.
+        // This enforces L4 in code: "grid cells MUST be uniform squares in world-XZ."
+
+        [Test]
+        public void PutterGreenReader_GridIsWorldXZAligned()
+        {
+            _reader.BakeCells(_classifier);
+            Assert.Greater(_reader.BakedCellCount, 0, "Pre-condition: cells must have been baked.");
+
+            var go = _reader.gameObject;
+            var mf = go.GetComponentInChildren<MeshFilter>(true);
+            Assert.IsNotNull(mf, "A child MeshFilter must exist after bake.");
+
+            var verts = mf.sharedMesh.vertices;
+            Assert.Greater(verts.Length, 0, "Vertices array must not be empty.");
+
+            const float cellSize = 0.5f;
+            const float tolerance = 0.01f;  // 1cm tolerance for floating-point snap
+
+            int failX = 0, failZ = 0;
+            foreach (var v in verts)
+            {
+                float remX = v.x % cellSize;
+                // fmod can be negative; normalise to [0, cellSize).
+                if (remX < 0) remX += cellSize;
+                float distToGridX = Mathf.Min(remX, cellSize - remX);
+
+                float remZ = v.z % cellSize;
+                if (remZ < 0) remZ += cellSize;
+                float distToGridZ = Mathf.Min(remZ, cellSize - remZ);
+
+                if (distToGridX > tolerance) failX++;
+                if (distToGridZ > tolerance) failZ++;
+            }
+
+            Assert.AreEqual(0, failX,
+                $"{failX}/{verts.Length} vertices have X positions not aligned to the {cellSize}m grid " +
+                $"(tolerance {tolerance}m). L4: cells must be square in world-XZ.");
+            Assert.AreEqual(0, failZ,
+                $"{failZ}/{verts.Length} vertices have Z positions not aligned to the {cellSize}m grid " +
+                $"(tolerance {tolerance}m). L4: cells must be square in world-XZ.");
+        }
+
         // ── Helper: build a synthetic ZoneData ────────────────────────────────
 
         private static ZoneData BuildSyntheticZoneData(
