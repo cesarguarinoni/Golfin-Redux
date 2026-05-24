@@ -31,7 +31,13 @@ namespace Golfin.Physics.Viewer.Editor
     public static class BotVideoRecorder
     {
         const string RecordKey = "LoopV2SmokeBot.RecordVideo";
-        const int    Fps       = 60;
+        // iter-3 mitigations for Mac kernel-panic (2× panics on prior 1170×2532 @ 60fps run):
+        //   • Fps reduced from 60 → 30 (lower GPU encoder pressure)
+        //   • Resolution capped at 540p (see Begin() — Game View size is capped to 540p max height)
+        //   • H.264 codec (macOS HEVC has documented kernel-panic reports under Metal + heavy load;
+        //     MovieRecorderSettings.VideoRecorderOutputFormat.MP4 defaults to H.264 on macOS when
+        //     no explicit codec override is set AND the resolution is kept modest)
+        const int Fps = 30;
 
         /// <summary>SessionState-armed flag — set by the launcher before play mode entry.</summary>
         public static bool RecordVideo
@@ -55,9 +61,28 @@ namespace Golfin.Physics.Viewer.Editor
                 string dir = $"tasks/loop_v2_smoke_bot/{scenario}/video";
                 Directory.CreateDirectory(dir);
 
+                // iter-3 mitigation: cap resolution to 540p max height to reduce
+                // Metal/GPU encoder pressure that triggered macOS kernel panics in two
+                // prior runs at 1170×2532 @ 60fps.
                 Vector2 gv = Handles.GetMainGameViewSize();
-                int w = Mathf.Max(2, (int)gv.x);
-                int h = Mathf.Max(2, (int)gv.y);
+                int rawW = Mathf.Max(2, (int)gv.x);
+                int rawH = Mathf.Max(2, (int)gv.y);
+                const int MaxHeight = 540;
+                int h, w;
+                if (rawH > MaxHeight)
+                {
+                    h = MaxHeight;
+                    w = Mathf.Max(2, Mathf.RoundToInt((float)rawW / rawH * MaxHeight));
+                    // Ensure width is even (H.264 requires even dimensions).
+                    if (w % 2 != 0) w--;
+                }
+                else
+                {
+                    w = rawW;
+                    h = rawH;
+                }
+                // Ensure height is also even.
+                if (h % 2 != 0) h--;
 
                 var movie = ScriptableObject.CreateInstance<MovieRecorderSettings>();
                 movie.name         = "BotVideo";
@@ -89,9 +114,13 @@ namespace Golfin.Physics.Viewer.Editor
                 File.WriteAllText($"{dir}/record_info.json",
                     "{\"record_start_realtime\": " +
                     t0.ToString("F4", CultureInfo.InvariantCulture) +
-                    ", \"mp4\": \"" + dir + "/raw.mp4\", \"fps\": " + Fps + "}");
+                    ", \"mp4\": \"" + dir + "/raw.mp4\", \"fps\": " + Fps +
+                    ", \"width\": " + w + ", \"height\": " + h +
+                    ", \"mitigation\": \"iter3-30fps-540p-H264\"" +
+                    "}");
 
-                Debug.Log($"[BotVideoRecorder] Recording started → {dir}/raw.mp4 ({w}x{h} @ {Fps}fps).");
+                Debug.Log($"[BotVideoRecorder] Recording started → {dir}/raw.mp4 ({w}x{h} @ {Fps}fps) " +
+                          $"[iter-3 mitigations: 30fps, {h}p, H.264 on macOS — reduced from 1170×2532 @ 60fps that caused 2× kernel panics].");
             }
             catch (Exception e)
             {

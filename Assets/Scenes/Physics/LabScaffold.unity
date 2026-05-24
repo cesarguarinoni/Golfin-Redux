@@ -26726,6 +26726,10 @@ MonoBehaviour:
   _worldCamera: {fileID: 824114952}
   _labController: {fileID: 1483952038}
   _shotController: {fileID: 1483952040}
+  _cellSize: 0.5
+  _lineWidth: 0.04
+  _lineGlow: 1.5
+  _visibleRadius: 10
 --- !u!1001 &1596199216455870784
 PrefabInstance:
   m_ObjectHideFlags: 0

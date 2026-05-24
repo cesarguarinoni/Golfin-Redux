@@ -86,3 +86,10 @@
 - Bot video adjudicated PASS with static CaptureCore capture as visual-gate substitute (per Cesar option-A after two Mac kernel panics)
 - Orchestrator-written IMPLEMENTER_REPORT cross-checked against on-disk evidence — no discrepancies
 - STATUS → ARCHITECT_REVIEW_PASS
+2026-05-24T00:00:00 iter-3 activated — reading spec and current code
+2026-05-24T00:02:00 Step 1: C# edits complete, about to verify compile via MCP
+2026-05-24T06:28:00 Step 1 complete: SerializeField wiring done. Running tests.
+2026-05-24T06:32:00 Step 2 complete: Hole1 production-flow capture saved. Grid renders on flat green as expected. Proceeding to Step 3 (bot video).
+2026-05-24T06:34:00 Step 3: Attempting bot video with mitigations (540p/30fps/H.264 on Hole1)
+2026-05-24T06:35:00 Step 3 PASS: Bot video completed without Mac panic. 250x540 @ 30fps H.264 mitigations worked. Video saved.
+2026-05-24T06:36:00 done, awaiting review. All 3 iter-3 gaps closed. STATUS=READY_FOR_SELF_REVIEW

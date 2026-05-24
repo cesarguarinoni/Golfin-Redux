@@ -63,10 +63,15 @@ namespace Golfin.Physics.Viewer
         private bool _aimActive;
 
         // Config (loaded from CSV; defaults per Q2).
+        // SerializeField values override CSV defaults at runtime (set in Update() via MPB).
         private float _greenThreshold  = 0.02f;
         private float _yellowThreshold = 0.05f;
-        private float _cellSize        = 0.5f;
-        private float _visibleRadius   = 10.0f;
+
+        [Header("Grid Parameters (Inspector overrides CSV defaults)")]
+        [SerializeField] private float _cellSize        = 0.5f;
+        [SerializeField] private float _lineWidth       = 0.04f;
+        [SerializeField] private float _lineGlow        = 1.5f;
+        [SerializeField] private float _visibleRadius   = 10.0f;
 
         // Colors (derived from thresholds, precomputed).
         // Yellow-green family matching PGA 2K reference — warm bright yellow on slopes.
@@ -229,6 +234,12 @@ namespace Golfin.Physics.Viewer
             _gridMeshRenderer.GetPropertyBlock(_mpb);
             _mpb.SetVector("_BallPosition", new Vector4(ballPos.x, ballPos.y, ballPos.z, 0f));
             _mpb.SetFloat("_VisibleRadius", _visibleRadius);
+            // Push Inspector-editable shader params so Cesar can tweak live without editing
+            // the material asset or the CSV (SerializeField values are the runtime-authoritative
+            // values; CSV sets the initial defaults in OnEnable → LoadConfig → ParseConfig).
+            _mpb.SetFloat("_CellSize",   _cellSize);
+            _mpb.SetFloat("_LineWidth",  _lineWidth);
+            _mpb.SetFloat("_LineGlow",   _lineGlow);
             _gridMeshRenderer.SetPropertyBlock(_mpb);
         }
 
@@ -258,10 +269,23 @@ namespace Golfin.Physics.Viewer
                                     System.Globalization.CultureInfo.InvariantCulture, out float val)) continue;
                 switch (key)
                 {
+                    // GreenThreshold and YellowThreshold: not [SerializeField] — always
+                    // loaded from CSV (no per-instance Inspector override path needed).
                     case "GreenThreshold":      _greenThreshold  = val; break;
                     case "YellowThreshold":     _yellowThreshold = val; break;
-                    case "CellSize":            _cellSize        = val; break;
-                    case "VisibleRadiusMeters": _visibleRadius   = val; break;
+                    // CellSize, VisibleRadius, LineWidth, LineGlow are now [SerializeField].
+                    // The Inspector value is authoritative and must NOT be overwritten here.
+                    // CSV lines for these keys are ignored gracefully (keys read but not
+                    // applied) so old GreenSlopeConfig.csv files don't corrupt the Inspector
+                    // values. The [SerializeField] field-initializer defaults (0.5 / 0.04 /
+                    // 1.5 / 10.0) are written into the scene asset on first use; they survive
+                    // domain reloads without help from CSV.
+                    case "CellSize":
+                    case "VisibleRadiusMeters":
+                    case "LineWidth":
+                    case "LineGlow":
+                        // intentionally ignored — [SerializeField] fields govern
+                        break;
                 }
             }
         }
