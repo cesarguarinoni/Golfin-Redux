@@ -1,6 +1,338 @@
 # ARCHITECT_REVIEW — `puttpath_predictor_perf_and_design`
 
 **Reviewer:** golfin-reviewer
+**Date:** 2026-05-24 06:45 CEST
+**Iteration reviewed:** iter-3 (commit `f2edb066`, on top of iter-2-redirect ARCHITECT_REVIEW_PASS at `78945f38`)
+**Verdict:** `ARCHITECT_REVIEW_PASS`
+
+> Iter-3 closes the three concrete gaps Cesar enumerated when manually rejecting
+> the iter-2-redirect PASS (`CESAR_REJECTION.md` § Rejection 2 dated 2026-05-23):
+> Inspector-editable shader params, production-flow capture on Hole 1, bot video
+> with kernel-panic mitigations. The warped-grid visual paradigm itself was
+> adjudicated at iter-2-redirect (`78945f38`) and is not re-litigated here.
+>
+> Prior verdicts (iter-2-redirect PASS, iter-1 PASS) preserved at the bottom of
+> this file for audit trail.
+
+---
+
+## Independent visual scan (Step 0 — iter-3 canonical, written before reading any reports)
+
+`screenshots/iter3_warped_grid_hole1_2026-05-24_06-30-58.png` (5.35 MB, dated
+2026-05-24 06:32):
+
+Portrait-orientation mobile gameplay view of Hole 1. Top HUD shows "JAMES /
+Lv 10 / TURN 1" player card on the left and "LOMOND / HOLE 1 - REGULAR /
+PAR 5" course card on the right, with "0.0 mph" and "0 mts" readouts
+beneath. Background is a real production environment: dense tree line, blue
+sky, vivid green grass plane with a darker fairway/green region in the
+foreground. Center stage shows a white golf ball with a green "G" logo
+sitting on a black/red puck (putter rim) facing a red flagstick with a "G"
+pennant. A warped wireframe grid is overlaid on the green in front of the
+ball, rendered in yellow-orange thin lines forming square-ish cells in plan
+view, fanning forward and converging slightly toward the hole — consistent
+with the PGA2K paradigm on a flat green (no Y warp because the surface is
+flat). Right edge shows a "0% / 0.0 mts" power dial. Bottom corners show
+"OGLfin" club selector (left) and "DRIVER / 0 mts" club info (right).
+
+---
+
+## Figma side-by-side — N/A for iter-3
+
+Iter-3 does not introduce any new Figma-driven UI; the only visual element
+is the warped-grid renderer, which was visually adjudicated at iter-2-redirect
+against `reference_pga2k_warped_grid.png` (PASS, `78945f38`). For iter-3
+the relevant reference comparison is on a flat production green:
+
+| Element | PGA2K reference (sculpted) | Iter-3 Hole 1 capture (flat) | Verdict |
+|---|---|---|---|
+| Grid color | yellow lines | yellow-orange lines | matches |
+| Line continuity | continuous strokes (not dashed) | continuous strokes | matches |
+| Plan-view geometry | square cells (L4) | square cells | matches |
+| Transparency | semi-transparent over green | semi-transparent (grass visible between cells) | matches |
+| Y warp with topology | bends with sinusoidal mesh | flat (Hole 1 green is flat) | expected — flat green produces flat grid (per CESAR_REJECTION.md iter-3) |
+| Coverage | bounded near ball/cup | bounded near ball | matches |
+
+Y warp absence on Hole 1 is **expected behaviour**, called out explicitly in
+CESAR_REJECTION.md § Rejection 2 Ask 2: *"Grid appearing flat-square on a
+flat production green is expected and correct behaviour."* The Y-warp PASS
+evidence remains the iter-2-redirect canonical TestGreen capture
+(`iter2_warped_grid_testgreen_canonical_2026-05-23_19-48-51.png`).
+
+Anti-references confirmed NOT present in iter-3 capture: NOT arrows, NOT
+contour isolines, NOT screen-space grid, NOT animated beads.
+
+---
+
+## Bbox verification — N/A
+
+No UI-containment claims in iter-3. The grid is a world-space mesh + URP
+shader child of `PutterGreenReader`, not a parented UI hierarchy. Step 6 of
+the visual-review checklist does not apply.
+
+---
+
+## Scene-mutation audit (independent re-run of `git show --stat f2edb066`)
+
+Iter-3 commit touches **2 scene files**:
+
+**`Assets/Scenes/Physics/LabScaffold.unity`** — CLEAN. The full diff is
+exactly 4 lines, all additive:
+
+```
++  _cellSize: 0.5
++  _lineWidth: 0.04
++  _lineGlow: 1.5
++  _visibleRadius: 10
+```
+
+These are exactly the 4 SerializeField values Ask 1 mandates. No `m_IsActive`
+flips, no `sizeDelta` changes, no transform mutations, no component removals.
+
+**`Assets/Scenes/Physics/PhysicsLab_TestGreen.unity`** — CLEAN with benign
+URP first-save noise (independently verified):
+
+1. The same 4 `_cellSize/_lineWidth/_lineGlow/_visibleRadius` additions on
+   the PutterGreenReader MonoBehaviour (Ask 1, expected).
+2. A new `UniversalAdditionalLightData` component (29 lines) on the
+   Directional Light, auto-added by URP on first-save bookkeeping after a
+   URP version refresh. Component carries default values
+   (`m_UsePipelineSettings: 1`, default rendering layers). This is a URP
+   companion-component artifact, not a runtime behaviour change.
+3. A material `_Color` write that updates a *legacy* color property from
+   `(1,1,1,1)` to `(0.14999998, 0.54999995, 0.11999995, 1)`, synced from
+   the existing `_BaseColor: (0.15, 0.55, 0.12, 1)` by the URP material
+   upgrader on first save. URP rendering paths read `_BaseColor`, not
+   `_Color`, so this affects no visible output. The float quantization
+   pattern (0.15 → 0.14999998 etc.) is the standard Unity color-picker
+   round-trip. The material is embedded in the TestGreen scene, NOT
+   shared with Hole 1.
+4. `stringTagMap: RenderType: Opaque` and `disabledShaderPasses:
+   [MOTIONVECTORS]` added by URP upgrader.
+
+Programmatic mutation scan:
+
+```
+$ git show f2edb066 -- Assets/Scenes/Physics/PhysicsLab_TestGreen.unity \
+  Assets/Scenes/Physics/LabScaffold.unity \
+  | grep -E "m_IsActive|sizeDelta|m_LocalPosition|m_AnchoredPosition|m_LocalRotation|m_LocalScale"
+(no output)
+```
+
+Zero GameObject deactivations, zero transform shifts, zero rect-size
+changes. The iter-12-style capture-path scene corruption pattern is
+**not** present. The URP first-save artifacts are non-mutating.
+
+---
+
+## Independent verification of the three iter-3 asks
+
+### Ask 1 — Inspector-editable shader params on `PutterGreenReader.cs`
+
+Independently grep-verified:
+
+```
+$ grep -n "SerializeField" Assets/Scripts/Physics/Viewer/PutterGreenReader.cs
+71:    [SerializeField] private float _cellSize        = 0.5f;
+72:    [SerializeField] private float _lineWidth       = 0.04f;
+73:    [SerializeField] private float _lineGlow        = 1.5f;
+74:    [SerializeField] private float _visibleRadius   = 10.0f;
+```
+
+Defaults match the CESAR_REJECTION.md Q-spec (0.5 / 0.04 / 1.5 / 10.0).
+
+MPB push verified in `Update()`:
+
+```
+234:    _gridMeshRenderer.GetPropertyBlock(_mpb);
+235:    _mpb.SetVector("_BallPosition", new Vector4(...));
+236:    _mpb.SetFloat("_VisibleRadius", _visibleRadius);
+240:    _mpb.SetFloat("_CellSize",   _cellSize);
+241:    _mpb.SetFloat("_LineWidth",  _lineWidth);
+242:    _mpb.SetFloat("_LineGlow",   _lineGlow);
+243:    _gridMeshRenderer.SetPropertyBlock(_mpb);
+```
+
+Single GetPropertyBlock / SetPropertyBlock pair, all 5 floats pushed
+between them, correct ordering, no leak.
+
+`ParseConfig()` verified non-destructive (PutterGreenReader.cs lines
+283–288):
+
+```
+case "CellSize":
+case "VisibleRadiusMeters":
+case "LineWidth":
+case "LineGlow":
+    // intentionally ignored — [SerializeField] fields govern
+    break;
+```
+
+CSV keys for the 4 SerializeField params are explicit no-ops with the
+documented intent. `GreenThreshold` / `YellowThreshold` continue to load
+from CSV (still non-SerializeField, as appropriate).
+
+Scene YAML serialization independently verified:
+
+```
+$ grep -n "_cellSize\|_lineWidth\|_lineGlow\|_visibleRadius" \
+    Assets/Scenes/Physics/LabScaffold.unity \
+    Assets/Scenes/Physics/PhysicsLab_TestGreen.unity
+LabScaffold.unity:26729:  _cellSize: 0.5
+LabScaffold.unity:26730:  _lineWidth: 0.04
+LabScaffold.unity:26731:  _lineGlow: 1.5
+LabScaffold.unity:26732:  _visibleRadius: 10
+PhysicsLab_TestGreen.unity:297:  _cellSize: 0.5
+PhysicsLab_TestGreen.unity:298:  _lineWidth: 0.04
+PhysicsLab_TestGreen.unity:299:  _lineGlow: 1.5
+PhysicsLab_TestGreen.unity:300:  _visibleRadius: 10
+```
+
+Both scenes carry the four values. Ask 1: **PASS**.
+
+### Ask 2 — Production-flow capture on Hole 1
+
+Pixel evidence (Step 0 scan above) confirms:
+
+- Real Lomond Hole 1 HUD ("LOMOND / HOLE 1 - REGULAR / PAR 5" course card,
+  "JAMES / Lv 10 / TURN 1" player card)
+- Real production environment (trees, sky, vivid grass)
+- The warped-grid mesh visibly rendering on the green polygon around the ball
+- Flat-square plan view consistent with Hole 1's flat green
+- Bot bake log: `baked=1857 cells` confirms `HoleContext.OnChanged`
+  triggered a full bake on production geometry
+
+This is **not** the synthetic dark `PhysicsLab_TestGreen` scene from
+iter-2-redirect — visible HUD elements unambiguously establish the real
+production flow. Capture method is `CaptureCore.SnapPlayModeSafe` (the
+sanctioned `CaptureCore` path per CLAUDE.md § Screenshots Hard Rule 6,
+appropriate for long-running bot coroutines that must capture and continue).
+
+Ask 2: **PASS**.
+
+### Ask 3 — Bot video gate with mitigations
+
+Independent `ffprobe` verification:
+
+```
+codec_name        = h264
+codec_long_name   = H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10
+profile           = Baseline
+width × height    = 250 × 540
+duration          = 21.02 s
+nb_frames         = 640
+avg_frame_rate    = 32000/1051  ≈  30.45 fps
+file size         = 1,179,678 bytes (~1.13 MB)
+```
+
+All three mitigation constraints satisfied:
+- **H.264 codec** (not HEVC) — confirmed, Baseline profile.
+- **≤540p height** — confirmed (540 exact; 250 width follows from portrait
+  aspect of the Game View).
+- **30 fps target** — actual 30.45 fps, within rounding of 30.
+
+`BotVideoRecorder.cs` independently grep-verified:
+
+```
+35:    //   • Fps reduced from 60 → 30 (lower GPU encoder pressure)
+36:    //   • Resolution capped at 540p ...
+37:    //   • H.264 codec (macOS HEVC has documented kernel-panic reports ...)
+40:    const int Fps = 30;
+70:    const int MaxHeight = 540;
+75:    w = Mathf.Max(2, Mathf.RoundToInt((float)rawW / rawH * MaxHeight));
+76:    // Ensure width is even (H.264 requires even dimensions).
+```
+
+All three mitigation constants are baked into source — future runs cannot
+silently regress to the 1170×2532 @ 60fps stack that panicked the Mac twice
+on 2026-05-23.
+
+No `BLOCKER.md` is present in the task folder; HEARTBEAT.log shows clean
+iter-3 completion with no IMPLEMENTER_BLOCKED interlude. The mitigation
+hypothesis held.
+
+Ask 3: **PASS**.
+
+---
+
+## Cross-check on the self-reviewer's PARTIAL → PASS override
+
+The implementer flagged `visible=0` (PARTIAL) in the bot assertion because
+the iter-2 mesh-path architecture moved distance culling into the shader
+fragment, so `LastVisibleCellCount` is a stale C#-side counter that resets
+to 0 when `OnShotStateChanged` fires with `isPutterAim=false` during bot
+cleanup. The self-reviewer overrode to PASS based on pixel evidence.
+
+Independent verification: I can see the yellow grid in the canonical
+screenshot. The grid IS rendering on the production green. The
+`LastVisibleCellCount=0` is a known test-seam artifact of the iter-2
+shader-cull architecture, not a render defect. The pixel evidence is the
+authoritative gate for "does it render in production flow?" and that gate
+is met.
+
+**Override stands.** Forward-looking note: the `LastVisibleCellCount`
+counter should either be removed or driven by a GPU readback in a future
+iteration so the smoke-bot assertion is meaningful again. This is a
+non-gating note-for-followup, not a blocker for iter-3.
+
+---
+
+## Test regression check
+
+IMPLEMENTER_REPORT iter-3 reports `tests-run` on `Golfin.Physics.Tests`:
+334 total / 331 passed / 0 failed / 3 skipped — identical to iter-2-redirect.
+The 3 skips are the pre-existing `McpToolManager 'ping'` skips unrelated
+to this task. No regressions introduced by the SerializeField additions
+or the ParseConfig no-op for the 4 CSV keys.
+
+---
+
+## Final verdict
+
+`ARCHITECT_REVIEW_PASS`. All three iter-3 asks from CESAR_REJECTION.md
+§ Rejection 2 are genuinely closed with independently verified evidence:
+
+1. **Inspector params** — 4 SerializeFields with correct defaults, pushed
+   via the existing MaterialPropertyBlock alongside `_BallPosition` and
+   `_VisibleRadius`, ParseConfig non-destructive for the 4 CSV keys,
+   both scenes serialize the values. Verified by grep on source + scene
+   YAML; the iter-3 commit diff is exactly the documented 4 + URP
+   first-save noise.
+2. **Production-flow Hole 1 capture** — Real Lomond gameplay path, real
+   bot scenario (`PutterAimGreenReaderVisible`), `baked=1857 cells` on
+   production geometry, grid visibly rendering on the production green
+   polygon. Captured via the sanctioned `CaptureCore.SnapPlayModeSafe`
+   path.
+3. **Bot video** — File present, H.264 Baseline / 250×540 / ~30 fps,
+   mitigation constants in source (`Fps=30`, `MaxHeight=540`, even-dim
+   enforcement, H.264 comment), no kernel panic this iteration.
+
+Scene-mutation audit clean — only the documented 4-line SerializeField
+addition plus benign URP first-save companion-component / material-upgrader
+artifacts. Zero `m_IsActive` flips, zero transform shifts, zero rect
+mutations. The iter-12 capture-path corruption pattern is NOT present.
+
+Capture provenance compliant with CLAUDE.md § Screenshots Hard Rule 6
+(`CaptureCore` only). No new contexts → no CaptureHelper maintenance
+owed. Test suite shows zero regression. The implementer's one self-flagged
+PARTIAL is a stale-counter test-seam in the iter-2 shader-cull
+architecture, overridden to PASS based on direct pixel evidence (the grid
+visibly renders in the production capture).
+
+The render-path / paradigm itself was already adjudicated at
+iter-2-redirect (`78945f38`); iter-3 added the three items above and they
+all land. Routing to Cesar for final visual gate.
+
+**Non-gating note for the queue:** when the smoke-bot test seam is
+revisited, replace `LastVisibleCellCount` with either a GPU readback or
+remove the assertion (the shader does culling now, so a C#-side count is
+no longer the right gate). This should be a Quick task, not a blocker.
+
+---
+
+# Historical — iter-2-redirect verdict (preserved for audit trail)
+
+**Reviewer:** golfin-reviewer
 **Date:** 2026-05-23 20:03 CEST
 **Iteration reviewed:** iter-2-redirect (commits `03b471de` + `ea52f9e7`)
 **Verdict:** `ARCHITECT_REVIEW_PASS`
@@ -8,7 +340,8 @@
 > Prior iter-1 review (PASS at commit `a2fd9850`) is preserved in git history at
 > `puttpath_predictor: ARCHITECT_REVIEW_PASS — iter-2 fixes verified` and is
 > superseded by Cesar's rejection (`CESAR_REJECTION.md`, 2026-05-22 ~18:00 CEST)
-> on visual paradigm grounds. This file is the iter-2-redirect verdict.
+> on visual paradigm grounds. The iter-2-redirect verdict below is followed by
+> iter-3 verdict above.
 
 ---
 
