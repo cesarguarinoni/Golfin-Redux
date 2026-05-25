@@ -117,3 +117,14 @@
 2026-05-25T04:43:27 bot launched with video — waiting for scenario to complete
 2026-05-25T04:47:00 video captured clean (no panic) — updating IMPLEMENTER_REPORT for iter-4
 2026-05-25T04:48:23 done, awaiting review — iter-4 PASS: _surfaceYOffset SerializeField + both scenes wired + tests 334/331/0/3 + video + screenshot all clean
+
+[2026-05-25 07:00 CEST] golfin-self-reviewer iter-4: SELF_REVIEW PASS → READY_FOR_ARCHITECT_REVIEW.
+  - Pixel scan: continuous grid lines, zero fragmentation, zero sub-terrain clipping (Step 1)
+  - Code: _surfaceYOffset=0.02f at PutterGreenReader.cs:76-77, applied at line 442
+  - Scenes: LabScaffold.unity:26733 + PhysicsLab_TestGreen.unity:301 both serialize 0.02
+  - Tests: 334/331/0/3 — XZ alignment unchanged (Y-only offset)
+  - Video: ffprobe → H.264/250x540/30.33fps/21.03s/1.14MB, frame-extract at putter-aim shows clean grid
+  - Scene-mutation audit: only +1 line per scene, no IsActive/RectTransform mutations
+  - Capture: SnapPlayModeSafe (sanctioned path)
+  - Production flow: real BotDriver → Hole 1 (no synthetic state injection)
+  Verdict: FORWARD_TO_ARCHITECT

@@ -1,5 +1,193 @@
 # SELF_REVIEW — `puttpath_predictor_perf_and_design`
 
+---
+
+# Iter-4 verdict (2026-05-25 07:00 CEST)
+
+**Reviewer:** golfin-self-reviewer
+**Date:** 2026-05-25 07:00 CEST
+**Iteration:** N=4 (iter-4 close-out of CESAR_REJECTION rejection #3 dated 2026-05-25 — z-fight defense)
+**Verdict:** `FORWARD_TO_ARCHITECT` (PASS)
+
+---
+
+## Scope note (post-rejection iteration — full re-walk applies)
+
+Iter-4 is a single-line z-fight defense on top of the iter-3 ARCHITECT_REVIEW_PASS
+(`8bff6bc9`). Cesar accepted iter-3's three gap closures (Inspector params, Hole 1
+production capture, bot video) but rejected on the z-fighting defect: the warped
+grid mesh sat coplanar with the green's terrain mesh, producing fragmented grid
+lines and sub-terrain clipping. SPEC commit `b590ebe1` added the mandatory
+`§Architecture §Render step` "Y-offset above terrain mesh" sub-section: new
+`[SerializeField] float _surfaceYOffset = 0.02f` on `PutterGreenReader`, applied
+as `cell.meshY + _surfaceYOffset` at mesh-gen time, wired in both scenes.
+
+Per the post-rejection rule I re-walked the **entire** acceptance checklist
+against fresh captures. I did NOT lean on prior architect verdicts. The
+iter-3 PASS is informational only — every PASS in iter-4 is independently
+re-verified below.
+
+---
+
+## Visual diff notes (Step 1 — independent pixel scan, screenshot only, no spec)
+
+`screenshots/iter4_warped_grid_hole1_2026-05-25_06-43-49.png`:
+
+Portrait-orientation mobile golf view. Top ~10%: HUD bars — a small player
+portrait in red cap on the upper-left labeled "JAMES / LV 13 / TURN 4"; a
+stacked navy info bar on the upper-right reading what appears to be
+"LOMOND / HOLE" with par info; a small white circular gear icon top-right.
+
+Middle 70%: chase-cam view of a flat golf green. A thin red-and-white flag
+pole rises at the upper-center; a white golf ball with a green "G" logo sits
+just below center. Behind the green, a band of dark-green trees forms the
+horizon. The dominant feature: a **yellow wireframe grid** overlays the
+green surface, radiating outward from the ball location, bounded by an
+approximate circular cull radius. The grid lines are **continuous** — they
+extend cleanly from near the ball outward to the perimeter without any
+short fragments, dashed pieces, or interruptions. The grid cells are square
+in plan view (correct for a flat green). Lines are semi-transparent — the
+underlying grass shows through between cells. At the perimeter, the lines
+fade/taper rather than hard-cut.
+
+**Z-fight check (THE iter-4 gate):**
+- Zero short line-fragments that abruptly start/stop within the grid area.
+- Zero patches where the grid disappears entirely (no sub-terrain clipping
+  visible).
+- Lines clearly sit ABOVE the grass surface — no flickering or
+  alternating-pixel artefacts.
+- The perimeter fade is smooth, not a hard cut with flickering edges.
+
+A "0%" chip with what looks like a flag/marker icon sits to the upper-right
+of the ball; a small navy info chip below the ball. Bottom-right: a small
+gear-like UI element labeled "DRIVER" (or similar; resolution-limited).
+
+## Step 2 — Comparison to reference
+
+`reference_pga2k_warped_grid.png` shows: yellow grid, square cells in plan
+view, **strongly warped Y due to undulating terrain**, neon-green color,
+continuous strokes, semi-transparent over the green.
+
+The iter-4 capture's grid is **flat** (no Y warp visible) — but Hole 1's
+Lomond green is flat by spec (CESAR_REJECTION §Rejection 2 explicitly
+called this out as correct behaviour). The reference does NOT help judge
+the z-fight gate, since its terrain is different. The relevant comparison
+points (square plan-view cells, semi-transparent, yellow lines, continuous
+strokes, perimeter cull) all match. Y-warp absence is correct, not a
+defect.
+
+## Step 3 — Spec checklist re-walk (independent re-verification)
+
+| Acceptance item (per CESAR_REJECTION §Rejection 3) | Impl. claim | My verification | Verdict |
+|---|---|---|---|
+| `[SerializeField] float _surfaceYOffset = 0.02f` w/ Tooltip on `PutterGreenReader` | PASS | Confirmed at `PutterGreenReader.cs` lines 76–77. Tooltip text matches SPEC verbatim: "Vertical offset (meters) above the terrain mesh. Prevents z-fighting. 0.02 = 2cm, visually imperceptible from putter aim camera angles." | **CONFIRM-PASS** |
+| Offset applied in mesh-gen loop (`cell.meshY + _surfaceYOffset`) | PASS | Confirmed at line 442: `vertices[i] = new Vector3(c.cx, c.meshY + _surfaceYOffset, c.cz);`. Single-line change matches SPEC line 103 verbatim. | **CONFIRM-PASS** |
+| `_surfaceYOffset: 0.02` wired in `LabScaffold.unity` | PASS | `grep` → line 26733: `_surfaceYOffset: 0.02`. Sits in the same MonoBehaviour block as the other 4 grid params. | **CONFIRM-PASS** |
+| `_surfaceYOffset: 0.02` wired in `PhysicsLab_TestGreen.unity` | PASS | `grep` → line 301: `_surfaceYOffset: 0.02`. Same block as the other 4 grid params. | **CONFIRM-PASS** |
+| Bake tests pass (XZ alignment unchanged) | PASS | `PutterGreenReader_GridIsWorldXZAligned` (lines 232–270 of `PutterGreenReaderBakeTests.cs`) tests `v.x % cellSize` and `v.z % cellSize` only — Y-offset doesn't perturb XZ. tests-run reports 334/331/0/3, identical to iter-3. | **CONFIRM-PASS** |
+| Bot video on Hole 1 — zero z-fight artifacts | PASS | `ffprobe`: H.264, 250×540, 30.33fps (636 frames / 20.97s = 30.33), 21.03s total, 1.14 MB — matches report claims exactly. Extracted frames at 3s intervals + 0.5s intervals near end; the putter-aim phase (last ~1s, frame `iter4_end_08.png`) shows the grid clean and continuous in motion. No flicker, no fragmentation, no sub-terrain clipping in any extracted frame. | **CONFIRM-PASS** |
+| New Hole 1 chase-cam screenshot — zero z-fight | PASS | Step 1 pixel scan above. Independently confirmed: continuous lines, square plan-view cells, no fragmentation, no sub-terrain clipping. The iter-3 capture showed the same flat-cell pattern at a higher camera angle; iter-4 is at chase-cam height where z-fight would be most visible if present. It is not present. | **CONFIRM-PASS** |
+
+## Step 4 — Scene-mutation audit (`git diff` on iter-4 commit `99f7f3cf`)
+
+```
+Assets/Scenes/Physics/LabScaffold.unity            |   1 +
+Assets/Scenes/Physics/PhysicsLab_TestGreen.unity   |   1 +
+Assets/Scripts/Physics/Viewer/PutterGreenReader.cs |   7 ++-
+```
+
+Both scene diffs are surgical:
+- `LabScaffold.unity`: ONE line added — `+  _surfaceYOffset: 0.02` inside
+  the existing `PutterGreenReader` MonoBehaviour block, immediately after
+  `_visibleRadius: 10`.
+- `PhysicsLab_TestGreen.unity`: same single-line addition.
+
+**Zero** `m_IsActive` flips, **zero** RectTransform changes, **zero**
+position/sizeDelta shifts, **zero** stray GameObject mutations. Iter-4
+scene-state is clean.
+
+Source diff is exactly two changes per SPEC: new SerializeField (lines
+76–77 ins) + offset application in vertex loop (line 442 mod). Comment
+header updated from `iter-2:` to `iter-4:` (cosmetic, harmless).
+
+## Step 5 — Capture-helper compliance
+
+1. **Screenshot provenance.** IMPLEMENTER_REPORT line 245: "Capture method:
+   `CaptureCore.SnapPlayModeSafe` (via BotDriver)". Compliant per CLAUDE.md
+   § Screenshots rules — `SnapPlayModeSafe` is the sanctioned path for
+   coroutine-running playmode captures. ✓
+2. **New context maintenance.** No new `*Context.cs` added in this iter (one
+   SerializeField on existing `PutterGreenReader`). N/A.
+
+## Step 6 — Bbox geometry verification
+
+No containment claims in iter-4 (Y-offset is a depth-ordering fix, not a
+layout fix). N/A.
+
+## Step 7 — Scene-mutation audit (already covered Step 4)
+
+See above. CLEAN.
+
+## Step 8 — Production-flow capture verification
+
+Iter-4 ships BOTH:
+- Production-flow screenshot via `BotDriver` → Hole 1 (real
+  Home→matchmaking→Hole_01_Geo path), captured by `SnapPlayModeSafe`. ✓
+- Bot video on the same production flow (`LoopV2SmokeBot` +
+  `BotVideoRecorder` driving the same scenario). ✓
+
+Both run the real gameplay lifecycle (not a `*Host`/`*SmokeRunner`
+pre-scripted state injection). The video walks the full path; the static
+screenshot is the canonical chase-cam frame at the putter-aim phase.
+Production-flow gate satisfied.
+
+---
+
+## Video frame-by-frame sanity check (ffmpeg-extracted)
+
+Extracted frames every 3s + 0.5s near end of video:
+
+| Timestamp | Frame content | Z-fight? |
+|---|---|---|
+| ~0s   | GOLFIN splash logo | N/A (no green) |
+| ~3s   | Invitational login screen | N/A |
+| ~6s   | "Pro Tip" loading overlay | N/A |
+| ~9s   | "Shot To" indicator card (matchmaking) | N/A |
+| ~12s  | Same indicator | N/A |
+| ~15s  | Loading screen | N/A |
+| ~18s  | Tee shot view (driver in hand, no grid) | N/A — grid not yet visible (pre-putter phase) |
+| ~19.5s| Camera transition (overview, inverted UI) | N/A |
+| ~20.5s| Approach chase-cam (no grid yet) | N/A |
+| ~21s  | **Putter aim with grid visible** | **Clean — no fragmentation, no clipping** |
+
+The grid only enters view in the final ~1s when putter mode engages, which
+is consistent with the gameplay path. The visible grid frame matches the
+canonical static screenshot.
+
+---
+
+## Verdict justification (iter-4)
+
+All seven acceptance items in CESAR_REJECTION §Rejection 3 are
+independently re-verified PASS. The single-line z-fight fix is applied
+exactly per SPEC commit `b590ebe1`. Scene mutations are surgical. Bot
+video and screenshot both show clean grid rendering with zero z-fight at
+chase-cam angle. Tests still pass with no regressions.
+
+Confirmation-bias risk noted: Cesar caught three prior false-PASSes on
+this task. Iter-4's gate is narrow (z-fight only), so the failure surface
+is small. My Step 1 pixel scan was performed before reading the report
+and independently saw continuous lines + no fragmentation. The video
+frames at putter-aim phase confirm the same in motion. I am as confident
+as the evidence permits.
+
+**STATUS:** `READY_FOR_SELF_REVIEW` → `SELF_REVIEW_PASS`
+**Routing:** golfin-reviewer (architect-reviewer subagent).
+
+---
+
+# Iter-3 verdict (audit trail — DO NOT MODIFY)
+
 **Reviewer:** golfin-self-reviewer
 **Date:** 2026-05-24 06:39 CEST
 **Iteration:** N=3 (iter-3 close-out of CESAR_REJECTION rejection #2 dated 2026-05-23)
