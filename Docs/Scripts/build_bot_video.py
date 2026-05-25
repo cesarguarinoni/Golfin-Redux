@@ -94,6 +94,104 @@ def parse_captions(log_path, rec_start, rec_end):
     return events
 
 
+def _dist3(a, b):
+    """Euclidean distance between (x,y,z) tuples."""
+    return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5
+
+
+def parse_visualgate_captions(log_path, rec_start, rec_end):
+    """
+    Visual-gate scenario captioner. Reads stroke events + at-rest positions to
+    surface "Stroke N (club, power) → carry Xm" captions during gameplay, plus a
+    pre-arm subtitle and a hole-complete card.
+
+    Expected log lines (LoopV2SmokeBot.live_stat_provider_visual_gate_*):
+      [t=T] === Live Stat Provider Visual Gate — <BUILD> ===
+      [t=T]   PreArm: char=<id> lv=<lv> STR=<a> CTRL=<b> REC=<c> STAM=<d> (<BUILD>)
+      [t=T] Stroke <N>: ball=(x, y, z) cup=(...) dist=<d>m — <name> club=<c> power=<p>
+      [t=T]   Stroke <N> terminal=<t> endSurface=<s> ball=(x, y, z)
+      [t=T] === PlayHoleToCup done: <N> strokes, holed=<seam|true> ===
+    """
+    events = []
+    if not os.path.exists(log_path):
+        print(f"WARN: history.log not found ({log_path}) — title caption only.")
+        return events
+
+    span = rec_end - rec_start
+
+    prearm_re = re.compile(r"\[t=([\d.]+)\]\s+PreArm:\s+char=(\S+)\s+lv=(\d+)\s+STR=(\d+)\s+CTRL=(\d+)\s+REC=(\d+)\s+STAM=(\d+)\s+\((\w+)\)")
+    stroke_fire_re = re.compile(r"\[t=([\d.]+)\]\s+Stroke\s+(\d+):\s+ball=\(([-\d.,\s]+)\)\s+cup=\([^)]+\)\s+dist=([\d.]+)m\s+—\s+(.+?)\s+club=(\d+)\s+power=([\d.]+)")
+    stroke_rest_re = re.compile(r"\[t=([\d.]+)\]\s+Stroke\s+(\d+)\s+terminal=(\w+)\s+endSurface=(\w+)\s+ball=\(([-\d.,\s]+)\)")
+    hole_done_re   = re.compile(r"\[t=([\d.]+)\]\s+===\s+PlayHoleToCup done:\s+(\d+)\s+strokes,\s+holed=(\w+)\s+===")
+
+    def to_video_t(log_t):
+        return max(0.0, log_t - rec_start)
+
+    def parse_xyz(s):
+        return tuple(float(p) for p in s.split(","))
+
+    stroke_starts = {}   # n -> (video_t, ball_xyz, label, club, power)
+    with open(log_path) as fh:
+        for line in fh:
+            m = prearm_re.search(line)
+            if m:
+                t = to_video_t(float(m.group(1)))
+                build = m.group(8).upper()
+                char  = m.group(2)
+                lv    = m.group(3)
+                # Portrait video is narrow (250px); wrap stats across 2 lines so they don't clip.
+                line1_stats = f"STR {m.group(4)}  CTRL {m.group(5)}"
+                line2_stats = f"REC {m.group(6)}  STAM {m.group(7)}"
+                # Subtitle: visible after title card fades, before first stroke.
+                events.append((t, t + 8.0,
+                               f"{build} BUILD\n{char.replace('char_','')} Lv {lv}\n{line1_stats}\n{line2_stats}"))
+                continue
+            m = stroke_fire_re.search(line)
+            if m:
+                n = int(m.group(2))
+                ball = parse_xyz(m.group(3))
+                # Trim the parenthetical noise off the label so it fits a portrait
+                # caption ("Driver full power (first stroke, dist=463m to cup)" -> "Driver full power").
+                raw_label = m.group(5).strip()
+                paren = raw_label.find("(")
+                label = raw_label[:paren].strip() if paren > 0 else raw_label
+                stroke_starts[n] = (
+                    to_video_t(float(m.group(1))),
+                    ball,
+                    label,
+                    int(m.group(6)),
+                    float(m.group(7)),
+                )
+                continue
+            m = stroke_rest_re.search(line)
+            if m:
+                n = int(m.group(2))
+                if n not in stroke_starts:
+                    continue
+                vt_fire, ball_start, label, club, power = stroke_starts[n]
+                vt_rest = to_video_t(float(m.group(1)))
+                ball_end = parse_xyz(m.group(5))
+                carry = _dist3(ball_start, ball_end)
+                surface = m.group(4)
+                # Caption rendered from fire to rest, capped at 3.5s so it doesn't
+                # linger over the next aim.
+                cap_end = min(vt_rest, vt_fire + 3.5, span)
+                if cap_end > vt_fire:
+                    # Portrait-friendly two-line caption: action + outcome.
+                    arrow = "to" if surface in ("OOB",) else "->"
+                    events.append((vt_fire, cap_end,
+                                   f"Stroke {n}  {label}\nCarry {carry:.0f}m  {arrow}  {surface}"))
+                continue
+            m = hole_done_re.search(line)
+            if m:
+                t = to_video_t(float(m.group(1)))
+                strokes = m.group(2)
+                holed = m.group(3)
+                tag = "Hole complete" if holed != "seam" else "Stroke cap hit  →  seam"
+                events.append((t, min(t + 4.0, span), f"{tag}\n{strokes} strokes"))
+    return events
+
+
 def esc(p):
     """Escape a path for an ffmpeg filter option value."""
     return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
@@ -102,8 +200,20 @@ def esc(p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", required=True, help="smoke-bot scenario key")
+    ap.add_argument("--mode", choices=["clicks", "visualgate"], default="clicks",
+                    help="Caption parser to use. 'clicks' = tap-event captions (default, "
+                         "for UI flows). 'visualgate' = per-stroke carry captions "
+                         "(for live_stat_provider_visual_gate_* scenarios).")
     ap.add_argument("--title", default="Loop v2 — Stage F\nButton Press Feedback")
     ap.add_argument("--suffix", default="stageF_buttons", help="output filename suffix")
+    ap.add_argument("--output-dir", default=None,
+                    help="Override output directory (default: Docs/Videos/). Use to land "
+                         "captioned videos in a per-task videos/ folder, e.g. "
+                         "Docs/Specs/Active/<task>/videos/.")
+    ap.add_argument("--raw-mp4", default=None,
+                    help="Override raw mp4 source path. Use this when the raw recording "
+                         "has already been moved out of tasks/loop_v2_smoke_bot/<scenario>/video/ "
+                         "(e.g. copied into a task's videos/ folder).")
     ap.add_argument("--keep-raw", action="store_true", help="keep the raw Recorder mp4 + sidecar")
     args = ap.parse_args()
 
@@ -120,9 +230,14 @@ def main():
     with open(info_path) as fh:
         info = json.load(fh)
     rec_start = float(info["record_start_realtime"]) + RECORDER_LEAD
-    raw = info["mp4"]
-    if not os.path.isabs(raw):
-        raw = os.path.join(REPO, raw)
+    if args.raw_mp4:
+        raw = args.raw_mp4
+        if not os.path.isabs(raw):
+            raw = os.path.join(REPO, raw)
+    else:
+        raw = info["mp4"]
+        if not os.path.isabs(raw):
+            raw = os.path.join(REPO, raw)
     if not os.path.exists(raw):
         sys.exit(f"ERROR: raw recording not found: {raw}")
 
@@ -137,9 +252,14 @@ def main():
 
     log_path = os.path.join(REPO, "tasks/loop_v2_smoke_bot", args.scenario,
                             "screenshots/history.log")
-    captions = parse_captions(log_path, rec_start, rec_start + duration)
-    captions.insert(0, (0.0, 3.6, args.title))
-    print(f"Captions: {len(captions)}")
+    if args.mode == "visualgate":
+        captions = parse_visualgate_captions(log_path, rec_start, rec_start + duration)
+    else:
+        captions = parse_captions(log_path, rec_start, rec_start + duration)
+    # Allow callers to pass literal \n in --title (bash strips backslash semantics).
+    title_text = args.title.replace("\\n", "\n")
+    captions.insert(0, (0.0, 3.6, title_text))
+    print(f"Captions: {len(captions)} (mode={args.mode})")
 
     fontsize = max(22, h // 32)
     title_fontsize = max(28, h // 40)  # smaller — title is 2 lines, must not clip width
@@ -165,7 +285,10 @@ def main():
             )
         vf = ",".join(draw)
 
-        out_dir = os.path.join(REPO, "Docs/Videos")
+        if args.output_dir:
+            out_dir = args.output_dir if os.path.isabs(args.output_dir) else os.path.join(REPO, args.output_dir)
+        else:
+            out_dir = os.path.join(REPO, "Docs/Videos")
         os.makedirs(out_dir, exist_ok=True)
         out_path = os.path.join(out_dir, f"{args.scenario}_{args.suffix}.mp4")
         cmd = [

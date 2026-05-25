@@ -143,6 +143,7 @@ namespace Golfin.Physics.Viewer
                 GameSession.ResetForNewHole();
                 Debug.Log("[SmokeRunner2fHost] GameSession reset done.");
                 controller.SetClub(0); // Driver
+                controller.InjectLabBundleForCurrentClub(); // LAB path
                 Debug.Log($"[SmokeRunner2fHost] SetClub(0) done. CurrentClubIndex={controller.CurrentClubIndex}");
             }
             catch (System.Exception ex)
@@ -460,6 +461,7 @@ namespace Golfin.Physics.Viewer
             try
             {
                 controller.SetClub(PhysicsLabController.PutterIndex);
+                controller.InjectLabBundleForCurrentClub(); // LAB path
                 Debug.Log($"[SmokeRunner2fHost] SetClub(Putter={PhysicsLabController.PutterIndex}) for comparison shots.");
             }
             catch (System.Exception ex)

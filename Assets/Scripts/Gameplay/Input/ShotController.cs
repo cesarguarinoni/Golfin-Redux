@@ -338,9 +338,7 @@ namespace Golfin.Gameplay.Input
         private StatBundle GetStatBundle()
         {
             if (_statBundleOverridden) return _statBundle;
-            return IsPutt
-                ? DefaultStatProvider.BuildPuttBundle()
-                : DefaultStatProvider.BuildSwingBundle();
+            return StatProviderBus.Resolve(IsPutt);
         }
 
         private void PublishState()

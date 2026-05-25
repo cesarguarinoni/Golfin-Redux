@@ -124,6 +124,13 @@ namespace Golfin.Physics.Viewer
                 case "putter_aim_warped_grid_on_test_green":
                     scenarioRoutine = Bot.Scenarios.PutterAimWarpedGridOnTestGreen(driver);
                     break;
+                // Live stat provider visual gate (live_stat_provider_wiring task):
+                case "live_stat_provider_visual_gate_high":
+                    scenarioRoutine = Bot.Scenarios.LiveStatProviderVisualGateHigh(driver);
+                    break;
+                case "live_stat_provider_visual_gate_low":
+                    scenarioRoutine = Bot.Scenarios.LiveStatProviderVisualGateLow(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

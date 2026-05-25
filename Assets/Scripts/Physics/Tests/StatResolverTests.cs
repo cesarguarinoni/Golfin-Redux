@@ -167,6 +167,61 @@ namespace Golfin.Physics.Tests
                 "Ball Roll +10 must reduce rolling resistance below 1.0");
         }
 
+        // ── Test F7-A: Strength=50 swing produces higher velocityMultiplier than Strength=5 ─
+
+        /// <summary>
+        /// F7 (2026-05-25): Character.Strength now feeds velocityMultiplier via velFromChar.
+        /// Strength=50 must produce a strictly higher velocityMultiplier than Strength=5.
+        /// </summary>
+        [Test]
+        public void Stats_CharStrength50_VelocityMultiplierGreaterThan_Strength5()
+        {
+            // Same club + ball so the only difference is Character.Strength.
+            var club = IronClub(power: 50);
+            var ball = NeutralBall;
+            fp cur = FullCur; fp max = FullMax;
+
+            var charHigh = new CharacterStats(50, 0, 0, 0); // Strength = 50 (Supreme cap)
+            var charLow  = new CharacterStats( 5, 0, 0, 0); // Strength =  5 (Common baseline)
+
+            var bundleHigh = new StatBundle(club, ball, charHigh, cur, max);
+            var bundleLow  = new StatBundle(club, ball, charLow,  cur, max);
+
+            var rHigh = StatModifierResolver.Resolve(bundleHigh, Coeffs, Caps);
+            var rLow  = StatModifierResolver.Resolve(bundleLow,  Coeffs, Caps);
+
+            Assert.Greater(rHigh.VelocityMultiplier.raw, rLow.VelocityMultiplier.raw,
+                $"Strength=50 ({rHigh.VelocityMultiplier.ToFloat():F4}) must exceed " +
+                $"Strength=5 ({rLow.VelocityMultiplier.ToFloat():F4}) on a swing (F7).");
+        }
+
+        // ── Test F7-B: Putter — Strength has no effect on velocityMultiplier ────────
+
+        /// <summary>
+        /// F7 putter exemption: putters keep velFromChar = 1.0, so Strength=50 and Strength=5
+        /// must produce identical velocityMultiplier on a putt bundle.
+        /// </summary>
+        [Test]
+        public void Stats_Putter_CharStrengthHasNoEffectOnVelocityMultiplier()
+        {
+            var putter = PutterStats.DefaultPutter;
+            var ball   = NeutralBall;
+            fp cur = FullCur; fp max = FullMax;
+
+            var charHigh = new CharacterStats(50, 0, 0, 0);
+            var charLow  = new CharacterStats( 5, 0, 0, 0);
+
+            var bundleHigh = new StatBundle(putter, ball, charHigh, cur, max);
+            var bundleLow  = new StatBundle(putter, ball, charLow,  cur, max);
+
+            var rHigh = StatModifierResolver.Resolve(bundleHigh, Coeffs, Caps);
+            var rLow  = StatModifierResolver.Resolve(bundleLow,  Coeffs, Caps);
+
+            Assert.AreEqual(rHigh.VelocityMultiplier.raw, rLow.VelocityMultiplier.raw,
+                $"Putter: Strength must NOT affect velocityMultiplier (F7 putter exemption). " +
+                $"High={rHigh.VelocityMultiplier.ToFloat():F4}, Low={rLow.VelocityMultiplier.ToFloat():F4}");
+        }
+
         // ── Test 10: ShotInputBuilder.Build + Simulate produces realistic carry ────
 
         [Test]

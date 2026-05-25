@@ -39,6 +39,12 @@ namespace Golfin.Inventory
         public int maxDurability      = 100;
         public int baseDistance       = 0;   // shown as "X yd", not a bar
 
+        // Physics flight parameters (from CSV: ballSpeedMps, launchAngleDeg, spinRateRpm)
+        // Used by LiveStatProviderHost to build ClubStats for the physics resolver.
+        public float ballSpeedMps     = 75f;   // base ball speed at launch
+        public float launchAngleDeg   = 10.9f; // loft / launch angle in degrees
+        public float spinRateRpm      = 2686f; // base backspin rate in RPM
+
         // Sprites (loaded from Resources/Clubs/)
         public string  portraitSpriteName = "";
         public Sprite? portraitSprite     = null;

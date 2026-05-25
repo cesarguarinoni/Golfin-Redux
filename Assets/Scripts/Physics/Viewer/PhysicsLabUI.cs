@@ -311,6 +311,7 @@ namespace Golfin.Physics.Viewer
             _clubIndex = index;
             if (_clubLabel != null) _clubLabel.text = PhysicsLabController.LabClubLabels[index];
             controller?.SetClub(index);
+            controller?.InjectLabBundleForCurrentClub(); // LAB path: inject neutral bundle after club switch
             controller?.RecomputeMaxCarry();
         }
 

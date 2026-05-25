@@ -90,6 +90,7 @@ namespace Golfin.Physics.Viewer
             // ── Piece 2a: Regular-mode (Driver) ball at Aiming ───────────────────
             Debug.Log("[PutterConeSmoke] P2a: Switching to Driver mode...");
             lab.SetClub(0);
+            lab.InjectLabBundleForCurrentClub(); // LAB path
             yield return new WaitForSecondsRealtime(0.5f);
 
             shotController.BeginExternalDrag();
@@ -108,6 +109,7 @@ namespace Golfin.Physics.Viewer
             // ── Enter putter mode ────────────────────────────────────────────────
             Debug.Log("[PutterConeSmoke] Entering putter mode...");
             lab.SetClub(PhysicsLabController.PutterIndex);
+            lab.InjectLabBundleForCurrentClub(); // LAB path
             yield return new WaitForSecondsRealtime(0.5f);
 
             // ── P1-Frame1 + P2b: Aiming — PutterTrack VISIBLE ───────────────────
@@ -174,6 +176,7 @@ namespace Golfin.Physics.Viewer
 
             // ── Piece 2c: Exit putter → Driver ─────────────────────────────────
             lab.SetClub(0);
+            lab.InjectLabBundleForCurrentClub(); // LAB path
             yield return new WaitForSecondsRealtime(0.5f);
 
             shotController.BeginExternalDrag();
@@ -192,6 +195,7 @@ namespace Golfin.Physics.Viewer
             // ── Production-flow capture ──────────────────────────────────────────
             Debug.Log("[PutterConeSmoke] PRODUCTION FLOW: switching back to putter...");
             lab.SetClub(PhysicsLabController.PutterIndex);
+            lab.InjectLabBundleForCurrentClub(); // LAB path
             yield return new WaitForSecondsRealtime(0.5f);
 
             shotController.BeginExternalDrag();

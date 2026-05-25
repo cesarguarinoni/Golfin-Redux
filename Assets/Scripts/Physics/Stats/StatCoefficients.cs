@@ -14,8 +14,9 @@ namespace Golfin.Physics.Stats
         public fp BallRollPerPoint;             // rolling resistance reduction per Ball Roll point
         public fp BallSpinPerPoint;             // spin magnitude multiplier per Ball Spin point
 
-        public fp CharStrengthPerPoint;         // overpower forgiveness per Character Strength point
-        public fp CharClubControlPerPoint;      // aim cone reduction per Character Club Control point
+        public fp CharStrengthPerPoint;               // overpower forgiveness per Character Strength point
+        public fp CharStrengthVelocityPerPoint;       // velocity multiplier per Character Strength point (swing only)
+        public fp CharClubControlPerPoint;            // aim cone reduction per Character Club Control point
 
         public fp PutterControlPerPoint;        // off-center forgiveness per Putter Control point
         public fp PutterAccuracyPerPoint;       // gravity well radius per Putter Accuracy point (assist)
@@ -35,8 +36,9 @@ namespace Golfin.Physics.Stats
             BallRollPerPoint    = fp.FromFloat(0.01f),
             BallSpinPerPoint    = fp.FromFloat(0.01f),
 
-            CharStrengthPerPoint    = fp.FromFloat(0.00625f),
-            CharClubControlPerPoint = fp.FromFloat(0.0035f),
+            CharStrengthPerPoint          = fp.FromFloat(0.00625f),
+            CharStrengthVelocityPerPoint  = fp.FromFloat(0.004f),    // NOTE F7 (2026-05-25): Strength→velocity coupling
+            CharClubControlPerPoint       = fp.FromFloat(0.0035f),
 
             PutterControlPerPoint  = fp.FromFloat(0.0042f),
             PutterAccuracyPerPoint = fp.FromFloat(0.0075f),

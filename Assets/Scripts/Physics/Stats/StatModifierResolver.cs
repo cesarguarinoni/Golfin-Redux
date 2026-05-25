@@ -18,11 +18,17 @@ namespace Golfin.Physics.Stats
             fp effClubControl = fp.FromInt(bundle.Character.ClubControl) * staminaMultiplier;
 
             // Step 2: Velocity multiplier.
-            // Lane: Club Power × Ball Power (multiplicative, shared lane per Section 8).
-            fp clubPower  = bundle.IsPutt ? fp.Zero : fp.FromInt(bundle.Club.Value.Power);
+            // Lane: Club Power × Ball Power × Character Strength (multiplicative).
+            // NOTE F7 (2026-05-25): added Character.Strength factor so the bus's
+            // live-stat resolution is observable on swing carry. Full lane audit
+            // pending in `Docs/Specs/Queued/stat_to_physics_mapping_audit/SPEC.md`.
+            fp clubPower   = bundle.IsPutt ? fp.Zero : fp.FromInt(bundle.Club.Value.Power);
             fp velFromClub = fp.One + clubPower * coeffs.ClubPowerPerPoint;
             fp velFromBall = fp.One + fp.FromInt(bundle.Ball.Power) * coeffs.BallPowerPerPoint;
-            fp velocityMultiplier = velFromClub * velFromBall;
+            fp velFromChar = bundle.IsPutt
+                ? fp.One
+                : fp.One + effStrength * coeffs.CharStrengthVelocityPerPoint;
+            fp velocityMultiplier = velFromClub * velFromBall * velFromChar;
             velocityMultiplier    = fpMath.Min(velocityMultiplier, caps.VelocityMultiplierMax);
             velocityMultiplier    = fpMath.Max(velocityMultiplier, fp.Zero);
 

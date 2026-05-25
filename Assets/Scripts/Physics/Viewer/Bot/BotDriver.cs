@@ -468,11 +468,12 @@ namespace Golfin.Physics.Viewer.Bot
                 yield break;
             }
 
-            // 1. Switch to putter.
+            // 1. Switch to putter (LAB path — inject neutral bundle so physics is club-only).
             try
             {
                 ctrl.SetClub(PhysicsLabController.PutterIndex);
-                LogStep($"  FireShot: SetClub(PutterIndex={PhysicsLabController.PutterIndex})");
+                ctrl.InjectLabBundleForCurrentClub(); // LAB path
+                LogStep($"  FireShot: SetClub(PutterIndex={PhysicsLabController.PutterIndex}) + InjectLabBundle");
             }
             catch (Exception ex)
             {
@@ -690,7 +691,13 @@ namespace Golfin.Physics.Viewer.Bot
 
                 LogStep($"Stroke {strokes}: ball={ball:F1} cup={cup:F1} dist={dist:F1}m — {label} club={club} power={power01:F2}");
 
-                try { ctrl.SetClub(club); } catch (Exception ex) { LogStep($"  SetClub warn: {ex.Message}"); }
+                // PROD path: SetClub only (no lab bundle inject); clear any prior override so bus resolves live stats.
+                try
+                {
+                    ctrl.SetClub(club);
+                    shotCtl?.ClearStatBundleOverride();
+                }
+                catch (Exception ex) { LogStep($"  SetClub warn: {ex.Message}"); }
 
                 float yaw = Mathf.Atan2(flat.z, flat.x);
                 try { ctrl.SetCameraYawRadians(yaw); }

@@ -31,7 +31,7 @@ Spec authoring is done by Cesar with the human Architect (claude.ai chat), NOT a
 - **Subagent definitions:** `.claude/agents/golfin-reviewer.md`, `golfin-implementer.md`, `golfin-self-reviewer.md`
 - **Hooks:** `.claude/hooks/route_subagent.py` (state router + desktop notify + email + alerts.log), `enforce_implementer_done.py` (PreToolUse blocker), `capture_screenshot.py` (Implementer's screenshot helper)
 - **Notification config:** `.claude/notify_config.json` (toast always on; email opt-in)
-- **Per-task folder:** `Docs/Specs/Active/<task_slug>/` containing `SPEC.md`, `STATUS.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, `ARCHITECT_REVIEW.md`, `CESAR_REJECTION.md` (when applicable), `HEARTBEAT.log`, `screenshots/`
+- **Per-task folder:** `Docs/Specs/Active/<task_slug>/` containing `SPEC.md`, `STATUS.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, `ARCHITECT_REVIEW.md`, `CESAR_REJECTION.md` (when applicable), `HEARTBEAT.log`, `screenshots/` (still images: PNG/JPG), `videos/` (clips: MP4/MOV/WebM — see § Screenshots rule 5)
 - **Template:** `Docs/Specs/Active/_TEMPLATE/` (copy this to start a new task)
 - **Quick tasks:** `Docs/Specs/Quick/` (lightweight, no subagent chain)
 
@@ -126,7 +126,7 @@ Code's screenshot history is full of timing failures. These rules eliminate the 
 
 4. **For mid-animation verification,** start a coroutine that runs `yield return CaptureHelper.SnapAtEndOfFrameAndPause("label")`. Do NOT pause first.
 
-5. **Output location.** All captures land in `Docs/Diagnostics/_capture/`. After capture, copy/rename the relevant one(s) into the task's `screenshots/` folder under `Docs/Specs/Active/<task>/screenshots/`. Don't litter the diagnostics folder with task-specific names.
+5. **Output location.** Still captures (PNG/JPG) land in `Docs/Diagnostics/_capture/`. After capture, copy/rename the relevant one(s) into the task's `screenshots/` folder under `Docs/Specs/Active/<task>/screenshots/`. Don't litter the diagnostics folder with task-specific names. **Video clips (MP4/MOV/WebM) go to `Docs/Specs/Active/<task>/videos/`, NOT `screenshots/`.** Bot recordings written by `BotVideoRecorder` to `tasks/loop_v2_smoke_bot/<scenario>/video/raw.mp4` get copied to the task's `videos/` folder. Frame extracts pulled from a video (JPG/PNG stills) go to `screenshots/`. Convention established by `puttpath_predictor_perf_and_design`; codified 2026-05-25 after `live_stat_provider_wiring` initially stashed MP4s in `screenshots/`.
 
 6. **`CaptureHelper` / `CaptureCore` is the only sanctioned capture path (Lesson 2026-05-13).** No per-task screenshot workarounds. If `SnapGameView`, `SnapAtEndOfFrameAndPause`, or `SnapPlayModeSafe` fails in your environment (MCP-frozen-time, domain reload in flight, anything else), STOP and surface the blocker per the `IMPLEMENTER_BLOCKED` protocol. Do NOT invent a custom capture path. Iter-12 of `loop_v1_2d_hole_complete_and_result_screen` hit MCP-frozen-time and the implementer wrote a custom ortho-camera-render workaround that deactivated 10 ShotUI GameObjects in `LabScaffold.unity` as a side effect; the scene corruption was invisible until Cesar launched normal play. If `CaptureCore` doesn't cover a case, that's a backlog item to extend `CaptureCore` (see `Docs/Specs/Queued/capture_core_frozen_time_fallback/SPEC.md`), not a license to bypass it.
 

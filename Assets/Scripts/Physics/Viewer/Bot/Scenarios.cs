@@ -620,6 +620,7 @@ namespace Golfin.Physics.Viewer.Bot
             if (labCtrl != null)
             {
                 labCtrl.SetClub(PhysicsLabController.PutterIndex);
+                labCtrl.InjectLabBundleForCurrentClub(); // LAB path
                 yield return new WaitForSecondsRealtime(0.3f); // EnterPutterMode → PutterGreenReader.enabled = true
             }
 
@@ -684,6 +685,265 @@ namespace Golfin.Physics.Viewer.Bot
             else
                 d.LogStep($"=== PutterAimGreenReaderVisible: PASS — baked={bakedCount} cells, " +
                           $"visible={visibleCount} arrows in frame ===");
+        }
+
+        // ── Scenarios: Live Stat Provider Visual Gate ─────────────────────────
+
+        /// <summary>
+        /// Visual gate HIGH build: arms char_elizabeth (Rare) at max level (119) with all
+        /// four stats at the Rare caps (STR=30, CTRL=30, REC=20, STAM=27), then runs the
+        /// Hole1Playthrough flow (Home → PLAY → matchmaking → Hole 1 → PlayHoleToCup →
+        /// result_modal). Proves the live-stat path propagates stat values into each shot
+        /// bundle. Compare against the LOW build run: carry distance / # strokes must differ.
+        ///
+        /// Captures: home, matchmaking_searching, opponent_found, gameplay_armed,
+        ///           result_modal (plus per-stroke captures from PlayHoleToCup).
+        ///
+        /// Pre-arm happens BEFORE NavigateToHome so GameSession.SelectedCharacterId is set
+        /// before the matchmaking seed fires.
+        /// </summary>
+        public static IEnumerator LiveStatProviderVisualGateHigh(BotDriver d)
+        {
+            d.LogStep("=== Live Stat Provider Visual Gate — HIGH BUILD ===");
+            ArmCharacterBuild(d, CharVGCharId, BuildKind.High);
+            yield return new WaitForSecondsRealtime(0.1f); // let reflection writes settle
+
+            // Re-use the standard Hole1Playthrough flow verbatim.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("home");
+
+            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return d.Capture("matchmaking_searching");
+
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("opponent_found");
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+
+            yield return d.PlayHoleToCup(par: 5);
+
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal");
+
+            d.LogStep("=== Live Stat Provider Visual Gate HIGH BUILD: all captures done ===");
+        }
+
+        /// <summary>
+        /// Visual gate LOW build: arms char_elizabeth (Rare) at starting level (80) with
+        /// base stats (STR=8, CTRL=10, REC=7, STAM=9), then runs the same Hole1Playthrough
+        /// flow. Compare against HIGH build — carry distance / # strokes must differ visibly,
+        /// proving the live bus carries stat values through to the physics layer.
+        ///
+        /// Captures: home, matchmaking_searching, opponent_found, gameplay_armed,
+        ///           result_modal (plus per-stroke captures from PlayHoleToCup).
+        /// </summary>
+        public static IEnumerator LiveStatProviderVisualGateLow(BotDriver d)
+        {
+            d.LogStep("=== Live Stat Provider Visual Gate — LOW BUILD ===");
+            ArmCharacterBuild(d, CharVGCharId, BuildKind.Low);
+            yield return new WaitForSecondsRealtime(0.1f);
+
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("home");
+
+            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return d.Capture("matchmaking_searching");
+
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("opponent_found");
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+
+            yield return d.PlayHoleToCup(par: 5);
+
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal");
+
+            d.LogStep("=== Live Stat Provider Visual Gate LOW BUILD: all captures done ===");
+        }
+
+        // ── Pre-arm helpers ───────────────────────────────────────────────────
+
+        /// <summary>The character used for both visual-gate scenarios (Rare rarity for wide level range).</summary>
+        const string CharVGCharId = "char_elizabeth";
+
+        // char_elizabeth Rare: startLevel=80, maxLevel=119
+        // base stats from Characters.csv: STR=8, CTRL=10, REC=7, STAM=9
+        // Rare caps from RarityStatCaps.cs:  STR=30, CTRL=30, REC=20, STAM=27
+        // Both scenarios equip the same driver + ball so the only variable is the stat build.
+        const string CharVGDriverId = "club_driver_gf";
+        const string CharVGBallId   = "ball_golfin";
+
+        private enum BuildKind { High, Low }
+
+        /// <summary>
+        /// Arms the character build BEFORE NavigateToHome so both matchmaking seed
+        /// and the live stat resolver see the correct character + club + ball state.
+        ///
+        /// Three-part arm:
+        ///  A. CharacterManager (Assembly-CSharp, accessed via reflection):
+        ///     - Sets private field `selectedCharacterId` so matchmaking calls to
+        ///       `GetSelectedCharacterId()` return charId (not the default char).
+        ///     - Mutates `ownedCharacters[charId]` stat fields for the chosen build.
+        ///  B. ClubManager (Assembly-CSharp, via reflection):
+        ///     - Calls `EquipClub(CharVGDriverId, bagSlot=1)` so BagManager.GetClubsInBag(1)
+        ///       returns the driver, enabling ClubContextPopulator.Refresh() to populate
+        ///       ClubContext.SelectedClubId = CharVGDriverId.
+        ///  C. BallContext static field: set directly (not reset during gameplay).
+        /// </summary>
+        private static void ArmCharacterBuild(BotDriver d, string charId, BuildKind kind)
+        {
+            int targetLevel, targetStr, targetCtrl, targetRec, targetStam;
+            string buildLabel;
+            if (kind == BuildKind.High)
+            {
+                // Rare caps: STR=30, CTRL=30, REC=20, STAM=27 (from RarityStatCaps.cs)
+                targetLevel = 119; // Rare maxLevel
+                targetStr   = 30;
+                targetCtrl  = 30;
+                targetRec   = 20;
+                targetStam  = 27;
+                buildLabel  = "HIGH";
+            }
+            else
+            {
+                // Rare starting values from Characters.csv (base stats, starting level)
+                targetLevel = 80;  // Rare startLevel
+                targetStr   = 8;
+                targetCtrl  = 10;
+                targetRec   = 7;
+                targetStam  = 9;
+                buildLabel  = "LOW";
+            }
+
+            // C. BallContext: set directly — static field, not reset during gameplay load.
+            Golfin.Gameplay.UI.HUD.BallContext.SelectedBallId = CharVGBallId;
+
+            try
+            {
+                // Locate CharacterManager and ClubManager singletons via FindObjectsOfType.
+                var allBehaviours = UnityEngine.Object.FindObjectsOfType<UnityEngine.MonoBehaviour>();
+                UnityEngine.MonoBehaviour cmInstance  = null;
+                UnityEngine.MonoBehaviour clbInstance = null;
+                foreach (var mb in allBehaviours)
+                {
+                    string typeName = mb.GetType().Name;
+                    if (typeName == "CharacterManager") cmInstance  = mb;
+                    if (typeName == "ClubManager")      clbInstance = mb;
+                    if (cmInstance != null && clbInstance != null) break;
+                }
+
+                // A. CharacterManager: set selectedCharacterId + mutate stat fields.
+                if (cmInstance != null)
+                {
+                    var cmType = cmInstance.GetType();
+
+                    // Set private selectedCharacterId field so matchmaking reads char_elizabeth.
+                    var selField = cmType.GetField("selectedCharacterId",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (selField != null)
+                    {
+                        selField.SetValue(cmInstance, charId);
+                        string afterSet = (string)selField.GetValue(cmInstance);
+                        d.LogStep($"  ArmCharacterBuild: selField SET — new value='{afterSet}' (expected='{charId}')");
+
+                        // Belt-and-suspenders: also call the public SelectCharacter API so
+                        // SaveData.selectedCharacterId is updated and OnCharacterSelected fires.
+                        var selectMethod = cmType.GetMethod("SelectCharacter",
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+                            null, new System.Type[] { typeof(string) }, null);
+                        if (selectMethod != null)
+                        {
+                            selectMethod.Invoke(cmInstance, new object[] { charId });
+                            d.LogStep($"  ArmCharacterBuild: SelectCharacter('{charId}') invoked OK");
+                        }
+                        else
+                        {
+                            d.LogStep("  ArmCharacterBuild WARN: SelectCharacter(string) method not found");
+                        }
+                    }
+                    else
+                    {
+                        d.LogStep($"  ArmCharacterBuild WARN: selField 'selectedCharacterId' not found on {cmType.FullName}");
+                    }
+
+                    // Mutate the PlayerCharacterData stat fields.
+                    var ownedField = cmType.GetField("ownedCharacters",
+                        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (ownedField != null)
+                    {
+                        var dict = ownedField.GetValue(cmInstance) as System.Collections.IDictionary;
+                        if (dict != null && dict.Contains(charId))
+                        {
+                            object pcd     = dict[charId];
+                            var    pcdType = pcd.GetType();
+                            pcdType.GetField("currentLevel")?.SetValue(pcd, targetLevel);
+                            pcdType.GetField("currentStrength")?.SetValue(pcd, targetStr);
+                            pcdType.GetField("currentClubControl")?.SetValue(pcd, targetCtrl);
+                            pcdType.GetField("currentRecovery")?.SetValue(pcd, targetRec);
+                            pcdType.GetField("currentStamina")?.SetValue(pcd, targetStam);
+                            pcdType.GetField("isSelected")?.SetValue(pcd, true);
+                        }
+                        else
+                        {
+                            d.LogStep($"  ArmCharacterBuild WARN: '{charId}' not in ownedCharacters (count={dict?.Count ?? 0})");
+                        }
+                    }
+                }
+                else
+                {
+                    d.LogStep("  ArmCharacterBuild WARN: CharacterManager not found");
+                }
+
+                // B. ClubManager: equip driver to bag slot 1 so ClubContextPopulator.Refresh()
+                //    finds it and sets ClubContext.SelectedClubId = CharVGDriverId.
+                if (clbInstance != null)
+                {
+                    var clbType    = clbInstance.GetType();
+                    var equipMethod = clbType.GetMethod("EquipClub",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+                        null,
+                        new System.Type[] { typeof(string), typeof(int) },
+                        null);
+                    if (equipMethod != null)
+                    {
+                        equipMethod.Invoke(clbInstance, new object[] { CharVGDriverId, 1 });
+                        d.LogStep($"  ArmCharacterBuild: EquipClub({CharVGDriverId}, slot=1) OK");
+                    }
+                    else
+                    {
+                        d.LogStep("  ArmCharacterBuild WARN: EquipClub(string,int) not found on ClubManager");
+                    }
+                }
+                else
+                {
+                    d.LogStep("  ArmCharacterBuild WARN: ClubManager not found — driver not equipped");
+                }
+
+                d.LogStep($"  PreArm: char={charId} lv={targetLevel} STR={targetStr} CTRL={targetCtrl} REC={targetRec} STAM={targetStam} ({buildLabel})");
+            }
+            catch (System.Exception ex)
+            {
+                d.LogStep($"  ArmCharacterBuild ERROR: {ex.Message}");
+            }
         }
 
         // ── Scenario: Putter Aim Warped Grid on TestGreen ─────────────────────
@@ -764,6 +1024,7 @@ namespace Golfin.Physics.Viewer.Bot
 
             // 5. Switch to putter.
             labCtrl.SetClub(PhysicsLabController.PutterIndex);
+            labCtrl.InjectLabBundleForCurrentClub(); // LAB path
             yield return new WaitForSecondsRealtime(0.3f);
 
             // 6. Enter putter aim via production ShotController path.

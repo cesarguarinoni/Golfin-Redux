@@ -85,6 +85,9 @@ namespace Golfin.Inventory
                     => idx.TryGetValue(col, out int i) && i < fields.Count ? fields[i].Trim() : def;
                 int     GetInt(string col, int def = 0)
                     => int.TryParse(Get(col), out int v) ? v : def;
+                float   GetFloat(string col, float def = 0f)
+                    => float.TryParse(Get(col), System.Globalization.NumberStyles.Float,
+                       System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : def;
 
                 var club = new ClubDataRuntime
                 {
@@ -99,6 +102,9 @@ namespace Golfin.Inventory
                     baseLoft           = GetInt("baseLoft"),
                     maxDurability      = GetInt("maxDurability", 100),
                     baseDistance       = GetInt("baseDistance"),
+                    ballSpeedMps       = GetFloat("ballSpeedMps",   75f),
+                    launchAngleDeg     = GetFloat("launchAngleDeg", 10.9f),
+                    spinRateRpm        = GetFloat("spinRateRpm",    2686f),
                     portraitSpriteName = Get("portraitSprite"),
                     portraitFullName   = Get("portraitFull"),
                     controlSpriteName  = Get("controlSprite"),

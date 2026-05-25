@@ -9,6 +9,6 @@
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
-    "autoReferenced": false,
+    "autoReferenced": true,
     "noEngineReferences": false
 }

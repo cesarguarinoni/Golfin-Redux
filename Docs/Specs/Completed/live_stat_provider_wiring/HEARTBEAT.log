@@ -1,0 +1,50 @@
+2026-05-25T07:20:15Z activated
+2026-05-25T07:22:26Z pre-flight research complete, starting implementation
+2026-05-25T07:24:09Z files created, running compile check via Unity MCP
+2026-05-25T07:26:16Z tests written, wiring ShellScene via MCP
+2026-05-25T07:26:47Z triggering Unity compile check via MCP script-execute
+2026-05-25T07:27:35Z asmdef autoReferenced set to true, about to use Unity MCP
+2026-05-25T07:28:34Z asmdef settings finalized, about to use Unity MCP for compile + component wiring
+2026-05-25T07:28:59Z using script-execute to wire ShellScene PersistentUI component
+2026-05-25T07:30:20Z MCP ai-game-developer not in tool list, trying computer-use + script approach
+2026-05-25T07:36:59Z component wired to ShellScene, tests passing (338/335/0/3)
+2026-05-25T07:39:47Z screenshot captured, writing IMPLEMENTER_REPORT
+2026-05-25T09:45:00Z done, awaiting review — routing READY_FOR_ARCHITECT_REVIEW (visual gate FAIL blocks self-review path)
+2026-05-25T08:22:05Z activated — reading spec + bot infrastructure files
+2026-05-25T08:23:07Z writing LiveStatProviderVisualGate scenarios
+2026-05-25T08:24:30Z verifying compile via Unity MCP
+2026-05-25T08:25:34Z triggering compile via AssetDatabase.Refresh MCP call
+2026-05-25T08:27:34Z launching HIGH BUILD bot scenario
+2026-05-25T08:30:58Z fixing ArmCharacterBuild to also set selectedCharacterId and equip driver
+2026-05-25T08:34:27Z resuming after context compaction — verifying compile then re-running HIGH build
+2026-05-25T08:41:12Z triggering compile of updated Scenarios.cs (added SelectCharacter call and explicit logging)
+2026-05-25T08:44:32Z HIGH BUILD run #2 started — monitoring for ArmCharacterBuild SelectCharacter logs
+2026-05-25T08:45:30Z HIGH BUILD complete with LIVE swings — launching LOW BUILD
+2026-05-25T08:48:37Z done, awaiting review — both bot runs complete with LIVE swings, report updated
+2026-05-25T10:53:00+0200 self-review activated
+2026-05-25T10:58:00+0200 self-review complete — verdict ESCALATE_TO_ARCHITECT, STATUS=READY_FOR_ARCHITECT_REVIEW
+2026-05-25T12:51:24 activated — Phase 3 lab-vs-prod split fix (F1-F6)
+2026-05-25T12:55:02 F1-F2 edits complete + new tests written, checking compile
+2026-05-25T12:56:00 F1-F3 complete, triggering compile check via MCP
+2026-05-25T12:56:44 Attempting MCP compile check
+2026-05-25T13:03:30 Compile verified, running tests now (F6)
+2026-05-25T13:04:26 Tests PASS 340/337/0/3 — starting F4 video re-record HIGH build
+2026-05-25T13:05:20 HIGH build scenario running in play mode — waiting for completion
+2026-05-25T13:09:56 HIGH complete (10532 LIVE lines, 75s span) — launching LOW build
+2026-05-25T13:14:13 Both videos valid, 0m delta (stat-physics mapping issue). Doing F5 lab compat check
+2026-05-25T13:17:53 Phase 3 complete — F1-F5 PASS, F4 delta FAIL (0m < 10m threshold), routing IMPLEMENTER_BLOCKED
+2026-05-25T13:33:55 activated — Phase 4 F7+F8 start
+2026-05-25T13:35:26 code edits complete — checking compile via MCP
+2026-05-25T13:36:05 triggering Unity compile check
+2026-05-25T13:37:00 running tests via Unity MCP
+2026-05-25T13:41:22 tests pass 342/339/0/3 — running bot scenarios
+2026-05-25T13:46:53 Hole 1 Playthrough done (8 strokes seam, pre-existing DefaultProvider issue). Running visual gate HIGH...
+2026-05-25T13:58:11 done, awaiting review — F7+F8 complete, 342/339/0/3 tests, v3 videos delta=26m
+2026-05-25T16:05:00 self-reviewer activated for Phase 4 (F7+F8) review
+2026-05-25T16:08:00 v3 mp4 ffprobe + frame extracts: HIGH/LOW both valid, different ball positions at t=30
+2026-05-25T16:10:00 history.log cross-check: HIGH STR=30, LOW STR=8, stroke1 carry delta 442m-416m=26m, 0 FALLBACK in either log
+2026-05-25T16:12:00 git diff Phase 4 scope confirmed (StatModifierResolver Step 2 only, StatCoefficients +1 field, StatCaps cap raise, StatResolverTests +2 tests, AI_CONTEXT +1 line, PHYSICS_TUNING_CHANGELOG.md new, NO mutation to Phase 1-3 files)
+2026-05-25T16:13:00 cap sanity verified: theoretical max product 2.112 < new cap 2.6, gate run high=1.568 low=1.4448 both well below cap
+2026-05-25T16:14:00 Phase 4 verdict FORWARD_TO_ARCHITECT — all checks PASS
+2026-05-25T16:25:00Z final reviewer pass started — pixel scan on v3 MP4s + cumulative diff audit
+2026-05-25T16:35:00Z final reviewer pass — verdict appended to ARCHITECT_REVIEW.md, STATUS → ARCHITECT_REVIEW_PASS

@@ -547,6 +547,26 @@ namespace Golfin.Physics.Viewer
             if (index != PutterIndex) _lastNonPutterClubIndex = index;
             bool isPutt = index == LabClubs.Length - 1;
             _shotController.IsPutt = isPutt;
+            // NOTE: SetClub no longer injects a stat bundle (F1 — lab-vs-prod split).
+            // Lab callers must call InjectLabBundleForCurrentClub() explicitly after SetClub().
+            // Production callers (BotDriver.PlayHoleToCup, auto-revert) do NOT inject;
+            // the StatProviderBus resolves live stats for every committed shot.
+            OnClubChanged?.Invoke(index);
+            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.Raise(index);
+        }
+
+        /// <summary>
+        /// Builds the current-club neutral lab bundle and injects it into ShotController.
+        /// Lab callers (lab UI, putter cone smoke, smoke runner, putter green reader bot
+        /// scenarios) call this AFTER SetClub() when they want the lab-bundle behavior.
+        /// Production-flow callers (BotDriver.PlayHoleToCup, auto-revert) must NOT call
+        /// this — the StatProviderBus resolves live stats for committed shots.
+        /// </summary>
+        public void InjectLabBundleForCurrentClub()
+        {
+            if (_shotController == null) return;
+            int index = CurrentClubIndex;
+            bool isPutt = index == LabClubs.Length - 1;
             if (isPutt)
             {
                 var putter = new Golfin.Physics.Stats.PutterStats(
@@ -566,8 +586,6 @@ namespace Golfin.Physics.Viewer
                     Golfin.Physics.Stats.CharacterStats.Neutral,
                     fp.FromFloat(100f), fp.FromFloat(100f)));
             }
-            OnClubChanged?.Invoke(index);
-            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.Raise(index);
         }
 
         // ── Setup ──────────────────────────────────────────────────────────────
@@ -1025,6 +1043,8 @@ namespace Golfin.Physics.Viewer
                         Debug.Log($"[PhysicsLab][§2f] AtRest surface={result.EndSurface} " +
                                   $"auto-switch club {CurrentClubIndex}→{target}");
                         SetClub(target);
+                        // PROD path: clear any lab bundle leftover so the bus resolves live stats.
+                        _shotController?.ClearStatBundleOverride();
                     }
 
                     // §2e: pin-aim rotation runs uniformly (including putter post-§2f-revert).

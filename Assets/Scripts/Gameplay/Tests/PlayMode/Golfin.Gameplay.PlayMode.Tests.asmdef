@@ -1,0 +1,21 @@
+{
+    "name": "Golfin.Gameplay.PlayMode.Tests",
+    "rootNamespace": "Golfin.Gameplay.PlayMode.Tests",
+    "references": [
+        "Golfin.Gameplay.Defaults",
+        "Golfin.Gameplay.Loop",
+        "Golfin.Gameplay.UI",
+        "Golfin.Physics.Stats",
+        "Golfin.Physics.Math"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "optionalUnityReferences": ["TestAssemblies"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

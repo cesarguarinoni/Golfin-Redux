@@ -80,6 +80,22 @@ namespace Golfin.Physics.Viewer.Editor
         public static void RunPutterAimWarpedGridOnTestGreen()
             => Launch("putter_aim_warped_grid_on_test_green");
 
+        // Live stat provider visual gate (live_stat_provider_wiring task):
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Live Stat Provider — High Build")]
+        public static void RunLiveStatProviderVisualGateHigh()
+        {
+            BotVideoRecorder.RecordVideo = true;
+            Launch("live_stat_provider_visual_gate_high");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Live Stat Provider — Low Build")]
+        public static void RunLiveStatProviderVisualGateLow()
+        {
+            BotVideoRecorder.RecordVideo = true;
+            Launch("live_stat_provider_visual_gate_low");
+        }
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]
@@ -114,6 +130,12 @@ namespace Golfin.Physics.Viewer.Editor
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Putter Aim Warped Grid On TestGreen", isValidateFunction: true)]
         static bool ValidatePutterAimWarpedGridOnTestGreen() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Live Stat Provider — High Build", isValidateFunction: true)]
+        static bool ValidateLiveStatProviderVisualGateHigh() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Live Stat Provider — Low Build", isValidateFunction: true)]
+        static bool ValidateLiveStatProviderVisualGateLow() => !EditorApplication.isPlaying;
 
         // ── Launcher ─────────────────────────────────────────────────────────
 
