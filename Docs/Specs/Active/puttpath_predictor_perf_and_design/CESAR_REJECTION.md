@@ -1,7 +1,7 @@
 # CESAR_REJECTION — `puttpath_predictor_perf_and_design`
 
 This file logs Cesar's manual rejections after architect-pass. Each rejection
-routes the task back to the implementer with STATUS = `CESAR_REJECTED`. Two
+routes the task back to the implementer with STATUS = `CESAR_REJECTED`. Three
 rejections recorded.
 
 ---
@@ -128,3 +128,105 @@ STATUS goes `ARCHITECT_REVIEW_PASS` → `CESAR_REJECTED` → next implementer ru
 4. Update IMPLEMENTER_REPORT with #1 + #2 evidence.
 5. **Only then** attempt the bot video with low settings (540p/30fps/H.264) on Hole 1.
 6. If video #5 succeeds → done. If it panics → IMPLEMENTER_BLOCKED with the BLOCKER.md mitigation log; items #1-#4 are real progress and can ship under READY_FOR_ARCHITECT_REVIEW with the bot video FAIL routing to Cesar one more time.
+
+---
+
+## Rejection 3 — iter-3 → iter-4 (2026-05-25)
+
+**Rejected verdict:** `ARCHITECT_REVIEW_PASS` (commit `8bff6bc9`)
+**Re-route:** Implementer iter-4 — Z-fight defense
+
+### Why rejected
+
+Iter-3 closed the three iter-2 gaps cleanly (Inspector params, Hole 1 production
+capture, bot video — all PASS at architect review). But Cesar's final visual
+inspection (2026-05-25 ~06:00 CEST) revealed a **z-fighting defect** that the
+flat Hole 1 capture and the low-res bot video both missed: the warped grid mesh
+sits coplanar with the green's terrain mesh, so floating-point precision
+determines which mesh wins per pixel. Result: short grid-line fragments appear
+and disappear across the green; large patches clip below the terrain entirely.
+Cesar captured a screenshot evidencing the defect (referenced from the SPEC's
+`§Architecture §Render step` "Y-offset above terrain mesh" sub-section).
+
+The pipeline missed it because:
+- The flat Hole 1 capture had the camera high enough that perspective masked
+  the fragmentation
+- The 250×540 bot video resolution + 30fps smoothed over the per-pixel
+  flicker
+- The synthetic TestGreen sinusoidal heightfield, viewed from above in
+  iter-2, also masked it (top-down angle minimizes z-fight visibility)
+
+This is iteration 4 of the pipeline. Lessons-worth follow-up at Cesar's "Done":
+add to Lesson U or sister: visual-fidelity capture for layout-affecting
+rendering changes needs camera dolly coverage, not just one static frame.
+
+### What's added in iter-4 (per SPEC `b590ebe1`)
+
+Cesar updated `SPEC.md` at commit `b590ebe1` with a new mandatory sub-section
+under `§Architecture §Render step`: **"Y-offset above terrain mesh"**. The fix:
+
+- New `[SerializeField] float _surfaceYOffset = 0.02f;` on `PutterGreenReader`.
+- Every grid-mesh vertex Y receives this offset above `SlopeCell.meshY` at
+  mesh-generation time:
+  `var pos = new Vector3(cell.cx, cell.meshY + _surfaceYOffset, cell.cz);`
+- Default 2cm. Implementer may tune in `[0.015f, 0.03f]` based on visual gate.
+- Tooltip explaining the z-fight rationale on the SerializeField (per SPEC).
+
+A new DoD line was added to the SPEC (line 221): grid must render consistently
+above terrain surface in the bot recording; **zero visible line-fragmenting
+or sub-terrain clipping** across the full putter aim camera dolly range.
+
+### What's kept from iter-3 (commit `f2edb066` + verifications at `587555c3`/`8bff6bc9`)
+
+All iter-3 work stays:
+- The 4 Inspector SerializeField params (`_cellSize`, `_lineWidth`, `_lineGlow`,
+  `_visibleRadius`) — `_surfaceYOffset` is a 5th sibling field on the same component
+- Hole 1 production-flow capture (will be retaken at iter-4 with the Y-offset fix)
+- Bot video pipeline + mitigations (540p / 30fps / H.264 / Hole 1) — proven safe;
+  re-record with the Y-offset fix in place
+- The procedural-mesh + URP HLSL shader render path
+- TestGreen scene + mesh asset (good for regression coverage on topology)
+- 2 new EditMode tests + the bake step + the data layer
+
+### Definition of redirect
+
+Implementer reads:
+1. **This file (CESAR_REJECTION.md)** — Rejection 3 section
+2. **`SPEC.md`** — `§Architecture §Render step` "Y-offset above terrain mesh"
+   sub-section (committed at `b590ebe1`) is the authoritative implementation
+   guidance
+3. **`IMPLEMENTER_REPORT.md`** — iter-3 section at the bottom; iter-4 will
+   append below it
+4. **`ARCHITECT_REVIEW.md`** — iter-3 PASS verdict (the pipeline cleared
+   iter-3; iter-4 is purely additive: 1 SerializeField + 1 line in the mesh
+   generation loop)
+5. **`tasks/lessons.md` Lesson U** — visual-fidelity SPEC reference rule
+
+Visual gate for iter-4: a **new bot recording** on Hole 1 (re-record the
+iter-3 video with the Y-offset fix applied) showing **zero** line-fragmenting
+and **zero** sub-terrain clipping at any camera angle in the putter aim dolly
+range. Bot video supersedes the iter-3 video as canonical evidence. The
+iter-3 video may be deleted at close-out (it shipped the same render with the
+z-fight defect).
+
+STATUS goes `ARCHITECT_REVIEW_PASS` → `CESAR_REJECTED` → next implementer
+run for iter-4 → `READY_FOR_SELF_REVIEW` if the visual gate is clean.
+
+### Order of work for iter-4
+
+1. Add the `_surfaceYOffset` SerializeField + its Tooltip to `PutterGreenReader.cs`
+   (defaults `0.02f`).
+2. Apply the offset in the mesh-generation loop (one line: `cell.meshY + _surfaceYOffset`).
+3. Wire the SerializeField value on the `LabScaffold.unity` AND
+   `PhysicsLab_TestGreen.unity` scenes (so Cesar can tweak in Inspector).
+4. Re-run `tests-run` to confirm bake tests still pass with the offset
+   (mesh vertex count + plan-view alignment unchanged; only Y values shift).
+5. Re-record the bot video on Hole 1 with the same mitigations (540p / 30fps /
+   H.264 / Hole 1 scene) — proven safe last iter. Save to
+   `videos/iter4_warped_grid_hole1_<timestamp>.mp4`.
+6. Re-capture a Hole 1 production-flow screenshot at a chase-cam angle that
+   would have exhibited z-fight before the fix. Save to
+   `screenshots/iter4_warped_grid_hole1_<timestamp>.png`.
+7. Update `IMPLEMENTER_REPORT.md` with iter-4 section: PASS for the Y-offset
+   SerializeField + the no-z-fight visual gate. Cite the new screenshot + video.
+8. Commit + push scoped to iter-4 paths. Set STATUS → `READY_FOR_SELF_REVIEW`.
