@@ -9,7 +9,9 @@
 
 Surfaced by Cesar's Lesson O playthrough on `loop_v1_2f_putter_p2_in_context`. Pre-existing P1/cup bugs (NOT §2f regressions) but §2f's auto-toggle makes them visible every session.
 
-**Audit queued:** `stat_to_physics_mapping_audit` — full lane-by-lane perceptibility audit of `StatModifierResolver` (filed 2026-05-25 from `live_stat_provider_wiring` Phase 3 postmortem; minimal Strength→velocity patch shipped as F7 in Phase 4). Spec at `Docs/Specs/Queued/stat_to_physics_mapping_audit/SPEC.md`.
+**Audit queued (P0 — Critical, Order 412):** `stat_to_physics_mapping_audit` — full lane-by-lane perceptibility audit of `StatModifierResolver` (filed 2026-05-25 from `live_stat_provider_wiring` Phase 3 postmortem; minimal Strength→velocity patch shipped as F7 in Phase 4). Spec at `Docs/Specs/Queued/stat_to_physics_mapping_audit/SPEC.md`. **Sequencing decision 2026-05-25 (Cesar+architect): audit fires BEFORE `spin_and_shot_shape_wiring`** — the audit covers Ball.Spin / Club.Spin / Character.Recovery coupling, so wiring spin first would risk rework. `spin_and_shot_shape_wiring` Order bumped 412→414 in Notion.
+
+**Tech-debt queued (P3 — Low, Order 419):** `physics_lab_controller_rename` — rename the misleadingly-named `PhysicsLabController` (used in production too, not just lab; surfaced during Phase 3 of `live_stat_provider_wiring` when the SetClub injection-bypass bug was easy to miss because reviewers assumed "Lab" meant lab-only). Filed 2026-05-25 by architect; SPEC at `Docs/Specs/Queued/physics_lab_controller_rename/SPEC.md`.
 
 1. ~~**putter_aim_yaw_in_groundlevel**~~ — DONE 2026-05-14 (then reverted 2026-05-14, putter now uses Chase mode for everything; see Lesson Q).
 2. ~~**putter_cone_per_shot_lifecycle**~~ — **DONE 2026-05-17** (Approach C). PutterTrack now follows per-shot lifecycle; central ball size parity fixed. Folder at `Docs/Specs/Completed/putter_cone_per_shot_lifecycle/`.
