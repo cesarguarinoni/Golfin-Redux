@@ -128,3 +128,5 @@
   - Capture: SnapPlayModeSafe (sanctioned path)
   - Production flow: real BotDriver → Hole 1 (no synthetic state injection)
   Verdict: FORWARD_TO_ARCHITECT
+
+2026-05-25 07:35 CEST  golfin-reviewer  iter-4 ARCHITECT_REVIEW_PASS — independent pixel scan + ffprobe + 3-frame video extraction + git diff audit all corroborate the SerializeField + mesh-gen-loop z-fight defense per SPEC b590ebe1. Routing to Cesar visual gate.

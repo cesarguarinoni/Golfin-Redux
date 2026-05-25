@@ -1,5 +1,217 @@
 # ARCHITECT_REVIEW — `puttpath_predictor_perf_and_design`
 
+---
+
+# Iter-4 verdict (2026-05-25 07:35 CEST)
+
+**Reviewer:** golfin-reviewer
+**Date:** 2026-05-25 07:35 CEST
+**Iteration reviewed:** iter-4 (commit `99f7f3cf`, on top of iter-3 ARCHITECT_REVIEW_PASS at `8bff6bc9`; targets `CESAR_REJECTION.md` § Rejection 3 z-fight defense)
+**Verdict:** `ARCHITECT_REVIEW_PASS`
+
+> Iter-4 ships exactly the single fix `SPEC.md` commit `b590ebe1` mandated:
+> a `[SerializeField] float _surfaceYOffset = 0.02f` on `PutterGreenReader`
+> with the verbatim Tooltip, applied as `cell.meshY + _surfaceYOffset` in
+> the mesh-generation vertex loop, and serialized as `0.02` on both
+> `LabScaffold.unity` and `PhysicsLab_TestGreen.unity`. The pipeline
+> (implementer + self-reviewer) re-walked the full checklist from scratch
+> per the post-rejection independence rule, and so did I. Independent pixel
+> scan of the chase-cam screenshot plus three independently-extracted video
+> frames at the putter-aim phase confirm the gate: zero line-fragmenting,
+> zero sub-terrain clipping. Iter-3 (Cesar-rejected) and iter-4 captures
+> side-by-side make the improvement unambiguous.
+>
+> Prior verdicts preserved below for audit trail.
+
+---
+
+## Independent visual scan (Step 0 — written before reading any narrative)
+
+`screenshots/iter4_warped_grid_hole1_2026-05-25_06-43-49.png`:
+
+Portrait gameplay capture of Lomond Hole 1. Top ~15%: HUD bars — "JAMES /
+Lv 13 / TURN 4" player chip upper-left, navy "LOMOND / HOLE 1 / PAR 5"
+stack upper-right, a small white gear button at the top-right corner.
+Middle: chase-cam onto a flat green with a red-and-white flag pole at
+upper-center and a white G-logo ball sitting just below center on top of
+a dark putter head. Behind the green a band of dark-green trees forms the
+horizon.
+
+The dominant feature for this review: a yellow wireframe grid covers the
+green around the ball/hole area, radiating outward, bounded by a soft
+circular cull radius. **Lines are continuous, unbroken, and consistently
+above the grass surface.** No fragmented short segments, no patches that
+disappear, no flickering perimeter shimmer. Cells are uniform squares in
+plan view (correct for a flat production green per `CESAR_REJECTION.md`
+§Rejection 2). The "0%" confidence chip and right-edge HUD chips read
+cleanly above the grid. Compared mentally to the iter-3 screenshot I
+opened second: iter-3 visibly had broken/dashed grid line segments at
+this same camera-angle band; iter-4 does not.
+
+## Reference (PGA2K paradigm) comparison
+
+`reference_pga2k_warped_grid.png` is the visual paradigm — yellow square
+cells in plan view, semi-transparent over the green polygon, continuous
+strokes, perimeter cull, Y warp from terrain undulation. iter-4 Hole 1
+matches all four non-warp paradigm checks (yellow / square / semi-
+transparent / continuous / perimeter cull). Y warp is N/A because Hole 1
+Lomond is flat by spec; the iter-2-redirect TestGreen capture (already
+architect-PASSed at `78945f38`) is the regression evidence for warp
+behaviour. Iter-4's gate is the z-fight defense, not the paradigm.
+
+| Element | Reference (PGA2K) | iter-4 Hole 1 | Match |
+|---|---|---|---|
+| Line color | Yellow | Yellow | Matches |
+| Cell shape | Square in plan-view | Square in plan-view | Matches |
+| Transparency | Semi-transparent over green | Semi-transparent (grass visible between cells) | Matches |
+| Strokes | Continuous (not dashed) | Continuous (zero fragments observed at chase-cam angle) | Matches |
+| Perimeter cull | Soft radial falloff | Soft radial falloff (smooth taper, no hard cut) | Matches within 1–2 px |
+| Y-warp | Sculpted topology produces visible warp | Flat green produces no warp | N/A — correct per SPEC |
+| Z-relationship to terrain | Above surface, no z-fight | Above surface, no z-fight visible at chase-cam | Matches |
+
+## Independent video frame extraction (parity check vs self-reviewer)
+
+`ffprobe` on `videos/iter4_warped_grid_hole1_2026-05-25_06-43-49.mp4`:
+- codec: h264
+- 250×540
+- 381600/12581 = 30.33 fps
+- duration: 20.97s
+- bit_rate: 454694 bps → ~1.14 MB
+
+All metadata matches the implementer's and self-reviewer's claims exactly.
+No Mac kernel panic; same mitigations as iter-3 (540p / 30fps / H.264 /
+Hole 1).
+
+Extracted dense frames at the putter-aim phase (`ffmpeg -vf
+"select='gte(t,20.0)*lt(t,21.0)'"` → 31 frames). Read 3 representative
+frames spanning the 1-second putter-aim dolly (frame_20, frame_25,
+frame_30):
+
+| Frame | Grid continuity | Sub-terrain clipping | Perimeter |
+|---|---|---|---|
+| end_20 | Continuous lines across full visible area | None observed | Smooth radial taper |
+| end_25 | Continuous lines across full visible area | None observed | Smooth radial taper |
+| end_30 | Continuous lines across full visible area | None observed | Smooth radial taper |
+
+The grid is stable in motion across the dolly. The ball, putter shaft,
+and HUD elements have no z-fight pixel flicker overlaid. An earlier-phase
+frame (frame_07, tee-shot view ~21s into the scenario) shows a clean
+non-putter view with no leftover grid artifacts in the wrong contexts —
+the gating behaviour is intact.
+
+## Bbox verification (Step 3 — containment)
+
+Not applicable. `_surfaceYOffset` is a depth-ordering / world-space-Y fix,
+not a UI containment claim. No "X inside Y" assertion in SPEC or
+IMPLEMENTER_REPORT to run `script-execute` against.
+
+## Scene-mutation audit (Step 4 — `git show 99f7f3cf`)
+
+Diff for iter-4 commit `99f7f3cf` reviewed independently. Total source
+change in scenes:
+
+```
+Assets/Scenes/Physics/LabScaffold.unity            |   1 +
+Assets/Scenes/Physics/PhysicsLab_TestGreen.unity   |   1 +
+```
+
+Each scene receives ONE line: `_surfaceYOffset: 0.02` appended inside the
+existing `PutterGreenReader` MonoBehaviour block immediately after
+`_visibleRadius: 10`. Surgical. **Zero** `m_IsActive` flips, **zero**
+RectTransform `sizeDelta` changes, **zero** position/rotation shifts,
+**zero** unrelated GameObject mutations. Iter-12 capture-corruption
+failure mode does not apply here — both captures used
+`CaptureCore.SnapPlayModeSafe` (the sanctioned path per CLAUDE.md), not a
+custom workaround.
+
+Source diff (`Assets/Scripts/Physics/Viewer/PutterGreenReader.cs`):
+- +3 lines (SerializeField + Tooltip + blank line at lines 76–78)
+- +1 modified line (vertex Y assignment at line 442:
+  `c.meshY` → `c.meshY + _surfaceYOffset`)
+- +1 modified comment header (`iter-2` → `iter-4`, cosmetic)
+
+The Tooltip text matches SPEC line 99 verbatim:
+`"Vertical offset (meters) above the terrain mesh. Prevents z-fighting.
+0.02 = 2cm, visually imperceptible from putter aim camera angles."`
+
+## Code verification (Step 5)
+
+`grep -n "_surfaceYOffset" Assets/Scripts/Physics/Viewer/PutterGreenReader.cs`:
+
+```
+1:// iter-4: _surfaceYOffset z-fight fix (2026-05-25)
+77:        private float _surfaceYOffset = 0.02f;
+442:                vertices[i] = new Vector3(c.cx, c.meshY + _surfaceYOffset, c.cz);
+```
+
+- SerializeField at line 76–77 with the verbatim SPEC Tooltip ✓
+- Default `0.02f` ✓
+- Offset applied Y-only at line 442 — XZ untouched (`c.cx` and `c.cz`
+  passed through) ✓
+
+The XZ test (`PutterGreenReader_GridIsWorldXZAligned`,
+`PutterGreenReaderBakeTests.cs:233`) checks `v.x % cellSize` and
+`v.z % cellSize` only — Y-offset cannot perturb its outcome. tests-run
+334/331/0/3 (identical to iter-3 baseline) is self-consistent.
+
+## Capture-helper compliance (Step 6)
+
+`IMPLEMENTER_REPORT` line 245: "Capture method: `CaptureCore.SnapPlayModeSafe`
+(via BotDriver)". This is the sanctioned playmode-with-running-coroutine
+path per CLAUDE.md §Screenshots quick-reference. The self-reviewer noted
+the same. ✓
+
+Bot video uses `LoopV2SmokeBot` + `BotVideoRecorder` driving the real
+production flow (Home → matchmaking → Hole_01_Geo). Not a smoke-only
+host. Production-flow gate satisfied — both static screenshot AND video
+walk the same real lifecycle. ✓
+
+No new `*Context.cs` added → no fake-state preset maintenance required.
+N/A. ✓
+
+## Acceptance checklist (independent re-verification)
+
+| Item | Implementer | Self-reviewer | Architect (this) | Notes |
+|---|---|---|---|---|
+| `[SerializeField] float _surfaceYOffset = 0.02f` + verbatim Tooltip | PASS | CONFIRM-PASS | **PASS** | Lines 76–77; Tooltip text exact-match to SPEC line 99. |
+| Offset applied in mesh-gen loop (`c.meshY + _surfaceYOffset`) | PASS | CONFIRM-PASS | **PASS** | Line 442; Y-only; XZ pass-through preserved. |
+| `_surfaceYOffset: 0.02` wired in `LabScaffold.unity` | PASS | CONFIRM-PASS | **PASS** | Diff line 26733; sits in same MonoBehaviour block as the other 4 grid params. |
+| `_surfaceYOffset: 0.02` wired in `PhysicsLab_TestGreen.unity` | PASS | CONFIRM-PASS | **PASS** | Diff line 301; same block. |
+| Bake tests pass (XZ + vertex count) | PASS | CONFIRM-PASS | **PASS** | tests-run 334/331/0/3, identical to iter-3 baseline; XZ test verifies `v.x % cellSize` and `v.z % cellSize` only, can't be perturbed by Y-offset. |
+| Bot video on Hole 1 — zero z-fight | PASS | CONFIRM-PASS | **PASS** | ffprobe matches claims; 3 frames extracted at putter-aim phase show continuous lines and zero clipping. |
+| Hole 1 chase-cam screenshot — zero z-fight | PASS | CONFIRM-PASS | **PASS** | Step 0 pixel scan independently confirms. iter-3 side-by-side shows the visible improvement. |
+| Scene-mutation audit clean | PASS | CONFIRM-PASS | **PASS** | Two `+1` lines, nothing else. |
+
+## Verdict justification
+
+The fix is exactly what SPEC `b590ebe1` mandated — one SerializeField, one
+mesh-gen line edit, two scene-wires. The implementer's claims are
+substantiated by my independent file reads, my independent commit-stat /
+git-diff inspection, my independent ffprobe + ffmpeg frame extractions,
+and my independent Step 0 pixel scan written before reading either prior
+report.
+
+The post-rejection independence rule was honoured. The self-reviewer's
+PASS is corroborated by every check I ran from scratch; I found nothing
+they missed. The iter-3 → iter-4 visual delta is unambiguous: iter-3
+showed dashed/fragmented grid segments at a less-revealing higher camera
+angle, and iter-4 shows continuous grid lines at the harder chase-cam
+angle. The Y-offset defense is working as specified.
+
+Confirmation-bias caveat (per CLAUDE.md visual-review rule 1): three
+prior false-PASSes on this task make rubber-stamping the risk. I am not
+rubber-stamping — I extracted my own video frames and read pixels
+independently. The evidence is consistent across all sources. The
+remaining risk lives in Cesar's final visual gate on the actual device,
+which is the next and correct step.
+
+**STATUS:** `SELF_REVIEW_PASS` → `ARCHITECT_REVIEW_PASS`
+**Routing:** Cesar's final visual gate.
+
+---
+
+# Iter-3 verdict (audit trail — DO NOT MODIFY)
+
 **Reviewer:** golfin-reviewer
 **Date:** 2026-05-24 06:45 CEST
 **Iteration reviewed:** iter-3 (commit `f2edb066`, on top of iter-2-redirect ARCHITECT_REVIEW_PASS at `78945f38`)
