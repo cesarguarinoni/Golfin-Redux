@@ -85,10 +85,29 @@ Procedure:
 #### Mesh generation
 
 1. On hole-load (`HoleContext.OnChanged` → bake step completes), generate a **procedural triangulated mesh** covering all green cells.
-2. Vertices: one per bake cell center. Position = `(cx, meshY, cz)` directly from the existing `SlopeCell.meshY` sample.
+2. Vertices: one per bake cell center. Position = `(cx, meshY + _surfaceYOffset, cz)` from the existing `SlopeCell.meshY` sample, where `_surfaceYOffset` is a `[SerializeField] float` on `PutterGreenReader` defaulting to **0.02f** (2cm). **MANDATORY** — see "Y-offset above terrain mesh" sub-section below.
 3. Triangulation: each adjacent 2x2 block of green cells forms a quad → 2 triangles. Skip quads where any of the 4 corners isn't a baked green cell (handles polygon boundaries; non-square greens still produce square interior cells, only the perimeter is irregular).
 4. **Vertex colors:** per-vertex color from baked slope magnitude via the Q2 ramp. Smooth interpolation across triangles gives the continuous color gradient like Mario Golf's tilt visualization — see L4 + Q2.
 5. Mesh bounds: AABB of all green vertices (used for frustum culling — the GPU does it for free at this point).
+
+#### Y-offset above terrain mesh
+
+The grid mesh **must not be coplanar with the green's terrain mesh**. Without a Y-offset, every vertex sits at the exact terrain surface Y and the two meshes z-fight: floating-point precision determines per-pixel which mesh wins, and from typical chase-cam angles the grid renders in irregular fragments — short line pieces appear and disappear across the green, large patches clip below the terrain entirely. Cesar flagged this on the iter-1 build (2026-05-23 ~08:00 CEST; screenshot in `CESAR_REJECTION.md` thread on the iter-2 chat).
+
+**Implementation:**
+```csharp
+[SerializeField, Tooltip("Vertical offset (meters) above the terrain mesh. Prevents z-fighting. 0.02 = 2cm, visually imperceptible from putter aim camera angles.")]
+float _surfaceYOffset = 0.02f;
+
+// In the mesh-generation loop:
+var pos = new Vector3(cell.cx, cell.meshY + _surfaceYOffset, cell.cz);
+```
+
+**Why 2cm (and not larger):** small enough that from the putter aim camera angle (~4–5m from ball, low pitch) the grid reads as drawn ON the surface, not hovering above it. The mesh perimeter is the most sensitive view — from a side angle you'd see the offset as a thin lip if it's too large.
+
+**Why 2cm (and not smaller):** 1cm has been observed insufficient on similar mobile-URP setups due to the depth buffer's 16-bit precision over the typical Lomond near/far plane ratio. 2cm gives reliable separation across the full camera dolly range used by `ChaseCamera.Mode.Chase` for putter aim. Implementer is free to tune in `[0.015f, 0.03f]` if iter-2 visuals show either residual z-fighting (raise) or visible hover at perimeter (lower) — the SerializeField makes this an inspector tweak, not a code change.
+
+**What this does NOT replace:** distance culling (Q3 / `_BallPosition` MaterialPropertyBlock), frustum culling (mesh bounds), or alpha-fading at the cull radius. Y-offset only fixes the z-fight; the other culling paths stay as specified.
 
 #### Shader (URP Shader Graph)
 
@@ -199,6 +218,7 @@ All three are additive. Architecture and Q-locks unchanged.
 ## Definition of done (REVISED iter-2)
 
 - [ ] `Assets/Scripts/Physics/Viewer/PutterGreenReader.cs` revised (data layer + bake step preserved; render path replaced with procedural mesh + child MeshFilter+MeshRenderer)
+- [ ] **NEW: `_surfaceYOffset` SerializeField on `PutterGreenReader`** (default `0.02f`, tooltip explaining the z-fight defense) — every mesh vertex Y receives this offset above `SlopeCell.meshY` at mesh-generation time. Grid must render consistently above terrain surface in the bot recording; **zero visible line-fragmenting or sub-terrain clipping** across the full putter aim camera dolly range.
 - [ ] `BakedZoneClassifier.GetPolygonAABBsForType(SurfaceType)` accessor preserved (unchanged from iter-1)
 - [ ] `PuttPathPredictor.cs` deleted
 - [ ] `PuttPathRenderer.cs` deleted
