@@ -1,27 +1,27 @@
-[t=9.37] === LoopV2SmokeBot started: scenario='putter_aim_green_reader_visible' ===
-[t=9.37] === Putter Aim Green Reader Visible ===
-[t=9.37] NavigateToHome: waiting for app startup sequence…
-[t=9.37]   NavigateToHome: on Splash after 0.0s — clicking StartButton
-[t=9.87] Click: 'StartButton'
-[t=10.01]   → clicked StartButton (pointer-down/up + onClick)
-[t=12.67]   NavigateToHome: reached Home after 3.0s
-[t=13.69] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/screenshots/s01_home_2026-05-24_06-33-59.png
-[t=13.69] Click: 'PLAY'
-[t=13.81]   → clicked PlayButton (pointer-down/up + onClick)
-[t=15.34] WaitForModalVisible: MatchMakingModal (timeout=15s)
-[t=15.35]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
-[t=15.39] Capture: s02_matchmaking_searching → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/screenshots/s02_matchmaking_searching_2026-05-24_06-34-01.png
-[t=15.39] WaitFor: matchmaking opponent found (timeout=30s)
-[t=19.41]   WaitFor OK: matchmaking opponent found after 3.8s
-[t=19.91] WaitForSceneLoaded: LabScaffold (timeout=40s)
-[t=21.08]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 1.0s
-[t=21.08] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
-[t=21.58]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
-[t=24.61] Capture: s03_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/screenshots/s03_gameplay_armed_2026-05-24_06-34-10.png
-[t=24.61]   Placing ball on green via PlaceBallAt...
-[t=25.45]   Setting IsPutt=true and calling BeginExternalDrag() on ShotController...
-[t=25.55]   After 3 frames: LastVisibleCellCount=0
-[t=25.91] Capture: s04_putter_aim_green_reader_visible → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/screenshots/s04_putter_aim_green_reader_visible_2026-05-24_06-34-11.png
-[t=25.91]   PutterGreenReader: baked=1857 visible=0 (need >=50 visible for PASS)
-[t=25.91] === PutterAimGreenReaderVisible: PARTIAL — baked=1857 cells but visible=0 (putter aim may not have been active during render tick) ===
-[t=25.91] === Scenario complete ===
+[t=9.50] === LoopV2SmokeBot started: scenario='putter_aim_green_reader_visible' ===
+[t=9.50] === Putter Aim Green Reader Visible ===
+[t=9.50] NavigateToHome: waiting for app startup sequence…
+[t=9.50]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=10.03] Click: 'StartButton'
+[t=10.17]   → clicked StartButton (pointer-down/up + onClick)
+[t=12.80]   NavigateToHome: reached Home after 3.0s
+[t=13.82] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/screenshots/s01_home_2026-05-25_06-43-36.png
+[t=13.82] Click: 'PLAY'
+[t=13.95]   → clicked PlayButton (pointer-down/up + onClick)
+[t=15.47] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=15.47]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=15.52] Capture: s02_matchmaking_searching → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/screenshots/s02_matchmaking_searching_2026-05-25_06-43-38.png
+[t=15.52] WaitFor: matchmaking opponent found (timeout=30s)
+[t=19.27]   WaitFor OK: matchmaking opponent found after 3.5s
+[t=19.81] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=21.22]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 1.0s
+[t=21.22] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=21.76]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
+[t=24.81] Capture: s03_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/screenshots/s03_gameplay_armed_2026-05-25_06-43-47.png
+[t=24.81]   Placing ball on green via PlaceBallAt...
+[t=25.65]   Setting IsPutt=true and calling BeginExternalDrag() on ShotController...
+[t=25.75]   After 3 frames: LastVisibleCellCount=0
+[t=26.10] Capture: s04_putter_aim_green_reader_visible → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/putter_aim_green_reader_visible/screenshots/s04_putter_aim_green_reader_visible_2026-05-25_06-43-49.png
+[t=26.10]   PutterGreenReader: baked=1857 visible=0 (need >=50 visible for PASS)
+[t=26.10] === PutterAimGreenReaderVisible: PARTIAL — baked=1857 cells but visible=0 (putter aim may not have been active during render tick) ===
+[t=26.10] === Scenario complete ===

@@ -298,6 +298,7 @@ MonoBehaviour:
   _lineWidth: 0.04
   _lineGlow: 1.5
   _visibleRadius: 10
+  _surfaceYOffset: 0.02
 --- !u!114 &631117027
 MonoBehaviour:
   m_ObjectHideFlags: 0

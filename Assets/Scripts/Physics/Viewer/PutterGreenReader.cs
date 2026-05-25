@@ -1,4 +1,4 @@
-// iter-2: warped grid render path (sharedMesh fix 2026-05-23)
+// iter-4: _surfaceYOffset z-fight fix (2026-05-25)
 using System.Collections.Generic;
 using UnityEngine;
 using Golfin.Physics;
@@ -72,6 +72,9 @@ namespace Golfin.Physics.Viewer
         [SerializeField] private float _lineWidth       = 0.04f;
         [SerializeField] private float _lineGlow        = 1.5f;
         [SerializeField] private float _visibleRadius   = 10.0f;
+
+        [SerializeField, Tooltip("Vertical offset (meters) above the terrain mesh. Prevents z-fighting. 0.02 = 2cm, visually imperceptible from putter aim camera angles.")]
+        private float _surfaceYOffset = 0.02f;
 
         // Colors (derived from thresholds, precomputed).
         // Yellow-green family matching PGA 2K reference — warm bright yellow on slopes.
@@ -436,7 +439,7 @@ namespace Golfin.Physics.Viewer
             for (int i = 0; i < _cells.Length; i++)
             {
                 ref readonly var c = ref _cells[i];
-                vertices[i] = new Vector3(c.cx, c.meshY, c.cz);
+                vertices[i] = new Vector3(c.cx, c.meshY + _surfaceYOffset, c.cz);
                 Color col = CellColor(c.magnitude);
                 colors32[i] = new Color32(
                     (byte)(col.r * 255),

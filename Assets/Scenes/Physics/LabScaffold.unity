@@ -26730,6 +26730,7 @@ MonoBehaviour:
   _lineWidth: 0.04
   _lineGlow: 1.5
   _visibleRadius: 10
+  _surfaceYOffset: 0.02
 --- !u!1001 &1596199216455870784
 PrefabInstance:
   m_ObjectHideFlags: 0

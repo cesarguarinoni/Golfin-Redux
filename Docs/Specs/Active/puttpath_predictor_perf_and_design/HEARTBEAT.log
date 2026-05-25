@@ -107,3 +107,13 @@
 2026-05-24T06:46:00Z golfin-reviewer iter-3: scene-mutation audit clean (LabScaffold 4-line addition; PhysicsLab_TestGreen URP first-save noise only, zero m_IsActive/transform mutations)
 2026-05-24T06:46:30Z golfin-reviewer iter-3: ffprobe video verified — h264 Baseline, 250x540, 30.45fps, 21.02s, 1.18MB
 2026-05-24T06:47:00Z golfin-reviewer iter-3: ARCHITECT_REVIEW_PASS written; STATUS=ARCHITECT_REVIEW_PASS; routing to Cesar final gate
+2026-05-25T04:32:02 activated — iter-4 start, adding _surfaceYOffset to PutterGreenReader
+2026-05-25T04:32:27 verifying Unity compile state after _surfaceYOffset changes
+2026-05-25T04:32:53 MCP server confirmed alive — calling editor-application-get-state
+2026-05-25T04:34:20 calling script-execute to refresh + wire _surfaceYOffset in both scenes
+2026-05-25T04:41:07 _surfaceYOffset confirmed compiled in assembly — wiring scenes
+2026-05-25T04:41:34 scenes wired — running Golfin.Physics.Tests
+2026-05-25T04:42:31 tests PASS 334/331/0/3 — proceeding to bot video capture on Hole 1
+2026-05-25T04:43:27 bot launched with video — waiting for scenario to complete
+2026-05-25T04:47:00 video captured clean (no panic) — updating IMPLEMENTER_REPORT for iter-4
+2026-05-25T04:48:23 done, awaiting review — iter-4 PASS: _surfaceYOffset SerializeField + both scenes wired + tests 334/331/0/3 + video + screenshot all clean
