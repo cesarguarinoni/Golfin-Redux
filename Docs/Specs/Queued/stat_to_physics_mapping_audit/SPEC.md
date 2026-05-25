@@ -27,7 +27,37 @@ This is design-intentional per the "single-source per lane" comment in the resol
    - Should `Character.Recovery` (currently does it affect anything?) feed back into stamina regen between shots?
    - Should `Character.Stamina` be more than a soft scalar (currently `staminaMultiplier` clamps to 1.0 max so it never amplifies, only attenuates)?
    - Should Ball.Power and Ball.Spin compete or stack (currently multiplicative-positive on velocity, additive on spin)?
-5. **Test gate:** any coefficient changes must preserve the existing `Golfin.Physics.Tests` baseline (today: 340/337/0/3 after Phase 3). Document a new physics regression test set if proposed changes go in.
+5. **Test gate:** any coefficient changes must preserve the existing `Golfin.Physics.Tests` baseline (today: **342/339/0/3 after Phase 4 F7 of `live_stat_provider_wiring`**). Document a new physics regression test set if proposed changes go in.
+
+## Methodology — bot harness design
+
+**Primary harness:** the existing `Hole 1 Playthrough` smoke-bot scenario (par-5, full-club journey: driver → wedge → putter). Reuse with character-build variation.
+
+**Stat-build profiles measured:**
+- **LOW** — Common-rarity max stats (~5–10 across STR / CTRL / REC / STAM)
+- **MID** — Rare-rarity max (~20–25)
+- **HIGH** — Supreme-rarity max (~45–50)
+
+**Per-lane sweep:** for each lane in §Scope.1, vary the dominant stat across LOW→MID→HIGH while keeping the other three stats fixed at MID. Same club and same ball as controls. Measure: stroke count, stroke-1 carry (m), terminal surface, aim spread (eyeballed from caption video; bot fires "perfect" aim so spread is theoretical — the audit may need to instrument per-shot RNG-seed jitter to surface aim-cone deltas).
+
+**`BallPhysicsModifiers` sweep:** vary ball stats with character fixed at MID. One new bot scenario `stat_lane_surface_roll`: fires the same club + power onto a Fairway lie, a Rough lie, and a Sand lie at a known position; measures roll-out terminal position with LOW vs HIGH ball stats. Adds ~1 scenario + ~6 bot runs.
+
+**Total harness work:** 1 new bot scenario + reuse of `Hole 1 Playthrough` + ~10–12 bot runs to permute. Output is a perceptibility matrix in `STAT_LANE_AUDIT.md` (rows = lanes, columns = LOW/MID/HIGH, cells = measured delta + PASS/FAIL vs the perceptibility bar).
+
+**OB avoidance:** bot scenarios in this audit MUST avoid OB shots by default. Aim targets must bias toward fairway-safe areas. If a HIGH stat build (e.g., Supreme Strength + driver) would push a default-aim shot into OB on Hole 1, the scenario must use a reduced-power flick or pick a different club. OB shots have currently-shoddy camera framing that degrades the audit's visual evidence. **OB-specific behavior is NOT in this audit's scope.**
+
+This OB-avoidance rule is ALSO codified as a durable bot convention in `Docs/Architecture/BOT_FRAMEWORK.md` §6 (added 2026-05-25) so future bot work inherits it.
+
+**Putter lanes:** out of scope unless a swing-lane finding implicates them (per §Out of scope below).
+
+## Q-LOCKS
+
+| # | Question | Architect lean | Lock |
+|---|---|---|---|
+| Q1 | Measurement methodology — what harness, what stat profiles, how is data generated? | See §Methodology above. Hole 1 par-5 reuse + 1 new surface-roll scenario, 3 stat profiles (LOW/MID/HIGH), per-lane stat sweep, OB avoidance baked in. | **LOCKED 2026-05-25 (Cesar):** Methodology approved as proposed in §Methodology. Additional durable rule confirmed: bots avoid OB shots by default; OB-specific testing is a separate concern. The rule is codified in `Docs/Architecture/BOT_FRAMEWORK.md` §6. |
+| Q2 | F7 baseline — keep F7's Strength→velocity coupling in place during the audit, or revert F7 first and run the audit on a cleaner pre-F7 baseline? | PENDING |
+| Q3 | `DefaultStatProvider.BuildSwingBundle` seam (always returns `DefaultDriver` regardless of club; root cause of Hole 1 default-character 8-stroke seam in `live_stat_provider_wiring` Phase 4) — in-scope as a fix in this audit, or surface as audit finding + file a separate spec? | PENDING |
+| Q4 | Coefficient-PR ceiling — DoD says "if changes proposed, ship them." Tier the proposed changes (safe-ship subset lands in this PR, larger retunings filed as follow-up specs) or all-or-nothing? | PENDING |
 
 ## Out of scope
 

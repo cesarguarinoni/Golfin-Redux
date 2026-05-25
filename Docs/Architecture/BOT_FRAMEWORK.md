@@ -179,6 +179,14 @@ terminal-state observation (modal wiring, progression) — never as the default 
   (a fullscreen Game View eats them).
 - **A long synchronous `script-execute` blocks the main thread** → the game loop can't
   advance. Enter play mode, let the bot run autonomously, poll with separate short calls.
+- **Default aim should avoid OB / hazards.** OB-shot camerawork is currently shoddy — the
+  production camera path doesn't frame the drop-zone cleanly on a shot terminating in OB
+  (separate concern: `director_obfreeze_to_chase_on_aiming` follow-up). When designing a
+  scenario that doesn't specifically test OB behavior, target fairway-safe areas: aim
+  toward fairway center, throttle power if a HIGH stat build would carry past the fairway,
+  or pick a hole/club combination where OB isn't reachable at the bot's aim heuristic. **OB
+  testing is a distinct scenario class** — only fire OB shots when the test demands it.
+  Existing scenarios that exhibit OB drift should be audited and corrected when found.
 
 ---
 
