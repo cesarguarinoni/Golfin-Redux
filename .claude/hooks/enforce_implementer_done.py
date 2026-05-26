@@ -62,11 +62,24 @@ capture detection that the iter-2/iter-3 of that task only caught by hand:
     report under `screenshots/` is variance-sampled (Pillow, falling back to a
     manual stdev pass). Variance < 5.0 on a ≥10000-pixel sample = synthetic
     fabrication; blocks the STATUS write with file path + variance.
+
+Rule 13 is the spin_and_shot_shape_wiring scar-tissue rule (Cesar-approved
+2026-05-26 21:25 CEST). It catches the forgotten-files-outside-spec-folder
+failure mode:
+
+13. **Files-modified coverage.** Every uncommitted path reported by
+    `git status --porcelain` that lives OUTSIDE the task's
+    `Docs/Specs/Active/<task>/` folder must appear in IMPLEMENTER_REPORT.md's
+    "Files modified or created" table. If a path is in the working tree but
+    not in the table, the implementer either forgot to report it (the
+    spin_and_shape PhysicsLabController case) or it's drift that should be
+    restored before transitioning. See Lesson AA in tasks/lessons.md.
 """
 import json
 import math
 import re
 import struct
+import subprocess
 import sys
 import time
 import zlib
@@ -879,6 +892,112 @@ def validate_image_variances(report_path: Path) -> list[str]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def get_uncommitted_paths_outside_spec(repo_root: Path, task_dir: Path) -> set[str]:
+    """Rule 13 helper: paths from `git status --porcelain` that live outside the task's spec folder.
+
+    Strips porcelain status codes (1-2 chars + space) and rename arrows
+    ('old -> new' keeps 'new'). Quoted paths (whitespace in name) are unquoted.
+    Paths inside `task_dir` are excluded; those are docs the close-out commit
+    will carry, NOT the code-outside-the-folder class the rule targets.
+
+    Empty set on git failure (not a repo, git missing, timeout) so a broken
+    environment doesn't block the implementer with something they can't fix.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return set()
+    if result.returncode != 0:
+        return set()
+
+    try:
+        task_rel = task_dir.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        task_rel = None
+
+    paths: set[str] = set()
+    for raw_line in result.stdout.splitlines():
+        if not raw_line or len(raw_line) < 3:
+            continue
+        line = raw_line[3:]
+        if " -> " in line:
+            line = line.split(" -> ", 1)[1]
+        path = line.strip()
+        if path.startswith('"') and path.endswith('"'):
+            path = path[1:-1]
+        if not path:
+            continue
+        if task_rel and (path == task_rel or path.startswith(task_rel + "/")):
+            continue
+        paths.add(path)
+    return paths
+
+
+def parse_files_modified_table(report_text: str) -> set[str]:
+    """Rule 13 helper: parse 'Files modified or created' table; return path column.
+
+    Falls back to 'Files modified' (without 'or created') for older formats.
+    Strips backticks (canonical format wraps paths in backticks).
+    """
+    rows = parse_table_rows(report_text, "Files modified or created")
+    if not rows:
+        rows = parse_table_rows(report_text, "Files modified")
+    paths: set[str] = set()
+    for row in rows:
+        if not row:
+            continue
+        cell = row[0].strip().strip("`").strip()
+        if cell:
+            paths.add(cell)
+    return paths
+
+
+def validate_files_modified_coverage(
+    report_path: Path,
+    repo_root: Path,
+    task_dir: Path,
+) -> list[str]:
+    """Rule 13: uncommitted paths outside the spec folder must be in the report.
+
+    For each path returned by `git status --porcelain` that doesn't live
+    inside `task_dir`, verify that IMPLEMENTER_REPORT.md's "Files modified
+    or created" table mentions it (substring match in either direction).
+
+    Returns a list of errors, one per uncovered path. Implementer's two paths
+    forward: (a) add the path to the report, or (b) restore/discard the path
+    before retrying the STATUS write.
+    """
+    errors: list[str] = []
+    if not report_path.exists():
+        return errors  # Rule 1 already errored on this case.
+
+    uncommitted = get_uncommitted_paths_outside_spec(repo_root, task_dir)
+    if not uncommitted:
+        return errors
+
+    report_text = report_path.read_text(encoding="utf-8", errors="ignore")
+    reported = parse_files_modified_table(report_text)
+
+    for path in sorted(uncommitted):
+        if any(path in r or r in path for r in reported):
+            continue
+        errors.append(
+            f"IMPLEMENTER_REPORT.md: working tree has uncommitted path "
+            f"'{path}' outside the task folder, but it does NOT appear in the "
+            f"'Files modified or created' table. Add it to the report (if "
+            f"intentional and part of this task) OR restore/discard before "
+            f"the STATUS write. See Lesson AA: the spin_and_shot_shape_wiring "
+            f"close-out missed PhysicsLabController.cs this exact way."
+        )
+    return errors
+
+
 def main() -> int:
     payload = read_payload()
     target = get_target_path(payload)
@@ -962,6 +1081,15 @@ def main() -> int:
     # Rule 12: variance check on every screenshot path in the report.
     if report_path.exists():
         errors.extend(validate_image_variances(report_path))
+
+    # Rule 13: uncommitted paths outside the spec folder must be in the
+    # report's 'Files modified or created' table. Scar-tissue from
+    # spin_and_shot_shape_wiring: the close-out commit was docs-only and
+    # the 14-file implementation lived only in working tree.
+    if report_path.exists():
+        errors.extend(
+            validate_files_modified_coverage(report_path, REPO_ROOT, task_dir)
+        )
 
     if errors:
         print(

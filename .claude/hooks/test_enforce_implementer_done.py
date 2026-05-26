@@ -510,5 +510,138 @@ class TestEndToEndBlocking(unittest.TestCase):
             shutil.rmtree(td, ignore_errors=True)
 
 
+class TestFilesModifiedCoverage(unittest.TestCase):
+    """Rule 13 — uncommitted paths outside the spec folder must be in the report."""
+
+    def _make_repo(self):
+        """Create a real tiny git repo in a temp dir."""
+        import subprocess
+        td = Path(tempfile.mkdtemp(prefix="hook_rule13_")).resolve()
+        subprocess.run(["git", "init", "-q"], cwd=td, check=True)
+        subprocess.run(["git", "config", "user.email", "t@t.t"], cwd=td, check=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=td, check=True)
+        (td / "seed.txt").write_text("seed\n")
+        subprocess.run(["git", "add", "."], cwd=td, check=True)
+        subprocess.run(["git", "commit", "-qm", "seed"], cwd=td, check=True)
+        active = td / "Docs" / "Specs" / "Active" / "demo_task"
+        active.mkdir(parents=True)
+        return td, active
+
+    def test_no_uncommitted_passes(self):
+        td, active = self._make_repo()
+        try:
+            (active / "IMPLEMENTER_REPORT.md").write_text("# Report\n\n## Files modified or created\n\n| Path | Change |\n|---|---|\n")
+            errors = eid.validate_files_modified_coverage(
+                active / "IMPLEMENTER_REPORT.md", td, active
+            )
+            self.assertEqual(errors, [])
+        finally:
+            import shutil
+            shutil.rmtree(td, ignore_errors=True)
+
+    def test_uncommitted_inside_spec_folder_passes(self):
+        """Files inside the task folder don't count — those are docs."""
+        td, active = self._make_repo()
+        try:
+            (active / "SPEC.md").write_text("# spec\n")  # untracked but inside task
+            (active / "IMPLEMENTER_REPORT.md").write_text(
+                "# Report\n\n## Files modified or created\n\n| Path | Change |\n|---|---|\n"
+            )
+            errors = eid.validate_files_modified_coverage(
+                active / "IMPLEMENTER_REPORT.md", td, active
+            )
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+        finally:
+            import shutil
+            shutil.rmtree(td, ignore_errors=True)
+
+    def test_uncommitted_outside_spec_folder_not_in_report_fails(self):
+        """The spin_and_shape PhysicsLabController case: file modified, not reported."""
+        td, active = self._make_repo()
+        try:
+            (td / "Assets").mkdir()
+            (td / "Assets" / "PhysicsLabController.cs").write_text("// untracked\n")
+            (active / "IMPLEMENTER_REPORT.md").write_text(
+                "# Report\n\n## Files modified or created\n\n"
+                "| Path | Change |\n|---|---|\n"
+                "| `Assets/SomeOtherFile.cs` | Modified |\n"
+            )
+            errors = eid.validate_files_modified_coverage(
+                active / "IMPLEMENTER_REPORT.md", td, active
+            )
+            self.assertTrue(errors)
+            self.assertTrue(any("PhysicsLabController.cs" in e for e in errors))
+            self.assertTrue(any("Lesson AA" in e for e in errors))
+        finally:
+            import shutil
+            shutil.rmtree(td, ignore_errors=True)
+
+    def test_uncommitted_outside_spec_folder_in_report_passes(self):
+        td, active = self._make_repo()
+        try:
+            (td / "Assets").mkdir()
+            (td / "Assets" / "Foo.cs").write_text("// untracked\n")
+            (active / "IMPLEMENTER_REPORT.md").write_text(
+                "# Report\n\n## Files modified or created\n\n"
+                "| Path | Change |\n|---|---|\n"
+                "| `Assets/Foo.cs` | Created |\n"
+            )
+            errors = eid.validate_files_modified_coverage(
+                active / "IMPLEMENTER_REPORT.md", td, active
+            )
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+        finally:
+            import shutil
+            shutil.rmtree(td, ignore_errors=True)
+
+    def test_substring_match_either_direction(self):
+        """Report may list parent dir while git lists individual files."""
+        td, active = self._make_repo()
+        try:
+            (td / "Assets" / "GreenAuth").mkdir(parents=True)
+            (td / "Assets" / "GreenAuth" / "A.cs").write_text("//\n")
+            (active / "IMPLEMENTER_REPORT.md").write_text(
+                "# Report\n\n## Files modified or created\n\n"
+                "| Path | Change |\n|---|---|\n"
+                "| `Assets/GreenAuth/` | New folder with 1 file |\n"
+            )
+            errors = eid.validate_files_modified_coverage(
+                active / "IMPLEMENTER_REPORT.md", td, active
+            )
+            self.assertEqual(errors, [], f"unexpected errors: {errors}")
+        finally:
+            import shutil
+            shutil.rmtree(td, ignore_errors=True)
+
+    def test_fallback_to_files_modified_heading(self):
+        """Older reports use 'Files modified' (no 'or created') — must still match."""
+        td, active = self._make_repo()
+        try:
+            (td / "Assets").mkdir()
+            (td / "Assets" / "Foo.cs").write_text("//\n")
+            (active / "IMPLEMENTER_REPORT.md").write_text(
+                "# Report\n\n## Files modified\n\n"
+                "| Path | Change |\n|---|---|\n"
+                "| `Assets/Foo.cs` | Modified |\n"
+            )
+            errors = eid.validate_files_modified_coverage(
+                active / "IMPLEMENTER_REPORT.md", td, active
+            )
+            self.assertEqual(errors, [])
+        finally:
+            import shutil
+            shutil.rmtree(td, ignore_errors=True)
+
+    def test_git_unavailable_returns_empty_safely(self):
+        """No git repo → set() not exception; the hook treats this as 'nothing to check'."""
+        td = Path(tempfile.mkdtemp(prefix="hook_rule13_nogit_")).resolve()
+        try:
+            paths = eid.get_uncommitted_paths_outside_spec(td, td)
+            self.assertEqual(paths, set())
+        finally:
+            import shutil
+            shutil.rmtree(td, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
