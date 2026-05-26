@@ -6,6 +6,21 @@
 **NOTION:** TBD — Cesar to add umbrella entry under §3/§4 area (post Loop v1), Order ~290 or interleave per priority. Sub-phases get their own Notion entries when promoted to Active.
 **WRITTEN:** 2026-05-18
 
+### Phase-by-phase status
+
+| Phase | Status | Closed | Commit |
+| --- | --- | --- | --- |
+| **1 — Data format spec + runtime classes** | ✅ DONE | 2026-05-26 10:55 CEST | `47dd8f6d` |
+| 2 — Authoring tool | queued | — | — |
+| 3 — Procedural baseline | queued | — | — |
+| 4 — Tracing pass | queued | — | — |
+| 5 — Heightmap reconciliation | queued | — | — |
+| 6 — Physics integration | queued | — | — |
+| 7 — Predictor redesign | queued (amendment pending — slope-source swap, not full redesign; the warped-grid `PutterGreenReader` shipped 2026-05-25 already renders the visual, Phase 7 swaps its slope source from mesh to `GreenTopologyCache`) | — | — |
+| 8 — Pin position wiring | queued | — | — |
+| 9a — Cup capture FX | queued | — | — |
+| 9b — Real geometric cup | queued (optional polish) | — | — |
+
 ---
 
 ## One-line
@@ -66,7 +81,7 @@ Architect writes this section into `Assets/Scripts/Course/Runtime/GreenTopology.
 - `bool TrySampleSlope(Vector2 worldXZ, out Vector2 dirXZ, out float magPct)` — false outside bounds; returns (0,0,0) for inactive cells inside bounds.
 - `Vector3 GetDefaultPin()`, `IReadOnlyList<Vector3> GetPinCandidates()`, `IReadOnlyList<string> GetPinLabels()`.
 
-**DoD for Phase 1:** schema is fixed in this SPEC. Phase 2 implements the C# class.
+**DoD for Phase 1:** ✅ DONE 2026-05-26 (commit `47dd8f6d`). Shipped: new asmdef `Golfin.Course.Runtime` (`autoReferenced: true`); `GreenTopology.cs` (267 lines, full XML doc, the 5 public-API methods above + 9 read-only properties); `GreenTopologyCache.cs` (90 lines, process-lifetime cache + negative cache for missing `green.json` to avoid repeated `Resources.Load` on per-step queries from Phase 6); `Assets/Resources/HoleData/Hole_01/green.json` skeleton (4×4 zero grid, `sourceTag=phase1_skeleton`, round-trip verified via Python parse of the base64 payload). NB: original DoD said "Phase 2 implements the C# class" — that ordering was wrong (Phase 2's editor tool can't compile against types that don't exist). Runtime classes shipped here in Phase 1.
 
 ---
 
@@ -76,9 +91,9 @@ New editor window. Menu: `GOLFIN > Green Authoring > Open Editor`. Files:
 
 - `Assets/Scripts/Editor/GreenAuthoring/GreenTopologyEditor.cs` — EditorWindow.
 - `Assets/Scripts/Editor/GreenAuthoring/GreenAuthoringMath.cs` — affine transform, procedural fill heuristics.
-- `Assets/Scripts/Editor/GreenAuthoring/Golfin.Editor.GreenAuthoring.asmdef` — references `Golfin.Course.Editor` (for zones.json reader) + `Golfin.Course.Runtime` (for GreenTopology).
-- `Assets/Scripts/Course/Runtime/GreenTopology.cs` — implements Phase 1 schema.
-- `Assets/Scripts/Course/Runtime/GreenTopologyCache.cs` — `static GetForHole(int) → GreenTopology` with `InvalidateAll()` and `Invalidate(int)`. Used by Phase 6 sim and Phase 7 predictor.
+- `Assets/Scripts/Editor/GreenAuthoring/Golfin.Editor.GreenAuthoring.asmdef` — references `Golfin.Course.Editor` (for zones.json reader; create or fold in as needed) + `Golfin.Course.Runtime` (already exists post-Phase-1, for GreenTopology).
+- ~~`Assets/Scripts/Course/Runtime/GreenTopology.cs`~~ — shipped in Phase 1 (commit `47dd8f6d`).
+- ~~`Assets/Scripts/Course/Runtime/GreenTopologyCache.cs`~~ — shipped in Phase 1 (commit `47dd8f6d`).
 
 **Features:**
 
@@ -98,7 +113,7 @@ New editor window. Menu: `GOLFIN > Green Authoring > Open Editor`. Files:
 1. Do NOT modify `HoleGeoImporter.cs` or any existing `CourseImporter/` editor tool — new code is fully under `Assets/Scripts/Editor/GreenAuthoring/`.
 2. Do NOT modify `zones.json` schema — read-only consumer of green polygon.
 3. Do NOT modify `heightmap.bytes` from this tool — Phase 5 owns heightmap deformation.
-4. Tool is editor-only (no runtime asmdef impact except adding `GreenTopology.cs` + `GreenTopologyCache.cs` to `Golfin.Course.Runtime`).
+4. Tool is editor-only (zero runtime asmdef impact — `Golfin.Course.Runtime` was created in Phase 1 and is not modified by Phase 2).
 5. New asmdef name: `Golfin.Editor.GreenAuthoring`. autoReferenced: false.
 6. EditMode tests in new file `Assets/Scripts/Course/Tests/GreenTopologyTests.cs`: (a) round-trip — write `green.json`, read back, assert slope grid byte-equal; (b) `TrySampleSlope` returns false outside bounds; (c) `GetPinCandidates` returns the configured list in order. **+3 tests, 0 IGNORED.**
 
