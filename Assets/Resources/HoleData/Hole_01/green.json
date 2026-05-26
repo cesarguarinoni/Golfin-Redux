@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "holeNumber": 1,
+  "sourceTag": "phase1_skeleton",
+  "boundsMin": { "x": -10.0, "z": 40.0 },
+  "boundsMax": { "x":  -8.0, "z": 42.0 },
+  "cellSize": 0.5,
+  "gridWidth": 4,
+  "gridHeight": 4,
+  "slopeGridBase64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "pinCandidates": [
+    { "worldX": -9.0, "worldY": 38.5, "worldZ": 41.0, "label": "skeleton-center" },
+    { "worldX": -8.5, "worldY": 38.5, "worldZ": 40.5, "label": "skeleton-front-right" },
+    { "worldX": -9.5, "worldY": 38.5, "worldZ": 41.5, "label": "skeleton-back-left" }
+  ],
+  "defaultPinIndex": 0
+}
