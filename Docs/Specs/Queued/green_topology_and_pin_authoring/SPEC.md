@@ -11,7 +11,7 @@
 | Phase | Status | Closed | Commit |
 | --- | --- | --- | --- |
 | **1 — Data format spec + runtime classes** | ✅ DONE | 2026-05-26 10:55 CEST | `47dd8f6d` |
-| 2 — Authoring tool | queued | — | — |
+| 2 — Authoring tool | ✅ DONE | 2026-05-26 19:40 CEST | `45ff0c67` (impl) + `4e7b2aff` (Quick fix: polygon/cell offset) + `093de0b9` (post-fix video) |
 | 3 — Procedural baseline | queued | — | — |
 | 4 — Tracing pass | queued | — | — |
 | 5 — Heightmap reconciliation | queued | — | — |
