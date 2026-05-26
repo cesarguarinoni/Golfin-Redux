@@ -1558,3 +1558,53 @@ If the answer is no, the SPEC is missing the §Visual reference. Pause STATUS bu
 **Sister rule:** the existing standing rule on asmdef pattern in `tasks/lessons.md` (re: `autoReferenced:true` and cross-asmdef static state for the live stat bus) is the foundation this lesson generalizes. This lesson is the explicit "when a parameter-pass design fails its pre-flight, here's the workaround" version.
 
 **Counter-rule:** if the dep graph DOES allow the parameter-pass, prefer it over a static bus. Static state on a bus is mutation-prone and harder to reason about than an explicit method signature; only reach for it when the dep graph leaves no other clean option.
+
+## Lesson X — Visual-gate criteria must be derived from what the current physics model does, not from real-world expectations (2026-05-26, spin_and_shot_shape_wiring)
+
+**TL;DR:** When a SPEC's visual-gate criterion is a *numeric* claim about physical behavior ("topspin makes the ball go ≥8m further"), the architect MUST verify the current physics engine actually implements the coupling that would produce that result. Real-world golf has topspin → ground-roll velocity transfer → longer total. The Golfin engine implements Magnus aero lift but zeros spin at first bounce (`BallSimulation.cs:264`) — there is no spin → roll coupling anywhere downstream. So no value of `SpinMagScaleSlope` makes topspin produce a longer total in this engine, and the SPEC's criterion was unsatisfiable from the moment it was written.
+
+**What happened (iter-2 escalation):** Acceptance item 13 read "TOPSPIN: Δ carry ≥3m or Δ total ≥8m further than CENTER." Iter-1 (slope=1.5) and iter-2 (slope=0.8) both produced *shorter* totals (−82.1m, −127.8m predicted). The reviewer and architect independently verified against `AeroModel.cs:89` (`liftDir = Cross(spin.Axis, vRelHat)`) that the Magnus sign-flip produces *downward* lift for true topspin — mechanically locked, no tuning value of any control parameter changes the sign. The criterion was incompatible with the physics, not the implementation.
+
+**Resolution:** amend the criterion to "visibly lower apex than CENTER in flight (Magnus sign-flip; verified from captioned video)." Lower apex IS the correct numeric signature of the Magnus direction flip and matches what the engine produces. A numeric `peakY` threshold can land later via the queued P3 SPEC `ball_simulation_peak_y_logging`.
+
+**Rules:**
+1. **At SPEC-authoring time, for any numeric physical-behavior criterion, the architect verifies the engine has the coupling the criterion implicitly requires.** "Will this number ever be reachable in the current engine?" — answered by code-reading the relevant simulation step, not by analogy to real-world physics.
+2. **If the engine lacks the needed coupling, the SPEC has two choices:** (a) rewrite the criterion to a signal the engine *does* produce (e.g. "lower apex" instead of "longer total"); (b) file a separate ticket to add the coupling to the engine, and gate the visual-gate criterion on that ticket landing first. Do NOT lock a SPEC's visual gate on a criterion that requires engine work the SPEC doesn't include.
+3. **Visual-gate criteria that depend on metrics the engine doesn't currently expose require a tooling-add ticket alongside the SPEC.** If apex height isn't logged today, the SPEC either visualizes apex from the captioned video (no number) or files the logging ticket as a hard prerequisite.
+
+**Sister rule:** Lesson V (methodology defects in same-start comparisons) — both are forms of "the bot ran without throwing, but the number doesn't mean what the SPEC thinks it means." The fix is the same: pre-flight the measurement methodology AND the physics feasibility before locking the criterion.
+
+**Counter-rule:** for non-numeric visual gates ("the ball curves left"), engine-feasibility is usually obvious from the architecture sketch and doesn't need an explicit check. The trigger is *numbers*: any criterion with a ≥X threshold gets the feasibility check.
+
+## Lesson Y — Visual-gate body-frame conventions need an explicit projection-axis lock (2026-05-26, spin_and_shot_shape_wiring)
+
+**TL;DR:** When a SPEC's visual-gate criterion talks about lateral / left / right / forward / behind, the SPEC MUST specify the projection axis ("body-frame right relative to the velocity vector at impact" vs "world Δz" vs "world Δx"). World-axis terms drift in meaning depending on hole orientation; body-frame terms stay consistent across the course. Don't mix them.
+
+**What happened (iter-2 measurement):** SPEC item 14 read "Stroke 4 LEFT_DRAW: ball curves left in flight. Final position lateral.z is visibly negative relative to CENTER terminal (Δ lateral ≥5m)." The actual data: DRAW terminal had **world Δz = +34.6m** (positive!), but **body-frame right = −32.1m** (correct left curl). Both numbers describe the same shot; the SPEC's "lateral.z visibly negative" was wrong because the velocity vector for Hole 1's tee shot aims in roughly −X / −Z, making world-Z and body-frame-left have opposite signs.
+
+The reviewer marked it PASS-with-note because the intent ("does DRAW curl left?") was unambiguously satisfied, but the SPEC language created a false-negative risk: if iter-1 had measured world-Z and concluded "DRAW failed because lateral.z is positive," the spec would have been wrong about its own physics.
+
+**Rules:**
+1. **At SPEC-authoring time, lateral / forward criteria use body-frame language by default, not world-axis language.** "Δ body-frame right ≥+5m" is portable across all holes; "Δ world.z ≥+5m" only works for tees that happen to aim along world-X.
+2. **If a SPEC must use world-axis language (e.g. because the implementation reads world coords directly), it specifies the tee's aim direction explicitly.** "At Hole 1's tee (aim ≈ −X / −Z), draw produces Δ world.z > 0" — and any other hole would need its own statement.
+3. **At review time, both reviewer and architect compute the body-frame projection from the captured velocity vector and use it as the canonical signal.** World-axis numbers go in the secondary table for sanity-checking, not as the gate.
+
+**Sister rule:** Lesson X (engine-feasibility check at SPEC authoring) — both are forms of "the SPEC's language under-specifies what the measurement actually means." Lesson X covers physics; Lesson Y covers geometry.
+
+## Lesson Z — OB handling must preserve first-bounce position for visual-gate measurement (2026-05-26, spin_and_shot_shape_wiring)
+
+**TL;DR:** When a SPEC's visual-gate criterion depends on terminal-at-rest position, and the shot has a non-trivial probability of going OOB / OB / into water, the at-rest reset destroys the measurement. The bot scenario MUST emit a `[Land]` log line at first ground contact (which captures the curl evidence before any OB-reset can fire), and the SPEC's criterion must read at-land for OB cases.
+
+**What happened (iter-2 FADE measurement):** SPEC item 15 read "Stroke 5 RIGHT_FADE: ball curves right. Δ lateral ≥+5m vs CENTER terminal." Iter-2 measured **+12.5m body-frame right at first ground contact** (clear curl evidence) — but the ball landed OOB, the OB handler reset to tee, and the at-rest terminal was (tee). Reading the criterion literally, "Δ lateral vs CENTER terminal" = 0m → FAIL. Reading the criterion's *intent* (does FADE curl right?) → unambiguous PASS.
+
+The implementer's iter-2 added `[Land]`/`[Rest]` log emission so both data points were available; the reviewer correctly cited `[Land]` as canonical. But the SPEC's wording forced an escalation, which would have been avoided if the SPEC had specified the at-land projection from the start.
+
+**Rules:**
+1. **At SPEC-authoring time, any visual-gate criterion that involves lateral / horizontal projection specifies "at first ground contact (or terminal if in-bounds)."** This wording covers both clean shots and OB cases.
+2. **The bot scenario MUST emit a `[Land]` log line at first ground contact for every shot, not just shots with explicit landing claims.** Free data, costs nothing.
+3. **OB-prone shots in visual gates (FADE, DRAW at high tilt, anything aimed toward a course boundary) are flagged in the SPEC as "may go OB — first-bounce measurement canonical" so the reviewer knows ahead of time.**
+4. **Where carry / total distance matters (not just lateral), the SPEC clarifies whether the measurement is at-land (carry only) or at-rest (total = carry + rollout).** Without this clarification, an OB shot has carry but no total, and the criterion may be unsatisfiable.
+
+**Sister rule:** Lesson V (methodology resets between samples) — both are "the data point you actually want isn't the data point the bot recorded by default." Pre-flight the measurement; emit the data point you need.
+
+**Counter-rule:** for shots that physically cannot go OOB (short putts, chip shots on closed greens), the at-rest reset case never fires, and at-rest is the natural measurement. The flag is for shots where OB is plausible.

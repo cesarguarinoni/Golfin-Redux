@@ -1,0 +1,19 @@
+2026-05-26T09:00:00 activated — reading SPEC, setting up task folder
+2026-05-26T09:05:00 completed steps 1-6: ControlsConfig, Loader, CSV, fpMath.Rotate, ShotInputBuilder, ShotController, SpinContext.Reset in PhysicsLabController
+2026-05-26T09:15:00 completed all code changes: tests, bot scenario, LiveStatLogTee extension, build_bot_video.py spinshape mode — verifying compile
+2026-05-26T06:34:18Z fixed ShotInputBuilder.Build() signature — replaced UnityEngine.Vector2 spinInput with fp spinInputX/spinInputY (noEngineReferences=true fix); updated ShotController+Tests callers
+2026-05-26T06:43:12Z compile fixed — ShotInputBuilder.Build uses fp spinInputX/spinInputY; ShotController uses PendingSpinInput; ClubHandleDragger + ShotConeView bridge SpinContext; BotDriver pushes before BeginExternalDrag
+2026-05-26T06:46:12Z fpMath.Sin/Cos improved with half-period folding for accuracy at π; running tests
+2026-05-26T06:48:19Z ALL TESTS PASS: 359 total, 356 passed, 0 failed, 3 skipped (baseline was 347/344/0/3); proceeding to bot scenario
+2026-05-26T06:49:51Z bot scenario SpinAndShapeVisualGate launched via ExecuteMenuItem; waiting for completion
+2026-05-26T06:50:39Z bot running, monitoring for completion
+2026-05-26T06:59:39 added SpinContext.Reset() to ShotConeView.HandleStateChanged for next-shot handoff
+2026-05-26T07:02:31 done, awaiting review — 359/356/0/3 tests, bot scenario complete, report written
+2026-05-26T07:13:43 activated — iter 2 starting, addressing SELF_REVIEW_FAIL
+2026-05-26T07:18:39 code edits done, checking compile
+2026-05-26T07:19:52 invoking Unity MCP to refresh and compile
+2026-05-26T07:23:45 tests pass, running bot scenario
+2026-05-26T07:24:15 bot scenario triggered, waiting for completion
+2026-05-26T07:32:02 spin pass-through fix applied, refreshing Unity
+2026-05-26T07:47:43 iter-2 fourth bot run complete (09:44-09:46), captioned video generated, preparing IMPLEMENTER_REPORT
+2026-05-26T07:55:14 done, 2 FAIL items (TOPSPIN criterion + FADE OB), escalating to READY_FOR_ARCHITECT_REVIEW
