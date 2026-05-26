@@ -1,0 +1,82 @@
+[t=9.61] === LoopV2SmokeBot started: scenario='live_stat_provider_visual_gate_high' ===
+[t=9.61] === Live Stat Provider Visual Gate — HIGH BUILD ===
+[t=9.61]   ArmCharacterBuild: selField SET — new value='char_elizabeth' (expected='char_elizabeth')
+[t=9.61]   ArmCharacterBuild: SelectCharacter('char_elizabeth') invoked OK
+[t=9.62]   ArmCharacterBuild: EquipClub(club_driver_gf, slot=1) OK
+[t=9.62]   PreArm: char=char_elizabeth lv=119 STR=30 CTRL=30 REC=20 STAM=27 (HIGH)
+[t=9.74] NavigateToHome: waiting for app startup sequence…
+[t=9.74]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=10.25] Click: 'StartButton'
+[t=10.38]   → clicked StartButton (pointer-down/up + onClick)
+[t=12.96]   NavigateToHome: reached Home after 3.0s
+[t=14.02] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s01_home_2026-05-25_15-47-48.png
+[t=14.02] Click: 'PLAY'
+[t=14.16]   → clicked PlayButton (pointer-down/up + onClick)
+[t=15.69] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=15.69]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=15.75] Capture: s02_matchmaking_searching → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s02_matchmaking_searching_2026-05-25_15-47-50.png
+[t=15.75] WaitFor: matchmaking opponent found (timeout=30s)
+[t=19.76]   WaitFor OK: matchmaking opponent found after 3.8s
+[t=20.32] Capture: s03_opponent_found → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s03_opponent_found_2026-05-25_15-47-54.png
+[t=20.32] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=21.51]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 1.0s
+[t=21.51] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=22.02]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
+[t=25.07] Capture: s04_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s04_gameplay_armed_2026-05-25_15-47-59.png
+[t=25.07] === PlayHoleToCup: par=5, stroke cap=8 ===
+[t=25.07] FindCupPosition: HoleContext.PinWorld = (-230.50, 10.18, -72.48)
+[t=25.07] Stroke 1: ball=(219.4, 11.5, 34.7) cup=(-230.5, 10.2, -72.5) dist=462.5m — Driver full power (first stroke, dist=463m to cup) club=0 power=1.00
+[t=25.07]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=26.23]   Fired via ShotController drag path — handle ramped to power=1.00
+[t=46.25]   Shot wait: done=True elapsed=20.1s
+[t=46.25]   Stroke 1 terminal=AtRest endSurface=Fairway ball=(-215.9, 11.6, -42.9)
+[t=47.29] Capture: s05_stroke1 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s05_stroke1_2026-05-25_15-48-21.png
+[t=47.29] Stroke 2: ball=(-215.9, 11.6, -42.9) cup=(-230.5, 10.2, -72.5) dist=33.0m — Wedge chip (dist=33m) power=0.41 club=2 power=0.41
+[t=47.29]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=48.37]   Fired via ShotController drag path — handle ramped to power=0.41
+[t=67.10]   Shot wait: done=True elapsed=18.8s
+[t=67.10]   Stroke 2 terminal=AtRest endSurface=Fairway ball=(-279.9, 9.0, -170.1)
+[t=68.16] Capture: s06_stroke2 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s06_stroke2_2026-05-25_15-48-42.png
+[t=68.16] Stroke 3: ball=(-279.9, 9.0, -170.1) cup=(-230.5, 10.2, -72.5) dist=109.4m — Wedge approach (dist=109m) power=0.75 club=2 power=0.75
+[t=68.16]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=69.22]   Fired via ShotController drag path — handle ramped to power=0.75
+[t=74.91]   Shot wait: done=True elapsed=5.7s
+[t=74.91]   Stroke 3 terminal=OB endSurface=OOB ball=(-279.9, 9.0, -170.1)
+[t=75.97] Capture: s07_stroke3 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s07_stroke3_2026-05-25_15-48-50.png
+[t=75.97] Stroke 4: ball=(-279.9, 9.0, -170.1) cup=(-230.5, 10.2, -72.5) dist=109.4m — Wedge approach (dist=109m) power=0.75 club=2 power=0.75
+[t=75.97]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=77.04]   Fired via ShotController drag path — handle ramped to power=0.75
+[t=82.76]   Shot wait: done=True elapsed=5.7s
+[t=82.76]   Stroke 4 terminal=OB endSurface=OOB ball=(-279.9, 9.0, -170.1)
+[t=83.80] Capture: s08_stroke4 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s08_stroke4_2026-05-25_15-48-58.png
+[t=83.80] Stroke 5: ball=(-279.9, 9.0, -170.1) cup=(-230.5, 10.2, -72.5) dist=109.4m — Wedge approach (dist=109m) power=0.75 club=2 power=0.75
+[t=83.80]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=84.86]   Fired via ShotController drag path — handle ramped to power=0.75
+[t=90.55]   Shot wait: done=True elapsed=5.7s
+[t=90.55]   Stroke 5 terminal=OB endSurface=OOB ball=(-279.9, 9.0, -170.1)
+[t=91.61] Capture: s09_stroke5 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s09_stroke5_2026-05-25_15-49-05.png
+[t=91.61] Stroke 6: ball=(-279.9, 9.0, -170.1) cup=(-230.5, 10.2, -72.5) dist=109.4m — Wedge approach (dist=109m) power=0.75 club=2 power=0.75
+[t=91.61]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=92.67]   Fired via ShotController drag path — handle ramped to power=0.75
+[t=98.37]   Shot wait: done=True elapsed=5.7s
+[t=98.37]   Stroke 6 terminal=OB endSurface=OOB ball=(-279.9, 9.0, -170.1)
+[t=99.40] Capture: s10_stroke6 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s10_stroke6_2026-05-25_15-49-13.png
+[t=99.40] Stroke 7: ball=(-279.9, 9.0, -170.1) cup=(-230.5, 10.2, -72.5) dist=109.4m — Wedge approach (dist=109m) power=0.75 club=2 power=0.75
+[t=99.40]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=100.46]   Fired via ShotController drag path — handle ramped to power=0.75
+[t=106.15]   Shot wait: done=True elapsed=5.7s
+[t=106.15]   Stroke 7 terminal=OB endSurface=OOB ball=(-279.9, 9.0, -170.1)
+[t=107.22] Capture: s11_stroke7 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s11_stroke7_2026-05-25_15-49-21.png
+[t=107.22] Stroke 8: ball=(-279.9, 9.0, -170.1) cup=(-230.5, 10.2, -72.5) dist=109.4m — Wedge approach (dist=109m) power=0.75 club=2 power=0.75
+[t=107.22]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=108.28]   Fired via ShotController drag path — handle ramped to power=0.75
+[t=113.97]   Shot wait: done=True elapsed=5.7s
+[t=113.97]   Stroke 8 terminal=OB endSurface=OOB ball=(-279.9, 9.0, -170.1)
+[t=115.00] Capture: s12_stroke8 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s12_stroke8_2026-05-25_15-49-29.png
+[t=115.00] PlayHoleToCup: not holed in 8 real strokes — ForceShotComplete safety net (Cesar spec: par+3 cap).
+[t=115.00] ForceShotComplete: driving terminal=InCup
+[t=115.05] ForceShotComplete OK: terminal=InCup
+[t=115.57] === PlayHoleToCup done: 8 strokes, holed=seam ===
+[t=117.60] Capture: s13_result_modal → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/live_stat_provider_visual_gate_high/screenshots/s13_result_modal_2026-05-25_15-49-31.png
+[t=117.60] === Live Stat Provider Visual Gate HIGH BUILD: all captures done ===
+[t=117.61] === Scenario complete ===

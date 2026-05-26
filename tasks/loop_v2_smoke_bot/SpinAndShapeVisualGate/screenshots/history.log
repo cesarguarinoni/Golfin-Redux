@@ -1,0 +1,95 @@
+[t=10.28] === LoopV2SmokeBot started: scenario='SpinAndShapeVisualGate' ===
+[t=10.28] === Spin and Shot-Shape Visual Gate ===
+[t=10.29] NavigateToHome: waiting for app startup sequence…
+[t=10.29]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=10.82] Click: 'StartButton'
+[t=10.95]   → clicked StartButton (pointer-down/up + onClick)
+[t=13.53]   NavigateToHome: reached Home after 3.0s
+[t=14.59] Capture: s01_home → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s01_home_2026-05-26_09-44-44.png
+[t=14.59] Click: 'PLAY'
+[t=14.74]   → clicked PlayButton (pointer-down/up + onClick)
+[t=16.26] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=16.29]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=16.32] WaitFor: matchmaking opponent found (timeout=30s)
+[t=20.07]   WaitFor OK: matchmaking opponent found after 3.5s
+[t=20.07] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=22.07]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 1.5s
+[t=22.07] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=22.57]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
+[t=25.61] Capture: s02_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s02_gameplay_armed_2026-05-26_09-44-55.png
+[t=25.61] [TeeDiag] ResetLabToTee OK: tee reset via PhysicsLabController.ResetToTee()
+[t=26.44] Stroke 1: CENTER spinInput=(0.0,0.0)
+[t=26.48] Capture: s03_stroke1_center_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s03_stroke1_center_armed_2026-05-26_09-44-56.png
+[t=26.48] FireDriverShot: power=1.00 (ShotController drag path)
+[t=26.48]   FireDriverShot: SetClub(0=Driver) + ClearStatBundleOverride
+[t=26.48] FindCupPosition: HoleContext.PinWorld = (-230.50, 10.18, -72.48)
+[t=26.48]   FireDriverShot: SetCameraYawRadians(-2.908) toward cup=(-230.50, 10.18, -72.48)
+[t=26.48]   FireDriverShot: Idle gate done (waited 0.00s), State=Idle
+[t=26.48]   FireDriverShot: Aiming gate done (waited 0.00s), SM=Aiming
+[t=26.48]   FireDriverShot: PendingSpinInput set to (0.00, 0.00) (spinInput=(0.00, 0.00))
+[t=27.57]   FireDriverShot: EndExternalDrag called (CommitFlick fires, PendingSpinInput flows to Build)
+[t=45.06]   FireDriverShot OK: terminal=AtRest ball=(-112.9, 6.3, -44.5) after 17.5s
+[t=45.06]   [Land] ball=(-80.8, 6.0, -36.8) surface=Fairway bounceCount=7
+[t=45.06]   [Rest] ball=(-112.9, 6.3, -44.5) surface=Fairway
+[t=47.11] Capture: s04_stroke1_center_landed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s04_stroke1_center_landed_2026-05-26_09-45-17.png
+[t=47.43] [TeeDiag] ResetLabToTee OK: tee reset via PhysicsLabController.ResetToTee()
+[t=48.26] Stroke 2: TOP_TOPSPIN spinInput=(0.0,1.0)
+[t=48.30] Capture: s05_stroke2_top_topspin_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s05_stroke2_top_topspin_armed_2026-05-26_09-45-18.png
+[t=48.30] FireDriverShot: power=1.00 (ShotController drag path)
+[t=48.31]   FireDriverShot: SetClub(0=Driver) + ClearStatBundleOverride
+[t=48.31] FindCupPosition: HoleContext.PinWorld = (-230.50, 10.18, -72.48)
+[t=48.31]   FireDriverShot: SetCameraYawRadians(-2.908) toward cup=(-230.50, 10.18, -72.48)
+[t=48.31]   FireDriverShot: Idle gate done (waited 0.00s), State=Idle
+[t=48.31]   FireDriverShot: Aiming gate done (waited 0.00s), SM=Aiming
+[t=48.31]   FireDriverShot: PendingSpinInput set to (0.00, 1.00) (spinInput=(0.00, 1.00))
+[t=49.35]   FireDriverShot: EndExternalDrag called (CommitFlick fires, PendingSpinInput flows to Build)
+[t=61.76]   FireDriverShot OK: terminal=AtRest ball=(-31.1, 7.1, -25.0) after 12.4s
+[t=61.76]   [Land] ball=(-0.9, 7.9, -17.8) surface=Fairway bounceCount=7
+[t=61.76]   [Rest] ball=(-31.1, 7.1, -25.0) surface=Fairway
+[t=63.80] Capture: s06_stroke2_top_topspin_landed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s06_stroke2_top_topspin_landed_2026-05-26_09-45-33.png
+[t=64.13] [TeeDiag] ResetLabToTee OK: tee reset via PhysicsLabController.ResetToTee()
+[t=64.96] Stroke 3: BOTTOM_BACK spinInput=(0.0,-1.0)
+[t=65.01] Capture: s07_stroke3_bottom_back_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s07_stroke3_bottom_back_armed_2026-05-26_09-45-35.png
+[t=65.01] FireDriverShot: power=1.00 (ShotController drag path)
+[t=65.01]   FireDriverShot: SetClub(0=Driver) + ClearStatBundleOverride
+[t=65.01] FindCupPosition: HoleContext.PinWorld = (-230.50, 10.18, -72.48)
+[t=65.01]   FireDriverShot: SetCameraYawRadians(-2.908) toward cup=(-230.50, 10.18, -72.48)
+[t=65.01]   FireDriverShot: Idle gate done (waited 0.00s), State=Idle
+[t=65.01]   FireDriverShot: Aiming gate done (waited 0.00s), SM=Aiming
+[t=65.01]   FireDriverShot: PendingSpinInput set to (0.00, -1.00) (spinInput=(0.00, -1.00))
+[t=66.07]   FireDriverShot: EndExternalDrag called (CommitFlick fires, PendingSpinInput flows to Build)
+[t=81.60]   FireDriverShot OK: terminal=AtRest ball=(-139.1, 7.0, -50.8) after 15.6s
+[t=81.60]   [Land] ball=(-114.4, 6.4, -44.9) surface=Fairway bounceCount=7
+[t=81.60]   [Rest] ball=(-139.1, 7.0, -50.8) surface=Fairway
+[t=83.65] Capture: s08_stroke3_bottom_back_landed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s08_stroke3_bottom_back_landed_2026-05-26_09-45-53.png
+[t=83.97] [TeeDiag] ResetLabToTee OK: tee reset via PhysicsLabController.ResetToTee()
+[t=84.84] Stroke 4: LEFT_DRAW spinInput=(-1.0,0.0)
+[t=84.88] Capture: s09_stroke4_left_draw_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s09_stroke4_left_draw_armed_2026-05-26_09-45-55.png
+[t=84.88] FireDriverShot: power=1.00 (ShotController drag path)
+[t=84.88]   FireDriverShot: SetClub(0=Driver) + ClearStatBundleOverride
+[t=84.88] FindCupPosition: HoleContext.PinWorld = (-230.50, 10.18, -72.48)
+[t=84.88]   FireDriverShot: SetCameraYawRadians(-2.908) toward cup=(-230.50, 10.18, -72.48)
+[t=84.88]   FireDriverShot: Idle gate done (waited 0.00s), State=Idle
+[t=84.88]   FireDriverShot: Aiming gate done (waited 0.00s), SM=Aiming
+[t=84.88]   FireDriverShot: PendingSpinInput set to (-1.00, 0.00) (spinInput=(-1.00, 0.00))
+[t=86.08]   FireDriverShot: EndExternalDrag called (CommitFlick fires, PendingSpinInput flows to Build)
+[t=99.63]   FireDriverShot OK: terminal=AtRest ball=(-106.1, 8.0, -9.9) after 13.7s
+[t=99.63]   [Land] ball=(-77.7, 7.8, -8.6) surface=Fairway bounceCount=7
+[t=99.63]   [Rest] ball=(-106.1, 8.0, -9.9) surface=Fairway
+[t=101.67] Capture: s10_stroke4_left_draw_landed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s10_stroke4_left_draw_landed_2026-05-26_09-46-11.png
+[t=101.97] [TeeDiag] ResetLabToTee OK: tee reset via PhysicsLabController.ResetToTee()
+[t=102.80] Stroke 5: RIGHT_FADE spinInput=(1.0,0.0)
+[t=102.83] Capture: s11_stroke5_right_fade_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s11_stroke5_right_fade_armed_2026-05-26_09-46-13.png
+[t=102.83] FireDriverShot: power=0.70 (ShotController drag path)
+[t=102.83]   FireDriverShot: SetClub(0=Driver) + ClearStatBundleOverride
+[t=102.83] FindCupPosition: HoleContext.PinWorld = (-230.50, 10.18, -72.48)
+[t=102.83]   FireDriverShot: SetCameraYawRadians(-2.908) toward cup=(-230.50, 10.18, -72.48)
+[t=102.83]   FireDriverShot: Idle gate done (waited 0.00s), State=Idle
+[t=102.84]   FireDriverShot: Aiming gate done (waited 0.00s), SM=Aiming
+[t=102.84]   FireDriverShot: PendingSpinInput set to (1.00, 0.00) (spinInput=(1.00, 0.00))
+[t=103.90]   FireDriverShot: EndExternalDrag called (CommitFlick fires, PendingSpinInput flows to Build)
+[t=108.53]   FireDriverShot OK: terminal=OB ball=(219.4, 11.5, 34.7) after 4.6s
+[t=108.53]   [Land] ball=(37.0, 7.3, -21.6) surface=OOB bounceCount=1
+[t=110.58] Capture: s12_stroke5_right_fade_landed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/SpinAndShapeVisualGate/screenshots/s12_stroke5_right_fade_landed_2026-05-26_09-46-20.png
+[t=110.58] === Spin Gate Complete ===
+[t=111.60] === Scenario complete ===

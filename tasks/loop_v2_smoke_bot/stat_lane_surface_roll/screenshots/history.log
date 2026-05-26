@@ -1,0 +1,27 @@
+[t=10.02] === LoopV2SmokeBot started: scenario='stat_lane_surface_roll' ===
+[t=10.02] === Stat Lane Surface Roll — LOW vs HIGH Ball.Roll ===
+[t=10.02] NavigateToHome: waiting for app startup sequence…
+[t=10.02]   NavigateToHome: on Splash after 0.0s — clicking StartButton
+[t=10.52] Click: 'StartButton'
+[t=10.65]   → clicked StartButton (pointer-down/up + onClick)
+[t=13.20]   NavigateToHome: reached Home after 3.0s
+[t=14.23] Click: 'PLAY'
+[t=14.37]   → clicked PlayButton (pointer-down/up + onClick)
+[t=15.89] WaitForModalVisible: MatchMakingModal (timeout=15s)
+[t=15.90]   WaitForModalVisible OK: 'MatchMakingModal' visible after 0.0s
+[t=15.93] WaitFor: matchmaking opponent found (timeout=30s)
+[t=19.93]   WaitFor OK: matchmaking opponent found after 3.8s
+[t=20.44] WaitForSceneLoaded: LabScaffold (timeout=40s)
+[t=21.77]   WaitForSceneLoaded OK: 'LabScaffold' loaded after 1.0s
+[t=21.77] WaitForSceneLoaded: Hole_01_Geo (timeout=40s)
+[t=22.28]   WaitForSceneLoaded OK: 'Hole_01_Geo' loaded after 0.5s
+[t=25.32] Capture: s01_gameplay_armed → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/stat_lane_surface_roll/screenshots/s01_gameplay_armed_2026-05-25_19-44-49.png
+[t=25.32]   ArmBallRoll: Ball.Roll=-10 (LOW) — Resolver set
+[t=36.74]   LOW Ball.Roll=-10: terminal pos=(106.25, 10.15, 27.68) (gated 9.8s)
+[t=37.81] Capture: s02_stat_lane_roll_low_stroke1 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/stat_lane_surface_roll/screenshots/s02_stat_lane_roll_low_stroke1_2026-05-25_19-45-02.png
+[t=38.84]   ArmBallRoll: Ball.Roll=10 (HIGH) — Resolver set
+[t=50.74]   HIGH Ball.Roll=+10: terminal pos=(106.19, 10.15, 27.68) (gated 10.3s)
+[t=51.81] Capture: s03_stat_lane_roll_high_stroke1 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/stat_lane_surface_roll/screenshots/s03_stat_lane_roll_high_stroke1_2026-05-25_19-45-16.png
+[t=51.81]   Roll delta: LOW pos=(106.3, 10.1, 27.7) HIGH pos=(106.2, 10.1, 27.7) distance=0.1m
+[t=51.81] === StatLaneSurfaceRoll: WEAK — roll delta 0.1m < 10m bar ===
+[t=51.81] === Scenario complete ===
