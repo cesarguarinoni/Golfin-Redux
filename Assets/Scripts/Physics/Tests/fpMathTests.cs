@@ -94,5 +94,63 @@ namespace Golfin.Physics.Tests
             Assert.AreEqual(2.236f, speed.ToFloat(), 0.01f,
                 "Sqrt regression: putter-shot |v| should be ~2.236 m/s, got " + speed.ToFloat());
         }
+
+        // ── Rotate tests (spin_and_shot_shape_wiring SPEC §5.2) ──────────────────
+
+        private const float RotateTol = 0.01f; // fp Sin/Cos are Taylor-series; ~1e-3 typical error
+
+        [Test]
+        public void Rotate_ZeroAngle_ReturnsInputVector()
+        {
+            // v rotated 0 rad around any axis must equal v.
+            var v = new fp3(fp.FromFloat(1f), fp.FromFloat(2f), fp.FromFloat(3f));
+            var k = new fp3(fp.Zero, fp.One, fp.Zero); // axis: +Y
+            fp3 result = fpMath.Rotate(v, k, fp.Zero);
+            Assert.AreEqual(1f, result.x.ToFloat(), RotateTol, "x component at angle=0");
+            Assert.AreEqual(2f, result.y.ToFloat(), RotateTol, "y component at angle=0");
+            Assert.AreEqual(3f, result.z.ToFloat(), RotateTol, "z component at angle=0");
+        }
+
+        [Test]
+        public void Rotate_PiAroundY_NegatesXAndZ()
+        {
+            // (1,0,0) rotated π around (0,1,0) should yield (-1,0,0).
+            var v = new fp3(fp.One, fp.Zero, fp.Zero);
+            var k = new fp3(fp.Zero, fp.One, fp.Zero);
+            fp pi = fp.FromDouble(System.Math.PI);
+            fp3 result = fpMath.Rotate(v, k, pi);
+            Assert.AreEqual(-1f, result.x.ToFloat(), RotateTol, "x should be -1 after π-rotation");
+            Assert.AreEqual( 0f, result.y.ToFloat(), RotateTol, "y should be 0 after π-rotation");
+            Assert.AreEqual( 0f, result.z.ToFloat(), RotateTol, "z should be 0 after π-rotation");
+        }
+
+        [Test]
+        public void Rotate_HalfPiAroundZ_TurnsXIntoY()
+        {
+            // (1,0,0) rotated +π/2 around (0,0,1) should yield (0,1,0).
+            var v = new fp3(fp.One, fp.Zero, fp.Zero);
+            var k = new fp3(fp.Zero, fp.Zero, fp.One);
+            fp halfPi = fp.FromDouble(System.Math.PI / 2.0);
+            fp3 result = fpMath.Rotate(v, k, halfPi);
+            Assert.AreEqual( 0f, result.x.ToFloat(), RotateTol, "x after +π/2 around Z");
+            Assert.AreEqual( 1f, result.y.ToFloat(), RotateTol, "y after +π/2 around Z");
+            Assert.AreEqual( 0f, result.z.ToFloat(), RotateTol, "z after +π/2 around Z");
+        }
+
+        [Test]
+        public void Rotate_PreservesLength()
+        {
+            // Rodrigues rotation preserves the vector length.
+            var v = new fp3(fp.FromFloat(3f), fp.FromFloat(4f), fp.Zero);
+            var k = new fp3(fp.Zero, fp.One, fp.Zero);
+            fp angle = fp.FromFloat(0.3f);
+            fp3 result = fpMath.Rotate(v, k, angle);
+            // |v| = 5.0; |result| must be ≈ 5.0.
+            float lenSq = result.x.ToFloat() * result.x.ToFloat()
+                        + result.y.ToFloat() * result.y.ToFloat()
+                        + result.z.ToFloat() * result.z.ToFloat();
+            float len = UnityEngine.Mathf.Sqrt(lenSq);
+            Assert.AreEqual(5f, len, 0.05f, "Length preserved after Rotate");
+        }
     }
 }

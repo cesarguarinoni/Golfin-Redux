@@ -59,6 +59,7 @@ namespace Golfin.Physics.Math
         // Angle in radians, reduced to [-π, π] first.
         private static readonly fp PI = fp.FromDouble(System.Math.PI);
         private static readonly fp TwoPI = fp.FromDouble(2.0 * System.Math.PI);
+        private static readonly fp HalfPI = fp.FromDouble(System.Math.PI / 2.0);
 
         // Exposed for WindModel (and any future phase) that needs 2π as a deterministic constant.
         public static readonly fp TwoPi = fp.FromDouble(2.0 * System.Math.PI);
@@ -70,9 +71,9 @@ namespace Golfin.Physics.Math
             return a;
         }
 
-        public static fp Sin(fp a)
+        // Core Taylor series around 0 — accurate only for |a| ≤ π/2.
+        private static fp SinCore(fp a)
         {
-            a = ReduceAngle(a);
             fp a2 = a * a;
             fp a3 = a2 * a;
             fp a5 = a3 * a2;
@@ -83,9 +84,9 @@ namespace Golfin.Physics.Math
                 - a7 / fp.FromInt(5040);
         }
 
-        public static fp Cos(fp a)
+        // Core Taylor series around 0 — accurate only for |a| ≤ π/2.
+        private static fp CosCore(fp a)
         {
-            a = ReduceAngle(a);
             fp a2 = a * a;
             fp a4 = a2 * a2;
             fp a6 = a4 * a2;
@@ -93,6 +94,26 @@ namespace Golfin.Physics.Math
                 - a2 / fp.FromInt(2)
                 + a4 / fp.FromInt(24)
                 - a6 / fp.FromInt(720);
+        }
+
+        public static fp Sin(fp a)
+        {
+            a = ReduceAngle(a);
+            // Half-period symmetry: sin(π - a) = sin(a); sin(-a) = -sin(a).
+            // Fold a into [-π/2, π/2] so Taylor converges accurately.
+            if (a > HalfPI)  return  SinCore(PI - a);   // sin(a) = sin(π - a)
+            if (a < -HalfPI) return -SinCore(PI + a);   // sin(a) = -sin(π + a)
+            return SinCore(a);
+        }
+
+        public static fp Cos(fp a)
+        {
+            a = ReduceAngle(a);
+            // Half-period symmetry: cos(π - a) = -cos(a); cos(-a) = cos(a).
+            // Fold a into [-π/2, π/2] so Taylor converges accurately.
+            if (a > HalfPI)  return -CosCore(PI - a);   // cos(a) = -cos(π - a)
+            if (a < -HalfPI) return -CosCore(PI + a);   // cos(a) = -cos(π + a)
+            return CosCore(a);
         }
 
         // Phase 2: added for aero model.
@@ -110,6 +131,22 @@ namespace Golfin.Physics.Math
             fp lenSq = Dot(v, v);
             if (lenSq <= fp.Epsilon) return new fp3(fp.Zero, fp.Zero, fp.One);
             return v / Sqrt(lenSq);
+        }
+
+        /// <summary>
+        /// Rotate vector v around unit axis k by angleRad using Rodrigues' formula.
+        /// k MUST be normalized — caller's responsibility. Returns v rotated.
+        /// Added for spin_and_shot_shape_wiring SPEC §5.2.
+        /// </summary>
+        public static fp3 Rotate(fp3 v, fp3 k, fp angleRad)
+        {
+            fp c = Cos(angleRad);
+            fp s = Sin(angleRad);
+            fp oneMinusC = fp.One - c;
+            // v_rot = v*c + (k × v)*s + k*(k·v)*(1 - c)
+            fp3 cross = Cross(k, v);
+            fp  dot   = Dot(k, v);
+            return v * c + cross * s + k * (dot * oneMinusC);
         }
 
         // Phase 2: added for aero model.

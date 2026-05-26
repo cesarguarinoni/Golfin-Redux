@@ -1096,6 +1096,172 @@ namespace Golfin.Physics.Viewer.Bot
             }
             return null;
         }
+
+        // ── Spin-scenario primitives (spin_and_shot_shape_wiring) ─────────────
+
+        /// <summary>
+        /// Reset PhysicsLabController to tee position between strokes.
+        /// Calls PhysicsLabController.ResetToTee() (public method, same asmdef — direct call).
+        /// Logs [TeeDiag] prefix so LiveStatLogTee can capture tee-reset confirmations.
+        /// </summary>
+        public void ResetLabToTee()
+        {
+            var ctrl = UnityEngine.Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            {
+                LogStep("[TeeDiag] ResetLabToTee FAIL: PhysicsLabController not found");
+                return;
+            }
+            ctrl.ResetToTee();
+            LogStep("[TeeDiag] ResetLabToTee OK: tee reset via PhysicsLabController.ResetToTee()");
+        }
+
+        /// <summary>
+        /// Fire a driver shot (club index 0) at the given power via the production ShotController
+        /// drag path (BeginExternalDrag → ramp SetExternalPower → EndExternalDrag → CommitFlick).
+        /// This is the PRODUCTION path — SpinContext.Spin flows through CommitFlick to Build.
+        ///
+        /// Camera yaw is set toward the cup (HoleContext.PinWorld) so the shot launches
+        /// in the correct direction.
+        ///
+        /// Waits for OnShotComplete (terminal=AtRest, InCup, or OB) up to timeoutSeconds.
+        /// Returns the ShotResult via out-parameter for logging.
+        /// </summary>
+        /// <param name="spinInput">Explicit spin input (x=draw/fade, y=topspin/backspin).
+        /// When non-zero, this overrides SpinContext.Spin so the spin value survives any
+        /// state-transition resets that clear SpinContext between SetSpin and CommitFlick.</param>
+        public IEnumerator FireDriverShot(float power01 = 1.0f, float timeoutSeconds = 20f,
+            Vector2 spinInput = default)
+        {
+            LogStep($"FireDriverShot: power={power01:F2} (ShotController drag path)");
+
+            var ctrl = UnityEngine.Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            {
+                LogStep("  FireDriverShot FAIL: PhysicsLabController not found");
+                yield break;
+            }
+            var shotCtl = UnityEngine.Object.FindObjectOfType<Golfin.Gameplay.Input.ShotController>();
+            if (shotCtl == null)
+            {
+                LogStep("  FireDriverShot FAIL: ShotController not found — cannot use production path");
+                yield break;
+            }
+            var sm = ctrl.BallSM;
+
+            // 1. Select Driver (club 0) via production path (no lab bundle override).
+            try
+            {
+                ctrl.SetClub(0);
+                shotCtl.ClearStatBundleOverride();
+                LogStep("  FireDriverShot: SetClub(0=Driver) + ClearStatBundleOverride");
+            }
+            catch (Exception ex)
+            {
+                LogStep($"  FireDriverShot WARN: SetClub failed: {ex.Message}");
+            }
+
+            // 2. Orient camera toward pin.
+            Vector3 cup = FindCupPosition();
+            Vector3 ball = ctrl.BallPosition;
+            Vector3 flat = new Vector3(cup.x - ball.x, 0f, cup.z - ball.z);
+            float yaw = Mathf.Atan2(flat.z, flat.x);
+            try
+            {
+                ctrl.SetCameraYawRadians(yaw);
+                LogStep($"  FireDriverShot: SetCameraYawRadians({yaw:F3}) toward cup={cup}");
+            }
+            catch (Exception ex)
+            {
+                LogStep($"  FireDriverShot WARN: SetCameraYawRadians failed: {ex.Message}");
+            }
+
+            // 3. Wait for ShotController to return to Idle.
+            float si = 0f;
+            while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 4f)
+            {
+                si += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            LogStep($"  FireDriverShot: Idle gate done (waited {si:F2}s), State={shotCtl.State}");
+
+            // 4. Gate on Aiming before firing.
+            if (sm != null)
+            {
+                float g = 0f;
+                while (sm.State != BallState.Aiming && g < 3f)
+                {
+                    g += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+                LogStep($"  FireDriverShot: Aiming gate done (waited {g:F2}s), SM={sm.State}");
+            }
+
+            // 5. Subscribe OnShotComplete BEFORE firing.
+            bool done = false;
+            ShotResult shotRes = default;
+            Action<ShotResult> handler = r => { done = true; shotRes = r; };
+            if (sm != null) sm.OnShotComplete += handler;
+
+            // 6. Fire via production drag path (ramp power over ~0.85s).
+            // Push spin to ShotController.PendingSpinInput before BeginExternalDrag.
+            // Use the explicit spinInput arg if non-zero (avoids SpinContext reset race);
+            // fall back to SpinContext.Spin for callers that don't supply explicit spin.
+            Vector2 resolvedSpin = (spinInput != Vector2.zero)
+                ? spinInput
+                : Golfin.Gameplay.UI.HUD.SpinContext.Spin;
+            shotCtl.PendingSpinInput = resolvedSpin;
+            LogStep($"  FireDriverShot: PendingSpinInput set to {resolvedSpin} (spinInput={spinInput})");
+            shotCtl.BeginExternalDrag();
+            const float rampSeconds = 0.85f;
+            float rt = 0f;
+            while (rt < rampSeconds)
+            {
+                rt += Time.unscaledDeltaTime;
+                shotCtl.SetExternalPower(Mathf.Lerp(0f, power01, rt / rampSeconds), 0f);
+                yield return null;
+            }
+            shotCtl.SetExternalPower(power01, 0f);
+            yield return new WaitForSecondsRealtime(0.18f);
+            shotCtl.EndExternalDrag(); // → CommitFlick → ShotInputBuilder.Build reads PendingSpinInput
+            LogStep($"  FireDriverShot: EndExternalDrag called (CommitFlick fires, PendingSpinInput flows to Build)");
+
+            // 7. Wait for terminal state.
+            float elapsed = 0f;
+            while (!done && elapsed < timeoutSeconds)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            if (sm != null) sm.OnShotComplete -= handler;
+
+            if (done)
+            {
+                LogStep($"  FireDriverShot OK: terminal={shotRes.TerminalState} ball={ctrl.BallPosition:F1} after {elapsed:F1}s");
+
+                // Log first-bounce (land) and final-rest positions separately from trajectory hits.
+                // This lets parse_spinshape_captions (and manual analysis) separate carry from rollout.
+                var traj = ctrl.LastTrajectory;
+                if (traj != null && traj.terrainHits != null && traj.terrainHits.Count > 0)
+                {
+                    var firstHit = traj.terrainHits[0];
+                    var lastHit  = traj.terrainHits[traj.terrainHits.Count - 1];
+                    Vector3 landPos = new Vector3(
+                        firstHit.Position.x.ToFloat(),
+                        firstHit.Position.y.ToFloat(),
+                        firstHit.Position.z.ToFloat());
+                    Vector3 restPos = new Vector3(
+                        lastHit.Position.x.ToFloat(),
+                        lastHit.Position.y.ToFloat(),
+                        lastHit.Position.z.ToFloat());
+                    LogStep($"  [Land] ball=({landPos.x:F1}, {landPos.y:F1}, {landPos.z:F1}) surface={firstHit.Surface} bounceCount={traj.terrainHits.Count}");
+                    if (traj.terrainHits.Count > 1)
+                        LogStep($"  [Rest] ball=({restPos.x:F1}, {restPos.y:F1}, {restPos.z:F1}) surface={lastHit.Surface}");
+                }
+            }
+            else
+                LogStep($"  FireDriverShot TIMEOUT: OnShotComplete not fired in {timeoutSeconds}s");
+        }
     }
 }
 #endif

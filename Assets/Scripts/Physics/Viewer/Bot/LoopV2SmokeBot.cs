@@ -135,6 +135,10 @@ namespace Golfin.Physics.Viewer
                 case "stat_lane_surface_roll":
                     scenarioRoutine = Bot.Scenarios.StatLaneSurfaceRoll(driver);
                     break;
+                // spin_and_shot_shape_wiring (2026-05-26):
+                case "SpinAndShapeVisualGate":
+                    scenarioRoutine = Bot.Scenarios.SpinAndShapeVisualGate(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

@@ -54,6 +54,8 @@ namespace Golfin.Gameplay.Config
                     case "DegradationYawDegPerPass":       cfg.DegradationYawDegPerPass       = val; break;
                     case "PuttArrowSpeedMultiplier":       cfg.PuttArrowSpeedMultiplier       = val; break;
                     case "PuttBaseVelocityMps":            cfg.PuttBaseVelocityMps            = val; break;
+                    case "SpinMagScaleSlope":              cfg.SpinMagScaleSlope              = val; break;
+                    case "SpinMaxTiltRad":                 cfg.SpinMaxTiltRad                 = val; break;
                     default: matched = false; break;
                 }
 

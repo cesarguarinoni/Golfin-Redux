@@ -20,3 +20,5 @@ MaxTotalPasses,10,total before auto-cancel
 DegradationYawDegPerPass,2,aim error widening per pass past clean
 PuttArrowSpeedMultiplier,0.5,putts get slower arrows
 PuttBaseVelocityMps,5,override default putter velocity
+SpinMagScaleSlope,1.5,spin.y magnitude slope (1.5 allows sign-flip topspin at y=+1)
+SpinMaxTiltRad,0.3,spin.x max axis-tilt angle in radians (approx 17 degrees) at x=+-1

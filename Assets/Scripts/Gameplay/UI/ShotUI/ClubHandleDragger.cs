@@ -37,6 +37,8 @@ namespace Golfin.Gameplay.UI.ShotUI
             _dragging     = true;
             _peakPower    = 0f;
             _peakFinetune = 0f;
+            // Push current spin selection before starting the drag so CommitFlick sees it.
+            _shotController.PendingSpinInput = HUD.SpinContext.Spin;
             _shotController.BeginExternalDrag();
             ProcessDrag(e);
         }

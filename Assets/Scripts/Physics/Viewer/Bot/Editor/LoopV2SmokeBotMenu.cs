@@ -105,6 +105,15 @@ namespace Golfin.Physics.Viewer.Editor
             Launch("stat_lane_surface_roll");
         }
 
+        // spin_and_shot_shape_wiring (2026-05-26):
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Spin And Shape Visual Gate")]
+        public static void RunSpinAndShapeVisualGate()
+        {
+            BotVideoRecorder.RecordVideo = true;
+            Launch("SpinAndShapeVisualGate");
+        }
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]
@@ -148,6 +157,9 @@ namespace Golfin.Physics.Viewer.Editor
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Stat Lane — Surface Roll", isValidateFunction: true)]
         static bool ValidateStatLaneSurfaceRoll() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Spin And Shape Visual Gate", isValidateFunction: true)]
+        static bool ValidateSpinAndShapeVisualGate() => !EditorApplication.isPlaying;
 
         // ── Launcher ─────────────────────────────────────────────────────────
 

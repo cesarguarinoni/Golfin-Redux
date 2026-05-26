@@ -2,6 +2,7 @@
 using System.Collections;
 using UnityEngine;
 using Golfin.Gameplay.Input;
+using Golfin.Gameplay.UI.HUD;
 
 namespace Golfin.Physics.Viewer.Bot
 {
@@ -1218,6 +1219,106 @@ namespace Golfin.Physics.Viewer.Bot
 
             // Clean up: restore resolver to null (back to pure FALLBACK).
             Golfin.Gameplay.Defaults.StatProviderBus.Resolver = null;
+        }
+
+        // ── Spin and Shot-Shape Visual Gate (spin_and_shot_shape_wiring) ─────────
+
+        /// <summary>
+        /// Fires 5 driver shots from Hole 1 tee with the same character/club/power=1.0,
+        /// varying only SpinContext.Spin between strokes. Bot resets to tee between strokes
+        /// via PhysicsLabController.ResetToTee() (Lesson V — same-start state required).
+        ///
+        /// Spin positions tested:
+        ///   1. CENTER      (0,  0) — baseline straight shot
+        ///   2. TOP_TOPSPIN (0, +1) — reduces backspin → lower trajectory, more roll
+        ///   3. BOTTOM_BACK (0, -1) — boosts backspin → higher trajectory, stops faster
+        ///   4. LEFT_DRAW   (-1, 0) — tilts axis → draw curl to the left
+        ///   5. RIGHT_FADE  (+1, 0) — tilts axis → fade curl to the right
+        ///
+        /// Per Q5 design lock: no manual playtest needed. Cesar approves from bot video.
+        ///
+        /// Captures: home, gameplay_armed, then per-stroke armed+landed stills.
+        /// Log: per-stroke [Build] lines (with spinInput/spinAxis/spinRate) written by
+        ///      LiveStatLogTee (extended to also capture [Build] prefix).
+        /// </summary>
+        public static IEnumerator SpinAndShapeVisualGate(BotDriver d)
+        {
+            d.LogStep("=== Spin and Shot-Shape Visual Gate ===");
+
+            // Navigate to game from cold start.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("home");
+
+            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+
+            // The 5 spin positions (widget-index order, per SpinPanelWidget._values[]).
+            var spinPositions = new[]
+            {
+                (label: "CENTER",       spin: new Vector2( 0f,  0f)),
+                (label: "TOP_TOPSPIN",  spin: new Vector2( 0f, +1f)),
+                (label: "BOTTOM_BACK",  spin: new Vector2( 0f, -1f)),
+                (label: "LEFT_DRAW",    spin: new Vector2(-1f,  0f)),
+                (label: "RIGHT_FADE",   spin: new Vector2(+1f,  0f)),
+            };
+
+            // Reset before first stroke so tee position is fresh.
+            d.ResetLabToTee();
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            for (int i = 0; i < spinPositions.Length; i++)
+            {
+                var (label, spin) = spinPositions[i];
+
+                // Set spin (SpinContext.Reset() was called inside preceding ResetLabToTee flow).
+                Golfin.Gameplay.UI.HUD.SpinContext.SetSpin(spin);
+                yield return new WaitForSecondsRealtime(0.3f); // settle frame
+
+                d.LogStep($"Stroke {i+1}: {label} spinInput=({spin.x:F1},{spin.y:F1})");
+
+                yield return d.Capture($"stroke{i+1}_{label.ToLower()}_armed");
+
+                // RIGHT_FADE at full power goes OB. Reduce to 0.7 to keep ball in bounds.
+                float shotPower = (label == "RIGHT_FADE") ? 0.7f : 1.0f;
+
+                // Pass spin explicitly to FireDriverShot to survive any SpinContext.Reset()
+                // that may fire between SetSpin() and CommitFlick() due to state transitions
+                // (ShotConeView.HandleStateChanged resets SpinContext on Idle, which can fire
+                // between coroutine yields — passing spin directly bypasses the race).
+                yield return d.FireDriverShot(power01: shotPower, timeoutSeconds: 25f,
+                    spinInput: spin);
+
+                // Pause at rest so the settled ball frame is clearly visible in the video.
+                // A 2-second wait is long enough that the next iteration's ResetLabToTee
+                // won't fire in the same Unity frame as this capture (iter-2 fix for post-reset screenshots).
+                yield return new WaitForSecondsRealtime(2.0f);
+                yield return d.Capture($"stroke{i+1}_{label.ToLower()}_landed");
+
+                // Now reset AFTER capturing the landed frame (not before the next armed capture).
+                // This guarantees the capture frame shows the landed ball, not the reset-to-tee state.
+                if (i < spinPositions.Length - 1)
+                {
+                    // Small pause before reset so the captured frame is rendered before scene state changes.
+                    yield return new WaitForSecondsRealtime(0.3f);
+                    d.ResetLabToTee();
+                    yield return new WaitForSecondsRealtime(0.5f); // settle frame after reset
+                }
+            }
+
+            d.LogStep("=== Spin Gate Complete ===");
+            yield return new WaitForSecondsRealtime(1f);
+            d.FlushLog();
         }
     }
 }

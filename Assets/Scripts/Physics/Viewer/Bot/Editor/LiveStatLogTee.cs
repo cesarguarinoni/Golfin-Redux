@@ -19,8 +19,13 @@ namespace Golfin.Physics.Viewer.Editor
     /// </summary>
     public static class LiveStatLogTee
     {
-        const string ArmedKey   = "LoopV2SmokeBot.Armed";
-        const string LogPrefix  = "[LiveStatProvider]";
+        const string ArmedKey      = "LoopV2SmokeBot.Armed";
+        const string LogPrefix     = "[LiveStatProvider]";
+        // spin_and_shot_shape_wiring: also capture [Build] lines (spinInput/spinAxis/spinRate)
+        // and [BotDriver]/[TeeDiag] lines (stroke labels + tee-reset confirmations).
+        const string BuildPrefix   = "[Build]";
+        const string BotPrefix     = "[BotDriver]";
+        const string TeeDiagPrefix = "[TeeDiag]";
 
         static StreamWriter _writer;
         static string       _logPath;
@@ -76,8 +81,15 @@ namespace Golfin.Physics.Viewer.Editor
         static void OnLogMessage(string logString, string stackTrace, LogType type)
         {
             if (!_active || _writer == null) return;
-            // Filter: only write lines that contain the [LiveStatProvider] prefix.
-            if (logString == null || !logString.Contains(LogPrefix)) return;
+            if (logString == null) return;
+            // Capture [LiveStatProvider] lines (stat provider data),
+            // [Build] lines (spinInput/spinAxis/spinRate from ShotInputBuilder.DiagBuildLogger),
+            // [BotDriver] lines (stroke step labels), and [TeeDiag] lines (tee reset confirmations).
+            if (!logString.Contains(LogPrefix) &&
+                !logString.Contains(BuildPrefix) &&
+                !logString.Contains(BotPrefix) &&
+                !logString.Contains(TeeDiagPrefix))
+                return;
             _writer.WriteLine($"[t={Time.realtimeSinceStartup:F2}] {logString}");
         }
 

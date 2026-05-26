@@ -18,8 +18,17 @@ namespace Golfin.Gameplay.Input
         private bool             _statBundleOverridden;
 
         // --- Public config ---
-        public bool  IsPutt                { get; set; }
-        public float CameraHeadingRadians  { get; set; }
+        public bool    IsPutt                { get; set; }
+        public float   CameraHeadingRadians  { get; set; }
+
+        /// <summary>
+        /// Spin input for the next shot (draw/fade = x, backspin/topspin = y).
+        /// Set by the HUD layer (which has access to Golfin.Gameplay.UI) before CommitFlick.
+        /// Golfin.Gameplay.Input cannot reference Golfin.Gameplay.UI (would be circular),
+        /// so the caller pushes the value here instead of ShotController reading SpinContext.
+        /// Reset to zero after each shot in TransitionToIdle().
+        /// </summary>
+        public Vector2 PendingSpinInput      { get; set; }
 
         // --- Debug toggles (8 flags per design §8) ---
         public ShotDebugFlags DebugFlags = ShotDebugFlags.Defaults;
@@ -213,6 +222,7 @@ namespace Golfin.Gameplay.Input
             _degradationYawRad = 0f;
             _coneFinetune      = 0f;
             _aimYawRadians     = 0f;
+            PendingSpinInput   = Vector2.zero;  // reset after each shot (spin is per-shot, not sticky)
         }
 
         private void TransitionToAiming()  => State = ShotState.Aiming;
@@ -251,6 +261,14 @@ namespace Golfin.Gameplay.Input
                     $"aimYawRadians={_aimYawRadians:F3}rad");
             }
 #endif
+            // Spin input: read PendingSpinInput (set by HUD layer before CommitFlick).
+            // Putts always use zero spin (design lock §Out of scope).
+            Vector2 spinInput = IsPutt ? Vector2.zero : PendingSpinInput;
+            fp spinInputX   = fp.FromFloat(spinInput.x);
+            fp spinInputY   = fp.FromFloat(spinInput.y);
+            fp spinMagSlope = fp.FromFloat(_config.SpinMagScaleSlope);
+            fp spinTiltRad  = fp.FromFloat(_config.SpinMaxTiltRad);
+
             var (input, ballMods) = ShotInputBuilder.Build(
                 bundle,
                 StatCoefficients.Default,
@@ -259,7 +277,11 @@ namespace Golfin.Gameplay.Input
                 fp.FromFloat(_aimYawRadians),
                 fp.Zero, fp.Zero, fp.Zero,
                 (uint)UnityEngine.Random.Range(1, int.MaxValue),
-                baseVelOverride);
+                baseVelOverride,
+                spinInputX,
+                spinInputY,
+                spinMagSlope,
+                spinTiltRad);
 
             State = ShotState.Resolving;
             OnShotResolved?.Invoke(input, ballMods);

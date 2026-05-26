@@ -158,18 +158,36 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             if (_shotController != null)
                 _shotController.OnStateChanged += HandleStateChanged;
+            // Keep ShotController.PendingSpinInput in sync with SpinContext so the
+            // InputSystem gesture path (non-ClubHandle) also sees the player's spin selection.
+            HUD.SpinContext.OnChanged += PushSpinToPending;
         }
 
         private void OnDisable()
         {
             if (_shotController != null)
                 _shotController.OnStateChanged -= HandleStateChanged;
+            HUD.SpinContext.OnChanged -= PushSpinToPending;
+        }
+
+        private void PushSpinToPending()
+        {
+            if (_shotController != null)
+                _shotController.PendingSpinInput = HUD.SpinContext.Spin;
         }
 
         // ── State handler ─────────────────────────────────────────────────────
 
         private void HandleStateChanged(ShotInputState state)
         {
+            // When the shot resolves back to Idle, reset the spin context so each
+            // new shot starts from the center position. ShotController cannot call
+            // SpinContext.Reset() directly (circular asmdef: Input does not ref UI);
+            // ShotConeView (in UI assembly) bridges the gap here.
+            // spin_and_shot_shape_wiring SPEC §5.4 next-shot handoff site.
+            if (state.State == Input.ShotState.Idle)
+                HUD.SpinContext.Reset();
+
             UpdatePutterTrackVisibility(state);
             UpdateConeWidth();
             UpdateClubHandle(state);

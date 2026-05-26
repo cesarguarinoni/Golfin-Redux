@@ -192,6 +192,108 @@ def parse_visualgate_captions(log_path, rec_start, rec_end):
     return events
 
 
+def parse_spinshape_captions(log_path, rec_start, rec_end):
+    """
+    Spin-and-shot-shape visual gate captioner. Reads per-stroke labels and [Build]
+    log lines to produce captions showing spin position + spinAxis + spinRate per stroke.
+
+    Expected log lines (from SpinAndShapeVisualGate + LiveStatLogTee extended filter):
+      [t=T] [BotDriver] Stroke N: LABEL spinInput=(X,Y)
+      [t=T] [BotDriver] [TeeDiag] ResetLabToTee OK: ...
+      [t=T] [Build] isPutt=False ... spinInput=(X.XX,Y.YY) spinAxis=(...) spinRate=ZZZ.Zrad/s
+
+    Produces one caption per stroke visible from the fire moment to ball-at-rest:
+      "Stroke N: LABEL\nspinInput=(X, Y)\nspinRate=Z rad/s"
+    """
+    events = []
+    if not os.path.exists(log_path):
+        print(f"WARN: history.log not found ({log_path}) — title caption only.")
+        return events
+
+    span = rec_end - rec_start
+
+    # Pattern for the stroke step log (BotDriver.LogStep writes to file WITHOUT [BotDriver] prefix).
+    # history.log format: "[t=T] Stroke N: LABEL spinInput=(X,Y)"
+    stroke_label_re = re.compile(
+        r"\[t=([\d.]+)\]\s+Stroke\s+(\d+):\s+(\w+)\s+spinInput=\(([-\d.]+),([-\d.]+)\)")
+    # Pattern for the [Build] line emitted by DiagBuildLogger (captured via LiveStatLogTee into live_stat_log.txt).
+    # NOTE: [Build] lines come from live_stat_log.txt, not history.log. The parser reads the same
+    # log_path argument; if it doesn't find [Build] lines, build_rate will be None and caption
+    # will show "n/a" for rate (still acceptable — label + spinInput are the primary visual).
+    build_re = re.compile(
+        r"\[t=([\d.]+)\].*\[Build\].*spinInput=\(([-\d.]+),([-\d.]+)\)"
+        r".*spinAxis=\(([-\d.]+),([-\d.]+),([-\d.]+)\)"
+        r".*spinRate=([-\d.]+)rad/s")
+    # Pattern for capture (landed) events to time the end of a stroke caption.
+    # history.log format: "[t=T] Capture: sXX_strokeN_..._landed → /path"
+    capture_re = re.compile(r"\[t=([\d.]+)\]\s+Capture:\s+\S+stroke(\d+)_\w+_landed")
+
+    def to_video_t(log_t):
+        return max(0.0, log_t - rec_start)
+
+    stroke_info = {}   # n -> {label, spin_x, spin_y, vt_start, build_rate}
+    landed_times = {}  # n -> vt_landed
+
+    # Read stroke labels and capture times from history.log.
+    with open(log_path) as fh:
+        for line in fh:
+            m = stroke_label_re.search(line)
+            if m:
+                n = int(m.group(2))
+                stroke_info[n] = {
+                    "label":   m.group(3),
+                    "spin_x":  float(m.group(4)),
+                    "spin_y":  float(m.group(5)),
+                    "vt_start": to_video_t(float(m.group(1))),
+                    "build_rate": None,
+                }
+                continue
+            m = capture_re.search(line)
+            if m:
+                n = int(m.group(2))
+                landed_times[n] = to_video_t(float(m.group(1)))
+
+    # Read [Build] lines from live_stat_log.txt (same scenario folder, one level up from screenshots/).
+    # The [Build] prefix is emitted by DiagBuildLogger, captured by LiveStatLogTee.
+    scenario_dir = os.path.dirname(log_path)
+    stat_log_path = os.path.join(scenario_dir, "live_stat_log.txt")
+    build_sources = [stat_log_path, log_path]  # prefer stat log; fall back to history.log
+    for build_src in build_sources:
+        if not os.path.exists(build_src):
+            continue
+        with open(build_src) as fh:
+            for line in fh:
+                m = build_re.search(line)
+                if m:
+                    # Associate this Build line with the most recent stroke by time.
+                    vt = to_video_t(float(m.group(1)))
+                    rate = float(m.group(8))
+                    # Find the stroke whose vt_start is closest (and before) this build line.
+                    best_n = None
+                    for n, info in stroke_info.items():
+                        if info["vt_start"] <= vt + 5.0:
+                            if best_n is None or info["vt_start"] > stroke_info[best_n]["vt_start"]:
+                                best_n = n
+                    if best_n is not None and stroke_info[best_n]["build_rate"] is None:
+                        stroke_info[best_n]["build_rate"] = rate
+        if any(info["build_rate"] is not None for info in stroke_info.values()):
+            break  # found rates from this source, done
+
+    for n, info in sorted(stroke_info.items()):
+        vt_start = info["vt_start"]
+        vt_end = landed_times.get(n, vt_start + 15.0)
+        cap_end = min(vt_end + 1.5, span)
+        if cap_end <= vt_start:
+            continue
+        sx, sy = info["spin_x"], info["spin_y"]
+        label = info["label"]
+        rate_str = f"{info['build_rate']:.0f} rad/s" if info["build_rate"] is not None else "n/a"
+        caption = f"Stroke {n}: {label}\nspinInput=({sx:.0f}, {sy:.0f})\nspinRate={rate_str}"
+        events.append((vt_start, cap_end, caption))
+
+    return events
+
+
 def esc(p):
     """Escape a path for an ffmpeg filter option value."""
     return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
@@ -200,10 +302,12 @@ def esc(p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", required=True, help="smoke-bot scenario key")
-    ap.add_argument("--mode", choices=["clicks", "visualgate"], default="clicks",
+    ap.add_argument("--mode", choices=["clicks", "visualgate", "spinshape"], default="clicks",
                     help="Caption parser to use. 'clicks' = tap-event captions (default, "
                          "for UI flows). 'visualgate' = per-stroke carry captions "
-                         "(for live_stat_provider_visual_gate_* scenarios).")
+                         "(for live_stat_provider_visual_gate_* scenarios). "
+                         "'spinshape' = per-stroke spin position + rate captions "
+                         "(for SpinAndShapeVisualGate scenario).")
     ap.add_argument("--title", default="Loop v2 — Stage F\nButton Press Feedback")
     ap.add_argument("--suffix", default="stageF_buttons", help="output filename suffix")
     ap.add_argument("--output-dir", default=None,
@@ -254,6 +358,8 @@ def main():
                             "screenshots/history.log")
     if args.mode == "visualgate":
         captions = parse_visualgate_captions(log_path, rec_start, rec_start + duration)
+    elif args.mode == "spinshape":
+        captions = parse_spinshape_captions(log_path, rec_start, rec_start + duration)
     else:
         captions = parse_captions(log_path, rec_start, rec_start + duration)
     # Allow callers to pass literal \n in --title (bash strips backslash semantics).
