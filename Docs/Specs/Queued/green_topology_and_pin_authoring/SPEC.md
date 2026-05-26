@@ -238,23 +238,75 @@ Extend `BallSimulation.RunPuttPhase` and `RunRollPhase` to sample green topology
 
 ---
 
-### Phase 8 — Pin position wiring (SURGICAL, 1-2h, Architect-executable)
+### Phase 8 — Pin position wiring (SURGICAL, 3-4h, Architect-executable)
 
-Modify `HoleContext` to source `PinWorld` from `green.json.pinCandidates[defaultPinIndex]` instead of whatever current placeholder source.
+**Current flow (pre-Phase-8) — verified in `PhysicsLabController.cs` lines ~1531-1554:**
 
-**Changes:**
+```
+Hole scene loads
+  ↓
+ PhysicsLabController finds the scene's "Flag" GameObject (hand-placed in scene)
+  ↓
+ HoleContext.PinWorld = flagGo.transform.position   ← pin is sourced FROM scene
+  ↓
+ RealCupDetector built around PinWorld   ← cup capture follows pin
+  ↓
+ HUD, BotDriver, all consumers read HoleContext.PinWorld
+```
 
-- `HoleContext.PinWorld` value source changed to `GreenTopologyCache.GetForHole(currentHole)?.GetDefaultPin() ?? legacyPlaceholderValue`.
-- New `HoleContext.PinCandidates` accessor (read-only) for §2d Result Screen + future Loop v2 pin rotation.
-- New `HoleContext.PinLabels` accessor (read-only, aligned indices with PinCandidates).
+**Important:** the visible flag mesh AND the (invisible) cup-capture region are BOTH driven by the scene's Flag GameObject today. There is no separate Cup GameObject — the cup is purely a math radius check (`RealCupDetector.IsInCupStatic`) around `PinWorld`.
+
+**Phase 8 inverts the flow:**
+
+```
+Hole scene loads
+  ↓
+ Try GreenTopologyCache.GetForHole(N)?.GetDefaultPin()
+  ↓
+ If green.json present:
+   HoleContext.PinWorld = green.json default pin       ← NEW: data drives
+   flagGo.transform.position = green.json default pin  ← NEW: also move the visible flag
+ If green.json absent:
+   HoleContext.PinWorld = flagGo.transform.position    ← fallback: existing behavior
+  ↓
+ RealCupDetector built around (now data-driven) PinWorld   ← unchanged code, picks up new pin automatically
+  ↓
+ HUD etc.
+```
+
+**Changes (3 files):**
+
+1. `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` (~20 lines modified around line 1535-1554):
+   - Replace the `flagGo.transform.position` read with the three-level fallback above
+   - When `green.json` provides a pin, also write that pin to `flagGo.transform.position` so the visible mesh moves to match
+   - Preserve existing `GreenCentroidWorld` fallback for holes with neither `green.json` nor a scene Flag
+   - Diagnostic log: `[PhysicsLab][§8] Pin source: greenJson | sceneFlag | centroidFallback (pos=...)`
+
+2. `Assets/Scripts/Gameplay/UI/ShotUI/HUD/HoleContext.cs`:
+   - Add `public static Vector3[] PinCandidates` (read-only-ish; reset on `Reset()`)
+   - Add `public static string[] PinLabels` (aligned indices)
+   - Existing `PinWorld` static field unchanged in signature
+
+3. `Assets/Scripts/Course/Runtime/GreenTopologyCache.cs` (created in Phase 2):
+   - Already exposes `GetForHole(int)` — no change here
 
 **Hard rules:**
 
 1. Do NOT change `HoleContext.PinWorld` field TYPE or static-bus signature — only the value source.
-2. Backward compat: if `green.json` missing OR `pinCandidates` empty, fall back to current placeholder (no break for any hole not yet authored in Phase 3).
-3. New EditMode test in `HoleContextTests.cs`: load hole 1 (post-Phase-3), assert `HoleContext.PinWorld == green.json.pinCandidates[defaultPinIndex]` after `HoleContext.Raise()`. Fallback test: stub a hole without `green.json`, assert legacy placeholder returned.
+2. Do NOT touch `RealCupDetector.cs` — it consumes `PinWorld` and rebuilds automatically downstream.
+3. Do NOT touch the scene file (`Hole_NN_Geo.unity`) — the flag GameObject stays in the scene; Phase 8 moves it at runtime via `transform.position` assignment, leaving artist-placed prefab intact.
+4. Backward compat: holes without `green.json` MUST continue to work via existing flagGo path. No `green.json` present → zero behavior change.
+5. If `flagGo` is null AND `green.json` is present, still write `PinWorld` from `green.json` (HUD + cup still work; just no visible flag movement — not a regression since today no flag = `GreenCentroidWorld` fallback anyway).
 
-**DoD:** 18 holes load with pin position from authored data; fallback path tested. Test gate: **baseline + 2 PASS, 0 IGNORED.**
+**Tests (new file `Assets/Scripts/Gameplay/Tests/HoleContextPinTests.cs`):**
+
+- **A:** Load hole 1 with `green.json` present (post-Phase-3) → assert `HoleContext.PinWorld == green.json.pinCandidates[defaultPinIndex]`.
+- **B:** Load hole 1 with `green.json` present + scene Flag GO present → assert `flagGo.transform.position == green.json.pinCandidates[defaultPinIndex]` after `HoleContext.Raise()`.
+- **C:** Load a hole without `green.json` (stub by temporarily removing) → assert `PinWorld == flagGo.transform.position` (legacy fallback).
+- **D:** Load a hole without `green.json` AND without scene flag → assert `PinWorld == GreenCentroidWorld` (existing fallback).
+- **E:** `HoleContext.PinCandidates.Length >= 1` and `PinCandidates[defaultPinIndex] == PinWorld` after green.json load.
+
+**DoD:** 18 holes load with pin position from authored data; visible flag mesh moves to data-driven location; cup capture works at new location; fallback paths tested. Test gate: **baseline + 5 PASS, 0 IGNORED.**
 
 ---
 
@@ -290,9 +342,9 @@ Modify `HoleContext` to source `PinWorld` from `green.json.pinCandidates[default
 | 5 — Heightmap reconciliation | FULL PIPELINE | 1 day |
 | 6 — Physics integration | FULL PIPELINE | ½ day |
 | 7 — Predictor redesign | FULL PIPELINE | ½ day |
-| 8 — Pin wiring | SURGICAL | 1-2h |
+| 8 — Pin wiring | SURGICAL | 3-4h |
 
-**Total pipeline work:** ~3.5 days FULL PIPELINE + ½ day Architect + 1-2h SURGICAL.
+**Total pipeline work:** ~3.5 days FULL PIPELINE + ½ day Architect + 3-4h SURGICAL.
 **Total Cesar manual work:** ~1.5 days (mostly Phase 4 tracing).
 **Calendar:** ~1.5 weeks if interleaved with Loop v1 work; ~5 working days if focused.
 
