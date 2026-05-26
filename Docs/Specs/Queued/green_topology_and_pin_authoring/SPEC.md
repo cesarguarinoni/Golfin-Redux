@@ -310,6 +310,94 @@ Hole scene loads
 
 ---
 
+### Phase 9a — Cup capture FX (FULL PIPELINE, ½ day) — MINIMUM
+
+**Problem (today):** The cup is a flat texture disc on the green surface. When the ball enters cup-capture radius, `RealCupDetector` returns true and play ends, but visually the ball just stops on top of the disc. No falling, no sound, no FX. Looks broken.
+
+**Phase 9a is FX-only — no geometry change.** Goal: when capture fires, ball appears to drop into the cup with audio + particle cues.
+
+**Trigger:** `BallStateMachine.OnShotComplete` event (or whichever event fires on cup-capture success — implementer audits and uses the EXISTING event). Do NOT modify `BallStateMachine.cs` (still on the hands-off list).
+
+**New code:**
+
+1. `Assets/Scripts/Gameplay/FX/CupCaptureFX.cs` (new MonoBehaviour, in scene or instanced by `PhysicsLabController`):
+   - Subscribes to ball-completion event in `OnEnable`, unsubscribes in `OnDisable`
+   - On capture trigger: reads `HoleContext.PinWorld`, runs animation coroutine:
+     - **Frame 0:** Ease ball XZ toward pin over 150 ms (smooth-step)
+     - **150-300 ms:** Drop ball Y by 0.15 m + scale uniform 1.0 → 0.0
+     - **At 300 ms:** Hide ball renderer; emit ParticleSystem `_cupPuff` at PinWorld; play AudioSource `_plunkSfx`
+     - **300-600 ms:** Optional secondary "rattle" particle pulse (1-2 small bounces)
+   - Configurable in inspector: durations, ease curves, particle prefab, audio clip
+
+2. `Assets/Scripts/Gameplay/FX/Golfin.Gameplay.FX.asmdef` (new asmdef, references `Golfin.Gameplay`, `Golfin.Gameplay.UI.HUD`)
+
+3. `Assets/Prefabs/FX/CupCaptureFX.prefab` (new prefab):
+   - Empty GameObject with `CupCaptureFX` component
+   - Child ParticleSystem `_cupPuff` (small green-dust burst, 0.4s lifetime, ~20 particles)
+   - Child AudioSource `_plunkSfx` with `cup_plunk.wav` (sourced or placeholder)
+
+4. **Disc texture swap** — cheap visual win: replace current flat circle disc with a recessed-look texture (darker center + rim shadow). Asset path TBD; implementer flags as `[NEEDS ART]` if no recessed disc texture exists in `Assets/Art/Course/`. Falls back to current flat disc if art missing.
+
+**Hard rules:**
+
+1. Do NOT modify `BallStateMachine.cs`, `RealCupDetector.cs`, or any physics-tier file. Subscribe to existing events only.
+2. Do NOT block the Result Screen (§2d) transition. Animation runs in parallel; if Result Screen fires before FX completes, FX must abort gracefully (Stop on `OnDisable`).
+3. Do NOT add audio that plays through any non-existent `AudioManager`. If `AudioManager.Instance` exists in the project, route through it; else play directly via AudioSource (audit during implementation).
+4. Animation must be skip-able — if user taps anywhere during the FX, it completes instantly and Result Screen fires.
+5. FX prefab is loaded once at hole-load time and pooled; don't `Instantiate` per-shot.
+
+**Tests (new file `Assets/Scripts/Gameplay/Tests/CupCaptureFXTests.cs`):**
+
+- **A:** Mock a capture event → assert `CupCaptureFX` coroutine starts within 1 frame.
+- **B:** During animation, assert ball renderer transitions to disabled by frame at t=300ms (tolerance ±1 frame).
+- **C:** Particle system emit count > 0 at t=300ms.
+- **D:** Skip input mid-animation → assert coroutine completes within 1 frame of input.
+
+**DoD:** Capture animation plays on every successful cup-capture across all 18 holes; SFX audible; particles visible; ball disappears smoothly; disc texture swapped (or `[NEEDS ART]` flagged). Test gate: **baseline + 4 PASS, 0 IGNORED.**
+
+---
+
+### Phase 9b — Real geometric cup (FULL PIPELINE, 1-1½ days) — OPTIONAL POLISH
+
+**Status:** Queued behind Phase 9a. Do not block 9a on 9b. 9b is the "this looks like a real hole" upgrade; 9a is the "this no longer looks broken" minimum.
+
+**Goal:** Replace the FX-only illusion with an actual hole geometry. Ball physically falls below ground plane into a cup-wall cylinder.
+
+**Approach — Stencil-mask shader:**
+
+1. `Assets/Art/Shaders/CupStencilMask.shadergraph` (URP shader graph, new file):
+   - Stencil writes to clear green pixels inside a small disc centered at PinWorld
+   - Result: green mesh renders with a circular hole at pin location
+   - Sized to 4.25" / 108 mm (regulation cup diameter)
+
+2. `Assets/Prefabs/FX/CupInterior.prefab`:
+   - Cup-wall cylinder mesh, 108 mm diameter, 102 mm deep (4" regulation)
+   - Dark interior material
+   - Cylinder bottom blocks ball; rim is collidable
+   - Instanced once at hole-load, parented to PinWorld
+
+3. Modify Phase 9a's `CupCaptureFX` to disable the ball-scale + position-cheat animation when 9b is active. Ball just physically falls due to existing gravity + collision; cup interior catches it.
+
+4. **Cup-rim physics interaction (optional sub-feature):** Add a thin lip ring just above the cup bottom. Balls that enter cup at borderline speed (just above capture threshold) hit the ring, lose energy, and rattle around before settling — produces visible "lip-out" effect when speed is grazing the cup-capture threshold.
+
+**Hard rules:**
+
+1. Stencil shader must work on iOS Metal AND Android Vulkan/GLES3. Test gate must include both.
+2. Heightmap (`heightmap.bytes`) is NOT modified — hole is shader/stencil, not actual mesh deformation. (Avoids re-running Phase 5 reconcile every time pin moves.)
+3. Cup interior must not affect `RealCupDetector` math — the existing radius check still authoritatively determines capture, NOT physics collision with the cup mesh.
+4. Performance budget: stencil + interior mesh + lip ring must add < 0.3ms per frame combined on a mid-range Android device (Pixel 5 / Galaxy A52 class).
+
+**Tests:**
+
+- **E:** Stencil renders hole on iOS Metal smoke run; pixel inspection at PinWorld XZ shows cup interior color, not green.
+- **F:** Stencil renders hole on Android Vulkan smoke run; same pixel inspection.
+- **G:** Ball enters cup-capture radius at 1.2 m/s (above threshold by 30%) → ball physically falls into cup interior without intersecting walls.
+- **H:** Ball enters at 1.55 m/s (just above 1.5 m/s threshold) → optional lip-out test; ball rattles for >300 ms before settling (only if lip-ring sub-feature included).
+
+**DoD:** Stencil-mask hole renders on both target platforms; ball falls into cup geometry; no perf regression; `RealCupDetector` capture logic unchanged. Test gate: **baseline + 4 PASS (E–H), 0 IGNORED.**
+
+---
+
 ## Out of scope (do not creep)
 
 - **Daily pin rotation** — Loop v2+ feature; this spec ships canonical-default-pin only.
@@ -343,8 +431,11 @@ Hole scene loads
 | 6 — Physics integration | FULL PIPELINE | ½ day |
 | 7 — Predictor redesign | FULL PIPELINE | ½ day |
 | 8 — Pin wiring | SURGICAL | 3-4h |
+| 9a — Cup capture FX (minimum) | FULL PIPELINE | ½ day |
+| 9b — Real geometric cup (optional polish) | FULL PIPELINE | 1-1½ days |
 
-**Total pipeline work:** ~3.5 days FULL PIPELINE + ½ day Architect + 3-4h SURGICAL.
+**Total pipeline work (without 9b):** ~4 days FULL PIPELINE + ½ day Architect + 3-4h SURGICAL.
+**Total pipeline work (with 9b):** ~5½ days FULL PIPELINE + ½ day Architect + 3-4h SURGICAL.
 **Total Cesar manual work:** ~1.5 days (mostly Phase 4 tracing).
 **Calendar:** ~1.5 weeks if interleaved with Loop v1 work; ~5 working days if focused.
 
