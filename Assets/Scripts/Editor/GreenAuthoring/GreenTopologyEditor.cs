@@ -945,6 +945,13 @@ namespace Golfin.Editor.GreenAuthoring
 
             // Draw polygon outline using DrawAAPolyLine (3px thick) so it is distinguishable
             // from the cell shading at any zoom level.
+            //
+            // Coordinate convention: inside GUI.BeginClip(_greenViewRect), Handles.BeginGUI()
+            // INHERITS the clip translation — drawing at clip-local (s.x, s.y) lands at the
+            // same screen position as cells (which use clip-local via EditorGUI.DrawRect) and
+            // pin markers (same). Earlier we added `+ _greenViewRect.x/y` to these Handles
+            // points, which produced a double-offset of the polygon outline by exactly the
+            // sidebar width / top-bar height. See diagnostic in green_authoring_polygon_cell_render_offset.
             if (_greenPolygon != null && _greenPolygon.Count >= 2)
             {
                 Handles.BeginGUI();
@@ -953,7 +960,7 @@ namespace Golfin.Editor.GreenAuthoring
                 for (int vi = 0; vi < _greenPolygon.Count; vi++)
                 {
                     Vector2 s = WorldToView(_greenPolygon[vi], viewCenter);
-                    pts[vi] = new Vector3(s.x + _greenViewRect.x, s.y + _greenViewRect.y, 0);
+                    pts[vi] = new Vector3(s.x, s.y, 0);
                 }
                 // Close the polygon.
                 pts[_greenPolygon.Count] = pts[0];
@@ -1006,22 +1013,25 @@ namespace Golfin.Editor.GreenAuthoring
             Vector2 screenDir = new Vector2(dir.x, -dir.y);
             Vector2 end = center + screenDir * arrowLen;
 
+            // Inside GUI.BeginClip(_greenViewRect) — Handles.BeginGUI inherits the clip
+            // translation, so we draw in clip-local coords (no `+ _greenViewRect.x/y`).
+            // Same convention as the polygon outline (matches cells & pin markers).
             Handles.BeginGUI();
             // iter-4 Fix 4: gate-painted cells use orange arrows; gradient cells use yellow.
             Handles.color = isGatePainted
                 ? new Color(1f, 0.5f, 0.05f, 1.0f)   // bright orange
                 : new Color(1f, 0.85f, 0.1f, 0.9f);   // yellow
             Handles.DrawLine(
-                new Vector3(center.x + _greenViewRect.x, center.y + _greenViewRect.y),
-                new Vector3(end.x    + _greenViewRect.x, end.y    + _greenViewRect.y));
+                new Vector3(center.x, center.y),
+                new Vector3(end.x,    end.y));
 
             // Arrowhead.
             Vector2 perpScreen = new Vector2(-screenDir.y, screenDir.x) * (arrowLen * 0.25f);
-            Vector3 tipV  = new Vector3(end.x    + _greenViewRect.x, end.y    + _greenViewRect.y);
-            Vector3 baseL = new Vector3(end.x - screenDir.x * arrowLen * 0.25f + perpScreen.x + _greenViewRect.x,
-                                         end.y - screenDir.y * arrowLen * 0.25f + perpScreen.y + _greenViewRect.y);
-            Vector3 baseR = new Vector3(end.x - screenDir.x * arrowLen * 0.25f - perpScreen.x + _greenViewRect.x,
-                                         end.y - screenDir.y * arrowLen * 0.25f - perpScreen.y + _greenViewRect.y);
+            Vector3 tipV  = new Vector3(end.x, end.y);
+            Vector3 baseL = new Vector3(end.x - screenDir.x * arrowLen * 0.25f + perpScreen.x,
+                                         end.y - screenDir.y * arrowLen * 0.25f + perpScreen.y);
+            Vector3 baseR = new Vector3(end.x - screenDir.x * arrowLen * 0.25f - perpScreen.x,
+                                         end.y - screenDir.y * arrowLen * 0.25f - perpScreen.y);
             Handles.DrawLine(tipV, baseL);
             Handles.DrawLine(tipV, baseR);
             Handles.EndGUI();
@@ -1030,6 +1040,7 @@ namespace Golfin.Editor.GreenAuthoring
         private void DrawGridLines(Vector2 viewCenter)
         {
             if (_slopeGrid == null) return;
+            // Inside GUI.BeginClip(_greenViewRect) — clip-local coords; no `+ _greenViewRect.x/y`.
             Handles.BeginGUI();
             Handles.color = new Color(0.3f, 0.4f, 0.3f, 0.3f);
 
@@ -1039,8 +1050,8 @@ namespace Golfin.Editor.GreenAuthoring
                 Vector2 top = WorldToView(new Vector2(wx, _boundsMin.y), viewCenter);
                 Vector2 bot = WorldToView(new Vector2(wx, _boundsMax.y), viewCenter);
                 Handles.DrawLine(
-                    new Vector3(top.x + _greenViewRect.x, top.y + _greenViewRect.y),
-                    new Vector3(bot.x + _greenViewRect.x, bot.y + _greenViewRect.y));
+                    new Vector3(top.x, top.y),
+                    new Vector3(bot.x, bot.y));
             }
             for (int cz = 0; cz <= _gridHeight; cz++)
             {
@@ -1048,8 +1059,8 @@ namespace Golfin.Editor.GreenAuthoring
                 Vector2 left  = WorldToView(new Vector2(_boundsMin.x, wz), viewCenter);
                 Vector2 right = WorldToView(new Vector2(_boundsMax.x, wz), viewCenter);
                 Handles.DrawLine(
-                    new Vector3(left.x  + _greenViewRect.x, left.y  + _greenViewRect.y),
-                    new Vector3(right.x + _greenViewRect.x, right.y + _greenViewRect.y));
+                    new Vector3(left.x,  left.y),
+                    new Vector3(right.x, right.y));
             }
             Handles.EndGUI();
         }
