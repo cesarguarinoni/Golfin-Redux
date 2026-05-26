@@ -775,6 +775,10 @@ namespace Golfin.Physics.Viewer
                 Debug.LogWarning("[PhysicsLab] FireViaShotController: _shotController is null — falling back to FireInternal with default preset.");
                 return;
             }
+            // Push current SpinContext value to ShotController before firing.
+            // (Golfin.Gameplay.Input cannot reference Golfin.Gameplay.UI directly — circular dep —
+            // so PhysicsLabController, which refs both, bridges the two.)
+            _shotController.PendingSpinInput = Golfin.Gameplay.UI.HUD.SpinContext.Spin;
             // FireDebugShot drives ShotController through the full production path:
             // Idle → Flicking → Resolving → OnShotResolved → HandleShotResolved → SM.
             // ShotConeView subscribes to OnStateChanged, so it sees Resolving and hides UI.
@@ -1069,6 +1073,8 @@ namespace Golfin.Physics.Viewer
                     if (cam != null) ApplyCameraYaw(cam);
 
                     _shotController?.CompleteShot();
+                    // spin_and_shot_shape_wiring: reset player spin selection for next shot.
+                    Golfin.Gameplay.UI.HUD.SpinContext.Reset();
                     _ballSM.ReArm();
                     break;
                 }
@@ -1088,6 +1094,8 @@ namespace Golfin.Physics.Viewer
                     // _shotController.CompleteShot() internally — no need to call it again.
                     RepositionBallWithLookDir(dropPos, preferredSurfaceTypeValue: null, lookDir: lookDir);
 
+                    // spin_and_shot_shape_wiring: reset player spin selection for next shot.
+                    Golfin.Gameplay.UI.HUD.SpinContext.Reset();
                     _ballSM.ReArm();
                     break;
                 }
@@ -1105,6 +1113,8 @@ namespace Golfin.Physics.Viewer
         internal void RearmAfterHoleComplete()
         {
             _shotController?.CompleteShot();
+            // spin_and_shot_shape_wiring: reset player spin selection for next hole's first shot.
+            Golfin.Gameplay.UI.HUD.SpinContext.Reset();
             _ballSM?.ReArm();
         }
 
