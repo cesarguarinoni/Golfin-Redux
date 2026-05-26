@@ -1,0 +1,2 @@
+Frame extract marker: step4_post_fill at 2026-05-26_11-46-36
+Extract stills from Docs/Specs/Active/green_authoring_editor_tool/videos/green_authoring_visual_gate.mp4 at the relevant timecode.

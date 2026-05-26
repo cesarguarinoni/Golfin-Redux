@@ -332,6 +332,10 @@ Implementer picks; either is fine. **Hard rule for both paths:** the recorder mu
 
 None at SPEC writing. If pre-flight discovers an asmdef-direction blocker (Lesson W class), implementer files IMPLEMENTER_BLOCKED with the discovered constraint and proposed workaround before changing scope.
 
+## Amendments
+
+Amendment 2026-05-26: File 1 reference list extended to 4 entries — added `Golfin.Physics.Math` for `fp` type used by `HeightmapData.SampleHeight`. Architect-reviewer confirmed dependency is real and points downward.
+
 ## Reference paths
 
 - This SPEC: `Docs/Specs/Active/green_authoring_editor_tool/SPEC.md`
