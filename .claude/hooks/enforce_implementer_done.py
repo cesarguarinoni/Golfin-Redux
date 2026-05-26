@@ -46,11 +46,30 @@ Additional rule for ALL gating statuses:
    that implementer save the Figma frame on activation. If the spec's Figma
    reference is ambiguous/broken, implementer must escalate via STATUS =
    IMPLEMENTER_BLOCKED — NOT proceed without it.
+
+Rules 10–12 are the green_authoring_editor_tool scar-tissue rules
+(Cesar-approved 2026-05-26). They enforce baseline attribution and synthetic-
+capture detection that the iter-2/iter-3 of that task only caught by hand:
+
+10. **Pre-flight baseline block in HEARTBEAT.log.** Every iter-N kickoff must
+    append a baseline block. Missing/malformed block blocks the STATUS write.
+    See `feedback_preflight_baseline_attribution.md` in user memory.
+11. **"Pre-existing" claims require baseline citation.** Any IMPLEMENTER_REPORT
+    line mentioning "pre-existing", "from previous session", "predates this",
+    "not introduced by", or "was already in" must have a backticked / fenced
+    citation within ±5 lines that quotes a path from the baseline DIRTY block.
+12. **Synthetic flat-color frame detection.** Every PNG/JPG referenced in the
+    report under `screenshots/` is variance-sampled (Pillow, falling back to a
+    manual stdev pass). Variance < 5.0 on a ≥10000-pixel sample = synthetic
+    fabrication; blocks the STATUS write with file path + variance.
 """
 import json
+import math
 import re
+import struct
 import sys
 import time
+import zlib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -73,6 +92,25 @@ GATING_STATUSES = {"READY_FOR_SELF_REVIEW", "READY_FOR_ARCHITECT_REVIEW"}
 # (might step away for hours mid-task), tight enough to catch "reused last
 # week's screenshot" cheats.
 MAX_SCREENSHOT_AGE_HOURS = 24
+
+# Rule 11 — phrases that trigger the "show your baseline" requirement. Each
+# occurrence in IMPLEMENTER_REPORT.md must be accompanied by a citation within
+# ±5 lines that quotes a path from the iter-N baseline DIRTY block. The first
+# tuple element is the human-readable label used in error messages; the second
+# is the compiled regex that matches the phrase variants we treat as triggers.
+PREEXISTING_TRIGGER_PATTERNS: list[tuple[str, re.Pattern]] = [
+    ("pre-existing", re.compile(r"pre[-\s]?existing", re.IGNORECASE)),
+    ("from (a) previous session", re.compile(r"from\s+(?:a\s+)?previous\s+session", re.IGNORECASE)),
+    ("not introduced by", re.compile(r"not\s+introduced\s+by", re.IGNORECASE)),
+    ("predates this", re.compile(r"predates?\s+this", re.IGNORECASE)),
+    ("was already in", re.compile(r"was\s+already\s+in", re.IGNORECASE)),
+]
+
+# Rule 12 — variance threshold. Variance < this on a sample patch ≥ MIN_SAMPLE_PIXELS
+# means the frame is effectively a single colour and almost certainly fabricated
+# (iter-2 of green_authoring shipped a uniform-grey PNG; this would have caught it).
+VARIANCE_THRESHOLD = 5.0
+MIN_SAMPLE_PIXELS = 10_000
 
 
 def read_payload() -> dict:
@@ -197,33 +235,48 @@ def validate_report(report_path: Path) -> list[str]:
             )
 
     # Rule 5: Screenshot path must exist.
-    # Look for "screenshots/<file>" path under "## Screenshot" section.
-    ss_match = re.search(
-        r"##\s+Screenshot.*?Captured at:\*\*\s*`([^`]+)`",
-        content,
-        re.IGNORECASE | re.DOTALL,
-    )
+    # Find the "## Screenshot" (or "## Screenshots") section and pull the FIRST
+    # backticked `screenshots/X.png` path out of it. We used to require a
+    # "Captured at: `path`" prefix but iter-4 of green_authoring uses
+    # "Canonical frame for visual review: `path`" instead; the substantive rule
+    # is "section exists AND first path under it points to a real file."
     ss_path = None
-    if not ss_match:
+    section_m = re.search(
+        r"^##\s+Screenshots?\b.*$",
+        content,
+        re.MULTILINE,
+    )
+    if not section_m:
         errors.append(
-            "IMPLEMENTER_REPORT.md: 'Screenshot' section missing or 'Captured at: `path`' line not found."
+            "IMPLEMENTER_REPORT.md: '## Screenshot' (or 'Screenshots') section "
+            "missing. Add a section that names at least one canonical capture "
+            "as `screenshots/<file>.png`."
         )
     else:
-        ss_rel = ss_match.group(1).strip()
-        # Resolve relative to the task folder.
-        candidate = (report_path.parent / ss_rel).resolve()
-        if candidate.exists():
-            ss_path = candidate
+        section_text = content[section_m.end():]
+        next_h = re.search(r"^##\s+\S", section_text, re.MULTILINE)
+        section_text = section_text[: next_h.start()] if next_h else section_text
+        ss_in_section = re.search(r"`(screenshots/[^`]+)`", section_text)
+        if not ss_in_section:
+            errors.append(
+                "IMPLEMENTER_REPORT.md: '## Screenshot' section contains no "
+                "backticked `screenshots/<file>` path. Name the canonical frame."
+            )
         else:
-            # Also try relative to repo root (in case path was given that way).
-            alt = (REPO_ROOT / ss_rel).resolve()
-            if alt.exists():
-                ss_path = alt
+            ss_rel = ss_in_section.group(1).strip()
+            candidate = (report_path.parent / ss_rel).resolve()
+            if candidate.exists():
+                ss_path = candidate
             else:
-                errors.append(
-                    f"Screenshot path '{ss_rel}' does not point to an actual file. "
-                    f"Run python .claude/hooks/capture_screenshot.py <task> first."
-                )
+                alt = (REPO_ROOT / ss_rel).resolve()
+                if alt.exists():
+                    ss_path = alt
+                else:
+                    errors.append(
+                        f"Screenshot path '{ss_rel}' does not point to an "
+                        f"actual file. Run python "
+                        f".claude/hooks/capture_screenshot.py <task> first."
+                    )
 
     # Rule 6: screenshot must be recent.
     if ss_path is not None:
@@ -271,6 +324,9 @@ def report_has_test_evidence(report_path: Path) -> bool:
       - 'TotalTests: 211' AND 'PassedTests: 211'  (raw JSON shape)
       - '211/211 PASS' or '211 / 211 pass'  (compact summary)
       - '211 tests pass' / '0 failed' / '0 skipped' (sentence form is OK as long as at least two of these appear)
+      - '362 total / 359 PASS / 0 FAIL / 3 SKIP' (iter-4 green_authoring idiom)
+      - '362 total (359 pass, 0 fail, 3 skip)' (parenthesised variant)
+      - '362 total' + '359 pass' (named counts without colon)
     """
     if not report_path.exists():
         return False
@@ -280,9 +336,21 @@ def report_has_test_evidence(report_path: Path) -> bool:
     if re.search(r"\b\d+\s*/\s*\d+\s*(?:tests?\s*)?(?:PASS|pass|passed)\b", content):
         return True
 
+    # Iter-4 idiom: "N total / N PASS / N FAIL / N SKIP" or
+    # "N total (N pass, N fail, N skip)". One regex covers both shapes.
+    if re.search(
+        r"\b\d+\s+total\s*(?:[/,]|\()\s*\d+\s+(?:PASS|pass|passed)\b",
+        content,
+        re.IGNORECASE,
+    ):
+        return True
+
     # Named counts: must have at least Total + Passed (or TotalTests + PassedTests).
-    has_total = bool(re.search(r"\bTotal(?:Tests)?\s*[:=]\s*\d+", content, re.IGNORECASE))
-    has_passed = bool(re.search(r"\bPassed(?:Tests)?\s*[:=]\s*\d+", content, re.IGNORECASE))
+    # Accept both 'Total: N' / 'Total = N' and the colon-less 'N total' / 'N passed'.
+    has_total = bool(re.search(r"\bTotal(?:Tests)?\s*[:=]\s*\d+", content, re.IGNORECASE)) \
+        or bool(re.search(r"\b\d+\s+total\b", content, re.IGNORECASE))
+    has_passed = bool(re.search(r"\bPassed(?:Tests)?\s*[:=]\s*\d+", content, re.IGNORECASE)) \
+        or bool(re.search(r"\b\d+\s+(?:PASS|pass|passed)\b", content))
     if has_total and has_passed:
         return True
 
@@ -342,6 +410,475 @@ def figma_reference_present(task_dir: Path) -> bool:
     return (task_dir / "screenshots" / "figma-reference.png").exists()
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Rule 10–12 helpers: baseline attribution + synthetic-frame detection.
+# Scar-tissue from green_authoring_editor_tool (2026-05-26). See module
+# docstring and feedback_preflight_baseline_attribution.md (user memory).
+# ─────────────────────────────────────────────────────────────────────────────
+
+def extract_iteration_number(report_text: str) -> int | None:
+    """Derive the current iteration number from IMPLEMENTER_REPORT.md content.
+
+    Looks for these patterns (case-insensitive), in order of specificity:
+      - `**Iteration:** N` (or `**Iteration**: N`)
+      - `Iteration: N`
+      - `iter-N` near the top of the document (first 40 lines)
+
+    Returns None if no iteration mention found. Caller should default to
+    requiring ANY valid baseline block (latest one wins) in that case so
+    legacy reports without an iteration marker still get baseline coverage.
+    """
+    # Pattern 1 + 2: explicit Iteration: N (with or without bold).
+    m = re.search(
+        r"\*{0,2}\s*Iteration\s*\*{0,2}\s*:?\s*\*{0,2}\s*(\d+)",
+        report_text,
+        re.IGNORECASE,
+    )
+    if m:
+        return int(m.group(1))
+    # Pattern 3: iter-N near the top.
+    head = "\n".join(report_text.splitlines()[:40])
+    m = re.search(r"\biter[-_]?(\d+)\b", head, re.IGNORECASE)
+    if m:
+        return int(m.group(1))
+    return None
+
+
+# Baseline block markers — flexible enough to allow the surrounding whitespace
+# variants Cesar's heartbeat scripts have produced, but strict on structure.
+_BASELINE_HEADER_RE = re.compile(
+    r"^={3,}\s*iter-(\d+)\s+kickoff\s+baseline\s+([^\s=][^\n]*?)\s*={3,}\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+_BASELINE_FOOTER_RE = re.compile(r"^={3,}\s*END\s+baseline\s*={3,}\s*$", re.IGNORECASE | re.MULTILINE)
+
+
+def parse_baseline_blocks(heartbeat_text: str) -> list[dict]:
+    """Parse every valid baseline block in HEARTBEAT.log.
+
+    Returns a list (in source order) of dicts with keys:
+      - 'iter' (int)
+      - 'timestamp' (str, freeform — usually ISO-ish)
+      - 'head' (str — 40-char SHA, lowercased)
+      - 'dirty_lines' (list[str] — raw lines as they appeared)
+      - 'dirty_paths' (set[str] — file paths only, leading status code stripped)
+      - 'start' (int char offset of the header)
+      - 'end' (int char offset just past the footer)
+
+    Malformed blocks (missing HEAD, missing DIRTY:, missing END marker) are
+    skipped, NOT raised — the validator wraps this and reports the absence as
+    a single human-readable error.
+    """
+    blocks = []
+    for header_m in _BASELINE_HEADER_RE.finditer(heartbeat_text):
+        iter_n = int(header_m.group(1))
+        timestamp = header_m.group(2).strip()
+        # Find the next END marker after this header.
+        footer_m = _BASELINE_FOOTER_RE.search(heartbeat_text, header_m.end())
+        if not footer_m:
+            continue
+        body = heartbeat_text[header_m.end():footer_m.start()]
+        # HEAD line.
+        head_m = re.search(r"^\s*HEAD:\s*([0-9a-fA-F]{7,40})\s*$", body, re.MULTILINE)
+        if not head_m:
+            continue
+        head_sha = head_m.group(1).lower()
+        # DIRTY: marker.
+        dirty_m = re.search(r"^\s*DIRTY:\s*$", body, re.MULTILINE)
+        if not dirty_m:
+            continue
+        dirty_body = body[dirty_m.end():]
+        dirty_lines: list[str] = []
+        dirty_paths: set[str] = set()
+        for raw in dirty_body.splitlines():
+            stripped = raw.rstrip()
+            if not stripped.strip():
+                continue
+            # Skip nested markers if any (shouldn't be there).
+            if re.match(r"^={3,}", stripped.strip()):
+                break
+            dirty_lines.append(stripped)
+            # Strip the porcelain status code (1-2 chars + space) when present.
+            # Accept ' M Assets/...', '?? Assets/...', 'M  Assets/...', 'A  Assets/...', etc.
+            path_m = re.match(
+                r"^\s*(?:[?!MADRCU ]{1,2}\s+|[?!MADRCU]{2}\s+)?(.+?)\s*$",
+                stripped,
+            )
+            if path_m and path_m.group(1):
+                dirty_paths.add(path_m.group(1).strip())
+        blocks.append({
+            "iter": iter_n,
+            "timestamp": timestamp,
+            "head": head_sha,
+            "dirty_lines": dirty_lines,
+            "dirty_paths": dirty_paths,
+            "start": header_m.start(),
+            "end": footer_m.end(),
+        })
+    return blocks
+
+
+def validate_baseline(
+    heartbeat_path: Path,
+    expected_iter: int | None,
+) -> tuple[list[str], dict | None]:
+    """Rule 10: ensure HEARTBEAT.log contains a baseline block for the iter.
+
+    Returns (errors, baseline_dict). When errors is non-empty, baseline_dict
+    may still be populated with the latest-found block for downstream rules
+    to operate on best-effort (Rule 11 needs the DIRTY paths).
+    """
+    errors: list[str] = []
+    if not heartbeat_path.exists():
+        errors.append(
+            "HEARTBEAT.log not found. Every iteration must append a kickoff "
+            "baseline block before any STATUS=READY_FOR_*_REVIEW write. "
+            "See feedback_preflight_baseline_attribution.md (user memory)."
+        )
+        return errors, None
+
+    text = heartbeat_path.read_text(encoding="utf-8", errors="ignore")
+    blocks = parse_baseline_blocks(text)
+    if not blocks:
+        errors.append(
+            "HEARTBEAT.log contains no valid '=== iter-N kickoff baseline ... ==='\n"
+            "    block. Required structure:\n"
+            "      === iter-N kickoff baseline <ISO timestamp> ===\n"
+            "      HEAD: <40-char SHA>\n"
+            "      DIRTY:\n"
+            "      <git status --porcelain lines, zero or more>\n"
+            "      === END baseline ===\n"
+            "    See feedback_preflight_baseline_attribution.md (user memory)."
+        )
+        return errors, None
+
+    if expected_iter is not None:
+        match = next((b for b in blocks if b["iter"] == expected_iter), None)
+        if match is None:
+            iters_found = ", ".join(f"iter-{b['iter']}" for b in blocks)
+            errors.append(
+                f"HEARTBEAT.log has baseline blocks for [{iters_found}] but no "
+                f"block for iter-{expected_iter}. IMPLEMENTER_REPORT.md claims "
+                f"iteration {expected_iter}; the matching kickoff baseline "
+                "must be appended to HEARTBEAT.log before STATUS can move to "
+                "review. See feedback_preflight_baseline_attribution.md."
+            )
+            # Fall back to the latest block so Rule 11 can still cite something.
+            return errors, blocks[-1]
+        return errors, match
+
+    # No iteration in report — accept latest block as the active baseline.
+    return errors, blocks[-1]
+
+
+def _find_code_spans(text: str) -> list[tuple[int, int, str]]:
+    """Return (start_line, end_line, content) for every code span in `text`.
+
+    Captures BOTH inline backtick spans (`like-this`) and fenced ``` blocks.
+    Line numbers are 0-indexed against `text.splitlines(keepends=False)`.
+
+    Used by Rule 11 to look for baseline citations within ±5 lines of a
+    trigger phrase. Inline backticks are accepted as "citations" because
+    iter-4 of green_authoring uses that form in its table-cell narrative;
+    the user explicitly wants iter-4 to pass.
+    """
+    spans: list[tuple[int, int, str]] = []
+    lines = text.splitlines()
+
+    # 1) Fenced code blocks.
+    in_fence = False
+    fence_start_line = -1
+    fence_buf: list[str] = []
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith("```"):
+            if not in_fence:
+                in_fence = True
+                fence_start_line = i
+                fence_buf = []
+            else:
+                # Close the fence; emit one span spanning all body lines.
+                spans.append((fence_start_line, i, "\n".join(fence_buf)))
+                in_fence = False
+                fence_buf = []
+            continue
+        if in_fence:
+            fence_buf.append(line)
+    # Unclosed fence — treat the rest of the file as a span anyway.
+    if in_fence:
+        spans.append((fence_start_line, len(lines) - 1, "\n".join(fence_buf)))
+
+    # 2) Inline backticks. Find them line-by-line but skip lines that fall
+    # inside a fenced block (already covered).
+    fenced_lines: set[int] = set()
+    for s, e, _ in spans:
+        for j in range(s, e + 1):
+            fenced_lines.add(j)
+    inline_re = re.compile(r"`([^`\n]+)`")
+    for i, line in enumerate(lines):
+        if i in fenced_lines:
+            continue
+        for m in inline_re.finditer(line):
+            spans.append((i, i, m.group(1)))
+
+    return spans
+
+
+def validate_preexisting_claims(report_text: str, dirty_paths: set[str]) -> list[str]:
+    """Rule 11: every 'pre-existing'-style claim needs a sourced citation.
+
+    For each trigger phrase occurrence, look at lines [N-5, N+5] for a code
+    span (fenced or inline backticks) that contains at least one DIRTY path.
+    No citation found = the claim is unsourced and FAILs the hook.
+    """
+    errors: list[str] = []
+    if not dirty_paths:
+        # Without a baseline (Rule 10 already errored), we can't enforce
+        # citations meaningfully. Bail — Rule 10's error covers this case.
+        return errors
+
+    lines = report_text.splitlines()
+    code_spans = _find_code_spans(report_text)
+
+    # Pre-compute, for each line, the union of code-span text in window [N-5, N+5].
+    # Approach: index code spans by line range, then per trigger line collect
+    # all spans that touch the window.
+    for trigger_label, regex in PREEXISTING_TRIGGER_PATTERNS:
+        for line_idx, line in enumerate(lines):
+            if not regex.search(line):
+                continue
+            # Collect all code-span text whose [start, end] intersects [line-5, line+5].
+            window_lo = line_idx - 5
+            window_hi = line_idx + 5
+            joined_spans: list[str] = []
+            for s, e, content in code_spans:
+                if e < window_lo or s > window_hi:
+                    continue
+                joined_spans.append(content)
+            joined_text = "\n".join(joined_spans)
+
+            cited = False
+            for path in dirty_paths:
+                if path and path in joined_text:
+                    cited = True
+                    break
+
+            if not cited:
+                # Extract a short excerpt of the offending phrase for the error.
+                excerpt = line.strip()
+                if len(excerpt) > 120:
+                    excerpt = excerpt[:117] + "..."
+                errors.append(
+                    f"IMPLEMENTER_REPORT.md line {line_idx + 1}: \"{trigger_label}\" "
+                    f"claim is UNSOURCED. Within ±5 lines, no backticked or fenced "
+                    f"code span contains a path from the baseline DIRTY block. "
+                    f"Offending line: \"{excerpt}\". Quote the matching baseline "
+                    f"line (e.g. ` M path/to/file`) inside backticks within "
+                    f"5 lines, OR remove the 'pre-existing' attribution. "
+                    f"See feedback_preflight_baseline_attribution.md."
+                )
+    return errors
+
+
+def _extract_image_paths(report_text: str) -> set[str]:
+    """Find every PNG/JPG path mentioned in the report under screenshots/.
+
+    Matches both relative-style (`screenshots/foo.png`) and
+    task-rooted-style (`Docs/Specs/Active/<task>/screenshots/foo.png`).
+    Returns a set of path strings (de-duplicated).
+    """
+    pattern = re.compile(
+        r"(?:Docs/Specs/(?:Active|Completed)/[\w.\-]+/)?screenshots/[\w./\-]+\.(?:png|jpg|jpeg)",
+        re.IGNORECASE,
+    )
+    return {m.group(0) for m in pattern.finditer(report_text)}
+
+
+def _resolve_image(report_path: Path, ss_rel: str) -> Path | None:
+    """Resolve a screenshot path mentioned in the report to an absolute file."""
+    candidate = (report_path.parent / ss_rel).resolve()
+    if candidate.exists():
+        return candidate
+    alt = (REPO_ROOT / ss_rel).resolve()
+    if alt.exists():
+        return alt
+    return None
+
+
+def _variance_pillow(img_path: Path) -> float | None:
+    """Compute variance using Pillow. Returns None if Pillow unavailable.
+
+    Samples a 3x3 grid of patches across the image and returns the MAX
+    variance across them. The grid sampling guards against the case where
+    the geometric centre happens to land on a uniform region (e.g. the
+    empty editor canvas between sidebars in iter-4's step3 polygon
+    capture — a real frame whose dead-centre 100x100 patch is variance 0
+    but whose off-centre regions are clearly non-synthetic).
+    Each patch is sized to satisfy MIN_SAMPLE_PIXELS individually.
+    """
+    try:
+        from PIL import Image, ImageStat  # type: ignore
+    except Exception:
+        return None
+    try:
+        img = Image.open(img_path)
+        img.load()
+    except Exception:
+        return None
+    w, h = img.size
+    side = max(int(math.sqrt(MIN_SAMPLE_PIXELS)), 100)
+    if w < side or h < side:
+        # Image is tiny — fall back to a single full-image sample.
+        gs = img.convert("L")
+        stat = ImageStat.Stat(gs)
+        return float(stat.stddev[0]) ** 2
+
+    half = side // 2
+    # Anchor points: 9 positions on a 3x3 grid (¼, ½, ¾ of each axis).
+    xs = [w // 4, w // 2, 3 * w // 4]
+    ys = [h // 4, h // 2, 3 * h // 4]
+    max_var = 0.0
+    for cy in ys:
+        for cx in xs:
+            left = max(0, min(w - side, cx - half))
+            top = max(0, min(h - side, cy - half))
+            patch = img.crop((left, top, left + side, top + side))
+            gs = patch.convert("L")
+            stat = ImageStat.Stat(gs)
+            var = float(stat.stddev[0]) ** 2
+            if var > max_var:
+                max_var = var
+    return max_var
+
+
+def _variance_fallback(img_path: Path) -> float | None:
+    """Manual stdev fallback when Pillow isn't installed.
+
+    Decodes uncompressed PNG IDAT chunks well enough to sample greyscale
+    variance. For JPEGs (or any image we can't decode here), returns None
+    and the validator treats that as "couldn't sample, skip".
+    """
+    try:
+        data = img_path.read_bytes()
+    except Exception:
+        return None
+    # Only attempt PNG fallback (JPEG decoding without a library is intractable).
+    if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return None
+    try:
+        # PNG: skip 8-byte signature, read chunks.
+        i = 8
+        width = height = 0
+        bit_depth = 0
+        color_type = 0
+        idat = bytearray()
+        while i < len(data):
+            chunk_len = struct.unpack(">I", data[i:i + 4])[0]
+            chunk_type = data[i + 4:i + 8]
+            chunk_data = data[i + 8:i + 8 + chunk_len]
+            if chunk_type == b"IHDR":
+                width = struct.unpack(">I", chunk_data[0:4])[0]
+                height = struct.unpack(">I", chunk_data[4:8])[0]
+                bit_depth = chunk_data[8]
+                color_type = chunk_data[9]
+            elif chunk_type == b"IDAT":
+                idat.extend(chunk_data)
+            elif chunk_type == b"IEND":
+                break
+            i += 12 + chunk_len  # 4 len + 4 type + data + 4 CRC
+        if not idat or width == 0 or height == 0 or bit_depth != 8:
+            return None
+        # Channels per pixel for the supported color types.
+        # 0=grey,2=RGB,3=palette(unsupported here),4=greyA,6=RGBA
+        channels = {0: 1, 2: 3, 4: 2, 6: 4}.get(color_type)
+        if channels is None:
+            return None
+        raw = zlib.decompress(bytes(idat))
+        stride = width * channels + 1  # +1 for filter byte per scanline
+        if len(raw) < stride * height:
+            return None
+        # Reconstruct greyscale samples — for variance, we only need a rough
+        # luminance estimate, so we approximate by averaging the colour channels
+        # of each pixel. We ignore PNG filter types (treat filter-byte as 0
+        # everywhere) because we only need variance, not pixel fidelity. For
+        # filter type 0 ("None") this is exact; for other types it inflates
+        # variance, which is acceptable — we only block on VERY low variance
+        # so a noisier estimate just makes the check more conservative.
+        samples: list[int] = []
+        step = max(1, (width * height) // MIN_SAMPLE_PIXELS)
+        idx = 0
+        for row in range(height):
+            row_start = row * stride + 1
+            for col in range(width):
+                if idx % step != 0:
+                    idx += 1
+                    continue
+                idx += 1
+                px_off = row_start + col * channels
+                if channels == 1:
+                    samples.append(raw[px_off])
+                elif channels == 2:
+                    samples.append(raw[px_off])
+                else:
+                    r, g, b = raw[px_off], raw[px_off + 1], raw[px_off + 2]
+                    samples.append((r + g + b) // 3)
+                if len(samples) >= MIN_SAMPLE_PIXELS:
+                    break
+            if len(samples) >= MIN_SAMPLE_PIXELS:
+                break
+        if len(samples) < 100:
+            return None
+        mean = sum(samples) / len(samples)
+        var = sum((s - mean) ** 2 for s in samples) / len(samples)
+        return float(var)
+    except Exception:
+        return None
+
+
+def compute_image_variance(img_path: Path) -> float | None:
+    """Variance of a small grey-scale patch from the centre of the image.
+
+    Tries Pillow first; falls back to a manual PNG-decode path. Returns
+    None when neither route can read the file (e.g. JPEG with no Pillow).
+    The validator treats None as "skip, can't sample" — it does NOT block.
+    """
+    v = _variance_pillow(img_path)
+    if v is not None:
+        return v
+    return _variance_fallback(img_path)
+
+
+def validate_image_variances(report_path: Path) -> list[str]:
+    """Rule 12: variance-sample every screenshot/* PNG/JPG cited in the report."""
+    errors: list[str] = []
+    content = report_path.read_text(encoding="utf-8", errors="ignore")
+    for ss_rel in sorted(_extract_image_paths(content)):
+        resolved = _resolve_image(report_path, ss_rel)
+        if resolved is None:
+            # Rule 5 already flags missing screenshot paths; don't double-error.
+            continue
+        var = compute_image_variance(resolved)
+        if var is None:
+            # Couldn't sample — log nothing. The hook isn't a substitute for
+            # eyeballs; we only block on a positive synthetic signal.
+            continue
+        if var < VARIANCE_THRESHOLD:
+            errors.append(
+                f"Screenshot '{ss_rel}' has variance {var:.3f} "
+                f"(< {VARIANCE_THRESHOLD:.1f} on a {MIN_SAMPLE_PIXELS}-pixel "
+                f"sample) — almost certainly a synthetic flat-colour frame. "
+                f"Iter-2 of green_authoring_editor_tool shipped exactly this "
+                f"failure mode (a uniform-grey PNG faked as a real capture). "
+                f"Re-capture via CaptureCore / CaptureHelper and re-attach."
+            )
+    return errors
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Orchestrator.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 def main() -> int:
     payload = read_payload()
     target = get_target_path(payload)
@@ -356,6 +893,7 @@ def main() -> int:
     task_dir = target.parent
     report_path = task_dir / "IMPLEMENTER_REPORT.md"
     spec_path = task_dir / "SPEC.md"
+    heartbeat_path = task_dir / "HEARTBEAT.log"
 
     # Rules 1-6 apply to both gating statuses.
     errors = validate_report(report_path)
@@ -406,6 +944,24 @@ def main() -> int:
             "IMPLEMENTER_BLOCKED and surface to Cesar rather than guessing — "
             "see golfin-implementer.md Step 5a."
         )
+
+    # Rule 10: HEARTBEAT.log must carry a baseline block for the current iter.
+    # Rule 11 piggy-backs on the parsed DIRTY paths; Rule 12 is independent.
+    report_text = ""
+    if report_path.exists():
+        report_text = report_path.read_text(encoding="utf-8", errors="ignore")
+    iter_n = extract_iteration_number(report_text) if report_text else None
+    baseline_errors, baseline = validate_baseline(heartbeat_path, iter_n)
+    errors.extend(baseline_errors)
+
+    # Rule 11: pre-existing claims need baseline citations.
+    if report_text:
+        dirty_paths = baseline["dirty_paths"] if baseline else set()
+        errors.extend(validate_preexisting_claims(report_text, dirty_paths))
+
+    # Rule 12: variance check on every screenshot path in the report.
+    if report_path.exists():
+        errors.extend(validate_image_variances(report_path))
 
     if errors:
         print(
