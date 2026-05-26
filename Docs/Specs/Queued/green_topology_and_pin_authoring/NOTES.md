@@ -55,23 +55,42 @@ Three digital data sources explored:
 
 ---
 
-## Known green features (web research 2026-05-18)
+## Known green features (PDF-extracted 2026-05-26)
 
-Captured from Japanese golf review sites; consume during Phase 3 procedural + Phase 4 refinement.
+**Source:** `A4_ホール攻略冊子.pdf` (Lomond 2019 strategy booklet), one page per hole (PDF page N+1 = hole N).
 
-- **Hole 7** — 2段グリーン (2-tier green). Per JP course guide: *"2段グリーンになっている為、ピン位置と同じ面に乗せることがカギ"* — "Because it's a 2-tier green, getting on the same tier as the pin is the key." Author back tier ~0.5m higher than front; ridge perpendicular to approach axis. **Mark hole 7 as `sourceTag = "manual_refined_v1"` from Phase 3 onward.**
-- **Hole 14** — Downhill par 4, valley left, pond right. Hardest hole (HDCP 2). Green specifics not detailed in sources but downhill landing implies elevated tee, possibly elevated green with bunker hazards on miss.
-- **General design language** — Designer 川田太三 (Kawada Taizo). 1997 build. *"Becomes tighter as you approach the green"* — strategic green design with smaller targets and surrounding penalties.
-- **Course character** — *"起伏の少ないバランスのある"* — "balanced with limited undulation." So greens are NOT wildly contoured (e.g. not Pinehurst No. 2 turtle-back style); subtle but strategic.
-- **Grass** — Penn A1 / 007 bent grass mix. High-quality fast greens. Stimp likely 11+, consistent with our current `putt.csv` calibration.
-- **Single-green design** — Important. Many JP courses have two greens (alternating seasonally for maintenance); Lomond is one-green per hole, simplifying everything.
+Dimensions are **width × depth in meters**, read off the PDF's `GREEN攻略法` panel. Magnitude calibration per Phase 4 spec.
 
-**During Phase 4, do another sweep of:**
-- `https://shotnavi.jp/gcguide/cdata/cdata_806_0.htm` (Shot Navi's per-hole pages — may have written commentary)
-- `https://reserve.golfdigest.co.jp/golf-course/538502/` (GDO course detail page)
-- `https://booking.gora.golf.rakuten.co.jp/voice/detail/c_id/240078` (1,384 user reviews — gold mine for per-hole green descriptions)
+| Hole | W×H (m) | Feature | Strategic note (JP) | EN translation |
+|---|---|---|---|---|
+| 1 | 31×30 | Back→front + R→L slope | 右サイドからは見た目よりはやい | Fast from right (faster than it looks) |
+| 2 | 25×33 | Back→front, multi-arrow | 右サイドの奥からはやい | Fast from back-right |
+| 3 | small | **2-tier** (dashed ridge) | 2段グリーンです。同じ段にのせましょう | 2-tier; aim same tier as pin |
+| 4 | 18×33 | Slope to front | 右サイドからはやい | Fast from right |
+| 5 | 21×37 | **Minimal slope** + small ridge | 傾斜の少ないグリーン | Little slope — attack with confidence |
+| 6 | 26×30 | Slope to front-left | 左サイドからは見た目よりはやい | Faster than it looks from left |
+| 7 | 43×29 | **L/R 2-tier** (diagonal ridge) | 左右の2段グリーン | L/R 2-tier; aim same tier |
+| 8 | 22×32 | Back→front | 奥からは見た目よりはやい | Faster than it looks from back |
+| 9 | 25×38 | **Heavy mounding, multi-direction** | 傾斜やマウンドが多い | Lots of slope and mounding |
+| 10 | 38×25 | Front→back gradient on left | 左サイドは手前から奥にはやい | Left side: fast front→back |
+| 11 | 22×36 | **Upper tier w/ mounding** | 上の段はマウンドがある | Upper tier has mounding — read carefully |
+| 12 | 29×37 | Tier-like ridge | 左上からはやい | Fast from upper-left |
+| 13 | 30×40 | Tier in upper-left | 左上からは見た目よりはやい | Faster than looks from upper-left |
+| 14 | 33×30 | Back→front + partial back tier | 奥からはやい | Fast from back |
+| 15 | 31×37 | Slope down/left | 左サイドからは見た目よりはやい | Faster than looks from left |
+| 16 | 24×33 | Slope to front | 奥からはやい | Fast from back |
+| 17 | 25×37 | Slope + dashed line | 左奥からはやい | Fast from back-left |
+| 18 | 28×40 | **Vertical 2-tier** (horizontal ridge) | 縦長の2段グリーン | Vertical 2-tier; aim same tier |
 
-Add per-hole findings to this NOTES.md as bullet points before Phase 4 tracing.
+**Summary statistics:**
+- Greens range from ~16 m to 43 m wide, 25 m to 40 m deep
+- 4 confirmed 2-tier: 3, 7, 11, 18
+- 5 likely-partial tier (dashed line in PDF without explicit "2段" call-out): 5, 12, 13, 14, 17
+- 1 minimal-slope: 5
+- 1 heavily mounded: 9 (matches Shot Navi heatmap outlier)
+- Most-common strategic note pattern: "見た目よりはやい" (faster than it looks) — implies subtle but consistent slope, calibrated 1.5-2%
+
+**Dimensions caveat:** A few dimension labels were clipped in the grid extraction; verify each by zooming the PDF panel directly during Phase 4 tracing.
 
 ---
 

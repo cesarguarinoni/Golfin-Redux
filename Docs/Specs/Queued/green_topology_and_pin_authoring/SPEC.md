@@ -20,6 +20,9 @@ Replace flat greens with real Lomond topology by (1) building an editor tool to 
 - **L6 — Captures already in hand (2026-05-18):** 36 PNGs in `screenshots/` — 18 × `_strategy` (distance/yardage view) + 18 × `_heatmap` (topographic view, rainbow icon active). Heatmap is the slope-authoring source; Strategy is the green-shape + pin-position reference.
 - **L7 — Shot Navi green-view distances are METERS, not yards.** Course-level yardage (back/regular/front tees, scorecard) is yards; green-zoom distances in Shot Navi (perimeter `0/5/10/15/20`, inline `13`, `11`, `16` numbers) are meters. Cesar locked: course = yards, green = meters. Matches `cellSize: 0.5` (m) in the data format below — 1 Shot Navi grid cell = 1 m, so cellSize 0.5 = 2 cells per visible grid square.
 - **L8 — Pin position: derived from Shot Navi flag location.** The white flag visible in each Shot Navi capture IS the canonical default pin. `defaultPinIndex = 0` maps to the Shot Navi-displayed flag; 2-4 alternate candidates authored manually based on visible green topology.
+- **L9 — Primary slope source: `A4_ホール攻略冊子.pdf` (Lomond's official strategy booklet, 2019).** Per-hole pages 2-19 each include a `GREEN攻略法` panel with: (a) explicit slope direction arrows on a top-down green diagram, (b) green width × depth in **meters** (matches L7 calibration), (c) dashed lines marking tier ridges, (d) Japanese strategic note keyed to slope direction ("奥からはやい" = fast-from-back, "見た目よりはやい" = faster-than-looks, etc.). This is the authoring primary; Shot Navi heatmap captures become secondary cross-reference.
+- **L10 — Confirmed 2-tier greens (PDF + reviews): Holes 3, 7, 11, 18.** Likely partial tiers / ridges (PDF shows dashed lines): 5, 12, 13, 14, 17. Hole 7 is **L/R 2-tier** (diagonal ridge), Hole 18 is **front/back 2-tier** (horizontal ridge) — corrects earlier spec assumption that hole 7 was front/back.
+- **L11 — Hole 9 is the most contoured green.** PDF: "傾斜やマウンドが多いのでライン読みは慎重に" = "Lots of slope and mounding — read carefully." Matches Shot Navi heatmap yellow/orange in `lomond_hole_09_shotnavi_heatmap.png`. All other greens are subtle by comparison.
 - **L2 — Storage: dense grid at 0.5 m resolution.** `{slopeDirX, slopeDirZ, magnitudePercent}` per cell over each green's axis-aligned bounding rect; cells outside the green polygon stored as `(0,0,0)`.
 - **L3 — Heightmap reconciliation: option (b).** Bake slope into `heightmap.bytes` so the visual mesh matches the sim data. Closes the 2026-05-01 open flag (ball dips at fairway→green seam) in the same pass.
 - **L4 — Pin authoring: 3-5 candidates per green, `defaultPinIndex = 0`.** Day-of pin rotation deferred to Loop v2+.
@@ -113,25 +116,44 @@ Cesar opens `GreenTopologyEditor` for each of 18 holes, hits "Auto-procedural fi
 
 ---
 
-### Phase 4 — Shot Navi tracing pass (Cesar manual, ~1 day of focused tracing)
+### Phase 4 — Tracing pass (Cesar manual, ~1 day of focused tracing)
 
-**Status (2026-05-18):** Captures complete. 36 PNGs in `screenshots/`:
-- `lomond_hole_NN_shotnavi_strategy.png` (18 ×) — yardage/distance view; useful for green polygon shape + canonical pin position (white flag glyph)
-- `lomond_hole_NN_shotnavi_heatmap.png` (18 ×) — topographic view with rainbow icon active; primary slope source
+**Status (2026-05-26):** All reference data in hand:
+- `A4_ホール攻略冊子.pdf` (20 pages, Lomond 2019 strategy booklet) — **PRIMARY** source for slope arrows + dimensions + tier locations + strategic notes
+- 18 × `lomond_hole_NN_shotnavi_strategy.png` (yardage view; canonical pin position from white flag glyph)
+- 18 × `lomond_hole_NN_shotnavi_heatmap.png` (secondary cross-reference for slope direction)
 
 **Tracing workflow (per hole):**
 1. Open `GreenTopologyEditor` for hole NN.
-2. Drop `lomond_hole_NN_shotnavi_strategy.png` into Backdrop slot. Align using green-edge anchor points (remember: grid is METERS). Use this view to confirm green polygon shape + capture canonical pin position from the visible white flag as `pinCandidates[0]`.
-3. Swap Backdrop to `lomond_hole_NN_shotnavi_heatmap.png`. Re-align using same anchor points.
-4. Trace slope arrows over the heatmap. Color cue: green = flat or subtle, yellow = noticeable slope, orange/red = steep. Magnitude scrubber: 1-2% for green-coloring, 3-4% for yellow, 5-8%+ for orange/red. Dashed lines on heatmap are fall-line / slope-direction references.
-5. Add 2-4 alternate pin candidates beyond the canonical default — typically one per visible tier or flat zone in the heatmap.
-6. Save.
+2. Open PDF page (hole NN = PDF page NN+1) and zoom to `GREEN攻略法` panel.
+3. Read green W × H dimensions in **meters** — sanity-check against `zones.json` green polygon bounding box.
+4. Drop `lomond_hole_NN_shotnavi_strategy.png` into Backdrop slot. Align using green-edge anchor points. Read canonical pin position from the visible white flag → `pinCandidates[0]`.
+5. Trace slope arrows directly from the PDF panel — directions are explicit (no color interpretation). Magnitude calibration:
+   - **"見た目よりはやい" (faster than it looks):** subtle slope, **1.5-2%**
+   - **"はやい" (fast):** noticeable slope, **2.5-4%**
+   - **"傾斜やマウンドが多い" (lots of slope and mounding):** highly contoured, multiple zones up to **5-7%** (hole 9 only)
+   - **Dashed line on PDF:** tier ridge — author as a 4-5% ridge perpendicular to fall line, with smooth falloff to flat regions on each side
+6. Cross-reference Shot Navi `_heatmap.png` only if PDF is ambiguous (rare); the PDF is authoritative.
+7. Add 2-4 alternate pin candidates beyond canonical default — one per visible tier or flat zone.
+8. Save.
 
-**Note on Lomond character:** Per Japanese course reviews, Lomond is "balanced with limited undulation." Most greens in heatmap mode show mostly-green coloring with subtle accents. Hole 9 (`lomond_hole_09_shotnavi_heatmap.png`) is the visible exception — notably yellow/orange. Author conservatively; don't fabricate slope where the heatmap shows green.
+**Confirmed 2-tier greens (use `manual_refined_v1` sourceTag):**
+- **Hole 3:** 2-tier (orientation TBD on closer PDF inspection during tracing)
+- **Hole 7:** L/R 2-tier with diagonal ridge — NOT front/back as earlier-spec assumed
+- **Hole 11:** Upper tier with mounding
+- **Hole 18:** Front/back 2-tier (horizontal ridge), vertical-elongated green
 
-**Out-of-band data:** also sweep Japanese golf review sites for any qualitative green descriptions; capture in `NOTES.md` § Known green features as bullet points per hole.
+**Likely partial tiers / partial ridges (PDF shows dashed lines):** Holes 5, 12, 13, 14, 17. Author with `procedural_v1` baseline + manual ridge addition during tracing; promote to `manual_refined_v1` if ridge is prominent.
 
-**DoD:** 18 `green.json` files with `sourceTag = "shotnavi_traced_v1"` (or `manual_refined_v1` for hole 7 + any others manually augmented). Screenshots already committed under `screenshots/`.
+**Hole 5 special:** PDF says "傾斜の少ないグリーン" = "green with little slope" — author conservatively, max 1.5% anywhere, no false-front.
+
+**Hole 9 special:** Most contoured green on the course. Multiple slope zones, expect to paint heterogeneous arrows. Don't over-smooth.
+
+**Source tagging:**
+- Holes 3, 7, 9, 11, 18 → `sourceTag = "manual_refined_v1"` (explicit features called out)
+- All others → `sourceTag = "shotnavi_traced_v1"` (even though PDF is the primary, the tag reflects "traced from photographic reference" semantics; rename schema if Cesar prefers `pdf_traced_v1` — trivial)
+
+**DoD:** 18 `green.json` files committed under `Assets/Resources/HoleData/Hole_NN/green.json`. All reference data in `screenshots/` + `A4_ホール攻略冊子.pdf` (already in spec folder).
 
 ---
 
