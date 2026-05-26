@@ -1074,6 +1074,151 @@ namespace Golfin.Physics.Viewer.Bot
             else
                 d.LogStep($"=== PutterAimWarpedGridOnTestGreen: PASS — baked={bakedCount} cells, meshVerts={meshVerts} ===");
         }
+
+        // ── Scenario: stat_lane_surface_roll ─────────────────────────────────
+        // stat_to_physics_mapping_audit (Q1, 2026-05-25)
+
+        /// <summary>
+        /// Stat lane surface roll audit: fires a Wedge shot at fixed power from the tee
+        /// with LOW vs HIGH ball stats (Ball.Roll = -10 vs +10) and logs the terminal
+        /// rest position. Measures BallPhysicsModifiers.Roll's effect on roll-out distance
+        /// on a Fairway lie.
+        ///
+        /// This scenario uses StatProviderBus.Resolver injection to control ball stats
+        /// without needing CSV entries with specific values.
+        ///
+        /// OB avoidance: wedge power=0.55 aimed at fairway center avoids OB on Hole 1
+        /// (BOT_FRAMEWORK.md §6 — OB-avoidance baked in per stat_to_physics_mapping_audit Q1).
+        ///
+        /// Captures: gameplay_armed, stat_lane_roll_low_stroke1, stat_lane_roll_high_stroke1.
+        /// </summary>
+        public static IEnumerator StatLaneSurfaceRoll(BotDriver d)
+        {
+            d.LogStep("=== Stat Lane Surface Roll — LOW vs HIGH Ball.Roll ===");
+
+            // Navigate to Hole 1 via standard matchmaking flow.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+
+            var ctrl   = Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            {
+                d.LogStep("=== StatLaneSurfaceRoll: FAIL — PhysicsLabController not found ===");
+                yield break;
+            }
+
+            // Helper: inject a Resolver with specific Ball.Roll value and MID character+club.
+            // The injected bundle is used only on FALLBACK — ClearStatBundleOverride() ensures
+            // the bus resolver (not the lab bundle) is used.
+            void ArmBallRoll(int rollValue, string label)
+            {
+                var charStats = new Golfin.Physics.Stats.CharacterStats(25, 25, 15, 20); // MID
+                var club      = Golfin.Physics.Stats.ClubStats.DefaultWedge;
+                var ball      = new Golfin.Physics.Stats.BallStats(0, 0, 0, rollValue, 0); // only Roll varies
+
+                Golfin.Gameplay.Defaults.StatProviderBus.Resolver = isPutt =>
+                {
+                    if (isPutt) return null; // let putter default handle putt
+                    return new Golfin.Physics.Stats.StatBundle(
+                        club, ball, charStats,
+                        Golfin.Physics.Math.fp.FromFloat(100f),
+                        Golfin.Physics.Math.fp.FromFloat(100f));
+                };
+                d.LogStep($"  ArmBallRoll: Ball.Roll={rollValue} ({label}) — Resolver set");
+            }
+
+            // Switch to Wedge (index 2) — fairway-safe at power=0.55 from tee.
+            ctrl.SetClub(2); // Wedge
+            var shotCtl = Object.FindObjectOfType<Golfin.Gameplay.Input.ShotController>();
+            if (shotCtl != null) shotCtl.ClearStatBundleOverride();
+
+            // Aim toward fairway center (yaw ≈ π, heading west-ish on Hole 1).
+            float yaw = Mathf.PI; // straight west — fairway-safe, no OB risk at wedge power
+            ctrl.SetCameraYawRadians(yaw);
+
+            // --- LOW Ball.Roll (-10: more friction, shorter roll) ---
+            ArmBallRoll(-10, "LOW");
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            bool lowDone = false;
+            var sm = ctrl.BallSM;
+            if (sm != null) sm.OnShotComplete += r => { lowDone = true; };
+
+            if (shotCtl != null)
+            {
+                float si = 0f;
+                while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 4f)
+                { si += Time.unscaledDeltaTime; yield return null; }
+                shotCtl.BeginExternalDrag();
+                float rt = 0f; const float ramp = 0.85f;
+                while (rt < ramp) { rt += Time.unscaledDeltaTime; shotCtl.SetExternalPower(Mathf.Lerp(0f, 0.55f, rt / ramp), 0f); yield return null; }
+                shotCtl.SetExternalPower(0.55f, 0f);
+                yield return new WaitForSecondsRealtime(0.18f);
+                shotCtl.EndExternalDrag();
+            }
+
+            float gLow = 0f;
+            while (!lowDone && gLow < 15f) { gLow += Time.unscaledDeltaTime; yield return null; }
+            d.LogStep($"  LOW Ball.Roll=-10: terminal pos={ctrl.BallPosition} (gated {gLow:F1}s)");
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("stat_lane_roll_low_stroke1");
+
+            Vector3 lowFinalPos = ctrl.BallPosition;
+
+            // --- HIGH Ball.Roll (+10: less friction, longer roll) ---
+            // Reset ball to tee so HIGH shot fires from the SAME start as LOW (same-start comparison).
+            ctrl.ResetToTee();
+            yield return new WaitForSecondsRealtime(1.0f); // let physics settle after reset
+            ctrl.SetCameraYawRadians(yaw);
+            ArmBallRoll(+10, "HIGH");
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            bool highDone = false;
+            if (sm != null) sm.OnShotComplete += r => { highDone = true; };
+
+            if (shotCtl != null)
+            {
+                float si = 0f;
+                while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 4f)
+                { si += Time.unscaledDeltaTime; yield return null; }
+                shotCtl.BeginExternalDrag();
+                float rt = 0f; const float ramp = 0.85f;
+                while (rt < ramp) { rt += Time.unscaledDeltaTime; shotCtl.SetExternalPower(Mathf.Lerp(0f, 0.55f, rt / ramp), 0f); yield return null; }
+                shotCtl.SetExternalPower(0.55f, 0f);
+                yield return new WaitForSecondsRealtime(0.18f);
+                shotCtl.EndExternalDrag();
+            }
+
+            float gHigh = 0f;
+            while (!highDone && gHigh < 15f) { gHigh += Time.unscaledDeltaTime; yield return null; }
+            d.LogStep($"  HIGH Ball.Roll=+10: terminal pos={ctrl.BallPosition} (gated {gHigh:F1}s)");
+            yield return new WaitForSecondsRealtime(1f);
+            yield return d.Capture("stat_lane_roll_high_stroke1");
+
+            Vector3 highFinalPos = ctrl.BallPosition;
+
+            // Report delta.
+            float rollDelta = Vector3.Distance(lowFinalPos, highFinalPos);
+            d.LogStep($"  Roll delta: LOW pos={lowFinalPos:F1} HIGH pos={highFinalPos:F1} distance={rollDelta:F1}m");
+            if (rollDelta >= 10f)
+                d.LogStep($"=== StatLaneSurfaceRoll: PASS — roll delta {rollDelta:F1}m >= 10m bar ===");
+            else
+                d.LogStep($"=== StatLaneSurfaceRoll: WEAK — roll delta {rollDelta:F1}m < 10m bar ===");
+
+            // Clean up: restore resolver to null (back to pure FALLBACK).
+            Golfin.Gameplay.Defaults.StatProviderBus.Resolver = null;
+        }
     }
 }
 #endif

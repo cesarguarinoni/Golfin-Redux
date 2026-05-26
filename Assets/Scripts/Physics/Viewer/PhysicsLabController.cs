@@ -551,6 +551,11 @@ namespace Golfin.Physics.Viewer
             // Lab callers must call InjectLabBundleForCurrentClub() explicitly after SetClub().
             // Production callers (BotDriver.PlayHoleToCup, auto-revert) do NOT inject;
             // the StatProviderBus resolves live stats for every committed shot.
+            //
+            // NOTE stat_to_physics_mapping_audit Q3 (2026-05-25): keep bus club-index in
+            // sync so DefaultStatProvider.BuildSwingBundle picks the right per-club defaults
+            // on the FALLBACK path (no player stats armed).
+            Golfin.Gameplay.Defaults.StatProviderBus.SetCurrentLabClubIndex(index);
             OnClubChanged?.Invoke(index);
             Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.Raise(index);
         }

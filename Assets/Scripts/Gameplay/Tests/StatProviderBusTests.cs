@@ -20,6 +20,8 @@ namespace Golfin.Gameplay.Tests
         {
             // Always clear the resolver so other tests start clean.
             StatProviderBus.Resolver = null;
+            // Reset club index to default (Driver = 0) so tests don't bleed.
+            StatProviderBus.SetCurrentLabClubIndex(0);
         }
 
         // ── Test 1: No resolver registered → default swing bundle ───────────
@@ -120,6 +122,93 @@ namespace Golfin.Gameplay.Tests
                 "Live bundle Accuracy must match the registered resolver's return value.");
             Assert.IsFalse(result.IsPutt,
                 "Live swing bundle must not be a putt.");
+        }
+
+        // ── Tests 4–7: Q3 club-aware FALLBACK — DefaultStatProvider per-club statics ──
+        // stat_to_physics_mapping_audit (2026-05-25)
+
+        [Test]
+        public void DefaultStatProvider_BuildSwingBundle_Index0_ReturnsDriverStats()
+        {
+            // Arrange: no resolver registered — pure FALLBACK path.
+            StatProviderBus.Resolver = null;
+            StatProviderBus.SetCurrentLabClubIndex(0);
+
+            // Act
+            StatBundle result = StatProviderBus.Resolve(isPutt: false);
+
+            // Assert: club velocity matches DefaultDriver (75 m/s).
+            Assert.IsTrue(result.Club.HasValue, "Index 0 must return a swing bundle with a Club.");
+            Assert.That(result.Club.Value.BaseVelocityMps.ToFloat(), Is.EqualTo(75f).Within(0.01f),
+                "Index 0 (Driver) must use DefaultDriver.BaseVelocityMps = 75 m/s.");
+        }
+
+        [Test]
+        public void DefaultStatProvider_BuildSwingBundle_Index1_ReturnsIron7Stats()
+        {
+            // Arrange
+            StatProviderBus.Resolver = null;
+            StatProviderBus.SetCurrentLabClubIndex(1);
+
+            // Act
+            StatBundle result = StatProviderBus.Resolve(isPutt: false);
+
+            // Assert: club velocity matches DefaultIron7 (51 m/s).
+            Assert.IsTrue(result.Club.HasValue, "Index 1 must return a swing bundle with a Club.");
+            Assert.That(result.Club.Value.BaseVelocityMps.ToFloat(), Is.EqualTo(51f).Within(0.01f),
+                "Index 1 (Iron7) must use DefaultIron7.BaseVelocityMps = 51 m/s.");
+        }
+
+        [Test]
+        public void DefaultStatProvider_BuildSwingBundle_Index2_ReturnsWedgeStats()
+        {
+            // Arrange
+            StatProviderBus.Resolver = null;
+            StatProviderBus.SetCurrentLabClubIndex(2);
+
+            // Act
+            StatBundle result = StatProviderBus.Resolve(isPutt: false);
+
+            // Assert: club velocity matches DefaultWedge (42 m/s).
+            Assert.IsTrue(result.Club.HasValue, "Index 2 must return a swing bundle with a Club.");
+            Assert.That(result.Club.Value.BaseVelocityMps.ToFloat(), Is.EqualTo(42f).Within(0.01f),
+                "Index 2 (Wedge) must use DefaultWedge.BaseVelocityMps = 42 m/s.");
+        }
+
+        [Test]
+        public void DefaultStatProvider_BuildSwingBundle_Index3AndAbove_FallsBackToDriver()
+        {
+            // Arrange: index 3 is Putter — swing should not be called for putter in
+            // normal flow (bus uses BuildPuttBundle for isPutt=true), but if called
+            // directly with index 3 or higher, it must fall back to Driver.
+            StatProviderBus.Resolver = null;
+            StatProviderBus.SetCurrentLabClubIndex(99); // out-of-range → Driver fallback
+
+            // Act
+            StatBundle result = StatProviderBus.Resolve(isPutt: false);
+
+            // Assert: falls back to DefaultDriver.
+            Assert.IsTrue(result.Club.HasValue, "Unknown index must return a swing bundle with a Club.");
+            Assert.That(result.Club.Value.BaseVelocityMps.ToFloat(), Is.EqualTo(75f).Within(0.01f),
+                "Unknown index must fall back to DefaultDriver.BaseVelocityMps = 75 m/s.");
+        }
+
+        // ── Test 8: Bus routes club index to DefaultProvider when resolver returns null ──
+
+        [Test]
+        public void StatProviderBus_Resolve_WithNullReturningResolver_UsesCurrentLabClubIndex()
+        {
+            // Arrange: resolver registered but returns null — triggers FALLBACK path.
+            StatProviderBus.Resolver = isPutt => null;
+            StatProviderBus.SetCurrentLabClubIndex(2); // Wedge
+
+            // Act
+            StatBundle result = StatProviderBus.Resolve(isPutt: false);
+
+            // Assert: FALLBACK uses Wedge (42 m/s), not Driver (75 m/s).
+            Assert.IsTrue(result.Club.HasValue, "FALLBACK must produce a Club.");
+            Assert.That(result.Club.Value.BaseVelocityMps.ToFloat(), Is.EqualTo(42f).Within(0.01f),
+                "FALLBACK with null resolver must use CurrentLabClubIndex=2 → Wedge.");
         }
     }
 }

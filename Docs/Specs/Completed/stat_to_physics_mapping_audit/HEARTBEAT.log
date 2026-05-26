@@ -1,0 +1,17 @@
+2026-05-25T20:00:00 activated — reading SPEC, prior reports, codebase
+2026-05-25T20:10:00 pre-flight complete — beginning Q3 club-aware FALLBACK implementation
+2026-05-25T20:20:00 Q3 implementation complete: ClubStats statics, StatProviderBus bus-state, DefaultStatProvider per-club, SetClub bridge, 5 new tests
+2026-05-25T20:30:00 STAT_LANE_AUDIT.md written; follow-up specs filed; stat_lane_surface_roll scenario added
+2026-05-25T20:40:00 writing IMPLEMENTER_REPORT.md
+2026-05-25T20:50:00 compile errors fixed: added Golfin.Gameplay.Defaults to Viewer asmdef; fixed BallStateMachine FindObjectOfType -> ctrl.BallSM
+2026-05-25T20:55:00 tests: 347/344/0/3 — all 5 Q3 tests pass, test gate PASS
+2026-05-25T21:05:00 Hole1 Playthrough bot: 3 strokes (Driver→Sand→Wedge→Green→Putt→InCup). PASS ≤7 gate
+2026-05-25T21:10:00 running stat_lane_surface_roll bot for Ball.Roll perceptibility evidence
+2026-05-25T21:20:00 stat_lane_surface_roll PASS — roll delta 106.5m >= 10m bar; video captured at videos/stat_lane_surface_roll.mp4
+2026-05-25T21:25:00 IMPLEMENTER_REPORT.md written; AI_CONTEXT.md updated; done, awaiting review
+2026-05-25T23:00:00 re-entry after SELF_REVIEW_FAIL — fixing methodology defect (ResetToTee) and adding captions
+2026-05-25T23:05:00 Scenarios.cs fix applied (ResetToTee added before HIGH shot); verifying compile via MCP
+2026-05-25T23:10:00 Scenarios.cs compiled cleanly (DLL 19:42:31); triggering stat_lane_surface_roll bot via AppleScript menu
+2026-05-25T23:20:00 captions complete, stills and video verified; checking test baseline
+2026-05-25T23:30:00 all fixes applied: ResetToTee, captions, Tier audit fix, LIVE-path doc; test gate 347/344/0/3 PASS; updating STATUS
+2026-05-25T23:35:00 done, awaiting review — all self-review fixes applied, test gate 347/344/0/3 PASS

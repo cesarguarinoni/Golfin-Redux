@@ -1522,3 +1522,39 @@ rules don't self-propagate through the pipeline.
 If the answer is no, the SPEC is missing the §Visual reference. Pause STATUS bump. Find or capture the reference image. Add the section. Re-read the §Architecture language for paradigm-drift words ("style", "like", "aesthetic") and replace with image-anchored implementation language. Then bump STATUS.
 
 **Postmortem cost of skipping this on iter-1:** one full pipeline chain (implementer + self-reviewer + architect-reviewer iterations), the wall-clock to detect the gap at Cesar's gate, plus the iter-2 redirect with revised SPEC + new test green scene + render-path swap. Roughly a half-day of pipeline time that a 5-minute image paste at SPEC-authoring would have prevented.
+
+## Lesson V — Same-start stat comparisons MUST reset state between samples (2026-05-26, stat_to_physics_mapping_audit iter-1)
+
+**TL;DR:** Any LOW-vs-HIGH (or A-vs-B) stat-perceptibility comparison in a bot scenario MUST reset the world to the same starting state between samples. Firing sample-B from sample-A's terminal position measures "A then B from A's outcome", not "A vs B from a shared start" — the resulting delta is a meaningless Euclidean distance between two end states that happen to be reachable via different paths.
+
+**What happened (iter-1):** `Scenarios.cs:StatLaneSurfaceRoll` fired the LOW shot from the tee, then fired the HIGH shot from LOW's terminal position with no reset. The reported "delta=106.5m" was the world-space distance between two end points produced by two consecutive shots from different starts. The audit's own analysis predicted a 4–8m delta for the B2 lane (WEAK / Tier-Tune); the 106.5m number disagreed with the finding it claimed to support, and the self-reviewer caught it as a methodology defect.
+
+**Iter-2 fix:** insert `ctrl.ResetToTee()` + a 1.0s settle wait between samples. The corrected delta dropped to **0.1m** (sub-meter WEAK) — internally consistent with the Tier-Tune classification. The small delta IS the finding; do not panic-tune coefficients to inflate it.
+
+**Rules:**
+1. **Every multi-sample bot scenario gets an explicit reset between samples.** No exceptions. The reset call should be the line immediately above the sample's `Fire()`.
+2. **Document the reset in the scenario's leading comment.** A future-you reading the coroutine should see "// Reset before sample N" before each fire, not have to infer the methodology from execution order.
+3. **The audit doc reports the methodology alongside the delta.** "LOW terminal X / HIGH terminal Y / measured from same-tee-start / delta = Z" — not just "delta = Z".
+4. **Self-reviewer check:** any LOW-vs-HIGH bot delta that disagrees with the SPEC's predicted band (in either direction) is a methodology red flag, not a finding. Re-read the coroutine before accepting the number.
+
+**Counter-rule:** for cumulative-effect tests (durability decay over N shots, learning curves, anything where the *sequence* is the test), you DO want consecutive shots without reset. Annotate those scenarios as "cumulative — no reset by design" so reviewers don't mistake them for same-start comparisons.
+
+**Sister rule:** Lesson G ("functionally working" is not "matches the reference") — a measurement that runs without throwing is not a measurement that means what you think it means. The bot fired LOW and HIGH and produced terminal points; the *methodology* was broken silently.
+
+## Lesson W — asmdef build order can veto a SPEC's parameter-pass design; static-bus state is the canonical workaround (2026-05-26, stat_to_physics_mapping_audit Q3)
+
+**TL;DR:** Before locking in a SPEC's API design (especially "add a parameter to method X in assembly A so caller in assembly B can pass new info"), verify that the asmdef dependency graph actually allows B to depend on A and that the parameter's source type is reachable from both sides. If the dep graph is reverse — A doesn't reference B and can't, because B is the higher-level / runtime-consumer assembly — the parameter-pass design is **architecturally infeasible**, and the canonical workaround is a static bus on a low-level assembly that both sides already reference (autoReferenced=true, typically `Golfin.Gameplay.Defaults` or `Golfin.Physics.Math`).
+
+**What happened (Q3 pre-flight):** `stat_to_physics_mapping_audit` SPEC §Q3 locked in the design `StatProviderBus.Resolve(bool isPutt, int labClubIndex)` — caller `PhysicsLabController.SetClub` passes `CurrentClubIndex` through to the bus's resolver Func. Pre-flight discovered that `Golfin.Gameplay.Defaults` (which owns `StatProviderBus`) does NOT reference `Golfin.Physics.Viewer` (which owns `PhysicsLabController`) and CAN NOT, because Viewer references Defaults (the dep direction is reverse). A signature change in the Func type would have required adding `Viewer` as a dep of `Defaults`, which would create a circular reference, which the compiler rejects.
+
+**Iter-1 fix (shipped):** instead of passing the club index through the Func signature, the bus carries `CurrentLabClubIndex` as static state on the bus itself (set via `SetCurrentLabClubIndex()` from `PhysicsLabController.SetClub`), and the resolver reads it. Callsites are bounded: only the lab calls `SetCurrentLabClubIndex`; the production `LiveStatProviderHost.ResolveLive` path never touches it. This is the same pattern as `HoleContext` and other static-bus contexts in `Golfin.Gameplay.Defaults`.
+
+**Rules:**
+1. **Pre-flight check the dep graph before locking a parameter-pass design.** "Does assembly A (callee) reference the assembly that owns the parameter's source type? If no, parameter-pass is infeasible." Run this check in the implementer's pre-flight, document the answer in IMPLEMENTER_REPORT.md, and surface BLOCKED if the SPEC requires the infeasible direction.
+2. **The canonical workaround is a static bus on a low-level, autoReferenced=true assembly.** Both sides of the original parameter-pass already reference it (by virtue of `autoReferenced:true` — Unity's asmdef setting that makes the assembly visible without an explicit reference). The bus owns the state; producers set it; consumers read it.
+3. **Bound the callsites and document them.** Static state is dangerous when many callers mutate without coordination. The audit limited mutation to one lab callsite (`PhysicsLabController.SetClub`) + test setup/teardown; production gameplay never touched it. Both reviewers verified the bounding.
+4. **SPEC authoring caveat:** the architect-side claude.ai chat may not know which assembly owns which symbol off the top of its head. The standing rule is: any SPEC that proposes adding a parameter across two-or-more namespaces lists those namespaces explicitly, and the implementer's pre-flight resolves them to asmdefs and checks the dep direction before code lands.
+
+**Sister rule:** the existing standing rule on asmdef pattern in `tasks/lessons.md` (re: `autoReferenced:true` and cross-asmdef static state for the live stat bus) is the foundation this lesson generalizes. This lesson is the explicit "when a parameter-pass design fails its pre-flight, here's the workaround" version.
+
+**Counter-rule:** if the dep graph DOES allow the parameter-pass, prefer it over a static bus. Static state on a bus is mutation-prone and harder to reason about than an explicit method signature; only reach for it when the dep graph leaves no other clean option.

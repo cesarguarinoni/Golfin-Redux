@@ -96,6 +96,15 @@ namespace Golfin.Physics.Viewer.Editor
             Launch("live_stat_provider_visual_gate_low");
         }
 
+        // stat_to_physics_mapping_audit (2026-05-25):
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Stat Lane — Surface Roll")]
+        public static void RunStatLaneSurfaceRoll()
+        {
+            BotVideoRecorder.RecordVideo = true;
+            Launch("stat_lane_surface_roll");
+        }
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]
@@ -136,6 +145,9 @@ namespace Golfin.Physics.Viewer.Editor
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Live Stat Provider — Low Build", isValidateFunction: true)]
         static bool ValidateLiveStatProviderVisualGateLow() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Stat Lane — Surface Roll", isValidateFunction: true)]
+        static bool ValidateStatLaneSurfaceRoll() => !EditorApplication.isPlaying;
 
         // ── Launcher ─────────────────────────────────────────────────────────
 

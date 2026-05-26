@@ -19,7 +19,31 @@ namespace Golfin.Gameplay.Defaults
         public static Func<bool, StatBundle?> Resolver;
 
         /// <summary>
+        /// Tracks the current lab club index (0=Driver, 1=Iron7, 2=Wedge, 3=Putter).
+        /// Set by PhysicsLabController.SetClub() so the FALLBACK path in Resolve()
+        /// can pick the correct DefaultStatProvider club bundle.
+        ///
+        /// NOTE stat_to_physics_mapping_audit Q3 (2026-05-25): this is the cross-asmdef
+        /// bridge for the FALLBACK club-aware fix. PhysicsLabController (Golfin.Physics.Viewer)
+        /// cannot be referenced from ShotController (Golfin.Gameplay.Input) due to asmdef
+        /// build order — StatProviderBus (Golfin.Gameplay.Defaults, autoReferenced=true) is
+        /// the correct location for cross-cutting shared state.
+        /// </summary>
+        public static int CurrentLabClubIndex { get; private set; }
+
+        /// <summary>
+        /// Called by PhysicsLabController.SetClub(index) to keep the bus in sync with
+        /// the active lab club selection. Thread-safe only from the Unity main thread.
+        /// </summary>
+        public static void SetCurrentLabClubIndex(int index)
+        {
+            CurrentLabClubIndex = index;
+        }
+
+        /// <summary>
         /// Called by ShotController.GetStatBundle() every shot.
+        /// Falls through to DefaultStatProvider when the Resolver is null or returns null.
+        /// In the FALLBACK path, uses CurrentLabClubIndex to pick the per-club default bundle.
         /// </summary>
         public static StatBundle Resolve(bool isPutt)
         {
@@ -27,7 +51,7 @@ namespace Golfin.Gameplay.Defaults
             if (live.HasValue) return live.Value;
             return isPutt
                 ? DefaultStatProvider.BuildPuttBundle()
-                : DefaultStatProvider.BuildSwingBundle();
+                : DefaultStatProvider.BuildSwingBundle(CurrentLabClubIndex);
         }
     }
 }

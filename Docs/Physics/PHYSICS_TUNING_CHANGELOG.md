@@ -48,3 +48,54 @@ The visual gate HIGH build drives Hole 1 with STR=30 on a driver completing stro
 ### Full audit follow-up
 
 `Docs/Specs/Queued/stat_to_physics_mapping_audit/SPEC.md` — full lane-by-lane review including this F7 patch.
+
+---
+
+## Q3 — DefaultStatProvider club-aware FALLBACK (2026-05-25)
+
+**Task:** `stat_to_physics_mapping_audit`  
+**Reason:** `DefaultStatProvider.BuildSwingBundle()` always returned `ClubStats.DefaultDriver` regardless of which club was selected. Non-driver FALLBACK strokes used 75 m/s driver physics (instead of 51 m/s Iron7 or 42 m/s Wedge), causing an 80% overshoot on wedge approach shots. The Hole 1 Playthrough bot scored 8 strokes (seam) as a direct result.
+
+### ClubStats changes
+
+| Field | Before | After | Notes |
+|---|---|---|---|
+| `ClubStats.DefaultIron7` | (did not exist) | `(power=50, acc=50, lie=50, dur=100, loft=25.5°, vel=51m/s, spin=6500RPM)` | New static — matches LabClubs[1] verbatim |
+| `ClubStats.DefaultWedge` | (did not exist) | `(power=50, acc=50, lie=50, dur=100, loft=41.2°, vel=42m/s, spin=9000RPM)` | New static — matches LabClubs[2] verbatim |
+
+### DefaultStatProvider changes
+
+`BuildSwingBundle()` now accepts an optional `clubIndex` parameter (default 0 = Driver). Index mapping:
+- 0 → `ClubStats.DefaultDriver` (75 m/s, loft 10.9°, spin 2686 RPM)
+- 1 → `ClubStats.DefaultIron7` (51 m/s, loft 25.5°, spin 6500 RPM)
+- 2 → `ClubStats.DefaultWedge` (42 m/s, loft 41.2°, spin 9000 RPM)
+- 3+ → `ClubStats.DefaultDriver` (safety fallback)
+
+### StatProviderBus changes
+
+Added `CurrentLabClubIndex` property and `SetCurrentLabClubIndex(int)` method. `PhysicsLabController.SetClub(index)` now calls `SetCurrentLabClubIndex` to keep the bus in sync. `Resolve(isPutt=false)` passes `CurrentLabClubIndex` to `DefaultStatProvider.BuildSwingBundle()`.
+
+### StatCoefficients / StatCaps changes
+
+None. This is purely a data-routing fix.
+
+### Expected behavior after fix
+
+| Stroke type | Before | After |
+|---|---|---|
+| FALLBACK driver stroke (index 0) | 75 m/s (correct) | 75 m/s (unchanged) |
+| FALLBACK Iron7 stroke (index 1) | 75 m/s (WRONG — overshoot) | 51 m/s (correct) |
+| FALLBACK Wedge stroke (index 2) | 75 m/s (WRONG — 80% overshoot) | 42 m/s (correct) |
+| LIVE path (any club) | Unchanged (bus resolves real club stats) | Unchanged |
+
+### Completability verification
+
+Hole 1 Playthrough FALLBACK bot must complete in ≤7 strokes after this fix. See IMPLEMENTER_REPORT.md for bot run evidence.
+
+### Tests added
+
+- `DefaultStatProvider_BuildSwingBundle_Index0_ReturnsDriverStats` — index 0 → Driver 75 m/s
+- `DefaultStatProvider_BuildSwingBundle_Index1_ReturnsIron7Stats` — index 1 → Iron7 51 m/s
+- `DefaultStatProvider_BuildSwingBundle_Index2_ReturnsWedgeStats` — index 2 → Wedge 42 m/s
+- `DefaultStatProvider_BuildSwingBundle_Index3AndAbove_FallsBackToDriver` — out-of-range → Driver
+- `StatProviderBus_Resolve_WithNullReturningResolver_UsesCurrentLabClubIndex` — bus routes index to DefaultProvider
