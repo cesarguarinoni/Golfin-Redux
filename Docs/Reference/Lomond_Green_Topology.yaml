@@ -1,0 +1,526 @@
+# Lomond Green Topology Manifest
+# Source: Docs/Specs/Queued/green_topology_and_pin_authoring/A4_ホール攻略冊子.pdf
+#         (Lomond Country Club official strategy booklet, 2019, Adobe InDesign CS5.5_J)
+# Cross-reference: Docs/Specs/Queued/green_topology_and_pin_authoring/screenshots/
+#                  (18 × Shot Navi 3DX strategy + 18 × heatmap captures)
+# Extracted by: Architect (claude.ai), 2026-05-27
+#
+# CONVENTIONS
+# ===========
+#
+# Coordinate frame: 'green-local' — fractions of the green polygon's AABB.
+#   • boundsFrac: [xMin, yMin, xMax, yMax] each in [0, 1]
+#     • x = 0 → PDF-left edge of green, x = 1 → PDF-right edge
+#     • y = 0 → PDF-bottom (front of green, near approach), y = 1 → PDF-top (back of green)
+#   • posFrac: [x, y] in [0, 1], same axes
+#   • polylineFrac: list of [x, y] vertices in [0, 1]
+#
+# Slope vectors: 'pdf-local' 2D — [dirRight, dirBack] (== [dirX, dirY] in PDF panel coords).
+#   • [-1, 0] = water flows LEFT  (PDF ←)
+#   • [+1, 0] = water flows RIGHT (PDF →)
+#   • [0, -1] = water flows FRONT (PDF ↓; toward approach/tee)   ← most common at Lomond
+#   • [0, +1] = water flows BACK  (PDF ↑; away from approach)
+#   • Diagonals: e.g. [-0.7, -0.7] = ↙ (down-left)
+#   • These get resolved to world XZ at apply-time using each hole's approach direction
+#     (computed from teePosition → greenCentroid in zones.json).
+#
+# Magnitude: percent slope (rise/run × 100). Lomond character is subtle:
+#   • 1.0–1.5%  — minimal / visually flat ('傾斜の少ない')
+#   • 1.5–2.5%  — '見た目よりはやい' (faster than it looks) — the most common pattern
+#   • 2.5–4.0%  — clearly perceptible slope
+#   • 4.0–6.0%  — ridge transition bands only
+#   • Above 6%  — not used at Lomond per the PDF (no greens this steep)
+#
+# Confidence: arrow-counting from the PDF panel is inherently approximate.
+#   • high   — arrows clearly readable, single dominant direction or unambiguous tiers
+#   • medium — multi-directional or ambiguous arrow clusters; magnitude estimated
+#   • low    — complex pattern (e.g. mounding); may need Cesar visual-gate refinement
+#
+# Region precedence: later regions override earlier ones in the same cell.
+# Ridges write LAST and override base regions in a transition band of width
+# 'transitionBandMeters' centered on the polyline.
+
+schemaVersion: 1
+courseName: 'Lomond Country Club'
+courseId: 806  # Shot Navi
+sourcePdf: 'Docs/Specs/Queued/green_topology_and_pin_authoring/A4_ホール攻略冊子.pdf'
+
+# ──────────────────────────────────────────────────────────────────────────────
+holes:
+
+  1:
+    sourcePage: 2
+    pdfDimensionsMeters: [31, 30]
+    feature: 'Crowned green with subtle central spine (back-to-front)'
+    jpNote: '右サイドからは見た目よりはやい'
+    enNote: 'Faster than it looks from the right side'
+    confidence: medium
+    regions:
+      - name: left_half
+        boundsFrac: [0.00, 0.10, 0.50, 0.95]
+        slopeDir: [-1.0, 0.0]
+        magnitudePct: 2.0
+      - name: left_lower
+        boundsFrac: [0.00, 0.10, 0.45, 0.40]
+        slopeDir: [-0.7, -0.7]
+        magnitudePct: 2.0
+      - name: right_half
+        boundsFrac: [0.50, 0.30, 1.00, 0.85]
+        slopeDir: [+1.0, 0.0]
+        magnitudePct: 2.0
+      - name: front_center_defensive
+        boundsFrac: [0.35, 0.00, 0.65, 0.25]
+        slopeDir: [-0.3, +0.95]
+        magnitudePct: 1.0
+    ridges: []
+    pins:
+      - { posFrac: [0.50, 0.30], label: 'default-front-center', isDefault: true }
+      - { posFrac: [0.30, 0.65], label: 'back-left' }
+      - { posFrac: [0.70, 0.65], label: 'back-right' }
+
+  2:
+    sourcePage: 3
+    pdfDimensionsMeters: [25, 33]
+    feature: 'Back-to-front with consistent left bias'
+    jpNote: '右サイドの奥からはやい'
+    enNote: 'Fast from back-right'
+    confidence: high
+    regions:
+      - name: whole_green
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [-0.4, -0.92]
+        magnitudePct: 2.0
+      - name: right_back_acceleration
+        boundsFrac: [0.55, 0.55, 1.00, 1.00]
+        slopeDir: [-0.5, -0.87]
+        magnitudePct: 2.5
+    ridges: []
+    pins:
+      - { posFrac: [0.45, 0.35], label: 'default-front-center', isDefault: true }
+      - { posFrac: [0.65, 0.65], label: 'back-right' }
+      - { posFrac: [0.30, 0.70], label: 'back-left' }
+
+  3:
+    sourcePage: 4
+    pdfDimensionsMeters: [36, 30]
+    feature: '**2-TIER** green with S-curved ridge across middle'
+    jpNote: '2段グリーンです。同じ段にのせましょう'
+    enNote: '2-tier green. Aim for the same tier as the pin.'
+    confidence: high
+    regions:
+      - name: upper_tier
+        boundsFrac: [0.00, 0.50, 1.00, 1.00]
+        slopeDir: [-0.3, -0.95]
+        magnitudePct: 2.0
+      - name: lower_tier
+        boundsFrac: [0.00, 0.00, 1.00, 0.50]
+        slopeDir: [0.0, -1.0]
+        magnitudePct: 1.5
+    ridges:
+      - name: middle_s_ridge
+        polylineFrac: [[0.05, 0.55], [0.30, 0.50], [0.55, 0.48], [0.80, 0.52], [0.95, 0.50]]
+        transitionBandMeters: 1.5
+        transitionMagnitudePct: 5.0
+        fallDirection: lower
+    pins:
+      - { posFrac: [0.50, 0.25], label: 'default-front-lower-tier', isDefault: true }
+      - { posFrac: [0.30, 0.75], label: 'back-left-upper-tier' }
+      - { posFrac: [0.70, 0.75], label: 'back-right-upper-tier' }
+      - { posFrac: [0.75, 0.25], label: 'front-right-lower-tier' }
+
+  4:
+    sourcePage: 5
+    pdfDimensionsMeters: [18, 33]
+    feature: 'Narrow long green; dominant left drainage with small back-mound'
+    jpNote: '右サイドからはやい'
+    enNote: 'Fast from right side (left-edge OB protected)'
+    confidence: medium
+    regions:
+      - name: whole_green
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [-1.0, -0.3]
+        magnitudePct: 2.0
+      - name: back_mound
+        boundsFrac: [0.30, 0.75, 0.70, 1.00]
+        slopeDir: [-0.2, +0.95]
+        magnitudePct: 1.5
+    ridges: []
+    pins:
+      - { posFrac: [0.50, 0.40], label: 'default-center', isDefault: true }
+      - { posFrac: [0.40, 0.75], label: 'back' }
+      - { posFrac: [0.60, 0.20], label: 'front' }
+
+  5:
+    sourcePage: 6
+    pdfDimensionsMeters: [21, 37]
+    feature: 'Minimal slope, gentle back-to-front'
+    jpNote: '傾斜の少ないグリーン。思い切って攻めてみよう'
+    enNote: 'Green has little slope — attack with confidence'
+    confidence: high
+    regions:
+      - name: whole_green
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [0.0, -1.0]
+        magnitudePct: 1.0
+    ridges: []
+    pins:
+      - { posFrac: [0.50, 0.40], label: 'default-front-center', isDefault: true }
+      - { posFrac: [0.50, 0.70], label: 'back-center' }
+      - { posFrac: [0.30, 0.30], label: 'front-left' }
+      - { posFrac: [0.70, 0.30], label: 'front-right' }
+
+  6:
+    sourcePage: 7
+    pdfDimensionsMeters: [30, 30]
+    feature: 'Crown sloping right; partial sub-ridge in lower-right'
+    jpNote: '左サイドからは見た目よりはやい'
+    enNote: 'Faster than it looks from left side'
+    confidence: medium
+    regions:
+      - name: main_body
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [+0.7, -0.7]
+        magnitudePct: 2.0
+      - name: front_left_falloff
+        boundsFrac: [0.00, 0.00, 0.40, 0.50]
+        slopeDir: [-0.5, -0.87]
+        magnitudePct: 2.0
+    ridges:
+      - name: lower_right_partial
+        polylineFrac: [[0.45, 0.20], [0.65, 0.30], [0.85, 0.40]]
+        transitionBandMeters: 1.0
+        transitionMagnitudePct: 3.0
+        fallDirection: lower
+    pins:
+      - { posFrac: [0.50, 0.50], label: 'default-center', isDefault: true }
+      - { posFrac: [0.35, 0.75], label: 'back-left' }
+      - { posFrac: [0.70, 0.30], label: 'front-right' }
+
+  7:
+    sourcePage: 8
+    pdfDimensionsMeters: [43, 29]
+    feature: '**L/R 2-TIER** with diagonal ridge (upper-left to lower-right)'
+    jpNote: '左右の2段グリーン。同じ段にのせましょう'
+    enNote: 'L/R 2-tier green. Aim for the same tier as the pin.'
+    confidence: high
+    regions:
+      - name: upper_left_tier
+        boundsFrac: [0.00, 0.00, 0.55, 1.00]
+        slopeDir: [-0.7, -0.7]
+        magnitudePct: 2.0
+      - name: lower_right_tier
+        boundsFrac: [0.45, 0.00, 1.00, 1.00]
+        slopeDir: [+0.4, -0.92]
+        magnitudePct: 2.0
+    ridges:
+      - name: diagonal_ridge
+        polylineFrac: [[0.20, 0.95], [0.40, 0.65], [0.55, 0.40], [0.75, 0.15]]
+        transitionBandMeters: 1.5
+        transitionMagnitudePct: 4.5
+        fallDirection: lower
+    pins:
+      - { posFrac: [0.30, 0.60], label: 'default-upper-left-tier', isDefault: true }
+      - { posFrac: [0.75, 0.40], label: 'lower-right-tier' }
+      - { posFrac: [0.20, 0.30], label: 'front-left-tier' }
+      - { posFrac: [0.85, 0.70], label: 'back-right-tier' }
+
+  8:
+    sourcePage: 9
+    pdfDimensionsMeters: [22, 39]
+    feature: 'Narrow long green; dominant back-to-front with slight right bias'
+    jpNote: '奥からは見た目よりはやい'
+    enNote: 'Faster than it looks from the back'
+    confidence: high
+    regions:
+      - name: whole_green
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [+0.2, -0.98]
+        magnitudePct: 1.8
+      - name: middle_right_accel
+        boundsFrac: [0.50, 0.35, 1.00, 0.65]
+        slopeDir: [+0.5, -0.87]
+        magnitudePct: 2.2
+    ridges: []
+    pins:
+      - { posFrac: [0.50, 0.35], label: 'default-front-center', isDefault: true }
+      - { posFrac: [0.50, 0.70], label: 'back-center' }
+      - { posFrac: [0.35, 0.50], label: 'middle-left' }
+
+  9:
+    sourcePage: 10
+    pdfDimensionsMeters: [25, 38]
+    feature: '**HEAVILY MOUNDED** — multi-direction; the most complex Lomond green'
+    jpNote: '傾斜やマウンドが多いのでライン読みは慎重に'
+    enNote: 'Lots of slope and mounding — read the line carefully'
+    confidence: low
+    regions:
+      - name: back_zone
+        boundsFrac: [0.00, 0.65, 1.00, 1.00]
+        slopeDir: [+0.4, -0.92]
+        magnitudePct: 3.0
+      - name: middle_left_mound
+        boundsFrac: [0.00, 0.35, 0.45, 0.70]
+        slopeDir: [-0.7, -0.7]
+        magnitudePct: 3.5
+      - name: middle_right
+        boundsFrac: [0.55, 0.35, 1.00, 0.70]
+        slopeDir: [0.0, -1.0]
+        magnitudePct: 2.5
+      - name: front_zone
+        boundsFrac: [0.00, 0.00, 1.00, 0.35]
+        slopeDir: [0.0, -1.0]
+        magnitudePct: 2.5
+    ridges:
+      - name: left_mound_spine
+        polylineFrac: [[0.20, 0.40], [0.25, 0.55], [0.20, 0.70]]
+        transitionBandMeters: 1.0
+        transitionMagnitudePct: 4.0
+        fallDirection: lower
+    pins:
+      - { posFrac: [0.65, 0.30], label: 'default-front-right', isDefault: true }
+      - { posFrac: [0.50, 0.55], label: 'middle-center' }
+      - { posFrac: [0.70, 0.75], label: 'back-right' }
+
+  10:
+    sourcePage: 11
+    pdfDimensionsMeters: [38, 29]
+    feature: 'Saddle / twist: front-left flows back, back-right flows front'
+    jpNote: '左サイドは手前から奥にはやい'
+    enNote: 'Left side is fast from front to back'
+    confidence: medium
+    regions:
+      - name: back_left_flow
+        boundsFrac: [0.00, 0.55, 0.50, 1.00]
+        slopeDir: [-0.3, +0.95]
+        magnitudePct: 2.0
+      - name: middle_center
+        boundsFrac: [0.30, 0.30, 0.70, 0.65]
+        slopeDir: [-1.0, 0.0]
+        magnitudePct: 1.5
+      - name: front_right_flow
+        boundsFrac: [0.50, 0.00, 1.00, 0.55]
+        slopeDir: [+0.3, -0.95]
+        magnitudePct: 2.0
+    ridges: []
+    pins:
+      - { posFrac: [0.50, 0.50], label: 'default-center', isDefault: true }
+      - { posFrac: [0.25, 0.75], label: 'back-left-low' }
+      - { posFrac: [0.75, 0.25], label: 'front-right-low' }
+
+  11:
+    sourcePage: 12
+    pdfDimensionsMeters: [22, 36]
+    feature: '**PARTIAL 2-TIER** with mound on upper tier'
+    jpNote: '上の段はマウンドがあるのでライン読みは慎重に'
+    enNote: 'Upper tier has mounding — read line carefully'
+    confidence: high
+    regions:
+      - name: upper_tier_with_mound
+        boundsFrac: [0.00, 0.45, 1.00, 1.00]
+        slopeDir: [+0.7, -0.7]
+        magnitudePct: 2.5
+      - name: lower_tier
+        boundsFrac: [0.00, 0.00, 1.00, 0.45]
+        slopeDir: [0.0, -1.0]
+        magnitudePct: 2.0
+    ridges:
+      - name: middle_partial_ridge
+        polylineFrac: [[0.10, 0.40], [0.40, 0.50], [0.70, 0.45], [0.95, 0.50]]
+        transitionBandMeters: 1.5
+        transitionMagnitudePct: 4.5
+        fallDirection: lower
+    pins:
+      - { posFrac: [0.50, 0.25], label: 'default-lower-tier-front', isDefault: true }
+      - { posFrac: [0.50, 0.70], label: 'upper-tier-back' }
+      - { posFrac: [0.30, 0.25], label: 'lower-tier-left' }
+
+  12:
+    sourcePage: 13
+    pdfDimensionsMeters: [29, 39]
+    feature: 'Single-tier with consistent back-to-front drainage; subtle'
+    jpNote: '左上からはやい'
+    enNote: 'Fast from upper-left'
+    confidence: high
+    regions:
+      - name: whole_green
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [-0.2, -0.98]
+        magnitudePct: 2.0
+    ridges: []
+    pins:
+      - { posFrac: [0.50, 0.35], label: 'default-front-center', isDefault: true }
+      - { posFrac: [0.35, 0.70], label: 'upper-left' }
+      - { posFrac: [0.65, 0.65], label: 'upper-right' }
+
+  13:
+    sourcePage: 14
+    pdfDimensionsMeters: [25, 40]
+    feature: 'Partial tier; upper drains down-left, lower drains down'
+    jpNote: '左上からは見た目よりはやい'
+    enNote: 'Faster than it looks from upper-left'
+    confidence: medium
+    regions:
+      - name: upper_zone
+        boundsFrac: [0.00, 0.50, 1.00, 1.00]
+        slopeDir: [-0.5, -0.87]
+        magnitudePct: 2.5
+      - name: lower_zone
+        boundsFrac: [0.00, 0.00, 1.00, 0.50]
+        slopeDir: [0.0, -1.0]
+        magnitudePct: 2.0
+    ridges:
+      - name: partial_ridge
+        polylineFrac: [[0.15, 0.55], [0.45, 0.52], [0.75, 0.55], [0.95, 0.50]]
+        transitionBandMeters: 1.2
+        transitionMagnitudePct: 3.5
+        fallDirection: lower
+    pins:
+      - { posFrac: [0.50, 0.30], label: 'default-front', isDefault: true }
+      - { posFrac: [0.30, 0.75], label: 'upper-left' }
+      - { posFrac: [0.65, 0.70], label: 'upper-right' }
+
+  14:
+    sourcePage: 15
+    pdfDimensionsMeters: [30, 33]
+    feature: 'Single dominant slope ↓→; small back-left arc-mound'
+    jpNote: '奥からはやい'
+    enNote: 'Fast from back'
+    confidence: medium
+    regions:
+      - name: whole_green
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [+0.3, -0.95]
+        magnitudePct: 2.0
+      - name: back_left_arc_mound
+        boundsFrac: [0.05, 0.65, 0.50, 0.95]
+        slopeDir: [-0.4, -0.92]
+        magnitudePct: 3.0
+    ridges:
+      - name: back_left_arc
+        polylineFrac: [[0.10, 0.70], [0.25, 0.80], [0.45, 0.85]]
+        transitionBandMeters: 1.0
+        transitionMagnitudePct: 3.5
+        fallDirection: lower
+    pins:
+      - { posFrac: [0.55, 0.40], label: 'default-center', isDefault: true }
+      - { posFrac: [0.70, 0.65], label: 'back-right' }
+      - { posFrac: [0.30, 0.30], label: 'front-left' }
+
+  15:
+    sourcePage: 16
+    pdfDimensionsMeters: [33, 31]
+    feature: 'Single-tier dominant ↘ drainage; subtle'
+    jpNote: '左サイドからは見た目よりはやい'
+    enNote: 'Faster than it looks from left side'
+    confidence: high
+    regions:
+      - name: whole_green
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [+0.5, -0.87]
+        magnitudePct: 2.0
+    ridges: []
+    pins:
+      - { posFrac: [0.50, 0.50], label: 'default-center', isDefault: true }
+      - { posFrac: [0.30, 0.70], label: 'back-left' }
+      - { posFrac: [0.70, 0.30], label: 'front-right' }
+
+  16:
+    sourcePage: 17
+    pdfDimensionsMeters: [24, 36]
+    feature: 'Back-to-front, with one small uphill ledge near front-center'
+    jpNote: '奥からはやい'
+    enNote: 'Fast from back'
+    confidence: medium
+    regions:
+      - name: whole_green
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [0.0, -1.0]
+        magnitudePct: 2.0
+      - name: front_center_ledge
+        boundsFrac: [0.40, 0.05, 0.60, 0.25]
+        slopeDir: [0.0, +1.0]
+        magnitudePct: 1.5
+    ridges: []
+    pins:
+      - { posFrac: [0.50, 0.40], label: 'default-front-center', isDefault: true }
+      - { posFrac: [0.50, 0.75], label: 'back-center' }
+      - { posFrac: [0.35, 0.50], label: 'middle-left' }
+
+  17:
+    sourcePage: 18
+    pdfDimensionsMeters: [25, 37]
+    feature: 'Single-tier crown; arrows fan from center, mostly downward'
+    jpNote: '左奥からはやい'
+    enNote: 'Fast from back-left'
+    confidence: medium
+    regions:
+      - name: whole_green
+        boundsFrac: [0.00, 0.00, 1.00, 1.00]
+        slopeDir: [0.0, -1.0]
+        magnitudePct: 1.8
+      - name: left_half_acceleration
+        boundsFrac: [0.00, 0.45, 0.50, 1.00]
+        slopeDir: [+0.4, -0.92]
+        magnitudePct: 2.2
+      - name: right_half_acceleration
+        boundsFrac: [0.50, 0.45, 1.00, 1.00]
+        slopeDir: [-0.4, -0.92]
+        magnitudePct: 2.0
+    ridges: []
+    pins:
+      - { posFrac: [0.50, 0.35], label: 'default-front-center', isDefault: true }
+      - { posFrac: [0.30, 0.70], label: 'back-left' }
+      - { posFrac: [0.70, 0.70], label: 'back-right' }
+
+  18:
+    sourcePage: 19
+    pdfDimensionsMeters: [28, 40]
+    feature: '**VERTICAL 2-TIER** (front/back) with slight diagonal ridge'
+    jpNote: '縦長の2段グリーン。同じ段にのせましょう'
+    enNote: 'Vertically-long 2-tier green. Aim for the same tier as the pin.'
+    confidence: high
+    regions:
+      - name: upper_tier
+        boundsFrac: [0.00, 0.50, 1.00, 1.00]
+        slopeDir: [+0.3, -0.95]
+        magnitudePct: 2.0
+      - name: lower_tier
+        boundsFrac: [0.00, 0.00, 1.00, 0.50]
+        slopeDir: [+0.5, -0.87]
+        magnitudePct: 2.5
+    ridges:
+      - name: middle_horizontal_ridge
+        polylineFrac: [[0.05, 0.55], [0.35, 0.50], [0.65, 0.47], [0.95, 0.45]]
+        transitionBandMeters: 1.5
+        transitionMagnitudePct: 5.0
+        fallDirection: lower
+    pins:
+      - { posFrac: [0.50, 0.25], label: 'default-lower-tier-front', isDefault: true }
+      - { posFrac: [0.40, 0.75], label: 'upper-tier-back' }
+      - { posFrac: [0.65, 0.70], label: 'upper-tier-right' }
+      - { posFrac: [0.70, 0.20], label: 'lower-tier-right' }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Summary:
+#   Confirmed 2-tier (explicit '2段' call-out + ridge polyline):
+#     3, 7, 11, 18
+#   Partial-tier (dashed line visible without explicit '2段' wording):
+#     6, 13, 14
+#   Crowned single-tier (drains outward from a center spine/dome):
+#     1, 6, 17
+#   Mounded (multi-directional from a sub-mound):
+#     4 (small back-mound), 9 (heavy mounding), 14 (back-left arc), 16 (front ledge)
+#   Pure single-direction back-to-front (the Lomond 'default'):
+#     2, 5 (flattest), 8, 12, 15
+#   Saddle/twist (unusual cross-flow):
+#     10
+#
+# Magnitude distribution:
+#   1.0–1.5%:  region count = 4   (Hole 5 main, Hole 1 defensive ledge, etc.)
+#   1.5–2.5%:  region count = 28  (the vast majority — '見た目よりはやい' Lomond character)
+#   2.5–3.5%:  region count = 5   (Hole 9 mounds primarily)
+#   3.5–5.0%:  ridge transitions only
+#
+# Total regions: 38 across 18 holes
+# Total ridges:  8 across 8 holes
+# Total pins:    66 across 18 holes (3.7 avg per hole, in spec range of 3-5)
