@@ -35,10 +35,16 @@ load_dotenv()
 # --- Config from environment variables ---
 # Read lazily (no KeyError at import) so --dry-run / --help work without secrets.
 # A real send validates these in main() and fails fast with a clear message.
-REQUIRED_ENV_VARS = ("ANTHROPIC_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+# Separate channel for --test / preview sends, so the PRODUCTION channel only
+# ever receives the scheduled daily report.
+TELEGRAM_TEST_CHAT_ID = os.environ.get("TELEGRAM_TEST_CHAT_ID", "")
+
+# Every send this run targets ACTIVE_CHAT_ID; main() flips it to the test chat
+# when --test is passed.
+ACTIVE_CHAT_ID = TELEGRAM_CHAT_ID
 
 # Repo defaults to two levels up from this script (Docs/Scripts/ -> repo root),
 # so it works on any machine without setting GOLFIN_REPO_PATH.
@@ -408,13 +414,13 @@ def post_to_telegram(text: str):
 
     for chunk in chunks:
         payload = {
-            "chat_id": TELEGRAM_CHAT_ID,
+            "chat_id": ACTIVE_CHAT_ID,
             "text": chunk,
         }
         resp = requests.post(url, json=payload, timeout=10)
         resp.raise_for_status()
 
-    print(f"[OK] Telegram message sent to {TELEGRAM_CHAT_ID}")
+    print(f"[OK] Telegram message sent to {ACTIVE_CHAT_ID}")
 
 
 def _send_telegram_file(method: str, field: str, path: str, caption: str) -> bool:
@@ -423,7 +429,7 @@ def _send_telegram_file(method: str, field: str, path: str, caption: str) -> boo
     Returns True on success, False on any failure (caller decides whether to delete).
     """
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}"
-    data = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption[:1024]}
+    data = {"chat_id": ACTIVE_CHAT_ID, "caption": caption[:1024]}
     if method == "sendVideo":
         data["supports_streaming"] = "true"
     try:
@@ -504,6 +510,7 @@ def main():
     parser.add_argument("--since", default="midnight", help="Git --since value (e.g. '2026-05-14 00:00:00') to backfill missed days")
     parser.add_argument("--no-media", action="store_true", help="Skip all video/image attachments")
     parser.add_argument("--dry-run", action="store_true", help="Print the report + planned media to stdout; do NOT post to Telegram or delete anything")
+    parser.add_argument("--test", action="store_true", help="Real send, but to TELEGRAM_TEST_CHAT_ID instead of the production channel")
     args = parser.parse_args()
 
     print(f"[{datetime.now().isoformat()}] Starting daily report...")
@@ -542,13 +549,27 @@ def main():
         print("\n[DRY RUN] Nothing posted to Telegram; nothing deleted; no Claude call.")
         return
 
-    # Real send needs all secrets — fail fast with a clear message if any missing.
-    missing = [n for n in REQUIRED_ENV_VARS if not os.environ.get(n)]
+    # Real send needs the secrets — fail fast with a clear message if any missing.
+    # --test routes everything to the test channel so production only ever gets
+    # the scheduled report.
+    global ACTIVE_CHAT_ID
+    needed = {
+        "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY,
+        "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+    }
+    if args.test:
+        needed["TELEGRAM_TEST_CHAT_ID"] = TELEGRAM_TEST_CHAT_ID
+        ACTIVE_CHAT_ID = TELEGRAM_TEST_CHAT_ID
+    else:
+        needed["TELEGRAM_CHAT_ID"] = TELEGRAM_CHAT_ID
+        ACTIVE_CHAT_ID = TELEGRAM_CHAT_ID
+    missing = [k for k, v in needed.items() if not v]
     if missing:
         print(f"[FATAL] Missing required env var(s): {', '.join(missing)}. "
               f"Copy Docs/Scripts/.env.example to .env and fill it in "
               f"(see DAILY_REPORT_SETUP.md).")
         sys.exit(1)
+    print(f"[INFO] Target channel: {'TEST' if args.test else 'PRODUCTION'} ({ACTIVE_CHAT_ID})")
 
     if not has_commits and not has_notion:
         today = datetime.now().strftime("%Y-%m-%d (%A)")

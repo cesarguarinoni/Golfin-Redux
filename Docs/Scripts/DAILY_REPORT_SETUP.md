@@ -32,7 +32,8 @@ Then edit `Docs/Scripts/.env` and fill in:
 |---|---|---|
 | `ANTHROPIC_API_KEY` | ✅ | Claude API key (summarization) |
 | `TELEGRAM_BOT_TOKEN` | ✅ | BotFather token for the report bot |
-| `TELEGRAM_CHAT_ID` | ✅ | Target chat/channel id |
+| `TELEGRAM_CHAT_ID` | ✅ | Production chat/channel id (scheduled report) |
+| `TELEGRAM_TEST_CHAT_ID` | — | Separate channel for `--test` preview sends |
 | `GOLFIN_REPO_PATH` | — | Defaults to two levels up from the script |
 | `GOLFIN_REPORT_MEDIA_DIR` | — | Defaults to `<repo>/Docs/Reports/Media` |
 | `NOTION_TOKEN`, `NOTION_DATABASE_ID` | — | Leave blank to skip the task tracker |
@@ -74,7 +75,10 @@ VENV=Docs/Scripts/.venv/bin/python
 # No Claude call, no Telegram post, no deletion.
 $VENV Docs/Scripts/daily_report.py --dry-run
 
-# Real send for today
+# Real PREVIEW send to the TEST channel (TELEGRAM_TEST_CHAT_ID)
+$VENV Docs/Scripts/daily_report.py --test
+
+# Real send for today (PRODUCTION channel)
 $VENV Docs/Scripts/daily_report.py
 
 # Backfill a specific day / add a note
@@ -88,6 +92,7 @@ launchctl start com.golfin.dailyreport
 | Flag | Effect |
 |---|---|
 | `--dry-run` | Print inputs + planned media; no API call, no post, no deletion |
+| `--test` | Real send, but to `TELEGRAM_TEST_CHAT_ID` instead of production |
 | `--no-media` | Send the text report only; skip all attachments |
 | `--since <git-since>` | Override the commit window (default `midnight`) |
 | `--note "<text>"` | Inject a developer note into the summary |
