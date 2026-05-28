@@ -27,10 +27,11 @@ import requests
 from dotenv import load_dotenv
 
 # Load .env that sits NEXT TO this script (robust under launchd, where the CWD
-# is not the script directory). Falls back to the normal upward search.
+# is not the script directory). override=True so the .env wins even when the
+# launching environment already exports an (often empty) ANTHROPIC_API_KEY.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(SCRIPT_DIR, ".env"))
-load_dotenv()
+load_dotenv(os.path.join(SCRIPT_DIR, ".env"), override=True)
+load_dotenv()  # fallback upward search; does not override the script-dir .env
 
 # --- Config from environment variables ---
 # Read lazily (no KeyError at import) so --dry-run / --help work without secrets.
@@ -342,7 +343,7 @@ def summarize_with_claude(
         extra_note_section = f"\nExtra note from developer (include as a bullet in the blockers or 'what was done' section as appropriate — translate it to Japanese in the JP section):\n{extra_note}\n"
 
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=1500,
         messages=[
             {
