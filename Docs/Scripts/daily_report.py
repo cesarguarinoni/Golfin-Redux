@@ -4,7 +4,15 @@ GOLFIN Daily Development Report
 Pulls git commits + Notion tasks, summarizes via Claude Sonnet, posts to Telegram.
 Includes Japan holiday/weekend awareness.
 
-See DAILY_REPORT_SETUP.md for installation and configuration.
+Media attachments (added 2026-05-28, Mac setup):
+  After the text report is posted, the tool also sends media to the same chat:
+    1. Any video file (.mp4/.mov/.webm/...) added or modified in TODAY's git commits.
+    2. Any video OR image you drop into the media folder (default: Docs/Reports/Media/).
+       Drop-folder files are DELETED after a successful send (README.md/.gitkeep are kept).
+  Telegram's Bot API caps uploads at 50 MB — larger files are skipped (and reported),
+  never deleted.
+
+See DAILY_REPORT_SETUP.md for installation and configuration (venv, .env, launchd).
 """
 
 import argparse
@@ -17,13 +25,30 @@ import anthropic
 import requests
 
 from dotenv import load_dotenv
+
+# Load .env that sits NEXT TO this script (robust under launchd, where the CWD
+# is not the script directory). Falls back to the normal upward search.
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(SCRIPT_DIR, ".env"))
 load_dotenv()
 
 # --- Config from environment variables ---
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
-REPO_PATH = os.environ.get("GOLFIN_REPO_PATH", os.path.expanduser("~/GolfinRedux"))
+# Read lazily (no KeyError at import) so --dry-run / --help work without secrets.
+# A real send validates these in main() and fails fast with a clear message.
+REQUIRED_ENV_VARS = ("ANTHROPIC_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
+# Repo defaults to two levels up from this script (Docs/Scripts/ -> repo root),
+# so it works on any machine without setting GOLFIN_REPO_PATH.
+DEFAULT_REPO_PATH = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+REPO_PATH = os.environ.get("GOLFIN_REPO_PATH", DEFAULT_REPO_PATH)
+
+# Manual drop folder for videos/images you want included in today's report.
+REPORT_MEDIA_DIR = os.environ.get(
+    "GOLFIN_REPORT_MEDIA_DIR", os.path.join(REPO_PATH, "Docs", "Reports", "Media")
+)
 
 # --- Notion config (optional — leave empty to skip) ---
 NOTION_TOKEN = os.environ.get("NOTION_TOKEN", "")
@@ -37,6 +62,16 @@ NOTION_STATUS_COLUMN = os.environ.get("NOTION_STATUS_COLUMN", "Status")
 DONE_STATUSES = ["Done", "Complete", "Completed"]
 IN_PROGRESS_STATUSES = ["In Progress", "In progress", "Doing"]
 TODO_STATUSES = ["To Do", "To do", "Not Started", "Not started", "Planned"]
+
+# --- Media / Telegram upload constraints ---
+# Telegram Bot API hard cap on uploaded files is 50 MB.
+TELEGRAM_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+VIDEO_EXTS = {".mp4", ".mov", ".webm", ".m4v", ".avi", ".mkv"}
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
+ANIM_EXTS = {".gif"}
+MEDIA_EXTS = VIDEO_EXTS | IMAGE_EXTS | ANIM_EXTS
+# Files in the drop folder that are part of the repo scaffold, never sent/deleted.
+DROP_FOLDER_KEEP = {"README.md", ".gitkeep", ".DS_Store"}
 
 # --- Japan Public Holidays 2026 ---
 JAPAN_HOLIDAYS_2026 = {
@@ -114,6 +149,58 @@ def get_changed_files(since: str = "midnight") -> str:
         text=True,
     )
     return result.stdout.strip()
+
+
+def get_todays_videos(since: str = "midnight") -> list:
+    """
+    Return absolute paths of video files added/modified in commits since `since`.
+    --diff-filter=d excludes deletions (lowercase d = "not deleted").
+    Only files that still exist on disk are returned, de-duplicated, sorted.
+    """
+    result = subprocess.run(
+        ["git", "log", f"--since={since}", "--name-only", "--diff-filter=d",
+         "--format=", "--no-merges"],
+        cwd=REPO_PATH,
+        capture_output=True,
+        text=True,
+    )
+    found = []
+    seen = set()
+    for line in result.stdout.splitlines():
+        rel = line.strip()
+        if not rel:
+            continue
+        if os.path.splitext(rel)[1].lower() not in VIDEO_EXTS:
+            continue
+        abs_path = os.path.normpath(os.path.join(REPO_PATH, rel))
+        real = os.path.realpath(abs_path)
+        if real in seen:
+            continue
+        if os.path.isfile(abs_path):
+            seen.add(real)
+            found.append(abs_path)
+    return sorted(found)
+
+
+def collect_drop_media(media_dir: str) -> list:
+    """
+    Return absolute paths of media files dropped into `media_dir` (non-recursive).
+    Skips the repo scaffold files (README.md, .gitkeep, .DS_Store) and any
+    extension we don't recognise as media.
+    """
+    if not os.path.isdir(media_dir):
+        return []
+    found = []
+    for name in sorted(os.listdir(media_dir)):
+        if name in DROP_FOLDER_KEEP or name.startswith("."):
+            continue
+        path = os.path.join(media_dir, name)
+        if not os.path.isfile(path):
+            continue
+        if os.path.splitext(name)[1].lower() not in MEDIA_EXTS:
+            continue
+        found.append(path)
+    return found
 
 
 def read_ai_context() -> str:
@@ -313,7 +400,7 @@ If there are no commits and no Notion tasks, say "No development activity today"
 # =============================================================================
 
 def post_to_telegram(text: str):
-    """Send message to Ken via Telegram Bot API."""
+    """Send a text message to the configured chat via Telegram Bot API."""
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
     # Telegram has a 4096 char limit — split if needed
@@ -330,6 +417,83 @@ def post_to_telegram(text: str):
     print(f"[OK] Telegram message sent to {TELEGRAM_CHAT_ID}")
 
 
+def _send_telegram_file(method: str, field: str, path: str, caption: str) -> bool:
+    """
+    Upload a single file to Telegram via the given method (sendVideo/sendPhoto/etc.).
+    Returns True on success, False on any failure (caller decides whether to delete).
+    """
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}"
+    data = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption[:1024]}
+    if method == "sendVideo":
+        data["supports_streaming"] = "true"
+    try:
+        with open(path, "rb") as fh:
+            resp = requests.post(url, data=data, files={field: fh}, timeout=300)
+        resp.raise_for_status()
+        print(f"[OK] {method}: {os.path.basename(path)}")
+        return True
+    except Exception as e:
+        detail = ""
+        # Surface Telegram's JSON error description when present.
+        resp_obj = getattr(e, "response", None)
+        if resp_obj is not None:
+            detail = f" — {resp_obj.text[:300]}"
+        print(f"[WARN] {method} failed for {os.path.basename(path)}: {e}{detail}")
+        return False
+
+
+def send_media_file(path: str, caption: str) -> bool:
+    """Pick the right Telegram method based on extension and send the file."""
+    ext = os.path.splitext(path)[1].lower()
+    if ext in VIDEO_EXTS:
+        return _send_telegram_file("sendVideo", "video", path, caption)
+    if ext in ANIM_EXTS:
+        return _send_telegram_file("sendAnimation", "animation", path, caption)
+    if ext in IMAGE_EXTS:
+        return _send_telegram_file("sendPhoto", "photo", path, caption)
+    # Unknown — send as a generic document so nothing silently disappears.
+    return _send_telegram_file("sendDocument", "document", path, caption)
+
+
+def send_all_media(git_videos: list, drop_media: list) -> None:
+    """
+    Send git videos (kept on disk) + drop-folder media (deleted after success).
+    Oversize files (>50 MB) are skipped and reported, never deleted.
+    """
+    if not git_videos and not drop_media:
+        print("[INFO] No media to attach today.")
+        return
+
+    sent_real_paths = set()
+
+    def _process(path: str, caption_prefix: str, is_drop: bool):
+        real = os.path.realpath(path)
+        if real in sent_real_paths:
+            return  # de-dupe across git + drop folder
+        size = os.path.getsize(path)
+        name = os.path.basename(path)
+        if size > TELEGRAM_MAX_UPLOAD_BYTES:
+            mb = size / (1024 * 1024)
+            print(f"[SKIP] {name} is {mb:.1f} MB > 50 MB Telegram limit — not sent.")
+            return
+        caption = f"{caption_prefix}{name}"
+        ok = send_media_file(path, caption)
+        if ok:
+            sent_real_paths.add(real)
+            if is_drop:
+                try:
+                    os.remove(path)
+                    print(f"[OK] Removed drop-folder file after send: {name}")
+                except OSError as e:
+                    print(f"[WARN] Could not delete {name} after send: {e}")
+
+    for v in git_videos:
+        _process(v, "🎬 ", is_drop=False)
+
+    for m in drop_media:
+        _process(m, "📎 ", is_drop=True)
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -338,9 +502,12 @@ def main():
     parser = argparse.ArgumentParser(description="GOLFIN daily report")
     parser.add_argument("--note", default="", help="Extra note to include in today's report")
     parser.add_argument("--since", default="midnight", help="Git --since value (e.g. '2026-05-14 00:00:00') to backfill missed days")
+    parser.add_argument("--no-media", action="store_true", help="Skip all video/image attachments")
+    parser.add_argument("--dry-run", action="store_true", help="Print the report + planned media to stdout; do NOT post to Telegram or delete anything")
     args = parser.parse_args()
 
     print(f"[{datetime.now().isoformat()}] Starting daily report...")
+    print(f"[INFO] Repo: {REPO_PATH}")
 
     commits = get_todays_commits(args.since)
     commit_count = get_commit_count(args.since)
@@ -354,6 +521,34 @@ def main():
 
     has_commits = bool(commits)
     has_notion = bool(notion_tasks_data)
+
+    # Gather media regardless of the report-text branch.
+    git_videos = [] if args.no_media else get_todays_videos(args.since)
+    drop_media = [] if args.no_media else collect_drop_media(REPORT_MEDIA_DIR)
+
+    # --dry-run is a cheap, safe diagnostics check: no Claude call, no Telegram
+    # post, no file deletion. Show the inputs and the media that WOULD be sent.
+    if args.dry_run:
+        print("\n========== DRY RUN — inputs ==========")
+        print(f"Commits since '{args.since}': {commit_count}")
+        print(f"Notion tasks found: {bool(notion_tasks_data)}")
+        print("\n========== DRY RUN — media that WOULD be sent ==========")
+        for v in git_videos:
+            print(f"  🎬 git video : {os.path.relpath(v, REPO_PATH)}")
+        for m in drop_media:
+            print(f"  📎 drop file : {os.path.relpath(m, REPO_PATH)} (would be deleted after send)")
+        if not git_videos and not drop_media:
+            print("  (none)")
+        print("\n[DRY RUN] Nothing posted to Telegram; nothing deleted; no Claude call.")
+        return
+
+    # Real send needs all secrets — fail fast with a clear message if any missing.
+    missing = [n for n in REQUIRED_ENV_VARS if not os.environ.get(n)]
+    if missing:
+        print(f"[FATAL] Missing required env var(s): {', '.join(missing)}. "
+              f"Copy Docs/Scripts/.env.example to .env and fill it in "
+              f"(see DAILY_REPORT_SETUP.md).")
+        sys.exit(1)
 
     if not has_commits and not has_notion:
         today = datetime.now().strftime("%Y-%m-%d (%A)")
@@ -383,6 +578,10 @@ def main():
         )
 
     post_to_telegram(report)
+
+    if not args.no_media:
+        send_all_media(git_videos, drop_media)
+
     print("Done.")
 
 

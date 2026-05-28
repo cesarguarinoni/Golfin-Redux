@@ -128,3 +128,16 @@ tasks/loop_v2_smoke_bot/*/video/
 # These should never have been tracked (rolled back in dae6f451, 2026-05-26).
 Docs/Diagnostics/_capture/*.flag
 Docs/Diagnostics/_capture/*.flag.pre
+
+# =========================
+# Daily Report tool (Docs/Scripts/daily_report.py)
+# =========================
+# Secrets (.env) and the per-machine venv must never be committed.
+Docs/Scripts/.env
+Docs/Scripts/.venv/
+Docs/Scripts/daily_report.log
+# Media drop folder: contents are transient (auto-deleted after send).
+# Keep only the scaffold.
+Docs/Reports/Media/*
+!Docs/Reports/Media/README.md
+!Docs/Reports/Media/.gitkeep
