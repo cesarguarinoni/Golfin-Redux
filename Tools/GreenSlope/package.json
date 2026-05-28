@@ -1,0 +1,13 @@
+{
+  "name": "green-slope",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "gui": "node scripts/dev-server.mjs",
+    "extract": "node scripts/extract-panels.mjs"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^4.0.0",
+    "sharp": "^0.33.0"
+  }
+}

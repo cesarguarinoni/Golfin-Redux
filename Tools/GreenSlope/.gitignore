@@ -1,0 +1,16 @@
+# Authored output (committed separately when approved by Cesar)
+output/
+
+# Extracted PDF panels (regenerable via npm run extract)
+data/panels.json
+
+# Dependencies
+node_modules/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Session locks
+*.lock
+!package-lock.json

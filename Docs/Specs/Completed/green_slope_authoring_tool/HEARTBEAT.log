@@ -1,0 +1,20 @@
+2026-05-28T11:11:55Z activated — STATUS=SPEC_READY -> IMPLEMENTER_WORKING
+
+=== iter-1 kickoff baseline ===
+HEAD SHA: b38ea22e
+DIRTY (git status --porcelain --untracked-files=no):
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Resources/HoleData/Hole_01/green.json
+ M Assets/Scripts/Course/Runtime/GreenTopology.cs
+ M Assets/Scripts/Editor/GreenAuthoring/GreenTopologyEditor.cs
+ M Docs/Reference/Lomond_Green_Topology.yaml
+ M Docs/Specs/Active/lomond_greens_authoring_batch/ITER8_PILOT_H07.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-05-28T11:25:00Z package.json + extract-panels.mjs done, panels.json written (18 holes), H07 crop verified
+2026-05-28T11:45:00Z all 4 deliverables written, smoke tests passed, output/ cleaned
+2026-05-28T11:50:00Z done, awaiting Cesar eyeball review

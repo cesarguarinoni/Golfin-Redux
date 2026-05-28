@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GreenSlope Authoring Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    font-family: monospace;
+    font-size: 13px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Top bar ── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    background: #111;
+    border-bottom: 2px solid #333;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  #topbar label { color: #aaa; }
+  #topbar select, #topbar input[type=range], #topbar button {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid #444;
+    padding: 3px 7px;
+    font: inherit;
+    cursor: pointer;
+  }
+  #topbar button { border-radius: 3px; }
+  #topbar button:hover { background: #3a3a3a; }
+  #topbar button.active { background: #1e6fa0; border-color: #3a9fd8; color: #fff; }
+  #topbar button.danger { background: #8a2222; border-color: #c04444; }
+  #topbar button.danger:hover { background: #b03030; }
+  #topbar .sep { border-left: 1px solid #444; height: 22px; margin: 0 4px; }
+  #topbar .tool-btn.active { background: #185a30; border-color: #2e9b58; color: #aef7c2; }
+
+  /* status/region readout */
+  #status-bar {
+    padding: 3px 10px;
+    background: #111;
+    border-bottom: 1px solid #2a2a2a;
+    color: #7a7;
+    font-size: 12px;
+    flex-shrink: 0;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  #status-bar .warn { color: #e8b84b; }
+  #status-bar .ok { color: #4ec94e; }
+
+  /* ── Main area ── */
+  #main {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 2D authoring canvas (FLAT mode) */
+  #flat-view {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+  }
+  #canvas-wrap {
+    position: relative;
+    /* sized dynamically by JS */
+  }
+  /* The backdrop image: positioned with CSS transform, NOT left/top */
+  #backdrop {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: center center; /* rotate/scale pivot about the image centre */
+    /* transform is set by JS: translate(tx,ty) rotate(deg) scale(s) */
+    cursor: grab;
+    pointer-events: auto;
+    user-select: none;
+  }
+  #backdrop.dragging { cursor: grabbing; }
+  #canvas2d {
+    position: relative;
+    z-index: 2;
+    cursor: crosshair;
+  }
+
+  /* 3D view */
+  #gl {
+    position: absolute;
+    inset: 0;
+    display: none; /* hidden in FLAT mode */
+    z-index: 10;
+  }
+
+  /* Instructions overlay */
+  #instructions {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid #333;
+    padding: 6px 10px;
+    font-size: 11px;
+    line-height: 1.6;
+    pointer-events: none;
+    z-index: 20;
+    color: #aaa;
+  }
+
+  /* Loading spinner */
+  #loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    font-size: 16px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Top bar ── -->
+<div id="topbar">
+  <label>Hole:</label>
+  <select id="hole-sel">
+    <option value="">—select—</option>
+    <script>for(let h=1;h<=18;h++) document.write(`<option value="${h}">${h}</option>`);</script>
+  </select>
+
+  <div class="sep"></div>
+
+  <button id="align-bd-btn" class="tool-btn" title="Align Backdrop mode — drag to move, mouse wheel to zoom, Q/E to rotate">⤧ Align BD</button>
+  <button id="flip-h-btn" title="Mirror the backdrop horizontally (fixes a flipped PDF — rotation alone can't). Align mode key: F">⇄ Flip H</button>
+  <button id="flip-v-btn" title="Mirror the backdrop vertically. Align mode key: V">⇅ Flip V</button>
+
+  <label>Opacity:</label>
+  <input id="bd-opacity" type="range" min="0" max="1" step="0.01" value="0.55" style="width:70px">
+  <input id="bd-opacity-num" type="number" min="0" max="1" step="0.05" value="0.55" style="width:52px">
+
+  <label>Scale:</label>
+  <input id="bd-scale" type="range" min="0.1" max="6" step="0.01" value="1" style="width:70px">
+  <input id="bd-scale-num" type="number" min="0.1" max="6" step="0.05" value="1" style="width:58px">
+
+  <label>Rotate°:</label>
+  <input id="bd-rotate" type="range" min="-180" max="180" step="0.5" value="0" style="width:70px">
+  <input id="bd-rotate-num" type="number" min="-180" max="180" step="0.5" value="0" style="width:60px">
+
+  <button id="bd-reset-btn" title="Reset backdrop transform">Reset BD</button>
+
+  <div class="sep"></div>
+
+  <button id="arrow-tool-btn" class="tool-btn active" title="Arrow tool (drag base→tip)">Arrow</button>
+  <button id="ridge-tool-btn" class="tool-btn" title="Ridge polyline tool">Ridge</button>
+  <button id="ridge-finish-btn" title="Finish the ridge polyline (or press Enter)" style="display:none">✓ Finish Ridge</button>
+  <button id="erase-btn" class="tool-btn" title="Erase last item of active type">Erase Last</button>
+
+  <div class="sep"></div>
+
+  <button id="toggle-3d-btn" title="Toggle FLAT / 3D view">FLAT</button>
+
+  <div class="sep"></div>
+
+  <button id="export-btn" title="Export to /api/save">Export</button>
+  <button id="import-btn" title="Load a previously exported hole_NN_slope_authoring.json (from output/)">Import</button>
+  <input id="import-file" type="file" accept=".json,application/json" style="display:none">
+  <button id="clear-btn" class="danger" title="Clear all arrows + ridge">Clear All</button>
+
+  <!-- region (tier) names — only used when a ridge splits the green into 2 tiers -->
+  <div class="sep"></div>
+  <label title="Free-text name for tier on one side of the ridge (e.g. left/upper/front)"><span style="color:#36c6ff">●</span> Tier 0:</label>
+  <input id="lbl-upper" type="text" value="upper" style="width:64px;border-left:3px solid #36c6ff" title="Name for region id 0 — the CYAN arrows/label on the canvas">
+  <label title="Free-text name for tier on the other side of the ridge (e.g. right/lower/back)"><span style="color:#ff8a3d">●</span> Tier 1:</label>
+  <input id="lbl-lower" type="text" value="lower" style="width:64px;border-left:3px solid #ff8a3d" title="Name for region id 1 — the ORANGE arrows/label on the canvas">
+</div>
+
+<!-- ── Status bar ── -->
+<div id="status-bar">
+  <span id="stat-hole">No hole loaded</span>
+  <span id="stat-arrows">Arrows: 0</span>
+  <span id="stat-ridge">Ridge: none</span>
+  <span id="stat-regions">Regions: —</span>
+  <span id="stat-mode">Mode: FLAT</span>
+</div>
+
+<!-- ── Main area ── -->
+<div id="main">
+  <div id="flat-view">
+    <div id="canvas-wrap">
+      <img id="backdrop" draggable="false" src="" style="display:none; position:absolute; top:0; left:0; transform-origin:center center;">
+      <canvas id="canvas2d"></canvas>
+    </div>
+  </div>
+  <canvas id="gl"></canvas>
+  <div id="loading">Loading…</div>
+  <div id="instructions"></div>
+</div>
+
+<script>
+"use strict";
+// ============================================================
+// State
+// ============================================================
+const state = {
+  hole: null,
+  contour: [],       // world-XZ pairs [[x,z],…]
+  bunkers: [],       // nearby bunker contours [[ [x,z],… ], …] — alignment landmarks
+  arrows: [],        // [{baseXZ:[x,z], tipXZ:[x,z], region:0|1}]
+  ridge: [],         // [[x,z],…] polyline; [] when not started
+  ridgeDrawing: false,
+  activeTool: "arrow",   // "arrow" | "ridge"
+  bdAlign: false,        // Align-Backdrop mode (drag=move, wheel=zoom, Q/E=rotate)
+  _loading: false,       // true while loadHole() restores — suppresses autosave
+  mode: "flat",          // "flat" | "3d"
+  panelW: 0,
+  panelH: 0,
+  // Backdrop CSS transform state
+  bd: { tx: 0, ty: 0, rotDeg: 0, scale: 1.0, flipH: false, flipV: false },
+  // Canvas geometry
+  canvasW: 600, canvasH: 600,
+  worldBounds: null,   // {minX, maxX, minZ, maxZ, spanX, spanZ}
+  // Arrow drawing in progress
+  arrowDrag: null,   // {startX, startZ, startPx, startPy}  — creating a new arrow
+  arrowMove: null,   // {idx, startWX, startWZ, origBase, origTip} — moving/cloning an existing arrow
+  // 3D scene
+  gl3: null,
+};
+
+// Tier colour-coding: region id 0 = cyan, region id 1 = orange.
+// Arrows, the on-canvas tier labels, the topbar Tier fields, and the status
+// readout all use these so it's always clear which side of the ridge is which.
+const REGION_COLORS = ["#36c6ff", "#ff8a3d"];
+const REGION_COLORS_3D = [0x36c6ff, 0xff8a3d];
+
+// ============================================================
+// DOM refs
+// ============================================================
+const holeSel      = document.getElementById("hole-sel");
+const bdOpacity    = document.getElementById("bd-opacity");
+const bdOpacityNum = document.getElementById("bd-opacity-num");
+const bdScale      = document.getElementById("bd-scale");
+const bdScaleNum   = document.getElementById("bd-scale-num");
+const bdRotate     = document.getElementById("bd-rotate");
+const bdRotateNum  = document.getElementById("bd-rotate-num");
+const bdResetBtn   = document.getElementById("bd-reset-btn");
+const alignBdBtn   = document.getElementById("align-bd-btn");
+const flipHBtn     = document.getElementById("flip-h-btn");
+const flipVBtn     = document.getElementById("flip-v-btn");
+const arrowToolBtn = document.getElementById("arrow-tool-btn");
+const ridgeToolBtn = document.getElementById("ridge-tool-btn");
+const ridgeFinishBtn = document.getElementById("ridge-finish-btn");
+const eraseBtn     = document.getElementById("erase-btn");
+const toggle3dBtn  = document.getElementById("toggle-3d-btn");
+const exportBtn    = document.getElementById("export-btn");
+const importBtn    = document.getElementById("import-btn");
+const importFile   = document.getElementById("import-file");
+const clearBtn     = document.getElementById("clear-btn");
+const lblUpper     = document.getElementById("lbl-upper");
+const lblLower     = document.getElementById("lbl-lower");
+
+const statHole     = document.getElementById("stat-hole");
+const statArrows   = document.getElementById("stat-arrows");
+const statRidge    = document.getElementById("stat-ridge");
+const statRegions  = document.getElementById("stat-regions");
+const statMode     = document.getElementById("stat-mode");
+
+const canvas2d     = document.getElementById("canvas2d");
+const ctx2d        = canvas2d.getContext("2d");
+const backdropEl   = document.getElementById("backdrop");
+const canvasWrap   = document.getElementById("canvas-wrap");
+const glCanvas     = document.getElementById("gl");
+const loadingEl    = document.getElementById("loading");
+const instEl       = document.getElementById("instructions");
+
+// ============================================================
+// Coordinate helpers
+// ============================================================
+// Map world XZ → canvas px (top-down; Z increases downward in canvas)
+function worldToCanvas(x, z) {
+  const b = state.worldBounds;
+  if (!b) return [0, 0];
+  const px = ((x - b.minX) / b.spanX) * (state.canvasW - 40) + 20;
+  const py = ((z - b.minZ) / b.spanZ) * (state.canvasH - 40) + 20;
+  return [px, py];
+}
+function canvasToWorld(px, py) {
+  const b = state.worldBounds;
+  if (!b) return [0, 0];
+  const x = ((px - 20) / (state.canvasW - 40)) * b.spanX + b.minX;
+  const z = ((py - 20) / (state.canvasH - 40)) * b.spanZ + b.minZ;
+  return [x, z];
+}
+
+// ============================================================
+// Compute world bounds from contour
+// ============================================================
+function computeBounds(contour) {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const [x, z] of contour) {
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  // Expand 15% for breathing room
+  const padX = (maxX - minX) * 0.15;
+  const padZ = (maxZ - minZ) * 0.15;
+  minX -= padX; maxX += padX;
+  minZ -= padZ; maxZ += padZ;
+  return { minX, maxX, minZ, maxZ, spanX: maxX - minX, spanZ: maxZ - minZ };
+}
+
+// Bounds over several world-XZ point arrays (green + nearby bunkers), so the
+// bunker landmarks stay in view. 12% breathing room.
+function computeBoundsMulti(pointArrays) {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const pts of pointArrays) {
+    for (const [x, z] of pts) {
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    }
+  }
+  if (!isFinite(minX)) return computeBounds([[0, 0]]);
+  const padX = (maxX - minX) * 0.12 || 2;
+  const padZ = (maxZ - minZ) * 0.12 || 2;
+  minX -= padX; maxX += padX;
+  minZ -= padZ; maxZ += padZ;
+  return { minX, maxX, minZ, maxZ, spanX: maxX - minX, spanZ: maxZ - minZ };
+}
+
+// Green-side bunkers only (centre within NEAR_M of the green centre).
+function nearbyBunkers(bunkers, greenContour) {
+  const gb = computeBounds(greenContour);
+  const gcx = (gb.minX + gb.maxX) / 2, gcz = (gb.minZ + gb.maxZ) / 2;
+  const NEAR_M = 60;
+  return bunkers
+    .filter(b => b.contour && b.contour.length >= 3)
+    .filter(b => {
+      const c = b.center || b.contour[0];
+      return Math.hypot(c[0] - gcx, c[1] - gcz) <= NEAR_M;
+    })
+    .map(b => b.contour);
+}
+
+// ============================================================
+// Size canvas to fit main area
+// ============================================================
+function resizeCanvas() {
+  const main = document.getElementById("main");
+  const available = Math.min(main.clientWidth - 20, main.clientHeight - 20);
+  const size = Math.max(400, available);
+  if (!state.worldBounds) { state.canvasW = size; state.canvasH = size; return; }
+  const b = state.worldBounds;
+  const aspect = b.spanX / b.spanZ;
+  if (aspect > 1) {
+    state.canvasW = size;
+    state.canvasH = Math.round(size / aspect);
+  } else {
+    state.canvasH = size;
+    state.canvasW = Math.round(size * aspect);
+  }
+  canvas2d.width  = state.canvasW;
+  canvas2d.height = state.canvasH;
+  canvasWrap.style.width  = state.canvasW + "px";
+  canvasWrap.style.height = state.canvasH + "px";
+  draw2d();
+}
+
+// ============================================================
+// Draw 2D canvas
+// ============================================================
+function draw2d() {
+  const W = state.canvasW, H = state.canvasH;
+  ctx2d.clearRect(0, 0, W, H);
+
+  if (!state.contour.length) return;
+
+  // Nearby bunkers (sand) — drawn first, as alignment landmarks under the green
+  for (const bc of state.bunkers) {
+    ctx2d.beginPath();
+    for (let i = 0; i < bc.length; i++) {
+      const [px, py] = worldToCanvas(...bc[i]);
+      if (i === 0) ctx2d.moveTo(px, py); else ctx2d.lineTo(px, py);
+    }
+    ctx2d.closePath();
+    ctx2d.fillStyle = "rgba(232, 214, 150, 0.5)";
+    ctx2d.fill();
+    ctx2d.strokeStyle = "#c9a84a";
+    ctx2d.lineWidth = 1.5;
+    ctx2d.stroke();
+  }
+
+  // Green polygon fill
+  ctx2d.beginPath();
+  for (let i = 0; i < state.contour.length; i++) {
+    const [px, py] = worldToCanvas(...state.contour[i]);
+    if (i === 0) ctx2d.moveTo(px, py); else ctx2d.lineTo(px, py);
+  }
+  ctx2d.closePath();
+  ctx2d.fillStyle = "rgba(40, 130, 60, 0.35)";
+  ctx2d.fill();
+  ctx2d.strokeStyle = "#3fc070";
+  ctx2d.lineWidth = 2;
+  ctx2d.stroke();
+
+  // Ridge polyline (dashed, yellow)
+  if (state.ridge.length >= 2) {
+    ctx2d.save();
+    ctx2d.setLineDash([8, 5]);
+    ctx2d.strokeStyle = "#f0d040";
+    ctx2d.lineWidth = 2.5;
+    ctx2d.beginPath();
+    for (let i = 0; i < state.ridge.length; i++) {
+      const [px, py] = worldToCanvas(...state.ridge[i]);
+      if (i === 0) ctx2d.moveTo(px, py); else ctx2d.lineTo(px, py);
+    }
+    ctx2d.stroke();
+    ctx2d.restore();
+    // Ridge vertices
+    for (const pt of state.ridge) {
+      const [px, py] = worldToCanvas(...pt);
+      ctx2d.fillStyle = "#f0d040";
+      ctx2d.beginPath();
+      ctx2d.arc(px, py, 4, 0, Math.PI * 2);
+      ctx2d.fill();
+    }
+  } else if (state.ridge.length === 1) {
+    const [px, py] = worldToCanvas(...state.ridge[0]);
+    ctx2d.fillStyle = "#f0d040";
+    ctx2d.beginPath();
+    ctx2d.arc(px, py, 4, 0, Math.PI * 2);
+    ctx2d.fill();
+  }
+
+  // Arrows — coloured by their tier (region 0 = cyan, region 1 = orange)
+  for (let i = 0; i < state.arrows.length; i++) {
+    const col = REGION_COLORS[state.arrows[i].region] || REGION_COLORS[0];
+    drawArrow(state.arrows[i], col, true, i);
+  }
+
+  // Tier name labels at each region's arrow cluster (only when a ridge splits it)
+  if (state.ridge.length >= 2) drawRegionLabels();
+
+  // In-progress arrow drag
+  if (state.arrowDrag) {
+    const d = state.arrowDrag;
+    drawArrowPx(d.startPx, d.startPy, d.curPx, d.curPy, "rgba(255,100,100,0.6)");
+  }
+
+  // In-progress ridge point
+  if (state.ridgeDrawing && state.ridge.length > 0) {
+    const last = state.ridge[state.ridge.length - 1];
+    const [lpx, lpy] = worldToCanvas(...last);
+    // Draw ghost line to cursor
+    if (state._ridgeCursorPx !== undefined) {
+      ctx2d.save();
+      ctx2d.setLineDash([4, 4]);
+      ctx2d.strokeStyle = "rgba(240,208,64,0.5)";
+      ctx2d.lineWidth = 2;
+      ctx2d.beginPath();
+      ctx2d.moveTo(lpx, lpy);
+      ctx2d.lineTo(state._ridgeCursorPx, state._ridgeCursorPy);
+      ctx2d.stroke();
+      ctx2d.restore();
+    }
+  }
+}
+
+// Draw each tier's name at the centroid of its arrows, in the tier colour.
+function drawRegionLabels() {
+  const names = [lblUpper.value || "Tier 0", lblLower.value || "Tier 1"];
+  for (const r of [0, 1]) {
+    const cluster = state.arrows.filter(a => a.region === r);
+    if (!cluster.length) continue;
+    let sx = 0, sz = 0;
+    for (const a of cluster) { sx += (a.baseXZ[0] + a.tipXZ[0]) / 2; sz += (a.baseXZ[1] + a.tipXZ[1]) / 2; }
+    const [px, py] = worldToCanvas(sx / cluster.length, sz / cluster.length);
+    const txt = names[r];
+    ctx2d.save();
+    ctx2d.font = "bold 13px monospace";
+    ctx2d.textAlign = "center";
+    const w = ctx2d.measureText(txt).width;
+    ctx2d.fillStyle = "rgba(0,0,0,0.65)";
+    ctx2d.fillRect(px - w / 2 - 5, py - 32, w + 10, 19);
+    ctx2d.fillStyle = REGION_COLORS[r];
+    ctx2d.fillText(txt, px, py - 18);
+    ctx2d.restore();
+  }
+}
+
+function drawArrow(arrow, color, showIndex, idx) {
+  const [bpx, bpy] = worldToCanvas(...arrow.baseXZ);
+  const [tpx, tpy] = worldToCanvas(...arrow.tipXZ);
+  drawArrowPx(bpx, bpy, tpx, tpy, color);
+  // Index label
+  if (showIndex) {
+    ctx2d.fillStyle = "#ffdd44";
+    ctx2d.font = "bold 11px monospace";
+    ctx2d.fillText(String(idx + 1), bpx + 4, bpy - 4);
+  }
+}
+
+function drawArrowPx(bpx, bpy, tpx, tpy, color) {
+  const dx = tpx - bpx, dy = tpy - bpy;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  if (len < 4) return;
+  const angle = Math.atan2(dy, dx);
+  const headLen = Math.min(12, len * 0.4);
+
+  ctx2d.strokeStyle = color;
+  ctx2d.fillStyle = color;
+  ctx2d.lineWidth = 2.5;
+  ctx2d.lineCap = "round";
+
+  ctx2d.beginPath();
+  ctx2d.moveTo(bpx, bpy);
+  ctx2d.lineTo(tpx, tpy);
+  ctx2d.stroke();
+
+  // Arrowhead
+  ctx2d.beginPath();
+  ctx2d.moveTo(tpx, tpy);
+  ctx2d.lineTo(tpx - headLen * Math.cos(angle - Math.PI / 6),
+               tpy - headLen * Math.sin(angle - Math.PI / 6));
+  ctx2d.lineTo(tpx - headLen * Math.cos(angle + Math.PI / 6),
+               tpy - headLen * Math.sin(angle + Math.PI / 6));
+  ctx2d.closePath();
+  ctx2d.fill();
+}
+
+// ============================================================
+// Region count (from ridge presence + arrow count)
+// ============================================================
+function computeRegionCount() {
+  if (state.ridge.length >= 2) return 2;
+  if (state.arrows.length === 0) return 1;
+  return 1;
+}
+
+// Assign each arrow to a region based on which side of ridge it's on
+function assignRegions() {
+  if (state.ridge.length < 2 || state.arrows.length === 0) {
+    state.arrows.forEach(a => { a.region = 0; });
+    return;
+  }
+  // Build ridge segments, determine which side of the polyline each arrow is on
+  // Use the signed area test (cross product of ridge tangent with arrow midpoint)
+  for (const arrow of state.arrows) {
+    const mx = (arrow.baseXZ[0] + arrow.tipXZ[0]) / 2;
+    const mz = (arrow.baseXZ[1] + arrow.tipXZ[1]) / 2;
+    // Find closest ridge segment, test which side
+    let side = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < state.ridge.length - 1; i++) {
+      const [ax, az] = state.ridge[i];
+      const [bx, bz] = state.ridge[i + 1];
+      // Distance from point to segment
+      const dx = bx - ax, dz = bz - az;
+      const len2 = dx*dx + dz*dz;
+      let t = len2 > 0 ? ((mx - ax) * dx + (mz - az) * dz) / len2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      const cx = ax + t * dx, cz = az + t * dz;
+      const dist = Math.sqrt((mx - cx) ** 2 + (mz - cz) ** 2);
+      if (dist < minDist) {
+        minDist = dist;
+        // Cross product (dx, dz) × (mx-ax, mz-az)
+        const cross = dx * (mz - az) - dz * (mx - ax);
+        side = cross >= 0 ? 0 : 1;
+      }
+    }
+    arrow.region = side;
+  }
+}
+
+// ============================================================
+// Update status bar
+// ============================================================
+function updateStatus() {
+  const regions = computeRegionCount();
+  const ridgePresent = state.ridge.length >= 2;
+  statHole.textContent    = state.hole ? `Hole ${state.hole}` : "No hole loaded";
+  statArrows.textContent  = `Arrows: ${state.arrows.length}`;
+  statRidge.textContent   = ridgePresent
+    ? `Ridge: ${state.ridge.length} pts`
+    : "Ridge: none";
+  const regionEl = statRegions;
+  if (ridgePresent) {
+    const n0 = state.arrows.filter(a => a.region === 0).length;
+    const n1 = state.arrows.filter(a => a.region === 1).length;
+    const t0 = lblUpper.value || "Tier 0", t1 = lblLower.value || "Tier 1";
+    regionEl.className = regions === 2 ? "ok" : "warn";
+    regionEl.innerHTML =
+      `Regions: ${regions} — ` +
+      `<span style="color:${REGION_COLORS[0]}">●${t0}: ${n0}</span> · ` +
+      `<span style="color:${REGION_COLORS[1]}">●${t1}: ${n1}</span>`;
+  } else {
+    regionEl.className = "";
+    regionEl.textContent = `Regions: ${regions}`;
+  }
+  statMode.textContent    = `Mode: ${state.mode.toUpperCase()}`;
+  recordHistory();   // capture an undo step at every committed authoring change
+}
+
+// ============================================================
+// Per-hole autosave (localStorage) — backdrop alignment + authoring
+// ============================================================
+const STORE_KEY = "greenslope.authoring.v1";
+
+function readStore() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); }
+  catch (e) { return {}; }
+}
+function loadHoleState(hole) {
+  return readStore()[hole] || null;
+}
+
+// ============================================================
+// Undo / redo (Cmd/Ctrl+Z) — per-hole history of the authoring state.
+// recordHistory() is called from updateStatus() (the single point hit after
+// every committed arrow/ridge change); dedupe keeps backdrop-only changes out.
+// ============================================================
+let history = [];
+let histPtr = -1;
+const HIST_MAX = 100;
+
+function authoringSnapshot() {
+  return {
+    arrows: state.arrows.map(a => ({ baseXZ: [a.baseXZ[0], a.baseXZ[1]], tipXZ: [a.tipXZ[0], a.tipXZ[1]], region: a.region })),
+    ridge: state.ridge.map(p => [p[0], p[1]]),
+    ridgeDrawing: state.ridgeDrawing,
+  };
+}
+function recordHistory() {
+  if (state._loading) return;                       // not during hole load/restore
+  const s = authoringSnapshot();
+  if (histPtr >= 0 && JSON.stringify(history[histPtr]) === JSON.stringify(s)) return; // dedupe (e.g. backdrop-only)
+  history = history.slice(0, histPtr + 1);          // drop any redo branch
+  history.push(s);
+  if (history.length > HIST_MAX) history.shift();
+  histPtr = history.length - 1;
+}
+function resetHistory() {                            // seed baseline for a freshly-loaded hole
+  history = [authoringSnapshot()];
+  histPtr = 0;
+}
+function applySnapshot(s) {
+  state.arrows = s.arrows.map(a => ({ baseXZ: [a.baseXZ[0], a.baseXZ[1]], tipXZ: [a.tipXZ[0], a.tipXZ[1]], region: a.region }));
+  state.ridge = s.ridge.map(p => [p[0], p[1]]);
+  state.ridgeDrawing = s.ridgeDrawing;
+  assignRegions();
+  draw2d(); updateStatus(); updateRidgeBtn();
+  persist();
+}
+function undo() {
+  if (histPtr <= 0) return;
+  histPtr--;
+  applySnapshot(history[histPtr]);
+}
+function redo() {
+  if (histPtr >= history.length - 1) return;
+  histPtr++;
+  applySnapshot(history[histPtr]);
+}
+function persist() {
+  if (state._loading || !state.hole) return;   // don't autosave mid-restore
+  try {
+    const all = readStore();
+    all[state.hole] = {
+      bd: { tx: state.bd.tx, ty: state.bd.ty, rotDeg: state.bd.rotDeg, scale: state.bd.scale,
+            flipH: state.bd.flipH, flipV: state.bd.flipV },
+      opacity: parseFloat(bdOpacity.value),
+      arrows: state.arrows,
+      ridge: state.ridge,
+      labels: { upper: lblUpper.value, lower: lblLower.value },
+    };
+    localStorage.setItem(STORE_KEY, JSON.stringify(all));
+  } catch (e) { /* storage unavailable / quota — non-fatal */ }
+}
+function clearHoleState(hole) {
+  try {
+    const all = readStore();
+    delete all[hole];
+    localStorage.setItem(STORE_KEY, JSON.stringify(all));
+  } catch (e) { /* non-fatal */ }
+}
+
+// ============================================================
+// Load hole
+// ============================================================
+async function loadHole(hole) {
+  if (!SERVED) { showNotServedBanner(); return; }
+  state._loading = true;            // suppress autosave while restoring
+  loadingEl.style.display = "flex";
+  try {
+    // Load contour
+    const cRes = await fetch(`/api/contour?hole=${hole}`);
+    if (!cRes.ok) throw new Error(`contour ${cRes.status}`);
+    const cData = await cRes.json();
+    state.contour = cData.contour;   // [[x,z],…]
+
+    // Load nearby bunkers as alignment landmarks (new route; tolerant if absent)
+    state.bunkers = [];
+    try {
+      const bRes = await fetch(`/api/bunkers?hole=${hole}`);
+      if (bRes.ok) {
+        const bData = await bRes.json();
+        state.bunkers = nearbyBunkers(bData.bunkers || [], state.contour);
+      }
+    } catch (e) { /* no bunkers — green-only view */ }
+
+    // Fit the view to the green + its nearby bunkers so the landmarks show.
+    state.worldBounds = computeBoundsMulti([state.contour, ...state.bunkers]);
+
+    // Load panel image
+    const pRes = await fetch(`/api/panel?hole=${hole}`);
+    if (!pRes.ok) throw new Error(`panel ${pRes.status}`);
+    const pData = await pRes.json();
+    state.panelW = pData.w;
+    state.panelH = pData.h;
+    backdropEl.src = `data:image/jpeg;base64,${pData.b64}`;
+    backdropEl.style.display = "block";
+    backdropEl.width  = pData.w;
+    backdropEl.height = pData.h;
+
+    state.hole = hole;
+
+    // Restore previously-saved authoring + backdrop alignment for this hole,
+    // else start fresh. (autosaved per hole to localStorage)
+    const saved = loadHoleState(hole);
+    if (saved) {
+      state.arrows = Array.isArray(saved.arrows) ? saved.arrows : [];
+      state.ridge  = Array.isArray(saved.ridge) ? saved.ridge : [];
+      state.ridgeDrawing = false;
+      lblUpper.value = (saved.labels && saved.labels.upper) || "upper";
+      lblLower.value = (saved.labels && saved.labels.lower) || "lower";
+      const bd = saved.bd || {};
+      state.bd = { tx: bd.tx || 0, ty: bd.ty || 0, rotDeg: bd.rotDeg || 0, scale: bd.scale || 1.0,
+                   flipH: !!bd.flipH, flipV: !!bd.flipV };
+      setOpacity(saved.opacity != null ? saved.opacity : 0.55);
+      setScale(state.bd.scale);
+      setRotate(state.bd.rotDeg);
+      updateFlipBtns();
+    } else {
+      state.arrows = [];
+      state.ridge  = [];
+      state.ridgeDrawing = false;
+      lblUpper.value = "upper"; lblLower.value = "lower";
+      state.bd = { tx: 0, ty: 0, rotDeg: 0, scale: 1.0, flipH: false, flipV: false };
+      setOpacity(0.55); setScale(1); setRotate(0);
+      updateFlipBtns();
+    }
+
+    assignRegions();
+    resizeCanvas();
+    updateStatus();
+    updateRidgeBtn();
+    resetHistory();   // fresh undo baseline for this hole (clears prior hole's history)
+  } catch (e) {
+    alert("Failed to load hole: " + e.message);
+  } finally {
+    state._loading = false;
+    loadingEl.style.display = "none";
+  }
+}
+
+// ============================================================
+// Backdrop transform
+// ============================================================
+function applyBackdropTransform() {
+  const { tx, ty, rotDeg, scale, flipH, flipV } = state.bd;
+  const sx = scale * (flipH ? -1 : 1);
+  const sy = scale * (flipV ? -1 : 1);
+  backdropEl.style.transform = `translate(${tx}px, ${ty}px) rotate(${rotDeg}deg) scale(${sx}, ${sy})`;
+  backdropEl.style.opacity   = bdOpacity.value;
+}
+
+// ---- Backdrop control setters (keep slider + number + state in sync) ----
+function clampNum(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function setOpacity(v) {
+  v = clampNum(parseFloat(v), 0, 1); if (isNaN(v)) v = 0.55;
+  bdOpacity.value = v; bdOpacityNum.value = Math.round(v * 100) / 100;
+  applyBackdropTransform();
+  persist();
+}
+function setScale(v) {
+  v = clampNum(parseFloat(v), 0.1, 6); if (isNaN(v)) v = 1;
+  state.bd.scale = v;
+  bdScale.value = v; bdScaleNum.value = Math.round(v * 100) / 100;
+  applyBackdropTransform();
+  persist();
+}
+function setRotate(v) {
+  v = parseFloat(v); if (isNaN(v)) v = 0;
+  while (v > 180) v -= 360; while (v < -180) v += 360;
+  v = Math.round(v * 10) / 10;
+  state.bd.rotDeg = v;
+  bdRotate.value = v; bdRotateNum.value = v;
+  applyBackdropTransform();
+  persist();
+}
+
+// ============================================================
+// Backdrop drag / align mode
+// ============================================================
+let bdDrag = null;
+function startBdDrag(e) {
+  e.preventDefault();
+  bdDrag = { startX: e.clientX, startY: e.clientY, startTx: state.bd.tx, startTy: state.bd.ty };
+  backdropEl.classList.add("dragging");
+}
+
+// Start a backdrop drag when in Align mode (anywhere in the view) or when Alt
+// is held (shortcut). Ignore clicks on the toolbar / status bar.
+document.addEventListener("mousedown", (e) => {
+  if (bdDrag) return;
+  if (e.target.closest("#topbar") || e.target.closest("#status-bar")) return;
+  if (state.bdAlign || e.altKey) startBdDrag(e);
+});
+
+document.addEventListener("mousemove", (e) => {
+  if (bdDrag) {
+    state.bd.tx = bdDrag.startTx + (e.clientX - bdDrag.startX);
+    state.bd.ty = bdDrag.startTy + (e.clientY - bdDrag.startY);
+    applyBackdropTransform();
+  }
+});
+
+document.addEventListener("mouseup", () => {
+  if (bdDrag) { bdDrag = null; backdropEl.classList.remove("dragging"); persist(); }
+});
+
+// Mouse wheel zooms the backdrop while in Align mode.
+document.getElementById("flat-view").addEventListener("wheel", (e) => {
+  if (!state.bdAlign) return;
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.05 : 1 / 1.05;
+  setScale(state.bd.scale * factor);
+}, { passive: false });
+
+// Align-Backdrop mode toggle
+alignBdBtn.addEventListener("click", () => {
+  state.bdAlign = !state.bdAlign;
+  alignBdBtn.classList.toggle("active", state.bdAlign);
+  canvas2d.style.cursor = state.bdAlign ? "move" : "crosshair";
+  updateInstructions();
+});
+
+// Flip (mirror) the backdrop — needed when the PDF green is a mirror image of
+// the game green, which no rotation can fix.
+function updateFlipBtns() {
+  flipHBtn.classList.toggle("active", state.bd.flipH);
+  flipVBtn.classList.toggle("active", state.bd.flipV);
+}
+flipHBtn.addEventListener("click", () => { state.bd.flipH = !state.bd.flipH; updateFlipBtns(); applyBackdropTransform(); persist(); });
+flipVBtn.addEventListener("click", () => { state.bd.flipV = !state.bd.flipV; updateFlipBtns(); applyBackdropTransform(); persist(); });
+
+// Two-way binding: sliders ⇄ number inputs ⇄ state
+bdOpacity.addEventListener("input",  () => setOpacity(bdOpacity.value));
+bdOpacityNum.addEventListener("input", () => setOpacity(bdOpacityNum.value));
+bdScale.addEventListener("input",    () => setScale(bdScale.value));
+bdScaleNum.addEventListener("input", () => setScale(bdScaleNum.value));
+bdRotate.addEventListener("input",   () => setRotate(bdRotate.value));
+bdRotateNum.addEventListener("input", () => setRotate(bdRotateNum.value));
+
+bdResetBtn.addEventListener("click", () => {
+  state.bd = { tx: 0, ty: 0, rotDeg: 0, scale: 1.0, flipH: false, flipV: false };
+  setOpacity(0.55); setScale(1); setRotate(0);
+  updateFlipBtns();
+});
+
+// ============================================================
+// Arrow hit-testing (for move / clone / delete of existing arrows)
+// ============================================================
+function distToSeg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+// Return index of the arrow nearest the cursor within threshold px, else -1.
+// Iterates last→first so the topmost (most recently drawn) arrow wins.
+function arrowHitTest(px, py) {
+  const TH = 9;
+  for (let i = state.arrows.length - 1; i >= 0; i--) {
+    const [bx, by] = worldToCanvas(...state.arrows[i].baseXZ);
+    const [tx, ty] = worldToCanvas(...state.arrows[i].tipXZ);
+    if (distToSeg(px, py, bx, by, tx, ty) <= TH) return i;
+  }
+  return -1;
+}
+
+// ============================================================
+// Canvas 2D mouse events (arrow authoring + ridge)
+//   arrow tool: drag empty space = new arrow; drag an arrow = move it;
+//   Cmd+Click an arrow = clone (then drag); Ctrl+Click / right-click = delete.
+// ============================================================
+canvas2d.addEventListener("mousedown", (e) => {
+  if (state.bdAlign) return; // Align mode: backdrop drag handled at document level
+  if (e.altKey) return;      // Alt is for backdrop drag
+  e.preventDefault();
+  const rect = canvas2d.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+  const [wx, wz] = canvasToWorld(px, py);
+
+  if (state.activeTool === "arrow") {
+    const idx = arrowHitTest(px, py);
+
+    // Ctrl+Click (or right-click) on an arrow = delete it
+    if (e.ctrlKey || e.button === 2) {
+      if (idx >= 0) {
+        state.arrows.splice(idx, 1);
+        assignRegions(); draw2d(); updateStatus(); persist();
+      }
+      return;
+    }
+    // Cmd/Win+Click on an arrow = clone it, then drag the new copy
+    if (e.metaKey && idx >= 0) {
+      const src = state.arrows[idx];
+      const clone = { baseXZ: [...src.baseXZ], tipXZ: [...src.tipXZ], region: src.region };
+      state.arrows.push(clone);
+      const ci = state.arrows.length - 1;
+      state.arrowMove = { idx: ci, startWX: wx, startWZ: wz, origBase: [...clone.baseXZ], origTip: [...clone.tipXZ] };
+      draw2d();
+      return;
+    }
+    // Plain click on an existing arrow = move it
+    if (idx >= 0) {
+      const a = state.arrows[idx];
+      state.arrowMove = { idx, startWX: wx, startWZ: wz, origBase: [...a.baseXZ], origTip: [...a.tipXZ] };
+      return;
+    }
+    // Empty space = draw a new arrow (base→tip)
+    state.arrowDrag = { startPx: px, startPy: py, startX: wx, startZ: wz, curPx: px, curPy: py };
+  } else if (state.activeTool === "ridge") {
+    if (!state.ridgeDrawing) {
+      // Start ridge
+      state.ridgeDrawing = true;
+      state.ridge = [[wx, wz]];
+    } else {
+      // Add point to ridge
+      state.ridge.push([wx, wz]);
+    }
+    draw2d();
+    updateStatus();
+    updateRidgeBtn();
+    persist();
+  }
+});
+
+canvas2d.addEventListener("mousemove", (e) => {
+  const rect = canvas2d.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+
+  if (state.arrowMove) {
+    const m = state.arrowMove;
+    const [wx, wz] = canvasToWorld(px, py);
+    const dx = wx - m.startWX, dz = wz - m.startWZ;
+    const a = state.arrows[m.idx];
+    a.baseXZ = [m.origBase[0] + dx, m.origBase[1] + dz];
+    a.tipXZ  = [m.origTip[0] + dx, m.origTip[1] + dz];
+    assignRegions(); // live re-tier so the colour updates as it crosses the ridge
+    draw2d();
+    return;
+  }
+  if (state.arrowDrag) {
+    state.arrowDrag.curPx = px;
+    state.arrowDrag.curPy = py;
+    draw2d();
+    return;
+  }
+  if (state.ridgeDrawing) {
+    state._ridgeCursorPx = px;
+    state._ridgeCursorPy = py;
+    draw2d();
+    return;
+  }
+  // Hover feedback: 'move' cursor when over an arrow in the arrow tool
+  if (state.activeTool === "arrow" && !state.bdAlign) {
+    canvas2d.style.cursor = arrowHitTest(px, py) >= 0 ? "move" : "crosshair";
+  }
+});
+
+canvas2d.addEventListener("mouseup", (e) => {
+  // Finish moving / cloning an arrow
+  if (state.arrowMove) {
+    state.arrowMove = null;
+    assignRegions(); updateStatus(); draw2d(); persist();
+    return;
+  }
+  if (!state.arrowDrag) return;
+  const rect = canvas2d.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+  const [tx, tz] = canvasToWorld(px, py);
+
+  const dx = px - state.arrowDrag.startPx;
+  const dy = py - state.arrowDrag.startPy;
+  const len = Math.sqrt(dx*dx + dy*dy);
+
+  if (len >= 8) { // minimum drag distance to register an arrow
+    state.arrows.push({
+      baseXZ: [state.arrowDrag.startX, state.arrowDrag.startZ],
+      tipXZ: [tx, tz],
+      region: 0,
+    });
+    assignRegions();
+    updateStatus();
+    persist();
+  }
+  state.arrowDrag = null;
+  draw2d();
+});
+
+// Ctrl+Click on macOS raises the context menu — suppress it over the canvas so
+// Ctrl+Click (and right-click) can delete arrows cleanly.
+canvas2d.addEventListener("contextmenu", (e) => e.preventDefault());
+
+// Finish the ridge: lock it in (≥2 points needed). Drops a trailing duplicate
+// point left behind by a double-click finish.
+function finishRidge() {
+  if (state.activeTool !== "ridge" || !state.ridgeDrawing) return;
+  if (state.ridge.length >= 2) {
+    const [ax, az] = worldToCanvas(...state.ridge[state.ridge.length - 1]);
+    const [bx, bz] = worldToCanvas(...state.ridge[state.ridge.length - 2]);
+    if (Math.hypot(ax - bx, az - bz) < 6) state.ridge.pop(); // de-dupe dbl-click
+  }
+  if (state.ridge.length < 2) return; // need at least 2 points to be a ridge
+  state.ridgeDrawing = false;
+  state._ridgeCursorPx = undefined;
+  assignRegions();
+  draw2d();
+  updateStatus();
+  updateRidgeBtn();
+  persist();
+}
+
+// Cancel an in-progress ridge (Escape).
+function cancelRidge() {
+  if (!state.ridgeDrawing) return;
+  state.ridgeDrawing = false;
+  state.ridge = [];
+  state._ridgeCursorPx = undefined;
+  assignRegions();
+  draw2d();
+  updateStatus();
+  updateRidgeBtn();
+  persist();
+}
+
+// Show the "Finish Ridge" button only while actively drawing a ridge.
+function updateRidgeBtn() {
+  const drawing = state.activeTool === "ridge" && state.ridgeDrawing;
+  ridgeFinishBtn.style.display = drawing ? "" : "none";
+  ridgeFinishBtn.disabled = state.ridge.length < 2;
+  ridgeFinishBtn.style.opacity = state.ridge.length < 2 ? "0.5" : "1";
+}
+
+ridgeFinishBtn.addEventListener("click", finishRidge);
+
+// Double-click also finishes the ridge.
+canvas2d.addEventListener("dblclick", () => finishRidge());
+
+// Keyboard:
+//  - Align mode: Q/E rotate the backdrop (Shift = ×5 step)
+//  - Ridge: Enter finishes, Escape cancels
+document.addEventListener("keydown", (e) => {
+  // Don't hijack typing in the number/text inputs.
+  const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+
+  // Undo / Redo — Cmd/Ctrl+Z (Shift = redo). Inputs keep their native text undo.
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+    if (typing) return;
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+    return;
+  }
+
+  if (state.bdAlign && !typing) {
+    const k = e.key.toLowerCase();
+    if (k === "q" || k === "e") {
+      e.preventDefault();
+      const step = e.shiftKey ? 5 : 1;
+      setRotate(state.bd.rotDeg + (k === "q" ? -step : step));
+      return;
+    }
+    if (k === "f") { e.preventDefault(); flipHBtn.click(); return; }
+    if (k === "v") { e.preventDefault(); flipVBtn.click(); return; }
+  }
+
+  if (state.activeTool !== "ridge" || !state.ridgeDrawing) return;
+  if (e.key === "Enter") { e.preventDefault(); finishRidge(); }
+  else if (e.key === "Escape") { e.preventDefault(); cancelRidge(); }
+});
+
+// ============================================================
+// Tool buttons
+// ============================================================
+arrowToolBtn.addEventListener("click", () => {
+  state.activeTool = "arrow";
+  state.ridgeDrawing = false;
+  arrowToolBtn.classList.add("active");
+  ridgeToolBtn.classList.remove("active");
+  updateInstructions();
+  updateRidgeBtn();
+});
+
+ridgeToolBtn.addEventListener("click", () => {
+  state.activeTool = "ridge";
+  ridgeToolBtn.classList.add("active");
+  arrowToolBtn.classList.remove("active");
+  updateInstructions();
+  updateRidgeBtn();
+});
+
+eraseBtn.addEventListener("click", () => {
+  if (state.activeTool === "arrow" && state.arrows.length > 0) {
+    state.arrows.pop();
+    assignRegions();
+    draw2d();
+    updateStatus();
+    persist();
+  } else if (state.activeTool === "ridge") {
+    if (state.ridgeDrawing && state.ridge.length > 0) {
+      state.ridge.pop();
+    } else if (!state.ridgeDrawing) {
+      state.ridge = [];
+    }
+    assignRegions();
+    draw2d();
+    updateStatus();
+    updateRidgeBtn();
+    persist();
+  }
+});
+
+clearBtn.addEventListener("click", () => {
+  if (!confirm("Clear all arrows and ridge?")) return;
+  state.arrows = [];
+  state.ridge  = [];
+  state.ridgeDrawing = false;
+  draw2d();
+  updateStatus();
+  updateRidgeBtn();
+  if (state.hole) clearHoleState(state.hole); // forget the autosaved work for this hole
+});
+
+// Tier names are part of the per-hole authoring state — redraw the on-canvas
+// labels + status readout, then autosave, on edit.
+function onTierNameEdit() { draw2d(); updateStatus(); persist(); }
+lblUpper.addEventListener("input", onTierNameEdit);
+lblLower.addEventListener("input", onTierNameEdit);
+
+// ============================================================
+// Instructions overlay
+// ============================================================
+function updateInstructions() {
+  if (state.mode === "3d") {
+    instEl.innerHTML = "Orbit: left-drag | Zoom: scroll | Return: click FLAT button";
+    return;
+  }
+  if (state.bdAlign) {
+    instEl.innerHTML =
+      "<b style='color:#aef7c2'>⤧ Align Backdrop mode:</b> drag = move | wheel = zoom | " +
+      "<b>Q</b>/<b>E</b> = rotate (Shift ×5) | <b>F</b> = flip H | <b>V</b> = flip V<br>" +
+      "If the PDF green is a mirror of the outline, <b>Flip H</b> first, then rotate/fit. " +
+      "Click <b>⤧ Align BD</b> again to resume authoring.";
+    return;
+  }
+  if (state.activeTool === "arrow") {
+    instEl.innerHTML =
+      "<b>Arrow tool:</b> drag empty space = new arrow (base→tip, tip=downhill)<br>" +
+      "drag an arrow = move it | <b>⌘+Click</b> an arrow = clone then drag | " +
+      "<b>Ctrl+Click</b> / right-click = delete<br>" +
+      "Alt+drag = move backdrop | <b>⌘Z</b> undo / <b>⇧⌘Z</b> redo | Erase Last = remove newest arrow";
+  } else {
+    instEl.innerHTML =
+      "<b>Ridge tool:</b> click along the tier divide to drop points<br>" +
+      "<b>Finish:</b> click <b>✓ Finish Ridge</b>, press <b>Enter</b>, or double-click | <b>Esc</b> = cancel<br>" +
+      "Erase Last = remove last point | Alt+drag = move backdrop";
+  }
+}
+
+// ============================================================
+// Hole selector
+// ============================================================
+holeSel.addEventListener("change", () => {
+  const h = parseInt(holeSel.value);
+  if (!isNaN(h)) loadHole(h);
+});
+
+// ============================================================
+// FLAT / 3D toggle
+// ============================================================
+toggle3dBtn.addEventListener("click", () => {
+  if (state.mode === "flat") {
+    if (!state.contour.length) { alert("Load a hole first."); return; }
+    if (typeof THREE === "undefined") {
+      alert("3D library (three.js) failed to load — check your network connection and reload.");
+      return;
+    }
+    state.mode = "3d";
+    toggle3dBtn.textContent = "3D";
+    toggle3dBtn.classList.add("active");
+    document.getElementById("flat-view").style.display = "none";
+    glCanvas.style.display = "block";
+    build3dScene();
+  } else {
+    state.mode = "flat";
+    toggle3dBtn.textContent = "FLAT";
+    toggle3dBtn.classList.remove("active");
+    // HIDE the WebGL canvas when returning to FLAT (leftover-canvas fix)
+    glCanvas.style.display = "none";
+    document.getElementById("flat-view").style.display = "flex";
+    destroy3dScene();
+  }
+  statMode.textContent = `Mode: ${state.mode.toUpperCase()}`;
+  updateInstructions();
+});
+
+// ============================================================
+// 3D scene (Three.js r128) — relief synthesized from arrows
+// ============================================================
+let threeScene = null, threeCamera = null, threeRenderer = null, threeControls = null;
+let animFrameId = null;
+
+function build3dScene() {
+  const W = glCanvas.parentElement.clientWidth;
+  const H = glCanvas.parentElement.clientHeight;
+  glCanvas.width  = W;
+  glCanvas.height = H;
+
+  threeRenderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: true });
+  threeRenderer.setSize(W, H);
+  threeRenderer.setClearColor(0x1a1a1a);
+
+  threeScene = new THREE.Scene();
+  threeCamera = new THREE.PerspectiveCamera(45, W / H, 0.1, 1000);
+  const b = state.worldBounds;
+  const cx = (b.minX + b.maxX) / 2;
+  const cz = (b.minZ + b.maxZ) / 2;
+  const span = Math.max(b.spanX, b.spanZ);
+  threeCamera.position.set(cx, span * 1.2, cz + span * 0.8);
+  threeCamera.lookAt(cx, 0, cz);
+
+  // Lighting
+  threeScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+  dir.position.set(cx + span, span, cz - span);
+  threeScene.add(dir);
+
+  // Build a height-field mesh from the contour + arrow slopes
+  buildGreenMesh(cx, cz);
+
+  // Simple orbit controls (manual, no OrbitControls import needed)
+  setupOrbitControls();
+
+  // Animate
+  function animate() {
+    animFrameId = requestAnimationFrame(animate);
+    threeRenderer.render(threeScene, threeCamera);
+  }
+  animate();
+}
+
+function buildGreenMesh(cx, cz) {
+  const b = state.worldBounds;
+  // Create a simple grid covering the bounding box
+  const GRID = 30;
+  const geom = new THREE.PlaneGeometry(b.spanX, b.spanZ, GRID, GRID);
+  geom.rotateX(-Math.PI / 2);
+
+  const pos = geom.attributes.position;
+  // Synthesize height from arrow slopes
+  // Each arrow defines a slope vector; we interpolate using inverse-distance weighting
+  const heights = new Float32Array(pos.count);
+
+  if (state.arrows.length === 0) {
+    // Flat
+    for (let i = 0; i < pos.count; i++) heights[i] = 0;
+  } else {
+    const maxH = 1.5; // max height variation in units (visual only)
+    for (let i = 0; i < pos.count; i++) {
+      const gx = pos.getX(i) + cx;
+      const gz = pos.getZ(i) + cz;
+      let wSum = 0, hSum = 0;
+      for (const arr of state.arrows) {
+        const [bx, bz] = arr.baseXZ;
+        const [tx, tz] = arr.tipXZ;
+        const dx = tx - bx, dz = tz - bz;
+        const len = Math.sqrt(dx*dx + dz*dz);
+        if (len < 0.01) continue;
+        // Project (gx-bx, gz-bz) onto arrow direction
+        const proj = ((gx - bx) * dx + (gz - bz) * dz) / (len * len);
+        // Height = -proj (tip is downhill → proj positive = lower)
+        const h = -proj * len * 0.08 * maxH;
+        const dist = Math.sqrt((gx - bx)**2 + (gz - bz)**2) + 0.5;
+        const w = 1 / (dist * dist);
+        wSum += w; hSum += h * w;
+      }
+      heights[i] = wSum > 0 ? hSum / wSum : 0;
+    }
+    // Normalize to [-maxH, maxH]
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < heights.length; i++) { if (heights[i] < lo) lo = heights[i]; if (heights[i] > hi) hi = heights[i]; }
+    const range = hi - lo || 1;
+    for (let i = 0; i < heights.length; i++) {
+      heights[i] = ((heights[i] - lo) / range - 0.5) * maxH * 2;
+    }
+  }
+
+  for (let i = 0; i < pos.count; i++) pos.setY(i, heights[i]);
+  pos.needsUpdate = true;
+  geom.computeVertexNormals();
+
+  // Colour by height
+  const colors = new Float32Array(pos.count * 3);
+  let lo2 = Infinity, hi2 = -Infinity;
+  for (let i = 0; i < pos.count; i++) { if (heights[i] < lo2) lo2 = heights[i]; if (heights[i] > hi2) hi2 = heights[i]; }
+  const range2 = hi2 - lo2 || 1;
+  for (let i = 0; i < pos.count; i++) {
+    const t = (heights[i] - lo2) / range2;
+    // Low: dark green, High: yellow-green
+    colors[i*3]   = 0.1 + t * 0.5;
+    colors[i*3+1] = 0.4 + t * 0.4;
+    colors[i*3+2] = 0.1;
+  }
+  geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geom, mat);
+  // The geometry is built centred on the origin; move it to the green's real
+  // world position so it lines up with the camera target and the arrows/ridge.
+  mesh.position.set(cx, 0, cz);
+  threeScene.add(mesh);
+
+  // Wireframe overlay (same world offset as the mesh)
+  const wfGeom = new THREE.WireframeGeometry(geom);
+  const wfMat  = new THREE.LineBasicMaterial({ color: 0x224422, opacity: 0.3, transparent: true });
+  const wf = new THREE.LineSegments(wfGeom, wfMat);
+  wf.position.set(cx, 0, cz);
+  threeScene.add(wf);
+
+  // Draw arrows in 3D
+  for (const arr of state.arrows) {
+    const [bx, bz] = arr.baseXZ;
+    const [tx, tz] = arr.tipXZ;
+    // Find height at base and tip (approx from grid)
+    const arrowMat = new THREE.LineBasicMaterial({ color: REGION_COLORS_3D[arr.region] || REGION_COLORS_3D[0], linewidth: 2 });
+    const arrowPoints = [
+      new THREE.Vector3(bx, 0.5, bz),
+      new THREE.Vector3(tx, 0.5, tz),
+    ];
+    const arrowGeom = new THREE.BufferGeometry().setFromPoints(arrowPoints);
+    threeScene.add(new THREE.Line(arrowGeom, arrowMat));
+  }
+
+  // Draw ridge in 3D
+  if (state.ridge.length >= 2) {
+    const ridgePts = state.ridge.map(([rx, rz]) => new THREE.Vector3(rx, 0.6, rz));
+    const ridgeGeom = new THREE.BufferGeometry().setFromPoints(ridgePts);
+    const ridgeMat  = new THREE.LineBasicMaterial({ color: 0xf0d040, linewidth: 2 });
+    threeScene.add(new THREE.Line(ridgeGeom, ridgeMat));
+  }
+}
+
+let orbitHandlers = null;   // kept so destroy3dScene can remove them (no leak on toggle)
+
+function setupOrbitControls() {
+  // Manual orbit: mouse drag rotates around the target
+  const b = state.worldBounds;
+  const span = Math.max(b.spanX, b.spanZ);
+  const o = {
+    isOrbiting: false, lastMX: 0, lastMY: 0,
+    phi: Math.PI / 4, theta: 0, radius: span * 1.6,
+    target: new THREE.Vector3((b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2),
+  };
+
+  function updateCamera() {
+    if (!threeCamera) return;
+    threeCamera.position.set(
+      o.target.x + o.radius * Math.sin(o.phi) * Math.sin(o.theta),
+      o.target.y + o.radius * Math.cos(o.phi),
+      o.target.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta)
+    );
+    threeCamera.lookAt(o.target);
+  }
+
+  const onDown  = (e) => { o.isOrbiting = true; o.lastMX = e.clientX; o.lastMY = e.clientY; };
+  const onUp    = () => { o.isOrbiting = false; };
+  const onMove  = (e) => {
+    if (!o.isOrbiting) return;
+    const dx = e.clientX - o.lastMX, dy = e.clientY - o.lastMY;
+    o.lastMX = e.clientX; o.lastMY = e.clientY;
+    o.theta -= dx * 0.005;
+    o.phi = Math.max(0.1, Math.min(Math.PI - 0.1, o.phi + dy * 0.005));
+    updateCamera();
+  };
+  const onWheel = (e) => {
+    o.radius = Math.max(1, o.radius + e.deltaY * 0.05);
+    updateCamera();
+  };
+
+  glCanvas.addEventListener("mousedown", onDown);
+  document.addEventListener("mouseup", onUp);
+  document.addEventListener("mousemove", onMove);
+  glCanvas.addEventListener("wheel", onWheel, { passive: true });
+  orbitHandlers = { onDown, onUp, onMove, onWheel };
+  updateCamera();
+}
+
+function destroy3dScene() {
+  if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+  if (orbitHandlers) {
+    glCanvas.removeEventListener("mousedown", orbitHandlers.onDown);
+    document.removeEventListener("mouseup", orbitHandlers.onUp);
+    document.removeEventListener("mousemove", orbitHandlers.onMove);
+    glCanvas.removeEventListener("wheel", orbitHandlers.onWheel);
+    orbitHandlers = null;
+  }
+  if (threeRenderer) { threeRenderer.dispose(); threeRenderer = null; }
+  threeScene = null; threeCamera = null;
+}
+
+// ============================================================
+// Export
+// ============================================================
+exportBtn.addEventListener("click", async () => {
+  if (!state.hole) { alert("Load a hole first."); return; }
+
+  assignRegions();
+  const regionCount = computeRegionCount();
+  const ridgePresent = state.ridge.length >= 2;
+
+  const regions = [
+    { id: 0, label: lblUpper.value || "upper" },
+    { id: 1, label: lblLower.value || "lower" },
+  ];
+  if (!ridgePresent) regions.splice(1); // single region if no ridge
+
+  const payload = {
+    hole: state.hole,
+    regionCount,
+    ridgePresent,
+    editorBackdrop: {
+      panelW: state.panelW,
+      panelH: state.panelH,
+      transform: {
+        tx: state.bd.tx,
+        ty: state.bd.ty,
+        rotDeg: state.bd.rotDeg,
+        scale: state.bd.scale,
+        flipH: state.bd.flipH,
+        flipV: state.bd.flipV,
+      },
+      correspondence: [],
+    },
+    arrows: state.arrows.map(a => ({
+      baseXZ: a.baseXZ,
+      tipXZ:  a.tipXZ,
+      region: a.region,
+    })),
+    ridge:   ridgePresent ? state.ridge : [],
+    regions,
+  };
+
+  try {
+    const res = await fetch("/api/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = await res.json();
+    if (result.ok) {
+      alert(`Saved: ${result.file}\n` +
+            `Regions: ${regionCount}  |  Ridge: ${ridgePresent}  |  Arrows: ${state.arrows.length}`);
+    } else {
+      alert("Save failed: " + JSON.stringify(result));
+    }
+  } catch (e) {
+    alert("Export error: " + e.message);
+  }
+});
+
+// ============================================================
+// Import a previous export (output/hole_NN_slope_authoring.json)
+// ============================================================
+importBtn.addEventListener("click", () => importFile.click());
+importFile.addEventListener("change", async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  try {
+    const payload = JSON.parse(await f.text());
+    if (!payload || typeof payload.hole !== "number") {
+      throw new Error("not a GreenSlope export (missing numeric 'hole' field)");
+    }
+    if (!confirm(`Import hole ${payload.hole} from "${f.name}"?\n` +
+                 `This replaces the current authoring for that hole.`)) {
+      importFile.value = ""; return;
+    }
+    await importExport(payload);
+  } catch (err) {
+    alert("Import failed: " + err.message);
+  }
+  importFile.value = ""; // allow re-selecting the same file
+});
+
+async function importExport(payload) {
+  const hole = payload.hole;
+  await loadHole(hole);                 // load green/panel/bunkers + select the hole
+  holeSel.value = String(hole);
+
+  // Overwrite authoring with the imported data
+  state.arrows = (payload.arrows || []).map(a => ({
+    baseXZ: [a.baseXZ[0], a.baseXZ[1]], tipXZ: [a.tipXZ[0], a.tipXZ[1]], region: a.region || 0,
+  }));
+  state.ridge = (payload.ridge || []).map(p => [p[0], p[1]]);
+  state.ridgeDrawing = false;
+  if (Array.isArray(payload.regions)) {
+    if (payload.regions[0]) lblUpper.value = payload.regions[0].label || "upper";
+    if (payload.regions[1]) lblLower.value = payload.regions[1].label || "lower";
+  }
+
+  // Backdrop transform (opacity isn't part of the export — keep current)
+  const t = (payload.editorBackdrop && payload.editorBackdrop.transform) || {};
+  state.bd = { tx: t.tx || 0, ty: t.ty || 0, rotDeg: t.rotDeg || 0, scale: t.scale || 1.0,
+               flipH: !!t.flipH, flipV: !!t.flipV };
+  setScale(state.bd.scale); setRotate(state.bd.rotDeg); updateFlipBtns();
+
+  assignRegions();
+  draw2d(); updateStatus(); updateRidgeBtn();
+  persist();        // imported state becomes the autosave for this hole
+  resetHistory();   // undo baseline = imported state
+  alert(`Imported hole ${hole}: ${state.arrows.length} arrows, ridge ${state.ridge.length} pts, ` +
+        `tiers "${lblUpper.value}"/"${lblLower.value}".`);
+}
+
+// ============================================================
+// Initial setup
+// ============================================================
+// This tool needs its Node backend (dev-server.mjs) for the /api/* routes.
+// If it's opened as a static file / preview (file:, blob:, about:srcdoc, …)
+// there is no HTTP origin and the relative fetches throw "Failed to parse URL".
+// Detect that and show a clear instruction instead of cryptic popups.
+const SERVED = location.protocol === "http:" || location.protocol === "https:";
+
+function showNotServedBanner() {
+  instEl.style.pointerEvents = "auto";
+  instEl.innerHTML =
+    "<b style='color:#e8b84b'>⚠ Run this tool via its dev server.</b><br>" +
+    "Open <b>http://127.0.0.1:4178</b> — launch with <b>Tools/GreenSlope/Launch&nbsp;GUI.command</b> " +
+    "(macOS) or <code>npm run gui</code>.<br>" +
+    "It can't run as a static file / preview pane: the <code>/api/*</code> routes need the backend.";
+}
+
+window.addEventListener("resize", resizeCanvas);
+updateInstructions();
+updateStatus();
+
+// Auto-load hole 7 on start (pilot hole) — only when actually served.
+window.addEventListener("load", () => {
+  if (!SERVED) { showNotServedBanner(); return; }
+  holeSel.value = "7";
+  loadHole(7);
+});
+</script>
+</body>
+</html>
