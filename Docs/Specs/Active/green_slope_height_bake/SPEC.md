@@ -78,7 +78,7 @@ In `CreateGreenMeshCDT` (or a post-triangulation pass), when a **v2 `green.json`
 
 **Guard:** holes with no v2 `green.json` keep the current behavior exactly (per-vert `terrain.SampleHeight`). Non-breaking.
 
-The terrain under the green is already depressed 0.40 m (`DepressTerrainUnderOverlays`) and `BakedHeightProvider` already treats the **mesh vertex Ys** as authoritative — so deforming the mesh gives both the visible undulation and correct ball height for free, with no z-fighting.
+> **CORRECTION (2026-05-29):** A prior version of this section claimed the terrain under greens is already depressed 0.40 m by `DepressTerrainUnderOverlays`. That is **false** — that function grades fairways/tees/cart-paths/water only. Greens *do*, however, carve a terrain hole at L2502–2522 (`holes[hz,hx] = false` inside a `greenCollarScale × 0.95` contour), so the underlying terrain mesh is deleted under most of the green — see § Amendment 2026-05-29 (iter-5) for what's actually broken and the corrected fix.
 
 ---
 
@@ -99,7 +99,7 @@ Break stays the **authored grid lateral force** (`TrySampleSlope` → the Phase-
 1. Arrows → one continuous interpolated gradient field per region; ridge = barrier. **Never** per-arrow facets.
 2. Arrows are **total** slope — do **not** add terrain macro-tilt to gradient/height (no double-count). Terrain only seats absolute + collar ramp.
 3. Importer change is **additive + guarded** — holes without v2 `green.json` are byte-for-byte unchanged.
-4. Touch only: `bake-green.mjs` (new), `GreenTopology.cs` (additive v2), `HoleLiteImporter` green-mesh path, and the 18 `green.json` outputs. No other Unity assets, no `greens.json`.
+4. Touch only: `bake-green.mjs` (new), `GreenTopology.cs` (additive v2), `HoleLiteImporter` green-mesh path **and fairway-mesh cut path**, the green terrain-hole-carve radius (existing mechanism, polygon swap only), and the 18 `green.json` outputs. No other Unity assets, no `greens.json`, **no `TerrainData` heightmap edits.** **[AMENDED 2026-05-29 iter-5 — see § Amendment 2026-05-29 (iter-5).]**
 5. Break stays grid-force. No gravity/collider putt changes.
 6. `green.json` base64 must match `GreenTopology` byte layout exactly: slope grid float32 ×3 `(dirX,dirZ,magPct)` row-major `[z][x]`; height grid float32 ×1 row-major `[z][x]`.
 
@@ -111,3 +111,79 @@ Break stays the **authored grid lateral force** (`TrySampleSlope` → the Phase-
 - `bake_report.txt` shows all H07 arrows inside the polygon, region counts, no NaN.
 - Cesar in-engine sign-off on H07 against the PDF panel + ShotNavi heatmap.
 - `--all` writes 18; 2-tier holes (3/11/18) render two tiers; no regression on unauthored/flat holes.
+
+---
+
+## Amendment 2026-05-29 — Green terrain pad (Deliverable 4) — **SUPERSEDED by iter-5 amendment below**
+
+> **SUPERSEDED 2026-05-29 14:35 JST.** Diagnosis below was wrong: the protruding surface in `h07_pad_fixed_uphill.png` is the **fairway mesh**, not terrain. Greens already carve the terrain under them (the L2502–2522 carve), just at an insufficient radius. Pad-grading the heightmap was the wrong fix to the wrong problem. The correct fix is in § Amendment 2026-05-29 (iter-5). Block kept for history.
+
+~~**Why:** Hard Rule 2 (no macro-tilt) seats the green flat, but the terrain beneath it keeps its full ~1.8 m DEM tilt and is **not** graded (greens were never in `DepressTerrainUnderOverlays`). The uphill terrain pokes through the flat green.~~
+
+~~**Hard Rule 4 is relaxed:** the importer **may now modify `TerrainData`** to grade a level pad under **height-baked** greens.~~
+
+~~**Deliverable 4 — green pad in `DepressTerrainUnderOverlays`:** flatten terrain cells under the green footprint to `padTargetY = (green interior min vertex Y) − clearance`, falloff through the collar zone.~~
+
+---
+
+## Amendment 2026-05-29 (iter-5) — Cut green+collar footprint from both underlying surfaces (Deliverable 4, REPLACED)
+
+**Authored:** 2026-05-29 14:35 JST (Architect).
+**Why:** Cesar rejected iter-4 (the pad fix above) because the actual culprit was wrong. The protruding surface in `h07_pad_fixed_uphill.png` is the **fairway overlay mesh**, not terrain. And on holes where the green sits directly over rough (no fairway), the **terrain** carve is too small — confirmed in code:
+- Green terrain hole-carve at L2502–2522 cuts a multiplicative `greenCollarScale × 0.95 = 1.026×` contour.
+- Collar mesh is built by **additive dilation** `DilateContour(contour, collarWidth = 0.6 m)` (L2664).
+- For a 12 m green that's a cut radius of ~12.3 m vs a collar reach of ~12.6 m → the outer ~0.3 m of the collar ring sits on un-carved terrain.
+- And `CreateFairwayMesh` builds the full fairway polygon with **no green cutout**; `yBoost = 0.02 m` was sized for the original terrain-conforming green, ~45× too small for the iter-2 flat-seat green.
+
+Bunkers, for the record, **do** carve terrain — at L2120–2147, the same `holes[hz,hx] = false` mechanism, using a `0.90×` inward contour. We're now using the same mechanism for greens, just with a properly sized cut.
+
+### Hard Rule 4 reverts to original spirit + small permitted extensions
+
+- ❌ **No `TerrainData` heightmap edits.** Revert iter-4's pad pass entirely.
+- ✅ Permitted: change the **polygon** passed to the green terrain-hole-carve (already an importer behavior — just a wider contour).
+- ✅ Permitted: drop fairway triangles that fall inside the green/bunker cut contour in `CreateFairwayMesh` (additive filter, guarded to height-baked greens only — see §Guards).
+
+### Shared helper — ONE source of truth for the cut contour
+
+```
+cutContour(forGreen) = DilateContour(green.contour, collarWidth − cutMargin)
+```
+with `collarWidth = 0.6 m`, **`cutMargin = 0.25 m`** (sane bounds 0.20–0.30; tune by eye on H07). The cut sits 0.35 m outside the green edge; the collar extends to +0.60 m, so the collar **overhangs the cut by 0.25 m** on every side — safely above terrain `holesRes ≈ 0.3 m/cell` precision. Putting this in one helper prevents the terrain-carve and the fairway-cut from ever drifting apart.
+
+### Deliverable 4a — Widen the green terrain hole-carve
+
+In `CreateGreenMeshes` at L2502–2522 (the existing carve block): replace the local multiplicative `greenCollarScale × 0.95` cut contour with the shared `cutContour` for the green being built. Same `IsInsideContour` test, same `holes[hz, hx] = false` write, same AABB bounds — just a different polygon. Guarded: only widen when the green has a v2 `green.json`; non-v2 greens keep the original `1.026×` cut (no behavior change).
+
+### Deliverable 4b — Cut greens out of the fairway mesh
+
+In `CreateFairwayMesh` (around L4084) — after triangulation, before assigning to the MeshFilter — drop any triangle whose centroid lies inside any green's `cutContour`. Fairway centroid-in-polygon test already exists in the file (`IsInsideContour`, used by `DepressTerrainUnderOverlays`). The green contours are available: greens build at L233 *before* fairways at L240, so the list of `(holeId, contour)` pairs can be passed forward, or read from `greens.json` the same way `CreateFlatZoneMeshes` does at L4049.
+
+### Deliverable 4c — Cut bunkers out of the fairway mesh (same pass)
+
+For each bunker, drop fairway triangles whose centroid is inside `DilateContour(bunker.contour, bunkerCutMargin = 0.20 m)`. Same defect class as greens-in-fairway, smaller absolute scale — hides until a steep enough hillside. Tees and cart paths are already terrain-depressed 0.40 m, so fairway-over-tee has headroom; **defer those unless a visible defect appears.** Water is its own absolute-Y path; skip.
+
+### Reverts to bundle with the fix (iter-4 cleanup)
+
+- `GreenPadRecord` and the green-pad pass added to `DepressTerrainUnderOverlays` in iter-4 → remove.
+- `Assets/Golf/Courses/lomond-country-club/Terrain/TerrainData_Hole07.asset` (+ `.meta`) → revert to its pre-iter-4 state.
+- Any other iter-4-only field/const introduced for pad grading → remove.
+
+### Guards (unchanged invariants)
+
+- Non-v2 holes: terrain hole-carve uses original `1.026×` polygon; fairway mesh unchanged. Byte-for-byte identical to today.
+- Physics: break stays grid-force; `BakedHeightProvider` continues to read mesh vertex Ys; ball rests on mesh.
+- Green mesh and collar geometry: unchanged. The fix is entirely about what's **under** the green/collar, not the green itself.
+
+### Updated DoD additions
+
+- H07 reimport: no fairway poke-through on any green edge — capture Cesar's exact bottom-left angle plus the uphill angle plus an overhead.
+- Pick one terrain-only green (no fairway overlap — implementer to identify from the 18 holes; e.g. a par-3 island green if Lomond has one, else closest fit) and confirm no terrain poke-through there either.
+- Quantitative diagnostic: print to `reimport_report.txt` (a) zero `true` terrain-hole cells inside any green's `cutContour` after the carve; (b) zero fairway triangles whose centroid is inside any green's `cutContour` after the cut.
+- Bunkers-in-fairway: visually confirm on a hole with a fairway bunker (implementer to identify) — no fairway-over-bunker poke-through.
+- iter-4 pad code and `TerrainData_Hole07.asset` modifications are reverted, confirmed by `git diff` summary in the implementer report.
+
+### Open items the implementer should report back on
+
+1. The actual hole(s) where the green sits directly on rough/terrain (no fairway underneath) — needed to verify the terrain-carve widening works in isolation.
+2. The actual hole(s) with fairway bunkers — needed to verify 4c.
+3. If `CreateFairwayMesh` triangulates over a larger polygon than just the fairway contour (e.g. dilated for fringe), confirm the centroid-drop still produces a clean edge under the collar overhang. Flag if the edge needs a small post-cut smoothing pass.
