@@ -1,0 +1,3 @@
+# Review scoreboard — architect-PASS later rejected by Cesar. One line per miss.
+# Format: [<logged>] MISS key=<task>:<rejection-mtime> - <note>
+[2026-05-29 backfill] MISS key=green_slope_height_bake:1780054395 - iter-9 ARCHITECT_REVIEW_PASS on a 256px canonical; Cesar caught boundary waves + dark skirt facets at full res. Motivated the Tier 1-4 hardening.

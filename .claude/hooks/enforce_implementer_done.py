@@ -98,7 +98,13 @@ PLACEHOLDER_PATTERNS = [
     r"<timestamp>",
 ]
 
-GATING_STATUSES = {"READY_FOR_SELF_REVIEW", "READY_FOR_ARCHITECT_REVIEW"}
+# Implementer -> review transitions: rules 1-15 (the implementer must prove its
+# work before any reviewer sees it).
+IMPLEMENTER_GATES = {"READY_FOR_SELF_REVIEW", "READY_FOR_ARCHITECT_REVIEW"}
+# Reviewer -> red-team handoff: rule 16 only (the reviewer must produce an
+# objective mesh-metrics verdict for mesh tasks before handing forward).
+REVIEWER_GATES = {"READY_FOR_REDTEAM"}
+GATING_STATUSES = IMPLEMENTER_GATES | REVIEWER_GATES
 
 # Screenshot must be modified within this many hours of the STATUS write to
 # count as "this session's screenshot." Generous default for Cesar's workflow
@@ -124,6 +130,43 @@ PREEXISTING_TRIGGER_PATTERNS: list[tuple[str, re.Pattern]] = [
 # (iter-2 of green_authoring shipped a uniform-grey PNG; this would have caught it).
 VARIANCE_THRESHOLD = 5.0
 MIN_SAMPLE_PIXELS = 10_000
+
+# Rule 14 — canonical-screenshot resolution floor. The iter-9 failure of
+# green_slope_height_bake: the implementer designated a 256x256 render as the
+# canonical PASS evidence; a boundary defect is physically unresolvable at that
+# size, so the reviewer rubber-stamped a PASS Cesar killed in seconds at full
+# res. Any report that cites screenshots must declare ONE canonical frame, and
+# its long edge must be >= this floor.
+MIN_CANONICAL_LONG_EDGE = 900
+# Accepts "Canonical screenshot:", "**Canonical frame:**", "canonical capture =",
+# etc., tolerating markdown bold/punctuation between the label and the path.
+CANONICAL_DECLARATION_RE = re.compile(
+    r"canonical\s+(?:screenshot|frame|capture|image)\b[^\n]*?`?"
+    r"((?:Docs/Specs/(?:Active|Completed)/[\w.\-]+/)?screenshots/[\w./\-]+\.(?:png|jpg|jpeg))",
+    re.IGNORECASE,
+)
+
+# Rule 15 — reproduce-the-rejection gate. When CESAR_REJECTION.md exists, the
+# next report must prove the rejected defect is gone at the rejection angle,
+# with a full-res capture. We require a "Rejection follow-up" section that
+# carries a resolution verdict AND a screenshot citation.
+REJECTION_RESOLVED_RE = re.compile(
+    r"\b(GONE|RESOLVED|FIXED|ADDRESSED|NO LONGER|STILL PRESENT|NOT FIXED)\b",
+    re.IGNORECASE,
+)
+
+# Rule 16 — mesh-task geometry metrics. For 3D mesh / terrain bakes there is no
+# Figma reference and no bbox-containment gate, so the reviewer historically had
+# nothing objective to fail on (green_slope_height_bake passed 3x on vibes).
+# When SPEC.md reads as a mesh task, the reviewer's ARCHITECT_REVIEW.md must
+# carry a numeric "Mesh metrics" section before the READY_FOR_REDTEAM handoff.
+MESH_TASK_KEYWORDS = [
+    "green.json", "terraindata", "mesh-cut", "mesh deform", "recalculatenormals",
+    "greentopology", "bake-green", "skirt", "vertex normal", "heightfield",
+    "height bake", "contour", "triangulat",
+]
+MESH_TASK_MIN_HITS = 2
+MESH_METRICS_SECTION = "Mesh metrics"
 
 
 def read_payload() -> dict:
@@ -888,6 +931,179 @@ def validate_image_variances(report_path: Path) -> list[str]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Rules 14-16: review-hardening (resolution floor, reproduce-rejection, mesh metrics).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _section_text(md: str, section_header: str) -> str | None:
+    """Return the body text under a Markdown header, up to the next header.
+
+    None if the header is absent. Mirrors parse_table_rows' section-finding
+    but returns the raw text so callers can scan for keywords / citations.
+    """
+    pattern = re.compile(rf"^#+\s*{re.escape(section_header)}\b.*$", re.MULTILINE)
+    m = pattern.search(md)
+    if not m:
+        return None
+    after = md[m.end():]
+    nxt = re.search(r"^#+\s+\S", after, re.MULTILINE)
+    return after[: nxt.start()] if nxt else after
+
+
+def image_dimensions(img_path: Path) -> tuple[int, int] | None:
+    """(width, height) in px. Pillow first, raw PNG IHDR fallback. None if unknown.
+
+    The fallback reads only the 26-byte PNG header, so it works for any PNG
+    without Pillow. JPEGs without Pillow return None (caller treats None as
+    "can't measure — don't block").
+    """
+    try:
+        from PIL import Image  # type: ignore
+        with Image.open(img_path) as im:
+            w, h = im.size
+            return (int(w), int(h))
+    except Exception:
+        pass
+    try:
+        with open(img_path, "rb") as f:
+            head = f.read(26)
+        if head[:8] == b"\x89PNG\r\n\x1a\n" and head[12:16] == b"IHDR":
+            w = struct.unpack(">I", head[16:20])[0]
+            h = struct.unpack(">I", head[20:24])[0]
+            return (int(w), int(h))
+    except Exception:
+        pass
+    return None
+
+
+def validate_canonical_resolution(report_path: Path) -> list[str]:
+    """Rule 14: a report that cites screenshots must declare exactly one
+    canonical frame, and that frame's long edge must be >= MIN_CANONICAL_LONG_EDGE.
+
+    Skips entirely when the report cites no screenshots (non-visual task).
+    """
+    errors: list[str] = []
+    if not report_path.exists():
+        return errors  # Rule 1 already errored.
+    content = report_path.read_text(encoding="utf-8", errors="ignore")
+    if not _extract_image_paths(content):
+        return errors  # non-visual task — nothing to gate.
+
+    matches = CANONICAL_DECLARATION_RE.findall(content)
+    if not matches:
+        errors.append(
+            "IMPLEMENTER_REPORT.md cites screenshots but declares no canonical "
+            "frame. Add a line `Canonical screenshot: \\`screenshots/<file>.png\\`` "
+            "naming the single full-res frame the reviewer must judge. (Rule 14: "
+            "green_slope_height_bake iter-9 passed on a 256px top-down the "
+            "implementer happened to pick — designation + a resolution floor "
+            "stops that.)"
+        )
+        return errors
+
+    for ss_rel in matches:
+        resolved = _resolve_image(report_path, ss_rel)
+        if resolved is None:
+            errors.append(
+                f"Canonical screenshot '{ss_rel}' is declared but the file does "
+                f"not exist. Point it at a real capture under screenshots/."
+            )
+            continue
+        dims = image_dimensions(resolved)
+        if dims is None:
+            continue  # can't measure (exotic format / no Pillow on JPEG) — don't block.
+        if max(dims) < MIN_CANONICAL_LONG_EDGE:
+            errors.append(
+                f"Canonical screenshot '{ss_rel}' is {dims[0]}x{dims[1]} — long "
+                f"edge {max(dims)}px < required {MIN_CANONICAL_LONG_EDGE}px. A "
+                f"defect invisible at this size gets rubber-stamped "
+                f"(green_slope_height_bake iter-9 was 256px). Re-capture at full "
+                f"resolution (screenshot-isolated resolution>=900, or "
+                f"CaptureHelper game-view). (Rule 14.)"
+            )
+    return errors
+
+
+def validate_rejection_followup(report_path: Path, task_dir: Path) -> list[str]:
+    """Rule 15: when CESAR_REJECTION.md exists, the report must carry a
+    'Rejection follow-up' section with a resolution verdict AND a screenshot
+    citation — proving the next iter re-shot the exact defect Cesar flagged.
+    """
+    errors: list[str] = []
+    if not (task_dir / "CESAR_REJECTION.md").exists():
+        return errors
+    if not report_path.exists():
+        return errors  # Rule 1 already errored.
+    content = report_path.read_text(encoding="utf-8", errors="ignore")
+    section = _section_text(content, "Rejection follow-up")
+    if section is None:
+        errors.append(
+            "CESAR_REJECTION.md exists but IMPLEMENTER_REPORT.md has no "
+            "'## Rejection follow-up' section. Cesar rejected after an architect "
+            "PASS — the report must re-shoot the exact angle/defect Cesar flagged "
+            "and state explicitly whether it is GONE, with a full-res screenshot "
+            "citation. (Rule 15.)"
+        )
+        return errors
+    if not REJECTION_RESOLVED_RE.search(section):
+        errors.append(
+            "'Rejection follow-up' section has no explicit resolution verdict. "
+            "Write GONE / RESOLVED / FIXED per defect Cesar flagged (or STILL "
+            "PRESENT — in which case set STATUS=IMPLEMENTER_BLOCKED, do not "
+            "advance to review). (Rule 15.)"
+        )
+    if not _extract_image_paths(section):
+        errors.append(
+            "'Rejection follow-up' section cites no screenshot. Attach the "
+            "same-angle, full-res capture proving the rejected defect is gone, "
+            "referenced as `screenshots/<file>.png`. (Rule 15.)"
+        )
+    return errors
+
+
+def spec_is_mesh_task(spec_path: Path) -> bool:
+    """True when SPEC.md reads as a 3D mesh / terrain bake (>= MESH_TASK_MIN_HITS
+    distinct mesh keywords). Used to gate Rule 16 to tasks where geometry metrics
+    are the meaningful objective check."""
+    if not spec_path.exists():
+        return False
+    text = spec_path.read_text(encoding="utf-8", errors="ignore").lower()
+    hits = sum(1 for kw in MESH_TASK_KEYWORDS if kw in text)
+    return hits >= MESH_TASK_MIN_HITS
+
+
+def validate_mesh_metrics(review_path: Path) -> list[str]:
+    """Rule 16: a mesh-task review must carry a numeric 'Mesh metrics' section
+    before the reviewer can hand forward to the red-teamer."""
+    errors: list[str] = []
+    if not review_path.exists():
+        errors.append(
+            "ARCHITECT_REVIEW.md not found — a mesh task cannot hand forward "
+            "without the reviewer's mesh-metrics verdict. (Rule 16.)"
+        )
+        return errors
+    content = review_path.read_text(encoding="utf-8", errors="ignore")
+    section = _section_text(content, MESH_METRICS_SECTION)
+    if section is None:
+        errors.append(
+            "Mesh task: ARCHITECT_REVIEW.md has no '## Mesh metrics' section. The "
+            "reviewer must run script-execute geometry checks and paste NUMBERS "
+            "(e.g. min collar-ring vertex normal.y, max Y-step between adjacent "
+            "boundary vertices, boundary vertex count) with PASS/FAIL against "
+            "thresholds. For 3D/terrain bakes there is no Figma or bbox gate — "
+            "numbers are the objective gate. (Rule 16.)"
+        )
+        return errors
+    if not re.search(r"-?\d+\.?\d*", section):
+        errors.append(
+            "'Mesh metrics' section has no numeric measurement — paste the actual "
+            "script-execute output (normal.y, Y-step, vert count), not a prose "
+            "placeholder. (Rule 16.)"
+        )
+    return errors
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Orchestrator.
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1013,6 +1229,33 @@ def main() -> int:
     report_path = task_dir / "IMPLEMENTER_REPORT.md"
     spec_path = task_dir / "SPEC.md"
     heartbeat_path = task_dir / "HEARTBEAT.log"
+    review_path = task_dir / "ARCHITECT_REVIEW.md"
+
+    # Reviewer -> red-team handoff (READY_FOR_REDTEAM). Only Rule 16, and only for
+    # mesh tasks. The implementer-report rules (1-15) do NOT apply to the
+    # reviewer's own STATUS write — this gate is about the reviewer producing an
+    # objective mesh-metrics verdict, not about the implementer's report.
+    if new_status in REVIEWER_GATES:
+        rt_errors: list[str] = []
+        if spec_is_mesh_task(spec_path):
+            rt_errors = validate_mesh_metrics(review_path)
+        if rt_errors:
+            print(
+                f"BLOCKED: cannot move STATUS to {new_status} - reviewer must "
+                f"complete the mesh-metrics gate:",
+                file=sys.stderr,
+            )
+            print("", file=sys.stderr)
+            for e in rt_errors:
+                print(f"  - {e}", file=sys.stderr)
+            print("", file=sys.stderr)
+            print(
+                "Run the geometry checks via script-execute and paste the numbers "
+                "into ARCHITECT_REVIEW.md § Mesh metrics with PASS/FAIL, then retry.",
+                file=sys.stderr,
+            )
+            return 2
+        return 0
 
     # Rules 1-6 apply to both gating statuses.
     errors = validate_report(report_path)
@@ -1090,6 +1333,14 @@ def main() -> int:
         errors.extend(
             validate_files_modified_coverage(report_path, REPO_ROOT, task_dir)
         )
+
+    # Rule 14: a report citing screenshots must declare one canonical frame and
+    # it must clear the resolution floor (blocks the iter-9 256px-render PASS).
+    errors.extend(validate_canonical_resolution(report_path))
+
+    # Rule 15: when CESAR_REJECTION.md exists, the report must carry a
+    # 'Rejection follow-up' section re-shooting the flagged defect at full res.
+    errors.extend(validate_rejection_followup(report_path, task_dir))
 
     if errors:
         print(

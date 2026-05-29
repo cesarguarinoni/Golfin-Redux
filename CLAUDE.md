@@ -20,7 +20,8 @@ For SMALL tasks where the full pipeline is overkill (bug fixes with obvious solu
 Cesar (with Architect Claude on claude.ai) -> writes SPEC.md
                                             -> golfin-implementer (builds + screenshots + self-PASS/FAIL checklist)
                                             -> golfin-self-reviewer (catches false PASSes; routes back or forward)
-                                            -> golfin-reviewer (final review: visual fidelity + cross-cutting)
+                                            -> golfin-reviewer (visual fidelity + mesh metrics + cross-cutting; PASS -> READY_FOR_REDTEAM)
+                                            -> golfin-redteam-reviewer (adversarial gate; ONLY it writes ARCHITECT_REVIEW_PASS)
                                             -> Cesar (final approval -> DONE)
 ```
 
@@ -28,7 +29,7 @@ Spec authoring is done by Cesar with the human Architect (claude.ai chat), NOT a
 
 ### Where things live
 
-- **Subagent definitions:** `.claude/agents/golfin-reviewer.md`, `golfin-implementer.md`, `golfin-self-reviewer.md`
+- **Subagent definitions:** `.claude/agents/golfin-reviewer.md`, `golfin-implementer.md`, `golfin-self-reviewer.md`, `golfin-redteam-reviewer.md`
 - **Hooks:** `.claude/hooks/route_subagent.py` (state router + desktop notify + email + alerts.log), `enforce_implementer_done.py` (PreToolUse blocker), `capture_screenshot.py` (Implementer's screenshot helper)
 - **Notification config:** `.claude/notify_config.json` (toast always on; email opt-in)
 - **Per-task folder:** `Docs/Specs/Active/<task_slug>/` containing `SPEC.md`, `STATUS.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, `ARCHITECT_REVIEW.md`, `CESAR_REJECTION.md` (when applicable), `HEARTBEAT.log`, `screenshots/` (still images: PNG/JPG), `videos/` (clips: MP4/MOV/WebM — see § Screenshots rule 5)
@@ -40,12 +41,16 @@ Spec authoring is done by Cesar with the human Architect (claude.ai chat), NOT a
 ```
 SPEC_READY -> IMPLEMENTER_WORKING -> READY_FOR_SELF_REVIEW
             -> (SELF_REVIEW_PASS | SELF_REVIEW_FAIL | READY_FOR_ARCHITECT_REVIEW)
-            -> (ARCHITECT_REVIEW_PASS | ARCHITECT_REVIEW_FAIL | ARCHITECT_REVIEW_ESCALATE)
+            -> golfin-reviewer PASS -> READY_FOR_REDTEAM
+            -> golfin-redteam-reviewer -> (ARCHITECT_REVIEW_PASS | ARCHITECT_REVIEW_FAIL | ARCHITECT_REVIEW_ESCALATE)
             -> (CESAR_REJECTED loops back) | (DONE finishes)
 
+READY_FOR_REDTEAM    - golfin-reviewer passed; adversarial red-team gate runs next
 IMPLEMENTER_BLOCKED  - implementer hit a circuit breaker; Cesar must unblock
 CESAR_REJECTED       - Cesar manually rejected after architect-pass; loop back to implementer
 ```
+
+**Two-gate review (added 2026-05-29).** `golfin-reviewer` no longer writes `ARCHITECT_REVIEW_PASS` — its PASS sets `READY_FOR_REDTEAM`, handing to `golfin-redteam-reviewer`, the adversarial gate that is the ONLY agent allowed to advance to `ARCHITECT_REVIEW_PASS`. This exists because single-reviewer PASSes were rubber-stamping work Cesar rejected on sight (`green_slope_height_bake` passed 3×). Every `ARCHITECT_REVIEW_PASS`-then-`CESAR_REJECTED` is logged to `.claude/review_misses.log` and the running miss count is surfaced at every pipeline tick.
 
 The `route_subagent.py` hook prints the next step in the terminal automatically after every subagent run, so neither you nor Cesar needs to check a log file. When STATUS reaches a state that needs Cesar (`ARCHITECT_REVIEW_PASS`, `*_ESCALATE`, `IMPLEMENTER_BLOCKED`), notifications fire via Windows toast + email (if configured) + always-logged at `.claude/alerts.log`.
 
@@ -63,6 +68,11 @@ The `route_subagent.py` hook prints the next step in the terminal automatically 
 10. **Circuit breakers** — if the same Unity MCP tool fails 3 times, or you wait on Unity for >3 minutes with no progress, or you can't find an asset after 2 attempts: set STATUS to `IMPLEMENTER_BLOCKED` and stop. Don't loop indefinitely.
 11. **Every new player-facing `Button` gets `Golfin.UI.Polish.ButtonPressFeedback`.** When adding any new `UnityEngine.UI.Button` to a production prefab or scene via Unity MCP, immediately follow `add_component(UnityEngine.UI.Button)` with `add_component(Golfin.UI.Polish.ButtonPressFeedback)` in the same operation. Defaults stay (`_pressedScale=0.95`, `_duration=0.12`). Full rationale in `tasks/lessons.md` Lesson S. Self-check at task close: grep new `.prefab` / scene diffs for Button GUID references; every match must have a sibling `ButtonPressFeedback` reference. One missing pair = task FAIL.
 12. **Close-out commits run `git status` first.** Architect-driven close-out commits (the move-from-`Active`-to-`Completed/` commit) MUST run `git status --porcelain --untracked-files=all` and `git diff --stat HEAD` immediately before staging the folder rename. If ANY M / ?? / D path lives outside the task's spec folder, HALT. Either (a) commit those code/data files first in a separate, properly-attributed commit, or (b) restore/discard the drift before staging the close-out. Doing the move-to-Completed commit on top of uncommitted code is the failure mode that produced `7a1d2328 spin_and_shot_shape_wiring: DONE` — a docs-only commit while 14 implementation files lived uncommitted in the working tree for over 10 hours. Full rationale: Lesson AA in `tasks/lessons.md`. Sister rule: Lesson R (always commit `.cs.meta` alongside `.cs`). This rule is architect-side: there is no subagent for close-out, so it lives here in CLAUDE.md rather than as a hook gate.
+13. **Review-hardening gates (added 2026-05-29, after `green_slope_height_bake` was PASSed 3× and Cesar rejected each in seconds).** `enforce_implementer_done.py` now also enforces:
+    - **Rule 14 — canonical-screenshot resolution floor.** A report that cites any `screenshots/*.png` must declare exactly one canonical frame (`Canonical screenshot: \`screenshots/X.png\``) and that frame's long edge must be ≥ 900px. iter-9 designated a 256px top-down — a boundary defect is physically unresolvable at that size, so the reviewer rubber-stamped. Blocks the implementer→review transition.
+    - **Rule 15 — reproduce-the-rejection gate.** When `CESAR_REJECTION.md` exists, `IMPLEMENTER_REPORT.md` must carry a `## Rejection follow-up` section with an explicit GONE/RESOLVED/STILL-PRESENT verdict per flagged defect AND a same-angle full-res screenshot citation. No re-shoot of the exact defect = no advance.
+    - **Rule 16 — mesh-metrics gate.** For mesh/terrain tasks (SPEC mentions ≥2 of: `green.json`, `TerrainData`, mesh-cut/deform, `GreenTopology`, skirt, vertex normal, contour, triangulate…), the reviewer's `ARCHITECT_REVIEW.md` must contain a numeric `## Mesh metrics` section before it can write `READY_FOR_REDTEAM`. 3D tasks have no Figma/bbox gate, so numbers (min collar normal.y, max boundary Δy, vert count) are the objective gate. Coverage: `.claude/hooks/test_enforce_implementer_done.py`.
+    - **Adversarial second reviewer + scoreboard.** See § STATUS.md states "Two-gate review" — `golfin-redteam-reviewer` is the only agent that may write `ARCHITECT_REVIEW_PASS`, and PASS→reject misses are logged to `.claude/review_misses.log`.
 
 ### Visual review checklist (enforced by both reviewer agents)
 

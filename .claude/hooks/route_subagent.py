@@ -79,13 +79,20 @@ NEXT_AGENT = {
     "SELF_REVIEW_PASS": "golfin-reviewer",
     "SELF_REVIEW_FAIL": "golfin-implementer",
     "READY_FOR_ARCHITECT_REVIEW": "golfin-reviewer",
-    "ARCHITECT_REVIEW_PASS": None,                     # Cesar's turn
+    "READY_FOR_REDTEAM": "golfin-redteam-reviewer",    # reviewer PASSed -> adversarial check
+    "ARCHITECT_REVIEW_PASS": None,                     # Cesar's turn (post red-team)
     "ARCHITECT_REVIEW_FAIL": "golfin-implementer",
     "ARCHITECT_REVIEW_ESCALATE": None,                 # Cesar's turn
-    "CESAR_REJECTED": "golfin-implementer",            # NEW: redo with Cesar's notes
-    "IMPLEMENTER_BLOCKED": None,                       # NEW: Cesar must unblock
+    "CESAR_REJECTED": "golfin-implementer",            # redo with Cesar's notes
+    "IMPLEMENTER_BLOCKED": None,                       # Cesar must unblock
     "DONE": "",
 }
+
+# Tier 4 — review scoreboard. Every time a task that the reviewer+red-teamer
+# passed (ARCHITECT_REVIEW_PASS) is then rejected by Cesar (CESAR_REJECTED), the
+# automated gate MISSED something Cesar caught. Logging these makes the miss
+# rate visible so the pipeline self-corrects instead of silently rubber-stamping.
+MISS_LOG_PATH = REPO_ROOT / ".claude" / "review_misses.log"
 
 
 def read_status(task_dir):
@@ -252,6 +259,44 @@ def log_alert(task, status, summary, where_lines):
         pass
 
 
+def record_review_miss(task, task_dir):
+    """Tier 4: log a reviewer/red-team miss (PASS later rejected by Cesar).
+
+    Deduped by '<task>:<CESAR_REJECTION.md mtime>' so the repeatedly-firing Stop
+    hook logs each distinct rejection exactly once. Returns (is_new, total_lines)
+    where total_lines is the running count of logged misses. Best-effort.
+    """
+    try:
+        rejection = task_dir / "CESAR_REJECTION.md"
+        if not rejection.exists():
+            return (False, _miss_count())
+        key = f"{task}:{int(rejection.stat().st_mtime)}"
+        existing = ""
+        if MISS_LOG_PATH.exists():
+            existing = MISS_LOG_PATH.read_text(encoding="utf-8", errors="ignore")
+        if key in existing:
+            return (False, _miss_count())
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(MISS_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(f"[{ts}] MISS key={key} - architect-PASS later rejected by Cesar\n")
+        return (True, _miss_count())
+    except Exception:
+        return (False, 0)
+
+
+def _miss_count():
+    """Count logged misses (lines containing ' MISS key='). Best-effort -> 0."""
+    try:
+        if not MISS_LOG_PATH.exists():
+            return 0
+        return sum(
+            1 for line in MISS_LOG_PATH.read_text(encoding="utf-8", errors="ignore").splitlines()
+            if " MISS key=" in line
+        )
+    except Exception:
+        return 0
+
+
 def main():
     if not ACTIVE_DIR.exists():
         return 0
@@ -312,6 +357,7 @@ def main():
                 review_file = task_dir / "ARCHITECT_REVIEW.md"
                 if (rejection_file.exists() and review_file.exists()
                         and rejection_file.stat().st_mtime > review_file.stat().st_mtime):
+                    record_review_miss(task, task_dir)
                     cesar_alert_lines.extend(
                         alert_cesar(
                             task, status,
@@ -324,8 +370,9 @@ def main():
                     cesar_alert_lines.extend(
                         alert_cesar(
                             task, status,
-                            "Ready for your final approval",
+                            "Ready for your final approval (passed reviewer + red-team)",
                             [f"Review Docs/Specs/Active/{task}/ARCHITECT_REVIEW.md",
+                             f"Red-team verdict: Docs/Specs/Active/{task}/REDTEAM_REVIEW.md",
                              f"Latest screenshot: Docs/Specs/Active/{task}/screenshots/"],
                             config,
                         )
@@ -354,6 +401,7 @@ def main():
             extra = ""
             if status == "CESAR_REJECTED":
                 extra = " (read CESAR_REJECTION.md first)"
+                record_review_miss(task, task_dir)
             next_steps.append(f"  [{task}] STATUS={status} -> {cmd}{extra}")
 
     if not next_steps and not cesar_alert_lines:
@@ -375,6 +423,12 @@ def main():
         print("Pipeline next-steps:")
         for line in next_steps:
             print(line)
+
+    misses = _miss_count()
+    if misses:
+        print("")
+        print(f"Review scoreboard: {misses} architect-PASS->Cesar-reject miss(es) "
+              f"logged in .claude/review_misses.log. Reviewer/red-team: tighten up.")
 
     print("=" * 72)
     print("")

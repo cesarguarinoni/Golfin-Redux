@@ -426,7 +426,8 @@ class TestEndToEndBlocking(unittest.TestCase):
         if with_synthetic_png:
             _write_flat_png(ss)
         else:
-            _write_noisy_png(ss)
+            # >= MIN_CANONICAL_LONG_EDGE so the Rule 14 resolution floor passes.
+            _write_noisy_png(ss, 960, 600)
         # IMPLEMENTER_REPORT.md.
         report = self.SCAFFOLD_REPORT
         if with_unsourced_claim:
@@ -641,6 +642,167 @@ class TestFilesModifiedCoverage(unittest.TestCase):
         finally:
             import shutil
             shutil.rmtree(td, ignore_errors=True)
+
+
+class TestCanonicalResolution(unittest.TestCase):
+    """Rule 14 — canonical-screenshot declaration + resolution floor."""
+
+    def _report(self, body: str, tmp: Path) -> Path:
+        p = tmp / "IMPLEMENTER_REPORT.md"
+        p.write_text(body)
+        return p
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="hook_rule14_")).resolve()
+        (self.tmp / "screenshots").mkdir()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_no_screenshots_skips(self):
+        rp = self._report("# R\n\nNo images here.\n", self.tmp)
+        self.assertEqual(eid.validate_canonical_resolution(rp), [])
+
+    def test_cites_screenshot_but_no_canonical_blocks(self):
+        _write_noisy_png(self.tmp / "screenshots" / "a.png", 960, 600)
+        rp = self._report("# R\n\nSee `screenshots/a.png`.\n", self.tmp)
+        errs = eid.validate_canonical_resolution(rp)
+        self.assertTrue(any("no canonical" in e for e in errs), errs)
+
+    def test_low_res_canonical_blocks(self):
+        _write_noisy_png(self.tmp / "screenshots" / "small.png", 256, 256)
+        rp = self._report(
+            "# R\n\nCanonical screenshot: `screenshots/small.png`\n", self.tmp
+        )
+        errs = eid.validate_canonical_resolution(rp)
+        self.assertTrue(any("256x256" in e for e in errs), errs)
+        self.assertTrue(any("Rule 14" in e for e in errs), errs)
+
+    def test_full_res_canonical_passes(self):
+        _write_noisy_png(self.tmp / "screenshots" / "big.png", 1280, 720)
+        rp = self._report(
+            "# R\n\n**Canonical frame:** `screenshots/big.png`\n", self.tmp
+        )
+        self.assertEqual(eid.validate_canonical_resolution(rp), [])
+
+    def test_iter9_256px_top_down_would_have_blocked(self):
+        # The literal failure: only a 256px top-down designated canonical.
+        _write_noisy_png(self.tmp / "screenshots" / "h07_iter9_overhead.png", 256, 256)
+        rp = self._report(
+            "# R\n\nCanonical screenshot: `screenshots/h07_iter9_overhead.png`\n",
+            self.tmp,
+        )
+        errs = eid.validate_canonical_resolution(rp)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("256px", errs[0])
+
+    def test_png_dimensions_fallback_without_pillow(self):
+        p = self.tmp / "screenshots" / "dim.png"
+        _write_noisy_png(p, 901, 480)
+        self.assertEqual(eid.image_dimensions(p), (901, 480))
+
+
+class TestRejectionFollowup(unittest.TestCase):
+    """Rule 15 — reproduce-the-rejection gate."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="hook_rule15_")).resolve()
+        (self.tmp / "screenshots").mkdir()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _report(self, body: str) -> Path:
+        p = self.tmp / "IMPLEMENTER_REPORT.md"
+        p.write_text(body)
+        return p
+
+    def test_no_rejection_file_skips(self):
+        rp = self._report("# R\n\nNothing.\n")
+        self.assertEqual(eid.validate_rejection_followup(rp, self.tmp), [])
+
+    def test_rejection_present_no_section_blocks(self):
+        (self.tmp / "CESAR_REJECTION.md").write_text("rejected: waves\n")
+        rp = self._report("# R\n\nNo follow-up section.\n")
+        errs = eid.validate_rejection_followup(rp, self.tmp)
+        self.assertTrue(any("Rejection follow-up" in e for e in errs), errs)
+
+    def test_section_without_verdict_or_image_blocks(self):
+        (self.tmp / "CESAR_REJECTION.md").write_text("rejected: waves\n")
+        rp = self._report("# R\n\n## Rejection follow-up\n\nLooked at it.\n")
+        errs = eid.validate_rejection_followup(rp, self.tmp)
+        self.assertEqual(len(errs), 2)  # missing verdict + missing image
+
+    def test_complete_followup_passes(self):
+        (self.tmp / "CESAR_REJECTION.md").write_text("rejected: waves\n")
+        rp = self._report(
+            "# R\n\n## Rejection follow-up\n\n"
+            "The boundary waves are GONE — see `screenshots/grazing.png`.\n"
+        )
+        self.assertEqual(eid.validate_rejection_followup(rp, self.tmp), [])
+
+    def test_still_present_is_accepted_verdict(self):
+        # STILL PRESENT is a legitimate verdict (implementer should then BLOCK,
+        # but the section itself is well-formed for Rule 15's purposes).
+        (self.tmp / "CESAR_REJECTION.md").write_text("rejected: waves\n")
+        rp = self._report(
+            "# R\n\n## Rejection follow-up\n\n"
+            "Waves STILL PRESENT — see `screenshots/grazing.png`.\n"
+        )
+        self.assertEqual(eid.validate_rejection_followup(rp, self.tmp), [])
+
+
+class TestMeshMetrics(unittest.TestCase):
+    """Rule 16 — mesh-task geometry-metrics gate on the reviewer's verdict."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="hook_rule16_")).resolve()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_spec_mesh_detection(self):
+        spec = self.tmp / "SPEC.md"
+        spec.write_text("This bakes green.json and deforms the mesh via GreenTopology.\n")
+        self.assertTrue(eid.spec_is_mesh_task(spec))
+
+    def test_spec_non_mesh_not_flagged(self):
+        spec = self.tmp / "SPEC.md"
+        spec.write_text("Add a button to the roster screen and wire OnClick.\n")
+        self.assertFalse(eid.spec_is_mesh_task(spec))
+
+    def test_single_keyword_not_enough(self):
+        spec = self.tmp / "SPEC.md"
+        spec.write_text("The contour of the UI card is rounded.\n")  # 1 hit only
+        self.assertFalse(eid.spec_is_mesh_task(spec))
+
+    def test_missing_review_blocks(self):
+        errs = eid.validate_mesh_metrics(self.tmp / "ARCHITECT_REVIEW.md")
+        self.assertTrue(any("not found" in e for e in errs), errs)
+
+    def test_no_metrics_section_blocks(self):
+        rv = self.tmp / "ARCHITECT_REVIEW.md"
+        rv.write_text("# Review\n\n## Verdict\n\nPASS, looks great.\n")
+        errs = eid.validate_mesh_metrics(rv)
+        self.assertTrue(any("no '## Mesh metrics'" in e for e in errs), errs)
+
+    def test_metrics_without_numbers_blocks(self):
+        rv = self.tmp / "ARCHITECT_REVIEW.md"
+        rv.write_text("# Review\n\n## Mesh metrics\n\nLooks fine, no numbers.\n")
+        errs = eid.validate_mesh_metrics(rv)
+        self.assertTrue(any("no numeric" in e for e in errs), errs)
+
+    def test_metrics_with_numbers_passes(self):
+        rv = self.tmp / "ARCHITECT_REVIEW.md"
+        rv.write_text(
+            "# Review\n\n## Mesh metrics\n\n"
+            "min collar normal.y = 0.62 (PASS, >0.3); max boundary Y-step = 0.04m "
+            "(PASS, <0.08); boundary verts = 170.\n"
+        )
+        self.assertEqual(eid.validate_mesh_metrics(rv), [])
 
 
 if __name__ == "__main__":

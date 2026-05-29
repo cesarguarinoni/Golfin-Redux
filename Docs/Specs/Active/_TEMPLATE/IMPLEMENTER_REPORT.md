@@ -14,10 +14,19 @@
 
 ## Screenshot
 
+- **Canonical screenshot:** `screenshots/<file>.png`  ← REQUIRED (Rule 14). Long edge ≥ 900px. Name the SINGLE frame the reviewer should judge; pick the angle that REVEALS the feature, not a flattering thumbnail/overhead.
 - **Captured at:** `screenshots/<timestamp>.png` (or `.jpg`)
 - **Scene loaded:** `<scene path>`
 - **Play mode:** Yes / No
 - **Hole loaded (if applicable):** `<hole id>`
+
+## Rejection follow-up
+
+Only required when `CESAR_REJECTION.md` exists (Rule 15 — hook-enforced; delete this section otherwise). For EACH defect Cesar flagged, re-shoot the exact angle and give a verdict + full-res citation.
+
+| Rejected defect | Verdict | Evidence (same-angle, full-res) |
+|---|---|---|
+| <defect Cesar flagged> | GONE / RESOLVED / STILL PRESENT | `screenshots/<file>.png` |
 
 ## Acceptance checklist (copy from SPEC.md, fill every line)
 

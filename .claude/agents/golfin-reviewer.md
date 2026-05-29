@@ -47,9 +47,27 @@ Verify:
 - **Latent issues:** Are there bugs the screenshot doesn't show? Null refs, asset loading order, missing inspector wires that happen to work today but won't tomorrow?
 - **Capture-helper compliance:** the self-reviewer should have checked Step 5 (screenshot provenance + maintenance protocol for new contexts). Verify their finding is correct — if they missed a non-compliant capture method or a missing fake-state extension, FAIL the task with reason "capture_helper protocol violation, see SPEC.md § Maintenance protocol." This is a backstop in case the self-reviewer waved it through.
 
+### Step 2 — Mesh / 3D-task track (MANDATORY for terrain/mesh bakes)
+
+UI tasks have Figma side-by-side + bbox containment as objective gates. **3D mesh / terrain-bake tasks have neither** — and that gap is exactly why `green_slope_height_bake` passed THREE times on a flattering screenshot while Cesar caught the defect in seconds (iter-3 poke-through, iter-6 wrong-importer, iter-9 a 256px top-down that physically could not resolve the boundary). For these tasks, **numbers are the gate.**
+
+If SPEC.md reads as a mesh/terrain task (it bakes `green.json`, deforms a mesh, edits `TerrainData`, touches `GreenTopology`/`HoleGeoImporter`, or the spec DoD names geometry thresholds), you MUST:
+
+1. **Distrust the canonical screenshot's angle.** A top-down overhead hides Y-undulation and skirt-normal facets. Independently capture (or require) a **grazing / near-eye-level** angle of the feature — the angle most likely to REVEAL the defect class, not the one that flatters it. Use `mcp__ai-game-developer__screenshot-isolated` (isolated=false, a slope-revealing `cameraView`) at resolution ≥ 900.
+2. **Run programmatic geometry checks via `script-execute`** and paste the raw numeric output into a `## Mesh metrics` section of `ARCHITECT_REVIEW.md`. The hook BLOCKS your `READY_FOR_REDTEAM` write for a mesh task unless that section exists and contains numbers. At minimum, for a green/terrain bake:
+   - **min vertex `normal.y` over the collar/skirt ring** — catches down-facing dark facets (a value near/below 0 = hanging skirt faces → FAIL).
+   - **max `Δy` between adjacent boundary-loop vertices** — catches height waves where the green meets the ridge (above the spec threshold → FAIL).
+   - **boundary/contour vertex count** vs the baked `green.json` — catches a resampled/decimated boundary.
+   - any additional metric the SPEC DoD names.
+3. **A number past threshold = hard FAIL, no qualitative override** (mirrors the bbox rule). "Looks smooth to me" cannot pass a metric that says otherwise.
+
+Write the `## Mesh metrics` section with one row per metric: `metric = value (PASS/FAIL vs threshold)`. If you cannot run a metric (MCP down, scene won't open), that is an `ARCHITECT_REVIEW_FAIL` or `IMPLEMENTER_BLOCKED` surface — never a silent PASS.
+
+### Step 3 — Verdict
+
 Write your verdict to `Docs/Specs/Active/<task>/ARCHITECT_REVIEW.md` using the template. (Filename retained for historical continuity — the file holds the architectural-review verdict; the agent that writes it is `golfin-reviewer`.) Update `STATUS.md` to one of:
 
-- `ARCHITECT_REVIEW_PASS` — ready for Cesar's approval. The hook will notify Cesar.
+- `READY_FOR_REDTEAM` — **this is your PASS.** You no longer write `ARCHITECT_REVIEW_PASS` yourself. A PASS now hands to the adversarial **golfin-redteam-reviewer**, which is the ONLY agent that may advance to `ARCHITECT_REVIEW_PASS` (Cesar's approval). This second, adversarial gate exists precisely because single-reviewer PASSes were rubber-stamping work Cesar rejected on sight. Do not treat the red-team as a formality — write your verdict to survive a skeptic actively trying to break it.
 - `ARCHITECT_REVIEW_FAIL` — list specific fail items with fix instructions. The hook will route back to the Implementer.
 - `ARCHITECT_REVIEW_ESCALATE` — write the questions Cesar needs to answer. The hook will notify Cesar to read the file.
 
