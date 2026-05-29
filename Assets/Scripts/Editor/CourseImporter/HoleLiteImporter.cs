@@ -1,3 +1,16 @@
+// ============================================================================
+// DEPRECATED — DO NOT EDIT, DO NOT TARGET IN NEW SPECS.
+// Superseded by HoleGeoImporter (same folder). The live import path is:
+//   Menu "Import/Re-import Current Hole" (ReimportCurrentHole.cs)
+//     -> HoleImporter -> HoleGeoImporter
+// This file is kept on disk for git history only.
+// CAUTION: Debug.Log strings inside HoleGeoImporter still say "[HoleLiteImporter]"
+// from past copy-paste — do NOT use log-tag grep to identify the live importer.
+// To verify the live path before any importer work:
+//   grep -nE "MenuItem|HoleGeoImporter|HoleLiteImporter" \
+//     Assets/Scripts/Editor/CourseImporter/
+// ============================================================================
+
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
