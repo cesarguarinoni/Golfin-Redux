@@ -44,8 +44,10 @@ After Poisson relaxation completes and **before** min-shift, do an additional pa
 
 ### Parameters
 
-- `RidgeRampWidth = 1.5f` — meters of horizontal ramp width. Real golf tier ramps are typically 1–3 m. Start at 1.5 m, tune by eye if needed; sane bounds 1.0–2.5 m.
-- No other tunables. The smoothstep weighting is fixed.
+**[AMENDED 2026-05-30 — see § Amendment 2026-05-30 (drop-scaled width) below. Original constant width superseded.]**
+
+- ~~`RidgeRampWidth = 1.5f`~~ — replaced with drop-scaled width per ridge. See amendment.
+- Smoothstep weighting unchanged.
 
 This preserves:
 - Macro tier height difference (centerline of band sits at the average of the two regions' values, which equals what the discontinuity was approximately at).
@@ -98,7 +100,7 @@ If signed off → `--all`, reimport all 18, spot-check the other 2-tier holes (3
 
 1. Single file touched in code: `Tools/GreenSlope/scripts/bake-green.mjs`. Plus regenerated `green.json`s.
 2. Single new function: `smoothRidgeBand()`. Called once, after `buildHeightGrid`, before min-shift.
-3. Single new parameter: `RidgeRampWidth = 1.5`.
+3. ~~Single new parameter: `RidgeRampWidth = 1.5`.~~ **[AMENDED]** Two new parameters: `RidgeTargetSlope = 0.08`, `RidgeMinBand = 1.0`. Band width is computed per-ridge from tier drop; see amendment.
 4. **Do not modify** the Poisson loop, `ridgeSeparated`, `buildSlopeGrid`, `classifyRegions`, or any importer code.
 5. **Do not** add a runtime smoothing pass. The fix is bake-time only; mesh build sees the corrected height field and renders it.
 6. No schema changes. v2 byte layout intact.
@@ -115,6 +117,64 @@ If signed off → `--all`, reimport all 18, spot-check the other 2-tier holes (3
 1. Final `RidgeRampWidth` setting after H07 sign-off. If 1.5 m visually reads as too gentle (tiers look like soft mounds), drop to 1.0 m. If too sharp, raise to 2.0–2.5 m. Document the chosen value.
 2. Whether the mirror-cell sampling (point on the opposite side of ridge centerline) requires a different lookup strategy on holes where the ridge polyline has tight curvature. If the perpendicular projection doesn't land cleanly inside the green for some band cells, flag and fall back to nearest-cell-in-opposite-region.
 3. Whether the band continuity check ever fails on the other 2-tier holes (3, 11, 18). If it does, the ridge polyline on that hole may have a sharp kink or near-self-intersection that breaks the perpendicular-distance assumption — architect look needed.
+
+---
+
+## Amendment 2026-05-30 (drop-scaled width) — in-scope for iter-13
+
+**Authored:** 2026-05-30 14:55 CEST / 21:55 JST (Architect)
+**Trigger:** Implementer iter-13a report — ridge worked at H07 with 4.0 m band (60% over spec max) and failed continuity gate on H14 (55 cm drop, 4× H07) at every band width that preserved visible tiers.
+
+### Why the original constant was wrong
+
+The `RidgeRampWidth = 1.5 m` default was anchored on a partial-slice tier drop estimate of ~14 cm. The actual H07 tier drop is **38 cm** (full perpendicular slice min→max). At 1.5 m that's 25% slope (unputtable cliff); at 4.0 m it's 9.5% (USGA-readable). The implementer's deviation to 4.0 m was correct; the spec premise was wrong. A single constant width also can't work across holes — H14's 55 cm drop fundamentally needs more horizontal band than H07's 38 cm to maintain the same ramp slope.
+
+### Drop-scaled width
+
+Replace the constant `RidgeRampWidth` with a per-hole computed value driven by target ramp slope:
+
+```
+tierDrop = max(heightField) - min(heightField) on perpendicular slice through ridge midpoint
+rampWidth = clamp(tierDrop / RidgeTargetSlope, RidgeMinBand, 0.40 * greenPerpWidth)
+```
+
+Parameters:
+- `RidgeTargetSlope = 0.08` (8%, middle of the USGA-readable 4–12% range — firmly tier-readable, firmly puttable).
+- `RidgeMinBand = 1.0 m` (don't go below ~2 grid cells; smoothing breaks down).
+- `maxBand = 0.40 * greenPerpWidth` (don't eliminate the tier flats; if drop is so big that the band would consume >40% of the green's perpendicular width, ramp slope steepens above 8% on that specific hole — acceptable trade vs no tier flats).
+
+### Computed widths for our holes
+
+| Hole | Tier drop | Computed band @ 8% | Clamp applied? | Actual ramp slope |
+|------|-----------|---------------------|----------------|-------------------|
+| H07  | 38 cm     | 4.75 m              | no             | ~8.0%             |
+| H14  | 55 cm     | 6.9 m               | no (green 25 m wide, max would be 10 m) | ~8.0% |
+| Other 2-tier (H03/H11/H18) | implementer to measure and report | implementer | implementer | target ~8% |
+| Flat / single-region | no ridge | no band | n/a | n/a |
+
+### Why this lets the continuity gate pass naturally
+
+The 5 cm/cell continuity gate (no Δh > 5 cm between adjacent 0.5 m cells = no local slope > 10%) was the binding constraint that forced the implementer to 4.0 m. With drop-scaled width holding slope at 8% globally, no cell carries more than ~8% by construction, so the gate passes everywhere automatically. **Continuity gate stays 5 cm/cell unchanged — don't relax it.**
+
+### Tier-drop measurement — implementation detail
+
+For the tier-drop computation, measure on the **post-Poisson, pre-`smoothRidgeBand`** height field (the field that has the cliff in it). Sample a perpendicular slice through the ridge polyline's midpoint, extending to both green edges; tierDrop = max−min along that slice. Cheaper alternative: max−min of the height field across the whole green works fine because the tier drop dominates any other variation; either is acceptable.
+
+### Why this remains in-scope for iter-13, not iter-14
+
+The change is ~10 lines in `smoothRidgeBand()` — compute tierDrop, replace constant with the clamp expression. Same function, same call site, same single-pass post-Poisson architecture. The continuity gate, smoothstep weighting, mirror-cell sampling, byte layout, schema, importer all stay exactly as iter-13a shipped them. Spinning a separate iter for a parameter change after the morning's good work would be process theater.
+
+### Updated DoD additions
+
+- All 2-tier holes pass the verify script: continuity gate (5 cm/cell) passes everywhere, perpendicular ramp slope ~8% ±1.5% on each tier.
+- H14 specifically: reimport shows readable tier transition (visible, puttable), no continuity-gate failure, ramp slope at or below 8% on the wider band.
+- H07 sign-off from iter-13a still holds with the new computed 4.75 m (close enough to 4.0 m that visual delta should be minimal).
+
+### Updated open items
+
+1. Implementer reports the **actual computed `rampWidth`** for every ridge hole (H03, H07, H11, H14, H18, and any others detected).
+2. If any hole hits the `0.40 * greenPerpWidth` cap, the computed ramp slope on that hole exceeds 8% — report which holes and what slope. If any exceed 12%, surface for architect (likely the hole has an unrealistic tier drop authored).
+3. If the iter-13a 4.0 m H07 result was Cesar-signed-off, confirm 4.75 m doesn't visibly regress it. If it does, drop `RidgeTargetSlope` to 0.10 (10% — still puttable, gives narrower bands across the board).
 
 ---
 
