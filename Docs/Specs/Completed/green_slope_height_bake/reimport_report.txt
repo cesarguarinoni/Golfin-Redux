@@ -1,0 +1,11 @@
+green_slope_height_bake iter-8 reimport diagnostics (GEO IMPORTER — SHIPPING)
+================================================================================
+Date: 2026-05-29 21:33:44
+Hole: 07  ImportType: Geo
+
+  Green 1 D4 terrain alignment:
+    surrounding-terrain alignment: cos = +0.942  → OK
+      terrain macro gradient: (+0.055, +0.016) m/m  (uphill to E (|g|=0.0571 m/m))
+      authored macro gradient: (+0.018, -0.001) m/m  (uphill to E (|g|=0.0177 m/m))
+
+  Green 1: terrain-carve: 38872 cells → true→false inside cutContour (170 pts, collarWidth=0.90m, cutMargin=0.25m)

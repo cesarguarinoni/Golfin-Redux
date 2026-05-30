@@ -187,3 +187,27 @@ For each bunker, drop fairway triangles whose centroid is inside `DilateContour(
 1. The actual hole(s) where the green sits directly on rough/terrain (no fairway underneath) — needed to verify the terrain-carve widening works in isolation.
 2. The actual hole(s) with fairway bunkers — needed to verify 4c.
 3. If `CreateFairwayMesh` triangulates over a larger polygon than just the fairway contour (e.g. dilated for fringe), confirm the centroid-drop still produces a clean edge under the collar overhang. Flag if the edge needs a small post-cut smoothing pass.
+
+---
+
+## Amendment 2026-05-29 (iter-7) — RE-TARGET Deliverables 3 & 4 to the Geo importer (shipping path)
+
+**Authored:** 2026-05-29 (orchestrator, Cesar-directed). **Why:** Cesar identified that iter-1→6 implemented Deliverables 3 & 4 in `HoleLiteImporter.cs` — the **deprecated** importer. The **shipping** map for every hole is the **Geo** importer: `HoleGeoImporter.cs`, menu `Import ▸ Geo ▸ Normal ▸ Import Hole NN Geo`, scenes `Hole_NN_Geo.unity`. Lite is deprecated. All iter-1→6 importer work and screenshots were the wrong path; the `ARCHITECT_REVIEW_PASS` is void.
+
+**What stays (importer-agnostic, already correct):** Deliverable 1 (`bake-green.mjs` → `green.json`) and Deliverable 2 (`GreenTopology.cs` v2 schema). Do NOT re-do these.
+
+**What moves:** Deliverables 3 (mesh height deform) and 4 (terrain hole-carve widen + fairway/bunker cut) must be implemented in **`HoleGeoImporter.cs`**, mirroring the proven Lite logic. The Geo importer is structurally near-identical (same `CreateGreenMeshes` L2277, `CreateGreenMeshCDT` L2483, `CreateFairwayMesh` L4261, `DepressTerrainUnderOverlays` L3304, `DilateContour`, same `greenCollarScale × 0.95` carve at L2374-2389, same no-green-cutout fairway).
+
+**KEY SIMPLIFICATION — the geo↔Lite coordinate mapping DROPS.** Verified: the Geo importer maps the green contour with **direct X/Z** (`HoleGeoImporter.cs` L2346-2348 `wx=contour.x; wz=contour.z`; L2404 comment "Geo importer: direct X/Z mapping"), whereas Lite applied a 90° CCW swap. The bake's `green.json` is authored in that same world frame. Therefore in Geo, sample the height grid **directly** via `GreenTopology.TrySampleHeight(new Vector2(vert.x, vert.z))` — NO 90° rotation, NO 1.209× scale, NO `TrySampleHeightAtLiteWorld`, NO geoCentroid/liteCentroid mapping. This removes the most fragile piece of the Lite implementation.
+
+**Geo port checklist (mirror Lite iter-2 + iter-5, minus the mapping):**
+- Geo `CreateGreenMeshes`: add `GreenTopology.LoadFromDisk("Assets/Resources/HoleData/Hole_NN/green.json", N)` (v2 guard); pass to `CreateGreenMeshCDT`. Replace the `greenCollarScale × 0.95` (1.026×) terrain hole-carve with the shared `cutContour = DilateContour(green.contour, collarWidth − cutMargin)` (collarWidth 0.6, cutMargin 0.25), guarded to v2 greens. Register green + bunker cut contours for the fairway pass.
+- Geo `CreateGreenMeshCDT`: add the `greenTopology` param; when v2, seat interior on ONE centroid datum (`greenSeatY = terrainBaseY + terrain.SampleHeight(centroid) + effectiveYOffset`) + `rawVerts[i].y = greenSeatY + GreenRaiseMeters + TrySampleHeight(vert.xz)` (DIRECT). Collar ramps to per-vert terrain. Guard: null topology → unchanged flat behavior.
+- Geo `CreateFairwayMesh`: drop triangles whose centroid is inside any green/bunker cut contour (4b/4c).
+- Triangulate v2 greens at 0.5 m (Deliverable 3 density), perf-permitting.
+
+**Reverts:** revert the dead-path Lite edits — `HoleLiteImporter.cs` and its `TerrainData_Hole07.asset` holes-map — to HEAD (read the current fixed Lite version first as the port reference). Keep `GreenTopology.cs` v2, `bake-green.mjs`, `green.json`. The Lite-only `TrySampleHeightAtLiteWorld` + geo↔Lite mapping fields in `GreenTopology.cs`/`green.json` may be kept (harmless) or trimmed — implementer's call, flag it.
+
+**Verification (the official map this time):** reimport via `Import ▸ Geo ▸ Normal ▸ Import Hole 07 Geo`; verify + capture on `Hole_07_Geo.unity`. Produce an orbit video + multi-angle stills (bottom-left, uphill/back, sides, overhead) so Cesar judges from chat. Same DoD as the iter-5 amendment (no fairway/terrain poke-through any edge; diagnostic counts; terrain-only green check; bunkers-in-fairway).
+
+**Hard Rule 4 (updated):** touch `HoleGeoImporter.cs` green-mesh + fairway-cut + terrain-hole-carve paths, plus the iter-5 reverts. No `TerrainData` heightmap edits (holes-map carve only). Lite importer reverts to HEAD.
