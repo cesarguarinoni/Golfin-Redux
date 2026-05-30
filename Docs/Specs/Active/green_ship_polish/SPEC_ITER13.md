@@ -176,6 +176,67 @@ The change is ~10 lines in `smoothRidgeBand()` — compute tierDrop, replace con
 2. If any hole hits the `0.40 * greenPerpWidth` cap, the computed ramp slope on that hole exceeds 8% — report which holes and what slope. If any exceed 12%, surface for architect (likely the hole has an unrealistic tier drop authored).
 3. If the iter-13a 4.0 m H07 result was Cesar-signed-off, confirm 4.75 m doesn't visibly regress it. If it does, drop `RidgeTargetSlope` to 0.10 (10% — still puttable, gives narrower bands across the board).
 
+> **NOTE:** the H14 rows in this amendment are SUPERSEDED by § Amendment 2026-05-30 (2-tier gate) below. H14 is **not** a 2-tier hole — it gets no barrier and no ramp at all. The drop-scaled width mechanism below still applies, but only to the four real tier holes (3/7/11/18).
+
+---
+
+## Amendment 2026-05-30 (2-tier gate) — ROOT CAUSE, supersedes H14 patching
+
+**Authored:** 2026-05-30 12:34 CEST / 19:34 JST (Architect)
+**Trigger:** Implementer's adversarial second pass correctly flagged H14 as still-broken (23 cm interior cliff). Investigation traced it past the proposed "smooth off the regionGrid boundary" fix to the actual root cause: **H14 is not a two-tier green and should never have had a ridge barrier.**
+
+### The real root cause
+
+The bake applies a ridge barrier (`ridgeSeparated` → two independent Poisson regions) to **any** hole whose authoring JSON has a traced dashed line. That is wrong. Verified against two authoritative sources:
+
+1. **The course PDF booklet** (`Docs/Specs/Queued/green_topology_and_pin_authoring/A4_ホール攻略冊子.pdf`) explicitly names the two-tier greens (「２段グリーン」): **p4→Hole 3, p8→Hole 7, p12→Hole 11, p19→Hole 18.** No other hole is labelled 2-tier. (Page N+1 = hole N.)
+2. **Green-reading convention** (confirmed via research): a dashed line on a green map is a **fall line / drainage spine** — the line of greatest slope where break converges, perpendicular to the contours. It is a *reading aid synthesizing what the arrows already say*, NOT a height step. Only on an architect-built **tiered** green does the dashed line coincide with an actual vertical step. On planar/saddle/crowned greens it's just the swale axis.
+
+H14's authored dashed line is faithful to the PDF — it's a fall line marking a **swale** (both regions' arrows point toward it; it's a valley floor, not a cliff). The bake misread it as a tier divider, split the green into two regions, and the ridge-barrier Poisson manufactured a 23 cm step where the real green has a smooth valley that flattens out toward the open end. **The arrows alone already encode the swale** — interpolating them produces the correct continuous surface with no barrier needed.
+
+This is why the earlier "H14 ridge is mistraced" theory was wrong (Cesar confirmed the trace matches the PDF — the dashed line genuinely stops mid-green) and why "smooth off the regionGrid boundary" was treating a symptom. There should be **no region split on H14 at all.**
+
+### The fix — gate the barrier on the canonical 2-tier hole list
+
+```js
+const TWO_TIER_HOLES = new Set([3, 7, 11, 18]);  // source: A4_ホール攻略冊子.pdf 「２段グリーン」 p4/p8/p12/p19
+const applyRidgeBarrier = ridgePresent && TWO_TIER_HOLES.has(holeNumber);
+```
+
+- **`applyRidgeBarrier === true` (holes 3/7/11/18):** behaviour exactly as iter-13 + drop-scaled amendment. `classifyRegions` splits into two regions, `ridgeSeparated` is a barrier in Poisson, `smoothRidgeBand` applies the drop-scaled ramp. Unchanged.
+- **`applyRidgeBarrier === false` (every other hole, incl. H14):** treat as **single region**. `classifyRegions` returns all-region-0 (it already does this when `!ridgePresent` — extend that path to also trigger when the hole isn't in `TWO_TIER_HOLES`). `ridgeSeparated` always returns false. `smoothRidgeBand` is a no-op (no barrier to smooth). Poisson relaxes across the entire green. The traced dashed line is ignored for geometry; the arrows carry the full surface including any swale.
+
+### Why this is the minimal correct change
+
+It's a guard on an existing branch, not new machinery. `classifyRegions` already has a single-region path (`!ridgePresent`); we widen its trigger condition. `ridgeSeparated` already returns false for single-region grids. `smoothRidgeBand` already no-ops when there's no region boundary. So the change is essentially **one set membership test feeding the existing `ridgePresent` logic.** It also *removes* H14 from the problem set entirely rather than patching it — H14 passes by construction because it never gets a barrier.
+
+The drop-scaled-width amendment above remains valid and now applies only to 3/7/11/18, which is what it was implicitly designed for.
+
+### What the traced dashed line does on non-tier holes
+
+Nothing geometric. It stays in the authoring JSON as documentation of the fall line (useful later if we ever render a green-reading aid UI — the fall line is exactly what a player-facing aid would draw). But the bake does not split regions or create a barrier from it. Confirmed correct per green-reading convention: the swale emerges from the arrow field automatically.
+
+### Updated DoD (supersedes the H14 row above)
+
+- `TWO_TIER_HOLES = {3,7,11,18}` gate added; sourced in a code comment to the PDF.
+- **H14 reimport: single continuous surface, swale present (from arrows), NO interior cliff.** The side-agnostic interior Δh scan (below) reports zero interior cliffs on H14.
+- Holes 3/7/11/18: unchanged from the drop-scaled amendment — visible readable tier, ~8% ramp, continuity gate passes.
+- All other holes: single region, no barrier, no regression vs their pre-iter-13 surface except the (correct) absence of any phantom step.
+
+### Acceptance gate correction (from the adversarial pass)
+
+The `verify-ridge.mjs` continuity check was authored-ridge-relative and same-side-filtered, which is what let H14's interior cliff hide. Replace/augment with a **side-agnostic, whole-green interior Δh scan**:
+
+- Scan every adjacent cell pair in the green; flag any `|Δh| > 5 cm`.
+- **Exclude pairs within ~1.0 m of the contour edge** — that band legitimately drops to the min-shift floor (height→0 at the green boundary) and would otherwise false-fail every hole (H07 scored 40 false positives under a naive whole-green scan; all were edge-band, 0 interior). The gate is **interior** Δh only.
+- Acceptance: **0 interior cliffs** (>5 cm, >1 m from contour edge) on every hole. This is the gate that correctly passes clean-H07 and fails broken-H14, and will pass H14 once the barrier is gated off.
+
+### Updated open items (supersede where overlapping)
+
+1. Confirm `classifyRegions` single-region path triggers correctly for non-tier holes that have a traced ridge (the widened condition). Report H14's region count post-fix (must be 1).
+2. Run the side-agnostic interior-Δh gate on **all 18**; report interior-cliff count per hole. Expect 0 everywhere. Any non-zero on 3/7/11/18 means the drop-scaled ramp didn't fully resolve that tier — surface for architect. Any non-zero on a non-tier hole means the barrier gate didn't take — bug.
+3. Spot-check in-engine: H14 (swale, no cliff) + one of 3/7/11/18 (tier intact). Low grazing angle for both.
+
 ---
 
 ## Queue (4 issues, locked order)
