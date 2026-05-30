@@ -1,0 +1,525 @@
+
+============================================================
+Baking hole 01...
+  contour smoothing: perimeter 73.36m → 73.32m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 147 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(-230.371,-72.596) liteCentroid=(-231.319,36.377) scale=0.9112
+  Grid: 48x49, bounds X=[-242.10, -218.55] Z=[-85.30, -61.27]
+  INFO: height mask dilation: 213 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 147  ✓
+    4-stencil all-valid (bilinear):      147 / 147  ✓
+    seam height max |delta| (bilinear):  2.22 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.30 cm  (was 12.53 cm)
+INFO: === Hole 01 Bake Report ===
+INFO:   arrows=12, ridgePresent=false, regionCount=1, grid=48x49
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 12 arrow(s)
+PASS: all 12 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.001m to 0.364m (spread=0.363m, max_expected=1.151m, min-shifted)
+PASS: height range plausible: 0.363m (min-shifted, range=[0.001, 0.364])
+INFO: === Result: PASS ===
+  INFO: preserving 3 existing pin(s)
+  INFO: height field after min-shift: range=[0.0008, 0.3637] spread=0.3629m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_01/green.json
+  INFO: slopeGrid floats=7056, heightGrid floats=2352
+PASS: hole 01 bake complete
+
+============================================================
+Baking hole 02...
+  contour smoothing: perimeter 74.36m → 74.31m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 149 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(-97.042,137.327) liteCentroid=(-168.838,53.187) scale=1.0777
+  Grid: 45x55, bounds X=[-108.22, -86.00] Z=[124.12, 151.20]
+  INFO: height mask dilation: 224 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 149  ✓
+    4-stencil all-valid (bilinear):      149 / 149  ✓
+    seam height max |delta| (bilinear):  1.20 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.17 cm  (was 12.53 cm)
+INFO: === Hole 02 Bake Report ===
+INFO:   arrows=9, ridgePresent=false, regionCount=1, grid=45x55
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 9 arrow(s)
+PASS: all 9 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.000m to 0.379m (spread=0.379m, max_expected=1.304m, min-shifted)
+PASS: height range plausible: 0.379m (min-shifted, range=[0.000, 0.379])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0003, 0.3790] spread=0.3788m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_02/green.json
+  INFO: slopeGrid floats=7425, heightGrid floats=2475
+PASS: hole 02 bake complete
+
+============================================================
+Baking hole 03...
+  contour smoothing: perimeter 72.93m → 72.90m (Δ -0.0%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 146 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(-15.388,-159.794) liteCentroid=(-138.080,42.156) scale=0.9723
+  Grid: 43x57, bounds X=[-25.86, -4.85] Z=[-174.01, -145.74]
+  INFO: height mask dilation: 221 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 146  ✓
+    4-stencil all-valid (bilinear):      146 / 146  ✓
+    seam height max |delta| (bilinear):  3.87 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.31 cm  (was 12.53 cm)
+INFO: === Hole 03 Bake Report ===
+INFO:   arrows=14, ridgePresent=true, regionCount=2, grid=43x57
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 10 arrow(s)
+PASS: region 1: 4 arrow(s)
+PASS: all 14 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.002m to 0.346m (spread=0.344m, max_expected=1.364m, min-shifted)
+PASS: height range plausible: 0.344m (min-shifted, range=[0.002, 0.346])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0023, 0.3460] spread=0.3437m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_03/green.json
+  INFO: slopeGrid floats=7353, heightGrid floats=2451
+PASS: hole 03 bake complete
+
+============================================================
+Baking hole 04...
+  contour smoothing: perimeter 67.54m → 67.48m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 24 → 135 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(-38.710,29.441) liteCentroid=(-36.252,6.601) scale=1.3838
+  Grid: 54x35, bounds X=[-52.19, -25.32] Z=[20.49, 37.98]
+  INFO: height mask dilation: 197 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 135  ✓
+    4-stencil all-valid (bilinear):      135 / 135  ✓
+    seam height max |delta| (bilinear):  1.75 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.21 cm  (was 12.53 cm)
+INFO: === Hole 04 Bake Report ===
+INFO:   arrows=11, ridgePresent=false, regionCount=1, grid=54x35
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 11 arrow(s)
+PASS: all 11 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.001m to 0.402m (spread=0.400m, max_expected=1.294m, min-shifted)
+PASS: height range plausible: 0.400m (min-shifted, range=[0.001, 0.402])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0015, 0.4017] spread=0.4002m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_04/green.json
+  INFO: slopeGrid floats=5670, heightGrid floats=1890
+PASS: hole 04 bake complete
+
+============================================================
+Baking hole 05...
+  contour smoothing: perimeter 75.67m → 75.63m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 151 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(121.512,-137.667) liteCentroid=(-174.292,29.689) scale=0.9569
+  Grid: 52x51, bounds X=[108.75, 134.62] Z=[-149.97, -124.90]
+  INFO: height mask dilation: 229 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 151  ✓
+    4-stencil all-valid (bilinear):      151 / 151  ✓
+    seam height max |delta| (bilinear):  1.23 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.14 cm  (was 12.53 cm)
+INFO: === Hole 05 Bake Report ===
+INFO:   arrows=8, ridgePresent=false, regionCount=1, grid=52x51
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 8 arrow(s)
+PASS: all 8 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.000m to 0.495m (spread=0.495m, max_expected=1.243m, min-shifted)
+PASS: height range plausible: 0.495m (min-shifted, range=[0.000, 0.495])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0002, 0.4948] spread=0.4946m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_05/green.json
+  INFO: slopeGrid floats=7956, heightGrid floats=2652
+PASS: hole 05 bake complete
+
+============================================================
+Baking hole 06...
+  contour smoothing: perimeter 79.35m → 79.29m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 159 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(-72.531,-8.840) liteCentroid=(-60.861,5.945) scale=1.3480
+  Grid: 50x56, bounds X=[-85.60, -60.99] Z=[-22.67, 5.03]
+  INFO: height mask dilation: 235 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 159  ✓
+    4-stencil all-valid (bilinear):      159 / 159  ✓
+    seam height max |delta| (bilinear):  7.63 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.38 cm  (was 12.53 cm)
+INFO: === Hole 06 Bake Report ===
+INFO:   arrows=8, ridgePresent=true, regionCount=2, grid=50x56
+PASS: regionCount/ridgePresent consistent
+FAIL: region 0 has 0 arrows — cannot interpolate
+PASS: region 1: 8 arrow(s)
+PASS: all 8 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.005m to 0.735m (spread=0.730m, max_expected=1.335m, min-shifted)
+PASS: height range plausible: 0.730m (min-shifted, range=[0.005, 0.735])
+INFO: === Result: FAIL ===
+FAIL: QA gate failed for hole 06 — not writing green.json
+
+============================================================
+Baking hole 07...
+  contour smoothing: perimeter 85.08m → 85.04m (Δ -0.0%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 170 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(176.981,-30.642) liteCentroid=(-155.034,48.933) scale=1.1604
+  Grid: 54x61, bounds X=[164.09, 190.63] Z=[-45.56, -15.33]
+  INFO: height mask dilation: 250 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 170  ✓
+    4-stencil all-valid (bilinear):      170 / 170  ✓
+    seam height max |delta| (bilinear):  8.64 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.27 cm  (was 12.53 cm)
+INFO: === Hole 07 Bake Report ===
+INFO:   arrows=8, ridgePresent=true, regionCount=2, grid=54x61
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 5 arrow(s)
+PASS: region 1: 3 arrow(s)
+PASS: all 8 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.000m to 0.474m (spread=0.474m, max_expected=1.461m, min-shifted)
+PASS: height range plausible: 0.474m (min-shifted, range=[0.000, 0.474])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0003, 0.4740] spread=0.4737m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_07/green.json
+  INFO: slopeGrid floats=9882, heightGrid floats=3294
+PASS: hole 07 bake complete
+
+============================================================
+Baking hole 08...
+  contour smoothing: perimeter 77.67m → 77.61m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 28 → 155 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(134.765,165.312) liteCentroid=(-252.415,75.875) scale=0.8691
+  Grid: 61x42, bounds X=[119.52, 150.00] Z=[155.00, 175.63]
+  INFO: height mask dilation: 218 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 155  ✓
+    4-stencil all-valid (bilinear):      155 / 155  ✓
+    seam height max |delta| (bilinear):  6.38 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.40 cm  (was 12.53 cm)
+INFO: === Hole 08 Bake Report ===
+INFO:   arrows=8, ridgePresent=false, regionCount=1, grid=61x42
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 8 arrow(s)
+PASS: all 8 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.002m to 0.443m (spread=0.441m, max_expected=1.474m, min-shifted)
+PASS: height range plausible: 0.441m (min-shifted, range=[0.002, 0.443])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0016, 0.4430] spread=0.4414m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_08/green.json
+  INFO: slopeGrid floats=7686, heightGrid floats=2562
+PASS: hole 08 bake complete
+
+============================================================
+Baking hole 09...
+  contour smoothing: perimeter 78.80m → 78.78m (Δ -0.0%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 36 → 158 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(182.291,40.077) liteCentroid=(-182.153,66.389) scale=1.0491
+  Grid: 62x42, bounds X=[166.47, 197.45] Z=[29.93, 50.88]
+  INFO: height mask dilation: 221 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 158  ✓
+    4-stencil all-valid (bilinear):      158 / 158  ✓
+    seam height max |delta| (bilinear):  2.13 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.17 cm  (was 12.53 cm)
+INFO: === Hole 09 Bake Report ===
+INFO:   arrows=10, ridgePresent=false, regionCount=1, grid=62x42
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 10 arrow(s)
+PASS: all 10 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.002m to 0.413m (spread=0.410m, max_expected=1.499m, min-shifted)
+PASS: height range plausible: 0.410m (min-shifted, range=[0.002, 0.413])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0024, 0.4127] spread=0.4102m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_09/green.json
+  INFO: slopeGrid floats=7812, heightGrid floats=2604
+PASS: hole 09 bake complete
+
+============================================================
+Baking hole 10...
+  contour smoothing: perimeter 72.71m → 72.65m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 28 → 146 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(-82.918,-141.244) liteCentroid=(-158.687,21.320) scale=0.9641
+  Grid: 42x57, bounds X=[-93.68, -72.75] Z=[-155.35, -127.27]
+  INFO: height mask dilation: 223 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 146  ✓
+    4-stencil all-valid (bilinear):      146 / 146  ✓
+    seam height max |delta| (bilinear):  3.51 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.38 cm  (was 12.53 cm)
+INFO: === Hole 10 Bake Report ===
+INFO:   arrows=8, ridgePresent=false, regionCount=1, grid=42x57
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 8 arrow(s)
+PASS: all 8 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.002m to 0.325m (spread=0.323m, max_expected=1.354m, min-shifted)
+PASS: height range plausible: 0.323m (min-shifted, range=[0.002, 0.325])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0022, 0.3247] spread=0.3225m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_10/green.json
+  INFO: slopeGrid floats=7182, heightGrid floats=2394
+PASS: hole 10 bake complete
+
+============================================================
+Baking hole 11...
+  contour smoothing: perimeter 73.43m → 73.40m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 28 → 147 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(-53.428,-49.416) liteCentroid=(-61.284,6.829) scale=1.1482
+  Grid: 44x54, bounds X=[-65.22, -43.44] Z=[-62.18, -35.28]
+  INFO: height mask dilation: 208 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 147  ✓
+    4-stencil all-valid (bilinear):      147 / 147  ✓
+    seam height max |delta| (bilinear):  9.02 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.48 cm  (was 12.53 cm)
+INFO: === Hole 11 Bake Report ===
+INFO:   arrows=13, ridgePresent=true, regionCount=2, grid=44x54
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 6 arrow(s)
+PASS: region 1: 7 arrow(s)
+PASS: all 13 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.000m to 0.514m (spread=0.513m, max_expected=1.295m, min-shifted)
+PASS: height range plausible: 0.513m (min-shifted, range=[0.000, 0.514])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0005, 0.5138] spread=0.5134m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_11/green.json
+  INFO: slopeGrid floats=7128, heightGrid floats=2376
+PASS: hole 11 bake complete
+
+============================================================
+Baking hole 12...
+  contour smoothing: perimeter 83.88m → 83.82m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 168 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(107.522,157.718) liteCentroid=(-178.375,53.185) scale=1.1007
+  Grid: 54x58, bounds X=[94.12, 120.91] Z=[143.53, 172.08]
+  INFO: height mask dilation: 244 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 168  ✓
+    4-stencil all-valid (bilinear):      168 / 168  ✓
+    seam height max |delta| (bilinear):  5.80 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.41 cm  (was 12.53 cm)
+INFO: === Hole 12 Bake Report ===
+INFO:   arrows=6, ridgePresent=false, regionCount=1, grid=54x58
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 6 arrow(s)
+PASS: all 6 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.000m to 0.498m (spread=0.498m, max_expected=1.378m, min-shifted)
+PASS: height range plausible: 0.498m (min-shifted, range=[0.000, 0.498])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0001, 0.4977] spread=0.4976m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_12/green.json
+  INFO: slopeGrid floats=9396, heightGrid floats=3132
+PASS: hole 12 bake complete
+
+============================================================
+Baking hole 13...
+  contour smoothing: perimeter 81.85m → 81.78m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 164 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(-193.693,-179.533) liteCentroid=(-269.344,49.075) scale=0.9464
+  Grid: 49x62, bounds X=[-206.25, -182.05] Z=[-194.79, -163.87]
+  INFO: height mask dilation: 241 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 164  ✓
+    4-stencil all-valid (bilinear):      164 / 164  ✓
+    seam height max |delta| (bilinear):  6.39 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.43 cm  (was 12.53 cm)
+INFO: === Hole 13 Bake Report ===
+INFO:   arrows=12, ridgePresent=true, regionCount=2, grid=49x62
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 4 arrow(s)
+PASS: region 1: 8 arrow(s)
+PASS: all 12 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.002m to 0.417m (spread=0.415m, max_expected=1.496m, min-shifted)
+PASS: height range plausible: 0.415m (min-shifted, range=[0.002, 0.417])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0023, 0.4169] spread=0.4145m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_13/green.json
+  INFO: slopeGrid floats=9114, heightGrid floats=3038
+PASS: hole 13 bake complete
+
+============================================================
+Baking hole 14...
+  contour smoothing: perimeter 78.31m → 78.27m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 157 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(-111.553,127.591) liteCentroid=(-173.397,48.673) scale=0.9919
+  Grid: 53x51, bounds X=[-123.71, -97.45] Z=[115.64, 140.84]
+  INFO: height mask dilation: 232 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 157  ✓
+    4-stencil all-valid (bilinear):      157 / 157  ✓
+    seam height max |delta| (bilinear):  11.52 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.75 cm  (was 12.53 cm)
+INFO: === Hole 14 Bake Report ===
+INFO:   arrows=8, ridgePresent=true, regionCount=2, grid=53x51
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 3 arrow(s)
+PASS: region 1: 5 arrow(s)
+PASS: all 8 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.002m to 0.556m (spread=0.554m, max_expected=1.263m, min-shifted)
+PASS: height range plausible: 0.554m (min-shifted, range=[0.002, 0.556])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0024, 0.5560] spread=0.5536m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_14/green.json
+  INFO: slopeGrid floats=8109, heightGrid floats=2703
+PASS: hole 14 bake complete
+
+============================================================
+Baking hole 15...
+  contour smoothing: perimeter 77.27m → 77.22m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 155 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(15.267,68.055) liteCentroid=(-58.067,14.441) scale=1.1436
+  Grid: 52x52, bounds X=[3.18, 28.82] Z=[55.80, 81.48]
+  INFO: height mask dilation: 234 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 155  ✓
+    4-stencil all-valid (bilinear):      155 / 155  ✓
+    seam height max |delta| (bilinear):  1.95 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.22 cm  (was 12.53 cm)
+INFO: === Hole 15 Bake Report ===
+INFO:   arrows=6, ridgePresent=false, regionCount=1, grid=52x52
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 6 arrow(s)
+PASS: all 6 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.002m to 0.517m (spread=0.515m, max_expected=1.234m, min-shifted)
+PASS: height range plausible: 0.515m (min-shifted, range=[0.002, 0.517])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0015, 0.5168] spread=0.5153m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_15/green.json
+  INFO: slopeGrid floats=8112, heightGrid floats=2704
+PASS: hole 15 bake complete
+
+============================================================
+Baking hole 16...
+  contour smoothing: perimeter 75.55m → 75.52m (Δ -0.0%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 151 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(24.043,-149.022) liteCentroid=(-143.052,42.404) scale=1.0135
+  Grid: 39x61, bounds X=[13.85, 33.22] Z=[-164.37, -133.93]
+  INFO: height mask dilation: 213 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 151  ✓
+    4-stencil all-valid (bilinear):      151 / 151  ✓
+    seam height max |delta| (bilinear):  8.39 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.70 cm  (was 12.53 cm)
+INFO: === Hole 16 Bake Report ===
+INFO:   arrows=7, ridgePresent=false, regionCount=1, grid=39x61
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 7 arrow(s)
+PASS: all 7 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.008m to 0.540m (spread=0.532m, max_expected=1.472m, min-shifted)
+PASS: height range plausible: 0.532m (min-shifted, range=[0.008, 0.540])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0079, 0.5399] spread=0.5320m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_16/green.json
+  INFO: slopeGrid floats=7137, heightGrid floats=2379
+PASS: hole 16 bake complete
+
+============================================================
+Baking hole 17...
+  contour smoothing: perimeter 70.41m → 70.35m (Δ -0.1%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 28 → 141 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(69.407,130.867) liteCentroid=(-158.190,73.047) scale=0.9316
+  Grid: 53x41, bounds X=[55.92, 82.41] Z=[121.02, 141.17]
+  INFO: height mask dilation: 203 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 141  ✓
+    4-stencil all-valid (bilinear):      141 / 141  ✓
+    seam height max |delta| (bilinear):  2.42 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.23 cm  (was 12.53 cm)
+INFO: === Hole 17 Bake Report ===
+INFO:   arrows=7, ridgePresent=false, regionCount=1, grid=53x41
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 7 arrow(s)
+PASS: all 7 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.001m to 0.346m (spread=0.345m, max_expected=1.275m, min-shifted)
+PASS: height range plausible: 0.345m (min-shifted, range=[0.001, 0.346])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0011, 0.3460] spread=0.3450m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_17/green.json
+  INFO: slopeGrid floats=6519, heightGrid floats=2173
+PASS: hole 17 bake complete
+
+============================================================
+Baking hole 18...
+  contour smoothing: perimeter 84.77m → 84.73m (Δ -0.0%, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: contour resampled 32 → 170 pts (targetSpacing=0.5m, 12 Taubin iters λ=0.5 μ=-0.53)
+  INFO: Lite↔Geo mapping: geoCentroid=(221.684,29.676) liteCentroid=(-250.184,98.372) scale=0.9697
+  Grid: 68x46, bounds X=[204.64, 238.23] Z=[19.35, 42.22]
+  INFO: height mask dilation: 243 boundary cells filled outward
+  INFO: boundary coverage assert: all contour verts' 2×2 stencils within grid bounds ✓
+  BOUNDARY COVERAGE (iter-12 verification):
+    zero-cell hits (nearest, inactive):  0 / 170  ✓
+    4-stencil all-valid (bilinear):      170 / 170  ✓
+    seam height max |delta| (bilinear):  8.61 cm  FAIL (was 47.21 cm)
+    seam height mean |delta| (bilinear): 0.34 cm  (was 12.53 cm)
+INFO: === Hole 18 Bake Report ===
+INFO:   arrows=11, ridgePresent=true, regionCount=2, grid=68x46
+PASS: regionCount/ridgePresent consistent
+PASS: region 0: 4 arrow(s)
+PASS: region 1: 7 arrow(s)
+PASS: all 11 arrow bases inside contour
+PASS: slope grid: no NaN
+PASS: height grid: no NaN
+INFO:   height range: 0.002m to 0.514m (spread=0.512m, max_expected=1.630m, min-shifted)
+PASS: height range plausible: 0.512m (min-shifted, range=[0.002, 0.514])
+INFO: === Result: PASS ===
+  INFO: preserving 1 existing pin(s)
+  INFO: height field after min-shift: range=[0.0018, 0.5138] spread=0.5120m (heightShiftMode=min)
+  INFO: wrote /Users/cesar/Documents/GolfinRedux/Assets/Resources/HoleData/Hole_18/green.json
+  INFO: slopeGrid floats=9384, heightGrid floats=3128
+PASS: hole 18 bake complete

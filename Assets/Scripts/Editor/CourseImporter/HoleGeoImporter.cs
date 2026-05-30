@@ -9,6 +9,7 @@ using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine.Splines;
 using andywiecko.BurstTriangulator;
+using Golfin.Course.Runtime;
 
 namespace Golfin.CourseImport
 {
@@ -43,6 +44,58 @@ namespace Golfin.CourseImport
         // ─── Green Elevation ─────────────────────────────────────────
         /// <summary>How far the putting surface sits above the outer collar edge.</summary>
         private const float GreenRaiseMeters = 0.08f;
+
+        // ─── Green + Bunker Footprint Cut (Deliverable 4, iter-7 Geo port) ───────
+        /// <summary>
+        /// Width of the green collar mesh. Collar extends additive DilateContour by this.
+        /// Widened from 0.6 m to 0.9 m in iter-8 for slope robustness (D2).
+        /// </summary>
+        private const float GreenCollarWidth = 0.9f;
+
+        /// <summary>
+        /// Cut margin: how far INSIDE the collar edge the terrain hole-carve and fairway
+        /// triangle-drop stop. Cut sits (GreenCollarWidth − GreenCutMargin) outside the
+        /// green edge; the collar overhangs the cut by GreenCutMargin on every side.
+        /// ONE shared value so terrain-carve and fairway-cut can't drift apart.
+        /// </summary>
+        private const float GreenCutMargin = 0.25f;
+
+        /// <summary>
+        /// Raise above terrain at the collar's outer edge (iter-10 fix).
+        /// Positive = outer collar edge ABOVE terrain surface (no downward-pointing skirt faces).
+        /// iter-8 set this to -0.10 (below terrain), which caused near-black triangular facets
+        /// visible in grazing close-ups. Setting to +0.02 places the outer ring just above
+        /// terrain, eliminating the dark skirt while still hiding any micro-gap at the cut edge.
+        /// NOTE: variable kept as GreenSkirtDepth for minimal diff; semantics now "raise above"
+        /// (negate if you want below-terrain behavior again).
+        /// </summary>
+        private const float GreenSkirtDepth = -0.02f; // iter-10: positive=above terrain (no dark skirt faces)
+
+        /// <summary>
+        /// Fairway triangle-drop margin for bunker footprints. Dilates the bunker
+        /// contour outward by this much before dropping fairway triangles inside.
+        /// </summary>
+        private const float BunkerFairwayCutMargin = 0.20f;
+
+        /// <summary>
+        /// Cut contours (world XZ, Vector2[]) for all v2-green footprints built this
+        /// import run. Populated by CreateGreenMeshes; consumed by CreateFlatZoneMeshes.
+        /// Cleared at the start of each import.
+        /// </summary>
+        private static readonly List<Vector2[]> s_greenCutContours = new List<Vector2[]>();
+
+        /// <summary>
+        /// Cut contours (world XZ, Vector2[]) for all bunker footprints built this
+        /// import run, dilated by BunkerFairwayCutMargin. Populated by CreateZoneMeshes;
+        /// consumed by CreateFlatZoneMeshes.
+        /// </summary>
+        private static readonly List<Vector2[]> s_bunkerCutContours = new List<Vector2[]>();
+
+        /// <summary>
+        /// Accumulates D4 terrain alignment report lines for this import run.
+        /// Written to reimport_report.txt by ImportHoleInternal after all mesh passes.
+        /// </summary>
+        private static readonly System.Text.StringBuilder s_reimportReportBuilder = new System.Text.StringBuilder();
 
         // Spline cart path footprint polygons — populated by CreateSplineCartPaths(),
         // consumed by DepressTerrainUnderOverlays() to match depression to actual mesh.
@@ -170,6 +223,14 @@ namespace Golfin.CourseImport
                 return;
             }
 
+            // Clear per-run report accumulator (D4 alignment + diagnostics)
+            s_reimportReportBuilder.Clear();
+            s_reimportReportBuilder.AppendLine($"green_slope_height_bake iter-8 reimport diagnostics (GEO IMPORTER — SHIPPING)");
+            s_reimportReportBuilder.AppendLine($"================================================================================");
+            s_reimportReportBuilder.AppendLine($"Date: {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+            s_reimportReportBuilder.AppendLine($"Hole: {holeNumber:D2}  ImportType: {importType}");
+            s_reimportReportBuilder.AppendLine();
+
             try
             {
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Cleaning previous import...", 0f);
@@ -230,7 +291,7 @@ namespace Golfin.CourseImport
                 CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating greens...", 0.53f);
-                CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
+                CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes, holeNumber);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating water...", 0.59f);
                 CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
@@ -240,7 +301,8 @@ namespace Golfin.CourseImport
                 // samples a naturally flat surface — no post-mesh hacks needed.
                 FlattenTerrainUnderTees(terrainData, terrainGO, exportPath);
                 CreateFlatZoneMeshes(terrainData, terrainGO, holeRoot.transform,
-                    exportPath, dataDir, projectRoot);
+                    exportPath, dataDir, projectRoot,
+                    s_greenCutContours, s_bunkerCutContours);
 
                 // Place anchor markers BEFORE terrain depression so
                 // SampleHeight returns the original undepressed surface
@@ -397,6 +459,21 @@ namespace Golfin.CourseImport
                 EditorSceneManager.SaveScene(scene, scenePath);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
+
+                // ── Write reimport_report.txt ──────────────────────────────────────────
+                // Accumulates: D4 terrain alignment gates + per-green log lines.
+                // Kept in the task folder for self-reviewer / architect review.
+                string reimportReportPath = Path.Combine(projectRoot,
+                    "Docs", "Specs", "Active", "green_slope_height_bake", "reimport_report.txt");
+                try
+                {
+                    System.IO.File.WriteAllText(reimportReportPath, s_reimportReportBuilder.ToString());
+                    Debug.Log($"[HoleGeoImporter] reimport_report.txt written to {reimportReportPath}");
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[HoleGeoImporter] Could not write reimport_report.txt: {ex.Message}");
+                }
 
                 EditorUtility.ClearProgressBar();
                 Debug.Log($"[HoleLiteImporter] Hole {holeId} imported — terrain {terrainX:F0}m(X) x {terrainZ:F0}m(Z)");
@@ -1914,6 +1991,9 @@ namespace Golfin.CourseImport
             Transform parentRoot, string exportPath, string dataDir, string projectRoot,
             bool[,] holes)
         {
+            // Clear stale bunker cut contours from a previous partial import.
+            s_bunkerCutContours.Clear();
+
             string bunkersPath = Path.Combine(exportPath, "bunkers.json");
             if (!File.Exists(bunkersPath))
             {
@@ -2030,7 +2110,21 @@ namespace Golfin.CourseImport
                 meshGO.AddComponent<Golfin.Course.BunkerSurfaceInfo>();
                 meshGO.AddComponent<Golfin.Physics.Runtime.SurfaceMarker>().Type = Golfin.Physics.SurfaceType.Sand;
 
-                Debug.Log($"[HoleGeoImporter] Bunker {bunker.id}: unified (cut=90%, depth={bowlDepth:F1}m, axis={shorterAxis:F1}m), {bunker.contour.Length} verts");
+                // ── Deliverable 4c: register dilated bunker contour for fairway triangle-drop ──
+                // Geo: worldContour is already direct X/Z — no rotation needed.
+                // Dilate by BunkerFairwayCutMargin so the fairway cut slightly overhangs the bunker rim.
+                {
+                    var cpForBunkerDilate = new ContourPoint[worldContour.Length];
+                    for (int i = 0; i < worldContour.Length; i++)
+                        cpForBunkerDilate[i] = new ContourPoint { x = worldContour[i].x, z = worldContour[i].y };
+                    var dilatedBunkerCPs = DilateContour(cpForBunkerDilate, BunkerFairwayCutMargin);
+                    var bunkerCutContour = new Vector2[dilatedBunkerCPs.Length];
+                    for (int i = 0; i < dilatedBunkerCPs.Length; i++)
+                        bunkerCutContour[i] = new Vector2(dilatedBunkerCPs[i].x, dilatedBunkerCPs[i].z);
+                    s_bunkerCutContours.Add(bunkerCutContour);
+                }
+
+                Debug.Log($"[HoleGeoImporter] Bunker {bunker.id}: unified (cut=90%, depth={bowlDepth:F1}m, axis={shorterAxis:F1}m), {bunker.contour.Length} verts. Registered +{BunkerFairwayCutMargin:F2}m dilated cut for fairway pass.");
             }
 
             // Copy bunkers.json to Assets
@@ -2276,8 +2370,12 @@ namespace Golfin.CourseImport
 
         private static void CreateGreenMeshes(TerrainData terrainData, GameObject terrainGO,
             Transform parentRoot, string exportPath, string dataDir, string projectRoot,
-            bool[,] holes)
+            bool[,] holes, int holeNumber = 0)
         {
+            // Clear any stale cut-contour records from a previous partial import.
+            // s_bunkerCutContours is cleared in CreateZoneMeshes (which runs before us).
+            s_greenCutContours.Clear();
+
             string greensPath = Path.Combine(exportPath, "greens.json");
             if (!File.Exists(greensPath))
             {
@@ -2338,7 +2436,7 @@ namespace Golfin.CourseImport
             {
                 if (green.contour == null || green.contour.Length < 3) continue;
 
-                // Map contour vertices to world space
+                // Map contour vertices to world space (Geo: direct X/Z — no rotation)
                 var worldContour = new Vector2[green.contour.Length];
                 float sumX = 0, sumZ = 0;
                 for (int i = 0; i < green.contour.Length; i++)
@@ -2366,13 +2464,100 @@ namespace Golfin.CourseImport
                     if (wz > cMaxZ) cMaxZ = wz;
                 }
 
-                // Cut contour at 95% of COLLAR scale
-                var cutContour = new Vector2[worldContour.Length];
-                for (int i = 0; i < worldContour.Length; i++)
+                // ── v2 height bake: load GreenTopology early so we can guard the cut contour ──
+                // Guard: holes without a v2 file (or any file) return null → keep existing behavior.
+                // NOTE: Uses LoadFromDisk (not Resources.Load) because the importer runs after
+                // CleanPreviousImport → AssetDatabase.Refresh(), which can invalidate Resources cache
+                // causing Resources.Load to return null for assets that exist on disk.
+                GreenTopology greenTopology = null;
+                if (holeNumber > 0)
                 {
-                    cutContour[i] = new Vector2(
-                        centroidX + (worldContour[i].x - centroidX) * greenCollarScale * 0.95f,
-                        centroidZ + (worldContour[i].y - centroidZ) * greenCollarScale * 0.95f);
+                    string greenJsonPath = $"Assets/Resources/HoleData/Hole_{holeNumber:D2}/green.json";
+                    greenTopology = GreenTopology.LoadFromDisk(greenJsonPath, holeNumber);
+                    if (greenTopology != null)
+                        Debug.Log($"[HoleGeoImporter] Hole {holeNumber:D2}: loaded GreenTopology v{greenTopology.SchemaVersion} from disk");
+                    else
+                        Debug.Log($"[HoleGeoImporter] Hole {holeNumber:D2}: no v2 green.json found at {greenJsonPath} — using flat green");
+                }
+
+                // ── D1 iter-8: Use resampled contour as single source of truth ──
+                // When the v2 green.json includes contourResampled (baked by iter-8+), use it
+                // for ALL polygon operations: CDT build, collar dilation, cut contour, terrain-carve.
+                // This ensures the collar outer ring is a smooth oval (not scalloped from coarse polygon).
+                bool hasResampledContour = (greenTopology != null && greenTopology.ContourResampled != null
+                    && greenTopology.ContourResampled.Length >= 3);
+
+                // activeContour: the contour used for CDT + cut. Resampled for v2 iter-8+, raw for all others.
+                ContourPoint[] activeContourCPs;
+                if (hasResampledContour)
+                {
+                    // Use the resampled contour from green.json (Vector2: .x = worldX, .y = worldZ)
+                    var rc = greenTopology.ContourResampled;
+                    activeContourCPs = new ContourPoint[rc.Length];
+                    for (int i = 0; i < rc.Length; i++)
+                        activeContourCPs[i] = new ContourPoint { x = rc[i].x, z = rc[i].y };
+                    Debug.Log($"[HoleGeoImporter] Green {green.id}: using contourResampled ({rc.Length} pts) as single source of truth (iter-8 D1)");
+                }
+                else
+                {
+                    // Legacy: raw worldContour
+                    activeContourCPs = new ContourPoint[worldContour.Length];
+                    for (int i = 0; i < worldContour.Length; i++)
+                        activeContourCPs[i] = new ContourPoint { x = worldContour[i].x, z = worldContour[i].y };
+                }
+
+                // Recompute centroid from activeContour (resampled contour may have different centroid)
+                if (hasResampledContour)
+                {
+                    float sumRX = 0, sumRZ = 0;
+                    foreach (var cp in activeContourCPs) { sumRX += cp.x; sumRZ += cp.z; }
+                    centroidX = sumRX / activeContourCPs.Length;
+                    centroidZ = sumRZ / activeContourCPs.Length;
+                }
+
+                // ── D4 iter-8: Terrain alignment gate (WARN only, importer-side post-bake) ──
+                // Sample terrain ring at (collarWidth + 2 m) outside the green, plane-fit both gradients,
+                // compute cos(angle) and log to console + append to reimport_report.txt.
+                string d4AlignmentReport = ComputeTerrainAlignmentGate(
+                    greenTopology, activeContourCPs, terrain, terrainBaseY, GreenCollarWidth, green.id);
+                if (!string.IsNullOrEmpty(d4AlignmentReport))
+                {
+                    Debug.Log($"[HoleGeoImporter] Green {green.id} D4 terrain alignment:\n{d4AlignmentReport}");
+                    s_reimportReportBuilder.AppendLine($"  Green {green.id} D4 terrain alignment:")
+                        .AppendLine($"    {d4AlignmentReport.Replace("\n", "\n    ")}")
+                        .AppendLine();
+                }
+
+                // ── Shared cut contour (Deliverable 4a — ONE source of truth) ──
+                // For v2 greens: cut = DilateContour(activeContour, GreenCollarWidth − GreenCutMargin)
+                //   Collar reaches GreenCollarWidth → overhangs cut by GreenCutMargin on every side.
+                //   Used for BOTH the terrain hole-carve AND the fairway triangle-drop.
+                // For non-v2 greens: keep the original centroid-scale 1.026× cut (no behavior change).
+                bool useWideCut = (greenTopology != null);
+                Vector2[] cutContour;
+                if (useWideCut)
+                {
+                    // Additive dilation from activeContour (resampled when available)
+                    float cutDilate = GreenCollarWidth - GreenCutMargin; // = 0.65 m with new collar width
+                    var dilatedCPs = DilateContour(activeContourCPs, cutDilate);
+                    cutContour = new Vector2[dilatedCPs.Length];
+                    for (int i = 0; i < dilatedCPs.Length; i++)
+                        cutContour[i] = new Vector2(dilatedCPs[i].x, dilatedCPs[i].z);
+
+                    // Register this cut contour for the fairway mesh pass (4b)
+                    s_greenCutContours.Add(cutContour);
+                    Debug.Log($"[HoleGeoImporter] Green {green.id}: v2 → using wide cut contour (+{cutDilate:F2} m dilated, collarWidth={GreenCollarWidth:F2}m, overhangs by {GreenCutMargin:F2} m, resampled={hasResampledContour}). Registered for fairway cut.");
+                }
+                else
+                {
+                    // Non-v2: original multiplicative cut (1.026×) — byte-for-byte unchanged.
+                    cutContour = new Vector2[worldContour.Length];
+                    for (int i = 0; i < worldContour.Length; i++)
+                    {
+                        cutContour[i] = new Vector2(
+                            centroidX + (worldContour[i].x - centroidX) * greenCollarScale * 0.95f,
+                            centroidZ + (worldContour[i].y - centroidZ) * greenCollarScale * 0.95f);
+                    }
                 }
 
                 int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
@@ -2380,14 +2565,21 @@ namespace Golfin.CourseImport
                 int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
                 int hMaxZ = Mathf.Clamp(Mathf.CeilToInt((cMaxZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
 
+                // Diagnostic: count terrain-hole cells inside the cut contour (should all be false after carve)
+                int carvedCells = 0;
                 for (int hz = hMinZ; hz <= hMaxZ; hz++)
                     for (int hx = hMinX; hx <= hMaxX; hx++)
                     {
                         float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
                         float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
                         if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
+                        {
                             holes[hz, hx] = false;
+                            carvedCells++;
+                        }
                     }
+                Debug.Log($"[HoleGeoImporter] Green {green.id}: terrain hole-carve → {carvedCells} cells set false (cutContour pts={cutContour.Length}, wide={useWideCut})");
+                s_reimportReportBuilder.AppendLine($"  Green {green.id}: terrain-carve: {carvedCells} cells → true→false inside cutContour ({cutContour.Length} pts, collarWidth={GreenCollarWidth:F2}m, cutMargin={GreenCutMargin:F2}m)");
 
                 // Detect if green is inside a fairway — boost Y so collar
                 // sits above the fairway mesh surface
@@ -2401,16 +2593,15 @@ namespace Golfin.CourseImport
                     }
                 }
 
-                // Build ContourPoint[] for CDT (Geo importer: direct X/Z mapping)
-                var contourPoints = new ContourPoint[worldContour.Length];
-                for (int i = 0; i < worldContour.Length; i++)
-                    contourPoints[i] = new ContourPoint { x = worldContour[i].x, z = worldContour[i].y };
+                // Build ContourPoint[] for CDT — use resampled contour when available (iter-8 D1).
+                // activeContourCPs already holds the correct contour (resampled or raw).
+                var contourPoints = activeContourCPs;
 
-                const float greenYOffset = 0.03f + GreenRaiseMeters; // terrain + collar base + raise
-                const float greenCollarWidth = 0.6f;
+                const float greenYOffset = 0.03f + GreenRaiseMeters; // terrain + collar base + raise (v1/flat path only)
                 var meshGO = CreateGreenMeshCDT(green.id, contourPoints,
                     terrain, terrainBaseY, greenMat, collarMat,
-                    greenCollarWidth, collarTileSize: 4f, greenTileSize: 3f, yBoost);
+                    GreenCollarWidth, collarTileSize: 4f, greenTileSize: 3f, yBoost,
+                    greenTopology: greenTopology);
                 if (meshGO != null)
                     meshGO.transform.SetParent(greensRoot.transform);
 
@@ -2479,19 +2670,31 @@ namespace Golfin.CourseImport
         /// Single mesh, shared geometry — no Z-fighting on slopes.
         /// Falls back to collar-free mesh if dilation CDT fails.
         /// Geo importer: contour uses direct X/Z mapping (no rotation).
+        ///
+        /// When <paramref name="greenTopology"/> is a v2 instance with a height grid, interior verts
+        /// are lifted by the authored height field (undulated surface). Collar verts ramp smoothly
+        /// from the authored green-boundary height to the terrain surface. Guard: passing null keeps
+        /// the existing flat-green behavior exactly.
         /// </summary>
         private static GameObject CreateGreenMeshCDT(
             int id, ContourPoint[] contour,
             Terrain terrain, float terrainBaseY,
             Material greenMat, Material collarMat,
             float collarWidth, float collarTileSize, float greenTileSize,
-            float yBoost)
+            float yBoost,
+            GreenTopology greenTopology = null)
         {
             const float yOffset = 0.00f;
             int nc = contour.Length;
             if (nc < 3) return null;
 
             float effectiveYOffset = yOffset + yBoost;
+
+            // Determine if we have a v2 height-baked topology to use
+            bool useHeightBake = greenTopology != null;
+
+            // Grid spacing: 0.5m for height-authored greens (smooth undulation), 1.0m otherwise
+            float gridSpacing = useHeightBake ? 0.5f : 1.0f;
 
             System.Func<float, float, Vector2> uvFunc = (wx, wz) =>
                 new Vector2(wx / greenTileSize, wz / greenTileSize);
@@ -2500,8 +2703,10 @@ namespace Golfin.CourseImport
 
             // Original contour as internal CDT constraint — forces triangle edges
             // exactly along it so the green/collar boundary has no jaggies.
+            // NOTE: CDTTriangulate only accepts a single innerConstraint loop. For v2 greens we rely on
+            // the 0.5m dense grid to approximate the ridge crease via mesh density (same as Lite impl).
             var (rawVerts, uvs, tris) = CDTTriangulate(
-                dilatedContour, terrain, terrainBaseY, effectiveYOffset, 1.0f, uvFunc,
+                dilatedContour, terrain, terrainBaseY, effectiveYOffset, gridSpacing, uvFunc,
                 innerConstraint: contour);
 
             bool collarEnabled = rawVerts != null && tris != null && tris.Length >= 3;
@@ -2509,7 +2714,7 @@ namespace Golfin.CourseImport
             {
                 Debug.LogWarning($"[HoleGeoImporter] Green {id}: dilated CDT failed, retrying without collar");
                 (rawVerts, uvs, tris) = CDTTriangulate(
-                    contour, terrain, terrainBaseY, effectiveYOffset, 1.0f, uvFunc);
+                    contour, terrain, terrainBaseY, effectiveYOffset, gridSpacing, uvFunc);
                 if (rawVerts == null || tris == null || tris.Length < 3)
                     return null;
             }
@@ -2529,25 +2734,108 @@ namespace Golfin.CourseImport
                     { int tmp = tris[t]; tris[t] = tris[t + 2]; tris[t + 2] = tmp; }
             }
 
-            // Per-vert Y raise: green interior gets full GreenRaiseMeters; collar
-            // ramps smoothly from full raise at the green boundary to zero at the
-            // outer collar edge. Classify by vert position (not by submesh) so
-            // boundary verts (d≈0) naturally compute full raise on both copies.
+            // Per-vert Y raise:
+            //   Flat green (greenTopology == null):
+            //     Interior gets full GreenRaiseMeters; collar smoothstep-ramps to zero.
+            //   Height-baked green (greenTopology != null, has height grid) — iter-8 D2+D3:
+            //     Interior: Y = greenSeatY + relH  (GreenRaiseMeters REMOVED — D3 min-shift fix)
+            //       greenSeatY = terrainBaseY + terrain.SampleHeight(contour centroid) + effectiveYOffset
+            //       This seats the whole interior on ONE planar datum (centroid terrain height).
+            //       min-shift guarantees relH ≥ 0 (lowest tier at 0, highest tier at +R).
+            //     Collar inner ring (at d=0): Y = greenSeatY + relH(boundary)  (D3: no GreenRaiseMeters)
+            //     Collar outer ring (at d=collarWidth): Y = terrain.SampleHeight(vertXZ) − GreenSkirtDepth
+            //       Per-vertex terrain → follows surrounding slope. skirtDepth places outer edge
+            //       below terrain surface so terrain/fairway hides the skirt tail (D2 seam fix).
+            //     Collar interior verts: smoothstep blend between inner and outer ring Ys.
+            //     KEY: Geo importer uses DIRECT X/Z — sample height grid directly via vert.x/vert.z.
+            //     NO rotation, NO scale mapping, NO TrySampleHeightAtLiteWorld.
+
+            // For height-baked greens: compute single datum from contour centroid terrain height.
+            float greenSeatY = 0f; // terrainBaseY + terrain.SampleHeight(centroid) + effectiveYOffset
+            if (useHeightBake)
+            {
+                // Geo: centroid is direct X/Z (already worldContour average)
+                float cntX = 0f, cntZ = 0f;
+                for (int i = 0; i < nc; i++) { cntX += contour[i].x; cntZ += contour[i].z; }
+                cntX /= nc; cntZ /= nc;
+                float centroidTerrH = terrain.SampleHeight(new Vector3(cntX, 0f, cntZ));
+                greenSeatY = terrainBaseY + centroidTerrH + effectiveYOffset;
+                Debug.Log($"[HoleGeoImporter] Green {id}: centroid=({cntX:F2},{cntZ:F2}) centroidTerrH={centroidTerrH:F3} greenSeatY={greenSeatY:F3} (terrainBaseY={terrainBaseY:F3})");
+            }
+
             for (int i = 0; i < rawVerts.Length; i++)
             {
                 float d = Mathf.Sqrt(DistanceSqToContour(rawVerts[i].x, rawVerts[i].z, originalPoly));
-                float raise;
-                if (IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly))
+                bool insideGreen = IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly);
+
+                if (useHeightBake)
                 {
-                    raise = GreenRaiseMeters;
+                    // Sample the authored height field at this vert position DIRECTLY (Geo frame = world frame).
+                    // Geo importer: direct X/Z mapping — no 90° rotation, no scale mapping.
+                    // iter-12 Fix 2: use TrySampleHeightBilinear for ALL vertices (interior + collar boundary).
+                    // Bilinear interpolation across the 2×2 stencil eliminates the nearest-cell discretization
+                    // that caused 85/170 boundary verts to land on zero outside-cells → 12.5 cm seam zig-zag.
+                    // Fix 1 (bake mask dilation) ensures all 4 stencil corners are non-zero for boundary verts.
+                    // Nearest-cell TrySampleHeight remains available for BakedHeightProvider + runtime use.
+                    float relH = 0f;
+                    // Prefer bilinear; fall back to nearest-cell if stencil is at the very edge of the grid.
+                    if (!greenTopology.TrySampleHeightBilinear(new Vector2(rawVerts[i].x, rawVerts[i].z), out relH))
+                        greenTopology.TrySampleHeight(new Vector2(rawVerts[i].x, rawVerts[i].z), out relH);
+
+                    if (insideGreen)
+                    {
+                        // D3 iter-8: Y = greenSeatY + relH  (GreenRaiseMeters REMOVED).
+                        // Min-shifted field guarantees relH ≥ 0 → lowest tier at greenSeatY, rising into tiers.
+                        // ASSIGNMENT (not +=) — replaces the per-vert terrain base from CDTTriangulate.
+                        rawVerts[i].y = greenSeatY + relH;
+                    }
+                    else
+                    {
+                        // iter-10 collar: blend from inner ring (greenSeatY + relH) to
+                        // outer ring (terrain.SampleHeight(vertXZ) + |GreenSkirtDepth|).
+                        // Inner ring: authored green-boundary height at the collar's inside edge.
+                        float innerBoundaryY = greenSeatY + relH;
+                        // Outer ring: per-vertex terrain + skirtDepth-complement so the outer edge
+                        // sits ABOVE terrain, not below. GreenSkirtDepth is now negative so
+                        // outerRingY = terrain + 0.02 — no downward-pointing faces, no dark skirt.
+                        float perVertTerrainH = terrain.SampleHeight(new Vector3(rawVerts[i].x, 0f, rawVerts[i].z));
+                        float outerRingY = terrainBaseY + perVertTerrainH - GreenSkirtDepth;
+                        float tBlend = 1f - Mathf.Clamp01(d / collarWidth);
+                        tBlend = tBlend * tBlend * (3f - 2f * tBlend); // smoothstep
+                        rawVerts[i].y = Mathf.Lerp(outerRingY, innerBoundaryY, tBlend);
+                    }
                 }
                 else
                 {
-                    float t = 1f - Mathf.Clamp01(d / collarWidth);
-                    t = t * t * (3f - 2f * t); // smoothstep
-                    raise = GreenRaiseMeters * t;
+                    // Original flat-green behavior (unchanged)
+                    float raise;
+                    if (insideGreen)
+                    {
+                        raise = GreenRaiseMeters;
+                    }
+                    else
+                    {
+                        float t = 1f - Mathf.Clamp01(d / collarWidth);
+                        t = t * t * (3f - 2f * t); // smoothstep
+                        raise = GreenRaiseMeters * t;
+                    }
+                    rawVerts[i].y += raise;
                 }
-                rawVerts[i].y += raise;
+            }
+
+            if (useHeightBake)
+            {
+                // Compute interior Y min/max for verification (proves authored spread, not terrain macro-tilt)
+                float interiorYMin = float.MaxValue, interiorYMax = float.MinValue;
+                for (int i = 0; i < rawVerts.Length; i++)
+                {
+                    if (IsInsideContour(rawVerts[i].x, rawVerts[i].z, originalPoly))
+                    {
+                        if (rawVerts[i].y < interiorYMin) interiorYMin = rawVerts[i].y;
+                        if (rawVerts[i].y > interiorYMax) interiorYMax = rawVerts[i].y;
+                    }
+                }
+                Debug.Log($"[HoleGeoImporter] Green {id}: height-baked mesh (gridSpacing={gridSpacing}m, verts={rawVerts.Length}, topo={greenTopology.SourceTag}) interiorY=[{interiorYMin:F3}..{interiorYMax:F3}] spread={(interiorYMax - interiorYMin):F3}m");
             }
 
             // Classify each triangle by its centroid (always strictly inside or outside
@@ -3862,7 +4150,9 @@ namespace Golfin.CourseImport
 
         private static void CreateFlatZoneMeshes(TerrainData terrainData,
             GameObject terrainGO, Transform parentRoot,
-            string exportPath, string dataDir, string projectRoot)
+            string exportPath, string dataDir, string projectRoot,
+            List<Vector2[]> greenCutContours = null,
+            List<Vector2[]> bunkerCutContours = null)
         {
             string texDir = "Assets/Courses/Textures_2025(JPG)";
             var terrain = terrainGO.GetComponent<Terrain>();
@@ -3926,10 +4216,13 @@ namespace Golfin.CourseImport
                         // Fairway mesh with fringe baked in as a second submesh.
                         // CDT runs on a DILATED contour; triangles outside the original
                         // contour are the fringe band. Single mesh, no overlap, no Z-fight.
+                        // 4b/4c: green + bunker cut contours drop fairway triangles inside
+                        // those footprints so the fairway mesh does not protrude under greens/bunkers.
                         var meshGO = CreateFairwayMesh(
                             fw.id, fw.contour, terrain, terrainBaseY,
                             fairwayMat, fringeMat, FairwayFringeMeters, 6f,
-                            stripeDir, stripeWidth);
+                            stripeDir, stripeWidth,
+                            greenCutContours, bunkerCutContours);
                         if (meshGO != null)
                             meshGO.transform.SetParent(fwRoot.transform);
                     }
@@ -4235,6 +4528,149 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
+        /// <summary>
+        /// D4 iter-8 — Surrounding-terrain elevation sanity gate.
+        /// Samples N evenly-spaced terrain points around a ring at (collarWidth + 2 m) outside
+        /// the active green contour. Plane-fits both the terrain ring and the bake interior height
+        /// grid to extract macro gradients gT and gA. Computes cos(angle) between them.
+        /// Returns a human-readable report string (suitable for Debug.Log / reimport_report.txt).
+        /// Gate: cos > +0.5 → OK; −0.5 to +0.5 → WARN; < −0.5 → WARN-MIRROR.
+        /// WARN, never FAIL — some greens are genuinely contrary to the land.
+        /// Returns empty string when no greenTopology is available (non-v2 greens).
+        /// </summary>
+        private static string ComputeTerrainAlignmentGate(
+            GreenTopology topo, ContourPoint[] contour,
+            Terrain terrain, float terrainBaseY, float collarWidth, int greenId)
+        {
+            if (topo == null) return string.Empty;
+
+            const int N = 24;
+            const float ringExtra = 2.0f;
+            float ringRadius = collarWidth + ringExtra;
+
+            // Compute contour centroid
+            float cX = 0, cZ = 0;
+            foreach (var cp in contour) { cX += cp.x; cZ += cp.z; }
+            cX /= contour.Length; cZ /= contour.Length;
+
+            // Approximate a bounding radius from contour to scale the ring properly
+            float maxR = 0;
+            foreach (var cp in contour)
+            {
+                float dx = cp.x - cX, dz = cp.z - cZ;
+                float r = Mathf.Sqrt(dx * dx + dz * dz);
+                if (r > maxR) maxR = r;
+            }
+            float totalRing = maxR + ringRadius;
+
+            // Sample N terrain points evenly around the ring
+            var terrainPts = new Vector3[N]; // world XZ + terrain height
+            for (int i = 0; i < N; i++)
+            {
+                float angle = i * 2f * Mathf.PI / N;
+                float rx = cX + totalRing * Mathf.Cos(angle);
+                float rz = cZ + totalRing * Mathf.Sin(angle);
+                float th = terrain.SampleHeight(new Vector3(rx, 0, rz));
+                terrainPts[i] = new Vector3(rx, th, rz); // y = terrain height (world)
+            }
+
+            // Plane-fit the terrain ring: least-squares fit plane to (x, z) → y
+            // Using normal equations for tilt: gT = (∂y/∂x, ∂y/∂z)
+            // Fit: y = gTx * x + gTz * z + c  via least squares on N points
+            float tGradX, tGradZ;
+            PlaneFit2D(terrainPts, N, out tGradX, out tGradZ);
+
+            // Collect interior baked heights to plane-fit authored gradient
+            var bakeInteriorPts = new System.Collections.Generic.List<Vector3>();
+            for (int cz = 0; cz < topo.GridHeight; cz++)
+            {
+                for (int cx = 0; cx < topo.GridWidth; cx++)
+                {
+                    float wx = topo.BoundsMin.x + (cx + 0.5f) * topo.CellSize;
+                    float wz = topo.BoundsMin.y + (cz + 0.5f) * topo.CellSize;
+                    float relH;
+                    if (topo.TrySampleHeight(new Vector2(wx, wz), out relH) && relH > 0.001f)
+                        bakeInteriorPts.Add(new Vector3(wx, relH, wz));
+                }
+            }
+
+            float aGradX, aGradZ;
+            string alignStatus;
+            float cosAngle = 0;
+
+            if (bakeInteriorPts.Count >= 4)
+            {
+                PlaneFit2D(bakeInteriorPts.ToArray(), bakeInteriorPts.Count, out aGradX, out aGradZ);
+
+                // Cos of angle between terrain macro gradient and authored macro gradient
+                float tLen = Mathf.Sqrt(tGradX * tGradX + tGradZ * tGradZ);
+                float aLen = Mathf.Sqrt(aGradX * aGradX + aGradZ * aGradZ);
+                if (tLen < 1e-6f || aLen < 1e-6f)
+                {
+                    alignStatus = "SKIP (gradient too small — flat terrain or flat green)";
+                    cosAngle = 0;
+                }
+                else
+                {
+                    cosAngle = (tGradX * aGradX + tGradZ * aGradZ) / (tLen * aLen);
+                    if (cosAngle > 0.5f)
+                        alignStatus = "OK";
+                    else if (cosAngle >= -0.5f)
+                        alignStatus = "WARN (perpendicular — green may be cross-slope or flat pad)";
+                    else
+                        alignStatus = "WARN-MIRROR (authored high/low is opposite surrounding land — verify against PDF before in-engine review)";
+                }
+            }
+            else
+            {
+                aGradX = 0; aGradZ = 0;
+                alignStatus = "SKIP (insufficient interior active cells)";
+            }
+
+            return $"surrounding-terrain alignment: cos = {cosAngle:+0.000;-0.000;0.000}  → {alignStatus}\n" +
+                   $"  terrain macro gradient: ({tGradX:+0.000;-0.000;0.000}, {tGradZ:+0.000;-0.000;0.000}) m/m  ({GetCardinalLabel(tGradX, tGradZ)})\n" +
+                   $"  authored macro gradient: ({aGradX:+0.000;-0.000;0.000}, {aGradZ:+0.000;-0.000;0.000}) m/m  ({GetCardinalLabel(aGradX, aGradZ)})";
+        }
+
+        private static void PlaneFit2D(Vector3[] pts, int count, out float gX, out float gZ)
+        {
+            // Fit y = gX * x + gZ * z + c  via normal equations (least squares).
+            // Returns gX = ∂y/∂x and gZ = ∂y/∂z.
+            if (count < 3) { gX = 0; gZ = 0; return; }
+
+            // Centre the data
+            float mX = 0, mZ = 0, mY = 0;
+            for (int i = 0; i < count; i++) { mX += pts[i].x; mZ += pts[i].z; mY += pts[i].y; }
+            mX /= count; mZ /= count; mY /= count;
+
+            // Build 2x2 normal matrix and 2-vector RHS
+            float sXX = 0, sXZ = 0, sZZ = 0, sXY = 0, sZY = 0;
+            for (int i = 0; i < count; i++)
+            {
+                float dx = pts[i].x - mX, dz = pts[i].z - mZ, dy = pts[i].y - mY;
+                sXX += dx * dx; sXZ += dx * dz; sZZ += dz * dz;
+                sXY += dx * dy; sZY += dz * dy;
+            }
+
+            float det = sXX * sZZ - sXZ * sXZ;
+            if (Mathf.Abs(det) < 1e-10f) { gX = 0; gZ = 0; return; }
+            gX = (sXY * sZZ - sZY * sXZ) / det;
+            gZ = (sZY * sXX - sXY * sXZ) / det;
+        }
+
+        private static string GetCardinalLabel(float gX, float gZ)
+        {
+            // gradient points uphill (slope is gradient direction = high side)
+            // gX > 0 → East is high; gZ > 0 → North is high
+            float angle = Mathf.Atan2(gX, gZ) * Mathf.Rad2Deg; // 0=N, 90=E, etc.
+            if (angle < 0) angle += 360;
+            string[] dirs = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+            int idx = Mathf.RoundToInt(angle / 45f) % 8;
+            float mag = Mathf.Sqrt(gX * gX + gZ * gZ);
+            return $"uphill to {dirs[idx]} (|g|={mag:F4} m/m)";
+        }
+
+        /// <summary>
         /// Dilate a ContourPoint[] outward by `offset` meters.
         /// Geo importer: contour uses direct X/Z mapping (no 90° rotation,
         /// unlike the Lite importer).
@@ -4257,11 +4693,15 @@ namespace Golfin.CourseImport
         /// Triangles whose 3 verts are all inside the ORIGINAL contour → fairway
         /// submesh (mow-stripe UVs). Others → fringe submesh (tile UVs via vertex
         /// duplication). Shared geometry means zero Z-fighting.
+        /// Deliverable 4b/4c: triangles whose centroid is inside any green or bunker cut
+        /// contour are dropped entirely so the fairway does not protrude under them.
         /// </summary>
         private static GameObject CreateFairwayMesh(int id, ContourPoint[] contour,
             Terrain terrain, float terrainBaseY,
             Material mat, Material fringeMat, float fringeWidth, float fringeTileSize,
-            Vector2 stripeDir, float stripeWidth)
+            Vector2 stripeDir, float stripeWidth,
+            List<Vector2[]> greenCutContours = null,
+            List<Vector2[]> bunkerCutContours = null)
         {
             int nc = contour.Length;
             if (nc < 3) return null;
@@ -4314,12 +4754,29 @@ namespace Golfin.CourseImport
                 }
             }
 
+            // Helper: returns true if a fairway triangle centroid falls inside any cut contour
+            // (green cut or bunker cut). Used to drop triangles that would protrude under greens/bunkers.
+            bool IsInsideCutContour(float tcx, float tcz)
+            {
+                if (greenCutContours != null)
+                    foreach (var gc in greenCutContours)
+                        if (gc != null && IsInsideContour(tcx, tcz, gc)) return true;
+                if (bunkerCutContours != null)
+                    foreach (var bc in bunkerCutContours)
+                        if (bc != null && IsInsideContour(tcx, tcz, bc)) return true;
+                return false;
+            }
+
             // Classify each triangle by its centroid (always strictly inside or
             // outside the original contour — never on the boundary, since the
             // triangle has nonzero area). With the original contour as an internal
             // CDT constraint, no triangle can straddle it.
+            // ── Deliverable 4b/4c: also drop triangles whose centroid is inside a green or bunker
+            //    cut contour. This removes fairway mesh from under greens and bunkers so it
+            //    cannot protrude through the flat green surface on the uphill side.
             var fairwayTris = new System.Collections.Generic.List<int>();
             var fringeSrcTris = new System.Collections.Generic.List<int>();
+            int fairwayDropped = 0, fringeDropped = 0;
             for (int t = 0; t < tris.Length; t += 3)
             {
                 Vector3 va = rawVerts[tris[t]];
@@ -4327,6 +4784,18 @@ namespace Golfin.CourseImport
                 Vector3 vc = rawVerts[tris[t + 2]];
                 float triCx = (va.x + vb.x + vc.x) / 3f;
                 float triCz = (va.z + vb.z + vc.z) / 3f;
+
+                // Drop fairway triangles inside any green or bunker cut contour (4b/4c)
+                if (IsInsideCutContour(triCx, triCz))
+                {
+                    bool wouldBeFairway = fringeEnabled
+                        ? IsInsideContour(triCx, triCz, originalPoly)
+                        : true;
+                    if (wouldBeFairway) fairwayDropped++;
+                    else fringeDropped++;
+                    continue; // drop this triangle
+                }
+
                 bool triInsideOriginal = fringeEnabled
                     ? IsInsideContour(triCx, triCz, originalPoly)
                     : true;
@@ -4335,6 +4804,8 @@ namespace Golfin.CourseImport
                 else
                 { fringeSrcTris.Add(tris[t]); fringeSrcTris.Add(tris[t + 1]); fringeSrcTris.Add(tris[t + 2]); }
             }
+            if (fairwayDropped + fringeDropped > 0)
+                Debug.Log($"[HoleGeoImporter] Fairway {id}: dropped {fairwayDropped} fairway + {fringeDropped} fringe triangles inside green/bunker cut contours (4b/4c)");
 
             var finalVerts = new System.Collections.Generic.List<Vector3>(rawVerts);
             var finalUVs = new System.Collections.Generic.List<Vector2>(uvs);
