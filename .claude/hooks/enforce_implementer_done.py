@@ -168,6 +168,25 @@ MESH_TASK_KEYWORDS = [
 MESH_TASK_MIN_HITS = 2
 MESH_METRICS_SECTION = "Mesh metrics"
 
+# Rule 17 — mesh/terrain bakes must ship a fresh VIDEO, not stills only. The
+# standing rule (feedback_prefer_bot_videos): for a green/terrain bake the thing
+# Cesar reviews from chat is an orbit fly-around clip in the task's videos/
+# folder; stills are supporting evidence only. green_slope_height_bake reached
+# Cesar on stills at iter-7, iter-8, iter-9 AND iter-12 and was bounced every
+# time ("I asked you to always show me video"). The rule lived only in memory and
+# kept getting skipped, so it is now a hook gate. Scoped to mesh tasks (same
+# detector as Rule 16) so UI-layout tasks — verified by stills + Figma — are not
+# falsely gated. The report must declare a `Canonical video:` line pointing at an
+# existing, non-trivial clip under videos/.
+MIN_VIDEO_BYTES = 50_000
+# Accepts "Canonical video:", "**Canonical clip:**", "canonical orbit =", etc.,
+# tolerating markdown bold/punctuation between the label and the path.
+CANONICAL_VIDEO_DECLARATION_RE = re.compile(
+    r"canonical\s+(?:video|clip|recording|orbit)\b[^\n]*?`?"
+    r"((?:Docs/Specs/(?:Active|Completed)/[\w.\-]+/)?videos/[\w./\-]+\.(?:mp4|mov|webm))",
+    re.IGNORECASE,
+)
+
 
 def read_payload() -> dict:
     """Claude Code passes hook payload as JSON on stdin."""
@@ -1103,6 +1122,74 @@ def validate_mesh_metrics(review_path: Path) -> list[str]:
     return errors
 
 
+def _resolve_video(report_path: Path, rel: str) -> Path | None:
+    """Resolve a videos/ path mentioned in the report to an absolute file.
+
+    Mirrors _resolve_image: tries report-relative first, then repo-rooted.
+    """
+    candidate = (report_path.parent / rel).resolve()
+    if candidate.exists():
+        return candidate
+    alt = (REPO_ROOT / rel).resolve()
+    if alt.exists():
+        return alt
+    return None
+
+
+def validate_video_deliverable(
+    report_path: Path,
+    spec_path: Path,
+) -> list[str]:
+    """Rule 17: a mesh/terrain bake must ship a fresh orbit video, not stills only.
+
+    Scoped to mesh tasks (spec_is_mesh_task) so UI-layout tasks verified by
+    stills + Figma are not falsely gated. The report must declare a
+    `Canonical video:` line pointing at an existing, non-trivial clip under
+    videos/. Skips entirely for non-mesh tasks.
+    """
+    errors: list[str] = []
+    if not report_path.exists():
+        return errors  # Rule 1 already errored.
+    if not spec_is_mesh_task(spec_path):
+        return errors  # only gate mesh/terrain bakes.
+
+    content = report_path.read_text(encoding="utf-8", errors="ignore")
+    matches = CANONICAL_VIDEO_DECLARATION_RE.findall(content)
+    if not matches:
+        errors.append(
+            "Mesh/terrain task: IMPLEMENTER_REPORT.md declares no canonical "
+            "video. A green/terrain bake is reviewed from chat as an orbit "
+            "fly-around clip, not stills — add a line `Canonical video: "
+            "\\`videos/<file>.mp4\\`` pointing at a fresh orbit of the baked "
+            "subject, copied to the task's videos/ folder. Render it with the "
+            "build_bot_video.py / textfile-drawtext idiom (see "
+            "reference_video_caption_tool memory). (Rule 17: green_slope_height_"
+            "bake reached Cesar on stills at iter-7/8/9/12 and was bounced every "
+            "time.)"
+        )
+        return errors
+
+    for rel in matches:
+        resolved = _resolve_video(report_path, rel)
+        if resolved is None:
+            errors.append(
+                f"Canonical video '{rel}' is declared but the file does not "
+                f"exist. Point it at a real clip under videos/. (Rule 17.)"
+            )
+            continue
+        try:
+            size = resolved.stat().st_size
+        except OSError:
+            size = 0
+        if size < MIN_VIDEO_BYTES:
+            errors.append(
+                f"Canonical video '{rel}' is {size} bytes "
+                f"(< {MIN_VIDEO_BYTES}) — looks empty/placeholder. Re-render the "
+                f"orbit; a real short 720p clip is multiple MB. (Rule 17.)"
+            )
+    return errors
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Orchestrator.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1341,6 +1428,11 @@ def main() -> int:
     # Rule 15: when CESAR_REJECTION.md exists, the report must carry a
     # 'Rejection follow-up' section re-shooting the flagged defect at full res.
     errors.extend(validate_rejection_followup(report_path, task_dir))
+
+    # Rule 17: mesh/terrain bakes must ship a fresh orbit video, not stills only.
+    # The standing 'always show me video' rule, now enforced (green_slope_height_
+    # bake skipped it on stills at iter-7/8/9/12). Scoped to mesh tasks.
+    errors.extend(validate_video_deliverable(report_path, spec_path))
 
     if errors:
         print(

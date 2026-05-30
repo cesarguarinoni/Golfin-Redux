@@ -805,5 +805,77 @@ class TestMeshMetrics(unittest.TestCase):
         self.assertEqual(eid.validate_mesh_metrics(rv), [])
 
 
+class TestVideoDeliverable(unittest.TestCase):
+    """Rule 17 — mesh/terrain bakes must ship a fresh orbit video, not stills."""
+
+    MESH_SPEC = (
+        "This task bakes green.json and deforms the mesh via GreenTopology "
+        "(skirt + contour).\n"
+    )
+    UI_SPEC = "Add a button to the roster screen and wire OnClick.\n"
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="hook_rule17_")).resolve()
+        (self.tmp / "videos").mkdir()
+        self.spec = self.tmp / "SPEC.md"
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _report(self, body: str) -> Path:
+        p = self.tmp / "IMPLEMENTER_REPORT.md"
+        p.write_text(body)
+        return p
+
+    def _video(self, name: str, nbytes: int) -> None:
+        (self.tmp / "videos" / name).write_bytes(b"\0" * nbytes)
+
+    def test_non_mesh_task_skips(self):
+        self.spec.write_text(self.UI_SPEC)
+        rp = self._report("# R\n\nNo video, but this is a UI task.\n")
+        self.assertEqual(eid.validate_video_deliverable(rp, self.spec), [])
+
+    def test_mesh_task_without_video_blocks(self):
+        self.spec.write_text(self.MESH_SPEC)
+        rp = self._report("# R\n\nHere are some stills, no clip.\n")
+        errs = eid.validate_video_deliverable(rp, self.spec)
+        self.assertTrue(any("declares no canonical video" in e for e in errs), errs)
+        self.assertTrue(any("Rule 17" in e for e in errs), errs)
+
+    def test_mesh_task_declared_video_missing_file_blocks(self):
+        self.spec.write_text(self.MESH_SPEC)
+        rp = self._report(
+            "# R\n\nCanonical video: `videos/h07_orbit.mp4`\n"
+        )  # no file written
+        errs = eid.validate_video_deliverable(rp, self.spec)
+        self.assertTrue(any("does not" in e for e in errs), errs)
+
+    def test_mesh_task_tiny_video_blocks(self):
+        self.spec.write_text(self.MESH_SPEC)
+        self._video("h07_orbit.mp4", 1234)  # < MIN_VIDEO_BYTES
+        rp = self._report("# R\n\nCanonical video: `videos/h07_orbit.mp4`\n")
+        errs = eid.validate_video_deliverable(rp, self.spec)
+        self.assertTrue(any("empty/placeholder" in e for e in errs), errs)
+
+    def test_mesh_task_real_video_passes(self):
+        self.spec.write_text(self.MESH_SPEC)
+        self._video("h07_orbit.mp4", eid.MIN_VIDEO_BYTES + 1)
+        rp = self._report(
+            "# R\n\n**Canonical clip:** `videos/h07_orbit.mp4`\n"
+        )
+        self.assertEqual(eid.validate_video_deliverable(rp, self.spec), [])
+
+    def test_task_rooted_video_path_resolves(self):
+        # Report cites the full Docs/Specs path; resolver falls back to REPO_ROOT.
+        self.spec.write_text(self.MESH_SPEC)
+        self._video("h07_orbit.mp4", eid.MIN_VIDEO_BYTES + 1)
+        rp = self._report(
+            "# R\n\nCanonical video: `videos/h07_orbit.mp4`\n"
+        )
+        # report-relative resolution should find it under self.tmp/videos
+        self.assertEqual(eid.validate_video_deliverable(rp, self.spec), [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
