@@ -8,9 +8,9 @@
 
 - **Active task:** `green_ship_polish` — four ship-blocker green-fidelity issues, fixed one at a time, locked order. All four BLOCK ship.
 - **Done:** iter-13 (ridge-slope staircase) — drop-scaled ridge-band smoothstep + 2-tier gate (barrier only on holes 3/7/11/18). Commits `71492c37` + `ee4b426c`.
-- **NEXT:** **iter-14 — fairway breaking around the green.** Then iter-15 (raised green ring), iter-16 (off-center raise).
-- **Live spec + history:** `Docs/Specs/Active/green_ship_polish/` (`SPEC_ITER13.md` = full iter-13 record incl. amendments; `HANDOFF.md` = next-session brief; queue checklist at bottom of `SPEC_ITER13.md` is authoritative).
-- **Last updated:** 2026-05-31 15:10 JST (Architect).
+- **NEXT:** **iter-14 — fairway breaking around the green — SPEC_READY** (`SPEC_ITER14.md`). Importer-only adaptive-collar fix (no bake / no green.json change). Root cause: rigid centroid-seat (`HoleGeoImporter.cs` L2762) + fixed 0.9 m collar dilate (L2702) → near-vertical bank on greens with large centroid→edge terrain drop → wall + carve-hole show-through. Fix: adaptive collar width `clamp(maxDrop / GreenMaxRampSlope[0.18], GreenCollarWidth[0.9], GreenMaxCollarMeters[8])` feeding BOTH collar + carve dilate; per-vertex ramp over local drop. H7-triggered but general by construction; flat greens clamp-to-floor = byte-identical. Then iter-15 (raised green ring), iter-16 (off-center raise).
+- **Live spec + history:** `Docs/Specs/Active/green_ship_polish/` (`SPEC_ITER14.md` = ready-to-kick; `ITER14_FAIRWAY_SEAM_DIAGNOSTIC.md` = root-cause evidence; `SPEC_ITER13.md` = iter-13 record incl. amendments; `HANDOFF.md` = next-session brief; queue checklist at bottom of `SPEC_ITER13.md` is authoritative).
+- **Last updated:** 2026-05-31 15:30 JST (Architect).
 
 ---
 

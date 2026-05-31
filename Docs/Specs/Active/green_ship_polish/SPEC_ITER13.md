@@ -242,6 +242,6 @@ The `verify-ridge.mjs` continuity check was authored-ridge-relative and same-sid
 ## Queue (4 issues, locked order)
 
 - [x] **iter-13** — Ridge-slope staircase bumps **(DONE 2026-05-30 — ridge-band smoothstep + drop-scaled width + 2-tier gate; H14 single-region, no phantom cliff; Cesar-confirmed)**
-- [ ] **iter-14** — Fairway breaking around the green **(NEXT)**
+- [ ] **iter-14** — Fairway breaking around the green **(SPEC_READY 2026-05-31 — SPEC_ITER14.md; importer-only adaptive collar, Option B)**
 - [ ] **iter-15** — Raised green ring (donut/pillow rim)
 - [ ] **iter-16** — Off-center raise
