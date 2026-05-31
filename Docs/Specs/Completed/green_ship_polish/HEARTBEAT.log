@@ -1,0 +1,147 @@
+=== iter-13 kickoff baseline 2026-05-30T14:10:00+09:00 ===
+HEAD: e2e2a24759a7475b8ea84b6cb6356f836a429b1e
+DIRTY:
+ M .claude/hooks/__pycache__/enforce_implementer_done.cpython-313.pyc
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/BunkerSand.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/GreenSurface.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_Fairway_Mix.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_RoadAsphalt_Albedo.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_Semirough_Albedo.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_Tee_Albedo.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_TeeBorder.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainLayer_T_OB_TintedRough.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Scenes/Debug/
+?? Assets/Scripts/Editor/CourseImporter/Debug/
+?? Docs/Diagnostics/_capture/* (many diagnostic frames from prior iters)
+?? Tools/GreenSlope/screenshots/holes/*
+?? Tools/GreenSlope/scripts/capture-all-holes.mjs
+=== end baseline ===
+2026-05-30T14:10:00+09:00 activated — reading SPEC.md, setting IMPLEMENTER_WORKING
+2026-05-30T14:15:00+09:00 read bake-green.mjs, understood structure, implementing smoothRidgeBand
+2026-05-30T14:25:00+09:00 smoothRidgeBand impl done, testing band widths to meet continuity gate
+2026-05-30T14:35:00+09:00 all-18 bake done (RIDGE_RAMP_WIDTH=4.0m). H07 slope=3.3% PASS, H03/11/13/18 all PASS. H14 FAIL (55cm tier, outside spec scope). Proceeding to Unity reimport.
+2026-05-30T14:40:00+09:00 triggering Unity reimport via MCP
+2026-05-30T14:55:00+09:00 Screenshots taken (front/left/right). Ridge reads as smooth ramp. Proceeding to video production.
+2026-05-30T15:10:00+09:00 Orbit video created: h07_ridge_iter13_orbit.mp4 (1.4MB, 6 views). Writing IMPLEMENTER_REPORT.
+2026-05-30T15:25:00+09:00 done, awaiting review
+2026-05-30T15:35:00+09:00 done, awaiting review
+=== iter-13 amendment kickoff baseline 2026-05-30T22:00:00+09:00 ===
+HEAD: b06fed587ddfd312331df7fda95ee2653b379ae1
+DIRTY (iter-13a artifacts + pre-existing):
+ M .claude/hooks/__pycache__/enforce_implementer_done.cpython-313.pyc
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/BunkerSand.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/GreenSurface.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_Fairway_Mix.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_RoadAsphalt_Albedo.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_Semirough_Albedo.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_Tee_Albedo.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_TeeBorder.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainLayer_T_OB_TintedRough.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Resources/HoleData/Hole_01/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_02/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_03/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_04/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_05/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_07/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_08/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_09/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_10/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_11/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_12/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_13/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_14/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_15/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_16/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_17/green.json (iter-13a baked)
+ M Assets/Resources/HoleData/Hole_18/green.json (iter-13a baked)
+ M Assets/Scripts/Editor/Recording/HoleFlyoverRecorder.cs
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M Tools/GreenSlope/bake_report.txt
+ M Tools/GreenSlope/scripts/bake-green.mjs (iter-13a: RIDGE_RAMP_WIDTH=4.0 constant)
+?? Tools/GreenSlope/scripts/verify-ridge.mjs (iter-13a created)
+?? Docs/Specs/Active/green_ship_polish/screenshots/h07_ridge_iter13_*.png (iter-13a)
+?? Docs/Specs/Active/green_ship_polish/videos/h07_ridge_iter13_orbit.mp4 (iter-13a)
+(plus pre-existing: Debug scenes, capture PNGs, pyc files, etc.)
+=== end baseline ===
+2026-05-30T22:00:00+09:00 iter-13 amendment activated — implementing drop-scaled rampWidth in bake-green.mjs
+2026-05-30T22:05:00+09:00 replaced RIDGE_RAMP_WIDTH=4.0 constant with RidgeTargetSlope=0.08 + RidgeMinBand=1.0 + smoothstep-peak 1.5x correction
+2026-05-30T22:15:00+09:00 --all bake complete: 6/6 ridge holes pass verify. H07=8.89m, H14=10.42m. Same-side continuity check added to verify-ridge.mjs.
+2026-05-30T22:25:00+09:00 H07 and H14 reimported via Unity MCP HTTP. H07 orbit recorded: green-07_orbit.mp4 (7.8MB). Recording H14 orbit next.
+2026-05-30T22:40:00+09:00 H14 orbit recorded (7.9MB), both captioned via ffmpeg drawtext. Motion gates: H07=PASS(16.2), H14=borderline(10.8 due to uniform green). Screenshots taken for both. Writing final report.
+2026-05-30T22:55:00+09:00 done, awaiting review — READY_FOR_ARCHITECT_REVIEW (PARTIAL on H14 motion gate 10.8 vs threshold 12)
+=== iter-13 2-tier-gate kickoff baseline 2026-05-30T22:00:00+09:00 ===
+HEAD: ee4b426c5b5791f0e04612f386a9468edb02bae8
+DIRTY:
+ M .claude/hooks/__pycache__/enforce_implementer_done.cpython-313.pyc
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/BunkerSand.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/GreenSurface.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_Fairway_Mix.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_RoadAsphalt_Albedo.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_Semirough_Albedo.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_T_Tee_Albedo.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MAT_TeeBorder.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainLayer_T_OB_TintedRough.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/BunkerSand.mat (from prior iter amendment — pre-existing)
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/GreenSurface.mat (pre-existing)
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/MAT_T_Fairway_Mix.mat (pre-existing)
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/MAT_T_RoadAsphalt_Albedo.mat (pre-existing)
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/MAT_T_Semirough_Albedo.mat (pre-existing)
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/MAT_T_Tee_Albedo.mat (pre-existing)
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/MAT_TeeBorder.mat (pre-existing)
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset (pre-existing)
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainLayer_T_OB_TintedRough.asset (pre-existing)
+ M Assets/Plugins/NuGet/.nuget-installed.json (pre-existing)
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll (pre-existing)
+ M Assets/Plugins/NuGet/McpPlugin.dll (pre-existing)
+ M Assets/Plugins/NuGet/ReflectorNet.dll (pre-existing)
+ M Assets/Resources/HoleData/Hole_01/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_02/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_03/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_04/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_05/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_07/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_08/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_09/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_10/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_11/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_12/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_13/green.json (iter-13 amendment baked — H13 was INCORRECTLY treated as 2-tier; will be fixed)
+ M Assets/Resources/HoleData/Hole_14/green.json (iter-13 amendment baked — H14 was INCORRECTLY treated as 2-tier; will be fixed)
+ M Assets/Resources/HoleData/Hole_15/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_16/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_17/green.json (iter-13 amendment baked)
+ M Assets/Resources/HoleData/Hole_18/green.json (iter-13 amendment baked)
+ M Assets/Scripts/Editor/Recording/HoleFlyoverRecorder.cs (iter-13 amendment — pre-existing from prior session)
+ M Packages/manifest.json (pre-existing)
+ M Packages/packages-lock.json (pre-existing)
+ M Tools/GreenSlope/bake_report.txt (iter-13 amendment baked)
+ M Tools/GreenSlope/scripts/bake-green.mjs (iter-13 amendment: drop-scaled width, no 2-tier gate yet)
+?? Tools/GreenSlope/scripts/verify-ridge.mjs (iter-13a created — needs 2-tier gate update)
+?? Docs/Specs/Active/green_ship_polish/screenshots/* (iter-13a and amendment screenshots)
+?? Docs/Specs/Active/green_ship_polish/videos/* (iter-13a and amendment videos)
+?? (and many pre-existing: Debug scenes, capture PNGs, pyc files, etc.)
+=== end baseline ===
+2026-05-30T22:00:00+09:00 iter-13 2-tier-gate activated — reading SPEC.md amendment, reading bake-green.mjs
+2026-05-30T22:10:00+09:00 implemented TWO_TIER_HOLES gate in bake-green.mjs, updated verify-ridge.mjs with side-agnostic interior Δh scan
+2026-05-30T22:15:00+09:00 --all bake: 18/18 PASS. H13/H14 now single-region. H06 also single-region (also has fall-line ridge). Tier holes 3/7/11/18 unchanged.
+2026-05-30T22:20:00+09:00 verify-ridge.mjs --all: 18/18 PASS, 0 interior cliffs on all holes. H14: region=1, interiorCliffs=0. H13: region=1, interiorCliffs=0.
+2026-05-30T22:25:00+09:00 All 18 green.json baked and verified. Proceeding to Unity reimport of H14 and H07 via MCP.
+2026-05-30T22:35:00+09:00 H14 and H07 reimported via Unity MCP script-execute. HoleFlyoverRecorder.RecordCurrentGreenOrbit() fired for both.
+2026-05-30T22:45:00+09:00 H14 orbit: 5.5MB 60fps 469 frames 90deg-diff=13.8 PASS. H07 orbit: 7.9MB 60fps 468 frames 90deg-diff=24.2 PASS. Screenshots taken 1920x1080. Elevation=18deg (grazing). Captioning and copying to task folder.
+2026-05-30T22:55:00+09:00 Orbit videos captioned via build_bot_video.py: green_orbit_h14_2tier_h14_2tier_gate_orbit.mp4 (3.9MB), green_orbit_h07_2tier_h07_2tier_gate_orbit.mp4 (4.3MB). Caption frame extracts confirmed — H14 shows single continuous surface, H07 shows 2-tier with smooth ramp. Writing IMPLEMENTER_REPORT.md.
+2026-05-30T23:05:00+09:00 IMPLEMENTER_REPORT.md complete. All 18/18 PASS. H14: region=1, 0 interior cliffs. H07/H03/H11/H18 tier intact. Setting STATUS to READY_FOR_SELF_REVIEW.
+2026-05-30T23:05:00+09:00 done, awaiting review
