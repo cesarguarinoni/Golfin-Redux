@@ -70,6 +70,44 @@ const POISSON_ITERATIONS = 500;
  */
 const IDW_CLAMP_D_SQ = 0.01;
 
+/**
+ * Drop-scaled ridge ramp parameters (SPEC: green_ship_polish iter-13 Amendment 2026-05-30).
+ *
+ * Rather than a constant ramp width, the band width is computed per-hole from
+ * the tier drop measured on the post-Poisson height field:
+ *
+ *   tierDrop  = max(h[active]) - min(h[active])   (active cells only)
+ *   rampWidth = clamp(tierDrop / RidgeTargetSlope,
+ *                     RidgeMinBand,
+ *                     0.40 * greenPerpWidth)
+ *
+ * This holds the ramp slope at ~8% (USGA-readable) across all holes regardless
+ * of how tall the tier step is.  H07 (38cm drop) → ~4.75m band; H14 (55cm) → ~6.9m.
+ *
+ * Parameters:
+ *   RidgeTargetSlope  — 8%, middle of the USGA-readable 4–12% range.
+ *   RidgeMinBand      — 1.0m floor (< 2 cells = smoothing breaks down).
+ *   maxBand cap       — 40% of greenPerpWidth, computed inside smoothRidgeBand().
+ *                       Prevents the band from eating the tier flats on unusually
+ *                       large tier drops; ramp slope can exceed 8% on those holes.
+ */
+const RidgeTargetSlope = 0.08;   // 8 % target ramp slope
+const RidgeMinBand     = 1.0;    // metres — minimum band width floor
+
+/**
+ * Two-tier green list (SPEC: green_ship_polish iter-13 2-tier-gate amendment 2026-05-30).
+ *
+ * Source: A4_ホール攻略冊子.pdf 「２段グリーン」 p4→Hole 3, p8→Hole 7, p12→Hole 11, p19→Hole 18.
+ * ONLY these four greens are genuine two-tier (height step) greens. Every other hole's
+ * dashed line in the authoring JSON is a fall-line / drainage spine (reading aid), NOT
+ * a height step. Those holes must be treated as single-region: no ridge barrier in Poisson,
+ * no smoothRidgeBand ramp, arrows carry the full surface including any swale.
+ *
+ * For non-tier holes that happen to have a traced ridge line (e.g. H13, H14), the dashed
+ * line is ignored for geometry; only the arrows are used to build the height field.
+ */
+const TWO_TIER_HOLES = new Set([3, 7, 11, 18]);  // source: A4_ホール攻略冊子.pdf 「２段グリーン」 p4/p8/p12/p19
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function loadJson(path) {
@@ -227,12 +265,16 @@ function sideOfPolyline(px, pz, ridge) {
 }
 
 /** Classify each grid cell by region using side-of-ridge test.
- *  Returns array [z][x] of region indices (0 or 1). */
-function classifyRegions(gridW, gridH, boundsMinX, boundsMinZ, cellSize, contour, ridge, ridgePresent) {
+ *  Returns array [z][x] of region indices (0 or 1).
+ *  applyRidgeBarrier: true only for genuine two-tier holes (TWO_TIER_HOLES).
+ *  For non-tier holes with a traced ridge, applyRidgeBarrier=false → single region. */
+function classifyRegions(gridW, gridH, boundsMinX, boundsMinZ, cellSize, contour, ridge, applyRidgeBarrier) {
     const regions = new Int32Array(gridW * gridH);
 
-    if (!ridgePresent || !ridge || ridge.length < 2) {
-        // Single region — all cells are region 0
+    if (!applyRidgeBarrier || !ridge || ridge.length < 2) {
+        // Single region — all cells are region 0.
+        // This path fires for: (a) holes with no ridge, and (b) holes with a traced
+        // ridge that are NOT in TWO_TIER_HOLES (fall-line/swale, not a height step).
         regions.fill(0);
         return regions;
     }
@@ -341,6 +383,286 @@ function buildSlopeGrid(gridW, gridH, boundsMinX, boundsMinZ, cellSize, contour,
 }
 
 /**
+ * Post-Poisson ridge-band smoothing (SPEC: green_ship_polish iter-13 + Amendment 2026-05-30).
+ *
+ * The Gauss-Seidel solver treats the ridge as a hard zero-width barrier,
+ * so cells on opposite sides have no continuity constraint — the entire
+ * tier-height drop is concentrated in 1–2 cells, rasterising as a staircase
+ * that the CDT mesh renders as bumps.
+ *
+ * This pass widens the barrier into a smooth ramp of DROP-SCALED width:
+ *   tierDrop  = max(h[active]) - min(h[active])
+ *   rampWidth = clamp(tierDrop / RidgeTargetSlope, RidgeMinBand, 0.40 * greenPerpWidth)
+ *
+ *   - For each active cell within rampWidth/2 of the ridge polyline:
+ *       t = distRidge / (rampWidth/2)   (0 = centreline, 1 = edge)
+ *       h_new = lerp(midpoint(h_self, h_mirror), h_self, smoothstep(t))
+ *   - Mirror cell: same perpendicular distance from ridge on the opposite side.
+ *     Located by reflecting the cell centre across the nearest ridge segment.
+ *     If the mirror point falls outside the green or the grid, fall back to the
+ *     nearest cell in the opposite region (4-connectivity search).
+ *   - At t=0: h_new = midpoint (both sides agree exactly).
+ *   - At t=1: h_new = h_self (Poisson value preserved).
+ *   - Smoothstep guarantees C¹ continuity at both endpoints.
+ *
+ * Called after buildHeightGrid() returns (post min-shift) and BEFORE
+ * dilateHeightMask(). Operates in-place on the height grid.
+ *
+ * Hard rules (per SPEC §"Hard rules"):
+ *  - Does NOT touch the Poisson loop, ridgeSeparated, buildSlopeGrid,
+ *    classifyRegions, or any importer code.
+ *  - Only modifies h[] values for ridge-band cells; all others are untouched.
+ *  - No schema changes; v2 byte layout intact.
+ *
+ * @param {Float32Array}  h           - height grid (modified in-place)
+ * @param {Uint8Array}    active      - inside-polygon mask (1 = active)
+ * @param {Int32Array}    regionGrid  - region IDs per cell (0 or 1)
+ * @param {number}        gridW
+ * @param {number}        gridH
+ * @param {number}        boundsMinX
+ * @param {number}        boundsMinZ
+ * @param {number}        cellSize
+ * @param {Array}         ridge       - ridge polyline [[x,z],…] in world XZ
+ * @param {boolean}       ridgePresent
+ * @returns {{ bandCellCount: number, maxDeltaH: number, rampWidth: number }}
+ *   bandCellCount: cells in the ramp band that were blended
+ *   maxDeltaH: largest absolute height change applied (m) — for QA reporting
+ *   rampWidth: the computed drop-scaled band width (m) — for reporting
+ */
+function smoothRidgeBand(h, active, regionGrid, gridW, gridH,
+                         boundsMinX, boundsMinZ, cellSize,
+                         ridge, applyRidgeBarrier) {
+
+    if (!applyRidgeBarrier || !ridge || ridge.length < 2) {
+        // No-op for: (a) flat/single-region holes, and (b) non-tier holes with a traced
+        // fall-line ridge (TWO_TIER_HOLES gate — their ridge is a reading aid, not a step).
+        return { bandCellCount: 0, maxDeltaH: 0, rampWidth: 0 };
+    }
+
+    // ── Drop-scaled ramp width (Amendment 2026-05-30) ─────────────────────────
+    // Measure tier drop from the post-Poisson height field (which still has the cliff).
+    // max−min across all active cells: tier drop dominates all other variation.
+    let hMin = Infinity, hMax = -Infinity;
+    for (let i = 0; i < h.length; i++) {
+        if (!active[i]) continue;
+        if (h[i] < hMin) hMin = h[i];
+        if (h[i] > hMax) hMax = h[i];
+    }
+    const tierDrop = (hMax > hMin) ? (hMax - hMin) : 0;
+
+    // Green perpendicular width: use the larger of the two AABB dimensions.
+    // Using max dimension is a conservative (generous) cap bound.
+    const greenPerpWidth = Math.max(gridW, gridH) * cellSize;
+    const maxBand = 0.40 * greenPerpWidth;
+
+    // Smoothstep peak-slope correction factor (1.5×):
+    // The smoothstep function 3t²-2t³ has its maximum first derivative at t=0.5,
+    // where d/dt(smoothstep) = 1.5. This means the peak cell-to-cell Δh in the
+    // transition zone is 1.5× the average slope (tierDrop/rampWidth × cellSize).
+    // To guarantee the 5cm/cell continuity gate (≡10% slope), we need:
+    //   1.5 × (tierDrop/rampWidth) ≤ gateSlope (10%)
+    // So rampWidth ≥ 1.5 × tierDrop / gateSlope = tierDrop × 1.5 / 0.10
+    // Equivalently, using RidgeTargetSlope=0.08 (8%) and accounting for peak:
+    //   rampWidth = 1.5 × tierDrop / RidgeTargetSlope
+    // This holds peak slope at RidgeTargetSlope (8%) and guarantees the continuity
+    // gate (10%) passes by construction.
+    const SMOOTHSTEP_PEAK = 1.5;
+    const rampWidth = Math.min(
+        Math.max(
+            (tierDrop > 0 ? (tierDrop * SMOOTHSTEP_PEAK) / RidgeTargetSlope : RidgeMinBand),
+            RidgeMinBand
+        ),
+        maxBand
+    );
+
+    const halfBand = rampWidth / 2;
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+
+    /** smoothstep(t): 3t²-2t³, t clamped [0,1]. */
+    function smoothstep(t) {
+        const tc = Math.max(0, Math.min(1, t));
+        return tc * tc * (3 - 2 * tc);
+    }
+
+    /**
+     * Minimum distance from point (px, pz) to the ridge polyline,
+     * and the perpendicular foot on the nearest segment.
+     * Returns { dist, footX, footZ, segIdx }.
+     */
+    function distToRidge(px, pz) {
+        let bestDistSq = Infinity;
+        let footX = px, footZ = pz;
+        let bestSeg = 0;
+
+        for (let i = 0; i < ridge.length - 1; i++) {
+            const [ax, az] = ridge[i];
+            const [bx, bz] = ridge[i + 1];
+            const dx = bx - ax, dz = bz - az;
+            const lenSq = dx * dx + dz * dz;
+            if (lenSq < 1e-10) continue;
+
+            const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / lenSq));
+            const fx = ax + t * dx;
+            const fz = az + t * dz;
+            const dsq = (px - fx) ** 2 + (pz - fz) ** 2;
+
+            if (dsq < bestDistSq) {
+                bestDistSq = dsq;
+                footX = fx;
+                footZ = fz;
+                bestSeg = i;
+            }
+        }
+
+        return { dist: Math.sqrt(bestDistSq), footX, footZ, segIdx: bestSeg };
+    }
+
+    /**
+     * Region-restricted bilinear sample of height grid at world position (wx, wz).
+     * Only uses stencil corners that belong to targetRegion.
+     * Falls back to weighted average of valid (same-region) corners.
+     * Returns null if no valid corners found.
+     *
+     * This is critical for mirror lookups that land near the ridge: a plain bilinear
+     * would mix heights from both sides of the ridge, producing a corrupted midpoint
+     * and leaving the transition still too steep. By restricting to opposite-region
+     * corners only, we get a pure opposite-side value.
+     */
+    function bilinearSampleHRegion(wx, wz, targetRegion) {
+        const fx = (wx - boundsMinX) / cellSize;
+        const fz = (wz - boundsMinZ) / cellSize;
+        const ix0 = Math.floor(fx);
+        const iz0 = Math.floor(fz);
+        const ix1 = ix0 + 1;
+        const iz1 = iz0 + 1;
+
+        // Bilinear weights for each corner
+        const tx = fx - ix0;
+        const tz = fz - iz0;
+        const corners = [
+            { cz: iz0, cx: ix0, w: (1 - tx) * (1 - tz) },
+            { cz: iz0, cx: ix1, w: tx       * (1 - tz) },
+            { cz: iz1, cx: ix0, w: (1 - tx) * tz       },
+            { cz: iz1, cx: ix1, w: tx       * tz       },
+        ];
+
+        let sum = 0, wSum = 0;
+        for (const { cz: cz2, cx: cx2, w } of corners) {
+            if (cz2 < 0 || cz2 >= gridH || cx2 < 0 || cx2 >= gridW) continue;
+            if (!active[cz2 * gridW + cx2]) continue;
+            if (regionGrid[cz2 * gridW + cx2] !== targetRegion) continue;
+            sum  += w * h[cz2 * gridW + cx2];
+            wSum += w;
+        }
+
+        return wSum > 1e-9 ? sum / wSum : null;
+    }
+
+    /**
+     * Nearest-cell fallback for mirror sampling when bilinear finds no valid corners.
+     * Searches outward from (cx,cz) in concentric rings for the closest active cell
+     * in the opposite region.
+     * Returns the height of the nearest found cell, or null if none found.
+     */
+    function mirrorFallback(cx, cz, selfRegion) {
+        const targetRegion = 1 - selfRegion; // opposite region
+        // 4-connectivity first (prioritise immediate neighbours)
+        for (const [nz, nx] of [[cz-1,cx],[cz+1,cx],[cz,cx-1],[cz,cx+1]]) {
+            if (nz >= 0 && nz < gridH && nx >= 0 && nx < gridW &&
+                active[nz * gridW + nx] &&
+                regionGrid[nz * gridW + nx] === targetRegion) {
+                return h[nz * gridW + nx];
+            }
+        }
+        // 8-connectivity widening search
+        for (let r = 2; r <= 8; r++) {
+            for (let dz2 = -r; dz2 <= r; dz2++) {
+                for (let dx2 = -r; dx2 <= r; dx2++) {
+                    if (Math.abs(dz2) !== r && Math.abs(dx2) !== r) continue;
+                    const nz = cz + dz2;
+                    const nx = cx + dx2;
+                    if (nz >= 0 && nz < gridH && nx >= 0 && nx < gridW &&
+                        active[nz * gridW + nx] &&
+                        regionGrid[nz * gridW + nx] === targetRegion) {
+                        return h[nz * gridW + nx];
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    // ── Main pass ──────────────────────────────────────────────────────────────
+
+    // We write into a COPY of h for the band cells so that each cell's blend
+    // uses the original (unmodified) Poisson values. This prevents partial-blended
+    // values from bleeding into adjacent band cells' mirror lookups.
+    const hNew = new Float32Array(h.length);
+    hNew.set(h);
+
+    let bandCellCount = 0;
+    let maxDeltaH = 0;
+
+    for (let cz = 0; cz < gridH; cz++) {
+        for (let cx = 0; cx < gridW; cx++) {
+            const idx = cz * gridW + cx;
+            if (!active[idx]) continue;
+
+            // World centre of this cell
+            const wx = boundsMinX + (cx + 0.5) * cellSize;
+            const wz = boundsMinZ + (cz + 0.5) * cellSize;
+
+            // Distance to ridge polyline
+            const { dist, footX, footZ } = distToRidge(wx, wz);
+            if (dist > halfBand) continue; // outside the ramp band
+
+            // Normalised distance: t=0 at centreline, t=1 at band edge
+            const t = dist / halfBand;
+            const sw = smoothstep(t); // weight toward h_self at t→1
+
+            const h_self = h[idx];
+            const selfRegion = regionGrid[idx];
+            const oppositeRegion = 1 - selfRegion;
+
+            // ── Mirror cell lookup ─────────────────────────────────────────────
+            // Reflect the cell centre across the ridge foot to get the mirror world pos.
+            // mirrorX = 2*footX - wx,  mirrorZ = 2*footZ - wz
+            // Use region-restricted bilinear so the stencil only uses opposite-side cells.
+            const mirrorX = 2 * footX - wx;
+            const mirrorZ = 2 * footZ - wz;
+
+            let h_mirror = bilinearSampleHRegion(mirrorX, mirrorZ, oppositeRegion);
+
+            // Fallback: nearest active cell in the opposite region
+            if (h_mirror === null) {
+                h_mirror = mirrorFallback(cx, cz, selfRegion);
+            }
+
+            if (h_mirror === null) continue; // no opposite-region cell found — skip
+
+            // ── Blend ──────────────────────────────────────────────────────────
+            // h_new = lerp(midpoint, h_self, smoothstep(t))
+            // At t=0: h_new = midpoint (both sides agree)
+            // At t=1: h_new = h_self (Poisson value)
+            const midpoint = (h_self + h_mirror) / 2;
+            const h_blended = midpoint + sw * (h_self - midpoint);
+
+            hNew[idx] = h_blended;
+            bandCellCount++;
+
+            const delta = Math.abs(h_blended - h_self);
+            if (delta > maxDeltaH) maxDeltaH = delta;
+        }
+    }
+
+    // Write blended values back to h
+    h.set(hNew);
+
+    return { bandCellCount, maxDeltaH, rampWidth };
+}
+
+/**
  * Poisson height integration.
  * Solve ∇²h = ∇·g (divergence of gradient field) with Neumann BC.
  * Ridge is a hard internal boundary: cells on opposite sides of the ridge
@@ -351,7 +673,7 @@ function buildSlopeGrid(gridW, gridH, boundsMinX, boundsMinZ, cellSize, contour,
  * Min-shift (not zero-mean) guarantees the field is always ≥ 0, preventing interior verts
  * from dipping below the collar attachment line (the "donut/pillow rim" fix, D3 iter-8).
  */
-function buildHeightGrid(gridW, gridH, boundsMinX, boundsMinZ, cellSize, contour, slopeGrid, regionGrid, ridgePresent) {
+function buildHeightGrid(gridW, gridH, boundsMinX, boundsMinZ, cellSize, contour, slopeGrid, regionGrid, applyRidgeBarrier) {
     // Compute divergence source term: div g = ∂gx/∂x + ∂gz/∂z
     // Using finite differences on the slope grid.
     const source = new Float32Array(gridW * gridH);
@@ -397,10 +719,12 @@ function buildHeightGrid(gridW, gridH, boundsMinX, boundsMinZ, cellSize, contour
     // Ridge as internal boundary: cells across the ridge can't average with each other.
     const h = new Float32Array(gridW * gridH);
 
-    // Check if two adjacent cells are separated by the ridge
-    // (they have different region IDs in the region grid)
+    // Check if two adjacent cells are separated by the ridge barrier.
+    // Only fires for genuine two-tier holes (applyRidgeBarrier=true).
+    // Non-tier holes with a traced ridge have applyRidgeBarrier=false and
+    // their regionGrid is all-0 (single region), so this always returns false.
     function ridgeSeparated(az, ax, bz, bx) {
-        if (!ridgePresent) return false;
+        if (!applyRidgeBarrier) return false;
         if (az < 0 || az >= gridH || ax < 0 || ax >= gridW) return true;
         if (bz < 0 || bz >= gridH || bx < 0 || bx >= gridW) return true;
         return regionGrid[az * gridW + ax] !== regionGrid[bz * gridW + bx];
@@ -736,11 +1060,32 @@ function bakeHole(holeNum) {
         return { success: false, report };
     }
 
-    const { arrows, ridge, regionCount, ridgePresent } = authoring;
+    const { arrows: rawArrows, ridge, regionCount: authoredRegionCount, ridgePresent } = authoring;
 
-    if (!arrows || arrows.length === 0) {
+    if (!rawArrows || rawArrows.length === 0) {
         report.push(`ERROR: no arrows in authoring JSON`);
         return { success: false, report };
+    }
+
+    // ── 2-tier gate (SPEC: green_ship_polish iter-13 2-tier-gate amendment 2026-05-30) ──
+    // Only genuine two-tier greens get the ridge barrier and smoothRidgeBand ramp.
+    // Other holes with a traced ridge (H13, H14, …) treat it as a fall-line reading aid —
+    // Poisson relaxes across the whole green, and all arrows contribute to the surface.
+    // Source: A4_ホール攻略冊子.pdf 「２段グリーン」 p4/p8/p12/p19.
+    const applyRidgeBarrier = ridgePresent && TWO_TIER_HOLES.has(holeNum);
+
+    // For non-tier holes with authored region splits: remap all arrows to region 0 so
+    // the full arrow set contributes to IDW interpolation across the whole green.
+    // For two-tier holes: preserve original region assignments (region 0 + region 1).
+    const arrows = applyRidgeBarrier
+        ? rawArrows
+        : rawArrows.map(a => ({ ...a, region: 0 }));
+
+    // Effective region count: 1 for non-tier holes (even if authoring says 2), 2 for tier holes.
+    const regionCount = applyRidgeBarrier ? authoredRegionCount : 1;
+
+    if (ridgePresent && !applyRidgeBarrier) {
+        report.push(`  INFO: 2-tier gate: hole ${holeId} has a traced ridge but is NOT in TWO_TIER_HOLES {3,7,11,18} — treating as single region (fall-line, not a height step). All ${arrows.length} arrows remapped to region 0.`);
     }
 
     // ── Load green contour (geo-pipeline, used for grid + arrows) ─
@@ -853,13 +1198,14 @@ function bakeHole(holeNum) {
     report.push(`  Grid: ${gridW}x${gridH}, bounds X=[${boundsMinX.toFixed(2)}, ${boundsMaxX.toFixed(2)}] Z=[${boundsMinZ.toFixed(2)}, ${boundsMaxZ.toFixed(2)}]`);
 
     // ── Region classification ────────────────────────────────────
+    // For two-tier holes (applyRidgeBarrier=true): two-region grid split by ridge.
+    // For all other holes: single-region grid (all-0), even if a ridge is traced.
     const regionGrid = classifyRegions(gridW, gridH, boundsMinX, boundsMinZ,
-        CELL_SIZE, contour, ridge, ridgePresent);
+        CELL_SIZE, contour, ridge, applyRidgeBarrier);
 
     // Verify region classification against authored arrows:
-    // We need to make sure region IDs in the grid match the authored arrow regions.
-    // Sample the first arrow of each authored region and check if the grid agrees.
-    if (ridgePresent && ridge && ridge.length >= 2) {
+    // Only relevant for two-tier holes — single-region grids are always consistent.
+    if (applyRidgeBarrier && ridge && ridge.length >= 2) {
         // Find representative positions for each region from arrows
         const regionReps = {};
         for (const arrow of arrows) {
@@ -889,11 +1235,31 @@ function bakeHole(holeNum) {
 
     // ── Slope grid ──────────────────────────────────────────────
     const slopeGrid = buildSlopeGrid(gridW, gridH, boundsMinX, boundsMinZ,
-        CELL_SIZE, contour, arrows, regionGrid, ridgePresent);
+        CELL_SIZE, contour, arrows, regionGrid, applyRidgeBarrier);
 
     // ── Height field ─────────────────────────────────────────────
     const { h: heightGrid, active: heightActiveMask } = buildHeightGrid(gridW, gridH, boundsMinX, boundsMinZ,
-        CELL_SIZE, contour, slopeGrid, regionGrid, ridgePresent);
+        CELL_SIZE, contour, slopeGrid, regionGrid, applyRidgeBarrier);
+
+    // ── Ridge-band smoothing (Fix, iter-13) ──────────────────────
+    // Widen the hard-zero-width ridge barrier into a controlled-width ramp
+    // by blending each band cell's height toward the midpoint of itself and
+    // its mirror cell across the ridge centreline, weighted by smoothstep(t).
+    // Must run AFTER buildHeightGrid (post min-shift) and BEFORE dilateHeightMask
+    // so the dilated ring inherits corrected values.
+    // See SPEC green_ship_polish iter-13, §"The fix".
+    const { bandCellCount, maxDeltaH, rampWidth: computedRampWidth } = smoothRidgeBand(
+        heightGrid, heightActiveMask, regionGrid,
+        gridW, gridH, boundsMinX, boundsMinZ, CELL_SIZE,
+        ridge, applyRidgeBarrier
+    );
+    if (applyRidgeBarrier) {
+        report.push(`  INFO: ridge-band smoothing (iter-13 amendment): rampWidth=${computedRampWidth.toFixed(2)}m (drop-scaled, target slope ${(RidgeTargetSlope*100).toFixed(0)}%), bandCells=${bandCellCount}, maxDeltaH=${(maxDeltaH * 100).toFixed(2)}cm`);
+    } else if (ridgePresent) {
+        report.push(`  INFO: ridge-band smoothing (iter-13 2-tier gate): ridge present but hole ${holeId} not in TWO_TIER_HOLES — smoothing skipped (fall-line hole, single region)`);
+    } else {
+        report.push(`  INFO: ridge-band smoothing (iter-13): no ridge — skipped`);
+    }
 
     // ── Height mask dilation (Fix 1, iter-12) ────────────────────
     // Extend the filled height region outward by 1 cell so bilinear stencils
@@ -1005,9 +1371,11 @@ function bakeHole(holeNum) {
     }
 
     // ── QA gate ──────────────────────────────────────────────────
+    // Pass applyRidgeBarrier (not ridgePresent) so the QA checks are consistent with
+    // what was actually baked: non-tier holes with a traced ridge are single-region.
     const { lines: qaLines, failed: qaFailed } = qaBake(
         holeNum, arrows, contour, gridW, gridH, boundsMinX, boundsMinZ, CELL_SIZE,
-        slopeGrid, heightGrid, ridgePresent, regionCount, ridgePresent
+        slopeGrid, heightGrid, applyRidgeBarrier, regionCount, applyRidgeBarrier
     );
     report.push(...qaLines);
     if (qaFailed) {

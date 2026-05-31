@@ -27,6 +27,19 @@ namespace Golfin.CourseImport.Recording
         private const int   OutputFrameRate   = 60;
         private const string FlyoverCamTag    = "FlyoverCam";
 
+        // --- Green-orbit mode (mesh/green inspection clip) ---
+        // A pure centred 360° orbit on the green, reusing the Recorder pipeline.
+        // Landscape, green dominating the frame. Auto-frames any open Hole_NN_Geo
+        // scene from its green renderer bounds — no greens.json / anchors dependency.
+        private const float GreenOrbitSeconds       = 8f;    // slow enough to read the surface
+        private const float GreenOrbitElevationDeg  = 18f;   // lowered to grazing for iter-13 2-tier-gate (was 38° — too high to resolve interior cliffs)
+        private const float GreenOrbitRadiusFactor  = 1.4f;  // radius = max(min, greenMaxExtent * factor)
+        private const float GreenOrbitMinRadius     = 18f;
+        private const float GreenOrbitTurns         = 1f;    // full loops (1 = 360°)
+        private const float GreenOrbitFov           = 40f;
+        private const int   GreenOrbitWidth         = 1920;  // landscape 16:9
+        private const int   GreenOrbitHeight        = 1080;
+
         // --- State machine ---
         private enum RecState { Idle, WaitingForPlayMode, Recording, WaitingForEditMode }
 
@@ -50,6 +63,7 @@ namespace Golfin.CourseImport.Recording
         private const string SK_BATCHING = "HoleFlyoverRec.Batching";
         private const string SK_ACTIVE   = "HoleFlyoverRec.Active";
         private const string SK_STATE    = "HoleFlyoverRec.State"; // persists _state across domain reload
+        private const string SK_GREENORBIT = "HoleFlyoverRec.GreenOrbit"; // green-orbit mode flag (survives domain reload)
 
         // ---------------------------------------------------------------
         // Boot / domain-reload recovery
@@ -137,6 +151,39 @@ namespace Golfin.CourseImport.Recording
             _holeQueue.Enqueue(meta.holeNumber);
             SessionState.SetBool(SK_BATCHING, false);
             StartNextHole();
+        }
+
+        [MenuItem("GOLFIN/Recording/Record Current Green Orbit")]
+        private static void MenuRecordGreenOrbit() => RecordCurrentGreenOrbit();
+
+        /// <summary>
+        /// Record a centred 360° green-inspection orbit of the CURRENTLY OPEN scene,
+        /// reusing the Unity Recorder pipeline. Headless-safe (logs instead of popups)
+        /// so the /green-orbit skill can invoke it via reflection. Output lands at
+        /// Recordings/green-NN_orbit.mp4. Returns false if it could not start.
+        /// </summary>
+        public static bool RecordCurrentGreenOrbit()
+        {
+            if (_state != RecState.Idle)
+            {
+                Debug.LogError("[HoleFlyoverRecorder] A recording is already in progress — cannot start green orbit.");
+                return false;
+            }
+            int holeNumber = ResolveCurrentHoleNumber();
+            if (holeNumber <= 0)
+            {
+                Debug.LogError("[HoleFlyoverRecorder] Could not resolve hole number for green orbit — " +
+                    "open a Hole_NN_Geo scene (HoleMetadata or scene name) first.");
+                return false;
+            }
+            _cancelRequested = false;
+            _holeQueue.Clear();
+            _holeQueue.Enqueue(holeNumber);
+            SessionState.SetBool(SK_BATCHING, false);   // single, current scene — no reopen
+            SessionState.SetBool(SK_GREENORBIT, true);
+            Debug.Log($"[HoleFlyoverRecorder] Green orbit armed for hole {holeNumber:D2} on the current scene.");
+            StartNextHole();
+            return true;
         }
 
         [MenuItem("GOLFIN/Recording/Record All 18 Holes")]
@@ -258,27 +305,43 @@ namespace Golfin.CourseImport.Recording
 
         private static void BeginRecording()
         {
+            bool greenOrbit = SessionState.GetBool(SK_GREENORBIT, false);
+
             _terrain = UnityEngine.Object.FindObjectOfType<Terrain>();
-            if (_terrain == null)
+            if (_terrain == null && !greenOrbit)
             {
                 Debug.LogError($"[HoleFlyoverRecorder] No Terrain found — aborting hole {_currentHole}");
                 AbortCurrentHole(); return;
             }
-            _terrainBaseY = _terrain.transform.position.y;
+            _terrainBaseY = _terrain != null ? _terrain.transform.position.y : 0f;
 
-            var meta = FindHoleMetadata();
-            if (meta == null)
+            if (greenOrbit)
             {
-                Debug.LogError("[HoleFlyoverRecorder] No HoleMetadata in scene — aborting");
-                AbortCurrentHole(); return;
+                // Green orbit needs no terrain/anchors/greens.json — it frames the green
+                // renderer of whatever scene is open. Works on production or Video scenes.
+                _keyframes = BuildGreenOrbitPath(out _flyoverDuration);
+                if (_keyframes == null || _keyframes.Length == 0)
+                {
+                    Debug.LogError($"[HoleFlyoverRecorder] Failed to build green-orbit path for hole {_currentHole}");
+                    AbortCurrentHole(); return;
+                }
             }
-
-            string exportPath = GetExportPath(meta.courseId, meta.holeNumber);
-            _keyframes = BuildFlyoverPath(exportPath, _terrain, _terrainBaseY, out _flyoverDuration);
-            if (_keyframes == null || _keyframes.Length == 0)
+            else
             {
-                Debug.LogError($"[HoleFlyoverRecorder] Failed to build camera path for hole {meta.holeNumber}");
-                AbortCurrentHole(); return;
+                var meta = FindHoleMetadata();
+                if (meta == null)
+                {
+                    Debug.LogError("[HoleFlyoverRecorder] No HoleMetadata in scene — aborting");
+                    AbortCurrentHole(); return;
+                }
+
+                string exportPath = GetExportPath(meta.courseId, meta.holeNumber);
+                _keyframes = BuildFlyoverPath(exportPath, _terrain, _terrainBaseY, out _flyoverDuration);
+                if (_keyframes == null || _keyframes.Length == 0)
+                {
+                    Debug.LogError($"[HoleFlyoverRecorder] Failed to build camera path for hole {meta.holeNumber}");
+                    AbortCurrentHole(); return;
+                }
             }
 
             // Disable WalkCamera so FlyoverCamera becomes the active rendered view.
@@ -290,7 +353,7 @@ namespace Golfin.CourseImport.Recording
             _flyoverCamGO = new GameObject("FlyoverCamera");
             _flyoverCamGO.tag = FlyoverCamTag;
             var cam = _flyoverCamGO.AddComponent<Camera>();
-            cam.fieldOfView   = CameraFov;
+            cam.fieldOfView   = greenOrbit ? GreenOrbitFov : CameraFov;
             cam.nearClipPlane = 0.3f;
             cam.farClipPlane  = 3000f;
             cam.depth         = 10f; // render above any existing cameras
@@ -314,13 +377,14 @@ namespace Golfin.CourseImport.Recording
             movieSettings.Enabled = true;
             movieSettings.OutputFormat = MovieRecorderSettings.VideoRecorderOutputFormat.MP4;
             movieSettings.CaptureAlpha = false;
-            movieSettings.OutputFile = Path.Combine(recordingsDir, $"hole-{meta.holeNumber:D2}");
+            movieSettings.OutputFile = Path.Combine(recordingsDir,
+                greenOrbit ? $"green-{_currentHole:D2}_orbit" : $"hole-{_currentHole:D2}");
 
             var camInput = new CameraInputSettings();
             camInput.Source      = ImageSource.TaggedCamera;
             camInput.CameraTag   = FlyoverCamTag;
-            camInput.OutputWidth  = OutputWidth;
-            camInput.OutputHeight = OutputHeight;
+            camInput.OutputWidth  = greenOrbit ? GreenOrbitWidth  : OutputWidth;
+            camInput.OutputHeight = greenOrbit ? GreenOrbitHeight : OutputHeight;
             movieSettings.ImageInputSettings = camInput;
 
             ctrlSettings.AddRecorderSettings(movieSettings);
@@ -330,7 +394,7 @@ namespace Golfin.CourseImport.Recording
             _recorderController.StartRecording();
 
             _recordStartTime = EditorApplication.timeSinceStartup;
-            Debug.Log($"[HoleFlyoverRecorder] Recording hole {meta.holeNumber:D2} → {movieSettings.OutputFile}.mp4");
+            Debug.Log($"[HoleFlyoverRecorder] Recording hole {_currentHole:D2}{(greenOrbit ? " (green orbit)" : "")} → {movieSettings.OutputFile}.mp4");
         }
 
         private static void StopAndCleanup()
@@ -364,6 +428,7 @@ namespace Golfin.CourseImport.Recording
             _holeQueue.Clear();
             SessionState.SetBool(SK_ACTIVE, false);
             SessionState.SetBool(SK_BATCHING, false);
+            SessionState.SetBool(SK_GREENORBIT, false);
             EditorUtility.ClearProgressBar();
             Debug.Log("[HoleFlyoverRecorder] All recordings complete.");
         }
@@ -629,6 +694,71 @@ namespace Golfin.CourseImport.Recording
             }
 
             return frames;
+        }
+
+        // Pure centred 360° orbit on the green of the currently-open scene.
+        // Frames the green from its renderer bounds — scene-agnostic, no json deps.
+        private static FlyoverKeyframe[] BuildGreenOrbitPath(out float totalDuration)
+        {
+            totalDuration = GreenOrbitSeconds;
+
+            Bounds? gb = FindGreenBounds();
+            if (gb == null)
+            {
+                Debug.LogError("[HoleFlyoverRecorder] No green renderer found in the open scene — " +
+                    "expected a MeshRenderer whose name contains 'green'.");
+                return null;
+            }
+            Bounds b      = gb.Value;
+            Vector3 center = b.center;
+            float maxExt  = Mathf.Max(b.extents.x, b.extents.z);
+            float radius  = Mathf.Max(GreenOrbitMinRadius, maxExt * GreenOrbitRadiusFactor);
+            float camH    = radius * Mathf.Tan(GreenOrbitElevationDeg * Mathf.Deg2Rad);
+
+            int totalFrames = Mathf.Max(2, Mathf.RoundToInt(totalDuration * OutputFrameRate));
+            var frames = new FlyoverKeyframe[totalFrames];
+            for (int i = 0; i < totalFrames; i++)
+            {
+                float t   = (float)i / (totalFrames - 1);
+                float ang = t * 360f * GreenOrbitTurns;
+                Vector3 offset = Quaternion.Euler(0f, ang, 0f) * new Vector3(0f, 0f, radius);
+                Vector3 pos    = new Vector3(center.x + offset.x, center.y + camH, center.z + offset.z);
+                frames[i] = new FlyoverKeyframe { camPos = pos, lookAtPos = center, normalizedT = t };
+            }
+
+            Debug.Log($"[HoleFlyoverRecorder] Green orbit: center={center} radius={radius:F1}m " +
+                      $"camHeight={camH:F1}m frames={totalFrames} ({totalDuration:F1}s @ {OutputFrameRate}fps)");
+            return frames;
+        }
+
+        // Encapsulate every MeshRenderer whose GameObject name contains 'green'
+        // (case-insensitive). Excludes 'greenside' bunkers/fringe so the orbit centres
+        // on the putting surface, not the surrounds.
+        private static Bounds? FindGreenBounds()
+        {
+            var renderers = UnityEngine.Object.FindObjectsOfType<MeshRenderer>();
+            Bounds? acc = null;
+            foreach (var r in renderers)
+            {
+                string n = r.gameObject.name.ToLowerInvariant();
+                if (!n.Contains("green") || n.Contains("greenside")) continue;
+                if (acc == null) acc = r.bounds;
+                else { var bb = acc.Value; bb.Encapsulate(r.bounds); acc = bb; }
+            }
+            return acc;
+        }
+
+        // Resolve the current hole number from HoleMetadata, else parse the active
+        // scene name (e.g. "Hole_07_Geo" → 7). Used for the output filename.
+        private static int ResolveCurrentHoleNumber()
+        {
+            var meta = FindHoleMetadata();
+            if (meta != null && meta.holeNumber > 0) return meta.holeNumber;
+
+            string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            var m = System.Text.RegularExpressions.Regex.Match(sceneName, @"(\d{1,2})");
+            if (m.Success && int.TryParse(m.Value, out int n) && n > 0) return n;
+            return -1;
         }
 
         private static void UpdateCameraFromPath(float t)
