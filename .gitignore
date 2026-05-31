@@ -143,3 +143,20 @@ Docs/Scripts/__pycache__/
 Docs/Reports/Media/*
 !Docs/Reports/Media/README.md
 !Docs/Reports/Media/.gitkeep
+
+# =========================
+# Python bytecode (GLOBAL) — 2026-05-31
+# Previously only Docs/Scripts/__pycache__/ was ignored, so .claude/hooks/
+# __pycache__/*.pyc got committed. Ignore bytecode everywhere.
+# =========================
+__pycache__/
+*.pyc
+
+# =========================
+# Diagnostic scratch captures — transient working output. 2026-05-31
+# Tracked .jpg/.txt/.log evidence already in _capture/ is unaffected; durable
+# review evidence now lives in per-task Docs/Specs/.../screenshots/ folders.
+# =========================
+Docs/Diagnostics/_capture/*.png
+Docs/Diagnostics/_capture/**/*.png
+Docs/Diagnostics/_capture/orbit_frames*/
