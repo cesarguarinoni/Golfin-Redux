@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { readFile, stat, writeFile, mkdir } from "node:fs/promises";
+import { readFile, stat, writeFile, mkdir, readdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -134,6 +134,35 @@ const server = createServer(async (req, res) => {
       sendJson(res, 200, await loadCourseData(courseId));
     } catch (err) {
       console.error("Failed to load course data:", err.message);
+      sendJson(res, 500, { ok: false, message: err.message });
+    }
+    return;
+  }
+
+  // --- API: List available courses (scans output/*/course.json) ---
+  // Powers the in-GUI course picker. Any output/<slug>/ dir with a course.json
+  // is offered as a selectable course.
+  if (req.method === "GET" && url.pathname === "/api/courses") {
+    try {
+      const outRoot = path.join(root, "output");
+      const entries = await readdir(outRoot, { withFileTypes: true });
+      const courses = [];
+      for (const ent of entries) {
+        if (!ent.isDirectory()) continue;
+        try {
+          const cj = JSON.parse(
+            await readFile(path.join(outRoot, ent.name, "course.json"), "utf8"));
+          courses.push({
+            id: ent.name,
+            display_name: cj.display_name || ent.name,
+            native_name: cj.native_name || "",
+            holes: Array.isArray(cj.holes) ? cj.holes.length : null,
+          });
+        } catch { /* no course.json here — skip */ }
+      }
+      courses.sort((a, b) => a.display_name.localeCompare(b.display_name));
+      sendJson(res, 200, { courses });
+    } catch (err) {
       sendJson(res, 500, { ok: false, message: err.message });
     }
     return;

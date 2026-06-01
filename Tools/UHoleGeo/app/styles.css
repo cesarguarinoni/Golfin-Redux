@@ -13,6 +13,21 @@
 
 * { box-sizing: border-box; }
 
+.course-select {
+  margin-top: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: var(--bg-panel-alt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+}
+.course-select:hover { border-color: var(--accent); }
+.course-select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+
 body {
   margin: 0;
   min-height: 100vh;

@@ -1,4 +1,17 @@
-const COURSE_ID = "lomond-country-club";
+// Active course. Resolved from (1) ?course= URL param, (2) last choice saved
+// in localStorage, (3) default Lomond. The picker persists the choice and
+// reloads, so this is read once at boot.
+const DEFAULT_COURSE = "lomond-country-club";
+function resolveCourseId() {
+  try {
+    const fromUrl = new URLSearchParams(location.search).get("course");
+    if (fromUrl) { localStorage.setItem("uholegeo.course", fromUrl); return fromUrl; }
+    const saved = localStorage.getItem("uholegeo.course");
+    if (saved) return saved;
+  } catch { /* localStorage unavailable */ }
+  return DEFAULT_COURSE;
+}
+let COURSE_ID = resolveCourseId();
 
 let courseData = null;
 let currentHole = null;
@@ -111,6 +124,7 @@ const LAYER_ZONES = {
 // ── Init ────────────────────────────────────────────
 
 async function init() {
+  await setupCoursePicker();
   try {
     const res = await fetch("/api/course?id=" + COURSE_ID);
     if (!res.ok) throw new Error("Server returned " + res.status);
@@ -130,6 +144,45 @@ async function init() {
   setupCanvasInteraction();
   setupMapOverlay();
   selectHole(1);
+}
+
+// Populate the course picker from /api/courses, mark the active course, and
+// reload on change (cleanest way to swap all per-course state). localStorage is
+// the source of truth so it survives launching from the .bat with no URL args.
+async function setupCoursePicker() {
+  const sel = document.getElementById("course-select");
+  if (!sel) return;
+  try {
+    const res = await fetch("/api/courses");
+    const data = await res.json();
+    const courses = data.courses || [];
+    sel.innerHTML = "";
+    for (const c of courses) {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.display_name + (c.holes ? " \u00b7 " + c.holes + "h" : "");
+      if (c.id === COURSE_ID) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    // Saved course no longer present? Fall back to the first listed course.
+    if (courses.length > 0 && !courses.some(c => c.id === COURSE_ID)) {
+      COURSE_ID = courses[0].id;
+      sel.value = COURSE_ID;
+      try { localStorage.setItem("uholegeo.course", COURSE_ID); } catch {}
+    }
+  } catch {
+    sel.innerHTML = '<option value="' + COURSE_ID + '">' + COURSE_ID + "</option>";
+  }
+  sel.addEventListener("change", () => {
+    const next = sel.value;
+    if (!next || next === COURSE_ID) return;
+    try { localStorage.setItem("uholegeo.course", next); } catch {}
+    // Drop any ?course= param so localStorage stays the single source of truth,
+    // then reload for a clean per-course state.
+    const u = new URL(location.href);
+    u.searchParams.delete("course");
+    location.href = u.toString();
+  });
 }
 
 function buildHoleNav() {
@@ -290,10 +343,13 @@ function updateBrushUI() {
     toolbar.hidden = true;
     canvas.classList.remove("painting");
   }
-  document.getElementById("btn-smooth-ob").hidden = activeBrushZone !== 9;
-  document.getElementById("btn-smooth-cp").hidden = activeBrushZone !== 8;
+  const _smOb = document.getElementById("btn-smooth-ob");
+  if (_smOb) _smOb.hidden = activeBrushZone !== 9;
+  const _smCp = document.getElementById("btn-smooth-cp");
+  if (_smCp) _smCp.hidden = activeBrushZone !== 8;
   const terrainZones = LAYER_ZONES.terrain || [];
-  document.getElementById("btn-smooth-terrain").hidden = !terrainZones.includes(activeBrushZone);
+  const _smTer = document.getElementById("btn-smooth-terrain");
+  if (_smTer) _smTer.hidden = !terrainZones.includes(activeBrushZone);
 }
 
 function updateLegendVisibility() {
@@ -1376,14 +1432,14 @@ function setupControls() {
   const opacityToggle = document.getElementById("btn-opacity-toggle");
   let lastNonZeroOpacity = 0.5;
 
-  opacitySlider.addEventListener("input", function () {
+  if (opacitySlider) opacitySlider.addEventListener("input", function () {
     overlayOpacity = this.value / 100;
     if (overlayOpacity > 0) lastNonZeroOpacity = overlayOpacity;
-    opacityToggle.textContent = overlayOpacity === 0 ? "0%" : (overlayOpacity === 1 ? "100%" : "·");
+    if (opacityToggle) opacityToggle.textContent = overlayOpacity === 0 ? "0%" : (overlayOpacity === 1 ? "100%" : "·");
     drawCanvas();
   });
 
-  opacityToggle.addEventListener("click", function () {
+  if (opacityToggle) opacityToggle.addEventListener("click", function () {
     if (overlayOpacity > 0) {
       lastNonZeroOpacity = overlayOpacity;
       overlayOpacity = 0;
@@ -2103,9 +2159,9 @@ function setupControls() {
     updateBrushUI();
   });
 
-  document.getElementById("btn-smooth-ob").addEventListener("click", () => smoothOBMask());
-  document.getElementById("btn-smooth-cp").addEventListener("click", () => smoothCartPathMask());
-  document.getElementById("btn-smooth-terrain").addEventListener("click", () => smoothTerrainZones());
+  document.getElementById("btn-smooth-ob")?.addEventListener("click", () => smoothOBMask());
+  document.getElementById("btn-smooth-cp")?.addEventListener("click", () => smoothCartPathMask());
+  document.getElementById("btn-smooth-terrain")?.addEventListener("click", () => smoothTerrainZones());
 
   // Undo (Ctrl+Z)
   window.addEventListener("keydown", (e) => {
