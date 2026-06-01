@@ -6,7 +6,25 @@ import { degreeOffsetsFromMeters, enumerateTiles, lonToTileX, latToTileY, tileSp
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const courseId = "lomond-country-club";
+
+// ---------------------------------------------------------------------------
+// CLI parameterization (2026-06-01): this fetcher was originally hardcoded to
+// Lomond. It now accepts an optional course slug + center lat/lon so the same
+// script pulls GSI basemap tiles (photo + DEM + DEM5A lidar) for ANY course.
+//
+//   node scripts/fetch-gsi-basemap.mjs                                  # Lomond (defaults)
+//   node scripts/fetch-gsi-basemap.mjs lomond-country-club              # Lomond, explicit
+//   node scripts/fetch-gsi-basemap.mjs taiheiyo-club-gotenba 35.2844768 138.8761690
+//
+// If lat/lon are omitted for a non-Lomond course, the script tries to read
+// "center" from Tools/UHoleGeo/config/<courseId>.json. Pass --force to ignore
+// the on-disk tile cache and re-download everything.
+// ---------------------------------------------------------------------------
+
+const positional = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const forceRefetch = process.argv.includes("--force");
+
+const courseId = positional[0] || "lomond-country-club";
 const courseRoot = path.join(root, "output", courseId);
 const basemapRoot = path.join(courseRoot, "basemap");
 const photoRoot = path.join(basemapRoot, "gsi-photo-z17");
@@ -14,9 +32,9 @@ const demRoot = path.join(basemapRoot, "gsi-dem-z14");
 const dem5aRoot = path.join(basemapRoot, "gsi-dem5a-z15");
 const manifestPath = path.join(basemapRoot, "manifest.json");
 const provenancePath = path.join(courseRoot, "provenance.json");
-const forceRefetch = process.argv.includes("--force");
 
-const inferredCourseCenter = {
+// Lomond's original hardcoded center, kept as the default for backward compat.
+const LOMOND_CENTER = {
   lat: 34.9115,
   lon: 136.4370,
   source: "manual_verification_google_maps",
@@ -24,7 +42,39 @@ const inferredCourseCenter = {
   note: "Clubhouse verified at 34.9132, 136.4416 via Google Maps. Course center estimated from aerial imagery to be slightly west-northwest of clubhouse."
 };
 
+// Resolve the course center. Priority: CLI lat/lon > UHoleGeo config > Lomond default.
+async function resolveCenter() {
+  const cliLat = positional[1] !== undefined ? Number(positional[1]) : null;
+  const cliLon = positional[2] !== undefined ? Number(positional[2]) : null;
+  if (cliLat !== null && cliLon !== null && !Number.isNaN(cliLat) && !Number.isNaN(cliLon)) {
+    return { lat: cliLat, lon: cliLon, source: "cli_argument", confidence: "high",
+      note: "Center supplied on the command line." };
+  }
+
+  if (courseId === "lomond-country-club") return LOMOND_CENTER;
+
+  // Try to read center from the UHoleGeo config for this course.
+  const cfgPath = path.join(root, "..", "UHoleGeo", "config", `${courseId}.json`);
+  try {
+    const cfg = JSON.parse(await readFile(cfgPath, "utf8"));
+    if (cfg.center && typeof cfg.center.lat === "number" && typeof cfg.center.lon === "number") {
+      return { lat: cfg.center.lat, lon: cfg.center.lon, source: "uholegeo_config",
+        confidence: "high", note: `Center read from ${path.relative(root, cfgPath)}.` };
+    }
+  } catch { /* no config — fall through to error */ }
+
+  throw new Error(
+    `No center for course "${courseId}". Pass lat/lon on the CLI ` +
+    `(node scripts/fetch-gsi-basemap.mjs ${courseId} <lat> <lon>) ` +
+    `or add a "center" block to Tools/UHoleGeo/config/${courseId}.json.`
+  );
+}
+
 async function main() {
+  const inferredCourseCenter = await resolveCenter();
+  console.log(`Course: ${courseId}`);
+  console.log(`Center: ${inferredCourseCenter.lat}, ${inferredCourseCenter.lon} (${inferredCourseCenter.source})`);
+
   await mkdir(photoRoot, { recursive: true });
   await mkdir(demRoot, { recursive: true });
   await mkdir(dem5aRoot, { recursive: true });
@@ -119,7 +169,7 @@ async function main() {
   };
 
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n", "utf8");
-  await updateProvenance(manifest);
+  await updateProvenance(manifest, inferredCourseCenter);
   await updateAlignmentTargets();
 
   console.log(`Saved base-map manifest to ${manifestPath}`);
@@ -223,7 +273,7 @@ async function downloadTilesWithMissing({ tiles, outputDir, extension, makeUrl }
   return { saved, missing };
 }
 
-async function updateProvenance(manifest) {
+async function updateProvenance(manifest, inferredCourseCenter) {
   let provenance = { sources: [] };
   try {
     provenance = JSON.parse(await readFile(provenancePath, "utf8"));

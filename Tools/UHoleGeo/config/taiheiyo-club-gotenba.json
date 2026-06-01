@@ -3,10 +3,10 @@
   "display_name": "Taiheiyo Club Gotenba Course",
   "native_name": "太平洋クラブ 御殿場コース",
 
-  "_TODO_center": "Placeholder coords centred on Itazuma 941-1, Gotemba — Cesar to refine in Google Earth. Gotemba city centroid is 35.308694, 138.934611; the course sits slightly southwest in Itazuma district near the East Fuji JGSDF training grounds.",
   "center": {
-    "lat": 35.291,
-    "lon": 138.902
+    "lat": 35.28447684435386,
+    "lon": 138.87616903771095,
+    "_source": "Cesar-confirmed in Google Earth 2026-06-01."
   },
 
   "sources": {

@@ -1,0 +1,5291 @@
+{
+  "schema_version": "1.0.0",
+  "course_id": "taiheiyo-club-gotenba",
+  "provider": "gsi",
+  "center": {
+    "lat": 35.28447684435386,
+    "lon": 138.87616903771095,
+    "source": "cli_argument",
+    "confidence": "high",
+    "note": "Center supplied on the command line."
+  },
+  "fetched_at": "2026-06-01T09:12:29.763Z",
+  "force_refetch": false,
+  "attribution": {
+    "short": "GSI / GSI Tiles",
+    "detail": "Base map tiles fetched from GSI. Attribution should cite GSI or GSI Tiles and link to the GSI tile list page."
+  },
+  "datasets": [
+    {
+      "id": "gsi-photo-z17",
+      "label": "GSI seamless photo",
+      "type": "imagery",
+      "zoom": 17,
+      "tile_span_m": 249.58,
+      "local_root": "basemap/gsi-photo-z17",
+      "tile_count": 340,
+      "tiles": [
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51782,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.30391856531169,
+            "east": 138.84796142578125,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51782,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.30391856531169,
+            "east": 138.8507080078125,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51782,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.30391856531169,
+            "east": 138.85345458984375,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51782,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.30391856531169,
+            "east": 138.856201171875,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51782,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.30391856531169,
+            "east": 138.85894775390625,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51782,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.30391856531169,
+            "east": 138.8616943359375,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51782,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.30391856531169,
+            "east": 138.86444091796875,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51782,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.30391856531169,
+            "east": 138.8671875,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51782,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.30391856531169,
+            "east": 138.86993408203125,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51782,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.30391856531169,
+            "east": 138.8726806640625,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51782,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.30391856531169,
+            "east": 138.87542724609375,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51782,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.30391856531169,
+            "east": 138.878173828125,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51782,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.30391856531169,
+            "east": 138.88092041015625,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51782,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.30391856531169,
+            "east": 138.8836669921875,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51782,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.30391856531169,
+            "east": 138.88641357421875,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51782,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.30391856531169,
+            "east": 138.88916015625,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51782,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.30391856531169,
+            "east": 138.89190673828125,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51782,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.30391856531169,
+            "east": 138.8946533203125,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51782,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.30391856531169,
+            "east": 138.89739990234375,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51782,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.30391856531169,
+            "east": 138.900146484375,
+            "south": 35.30167705397601
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51782.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51782.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51783,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.30167705397601,
+            "east": 138.84796142578125,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51783,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.30167705397601,
+            "east": 138.8507080078125,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51783,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.30167705397601,
+            "east": 138.85345458984375,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51783,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.30167705397601,
+            "east": 138.856201171875,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51783,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.30167705397601,
+            "east": 138.85894775390625,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51783,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.30167705397601,
+            "east": 138.8616943359375,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51783,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.30167705397601,
+            "east": 138.86444091796875,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51783,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.30167705397601,
+            "east": 138.8671875,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51783,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.30167705397601,
+            "east": 138.86993408203125,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51783,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.30167705397601,
+            "east": 138.8726806640625,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51783,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.30167705397601,
+            "east": 138.87542724609375,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51783,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.30167705397601,
+            "east": 138.878173828125,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51783,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.30167705397601,
+            "east": 138.88092041015625,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51783,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.30167705397601,
+            "east": 138.8836669921875,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51783,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.30167705397601,
+            "east": 138.88641357421875,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51783,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.30167705397601,
+            "east": 138.88916015625,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51783,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.30167705397601,
+            "east": 138.89190673828125,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51783,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.30167705397601,
+            "east": 138.8946533203125,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51783,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.30167705397601,
+            "east": 138.89739990234375,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51783,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.30167705397601,
+            "east": 138.900146484375,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51783.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51783.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51784,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.299435480545434,
+            "east": 138.84796142578125,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51784,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.299435480545434,
+            "east": 138.8507080078125,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51784,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.299435480545434,
+            "east": 138.85345458984375,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51784,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.299435480545434,
+            "east": 138.856201171875,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51784,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.299435480545434,
+            "east": 138.85894775390625,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51784,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.299435480545434,
+            "east": 138.8616943359375,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51784,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.299435480545434,
+            "east": 138.86444091796875,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51784,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.299435480545434,
+            "east": 138.8671875,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51784,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.299435480545434,
+            "east": 138.86993408203125,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51784,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.299435480545434,
+            "east": 138.8726806640625,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51784,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.299435480545434,
+            "east": 138.87542724609375,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51784,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.299435480545434,
+            "east": 138.878173828125,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51784,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.299435480545434,
+            "east": 138.88092041015625,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51784,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.299435480545434,
+            "east": 138.8836669921875,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51784,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.299435480545434,
+            "east": 138.88641357421875,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51784,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.299435480545434,
+            "east": 138.88916015625,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51784,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.299435480545434,
+            "east": 138.89190673828125,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51784,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.299435480545434,
+            "east": 138.8946533203125,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51784,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.299435480545434,
+            "east": 138.89739990234375,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51784,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.299435480545434,
+            "east": 138.900146484375,
+            "south": 35.297193845021724
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51784.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51784.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51785,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.297193845021724,
+            "east": 138.84796142578125,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51785,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.297193845021724,
+            "east": 138.8507080078125,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51785,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.297193845021724,
+            "east": 138.85345458984375,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51785,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.297193845021724,
+            "east": 138.856201171875,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51785,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.297193845021724,
+            "east": 138.85894775390625,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51785,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.297193845021724,
+            "east": 138.8616943359375,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51785,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.297193845021724,
+            "east": 138.86444091796875,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51785,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.297193845021724,
+            "east": 138.8671875,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51785,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.297193845021724,
+            "east": 138.86993408203125,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51785,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.297193845021724,
+            "east": 138.8726806640625,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51785,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.297193845021724,
+            "east": 138.87542724609375,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51785,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.297193845021724,
+            "east": 138.878173828125,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51785,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.297193845021724,
+            "east": 138.88092041015625,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51785,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.297193845021724,
+            "east": 138.8836669921875,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51785,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.297193845021724,
+            "east": 138.88641357421875,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51785,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.297193845021724,
+            "east": 138.88916015625,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51785,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.297193845021724,
+            "east": 138.89190673828125,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51785,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.297193845021724,
+            "east": 138.8946533203125,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51785,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.297193845021724,
+            "east": 138.89739990234375,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51785,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.297193845021724,
+            "east": 138.900146484375,
+            "south": 35.29495214740657
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51785.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51785.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51786,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.29495214740657,
+            "east": 138.84796142578125,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51786,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.29495214740657,
+            "east": 138.8507080078125,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51786,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.29495214740657,
+            "east": 138.85345458984375,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51786,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.29495214740657,
+            "east": 138.856201171875,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51786,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.29495214740657,
+            "east": 138.85894775390625,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51786,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.29495214740657,
+            "east": 138.8616943359375,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51786,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.29495214740657,
+            "east": 138.86444091796875,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51786,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.29495214740657,
+            "east": 138.8671875,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51786,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.29495214740657,
+            "east": 138.86993408203125,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51786,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.29495214740657,
+            "east": 138.8726806640625,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51786,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.29495214740657,
+            "east": 138.87542724609375,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51786,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.29495214740657,
+            "east": 138.878173828125,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51786,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.29495214740657,
+            "east": 138.88092041015625,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51786,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.29495214740657,
+            "east": 138.8836669921875,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51786,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.29495214740657,
+            "east": 138.88641357421875,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51786,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.29495214740657,
+            "east": 138.88916015625,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51786,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.29495214740657,
+            "east": 138.89190673828125,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51786,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.29495214740657,
+            "east": 138.8946533203125,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51786,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.29495214740657,
+            "east": 138.89739990234375,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51786,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.29495214740657,
+            "east": 138.900146484375,
+            "south": 35.29271038770169
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51786.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51786.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51787,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.29271038770169,
+            "east": 138.84796142578125,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51787,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.29271038770169,
+            "east": 138.8507080078125,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51787,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.29271038770169,
+            "east": 138.85345458984375,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51787,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.29271038770169,
+            "east": 138.856201171875,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51787,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.29271038770169,
+            "east": 138.85894775390625,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51787,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.29271038770169,
+            "east": 138.8616943359375,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51787,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.29271038770169,
+            "east": 138.86444091796875,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51787,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.29271038770169,
+            "east": 138.8671875,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51787,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.29271038770169,
+            "east": 138.86993408203125,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51787,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.29271038770169,
+            "east": 138.8726806640625,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51787,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.29271038770169,
+            "east": 138.87542724609375,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51787,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.29271038770169,
+            "east": 138.878173828125,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51787,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.29271038770169,
+            "east": 138.88092041015625,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51787,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.29271038770169,
+            "east": 138.8836669921875,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51787,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.29271038770169,
+            "east": 138.88641357421875,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51787,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.29271038770169,
+            "east": 138.88916015625,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51787,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.29271038770169,
+            "east": 138.89190673828125,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51787,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.29271038770169,
+            "east": 138.8946533203125,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51787,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.29271038770169,
+            "east": 138.89739990234375,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51787,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.29271038770169,
+            "east": 138.900146484375,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51787.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51787.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51788,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.290468565908775,
+            "east": 138.84796142578125,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51788,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.290468565908775,
+            "east": 138.8507080078125,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51788,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.290468565908775,
+            "east": 138.85345458984375,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51788,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.290468565908775,
+            "east": 138.856201171875,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51788,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.290468565908775,
+            "east": 138.85894775390625,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51788,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.290468565908775,
+            "east": 138.8616943359375,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51788,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.290468565908775,
+            "east": 138.86444091796875,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51788,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.290468565908775,
+            "east": 138.8671875,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51788,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.290468565908775,
+            "east": 138.86993408203125,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51788,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.290468565908775,
+            "east": 138.8726806640625,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51788,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.290468565908775,
+            "east": 138.87542724609375,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51788,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.290468565908775,
+            "east": 138.878173828125,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51788,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.290468565908775,
+            "east": 138.88092041015625,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51788,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.290468565908775,
+            "east": 138.8836669921875,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51788,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.290468565908775,
+            "east": 138.88641357421875,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51788,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.290468565908775,
+            "east": 138.88916015625,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51788,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.290468565908775,
+            "east": 138.89190673828125,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51788,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.290468565908775,
+            "east": 138.8946533203125,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51788,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.290468565908775,
+            "east": 138.89739990234375,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51788,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.290468565908775,
+            "east": 138.900146484375,
+            "south": 35.288226682029546
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51788.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51788.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51789,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.288226682029546,
+            "east": 138.84796142578125,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51789,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.288226682029546,
+            "east": 138.8507080078125,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51789,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.288226682029546,
+            "east": 138.85345458984375,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51789,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.288226682029546,
+            "east": 138.856201171875,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51789,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.288226682029546,
+            "east": 138.85894775390625,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51789,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.288226682029546,
+            "east": 138.8616943359375,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51789,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.288226682029546,
+            "east": 138.86444091796875,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51789,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.288226682029546,
+            "east": 138.8671875,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51789,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.288226682029546,
+            "east": 138.86993408203125,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51789,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.288226682029546,
+            "east": 138.8726806640625,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51789,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.288226682029546,
+            "east": 138.87542724609375,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51789,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.288226682029546,
+            "east": 138.878173828125,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51789,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.288226682029546,
+            "east": 138.88092041015625,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51789,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.288226682029546,
+            "east": 138.8836669921875,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51789,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.288226682029546,
+            "east": 138.88641357421875,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51789,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.288226682029546,
+            "east": 138.88916015625,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51789,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.288226682029546,
+            "east": 138.89190673828125,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51789,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.288226682029546,
+            "east": 138.8946533203125,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51789,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.288226682029546,
+            "east": 138.89739990234375,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51789,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.288226682029546,
+            "east": 138.900146484375,
+            "south": 35.28598473606574
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51789.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51789.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51790,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.28598473606574,
+            "east": 138.84796142578125,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51790,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.28598473606574,
+            "east": 138.8507080078125,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51790,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.28598473606574,
+            "east": 138.85345458984375,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51790,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.28598473606574,
+            "east": 138.856201171875,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51790,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.28598473606574,
+            "east": 138.85894775390625,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51790,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.28598473606574,
+            "east": 138.8616943359375,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51790,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.28598473606574,
+            "east": 138.86444091796875,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51790,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.28598473606574,
+            "east": 138.8671875,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51790,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.28598473606574,
+            "east": 138.86993408203125,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51790,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.28598473606574,
+            "east": 138.8726806640625,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51790,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.28598473606574,
+            "east": 138.87542724609375,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51790,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.28598473606574,
+            "east": 138.878173828125,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51790,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.28598473606574,
+            "east": 138.88092041015625,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51790,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.28598473606574,
+            "east": 138.8836669921875,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51790,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.28598473606574,
+            "east": 138.88641357421875,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51790,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.28598473606574,
+            "east": 138.88916015625,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51790,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.28598473606574,
+            "east": 138.89190673828125,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51790,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.28598473606574,
+            "east": 138.8946533203125,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51790,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.28598473606574,
+            "east": 138.89739990234375,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51790,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.28598473606574,
+            "east": 138.900146484375,
+            "south": 35.28374272801905
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51790.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51790.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51791,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.28374272801905,
+            "east": 138.84796142578125,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51791,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.28374272801905,
+            "east": 138.8507080078125,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51791,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.28374272801905,
+            "east": 138.85345458984375,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51791,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.28374272801905,
+            "east": 138.856201171875,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51791,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.28374272801905,
+            "east": 138.85894775390625,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51791,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.28374272801905,
+            "east": 138.8616943359375,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51791,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.28374272801905,
+            "east": 138.86444091796875,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51791,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.28374272801905,
+            "east": 138.8671875,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51791,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.28374272801905,
+            "east": 138.86993408203125,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51791,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.28374272801905,
+            "east": 138.8726806640625,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51791,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.28374272801905,
+            "east": 138.87542724609375,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51791,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.28374272801905,
+            "east": 138.878173828125,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51791,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.28374272801905,
+            "east": 138.88092041015625,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51791,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.28374272801905,
+            "east": 138.8836669921875,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51791,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.28374272801905,
+            "east": 138.88641357421875,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51791,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.28374272801905,
+            "east": 138.88916015625,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51791,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.28374272801905,
+            "east": 138.89190673828125,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51791,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.28374272801905,
+            "east": 138.8946533203125,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51791,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.28374272801905,
+            "east": 138.89739990234375,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51791,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.28374272801905,
+            "east": 138.900146484375,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51791.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51791.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51792,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.28150065789119,
+            "east": 138.84796142578125,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51792,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.28150065789119,
+            "east": 138.8507080078125,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51792,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.28150065789119,
+            "east": 138.85345458984375,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51792,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.28150065789119,
+            "east": 138.856201171875,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51792,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.28150065789119,
+            "east": 138.85894775390625,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51792,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.28150065789119,
+            "east": 138.8616943359375,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51792,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.28150065789119,
+            "east": 138.86444091796875,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51792,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.28150065789119,
+            "east": 138.8671875,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51792,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.28150065789119,
+            "east": 138.86993408203125,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51792,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.28150065789119,
+            "east": 138.8726806640625,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51792,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.28150065789119,
+            "east": 138.87542724609375,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51792,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.28150065789119,
+            "east": 138.878173828125,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51792,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.28150065789119,
+            "east": 138.88092041015625,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51792,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.28150065789119,
+            "east": 138.8836669921875,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51792,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.28150065789119,
+            "east": 138.88641357421875,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51792,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.28150065789119,
+            "east": 138.88916015625,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51792,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.28150065789119,
+            "east": 138.89190673828125,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51792,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.28150065789119,
+            "east": 138.8946533203125,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51792,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.28150065789119,
+            "east": 138.89739990234375,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51792,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.28150065789119,
+            "east": 138.900146484375,
+            "south": 35.279258525683886
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51792.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51792.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51793,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.279258525683886,
+            "east": 138.84796142578125,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51793,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.279258525683886,
+            "east": 138.8507080078125,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51793,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.279258525683886,
+            "east": 138.85345458984375,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51793,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.279258525683886,
+            "east": 138.856201171875,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51793,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.279258525683886,
+            "east": 138.85894775390625,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51793,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.279258525683886,
+            "east": 138.8616943359375,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51793,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.279258525683886,
+            "east": 138.86444091796875,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51793,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.279258525683886,
+            "east": 138.8671875,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51793,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.279258525683886,
+            "east": 138.86993408203125,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51793,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.279258525683886,
+            "east": 138.8726806640625,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51793,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.279258525683886,
+            "east": 138.87542724609375,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51793,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.279258525683886,
+            "east": 138.878173828125,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51793,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.279258525683886,
+            "east": 138.88092041015625,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51793,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.279258525683886,
+            "east": 138.8836669921875,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51793,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.279258525683886,
+            "east": 138.88641357421875,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51793,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.279258525683886,
+            "east": 138.88916015625,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51793,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.279258525683886,
+            "east": 138.89190673828125,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51793,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.279258525683886,
+            "east": 138.8946533203125,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51793,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.279258525683886,
+            "east": 138.89739990234375,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51793,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.279258525683886,
+            "east": 138.900146484375,
+            "south": 35.27701633139884
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51793.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51793.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51794,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.27701633139884,
+            "east": 138.84796142578125,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51794,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.27701633139884,
+            "east": 138.8507080078125,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51794,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.27701633139884,
+            "east": 138.85345458984375,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51794,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.27701633139884,
+            "east": 138.856201171875,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51794,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.27701633139884,
+            "east": 138.85894775390625,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51794,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.27701633139884,
+            "east": 138.8616943359375,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51794,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.27701633139884,
+            "east": 138.86444091796875,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51794,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.27701633139884,
+            "east": 138.8671875,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51794,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.27701633139884,
+            "east": 138.86993408203125,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51794,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.27701633139884,
+            "east": 138.8726806640625,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51794,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.27701633139884,
+            "east": 138.87542724609375,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51794,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.27701633139884,
+            "east": 138.878173828125,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51794,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.27701633139884,
+            "east": 138.88092041015625,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51794,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.27701633139884,
+            "east": 138.8836669921875,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51794,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.27701633139884,
+            "east": 138.88641357421875,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51794,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.27701633139884,
+            "east": 138.88916015625,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51794,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.27701633139884,
+            "east": 138.89190673828125,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51794,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.27701633139884,
+            "east": 138.8946533203125,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51794,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.27701633139884,
+            "east": 138.89739990234375,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51794,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.27701633139884,
+            "east": 138.900146484375,
+            "south": 35.27477407503774
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51794.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51794.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51795,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.27477407503774,
+            "east": 138.84796142578125,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51795,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.27477407503774,
+            "east": 138.8507080078125,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51795,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.27477407503774,
+            "east": 138.85345458984375,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51795,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.27477407503774,
+            "east": 138.856201171875,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51795,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.27477407503774,
+            "east": 138.85894775390625,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51795,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.27477407503774,
+            "east": 138.8616943359375,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51795,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.27477407503774,
+            "east": 138.86444091796875,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51795,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.27477407503774,
+            "east": 138.8671875,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51795,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.27477407503774,
+            "east": 138.86993408203125,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51795,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.27477407503774,
+            "east": 138.8726806640625,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51795,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.27477407503774,
+            "east": 138.87542724609375,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51795,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.27477407503774,
+            "east": 138.878173828125,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51795,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.27477407503774,
+            "east": 138.88092041015625,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51795,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.27477407503774,
+            "east": 138.8836669921875,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51795,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.27477407503774,
+            "east": 138.88641357421875,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51795,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.27477407503774,
+            "east": 138.88916015625,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51795,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.27477407503774,
+            "east": 138.89190673828125,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51795,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.27477407503774,
+            "east": 138.8946533203125,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51795,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.27477407503774,
+            "east": 138.89739990234375,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51795,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.27477407503774,
+            "east": 138.900146484375,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51795.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51795.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51796,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.27253175660236,
+            "east": 138.84796142578125,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51796,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.27253175660236,
+            "east": 138.8507080078125,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51796,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.27253175660236,
+            "east": 138.85345458984375,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51796,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.27253175660236,
+            "east": 138.856201171875,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51796,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.27253175660236,
+            "east": 138.85894775390625,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51796,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.27253175660236,
+            "east": 138.8616943359375,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51796,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.27253175660236,
+            "east": 138.86444091796875,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51796,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.27253175660236,
+            "east": 138.8671875,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51796,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.27253175660236,
+            "east": 138.86993408203125,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51796,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.27253175660236,
+            "east": 138.8726806640625,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51796,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.27253175660236,
+            "east": 138.87542724609375,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51796,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.27253175660236,
+            "east": 138.878173828125,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51796,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.27253175660236,
+            "east": 138.88092041015625,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51796,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.27253175660236,
+            "east": 138.8836669921875,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51796,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.27253175660236,
+            "east": 138.88641357421875,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51796,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.27253175660236,
+            "east": 138.88916015625,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51796,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.27253175660236,
+            "east": 138.89190673828125,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51796,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.27253175660236,
+            "east": 138.8946533203125,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51796,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.27253175660236,
+            "east": 138.89739990234375,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51796,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.27253175660236,
+            "east": 138.900146484375,
+            "south": 35.270289376094404
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51796.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51796.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51797,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.270289376094404,
+            "east": 138.84796142578125,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51797,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.270289376094404,
+            "east": 138.8507080078125,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51797,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.270289376094404,
+            "east": 138.85345458984375,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51797,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.270289376094404,
+            "east": 138.856201171875,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51797,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.270289376094404,
+            "east": 138.85894775390625,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51797,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.270289376094404,
+            "east": 138.8616943359375,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51797,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.270289376094404,
+            "east": 138.86444091796875,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51797,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.270289376094404,
+            "east": 138.8671875,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51797,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.270289376094404,
+            "east": 138.86993408203125,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51797,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.270289376094404,
+            "east": 138.8726806640625,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51797,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.270289376094404,
+            "east": 138.87542724609375,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51797,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.270289376094404,
+            "east": 138.878173828125,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51797,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.270289376094404,
+            "east": 138.88092041015625,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51797,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.270289376094404,
+            "east": 138.8836669921875,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51797,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.270289376094404,
+            "east": 138.88641357421875,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51797,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.270289376094404,
+            "east": 138.88916015625,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51797,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.270289376094404,
+            "east": 138.89190673828125,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51797,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.270289376094404,
+            "east": 138.8946533203125,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51797,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.270289376094404,
+            "east": 138.89739990234375,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51797,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.270289376094404,
+            "east": 138.900146484375,
+            "south": 35.26804693351554
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51797.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51797.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116088,
+          "y": 51798,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.26804693351554,
+            "east": 138.84796142578125,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116088-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116088/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116089,
+          "y": 51798,
+          "bounds": {
+            "west": 138.84796142578125,
+            "north": 35.26804693351554,
+            "east": 138.8507080078125,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116089-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116089/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116090,
+          "y": 51798,
+          "bounds": {
+            "west": 138.8507080078125,
+            "north": 35.26804693351554,
+            "east": 138.85345458984375,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116090-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116090/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116091,
+          "y": 51798,
+          "bounds": {
+            "west": 138.85345458984375,
+            "north": 35.26804693351554,
+            "east": 138.856201171875,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116091-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116091/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116092,
+          "y": 51798,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.26804693351554,
+            "east": 138.85894775390625,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116092-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116092/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116093,
+          "y": 51798,
+          "bounds": {
+            "west": 138.85894775390625,
+            "north": 35.26804693351554,
+            "east": 138.8616943359375,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116093-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116093/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116094,
+          "y": 51798,
+          "bounds": {
+            "west": 138.8616943359375,
+            "north": 35.26804693351554,
+            "east": 138.86444091796875,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116094-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116094/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116095,
+          "y": 51798,
+          "bounds": {
+            "west": 138.86444091796875,
+            "north": 35.26804693351554,
+            "east": 138.8671875,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116095-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116095/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116096,
+          "y": 51798,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.26804693351554,
+            "east": 138.86993408203125,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116096-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116096/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116097,
+          "y": 51798,
+          "bounds": {
+            "west": 138.86993408203125,
+            "north": 35.26804693351554,
+            "east": 138.8726806640625,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116097-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116097/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116098,
+          "y": 51798,
+          "bounds": {
+            "west": 138.8726806640625,
+            "north": 35.26804693351554,
+            "east": 138.87542724609375,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116098-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116098/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116099,
+          "y": 51798,
+          "bounds": {
+            "west": 138.87542724609375,
+            "north": 35.26804693351554,
+            "east": 138.878173828125,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116099-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116099/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116100,
+          "y": 51798,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.26804693351554,
+            "east": 138.88092041015625,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116100-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116100/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116101,
+          "y": 51798,
+          "bounds": {
+            "west": 138.88092041015625,
+            "north": 35.26804693351554,
+            "east": 138.8836669921875,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116101-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116101/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116102,
+          "y": 51798,
+          "bounds": {
+            "west": 138.8836669921875,
+            "north": 35.26804693351554,
+            "east": 138.88641357421875,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116102-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116102/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116103,
+          "y": 51798,
+          "bounds": {
+            "west": 138.88641357421875,
+            "north": 35.26804693351554,
+            "east": 138.88916015625,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116103-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116103/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116104,
+          "y": 51798,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.26804693351554,
+            "east": 138.89190673828125,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116104-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116104/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116105,
+          "y": 51798,
+          "bounds": {
+            "west": 138.89190673828125,
+            "north": 35.26804693351554,
+            "east": 138.8946533203125,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116105-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116105/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116106,
+          "y": 51798,
+          "bounds": {
+            "west": 138.8946533203125,
+            "north": 35.26804693351554,
+            "east": 138.89739990234375,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116106-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116106/51798.jpg",
+          "cached": false
+        },
+        {
+          "z": 17,
+          "x": 116107,
+          "y": 51798,
+          "bounds": {
+            "west": 138.89739990234375,
+            "north": 35.26804693351554,
+            "east": 138.900146484375,
+            "south": 35.26580442886754
+          },
+          "local_path": "basemap/gsi-photo-z17/17-116107-51798.jpg",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/17/116107/51798.jpg",
+          "cached": false
+        }
+      ]
+    },
+    {
+      "id": "gsi-dem-z14",
+      "label": "GSI DEM",
+      "type": "elevation",
+      "zoom": 14,
+      "tile_span_m": 1996.64,
+      "local_root": "basemap/gsi-dem-z14",
+      "tile_count": 9,
+      "tiles": [
+        {
+          "z": 14,
+          "x": 14511,
+          "y": 6472,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.31736632923787,
+            "east": 138.8671875,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-dem-z14/14-14511-6472.txt",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem/14/14511/6472.txt",
+          "cached": false
+        },
+        {
+          "z": 14,
+          "x": 14512,
+          "y": 6472,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.31736632923787,
+            "east": 138.88916015625,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-dem-z14/14-14512-6472.txt",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem/14/14512/6472.txt",
+          "cached": false
+        },
+        {
+          "z": 14,
+          "x": 14513,
+          "y": 6472,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.31736632923787,
+            "east": 138.9111328125,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-dem-z14/14-14513-6472.txt",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem/14/14513/6472.txt",
+          "cached": false
+        },
+        {
+          "z": 14,
+          "x": 14511,
+          "y": 6473,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.299435480545434,
+            "east": 138.8671875,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-dem-z14/14-14511-6473.txt",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem/14/14511/6473.txt",
+          "cached": false
+        },
+        {
+          "z": 14,
+          "x": 14512,
+          "y": 6473,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.299435480545434,
+            "east": 138.88916015625,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-dem-z14/14-14512-6473.txt",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem/14/14512/6473.txt",
+          "cached": false
+        },
+        {
+          "z": 14,
+          "x": 14513,
+          "y": 6473,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.299435480545434,
+            "east": 138.9111328125,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-dem-z14/14-14513-6473.txt",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem/14/14513/6473.txt",
+          "cached": false
+        },
+        {
+          "z": 14,
+          "x": 14511,
+          "y": 6474,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.28150065789119,
+            "east": 138.8671875,
+            "south": 35.263561862152095
+          },
+          "local_path": "basemap/gsi-dem-z14/14-14511-6474.txt",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem/14/14511/6474.txt",
+          "cached": false
+        },
+        {
+          "z": 14,
+          "x": 14512,
+          "y": 6474,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.28150065789119,
+            "east": 138.88916015625,
+            "south": 35.263561862152095
+          },
+          "local_path": "basemap/gsi-dem-z14/14-14512-6474.txt",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem/14/14512/6474.txt",
+          "cached": false
+        },
+        {
+          "z": 14,
+          "x": 14513,
+          "y": 6474,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.28150065789119,
+            "east": 138.9111328125,
+            "south": 35.263561862152095
+          },
+          "local_path": "basemap/gsi-dem-z14/14-14513-6474.txt",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem/14/14513/6474.txt",
+          "cached": false
+        }
+      ]
+    },
+    {
+      "id": "gsi-dem5a-z15",
+      "label": "GSI DEM5A (5m lidar)",
+      "type": "elevation_hires",
+      "zoom": 15,
+      "tile_span_m": 998.32,
+      "local_root": "basemap/gsi-dem5a-z15",
+      "tile_count": 25,
+      "tiles_available": 25,
+      "tiles_missing": 0,
+      "tiles": [
+        {
+          "z": 15,
+          "x": 29022,
+          "y": 12945,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.30840140169162,
+            "east": 138.856201171875,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29022-12945.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29022/12945.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29023,
+          "y": 12945,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.30840140169162,
+            "east": 138.8671875,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29023-12945.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29023/12945.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29024,
+          "y": 12945,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.30840140169162,
+            "east": 138.878173828125,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29024-12945.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29024/12945.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29025,
+          "y": 12945,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.30840140169162,
+            "east": 138.88916015625,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29025-12945.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29025/12945.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29026,
+          "y": 12945,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.30840140169162,
+            "east": 138.900146484375,
+            "south": 35.299435480545434
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29026-12945.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29026/12945.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29022,
+          "y": 12946,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.299435480545434,
+            "east": 138.856201171875,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29022-12946.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29022/12946.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29023,
+          "y": 12946,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.299435480545434,
+            "east": 138.8671875,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29023-12946.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29023/12946.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29024,
+          "y": 12946,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.299435480545434,
+            "east": 138.878173828125,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29024-12946.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29024/12946.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29025,
+          "y": 12946,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.299435480545434,
+            "east": 138.88916015625,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29025-12946.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29025/12946.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29026,
+          "y": 12946,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.299435480545434,
+            "east": 138.900146484375,
+            "south": 35.290468565908775
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29026-12946.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29026/12946.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29022,
+          "y": 12947,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.290468565908775,
+            "east": 138.856201171875,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29022-12947.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29022/12947.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29023,
+          "y": 12947,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.290468565908775,
+            "east": 138.8671875,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29023-12947.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29023/12947.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29024,
+          "y": 12947,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.290468565908775,
+            "east": 138.878173828125,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29024-12947.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29024/12947.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29025,
+          "y": 12947,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.290468565908775,
+            "east": 138.88916015625,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29025-12947.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29025/12947.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29026,
+          "y": 12947,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.290468565908775,
+            "east": 138.900146484375,
+            "south": 35.28150065789119
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29026-12947.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29026/12947.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29022,
+          "y": 12948,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.28150065789119,
+            "east": 138.856201171875,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29022-12948.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29022/12948.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29023,
+          "y": 12948,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.28150065789119,
+            "east": 138.8671875,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29023-12948.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29023/12948.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29024,
+          "y": 12948,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.28150065789119,
+            "east": 138.878173828125,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29024-12948.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29024/12948.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29025,
+          "y": 12948,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.28150065789119,
+            "east": 138.88916015625,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29025-12948.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29025/12948.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29026,
+          "y": 12948,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.28150065789119,
+            "east": 138.900146484375,
+            "south": 35.27253175660236
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29026-12948.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29026/12948.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29022,
+          "y": 12949,
+          "bounds": {
+            "west": 138.84521484375,
+            "north": 35.27253175660236,
+            "east": 138.856201171875,
+            "south": 35.263561862152095
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29022-12949.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29022/12949.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29023,
+          "y": 12949,
+          "bounds": {
+            "west": 138.856201171875,
+            "north": 35.27253175660236,
+            "east": 138.8671875,
+            "south": 35.263561862152095
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29023-12949.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29023/12949.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29024,
+          "y": 12949,
+          "bounds": {
+            "west": 138.8671875,
+            "north": 35.27253175660236,
+            "east": 138.878173828125,
+            "south": 35.263561862152095
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29024-12949.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29024/12949.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29025,
+          "y": 12949,
+          "bounds": {
+            "west": 138.878173828125,
+            "north": 35.27253175660236,
+            "east": 138.88916015625,
+            "south": 35.263561862152095
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29025-12949.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29025/12949.png",
+          "cached": false
+        },
+        {
+          "z": 15,
+          "x": 29026,
+          "y": 12949,
+          "bounds": {
+            "west": 138.88916015625,
+            "north": 35.27253175660236,
+            "east": 138.900146484375,
+            "south": 35.263561862152095
+          },
+          "local_path": "basemap/gsi-dem5a-z15/15-29026-12949.png",
+          "source_url": "https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/29026/12949.png",
+          "cached": false
+        }
+      ]
+    }
+  ]
+}

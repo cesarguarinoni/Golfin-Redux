@@ -1,0 +1,36 @@
+{
+  "course_id": "taiheiyo-club-gotenba",
+  "sources": [
+    {
+      "source_id": "gsi-seamlessphoto",
+      "category": "public_authoritative",
+      "url": "https://maps.gsi.go.jp/development/ichiran.html",
+      "license_status": "attribution_required",
+      "trust_level": "public_authoritative",
+      "use_mode": "alignment_base_map_and_reference_imagery",
+      "notes": [
+        "GSI tile list indicates real-time app use is permitted with attribution.",
+        "Course center is currently an inferred approximate centroid and should be validated."
+      ]
+    },
+    {
+      "source_id": "gsi-dem",
+      "category": "public_authoritative",
+      "url": "https://maps.gsi.go.jp/development/demtile.html",
+      "license_status": "attribution_required",
+      "trust_level": "public_authoritative",
+      "use_mode": "elevation_reference"
+    }
+  ],
+  "base_map": {
+    "provider": "gsi",
+    "manifest_path": "basemap/manifest.json",
+    "inferred_center": {
+      "lat": 35.28447684435386,
+      "lon": 138.87616903771095,
+      "source": "cli_argument",
+      "confidence": "high",
+      "note": "Center supplied on the command line."
+    }
+  }
+}
