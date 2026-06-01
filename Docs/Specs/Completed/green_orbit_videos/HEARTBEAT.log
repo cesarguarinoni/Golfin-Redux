@@ -1,0 +1,139 @@
+=== green_orbit_videos kickoff baseline (iter-1) ===
+HEAD SHA: 33a23393c0d111a54cdb939861c6173e51dc05c2
+git status --porcelain --untracked-files=all (237 lines, pre-existing reimport churn):
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/BunkerSand.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/GreenSurface.mat
+[...continued through all 18 hole .mat/.asset churn...]
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-18-geo/TerrainLayer_T_OB_TintedRough.asset
+ M Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ M Docs/Specs/Active/green_ship_polish/HEARTBEAT.log
+ M Docs/Specs/Active/green_ship_polish/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/green_ship_polish/SELF_REVIEW.md
+ M Docs/Specs/Active/green_ship_polish/STATUS.md
+ M Docs/Specs/Active/green_ship_polish/reimport_report.txt
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M Tools/GreenSlope/bake_report.txt
+?? Docs/Diagnostics/_capture/h07_iter8_D5_south_north_compressed.jpg
+[...22 untracked files in _capture, green_ship_polish screenshots/videos, and tools ...]
+?? Tools/GreenSlope/scripts/capture-all-holes.mjs
+NOTE: All 237 dirty paths above are PRE-EXISTING churn from prior sessions (green_ship_polish, diagnostics).
+None were introduced by this session.
+=== end baseline ===
+
+2026-06-01T00:00:00 activated: green_orbit_videos iter-1 kickoff
+2026-06-01T00:30:00 Phase 1 complete: all 16 holes measured CLEAN (runs/row=0 at t=1.5s, calibrated threshold)
+2026-06-01T01:00:00 Phase 2: GreenSlopeGridOrbit.cs written, checking compile via Unity MCP
+2026-06-01T01:15:00 Phase 2: GreenSlopeGridOrbit.cs written (static analysis clean), proceeding to Unity MCP for compile + H7 orbit recording
+2026-06-01T01:30:00 Switching to direct MCP tool calls for compile verification and orbit recording
+2026-06-01T01:45:00 H7 grid orbit recording started, waiting for completion...
+2026-06-01T01:50:00 H7 normal orbit saved, re-recording grid orbit
+2026-06-01T02:00:00 Phase 2 complete: H7 grid orbit recorded (8MB, 60fps, 90deg_diff=26.61), normal orbit recorded (7.9MB, 90deg_diff=25.70), both captioned, frames extracted. Non-destructive verified (DontSave). Seam clean.
+2026-06-01T02:15:00 IMPLEMENTER_REPORT.md written. All PASS. Setting READY_FOR_SELF_REVIEW.
+2026-06-01T02:20:00 done, awaiting review
+
+=== green_orbit_videos Phase 3 kickoff baseline (iter-2) ===
+HEAD SHA: 33a23393c0d111a54cdb939861c6173e51dc05c2
+git status --porcelain --untracked-files=all (271 lines total):
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/BunkerSand.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/GreenSurface.mat
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/MAT_T_Fairway_Mix.mat
+[...continued for all 18-hole .mat/.asset reimport churn -- same as iter-1 baseline...]
+ M Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ M Docs/Specs/Active/green_ship_polish/HEARTBEAT.log (modified)
+ M Docs/Specs/Active/green_ship_polish/IMPLEMENTER_REPORT.md (modified)
+ M Docs/Specs/Active/green_ship_polish/SELF_REVIEW.md (modified)
+ M Docs/Specs/Active/green_ship_polish/STATUS.md (modified)
+ M Docs/Specs/Active/green_ship_polish/reimport_report.txt (modified)
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M Tools/GreenSlope/bake_report.txt
+?? Assets/Scripts/Editor/Recording/GreenSlopeGridOrbit.cs  (from Phase 2, this task)
+?? Assets/Scripts/Editor/Recording/GreenSlopeGridOrbit.cs.meta  (from Phase 2, this task)
+?? Docs/Diagnostics/_capture/h07_iter8_*.jpg (6 files, prior diagnostics)
+?? Docs/Specs/Active/green_orbit_videos/HEARTBEAT.log (this task)
+?? Docs/Specs/Active/green_orbit_videos/IMPLEMENTER_REPORT.md (this task)
+?? Docs/Specs/Active/green_orbit_videos/SELF_REVIEW.md (this task)
+?? Docs/Specs/Active/green_orbit_videos/SPEC.md (this task)
+?? Docs/Specs/Active/green_orbit_videos/STATUS.md (this task)
+?? Docs/Specs/Active/green_orbit_videos/screenshots/* (Phase 1+2 artifacts)
+?? Docs/Specs/Active/green_orbit_videos/videos/h07_orbit_grid.mp4 (Phase 2 stale -- will be overwritten)
+?? Docs/Specs/Active/green_orbit_videos/videos/h07_orbit_grid_captioned.mp4
+?? Docs/Specs/Active/green_orbit_videos/videos/h07_orbit_normal.mp4
+?? Docs/Specs/Active/green_orbit_videos/videos/h07_orbit_normal_captioned.mp4
+?? Tools/GreenSlope/scripts/capture-all-holes.mjs
+NOTE: All dirty paths OUTSIDE the task folder are PRE-EXISTING from prior sessions (green_ship_polish, diagnostics, MCP plugin bump).
+Phase 3 introduces: GreenSlopeGridOrbit.cs raycast fix + 32 new orbit videos (16 holes × 2).
+=== end Phase 3 baseline ===
+
+2026-06-01T17:50:00 Phase 3 activated: tree-safe raycast fix + 32-video mass-record run
+2026-06-01T18:06:00 Phase 3: Step 0 compile verified (tree-safe raycast hasMeshCollider=True), H7 normal orbit recorded with trees (7.5MB, 18:06)
+2026-06-01T18:08:25 Starting hole 01
+2026-06-01T18:08:57 H01 normal orbit done (7786644 bytes)
+2026-06-01T18:09:24 H01 grid orbit done (7791595 bytes)
+2026-06-01T18:09:28 H01 complete: trees=1 normal=True grid=True
+2026-06-01T18:09:28 Starting hole 02
+2026-06-01T18:09:59 H02 normal orbit done (7898743 bytes)
+2026-06-01T18:10:26 H02 grid orbit done (7885411 bytes)
+2026-06-01T18:10:30 H02 complete: trees=1 normal=True grid=True
+2026-06-01T18:10:30 Starting hole 03
+2026-06-01T18:11:01 H03 normal orbit done (7614662 bytes)
+2026-06-01T18:11:28 H03 grid orbit done (7723083 bytes)
+2026-06-01T18:11:32 H03 complete: trees=1 normal=True grid=True
+2026-06-01T18:11:32 Starting hole 04
+2026-06-01T18:12:02 H04 normal orbit done (7832141 bytes)
+2026-06-01T18:12:30 H04 grid orbit done (7700554 bytes)
+2026-06-01T18:12:33 H04 complete: trees=1 normal=True grid=True
+2026-06-01T18:12:33 Starting hole 05
+2026-06-01T18:13:05 H05 normal orbit done (7282579 bytes)
+2026-06-01T18:13:32 H05 grid orbit done (7637316 bytes)
+2026-06-01T18:13:36 H05 complete: trees=1 normal=True grid=True
+2026-06-01T18:13:36 Starting hole 06
+2026-06-01T18:14:07 H06 normal orbit done (7651444 bytes)
+2026-06-01T18:14:34 H06 grid orbit done (7748602 bytes)
+2026-06-01T18:14:38 H06 complete: trees=1 normal=True grid=True
+2026-06-01T18:14:38 Starting hole 08
+2026-06-01T18:15:10 H08 normal orbit done (7596784 bytes)
+2026-06-01T18:15:37 H08 grid orbit done (7660444 bytes)
+2026-06-01T18:15:41 H08 complete: trees=1 normal=True grid=True
+2026-06-01T18:15:41 Starting hole 09
+2026-06-01T18:16:12 H09 normal orbit done (7572685 bytes)
+2026-06-01T18:16:39 H09 grid orbit done (7440007 bytes)
+2026-06-01T18:16:43 H09 complete: trees=1 normal=True grid=True
+2026-06-01T18:16:43 Starting hole 11
+2026-06-01T18:17:14 H11 normal orbit done (7754816 bytes)
+2026-06-01T18:17:42 H11 grid orbit done (7849064 bytes)
+2026-06-01T18:17:45 H11 complete: trees=1 normal=True grid=True
+2026-06-01T18:17:45 Starting hole 12
+2026-06-01T18:18:17 H12 normal orbit done (7322838 bytes)
+2026-06-01T18:18:45 H12 grid orbit done (7599764 bytes)
+2026-06-01T18:18:49 H12 complete: trees=1 normal=True grid=True
+2026-06-01T18:18:49 Starting hole 13
+2026-06-01T18:19:21 H13 normal orbit done (7723131 bytes)
+2026-06-01T18:19:49 H13 grid orbit done (7920592 bytes)
+2026-06-01T18:19:52 H13 complete: trees=1 normal=True grid=True
+2026-06-01T18:19:52 Starting hole 14
+2026-06-01T18:20:24 H14 normal orbit done (7782605 bytes)
+2026-06-01T18:20:52 H14 grid orbit done (7838419 bytes)
+2026-06-01T18:20:56 H14 complete: trees=1 normal=True grid=True
+2026-06-01T18:20:56 Starting hole 15
+2026-06-01T18:21:27 H15 normal orbit done (7663339 bytes)
+2026-06-01T18:21:55 H15 grid orbit done (7902997 bytes)
+2026-06-01T18:21:58 H15 complete: trees=1 normal=True grid=True
+2026-06-01T18:21:58 Starting hole 16
+2026-06-01T18:22:30 H16 normal orbit done (7916523 bytes)
+2026-06-01T18:22:58 H16 grid orbit done (8023349 bytes)
+2026-06-01T18:23:01 H16 complete: trees=1 normal=True grid=True
+2026-06-01T18:23:01 Starting hole 17
+2026-06-01T18:23:33 H17 normal orbit done (7590104 bytes)
+2026-06-01T18:24:01 H17 grid orbit done (7662925 bytes)
+2026-06-01T18:24:05 H17 complete: trees=1 normal=True grid=True
+2026-06-01T18:24:05 Batch recording complete for holes 1-6, 8-9, 11-17
+2026-06-01T18:45:00 Phase 3: All 32 recordings complete (16 holes x 2). H01-H17 all trees=1 PASS. Starting motion gate + captions.
+2026-06-01T18:55:00 Phase 3: All 32 recordings done. Motion gate: 31/32 PASS, H01 normal FAIL (diff=10.99, H01 symmetric green). Starting captions + visual verification.
+2026-06-01T19:05:00 Phase 3: All 32 videos captioned (32/32 PASS). Canonical screenshots captured. H01 normal motion gate FAIL documented (diff=10.99 < 12 threshold). Writing IMPLEMENTER_REPORT.
+2026-06-01T19:15:00 done, awaiting architect review (H01 normal motion gate FAIL + 2 open questions)
