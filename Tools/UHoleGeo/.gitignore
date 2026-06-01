@@ -1,5 +1,14 @@
-# Output data (large, regenerable)
-output/
+# Output data (large, regenerable byte blobs)
+# Ignore contents, not the directory itself, so we can selectively un-ignore
+# canonical hand-authored files inside (course.json).
+output/**
+
+# But DO track the per-course directory entries and canonical course.json files.
+# course.json contains hand-authored data (par, hdcp, yardages from official sources)
+# that is NOT regenerable by the pipeline — must be committed.
+!output/
+!output/*/
+!output/*/course.json
 
 # Tile cache (downloaded GSI tiles, regenerable)
 tile-cache/

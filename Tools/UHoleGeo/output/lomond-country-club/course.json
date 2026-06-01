@@ -1,0 +1,483 @@
+{
+  "course_id": "lomond-country-club",
+  "display_name": "Lomond Country Club",
+  "native_name": "ローモンドカントリー倶楽部",
+  "source_urls": {
+    "official": "https://www.lomond-cc.com/course/",
+    "gora": "https://booking.gora.golf.rakuten.co.jp/guide/course_info/disp/c_id/240078"
+  },
+  "course_type": "hilly",
+  "elevation_profile": "moderate",
+  "area_m2": 1370000,
+  "greens": "bent",
+  "holes": [
+    {
+      "number": 1,
+      "par": 5,
+      "hdcp": 9,
+      "tees": {
+        "back": {
+          "yards": 531,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 509,
+          "color": "green"
+        },
+        "front": {
+          "yards": 488,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 458,
+          "color": "red"
+        }
+      },
+      "description_jp": "ティーショットは右側が広く、二段のフェアウェイセンターの傾斜部が狙い目です。２打目の落とし所が重要。",
+      "green_dimensions": null,
+      "source_gif": "source/course_e01.gif"
+    },
+    {
+      "number": 2,
+      "par": 4,
+      "hdcp": 3,
+      "tees": {
+        "back": {
+          "yards": 403,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 391,
+          "color": "green"
+        },
+        "front": {
+          "yards": 378,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 366,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e02.gif"
+    },
+    {
+      "number": 3,
+      "par": 4,
+      "hdcp": 15,
+      "tees": {
+        "back": {
+          "yards": 368,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 349,
+          "color": "green"
+        },
+        "front": {
+          "yards": 315,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 285,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e03.gif"
+    },
+    {
+      "number": 4,
+      "par": 3,
+      "hdcp": 13,
+      "tees": {
+        "back": {
+          "yards": 138,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 126,
+          "color": "green"
+        },
+        "front": {
+          "yards": 124,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 106,
+          "color": "red"
+        }
+      },
+      "description_jp": "最も短いショートホール。グリーン右から傾斜の為、右サイドから攻めるのがベスト。グリーン左斜面下に落ちると苦戦します。",
+      "green_dimensions": null,
+      "source_gif": "source/course_e04.gif"
+    },
+    {
+      "number": 5,
+      "par": 4,
+      "hdcp": 1,
+      "tees": {
+        "back": {
+          "yards": 425,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 383,
+          "color": "green"
+        },
+        "front": {
+          "yards": 372,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 366,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e05.gif"
+    },
+    {
+      "number": 6,
+      "par": 3,
+      "hdcp": 7,
+      "tees": {
+        "back": {
+          "yards": 193,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 173,
+          "color": "green"
+        },
+        "front": {
+          "yards": 149,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 129,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e06.gif"
+    },
+    {
+      "number": 7,
+      "par": 4,
+      "hdcp": 5,
+      "tees": {
+        "back": {
+          "yards": 430,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 410,
+          "color": "green"
+        },
+        "front": {
+          "yards": 375,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 335,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e07.gif"
+    },
+    {
+      "number": 8,
+      "par": 5,
+      "hdcp": 17,
+      "tees": {
+        "back": {
+          "yards": 562,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 480,
+          "color": "green"
+        },
+        "front": {
+          "yards": 469,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 452,
+          "color": "red"
+        }
+      },
+      "description_jp": "右ドッグレッグのロングホール。ティーショットはフェアウェイセンターやや左狙い。セカンド以降は左右が狭いので手堅くきざむのが無難。距離の出る人は２オン可能なホール。",
+      "green_dimensions": null,
+      "source_gif": "source/course_e08.gif"
+    },
+    {
+      "number": 9,
+      "par": 4,
+      "hdcp": 11,
+      "tees": {
+        "back": {
+          "yards": 434,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 403,
+          "color": "green"
+        },
+        "front": {
+          "yards": 376,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 357,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e09.gif"
+    },
+    {
+      "number": 10,
+      "par": 4,
+      "hdcp": 10,
+      "tees": {
+        "back": {
+          "yards": 392,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 368,
+          "color": "green"
+        },
+        "front": {
+          "yards": 346,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 328,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e10.gif"
+    },
+    {
+      "number": 11,
+      "par": 3,
+      "hdcp": 16,
+      "tees": {
+        "back": {
+          "yards": 179,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 162,
+          "color": "green"
+        },
+        "front": {
+          "yards": 138,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 120,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e11.gif"
+    },
+    {
+      "number": 12,
+      "par": 4,
+      "hdcp": 4,
+      "tees": {
+        "back": {
+          "yards": 435,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 359,
+          "color": "green"
+        },
+        "front": {
+          "yards": 348,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 269,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e12.gif"
+    },
+    {
+      "number": 13,
+      "par": 5,
+      "hdcp": 8,
+      "tees": {
+        "back": {
+          "yards": 597,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 559,
+          "color": "green"
+        },
+        "front": {
+          "yards": 534,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 508,
+          "color": "red"
+        }
+      },
+      "description_jp": "左ドッグレッグのロングホール。左は全てＯＢとなっている為、ティーショットはセンター狙いで行くと良い。セカンドからはグリーン左が崖になっている為、セカンドもセンター狙いに確実にきざんで、３打目勝負。※特設ティあり",
+      "green_dimensions": null,
+      "source_gif": "source/course_e13.gif"
+    },
+    {
+      "number": 14,
+      "par": 4,
+      "hdcp": 2,
+      "tees": {
+        "back": {
+          "yards": 420,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 392,
+          "color": "green"
+        },
+        "front": {
+          "yards": 373,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 357,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e14.gif"
+    },
+    {
+      "number": 15,
+      "par": 3,
+      "hdcp": 14,
+      "tees": {
+        "back": {
+          "yards": 184,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 169,
+          "color": "green"
+        },
+        "front": {
+          "yards": 146,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 121,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e15.gif"
+    },
+    {
+      "number": 16,
+      "par": 4,
+      "hdcp": 18,
+      "tees": {
+        "back": {
+          "yards": 356,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 327,
+          "color": "green"
+        },
+        "front": {
+          "yards": 316,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 292,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e16.gif"
+    },
+    {
+      "number": 17,
+      "par": 4,
+      "hdcp": 6,
+      "tees": {
+        "back": {
+          "yards": 410,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 379,
+          "color": "green"
+        },
+        "front": {
+          "yards": 353,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 328,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e17.gif"
+    },
+    {
+      "number": 18,
+      "par": 5,
+      "hdcp": 12,
+      "tees": {
+        "back": {
+          "yards": 567,
+          "color": "blue"
+        },
+        "regular": {
+          "yards": 548,
+          "color": "green"
+        },
+        "front": {
+          "yards": 521,
+          "color": "white"
+        },
+        "ladies": {
+          "yards": 502,
+          "color": "red"
+        }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": "source/course_e18.gif"
+    }
+  ]
+}

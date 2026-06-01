@@ -1,0 +1,317 @@
+{
+  "course_id": "taiheiyo-club-gotenba",
+  "display_name": "Taiheiyo Club Gotenba Course",
+  "native_name": "太平洋クラブ 御殿場コース",
+  "source_urls": {
+    "official": "https://www.taiheiyoclub.co.jp/course/gotenba/information.html",
+    "official_en": "http://www.taiheiyoclub.com/gotemba",
+    "gora": "https://booking.gora.golf.rakuten.co.jp/guide/disp/c_id/220046/"
+  },
+  "course_type": "hilly",
+  "elevation_profile": "moderate",
+  "area_m2": 910000,
+  "greens": "bent",
+  "par": 72,
+  "course_rate_tournament": 74.2,
+  "tournament_total_yards": 7327,
+  "back_total_yards": 6902,
+  "regular_total_yards": 6539,
+  "middle_total_yards": 6194,
+  "front_total_yards": 5794,
+  "ladies_total_yards": 5305,
+  "tee_set_count": 6,
+  "tee_set_names": ["tournament", "back", "regular", "middle", "front", "ladies"],
+  "_notes_tee_colors": "Site doesn't specify physical marker colors per tee set. Defaults left null — Cesar to fill in from on-site visit or course brochure. Common conventions for Japanese tournament courses: tournament=gold, back=blue, regular=white, middle=green, front=yellow, ladies=red — but this varies.",
+  "holes": [
+    {
+      "number": 1,
+      "par": 4,
+      "hdcp": 5,
+      "tees": {
+        "tournament": { "yards": 465, "color": null },
+        "back":       { "yards": 445, "color": null },
+        "regular":    { "yards": 415, "color": null },
+        "middle":     { "yards": 409, "color": null },
+        "front":      { "yards": 395, "color": null },
+        "ladies":     { "yards": 335, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 2,
+      "par": 4,
+      "hdcp": 13,
+      "tees": {
+        "tournament": { "yards": 435, "color": null },
+        "back":       { "yards": 395, "color": null },
+        "regular":    { "yards": 385, "color": null },
+        "middle":     { "yards": 355, "color": null },
+        "front":      { "yards": 345, "color": null },
+        "ladies":     { "yards": 315, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 3,
+      "par": 5,
+      "hdcp": 17,
+      "tees": {
+        "tournament": { "yards": 565, "color": null },
+        "back":       { "yards": 530, "color": null },
+        "regular":    { "yards": 515, "color": null },
+        "middle":     { "yards": 500, "color": null },
+        "front":      { "yards": 480, "color": null },
+        "ladies":     { "yards": 435, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 4,
+      "par": 3,
+      "hdcp": 9,
+      "tees": {
+        "tournament": { "yards": 220, "color": null },
+        "back":       { "yards": 195, "color": null },
+        "regular":    { "yards": 180, "color": null },
+        "middle":     { "yards": 158, "color": null },
+        "front":      { "yards": 130, "color": null },
+        "ladies":     { "yards": 126, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 5,
+      "par": 4,
+      "hdcp": 7,
+      "tees": {
+        "tournament": { "yards": 400, "color": null },
+        "back":       { "yards": 385, "color": null },
+        "regular":    { "yards": 370, "color": null },
+        "middle":     { "yards": 350, "color": null },
+        "front":      { "yards": 330, "color": null },
+        "ladies":     { "yards": 315, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 6,
+      "par": 5,
+      "hdcp": 15,
+      "tees": {
+        "tournament": { "yards": 540, "color": null },
+        "back":       { "yards": 525, "color": null },
+        "regular":    { "yards": 510, "color": null },
+        "middle":     { "yards": 490, "color": null },
+        "front":      { "yards": 450, "color": null },
+        "ladies":     { "yards": 425, "color": null }
+      },
+      "description_jp": "ランディングゾーン左にバンカーを新設。ガードバンカーも再造形及び新設した。松山プロの意見を受けてPar5／Par4（510ヤード）どちらの設定も可能なレイアウトに。Par4ならば難度が相当上がる。",
+      "green_dimensions": null,
+      "source_gif": null,
+      "pickup_image_source": "https://www.taiheiyoclub.co.jp/course/gotenba/images/crs_inf_img_06.jpg"
+    },
+    {
+      "number": 7,
+      "par": 3,
+      "hdcp": 11,
+      "tees": {
+        "tournament": { "yards": 178, "color": null },
+        "back":       { "yards": 157, "color": null },
+        "regular":    { "yards": 152, "color": null },
+        "middle":     { "yards": 140, "color": null },
+        "front":      { "yards": 130, "color": null },
+        "ladies":     { "yards": 127, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 8,
+      "par": 4,
+      "hdcp": 3,
+      "tees": {
+        "tournament": { "yards": 447, "color": null },
+        "back":       { "yards": 415, "color": null },
+        "regular":    { "yards": 400, "color": null },
+        "middle":     { "yards": 375, "color": null },
+        "front":      { "yards": 350, "color": null },
+        "ladies":     { "yards": 310, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 9,
+      "par": 4,
+      "hdcp": 1,
+      "tees": {
+        "tournament": { "yards": 465, "color": null },
+        "back":       { "yards": 425, "color": null },
+        "regular":    { "yards": 410, "color": null },
+        "middle":     { "yards": 385, "color": null },
+        "front":      { "yards": 360, "color": null },
+        "ladies":     { "yards": 305, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 10,
+      "par": 4,
+      "hdcp": 8,
+      "tees": {
+        "tournament": { "yards": 401, "color": null },
+        "back":       { "yards": 385, "color": null },
+        "regular":    { "yards": 365, "color": null },
+        "middle":     { "yards": 355, "color": null },
+        "front":      { "yards": 320, "color": null },
+        "ladies":     { "yards": 280, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 11,
+      "par": 5,
+      "hdcp": 12,
+      "tees": {
+        "tournament": { "yards": 540, "color": null },
+        "back":       { "yards": 520, "color": null },
+        "regular":    { "yards": 505, "color": null },
+        "middle":     { "yards": 485, "color": null },
+        "front":      { "yards": 452, "color": null },
+        "ladies":     { "yards": 445, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 12,
+      "par": 4,
+      "hdcp": 14,
+      "tees": {
+        "tournament": { "yards": 451, "color": null },
+        "back":       { "yards": 430, "color": null },
+        "regular":    { "yards": 385, "color": null },
+        "middle":     { "yards": 374, "color": null },
+        "front":      { "yards": 317, "color": null },
+        "ladies":     { "yards": 312, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 13,
+      "par": 3,
+      "hdcp": 16,
+      "tees": {
+        "tournament": { "yards": 203, "color": null },
+        "back":       { "yards": 192, "color": null },
+        "regular":    { "yards": 173, "color": null },
+        "middle":     { "yards": 152, "color": null },
+        "front":      { "yards": 145, "color": null },
+        "ladies":     { "yards": 130, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 14,
+      "par": 4,
+      "hdcp": 4,
+      "tees": {
+        "tournament": { "yards": 422, "color": null },
+        "back":       { "yards": 390, "color": null },
+        "regular":    { "yards": 365, "color": null },
+        "middle":     { "yards": 345, "color": null },
+        "front":      { "yards": 338, "color": null },
+        "ladies":     { "yards": 315, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 15,
+      "par": 4,
+      "hdcp": 18,
+      "tees": {
+        "tournament": { "yards": 378, "color": null },
+        "back":       { "yards": 368, "color": null },
+        "regular":    { "yards": 355, "color": null },
+        "middle":     { "yards": 342, "color": null },
+        "front":      { "yards": 300, "color": null },
+        "ladies":     { "yards": 290, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 16,
+      "par": 4,
+      "hdcp": 2,
+      "tees": {
+        "tournament": { "yards": 462, "color": null },
+        "back":       { "yards": 440, "color": null },
+        "regular":    { "yards": 400, "color": null },
+        "middle":     { "yards": 355, "color": null },
+        "front":      { "yards": 343, "color": null },
+        "ladies":     { "yards": 310, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 17,
+      "par": 3,
+      "hdcp": 6,
+      "tees": {
+        "tournament": { "yards": 230, "color": null },
+        "back":       { "yards": 195, "color": null },
+        "regular":    { "yards": 164, "color": null },
+        "middle":     { "yards": 144, "color": null },
+        "front":      { "yards": 139, "color": null },
+        "ladies":     { "yards": 115, "color": null }
+      },
+      "description_jp": null,
+      "green_dimensions": null,
+      "source_gif": null
+    },
+    {
+      "number": 18,
+      "par": 5,
+      "hdcp": 10,
+      "tees": {
+        "tournament": { "yards": 525, "color": null },
+        "back":       { "yards": 510, "color": null },
+        "regular":    { "yards": 490, "color": null },
+        "middle":     { "yards": 480, "color": null },
+        "front":      { "yards": 470, "color": null },
+        "ladies":     { "yards": 415, "color": null }
+      },
+      "description_jp": "フェアウエイバンカーを再造形し、\"考えさせるティーショット\"へ。グリーン左のバンカーも再造形し、グリーン右の池を奥に8ヤード増設。ターゲットがシビアになり、よりドラマチックな最終ホールとなった。",
+      "green_dimensions": null,
+      "source_gif": null,
+      "pickup_image_source": "https://www.taiheiyoclub.co.jp/course/gotenba/images/crs_inf_img_18.jpg"
+    }
+  ]
+}

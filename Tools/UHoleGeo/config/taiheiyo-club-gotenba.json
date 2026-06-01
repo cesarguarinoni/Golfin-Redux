@@ -1,0 +1,52 @@
+{
+  "course_id": "taiheiyo-club-gotenba",
+  "display_name": "Taiheiyo Club Gotenba Course",
+  "native_name": "太平洋クラブ 御殿場コース",
+
+  "_TODO_center": "Placeholder coords centred on Itazuma 941-1, Gotemba — Cesar to refine in Google Earth. Gotemba city centroid is 35.308694, 138.934611; the course sits slightly southwest in Itazuma district near the East Fuji JGSDF training grounds.",
+  "center": {
+    "lat": 35.291,
+    "lon": 138.902
+  },
+
+  "sources": {
+    "official_url": "https://www.taiheiyoclub.co.jp/course/gotenba/information.html",
+    "official_en_url": "http://www.taiheiyoclub.com/gotemba",
+    "gora_url": "https://booking.gora.golf.rakuten.co.jp/guide/disp/c_id/220046/",
+    "golfdigest_url": "https://www.golfdigest.com/courses/japan/taiheiyo-club-gotemba",
+    "wiki_tournament_url": "https://en.wikipedia.org/wiki/Mitsui_Sumitomo_Visa_Taiheiyo_Masters"
+  },
+
+  "gsi_zoom_default": 18,
+
+  "terrain_defaults": {
+    "course_type": "hilly",
+    "elevation_profile": "moderate",
+    "base_undulation_m": 10,
+    "noise_frequency": 0.012,
+    "green_flatness": 0.15,
+    "bunker_depth_m": 3.0,
+    "bunker_lip_m": 0.8,
+    "tree_ridge_m": 4.0,
+    "tee_to_green_drop_range_m": [5, 20],
+    "_notes": "Tuned hilly defaults vs Lomond — Taiheiyo sits on the southeastern flank of Mt. Fuji with notably more relief. base_undulation +25% and tree_ridge +33% vs Lomond as a first guess; revisit after Hole 1 accuracy review."
+  },
+
+  "metadata": {
+    "opened": "1977-04-26",
+    "original_designer": "Shunsuke Kato (加藤俊輔)",
+    "renovation_year": 2018,
+    "renovation_designer": "Rees Jones (with Bryce Swanson)",
+    "renovation_supervisor": "Hideki Matsuyama (松山英樹)",
+    "course_area_m2": 910000,
+    "clubhouse_area_m2": 3128,
+    "course_rate_tournament": 74.2,
+    "tournaments": [
+      "三井住友VISA太平洋マスターズ (since 1977)",
+      "WGC-EMC World Cup 2001",
+      "マルハンカップ太平洋クラブシニア (since 2020)"
+    ],
+    "address_jp": "〒412-0048 静岡県御殿場市板妻 941-1",
+    "address_en": "941-1 Itazuma, Gotemba, Shizuoka 412-0048, Japan"
+  }
+}
