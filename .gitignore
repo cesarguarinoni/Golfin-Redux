@@ -160,3 +160,9 @@ __pycache__/
 Docs/Diagnostics/_capture/*.png
 Docs/Diagnostics/_capture/**/*.png
 Docs/Diagnostics/_capture/orbit_frames*/
+
+# =========================
+# GreenSlope authoring-tool captures — local-only, regenerable via
+# Tools/GreenSlope/scripts/capture-all-holes.mjs. Cesar: ignore (2026-06-01).
+# =========================
+Tools/GreenSlope/screenshots/
