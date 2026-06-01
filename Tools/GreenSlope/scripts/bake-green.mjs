@@ -439,16 +439,77 @@ function smoothRidgeBand(h, active, regionGrid, gridW, gridH,
         return { bandCellCount: 0, maxDeltaH: 0, rampWidth: 0 };
     }
 
-    // ── Drop-scaled ramp width (Amendment 2026-05-30) ─────────────────────────
-    // Measure tier drop from the post-Poisson height field (which still has the cliff).
-    // max−min across all active cells: tier drop dominates all other variation.
-    let hMin = Infinity, hMax = -Infinity;
+    // ── Drop-scaled ramp width (tier-step-fix 2026-06-01) ─────────────────────
+    // Bug (iter-13): tierDrop was max−min over ALL active cells = total green relief.
+    // For H7 that was ~0.474 m → rampWidth ≈ 8.9 m → band spanned the whole green
+    // → both shelves smeared into one ramp (histogram went unimodal).
+    //
+    // Fix: measure the TIER STEP = |mean(region 0 plateau) − mean(region 1 plateau)|
+    // using the regionGrid that this function already receives.
+    //
+    // Two-pass strategy:
+    //   Pass 1 (all-region): include all active cells per region → gives a first-pass
+    //     step estimate (contaminated by cliff transition cells but good enough for
+    //     the far-from-ridge filter threshold).
+    //   Pass 2 (far-from-ridge): recompute means using only cells whose world-space
+    //     distance to the ridge exceeds RidgeMinBand (clean plateau cells).
+    //     If either region has fewer than 4 far-from-ridge cells, fall back to
+    //     pass-1 (all-active-per-region) for that region.
+    //
+    // Region labels: 0 and 1, matching regionGrid values set by classifyRegions().
+
+    // Pass 1: all-active-per-region sums
+    let sum0 = 0, n0 = 0, sum1 = 0, n1 = 0;
     for (let i = 0; i < h.length; i++) {
         if (!active[i]) continue;
-        if (h[i] < hMin) hMin = h[i];
-        if (h[i] > hMax) hMax = h[i];
+        if (regionGrid[i] === 0) { sum0 += h[i]; n0++; }
+        else if (regionGrid[i] === 1) { sum1 += h[i]; n1++; }
     }
-    const tierDrop = (hMax > hMin) ? (hMax - hMin) : 0;
+    const mean0All = n0 > 0 ? sum0 / n0 : 0;
+    const mean1All = n1 > 0 ? sum1 / n1 : 0;
+
+    // Pass 2: far-from-ridge plateau means (only cells beyond RidgeMinBand from ridge)
+    let sum0Far = 0, n0Far = 0, sum1Far = 0, n1Far = 0;
+    for (let cz = 0; cz < gridH; cz++) {
+        for (let cx = 0; cx < gridW; cx++) {
+            const idx = cz * gridW + cx;
+            if (!active[idx]) continue;
+            const wx = boundsMinX + (cx + 0.5) * cellSize;
+            const wz = boundsMinZ + (cz + 0.5) * cellSize;
+            // Quick ridge-distance check (reuse distToRidge helper defined below;
+            // but distToRidge is a closure defined later in this function scope, so
+            // we compute ridge distance inline here using the same algorithm).
+            let bestDistSq = Infinity;
+            for (let k = 0; k < ridge.length - 1; k++) {
+                const [ax, az] = ridge[k];
+                const [bx, bz] = ridge[k + 1];
+                const dxk = bx - ax, dzk = bz - az;
+                const lenSq = dxk * dxk + dzk * dzk;
+                if (lenSq < 1e-10) continue;
+                const tp = Math.max(0, Math.min(1,
+                    ((wx - ax) * dxk + (wz - az) * dzk) / lenSq));
+                const fx = ax + tp * dxk;
+                const fz = az + tp * dzk;
+                const dsq = (wx - fx) ** 2 + (wz - fz) ** 2;
+                if (dsq < bestDistSq) bestDistSq = dsq;
+            }
+            const distR = Math.sqrt(bestDistSq);
+            if (distR <= RidgeMinBand) continue; // skip near-ridge cells
+
+            const reg = regionGrid[idx];
+            if (reg === 0) { sum0Far += h[idx]; n0Far++; }
+            else if (reg === 1) { sum1Far += h[idx]; n1Far++; }
+        }
+    }
+
+    // Choose far-from-ridge mean if enough cells exist (≥4), else fall back to all-region
+    const FAR_MIN_CELLS = 4;
+    const mean0 = (n0Far >= FAR_MIN_CELLS) ? sum0Far / n0Far : mean0All;
+    const mean1 = (n1Far >= FAR_MIN_CELLS) ? sum1Far / n1Far : mean1All;
+    const _plateauPath0 = (n0Far >= FAR_MIN_CELLS) ? 'far-from-ridge' : 'all-region-fallback';
+    const _plateauPath1 = (n1Far >= FAR_MIN_CELLS) ? 'far-from-ridge' : 'all-region-fallback';
+
+    const tierDrop = Math.abs(mean0 - mean1);   // tier STEP, not total relief
 
     // Green perpendicular width: use the larger of the two AABB dimensions.
     // Using max dimension is a conservative (generous) cap bound.
@@ -659,7 +720,9 @@ function smoothRidgeBand(h, active, regionGrid, gridW, gridH,
     // Write blended values back to h
     h.set(hNew);
 
-    return { bandCellCount, maxDeltaH, rampWidth };
+    return { bandCellCount, maxDeltaH, rampWidth, tierStep: tierDrop,
+             plateauPath0: _plateauPath0, plateauPath1: _plateauPath1,
+             n0Far, n1Far, n0FarAll: n0, n1FarAll: n1 };
 }
 
 /**
@@ -1248,13 +1311,16 @@ function bakeHole(holeNum) {
     // Must run AFTER buildHeightGrid (post min-shift) and BEFORE dilateHeightMask
     // so the dilated ring inherits corrected values.
     // See SPEC green_ship_polish iter-13, §"The fix".
-    const { bandCellCount, maxDeltaH, rampWidth: computedRampWidth } = smoothRidgeBand(
+    const { bandCellCount, maxDeltaH, rampWidth: computedRampWidth,
+            tierStep: computedTierStep,
+            plateauPath0, plateauPath1, n0Far, n1Far } = smoothRidgeBand(
         heightGrid, heightActiveMask, regionGrid,
         gridW, gridH, boundsMinX, boundsMinZ, CELL_SIZE,
         ridge, applyRidgeBarrier
     );
     if (applyRidgeBarrier) {
-        report.push(`  INFO: ridge-band smoothing (iter-13 amendment): rampWidth=${computedRampWidth.toFixed(2)}m (drop-scaled, target slope ${(RidgeTargetSlope*100).toFixed(0)}%), bandCells=${bandCellCount}, maxDeltaH=${(maxDeltaH * 100).toFixed(2)}cm`);
+        report.push(`  INFO: ridge-band smoothing (tier-step-fix): tierStep=${computedTierStep.toFixed(4)}m, rampWidth=${computedRampWidth.toFixed(2)}m (target slope ${(RidgeTargetSlope*100).toFixed(0)}%), bandCells=${bandCellCount}, maxDeltaH=${(maxDeltaH * 100).toFixed(2)}cm`);
+        report.push(`  INFO:   plateau-mean path: region0=${plateauPath0} (n=${n0Far}), region1=${plateauPath1} (n=${n1Far})`);
     } else if (ridgePresent) {
         report.push(`  INFO: ridge-band smoothing (iter-13 2-tier gate): ridge present but hole ${holeId} not in TWO_TIER_HOLES — smoothing skipped (fall-line hole, single region)`);
     } else {

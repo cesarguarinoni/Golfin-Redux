@@ -1627,3 +1627,14 @@ The implementer's iter-2 added `[Land]`/`[Rest]` log emission so both data point
 
 **Sister rule:** Lesson R (always commit `.cs.meta` alongside `.cs`) — both are forms of "the implementation isn't done until git knows about it." R catches the meta-file class; AA catches the entire-implementation class.
 
+## Lesson AB — A low→high height gradient is NOT proof of "two tiers"; distinguish a smeared ramp from real shelves with bimodality + plane-fit, not a heatmap eyeball (2026-06-01, green_ship_polish tier-step-fix)
+
+**TL;DR:** When asked "is the 2-tier still there?", I decoded H7's `relH`, saw a clear low region (NW) → diagonal ridge → high region (SE) on a heatmap, and told Cesar "the 2-tier IS in the geometry." Wrong call. A green whose shelves were *smeared into one smooth ramp* by an over-wide smoothing band ALSO renders as a low→high gradient with a "ridge" of higher gradient in the middle — visually indistinguishable from real shelves on a heatmap. The Architect's quantitative check exposed the truth: plane-fit showed 0.443 m of the 0.474 m spread was smooth planar tilt (only 0.180 m residual undulation) and the height histogram was **unimodal** — statistically the same as a flat hole. The shelves were gone. Cesar's "it looks flat" instinct beat my heatmap reassurance.
+
+**The discriminator:** "two shelves" vs "one slope" is a question about the *height distribution*, not the *spatial gradient*. Use:
+1. **Histogram of `relH`** — two shelves → bimodal (two clusters + a low-count valley = the two plateau heights). One smooth ramp → unimodal. (Caveat: if each shelf is itself sloped, the *combined* 1-D histogram can stay unimodal even with real tiers — then use a **region-labeled** histogram, coloring cells by which side of the ridge they fall on, and check the two region means are separated.)
+2. **Plane-fit residual ratio** — fit a least-squares plane; if nearly all the spread is explained by the plane (residual ≪ planar tilt), it's one ramp, not shelves.
+3. **Perpendicular-to-ridge cross-section** — real shelves read as flat → step → flat; a smear reads as one continuous slope. (Mind diagonal ridges: axis-aligned row/column *averages* smear a diagonal ridge into a fake-smooth gradient — sample perpendicular to the ridge, or render the 2-D field, don't average across an axis.)
+
+**Rule:** Never answer a "shape/structure present?" question from a single colormap. Reach for the distribution-level statistic that actually defines the feature (bimodality, plane-fit residual, cross-section profile). Same family as the standing "verify root cause in the DATA before speccing" lesson — extended to "verify with the RIGHT statistic, not the most convenient visualization."
+
