@@ -33,7 +33,7 @@ namespace Golfin.Physics.Stats
             BallPowerPerPoint   = fp.FromFloat(0.01f),
             BallReboundPerPoint = fp.FromFloat(0.01f),
             BallWindCutPerPoint = fp.FromFloat(0.01f),
-            BallRollPerPoint    = fp.FromFloat(0.01f),
+            BallRollPerPoint    = fp.FromFloat(0.02f),  // raised from 0.01 (ball_roll_coefficient_retune, 2026-06-02)
             BallSpinPerPoint    = fp.FromFloat(0.01f),
 
             CharStrengthPerPoint          = fp.FromFloat(0.00625f),

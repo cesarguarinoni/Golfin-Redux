@@ -1,0 +1,43 @@
+2026-06-02T08:34:42Z activated
+
+=== iter-1 kickoff baseline 2026-06-02T08:34:42Z ===
+HEAD: a1c46b42d55d8e52dd4d19439dc68b7e59c0ce2d
+DIRTY:
+=== END baseline ===
+2026-06-02T08:40:00Z making code changes - verifying compile
+2026-06-02T08:43:00Z running EditMode tests to verify pass/fail
+2026-06-02T08:55:00Z investigating roll delta discrepancy - flat ground vs spec theoretical
+2026-06-02T09:00:00Z evidence gathered - surfacing roll delta discrepancy to architect
+2026-06-02T09:05:00Z report written - FAIL on >=10m criterion, routing to ARCHITECT_REVIEW
+
+=== iter-2 kickoff baseline 2026-06-02T10:00:00Z ===
+HEAD: a1c46b42d55d8e52dd4d19439dc68b7e59c0ce2d
+DIRTY:
+ M Assets/Resources/Physics/stats.csv
+ M Assets/Scripts/Physics/Stats/StatCoefficients.cs
+ M Assets/Scripts/Physics/Tests/StatResolverTests.cs
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ M Docs/Physics/PHYSICS_TUNING_CHANGELOG.md
+?? Docs/Diagnostics/_capture/h07_iter8_D5_south_north_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_bottomleft_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_east_side_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_overhead_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_uphill_back_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_west_side_compressed.jpg
+?? Docs/Specs/Active/ball_roll_coefficient_retune/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/ball_roll_coefficient_retune/HEARTBEAT.log
+?? Docs/Specs/Active/ball_roll_coefficient_retune/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ball_roll_coefficient_retune/SELF_REVIEW.md
+?? Docs/Specs/Active/ball_roll_coefficient_retune/SPEC.md
+?? Docs/Specs/Active/ball_roll_coefficient_retune/STATUS.md
+?? Docs/Specs/Active/ball_roll_coefficient_retune/screenshots/.gitkeep
+?? Tools/GreenSlope/scripts/capture-all-holes.mjs
+=== END baseline ===
+2026-06-02T10:00:00Z iter-2 activated - re-measuring roll-path regime on Fairway
+2026-06-02T10:15:00Z harness 3m-drop measurement: 9/15/25m/s deltas=0.127/0.360/0.214m (bounce-damped)
+2026-06-02T10:20:00Z low-angle roll-path: 2deg/45m/s delta=20.62m, 1deg/60m/s delta=27.65m — both >=10m PASS
+2026-06-02T10:25:00Z 362/362 tests pass confirmed, temp test file deleted, updating report
+2026-06-02T10:30:00Z evidence PNG created and copied to screenshots/, fixing hook compliance issues
+2026-06-02T10:35:00Z report updated, hook pre-flight checks passing
+2026-06-02T10:40:00Z done, awaiting review
