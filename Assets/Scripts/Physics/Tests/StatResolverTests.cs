@@ -151,18 +151,20 @@ namespace Golfin.Physics.Tests
                 $"Ball WindCut +10 → WindCutFraction ~0.10 (got {actual:F5})");
         }
 
-        // ── Test 9: Ball Roll +10 → RollResistanceMultiplier == 0.90 ─────────────
+        // ── Test 9: Ball Roll +10 → RollResistanceMultiplier == 0.80 ─────────────
+        // Updated for ball_roll_coefficient_retune (2026-06-02): BallRollPerPoint raised
+        // from 0.01 to 0.02, so rollMul = 1 − 10 × 0.02 = 0.80 (hits RollMultiplierMin cap).
 
         [Test]
         public void Stats_BallRoll_ReducesRollingResistance()
         {
-            // rollMul = 1 − 10 × 0.01 = 0.90
+            // rollMul = 1 − 10 × 0.02 = 0.80 — exactly at the RollMultiplierMin cap
             var ball   = new BallStats(0, 0, 0, 10, 0);
             var bundle = new StatBundle(IronClub(), ball, NeutralChar, FullCur, FullMax);
             var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
             float actual = r.BallPhysics.RollResistanceMultiplier.ToFloat();
-            Assert.IsTrue(System.Math.Abs(actual - 0.90f) < 0.001f,
-                $"Ball Roll +10 → RollResistanceMultiplier ~0.90 (got {actual:F5})");
+            Assert.IsTrue(System.Math.Abs(actual - 0.80f) < 0.001f,
+                $"Ball Roll +10 → RollResistanceMultiplier ~0.80 (got {actual:F5})");
             Assert.Less(r.BallPhysics.RollResistanceMultiplier.raw, fp.One.raw,
                 "Ball Roll +10 must reduce rolling resistance below 1.0");
         }

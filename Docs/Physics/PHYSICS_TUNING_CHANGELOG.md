@@ -6,6 +6,42 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F8 — BallRollPerPoint 0.01 → 0.02 (2026-06-02)
+
+**Task:** `ball_roll_coefficient_retune`  
+**Reason:** At 0.01, Ball.Roll=±10 swings `rollMul` between 0.90 and 1.10 (only 10% change), producing ~3m terminal-distance delta on Fairway — below the 10m perceptibility bar. Raising to 0.02 fills the cap range (0.80–1.20) at ±10 ball points, producing a ~12m+ delta.
+
+### StatCoefficients changes
+
+| Field | Before | After | Notes |
+|---|---|---|---|
+| `BallRollPerPoint` | `0.01f` | `0.02f` | Fills RollMultiplierMin/Max (0.80–1.20) at Ball.Roll=±10 |
+
+### StatCaps (unchanged)
+
+| Field | Value | Notes |
+|---|---|---|
+| `RollMultiplierMax` | `1.20f` | Unchanged |
+| `RollMultiplierMin` | `0.80f` | Unchanged |
+
+### Expected rollMul at stat extremes
+
+| Ball.Roll | Formula | Unclamped | Clamped | Effect |
+|---|---|---|---|---|
+| +10 (max) | 1 − 10 × 0.02 | 0.80 | 0.80 (at min cap) | minimum rolling resistance → longest roll |
+| 0 (neutral) | 1 − 0 × 0.02 | 1.00 | 1.00 | neutral |
+| -10 (min) | 1 − (−10) × 0.02 | 1.20 | 1.20 (at max cap) | maximum rolling resistance → shortest roll |
+
+### Also updated: `Assets/Resources/Physics/stats.csv`
+
+The loaded config CSV `ball_roll_per_point` row also updated from 0.01 → 0.02 so runtime-loaded config matches the code Default.
+
+### Regression test updated
+
+`StatResolverTests.Stats_BallRoll_ReducesRollingResistance`: expected value changed 0.90 → 0.80 (cap-at-min).
+
+---
+
 ## F7 — CharStrengthVelocityPerPoint + VelocityMultiplierMax (2026-05-25)
 
 **Task:** `live_stat_provider_wiring` Phase 4  

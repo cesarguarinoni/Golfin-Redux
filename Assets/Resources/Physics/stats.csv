@@ -5,7 +5,7 @@ club_lie_resistance_per_point,0.0042,lie penalty reduction per Club Lie Resistan
 ball_power_per_point,0.01,velocity multiplier per Ball Power point (10 pts = +10%)
 ball_rebound_per_point,0.01,restitution multiplier per Ball Rebound point
 ball_wind_cut_per_point,0.01,wind drag reduction per Ball Wind Cut point
-ball_roll_per_point,0.01,rolling resistance reduction per Ball Roll point (more = farther roll)
+ball_roll_per_point,0.02,rolling resistance reduction per Ball Roll point (more = farther roll)
 ball_spin_per_point,0.01,spin magnitude multiplier per Ball Spin point
 char_strength_per_point,0.00625,overpower forgiveness per Character Strength point
 char_club_control_per_point,0.0035,aim cone reduction per Character Club Control point

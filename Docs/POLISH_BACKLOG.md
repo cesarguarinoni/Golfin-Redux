@@ -25,3 +25,14 @@ Items consciously deferred to the polish phase (Roadmap item 9: UI/UX Polish). N
 **When resumed — required first step (Unity-side, can't be done offline):** add a diagnostic to `HoleGeoImporter.cs` that, per fairway-bordered green, reports collar inner-ring Y (green edge) minus outer-ring Y (fairway edge) per vertex → the real collar slope distribution. That determines whether the fix is (a) green edge sheds too much height into the collar, (b) fairway sits too low relative to the green edge, or (c) other. Spec the realism fix against those real numbers — do NOT extrapolate from H18 (it's terrain-bordered, different case). Likely fix direction: move the height transition so the 0.9 m collar stays near-flat (like a real mown collar) and the elevation change happens as the green's own fall-off / a separate gentle run-off beyond the collar — NOT by fattening the collar.
 
 **Guardrails for whoever takes it:** must not disturb the B1 fitted-plane seat, the blessed collar↔fairway CDT weld, `relH`/slopes/tiers, or re-introduce the iter-14 mound. Per Lesson AC, don't touch collar code while any other green task is mid-run.
+
+---
+
+## P-003 — Vestigial resolver output: AimConeReductionFraction computed but never consumed
+**Filed:** 2026-06-02 (Architect). **Area:** `StatModifierResolver` / `ResolvedShotModifiers` aim-cone path. **Severity:** code-health / consistency.
+
+**Context:** While investigating `club_control_aim_arrow_speed` (closed as already-implemented), found that `ResolvedShotModifiers.AimConeReductionFraction` is computed by the resolver and assigned in the struct ctor, but **nothing functionally consumes it**. Grep across Assets returns only the struct assignment + a stale `ShotInputBuilder.cs:26` comment claiming "consumed by the aim reticle UI." The cone width the player actually sees is computed independently in `ShotController.HalfConeAngleRad()` as a lerp on **Club.Accuracy / 120** via `ControlsConfig` — not from the resolver.
+
+**Why it matters:** two parallel sources of truth for aim-cone behavior (resolver vs ControlsConfig) invite drift; the resolver value looks authoritative but is dead. The audit's "CC → sub-perceptible cone reduction" finding was measuring this dead lane.
+
+**When resumed:** decide one of — (a) delete `AimConeReductionFraction` from `ResolvedShotModifiers` + resolver if the ControlsConfig path is canonical (simplest; fix the stale ShotInputBuilder comment too), or (b) re-route `HalfConeAngleRad()` to consume the resolver output if the resolver is meant to be canonical (larger; unifies Club.Accuracy + Char.ClubControl into one cone computation). Lean (a) unless there's a reason the resolver must own cone geometry. Not a ship-blocker; no gameplay effect either way since the value is currently unused.

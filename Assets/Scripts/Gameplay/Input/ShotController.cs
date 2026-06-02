@@ -293,7 +293,8 @@ namespace Golfin.Gameplay.Input
         {
             var bundle = GetStatBundle();
             float cc = bundle.Character.ClubControl;
-            float arrowHz = _config.BaseArrowSpeedHzAtCC0 + cc * _config.ArrowSpeedHzPerCC;
+            float ccClamped = Mathf.Clamp(cc, 0f, 100f);
+            float arrowHz = _config.BaseArrowSpeedHzAtCC0 + ccClamped * _config.ArrowSpeedHzPerCC;
             if (IsPutt) arrowHz *= _config.PuttArrowSpeedMultiplier;
 
             _arrowProgress += arrowHz * dt;

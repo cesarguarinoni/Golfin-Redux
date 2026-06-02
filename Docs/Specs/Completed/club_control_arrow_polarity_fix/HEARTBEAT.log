@@ -1,0 +1,25 @@
+2026-06-02T00:00:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: 7dba61d9cfad9c16ae4f4c8ba623e381a80c89cc
+DIRTY:
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+?? Docs/Diagnostics/_capture/h07_iter8_D5_south_north_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_bottomleft_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_east_side_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_overhead_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_uphill_back_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_west_side_compressed.jpg
+?? Docs/Specs/Active/club_control_arrow_polarity_fix/HEARTBEAT.log
+?? Docs/Specs/Active/club_control_arrow_polarity_fix/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/club_control_arrow_polarity_fix/STATUS.md
+?? Tools/GreenSlope/scripts/capture-all-holes.mjs
+=== end baseline ===
+
+2026-06-02T00:00:01 reading source files, planning changes
+2026-06-02T10:55:00 all 5 code changes made, running compile check
+2026-06-02T13:04:00 compile clean, all 363 EditMode tests pass (360 passed, 3 skipped, 0 failed)
+2026-06-02T13:04:18 screenshot captured cc_polarity_fix_2026-06-02_13-04-18.png (1920x1080)
+2026-06-02T13:05:00 filling IMPLEMENTER_REPORT.md
+2026-06-02T13:10:00 done, awaiting review
