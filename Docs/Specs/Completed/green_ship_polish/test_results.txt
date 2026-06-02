@@ -1,0 +1,2 @@
+EditMode tests: total=362 passed=359 failed=0 skipped=3
+Result=Skipped:Ignored

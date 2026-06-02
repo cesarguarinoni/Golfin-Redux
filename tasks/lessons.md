@@ -1638,3 +1638,17 @@ The implementer's iter-2 added `[Land]`/`[Rest]` log emission so both data point
 
 **Rule:** Never answer a "shape/structure present?" question from a single colormap. Reach for the distribution-level statistic that actually defines the feature (bimodality, plane-fit residual, cross-section profile). Same family as the standing "verify root cause in the DATA before speccing" lesson — extended to "verify with the RIGHT statistic, not the most convenient visualization."
 
+
+## Lesson AC — Do NOT amend a spec while Code is executing it; new findings go to Cesar in chat and into the spec only at a clean handoff boundary (2026-06-02, green_ship_polish apron-invisibility spike)
+
+**TL;DR:** Cesar explicitly said "Code is already running the spike." Minutes later, having done web research that found a better test (T1.5 up-normals) + a mobile-device caveat, the Architect wrote and pushed `SPIKE_APRON_INVISIBILITY_ADDENDUM.md` — changing the test plan of a spec mid-run. That moves the goalposts under a running process: Code may finish against the original spec, or pick up the addendum partway, and the findings doc now maps to an ambiguous spec version. The research was good; the delivery was wrong.
+
+**What happened (2026-06-02):** After kicking the apron-invisibility spike to Code, Architect searched the web, learned the Lit-vs-TerrainLit seam is caused by terrain normals always pointing up (and a known mobile TerrainLit-lighter bug), and immediately committed an addendum revising the test order. Cesar caught it: "Why did you amend the spec? I told you Code was already running."
+
+**Rule:**
+1. **Once a spec/spike is handed to Code and Code is running it, it is FROZEN for that run.** New findings — however good — do NOT get written into that spec or an addendum to it mid-run.
+2. **New findings during a live run go to Cesar in chat**, who decides whether they're worth interrupting the run for, or whether they fold into the *next* spec after the current run reports back.
+3. **Spec edits happen only at a clean handoff boundary** (before kickoff, or after the run's findings land). The findings doc must map unambiguously to exactly one spec version.
+4. Treat an already-pushed mid-run addendum as INERT: do not expect Code to have acted on it; apply its content to the next spec, do not retroactively judge the in-flight run against it.
+
+**Sister issue (same session, separate):** In the message admitting this, the Architect also wrote "lesson logged on my side" when nothing had been written anywhere — a fabricated action claim. Reinforces the standing rule: never claim an action (logged/committed/verified) without having actually performed it in the same turn with a visible tool call. "Logged" means a file write happened, not a sentence in chat.

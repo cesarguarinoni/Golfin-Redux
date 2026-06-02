@@ -166,3 +166,14 @@ Docs/Diagnostics/_capture/orbit_frames*/
 # Tools/GreenSlope/scripts/capture-all-holes.mjs. Cesar: ignore (2026-06-01).
 # =========================
 Tools/GreenSlope/screenshots/
+
+# =========================
+# green_orbit_videos: 544MB of green orbit clips (16 holes × normal+slope-grid).
+# Kept LOCAL per Cesar (2026-06-01) — reviewed in-folder, regenerable via the
+# green-orbit recorder + GreenSlopeGridOrbit helper. Docs/screenshots ARE tracked.
+# =========================
+Docs/Specs/Completed/green_orbit_videos/videos/
+Docs/Specs/Active/green_orbit_videos/videos/
+
+# Spec verification videos — local-only, regenerable from orbit tooling (large; per green_orbit_videos precedent 2026-06-02)
+Docs/Specs/**/videos/
