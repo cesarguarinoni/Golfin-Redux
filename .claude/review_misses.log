@@ -1,3 +1,4 @@
 # Review scoreboard — architect-PASS later rejected by Cesar. One line per miss.
 # Format: [<logged>] MISS key=<task>:<rejection-mtime> - <note>
 [2026-05-29 backfill] MISS key=green_slope_height_bake:1780054395 - iter-9 ARCHITECT_REVIEW_PASS on a 256px canonical; Cesar caught boundary waves + dark skirt facets at full res. Motivated the Tier 1-4 hardening.
+[2026-06-02] MISS key=green_ship_polish:1780374572 - terrain-apron ARCHITECT_REVIEW_PASS (all 4 gates) on a material/appearance defect; Cesar caught it on sight: apron textured to match fairway fringe (T_Semirough, tile 6, no normal) not the rough terrain it meets (T_Rough, tile 8, T_Rough_Normal). Gates checked sawtooth runs/row, never material-matches-terrain. New spec gate must test apron-indistinguishable-from-terrain.
