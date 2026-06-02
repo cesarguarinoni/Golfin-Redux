@@ -174,3 +174,6 @@ Tools/GreenSlope/screenshots/
 # =========================
 Docs/Specs/Completed/green_orbit_videos/videos/
 Docs/Specs/Active/green_orbit_videos/videos/
+
+# Spec verification videos — local-only, regenerable from orbit tooling (large; per green_orbit_videos precedent 2026-06-02)
+Docs/Specs/**/videos/
