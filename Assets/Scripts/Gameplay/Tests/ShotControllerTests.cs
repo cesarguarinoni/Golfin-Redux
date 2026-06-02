@@ -166,14 +166,14 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void Test09_ArrowDegradation_StartsAfterCleanPasses()
         {
-            // CC=0 (neutral defaults) → arrowHz=0.5, cleanPasses=1.
-            // dt=2.5 → arrowProgress += 1.25 → 1 pass per tick.
+            // CC=0 (neutral defaults) → arrowHz=3.0, cleanPasses=1.
+            // dt=0.34 → arrowProgress += 1.02 → 1 pass per tick.
             // After pass 1: passIndex=1 >= cleanPasses=1 → IsDegrading=true.
             DriveToTiming(170f);
             ShotInputState lastState = default;
             _sc.OnStateChanged += s => lastState = s;
 
-            _sc.Tick(2.5f);
+            _sc.Tick(0.34f);
 
             Assert.IsTrue(lastState.IsDegrading,
                 "Should degrade after exhausting clean passes");
@@ -182,15 +182,64 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void Test10_MaxTotalPasses_AutoCancelsToIdle()
         {
-            // MaxTotalPasses=10, arrowHz=0.5, dt=2.5 → exactly 1 pass per tick.
+            // MaxTotalPasses=10, arrowHz=3.0, dt=0.34 → ~1 pass per tick.
             // After 10 ticks in Timing the controller auto-cancels.
             DriveToTiming(170f);
 
             for (int i = 0; i < 10; i++)
-                _sc.Tick(2.5f);
+                _sc.Tick(0.34f);
 
             Assert.AreEqual(ShotState.Idle, _sc.State,
                 "Shot should auto-cancel after MaxTotalPasses");
+        }
+
+        [Test]
+        public void Test11_ArrowSpeed_MonotonicDecreasingWithCC()
+        {
+            // Polarity regression gate: arrowHz(CC=0) > arrowHz(CC=100) and both > 0.
+            // Use a fixed dt and compare elapsed arrow progress for CC=0 vs CC=100 bundles.
+            // CC=0  → arrowHz = 3.0 + 0   * (-0.025) = 3.0  → progress over dt=0.1: 0.30
+            // CC=100→ arrowHz = 3.0 + 100 * (-0.025) = 0.5  → progress over dt=0.1: 0.05
+            // CC=0 must advance faster (higher Hz = faster oscillation = harder to time).
+
+            const float dt = 0.1f;
+
+            var cc0Char    = new Golfin.Physics.Stats.CharacterStats(0, 0, 0, 0);   // ClubControl=0
+            var cc100Char  = new Golfin.Physics.Stats.CharacterStats(0, 100, 0, 0); // ClubControl=100
+            var ball       = Golfin.Physics.Stats.BallStats.Neutral;
+            var club       = Golfin.Physics.Stats.ClubStats.DefaultDriver;
+            var stamina100 = Golfin.Physics.Math.fp.FromFloat(100f);
+
+            var cc0Bundle   = new Golfin.Physics.Stats.StatBundle(club, ball, cc0Char,   stamina100, stamina100);
+            var cc100Bundle = new Golfin.Physics.Stats.StatBundle(club, ball, cc100Char, stamina100, stamina100);
+
+            // Measure CC=0 arrow progress after one dt tick
+            _sc.InjectStatBundle(cc0Bundle);
+            DriveToTiming(170f);
+            ShotInputState stateCC0 = default;
+            _sc.OnStateChanged += s => stateCC0 = s;
+            _sc.Tick(dt);
+            float progressCC0 = stateCC0.ArrowProgress01;
+            // Reset: lift finger (low velocity → cancelled to Idle) so next DriveToTiming
+            // sees a fresh justTouched=true on the next touch-down.
+            _input.IsTouching = false;
+            _sc.Tick(0.016f); // Timing → Idle (velocity=0 < threshold → cancel)
+            // _wasTouching is now false (set in the tick above)
+
+            // Measure CC=100 arrow progress after one dt tick (fresh drive to Timing)
+            _sc.InjectStatBundle(cc100Bundle);
+            DriveToTiming(170f);
+            ShotInputState stateCC100 = default;
+            _sc.OnStateChanged += s => stateCC100 = s;
+            _sc.Tick(dt);
+            float progressCC100 = stateCC100.ArrowProgress01;
+
+            Assert.Greater(progressCC0, 0f,
+                "CC=0 arrow progress must be positive (arrowHz > 0)");
+            Assert.Greater(progressCC100, 0f,
+                "CC=100 arrow progress must be positive (arrowHz > 0)");
+            Assert.Greater(progressCC0, progressCC100,
+                $"CC=0 must advance faster than CC=100: CC0={progressCC0:F4} CC100={progressCC100:F4}");
         }
     }
 }

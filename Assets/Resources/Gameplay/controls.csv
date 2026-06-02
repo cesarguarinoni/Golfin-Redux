@@ -12,8 +12,8 @@ ConeFadeInSeconds,0.15,fade-in duration on entering Aiming
 ConeFadeOutSeconds,0.30,fade-out duration on entering Resolving
 BallHitZoneRadiusPx,80,fixed-pixel radius around ball sprite for touch input
 TargetingLineLengthMeters,30,length of the in-game targeting line
-BaseArrowSpeedHzAtCC0,0.5,arrow cycles per second at ClubControl=0
-ArrowSpeedHzPerCC,0.025,additive cycles/sec per CC point
+BaseArrowSpeedHzAtCC0,3.0,arrow cycles/sec at ClubControl=0 — fastest/hardest end of range
+ArrowSpeedHzPerCC,-0.025,additive cycles/sec per CC point — negative: higher CC = slower arrow
 MaxCleanPassesAtCC0,1,passes before degradation at CC=0
 CleanPassesPerCC,0.04,additive passes per CC point (CC=100 gives 5 passes)
 MaxTotalPasses,10,total before auto-cancel

@@ -130,19 +130,32 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void F1_IsPutt_ArrowsSlowedByMultiplier()
         {
-            // With IsPutt=true, arrowHz = 0.5 * 0.5 = 0.25 Hz → one pass takes 4 s.
-            // After 2s of ticking, arrowProgress should be < 1 (no pass completed).
-            // Without putt, after 2s arrowProgress >= 1 (pass completed).
+            // Polarity-independent invariant: at equal CC, putt arrowHz < non-putt arrowHz.
+            // PuttArrowSpeedMultiplier=0.5, so putt advances at half the non-putt rate.
+            // With default CC=0: non-putt arrowHz=3.0, putt arrowHz=1.5.
+            // Over dt=0.1s: non-putt progress=0.30, putt progress=0.15 → putt < non-putt.
+            const float dt = 0.1f;
+
+            // Measure non-putt arrow progress
+            _sc.IsPutt = false;
+            DriveToTiming(170f);
+            ShotInputState nonPuttState = default;
+            _sc.OnStateChanged += s => nonPuttState = s;
+            _sc.Tick(dt);
+            float progressNonPutt = nonPuttState.ArrowProgress01;
+            _sc.CompleteShot();
+
+            // Measure putt arrow progress at same CC
             _sc.IsPutt = true;
             DriveToTiming(170f);
+            ShotInputState puttState = default;
+            _sc.OnStateChanged += s => puttState = s;
+            _sc.Tick(dt);
+            float progressPutt = puttState.ArrowProgress01;
 
-            ShotInputState lastState = default;
-            _sc.OnStateChanged += s => lastState = s;
-
-            _sc.Tick(2.0f);
-
-            Assert.Less(lastState.ArrowProgress01, 1f,
-                "Putt mode: arrow should not complete a pass in 2s (needs 4s at 0.25 Hz)");
+            Assert.Greater(progressNonPutt, progressPutt,
+                $"Putt mode arrow must advance slower than non-putt at equal CC: " +
+                $"non-putt={progressNonPutt:F4} putt={progressPutt:F4} (PuttArrowSpeedMultiplier slows putts)");
         }
 
         [Test]
@@ -154,7 +167,7 @@ namespace Golfin.Gameplay.Tests
             _sc.CameraHeadingRadians = 0f;
             DriveToTiming(170f);
 
-            // Tick 8s (2 complete putt passes at 0.25Hz).
+            // Tick through 2 complete putt passes (putt arrowHz=1.5, dt=4.5 → progress=6.75 → 1 pass/tick).
             _sc.Tick(4.5f); // ~1 pass
             _sc.Tick(4.5f); // ~2 passes
 
@@ -214,10 +227,10 @@ namespace Golfin.Gameplay.Tests
             _sc.CameraHeadingRadians = 0f;
             DriveToTiming(170f);
 
-            // Tick through many passes (arrowHz=0.5, dt=2.5 → 1 pass/tick × 8 = 8 passes).
+            // Tick through many passes (arrowHz=3.0, dt=2.5 → progress=7.5 → 1 pass/tick × 8 = 8 passes).
             for (int i = 0; i < 8; i++) _sc.Tick(2.5f);
 
-            // Still in Timing (not auto-cancelled yet), flick now.
+            // Still in Timing (not auto-cancelled yet, MaxTotalPasses=10), flick now.
             Assert.AreEqual(ShotState.Timing, _sc.State, "Still in Timing after 8 passes");
 
             var input = FlickAndCapture();
