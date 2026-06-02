@@ -1,0 +1,14 @@
+green_slope_height_bake iter-8 reimport diagnostics (GEO IMPORTER — SHIPPING)
+================================================================================
+Date: 2026-06-02 09:26:26
+Hole: 10  ImportType: Geo
+
+  Green 1 D4 terrain alignment:
+    surrounding-terrain alignment: cos = +0.315  → WARN (perpendicular — green may be cross-slope or flat pad)
+      terrain macro gradient: (+0.022, +0.035) m/m  (uphill to NE (|g|=0.0413 m/m))
+      authored macro gradient: (+0.003, -0.001) m/m  (uphill to E (|g|=0.0028 m/m))
+
+Green 1: seatPlane(pa=0.00501,pb=0.01452,pc=15.224) edgeFloatMax=0.1997 edgeSinkMax=0.1568 collarWidth=0.90
+  Green 1: terrain-carve: 21309 cells → true→false inside carveContour (146 pts, boundaryWidth=0.70m, carveInset=0.20m (teeth under collar, no apron))
+  Green 1: isTerrainBordered=True nearestFairway=25.4m (threshold=0.9m)
+  Green 1: pinY=12.560 onSurface=Y (seatPlane+relH at pin XZ)
