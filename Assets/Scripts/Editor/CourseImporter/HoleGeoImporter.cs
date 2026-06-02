@@ -72,6 +72,19 @@ namespace Golfin.CourseImport
         private const float GreenSkirtDepth = -0.02f; // iter-10: positive=above terrain (no dark skirt faces)
 
         /// <summary>
+        /// Terrain-carve INSET (m) for terrain-bordered greens (no adjacent fairway: H10, H18 on Lomond).
+        /// The terrain hole-carve boundary is pulled this far INSIDE the collar outer edge so the
+        /// rasterized SetHoles stair-step teeth land UNDER the collar drape (the collar rides at
+        /// terrain+0.02m, so terrain beneath it stays buried) instead of poking into open air. The
+        /// collar's own smooth outer mesh edge then becomes the visible boundary — no sawtooth, no apron.
+        /// This replaces the old terrain-apron ring, which could not colour-match the rough terrain.
+        /// Probe (H10, 0.19m intrusion — worst case): ~zero poke-through at 0.20m (1 vert, 2.7mm; global
+        /// max under collar 1.76cm). Teeth pitch ≈ 0.11m, so 0.20m ≈ 1.8 cells of cover.
+        /// 0f = legacy behavior (carve at collar outer edge → teeth poke → needed apron). carve-inset 2026-06-02.
+        /// </summary>
+        private const float GreenCarveInset = 0.20f;
+
+        /// <summary>
         /// Fairway triangle-drop margin for bunker footprints. Dilates the bunker
         /// contour outward by this much before dropping fairway triangles inside.
         /// </summary>
@@ -2665,6 +2678,27 @@ namespace Golfin.CourseImport
                     }
                 }
 
+                // ── carve-inset: pull the terrain hole-carve INSIDE the collar for terrain-bordered greens ──
+                // cutContour (collar outer ring) stays registered for the fairway pass; only the raster
+                // hole-carve uses this inset copy so the SetHoles teeth tuck under the collar drape and the
+                // collar's own smooth outer edge becomes the visible boundary (no sawtooth, no apron needed).
+                // Fairway-bordered greens keep carve == collar outer (watertight weld), so gate on terrain-bordered.
+                Vector2[] carveContour = cutContour;
+                {
+                    bool insideAnyFairwayForCarve = false;
+                    foreach (var fwPoly in fairwayPolys)
+                        if (IsInsideContour(centroidX, centroidZ, fwPoly)) { insideAnyFairwayForCarve = true; break; }
+                    bool terrainBorderedForCarve = (fairwayPolys.Count > 0) && !insideAnyFairwayForCarve;
+                    if (GreenCarveInset > 0f && terrainBorderedForCarve && useWideCut)
+                    {
+                        var insetCPs = DilateContour(activeContourCPs, GreenCollarWidth - GreenCarveInset);
+                        carveContour = new Vector2[insetCPs.Length];
+                        for (int i = 0; i < insetCPs.Length; i++)
+                            carveContour[i] = new Vector2(insetCPs[i].x, insetCPs[i].z);
+                        Debug.Log($"[HoleGeoImporter] Green {green.id}: carve-inset {GreenCarveInset:F2}m -> boundary at collarWidth-inset={GreenCollarWidth - GreenCarveInset:F2}m (teeth tucked under collar, no apron), pts={carveContour.Length}");
+                    }
+                }
+
                 int hMinX = Mathf.Clamp(Mathf.FloorToInt((cMinX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
                 int hMaxX = Mathf.Clamp(Mathf.CeilToInt((cMaxX - terrainPos.x) / terrainSize.x * holesRes), 0, holesRes - 1);
                 int hMinZ = Mathf.Clamp(Mathf.FloorToInt((cMinZ - terrainPos.z) / terrainSize.z * holesRes), 0, holesRes - 1);
@@ -2677,14 +2711,16 @@ namespace Golfin.CourseImport
                     {
                         float cellWorldX = ((hx + 0.5f) / holesRes) * terrainSize.x + terrainPos.x;
                         float cellWorldZ = ((hz + 0.5f) / holesRes) * terrainSize.z + terrainPos.z;
-                        if (IsInsideContour(cellWorldX, cellWorldZ, cutContour))
+                        if (IsInsideContour(cellWorldX, cellWorldZ, carveContour))
                         {
                             holes[hz, hx] = false;
                             carvedCells++;
                         }
                     }
-                Debug.Log($"[HoleGeoImporter] Green {green.id}: terrain hole-carve → {carvedCells} cells set false (cutContour pts={cutContour.Length}, wide={useWideCut})");
-                s_reimportReportBuilder.AppendLine($"  Green {green.id}: terrain-carve: {carvedCells} cells → true→false inside cutContour ({cutContour.Length} pts, collarOuter=collarWidth={GreenCollarWidth:F2}m, B1-oneRing)");
+                bool carveWasInset = !ReferenceEquals(carveContour, cutContour);
+                float carveBoundaryWidth = carveWasInset ? (GreenCollarWidth - GreenCarveInset) : GreenCollarWidth;
+                Debug.Log($"[HoleGeoImporter] Green {green.id}: terrain hole-carve → {carvedCells} cells set false (carveContour pts={carveContour.Length}, boundaryWidth={carveBoundaryWidth:F2}m, inset={carveWasInset}, wide={useWideCut})");
+                s_reimportReportBuilder.AppendLine($"  Green {green.id}: terrain-carve: {carvedCells} cells → true→false inside carveContour ({carveContour.Length} pts, boundaryWidth={carveBoundaryWidth:F2}m, carveInset={(carveWasInset ? GreenCarveInset.ToString("F2") + "m (teeth under collar, no apron)" : "0 (collar outer, B1-oneRing)")})");
 
                 // Build ContourPoint[] for CDT — use resampled contour when available (iter-8 D1).
                 // activeContourCPs already holds the correct contour (resampled or raw).
@@ -2707,6 +2743,39 @@ namespace Golfin.CourseImport
                     greenTopology: greenTopology);
                 if (meshGO != null)
                     meshGO.transform.SetParent(greensRoot.transform);
+
+                // ── terrain-apron Change 1: detect terrain-bordered greens (data-driven) ──
+                // A green is terrain-bordered iff its centroid is NOT inside any fairway polygon.
+                // Fairway polygons are the outer boundaries of fairways; greens whose collars are
+                // welded to a fairway via the CDT hole-constraint have their centroids INSIDE the
+                // fairway polygon (the green sits in the middle of the fairway area).
+                // Greens NOT inside any fairway (H10, H18) have no adjacent fairway → terrain-bordered.
+                // Secondary: report nearest fairway distance (from green centroid to fairway edge)
+                // for diagnostic purposes.
+                bool isInsideAnyFairway = false;
+                float minFairwayDistSq = float.MaxValue;
+                foreach (var fwPoly in fairwayPolys)
+                {
+                    if (IsInsideContour(centroidX, centroidZ, fwPoly))
+                    {
+                        isInsideAnyFairway = true;
+                        minFairwayDistSq = 0f; // centroid is inside → distance = 0
+                        break;
+                    }
+                    // Compute distance from green centroid to fairway polygon boundary
+                    float dSq = DistanceSqToContour(centroidX, centroidZ, fwPoly);
+                    if (dSq < minFairwayDistSq) minFairwayDistSq = dSq;
+                }
+                // If no fairways loaded at all, treat all greens as non-terrain-bordered.
+                float minFairwayDist = (fairwayPolys.Count == 0) ? 0f : Mathf.Sqrt(minFairwayDistSq);
+                bool isTerrainBordered = (fairwayPolys.Count > 0) && !isInsideAnyFairway;
+                s_reimportReportBuilder.AppendLine($"  Green {green.id}: isTerrainBordered={isTerrainBordered} nearestFairway={minFairwayDist:F1}m (threshold={GreenCollarWidth:F1}m)");
+                Debug.Log($"[HoleGeoImporter] Green {green.id}: isTerrainBordered={isTerrainBordered} nearestFairway={minFairwayDist:F2}m");
+
+                // ── terrain-bordered greens get NO apron ──
+                // The carve-inset above tucks the SetHoles teeth under the collar, so the collar's smooth
+                // outer edge is the visible boundary. The old CreateGreenTerrainApron ring is retired — it
+                // could not colour-match the surrounding rough terrain (Cesar rejection 2026-06-02).
 
                 // ── B1 Change 2: place flag/cup on the green surface at the pin XZ ──
                 // Pin XZ from greenTopology.GetDefaultPin() (green.json pinCandidates[defaultPinIndex]).
