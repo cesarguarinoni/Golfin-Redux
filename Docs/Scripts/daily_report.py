@@ -19,6 +19,7 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime, date
 
 import anthropic
@@ -79,6 +80,18 @@ ANIM_EXTS = {".gif"}
 MEDIA_EXTS = VIDEO_EXTS | IMAGE_EXTS | ANIM_EXTS
 # Files in the drop folder that are part of the repo scaffold, never sent/deleted.
 DROP_FOLDER_KEEP = {"README.md", ".gitkeep", ".DS_Store"}
+
+# --- Media send pacing / rate-limit handling ---
+# Telegram throttles bulk media to a group/channel (~20 messages per minute).
+# The original tool fired every file in a tight loop with no pacing or retry, so
+# a big drop (28 videos on 2026-06-02) blew past the limit: file 7 onward all
+# came back HTTP 429 "Too Many Requests" and were silently dropped — sent=False,
+# so never deleted. Pace consecutive uploads AND honour the server's retry_after
+# so the whole batch goes out instead of half-failing.
+MEDIA_SEND_INTERVAL_SEC = 3.0      # gap between consecutive media uploads (~20/min)
+MEDIA_MAX_RETRIES = 5              # attempts per file before giving up
+# Statuses worth retrying: 429 (rate limit) + transient gateway/server errors.
+RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 
 # --- Japan Public Holidays 2026 ---
 JAPAN_HOLIDAYS_2026 = {
@@ -424,29 +437,67 @@ def post_to_telegram(text: str):
     print(f"[OK] Telegram message sent to {ACTIVE_CHAT_ID}")
 
 
+def _retry_after_seconds(resp_obj, default: float) -> float:
+    """
+    Extract Telegram's retry_after (seconds) from a 429 response so we wait the
+    exact throttle window. Looks in the JSON body's `parameters.retry_after`
+    first, then the `Retry-After` header; falls back to `default`. Adds a 1s
+    buffer so we resume just after the window, not exactly on its edge.
+    """
+    if resp_obj is None:
+        return default
+    try:
+        ra = resp_obj.json().get("parameters", {}).get("retry_after")
+        if ra is not None:
+            return float(ra) + 1.0
+    except Exception:
+        pass
+    ra_hdr = getattr(resp_obj, "headers", {}).get("Retry-After")
+    if ra_hdr:
+        try:
+            return float(ra_hdr) + 1.0
+        except ValueError:
+            pass
+    return default
+
+
 def _send_telegram_file(method: str, field: str, path: str, caption: str) -> bool:
     """
     Upload a single file to Telegram via the given method (sendVideo/sendPhoto/etc.).
-    Returns True on success, False on any failure (caller decides whether to delete).
+    Retries on 429 (honouring retry_after) and transient 5xx errors up to
+    MEDIA_MAX_RETRIES times. Returns True on success, False on terminal failure
+    (caller decides whether to delete).
     """
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}"
     data = {"chat_id": ACTIVE_CHAT_ID, "caption": caption[:1024]}
     if method == "sendVideo":
         data["supports_streaming"] = "true"
-    try:
-        with open(path, "rb") as fh:
-            resp = requests.post(url, data=data, files={field: fh}, timeout=300)
-        resp.raise_for_status()
-        print(f"[OK] {method}: {os.path.basename(path)}")
-        return True
-    except Exception as e:
-        detail = ""
-        # Surface Telegram's JSON error description when present.
-        resp_obj = getattr(e, "response", None)
-        if resp_obj is not None:
-            detail = f" — {resp_obj.text[:300]}"
-        print(f"[WARN] {method} failed for {os.path.basename(path)}: {e}{detail}")
-        return False
+    name = os.path.basename(path)
+
+    for attempt in range(1, MEDIA_MAX_RETRIES + 1):
+        try:
+            with open(path, "rb") as fh:
+                resp = requests.post(url, data=data, files={field: fh}, timeout=300)
+            resp.raise_for_status()
+            print(f"[OK] {method}: {name}")
+            return True
+        except Exception as e:
+            resp_obj = getattr(e, "response", None)
+            status = getattr(resp_obj, "status_code", None)
+            # Retry rate-limit / transient errors; honour Telegram's retry_after.
+            if status in RETRYABLE_STATUSES and attempt < MEDIA_MAX_RETRIES:
+                wait = _retry_after_seconds(resp_obj, default=float(attempt * 5))
+                print(f"[RETRY] {method} {name}: HTTP {status}, waiting {wait:.0f}s "
+                      f"(attempt {attempt}/{MEDIA_MAX_RETRIES})")
+                time.sleep(wait)
+                continue
+            detail = ""
+            # Surface Telegram's JSON error description when present.
+            if resp_obj is not None:
+                detail = f" — {resp_obj.text[:300]}"
+            print(f"[WARN] {method} failed for {name}: {e}{detail}")
+            return False
+    return False
 
 
 def send_media_file(path: str, caption: str) -> bool:
@@ -472,8 +523,10 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
         return
 
     sent_real_paths = set()
+    uploads_attempted = 0  # only count real upload attempts, not dedupe/oversize skips
 
     def _process(path: str, caption_prefix: str, is_drop: bool):
+        nonlocal uploads_attempted
         real = os.path.realpath(path)
         if real in sent_real_paths:
             return  # de-dupe across git + drop folder
@@ -483,6 +536,11 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
             mb = size / (1024 * 1024)
             print(f"[SKIP] {name} is {mb:.1f} MB > 50 MB Telegram limit — not sent.")
             return
+        # Pace consecutive uploads under Telegram's group rate limit. Sleep BEFORE
+        # the 2nd+ upload (not after the last) so we don't trail an idle gap.
+        if uploads_attempted > 0:
+            time.sleep(MEDIA_SEND_INTERVAL_SEC)
+        uploads_attempted += 1
         caption = f"{caption_prefix}{name}"
         ok = send_media_file(path, caption)
         if ok:
