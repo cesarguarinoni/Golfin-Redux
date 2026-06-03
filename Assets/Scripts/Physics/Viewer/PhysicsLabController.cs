@@ -48,9 +48,10 @@ namespace Golfin.Physics.Viewer
         [SerializeField] ChaseCamera        chaseCamera;
 
         [Header("Shot Controller (Live Touch)")]
-        [SerializeField] ShotController _shotController;
-        [SerializeField] ShotConeView   _shotConeView;
-        [SerializeField] Transform      _ballSpawnPoint;
+        [SerializeField] ShotController      _shotController;
+        [SerializeField] ShotConeView        _shotConeView;
+        [SerializeField] Transform           _ballSpawnPoint;
+        [SerializeField] BallTrailController _ballTrail;
 
         [Header("Camera")]
         [Tooltip("Initial look direction (XZ). Leave zero to auto-derive from scene type.")]
@@ -182,6 +183,9 @@ namespace Golfin.Physics.Viewer
 
             if (_shotController != null)
                 _shotController.OnShotResolved += HandleShotResolved;
+
+            // ball_flight_trail: wire trail controller to the ball SM + shot controller.
+            _ballTrail?.Configure(ballAnimator, _ballSM, _shotController);
 
             // 8.5: consume club selection from the action button selector overlay.
             // Re-entrancy guard inside handler prevents the loop when SetClub() itself raises ClubSelectionBroadcast.

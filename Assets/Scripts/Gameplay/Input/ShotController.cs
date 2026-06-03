@@ -41,6 +41,11 @@ namespace Golfin.Gameplay.Input
         public float     PowerNormalized  { get; private set; }
         public float     ConeHalfAngleDeg => HalfConeAngleRad() * Mathf.Rad2Deg;
 
+        /// <summary>True if the most recent committed flick was a full-swing shot with zero aim
+        /// degradation (committed inside the clean-pass window). Putts are never "clean" for trail
+        /// purposes (see spec NOTE P). Latched in CommitFlick; read by BallTrailController on Flying.</summary>
+        public bool LastShotWasClean { get; private set; }
+
         // --- Internal state ---
         private float _pullDistancePx;
         private float _arrowProgress;
@@ -234,6 +239,7 @@ namespace Golfin.Gameplay.Input
             State = ShotState.Flicking;
 
             float degradYaw = DebugFlags.ForcePerfectAim ? 0f : _degradationYawRad;
+            LastShotWasClean = !IsPutt && Mathf.Approximately(degradYaw, 0f);   // latched for BallTrailController
             float finetune  = DebugFlags.DisableConeFineTune ? 0f : _coneFinetune;
 
             _aimYawRadians = CameraHeadingRadians + finetune * HalfConeAngleRad() + degradYaw;

@@ -12916,6 +12916,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1075126836}
   - component: {fileID: 1075126835}
+  - component: {fileID: 1075126837}
   m_Layer: 0
   m_Name: BallAnimator
   m_TagString: Untagged
@@ -12960,6 +12961,25 @@ Transform:
   - {fileID: 637864661}
   m_Father: {fileID: 1483952039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1075126837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1075126834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efd3b8c3629f245b8888efaec89042ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.BallTrailController
+  _flightColor: {r: 0.18039216, g: 0.60784316, b: 1, a: 1}
+  _obColor: {r: 1, g: 0.18039216, b: 0.18039216, a: 1}
+  _perfectColor: {r: 1, g: 0.8235294, b: 0.2901961, a: 1}
+  _trailMaterial: {fileID: 2100000, guid: 554ba121507da4a4ca699b86d7eb7273, type: 2}
+  _time: 8
+  _minVertexDistance: 0.3
+  _startWidth: 0.09
 --- !u!1 &1081066033
 GameObject:
   m_ObjectHideFlags: 0
@@ -18951,6 +18971,7 @@ MonoBehaviour:
   _shotController: {fileID: 1483952040}
   _shotConeView: {fileID: 1838493589}
   _ballSpawnPoint: {fileID: 762323535}
+  _ballTrail: {fileID: 1075126837}
   _defaultLookDirection: {x: 0, y: 0, z: 0}
   _orbitSensitivity: 0.5
   _putterTrack: {fileID: 2300000001}
