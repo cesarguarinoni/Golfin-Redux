@@ -6,11 +6,14 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Shipped:** `green_ship_polish` — ✅ DONE, moved to `Docs/Specs/Completed/green_ship_polish/`. The terrain-apron MATERIAL fix landed with it; full record + do-not-repeat lessons live in that folder. **Do not re-report as pending.**
-- **PRIMARY ACTIVE — `loop_v2_scope`** (`Docs/Specs/Active/loop_v2_scope/`). The Select Character → Clubs → Hole → play → result → next/menu glue. Scoping SPEC is SPEC_READY; the 5 open questions are **LOCKED (2026-05-19)** — Result modal = ShellScene-resident (Option B), cross-scene signal `GameSession.OnHoleComplete`. Stages: A singletons-consolidation → B session-state-plumbing → C result-modal (FULL PIPELINE) → D next-hole-autoflow → E hole-selection-entry → F animated-polish. **Next concrete action: fire Stage A** as its own sub-spec `loop_v2_a_singletons_consolidation/` (not yet created). Routing: A/B/D/E TELLCODE, C+F per spec.
-- **PARALLEL ACTIVE — `lomond_greens_authoring_batch`** (`Docs/Specs/Active/`). FULL PIPELINE: author dense per-cell `green.json` slope grids for all 18 Lomond greens from the PDF strategy panels (primary), Shot Navi (cross-val), `greens.json` polygon (shape); visual-gate each hole vs the panel. ITER8 pilot on H07 in flight. Kickoff: `Use the golfin-implementer subagent on "lomond_greens_authoring_batch"`.
-- **SIDE QUEST (today, 2026-06-03) — `ball_flight_trail`** (`Docs/Specs/Active/ball_flight_trail/SPEC.md`). SPEC_READY. State-colored mobile ball trail: blue flight+roll / whole-ribbon red on OB / gold on a clean (perfect) full-swing flick. 4 changes, no `BallAnimator` edits. Kickoff: `Use the implementer subagent on "ball_flight_trail"`.
-- **Last updated:** 2026-06-03 (Architect — corrected stale headline: `green_ship_polish` shipped to Completed; repointed to loop_v2 primary + lomond_greens batch; logged `ball_flight_trail` side quest).
+- **Shipped (do NOT re-report as pending):** `green_ship_polish` (Completed); **Loop v2 core** — A/B/C0/C1 + smoke-bot (Notion Orders 310–340), playable end-to-end since 2026-05-19, umbrella now in `Completed/loop_v2_scope/` (only Stage F animated-polish possibly-open — confirm before reopening); green authoring (`green_slope_authoring_tool` + `green_slope_height_bake`, Completed); **`ball_flight_trail`** — Code implemented (`4249c0da`) + closed to `Completed/ball_flight_trail/`.
+- **PRIMARY ACTIVE — home mode-selection rework** (2 specs in `Docs/Specs/Active/`):
+  - `mode_select_system` — SPEC_READY, FULL PIPELINE. 4 modes (Practice / 1v1 / Driving Range-locked / Missions-locked) over two surfaces: home horizontal carousel + full-screen Mode Select (clone of Hole Select) reached via the bottom-nav tee button. CSV-driven fee+rewards (`modes.csv`), locked-card treatment from holes, RP economy via `RewardPointsManager`. Kickoff: `Use the implementer subagent on "mode_select_system"`.
+  - `practice_1v1_matchmaking_split` — SPEC_READY, TELLCODE. Move fake matchmaking OFF Practice (solo, seed+load direct) and ONTO 1v1 (random hole 1–18 + random opponent). Touches shipped C0 seed path. Kickoff: `Use the implementer subagent on "practice_1v1_matchmaking_split"`.
+  - **Blocked-pending-Figma:** the economy gate needs an "Insufficient Reward Points" message — Architect to create in Figma for Cesar approval, then bind.
+- **Retired orphan:** `lomond_greens_authoring_batch` → `Completed/` (abandoned auto-PDF-read approach, superseded by `green_slope_authoring_tool`; stale leftover in Active, not real work).
+- **Roadmap TODO (Notion):** add **"1v1 in-game UI"** (opponent HUD / turn order / versus scoring) — gated on Cesar's upcoming Figma.
+- **Last updated:** 2026-06-03 (Architect — Loop v2 + greens + ball_flight_trail all confirmed shipped; repointed to the mode-selection rework; retired the greens orphan).
 
 ---
 
