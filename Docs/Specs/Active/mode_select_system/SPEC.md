@@ -86,6 +86,16 @@ Every position, size, and font on the mode-select surfaces must match the named 
 - Save a screenshot of each of the three frames into `Docs/Specs/Active/mode_select_system/screenshots/` as the §Visual reference (mandatory for visual-fidelity tasks).
 - Anything unreadable from Figma → `// NOTE`, flag it, do not guess.
 
+## Transitions & animation (smooth, reuse existing — no new tween lib)
+
+The project has **no tween library** (DOTween/LeanTween absent). Reuse the shipped patterns; animate the gaps with coroutine-Lerp (the `ModalController` idiom).
+
+- **Screen swaps** (tee → Mode Select; Mode Select → back; Practice PLAY → Hole Select) — go through `ScreenManager.ShowScreen(id)` with the **default** `instant=false` so `FadeController.FadeOutThenIn` runs (fade-to-black → swap → fade-in). **Never pass `instant=true`** for these.
+- **Matchmaking / toast** — reuse `ModalController` `CanvasGroup` `FadeIn`/`FadeOut` (already animated) and the existing `ToastController` animation. No change.
+- **Carousel card expand/collapse** — must NOT be an instant `expandedContainer` SetActive pop. Animate height + `CanvasGroup` alpha over a short ease-out (~0.15–0.20s) via coroutine-Lerp; chevron rotates/swaps in step. Collapse reverses.
+- **Carousel swipe-snap** — the centered-card snap eases into place (coroutine-Lerp), not an instant jump; expand only fires after snap settles.
+- Durations live as serialized fields (Cesar-tunable in inspector), with the ~0.15–0.20s ease-out as defaults. No frame-rate-dependent steps — Lerp on `unscaledDeltaTime` so a paused timescale doesn't freeze menu motion.
+
 ## Acceptance gates (via loop_v2_smoke_bot framework — reusability contract)
 
 New Scenarios.cs flows:
@@ -94,6 +104,7 @@ New Scenarios.cs flows:
 3. Practice PLAY -> Hole Select. 1v1 PLAY -> gameplay reached (delegated; see split spec).
 4. Fee economy: Practice PLAY when balance < fee -> ENTRY FEE text is red `#C04000`, PLAY greyed; tapping PLAY -> toast shown, no `SpendPoints`, no launch. Balance >= fee -> fee normal, `SpendPoints` called once, RP counter decrements, launch proceeds. 1v1 (fee 0) -> never blocked, no deduction.
 5. Existing screens untouched; EditMode green.
+6. Transitions: screen swaps fade (no hard cuts, no `instant=true`); carousel expand/collapse + swipe-snap animate smoothly (no SetActive pop); modals/toast fade as today.
 
 Human LOOK pass: both surfaces match Figma **to the Visual fidelity gate above** — position/size/font mismatches are **blockers, not polish**, measured against `13027`/`13026`. Locked treatment reads "coming soon"; expand/collapse clean.
 
