@@ -6,7 +6,13 @@ Includes Japan holiday/weekend awareness.
 
 Media attachments (added 2026-05-28, Mac setup):
   After the text report is posted, the tool also sends media to the same chat:
-    1. Any video file (.mp4/.mov/.webm/...) added or modified in TODAY's git commits.
+    1. Any video file (.mp4/.mov/.webm/...) added or modified in the last 24h of
+       git commits.
+       CAVEAT: task videos under Docs/Specs/**/videos/ are git-ignored (large,
+       regenerable — see .gitignore, added 2026-06-02). Git-ignored videos are
+       never committed, so this auto-path CANNOT see them. To attach a task
+       video (orbit clip, trail capture, etc.), copy it into the media drop
+       folder below — that is the only reliable path for task videos.
     2. Any video OR image you drop into the media folder (default: Docs/Reports/Media/).
        Drop-folder files are DELETED after a successful send (README.md/.gitkeep are kept).
   Telegram's Bot API caps uploads at 50 MB — larger files are skipped (and reported),
@@ -135,7 +141,7 @@ def get_day_note() -> str:
     return "\n".join(notes) if notes else ""
 
 
-def get_todays_commits(since: str = "midnight") -> str:
+def get_todays_commits(since: str = "24 hours ago") -> str:
     """Pull git log from the repo — chronological order (oldest first)."""
     result = subprocess.run(
         ["git", "log", f"--since={since}", "--reverse", "--format=%h %s (%an, %ar)", "--no-merges"],
@@ -146,7 +152,7 @@ def get_todays_commits(since: str = "midnight") -> str:
     return result.stdout.strip()
 
 
-def get_commit_count(since: str = "midnight") -> int:
+def get_commit_count(since: str = "24 hours ago") -> int:
     """Count commits since the given time."""
     result = subprocess.run(
         ["git", "rev-list", "--count", f"--since={since}", "HEAD", "--no-merges"],
@@ -160,7 +166,7 @@ def get_commit_count(since: str = "midnight") -> int:
         return 0
 
 
-def get_changed_files(since: str = "midnight") -> str:
+def get_changed_files(since: str = "24 hours ago") -> str:
     """Get a summary of files changed since the given time."""
     result = subprocess.run(
         ["git", "log", f"--since={since}", "--reverse", "--stat", "--format=", "--no-merges"],
@@ -171,7 +177,7 @@ def get_changed_files(since: str = "midnight") -> str:
     return result.stdout.strip()
 
 
-def get_todays_videos(since: str = "midnight") -> list:
+def get_todays_videos(since: str = "24 hours ago") -> list:
     """
     Return absolute paths of video files added/modified in commits since `since`.
     --diff-filter=d excludes deletions (lowercase d = "not deleted").
@@ -566,7 +572,11 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
 def main():
     parser = argparse.ArgumentParser(description="GOLFIN daily report")
     parser.add_argument("--note", default="", help="Extra note to include in today's report")
-    parser.add_argument("--since", default="midnight", help="Git --since value (e.g. '2026-05-14 00:00:00') to backfill missed days")
+    parser.add_argument("--since", default="24 hours ago",
+                        help="Git --since window (default: '24 hours ago' — a rolling 24h "
+                             "window that tiles cleanly with the 13:30 daily run so commits "
+                             "made after 13:30 are not lost in a gap. Override e.g. "
+                             "'2026-05-14 00:00:00' to backfill a missed day)")
     parser.add_argument("--no-media", action="store_true", help="Skip all video/image attachments")
     parser.add_argument("--dry-run", action="store_true", help="Print the report + planned media to stdout; do NOT post to Telegram or delete anything")
     parser.add_argument("--test", action="store_true", help="Real send, but to TELEGRAM_TEST_CHAT_ID instead of the production channel")

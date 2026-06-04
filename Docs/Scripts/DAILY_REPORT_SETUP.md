@@ -43,13 +43,21 @@ it works under `launchd` (whose working directory differs).
 
 ## 3. Media attachments
 
-- **Today's git videos** — any `.mp4/.mov/.webm/...` added or modified in commits
-  since midnight are attached automatically.
+- **Git videos (last 24h)** — any `.mp4/.mov/.webm/...` added or modified in
+  commits in the **last 24 hours** are attached automatically. The window is a
+  rolling 24h (not "since midnight") so commits made after the 13:30 run aren't
+  lost in a gap until the next day.
+  ⚠️ **Task videos do NOT auto-attach.** Everything under `Docs/Specs/**/videos/`
+  is git-ignored (large, regenerable — `.gitignore`, 2026-06-02), so it is never
+  committed and the git auto-path can't see it. Orbit clips, trail captures, and
+  any other task video must go through the manual drop folder below.
 - **Manual drop folder** — `Docs/Reports/Media/`. Drop videos *or* images there
   and they'll be attached to the next report, then **deleted after a successful
-  send** (`README.md`/`.gitkeep` are preserved). See that folder's README.
+  send** (`README.md`/`.gitkeep` are preserved). This is the reliable path for
+  task videos. See that folder's README.
 - Telegram caps uploads at **50 MB**; larger files are skipped and reported in
-  the log, never deleted.
+  the log, never deleted. Bulk drops are paced (~20/min) and retry on HTTP 429,
+  so a big batch sends fully instead of half-failing.
 
 ## 4. Schedule — launchd
 
