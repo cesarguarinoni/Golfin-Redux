@@ -65,18 +65,24 @@ Fee + rewards are examples; values live in CSV so Cesar tunes which modes charge
 
 ## Visual fidelity gate (Figma-exact — HARD, blocks acceptance)
 
-Every position, size, and font on the mode-select surfaces must match the named Figma frames exactly (Unity-converted). **Reuse means structure + logic, not stale layout** — where a cloned/reused component (Mission Card, locked-hole treatment, gold PLAY button, Cross-Promotion banner) disagrees with the Figma frame, **Figma wins**; Code adjusts the clone's RectTransform/typography to the frame. Do not inherit prefab metrics on faith.
+Every position, size, and font on the mode-select surfaces must match the named Figma frames exactly (Unity-converted). **Reuse means structure + logic, not stale layout** — where a cloned/reused component (Mission Card, locked-hole treatment, mode card text) disagrees with the Figma frame, **Figma wins**; Code adjusts the clone's RectTransform/typography to the frame. Do not inherit prefab metrics on faith.
+
+**Prefab-wins exceptions (Cesar 2026-06-04 — do NOT re-measure to Figma):**
+- **Cross-Promotion banner** — ships exactly as the existing `promoBannerButton` prefab; only repositioned under the carousel. Keep its current size/typography.
+- **Gold PLAY button** — ships as the existing component as-is (incl. `ButtonPressFeedback`). Keep its current size/typography; only its enabled/greyed state and route change.
 
 **Source frames** (file key `5gEAHjl6xAtW8iYY7NMvWd`): home carousel `13027-5212` (collapsed) / `13027-10471` (expanded); full-screen Mode Select `13026-1924`. Pull metrics **live from Figma MCP** (`use_figma` `getNodeByIdAsync` walk, or `get_design_context` with `excludeScreenshot:false` for full child geometry) — never guess (RUNTIME_BLUEPRINT §8 standing rule).
 
 **Conversion (RUNTIME_BLUEPRINT §1/§7):**
 - Canvas `1170×2532, Match=0`. At 1170-wide, **1 Figma px = 1 Unity unit** → x/y offsets and w/h copy directly as canvas units.
 - **Unity TMP fontSize = Figma fontSize ÷ 1.4** (record BOTH numbers as a `// NOTE` beside each text element).
-- Font asset: `Assets/Fonts/Rubik-VariableFont_wght SDF.asset` (NOT `Rubik-SemiBold SDF`). Match the per-layer weight from Figma.
+- **Fonts are NOT uniform** — measure every text element individually. Sizes differ per element (title vs tagline vs description vs ENTRY FEE vs REWARDS), and weights differ: some are **bold** (use the bold/SemiBold weight of the variable font, or `fontStyle` Bold) where Figma shows bold, regular elsewhere. Read each layer's size AND weight from Figma; never copy one element's font to another.
+- Font asset: `Assets/Fonts/Rubik-VariableFont_wght SDF.asset` (NOT `Rubik-SemiBold SDF`). Apply the per-layer weight from Figma.
 - Anchors per the frame's layout (corner-anchored against the 1170×2532 ref, per §7 convention).
 
 **Deliverables (in IMPLEMENTER_REPORT):**
-- A per-element fidelity table: element → Figma node id → x,y / w,h (Figma px = Unity units) → font family + weight + Figma size + Unity size.
+- A per-element fidelity table: element → Figma node id → x,y / w,h (Figma px = Unity units) → font family + **weight (regular/bold)** + Figma size + Unity size.
+- **Collapsed vs Expanded are measured separately** — the card's size and child layout differ between `13027-5212` (collapsed) and `13027-10471` (expanded). Capture metrics for BOTH states; the fidelity table has a row set per state.
 - Save a screenshot of each of the three frames into `Docs/Specs/Active/mode_select_system/screenshots/` as the §Visual reference (mandatory for visual-fidelity tasks).
 - Anything unreadable from Figma → `// NOTE`, flag it, do not guess.
 
