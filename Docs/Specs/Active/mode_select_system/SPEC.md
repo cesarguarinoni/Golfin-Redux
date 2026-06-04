@@ -3,7 +3,7 @@
 **Slug:** `mode_select_system`
 **Tier:** FULL PIPELINE (new screens + visual fidelity + new data/economy surface).
 **Status:** SPEC_READY
-**Depends on:** `practice_1v1_matchmaking_split` (per-mode launch behavior) · Figma "Insufficient Reward Points" message (to be created + Cesar-approved before the economy gate ships).
+**Depends on:** `practice_1v1_matchmaking_split` (per-mode launch behavior). Insufficient-RP UX RESOLVED 2026-06-03 (disable PLAY + red `#C04000` fee + `ToastController`; no new Figma).
 **Figma:** Home carousel `13027-5212` (collapsed) / `13027-10471` (expanded); full-screen `13026-1924` (Mode Selection Screen). File key `5gEAHjl6xAtW8iYY7NMvWd`.
 
 ---
@@ -58,7 +58,7 @@ Fee + rewards are examples; values live in CSV so Cesar tunes which modes charge
   - Practice -> target=hole_select -> existing Hole Select screen.
   - 1v1 -> target=matchmaking_1v1 -> launch directly (random hole + random opponent -> matchmaking -> gameplay). Behavior owned by `practice_1v1_matchmaking_split`.
   - Driving Range / Missions -> locked -> PLAY disabled, no route.
-- **Entry fee** (assumption — confirm): on PLAY press, if (fee>0 and !CanAfford(fee)) -> show **Insufficient Reward Points** message (Figma, to create) and abort; else `SpendPoints(fee)` then route. Deduct-on-launch.
+- **Entry fee (DECIDED 2026-06-03):** card binds fee from `modes.csv`. **Affordable** (`fee==0 || CanAfford(fee)`): fee renders normal, PLAY enabled; on press `SpendPoints(fee)` then route (deduct-on-launch). **Unaffordable** (`fee>0 && !CanAfford(fee)`): (a) ENTRY FEE amount renders **red `#C04000`** (the project's `spDepletedColor`, from `LevelUpModalController`); (b) PLAY renders **greyed/disabled** but stays *technically* interactable — deliberate divergence from level-up's hard `interactable=false`, so the tap can be caught; (c) tapping PLAY fires `ToastController.Instance.Show("Not enough Reward Points", ...)` — no launch, no deduction. Reuses the existing toast (powers "COURSE CLEARED!"); **no new Figma**. 1v1 (fee 0) is never blocked.
 - Carousel rotates **all 4** modes (locked ones show locked, no PLAY) — assumption. The two surfaces are independent launchers (no shared "current mode" state).
 
 ---
@@ -69,7 +69,7 @@ New Scenarios.cs flows:
 1. Tee button -> Mode Select renders 4 cards in `order`; Practice/1v1 enabled, Driving Range/Missions locked (dark + lock glyph, PLAY non-interactive).
 2. Home carousel: swipe centers each mode; arrow expands centered card (description visible), collapses on slide; banner stays below; only centered card shows PLAY.
 3. Practice PLAY -> Hole Select. 1v1 PLAY -> gameplay reached (delegated; see split spec).
-4. Fee economy: Practice PLAY with balance < fee -> Insufficient-RP message, no deduction, no launch; balance >= fee -> SpendPoints called once, RP counter decrements, launch proceeds. 1v1 (fee 0) -> no deduction.
+4. Fee economy: Practice PLAY when balance < fee -> ENTRY FEE text is red `#C04000`, PLAY greyed; tapping PLAY -> toast shown, no `SpendPoints`, no launch. Balance >= fee -> fee normal, `SpendPoints` called once, RP counter decrements, launch proceeds. 1v1 (fee 0) -> never blocked, no deduction.
 5. Existing screens untouched; EditMode green.
 
 Human LOOK pass: both surfaces match Figma; locked treatment reads "coming soon"; expand/collapse clean.
@@ -79,4 +79,3 @@ Human LOOK pass: both surfaces match Figma; locked treatment reads "coming soon"
 ## Out of scope (tracked elsewhere)
 - Practice/1v1 matchmaking behavior -> `practice_1v1_matchmaking_split`.
 - 1v1 in-game UI -> new roadmap item (Cesar's upcoming Figma).
-- Designing the Insufficient-RP message -> created in Figma first, approved, then bound here.

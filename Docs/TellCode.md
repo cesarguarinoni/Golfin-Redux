@@ -10,7 +10,7 @@
 - **PRIMARY ACTIVE — home mode-selection rework** (2 specs in `Docs/Specs/Active/`):
   - `mode_select_system` — SPEC_READY, FULL PIPELINE. 4 modes (Practice / 1v1 / Driving Range-locked / Missions-locked) over two surfaces: home horizontal carousel + full-screen Mode Select (clone of Hole Select) reached via the bottom-nav tee button. CSV-driven fee+rewards (`modes.csv`), locked-card treatment from holes, RP economy via `RewardPointsManager`. Kickoff: `Use the implementer subagent on "mode_select_system"`.
   - `practice_1v1_matchmaking_split` — SPEC_READY, TELLCODE. Move fake matchmaking OFF Practice (solo, seed+load direct) and ONTO 1v1 (random hole 1–18 + random opponent). Touches shipped C0 seed path. Kickoff: `Use the implementer subagent on "practice_1v1_matchmaking_split"`.
-  - **Blocked-pending-Figma:** the economy gate needs an "Insufficient Reward Points" message — Architect to create in Figma for Cesar approval, then bind.
+  - Economy-gate UX RESOLVED (no Figma needed): disable PLAY + red `#C04000` fee amount + `ToastController` toast on tap-anyway. Both specs clear to implement.
 - **Retired orphan:** `lomond_greens_authoring_batch` → `Completed/` (abandoned auto-PDF-read approach, superseded by `green_slope_authoring_tool`; stale leftover in Active, not real work).
 - **Roadmap TODO (Notion):** add **"1v1 in-game UI"** (opponent HUD / turn order / versus scoring) — gated on Cesar's upcoming Figma.
 - **Last updated:** 2026-06-03 (Architect — Loop v2 + greens + ball_flight_trail all confirmed shipped; repointed to the mode-selection rework; retired the greens orphan).
