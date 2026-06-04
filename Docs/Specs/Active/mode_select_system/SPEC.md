@@ -148,10 +148,10 @@ Human LOOK pass: both surfaces match Figma **to the Visual fidelity gate above**
 
 | State | Surface | Figma ref | Card structure |
 |---|---|---|---|
-| Home collapsed | Home carousel | `13027-5212` | centered card: title + tagline (+variant chevron if mode has variants) + ENTRY FEE + REWARDS + PLAY. **No description.** |
+| Home collapsed | Home carousel | `13027-5212` | centered card: title + tagline (+ expand chevron on centered card) + ENTRY FEE + REWARDS + PLAY. **No description.** |
 | Home expanded | Home carousel | `13027-10471` | same as collapsed **plus** description paragraph between title-separator and fee block. |
-| Full-screen, one expanded | Mode Select | `13026-1924` | expanded card = title + variant subtitle + description + ENTRY FEE + REWARDS + PLAY (3 separators). Other cards collapsed. |
-| Full-screen, all collapsed | Mode Select | derive from `13026-1924` collapsed cards | each card = title + tagline + fee row(s). No description, **no PLAY**. |
+| Full-screen, one expanded | Mode Select | `13026-1924` | expanded card = title + subtitle + description + ENTRY FEE + REWARDS + PLAY (3 separators). Other cards collapsed. |
+| Full-screen, all collapsed | Mode Select | derive from `13026-1924` collapsed cards | render EVERY card in its collapsed form (title + tagline + fee row(s), no description, **no PLAY**). No separate frame needed. |
 
 **PLAY presence rule:** Home = PLAY always on the centered card (both states). Full-screen = PLAY only on the **expanded** card; collapsed list cards have no PLAY.
 
@@ -198,7 +198,7 @@ Human LOOK pass: both surfaces match Figma **to the Visual fidelity gate above**
 7. Description touching sides -> 80px inset.
 8. Centered card not horizontally centered -> center card is **764** wide (sides 677); snap centers it. (Likely caused by uniform-width assumption.)
 9. **Carousel scroll arrows REMOVED** (Cesar 2026-06-04 — they are set hidden in Figma deliberately; do not render them on either surface).
-10. Per-card variant chevron: render ONLY where a mode has variants (MULTIPLAYER `1v1 Match v`); Practice/others = plain tagline, no chevron.
+10. Subtitle/chevron: `1 vs 1 Match` is the MULTIPLAYER **subtitle**, NOT a selectable variant (no mode has variants). The chevron is the expand/collapse affordance only — shown on the home centered card (per `13027-10471`), hidden on the full-screen list (see item 16).
 
 **Full-screen:**
 11. No back panel -> add `Cards Container` panel (6.2): 1074w, gradient, 3px `rgba(255,255,255,0.9)`, rounded-20, pad-24, gap-24.
@@ -215,10 +215,10 @@ Human LOOK pass: both surfaces match Figma **to the Visual fidelity gate above**
 - Each capture diffed against its mapped Figma frame: title/tagline/desc/label/value/PLAY positions, sizes, weights match the 6.2 tables. Mismatch = reject.
 - Active card has white border + gold title + 3 separators + PLAY; collapsed cards have blue border + silver title + 1 separator + no PLAY.
 - Full-screen: back panel present (1074w), cards 978 inset-48, locked overlay clipped to card.
-- No scroll arrows anywhere. No per-card chevron on full-screen list. Home chevron only on MULTIPLAYER.
+- No scroll arrows anywhere. No expand chevron on full-screen list cards. Home expand chevron on the centered card only.
 - EditMode green; existing screens untouched.
 - IMPLEMENTER_REPORT carries the per-element fidelity table (element -> node id -> x,y/w,h -> font weight + Figma px + Unity px) for BOTH states of BOTH surfaces, plus the source GUID each prefab was duplicated from (Step 0 gate still in force).
 
-## 6.5 Open confirmations
-- Variant chevron set: confirmed MULTIPLAYER (`1v1 Match`). Any other mode with variants? (assume none for iter-6.)
-- All-collapsed full-screen has no dedicated Figma frame; collapsed-card metrics derive from `13026-1924`. Flag if a canonical all-collapsed frame exists.
+## 6.5 Resolved (Cesar 2026-06-04)
+- **No mode variants exist.** `1 vs 1 Match` is the MULTIPLAYER subtitle; the chevron is the expand/collapse affordance only.
+- **All-collapsed full-screen needs no canonical frame** — render every card in its collapsed form; collapsed-card metrics derive from the collapsed cards in `13026-1924`.
