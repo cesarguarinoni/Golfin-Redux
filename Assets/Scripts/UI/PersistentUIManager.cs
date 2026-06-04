@@ -210,7 +210,8 @@ namespace Golfin.UI
                     sm.ShowScreen(GolfinRedux.UI.ScreenId.Roster);
                     break;
                 case Screen.MainPlay:
-                    sm.ShowScreen(GolfinRedux.UI.ScreenId.HoleSelection);
+                    // Bottom-nav tee button → Mode Select screen (mode_select_system spec)
+                    sm.ShowScreen(GolfinRedux.UI.ScreenId.ModeSelection);
                     break;
                 default:
                     Debug.LogWarning($"[PersistentUI] Navigation to {screen} not yet implemented.");
@@ -230,7 +231,8 @@ namespace Golfin.UI
                 case GolfinRedux.UI.ScreenId.Home:          currentScreen = Screen.Home; break;
                 case GolfinRedux.UI.ScreenId.Roster:        currentScreen = Screen.Characters; break;
                 case GolfinRedux.UI.ScreenId.Inventory:     currentScreen = Screen.Inventory; break;
-                case GolfinRedux.UI.ScreenId.HoleSelection: currentScreen = Screen.MainPlay; break;
+                case GolfinRedux.UI.ScreenId.HoleSelection:  currentScreen = Screen.MainPlay; break;
+                case GolfinRedux.UI.ScreenId.ModeSelection:  currentScreen = Screen.MainPlay; break;
                 default:
                     return; // Logo/Splash/Loading: bars hidden, no highlight needed.
             }

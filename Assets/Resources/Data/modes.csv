@@ -1,0 +1,5 @@
+id,title,tagline,description,entryFee,rewards,locked,target,order
+practice,PRACTICE,Sharpen your skills on any hole.,Practice your golf skills on any course. Choose a hole and tee off at your own pace — no pressure.,100,50,false,hole_select,1
+versus_1v1,1v1,Face off in fast-paced 1v1 matches.,Face off in fast-paced 1v1 golf matches. Beat your opponent to earn Reward Points and climb the rankings.,0,200,false,matchmaking_1v1,2
+driving_range,DRIVING RANGE,Coming Soon — practice your drives.,A dedicated driving range mode where you can practice long shots and experiment with different clubs.,0,0,true,none,3
+missions,MISSIONS,Coming Soon — complete challenges.,Complete special challenges and objectives to earn bonus rewards and exclusive items.,0,200,true,none,4

@@ -8,6 +8,18 @@
 
 ---
 
+## Step 0 — CLONE, do not author (HARD GATE, reviewer-reject on violation)
+
+A prior session built `ModeCard.prefab` from scratch (empty `Image` boxes, no art) and was **discarded 2026-06-04**. Do not recreate it. **No new card or screen GameObject may be authored from scratch.** Every visual element is produced by **duplicating a named existing prefab** and rebinding/resizing its children:
+
+- **Home carousel card** → `Duplicate` `HomeScreen.prefab › NextHolePanel`.
+- **Full-screen vertical list** → clone `HoleSelectionScreenController.cs` → `ModeSelectScreenController.cs`; card = `HoleSelection/HoleCard.prefab` + clone `HoleCardController.cs` → `ModeCardController.cs` (locked/accordion treatment verbatim).
+- Full element-by-element inventory + reuse table: **`BRIEF_REUSABLE_ELEMENTS.md`** (in this folder) is binding, read it first.
+
+**IMPLEMENTER_REPORT must list the source asset GUID each new prefab was duplicated from.** A new card/screen GameObject with no clone source = automatic reject. Salvaged-and-kept from the prior session (do NOT rebuild): `ScreenManager.cs` (enum `ModeSelection` + slot), `PersistentUIManager.cs` (tee → ModeSelection), `Resources/Data/modes.csv`, `ModeSelect/ModesDatabaseCSV.cs`.
+
+---
+
 ## Goal
 
 Replace the single home PLAY->Hole-Select entry with a **mode selection layer** offering four modes, across two surfaces that share one data source and one card component:
