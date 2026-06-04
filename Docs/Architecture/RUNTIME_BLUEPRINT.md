@@ -340,6 +340,18 @@ These are markers Architect/Code should fill in next time the relevant area is t
 
 The legacy `Docs/TellCode.md` workflow is deprecated for new active tasks. Don't write new active work there.
 
+### Standing rule: extract from STRUCTURAL DATA, not screenshots (set 2026-06-04)
+
+**Before writing OR reviewing any UI fidelity spec, pull the component's structural data and build the per-element token table from it — never from rendered screenshots or recall.** Screenshots show symptoms; they do not show what is encoded in structure.
+
+Two calls, in order, on the target component (frame or instance):
+1. **`figma:get_metadata`** — node tree, names, x/y/w/h, and **`hidden="true"` flags**. This reveals: nested containers, per-state node presence, hidden elements (e.g. `Arrow Container hidden=true`), and exact dimensions.
+2. **`figma:get_design_context`** — the token values: font family/**weight**/size/lineHeight, fills, **gradients**, **border color + width**, corner radius, separators, padding/gap.
+
+Then write each value as a LITERAL into the spec. Code transcribes; it does not re-query or interpret.
+
+**Lesson — mode_select_system iter-5 review (2026-06-04):** reviewing from the rendered screenshots + memory missed ~10 real issues, ALL of which were sitting in the metadata: active-vs-inactive encoded as **border color** (white vs `#3E7CA8`) + **title color** (gold `#EEDC9A` vs silver gradient); the "back panel" being the **`Cards Container` frame's own fill** (not a separate rect); **per-surface card widths** (home 764/677 vs full-screen 978); the carousel arrows being **`hidden=true`** deliberately; **separator counts** per state (3 on expanded, 1 on collapsed); the fee/reward **centered-cluster** layout vs corner-spread. None of this is legible from a screenshot. Pulling `get_metadata` + `get_design_context` surfaced every one. Do this FIRST, every time.
+
 ### Standing rule: Figma source-of-truth (set 2026-04-28)
 
 **Figma is the UI source-of-truth.** Reference PNGs in `Docs/Reference/` are companions for visual comparison only — Code uses them for side-by-side diffs during impl, but the canonical numbers (dimensions, fonts, colors, positions) come from Figma via the MCP, not from eyeballing the PNG.
@@ -463,6 +475,8 @@ In the Unity Editor, `ScreenCapture.CaptureScreenshotAsTexture()` returns the OS
 ---
 
 ## 11 — Update Log
+
+- **2026-06-04** — Added §9 standing rule "extract from STRUCTURAL DATA, not screenshots." Before writing/reviewing any UI fidelity spec, pull `get_metadata` + `get_design_context` on the component and build the token table from that. From mode_select_system iter-5 review, where screenshot-eyeballing missed ~10 issues all present in metadata (active/inactive border+title color, container-as-back-panel, per-surface widths, hidden arrow containers, separator counts, centered-cluster layout).
 
 - **2026-04-30** — Added §10 Editor Tooling. Documents `CaptureHelper.cs` (synchronous GameView RT reflection capture, replacing async `ScreenCapture.CaptureScreenshot`), `FakeStateLock` runtime flag, fake-state preset menu items, populator cooperation pattern, and the standing maintenance protocol when adding new static-bus contexts. Cross-referenced from §2 and §3. Renumbered Update Log §10 → §11. Built on the `capture_helper` task (Cesar approved 2026-04-29) plus the populator-lock follow-up (2026-04-30).
 
