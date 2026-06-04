@@ -63,6 +63,23 @@ Fee + rewards are examples; values live in CSV so Cesar tunes which modes charge
 
 ---
 
+## Visual fidelity gate (Figma-exact — HARD, blocks acceptance)
+
+Every position, size, and font on the mode-select surfaces must match the named Figma frames exactly (Unity-converted). **Reuse means structure + logic, not stale layout** — where a cloned/reused component (Mission Card, locked-hole treatment, gold PLAY button, Cross-Promotion banner) disagrees with the Figma frame, **Figma wins**; Code adjusts the clone's RectTransform/typography to the frame. Do not inherit prefab metrics on faith.
+
+**Source frames** (file key `5gEAHjl6xAtW8iYY7NMvWd`): home carousel `13027-5212` (collapsed) / `13027-10471` (expanded); full-screen Mode Select `13026-1924`. Pull metrics **live from Figma MCP** (`use_figma` `getNodeByIdAsync` walk, or `get_design_context` with `excludeScreenshot:false` for full child geometry) — never guess (RUNTIME_BLUEPRINT §8 standing rule).
+
+**Conversion (RUNTIME_BLUEPRINT §1/§7):**
+- Canvas `1170×2532, Match=0`. At 1170-wide, **1 Figma px = 1 Unity unit** → x/y offsets and w/h copy directly as canvas units.
+- **Unity TMP fontSize = Figma fontSize ÷ 1.4** (record BOTH numbers as a `// NOTE` beside each text element).
+- Font asset: `Assets/Fonts/Rubik-VariableFont_wght SDF.asset` (NOT `Rubik-SemiBold SDF`). Match the per-layer weight from Figma.
+- Anchors per the frame's layout (corner-anchored against the 1170×2532 ref, per §7 convention).
+
+**Deliverables (in IMPLEMENTER_REPORT):**
+- A per-element fidelity table: element → Figma node id → x,y / w,h (Figma px = Unity units) → font family + weight + Figma size + Unity size.
+- Save a screenshot of each of the three frames into `Docs/Specs/Active/mode_select_system/screenshots/` as the §Visual reference (mandatory for visual-fidelity tasks).
+- Anything unreadable from Figma → `// NOTE`, flag it, do not guess.
+
 ## Acceptance gates (via loop_v2_smoke_bot framework — reusability contract)
 
 New Scenarios.cs flows:
@@ -72,7 +89,7 @@ New Scenarios.cs flows:
 4. Fee economy: Practice PLAY when balance < fee -> ENTRY FEE text is red `#C04000`, PLAY greyed; tapping PLAY -> toast shown, no `SpendPoints`, no launch. Balance >= fee -> fee normal, `SpendPoints` called once, RP counter decrements, launch proceeds. 1v1 (fee 0) -> never blocked, no deduction.
 5. Existing screens untouched; EditMode green.
 
-Human LOOK pass: both surfaces match Figma; locked treatment reads "coming soon"; expand/collapse clean.
+Human LOOK pass: both surfaces match Figma **to the Visual fidelity gate above** — position/size/font mismatches are **blockers, not polish**, measured against `13027`/`13026`. Locked treatment reads "coming soon"; expand/collapse clean.
 
 ---
 
