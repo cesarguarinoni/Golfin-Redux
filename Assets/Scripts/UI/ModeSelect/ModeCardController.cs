@@ -47,10 +47,20 @@ namespace GolfinRedux.UI.ModeSelect
         [SerializeField] private Image   cardBackground;          // root panel Image (sliced)
         [SerializeField] private Sprite  panelActiveSprite;      // white-border panel (active/expanded)
         [SerializeField] private Sprite  panelCollapsedSprite;   // #3E7CA8-border panel (collapsed/locked)
-        // Active/expanded border color = white (3px)
-        private static readonly Color BorderActive   = new Color(1f, 1f, 1f, 1f);
-        // Collapsed/inactive border color = #3E7CA8 (blue)
-        private static readonly Color BorderInactive = new Color(0.243f, 0.486f, 0.659f, 1f);
+        // ── Colours (§6.2 — editable per prefab in the Inspector) ─────────────
+        // Were hardcoded constants; now serialized so border/title/fee colours can be
+        // retuned in Unity without a code change. Defaults match the shipped values.
+        [Header("Colours (§6.2)")]
+        [Tooltip("Border tint on the active/selected card (white).")]
+        [SerializeField] private Color borderActiveColor   = new Color(1f, 1f, 1f, 1f);
+        [Tooltip("Border tint when inactive/collapsed (#3E7CA8 blue).")]
+        [SerializeField] private Color borderInactiveColor = new Color(0.243f, 0.486f, 0.659f, 1f);
+        [Tooltip("Title colour on the active/selected card (#EEDC9A gold).")]
+        [SerializeField] private Color titleActiveColor    = new Color32(0xEE, 0xDC, 0x9A, 255);
+        [Tooltip("Title colour when inactive/locked (#D1D5DB silver).")]
+        [SerializeField] private Color titleCollapsedColor = new Color32(0xD1, 0xD5, 0xDB, 255);
+        [Tooltip("Entry-fee text colour when the player can't afford the fee (#C04000).")]
+        [SerializeField] private Color insufficientRpColor = new Color32(0xC0, 0x40, 0x00, 255);
 
         // ── Title TMP elements ────────────────────────────────────────────────
         // NOTE: Figma 45px ÷ 1.4 = 32.14 TMP, Rubik variable font weight 600
@@ -58,12 +68,7 @@ namespace GolfinRedux.UI.ModeSelect
         [SerializeField] private TextMeshProUGUI titleText;           // collapsed title
         [SerializeField] private TextMeshProUGUI titleTextExpanded;   // expanded title (if separate)
 
-        // Active title color: gold #EEDC9A
-        private static readonly Color TitleColorActive = new Color32(0xEE, 0xDC, 0x9A, 255);
-        // Collapsed title color: approximated as #B0B8C1 (midpoint of silver gradient)
-        // NOTE: TMP VertexGradient would be more accurate but requires gradient asset.
-        // Using the midpoint silver as a reasonable approximation.
-        private static readonly Color TitleColorCollapsed = new Color32(0xD1, 0xD5, 0xDB, 255);
+        // Title colours are the serialized titleActiveColor / titleCollapsedColor fields above.
 
         // ── Tagline / Description — single auto-sizing TMP element ─────────────
         // NOTE: Collapsed shows tagline (EN/Footnote 39px → 27.86); Expanded swaps to description.
@@ -137,7 +142,7 @@ namespace GolfinRedux.UI.ModeSelect
         [SerializeField] private float _expandedHeight   = 822f;
 
         // Insufficient-RP color — matches LevelUpModalController.spDepletedColor (#C04000)
-        private static readonly Color32 InsufficientRpColor = new Color32(0xC0, 0x40, 0x00, 255);
+        // Insufficient-RP colour is the serialized insufficientRpColor field above.
         private static readonly Color32 NormalWhite = new Color32(255, 255, 255, 255);
 
         // ── Public state ──────────────────────────────────────────────────────
@@ -208,7 +213,7 @@ namespace GolfinRedux.UI.ModeSelect
             bool whiteBorder = _showChevron
                 ? (isLocked ? _isCenter : isExpanded)
                 : (isExpanded && !isLocked);
-            Color borderColor = whiteBorder ? BorderActive : BorderInactive;
+            Color borderColor = whiteBorder ? borderActiveColor : borderInactiveColor;
             if (borderImage != null)        borderImage.color        = borderColor;
             if (cardBorderOutline != null)  cardBorderOutline.effectColor = borderColor;
             if (cardBackground != null && panelActiveSprite != null && panelCollapsedSprite != null)
@@ -219,7 +224,7 @@ namespace GolfinRedux.UI.ModeSelect
             // (matching the selected look); side & locked cards stay silver. Full-screen: gold = the
             // expanded non-locked card. Locked cards never go gold.
             bool goldTitle = !isLocked && (_showChevron ? _isCenter : isExpanded);
-            Color titleColor = goldTitle ? TitleColorActive : TitleColorCollapsed;
+            Color titleColor = goldTitle ? titleActiveColor : titleCollapsedColor;
             if (titleText != null)         titleText.color         = titleColor;
             if (titleTextExpanded != null) titleTextExpanded.color = titleColor;
         }
@@ -420,7 +425,7 @@ namespace GolfinRedux.UI.ModeSelect
                 && RewardPointsManager.Instance != null
                 && !RewardPointsManager.Instance.CanAfford(_data.entryFee);
 
-            Color feeColor = insufficient ? (Color)InsufficientRpColor : (Color)NormalWhite;
+            Color feeColor = insufficient ? insufficientRpColor : (Color)NormalWhite;
 
             if (entryFeeAmount    != null) entryFeeAmount.color    = feeColor;
             if (entryFeeAmountExp != null) entryFeeAmountExp.color = feeColor;

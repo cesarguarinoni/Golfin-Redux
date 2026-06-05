@@ -296,6 +296,11 @@ MonoBehaviour:
   cardBackground: {fileID: 4308526934566592319}
   panelActiveSprite: {fileID: 21300000, guid: 99fb7f168b66e4d73a9e9614789b4daa, type: 3}
   panelCollapsedSprite: {fileID: 21300000, guid: d728fd9a4ec594e3cb936e7265705171, type: 3}
+  borderActiveColor: {r: 1, g: 1, b: 1, a: 1}
+  borderInactiveColor: {r: 0.243, g: 0.486, b: 0.659, a: 1}
+  titleActiveColor: {r: 0.93333334, g: 0.8627451, b: 0.6039216, a: 1}
+  titleCollapsedColor: {r: 0.81960785, g: 0.8352941, b: 0.85882354, a: 1}
+  insufficientRpColor: {r: 0.7529412, g: 0.2509804, b: 0, a: 1}
   titleText: {fileID: 1190424334758952834}
   titleTextExpanded: {fileID: 0}
   explanationText: {fileID: 0}

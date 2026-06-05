@@ -5,6 +5,39 @@
 **Restore point:** `restore/mode_select_working_2026-06-05` (tag) + `Docs/Backups/mode_select_working_2026-06-05/`
 **Surfaces:** `ModeCard.prefab` (full-screen) + `ModeHomeCard.prefab` (home carousel)
 
+---
+
+## ✅ IMPLEMENTED 2026-06-05 — design DIVERGED from the snapshot approach below
+
+Shipped as `Assets/Scripts/UI/ModeSelect/Editor/ModeCardPreview.cs`. **The in-Prefab-stage
+snapshot/restore design described further down was abandoned** — it leaks. Applying a state in
+the Prefab stage runs the layout groups, which **bake driven RectTransform sizes** into the
+asset (plus `_showChevron` and a `CanvasGroup` that `RefreshFeeColor` adds to PLAY); a property
+snapshot can't reliably revert all of that, so a save could persist preview junk. Verified the
+leak by md5 (a capture→apply→restore→save cycle changed the prefab in 48/30 lines).
+
+**Final design — non-persistence BY CONSTRUCTION:** the prefab asset is only ever *read*. The
+preview instantiates a **linked prefab instance** into a throwaway additive scene
+(`__ModeCardPreview`), binds sample data + applies the chosen state to THAT instance, and frames
+it in the Scene view (World-Space canvas). Editing the real prefab in the Prefab stage updates
+the live instance. `Clear Preview` closes the scene. The prefab file is never written.
+
+Menu: `GOLFIN/Mode Cards/Preview/{Home — Collapsed+PLAY / Home — Expanded / Home — Side /
+Home — Locked / Full-screen — Collapsed / Full-screen — Expanded / Full-screen — Locked}` and
+`GOLFIN/Mode Cards/Clear Preview`. Sample data = "PREVIEW MODE" + a multi-line description, fee
+100 / rewards 200. State applied via the real `Bind/SetState/SetCenter/SetShowChevron` API
+(first-show guard reset so it's instant — coroutines don't tick in edit mode).
+
+**Verified:** preview builds a correct linked instance ("PREVIEW MODE", Expanded,
+`IsPartOfPrefabInstance=true`); **both prefab files are byte-identical (md5) before and after
+previewing + clearing** — the hard non-persistence gate. (The Scene-view frame works
+interactively; the MCP scene-view screenshot grabs a different view so it couldn't be
+auto-captured — Cesar to eyeball the framing in-editor.)
+
+Everything below is the ORIGINAL spec, kept for context.
+
+---
+
 ## Problem
 
 The cards are real prefabs, but their **final appearance is finalized at runtime**
