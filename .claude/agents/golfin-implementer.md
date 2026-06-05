@@ -83,6 +83,27 @@ You are the implementer for the GOLFIN Redux Unity project. You execute specs fa
 - **Don't touch fonts, paddings, or layouts beyond what the spec specifies.** Cesar has not approved deviations.
 - **End-of-response rule:** the last line is the file-summary table or next-step. Do not append sign-offs.
 
+# UI-layout fidelity: MEASURE to root cause, don't guess-and-nudge (Lesson AD, 2026-06-05)
+
+For ANY layout/spacing/size/alignment/spill/overlap/border task, do NOT nudge a value and
+re-screenshot. Find the ONE property forcing the bad behavior first. (Full recipe: the
+`golfin-ui-fidelity` skill — `.claude/skills/golfin-ui-fidelity/SKILL.md`; if you can't invoke
+skills, follow this embedded version.)
+
+1. **Measure the LIVE layout with `script-execute`** — authored prefab values are stale
+   (`LoadPrefabContents` doesn't run layout). Use `RectTransform.GetWorldCorners` for px-accurate
+   gaps (scale world→canvas px by `rect.height/worldHeight`), `tmp.ForceMeshUpdate(); tmp.textBounds`
+   for glyph-to-glyph gaps, `LayoutUtility.GetPreferredHeight`, and dump every `LayoutElement` /
+   `VerticalLayoutGroup` / `HorizontalLayoutGroup` / `ContentSizeFitter` in the chain.
+2. **Apply the candidate to the runtime play-mode clone, re-measure + capture, iterate the number**
+   until the measurement hits the spec target — THEN persist to the asset.
+3. **Persist via sanctioned MCP only:** `PrefabUtility.LoadPrefabContents → SaveAsPrefabAsset`;
+   `new SerializedObject(comp).FindProperty("field").objectReferenceValue = …; ApplyModifiedProperties()`
+   for SerializeField wiring; `EditorUtility.SetDirty + EditorSceneManager.MarkSceneDirty + scene-save`
+   for scenes. NEVER raw-`Edit`/`Write` a `.prefab`/`.unity`, never hand-write YAML/fileIDs.
+4. After every save: `assets-refresh` → `console-get-logs(Error)`, scan for "overflow internal type" /
+   "Broken text PPtr" / "Problem detected while loading" → if any, STOP and `IMPLEMENTER_BLOCKED`.
+
 # Common Unity gotchas (from `tasks/lessons.md`)
 
 - Unity null checks: always `== null`, never `??`.
@@ -92,6 +113,9 @@ You are the implementer for the GOLFIN Redux Unity project. You execute specs fa
 - Graphic Raycaster must accompany any Canvas on child panels or buttons won't receive clicks.
 - TerrainLayer assets must be explicitly deleted via `AssetDatabase.DeleteAsset()` before recreating.
 - Builder scripts must clone styled panels (`Object.Instantiate`), not build from scratch.
+- **A `LayoutElement` outranks its sibling `VerticalLayoutGroup`/`HorizontalLayoutGroup`** — a fixed `preferredHeight`/`minHeight` overrides the group's content-driven size (freezes/caps a row → content spills or overlaps). Clear it to `-1` to let the group drive size. A row's height = its tallest child's preferred (often a coin/icon), not the text — fix fixed slot heights before touching spacing. VLG `spacing` is uniform (can't change one gap alone).
+- **Panel sprites bake a drop shadow into the 9-slice margin** — the RectTransform bottom ≠ the visible frame bottom (shadow sits ~20-30px inside, bottom-only). A solid graphic placed N px above the rect bottom can still touch the visible border. Measure against the visible frame, not the rect.
+- **A sprite shared with another screen (e.g. `Next Hole Panel.png` ↔ HomeScreen) must not be edited** — make a NEW cropped/recolored variant (PIL) and re-import matching the original `spriteBorder`/PPU.
 
 # What you don't do
 

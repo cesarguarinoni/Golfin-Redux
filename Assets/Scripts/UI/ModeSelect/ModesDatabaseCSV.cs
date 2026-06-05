@@ -67,8 +67,9 @@ namespace GolfinRedux.UI.ModeSelect
                 string line = lines[i].Trim();
                 if (string.IsNullOrEmpty(line)) continue;
 
-                // Simple CSV split (no quoted fields with commas)
-                string[] cols = line.Split(',');
+                // Quote-aware split so fields (e.g. descriptions) may contain commas
+                // by wrapping them in double quotes: id,Title,Tagline,"Desc, with commas",...
+                string[] cols = ParseCsvLine(line);
 
                 var mode = new ModeData();
                 if (iId >= 0 && iId < cols.Length)     mode.id       = cols[iId].Trim();
@@ -91,10 +92,38 @@ namespace GolfinRedux.UI.ModeSelect
             Debug.Log($"[ModesDatabaseCSV] Loaded {_modes.Count} modes");
         }
 
+        /// <summary>
+        /// Splits one CSV line on commas, honoring double-quoted fields so a field
+        /// may itself contain commas. A literal quote inside a quoted field is "".
+        /// </summary>
+        private static string[] ParseCsvLine(string line)
+        {
+            var cols = new List<string>();
+            var sb = new System.Text.StringBuilder();
+            bool inQuotes = false;
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+                if (c == '"')
+                {
+                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"') { sb.Append('"'); i++; }
+                    else inQuotes = !inQuotes;
+                }
+                else if (c == ',' && !inQuotes)
+                {
+                    cols.Add(sb.ToString());
+                    sb.Clear();
+                }
+                else sb.Append(c);
+            }
+            cols.Add(sb.ToString());
+            return cols.ToArray();
+        }
+
         private void AddFallbackModes()
         {
-            _modes.Add(new ModeData { id = "practice",     title = "PRACTICE",      tagline = "Sharpen your skills.",              description = "Practice on any course.",             entryFee = 100, rewards = 50,  locked = false, target = "hole_select",    order = 1 });
-            _modes.Add(new ModeData { id = "versus_1v1",   title = "1v1",            tagline = "Fast-paced 1v1 matches.",           description = "Face off in 1v1 golf matches.",       entryFee = 0,   rewards = 200, locked = false, target = "matchmaking_1v1", order = 2 });
+            _modes.Add(new ModeData { id = "versus_1v1",   title = "Multiplayer",    tagline = "1v1",                               description = "Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.", entryFee = 0, rewards = 200, locked = false, target = "matchmaking_1v1", order = 1 });
+            _modes.Add(new ModeData { id = "practice",     title = "PRACTICE",      tagline = "Sharpen your skills.",              description = "Practice on any course.",             entryFee = 100, rewards = 50,  locked = false, target = "hole_select",    order = 2 });
             _modes.Add(new ModeData { id = "driving_range",title = "DRIVING RANGE",  tagline = "Coming Soon.",                      description = "Practice long shots.",                entryFee = 0,   rewards = 0,   locked = true,  target = "none",           order = 3 });
             _modes.Add(new ModeData { id = "missions",     title = "MISSIONS",       tagline = "Coming Soon.",                      description = "Complete challenges for rewards.",     entryFee = 0,   rewards = 200, locked = true,  target = "none",           order = 4 });
         }

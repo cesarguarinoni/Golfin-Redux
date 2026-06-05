@@ -1,0 +1,539 @@
+using System.Collections;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using Golfin.UI.Toast;
+using Golfin.Roster;
+
+namespace GolfinRedux.UI.ModeSelect
+{
+    /// <summary>
+    /// Controls a single mode card's visual state (Collapsed / Expanded / Locked).
+    /// Cloned verbatim from HoleCardController; adapted for ModeData.
+    ///
+    /// FIGMA METRICS §6.2 (binding source — SPEC.md iter-6):
+    ///   Active/expanded border: 3px WHITE.
+    ///   Collapsed/inactive border: 3px #3E7CA8 (blue).
+    ///   Active title: #EEDC9A (gold).
+    ///   Collapsed/inactive title: silver gradient #FFFFFF → #D1D5DB(40%) → #818EA1.
+    ///   Title: EN/Subhead 45px Figma → 32.14 TMP (Rubik variable font, weight 600).
+    ///   Tagline/description: EN/Footnote/Subhead per state, white, Rubik variable weight 600.
+    ///   ENTRY FEE / REWARDS: EN/Footnote 39px → 27.86 TMP, white.
+    ///   Fee/reward cluster: CENTERED horizontal group [LABEL gap32 coin42 gap6 value].
+    ///   Rows stacked gap-24, centered in card.
+    ///   Active card: 3 separators (under title, under description, above PLAY).
+    ///   Collapsed card: 1 separator (under title only).
+    ///   PLAY: 359×120, centered, wrapper 144h (24px bottom pad).
+    ///   Description inset: ~80px each side.
+    ///   Full-screen: no expand chevron on list cards.
+    /// </summary>
+    public class ModeCardController : MonoBehaviour
+    {
+        // ── Layout containers ─────────────────────────────────────────────────
+        [Header("Layout")]
+        [SerializeField] public RectTransform rootRect;
+        [SerializeField] private GameObject collapsedContainer;
+        [SerializeField] private GameObject expandedContainer;
+
+        // ── Card border ───────────────────────────────────────────────────────
+        // NOTE: iter-8 — replaced Outline (which doesn't respect corner radius) with a
+        // full-bleed sliced Image (FillCenter=false) that draws only the border ring.
+        // cardBorderOutline kept as optional fallback; borderImage is the primary path.
+        [Header("Card Border")]
+        [SerializeField] private Outline cardBorderOutline;   // legacy fallback (may be null)
+        [SerializeField] private Image   borderImage;         // iter-8: sliced border ring
+        // iter-11: §6.2 border via SPRITE SWAP on the card background. The panel sprite has the
+        // border baked in (white = active, #3E7CA8 = collapsed/inactive). Swapped in SetState.
+        [SerializeField] private Image   cardBackground;          // root panel Image (sliced)
+        [SerializeField] private Sprite  panelActiveSprite;      // white-border panel (active/expanded)
+        [SerializeField] private Sprite  panelCollapsedSprite;   // #3E7CA8-border panel (collapsed/locked)
+        // Active/expanded border color = white (3px)
+        private static readonly Color BorderActive   = new Color(1f, 1f, 1f, 1f);
+        // Collapsed/inactive border color = #3E7CA8 (blue)
+        private static readonly Color BorderInactive = new Color(0.243f, 0.486f, 0.659f, 1f);
+
+        // ── Title TMP elements ────────────────────────────────────────────────
+        // NOTE: Figma 45px ÷ 1.4 = 32.14 TMP, Rubik variable font weight 600
+        [Header("Text - Title")]
+        [SerializeField] private TextMeshProUGUI titleText;           // collapsed title
+        [SerializeField] private TextMeshProUGUI titleTextExpanded;   // expanded title (if separate)
+
+        // Active title color: gold #EEDC9A
+        private static readonly Color TitleColorActive = new Color32(0xEE, 0xDC, 0x9A, 255);
+        // Collapsed title color: approximated as #B0B8C1 (midpoint of silver gradient)
+        // NOTE: TMP VertexGradient would be more accurate but requires gradient asset.
+        // Using the midpoint silver as a reasonable approximation.
+        private static readonly Color TitleColorCollapsed = new Color32(0xD1, 0xD5, 0xDB, 255);
+
+        // ── Tagline / Description — single auto-sizing TMP element ─────────────
+        // NOTE: Collapsed shows tagline (EN/Footnote 39px → 27.86); Expanded swaps to description.
+        // For home expanded: EN/Footnote 39px → 27.86. For full-screen expanded: EN/Subhead 45px → 32.14.
+        [SerializeField] private TextMeshProUGUI explanationText;
+        [SerializeField] private TextMeshProUGUI subtitleTextExpanded;
+        [SerializeField] private TextMeshProUGUI descriptionTextExpanded;
+
+        // ── Economy rows (collapsed container) ───────────────────────────────
+        [Header("Economy - Collapsed")]
+        [SerializeField] private GameObject rewardSlot1;            // ENTRY FEE row
+        [SerializeField] private GameObject rewardSlot2;            // REWARDS row
+        [SerializeField] private TextMeshProUGUI entryFeeLabel;     // "ENTRY FEE" label
+        [SerializeField] private TextMeshProUGUI entryFeeAmount;    // "x100" / "NO ENTRY FEE"
+        [SerializeField] private TextMeshProUGUI rewardsLabel;      // "REWARDS"
+        [SerializeField] private TextMeshProUGUI rewardsAmount;     // "x200"
+        [SerializeField] private Image coinIcon;                    // entry-fee coin (Reward1Icon)
+        [SerializeField] private Image rewardsCoin;                 // rewards coin (Reward2Icon)
+
+        // ── Economy rows (expanded container) ────────────────────────────────
+        [Header("Economy - Expanded")]
+        [SerializeField] private GameObject rewardSlot1Exp;
+        [SerializeField] private GameObject rewardSlot2Exp;
+        [SerializeField] private TextMeshProUGUI entryFeeLabelExp;
+        [SerializeField] private TextMeshProUGUI entryFeeAmountExp;
+        [SerializeField] private TextMeshProUGUI rewardsLabelExp;
+        [SerializeField] private TextMeshProUGUI rewardsAmountExp;
+
+        // ── Separators ────────────────────────────────────────────────────────
+        // Active/expanded card has THREE separators; collapsed has ONE (under title).
+        [Header("Separators")]
+        [SerializeField] private GameObject separator1UnderTitle;     // always shown
+        [SerializeField] private GameObject separator2UnderDesc;      // expanded only
+        [SerializeField] private GameObject separator3AbovePlay;      // expanded only
+
+        // ── PLAY button wrapper ────────────────────────────────────────────────
+        // Wrapper height 144 (button 120 + 24px bottom pad). Visible only on expanded non-locked.
+        [Header("PLAY Button")]
+        [SerializeField] private Button playButton;
+        [SerializeField] private TextMeshProUGUI playButtonLabel;
+        [SerializeField] private RectTransform playButtonWrapper;    // height 144 container
+
+        // ── Tap + Locked overlay ──────────────────────────────────────────────
+        [Header("Interaction")]
+        [SerializeField] private Button cardTapButton;
+        [SerializeField] private GameObject lockedOverlay;
+        // Tapping the subtitle/tagline row toggles expand/collapse on the home centered card.
+        [SerializeField] private Button taglineButton;
+
+        // ── Chevron arrow (expand/collapse indicator — HOME only) ─────────────
+        // Per §6.3 item 16: hidden on full-screen list cards. ModeCarouselController
+        // sets _showChevron=true for home; ModeSelectScreenController leaves it false.
+        [Header("Chevron Arrow")]
+        [SerializeField] private GameObject chevronCollapsed;
+        [SerializeField] private GameObject chevronExpanded;
+        [SerializeField] private bool _showChevron = false;  // set by parent controller
+
+        // ── Lock icon ─────────────────────────────────────────────────────────
+        [Header("Lock Icon")]
+        [SerializeField] private GameObject lockIconCollapsed;
+        [SerializeField] private GameObject lockIconExpanded;
+
+        // ── Expand/Collapse animation ─────────────────────────────────────────
+        [Header("Animation")]
+        [SerializeField] private float _expandDuration   = 0.18f;
+        [SerializeField] private float _collapseDuration = 0.15f;
+        // NOTE: These are overridden by parent carousel (ModeCarouselController sets them via
+        // SetHeights() before calling SetState). For home carousel: collapsed=484, expanded=822.
+        // For full-screen: collapsed=auto (content-hug), expanded=auto (content-hug).
+        [SerializeField] private float _collapsedHeight  = 484f;
+        [SerializeField] private float _expandedHeight   = 822f;
+
+        // Insufficient-RP color — matches LevelUpModalController.spDepletedColor (#C04000)
+        private static readonly Color32 InsufficientRpColor = new Color32(0xC0, 0x40, 0x00, 255);
+        private static readonly Color32 NormalWhite = new Color32(255, 255, 255, 255);
+
+        // ── Public state ──────────────────────────────────────────────────────
+        public string ModeId { get; private set; }
+        public ModeCardState State { get; private set; }
+        private ModeData _data;
+
+        // True when this card is the centered card of the home carousel. Drives PLAY + chevron
+        // visibility (position-based failsafe). Set by ModeCarouselController via SetCenter().
+        private bool _isCenter;
+        // Locked is owned by the bound data, not the transient visual state.
+        public bool IsLocked => _data != null && _data.locked;
+
+        // Full-screen list expand/collapse height animation handle + a first-show guard so the
+        // initial Bind sizes instantly (only genuine user expand/collapse animates).
+        private Coroutine _heightAnim;
+        private bool _stateInitialized;
+
+        public event System.Action<ModeCardController> OnCardTapped;
+        public event System.Action<ModeCardController> OnPlayClicked;
+        public event System.Action<ModeCardController> OnTaglineTapped;
+
+        /// <summary>
+        /// Called by parent controller to enable or disable the expand chevron.
+        /// Home carousel: true. Full-screen list: false (§6.3 item 16).
+        /// </summary>
+        public void SetShowChevron(bool show) { _showChevron = show; }
+
+        /// <summary>
+        /// Set by the home carousel: true for the centered card, false for side/peek cards.
+        /// Drives PLAY + chevron visibility (position-based failsafe, NOT state-based) so paging
+        /// across locked cards can never leave the center without PLAY or a side card keeping one.
+        /// </summary>
+        public void SetCenter(bool isCenter)
+        {
+            _isCenter = isCenter;
+            RefreshCenterVisuals();
+        }
+
+        /// <summary>
+        /// PLAY + chevron visibility, derived purely from carousel POSITION (center vs side) and
+        /// lock state — never from the collapsed/expanded state. Home carousel (_showChevron=true):
+        /// PLAY + chevron on the centered card only. Full-screen list (_showChevron=false): no
+        /// center concept, so PLAY follows the expanded card and there is no chevron.
+        /// </summary>
+        private void RefreshCenterVisuals()
+        {
+            bool isLocked   = State == ModeCardState.Locked;
+            bool isExpanded = State == ModeCardState.Expanded;
+
+            bool playVisible = !isLocked && (_showChevron ? _isCenter : isExpanded);
+            if (playButton != null)
+                playButton.gameObject.SetActive(playVisible);
+            // playButtonWrapper may be wired to rootRect on ModeHomeCard — never deactivate the
+            // whole card; only toggle a dedicated wrapper.
+            if (playButtonWrapper != null && playButtonWrapper != rootRect)
+                playButtonWrapper.gameObject.SetActive(playVisible);
+
+            bool showChevrons = _showChevron && !isLocked && _isCenter;
+            if (chevronCollapsed != null) chevronCollapsed.SetActive(showChevrons && !isExpanded);
+            if (chevronExpanded  != null) chevronExpanded.SetActive(showChevrons && isExpanded);
+
+            // ── Border: WHITE on the SELECTED card, blue (#3E7CA8) on inactive (§6.2) ──
+            // Home carousel: a non-locked card is "active" when expanded (collapsed/side stay blue);
+            // a LOCKED card is "active" whenever it is the centered/selected card (it can't expand),
+            // so it gets the white border like any other selected card (Cesar 2026-06-05).
+            // Full-screen list: no center concept → active = the expanded, non-locked card.
+            bool whiteBorder = _showChevron
+                ? (isLocked ? _isCenter : isExpanded)
+                : (isExpanded && !isLocked);
+            Color borderColor = whiteBorder ? BorderActive : BorderInactive;
+            if (borderImage != null)        borderImage.color        = borderColor;
+            if (cardBorderOutline != null)  cardBorderOutline.effectColor = borderColor;
+            if (cardBackground != null && panelActiveSprite != null && panelCollapsedSprite != null)
+                cardBackground.sprite = whiteBorder ? panelActiveSprite : panelCollapsedSprite;
+
+            // ── Title color: gold (#EEDC9A) on the SELECTED card, silver on inactive (§6.2) ──
+            // Home: a centered non-locked card is gold in BOTH collapsed+PLAY and expanded states
+            // (matching the selected look); side & locked cards stay silver. Full-screen: gold = the
+            // expanded non-locked card. Locked cards never go gold.
+            bool goldTitle = !isLocked && (_showChevron ? _isCenter : isExpanded);
+            Color titleColor = goldTitle ? TitleColorActive : TitleColorCollapsed;
+            if (titleText != null)         titleText.color         = titleColor;
+            if (titleTextExpanded != null) titleTextExpanded.color = titleColor;
+        }
+
+        /// <summary>
+        /// Called by parent carousel to override the collapsed/expanded heights.
+        /// ModeCarouselController sets (484, 822) for the center home card;
+        /// full-screen cards use content-hug via ContentSizeFitter.
+        /// </summary>
+        public void SetHeights(float collapsed, float expanded)
+        {
+            _collapsedHeight = collapsed;
+            _expandedHeight  = expanded;
+        }
+
+        private void Awake()
+        {
+            if (cardTapButton != null)
+            {
+                cardTapButton.transform.SetAsFirstSibling();
+                cardTapButton.onClick.AddListener(() => OnCardTapped?.Invoke(this));
+            }
+            if (playButton != null)
+                playButton.onClick.AddListener(HandlePlayButtonClicked);
+            if (taglineButton != null)
+                taglineButton.onClick.AddListener(() => OnTaglineTapped?.Invoke(this));
+        }
+
+        private void OnEnable()
+        {
+            if (RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.OnPointsChanged += OnPointsChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.OnPointsChanged -= OnPointsChanged;
+        }
+
+        private void OnPointsChanged(int _) => RefreshFeeColor();
+
+        /// <summary>Bind a mode's data and initial state.</summary>
+        public void Bind(ModeData mode, ModeCardState state)
+        {
+            if (mode == null) return;
+            _data = mode;
+            ModeId = mode.id;
+
+            // Set text content
+            SetTitleText(mode.title);
+            if (subtitleTextExpanded != null) subtitleTextExpanded.text = mode.tagline;
+            if (explanationText != null)      explanationText.text      = mode.tagline;
+            if (descriptionTextExpanded != null) descriptionTextExpanded.text = mode.description;
+
+            UpdateEconomyRows(mode);
+            SetState(state);
+        }
+
+        private void SetTitleText(string title)
+        {
+            if (titleText != null)         titleText.text         = title;
+            if (titleTextExpanded != null) titleTextExpanded.text = title;
+        }
+
+        /// <summary>Switch visual state. Animates height. Updates all visuals.</summary>
+        public void SetState(ModeCardState state)
+        {
+            State = state;
+
+            bool isLocked   = state == ModeCardState.Locked;
+            bool isExpanded = state == ModeCardState.Expanded;
+
+            // ── Update explanation text (single auto-sizing element) ──────────
+            if (explanationText != null && _data != null)
+                explanationText.text = isExpanded ? _data.description : _data.tagline;
+            if (descriptionTextExpanded != null && _data != null)
+                descriptionTextExpanded.text = _data.description;
+            if (subtitleTextExpanded != null && _data != null)
+                subtitleTextExpanded.text = _data.tagline;
+
+            // Home card uses dedicated Subtitle (always visible) + Description (expanded only)
+            // elements rather than the single toggling explanationText. The subtitle stays on;
+            // the description shows only on the expanded card. (Full-screen card is unaffected:
+            // its descriptionTextExpanded lives inside ExpandedContainer which is already gated.)
+            if (descriptionTextExpanded != null)
+                descriptionTextExpanded.gameObject.SetActive(isExpanded && !isLocked);
+
+            // ── Container visibility ──────────────────────────────────────────
+            if (collapsedContainer != null) collapsedContainer.SetActive(!isExpanded);
+            if (expandedContainer  != null) expandedContainer.SetActive(isExpanded);
+
+            // ── Separator visibility: 1 when collapsed, 3 when expanded ───────
+            if (separator1UnderTitle != null) separator1UnderTitle.SetActive(true);  // always
+            if (separator2UnderDesc  != null) separator2UnderDesc.SetActive(isExpanded && !isLocked);
+            if (separator3AbovePlay  != null) separator3AbovePlay.SetActive(isExpanded && !isLocked);
+
+            // ── PLAY button + chevron are POSITION-driven (RefreshCenterVisuals, end of method) ──
+            // Failsafe: on the home carousel the centered card ALWAYS shows PLAY and side cards
+            // NEVER do — independent of the collapsed/expanded state, which used to desync the
+            // PLAY button when paging across locked cards (virtual-array instance swap).
+
+            // ── Locked overlay ────────────────────────────────────────────────
+            if (lockedOverlay != null) lockedOverlay.SetActive(isLocked);
+
+            // ── Tap interactability ───────────────────────────────────────────
+            if (cardTapButton != null) cardTapButton.interactable = !isLocked;
+
+            // ── Border (white=active / #3E7CA8=inactive) is POSITION-aware → RefreshCenterVisuals.
+            // A locked card that is the SELECTED (centered) home card must show the white border
+            // like any other selected card, so the swap needs _isCenter (set after SetState).
+
+            // ── Title color is POSITION-aware (gold on the SELECTED card) → RefreshCenterVisuals.
+            // A centered non-locked card must show the gold title in BOTH collapsed+PLAY and
+            // expanded states, so the swap needs _isCenter (set after SetState).
+
+            // ── Chevron is position-driven (RefreshCenterVisuals, end of method) ──
+
+            // ── Lock icon ─────────────────────────────────────────────────────
+            if (lockIconCollapsed != null) lockIconCollapsed.SetActive(isLocked);
+            if (lockIconExpanded  != null) lockIconExpanded.SetActive(false);
+
+            // ── Refresh fee color ─────────────────────────────────────────────
+            RefreshFeeColor();
+
+            // ── PLAY + chevron from position (center vs side) — the failsafe ───
+            RefreshCenterVisuals();
+
+            // ── Height ────────────────────────────────────────────────────────
+            // Home carousel cards (_showChevron) are sized + animated by ModeCarouselController's
+            // LerpToTargetLayout — nothing to do here. Full-screen list cards animate their OWN
+            // expand/collapse: a ContentSizeFitter + a parent VerticalLayoutGroup(childControlHeight)
+            // own the height, so we smoothly drive LayoutElement.preferredHeight (priority 1 overrides
+            // the content calc, and both the CSF and the parent VLG follow it). The card's RectMask2D
+            // clips the content that hasn't unfolded yet. The first SetState (Bind) sizes instantly.
+            if (rootRect != null && !_showChevron)
+            {
+                if (_heightAnim != null) { StopCoroutine(_heightAnim); _heightAnim = null; }
+                var csf = rootRect.GetComponent<ContentSizeFitter>();
+                bool csfOwnsHeight = csf != null && csf.enabled
+                    && csf.verticalFit != ContentSizeFitter.FitMode.Unconstrained;
+                if (!_stateInitialized)
+                {
+                    _stateInitialized = true;   // initial display: let the layout size it instantly
+                }
+                else if (csfOwnsHeight)
+                {
+                    _heightAnim = StartCoroutine(AnimateListHeight(isExpanded ? _expandDuration : _collapseDuration));
+                }
+                else
+                {
+                    float targetHeight = isExpanded ? _expandedHeight : _collapsedHeight;
+                    _heightAnim = StartCoroutine(AnimateHeight(rootRect.sizeDelta.y, targetHeight,
+                        isExpanded ? _expandDuration : _collapseDuration));
+                }
+            }
+        }
+
+        // ── Economy helpers ───────────────────────────────────────────────────
+
+        private void UpdateEconomyRows(ModeData mode)
+        {
+            if (mode == null) return;
+
+            bool hasFee     = mode.entryFee > 0;
+            bool hasRewards = mode.rewards  > 0;
+            string feeText  = hasFee ? $"x{mode.entryFee}" : "NO ENTRY FEE";
+            string rwdText  = $"x{mode.rewards}";
+
+            // ── Collapsed container ───────────────────────────────────────────
+            if (rewardSlot1 != null) rewardSlot1.SetActive(true);
+            if (entryFeeLabel  != null) entryFeeLabel.gameObject.SetActive(hasFee);
+            if (entryFeeAmount != null) { entryFeeAmount.text = feeText; entryFeeAmount.color = NormalWhite; }
+            if (coinIcon != null) coinIcon.gameObject.SetActive(hasFee);
+
+            if (rewardSlot2 != null) rewardSlot2.SetActive(hasRewards);
+            if (rewardsLabel  != null) rewardsLabel.gameObject.SetActive(hasRewards);
+            if (rewardsAmount != null) { rewardsAmount.text = rwdText; rewardsAmount.color = NormalWhite; }
+            if (rewardsCoin != null) rewardsCoin.gameObject.SetActive(hasRewards);
+
+            // ── Expanded container ────────────────────────────────────────────
+            if (rewardSlot1Exp     != null) rewardSlot1Exp.SetActive(true);
+            if (entryFeeLabelExp   != null) entryFeeLabelExp.gameObject.SetActive(hasFee);
+            if (entryFeeAmountExp  != null) { entryFeeAmountExp.text = feeText; entryFeeAmountExp.color = NormalWhite; }
+
+            if (rewardSlot2Exp   != null) rewardSlot2Exp.SetActive(hasRewards);
+            if (rewardsLabelExp  != null) rewardsLabelExp.gameObject.SetActive(hasRewards);
+            if (rewardsAmountExp != null) { rewardsAmountExp.text = rwdText; rewardsAmountExp.color = NormalWhite; }
+
+            RefreshFeeColor();
+        }
+
+        private void RefreshFeeColor()
+        {
+            if (_data == null) return;
+
+            bool insufficient = _data.entryFee > 0
+                && RewardPointsManager.Instance != null
+                && !RewardPointsManager.Instance.CanAfford(_data.entryFee);
+
+            Color feeColor = insufficient ? (Color)InsufficientRpColor : (Color)NormalWhite;
+
+            if (entryFeeAmount    != null) entryFeeAmount.color    = feeColor;
+            if (entryFeeAmountExp != null) entryFeeAmountExp.color = feeColor;
+
+            if (playButton != null)
+            {
+                var cg = playButton.GetComponent<CanvasGroup>();
+                if (cg == null) cg = playButton.gameObject.AddComponent<CanvasGroup>();
+                cg.alpha = insufficient ? 0.4f : 1f;
+            }
+        }
+
+        private void HandlePlayButtonClicked()
+        {
+            if (_data == null) return;
+
+            bool unaffordable = _data.entryFee > 0
+                && (RewardPointsManager.Instance == null
+                    || !RewardPointsManager.Instance.CanAfford(_data.entryFee));
+
+            if (unaffordable)
+            {
+                if (ToastController.Instance != null)
+                    ToastController.Instance.Show("Not enough Reward Points");
+                return;
+            }
+
+            if (_data.entryFee > 0 && RewardPointsManager.Instance != null)
+                RewardPointsManager.Instance.SpendPoints(_data.entryFee);
+
+            OnPlayClicked?.Invoke(this);
+        }
+
+        // Smoothly expand/collapse a full-screen LIST card. The card is sized by a parent
+        // VerticalLayoutGroup(childControlHeight) reading its preferred height, so we animate
+        // LayoutElement.preferredHeight (priority 1 → overrides the content's calc; the CSF and the
+        // parent VLG both follow it, and the parent reflows the cards below). Content is already set
+        // to the target state; the card's RectMask2D clips whatever hasn't unfolded yet. On settle we
+        // hand the height back to the content (preferredHeight = -1) so resting cards stay content-hug.
+        private IEnumerator AnimateListHeight(float duration)
+        {
+            var le = rootRect.GetComponent<UnityEngine.UI.LayoutElement>();
+            if (le == null) le = rootRect.gameObject.AddComponent<UnityEngine.UI.LayoutElement>();
+
+            // Start = current laid-out height (content not yet rebuilt to the new state).
+            float startH = rootRect.rect.height;
+
+            // Measure the target height with content-driven sizing.
+            le.preferredHeight = -1f;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
+            float targetH = rootRect.rect.height;
+
+            if (duration <= 0f || Mathf.Approximately(startH, targetH))
+            {
+                le.preferredHeight = -1f;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
+                _heightAnim = null;
+                yield break;
+            }
+
+            // Snap back to start and apply immediately (no flash to the target frame).
+            le.preferredHeight = startH;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
+
+            var parent = rootRect.parent as RectTransform;
+            float el = 0f;
+            while (el < duration)
+            {
+                el += Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(el / duration);
+                float e = 1f - (1f - t) * (1f - t) * (1f - t);   // cubic ease-out
+                le.preferredHeight = Mathf.Lerp(startH, targetH, e);
+                if (parent != null) LayoutRebuilder.MarkLayoutForRebuild(parent);
+                yield return null;
+            }
+
+            // Settle: hand the height back to the ContentSizeFitter / content.
+            le.preferredHeight = -1f;
+            if (parent != null) LayoutRebuilder.MarkLayoutForRebuild(parent);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
+            _heightAnim = null;
+        }
+
+        private IEnumerator AnimateHeight(float from, float to, float duration)
+        {
+            if (duration <= 0f)
+            {
+                if (rootRect != null)
+                    rootRect.sizeDelta = new Vector2(rootRect.sizeDelta.x, to);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
+                yield break;
+            }
+
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float t     = Mathf.Clamp01(elapsed / duration);
+                float eased = 1f - (1f - t) * (1f - t);
+                if (rootRect != null)
+                    rootRect.sizeDelta = new Vector2(rootRect.sizeDelta.x, Mathf.Lerp(from, to, eased));
+                yield return null;
+            }
+
+            if (rootRect != null)
+            {
+                rootRect.sizeDelta = new Vector2(rootRect.sizeDelta.x, to);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
+            }
+        }
+    }
+
+    // Collapsed = collapsed WITH the PLAY button (home centered card collapsed).
+    // CollapsedNoPlay = collapsed WITHOUT PLAY (home side/peek cards).
+    public enum ModeCardState { Collapsed, Expanded, Locked, CollapsedNoPlay }
+}
