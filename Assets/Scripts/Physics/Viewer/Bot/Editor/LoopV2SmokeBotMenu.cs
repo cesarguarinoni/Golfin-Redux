@@ -85,14 +85,14 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Live Stat Provider — High Build")]
         public static void RunLiveStatProviderVisualGateHigh()
         {
-            BotVideoRecorder.RecordVideo = true;
+            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.GameplayCapped);
             Launch("live_stat_provider_visual_gate_high");
         }
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Live Stat Provider — Low Build")]
         public static void RunLiveStatProviderVisualGateLow()
         {
-            BotVideoRecorder.RecordVideo = true;
+            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.GameplayCapped);
             Launch("live_stat_provider_visual_gate_low");
         }
 
@@ -101,7 +101,7 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Stat Lane — Surface Roll")]
         public static void RunStatLaneSurfaceRoll()
         {
-            BotVideoRecorder.RecordVideo = true;
+            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.GameplayCapped);
             Launch("stat_lane_surface_roll");
         }
 
@@ -110,7 +110,7 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Spin And Shape Visual Gate")]
         public static void RunSpinAndShapeVisualGate()
         {
-            BotVideoRecorder.RecordVideo = true;
+            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.GameplayCapped);
             Launch("SpinAndShapeVisualGate");
         }
 
