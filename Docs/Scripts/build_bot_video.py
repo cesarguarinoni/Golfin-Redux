@@ -94,6 +94,38 @@ def parse_captions(log_path, rec_start, rec_end):
     return events
 
 
+def parse_steps_captions(log_path, rec_start, rec_end):
+    """
+    Generic UI-walkthrough captioner. Reads `[t=T] Step: '<text>'` lines and renders
+    <text> VERBATIM (no 'Tap' prefix) from each step until the next (capped ~3.2s).
+    Use for non-click UI demos (scroll / swipe / expand / collapse) where 'Tap' is wrong.
+    Supports literal '\\n' in the step text for multi-line captions.
+    """
+    events = []
+    if not os.path.exists(log_path):
+        print(f"WARN: history.log not found ({log_path}) — title caption only.")
+        return events
+    step_re = re.compile(r"\[t=([\d.]+)\]\s+Step:\s+'([^']+)'")
+    raw = []
+    with open(log_path) as fh:
+        for line in fh:
+            m = step_re.search(line)
+            if m:
+                raw.append((float(m.group(1)), m.group(2)))
+    span = rec_end - rec_start
+    for i, (t, text) in enumerate(raw):
+        start = t - rec_start
+        nxt = (raw[i + 1][0] - rec_start) if i + 1 < len(raw) else span
+        end = min(start + 3.2, nxt)
+        if end <= start:
+            end = start + 1.4
+        start = max(start, 0.0)
+        if start >= span:
+            continue
+        events.append((start, min(end, span), text.replace("\\n", "\n")))
+    return events
+
+
 def _dist3(a, b):
     """Euclidean distance between (x,y,z) tuples."""
     return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5
@@ -302,10 +334,11 @@ def esc(p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", required=True, help="smoke-bot scenario key")
-    ap.add_argument("--mode", choices=["clicks", "visualgate", "spinshape"], default="clicks",
+    ap.add_argument("--mode", choices=["clicks", "steps", "visualgate", "spinshape"], default="clicks",
                     help="Caption parser to use. 'clicks' = tap-event captions (default, "
-                         "for UI flows). 'visualgate' = per-stroke carry captions "
-                         "(for live_stat_provider_visual_gate_* scenarios). "
+                         "for UI flows). 'steps' = verbatim `Step: '<text>'` captions "
+                         "(for scroll/swipe/expand UI walkthroughs). 'visualgate' = per-stroke "
+                         "carry captions (for live_stat_provider_visual_gate_* scenarios). "
                          "'spinshape' = per-stroke spin position + rate captions "
                          "(for SpinAndShapeVisualGate scenario).")
     ap.add_argument("--title", default="Loop v2 — Stage F\nButton Press Feedback")
@@ -360,6 +393,8 @@ def main():
         captions = parse_visualgate_captions(log_path, rec_start, rec_start + duration)
     elif args.mode == "spinshape":
         captions = parse_spinshape_captions(log_path, rec_start, rec_start + duration)
+    elif args.mode == "steps":
+        captions = parse_steps_captions(log_path, rec_start, rec_start + duration)
     else:
         captions = parse_captions(log_path, rec_start, rec_start + duration)
     # Allow callers to pass literal \n in --title (bash strips backslash semantics).
