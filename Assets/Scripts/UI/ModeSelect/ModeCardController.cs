@@ -206,12 +206,12 @@ namespace GolfinRedux.UI.ModeSelect
             if (chevronExpanded  != null) chevronExpanded.SetActive(showChevrons && isExpanded);
 
             // ── Border: WHITE on the SELECTED card, blue (#3E7CA8) on inactive (§6.2) ──
-            // Home carousel: a non-locked card is "active" when expanded (collapsed/side stay blue);
-            // a LOCKED card is "active" whenever it is the centered/selected card (it can't expand),
-            // so it gets the white border like any other selected card (Cesar 2026-06-05).
+            // Home carousel: the SELECTED (centered) card is white in EVERY state — collapsed+PLAY,
+            // expanded, or locked — matching the gold title; side cards stay blue. (Cesar 2026-06-05:
+            // the collapsed+PLAY centre was showing blue while its title was gold.)
             // Full-screen list: no center concept → active = the expanded, non-locked card.
             bool whiteBorder = _showChevron
-                ? (isLocked ? _isCenter : isExpanded)
+                ? _isCenter
                 : (isExpanded && !isLocked);
             Color borderColor = whiteBorder ? borderActiveColor : borderInactiveColor;
             if (borderImage != null)        borderImage.color        = borderColor;
