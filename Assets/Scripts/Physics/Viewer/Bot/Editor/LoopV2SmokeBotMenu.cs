@@ -85,14 +85,14 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Live Stat Provider — High Build")]
         public static void RunLiveStatProviderVisualGateHigh()
         {
-            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.GameplayCapped);
+            BotVideoRecorder.Arm();
             Launch("live_stat_provider_visual_gate_high");
         }
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Live Stat Provider — Low Build")]
         public static void RunLiveStatProviderVisualGateLow()
         {
-            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.GameplayCapped);
+            BotVideoRecorder.Arm();
             Launch("live_stat_provider_visual_gate_low");
         }
 
@@ -101,7 +101,7 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Stat Lane — Surface Roll")]
         public static void RunStatLaneSurfaceRoll()
         {
-            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.GameplayCapped);
+            BotVideoRecorder.Arm();
             Launch("stat_lane_surface_roll");
         }
 
@@ -110,7 +110,7 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Spin And Shape Visual Gate")]
         public static void RunSpinAndShapeVisualGate()
         {
-            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.GameplayCapped);
+            BotVideoRecorder.Arm();
             Launch("SpinAndShapeVisualGate");
         }
 
@@ -119,27 +119,24 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Practice Flow Gate")]
         public static void RunPracticeFlowGate()
         {
-            // MenuNative records at native Game View size (1170×2532 iPhone 14 portrait).
-            // Switched from GameplayCapped (iter-2 was 540p) per Cesar rejection — full-size required.
-            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.MenuNative);
+            // Records at the full iPhone-14 1170×2532 device preset (see BotVideoRecorder).
+            BotVideoRecorder.Arm();
             Launch("practice_flow_gate");
         }
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Matchmaking 1v1 Gate")]
         public static void RunMatchmaking1v1Gate()
         {
-            // MenuNative records at native Game View size (1170×2532 iPhone 14 portrait).
-            // Switched from GameplayCapped (iter-2 was 540p) per Cesar rejection — full-size required.
-            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.MenuNative);
+            // Records at the full iPhone-14 1170×2532 device preset (see BotVideoRecorder).
+            BotVideoRecorder.Arm();
             Launch("matchmaking_1v1_gate");
         }
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Matchmaking 1v1 Cancel Gate")]
         public static void RunMatchmaking1v1CancelGate()
         {
-            // MenuNative records at native Game View size (1170×2532). Cancel gate is UI-only
-            // (no gameplay 3D scene), so kernel-panic risk is minimal at full resolution.
-            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.MenuNative);
+            // Records at the full iPhone-14 1170×2532 device preset (see BotVideoRecorder).
+            BotVideoRecorder.Arm();
             Launch("matchmaking_1v1_cancel_gate");
         }
 

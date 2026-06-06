@@ -12,27 +12,27 @@ namespace Golfin.Physics.Viewer.Editor
     /// <summary>
     /// Drives the Unity Recorder (com.unity.recorder) to capture a smooth, full-framerate
     /// MP4 of a smoke-bot run. Replaces the old PNG-dump recorder — the Recorder's async
-    /// capture pipeline records at 30-60 fps without the per-frame encode stall that
+    /// capture pipeline records at 30 fps without the per-frame encode stall that
     /// capped the dump approach at ~8 fps.
     ///
     /// Driven entirely from the editor by LoopV2SmokeBotMenu's playModeStateChanged hook:
     /// Begin() at EnteredPlayMode, End() at ExitingPlayMode. Active only when the
     /// RecordVideo flag is armed (SessionState; cleared on Begin so it never leaks).
     ///
-    /// Capture profiles (see <see cref="CaptureProfile"/>):
-    ///   • MenuNative     — records at the Game View's native render resolution (e.g. the
-    ///                      iPhone 14 1170×2532 custom size). The output size equals the
-    ///                      current Game View size, so the Recorder's internal
-    ///                      GameViewSize.SetCustomSize is a no-op (it early-returns when the
-    ///                      requested size already matches) — the Game View is NOT resized and
-    ///                      menu/UI layouts keep their exact pixels. This is the default.
-    ///   • GameplayCapped — caps recorded height at 540p to reduce Metal/GPU encoder pressure
-    ///                      that caused two macOS kernel panics on prior 1170×2532 @ 60fps
-    ///                      gameplay runs. This DOES resize the Game View while recording; the
-    ///                      view is restored to its original resolution in End() so a capped
-    ///                      gameplay run never leaves the view stuck at 540p (which would
-    ///                      otherwise poison a subsequent MenuNative capture into recording —
-    ///                      and breaking — the UI at 540p).
+    /// Game-View size handling (the important part):
+    ///   Unity Recorder's GameViewInput resizes the Game View to its output resolution by creating /
+    ///   selecting a custom "Recording Resolution" GameViewSize entry. Letting it do that at any size
+    ///   other than the device size mis-lays-out the UI Canvas (the bottom nav bar / menu break) and
+    ///   the Recorder then captures the broken frame. So BEFORE recording we explicitly select the real
+    ///   iPhone-14 1170×2532 device preset via <see cref="GameViewSizeUtil.EnsureIPhone14Selected"/>
+    ///   and record at exactly that size — the UI lays out identically to normal play, and because the
+    ///   requested output size already equals the current render size the Recorder's resize is a no-op
+    ///   (no fabricated entry is created). End() purges any fabricated entry defensively.
+    ///
+    ///   We record at FULL 1170×2532. An earlier build capped this to 540p as a macOS "kernel-panic
+    ///   mitigation"; that cap is removed — it was the source of the broken-layout captures and Cesar
+    ///   requires full-size video. If a full-res record genuinely kernel-panics the Mac, STOP and
+    ///   surface it — do NOT silently re-introduce a smaller fabricated resolution.
     ///
     /// Output (project-root-relative):
     ///   tasks/loop_v2_smoke_bot/&lt;scenario&gt;/video/raw.mp4
@@ -45,31 +45,10 @@ namespace Golfin.Physics.Viewer.Editor
     /// </summary>
     public static class BotVideoRecorder
     {
-        const string RecordKey  = "LoopV2SmokeBot.RecordVideo";
-        const string ProfileKey = "LoopV2SmokeBot.RecordProfile";
+        const string RecordKey = "LoopV2SmokeBot.RecordVideo";
 
-        // Fps reduced from 60 → 30 (lower GPU encoder pressure) after 2× macOS kernel panics
-        // on a prior 1170×2532 @ 60fps run. H.264 (MP4 default on macOS) is kept for the same reason.
+        // 30 fps (not 60): real-time recording at 1170×2532 keeps the encoder load modest.
         const int Fps = 30;
-
-        // GameplayCapped profile only: cap recorded height to keep the Metal/GPU encoder load modest.
-        const int GameplayMaxHeight = 540;
-
-        /// <summary>How the recorder chooses its output resolution. See class doc for the trade-off.</summary>
-        public enum CaptureProfile
-        {
-            /// <summary>
-            /// Record at the Game View's native render resolution (no resize). Use for menu / UI
-            /// captures — keeps the iPhone 14 (or whatever) custom view exactly as authored.
-            /// </summary>
-            MenuNative = 0,
-
-            /// <summary>
-            /// Cap recorded height at 540p (kernel-panic mitigation). Resizes the Game View while
-            /// recording, then restores it in End(). Use for 3D gameplay captures.
-            /// </summary>
-            GameplayCapped = 1,
-        }
 
         /// <summary>SessionState-armed flag — set by the launcher before play mode entry.</summary>
         public static bool RecordVideo
@@ -78,40 +57,16 @@ namespace Golfin.Physics.Viewer.Editor
             set => SessionState.SetBool(RecordKey, value);
         }
 
-        /// <summary>
-        /// SessionState-armed capture profile. Defaults to <see cref="CaptureProfile.MenuNative"/> so
-        /// any recording that doesn't explicitly opt into the gameplay cap keeps the Game View intact.
-        /// </summary>
-        public static CaptureProfile Profile
-        {
-            get => (CaptureProfile)SessionState.GetInt(ProfileKey, (int)CaptureProfile.MenuNative);
-            set => SessionState.SetInt(ProfileKey, (int)value);
-        }
-
-        /// <summary>Arm a recording with an explicit profile. Call before entering play mode.</summary>
-        public static void Arm(CaptureProfile profile)
-        {
-            RecordVideo = true;
-            Profile     = profile;
-        }
+        /// <summary>Arm a recording. Call before entering play mode.</summary>
+        public static void Arm() => RecordVideo = true;
 
         static RecorderController _controller;
-
-        // Snapshot of the Game View render resolution taken before recording, so the GameplayCapped
-        // profile (or an odd-size even-clamp) can restore it in End() instead of leaving the view resized.
-        static bool _restoreResolution;
-        static uint _savedWidth;
-        static uint _savedHeight;
 
         /// <summary>Start recording the Game View. No-op unless RecordVideo is armed.</summary>
         public static void Begin()
         {
             if (!RecordVideo) return;
-            RecordVideo = false;                  // clear immediately — never leak into a later run
-            CaptureProfile profile = Profile;
-            Profile = CaptureProfile.MenuNative;  // reset to the safe default so the profile never leaks
-
-            _restoreResolution = false;
+            RecordVideo = false;   // clear immediately — never leak into a later run
 
             try
             {
@@ -120,30 +75,29 @@ namespace Golfin.Physics.Viewer.Editor
                 string dir = $"tasks/loop_v2_smoke_bot/{scenario}/video";
                 Directory.CreateDirectory(dir);
 
-                // Snapshot the live Game View render resolution BEFORE the Recorder touches it.
-                PlayModeWindow.GetRenderingResolution(out _savedWidth, out _savedHeight);
-                int rawW = Mathf.Max(2, (int)_savedWidth);
-                int rawH = Mathf.Max(2, (int)_savedHeight);
+                // Select the REAL iPhone-14 1170×2532 device preset (and purge any fabricated
+                // "Recording Resolution" entry) so the menu lays out exactly as in normal play.
+                bool selected = GameViewSizeUtil.EnsureIPhone14Selected();
 
+                // Record at full device resolution. Use the live render size when the select worked
+                // (it now equals 1170×2532); fall back to the constants otherwise.
                 int w, h;
-                if (profile == CaptureProfile.GameplayCapped && rawH > GameplayMaxHeight)
+                PlayModeWindow.GetRenderingResolution(out uint cw, out uint ch);
+                if (selected && cw == GameViewSizeUtil.IPhone14Width && ch == GameViewSizeUtil.IPhone14Height)
                 {
-                    // Downscale proportionally to the 540p height cap (kernel-panic mitigation).
-                    h = GameplayMaxHeight;
-                    w = Mathf.Max(2, Mathf.RoundToInt((float)rawW / rawH * GameplayMaxHeight));
-                    _restoreResolution = true;   // we are about to resize the view; undo it in End()
+                    w = GameViewSizeUtil.IPhone14Width;
+                    h = GameViewSizeUtil.IPhone14Height;
                 }
                 else
                 {
-                    // MenuNative (or already ≤ cap): record at the native size. Output == current
-                    // render size, so the Recorder's SetCustomSize is a no-op → no resize → UI intact.
-                    w = rawW;
-                    h = rawH;
+                    Debug.LogWarning($"[BotVideoRecorder] Could not confirm the iPhone-14 1170×2532 Game View size " +
+                                     $"(selected={selected}, render={cw}x{ch}). Recording at the current render size; " +
+                                     $"the UI may not match normal play.");
+                    w = Mathf.Max(2, (int)cw);
+                    h = Mathf.Max(2, (int)ch);
+                    if (w % 2 != 0) w--;   // H.264 requires even dimensions
+                    if (h % 2 != 0) h--;
                 }
-                // H.264 requires even dimensions. Clamping an odd native size by 1px would itself
-                // resize the view, so flag a restore when that happens too.
-                if (w % 2 != 0) { w--; _restoreResolution = true; }
-                if (h % 2 != 0) { h--; _restoreResolution = true; }
 
                 var movie = ScriptableObject.CreateInstance<MovieRecorderSettings>();
                 movie.name         = "BotVideo";
@@ -171,80 +125,47 @@ namespace Golfin.Physics.Viewer.Editor
                 _controller.PrepareRecording();
                 _controller.StartRecording();
 
-                string mitigation = profile == CaptureProfile.GameplayCapped
-                    ? $"gameplay-capped-{Fps}fps-{h}p-H264"
-                    : $"menu-native-{Fps}fps-{w}x{h}-H264";
-
                 float t0 = Time.realtimeSinceStartup;
                 File.WriteAllText($"{dir}/record_info.json",
                     "{\"record_start_realtime\": " +
                     t0.ToString("F4", CultureInfo.InvariantCulture) +
                     ", \"mp4\": \"" + dir + "/raw.mp4\", \"fps\": " + Fps +
                     ", \"width\": " + w + ", \"height\": " + h +
-                    ", \"profile\": \"" + profile + "\"" +
-                    ", \"mitigation\": \"" + mitigation + "\"" +
+                    ", \"size\": \"iphone14-1170x2532-full\"" +
                     "}");
 
-                if (profile == CaptureProfile.MenuNative)
-                {
-                    Debug.Log($"[BotVideoRecorder] Recording started → {dir}/raw.mp4 ({w}x{h} @ {Fps}fps, profile=MenuNative). " +
-                              "Native Game View resolution — no resize, menu/UI layout preserved.");
-                }
-                else
-                {
-                    Debug.Log($"[BotVideoRecorder] Recording started → {dir}/raw.mp4 ({w}x{h} @ {Fps}fps, profile=GameplayCapped). " +
-                              $"Capped to {h}p for macOS kernel-panic safety; Game View will be restored to {_savedWidth}x{_savedHeight} on stop.");
-                }
+                Debug.Log($"[BotVideoRecorder] Recording started → {dir}/raw.mp4 ({w}x{h} @ {Fps}fps). " +
+                          "Game View pinned to the iPhone-14 1170×2532 device preset — UI lays out as in normal play.");
             }
             catch (Exception e)
             {
                 Debug.LogError($"[BotVideoRecorder] Begin failed: {e}");
                 _controller = null;
-                RestoreResolutionIfNeeded();
             }
         }
 
         /// <summary>Stop recording. Safe to call when not recording.</summary>
         public static void End()
         {
-            if (_controller == null)
+            if (_controller != null)
             {
-                // A Begin() that armed a restore but never spun up a controller still needs cleanup.
-                RestoreResolutionIfNeeded();
-                return;
+                try
+                {
+                    if (_controller.IsRecording())
+                        _controller.StopRecording();
+                    Debug.Log("[BotVideoRecorder] Recording stopped.");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[BotVideoRecorder] End: {e.Message}");
+                }
+                _controller = null;
             }
-            try
-            {
-                if (_controller.IsRecording())
-                    _controller.StopRecording();
-                Debug.Log("[BotVideoRecorder] Recording stopped.");
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[BotVideoRecorder] End: {e.Message}");
-            }
-            _controller = null;
-            RestoreResolutionIfNeeded();
-        }
 
-        /// <summary>
-        /// Put the Game View back to the resolution it had before recording. Best-effort: the
-        /// GameplayCapped profile resizes the view to 540p and the Recorder never restores it, so
-        /// without this a capped run would leave the editor — and any later menu capture — at 540p.
-        /// </summary>
-        static void RestoreResolutionIfNeeded()
-        {
-            if (!_restoreResolution) return;
-            _restoreResolution = false;
-            try
-            {
-                PlayModeWindow.SetCustomRenderingResolution(_savedWidth, _savedHeight, "Restored (BotVideoRecorder)");
-                Debug.Log($"[BotVideoRecorder] Restored Game View resolution to {_savedWidth}x{_savedHeight}.");
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[BotVideoRecorder] Resolution restore failed: {e.Message}");
-            }
+            // Defensive: if the Recorder created a "Recording Resolution" entry this run, drop it so it
+            // never lingers in the Game View dropdown (and never poisons a later capture). The iPhone-14
+            // preset stays selected.
+            GameViewSizeUtil.PurgeFabricatedEntries();
         }
     }
 }
