@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Golfin.UI;
+using Golfin.UI.Matchmaking;
 
 namespace GolfinRedux.UI.ModeSelect
 {
@@ -28,6 +29,9 @@ namespace GolfinRedux.UI.ModeSelect
 
         [Header("Screen Manager (optional — falls back to singleton)")]
         [SerializeField] private ScreenManager screenManager;
+
+        [Header("1v1 Matchmaking Modal")]
+        [SerializeField] private MatchmakingModalController matchmakingModal1v1;
 
         [Header("Initial state")]
         [Tooltip("Mode id to show expanded when the screen opens. Empty = all collapsed.")]
@@ -155,7 +159,17 @@ namespace GolfinRedux.UI.ModeSelect
                     break;
 
                 case "matchmaking_1v1":
-                    Debug.Log("[ModeSelectScreen] 1v1 PLAY — matchmaking delegate.");
+                    // 1v1 path: pick a random hole (1-18), then open matchmaking modal.
+                    // MatchmakingModalController.Open expects a 0-based index.
+                    if (matchmakingModal1v1 != null)
+                    {
+                        int randomHoleIndex = UnityEngine.Random.Range(0, 18); // 0-based → hole numbers 1-18
+                        matchmakingModal1v1.Open(randomHoleIndex);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[ModeSelectScreen] 1v1 PLAY — matchmakingModal1v1 not wired in Inspector.");
+                    }
                     break;
 
                 case "none":

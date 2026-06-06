@@ -114,6 +114,35 @@ namespace Golfin.Physics.Viewer.Editor
             Launch("SpinAndShapeVisualGate");
         }
 
+        // practice_1v1_matchmaking_split (2026-06-06):
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Practice Flow Gate")]
+        public static void RunPracticeFlowGate()
+        {
+            // MenuNative records at native Game View size (1170×2532 iPhone 14 portrait).
+            // Switched from GameplayCapped (iter-2 was 540p) per Cesar rejection — full-size required.
+            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.MenuNative);
+            Launch("practice_flow_gate");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Matchmaking 1v1 Gate")]
+        public static void RunMatchmaking1v1Gate()
+        {
+            // MenuNative records at native Game View size (1170×2532 iPhone 14 portrait).
+            // Switched from GameplayCapped (iter-2 was 540p) per Cesar rejection — full-size required.
+            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.MenuNative);
+            Launch("matchmaking_1v1_gate");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Matchmaking 1v1 Cancel Gate")]
+        public static void RunMatchmaking1v1CancelGate()
+        {
+            // MenuNative records at native Game View size (1170×2532). Cancel gate is UI-only
+            // (no gameplay 3D scene), so kernel-panic risk is minimal at full resolution.
+            BotVideoRecorder.Arm(BotVideoRecorder.CaptureProfile.MenuNative);
+            Launch("matchmaking_1v1_cancel_gate");
+        }
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]
@@ -160,6 +189,15 @@ namespace Golfin.Physics.Viewer.Editor
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Spin And Shape Visual Gate", isValidateFunction: true)]
         static bool ValidateSpinAndShapeVisualGate() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Practice Flow Gate", isValidateFunction: true)]
+        static bool ValidatePracticeFlowGate() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Matchmaking 1v1 Gate", isValidateFunction: true)]
+        static bool ValidateMatchmaking1v1Gate() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Matchmaking 1v1 Cancel Gate", isValidateFunction: true)]
+        static bool ValidateMatchmaking1v1CancelGate() => !EditorApplication.isPlaying;
 
         // ── Launcher ─────────────────────────────────────────────────────────
 

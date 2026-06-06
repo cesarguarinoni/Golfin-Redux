@@ -4,7 +4,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using GolfinRedux.UI;
-using Golfin.UI.Matchmaking;
+using Golfin.Gameplay.Session;
+using Golfin.Roster;
+using Golfin.UI.GameplayTransition;
 using Golfin.Utilities;
 
 namespace GolfinRedux.UI.HoleSelection
@@ -41,9 +43,6 @@ namespace GolfinRedux.UI.HoleSelection
         [SerializeField] private ScrollRect cardsScrollRect;
         [SerializeField] private RectTransform cardsContent;
         [SerializeField] private HoleCardController cardPrefab;
-
-        [Header("Matchmaking Modal")]
-        [SerializeField] private MatchmakingModalController matchmakingModal;
 
         [Header("Hole Database")]
         [SerializeField] private HoleDatabase holeDatabase;
@@ -283,10 +282,32 @@ namespace GolfinRedux.UI.HoleSelection
 
         private void HandleActionClicked(HoleCardController card)
         {
-            if (matchmakingModal != null)
-                matchmakingModal.Open(card.HoleNumber - 1); // holeNumber is 1-based; index is 0-based
+            // Practice path: seed the session directly and launch gameplay — no matchmaking modal.
+            // holeNumber is 1-based; GameSession.SeedSession expects the 1-based hole number.
+            int holeNumber = card.HoleNumber;
+
+            string charId = CharacterManager.Instance != null
+                ? CharacterManager.Instance.GetSelectedCharacterId()
+                : string.Empty;
+            int bagSlot = BagManager.Instance != null
+                ? BagManager.Instance.EquippedBagSlot
+                : 0;
+
+            GameSession.SeedSession(holeNumber, charId, bagSlot);
+#if UNITY_EDITOR
+            Debug.Log($"[Practice] GameSession seeded — Hole={holeNumber}, CharacterId='{charId}', BagSlot={bagSlot}");
+#endif
+
+            var loader = GameplaySceneLoader.Instance;
+            if (loader != null)
+            {
+                loader.BeginGameplayLoad(holeNumber);
+            }
             else
-                Debug.LogWarning("[HoleSelection] No matchmaking modal wired — action button is dead.");
+            {
+                Debug.LogError("[HoleSelection] GameplaySceneLoader.Instance is null — " +
+                               "gameplay scene will not load. Verify GameplaySceneLoader is wired in ShellScene.");
+            }
         }
 
         private IEnumerator CentreCardNextFrame(HoleCardController card)

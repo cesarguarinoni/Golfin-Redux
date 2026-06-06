@@ -101,6 +101,14 @@ namespace Golfin.UI.Matchmaking
         private int       _resolvedIndex;
         private HoleData? _resolvedHoleData;
 
+        // Captured prior active-state of home panels so Cancel/OnDisable restores
+        // them to what they were before OnShow hid them — not unconditionally true.
+        // When matchmaking is launched from the Mode Select carousel (where
+        // homeNextHolePanel is already inactive), this ensures Cancel doesn't
+        // resurrect the legacy NextHolePanel behind the carousel.
+        private bool _noticeWasActive;
+        private bool _nextHoleWasActive;
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         protected override void Awake()
@@ -114,6 +122,13 @@ namespace Golfin.UI.Matchmaking
 
         protected override void OnShow()
         {
+            // Capture prior active-state BEFORE hiding so Cancel/OnDisable can
+            // restore exactly the state that existed when the modal was opened.
+            // If launched from the Mode Select carousel, homeNextHolePanel is already
+            // inactive — capturing false here means it stays inactive on Cancel.
+            _noticeWasActive   = homeNoticePanel   != null && homeNoticePanel.activeSelf;
+            _nextHoleWasActive = homeNextHolePanel != null && homeNextHolePanel.activeSelf;
+
             // Hide home-screen elements that would show through the backdrop
             if (homeNoticePanel != null)   homeNoticePanel.SetActive(false);
             if (homeNextHolePanel != null) homeNextHolePanel.SetActive(false);
@@ -132,17 +147,21 @@ namespace Golfin.UI.Matchmaking
             if (statusText != null)
                 statusText.text = string.Empty;
 
-            // Restore home-screen elements that were hidden while modal was open
-            if (homeNoticePanel != null)   homeNoticePanel.SetActive(true);
-            if (homeNextHolePanel != null) homeNextHolePanel.SetActive(true);
+            // Restore home-screen elements to their prior active-state (captured in
+            // OnShow). This preserves legacy home-launch behavior (panels were on →
+            // restored on) while keeping NextHolePanel OFF when Cancel is pressed
+            // from the Mode Select carousel path (panel was off → stays off).
+            if (homeNoticePanel != null)   homeNoticePanel.SetActive(_noticeWasActive);
+            if (homeNextHolePanel != null) homeNextHolePanel.SetActive(_nextHoleWasActive);
         }
 
         private void OnDisable()
         {
             // Safety net: if modal is killed without going through Hide(),
-            // ensure home-screen elements are never left stuck hidden.
-            if (homeNoticePanel != null)   homeNoticePanel.SetActive(true);
-            if (homeNextHolePanel != null) homeNextHolePanel.SetActive(true);
+            // restore home-screen elements to their prior active-state rather than
+            // unconditionally forcing true (which resurrects NextHolePanel).
+            if (homeNoticePanel != null)   homeNoticePanel.SetActive(_noticeWasActive);
+            if (homeNextHolePanel != null) homeNextHolePanel.SetActive(_nextHoleWasActive);
         }
 
         // ── Public API ────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Golfin.UI.Toast;
+using Golfin.UI.Matchmaking;
 using GolfinRedux.UI;
 
 namespace GolfinRedux.UI.ModeSelect
@@ -28,6 +29,9 @@ namespace GolfinRedux.UI.ModeSelect
         [Header("Cards Container")]
         [SerializeField] private RectTransform cardsContainer;
         [SerializeField] private ScrollRect scrollRect;
+
+        [Header("1v1 Matchmaking Modal")]
+        [SerializeField] private MatchmakingModalController matchmakingModal1v1;
 
         [Header("Card Prefab")]
         [SerializeField] private ModeCardController cardPrefab;
@@ -473,7 +477,17 @@ namespace GolfinRedux.UI.ModeSelect
                     break;
 
                 case "matchmaking_1v1":
-                    Debug.Log("[ModeCarousel] 1v1 PLAY — matchmaking delegate (practice_1v1_matchmaking_split spec).");
+                    // 1v1 path: pick a random hole (1-18), then open matchmaking modal.
+                    // MatchmakingModalController.Open expects a 0-based index.
+                    if (matchmakingModal1v1 != null)
+                    {
+                        int randomHoleIndex = Random.Range(0, 18); // 0-based → hole numbers 1-18
+                        matchmakingModal1v1.Open(randomHoleIndex);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[ModeCarousel] 1v1 PLAY — matchmakingModal1v1 not wired in Inspector.");
+                    }
                     break;
 
                 default:

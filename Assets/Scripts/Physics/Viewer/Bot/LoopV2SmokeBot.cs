@@ -139,6 +139,16 @@ namespace Golfin.Physics.Viewer
                 case "SpinAndShapeVisualGate":
                     scenarioRoutine = Bot.Scenarios.SpinAndShapeVisualGate(driver);
                     break;
+                // practice_1v1_matchmaking_split (2026-06-06):
+                case "practice_flow_gate":
+                    scenarioRoutine = Bot.Scenarios.PracticeFlowGate(driver);
+                    break;
+                case "matchmaking_1v1_gate":
+                    scenarioRoutine = Bot.Scenarios.Matchmaking1v1Gate(driver);
+                    break;
+                case "matchmaking_1v1_cancel_gate":
+                    scenarioRoutine = Bot.Scenarios.Matchmaking1v1CancelGate(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

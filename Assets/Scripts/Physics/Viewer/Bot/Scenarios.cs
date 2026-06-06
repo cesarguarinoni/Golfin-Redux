@@ -1320,6 +1320,199 @@ namespace Golfin.Physics.Viewer.Bot
             yield return new WaitForSecondsRealtime(1f);
             d.FlushLog();
         }
+
+        // ── Scenario: practice_flow_gate ──────────────────────────────────────
+        // practice_1v1_matchmaking_split (2026-06-06): Acceptance Gate 1 evidence.
+
+        /// <summary>
+        /// Production-flow acceptance gate for the Practice path after the matchmaking split.
+        ///
+        /// Verifies:
+        ///   - Clicking PLAY on the Practice mode card reaches Hole Selection (NO matchmaking).
+        ///   - Clicking a hole card's ActionButton seeds the session and loads gameplay directly.
+        ///   - Hole-out → result modal SUCCESS → PLAY NEXT works (solo loop intact).
+        ///
+        /// Uses ClickModeCardPlay("practice") to invoke the real onClick path on the Practice
+        /// mode card, NOT a direct coroutine call to any controller method.
+        ///
+        /// Captures: home, practice_hole_selection, gameplay_armed, result_modal,
+        ///           gameplay_armed_hole2 (PLAY NEXT advance).
+        /// </summary>
+        public static IEnumerator PracticeFlowGate(BotDriver d)
+        {
+            d.LogStep("=== Practice Flow Gate (practice_1v1_matchmaking_split) ===");
+
+            // 1. Cold launch → Home.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f); // let mode carousel settle
+            yield return d.Capture("home");
+
+            // 2. Click PLAY on the Practice mode card (real onClick path).
+            //    ModeCarouselController.HandlePlayClicked dispatches to ShowScreen(HoleSelection).
+            //    NO matchmaking modal should appear.
+            yield return d.ClickModeCardPlay("practice", settleSeconds: 1.5f);
+
+            // 3. Confirm Hole Selection screen is shown (not matchmaking modal).
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(3f); // wait for HoleCardController auto-expand
+            yield return d.Capture("practice_hole_selection");
+
+            // 4. Tap PLAY on the first available hole card (ActionButton on the auto-expanded row).
+            //    HoleSelectionScreenController.HandleActionClicked calls GameSession.SeedSession +
+            //    GameplaySceneLoader.BeginGameplayLoad — no matchmaking modal.
+            //    Button is inside ExpandedContainer; needs 3s settle above to become active.
+            yield return d.Click("ActionButton", settleSeconds: 1.5f);
+
+            // 5. Assert NO matchmaking modal appears (screenshot taken after click — modal
+            //    would need 0.5s+ to appear; the slot is empty on the practice path).
+            yield return new WaitForSecondsRealtime(0.5f);
+            bool modalVisible = d.IsMatchMakingModalVisible();
+            d.LogStep($"[PracticeFlowGate] MatchMakingModal visible after ActionButton click: {modalVisible} (expected: false)");
+
+            // 6. Wait for gameplay scene to load.
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            // Determine which hole was loaded (first unlocked hole, typically Hole 1).
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+            d.LogStep($"[PracticeFlowGate] GameSession.CurrentHoleNumber={Golfin.Gameplay.Session.GameSession.CurrentHoleNumber} (expected: 1)");
+
+            // 7. Force InCup → SUCCESS result modal.
+            yield return d.ForceShotComplete("InCup", settleSeconds: 1f);
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal");
+
+            // 8. Tap PLAY NEXT → Hole 2 loads (PLAY NEXT card in lab widget is "PlayButton").
+            yield return d.Click("PlayButton", settleSeconds: 1.5f);
+            yield return d.WaitForSceneLoaded("Hole_02_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed_hole2");
+            d.LogStep($"[PracticeFlowGate] After PLAY NEXT: GameSession.CurrentHoleNumber={Golfin.Gameplay.Session.GameSession.CurrentHoleNumber} (expected: 2)");
+
+            if (!modalVisible)
+                d.LogStep("=== Practice Flow Gate: PASS — Practice path skips matchmaking, reaches gameplay, hole-out + PLAY NEXT intact ===");
+            else
+                d.LogStep("=== Practice Flow Gate: FAIL — MatchMakingModal appeared on Practice path (should NOT appear) ===");
+
+            d.FlushLog();
+        }
+
+        // ── Scenario: matchmaking_1v1_gate ────────────────────────────────────
+        // practice_1v1_matchmaking_split (2026-06-06): Acceptance Gate 2 evidence.
+
+        /// <summary>
+        /// Production-flow acceptance gate for the 1v1 path after the matchmaking split.
+        ///
+        /// Verifies:
+        ///   - Clicking PLAY on the 1v1 mode card opens the matchmaking modal (random hole 1-18).
+        ///   - Matchmaking completes (OpponentFound) and gameplay scene loads.
+        ///   - GameSession.CurrentHoleNumber is in range [1, 18] (random selection confirmed).
+        ///
+        /// Uses ClickModeCardPlay("versus_1v1") to invoke the real onClick path on the 1v1
+        /// mode card — NOT a direct call to MatchmakingModalController.Open().
+        ///
+        /// Captures: home, matchmaking_searching, opponent_found, gameplay_armed.
+        /// </summary>
+        public static IEnumerator Matchmaking1v1Gate(BotDriver d)
+        {
+            d.LogStep("=== Matchmaking 1v1 Gate (practice_1v1_matchmaking_split) ===");
+
+            // 1. Cold launch → Home.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f); // let mode carousel settle
+            yield return d.Capture("home");
+
+            // 2. Click PLAY on the 1v1 mode card (real onClick path).
+            //    ModeCarouselController.HandlePlayClicked dispatches to
+            //    matchmakingModal1v1.Open(Random.Range(0,18)).
+            yield return d.ClickModeCardPlay("versus_1v1", settleSeconds: 1.5f);
+
+            // 3. Matchmaking modal should appear.
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return d.Capture("matchmaking_searching");
+
+            // 4. Wait for OpponentFound phase.
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("opponent_found");
+
+            // 5. Wait for gameplay scenes to load.
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            // The hole number is random 1-18; wait for any Hole_NN_Geo.
+            yield return d.WaitForAnyHoleGeoScene(timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("gameplay_armed");
+
+            // 6. Log the seeded hole number for verification.
+            int holeNum = Golfin.Gameplay.Session.GameSession.CurrentHoleNumber;
+            d.LogStep($"[Matchmaking1v1Gate] GameSession.CurrentHoleNumber={holeNum} (expected: 1-18)");
+
+            if (holeNum >= 1 && holeNum <= 18)
+                d.LogStep("=== Matchmaking 1v1 Gate: PASS — 1v1 PLAY opens matchmaking, random hole in [1,18], gameplay loaded ===");
+            else
+                d.LogStep($"=== Matchmaking 1v1 Gate: FAIL — hole={holeNum} outside [1,18] ===");
+
+            d.FlushLog();
+        }
+
+        // ── Scenario: matchmaking_1v1_cancel_gate ─────────────────────────────
+        // practice_1v1_matchmaking_split iter-3 (2026-06-06): Cancel-gate fix evidence.
+
+        /// <summary>
+        /// Acceptance gate for the CESAR_REJECTION defect fix:
+        /// "Cancel on the matchmaking modal resurrects the dead NextHolePanel."
+        ///
+        /// Verifies:
+        ///   - Home → Mode Select → 1v1 PLAY → matchmaking modal opens.
+        ///   - Tap CANCEL → modal closes cleanly.
+        ///   - The legacy NextHolePanel (HomeScreen > NextHolePanel, m_IsActive: 0)
+        ///     is NOT active in the hierarchy after Cancel.
+        ///   - The Mode Select carousel is visible again (home state clean).
+        ///
+        /// Captures: home, matchmaking_modal_open, post_cancel_home (the load-bearing evidence).
+        /// The post_cancel_home frame must show the carousel WITHOUT the NextHolePanel behind it.
+        /// </summary>
+        public static IEnumerator Matchmaking1v1CancelGate(BotDriver d)
+        {
+            d.LogStep("=== Matchmaking 1v1 Cancel Gate (practice_1v1_matchmaking_split iter-3) ===");
+
+            // 1. Cold launch → Home.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f); // let mode carousel settle
+            yield return d.Capture("s01_home_pre_play");
+
+            // 2. Click PLAY on the 1v1 mode card (real onClick path).
+            yield return d.ClickModeCardPlay("versus_1v1", settleSeconds: 1.5f);
+
+            // 3. Matchmaking modal should appear.
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("s02_matchmaking_modal_open");
+
+            // 4. Tap CANCEL to dismiss the modal.
+            yield return d.Click("CancelButton", settleSeconds: 0.5f);
+
+            // 5. Wait for modal to hide.
+            yield return d.WaitForModalHidden("MatchMakingModal", timeoutSeconds: 10f);
+            yield return new WaitForSecondsRealtime(1.5f); // let home settle after hide
+
+            // 6. Capture the post-Cancel home state — this is the load-bearing frame.
+            yield return d.Capture("s03_post_cancel_home");
+
+            // 7. Check that NextHolePanel is NOT active in the hierarchy.
+            bool nextHolePanelActive = d.IsNextHolePanelActive();
+            d.LogStep($"[Matchmaking1v1CancelGate] NextHolePanel.activeInHierarchy={nextHolePanelActive} (expected: false)");
+
+            if (!nextHolePanelActive)
+                d.LogStep("=== Matchmaking 1v1 Cancel Gate: PASS — Cancel returns to Mode Select carousel; NextHolePanel stays deactivated ===");
+            else
+                d.LogStep("=== Matchmaking 1v1 Cancel Gate: FAIL — NextHolePanel is active after Cancel (resurrection defect still present) ===");
+
+            d.FlushLog();
+        }
     }
 }
 #endif

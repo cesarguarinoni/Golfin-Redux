@@ -1,4 +1,5 @@
 // iteration3-fix: labelComp cast corrected v2
+// practice_1v1_matchmaking_split: matchmakingModal field removed from HoleSelectionScreenController.
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -7,7 +8,6 @@ using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
 using GolfinRedux.UI.HoleSelection;
-using Golfin.UI.Matchmaking;
 
 namespace GolfinRedux.UI.HoleSelection.Editor
 {
@@ -345,16 +345,9 @@ namespace GolfinRedux.UI.HoleSelection.Editor
                 else { FailB("holeDatabase", HOLE_DATABASE_PATH); }
             }
 
-            // matchmakingModal
-            {
-                MatchmakingModalController modal = null;
-                foreach (var m in Resources.FindObjectsOfTypeAll<MatchmakingModalController>())
-                {
-                    if (m.gameObject.scene.isLoaded) { modal = m; break; }
-                }
-                if (modal != null) { so.FindProperty("matchmakingModal").objectReferenceValue = modal; counters.Wired++; Debug.Log("[HoleSelectionAutoWire] OK scene:matchmakingModal"); }
-                else { FailB("matchmakingModal", "(scene MatchmakingModalController)", "not found in scene"); }
-            }
+            // matchmakingModal was REMOVED from HoleSelectionScreenController
+            // (practice_1v1_matchmaking_split: Practice path no longer uses matchmaking).
+            // No wiring needed here.
 
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(ctrl);

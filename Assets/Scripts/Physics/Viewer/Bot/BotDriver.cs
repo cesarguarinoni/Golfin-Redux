@@ -1097,6 +1097,264 @@ namespace Golfin.Physics.Viewer.Bot
             return null;
         }
 
+        // ── Mode-card primitives (practice_1v1_matchmaking_split) ────────────
+
+        /// <summary>
+        /// Snaps the mode carousel to centre the card with the given modeId, bypassing the
+        /// swipe-drag animation so the bot doesn't have to simulate pointer events.
+        ///
+        /// Uses reflection to:
+        ///   1. Find ModeCarouselController in the scene.
+        ///   2. Read its _allCards list and _centeredVirtualIndex field.
+        ///   3. Write _centeredVirtualIndex to the virtual slot whose ModeId matches.
+        ///   4. Call private ApplyCardStates() to activate PLAY on the new centre card.
+        ///
+        /// Safe to call even if the carousel is already centred on modeId.
+        /// Returns true if the carousel was found and the mode was set; false otherwise.
+        /// </summary>
+        public bool SnapCarouselToMode(string modeId)
+        {
+            LogStep($"SnapCarouselToMode: target='{modeId}'");
+
+            Type carouselType = Type.GetType(
+                "GolfinRedux.UI.ModeSelect.ModeCarouselController, Assembly-CSharp");
+            if (carouselType == null)
+            {
+                LogStep("SnapCarouselToMode WARN: ModeCarouselController type not found via reflection");
+                return false;
+            }
+
+            var carousel = UnityEngine.Object.FindObjectOfType(carouselType) as MonoBehaviour;
+            if (carousel == null)
+            {
+                LogStep("SnapCarouselToMode WARN: no ModeCarouselController instance in scene");
+                return false;
+            }
+
+            // Get the _allCards list.
+            FieldInfo cardsField = carouselType.GetField("_allCards",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            if (cardsField == null)
+            {
+                LogStep("SnapCarouselToMode WARN: _allCards field not found");
+                return false;
+            }
+            var allCards = cardsField.GetValue(carousel) as System.Collections.IList;
+            if (allCards == null || allCards.Count == 0)
+            {
+                LogStep("SnapCarouselToMode WARN: _allCards is null or empty");
+                return false;
+            }
+
+            // Find the virtual index with matching modeId (prefer the middle pass = pass 1).
+            Type cardType = Type.GetType(
+                "GolfinRedux.UI.ModeSelect.ModeCardController, Assembly-CSharp");
+            PropertyInfo modeIdProp = cardType?.GetProperty("ModeId",
+                BindingFlags.Public | BindingFlags.Instance);
+
+            FieldInfo centeredField = carouselType.GetField("_centeredVirtualIndex",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            FieldInfo dataCountField = carouselType.GetField("_dataCount",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            if (centeredField == null || dataCountField == null)
+            {
+                LogStep("SnapCarouselToMode WARN: _centeredVirtualIndex or _dataCount field not found");
+                return false;
+            }
+            int dataCount = (int)dataCountField.GetValue(carousel);
+
+            // Find first match in the middle pass (indices [dataCount .. 2*dataCount-1]).
+            int targetVirtual = -1;
+            for (int i = 0; i < allCards.Count; i++)
+            {
+                var card = allCards[i] as MonoBehaviour;
+                if (card == null) continue;
+                string id = modeIdProp?.GetValue(card) as string;
+                if (id != null && id.Equals(modeId, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Prefer middle pass slot.
+                    if (i >= dataCount && i < 2 * dataCount)
+                    {
+                        targetVirtual = i;
+                        break;
+                    }
+                    if (targetVirtual < 0) targetVirtual = i; // fallback to first match
+                }
+            }
+
+            if (targetVirtual < 0)
+            {
+                LogStep($"SnapCarouselToMode MISS: no card with modeId='{modeId}' in _allCards");
+                return false;
+            }
+
+            centeredField.SetValue(carousel, targetVirtual);
+            LogStep($"SnapCarouselToMode: set _centeredVirtualIndex={targetVirtual} (total cards={allCards.Count}, dataCount={dataCount})");
+
+            // Call private ApplyCardStates() to update SetCenter / PLAY visibility.
+            MethodInfo applyMethod = carouselType.GetMethod("ApplyCardStates",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            if (applyMethod != null)
+            {
+                applyMethod.Invoke(carousel, null);
+                LogStep("SnapCarouselToMode: ApplyCardStates() called — PLAY button should now be active on center card");
+            }
+            else
+            {
+                LogStep("SnapCarouselToMode WARN: ApplyCardStates() method not found; card states may be stale");
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Find the PLAY button on the mode card whose ModeId matches <paramref name="modeId"/>
+        /// (case-insensitive). ModeCardController is in Assembly-CSharp — accessed via reflection
+        /// to avoid a cross-assembly static reference.
+        ///
+        /// Returns the Button component if found, null otherwise.
+        /// </summary>
+        public Button FindModeCardPlayButton(string modeId)
+        {
+            // ModeCardController lives in Assembly-CSharp (GolfinRedux.UI.ModeSelect namespace).
+            Type cardType = Type.GetType(
+                "GolfinRedux.UI.ModeSelect.ModeCardController, Assembly-CSharp");
+            if (cardType == null)
+            {
+                LogStep($"FindModeCardPlayButton WARN: ModeCardController type not found via reflection");
+                return null;
+            }
+
+            var cards = UnityEngine.Object.FindObjectsOfType(cardType) as MonoBehaviour[];
+            if (cards == null || cards.Length == 0)
+            {
+                LogStep($"FindModeCardPlayButton WARN: no ModeCardController instances active");
+                return null;
+            }
+
+            PropertyInfo modeIdProp = cardType.GetProperty("ModeId",
+                BindingFlags.Public | BindingFlags.Instance);
+
+            // The carousel uses a 3× virtual array — there may be multiple ModeCardController
+            // instances with the same modeId. Only the center-card copy has its playButton active.
+            // Scan all matching cards and return the first one whose playButton is active.
+            FieldInfo playField = cardType.GetField("playButton",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            if (playField == null)
+            {
+                LogStep($"FindModeCardPlayButton WARN: 'playButton' field not found on {cardType.Name}");
+                return null;
+            }
+
+            Button inactiveCandidate = null; // keep for debug log
+            foreach (var card in cards)
+            {
+                string id = modeIdProp?.GetValue(card) as string;
+                if (id == null || !id.Equals(modeId, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var btn = playField.GetValue(card) as Button;
+                if (btn == null) continue;
+
+                if (btn.gameObject.activeInHierarchy && btn.isActiveAndEnabled)
+                {
+                    LogStep($"FindModeCardPlayButton OK: modeId='{modeId}' → {btn.gameObject.name} (active)");
+                    return btn;
+                }
+                // Record a found-but-inactive candidate for diagnostics.
+                inactiveCandidate = btn;
+            }
+
+            if (inactiveCandidate != null)
+                LogStep($"FindModeCardPlayButton WARN: all '{modeId}' cards found but playButton inactive/null — center card may not have settled yet");
+            else
+                LogStep($"FindModeCardPlayButton MISS: no active ModeCardController with modeId='{modeId}'");
+            return null;
+        }
+
+        /// <summary>
+        /// Click the PLAY button on the mode card whose ModeId == <paramref name="modeId"/>.
+        /// Uses the same pointer-down/up + onClick.Invoke() pattern as <see cref="Click"/>.
+        /// Waits settleSeconds (realtime) after clicking.
+        /// </summary>
+        public IEnumerator ClickModeCardPlay(string modeId, float settleSeconds = 1.5f)
+        {
+            LogStep($"ClickModeCardPlay: modeId='{modeId}'");
+
+            // Ensure the carousel is centred on the requested mode so its PLAY button is active.
+            // SnapCarouselToMode is instantaneous (no animation); wait one frame for Unity to
+            // process the layout changes before reading the button state.
+            SnapCarouselToMode(modeId);
+            yield return null; // one-frame settle
+
+            var btn = FindModeCardPlayButton(modeId);
+            if (btn != null)
+            {
+                var ped = new PointerEventData(EventSystem.current);
+                ExecuteEvents.Execute(btn.gameObject, ped, ExecuteEvents.pointerDownHandler);
+                yield return new WaitForSecondsRealtime(0.10f);
+                ExecuteEvents.Execute(btn.gameObject, ped, ExecuteEvents.pointerUpHandler);
+                btn.onClick.Invoke();
+                LogStep($"  → clicked mode card PLAY for modeId='{modeId}'");
+            }
+            else
+            {
+                LogStep($"  → ClickModeCardPlay FAILED: no active PLAY button for modeId='{modeId}'");
+            }
+            yield return new WaitForSecondsRealtime(settleSeconds);
+        }
+
+        /// <summary>
+        /// Returns true if the MatchMakingModal is currently visible.
+        /// Delegates to the private IsModalVisible helper.
+        /// </summary>
+        public bool IsMatchMakingModalVisible()
+            => IsModalVisible("MatchMakingModal");
+
+        /// <summary>
+        /// Returns true if the legacy NextHolePanel GameObject is currently active in the hierarchy.
+        /// Used by the Cancel gate to verify the panel is NOT resurrected after matchmaking Cancel.
+        /// Searches all transforms (includeInactive: true) so we can detect even if the parent is active.
+        /// </summary>
+        public bool IsNextHolePanelActive()
+        {
+            // Walk all MonoBehaviours (active+inactive) to find a GO named "NextHolePanel"
+            var allMonos = UnityEngine.Object.FindObjectsOfType<MonoBehaviour>(includeInactive: true);
+            foreach (var mono in allMonos)
+            {
+                if (mono.gameObject.name.Equals("NextHolePanel", StringComparison.OrdinalIgnoreCase))
+                    return mono.gameObject.activeInHierarchy;
+            }
+            // Not found (normal in gameplay scenes where HomeScreen is not loaded)
+            return false;
+        }
+
+        /// <summary>
+        /// Poll until any loaded scene whose name starts with "Hole_" and ends with "_Geo"
+        /// is found. Used by 1v1 scenarios where the exact hole number is random.
+        /// </summary>
+        public IEnumerator WaitForAnyHoleGeoScene(float timeoutSeconds = 40f)
+        {
+            LogStep($"WaitForAnyHoleGeoScene (timeout={timeoutSeconds}s)");
+            float elapsed = 0f;
+            while (elapsed < timeoutSeconds)
+            {
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    var scene = SceneManager.GetSceneAt(i);
+                    if (scene.isLoaded
+                        && scene.name.StartsWith("Hole_", StringComparison.OrdinalIgnoreCase)
+                        && scene.name.EndsWith("_Geo", StringComparison.OrdinalIgnoreCase))
+                    {
+                        LogStep($"  WaitForAnyHoleGeoScene OK: '{scene.name}' loaded after {elapsed:F1}s");
+                        yield break;
+                    }
+                }
+                yield return new WaitForSecondsRealtime(0.5f);
+                elapsed += 0.5f;
+            }
+            LogStep($"  WaitForAnyHoleGeoScene TIMEOUT: no Hole_*_Geo scene loaded after {timeoutSeconds}s");
+        }
+
         // ── Spin-scenario primitives (spin_and_shot_shape_wiring) ─────────────
 
         /// <summary>

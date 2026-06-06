@@ -11524,7 +11524,6 @@ MonoBehaviour:
   cardsScrollRect: {fileID: 1977601622}
   cardsContent: {fileID: 1638972377}
   cardPrefab: {fileID: 5359315399421949491, guid: 6717663c8484640909c58d78cd02f8c2, type: 3}
-  matchmakingModal: {fileID: 4390230621042469647}
   holeDatabase: {fileID: 11400000, guid: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6, type: 2}
 --- !u!225 &249416401
 CanvasGroup:
@@ -23511,7 +23510,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -104.99988}
+  m_AnchoredPosition: {x: 0, y: -105}
   m_SizeDelta: {x: 0, y: -210}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &494579383
@@ -33384,7 +33383,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -27.63}
+  m_AnchoredPosition: {x: 0, y: -27.629883}
   m_SizeDelta: {x: 1074, y: 56}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &695462981
@@ -64380,6 +64379,7 @@ MonoBehaviour:
   cardPrefab: {fileID: 4256354369524467075, guid: 8b72adc05329744348b02e5cddf5f4bd, type: 3}
   cardsContainerPanel: {fileID: 869265816}
   screenManager: {fileID: 0}
+  matchmakingModal1v1: {fileID: 4390230621042469647}
   _initialExpandedModeId: practice
 --- !u!1 &1340989192
 GameObject:
@@ -65094,11 +65094,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.ModeSelect.ModeCarouselController
   cardsContainer: {fileID: 1292098652}
   scrollRect: {fileID: 0}
+  matchmakingModal1v1: {fileID: 4390230621042469647}
   cardPrefab: {fileID: 644438347741027527, guid: 91af3d865b02e46e6ae47ecc4e6ba084, type: 3}
   leftArrowButton: {fileID: 1443002514}
   rightArrowButton: {fileID: 1580596742}
   _snapDuration: 0.18
   _expandAfterSnap: 0.05
+  _resizeDuration: 0.2
   _collapsedCardWidth: 556
   _collapsedCardHeight: 640
   _expandedCardWidth: 764
@@ -80647,7 +80649,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -104.99988}
+  m_AnchoredPosition: {x: 0, y: -105}
   m_SizeDelta: {x: 0, y: -210}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1691560212
