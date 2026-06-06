@@ -1,0 +1,122 @@
+=== iter-1 kickoff baseline 2026-06-06T05:52:34Z ===
+HEAD: efe526ff1110ff45e08c1091e55f646704ad8ca0
+DIRTY (porcelain):
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_REUSABLE_ELEMENTS.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_WHAT_HAPPENED.md
+ D Docs/Specs/Active/mode_select_system/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ (+ untracked: Assets/Courses/Maps/Taiheyo/*, Docs/Diagnostics/_capture/h07_iter8_*, etc.)
+=== end baseline ===
+
+2026-06-06T05:52:34Z activated
+2026-06-06T05:52:34Z reading spec and all referenced source files
+2026-06-06T05:57:57 running EditMode tests
+2026-06-06T08:14:00 done, awaiting review
+
+=== iter-2 kickoff baseline 2026-06-06T09:00:00Z ===
+HEAD: efe526ff1110ff45e08c1091e55f646704ad8ca0
+DIRTY (porcelain):
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionAutoWire.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCarouselController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeSelectScreenController.cs
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_REUSABLE_ELEMENTS.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_WHAT_HAPPENED.md
+ D Docs/Specs/Active/mode_select_system/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ (+ untracked: Assets/Courses/Maps/Taiheyo/*, etc. — pre-existing from iter-1 baseline)
+=== end baseline ===
+
+2026-06-06T09:00:00Z iter-2 activated — writing bot scenarios for practice_flow_gate + matchmaking_1v1_gate
+2026-06-06T09:30:00Z running EditMode tests - verify 360/360 pass
+2026-06-06T09:45:00Z launching practice_flow_gate bot scenario for production-flow capture
+2026-06-06T09:00:00Z launching practice_flow_gate with SnapCarouselToMode + 3s settle fixes
+2026-06-06T09:10:00Z practice_flow_gate PASS — gameplay reached, hole-out, PLAY NEXT verified
+2026-06-06T09:15:00Z matchmaking_1v1_gate PASS — random hole 8, gameplay loaded
+2026-06-06T09:20:00Z running EditMode tests — 360/363 pass (3 pre-existing skips)
+2026-06-06T09:25:00Z building captioned videos for both scenarios
+2026-06-06T09:30:00Z updating IMPLEMENTER_REPORT with real log lines + video declarations
+2026-06-06T09:35:00Z done, awaiting review
+
+=== iter-3 kickoff baseline 2026-06-06T10:00:00Z ===
+HEAD: efe526ff1110ff45e08c1091e55f646704ad8ca0
+DIRTY (porcelain):
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/UI/HoleSelection/Editor/HoleSelectionAutoWire.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCarouselController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeSelectScreenController.cs
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_REUSABLE_ELEMENTS.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_WHAT_HAPPENED.md
+ D Docs/Specs/Active/mode_select_system/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ (+ untracked: Assets/Courses/Maps/Taiheyo/*, etc. — pre-existing from prior iters)
+=== end baseline ===
+
+2026-06-06T10:00:00Z iter-3 activated — CESAR_REJECTED; fixing Cancel resurrects NextHolePanel bug
+2026-06-06T10:10:00Z fix applied to MatchmakingModalController.cs — _noticeWasActive/_nextHoleWasActive capture pattern; EditMode 360/360 pass
+2026-06-06T10:16:00Z cancel gate PASS: NextHolePanel.activeInHierarchy=False; screenshot 1170x2532; video 1170x2532 2.7MB
+2026-06-06T10:28:00Z iter-3 practice_flow_gate + matchmaking_1v1_gate re-run at MenuNative (1170x2532); captioned videos built; IMPLEMENTER_REPORT written
+2026-06-06T10:28:00Z done, awaiting review
