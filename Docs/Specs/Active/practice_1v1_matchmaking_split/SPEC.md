@@ -33,6 +33,7 @@ Today the fake matchmaking sits on the **Practice** path. Move it: **Practice be
 
 ## Changes (surgical)
 
+0. **PLAY button wiring (the dead-button fix)** — the mode-card PLAY buttons on both surfaces (carousel `ModeHomeCard` + full-screen `ModeCard`) currently route nowhere; this is expected (mode_select delegated launch behavior here). Wire `onClick` **data-driven off the mode's `target` column in `modes.csv`** via a single dispatch point (not per-card hard-coding): `hole_select` -> open Hole Select; `matchmaking_1v1` -> the 1v1 path below; `none` (locked modes) -> no route (PLAY already disabled by mode_select's lock/fee UX). Verify both surfaces' PLAY reach gameplay before closing.
 1. **Practice path** — `HoleCardController` (or the Practice launch in `mode_select_system`) calls `SeedSession` + `GameplaySceneLoader.BeginGameplayLoad` directly; remove the `MatchmakingModalController.Open` forward from the Practice/hole-select route.
 2. **1v1 path** — Mode Select 1v1 PLAY -> random hole -> `MatchmakingModalController.Open(randomHole)`. Random opponent from `_opponentPool` (already random).
 3. **Seed ownership** — ensure exactly one seed point per path; matchmaking keeps seeding for 1v1, Practice seeds on launch. No double-seed.
