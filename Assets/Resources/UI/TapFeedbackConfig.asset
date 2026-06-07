@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83834c1ed57a54a75aeda5481e9fc571, type: 3}
+  m_Name: TapFeedbackConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.TapFeedbackConfig
+  enabled: 1
+  poolSize: 8
+  ringStartPx: 30
+  ringEndPx: 90
+  ringDuration: 0.3
+  ringPeakAlpha: 0.4
+  ringColor: {r: 1, g: 1, b: 1, a: 1}
+  sparkleCount: 6
+  sparkleSpeed: 120
+  sparkleLifetime: 0.45
+  sparkleSizePx: 8
+  sparklePeakAlpha: 0.5
+  sparkleTint: {r: 1, g: 0.95, b: 0.85, a: 1}
+  playAudio: 0
+  audioClip: {fileID: 0}

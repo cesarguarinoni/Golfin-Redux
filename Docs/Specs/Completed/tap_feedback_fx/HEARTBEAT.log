@@ -1,0 +1,204 @@
+
+=== iter-1 kickoff baseline 2026-06-06T09:20:08Z ===
+HEAD: 95efbe8b4ce04c0bada6229c5a047b1b604ca425
+DIRTY porcelain:
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_REUSABLE_ELEMENTS.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_WHAT_HAPPENED.md
+ D Docs/Specs/Active/mode_select_system/SPEC.md
+ M Docs/Specs/Active/tap_feedback_fx/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+
+2026-06-06T09:20:08Z activated
+2026-06-06T09:23:16Z writing TapFeedbackController.cs + preparing prefab build
+2026-06-06T09:26:50Z entering play mode to verify bootstrap
+2026-06-06T09:30:21Z capturing screenshot and recording visual evidence
+2026-06-06T09:39:23Z done, awaiting review — canonical screenshot tap_fx_canonical.png, all checklist items PASS
+=== iter-2 kickoff baseline 2026-06-06T09:43:24Z ===
+HEAD: 95efbe8b4ce04c0bada6229c5a047b1b604ca425
+DIRTY:
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_REUSABLE_ELEMENTS.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_WHAT_HAPPENED.md
+ D Docs/Specs/Active/mode_select_system/SPEC.md
+ M Docs/Specs/Active/tap_feedback_fx/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Courses/Maps/Taiheyo.meta
+?? "Assets/Courses/Maps/Taiheyo/Hole 01.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 01/OB.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 01/cart.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 01/terrain.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 01/trees.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 02.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 02/Cart.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 02/OB.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 02/Terrain.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 02/Trees.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 02/hole-02-satellite.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 03.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 03/Cart.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 03/OB.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 03/Terrain.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 03/Trees.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 03/hole-03-satellite (1).png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 04.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 04/Cart.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 04/OB.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 04/Terrain.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 04/Trees.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 04/hole-04-satellite.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 05.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 05/Cart.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 05/OB.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 05/Terrain.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 05/Trees.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 05/hole-05-satellite.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 06.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 06/Cart.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 06/OB.bmp.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 06/OB.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 06/Terrain.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 06/Trees.png.meta"
+?? "Assets/Courses/Maps/Taiheyo/Hole 06/hole-06-satellite.png.meta"
+?? Assets/Courses/Maps/Taiheyo/hole-03-satellite.png.meta
+?? Assets/Prefabs/UI/TapSparkle_Additive.mat
+?? Assets/Prefabs/UI/TapSparkle_Additive.mat.meta
+?? Assets/ProjectSettings.meta
+?? Assets/ProjectSettings/UIParticleProjectSettings.asset
+?? Assets/ProjectSettings/UIParticleProjectSettings.asset.meta
+?? Assets/Resources/UI/TapFeedbackFX.prefab
+?? Assets/Resources/UI/TapFeedbackFX.prefab.meta
+?? Assets/Scripts/UI/TapFeedbackController.cs
+?? Assets/Scripts/UI/TapFeedbackController.cs.meta
+?? Assets/Scripts/UI/TapFeedbackFX.cs
+?? Assets/Scripts/UI/TapFeedbackFX.cs.meta
+?? Docs/Diagnostics/_capture/h07_iter8_D5_south_north_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_bottomleft_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_east_side_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_overhead_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_uphill_back_compressed.jpg
+?? Docs/Diagnostics/_capture/h07_iter8_west_side_compressed.jpg
+?? Docs/Specs/Active/tap_feedback_fx/HEARTBEAT.log
+?? Docs/Specs/Active/tap_feedback_fx/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tap_feedback_fx/screenshots/tap_fx_active_splash.png
+?? Docs/Specs/Active/tap_feedback_fx/screenshots/tap_fx_canonical.png
+?? Docs/Specs/Active/tap_feedback_fx/screenshots/tap_fx_home_rings_visible.png
+?? Docs/Specs/Active/tap_feedback_fx/screenshots/tap_fx_home_screen.png
+?? Docs/Specs/Completed/ball_flight_trail/HEARTBEAT.log
+?? Docs/Specs/Completed/ball_flight_trail/screenshots/.gitkeep
+?? Docs/Specs/Quick/editor_replay_singleton_reset.md
+?? Docs/Videos/matchmaking_1v1_cancel_gate_stageF_buttons.mp4
+?? Docs/Videos/matchmaking_1v1_gate_stageF_buttons.mp4
+?? Docs/Videos/practice_flow_gate_stageF_buttons.mp4
+?? Tools/GreenSlope/scripts/capture-all-holes.mjs
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_cancel_gate/live_stat_log.txt
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_cancel_gate/screenshots/history.log
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_cancel_gate/screenshots/s01_s01_home_pre_play_2026-06-06_10-15-22.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_cancel_gate/screenshots/s02_s02_matchmaking_modal_open_2026-06-06_10-15-25.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_cancel_gate/screenshots/s03_s03_post_cancel_home_2026-06-06_10-15-27.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/live_stat_log.txt
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/screenshots/history.log
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/screenshots/s01_home_2026-06-06_09-02-54.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/screenshots/s01_home_2026-06-06_10-25-46.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/screenshots/s02_matchmaking_searching_2026-06-06_09-02-56.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/screenshots/s02_matchmaking_searching_2026-06-06_10-25-48.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/screenshots/s03_opponent_found_2026-06-06_09-03-01.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/screenshots/s03_opponent_found_2026-06-06_10-25-52.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/screenshots/s04_gameplay_armed_2026-06-06_09-03-05.png
+?? tasks/loop_v2_smoke_bot/matchmaking_1v1_gate/screenshots/s04_gameplay_armed_2026-06-06_10-25-57.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/live_stat_log.txt
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/history.log
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s01_home_2026-06-06_08-48-18.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s01_home_2026-06-06_08-53-14.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s01_home_2026-06-06_08-59-15.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s01_home_2026-06-06_10-17-54.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s02_practice_hole_selection_2026-06-06_08-48-37.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s02_practice_hole_selection_2026-06-06_08-53-32.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s02_practice_hole_selection_2026-06-06_08-59-20.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s02_practice_hole_selection_2026-06-06_10-17-58.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s03_gameplay_armed_2026-06-06_08-50-05.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s03_gameplay_armed_2026-06-06_08-55-00.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s03_gameplay_armed_2026-06-06_09-00-06.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s03_gameplay_armed_2026-06-06_10-18-45.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s04_result_modal_2026-06-06_08-50-07.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s04_result_modal_2026-06-06_09-00-09.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s04_result_modal_2026-06-06_10-18-51.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s05_gameplay_armed_hole2_2026-06-06_08-50-53.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s05_gameplay_armed_hole2_2026-06-06_09-00-14.png
+?? tasks/loop_v2_smoke_bot/practice_flow_gate/screenshots/s05_gameplay_armed_hole2_2026-06-06_10-22-53.png
+=== end baseline ===
+
+2026-06-06T09:43:24Z activated iter-2: closing evidence gaps (video, in-game, sparkle-proof, dedup)
+2026-06-06T09:47:26Z about to launch TapFeedbackDemoRecorder — entering play mode for recording
+2026-06-06T09:58Z iter-2 done: video captioned (1.1MB, 10.7s, 1170x2532), in-game still (tapfx_ingame_ring_on_3d_hole.png), duplicate screenshot removed, IMPLEMENTER_REPORT updated. Awaiting review.
+
+=== iter-3 kickoff baseline 2026-06-06T09:00:00 ===
+HEAD: 95efbe8b fix(BotVideoRecorder): record at the real iPhone-14 1170x2532 Game View preset
+DIRTY:
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_REUSABLE_ELEMENTS.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_WHAT_HAPPENED.md
+ D Docs/Specs/Active/mode_select_system/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M ProjectSettings/ProjectSettings.asset
+=== end baseline ===
+2026-06-06T09:00:00 iter-3 activated — fixing sparkle sub-pixel defect
+2026-06-06T14:00:00Z iter-3 resumed — updating DemoRecorder to use LabScaffold for dark-bg video
+2026-06-06T13:05:00Z captioned video (682KB, 11.2s, 1170x2532) done, IMPLEMENTER_REPORT updated with Rejection follow-up, all checks PASS
+2026-06-06T13:05:00Z done, awaiting review
