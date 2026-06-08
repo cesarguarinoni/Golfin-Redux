@@ -15,16 +15,21 @@ Media attachments (added 2026-05-28, Mac setup):
        folder below — that is the only reliable path for task videos.
     2. Any video OR image you drop into the media folder (default: Docs/Reports/Media/).
        Drop-folder files are DELETED after a successful send (README.md/.gitkeep are kept).
-  Telegram's Bot API caps uploads at 50 MB — larger files are skipped (and reported),
-  never deleted.
+  Telegram's Bot API caps uploads at 50 MB. Oversize VIDEOS are auto-compressed
+  (two-pass, same resolution) to fit and then sent; oversize non-video files are
+  skipped (and reported), never deleted. Auto-compress needs ffmpeg/ffprobe —
+  found via PATH or the common install dirs (incl. ~/.local/bin), or override
+  with GOLFIN_FFMPEG_PATH / GOLFIN_FFPROBE_PATH.
 
 See DAILY_REPORT_SETUP.md for installation and configuration (venv, .env, launchd).
 """
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, date
 
@@ -80,6 +85,13 @@ TODO_STATUSES = ["To Do", "To do", "Not Started", "Not started", "Planned"]
 # --- Media / Telegram upload constraints ---
 # Telegram Bot API hard cap on uploaded files is 50 MB.
 TELEGRAM_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+# Oversize videos are auto-compressed (two-pass, same resolution) to this target
+# before sending. Kept ~8 MB under the 50 MB cap so x264's typical few-percent
+# two-pass overshoot never crosses the limit (a 74 MB clip lands ~43 MB).
+# Added 2026-06-08 after a 74 MB "Mode Selection.mp4" was skipped.
+COMPRESS_TARGET_BYTES = 42 * 1024 * 1024
+# Audio bitrate budget reserved when computing the video bitrate for compression.
+COMPRESS_AUDIO_KBPS = 96
 VIDEO_EXTS = {".mp4", ".mov", ".webm", ".m4v", ".avi", ".mkv"}
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 ANIM_EXTS = {".gif"}
@@ -519,10 +531,105 @@ def send_media_file(path: str, caption: str) -> bool:
     return _send_telegram_file("sendDocument", "document", path, caption)
 
 
+def _find_media_tool(name: str, env_var: str):
+    """
+    Locate ffmpeg / ffprobe robustly. Under launchd the plist PATH is just
+    /usr/bin:/bin:/usr/sbin:/sbin, which does NOT include the Homebrew or
+    ~/.local/bin locations where ffmpeg usually lives — so PATH lookup alone
+    fails in the scheduled run. Check an explicit env override first, then PATH,
+    then the common install dirs. Returns an absolute path or None.
+    """
+    cand = os.environ.get(env_var, "")
+    if cand and os.path.isfile(cand) and os.access(cand, os.X_OK):
+        return cand
+    found = shutil.which(name)
+    if found:
+        return found
+    for d in ("~/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"):
+        p = os.path.join(os.path.expanduser(d), name)
+        if os.path.isfile(p) and os.access(p, os.X_OK):
+            return p
+    return None
+
+
+def _compress_video(src: str):
+    """
+    Two-pass re-encode `src` to ~COMPRESS_TARGET_BYTES at the SAME resolution
+    (only the bitrate drops — never downscale, per the full-res capture rule).
+    Returns the path to a temp .mp4 under a fresh temp dir on success, or None
+    on any failure (missing ffmpeg, probe error, encode error, still too big).
+    Caller owns cleanup of the returned file's temp dir.
+    """
+    ffmpeg = _find_media_tool("ffmpeg", "GOLFIN_FFMPEG_PATH")
+    ffprobe = _find_media_tool("ffprobe", "GOLFIN_FFPROBE_PATH")
+    name = os.path.basename(src)
+    if not ffmpeg or not ffprobe:
+        print(f"[WARN] ffmpeg/ffprobe not found — cannot compress {name}. "
+              f"Install ffmpeg or set GOLFIN_FFMPEG_PATH / GOLFIN_FFPROBE_PATH.")
+        return None
+
+    # Duration drives the target bitrate.
+    try:
+        dur = float(subprocess.run(
+            [ffprobe, "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=nokey=1:noprint_wrappers=1", src],
+            capture_output=True, text=True, timeout=60).stdout.strip())
+    except Exception as e:
+        print(f"[WARN] ffprobe failed for {name}: {e}")
+        return None
+    if dur <= 0:
+        print(f"[WARN] bad/zero duration for {name} — cannot compress.")
+        return None
+
+    total_kbps = (COMPRESS_TARGET_BYTES * 8 / dur) / 1000.0
+    video_kbps = int(max(500, total_kbps - COMPRESS_AUDIO_KBPS))
+
+    tmpdir = tempfile.mkdtemp(prefix="golfin_report_")
+    out = os.path.join(tmpdir, os.path.splitext(name)[0] + "_tg.mp4")
+    plog = os.path.join(tmpdir, "ff2pass")
+    base = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error", "-i", src,
+            "-c:v", "libx264", "-b:v", f"{video_kbps}k", "-preset", "medium",
+            "-pix_fmt", "yuv420p", "-passlogfile", plog]
+    try:
+        print(f"[INFO] Compressing {name}: {os.path.getsize(src)/1024/1024:.1f}MB, "
+              f"{dur:.0f}s -> video {video_kbps}k (target ~{COMPRESS_TARGET_BYTES//(1024*1024)}MB)…")
+        r1 = subprocess.run(base + ["-pass", "1", "-an", "-f", "mp4", os.devnull],
+                            capture_output=True, text=True, timeout=1800)
+        if r1.returncode != 0:
+            print(f"[WARN] compress pass 1 failed for {name}: {r1.stderr[:300]}")
+            shutil.rmtree(tmpdir, ignore_errors=True)
+            return None
+        r2 = subprocess.run(base + ["-pass", "2", "-c:a", "aac",
+                            "-b:a", f"{COMPRESS_AUDIO_KBPS}k", "-movflags", "+faststart", out],
+                            capture_output=True, text=True, timeout=1800)
+        if r2.returncode != 0:
+            print(f"[WARN] compress pass 2 failed for {name}: {r2.stderr[:300]}")
+            shutil.rmtree(tmpdir, ignore_errors=True)
+            return None
+    except Exception as e:
+        print(f"[WARN] compression error for {name}: {e}")
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        return None
+
+    if not os.path.isfile(out):
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        return None
+    size = os.path.getsize(out)
+    if size > TELEGRAM_MAX_UPLOAD_BYTES:
+        print(f"[WARN] {name} still {size/1024/1024:.1f}MB after compression "
+              f"(> 50 MB) — not sent.")
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        return None
+    print(f"[OK] Compressed {name}: {os.path.getsize(src)/1024/1024:.1f}MB -> "
+          f"{size/1024/1024:.1f}MB")
+    return out
+
+
 def send_all_media(git_videos: list, drop_media: list) -> None:
     """
     Send git videos (kept on disk) + drop-folder media (deleted after success).
-    Oversize files (>50 MB) are skipped and reported, never deleted.
+    Oversize videos (>50 MB) are auto-compressed to fit before sending; oversize
+    NON-video files (still > 50 MB) are skipped and reported, never deleted.
     """
     if not git_videos and not drop_media:
         print("[INFO] No media to attach today.")
@@ -538,25 +645,47 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
             return  # de-dupe across git + drop folder
         size = os.path.getsize(path)
         name = os.path.basename(path)
+        send_path = path           # what we actually upload (may be a compressed temp)
+        tmp_dir_to_clean = None
+        caption_suffix = ""
         if size > TELEGRAM_MAX_UPLOAD_BYTES:
             mb = size / (1024 * 1024)
-            print(f"[SKIP] {name} is {mb:.1f} MB > 50 MB Telegram limit — not sent.")
-            return
+            ext = os.path.splitext(name)[1].lower()
+            if ext not in VIDEO_EXTS:
+                # Only videos can be transcoded down; images/anims just skip.
+                print(f"[SKIP] {name} is {mb:.1f} MB > 50 MB Telegram limit — not sent.")
+                return
+            print(f"[INFO] {name} is {mb:.1f} MB > 50 MB — auto-compressing to fit.")
+            compressed = _compress_video(path)
+            if not compressed:
+                print(f"[SKIP] {name} is {mb:.1f} MB > 50 MB and could not be "
+                      f"compressed — not sent (original kept).")
+                return
+            send_path = compressed
+            tmp_dir_to_clean = os.path.dirname(compressed)
+            caption_suffix = (f" (compressed {mb:.0f}MB→"
+                              f"{os.path.getsize(compressed)/1024/1024:.0f}MB)")
         # Pace consecutive uploads under Telegram's group rate limit. Sleep BEFORE
         # the 2nd+ upload (not after the last) so we don't trail an idle gap.
         if uploads_attempted > 0:
             time.sleep(MEDIA_SEND_INTERVAL_SEC)
         uploads_attempted += 1
-        caption = f"{caption_prefix}{name}"
-        ok = send_media_file(path, caption)
+        caption = f"{caption_prefix}{name}{caption_suffix}"
+        ok = send_media_file(send_path, caption)
         if ok:
             sent_real_paths.add(real)
             if is_drop:
+                # The drop-folder contract is "deleted after a successful send" —
+                # the ORIGINAL is removed even when we sent a compressed copy,
+                # because its content was delivered. Masters live elsewhere.
                 try:
                     os.remove(path)
                     print(f"[OK] Removed drop-folder file after send: {name}")
                 except OSError as e:
                     print(f"[WARN] Could not delete {name} after send: {e}")
+        # Always clean up the temp compressed file + its temp dir.
+        if tmp_dir_to_clean:
+            shutil.rmtree(tmp_dir_to_clean, ignore_errors=True)
 
     for v in git_videos:
         _process(v, "🎬 ", is_drop=False)

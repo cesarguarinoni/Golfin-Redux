@@ -55,9 +55,15 @@ it works under `launchd` (whose working directory differs).
   and they'll be attached to the next report, then **deleted after a successful
   send** (`README.md`/`.gitkeep` are preserved). This is the reliable path for
   task videos. See that folder's README.
-- Telegram caps uploads at **50 MB**; larger files are skipped and reported in
-  the log, never deleted. Bulk drops are paced (~20/min) and retry on HTTP 429,
-  so a big batch sends fully instead of half-failing.
+- Telegram caps uploads at **50 MB**. Oversize **videos** are **auto-compressed**
+  (two-pass, *same resolution* — only the bitrate drops, ~42 MB target) and then
+  sent; oversize non-video files are skipped and reported, never deleted. Auto-
+  compress needs `ffmpeg`/`ffprobe`: found via `PATH` or common install dirs
+  (incl. `~/.local/bin`), or set `GOLFIN_FFMPEG_PATH` / `GOLFIN_FFPROBE_PATH`.
+  Because the launchd plist's `PATH` is minimal, the script probes `~/.local/bin`
+  and Homebrew dirs directly so the scheduled run still finds ffmpeg.
+- Bulk drops are paced (~20/min) and retry on HTTP 429, so a big batch sends
+  fully instead of half-failing.
 
 ## 4. Schedule — launchd
 

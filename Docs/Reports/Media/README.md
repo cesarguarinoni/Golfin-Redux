@@ -11,9 +11,12 @@ How it works (`Docs/Scripts/daily_report.py`):
    git commits.
 2. **Files here are deleted after a successful send.** This `README.md` and
    `.gitkeep` are never sent or deleted.
-3. Telegram's Bot API caps uploads at **50 MB**. Files larger than that are
-   skipped (and reported in the run log), and are **not** deleted — so you'll
-   know they didn't go out.
+3. Telegram's Bot API caps uploads at **50 MB**. Oversize **videos** are
+   **auto-compressed** to fit (two-pass, *same resolution* — only the bitrate
+   drops) and then sent; the original drop file is deleted like any other
+   successful send, so **keep your master copy elsewhere** if you need it.
+   Oversize **non-video** files (images, zips, …) can't be transcoded and are
+   skipped + reported (and **not** deleted) so you know they didn't go out.
 
 The folder's contents are git-ignored (only `README.md` and `.gitkeep` are
 tracked), so dropped media never gets committed.
