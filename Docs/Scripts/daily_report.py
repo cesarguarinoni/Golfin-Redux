@@ -625,11 +625,35 @@ def _compress_video(src: str):
     return out
 
 
+def _post_unattached_notice(failed: list) -> None:
+    """
+    Post a follow-up message to the chat listing media that could NOT be attached
+    (oversize + uncompressible, or upload failures), so recipients aren't left
+    thinking everything went out. The text report is already posted by the time
+    media is attempted, so this is a separate message in the same chat rather
+    than an edit of the original. Best-effort: never crashes the run.
+    """
+    if not failed:
+        return
+    lines = [
+        "⚠️ Some media could not be attached to today's report:",
+        "⚠️ 一部のメディアを本日のレポートに添付できませんでした:",
+        "",
+    ]
+    lines += [f"• {name} — {reason}" for name, reason in failed]
+    try:
+        post_to_telegram("\n".join(lines))
+    except Exception as e:
+        print(f"[WARN] Could not post unattached-media notice: {e}")
+
+
 def send_all_media(git_videos: list, drop_media: list) -> None:
     """
     Send git videos (kept on disk) + drop-folder media (deleted after success).
     Oversize videos (>50 MB) are auto-compressed to fit before sending; oversize
     NON-video files (still > 50 MB) are skipped and reported, never deleted.
+    Anything that still can't be attached (uncompressible or upload failure) is
+    listed in a follow-up notice posted to the chat.
     """
     if not git_videos and not drop_media:
         print("[INFO] No media to attach today.")
@@ -637,6 +661,7 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
 
     sent_real_paths = set()
     uploads_attempted = 0  # only count real upload attempts, not dedupe/oversize skips
+    failed = []            # (name, reason) for media that could NOT be attached
 
     def _process(path: str, caption_prefix: str, is_drop: bool):
         nonlocal uploads_attempted
@@ -654,12 +679,16 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
             if ext not in VIDEO_EXTS:
                 # Only videos can be transcoded down; images/anims just skip.
                 print(f"[SKIP] {name} is {mb:.1f} MB > 50 MB Telegram limit — not sent.")
+                failed.append((name, f"{mb:.0f} MB, over the 50 MB limit and not a "
+                                     f"video, so it can't be compressed"))
                 return
             print(f"[INFO] {name} is {mb:.1f} MB > 50 MB — auto-compressing to fit.")
             compressed = _compress_video(path)
             if not compressed:
                 print(f"[SKIP] {name} is {mb:.1f} MB > 50 MB and could not be "
                       f"compressed — not sent (original kept).")
+                failed.append((name, f"{mb:.0f} MB, couldn't be compressed under "
+                                     f"the 50 MB limit"))
                 return
             send_path = compressed
             tmp_dir_to_clean = os.path.dirname(compressed)
@@ -683,6 +712,8 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
                     print(f"[OK] Removed drop-folder file after send: {name}")
                 except OSError as e:
                     print(f"[WARN] Could not delete {name} after send: {e}")
+        else:
+            failed.append((name, "upload to Telegram failed after retries"))
         # Always clean up the temp compressed file + its temp dir.
         if tmp_dir_to_clean:
             shutil.rmtree(tmp_dir_to_clean, ignore_errors=True)
@@ -692,6 +723,9 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
 
     for m in drop_media:
         _process(m, "📎 ", is_drop=True)
+
+    # Tell the chat about anything that didn't make it.
+    _post_unattached_notice(failed)
 
 
 # =============================================================================

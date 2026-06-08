@@ -16,7 +16,11 @@ How it works (`Docs/Scripts/daily_report.py`):
    drops) and then sent; the original drop file is deleted like any other
    successful send, so **keep your master copy elsewhere** if you need it.
    Oversize **non-video** files (images, zips, …) can't be transcoded and are
-   skipped + reported (and **not** deleted) so you know they didn't go out.
+   skipped (and **not** deleted) so you know they didn't go out.
+4. **Anything that still couldn't be attached** — an uncompressible oversize
+   file, or an upload that failed — is listed in a short follow-up message
+   posted to the Telegram chat, so recipients aren't left assuming everything
+   went out.
 
 The folder's contents are git-ignored (only `README.md` and `.gitkeep` are
 tracked), so dropped media never gets committed.

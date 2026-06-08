@@ -64,6 +64,10 @@ it works under `launchd` (whose working directory differs).
   and Homebrew dirs directly so the scheduled run still finds ffmpeg.
 - Bulk drops are paced (~20/min) and retry on HTTP 429, so a big batch sends
   fully instead of half-failing.
+- **Unattached-media notice** — if anything still can't be attached (an
+  uncompressible oversize file, or an upload that failed after retries), the
+  tool posts a short follow-up message to the chat listing it, so recipients
+  know it didn't go out instead of only seeing a `[SKIP]` in the local log.
 
 ## 4. Schedule — launchd
 
