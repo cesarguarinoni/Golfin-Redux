@@ -27,6 +27,18 @@ Cesar (with Architect Claude on claude.ai) -> writes SPEC.md
 
 Spec authoring is done by Cesar with the human Architect (claude.ai chat), NOT a subagent. The subagent chain handles implementation, self-review, and final review only.
 
+### Surface iteration review images in the main chat (Cesar standing rule, 2026-06-09)
+
+**Every time the implementer finishes an iteration (STATUS → `READY_FOR_SELF_REVIEW` or `READY_FOR_ARCHITECT_REVIEW`), the orchestrator (you, the main Claude Code thread) MUST display that iteration's canonical review image inline in the main chat BEFORE dispatching the next reviewer subagent.** Use the `Read` tool on the `Canonical screenshot:` path from `IMPLEMENTER_REPORT.md` (the `route_subagent.py` hook prints a `📸 SURFACE IN CHAT FIRST:` line with the exact path). For iterations whose deliverables are videos, also extract and display one representative still per new video and give Cesar the local `videos/` path.
+
+Rationale (Cesar): *"I'm faster than the reviewer most of the time but I'm not always available."* Surfacing the image gives Cesar the earliest possible window to catch an issue and interrupt — saving the whole review chain — without making the pipeline depend on him being present.
+
+Rules:
+- **Non-blocking.** Display the image, then immediately proceed to dispatch the reviewer. Do NOT wait/pause for Cesar — if he's watching he'll interrupt; if not, the pipeline runs itself.
+- **Every iteration, not just the final one.** The point is to catch issues early, so surface on each implementer→review handoff, including redo iterations.
+- **Keep it signal, not noise.** Surface the canonical screenshot + any `Rejection follow-up` frames + one still per NEW video — not every intermediate frame the subagent dumped.
+- Also continue surfacing the canonical image (and videos) at `ARCHITECT_REVIEW_PASS` when handing to Cesar for final approval, as already done.
+
 ### Where things live
 
 - **Subagent definitions:** `.claude/agents/golfin-reviewer.md`, `golfin-implementer.md`, `golfin-self-reviewer.md`, `golfin-redteam-reviewer.md`

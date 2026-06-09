@@ -54,6 +54,7 @@ Config file (optional): .claude/notify_config.json
   }
 """
 import os
+import re
 import sys
 import json
 import subprocess
@@ -66,6 +67,46 @@ ACTIVE_DIR = REPO_ROOT / "Docs" / "Specs" / "Active"
 COMPLETED_DIR = REPO_ROOT / "Docs" / "Specs" / "Completed"
 TEMPLATE_NAME = "_TEMPLATE"
 CONFIG_PATH = REPO_ROOT / ".claude" / "notify_config.json"
+
+# Cesar's standing rule (2026-06-09): every iteration's review image must be
+# SURFACED in the main chat so he can eyeball it live and interrupt the pipeline
+# before the reviewers spend tokens ("I'm faster than the reviewer most of the
+# time but not always available"). The orchestrator renders the image inline via
+# the Read tool; this hook just makes the path impossible to miss. Mirrors the
+# `Canonical screenshot:` declaration the implementer writes (Rule 14).
+CANONICAL_SHOT_RE = re.compile(
+    r"canonical\s+(?:screenshot|frame|capture|image)\b[^\n]*?`?"
+    r"((?:Docs/Specs/(?:Active|Completed)/[\w.\-]+/)?screenshots/[\w./\-]+\.(?:png|jpg|jpeg))",
+    re.IGNORECASE,
+)
+# States where the implementer has just produced a fresh canonical frame — the
+# moment to surface it (earliest window for Cesar to catch an issue).
+SURFACE_STATES = {"READY_FOR_SELF_REVIEW", "READY_FOR_ARCHITECT_REVIEW"}
+
+
+def canonical_shot_rel(task_dir):
+    """Return the repo-relative path of the iteration's canonical screenshot,
+    pulled from IMPLEMENTER_REPORT.md's `Canonical screenshot:` line. None if
+    absent. Used to remind the orchestrator to Read+display it in the chat."""
+    report = task_dir / "IMPLEMENTER_REPORT.md"
+    if not report.exists():
+        return None
+    try:
+        content = report.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return None
+    m = CANONICAL_SHOT_RE.search(content)
+    if not m:
+        return None
+    rel = m.group(1).strip()
+    # Normalize to a repo-rooted path the orchestrator can Read directly.
+    if rel.startswith("Docs/Specs/"):
+        return rel
+    try:
+        task_rel = task_dir.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+        return f"{task_rel}/{rel}"
+    except ValueError:
+        return rel
 
 # When IMPLEMENTER_WORKING and no heartbeat update for this many minutes,
 # flag the task as potentially stuck and notify Cesar.
@@ -403,6 +444,24 @@ def main():
                 extra = " (read CESAR_REJECTION.md first)"
                 record_review_miss(task, task_dir)
             next_steps.append(f"  [{task}] STATUS={status} -> {cmd}{extra}")
+            # Cesar's standing rule: surface this iteration's review image in the
+            # main chat BEFORE chaining the reviewer, so Cesar can catch issues
+            # live. The orchestrator must Read+display it (non-blocking).
+            if status in SURFACE_STATES:
+                shot = canonical_shot_rel(task_dir)
+                if shot:
+                    next_steps.append(
+                        f"    -> 📸 SURFACE IN CHAT FIRST: Read `{shot}` and display it "
+                        f"to Cesar (+ a still per new video in {task}/videos/) BEFORE "
+                        f"dispatching {next_agent}. Non-blocking — proceed after."
+                    )
+                else:
+                    next_steps.append(
+                        f"    -> 📸 SURFACE IN CHAT FIRST: display the iteration's "
+                        f"canonical screenshot from {task}/screenshots/ to Cesar "
+                        f"before dispatching {next_agent} (report had no "
+                        f"`Canonical screenshot:` line)."
+                    )
 
     if not next_steps and not cesar_alert_lines:
         return 0
