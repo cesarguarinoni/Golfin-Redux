@@ -44,9 +44,11 @@ This description is what you write at the top of `SELF_REVIEW.md` § "Visual dif
 
 Either way: stop the review here, do NOT proceed without the reference, do NOT "lean on prior architect verdict" as a substitute.
 
-Now open the reference image (path in SPEC § Reference). Note differences from your Step 1 description — not from the spec. "Reference shows chip text starting close to portrait edge; screenshot shows large green gap between portrait and chip." Differences here are visible failures regardless of whether they map to a spec checklist item.
+Now open the reference image (path in SPEC § Reference, plus any node renders in `Docs/Specs/Active/<task>/reference/`). Note differences from your Step 1 description — not from the spec. "Reference shows chip text starting close to portrait edge; screenshot shows large green gap between portrait and chip." Differences here are visible failures regardless of whether they map to a spec checklist item.
 
 This is how you catch spec gaps (Lesson C). The architect-review subagent does this same comparison globally; you do it as part of the visual diff.
+
+**Figma fidelity table (MANDATORY when SPEC references a Figma node) (Rule 18).** Do NOT accept a blanket "matches Figma" from the implementer — that exact rubber-stamp let `1v1_ingame_ui` pass with an explicit 3px `#818EA1` banner-border token absent and a mis-placed/wrong-content mini-map, and Cesar rejected it twice. Build a per-element table in `SELF_REVIEW.md` § **"Figma fidelity"** — one row per element (each card, the banner, **every border/outline**, font + weight, each portrait/icon, **position relative to neighbors**, and **content shown/hidden** for relocated/derived elements), each citing the Figma node + the Figma value + the built value + PASS/FAIL. Pull the node render (the `reference/` images, or live via `mcp__figma__get_screenshot`) and A/B against it — not against the spec's prose, which can under-specify. ANY element you cannot confirm against the actual node → FAIL the row. If the implementer's `IMPLEMENTER_REPORT.md` has no `## Figma fidelity` table (the hook should have blocked them, but backstop it), that alone is `BACK_TO_IMPLEMENTER`.
 
 ### Step 3 — Walk the spec checklist
 

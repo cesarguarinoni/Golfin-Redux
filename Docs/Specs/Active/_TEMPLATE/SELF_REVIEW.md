@@ -33,6 +33,14 @@ Free-form observations comparing the screenshot to the Figma reference. Things t
 
 - <observation>
 
+## Figma fidelity
+
+Required when `SPEC.md` references a Figma node (Rule 18). Do NOT accept the implementer's blanket "matches Figma" — build your own per-element table diffed against the pulled node renders (`reference/` or live `mcp__figma__get_screenshot`). Enumerate **every border/outline** + every **relocated/derived** element. Any element you can't confirm against the actual node render → FAIL the row → `BACK_TO_IMPLEMENTER`.
+
+| Element | Figma node | Figma value | Built value | Result |
+|---|---|---|---|---|
+| <element> | `<node>` | <figma value> | <built> | PASS / FAIL |
+
 ## Routing
 
 Final routing decision (one of):

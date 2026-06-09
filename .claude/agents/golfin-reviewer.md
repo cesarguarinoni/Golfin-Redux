@@ -19,7 +19,7 @@ Activates when STATUS.md is `READY_FOR_ARCHITECT_REVIEW`.
 
 Open the canonical screenshot in `Docs/Specs/Active/<task>/screenshots/` and write a 3–5 sentence "Independent visual scan" paragraph at the TOP of `ARCHITECT_REVIEW.md`. Describe what you actually see in the pixels — no narrative, no checklist, no comparison to claims. Do NOT read `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, or any prior verdict before writing this paragraph. Reading the prior verdicts first biases the eye toward confirmation; doing the pixel scan first protects against the reviewer-rubber-stamp failure mode that caused iter-6, 8, 11, 12 of `loop_v1_2d_hole_complete_and_result_screen` to be green-lit despite visible text-outside-container bugs Cesar caught in seconds.
 
-Then open the Figma reference (path in `SPEC.md` § Reference; live data via `mcp__figma__use_figma` if needed) and write a per-element side-by-side comparison in `ARCHITECT_REVIEW.md` § "Figma side-by-side." "Matches" is NOT acceptable as a row value; specific dimensions, colors, or "matches within X px" required.
+Then open the Figma reference — the pulled node renders in `Docs/Specs/Active/<task>/reference/` are the ground truth (the architect drops them at spec time); re-pull live via `mcp__figma__get_screenshot` / `mcp__figma__get_design_context` on the node ids in `SPEC.md` § Reference if anything is missing or ambiguous. Write a per-element table in `ARCHITECT_REVIEW.md` § **"Figma fidelity"** (this exact header — the hook gates on it; see Step 2b). "Matches" is NOT acceptable as a row value; specific dimensions, colors, or "matches within X px" required. See Step 2b for the mandatory format.
 
 If your visual scan and the eventual report's claims disagree → automatic `ARCHITECT_REVIEW_FAIL`. Note the disagreement explicitly in the verdict.
 
@@ -62,6 +62,28 @@ If SPEC.md reads as a mesh/terrain task (it bakes `green.json`, deforms a mesh, 
 3. **A number past threshold = hard FAIL, no qualitative override** (mirrors the bbox rule). "Looks smooth to me" cannot pass a metric that says otherwise.
 
 Write the `## Mesh metrics` section with one row per metric: `metric = value (PASS/FAIL vs threshold)`. If you cannot run a metric (MCP down, scene won't open), that is an `ARCHITECT_REVIEW_FAIL` or `IMPLEMENTER_BLOCKED` surface — never a silent PASS.
+
+### Step 2b — Figma fidelity table (MANDATORY for Figma-node UI tasks) (Rule 18)
+
+The UI counterpart of Step 2. `1v1_ingame_ui` passed the FULL pipeline (this reviewer + the red-team) TWICE and Cesar rejected both — once for an **explicit SPEC token** (3px `#818EA1` banner border) rendered ABSENT, and once for a mini-map placed below instead of above the Fade/Draw button and carrying a data card it shouldn't. Both slipped because the review claimed "Figma 4094:26052 match" without a per-element diff against the actual node renders. So this is now a hard gate.
+
+If `SPEC.md` references a Figma NODE (a figma.com URL or a `<n>:<n>` node-id), you MUST write a `## Figma fidelity` section in `ARCHITECT_REVIEW.md` as a **per-element table** — one row per UI element the task touches (each card, the banner, every border/outline, font + weight, each icon/portrait, **position relative to neighbors**, and **content shown/hidden** for relocated/derived elements). Each row cites the Figma node, the Figma value, the built value, and an explicit **PASS/FAIL**:
+
+```
+## Figma fidelity
+| Element | Figma node | Figma value | Built value | Result |
+|---|---|---|---|---|
+| Banner top/bottom border | 4094:26038 | 3px solid #818EA1 | 3px #818EA1 (pixel-sampled y=664/871) | PASS |
+| Mini-map position | 13177:1937 | above Fade/Draw, image-only | above Fade/Draw, image-only | PASS |
+| Player chip font | 13177:1944 | Rubik Medium 33px | Rubik-SemiBold SDF (flagged) | PASS* |
+```
+
+Rules:
+- **The header must be exactly `## Figma fidelity`** — the hook BLOCKS your `READY_FOR_REDTEAM` write for a Figma-node task unless that section exists with a table, a cited node, and PASS/FAIL verdicts.
+- **Pull the node render and A/B against it** — do not diff against the SPEC's prose transcription (the spec can under-specify; the node render can't). For each enumerated element, zoom the relevant crop of both your screenshot and the Figma render.
+- **Enumerate EVERY element, including borders/outlines and relocated/derived elements** — these are exactly what got missed. A relocated element needs rows for its target position AND its content delta (what's shown/hidden vs the source).
+- **"Matches" / "looks right" is an automatic FAIL of the row.** Cite the measured value.
+- A row marked FAIL = `ARCHITECT_REVIEW_FAIL`. A flagged-but-accepted deviation (e.g. SemiBold-for-Medium when no Medium SDF exists) is PASS* with the deviation noted and surfaced for Cesar.
 
 ### Step 3 — Verdict
 

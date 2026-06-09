@@ -877,5 +877,90 @@ class TestVideoDeliverable(unittest.TestCase):
         self.assertEqual(eid.validate_video_deliverable(rp, self.spec), [])
 
 
+class TestFigmaFidelity(unittest.TestCase):
+    """Rule 18 — Figma-node UI tasks need a per-element Figma fidelity table."""
+
+    UI_FIGMA_SPEC = (
+        "## Reference\n\nFigma frame 'In-Game - 1v1' node 13177:1937 in file "
+        "https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/x?node-id=13177-1937\n"
+    )
+    UI_NODE_ONLY_SPEC = "Match the Figma banner node 4094:26038 exactly.\n"
+    NO_FIGMA_SPEC = "Add a button to the roster screen and wire OnClick. NO new Figma.\n"
+    GOOD_TABLE = (
+        "# Report\n\n## Figma fidelity\n\n"
+        "| Element | Figma node | Figma value | Built | Result |\n"
+        "|---|---|---|---|---|\n"
+        "| Banner border | 4094:26038 | 3px #818EA1 top+bottom | 3px #818EA1 | PASS |\n"
+        "| Map position | 13177:1937 | above Fade/Draw | above Fade/Draw | PASS |\n"
+    )
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="hook_rule18_")).resolve()
+        self.spec = self.tmp / "SPEC.md"
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    # --- detector ---
+    def test_detect_figma_url(self):
+        self.spec.write_text(self.UI_FIGMA_SPEC)
+        self.assertTrue(eid.spec_references_figma_node(self.spec))
+
+    def test_detect_figma_word_plus_node_id(self):
+        self.spec.write_text(self.UI_NODE_ONLY_SPEC)
+        self.assertTrue(eid.spec_references_figma_node(self.spec))
+
+    def test_no_figma_not_flagged(self):
+        self.spec.write_text(self.NO_FIGMA_SPEC)
+        self.assertFalse(eid.spec_references_figma_node(self.spec))
+
+    def test_bare_node_id_without_figma_word_not_flagged(self):
+        # A "12:34"-style token with no Figma context must NOT trip the gate.
+        self.spec.write_text("The build ran at 13:37 and touched lines 10-20.\n")
+        self.assertFalse(eid.spec_references_figma_node(self.spec))
+
+    # --- validator ---
+    def test_missing_doc_blocks(self):
+        errs = eid.validate_figma_fidelity(self.tmp / "IMPLEMENTER_REPORT.md", "IMPLEMENTER_REPORT.md")
+        self.assertTrue(any("not found" in e for e in errs), errs)
+
+    def test_no_section_blocks(self):
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text("# Report\n\n## Notes\n\nLooks like Figma, matches the design.\n")
+        errs = eid.validate_figma_fidelity(rp, "IMPLEMENTER_REPORT.md")
+        self.assertTrue(any("no '## Figma fidelity' section" in e for e in errs), errs)
+
+    def test_section_without_table_blocks(self):
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text("# Report\n\n## Figma fidelity\n\nEverything matches node 13177:1937. PASS.\n")
+        errs = eid.validate_figma_fidelity(rp, "IMPLEMENTER_REPORT.md")
+        self.assertTrue(any("no table data rows" in e for e in errs), errs)
+
+    def test_table_without_node_citation_blocks(self):
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text(
+            "# Report\n\n## Figma fidelity\n\n"
+            "| Element | Result |\n|---|---|\n| Banner | PASS |\n"
+        )
+        errs = eid.validate_figma_fidelity(rp, "IMPLEMENTER_REPORT.md")
+        self.assertTrue(any("cites no Figma node" in e for e in errs), errs)
+
+    def test_table_without_passfail_blocks(self):
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text(
+            "# Report\n\n## Figma fidelity\n\n"
+            "| Element | Figma node | Note |\n|---|---|---|\n"
+            "| Banner | 4094:26038 | matches |\n"
+        )
+        errs = eid.validate_figma_fidelity(rp, "IMPLEMENTER_REPORT.md")
+        self.assertTrue(any("no PASS/FAIL verdict" in e for e in errs), errs)
+
+    def test_good_table_passes(self):
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text(self.GOOD_TABLE)
+        self.assertEqual(eid.validate_figma_fidelity(rp, "IMPLEMENTER_REPORT.md"), [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

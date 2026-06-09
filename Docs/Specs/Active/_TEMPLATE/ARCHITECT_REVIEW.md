@@ -27,14 +27,15 @@ Things only the architect can verify (beyond what the self-reviewer caught):
 | Pattern adherence | PASS / FAIL | <...> |
 | ... | ... | ... |
 
-## Visual fidelity verdict
+## Figma fidelity
 
-Per-element comparison against Figma reference.
+Required when `SPEC.md` references a Figma node (Rule 18 — hook BLOCKS `READY_FOR_REDTEAM` without this exact header + a table + a cited node + PASS/FAIL). Per-element comparison diffed against the **pulled node renders** (`reference/` or live `mcp__figma__get_screenshot`), NOT the spec's prose. Enumerate **every border/outline** and every **relocated/derived** element — those are what the pipeline missed on `1v1_ingame_ui`. "Matches" / "looks right" is an automatic FAIL of the row; cite the measured value. A flagged-but-accepted deviation = `PASS*`.
 
-| Element | Spec value | Screenshot shows | Match? |
-|---|---|---|---|
-| <element 1> | <expected> | <actual> | YES / NO |
-| ... | ... | ... | ... |
+| Element | Figma node | Figma value | Built value | Result |
+|---|---|---|---|---|
+| <e.g. Banner top/bottom border> | `<node>` | 3px solid #818EA1 | <pixel-sampled> | PASS / FAIL |
+| <e.g. Relocated map> | `<node>` | above Fade/Draw, image-only | <built> | PASS / FAIL |
+| ... | `<node>` | ... | ... | PASS / FAIL |
 
 ## Specific FAIL items (if any)
 

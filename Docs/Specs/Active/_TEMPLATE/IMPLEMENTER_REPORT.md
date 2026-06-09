@@ -28,6 +28,16 @@ Only required when `CESAR_REJECTION.md` exists (Rule 15 — hook-enforced; delet
 |---|---|---|
 | <defect Cesar flagged> | GONE / RESOLVED / STILL PRESENT | `screenshots/<file>.png` |
 
+## Figma fidelity
+
+Required when `SPEC.md` references a Figma node (Rule 18 — hook-enforced; delete this section otherwise). One row per UI element the task touches — enumerate **every border/outline** and every **relocated/derived** element. A/B each against the pulled node render in `reference/` (or live `mcp__figma__get_screenshot`), NOT the spec's prose. "matches" is not acceptable — cite the measured value. Flagged-but-accepted deviation = `PASS*` (note it under § Spec deviations).
+
+| Element | Figma node | Figma value | Built value | Result |
+|---|---|---|---|---|
+| <e.g. Banner top/bottom border> | `<node>` | 3px solid #818EA1 | <pixel-sampled value> | PASS / FAIL |
+| <e.g. Relocated map> | `<node>` | above Fade/Draw, image-only | <built value> | PASS / FAIL |
+| <...> | `<node>` | <...> | <...> | PASS / FAIL |
+
 ## Acceptance checklist (copy from SPEC.md, fill every line)
 
 | Item | Result | Justification |

@@ -74,6 +74,26 @@ failure mode:
     not in the table, the implementer either forgot to report it (the
     spin_and_shape PhysicsLabController case) or it's drift that should be
     restored before transitioning. See Lesson AA in tasks/lessons.md.
+
+Rule 18 is the 1v1_ingame_ui scar-tissue rule (Cesar-approved 2026-06-09).
+It is the UI counterpart of the mesh-metrics gate (Rule 16): for 3D bakes the
+objective gate is numbers; for Figma-referencing UI tasks the objective gate is
+a per-element fidelity table diffed against the actual Figma node renders.
+
+18. **Figma fidelity table.** When SPEC.md references a Figma NODE (a
+    figma.com/design URL or a `<n>:<n>` node-id token alongside "figma"), the
+    IMPLEMENTER_REPORT.md must carry a `## Figma fidelity` section with a real
+    per-element table (>= 1 data row, a cited Figma node, and PASS/FAIL
+    verdicts) — NOT a prose "matches Figma" claim. The same section is required
+    in ARCHITECT_REVIEW.md before the reviewer can hand to the red-team
+    (READY_FOR_REDTEAM). Rationale: 1v1_ingame_ui passed the full pipeline 2x
+    and Cesar caught an EXPLICIT spec token (3px #818EA1 banner border) absent,
+    plus a mis-placed / wrong-content mini-map — because reviewers claimed
+    "Figma match" without a per-element diff against the pulled node renders.
+    The existing visual-review checklist already DEMANDS this ("'matches' is not
+    acceptable"); it was unenforced, so it is now a structural gate. The
+    architect drops the canonical node renders into the task's reference/ folder
+    at spec time so the A/B is unavoidable.
 """
 import json
 import math
@@ -186,6 +206,19 @@ CANONICAL_VIDEO_DECLARATION_RE = re.compile(
     r"((?:Docs/Specs/(?:Active|Completed)/[\w.\-]+/)?videos/[\w./\-]+\.(?:mp4|mov|webm))",
     re.IGNORECASE,
 )
+
+# Rule 18 — Figma fidelity gate. The UI counterpart of Rule 16 (mesh metrics).
+# When SPEC.md references a Figma NODE, both IMPLEMENTER_REPORT.md (implementer
+# gate) and ARCHITECT_REVIEW.md (reviewer -> red-team gate) must carry a real
+# per-element `## Figma fidelity` table — a node citation + PASS/FAIL verdicts,
+# not a blanket "matches Figma" claim. See module docstring (Rule 18) and the
+# 1v1_ingame_ui post-mortem (Lesson AE).
+FIGMA_FIDELITY_SECTION = "Figma fidelity"
+# A Figma node id like "13177:1937" or "4094-26038" (>=2 digits each side to
+# avoid matching version numbers / dates). Used together with the word "figma".
+FIGMA_NODE_ID_RE = re.compile(r"\b\d{2,}[:\-]\d{2,}\b")
+# A direct Figma design URL — sufficient on its own to mark a Figma-node task.
+FIGMA_URL_RE = re.compile(r"figma\.com/(?:design|file)/", re.IGNORECASE)
 
 
 def read_payload() -> dict:
@@ -1190,6 +1223,90 @@ def validate_video_deliverable(
     return errors
 
 
+def spec_references_figma_node(spec_path: Path) -> bool:
+    """Rule 18 detector: True when SPEC.md references a concrete Figma NODE.
+
+    A "Figma node" means the spec points at a specific design to diff against —
+    either a figma.com/design URL, or a `<n>:<n>` / `<n>-<n>` node-id token used
+    in a Figma context. We require the word "figma" to be present so a bare
+    "13177:1937"-style token in an unrelated spec doesn't trip it, and we ignore
+    specs that explicitly opt out ("no new Figma" with no node id won't have a
+    node-id token in Figma context).
+
+    Returns False for non-UI/backend specs (no Figma mention) and for UI specs
+    that reuse existing elements with no Figma node to diff against.
+    """
+    if not spec_path.exists():
+        return False
+    text = spec_path.read_text(encoding="utf-8", errors="ignore")
+    if FIGMA_URL_RE.search(text):
+        return True
+    if "figma" in text.lower() and FIGMA_NODE_ID_RE.search(text):
+        return True
+    return False
+
+
+def validate_figma_fidelity(doc_path: Path, role_label: str) -> list[str]:
+    """Rule 18: a Figma-node task's IMPLEMENTER_REPORT.md / ARCHITECT_REVIEW.md
+    must carry a real per-element `## Figma fidelity` table.
+
+    Structural checks (cheap, hard to fake with prose):
+      - the `## Figma fidelity` section exists,
+      - it contains a Markdown table with >= 1 data row,
+      - it cites at least one Figma node (node-id token or figma.com URL) —
+        proving a specific node was pulled and diffed, not "matches Figma",
+      - it contains at least one PASS/FAIL verdict.
+
+    `role_label` ("IMPLEMENTER_REPORT.md" / "ARCHITECT_REVIEW.md") is woven into
+    the error text so the blocked agent knows which doc to fix.
+    """
+    errors: list[str] = []
+    if not doc_path.exists():
+        errors.append(
+            f"{role_label} not found — a Figma-referencing task cannot advance "
+            f"without a per-element Figma fidelity table. (Rule 18.)"
+        )
+        return errors
+    content = doc_path.read_text(encoding="utf-8", errors="ignore")
+    section = _section_text(content, FIGMA_FIDELITY_SECTION)
+    if section is None:
+        errors.append(
+            f"{role_label} has no '## Figma fidelity' section. The task's SPEC "
+            f"references a Figma node, so the visual claim must be a PER-ELEMENT "
+            f"table (one row per element: portrait/card/banner/border/font/"
+            f"position/content), each citing the Figma node + a freshly-pulled "
+            f"render with PASS/FAIL — NOT a blanket 'matches Figma'. (Rule 18: "
+            f"1v1_ingame_ui passed the pipeline 2x with an explicit 3px #818EA1 "
+            f"banner-border token absent + a mis-placed mini-map, because "
+            f"reviewers vibe-matched instead of diffing each element against the "
+            f"pulled node renders in reference/.)"
+        )
+        return errors
+    # Table with >= 1 data row.
+    rows = parse_table_rows(content, FIGMA_FIDELITY_SECTION)
+    if not rows:
+        errors.append(
+            f"{role_label} '## Figma fidelity' section has no table data rows. "
+            f"Add a row per UI element with columns like | Element | Figma node | "
+            f"Figma value | Built value | PASS/FAIL |. (Rule 18.)"
+        )
+    # Node citation — proves a specific node was diffed, not a prose claim.
+    if not (FIGMA_NODE_ID_RE.search(section) or FIGMA_URL_RE.search(section)):
+        errors.append(
+            f"{role_label} '## Figma fidelity' section cites no Figma node "
+            f"(no `<n>:<n>` node id or figma.com URL). Cite the specific node "
+            f"each element was diffed against. (Rule 18.)"
+        )
+    # At least one PASS/FAIL verdict — proves a per-property judgment, not prose.
+    if not re.search(r"\b(PASS|FAIL)\b", section, re.IGNORECASE):
+        errors.append(
+            f"{role_label} '## Figma fidelity' section has no PASS/FAIL verdict. "
+            f"Each element row needs an explicit per-property result. 'matches' "
+            f"is not acceptable. (Rule 18.)"
+        )
+    return errors
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Orchestrator.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1318,18 +1435,21 @@ def main() -> int:
     heartbeat_path = task_dir / "HEARTBEAT.log"
     review_path = task_dir / "ARCHITECT_REVIEW.md"
 
-    # Reviewer -> red-team handoff (READY_FOR_REDTEAM). Only Rule 16, and only for
-    # mesh tasks. The implementer-report rules (1-15) do NOT apply to the
-    # reviewer's own STATUS write — this gate is about the reviewer producing an
-    # objective mesh-metrics verdict, not about the implementer's report.
+    # Reviewer -> red-team handoff (READY_FOR_REDTEAM). The reviewer must produce
+    # an objective verdict before handing forward: Rule 16 mesh-metrics for mesh
+    # tasks, Rule 18 Figma-fidelity table for Figma-node UI tasks. The
+    # implementer-report rules (1-15) do NOT apply to the reviewer's own STATUS
+    # write — this gate is about the reviewer's ARCHITECT_REVIEW.md.
     if new_status in REVIEWER_GATES:
         rt_errors: list[str] = []
         if spec_is_mesh_task(spec_path):
-            rt_errors = validate_mesh_metrics(review_path)
+            rt_errors.extend(validate_mesh_metrics(review_path))
+        if spec_references_figma_node(spec_path):
+            rt_errors.extend(validate_figma_fidelity(review_path, "ARCHITECT_REVIEW.md"))
         if rt_errors:
             print(
                 f"BLOCKED: cannot move STATUS to {new_status} - reviewer must "
-                f"complete the mesh-metrics gate:",
+                f"complete the objective-verdict gate:",
                 file=sys.stderr,
             )
             print("", file=sys.stderr)
@@ -1337,8 +1457,9 @@ def main() -> int:
                 print(f"  - {e}", file=sys.stderr)
             print("", file=sys.stderr)
             print(
-                "Run the geometry checks via script-execute and paste the numbers "
-                "into ARCHITECT_REVIEW.md § Mesh metrics with PASS/FAIL, then retry.",
+                "Mesh task: paste geometry numbers into ARCHITECT_REVIEW.md § Mesh "
+                "metrics with PASS/FAIL. Figma task: add a § Figma fidelity table "
+                "diffing each element against its pulled node render. Then retry.",
                 file=sys.stderr,
             )
             return 2
@@ -1433,6 +1554,12 @@ def main() -> int:
     # The standing 'always show me video' rule, now enforced (green_slope_height_
     # bake skipped it on stills at iter-7/8/9/12). Scoped to mesh tasks.
     errors.extend(validate_video_deliverable(report_path, spec_path))
+
+    # Rule 18: Figma-node UI tasks must carry a per-element Figma fidelity table
+    # in IMPLEMENTER_REPORT.md (the UI counterpart of Rule 16). Blocks the
+    # vibe-match that let 1v1_ingame_ui ship with an explicit border token absent.
+    if spec_references_figma_node(spec_path):
+        errors.extend(validate_figma_fidelity(report_path, "IMPLEMENTER_REPORT.md"))
 
     if errors:
         print(

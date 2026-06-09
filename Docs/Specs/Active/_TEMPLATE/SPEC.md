@@ -26,6 +26,26 @@ See `STATUS.md` for current pipeline state. Possible values:
 - **Figma frame:** <page name> / <frame name> / id `<node id>` in file `<file key>`
 - **Reference PNG:** `<path/to/Reference.png>` (companion for visual diff)
 - **Placeholder vs canonical content notes:** <which text/data in the Figma is mockup>
+- **Node renders dropped to `reference/`:** <list every figma node render the architect
+  pulled into `Docs/Specs/Active/<task>/reference/` at spec time>. Pull these via
+  `mcp__figma__get_screenshot` for EVERY frame/component the task touches —
+  including relocated/derived elements (the map, the mirrored card). They are the
+  ground truth the implementer + reviewers A/B against; prose can under-specify.
+
+## Figma Fidelity (enumerate EVERY element — Rule 18)
+
+> One row per UI element the task touches. Prose ("relocate the mini-map lower-right")
+> hides exactly what gets missed; the table forces position/content/border to be written
+> down. **Enumerate borders/outlines and relocated/derived elements explicitly** — those
+> are the ones the pipeline missed on `1v1_ingame_ui` (absent 3px border, map placed
+> below instead of above Fade/Draw, map carrying a data card it shouldn't). The
+> implementer + both reviewers reproduce this table with PASS/FAIL against the node render.
+
+| Element | Figma node | Property → value (size/pos/fill/border/font/content) |
+|---|---|---|
+| <e.g. Banner band> | `<node>` | 1170×210; gradient rgba(...); **top+bottom 3px solid #818EA1**; Rubik Medium 128px |
+| <e.g. Relocated map> | `<node>` | position: ABOVE the Fade/Draw button, flush right; content: map image ONLY (no data card) |
+| <...> | `<node>` | <...> |
 
 ## Architecture context
 
