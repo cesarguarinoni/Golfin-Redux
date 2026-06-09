@@ -7,13 +7,10 @@
 ## ▶ CURRENT STATE — update this block at every session boundary
 
 - **Shipped (do NOT re-report as pending):** `green_ship_polish` (Completed); **Loop v2 core** — A/B/C0/C1 + smoke-bot (Notion Orders 310–340), playable end-to-end since 2026-05-19, umbrella now in `Completed/loop_v2_scope/` (only Stage F animated-polish possibly-open — confirm before reopening); green authoring (`green_slope_authoring_tool` + `green_slope_height_bake`, Completed); **`ball_flight_trail`** — Code implemented (`4249c0da`) + closed to `Completed/ball_flight_trail/`.
-- **PRIMARY ACTIVE — home mode-selection rework** (2 specs in `Docs/Specs/Active/`):
-  - `mode_select_system` — SPEC_READY, FULL PIPELINE. 4 modes (Practice / 1v1 / Driving Range-locked / Missions-locked) over two surfaces: home horizontal carousel + full-screen Mode Select (clone of Hole Select) reached via the bottom-nav tee button. CSV-driven fee+rewards (`modes.csv`), locked-card treatment from holes, RP economy via `RewardPointsManager`. Kickoff: `Use the implementer subagent on "mode_select_system"`.
-  - `practice_1v1_matchmaking_split` — SPEC_READY, TELLCODE. Move fake matchmaking OFF Practice (solo, seed+load direct) and ONTO 1v1 (random hole 1–18 + random opponent). Touches shipped C0 seed path. Kickoff: `Use the implementer subagent on "practice_1v1_matchmaking_split"`.
-  - Economy-gate UX RESOLVED (no Figma needed): disable PLAY + red `#C04000` fee amount + `ToastController` toast on tap-anyway. Both specs clear to implement.
-- **Retired orphan:** `lomond_greens_authoring_batch` → `Completed/` (abandoned auto-PDF-read approach, superseded by `green_slope_authoring_tool`; stale leftover in Active, not real work).
-- **Roadmap TODO (Notion):** add **"1v1 in-game UI"** (opponent HUD / turn order / versus scoring) — gated on Cesar's upcoming Figma.
-- **Last updated:** 2026-06-03 (Architect — Loop v2 + greens + ball_flight_trail all confirmed shipped; repointed to the mode-selection rework; retired the greens orphan).
+- **Shipped since (do NOT re-report as pending):** `mode_select_system` (Order 341), `practice_1v1_matchmaking_split` (Order 342), `tap_feedback_fx`, and **`1v1_ingame_ui` Phase 1** (Order 343, 2026-06-08, commit `756ab280` — two-player versus HUD: P2 card cloned+flipped from P1, active/inactive 0.50 opacity, relocated minimap, `TurnBannerWidget`, `MatchContext` data layer, all gated behind `GameSession.IsVersus` with solo HUD untouched). All Completed.
+- **NEXT / open:** `1v1_match_flow` (Order 344, Queued P2) — 1v1 **Phase 2**: production bot opponent AI (difficulty tied to bot level), turn-flow state machine (alternating shots, control lock, banner per turn), win/tie + winner banner. Spec not yet written; Architect authors when Cesar wants it. Open design calls listed in `Docs/Specs/Completed/1v1_ingame_ui/SPEC.md`.
+- **Also queued:** physics audit follow-ups (`strength_velocity_short_game_scaling`, `club_control_aim_arrow_speed`, `ball_rebound_perceptibility`, `ball_roll_coefficient_retune`, `character_recovery_stamina_regen`), `physics_lab_controller_rename` (P3), `phone_build_smoke_test` (Order 420, blocked on Ken's dev-account issue). Card-editability specs are non-gated and can run ahead.
+- **Last updated:** 2026-06-08 (Architect — closed `1v1_ingame_ui` Phase 1 to Completed; Notion 343→Done, filed 344 `1v1_match_flow` for Phase 2).
 
 ---
 
