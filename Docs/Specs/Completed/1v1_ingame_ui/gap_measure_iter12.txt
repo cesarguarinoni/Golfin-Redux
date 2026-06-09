@@ -1,0 +1,4 @@
+Map↔FadeDraw gap: 34.0px
+Driver↔FadeDraw gap: 24.0px
+Diff: 10.0px
+Current y=-1718, target y=-1728

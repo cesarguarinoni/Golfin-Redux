@@ -283,7 +283,10 @@ namespace GolfinRedux.UI.HoleSelection
         private void HandleActionClicked(HoleCardController card)
         {
             // Practice path: seed the session directly and launch gameplay — no matchmaking modal.
+            // Explicitly clear the versus flag so the solo HUD is used.
             // holeNumber is 1-based; GameSession.SeedSession expects the 1-based hole number.
+            GameSession.IsVersus = false;
+
             int holeNumber = card.HoleNumber;
 
             string charId = CharacterManager.Instance != null

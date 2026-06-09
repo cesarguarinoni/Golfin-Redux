@@ -62,9 +62,16 @@ namespace Golfin.UI.Modals
         public virtual void Show()
         {
             if (_isVisible) return;
-            
+
             _isVisible = true;
-            
+
+            // R2-5 fix: move the modal to the front of its parent's sibling list so
+            // it renders on top of all other screens (e.g. ModeSelectionScreen).
+            // In Unity UI, the last sibling in a Canvas renders on top. Without this,
+            // a screen that is a later sibling than the modal root will paint over the
+            // backdrop, making the modal appear to open over an empty/opaque background.
+            transform.SetAsLastSibling();
+
             // Show backdrop
             if (backdrop != null)
             {

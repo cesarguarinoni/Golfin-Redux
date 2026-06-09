@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using Golfin.UI.Toast;
 using Golfin.UI.Matchmaking;
 using GolfinRedux.UI;
+using Golfin.Gameplay.Session;
 
 namespace GolfinRedux.UI.ModeSelect
 {
@@ -477,7 +478,9 @@ namespace GolfinRedux.UI.ModeSelect
                     break;
 
                 case "matchmaking_1v1":
-                    // 1v1 path: pick a random hole (1-18), then open matchmaking modal.
+                    // 1v1 path: flag the session as versus BEFORE opening matchmaking.
+                    GameSession.IsVersus = true;
+                    // Pick a random hole (1-18), then open matchmaking modal.
                     // MatchmakingModalController.Open expects a 0-based index.
                     if (matchmakingModal1v1 != null)
                     {

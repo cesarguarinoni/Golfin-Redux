@@ -1,6 +1,7 @@
 using UnityEngine;
 using Golfin.Roster;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.Session;
 
 namespace Golfin.UI.HUD
 {
@@ -82,6 +83,22 @@ namespace Golfin.UI.HUD
                 PlayerContext.Level = pc.currentLevel;
 
             PlayerContext.Raise();
+
+            // ── Versus mirror ─────────────────────────────────────────────────
+            // When a 1v1 session is active, mirror P1 data into MatchContext.Players[0].
+            // This ensures PlayerCardWidget in versus mode reads the same data as solo.
+            if (GameSession.IsVersus)
+            {
+                MatchContext.Players[0] = new MatchContext.Player
+                {
+                    DisplayName      = PlayerContext.DisplayName,
+                    Level            = PlayerContext.Level,
+                    Portrait         = PlayerContext.Portrait,
+                    RarityBackground = PlayerContext.RarityBackground,
+                    TurnCount        = Golfin.Gameplay.Session.GameSession.TurnCount
+                };
+                MatchContext.Raise();
+            }
         }
 
         void ResetContext()

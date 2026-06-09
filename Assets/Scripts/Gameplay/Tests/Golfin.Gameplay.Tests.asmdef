@@ -10,7 +10,8 @@
         "Golfin.Physics.Core",
         "Golfin.Physics.Math",
         "Golfin.Physics.Runtime",
-        "Golfin.Gameplay.Loop"
+        "Golfin.Gameplay.Loop",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],

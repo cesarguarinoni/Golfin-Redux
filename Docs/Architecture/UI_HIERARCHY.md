@@ -410,6 +410,30 @@ Singleton; `ToastController.Show(message, seconds)`. Fired by the modal on Hole 
 
 ---
 
+### In-Game 1v1 HUD (LabScaffold.unity — gameplay HUD, versus-only; Phase 1)
+
+Lives in the additive gameplay HUD scene `Assets/Scenes/Physics/LabScaffold.unity`, not ShellScene. All versus elements are gated behind `GameSession.IsVersus`; the solo/Practice HUD is unchanged.
+
+```
+HUD root
+├── PlayerCard            (PlayerCardWidget, _playerIndex=0 — P1, active, top-left, reads PlayerContext)
+├── PlayerCard_P2         (CLONE of PlayerCard; PlayerCardWidget _playerIndex=1 — opponent, top-right,
+│                          mirrored by anchors: parameters left / portrait right; default inactive,
+│                          activated by VersusHudController in versus; reads MatchContext.Players[1])
+├── TurnBanner            (TurnBannerWidget — full-width 1170×210 band, 3px #818EA1 top+bottom borders,
+│                          Rubik-SemiBold SDF + TMP auto-size; Show(text, fromLeft): YOUR TURN slides
+│                          from LEFT, OPPONENT'S TURN from RIGHT; CanvasGroup fade; starts hidden)
+└── (mini-map / HoleCard) (versus: relocated above the Fade/Draw button, image-only — hole-info data
+                           card hidden, right-edge aligned to the bottom buttons; solo: top-right, unchanged)
+```
+
+- **Orchestrator:** `VersusHudController` (on HUD root) — activates P2 + relocates the mini-map in versus; serialized `_miniMapVersusPos`. `[SerializeField] _debugForceVersus` ships **false**; the Phase-1 debug toggle drives a NON-serialized `_runtimeDebugForceVersus` so captures can't bake a versus state into the scene.
+- **Data layer:** static `MatchContext` (`Scripts/Gameplay/UI/ShotUI/HUD/MatchContext.cs`) — `Players[0/1]`, `ActiveIndex`, `SetActive(i)` (1.0/0.50 opacity swap), `OnChanged`/`OnActiveChanged`. Slot 0 from `PlayerContextPopulator`, slot 1 from `MatchmakingModalController` at OPPONENT FOUND.
+- Clone gate: `PlayerCard_P2` carries the same `PlayerCardWidget` script GUID `c9b16932b3e429543aa96a954ce0ccbf` as P1 (cloned, never rebuilt).
+- Phase 2 (not built): bot AI, turn-flow, win/tie + winner banner, driving the per-turn banner from real gameplay.
+
+---
+
 ## Key Notes
 
 - **Character stat rows** use `Name+Bar/StatsName`, `Name+Bar/Bar`, `DiffLabel`, `StatNumber`

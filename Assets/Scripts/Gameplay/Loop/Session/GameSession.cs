@@ -17,6 +17,15 @@ namespace Golfin.Gameplay.Session
         public static string SelectedCharacterId = string.Empty;
         public static int    EquippedBagSlot;
 
+        // ── Versus flag (gates all 1v1 HUD elements) ─────────────────────────
+        /// <summary>
+        /// True when a 1v1 match is active. False for all solo/Practice sessions.
+        /// Set to true by ModeSelectScreenController / ModeCarouselController before
+        /// opening the 1v1 matchmaking modal. Set to false by HoleSelectionScreenController
+        /// on the Practice path. Cleared to false in ResetSession().
+        /// </summary>
+        public static bool IsVersus;
+
         // ── Turn counter ──────────────────────────────────────────────────────
         public static int TurnCount = 1;
         public static event System.Action OnTurnChanged;
@@ -77,6 +86,7 @@ namespace Golfin.Gameplay.Session
             CurrentHoleNumber   = 0;
             SelectedCharacterId = string.Empty;
             EquippedBagSlot     = 0;
+            IsVersus            = false;
             ResetForNewHole();
         }
 

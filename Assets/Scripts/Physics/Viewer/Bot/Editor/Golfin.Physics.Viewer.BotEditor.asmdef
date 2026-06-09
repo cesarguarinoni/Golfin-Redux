@@ -3,6 +3,8 @@
     "rootNamespace": "Golfin.Physics.Viewer.Editor",
     "references": [
         "Golfin.Physics.Viewer",
+        "Golfin.Gameplay.UI",
+        "Golfin.Gameplay.Loop",
         "Unity.Recorder.Editor"
     ],
     "includePlatforms": [

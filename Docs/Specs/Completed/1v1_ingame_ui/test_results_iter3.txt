@@ -1,0 +1,22 @@
+VersusHudTests — iter-3 run — 2026-06-08
+TestMode: EditMode
+TestClass: VersusHudTests
+TotalTests: 7 (filtered; 370 total EditMode suite)
+Passed: 7
+Failed: 0
+Skipped: 0
+Duration: 0.701s
+
+[PASS] Golfin.Gameplay.Tests.VersusHudTests.AfterReset_VersusCard_AlphaReverts            (0.141s)
+[PASS] Golfin.Gameplay.Tests.VersusHudTests.MatchContextReset_ClearsBothSlots             (0.001s)
+[PASS] Golfin.Gameplay.Tests.VersusHudTests.ResetSession_ClearsIsVersus                   (0.000s)
+[PASS] Golfin.Gameplay.Tests.VersusHudTests.SetActive_UpdatesIndexAndFiresEvent           (0.000s)
+[PASS] Golfin.Gameplay.Tests.VersusHudTests.SoloPath_PlayerCardWidget_ReadsPlayerContext_AlphaOne  (0.001s)
+[PASS] Golfin.Gameplay.Tests.VersusHudTests.VersusPath_InactiveCard_AlphaFifty            (0.000s)
+[PASS] Golfin.Gameplay.Tests.VersusHudTests.VersusPath_P1Widget_ReadsMatchContextSlot0    (0.000s)
+
+All 4 "strengthened" instantiation-based tests PASS:
+  SoloPath_PlayerCardWidget_ReadsPlayerContext_AlphaOne  — PASS (instantiates real PlayerCardWidget, DisplayName="MAYA", alpha=1.0)
+  VersusPath_P1Widget_ReadsMatchContextSlot0             — PASS (instantiates real PlayerCardWidget, "CAMILA"/Lv13/TURN2, alpha=1.0 active)
+  VersusPath_InactiveCard_AlphaFifty                     — PASS (instantiates real PlayerCardWidget, "TARO", alpha=0.50 inactive)
+  AfterReset_VersusCard_AlphaReverts                     — PASS (alpha reverts 0.50 → 1.0 after ResetSession+MatchContext.Reset)

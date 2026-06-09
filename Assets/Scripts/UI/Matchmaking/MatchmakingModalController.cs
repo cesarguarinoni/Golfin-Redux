@@ -365,6 +365,10 @@ namespace Golfin.UI.Matchmaking
             float elapsed = 0f;
             string lastPickId = string.Empty;
 
+            // Hoisted so OPPONENT FOUND block can read the final chosen opponent.
+            CharacterDataRuntime finalPick = null!;
+            int finalFakeLevel = 1;
+
             while (elapsed < searchDurationSeconds)
             {
                 if (_opponentPool.Count > 0)
@@ -391,6 +395,10 @@ namespace Golfin.UI.Matchmaking
                     lastPickId = pick.characterId;
 
                     int fakeLevel = Random.Range(fakeOpponentLevelRange.x, fakeOpponentLevelRange.y + 1);
+                    // Track the last shown opponent so we can populate MatchContext at OPPONENT FOUND.
+                    finalPick      = pick;
+                    finalFakeLevel = fakeLevel;
+
                     if (opponentCard != null)
                         opponentCard.InitializeFromTemplate(pick.characterId, fakeLevel);
 
@@ -434,6 +442,40 @@ namespace Golfin.UI.Matchmaking
 #if UNITY_EDITOR
             Debug.Log($"[Stage B] GameSession seeded — Hole={seededHole}, CharacterId='{charId}', BagSlot={bagSlot}");
 #endif
+
+            // ── 1v1: populate MatchContext.Players[1] (opponent) ──────────────
+            // Phase-1 placeholder: level and TurnCount from fake matchmaking data.
+            // Portrait and RarityBackground loaded from the same Resources paths used by
+            // PlayerContextPopulator — same characterId / rarity enum as the template.
+            if (Golfin.Gameplay.Session.GameSession.IsVersus && finalPick != null)
+            {
+                var fp = finalPick;
+                string opponentName = string.Empty;
+                if (opponentUsernameText != null)
+                    opponentName = opponentUsernameText.text.ToUpperInvariant();
+                if (string.IsNullOrEmpty(opponentName))
+                    opponentName = (fp.characterName ?? "OPPONENT").ToUpperInvariant();
+
+                Sprite oppPortrait = null;
+                if (!string.IsNullOrEmpty(fp.portraitSpriteName))
+                    oppPortrait = Resources.Load<Sprite>($"Portraits/InGame/{fp.portraitSpriteName}");
+                if (oppPortrait == null) oppPortrait = fp.portraitSprite;
+
+                Sprite oppRarityBg = Resources.Load<Sprite>($"Rarities/{fp.rarity}");
+
+                Golfin.Gameplay.UI.HUD.MatchContext.Players[1] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                {
+                    DisplayName      = opponentName,
+                    Level            = finalFakeLevel,
+                    Portrait         = oppPortrait,
+                    RarityBackground = oppRarityBg,
+                    TurnCount        = 1   // Phase-1 placeholder
+                };
+                Golfin.Gameplay.UI.HUD.MatchContext.Raise();
+#if UNITY_EDITOR
+                Debug.Log($"[1v1] MatchContext.Players[1] set — Name='{opponentName}', Level={finalFakeLevel}, Portrait={fp.portraitSpriteName}");
+#endif
+            }
 
             _opponentScanCoroutine = null;
 

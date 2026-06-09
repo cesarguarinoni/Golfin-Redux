@@ -94,7 +94,11 @@ namespace Golfin.EditorTools
             ClubContext.Reset();
             ShotModeContext.Reset();
             SpinContext.Reset();
-            Debug.Log("[FakeState:Reset] All contexts reset to defaults");
+            // 1v1 versus context — always reset alongside PlayerContext so fake-state
+            // presets never leave stale MatchContext data in the bus.
+            MatchContext.Reset();
+            GameSession.IsVersus = false;
+            Debug.Log("[FakeState:Reset] All contexts reset to defaults (including MatchContext)");
             ReleaseMouseAfterMenu();
         }
 
@@ -107,6 +111,17 @@ namespace Golfin.EditorTools
             PlayerContext.Level       = 13;
             PlayerContext.Portrait    = Resources.Load<Sprite>("Portraits/InGame/Camila");
             PlayerContext.Raise();
+
+            // Mirror into MatchContext slot 0 so that if the versus HUD is visible,
+            // it shows sensible P1 data (FakeReset has cleared IsVersus, so this is a
+            // no-op for P1 card — but keeps the bus consistent).
+            MatchContext.Players[0] = new MatchContext.Player
+            {
+                DisplayName = "CAMILA",
+                Level       = 13,
+                TurnCount   = 5
+            };
+            MatchContext.Raise();
 
             HoleContext.HoleNumber        = 1;
             HoleContext.Par               = 5;
@@ -146,7 +161,55 @@ namespace Golfin.EditorTools
             ShotModeContext.Reset();
             SpinContext.SetSpin(Vector2.zero);
 
-            Debug.Log("[FakeState:MidAim] Player=CAMILA Lv13 Hole=Lomond#1 Par5 425y Wind=8mph@270 Turn=5 Ball=GOLFIN Club=DRIVER 230y Mode=Straight Spin=(0,0)");
+            Debug.Log("[FakeState:MidAim] Player=CAMILA Lv13 Hole=Lomond#1 Par5 425y Wind=8mph@270 Turn=5 Ball=GOLFIN Club=DRIVER 230y Mode=Straight Spin=(0,0) MatchContext.Players[0]=CAMILA Lv13");
+            ReleaseMouseAfterMenu();
+        }
+
+        // ────────────────────────────────────────────────────────────────────────
+        // FAKE STATE — 1v1 Versus mid-aim (Camila vs Taro, Lomond H1)
+        // Sets IsVersus=true, populates MatchContext for both P1 and P2.
+        // Designed for capturing the VersusHudController layout without matchmaking.
+        // ────────────────────────────────────────────────────────────────────────
+        [MenuItem("GOLFIN/Capture/Fake State - 1v1 Mid Aim (Camila vs Taro, Lomond H1)")]
+        public static void Fake1v1MidAim()
+        {
+            FakeStateLock.IsLocked = true;
+            GameSession.IsVersus   = true;
+
+            // P1 (human — slot 0): Camila, active player.
+            PlayerContext.DisplayName = "CAMILA";
+            PlayerContext.Level       = 13;
+            PlayerContext.Portrait    = Resources.Load<Sprite>("Portraits/InGame/Camila");
+            PlayerContext.Raise();
+
+            MatchContext.Players[0] = new MatchContext.Player
+            {
+                DisplayName = "CAMILA",
+                Level       = 13,
+                TurnCount   = 1
+            };
+
+            // P2 (opponent — slot 1): Taro, inactive player.
+            MatchContext.Players[1] = new MatchContext.Player
+            {
+                DisplayName = "TARO",
+                Level       = 17,
+                TurnCount   = 0
+            };
+
+            MatchContext.ActiveIndex = 0;  // P1's turn.
+            MatchContext.Raise();
+
+            HoleContext.HoleNumber        = 1;
+            HoleContext.Par               = 5;
+            HoleContext.ChampionshipYards = 425;
+            HoleContext.CourseName        = "LOMOND";
+            HoleContext.TeeName           = "REGULAR";
+            HoleContext.Raise();
+
+            GameSession.SetTurn(1);
+
+            Debug.Log("[FakeState:1v1MidAim] IsVersus=true P1=CAMILA Lv13 (active) P2=TARO Lv17 (inactive) Hole=Lomond#1 Turn=1");
             ReleaseMouseAfterMenu();
         }
 
