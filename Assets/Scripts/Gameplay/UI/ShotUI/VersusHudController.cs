@@ -188,65 +188,61 @@ namespace Golfin.Gameplay.UI.ShotUI
             // ActivateVersusLayout() without having fired Raise() first.
             MatchContext.Raise();
 
-            // Show opening banner AFTER cards have been forced to refresh.
-            // "YOUR TURN" slides in from the left (fromLeft=true).
-            if (_banner != null)
+            // Phase 2a: VersusMatchController's first AnnounceTurn fires the opening "YOUR TURN"
+            // banner. Do NOT fire it here as well, or the banner plays twice at match start.
+            // The banner call is retained only in editor-debug mode (no VersusMatchController).
+#if UNITY_EDITOR
+            if (_banner != null && !_suppressOpeningBanner)
                 _banner.Show(_debugBannerText, fromLeft: true);
-            else
-                Debug.LogWarning("[VersusHudController] _banner is not wired — turn banner will not appear.");
+#endif
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // DEBUG Phase-1 API — called from Inspector buttons or external scripts
-        // for screenshot / verification purposes.
-        // ─────────────────────────────────────────────────────────────────────
-
         /// <summary>
-        /// DEBUG: Swap active turn (0 → 1 → 0).
-        /// Fires MatchContext.SetActive to drive alpha on both cards.
-        /// Phase-2 will replace with real turn-flow logic.
+        /// Phase 2a: Called by VersusMatchController.Start() to tell VersusHudController that
+        /// the production turn-flow is active and will fire the opening banner via AnnounceTurn.
+        /// Prevents the double-banner at match start.
+        /// Set before ActivateVersusLayout() runs (both scripts Start() in the same frame;
+        /// VersusMatchController calls this in its Awake() to ensure ordering).
+        /// </summary>
+        public static bool _suppressOpeningBanner;
+
+        // ─────────────────────────────────────────────────────────────────────
+        // DEBUG Phase-1 API — editor-only. Production turn-flow is driven by
+        // VersusMatchController (Phase 2a). These methods remain available for
+        // inspector/screenshot use in-editor but MUST NOT ship in builds.
+        // ─────────────────────────────────────────────────────────────────────
+#if UNITY_EDITOR
+        /// <summary>
+        /// DEBUG (editor-only): Swap active turn (0 → 1 → 0).
+        /// Phase-2 production turn-flow is driven by VersusMatchController, not this method.
         /// </summary>
         [ContextMenu("DEBUG — Swap Turn")]
         public void DebugSwapTurn()
         {
             int next = MatchContext.ActiveIndex == 0 ? 1 : 0;
             MatchContext.SetActive(next);
-            // R2-4: YOUR TURN slides from left; OPPONENT'S TURN slides from right.
             if (_banner != null)
                 _banner.Show(next == 0 ? "YOUR TURN" : "OPPONENT'S TURN", fromLeft: next == 0);
         }
 
         /// <summary>
-        /// DEBUG: Force versus layout on-demand (e.g., from inspector button or test harness).
-        ///
-        /// SCENE-MUTATION HAZARD FIX (iter-11, FIX 3):
-        /// The old implementation set _debugForceVersus=true — a SerializeField — which Unity
-        /// would then bake into the scene asset on the next EditorSceneManager.SaveScene() or
-        /// editor auto-save, shipping _debugForceVersus:1 and breaking Practice/solo mode.
-        ///
-        /// This version sets _runtimeDebugForceVersus (a plain non-serialized bool) instead.
-        /// Non-serialized fields are NEVER written to .unity files, so this call can never
-        /// mutate LabScaffold.unity regardless of when/how the scene is saved.
-        ///
-        /// The serialized _debugForceVersus field is INTENTIONALLY never set to true by code;
-        /// it exists only as an Inspector checkbox that devs can toggle manually in EditMode for
-        /// one-shot inspection — and must always be FALSE in the committed scene asset.
+        /// DEBUG (editor-only): Force versus layout on-demand.
+        /// SCENE-MUTATION HAZARD FIX: uses _runtimeDebugForceVersus (non-serialized).
         /// </summary>
         [ContextMenu("DEBUG — Force Versus Layout")]
         public void DebugForceVersus()
         {
-            // Use runtime-only flag — NEVER mutate the serialized _debugForceVersus field here.
             _runtimeDebugForceVersus = true;
             ActivateVersusLayout();
         }
 
         /// <summary>
-        /// DEBUG: Show the banner with a given message (for screenshot capture).
-        /// fromLeft=true for "YOUR TURN", false for "OPPONENT'S TURN".
+        /// DEBUG (editor-only): Show the banner with a given message.
         /// </summary>
         public void DebugShowBanner(string text, bool fromLeft = true)
         {
             if (_banner != null) _banner.Show(text, fromLeft);
         }
+#endif
     }
 }

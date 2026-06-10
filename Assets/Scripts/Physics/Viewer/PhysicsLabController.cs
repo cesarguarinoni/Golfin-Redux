@@ -128,6 +128,13 @@ namespace Golfin.Physics.Viewer
             ? ballAnimator.CurrentBall.position
             : Vector3.zero;
 
+        /// <summary>
+        /// True once OnHoleLoaded has fired (ScanForLoadedHoleSceneAtStartup found a Hole_NN_Geo scene).
+        /// Used by VersusMatchController to avoid reading BallPosition before the tee is set.
+        /// False on flat-ground / no-hole sessions (ball is at _ballSpawnPoint, not a real tee).
+        /// </summary>
+        public bool IsHoleReady => _useSceneProviders;
+
         // ── §controls_h: test injection helpers ───────────────────────────────
         // Allow EditMode integration tests to inject dependencies without a full scene.
         internal void InjectForTests(BallAnimator ba, Golfin.Gameplay.Loop.BallStateMachine sm)
@@ -465,6 +472,52 @@ namespace Golfin.Physics.Viewer
                 _ballSelectorCanvasGroup.blocksRaycasts = true;
             }
             if (_centralBall != null) _centralBall.SetPuttMode(false);
+        }
+
+        /// <summary>
+        /// Hides the shot-input aiming UI (aim cone/targeting line, power gauge, action buttons cluster,
+        /// putter track) so they do not appear behind/over the WIN/LOSE/DRAW persistent banner.
+        /// Called by VersusMatchController.MatchEnd() before ShowPersistent(). (DEFECT 1 fix — iter-7)
+        ///
+        /// iter-10b fix: hide only the shot-input children selectively — do NOT disable ShotUI_Canvas
+        /// as a whole, because TurnBannerWidget is also a child of ShotUI_Canvas and must remain
+        /// activeInHierarchy so ShowPersistent() can start coroutines. ConeRoot is hidden via both
+        /// SetActive(false) AND a CanvasGroup alpha=0 as belt-and-suspenders against 1-frame flash.
+        /// In the InCup/Draw path there is no code that re-enables ConeRoot after MatchEnd fires
+        /// (no ReArm, no AnnounceTurn), so SetActive(false) is durable.
+        /// </summary>
+        public void HideShotUI()
+        {
+            // Hide ConeRoot (ShotConeView) — aim hex, targeting line, club handle, slab.
+            // Belt-and-suspenders: SetActive(false) + CanvasGroup.alpha=0 to prevent 1-frame flash.
+            if (_shotConeView != null)
+            {
+                _shotConeView.gameObject.SetActive(false);
+                var cg = _shotConeView.GetComponent<UnityEngine.CanvasGroup>();
+                if (cg == null) cg = _shotConeView.gameObject.AddComponent<UnityEngine.CanvasGroup>();
+                cg.alpha = 0f;
+                cg.blocksRaycasts = false;
+            }
+
+            // Hide PowerHUD (gauge + timing slab container).
+            if (_powerGaugeWidget != null)
+                _powerGaugeWidget.gameObject.SetActive(false);
+
+            // Hide ActionButtons_Cluster (Spin, FadeDraw, Club buttons) — hide parent cluster.
+            // _actionButtonRowTop is SpinButton which is a child of ActionButtons_Cluster.
+            if (_actionButtonRowTop != null && _actionButtonRowTop.transform.parent != null)
+                _actionButtonRowTop.transform.parent.gameObject.SetActive(false);
+            else if (_actionButtonRowTop != null)
+            {
+                _actionButtonRowTop.SetActive(false);
+                if (_actionButtonFadeDrawButton != null) _actionButtonFadeDrawButton.SetActive(false);
+            }
+
+            // Hide PutterTrack and PuttPathRoot.
+            if (_putterTrack  != null) _putterTrack.SetActive(false);
+            if (_puttPathRoot != null) _puttPathRoot.SetActive(false);
+
+            Debug.Log($"[HideShotUI] Shot-input UI hidden. _shotConeView={(_shotConeView == null ? "NULL" : _shotConeView.gameObject.name + " activeSelf=" + _shotConeView.gameObject.activeSelf)}, _powerGaugeWidget={(_powerGaugeWidget == null ? "NULL" : _powerGaugeWidget.gameObject.activeSelf.ToString())}, _actionButtonRowTop={(_actionButtonRowTop == null ? "NULL" : _actionButtonRowTop.activeSelf.ToString())}");
         }
 
         // Aligns the putter track's top edge with the ball widget centre at runtime,

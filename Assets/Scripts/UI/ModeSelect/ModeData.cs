@@ -24,5 +24,8 @@ namespace GolfinRedux.UI.ModeSelect
         public string target = "";
         // order — sort order in both carousel and full-screen list (1-based)
         public int order;
+        // versusStrokeCapOverPar — safety cap for 1v1 matches (strokes over par before forced draw).
+        // 0 means not applicable (non-versus modes). versus_1v1 = 5 by default (CSV-tunable).
+        public int versusStrokeCapOverPar;
     }
 }

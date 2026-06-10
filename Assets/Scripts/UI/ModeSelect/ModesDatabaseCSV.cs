@@ -61,6 +61,7 @@ namespace GolfinRedux.UI.ModeSelect
             int iLocked = System.Array.IndexOf(headers, "locked");
             int iTarget = System.Array.IndexOf(headers, "target");
             int iOrder = System.Array.IndexOf(headers, "order");
+            int iCapOverPar = System.Array.IndexOf(headers, "versusStrokeCapOverPar");
 
             for (int i = 1; i < lines.Length; i++)
             {
@@ -81,6 +82,7 @@ namespace GolfinRedux.UI.ModeSelect
                 if (iLocked >= 0 && iLocked < cols.Length) bool.TryParse(cols[iLocked].Trim(), out mode.locked);
                 if (iTarget >= 0 && iTarget < cols.Length)  mode.target = cols[iTarget].Trim();
                 if (iOrder >= 0 && iOrder < cols.Length)    int.TryParse(cols[iOrder].Trim(), out mode.order);
+                if (iCapOverPar >= 0 && iCapOverPar < cols.Length) int.TryParse(cols[iCapOverPar].Trim(), out mode.versusStrokeCapOverPar);
 
                 if (!string.IsNullOrEmpty(mode.id))
                     _modes.Add(mode);

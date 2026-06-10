@@ -19,6 +19,16 @@ namespace Golfin.Gameplay.UI.HUD
             public Sprite Portrait;
             public Sprite RarityBackground;
             public int    TurnCount;
+
+            // ── Phase 2a additions (additive — do NOT remove Phase-1 fields above) ──
+            /// <summary>Current ball resting position in world space. Set to tee at match start.</summary>
+            public Vector3 Lie;
+            /// <summary>Number of shots taken this hole by this player.</summary>
+            public int     Strokes;
+            /// <summary>True once this player's ball has reached InCup.</summary>
+            public bool    HoledOut;
+            /// <summary>The Strokes value at which this player holed out (0 until holed).</summary>
+            public int     HoleOutStroke;
         }
 
         /// <summary>
@@ -64,5 +74,30 @@ namespace Golfin.Gameplay.UI.HUD
             OnChanged?.Invoke();
             OnActiveChanged?.Invoke();
         }
+
+        // ── Phase 2a additions ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Reset per-match state for both players. Sets both lies to <paramref name="tee"/>,
+        /// clears Strokes/HoledOut/HoleOutStroke, and sets ActiveIndex to 0 (P1 shoots first).
+        /// Preserves DisplayName/Level/Portrait/RarityBackground so the card data set at
+        /// matchmaking time is not lost.
+        /// </summary>
+        public static void ResetMatchState(Vector3 tee)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                Players[i].Lie           = tee;
+                Players[i].Strokes       = 0;
+                Players[i].HoledOut      = false;
+                Players[i].HoleOutStroke = 0;
+            }
+            ActiveIndex = 0;
+            OnChanged?.Invoke();
+            OnActiveChanged?.Invoke();
+        }
+
+        /// <summary>Returns the other player index: 0 → 1, 1 → 0.</summary>
+        public static int Other(int i) => 1 - i;
     }
 }

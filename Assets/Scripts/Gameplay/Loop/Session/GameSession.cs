@@ -26,6 +26,15 @@ namespace Golfin.Gameplay.Session
         /// </summary>
         public static bool IsVersus;
 
+        // ── Versus safety stroke cap (Phase 2a, CSV-keyed) ───────────────────
+        /// <summary>
+        /// Strokes above par at which a 1v1 match is forced to draw if neither player has holed.
+        /// Read from modes.csv "versus_1v1.versusStrokeCapOverPar" by VersusResultHandler (Assembly-CSharp)
+        /// and written here so VersusMatchController (Golfin.Physics.Viewer) can read it without
+        /// crossing the asmdef boundary to ModesDatabaseCSV. Default = 5.
+        /// </summary>
+        public static int VersusStrokeCapOverPar = 5;
+
         // ── Turn counter ──────────────────────────────────────────────────────
         public static int TurnCount = 1;
         public static event System.Action OnTurnChanged;
@@ -42,6 +51,25 @@ namespace Golfin.Gameplay.Session
 
         // ── Cross-scene completion signal (Stage B) ───────────────────────────
         public static event System.Action<HoleCompletionData> OnHoleComplete;
+
+        // ── Versus match completion signal (Phase 2a) ─────────────────────────
+        /// <summary>
+        /// Outcome of a completed 1v1 match.
+        /// </summary>
+        public enum MatchOutcome { P1Win, P2Win, Draw }
+
+        /// <summary>
+        /// Fired by VersusMatchController via MarkMatchComplete when the match ends.
+        /// Carries outcome, P1 stroke count, P2 stroke count.
+        /// ShellScene-resident VersusResultHandler subscribes here to grant RP and return home.
+        /// VersusMatchController (in Golfin.Physics.Viewer) must NOT call RewardPointsManager
+        /// directly — only fire this event.
+        /// </summary>
+        public static event System.Action<MatchOutcome, int, int> OnMatchComplete;
+
+        /// <summary>Fire OnMatchComplete. Called by VersusMatchController at match end.</summary>
+        public static void MarkMatchComplete(MatchOutcome outcome, int p1Strokes, int p2Strokes)
+            => OnMatchComplete?.Invoke(outcome, p1Strokes, p2Strokes);
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
         /// <summary>

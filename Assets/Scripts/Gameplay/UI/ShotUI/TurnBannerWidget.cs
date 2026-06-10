@@ -135,6 +135,97 @@ namespace Golfin.Gameplay.UI.ShotUI
             _activeRoutine = StartCoroutine(BannerRoutine(fromLeft));
         }
 
+        /// <summary>
+        /// Show the banner with <paramref name="text"/> and hold it indefinitely (no auto fade-out).
+        /// The banner stays visible until <see cref="Hide"/> is called (or the object is deactivated).
+        /// Slide-in animation is identical to <see cref="Show"/>. If a routine is in progress it
+        /// is cancelled and restarted. Used for WIN / LOSE / DRAW at match end (Phase 2a).
+        /// </summary>
+        public void ShowPersistent(string text, bool fromLeft = true)
+        {
+            if (_label != null) _label.text = text;
+
+            if (_activeRoutine != null)
+                StopCoroutine(_activeRoutine);
+
+            // Pre-position off-screen before SetActive(true) to avoid 1-frame center-flash.
+            {
+                float resolvedWidth = 1170f;
+                var parentCanvas = GetComponentInParent<Canvas>();
+                if (parentCanvas != null)
+                {
+                    var crt = parentCanvas.GetComponent<RectTransform>();
+                    if (crt != null) resolvedWidth = crt.rect.width;
+                }
+                float preStartX = fromLeft ? -resolvedWidth : resolvedWidth;
+                if (_rect != null)
+                    _rect.anchoredPosition = new Vector2(preStartX, _restAnchoredY);
+            }
+
+            gameObject.SetActive(true);
+
+            if (_label != null)
+            {
+                _label.ForceMeshUpdate();
+                _label.enableAutoSizing = false;
+            }
+
+            _activeRoutine = StartCoroutine(BannerPersistentRoutine(fromLeft));
+        }
+
+        /// <summary>
+        /// Immediately hide the banner (deactivates the GameObject).
+        /// Stops any in-progress animation.
+        /// </summary>
+        public void Hide()
+        {
+            if (_activeRoutine != null)
+            {
+                StopCoroutine(_activeRoutine);
+                _activeRoutine = null;
+            }
+            if (_canvasGroup != null) _canvasGroup.alpha = 0f;
+            gameObject.SetActive(false);
+
+            if (_label != null)
+                _label.enableAutoSizing = true;
+        }
+
+        IEnumerator BannerPersistentRoutine(bool fromLeft)
+        {
+            float canvasWidth = 1170f;
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas != null)
+            {
+                var canvasRect = canvas.GetComponent<RectTransform>();
+                if (canvasRect != null) canvasWidth = canvasRect.rect.width;
+            }
+
+            if (_canvasGroup != null) _canvasGroup.alpha = 1f;
+
+            float startX = fromLeft ? -canvasWidth : canvasWidth;
+            if (_rect != null)
+                _rect.anchoredPosition = new Vector2(startX, _restAnchoredY);
+
+            // Slide in.
+            float t = 0f;
+            while (t < _slideInDuration)
+            {
+                t += Time.deltaTime;
+                float norm  = Mathf.Clamp01(t / _slideInDuration);
+                float eased = 1f - (1f - norm) * (1f - norm);
+                if (_rect != null)
+                    _rect.anchoredPosition = new Vector2(Mathf.Lerp(startX, 0f, eased), _restAnchoredY);
+                yield return null;
+            }
+
+            if (_rect != null)
+                _rect.anchoredPosition = new Vector2(0f, _restAnchoredY);
+
+            // Hold indefinitely — no fade-out, no deactivate. Caller must call Hide().
+            _activeRoutine = null;
+        }
+
         IEnumerator BannerRoutine(bool fromLeft)
         {
             // Canvas width for off-screen start position (1170px standard).

@@ -81,6 +81,10 @@ namespace Golfin.Physics.Viewer
 
         void HandleShot(ShotResult result)
         {
+            // Phase 2a: versus hole-outs are owned by VersusMatchController.
+            // Suppress the solo result modal on the versus path entirely.
+            if (GameSession.IsVersus) return;
+
             // Guard: only fire once per hole to prevent double-fire.
             if (_firedThisHole) return;
 

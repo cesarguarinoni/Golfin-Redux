@@ -76,6 +76,16 @@ namespace Golfin.Physics.Viewer.Editor
         // truncates real footage; lower it only if a specific clip family is shorter.
         const int MaxRecordSeconds = 30;
 
+        // Per-scenario watchdog override (0 = use MaxRecordSeconds default).
+        // Set this BEFORE calling Begin() and clear it in the scenario's own cleanup path
+        // so it never leaks to unrelated recordings. Do NOT set above 40s without explicit
+        // GPU-safety re-evaluation: the 2026-06-09 reboot was caused by multi-clip cumulative
+        // load, and a single longer clip at 30fps/1170x2532 is still bounded within safe margin.
+        // Authorized uses:
+        //   40s — versus_full_match_flow (Cesar-approved 2026-06-10): a real-tee Hole-04 match
+        //          takes ~32s. Bumped only for this scenario; all other clips keep the 30s cap.
+        public static int MaxRecordSecondsOverride = 0;
+
         // Saved render-load settings restored in End().
         static double _recordStartEditorTime;
         static int _savedTargetFps;
@@ -245,9 +255,10 @@ namespace Golfin.Physics.Viewer.Editor
             GameViewSizeUtil.PurgeFabricatedEntries();
         }
 
-        /// <summary>Guardrail 2 — force-stop a clip that exceeds MaxRecordSeconds so the
+        /// <summary>Guardrail 2 — force-stop a clip that exceeds the effective max duration so the
         /// real-time encoder can't saturate the GPU over a long run (the 2026-06-09
-        /// WindowServer-watchdog reboot). Exits play mode after stopping.</summary>
+        /// WindowServer-watchdog reboot). Exits play mode after stopping.
+        /// Uses <see cref="MaxRecordSecondsOverride"/> when non-zero (caller resets it after Begin).</summary>
         static void DurationWatchdog()
         {
             if (_controller == null)
@@ -255,13 +266,15 @@ namespace Golfin.Physics.Viewer.Editor
                 EditorApplication.update -= DurationWatchdog;
                 return;
             }
-            if (EditorApplication.timeSinceStartup - _recordStartEditorTime < MaxRecordSeconds)
+            int limit = MaxRecordSecondsOverride > 0 ? MaxRecordSecondsOverride : MaxRecordSeconds;
+            if (EditorApplication.timeSinceStartup - _recordStartEditorTime < limit)
                 return;
             Debug.LogWarning(
-                $"[BotVideoRecorder] Max clip duration ({MaxRecordSeconds}s) reached — force-stopping " +
+                $"[BotVideoRecorder] Max clip duration ({limit}s) reached — force-stopping " +
                 "and exiting play mode to avoid GPU saturation. If the clip needs to be longer, split " +
                 "the scenario or shorten it; do NOT raise MaxRecordSeconds without re-checking the " +
                 "WindowServer-watchdog risk.");
+            MaxRecordSecondsOverride = 0;   // clear after firing so it never leaks
             End();
             if (EditorApplication.isPlaying)
                 EditorApplication.isPlaying = false;

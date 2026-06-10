@@ -24249,6 +24249,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1817614130}
   - component: {fileID: 1817614129}
+  - component: {fileID: 1817614133}
+  - component: {fileID: 1817614132}
+  - component: {fileID: 1817614131}
   m_Layer: 0
   m_Name: '[Session]'
   m_TagString: Untagged
@@ -24285,6 +24288,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1817614131
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1817614128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a8472d5816b84ee792fe3327d171ec6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Modals.VersusResultHandler
+  _fallbackReward: 200
+--- !u!114 &1817614132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1817614128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b80dce4e635074bb59cbc6f15a59f106, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.VersusBot
+  _controller: {fileID: 1483952038}
+  _shotController: {fileID: 1483952040}
+--- !u!114 &1817614133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1817614128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7eef36cec1e8043ac94abcd6cdb45073, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.VersusMatchController
+  _humanInput: {fileID: 1443870535}
+  _banner: {fileID: 1436714831}
+  _bot: {fileID: 1817614132}
+  _controller: {fileID: 1483952038}
+  _strokeCapOverPar: 5
 --- !u!1 &1820754619
 GameObject:
   m_ObjectHideFlags: 0
