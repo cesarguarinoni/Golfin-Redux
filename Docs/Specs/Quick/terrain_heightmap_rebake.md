@@ -35,5 +35,12 @@ Bake round-trip mismatches: 0/100. Backup of old Resources heightmap: `/tmp/hole
 4. Commit the regenerated `heightmap.bytes` files (course-data commit, scoped).
 5. Unblock `1v1_match_flow` (its BUG C is gone) and resume the §15 capture.
 
-## STATUS
-Hole 4 re-baked + verified. Awaiting Cesar's go to roll out the remaining holes.
+## STATUS — DONE (2026-06-10, committed `1648db3b`, pushed)
+Re-baked all 18 holes from current terrain; **12 had stale heightmaps and were fixed** (02,03,04,05,06,08,09,10,11,12,13,14); 6 were already current (byte-identical, no change). Verified per hole: sim ground now matches the visual terrain within **0.02–0.42 m** (was ~9 m off behind greens). Committed only the 12 `heightmap.bytes` + this doc (scoped). Backups: `/tmp/heightmap_backup_20260610/` and `/tmp/hole04_heightmap_RESOURCES_backup.bytes`.
+
+**Per-hole verification (max |simGround − visualRaycast|):**
+H02 0.02 · H03 0.10 · H04 0.13 · H05 0.29 · H06 0.24 · H08 0.23 · H09 0.25 · H10 0.11 · H11 0.32 · H12 0.39 · H13 0.21 · H14 0.42 m — all PASS (<1 m).
+
+Note: heightmaps were baked from the current working-tree terrain (which has a tiny ~5 KB uncommitted `TerrainData_Hole*Geo.asset` drift, sub-meter). If that drift is ever reverted the match stays sub-meter — not a regression of the ~10 m bug.
+
+→ `1v1_match_flow` BUG C is resolved; that task can resume the §15 par-3 capture (BUG A + BUG B fixes still pending there).
