@@ -1,0 +1,122 @@
+2026-06-10T21:00:00 activated — reading SPEC.md and STATUS.md
+=== iter-1 kickoff baseline ===
+HEAD: 777e7ccc spec(versus_bot_hardening): bot-only hardening before 1v1 Phase 2b
+DIRTY (pre-existing, not introduced by this task):
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_REUSABLE_ELEMENTS.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_WHAT_HAPPENED.md
+ D Docs/Specs/Active/mode_select_system/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-06-10T13:40:00 H1: calibration harness done, bot_clubs.csv generated (84 rows). Starting VersusBot rewrite.
+2026-06-10T14:00:00 VersusHudCaptureMenu updated: added LaunchHole, RecordBotHardeningWater (Hole16), RecordBotHardeningSloped (Hole09) + handlers. Compiles clean. Starting video recordings.
+2026-06-10T11:59:51 recording versus_bot_hardening_water (Hole16) in progress, watchdog 60s
+2026-06-10T12:00:45 recording versus_bot_hardening_sloped (Hole09) in progress
+2026-06-10T14:10:00 done, awaiting review
+2026-06-10T21:25:00 iter-2 activated — reading SELF_REVIEW.md, SPEC.md, prior IMPLEMENTER_REPORT.md
+=== iter-2 kickoff baseline ===
+HEAD: 777e7ccc spec(versus_bot_hardening): bot-only hardening before 1v1 Phase 2b
+DIRTY (pre-existing, not introduced by this task):
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ M Assets/Golf/Courses/lomond-country-cl/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/Golfin.Physics.Viewer.BotEditor.asmdef
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/VersusHudCaptureMenu.cs
+ M Assets/Scripts/Physics/Viewer/PutterGreenReader.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_REUSABLE_ELEMENTS.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_WHAT_HAPPENED.md
+ D Docs/Specs/Active/mode_select_system/SPEC.md
+ M Docs/Specs/Active/versus_bot_hardening/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-06-10T21:25:19 Geometric analysis: Hole 06 water polygon crosses tee→pin line at t=0.517..0.792 (79m–122m). Switching H2 to Hole 06. Fixing H3 gain.
+2026-06-10T21:26:30 VersusHudCaptureMenu.cs updated: Hole06 H2 scenario, H3 near-green _debugStartLie, H1 60s watchdog
+2026-06-10T13:13:00 Session guard reset. Starting H2 recording on Hole06.
+2026-06-10T13:15:00 H2 recording started on Hole06 (120s watchdog). Waiting for raw.mp4.
+2026-06-10T15:26:50 Session guard reset correctly. SessionGuard=False, RecordVideo=True. Triggering H2 on Hole06.
+2026-06-10T15:30:00 H2 raw.mp4 = 78MB but bot started near-green (debugStartLie persisted from H3 scenario). Need to reset _debugStartLie, reset guard, re-record.
+2026-06-10T13:49:47 VersusHudCaptureMenu.cs updated: Hole18 H2 scenario added. Compile clean. Resetting session guard.
+2026-06-10T13:51:02 H2 Hole18 recording in progress — H2 proactive confirmed: Water at 146m, layup to 138m. Watchdog=120s.
+2026-06-10T13:54:00 H3 recording started on Hole09 (60s watchdog). Near-green _debugStartLie=(170.48, 17.472, 38.63).
+2026-06-10T16:10:00 done, awaiting review
+=== iter-3 kickoff baseline ===
+HEAD: 777e7ccc spec(versus_bot_hardening): bot-only hardening before 1v1 Phase 2b
+DIRTY (pre-existing, not introduced by this task):
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/Golfin.Physics.Viewer.BotEditor.asmdef
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/VersusHudCaptureMenu.cs
+ M Assets/Scripts/Physics/Viewer/PutterGreenReader.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-PutterFromGreen.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_REUSABLE_ELEMENTS.md
+ D Docs/Specs/Active/mode_select_system/BRIEF_WHAT_HAPPENED.md
+ D Docs/Specs/Active/mode_select_system/SPEC.md
+ M Docs/Specs/Active/versus_bot_hardening/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-06-10T17:00:00 iter-3 activated — root-cause analysis of 100%-power putt + H1 club-selection fix
+2026-06-10T17:30:00 iter-3 resumed — triggering H2 Hole18 recording with fixed code (180s watchdog, putter fix)
+2026-06-10T17:35:00 H2 recording still in play mode, monitoring for completion
+2026-06-10T17:36:00 CRITICAL: Bot stuck in putter-through-terrain loop on Hole 18 near green (x=84-90, z=11-21, y=5-6). Terrain heightmap gap. Stopping recording to investigate.
+2026-06-10T18:45:00 iter-3 resumed — fixing putter-off-green fall-through: wedge override when ball not on green
+2026-06-10T17:35:50 re-triggering H2 Hole18 recording with fresh play mode (fixed DLL confirmed)
+2026-06-10T17:50:00 Layup-putter-floor fix compiled (DLL 17:49:51). H18 recording started in play mode (180s watchdog).
+2026-06-10T17:51:30 H18 recording in progress — both bots fired from tee correctly (driver). Monitoring for hole-out.
+2026-06-10T17:58:00 Session guard cleared. Re-triggering H18 recording (guard was blocking the run - putter-floor fix verified working).
+2026-06-10T18:02:00 H18 recording completed (129MB, 180s watchdog). Bot still in layup loop — water probe granularity issue found. Fixing: skip layup when landing beyond water is safe.
+2026-06-10T18:08:00 H18 recording running with fly-over fix — bots in putt mode, match progressing well
+2026-06-10T18:10:00 H18 recording completed naturally at 89s (not watchdog). Both bots Turn 4 on green, putter mode, 6-8m to pin. No frozen grey-fog. Match completed.
+2026-06-10T18:19:00 Captioned H2 video built (71.3MB, 1170x2532, 89.2s). Canonical screenshot extracted (1170x2532). Writing IMPLEMENTER_REPORT.
+2026-06-10T18:30:00 done, awaiting review
