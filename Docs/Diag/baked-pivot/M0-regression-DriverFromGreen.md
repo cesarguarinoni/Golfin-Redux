@@ -6,7 +6,7 @@
 
 | dir | yaw | result | violFrame | ballY | groundY | minBallY | samples | termination |
 |-----|-----|--------|-----------|-------|---------|----------|---------|-------------|
-| N | 0 | PASS | - | 0.000 | 0.000 | 4.300 | 742 | HitOOB |
+| N | 0 | PASS | - | 0.000 | 0.000 | 4.299 | 742 | HitOOB |
 | NE | 45 | PASS | - | 0.000 | 0.000 | 8.753 | 3432 | BallStopped |
 | E | 90 | PASS | - | 0.000 | 0.000 | 10.144 | 453 | HitOOB |
 | SE | 135 | PASS | - | 0.000 | 0.000 | 10.144 | 325 | HitOOB |
