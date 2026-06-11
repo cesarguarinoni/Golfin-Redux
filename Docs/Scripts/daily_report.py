@@ -479,6 +479,37 @@ def _retry_after_seconds(resp_obj, default: float) -> float:
     return default
 
 
+def _probe_video_dims(path: str):
+    """
+    Return (width, height, duration_seconds) for a video, or None on any failure.
+    Telegram renders a SQUARE preview bubble for sendVideo uploads that omit
+    width/height — so we probe and pass them explicitly (see _send_telegram_file).
+    Portrait captures (1170x2532) showed up square in Telegram until this was added.
+    """
+    ffprobe = _find_media_tool("ffprobe", "GOLFIN_FFPROBE_PATH")
+    if not ffprobe:
+        return None
+    try:
+        out = subprocess.run(
+            [ffprobe, "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height:format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=0", path],
+            capture_output=True, text=True, timeout=60).stdout
+        vals = {}
+        for line in out.splitlines():
+            if "=" in line:
+                k, v = line.split("=", 1)
+                vals[k.strip()] = v.strip()
+        w = int(vals.get("width", "0"))
+        h = int(vals.get("height", "0"))
+        dur = int(round(float(vals.get("duration", "0") or 0)))
+        if w > 0 and h > 0:
+            return (w, h, dur)
+    except Exception as e:
+        print(f"[WARN] could not probe dims for {os.path.basename(path)}: {e}")
+    return None
+
+
 def _send_telegram_file(method: str, field: str, path: str, caption: str) -> bool:
     """
     Upload a single file to Telegram via the given method (sendVideo/sendPhoto/etc.).
@@ -490,6 +521,12 @@ def _send_telegram_file(method: str, field: str, path: str, caption: str) -> boo
     data = {"chat_id": ACTIVE_CHAT_ID, "caption": caption[:1024]}
     if method == "sendVideo":
         data["supports_streaming"] = "true"
+        # Pass width/height/duration so Telegram renders the true aspect ratio.
+        # Without them it falls back to a SQUARE preview bubble — portrait
+        # (1170x2532) clips looked square until this was added (2026-06-11).
+        dims = _probe_video_dims(path)
+        if dims:
+            data["width"], data["height"], data["duration"] = dims
     name = os.path.basename(path)
 
     for attempt in range(1, MEDIA_MAX_RETRIES + 1):
