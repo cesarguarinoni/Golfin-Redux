@@ -213,6 +213,38 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Capture 1v1/Record Resolution Clip (Clip B - Near-Green)", isValidateFunction: true)]
         static bool ValidateResolutionClip() => !EditorApplication.isPlaying;
 
+        /// <summary>
+        /// Order 346 / 2b visual gate — sloppy bot (DebugLevelOverride=1, bracket minLevel=1).
+        /// aimError=±6°, powerError=±0.12, clubNoise=25% — visibly wandering aim and wrong clubs.
+        /// Records a full match on Hole_04 (same hole as Clip B).
+        /// Output: tasks/loop_v2_smoke_bot/versus_bot_difficulty_lv1/video/raw.mp4
+        /// </summary>
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Difficulty - Sloppy (Lv1)")]
+        public static void RecordBotDifficultyLv1()
+        {
+            BotVideoRecorder.Arm();
+            Launch("versus_bot_difficulty_lv1");
+        }
+
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Difficulty - Sloppy (Lv1)", isValidateFunction: true)]
+        static bool ValidateBotDifficultyLv1() => !EditorApplication.isPlaying;
+
+        /// <summary>
+        /// Order 346 / 2b visual gate — hardened bot (DebugLevelOverride=200, bracket minLevel=180).
+        /// aimError=±0.4°, powerError=±0.01, clubNoise=0% — plays like the 345 hardened baseline.
+        /// Records a full match on Hole_04 (same hole as Lv1 clip for side-by-side comparison).
+        /// Output: tasks/loop_v2_smoke_bot/versus_bot_difficulty_lv200/video/raw.mp4
+        /// </summary>
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Difficulty - Hardened (Lv200)")]
+        public static void RecordBotDifficultyLv200()
+        {
+            BotVideoRecorder.Arm();
+            Launch("versus_bot_difficulty_lv200");
+        }
+
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Difficulty - Hardened (Lv200)", isValidateFunction: true)]
+        static bool ValidateBotDifficultyLv200() => !EditorApplication.isPlaying;
+
         // ── Validation ──────────────────────────────────────────────────────
 
         [MenuItem("GOLFIN/Capture 1v1/Record Versus Launch", isValidateFunction: true)]
@@ -499,6 +531,18 @@ namespace Golfin.Physics.Viewer.Editor
             BotVideoRecorder.MaxRecordSecondsOverride = 60;
             Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_sloped: OnMatchReadyToBegin received — " +
                       "starting BotVideoRecorder now. 60s watchdog, near-green start (12m from H09 pin) ensures Putter selection.");
+            BotVideoRecorder.Begin();
+        }
+
+        // ── Deferred recorder handler for versus_bot_difficulty_* (Order 346 / 2b) ───────
+        // 60s watchdog — Hole_04 par-3 with error-injected bot; sloppy bracket may take
+        // extra shots (OB shots, recoveries), but the 60s cap proved sufficient for 345 par-3.
+        static void OnBotDifficultyReadyHandler()
+        {
+            VersusMatchController.OnMatchReadyToBegin -= OnBotDifficultyReadyHandler;
+            BotVideoRecorder.MaxRecordSecondsOverride = 60;
+            Debug.Log("[VersusHudCaptureMenu] versus_bot_difficulty: OnMatchReadyToBegin — " +
+                      "starting BotVideoRecorder. 60s watchdog (Hole_04 par-3).");
             BotVideoRecorder.Begin();
         }
 
@@ -808,6 +852,66 @@ namespace Golfin.Physics.Viewer.Editor
                     Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_sloped: BotVideoRecorder deferred to OnMatchReadyToBegin (60s). Near-green start ensures H3 slope-read fires.");
                     return;
                 }
+                else if (scenario == "versus_bot_difficulty_lv1" || scenario == "versus_bot_difficulty_lv200")
+                {
+                    // Order 346 / 2b visual gate: full match on Hole_04 with DebugLevelOverride.
+                    // lv1: DebugLevelOverride=1 → bracket minLevel=1 (aim±6°, pow±0.12, clubNoise=25%)
+                    // lv200: DebugLevelOverride=200 → bracket minLevel=180 (aim±0.4°, pow±0.01, no noise)
+                    int debugLevel = scenario == "versus_bot_difficulty_lv1" ? 1 : 200;
+
+                    var teeLie = new Vector3(
+                        SessionState.GetFloat(TeeLieXKey, 0f),
+                        SessionState.GetFloat(TeeLieYKey, 0f),
+                        SessionState.GetFloat(TeeLieZKey, 0f));
+                    Debug.Log($"[VersusHudCaptureMenu] {scenario}: teeLie={teeLie:F3} DebugLevelOverride={debugLevel}");
+
+                    Golfin.Gameplay.Session.GameSession.IsVersus = true;
+                    // Players[1] Level is set here but will be overridden by DebugLevelOverride on VersusBot.
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[0] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "CAMILA",
+                        Level       = 13,
+                        TurnCount   = 1,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[1] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "TARO",
+                        Level       = debugLevel,
+                        TurnCount   = 0,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.ActiveIndex = 0;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Raise();
+
+                    var vmcDiff = Object.FindAnyObjectByType<VersusMatchController>();
+                    if (vmcDiff != null)
+                    {
+                        vmcDiff._debugBothBots = true;
+                        // Inject DebugLevelOverride on VersusBot to force the bracket.
+                        var bot = Object.FindAnyObjectByType<VersusBot>();
+                        if (bot != null)
+                        {
+                            bot.DebugLevelOverride = debugLevel;
+                            Debug.Log($"[VersusHudCaptureMenu] {scenario}: VersusBot.DebugLevelOverride={debugLevel} set directly.");
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[VersusHudCaptureMenu] {scenario}: VersusBot not found at EnteredPlayMode — " +
+                                             "DebugLevelOverride will fall back to MatchContext.Players[1].Level={debugLevel}.");
+                        }
+                        Debug.Log($"[VersusHudCaptureMenu] {scenario}: _debugBothBots=true, DebugLevelOverride={debugLevel}, real tee start.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[VersusHudCaptureMenu] {scenario}: VersusMatchController not found.");
+                    }
+
+                    // Add a named handler so ExitingPlayMode cleanup can remove it.
+                    VersusMatchController.OnMatchReadyToBegin += OnBotDifficultyReadyHandler;
+                    Debug.Log($"[VersusHudCaptureMenu] {scenario}: BotVideoRecorder deferred to OnMatchReadyToBegin (60s watchdog).");
+                    return;
+                }
                 else if (scenario == "versus_resolution_clip")
                 {
                     // Clip B — near-green resolution proof (iter-9 two-clip strategy, Cesar 2026-06-10).
@@ -925,6 +1029,7 @@ namespace Golfin.Physics.Viewer.Editor
                 VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterH06ReadyHandler;
                 VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterH18ReadyHandler;
                 VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningSlopedReadyHandler;
+                VersusMatchController.OnMatchReadyToBegin -= OnBotDifficultyReadyHandler;
 
                 // Clear the per-scenario watchdog override so it never leaks to a future recording.
                 BotVideoRecorder.MaxRecordSecondsOverride = 0;

@@ -1,8 +1,9 @@
-// VersusBot.cs — versus_bot_hardening (H1 + H2 + H3)
+// VersusBot.cs — versus_bot_hardening (H1 + H2 + H3) + versus_bot_difficulty (2b)
 // H1: calibrated club/power from bot_clubs.csv (production stat path carry table).
 // H2: proactive landing probe (Water avoid; Sand discouraged) + layup + ±10°/±20° retarget
 //     + reactive OBReason bias.
 // H3: PutterGreenReader.TryGetSlopeAt slope-break aim offset + power nudge (CSV-gain).
+// 2b: post-decision error injection from bot_difficulty.csv bracket (level-mapped bands).
 //
 // Constraints:
 //   - No #if UNITY_EDITOR, no ForceShotCompleteForBot.
@@ -20,7 +21,8 @@ using Golfin.Physics.Math;
 namespace Golfin.Physics.Viewer
 {
     /// <summary>
-    /// Runtime bot opponent for 1v1 versus mode (Phase 2a hardened in versus_bot_hardening).
+    /// Runtime bot opponent for 1v1 versus mode (Phase 2a hardened in versus_bot_hardening;
+    /// Phase 2b difficulty model in versus_bot_difficulty).
     /// Drives shots via the PRODUCTION ShotController external-drag path.
     /// </summary>
     public class VersusBot : MonoBehaviour
@@ -28,6 +30,12 @@ namespace Golfin.Physics.Viewer
         [SerializeField] PhysicsLabController _controller;
         [SerializeField] ShotController       _shotController;
         [SerializeField] PutterGreenReader    _greenReader;
+
+        // ── 2b: debug level override (inspector) ──────────────────────────────
+        // -1 = off (use MatchContext.Players[1].Level). Set to 1–240 to force a
+        // specific difficulty bracket for capture / testing. No #if UNITY_EDITOR —
+        // field is production-safe (simply a floor/override on the level read).
+        [SerializeField] public int DebugLevelOverride = -1;
 
         // ── H2: reactive OB state ──────────────────────────────────────────
         // Written by VersusMatchController or caller after each shot resolves.
@@ -56,6 +64,22 @@ namespace Golfin.Physics.Viewer
         private const float LayupMinDist   = 10f;  // m minimum layup target
         private const int   RetargetAngles = 4;    // ±10°, ±20°
         private static readonly float[] OffsetDegrees = { -10f, 10f, -20f, 20f };
+
+        // ── 2b: difficulty bracket ─────────────────────────────────────────
+        private struct DifficultyBracket
+        {
+            public int   minLevel;
+            public float aimErrorDegMax;
+            public float powerErrorMax;
+            public float clubNoiseChance;
+        }
+        private static List<DifficultyBracket> _difficultyTable;
+        private static bool                    _difficultyLoaded;
+
+        // Resolved once per match (-1 sentinel = not yet resolved; domain-reload-safe).
+        // Using int sentinel instead of bool guard avoids the zero-init domain-reload trap.
+        private int               _resolvedLevel   = -1;
+        private DifficultyBracket _resolvedBracket;
 
         void Awake()
         {
@@ -93,6 +117,92 @@ namespace Golfin.Physics.Viewer
                 _carryTable.Add(new CarryRow { club = p[0].Trim(), power01 = pow, carry = carry });
             }
             Debug.Log($"[VersusBot] Carry table loaded: {_carryTable.Count} rows.");
+        }
+
+        // ── 2b: difficulty table loader ─────────────────────────────────────
+
+        private void EnsureDifficultyLoaded()
+        {
+            if (_difficultyLoaded) return;
+            _difficultyLoaded = true;
+            _difficultyTable  = new List<DifficultyBracket>(8);
+
+            var csv = Resources.Load<TextAsset>("Data/bot_difficulty");
+            if (csv == null)
+            {
+                Debug.LogWarning("[VersusBot] bot_difficulty.csv not found — zero-error fallback (hardened baseline).");
+                return;
+            }
+
+            foreach (var rawLine in csv.text.Split('\n'))
+            {
+                var line = rawLine.Trim();
+                if (string.IsNullOrEmpty(line) || line.StartsWith("#") || line.StartsWith("minLevel"))
+                    continue;
+                var p = line.Split(',');
+                if (p.Length < 4) continue;
+                if (!int.TryParse(p[0].Trim(), out int minLevel)) continue;
+                if (!float.TryParse(p[1].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float aimErr)) continue;
+                if (!float.TryParse(p[2].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float powErr)) continue;
+                if (!float.TryParse(p[3].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float clubNoise)) continue;
+                _difficultyTable.Add(new DifficultyBracket
+                {
+                    minLevel       = minLevel,
+                    aimErrorDegMax = aimErr,
+                    powerErrorMax  = powErr,
+                    clubNoiseChance = clubNoise
+                });
+            }
+            // Sort ascending by minLevel so bracket lookup is correct.
+            _difficultyTable.Sort((a, b) => a.minLevel.CompareTo(b.minLevel));
+            Debug.Log($"[VersusBot] Difficulty table loaded: {_difficultyTable.Count} brackets.");
+        }
+
+        /// <summary>
+        /// Resolve the difficulty bracket once per match and cache it.
+        /// Uses DebugLevelOverride if set (>=0), otherwise MatchContext.Players[1].Level.
+        /// Logs the resolved bracket once.
+        /// </summary>
+        private DifficultyBracket ResolveBracket()
+        {
+            EnsureDifficultyLoaded();
+
+            int level = DebugLevelOverride >= 0
+                ? DebugLevelOverride
+                : MatchContext.Players[1].Level;
+
+            // Already resolved for this level? Return cached.
+            if (_resolvedLevel == level)
+                return _resolvedBracket;
+
+            _resolvedLevel = level;
+
+            // Zero-error fallback if table is empty.
+            if (_difficultyTable == null || _difficultyTable.Count == 0)
+            {
+                _resolvedBracket = new DifficultyBracket { minLevel = 0, aimErrorDegMax = 0f, powerErrorMax = 0f, clubNoiseChance = 0f };
+                Debug.LogWarning("[VersusBot] Difficulty table empty — zero-error fallback.");
+                return _resolvedBracket;
+            }
+
+            // Find highest minLevel <= level.
+            DifficultyBracket bracket = _difficultyTable[0]; // default to lowest
+            foreach (var b in _difficultyTable)
+            {
+                if (b.minLevel <= level)
+                    bracket = b;
+                else
+                    break; // sorted ascending — no need to continue
+            }
+
+            _resolvedBracket = bracket;
+            Debug.Log($"[VersusBot] Difficulty: level={level} bracket(minLevel={bracket.minLevel}) " +
+                      $"aim=±{bracket.aimErrorDegMax:F1}° pow=±{bracket.powerErrorMax:F3} " +
+                      $"clubNoise={bracket.clubNoiseChance:F2}");
+            return _resolvedBracket;
         }
 
         /// <summary>
@@ -516,6 +626,70 @@ namespace Golfin.Physics.Viewer
                 }
             }
 
+            // ── 2b: POST-DECISION ERROR INJECTION (D1: after H1/H2/H3, before commit) ──
+            // Inject per-shot execution error based on the opponent's level bracket.
+            // No safety re-check runs on the perturbed values — they fire straight to commit.
+            {
+                var bkt = ResolveBracket();
+
+                // Remember the safe target distance before any club noise changes it.
+                // This is the distance already in scope after H1/H2 selection (dist for normal
+                // shots, safeDist for laid-up shots — both are captured in power01+club by this
+                // point). We need to recover the target distance for power re-inversion (D3).
+                // Re-derive via InterpolateClubPower inverse: we know the club and the intent
+                // carry was either dist (full shot) or the safeDist (layup). Rather than tracking
+                // both paths, we reconstruct it from the current club+power01 by reading the
+                // carry table: find the carry that matches current power01 for current clubName.
+                // Simpler: cache the distance that was passed to SelectShotCalibrated — that is
+                // the "safe target distance" for re-inversion purposes.
+                // Since we no longer have a named local (layup paths shadow `dist`), use a helper:
+                // invert InterpolateClubPower(clubName, targetDist) → re-derive targetDist from
+                // the current power01 reading. The spec says "re-invert to the SAME safe target
+                // distance" — meaning we pass the same targetDist to InterpolateClubPower(noisyClub, targetDist).
+                // We can recover targetDist because the carry table is monotone: find the carry
+                // corresponding to current power01 for current club name.
+                string origClubName = ClubNames[Mathf.Clamp(club, 0, ClubNames.Length - 1)];
+                float  safeTargetDist = InvertClubPower(origClubName, power01);
+
+                // D3: club noise (suppressed when club is putter — D4).
+                string clubNoiseNote = "none";
+                if (!isPutt && bkt.clubNoiseChance > 0f && Random.value < bkt.clubNoiseChance)
+                {
+                    // ±1 band shift: 0=driver, 1=iron7, 2=wedge, 3=putter.
+                    // Putter never noise-in (isPutt guard above); driver can only shift down (→ iron7).
+                    int dir = (Random.value > 0.5f) ? 1 : -1;
+                    int noisyClubIndex = Mathf.Clamp(club + dir, 0, 2); // clamp [0..2]: putter excluded
+
+                    if (noisyClubIndex != club)
+                    {
+                        string noisyClubName = ClubNames[noisyClubIndex];
+                        float  maxCarry = GetMaxCarry(noisyClubName);
+                        // Re-invert power for the noisy club at the SAME safe target distance.
+                        float  noisyPower = InterpolateClubPower(noisyClubName, Mathf.Min(safeTargetDist, maxCarry));
+                        noisyPower = Mathf.Clamp01(noisyPower);
+
+                        clubNoiseNote = $"{origClubName}→{noisyClubName}";
+                        club    = noisyClubIndex;
+                        power01 = noisyPower;
+                        label  += $" [clubNoise:{origClubName}→{noisyClubName}]";
+                    }
+                }
+
+                // D2: aim/power error (applies to all shots including putts after H3).
+                float deltaAimDeg = 0f;
+                float deltaPow    = 0f;
+                if (bkt.aimErrorDegMax > 0f || bkt.powerErrorMax > 0f)
+                {
+                    deltaAimDeg = Random.Range(-bkt.aimErrorDegMax, bkt.aimErrorDegMax);
+                    deltaPow    = Random.Range(-bkt.powerErrorMax,  bkt.powerErrorMax);
+                    aimYaw  += deltaAimDeg * Mathf.Deg2Rad;
+                    power01  = Mathf.Clamp01(power01 + deltaPow);
+                }
+
+                Debug.Log($"[VersusBot] 2b error: Δaim={deltaAimDeg:+0.0;-0.0}° Δpow={deltaPow:+0.000;-0.000} clubNoise={clubNoiseNote}");
+            }
+            // ── END 2b error injection ──────────────────────────────────────
+
             Debug.Log($"[VersusBot] TakeShot: ball={ball:F1} cup={cup:F1} dist={dist:F1}m aimYaw={aimYaw*Mathf.Rad2Deg:F1}° — {label}");
 
             // ── 4. Set club; clear any stat-bundle override so bus resolves live stats ──
@@ -572,6 +746,51 @@ namespace Golfin.Physics.Viewer
             _shotController.EndExternalDrag();
 
             Debug.Log($"[VersusBot] TakeShot: shot fired — club={club} power={power01:F2}");
+        }
+
+        // ── 2b: helpers ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Inverts InterpolateClubPower: given a clubName and power01, returns the approximate
+        /// carry distance that produced that power reading (used to recover safeTargetDist for
+        /// club-noise re-inversion per D3). Uses linear search over the carry table.
+        /// Falls back to 50m if the table is empty or club is unknown.
+        /// </summary>
+        private float InvertClubPower(string clubName, float power01)
+        {
+            if (_carryTable == null || _carryTable.Count == 0) return 50f;
+
+            CarryRow below = default;
+            CarryRow above = default;
+            bool foundBelow = false, foundAbove = false;
+
+            foreach (var r in _carryTable)
+            {
+                if (r.club != clubName) continue;
+                if (r.power01 <= power01)
+                {
+                    if (!foundBelow || r.power01 > below.power01)
+                    {
+                        below = r; foundBelow = true;
+                    }
+                }
+                else
+                {
+                    if (!foundAbove || r.power01 < above.power01)
+                    {
+                        above = r; foundAbove = true;
+                    }
+                }
+            }
+
+            if (!foundBelow && foundAbove) return above.carry;
+            if (foundBelow && !foundAbove) return below.carry;
+            if (!foundBelow) return 50f;
+
+            float span = above.power01 - below.power01;
+            if (span < 0.001f) return below.carry;
+            float t = (power01 - below.power01) / span;
+            return Mathf.Lerp(below.carry, above.carry, t);
         }
     }
 }
