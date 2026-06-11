@@ -1,42 +1,331 @@
+// VersusBot.cs — versus_bot_hardening (H1 + H2 + H3)
+// H1: calibrated club/power from bot_clubs.csv (production stat path carry table).
+// H2: proactive landing probe (Water avoid; Sand discouraged) + layup + ±10°/±20° retarget
+//     + reactive OBReason bias.
+// H3: PutterGreenReader.TryGetSlopeAt slope-break aim offset + power nudge (CSV-gain).
+//
+// Constraints:
+//   - No #if UNITY_EDITOR, no ForceShotCompleteForBot.
+//   - Drives production ShotController external-drag path.
+//   - Bot lives in Golfin.Physics.Viewer (internal BallSM / SetCameraYawRadians access).
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Golfin.Gameplay.Input;
 using Golfin.Gameplay.Loop;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Physics;
+using Golfin.Physics.Math;
 
 namespace Golfin.Physics.Viewer
 {
     /// <summary>
-    /// Runtime bot opponent for 1v1 versus mode (Phase 2a).
-    ///
-    /// Drives shots via the PRODUCTION ShotController external-drag path:
-    ///   BeginExternalDrag() → ramped SetExternalPower() → EndExternalDrag()
-    /// The bot reads the cup position from HoleContext.PinWorld and selects club+power
-    /// using the same SelectShot() heuristic from BotDriver (cited as behavioral reference).
-    ///
-    /// Phase 2a: no error injection. coneFinetune = 0, no aim/power noise.
-    /// The bot plays a competent, straight line so matches reliably resolve end-to-end.
-    /// Phase 2b will layer the difficulty error model (§13 of SPEC).
-    ///
-    /// MUST NOT call ForceShotCompleteForBot.
-    /// MUST NOT be wrapped in #if UNITY_EDITOR.
+    /// Runtime bot opponent for 1v1 versus mode (Phase 2a hardened in versus_bot_hardening).
+    /// Drives shots via the PRODUCTION ShotController external-drag path.
     /// </summary>
     public class VersusBot : MonoBehaviour
     {
         [SerializeField] PhysicsLabController _controller;
         [SerializeField] ShotController       _shotController;
+        [SerializeField] PutterGreenReader    _greenReader;
+
+        // ── H2: reactive OB state ──────────────────────────────────────────
+        // Written by VersusMatchController or caller after each shot resolves.
+        // Public so VersusMatchController can set it if desired; VersusBot also
+        // clears it after applying the bias (one-shot correction).
+        public OBReason? LastOBReason { get; set; }
+
+        // ── H3: green-read CSV config ──────────────────────────────────────
+        // _slopeAimGain: yaw-offset multiplier: aimOffset = -slopeX * dist * gain (radians).
+        // Tuning: target ~1–3° at 5% grade, 8m: 0.05*8*gain = 0.02–0.05 rad → gain ≈ 0.05–0.125.
+        // Chosen value 0.125 gives 0.05 rad ≈ 2.9° on 5% slope at 8m (was 1.5 → 0.6 rad ≈ 34°, ~10× too large).
+        // CSV-tunable: add "# slope_aim_gain=0.125" header line to bot_clubs.csv to override at runtime.
+        private float _slopeAimGain  = 0.125f;  // yaw-offset multiplier: offset = slopeX*dist*gain
+        private float _slopePowerGain = 0.08f;  // power nudge: nudge += slopeZ*dist*gain (positive=uphill)
+
+        // ── H1: carry table ────────────────────────────────────────────────
+        private struct CarryRow { public string club; public float power01; public float carry; }
+        private static List<CarryRow> _carryTable;
+        private static bool           _tableLoaded;
+
+        // Club name map matching calibration harness (0=driver, 1=iron7, 2=wedge, 3=putter).
+        private static readonly string[] ClubNames = { "driver", "iron7", "wedge", "putter" };
+
+        // ── H2: layup config ───────────────────────────────────────────────
+        private const float LayupStep      = 8f;   // m per layup step
+        private const float LayupMinDist   = 10f;  // m minimum layup target
+        private const int   RetargetAngles = 4;    // ±10°, ±20°
+        private static readonly float[] OffsetDegrees = { -10f, 10f, -20f, 20f };
 
         void Awake()
         {
-            if (_controller   == null) _controller   = FindObjectOfType<PhysicsLabController>();
+            if (_controller    == null) _controller    = FindObjectOfType<PhysicsLabController>();
             if (_shotController == null) _shotController = FindObjectOfType<ShotController>();
+            if (_greenReader   == null) _greenReader   = FindObjectOfType<PutterGreenReader>();
         }
+
+        // ── H1: carry table loader ─────────────────────────────────────────
+
+        private void EnsureTableLoaded()
+        {
+            if (_tableLoaded) return;
+            _tableLoaded = true;
+            _carryTable  = new List<CarryRow>(100);
+
+            var csv = Resources.Load<TextAsset>("Data/bot_clubs");
+            if (csv == null)
+            {
+                Debug.LogWarning("[VersusBot] bot_clubs.csv not found — falling back to legacy SelectShot.");
+                return;
+            }
+
+            foreach (var rawLine in csv.text.Split('\n'))
+            {
+                var line = rawLine.Trim();
+                if (string.IsNullOrEmpty(line) || line.StartsWith("#") || line.StartsWith("club,"))
+                    continue;
+                var p = line.Split(',');
+                if (p.Length < 3) continue;
+                if (!float.TryParse(p[1].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float pow)) continue;
+                if (!float.TryParse(p[2].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float carry)) continue;
+                _carryTable.Add(new CarryRow { club = p[0].Trim(), power01 = pow, carry = carry });
+            }
+            Debug.Log($"[VersusBot] Carry table loaded: {_carryTable.Count} rows.");
+        }
+
+        /// <summary>
+        /// H1: select club+power from carry table for a given target distance (meters).
+        /// Uses explicit distance bands to pick the longest realistic club for the distance:
+        ///   > 200m  → driver
+        ///   80-200m → iron7
+        ///   20-80m  → wedge
+        ///   ≤ 20m   → putter
+        /// Then interpolates power from the carry table.
+        /// Falls back to legacy heuristic if table is absent.
+        /// NOTE: the CSV max-carry values are calibrated from the production stat path
+        /// (driver@1.0=433m, iron7@1.0=418m, wedge@1.0=360m) — all clubs can technically
+        /// reach any distance at high power, so distance bands are the practical selector.
+        /// </summary>
+        private void SelectShotCalibrated(float targetDist, out int club, out float power01, out string label)
+        {
+            EnsureTableLoaded();
+
+            if (_carryTable == null || _carryTable.Count == 0)
+            {
+                SelectShotLegacy(targetDist, out club, out power01, out label);
+                return;
+            }
+
+            int putter = PhysicsLabController.PutterIndex; // = 3
+
+            // Putt range.
+            if (targetDist <= 20f)
+            {
+                club    = putter;
+                power01 = InterpolateClubPower("putter", targetDist);
+                label   = $"Putter (calibrated) dist={targetDist:F1}m power={power01:F2}";
+                return;
+            }
+
+            // Full shots: select club by distance band (longest realistic club per range).
+            // Distance band boundaries tuned to Lomond course geometry:
+            //   > 200m: driver (tee shots, long par-4/par-5 approaches)
+            //   80-200m: iron7 (mid-range approaches)
+            //   20-80m: wedge (short approaches, chips)
+            string bestName;
+            int    bestClubIndex;
+            if (targetDist > 200f)
+            {
+                bestName       = "driver";
+                bestClubIndex  = 0;
+            }
+            else if (targetDist > 80f)
+            {
+                bestName       = "iron7";
+                bestClubIndex  = 1;
+            }
+            else
+            {
+                bestName       = "wedge";
+                bestClubIndex  = 2;
+            }
+
+            power01 = InterpolateClubPower(bestName, targetDist);
+            club    = bestClubIndex;
+            label   = $"{bestName} (calibrated, band) dist={targetDist:F1}m power={power01:F2}";
+        }
+
+        private float GetMaxCarry(string clubName)
+        {
+            float max = 0f;
+            foreach (var r in _carryTable)
+                if (r.club == clubName && r.carry > max) max = r.carry;
+            return max;
+        }
+
+        private float InterpolateClubPower(string clubName, float targetDist)
+        {
+            // Find the two bracketing rows; linearly interpolate power01.
+            CarryRow below = default;
+            CarryRow above = default;
+            bool foundBelow = false, foundAbove = false;
+
+            foreach (var r in _carryTable)
+            {
+                if (r.club != clubName) continue;
+                if (r.carry <= targetDist)
+                {
+                    if (!foundBelow || r.carry > below.carry)
+                    {
+                        below = r; foundBelow = true;
+                    }
+                }
+                else
+                {
+                    if (!foundAbove || r.carry < above.carry)
+                    {
+                        above = r; foundAbove = true;
+                    }
+                }
+            }
+
+            if (!foundBelow && foundAbove) return above.power01;
+            if (foundBelow && !foundAbove) return below.power01; // clamp at max
+            if (!foundBelow)               return 0f;
+
+            float span = above.carry - below.carry;
+            if (span < 0.01f) return below.power01;
+            float t = (targetDist - below.carry) / span;
+            return Mathf.Clamp01(Mathf.Lerp(below.power01, above.power01, t));
+        }
+
+        // ── Legacy fallback (original Phase 2a heuristic) ──────────────────
+
+        private void SelectShotLegacy(float dist, out int club, out float power01, out string label)
+        {
+            int putter = PhysicsLabController.PutterIndex;
+            if (dist > 180f)
+            {
+                club = 0; power01 = 1.0f;
+                label = $"Driver full power LEGACY (dist={dist:F0}m)";
+            }
+            else if (dist > 110f)
+            {
+                club = 1; power01 = Mathf.Clamp01(dist / 180f);
+                label = $"Iron7 mid-range LEGACY (dist={dist:F0}m) power={power01:F2}";
+            }
+            else if (dist > 40f)
+            {
+                club = 2; power01 = Mathf.Min(Mathf.Clamp01(dist / 130f), 0.75f);
+                label = $"Wedge approach LEGACY (dist={dist:F0}m) power={power01:F2}";
+            }
+            else if (dist > 15f)
+            {
+                club = 2; power01 = Mathf.Clamp01(dist / 80f);
+                label = $"Wedge chip LEGACY (dist={dist:F0}m) power={power01:F2}";
+            }
+            else if (dist > 6f)
+            {
+                club = putter; power01 = Mathf.Clamp01(dist / 18f);
+                label = $"Putter long putt LEGACY (dist={dist:F0}m) power={power01:F2}";
+            }
+            else
+            {
+                club = putter; power01 = Mathf.Clamp01(dist / 8f);
+                label = $"Putter short putt LEGACY (dist={dist:F0}m) power={power01:F2}";
+            }
+        }
+
+        // ── H2: surface probe helpers ─────────────────────────────────────
+
+        private bool IsAvoidSurface(SurfaceType s)  => s == SurfaceType.Water;
+        private bool IsPlayableSurface(SurfaceType s) =>
+            s == SurfaceType.Fairway || s == SurfaceType.Green || s == SurfaceType.GreenCollar ||
+            s == SurfaceType.Semirough || s == SurfaceType.Rough || s == SurfaceType.Tee ||
+            s == SurfaceType.Sand; // sand (bunker) playable but discouraged
+
+        /// <summary>
+        /// Compute landing XZ position given ball position, aim yaw, and carry distance.
+        /// </summary>
+        private static Vector2 LandingXZ(Vector3 ball, float aimYaw, float carry)
+        {
+            // Aim yaw: 0 = +X, project convention.
+            return new Vector2(
+                ball.x + carry * Mathf.Cos(aimYaw),
+                ball.z + carry * Mathf.Sin(aimYaw));
+        }
+
+        /// <summary>
+        /// Probe the surface at a world-XZ position.
+        /// Returns SurfaceType.Fairway as fallback if surface provider is unavailable
+        /// (BakedZoneClassifier.DefaultSurface = Fairway — positions outside all polygons).
+        /// Note: world-bounds OB is NOT detectable via Classify (returns Fairway outside polygons);
+        /// rely on reactive LastOBReason for that case.
+        /// </summary>
+        private SurfaceType ProbeSurface(float worldX, float worldZ)
+        {
+            var provider = _controller?.GetSurfaces();
+            if (provider == null) return SurfaceType.Fairway;
+            try
+            {
+                return provider.Classify(fp.FromFloat(worldX), fp.FromFloat(worldZ));
+            }
+            catch
+            {
+                return SurfaceType.Fairway;
+            }
+        }
+
+        /// <summary>
+        /// H2: try to find a safe aim yaw + carry distance.
+        /// Returns true if a safe landing was found; outputs safe yaw and distance.
+        /// </summary>
+        private bool TrySafeLanding(Vector3 ball, float aimYaw, float carry,
+                                     out float safeYaw, out float safeDist)
+        {
+            safeYaw = aimYaw;
+            safeDist = carry;
+
+            // Step 1: probe straight line, walk back from carry until safe.
+            for (float d = carry; d >= LayupMinDist; d -= LayupStep)
+            {
+                var land = LandingXZ(ball, aimYaw, d);
+                var surf = ProbeSurface(land.x, land.y);
+                if (IsPlayableSurface(surf) && !IsAvoidSurface(surf))
+                {
+                    safeDist = d;
+                    return true;
+                }
+            }
+
+            // Step 2: try rotated aim lines.
+            for (int i = 0; i < OffsetDegrees.Length; i++)
+            {
+                float offsetYaw = aimYaw + OffsetDegrees[i] * Mathf.Deg2Rad;
+                for (float d = carry; d >= LayupMinDist; d -= LayupStep)
+                {
+                    var land = LandingXZ(ball, offsetYaw, d);
+                    var surf = ProbeSurface(land.x, land.y);
+                    if (IsPlayableSurface(surf) && !IsAvoidSurface(surf))
+                    {
+                        safeYaw  = offsetYaw;
+                        safeDist = d;
+                        return true;
+                    }
+                }
+            }
+
+            // No safe line found; return original (will likely go OB, reactive path will correct).
+            return false;
+        }
+
+        // ── Main shot coroutine ────────────────────────────────────────────
 
         /// <summary>
         /// Drives one complete bot shot toward the cup.
         /// Called by VersusMatchController during the bot's AwaitShot phase.
-        /// Fires OnShotComplete on the BallStateMachine when the shot resolves;
-        /// VersusMatchController's subscription handles the rest.
         /// </summary>
         public IEnumerator TakeShot()
         {
@@ -52,20 +341,191 @@ namespace Golfin.Physics.Viewer
             Vector3 flat = new Vector3(cup.x - ball.x, 0f, cup.z - ball.z);
             float   dist = flat.magnitude;
 
-            // ── 2. Select club + power via distance-aware heuristic (BUG B fix iter-5) ──
-            SelectShot(dist, out int club, out float power01, out string label);
+            // ── 2. Compute base aim yaw ────────────────────────────────────
+            float baseYaw = Mathf.Atan2(flat.z, flat.x);
+            float aimYaw  = baseYaw;
 
-            Debug.Log($"[VersusBot] TakeShot: ball={ball:F1} cup={cup:F1} dist={dist:F1}m — {label}");
+            // ── H2: reactive OB bias ───────────────────────────────────────
+            // If the last shot returned OBReason, bias aim away from that direction.
+            if (LastOBReason.HasValue)
+            {
+                // Simple correction: apply a ±15° randomized offset away from previous line.
+                // The proactive Classify probe will further refine the landing.
+                float bias = (Random.value > 0.5f ? 1f : -1f) * 15f * Mathf.Deg2Rad;
+                aimYaw  += bias;
+                Debug.Log($"[VersusBot] H2 reactive: OBReason={LastOBReason.Value}, applying bias={bias * Mathf.Rad2Deg:F0}°");
+                LastOBReason = null; // consume
+            }
 
-            // ── 3. Set club; clear any stat-bundle override so bus resolves live stats ──
+            // ── 3. Select club + power (H1 calibrated) ─────────────────────
+            SelectShotCalibrated(dist, out int club, out float power01, out string label);
+            bool isPutt = club == PhysicsLabController.PutterIndex;
+
+            // ── H3b: off-green putter override (putter-fall-through guard) ──
+            // When the bot selects Putter (dist ≤ 20m) but the ball is NOT on
+            // the green or collar, the ShotController fires an aerial shot
+            // (isPuttGate.surfaceOk=false). Aerial putter shots can start
+            // slightly below the heightmap surface → ball falls through terrain
+            // (hits=0, reaches y≈-2685) → bot stuck in recovery loop.
+            // Fix: fall back to Wedge for dist > 3m when ball is off-green.
+            // Wedge aerial at low power carries correctly and lands without
+            // height-map depenetration issues.
+            if (isPutt && dist > 3f)
+            {
+                var ballSurface = ProbeSurface(ball.x, ball.z);
+                if (ballSurface != SurfaceType.Green && ballSurface != SurfaceType.GreenCollar)
+                {
+                    club    = 2; // wedge
+                    power01 = InterpolateClubPower("wedge", dist);
+                    label   = $"wedge (off-green override, surface={ballSurface}) dist={dist:F1}m power={power01:F2}";
+                    isPutt  = false;
+                    Debug.Log($"[VersusBot] H3b off-green override: surface={ballSurface} at ({ball.x:F1},{ball.z:F1}), " +
+                              $"using wedge for {dist:F1}m instead of putter (prevents aerial fall-through).");
+                }
+            }
+
+            // ── H2: proactive landing probe (non-putt only) ─────────────────
+            // Probe both intermediate flight-path points (every LayupStep) AND the landing point.
+            // This catches holes where the ball must fly OVER water (mid-fairway hazard) even
+            // if the landing point itself is safe beyond the water.
+            // Example: Hole 18 (water 100-188m along tee→pin, pin 223m) — ball flies through
+            // water at ~106m even though it lands safely at 223m.
+            if (!isPutt && dist > LayupMinDist)
+            {
+                float estimatedCarry = dist; // calibrated club carries ≈ to target distance
+                bool  hazardFound = false;
+                float hazardDist  = estimatedCarry;
+
+                // 1. Probe every LayupStep along the flight path to detect mid-flight water.
+                for (float d = LayupMinDist; d <= estimatedCarry; d += LayupStep)
+                {
+                    var midXZ   = LandingXZ(ball, aimYaw, d);
+                    var midSurf = ProbeSurface(midXZ.x, midXZ.y);
+                    if (IsAvoidSurface(midSurf))
+                    {
+                        hazardFound = true;
+                        hazardDist  = d;
+                        Debug.Log($"[VersusBot] H2 proactive: {midSurf} detected at {d:F0}m ({midXZ.x:F1},{midXZ.y:F1}) along flight path — laying up short of water");
+                        break;
+                    }
+                }
+
+                // H2 fly-over check: if mid-flight water detected but the LANDING POINT is safe,
+                // the ball will arc over the hazard — no layup needed.
+                // Root cause of layup loop: from 83m with water at 18m, the full shot (83m) lands
+                // on the green safely, but the probe at 18m set hazardFound. The correct behaviour
+                // is to fly over. Only lay up when the landing point itself is in the hazard.
+                if (hazardFound)
+                {
+                    var flyOverLandXZ   = LandingXZ(ball, aimYaw, estimatedCarry);
+                    var flyOverLandSurf = ProbeSurface(flyOverLandXZ.x, flyOverLandXZ.y);
+                    if (!IsAvoidSurface(flyOverLandSurf))
+                    {
+                        hazardFound = false; // landing is safe — fly over
+                        Debug.Log($"[VersusBot] H2 fly-over: mid-flight water at {hazardDist:F0}m but landing at {estimatedCarry:F0}m is {flyOverLandSurf} — using full shot (fly over)");
+                    }
+                }
+
+                // 2. Also check the actual landing point (catches pin-in-water edge cases).
+                if (!hazardFound)
+                {
+                    var landXZ   = LandingXZ(ball, aimYaw, estimatedCarry);
+                    var landSurf = ProbeSurface(landXZ.x, landXZ.y);
+                    if (IsAvoidSurface(landSurf))
+                    {
+                        hazardFound = true;
+                        hazardDist  = estimatedCarry;
+                        Debug.Log($"[VersusBot] H2 proactive: landing surface={landSurf} at ({landXZ.x:F1},{landXZ.y:F1}) → laying up to safe distance (was {estimatedCarry:F1}m)");
+                    }
+                }
+
+                if (hazardFound)
+                {
+                    // TrySafeLanding walks back from the hazard entry point to find safe ground.
+                    if (TrySafeLanding(ball, aimYaw, hazardDist, out float safeYaw, out float safeDist))
+                    {
+                        aimYaw = safeYaw;
+                        // H2 layup putter-floor: SelectShotCalibrated picks putter for dist ≤ 20m.
+                        // If safeDist ≤ 20m, SetClub(3) triggers EnterPutterMode() which teleports
+                        // the ball to the LabScaffold flat-green origin (0,0,0) — shot fires from
+                        // wrong position, falls through terrain, bot stuck.
+                        // Fix: floor safeDist to 22m so a layup always targets wedge/iron, never putter.
+                        const float LayupPutterFloor = 22f;
+                        if (safeDist < LayupPutterFloor)
+                        {
+                            Debug.Log($"[VersusBot] H2 layup putter-floor: safeDist={safeDist:F1}m clamped to {LayupPutterFloor}m (prevents EnterPutterMode teleport)");
+                            safeDist = LayupPutterFloor;
+                        }
+                        // Re-select club+power for the new (shorter) safe distance.
+                        SelectShotCalibrated(safeDist, out club, out power01, out label);
+                        isPutt = club == PhysicsLabController.PutterIndex;
+                        label += $" [laid up to {safeDist:F0}m]";
+                        float aimDeltaDeg = (safeYaw - baseYaw) * Mathf.Rad2Deg;
+                        Debug.Log($"[VersusBot] H2 layup resolved: safeDist={safeDist:F1}m safeYaw={safeYaw*Mathf.Rad2Deg:F1}° (delta={aimDeltaDeg:+0.1;-0.1}° from cup line)");
+                    }
+                    else
+                    {
+                        Debug.Log("[VersusBot] H2: no safe landing found — using original line (reactive OBReason will catch).");
+                    }
+                }
+            }
+
+            // ── H3: green-slope read (putts only) ──────────────────────────
+            // SAFETY: only apply slope corrections when:
+            //   (a) mag is within a realistic green-slope range (< 0.35 = 35% grade cap),
+            //   (b) the ball is within _greenReader.BakedCellCount > 0 (green baked).
+            // This guards against degenerate cells at the edge of the baked region (or when
+            // the ball is off the green) that can have artificially large slopeX/slopeZ values.
+            // Root cause of iter-2's 100%-power putt: the ball was on Hole18's green after
+            // tree recovery; TryGetSlopeAt found the nearest baked cell which had a large
+            // uphillComponent; powerNudge = uphillComponent * 9.8 * 0.08 pushed power to 1.0.
+            if (isPutt && _greenReader != null && _greenReader.BakedCellCount > 0)
+            {
+                if (_greenReader.TryGetSlopeAt(ball.x, ball.z, out float slopeX, out float slopeZ, out float mag))
+                {
+                    // Only apply if slope is in a realistic green range (0.01–0.35 grade fraction).
+                    // Values > 0.35 are outside realistic green design and likely a degenerate cell.
+                    const float MagMin = 0.01f;
+                    const float MagMax = 0.35f;
+                    if (mag > MagMin && mag < MagMax)
+                    {
+                        // Aim offset: push aim uphill of the fall line proportional to slopeX.
+                        // slopeX > 0 means terrain rises in +X → ball will break toward -X.
+                        // To play the break, aim toward +X (uphill) by slopeX*dist*gain.
+                        float aimOffset = -slopeX * dist * _slopeAimGain;
+                        aimYaw += aimOffset;
+
+                        // Power nudge: uphill (slopeZ<0 in forward direction) needs more power.
+                        // Compute component of slope along aim direction.
+                        float aimCos  = Mathf.Cos(baseYaw);
+                        float aimSin  = Mathf.Sin(baseYaw);
+                        float uphillComponent = slopeX * aimCos + slopeZ * aimSin;
+                        float powerNudge = uphillComponent * dist * _slopePowerGain;
+                        // Cap nudge to ±0.15 (15% power swing) — prevents any single cell from
+                        // dramatically changing the computed power even if uphillComponent is large.
+                        powerNudge = Mathf.Clamp(powerNudge, -0.15f, 0.15f);
+                        power01 = Mathf.Clamp01(power01 + powerNudge);
+
+                        Debug.Log($"[VersusBot] H3 slope: slopeX={slopeX:F3} slopeZ={slopeZ:F3} mag={mag:F3} " +
+                                  $"aimOffset={aimOffset*Mathf.Rad2Deg:F2}° powerNudge={powerNudge:F3} → power={power01:F2}");
+                    }
+                    else
+                    {
+                        Debug.Log($"[VersusBot] H3 slope: mag={mag:F3} outside [{MagMin},{MagMax}] — skipping slope correction (degenerate cell guard).");
+                    }
+                }
+            }
+
+            Debug.Log($"[VersusBot] TakeShot: ball={ball:F1} cup={cup:F1} dist={dist:F1}m aimYaw={aimYaw*Mathf.Rad2Deg:F1}° — {label}");
+
+            // ── 4. Set club; clear any stat-bundle override so bus resolves live stats ──
             _controller.SetClub(club);
             _shotController.ClearStatBundleOverride();
 
-            // ── 4. Orient camera yaw toward cup ─────────────────────────────
-            float yaw = Mathf.Atan2(flat.z, flat.x);
-            _controller.SetCameraYawRadians(yaw);
+            // ── 5. Orient camera yaw ────────────────────────────────────────
+            _controller.SetCameraYawRadians(aimYaw);
 
-            // ── 5. Gate on ShotController.State == Idle ──────────────────────
+            // ── 6. Gate on ShotController.State == Idle ──────────────────────
             {
                 float gateElapsed = 0f;
                 while (_shotController.State != ShotState.Idle && gateElapsed < 4f)
@@ -80,7 +540,7 @@ namespace Golfin.Physics.Viewer
                 }
             }
 
-            // ── 6. Gate on BallStateMachine.State == Aiming ─────────────────
+            // ── 7. Gate on BallStateMachine.State == Aiming ─────────────────
             var sm = _controller.BallSM;
             if (sm != null)
             {
@@ -94,8 +554,7 @@ namespace Golfin.Physics.Viewer
                     Debug.LogWarning($"[VersusBot] TakeShot: BallSM never reached Aiming (state={sm.State})");
             }
 
-            // ── 7. Drive the shot via BeginExternalDrag → ramp → EndExternalDrag ──
-            // Mirror BotDriver.PlayHoleToCup ramp: 0.85s visible handle pull-down.
+            // ── 8. Drive the shot via BeginExternalDrag → ramp → EndExternalDrag ──
             _shotController.BeginExternalDrag();
 
             const float rampSeconds = 0.85f;
@@ -108,77 +567,11 @@ namespace Golfin.Physics.Viewer
             }
             _shotController.SetExternalPower(power01, 0f);
 
-            // Brief hold at full pull (mirrors BotDriver.PlayHoleToCup: 0.18s).
             yield return new WaitForSecondsRealtime(0.18f);
 
             _shotController.EndExternalDrag();
 
             Debug.Log($"[VersusBot] TakeShot: shot fired — club={club} power={power01:F2}");
-            // OnShotComplete on BallStateMachine fires when the ball resolves.
-            // VersusMatchController is subscribed and handles the result.
-        }
-
-        /// <summary>
-        /// Select club index and power for a shot of the given horizontal distance.
-        /// Distance-aware from stroke 1 (BUG B fix iter-5): the isFirstStroke=Driver override
-        /// has been removed so par-3 tee shots (~110m) correctly use Iron7 instead of Driver.
-        ///
-        /// Tier thresholds (tuned against Lomond real flight data):
-        ///   dist > 180m → Driver full power  (par-5/long par-4 tees)
-        ///   dist > 110m → Iron7, power = dist/180  (mid par-4, short par-4, par-3 tees ~110-180m)
-        ///   dist > 40m  → Wedge approach
-        ///   dist > 15m  → Wedge chip
-        ///   dist > 6m   → Putter long putt
-        ///   else        → Putter short putt
-        ///
-        /// Club indices: 0=Driver, 1=Iron7, 2=Wedge, 3=Putter (PhysicsLabController.PutterIndex)
-        /// </summary>
-        void SelectShot(float dist, out int club, out float power01, out string label)
-        {
-            int putter = PhysicsLabController.PutterIndex;
-
-            if (dist > 180f)
-            {
-                // Long tee (par-5 / long par-4): Driver full power.
-                club    = 0;
-                power01 = 1.0f;
-                label   = $"Driver full power (dist={dist:F0}m)";
-            }
-            else if (dist > 110f)
-            {
-                // Mid-range (par-4 / par-3 tee ~110-180m): Iron7, power scaled by distance.
-                club    = 1;
-                power01 = Mathf.Clamp01(dist / 180f);
-                label   = $"Iron7 mid-range (dist={dist:F0}m) power={power01:F2}";
-            }
-            else if (dist > 40f)
-            {
-                // Short approach: Wedge.
-                club    = 2;
-                power01 = Mathf.Min(Mathf.Clamp01(dist / 130f), 0.75f);
-                label   = $"Wedge approach (dist={dist:F0}m) power={power01:F2}";
-            }
-            else if (dist > 15f)
-            {
-                // Chip: Wedge low power.
-                club    = 2;
-                power01 = Mathf.Clamp01(dist / 80f);
-                label   = $"Wedge chip (dist={dist:F0}m) power={power01:F2}";
-            }
-            else if (dist > 6f)
-            {
-                // Long putt.
-                club    = putter;
-                power01 = Mathf.Clamp01(dist / 18f);
-                label   = $"Putter long putt (dist={dist:F0}m) power={power01:F2}";
-            }
-            else
-            {
-                // Short putt.
-                club    = putter;
-                power01 = Mathf.Clamp01(dist / 8f);
-                label   = $"Putter short putt (dist={dist:F0}m) power={power01:F2}";
-            }
         }
     }
 }

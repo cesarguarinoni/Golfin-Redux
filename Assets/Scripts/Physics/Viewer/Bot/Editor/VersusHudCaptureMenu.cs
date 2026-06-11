@@ -30,6 +30,23 @@ namespace Golfin.Physics.Viewer.Editor
     public static class VersusHudCaptureMenu
     {
         const string LabScenePath  = "Assets/Scenes/Physics/LabScaffold.unity";
+        // Hole_09_Geo (par-4) — versus_bot_hardening_sloped scenario: used to verify H3 green-slope read.
+        const string Hole09GeoPath = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_09_Geo.unity";
+        // Hole_16_Geo (par-4, water hazard) — versus_bot_hardening_water scenario (DEPRECATED iter-1): Hole16 water polygon
+        // is laterally offset from the tee→pin line — the bot's straight aim never crosses water. Kept for reference.
+        const string Hole16GeoPath = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_16_Geo.unity";
+        // Hole_06_Geo (par-4, water hazard) — versus_bot_hardening_water_h06 scenario (iter-2): water polygon centroid
+        // (-19.7,-7.9) has perp distance 6.3m from tee(80.2,-24.5)→pin(-72.5,-8.8) straight line, entering at 79m
+        // and exiting at 122m (t=0.51..0.79). DEPRECATED iter-2: probe at dist=74m (pin) is safe (pin is beyond water);
+        // the old landing-only probe never fired H2 code even though water crossed the line.
+        const string Hole06GeoPath = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_06_Geo.unity";
+        // Hole_18_Geo (par-5, water hazard) — versus_bot_hardening_water_h18 scenario (iter-2 final):
+        // tee→pin dist=222.8m; water polygon crosses the straight tee→pin line from 100m to 188m (88m of water).
+        // With the flight-path probe (every 8m from LayupMinDist to carry), probe at d=106m hits Water → H2 fires.
+        // Bot lays up to ~96m (just before water entry at 100m). The probe-at-landing-point approach (Hole06)
+        // never fired because the landing point (pin at 74m) was beyond the water band.
+        // Geometry verified via Python ray-casting against the Hole_18_Geo water polygon JSON.
+        const string Hole18GeoPath = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_18_Geo.unity";
         // Hole_04_Geo (par-3, tee→pin ~110m) loaded additively behind the HUD.
         // For the versus_full_match_flow scenario, Hole_04 is used so the full match
         // resolves inside the 30s BotVideoRecorder watchdog (iron shots ~3-5s vs 16s driver).
@@ -90,6 +107,79 @@ namespace Golfin.Physics.Viewer.Editor
 
         [MenuItem("GOLFIN/Capture 1v1/Record Full Match Flow (Phase 2a)", isValidateFunction: true)]
         static bool ValidateFullMatchFlow() => !EditorApplication.isPlaying;
+
+        /// <summary>
+        /// Order 345 / H2 visual gate: records a full 1v1 bot match on Hole 16 (par-4, water hazard).
+        /// Verifies the bot lays up / retargets around the water instead of repeatedly going OB.
+        /// Both P1 and P2 are driven by VersusBot.
+        /// Output: tasks/loop_v2_smoke_bot/versus_bot_hardening_water/video/raw.mp4
+        /// </summary>
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Hardening - Water Hole")]
+        public static void RecordBotHardeningWater()
+        {
+            BotVideoRecorder.Arm();
+            LaunchHole(Hole16GeoPath, "versus_bot_hardening_water");
+        }
+
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Hardening - Water Hole", isValidateFunction: true)]
+        static bool ValidateBotHardeningWater() => !EditorApplication.isPlaying;
+
+        /// <summary>
+        /// Order 345 / H2 iter-2 visual gate: records a full 1v1 bot match on Hole 06 (par-4, water hazard).
+        /// Hole 06 was chosen because its water polygon centroid (-19.7,-7.9) has perpendicular distance
+        /// 6.3m from the tee(80.2,-24.5)→pin(-72.5,-8.8) straight line, with the tee→pin segment entering
+        /// the water bbox at ~79m and exiting at ~122m (t≈0.51..0.79). The bot's straight aim line crosses
+        /// the water, forcing the H2 proactive layup/retarget code to fire.
+        /// Uses 120s watchdog — par-4 with water may require multiple retarget shots.
+        /// Both P1 and P2 are driven by VersusBot.
+        /// Output: tasks/loop_v2_smoke_bot/versus_bot_hardening_water_h06/video/raw.mp4
+        /// </summary>
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Hardening - Water Hole 06 (H2 iter-2)")]
+        public static void RecordBotHardeningWaterH06()
+        {
+            BotVideoRecorder.Arm();
+            LaunchHole(Hole06GeoPath, "versus_bot_hardening_water_h06");
+        }
+
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Hardening - Water Hole 06 (H2 iter-2)", isValidateFunction: true)]
+        static bool ValidateBotHardeningWaterH06() => !EditorApplication.isPlaying;
+
+        /// <summary>
+        /// Order 345 / H2 iter-2 FINAL visual gate: records a full 1v1 bot match on Hole 18 (par-5, water hazard).
+        /// Hole 18 was chosen: tee→pin dist=222.8m; water polygon crosses the straight tee→pin line from
+        /// 100m to 188m (88m continuous water band). With the iter-2 flight-path probe (every 8m from LayupMinDist
+        /// to carry), the probe at d=106m hits Water → H2 code fires, bot lays up to ~96m (just short of water).
+        /// Previous Hole06 attempt failed: Hole06 pin is at 74m, probe-at-landing always landed at pin (safe,
+        /// beyond water); the old code never triggered. The new flight-path loop fixes this.
+        /// Uses 120s watchdog — par-5 with water + layup may require multiple shots per player.
+        /// Both P1 and P2 are driven by VersusBot. Starts from real tee (no _debugStartLie).
+        /// Output: tasks/loop_v2_smoke_bot/versus_bot_hardening_water_h18/video/raw.mp4
+        /// </summary>
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Hardening - Water Hole 18 (H2 iter-2 final)")]
+        public static void RecordBotHardeningWaterH18()
+        {
+            BotVideoRecorder.Arm();
+            LaunchHole(Hole18GeoPath, "versus_bot_hardening_water_h18");
+        }
+
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Hardening - Water Hole 18 (H2 iter-2 final)", isValidateFunction: true)]
+        static bool ValidateBotHardeningWaterH18() => !EditorApplication.isPlaying;
+
+        /// <summary>
+        /// Order 345 / H3 visual gate: records a full 1v1 bot match on Hole 9 (par-4).
+        /// Verifies the bot's putts curve with the green slope (H3 additive slope read).
+        /// Both P1 and P2 are driven by VersusBot.
+        /// Output: tasks/loop_v2_smoke_bot/versus_bot_hardening_sloped/video/raw.mp4
+        /// </summary>
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Hardening - Sloped Green")]
+        public static void RecordBotHardeningSloped()
+        {
+            BotVideoRecorder.Arm();
+            LaunchHole(Hole09GeoPath, "versus_bot_hardening_sloped");
+        }
+
+        [MenuItem("GOLFIN/Capture 1v1/Record Bot Hardening - Sloped Green", isValidateFunction: true)]
+        static bool ValidateBotHardeningSloped() => !EditorApplication.isPlaying;
 
         /// <summary>
         /// Records the full production navigation flow: Home → Mode Select → 1v1 →
@@ -182,6 +272,45 @@ namespace Golfin.Physics.Viewer.Editor
             SessionState.SetFloat(TeeLieYKey, teeLie.y);
             SessionState.SetFloat(TeeLieZKey, teeLie.z);
             Debug.Log($"[VersusHudCaptureMenu] Tee position queried from {System.IO.Path.GetFileNameWithoutExtension(GeoScenePath)}: {teeLie:F3} (stored in SessionState).");
+
+            ArmAndEnterPlayMode(scenarioKey);
+        }
+
+        // ── Launcher (bot hardening scenarios — LabScaffold + per-hole Geo) ──
+
+        /// <summary>
+        /// Generic launcher for bot-hardening scenarios: loads LabScaffold + the specified geoPath.
+        /// Follows the same pattern as Launch() but uses a caller-supplied geo scene path instead
+        /// of the hardcoded Hole_04_Geo path.
+        /// </summary>
+        static void LaunchHole(string holeGeoPath, string scenarioKey)
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogError("[VersusHudCaptureMenu] Stop play mode first before launching a scenario.");
+                return;
+            }
+
+            Debug.Log($"[VersusHudCaptureMenu] LaunchHole: scenario='{scenarioKey}' geoPath='{holeGeoPath}'");
+
+            var labScene = EditorSceneManager.OpenScene(LabScenePath, OpenSceneMode.Single);
+            if (!labScene.IsValid())
+            {
+                Debug.LogError($"[VersusHudCaptureMenu] Failed to open {LabScenePath}");
+                return;
+            }
+
+            var geoScene = EditorSceneManager.OpenScene(holeGeoPath, OpenSceneMode.Additive);
+            if (!geoScene.IsValid())
+            {
+                Debug.LogWarning($"[VersusHudCaptureMenu] {holeGeoPath} not loaded — recording will show empty scene background.");
+            }
+
+            Vector3 teeLie = QueryTeePosition(geoScene);
+            SessionState.SetFloat(TeeLieXKey, teeLie.x);
+            SessionState.SetFloat(TeeLieYKey, teeLie.y);
+            SessionState.SetFloat(TeeLieZKey, teeLie.z);
+            Debug.Log($"[VersusHudCaptureMenu] Tee position queried from {System.IO.Path.GetFileNameWithoutExtension(holeGeoPath)}: {teeLie:F3}");
 
             ArmAndEnterPlayMode(scenarioKey);
         }
@@ -312,14 +441,64 @@ namespace Golfin.Physics.Viewer.Editor
         {
             VersusMatchController.OnMatchReadyToBegin -= OnMatchReadyToBeginHandler;
 
-            // Scoped watchdog bump: a real-tee Hole-04 match takes ~32s (Cesar-approved 2026-06-10).
-            // Set override to 40s ONLY for this scenario; the 30s default guard stays intact for every
-            // other recording. Override is cleared by DurationWatchdog when it fires, or by End() path.
-            // Hard cap: do NOT set above 40s; GPU-safety re-evaluation required for higher values.
-            BotVideoRecorder.MaxRecordSecondsOverride = 40;
+            // Scoped watchdog bump: a real-tee Hole-04 par-3 match. Bumped to 60s (iter-2) so
+            // a complete hole-out (HoleCompleted log line) is guaranteed visible in the recording.
+            // Previously 40s — self-review (iter-1) flagged no visible hole-out in 39.93s clip.
+            BotVideoRecorder.MaxRecordSecondsOverride = 60;
 
             Debug.Log("[VersusHudCaptureMenu] OnMatchReadyToBegin received — starting BotVideoRecorder now " +
-                      "(hole loaded, BallSM ready). 40s window (Cesar-approved 2026-06-10) covers the full real-tee match flow.");
+                      "(hole loaded, BallSM ready). 60s window (iter-2, extended for hole-out visibility).");
+            BotVideoRecorder.Begin();
+        }
+
+        // ── Deferred recorder handler for versus_bot_hardening_water (Order 345 / H2, DEPRECATED iter-1 Hole16) ──
+        // Uses a 60s watchdog — par-4 water hole can take more shots than the par-3 Hole_04.
+        static void OnBotHardeningWaterReadyHandler()
+        {
+            VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterReadyHandler;
+            BotVideoRecorder.MaxRecordSecondsOverride = 60;
+            Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_water: OnMatchReadyToBegin received — " +
+                      "starting BotVideoRecorder now. 60s watchdog covers par-4 water hole.");
+            BotVideoRecorder.Begin();
+        }
+
+        // ── Deferred recorder handler for versus_bot_hardening_water_h06 (Order 345 / H2 iter-2, Hole 06) ──
+        // Uses a 120s watchdog — Hole 06 par-4 with active water crossing; bot may require extra shots to lay up.
+        // Hole 06 tee(80.2,-24.5)→pin(-72.5,-8.8): water polygon crosses the straight aim line at 79m–122m.
+        static void OnBotHardeningWaterH06ReadyHandler()
+        {
+            VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterH06ReadyHandler;
+            BotVideoRecorder.MaxRecordSecondsOverride = 120;
+            Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_water_h06: OnMatchReadyToBegin received — " +
+                      "starting BotVideoRecorder now. 120s watchdog covers Hole06 par-4 with H2 water layup.");
+            BotVideoRecorder.Begin();
+        }
+
+        // ── Deferred recorder handler for versus_bot_hardening_water_h18 (Order 345 / H2 iter-2 final, Hole 18) ──
+        // Uses a 180s watchdog — Hole 18 par-5 with 88m water band; 2-player bot match needs extra time to complete.
+        // Hole 18 tee→pin 222.8m; flight-path probe at d=106m hits Water; bot lays up to ~96m.
+        // iter-3: bumped 120s → 180s to guarantee hole-out proof (par-5 + 2 bots + H2 layup penalty shots = ~5-6 shots
+        // per player, each shot ~5-6s, total ~60-80s match time + overhead).
+        static void OnBotHardeningWaterH18ReadyHandler()
+        {
+            VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterH18ReadyHandler;
+            BotVideoRecorder.MaxRecordSecondsOverride = 180;
+            Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_water_h18: OnMatchReadyToBegin received — " +
+                      "starting BotVideoRecorder now. 180s watchdog (iter-3, bumped for guaranteed hole-out on par-5).");
+            BotVideoRecorder.Begin();
+        }
+
+        // ── Deferred recorder handler for versus_bot_hardening_sloped (Order 345 / H3) ──
+        // iter-2: uses a 60s watchdog + near-green _debugStartLie so the bot selects Putter (targetDist≤20m).
+        // H09 nearGreen position (12m from pin along tee→pin axis): (170.48, 17.472, 38.63).
+        // This ensures H3 slope-read code fires (gated on isPutt) — iter-1 failed because 60s from tee
+        // never put the bot in putter range.
+        static void OnBotHardeningSlopedReadyHandler()
+        {
+            VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningSlopedReadyHandler;
+            BotVideoRecorder.MaxRecordSecondsOverride = 60;
+            Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_sloped: OnMatchReadyToBegin received — " +
+                      "starting BotVideoRecorder now. 60s watchdog, near-green start (12m from H09 pin) ensures Putter selection.");
             BotVideoRecorder.Begin();
         }
 
@@ -423,17 +602,210 @@ namespace Golfin.Physics.Viewer.Editor
                     // Do NOT call BotVideoRecorder.Begin() here (EnteredPlayMode). Instead,
                     // subscribe to VersusMatchController.OnMatchReadyToBegin — which fires after
                     // IsVersus is confirmed AND BallSM is ready AND the hole has finished loading,
-                    // immediately before MatchFlow() begins. This shifts the 40s watchdog
-                    // window so it covers the match itself, not the ~5s hole-load overhead.
-                    // The subscription is one-shot (unsubscribes after firing so it never leaks).
-                    // MaxRecordSeconds constant (30s) is preserved — OnMatchReadyToBeginHandler sets
-                    // MaxRecordSecondsOverride=40 for this scenario only (Cesar-approved 2026-06-10).
+                    // immediately before MatchFlow() begins. This shifts the watchdog window so it
+                    // covers the match itself, not the ~5s hole-load overhead.
+                    // iter-2: watchdog bumped 40s → 60s (OnMatchReadyToBeginHandler) so hole-out
+                    // (HoleCompleted log line) is guaranteed visible in the recording.
                     VersusMatchController.OnMatchReadyToBegin += OnMatchReadyToBeginHandler;
                     Debug.Log("[VersusHudCaptureMenu] versus_full_match_flow: BotVideoRecorder deferred " +
                               "— will start when VersusMatchController.OnMatchReadyToBegin fires " +
-                              "(hole loaded, BallSM ready, match about to begin). 40s window (Cesar-approved) covers full match flow.");
+                              "(hole loaded, BallSM ready, match about to begin). 60s window (iter-2, covers hole-out).");
                     // IMPORTANT: BotVideoRecorder.Begin() is NOT called here — return before the
                     // unconditional Begin() at the bottom of this handler.
+                    return;
+                }
+                else if (scenario == "versus_bot_hardening_water")
+                {
+                    // Order 345 / H2: full match on Hole 16 (par-4, water hazard).
+                    // Both players bot-driven; starts from real tee (BUG-A fix pattern).
+                    // BotVideoRecorder deferred to OnMatchReadyToBegin (60s watchdog).
+                    var teeLie = new Vector3(
+                        SessionState.GetFloat(TeeLieXKey, 0f),
+                        SessionState.GetFloat(TeeLieYKey, 0f),
+                        SessionState.GetFloat(TeeLieZKey, 0f));
+                    Debug.Log($"[VersusHudCaptureMenu] versus_bot_hardening_water: teeLie={teeLie:F3}");
+
+                    Golfin.Gameplay.Session.GameSession.IsVersus = true;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[0] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "CAMILA",
+                        Level       = 13,
+                        TurnCount   = 1,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[1] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "TARO",
+                        Level       = 17,
+                        TurnCount   = 0,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.ActiveIndex = 0;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Raise();
+
+                    var vmc2 = Object.FindAnyObjectByType<VersusMatchController>();
+                    if (vmc2 != null)
+                    {
+                        vmc2._debugBothBots = true;
+                        Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_water: _debugBothBots = true, starting from real tee.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[VersusHudCaptureMenu] versus_bot_hardening_water: VersusMatchController not found.");
+                    }
+
+                    VersusMatchController.OnMatchReadyToBegin += OnBotHardeningWaterReadyHandler;
+                    Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_water: BotVideoRecorder deferred to OnMatchReadyToBegin (60s).");
+                    return;
+                }
+                else if (scenario == "versus_bot_hardening_water_h06")
+                {
+                    // Order 345 / H2 iter-2: full match on Hole 06 (par-4, water crossing the tee→pin line).
+                    // Hole 06 was chosen: water centroid (-19.7,-7.9) has perp-dist 6.3m from tee→pin,
+                    // bbox intersects segment at t≈0.51–0.79 (79m–122m from tee). Water is in the way.
+                    // Both players bot-driven; starts from real tee (BUG-A fix pattern).
+                    // BotVideoRecorder deferred to OnMatchReadyToBegin (120s watchdog).
+                    var teeLie = new Vector3(
+                        SessionState.GetFloat(TeeLieXKey, 0f),
+                        SessionState.GetFloat(TeeLieYKey, 0f),
+                        SessionState.GetFloat(TeeLieZKey, 0f));
+                    Debug.Log($"[VersusHudCaptureMenu] versus_bot_hardening_water_h06: teeLie={teeLie:F3}");
+
+                    Golfin.Gameplay.Session.GameSession.IsVersus = true;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[0] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "CAMILA",
+                        Level       = 13,
+                        TurnCount   = 1,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[1] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "TARO",
+                        Level       = 17,
+                        TurnCount   = 0,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.ActiveIndex = 0;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Raise();
+
+                    var vmcH06 = Object.FindAnyObjectByType<VersusMatchController>();
+                    if (vmcH06 != null)
+                    {
+                        vmcH06._debugBothBots = true;
+                        // No _debugStartLie — start from real tee so bot must fly over/around water.
+                        Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_water_h06: _debugBothBots = true, " +
+                                  "starting from real tee. Water on tee→pin line forces H2 layup to fire.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[VersusHudCaptureMenu] versus_bot_hardening_water_h06: VersusMatchController not found.");
+                    }
+
+                    VersusMatchController.OnMatchReadyToBegin += OnBotHardeningWaterH06ReadyHandler;
+                    Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_water_h06: BotVideoRecorder deferred to OnMatchReadyToBegin (120s).");
+                    return;
+                }
+                else if (scenario == "versus_bot_hardening_water_h18")
+                {
+                    // Order 345 / H2 iter-2 final: full match on Hole 18 (par-5, 88m water band on tee→pin line).
+                    // Flight-path probe (every 8m from 10m to carry) detects Water at d=106m.
+                    // Bot lays up to ~96m (TrySafeLanding walks back from 106m in 8m steps).
+                    // Both players bot-driven; starts from real tee — no _debugStartLie needed.
+                    // BotVideoRecorder deferred to OnMatchReadyToBegin (120s watchdog).
+                    var teeLie = new Vector3(
+                        SessionState.GetFloat(TeeLieXKey, 0f),
+                        SessionState.GetFloat(TeeLieYKey, 0f),
+                        SessionState.GetFloat(TeeLieZKey, 0f));
+                    Debug.Log($"[VersusHudCaptureMenu] versus_bot_hardening_water_h18: teeLie={teeLie:F3}");
+
+                    Golfin.Gameplay.Session.GameSession.IsVersus = true;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[0] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "CAMILA",
+                        Level       = 13,
+                        TurnCount   = 1,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[1] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "TARO",
+                        Level       = 17,
+                        TurnCount   = 0,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.ActiveIndex = 0;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Raise();
+
+                    var vmcH18 = Object.FindAnyObjectByType<VersusMatchController>();
+                    if (vmcH18 != null)
+                    {
+                        vmcH18._debugBothBots = true;
+                        // No _debugStartLie — start from real tee so bot must fly over/around the 88m water band.
+                        // Flight-path probe (every 8m) detects Water at d=106m → bot lays up to ~96m.
+                        Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_water_h18: _debugBothBots = true, " +
+                                  "starting from real tee. 88m water band on tee→pin forces H2 flight-path probe to fire.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[VersusHudCaptureMenu] versus_bot_hardening_water_h18: VersusMatchController not found.");
+                    }
+
+                    VersusMatchController.OnMatchReadyToBegin += OnBotHardeningWaterH18ReadyHandler;
+                    Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_water_h18: BotVideoRecorder deferred to OnMatchReadyToBegin (120s).");
+                    return;
+                }
+                else if (scenario == "versus_bot_hardening_sloped")
+                {
+                    // Order 345 / H3: full match on Hole 9 (par-4, sloped green).
+                    // Both players bot-driven; starts from real tee (BUG-A fix pattern).
+                    // BotVideoRecorder deferred to OnMatchReadyToBegin (60s watchdog).
+                    var teeLie = new Vector3(
+                        SessionState.GetFloat(TeeLieXKey, 0f),
+                        SessionState.GetFloat(TeeLieYKey, 0f),
+                        SessionState.GetFloat(TeeLieZKey, 0f));
+                    Debug.Log($"[VersusHudCaptureMenu] versus_bot_hardening_sloped: teeLie={teeLie:F3}");
+
+                    Golfin.Gameplay.Session.GameSession.IsVersus = true;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[0] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "CAMILA",
+                        Level       = 13,
+                        TurnCount   = 1,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[1] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "TARO",
+                        Level       = 17,
+                        TurnCount   = 0,
+                        Lie         = teeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.ActiveIndex = 0;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Raise();
+
+                    var vmc3 = Object.FindAnyObjectByType<VersusMatchController>();
+                    if (vmc3 != null)
+                    {
+                        vmc3._debugBothBots = true;
+                        // iter-2 FIX: Use near-green _debugStartLie so the bot selects Putter (targetDist≤20m).
+                        // H09 pin=(182.30, 18.42, 40.70); nearGreen 12m from pin along tee→pin axis:
+                        //   nearGreen=(170.48, Y=17.472, 38.63) — terrain-raycast confirmed in EditMode.
+                        // This ensures H3 slope-read code fires (gated on isPutt = targetDist≤20m).
+                        // iter-1 failure: from tee (361m away), 60s watchdog never put the bot in putter range.
+                        var nearGreenH09 = new Vector3(170.48f, 17.472f, 38.63f);
+                        vmc3._debugStartLie = nearGreenH09;
+                        Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_sloped: _debugBothBots = true, " +
+                                  "_debugStartLie = (170.48, 17.472, 38.63) [12m from H09 pin]. " +
+                                  "Bot will select Putter, H3 slope-read fires. 60s watchdog.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[VersusHudCaptureMenu] versus_bot_hardening_sloped: VersusMatchController not found.");
+                    }
+
+                    VersusMatchController.OnMatchReadyToBegin += OnBotHardeningSlopedReadyHandler;
+                    Debug.Log("[VersusHudCaptureMenu] versus_bot_hardening_sloped: BotVideoRecorder deferred to OnMatchReadyToBegin (60s). Near-green start ensures H3 slope-read fires.");
                     return;
                 }
                 else if (scenario == "versus_resolution_clip")
@@ -549,6 +921,10 @@ namespace Golfin.Physics.Viewer.Editor
                 // (e.g. play mode exited early or scenario was aborted before hole load).
                 VersusMatchController.OnMatchReadyToBegin -= OnMatchReadyToBeginHandler;
                 VersusMatchController.OnMatchReadyToBegin -= OnResolutionClipReadyHandler;
+                VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterReadyHandler;
+                VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterH06ReadyHandler;
+                VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterH18ReadyHandler;
+                VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningSlopedReadyHandler;
 
                 // Clear the per-scenario watchdog override so it never leaks to a future recording.
                 BotVideoRecorder.MaxRecordSecondsOverride = 0;

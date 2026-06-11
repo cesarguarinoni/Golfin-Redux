@@ -561,5 +561,36 @@ namespace Golfin.Physics.Viewer
 
         /// <summary>Force a rebake — called externally when the hole changes or tests run.</summary>
         public void RefreshBake() => BakeCells();
+
+        /// <summary>
+        /// H3 (versus_bot_hardening): additive slope accessor for VersusBot.
+        /// Returns the slope at the nearest baked cell to (worldX, worldZ).
+        /// Does not re-bake; reads the already-baked _cells array.
+        /// Returns false if no cells are baked.
+        /// </summary>
+        public bool TryGetSlopeAt(float worldX, float worldZ, out float slopeX, out float slopeZ, out float magnitude)
+        {
+            slopeX = 0f; slopeZ = 0f; magnitude = 0f;
+            if (_cells == null || _cells.Length == 0) return false;
+
+            float bestDistSq = float.MaxValue;
+            int bestIdx = -1;
+            for (int i = 0; i < _cells.Length; i++)
+            {
+                float dx = _cells[i].cx - worldX;
+                float dz = _cells[i].cz - worldZ;
+                float distSq = dx * dx + dz * dz;
+                if (distSq < bestDistSq)
+                {
+                    bestDistSq = distSq;
+                    bestIdx = i;
+                }
+            }
+            if (bestIdx < 0) return false;
+            slopeX    = _cells[bestIdx].slopeX;
+            slopeZ    = _cells[bestIdx].slopeZ;
+            magnitude = _cells[bestIdx].magnitude;
+            return true;
+        }
     }
 }
