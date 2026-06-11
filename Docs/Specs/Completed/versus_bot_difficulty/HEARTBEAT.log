@@ -1,0 +1,15 @@
+=== iter-1 kickoff baseline ===
+HEAD: 37c36a56d472e415fb8fa660fde4fb8474cf612f
+DIRTY:
+ M .gitignore
+ M Docs/Specs/Active/versus_bot_difficulty/STATUS.md
+=== end baseline ===
+
+2026-06-11T14:30:00 activated — reading SPEC.md, VersusBot.cs, MatchContext.cs
+2026-06-11T14:35:00 wrote VersusBot.cs and bot_difficulty.csv — triggering compile check
+2026-06-11T14:42:00 adding difficulty capture menu items to VersusHudCaptureMenu.cs
+2026-06-11T14:45:00 lv1 recording started — waiting for match to complete (60s watchdog)
+2026-06-11T07:49:00 lv1 video confirmed 82MB, lv200 video confirmed 85MB — both 1170x2532
+2026-06-11T07:49:00 dispersion proof run: lv1 BOUNDS_OK=true, lv200 BOUNDS_OK=true, all D5 bracket checks PASS
+2026-06-11T07:49:00 captioned both videos, extracted frame stills, verified D1 code path
+2026-06-11T07:50:00 done, awaiting review
