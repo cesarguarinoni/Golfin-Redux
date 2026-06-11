@@ -177,3 +177,15 @@ Docs/Specs/Active/green_orbit_videos/videos/
 
 # Spec verification videos — local-only, regenerable from orbit tooling (large; per green_orbit_videos precedent 2026-06-02)
 Docs/Specs/**/videos/
+
+# =========================
+# Transient run-output / scratch dirs (Cesar 2026-06-11). These are regenerable
+# capture/bot outputs and Unity auto-recovery scratch that the team has purged
+# repeatedly (1db82d7f, a7c10956). Already-tracked files in them stay tracked;
+# this only stops NEW untracked noise from dirtying the working tree.
+# =========================
+Assets/_Recovery/
+Docs/Diagnostics/_capture/
+tasks/loop_v2_smoke_bot/
+# Orphaned intermediate review frames from a shipped task (canonical stills already committed)
+Docs/Specs/Completed/1v1_match_flow/screenshots/
