@@ -1,3 +1,135 @@
+# Architect Review — `tree_collisions` (iter-8 + iter-8c, post-Cesar-rejection N=4)
+
+**Reviewer:** golfin-reviewer
+**Timestamp:** 2026-06-12 10:35 JST
+**Verdict:** **PASS → READY_FOR_REDTEAM** (iter-8 test-tightening + iter-8c trunk clip — fresh independent review)
+
+---
+
+## Independent visual scan (Step 0 — iter-8c canonical still, pixels only, no prior verdicts read)
+
+The frame is portrait 1170×2532. The dominant element fills most of the middle column: a very large brown tree with thick rough bark — the lowest 60% of the frame's height shows BARE TRUNK wood with no foliage in front of it. The upper third holds green canopy and curved branches reading as a mature pine. A white Golfin-logo golf ball sits on a small gray tee marker on green grass, positioned directly at the base of the central trunk — the ball is unambiguously on the ground (green grass continues below and to the right of the ball; no air-gap, no foliage between camera and ball). A faint blue dashed aim line trails from the ball toward the lower-right corner. Top-left HUD reads "JAMES / Lv 10 / TURN 2" with a portrait, "0.0 mph" and "178 yds". Top-right reads "LOMOND / HOLE 1 - REGULAR / PAR 5" with a settings cog. Bottom-left buttons: "SPIN" / "GOLFIN ∞". Bottom-right: "STRAIGHT ↑" / "DRIVER / 0 yds". The framing is the standard chase-cam composition (HUD, club chip, club selector all present and unmodified). "TURN 2" + "0.0 mph" confirms this is a post-shot at-rest moment, not a pre-shot pose.
+
+---
+
+## Live test re-verification (Step 1)
+
+Per task brief, the orchestrator already confirmed live `mcp__ai-game-developer__tests-run testClass=TreeCollisionTests` → **9/9 PASS, 0 failed** (incl. tightened `CanopyEntryImpulse_NoSlowMoDescent` + PROBE7 `AirborneTrunkDescending_BallReachesGround`). The implementer-reported full EditMode suite count is `total=379, passed=376, failed=0, skipped=3` (3 skips are pre-existing Stage C1 `[Ignore]` HoleCompleteDriver tests, unchanged baseline). My subagent tool surface does NOT include `mcp__ai-game-developer__tests-run` — I am relying on the orchestrator's live confirmation passed into the task brief, plus the test diff matching the Architect directive exactly (verified below).
+
+**Reported counts:** TreeCollisionTests 9/9 PASS; full EditMode 376/379 (3 pre-existing skips). 0 failures. Numbers are consistent with the iter-7 baseline + the tightened test passing.
+
+---
+
+## Sim-frozen proof (Step 2)
+
+`git diff 2fb4c2b7 -- Assets/Scripts/Physics/Core/BallSimulation.cs Assets/Scripts/Physics/Core/TreeObstacleData.cs Assets/Scripts/Physics/Runtime/TreeObstacleProvider.cs Assets/Scripts/Physics/Runtime/TreeObstacleLoader.cs Assets/Scripts/Editor/CourseImporter/TreeObstacleBaker.cs Assets/Resources/Data/tree_collision_profiles.csv` → **EMPTY**. Sim, profiles CSV, and bake harness are byte-identical to the verified iter-7 checkpoint.
+
+`git diff 2fb4c2b7 -- 'Assets/Resources/HoleData/Hole_*/tree_obstacles.csv'` → **EMPTY**. All per-hole baked CSVs unchanged.
+
+`git diff 2fb4c2b7 -- Assets/Scenes/Physics/PhysicsLab_Hole1.unity` → **EMPTY**. Scene byte-identical.
+
+Code changes this cycle, per `git status --porcelain`:
+- `M Assets/Scripts/Physics/Tests/TreeCollisionTests.cs` — assertion (b) tightening only
+- `M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs` — iter-8b TrunkStrikeBody power/camera tweaks + iter-8c new `TreeTrunkNormalPlay` scenario
+- `M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs` — +17 lines, one new menu entry wiring `tree_trunk_normal_play`
+- `M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs` — +4 lines, one case branch dispatching to the new scenario
+- Task docs (STATUS, IMPLEMENTER_REPORT, SELF_REVIEW, HEARTBEAT)
+
+Sim is verifiably frozen. Architect contract honored.
+
+---
+
+## Test tightening correctness (Step 3)
+
+`git diff 2fb4c2b7 -- Assets/Scripts/Physics/Tests/TreeCollisionTests.cs` is contained within `TreeCollision_CanopyEntryImpulse_NoSlowMoDescent`, assertion (b) only. The change implements the Architect's directive exactly:
+
+| Architect requirement | Implementation | Verdict |
+|---|---|---|
+| Scan truncates at first sample with `y < 0.2m` | `const float groundFloor = 0.2f;` + `if (y < groundFloor) break;` | MATCH |
+| Single drop must be in canopy band `(trunkTopY, canopyTopY]` (3.0 < y ≤ 9.0) | `Assert.Greater(dampY, trunkTopY)` + `Assert.LessOrEqual(dampY, canopyTopY)` with `trunkTopY=3.0`, `canopyTopY=9.0` | MATCH |
+| Ratio ≈ `canopyHitDamping` ± 0.15 (0.25 ≤ ratio ≤ 0.55) | `Assert.Greater(dampRatio, hitDamping - dampTol)` + `Assert.Less(dampRatio, hitDamping + dampTol)` with `hitDamping=0.40`, `dampTol=0.15` | MATCH |
+| Assertion (a) descent-time check UNCHANGED | `Assert.Less(withTime, noTime * 1.5f)` block above unchanged | MATCH |
+| Sim code untouched | `git diff 2fb4c2b7 -- BallSimulation.cs` empty | MATCH |
+| Code comment cites Architect decision + confirming-probe evidence | Long comment block lines 318–340 explaining truncation rationale, citing "iter-8 confirming probe", citing "Architect adjudicated" | MATCH |
+
+Noteworthy: `IMPLEMENTER_REPORT.md` records the noTrees confirming probe in the "Console output" section (8 ratio<0.7 steps all at y≈0, ratios 0.465–0.672, vy sign-flips — pure ground bounce-and-settle, no trees involved). This locks hypothesis (A) empirically. The test fix is a clean, targeted heuristic correction, not a sim regression patch.
+
+---
+
+## §9 trunk video independent verification (Step 4 — sensitive item, 3× rejected)
+
+**Canonical video:** `videos/tree_trunk_normal_play_iter8c_normalcam.mp4`. `ffprobe` confirms 1170×2532 @ 28.25 fps, 16.25s, 11.6 MB, h264. I extracted 8 frames at `fps=1/2` to `/tmp/iter8c_frames/` and read four representative frames (f_004, f_006, f_007, f_008) directly.
+
+**Independent frame walk:**
+- **f_004 (t≈8s, pre-shot, TURN 1):** Ball is on the green-grass ground east of a large tree, normal chase-cam framing — standard HUD top bar, club chip and selector bottom bar, no Downrange / fixed-camera label visible. The "0.0 mph" indicator is shown — ball at rest pre-shot.
+- **f_006 (t≈12s, mid-flight):** Ball is briefly inside foliage with a green canopy filling the frame and a "18%" power-gauge overlay visible. Camera is tracking the ball through the canopy — exactly the "normal chase camera through foliage" behavior the Architect spec describes. By design, mid-flight will look "buried" while the ball is inside the canopy band; this is not the at-rest moment.
+- **f_007 (t≈14s, TURN 2 settled):** Ball at rest on green grass at the base of a large BARE BROWN TRUNK. Bark texture clearly visible. No foliage between camera and ball. Normal chase-cam framing centered on ball. Same composition as the canonical still.
+- **f_008 (t≈16s, TURN 2 stable):** Identical to f_007 — final at-rest hold for legibility. Ball on ground, bare-trunk wood centered behind it.
+
+**ZERO Downrange / fixed-camera evidence anywhere in the clip.** The `TreeTrunkNormalPlay` scenario diff confirms ZERO `ChaseCamera.SetMode()` / Mode.Downrange calls — only `ctrl.PlaceBallAt` and `ctrl.SetCameraYawRadians` (yaw is a normal play parameter, not a camera-mode override). The chase camera follows the ball through flight and settles on it at rest.
+
+**My explicit call on the trunk clip:** **PASS.** The at-rest frame (canonical still + f_007/f_008 in the video) shows the ball ON THE GROUND at the BASE of a BARE TRUNK with NORMAL CHASE CAMERA framing. This satisfies Cesar's "just play normally and hit a trunk" directive. Note that mid-flight f_006 transiently shows foliage as the chase cam follows the ball into the canopy — but that's expected behavior for the normal chase cam Cesar asked for and is NOT the at-rest moment Cesar's "trunk video doesn't show trunk collision" rejection was about. The settled, post-shot frame is the legibility gate, and the bare-bark contact reads cleanly.
+
+Per the task brief: "the canopy no-slow-mo + control are covered by the tightened test + prior clips/proofs; this clip is the trunk strike per Cesar's steer — don't demand a 3-part gate clip." I confirm this clip is a single clean trunk strike per Cesar's directive — no 3-part gate required.
+
+---
+
+## Scope / Rule 13 audit (Step 5)
+
+`git status --porcelain --untracked-files=all` returns exactly the 14 entries the implementer Files-table reports (8 modified, 6 untracked: 5 screenshots + 1 `Docs/Videos/tree_collision_gate_stageF_buttons.mp4`). Reconciliation:
+
+| Path | In Files-table? | Verdict |
+|---|---|---|
+| `M Assets/Scripts/Physics/Tests/TreeCollisionTests.cs` | YES (explicit "CHANGED iter-8") | OK |
+| `M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs` | YES (explicit "CHANGED iter-8c") | OK |
+| `M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs` | YES (prose says "UNCHANGED iter-8c") | **MINOR-DISCREPANCY** — diff shows +17 lines wiring the new menu entry. Self-reviewer flagged this. Non-blocking — purely additive wiring for the declared `tree_trunk_normal_play` scenario, no scope drift, but the prose is incorrect. |
+| `M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs` | YES (prose says "UNCHANGED iter-8c") | **MINOR-DISCREPANCY** — diff shows +4 lines for the case branch. Same justification. |
+| `M Docs/Specs/Active/tree_collisions/*` (task docs) | YES | OK |
+| `?? screenshots/s02_*.png`, `s05_*.png` (iter-8/iter-8b intermediates) | YES | OK in-folder, non-canonical |
+| `?? screenshots/trunk_atrest_iter8c_run10.png` | YES (canonical) | OK |
+| `?? screenshots/trunk_impact_downrange_2026-06-12.png` | YES (iter-8b intermediate) | OK |
+| `?? Docs/Videos/tree_collision_gate_stageF_buttons.mp4` | YES (explicit "iter-8b intermediate, superseded") | OK Rule 13 satisfied |
+
+The two minor discrepancies (UNCHANGED prose vs +17/+4 lines) are bookkeeping nits, NOT scope drift — both changes are in-spec scenario wiring. Not a FAIL on their own. The implementer should fix the prose in a future close-out, but the SELF_REVIEW correctly flagged them and they don't block the verdict.
+
+**Scenarios.cs is camera/scenario-only** per diff inspection: iter-8b modifies the existing `TrunkStrikeBody` (camera position/power tweaks + per-frame Downrange re-apply for the OLD TreeCollisionGate scenario — NOT used by iter-8c), and iter-8c ADDS a new `TreeTrunkNormalPlay` + `TreeTrunkNormalPlayBody` method pair with try/finally canvas restore and ZERO camera mode code. Verified the new scenario uses ZERO `ChaseCamera.SetMode(Mode.Downrange)` / Mode override calls — the only camera-related call is `ctrl.SetCameraYawRadians(yawToTree)` which is a normal-play parameter.
+
+**iter-5 try/finally canvas-restore pattern is preserved** in the new `TreeTrunkNormalPlay` scenario: `try { … } finally { restoreCanvases(); d.FlushLog(); }` correctly unwinds canvas state regardless of yield-break / exception / normal completion. ShellScene canvases are hidden during recording and unconditionally re-enabled at the end.
+
+**Scene-mutation audit:** `git diff 2fb4c2b7 -- Assets/Scenes/Physics/PhysicsLab_Hole1.unity` → empty. `git diff 2fb4c2b7 -- Assets/Scenes/LabScaffold.unity` → empty (not in modified list). Despite the implementer's "~614 tool calls / many recording attempts" workflow, NO forbidden scene mutations leaked into either scene file. Try/finally canvas-restore worked.
+
+---
+
+## Rules 14–18 compliance
+
+- **Rule 14 (canonical screenshot ≥ 900px long edge):** `trunk_atrest_iter8c_run10.png` is 1170×2532 → long edge 2532px, well above floor. PASS.
+- **Rule 15 (reproduce-the-rejection):** IMPLEMENTER_REPORT.md has a `## Rejection follow-up` section with explicit RESOLVED verdicts per defect AND same-angle full-res screenshot citations. PASS.
+- **Rule 16 (mesh metrics):** N/A — this is a tree-obstacle bake (XZ spatial grid + segment-vs-cylinder tests), not a mesh-deform / TerrainData edit. No `## Mesh metrics` required.
+- **Rule 17 (mesh-bake video):** N/A for same reason. The §9 video here is a UX legibility clip, not a fly-around bake demo.
+- **Rule 18 (Figma fidelity):** N/A — SPEC.md references no Figma node URL or node-id. This is a physics task, not a UI redesign.
+
+---
+
+## Verdict: READY_FOR_REDTEAM
+
+**Setting STATUS to `READY_FOR_REDTEAM`.**
+
+**Rationale:**
+1. **Sim frozen and provably so** — byte-identical diff against the verified iter-7 checkpoint `2fb4c2b7` for BallSimulation.cs, TreeObstacleData.cs, TreeObstacleProvider.cs, TreeObstacleLoader.cs, TreeObstacleBaker.cs, tree_collision_profiles.csv, and all 17 per-hole `tree_obstacles.csv` files. Architect contract satisfied.
+2. **Test fix matches Architect directive exactly** — assertion (b) tightened to (i) truncate scan at y<0.2m to exclude ground bounces, (ii) assert single drop in canopy band (3.0, 9.0], (iii) assert ratio ∈ [0.25, 0.55]. Assertion (a) descent-time check unchanged. Noted iter-8 confirming probe (8 noTrees bounces at y≈0) is in the report and empirically locks hypothesis (A).
+3. **§9 trunk clip independently verified PASS** — extracted 4 representative frames; at-rest f_007/f_008 + canonical still all show ball ON GROUND at BASE of BARE TRUNK with NORMAL CHASE CAMERA framing. ZERO Downrange / fixed-camera code in the new `TreeTrunkNormalPlay` scenario. Mid-flight f_006 transiently shows foliage as the chase cam follows ball through canopy — by design, not the at-rest moment Cesar rejected on.
+4. **Scope clean** — only TreeCollisionTests.cs + Scenarios.cs + 2 minor wiring lines + task docs changed; scene byte-identical; try/finally canvas-restore preserved; no forbidden scene mutations despite the heavy recording session.
+5. **Live test counts (per orchestrator):** TreeCollisionTests 9/9 PASS, full EditMode 376/379 (3 pre-existing skips), 0 failures.
+
+**Red-team focus areas:**
+- The minor Files-table prose discrepancy (LoopV2SmokeBotMenu.cs / LoopV2SmokeBot.cs marked "UNCHANGED" but have +17 / +4 lines of in-scope scenario wiring) — not a verdict-changer but worth confirming the red-team agrees it's bookkeeping not drift.
+- The mid-flight f_006 frame transiently shows foliage during chase-cam canopy tracking. Cesar's rejection was specifically about the AT-REST trunk-collision legibility, and the at-rest frames are clean. If the red-team reads the in-canopy mid-flight frame as "still buried in foliage," they should flag it — but my read is this is the expected normal-chase-cam behavior Cesar explicitly asked for ("just play normally and hit a trunk").
+- The implementer-graded "PARTIAL" verdict on the bot's `TreeTrunkNormalPlay: PARTIAL — ball y=6.84` log is a scenario-internal pass/fail message calibrated for flat-lab terrain (1.5m floor) — at tree idx=247 the Hole 1 fairway hillside terrain height is 6.84m, and `surface=Fairway` is confirmed in the roll-step log. Ball IS on the ground; the log message is misleading but the physics is correct.
+
+This is N=4 on the rejection cycle. Sim has been frozen across two reviewer passes now (iter-7 and iter-8). If the red-team disagrees and would FAIL, ESCALATE is the appropriate next move per the standing rule — but my read is the gate is clean.
+
+---
+
 # Architect Review — `tree_collisions` (iter-6, post-Cesar-rejection REDO)
 
 **Reviewer:** golfin-reviewer

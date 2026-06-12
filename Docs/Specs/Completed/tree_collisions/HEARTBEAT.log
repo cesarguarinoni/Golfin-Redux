@@ -288,3 +288,51 @@ DIRTY:
 2026-06-12T00:28:06Z BLOCKED — all Unity MCP tool calls returning 'user doesn't want to take this action right now'; cannot run tests-run, console-get-logs, script-execute, or editor-application-get-state; every MCP tool blocked since session start
 2026-06-12T01:08:39Z CIRCUIT BREAKER TRIGGERED — all Unity MCP tools blocked for entire session (>5 min); cannot run tests-run, script-execute, console-get-logs, or any ai-game-developer tool; every attempt returns 'user doesn't want to take this action right now'; 12+ retries over entire session; setting IMPLEMENTER_BLOCKED
 2026-06-12T03:20:18Z done — IMPLEMENTER_BLOCKED written; code fix is in working tree; MCP unavailable for test verification
+
+=== iter-8 kickoff baseline ===
+HEAD: 2fb4c2b7 wip(tree_collisions): iter-7 checkpoint pre-iter-8
+DIRTY: (clean — all iter-7 code committed at 2fb4c2b7)
+=== end baseline ===
+2026-06-12T05:06:30Z iter-8 activated — confirming probe (noTrees trace), tightening CanopyEntryImpulse_NoSlowMoDescent assertion (b), bare-bark trunk clip re-shoot
+2026-06-12T05:09:00Z noTrees probe DONE — 8 ratio<0.7 steps at y≈0 (pure ground bounces, no trees involved) — hypothesis (A) CONFIRMED
+2026-06-12T05:12:00Z test tightened: truncate scan at y<0.2f + assert drop in canopy band + ratio≈0.40±0.15; full suite 376/379 PASS, 0 FAIL — CanopyEntryImpulse PASSES; running bot for bare-bark re-shoot
+2026-06-12T07:17:00Z bot ran — TreeCollisionGate PASS; 37s video at 1170x2532; s05 shows ball vs bare bark; captioned via build_bot_video.py
+2026-06-12T07:22:00Z IMPLEMENTER_REPORT.md complete; all checklist PASS; setting READY_FOR_SELF_REVIEW
+2026-06-12T07:22:01Z done, awaiting review
+
+=== iter-8b kickoff baseline ===
+HEAD: 2fb4c2b7 wip(tree_collisions): iter-7 checkpoint pre-iter-8
+DIRTY: (same as iter-8 — iter-8 code committed, only task docs changed)
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Docs/Specs/Active/tree_collisions/STATUS.md
+=== end baseline ===
+2026-06-12T08:30:00Z iter-8b activated — probing low-trunk shot config to get ball at ground level
+2026-06-12T07:50:00Z probe complete — all shots rest at y=1.00 (ground) when hitting trunk; iter-8's ball at y=3.6 was near trunk top due to high power+long distance; fix: power=0.20, ball 8m from trunk, camera at y=3.0 looking at trunk base
+2026-06-12T06:08:30Z iter-8b: 4th bot run PASS, y=0.2 ground-level, Downrange camera held; bareback_v9 captioned; canonical frame extracted trunk_impact_downrange_2026-06-12.png; IMPLEMENTER_REPORT updated; setting READY_FOR_SELF_REVIEW
+
+2026-06-12T06:21:40Z iter-8c activated
+=== iter-8c kickoff baseline ===
+HEAD: 2fb4c2b71a099fa868afd9b19316e5b7860c8e2f 2fb4c2b7 wip(tree_collisions): iter-7 checkpoint pre-iter-8
+DIRTY:
+ M Assets/Scripts/Physics/Tests/TreeCollisionTests.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Docs/Specs/Active/tree_collisions/HEARTBEAT.log
+ M Docs/Specs/Active/tree_collisions/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/tree_collisions/STATUS.md
+?? Docs/Specs/Active/tree_collisions/screenshots/s02_trunk_before_iter8b.png
+?? Docs/Specs/Active/tree_collisions/screenshots/s02_trunk_strike_before_v8.png
+?? Docs/Specs/Active/tree_collisions/screenshots/s05_canopy_hit_after_bareback_v8.png
+?? Docs/Specs/Active/tree_collisions/screenshots/trunk_impact_downrange_2026-06-12.png
+?? Docs/Videos/tree_collision_gate_stageF_buttons.mp4
+=== end baseline ===
+2026-06-12T06:25:00Z launching tree_trunk_normal_play bot via MCP script-execute
+2026-06-12T06:27:36Z iter-8c run 2: corrected ball pos to (-87.0, 0, -113.3) same as iter-8b
+2026-06-12T06:48:32 DiagSimShot6 confirms trunk collision fires with x=-87.45 start: [103] vz flipped -17.37→+2.60 at xzDist=0.340m. Launching corrected bot run.
+2026-06-12T09:00:00 DiagSimShot7 CONFIRMED trunk collision at sample[017] vz=-18.21→+2.35 xzDist=0.339m. Launching Run4 with ballPos=(-87.04,0,-119.7) InjectLabBundle
+2026-06-12T07:07:37 Session guard cleared. Launching Run4 (TreeTrunkNormalPlay with BotVideoRecorder)
+2026-06-12T09:25:26 Scenarios.cs ballPos z -119.7→-117.0 (outside canopy radius), power 0.20→0.30. Session guard reset. Firing Run 5.
+2026-06-12T09:31:11 Run 6 fired with explicit BotVideoRecorder.Arm() + session guard reset in same script-execute. Waiting for recording.
+2026-06-12T07:53:17 found in-bounds tree idx=74 at (-236.1,-103.0); updated Scenarios.cs ballPos to launch from (-236.1,-95.0)
+2026-06-12T08:05:15 switching to tree idx=247 east-approach (yaw=π westward) to avoid foliage lodge; prev run 9 lodged at y=15.96m
+2026-06-12T08:08:09 Run 10 PASS: east-approach tree idx=247, hits=3, y=6.84 (terrain height), at-rest frame shows ball at bare trunk; captioned video + at-rest still copied to task folder
+2026-06-12T08:13:51 IMPLEMENTER_REPORT.md Rejection follow-up updated for iter-8c (normal chase camera, east approach, tree idx=247, at-rest Run 10); all Rule 13 files verified; setting STATUS to READY_FOR_SELF_REVIEW
