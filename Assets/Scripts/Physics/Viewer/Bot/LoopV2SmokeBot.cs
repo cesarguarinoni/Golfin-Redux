@@ -153,6 +153,10 @@ namespace Golfin.Physics.Viewer
                 case "tree_collision_gate":
                     scenarioRoutine = Bot.Scenarios.TreeCollisionGate(driver);
                     break;
+                // tree_collisions iter-8c: minimal normal-play trunk strike (no camera tricks)
+                case "tree_trunk_normal_play":
+                    scenarioRoutine = Bot.Scenarios.TreeTrunkNormalPlay(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

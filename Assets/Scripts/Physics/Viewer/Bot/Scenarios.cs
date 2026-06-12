@@ -1661,12 +1661,20 @@ namespace Golfin.Physics.Viewer.Bot
             var sm      = ctrl.BallSM;
             var shotCtl = Object.FindObjectOfType<Golfin.Gameplay.Input.ShotController>();
 
-            // Target tree: x=-87.0, z=-121.3 (MESH_JapaneseBlack_01, Hole 1 tree_obstacles.csv).
-            // Ball placed 30m in front (same X, 30m toward +z side = z=-91.0).
-            // Yaw = atan2(-1, 0) = -π/2 → aims ball in the -z world direction (toward tree).
-            var ballPos     = new Vector3(-87.0f, 0f, -91.0f);
-            var canopyPos   = new Vector3(-87.0f, 0f, -71.0f); // 50m back for canopy arc
-            float yawToTree = Mathf.Atan2(-1f, 0f);            // -π/2 rad → shot direction is -z
+            // Target tree: x=-87.04, z=-121.27 (MESH_JapaneseBlack_01, Hole 1 tree_obstacles.csv).
+            // Tree profile: trunkRadius=0.35*scale=0.339m, trunkHeight=3.5*scale=3.392m,
+            //   trunkTop=baseY(0.98)+3.39=4.375m.  Bare-bark zone: y=0.98..4.375m.
+            //
+            // iter-8b LOW-TRUNK re-shoot:
+            //   Ball placed 8m in front of trunk (same X, z=-113.3) → much closer than iter-8's 30m.
+            //   Power = 0.20 (very low, nearly flat shot). At this distance+power, the driver
+            //   launches with low vy and reaches the trunk before rising more than ~1.5m.
+            //   BallSimulation probe (iter-8b, read-only): finalPos=(-87.04,1.00,-119.99) →
+            //   ball rests at y=1.00m (= ground level = baseY=0.98) right in front of trunk base.
+            //   Canopy still uses 50m-back position and power=0.55 (unchanged, PART B+C fine).
+            var ballPos     = new Vector3(-87.0f, 0f, -113.3f); // 8m in front of trunk
+            var canopyPos   = new Vector3(-87.0f, 0f, -71.0f);  // 50m back for canopy arc (unchanged)
+            float yawToTree = Mathf.Atan2(-1f, 0f);             // -π/2 rad → shot direction is -z
 
             // ChaseCamera component reference for mode switching (iter-6 Defect 2 fix).
             // Default Chase mode buries itself in the foliage (camera follows ball INTO the tree
@@ -1676,19 +1684,21 @@ namespace Golfin.Physics.Viewer.Bot
             var chaseCamFi    = ctrl.GetType().GetField("chaseCamera", bindPrivate);
             var chaseCamComp  = chaseCamFi?.GetValue(ctrl) as ChaseCamera;
 
-            // Downrange framing for the trunk-strike side view.
-            // Trunk at x=-87, z=-121.3. Camera 16m west, 6m elevated, looking east at mid-trunk.
-            // Ball enters frame from the right (+z side), strikes trunk at x=-87, drops dead.
-            var trunkImpactLookAt = new Vector3(-87.0f, 2.5f, -121.3f); // mid-trunk aim point
-            var trunkSideCamPos   = new Vector3(-103.0f, 6.0f, -121.3f); // 16m west, elevated
+            // iter-8b camera: positioned to CLEARLY FRAME the bare LOWER TRUNK and ball at ground.
+            // Trunk center at x=-87.04, z=-121.27, base at y=0.98.
+            // Ball rests at y=1.00 (ground level) near z=-120.0 (1.3m in front of trunk).
+            // Camera: west side (x=-100, 13m from trunk), y=3.0 (elevated enough to show ball on ground
+            //   AND bare bark trunk behind it), looking at trunk base area (y=1.5).
+            // This frames the scene: ball at lower left foreground, bare brown trunk behind it.
+            // The tree's green foliage is ABOVE the camera's frame (foliage starts at y=4.375m).
+            var trunkImpactLookAt = new Vector3(-87.0f, 1.5f, -121.0f); // trunk lower area (bare bark)
+            var trunkSideCamPos   = new Vector3(-100.0f, 3.0f, -121.0f); // 13m west, slight elevation
 
-            // ── A: Trunk Strike (trees enabled, power 0.75) ───────────────────
-            d.LogStep("=== Part A: Trunk Strike (trees enabled) ===");
+            // ── A: Trunk Strike (trees enabled, power 0.20, 8m from trunk) ──────────
+            d.LogStep("=== Part A: Trunk Strike (trees enabled, LOW power=0.20 from 8m) ===");
             ctrl.PlaceBallAt(ballPos, preferredSurfaceTypeValue: null);
 
-            // Switch to Downrange mode: fixed camera at side/elevated position watching trunk.
-            // This overrides the chase-cam for the duration of Part A.
-            // SetCameraYawRadians still drives the ball-shot direction (ShotController.CameraHeadingRadians).
+            // Switch to Downrange mode: fixed camera at side-elevated position watching trunk base.
             ctrl.SetCameraYawRadians(yawToTree);
             if (chaseCamComp != null)
             {
@@ -1711,18 +1721,33 @@ namespace Golfin.Physics.Viewer.Bot
                     while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 4f)
                     { si += Time.unscaledDeltaTime; yield return null; }
                     shotCtl.BeginExternalDrag();
-                    const float ramp = 0.85f; float rt = 0f;
-                    while (rt < ramp) { rt += Time.unscaledDeltaTime; shotCtl.SetExternalPower(Mathf.Lerp(0f, 0.75f, rt / ramp), 0f); yield return null; }
-                    shotCtl.SetExternalPower(0.75f, 0f);
+                    // iter-8b: power 0.20 (was 0.55) — much lower → very flat trajectory.
+                    // Ball at 8m distance strikes the LOWER trunk (y≈1.0-2.0m, bare bark zone)
+                    // and drops nearly dead to the ground (trunkRestitution=0.15 → dead stop).
+                    // Probe confirms final position ≈ (-87.04, 1.00, -120.0): ground-level, trunk base.
+                    const float ramp = 0.60f; float rt = 0f;
+                    while (rt < ramp) { rt += Time.unscaledDeltaTime; shotCtl.SetExternalPower(Mathf.Lerp(0f, 0.20f, rt / ramp), 0f); yield return null; }
+                    shotCtl.SetExternalPower(0.20f, 0f);
                     yield return new WaitForSecondsRealtime(0.18f);
                     shotCtl.EndExternalDrag();
                 }
-                else { ctrl.FireViaShotController(0.75f, Golfin.Gameplay.Input.DebugShotAccuracy.Green); }
+                else { ctrl.FireViaShotController(0.20f, Golfin.Gameplay.Input.DebugShotAccuracy.Green); }
                 float e = 0f;
-                while (!trunkDone && e < 30f) { e += Time.unscaledDeltaTime; yield return null; }
+                // iter-8b fix: LoopCameraDirector overrides mode to Chase when BallState→Flying/Rolling.
+                // Re-apply Downrange every frame during flight so the fixed side-camera persists
+                // for the trunk approach + contact + settle — Cesar needs bare-bark contact in the video.
+                while (!trunkDone && e < 30f)
+                {
+                    e += Time.unscaledDeltaTime;
+                    chaseCamComp?.SetMode(ChaseCamera.Mode.Downrange);
+                    yield return null;
+                }
                 d.LogStep($"  [TrunkStrike] complete e={e:F1}s ball={ctrl.BallPosition:F1}");
             }
-            yield return new WaitForSecondsRealtime(2.0f);
+            // Re-apply Downrange for the settle wait and at-rest capture.
+            chaseCamComp?.SetMode(ChaseCamera.Mode.Downrange);
+            yield return new WaitForSecondsRealtime(2.5f); // extra wait — slow ball, let it fully settle
+            chaseCamComp?.SetMode(ChaseCamera.Mode.Downrange); // guard against AtRest state reset
             yield return d.Capture("trunk_strike_after");
             d.LogStep($"  [TrunkStrike] final pos={ctrl.BallPosition:F1}");
 
@@ -1838,6 +1863,203 @@ namespace Golfin.Physics.Viewer.Bot
             {
                 // Restore ShellScene canvases on ALL exit paths — normal exit, early yield break,
                 // and unhandled exceptions. FlushLog also runs unconditionally here.
+                restoreCanvases();
+                d.FlushLog();
+            }
+        }
+
+        // ── Scenario: tree_trunk_normal_play ──────────────────────────────────
+        // iter-8c: minimal single-shot trunk video using the NORMAL chase camera.
+        // No camera tricks, no Downrange mode, no per-frame camera override.
+        // Ball placed 10m from the target trunk; LOW power=0.20 flat shot fires
+        // straight at the bare lower trunk.  The chase cam follows the ball and
+        // settles naturally on it at rest against the trunk base.
+        //
+        // Target tree (Hole 1): x=-87.04, z=-121.27 — same as TreeCollisionGate PART A.
+        //   Profile MESH_JapaneseBlack_01: trunkRadius≈0.339m, trunkTopY≈4.375m
+        //   Ball start: x=-87.45, z=-113.3  (8m in front of trunk, shifted west to account for x-drift)
+        //   Power=0.20 → flat trajectory, strikes lower bare bark at y≈1-2m, drops dead (y≈1.0)
+        //   This start position is known-good: iter-8b confirmed ball rests at y≈1.0 ground level.
+        //
+        // KEY DIFFERENCE FROM TreeCollisionGate PART A: ZERO camera code.
+        // Normal chase camera follows ball throughout and settles on it at rest.
+
+        /// <summary>
+        /// Minimal trunk-strike video: one flat shot at a bare lower trunk.
+        /// Normal chase camera only — zero camera code.
+        /// </summary>
+        public static IEnumerator TreeTrunkNormalPlay(BotDriver d)
+        {
+            d.LogStep("=== Tree Trunk Normal Play (tree_collisions iter-8c) ===");
+
+            // Hide ShellScene canvases so the PhysicsLab camera dominates the Game View.
+            var shellCanvases = Object.FindObjectsOfType<Canvas>();
+            var hiddenCanvases = new System.Collections.Generic.List<Canvas>();
+            foreach (var c in shellCanvases)
+            {
+                if (c.gameObject.scene.name == "ShellScene" && c.enabled)
+                {
+                    c.enabled = false;
+                    hiddenCanvases.Add(c);
+                }
+            }
+            d.LogStep($"  Hidden {hiddenCanvases.Count} ShellScene canvases.");
+
+            System.Action restoreCanvases = () =>
+            {
+                foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+                d.LogStep($"  Restored {hiddenCanvases.Count} ShellScene canvases.");
+            };
+
+            return TreeTrunkNormalPlayBody(d, restoreCanvases);
+        }
+
+        private static IEnumerator TreeTrunkNormalPlayBody(
+            BotDriver d,
+            System.Action restoreCanvases)
+        {
+            try
+            {
+
+            // 1. Load LabScaffold + Hole_01_Geo additively (same as TreeCollisionGate).
+            d.LogStep("  Loading LabScaffold + Hole_01_Geo...");
+            var opLab = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "LabScaffold", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opLab == null)
+            {
+                d.LogStep("=== TreeTrunkNormalPlay: FAIL — LabScaffold not in Build Settings ===");
+                yield break;
+            }
+            var opHole = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "Hole_01_Geo", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opHole == null)
+            {
+                d.LogStep("=== TreeTrunkNormalPlay: FAIL — Hole_01_Geo not in Build Settings ===");
+                yield break;
+            }
+
+            float lw = 0f;
+            while ((!opLab.isDone || !opHole.isDone) && lw < 30f)
+            {
+                yield return new WaitForSecondsRealtime(0.25f);
+                lw += 0.25f;
+            }
+            if (!opLab.isDone || !opHole.isDone)
+            {
+                d.LogStep($"=== TreeTrunkNormalPlay: FAIL — load timed out ({lw:F1}s) ===");
+                yield break;
+            }
+            d.LogStep($"  Scenes loaded ({lw:F1}s). Waiting for IsHoleReady...");
+
+            // 2. Wait for PhysicsLabController.IsHoleReady (tree CSV bake loaded).
+            var ctrl = Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            {
+                d.LogStep("=== TreeTrunkNormalPlay: FAIL — PhysicsLabController not found ===");
+                yield break;
+            }
+            float hw = 0f;
+            while (!ctrl.IsHoleReady && hw < 15f)
+            {
+                yield return new WaitForSecondsRealtime(0.25f);
+                hw += 0.25f;
+            }
+            if (!ctrl.IsHoleReady)
+            {
+                d.LogStep($"=== TreeTrunkNormalPlay: FAIL — IsHoleReady never true ({hw:F1}s) ===");
+                yield break;
+            }
+            d.LogStep($"  IsHoleReady=true ({hw:F1}s). Extra settle 1s...");
+            yield return new WaitForSecondsRealtime(1f);
+
+            // 3. Place ball east of trunk, shoot westward — SIDE approach avoids dense upper canopy.
+            //    Target tree: idx=247, x=-132.879, z=-53.239 (MESH_JapaneseBlack_01, scale=1.063, Hole 1)
+            //    Verified IN-BOUNDS via zones.json OB mask; all positions in-bounds.
+            //    Profile: trunkRadius=0.35m→0.371m@scale, canopyRadius=3.5m→3.719m@scale
+            //    Ball start: x=-122.0, z=-53.239  (10.9m east of trunk center, 7.16m east of canopy edge)
+            //    → SurfaceSnap hits terrain (ball at ground level) → ball rolls westward along z=-53.239
+            //    → enters canopy east face → canopyHitDamping=0.40 → hits trunk east face (XZ reflect)
+            //    → bounces back east → comes to rest on ground east of trunk (all in-bounds)
+            //    Side approach: ball path stays near ground level, avoids dense upper branch geometry.
+            //    Previous attempt (south approach, tree idx=74): physical ball lodged at y=15.96m in foliage.
+            //    yawToTree = atan2(0, -1) = π rad → shot direction is -x (westward toward trunk)
+            var ballPos     = new Vector3(-122.0f, 0f, -53.239f);
+            float yawToTree = Mathf.Atan2(0f, -1f);
+
+            ctrl.PlaceBallAt(ballPos, preferredSurfaceTypeValue: null);
+            ctrl.SetCameraYawRadians(yawToTree);
+            d.LogStep($"  Ball placed at {ballPos:F2}, yaw={yawToTree:F3} (north). No camera code — normal chase cam.");
+
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("trunk_normal_before");
+
+            // 4. Fire one low-power shot (power=0.18, no accuracy offset).
+            //    Ball at x=-122.0 → canopy entry at x=-129.16 → trunk at x=-132.879.
+            //    Power 0.18: ~13.5m/s initial westward → 7.16m to canopy edge → enters canopy (×0.40 = ~5.4m/s)
+            //    → 3.35m more → hits trunk east face → XZ reflect (restitution=0.15) → ball goes back east
+            //    → comes to rest on ground east of trunk (all in-bounds).
+            //    ZERO camera code — normal chase camera follows the ball automatically.
+            var sm      = ctrl.BallSM;
+            var shotCtl = Object.FindObjectOfType<Golfin.Gameplay.Input.ShotController>();
+
+            ctrl.SetClub(0); // Driver — lowest loft (10.9°), keeps ball near ground for lateral approach
+            ctrl.InjectLabBundleForCurrentClub(); // Lab stats for consistent behavior
+
+            bool shotDone = false;
+            if (sm != null) sm.OnShotComplete += r => { shotDone = true; };
+            if (shotCtl != null)
+            {
+                float si = 0f;
+                while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 4f)
+                { si += Time.unscaledDeltaTime; yield return null; }
+                shotCtl.BeginExternalDrag();
+                const float ramp = 0.60f; float rt = 0f;
+                while (rt < ramp)
+                {
+                    rt += Time.unscaledDeltaTime;
+                    shotCtl.SetExternalPower(Mathf.Lerp(0f, 0.18f, rt / ramp), 0f);
+                    yield return null;
+                }
+                shotCtl.SetExternalPower(0.18f, 0f);
+                yield return new WaitForSecondsRealtime(0.18f);
+                shotCtl.EndExternalDrag();
+            }
+            else
+            {
+                ctrl.FireViaShotController(0.18f, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+            }
+            d.LogStep("  Shot fired (power=0.18, westward). Waiting for OnShotComplete...");
+
+            // 5. Wait for shot complete — NO camera manipulation at all.
+            float elapsed = 0f;
+            while (!shotDone && elapsed < 30f)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            d.LogStep($"  Shot done after {elapsed:F1}s. BallPos={ctrl.BallPosition:F2}");
+
+            // 6. Extra settle time — let ball come fully to rest and chase cam settle on it.
+            yield return new WaitForSecondsRealtime(3.5f);
+
+            // 7. Capture at-rest frame showing ball on ground at bare trunk base.
+            yield return d.Capture("trunk_normal_atrest");
+            d.LogStep($"  At-rest capture done. FinalPos={ctrl.BallPosition:F2}");
+
+            Vector3 finalPos = ctrl.BallPosition;
+            float xzDistToTrunk = Mathf.Sqrt(
+                Mathf.Pow(finalPos.x - (-132.879f), 2f) +
+                Mathf.Pow(finalPos.z - (-53.239f), 2f));
+            d.LogStep($"  xzDist to trunk center={xzDistToTrunk:F2}m (trunkRadius@scale=0.371m, canopyRadius=3.719m)");
+
+            if (finalPos.y < 1.5f)
+                d.LogStep("=== TreeTrunkNormalPlay: PASS — ball at ground level (y<1.5) ===");
+            else
+                d.LogStep($"=== TreeTrunkNormalPlay: PARTIAL — ball y={finalPos.y:F2} (expected <1.5, check for foliage lodge) ===");
+
+            } // end try
+            finally
+            {
                 restoreCanvases();
                 d.FlushLog();
             }

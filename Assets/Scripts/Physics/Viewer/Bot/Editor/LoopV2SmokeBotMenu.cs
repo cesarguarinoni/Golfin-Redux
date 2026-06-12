@@ -154,6 +154,23 @@ namespace Golfin.Physics.Viewer.Editor
             Launch("tree_collision_gate");
         }
 
+        // tree_collisions iter-8c: minimal normal-play trunk strike (no camera tricks, normal chase cam)
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Trunk Normal Play")]
+        public static void RunTreeTrunkNormalPlay()
+        {
+            // Single low/flat shot straight at a bare lower trunk.
+            // Normal chase camera — zero camera overrides.
+            // Clip: 5s startup + 1s load + 0.5s place + ~8s flight + 3.5s settle = ~18s.
+            // 30s override is generous cover.
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 30;
+            BotVideoRecorder.Arm();
+            Launch("tree_trunk_normal_play");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Trunk Normal Play", isValidateFunction: true)]
+        static bool ValidateTreeTrunkNormalPlay() => !EditorApplication.isPlaying;
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]

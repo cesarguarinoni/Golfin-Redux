@@ -315,50 +315,87 @@ namespace Golfin.Physics.Tests
                 $"≤1.5× trees-disabled descent ({noTime:F3}s). If this fails, per-step damping " +
                 $"was reintroduced — check BallSimulation canopy branch for per-step re-application.");
 
-            // ── (b) Impulse-once check ──────────────────────────────────────────────────
-            // Scan consecutive samples for velocity-ratio drops of ~0.40 (±0.15 tolerance).
-            // Exactly one such drop should occur (the canopy entry step).
-            // All other steps should show ratio ≈ 1.0 (or natural free-fall acceleration, which
-            // in vacuum is a small positive vy change each step — never a 0.40× step drop in
-            // total speed).
+            // ── (b) Impulse-once check (tightened in iter-8 per Architect decision) ────────
             //
-            // In vacuum (AeroConfig.Vacuum), the only per-step change is gravity (+vy).
-            // A 0.40× velocity ratio in total speed is a dramatic drop, not possible from gravity
-            // alone. So any ratio < 0.6 indicates a damping step; we expect exactly one.
+            // WHY THE SCAN IS TRUNCATED AT FIRST GROUND CONTACT:
+            // After the canopy entry impulse fires (the ONE legitimate damping step), the ball
+            // falls freely to the ground and then bounces. Ground bounces produce velocity-ratio
+            // steps that also fall below 0.7 (restitution < 1.0 at each bounce). These are pure
+            // ground physics — they occur IDENTICALLY in the noTrees simulation (confirmed by the
+            // iter-8 confirming probe: noTrees ball also shows 8 ratio<0.7 steps at y≈0).
+            // Scanning past first ground contact counts those bounces as false "damping" events,
+            // causing the old heuristic to report 10 steps instead of 1.
+            //
+            // The Architect adjudicated (iter-8): the over-broad heuristic (count ALL ratio<0.7)
+            // was introduced in iter-6 and its "1 step" pass was a FALSE PASS caused by the
+            // stuck-ball bug — the ball was frozen at the trunk (never reached ground), so there
+            // were zero bounces and only the canopy drop was counted. Iter-7 freed the ball;
+            // it now correctly lands and bounces; the bounce count trips the old assertion.
+            // Fix: truncate the scan at the first sample with y < 0.2m (the descent/canopy
+            // portion only), and additionally assert the drop lies within the canopy band.
+            //
+            // The tightened assertion also checks:
+            //   - the drop's Y position is within the canopy band (trunkTopY < y <= canopyTopY),
+            //     confirming it fired at canopy entry, not elsewhere;
+            //   - the ratio is ≈ canopyHitDamping (0.40) ± 0.15 tolerance for fp rounding.
+            const float trunkTopY   = 3.0f;  // default profile (matches SyntheticInstanceCsv → "default")
+            const float canopyTopY  = 9.0f;  // default profile
+            const float hitDamping  = 0.40f; // canopyHitDamping default
+            const float dampTol     = 0.15f; // ±0.15 fp/gravity-step tolerance
+            const float groundFloor = 0.2f;  // truncate scan here (first ground contact)
+
             var samples = withTrees.samples;
-            int dampStepCount = 0;
-            float dampRatio = float.NaN;
+            int   dampStepCount  = 0;
+            float dampRatio      = float.NaN;
+            float dampY          = float.NaN;
+
             for (int i = 1; i < samples.Count; i++)
             {
+                float y = samples[i].position.y.ToFloat();
+
+                // Stop scanning at first ground contact — everything below this is ground
+                // bounce-and-settle (restitution physics, NOT canopy damping).
+                if (y < groundFloor)
+                    break;
+
                 float vPrev = SpeedXYZ(samples[i - 1].velocity);
                 float vCurr = SpeedXYZ(samples[i].velocity);
-                if (vPrev > 0.1f) // avoid division by near-zero at rest
+                if (vPrev > 0.1f)
                 {
                     float ratio = vCurr / vPrev;
-                    // A ratio below 0.7 indicates a significant velocity drop — only the canopy
-                    // impulse (0.40) should produce this. Free-fall in vacuum changes speed by
-                    // at most a few percent per step (gravity × dt / v).
                     if (ratio < 0.7f)
                     {
                         dampStepCount++;
                         dampRatio = ratio;
+                        dampY     = y;
                     }
                 }
             }
 
+            // Expect exactly 1 impulse in the pre-ground portion of the trajectory.
             Assert.AreEqual(1, dampStepCount,
-                $"Exactly one damping step should occur (canopy entry crossing fires once). " +
-                $"Found {dampStepCount} steps with velocity ratio < 0.7. " +
+                $"Exactly one damping step should occur BEFORE first ground contact " +
+                $"(canopy entry crossing fires once). " +
+                $"Found {dampStepCount} pre-ground steps with velocity ratio < 0.7. " +
                 $"If 0: canopy entry was never detected (check IsInsideCanopy + entry condition). " +
-                $"If >1: per-step damping was reintroduced.");
+                $"If >1: per-step damping was reintroduced in the canopy branch.");
 
-            // The impulse ratio should be approximately canopyHitDamping (0.40, ±0.15 tolerance
-            // for fp rounding and the fact that velNext also accumulated a gravity step).
-            Assert.Greater(dampRatio, 0.20f,
-                $"Canopy impulse velocity ratio ({dampRatio:F3}) is too low — expected ~0.40 (canopyHitDamping). " +
+            // The impulse must have fired within the canopy Y-band.
+            Assert.Greater(dampY, trunkTopY,
+                $"Canopy impulse fired at y={dampY:F3}m — must be ABOVE trunkTopY ({trunkTopY}m). " +
+                $"A value ≤ trunkTopY suggests the impulse fired in the trunk band or below.");
+            Assert.LessOrEqual(dampY, canopyTopY,
+                $"Canopy impulse fired at y={dampY:F3}m — must be ≤ canopyTopY ({canopyTopY}m). " +
+                $"A value above canopyTopY suggests an off-tree entry (IsInsideCanopy bug).");
+
+            // The impulse ratio should be approximately canopyHitDamping (0.40).
+            Assert.Greater(dampRatio, hitDamping - dampTol,
+                $"Canopy impulse velocity ratio ({dampRatio:F3}) is too low — expected ~{hitDamping} " +
+                $"(canopyHitDamping ± {dampTol}). " +
                 $"A value near 0 suggests a second unintended damping compounded.");
-            Assert.Less(dampRatio, 0.60f,
-                $"Canopy impulse velocity ratio ({dampRatio:F3}) is too high — expected ~0.40 (canopyHitDamping). " +
+            Assert.Less(dampRatio, hitDamping + dampTol,
+                $"Canopy impulse velocity ratio ({dampRatio:F3}) is too high — expected ~{hitDamping} " +
+                $"(canopyHitDamping ± {dampTol}). " +
                 $"A value near 1.0 suggests the impulse didn't apply or only applied partially.");
         }
 
