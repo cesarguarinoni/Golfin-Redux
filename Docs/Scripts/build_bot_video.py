@@ -326,6 +326,111 @@ def parse_spinshape_captions(log_path, rec_start, rec_end):
     return events
 
 
+def parse_treegate_captions(log_path, rec_start, rec_end):
+    """
+    Tree Collision Gate captioner (tree_collisions Order 348).
+    Reads TrunkStrike / CanopyHit / Control log events from history.log.
+
+    Expected lines (from Scenarios.TreeCollisionGate via BotDriver.LogStep):
+      [t=T] === Part A: Trunk Strike (trees enabled) ===
+      [t=T]   [TrunkStrike] placed at (x, y, z), yaw=...
+      [t=T]   [TrunkStrike] complete e=Xs ball=(x, y, z)
+      [t=T]   [TrunkStrike] final pos=(x, y, z)
+      [t=T] === Part B: Canopy Hit (trees enabled) ===
+      [t=T]   [CanopyHit] placed at (x, y, z)
+      [t=T]   [CanopyHit] complete e=Xs ball=(x, y, z)
+      [t=T]   [CanopyHit] final=(x, y, z) (expected: SHORT of ...)
+      [t=T] === Part C: Control Shot (trees disabled) ===
+      [t=T]   [Control] complete e=Xs ball=(x, y, z)
+      [t=T]   [Control] final=(x, y, z)
+      [t=T]   [Summary] Control vs Canopy flat delta=XXm
+      [t=T] === TreeCollisionGate: PASS ===
+    """
+    import re as _re
+    events = []
+    if not os.path.exists(log_path):
+        print(f"WARN: history.log not found ({log_path}) — title caption only.")
+        return events
+
+    span = rec_end - rec_start
+
+    def to_vt(log_t):
+        return max(0.0, log_t - rec_start)
+
+    part_a_re  = _re.compile(r"\[t=([\d.]+)\]\s+===\s+Part A")
+    placed_re  = _re.compile(r"\[t=([\d.]+)\]\s+\[(TrunkStrike|CanopyHit|Control)\]\s+placed at")
+    complete_re= _re.compile(r"\[t=([\d.]+)\]\s+\[(TrunkStrike|CanopyHit|Control)\]\s+complete\s+e=([\d.]+)s\s+ball=\(([-\d.,\s]+)\)")
+    final_re   = _re.compile(r"\[t=([\d.]+)\]\s+\[(TrunkStrike|CanopyHit)\]\s+final\s+pos?=\(([-\d.,\s]+)\)")
+    part_b_re  = _re.compile(r"\[t=([\d.]+)\]\s+===\s+Part B")
+    part_c_re  = _re.compile(r"\[t=([\d.]+)\]\s+===\s+Part C")
+    disable_re = _re.compile(r"\[t=([\d.]+)\]\s+\[Control\]\s+_treeProvider nulled")
+    control_final_re = _re.compile(r"\[t=([\d.]+)\]\s+\[Control\]\s+final=\(([-\d.,\s]+)\)")
+    summary_re = _re.compile(r"\[t=([\d.]+)\]\s+\[Summary\]\s+Control vs Canopy flat delta=([\d.]+)m")
+    pass_re    = _re.compile(r"\[t=([\d.]+)\]\s+===\s+TreeCollisionGate:\s+(\w+)")
+
+    pending = {}  # part -> {start, end, text}
+
+    with open(log_path) as fh:
+        for line in fh:
+            m = part_a_re.search(line)
+            if m:
+                t = to_vt(float(m.group(1)))
+                pending["a_hdr"] = (t, min(t + 2.5, span), "PART A: TRUNK STRIKE\n(trees enabled)")
+                continue
+            m = part_b_re.search(line)
+            if m:
+                t = to_vt(float(m.group(1)))
+                pending["b_hdr"] = (t, min(t + 2.5, span), "PART B: CANOPY HIT\n(trees enabled)")
+                continue
+            m = part_c_re.search(line)
+            if m:
+                t = to_vt(float(m.group(1)))
+                pending["c_hdr"] = (t, min(t + 2.5, span), "PART C: CONTROL SHOT\n(trees disabled)")
+                continue
+            m = disable_re.search(line)
+            if m:
+                t = to_vt(float(m.group(1)))
+                pending["c_disable"] = (t, min(t + 2.0, span), "Tree provider nulled\n(control condition)")
+                continue
+            m = complete_re.search(line)
+            if m:
+                t    = to_vt(float(m.group(1)))
+                part = m.group(2)
+                elapsed = m.group(3)
+                xyz = m.group(4).strip()
+                if part == "TrunkStrike":
+                    pending["a_complete"] = (t, min(t + 4.0, span),
+                        f"Trunk Strike complete  e={elapsed}s\nball=({xyz})\n→ Hard reflect + stop")
+                elif part == "CanopyHit":
+                    pending["b_complete"] = (t, min(t + 4.0, span),
+                        f"Canopy Hit complete  e={elapsed}s\nball=({xyz})\n→ Canopy damped shot")
+                elif part == "Control":
+                    pending["c_complete"] = (t, min(t + 4.0, span),
+                        f"Control complete  e={elapsed}s\nball=({xyz})\n→ Full flight, no trees")
+                continue
+            m = summary_re.search(line)
+            if m:
+                t = to_vt(float(m.group(1)))
+                delta = m.group(2)
+                pending["summary"] = (t, min(t + 4.0, span),
+                    f"DELTA: {delta}m\n(Control further = trees damping confirmed)")
+                continue
+            m = pass_re.search(line)
+            if m:
+                t = to_vt(float(m.group(1)))
+                verdict = m.group(2)
+                tag = "PASS" if verdict == "PASS" else f"PARTIAL/FAIL"
+                pending["verdict"] = (t, min(t + 4.0, span), f"TreeCollisionGate: {tag}")
+                continue
+
+    # Emit in chronological order.
+    ordered = sorted(pending.values(), key=lambda x: x[0])
+    for start, end, text in ordered:
+        if start < span:
+            events.append((start, end, text))
+    return events
+
+
 def esc(p):
     """Escape a path for an ffmpeg filter option value."""
     return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
@@ -334,13 +439,15 @@ def esc(p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", required=True, help="smoke-bot scenario key")
-    ap.add_argument("--mode", choices=["clicks", "steps", "visualgate", "spinshape"], default="clicks",
+    ap.add_argument("--mode", choices=["clicks", "steps", "visualgate", "spinshape", "treegate"], default="clicks",
                     help="Caption parser to use. 'clicks' = tap-event captions (default, "
                          "for UI flows). 'steps' = verbatim `Step: '<text>'` captions "
                          "(for scroll/swipe/expand UI walkthroughs). 'visualgate' = per-stroke "
                          "carry captions (for live_stat_provider_visual_gate_* scenarios). "
                          "'spinshape' = per-stroke spin position + rate captions "
-                         "(for SpinAndShapeVisualGate scenario).")
+                         "(for SpinAndShapeVisualGate scenario). "
+                         "'treegate' = trunk/canopy/control captions "
+                         "(for tree_collision_gate scenario, Order 348).")
     ap.add_argument("--title", default="Loop v2 — Stage F\nButton Press Feedback")
     ap.add_argument("--suffix", default="stageF_buttons", help="output filename suffix")
     ap.add_argument("--output-dir", default=None,
@@ -395,6 +502,8 @@ def main():
         captions = parse_spinshape_captions(log_path, rec_start, rec_start + duration)
     elif args.mode == "steps":
         captions = parse_steps_captions(log_path, rec_start, rec_start + duration)
+    elif args.mode == "treegate":
+        captions = parse_treegate_captions(log_path, rec_start, rec_start + duration)
     else:
         captions = parse_captions(log_path, rec_start, rec_start + duration)
     # Allow callers to pass literal \n in --title (bash strips backslash semantics).

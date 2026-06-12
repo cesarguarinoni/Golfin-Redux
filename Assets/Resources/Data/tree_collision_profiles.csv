@@ -1,0 +1,12 @@
+# One row per tree prefab used in placement; `default` row is the fallback for any unprofiled prefab.
+# Heights/radii in meters at scale=1.0; instance scale multiplies all four.
+# Names match the normalized form emitted by TreeObstacleBaker (spaces replaced with underscores).
+prefabName,trunkRadius,trunkHeight,canopyRadius,canopyTop,trunkRestitution,canopyHitDamping
+default,0.25,3.0,3.0,9.0,0.15,0.40
+MESH_01Cedar,0.30,4.0,2.5,12.0,0.15,0.40
+MESH_JapaneseBlack_01,0.35,3.5,3.5,10.0,0.15,0.40
+MESH_JapaneseBlack_01_Var1,0.35,3.5,3.5,10.0,0.15,0.40
+Mesh_Metasequoia,0.30,4.5,2.0,13.0,0.15,0.40
+MESH_ScottishPine_01,0.30,4.0,2.5,11.0,0.15,0.40
+Spruce_1,0.25,3.5,2.5,10.0,0.15,0.40
+Spruce_3,0.25,3.5,2.5,10.0,0.15,0.40

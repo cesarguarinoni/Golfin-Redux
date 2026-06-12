@@ -41,6 +41,8 @@ namespace Golfin.Physics.Viewer
         // live colliders. Null on flat-ground / no-hole sessions.
         Golfin.Physics.Runtime.Baked.BakedZoneClassifier _bakedClassifier;
         Golfin.Physics.Runtime.Baked.BakedHeightProvider _bakedGround;
+        // Phase 7: tree obstacle provider — null = no trees.
+        Golfin.Physics.ITreeObstacleProvider _treeProvider;
 
         [Header("References")]
         [SerializeField] TrajectoryRenderer trajectoryRenderer;
@@ -1179,7 +1181,7 @@ namespace Golfin.Physics.Viewer
         {
             var ground  = BuildGroundProvider();
             var surface = BuildSurfaceProvider(default(ShotPreset));
-            return BallSimulation.Simulate(input, ground, AeroCfg, WindCfg, surface, SurfaceCfg, PuttCfg, ballMods);
+            return BallSimulation.Simulate(input, ground, AeroCfg, WindCfg, surface, SurfaceCfg, PuttCfg, ballMods, _treeProvider);
         }
 
         bool _configsLoaded;
@@ -1284,7 +1286,7 @@ namespace Golfin.Physics.Viewer
             var input   = new ShotInput(origin, newVelocity, fp.FromInt(60), spin);
             var ground  = BuildGroundProvider();
             var surface = BuildSurfaceProvider(preset);
-            return BallSimulation.Simulate(input, ground, AeroCfg, preset.Wind, surface, SurfaceCfg, PuttCfg);
+            return BallSimulation.Simulate(input, ground, AeroCfg, preset.Wind, surface, SurfaceCfg, PuttCfg, BallPhysicsModifiers.Neutral, _treeProvider);
         }
 
         // Returns current ball position snapped to terrain, or fallback if no ball.
@@ -1362,6 +1364,7 @@ namespace Golfin.Physics.Viewer
         {
             _bakedClassifier = null;
             _bakedGround     = null;
+            _treeProvider    = null;
 
             // Both files live under Assets/Resources/HoleData/<holeId>/ so they
             // ship with built players AND survive cross-PC pulls (Tools/UHoleGeo/output/
@@ -1396,6 +1399,15 @@ namespace Golfin.Physics.Viewer
                 Debug.Log($"[PhysicsLab] Baked providers wired for {holeId}: "
                         + $"{data.zones.Count} zone groups, "
                         + $"OB mask={(data.obMask != null ? "yes" : "no")}.");
+
+                // Phase 7: load tree obstacles for this hole.
+                var treeAsset = Resources.Load<TextAsset>($"HoleData/{holeId}/tree_obstacles");
+                var instances = Golfin.Physics.Runtime.TreeObstacleLoader.LoadInstances(treeAsset);
+                _treeProvider = Golfin.Physics.Runtime.TreeObstacleProvider.Create(instances);
+                if (_treeProvider != null)
+                    Debug.Log($"[PhysicsLab] Tree obstacles loaded for {holeId}: {instances.Count} trees.");
+                else
+                    Debug.Log($"[PhysicsLab] No tree_obstacles CSV for {holeId} — tree collision disabled.");
             }
             catch (System.Exception e)
             {

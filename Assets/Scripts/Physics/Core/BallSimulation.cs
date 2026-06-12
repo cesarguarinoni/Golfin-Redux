@@ -129,6 +129,35 @@ namespace Golfin.Physics
             SurfaceConfig surfaceCfg,
             PuttConfig puttCfg,
             BallPhysicsModifiers ballMods)
+            => Simulate(input, ground, aero, wind, surfaces, surfaceCfg, puttCfg, ballMods, null);
+
+        // ── Phase 7 (tree collisions) ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Phase 7 entry. Adds ITreeObstacleProvider for deterministic tree trunk + canopy
+        /// collision in all sim phases (airborne RK4, bounce arcs, roll, putt).
+        ///
+        /// trees=null → behaviour is bit-exact identical to the Phase 6 8-arg path.
+        /// Design: trunk = hard XZ reflect + trunkRestitution (M5b pattern);
+        ///         canopy = ONE-TIME entry impulse (vel *= canopyHitDamping) on the step the
+        ///                  ball crosses from outside to inside the canopy cylinder (airborne only).
+        ///                  No per-step force while inside; no cut on exit. Each fresh re-entry
+        ///                  fires its own cut. (D3 revised 2026-06-12: per-step drag was rejected
+        ///                  as slow-motion; discrete impulse at contact then normal ballistics.)
+        ///
+        /// Ordering: trunk check runs BEFORE ground check within a step; earliest frac wins.
+        /// Roll/putt phases: trunk-only (canopy floor is above a rolling ball by construction).
+        /// </summary>
+        public static Trajectory Simulate(
+            ShotInput input,
+            IGroundProvider ground,
+            AeroConfig aero,
+            WindConfig wind,
+            ISurfaceProvider surfaces,
+            SurfaceConfig surfaceCfg,
+            PuttConfig puttCfg,
+            BallPhysicsModifiers ballMods,
+            ITreeObstacleProvider trees)
         {
 #if UNITY_EDITOR
             if (DiagShotLogger != null)
@@ -171,11 +200,11 @@ namespace Golfin.Physics
 
                 return RunPuttPhase(startPos, startVel, fp.Zero,
                                     ground, surfaces, surfaceCfg, puttCfg,
-                                    aero.BallRadius, samples, hits, ballMods);
+                                    aero.BallRadius, samples, hits, ballMods, trees);
             }
 
             // ── Airborne phase ────────────────────────────────────────────────────────
-            var airborne = SimulateAirborne(input, ground, aero, wind, ballMods);
+            var airborne = SimulateAirborne(input, ground, aero, wind, ballMods, trees);
 
             if (airborne.termination != TerminationReason.HitGround)
             {
@@ -286,11 +315,11 @@ namespace Golfin.Physics
                 {
                     fp3 vRoll = vel - normal * fpMath.Dot(vel, normal);
                     return RunRollPhase(pos, vRoll, t, ground, surfaces, surfaceCfg,
-                                        aero.BallRadius, samplesList, hitsList, ballMods);
+                                        aero.BallRadius, samplesList, hitsList, ballMods, trees);
                 }
 
                 var nextInput    = new ShotInput(pos, vel, fp.FromInt(30), new SpinState(input.Spin.Axis, fp.Zero));
-                var nextAirborne = SimulateAirborne(nextInput, ground, aero, wind, ballMods);
+                var nextAirborne = SimulateAirborne(nextInput, ground, aero, wind, ballMods, trees);
 
                 for (int i = 1; i < nextAirborne.samples.Count; i++)
                 {
@@ -338,7 +367,8 @@ namespace Golfin.Physics
             IGroundProvider ground,
             AeroConfig aero,
             WindConfig wind,
-            BallPhysicsModifiers ballMods)
+            BallPhysicsModifiers ballMods,
+            ITreeObstacleProvider trees = null)
         {
             var samples = new List<TrajectorySample>(capacity: 1536);
             fp3 pos = input.origin;
@@ -388,6 +418,105 @@ namespace Golfin.Physics
                 fp3 posNext = pos + (k1p + k2p * Two + k3p * Two + k4p) * Dt / Six;
                 fp3 velNext = vel + (k1v + k2v * Two + k3v * Two + k4v) * Dt / Six;
                 fp  tNext   = t + Dt;
+
+                // ── Tree collision (airborne) ─────────────────────────────────────────
+                // Run BEFORE the ground check so a trunk stop doesn't tunnel through terrain.
+                // Trunk: earliest XZ crossing → M5b-style interpolate to hit, reflect XZ vel.
+                // Canopy (ENTRY crossing: outside p0 → inside p1): one-time vel *= canopyHitDamping;
+                //   normal ballistics (gravity/drag/magnus) resume immediately. Not applied
+                //   per-step while inside; not applied on exit. Each fresh re-entry fires one cut.
+                if (trees != null && trees.TestSegment(pos, posNext, out TreeHit treeHit))
+                {
+                    if (treeHit.IsTrunk)
+                    {
+                        // ── frac=0 containment guard: ball is ALREADY INSIDE the trunk cylinder ──
+                        // The containment guard in TestTrunkCrossing fires when p0 is inside the trunk
+                        // (dist < trunkRadius) and returns frac=0, hitPos=p0, NormalXZ=outward push.
+                        // Without special-casing, tHitAbs = t + 0 = t and pos = hitPos = pos → zero
+                        // time/position progress → the integrator loops to the cap (14 400 steps),
+                        // leaving the ball floating mid-air against the trunk (PROBE7 stuck-ball defect,
+                        // red-team iter-6 ARCHITECT_REVIEW_FAIL).
+                        //
+                        // Fix: when frac=0 (already-inside), push the ball OUT of the trunk cylinder
+                        // along NormalXZ to just beyond trunkRadius, then advance to tNext/posNext
+                        // (pushed) unconditionally — mirroring the roll/putt handler which advances
+                        // t=t+Dt and pos=posNext unconditionally and never sticks.
+                        //
+                        // For the descending-onto-trunk case (vy<0, XZ inside trunk at/above trunkTopY,
+                        // including near-zero XZ velocity where NormalXZ is degenerate): kill XZ velocity,
+                        // keep the descent, and advance t=tNext so the ground-crossing check can terminate
+                        // the shot normally. The ball lands on the ground below the trunk.
+                        if (treeHit.Frac == fp.Zero)
+                        {
+                            fp trunkR = treeHit.Profile.TrunkRadius;
+                            // Check if NormalXZ is degenerate (near-zero XZ — straight-down approach).
+                            fp nLenSq = treeHit.NormalXZ.x * treeHit.NormalXZ.x
+                                      + treeHit.NormalXZ.z * treeHit.NormalXZ.z;
+                            fp3 pushedPos;
+                            fp3 velOut;
+                            if (nLenSq > fp.FromFloat(0.001f))
+                            {
+                                // Push the ball outside the trunk along the outward normal.
+                                pushedPos = new fp3(
+                                    treeHit.HitPos.x + treeHit.NormalXZ.x * (trunkR + fp.FromFloat(0.01f)),
+                                    posNext.y,
+                                    treeHit.HitPos.z + treeHit.NormalXZ.z * (trunkR + fp.FromFloat(0.01f)));
+                                // Mirror: reflect XZ off the trunk normal; keep vy; apply restitution.
+                                fp dotXZ2 = velNext.x * treeHit.NormalXZ.x + velNext.z * treeHit.NormalXZ.z;
+                                fp3 velRefl2 = new fp3(
+                                    velNext.x - fp.FromInt(2) * dotXZ2 * treeHit.NormalXZ.x,
+                                    velNext.y,
+                                    velNext.z - fp.FromInt(2) * dotXZ2 * treeHit.NormalXZ.z);
+                                fp restitution2 = treeHit.Profile.TrunkRestitution;
+                                velOut = new fp3(
+                                    velRefl2.x * restitution2,
+                                    velRefl2.y,
+                                    velRefl2.z * restitution2);
+                            }
+                            else
+                            {
+                                // Degenerate NormalXZ (straight-down / near-axis descent):
+                                // kill XZ velocity, keep vy, let the ball fall through and land.
+                                // Advance pos along the descent direction.
+                                pushedPos = posNext;
+                                velOut = new fp3(fp.Zero, velNext.y, fp.Zero);
+                            }
+                            // Advance unconditionally to tNext (mirror roll/putt handler).
+                            samples.Add(new TrajectorySample(tNext, pushedPos, velOut));
+                            pos = pushedPos; vel = velOut; t = tNext;
+                            continue;
+                        }
+
+                        // ── Normal frac>0 trunk crossing ──
+                        // Interpolate to hit position.
+                        fp3 hitPos = treeHit.HitPos;
+                        // Reflect XZ velocity about the outward normal; Y unchanged.
+                        fp dotXZ = velNext.x * treeHit.NormalXZ.x + velNext.z * treeHit.NormalXZ.z;
+                        fp3 velReflected = new fp3(
+                            velNext.x - fp.FromInt(2) * dotXZ * treeHit.NormalXZ.x,
+                            velNext.y,
+                            velNext.z - fp.FromInt(2) * dotXZ * treeHit.NormalXZ.z);
+                        fp restitution = treeHit.Profile.TrunkRestitution;
+                        fp3 velOut2 = new fp3(
+                            velReflected.x * restitution,
+                            velReflected.y,
+                            velReflected.z * restitution);
+                        fp tHitAbs = t + (tNext - t) * treeHit.Frac;
+                        samples.Add(new TrajectorySample(tHitAbs, hitPos, velOut2));
+                        pos = hitPos; vel = velOut2; t = tHitAbs;
+                        // Continue integration from the hit point (restart step).
+                        continue;
+                    }
+                    else
+                    {
+                        // Canopy entry crossing: one-time velocity impulse. Do not interrupt trajectory.
+                        // Ball was outside canopy at pos, crosses into canopy at posNext.
+                        // Apply canopyHitDamping ONCE; subsequent in-canopy steps are NOT damped.
+                        // Normal ballistics (gravity/drag/magnus) resume immediately after this cut.
+                        fp damp = treeHit.Profile.CanopyHitDamping;
+                        velNext = velNext * damp;
+                    }
+                }
 
                 // M5b: signed-distance level-detector replaces the previous
                 // edge-detector (`posNext.y <= groundY && pos.y > groundY`).
@@ -456,7 +585,7 @@ namespace Golfin.Physics
             fp3 startPos, fp3 startVel, fp startT,
             IGroundProvider ground, ISurfaceProvider surfaces, SurfaceConfig surfaceCfg,
             fp ballRadius, List<TrajectorySample> samples, List<TerrainHit> hits,
-            BallPhysicsModifiers ballMods)
+            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees = null)
         {
             fp3 pos = startPos;
             fp3 vel = startVel;
@@ -526,6 +655,28 @@ namespace Golfin.Physics
                 posNext = new fp3(posNext.x,
                     ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
                     posNext.z);
+
+                // ── Tree trunk collision (roll phase) ─────────────────────────────────
+                // Canopy damping is airborne-only (a rolling ball's height < canopy floor in
+                // typical layouts). Only trunk XZ reflect is tested here.
+                if (trees != null && trees.TestSegment(pos, posNext, out TreeHit rollTreeHit)
+                    && rollTreeHit.IsTrunk)
+                {
+                    fp dotXZ = vel.x * rollTreeHit.NormalXZ.x + vel.z * rollTreeHit.NormalXZ.z;
+                    fp3 velReflected = new fp3(
+                        vel.x - fp.FromInt(2) * dotXZ * rollTreeHit.NormalXZ.x,
+                        vel.y,
+                        vel.z - fp.FromInt(2) * dotXZ * rollTreeHit.NormalXZ.z);
+                    fp restitution = rollTreeHit.Profile.TrunkRestitution;
+                    vel = new fp3(
+                        velReflected.x * restitution,
+                        velReflected.y,
+                        velReflected.z * restitution);
+                    posNext = rollTreeHit.HitPos;
+                    posNext = new fp3(posNext.x,
+                        ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
+                        posNext.z);
+                }
 
                 t   = t + Dt;
                 pos = posNext;
@@ -616,7 +767,7 @@ namespace Golfin.Physics
             IGroundProvider ground, ISurfaceProvider surfaces,
             SurfaceConfig surfaceCfg, PuttConfig puttCfg,
             fp ballRadius, List<TrajectorySample> samples, List<TerrainHit> hits,
-            BallPhysicsModifiers ballMods)
+            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees = null)
         {
             fp3 pos = startPos;
             fp3 vel = startVel;
@@ -684,6 +835,26 @@ namespace Golfin.Physics
                 posNext = new fp3(posNext.x,
                     ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
                     posNext.z);
+
+                // ── Tree trunk collision (putt phase) ─────────────────────────────────
+                if (trees != null && trees.TestSegment(pos, posNext, out TreeHit puttTreeHit)
+                    && puttTreeHit.IsTrunk)
+                {
+                    fp dotXZ = vel.x * puttTreeHit.NormalXZ.x + vel.z * puttTreeHit.NormalXZ.z;
+                    fp3 velReflected = new fp3(
+                        vel.x - fp.FromInt(2) * dotXZ * puttTreeHit.NormalXZ.x,
+                        vel.y,
+                        vel.z - fp.FromInt(2) * dotXZ * puttTreeHit.NormalXZ.z);
+                    fp restitution = puttTreeHit.Profile.TrunkRestitution;
+                    vel = new fp3(
+                        velReflected.x * restitution,
+                        velReflected.y,
+                        velReflected.z * restitution);
+                    posNext = puttTreeHit.HitPos;
+                    posNext = new fp3(posNext.x,
+                        ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
+                        posNext.z);
+                }
 
                 t   = t + Dt;
                 pos = posNext;

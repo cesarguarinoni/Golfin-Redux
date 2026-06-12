@@ -149,6 +149,10 @@ namespace Golfin.Physics.Viewer
                 case "matchmaking_1v1_cancel_gate":
                     scenarioRoutine = Bot.Scenarios.Matchmaking1v1CancelGate(driver);
                     break;
+                // tree_collisions (Order 348, 2026-06-12):
+                case "tree_collision_gate":
+                    scenarioRoutine = Bot.Scenarios.TreeCollisionGate(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

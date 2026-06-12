@@ -1513,6 +1513,335 @@ namespace Golfin.Physics.Viewer.Bot
 
             d.FlushLog();
         }
+
+        // ── Scenario: tree_collision_gate ─────────────────────────────────────
+        // tree_collisions (Order 348, 2026-06-12): §9 visual gate evidence.
+
+        /// <summary>
+        /// Visual gate for the tree collision system (Order 348).
+        ///
+        /// Three clips in one combined recording:
+        ///   A. trunk_strike  — ball fired straight at a trunk, reflects and drops nearly dead.
+        ///   B. canopy_hit    — ball fired at a shallower loft toward canopy zone, visibly damped.
+        ///   C. control       — same canopy shot fired with _treeProvider nulled (no collision),
+        ///                       ball flies full distance showing delta vs. B.
+        ///
+        /// Scene path: DIRECT — LoadSceneAsync("LabScaffold", Single) then additive
+        ///   LoadSceneAsync("Hole_01_Geo"). Bypasses full game navigation (~84s under recording
+        ///   load) to keep total clip ≤40s. PhysicsLabController.ScanForLoadedHoleSceneAtStartup
+        ///   detects Hole_01_Geo, calls OnHoleLoaded → TryLoadBakedProviders → populates _treeProvider.
+        ///
+        /// Target tree: Hole 1, cluster at world x=-87.0, z=-121.3, baseY≈1.0, scale≈0.97
+        /// (MESH_JapaneseBlack_01 per tree_obstacles.csv). Ball placed at x=-87.0, z=-91.0
+        /// (30m in front of trunk along +z axis); driver shot aimed straight at tree (yaw=-π/2).
+        ///
+        /// Trunk profile for MESH_JapaneseBlack_01 (from tree_collision_profiles.csv):
+        ///   trunkRadius=0.25m, trunkHeight=4.5m, canopyBaseY=4.5m, canopyRadius=3.5m,
+        ///   canopyHeight=5.0m, trunkBounciness=0.72, canopyDamping=0.45.
+        ///
+        /// Captures: gameplay_armed, trunk_strike_before, trunk_strike_after,
+        ///           canopy_hit_before, canopy_hit_after, control_before, control_after.
+        /// </summary>
+        public static IEnumerator TreeCollisionGate(BotDriver d)
+        {
+            d.LogStep("=== Tree Collision Gate (tree_collisions Order 348) ===");
+
+            // Hide ShellScene canvases so the PhysicsLab camera dominates the Game View.
+            // Without this, the ShellScene UI overlays the PhysicsLab 3D render, making
+            // the recorded video show the home-screen splash instead of ball-tree collisions.
+            var shellCanvases = Object.FindObjectsOfType<Canvas>();
+            var hiddenCanvases = new System.Collections.Generic.List<Canvas>();
+            foreach (var c in shellCanvases)
+            {
+                if (c.gameObject.scene.name == "ShellScene" && c.enabled)
+                {
+                    c.enabled = false;
+                    hiddenCanvases.Add(c);
+                }
+            }
+            d.LogStep($"  Hidden {hiddenCanvases.Count} ShellScene canvases for clean video capture.");
+
+            // ── Local restore helper ──────────────────────────────────────────
+            // Invoked by the finally block — guaranteed on ALL exit paths including
+            // early yield breaks and uncaught exceptions. C# iterators support
+            // yield return inside try/finally (not try/catch); yield break inside
+            // the try block causes the finally to run before the coroutine terminates.
+            System.Action restoreCanvases = () =>
+            {
+                foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+                d.LogStep($"  Restored {hiddenCanvases.Count} ShellScene canvases.");
+            };
+
+            // Delegate to the body iterator so cleanup (restoreCanvases + FlushLog) runs in
+            // a try/finally, guaranteeing it fires on ALL exit paths: normal completion,
+            // early yield break, and unhandled exceptions. C# 5+ iterators support
+            // yield return (and yield break) inside try/finally.
+            return TreeCollisionGateBody(d, restoreCanvases);
+        }
+
+        // Body iterator — separated from TreeCollisionGate so the non-iterator outer method
+        // can set up state (canvas hiding) before returning this IEnumerator, and the
+        // try/finally here guarantees cleanup on every exit path.
+        private static IEnumerator TreeCollisionGateBody(
+            BotDriver d,
+            System.Action restoreCanvases)
+        {
+            try
+            {
+
+            // 1. Load LabScaffold directly (bypasses full matchmaking navigation).
+            //    Load LabScaffold + Hole_01_Geo ADDITIVELY, both kicked off simultaneously.
+            //
+            // CRITICAL ordering constraint: PhysicsLabController.ScanForLoadedHoleSceneAtStartup
+            // runs in Start() and yields only 2 frames before checking for Hole_*_Geo scenes.
+            // If LabScaffold loads but Hole_01_Geo is not yet loaded, the scan finds nothing
+            // and exits — OnHoleLoaded never fires, IsHoleReady stays false.
+            //
+            // Fix: kick off BOTH loads before waiting for either. When LabScaffold's Start()
+            // runs the scan, Hole_01_Geo is loading (or already loaded) so the scan finds it.
+            //
+            // Additive mode keeps ShellScene (and this bot GO) alive — bot GO would be destroyed
+            // by Single-mode load. Mirrors GameplaySceneLoader.cs which also uses Additive.
+            d.LogStep("  Starting LabScaffold + Hole_01_Geo loads (both Additive, simultaneous)...");
+            var opLab = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "LabScaffold", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opLab == null)
+            {
+                d.LogStep("=== TreeCollisionGate: FAIL — LoadSceneAsync('LabScaffold') returned null. Is LabScaffold in Build Settings? ===");
+                yield break;
+            }
+            // Kick off hole load immediately (before LabScaffold finishes) so it's available
+            // when ScanForLoadedHoleSceneAtStartup runs on LabScaffold's frame 2.
+            var opHole = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "Hole_01_Geo", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opHole == null)
+            {
+                d.LogStep("=== TreeCollisionGate: FAIL — LoadSceneAsync('Hole_01_Geo') returned null. Is Hole_01_Geo in Build Settings? ===");
+                yield break;
+            }
+
+            // 2. Wait for both loads to complete.
+            float lw = 0f;
+            while ((!opLab.isDone || !opHole.isDone) && lw < 30f)
+            {
+                yield return new WaitForSecondsRealtime(0.25f);
+                lw += 0.25f;
+            }
+            if (!opLab.isDone || !opHole.isDone)
+            {
+                d.LogStep($"=== TreeCollisionGate: FAIL — scene load timed out after {lw:F1}s (lab={opLab.isDone} hole={opHole.isDone}) ===");
+                yield break;
+            }
+            d.LogStep($"  Both scenes loaded in {lw:F1}s. Polling ctrl.IsHoleReady...");
+
+            // 3. Wait for PhysicsLabController.OnHoleLoaded to complete (sets _useSceneProviders=true,
+            //    loads tree_obstacles.csv, populates _treeProvider). Poll IsHoleReady up to 15s.
+            var ctrl = Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            {
+                d.LogStep("=== TreeCollisionGate: FAIL — PhysicsLabController not found after LabScaffold load ===");
+                yield break;
+            }
+            float holeWait = 0f;
+            while (!ctrl.IsHoleReady && holeWait < 15f)
+            {
+                yield return new WaitForSecondsRealtime(0.25f);
+                holeWait += 0.25f;
+            }
+            if (!ctrl.IsHoleReady)
+            {
+                d.LogStep($"=== TreeCollisionGate: FAIL — IsHoleReady never true after {holeWait:F1}s. OnHoleLoaded did not fire. ===");
+                yield break;
+            }
+            d.LogStep($"  IsHoleReady=true after {holeWait:F1}s settle. Capturing armed state.");
+            yield return new WaitForSecondsRealtime(1f); // extra settle for treeProvider CSV load
+            yield return d.Capture("gameplay_armed");
+
+            // ctrl is already found above (after LabScaffold loaded, before IsHoleReady poll).
+            var sm      = ctrl.BallSM;
+            var shotCtl = Object.FindObjectOfType<Golfin.Gameplay.Input.ShotController>();
+
+            // Target tree: x=-87.0, z=-121.3 (MESH_JapaneseBlack_01, Hole 1 tree_obstacles.csv).
+            // Ball placed 30m in front (same X, 30m toward +z side = z=-91.0).
+            // Yaw = atan2(-1, 0) = -π/2 → aims ball in the -z world direction (toward tree).
+            var ballPos     = new Vector3(-87.0f, 0f, -91.0f);
+            var canopyPos   = new Vector3(-87.0f, 0f, -71.0f); // 50m back for canopy arc
+            float yawToTree = Mathf.Atan2(-1f, 0f);            // -π/2 rad → shot direction is -z
+
+            // ChaseCamera component reference for mode switching (iter-6 Defect 2 fix).
+            // Default Chase mode buries itself in the foliage (camera follows ball INTO the tree
+            // along the shot path). We switch to Downrange mode for Part A to hold a fixed
+            // side-elevated position that shows the trunk contact unmistakably.
+            var bindPrivate   = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            var chaseCamFi    = ctrl.GetType().GetField("chaseCamera", bindPrivate);
+            var chaseCamComp  = chaseCamFi?.GetValue(ctrl) as ChaseCamera;
+
+            // Downrange framing for the trunk-strike side view.
+            // Trunk at x=-87, z=-121.3. Camera 16m west, 6m elevated, looking east at mid-trunk.
+            // Ball enters frame from the right (+z side), strikes trunk at x=-87, drops dead.
+            var trunkImpactLookAt = new Vector3(-87.0f, 2.5f, -121.3f); // mid-trunk aim point
+            var trunkSideCamPos   = new Vector3(-103.0f, 6.0f, -121.3f); // 16m west, elevated
+
+            // ── A: Trunk Strike (trees enabled, power 0.75) ───────────────────
+            d.LogStep("=== Part A: Trunk Strike (trees enabled) ===");
+            ctrl.PlaceBallAt(ballPos, preferredSurfaceTypeValue: null);
+
+            // Switch to Downrange mode: fixed camera at side/elevated position watching trunk.
+            // This overrides the chase-cam for the duration of Part A.
+            // SetCameraYawRadians still drives the ball-shot direction (ShotController.CameraHeadingRadians).
+            ctrl.SetCameraYawRadians(yawToTree);
+            if (chaseCamComp != null)
+            {
+                chaseCamComp.SetDownrangeFraming(trunkSideCamPos, trunkImpactLookAt);
+                chaseCamComp.SetMode(ChaseCamera.Mode.Downrange);
+                d.LogStep($"  [TrunkStrike] camera → Downrange pos={trunkSideCamPos:F1} lookAt={trunkImpactLookAt:F1}");
+            }
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("trunk_strike_before");
+            d.LogStep($"  [TrunkStrike] placed at {ballPos}, yaw={yawToTree:F3}");
+
+            ctrl.SetClub(0);
+            shotCtl?.ClearStatBundleOverride();
+            {
+                bool trunkDone = false;
+                if (sm != null) sm.OnShotComplete += r => { trunkDone = true; };
+                if (shotCtl != null)
+                {
+                    float si = 0f;
+                    while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 4f)
+                    { si += Time.unscaledDeltaTime; yield return null; }
+                    shotCtl.BeginExternalDrag();
+                    const float ramp = 0.85f; float rt = 0f;
+                    while (rt < ramp) { rt += Time.unscaledDeltaTime; shotCtl.SetExternalPower(Mathf.Lerp(0f, 0.75f, rt / ramp), 0f); yield return null; }
+                    shotCtl.SetExternalPower(0.75f, 0f);
+                    yield return new WaitForSecondsRealtime(0.18f);
+                    shotCtl.EndExternalDrag();
+                }
+                else { ctrl.FireViaShotController(0.75f, Golfin.Gameplay.Input.DebugShotAccuracy.Green); }
+                float e = 0f;
+                while (!trunkDone && e < 30f) { e += Time.unscaledDeltaTime; yield return null; }
+                d.LogStep($"  [TrunkStrike] complete e={e:F1}s ball={ctrl.BallPosition:F1}");
+            }
+            yield return new WaitForSecondsRealtime(2.0f);
+            yield return d.Capture("trunk_strike_after");
+            d.LogStep($"  [TrunkStrike] final pos={ctrl.BallPosition:F1}");
+
+            // Restore Chase mode for Part B and C so they use the default chase camera behaviour.
+            if (chaseCamComp != null)
+            {
+                chaseCamComp.SetMode(ChaseCamera.Mode.Chase);
+                d.LogStep("  [TrunkStrike] camera restored to Chase mode.");
+            }
+
+            // ── B: Canopy Hit (trees enabled, power 0.55, 50m back) ───────────
+            d.LogStep("=== Part B: Canopy Hit (trees enabled) ===");
+            ctrl.PlaceBallAt(canopyPos, preferredSurfaceTypeValue: null);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("canopy_hit_before");
+            d.LogStep($"  [CanopyHit] placed at {canopyPos}");
+
+            ctrl.SetClub(0);
+            shotCtl?.ClearStatBundleOverride();
+            ctrl.SetCameraYawRadians(yawToTree);
+            {
+                bool canopyDone = false;
+                if (sm != null) sm.OnShotComplete += r => { canopyDone = true; };
+                if (shotCtl != null)
+                {
+                    float si = 0f;
+                    while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 4f)
+                    { si += Time.unscaledDeltaTime; yield return null; }
+                    shotCtl.BeginExternalDrag();
+                    const float ramp = 0.85f; float rt = 0f;
+                    while (rt < ramp) { rt += Time.unscaledDeltaTime; shotCtl.SetExternalPower(Mathf.Lerp(0f, 0.55f, rt / ramp), 0f); yield return null; }
+                    shotCtl.SetExternalPower(0.55f, 0f);
+                    yield return new WaitForSecondsRealtime(0.18f);
+                    shotCtl.EndExternalDrag();
+                }
+                else { ctrl.FireViaShotController(0.55f, Golfin.Gameplay.Input.DebugShotAccuracy.Green); }
+                float e = 0f;
+                while (!canopyDone && e < 30f) { e += Time.unscaledDeltaTime; yield return null; }
+                d.LogStep($"  [CanopyHit] complete e={e:F1}s ball={ctrl.BallPosition:F1}");
+            }
+            yield return new WaitForSecondsRealtime(2.0f);
+            yield return d.Capture("canopy_hit_after");
+            Vector3 canopyFinalPos = ctrl.BallPosition;
+            d.LogStep($"  [CanopyHit] final={canopyFinalPos:F1} (expected: SHORT of z=-121.3)");
+
+            // ── C: Control Shot (trees disabled via reflection) ───────────────
+            d.LogStep("=== Part C: Control Shot (trees disabled) ===");
+            var treeField = typeof(PhysicsLabController).GetField(
+                "_treeProvider",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            object savedProvider = null;
+            if (treeField != null)
+            {
+                savedProvider = treeField.GetValue(ctrl);
+                treeField.SetValue(ctrl, null);
+                d.LogStep($"  [Control] _treeProvider nulled (was {(savedProvider != null ? "set" : "null")})");
+            }
+            else
+            {
+                d.LogStep("  [Control] WARN: _treeProvider field not found — control may not differ");
+            }
+
+            ctrl.PlaceBallAt(canopyPos, preferredSurfaceTypeValue: null);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("control_before");
+            ctrl.SetClub(0);
+            shotCtl?.ClearStatBundleOverride();
+            ctrl.SetCameraYawRadians(yawToTree);
+            {
+                bool ctrlDone = false;
+                if (sm != null) sm.OnShotComplete += r => { ctrlDone = true; };
+                if (shotCtl != null)
+                {
+                    float si = 0f;
+                    while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 4f)
+                    { si += Time.unscaledDeltaTime; yield return null; }
+                    shotCtl.BeginExternalDrag();
+                    const float ramp = 0.85f; float rt = 0f;
+                    while (rt < ramp) { rt += Time.unscaledDeltaTime; shotCtl.SetExternalPower(Mathf.Lerp(0f, 0.55f, rt / ramp), 0f); yield return null; }
+                    shotCtl.SetExternalPower(0.55f, 0f);
+                    yield return new WaitForSecondsRealtime(0.18f);
+                    shotCtl.EndExternalDrag();
+                }
+                else { ctrl.FireViaShotController(0.55f, Golfin.Gameplay.Input.DebugShotAccuracy.Green); }
+                float e = 0f;
+                while (!ctrlDone && e < 30f) { e += Time.unscaledDeltaTime; yield return null; }
+                d.LogStep($"  [Control] complete e={e:F1}s ball={ctrl.BallPosition:F1}");
+            }
+            yield return new WaitForSecondsRealtime(2.0f);
+            yield return d.Capture("control_after");
+            Vector3 controlFinalPos = ctrl.BallPosition;
+            d.LogStep($"  [Control] final={controlFinalPos:F1} (expected: PAST tree, further than canopy)");
+
+            // Restore _treeProvider.
+            if (treeField != null && savedProvider != null)
+            {
+                treeField.SetValue(ctrl, savedProvider);
+                d.LogStep("  [Control] _treeProvider restored.");
+            }
+
+            // ── Summary ───────────────────────────────────────────────────────
+            float delta = Vector3.Distance(
+                new Vector3(controlFinalPos.x, 0f, controlFinalPos.z),
+                new Vector3(canopyFinalPos.x,  0f, canopyFinalPos.z));
+            d.LogStep($"  [Summary] Control vs Canopy flat delta={delta:F1}m (>0 = trees damping)");
+            if (delta > 2f)
+                d.LogStep("=== TreeCollisionGate: PASS ===");
+            else
+                d.LogStep($"=== TreeCollisionGate: PARTIAL/FAIL — delta={delta:F1}m < 2m ===");
+
+            } // end try
+            finally
+            {
+                // Restore ShellScene canvases on ALL exit paths — normal exit, early yield break,
+                // and unhandled exceptions. FlushLog also runs unconditionally here.
+                restoreCanvases();
+                d.FlushLog();
+            }
+        }
     }
 }
 #endif

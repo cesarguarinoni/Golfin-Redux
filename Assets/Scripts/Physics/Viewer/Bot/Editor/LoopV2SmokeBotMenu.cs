@@ -140,6 +140,20 @@ namespace Golfin.Physics.Viewer.Editor
             Launch("matchmaking_1v1_cancel_gate");
         }
 
+        // tree_collisions (Order 348, 2026-06-12): §9 visual gate — trunk strike, canopy hit, control.
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Collision Gate")]
+        public static void RunTreeCollisionGate()
+        {
+            // Records at full iPhone-14 1170×2532.
+            // Direct scene load (LabScaffold+Hole_01_Geo) ~0.5s; 3 shots at ~11s each + waits ~60s.
+            // 65s override covers: 5s startup + 0.5s load + 3×(2s place + 13s flight + 2.5s post) = 54s.
+            // SessionState-backed so it survives the domain reload between menu-click and Begin().
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 65;
+            BotVideoRecorder.Arm();
+            Launch("tree_collision_gate");
+        }
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]
@@ -195,6 +209,9 @@ namespace Golfin.Physics.Viewer.Editor
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Matchmaking 1v1 Cancel Gate", isValidateFunction: true)]
         static bool ValidateMatchmaking1v1CancelGate() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Collision Gate", isValidateFunction: true)]
+        static bool ValidateTreeCollisionGate() => !EditorApplication.isPlaying;
 
         // ── Launcher ─────────────────────────────────────────────────────────
 

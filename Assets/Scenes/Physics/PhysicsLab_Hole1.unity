@@ -4098,6 +4098,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.ChaseCamera
   startMode: 0
   smoothTime: 0.15
+  _followDistance: 3
+  _followHeight: 1.8
 --- !u!20 &824114952
 Camera:
   m_ObjectHideFlags: 0
@@ -7068,14 +7070,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.PhysicsLabController
   currentScene: 1
+  _savedTeeWorldPos: {x: 0, y: 0, z: 0}
   trajectoryRenderer: {fileID: 1897115161}
   ballAnimator: {fileID: 1075126835}
   chaseCamera: {fileID: 824114951}
   _shotController: {fileID: 1483952040}
   _shotConeView: {fileID: 1838493589}
   _ballSpawnPoint: {fileID: 1733251866}
+  _ballTrail: {fileID: 0}
   _defaultLookDirection: {x: 0, y: 0, z: 0}
   _orbitSensitivity: 0.5
+  _putterTrack: {fileID: 0}
+  _puttPathRoot: {fileID: 0}
+  _putterGreenReader: {fileID: 0}
+  _actionButtonRowTop: {fileID: 0}
+  _actionButtonFadeDrawButton: {fileID: 0}
+  _ballSelectorCanvasGroup: {fileID: 0}
+  _centralBall: {fileID: 0}
+  _powerGaugeWidget: {fileID: 0}
+  _holeIndicatorWidget: {fileID: 0}
 --- !u!4 &1483952039
 Transform:
   m_ObjectHideFlags: 0
@@ -7107,6 +7120,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.Input::Golfin.Gameplay.Input.ShotController
   _inputSystemSource: {fileID: 1483952041}
+  LogResolution: 0
 --- !u!114 &1483952041
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9237,7 +9251,7 @@ MonoBehaviour:
   _coneGraphic: {fileID: 1379986110}
   _coneHeightPx: 600
   _clubHandle: {fileID: 1443870532}
-  _handleYPx: 80
+  _handleStartYPx: 785
   _handleWidth: 178
   _handleHeight: 100
   _minHandleScale: 1
@@ -9250,6 +9264,9 @@ MonoBehaviour:
   _slabColorTop: {r: 0.68, g: 0.92, b: 0.68, a: 0.7}
   _powerHUD: {fileID: 7755259}
   _targetingLine: {fileID: 1417103398}
+  _putterTimingSlabRT: {fileID: 0}
+  _putterTrackHeightPx: 1000
+  _putterTrack: {fileID: 0}
 --- !u!224 &1838493590
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9743,6 +9760,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7523d0bdf02771c4a8b865571a593fb4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.TrajectoryRenderer
+  _showInGameplay: 0
 --- !u!1 &1924935587
 GameObject:
   m_ObjectHideFlags: 0
@@ -11190,7 +11208,9 @@ MonoBehaviour:
   _image: {fileID: 2200000003}
   _rect: {fileID: 2200000002}
   _shotController: {fileID: 1483952040}
-  _sizePx: {x: 100, y: 100}
+  _debugPanel: {fileID: 0}
+  _normalSize: 150
+  _puttModeSize: 150
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -78,12 +78,30 @@ namespace Golfin.Physics.Viewer.Editor
 
         // Per-scenario watchdog override (0 = use MaxRecordSeconds default).
         // Set this BEFORE calling Begin() and clear it in the scenario's own cleanup path
-        // so it never leaks to unrelated recordings. Do NOT set above 40s without explicit
+        // so it never leaks to unrelated recordings. Do NOT set above 90s without explicit
         // GPU-safety re-evaluation: the 2026-06-09 reboot was caused by multi-clip cumulative
         // load, and a single longer clip at 30fps/1170x2532 is still bounded within safe margin.
         // Authorized uses:
         //   40s — versus_full_match_flow (Cesar-approved 2026-06-10): a real-tee Hole-04 match
         //          takes ~32s. Bumped only for this scenario; all other clips keep the 30s cap.
+        //   90s — tree_collision_gate (Order 348, 2026-06-12): trunk+canopy+control single-clip;
+        //          cap pending Cesar confirmation. Three shots with additive scene loads ~61s total.
+        //
+        // SessionState-backed variant (survives domain reloads between menu-click and Begin()):
+        const string MaxRecordOverrideKey = "LoopV2SmokeBot.MaxRecordSecondsOverride";
+
+        /// <summary>Per-scenario watchdog override backed by SessionState so it survives the domain
+        /// reload that occurs when entering play mode. Set in the menu item BEFORE Arm()+Launch();
+        /// cleared automatically by Begin() after being read. 0 = use MaxRecordSeconds default.</summary>
+        public static int MaxRecordSecondsSessionOverride
+        {
+            get => SessionState.GetInt(MaxRecordOverrideKey, 0);
+            set => SessionState.SetInt(MaxRecordOverrideKey, value);
+        }
+
+        // Legacy static field — kept for backward compatibility (versus_full_match_flow).
+        // Prefer MaxRecordSecondsSessionOverride for new scenarios where a domain reload
+        // may occur between setting the value and Begin() firing.
         public static int MaxRecordSecondsOverride = 0;
 
         // Saved render-load settings restored in End().
@@ -126,6 +144,16 @@ namespace Golfin.Physics.Viewer.Editor
             }
 
             RecordVideo = false;   // clear immediately — never leak into a later run
+
+            // Absorb the SessionState override into the static field so DurationWatchdog
+            // can read it uniformly. Clear the SessionState value so it never leaks.
+            int sessionOverride = MaxRecordSecondsSessionOverride;
+            if (sessionOverride > 0)
+            {
+                MaxRecordSecondsOverride = sessionOverride;
+                MaxRecordSecondsSessionOverride = 0;
+                Debug.Log($"[BotVideoRecorder] MaxRecordSecondsOverride set to {sessionOverride}s from SessionState.");
+            }
 
             try
             {
