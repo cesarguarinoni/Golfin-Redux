@@ -71,7 +71,7 @@ it works under `launchd` (whose working directory differs).
 
 ## 4. Schedule — launchd
 
-The agent `com.golfin.dailyreport` runs the report **daily at 13:30** local time.
+The agent `com.golfin.dailyreport` fires **daily at 13:30** local time.
 
 ```bash
 cp Docs/Scripts/com.golfin.dailyreport.plist ~/Library/LaunchAgents/
@@ -82,6 +82,13 @@ launchctl list | grep golfin          # confirm it's registered
 
 Change the time by editing `StartCalendarInterval` (`Hour`/`Minute`) in the
 plist, then re-copy + reload. Logs go to `Docs/Scripts/daily_report.log`.
+
+**Weekends (Cesar rule, 2026-06-13).** The agent still fires every day, but the
+**script** skips the send on **Saturday and Sunday** — those commits are folded
+into **Monday's** report, which uses a 72h git window (back to Friday's run)
+instead of the usual 24h. This is enforced script-side (not via a launchd
+`Weekday` key) so it's testable and survives plist re-installs. To send anyway
+on a weekend, pass `--force` (or `--test`, or an explicit `--since`).
 
 ## 5. Running it manually
 
@@ -96,8 +103,10 @@ $VENV Docs/Scripts/daily_report.py --dry-run
 # Real PREVIEW send to the TEST channel (TELEGRAM_TEST_CHAT_ID)
 $VENV Docs/Scripts/daily_report.py --test
 
-# Real send for today (PRODUCTION channel)
+# Real send for today (PRODUCTION channel). On a weekend this no-ops (folds into
+# Monday); add --force to send anyway.
 $VENV Docs/Scripts/daily_report.py
+$VENV Docs/Scripts/daily_report.py --force      # send even on Sat/Sun
 
 # Backfill a specific day / add a note
 $VENV Docs/Scripts/daily_report.py --since "2026-05-27 00:00:00" --note "fixed green topology"
@@ -109,18 +118,21 @@ launchctl start com.golfin.dailyreport
 ### Flags
 | Flag | Effect |
 |---|---|
-| `--dry-run` | Print inputs + planned media; no API call, no post, no deletion |
-| `--test` | Real send, but to `TELEGRAM_TEST_CHAT_ID` instead of production |
+| `--dry-run` | Print inputs + planned media; no API call, no post, no deletion (on a weekend, shows it would skip) |
+| `--test` | Real send, but to `TELEGRAM_TEST_CHAT_ID` instead of production (also bypasses the weekend skip) |
 | `--no-media` | Send the text report only; skip all attachments |
-| `--since <git-since>` | Override the commit window (default `midnight`) |
+| `--since <git-since>` | Override the commit window (default is weekday-aware: 24h, or 72h on Monday). An explicit value also bypasses the weekend skip |
 | `--note "<text>"` | Inject a developer note into the summary |
+| `--force` | Send even on a Saturday/Sunday (bypass the weekend skip) |
 
 ## 6. Troubleshooting
 
-- **Nothing posted at 13:30** — check `Docs/Scripts/daily_report.log`. A
-  `KeyError: 'ANTHROPIC_API_KEY'` means `.env` is missing or incomplete.
+- **Nothing posted at 13:30** — first check the day: **Saturday/Sunday don't
+  send** (folded into Monday). Otherwise check `Docs/Scripts/daily_report.log`;
+  a `KeyError: 'ANTHROPIC_API_KEY'` means `.env` is missing or incomplete.
 - **`git: command not found` in the log** — the plist sets `PATH` to
   `/usr/bin:/bin:/usr/sbin:/sbin`; `git` is at `/usr/bin/git`. If you use a
   Homebrew git, add `/opt/homebrew/bin` to the plist `PATH`.
-- **Video skipped** — it's over Telegram's 50 MB upload cap. Compress it or host
-  it elsewhere.
+- **Oversize video** — videos over Telegram's 50 MB cap are auto-compressed
+  (same resolution) and sent; if compression can't get it under 50 MB (or
+  ffmpeg is missing), it's skipped and a notice is posted to the chat.

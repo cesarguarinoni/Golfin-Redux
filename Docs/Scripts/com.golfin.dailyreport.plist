@@ -2,7 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   GOLFIN Daily Report launchd agent.
-  Runs Docs/Scripts/daily_report.py every day at 13:30 local time.
+  Fires Docs/Scripts/daily_report.py every day at 13:30 local time.
+  NOTE: the agent fires daily, but the script SKIPS the send on Saturday and
+  Sunday — weekend commits are folded into Monday's report (72h window). This
+  plist intentionally has no Weekday key; the weekend logic lives in the script
+  so it's testable and survives plist re-installs. See DAILY_REPORT_SETUP.md §4.
 
   Install (see DAILY_REPORT_SETUP.md):
     cp Docs/Scripts/com.golfin.dailyreport.plist ~/Library/LaunchAgents/

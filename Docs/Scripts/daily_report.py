@@ -772,24 +772,51 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
 def main():
     parser = argparse.ArgumentParser(description="GOLFIN daily report")
     parser.add_argument("--note", default="", help="Extra note to include in today's report")
-    parser.add_argument("--since", default="24 hours ago",
-                        help="Git --since window (default: '24 hours ago' — a rolling 24h "
-                             "window that tiles cleanly with the 13:30 daily run so commits "
-                             "made after 13:30 are not lost in a gap. Override e.g. "
-                             "'2026-05-14 00:00:00' to backfill a missed day)")
+    parser.add_argument("--since", default=None,
+                        help="Git --since window. Default is weekday-aware: a rolling "
+                             "'24 hours ago' Tue–Fri, and '72 hours ago' on Monday so the "
+                             "report folds in the skipped weekend (Sat/Sun don't auto-send). "
+                             "Override e.g. '2026-05-14 00:00:00' to backfill a missed day "
+                             "(an explicit --since also bypasses the weekend skip).")
     parser.add_argument("--no-media", action="store_true", help="Skip all video/image attachments")
     parser.add_argument("--dry-run", action="store_true", help="Print the report + planned media to stdout; do NOT post to Telegram or delete anything")
     parser.add_argument("--test", action="store_true", help="Real send, but to TELEGRAM_TEST_CHAT_ID instead of the production channel")
+    parser.add_argument("--force", action="store_true", help="Send even on a weekend (bypass the Sat/Sun skip)")
     args = parser.parse_args()
 
     print(f"[{datetime.now().isoformat()}] Starting daily report...")
     print(f"[INFO] Repo: {REPO_PATH}")
+
+    # --- Weekend handling (Cesar standing rule, 2026-06-13) ---
+    # No automatic report on Saturday or Sunday; Monday's report covers the whole
+    # weekend. A manual send overrides via --force / --test / an explicit --since.
+    weekday = date.today().weekday()          # Mon=0 .. Sun=6
+    manual_override = args.force or args.test or args.since is not None
+    if weekday >= 5 and not manual_override:
+        day_name = "Saturday" if weekday == 5 else "Sunday"
+        if args.dry_run:
+            print(f"\n[DRY RUN] {day_name} — the scheduled run would SKIP; the weekend "
+                  f"folds into Monday's report. Use --force to send anyway.")
+        else:
+            print(f"[INFO] {day_name} — skipping the weekend run. These commits will be "
+                  f"included in Monday's report. (Use --force to send anyway.)")
+        return
+
+    # Weekday-aware git window when --since wasn't given explicitly: Monday reaches
+    # back 72h (to Friday's run) to fold in Sat+Sun; other weekdays roll 24h.
+    if args.since is None:
+        args.since = "72 hours ago" if weekday == 0 else "24 hours ago"
+        if weekday == 0:
+            print("[INFO] Monday — using a 72h window so the report includes the weekend.")
 
     commits = get_todays_commits(args.since)
     commit_count = get_commit_count(args.since)
     file_changes = get_changed_files(args.since)
     ai_context = read_ai_context()
     day_note = get_day_note()
+    if weekday == 0:  # Monday report covers the folded-in weekend
+        weekend_note = "🗓 Includes the weekend (Sat–Sun)"
+        day_note = f"{day_note}\n{weekend_note}" if day_note else weekend_note
 
     # Notion tasks (optional — works without it)
     notion_tasks_data = get_notion_tasks()
