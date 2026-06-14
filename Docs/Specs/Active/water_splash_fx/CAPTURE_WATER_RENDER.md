@@ -1,7 +1,11 @@
 # CAPTURE_WATER_RENDER — `water_splash_fx` Problem A (water grey in capture)
 
 **Author:** Architect (claude.ai) · **Date:** 2026-06-13
-**This is a Code task** — needs the Unity MCP bridge (`localhost:21573`), which the Architect doesn't have. Architect supplies the diagnosis + fix plan; Code runs it in-engine.
+> **RESOLVED 2026-06-13 (Cesar).** Actual root cause: **two directional lights active at once** — ShellScene's persistent light + the additive hole's light double-lit the water surface, washing it flat grey. NOT a reflection-probe issue. The architect hypotheses below were wrong-shaped (reasoned from symptom without a live scene-graph dump). Code is fixing it (cull/disable the duplicate light on additive hole load). **Lesson:** with ShellScene→additive-hole, check for duplicated persistent objects (lights, audio listeners, cameras) FIRST. The original diagnosis is kept below for the record only.
+
+---
+
+**This was scoped as a Code task** — needs the Unity MCP bridge (`localhost:21573`), which the Architect doesn't have. Architect supplied the (incorrect) diagnosis + fix plan; Code ran it in-engine and found the real cause.
 
 ## Symptom
 Hole 6 water renders flat **grey/sandy** in every frame of the bot/capture flow. It renders **correctly (deep blue, rippled, reflective) in normal manual play.** Cesar confirmed: not a camera-angle artifact, not a known bug. Both flows call `SeedSession(6,…)` + `GameplaySceneLoader.BeginGameplayLoad(6)` and both host on `LabScaffold` + additive `Hole_06_Geo`. Normal play boots from `ShellScene` first; the capture rig (`WaterSplashCaptureRig.cs`) also boots ShellScene, so that alone isn't the difference.
