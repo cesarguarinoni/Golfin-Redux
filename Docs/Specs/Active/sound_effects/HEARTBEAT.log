@@ -89,3 +89,4 @@ A  Assets/Sounds/Victory/Clapping_02.wav.meta
 2026-06-15T20:15:00 BLOCKER 2: staged 42 Golfin_SFX clips + 4 folder.meta files via git add
 2026-06-15T20:20:00 SHOULD-FIX: added HitBunker reserved comment in SfxId.cs; CSV loop already documented in SfxPlayer.cs
 2026-06-15T20:25:00 done, awaiting review
+2026-06-15T20:30:00 iter-2 complete — committed 222de762, STATUS=READY_FOR_ARCHITECT_REVIEW, pushed d7949639
