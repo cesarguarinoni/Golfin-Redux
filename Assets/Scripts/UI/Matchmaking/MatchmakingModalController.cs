@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using TMPro;
 using Golfin.Roster;
 using Golfin.UI.Modals;
+using Golfin.UI.Rankings;
 using GolfinRedux.UI;
 
 namespace Golfin.UI.Matchmaking
@@ -95,7 +96,9 @@ namespace Golfin.UI.Matchmaking
         // ── Private state ─────────────────────────────────────────────────────
         private Coroutine? _dotCycleCoroutine;
         private Coroutine? _opponentScanCoroutine;
-        private List<CharacterDataRuntime> _opponentPool = new List<CharacterDataRuntime>();
+        // Phase 2: opponents come from the shared fake-player roster (LeaderboardEntry),
+        // the same roster that feeds the leaderboard — name + characterId + level together.
+        private List<LeaderboardEntry> _opponentPool = new List<LeaderboardEntry>();
 
         // Stage B: captured at Open(); read in OpponentScanRoutine to seed GameSession.
         private int       _resolvedIndex;
@@ -210,19 +213,32 @@ namespace Golfin.UI.Matchmaking
             if (playerRankText != null)
                 playerRankText.text = $"RANK: #{Random.Range(fakeRankRange.x, fakeRankRange.y + 1)}";
 
-            // 5. Build opponent pool (all characters minus player's)
+            // 5. Build opponent pool from the shared fake-player roster (Phase 2).
+            //    The SAME roster that feeds the leaderboard now feeds 1v1 opponents — each
+            //    entry is a coherent fake player (username + characterId + level). Falls back
+            //    to the character DB (legacy random name/level) if the roster is unavailable.
             _opponentPool.Clear();
-            var allChars = CharacterDatabaseCSV.Instance?.GetAllCharacters();
-            if (allChars != null)
+            var roster = LeaderboardManager.Instance?.GetRanking(LeaderboardPeriod.Daily);
+            if (roster != null)
             {
-                foreach (var c in allChars)
+                foreach (var entry in roster)
+                    if (!entry.IsPlayer)
+                        _opponentPool.Add(entry);
+            }
+            if (_opponentPool.Count == 0)
+            {
+                Debug.LogWarning("[MatchmakingModalController] Leaderboard roster unavailable — " +
+                                 "falling back to character-DB opponents.");
+                var allChars = CharacterDatabaseCSV.Instance?.GetAllCharacters();
+                if (allChars != null)
                 {
-                    if (c.characterId != playerCharId)
-                        _opponentPool.Add(c);
+                    foreach (var c in allChars)
+                        if (c.characterId != playerCharId)
+                            _opponentPool.Add(MakeFallbackEntry(c));
+                    if (_opponentPool.Count == 0)
+                        foreach (var c in allChars)
+                            _opponentPool.Add(MakeFallbackEntry(c));
                 }
-                // Fallback: if only one character exists, include them
-                if (_opponentPool.Count == 0)
-                    _opponentPool.AddRange(allChars);
             }
 
             // 6. Resolve hole + populate
@@ -261,6 +277,25 @@ namespace Golfin.UI.Matchmaking
         }
 
         // ── Private Helpers ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Fallback opponent entry synthesized from a roster character, used only when the
+        /// shared leaderboard roster is unavailable. Preserves the legacy random name/level.
+        /// </summary>
+        private LeaderboardEntry MakeFallbackEntry(CharacterDataRuntime c)
+        {
+            string name = (fakeOpponentUsernames != null && fakeOpponentUsernames.Length > 0)
+                ? fakeOpponentUsernames[Random.Range(0, fakeOpponentUsernames.Length)]
+                : (c.characterName ?? "OPPONENT");
+            return new LeaderboardEntry
+            {
+                Rank        = Random.Range(fakeRankRange.x, fakeRankRange.y + 1),
+                DisplayName = name,
+                CharacterId = c.characterId,
+                Level       = Random.Range(fakeOpponentLevelRange.x, fakeOpponentLevelRange.y + 1),
+                IsPlayer    = false
+            };
+        }
 
         private void ApplyHole(HoleData hole)
         {
@@ -363,28 +398,29 @@ namespace Golfin.UI.Matchmaking
         private IEnumerator OpponentScanRoutine()
         {
             float elapsed = 0f;
-            string lastPickId = string.Empty;
+            string lastPickName = string.Empty;
 
-            // Hoisted so OPPONENT FOUND block can read the final chosen opponent.
-            CharacterDataRuntime finalPick = null!;
-            int finalFakeLevel = 1;
+            // Hoisted so the OPPONENT FOUND block can read the final chosen opponent.
+            LeaderboardEntry finalPick = default;
+            bool hasFinalPick = false;
 
             while (elapsed < searchDurationSeconds)
             {
                 if (_opponentPool.Count > 0)
                 {
-                    // Pick a random opponent, avoiding immediate repeat when pool >= 2
-                    CharacterDataRuntime pick;
+                    // Pick a random roster opponent, avoiding an immediate repeat when pool >= 2.
+                    // Usernames are unique per fake player, so dedup on DisplayName.
+                    LeaderboardEntry pick;
                     if (_opponentPool.Count >= 2)
                     {
-                        CharacterDataRuntime candidate;
+                        LeaderboardEntry candidate;
                         int attempts = 0;
                         do
                         {
                             candidate = _opponentPool[Random.Range(0, _opponentPool.Count)];
                             attempts++;
                         }
-                        while (candidate.characterId == lastPickId && attempts < 10);
+                        while (candidate.DisplayName == lastPickName && attempts < 10);
                         pick = candidate;
                     }
                     else
@@ -392,21 +428,19 @@ namespace Golfin.UI.Matchmaking
                         pick = _opponentPool[0];
                     }
 
-                    lastPickId = pick.characterId;
+                    lastPickName = pick.DisplayName;
+                    finalPick    = pick;
+                    hasFinalPick = true;
 
-                    int fakeLevel = Random.Range(fakeOpponentLevelRange.x, fakeOpponentLevelRange.y + 1);
-                    // Track the last shown opponent so we can populate MatchContext at OPPONENT FOUND.
-                    finalPick      = pick;
-                    finalFakeLevel = fakeLevel;
-
+                    // Name + character + level all come from the SAME roster entry now.
                     if (opponentCard != null)
-                        opponentCard.InitializeFromTemplate(pick.characterId, fakeLevel);
+                        opponentCard.InitializeFromTemplate(pick.CharacterId, pick.Level);
 
-                    if (opponentUsernameText != null && fakeOpponentUsernames != null && fakeOpponentUsernames.Length > 0)
-                        opponentUsernameText.text = fakeOpponentUsernames[Random.Range(0, fakeOpponentUsernames.Length)];
+                    if (opponentUsernameText != null)
+                        opponentUsernameText.text = pick.DisplayName;
 
                     if (opponentRankText != null)
-                        opponentRankText.text = $"RANK: #{Random.Range(fakeRankRange.x, fakeRankRange.y + 1)}";
+                        opponentRankText.text = $"RANK: #{pick.Rank}";
                 }
 
                 yield return new WaitForSeconds(opponentCycleIntervalSeconds);
@@ -447,33 +481,36 @@ namespace Golfin.UI.Matchmaking
             // Phase-1 placeholder: level and TurnCount from fake matchmaking data.
             // Portrait and RarityBackground loaded from the same Resources paths used by
             // PlayerContextPopulator — same characterId / rarity enum as the template.
-            if (Golfin.Gameplay.Session.GameSession.IsVersus && finalPick != null)
+            if (Golfin.Gameplay.Session.GameSession.IsVersus && hasFinalPick)
             {
-                var fp = finalPick;
-                string opponentName = string.Empty;
-                if (opponentUsernameText != null)
-                    opponentName = opponentUsernameText.text.ToUpperInvariant();
+                // Resolve the roster entry's character template for portrait + rarity art
+                // (same Resources paths PlayerContextPopulator / RankingsCardWidget use).
+                var template = CharacterDatabaseCSV.Instance?.GetCharacter(finalPick.CharacterId);
+
+                string opponentName = (finalPick.DisplayName ?? string.Empty).ToUpperInvariant();
                 if (string.IsNullOrEmpty(opponentName))
-                    opponentName = (fp.characterName ?? "OPPONENT").ToUpperInvariant();
+                    opponentName = (template?.characterName ?? "OPPONENT").ToUpperInvariant();
 
                 Sprite oppPortrait = null;
-                if (!string.IsNullOrEmpty(fp.portraitSpriteName))
-                    oppPortrait = Resources.Load<Sprite>($"Portraits/InGame/{fp.portraitSpriteName}");
-                if (oppPortrait == null) oppPortrait = fp.portraitSprite;
+                if (template != null && !string.IsNullOrEmpty(template.portraitSpriteName))
+                    oppPortrait = Resources.Load<Sprite>($"Portraits/InGame/{template.portraitSpriteName}");
+                if (oppPortrait == null && template != null) oppPortrait = template.portraitSprite;
 
-                Sprite oppRarityBg = Resources.Load<Sprite>($"Rarities/{fp.rarity}");
+                Sprite oppRarityBg = template != null
+                    ? Resources.Load<Sprite>($"Rarities/{template.rarity}")
+                    : null;
 
                 Golfin.Gameplay.UI.HUD.MatchContext.Players[1] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
                 {
                     DisplayName      = opponentName,
-                    Level            = finalFakeLevel,
+                    Level            = finalPick.Level,
                     Portrait         = oppPortrait,
                     RarityBackground = oppRarityBg,
                     TurnCount        = 1   // Phase-1 placeholder
                 };
                 Golfin.Gameplay.UI.HUD.MatchContext.Raise();
 #if UNITY_EDITOR
-                Debug.Log($"[1v1] MatchContext.Players[1] set — Name='{opponentName}', Level={finalFakeLevel}, Portrait={fp.portraitSpriteName}");
+                Debug.Log($"[1v1] MatchContext.Players[1] set (roster) — Name='{opponentName}', Level={finalPick.Level}, CharacterId={finalPick.CharacterId}");
 #endif
             }
 
