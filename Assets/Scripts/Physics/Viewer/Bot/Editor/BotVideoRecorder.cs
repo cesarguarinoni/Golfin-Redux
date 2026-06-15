@@ -70,6 +70,35 @@ namespace Golfin.Physics.Viewer.Editor
         // want, since relaunching Unity is what releases the wedged GPU/encoder state.
         const string SessionGuardKey = "LoopV2SmokeBot.RecordedThisEditorSession";
 
+        // Audio opt-in (2026-06-16, Order 350 audio fidelity pass).
+        // When true, the Recorder captures the audio mix (PreserveAudio=true) so Cesar can
+        // hear SFX + music in the output MP4. Default is false (matches original behavior).
+        // SessionState-backed so it survives the domain reload between menu-click and Begin().
+        const string CaptureAudioKey = "LoopV2SmokeBot.CaptureAudio";
+
+        /// <summary>When true, the next recording captures audio (PreserveAudio=true).
+        /// Set this BEFORE Arm()+Launch(). Cleared automatically by Begin().</summary>
+        public static bool CaptureAudio
+        {
+            get => SessionState.GetBool(CaptureAudioKey, false);
+            set => SessionState.SetBool(CaptureAudioKey, value);
+        }
+
+        // Custom output path override (2026-06-16, Order 350 audio fidelity pass).
+        // When non-empty, Begin() writes the MP4 to this path instead of the default
+        // tasks/loop_v2_smoke_bot/<scenario>/video/raw.mp4. Use to land audio clips
+        // directly in Docs/Specs/Active/sound_effects/videos/.
+        // Cleared automatically by Begin() after being read.
+        const string CustomOutputPathKey = "LoopV2SmokeBot.CustomOutputPath";
+
+        /// <summary>Custom MP4 output path (without extension). SessionState-backed.
+        /// Cleared by Begin() after being read. Empty = use default path.</summary>
+        public static string CustomOutputPath
+        {
+            get => SessionState.GetString(CustomOutputPathKey, "");
+            set => SessionState.SetString(CustomOutputPathKey, value);
+        }
+
         // Runaway backstop. A clip longer than this is force-stopped — it catches a hung
         // bot that records indefinitely (itself a GPU-saturation risk), NOT normal clips.
         // Set above the longest legit clip (the menu→opponent-turn nav is ~19s) so it never
@@ -155,12 +184,38 @@ namespace Golfin.Physics.Viewer.Editor
                 Debug.Log($"[BotVideoRecorder] MaxRecordSecondsOverride set to {sessionOverride}s from SessionState.");
             }
 
+            // Read and clear audio opt-in and custom output path before domain reload risk.
+            bool captureAudio = CaptureAudio;
+            CaptureAudio = false;   // clear so it never leaks
+
+            string customOutputPath = CustomOutputPath;
+            CustomOutputPath = "";  // clear immediately
+
             try
             {
                 string scenario = LoopV2SmokeBot.Scenario;
                 if (string.IsNullOrEmpty(scenario)) scenario = "unknown";
-                string dir = $"tasks/loop_v2_smoke_bot/{scenario}/video";
-                Directory.CreateDirectory(dir);
+
+                // Determine output directory and file base — use custom path when set.
+                string outputFileNoExt;
+                if (!string.IsNullOrEmpty(customOutputPath))
+                {
+                    outputFileNoExt = customOutputPath;
+                    string customDir = Path.GetDirectoryName(customOutputPath);
+                    if (!string.IsNullOrEmpty(customDir))
+                        Directory.CreateDirectory(customDir);
+                    Debug.Log($"[BotVideoRecorder] Custom output path: {customOutputPath}.mp4");
+                }
+                else
+                {
+                    string dir = $"tasks/loop_v2_smoke_bot/{scenario}/video";
+                    Directory.CreateDirectory(dir);
+                    outputFileNoExt = $"{dir}/raw";
+                }
+
+                // Legacy: keep dir for record_info.json (still written at default path for bot runs).
+                string dir2 = $"tasks/loop_v2_smoke_bot/{scenario}/video";
+                Directory.CreateDirectory(dir2);
 
                 // Select the REAL iPhone-14 1170×2532 device preset (and purge any fabricated
                 // "Recording Resolution" entry) so the menu lays out exactly as in normal play.
@@ -195,8 +250,8 @@ namespace Golfin.Physics.Viewer.Editor
                     OutputWidth  = w,
                     OutputHeight = h,
                 };
-                movie.AudioInputSettings.PreserveAudio = false;
-                movie.OutputFile = $"{dir}/raw";   // Recorder appends the .mp4 extension
+                movie.AudioInputSettings.PreserveAudio = captureAudio;
+                movie.OutputFile = outputFileNoExt;   // Recorder appends the .mp4 extension
 
                 var settings = ScriptableObject.CreateInstance<RecorderControllerSettings>();
                 settings.AddRecorderSettings(movie);
@@ -231,15 +286,16 @@ namespace Golfin.Physics.Viewer.Editor
                 EditorApplication.update += DurationWatchdog;
 
                 float t0 = Time.realtimeSinceStartup;
-                File.WriteAllText($"{dir}/record_info.json",
+                File.WriteAllText($"{dir2}/record_info.json",
                     "{\"record_start_realtime\": " +
                     t0.ToString("F4", CultureInfo.InvariantCulture) +
-                    ", \"mp4\": \"" + dir + "/raw.mp4\", \"fps\": " + Fps +
+                    ", \"mp4\": \"" + outputFileNoExt + ".mp4\", \"fps\": " + Fps +
                     ", \"width\": " + w + ", \"height\": " + h +
                     ", \"size\": \"iphone14-1170x2532-full\"" +
+                    ", \"capture_audio\": " + (captureAudio ? "true" : "false") +
                     "}");
 
-                Debug.Log($"[BotVideoRecorder] Recording started → {dir}/raw.mp4 ({w}x{h} @ {Fps}fps). " +
+                Debug.Log($"[BotVideoRecorder] Recording started → {outputFileNoExt}.mp4 ({w}x{h} @ {Fps}fps, audio={captureAudio}). " +
                           "Game View pinned to the iPhone-14 1170×2532 device preset — UI lays out as in normal play.");
             }
             catch (Exception e)

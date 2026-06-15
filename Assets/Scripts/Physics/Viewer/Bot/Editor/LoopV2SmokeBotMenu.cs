@@ -171,6 +171,44 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Tree Trunk Normal Play", isValidateFunction: true)]
         static bool ValidateTreeTrunkNormalPlay() => !EditorApplication.isPlaying;
 
+        // ── Order 350 audio fidelity clips ───────────────────────────────────
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — UI and Music Slider")]
+        public static void RunAudioUiMusicSlider()
+        {
+            // Clip 1: boot to Home (music playing) → open Settings → drag music slider to 5%
+            // → UI tap SFX audible. ~20–25s. Audio ON.
+            // One-recording-per-session guard applies — reset it first if needed:
+            //   GOLFIN > Capture > Reset Video Session Guard
+            BotVideoRecorder.CaptureAudio = true;
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 35; // generous cover for 20-25s
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/sound_effects/videos/audio_ui_and_music_slider";
+            BotVideoRecorder.Arm();
+            Launch("audio_ui_music_slider");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Gameplay Shots")]
+        public static void RunAudioGameplayShots()
+        {
+            // Clip 2: real ShellScene boot → Practice card → Hole 1 → music quieted →
+            // PlayHoleToCup. Cesar hears swing+hit+land+cup over nearly-silent music.
+            // Practice path bypasses matchmaking, loads hole directly. ~50–80s. Audio ON.
+            // Cap = 90s to cover worst-case hole load (~35s) + shots (~30s).
+            BotVideoRecorder.CaptureAudio = true;
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 90;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/sound_effects/videos/audio_gameplay_shots";
+            BotVideoRecorder.Arm();
+            Launch("audio_gameplay_shots");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — UI and Music Slider", isValidateFunction: true)]
+        static bool ValidateAudioUiMusicSlider() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Gameplay Shots", isValidateFunction: true)]
+        static bool ValidateAudioGameplayShots() => !EditorApplication.isPlaying;
+
         // ── Validation items (disable menu entries when in play mode) ─────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough", isValidateFunction: true)]

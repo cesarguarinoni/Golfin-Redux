@@ -2064,6 +2064,178 @@ namespace Golfin.Physics.Viewer.Bot
                 d.FlushLog();
             }
         }
+
+        // ── Audio helper (reflection, cross-assembly) ─────────────────────────
+
+        /// <summary>
+        /// Set AudioManager.SetMusicVolume(percent) via reflection.
+        /// BotDriver assembly (Golfin.Physics.Viewer) cannot directly reference
+        /// Assembly-CSharp types; same pattern used by ArmCharacterBuild.
+        /// </summary>
+        private static void SetMusicVolumeReflection(BotDriver d, float volumePercent)
+        {
+            try
+            {
+                // Find AudioManager MonoBehaviour by type name — avoids direct reference.
+                var allBehaviours = UnityEngine.Object.FindObjectsOfType<UnityEngine.MonoBehaviour>();
+                UnityEngine.MonoBehaviour amInstance = null;
+                foreach (var mb in allBehaviours)
+                {
+                    if (mb.GetType().Name == "AudioManager") { amInstance = mb; break; }
+                }
+                if (amInstance == null)
+                {
+                    d.LogStep($"  SetMusicVolumeReflection WARN: AudioManager not found — music volume unchanged");
+                    return;
+                }
+                var setVol = amInstance.GetType().GetMethod("SetMusicVolume",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+                    null, new System.Type[] { typeof(float) }, null);
+                if (setVol == null)
+                {
+                    d.LogStep("  SetMusicVolumeReflection WARN: SetMusicVolume(float) not found");
+                    return;
+                }
+                setVol.Invoke(amInstance, new object[] { volumePercent });
+                d.LogStep($"  SetMusicVolumeReflection OK: volume={volumePercent}%");
+            }
+            catch (System.Exception ex)
+            {
+                d.LogStep($"  SetMusicVolumeReflection ERROR: {ex.Message}");
+            }
+        }
+
+        // ── Scenario: Audio UI and Music Slider ───────────────────────────────
+
+        /// <summary>
+        /// Order 350 audio fidelity Clip 1.
+        ///
+        /// Flow:
+        ///   1. Boot real ShellScene to Home — menu music is playing.
+        ///   2. Capture home with music audible.
+        ///   3. Open Settings → expand Sound accordion → capture with slider visible.
+        ///   4. Drag the MUSIC slider to near 0 (5%) — music audibly quiets.
+        ///   5. Tap several UI buttons so the UI tap SFX is audible over the now-quiet music.
+        ///   6. Close Settings.
+        ///
+        /// This clip proves: menu music starts → slider quiets it → UI SFX audible.
+        ///
+        /// Captures: home_music_playing, settings_sound_open, slider_dragged_quiet,
+        ///           home_after_settings.
+        ///
+        /// Duration: ~20–25s. BotVideoRecorder must be armed with CaptureAudio=true and a
+        /// custom output path before this scenario runs (see AudioUiMusicSliderMenu).
+        /// </summary>
+        public static IEnumerator AudioUiMusicSlider(BotDriver d)
+        {
+            d.LogStep("=== Audio UI and Music Slider ===");
+
+            // 1. Navigate to Home — menu music should be playing when we arrive.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f); // let music start
+            yield return d.Capture("home_music_playing");
+
+            // 2. Open Settings.
+            yield return d.Click("SettingsButton", settleSeconds: 1.0f);
+            yield return d.WaitForGameObject("SettingsPanel", timeoutSeconds: 10f);
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            // 3. Expand Sound accordion.
+            yield return d.Click("SoundSettingsRow", settleSeconds: 1.0f);
+            yield return new WaitForSecondsRealtime(0.8f); // accordion animation
+            yield return d.Capture("settings_sound_open");
+
+            // 4. Drag MUSIC slider to near 0 (5%) — music audibly quiets.
+            //    The slider GO name in ShellScene is "MusicVolumeSlider".
+            yield return d.SetSliderValue("MusicVolumeSlider", 0.05f);
+            yield return new WaitForSecondsRealtime(1.0f); // let AudioManager apply the change
+            yield return d.Capture("slider_dragged_quiet");
+
+            // 5. Tap a few UI buttons so the UI tap SFX is audible over now-quiet music.
+            yield return d.Click("CloseButton", settleSeconds: 0.8f);
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            // Navigate to a sub-section and back to generate more UI taps.
+            yield return d.Click("SettingsButton", settleSeconds: 0.8f);
+            yield return new WaitForSecondsRealtime(0.3f);
+            yield return d.Click("CloseButton", settleSeconds: 0.8f);
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            // 6. Capture home after returning (music quiet, SFX audible in clip).
+            yield return d.WaitForScreen("Home", timeoutSeconds: 10f);
+            yield return d.Capture("home_after_settings");
+
+            // Restore music volume to 70% so the next clip isn't affected.
+            // Access AudioManager via reflection — cross-assembly boundary constraint.
+            SetMusicVolumeReflection(d, 70f);
+
+            d.LogStep("=== Audio UI and Music Slider: all captures done ===");
+        }
+
+        // ── Scenario: Audio Gameplay Shots ────────────────────────────────────
+
+        /// <summary>
+        /// Order 350 audio fidelity Clip 2.
+        ///
+        /// Flow:
+        ///   1. Boot real ShellScene → Practice mode card PLAY → Hole Selection → Hole 1 Geo.
+        ///      Uses Practice (solo) path — no matchmaking modal, direct to gameplay.
+        ///      GameplaySceneLoader.BeginGameplayLoad runs in the FULL ShellScene rendering
+        ///      context (real water, real post-processing). Never direct-loads LabScaffold.
+        ///   2. Quiet music immediately after hole loads (so SFX are clearly audible).
+        ///   3. Fire real shots via PlayHoleToCup — ball visibly flies, bounces, settles.
+        ///      Cesar hears: swing + hit + per-bounce land sounds matching visible ball action.
+        ///      If the hole holes out, cup-drop sound fires.
+        ///   4. Capture result modal.
+        ///
+        /// Duration: ~50–80s total (hole load ~30s + shots ~20-30s).
+        /// BotVideoRecorder armed with CaptureAudio=true, cap=90s, and custom output path
+        /// (see RunAudioGameplayShots in LoopV2SmokeBotMenu).
+        /// </summary>
+        public static IEnumerator AudioGameplayShots(BotDriver d)
+        {
+            d.LogStep("=== Audio Gameplay Shots ===");
+
+            // 1. Navigate to Home (real ShellScene boot).
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f); // let mode carousel and music settle
+            yield return d.Capture("home");
+
+            // 2. Practice mode card PLAY → Hole Selection (no matchmaking, no modal).
+            //    ModeCarouselController.HandlePlayClicked dispatches to ShowScreen(HoleSelection).
+            yield return d.ClickModeCardPlay("practice", settleSeconds: 1.5f);
+
+            // 3. Hole Selection screen — wait for HoleCardController auto-expand.
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(3f); // HoleCardController expand animation
+            yield return d.Capture("hole_selection");
+
+            // 4. Tap PLAY on the first hole card (ActionButton in the auto-expanded row).
+            //    HoleSelectionScreenController.HandleActionClicked → GameSession.SeedSession
+            //    + GameplaySceneLoader.BeginGameplayLoad — real production path, no matchmaking.
+            yield return d.Click("ActionButton", settleSeconds: 1.5f);
+
+            // 5. Wait for hole scene to load. LabScaffold is the host; Hole_01_Geo is additive.
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(3f); // fade-in + HUD settle
+
+            // 6. Quiet music so SFX (swing, hit, land, cup) are clearly audible over near-silence.
+            //    Access AudioManager via reflection — cross-assembly boundary constraint.
+            SetMusicVolumeReflection(d, 8f);
+
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("gameplay_armed");
+
+            // 7. Play hole via real physics shots — fires swing/hit/land/cup sounds each stroke.
+            yield return d.PlayHoleToCup(par: 5);
+
+            // 8. Wait for result modal and capture.
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal");
+
+            d.LogStep("=== Audio Gameplay Shots: all captures done ===");
+        }
     }
 }
 #endif

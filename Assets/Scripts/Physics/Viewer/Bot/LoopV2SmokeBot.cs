@@ -157,6 +157,13 @@ namespace Golfin.Physics.Viewer
                 case "tree_trunk_normal_play":
                     scenarioRoutine = Bot.Scenarios.TreeTrunkNormalPlay(driver);
                     break;
+                // Order 350 audio fidelity clips (2026-06-16):
+                case "audio_ui_music_slider":
+                    scenarioRoutine = Bot.Scenarios.AudioUiMusicSlider(driver);
+                    break;
+                case "audio_gameplay_shots":
+                    scenarioRoutine = Bot.Scenarios.AudioGameplayShots(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;
