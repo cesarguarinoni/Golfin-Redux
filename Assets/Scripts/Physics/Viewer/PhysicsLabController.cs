@@ -53,7 +53,11 @@ namespace Golfin.Physics.Viewer
         [SerializeField] ShotController      _shotController;
         [SerializeField] ShotConeView        _shotConeView;
         [SerializeField] Transform           _ballSpawnPoint;
-        [SerializeField] BallTrailController _ballTrail;
+        [SerializeField] BallTrailController    _ballTrail;
+        // water_splash_fx (Order 349): WaterSplashController is wired entirely in code in Awake()
+        // (GetComponent-or-AddComponent on the BallAnimator GO + Resources-loaded prefab) so the
+        // scene carries no baked reference → LabScaffold.unity stays at zero diff for this task.
+        WaterSplashController  _waterSplash;
 
         [Header("Camera")]
         [Tooltip("Initial look direction (XZ). Leave zero to auto-derive from scene type.")]
@@ -195,6 +199,19 @@ namespace Golfin.Physics.Viewer
 
             // ball_flight_trail: wire trail controller to the ball SM + shot controller.
             _ballTrail?.Configure(ballAnimator, _ballSM, _shotController);
+
+            // water_splash_fx (Order 349): wire splash controller entirely in code so the scene
+            // carries no baked reference. Add the component to the BallAnimator GO (same host as
+            // BallTrailController) idempotently — GetComponent-or-AddComponent survives domain
+            // reloads, and Configure() is itself idempotent (unsubscribe-before-subscribe).
+            if (ballAnimator != null)
+            {
+                if (_waterSplash == null)
+                    _waterSplash = ballAnimator.GetComponent<WaterSplashController>();
+                if (_waterSplash == null)
+                    _waterSplash = ballAnimator.gameObject.AddComponent<WaterSplashController>();
+                _waterSplash.Configure(ballAnimator, _ballSM, _shotController);
+            }
 
             // 8.5: consume club selection from the action button selector overlay.
             // Re-entrancy guard inside handler prevents the loop when SetClub() itself raises ClubSelectionBroadcast.
@@ -1149,13 +1166,26 @@ namespace Golfin.Physics.Viewer
                     Debug.Log($"[PhysicsLab][§2e] OB drop: from end={result.EndPosition} " +
                               $"to drop={dropPos:F2} yawRad={newYaw:F3} (penalty stroke +1)");
 
-                    // Reposition ball at drop point. RepositionBallWithLookDir calls
-                    // _shotController.CompleteShot() internally — no need to call it again.
-                    RepositionBallWithLookDir(dropPos, preferredSurfaceTypeValue: null, lookDir: lookDir);
+                    // water_splash_fx (Order 349): on a WATER landing, freeze the camera where it is
+                    // (it was chasing the ball into the water, so it is already looking at the entry
+                    // point) for a beat so the splash VFX plays on screen, THEN drop the ball + re-aim
+                    // to the penalty shot. Camera-only hold — the gameplay result (drop position,
+                    // penalty stroke) is unchanged, just sequenced after the beat.
+                    if (result.OBReason.HasValue
+                        && result.OBReason.Value == Golfin.Gameplay.Loop.OBReason.Water)
+                    {
+                        StartCoroutine(WaterSplashCameraHold(dropPos, lookDir));
+                    }
+                    else
+                    {
+                        // Reposition ball at drop point. RepositionBallWithLookDir calls
+                        // _shotController.CompleteShot() internally — no need to call it again.
+                        RepositionBallWithLookDir(dropPos, preferredSurfaceTypeValue: null, lookDir: lookDir);
 
-                    // spin_and_shot_shape_wiring: reset player spin selection for next shot.
-                    Golfin.Gameplay.UI.HUD.SpinContext.Reset();
-                    _ballSM.ReArm();
+                        // spin_and_shot_shape_wiring: reset player spin selection for next shot.
+                        Golfin.Gameplay.UI.HUD.SpinContext.Reset();
+                        _ballSM.ReArm();
+                    }
                     break;
                 }
 
@@ -1166,6 +1196,40 @@ namespace Golfin.Physics.Viewer
                     break;
                 }
             }
+        }
+
+        // water_splash_fx (Order 349): how long to hold the camera on the water entry so the splash
+        // VFX is visible before the ball drops + the camera re-aims to the penalty shot.
+        const float WaterOBDwellSeconds = 1.2f;
+
+        // Freezes the camera at its current transform (it was chasing the ball into the water, so it is
+        // already looking at the entry point) for WaterOBDwellSeconds, letting the splash play on
+        // screen, then performs the normal OB drop + spin reset + re-arm. ChaseCamera is disabled
+        // during the hold so its LateUpdate (which, with a null target on OB, would re-point the camera
+        // back at the shot origin) doesn't fight the frozen transform; it is re-enabled before the re-aim.
+        System.Collections.IEnumerator WaterSplashCameraHold(Vector3 dropPos, Vector3 lookDir)
+        {
+            Camera cam = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : Camera.main;
+            bool       chaseWasEnabled = chaseCamera != null && chaseCamera.enabled;
+            Vector3    holdPos = cam != null ? cam.transform.position : Vector3.zero;
+            Quaternion holdRot = cam != null ? cam.transform.rotation : Quaternion.identity;
+            if (chaseCamera != null) chaseCamera.enabled = false;
+
+            float t = 0f;
+            while (t < WaterOBDwellSeconds)
+            {
+                if (cam != null) cam.transform.SetPositionAndRotation(holdPos, holdRot);
+                t += Time.deltaTime;
+                yield return null;
+            }
+
+            if (chaseCamera != null) chaseCamera.enabled = chaseWasEnabled;
+
+            // Normal OB drop + re-aim, deferred until after the splash beat.
+            // RepositionBallWithLookDir calls _shotController.CompleteShot() internally.
+            RepositionBallWithLookDir(dropPos, preferredSurfaceTypeValue: null, lookDir: lookDir);
+            Golfin.Gameplay.UI.HUD.SpinContext.Reset();
+            _ballSM.ReArm();
         }
 
         // §2d: invoked by HoleCompleteDriver after the modal is dismissed.
@@ -1571,6 +1635,14 @@ namespace Golfin.Physics.Viewer
             // when the hole is loaded standalone.
             CopyHoleLighting(SceneManager.GetSceneByName(sceneName));
 
+            // water_splash_fx (Order 349): ShellScene stays additively loaded during gameplay
+            // (see GameplaySceneLoader — host + hole load Additive, ShellScene is never unloaded)
+            // and carries its own intensity-2 Directional Light. Combined with the hole's own
+            // directional light that double-lights the scene from opposing azimuths and flattens
+            // the URPWater surface to grey. Switch the shell's directional light off while a hole
+            // is loaded so the hole's sun is the only one.
+            DisableShellDirectionalLight();
+
             // Populate HoleContext for HUD widgets (PlayerCardWidget, HoleCardWidget).
             // HoleMetadata lives in Assembly-CSharp; use reflection to avoid a circular asmdef dep
             // (Viewer has autoReferenced:true, so Viewer→Assembly-CSharp would be circular).
@@ -1804,10 +1876,47 @@ namespace Golfin.Physics.Viewer
             Debug.Log($"[PhysicsLab] Copied lighting from {holeScene.name} into LabScaffold.");
         }
 
+        // water_splash_fx (Order 349): the ShellScene directional light we switch off while a hole
+        // is loaded, held so OnHoleUnloaded can restore it when we return to the shell.
+        Light _shellDirLightDisabled;
+
+        /// <summary>
+        /// Disables the ShellScene's directional light while a hole is loaded. ShellScene is kept
+        /// additively loaded during gameplay and ships an intensity-2 Directional Light; the hole
+        /// scene ships its own directional light too. With both active the surface is double-lit
+        /// from opposing azimuths, which flattens the URPWater reflection to flat grey. We leave the
+        /// hole's light as the sole sun and restore the shell light on unload. No-op when there is
+        /// no ShellScene (e.g. the standalone lab-rig path).
+        /// </summary>
+        void DisableShellDirectionalLight()
+        {
+            if (_shellDirLightDisabled != null) return; // already disabled for the current hole
+            var lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var l in lights)
+            {
+                if (l == null || l.type != LightType.Directional || !l.enabled) continue;
+                if (l.gameObject.scene.name != "ShellScene") continue;
+                l.enabled = false;
+                _shellDirLightDisabled = l;
+                Debug.Log($"[PhysicsLab] Disabled ShellScene directional light '{l.gameObject.name}' (intensity {l.intensity}) while hole is loaded — prevents double-lighting / grey water.");
+                return;
+            }
+            Debug.Log("[PhysicsLab] DisableShellDirectionalLight: no enabled ShellScene directional light found (ok for the standalone lab-rig path).");
+        }
+
         // Called by LabHoleBinder when the loaded hole scene is closed.
         public void OnHoleUnloaded()
         {
             DiagAero("OnHoleUnloaded.start");
+
+            // water_splash_fx (Order 349): restore the ShellScene directional light we switched off
+            // on load, so returning to the shell/home is lit normally again.
+            if (_shellDirLightDisabled != null)
+            {
+                _shellDirLightDisabled.enabled = true;
+                Debug.Log("[PhysicsLab] Re-enabled ShellScene directional light on hole unload.");
+                _shellDirLightDisabled = null;
+            }
             _useSceneProviders   = false;
             _greenCentroidValid  = false;
             _ballSpawnPoint      = null;

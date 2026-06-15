@@ -431,6 +431,66 @@ def parse_treegate_captions(log_path, rec_start, rec_end):
     return events
 
 
+def parse_watersplash_captions(log_path, rec_start, rec_end):
+    """
+    Water Splash captioner (water_splash_fx Order 349, iter-5 real-flow capture).
+
+    Reads the WaterSplashCaptureRig real-flow event lines from history.log. The rig drives
+    the production flow (ShellScene → BeginGameplayLoad(6) → deterministic Driver shot →
+    OBReason.Water → production WaterSplashController fires → camera held over the water entry).
+
+    Expected lines (each stamped with [t=<Time.realtimeSinceStartup>]):
+      [t=T] WS: fire        -> Driver power=0.45 toward Hole-6 water
+      [t=T] WS: flight      -> ball in flight toward the water hazard
+      [t=T] WS: waterhit    -> HitWater finalPos=(-19.9,7.3,-8.3)  OBReason.Water
+      [t=T] WS: splash      -> WaterSplashController fires splash at the entry point
+      [t=T] WS: hold        -> camera held over the splash (~1.8s)
+    """
+    import re as _re
+    events = []
+    if not os.path.exists(log_path):
+        print(f"WARN: history.log not found ({log_path}) — title caption only.")
+        return events
+
+    span = rec_end - rec_start
+
+    def to_vt(log_t):
+        return max(0.0, log_t - rec_start)
+
+    pending = {}
+    fire_re   = _re.compile(r"\[t=([\d.]+)\]\s+WS:\s+fire")
+    flight_re = _re.compile(r"\[t=([\d.]+)\]\s+WS:\s+flight")
+    hit_re    = _re.compile(r"\[t=([\d.]+)\]\s+WS:\s+waterhit")
+    splash_re = _re.compile(r"\[t=([\d.]+)\]\s+WS:\s+splash")
+    hold_re   = _re.compile(r"\[t=([\d.]+)\]\s+WS:\s+hold")
+
+    # Collect raw event start times, then assign NON-OVERLAPPING windows so captions never
+    # stack on top of each other at the bottom of the frame (each caption ends where the next begins).
+    raw = {}
+    with open(log_path) as fh:
+        for line in fh:
+            m = fire_re.search(line)
+            if m: raw["fire"]   = (float(m.group(1)), "Driver shot fired\ntoward the Hole 6 water")
+            m = flight_re.search(line)
+            if m: raw["flight"] = (float(m.group(1)), "Ball in flight")
+            m = hit_re.search(line)
+            if m: raw["hit"]    = (float(m.group(1)), "Ball enters the water\nOBReason.Water")
+            m = splash_re.search(line)
+            if m: raw["splash"] = (float(m.group(1)), "SPLASH\nWaterSplashController fires")
+            m = hold_re.search(line)
+            if m: raw["hold"]   = (float(m.group(1)), "Camera held over the splash")
+
+    order = [k for k in ("fire", "flight", "hit", "splash", "hold") if k in raw]
+    starts = [(to_vt(raw[k][0]), raw[k][1]) for k in order]
+    for i, (start, text) in enumerate(starts):
+        end = starts[i + 1][0] if i + 1 < len(starts) else span
+        end = min(end, span)
+        if end <= start:
+            continue
+        events.append((start, end, text))
+    return events
+
+
 def esc(p):
     """Escape a path for an ffmpeg filter option value."""
     return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
@@ -439,7 +499,7 @@ def esc(p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", required=True, help="smoke-bot scenario key")
-    ap.add_argument("--mode", choices=["clicks", "steps", "visualgate", "spinshape", "treegate"], default="clicks",
+    ap.add_argument("--mode", choices=["clicks", "steps", "visualgate", "spinshape", "treegate", "watersplash"], default="clicks",
                     help="Caption parser to use. 'clicks' = tap-event captions (default, "
                          "for UI flows). 'steps' = verbatim `Step: '<text>'` captions "
                          "(for scroll/swipe/expand UI walkthroughs). 'visualgate' = per-stroke "
@@ -447,7 +507,9 @@ def main():
                          "'spinshape' = per-stroke spin position + rate captions "
                          "(for SpinAndShapeVisualGate scenario). "
                          "'treegate' = trunk/canopy/control captions "
-                         "(for tree_collision_gate scenario, Order 348).")
+                         "(for tree_collision_gate scenario, Order 348). "
+                         "'watersplash' = splash burst/reuse/OOB captions "
+                         "(for water_splash_gate scenario, Order 349).")
     ap.add_argument("--title", default="Loop v2 — Stage F\nButton Press Feedback")
     ap.add_argument("--suffix", default="stageF_buttons", help="output filename suffix")
     ap.add_argument("--output-dir", default=None,
@@ -459,6 +521,10 @@ def main():
                          "has already been moved out of tasks/loop_v2_smoke_bot/<scenario>/video/ "
                          "(e.g. copied into a task's videos/ folder).")
     ap.add_argument("--keep-raw", action="store_true", help="keep the raw Recorder mp4 + sidecar")
+    ap.add_argument("--title-seconds", type=float, default=3.6,
+                    help="How long the centered title card stays on screen (seconds). Lower it for "
+                         "short clips where the title would otherwise overlap the action (e.g. a 5s "
+                         "splash clip where the splash happens ~2s in).")
     args = ap.parse_args()
 
     ffmpeg = find_bin("ffmpeg")
@@ -504,11 +570,13 @@ def main():
         captions = parse_steps_captions(log_path, rec_start, rec_start + duration)
     elif args.mode == "treegate":
         captions = parse_treegate_captions(log_path, rec_start, rec_start + duration)
+    elif args.mode == "watersplash":
+        captions = parse_watersplash_captions(log_path, rec_start, rec_start + duration)
     else:
         captions = parse_captions(log_path, rec_start, rec_start + duration)
     # Allow callers to pass literal \n in --title (bash strips backslash semantics).
     title_text = args.title.replace("\\n", "\n")
-    captions.insert(0, (0.0, 3.6, title_text))
+    captions.insert(0, (0.0, args.title_seconds, title_text))
     print(f"Captions: {len(captions)} (mode={args.mode})")
 
     fontsize = max(22, h // 32)

@@ -46,7 +46,8 @@ You are the implementer for the GOLFIN Redux Unity project. You execute specs fa
 
 ## Before reporting done
 
-1. Open the relevant scene (e.g., `Assets/Scenes/LabScaffold.unity`) via `mcp__unity__scene-open`.
+0. **Pick the right verification environment FIRST (see § Real-world game testing below).** If the feature manifests during actual gameplay — ball physics, hazards, VFX/splash/trail, shot feedback, camera, hole-specific behavior, audio — you MUST verify it through the **real game flow** (boot ShellScene → `GameplaySceneLoader.BeginGameplayLoad`), NOT by direct-loading `LabScaffold` or a bespoke bot scenario. A direct `LoadSceneAsync("LabScaffold", Single)` bypasses the ShellScene rendering boot and makes visuals (water, lighting, post-processing) render WRONG. Only isolated, non-visual unit checks may use the lab rig directly.
+1. Open the relevant scene via `mcp__unity__scene-open` — for a pure UI-layout task this is `ShellScene.unity`; for a gameplay-facing task follow the § Real-world game testing recipe instead of opening a scene directly.
 2. Enter play mode via `mcp__unity__editor-application-set-state` if the task requires runtime verification.
 3. **Wait for the scene to fully render before capturing.** After entering play mode, wait at least 3 seconds (use `Bash` with `sleep 3` or equivalent) before taking the screenshot. Unity needs time to: load assets, run Awake/Start/OnEnable for all GameObjects, render the first few frames, and let any one-time UI population code complete. A screenshot taken instantly after entering play mode often misses sprites that load 1-2 frames in. If the spec involves any data binding (CharacterContext, HoleContext, etc.), wait at least 5 seconds.
 4. **Take a fresh screenshot.** Try in this order, falling back if a step fails:
@@ -65,6 +66,38 @@ You are the implementer for the GOLFIN Redux Unity project. You execute specs fa
    - **Any FAIL or unverifiable items:** `READY_FOR_ARCHITECT_REVIEW` (escalation; architect handles direct, skipping self-review). The hook ENFORCES this rule — trying to set `READY_FOR_SELF_REVIEW` with open FAILs will be blocked.
    - **Genuine ambiguity in the spec:** also `READY_FOR_ARCHITECT_REVIEW`, with questions in the report's "Open questions for Architect" section.
    - **Hit a circuit breaker:** `IMPLEMENTER_BLOCKED` — Cesar gets pinged.
+
+# Real-world game testing (gameplay-facing features) — DEFAULT, not optional
+
+**Standing rule (Cesar, 2026-06-13): verify gameplay-facing features by PLAYING THE REAL GAME, not in the LabScaffold lab rig.** This was added after `water_splash_fx` failed 3× because each attempt captured the splash in the LabScaffold-additive rig, where the water rendered wrong and the splash never showed. The lab rig is for isolated, non-visual unit checks only.
+
+## When this applies
+
+Any feature that manifests during actual play: ball physics/trajectory, hazards (water/OB/bunker), VFX (splash, trail, impact), shot feedback, camera behavior, hole-specific geometry/visuals, gameplay audio, HUD-during-play. If the deliverable is "show the ball/effect do X in a real hole," this section governs.
+
+## Why the lab rig renders visuals wrong (root cause)
+
+`GameplaySceneLoader` uses `GAMEPLAY_SCENE_NAME = "LabScaffold"` as the host scene and additively loads `Hole_NN_Geo` onto it — so far the same as the lab rig. The decisive difference: the **real flow boots from `ShellScene` first**, which establishes all persistent rendering infrastructure (URP post-processing/quality settings, persistent managers, `SaveDataHost`, lighting/reflection context). A direct `LoadSceneAsync("LabScaffold", Single)` (what the old `WaterSplashGate` / loop-bot scenarios do) **skips the ShellScene boot**, so that rendering setup is absent and visuals like water look broken. `PhysicsLabController.CopyHoleLighting()` only copies a subset of `RenderSettings` and cannot make up the difference. **Never direct-load LabScaffold for a visual capture.**
+
+## The verified real-flow recipe (drive it via `script-execute`)
+
+1. **Boot the real game:** `scene-open Assets/Scenes/ShellScene.unity` (Single). Verify `IsCompiling=false`, then `editor-application-set-state isPlaying:true`. Wait ≥5s for ShellScene to fully initialize (managers, save, post-processing).
+2. **Unlock the target hole** — only holes 1–4 are unlocked by default. Call `GolfinRedux.UI.HoleSelection.HoleProgressionService.Instance.SetUnlockedOverride(n, true)` for the hole you need (or 1..18). Verify `IsUnlocked(n) == true`.
+3. **Reward Points:** if entering Practice / the target hole is RP-gated, grant enough via `RewardPointsManager` first so the load isn't blocked. Verify the launch proceeds (Cesar was unsure whether Practice charges RP — check and handle).
+4. **Seed the session (Practice = solo):** set `GameSession.IsVersus = false`; pick a character + bag (use the save's defaults, or the first roster character + its equipped bag slot); call `Golfin.Gameplay.Loop.Session.GameSession.SeedSession(holeNumber, characterId, bagSlot)`.
+5. **Launch via the real loader:** `GolfinRedux.UI.GameplayTransition.GameplaySceneLoader.Instance.BeginGameplayLoad(holeNumber)`. This runs the production coroutine (fade → additive LabScaffold host → additive `Hole_NN_Geo`) **with the full ShellScene rendering context present** → correct water/visuals. Wait until `PhysicsLabController.IsHoleReady == true`, then a few more seconds for render settle.
+6. **Pre-calculate the deterministic shot so the FIRST shot produces the event.** Physics is deterministic — do NOT fire blind and hope. Read the loaded hole's tee marker + the hazard/zone you need (e.g. water zone bounds), then probe `BallSimulation` to find the club + aim/yaw + power whose terminal hit lands in that zone. THEN fire that one shot through the normal `ShotController` path (`FireDebugShot(power, accuracy)` or the standard fire). Confirm the terminal surface/`OBReason` is what you intended. (Cesar's complaint: the lab bot fired 3 shots and missed the water — unacceptable.)
+7. **Camera: use the game's normal chase camera. Never** pivot it, force Downrange, or write per-frame camera code. Fix the SHOT so the event frames naturally, not the camera.
+8. **Record full-res (iPhone 14 = 1170×2532)** via the sanctioned BotVideoRecorder / Unity Recorder pipeline. The **canonical still must SHOW the event** (the splash/impact actually visible), frame-extracted from the video — never a pre-event or effect-not-visible frame.
+9. **Restore:** unlock/RP/seed overrides mutate save state — note exactly what you changed in the report and restore it (or flag it) so the real save isn't corrupted. Leave no auto-running scenarios wired into any scene.
+
+## Forbidden for gameplay-facing capture (auto-FAIL)
+
+- Direct `LoadSceneAsync("LabScaffold", Single)` + additive hole, or any bespoke `*Gate` lab scenario, used as the *visual* capture path.
+- Spawning the effect synthetically / calling its trigger method directly instead of producing it through real play.
+- Camera pivots / overhead Downrange framing.
+- A canonical screenshot that does not actually show the feature.
+- Falling back to the lab rig because the real flow is "hard." If the real flow is genuinely undrivable via MCP after a real attempt, set `IMPLEMENTER_BLOCKED` with specifics — do NOT substitute the lab rig.
 
 # Hard rules
 
