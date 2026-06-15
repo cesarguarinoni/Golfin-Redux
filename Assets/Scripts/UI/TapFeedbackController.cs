@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using Golfin.Audio.Events;
 
 namespace Golfin.UI
 {
@@ -163,10 +164,13 @@ namespace Golfin.UI
 
             fx.Play(localPt, _config);
 
-            if (_config.playAudio && _config.audioClip != null)
+            if (_config.playAudio)
             {
-                // Soft audio tick — only if enabled
-                AudioSource.PlayClipAtPoint(_config.audioClip, Vector3.zero, 0.3f);
+                // Order 350: route through SfxBus so tap audio respects the SFX volume slider.
+                // Previously used AudioSource.PlayClipAtPoint which bypassed AudioManager entirely
+                // (latent volume-slider-does-nothing bug now fixed). _config.audioClip is preserved
+                // for backward-compat inspector data but is no longer used for playback.
+                SfxBus.Play(SfxId.UiTap);
             }
         }
 

@@ -10,7 +10,8 @@
         "Golfin.Gameplay.Loop",
         "Golfin.Gameplay.Input",
         "Golfin.Gameplay.UI",
-        "Golfin.Diagnostics.Runtime"
+        "Golfin.Diagnostics.Runtime",
+        "Golfin.Audio.Events"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],

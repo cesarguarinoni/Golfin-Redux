@@ -4,6 +4,7 @@ using Golfin.Gameplay.Session;
 using Golfin.Roster;
 using Golfin.UI.GameplayTransition;
 using GolfinRedux.UI.ModeSelect;
+using Golfin.Audio.Events;
 
 namespace Golfin.UI.Modals
 {
@@ -75,6 +76,15 @@ namespace Golfin.UI.Modals
         void HandleMatchComplete(GameSession.MatchOutcome outcome, int p1Strokes, int p2Strokes)
         {
             Debug.Log($"[VersusResultHandler] Match complete: outcome={outcome} P1={p1Strokes} P2={p2Strokes}");
+
+            // Order 350: publish match stinger via SfxBus (one event per outcome).
+            SfxId stingerId = outcome switch
+            {
+                GameSession.MatchOutcome.P1Win => SfxId.MatchWin,
+                GameSession.MatchOutcome.P2Win => SfxId.MatchLose,
+                _                             => SfxId.MatchDraw,
+            };
+            SfxBus.Play(stingerId);
 
             // Grant RP for P1 win only.
             if (outcome == GameSession.MatchOutcome.P1Win)

@@ -58,6 +58,8 @@ namespace Golfin.Physics.Viewer
         // (GetComponent-or-AddComponent on the BallAnimator GO + Resources-loaded prefab) so the
         // scene carries no baked reference → LabScaffold.unity stays at zero diff for this task.
         WaterSplashController  _waterSplash;
+        // sound_effects (Order 350): BallAudioEmitter wired in code, same pattern as WaterSplashController.
+        BallAudioEmitter       _ballAudio;
 
         [Header("Camera")]
         [Tooltip("Initial look direction (XZ). Leave zero to auto-derive from scene type.")]
@@ -211,6 +213,16 @@ namespace Golfin.Physics.Viewer
                 if (_waterSplash == null)
                     _waterSplash = ballAnimator.gameObject.AddComponent<WaterSplashController>();
                 _waterSplash.Configure(ballAnimator, _ballSM, _shotController);
+            }
+
+            // sound_effects (Order 350): wire BallAudioEmitter in code, same pattern as WaterSplashController.
+            if (ballAnimator != null)
+            {
+                if (_ballAudio == null)
+                    _ballAudio = ballAnimator.GetComponent<BallAudioEmitter>();
+                if (_ballAudio == null)
+                    _ballAudio = ballAnimator.gameObject.AddComponent<BallAudioEmitter>();
+                _ballAudio.Configure(ballAnimator, _ballSM, _shotController);
             }
 
             // 8.5: consume club selection from the action button selector overlay.

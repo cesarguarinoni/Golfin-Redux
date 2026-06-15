@@ -3,6 +3,7 @@ using Golfin.Gameplay.Loop;
 using Golfin.Gameplay.Input;
 using Golfin.Physics.Math;
 using Golfin.Physics;
+using Golfin.Audio.Events;
 
 // Allow the EditMode test assembly to call internal members directly so tests
 // can wire HandleStateChanged via sm.OnStateChanged without going through Configure.
@@ -149,12 +150,10 @@ namespace Golfin.Physics.Viewer
             _splashInstance.Clear();
             _splashInstance.Play();
 
-            // Audio hook (clip supplied by Order 350; null-safe).
-            // AudioSource.PlayClipAtPoint mirrors AudioManager.PlaySFXAtPosition but avoids
-            // a cross-assembly reference (AudioManager lives in Assembly-CSharp, not in
-            // Golfin.Physics.Viewer). Volume defaults to 1f; Order 350 can tune via the clip.
-            if (_splashClip != null)
-                AudioSource.PlayClipAtPoint(_splashClip, worldPos);
+            // Order 350: publish via SfxBus instead of PlayClipAtPoint.
+            // This fixes the latent bug where the SFX volume slider had no effect on splash audio.
+            // _splashClip field is preserved for backward-compat inspector wiring but no longer used.
+            SfxBus.Play(SfxId.LandWater);
         }
 
 #if UNITY_EDITOR

@@ -1,0 +1,15 @@
+=== iter-1 kickoff baseline ===
+HEAD: 4cd37c14 docs(sound_effects): Tier-3 SPEC + STATUS for Order 350 audio pass (2026-06-16 00:44 JST)
+DIRTY (first 5):
+ M Docs/Specs/Active/sound_effects/STATUS.md
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/card_draw_1.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/card_draw_2.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/card_draw_3.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/card_fan.wav"
+=== end baseline ===
+2026-06-15T15:49:53 activated — iter-1 start
+2026-06-16T18:07:15 resumed — iter-1 continuation; creating AudioMixer + SfxLibrary assets, scene wiring
+2026-06-16T18:10:00 writing GolfinAudio.mixer YAML to disk, triggering import
+2026-06-16T18:15:00 fixing children property bug in mixer setup
+2026-06-16T18:50:00 all tests pass (20/20 audio + 418 full suite); taking canonical screenshot
+2026-06-16T18:54:31 done, awaiting review — IMPLEMENTER_REPORT.md written, routing to READY_FOR_ARCHITECT_REVIEW (fidelity gate is Tier-3 human gate)

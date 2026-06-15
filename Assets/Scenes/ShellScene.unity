@@ -39728,6 +39728,7 @@ MonoBehaviour:
   _holeSelectionScreen: {fileID: 249416398}
   _modeSelectionScreen: {fileID: 1340132284}
   _leaderboardScreen: {fileID: 5963199919595119297}
+  _mainThemeClip: {fileID: 8300000, guid: 71454997e659f7e48950fb6ecac7a3f2, type: 3}
 --- !u!114 &825584068
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -97035,6 +97036,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2057687344}
   - component: {fileID: 2057687343}
+  - component: {fileID: 2057687345}
   m_Layer: 0
   m_Name: AudioManager
   m_TagString: Untagged
@@ -97056,6 +97058,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Audio.AudioManager
   musicSource: {fileID: 0}
   sfxSources: []
+  _mixer: {fileID: 24100000, guid: 33dfc73b6895944bf9d5ff3df8a16f78, type: 2}
+  _musicGroup: {fileID: 3607115062277688925, guid: 33dfc73b6895944bf9d5ff3df8a16f78, type: 2}
+  _sfxGroup: {fileID: -5654114710015031649, guid: 33dfc73b6895944bf9d5ff3df8a16f78, type: 2}
   musicVolume: 0.7
   sfxVolume: 0.7
   sfxPoolSize: 5
@@ -97074,6 +97079,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2057687345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2057687342}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08e661d12b6bc43a8a328c012f9b2dfe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Audio.SfxPlayer
+  _library: {fileID: 11400000, guid: c673e5d0d00324ec7a71e45ce8867eca, type: 2}
 --- !u!1 &2058978396
 GameObject:
   m_ObjectHideFlags: 0

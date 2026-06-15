@@ -1,4 +1,5 @@
 using UnityEngine;
+using Golfin.Audio;
 
 namespace GolfinRedux.UI
 {
@@ -38,6 +39,10 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _modeSelectionScreen;
         [SerializeField] private GameObject _leaderboardScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
+
+        [Header("Audio (Order 350)")]
+        [Tooltip("Main Theme music clip — assign Assets/Music/Main Theme.mp3 in the Inspector.")]
+        [SerializeField] private AudioClip _mainThemeClip;
 
         private ScreenId _currentScreen;
 
@@ -135,6 +140,22 @@ namespace GolfinRedux.UI
                 _leaderboardScreen.SetActive(screenId == ScreenId.Leaderboard);
 
             // Settings is an overlay (SettingsController), not managed here
+
+            // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
+            // AudioManager is DDOL and lives in Assembly-CSharp, same as ScreenManager.
+            bool isMenuScreen = screenId == ScreenId.Home
+                             || screenId == ScreenId.Roster
+                             || screenId == ScreenId.Inventory
+                             || screenId == ScreenId.HoleSelection
+                             || screenId == ScreenId.ModeSelection
+                             || screenId == ScreenId.Leaderboard;
+            if (AudioManager.Instance != null)
+            {
+                if (isMenuScreen && _mainThemeClip != null && !AudioManager.Instance.IsMusicPlaying())
+                    AudioManager.Instance.PlayMusic(_mainThemeClip, loop: true);
+                else if (!isMenuScreen && AudioManager.Instance.IsMusicPlaying())
+                    AudioManager.Instance.StopMusic();
+            }
 
             // Show persistent bars on Home, Roster, Inventory, HoleSelection, ModeSelection, Leaderboard; hide on Logo/Splash/Loading
             bool showBars = screenId == ScreenId.Home

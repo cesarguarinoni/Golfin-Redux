@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using Golfin.Save;
+using Golfin.Audio.Events;
 
 namespace Golfin.Roster
 {
@@ -324,6 +325,7 @@ namespace Golfin.Roster
             SyncCharacterToSaveData(characterId);
 
             OnCharacterLeveledUp?.Invoke(characterId);
+            SfxBus.Play(SfxId.LevelUp);
 
             Debug.Log($"[CharacterManager] {characterId} leveled up to {nextLevel}, earned {spReward} SP");
             return spReward;

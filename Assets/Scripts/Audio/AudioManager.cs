@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Audio;
 using System.Collections.Generic;
 
 namespace Golfin.Audio
@@ -6,6 +7,10 @@ namespace Golfin.Audio
     /// <summary>
     /// Global audio manager - handles Music and SFX volume control.
     /// Singleton pattern, persists across scenes.
+    ///
+    /// Order 350: AudioMixer routing added. Volume applied via mixer dB parameters
+    /// (MusicVol / SFXVol). IMPORTANT: SetFloat must NOT be called in Awake/OnEnable —
+    /// AudioMixer is not ready then. Volume is loaded + applied in Start().
     /// </summary>
     public class AudioManager : MonoBehaviour
     {
@@ -17,6 +22,16 @@ namespace Golfin.Audio
 
         [Tooltip("Pool of AudioSources for SFX playback")]
         public List<AudioSource> sfxSources = new List<AudioSource>();
+
+        [Header("AudioMixer (Order 350)")]
+        [Tooltip("GolfinAudio mixer asset. Groups: Master → { Music, SFX }.")]
+        [SerializeField] private AudioMixer _mixer;
+        [SerializeField] private AudioMixerGroup _musicGroup;
+        [SerializeField] private AudioMixerGroup _sfxGroup;
+
+        // Exposed mixer parameter names (must match those exposed in GolfinAudio.mixer)
+        private const string MixerMusicVol = "MusicVol";
+        private const string MixerSfxVol   = "SFXVol";
 
         [Header("Volume Settings")]
         [Range(0f, 1f)]
@@ -31,6 +46,16 @@ namespace Golfin.Audio
         private const string MUSIC_VOLUME_KEY = "Settings_MusicVolume";
         private const string SFX_VOLUME_KEY = "Settings_SFXVolume";
 
+        // dB floor when volume = 0 (mute)
+        private const float DB_FLOOR = -80f;
+
+        /// <summary>Convert a linear 0–1 volume to decibels. Returns DB_FLOOR for 0 input.</summary>
+        public static float LinearToDb(float linear01)
+        {
+            float clamped = Mathf.Clamp(linear01, 0.0001f, 1f);
+            return Mathf.Log10(clamped) * 20f;
+        }
+
         private void Awake()
         {
             // Singleton pattern
@@ -43,17 +68,24 @@ namespace Golfin.Audio
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // Initialize audio sources if not assigned
+            // Initialize audio sources (and wire mixer groups) — does NOT call SetFloat.
             InitializeAudioSources();
 
-            // Load saved volume preferences
-            LoadVolumePreferences();
+            // NOTE: volume preferences are loaded in Start() (not Awake) because
+            // AudioMixer.SetFloat is not reliable in Awake/OnEnable.
+            Debug.Log("[AudioManager] Awake complete. Volume load deferred to Start().");
+        }
 
-            Debug.Log($"[AudioManager] Initialized - Music: {musicVolume * 100}%, SFX: {sfxVolume * 100}%");
+        private void Start()
+        {
+            // Load saved volume preferences and apply via mixer (safe to call here).
+            LoadVolumePreferences();
+            Debug.Log($"[AudioManager] Start: Music={musicVolume * 100:F0}%, SFX={sfxVolume * 100:F0}%");
         }
 
         /// <summary>
-        /// Initialize audio sources if they don't exist.
+        /// Initialize audio sources if they don't exist and wire mixer groups.
+        /// Does NOT call AudioMixer.SetFloat — that happens in Start().
         /// </summary>
         private void InitializeAudioSources()
         {
@@ -66,6 +98,10 @@ namespace Golfin.Audio
                 musicSource.loop = true;
                 musicSource.playOnAwake = false;
             }
+
+            // Route music source → Music mixer group
+            if (_musicGroup != null)
+                musicSource.outputAudioMixerGroup = _musicGroup;
 
             // Create SFX source pool if needed
             if (sfxSources == null || sfxSources.Count == 0)
@@ -80,39 +116,42 @@ namespace Golfin.Audio
                     sfxSources.Add(sfxSource);
                 }
             }
+
+            // Route all SFX sources → SFX mixer group
+            if (_sfxGroup != null)
+            {
+                foreach (var src in sfxSources)
+                {
+                    if (src != null)
+                        src.outputAudioMixerGroup = _sfxGroup;
+                }
+            }
         }
 
         /// <summary>
-        /// Load volume preferences from PlayerPrefs.
+        /// Load volume preferences from PlayerPrefs and apply via mixer.
+        /// Migrate legacy 0–100 PlayerPrefs values → dB. Safe to call in Start() and later.
         /// </summary>
         private void LoadVolumePreferences()
         {
-            // Load volumes (stored as 0-100, convert to 0-1)
+            // Load volumes (stored as 0–100, convert to 0–1).
+            // Legacy keys preserved: "Settings_MusicVolume" / "Settings_SFXVolume".
             musicVolume = PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, 70f) / 100f;
-            sfxVolume = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 70f) / 100f;
+            sfxVolume   = PlayerPrefs.GetFloat(SFX_VOLUME_KEY,   70f) / 100f;
 
             ApplyVolumes();
         }
 
         /// <summary>
-        /// Set music volume (0-100 scale).
+        /// Set music volume (0–100 scale). Internally drives AudioMixer dB parameter.
         /// </summary>
-        /// <param name="volume">Volume from 0 to 100</param>
         public void SetMusicVolume(float volume)
         {
-            // Clamp to 0-100 range
             volume = Mathf.Clamp(volume, 0f, 100f);
-
-            // Convert to 0-1 range
             musicVolume = volume / 100f;
 
-            // Apply to music source
-            if (musicSource != null)
-            {
-                musicSource.volume = musicVolume;
-            }
+            ApplyMusicVolume();
 
-            // Save preference
             PlayerPrefs.SetFloat(MUSIC_VOLUME_KEY, volume);
             PlayerPrefs.Save();
 
@@ -120,27 +159,15 @@ namespace Golfin.Audio
         }
 
         /// <summary>
-        /// Set SFX volume (0-100 scale).
+        /// Set SFX volume (0–100 scale). Internally drives AudioMixer dB parameter.
         /// </summary>
-        /// <param name="volume">Volume from 0 to 100</param>
         public void SetSFXVolume(float volume)
         {
-            // Clamp to 0-100 range
             volume = Mathf.Clamp(volume, 0f, 100f);
-
-            // Convert to 0-1 range
             sfxVolume = volume / 100f;
 
-            // Apply to all SFX sources
-            foreach (var sfxSource in sfxSources)
-            {
-                if (sfxSource != null)
-                {
-                    sfxSource.volume = sfxVolume;
-                }
-            }
+            ApplySfxVolume();
 
-            // Save preference
             PlayerPrefs.SetFloat(SFX_VOLUME_KEY, volume);
             PlayerPrefs.Save();
 
@@ -164,20 +191,44 @@ namespace Golfin.Audio
         }
 
         /// <summary>
-        /// Apply current volume settings to all sources.
+        /// Apply current volume settings. Uses mixer dB if mixer is available;
+        /// falls back to per-source volume if mixer is not wired (graceful degradation).
         /// </summary>
         private void ApplyVolumes()
         {
-            if (musicSource != null)
-            {
-                musicSource.volume = musicVolume;
-            }
+            ApplyMusicVolume();
+            ApplySfxVolume();
+        }
 
-            foreach (var sfxSource in sfxSources)
+        private void ApplyMusicVolume()
+        {
+            if (_mixer != null)
             {
-                if (sfxSource != null)
+                float db = musicVolume <= 0f ? DB_FLOOR : LinearToDb(musicVolume);
+                _mixer.SetFloat(MixerMusicVol, db);
+            }
+            else
+            {
+                // Fallback: direct source volume (no mixer)
+                if (musicSource != null)
+                    musicSource.volume = musicVolume;
+            }
+        }
+
+        private void ApplySfxVolume()
+        {
+            if (_mixer != null)
+            {
+                float db = sfxVolume <= 0f ? DB_FLOOR : LinearToDb(sfxVolume);
+                _mixer.SetFloat(MixerSfxVol, db);
+            }
+            else
+            {
+                // Fallback: direct source volume (no mixer)
+                foreach (var src in sfxSources)
                 {
-                    sfxSource.volume = sfxVolume;
+                    if (src != null)
+                        src.volume = sfxVolume;
                 }
             }
         }

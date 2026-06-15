@@ -2,6 +2,7 @@
 using Golfin.Save;
 using Golfin.UI.Rankings;
 using UnityEngine;
+using Golfin.Audio.Events;
 
 namespace Golfin.Roster
 {
@@ -120,6 +121,9 @@ namespace Golfin.Roster
 
             SaveDataHost.Instance.MarkDirty();
             OnPointsChanged?.Invoke(GetPoints());
+
+            // Order 350: RP earn SFX (one event per earn).
+            SfxBus.Play(SfxId.RpEarn);
 
             Debug.Log($"[RewardPointsManager] Earned {amount}R, now have {GetPoints()}R");
         }

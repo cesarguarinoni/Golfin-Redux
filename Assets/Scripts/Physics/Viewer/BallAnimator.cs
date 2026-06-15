@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using UnityEngine;
 using Golfin.Physics;
@@ -9,6 +10,10 @@ namespace Golfin.Physics.Viewer
     /// Animates a ball prefab along a pre-computed Trajectory at configurable play-rate.
     /// The prefab's Rigidbody (if any) is made kinematic and Colliders are disabled —
     /// the trajectory is deterministic and pre-computed; PhysX must not interfere.
+    ///
+    /// Order 350 (additive only — does not alter existing playback/positioning):
+    ///   OnHit fires as playback advances past each Trajectory.hits[i].Time.
+    ///   CurrentSimTime is readable by BallAudioEmitter and tests.
     /// </summary>
     public class BallAnimator : MonoBehaviour
     {
@@ -21,10 +26,29 @@ namespace Golfin.Physics.Viewer
         public Transform CurrentBall => _instance == null ? null : _instance.transform;
         public bool IsPlaying => _playing;
 
+        // ── Order 350: per-hit event (additive — zero impact on existing playback) ──
+
+        /// <summary>
+        /// Fired as the playback clock passes each TerrainHit.Time in the Trajectory.
+        /// Read-only — subscribers must NOT modify the trajectory or sim state.
+        /// BallAudioEmitter subscribes to publish per-bounce landing sounds.
+        /// </summary>
+        public event Action<TerrainHit> OnHit;
+
+        /// <summary>
+        /// Current playback sim-time (seconds, unscaled). Read-only; zero when not playing.
+        /// Exposed for BallAudioEmitter and EditMode tests only.
+        /// </summary>
+        public float CurrentSimTime => _currentSimTime;
+
         Trajectory  _trajectory;
         GameObject  _instance;
         float       _currentSimTime;
         bool        _playing;
+
+        // ── Order 350: hit-event tracking ─────────────────────────────────────
+        // Index into _trajectory.hits of the next hit that has not yet fired OnHit.
+        int _nextHitIndex;
 
         // §controls_i: ball visual rotation derived from position delta
         Vector3 _previousPos;
@@ -91,6 +115,7 @@ namespace Golfin.Physics.Viewer
             SpawnInstance(t.samples[0].position);
 
             _currentSimTime = 0f;
+            _nextHitIndex   = 0;  // Order 350: reset hit cursor
             _playing = true;
 
             // Instant mode: snap straight to rest position
@@ -127,6 +152,18 @@ namespace Golfin.Physics.Viewer
             float endTime = samples[samples.Count - 1].time.ToFloat();
 
             _currentSimTime += Time.unscaledDeltaTime * PlayRate;
+
+            // Order 350: fire OnHit for every hit whose time has been passed.
+            // Additive: does not affect _currentSimTime or position logic below.
+            if (_trajectory.terrainHits != null && OnHit != null)
+            {
+                while (_nextHitIndex < _trajectory.terrainHits.Count
+                    && _trajectory.terrainHits[_nextHitIndex].Time.ToFloat() <= _currentSimTime)
+                {
+                    OnHit.Invoke(_trajectory.terrainHits[_nextHitIndex]);
+                    _nextHitIndex++;
+                }
+            }
 
             if (_currentSimTime >= endTime)
             {

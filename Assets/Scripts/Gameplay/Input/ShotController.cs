@@ -5,6 +5,7 @@ using Golfin.Physics.Math;
 using Golfin.Physics.Stats;
 using Golfin.Gameplay.Config;
 using Golfin.Gameplay.Defaults;
+using Golfin.Audio.Events;
 
 namespace Golfin.Gameplay.Input
 {
@@ -238,6 +239,11 @@ namespace Golfin.Gameplay.Input
         {
             State = ShotState.Flicking;
 
+            // ── Order 350: Swing + Hit SFX ────────────────────────────────────────
+            // Published at the moment the player commits the shot. Read-only: does not
+            // touch BallSimulation, BallStateMachine, or any fixed-point state.
+            PublishShotSfx();
+
             float degradYaw = DebugFlags.ForcePerfectAim ? 0f : _degradationYawRad;
             LastShotWasClean = !IsPutt && Mathf.Approximately(degradYaw, 0f);   // latched for BallTrailController
             float finetune  = DebugFlags.DisableConeFineTune ? 0f : _coneFinetune;
@@ -368,6 +374,56 @@ namespace Golfin.Gameplay.Input
         {
             if (_statBundleOverridden) return _statBundle;
             return StatProviderBus.Resolve(IsPutt);
+        }
+
+        // ── Order 350: SFX helpers ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Publishes exactly one Swing* and one Hit* (or HitPutt) to SfxBus.
+        /// Swing type is derived from IsPutt + StatProviderBus.CurrentLabClubIndex
+        /// (the only club-type signal available inside Golfin.Gameplay.Input).
+        /// Hit type is derived from power band (NOTE-F spec).
+        /// Read-only: zero feedback into the physics sim.
+        /// </summary>
+        private void PublishShotSfx()
+        {
+            // --- Swing SFX (NOTE-F: putter→SwingPutt; index→swing club type) ---
+            SfxId swingId;
+            if (IsPutt)
+            {
+                swingId = SfxId.SwingPutt;
+            }
+            else
+            {
+                // StatProviderBus.CurrentLabClubIndex: 0=Driver/Wood, 1=Iron, 2=Wedge
+                // In live gameplay the LiveStatProviderHost sets the resolver; index acts
+                // as a best-effort proxy until a ClubType signal is added to the bus.
+                int labIdx = StatProviderBus.CurrentLabClubIndex;
+                swingId = labIdx switch
+                {
+                    0 => SfxId.SwingDriver,
+                    1 => SfxId.SwingIron,
+                    2 => SfxId.SwingWedge,
+                    _ => SfxId.SwingDefault,
+                };
+            }
+            SfxBus.Play(swingId);
+
+            // --- Hit SFX (NOTE-F: putter→HitPutt; else power-band) ---
+            SfxId hitId;
+            if (IsPutt)
+            {
+                hitId = SfxId.HitPutt;
+            }
+            else
+            {
+                // Power >0.8 = strong; <0.3 = weak; else default
+                float power = PowerNormalized;
+                if (power > 0.8f)       hitId = SfxId.HitStrong;
+                else if (power < 0.3f)  hitId = SfxId.HitWeak;
+                else                    hitId = SfxId.HitDefault;
+            }
+            SfxBus.Play(hitId);
         }
 
         private void PublishState()
