@@ -1,0 +1,310 @@
+2026-06-12T10:00:00 activated
+=== iter-1 kickoff baseline ===
+HEAD: f0c3709002d9f74b83469fb260e38cafd1c81458
+DIRTY:
+?? Docs/Specs/Active/water_splash_fx/HEARTBEAT.log
+?? Docs/Specs/Active/water_splash_fx/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/water_splash_fx/STATUS.md
+=== end baseline ===
+2026-06-12T10:25:00 MCP transport dropped after component-add, attempting recovery via script approach
+2026-06-12T10:45:00 BLOCKED: MCP transport unresponsive 20+ minutes. Filed IMPLEMENTER_BLOCKED.
+2026-06-12T13:13:00 MCP recovered — wired _splashPrefab + _waterSplash, scene saved, running tests
+2026-06-12T13:47:00 run-4 completed — TeeMarker pos fix, particles visible (27K-50K diff px), captioning video, writing report
+2026-06-12T13:52:00 done — report written, STATUS=READY_FOR_SELF_REVIEW, all items PASS
+2026-06-12T21:30:00 iter-2 activated — STATUS=IMPLEMENTER_WORKING
+=== iter-2 kickoff baseline ===
+HEAD: f0c37090 (last commit — no new commit since iter-1)
+DIRTY (from git status --porcelain):
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Docs/Scripts/build_bot_video.py
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/FX.meta
+?? Assets/FX/WaterSplash.prefab
+?? Assets/FX/WaterSplash.prefab.meta
+?? Assets/FX/WaterSplashParticle.mat
+?? Assets/FX/WaterSplashParticle.mat.meta
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs.meta
+?? Docs/Specs/Active/water_splash_fx/ (task files)
+=== end baseline ===
+2026-06-12T22:15:00 Scenarios.cs compile-clean — using fully-qualified types; launching WaterSplashGate bot
+2026-06-12T22:30:00 Switching to Hole_09 (26m tee-to-water); launching WaterSplashGate run-2
+2026-06-12T14:55:00 iter-2: scene re-wired cleanly, packages reverted, running EditMode tests
+2026-06-12T15:20:00 Analyzing heightmap: water zone at y=7.9 SOUTH of tee (-87,16.6,-80); terrain drops to 7.89 at z=-140 (60m south). Fixing yaw to -pi/2 (south direction).
+2026-06-12T15:35:00 Fixed Scenarios.cs: yaw 1.01 rad NE + power 0.55 → north water lobe at (-65,-45) dist=41m
+2026-06-12T15:40:00 run-5 bot launched — yaw=1.01 rad NE, power=0.55, waiting for OBReason.Water in history.log
+2026-06-12T15:50:00 Fixed InjectLabBundleForCurrentClub — was ClearStatBundleOverride (caused zero-power shots). Launching run-6.
+2026-06-12T18:00:00 iter-2 resume: fixed Scenarios.cs yaw bug (1.01 NE→-0.49 ESE), fixing scene drift next
+2026-06-12T18:10:00 Tests 4/4 PASS. Fixed Scenarios.cs yaw (-0.49 ESE). Launching bot run-7 for real water shot.
+2026-06-12T18:20:00 run-8 launching: yaw=-1.63 SSW toward actual water polygon interior at (-90,-130) dist=50m, power=0.85
+2026-06-12T18:30:00 run-9 launching: yaw=-1.63 SSW, power=0.95 (run-8 stopped at z=-113, need z=-130 water)
+2026-06-12T18:45:00 run-9 in progress (IsPlaying=true), waiting for completion
+2026-06-12T19:00:00 run-9/10 in progress, waiting for completion before recompile
+2026-06-12T19:05:00 run-10 launching: yaw=0.0 due East toward water at (-55,-80) dist=32m, power=0.90
+2026-06-12T18:50:00Z run-13 launching: Downrange camera pivot after OnShotComplete for burst screenshots at water entry (-54.9,7.9,-83.9)
+2026-06-12T19:00:00Z run-14 launched: debug worldPos logging + Downrange camera active
+2026-06-12T21:45:00 run-14 PASS confirmed, 4/4 EditMode tests pass, video built, writing IMPLEMENTER_REPORT
+2026-06-12T22:55:00 done, awaiting review
+2026-06-13T00:00:00 iter-3 activated — STATUS=IMPLEMENTER_WORKING
+=== iter-3 kickoff baseline ===
+HEAD: 7a8ce4cd (docs(roadmap): file localization_audit (353, P2 Queued))
+DIRTY:
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Docs/Scripts/build_bot_video.py
+?? Assets/FX.meta
+?? Assets/FX/WaterSplash.prefab
+?? Assets/FX/WaterSplash.prefab.meta
+?? Assets/FX/WaterSplashParticle.mat
+?? Assets/FX/WaterSplashParticle.mat.meta
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs.meta
+?? Docs/Specs/Active/water_splash_fx/ (task files)
+=== end baseline ===
+2026-06-13T00:15:00 FIX A/B done (removed Downrange pivot from Scenarios.cs); FIX C done (beefed up PS); FIX E done (verbose log gate); running EditMode tests
+2026-06-13T00:30:00 Scenarios.cs updated for Hole_06_Geo (yaw=PI west, approach (25,12,-10), power=0.60); FIX D analyzed (greenReader/DebugLevelOverride are real default fields, already at defaults); running compile check
+2026-06-13T00:45:00 run-15 PARTIAL: OBReason=OutOfBounds (ball flew 139m past water). Need power=0.15 and approach x=10 (closer to water). Adjusting Scenarios.cs.
+2026-06-13T01:15:00 run-16 launching: power=0.20, approach=(10,12,-10), yaw=PI west, Hole_06_Geo
+2026-06-13T01:35:00 run-17 launching: power=0.28, approach=(10,12,-10), target x=-26 in water polygon
+2026-06-13T02:00:00 iter-3 resume: fixing scene drift, beefing VFX, updating Scenarios.cs for better shot, re-running bot
+2026-06-13T02:10:00 BeefUp PS done (via script-execute); launching run-18 at power=0.28 targeting Hole_06 water
+2026-06-13T02:25:00 run-19 launching: approach=(35,15,-8), power=0.35, yaw=PI west — fixed approach position outside water zone
+2026-06-13T03:00:00 Fixed Scenarios.cs timing bug (post-loop race recovery); launching run-20
+2026-06-13T03:30:00 iter-3 done: rebuilt video with correct title, wrote IMPLEMENTER_REPORT, setting READY_FOR_SELF_REVIEW
+2026-06-13T03:31:00 done, awaiting review
+
+=== iter-4 kickoff baseline (2026-06-13T04:51:35Z) ===
+HEAD: 7a8ce4cd (docs(roadmap): file localization_audit (353, P2 Queued) (2026-06-12 19:57 JST))
+DIRTY (porcelain --untracked-files=all):
+ M .claude/agents/golfin-implementer.md
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Docs/Scripts/build_bot_video.py
+?? Assets/FX.meta
+?? Assets/FX/WaterSplash.prefab
+?? Assets/FX/WaterSplash.prefab.meta
+?? Assets/FX/WaterSplashParticle.mat
+?? Assets/FX/WaterSplashParticle.mat.meta
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs.meta
+=== end baseline ===
+2026-06-13T04:51:35Z iter-4 activated — real-game-flow capture; zero-scene-diff code-wire plan
+2026-06-13T04:53:08Z removed lab-rig WaterSplashGate from Scenarios/SmokeBot/Menu; bot files back to zero diff vs HEAD
+2026-06-13T04:57:40Z moved prefab→Resources/FX; deleted empty Assets/FX; cleared stale screenshots+videos
+2026-06-13T05:00:08Z code-wired WaterSplashController in PhysicsLabController.Awake; reverted LabScaffold to HEAD (zero scene diff)
+2026-06-13T05:26:18Z BLOCKER: Unity MCP transport unresponsive (Response data is null) for ~10min wall-clock.
+  - Attempts: editor-application-get-state x6, console-get-logs x1, assets-refresh x1, assets-delete x2 — all returned null.
+  - Wait windows: 5s/10s/20s + structured 60s + 90s loops between batches.
+  - Editor IS healthy: Editor.log shows Asset Pipeline Refresh succeeded 06:53:31, domain reload 1865ms, ZERO 'error CS' lines, idle since.
+  - Root cause: transport drop after the prefab-move domain reload; needs /mcp reconnect at orchestrator level (cannot trigger from subagent).
+  - Code changes complete + brace-balanced + scene at zero diff, but my latest .cs edits are NOT yet compile-verified, tests NOT run, real-flow capture NOT done — all require MCP.
+2026-06-13T05:26:18Z Setting STATUS=IMPLEMENTER_BLOCKED and surfacing to orchestrator.
+2026-06-13T05:35:25Z STATUS=IMPLEMENTER_BLOCKED written; report filled; surfacing to orchestrator. Resume = /mcp reconnect then refresh→tests→real-flow capture.
+
+=== iter-4-resume baseline (2026-06-13T06:01:40Z) ===
+HEAD: 7a8ce4cd (docs(roadmap): file localization_audit (353, P2 Queued))
+DIRTY (porcelain --untracked-files=all):
+ M .claude/agents/golfin-implementer.md
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Docs/Scripts/build_bot_video.py
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Resources/FX.meta
+?? Assets/Resources/FX/WaterSplash.prefab
+?? Assets/Resources/FX/WaterSplash.prefab.meta
+?? Assets/Resources/FX/WaterSplashParticle.mat
+?? Assets/Resources/FX/WaterSplashParticle.mat.meta
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs.meta
+?? Docs/Specs/Active/water_splash_fx/HEARTBEAT.log
+?? Docs/Specs/Active/water_splash_fx/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/water_splash_fx/SELF_REVIEW.md
+?? Docs/Specs/Active/water_splash_fx/STATUS.md
+=== end baseline ===
+2026-06-13T06:01:40Z MCP back online (editor-application-get-state real JSON, IsCompiling=false); resuming refresh->compile->tests->VFX->real-flow capture
+2026-06-13T06:02:43Z assets-refresh done; waiting for compile then console-get-logs
+2026-06-13T06:03:14Z compile CLEAN (zero CS errors); InternalsVisibleTo asmdef verified == Golfin.Physics.Tests; BallStateChange ctor verified; PlaySplash first-splash Play() fix applied; running EditMode tests
+2026-06-13T06:03:35Z WaterSplash tests 4/4 PASS; running full EditMode suite to confirm green
+2026-06-13T06:04:42Z VFX beef-up: opening prefab via PrefabUtility.LoadPrefabContents to bump spray (burst/size/upward velocity/opacity) + ring (count/lifetime/start-size) via PS C# API, then SaveAsPrefabAsset
+2026-06-13T06:05:27Z VFX beef-up persisted to prefab (spray burst28-38/max45/len0.9; ripple max6/len1.2). Starting REAL-flow capture: opening ShellScene
+2026-06-13T06:07:24Z ShellScene play confirmed; discovering character/bag defaults + RP API, then seeding + BeginGameplayLoad(6)
+2026-06-13T06:08:29Z BeginGameplayLoad(6) invoked via real loader; waiting for additive LabScaffold+Hole_06_Geo + IsHoleReady
+2026-06-13T06:14:39Z Deterministic shot found: Driver power=0.45 aimYaw=2.9804 -> HitWater at water center (-19.9,7.3,-8.3). Verifying live ShotController fire lands in water before recording (1-record-per-session guard)
+2026-06-13T06:16:12Z Hole 6 renders correctly via real flow (full HUD, proper lighting/trees/fairway). Verify-fire confirmed ob=Water at (-19.9,7.3,-8.3) + WaterOBFireCount=1 + splash pool spawned. Arming BotVideoRecorder for the single recorded shot.
+2026-06-13T06:18:26Z First recording missed the shot (fire executed after the 20s watchdog cap due to a failed-fire retry gap; video is static tee). Resetting session guard to redo with fire-immediately-after-begin.
+2026-06-13T06:19:30Z WaterRecFire3 fired ~1s after Begin (cap 12s). Waiting for watchdog to finalize raw.mp4, then frame-extract to verify the splash is captured.
+2026-06-13T06:20:54Z ROOT CAUSE: play mode exited between 1st recording end and 2nd begin (PLC null + "PrepareRecording only in Play mode"). 1st video is static-tee only (shot fired post-window). Session guard reset OK. Re-entering full real flow; will fire within ~1-2s of Begin this time.
+2026-06-13T06:21:32Z Re-entered play; re-ran load (unlock/RP/seed/BeginGameplayLoad 6). Waiting for IsHoleReady.
+2026-06-13T06:22:26Z WaterAutoRecord coroutine launched: Begin -> +1.2s fire -> +8.5s End. Self-contained timing (no MCP-call gap). Waiting ~13s.
+2026-06-13T06:25:24Z 2nd recording (9.7s) shows ball glued to tee aim-view the whole time; chase never visibly followed despite WaterOBFireCount=1 + chaseCam ending at water (-19.9,12.3,-8.3). Also water near entry renders as a flat blue box (shader concern, out-of-scope §6). Mechanic fully proven. Switching to direct live-view capture of the splash + surfacing the camera/water concerns honestly.
+2026-06-13T06:27:34Z Burst-snap coroutine: fire + CaptureCore.SnapPlayModeSafe x10 across t=2.85..4.0s to catch the splash before OB snap-back. Waiting ~6s.
+2026-06-13T06:28:40Z SnapPlayModeSafe did NOT persist frames to disk (CaptureScreenshotAsTexture write failed silently). Chase OB-snap-back is same-frame as water hit (verify log: Flying->OB->Aiming all frame 84191), so splash window on chase cam is ~0 frames. Will try rapid screenshot-game-view burst at impact; if still no clean splash, surface as blocker (mechanic fully proven, camera framing + flat-water-render are the obstacles).
+2026-06-13T06:30:27Z Play mode exited again (instability from repeated MonoBehaviour script-execute + pause cycles). On-camera splash capture blocked by production OB chase-snap-back (same-frame as water hit -> splash never framed) + flat-water-render at entry. Mechanic fully proven (tests, WaterOBFireCount=1, pool at exact water entry, real-flow Hole6 renders correctly). Capturing isolated VFX render to prove beefed visuals; will surface camera/water framing as architect question.
+2026-06-13T06:31:16Z Re-entered play, reloaded Hole 6. Will reset video guard + run self-contained record coroutine (ResetToTee+aim+Begin+fire+hold+End all in one coroutine).
+2026-06-13T06:31:54Z WaterFinalRecord coroutine: guard reset + stage + Begin + 1s + fire + 9.5s hold + End. Waiting ~14s.
+2026-06-13T06:33:13Z 3rd recording also static-tee (TURN stayed 3 -> fire in recorder coroutine did NOT advance turn/resolve; recorder targetFrameRate/Tick interaction). All capture methods (3 recordings, screenshot bursts, frozen-frame, SnapPlayModeSafe) fail to frame the splash on the production chase cam. Mechanic 100% proven (verify-fires advanced TURN 3->5->7->11, WaterOBFireCount=1, pool at exact entry). Capturing isolated VFX render as supporting proof; preparing honest report + architect question on the camera/recorder framing blocker.
+2026-06-13T06:35:45Z WaterChaseTest: fire + SnapAtEndOfFrameAndPause burst (t=0.6..3.4) to verify chase follows the flying ball. Waiting ~6s.
+2026-06-13T06:37:25Z Investigation complete. Mechanic fully proven. Visual deliverable blocked: (1) Hole6 Water_1 west-lobe (the only water, where shot lands) renders as a flat grey plane, not realistic water; (2) production OB chase camera does not dwell on the splash. Both are out-of-scope to fix (presentation-only, zero gameplay/camera impact). Copied evidence to task folder. Writing honest report -> READY_FOR_ARCHITECT_REVIEW (escalation).
+2026-06-13T06:39:36Z done, awaiting architect review (escalation). Report written; canonical=realflow_hole6_renders_correct.jpg (1170x2532, var 1788.8); canonical video=realflow_hole6_attempt.mp4. Mechanic PASS; on-camera splash visual FAIL/unverifiable (grey water + chase OB-snap-back, both out-of-scope). Architect judgment requested.
+
+=== iter-5 kickoff baseline (2026-06-13T07:42:00Z) ===
+HEAD: 7a8ce4cd (docs(roadmap): file localization_audit (353, P2 Queued))
+DIRTY (porcelain --untracked-files=all):
+ M .claude/agents/golfin-implementer.md
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Docs/Scripts/build_bot_video.py
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Resources/FX.meta
+?? Assets/Resources/FX/WaterSplash.prefab
+?? Assets/Resources/FX/WaterSplash.prefab.meta
+?? Assets/Resources/FX/WaterSplashParticle.mat
+?? Assets/Resources/FX/WaterSplashParticle.mat.meta
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs.meta
+?? Docs/Specs/Active/water_splash_fx/ (task files)
+=== end baseline ===
+2026-06-13T07:42:00Z iter-5 activated — SINGLE JOB: capture video showing splash over Hole6 water with capture-time camera HOLD (Cesar authorized). Water renders fine; prior grey was bad-angle artifact. No code re-litigation.
+2026-06-13T07:55:00Z Wrote capture-only WaterSplashCaptureRig (editor-only, Bot folder); refresh+compile-check
+2026-06-13T08:05:00Z Discovery OK (Hole6 unlocked, RP 999999, char_james, IsVersus false). Starting recording + BeginGameplayLoad(6) + spawning WaterSplashCaptureRig
+2026-06-13T08:10:00Z Capture sequence executed: HitWater finalPos=(-19.90,7.27,-8.27), camera HELD 1.6s over entry, released cleanly. Ending recording + exiting play.
+2026-06-13T08:20:00Z Camera HOLD works + splash framed (frame 22 shows splash particles over entry). BUT: (a) particles render as hard translucent squares (no soft droplet tex); (b) hold angle too top-down -> water reads grey not blue. Fixing both: soft particle material + lower behind-ball hold angle for sky reflection.
+2026-06-13T08:30:00Z Assigned soft droplet tex (T_WaterDroplet) to _BaseMap; retuned hold camera to LOW grazing across-water angle (h2.4 back10 lookacross14) for sky reflection -> blue water. Recompiling for re-run.
+2026-06-13T08:45:00Z RUN-2 SUCCESS: splash now renders as soft blue spray (h_001/h_002 peak) — droplet tex fix worked. Far water reflects blue; near foreground still sandy/grey (shader shallow-bottom look). Tuning hold angle higher+across to maximize blue far-water band, then final record.
+2026-06-13T08:52:00Z Retuned hold to production-chase-faithful low grazing (h1.9 back5 lookacross30 lookup2.0) for maximum sky-reflection blue water. Recompiling for final record.
+2026-06-13T09:00:00Z RUN-3: lower grazing shows bigger blue far-water band + far shore, but splash drifts off-center/smaller. RUN-2 framed the splash best (centered dramatic blue spray). Doing final run with blended params (h2.2/back9/across16/lookup1.0) to keep dramatic centered splash + more grazing blue water.
+2026-06-13T09:25:00Z FINAL video built: water_splash_fx_splash_realflow.mp4 (1170x2532, 5.2s, captioned). Canonical screenshot splash_canonical_peak.jpg (peak spray, blue). Verifying zero-diff on gameplay files + cleaning temp capture artifacts.
+2026-06-13T09:40:00Z All acceptance PASS. Splash captured on-camera over Hole6 water via real flow + capture-time camera hold (zero gameplay diff verified on 6 files). Soft droplet tex fixed hard-squares. Tests 4/4 + physics 189/0/3. IMPLEMENTER_REPORT written.
+2026-06-13T09:40:30Z done, awaiting review — STATUS=READY_FOR_SELF_REVIEW. Canonical=splash_canonical_peak.jpg (1170x2532, var 1244). Canonical video=water_splash_fx_splash_realflow.mp4.
+
+=== iter-6 kickoff baseline (2026-06-13T12:00:00Z) ===
+HEAD: 0a81511b915fb9aec85d2f0536746495c5e4b955 (docs(water_splash_fx): architect specs for splash VFX redesign + grey-water capture fix)
+DIRTY (porcelain --untracked-files=all):
+ M .claude/agents/golfin-implementer.md
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Docs/Scripts/build_bot_video.py
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Resources/FX.meta
+?? Assets/Resources/FX/T_WaterDroplet.png (+meta)
+?? Assets/Resources/FX/WaterSplash.prefab (+meta)
+?? Assets/Resources/FX/WaterSplashParticle.mat (+meta)
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs (+meta)
+?? Assets/Scripts/Physics/Viewer/Bot/WaterSplashCaptureRig.cs (+meta)
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs (+meta)
+?? Docs/Specs/Active/water_splash_fx/ (task files + screenshots)
+=== end baseline ===
+2026-06-13T12:00:00Z iter-6 activated — PROBLEM A: diagnose grey water in capture flow. Run diagnostic script to dump reflection state both flows, then fix in WaterSplashCaptureRig.cs.
+2026-06-13T13:20:00Z WaterSplashCaptureRig updated with ApplyWaterReflectionFix() - switching _REFLECTIONMODE_PROBES to _REFLECTIONMODE_SKYBOX; ready to run real-flow capture
+2026-06-13T13:10:23Z iter-6 resumed - game in play mode hole 6 loaded, running WaterSplashCaptureRig capture
+2026-06-13T15:25:00Z investigating root cause - URPWater needs ReflectionProbe with baked Sky-2 cubemap; defaultTexture is grey Default-Skybox-Cubemap
+2026-06-13T13:33:07Z iter-6 resumed — context restored, running full real-flow capture with _REFLECTIONMODE_CUBEMAP fix
+2026-06-13T16:00:00Z iter-6 resumed — context restored, checking wsplash_eof images (showing tee not water), need re-run with end-of-frame yield for SnapPlayModeSafe
+2026-06-13T16:00:00Z diagnosing grey water: reflection fix applied but water still dark; root cause now appears to be depth-based color at OB drop angle; exploring tee view angle
+2026-06-13T16:40:00Z done, awaiting architect review — Problem A (blue water) PASS; Problem B (VFX redesign) FAIL/BLOCKED pending textures from Cesar
+
+=== iter-7 kickoff baseline (2026-06-14T05:12:36Z) ===
+HEAD: 0a81511b915fb9aec85d2f0536746495c5e4b955
+DIRTY (porcelain --untracked-files=all):
+ M .claude/agents/golfin-implementer.md
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Docs/Scripts/build_bot_video.py
+ M Docs/Specs/Active/water_splash_fx/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Resources/FX.meta
+?? Assets/Resources/FX/T_SplashDroplet.png
+?? Assets/Resources/FX/T_SplashFoam.png
+?? Assets/Resources/FX/T_SplashRing.png
+?? Assets/Resources/FX/T_WaterDroplet.png
+?? Assets/Resources/FX/T_WaterDroplet.png.meta
+?? Assets/Resources/FX/WaterSplash.prefab
+?? Assets/Resources/FX/WaterSplash.prefab.meta
+?? Assets/Resources/FX/WaterSplashParticle.mat
+?? Assets/Resources/FX/WaterSplashParticle.mat.meta
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/Bot/WaterSplashCaptureRig.cs
+?? Assets/Scripts/Physics/Viewer/Bot/WaterSplashCaptureRig.cs.meta
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs.meta
+?? Docs/Specs/Active/water_splash_fx/ARCHITECT_HANDOFF.md
+?? Docs/Specs/Active/water_splash_fx/HEARTBEAT.log
+?? Docs/Specs/Active/water_splash_fx/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/water_splash_fx/SELF_REVIEW.md
+?? Docs/Specs/Active/water_splash_fx/screenshots/realflow_hole6_renders_correct.jpg
+?? Docs/Specs/Active/water_splash_fx/screenshots/splash_a_impact.jpg
+?? Docs/Specs/Active/water_splash_fx/screenshots/splash_b.jpg
+?? Docs/Specs/Active/water_splash_fx/screenshots/splash_c_settled_hold.jpg
+?? Docs/Specs/Active/water_splash_fx/screenshots/splash_canonical_peak.jpg
+?? Docs/Specs/Active/water_splash_fx/screenshots/wsplash_peak_iter6_20260613.png
+?? Docs/Specs/Active/water_splash_fx/screenshots/wsplash_ripple_iter6_20260613.png
+=== end baseline ===
+2026-06-14T05:12:36Z activated — iter-7: AssetDB refresh for 3 new textures, import settings, rebuild WaterSplash.prefab (4-child sub-system, Alpha blend), capture.
+2026-06-14T07:20:00 iter-7 resume: prefab verified (4 children, correct mats/textures). Starting real-game capture flow.
+2026-06-13T07:26:59 resuming from context compaction — forcing OnHoleLoaded and launching WaterSplashCaptureRig
+2026-06-14T05:36:07Z grey water persists from cinematic override angle even with FIX A; switching to natural-chase-camera capture strategy
+2026-06-14T07:52:00 iter-7 resumed after context compaction — fixed settleFrames compile error, entering fresh play mode for capture run
+2026-06-14T06:17:33 exiting play mode to recompile new impact-capture Phase C
+
+=== iter-8 kickoff baseline (2026-06-14T02:00:00Z) ===
+HEAD: 43baa18d docs(water_splash_fx): correct Problem A root cause to duplicate lights (resolved by Code) (2026-06-13 21:58 JST)
+DIRTY (porcelain --untracked-files=all):
+ M .claude/agents/golfin-implementer.md
+ M Assets/Golf/Courses/lomond-country-club/Data/hole-06-geo/WaterSurface.mat
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Docs/Scripts/build_bot_video.py
+ M Docs/Specs/Active/water_splash_fx/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Resources/FX.meta
+?? Assets/Resources/FX/M_SplashDroplet.mat (+meta)
+?? Assets/Resources/FX/M_SplashFoam.mat (+meta)
+?? Assets/Resources/FX/M_SplashRing.mat (+meta)
+?? Assets/Resources/FX/T_SplashDroplet.png (+meta)
+?? Assets/Resources/FX/T_SplashFoam.png (+meta)
+?? Assets/Resources/FX/T_SplashRing.png (+meta)
+?? Assets/Resources/FX/T_WaterDroplet.png (+meta)
+?? Assets/Resources/FX/WaterSplash.prefab (+meta)
+?? Assets/Resources/FX/WaterSplashDroplet.mat (+meta)
+?? Assets/Resources/FX/WaterSplashFoam.mat (+meta)
+?? Assets/Resources/FX/WaterSplashRing.mat (+meta)
+?? Assets/Scripts/Physics/Tests/WaterSplashControllerTests.cs (+meta)
+?? Assets/Scripts/Physics/Viewer/Bot/WaterSplashCaptureRig.cs (+meta)
+?? Assets/Scripts/Physics/Viewer/WaterSplashController.cs (+meta)
+?? Docs/Specs/Active/water_splash_fx/ (task files + screenshots)
+=== end baseline ===
+2026-06-14T02:00:00Z iter-8 activated — CAPTURE-ONLY. Do NOT edit prefab/materials. Goal: real-game-flow Hole-6 video + canonical still over BLUE water with new subtle white splash.
+2026-06-14T02:15:00Z Hole_06_Geo loaded via real flow. IsHoleReady=True. ShellScene directional light (intensity=2) disabled. Spawning WaterSplashCaptureRig.
+2026-06-14T08:43:00Z Multiple capture attempts. wsplash_peak_20260614_103558 shows blue water pre-impact. Cinematic capture wsplash_peak_20260614_104126 shows water close-up. WaterOBFireCount=3 confirms splash PS fired 3 times. Direct-cap attempt with camera held at water: camera still snapped to tee drop zone. Investigating root cause.
+2026-06-14T08:59:26Z iter-8 resumed: fresh cinematic capture attempt with UseNaturalCamera=false to show blue water + subtle splash
+2026-06-14T09:08:00Z iter-8: video captured, splash fires (WaterOBFireCount 3→4), water B>R=92%. Splash invisible at 9m. Attempting closer camera 4m for splash visibility.
+2026-06-14T09:19:08Z resuming — cinematic camera 4m attempt, destroy old rig
+2026-06-14T09:34:00Z iter-8 resumed (new session) — session guard reset, MaxRecord=60s, ShellScene open, entering play mode. Waiting 35s for full boot to Home screen before starting recording + spawning rig.
+2026-06-14T11:45:49 resuming after context compaction — diagnosing PLC null in real game flow
+2026-06-14T11:51:47 captured 3 frames - reviewing camera angle issue, will fire more shots for correct chase cam view
+2026-06-14T11:55:05 play mode exited by 30s watchdog — re-entering, confirmed captures exist, moving to deliverable assembly
+2026-06-14T11:58:59 resuming after context compaction — need TURN5 camera capture for splash video
+2026-06-14T12:06:53 trying coordinated approach: play→hole6→arm→rig all in sequence
+2026-06-14T10:24:46Z iter-8: video review shows wrong phase (TURN3 drop zone, no splash in frame). Re-running with arm-before-shot approach to capture TURN1 water hit. Canonical still wsplash_peak_111946 confirmed BLUE B>R. Will use that as canonical still.
