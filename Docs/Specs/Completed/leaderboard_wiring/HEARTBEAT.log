@@ -1,0 +1,210 @@
+2026-06-15T05:21:34Z activated — iter-1 kickoff
+=== iter-1 kickoff baseline ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Docs/Specs/Active/leaderboard_wiring/STATUS.md
+=== end baseline ===
+2026-06-15T05:23:24Z beginning code writes — SaveData, SaveSchemaMigrator, RewardPointsManager
+2026-06-15T05:26:58Z writing RankingsScreenController
+2026-06-15T05:32:05 activated new session — fixed CS0103 CharacterManager namespace, compile clean
+2026-06-15T05:55:46 EditMode tests all 14 PASS; starting screenshot capture
+2026-06-15T06:23:41 resuming - moving LeaderboardButton to PersistentUI/TopBar (was hidden behind TopBar in HomeScreen/HoleSelectionScreen)
+2026-06-15T06:49:30Z back button added and wired; running final verification
+2026-06-15T07:18:00Z done, awaiting review — IMPLEMENTER_REPORT.md written, all 8 acceptance items PASS
+2026-06-15T08:30:00Z === iter-2 kickoff baseline ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Assets/Prefabs/UI/Rankings/RankingsScreen.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+?? Assets/Art/RankingsScreen/ICO_Leaderboard.png
+?? Assets/Resources/Data/fake_players.csv
+?? Assets/Scripts/UI/Rankings/Core/
+?? Assets/Scripts/UI/Rankings/LeaderboardManager.cs
+?? Assets/Scripts/UI/Rankings/LocalFakeLeaderboardProvider.cs
+?? Assets/Scripts/UI/Rankings/NetworkTimeProvider.cs
+?? Assets/Scripts/UI/Rankings/RankingsCardWidget.cs
+?? Assets/Scripts/UI/Rankings/RankingsScreenController.cs
+?? Assets/Scripts/UI/Rankings/Tests/
+?? Assets/Scripts/UI/Rankings/Top3CardWidget.cs
+=== end baseline ===
+2026-06-15T08:30:00Z iter-2 activated — addressing SELF_REVIEW_FAIL items 1-8
+2026-06-15T08:45:00Z diagnosed: pre-baked prefab rows in GridContent cause all rows to show designer defaults; investigating Resolve() path
+2026-06-15T10:15:00Z copying captures, verifying visuals, writing iter-2 IMPLEMENTER_REPORT
+2026-06-15T10:18:00Z done, awaiting self-review — iter-2 all 8 PASS, IMPLEMENTER_REPORT updated
+=== iter-3 kickoff baseline ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Assets/Prefabs/UI/Rankings/RankingsScreen.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+?? Assets/Art/RankingsScreen/ICO_Leaderboard.png
+?? Assets/Resources/Data/fake_players.csv
+?? Assets/Scripts/UI/Rankings/
+=== end baseline ===
+2026-06-15T12:00:00Z iter-3 activated — CESAR_REJECTED, 4 layout fixes: icon out of PersistentUI, raised portraits, RP left-align, shrink #2/#3 cards
+2026-06-15T11:05:00Z iter-3 all 4 fixes verified in play mode, 14 tests PASS, 4 captures at 1170x2532, IMPLEMENTER_REPORT written
+2026-06-15T11:06:00Z done, awaiting review
+=== iter-4 kickoff baseline ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Assets/Prefabs/UI/Rankings/RankingsScreen.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+?? Assets/Art/RankingsScreen/ICO_Leaderboard.png
+?? Assets/Resources/Data/fake_players.csv
+?? Assets/Scripts/UI/Rankings/
+=== end baseline ===
+2026-06-15T12:00:00Z iter-4 activated — CESAR_REJECTED Round 2, 6 visual fixes: R2-Fix A (RP left-align all rows), R2-Fix B (remove RP suffix), R2-Fix C (portrait fill frame), R2-Fix D (bottom-anchor cards), R2-Fix E (spell out rarity), R2-Fix F (gold active tab)
+2026-06-15T12:10:00Z C# code changes done: GetRarityFullName added to RarityHelper, FormatScore drops RP suffix (both widgets), RankingsScreenController caches tab labels + ApplyTabGradient with TextGradients — compile PASS. Starting prefab surgery.
+2026-06-15T12:30:00Z all 6 R2-Fixes verified in play mode; 4 tab captures at 1170x2532; IMPLEMENTER_REPORT written for iter-4
+2026-06-15T12:31:00Z done, awaiting review — iter-4 all 8 acceptance items PASS, STATUS→READY_FOR_SELF_REVIEW
+=== iter-5 kickoff baseline ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Assets/Prefabs/UI/Rankings/RankingsScreen.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabase.cs
+ M Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+?? Assets/Art/RankingsScreen/ICO_Leaderboard.png
+?? Assets/Resources/Data/fake_players.csv
+?? Assets/Scripts/UI/Rankings/
+=== end baseline ===
+2026-06-15T09:45:32Z iter-5 activated — evidence-correction only: re-capture 4 tab screenshots with correct filenames; update IMPLEMENTER_REPORT canonical designation
+=== iter-6 kickoff baseline (Round 3 CESAR_REJECTED) ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Assets/Prefabs/UI/Rankings/RankingsScreen.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabase.cs
+ M Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+?? Assets/Art/RankingsScreen/ICO_Leaderboard.png
+?? Assets/Resources/Data/fake_players.csv
+?? Assets/Scripts/UI/Rankings/
+=== end baseline ===
+2026-06-15T10:00:00Z iter-6 activated — Round 3 CESAR_REJECTED: R3-Fix1 Thumbnails portraits, R3-Fix2 remove scale override, R3-Fix3 RP right-aligned on podium
+2026-06-15T10:30:00Z done, awaiting review — iter-6 all 8 acceptance items PASS, IMPLEMENTER_REPORT updated, STATUS→READY_FOR_SELF_REVIEW
+=== iter-7 kickoff baseline (Round 4 CESAR_REJECTED) ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Assets/Prefabs/UI/Rankings/RankingsScreen.prefab
+ M Assets/Prefabs/UI/Rankings/Top1Card.prefab
+ M Assets/Prefabs/UI/Rankings/Top2Card.prefab
+ M Assets/Prefabs/UI/Rankings/Top3Card.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabase.cs
+ M Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+?? Assets/Art/RankingsScreen/ICO_Leaderboard.png
+?? Assets/Resources/Data/fake_players.csv
+?? Assets/Scripts/UI/Rankings/
+=== end baseline ===
+2026-06-15T13:00:00Z iter-7 activated — Round 4 CESAR_REJECTED: R4-Fix1 24px gap banner, R4-Fix2 recenter podium pill/right-align amount, R4-Fix3 right-align YOU-row RP, R4-Fix4 space between rarity and level
+2026-06-15T12:55:00Z all 4 R4-Fixes applied to prefabs/scene; 4 tabs captured at 1170x2532 via SnapAtEndOfFrameAndPause; 14 EditMode tests PASS; IMPLEMENTER_REPORT written
+2026-06-15T12:55:00Z done, awaiting review
+=== iter-8 kickoff baseline (Round 5 CESAR_REJECTED) ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Assets/Prefabs/UI/Rankings/RankingsCards.prefab
+ M Assets/Prefabs/UI/Rankings/RankingsScreen.prefab
+ M Assets/Prefabs/UI/Rankings/Top1Card.prefab
+ M Assets/Prefabs/UI/Rankings/Top2Card.prefab
+ M Assets/Prefabs/UI/Rankings/Top3Card.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabase.cs
+ M Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+?? Assets/Art/RankingsScreen/ICO_Leaderboard.png
+?? Assets/Resources/Data/fake_players.csv
+?? Assets/Scripts/UI/Rankings/
+=== end baseline ===
+2026-06-15T14:00:00Z iter-8 activated — Round 5 CESAR_REJECTED: R5-Fix1 add LEADERBOARD title, R5-Fix2 scroll list starts at rank 4 (skip top 3 podium entries)
+2026-06-15T14:45:00Z done, awaiting review — iter-8 all 8 acceptance items PASS, IMPLEMENTER_REPORT written, STATUS→READY_FOR_SELF_REVIEW
+=== iter-9 kickoff baseline (Round 6 CESAR_REJECTED) ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Assets/Prefabs/UI/Rankings/RankingsCards.prefab
+ M Assets/Prefabs/UI/Rankings/RankingsScreen.prefab
+ M Assets/Prefabs/UI/Rankings/Top1Card.prefab
+ M Assets/Prefabs/UI/Rankings/Top2Card.prefab
+ M Assets/Prefabs/UI/Rankings/Top3Card.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/Save/Tests/SaveLayerTests.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabase.cs
+ M Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+?? Assets/Art/RankingsScreen/ICO_Leaderboard.png
+?? Assets/Resources/Data/fake_players.csv
+?? Assets/Scripts/UI/Rankings/
+=== end baseline ===
+2026-06-15T15:00:00Z iter-9 activated — Round 6 CESAR_REJECTED: R6-Fix1 remove TitleLabel+GoldUnderline from RankingsScreen; R6-Fix2 drive top-bar center text per-screen in PersistentUIManager
+2026-06-15T15:05:00Z PersistentUIManager.cs updated: _username cache + HighlightScreen header text switch (Leaderboard=LEADERBOARD, Home=_username, others=blank)
+2026-06-15T15:07:00Z RankingsScreenController.cs: removed _titleLabel SerializeField field
+2026-06-15T15:08:00Z scene surgery: TitleLabel+GoldUnderline destroyed from Canvas/ScreensRoot/RankingsScreen; scene saved; no TitleLabel references remain in ShellScene.unity
+2026-06-15T15:10:00Z compile clean (IsCompiling=false, zero Error logs); play mode entered
+2026-06-15T15:14:00Z 3 captures complete: leaderboard_daily_canonical_iter9.png (LEADERBOARD in top bar, rank 4 list), home_topbar_username_iter9.png (CHOTO in top bar), holeselect_topbar_blank_iter9.png (blank center)
+2026-06-15T14:00:16 done, awaiting review — iter-9 complete, STATUS→READY_FOR_SELF_REVIEW
+=== iter-10 kickoff baseline (ARCHITECT_REVIEW_FAIL) ===
+HEAD: 33244f7276e2e9668b8fd0fee5db5852636b5121
+DIRTY:
+ M Assets/Prefabs/UI/Rankings/RankingsCards.prefab
+ M Assets/Prefabs/UI/Rankings/RankingsScreen.prefab
+ M Assets/Prefabs/UI/Rankings/Top1Card.prefab
+ M Assets/Prefabs/UI/Rankings/Top2Card.prefab
+ M Assets/Prefabs/UI/Rankings/Top3Card.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/Save/Tests/SaveLayerTests.cs
+ M Assets/Scripts/UI/HoleSelection/HoleSelectionScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabase.cs
+ M Assets/Scripts/UI/Roster/Managers/RewardPointsManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+?? Assets/Art/RankingsScreen/ICO_Leaderboard.png
+?? Assets/Resources/Data/fake_players.csv
+?? Assets/Scripts/UI/Rankings/
+=== end baseline ===
+2026-06-15T16:00:00Z iter-10 activated — ARCHITECT_REVIEW_FAIL: Fix BLOCKER 1/2: Option A — add ModeSelection case to HighlightScreen, remove SetUsername dance from ModeSelectScreenController, add regression test
+2026-06-15T16:20:00Z compile clean; tests 17/17 PASS (3 new regression); 4 round-trip captures complete; writing report
+2026-06-15T16:25:00Z done, awaiting review — iter-10 IMPLEMENTER_REPORT written, all 12 acceptance items PASS
