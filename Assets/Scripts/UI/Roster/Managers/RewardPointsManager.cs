@@ -1,5 +1,6 @@
 #nullable enable
 using Golfin.Save;
+using Golfin.UI.Rankings;
 using UnityEngine;
 
 namespace Golfin.Roster
@@ -101,6 +102,8 @@ namespace Golfin.Roster
 
         /// <summary>
         /// Earn points. Writes through to SaveData; fires OnPointsChanged.
+        /// Also accumulates into the leaderboard period buckets (Daily/Weekly/Monthly/Lifetime).
+        /// SpendPoints does NOT touch these — earned ≠ balance.
         /// </summary>
         public void EarnPoints(int amount)
         {
@@ -111,10 +114,57 @@ namespace Golfin.Roster
             }
 
             SaveDataHost.Instance.Data.rewardPoints += amount;
+
+            // ── Leaderboard accumulation ───────────────────────────────────────
+            AccumulateLeaderboardRp(amount);
+
             SaveDataHost.Instance.MarkDirty();
             OnPointsChanged?.Invoke(GetPoints());
 
             Debug.Log($"[RewardPointsManager] Earned {amount}R, now have {GetPoints()}R");
+        }
+
+        /// <summary>
+        /// Lazily rolls over stale periods and adds amount to all leaderboard accumulators.
+        /// Called from EarnPoints only (SpendPoints must NOT call this).
+        /// </summary>
+        private void AccumulateLeaderboardRp(int amount)
+        {
+            if (SaveDataHost.Instance == null) return;
+            var data = SaveDataHost.Instance.Data;
+
+            // Use the network-authoritative time provider if available; fall back to device UTC.
+            System.DateTime utcNow = NetworkTimeProvider.Instance.UtcNow;
+
+            // Daily rollover
+            long currentDailyKey = LeaderboardPeriodKey.Daily(utcNow);
+            if (data.dailyPeriodKey != currentDailyKey)
+            {
+                data.rpDaily = 0;
+                data.dailyPeriodKey = currentDailyKey;
+            }
+
+            // Weekly rollover
+            long currentWeeklyKey = LeaderboardPeriodKey.Weekly(utcNow);
+            if (data.weeklyPeriodKey != currentWeeklyKey)
+            {
+                data.rpWeekly = 0;
+                data.weeklyPeriodKey = currentWeeklyKey;
+            }
+
+            // Monthly rollover
+            long currentMonthlyKey = LeaderboardPeriodKey.Monthly(utcNow);
+            if (data.monthlyPeriodKey != currentMonthlyKey)
+            {
+                data.rpMonthly = 0;
+                data.monthlyPeriodKey = currentMonthlyKey;
+            }
+
+            // Accumulate
+            data.lifetimeRpEarned += amount;
+            data.rpDaily          += amount;
+            data.rpWeekly         += amount;
+            data.rpMonthly        += amount;
         }
 
         /// <summary>

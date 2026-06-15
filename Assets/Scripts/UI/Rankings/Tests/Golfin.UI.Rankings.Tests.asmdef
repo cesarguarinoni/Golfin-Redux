@@ -1,0 +1,18 @@
+{
+    "name": "Golfin.UI.Rankings.Tests",
+    "rootNamespace": "Golfin.UI.Rankings.Tests",
+    "references": [
+        "Golfin.UI.Rankings.Core",
+        "Golfin.Save"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "optionalUnityReferences": ["TestAssemblies"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

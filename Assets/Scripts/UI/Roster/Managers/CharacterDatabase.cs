@@ -164,6 +164,23 @@ namespace Golfin.Roster
                 _ => "?"
             };
         }
+
+        /// <summary>
+        /// Full spelled-out rarity name for leaderboard display (RARE, LEGENDARY, etc.)
+        /// </summary>
+        public static string GetRarityFullName(CharacterRarity rarity)
+        {
+            return rarity switch
+            {
+                CharacterRarity.Common => "COMMON",
+                CharacterRarity.Uncommon => "UNCOMMON",
+                CharacterRarity.Rare => "RARE",
+                CharacterRarity.Mythic => "MYTHIC",
+                CharacterRarity.Legendary => "LEGENDARY",
+                CharacterRarity.Supreme => "SUPREME",
+                _ => "COMMON"
+            };
+        }
         
         /// <summary>
         /// Get rarity badge text color for CharacterThumbnailCardGlowUp

@@ -13,7 +13,7 @@ namespace Golfin.Save
     /// </summary>
     public class SaveData
     {
-        public int schemaVersion = 1;
+        public int schemaVersion = 2;
 
         public int rewardPoints;
         public string selectedCharacterId = "";
@@ -30,6 +30,22 @@ namespace Golfin.Save
         public List<int> unlockedHoles = new List<int>();
 
         public List<int> playedHoles = new List<int>();
+
+        // ── Leaderboard: RP earned per rolling period (UTC) ──────────────────
+        // lifetimeRpEarned is monotonic (never reset). rpDaily/rpWeekly/rpMonthly
+        // are lazily reset on period rollover (see LeaderboardPeriodKey).
+        public long lifetimeRpEarned;
+        public long rpDaily;
+        public long rpWeekly;
+        public long rpMonthly;
+
+        // Period keys the accumulators currently belong to (UTC).
+        // dailyPeriodKey   = floor(utcUnixSeconds / 86400)
+        // weeklyPeriodKey  = Monday-anchored ISO week number (year*53 + weekOfYear)
+        // monthlyPeriodKey = year*12 + (month-1)
+        public long dailyPeriodKey;
+        public long weeklyPeriodKey;
+        public long monthlyPeriodKey;
     }
 
     /// <summary>

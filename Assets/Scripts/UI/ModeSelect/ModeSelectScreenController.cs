@@ -39,15 +39,14 @@ namespace GolfinRedux.UI.ModeSelect
         [SerializeField] private string _initialExpandedModeId = "practice";
 
         private readonly List<ModeCardController> _cards = new List<ModeCardController>();
-        private string _savedUsernameText;
+        // NOTE: _savedUsernameText and the SetUsername("MODE SELECTION") call were removed in
+        // iter-10 (leaderboard_wiring). The "MODE SELECTION" top-bar center text is now driven
+        // centrally by PersistentUIManager.HighlightScreen(ScreenId.ModeSelection) — the same
+        // mechanism used for "LEADERBOARD" on the Rankings screen. This avoids corrupting the
+        // cached _username field via transient SetUsername calls (BLOCKER 1 in REDTEAM_REVIEW).
 
         private void OnEnable()
         {
-            if (PersistentUIManager.Instance != null && PersistentUIManager.Instance.usernameText != null)
-            {
-                _savedUsernameText = PersistentUIManager.Instance.usernameText.text;
-                PersistentUIManager.Instance.SetUsername("MODE SELECTION");
-            }
             StopAllCoroutines();
             StartCoroutine(RebuildCardsNextFrame());
         }
@@ -60,8 +59,6 @@ namespace GolfinRedux.UI.ModeSelect
 
         private void OnDisable()
         {
-            if (PersistentUIManager.Instance != null && _savedUsernameText != null)
-                PersistentUIManager.Instance.SetUsername(_savedUsernameText);
             UnwireCards();
             _cards.Clear();
         }

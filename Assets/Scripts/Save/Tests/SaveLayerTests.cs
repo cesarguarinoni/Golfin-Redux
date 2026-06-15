@@ -88,15 +88,27 @@ namespace Golfin.Save.Tests
             Assert.Contains(2,                            loaded.unlockedHoles);
         }
 
-        // ── Test 2: Schema migration — no save file, but PlayerPrefs analogue ──
+        // ── Test 2: Schema migration ───────────────────────────────────────────
 
         [Test]
-        public void SchemaMigration_V1_NoMigrationNeeded()
+        public void SchemaMigration_CurrentVersion_NoMigrationNeeded()
         {
-            var data = new SaveData { schemaVersion = 1, rewardPoints = 500 };
+            // CurrentSchemaVersion (v2) — no migration steps apply, schemaVersion stays 2.
+            var data = new SaveData { schemaVersion = SaveSchemaMigrator.CurrentSchemaVersion, rewardPoints = 500 };
             // Should not throw
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data));
-            Assert.AreEqual(1, data.schemaVersion);
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data.schemaVersion);
+            Assert.AreEqual(500, data.rewardPoints);
+        }
+
+        [Test]
+        public void SchemaMigration_V1_MigratesTo_CurrentVersion()
+        {
+            // v1 save must migrate up to CurrentSchemaVersion; rewardPoints preserved.
+            var data = new SaveData { schemaVersion = 1, rewardPoints = 500 };
+            // Should not throw; migration adds leaderboard RP accumulators (default 0) silently
+            Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data));
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data.schemaVersion);
             Assert.AreEqual(500, data.rewardPoints);
         }
 

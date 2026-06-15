@@ -47,6 +47,10 @@ namespace GolfinRedux.UI.HoleSelection
         [Header("Hole Database")]
         [SerializeField] private HoleDatabase holeDatabase;
 
+        // ── Leaderboard entry ─────────────────────────────────────────────────
+        [Header("Leaderboard")]
+        [SerializeField] private Button _leaderboardButton;
+
         private readonly List<HoleCardController> _cards = new List<HoleCardController>();
 
         private CourseFilter _activeCourse = CourseFilter.Lomond;
@@ -58,6 +62,21 @@ namespace GolfinRedux.UI.HoleSelection
         //   locked → silver gradient + lock icon visible
         // The two LADIES/FRONT pills in row 2 are independent toggles per spec, so "white active"
         // doesn't apply — they share the gold/silver convention with everything else.
+
+        private void Awake()
+        {
+            if (_leaderboardButton != null)
+                _leaderboardButton.onClick.AddListener(OnLeaderboardClicked);
+        }
+
+        private void OnLeaderboardClicked()
+        {
+            var ctrl = FindObjectOfType<Golfin.UI.Rankings.RankingsScreenController>();
+            if (ctrl != null)
+                ctrl.OpenFrom(GolfinRedux.UI.ScreenId.HoleSelection);
+            else
+                GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(GolfinRedux.UI.ScreenId.Leaderboard);
+        }
 
         private void OnEnable()
         {

@@ -1,0 +1,14 @@
+{
+    "name": "Golfin.UI.Rankings.Core",
+    "rootNamespace": "Golfin.UI.Rankings",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

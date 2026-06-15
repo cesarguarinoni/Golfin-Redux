@@ -11,7 +11,8 @@ namespace GolfinRedux.UI
         Roster,
         Inventory,
         HoleSelection,
-        ModeSelection
+        ModeSelection,
+        Leaderboard
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -35,9 +36,13 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _inventoryScreen;
         [SerializeField] private GameObject _holeSelectionScreen;
         [SerializeField] private GameObject _modeSelectionScreen;
+        [SerializeField] private GameObject _leaderboardScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         private ScreenId _currentScreen;
+
+        /// <summary>Returns the currently active ScreenId.</summary>
+        public ScreenId CurrentScreen => _currentScreen;
 
         private void Awake()
         {
@@ -126,14 +131,18 @@ namespace GolfinRedux.UI
             if (_modeSelectionScreen != null)
                 _modeSelectionScreen.SetActive(screenId == ScreenId.ModeSelection);
 
+            if (_leaderboardScreen != null)
+                _leaderboardScreen.SetActive(screenId == ScreenId.Leaderboard);
+
             // Settings is an overlay (SettingsController), not managed here
 
-            // Show persistent bars on Home, Roster, Inventory, HoleSelection, ModeSelection; hide on Logo/Splash/Loading
+            // Show persistent bars on Home, Roster, Inventory, HoleSelection, ModeSelection, Leaderboard; hide on Logo/Splash/Loading
             bool showBars = screenId == ScreenId.Home
                          || screenId == ScreenId.Roster
                          || screenId == ScreenId.Inventory
                          || screenId == ScreenId.HoleSelection
-                         || screenId == ScreenId.ModeSelection;
+                         || screenId == ScreenId.ModeSelection
+                         || screenId == ScreenId.Leaderboard;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
                 if (showBars)

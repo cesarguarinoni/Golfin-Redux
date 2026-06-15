@@ -78,6 +78,10 @@ namespace GolfinRedux.UI
         [Header("Matchmaking")]
         [SerializeField] private MatchmakingModalController matchmakingModal;
 
+        // ── Leaderboard entry ─────────────────────────────────────────────────
+        [Header("Leaderboard")]
+        [SerializeField] private Button _leaderboardButton;
+
         private void Awake()
         {
             // Top bar
@@ -91,6 +95,19 @@ namespace GolfinRedux.UI
             // Next hole
             if (playButton != null)
                 playButton.onClick.AddListener(OnPlayClicked);
+
+            // Leaderboard header icon
+            if (_leaderboardButton != null)
+                _leaderboardButton.onClick.AddListener(OnLeaderboardClicked);
+        }
+
+        private void OnLeaderboardClicked()
+        {
+            var ctrl = FindObjectOfType<Golfin.UI.Rankings.RankingsScreenController>();
+            if (ctrl != null)
+                ctrl.OpenFrom(GolfinRedux.UI.ScreenId.Home);
+            else
+                GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(GolfinRedux.UI.ScreenId.Leaderboard);
         }
 
         private void OnEnable()

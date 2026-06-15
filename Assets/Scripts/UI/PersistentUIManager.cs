@@ -18,6 +18,9 @@ namespace Golfin.UI
         public Button settingsButton;
         public TMPro.TextMeshProUGUI usernameText;
 
+        // Cached real username so HighlightScreen can restore it on Home.
+        private string _username = string.Empty;
+
         [Header("Bottom Navigation Bar References")]
         public GameObject bottomNavPanel;
         public Button homeButton;
@@ -60,6 +63,11 @@ namespace Golfin.UI
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            // Cache the designer-set username text (e.g. "CHOTO") at startup.
+            // HighlightScreen will restore it when navigating to Home.
+            if (usernameText != null)
+                _username = usernameText.text;
 
             // Hide by default (show when HomeScreen loads)
             HideBars();
@@ -153,8 +161,19 @@ namespace Golfin.UI
             }
         }
 
+        /// <summary>
+        /// Sets the visible center-text WITHOUT touching the cached _username.
+        /// This is a transient display override (e.g. screen titles).
+        /// To update the persisted username use UpdateUsername instead.
+        /// </summary>
         public void SetUsername(string username)
         {
+            // NOTE: deliberately does NOT write _username.
+            // _username is authoritative and is only written by Awake() and UpdateUsername().
+            // ModeSelectScreenController previously poked SetUsername("MODE SELECTION") as a
+            // transient title; that was removed in iter-10 (Option A). SetUsername now only
+            // updates the live text. If any future caller truly needs to change the real
+            // username they must call UpdateUsername instead.
             if (usernameText != null)
             {
                 usernameText.text = username;
@@ -166,6 +185,7 @@ namespace Golfin.UI
         /// </summary>
         public void UpdateUsername(string newUsername)
         {
+            _username = newUsername;
             if (usernameText != null)
             {
                 usernameText.text = newUsername;
@@ -223,9 +243,35 @@ namespace Golfin.UI
         /// Called by ScreenManager whenever the active shell screen changes,
         /// so the bottom-nav highlight tracks navigation that bypasses the nav buttons
         /// (e.g. initial load, programmatic transitions).
+        /// Also drives the top-bar center text per screen:
+        ///   Home        → real username (e.g. "CHOTO")
+        ///   Leaderboard → "LEADERBOARD"
+        ///   all others  → "" (blank center)
         /// </summary>
         public void HighlightScreen(GolfinRedux.UI.ScreenId screenId)
         {
+            // ── Drive top-bar center text BEFORE the nav-highlight switch ────────
+            // (The switch has a default:return for Leaderboard; text must be set first.)
+            if (usernameText != null)
+            {
+                switch (screenId)
+                {
+                    case GolfinRedux.UI.ScreenId.Home:
+                        usernameText.text = _username;
+                        break;
+                    case GolfinRedux.UI.ScreenId.Leaderboard:
+                        usernameText.text = "LEADERBOARD";
+                        break;
+                    case GolfinRedux.UI.ScreenId.ModeSelection:
+                        usernameText.text = "MODE SELECTION";
+                        break;
+                    default:
+                        usernameText.text = string.Empty;
+                        break;
+                }
+            }
+
+            // ── Bottom-nav icon highlight ─────────────────────────────────────────
             switch (screenId)
             {
                 case GolfinRedux.UI.ScreenId.Home:          currentScreen = Screen.Home; break;
@@ -234,7 +280,7 @@ namespace Golfin.UI
                 case GolfinRedux.UI.ScreenId.HoleSelection:  currentScreen = Screen.MainPlay; break;
                 case GolfinRedux.UI.ScreenId.ModeSelection:  currentScreen = Screen.MainPlay; break;
                 default:
-                    return; // Logo/Splash/Loading: bars hidden, no highlight needed.
+                    return; // Logo/Splash/Loading/Leaderboard: bars hidden or no nav highlight.
             }
             UpdateScreenHighlight();
         }

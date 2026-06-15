@@ -14,7 +14,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 1;
+        public const int CurrentSchemaVersion = 2;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -33,8 +33,15 @@ namespace Golfin.Save
                 throw new SaveSchemaVersionException(msg);
             }
 
-            // v1 → v2 migration would go here:
-            // if (data.schemaVersion < 2) { MigrateV1ToV2(data); data.schemaVersion = 2; }
+            // v1 → v2: add leaderboard RP accumulators (default 0 is correct for new period)
+            if (data.schemaVersion < 2)
+            {
+                // New fields default to 0 on JSON deserialization — no action needed.
+                // lifetimeRpEarned, rpDaily, rpWeekly, rpMonthly,
+                // dailyPeriodKey, weeklyPeriodKey, monthlyPeriodKey all default 0.
+                data.schemaVersion = 2;
+                Debug.Log("[SaveSchemaMigrator] Migrated v1 → v2 (leaderboard RP accumulators added, default 0).");
+            }
 
             // Ensure schemaVersion is current after all migrations
             data.schemaVersion = CurrentSchemaVersion;
