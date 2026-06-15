@@ -21,7 +21,9 @@ namespace Golfin.Audio.Events
         HitDefault02,
         HitWeak,
         HitPutt,
-        HitBunker,
+        HitBunker,  // Reserved: bunker-specific hit variant. Not emitted by current ShotController
+                    // (all shots use power-band routing HitStrong/HitDefault/HitWeak/HitPutt).
+                    // Present in sfx.csv + SfxLibrary.asset for fidelity tour + future use.
 
         // ── Ball in cup ────────────────────────────────────────────────────────
         HitBallIn,

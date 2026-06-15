@@ -13,3 +13,79 @@ DIRTY (first 5):
 2026-06-16T18:15:00 fixing children property bug in mixer setup
 2026-06-16T18:50:00 all tests pass (20/20 audio + 418 full suite); taking canonical screenshot
 2026-06-16T18:54:31 done, awaiting review — IMPLEMENTER_REPORT.md written, routing to READY_FOR_ARCHITECT_REVIEW (fidelity gate is Tier-3 human gate)
+
+=== iter-2 kickoff baseline 2026-06-15T16:00:00Z ===
+HEAD: 8c7bb686cec9b0d885eeff2cf266e27e45d7d267
+DIRTY (relevant to this task -- architect drift excluded):
+  M Docs/Specs/Active/sound_effects/STATUS.md
+  ?? Assets/Sounds/Hit/Golfin_SFX* (untracked -- BLOCKER 2 to fix)
+  ?? Assets/Sounds/Swing/Golfin_SFX* (untracked -- BLOCKER 2 to fix)
+  ?? Assets/Sounds/Land/Golfin_SFX* (untracked -- BLOCKER 2 to fix)
+  ?? Assets/Sounds/Victory/Clapping_01.wav Clapping_02.wav (untracked -- BLOCKER 2 to fix)
+Architect drift (NOT this task -- do not touch): M BotEditor.asmdef, ?? AudioFidelityCapture.cs, ?? FIDELITY_VIDEO.md, ?? videos/, ?? screenshots/tour_*.png
+=== end baseline ===
+
+=== iter-2 kickoff baseline 2026-06-15T20:00:00 ===
+HEAD: 8c7bb686cec9b0d885eeff2cf266e27e45d7d267
+DIRTY:
+M Assets/Scripts/Audio/Events/SfxId.cs
+ M Assets/Scripts/Gameplay/Input/ShotController.cs
+ M Assets/Scripts/Physics/Tests/AudioEmitterTests.cs
+ M Assets/Scripts/Physics/Viewer/BallAudioEmitter.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/Golfin.Physics.Viewer.BotEditor.asmdef
+A  Assets/Sounds/Hit.meta
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_BallIn.ogg"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_BallIn.ogg.meta"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Bunker.ogg"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Bunker.ogg.meta"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Default.ogg"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Default.ogg.meta"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Default_02.ogg"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Default_02.ogg.meta"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Putt.ogg"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Putt.ogg.meta"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Strong.ogg"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Strong.ogg.meta"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Weak.ogg"
+A  "Assets/Sounds/Hit/Golfin_SFX - Hit_Weak.ogg.meta"
+A  Assets/Sounds/Land.meta
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Bushes.ogg"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Bushes.ogg.meta"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Fairway.ogg"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Fairway.ogg.meta"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Green.ogg"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Green.ogg.meta"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Road.ogg"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Road.ogg.meta"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Rough.ogg"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Rough.ogg.meta"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Sand.ogg"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Sand.ogg.meta"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Water.ogg"
+A  "Assets/Sounds/Land/Golfin_SFX - Landing_Water.ogg.meta"
+A  Assets/Sounds/Swing.meta
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Default.ogg"
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Default.ogg.meta"
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Driver.ogg"
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Driver.ogg.meta"
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Iron.ogg"
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Iron.ogg.meta"
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Wedge.ogg"
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Wedge.ogg.meta"
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Wood.ogg"
+A  "Assets/Sounds/Swing/Golfin_SFX - Swing_Wood.ogg.meta"
+A  Assets/Sounds/Victory.meta
+A  Assets/Sounds/Victory/Clapping_01.wav
+A  Assets/Sounds/Victory/Clapping_01.wav.meta
+A  Assets/Sounds/Victory/Clapping_02.wav
+A  Assets/Sounds/Victory/Clapping_02.wav.meta
+ M Docs/Specs/Active/sound_effects/HEARTBEAT.log
+ M Docs/Specs/Active/sound_effects/STATUS.md
+=== end baseline ===
+
+2026-06-15T20:00:00 iter-2 activated — addressing ARCHITECT_REVIEW_FAIL blockers
+2026-06-15T20:05:00 BLOCKER 1 fix: rewrote VersusResultHandler test to invoke HandleMatchComplete directly via reflection + try-catch for StartCoroutine
+2026-06-15T20:10:00 All 34 AudioEmitterTests PASS (435 total, 0 fail)
+2026-06-15T20:15:00 BLOCKER 2: staged 42 Golfin_SFX clips + 4 folder.meta files via git add
+2026-06-15T20:20:00 SHOULD-FIX: added HitBunker reserved comment in SfxId.cs; CSV loop already documented in SfxPlayer.cs
+2026-06-15T20:25:00 done, awaiting review

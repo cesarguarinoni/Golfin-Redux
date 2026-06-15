@@ -219,6 +219,11 @@ namespace Golfin.Physics.Viewer
         }
 
         /// <summary>
+        /// Override _lastLandSfxTime for interval-gate tests.
+        /// </summary>
+        public void SetLastLandSfxTimeForTest(float t) => _lastLandSfxTime = t;
+
+        /// <summary>
         /// Expose surface→SfxId mapping for test assertions.
         /// </summary>
         public static SfxId SurfaceToSfxIdForTest(SurfaceType s) => SurfaceToLandSfx(s);

@@ -69,6 +69,19 @@ namespace Golfin.Gameplay.Input
         // Call when the ball comes to rest (or explicitly from a test)
         public void CompleteShot() => TransitionToIdle();
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// Invoke PublishShotSfx directly for EditMode bus-wiring seam tests (Order 350).
+        /// Sets IsPutt and PowerNormalized first so the SfxId selection logic is exercised.
+        /// </summary>
+        public void PublishShotSfxForTest(bool isPutt, float powerNormalized)
+        {
+            IsPutt          = isPutt;
+            PowerNormalized = powerNormalized;
+            PublishShotSfx();
+        }
+#endif
+
         // ── External drag API (ClubHandle → drives shot without pixel-pull math) ──
 
         public bool IsExternalDragActive => _externalDragActive;
