@@ -283,6 +283,20 @@ namespace Golfin.Physics.Viewer.Editor
                     if (h % 2 != 0) h--;
                 }
 
+                // Y-FLIP FIX (2026-06-16): lock the render-pipeline state BEFORE StartRecording so
+                // nothing recreates the Game View render target / swap chain DURING the recorded
+                // window. A mid-record render-state change is what flipped a single frame — Unity
+                // Recorder's GameView capture reads one frame with inverted vertical orientation when
+                // the RT is recreated on Metal (known GameView-capture flip class; Recorder 5.1.6 has
+                // no remaining documented base-flip, so this transient was self-inflicted by changing
+                // vSync/targetFrameRate AFTER StartRecording). Guardrail 3 (fps cap) lives here now —
+                // same GPU-load cut, just applied a few lines earlier. Restored in End().
+                _savedTargetFps = Application.targetFrameRate;
+                _savedVSync     = QualitySettings.vSyncCount;
+                QualitySettings.vSyncCount   = 0;     // vSync would clamp targetFrameRate to display Hz
+                Application.targetFrameRate  = Fps;
+                _loadOverridden = true;
+
                 var movie = ScriptableObject.CreateInstance<MovieRecorderSettings>();
                 movie.name         = "BotVideo";
                 movie.Enabled      = true;
@@ -314,14 +328,7 @@ namespace Golfin.Physics.Viewer.Editor
                 // attempt doesn't lock the session out.
                 SessionState.SetBool(SessionGuardKey, true);
 
-                // Guardrail 3 — cap the render loop to the capture fps during record. Uncapped
-                // Game-View rendering is the dominant GPU draw; capping it cuts load hard with
-                // zero change to the recorded look. Restored in End().
-                _savedTargetFps = Application.targetFrameRate;
-                _savedVSync     = QualitySettings.vSyncCount;
-                QualitySettings.vSyncCount   = 0;     // vSync would clamp targetFrameRate to display Hz
-                Application.targetFrameRate  = Fps;
-                _loadOverridden = true;
+                // (Guardrail 3 / fps cap moved ABOVE StartRecording — see Y-FLIP FIX note.)
 
                 // Guardrail 2 — arm the duration watchdog.
                 _recordStartEditorTime = EditorApplication.timeSinceStartup;
