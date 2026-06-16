@@ -12,6 +12,7 @@ namespace Golfin.Gameplay.UI.HUD
         public static Sprite? SelectedFullSprite      = null;
         public static System.Collections.Generic.List<BallEntry> OwnedBalls = new();
         public static int     SelectedIndex           = 0;
+        public static int     SelectedSpinStat        = 0;   // ball spin stat, range -10..+10
 
         public static event Action? OnSelectedChanged;
         public static event Action? OnBagChanged;
@@ -30,6 +31,7 @@ namespace Golfin.Gameplay.UI.HUD
             SelectedFullSprite      = null;
             OwnedBalls.Clear();
             SelectedIndex           = 0;
+            SelectedSpinStat        = 0;
             RaiseBagChanged();
             RaiseSelectedChanged();
         }

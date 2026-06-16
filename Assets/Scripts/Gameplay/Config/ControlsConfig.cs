@@ -49,6 +49,24 @@ namespace Golfin.Gameplay.Config
         public float SpinMagScaleSlope;   // 1.5 = sign-flip allowed at spinY=+1 (Q2 lock)
         public float SpinMaxTiltRad;      // 0.3 ≈ 17° max axis tilt at spinX=±1
 
+        // Spin selector UX (spin_selector_ux Order 354)
+        public float SpinSelectorFloorRadius01;    // min selectable disc radius at spin=-10; default 0.20
+
+        /// <summary>
+        /// Fraction of the BallImage RectTransform half-width that equals the visible
+        /// painted ball edge (accounting for sprite alpha padding).
+        ///
+        /// The ball sprite (200×200 ASTC_6x6) has transparent padding: the painted
+        /// circle edge lands at approximately 95.7% of the RectTransform half-width
+        /// (empirically measured: reviewer observed ~287 canvas-px visible radius out of
+        /// 300 canvas-px RectTransform half-width).
+        ///
+        /// Used by SpinPanelWidget to cap the HIGH disc's un-dimmed hole to the visible
+        /// painted ball edge rather than the RectTransform border.
+        /// Tunable via controls.csv (key: BallSpriteVisualRadiusFrac).
+        /// </summary>
+        public float BallSpriteVisualRadiusFrac;   // 0.957 = visible ball edge / RT half-width
+
         public static readonly ControlsConfig Default = new ControlsConfig
         {
             PullStartThresholdPx           = 30f,
@@ -74,6 +92,8 @@ namespace Golfin.Gameplay.Config
             PuttBaseVelocityMps            = 5f,
             SpinMagScaleSlope              = 1.5f,
             SpinMaxTiltRad                 = 0.3f,
+            SpinSelectorFloorRadius01      = 0.20f,
+            BallSpriteVisualRadiusFrac     = 0.957f,
         };
     }
 }

@@ -312,47 +312,125 @@ public static class ActionButtonsBuilder
         ballImg.preserveAspect = true;
         ballImg.color = white;
 
+        // ── Gray-out donut (dims everything OUTSIDE the active disc) ───────────
+        // SpinPanelWidget.UpdateDiscVisuals() generates a runtime donut Texture2D:
+        //   - transparent hole at center (= active disc area → ball shows at full clarity)
+        //   - dark (alpha 0.55) outside the hole → dims the inactive region
+        // This Image is full-size (stretch-fill = same as BallImage 600x600).
+        // color=white so the texture alpha drives rendering without extra tint.
+        // The initial sprite is null; the donut texture is assigned in Open().
+        var grayOutRt = CreateRectTransform("SpinGrayOut", ballImgRt);
+        StretchFill(grayOutRt);
+        var grayOutImg = grayOutRt.gameObject.AddComponent<Image>();
+        grayOutImg.color = Color.white;   // texture controls per-pixel alpha
+        grayOutImg.raycastTarget = false;
+
+        // ── Active disc outline ring (thin edge cue at the disc boundary) ────
+        // SpinPanelWidget sizes this to 2*activePxRadius at runtime.
+        // It's a Knob-sprite Image at low alpha — acts purely as a visible border
+        // around the active zone. The disc INTERIOR has no overlay (ball shows through).
+        var activeDiscRt = CreateRectTransform("SpinActiveDisc", ballImgRt, new Vector2(264f, 264f));
+        SetAnchorCenter(activeDiscRt);
+        activeDiscRt.anchoredPosition = Vector2.zero;
+        var activeDiscImg = activeDiscRt.gameObject.AddComponent<Image>();
+        // Correct API for Unity built-in extra resources — NOT AssetDatabase.LoadAssetAtPath (wrong path).
+        Sprite knobSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+        if (knobSprite != null)
+            Debug.Log("[ActionButtonsBuilder] Knob sprite loaded OK: " + knobSprite.name + " fileID=" + knobSprite.GetInstanceID());
+        else
+            Debug.LogError("[ActionButtonsBuilder] GetBuiltinExtraResource<Sprite>(UI/Skin/Knob.psd) returned NULL — dot will be square. Check Unity version.");
+        activeDiscImg.sprite = knobSprite;
+        activeDiscImg.color  = new Color(1f, 1f, 1f, 0.35f);  // thin white outline ring
+        activeDiscImg.type   = Image.Type.Simple;
+        activeDiscImg.preserveAspect  = false;
+        activeDiscImg.raycastTarget   = false;
+
+        // ── Gray-out mask placeholder (kept so existing serialized wiring isn't broken) ─
+        // _grayOutMaskRt is no longer functionally used in iter-2; the donut texture
+        // approach makes it redundant. Kept as an inert invisible GameObject.
+        var grayOutMaskRt = CreateRectTransform("SpinGrayOutMask", ballImgRt, new Vector2(264f, 264f));
+        SetAnchorCenter(grayOutMaskRt);
+        grayOutMaskRt.anchoredPosition = Vector2.zero;
+        var grayOutMaskImg = grayOutMaskRt.gameObject.AddComponent<Image>();
+        grayOutMaskImg.sprite = knobSprite;
+        grayOutMaskImg.color  = new Color(0f, 0f, 0f, 0.0f);  // fully transparent — inert
+        grayOutMaskImg.raycastTarget = false;
+
+        // ── Spin dot (1b: round) ────────────────────────────────────────────
+        // Load circular sprite for the dot. Use built-in Knob.
+        Sprite circleSprite = knobSprite;
+        if (circleSprite == null)
+        {
+            // Fallback: load from project Resources if a white circle exists there
+            circleSprite = Resources.Load<Sprite>("UI/WhiteCircle");
+        }
+
         var dotRt = CreateRectTransform("SpinDot", ballImgRt);
         dotRt.sizeDelta = new Vector2(60f, 60f);
         SetAnchorCenter(dotRt);
         dotRt.anchoredPosition = Vector2.zero;
         var dotImg = dotRt.gameObject.AddComponent<Image>();
-        dotImg.color = new Color(1f, 0.2f, 0.2f, 1f);
+        dotImg.sprite = circleSprite;
+        dotImg.color  = new Color(1f, 0.2f, 0.2f, 1f);  // keep existing red color
+        if (circleSprite != null)
+        {
+            dotImg.type = Image.Type.Simple;
+            dotImg.preserveAspect = false;
+        }
 
-        Vector2[] btnPositions = {
-            new Vector2(   0f,    0f),
-            new Vector2(   0f,  220f),
-            new Vector2(   0f, -220f),
-            new Vector2(-220f,    0f),
-            new Vector2( 220f,    0f),
-        };
-        string[] btnNames = { "SpinBtn_Center", "SpinBtn_Top", "SpinBtn_Bottom", "SpinBtn_Left", "SpinBtn_Right" };
+        // ── Single drag surface (replaces 5 discrete buttons) ───────────────
+        // Covers the same 600x600 area as BallImage; implements IPointerDownHandler/IDragHandler.
+        // SpinPanelWidget itself now handles drag via interface — it sits on spinPanelGo (stretch fill).
+        // We add a transparent hit area on BallImage to ensure raycasts are consumed there.
+        var dragSurfaceRt = CreateRectTransform("SpinDragSurface", ballImgRt, new Vector2(600f, 600f));
+        SetAnchorCenter(dragSurfaceRt);
+        dragSurfaceRt.anchoredPosition = Vector2.zero;
+        var dragSurfaceImg = dragSurfaceRt.gameObject.AddComponent<Image>();
+        dragSurfaceImg.color = new Color(0f, 0f, 0f, 0f);  // transparent — just a raycast surface
+        // Note: SpinPanelWidget implements IPointerDownHandler/IDragHandler and will receive events
+        // from this transparent image as long as the panel has a GraphicRaycaster in the canvas.
 
         SpinPanelWidget spinPanelWidget = spinPanelGo.AddComponent<SpinPanelWidget>();
 
-        for (int i = 0; i < 5; i++)
-        {
-            var posRt = CreateRectTransform(btnNames[i], ballImgRt, new Vector2(200f, 200f));
-            SetAnchorCenter(posRt);
-            posRt.anchoredPosition = btnPositions[i];
-            var posImg = posRt.gameObject.AddComponent<Image>();
-            posImg.color = new Color(0f, 0f, 0f, 0f);
-            var posBtn = posRt.gameObject.AddComponent<Button>();
-            posBtn.targetGraphic = posImg;
-            int captured = i;
-            posBtn.onClick.AddListener(() => spinPanelWidget.SelectPosition(captured));
-        }
-
+        // ── Find ConeRoot ──────────────────────────────────────────────────
         var coneRootT = canvasGo.transform.Find("ConeRoot");
         var coneRoot  = coneRootT != null ? coneRootT.gameObject : null;
         if (coneRoot == null) Debug.LogWarning("[ActionButtonsBuilder] ConeRoot not found — _aimingCone will be null on SpinPanelWidget.");
 
+        // ── Find CentralBallWidget (1a: hide while spin selector is open) ──
+        // CentralBallWidget lives under ShotUI_Canvas on a GO named "CentralBallWidget" or similar.
+        var centralBallT = canvasGo.transform.Find("CentralBallWidget");
+        // Also try "CentralBall" or scan all children for CentralBallWidget component
+        GameObject centralBallGo = null;
+        if (centralBallT != null)
+        {
+            centralBallGo = centralBallT.gameObject;
+        }
+        else
+        {
+            // Walk all immediate children of the canvas to find the CentralBallWidget component
+            foreach (Transform child in canvasGo.transform)
+            {
+                if (child.GetComponent<Golfin.Gameplay.UI.ShotUI.CentralBallWidget>() != null)
+                {
+                    centralBallGo = child.gameObject;
+                    break;
+                }
+            }
+        }
+        if (centralBallGo == null)
+            Debug.LogWarning("[ActionButtonsBuilder] CentralBallWidget GO not found — _centralBall will be null on SpinPanelWidget. Wire manually in Inspector.");
+
         var spinPanelSo = new SerializedObject(spinPanelWidget);
-        spinPanelSo.FindProperty("_ballImage").objectReferenceValue        = ballImg;
-        spinPanelSo.FindProperty("_spinDot").objectReferenceValue          = dotRt;
-        spinPanelSo.FindProperty("_dimBackground").objectReferenceValue    = spinCatcher;
+        spinPanelSo.FindProperty("_ballImage").objectReferenceValue         = ballImg;
+        spinPanelSo.FindProperty("_spinDot").objectReferenceValue           = dotRt;
+        spinPanelSo.FindProperty("_dimBackground").objectReferenceValue     = spinCatcher;
         spinPanelSo.FindProperty("_defaultBallSprite").objectReferenceValue = defaultBallThumbnail;
-        spinPanelSo.FindProperty("_aimingCone").objectReferenceValue       = coneRoot;
+        spinPanelSo.FindProperty("_aimingCone").objectReferenceValue        = coneRoot;
+        spinPanelSo.FindProperty("_centralBall").objectReferenceValue       = centralBallGo;
+        spinPanelSo.FindProperty("_activeDiscRt").objectReferenceValue      = activeDiscRt;
+        spinPanelSo.FindProperty("_grayOutRt").objectReferenceValue         = grayOutRt;
+        spinPanelSo.FindProperty("_grayOutMaskRt").objectReferenceValue     = grayOutMaskRt;
         spinPanelSo.ApplyModifiedProperties();
 
         spinCatcherGo.SetActive(false);

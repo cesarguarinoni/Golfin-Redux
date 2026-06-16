@@ -1,0 +1,332 @@
+2026-06-16T10:00:00 activated — spin_selector_ux iter-1
+
+=== iter-1 kickoff baseline ===
+HEAD: 7511e7db3 docs(polish-backlog): file P-004 (H4 fringe pass-through) + P-005 (H4 bunker terrain fall-through) from Order 350 testing
+DIRTY porcelain:
+?? "Assets/Sounds/400 Sounds Pack/" (untracked sound assets from Order 350)
+=== end baseline ===
+
+2026-06-16T12:00:00 === iter-2 kickoff baseline ===
+HEAD: 7511e7db3 docs(polish-backlog): file P-004 (H4 fringe pass-through) + P-005 (H4 bunker terrain fall-through) from Order 350 testing
+DIRTY porcelain (M = staged data-path changes from iter-1):
+ M Assets/Resources/Gameplay/controls.csv
+ M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/HUD/BallContext.cs
+ M Assets/Scripts/UI/HUD/BallContextPopulator.cs
+ M Assets/Scripts/UI/HUD/LabInventoryStub.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/BotVideoRecorder.cs (pre-existing Order-350 drift)
+?? Assets/Sounds/400 Sounds Pack/ (882 untracked sound assets — pre-existing Order-350 drift, not modified by this task)
+=== end baseline ===
+2026-06-16T12:00:00 iter-2 starting — Part A (central ball hide) + Part B (round dot sprite) + Part C (continuous disc drag) + tests
+2026-06-16T12:20:00 LabScaffold opened — running ActionButtonsBuilder to rebuild SpinPanel
+2026-06-16T14:35:51 done, awaiting review
+
+=== iter-2 kickoff baseline ===
+Timestamp: 2026-06-16T12:46:20Z
+HEAD: b369c91f261cdc816dd325084a1ef9529105ba90
+DIRTY porcelain:
+ M Assets/Resources/Gameplay/controls.csv
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Editor/CanvasScalerMigration/ActionButtonsBuilder.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/HUD/BallContext.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/SpinPanelWidget.cs
+ M Assets/Scripts/UI/HUD/BallContextPopulator.cs
+ M Assets/Scripts/UI/HUD/LabInventoryStub.cs
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs.meta
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/card_draw_3.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/card_draw_3.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/card_fan_2.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/card_fan_2.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_drop.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_drop.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_gather.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_gather.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_gather_2.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_gather_2.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_gather_3.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_gather_3.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_in_sack_shake.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_in_sack_shake.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_in_sack_short.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_in_sack_short.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_place_1.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_place_1.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_place_2.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_place_2.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_place_3.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_place_3.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_stack.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_stack.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_stack_2.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/chips_stack_2.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_grab.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_grab.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_roll_1.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_roll_1.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_roll_2.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_roll_2.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_roll_3.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_roll_3.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_roll_4.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_roll_4.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_shake_2.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_shake_2.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_shake_3.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_shake_3.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_shake_4.wav"
+?? "Assets/Sounds/400 Sounds Pack/Card and Board/dice_shake_4.wav.meta"
+?? "Assets/Sounds/400 Sounds Pack/Combat and Gore.meta"
+?? "Assets/Sounds/400 Sounds Pack/Combat and Gore/"
+?? "Assets/Sounds/400 Sounds Pack/Environment.meta"
+?? "Assets/Sounds/400 Sounds Pack/Environment/"
+?? "Assets/Sounds/400 Sounds Pack/Footsteps.meta"
+?? "Assets/Sounds/400 Sounds Pack/Footsteps/"
+?? "Assets/Sounds/400 Sounds Pack/Human.meta"
+?? "Assets/Sounds/400 Sounds Pack/Human/"
+?? "Assets/Sounds/400 Sounds Pack/Items.meta"
+?? "Assets/Sounds/400 Sounds Pack/Items/"
+?? "Assets/Sounds/400 Sounds Pack/Machines.meta"
+?? "Assets/Sounds/400 Sounds Pack/Machines/"
+?? "Assets/Sounds/400 Sounds Pack/Match Three.meta"
+?? "Assets/Sounds/400 Sounds Pack/Match Three/"
+?? "Assets/Sounds/400 Sounds Pack/Materials.meta"
+?? "Assets/Sounds/400 Sounds Pack/Materials/"
+?? "Assets/Sounds/400 Sounds Pack/Musical Effects.meta"
+?? "Assets/Sounds/400 Sounds Pack/Musical Effects/"
+?? "Assets/Sounds/400 Sounds Pack/Other.meta"
+?? "Assets/Sounds/400 Sounds Pack/Other/"
+?? "Assets/Sounds/400 Sounds Pack/Retro.meta"
+?? "Assets/Sounds/400 Sounds Pack/Retro/"
+?? "Assets/Sounds/400 Sounds Pack/UI.meta"
+?? "Assets/Sounds/400 Sounds Pack/UI/"
+?? "Assets/Sounds/400 Sounds Pack/Weapons.meta"
+?? "Assets/Sounds/400 Sounds Pack/Weapons/"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_BallIn.wav"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_BallIn.wav.meta"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Bunker.wav"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Bunker.wav.meta"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Default.wav"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Default.wav.meta"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Default_02.wav"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Default_02.wav.meta"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Putt.wav"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Putt.wav.meta"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Strong.wav"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Strong.wav.meta"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Weak.wav"
+?? "Assets/Sounds/Hit/Golfin_SFX - Hit_Weak.wav.meta"
+?? Assets/Sounds/Hit/hit_default.wav
+?? Assets/Sounds/Hit/hit_default.wav.meta
+?? Assets/Sounds/Hit/hit_putter.wav
+?? Assets/Sounds/Hit/hit_putter.wav.meta
+?? Assets/Sounds/Hit/hit_sand.wav
+?? Assets/Sounds/Hit/hit_sand.wav.meta
+?? Assets/Sounds/Hit/hit_strong.wav
+?? Assets/Sounds/Hit/hit_strong.wav.meta
+?? Assets/Sounds/Hit/hit_weak.wav
+?? Assets/Sounds/Hit/hit_weak.wav.meta
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Bushes.wav"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Bushes.wav.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Fairway.wav"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Fairway.wav.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Grass.ogg"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Grass.ogg.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Grass.wav"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Grass.wav.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Grass_02.ogg"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Grass_02.ogg.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Grass_02.wav"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Grass_02.wav.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Green.wav"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Green.wav.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Road.wav"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Road.wav.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Rough.wav"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Rough.wav.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Sand.wav"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Sand.wav.meta"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Water.wav"
+?? "Assets/Sounds/Land/Golfin_SFX - Landing_Water.wav.meta"
+?? Assets/Sounds/Land/land_grass.wav
+?? Assets/Sounds/Land/land_grass.wav.meta
+?? Assets/Sounds/Land/land_road.wav
+?? Assets/Sounds/Land/land_road.wav.meta
+?? Assets/Sounds/Land/land_sand.wav
+?? Assets/Sounds/Land/land_sand.wav.meta
+?? Assets/Sounds/Land/land_water.wav
+?? Assets/Sounds/Land/land_water.wav.meta
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Default.wav"
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Default.wav.meta"
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Driver.wav"
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Driver.wav.meta"
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Iron.wav"
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Iron.wav.meta"
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Wedge.wav"
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Wedge.wav.meta"
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Wood.wav"
+?? "Assets/Sounds/Swing/Golfin_SFX - Swing_Wood.wav.meta"
+?? Assets/Sounds/Swing/swing-wood.wav
+?? Assets/Sounds/Swing/swing-wood.wav.meta
+?? Assets/Sounds/Swing/swing_default.wav
+?? Assets/Sounds/Swing/swing_default.wav.meta
+?? Assets/Sounds/Swing/swing_driver.wav
+?? Assets/Sounds/Swing/swing_driver.wav.meta
+?? Assets/Sounds/Swing/swing_iron.wav
+?? Assets/Sounds/Swing/swing_iron.wav.meta
+?? Assets/Sounds/Swing/swing_wedge.wav
+?? Assets/Sounds/Swing/swing_wedge.wav.meta
+?? Docs/Specs/Active/spin_selector_ux/
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_14.0.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_14.5.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_15.0.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_15.5.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_16.0.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_t13.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_t17.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_t4.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_t9.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c2_t20.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c2_t38.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c2_t55.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c2_t72.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c2_t84.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c2short_open.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c2short_t20.png
+?? Docs/Specs/Completed/sound_effects/screenshots/chk_audio_match_stinger_t1.png
+?? Docs/Specs/Completed/sound_effects/screenshots/chk_audio_match_stinger_t10.png
+?? Docs/Specs/Completed/sound_effects/screenshots/chk_audio_match_stinger_t15.png
+?? Docs/Specs/Completed/sound_effects/screenshots/chk_audio_putt_to_cup_t1.png
+?? Docs/Specs/Completed/sound_effects/screenshots/chk_audio_putt_to_cup_t11.png
+?? Docs/Specs/Completed/sound_effects/screenshots/chk_audio_putt_to_cup_t16.png
+?? Docs/Specs/Completed/sound_effects/screenshots/chk_audio_water_splash_sfx_t1.png
+?? Docs/Specs/Completed/sound_effects/screenshots/chk_audio_water_splash_sfx_t4.png
+?? Docs/Specs/Completed/sound_effects/screenshots/chk_audio_water_splash_sfx_t6.png
+?? Docs/Specs/Completed/sound_effects/screenshots/putt_01_pre_shot.jpg
+?? Docs/Specs/Completed/sound_effects/screenshots/putt_02_fired.jpg
+?? Docs/Specs/Completed/sound_effects/screenshots/putt_03_incup.jpg
+?? Docs/Specs/Completed/sound_effects/screenshots/v3_flipcheck/
+?? Docs/Specs/Completed/sound_effects/screenshots/v3_shot_charging.png
+?? Docs/Specs/Completed/sound_effects/screenshots/v3_tee_ready.png
+?? Docs/Specs/Completed/sound_effects/screenshots/water_01_pre_shot.png
+?? Docs/Specs/Completed/sound_effects/screenshots/water_02_splash_peak.png
+?? Docs/Specs/Completed/sound_effects/screenshots/water_03_splash_ripple.png
+?? Docs/Specs/Completed/sound_effects/screenshots/water_04_splash_in_water.jpg
+=== end baseline ===
+2026-06-16T12:46:20Z activated iter-2 — fixing gray-out inversion defect
+2026-06-16T15:30:00Z done, awaiting review
+
+=== iter-3 kickoff baseline ===
+Timestamp: 2026-06-16T00:00:00Z (session start)
+HEAD: b369c91f261cdc816dd325084a1ef9529105ba90
+DIRTY porcelain (M = spin_selector_ux iter-2 changes persisted, not yet committed):
+ M Assets/Resources/Gameplay/controls.csv
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Editor/CanvasScalerMigration/ActionButtonsBuilder.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/HUD/BallContext.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/SpinPanelWidget.cs
+ M Assets/Scripts/UI/HUD/BallContextPopulator.cs
+ M Assets/Scripts/UI/HUD/LabInventoryStub.cs
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs.meta
+?? Assets/Sounds/400 Sounds Pack/ (Order-350 drift)
+?? Assets/Sounds/Hit/ (Order-350 drift)
+?? Assets/Sounds/Land/ (Order-350 drift)
+?? Assets/Sounds/Swing/ (Order-350 drift)
+?? Docs/Specs/Completed/sound_effects/screenshots/ (Order-350 drift)
+DEFECT BEING FIXED: 1b — _spinDot/SpinActiveDisc sprite null (AssetDatabase.LoadAssetAtPath wrong path). Switching to AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd").
+=== end baseline ===
+2026-06-16T00:01:00Z iter-3 starting — fix Knob sprite load (GetBuiltinExtraResource), re-run builder, re-capture LOW+HIGH, corner-probe dot bbox
+2026-06-16T15:50:00 iter-3 corner probe PASS: all 4 dot corners=background NOT red, center=rgb(245,47,47). 20/20 tests pass. Screenshots iter3_LOW+HIGH captured. Report updated.
+2026-06-16T15:52:00 done, awaiting review
+
+=== iter-4 kickoff baseline ===
+Timestamp: 2026-06-16T15:29:06Z
+HEAD: b369c91f2 fix(capture): BotVideoRecorder Y-flip — lock render state before StartRecording
+DIRTY porcelain (M = spin_selector_ux iter-1/2/3 changes persisted, not yet committed):
+ M .claude/review_misses.log
+ M Assets/Resources/Gameplay/controls.csv
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Editor/CanvasScalerMigration/ActionButtonsBuilder.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/HUD/BallContext.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/SpinPanelWidget.cs
+ M Assets/Scripts/UI/HUD/BallContextPopulator.cs
+ M Assets/Scripts/UI/HUD/LabInventoryStub.cs
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs (new file for this task)
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs.meta (new file for this task)
+?? Assets/Sounds/ (Order-350 drift — pre-existing)
+?? Docs/Specs/Completed/sound_effects/screenshots/ (Order-350 drift — pre-existing)
+DEFECT BEING FIXED (iter-4, CESAR_REJECTED): HIGH spin disc (radius01=1.0) reaches 220px — larger than the ball sprite visual radius. Fix: cap MaxSpinPixelRadius to ball sprite's actual rendered half-extent in canvas space.
+=== end baseline ===
+2026-06-16T15:29:06Z activated iter-4 — measure ball radius, cap MaxSpinPixelRadius, update tests
+2026-06-16T16:30:00Z done, awaiting review
+
+=== iter-5 kickoff baseline ===
+Timestamp: 2026-06-16T19:00:00Z
+HEAD: b369c91f2 fix(capture): BotVideoRecorder Y-flip — lock render state before StartRecording
+DIRTY porcelain (M = spin_selector_ux iter-1/2/3/4 changes persisted, not yet committed):
+ M .claude/review_misses.log
+ M Assets/Resources/Gameplay/controls.csv
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Editor/CanvasScalerMigration/ActionButtonsBuilder.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/HUD/BallContext.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/SpinPanelWidget.cs
+ M Assets/Scripts/UI/HUD/BallContextPopulator.cs
+ M Assets/Scripts/UI/HUD/LabInventoryStub.cs
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs (new file for this task)
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs.meta (new file for this task)
+?? Assets/Sounds/400 Sounds Pack/ (Order-350 drift — pre-existing)
+?? Assets/Sounds/Hit/ (Order-350 drift — pre-existing)
+?? Assets/Sounds/Land/ (Order-350 drift — pre-existing)
+?? Assets/Sounds/Swing/ (Order-350 drift — pre-existing)
+?? Docs/Specs/Completed/sound_effects/screenshots/ (Order-350 drift — pre-existing)
+DEFECT BEING FIXED (iter-5, ARCHITECT_REVIEW_FAIL): Un-dimmed donut hole spills outside visible ball
+sprite edge at HIGH. Root cause: _ballImageRadius=296px is the RectTransform half-width, but the
+ball sprite has alpha padding — visible sprite radius is ~210 canvas-px. The donut hole at HIGH
+covers 296px of the 300px donut extent, but the visible ball edge is at ~210px. Fix: use
+BallSpriteVisualRadiusFrac constant in ControlsConfig to scale _ballImageRadius to the visible
+sprite radius. The donut hole and bright disc cap must both be capped to the visible sprite edge.
+=== end baseline ===
+2026-06-16T19:00:00Z activated iter-5 — measuring visible ball sprite radius, implementing BallSpriteVisualRadiusFrac, updating tests
+2026-06-16T20:45:00Z done, awaiting review
+
+=== iter-6 kickoff baseline ===
+Timestamp: 2026-06-16T00:00:00Z
+HEAD: b369c91f2 fix(capture): BotVideoRecorder Y-flip — lock render state before StartRecording
+DIRTY porcelain (M = spin_selector_ux iter-1/2/3/4/5 changes persisted, not yet committed):
+ M .claude/review_misses.log
+ M Assets/Resources/Gameplay/controls.csv
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Editor/CanvasScalerMigration/ActionButtonsBuilder.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/HUD/BallContext.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/SpinPanelWidget.cs
+ M Assets/Scripts/UI/HUD/BallContextPopulator.cs
+ M Assets/Scripts/UI/HUD/LabInventoryStub.cs
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs (new file for this task)
+?? Assets/Scripts/Gameplay/Tests/SpinSelectorMappingTests.cs.meta
+?? Assets/Sounds/ (Order-350 drift — pre-existing)
+?? Docs/Specs/Completed/sound_effects/screenshots/ (Order-350 drift — pre-existing)
+DEFECTS BEING FIXED (iter-6, CESAR_REJECTED #2):
+  D-1: Dim is a square box — must be circular. GenerateDonutTexture only has inner radius
+       (hole) but NOT outer radius cutoff — dark pixels fill ALL corners of the 600x600 square.
+       Fix: add outer radius cutoff at ball radius (holeRadiusFrac=1.0 = visualFrac) — pixels
+       beyond ball edge must be alpha=0 (not dark), making the dim a circular annulus.
+  D-2: White/wash over ball from SpinActiveDisc (alpha=0.35 Knob). Inside cut = normal ball,
+       zero overlay. Remove or set alpha=0 on _activeDiscRt Image inside the disc.
+  D-3: Captures over LabScaffold (flat gray sky). Must re-shoot via real game flow
+       (ShellScene → GameplaySceneLoader) over a real loaded hole at 1170×2532.
+=== end baseline ===
+2026-06-16T00:00:00Z activated iter-6 — D-1 circular dim, D-2 remove white wash, D-3 real-hole capture
+2026-06-16T20:58:00 D-3 captures complete: HIGH+LOW over Hole_01_Geo (Lomond PAR5) at 1170x2532. Writing IMPLEMENTER_REPORT.md.
+2026-06-16T21:15:00 IMPLEMENTER_REPORT.md written for iter-6. All items PASS. Setting STATUS to READY_FOR_SELF_REVIEW.

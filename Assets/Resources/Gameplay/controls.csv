@@ -22,3 +22,5 @@ PuttArrowSpeedMultiplier,0.5,putts get slower arrows
 PuttBaseVelocityMps,5,override default putter velocity
 SpinMagScaleSlope,1.5,spin.y magnitude slope (1.5 allows sign-flip topspin at y=+1)
 SpinMaxTiltRad,0.3,spin.x max axis-tilt angle in radians (approx 17 degrees) at x=+-1
+SpinSelectorFloorRadius01,0.20,spin selector disc min radius fraction at spin=-10 (feel knob; 0.0-1.0)
+BallSpriteVisualRadiusFrac,0.957,fraction of BallImage RT half-width that equals the visible painted ball edge (alpha-padding calibration; tunable)

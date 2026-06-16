@@ -68,6 +68,7 @@ namespace Golfin.UI.HUD
                 BallContext.SelectedThumbnail       = null;
                 BallContext.SelectedFullSprite      = null;
                 BallContext.SelectedIndex           = 0;
+                BallContext.SelectedSpinStat        = 0;
                 BallContext.RaiseSelectedChanged();
                 return;
             }
@@ -79,6 +80,10 @@ namespace Golfin.UI.HUD
             BallContext.SelectedThumbnail       = e.Thumbnail;
             BallContext.SelectedFullSprite      = e.FullSprite;
             BallContext.SelectedIndex           = idx;
+            // Populate spin stat from template so disc radius reflects equipped ball.
+            var db = BallDatabaseCSV.Instance;
+            var template = db != null ? db.GetBall(e.BallId) : null;
+            BallContext.SelectedSpinStat = template != null ? template.spin : 0;
             BallContext.RaiseSelectedChanged();
         }
     }
