@@ -189,3 +189,29 @@ Docs/Diagnostics/_capture/
 tasks/loop_v2_smoke_bot/
 # Orphaned intermediate review frames from a shipped task (canonical stills already committed)
 Docs/Specs/Completed/1v1_match_flow/screenshots/
+
+# =========================
+# Order-350 (sound_effects) unused audio — keep on disk, out of git (Cesar 2026-06-16).
+# Verified against the shipped SfxLibrary.asset (24 clip GUIDs) + every tracked
+# scene/prefab/asset: NONE of the files below are referenced by the game. The clips
+# the build actually uses are already committed — the golf Hit/Land/Swing sounds as
+# .ogg, plus card_draw_1/2.wav, card_fan.wav and Victory/Clapping_01/02.wav. The
+# remainder is an unused commercial pack and uncompressed .wav source twins of the
+# shipping .ogg. SfxLibrary loads clips only via direct SO refs (no Resources.Load),
+# so a clean clone still builds with full sound. .gitignore never untracks, so the
+# already-committed clips above are unaffected.
+# =========================
+# Entire 400 Sounds Pack library is unused except the 3 already-committed Card and Board clips.
+Assets/Sounds/400 Sounds Pack/
+# Uncompressed .wav source twins of the shipping .ogg golf sounds.
+Assets/Sounds/Hit/*.wav
+Assets/Sounds/Hit/*.wav.meta
+Assets/Sounds/Land/*.wav
+Assets/Sounds/Land/*.wav.meta
+Assets/Sounds/Swing/*.wav
+Assets/Sounds/Swing/*.wav.meta
+# Unused .ogg variants not referenced by SfxLibrary (Landing_Grass / _02).
+Assets/Sounds/Land/Golfin_SFX - Landing_Grass.ogg
+Assets/Sounds/Land/Golfin_SFX - Landing_Grass.ogg.meta
+Assets/Sounds/Land/Golfin_SFX - Landing_Grass_02.ogg
+Assets/Sounds/Land/Golfin_SFX - Landing_Grass_02.ogg.meta
