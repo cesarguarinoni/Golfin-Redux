@@ -36,3 +36,23 @@ Items consciously deferred to the polish phase (Roadmap item 9: UI/UX Polish). N
 **Why it matters:** two parallel sources of truth for aim-cone behavior (resolver vs ControlsConfig) invite drift; the resolver value looks authoritative but is dead. The audit's "CC → sub-perceptible cone reduction" finding was measuring this dead lane.
 
 **When resumed:** decide one of — (a) delete `AimConeReductionFraction` from `ResolvedShotModifiers` + resolver if the ControlsConfig path is canonical (simplest; fix the stale ShotInputBuilder comment too), or (b) re-route `HalfConeAngleRad()` to consume the resolver output if the resolver is meant to be canonical (larger; unifies Club.Accuracy + Char.ClubControl into one cone computation). Lean (a) unless there's a reason the resolver must own cone geometry. Not a ship-blocker; no gameplay effect either way since the value is currently unused.
+
+---
+
+## P-004 — Ball passes through fringe/border on Hole 4
+**Filed:** 2026-06-16 (Architect). **Area:** `Hole_04_Geo` fringe/border collider (`HoleGeoImporter.cs` collider gen). **Severity:** functional (ball leaves playable surface), Hole-4 specific. Found during Order 350 audio play-testing — NOT an audio bug.
+
+**Context:** A normal shot on Hole 4 sent the ball **through** the fringe/border mesh instead of colliding/resting on it. Likely a collider gap, or the fringe/border submesh not carrying a `MeshCollider` on `Hole_04_Geo`. Cross-ref `Docs/Pipeline/LESSONS_FRINGE_BORDER_MESHES.md`.
+
+**When resumed:** dump `Hole_04_Geo`'s collider coverage on the fringe/border submesh — confirm whether that submesh has a collider at all, and whether there's a seam gap at the fringe↔terrain join. Compare against a hole that behaves correctly. Verify with a bot/manual shot across the Hole-4 fringe after the fix.
+
+---
+
+## P-005 — Ball falls through terrain into Hole-4 bunker
+**Filed:** 2026-06-16 (Architect). **Area:** `Hole_04_Geo` bunker terrain / physics heightmap (`Resources/HoleData/Hole_04/heightmap.bytes`) + bunker-lip colliders. **Severity:** functional (ball drops below world), Hole-4 specific. Found during Order 350 audio play-testing — NOT an audio bug.
+
+**Context:** Shooting into a Hole-4 bunker dropped the ball **out of the world / below the surface** — classic stale-heightmap / missing-collider fall-through. Matches the recurring project pattern: balls fall through terrain outside baked zones because `heightmap.bytes` is stale.
+
+**When resumed:** re-bake `Hole_04_Geo`'s physics heightmap via `PhysicsHeightmapBaker`, copy to `Resources/HoleData/Hole_04/`, then audit the bunker-lip colliders (see bunker-lip collider notes in `Docs/Pipeline/`). The standard fix for this pattern is re-bake + copy-to-Resources. Verify with a bot shot landing in the Hole-4 bunker.
+
+**Note:** P-004 + P-005 are both `Hole_04_Geo` collider/terrain issues — likely worth resuming together as one Hole-4 collider/heightmap pass (the "physics stress test" umbrella).
