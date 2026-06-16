@@ -32,6 +32,8 @@ namespace Golfin.Physics.Viewer.Editor
     public static class LoopV2SmokeBotMenu
     {
         const string ShellScenePath = "Assets/Scenes/ShellScene.unity";
+        const string LabScenePath   = "Assets/Scenes/Physics/LabScaffold.unity";
+        const string Hole06GeoPath  = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_06_Geo.unity";
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough")]
         public static void RunHole1Playthrough()    => Launch("hole1_playthrough");
@@ -203,6 +205,83 @@ namespace Golfin.Physics.Viewer.Editor
             Launch("audio_gameplay_shots");
         }
 
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Gameplay Shots V3 (Hit Audibility Fix)")]
+        public static void RunAudioGameplayShotsV3()
+        {
+            // Clip 3 (v3): deferred-start recording — begins AFTER hole is fully loaded so no
+            // Y-flip first frame. Mid-power (0.5) first stroke → HitDefault (vol 1.0 > swing 0.55).
+            // Cap = 45s covers the recorded gameplay segment (~25-35s).
+            BotVideoRecorder.CaptureAudio = true;
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 45;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/sound_effects/videos/audio_gameplay_v3";
+            BotVideoRecorder.ArmDeferred();   // deferred start — scenario calls BeginDeferred()
+            Launch("audio_gameplay_v3");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Gameplay Shots V3 (Hit Audibility Fix)", isValidateFunction: true)]
+        static bool ValidateAudioGameplayShotsV3() => !EditorApplication.isPlaying;
+
+        // Order 350 focused fidelity clips (2026-06-16):
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Putt To Cup (Focused Clip)")]
+        public static void RunAudioPuttToCup()
+        {
+            // Clip: real ShellScene boot → Practice → Hole 1 → music quieted → putt into cup.
+            // Deferred start: recording begins mid-coroutine after hole fully loaded (no Y-flip).
+            // Target: HitPutt audible, NO settle-thud (putt suppression), HitBallIn at cup.
+            // 25s covers: 5s startup + hole load ~15s + putt flight ~3s + settle ~2s.
+            BotVideoRecorder.CaptureAudio = true;
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 25;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/sound_effects/videos/audio_putt_to_cup";
+            BotVideoRecorder.ArmDeferred();   // deferred start — scenario calls BeginDeferred()
+            Launch("audio_putt_to_cup");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Putt To Cup (Focused Clip)", isValidateFunction: true)]
+        static bool ValidateAudioPuttToCup() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Water Splash SFX (Focused Clip)")]
+        public static void RunAudioWaterSplashSfx()
+        {
+            // Clip: real ShellScene boot → Practice → HoleSelection → Hole 6 (unlocked at
+            // runtime) → music quieted → Driver aimed at water → LandWater SFX + splash VFX.
+            // ShellScene boot is REQUIRED for AudioManager init; direct LabScaffold bypasses
+            // it and produces silent audio (-91 dB) even with CaptureAudio=true.
+            // 30s covers: hole load ~15s + 4s settle + 1s arm + 5s flight + 5s dwell.
+            BotVideoRecorder.CaptureAudio = true;
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 30;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/sound_effects/videos/audio_water_splash_sfx";
+            BotVideoRecorder.ArmDeferred();   // deferred start — scenario calls BeginDeferred()
+            Launch("audio_water_splash_sfx");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Water Splash SFX (Focused Clip)", isValidateFunction: true)]
+        static bool ValidateAudioWaterSplashSfx() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Match Stinger (Focused Clip)")]
+        public static void RunAudioMatchStinger()
+        {
+            // Clip: real ShellScene boot → HomeScreen → ClickModeCardPlay("versus_1v1") →
+            // matchmaking → hole loads → VersusMatchController._debugBothBots=true → match runs
+            // to completion → stinger SFX fires at VersusResultHandler.HandleMatchComplete.
+            // ShellScene boot is REQUIRED for AudioManager init; VersusHudCaptureMenu.Launch()
+            // opens LabScaffold directly and produces silent audio (-91 dB) even with CaptureAudio=true.
+            // 120s covers: ShellScene boot ~5s + matchmaking ~10s + hole load ~20s + match play ~90s
+            // (worst-case non-hole-4, from tee) — actual typical time for hole 4 near-green is ~25s.
+            BotVideoRecorder.CaptureAudio = true;
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 120;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/sound_effects/videos/audio_match_stinger";
+            BotVideoRecorder.ArmDeferred();   // deferred start — scenario calls Begin() mid-coroutine
+            Launch("audio_match_stinger");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Match Stinger (Focused Clip)", isValidateFunction: true)]
+        static bool ValidateAudioMatchStinger() => !EditorApplication.isPlaying;
+
         [MenuItem("GOLFIN/Smoke/Loop v2/Audio — UI and Music Slider", isValidateFunction: true)]
         static bool ValidateAudioUiMusicSlider() => !EditorApplication.isPlaying;
 
@@ -312,6 +391,57 @@ namespace Golfin.Physics.Viewer.Editor
 
             // 4. Enter play mode. The [DidReloadScripts]-registered handler will
             //    fire at EnteredPlayMode and inject the host GO (because Armed=true).
+            EditorApplication.EnterPlaymode();
+        }
+
+        // ── Direct-lab launcher (no ShellScene) ──────────────────────────────
+
+        /// <summary>
+        /// Opens LabScaffold (single mode) + the specified geo scene (additive),
+        /// then arms the scenario and enters play mode — without ShellScene.
+        ///
+        /// The grey-water fix lives in PhysicsLabController.OnHoleLoaded, which
+        /// disables the duplicate ShellScene directional light even in a direct
+        /// LabScaffold load. Water renders correctly without ShellScene.
+        /// </summary>
+        static void LaunchDirectLab(string holeGeoPath, string scenarioKey)
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogError("[LoopV2SmokeBotMenu] Stop play mode first before launching a direct-lab scenario.");
+                return;
+            }
+
+            Debug.Log($"[LoopV2SmokeBotMenu] LaunchDirectLab: scenario='{scenarioKey}' geo='{holeGeoPath}'");
+
+            // 1. Open LabScaffold as the host (single mode — never saves).
+            var labScene = EditorSceneManager.OpenScene(LabScenePath, OpenSceneMode.Single);
+            if (!labScene.IsValid())
+            {
+                Debug.LogError($"[LoopV2SmokeBotMenu] Failed to open LabScaffold at {LabScenePath}");
+                return;
+            }
+
+            // 2. Open the hole geo additively.
+            var geoScene = EditorSceneManager.OpenScene(holeGeoPath, OpenSceneMode.Additive);
+            if (!geoScene.IsValid())
+                Debug.LogWarning($"[LoopV2SmokeBotMenu] Failed to open geo scene '{holeGeoPath}' — PhysicsLabController will load it at runtime.");
+
+            // 3. Arm via SessionState (mirrors Launch()).
+            Golfin.Physics.Viewer.LoopV2SmokeBot.Scenario = scenarioKey;
+            Golfin.Physics.Viewer.LoopV2SmokeBot.Armed    = true;
+
+            // 4. DisableSceneReload guard (same as Launch()).
+            bool hadSceneReloadDisabled = EditorSettings.enterPlayModeOptionsEnabled &&
+                (EditorSettings.enterPlayModeOptions & EnterPlayModeOptions.DisableSceneReload) != 0;
+            if (hadSceneReloadDisabled)
+            {
+                Debug.LogWarning("[LoopV2SmokeBotMenu] DisableSceneReload detected — temporarily enabling scene reload for this run.");
+                EditorSettings.enterPlayModeOptions &= ~EnterPlayModeOptions.DisableSceneReload;
+            }
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RestoreSceneReload", hadSceneReloadDisabled);
+
+            Debug.Log($"[LoopV2SmokeBotMenu] DirectLab armed. Scenario='{scenarioKey}'. Entering play mode…");
             EditorApplication.EnterPlaymode();
         }
 

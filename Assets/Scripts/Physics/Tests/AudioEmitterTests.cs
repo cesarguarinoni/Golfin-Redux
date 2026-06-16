@@ -161,6 +161,34 @@ namespace Golfin.Physics.Tests
             Assert.AreEqual(SfxId.LandRough, _played[0]);
         }
 
+        // ── 4b. Putt: AtRest settle + roll hits do NOT publish a ground sound ──
+        // Cesar 2026-06-16: a putt rolling to a stop must not thud. With IsPutt true,
+        // both the AtRest settle and any roll hits are suppressed; only the cup still fires.
+
+        [Test]
+        public void Putt_AtRestAndRollHits_SuppressGroundSound()
+        {
+            var shotGo = new GameObject("PuttShotController");
+            var sc = shotGo.AddComponent<ShotController>();
+            sc.IsPutt = true;
+            _emitter.SetShotForTest(sc);
+            _gates.VelocityGate = 0f; // would otherwise pass; putt suppression must win
+
+            // A roll hit on the green must be suppressed
+            _emitter.FireHitForTest(MakeHit(3f, SurfaceType.Green, isStop: false));
+            // The settle (AtRest) on the green must be suppressed
+            _emitter.FireStateChangeForTest(MakeStateChange(BallState.Rolling, BallState.AtRest, SurfaceType.Green));
+
+            Assert.AreEqual(0, _played.Count, "A putt must publish NO land/settle ground sound");
+
+            // ...but a putt that drops still gets the cup sound
+            _emitter.FireStateChangeForTest(MakeStateChange(BallState.Rolling, BallState.InCup, SurfaceType.Green));
+            Assert.AreEqual(1, _played.Count, "A sunk putt must still publish the cup sound");
+            Assert.AreEqual(SfxId.HitBallIn, _played[0]);
+
+            UnityEngine.Object.DestroyImmediate(shotGo);
+        }
+
         // ── 5. InCup fires HitBallIn ─────────────────────────────────────────
 
         [Test]

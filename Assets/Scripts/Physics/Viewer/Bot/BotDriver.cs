@@ -659,10 +659,14 @@ namespace Golfin.Physics.Viewer.Bot
         /// Loops until the ball is InCup or the stroke count reaches par+3 (safety net seam).
         /// Normal PlayRate is left untouched so each shot animates its full trajectory.
         /// </summary>
-        public IEnumerator PlayHoleToCup(int par)
+        /// <param name="firstStrokePowerOverride">When &gt; 0, overrides the first-stroke power
+        /// (default 1.0 = Driver full). Use values like 0.55 on par-3 holes to keep
+        /// the ball in play — Driver at full power carries ~250m which overshoots short
+        /// holes into OB.</param>
+        public IEnumerator PlayHoleToCup(int par, float firstStrokePowerOverride = 0f)
         {
             int maxStrokes = par + 3;
-            LogStep($"=== PlayHoleToCup: par={par}, stroke cap={maxStrokes} ===");
+            LogStep($"=== PlayHoleToCup: par={par}, stroke cap={maxStrokes}, firstStrokePowerOverride={firstStrokePowerOverride:F2} ===");
 
             var ctrl = UnityEngine.Object.FindObjectOfType<PhysicsLabController>();
             if (ctrl == null) { LogStep("PlayHoleToCup FAIL: no PhysicsLabController"); yield break; }
@@ -686,7 +690,8 @@ namespace Golfin.Physics.Viewer.Bot
                 Vector3 flat = new Vector3(cup.x - ball.x, 0f, cup.z - ball.z);
                 float dist = flat.magnitude;
 
-                SelectShot(dist, isFirstStroke, out int club, out float power01, out string label);
+                SelectShot(dist, isFirstStroke, out int club, out float power01, out string label,
+                    firstStrokePowerOverride);
                 isFirstStroke = false;
 
                 LogStep($"Stroke {strokes}: ball={ball:F1} cup={cup:F1} dist={dist:F1}m — {label} club={club} power={power01:F2}");
@@ -830,16 +835,21 @@ namespace Golfin.Physics.Viewer.Bot
         ///
         /// Club indices: 0=Driver, 1=Iron 7, 2=Wedge, 3=Putter (PhysicsLabController.PutterIndex)
         /// </summary>
-        void SelectShot(float dist, bool isFirstStroke, out int club, out float power01, out string label)
+        void SelectShot(float dist, bool isFirstStroke, out int club, out float power01, out string label,
+            float firstStrokePowerOverride = 0f)
         {
             int putter = PhysicsLabController.PutterIndex;
 
-            // First stroke: always Driver at full power (~250m carry for Par 5).
+            // First stroke: Driver. Power defaults to 1.0 (full) unless overridden.
+            // On par-3 holes pass firstStrokePowerOverride ≈ 0.55 to keep the ball in play
+            // (Driver at 100% carries ~250m which overshoots any par-3 green into OB).
             if (isFirstStroke)
             {
                 club    = 0;
-                power01 = 1.0f;
-                label   = $"Driver full power (first stroke, dist={dist:F0}m to cup)";
+                power01 = firstStrokePowerOverride > 0f
+                    ? Mathf.Clamp01(firstStrokePowerOverride)
+                    : 1.0f;
+                label   = $"Driver (first stroke, dist={dist:F0}m to cup, power={power01:F2})";
                 return;
             }
 

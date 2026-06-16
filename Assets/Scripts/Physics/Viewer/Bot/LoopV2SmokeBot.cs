@@ -164,6 +164,20 @@ namespace Golfin.Physics.Viewer
                 case "audio_gameplay_shots":
                     scenarioRoutine = Bot.Scenarios.AudioGameplayShots(driver);
                     break;
+                case "audio_gameplay_v3":
+                    scenarioRoutine = Bot.Scenarios.AudioGameplayShotsV3(driver);
+                    break;
+                // Order 350 focused audio fidelity clips (2026-06-16):
+                case "audio_putt_to_cup":
+                    scenarioRoutine = Bot.Scenarios.AudioPuttToCup(driver);
+                    break;
+                case "audio_water_splash_sfx":
+                    scenarioRoutine = Bot.Scenarios.AudioWaterSplashSfx(driver);
+                    break;
+                // Order 350 focused audio fidelity clip — 1v1 match stinger (2026-06-16):
+                case "audio_match_stinger":
+                    scenarioRoutine = Bot.Scenarios.AudioMatchStinger(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

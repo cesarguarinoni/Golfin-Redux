@@ -214,6 +214,28 @@ namespace Golfin.Physics.Viewer.Editor
         static bool ValidateResolutionClip() => !EditorApplication.isPlaying;
 
         /// <summary>
+        /// Order 350 audio fidelity clip: drives a near-green 1v1 match to completion on Hole_04
+        /// so the result modal appears → VersusResultHandler fires MatchWin/MatchLose stinger SFX.
+        /// Both P1 and P2 are bot-driven (P2 also near pin so match ends quickly).
+        /// Near-green start: (-36.12, 17.0, 27.59) [~3m from Hole_04 pin] — same as Clip B.
+        /// Audio ON. Custom output path for the sound_effects task.
+        /// Max 30s recording — near-green match resolves in ~22-27s.
+        /// </summary>
+        [MenuItem("GOLFIN/Capture 1v1/Record Audio Match Stinger")]
+        public static void RecordAudioMatchStinger()
+        {
+            BotVideoRecorder.CaptureAudio = true;
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 30;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/sound_effects/videos/audio_match_stinger";
+            BotVideoRecorder.Arm();
+            Launch("audio_match_stinger");
+        }
+
+        [MenuItem("GOLFIN/Capture 1v1/Record Audio Match Stinger", isValidateFunction: true)]
+        static bool ValidateAudioMatchStinger() => !EditorApplication.isPlaying;
+
+        /// <summary>
         /// Order 346 / 2b visual gate — sloppy bot (DebugLevelOverride=1, bracket minLevel=1).
         /// aimError=±6°, powerError=±0.12, clubNoise=25% — visibly wandering aim and wrong clubs.
         /// Records a full match on Hole_04 (same hole as Clip B).
@@ -543,6 +565,17 @@ namespace Golfin.Physics.Viewer.Editor
             BotVideoRecorder.MaxRecordSecondsOverride = 60;
             Debug.Log("[VersusHudCaptureMenu] versus_bot_difficulty: OnMatchReadyToBegin — " +
                       "starting BotVideoRecorder. 60s watchdog (Hole_04 par-3).");
+            BotVideoRecorder.Begin();
+        }
+
+        // ── Deferred recorder handler for audio_match_stinger (Order 350 audio fidelity) ──
+        // Near-green start resolves in ~22-27s. Uses default 30s watchdog (no override needed).
+        // CaptureAudio=true set by RecordAudioMatchStinger() before Arm() — already in SessionState.
+        static void OnAudioMatchStingerReadyHandler()
+        {
+            VersusMatchController.OnMatchReadyToBegin -= OnAudioMatchStingerReadyHandler;
+            Debug.Log("[VersusHudCaptureMenu] audio_match_stinger: OnMatchReadyToBegin received — " +
+                      "starting BotVideoRecorder now. Default 30s watchdog (near-green ~22-27s).");
             BotVideoRecorder.Begin();
         }
 
@@ -912,6 +945,51 @@ namespace Golfin.Physics.Viewer.Editor
                     Debug.Log($"[VersusHudCaptureMenu] {scenario}: BotVideoRecorder deferred to OnMatchReadyToBegin (60s watchdog).");
                     return;
                 }
+                else if (scenario == "audio_match_stinger")
+                {
+                    // Order 350 audio fidelity: drive a near-green 1v1 match on Hole_04 to completion
+                    // so the result modal fires MatchWin/MatchLose/MatchDraw stinger SFX.
+                    // Near-green start: (-36.12, 17.0, 27.59) [~3m from Hole_04 pin].
+                    // CaptureAudio=true already set in SessionState by RecordAudioMatchStinger().
+                    // BotVideoRecorder deferred to OnMatchReadyToBegin to avoid Y-flip / hole-load overhead.
+                    var nearGreenLie = new Vector3(-36.12f, 17.0f, 27.59f);
+
+                    Golfin.Gameplay.Session.GameSession.IsVersus = true;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[0] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "CAMILA",
+                        Level       = 13,
+                        TurnCount   = 1,
+                        Lie         = nearGreenLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[1] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "TARO",
+                        Level       = 17,
+                        TurnCount   = 0,
+                        Lie         = nearGreenLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.ActiveIndex = 0;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Raise();
+
+                    var vmcStinger = Object.FindAnyObjectByType<VersusMatchController>();
+                    if (vmcStinger != null)
+                    {
+                        vmcStinger._debugBothBots = true;
+                        vmcStinger._debugStartLie = nearGreenLie;
+                        Debug.Log("[VersusHudCaptureMenu] audio_match_stinger: _debugBothBots=true, " +
+                                  "_debugStartLie=(-36.12, 17.0, 27.59) [~3m from Hole_04 pin]. " +
+                                  "Match ends quickly so result stinger SFX fires within 30s window.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[VersusHudCaptureMenu] audio_match_stinger: VersusMatchController not found.");
+                    }
+
+                    VersusMatchController.OnMatchReadyToBegin += OnAudioMatchStingerReadyHandler;
+                    Debug.Log("[VersusHudCaptureMenu] audio_match_stinger: BotVideoRecorder deferred to OnMatchReadyToBegin.");
+                    return;
+                }
                 else if (scenario == "versus_resolution_clip")
                 {
                     // Clip B — near-green resolution proof (iter-9 two-clip strategy, Cesar 2026-06-10).
@@ -1030,6 +1108,7 @@ namespace Golfin.Physics.Viewer.Editor
                 VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterH18ReadyHandler;
                 VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningSlopedReadyHandler;
                 VersusMatchController.OnMatchReadyToBegin -= OnBotDifficultyReadyHandler;
+                VersusMatchController.OnMatchReadyToBegin -= OnAudioMatchStingerReadyHandler;
 
                 // Clear the per-scenario watchdog override so it never leaks to a future recording.
                 BotVideoRecorder.MaxRecordSecondsOverride = 0;

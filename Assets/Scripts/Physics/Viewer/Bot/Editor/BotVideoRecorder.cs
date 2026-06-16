@@ -133,6 +133,48 @@ namespace Golfin.Physics.Viewer.Editor
         // may occur between setting the value and Begin() firing.
         public static int MaxRecordSecondsOverride = 0;
 
+        // Deferred-start arm (2026-06-16, Order 350 audio v2 pass).
+        // When a scenario needs to START recording mid-run (AFTER the hole/scene is fully
+        // loaded and several frames have rendered), use ArmDeferred()+BeginDeferred() instead
+        // of Arm()+Begin(). This prevents the EnteredPlayMode Y-flip transient from being
+        // captured in the first frame.
+        //
+        // Contract:
+        //   1. Menu item calls ArmDeferred() (sets DeferredRecord=true; does NOT set RecordVideo
+        //      so Begin() is a no-op at EnteredPlayMode).
+        //   2. Scenario calls BeginDeferred() mid-coroutine when the hole is stable.
+        //   3. BeginDeferred() behaves identically to Begin() except it reads DeferredRecord
+        //      instead of RecordVideo.
+        const string DeferredRecordKey = "LoopV2SmokeBot.DeferredRecord";
+
+        /// <summary>Deferred-start flag set by ArmDeferred(). Cleared by BeginDeferred().</summary>
+        public static bool DeferredRecord
+        {
+            get => SessionState.GetBool(DeferredRecordKey, false);
+            set => SessionState.SetBool(DeferredRecordKey, value);
+        }
+
+        /// <summary>Arm a DEFERRED recording. Call before entering play mode. The scenario
+        /// calls BeginDeferred() once the scene is fully loaded to avoid the Y-flip transient.</summary>
+        public static void ArmDeferred() => DeferredRecord = true;
+
+        /// <summary>Start recording mid-scenario (deferred start). Safe to call from a
+        /// play-mode coroutine. No-op unless DeferredRecord was armed via ArmDeferred().
+        /// Shares the same SessionGuard as Begin() — only one full-res recording per session.</summary>
+        public static void BeginDeferred()
+        {
+            if (!DeferredRecord) return;
+            DeferredRecord = false;   // clear immediately — never leak
+
+            // Inject RecordVideo so the shared Begin() path activates.
+            // We must NOT call RecordVideo = true and then Begin() separately because
+            // the guard check inside Begin() reads RecordVideo (not DeferredRecord), so
+            // we temporarily set it, call Begin(), then ensure it is cleared.
+            RecordVideo = true;
+            Begin();
+            // Begin() clears RecordVideo as its first act after the guard — no extra clear needed.
+        }
+
         // Saved render-load settings restored in End().
         static double _recordStartEditorTime;
         static int _savedTargetFps;

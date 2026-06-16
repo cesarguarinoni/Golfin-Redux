@@ -32,6 +32,7 @@ namespace Golfin.Physics.Viewer
         // ── Runtime refs set by Configure() ───────────────────────────────────
         BallAnimator     _anim;
         BallStateMachine _sm;
+        ShotController   _shot;   // used to suppress land/settle sounds during a putt
 
         // ── De-dup: suppress settle sound if the IsStop hit already covered it ─
         bool _stopHitFired;
@@ -47,14 +48,13 @@ namespace Golfin.Physics.Viewer
         /// </summary>
         public void Configure(BallAnimator anim, BallStateMachine sm, ShotController shot)
         {
-            _ = shot; // unused — kept for signature parity with BallTrailController
-
             // Idempotent re-wire
             if (_anim != null) _anim.OnHit -= HandleHit;
             if (_sm   != null) _sm.OnStateChanged -= HandleStateChanged;
 
             _anim = anim;
             _sm   = sm;
+            _shot = shot;   // putt detection (suppresses land/settle ground sounds on a putt)
 
             if (_anim != null) _anim.OnHit        += HandleHit;
             if (_sm   != null) _sm.OnStateChanged  += HandleStateChanged;
@@ -70,6 +70,12 @@ namespace Golfin.Physics.Viewer
 
         void HandleHit(TerrainHit hit)
         {
+            // Putt: the ball rolls along the green and never lands from the air, so it must
+            // not produce any land/roll ground sound (Cesar 2026-06-16). The stroke (Swing+Hit)
+            // and the cup (InCup) still fire; only the ground impact is suppressed.
+            if (_shot != null && _shot.IsPutt)
+                return;
+
             // PlayRate cap: suppress per-bounce sounds at Instant or very high rate.
             SfxId landId = SurfaceToLandSfx(hit.Surface);
             float playRateCap = GetPlayRateCap(landId);
@@ -111,8 +117,10 @@ namespace Golfin.Physics.Viewer
             }
             else if (c.Next == BallState.AtRest)
             {
-                // Settle sound — only if the IsStop hit event didn't already cover it.
-                if (!_stopHitFired)
+                // Settle sound — only if the IsStop hit event didn't already cover it, and
+                // NOT for a putt (a putt rolling to a stop must not thud — Cesar 2026-06-16).
+                bool isPutt = _shot != null && _shot.IsPutt;
+                if (!_stopHitFired && !isPutt)
                 {
                     SfxId landId = SurfaceToLandSfx(c.Surface);
                     SfxBus.Play(landId);
@@ -222,6 +230,11 @@ namespace Golfin.Physics.Viewer
         /// Override _lastLandSfxTime for interval-gate tests.
         /// </summary>
         public void SetLastLandSfxTimeForTest(float t) => _lastLandSfxTime = t;
+
+        /// <summary>
+        /// Inject a ShotController for putt-suppression tests.
+        /// </summary>
+        public void SetShotForTest(ShotController shot) => _shot = shot;
 
         /// <summary>
         /// Expose surface→SfxId mapping for test assertions.

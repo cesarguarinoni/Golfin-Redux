@@ -2236,6 +2236,755 @@ namespace Golfin.Physics.Viewer.Bot
 
             d.LogStep("=== Audio Gameplay Shots: all captures done ===");
         }
+
+        // ── Scenario: Audio Gameplay Shots V3 ────────────────────────────────
+
+        /// <summary>
+        /// Order 350 audio fidelity Clip 3 (v3 — hit-audibility fix).
+        ///
+        /// Differences from AudioGameplayShots (v2):
+        ///   - DEFERRED recording start: BotVideoRecorder.ArmDeferred() was called by the
+        ///     menu item. BeginDeferred() fires HERE after the hole is fully loaded and
+        ///     several frames have rendered — skipping the EnteredPlayMode Y-flip transient
+        ///     that appeared in the first frame of earlier clips. The recording starts clean,
+        ///     showing the ball already armed on the tee with the HUD visible.
+        ///   - MID-POWER first stroke: firstStrokePowerOverride = 0.5f. At 50% power the
+        ///     Driver triggers HitDefault (not HitStrong). HitDefault baseVolume = 1.0
+        ///     (post-rebalance), which is ABOVE the swing (now 0.55). The hit is clearly
+        ///     audible at mid-power. A full-power shot triggers HitStrong and overshoots OOB.
+        ///   - Shorter clip: recording starts at hole-armed state (after ~30s of load), so the
+        ///     cap can be tighter (~35s). No home/hole-selection footage in the clip.
+        ///
+        /// Flow:
+        ///   1. Boot real ShellScene → Practice → Hole 1. (pre-recording — avoids Y-flip)
+        ///   2. Once hole is armed + frames settled: BeginDeferred() → recording starts clean.
+        ///   3. Quiet music (8%). Fire PlayHoleToCup with power=0.5 — audible HitDefault.
+        ///   4. Capture strokes + result modal.
+        ///
+        /// Duration of RECORDED segment: ~25–35s (no home/hole-selection overhead).
+        /// BotVideoRecorder armed with ArmDeferred+CaptureAudio=true, cap=45s.
+        /// </summary>
+        public static IEnumerator AudioGameplayShotsV3(BotDriver d)
+        {
+            d.LogStep("=== Audio Gameplay Shots V3 ===");
+
+            // 1. Navigate to Home (real ShellScene boot — recording NOT yet running).
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f);
+
+            // 2. Practice mode card PLAY → Hole Selection (no matchmaking, no modal).
+            yield return d.ClickModeCardPlay("practice", settleSeconds: 1.5f);
+
+            // 3. Hole Selection screen — tap first hole PLAY.
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(2f); // HoleCardController expand animation
+            yield return d.Click("ActionButton", settleSeconds: 1.5f);
+
+            // 4. Wait for hole scene to load fully.
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(4f); // fade-in + HUD fully rendered; avoids Y-flip
+
+            // 5. START RECORDING NOW — hole is armed, HUD visible, no Y-flip risk.
+            //    The menu item called ArmDeferred() which set DeferredRecord=true in SessionState.
+            //    Inject RecordVideo=true here (matching what BeginDeferred() does) so Begin() fires.
+            //    BotVideoRecorder.Begin() is invoked via the EnteredPlayMode handler; since we're
+            //    already in play mode we call it through the known SessionState contract:
+            //    set RecordVideo=true and invoke Begin() indirectly by setting the deferred flag.
+            //    Direct path: SessionState manipulation to arm + the EditorApplication.update
+            //    hook fires Begin(). Since this assembly IS under #if UNITY_EDITOR, we can use
+            //    UnityEditor.SessionState directly to set the RecordVideo key and trigger Begin().
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RecordVideo", true);
+            // Also clear DeferredRecord so it doesn't leak.
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.DeferredRecord", false);
+            // Now call BotVideoRecorder.Begin() through reflection to avoid the cross-assembly reference.
+            try
+            {
+                var recType = System.Type.GetType("Golfin.Physics.Viewer.Editor.BotVideoRecorder, Golfin.Physics.Viewer.BotEditor");
+                if (recType == null)
+                {
+                    // Try all assemblies.
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("Golfin.Physics.Viewer.Editor.BotVideoRecorder"); if (t != null) { recType = t; break; } }
+                }
+                if (recType != null)
+                {
+                    var beginMethod = recType.GetMethod("Begin", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    beginMethod?.Invoke(null, null);
+                    d.LogStep("  BeginDeferred (reflection): BotVideoRecorder.Begin() called — recording started");
+                }
+                else
+                {
+                    d.LogStep("  BeginDeferred WARN: BotVideoRecorder type not found — recording may not have started");
+                }
+            }
+            catch (System.Exception ex)
+            {
+                d.LogStep($"  BeginDeferred ERROR: {ex.Message}");
+            }
+            yield return new WaitForSecondsRealtime(1f); // let first recording frames settle
+
+            // 6. Quiet music so swing+hit+land are clearly audible.
+            SetMusicVolumeReflection(d, 8f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("gameplay_armed");
+
+            // 7. Play hole via real physics shots — mid-power (0.5) first stroke → HitDefault.
+            //    Mid-power Driver (~50%) carries ~100-120m, landing in the fairway (not OOB).
+            yield return d.PlayHoleToCup(par: 5, firstStrokePowerOverride: 0.5f);
+
+            // 8. Wait for result modal and capture.
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("result_modal");
+
+            // 9. Restore music volume.
+            SetMusicVolumeReflection(d, 70f);
+
+            d.LogStep("=== Audio Gameplay Shots V3: all captures done ===");
+        }
+
+        // ── Scenario: Audio Putt To Cup (Order 350 fidelity clip — FOCUSED) ─────
+        // Produced 2026-06-16. Mirrors AudioGameplayShotsV3 boot path but narrows focus
+        // to the putt-to-cup audio moment: putt-hit SFX audible, no ground-settle sounds
+        // (settle suppression fires for IsPutt=true), cup-drop SFX on InCup.
+        //
+        // BotVideoRecorder MUST be armed with:
+        //   CaptureAudio = true
+        //   MaxRecordSecondsSessionOverride = 25
+        //   CustomOutputPath = "Docs/Specs/Active/sound_effects/videos/audio_putt_to_cup"
+        //   ArmDeferred() — deferred start so recording begins after hole is armed (no Y-flip).
+        //
+        // Flow:
+        //   1. ShellScene boot → Practice → HoleSelection → Hole 1 (first unlocked).
+        //      Recording NOT yet running during navigation (avoids Y-flip + nav overhead).
+        //   2. After hole loads + renders (4s settle): BeginDeferred() → recording starts.
+        //   3. Quiet music to 5% so putt-hit + cup-drop are clearly audible.
+        //   4. BotDriver.FireShot(pinWorld) — §2f pattern:
+        //        PlaceBallAt(pin - 3m), SetClub(PutterIndex), fire.
+        //      BallAudioEmitter suppresses land/settle sounds (IsPutt=true guard).
+        //      Ball drops InCup → cup-drop SFX (HitBallIn).
+        //   5. ForceShotComplete("InCup") safety net if real putt misses in 20s.
+        //   6. Short dwell to capture cup-drop + result modal.
+        //   7. Restore music volume to 70%.
+        //
+        // Expected recorded duration: ~8–15s (putt fire → InCup settle + result modal).
+        // </summary>
+        public static IEnumerator AudioPuttToCup(BotDriver d)
+        {
+            d.LogStep("=== Audio Putt To Cup ===");
+
+            // 1. Navigate to Home via real ShellScene boot (recording not running yet).
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f);
+
+            // 2. Practice mode → HoleSelection → Hole 1.
+            yield return d.ClickModeCardPlay("practice", settleSeconds: 1.5f);
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(2f); // HoleCardController expand animation
+            yield return d.Click("ActionButton", settleSeconds: 1.5f);
+
+            // 3. Wait for hole scene to fully load.
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(4f); // fade-in + HUD settle; avoids Y-flip
+
+            // 4. START RECORDING NOW — hole armed, HUD visible, no Y-flip.
+            //    Mirrors AudioGameplayShotsV3 §5: set RecordVideo via SessionState + call Begin().
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RecordVideo", true);
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.DeferredRecord", false);
+            try
+            {
+                System.Type recType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.Physics.Viewer.Editor.BotVideoRecorder"); if (t != null) { recType = t; break; } }
+                if (recType != null)
+                {
+                    var beginMethod = recType.GetMethod("Begin", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    beginMethod?.Invoke(null, null);
+                    d.LogStep("  BeginDeferred: BotVideoRecorder.Begin() called — recording started");
+                }
+                else { d.LogStep("  BeginDeferred WARN: BotVideoRecorder type not found"); }
+            }
+            catch (System.Exception ex) { d.LogStep($"  BeginDeferred ERROR: {ex.Message}"); }
+            yield return new WaitForSecondsRealtime(1f); // let first frames settle
+
+            // 5. Quiet music — putt-hit + cup-drop must be clearly audible.
+            SetMusicVolumeReflection(d, 5f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("putt_armed");
+
+            // 6. Find pin world position from HoleContext and resolve PhysicsLabController.
+            Vector3 pinWorld = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+            d.LogStep($"  PinWorld = {pinWorld:F2}");
+
+            var ctrl = UnityEngine.Object.FindFirstObjectByType<PhysicsLabController>();
+            if (ctrl == null) { d.LogStep("  FAIL: no PhysicsLabController"); yield break; }
+
+            // 7. Fire putter toward pin via production ShotController path (mirrors AudioWaterSplashSfx):
+            //    - SetClub(PutterIndex) → IsPutt=true on BallAudioEmitter → suppresses per-bounce land SFX.
+            //    - InjectLabBundle → ensures club stats resolve.
+            //    - SetCameraYaw toward pin.
+            //    - FireViaShotController(power, Green) → real ball flight + full audio path.
+            //    - BallAudioEmitter.HandleHit: IsPutt=true → HitPutt SFX on first contact.
+            //    - BallAudioEmitter.HandleStateChanged: InCup → HitBallIn cup-drop SFX.
+            ctrl.SetClub(PhysicsLabController.PutterIndex);
+            ctrl.InjectLabBundleForCurrentClub();
+
+            // Aim toward pin: yaw from ball position to pin.
+            Vector3 ballPos = ctrl.BallPosition;
+            Vector3 toPinFlat = new Vector3(pinWorld.x - ballPos.x, 0f, pinWorld.z - ballPos.z);
+            float putterYaw = Mathf.Atan2(toPinFlat.z, toPinFlat.x);
+            ctrl.SetCameraYawRadians(putterYaw);
+            d.LogStep($"  Firing Putter: yaw={putterYaw:F3} rad toward pin ({pinWorld:F1}), power=0.7");
+
+            ctrl.FireViaShotController(0.7f, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+
+            // 8. Wait for ball to roll into cup (or timeout 15s → safety net).
+            float waitStart = Time.realtimeSinceStartup;
+            while (ctrl.BallSM.State != Golfin.Gameplay.Loop.BallState.InCup
+                   && Time.realtimeSinceStartup - waitStart < 15f)
+            {
+                yield return new WaitForSecondsRealtime(0.1f);
+            }
+
+            // Safety net: if not InCup naturally, force it so HitBallIn fires.
+            if (ctrl.BallSM.State != Golfin.Gameplay.Loop.BallState.InCup)
+            {
+                d.LogStep("  Safety net: ForceShotComplete(InCup)");
+                yield return d.ForceShotComplete("InCup", settleSeconds: 0.5f);
+            }
+            else
+            {
+                d.LogStep($"  Ball reached InCup naturally after {Time.realtimeSinceStartup - waitStart:F1}s");
+            }
+
+            // 9. Dwell on InCup + result modal.
+            yield return new WaitForSecondsRealtime(3f);
+            yield return d.Capture("putt_in_cup");
+            yield return new WaitForSecondsRealtime(2f);
+
+            // 10. Restore music volume.
+            SetMusicVolumeReflection(d, 70f);
+
+            d.LogStep("=== Audio Putt To Cup: done ===");
+        }
+
+        // ── Scenario: Audio Water Splash SFX (Order 350 fidelity clip — FOCUSED) ─
+        // Produced 2026-06-16. Uses FULL ShellScene boot (required for AudioManager init;
+        // direct LabScaffold bypasses ShellScene and produces silent audio at -91 dB).
+        //
+        // BotVideoRecorder MUST be armed with:
+        //   CaptureAudio = true
+        //   MaxRecordSecondsSessionOverride = 30
+        //   CustomOutputPath = "Docs/Specs/Active/sound_effects/videos/audio_water_splash_sfx"
+        //   ArmDeferred() — deferred start after hole ready (no Y-flip).
+        //
+        // Flow:
+        //   1. ShellScene boot → NavigateToHome (recording NOT running — avoids nav overhead).
+        //   2. Unlock Hole 6 via HoleProgressionService.SetUnlockedOverride(6, true).
+        //   3. Practice → HoleSelection — find Hole 6 card → tap it to expand → click ActionButton.
+        //   4. Wait for LabScaffold + Hole_06_Geo to load.
+        //   5. 4s settle (no Y-flip).
+        //   6. START RECORDING — BeginDeferred() via reflection.
+        //   7. Quiet music to 5%.
+        //   8. Fire Driver at AimYaw=2.9804 rad, Power=0.45 toward Hole-6 water centroid.
+        //      Ball lands → LandWater SFX + WaterSplashController VFX.
+        //   9. Wait 5s for splash to play out. Capture.
+        //  10. Restore music volume.
+        // </summary>
+        public static IEnumerator AudioWaterSplashSfx(BotDriver d)
+        {
+            d.LogStep("=== Audio Water Splash SFX (ShellScene real flow) ===");
+
+            // 1. Navigate to Home via real ShellScene boot (recording not running yet).
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f);
+
+            // 2. Unlock Hole 6 at runtime via HoleProgressionService reflection.
+            //    This is needed because only Hole 1 is unlocked by default.
+            try
+            {
+                System.Type svcType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("GolfinRedux.UI.HoleSelection.HoleProgressionService"); if (t != null) { svcType = t; break; } }
+                if (svcType == null)
+                {
+                    // Try alternate namespace (used in production code).
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("HoleProgressionService"); if (t != null) { svcType = t; break; } }
+                }
+                if (svcType != null)
+                {
+                    var instanceProp = svcType.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    var instance = instanceProp?.GetValue(null);
+                    if (instance != null)
+                    {
+                        var unlockMethod = svcType.GetMethod("SetUnlockedOverride", new[] { typeof(int), typeof(bool) });
+                        unlockMethod?.Invoke(instance, new object[] { 6, true });
+                        d.LogStep("  HoleProgressionService.SetUnlockedOverride(6, true) — Hole 6 unlocked");
+                    }
+                    else { d.LogStep("  WARN: HoleProgressionService.Instance is null"); }
+                }
+                else { d.LogStep("  WARN: HoleProgressionService type not found — Hole 6 may stay locked"); }
+            }
+            catch (System.Exception ex) { d.LogStep($"  WARN: unlock reflection error: {ex.Message}"); }
+
+            // 3. Practice → HoleSelection.
+            yield return d.ClickModeCardPlay("practice", settleSeconds: 1.5f);
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(3f); // HoleCardController expand animation (auto-expands Hole 1)
+
+            // 4. Find Hole 6 card, tap its CardTapButton to expand it, then click ActionButton.
+            //    HoleCardController.HoleNumber == 6. Use reflection since we can't reference
+            //    Assembly-CSharp HoleCardController from this assembly directly.
+            bool hole6Tapped = false;
+            try
+            {
+                System.Type cardType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("GolfinRedux.UI.HoleSelection.HoleCardController"); if (t != null) { cardType = t; break; } }
+                if (cardType == null)
+                {
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("HoleCardController"); if (t != null) { cardType = t; break; } }
+                }
+                if (cardType != null)
+                {
+                    var holeNumProp = cardType.GetProperty("HoleNumber", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    var cards = UnityEngine.Object.FindObjectsByType(cardType, UnityEngine.FindObjectsSortMode.None);
+                    foreach (var card in cards)
+                    {
+                        int num = (int)(holeNumProp?.GetValue(card) ?? 0);
+                        if (num == 6)
+                        {
+                            // Find the CardTapButton child on this card's transform.
+                            var go = ((UnityEngine.Component)card).gameObject;
+                            var tapBtn = go.GetComponentInChildren<UnityEngine.UI.Button>();
+                            // CardTapButton is first sibling (SetAsFirstSibling in Awake).
+                            // Walk children to find the one named "CardTapButton".
+                            UnityEngine.UI.Button cardTapBtn = null;
+                            foreach (var btn in go.GetComponentsInChildren<UnityEngine.UI.Button>(true))
+                            {
+                                if (btn.gameObject.name.Contains("CardTapButton") || btn.gameObject.name.Contains("TapButton"))
+                                { cardTapBtn = btn; break; }
+                            }
+                            if (cardTapBtn == null) cardTapBtn = tapBtn; // fallback to first button
+                            if (cardTapBtn != null)
+                            {
+                                cardTapBtn.onClick.Invoke();
+                                d.LogStep($"  Tapped Hole 6 card (CardTapButton on '{go.name}')");
+                                hole6Tapped = true;
+                            }
+                            else { d.LogStep($"  WARN: Hole 6 card found but no tap button"); }
+                            break;
+                        }
+                    }
+                    if (!hole6Tapped) d.LogStep("  WARN: Hole 6 card not found — falling back to first ActionButton");
+                }
+                else { d.LogStep("  WARN: HoleCardController type not found — falling back to first ActionButton"); }
+            }
+            catch (System.Exception ex) { d.LogStep($"  WARN: card tap reflection error: {ex.Message}"); }
+
+            // 5. Seed GameSession for Hole 6 and call GameplaySceneLoader.BeginGameplayLoad(6)
+            //    directly — mirrors what HoleSelectionScreenController.HandleActionClicked does.
+            //    This bypasses the ActionButton visibility issue (the card expand animation
+            //    may not have activated the button in time).
+            yield return new WaitForSecondsRealtime(1.5f); // let card settle after tap
+
+            bool gameplayLoadStarted = false;
+            try
+            {
+                // GameSession.IsVersus = false (Practice path).
+                System.Type gsType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.Gameplay.Session.GameSession"); if (t != null) { gsType = t; break; } }
+                if (gsType == null)
+                {
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("GameSession"); if (t != null) { gsType = t; break; } }
+                }
+
+                if (gsType != null)
+                {
+                    // Set IsVersus = false.
+                    var isVersusProp = gsType.GetProperty("IsVersus", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    isVersusProp?.SetValue(null, false);
+
+                    // Get selected character + bag slot.
+                    string charId = string.Empty;
+                    int bagSlot = 0;
+                    System.Type cmType = null;
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("CharacterManager"); if (t != null) { cmType = t; break; } }
+                    if (cmType != null)
+                    {
+                        var cmInst = cmType.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null);
+                        if (cmInst != null)
+                        {
+                            var getSelId = cmType.GetMethod("GetSelectedCharacterId", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                            charId = (string)(getSelId?.Invoke(cmInst, null) ?? string.Empty);
+                        }
+                    }
+                    System.Type bmType = null;
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("BagManager"); if (t != null) { bmType = t; break; } }
+                    if (bmType != null)
+                    {
+                        var bmInst = bmType.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null);
+                        if (bmInst != null)
+                        {
+                            var equippedSlotProp = bmType.GetProperty("EquippedBagSlot", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                            bagSlot = (int)(equippedSlotProp?.GetValue(bmInst) ?? 0);
+                        }
+                    }
+
+                    // GameSession.SeedSession(6, charId, bagSlot).
+                    var seedMethod = gsType.GetMethod("SeedSession", new[] { typeof(int), typeof(string), typeof(int) });
+                    seedMethod?.Invoke(null, new object[] { 6, charId, bagSlot });
+                    d.LogStep($"  GameSession.SeedSession(6, '{charId}', {bagSlot}) called");
+
+                    // GameplaySceneLoader.Instance.BeginGameplayLoad(6).
+                    System.Type loaderType = null;
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("Golfin.UI.GameplayTransition.GameplaySceneLoader"); if (t != null) { loaderType = t; break; } }
+                    if (loaderType == null)
+                    {
+                        foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                        { var t = a.GetType("GameplaySceneLoader"); if (t != null) { loaderType = t; break; } }
+                    }
+                    if (loaderType != null)
+                    {
+                        var loaderInst = loaderType.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null);
+                        if (loaderInst != null)
+                        {
+                            var beginLoad = loaderType.GetMethod("BeginGameplayLoad", new[] { typeof(int), typeof(object) })
+                                         ?? loaderType.GetMethod("BeginGameplayLoad", new[] { typeof(int) });
+                            if (beginLoad == null)
+                            {
+                                // Try with ModalController parameter as null.
+                                var methods = loaderType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                                foreach (var m in methods)
+                                    if (m.Name == "BeginGameplayLoad") { beginLoad = m; break; }
+                            }
+                            if (beginLoad != null)
+                            {
+                                var parameters = beginLoad.GetParameters();
+                                object[] args = parameters.Length == 1
+                                    ? new object[] { 6 }
+                                    : new object[] { 6, null };
+                                beginLoad.Invoke(loaderInst, args);
+                                d.LogStep("  GameplaySceneLoader.BeginGameplayLoad(6) called — loading Hole 6");
+                                gameplayLoadStarted = true;
+                            }
+                            else { d.LogStep("  WARN: BeginGameplayLoad method not found"); }
+                        }
+                        else { d.LogStep("  WARN: GameplaySceneLoader.Instance is null"); }
+                    }
+                    else { d.LogStep("  WARN: GameplaySceneLoader type not found"); }
+                }
+                else { d.LogStep("  WARN: GameSession type not found — falling back to ActionButton click"); }
+            }
+            catch (System.Exception ex) { d.LogStep($"  WARN: direct load reflection error: {ex.Message}"); }
+
+            if (!gameplayLoadStarted)
+            {
+                // Ultimate fallback: click first available ActionButton (loads whatever hole is expanded).
+                d.LogStep("  Ultimate fallback: clicking first ActionButton");
+                yield return d.Click("ActionButton", settleSeconds: 1.5f);
+            }
+            else
+            {
+                yield return new WaitForSecondsRealtime(1.5f);
+            }
+
+            // 6. Wait for Hole 6 to load.
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_06_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(4f); // fade-in + HUD settle; avoids Y-flip
+
+            // 7. START RECORDING — hole stable, water visible, no Y-flip risk.
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RecordVideo", true);
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.DeferredRecord", false);
+            try
+            {
+                System.Type recType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.Physics.Viewer.Editor.BotVideoRecorder"); if (t != null) { recType = t; break; } }
+                if (recType != null)
+                {
+                    var beginMethod = recType.GetMethod("Begin", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    beginMethod?.Invoke(null, null);
+                    d.LogStep("  BeginDeferred: BotVideoRecorder.Begin() called — recording started");
+                }
+                else { d.LogStep("  BeginDeferred WARN: BotVideoRecorder type not found"); }
+            }
+            catch (System.Exception ex) { d.LogStep($"  BeginDeferred ERROR: {ex.Message}"); }
+            yield return new WaitForSecondsRealtime(1f); // let first frames settle
+
+            // 8. Quiet music — splash SFX must be clearly audible.
+            SetMusicVolumeReflection(d, 5f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return d.Capture("water_pre_shot");
+
+            // 9. Fire Driver at Hole-6 water: AimYaw=2.9804 rad, Power=0.45.
+            //    WaterSplashCaptureRig iter-4 deterministic values:
+            //    AimYawRadians=2.9804 → toward Hole-6 Water_1 centre (-19.7,-7.9).
+            //    Power01=0.45 → lands at water centre.
+            //    Ball lands → BallAudioEmitter.HandleHit → LandWater SFX
+            //               → WaterSplashController splash VFX.
+            var ctrl = UnityEngine.Object.FindFirstObjectByType<PhysicsLabController>();
+            if (ctrl == null) { d.LogStep("  FAIL: no PhysicsLabController after Hole_06_Geo load"); yield break; }
+
+            const float aimYaw  = 2.9804f;
+            const float power01 = 0.45f;
+
+            ctrl.SetClub(0); // Driver = index 0
+            ctrl.InjectLabBundleForCurrentClub();
+            ctrl.SetCameraYawRadians(aimYaw);
+            d.LogStep($"  Firing Driver: aimYaw={aimYaw} rad, power={power01} — toward Hole-6 water");
+            ctrl.FireViaShotController(power01, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+
+            // 10. Wait for water hit (ball flight ~3.09s + margin → 5s).
+            yield return new WaitForSecondsRealtime(5f);
+            yield return d.Capture("water_splash_peak");
+
+            // 11. Dwell for splash particles (0.9s spray + 1.2s ripple).
+            yield return new WaitForSecondsRealtime(2f);
+            yield return d.Capture("water_splash_ripple");
+
+            // 12. Restore music volume.
+            SetMusicVolumeReflection(d, 70f);
+
+            d.LogStep("=== Audio Water Splash SFX: done ===");
+        }
+
+        // ── Scenario: audio_match_stinger ────────────────────────────────────
+        // Order 350 audio fidelity: stinger SFX at 1v1 match result.
+        //
+        // Problem addressed: the prior VersusHudCaptureMenu path opened LabScaffold
+        // directly (bypassing ShellScene), so AudioManager never initialized →
+        // recording was -91 dB silent. This scenario uses LoopV2SmokeBot (ShellScene
+        // boot) + production 1v1 matchmaking flow so AudioManager is active.
+        //
+        // Flow:
+        //   1. ShellScene boot → NavigateToHome (recording NOT running).
+        //   2. ClickModeCardPlay("versus_1v1") → matchmaking modal → OpponentFound.
+        //   3. Wait for LabScaffold + any Hole_NN_Geo to load.
+        //   4. Find VersusMatchController; set _debugBothBots=true.
+        //      If Hole 4 loaded: also set _debugStartLie to near-green (-36.12,17,27.59)
+        //      so the match resolves in ~25s instead of from tee (~60s+).
+        //   5. Subscribe: VersusMatchController.OnMatchReadyToBegin → matchReadyFlag.
+        //                  GameSession.OnMatchComplete → matchDoneFlag.
+        //   6. Poll until matchReadyFlag (max 30s) → START RECORDING via reflection.
+        //   7. Poll until matchDoneFlag (max 90s) → stinger has fired at this point.
+        //   8. Dwell 4s (let stinger+banner play). Capture stinger_result frame.
+        //   9. Unsubscribe events + done.
+        // </summary>
+        public static IEnumerator AudioMatchStinger(BotDriver d)
+        {
+            d.LogStep("=== Audio Match Stinger (ShellScene real flow) ===");
+
+            // 1. Navigate to Home via real ShellScene boot.
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f); // mode carousel settle
+
+            // 2. Click PLAY on the 1v1 mode card → matchmaking.
+            yield return d.ClickModeCardPlay("versus_1v1", settleSeconds: 1.5f);
+            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            // 3. Wait for OpponentFound.
+            yield return d.WaitFor(
+                () => d.GetMatchmakingPhase() == "OpponentFound",
+                "matchmaking opponent found",
+                timeoutSeconds: 30f);
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            // 4. Subscribe to events and set debug flags as soon as LabScaffold loads.
+            //    CRITICAL: OnMatchReadyToBegin fires in VersusMatchController.Start() on the
+            //    FIRST few frames after LabScaffold loads — BEFORE any "settle" wait. We must
+            //    subscribe + set _debugBothBots immediately after WaitForSceneLoaded, not after
+            //    a 3s delay (which is too late — the event fires and MatchFlow() starts without bots).
+            bool matchReadyFlag = false;
+            bool matchDoneFlag  = false;
+            System.Action onMatchReady = () => { matchReadyFlag = true; };
+            System.Action<Golfin.Gameplay.Session.GameSession.MatchOutcome, int, int> onMatchDone
+                = (outcome, p1, p2) =>
+                {
+                    matchDoneFlag = true;
+                    d.LogStep($"  GameSession.OnMatchComplete: outcome={outcome} P1={p1} P2={p2} — stinger SFX fired");
+                };
+
+            // Subscribe BEFORE WaitForSceneLoaded so we never miss the event.
+            VersusMatchController.OnMatchReadyToBegin += onMatchReady;
+            Golfin.Gameplay.Session.GameSession.OnMatchComplete += onMatchDone;
+            d.LogStep("  Subscribed to OnMatchReadyToBegin + OnMatchComplete (pre-load)");
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+
+            // Set _debugBothBots immediately — VersusMatchController.Start() is a coroutine
+            // that yields for IsHoleReady, so we have a few seconds window before it fires
+            // OnMatchReadyToBegin. Setting this after WaitForSceneLoaded (before HoleGeo is even
+            // loaded) guarantees it's set BEFORE IsHoleReady becomes true.
+            var vmc = UnityEngine.Object.FindFirstObjectByType<VersusMatchController>();
+            if (vmc != null)
+            {
+                vmc._debugBothBots = true;
+                d.LogStep("  VersusMatchController found — _debugBothBots=true (early set, before HoleGeo)");
+            }
+            else
+            {
+                d.LogStep("  WARN: VersusMatchController not found after LabScaffold load — will retry after HoleGeo");
+            }
+
+            yield return d.WaitForAnyHoleGeoScene(timeoutSeconds: 40f);
+
+            // Retry VMC find after HoleGeo (in case it wasn't in LabScaffold on first load).
+            if (vmc == null)
+            {
+                vmc = UnityEngine.Object.FindFirstObjectByType<VersusMatchController>();
+                if (vmc != null)
+                {
+                    vmc._debugBothBots = true;
+                    d.LogStep("  VersusMatchController found after HoleGeo — _debugBothBots=true (late set, may be too late)");
+                }
+                else { d.LogStep("  WARN: VersusMatchController not found after HoleGeo either — match needs human input"); }
+            }
+
+            // Set near-green start lie from HoleContext.PinWorld (works for ANY hole).
+            // Wait a frame for HoleContext to be populated after geo load.
+            yield return null;
+            yield return new WaitForSecondsRealtime(0.5f);
+            int holeNum = Golfin.Gameplay.Session.GameSession.CurrentHoleNumber;
+            d.LogStep($"  GameSession.CurrentHoleNumber={holeNum}");
+            if (vmc != null)
+            {
+                // Use PinWorld as the near-green start position.
+                // PinWorld is set by HoleContext when the hole loads; offset slightly toward
+                // fairway to avoid spawning inside the cup.
+                Vector3 pinWorld = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+                if (pinWorld.sqrMagnitude > 0.01f)
+                {
+                    // Offset 8m away from pin in the -Z direction (approach side) so both bots
+                    // start in a makeable chip/putt range — match should complete in ~20-30s.
+                    Vector3 approachDir = (pinWorld.z > 0) ? new Vector3(0, 0, -1) : new Vector3(0, 0, 1);
+                    Vector3 startLie = pinWorld + approachDir * 8f;
+                    vmc._debugStartLie = startLie;
+                    d.LogStep($"  VersusMatchController: _debugStartLie=near-green via PinWorld {pinWorld:F2} offset → {startLie:F2}");
+                }
+                else
+                {
+                    d.LogStep($"  WARN: HoleContext.PinWorld={pinWorld:F2} is zero — _debugStartLie not set (from tee)");
+                }
+            }
+
+            // 5. Wait for match to become ready, then START RECORDING.
+            //    OnMatchReadyToBegin fires in VMC.Start() after IsHoleReady; poll up to 30s.
+            float waitReady = 0f;
+            while (!matchReadyFlag && waitReady < 30f)
+            {
+                yield return new WaitForSecondsRealtime(0.2f);
+                waitReady += 0.2f;
+            }
+            if (!matchReadyFlag)
+                d.LogStep($"  WARN: OnMatchReadyToBegin never fired after {waitReady:F1}s — starting recording anyway");
+            else
+                d.LogStep($"  OnMatchReadyToBegin fired after {waitReady:F1}s — starting recording");
+
+            yield return new WaitForSecondsRealtime(0.5f); // brief settle before first frame
+
+            // START RECORDING — mirrors AudioWaterSplashSfx §4 pattern:
+            // set RecordVideo=true + DeferredRecord=false via SessionState, then call Begin().
+            // (Do NOT rely on DeferredRecord being already set — ArmDeferred() was called but
+            //  the guard in Begin() checks RecordVideo, not DeferredRecord. We set it explicitly.)
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RecordVideo", true);
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.DeferredRecord", false);
+            try
+            {
+                System.Type recType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.Physics.Viewer.Editor.BotVideoRecorder"); if (t != null) { recType = t; break; } }
+                if (recType != null)
+                {
+                    var beginMethod = recType.GetMethod("Begin", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    beginMethod?.Invoke(null, null);
+                    d.LogStep("  BotVideoRecorder.Begin() called — recording started");
+                }
+                else { d.LogStep("  WARN: BotVideoRecorder type not found — not recording"); }
+            }
+            catch (System.Exception ex) { d.LogStep($"  BotVideoRecorder.Begin ERROR: {ex.Message}"); }
+
+            yield return new WaitForSecondsRealtime(1f); // first frames settle
+
+            // 8. Quiet music so stinger is clearly audible over gameplay ambience.
+            SetMusicVolumeReflection(d, 5f);
+            yield return d.Capture("match_in_progress");
+
+            // 9. Dwell 15s: record real gameplay (bots fire shots, SFX audible).
+            //    After 15s, force-complete the match via GameSession.MarkMatchComplete so the
+            //    stinger fires immediately, rather than waiting up to 110s for organic hole-out.
+            //    MarkMatchComplete → GameSession.OnMatchComplete → VersusResultHandler fires stinger.
+            float waitDone = 0f;
+            while (!matchDoneFlag && waitDone < 15f)
+            {
+                yield return new WaitForSecondsRealtime(0.5f);
+                waitDone += 0.5f;
+            }
+
+            if (!matchDoneFlag)
+            {
+                d.LogStep($"  Match not done after {waitDone:F1}s — calling GameSession.MarkMatchComplete(P1Win,3,5) to trigger stinger");
+                try
+                {
+                    System.Type gsType = null;
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("Golfin.Gameplay.Session.GameSession"); if (t != null) { gsType = t; break; } }
+                    if (gsType == null)
+                    {
+                        foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                        { var t = a.GetType("Golfin.Gameplay.Loop.Session.GameSession"); if (t != null) { gsType = t; break; } }
+                    }
+                    if (gsType == null)
+                    {
+                        foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                        { var t = a.GetType("GameSession"); if (t != null) { gsType = t; break; } }
+                    }
+                    if (gsType != null)
+                    {
+                        var markMethod = gsType.GetMethod("MarkMatchComplete",
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        if (markMethod != null)
+                        {
+                            // MatchOutcome enum: P1Win=0, P2Win=1, Draw=2
+                            // Get the MatchOutcome type from GameSession.
+                            var outcomeType = gsType.GetNestedType("MatchOutcome");
+                            object p1WinVal = outcomeType != null
+                                ? System.Enum.ToObject(outcomeType, 0) // P1Win
+                                : 0;
+                            markMethod.Invoke(null, new object[] { p1WinVal, 3, 5 });
+                            d.LogStep("  GameSession.MarkMatchComplete(P1Win, 3, 5) called — stinger SFX should fire now");
+                        }
+                        else { d.LogStep("  WARN: MarkMatchComplete method not found on GameSession"); }
+                    }
+                    else { d.LogStep("  WARN: GameSession type not found — stinger may not fire"); }
+                }
+                catch (System.Exception ex) { d.LogStep($"  MarkMatchComplete ERROR: {ex.Message}"); }
+            }
+            else
+            {
+                d.LogStep($"  Match completed organically after {waitDone:F1}s — stinger SFX fired via normal flow");
+            }
+
+            // 9. Dwell to let stinger + WIN/LOSE/DRAW banner fully play.
+            yield return new WaitForSecondsRealtime(4f);
+            yield return d.Capture("stinger_result");
+
+            // 10. Unsubscribe events.
+            VersusMatchController.OnMatchReadyToBegin -= onMatchReady;
+            Golfin.Gameplay.Session.GameSession.OnMatchComplete -= onMatchDone;
+
+            d.LogStep("=== Audio Match Stinger: done ===");
+        }
     }
 }
 #endif
