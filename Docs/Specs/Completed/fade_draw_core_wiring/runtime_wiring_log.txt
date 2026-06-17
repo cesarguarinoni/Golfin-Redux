@@ -1,0 +1,4 @@
+=== runtime_wiring_log — FadeDrawRealHoleGate iter-3 ===
+[CommitFlickLog] mode=FadeDraw FadeDrawActive=True IsPutt=False finetune=-1.0000 fadeDrawInput=-1.0000 fadeDrawMaxTilt=0.3000 spinInputX=0.0000 spinTiltRad=0.0750 aimYaw=3.1439 lockedAim=3.0391
+[CommitFlickLog] mode=FadeDraw FadeDrawActive=True IsPutt=False finetune=1.0000 fadeDrawInput=1.0000 fadeDrawMaxTilt=0.3000 spinInputX=0.0000 spinTiltRad=0.0750 aimYaw=3.1439 lockedAim=3.0391
+[CommitFlickLog] mode=Straight FadeDrawActive=False IsPutt=False finetune=-1.0000 fadeDrawInput=0.0000 fadeDrawMaxTilt=0.0000 spinInputX=0.0000 spinTiltRad=0.0750 aimYaw=3.0915 lockedAim=NaN

@@ -1,0 +1,144 @@
+=== iter-1 kickoff baseline ===
+HEAD SHA: b4aea77d98bfe5cd251cb9df64abfce9fb7fac53
+DIRTY (untracked outside task folder):
+  ?? Docs/Specs/Completed/sound_effects/screenshots/ (sound_effects completed screenshots, predates this task)
+DIRTY (task folder — expected new files):
+  ?? Docs/Specs/Active/fade_draw_core_wiring/ARCHITECT_REVIEW.md
+  ?? Docs/Specs/Active/fade_draw_core_wiring/IMPLEMENTER_REPORT.md
+  ?? Docs/Specs/Active/fade_draw_core_wiring/SELF_REVIEW.md
+  ?? Docs/Specs/Active/fade_draw_core_wiring/SPEC.md
+  ?? Docs/Specs/Active/fade_draw_core_wiring/STATUS.md
+  ?? Docs/Specs/Active/fade_draw_core_wiring/reference/.gitkeep
+  ?? Docs/Specs/Active/fade_draw_core_wiring/reference/README.md
+  ?? Docs/Specs/Active/fade_draw_core_wiring/screenshots/.gitkeep
+=== end baseline ===
+
+2026-06-17T00:00:00 activated — reading SPEC.md and source files
+2026-06-17T00:10:00 starting compile check via Unity MCP
+2026-06-17T00:20:00 attempting Unity MCP compile check
+2026-06-17T00:30:00 code changes complete, attempting compile check
+2026-06-17T00:40:00 all code changes complete, running compile+test check
+2026-06-17T05:36:26 fixing FadeDrawWiringTests compile errors (velocity lowercase, Assert.IsTrue)
+2026-06-17T05:46:07 fixing SpinY_StillChangesRate test: PendingSpinInput reset by TransitionToIdle, using spinOverride param
+2026-06-17T05:46:50 all 17 EditMode tests pass (9 FadeDrawTiltTests + 7 FadeDrawWiringTests + 1 regr); proceeding to behavioral gate
+2026-06-17T05:56:08 trajectory trace complete — all 3 checks PASS; FD=29.5m, SpinX=7.8m, ratio=3.79x; writing IMPLEMENTER_REPORT
+2026-06-17T06:10:00 IMPLEMENTER_REPORT complete; 10 PASS / 1 FAIL (behavioral gate); transitioning to READY_FOR_ARCHITECT_REVIEW
+2026-06-17T06:10:01 done, awaiting review
+
+=== iter-2 kickoff baseline ===
+HEAD SHA: 49ca7b004 (most recent commit)
+DIRTY (modified production files — from iter-1 implementation, pre-existing):
+  M Assets/Resources/Gameplay/controls.csv
+  M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+  M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+  M Assets/Scripts/Gameplay/Input/ShotController.cs
+  M Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs
+  M Assets/Scripts/Physics/Stats/ShotInputBuilder.cs
+DIRTY (new test files from iter-1, untracked):
+  ?? Assets/Scripts/Editor/FadeDrawTrajectoryTrace.cs
+  ?? Assets/Scripts/Editor/FadeDrawTrajectoryViz.cs
+  ?? Assets/Scripts/Gameplay/Tests/FadeDrawWiringTests.cs
+  ?? Assets/Scripts/Physics/Tests/FadeDrawTiltTests.cs
+  ?? Docs/Specs/Active/fade_draw_core_wiring/screenshots/trajectory_viz.png
+  ?? Docs/Specs/Active/fade_draw_core_wiring/test_results.txt
+  ?? Docs/Specs/Active/fade_draw_core_wiring/trajectory_trace.txt
+DIRTY (untracked outside task folder — pre-existing, predates this task):
+  ?? Docs/Specs/Completed/sound_effects/screenshots/ (completed task screenshots)
+=== end baseline ===
+
+2026-06-17T07:00:00 iter-2 activated — writing FadeDrawRealHoleGate scenario + menu items
+2026-06-17T07:20:00 FadeDrawRealHoleGate scenario written; menu+dispatch added; running compile check
+2026-06-17T08:20:00 compilation confirmed clean; FadeDraw Real Hole Gate menu item verified; launching scenario
+2026-06-17T08:30:00 90s cap re-run complete: Shot A DRAW (rest -68.0/10.3/-16.6), Shot B FADE (rest 63.7/12.3/-26.3), Shot C Straight (rest -70.1/10.4/-17.1); all 3 terminal=AtRest
+2026-06-17T08:32:00 build_bot_video.py captions applied; fadedraw_real_hole_gate_fadedraw_gate.mp4 (73.9s, 66.2MB); stills copied to screenshots/; IMPLEMENTER_REPORT updated
+2026-06-17T08:32:00 done, awaiting review
+
+=== iter-3 kickoff baseline ===
+HEAD SHA: 49ca7b004 (49ca7b004)
+DIRTY (modified production files — pre-existing from iter-1/2):
+  M Assets/Resources/Gameplay/controls.csv
+  M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+  M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+  M Assets/Scripts/Gameplay/Input/ShotController.cs
+  M Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs
+  M Assets/Scripts/Physics/Stats/ShotInputBuilder.cs
+  M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+  M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+  M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+DIRTY (new test/editor files from iter-1/2, untracked):
+  ?? Assets/Scripts/Editor/FadeDrawTrajectoryTrace.cs
+  ?? Assets/Scripts/Editor/FadeDrawTrajectoryViz.cs
+  ?? Assets/Scripts/Gameplay/Tests/FadeDrawWiringTests.cs
+  ?? Assets/Scripts/Physics/Tests/FadeDrawTiltTests.cs
+  ?? Docs/Specs/Active/fade_draw_core_wiring/screenshots/ (screenshots from iter-2)
+  ?? Docs/Specs/Active/fade_draw_core_wiring/test_results.txt
+  ?? Docs/Specs/Active/fade_draw_core_wiring/trajectory_trace.txt
+DIRTY (untracked outside task folder — pre-existing, predates this task):
+  ?? Docs/Specs/Completed/sound_effects/screenshots/ (completed task screenshots)
+=== end baseline ===
+
+2026-06-17T09:00:00 iter-3 activated — addressing self-reviewer FAILs: (1) runtime wiring log, (2) overhead curve capture, (3) caption legibility
+2026-06-17T07:11:09 re-running FadeDrawRealHoleGate with 15m overhead + 1.5m trail width boost
+2026-06-17T07:15:24 resetting video session guard, re-running FadeDrawRealHoleGate for fresh video
+2026-06-17T07:24:22 iter-3 complete: wiring log confirmed, overhead 15m+1.5m trail captures done, captions verified, IMPLEMENTER_REPORT updated
+
+=== iter-4 kickoff baseline ===
+HEAD SHA: 49ca7b004
+DIRTY (modified production files — pre-existing from iter-1/2/3):
+  M Assets/Resources/Gameplay/controls.csv
+  M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+  M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+  M Assets/Scripts/Gameplay/Input/ShotController.cs
+  M Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs
+  M Assets/Scripts/Physics/Stats/ShotInputBuilder.cs
+  M Assets/Scripts/Physics/Viewer/BallTrailController.cs
+  M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+  M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+  M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+DIRTY (untracked outside task folder — pre-existing, predates this task):
+  ?? Docs/Specs/Completed/sound_effects/screenshots/ (completed task screenshots)
+=== end baseline ===
+
+2026-06-17T07:45:00 activated iter-4 — implementing curve overlay PNG + fixed side cam video
+2026-06-17T07:49:44 code changes complete — running compile check via Unity MCP
+2026-06-17T07:53:32 triggering Unity asset refresh to compile new Scenarios.cs changes
+2026-06-17T07:54:20 waiting for Unity to compile new Scenarios.cs changes, preparing to run FadeDrawRealHoleGate
+2026-06-17T07:58:29 compile verified — FadeDrawSetSideCamera/RestoreCamera/SampleTrail confirmed in assembly; launching FadeDrawRealHoleGate scenario
+2026-06-17T08:15:03Z iter-4 complete: curve_overlay_real_hole.png (1400x1400, 17.2m DRAW-FADE sep) + fadedraw_real_hole_gate_iter4.mp4 (73.7s, fixed side cam). All 11 checklist items PASS.
+2026-06-17T08:15:03Z done, awaiting review
+
+=== iter-5 kickoff baseline ===
+HEAD SHA: 49ca7b004
+DIRTY (modified production files — pre-existing from iter-1/2/3/4):
+  M Assets/Resources/Gameplay/controls.csv
+  M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+  M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+  M Assets/Scripts/Gameplay/Input/ShotController.cs
+  M Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs
+  M Assets/Scripts/Physics/Stats/ShotInputBuilder.cs
+  M Assets/Scripts/Physics/Viewer/BallTrailController.cs
+  M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+  M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+  M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+DIRTY (new test/editor files from iter-1, untracked):
+  ?? Assets/Scripts/Editor/FadeDrawTrajectoryTrace.cs
+  ?? Assets/Scripts/Editor/FadeDrawTrajectoryTrace.cs.meta
+  ?? Assets/Scripts/Editor/FadeDrawTrajectoryViz.cs
+  ?? Assets/Scripts/Editor/FadeDrawTrajectoryViz.cs.meta
+  ?? Assets/Scripts/Gameplay/Tests/FadeDrawWiringTests.cs
+  ?? Assets/Scripts/Gameplay/Tests/FadeDrawWiringTests.cs.meta
+  ?? Assets/Scripts/Physics/Tests/FadeDrawTiltTests.cs
+  ?? Assets/Scripts/Physics/Tests/FadeDrawTiltTests.cs.meta
+  ?? Docs/Scripts/render_fadedraw_curve_overlay.py
+DIRTY (untracked outside task folder — pre-existing, predates this task):
+  ?? Docs/Specs/Completed/sound_effects/screenshots/ (completed task screenshots)
+=== end baseline ===
+
+2026-06-17T11:00:00 activated iter-5 — addressing ARCHITECT_REVIEW_FAIL: ChaseCamera override fix + cleanup
+2026-06-17T11:08:00 code changes complete — FadeDrawSetSideCamera/RestoreCamera use Downrange mode; FadeDrawFireShot re-asserts Downrange per-frame; awaiting compile check
+2026-06-17T11:15:00 compile confirmed clean (Tundra build success, 4.07s, 29 items) — launching FadeDrawRealHoleGate scenario
+2026-06-17T11:16:00 deleted 105MB raw video + iter-2 superseded video; renamed still_sidecam to still_chasecam files
+2026-06-17T11:20:00 iter-5 scenario run complete: SideCam armed+settled (Downrange mode), all 3 shots terminal=AtRest
+2026-06-17T11:22:00 captioned video: fadedraw_real_hole_gate_iter5.mp4 (120MB); deleted raw; updated overlay PNG to iter-5
+2026-06-17T11:24:00 self-verification: ball visible at launch in side-cam view; camera lock confirmed via static background + changing yardage; writing IMPLEMENTER_REPORT
+2026-06-17T11:30:00 done, awaiting review

@@ -161,6 +161,10 @@ namespace Golfin.Gameplay.UI.ShotUI
             // Keep ShotController.PendingSpinInput in sync with SpinContext so the
             // InputSystem gesture path (non-ClubHandle) also sees the player's spin selection.
             HUD.SpinContext.OnChanged += PushSpinToPending;
+            // Phase E (fade_draw_core_wiring Order 356): push mode state on every toggle.
+            HUD.ShotModeContext.OnChanged += OnShotModeChanged;
+            // Sync initial state in case mode is already non-default (e.g. restored from save).
+            PushFadeDrawModeToController();
         }
 
         private void OnDisable()
@@ -168,12 +172,44 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_shotController != null)
                 _shotController.OnStateChanged -= HandleStateChanged;
             HUD.SpinContext.OnChanged -= PushSpinToPending;
+            HUD.ShotModeContext.OnChanged -= OnShotModeChanged;
         }
 
         private void PushSpinToPending()
         {
-            if (_shotController != null)
-                _shotController.PendingSpinInput = HUD.SpinContext.Spin;
+            if (_shotController == null) return;
+            _shotController.PendingSpinInput = HUD.SpinContext.Spin;
+        }
+
+        // Phase E — mode-transition aim-lock + handle re-center (D5).
+        // Called whenever ShotModeContext.OnChanged fires.
+        private void OnShotModeChanged()
+        {
+            if (_shotController == null) return;
+            bool isFadeDraw = HUD.ShotModeContext.Mode == HUD.ShotMode.FadeDraw;
+            _shotController.FadeDrawActive = isFadeDraw;
+
+            if (isFadeDraw)
+            {
+                // Straight→FadeDraw (arming): lock aim at camera heading (D5).
+                // We lock to CameraHeadingRadians because finetune will re-center to 0 on arm —
+                // so the effective aim at arm time IS the camera heading, not heading+finetune-nudge.
+                _shotController.FadeDrawLockedAimRad = _shotController.CameraHeadingRadians;
+
+                // Re-center the handle so subsequent handle movement drives curve from center (D5).
+                _shotController.ForceRecenterFinetune();
+            }
+            else
+            {
+                // FadeDraw→Straight (disarming): clear the aim lock; handle becomes aim-nudge again.
+                _shotController.FadeDrawLockedAimRad = float.NaN;
+            }
+        }
+
+        private void PushFadeDrawModeToController()
+        {
+            if (_shotController == null) return;
+            _shotController.FadeDrawActive = HUD.ShotModeContext.Mode == HUD.ShotMode.FadeDraw;
         }
 
         // ── State handler ─────────────────────────────────────────────────────

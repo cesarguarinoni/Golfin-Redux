@@ -34,10 +34,12 @@ namespace Golfin.Physics.Stats
             fp originX, fp originY, fp originZ,
             uint seed,
             fp baseVelocityOverrideMps = default,
-            fp spinInputX = default,                        // NEW — spin.x (draw/fade orbital tilt), 0=no tilt
-            fp spinInputY = default,                        // NEW — spin.y (backspin/topspin scale), 0=no scaling
-            fp spinMagScaleSlope = default,                 // NEW — 0 → no scaling (legacy behavior)
-            fp spinMaxTiltRad = default)                    // NEW — 0 → no tilt (legacy behavior)
+            fp spinInputX = default,                        // spin.x (sidespin trim), 0=no tilt
+            fp spinInputY = default,                        // spin.y (backspin/topspin scale), 0=no scaling
+            fp spinMagScaleSlope = default,                 // 0 → no scaling (legacy behavior)
+            fp spinMaxTiltRad = default,                    // 0 → no tilt (legacy behavior); demoted to TRIM (D3)
+            fp fadeDrawInput = default,                     // fade/draw handle offset -1..+1, 0=no curve (D1; default=0 legacy no-op)
+            fp fadeDrawMaxTiltRad = default)                // max fade/draw curve angle in radians (D1; default=0 legacy no-op)
         {
             var resolved = StatModifierResolver.Resolve(bundle, coeffs, caps);
 
@@ -101,12 +103,15 @@ namespace Golfin.Physics.Stats
                 // Q2(a): sign-flip allowed. magScale signed; e.g. spinY=+1 with slope=1.5 → -0.5 (topspin).
                 fp magScale = fp.One - spinInputY * spinMagScaleSlope;
 
-                // Q3(a): orbital tilt around velocity vector. spinX × maxTilt radians.
+                // Q3(a): orbital tilt around velocity vector.
+                // fade/draw is dominant (Phase B); spin.x is TRIM (D3).
+                // tiltAngle = fadeDrawInput * fadeDrawMaxTiltRad + spinInputX * spinMaxTiltRad
+                // Both default to 0 so existing callers that pass neither new param are unaffected.
                 fp3 finalAxis;
-                if (spinInputX != fp.Zero && spinMaxTiltRad != fp.Zero)
+                fp tiltAngle = fadeDrawInput * fadeDrawMaxTiltRad + spinInputX * spinMaxTiltRad;
+                if (tiltAngle != fp.Zero)
                 {
                     fp3 velocityDir = fpMath.Normalize(velocity);
-                    fp  tiltAngle   = spinInputX * spinMaxTiltRad;
                     finalAxis = fpMath.Rotate(startAxis, velocityDir, tiltAngle);
                 }
                 else
@@ -149,6 +154,7 @@ namespace Golfin.Physics.Stats
                     $"loft={loftDeg.ToFloat():F1}deg aimYaw={aimYawRadians.ToFloat():F3}rad " +
                     $"finalVel=({velocity.x.ToFloat():F2},{velocity.y.ToFloat():F2},{velocity.z.ToFloat():F2}) " +
                     $"spinInput=({spinInputX.ToFloat():F2},{spinInputY.ToFloat():F2}) " +
+                    $"fadeDrawInput={fadeDrawInput.ToFloat():F2} fadeDrawMaxTiltRad={fadeDrawMaxTiltRad.ToFloat():F3} " +
                     $"spinAxis=({spin.Axis.x.ToFloat():F2},{spin.Axis.y.ToFloat():F2},{spin.Axis.z.ToFloat():F2}) " +
                     $"spinRate={spin.Rate.ToFloat():F1}rad/s");
             }

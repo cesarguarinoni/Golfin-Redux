@@ -1,0 +1,25 @@
+=== FadeDraw Tests Run Started ===
+6/17/2026 7:46:30 AM
+
+Passed   Golfin.Gameplay.Tests.FadeDrawWiringTests.FadeDrawMode_AimIsLocked_HandleDoesNotShiftAim
+Passed   Golfin.Gameplay.Tests.FadeDrawWiringTests.FadeDrawMode_HandleLeftVsRight_ProducesDifferentSpinAxis
+Passed   Golfin.Gameplay.Tests.FadeDrawWiringTests.ModeTrans_Arm_LocksAimAtCameraHeading
+Passed   Golfin.Gameplay.Tests.FadeDrawWiringTests.ModeTrans_Arm_RecentersHandle
+Passed   Golfin.Gameplay.Tests.FadeDrawWiringTests.Putt_FadeDrawActive_SpinIsZero
+Passed   Golfin.Gameplay.Tests.FadeDrawWiringTests.SpinY_StillChangesRate_AfterD3
+Passed   Golfin.Gameplay.Tests.FadeDrawWiringTests.StraightMode_HandleLeft_NudgesAimLeft
+Passed   Golfin.Gameplay.Tests.FadeDrawWiringTests.StraightMode_HandleRight_NudgesAimRight
+Passed   Golfin.Physics.Tests.FadeDrawTiltTests.BothZero_ProducesUntiledLegacyAxis
+Passed   Golfin.Physics.Tests.FadeDrawTiltTests.DefaultParams_LegacyNoOp_SpinXOnly
+Passed   Golfin.Physics.Tests.FadeDrawTiltTests.Determinism_SameSeedAndInputs_IdenticalShotInput
+Passed   Golfin.Physics.Tests.FadeDrawTiltTests.FadeDraw_ProducesLargerTiltThanSpinTrim
+Passed   Golfin.Physics.Tests.FadeDrawTiltTests.FadeDrawNegative_ProducesOppositeAxisToPositive
+Passed   Golfin.Physics.Tests.FadeDrawTiltTests.FadeDrawPlusTrim_CombinesAdditively
+Passed   Golfin.Physics.Tests.FadeDrawTiltTests.FadeDrawPositive_AndSpinXPositive_TiltSameDirection
+Passed   Golfin.Physics.Tests.FadeDrawTiltTests.FadeDrawTilt_AxisRemainsUnitLength
+Passed   Golfin.Physics.Tests.FadeDrawTiltTests.SpinTrim_IsApproximatelyQuarterOfFadeDrawMax
+
+=== Run Finished ===
+Overall: Passed
+Pass: 17  Fail: 0  Skip: 0
+Duration: 1.707s

@@ -31,6 +31,24 @@ namespace Golfin.Gameplay.Input
         /// </summary>
         public Vector2 PendingSpinInput      { get; set; }
 
+        // ── Fade/Draw mode state (D1–D5, fade_draw_core_wiring Order 356) ───────
+        // Cannot read ShotModeContext directly (circular asmdef: Input does not ref UI).
+        // UI layer (ShotConeView) pushes these values when mode changes.
+
+        /// <summary>
+        /// True when the Fade/Draw toggle is armed (ShotMode.FadeDraw).
+        /// Pushed by ShotConeView.OnShotModeChanged. Read at CommitFlick.
+        /// </summary>
+        public bool FadeDrawActive { get; set; }
+
+        /// <summary>
+        /// Locked aim yaw (radians) captured when arming the Fade/Draw toggle (D5).
+        /// Set by ShotConeView when mode transitions Straight→FadeDraw.
+        /// Read at CommitFlick instead of the live CameraHeadingRadians when FadeDrawActive.
+        /// NaN = not locked (use camera heading).
+        /// </summary>
+        public float FadeDrawLockedAimRad { get; set; } = float.NaN;
+
         // --- Debug toggles (8 flags per design §8) ---
         public ShotDebugFlags DebugFlags = ShotDebugFlags.Defaults;
 
@@ -68,6 +86,13 @@ namespace Golfin.Gameplay.Input
 
         // Call when the ball comes to rest (or explicitly from a test)
         public void CompleteShot() => TransitionToIdle();
+
+        /// <summary>
+        /// Called by ShotConeView when the Fade/Draw toggle is armed (D5).
+        /// Re-centers the cone finetune to 0 so subsequent handle movement
+        /// drives the fade/draw curve from center, not carry over the old aim offset.
+        /// </summary>
+        public void ForceRecenterFinetune() => _coneFinetune = 0f;
 
 #if UNITY_EDITOR
         /// <summary>
@@ -242,6 +267,9 @@ namespace Golfin.Gameplay.Input
             _coneFinetune      = 0f;
             _aimYawRadians     = 0f;
             PendingSpinInput   = Vector2.zero;  // reset after each shot (spin is per-shot, not sticky)
+            // Fade/Draw mode state resets after each shot (FadeDrawActive persists between shots
+            // — the toggle is sticky — but the locked aim resets so next arm captures fresh aim).
+            FadeDrawLockedAimRad = float.NaN;
         }
 
         private void TransitionToAiming()  => State = ShotState.Aiming;
@@ -261,7 +289,29 @@ namespace Golfin.Gameplay.Input
             LastShotWasClean = !IsPutt && Mathf.Approximately(degradYaw, 0f);   // latched for BallTrailController
             float finetune  = DebugFlags.DisableConeFineTune ? 0f : _coneFinetune;
 
-            _aimYawRadians = CameraHeadingRadians + finetune * HalfConeAngleRad() + degradYaw;
+            // Phase D/E (fade_draw_core_wiring Order 356):
+            // FadeDraw mode: aim is LOCKED at arming time (pushed by ShotConeView as FadeDrawLockedAimRad).
+            //   If lock was cleared (NaN, e.g. after a shot reset), re-lock to camera heading now.
+            //   finetune drives the fade/draw curve, NOT aim.
+            // Straight mode: finetune drives aim nudge within ±AimNudgeRangeRad (D4).
+            //   The legacy formula (finetune * HalfConeAngleRad) is REPLACED by aim nudge.
+            // Putts: unchanged (D6) — legacy formula retained.
+            if (!IsPutt && FadeDrawActive)
+            {
+                // FadeDraw armed: use locked aim. Re-lock if NaN (per-shot re-arm after reset).
+                float lockedAim = float.IsNaN(FadeDrawLockedAimRad) ? CameraHeadingRadians : FadeDrawLockedAimRad;
+                _aimYawRadians = lockedAim + degradYaw;
+            }
+            else if (!IsPutt && !FadeDrawActive)
+            {
+                // Straight mode: aim nudge = finetune * AimNudgeRangeRad (D4).
+                _aimYawRadians = CameraHeadingRadians + finetune * _config.AimNudgeRangeRad + degradYaw;
+            }
+            else
+            {
+                // Putt: unchanged (D6) — legacy formula retained.
+                _aimYawRadians = CameraHeadingRadians + finetune * HalfConeAngleRad() + degradYaw;
+            }
 
             float flickMag = PowerNormalized;
             if (IsPutt || DebugFlags.DisableOverpower) flickMag = Mathf.Min(flickMag, 1f);
@@ -294,6 +344,17 @@ namespace Golfin.Gameplay.Input
             fp spinMagSlope = fp.FromFloat(_config.SpinMagScaleSlope);
             fp spinTiltRad  = fp.FromFloat(_config.SpinMaxTiltRad);
 
+            // Phase B (fade_draw_core_wiring Order 356):
+            // FadeDraw armed + not putt: finetune (re-centered after arm) drives fade/draw curve.
+            // Straight mode or putt: fadeDrawInput = 0 (no curve).
+            fp fadeDrawInputFp    = fp.Zero;
+            fp fadeDrawMaxTiltFp  = fp.Zero;
+            if (!IsPutt && FadeDrawActive)
+            {
+                fadeDrawInputFp   = fp.FromFloat(finetune);
+                fadeDrawMaxTiltFp = fp.FromFloat(_config.FadeDrawMaxTiltRad);
+            }
+
             var (input, ballMods) = ShotInputBuilder.Build(
                 bundle,
                 StatCoefficients.Default,
@@ -306,7 +367,9 @@ namespace Golfin.Gameplay.Input
                 spinInputX,
                 spinInputY,
                 spinMagSlope,
-                spinTiltRad);
+                spinTiltRad,
+                fadeDrawInputFp,
+                fadeDrawMaxTiltFp);
 
             State = ShotState.Resolving;
             OnShotResolved?.Invoke(input, ballMods);
