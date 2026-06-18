@@ -1,0 +1,80 @@
+2026-06-17T15:10:19Z activated
+
+=== iter-1 kickoff baseline ===
+HEAD: de595de4bfa453eb44e6c22fbbac9af6197b529c
+DIRTY:
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_14.0.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_14.5.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_15.0.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_15.5.png
+?? Docs/Specs/Completed/sound_effects/screenshots/c1_drag_16.0.png
+...
+=== end baseline ===
+2026-06-17T15:33:15Z tests pass, wiring scene
+2026-06-17T17:52:00Z done, awaiting review
+
+=== iter-2 kickoff baseline ===
+HEAD: de595de4bfa453eb44e6c22fbbac9af6197b529c
+DIRTY:
+ M Assets/Resources/Gameplay/controls.csv
+ M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs
+?? Assets/Scripts/Gameplay/Tests/AimLineBendTests.cs
+?? Assets/Scripts/Gameplay/Tests/AimLineBendTests.cs.meta
+?? Assets/Scripts/Gameplay/UI/ShotUI/AimLineBendRenderer.cs
+?? Assets/Scripts/Gameplay/UI/ShotUI/AimLineBendRenderer.cs.meta
+?? Docs/Specs/Active/fade_draw_aim_line_bend/ (task folder)
+?? Docs/Specs/Completed/sound_effects/screenshots/ (pre-existing, 30+ untracked PNGs from prior task)
+=== end baseline ===
+2026-06-17T18:20:00Z iter-2 activated — fixing rotation overwrite bug + producing video
+2026-06-17T18:25:00Z running EditMode tests
+2026-06-17T16:11:41 writing FadeDrawAimLineBendGate scenario in Scenarios.cs
+2026-06-17T16:14:11 BotVideoRecorder scenario running in play mode — waiting for completion
+2026-06-17T16:15:44 re-run 2: scenario launched, waiting ~90s for Hole_01_Geo load + full sequence
+2026-06-17T16:16:28 waiting for Hole_01_Geo load in scenario run 2
+2026-06-17T16:18:51 run 3: WaitForAnyHoleGeo fix deployed — waiting for any Hole_NN_Geo
+2026-06-17T18:28:00 done, awaiting review — video captioned, 4 stills at 1170x2532, 7 duplicates deleted, report filled, all 8 tests PASS
+
+2026-06-17T16:55:06Z activated
+
+=== iter-3 kickoff baseline ===
+HEAD: de595de4bfa453eb44e6c22fbbac9af6197b529c
+DIRTY:
+ M Assets/Resources/Gameplay/controls.csv
+ M Assets/Scripts/Gameplay/Config/ControlsConfig.cs
+ M Assets/Scripts/Gameplay/Config/ControlsConfigLoader.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Docs/Specs/Active/fade_draw_aim_line_bend/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/fade_draw_aim_line_bend/SELF_REVIEW.md
+ M Docs/Specs/Active/fade_draw_aim_line_bend/STATUS.md
+?? Assets/Scripts/Gameplay/Tests/AimLineBendTests.cs
+?? Assets/Scripts/Gameplay/Tests/AimLineBendTests.cs.meta
+?? Assets/Scripts/Gameplay/UI/ShotUI/AimLineBendRenderer.cs
+?? Assets/Scripts/Gameplay/UI/ShotUI/AimLineBendRenderer.cs.meta
+?? Docs/Specs/Active/fade_draw_aim_line_bend/HEARTBEAT.log
+?? Docs/Specs/Active/fade_draw_aim_line_bend/reference/figma_node_2714-3536_actual.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/reference/figma_node_2714-3536_darkbg.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/reference/figma_node_2714-3536_line1.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/aim_line_draw_v2.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/aim_line_draw_v2_cropped_viewport.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/aim_line_fadedraw_armed_cropped_viewport.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/aim_line_straight_v2.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/aim_line_straight_v2_cropped_viewport.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/crop_s01_straight_line.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/crop_s03_draw_bent.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/crop_s04_fade_bent.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/figma-reference.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/s01_straight_line.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/s02_fadedraw_armed.png
+?? Docs/Specs/Active/fade_draw_aim_line_bend/screenshots/s03_draw_bent.png
+=== end baseline ===
+2026-06-17T16:58:37Z iter-3 planning — analyzing sign contradiction, y-flip root cause, ball-fire sequence
+2026-06-17T19:05:00Z iter-3 scenario launched — waiting for ~90s completion (recording started at 1170x2532 @ 30fps)
+2026-06-17T19:17:00Z iter-3 scenario re-launched (iter-3 code confirmed in Golfin.Physics.Viewer.dll@19:06, session guard reset, recording started)
+2026-06-17T20:00:00Z iter-3 analysis complete: DRAW bends RIGHT (+77px) which is camera-correct on Hole 6 (+Z=screen right); FADE phase failed (shot fired on Par 3 → hole end). Fixing scenario to capture both DRAW+FADE without firing shot.
+2026-06-17T20:20:00Z iter-3 complete: sign verified (+59px DRAW RIGHT = camera-correct Hole 6), y-flip absent, ball fires at t=46.88, captions unobtrusive (Y=2380), 5 stale PNGs deleted, captioned video 43MB
+2026-06-17T20:20:00Z done, awaiting review
