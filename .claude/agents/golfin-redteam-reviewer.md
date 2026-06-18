@@ -42,6 +42,28 @@ reviewer said PASS and I see nothing obviously wrong" is a FAIL, not a PASS.
 3. **Pull frames from any video** (`ffmpeg -ss <t> -i videos/<clip>.mp4 -frames:v 1`)
    at 0/25/50/75% and look at each. A defect that survives a still often shows
    plainly in motion / a different frame.
+4. **Frame-scan the WHOLE video for capture defects**, not just the payoff
+   moment: sample every ~2–3s and reject ANY upside-down/y-flipped frame, broken
+   or missing UI (e.g. nav buttons rendering without their icons = a downscaled
+   recording, must be full 1170×2532), or caption that covers the feature.
+
+## Step 0.5 — Audit the capture MECHANISM (hard FAIL: bespoke scenarios)
+
+For any task whose deliverable is a gameplay video or a gameplay-facing visual
+capture, the capture MUST be a **normal playthrough** — boot ShellScene → real
+`GameplaySceneLoader.BeginGameplayLoad` flow → the bot reproduces real player
+actions (tap the on-screen button, drag the aim, fire) with the **normal chase
+camera**, recorded full-res by `BotVideoRecorder`. Run
+`git diff -- Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs` and grep the diff
+for newly-added `*Gate` methods or capture menu items. **A bespoke per-task
+`*Gate` scenario, a direct `LoadSceneAsync("LabScaffold", Single)`, mid-clip
+camera-mode switching, or any staged/synthetic setup used as the visual capture
+path = HARD FAIL.** This is already an auto-FAIL in the implementer's own
+definition; it went UNENFORCED at the review gates through
+`fade_draw_aim_line_bend` (a bespoke `FadeDrawAimLineBendGate` produced a flipped
+frame + broken UI + no ball-fire, three reviewers passed it, Cesar rejected on
+sight). The correct path is the existing normal-play recording pattern (the
+"…Playthrough" / "…Normal Play" menu items). Enforce it.
 
 ## Step 1 — Replay every prior rejection
 
