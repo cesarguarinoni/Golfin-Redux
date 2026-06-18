@@ -1,7 +1,7 @@
 # KICKOFF — `map_view_aiming` (Order 352)
 
-> Status: **SCOPING** — render-source decision locked, rest open. NO SPEC yet, do NOT implement.
-> Resume in a fresh conversation: run the session-start protocol, finish the open forks, then write the SPEC into `Docs/Specs/Active/map_view_aiming/`.
+> **SUPERSEDED 2026-06-18 → see `Docs/Specs/Active/map_view_aiming/SPEC.md` (SPEC_READY).**
+> All forks resolved. **Render decision CHANGED: camera = HERO ANGLE, not ortho top-down** (Cesar, 2026-06-18) — a live cam projects markers correctly at any tilt, so the ortho lock below is overridden. This file kept as scoping history.
 
 ## Decision LOCKED (Cesar, this session)
 - **Render source = B: live ORTHOGRAPHIC top-down render of the hole geometry → RenderTexture.**
