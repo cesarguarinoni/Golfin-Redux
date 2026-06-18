@@ -11,7 +11,8 @@
         "Golfin.Physics.Math",
         "Golfin.Physics.Runtime",
         "Golfin.Gameplay.Loop",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],

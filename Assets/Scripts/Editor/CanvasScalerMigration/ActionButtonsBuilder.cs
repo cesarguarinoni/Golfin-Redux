@@ -648,11 +648,12 @@ public static class ActionButtonsBuilder
         iconAreaRt.anchorMax = new Vector2(0.5f, 1f);
         iconAreaRt.pivot     = new Vector2(0.5f, 1f);
         iconAreaRt.anchoredPosition = Vector2.zero;
-        // Dark navy background covers the white top area of Button-All so it fades cleanly
-        var iconAreaBg = iconAreaRt.gameObject.AddComponent<Image>();
-        iconAreaBg.sprite = null;
-        iconAreaBg.color  = new Color(0f, 30f/255f, 57f/255f, 1f);
-        iconAreaBg.raycastTarget = false;
+        // IMPORTANT — IconArea must have NO background Image (intentional). The Button-All
+        // sprite's WHITE top half IS the design (white icon tray + navy label + gold border).
+        // An opaque navy quad here masks that white top and (being hard-cornered) overflows
+        // the rounded border. That regressed into the scene at Order 354 (commit 72bbb8db4)
+        // and Cesar rejected it. Do NOT add an opaque IconArea background.
+        // Guard: ActionButtonRenderingTests fails if an opaque IconArea bg reappears.
 
         // Icon (stretch inside IconArea, insets 33)
         var iconRt = CreateRectTransform("Icon", iconAreaRt);
@@ -754,11 +755,12 @@ public static class ActionButtonsBuilder
         iconAreaRt.anchorMax = new Vector2(0.5f, 1f);
         iconAreaRt.pivot     = new Vector2(0.5f, 1f);
         iconAreaRt.anchoredPosition = Vector2.zero;
-        // Dark navy background covers the white top area of Button-All so it fades cleanly
-        var iconAreaBg2 = iconAreaRt.gameObject.AddComponent<Image>();
-        iconAreaBg2.sprite = null;
-        iconAreaBg2.color  = new Color(0f, 30f/255f, 57f/255f, 1f);
-        iconAreaBg2.raycastTarget = false;
+        // IMPORTANT — IconArea must have NO background Image (intentional). The Button-All
+        // sprite's WHITE top half IS the design (white icon tray + navy label + gold border).
+        // An opaque navy quad here masks that white top and (being hard-cornered) overflows
+        // the rounded border. That regressed into the scene at Order 354 (commit 72bbb8db4)
+        // and Cesar rejected it. Do NOT add an opaque IconArea background.
+        // Guard: ActionButtonRenderingTests fails if an opaque IconArea bg reappears.
 
         var iconRt = CreateRectTransform("Icon", iconAreaRt);
         StretchFill(iconRt);
