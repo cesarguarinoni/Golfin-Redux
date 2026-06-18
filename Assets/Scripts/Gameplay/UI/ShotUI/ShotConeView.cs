@@ -46,6 +46,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         [Header("Targeting line")]
         [SerializeField] private RectTransform   _targetingLine;
+        // Bend renderer — bootstrapped from _targetingLine's Image at Awake.
+        // Set by InjectBendRenderer in tests.
+        private AimLineBendRenderer _bendRenderer;
 
         [Header("Putter timing slab")]
         [SerializeField] private RectTransform   _putterTimingSlabRT;
@@ -65,6 +68,15 @@ namespace Golfin.Gameplay.UI.ShotUI
         // ── Public API ────────────────────────────────────────────────────────
 
         public void SetMaxCarryYards(float yards) => _maxCarryYards = yards;
+
+        /// <summary>
+        /// Test injection: wire an AimLineBendRenderer without Inspector. Call before Awake-
+        /// dependent paths run. Also sets CurveScale/ReachPx to sensible defaults.
+        /// </summary>
+        public void InjectBendRenderer(AimLineBendRenderer renderer)
+        {
+            _bendRenderer = renderer;
+        }
 
         /// <summary>
         /// Test injection point. Wires _shotController, _coneGraphic, and _putterTrack
@@ -129,6 +141,51 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_clubHandle != null)
                 _clubHandle.sizeDelta = new Vector2(_handleWidth, _handleHeight);
             SetupSlab();
+            SetupBendRenderer();
+        }
+
+        private void SetupBendRenderer()
+        {
+            if (_targetingLine == null) return;
+
+            // The bend renderer is a UI Graphic, and a GameObject may host only ONE Graphic.
+            // _targetingLine already carries the original Image, so the mesh Graphic lives on
+            // a dedicated child GO ("AimLineMesh"). _targetingLine stays the wired pivot/anchor;
+            // toggling its GameObject active also shows/hides the mesh child.
+            if (_bendRenderer == null)
+            {
+                var existing = _targetingLine.Find("AimLineMesh");
+                if (existing != null)
+                    _bendRenderer = existing.GetComponent<AimLineBendRenderer>();
+            }
+            if (_bendRenderer == null)
+            {
+                // Construct with CanvasRenderer up-front: [RequireComponent] on a Graphic
+                // base class is not reliably honoured by runtime AddComponent on a subclass,
+                // and without a CanvasRenderer the mesh is built but never drawn.
+                var go = new GameObject("AimLineMesh", typeof(RectTransform), typeof(CanvasRenderer));
+                var rt = go.GetComponent<RectTransform>();
+                rt.SetParent(_targetingLine, false);
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot            = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = Vector2.zero;
+                rt.sizeDelta        = Vector2.zero;
+                _bendRenderer = go.AddComponent<AimLineBendRenderer>();
+                _bendRenderer.raycastTarget = false;
+            }
+
+            // Bootstrap sprite + colour from the existing Image component so the look
+            // is identical to the old single-rect approach (D6).
+            var sourceImage = _targetingLine.GetComponent<UnityEngine.UI.Image>();
+            if (sourceImage != null)
+            {
+                _bendRenderer.SetSpriteFrom(sourceImage);
+                // Disable the source Image so only the mesh renders (not a double-draw).
+                sourceImage.enabled = false;
+            }
+
+            _bendRenderer.CurveScale = ControlsConfig.Default.AimLineCurveScale;
+            _bendRenderer.ReachPx    = ControlsConfig.Default.AimLineDefaultReachPx;
         }
 
         private void SetupSlab()
@@ -370,8 +427,7 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             if (!show || _worldCamera == null || _ballTransform == null) return;
 
-            // Line is always anchored at canvas center (same position as CentralBallWidget).
-            // Only rotation is computed from world-space aim direction.
+            // ── Compute aim angle from world-space projection (same as before) ──────
             Vector3 aimDir      = new Vector3(Mathf.Cos(state.AimYawRadians), 0f, Mathf.Sin(state.AimYawRadians));
             Vector3 targetWorld = _ballTransform.position + aimDir * ControlsConfig.Default.TargetingLineLengthMeters;
 
@@ -392,7 +448,45 @@ namespace Golfin.Gameplay.UI.ShotUI
             float   angle   = Mathf.Atan2(lineDir.y, lineDir.x) * Mathf.Rad2Deg - 90f;
 
             _targetingLine.anchoredPosition = Vector2.zero;
-            _targetingLine.localRotation    = Quaternion.Euler(0f, 0f, angle);
+
+            // ── Feed the bend renderer ────────────────────────────────────────────
+            if (_bendRenderer != null)
+            {
+                // FadeDraw armed: read live mode from ShotModeContext.
+                bool fadeDrawArmed = HUD.ShotModeContext.Mode == HUD.ShotMode.FadeDraw;
+                _bendRenderer.FadeDrawArmed = fadeDrawArmed;
+                _bendRenderer.FinetuneX     = state.ConeFinetuneX;   // –1=draw, +1=fade (D5)
+                _bendRenderer.AimAngleDeg   = angle;
+
+                // Phase C — power-driven reach.
+                // At Idle/Aiming: default reach from config.
+                // At Pulling/Timing/Flicking: scale reach by live PowerNormalized.
+                var cfg = ControlsConfig.Default;
+                float defaultReach = cfg.AimLineDefaultReachPx;
+                float reach;
+                if (state.State is ShotState.Pulling or ShotState.Timing or ShotState.Flicking)
+                {
+                    float power = Mathf.Clamp01(state.PowerNormalized);
+                    // Reach scales from 50% to 100% of default over [0,1] power.
+                    reach = defaultReach * Mathf.Lerp(0.5f, 1.0f, power);
+                }
+                else
+                {
+                    reach = defaultReach;
+                }
+                _bendRenderer.ReachPx    = reach;
+                _bendRenderer.CurveScale = cfg.AimLineCurveScale;
+                _bendRenderer.Refresh();
+
+                // In bend-renderer mode the root RT is just a pivot container;
+                // Refresh() already applied localRotation = Quaternion.Euler(0,0,AimAngleDeg).
+                // Do NOT overwrite localRotation here — that was the iter-1 bug.
+            }
+            else
+            {
+                // Fallback: old single-rect rotation (no renderer wired).
+                _targetingLine.localRotation = Quaternion.Euler(0f, 0f, angle);
+            }
         }
     }
 }

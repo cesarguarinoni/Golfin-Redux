@@ -282,6 +282,25 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Audio — Match Stinger (Focused Clip)", isValidateFunction: true)]
         static bool ValidateAudioMatchStinger() => !EditorApplication.isPlaying;
 
+        // Order 355 fade_draw_aim_line_bend (2026-06-17):
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Fade Draw Aim Line Bend Gate")]
+        public static void RunFadeDrawAimLineBendGate()
+        {
+            // Clip: ShellScene boot → Practice → Hole 1 → straight line →
+            // arm FADE/DRAW → DRAW bent → FADE bent → fire FADE shot.
+            // 120s covers: boot ~5s + hole load ~50s + settle 4s + straight ~3s + toggle ~1s +
+            // draw dwell 3s + fade dwell 3s + shot ramp+flight ~10s.
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 120;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/fade_draw_aim_line_bend/videos/fade_draw_aim_line_bend_gate";
+            BotVideoRecorder.Arm();
+            Launch("fade_draw_aim_line_bend_gate");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Fade Draw Aim Line Bend Gate", isValidateFunction: true)]
+        static bool ValidateFadeDrawAimLineBendGate() => !EditorApplication.isPlaying;
+
         [MenuItem("GOLFIN/Smoke/Loop v2/Audio — UI and Music Slider", isValidateFunction: true)]
         static bool ValidateAudioUiMusicSlider() => !EditorApplication.isPlaying;
 

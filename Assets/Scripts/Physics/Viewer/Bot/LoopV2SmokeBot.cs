@@ -178,6 +178,10 @@ namespace Golfin.Physics.Viewer
                 case "audio_match_stinger":
                     scenarioRoutine = Bot.Scenarios.AudioMatchStinger(driver);
                     break;
+                // Order 355 fade_draw_aim_line_bend (2026-06-17):
+                case "fade_draw_aim_line_bend_gate":
+                    scenarioRoutine = Bot.Scenarios.FadeDrawAimLineBendGate(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

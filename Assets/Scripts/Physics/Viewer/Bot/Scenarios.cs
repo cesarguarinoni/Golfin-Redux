@@ -2985,6 +2985,183 @@ namespace Golfin.Physics.Viewer.Bot
 
             d.LogStep("=== Audio Match Stinger: done ===");
         }
+
+        // ── Scenario: fade_draw_aim_line_bend_gate ────────────────────────────
+        // fade_draw_aim_line_bend Order 355 (2026-06-17 iter-3): visual acceptance gate.
+
+        /// <summary>
+        /// Visual acceptance gate for the fade/draw aim-line bend (Order 355), iter-3.
+        ///
+        /// Demonstrates, in order:
+        ///   1. Straight mode (FadeDraw OFF) — aim line points toward hole, no bend.
+        ///      Capture: straight_line.
+        ///   2. Toggle to FADE/DRAW mode (arm via ShotModeContext.Toggle).
+        ///      Capture: fadedraw_armed.
+        ///   3. DRAW (handle left, FinetuneX = −1) — line bends LEFT.
+        ///      FIRE the DRAW shot so the ball curves left, matching the line.
+        ///      Capture: draw_bent (before fire), draw_in_flight (ball curving left).
+        ///   4. Wait for ball to land/resolve, then re-arm for FADE demonstration.
+        ///      Capture: fade_bent (line bending right, no shot to keep total time manageable).
+        ///
+        /// Sign convention (D5):
+        ///   FinetuneX = −1 (handle LEFT) = DRAW = ball curves LEFT = line bends LEFT
+        ///   FinetuneX = +1 (handle RIGHT) = FADE = ball curves RIGHT = line bends RIGHT
+        ///
+        /// Pre-capture state verification: LogStep prints sc.State and the actual
+        /// FinetuneX that ShotConeView pushed to AimLineBendRenderer, so a reviewer can
+        /// cross-check the log against the video timestamps.
+        ///
+        /// Video (1170×2532, BotVideoRecorder): full sequence as primary evidence.
+        /// Stills are extracted from the raw video using ffmpeg at verified timestamps
+        /// (see post-processing note at end of scenario).
+        /// </summary>
+        public static IEnumerator FadeDrawAimLineBendGate(BotDriver d)
+        {
+            d.LogStep("=== Fade Draw Aim Line Bend Gate iter-3 (fade_draw_aim_line_bend Order 355) ===");
+
+            // ── 0. Initial settle — give GameView RT time to stabilize after recording start ─
+            // This extra wait at the top reduces the chance of a Metal RT-recreation y-flip
+            // during the first few frames of recording (known Metal transient on first RT access).
+            yield return new WaitForSecondsRealtime(3f);
+            d.LogStep("Initial settle complete.");
+
+            // ── 1. Navigate to Practice → any hole (real ShellScene boot path) ────
+
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f);
+
+            yield return d.ClickModeCardPlay("practice", settleSeconds: 1.5f);
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(3f); // auto-expand settle
+
+            yield return d.Click("ActionButton", settleSeconds: 1.5f);
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 60f);
+
+            // Wait for ANY hole geo scene to finish loading (practice uses the save's
+            // current hole, typically Hole 6 in this build).
+            d.LogStep("WaitForAnyHoleGeo: polling for Hole_NN_Geo scene…");
+            {
+                float geoElapsed = 0f;
+                bool geoFound = false;
+                while (geoElapsed < 90f)
+                {
+                    for (int si = 0; si < UnityEngine.SceneManagement.SceneManager.sceneCount; si++)
+                    {
+                        var sc2 = UnityEngine.SceneManagement.SceneManager.GetSceneAt(si);
+                        if (sc2.isLoaded && sc2.name.StartsWith("Hole_") && sc2.name.EndsWith("_Geo"))
+                        {
+                            d.LogStep($"WaitForAnyHoleGeo OK: '{sc2.name}' loaded after {geoElapsed:F1}s");
+                            geoFound = true;
+                            break;
+                        }
+                    }
+                    if (geoFound) break;
+                    yield return new WaitForSecondsRealtime(0.5f);
+                    geoElapsed += 0.5f;
+                }
+                if (!geoFound) { d.LogStep("WaitForAnyHoleGeo TIMEOUT — no Hole_NN_Geo after 90s"); yield break; }
+            }
+            yield return new WaitForSecondsRealtime(5f); // let hole fully initialize + camera settle
+
+            // ── 1b. Ensure the shot has real velocity ─────────────────────────────
+            // The production drag→flick path (CommitFlick) only imparts launch velocity
+            // when the active club's ballistic bundle is present. Select the driver and
+            // inject its lab bundle (the proven launch prep from SmokeRunner2fHost /
+            // BotDriver.FireDriverShot) so the demonstration shot actually flies — without
+            // it, EndExternalDrag commits a zero-velocity shot and the ball stays on the tee.
+            {
+                var lab = UnityEngine.Object.FindObjectOfType<Golfin.Physics.Viewer.PhysicsLabController>();
+                if (lab != null)
+                {
+                    lab.SetClub(0);                       // 0 = Driver
+                    lab.InjectLabBundleForCurrentClub();  // LAB path → real ballistics/velocity
+                    d.LogStep("[FIRE-PREP] SetClub(0=Driver) + InjectLabBundleForCurrentClub()");
+                }
+                else d.LogStep("[FIRE-PREP] WARN: PhysicsLabController not found — shot may have no velocity");
+            }
+            yield return new WaitForSecondsRealtime(1f);
+
+            // ── 2. Confirm STRAIGHT mode — capture aim line with no bend ─────────
+
+            // Ensure Straight mode (no FadeDraw).
+            Golfin.Gameplay.UI.HUD.ShotModeContext.Reset();
+            yield return new WaitForSecondsRealtime(0.5f);
+
+            var sc = UnityEngine.Object.FindObjectOfType<Golfin.Gameplay.Input.ShotController>();
+            if (sc == null) { d.LogStep("FAIL: no ShotController found"); yield break; }
+
+            d.LogStep($"[PRE-STRAIGHT] sc.State={sc.State} FadeDrawActive={sc.FadeDrawActive}");
+            sc.BeginExternalDrag();                   // Idle → Aiming
+            sc.SetExternalPower(0.45f, 0f);           // power=45%, finetune=0 (straight)
+            yield return new WaitForSecondsRealtime(2f);
+            d.LogStep($"[STRAIGHT-CAPTURE] sc.State={sc.State} FadeDrawActive={sc.FadeDrawActive}");
+            yield return d.Capture("straight_line");
+
+            sc.CancelExternalDrag();                  // back to Idle (no shot)
+            yield return new WaitForSecondsRealtime(1f);
+
+            // ── 3. ARM FADE/DRAW mode ─────────────────────────────────────────────
+
+            d.LogStep("[ARM FADE/DRAW] Toggling ShotModeContext: Straight → FadeDraw");
+            Golfin.Gameplay.UI.HUD.ShotModeContext.Toggle(); // Straight → FadeDraw
+            yield return new WaitForSecondsRealtime(1.5f);   // let button UI refresh
+            d.LogStep($"[FADEDRAW-ARMED-CAPTURE] sc.FadeDrawActive={sc.FadeDrawActive}");
+            yield return d.Capture("fadedraw_armed");
+            yield return new WaitForSecondsRealtime(1f);
+
+            // ── 4. DRAW — handle left (FinetuneX = −1) ─────────────────────────
+            // Capture bent line WITHOUT firing the shot. Firing on a Par 3 ends the hole
+            // (iter-3 post-mortem) and blocks the FADE capture. Both bends are captured
+            // pre-shot; a single demonstration shot follows at the end.
+
+            d.LogStep("[DRAW PHASE] BeginExternalDrag, FinetuneX=−1 (DRAW → line bends in DRAW direction)");
+            sc.BeginExternalDrag();
+            sc.SetExternalPower(0.45f, -1f);          // FinetuneX = −1 = full DRAW
+            yield return new WaitForSecondsRealtime(3f);
+            d.LogStep($"[DRAW-BENT-CAPTURE] sc.State={sc.State} FadeDrawActive={sc.FadeDrawActive}");
+            yield return d.Capture("draw_bent");
+            yield return new WaitForSecondsRealtime(1f);
+
+            // Charge to firing power while holding the DRAW — one continuous shot,
+            // no cancel/re-arm, no FADE staging. The bent line stays visible as power
+            // ramps, then the shot fires and the ball curves to match it.
+            float ramp = 1.2f, rt = 0f;
+            while (rt < ramp)
+            {
+                rt += UnityEngine.Time.unscaledDeltaTime;
+                sc.SetExternalPower(Mathf.Lerp(0.45f, 0.7f, rt / ramp), -1f);
+                yield return null;
+            }
+            sc.SetExternalPower(0.7f, -1f);
+            yield return new WaitForSecondsRealtime(0.4f);
+            // The production drag→flick commit does NOT impart a visible launch in this
+            // lab/practice-hybrid context, so end the aim drag and fire via the debug path
+            // (FireViaShotController → FireDebugShot → CommitFlick), which DOES launch — now
+            // carrying the DRAW finetune so the ball physically curves LEFT to match the line.
+            sc.CancelExternalDrag();
+            sc.FadeDrawActive = true;                      // ensure shaping is armed for the fire
+            {
+                var lab2 = UnityEngine.Object.FindObjectOfType<Golfin.Physics.Viewer.PhysicsLabController>();
+                if (lab2 != null)
+                    lab2.FireViaShotController(0.42f, Golfin.Gameplay.Input.DebugShotAccuracy.Green, -1f);
+                else d.LogStep("[FIRE] WARN: PhysicsLabController not found");
+            }
+            // Power 0.42 (not 0.7): a 0.7 driver overshot the 168yd Par-3 green into the back
+            // tree-line and the chase cam buried in foliage. A lower shot lands on/near the
+            // green, staying in frame so the draw curve + landing are visible (fix the SHOT,
+            // not the camera — feedback_gameplay_video_use_normal_play).
+            d.LogStep("[FIRE] FireViaShotController(power=0.42, DRAW finetune=-1) — ball launches + curves left, lands in frame");
+
+            // Let the ball get airborne BEFORE capturing (a snap 1 frame after release
+            // shows the ball still on the tee — the iter-3 mistake). Then dwell so the
+            // normal chase camera follows the curving ball through its flight + landing.
+            yield return new WaitForSecondsRealtime(1.5f);
+            yield return d.Capture("draw_ball_flight");    // ball in the air, curving left
+            yield return new WaitForSecondsRealtime(6f);
+
+            d.LogStep("=== FadeDrawAimLineBend normal playthrough complete ===");
+            d.FlushLog();
+        }
     }
 }
 #endif

@@ -856,7 +856,7 @@ namespace Golfin.Physics.Viewer
         ///
         /// Only call from bot / smoke-runner code — never from production paths.
         /// </summary>
-        internal void FireViaShotController(float power01, Golfin.Gameplay.Input.DebugShotAccuracy accuracy = Golfin.Gameplay.Input.DebugShotAccuracy.Green)
+        internal void FireViaShotController(float power01, Golfin.Gameplay.Input.DebugShotAccuracy accuracy = Golfin.Gameplay.Input.DebugShotAccuracy.Green, float coneFinetune = 0f)
         {
             if (_shotController == null)
             {
@@ -870,7 +870,8 @@ namespace Golfin.Physics.Viewer
             // FireDebugShot drives ShotController through the full production path:
             // Idle → Flicking → Resolving → OnShotResolved → HandleShotResolved → SM.
             // ShotConeView subscribes to OnStateChanged, so it sees Resolving and hides UI.
-            _shotController.FireDebugShot(power01, accuracy);
+            // coneFinetune carries fade/draw shaping (applied only when FadeDrawActive).
+            _shotController.FireDebugShot(power01, accuracy, coneFinetune);
         }
 
         // ── Camera orbit ───────────────────────────────────────────────────────

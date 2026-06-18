@@ -60,6 +60,8 @@ namespace Golfin.Gameplay.Config
                     case "AimNudgeRangeRad":               cfg.AimNudgeRangeRad               = val; break;
                     case "SpinSelectorFloorRadius01":      cfg.SpinSelectorFloorRadius01      = val; break;
                     case "BallSpriteVisualRadiusFrac":     cfg.BallSpriteVisualRadiusFrac     = val; break;
+                    case "AimLineDefaultReachPx":          cfg.AimLineDefaultReachPx          = val; break;
+                    case "AimLineCurveScale":              cfg.AimLineCurveScale              = val; break;
                     default: matched = false; break;
                 }
 

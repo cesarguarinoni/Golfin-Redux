@@ -149,11 +149,13 @@ namespace Golfin.Gameplay.Input
 
         // Fires a shot directly without gesture input. Maps accuracy preset to degradation yaw.
         // power range: 0–1.2 (same as PowerNormalized; 1.0 = 100%).
-        public void FireDebugShot(float power, DebugShotAccuracy accuracy)
+        public void FireDebugShot(float power, DebugShotAccuracy accuracy, float coneFinetune = 0f)
         {
             TransitionToIdle();
             PowerNormalized    = Mathf.Clamp(power, 0f, 1.2f);
-            _coneFinetune      = 0f;
+            // Carry the fade/draw shaping only when armed; the default 0 keeps every existing
+            // caller firing dead-straight exactly as before. This lets a debug/bot shot curve.
+            _coneFinetune      = (!IsPutt && FadeDrawActive) ? Mathf.Clamp(coneFinetune, -1f, 1f) : 0f;
             _externalDragActive = false;
             _degradationYawRad = accuracy switch
             {

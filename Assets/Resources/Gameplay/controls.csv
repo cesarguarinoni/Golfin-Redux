@@ -26,3 +26,5 @@ FadeDrawMaxTiltRad,0.3,fade/draw dominant curve max tilt in radians (approx 17 d
 AimNudgeRangeRad,0.0524,aim yaw nudge in radians at full handle deflection in Straight mode (~3 deg; D4)
 SpinSelectorFloorRadius01,0.20,spin selector disc min radius fraction at spin=-10 (feel knob; 0.0-1.0)
 BallSpriteVisualRadiusFrac,0.957,fraction of BallImage RT half-width that equals the visible painted ball edge (alpha-padding calibration; tunable)
+AimLineDefaultReachPx,500,aim-line reach in canvas px at rest (Order 355 fade_draw_aim_line_bend; iter-2 increased from 400)
+AimLineCurveScale,0.55,aim-line curvature gain k — tip lateral px = k * |finetune| * reachPx (Order 355; iter-4 increased from 0.35 for a more pronounced/readable bend)
