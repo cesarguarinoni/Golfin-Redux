@@ -3,7 +3,8 @@
 > **Tier:** FULL PIPELINE (Tier 3).
 > **Status:** RESET 2026-06-19 after iter-15 escalation (`ARCHITECT_ESCALATION.md`). v1 architecture (RenderTexture + bot-video-as-gate) is **withdrawn**. This v2 changes the render path and **replaces the verification gate**. Do NOT resume from iter-15 visuals.
 > **Reference image:** `reference_old_ui.png` (this folder) — the in-game hole indicator with a LINE to the hole is the flag treatment (see §6).
-> **Handoff kickoff:** `Use the implementer subagent on "map_view_aiming"` — start from §A (entry point) and do nothing else until it passes.
+> **Handoff kickoff:** `Use the implementer subagent on "map_view_aiming"`.
+> **Step 0 (before any map work):** apply `Docs/PIPELINE_HARDENING.md` to `route_subagent.py` + `.claude/agents/*` so the iteration breaker, real-entry rule, and math-not-pixels gate enforce on THIS run. Then start from §A (entry point) and do nothing else until it passes.
 
 ---
 
@@ -79,10 +80,11 @@ Power-on-map; per-club dispersion rings; heat-gradient polish beyond the radial 
 11. Zero `Assets/Scripts/Physics/` edits. Aim-only.
 12. EditMode tests: screen→ground projection, carry/ring placement (center==carry; rings 80/100/120%), curve-bend sign, write-back heading round-trip.
 
-## 9. Capture (artifact, NOT the gate)
+## 9. Capture (artifact, NOT the gate) — fix the CAUSE of flips, don't catch them
+**Root cause (corrected 2026-06-19, per Cesar):** flipped frames are NOT a Metal/Recorder fact — Cesar's `HoleFlyoverRecorder` flyovers record through Unity Recorder with no flips. The iter 6–15 flips were **self-inflicted** by the indirection we added: RT→RawImage (RenderTexture sampling origin differs across graphics APIs) → then a `uvRect` flip to "fix" it → then `yflip_repair.py` to patch the output. Remove the indirection and there is nothing to catch.
 - One continuous clip of **real play**: tap the real `HoleCardWidget` → map opens → tap-aim + drag-aim → (arm Fade/Draw → bent line) → SHOOT/close → fire on chosen heading → ball flies.
-- Captured from the **overlay camera directly** (no RT, no Unity-Recorder-on-RawImage flip games, no `yflip_repair.py`).
-- Verification of the clip (secondary): decode **consecutive** frames + L2 mirror detector. **`ffmpeg -ss` keyframe sampling is BANNED** (structurally skips flipped frames — the iter 6–15 blind spot).
+- **Capture via the PROVEN flip-free path** = exactly what `HoleFlyoverRecorder` already does: tag the map overlay camera and point Unity Recorder's **`CameraInputSettings` `TaggedCamera`** input at it. **No RenderTexture, no RawImage, no `uvRect`, no GameView-overlay composite capture, no `yflip_repair.py`.** This is the same mechanism Cesar uses that does not flip.
+- **No flip-detector as a gate.** Orientation is already verified by the §11 invariant (`ball.screenY > flag.screenY`) — projected coordinates, not pixels. If a captured frame is ever flipped, that is a **regression signal that an indirection was re-introduced** → fix the capture path, NEVER detect-and-repair. (If frames are ever sampled at all, decode **consecutive** frames; `ffmpeg -ss` keyframe sampling stays banned as structurally blind.)
 - The clip is for Cesar to glance at. **It is NOT the pass/fail gate** — §11 is.
 
 ## 10. Implementer notes

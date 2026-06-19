@@ -18,10 +18,11 @@
 - The recorded video is an **artifact for the human**, not the gate.
 - Each task's SPEC defines its invariant table (see `map_view_aiming` SPEC §11 as the template: orientation, marker collinearity, projected-pos == `WorldToScreenPoint`, write-back round-trip, banned-API/architecture absence).
 
-## 4. Video verification method (when a clip IS checked as a secondary)
-- Decode **consecutive frames**; run the L2 vertical-mirror / orientation detector across them.
-- **`ffmpeg -ss <time>` single-frame keyframe sampling is BANNED** for flip/orientation checks — it keyframe-snaps and structurally skips intermittent flipped frames (the iter 6–15 blind spot).
-- **No post-process "repair"** (`yflip_repair.py`-style) to make a clip pass. Fix the capture at the source. A pipeline that needs to re-flip its own output is failing, not passing.
+## 4. Capture the flip-free way — do NOT build flip-catchers
+- **Flips are not a platform fact; they are self-inflicted.** Plain Unity Recorder on a normal/tagged camera does not flip (Cesar's `HoleFlyoverRecorder` flyovers prove it). Flips appear only when we add indirection: **RT→RawImage** (RenderTexture sampling origin differs across graphics APIs), a **`uvRect` flip** to "fix" it, GameView-overlay composite capture, etc.
+- **Capture via the proven path:** Recorder `TaggedCamera` input pointed at the target camera — the mechanism already working in `HoleFlyoverRecorder`. **Banned:** RT→RawImage capture indirection, `uvRect` flips, and any post-process re-flip (`yflip_repair.py`-style). A pipeline that re-flips its own output is failing, not passing.
+- **Verify orientation by the math, not the pixels** — the world→screen invariant (e.g. `ball.screenY > flag.screenY`) catches an upside-down render with zero frame-pixel analysis. Do not stand up a flip-detector as a routine gate; a flipped frame = a capture-path regression to fix at the source.
+- If frames are ever sampled at all: decode **consecutive** frames. `ffmpeg -ss <time>` single-frame keyframe sampling stays **banned** (keyframe-snaps past intermittent flips — the iter 6–15 blind spot).
 
 ## 5. Reviewer scope
 - Reviewer + red-team agents **re-run the ENTIRE SPEC §acceptance list every pass** — not only the symptom the previous reviewer named. iter-15's recurring miss was scoped re-checks that fixed the last-named thing while the feature stayed broken as a whole.
