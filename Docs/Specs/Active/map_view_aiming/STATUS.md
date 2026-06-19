@@ -1,11 +1,13 @@
 # STATUS — `map_view_aiming` (Order 352)
 
 **Tier:** FULL PIPELINE (Tier 3)
-**State:** SPEC_READY — awaiting `Use the implementer subagent on "map_view_aiming"`.
+**State:** RESET — SPEC v2 authored 2026-06-19 after iter-15 escalation. Awaiting fresh implementer run from SPEC §A.
 
 ## Log
-- **2026-06-18** — Scoping complete. 6 forks resolved by Cesar: hero-angle camera (overrides kickoff's ortho lock), drag+tap aim, pinch-zoom+pan, aim-only, all-buttons-hidden-except-club (relabel "SHOOT" = close), markers = ball/flag/landing-zone/mocked-trajectory+power-rings. Genre research (Golf Clash / Golf Rival) confirmed the draggable-landing-target + guide-line + ring-band idiom. Live code verified: entry widget + RT surface + landing/ring/trajectory visuals are net-new; carry from `_maxCarryYards`; no per-club accuracy field (rings = fixed % band for v1); reuse `AimLineBendRenderer.LateralAtT` curve math world-space. SPEC.md authored. Notion 352 → In Progress.
+- **2026-06-19** — **iter-15 escalation adjudicated (Architect).** Pipeline twice marked PASS on a feature unopenable in real play + upside-down. Decisions: (1) **drop RenderTexture → 2nd full-screen overlay camera** (kills the Metal-flip tar pit at the source); (2) **verification gate replaced**: bot-video-as-gate → **world→screen invariant JSON assertions** (`map_view_invariants.json`, SPEC §11) that work without Cesar; bot must drive the **real `HoleCardWidget`** (synthetic button banned → entry-point bug un-hideable); (3) flag → **in-game hole indicator WITH line to hole** (not a flag icon on the pin, not an 18× mesh); (4) ground visuals → **projected decal/shader over terrain** (rings + landing zone), not clipped quads/under-terrain lines. SPEC rewritten to v2. Pipeline-wide fixes → `Docs/PIPELINE_HARDENING.md` (iteration circuit-breaker, real-entry rule, math-not-pixels gate, `ffmpeg -ss` ban, reviewer full-list re-run, fabricated-claim auto-FAIL). Architect owns: v1 SPEC over-locked the RT path. Notion 352 stays In Progress.
+- **2026-06-18** — Scoping complete, SPEC v1 authored (RT path — now withdrawn).
 
 ## Reference
-- Old-UI screenshot (Cesar, this session) = visual reference. If dropped to disk: `reference_old_ui.png` in this folder.
+- `ARCHITECT_ESCALATION.md` (Code's iter-15 post-mortem) — the record that triggered v2.
+- `reference_old_ui.png` (if dropped) — hole-indicator-with-line treatment.
 - Kickoff (superseded): `Docs/Specs/Queued/map_view_aiming_KICKOFF.md`.

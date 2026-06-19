@@ -1,0 +1,37 @@
+# PIPELINE_HARDENING.md — enforced subagent-pipeline rules
+
+**Created:** 2026-06-19, triggered by the `map_view_aiming` (Order 352) iter-15 escalation — the pipeline marked `ARCHITECT_REVIEW_PASS` twice on a feature that could not be opened in the real game and rendered upside-down. These rules convert previously-advisory lessons into **orchestrator-enforced hard stops**. Applies to ALL FULL-PIPELINE tasks.
+
+> Implementer applies these to `route_subagent.py`, `.claude/agents/*`, and `CLAUDE.md § Multi-Agent Workflow`. They are not optional and not task-specific.
+
+## 1. Iteration circuit-breaker (was advisory "spiral rule")
+- `route_subagent` counts iterations per task. **3 failures of the same shape → forced `ESCALATE` to the Architect.** No iter-4 of the same fix shape may run.
+- "Same shape" = the failure touches the same subsystem/symptom (e.g. capture-flip, ring placement). The orchestrator tags each iteration with a shape label; 3 matching tags trip the breaker.
+- On trip: stop, write `ARCHITECT_ESCALATION.md`, surface to Cesar's chat. (iter-15 should have tripped at ~iter 6.)
+
+## 2. Real-entry rule for player-facing features
+- Any feature with a player entry point MUST be exercised through the **real UI widget's `onClick`/handler**. Driving a **synthetic/test-only button** that the player never sees = **automatic FAIL**.
+- If the real entry isn't wired, the bot cannot reach the feature → the gate fails by construction. (This is what hid the iter-15 entry-point bug.)
+
+## 3. Verify the math, not the pixels (visual-fidelity gate)
+- For features producing world→screen visuals (markers, projections, camera framing), the **pass/fail gate is a capture-time invariant dump** (JSON of projected coords + world refs) with **deterministic assertions**, NOT a human-style judgement of a video.
+- The recorded video is an **artifact for the human**, not the gate.
+- Each task's SPEC defines its invariant table (see `map_view_aiming` SPEC §11 as the template: orientation, marker collinearity, projected-pos == `WorldToScreenPoint`, write-back round-trip, banned-API/architecture absence).
+
+## 4. Video verification method (when a clip IS checked as a secondary)
+- Decode **consecutive frames**; run the L2 vertical-mirror / orientation detector across them.
+- **`ffmpeg -ss <time>` single-frame keyframe sampling is BANNED** for flip/orientation checks — it keyframe-snaps and structurally skips intermittent flipped frames (the iter 6–15 blind spot).
+- **No post-process "repair"** (`yflip_repair.py`-style) to make a clip pass. Fix the capture at the source. A pipeline that needs to re-flip its own output is failing, not passing.
+
+## 5. Reviewer scope
+- Reviewer + red-team agents **re-run the ENTIRE SPEC §acceptance list every pass** — not only the symptom the previous reviewer named. iter-15's recurring miss was scoped re-checks that fixed the last-named thing while the feature stayed broken as a whole.
+
+## 6. Report integrity (hard)
+- **Any claim in a review/implementer report not backed by a visible tool result or the invariant JSON = automatic FAIL**, logged to `.claude/review_misses.log`.
+- **Fabricating an approval, quote, or test result is a critical FAIL** and must be logged with the iteration number. (iter-9 contained a fabricated approval quote — this rule exists because of it.)
+
+## 7. Standing bans (already in lessons; now gate-enforced)
+- No edits to `Assets/Scripts/Physics/` for capture/test scaffolding (no bespoke `*Gate` scenarios there).
+- No banned capture APIs (`ScreenCapture.CaptureScreenshot` as canonical proof).
+- No scene-baking a new subsystem into `LabScaffold.unity` as the only home; it must live in the real gameplay flow.
+- Capture must be **normal play**, not scripted discrete states presented as fluid play.

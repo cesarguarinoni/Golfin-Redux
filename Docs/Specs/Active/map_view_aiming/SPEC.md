@@ -1,82 +1,107 @@
-# SPEC — `map_view_aiming` (Order 352)
+# SPEC — `map_view_aiming` (Order 352) — **v2 (post-escalation reset)**
 
-> **Tier:** FULL PIPELINE (Tier 3) — visual fidelity + runtime world↔screen aim projection.
-> **Status:** SPEC_READY 2026-06-18. Scoping complete (6 forks resolved by Cesar). No Figma — reference is the previous-implementation screenshot (`Docs/Specs/Active/map_view_aiming/reference_old_ui.png` — Architect to confirm Cesar drops the image here; otherwise intent-driven from the description below).
-> **Handoff kickoff:** `Use the implementer subagent on "map_view_aiming"`.
+> **Tier:** FULL PIPELINE (Tier 3).
+> **Status:** RESET 2026-06-19 after iter-15 escalation (`ARCHITECT_ESCALATION.md`). v1 architecture (RenderTexture + bot-video-as-gate) is **withdrawn**. This v2 changes the render path and **replaces the verification gate**. Do NOT resume from iter-15 visuals.
+> **Reference image:** `reference_old_ui.png` (this folder) — the in-game hole indicator with a LINE to the hole is the flag treatment (see §6).
+> **Handoff kickoff:** `Use the implementer subagent on "map_view_aiming"` — start from §A (entry point) and do nothing else until it passes.
 
 ---
 
-## 0. One-line intent
-Tap the hole-map thumbnail in the Shot UI → a full-screen **hero-angle** live view of the real hole, where the player **drags or taps to aim** (with a mocked trajectory + landing zone + power-band rings), then closes back to the normal shot view. Aim set here carries into the live shot.
+## WHY v2 (read before coding)
+The pipeline marked iter-15 `ARCHITECT_REVIEW_PASS` while the feature **could not be opened in the real game** and rendered **upside-down with misaligned markers**. Two root causes, both fixed here:
+1. **Wrong gate.** Acceptance was a bot-driven video through a *synthetic* button. v2 gate = **world→screen invariant assertions** (numbers, not pixels) + drive through the **real** entry widget (§11). A bot pressing a fake button can no longer certify a feature a human can't open.
+2. **Wrong render path.** RT→RawImage on Mac/Metal flips; "fixes" (uvRect) turned the live map upside-down. v2 = **2nd full-screen overlay camera, NO RenderTexture** (§3).
 
-## 1. Scope decisions (LOCKED — Cesar, 2026-06-18)
+## A. FIRST MILESTONE — real entry point (nothing else until this passes)
+- `HoleCardWidget` (the real Shot-UI thumbnail) becomes a tappable Button whose onClick calls `MapViewController.Open()`.
+- `MapViewController` must be present + enabled in the **real gameplay flow** (Practice AND 1v1), not just `LabScaffold.unity`.
+- **NO synthetic "HoleMap" button.** Delete `MapViewCaptureDriver`'s fake button; any capture drives the real `HoleCardWidget` onClick.
+- **Gate for A:** the capture bot opens the map by invoking the *real* `HoleCardWidget` button; if it can't, FAIL. (This is the assertion that makes the entry-point bug un-hideable.)
+
+## 1. Scope decisions (LOCKED)
 | # | Decision |
 |---|----------|
-| Render source | **Live camera → RenderTexture** (option B). Static-PNG scaling rejected (kickoff). |
-| Camera look | **Hero angle** (tilted bird's-eye, like the reference screenshot). **OVERRIDES** the kickoff's earlier "LOCKED ortho top-down" — a live cam projects markers correctly at any tilt, so the drift worry that drove the ortho lock (a *static-PNG* problem) does not apply. |
+| Render source | **2nd full-screen overlay Camera, NO RenderTexture.** (CHANGED from v1.) Map cam renders the real hole at a hero tilt, higher depth than the gameplay cam, clears solid/skybox, draws over the live view. No RawImage, no `uvRect`, no Metal-flip surface. |
+| Camera look | **Hero angle** (tilted bird's-eye). Orientation correct **at the camera transform** (behind ball, looking toward green; ball/tee renders at the BOTTOM of frame). Verified by the §11 invariant (ball screenY > flag screenY), never by a uvRect hack. |
 | Aim interaction | **Drag AND tap** both set aim. |
-| Markers | Ball, flag, draggable landing zone, mocked trajectory + power rings. Hazards render for free (real geometry). |
-| Zoom / pan | **Pinch-zoom + pan** supported. |
+| Markers | Ball, hole-indicator-with-line (§6), draggable landing zone, mocked guide line + power rings. Hazards render for free. |
+| Zoom / pan | **Pinch-zoom + pan**, driven on the map **camera** (position/FOV) — trivial now that there's no RT. |
 | 1v1 | **Active player only.** Never opens on a bot turn. |
-| Sets | **Aim only.** Power still comes from the swing meter; rings are informational. |
-| Exit control | In map mode **all** Shot-UI buttons hide except the club-select button, which is **repurposed to a single Close control** (relabel to **"SHOOT"**), returning to the normal shot view. |
+| Sets | **Aim only.** Power stays on the swing meter; rings informational. |
+| Exit | In map mode ALL Shot-UI chrome hides except the club button, **relabeled "SHOOT"**, repurposed to close → return to shot view. Restore exactly on close. |
 
-## 2. Anchors (verified live, 2026-06-18 — do not re-derive; cite before editing)
-- **Entry widget:** `Assets/Scripts/Gameplay/UI/ShotUI/HoleCardWidget.cs` — currently a *static sprite swapper only* (`_holeMap` Image, `_holeMaps[18]`, `_defaultHoleMap`). **No Button / onClick / RawImage / RT today** → tap-to-open + RT surface are **net-new** here.
-- **Camera rig pattern to adapt:** `Assets/Scripts/Editor/Recording/HoleFlyoverRecorder.cs` — spawns a 2nd `Camera` (perspective, `fieldOfView` 55, `nearClipPlane` 0.3, `depth` 10 renders-on-top), bounds-fits from green/renderer bounds, disables `WalkCamera` while active. **For the map: render to a RenderTexture instead of on-top; keep perspective at a hero tilt; do NOT disable the gameplay camera** (the map is an overlay, the shot scene stays loaded behind it).
-- **Renderable geometry:** `Assets/Scripts/Physics/Viewer/LabHoleBinder.cs` (HoleGeo) + `Assets/Scripts/Course/Runtime/GreenTopology.cs` — already loaded in the gameplay scene, so a 2nd cam can render it directly.
-- **Aim pipeline (write-back target):** `Assets/Scripts/Gameplay/Input/ShotController.cs` — aim is driven by `CameraHeadingRadians` (NOT a public `SetAimYaw`; `_aimYawRadians` is private). Fade/Draw locks via `FadeDrawLockedAimRad` (public). `PowerNormalized` is read-only externally; `SetExternalPower(power, coneFinetune)` exists but is **out of scope** (aim-only). → **Map aim writes back by setting the aim heading**, so the cone + bent aim line follow downstream for free.
-- **Carry distance (landing-zone placement):** `ShotConeView._maxCarryYards` / `SetMaxCarryYards(float)` — same club-carry value the power gauge uses (`PowerGaugeWidget._maxCarryYards`). Landing center = carry along aim. **Single source of truth — read the same value, do not hardcode.**
-- **Projection reference:** `ShotConeView` uses `_worldCamera.WorldToScreenPoint(...)` + `RectTransformUtility.ScreenPointToLocalPointInRectangle(...)`. The map's input does the inverse (screen tap → world) via a ray through the map cam onto the ground plane (§5).
-- **Bent-line curve math to REUSE:** `Assets/Scripts/Gameplay/UI/ShotUI/AimLineBendRenderer.LateralAtT(t)` — `lateral(t) = SignedFinetune · CurveScale · t² · reach`, clamped. `CurveScale` from `ControlsConfig.AimLineCurveScale` (live value 0.55). **Reuse the parametric form for the map's bent guide line, but render it WORLD-SPACE on the ground (new renderer), not the screen-space `AimLineBendRenderer` MaskableGraphic.**
-- **Action-button container:** `Assets/Scripts/Gameplay/UI/ShotUI/ActionButtonsBuilder.cs` builds the Spin/FadeDraw/Golfin/Club buttons. Implementer to locate the exact button refs for the hide/relabel seam (§4). **Do NOT re-run the builder** (Lesson AH: builder re-runs bake latent visual changes — the white-top regression).
+## 2. Anchors (verified live)
+- **Entry widget:** `Assets/Scripts/Gameplay/UI/ShotUI/HoleCardWidget.cs` — `Image` sprite-swapper, **no Button today** → §A wires it.
+- **Camera-rig pattern:** `Assets/Scripts/Editor/Recording/HoleFlyoverRecorder.cs` — 2nd-camera bounds-fit (perspective, FOV 55, nearClip 0.3, depth-above). Adapt to a runtime overlay cam (NOT editor-only, NOT RT).
+- **Renderable geometry:** `LabHoleBinder` (HoleGeo) + `GreenTopology` — already loaded.
+- **Aim pipeline / write-back:** `ShotController` — aim driven by `CameraHeadingRadians`; no public `SetAimYaw` (add a minimal public seam mirroring `FadeDrawLockedAimRad`, do not touch privates). `PowerNormalized` read-only externally — out of scope (aim-only).
+- **Carry:** `ShotConeView._maxCarryYards` / `SetMaxCarryYards` (same value `PowerGaugeWidget` uses). Landing center = carry along aim. Single source of truth.
+- **Projection:** `_worldCamera.WorldToScreenPoint(...)` (as `ShotConeView` does) — used for BOTH marker placement and the §11 invariant dump.
+- **Curve reuse:** `AimLineBendRenderer.LateralAtT(t)` (`lateral = SignedFinetune·CurveScale·t²·reach`, clamped; `CurveScale` from `ControlsConfig.AimLineCurveScale`, live 0.55). Reuse the parametric form for the world-space guide line.
+- **Hole indicator:** `HoleIndicatorWidget` + `Assets/Art/In-Game UI/Icon - Flag.png` — the normal-shot indicator with a LINE to the hole (§6).
 
-## 3. Map render & camera
-- New `MapViewController` (MonoBehaviour, `Golfin.Gameplay.UI` or the ShotUI namespace already in use). Owns: the map `Camera`, the `RenderTexture`, the overlay `RawImage`, markers, input, and open/close lifecycle.
-- **Camera:** perspective, hero tilt (start ~55–65° from horizontal — tune to match the reference framing), positioned + framed to fit the playable hole between ball and green using the `HoleFlyoverRecorder` bounds-fit approach. Renders only relevant layers (terrain, green, hazards, course meshes; exclude the live HUD).
-- **RT:** sized to the device screen (full-res, e.g. 1170×2532 reference); recreate on orientation/size change. Disposed on close.
-- **Overlay:** full-screen `RawImage` on its own Canvas above the shot HUD; opening sets it active, closing tears it down. Behind it, the shot scene + its camera stay untouched (no camera-fighting — Lesson set from the fade/draw arc).
+## 3. Map render & camera (overlay, no RT)
+- `MapViewController` owns a runtime overlay `Camera`: hero tilt (~55–65° from horizontal, tune to reference), bounds-fit ball↔green via the `HoleFlyoverRecorder` approach, depth above the gameplay cam, clears solid/skybox, culls to terrain/green/hazards/course (exclude HUD + lab scaffolding). The gameplay cam stays alive behind it.
+- **No RenderTexture, no RawImage.** Orientation is a property of the camera transform — get it right there.
+- Pinch-zoom = adjust cam distance/FOV; pan = move the cam target within hole bounds. Reset on reopen.
 
 ## 4. UI / buttons in map mode
-- On open: hide the entire action-button row + GOLFIN ball button + wind indicator + settings gear + player card (everything except the club button). Use a reversible toggle (CanvasGroup/SetActive on the container) — restore exactly on close.
-- The **club-select button** stays, relabeled **"SHOOT"**, its handler swapped to "close map → return to shot view". On close, label + handler revert.
-- **NOTE (implementer):** confirm the exact button GameObjects in `ActionButtonsBuilder`/the Shot-UI prefab and toggle them in the scene/prefab WITHOUT re-running the builder.
+- On open: reversibly hide the action-button row + GOLFIN + wind + settings + player card (CanvasGroup/SetActive on the container — do NOT re-run `ActionButtonsBuilder`, Lesson AH). Restore exactly on close.
+- Club button stays, relabeled **"SHOOT"**, handler swapped to close. Revert on close.
 
-## 5. Aim interaction (runtime spatial math — the Tier-3 core)
-- **Tap:** map RawImage-local point → screen point → `Ray` through the map camera → intersect the **ground plane** (terrain height at that x/z, or a flat plane at tee/ball Y for v1) → world target point. Aim heading = `atan2(target−ball)` on the x/z plane.
-- **Drag:** same projection, continuous while the finger moves the landing-zone handle (or anywhere on the map). Drag the landing target *or* tap empty ground — both re-aim.
-- **Write-back:** set the aim **heading** that `ShotController` reads (route through the same `CameraHeadingRadians` aim source the live cone uses — implementer to confirm the exact setter/seam; add a minimal public seam if none exists, mirroring `FadeDrawLockedAimRad`'s pattern, rather than reaching into privates). On close, the live shot view reflects the chosen aim.
-- **Clamp:** aim heading clamped to the legal aim range already enforced by the live aim pipeline (do not exceed what the normal cone allows).
+## 5. Aim interaction (runtime spatial math)
+- **Tap/Drag:** map-screen point → `Ray` through the overlay cam → ground-plane (terrain height sample preferred; flat plane at ball Y acceptable v1 — flag which) → world target. Heading = `atan2(target−ball)` on x/z.
+- **Write-back:** set the aim **heading** `ShotController` reads (minimal public seam). On close, the live cone/aim reflect it and the fired shot launches on it.
+- **Clamp** to the legal aim range the live pipeline enforces.
 
-## 6. Map overlays (mocked — NOT the deterministic sim)
-- **Guide line:** world-space line on the ground, ball → landing target. If **Fade/Draw is armed** (`ShotController.FadeDrawActive`), bend it using the `LateralAtT` parametric form (reused, world-space) so the map agrees with the in-game bent line. Otherwise straight.
-- **Landing zone:** world-space ground decal/quad centered at `ballPos + aimDir · carryYards` (carry from `_maxCarryYards`, converted yd→world units consistently with the rest of the sim). Foreshortens naturally under the hero tilt.
-- **Power-band rings:** 3 concentric ground rings at **80% / 100% / 120%** of carry (fixed spread for v1), labelled like the reference. **NOTE:** ring *spread* tied to club dispersion / Club-Control is a **v1.1 enhancement** — no per-club accuracy field exists today (only the debug `DebugShotAccuracy` enum), so v1 uses fixed % bands. Do not invent a field.
-- **Markers:** ball (origin) + flag/pin as world-space markers rendered by the map cam. Hazards (bunkers/water) appear from the real geometry — no separate markers in v1.
-- **Heat gradient** (red→green ideal-landing falloff) and a **roll-out extension line** (Golf Rival style) are **deferred to v1.1** unless trivially cheap.
+## 6. Map overlays (mocked — NOT the sim) — markers must stay COHERENT
+All three of {guide line, landing zone, power rings} share ONE aim direction and origin. The §11 gate asserts they project to a single screen line — this is the fix for iter-15's "three directions."
+- **Guide line:** world-space line on the ground, ball→landing target. Bends via `LateralAtT` (world-space) when `FadeDrawActive`, else straight.
+- **Landing zone:** **shader-driven radial gradient projected on the ground** (URP Decal Projector or a ground-projector shader) centered at `ball + aimDir·carry`. **NOT a flat textured quad** (iter-15 clipped at the tilt).
+- **Power rings:** **projected decal/shader annuli** (translucent, correct width, render OVER terrain, conform to slope) at **80/100/120%** of carry. **NOT flat `LineRenderer`/mesh at sampled height** (iter-15 clipped under terrain). Fixed-% spread v1 (no per-club accuracy field exists; Club-Control spread = v1.1).
+- **Hole indicator:** the in-game **`HoleIndicatorWidget` style — icon + LINE pointing to the hole** — projected to the pin's screen position. **NOT** an 18× `Flag.fbx` mesh, **NOT** a bare flag icon dropped on the pin. Fix the pin world pos (`HoleContext.PinWorld`) so it sits on the green.
+- **Ball marker:** at `ballWorldPos`, must be in-frame (gate asserts).
 
 ## 7. Out of scope (v1)
-Setting power on the map; per-club dispersion rings; heat-gradient; roll-out line; wind/elevation visualisation on the map; opponent display in 1v1; pan/zoom *limits* tuning beyond sane bounds.
+Power-on-map; per-club dispersion rings; heat-gradient polish beyond the radial shader; roll-out line; wind/elevation viz; opponent display; RenderTexture anything.
 
-## 8. Acceptance criteria
-1. Tapping the hole-map thumbnail opens a full-screen hero-angle live render of the **currently loaded real hole** (verified over a real hole via ShellScene→`BeginGameplayLoad`, never LabScaffold).
-2. In map mode only the (relabeled **SHOOT**) button is visible; all other Shot-UI chrome is hidden and restored exactly on close.
-3. Ball, flag, landing zone, guide line, and 3 power-band rings are visible and sit correctly on the ground under the hero tilt (no marker drift, no screen-space-circle-on-tilted-ground artefact).
-4. **Tap** and **drag** both re-aim; the landing zone + guide line track the chosen aim live.
-5. Aim chosen on the map **persists to the live shot** — closing the map shows the cone/aim line at the map-chosen heading, and the fired shot launches on that heading.
-6. With Fade/Draw armed, the map guide line **bends in the same direction** as the in-game bent line (sign-faithful to 355/356).
-7. Pinch-zoom + pan work and reset cleanly on reopen.
-8. Never openable on a bot turn in 1v1; active-player only.
-9. Zero edits under `Assets/Scripts/Physics/` (determinism tripwire). Aim-only — no power path touched.
-10. EditMode tests: screen→ground projection math (tap point → expected world target / heading) and the mocked carry/ring placement (landing center == carry along aim; rings at 80/100/120%). Curve-reuse sign test if Fade/Draw bend is included.
+## 8. Acceptance criteria (ALL hard-gated; §11 defines the automated checks)
+1. Map opens by tapping the **real** `HoleCardWidget` in Practice AND 1v1 (real `BeginGameplayLoad` hole, never LabScaffold-only). [§11-A]
+2. Map content is **right-side up** at the source (ball/tee bottom, green top) with **no `uvRect` flip and no RenderTexture** anywhere in the path. [§11 ball/flag screenY invariant]
+3. Ball, hole-indicator-with-line, landing zone, guide line, 3 power rings all visible, on the ground, conforming to and rendered OVER terrain. [§11 + visual]
+4. Guide line, landing center, and ring labels are **collinear / co-located** on one aim line. [§11 alignment invariant]
+5. Hole indicator points at the pin and sits inside the green. [§11 flag invariant]
+6. Tap and drag both re-aim; markers track live.
+7. Aim chosen on the map persists — fired shot launches on that heading. [§11 write-back invariant]
+8. Fade/Draw armed → guide line bends sign-faithful to 355/356.
+9. Pinch-zoom + pan work; reset on reopen.
+10. Never openable on a bot turn; active-player only.
+11. Zero `Assets/Scripts/Physics/` edits. Aim-only.
+12. EditMode tests: screen→ground projection, carry/ring placement (center==carry; rings 80/100/120%), curve-bend sign, write-back heading round-trip.
 
-## 9. Capture / visual gate (Tier-3, per fade/draw-arc lessons)
-- Capture over a **real loaded hole** at full device res; **normal play only** (no bespoke `*Gate` scenario, no camera-fighting) — all 3 reviewer agents hard-FAIL a video captured via a bespoke scenario.
-- Show: open map → tap-aim + drag-aim → (optionally arm Fade/Draw → bent guide line) → SHOOT/close → fire on the chosen heading → ball flies. One continuous normal-play clip.
-- Position-trace / assertion evidence for the projection (not just an open/close event log — Lesson O: dispatch ≠ visual fidelity).
+## 9. Capture (artifact, NOT the gate)
+- One continuous clip of **real play**: tap the real `HoleCardWidget` → map opens → tap-aim + drag-aim → (arm Fade/Draw → bent line) → SHOOT/close → fire on chosen heading → ball flies.
+- Captured from the **overlay camera directly** (no RT, no Unity-Recorder-on-RawImage flip games, no `yflip_repair.py`).
+- Verification of the clip (secondary): decode **consecutive** frames + L2 mirror detector. **`ffmpeg -ss` keyframe sampling is BANNED** (structurally skips flipped frames — the iter 6–15 blind spot).
+- The clip is for Cesar to glance at. **It is NOT the pass/fail gate** — §11 is.
 
-## 10. Open implementation notes for the implementer
-- Confirm the exact aim-heading write-back seam in `ShotController`/`ShotConeView`; prefer a minimal public setter mirroring `FadeDrawLockedAimRad` over reaching into privates.
-- Confirm yd→world unit conversion used elsewhere (so the landing center matches where the ball actually lands at that power).
-- Confirm which layers the map cam should cull to render a clean hole (terrain/green/hazards/course; exclude HUD + lab scaffolding).
-- Ground-plane for the raycast: terrain-height sample preferred; flat plane at ball Y acceptable for v1 if terrain sampling is costly — flag which you chose.
+## 10. Implementer notes
+- Add the minimal public aim-heading seam on `ShotController`.
+- Confirm yd→world unit conversion (landing center must match real landing at that power).
+- Confirm map-cam culling layers.
+- Ground-plane raycast: terrain sample vs flat plane — flag which.
+
+## 11. AUTOMATED VERIFICATION GATE (the real pass/fail — works with no human)
+At capture, `MapViewController` (editor/bot build) dumps `map_view_invariants.json` of projected screen coords + world refs at ≥2 aim states. The reviewer + red-team agents assert on it (no eyeballing, no frame-pixel guessing). **Any failed assertion = hard FAIL; PASS is impossible without all passing.**
+
+| Assert | Catches (iter-15 issue) |
+|---|---|
+| Map opened via the REAL `HoleCardWidget.onClick` (not a synthetic GO) | entry point never wired (#1) |
+| `ball.screenY > flag.screenY` (ball lower on screen) AND ball in viewport rect | upside-down map (#2), ball off-frame (#8) |
+| `landingCenter.screen`, `label100.screen`, `aimLineEnd.screen` collinear within tol | bands/labels/line in 3 directions (#3) |
+| `flagIndicator.screen ≈ WorldToScreenPoint(pinWorld)` AND pinWorld inside green bounds | floating flag (#7) |
+| ring/landing materials flagged as projected-decal/shader, depth-test OVER terrain | lines under terrain, clipped quad (#4,#5) |
+| `firedHeadingRad ≈ mapSetHeadingRad` | dead aim write-back |
+| No `RenderTexture`/`uvRect` in the map path; no banned capture API; no `Assets/Scripts/Physics/` diff | architecture regressions |
+
+Reviewers re-run the **entire §8 list** every pass — not just the last-named symptom. A report making any claim not backed by the JSON or a tool result = automatic FAIL + logged to `.claude/review_misses.log`.
