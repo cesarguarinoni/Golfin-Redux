@@ -5,6 +5,8 @@ ARCHITECT_DIRECTED
 **Tier:** FULL PIPELINE (Tier 3)
 **State:** ARCHITECT_DIRECTED (2026-06-20) — iter-21's 6 issues are all visual-model defects on a CORRECT, now-FROZEN v2 architecture (§F). Architect authored the fix: **§6-MODEL** anchors guide line / rings / labels / landing zone / flag-position / open-aim to ONE shared landing endpoint **L**; **§11+** adds deterministic asserts for each of the six so the gate can no longer be green while they're wrong. Surgical delta = overlay-drawing methods of `MapViewController.cs` + the validator + one `controls.csv` field (`RING_FRAC`=0.15). DO NOT touch §F (camera/render/entry/carry/framing/capture/ball-cull). One implementer pass against the extended gate. Report that triggered this: `ARCHITECT_REPORT_iter21.md`.
 
+**Model clarified w/ Cesar (2026-06-20), checked vs `reference_old_ui.jpg`:** (a) the guide line **HAS a gentle bow** — kept; it foreshortens to near-straight from the near-axial camera, do NOT flatten it. (b) The rings are **dark, semi-transparent, PROJECTED onto the terrain** (clearest where they cross the green), NOT white strokes — kept concentric at L. §6-MODEL + §11+ updated; an earlier Architect misread (flatten line / drop rings) was reverted.
+
 ## Cesar feedback on iter-20 canonical (2026-06-19) → iter-21
 1. **Ring labels (120%/100%/80%) overlap** — they're stacked on top of each other. Put EACH label ON its own ring line (one label per ring, positioned at that ring).
 2. **Shot-UI ball still visible in the map** — the "G" GOLFIN central ball is bleeding through. iter-20's cull claim was FALSE. It's Shot-UI chrome → add it to the hide-on-open set (the v2 rewrite dropped it). Confirm it's gone in the map view.

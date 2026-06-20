@@ -140,14 +140,14 @@ The six issues exist because guide line / rings / labels / landing zone / flag /
 - **L (shared landing endpoint)** = `ball + aimDir·carry`, plus, when Fade/Draw armed, the lateral term `aimPerp · LateralAtT(1)·carry`. L is the single center for the guide-line end, all rings, all labels, and the landing zone.
 
 **Guide line (issues #3, #4):**
-- Smooth curve ball→**L**, 24 verts, t∈[0,1]: x/z = `lerp(ball, L, t)`; **Y = `lerp(ballY, L.Y, t) + arcBow·sin(πt)`** (small bow, `arcBow≈1.5 m`). Reads as a trajectory.
+- Smooth curve ball→**L**, 24 verts, t∈[0,1]: x/z = `lerp(ball, L, t)`; **Y = `lerp(ballY, L.Y, t) + arcBow·sin(πt)`** (gentle bow, `arcBow≈1.5 m`, tunable). Reads as a trajectory. **The bow IS intentional** — from a near-axial camera (like the reference) it foreshortens to near-straight; do NOT remove it or flatten the line.
 - **Do NOT set Y from `SampleTerrainHeight` per vertex** — that caused the "straight-with-2-bumps" terrain-hugging. Fade/Draw lateral via `LateralAtT(t)` so the curve still **ends exactly at L**.
 
 **Rings (issues #1, #4) — concentric at L:**
-- Three concentric rings centered at **L**, radius `r_p = carry · RING_FRAC · (p/100)` for p∈{80,100,120}; `RING_FRAC` = new `controls.csv` / `ControlsConfig` field, default **0.15** (same pattern as `AimLineCurveScale`). → r80<r100<r120, all centered on L. Thin white stroke, drawn ON TOP of the landing zone.
+- Three concentric rings centered at **L**, radius `r_p = carry · RING_FRAC · (p/100)` for p∈{80,100,120}; `RING_FRAC` = new `controls.csv` / `ControlsConfig` field, default **0.15** (same pattern as `AimLineCurveScale`). → r80<r100<r120, all centered on L. Rendered as a **dark, semi-transparent decal PROJECTED onto the terrain** (conforms to the ground — clearly readable where it crosses the green, subtle on the fairway). NOT a bright white stroke, NOT a flat quad. Match `reference_old_ui.jpg`.
 
 **Labels (issue #1):**
-- One per ring at its **far edge along +aim**: `labelPos_p = L + aimDir·r_p`. → stacked along the aim line, **120 (outer, far/top) → 100 → 80 (inner, near/bottom)**, each sitting on its own ring. White. (Exactly Cesar's described layout.)
+- One per ring, sitting ON its ring, ordered along the aim axis **120 (outer ring — toward the green / FAR) → 100 (at the blob center) → 80 (inner ring — toward the ball / NEAR)**, exactly as positioned in `reference_old_ui.jpg`. 80 reads on the **near** side of the landing and 120 on the **far** side — NOT all clustered above center.
 
 **Landing zone (issue #6):**
 - Red→green **radial-gradient** decal centered at **L**, radius `r80·0.9` (sits inside the inner ring). Red center → green edge, semi-transparent. Drawn BEFORE (under) the rings but **alpha-visible — must occupy visible pixels, not be fully occluded**. (Replaces the white/yellow disc.)
@@ -163,8 +163,8 @@ The iter-21 lesson: §11 was green while six visual things were wrong because it
 | Assert | Catches |
 |---|---|
 | all three `ring.center.screen` == `guideLineEnd.screen` == `L.screen` within tol | rings/line misalignment (#4) |
-| `ring.radius_p` ≈ `carry·RING_FRAC·(p/100)` (ratios 0.8:1.0:1.2) within tol | arbitrary radii (#4) |
-| label screen positions monotonic along +aim, order **120 far → 100 → 80 near**, each at its ring's far edge | clock-positioned labels (#1) |
+| `ring.radius_p` ≈ `carry·RING_FRAC·(p/100)` (ratios 0.8:1.0:1.2) within tol; rings = terrain-projected semi-transparent decal (not white stroke, not flat quad) | arbitrary radii (#4) |
+| label screen positions ordered along aim **120 far → 100 → 80 near** (80 on the near side of the landing, 120 on the far side) | clock-positioned labels (#1) |
 | `openAimYaw` == `CameraHeadingRadians` (natural) within tol; NOT == `AimYawTowardFlag()` | aiming at OB (#2) |
 | guide-line vertex heights are a smooth curve (max |2nd-difference| < tol) AND **not equal to per-vertex terrain height** | terrain-hugging "2 bumps" (#3) |
 | `flagWorldPos` == `GetDefaultPin()` within tol AND inside green polygon bounds | flag in fairway (#5) |
