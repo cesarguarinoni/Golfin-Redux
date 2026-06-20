@@ -1,7 +1,7 @@
 # SPEC — `map_view_aiming` (Order 352) — **v2 (post-escalation reset)**
 
 > **Tier:** FULL PIPELINE (Tier 3).
-> **Status:** RESET 2026-06-19 after iter-15 escalation (`ARCHITECT_ESCALATION.md`). v1 architecture (RenderTexture + bot-video-as-gate) is **withdrawn**. This v2 changes the render path and **replaces the verification gate**. Do NOT resume from iter-15 visuals.
+> **Status:** RESET 2026-06-19 after iter-15 escalation. v2 architecture (overlay cam, no RT) is **correct and FROZEN** (see §F). **iter-21 REVISION (2026-06-20):** the six remaining issues are all *visual-model* defects, not architecture — fixed by the single-endpoint model in **§6-MODEL** + the extended gate in **§11+**. Do NOT reset; do NOT touch §F.
 > **Reference image:** `reference_old_ui.png` (this folder) — the in-game hole indicator with a LINE to the hole is the flag treatment (see §6).
 > **Handoff kickoff:** `Use the implementer subagent on "map_view_aiming"`.
 > **Step 0 (before any map work):** apply `Docs/PIPELINE_HARDENING.md` to `route_subagent.py` + `.claude/agents/*` so the iteration breaker, real-entry rule, and math-not-pixels gate enforce on THIS run. Then start from §A (entry point) and do nothing else until it passes.
@@ -12,6 +12,15 @@
 The pipeline marked iter-15 `ARCHITECT_REVIEW_PASS` while the feature **could not be opened in the real game** and rendered **upside-down with misaligned markers**. Two root causes, both fixed here:
 1. **Wrong gate.** Acceptance was a bot-driven video through a *synthetic* button. v2 gate = **world→screen invariant assertions** (numbers, not pixels) + drive through the **real** entry widget (§11). A bot pressing a fake button can no longer certify a feature a human can't open.
 2. **Wrong render path.** RT→RawImage on Mac/Metal flips; "fixes" (uvRect) turned the live map upside-down. v2 = **2nd full-screen overlay camera, NO RenderTexture** (§3).
+
+## v2.1 MODEL CORRECTION (Cesar, 2026-06-19) — this OVERRIDES §3/§6 where they conflict
+Root cause of the iter-16..18 grey-void / giant-rings / off-field-framing: the carry/landing/ring **model** was wrong, and we kept patching the *rendering*. Corrected model (authoritative):
+1. **Carry = the SELECTED CLUB's real carry** for the current shot — NOT a fixed driver carry. `PhysicsLabController.ComputeMaxCarryYards()` is driver-locked (75 m/s, 10.9°); the map must NOT use that for the rings/landing. Source the selected club's carry from the club data (the same per-club distance the club button should show — see `task_6d0326e9` `ClubContext.SelectedDistance`). On a short approach the carry is small → landing sits near the pin, not 100 m past it.
+2. **Rings are CONCENTRIC — nested one inside the other — centered on the LANDING SITE, not the ball.** (iter-19 refinement, Cesar 2026-06-19.) They show where the ball lands at 80/100/120% power, drawn as **three THIN concentric rings sharing a common center at the landing zone**: 80% innermost, 100% middle, 120% outermost — nested one inside the other **exactly as in `reference_old_ui.jpg`** (open it and match the nesting). iter-19 drew them as a separated/offset cluster — make them properly concentric. NOT huge full-carry circles centered on the ball; NOT an offset smudge. Ring line weight must be THIN relative to the map.
+3. **Camera must be TIGHT — ZOOM IN so NOTHING outside the playing field is visible.** (iter-19 refinement.) iter-19 framing was much better but still showed off-field at the edges. Zoom in further: the playable field fills the frame and the off-field/skybox/dark borders are NOT visible at all. Frame to ball + landing + pin, then tighten until the field edge is at/beyond the viewport.
+6. **Hole indicator — yellow flag ICON is ACCEPTED for v1** (Cesar 2026-06-19); the upgrade to the real shot-UI flag widget WITH the line pointing to the hole is a **future task** (`task_` — see follow-up), NOT a v1 blocker.
+4. **The shot-UI gameplay ball must NOT appear in the map view.** The live "G" GOLFIN ball from the Shot UI is bleeding through. Exclude it from the map camera's culling mask (and/or the gameplay ball's layer); the map draws its OWN ball marker only.
+5. **Open from a REAL ball-at-tee in a real loaded hole.** The 40 m ball-to-pin seen in capture is a lab/default ball position — no tee is 40 m from its pin. The capture/§A must use the real `BeginGameplayLoad` tee (this is also the §A real-entry requirement, still unmet).
 
 ## A. FIRST MILESTONE — real entry point (nothing else until this passes)
 - `HoleCardWidget` (the real Shot-UI thumbnail) becomes a tappable Button whose onClick calls `MapViewController.Open()`.
@@ -107,3 +116,61 @@ At capture, `MapViewController` (editor/bot build) dumps `map_view_invariants.js
 | No `RenderTexture`/`uvRect` in the map path; no banned capture API; no `Assets/Scripts/Physics/` diff | architecture regressions |
 
 Reviewers re-run the **entire §8 list** every pass — not just the last-named symptom. A report making any claim not backed by the JSON or a tool result = automatic FAIL + logged to `.claude/review_misses.log`.
+
+---
+
+# iter-21 REVISION (2026-06-20) — governing sections below supersede any conflicting earlier text
+
+## §F. FROZEN — working v2 parts, DO NOT REGRESS (Cesar: "don't break the map again")
+These are correct as of iter-21. The iter-21 fix touches the overlay-drawing methods of `MapViewController.cs` + the §11 validator + one `controls.csv` field ONLY. Do not modify, refactor, or "improve" any of these:
+- Overlay **camera + render path** (no RenderTexture, no `uvRect`, no flip). §3.
+- Real `HoleCardWidget` **entry/open/close**. §A, §4.
+- **Club carry** source `_maxCarryYards` (124 yd, NOT driver 154). §2.
+- **Tight framing** (no off-field grey), **shot-UI ball cull**, **capture via TaggedCamera**. §3, §9.
+- Untampered **§11 validator exits 0**, **`Assets/Scripts/Physics/` diff empty**.
+A diff that changes camera/render/entry/carry/framing/capture = automatic FAIL.
+
+## §6-MODEL. CANONICAL AIM MODEL — one shared endpoint L (supersedes the ad-hoc per-element formulas)
+The six issues exist because guide line / rings / labels / landing zone / flag / open-aim were each computed with separate constants. They are now ALL derived from one point **L**.
+
+**Aim & L:**
+- **Open aim = the natural heading the shot already has.** In `Open()`: set `_aimYawRadians = _savedAimYaw` where `_savedAimYaw = _shotController.CameraHeadingRadians` (the value already saved at L341). **DELETE the L368-373 flag-aim override** (`AimYawTowardFlag()` → `_aimYawRadians`) and **do not** reset `_savedAimYaw` to the flag aim. Clamp reference = the natural heading. (Issue #2 — stops aiming into OB.)
+- `aimDir` = horizontal unit vector of that heading.
+- `carry` = `_maxCarryYards` (yd→world), unchanged.
+- **L (shared landing endpoint)** = `ball + aimDir·carry`, plus, when Fade/Draw armed, the lateral term `aimPerp · LateralAtT(1)·carry`. L is the single center for the guide-line end, all rings, all labels, and the landing zone.
+
+**Guide line (issues #3, #4):**
+- Smooth curve ball→**L**, 24 verts, t∈[0,1]: x/z = `lerp(ball, L, t)`; **Y = `lerp(ballY, L.Y, t) + arcBow·sin(πt)`** (small bow, `arcBow≈1.5 m`). Reads as a trajectory.
+- **Do NOT set Y from `SampleTerrainHeight` per vertex** — that caused the "straight-with-2-bumps" terrain-hugging. Fade/Draw lateral via `LateralAtT(t)` so the curve still **ends exactly at L**.
+
+**Rings (issues #1, #4) — concentric at L:**
+- Three concentric rings centered at **L**, radius `r_p = carry · RING_FRAC · (p/100)` for p∈{80,100,120}; `RING_FRAC` = new `controls.csv` / `ControlsConfig` field, default **0.15** (same pattern as `AimLineCurveScale`). → r80<r100<r120, all centered on L. Thin white stroke, drawn ON TOP of the landing zone.
+
+**Labels (issue #1):**
+- One per ring at its **far edge along +aim**: `labelPos_p = L + aimDir·r_p`. → stacked along the aim line, **120 (outer, far/top) → 100 → 80 (inner, near/bottom)**, each sitting on its own ring. White. (Exactly Cesar's described layout.)
+
+**Landing zone (issue #6):**
+- Red→green **radial-gradient** decal centered at **L**, radius `r80·0.9` (sits inside the inner ring). Red center → green edge, semi-transparent. Drawn BEFORE (under) the rings but **alpha-visible — must occupy visible pixels, not be fully occluded**. (Replaces the white/yellow disc.)
+
+**Flag indicator (issue #5) — POSITION fix only:**
+- Source the pin from **`GreenTopology.GetDefaultPin()`** (authored canonical pin, no arg — the loaded hole's instance), feeding `HoleContext.PinWorld` / `_flagWorldPos`. NOT the name-matched "Flag" GO or `GreenCentroid` fallback. Must sit **inside the green bounds**. The **accepted v1 yellow flag icon (v2.1 #6) then sits at the correct point**. Do NOT build the real flag-widget + line-to-hole here — that is future `task_7d4fdd3a`; this pass corrects the pin POSITION only.
+
+**Framing:** keep L and ball on-screen at the natural aim. **Do NOT re-aim to fit framing.**
+
+## §11+. EXTENDED GATE — the six visual requirements as deterministic asserts
+The iter-21 lesson: §11 was green while six visual things were wrong because it asserted *weaker* properties. These additions make a green gate MEAN "matches the model." Add to `map_view_invariants.json` + the validator; any failure = hard FAIL.
+
+| Assert | Catches |
+|---|---|
+| all three `ring.center.screen` == `guideLineEnd.screen` == `L.screen` within tol | rings/line misalignment (#4) |
+| `ring.radius_p` ≈ `carry·RING_FRAC·(p/100)` (ratios 0.8:1.0:1.2) within tol | arbitrary radii (#4) |
+| label screen positions monotonic along +aim, order **120 far → 100 → 80 near**, each at its ring's far edge | clock-positioned labels (#1) |
+| `openAimYaw` == `CameraHeadingRadians` (natural) within tol; NOT == `AimYawTowardFlag()` | aiming at OB (#2) |
+| guide-line vertex heights are a smooth curve (max |2nd-difference| < tol) AND **not equal to per-vertex terrain height** | terrain-hugging "2 bumps" (#3) |
+| `flagWorldPos` == `GetDefaultPin()` within tol AND inside green polygon bounds | flag in fairway (#5) |
+| landing-zone decal present, gradient material (red center→green edge), center alpha>0, occupies ≥N visible px, draw-order below rings | invisible/wrong-color zone (#6) |
+
+If any assert cannot be computed, that is a FAIL (not a skip).
+
+## Convergence note (why this should land in ~1 pass where 6 didn't)
+The blind loop is good at mechanical/structural fixes and bad at "match this picture." Anchoring all six to one **L** turns the visual-coherence problem into mechanical wiring, and the §11+ asserts turn "looks right" into numbers the gate fails on. The loop's strength now applies to exactly the thing it kept missing.
