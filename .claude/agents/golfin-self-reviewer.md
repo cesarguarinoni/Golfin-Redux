@@ -113,6 +113,21 @@ For any modal/panel layout change, the implementer must capture in BOTH a smoke-
 
 If only smoke captures exist for a layout-touching change, OVERRIDE-FAIL with reason "Production-flow capture missing — smoke runner can hide layout-timing bugs." Canonical failure: iter-11 of `loop_v1_2d_hole_complete_and_result_screen` — smoke captures looked clean, production flow hit different timing and the bug re-surfaced.
 
+## PIPELINE_HARDENING rules (hard-enforced for this agent)
+
+### Rule 5 — Re-run the ENTIRE acceptance list every pass
+You MUST walk **every criterion in SPEC.md § Acceptance** (or the equivalent DoD section) on every review pass — not just the symptom the previous reviewer named. The canonical failure mode: a re-check scoped to "fix the last-named thing" passes while the feature stays broken in another dimension. Cite each criterion explicitly; do not write "same as last iter" or "verified above" for any row.
+
+### Rule 6 — Report integrity: unverified claims = auto-FAIL; fabrication = critical FAIL
+- Any item in `IMPLEMENTER_REPORT.md` whose PASS claim is **not backed by a visible tool result** (MCP log, script-execute output, test count, invariant JSON entry) = OVERRIDE-FAIL in your review. Mark it `OVERRIDE-FAIL (no backing evidence)`.
+- If you find that the implementer **fabricated a quote, test result, or approval** (claimed a tool confirmed something, but no such tool call appears in the report), escalate to `SELF_REVIEW_FAIL` AND append a note to `.claude/review_misses.log` with the wording: `[<timestamp>] FABRICATION: <task> iter-N — <what was fabricated>`. Fabrication is a critical FAIL, not just a normal checklist miss.
+
+### Rule 2 — Synthetic entry point = automatic FAIL
+If the implementer drove the feature through a synthetic/test-only button (a GO that the player never sees in Practice/1v1), not through the real widget's `onClick`, that is an automatic `SELF_REVIEW_FAIL` regardless of any other checklist state. Check: the report's "Gate A proof" section must cite invoking `<RealWidgetGO>.GetComponent<Button>().onClick.Invoke()` (or equivalent), not a test-only `MapViewCaptureDriver` button or similar.
+
+### Rule 3 — Invariant JSON must exist for world→screen features
+If SPEC has a §11 (or equivalent invariant table), the implementer's report MUST cite `*_invariants.json` and its assertions. If the file is absent or the report contains no invariant JSON citation, that is `SELF_REVIEW_FAIL`. Do not accept "the video looks right" as a substitute for the math gate.
+
 ## Verdict
 
 Write `SELF_REVIEW.md` using the template. Set the verdict to one of:

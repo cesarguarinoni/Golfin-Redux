@@ -5,6 +5,12 @@ using Golfin.Gameplay.UI.HUD;
 
 namespace Golfin.Gameplay.UI.ShotUI
 {
+    /// <summary>
+    /// HUD widget showing course name, hole number, par, and a hole-map thumbnail.
+    /// The hole-map image area is a tappable Button whose onClick calls
+    /// MapViewController.Open() — the real player entry point for the map view
+    /// (PIPELINE_HARDENING Rule 2: no synthetic bypass; this IS the player's button).
+    /// </summary>
     public class HoleCardWidget : MonoBehaviour
     {
         [Header("Hole Map")]
@@ -16,6 +22,61 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] TMP_Text _courseText;
         [SerializeField] TMP_Text _holeText;
         [SerializeField] TMP_Text _parText;
+
+        // ── v2 entry-point wiring ─────────────────────────────────────────────
+        // The Button + ButtonPressFeedback components are expected on the same GO
+        // as the _holeMap Image (the "HoleMap" child), which is the natural tap
+        // target for the player.  We wire onClick at runtime so we never need a
+        // persistent-callback YAML entry in the scene.
+        Button _mapButton;
+
+        void Awake()
+        {
+            // Find the Button on the _holeMap child (already in the scene with
+            // Button + ButtonPressFeedback).  Fall back to GetComponentInChildren
+            // in case the widget is re-parented.
+            if (_holeMap != null)
+                _mapButton = _holeMap.GetComponent<Button>();
+
+            if (_mapButton == null)
+                _mapButton = GetComponentInChildren<Button>(includeInactive: true);
+
+            if (_mapButton != null)
+            {
+                _mapButton.onClick.AddListener(OpenMapView);
+            }
+            else
+            {
+                Debug.LogWarning("[HoleCardWidget] No Button found on HoleMap child — map cannot be opened via tap.");
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (_mapButton != null)
+                _mapButton.onClick.RemoveListener(OpenMapView);
+        }
+
+        // ── Public API — the REAL player entry point ──────────────────────────
+        /// <summary>
+        /// Opens the map view.  Called by the Button's onClick and also
+        /// invokable in tests via widget.GetComponent<Button>().onClick.Invoke()
+        /// on the HoleMap child.
+        /// </summary>
+        public void OpenMapView()
+        {
+            var mvc = FindObjectOfType<MapViewController>(includeInactive: false);
+            if (mvc == null)
+            {
+                Debug.LogError("[HoleCardWidget] MapViewController not found in scene — cannot open map.");
+                return;
+            }
+            mvc.OpenViaWidget();  // sets _entryViaRealWidget=true for §11 assert
+        }
+
+        // ── Public accessor for Gate-A verification ───────────────────────────
+        /// <summary>Returns the tappable Button this widget wired (the HoleMap child Button).</summary>
+        public Button MapButton => _mapButton;
 
         void OnEnable()
         {

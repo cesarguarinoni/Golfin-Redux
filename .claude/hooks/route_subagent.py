@@ -68,6 +68,135 @@ COMPLETED_DIR = REPO_ROOT / "Docs" / "Specs" / "Completed"
 TEMPLATE_NAME = "_TEMPLATE"
 CONFIG_PATH = REPO_ROOT / ".claude" / "notify_config.json"
 
+# ---------------------------------------------------------------------------
+# PIPELINE_HARDENING Rule 1 — Iteration circuit-breaker
+# Each iteration is tagged with a "shape label" (subsystem:symptom) recorded
+# in ITER_SHAPES_LOG (one JSON file per task). When 3 iterations share the
+# SAME shape label, the pipeline is forced to ARCHITECT_REVIEW_ESCALATE and
+# writes ARCHITECT_ESCALATION.md before any iter-N+1 may run.
+# Shape label vocabulary: free-form strings baked into IMPLEMENTER_REPORT.md
+# via the "Iteration shape:" metadata line. The implementer declares its own
+# shape; the hook counts matches.
+# ---------------------------------------------------------------------------
+ITER_SHAPES_LOG_NAME = ".iter_shapes.json"   # per-task; inside task_dir
+CIRCUIT_BREAKER_THRESHOLD = 3                # same shape → forced ESCALATE
+
+
+def _load_iter_shapes(task_dir):
+    """Load {shape: count} dict from the per-task iter-shapes JSON. {} if absent."""
+    p = task_dir / ITER_SHAPES_LOG_NAME
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8", errors="ignore"))
+    except Exception:
+        return {}
+
+
+def _save_iter_shapes(task_dir, shapes):
+    """Persist {shape: count} dict."""
+    try:
+        (task_dir / ITER_SHAPES_LOG_NAME).write_text(
+            json.dumps(shapes, indent=2), encoding="utf-8"
+        )
+    except Exception:
+        pass
+
+
+def _extract_iter_shape(task_dir):
+    """Read IMPLEMENTER_REPORT.md and return the 'Iteration shape:' value, or None."""
+    report = task_dir / "IMPLEMENTER_REPORT.md"
+    if not report.exists():
+        return None
+    try:
+        for line in report.read_text(encoding="utf-8", errors="ignore").splitlines():
+            m = re.match(r"^[*_]*Iteration\s+shape[*_]*\s*:\s*(.+)", line, re.IGNORECASE)
+            if m:
+                return m.group(1).strip()
+    except Exception:
+        pass
+    return None
+
+
+def check_circuit_breaker(task, task_dir, status, config):
+    """
+    On every FAIL transition (SELF_REVIEW_FAIL / ARCHITECT_REVIEW_FAIL /
+    CESAR_REJECTED), record the iteration shape from IMPLEMENTER_REPORT.md.
+    If that shape has now failed 3+ times, force ARCHITECT_REVIEW_ESCALATE
+    and write ARCHITECT_ESCALATION.md (if not already present).
+
+    Returns a list of terminal output lines (may be empty).
+    """
+    FAIL_STATES = {"SELF_REVIEW_FAIL", "ARCHITECT_REVIEW_FAIL", "CESAR_REJECTED",
+                   "ARCHITECT_REVIEW_ESCALATE"}
+    if status not in FAIL_STATES:
+        return []
+
+    shape = _extract_iter_shape(task_dir)
+    if not shape:
+        return []   # no shape declared; circuit-breaker can't count
+
+    shapes = _load_iter_shapes(task_dir)
+    shapes[shape] = shapes.get(shape, 0) + 1
+    _save_iter_shapes(task_dir, shapes)
+
+    count = shapes[shape]
+    if count < CIRCUIT_BREAKER_THRESHOLD:
+        return []   # not yet at threshold
+
+    # --- CIRCUIT BREAKER TRIPPED ---
+    escalation_file = task_dir / "ARCHITECT_ESCALATION.md"
+    if not escalation_file.exists():
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            escalation_file.write_text(
+                f"# ARCHITECT_ESCALATION — circuit breaker tripped\n\n"
+                f"**Task:** {task}  \n"
+                f"**Triggered:** {ts}  \n"
+                f"**Shape:** `{shape}`  \n"
+                f"**Failure count:** {count} (threshold {CIRCUIT_BREAKER_THRESHOLD})  \n\n"
+                f"The same iteration shape has failed {count} consecutive times.\n"
+                f"This is a forced escalation: no further implementer iterations may\n"
+                f"run until the Architect resolves the root cause.\n\n"
+                f"## What the Architect must do\n"
+                f"1. Read the last `IMPLEMENTER_REPORT.md` and `SELF_REVIEW.md`/`ARCHITECT_REVIEW.md`.\n"
+                f"2. Identify WHY the same shape keeps failing.\n"
+                f"3. Either amend `SPEC.md` (if the spec is wrong) or unblock the\n"
+                f"   specific technical obstacle (if the implementation is blocked).\n"
+                f"4. Set `STATUS.md` to `SPEC_READY` (or another appropriate state)\n"
+                f"   to restart the implementer with a new shape label.\n",
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+
+    # Force status to ESCALATE
+    status_file = task_dir / "STATUS.md"
+    try:
+        current = status_file.read_text(encoding="utf-8") if status_file.exists() else ""
+        if "ARCHITECT_REVIEW_ESCALATE" not in current.splitlines()[0] if current else True:
+            status_file.write_text(
+                f"ARCHITECT_REVIEW_ESCALATE\n\n"
+                f"# STATUS — `{task}`\n"
+                f"**CIRCUIT BREAKER TRIPPED** — shape `{shape}` failed {count}× "
+                f"(threshold {CIRCUIT_BREAKER_THRESHOLD}). Forced escalation to Architect.\n"
+                f"See ARCHITECT_ESCALATION.md for details.\n",
+                encoding="utf-8",
+            )
+    except Exception:
+        pass
+
+    lines = alert_cesar(
+        task, "ARCHITECT_REVIEW_ESCALATE",
+        f"CIRCUIT BREAKER: shape '{shape}' failed {count}× — forced escalation",
+        [
+            f"Read Docs/Specs/Active/{task}/ARCHITECT_ESCALATION.md",
+            "No more implementer iterations until Architect resolves root cause.",
+        ],
+        config,
+    )
+    return lines
+
 # Cesar's standing rule (2026-06-09): every iteration's review image must be
 # SURFACED in the main chat so he can eyeball it live and interrupt the pipeline
 # before the reviewers spend tokens ("I'm faster than the reviewer most of the
@@ -438,6 +567,14 @@ def main():
                 )
         else:
             # Subagent's turn.
+            # PIPELINE_HARDENING Rule 1: check circuit breaker BEFORE routing.
+            cb_lines = check_circuit_breaker(task, task_dir, status, config)
+            if cb_lines:
+                # Circuit breaker tripped: status was just forced to ESCALATE.
+                # Re-read status and route as Cesar-alert instead of subagent.
+                cesar_alert_lines.extend(cb_lines)
+                continue
+
             cmd = f"Use the {next_agent} subagent on \"{task}\""
             extra = ""
             if status == "CESAR_REJECTED":

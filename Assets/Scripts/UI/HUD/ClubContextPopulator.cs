@@ -85,6 +85,10 @@ namespace Golfin.UI.HUD
             var e = ClubContext.EquippedBag[idx];
             ClubContext.SelectedClubId    = e.ClubId;
             ClubContext.SelectedTypeLabel = e.TypeLabel;
+            // iter-37 (Cesar): show the selected club's distance. The intended real-physics-carry push
+            // (PhysicsLabController.PushSelectedClubDistanceToContext) was NEVER implemented — it exists
+            // only in comments — so SelectedDistance stayed 0 → the "DRIVER / 0.00 yds" bug. Use the
+            // club's CSV baseDistance (e.Distance), which is the correct per-club number to display.
             ClubContext.SelectedDistance  = e.Distance;
             ClubContext.SelectedPortrait  = e.Portrait;
             ClubContext.SelectedIndex     = idx;

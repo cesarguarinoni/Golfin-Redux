@@ -5,8 +5,12 @@
         "Golfin.Gameplay.Input",
         "Golfin.Gameplay.Config",
         "Golfin.Gameplay.Loop",
+        "Golfin.Diagnostics.Runtime",
+        "Golfin.Course.Runtime",
         "Unity.TextMeshPro",
-        "Unity.ugui"
+        "Unity.ugui",
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

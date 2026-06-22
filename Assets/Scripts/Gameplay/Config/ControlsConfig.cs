@@ -60,6 +60,9 @@ namespace Golfin.Gameplay.Config
         public float AimLineDefaultReachPx;  // line length in canvas px at rest / Idle state
         public float AimLineCurveScale;      // k: lateral gain at full handle — tip lateral = k * |finetune| * reachPx
 
+        // Map-view ring radius (map_view_aiming Order 352, iter-22 §6-MODEL)
+        public float RingFrac;  // r_p = carry * RingFrac * (p/100) for p∈{80,100,120}
+
         /// <summary>
         /// Fraction of the BallImage RectTransform half-width that equals the visible
         /// painted ball edge (accounting for sprite alpha padding).
@@ -106,6 +109,7 @@ namespace Golfin.Gameplay.Config
             BallSpriteVisualRadiusFrac     = 0.957f,
             AimLineDefaultReachPx          = 500f,   // canvas px at rest (iter-2: increased from 400 for readability)
             AimLineCurveScale              = 0.55f,  // k: full finetune → tip lateral ≈ 0.55 × reachPx (iter-4: increased from 0.35 — Cesar wants a more pronounced, readable bend)
+            RingFrac                       = 0.15f,  // map-view ring radius fraction: r_p = carry * RingFrac * (p/100) for p∈{80,100,120}
         };
     }
 }

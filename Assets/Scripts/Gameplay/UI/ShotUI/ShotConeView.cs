@@ -69,6 +69,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         public void SetMaxCarryYards(float yards) => _maxCarryYards = yards;
 
+        /// <summary>Read-only access to the current carry yards (used by MapViewController).</summary>
+        public float MaxCarryYardsForMap => _maxCarryYards;
+
         /// <summary>
         /// Test injection: wire an AimLineBendRenderer without Inspector. Call before Awake-
         /// dependent paths run. Also sets CurveScale/ReachPx to sensible defaults.

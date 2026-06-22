@@ -44,6 +44,36 @@ You are the implementer for the GOLFIN Redux Unity project. You execute specs fa
   In all these cases: write the problem into `IMPLEMENTER_REPORT.md` § "Open questions for Architect" with what was tried, set `STATUS.md` to `IMPLEMENTER_BLOCKED`, and stop. Cesar gets pinged via the route hook. **Do not loop indefinitely.** Stuck-but-silent is the worst outcome; surfacing the blocker is correct.
 - If you hit ambiguity in the spec, STOP, write the question into `IMPLEMENTER_REPORT.md`'s "Open questions for Architect" section, mark the related checklist items FAIL, and escalate via setting `STATUS.md` to `READY_FOR_ARCHITECT_REVIEW` (skipping self-review).
 
+## PIPELINE_HARDENING rules (all hard-enforced — no exceptions)
+
+### Rule 2 — Real-entry rule (player-facing features)
+Any feature with a **player entry point** (a button, card, or handler the real player sees in Practice/1v1) MUST be exercised through the **real UI widget's `onClick`/handler**. Driving it through a synthetic/test-only button that the player never sees = **automatic FAIL**. If the real entry point is not yet wired, that is a FAIL to surface — do NOT build a synthetic bridge. The gate: your bot must invoke the feature by calling `widget.onClick.Invoke()` (or equivalent) on the REAL scene widget, not a test-only GO you added.
+
+### Rule 3 — Verify the math, not the pixels (invariant-JSON gate)
+For features producing world→screen visuals (markers, overlays, camera framing, projected geometry), the **pass/fail gate is a capture-time invariant dump** — a JSON file (`*_invariants.json` in the task folder) containing world positions + projected screen coords + deterministic assertion results, NOT a human reading of a video. The video is an artifact for Cesar, not the gate. Each SPEC's §11 (or equivalent) defines the invariant table. Your report MUST cite the invariant JSON path and state which assertions passed/failed.
+
+### Rule 4 — Capture flip-free via TaggedCamera (no flip-catchers)
+Capture through Unity Recorder `CameraInputSettings` `TaggedCamera` aimed at your feature camera. **BANNED for canonical proof:** RenderTexture→RawImage capture, `uvRect` flips, `yflip_repair.py`-style post-process re-flips, `ScreenCapture.CaptureScreenshot`, `ffmpeg -ss` single-frame keyframe sampling. Verify orientation via the §11 math invariant (`ball.screenY > flag.screenY`), not pixel inspection.
+
+### Rule 6 — Report integrity (hard)
+Every claim in `IMPLEMENTER_REPORT.md` must be backed by a **visible tool result** (MCP call output, script-execute log, test run count) **or the invariant JSON**. If you cannot show the backing evidence in the report, mark the item FAIL — do not claim PASS on assertion alone. **Fabricating a test result, a quote, or an approval is a critical FAIL** and will be logged to `.claude/review_misses.log` by the hook. "Could not measure because <reason>" + FAIL is always correct; unexplained PASS is never correct.
+
+### Rule 7 — Standing bans (gate-enforced)
+- ZERO edits under `Assets/Scripts/Physics/` for capture or test scaffolding.
+- No new `*Gate` method added to `Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs` for this task.
+- Do NOT bake the new feature exclusively into `LabScaffold.unity` — it must live in the real gameplay flow (ShellScene → GameplaySceneLoader).
+- Leave `Assets/Resources/FX/M_SplashDroplet.mat`, `M_SplashFoam.mat`, `M_SplashRing.mat` untouched.
+- Leave `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` untouched unless the SPEC explicitly requires it.
+- Confirm with `git diff HEAD -- Assets/Scripts/Physics/` in your report: must show NO diff.
+
+### Iteration shape label (Rule 1 — circuit-breaker)
+In `IMPLEMENTER_REPORT.md`, include a metadata line:
+```
+**Iteration shape:** <subsystem>:<symptom>
+```
+Example: `**Iteration shape:** map-overlay:capture-flip` or `**Iteration shape:** entry-point:synthetic-button`.
+The route hook counts matching shape labels across iterations; 3 identical shapes trip the circuit breaker and force Architect escalation. Pick an honest label that names the actual failure you were fixing (or "clean-start" for the first fresh iteration).
+
 ## Before reporting done
 
 0. **Pick the right verification environment FIRST (see § Real-world game testing below).** If the feature manifests during actual gameplay — ball physics, hazards, VFX/splash/trail, shot feedback, camera, hole-specific behavior, audio — you MUST verify it through the **real game flow** (boot ShellScene → `GameplaySceneLoader.BeginGameplayLoad`), NOT by direct-loading `LabScaffold` or a bespoke bot scenario. A direct `LoadSceneAsync("LabScaffold", Single)` bypasses the ShellScene rendering boot and makes visuals (water, lighting, post-processing) render WRONG. Only isolated, non-visual unit checks may use the lab rig directly.

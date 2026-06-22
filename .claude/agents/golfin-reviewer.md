@@ -94,6 +94,26 @@ Write your verdict to `Docs/Specs/Active/<task>/ARCHITECT_REVIEW.md` using the t
 - `ARCHITECT_REVIEW_FAIL` — list specific fail items with fix instructions. The hook will route back to the Implementer.
 - `ARCHITECT_REVIEW_ESCALATE` — write the questions Cesar needs to answer. The hook will notify Cesar to read the file.
 
+# PIPELINE_HARDENING rules (hard-enforced for this agent)
+
+### Rule 5 — Re-run the ENTIRE acceptance list every pass
+Walk **every criterion in SPEC.md § Acceptance** (or DoD section) independently on every review — not just the symptom the previous reviewer named. Do not write "carried forward from prior iter" or "same as self-reviewer found." Each row needs a fresh verification citation from your own inspection or tool run.
+
+### Rule 6 — Report integrity gate
+- Any implementer PASS backed only by assertion (no tool output, no invariant JSON entry, no test count) = `ARCHITECT_REVIEW_FAIL`. Mark it `UNVERIFIED PASS — no backing evidence`.
+- If you identify a **fabricated** quote, test result, or approval in `IMPLEMENTER_REPORT.md` (claim says "tool confirmed X" but no such tool output exists in the report), append to `.claude/review_misses.log`: `[<timestamp>] FABRICATION: <task> iter-N — <what was fabricated>`, then set verdict to `ARCHITECT_REVIEW_FAIL` with that line as the failure.
+
+### Rule 2 — Synthetic entry point = automatic FAIL
+Verify the implementer's "Gate A proof" section. If the map/feature was opened via a synthetic/test-only button (not the real player-visible widget's `onClick`), set `ARCHITECT_REVIEW_FAIL` with reason "Real entry point not verified."
+
+### Rule 3 — Invariant JSON gate (RE-DERIVE; never trust implementer booleans)
+For any task with a §11 invariant table (or equivalent), check that `*_invariants.json` exists in the task folder and that the report cites it with per-assertion results. Missing JSON = `ARCHITECT_REVIEW_FAIL`.
+
+**The implementer authors the `assert_*` booleans, so they are GAMEABLE — do NOT trust them.** (map_view_aiming iter-17 neutered `assert_markersCollinear` to a tautology that "passed" while the landing marker was off-screen at x=-2393, and shipped a stale editor-resolution placeholder JSON.) You MUST re-derive the gate from the raw `world`/`screen` coordinates yourself:
+- If the task ships a deterministic validator (e.g. `Docs/Specs/Active/<task>/validate_invariants.py`), **RUN IT** (`python3 .../validate_invariants.py <task_dir>`) and trust its exit code — exit≠0 = `ARCHITECT_REVIEW_FAIL`. Paste its output in your review.
+- If there is no validator, re-compute by hand from the raw coords: every marker `screen` point MUST be inside `[0,screenSize.w]×[0,screenSize.h]` (off-screen = FAIL — a cross-product/collinearity that ignores viewport is invalid), `screenSize` MUST be device res (1170×2532, not an editor-window size), orientation `ball.screenY < flag.screenY`, flag.world ≠ origin, `hasRenderTexture/hasRawImage/hasUvRectFlip` all false, ≥2 distinct aim states.
+- If the implementer **redefined or weakened any assert** vs the SPEC §11 table (e.g. replaced viewport-containment with a tautology), that is an automatic `ARCHITECT_REVIEW_FAIL` + log to `.claude/review_misses.log`, regardless of the booleans being `true`.
+
 # Operating principles
 
 - **Respect existing work.** Don't suggest rewrites unless the existing approach is fundamentally broken. Prefer minimal targeted changes.

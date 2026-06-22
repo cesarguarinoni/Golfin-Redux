@@ -100,7 +100,19 @@ public class ClubManager : MonoBehaviour
             ownedClubs[template.clubId] = playerClub;
         }
 
-        Debug.Log($"[ClubManager] Initialized {ownedClubs.Count} clubs.");
+        // iter-37 (Cesar): equip a default STARTER BAG to slot 1. Every club is seeded above but
+        // UNEQUIPPED (equippedBagSlot=0), so BagManager.GetClubsInBag(1) returned empty / Driver-only
+        // and the in-game club selector showed only the Driver. Equip a representative set so the bag
+        // (and club selection) is populated for real play. IDs match Clubs.csv (same set the lab stub uses);
+        // missing IDs are skipped. No bag persistence yet, so this default applies each session.
+        string[] defaultBag = { "club_driver_gf", "club_wood_gf", "club_iron7_mireo", "club_putter_golfinx" };
+        int equipped = 0;
+        foreach (var id in defaultBag)
+        {
+            if (ownedClubs.TryGetValue(id, out var pc)) { pc.equippedBagSlot = 1; equipped++; }
+        }
+
+        Debug.Log($"[ClubManager] Initialized {ownedClubs.Count} clubs; equipped {equipped} to default bag (slot 1).");
     }
 
     // ── Query API ─────────────────────────────────────────────────────────────

@@ -112,6 +112,25 @@ set `STATUS.md` to one of:
   (spec contradicts reference, design changed, ship-with-known-tradeoff). Not a
   way to dodge a decision you can make.
 
+# PIPELINE_HARDENING rules (red-team enforcement)
+
+### Rule 5 — Re-run the ENTIRE acceptance list (you, not the reviewer)
+Before you can PASS, you MUST walk every criterion in SPEC.md § Acceptance independently — not by reading the reviewer's `ARCHITECT_REVIEW.md` and agreeing. Generate your own evidence (re-shoot, re-run metrics, re-invoke invariant check). A PASS you carry forward from the reviewer without re-generating is a rubber-stamp: exactly what this gate exists to prevent.
+
+### Rule 6 — Fabrication = escalate + log
+If you identify a fabricated claim in any prior report (implementer or reviewer claims "tool confirmed X" but no such tool output exists), set `ARCHITECT_REVIEW_FAIL`, append to `.claude/review_misses.log`: `[<timestamp>] FABRICATION: <task> iter-N — <what was fabricated>`, and surface to Cesar via the escalation path.
+
+### Rule 2 — Synthetic entry point = hard FAIL
+Verify the feature can be opened in the REAL game flow (boot ShellScene → GameplaySceneLoader → tap HoleCardWidget button in Practice). If the only bot path is through a test/synthetic button, that is `ARCHITECT_REVIEW_FAIL` regardless of any other visual correctness.
+
+### Rule 3 — Invariant JSON is your primary gate for world→screen features (RE-DERIVE — booleans are gameable)
+Re-run or re-verify the invariant JSON assertions yourself (via script-execute). Do NOT accept the implementer's reported invariant results without checking the JSON file in the task folder. If the file is absent, that is `ARCHITECT_REVIEW_FAIL`.
+
+**The `assert_*` booleans are written by the implementer and ARE gamed** (map_view_aiming iter-17 turned `assert_markersCollinear` into a tautology that passed with the landing marker off-screen at x=-2393, and left a stale editor-res placeholder JSON on disk while pasting different numbers in the report). Trust ONLY values you re-derive from the raw `world`/`screen` coords:
+- RUN the task's deterministic validator if present (`python3 Docs/Specs/Active/<task>/validate_invariants.py <task_dir>`); exit≠0 = FAIL. Paste its output.
+- Independently confirm: every marker `screen` ∈ viewport (off-screen = FAIL, no cross-product hand-wave), `screenSize` == 1170×2532 (an editor-window size like 2070×1912 = FAIL), `ball.screenY < flag.screenY`, `flag.world` ≠ origin, no RT/RawImage/uvRect flags, ≥2 distinct aim states.
+- Any assert weakened/redefined vs SPEC §11, or any report number that doesn't match the on-disk JSON, = automatic `ARCHITECT_REVIEW_FAIL` + log to `.claude/review_misses.log` (report-integrity, hardening rule 6).
+
 # Operating principles
 
 - **You are adversarial by design.** A PASS from you means "a hostile reviewer

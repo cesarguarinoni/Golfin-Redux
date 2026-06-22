@@ -22,6 +22,16 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         protected override void Refresh()
         {
+            // Cesar (iter-35): cap the label's auto-size MAX font at 23 so "STRAIGHT" fits the button.
+            // The label is runtime-populated (not findable at edit time), so this is set in code.
+            if (_primaryText != null)
+            {
+                _primaryText.enableAutoSizing = true;
+                _primaryText.fontSizeMax = 23f;
+                if (_primaryText.fontSizeMin <= 0f || _primaryText.fontSizeMin > 23f)
+                    _primaryText.fontSizeMin = 8f;
+            }
+
             if (ShotModeContext.Mode == ShotMode.Straight)
             {
                 if (_iconImage   != null) _iconImage.sprite = _iconStraight;

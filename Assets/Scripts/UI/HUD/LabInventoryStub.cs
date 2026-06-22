@@ -104,7 +104,7 @@ namespace Golfin.UI.HUD
             var e = bag[idx];
             ClubContext.SelectedClubId    = e.ClubId;
             ClubContext.SelectedTypeLabel = e.TypeLabel;
-            ClubContext.SelectedDistance  = e.Distance;
+            ClubContext.SelectedDistance  = e.Distance; // iter-37: show the club's distance (see ClubContextPopulator)
             ClubContext.SelectedPortrait  = e.Portrait;
             ClubContext.SelectedIndex     = idx;
             ClubContext.RaiseSelectedChanged();
@@ -150,7 +150,7 @@ namespace Golfin.UI.HUD
                 var e = entries[0];
                 ClubContext.SelectedClubId    = e.ClubId;
                 ClubContext.SelectedTypeLabel = e.TypeLabel;
-                ClubContext.SelectedDistance  = e.Distance;
+                ClubContext.SelectedDistance  = e.Distance; // iter-37: show the club's distance
                 ClubContext.SelectedPortrait  = e.Portrait;
                 ClubContext.SelectedIndex     = 0;
                 ClubContext.RaiseSelectedChanged();

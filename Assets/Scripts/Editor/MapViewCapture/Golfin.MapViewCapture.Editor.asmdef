@@ -1,0 +1,14 @@
+{
+    "name": "Golfin.MapViewCapture.Editor",
+    "rootNamespace": "Golfin.EditorTools",
+    "references": [
+        "Golfin.Gameplay.UI",
+        "Unity.Recorder.Editor"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

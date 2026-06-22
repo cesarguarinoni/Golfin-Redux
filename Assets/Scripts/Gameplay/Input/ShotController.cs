@@ -49,6 +49,13 @@ namespace Golfin.Gameplay.Input
         /// </summary>
         public float FadeDrawLockedAimRad { get; set; } = float.NaN;
 
+        /// <summary>
+        /// Read-only view of the current cone finetune value (−1..1).
+        /// Used by MapViewController to mirror the Fade/Draw bend direction in the map guide line
+        /// (Order 352 — map_view_aiming). Write path remains internal to ShotController.
+        /// </summary>
+        public float ConeFinetune => _coneFinetune;
+
         // --- Debug toggles (8 flags per design §8) ---
         public ShotDebugFlags DebugFlags = ShotDebugFlags.Defaults;
 
@@ -105,6 +112,14 @@ namespace Golfin.Gameplay.Input
             PowerNormalized = powerNormalized;
             PublishShotSfx();
         }
+
+        /// <summary>
+        /// Editor-only seam: pre-set _coneFinetune while in Idle state so that
+        /// MapViewController.Open() snapshots a non-zero value for criterion-6 bend demonstration.
+        /// (map_view_aiming Order 352 — capture driver sets this BEFORE tapping Open.)
+        /// NOT callable in production (Idle→ExternalDrag transition is the production path).
+        /// </summary>
+        public void SetFinetuneForCapture(float v) => _coneFinetune = Mathf.Clamp(v, -1f, 1f);
 #endif
 
         // ── External drag API (ClubHandle → drives shot without pixel-pull math) ──
