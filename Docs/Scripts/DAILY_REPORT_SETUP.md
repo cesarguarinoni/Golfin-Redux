@@ -51,10 +51,12 @@ it works under `launchd` (whose working directory differs).
   is git-ignored (large, regenerable — `.gitignore`, 2026-06-02), so it is never
   committed and the git auto-path can't see it. Orbit clips, trail captures, and
   any other task video must go through the manual drop folder below.
-- **Manual drop folder** — `Docs/Reports/Media/`. Drop videos *or* images there
-  and they'll be attached to the next report, then **deleted after a successful
-  send** (`README.md`/`.gitkeep` are preserved). This is the reliable path for
-  task videos. See that folder's README.
+- **Manual drop folder** — `Docs/Reports/Media/`. Drop **any file** there
+  (videos and images go as media; `.docx`/`.pdf`/`.csv`/`.zip`/… go as
+  documents — no extension filter) and it'll be attached to the next report,
+  then **deleted after a successful send** (`README.md`/`.gitkeep` are
+  preserved). This is also the reliable path for task videos. See that folder's
+  README.
 - Telegram caps uploads at **50 MB**. Oversize **videos** are **auto-compressed**
   (two-pass, *same resolution* — only the bitrate drops, ~42 MB target) and then
   sent; oversize non-video files are skipped and reported, never deleted. Auto-

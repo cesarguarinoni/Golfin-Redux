@@ -1,12 +1,14 @@
 # Daily Report — Media drop folder
 
-Drop any **videos** (`.mp4 .mov .webm .m4v .avi .mkv`) or **images**
-(`.png .jpg .jpeg .webp .gif`) in this folder that you want attached to the next
-GOLFIN daily Telegram report.
+Drop **any file** in this folder that you want attached to the next GOLFIN daily
+Telegram report. **Videos** (`.mp4 .mov .webm .m4v .avi .mkv`) and **images**
+(`.png .jpg .jpeg .webp .gif`) are sent as media; **anything else** (`.docx`,
+`.pdf`, `.csv`, `.zip`, …) is sent as a document. No extension filtering — if you
+put it here, it goes out.
 
 How it works (`Docs/Scripts/daily_report.py`):
 
-1. When the report runs, every media file in this folder is sent to the Telegram
+1. When the report runs, every file in this folder is sent to the Telegram
    chat **after** the text summary, alongside any videos that appeared in today's
    git commits.
 2. **Files here are deleted after a successful send.** This `README.md` and

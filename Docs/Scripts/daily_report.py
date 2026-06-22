@@ -13,8 +13,10 @@ Media attachments (added 2026-05-28, Mac setup):
        never committed, so this auto-path CANNOT see them. To attach a task
        video (orbit clip, trail capture, etc.), copy it into the media drop
        folder below — that is the only reliable path for task videos.
-    2. Any video OR image you drop into the media folder (default: Docs/Reports/Media/).
-       Drop-folder files are DELETED after a successful send (README.md/.gitkeep are kept).
+    2. ANY file you drop into the media folder (default: Docs/Reports/Media/) —
+       videos/images are sent as media, everything else (docx, pdf, csv, zip, …)
+       is sent via Telegram's sendDocument. Drop-folder files are DELETED after a
+       successful send (README.md/.gitkeep are kept).
   Telegram's Bot API caps uploads at 50 MB. Oversize VIDEOS are auto-compressed
   (two-pass, same resolution) to fit and then sent; oversize non-video files are
   skipped (and reported), never deleted. Auto-compress needs ffmpeg/ffprobe —
@@ -222,9 +224,12 @@ def get_todays_videos(since: str = "24 hours ago") -> list:
 
 def collect_drop_media(media_dir: str) -> list:
     """
-    Return absolute paths of media files dropped into `media_dir` (non-recursive).
-    Skips the repo scaffold files (README.md, .gitkeep, .DS_Store) and any
-    extension we don't recognise as media.
+    Return absolute paths of EVERY file dropped into `media_dir` (non-recursive),
+    not just videos/images. Videos and images are sent as such; anything else
+    (docx, pdf, csv, zip, …) is sent via Telegram's sendDocument (see
+    send_media_file). Only the repo scaffold (README.md, .gitkeep, .DS_Store) and
+    hidden dotfiles are skipped — the whole point of the drop folder is "attach
+    whatever I put here," so we don't filter by extension.
     """
     if not os.path.isdir(media_dir):
         return []
@@ -234,8 +239,6 @@ def collect_drop_media(media_dir: str) -> list:
             continue
         path = os.path.join(media_dir, name)
         if not os.path.isfile(path):
-            continue
-        if os.path.splitext(name)[1].lower() not in MEDIA_EXTS:
             continue
         found.append(path)
     return found
