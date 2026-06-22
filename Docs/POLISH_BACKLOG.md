@@ -56,3 +56,50 @@ Items consciously deferred to the polish phase (Roadmap item 9: UI/UX Polish). N
 **When resumed:** re-bake `Hole_04_Geo`'s physics heightmap via `PhysicsHeightmapBaker`, copy to `Resources/HoleData/Hole_04/`, then audit the bunker-lip colliders (see bunker-lip collider notes in `Docs/Pipeline/`). The standard fix for this pattern is re-bake + copy-to-Resources. Verify with a bot shot landing in the Hole-4 bunker.
 
 **Note:** P-004 + P-005 are both `Hole_04_Geo` collider/terrain issues — likely worth resuming together as one Hole-4 collider/heightmap pass (the "physics stress test" umbrella).
+
+---
+
+> **Order 352 caveats consolidated here (canonical).** The implementer also left stubs at `Docs/Specs/Queued/club_bag_population_concern/` and `Docs/Specs/Queued/map_view_polish/` — same items; treat P-006–P-010 as the source of truth.
+
+## P-006 — CONCERN: map club carry populated as a stopgap, not from save state
+**Filed:** 2026-06-22 (Architect, at Order 352 close). **Area:** `MapViewController` / `ClubContext` club-carry hydration (cf. `task_6d0326e9`). **Severity:** CONCERN (not cosmetic) — open question; resolve before trusting map distances.
+
+**Context:** During `map_view_aiming` the club bag / carry was populated as a **stopgap** rather than read from the player's **save state**. Cesar's flag: we HAVE save states — unclear why they weren't used. The landing zone + power bands hang off `_maxCarryYards`, so if that's a stopgap (not the real equipped-club value), the map shows wrong distances.
+
+**When resumed:** trace where the map's club carry comes from vs the real save-state loadout; confirm `_maxCarryYards` is fed from the player's actual equipped club via the save system, not a hardcoded/stopgap default. Cross-ref Order 421 (`rp_save_test_isolation`) + the `ClubContext` `SelectedDistance` hydration blocker in the 352 STATUS. Likely a source swap once the save-state read is confirmed available at map-open time.
+
+---
+
+## P-007 — Landing zone / rings project onto trees
+**Filed:** 2026-06-22 (Architect, Order 352 close). **Area:** map overlay landing-zone + ring decals (`MapViewController`). **Severity:** cosmetic.
+
+**Context:** The red→green landing-zone decal (and likely the ring decals) project onto tree canopies/props instead of clipping to ground/terrain only.
+
+**When resumed:** mask the decal projector to terrain/course layers so it doesn't paint trees/props; confirm zone + rings land on ground surfaces only.
+
+---
+
+## P-008 — Map zoom-out distance feels limited
+**Filed:** 2026-06-22 (Architect, Order 352 close). **Area:** map camera pinch-zoom range (`MapViewController`). **Severity:** UX polish.
+
+**Context:** Max zoom-out doesn't pull back far enough.
+
+**When resumed:** extend the zoom-out clamp / camera distance bounds; tune against long holes.
+
+---
+
+## P-009 — Distance bands missing on the map view
+**Filed:** 2026-06-22 (Architect, Order 352 close). **Area:** map overlay (`MapViewController` / `ShotConeView` distance bands). **Severity:** UX polish (regression vs prior behavior).
+
+**Context:** The yardage distance bands shown elsewhere are NOT on the map — Cesar wants them back. Distinct from the 80/100/120 power rings.
+
+**When resumed:** confirm which distance-band reference is meant (the cone's bands), then render them on the map as ground-projected bands consistent with the §6-MODEL anchoring to L.
+
+---
+
+## P-010 — Map-open recenter hiccup (1–2 frames)
+**Filed:** 2026-06-22 (Architect, Order 352 close). **Area:** `MapViewController.Open()` camera framing. **Severity:** cosmetic.
+
+**Context:** On opening the map, the camera recenters/reframes for a frame or two (a brief pop) before settling.
+
+**When resumed:** compute the bounds-fit framing BEFORE the first rendered frame (set the map cam position/zoom in `Open()` prior to enabling the overlay) so frame 1 is already centered — no post-open recenter.
