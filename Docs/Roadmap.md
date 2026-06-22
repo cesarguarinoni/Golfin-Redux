@@ -1,11 +1,22 @@
 ﻿# GOLFIN Redux — Roadmap
 
-**Last updated:** 2026-05-17 JST
+**Last updated:** 2026-06-22 JST
+
+> **▶ NOW ACTIVE — Tournaments v1** (set 2026-06-22, Notion Order 500, In Progress / P1)
+> Time-boxed leaderboard stroke-play tournaments on a country-club course for a UTC window. Sign up (free or RP fee), play all holes, ranked by total strokes at close, prizes by rank band. **Bots first, real async players later** via interface-first `ITournamentBackend` (no UI change on swap) — consistent with the Architectural foundations below.
+> - Design (LOCKED): `Docs/Game Design/Tournaments_GDD.md` (+ `.docx`).
+> - Plan: `Docs/Game Design/Tournaments_Implementation_Plan.md` — Orders T1–T12, inside-out.
+> - Next concrete order: **T1 `tournaments_core_contracts`** (asmdef + DTOs + `ITournamentBackend` + `ITournamentClock`).
+> - UI screens (T7–T10) adapt **Shop** + **Hole Selection** Figma patterns — frames pending.
+> - Open sub-decisions: **S1** (character lock vs swap), **D-Tie** (indivisible-item rule).
+> - ⚠ `map_view_aiming` (Order 352) still In Progress at iter-21 — confirm keep / park / close before Tournaments takes the floor.
 
 ## Sequence
 
 ```
 Putter P1 → Loop v1 (incl. Putter P2) → Multi-Club Foundation → Loop v2 → Save System
+                                                                              ↓
+                                          Tournaments v1  ◄═ NOW ACTIVE
                                                                               ↓
                                                 Rankings → Matchmaking → Perf Baseline
                                                                               ↓
@@ -40,6 +51,12 @@ Putter P1 → Loop v1 (incl. Putter P2) → Multi-Club Foundation → Loop v2 �
 - 3c. Result screen polish (score breakdown, optional shot replay link)
 - 3d. Next Hole / Back to Menu transitions
 - 3e. Save state: persist character/clubs/score across sessions
+
+## 3.5 Tournaments v1  ◄═ NOW ACTIVE
+Time-boxed, leaderboard stroke-play tournaments. Bots first, real async players later. Builds on the existing save layer, bot/sim determinism, and RP economy.
+- See `Docs/Game Design/Tournaments_GDD.md` (design, locked) and `Tournaments_Implementation_Plan.md` (Orders T1–T12).
+- T1–T5 (contracts → headless backend → save) can spec now; T6 needs S1; T7–T10 need Figma frames (adapt Shop + Hole Selection); T11 banner; T12 content.
+- Interface-first `ITournamentBackend` + `ITournamentClock` so the server impl swaps in with no UI change.
 
 ## 4. Rankings
 - 4a. Local leaderboard (per hole + total)
@@ -87,14 +104,15 @@ Putter P1 → Loop v1 (incl. Putter P2) → Multi-Club Foundation → Loop v2 �
 - 11d. Shop/Gacha server-side validation
 - 11e. Analytics + Crashlytics
 - 11f. Save sync
+- 11g. **Tournaments: `RemoteTournamentBackend`** (replace `LocalTournamentBackend`; server-issued definitions + server time + sim-replay score verification)
 
 ---
 
 ## Architectural foundations (bake in early)
 
-1. **Interface-first for online-deferred systems.** `IRankingService`, `IMatchmakingService`, `IShopService`, `IGachaService` — local impls now, server impls later, same call sites.
+1. **Interface-first for online-deferred systems.** `IRankingService`, `IMatchmakingService`, `IShopService`, `IGachaService`, **`ITournamentBackend`** — local impls now, server impls later, same call sites.
 2. **Reactive save layer.** Single `SaveData` with `OnChanged` event. All systems write through it. Cloud sync swaps the persister.
-3. **Replay determinism.** Physics is bit-exact. Record `(seed, club, ball, charYaw, power, finetune)` per shot — ~100 bytes per hole. Enables replays, share-a-shot, anti-cheat.
+3. **Replay determinism.** Physics is bit-exact. Record `(seed, club, ball, charYaw, power, finetune)` per shot — ~100 bytes per hole. Enables replays, share-a-shot, anti-cheat. (Tournament `HoleResult` reserves `rngSeed` + `inputLog` for exactly this.)
 4. **Event bus for rewards/currency.** "Hole complete" → multiple listeners (currency, ranking, achievements, gacha tickets). Avoid hardcoded chains.
 5. **Headless mode for bots.** Ball state machine runs with no visuals so faked-matchmaking bots simulate scores via real sim.
 
