@@ -1,0 +1,2 @@
+{"phase": "pre_open", "screen": [1170, 2532], "samplePatch": [553, 1234, 64, 64], "meanLuma": 0.4815, "allBlack": false, "sample_tl": [15, 44, 44], "sample_br": [10, 29, 26], "iter": "27", "source": "Docs/Diagnostics/_capture/iter27_gameplay_map_closed.png"}
+{"phase": "post_close", "screen": [1170, 2532], "samplePatch": [553, 1234, 64, 64], "meanLuma": 0.05907, "allBlack": false, "sample_tl": [217, 217, 231], "sample_br": [180, 180, 195], "iter": "27", "source": "Docs/Diagnostics/_capture/s06_map_closed_2026-06-22_07-08-55.png"}
