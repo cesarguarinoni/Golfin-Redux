@@ -12,7 +12,8 @@
 - [x] GDD reconciled — §17 Addendum appended (rulings + reuse map + delivery model).
 - [x] Clone sources grounded in Unity (HoleSelection, Rankings, Modals/Result, ScreenManager).
 - [x] SPEC.md foundation written: rules, clone map, tokens, staged plan, Stage 0 prefab inventory.
-- [ ] Stage 0 measurements — pull each TO-EXTRACT node (geometry + tokens), fill §4.
+- [x] Stage 0 GEOMETRY extracted for all 9 prefabs (get_metadata) + structure + content mapping, written into §4 with node links.
+- [ ] Stage 0 TOKENS (font px + exact fills) — blocked: Figma get_design_context endpoint hung (needs MCP restart). Links left in §4 for the pull.
 - [ ] Stage 0 handoff to Code (prefabs only).
 - [ ] Stage 1 scaffold + nav.
 - [ ] Stage 2 bind to LocalTournamentBackend.
