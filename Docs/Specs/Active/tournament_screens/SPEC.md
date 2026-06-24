@@ -7,6 +7,30 @@
 
 ---
 
+## Reference renders (Figma source — GUIDE ONLY)
+
+Exported 2026-06-24 from Figma `5gEAHjl6xAtW8iYY7NMvWd` into `reference/`. Composition guides only — if a render ever disagrees with a token table or a live node, the **token / node wins** (RUNTIME_BLUEPRINT §9 hierarchy). Placeholder content in the renders (e.g. "Kasumigaseki") is mock data, not canonical.
+
+**Full screens**
+- **Hole Selection** — `13414:2936` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-2936)
+
+  ![Hole Selection](reference/tournament_hole_selection_screen.png)
+- **Leaderboard** — `13414:5598` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-5598)
+
+  ![Leaderboard](reference/tournament_leaderboard_screen.png)
+
+**Hole-card states** (Screen A)
+- **Finished** `13414:5549` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-5549) — ![Finished](reference/hole_card_finished.png)
+- **Next** `13414:2972` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-2972) — ![Next](reference/hole_card_next.png)
+- **Locked** `13414:4041` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-4041) — ![Locked](reference/hole_card_locked.png)
+
+**Leaderboard components** (Screen B)
+- **Top-3 podium** `13414:5632` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-5632) — ![Podium](reference/leaderboard_podium_top3.png)
+- **Ranking row (#4+)** `13414:5705` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-5705) — ![Ranking row](reference/leaderboard_ranking_row.png)
+- **Sticky "you" row** `13414:5892` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-5892) — ![Sticky row](reference/leaderboard_sticky_you_row.png)
+
+---
+
 ## 0. Rules Code MUST follow
 
 1. **REUSE, don't recreate (HARD RULE).** Every element below names an existing Unity prefab/component. Code **duplicates that prefab and modifies only the diff** — e.g. the podium: duplicate `RankingsScreen.prefab`'s podium, swap the RP pill → STROKES, drop the coin. **Never rebuild a hierarchy that already exists.** The **only** element created from scratch is the empty-state message (B4) — nothing equivalent exists. If unsure whether something exists, search the repo before creating.
