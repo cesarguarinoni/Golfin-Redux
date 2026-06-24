@@ -15,7 +15,7 @@
 - [x] Stage 0 TOKENS extracted (get_design_context, online) — text styles, STROKES pill, LIVE badge, badge colors.
 - [x] Existing Unity prefabs pinned for reuse (HoleCard, HoleCompleteWidget, RankingsScreen, RankingsCards, RankingsCardUser).
 - [x] SPEC rewritten: reuse-and-modify mandate, exact prefab paths, full tokens. **Stage 0 ready for Code handoff.**
-- [ ] Stage 0 handoff to Code (prefabs only).
+- [x] Stage 0 handoff to Code (prefabs only) — **7 prefabs BUILT + Cesar-APPROVED 2026-06-24** (r1 fixes + LIVE pill applied). See `STAGE0_REPORT.md` + `screenshots/stage0_screen{A,B}_*.png`. **Next: Stage 1 scaffold + nav (awaiting Cesar go).**
 - [ ] Stage 1 scaffold + nav.
 - [ ] Stage 2 bind to LocalTournamentBackend.
 - [ ] Stage 3 state polish.
