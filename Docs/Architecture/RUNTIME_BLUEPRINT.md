@@ -332,6 +332,16 @@ These are markers Architect/Code should fill in next time the relevant area is t
 
 ## 9 — Working with Figma references
 
+### Spec content & source-of-truth hierarchy (set 2026-06-24)
+
+Every UI spec carries three things; include as much of all three as possible (more info = fewer misreads):
+
+1. **Metrics** — as many literal token values as possible: dimensions, x/y, font family/weight/size, line-height, fills, gradients, border color+width, corner radius, gaps, padding. Pulled via `get_metadata` + `get_design_context`. **★ SOURCE OF TRUTH.**
+2. **Direct Figma links** — a node link for every screen / component / state so Code (and Architect on review) can jump straight to the canonical design. Form: `https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=<ID-with-dash>`. **★ SOURCE OF TRUTH.**
+3. **Reference images** — Figma renders of each screen/state in the task's `reference/` folder, linked inline beside the matching section. **GUIDE ONLY** — they help Code picture the composition; they never override the metrics or the live node.
+
+**Precedence:** if a reference image ever disagrees with a metric or the live Figma node, the metric/node wins. Images guide; numbers + links decide.
+
 ### Standing rule: Multi-Agent Pipeline (set 2026-04-28)
 
 **All UI tasks go through the subagent pipeline at `.claude/agents/`.** Architect (Opus) writes specs → Implementer (Sonnet) builds → Self-Reviewer (Opus) catches false PASSes → Architect (Opus) does final review → Cesar approves. Hooks at `.claude/hooks/` route the chain automatically and notify Cesar via desktop toast when his attention is needed. Full details in `CLAUDE.md` § Multi-Agent Workflow.
@@ -485,6 +495,7 @@ In the Unity Editor, `ScreenCapture.CaptureScreenshotAsTexture()` returns the OS
 
 ## 11 — Update Log
 
+- **2026-06-24** — Added §9 capstone "Spec content & source-of-truth hierarchy." Every UI spec carries (1) metrics/literal tokens, (2) direct Figma node links, (3) reference images. Metrics + links are SOURCE OF TRUTH; images are GUIDE ONLY and never override them. Per Cesar.
 - **2026-06-24** — Added §9 standing rule "ship the Figma RENDERS with the spec." Every UI spec now also exports each referenced frame/state as a PNG into the task's `reference/` folder (via `get_screenshot`/`download_assets`), linked inline in SPEC.md, in ADDITION to literal tokens. Added `reference/` to the per-task folder convention. Per Cesar: the more the Implementer can see, the better.
 - **2026-06-04** — Added §9 standing rule "extract from STRUCTURAL DATA, not screenshots." Before writing/reviewing any UI fidelity spec, pull `get_metadata` + `get_design_context` on the component and build the token table from that. From mode_select_system iter-5 review, where screenshot-eyeballing missed ~10 issues all present in metadata (active/inactive border+title color, container-as-back-panel, per-surface widths, hidden arrow containers, separator counts, centered-cluster layout).
 
