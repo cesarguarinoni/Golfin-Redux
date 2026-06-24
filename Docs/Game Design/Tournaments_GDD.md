@@ -357,3 +357,42 @@ Align to the 1v1 result frames (`13274-877` / `13275-2628`): final rank + score 
 - **Auto-layout everywhere** — no absolute positions except the top-right badge overlay.
 - **8px-multiple** gaps/paddings (8/16/24/32); list gap 24, side margins 48.
 - **Shared tokens** — same gradients, fonts, panel radii, gold accents as Shop/Hole/Rankings; **Main Buttons** real component instances (resize, never rescale); rarity/icon assets via existing helpers, never hardcoded.
+
+---
+
+## 17. Addendum — Implementation Rulings (2026-06-24, LOCKED)
+
+> Rulings made while finalizing the Figma designs for the **Tournament Hole Selection** and **Tournament Leaderboard** screens. Where a ruling conflicts with an earlier section, **this addendum wins** and the override is named. Companion build spec: `Docs/Specs/Active/tournament_screens/SPEC.md`.
+
+### 17.1 New screen adopted — Tournament Hole Selection *(adds to §2 loop & §11/§16 screen list)*
+A per-tournament **hole hub** sits between Tournament Selection and per-hole play. Vertical list of the tournament's holes as cards in three states: **FINISHED** (read-only result summary), **NEXT** (current playable hole + PLAY), **LOCKED** (not yet reached). A podium icon (top-right) opens the Leaderboard; a silver **Close** button (bottom) returns to Tournament Selection. Updated loop: `Selection → Hole Selection → (play hole) → back to Hole Selection … → Leaderboard`.
+
+### 17.2 Leaderboard shows raw STROKES *(overrides §5 display note & §16.7)*
+The board displays **total strokes (raw integer)**, not score-to-par, and shows **no `thru X/N` and no time column**. Raw strokes still drive the sort (ascending). (To-par may return in a later polish pass; not v1.)
+
+### 17.3 Tiebreak — backend ladder unchanged; time is the human-visible break *(clarifies §6)*
+The full ranking ladder of §6.1 (**strokes → countback → time → submit-timestamp**) stays in the backend. The **human-visible** tiebreak is **time**. The **`T` prefix shows only when entries are genuinely tied for a placement**; with no tie, the bare rank number is shown.
+
+### 17.4 DNFs hidden from the board *(overrides §5 DNF-listing)*
+The leaderboard lists **only players who have finished all holes**. Non-finishers are **not** shown as ranked rows. The viewing player always sees themselves via a **sticky "you" row** pinned at the bottom (running strokes, rank `--` until they finish, **LIVE** badge while active) — so an unranked player still has presence. When **no one has finished yet**, the board shows an **empty-state message** (copy in SPEC); the sticky "you" row still renders.
+
+### 17.5 Finished-hole card RANK = overall tournament rank *(no new backend)*
+The `RANK` value on a FINISHED hole card is the player's **current overall tournament standing** (same value as `GetLeaderboard`), **not** a per-hole rank. Drop the `T` unless the player is actually tied. No per-hole leaderboard method is added.
+
+### 17.6 Prize claim = auto-claim modal + leaderboard link *(overrides Decision #5 & §16.8)*
+There is **no separate sequenced Result screen** for claiming in v1. When a tournament finishes, prizes are **auto-claimed** and surfaced in a **modal** (`ModalController`) that includes a **link to the Leaderboard**. The `claimed` one-time-grant guard (§10) is unchanged.
+
+### 17.7 Stamina is NOT a hard gate in v1 *(softens Decision #1 & §2)*
+0 stamina **affects shot stats but does not prevent playing a hole** — so stamina is **not a play gate** in v1. This weakens Decision #1's "stamina drives multi-session play" premise and the stamina-based justification for **S1** (character lock). Character lock at registration **remains the default** but is no longer stamina-motivated. **Stamina UI is left off the v1 tournament screens** — flagged for a later pass.
+
+### 17.8 Clone-and-modify reuse map (grounded in Unity, verified 2026-06-24)
+- **Tournament Hole Selection** clones `Assets/Scripts/UI/HoleSelection/` (screen + hole-card prefab). Per-hole data (par, tip text, thumbnails) from `HoleData.cs` / `HoleDatabase.cs` / `HoleDatabaseLoader.cs` — **Lomond populated, other clubs placeholder**. FINISHED-card result block reuses much of the **Result Screen card** → `Assets/Scripts/UI/Modals/Result/HoleCompleteModalController.cs`.
+- **Tournament Leaderboard** clones `Assets/Scripts/UI/Rankings/` (+ `Rankings/Core/`). **Strip the period machinery** (`LeaderboardPeriodKey`, Daily/Weekly/Monthly) per §16.0 U2; **reuse the filter pill** repurposed as the identity row (sponsor mark · league/tournament name · countdown timer).
+- **Both screens** share that top identity-pill row. Nav via `ScreenManager` (full screens); modals via `ModalController`.
+- Backend seam unchanged: `ITournamentBackend` → `LocalTournamentBackend` (deterministic bots) now, `RemoteTournamentBackend` (real server players) later (§8).
+
+### 17.9 Delivery model — prefab-first, controlled stages
+Every repeating element is a **committed prefab with placeholder data baked in** (hole card ×3 states, Close button; leaderboard podium item, ranking row, sticky-player row, empty-state message). Runtime **only instantiates + fills data** — no purely runtime-built hierarchies — so each prefab can be opened and fixed directly in the editor. Handed to Code in **controlled stages** (Stage 0 prefabs → Stage 1 scaffold+nav → Stage 2 backend bind → Stage 3 state polish); each stage is a separate reviewable handoff. Full breakdown in SPEC.
+
+### 17.10 Minor
+The vestigial left/right **Arrow** instances inherited from the cloned base screens are **dropped** (no function here).
