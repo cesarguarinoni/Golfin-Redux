@@ -62,7 +62,7 @@
 
 ## 3. Staged delivery (one Code handoff each)
 
-- **Stage 0 — Prefabs only.** Duplicate each source prefab (§1), apply the per-prefab diff (§4), bake placeholder data, commit. Static, no logic, no wiring. Cesar reviews/edits each.
+- **Stage 0 — Prefabs only (current handoff).** Duplicate each source prefab (§1), apply the per-prefab diff (§4), bake placeholder data, output to **`Assets/Prefabs/UI/Tournaments/`**. The 7 prefabs: `TournamentHoleCard_Finished` / `_Next` / `_Locked`, `TournamentRankingRow`, `TournamentPlayerStickyRow`, `TournamentCloseButton`, `TournamentLeaderboardEmptyState`. **Guardrails:** static only — NO screen wiring, navigation, backend, or runtime population this stage; each prefab must open + render standalone in the editor with its placeholder data; **commit but DO NOT push until Cesar confirms** the prefabs look right; verify the `.prefab` files actually landed (`git status`) and report the real file list — no synthetic/fabricated claims; flag anything ambiguous back to Cesar rather than guessing. Cesar reviews/edits each prefab before Stage 1.
 - **Stage 1 — Screen scaffolds + nav.** Both full screens (own backgrounds), identity-pill row, scroll containers, podium-icon→Leaderboard, Close buttons. Wire `Selection → Hole Selection → Leaderboard` and back via `ScreenManager`. Drop vestigial Arrows.
 - **Stage 2 — Bind to `LocalTournamentBackend`** (bots): hole-card states from entry progress; podium + rows from `GetLeaderboard`; empty-state when no finishers; sticky "you" row (live/partial, `--`, LIVE); finished-card RANK = overall tournament rank.
 - **Stage 3 — Polish:** Provisional/Final labeling, `T`-tie prefixes, edge cases, stamina/locked-character flag (off v1 per §17.7) revisited.
