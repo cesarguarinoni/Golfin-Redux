@@ -15,12 +15,13 @@
 - [x] Stage 0 TOKENS extracted (get_design_context, online) — text styles, STROKES pill, LIVE badge, badge colors.
 - [x] Existing Unity prefabs pinned for reuse (HoleCard, HoleCompleteWidget, RankingsScreen, RankingsCards, RankingsCardUser).
 - [x] SPEC rewritten: reuse-and-modify mandate, exact prefab paths, full tokens. **Stage 0 ready for Code handoff.**
-- [x] Stage 0 handoff to Code (prefabs only) — **7 prefabs BUILT + Cesar-APPROVED 2026-06-24** (r1 fixes + LIVE pill applied). See `STAGE0_REPORT.md` + `screenshots/stage0_screen{A,B}_*.png`. **Next: Stage 1 scaffold + nav (awaiting Cesar go).**
-- [ ] Stage 1 scaffold + nav.
+- [x] Stage 0 handoff to Code (prefabs only) — **7 prefabs BUILT + Cesar-APPROVED 2026-06-24** (r1 fixes + LIVE pill applied). See `STAGE0_REPORT.md` + `screenshots/stage0_screen{A,B}_*.png`.
+- [x] **Stage 1 scaffold + nav — BUILT 2026-06-24 + Cesar in-session corrections applied.** Both full screens, identity-pill row (reused rankings pills), scroll containers, Stage-0 prefabs in place, podium-icon → Leaderboard, Close inside panels, `Selection → Hole Selection ⇄ Leaderboard` wired via ScreenManager (nav verified in play mode). See `STAGE1_REPORT.md` + `screenshots/stage1_{hole_selection,leaderboard}.png`. **Committed, NOT pushed — awaiting Cesar final confirm.**
+- [x] Insert new UI order in Tournaments_Implementation_Plan.md for Hole Selection (**T8b** before T9).
 - [ ] Stage 2 bind to LocalTournamentBackend.
 - [ ] Stage 3 state polish.
-- [ ] Insert new UI order in Tournaments_Implementation_Plan.md for Hole Selection.
 - [ ] Confirm empty-state copy (+ JP localization).
+- [ ] Remove temp `TOURNAMENTS (TEMP)` entry on ModeSelection once T7 (tournament_selection_screen) lands.
 
 ## Key node IDs
 - Hole Selection root `13414:2936`; Leaderboard root `13414:5598`.

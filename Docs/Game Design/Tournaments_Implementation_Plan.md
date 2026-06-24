@@ -83,8 +83,11 @@ Implements `ITournamentBackend`:
 |---|---|---|---|
 | **T7** | `tournament_selection_screen` | FULL PIPELINE | filter tabs, cards, state-driven CTA |
 | **T8** | `tournament_detail_screen` | FULL PIPELINE | rules, prize table, **character-lock picker**, sign-up/continue |
+| **T8b** | `tournament_hole_selection_screen` | FULL PIPELINE | **per-tournament hole list** — Finished / Next / Locked hole cards, identity-pill row (sponsor · league · timer), podium-icon → Leaderboard, silver Close. Entry point into a tournament round. Built in `Docs/Specs/Active/tournament_screens` (Stage 1 = screen scaffolds + nav, static placeholder; Stage 2 = bind to `LocalTournamentBackend`). Reuses the HoleSelection screen + `HoleCard.prefab`. |
 | **T9** | `tournament_leaderboard_screen` | FULL PIPELINE | provisional/final banner, projected rows, sticky player row |
 | **T10** | `tournament_result_screen` | FULL PIPELINE | rank + prize + **Claim**; sequence after WIN/LOSE banner if reused from 1v1 result pattern |
+
+> **Insertion note (2026-06-24):** **T8b `tournament_hole_selection_screen`** was added between T8 and T9 — the original plan jumped from sign-up (T8) straight to the leaderboard (T9), but a player needs a per-tournament hole-picker to actually enter/continue a tournament round. T8b + T9 are co-built in the `tournament_screens` spec; T8b is the upstream of T9 (podium-icon → Leaderboard, Leaderboard Close → Hole Selection). Nav flow: Selection (T7) → Hole Selection (T8b) ⇄ Leaderboard (T9).
 
 Each: confirm Figma frame → extract tokens → spec to image, not prose. Depends: T4 (+ T6 for live HUD context on T9).
 

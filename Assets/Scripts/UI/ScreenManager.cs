@@ -13,7 +13,11 @@ namespace GolfinRedux.UI
         Inventory,
         HoleSelection,
         ModeSelection,
-        Leaderboard
+        Leaderboard,
+        // Tournament screens (Stage 1 scaffolds — separate full screens from the
+        // non-tournament HoleSelection / Leaderboard above).
+        TournamentHoleSelection,
+        TournamentLeaderboard
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -38,6 +42,8 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _holeSelectionScreen;
         [SerializeField] private GameObject _modeSelectionScreen;
         [SerializeField] private GameObject _leaderboardScreen;
+        [SerializeField] private GameObject _tournamentHoleSelectionScreen;
+        [SerializeField] private GameObject _tournamentLeaderboardScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         [Header("Audio (Order 350)")]
@@ -139,6 +145,12 @@ namespace GolfinRedux.UI
             if (_leaderboardScreen != null)
                 _leaderboardScreen.SetActive(screenId == ScreenId.Leaderboard);
 
+            if (_tournamentHoleSelectionScreen != null)
+                _tournamentHoleSelectionScreen.SetActive(screenId == ScreenId.TournamentHoleSelection);
+
+            if (_tournamentLeaderboardScreen != null)
+                _tournamentLeaderboardScreen.SetActive(screenId == ScreenId.TournamentLeaderboard);
+
             // Settings is an overlay (SettingsController), not managed here
 
             // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
@@ -148,7 +160,9 @@ namespace GolfinRedux.UI
                              || screenId == ScreenId.Inventory
                              || screenId == ScreenId.HoleSelection
                              || screenId == ScreenId.ModeSelection
-                             || screenId == ScreenId.Leaderboard;
+                             || screenId == ScreenId.Leaderboard
+                             || screenId == ScreenId.TournamentHoleSelection
+                             || screenId == ScreenId.TournamentLeaderboard;
             if (AudioManager.Instance != null)
             {
                 if (isMenuScreen && _mainThemeClip != null && !AudioManager.Instance.IsMusicPlaying())
