@@ -11,9 +11,10 @@
 - [x] Cross-referenced locked Tournaments GDD; 7 conflicts surfaced + ruled by Cesar.
 - [x] GDD reconciled — §17 Addendum appended (rulings + reuse map + delivery model).
 - [x] Clone sources grounded in Unity (HoleSelection, Rankings, Modals/Result, ScreenManager).
-- [x] SPEC.md foundation written: rules, clone map, tokens, staged plan, Stage 0 prefab inventory.
-- [x] Stage 0 GEOMETRY extracted for all 9 prefabs (get_metadata) + structure + content mapping, written into §4 with node links.
-- [ ] Stage 0 TOKENS (font px + exact fills) — blocked: Figma get_design_context endpoint hung (needs MCP restart). Links left in §4 for the pull.
+- [x] Stage 0 GEOMETRY extracted for all 9 prefabs (get_metadata) + structure + content mapping.
+- [x] Stage 0 TOKENS extracted (get_design_context, online) — text styles, STROKES pill, LIVE badge, badge colors.
+- [x] Existing Unity prefabs pinned for reuse (HoleCard, HoleCompleteWidget, RankingsScreen, RankingsCards, RankingsCardUser).
+- [x] SPEC rewritten: reuse-and-modify mandate, exact prefab paths, full tokens. **Stage 0 ready for Code handoff.**
 - [ ] Stage 0 handoff to Code (prefabs only).
 - [ ] Stage 1 scaffold + nav.
 - [ ] Stage 2 bind to LocalTournamentBackend.
