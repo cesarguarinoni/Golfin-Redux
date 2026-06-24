@@ -177,7 +177,9 @@ namespace GolfinRedux.UI
                          || screenId == ScreenId.Inventory
                          || screenId == ScreenId.HoleSelection
                          || screenId == ScreenId.ModeSelection
-                         || screenId == ScreenId.Leaderboard;
+                         || screenId == ScreenId.Leaderboard
+                         || screenId == ScreenId.TournamentHoleSelection
+                         || screenId == ScreenId.TournamentLeaderboard;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
                 if (showBars)

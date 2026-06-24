@@ -51,9 +51,17 @@ ModeSelection ──(temp entry)──▶ TournamentHoleSelection ──(podium-
 ---
 
 ## Corrections applied after Cesar review (this session)
+
+**Round 1:**
 1. **Close buttons inside the panels** (not footers below): hole Close flows after the LOCKED card inside the cards scroll; leaderboard Close is the last card-slot in the ranking list (no row overlap).
 2. **Identity row reuses the rankings filter pills** (`BackgroundLeague` sprite) instead of a custom bar — set to **Sliced** with a 9-slice border (`BackgroundLeague.png.meta` border 70/0/70/0) so they don't stretch/break.
-3. **"TOURNAMENT LEADERBOARD" moved to the top** (header/nav-bar position) instead of floating in the screen body.
+3. **"TOURNAMENT LEADERBOARD" moved to the top** instead of floating in the screen body.
+
+**Round 2 — aligned to Cesar's `SELECT HOLE` mockup:**
+4. **Real persistent nav bars now shown** on both tournament screens (currency + settings gear + gold banner title + bottom nav). `ScreenManager` adds the two tournament ScreenIds to `showBars`; `PersistentUIManager.HighlightScreen` sets the top-bar center title — **"SELECT HOLE"** / **"TOURNAMENT LEADERBOARD"** — and highlights the bottom-nav tee button. The floating title is gone (it now lives in the nav bar, matching the mockup).
+5. **Identity pills are now 2 rows:** full-width **"SPONSORED BY PUMA"** on top; **`KASUMIGASEKI OPEN`** + **`ENDS IN: 1d 5h 25m 05 s`** below. (Timer now carries the `ENDS IN:` label.)
+6. **Scroll bars set to AutoHide** — only visible when the list actually overflows (hidden on the hole screen where the cards fit).
+7. **Podium Top-3 STROKES on one line** (`NoWrap` + autosize) — was wrapping to two lines.
 
 ---
 
