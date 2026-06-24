@@ -336,7 +336,7 @@ These are markers Architect/Code should fill in next time the relevant area is t
 
 **All UI tasks go through the subagent pipeline at `.claude/agents/`.** Architect (Opus) writes specs → Implementer (Sonnet) builds → Self-Reviewer (Opus) catches false PASSes → Architect (Opus) does final review → Cesar approves. Hooks at `.claude/hooks/` route the chain automatically and notify Cesar via desktop toast when his attention is needed. Full details in `CLAUDE.md` § Multi-Agent Workflow.
 
-**Per-task folder convention:** `Docs/Specs/Active/<task_slug>/` containing `SPEC.md`, `STATUS.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, `ARCHITECT_REVIEW.md`, `screenshots/`. Template at `Docs/Specs/Active/_TEMPLATE/`.
+**Per-task folder convention:** `Docs/Specs/Active/<task_slug>/` containing `SPEC.md`, `STATUS.md`, `IMPLEMENTER_REPORT.md`, `SELF_REVIEW.md`, `ARCHITECT_REVIEW.md`, `screenshots/` (Code's verification captures), `reference/` (Figma source renders shipped with the spec). Template at `Docs/Specs/Active/_TEMPLATE/`.
 
 The legacy `Docs/TellCode.md` workflow is deprecated for new active tasks. Don't write new active work there.
 
@@ -351,6 +351,15 @@ Two calls, in order, on the target component (frame or instance):
 Then write each value as a LITERAL into the spec. Code transcribes; it does not re-query or interpret.
 
 **Lesson — mode_select_system iter-5 review (2026-06-04):** reviewing from the rendered screenshots + memory missed ~10 real issues, ALL of which were sitting in the metadata: active-vs-inactive encoded as **border color** (white vs `#3E7CA8`) + **title color** (gold `#EEDC9A` vs silver gradient); the "back panel" being the **`Cards Container` frame's own fill** (not a separate rect); **per-surface card widths** (home 764/677 vs full-screen 978); the carousel arrows being **`hidden=true`** deliberately; **separator counts** per state (3 on expanded, 1 on collapsed); the fee/reward **centered-cluster** layout vs corner-spread. None of this is legible from a screenshot. Pulling `get_metadata` + `get_design_context` surfaced every one. Do this FIRST, every time.
+
+### Standing rule: ship the Figma RENDERS with the spec (set 2026-06-24)
+
+Tokens tell Code the numbers; they don't show the composition. **Every UI spec must also ship the actual Figma render of each referenced screen/frame/state as a PNG in the task folder, linked inline in SPEC.md next to the matching token table.** The more the Implementer can SEE, the fewer layout misreads — Code should never have to imagine the screen from numbers alone.
+
+- Export each canonical frame + every distinct state (e.g. hole-card Finished/Next/Locked, Top-3 podium, sticky "you" row) via `figma:get_screenshot` on the node (or `figma:download_assets` for a full render), then save into `Docs/Specs/Active/<task>/reference/<screen_or_state>.png`.
+- Link them inline in SPEC.md beside the relevant section: `![Tournament Leaderboard](reference/leaderboard.png)`.
+- These are the **design source render** — distinct from `screenshots/` (Code's verification output). Keep both.
+- This is an ADDITION, never a replacement: still extract literal tokens per the rule above. Image + numbers, not image instead of numbers.
 
 ### Standing rule: Figma source-of-truth (set 2026-04-28)
 
@@ -476,6 +485,7 @@ In the Unity Editor, `ScreenCapture.CaptureScreenshotAsTexture()` returns the OS
 
 ## 11 — Update Log
 
+- **2026-06-24** — Added §9 standing rule "ship the Figma RENDERS with the spec." Every UI spec now also exports each referenced frame/state as a PNG into the task's `reference/` folder (via `get_screenshot`/`download_assets`), linked inline in SPEC.md, in ADDITION to literal tokens. Added `reference/` to the per-task folder convention. Per Cesar: the more the Implementer can see, the better.
 - **2026-06-04** — Added §9 standing rule "extract from STRUCTURAL DATA, not screenshots." Before writing/reviewing any UI fidelity spec, pull `get_metadata` + `get_design_context` on the component and build the token table from that. From mode_select_system iter-5 review, where screenshot-eyeballing missed ~10 issues all present in metadata (active/inactive border+title color, container-as-back-panel, per-surface widths, hidden arrow containers, separator counts, centered-cluster layout).
 
 - **2026-04-30** — Added §10 Editor Tooling. Documents `CaptureHelper.cs` (synchronous GameView RT reflection capture, replacing async `ScreenCapture.CaptureScreenshot`), `FakeStateLock` runtime flag, fake-state preset menu items, populator cooperation pattern, and the standing maintenance protocol when adding new static-bus contexts. Cross-referenced from §2 and §3. Renumbered Update Log §10 → §11. Built on the `capture_helper` task (Cesar approved 2026-04-29) plus the populator-lock follow-up (2026-04-30).
