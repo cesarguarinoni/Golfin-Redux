@@ -1,0 +1,8 @@
+=== iter-1 kickoff baseline ===
+timestamp: 2026-06-25T07:52:51Z
+HEAD: 1b8024dce317d91b3ec17fb1f6329ecac0fbfb83
+DIRTY:
+ M Docs/Specs/Active/tournament_contracts/STATUS.md
+=== end baseline ===
+2026-06-25T07:52:51Z activated — implementing T1 tournament_contracts
+2026-06-25T08:03:52 done, awaiting review — 14/14 tests PASS, report written, STATUS → READY_FOR_SELF_REVIEW
