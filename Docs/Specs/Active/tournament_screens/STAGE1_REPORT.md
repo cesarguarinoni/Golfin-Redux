@@ -63,6 +63,13 @@ ModeSelection ──(temp entry)──▶ TournamentHoleSelection ──(podium-
 6. **Scroll bars set to AutoHide** — only visible when the list actually overflows (hidden on the hole screen where the cards fit).
 7. **Podium Top-3 STROKES on one line** (`NoWrap` + autosize) — was wrapping to two lines.
 
+**Round 3 — spacing/podium fidelity to the Figma renders (`reference/*.png`, nodes 13414-2936 / 13414-5598):**
+8. **24px gap between the top pills and the content panel** on both screens — hole screen was overlapping (pills rect was 84px holding 122px of content → resized to 124px so the Content VLG's 24px spacing applies); leaderboard gap was too big (banner spacer 224→198 so the panel sits 24px below the pills).
+9. **Leaderboard panel sized like the normal rankings screen** — `RankingsArea` grown 1285→1553 (+ scroll viewport `Bottom97` 776→1028) so the panel fills the screen, and the **player's sticky card moved lower** to just above the bottom nav (matching the normal RankingsScreen / Figma).
+10. **Podium Top-3 hierarchy effect** (same as the normal rankings screen) — #1 full scale, **#2/#3 scaled 0.85** with bottom-center pivot.
+11. **Podium STROKES centered** in the pill (was right-aligned).
+12. Leaderboard list filled to **10 rows (ranks 4–13)** so the taller panel reads like the Figma instead of half-empty (placeholder data; real rows bind in Stage 2).
+
 ---
 
 ## Flags / decisions for Cesar
