@@ -36,3 +36,11 @@
 - No banned capture APIs (`ScreenCapture.CaptureScreenshot` as canonical proof).
 - No scene-baking a new subsystem into `LabScaffold.unity` as the only home; it must live in the real gameplay flow.
 - Capture must be **normal play**, not scripted discrete states presented as fluid play.
+
+## 8. Clone-provenance gate for reuse-table tasks (was advisory clone-and-modify rule)
+- **Created:** 2026-06-25, triggered by the `tournament_selection_screen` (T7) iter-1 failure — the implementer **rebuilt the screen scaffold + CTA buttons from scratch** despite a HARD clone-and-modify rule, and all three gates (implementer self-check, reviewer scene-mutation audit, orchestrator token review) checked **fidelity** but never **provenance**, so an ~80%-right-looking frame on a 100%-wrong (non-reused) foundation passed for 3 iterations.
+- **Applies to:** any task whose SPEC contains a `§1 reuse / clone-from table`.
+- **The gate:** for **every row** in that table, the implementer report MUST cite the concrete **source it cloned from** — a prefab **GUID**, or a named **scene-object** (path + fileID). E.g. *"CTA = instance of `GoldPrimaryButton.prefab` guid `…`"*, *"chassis = duplicate of `RankingsScreen.prefab` guid `…`"*. A reuse row with **no provenance, or provenance pointing at a net-new bespoke object = automatic FAIL.**
+- **Evidence the reviewer runs** (per net-new prefab/screen that should be a clone): `grep -cE "PrefabInstance|^--- !u!1001" <asset>` must be **> 0** (a clone carries nested prefab-instance blocks; a hand-built one has 0); and the named source GUID must appear in the new asset's YAML.
+- **If the named reuse source doesn't exist or isn't cleanly extractable, STOP and flag the Architect** — do **not** hand-roll a substitute and proceed. (The T7 spec told Code to reuse a "shared gold button" that had no prefab; the correct move was to flag, not rebuild.)
+- This is the UI analogue of the Rule 2 real-entry gate and the Rule 3 invariant gate: provenance is checkable mechanically, so it is a hard stop, not a judgement call.

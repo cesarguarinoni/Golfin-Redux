@@ -1,30 +1,34 @@
+REDO_READY
+
 # STATUS — tournament_selection_screen (T7)
 
-**Task:** Build the Tournament Selection screen ("TOURNAMENTS") from Figma `13386:1758` (v7) — the browse/pick hub: filter tabs (ALL/OPEN/PLAYING/CLOSED) + scrollable tournament cards across six states, state-driven CTA (SIGN UP / CONTINUE / LEADERBOARD / ENTRY-fee), expand-in-place sign-up (GDD U1). Delivered prefab-first in stages.
+> **2026-06-25 — REDO scoped.** iter-1 was stopped by Cesar: it **rebuilt the screen + buttons from scratch** instead of cloning the chassis / reusing the shared buttons (violates SPEC §0/§1, now PIPELINE_HARDENING **Rule 8**). Diagnosis = **both** spec gaps + Code violation (full record: `ARCHITECT_HANDOFF.md`).
+> **Architect has now closed the gaps** — `SPEC.md` rewritten card-first with every reuse row pinned to a concrete on-disk handle; salvage list explicit; clone-provenance now gate-enforced. Decisions locked by Cesar: **(1) salvage** Code's sound card C# + nav edits, **(2) card-first** (build the card prefab, then the screen).
 
-**Tier:** FULL PIPELINE (new screen + visual fidelity + state matrix).
+**Task:** Tournament Selection screen ("TOURNAMENTS") from Figma `13386:1758` (v7) — browse/pick hub: 4 filter tabs (ALL/OPEN/PLAYING/CLOSED) + scrollable tournament cards across six states, state-driven CTA (SIGN UP / CONTINUE / LEADERBOARD / ENTRY-fee), expand-in-place sign-up (GDD U1).
 
-**Updated:** 2026-06-25 JST
+**Tier:** FULL PIPELINE. **Updated:** 2026-06-25 (redo scoped — ready to re-dispatch).
 
-## Progress
-- [x] Figma frame confirmed `13386:1758` ("Tournament Selection v7"); full get_metadata geometry (filter strip, 6 cards 978×360, all node IDs).
-- [x] Card tokens extracted (get_design_context, online) for the canonical Lomond OPEN card `13386:1780` — gradient/border/radius, badge, eyebrow/name/club fonts, FREE-ENTRY pill, RP amount, gold Sign-Up button.
-- [x] Reuse sources grounded: HoleSelection scaffold (clone, as `tournament_screens` did), Rankings TabBar pattern, shared gold primary button, silver `TournamentCloseButton`, RP icon, `PersistentUIManager`, `ModalController`.
-- [x] Reference render saved → `reference/tournament_selection_screen.png`.
-- [x] SPEC authored — layout + node links, literal tokens (§3), per-state matrix (§4), nav + new `ScreenId.TournamentSelection` (§5), 4-stage plan (§6), flags (§7). **Stages 0–1 ready for Code handoff now (no backend).**
-- [ ] Stage 0 — card state prefabs + 4-tab TabBar (extract per-state badge hex). Implementer.
-- [ ] Stage 1 — static screen scaffold + nav + replace ModeSelection TEMP entry. **Cesar visual gate.**
-- [ ] Stage 2 — bind `ITournamentBackend.GetTournaments()` (state-driven CTA + filters + countdowns + Register flow). **Blocked on T1→T4.**
-- [ ] Stage 3 — expand-in-place (U1) + sign-up/character-lock modal + polish.
+## Redo plan (SPEC §6 — card-first)
+- [ ] **Stage 0a** — extract `Assets/Prefabs/UI/Common/GoldPrimaryButton.prefab` from in-scene `PlayButton` (`ShellScene.unity`, fileID `4123466008247632389`).
+- [ ] **Stage 0b** — export 6 course images (`download_assets` per card node) → `Assets/Art/Tournaments/CourseImages/` → Sprite. *(Architect offering to run this export.)*
+- [ ] **Stage 0c** — `TournamentSelectionCard.prefab` (THE focus): nested instances of GoldPrimaryButton + silver `TournamentCloseButton`, RP icon + course-image sprites, badge pill, §3 tokens, per-state visuals; **salvage `TournamentSelectionCard.cs`**. Render standalone → **Cesar visual gate on the CARD.**
+- [ ] **Stage 1** — duplicate `RankingsScreen.prefab` → rename `TournamentSelectionScreen` → relabel 4 tabs → instantiate card prefabs (one per state, static) → nav + keep Code's ScreenManager/PersistentUIManager/entry edits. **Cesar visual gate on the SCREEN.**
+- [ ] **Stage 2** — bind `ITournamentBackend.GetTournaments()`. **Blocked on T1→T4.**
+- [ ] **Stage 3** — expand-in-place (U1) + sign-up modal.
+
+## Salvage (kept from iter-1 working tree)
+`TournamentSelectionCard.cs` (state/badge/bind logic) · `ScreenManager.ScreenId.TournamentSelection` · `PersistentUIManager` banner+showBars · `TournamentDevEntryButton` route · `TournamentHoleSelectionScreenController` back-target. **Discard:** bespoke screen scaffold + hand-rolled CTA.
+
+## Concrete reuse handles (verified on disk 2026-06-25) — see SPEC §1
+Chassis → `Assets/Prefabs/UI/Rankings/RankingsScreen.prefab` (4-tab row + scroll + panel) · Gold CTA → extract from `PlayButton` · Silver CTA → `Assets/Prefabs/UI/Tournaments/TournamentCloseButton.prefab` · RP icon → `Assets/Art/HomeScreen/Reward Points Icon.png` · Course images → Figma export.
 
 ## Decisions to resolve (SPEC §7)
-- UPCOMING / ENDED CTA behavior (disabled / Notify / LEADERBOARD).
-- Filter semantics per `TournamentState`.
-- Tab label `PLAYING` vs GDD `Active` → Figma canonical; reconcile GDD.
-- Name font Noto Sans JP Bold for EN names.
+- Chassis pick (RankingsScreen.prefab vs in-scene TournamentHoleSelection) — implementer confirms + cites provenance.
+- UPCOMING / ENDED CTA behavior · `PLAYING` vs GDD `Active` (Figma canonical) · EN name font.
 
 ## Key node IDs
-- Screen root `13386:1758` · Filter strip `13386:1761` (tabs 1763/1767/1771/1775) · Cards: Kasumigaseki `13389:1884`, Hirono `13405:1858`, Lomond `13386:1780`, Gotemba `13386:1804`, Kisarazu `13386:1828`, Kawana `13389:1849`.
+Screen root `13386:1758` · Filter strip `13386:1761` (tabs 1763/1767/1771/1775) · Cards: Kasumigaseki `13389:1884`, Hirono `13405:1858`, Lomond `13386:1780`, Gotemba `13386:1804`, Kisarazu `13386:1828`, Kawana `13389:1849`.
 
 ## Dependency
-Stages 0–1 independent (static, like `tournament_screens`). Stage 2 needs **T1 `tournament_contracts` → T2 → T3 → T4** (`GetTournaments()`).
+Stages 0–1 independent (static). Stage 2 needs **T1✓ → T2 → T3 → T4** (`GetTournaments()`).
