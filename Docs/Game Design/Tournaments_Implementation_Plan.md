@@ -82,12 +82,12 @@ Implements `ITournamentBackend`:
 | Order | Screen | Class | Notes |
 |---|---|---|---|
 | **T7** | `tournament_selection_screen` | FULL PIPELINE | filter tabs, cards, state-driven CTA |
-| **T8** | `tournament_detail_screen` | FULL PIPELINE | rules, prize table, **character-lock picker**, sign-up/continue |
+| ~~**T8**~~ | ~~`tournament_detail_screen`~~ | **CUT (GDD U1)** | **No separate Detail screen in v1.** Detail = expand-in-place on the Selection card; rules / prize preview / **character-lock picker** / sign-up all live on **T7** (expanded card + sign-up modal). See GDD §16 U1, §16.6. |
 | **T8b** | `tournament_hole_selection_screen` | FULL PIPELINE | **per-tournament hole list** — Finished / Next / Locked hole cards, identity-pill row (sponsor · league · timer), podium-icon → Leaderboard, silver Close. Entry point into a tournament round. Built in `Docs/Specs/Active/tournament_screens` (Stage 1 = screen scaffolds + nav, static placeholder; Stage 2 = bind to `LocalTournamentBackend`). Reuses the HoleSelection screen + `HoleCard.prefab`. |
 | **T9** | `tournament_leaderboard_screen` | FULL PIPELINE | provisional/final banner, projected rows, sticky player row |
-| **T10** | `tournament_result_screen` | FULL PIPELINE | rank + prize + **Claim**; sequence after WIN/LOSE banner if reused from 1v1 result pattern |
+| **T10** | ~~`tournament_result_screen`~~ → **auto-claim modal** | TELLCODE / MODAL | **GDD §17 ruling #6 supersedes the separate Result screen** (Decision #5 / §16.8): on tournament finish show an **auto-claim modal + leaderboard link** (reuse `ModalController`), not a full screen. |
 
-> **Insertion note (2026-06-24):** **T8b `tournament_hole_selection_screen`** was added between T8 and T9 — the original plan jumped from sign-up (T8) straight to the leaderboard (T9), but a player needs a per-tournament hole-picker to actually enter/continue a tournament round. T8b + T9 are co-built in the `tournament_screens` spec; T8b is the upstream of T9 (podium-icon → Leaderboard, Leaderboard Close → Hole Selection). Nav flow: Selection (T7) → Hole Selection (T8b) ⇄ Leaderboard (T9).
+> **Insertion note (2026-06-24):** **T8b `tournament_hole_selection_screen`** was added between T8 and T9 — the original plan jumped from sign-up (on **T7**) straight to the leaderboard (T9), but a player needs a per-tournament hole-picker to actually enter/continue a tournament round. T8b + T9 are co-built in the `tournament_screens` spec; T8b is the upstream of T9 (podium-icon → Leaderboard, Leaderboard Close → Hole Selection). Nav flow: Selection (T7) → Hole Selection (T8b) ⇄ Leaderboard (T9).
 
 Each: confirm Figma frame → extract tokens → spec to image, not prose. Depends: T4 (+ T6 for live HUD context on T9).
 
@@ -113,7 +113,7 @@ Each: confirm Figma frame → extract tokens → spec to image, not prose. Depen
 ## Dependency graph / critical path
 
 ```
-T1 ─┬─► T2 ─► T4 ─┬─► T7,T8,T9,T10 (Figma-gated)
+T1 ─┬─► T2 ─► T4 ─┬─► T7,T8b,T9,T10 (Figma-gated)
     ├─► T3 ──────┘   └─► T11
     └─► T5 ─┐
             └─► T6 (needs S1)
@@ -130,7 +130,7 @@ T4 ─► T12
 
 **Blocked:**
 - **T6** → ruling on **S1** (character lock vs swap).
-- **T7–T10** → Figma frames (point me at existing tournament frames in `5gEAHjl6xAtW8iYY7NMvWd`, or flag that they need designing first).
+- **T7, T9, T10** → Figma frames (point me at existing tournament frames in `5gEAHjl6xAtW8iYY7NMvWd`, or flag that they need designing first). **T8 cut** (GDD U1); T8b done.
 - **T11** → confirm the Home banner component.
 
 **Recommended first spec:** **T1** (`tournaments_core_contracts`) — unblocks the entire chain and locks the DTO/interface shape (incl. the forward-compat `rngSeed`/`inputLog` slots) before anything depends on it.
