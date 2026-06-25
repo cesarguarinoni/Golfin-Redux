@@ -643,6 +643,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Tournaments.TournamentSelectionCard
   _badgeBackground: {fileID: 8676500594348177783}
   _badgeLabel: {fileID: 3695528202758882674}
+  _tournamentImage: {fileID: 259090858572330456}
   _eyebrowLabel: {fileID: 3104269904590821710}
   _nameLabel: {fileID: 1173887975579426863}
   _clubLabel: {fileID: 5646562200922948807}
@@ -2552,6 +2553,10 @@ PrefabInstance:
     - target: {fileID: 2686930610256254749, guid: 260f2fa7739224d6d873794a1eb3c4a2, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3410025690068449476, guid: 260f2fa7739224d6d873794a1eb3c4a2, type: 3}
+      propertyPath: m_PixelsPerUnitMultiplier
+      value: 2.3
       objectReference: {fileID: 0}
     - target: {fileID: 5867896456911582480, guid: 260f2fa7739224d6d873794a1eb3c4a2, type: 3}
       propertyPath: m_Name

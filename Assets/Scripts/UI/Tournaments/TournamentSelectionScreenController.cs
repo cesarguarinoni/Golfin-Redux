@@ -24,6 +24,7 @@ namespace GolfinRedux.UI.Tournaments
         [SerializeField] private ScrollRect _cardsScrollRect;
         [SerializeField] private RectTransform _cardsContent;
         [SerializeField] private TournamentSelectionCard _cardPrefab;
+        [SerializeField] private Sprite[] _courseImages;   // per-card course photos, in StaticCards order
 
         [Header("Filter Tabs")]
         [SerializeField] private Button _tabAll;
@@ -169,8 +170,9 @@ namespace GolfinRedux.UI.Tournaments
                 return;
             }
 
-            foreach (var data in StaticCards)
+            for (int i = 0; i < StaticCards.Length; i++)
             {
+                var data = StaticCards[i];
                 var card = Object.Instantiate(_cardPrefab, _cardsContent);
                 card.BindStatic(
                     data.State,
@@ -181,6 +183,9 @@ namespace GolfinRedux.UI.Tournaments
                     data.EntryRp,
                     data.RewardRp,
                     data.CtaText);
+
+                if (_courseImages != null && i < _courseImages.Length)
+                    card.SetCourseImage(_courseImages[i]);
 
                 card.OnCtaClicked += HandleCtaClicked;
             }

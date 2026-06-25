@@ -25,6 +25,10 @@ namespace GolfinRedux.UI.Tournaments
         [SerializeField] private Image _badgeBackground;
         [SerializeField] private TextMeshProUGUI _badgeLabel;
 
+        // -- Course image ---------------------------------------------------------
+        [Header("Course Image")]
+        [SerializeField] private Image _tournamentImage;          // 260x360 left bleed, per-tournament photo
+
         // -- Content header -------------------------------------------------------
         [Header("Header")]
         [SerializeField] private TextMeshProUGUI _eyebrowLabel;    // "GOLFIN PRESENTS"
@@ -189,6 +193,12 @@ namespace GolfinRedux.UI.Tournaments
 
             if (!silver && _ctaGoldLabel   != null) _ctaGoldLabel.text   = ctaText;
             if (silver  && _ctaSilverLabel != null) _ctaSilverLabel.text = ctaText;
+        }
+
+        /// <summary>Stage 0-1: assign the per-tournament course photo (260x360 left bleed).</summary>
+        public void SetCourseImage(Sprite sprite)
+        {
+            if (_tournamentImage != null && sprite != null) _tournamentImage.sprite = sprite;
         }
 
         private void ApplyBadge(CardState state)
