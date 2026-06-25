@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -16,7 +17,8 @@ namespace GolfinRedux.UI.Tournaments
     /// Navigation:
     ///   SIGN UP / CONTINUE CTA → TournamentHoleSelection (card tap)
     ///   LEADERBOARD CTA         → TournamentLeaderboard
-    ///   Filter tabs             → visual only (Stage 1), filter logic in Stage 2
+    ///   Filter tabs             → Stage 1 preview filters the static cards by state;
+    ///                             backend-driven filtering (real TournamentState) lands in Stage 2
     /// </summary>
     public class TournamentSelectionScreenController : MonoBehaviour
     {
@@ -50,6 +52,9 @@ namespace GolfinRedux.UI.Tournaments
 
         private enum TabId { All, Open, Playing, Closed }
         private TabId _activeTab = TabId.All;
+
+        // Instantiated cards, tracked so the filter tabs can show/hide by state (Stage 1 preview).
+        private readonly List<TournamentSelectionCard> _cards = new List<TournamentSelectionCard>();
 
         // ── Static card data (Stage 0–1, replaced by backend in Stage 2) ─────
         private struct StaticCardData
@@ -188,6 +193,7 @@ namespace GolfinRedux.UI.Tournaments
                     card.SetCourseImage(_courseImages[i]);
 
                 card.OnCtaClicked += HandleCtaClicked;
+                _cards.Add(card);
             }
 
             if (_cardsScrollRect != null)
@@ -196,6 +202,7 @@ namespace GolfinRedux.UI.Tournaments
 
         private void ClearCards()
         {
+            _cards.Clear();
             if (_cardsContent == null) return;
             foreach (Transform child in _cardsContent)
             {
@@ -236,7 +243,39 @@ namespace GolfinRedux.UI.Tournaments
         {
             _activeTab = tab;
             RefreshTabVisuals();
-            // Stage 2: filter card list based on tab selection
+            ApplyFilter();
+            if (_cardsScrollRect != null) _cardsScrollRect.verticalNormalizedPosition = 1f;
+        }
+
+        // Stage 1 preview: show/hide the static cards by state. Backend-driven filtering
+        // (against real TournamentState) replaces this in Stage 2.
+        private void ApplyFilter()
+        {
+            foreach (var card in _cards)
+            {
+                if (card == null) continue;
+                card.gameObject.SetActive(Matches(card.State, _activeTab));
+            }
+        }
+
+        private static bool Matches(TournamentSelectionCard.CardState state, TabId tab)
+        {
+            switch (tab)
+            {
+                case TabId.All:
+                    return true;
+                case TabId.Open:     // joinable now or opening soon
+                    return state == TournamentSelectionCard.CardState.Open
+                        || state == TournamentSelectionCard.CardState.Ending
+                        || state == TournamentSelectionCard.CardState.Upcoming;
+                case TabId.Playing:  // entered (in progress or round finished)
+                    return state == TournamentSelectionCard.CardState.EnteredActive
+                        || state == TournamentSelectionCard.CardState.EnteredFinished;
+                case TabId.Closed:   // finished/ended
+                    return state == TournamentSelectionCard.CardState.Ended;
+                default:
+                    return true;
+            }
         }
 
         private void RefreshTabVisuals()
