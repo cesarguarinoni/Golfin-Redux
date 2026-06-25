@@ -1,0 +1,89 @@
+2026-06-25T10:00:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: f37b0f061 docs(tournaments): T1 tournament_contracts DONE — close out Active → Completed
+DIRTY:
+ M Docs/Specs/Active/tournament_selection_screen/STATUS.md
+=== end baseline ===
+2026-06-25T10:15:00 extracted badge hex colors from Figma - LIVE=#c04000, ENDING=#ffc107, UPCOMING=#2775dd, ENDED=#6e7b91
+2026-06-25T10:30:00 surveyed scene hierarchy: TournamentTempEntry (3274200) in ModeSelectionScreen, planning Stage 0+1 implementation
+2026-06-25T09:44:19 screenshot verified - cards visible, persisting layout fixes
+2026-06-25T09:50:52 edit-mode persist confirmed, play-mode re-verified, canonical screenshot captured
+2026-06-25T12:02:00 canonical screenshot captured at 1170x2532 - 6 cards visible, Gate-A PASS, proceeding to IMPLEMENTER_REPORT
+2026-06-25T12:20:00 EntryRewardRow HLG childControlHeight fix applied and verified - sizeDelta=36 confirmed
+2026-06-25T12:21:00 T7-FULL verification: 6/6 CTA inside=True, 6/6 ButtonPressFeedback, tabs all wired+active
+2026-06-25T12:22:00 Gate-A PASS: TournamentDevEntryButton.onClick.Invoke() → ScreenManager.ShowScreen(TournamentSelection)
+2026-06-25T12:23:00 Physics diff: empty (zero changes to Assets/Scripts/Physics/)
+2026-06-25T12:24:00 Writing IMPLEMENTER_REPORT.md - all checks PASS
+2026-06-25T12:30:00 done, awaiting review
+2026-06-25T12:32:00 fresh canonical screenshot captured (1170x2532) and IMPLEMENTER_REPORT.md finalized
+2026-06-25T12:30:00 canonical screenshot confirmed 800x1731 via CaptureHelper/ScreenshotTool, hook-stamped to 2026-06-25_12-29-34.jpg, IMPLEMENTER_REPORT updated, STATUS=READY_FOR_SELF_REVIEW
+2026-06-25T14:00:00 === iter-2 kickoff baseline ===
+HEAD: 105f53ab8244c00d9914e5d3b53b9ad788c68475 docs(tournaments): T1 tournament_contracts DONE — close out Active → Completed
+DIRTY:
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/Tournaments/TournamentDevEntryButton.cs
+ M Assets/Scripts/UI/Tournaments/TournamentHoleSelectionScreenController.cs
+ M Docs/Specs/Active/tournament_selection_screen/STATUS.md
+?? Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab
+?? Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab.meta
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionCard.cs
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionCard.cs.meta
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionScreenController.cs
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionScreenController.cs.meta
+=== end baseline ===
+2026-06-25T14:05:00 analyzing prefab hierarchy - planning iter-2 fixes: pill bg, RP icon, paid badge, placeholder, eyebrow gradient
+2026-06-25T14:15:00 script compiled - beginning prefab modification: pill bg, RP icon, paid badge, placeholder, eyebrow gradient
+2026-06-25T15:00:00 runtime verification complete: TournamentImage sprite=Placeholder_HoleThumbnailSmall confirmed via CheckTournImgRuntime2 script; physics diff empty; writing iter-2 IMPLEMENTER_REPORT.md
+2026-06-25T15:05:00 done, awaiting review — IMPLEMENTER_REPORT.md written, STATUS=READY_FOR_SELF_REVIEW
+
+=== iter-3 kickoff baseline ===
+HEAD: 105f53ab8244c00d9914e5d3b53b9ad788c68475
+DIRTY:
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/Tournaments/TournamentDevEntryButton.cs
+ M Assets/Scripts/UI/Tournaments/TournamentHoleSelectionScreenController.cs
+ M Docs/Specs/Active/tournament_selection_screen/STATUS.md
+?? Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab
+?? Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab.meta
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionCard.cs
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionCard.cs.meta
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionScreenController.cs
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionScreenController.cs.meta
+?? Docs/Specs/Active/tournament_selection_screen/HEARTBEAT.log
+?? Docs/Specs/Active/tournament_selection_screen/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_selection_screen/SELF_REVIEW.md
+?? Docs/Specs/Active/tournament_selection_screen/screenshots/2026-06-25_12-02-02.png
+?? Docs/Specs/Active/tournament_selection_screen/screenshots/2026-06-25_12-14-09.png
+?? Docs/Specs/Active/tournament_selection_screen/screenshots/2026-06-25_12-26-35.png
+?? Docs/Specs/Active/tournament_selection_screen/screenshots/2026-06-25_12-29-34.jpg
+?? Docs/Specs/Active/tournament_selection_screen/screenshots/2026-06-25_12-48-37.jpg
+=== end baseline ===
+2026-06-25T11:15:38Z iter-3 activated — stale prefab root cause confirmed, plan: reimport + code-driven sprite assignment + pill border fix + eyebrow gradient fix
+2026-06-25T11:26:46Z iter-3 resumed — entering play mode for canonical screenshot after PillBorder+Outline+PaidBadge fixes
+2026-06-25T11:32:37Z canonical screenshot captured via CaptureHelper.SnapGameViewWithLabel — 1170x2532 779KB, all 6 fixes verified at runtime
+2026-06-25T13:45:00Z done, awaiting review — IMPLEMENTER_REPORT.md iter-3 written, STATUS=READY_FOR_ARCHITECT_REVIEW (A10 eyebrow gradient FAIL)
+
+=== redo-card kickoff baseline ===
+HEAD: 2a45cb5d6 T7 Stage 0b: 6 course images into Unity + spec §8 Figma links/image mapping
+DIRTY:
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/Tournaments/TournamentDevEntryButton.cs
+ M Assets/Scripts/UI/Tournaments/TournamentHoleSelectionScreenController.cs
+?? Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab
+?? Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab.meta
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionCard.cs
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionCard.cs.meta
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionScreenController.cs
+?? Assets/Scripts/UI/Tournaments/TournamentSelectionScreenController.cs.meta
+=== end baseline ===
+2026-06-25T12:38:00Z redo-card activated — Stage 0a (GoldPrimaryButton.prefab extraction) + 0b (sprite import) + 0c (card prefab with nested instances)
+2026-06-25T15:10:00Z GUIDs confirmed: PlayButton.png=cff37a7f, RubikSemiBold=39fb7824, TournamentCloseButton=260f2fa7 — proceeding Stage 0a GoldPrimaryButton.prefab
+2026-06-25T16:00:00Z Stage 0c starting - RP icon guid=aab2dfa3, S_PillWhite guid=17724478, building TournamentSelectionCard.prefab with nested instances
+2026-06-25T13:20:00Z TournamentSelectionCard.cs updated — gold/silver toggle added, _ctaGoldButtonGO/_ctaSilverButtonGO fields added
