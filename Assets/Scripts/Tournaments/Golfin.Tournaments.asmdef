@@ -1,0 +1,17 @@
+{
+    "name": "Golfin.Tournaments",
+    "rootNamespace": "Golfin.Tournaments",
+    "references": [
+        "Golfin.UI.Rankings.Core",
+        "Golfin.Save"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
