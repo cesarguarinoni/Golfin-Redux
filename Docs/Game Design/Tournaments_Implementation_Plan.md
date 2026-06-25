@@ -81,7 +81,7 @@ Implements `ITournamentBackend`:
 
 | Order | Screen | Class | Notes |
 |---|---|---|---|
-| **T7** | `tournament_selection_screen` | FULL PIPELINE | filter tabs, cards, state-driven CTA |
+| **T7** | `tournament_selection_screen` | FULL PIPELINE | **Figma frame EXISTS: `13386:1758`** ("Tournament Selection v7"). Tabs **ALL/OPEN/PLAYING/CLOSED**; six 978×360 cards × states (LIVE/ENTERED, OPEN, ENDING, UPCOMING, ENDED); state-driven CTA (SIGN UP / CONTINUE / LEADERBOARD / ENTRY-fee); expand-in-place + sign-up modal (U1). Render in `tournament_screens/reference/tournament_selection_screen_T7.png`. |
 | ~~**T8**~~ | ~~`tournament_detail_screen`~~ | **CUT (GDD U1)** | **No separate Detail screen in v1.** Detail = expand-in-place on the Selection card; rules / prize preview / **character-lock picker** / sign-up all live on **T7** (expanded card + sign-up modal). See GDD §16 U1, §16.6. |
 | **T8b** | `tournament_hole_selection_screen` | FULL PIPELINE | **per-tournament hole list** — Finished / Next / Locked hole cards, identity-pill row (sponsor · league · timer), podium-icon → Leaderboard, silver Close. Entry point into a tournament round. Built in `Docs/Specs/Active/tournament_screens` (Stage 1 = screen scaffolds + nav, static placeholder; Stage 2 = bind to `LocalTournamentBackend`). Reuses the HoleSelection screen + `HoleCard.prefab`. |
 | **T9** | `tournament_leaderboard_screen` | FULL PIPELINE | provisional/final banner, projected rows, sticky player row |
@@ -130,7 +130,7 @@ T4 ─► T12
 
 **Blocked:**
 - **T6** → ruling on **S1** (character lock vs swap).
-- **T7, T9, T10** → Figma frames (point me at existing tournament frames in `5gEAHjl6xAtW8iYY7NMvWd`, or flag that they need designing first). **T8 cut** (GDD U1); T8b done.
+- **T7 frame EXISTS** (`13386:1758`, "v7") — **ready to spec**, no design blocker. **T10** → claim-modal copy/flow only. **T8 cut** (GDD U1); **T8b + T9 done**.
 - **T11** → confirm the Home banner component.
 
 **Recommended first spec:** **T1** (`tournaments_core_contracts`) — unblocks the entire chain and locks the DTO/interface shape (incl. the forward-compat `rngSeed`/`inputLog` slots) before anything depends on it.

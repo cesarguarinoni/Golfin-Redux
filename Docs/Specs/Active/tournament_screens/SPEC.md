@@ -19,6 +19,10 @@ Exported 2026-06-24 from Figma `5gEAHjl6xAtW8iYY7NMvWd` into `reference/`. Compo
 
   ![Leaderboard](reference/tournament_leaderboard_screen.png)
 
+**Upstream — Tournament Selection (T7, NOT built in this spec)** — `13386:1758` ("Tournament Selection v7") · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13386-1758). The browse/pick screen this hub returns to (Hole Selection **Close** → here). Filter tabs **ALL / OPEN / PLAYING / CLOSED**; six 978×360 cards across states (LIVE/ENTERED, OPEN, ENDING, UPCOMING, ENDED); **state-driven CTA**: SIGN UP / CONTINUE / LEADERBOARD / ENTRY-fee. Sign-up + character-lock via expand-in-place + modal (GDD U1). Its own future spec (T7 order).
+
+  ![Tournament Selection (T7)](reference/tournament_selection_screen_T7.png)
+
 **Hole-card states** (Screen A)
 - **Finished** `13414:5549` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-5549) — ![Finished](reference/hole_card_finished.png)
 - **Next** `13414:2972` · [node](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13414-2972) — ![Next](reference/hole_card_next.png)
@@ -151,6 +155,7 @@ Root `13414:5598` (1170×2532) · [link](https://www.figma.com/design/5gEAHjl6xA
 ---
 
 ## 5. Flags / to-resolve
+- **T7 Tournament Selection frame EXISTS** — `13386:1758` ("v7"), render in `reference/tournament_selection_screen_T7.png`. It is the Hole Selection **Close** target (currently a stub until T7 is built). Tab labels: Figma v7 = **ALL / OPEN / PLAYING / CLOSED**; GDD §16.2 says "All / Open / **Active** / Closed" — **Figma is canonical**; reconcile the GDD when speccing T7.
 - **Clone artifacts to remove:** FINISHED "DOWNLOAD SIZE" `13414:5572`; in-list "Player" row `13414:5874` (+RP coin); left/right Arrows on both screens.
 - **Close button** TO-ADD on the Leaderboard (dup A4).
 - **Empty-state JP** localization TODO.
