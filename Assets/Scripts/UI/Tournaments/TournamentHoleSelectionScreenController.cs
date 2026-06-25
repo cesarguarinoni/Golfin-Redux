@@ -23,9 +23,8 @@ namespace GolfinRedux.UI.Tournaments
         [Tooltip("Silver CLOSE button → back to the upstream selection screen.")]
         [SerializeField] private Button _closeButton;
 
-        [Tooltip("Where CLOSE returns to. Stage 1 placeholder = ModeSelection; " +
-                 "swap to the real Tournament Selection screen (T7) once it exists.")]
-        [SerializeField] private ScreenId _backScreen = ScreenId.ModeSelection;
+        [Tooltip("Where CLOSE returns to. T7 TournamentSelection screen (Figma 13386:1758).")]
+        [SerializeField] private ScreenId _backScreen = ScreenId.TournamentSelection;
 
         private void Awake()
         {

@@ -5,15 +5,14 @@ using GolfinRedux.UI;
 namespace GolfinRedux.UI.Tournaments
 {
     /// <summary>
-    /// TEMPORARY Stage-1 entry hook. The real upstream "Tournament Selection" screen
-    /// (Implementation Plan T7) does not exist yet, so this small button lets the
-    /// Selection → Tournament Hole Selection forward navigation be exercised now.
-    /// REMOVE once T7 (tournament_selection_screen) lands and wires the real card.
+    /// ModeSelection TOURNAMENTS button entry hook. Routes to the T7 TournamentSelection
+    /// browse screen (Figma 13386:1758). Previously routed to TournamentHoleSelection
+    /// (Stage-1 temp); updated when T7 landed.
     /// </summary>
     public class TournamentDevEntryButton : MonoBehaviour
     {
         [SerializeField] private Button _button;
-        [SerializeField] private ScreenId _target = ScreenId.TournamentHoleSelection;
+        [SerializeField] private ScreenId _target = ScreenId.TournamentSelection;
 
         private void Awake()
         {

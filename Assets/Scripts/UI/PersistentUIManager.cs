@@ -271,6 +271,9 @@ namespace Golfin.UI
                     case GolfinRedux.UI.ScreenId.TournamentLeaderboard:
                         usernameText.text = "TOURNAMENT LEADERBOARD";
                         break;
+                    case GolfinRedux.UI.ScreenId.TournamentSelection:
+                        usernameText.text = "TOURNAMENTS";
+                        break;
                     default:
                         usernameText.text = string.Empty;
                         break;
@@ -287,6 +290,7 @@ namespace Golfin.UI
                 case GolfinRedux.UI.ScreenId.ModeSelection:  currentScreen = Screen.MainPlay; break;
                 case GolfinRedux.UI.ScreenId.TournamentHoleSelection: currentScreen = Screen.MainPlay; break;
                 case GolfinRedux.UI.ScreenId.TournamentLeaderboard:   currentScreen = Screen.MainPlay; break;
+                case GolfinRedux.UI.ScreenId.TournamentSelection:     currentScreen = Screen.MainPlay; break;
                 default:
                     return; // Logo/Splash/Loading/Leaderboard: bars hidden or no nav highlight.
             }

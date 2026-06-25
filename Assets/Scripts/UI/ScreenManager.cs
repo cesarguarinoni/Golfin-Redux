@@ -17,7 +17,9 @@ namespace GolfinRedux.UI
         // Tournament screens (Stage 1 scaffolds — separate full screens from the
         // non-tournament HoleSelection / Leaderboard above).
         TournamentHoleSelection,
-        TournamentLeaderboard
+        TournamentLeaderboard,
+        // T7 — Tournament Selection browse screen (Figma 13386:1758, Stage 0–1)
+        TournamentSelection
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -44,6 +46,7 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _leaderboardScreen;
         [SerializeField] private GameObject _tournamentHoleSelectionScreen;
         [SerializeField] private GameObject _tournamentLeaderboardScreen;
+        [SerializeField] private GameObject _tournamentSelectionScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         [Header("Audio (Order 350)")]
@@ -151,6 +154,9 @@ namespace GolfinRedux.UI
             if (_tournamentLeaderboardScreen != null)
                 _tournamentLeaderboardScreen.SetActive(screenId == ScreenId.TournamentLeaderboard);
 
+            if (_tournamentSelectionScreen != null)
+                _tournamentSelectionScreen.SetActive(screenId == ScreenId.TournamentSelection);
+
             // Settings is an overlay (SettingsController), not managed here
 
             // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
@@ -162,7 +168,8 @@ namespace GolfinRedux.UI
                              || screenId == ScreenId.ModeSelection
                              || screenId == ScreenId.Leaderboard
                              || screenId == ScreenId.TournamentHoleSelection
-                             || screenId == ScreenId.TournamentLeaderboard;
+                             || screenId == ScreenId.TournamentLeaderboard
+                             || screenId == ScreenId.TournamentSelection;
             if (AudioManager.Instance != null)
             {
                 if (isMenuScreen && _mainThemeClip != null && !AudioManager.Instance.IsMusicPlaying())
@@ -179,7 +186,8 @@ namespace GolfinRedux.UI
                          || screenId == ScreenId.ModeSelection
                          || screenId == ScreenId.Leaderboard
                          || screenId == ScreenId.TournamentHoleSelection
-                         || screenId == ScreenId.TournamentLeaderboard;
+                         || screenId == ScreenId.TournamentLeaderboard
+                         || screenId == ScreenId.TournamentSelection;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
                 if (showBars)
