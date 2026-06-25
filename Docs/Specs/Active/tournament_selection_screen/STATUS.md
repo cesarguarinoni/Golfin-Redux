@@ -11,7 +11,7 @@ REDO_READY
 
 ## Redo plan (SPEC §6 — card-first)
 - [ ] **Stage 0a** — extract `Assets/Prefabs/UI/Common/GoldPrimaryButton.prefab` from in-scene `PlayButton` (`ShellScene.unity`, fileID `4123466008247632389`).
-- [ ] **Stage 0b** — export 6 course images (`download_assets` per card node) → `Assets/Art/Tournaments/CourseImages/` → Sprite. *(Architect offering to run this export.)*
+- [x] **Stage 0b — DONE (Architect):** 6 course images exported on disk → `Assets/Art/Tournaments/CourseImages/` (`lomond/gotemba/hirono/kasumigaseki/kisarazu.png` + `kawana.jpg`; kisarazu 260×212 + kawana 980×517 cover-fit). **Code's 0b = import as Sprite + assign per card** (SPEC §8 mapping).
 - [ ] **Stage 0c** — `TournamentSelectionCard.prefab` (THE focus): nested instances of GoldPrimaryButton + silver `TournamentCloseButton`, RP icon + course-image sprites, badge pill, §3 tokens, per-state visuals; **salvage `TournamentSelectionCard.cs`**. Render standalone → **Cesar visual gate on the CARD.**
 - [ ] **Stage 1** — duplicate `RankingsScreen.prefab` → rename `TournamentSelectionScreen` → relabel 4 tabs → instantiate card prefabs (one per state, static) → nav + keep Code's ScreenManager/PersistentUIManager/entry edits. **Cesar visual gate on the SCREEN.**
 - [ ] **Stage 2** — bind `ITournamentBackend.GetTournaments()`. **Blocked on T1→T4.**

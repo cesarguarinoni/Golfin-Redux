@@ -23,7 +23,7 @@
 | **Gold CTA** (SIGN UP / CONTINUE) | **extract `Assets/Prefabs/UI/Common/GoldPrimaryButton.prefab` from `PlayButton`** in `ShellScene.unity` (m_Name `PlayButton`, fileID `4123466008247632389`) — **Stage 0a** | create shared prefab, then instance it in the card |
 | **Silver CTA** (LEADERBOARD) | **`Assets/Prefabs/UI/Tournaments/TournamentCloseButton.prefab`** (exists; was used 0× in the failed pass) | instance it |
 | **RP reward icon** | **`Assets/Art/HomeScreen/Reward Points Icon.png`** | sprite on the card reward row |
-| **Course images** (6) | **export from Figma** — each card's `tournament_image` fill — **Stage 0b** | `download_assets` → `Assets/Art/Tournaments/CourseImages/` → import as Sprite |
+| **Course images** (6) | **ALREADY EXPORTED on disk → `Assets/Art/Tournaments/CourseImages/`** (lomond/gotemba/hirono/kasumigaseki/kisarazu `.png` + kawana `.jpg`) — per-card mapping in **§8** | **Stage 0b = import + assign per card** (Sprite 2D, full-rect); no Figma export needed |
 | Persistent bars | `PersistentUIManager` (keep Code's edit) | banner "TOURNAMENTS" |
 | Card state/badge/bind logic | **salvage `TournamentSelectionCard.cs`** (Code's — correct, chassis-agnostic) | re-attach to the rebuilt card prefab |
 | **NEW** | `Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab` | only net-new prefab |
@@ -79,7 +79,7 @@ Countdown/status computed from `(startUtc, endUtc, entry, ITournamentClock.UtcNo
 
 ## 6. Staging — CARD-FIRST (per Cesar)
 - **Stage 0a — extract `GoldPrimaryButton.prefab`** from `PlayButton` (ShellScene). Self-contained shared button prefab (gold gradient, sheen, label). Cite source GUID.
-- **Stage 0b — export 6 course images** from Figma (`download_assets` each card node) → `Assets/Art/Tournaments/CourseImages/{kasumigaseki,hirono,lomond,gotemba,kisarazu,kawana}.png` → import as Sprite (2D, full rect). *(Architect can run this export — see chat.)*
+- **Stage 0b — import the 6 course images** (Architect already exported them → `Assets/Art/Tournaments/CourseImages/`; per-card mapping §8): set each to **Sprite (2D, full-rect)**, assign per card. Note `kawana.jpg` is full-res and `kisarazu.png` is 260×212 → both **cover-fit** the 260×360 slot. No Figma export step.
 - **Stage 0c — `TournamentSelectionCard.prefab`** ← THE focus. Real prefab: **nested instances** of `GoldPrimaryButton.prefab` (SIGN UP/CONTINUE) + `TournamentCloseButton.prefab` (LEADERBOARD), RP-icon sprite, course-image sprite, badge pill, separator; §3 tokens; per-state visuals; salvaged `TournamentSelectionCard.cs` attached. Get the card pixel-right **standalone** (render it in isolation). **Cesar visual gate on the CARD.**
 - **Stage 1 — screen:** duplicate `RankingsScreen.prefab` → rename `TournamentSelectionScreen` → relabel 4 tabs ALL/OPEN/PLAYING/CLOSED → swap ranking-card list for `TournamentSelectionCard` instances (one per state, static) → persistent bars "TOURNAMENTS" → nav (card→T8b carry id; LEADERBOARD→T9) → replace ModeSelection TEMP entry (keep Code's edits). **Cesar visual gate on the SCREEN.**
 - **Stage 2 — bind `ITournamentBackend.GetTournaments()`** (state-driven badge/entry/CTA, filter logic, countdowns, Register flow). **Blocked on T1→T4.**
@@ -93,3 +93,32 @@ Countdown/status computed from `(startUtc, endUtc, entry, ITournamentClock.UtcNo
 - **UPCOMING / ENDED CTA** — disabled / "Notify" / LEADERBOARD?
 - **Tab label `PLAYING`** (Figma) vs GDD `Active` → Figma canonical; reconcile GDD.
 - **Name font** Noto Sans JP Bold for EN names — confirm or swap Rubik for EN.
+
+---
+
+## 8. References & direct Figma links
+**File key:** `5gEAHjl6xAtW8iYY7NMvWd` · link form `https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=<ID>` (ID uses a **dash**, e.g. `13386-1758`).
+
+**Screen + structure (click to open the exact node):**
+- Screen root — [13386:1758](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13386-1758)
+- Filter strip (4 tabs) — [13386:1761](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13386-1761)
+- Cards Container — [13386:1779](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13386-1779)
+- **Canonical card** (Lomond OPEN, all §3 tokens) — [13386:1780](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13386-1780)
+- Gold CTA component instance (“Sign Up Button”) — [13386:1803](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13386-1803)
+
+**Per-card links + course-image mapping** (image already on disk under `Assets/Art/Tournaments/CourseImages/`):
+| Card | State | Card node (link) | `tournament_image` node | On-disk file | Px |
+|---|---|---|---|---|---|
+| Kasumigaseki Invitational | LIVE / ENTERED→CONTINUE | [13389:1884](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13389-1884) | `13389:1885` | `kasumigaseki.png` | 260×360 |
+| Hirono Championship | LIVE / finished→LEADERBOARD | [13405:1858](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13405-1858) | `13405:1859` | `hirono.png` | 260×360 |
+| Lomond Open | OPEN→SIGN UP | [13386:1780](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13386-1780) | `13386:1781` | `lomond.png` | 260×360 |
+| Gotemba Masters | ENDING / ENTRY ⓡ500→SIGN UP | [13386:1804](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13386-1804) | `13386:1805` | `gotemba.png` | 260×360 |
+| Kisarazu Cup | UPCOMING | [13386:1828](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13386-1828) | `13386:1829` | `kisarazu.png` | 260×212 → cover-fit |
+| Kawana Fuji Open | ENDED | [13389:1849](https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/?node-id=13389-1849) | `13389:1850` | `kawana.jpg` | 980×517 → cover-fit |
+
+**Reference images** (guide only — metrics §3 + node links win on any conflict):
+- Full screen render: `reference/tournament_selection_screen.png`
+- 6 course photos: `Assets/Art/Tournaments/CourseImages/{lomond,gotemba,hirono,kasumigaseki,kisarazu}.png`, `kawana.jpg`
+
+**Per-state badge fill nodes** (geometry constant 180×44 r22; pull fill per node in Stage 0c):
+LIVE red `13389:1887` / `13405:1861` · OPEN green `13386:1783` · ENDING amber `13386:1807` · UPCOMING blue `13386:1831` · ENDED grey `13389:1852`.
