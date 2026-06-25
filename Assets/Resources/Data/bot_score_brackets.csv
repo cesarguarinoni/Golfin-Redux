@@ -1,0 +1,12 @@
+# Per-bracket stroke distribution for pre-rolled bot fields (T3, GDD §7).
+# keyed by bot_difficulty.csv minLevel values (bracket ids: 1/10/25/50/100/180).
+# meanDeltaPerHole: mean strokes above/below par per hole (positive = over par).
+# stdevPerHole: standard deviation of strokes per hole (Box-Muller, seeded).
+# D1 locked (Cesar 2026-06-25): use these values as-is; tune via this CSV only.
+minLevel,meanDeltaPerHole,stdevPerHole
+1,1.3,0.9
+10,0.9,0.8
+25,0.6,0.7
+50,0.35,0.6
+100,0.15,0.5
+180,-0.05,0.45

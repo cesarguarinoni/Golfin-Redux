@@ -100,12 +100,12 @@ Headless NUnit in `Golfin.Tournaments.Tests`. Pass = all green (this is the gate
 
 ---
 
-## 9. Decisions for Cesar
-- **D0 — PRNG:** explicit PCG/xorshift seeded by stable hash *(rec)* vs `System.Random` + stable seed.
-- **D1 — strokes distribution numbers** (§3 table): tune the per-bracket meanΔ/stdev. The model + `bot_score_brackets.csv` shape is the real ask.
-- **D2 — identity selection:** weighted-by-`BracketWeights` *(rec)* vs roster-level-only.
-- **D3 — worst-hole cap:** reuse `versusStrokeCapOverPar` *(rec, e.g. +4)*.
-- **D4 — in-progress provisional ranking** (sort partially-revealed bots by revealed strokes? hide `thru 0` bots?) — likely a **T4** concern; confirm so the `Project` output carries what T4 needs.
+## 9. Decisions — ✅ LOCKED (Cesar, 2026-06-25)
+- **D0 — PRNG:** ✅ **explicit PCG/xorshift seeded by the stable hash** (NOT `System.Random`). Ship the ~15-line generator in-asmdef.
+- **D1 — strokes distribution numbers:** ✅ **use the §3 proposed per-bracket meanΔ/stdev as-is**, in tunable `bot_score_brackets.csv`.
+- **D2 — identity selection:** ✅ **weighted-by-`BracketWeights`** — sample target bracket (seeded), pick no-repeat roster identity in that tier, nearest-bracket fallback; distribution params come from the slot's bracket.
+- **D3 — worst-hole cap:** ✅ **par+4, reuse `versusStrokeCapOverPar`.** `clamp(strokes, 1, par+4)`; stroke-bounds invariant asserts `1 ≤ strokes ≤ par+4`.
+- **D4 — provisional ranking:** ✅ **ranking shows only FINISHED bots.** T3 `Project` output is unchanged — emits `(thru, revealedStrokes, complete)`; **T4** filters its leaderboard to `complete == true` (any bot with `thru < H` is hidden). T3 just guarantees `complete` is computed correctly; no extra provisional-rank signal needed.
 
 ---
 

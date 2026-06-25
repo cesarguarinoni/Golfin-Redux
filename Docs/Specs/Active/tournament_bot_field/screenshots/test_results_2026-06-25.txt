@@ -1,0 +1,56 @@
+tournament_bot_field T3 invariant test run — 2026-06-25
+EditMode, namespace: Golfin.Tournaments.Tests
+Tool: mcp__ai-game-developer__tests-run
+
+Summary: Status=Passed, TotalTests=47, PassedTests=47, FailedTests=0, Duration=00:00:01.5932880
+
+BotFieldInvariantTests (33 tests — T3 gate):
+  PASS BotScoreBracketsParser_HighestBracket_NegativeMeanDelta
+  PASS BotScoreBracketsParser_Parse_6Rows
+  PASS BotScoreBracketsParser_Parse_SortedAscending
+  PASS BotSeedFactory_DifferentSuffixes_DifferentSeeds
+  PASS FakePlayerRosterParser_Parse_120Rows
+  PASS FakePlayerRosterParser_Parse_FirstRow
+  PASS Project_AtEndUtc_ThruEqualsH
+  PASS Project_BeforeStart_ThruIsZero
+  PASS Project_Complete_IffThruEqualsH
+  PASS Project_Monotonicity_ThruNonDecreasing
+  PASS Project_Purity_SameCardAndTimeYieldsSameResult
+  PASS Project_RevealedStrokes_EqualsPartialSum
+  PASS Project_Trickle_PartialFillAtMidWindow
+  PASS RollField_BotIds_AllInFakePlayers
+  PASS RollField_BotIds_NoDuplicates
+  PASS RollField_BracketMix_ApproximatesWeightsAt500
+  PASS RollField_Determinism_DifferentIdsDifferentFields
+  PASS RollField_Determinism_SameArgsSameResult
+  PASS RollField_FieldSize_EqualsBotCount
+  PASS RollField_Pace_AllInTournamentWindow
+  PASS RollField_Pace_StrictlyIncreasing
+  PASS RollField_SingleHolePar_StillValid
+  PASS RollField_StartOffsets_WithinConfiguredRange
+  PASS RollField_StrokesBounds_ValidForAllHoles
+  PASS StableHash_DifferentStrings_ProduceDifferentValues
+  PASS StableHash_EmptyString_IsConstant
+  PASS StableHash_KnownVector_abc
+  PASS Xorshift64_BoxMuller_MeanApproxZeroStdevApproxOne
+  PASS Xorshift64_DifferentSeeds_ProduceDifferentSequences
+  PASS Xorshift64_NextDouble_InRange
+  PASS Xorshift64_NextInt_InRange
+  PASS Xorshift64_SameSeed_ProducesSameSequence
+  PASS Xorshift64_ZeroSeed_AvoidsDegenerateState
+
+TournamentContractsTests (14 tests — pre-existing, all green):
+  PASS BotCard_ConstructAndRead
+  PASS BotFieldConfig_ConstructAndRead
+  PASS EntryState_ConstructAndRead
+  PASS EntryStatus_AllCasesCovered
+  PASS HoleResult_CarriesRngSeedAndInputLog
+  PASS HoleResult_NullInputLog_BecomesEmptyList
+  PASS PrizeTable_ConstructAndRead
+  PASS ShotCommand_ConstructAndRead
+  PASS StubBackend_ImplementsInterface
+  PASS TimeProviderClock_WrapsITimeProvider
+  PASS TournamentDefinition_ConstructAndRead
+  PASS TournamentLeaderboardEntry_ConstructAndRead
+  PASS TournamentResult_ConstructAndRead
+  PASS TournamentState_AllCasesCovered
