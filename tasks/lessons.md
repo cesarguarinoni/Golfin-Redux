@@ -1727,3 +1727,22 @@ Cesar noticed the in-game action buttons (Spin / FadeDraw / Golfin-ball / Driver
 - A builder/editor script must NOT make un-requested visual design changes; if a fade/state needs a different look, drive it at runtime (alpha/CanvasGroup) — never permanently overpaint the authored design. Comments saying "so it X cleanly" on an un-spec'd visual change are a smell.
 - **Builder re-runs bake latent code into the scene.** Code added to a scene-builder is dormant until the builder is re-run; the regression surfaces at a *later, unrelated* task. When a task re-runs a builder (`ActionButtonsBuilder`, etc.), diff the resulting scene and eyeball EVERY rebuilt element, not just the task's target.
 - Prefer surgical Unity-API scene edits (toggle the offending component) over re-running the whole builder when the builder is keyed off manual adjustments — re-running risks overwriting them and is what baked this bug.
+
+---
+
+## Lesson — Verify UI layout NUMERICALLY before claiming a fix (tournament_screens Stage 1, 2026-06-25)
+
+**Cesar correction:** "Gap between panel and sticky is still not 24px. Are you even checking the result visually?" — I had eyeballed a screenshot, *assumed* a 16px height tweak produced a 24px gap, and committed a message claiming "24px" without measuring. The real gaps were 48px (top) / 8px (bottom).
+
+**Rules:**
+- For any "make it N px" UI request, MEASURE with `RectTransform.GetWorldCorners` (world Y in a ScreenSpaceOverlay canvas = pixels) and print the actual gap. Never claim a pixel value you didn't read back.
+- A translate can only fix BOTH a top and bottom gap if `topGap + bottomGap == 2*target`; otherwise the element is the wrong SIZE, not just mis-positioned. When unsure, run a tiny solver: adjust → `Canvas.ForceUpdateCanvases()` → re-measure → repeat until within tolerance, in ONE script.
+- Commit messages must reflect *measured* reality. If a prior commit's claim turns out false, say so plainly in the next message (don't paper over it).
+
+## Lesson — Script edits to prefab-instance properties need RecordPrefabInstancePropertyModifications
+
+Setting `tmp.text = ...` on a TMP that lives inside a **prefab instance** in a scene, then `SaveScene`, did NOT persist for the original instances (only freshly-`InstantiatePrefab`'d ones). The override wasn't recorded. Fix: `var so=new SerializedObject(comp); so.FindProperty("m_text").stringValue=v; so.ApplyModifiedPropertiesWithoutUndo(); UnityEditor.PrefabUtility.RecordPrefabInstancePropertyModifications(comp); EditorUtility.SetDirty(comp);` then save. Always read back after save to confirm.
+
+## Lesson — Reuse the existing data widgets for "populate like screen X"
+
+To populate the tournament leaderboard "like normal Rankings", the cleanest path was to reuse the SAME runtime widgets the normal screen uses (`Top3CardWidget`/`RankingsCardWidget` + `LeaderboardManager` → `fake_players.csv`) and only override the one tournament-specific field (score pill → "<n> STROKES"). Character art/rarity-colour mapping needs the runtime DB singletons (`CharacterDatabaseCSV.Instance`), which are null in EditMode — so this MUST be a play-mode/runtime fill, not an edit-mode bake.
