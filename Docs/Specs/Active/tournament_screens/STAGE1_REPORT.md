@@ -70,6 +70,11 @@ ModeSelection ──(temp entry)──▶ TournamentHoleSelection ──(podium-
 11. **Podium STROKES centered** in the pill (was right-aligned).
 12. Leaderboard list filled to **10 rows (ranks 4–13)** so the taller panel reads like the Figma instead of half-empty (placeholder data; real rows bind in Stage 2).
 
+**Round 4 — leaderboard final polish:**
+13. **24px gap between the panel and the sticky card** (was 8px) — panel's bottom raised 16px (RankingsArea 1553→1537 + scroll viewport), keeping the 24px top gap.
+14. **Podium STROKES truly centered** — the NameLabel was left-anchored at x=57 (vestigial coin offset) spanning only 182 of the 250px pill; stretched it full-width so the centered text actually centers in the pill.
+15. Ranking-row numbers corrected to a clean **4–13** sequence (earlier pass had left the first five at "4").
+
 ---
 
 ## Flags / decisions for Cesar
