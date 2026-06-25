@@ -149,11 +149,34 @@ namespace GolfinRedux.UI.Tournaments
             // Date
             if (_dateLabel != null) _dateLabel.text = dateLine;
 
-            // Entry block
-            if (_freeEntryBadge != null) _freeEntryBadge.SetActive(isFreeEntry);
-            if (_paidEntryBadge != null) _paidEntryBadge.SetActive(!isFreeEntry);
-            if (_paidEntryAmount != null && !isFreeEntry)
-                _paidEntryAmount.text = entryRpCost.ToString("N0");
+            // Entry block — entered tournaments show an "ENTERED" pill (Figma 13389:1905);
+            // otherwise the FREE ENTRY pill or the paid ENTRY+fee variant.
+            bool entered = state == CardState.EnteredActive || state == CardState.EnteredFinished;
+            if (entered)
+            {
+                if (_freeEntryBadge != null)
+                {
+                    _freeEntryBadge.SetActive(true);
+                    var lbl = _freeEntryBadge.GetComponentInChildren<TextMeshProUGUI>(true);
+                    if (lbl != null) lbl.text = "ENTERED";
+                }
+                if (_paidEntryBadge != null) _paidEntryBadge.SetActive(false);
+            }
+            else
+            {
+                if (_freeEntryBadge != null)
+                {
+                    _freeEntryBadge.SetActive(isFreeEntry);
+                    if (isFreeEntry)
+                    {
+                        var lbl = _freeEntryBadge.GetComponentInChildren<TextMeshProUGUI>(true);
+                        if (lbl != null) lbl.text = "FREE ENTRY";
+                    }
+                }
+                if (_paidEntryBadge != null) _paidEntryBadge.SetActive(!isFreeEntry);
+                if (_paidEntryAmount != null && !isFreeEntry)
+                    _paidEntryAmount.text = entryRpCost.ToString("N0");
+            }
 
             // Reward
             if (_rewardAmountLabel != null)
