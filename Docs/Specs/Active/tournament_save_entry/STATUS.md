@@ -13,11 +13,11 @@ READY — dep met (T1 ✓); can fire in parallel with T4
 
 ## Staging (SPEC §6)
 - [ ] **Stage 1** — `Golfin.Save` DTOs + `SaveData.tournamentEntries` + migrator `v2→v3` + migration/fail-hard/round-trip tests *(risk surface)*.
-- [ ] **Stage 2** — `SaveBackedEntryStore` adapter (map⇄, upsert, MarkDirty) + tests.
+- [ ] **Stage 2** — `SaveBackedEntryStore` adapter (map⇄, upsert, IsClaimed/MarkClaimed, MarkDirty) + tests (incl. claim-persists-across-restart).
 
 ## ⚠ Decisions for Cesar (SPEC §7)
 - **D1** persist `inputLog`? Rec: no (v1) — store `rngSeed` only, defer shot logs to server era.
-- **D2** claim-state persistence — **OPEN.** Shipped seam is `Load`/`Save(EntryState)` only; `EntryState` has no `claimed` → claim-once is in-memory and a **relaunch could double-claim a prize.** (a) accept in-memory v1 (rec, simplest) vs (b) persist claim state (T4 grows the seam). Lock after T4 Stage 4.
+- **D2** claim-state persistence — **✅ LOCKED (b): persist it.** T4 grows the seam with `IsClaimed`/`MarkClaimed` (in-mem fake = HashSet); T5's `SaveBackedEntryStore` stores the `claimed` column + `MarkDirty()`. Claim-once survives restart — no relaunch double-claim. Mirrored into T4 spec.
 - **D3** DateTime as ISO string (rec, diff-friendly) vs raw `DateTime?` (Newtonsoft handles both).
 
 ## Kickoff (deps met — fire any time, parallel-safe with T4)

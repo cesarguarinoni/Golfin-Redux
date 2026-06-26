@@ -11,7 +11,7 @@
 `LocalTournamentBackend` is the v1 implementation of every `ITournamentBackend` method: state derivation, registration + RP debit, hole submission + persistence, the merged provisional/final leaderboard (projected T3 bots + the local player, §6 ranking), and result/prize resolution. Pure C# in `Golfin.Tournaments` (**no UnityEngine dependency in the logic** — same headless-testable discipline as T3), wired to the engine only through **injected seams**.
 
 **Boundary (do not cross):**
-- **T5 owns the save schema.** T4 must **not** add `PersistedTournamentEntry` or touch `SaveData`/`SaveSchemaMigrator`. T4 persists through an injected `ITournamentEntryStore`; ship an **in-memory** impl for v1/tests; T5 swaps in the `Golfin.Save`-backed impl. (Plan: T4 ⟂ T5, both from T1, converge at T6.)
+- **T5 owns the save schema.** T4 must **not** add `PersistedTournamentEntry` or touch `SaveData`/`SaveSchemaMigrator`. T4 persists through an injected `ITournamentEntryStore` (Load/Save + **persisted claim-once** via `IsClaimed`/`MarkClaimed`, D-claim **(b)**); ship an **in-memory** impl for v1/tests; T5 swaps in the `Golfin.Save`-backed impl. (Plan: T4 ⟂ T5, both from T1, converge at T6.)
 - **T9 owns the leaderboard screen binding.** T4 only *produces* `TournamentLeaderboardEntry[]`; the swap of the screen's fill source from `LeaderboardManager` to `GetLeaderboard(id)` is T9 Stage 2.
 - **T6 owns the round loop.** T4 exposes `SubmitHoleResult`; driving holes/stamina is T6.
 
@@ -49,7 +49,7 @@ LocalTournamentBackend(
 ```
 
 **New seams T4 defines (interfaces + in-memory fakes; real adapters are thin):**
-- `ITournamentEntryStore { EntryState? Load(string tid); void Save(EntryState e); }` — **the T4/T5 boundary.**
+- `ITournamentEntryStore { EntryState? Load(string tid); void Save(EntryState e); bool IsClaimed(string tid); void MarkClaimed(string tid); }` — **the T4/T5 boundary.** Claim-once is **persisted** here (D-claim locked **(b)**): the in-memory fake uses a `HashSet<string>`; T5's `SaveBackedEntryStore` persists the `claimed` column. Prevents a relaunch double-claim.
 - `IRewardPointsService { long Balance { get; } bool TrySpend(long rp); void Grant(long rp); }` — adapter casts to the int `RewardPointsManager` API (guard `> int.MaxValue`).
 - `IItemRewardService { void Grant(string itemId, int qty); }`.
 - `IHoleParProvider { IReadOnlyList<int> ParsFor(string clubId, IReadOnlyList<string> holeSet); }`.
@@ -77,7 +77,7 @@ LocalTournamentBackend(
 5. **`SubmitHoleResult(id, result)`** — append to `PerHole`, recompute `LastHoleUtc=now`; if `PerHole.Count == def.HoleSet.Count` → `Status=Finished`; `store.Save`; return updated. (Reject duplicate hole / post-`EndUtc` submit.)
 6. **`GetLeaderboard(id)`** → §5.
 7. **`GetResults(id)`** — null unless `IsResolved`. Resolve the player's final standing from the §5 final board → `TournamentResult{FinalRank, IsTie, PrizeRP, ItemRewardId, Claimed}` (PrizeRP/Item from §5 split-pool). Null if player never entered.
-8. **`ClaimPrize(id)`** — no-op if `Claimed` or not resolved; else `rp.Grant(PrizeRP)`, `items.Grant(ItemRewardId,1)` if non-null, set `Claimed=true` via store. **Idempotent** (claim-once guard).
+8. **`ClaimPrize(id)`** — no-op if not resolved or `store.IsClaimed(id)`; else `rp.Grant(PrizeRP)`, `items.Grant(ItemRewardId,1)` if non-null, then `store.MarkClaimed(id)`; return the result with `Claimed=true`. **Idempotent across app restarts** — claim-once is **persisted** through the store (D-claim **(b)**), never in-memory only, so a relaunch cannot re-claim a granted prize.
 
 ---
 
@@ -111,7 +111,7 @@ Headless NUnit in `Golfin.Tournaments.Tests`, all fakes injected (fixed clock, i
 - **DNF:** below all finishers; hidden from ranked rows; player DNF visible in sticky row; DNF ordering by holes-done desc then strokes.
 - **Provisional:** ranks by score-to-par-so-far (D3 fixture: thru-3 −1 ranks above thru-9 E); `IsProvisional` true pre-resolve, false post-resolve.
 - **Prizes / split-pool:** band match; 2-way + N-way tie pools spanned bands, RP rounded-up even split; indivisible item duplicated to each tied player; boundary-straddling tie (spans rank 10|11) pooled correctly.
-- **GetResults/ClaimPrize:** null before resolve; correct rank/prize after; **claim-once** (second claim no-ops, RP/items granted exactly once).
+- **GetResults/ClaimPrize:** null before resolve; correct rank/prize after; **claim-once** (second claim no-ops, RP/items granted exactly once); **claim-once survives a `store` reload** — `IsClaimed` after a simulated restart still reports claimed (relaunch cannot re-claim).
 - **Determinism via clock:** same `(seed, fixedNow)` ⇒ identical board across runs (T3 purity carried through merge).
 
 ---
@@ -129,6 +129,7 @@ Headless NUnit in `Golfin.Tournaments.Tests`, all fakes injected (fixed clock, i
 - **D1 — ✅ RESOLVED.** T2 shipped `ResolveDelayMinutes` on `TournamentDefinition` (all sample CSVs = 30 min). T4 reads `def.ResolveDelayMinutes` directly — no T1 reopen, no fallback const. No action needed.
 - **D2 — "Ending" badge threshold.** When does Open/Playing flip to **Ending**? **Rec:** last 1 hour of the window (or a per-field config column). Tune.
 - **D3 — provisional ranking.** Rank in-progress entries by **score-to-par over completed holes** (rec — authentic live board) vs raw revealed strokes (apples-to-oranges across `Thru`). Final board is always total strokes + §6.
+- **D-claim — ✅ LOCKED (b).** Claim-once is **persisted** via `store.IsClaimed`/`MarkClaimed` (not in-memory) → survives app restart, preventing a relaunch double-claim (RP duplication). The seam grows the two methods; in-memory fake = `HashSet<string>`; T5 persists the `claimed` column. *(The seam shipped earlier in this run as Load/Save-only — if Stage 4 lands without the claim methods, a small follow-up amendment adds them.)*
 - **Out of scope (noted):** *cancel → RP refund* — `ITournamentBackend` has **no Cancel method** (8 methods, none); v1 has no un-register UI → deferred. RP `int`↔`long` bridging handled by the `IRewardPointsService` adapter (guarded cast).
 
 ---
