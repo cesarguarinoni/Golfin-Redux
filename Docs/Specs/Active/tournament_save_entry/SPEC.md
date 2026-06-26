@@ -1,7 +1,7 @@
 # Tournament Save Entry (T5) — Spec
 
 > **Order:** EPIC 500 Phase C · the `Golfin.Save`-backed persistence for tournament entries: new `PersistedTournamentEntry` DTO + `SaveData` list field + `schemaVersion 2→3` migrator + the `SaveBackedTournamentEntryStore` that swaps T4's in-memory store.
-> **Depends:** T1 ✓ (DTOs). **Parallel to T4** (both from T1; they meet at T6). T4 ships with an in-memory `ITournamentEntryStore`; T5 provides the disk-backed impl behind the **same seam** — so T5 can land independently and be wired in at T6.
+> **Depends:** T1 ✓ (DTOs) + **`tournament_character_snapshot`** (adds `EntryState.Snapshot` — must land first so the frozen snapshot ships inside this **same** v2→v3 migration, not a later v3→v4). **Parallel to T4** (both from T1; they meet at T6). T4 ships with an in-memory `ITournamentEntryStore`; T5 provides the disk-backed impl behind the **same seam** — so T5 can land independently and be wired in at T6.
 > **Design source:** `Tournaments_GDD.md` §12 (save schema); `Tournaments_Implementation_Plan.md` T5 (lines 60–67).
 > **Tier:** FULL PIPELINE — *save schema = risk*. Gated by an EditMode test suite (migration / round-trip / debounce / atomic-write), extending the existing `SaveLayerTests`. No visuals → Rule 8 N/A.
 
@@ -10,7 +10,7 @@
 ## 0. What T5 is — and the boundary
 Two halves:
 1. **Schema (in `Golfin.Save`):** add `PersistedTournamentEntry` + `PersistedHoleResult` flat DTOs and a `List<PersistedTournamentEntry> tournamentEntries` field to `SaveData`; bump `schemaVersion 2→3`; add the `v2→v3` migrator step (preserve fail-hard-on-newer).
-2. **Store adapter (in `Golfin.Tournaments`):** `SaveBackedEntryStore : ITournamentEntryStore` (`Load`/`Save(EntryState)` + **persisted claim-once** `IsClaimed`/`MarkClaimed`, D2 = **(b)**) that maps `EntryState`/`HoleResult`/`EntryStatus` ⇄ the persisted DTOs, reads/writes `SaveDataHost.Instance.Data.tournamentEntries`, and calls `MarkDirty()` after each mutation.
+2. **Store adapter (in `Golfin.Tournaments`):** `SaveBackedEntryStore : ITournamentEntryStore` (`Load`/`Save(EntryState)` + **persisted claim-once** `IsClaimed`/`MarkClaimed`, D2 = **(b)**) that maps `EntryState`/`HoleResult`/`EntryStatus`/**`CharacterSnapshot`** ⇄ the persisted DTOs, reads/writes `SaveDataHost.Instance.Data.tournamentEntries`, and calls `MarkDirty()` after each mutation.
 
 **Boundary:** T5 does **not** change tournament *logic* (that's T4) and does **not** drive the round loop (T6). It only persists/restores what T4 produces. The flat-DTO mandate is explicit in `SaveData.cs`: *"Do NOT serialize PlayerCharacterData… directly. Use the flat DTO types… to decouple storage from runtime."* — T5 follows the `PersistedCharacter` precedent exactly.
 
@@ -24,7 +24,7 @@ Two halves:
 | `PersistedCharacter` | the flat-DTO template: plain mutable public fields, parameterless (Newtonsoft-friendly). **T5's DTOs mirror this style.** |
 | `SaveDataHost` | singleton MonoBehaviour (exec order −100); `.Instance`, `.Data` (live `SaveData`), `MarkDirty()` (debounced 250 ms write), `ReloadFromDisk()` (test: simulate restart), `SetPersister(ISavePersister)` (test injection), `OnSaved`. |
 | `SaveSchemaMigrator` | `CurrentSchemaVersion = 2`; `Migrate(data)` fail-hard if file > code; sequential `if (data.schemaVersion < N)` steps; ends `data.schemaVersion = CurrentSchemaVersion`. v1→v2 is the pattern to copy (new fields default fine; just bump). |
-| `EntryState` (to persist) | `TournamentId`, `CharacterId`, `PerHole : IReadOnlyList<HoleResult>`, `StartedUtc`, `LastHoleUtc : DateTime?`, `Status : EntryStatus`. |
+| `EntryState` (to persist) | `TournamentId`, `CharacterId`, `PerHole : IReadOnlyList<HoleResult>`, `StartedUtc`, `LastHoleUtc : DateTime?`, `Status : EntryStatus`, **`Snapshot : CharacterSnapshot`** (frozen at sign-up by `tournament_character_snapshot`). |
 | `HoleResult` (to persist) | `HoleId` (string), `Strokes` (int), `TimeSeconds` (float), `CompletedUtc` (DateTime), `RngSeed` (int), `InputLog : IReadOnlyList<ShotCommand>`. **Sealed, ctor-only** → must be mirrored by a flat DTO, not serialized directly. |
 | Tests | `Assets/Scripts/Save/Tests/SaveLayerTests.cs` — extend its patterns. |
 | Seam (from T4) | `Load(string)` + `Save(EntryState)` + **persisted claim-once** `IsClaimed(string)`/`MarkClaimed(string)` (D2 = **(b)**; T4 grows the seam, in-memory fake = `HashSet`). **T5 adds `SaveBackedEntryStore`** implementing all four. **Asmdef: `Golfin.Tournaments → Golfin.Save`** (one-way). |
@@ -45,6 +45,7 @@ public class PersistedTournamentEntry
     public string lastHoleUtc = "";              // "" = none (maps to DateTime?)
     public int    status;                        // (int)EntryStatus — enum order frozen
     public bool   claimed;                       // persisted claim-once flag (D2 = (b)) — read/set via IsClaimed/MarkClaimed
+    public PersistedCharacterSnapshot snapshot = new();   // frozen character state at sign-up (treat-as-separate-character ruling)
 }
 
 public class PersistedHoleResult
@@ -55,6 +56,16 @@ public class PersistedHoleResult
     public string completedUtc = "";             // ISO-8601
     public int    rngSeed;                        // kept for future server re-sim (GDD §8)
     // inputLog intentionally omitted in v1 — see D1
+}
+
+public class PersistedCharacterSnapshot          // mirrors Golfin.Tournaments.CharacterSnapshot 1:1
+{
+    public string characterId = "";
+    public int    level;
+    public int    strength;
+    public int    clubControl;
+    public int    recovery;
+    public int    stamina;                        // the STAT, not energy
 }
 ```
 Add to `SaveData`: `public List<PersistedTournamentEntry> tournamentEntries = new List<PersistedTournamentEntry>();`
@@ -74,14 +85,14 @@ if (data.schemaVersion < 3)
     Debug.Log("[SaveSchemaMigrator] Migrated v2 → v3 (tournament entries list added, default empty).");
 }
 ```
-- **Preserve** fail-hard-on-newer (`> CurrentSchemaVersion` throws `SaveSchemaVersionException`). A v3 build reading a v2 save = empty entries list (correct); a v2 build reading a v3 save = hard fail (no silent loss).
+- **Preserve** fail-hard-on-newer (`> CurrentSchemaVersion` throws `SaveSchemaVersionException`). A v3 build reading a v2 save = empty entries list (correct); a v2 build reading a v3 save = hard fail (no silent loss). The frozen `CharacterSnapshot` is a field-set **within** each v3 entry row — it ships inside this single v2→v3 bump, **no separate migration.**
 
 ---
 
 ## 4. Store adapter (in `Golfin.Tournaments`)
 `SaveBackedEntryStore : ITournamentEntryStore` — the production impl T4 injects (T4 tests + v1 use the shipped `InMemoryEntryStore`). Implements the full seam: `Load`, `Save`, `IsClaimed`, `MarkClaimed`.
-- `EntryState? Load(string tid)` → find `tournamentEntries` row by id → map to `EntryState` (rebuild `HoleResult`s with empty `InputLog`; `status = (EntryStatus)row.status`; parse ISO dates; `""` lastHoleUtc → null).
-- `void Save(EntryState e)` → upsert the row (replace by `tournamentId`), map `EntryState`→`PersistedTournamentEntry`, then `SaveDataHost.Instance.MarkDirty()`.
+- `EntryState? Load(string tid)` → find `tournamentEntries` row by id → map to `EntryState` (rebuild `HoleResult`s with empty `InputLog`; `status = (EntryStatus)row.status`; parse ISO dates; `""` lastHoleUtc → null; map `row.snapshot` → `CharacterSnapshot`).
+- `void Save(EntryState e)` → upsert the row (replace by `tournamentId`), map `EntryState`→`PersistedTournamentEntry` (incl. `e.Snapshot` → `row.snapshot`), then `SaveDataHost.Instance.MarkDirty()`.
 - **Claim persistence (D2 = (b), LOCKED):** `bool IsClaimed(string tid)` → read `row.claimed`; `void MarkClaimed(string tid)` → set `row.claimed = true` + `MarkDirty()`. T4's `ClaimPrize` calls these for once-only grants that **survive app restart** (no relaunch double-claim). Requires T4's seam to carry the two methods — mirrored into the T4 spec (§2/§4/§8).
 - All reads/writes go through `SaveDataHost.Instance.Data.tournamentEntries`. No direct disk I/O — `MarkDirty()` owns the debounced atomic write.
 
@@ -90,7 +101,7 @@ if (data.schemaVersion < 3)
 ## 5. Acceptance — EditMode suite (the gate; extend `SaveLayerTests`)
 - **v2→v3 migration:** a hand-built v2 JSON (no `tournamentEntries`) loads → `schemaVersion==3`, `tournamentEntries` empty, all v2 fields intact. v3-reading-v2 path.
 - **Fail-hard:** a v4 JSON throws `SaveSchemaVersionException` (regression guard on the existing Q2 rule).
-- **Round-trip:** `EntryState` (multi-hole, with `DateTime?` set and null) → `Save` → serialize → deserialize → `Load` → field-equal (ids, per-hole strokes/time/completedUtc/rngSeed, status, startedUtc, lastHoleUtc, claimed).
+- **Round-trip:** `EntryState` (multi-hole, with `DateTime?` set and null) → `Save` → serialize → deserialize → `Load` → field-equal (ids, per-hole strokes/time/completedUtc/rngSeed, status, startedUtc, lastHoleUtc, claimed, **snapshot: characterId/level/strength/clubControl/recovery/stamina**).
 - **Upsert:** two `Save` calls for the same `tournamentId` replace (not duplicate) the row.
 - **Claim:** `MarkClaimed` persists; `IsClaimed` true after reload; idempotent.
 - **Debounce coalescing:** N appends within 250 ms → one disk write (assert via `OnSaved` count / persister spy) — reuse `SaveLayerTests` debounce harness.
