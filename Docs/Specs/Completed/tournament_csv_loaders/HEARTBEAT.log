@@ -1,0 +1,43 @@
+=== iter-1 kickoff baseline ===
+HEAD: 5a30d696b0169a89014e0574ed3cf7d64fc3fc84
+DIRTY:
+ M Assets/Scenes/ShellScene.unity
+ M Docs/Specs/Active/tournament_csv_loaders/STATUS.md
+=== end baseline ===
+
+2026-06-26T00:00:00Z activated — reading SPEC.md + T1 DTOs
+2026-06-26T00:10:00Z §0.1 amendment applied — TournamentDefinition.ResolveDelayMinutes added, 4 call sites updated
+2026-06-26T00:20:00Z three CSVs authored verbatim per SPEC §3
+2026-06-26T00:30:00Z TournamentCsvLoader.cs created — 3 load methods + 3 helpers
+2026-06-26T00:40:00Z TournamentCsvLoaderTests.cs created — 26 EditMode tests
+2026-06-26T00:50:00Z resolved LogAssert.Expect for negative-control tests; all 77/77 PASS confirmed
+2026-06-26T01:00:00Z done, awaiting review
+
+=== iter-2 kickoff baseline ===
+HEAD: 5a30d696b0169a89014e0574ed3cf7d64fc3fc84
+DIRTY:
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Tournaments/StubTournamentBackend.cs
+ M Assets/Scripts/Tournaments/Tests/BotFieldInvariantTests.cs
+ M Assets/Scripts/Tournaments/Tests/TournamentContractsTests.cs
+ M Assets/Scripts/Tournaments/TournamentDefinition.cs
+ M Docs/Specs/Active/tournament_csv_loaders/STATUS.md
+?? Assets/Resources/Data/tournament_bot_fields.csv
+?? Assets/Resources/Data/tournament_bot_fields.csv.meta
+?? Assets/Resources/Data/tournament_prizes.csv
+?? Assets/Resources/Data/tournament_prizes.csv.meta
+?? Assets/Resources/Data/tournaments.csv
+?? Assets/Resources/Data/tournaments.csv.meta
+?? Assets/Scripts/Tournaments/Tests/TournamentCsvLoaderTests.cs
+?? Assets/Scripts/Tournaments/Tests/TournamentCsvLoaderTests.cs.meta
+?? Assets/Scripts/Tournaments/TournamentCsvLoader.cs
+?? Assets/Scripts/Tournaments/TournamentCsvLoader.cs.meta
+?? Docs/Specs/Active/tournament_csv_loaders/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tournament_csv_loaders/HEARTBEAT.log
+?? Docs/Specs/Active/tournament_csv_loaders/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_csv_loaders/SELF_REVIEW.md
+=== end baseline ===
+
+2026-06-26T02:00:00Z iter-2 activated — adding 4 real-loader wrapper tests (calling Load* methods directly)
+2026-06-26T02:10:00Z 4 wrapper tests added; 81/81 PASS confirmed via tests-run
+2026-06-26T02:15:00Z done, awaiting review
