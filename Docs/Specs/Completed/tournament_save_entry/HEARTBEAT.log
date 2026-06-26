@@ -1,0 +1,28 @@
+2026-06-26T13:17:15Z activated
+
+=== iter-1 kickoff baseline ===
+HEAD: 679144e6a64d15d63ad265e1b368ee5bc42f52ee
+DIRTY porcelain:
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Tournaments/EntryState.cs
+ M Assets/Scripts/Tournaments/LocalTournamentBackend.cs
+ M Assets/Scripts/Tournaments/Tests/LocalTournamentBackendTests.cs
+ M Docs/Specs/Active/tournament_character_snapshot/STATUS.md
+ M Docs/Specs/Active/tournament_save_entry/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Scripts/Tournaments/CharacterSnapshot.cs
+?? Assets/Scripts/Tournaments/CharacterSnapshot.cs.meta
+?? Assets/Scripts/Tournaments/ICharacterStatsProvider.cs
+?? Assets/Scripts/Tournaments/ICharacterStatsProvider.cs.meta
+?? Assets/Scripts/TournamentsRuntime.meta
+?? Assets/Scripts/TournamentsRuntime/CharacterManagerStatsProvider.cs
+?? Assets/Scripts/TournamentsRuntime/CharacterManagerStatsProvider.cs.meta
+?? Docs/Specs/Active/tournament_character_snapshot/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tournament_character_snapshot/HEARTBEAT.log
+?? Docs/Specs/Active/tournament_character_snapshot/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_character_snapshot/REDTEAM_REVIEW.md
+?? Docs/Specs/Active/tournament_character_snapshot/SELF_REVIEW.md
+===
+2026-06-26T13:23:38Z running EditMode tests
+2026-06-26T13:27:26Z done, awaiting review

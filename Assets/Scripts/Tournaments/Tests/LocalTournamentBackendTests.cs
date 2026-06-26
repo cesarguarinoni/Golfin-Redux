@@ -1345,6 +1345,122 @@ namespace Golfin.Tournaments.Tests
     }
 
     // ═════════════════════════════════════════════════════════════════════════
+    // §32 — CharacterSnapshot / freeze-invariant tests
+    // (tournament_character_snapshot amendment)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [TestFixture]
+    public class CharacterSnapshotTests
+    {
+        // ── Helper: build a backend with a FakeStatsProvider ─────────────────
+        private static (LocalTournamentBackend backend, FakeStatsProvider stats) MakeWithStats(
+            long rpBalance = 10000L)
+        {
+            var d     = Fixture.Def();
+            var clock = new FixedClock(Fixture.StartUtc.AddHours(1));
+            var s     = new InMemoryEntryStore();
+            var rp    = new FakeRewardPointsService(rpBalance);
+            var items = new FakeItemRewardService();
+            var p     = Fixture.DefaultPrize();
+            var statsProvider = new FakeStatsProvider();
+
+            var backend = new LocalTournamentBackend(
+                definitions: new System.Collections.Generic.List<TournamentDefinition> { d },
+                prizeTables: new System.Collections.Generic.Dictionary<string, PrizeTable> { [p.PrizeTableId] = p },
+                botFields:   new System.Collections.Generic.Dictionary<string, BotFieldConfig> { [Fixture.EmptyBotField().BotFieldId] = Fixture.EmptyBotField() },
+                botGen:      Fixture.EmptyBotGen(),
+                clock:       clock,
+                store:       s,
+                rp:          rp,
+                items:       items,
+                pars:        new FakeHoleParProvider(4),
+                stats:       statsProvider);
+
+            return (backend, statsProvider);
+        }
+
+        // §32.1 — Register captures stats from FakeStatsProvider at sign-up time
+        [Test]
+        public void Register_CapturesSnapshotFromProvider()
+        {
+            var (backend, statsProvider) = MakeWithStats();
+
+            var expectedSnap = new CharacterSnapshot(
+                characterId: "char_player",
+                level:       42,
+                strength:    18,
+                clubControl: 20,
+                recovery:    15,
+                stamina:     22);
+            statsProvider.Register("char_player", expectedSnap);
+
+            var entry = backend.Register("t1", 0L, "char_player");
+
+            Assert.IsNotNull(entry.Snapshot,
+                "Snapshot must not be null when stats provider is injected");
+            Assert.AreEqual(expectedSnap, entry.Snapshot,
+                "Snapshot stored in EntryState must equal the one returned by FakeStatsProvider");
+        }
+
+        // §32.2 — Freeze invariant: mutating FakeStatsProvider after Register
+        //          does NOT change the already-stored snapshot
+        [Test]
+        public void Register_SnapshotIsFrozen_MutatingProviderAfterRegister_DoesNotAffectEntry()
+        {
+            var (backend, statsProvider) = MakeWithStats();
+
+            // Register the "before" snapshot
+            var before = new CharacterSnapshot("char_player", 10, 5, 6, 7, 8);
+            statsProvider.Register("char_player", before);
+
+            var entry = backend.Register("t1", 0L, "char_player");
+            Assert.AreEqual(before, entry.Snapshot, "sanity: snapshot matches before-value at Register time");
+
+            // Now mutate provider to a different snapshot
+            var after = new CharacterSnapshot("char_player", 99, 50, 50, 50, 50);
+            statsProvider.Register("char_player", after);
+
+            // Re-load entry from store — snapshot must still be the "before" value
+            var reloaded = backend.GetMyEntry("t1");
+            Assert.IsNotNull(reloaded, "Entry must exist in store");
+            Assert.AreEqual(before, reloaded!.Snapshot,
+                "Snapshot is immutable: changing the provider after Register must NOT change the stored entry");
+            Assert.AreNotEqual(after, reloaded.Snapshot,
+                "The new 'after' snapshot must NOT have leaked into the stored entry");
+        }
+
+        // §32.3 — Store round-trip: Snapshot survives Save → Load via InMemoryEntryStore
+        [Test]
+        public void Register_SnapshotSurvivesStoreRoundTrip()
+        {
+            var (backend, statsProvider) = MakeWithStats();
+
+            var snap = new CharacterSnapshot("char_player", 55, 30, 31, 29, 28);
+            statsProvider.Register("char_player", snap);
+
+            backend.Register("t1", 0L, "char_player");
+
+            // Load back through the public GetMyEntry path (which reads _store.Load)
+            var loaded = backend.GetMyEntry("t1");
+            Assert.IsNotNull(loaded);
+            Assert.AreEqual(snap, loaded!.Snapshot,
+                "Snapshot must survive a Save/Load round-trip through InMemoryEntryStore");
+        }
+
+        // §32.4 — Unknown character id throws KeyNotFoundException (no silent null)
+        [Test]
+        public void Register_UnknownCharacterId_ThrowsKeyNotFoundException()
+        {
+            var (backend, statsProvider) = MakeWithStats();
+            // Deliberately NOT registering "char_unknown" in statsProvider
+
+            Assert.Throws<System.Collections.Generic.KeyNotFoundException>(() =>
+                backend.Register("t1", 0L, "char_unknown"),
+                "Register with an unregistered characterId must throw KeyNotFoundException");
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
     // PrizeSplitFormula — isolated arithmetic tests
     // ═════════════════════════════════════════════════════════════════════════
 

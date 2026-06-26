@@ -33,6 +33,7 @@ namespace Golfin.Tournaments
         private readonly IRewardPointsService                        _rp;
         private readonly IItemRewardService                          _items;
         private readonly IHoleParProvider                            _pars;
+        private readonly ICharacterStatsProvider                     _stats;
 
         // ── Cached computed result (memo only — NOT the claim guard) ────────────
         // Keyed by tournamentId; built lazily in GetResults and reused.
@@ -53,6 +54,10 @@ namespace Golfin.Tournaments
         /// <param name="rp">RP debit/grant seam — wraps RewardPointsManager.Instance.</param>
         /// <param name="items">Item grant seam — wraps SaveData.itemQuantities (via T5).</param>
         /// <param name="pars">Per-hole par seam — wraps HoleDatabaseLoader.</param>
+        /// <param name="stats">
+        /// Character stats provider seam — snapshot is captured at Register time.
+        /// Production: <see cref="CharacterManagerStatsProvider"/>; tests: <see cref="FakeStatsProvider"/>.
+        /// </param>
         public LocalTournamentBackend(
             IReadOnlyList<TournamentDefinition>         definitions,
             IReadOnlyDictionary<string, PrizeTable>     prizeTables,
@@ -62,7 +67,8 @@ namespace Golfin.Tournaments
             ITournamentEntryStore                       store,
             IRewardPointsService                        rp,
             IItemRewardService                          items,
-            IHoleParProvider                            pars)
+            IHoleParProvider                            pars,
+            ICharacterStatsProvider?                    stats = null)
         {
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _prizeTables = prizeTables  ?? throw new ArgumentNullException(nameof(prizeTables));
@@ -73,6 +79,9 @@ namespace Golfin.Tournaments
             _rp          = rp           ?? throw new ArgumentNullException(nameof(rp));
             _items       = items        ?? throw new ArgumentNullException(nameof(items));
             _pars        = pars         ?? throw new ArgumentNullException(nameof(pars));
+            // stats is optional — null means snapshots will be null (pre-amendment compatibility).
+            // Production wires CharacterManagerStatsProvider; tests inject FakeStatsProvider.
+            _stats       = stats!;
         }
 
         // ═════════════════════════════════════════════════════════════════════
@@ -119,9 +128,15 @@ namespace Golfin.Tournaments
                         $"need {entryPaymentRP}, have {_rp.Balance}.");
             }
 
+            // Freeze character stats at sign-up (SPEC §5 — capture point is Register,
+            // not round-start, because sign-up can precede play by days).
+            // _stats is null only when no provider was injected (legacy/pre-amendment).
+            CharacterSnapshot? snapshot = _stats?.SnapshotFor(characterId);
+
             var entry = new EntryState(
                 tournamentId: id,
                 characterId:  characterId,
+                snapshot:     snapshot,
                 perHole:      new List<HoleResult>(),
                 startedUtc:   _clock.UtcNow,
                 lastHoleUtc:  null,
@@ -174,6 +189,7 @@ namespace Golfin.Tournaments
             var updated = new EntryState(
                 tournamentId: id,
                 characterId:  entry.CharacterId,
+                snapshot:     entry.Snapshot,         // preserve frozen snapshot across hole submissions
                 perHole:      updatedHoles,
                 startedUtc:   entry.StartedUtc,
                 lastHoleUtc:  now,

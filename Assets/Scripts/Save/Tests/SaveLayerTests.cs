@@ -288,6 +288,209 @@ namespace Golfin.Save.Tests
             Assert.IsFalse(result);
             Assert.IsNull(json);
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // T5 — Tournament save schema tests (migration + fail-hard + round-trip)
+        // ══════════════════════════════════════════════════════════════════════
+
+        // ── T5 Test 1: v2 → v3 migration ─────────────────────────────────────
+
+        [Test]
+        public void T5_V2ToV3_Migration_TournamentEntriesEmptyAllV2FieldsIntact()
+        {
+            // Hand-built v2 JSON (no tournamentEntries field) — simulates a save file
+            // written before T5 shipped.
+            const string v2Json = @"{
+                ""schemaVersion"": 2,
+                ""rewardPoints"": 9999,
+                ""selectedCharacterId"": ""char_tiger"",
+                ""ownedCharacters"": [],
+                ""ballQuantities"": {},
+                ""itemQuantities"": {},
+                ""unlockedHoles"": [1, 2, 3],
+                ""playedHoles"": [1],
+                ""lifetimeRpEarned"": 500,
+                ""rpDaily"": 100,
+                ""rpWeekly"": 300,
+                ""rpMonthly"": 500,
+                ""dailyPeriodKey"": 19900,
+                ""weeklyPeriodKey"": 107218,
+                ""monthlyPeriodKey"": 24301
+            }";
+
+            var data = JsonConvert.DeserializeObject<SaveData>(v2Json);
+            Assert.IsNotNull(data);
+
+            // Act: migrate
+            Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
+
+            // Assert: schemaVersion bumped to 3
+            Assert.AreEqual(3, data!.schemaVersion, "schemaVersion must be 3 after v2→v3 migration");
+
+            // Assert: tournamentEntries is present and empty (not null)
+            Assert.IsNotNull(data.tournamentEntries, "tournamentEntries must not be null after migration");
+            Assert.AreEqual(0, data.tournamentEntries.Count, "tournamentEntries must be empty for a v2 save");
+
+            // Assert: all v2 fields intact
+            Assert.AreEqual(9999, data.rewardPoints);
+            Assert.AreEqual("char_tiger", data.selectedCharacterId);
+            Assert.AreEqual(3, data.unlockedHoles.Count);
+            Assert.AreEqual(500L, data.lifetimeRpEarned);
+            Assert.AreEqual(100L, data.rpDaily);
+            Assert.AreEqual(19900L, data.dailyPeriodKey);
+        }
+
+        // ── T5 Test 2: Fail-hard on v4 (future-version guard) ────────────────
+
+        [Test]
+        public void T5_FailHard_V4Json_ThrowsSaveSchemaVersionException()
+        {
+            // A save written by a future build (v4) must throw, not silently corrupt.
+            const string v4Json = @"{ ""schemaVersion"": 4, ""rewardPoints"": 1 }";
+            var data = JsonConvert.DeserializeObject<SaveData>(v4Json);
+            Assert.IsNotNull(data);
+
+            // Expect the Debug.LogError before the throw
+            UnityEngine.TestTools.LogAssert.Expect(
+                UnityEngine.LogType.Error,
+                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 4"));
+
+            Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data!));
+        }
+
+        // ── T5 Test 3: CurrentSchemaVersion is 3 ─────────────────────────────
+
+        [Test]
+        public void T5_CurrentSchemaVersion_Is3()
+        {
+            Assert.AreEqual(3, SaveSchemaMigrator.CurrentSchemaVersion,
+                "CurrentSchemaVersion must be 3 after the v2→v3 bump");
+        }
+
+        // ── T5 Test 4: PersistedTournamentEntry round-trip via Newtonsoft ─────
+
+        [Test]
+        public async Task T5_PersistedTournamentEntry_RoundTripViaNewtonsoft()
+        {
+            var savePath  = Path.Combine(_testDir, "save_t5_roundtrip.json");
+            var persister = new LocalJsonPersister(savePath);
+
+            var originalData = new SaveData
+            {
+                schemaVersion      = 3,
+                rewardPoints       = 1000,
+                selectedCharacterId = "char_alice"
+            };
+
+            // Populate with a multi-hole entry (with lastHoleUtc set and null cases)
+            var entry1 = new PersistedTournamentEntry
+            {
+                tournamentId = "t_open_2026",
+                characterId  = "char_alice",
+                startedUtc   = "2026-08-01T10:00:00.0000000Z",
+                lastHoleUtc  = "2026-08-01T10:45:00.0000000Z",
+                status       = 1, // InProgress
+                claimed      = false,
+                perHole      = new List<PersistedHoleResult>
+                {
+                    new PersistedHoleResult
+                    {
+                        holeId       = "h1",
+                        strokes      = 3,
+                        timeSeconds  = 95.5f,
+                        completedUtc = "2026-08-01T10:25:00.0000000Z",
+                        rngSeed      = 42
+                    },
+                    new PersistedHoleResult
+                    {
+                        holeId       = "h2",
+                        strokes      = 5,
+                        timeSeconds  = 120.0f,
+                        completedUtc = "2026-08-01T10:45:00.0000000Z",
+                        rngSeed      = 99
+                    }
+                },
+                snapshot = new PersistedCharacterSnapshot
+                {
+                    characterId = "char_alice",
+                    level       = 42,
+                    strength    = 20,
+                    clubControl = 18,
+                    recovery    = 15,
+                    stamina     = 22
+                }
+            };
+
+            // Entry 2: no lastHoleUtc (empty string = null)
+            var entry2 = new PersistedTournamentEntry
+            {
+                tournamentId = "t_invitational_2026",
+                characterId  = "char_bob",
+                startedUtc   = "2026-09-01T08:00:00.0000000Z",
+                lastHoleUtc  = "",
+                status       = 0, // NotEntered / not yet started
+                claimed      = true,
+                perHole      = new List<PersistedHoleResult>(),
+                snapshot     = new PersistedCharacterSnapshot
+                {
+                    characterId = "char_bob",
+                    level       = 10,
+                    strength    = 12,
+                    clubControl = 11,
+                    recovery    = 8,
+                    stamina     = 9
+                }
+            };
+
+            originalData.tournamentEntries.Add(entry1);
+            originalData.tournamentEntries.Add(entry2);
+
+            // Serialize → save → reload → deserialize
+            string json = JsonConvert.SerializeObject(originalData, Formatting.Indented);
+            await persister.SaveAsync(json);
+
+            Assert.IsTrue(persister.TryLoad(out string? loadedJson));
+            var loaded = JsonConvert.DeserializeObject<SaveData>(loadedJson!);
+
+            Assert.IsNotNull(loaded);
+            Assert.AreEqual(3, loaded!.schemaVersion);
+            Assert.AreEqual(1000, loaded.rewardPoints);
+            Assert.AreEqual(2, loaded.tournamentEntries.Count);
+
+            // Verify entry1 fields
+            var le1 = loaded.tournamentEntries[0];
+            Assert.AreEqual("t_open_2026", le1.tournamentId);
+            Assert.AreEqual("char_alice",  le1.characterId);
+            Assert.AreEqual("2026-08-01T10:00:00.0000000Z", le1.startedUtc);
+            Assert.AreEqual("2026-08-01T10:45:00.0000000Z", le1.lastHoleUtc);
+            Assert.AreEqual(1,    le1.status);
+            Assert.IsFalse(le1.claimed);
+            Assert.AreEqual(2,    le1.perHole.Count);
+            Assert.AreEqual("h1", le1.perHole[0].holeId);
+            Assert.AreEqual(3,    le1.perHole[0].strokes);
+            Assert.AreEqual(95.5f, le1.perHole[0].timeSeconds, delta: 0.001f);
+            Assert.AreEqual(42,   le1.perHole[0].rngSeed);
+            Assert.AreEqual("h2", le1.perHole[1].holeId);
+            Assert.AreEqual(5,    le1.perHole[1].strokes);
+            Assert.AreEqual(99,   le1.perHole[1].rngSeed);
+
+            // Verify snapshot fields (characterId/level/strength/clubControl/recovery/stamina)
+            Assert.AreEqual("char_alice", le1.snapshot.characterId);
+            Assert.AreEqual(42,  le1.snapshot.level);
+            Assert.AreEqual(20,  le1.snapshot.strength);
+            Assert.AreEqual(18,  le1.snapshot.clubControl);
+            Assert.AreEqual(15,  le1.snapshot.recovery);
+            Assert.AreEqual(22,  le1.snapshot.stamina);
+
+            // Verify entry2: no lastHoleUtc, claimed=true
+            var le2 = loaded.tournamentEntries[1];
+            Assert.AreEqual("t_invitational_2026", le2.tournamentId);
+            Assert.AreEqual("",    le2.lastHoleUtc, "Empty string must survive round-trip for null DateTime?");
+            Assert.IsTrue(le2.claimed);
+            Assert.AreEqual(0,     le2.perHole.Count);
+            Assert.AreEqual("char_bob", le2.snapshot.characterId);
+            Assert.AreEqual(10,   le2.snapshot.level);
+        }
     }
 
     /// <summary>

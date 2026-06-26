@@ -14,7 +14,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 2;
+        public const int CurrentSchemaVersion = 3;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -41,6 +41,18 @@ namespace Golfin.Save
                 // dailyPeriodKey, weeklyPeriodKey, monthlyPeriodKey all default 0.
                 data.schemaVersion = 2;
                 Debug.Log("[SaveSchemaMigrator] Migrated v1 → v2 (leaderboard RP accumulators added, default 0).");
+            }
+
+            // v2 → v3: add tournament entries list (empty for pre-tournament saves).
+            // The PersistedCharacterSnapshot field inside each entry is part of this same bump —
+            // the frozen snapshot ships inside this single v2→v3 migration (no separate v3→v4).
+            if (data.schemaVersion < 3)
+            {
+                // Defensive null-init: Newtonsoft leaves missing JSON key at field default (new List),
+                // but guard against any edge-case deserializer that produces null.
+                data.tournamentEntries ??= new System.Collections.Generic.List<PersistedTournamentEntry>();
+                data.schemaVersion = 3;
+                Debug.Log("[SaveSchemaMigrator] Migrated v2 → v3 (tournament entries list added, default empty).");
             }
 
             // Ensure schemaVersion is current after all migrations

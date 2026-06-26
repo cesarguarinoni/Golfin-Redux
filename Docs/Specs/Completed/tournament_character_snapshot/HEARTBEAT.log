@@ -1,0 +1,12 @@
+2026-06-26T12:00:00Z activated — tournament_character_snapshot implementer start
+
+=== iter-1 kickoff baseline ===
+HEAD: 679144e6a specs(snapshot): freeze character state per tournament — new tournament_character_snapshot amendment + T5 persists CharacterSnapshot in single v2->v3 (2026-06-26 21:22 JST)
+DIRTY porcelain:
+ M Assets/Scenes/ShellScene.unity
+ M Docs/Specs/Active/tournament_character_snapshot/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end iter-1 kickoff baseline ===
+2026-06-26T12:38:31 all 4 CharacterSnapshotTests pass (158/158 EditMode); writing report
+2026-06-26T12:39:33 done, awaiting review
