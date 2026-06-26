@@ -1,0 +1,5 @@
+# Bot field configs. bracketWeights = minLevel:weight pairs (keys = bot_difficulty.csv minLevels).
+botFieldId,botCount,bracketWeights,startOffsetMinSec,startOffsetMaxSec,perHoleSpreadSec
+field_small,12,1:0.30;10:0.30;25:0.20;50:0.20,0,7200,600
+field_medium,20,10:0.25;25:0.30;50:0.25;100:0.20,0,7200,540
+field_major,30,25:0.20;50:0.25;100:0.30;180:0.25,0,10800,480

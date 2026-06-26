@@ -46,6 +46,14 @@ namespace Golfin.Tournaments
         public DateTime EndUtc { get; }
 
         /// <summary>
+        /// Minutes after <see cref="EndUtc"/> before results are finalised and prizes granted.
+        /// GDD §9 resolveDelayMinutes — per-tournament delay so the backend can verify
+        /// and rank all submissions before the leaderboard is sealed.
+        /// Added in T2 (§0.1 approved) as an additive amendment to the T1 contract.
+        /// </summary>
+        public int ResolveDelayMinutes { get; }
+
+        /// <summary>
         /// RP entry fee. 0 = free entry.
         /// Debited once via RewardPointsManager at Register() time (T4).
         /// </summary>
@@ -76,23 +84,25 @@ namespace Golfin.Tournaments
             IReadOnlyList<string> holeSet,
             DateTime startUtc,
             DateTime endUtc,
+            int resolveDelayMinutes,
             long entryFeeRP,
             string prizeTableId,
             string botFieldId,
             string sponsorKey,
             string leagueKey)
         {
-            Id          = id;
-            NameKey     = nameKey;
-            ClubId      = clubId;
-            HoleSet     = holeSet;
-            StartUtc    = startUtc;
-            EndUtc      = endUtc;
-            EntryFeeRP  = entryFeeRP;
-            PrizeTableId = prizeTableId;
-            BotFieldId  = botFieldId;
-            SponsorKey  = sponsorKey;
-            LeagueKey   = leagueKey;
+            Id                   = id;
+            NameKey              = nameKey;
+            ClubId               = clubId;
+            HoleSet              = holeSet;
+            StartUtc             = startUtc;
+            EndUtc               = endUtc;
+            ResolveDelayMinutes  = resolveDelayMinutes;
+            EntryFeeRP           = entryFeeRP;
+            PrizeTableId         = prizeTableId;
+            BotFieldId           = botFieldId;
+            SponsorKey           = sponsorKey;
+            LeagueKey            = leagueKey;
         }
     }
 }

@@ -26,17 +26,18 @@ namespace Golfin.Tournaments
         // ── Pre-built fixed data ──────────────────────────────────────────────
 
         private static readonly TournamentDefinition StubDefinition = new TournamentDefinition(
-            id:           "stub_tournament",
-            nameKey:      "TOURNAMENT_STUB_NAME",
-            clubId:       "lomond",
-            holeSet:      new[] { "h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "h9" },
-            startUtc:     DateTime.UtcNow.AddDays(-1),
-            endUtc:       DateTime.UtcNow.AddDays(1),
-            entryFeeRP:   0L,
-            prizeTableId: "stub_prizes",
-            botFieldId:   "stub_bots",
-            sponsorKey:   "TOURNAMENT_STUB_SPONSOR",
-            leagueKey:    "TOURNAMENT_STUB_LEAGUE"
+            id:                  "stub_tournament",
+            nameKey:             "TOURNAMENT_STUB_NAME",
+            clubId:              "lomond",
+            holeSet:             new[] { "h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "h9" },
+            startUtc:            DateTime.UtcNow.AddDays(-1),
+            endUtc:              DateTime.UtcNow.AddDays(1),
+            resolveDelayMinutes: 30,
+            entryFeeRP:          0L,
+            prizeTableId:        "stub_prizes",
+            botFieldId:          "stub_bots",
+            sponsorKey:          "TOURNAMENT_STUB_SPONSOR",
+            leagueKey:           "TOURNAMENT_STUB_LEAGUE"
         );
 
         private static readonly EntryState StubEntry = new EntryState(

@@ -193,17 +193,18 @@ fp_120,STING,char_roshana,185
             var start = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc);
             var end   = new DateTime(2026, 7, 8, 0, 0, 0, DateTimeKind.Utc);
             return new TournamentDefinition(
-                id:           id,
-                nameKey:      "TEST_TOURNEY",
-                clubId:       "lomond",
-                holeSet:      new[] { "h1","h2","h3","h4","h5","h6","h7","h8","h9" },
-                startUtc:     start,
-                endUtc:       end,
-                entryFeeRP:   500L,
-                prizeTableId: "medium",
-                botFieldId:   "test_field",
-                sponsorKey:   "SPONSOR_TEST",
-                leagueKey:    "LEAGUE_WEEKLY"
+                id:                  id,
+                nameKey:             "TEST_TOURNEY",
+                clubId:              "lomond",
+                holeSet:             new[] { "h1","h2","h3","h4","h5","h6","h7","h8","h9" },
+                startUtc:            start,
+                endUtc:              end,
+                resolveDelayMinutes: 30,
+                entryFeeRP:          500L,
+                prizeTableId:        "medium",
+                botFieldId:          "test_field",
+                sponsorKey:          "SPONSOR_TEST",
+                leagueKey:           "LEAGUE_WEEKLY"
             );
         }
 
@@ -873,17 +874,18 @@ fp_120,STING,char_roshana,185
             var end   = start.AddSeconds(H * 2); // 18s window for 9 holes
 
             var def = new TournamentDefinition(
-                id:           "short_window_test",
-                nameKey:      "TEST",
-                clubId:       "lomond",
-                holeSet:      new[] { "h1","h2","h3","h4","h5","h6","h7","h8","h9" },
-                startUtc:     start,
-                endUtc:       end,
-                entryFeeRP:   0L,
-                prizeTableId: "test",
-                botFieldId:   "test",
-                sponsorKey:   "S",
-                leagueKey:    "L"
+                id:                  "short_window_test",
+                nameKey:             "TEST",
+                clubId:              "lomond",
+                holeSet:             new[] { "h1","h2","h3","h4","h5","h6","h7","h8","h9" },
+                startUtc:            start,
+                endUtc:              end,
+                resolveDelayMinutes: 0,
+                entryFeeRP:          0L,
+                prizeTableId:        "test",
+                botFieldId:          "test",
+                sponsorKey:          "S",
+                leagueKey:           "L"
             );
 
             // startOffsetMinSec = 0, so botStart = startUtc; perHoleSpreadSec = 5s >> nominalStep ~2s

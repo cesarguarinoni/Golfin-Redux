@@ -27,17 +27,18 @@ namespace Golfin.Tournaments.Tests
             var endUtc   = new DateTime(2026, 7, 8, 0, 0, 0, DateTimeKind.Utc);
 
             var def = new TournamentDefinition(
-                id:           "weekly_lomond_9",
-                nameKey:      "TOURNAMENT_WEEKLY_LOMOND_9",
-                clubId:       "lomond",
-                holeSet:      holeSet,
-                startUtc:     startUtc,
-                endUtc:       endUtc,
-                entryFeeRP:   500L,
-                prizeTableId: "medium",
-                botFieldId:   "medium_9hole",
-                sponsorKey:   "SPONSOR_WONDERWALL",
-                leagueKey:    "LEAGUE_WEEKLY"
+                id:                  "weekly_lomond_9",
+                nameKey:             "TOURNAMENT_WEEKLY_LOMOND_9",
+                clubId:              "lomond",
+                holeSet:             holeSet,
+                startUtc:            startUtc,
+                endUtc:              endUtc,
+                resolveDelayMinutes: 30,
+                entryFeeRP:          500L,
+                prizeTableId:        "medium",
+                botFieldId:          "medium_9hole",
+                sponsorKey:          "SPONSOR_WONDERWALL",
+                leagueKey:           "LEAGUE_WEEKLY"
             );
 
             Assert.AreEqual("weekly_lomond_9", def.Id);
