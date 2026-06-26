@@ -1,4 +1,4 @@
-QUEUED — implementation blocked on T2
+READY — all deps met (T1 ✓ T2 ✓ T3 ✓); fire now
 
 # STATUS — tournament_local_backend (T4)
 
@@ -9,8 +9,8 @@ QUEUED — implementation blocked on T2
 **Tier:** FULL PIPELINE — gated by an EditMode invariant/unit suite (Rule 3). No clone table → Rule 8 N/A.
 
 ## Dependency / ordering
-- **T1 ✓** · **T3 ✓** · **T2 (Order 503) — Queued, NOT implemented.** T4 *spec* is ready now, but **implementation is blocked on T2** (needs loaded `TournamentDefinition`/`PrizeTable`/`BotFieldConfig`). Not blocked on T5 — persistence is an injected seam (in-memory v1; T5 swaps the save-backed impl).
-- Implementation order: **fire T2 → then T4.**
+- **T1 ✓** · **T2 ✓** (`TournamentCsvLoader` + 3 CSVs + 81/81 tests, `5671b9840`/`69075753d`) · **T3 ✓**. **All deps met — T4 is unblocked and ready to fire.** Not blocked on T5 — persistence is an injected seam (in-memory v1; T5 swaps the save-backed impl).
+- D1 resolved: T2 shipped `ResolveDelayMinutes` on `TournamentDefinition` (CSVs = 30).
 
 ## Staging (SPEC §7)
 - [ ] **Stage 1** — skeleton + 4 seams + in-memory fakes + state derivation + GetTournaments/GetTournament + tests.
@@ -19,12 +19,12 @@ QUEUED — implementation blocked on T2
 - [ ] **Stage 4** — GetResults + ClaimPrize: resolve gate + split-pool + claim-once + tests.
 
 ## ⚠ Decisions for Cesar (SPEC §8)
-- **D1** resolveDelay: `TournamentDefinition` lacks `ResolveDelayMinutes` → T2 adds it (rec) vs T4 const. *Confirm with T2.*
+- **D1 ✅ resolved** — T2 shipped `ResolveDelayMinutes`; T4 reads it. No action.
 - **D2** "Ending" badge threshold (rec: last 1h of window).
 - **D3** provisional ranking: score-to-par-so-far (rec) vs raw revealed strokes.
 - Out of scope: cancel→refund (no Cancel method in the interface).
 
-## Kickoff (after T2 lands)
+## Kickoff (deps met — fire now)
 ```
 Use the golfin-implementer subagent on "tournament_local_backend"
 ```

@@ -1,7 +1,7 @@
 # Tournament Local Backend (T4) — Spec
 
 > **Order:** EPIC 500 Phase B · class `LocalTournamentBackend` implements `ITournamentBackend` (the 8 methods), replacing `StubTournamentBackend`. **Critical path** (`T1 → T4 → T6 → UI`).
-> **Depends:** T1 ✓ (DTOs) · **T2** (`tournament_csv_loaders` — definitions/prizes/bot-fields; *still Queued, Order 503*) · T3 ✓ (`BotFieldGenerator`). **NOT T5** — persistence is an injected seam; T5 (`tournament_save_entry`) provides the `Golfin.Save`-backed impl later.
+> **Depends:** T1 ✓ · **T2 ✓** (`TournamentCsvLoader` + 3 CSVs shipped, 81/81 tests, commit `5671b9840`) · T3 ✓ (`BotFieldGenerator`). **All deps met — ready to implement.** **NOT T5** — persistence is an injected seam; T5 (`tournament_save_entry`) provides the `Golfin.Save`-backed impl later.
 > **Design source:** `Docs/Game Design/Tournaments_GDD.md` §3 (lifecycle), §5 (scoring), §6 (ties + split-pool), §7 (organic reveal), §10 (prizes); `Tournaments_Implementation_Plan.md` T4.
 > **Tier:** FULL PIPELINE — headless deterministic logic, gated by an **EditMode invariant/unit suite** (`PIPELINE_HARDENING` Rule 3), *not* visuals. No clone table → Rule 8 N/A.
 
@@ -26,7 +26,7 @@
 | Clock (T1 ✓) | `ITournamentClock` / `TimeProviderClock(ITimeProvider)` wrapping `NetworkTimeProvider` (`Golfin.UI.Rankings.Core`) | **all** window/state/projection reads `clock.UtcNow` — never `DateTime.UtcNow`. |
 | RP debit/grant | `RewardPointsManager.Instance` — `int GetPoints()`, `bool CanAfford(int)`, `bool SpendPoints(int)`, `void EarnPoints(int)` | **MonoBehaviour singleton** → wrap behind `IRewardPointsService` seam (T4 stays headless). ⚠ RP API is `int`; `EntryFeeRP`/`RpReward` are `long` → bridge with a guarded cast. |
 | Per-hole par (RollField input) | `Assets/Scripts/UI/HoleDatabaseLoader.cs` → `HoleData.par` | wrap behind `IHoleParProvider` (resolve `def.ClubId` + `def.HoleSet` → `IReadOnlyList<int> holePars`); inject fixed pars in tests. |
-| Definitions/prizes/bot-fields | **T2** `tournament_csv_loaders` → `TournamentDefinition`/`PrizeTable`/`BotFieldConfig` | T4 takes loaded data via an `ITournamentDataSource` seam (or constructor lists). |
+| Definitions/prizes/bot-fields | **T2 ✓** `TournamentCsvLoader` — `LoadTournaments() → IReadOnlyList<TournamentDefinition>`, `LoadPrizeTables() → IReadOnlyDictionary<string,PrizeTable>`, `LoadBotFields() → IReadOnlyDictionary<string,BotFieldConfig>`, + static `CheckReferentialIntegrity(...)`. Loader is Unity-coupled (`Resources.Load`). | T4 takes the **loaded collections by constructor** (production passes the loader's results; tests inject fixtures — keeps T4 headless). 6 tournaments / 3 prize tables / 3 bot fields shipped. |
 | Item-reward grant | `SaveData.itemQuantities` (`Dictionary<string,int>`) via `SaveDataHost` | wrap behind `IItemRewardService.Grant(itemId, qty)`; in-memory in tests; real impl increments `itemQuantities` (may land with T5). |
 | Player per-hole shape | `HoleResult` — **confirm fields** `holeIndex / strokes / timeMs / rngSeed / inputLog?` (GDD §12) | drives player countback + time in §6. Implementer cites the exact field names (Rule 8 spirit). |
 
@@ -37,7 +37,9 @@
 
 ```
 LocalTournamentBackend(
-    ITournamentDataSource data,     // T2-loaded definitions + prize tables + bot-field configs
+    IReadOnlyList<TournamentDefinition>         definitions,  // loader.LoadTournaments()
+    IReadOnlyDictionary<string,PrizeTable>     prizeTables,  // loader.LoadPrizeTables()
+    IReadOnlyDictionary<string,BotFieldConfig> botFields,    // loader.LoadBotFields()
     BotFieldGenerator      botGen,  // T3 (built from parsed roster + bot_score_brackets)
     ITournamentClock       clock,   // T1 — UtcNow seam
     ITournamentEntryStore  store,   // NEW seam — v1 in-memory; T5 = Golfin.Save-backed
@@ -63,7 +65,7 @@ LocalTournamentBackend(
 - `now ≥ EndUtc` & no entry → **Closed**
 - `now ≥ EndUtc` & had entry → **Ended**
 
-**Resolve gate** (separate from the badge): `IsResolved(def, now) = now ≥ EndUtc + resolveDelay`. `GetResults`/`ClaimPrize` return null / no-op until resolved; `GetLeaderboard` is `IsProvisional = !IsResolved`. **resolveDelay source = D1.**
+**Resolve gate** (separate from the badge): `IsResolved(def, now) = now ≥ EndUtc + TimeSpan.FromMinutes(def.ResolveDelayMinutes)`. `GetResults`/`ClaimPrize` return null / no-op until resolved; `GetLeaderboard` sets `IsProvisional = !IsResolved`. (`ResolveDelayMinutes` shipped in T2; CSVs = 30.)
 
 ---
 
@@ -124,7 +126,7 @@ Headless NUnit in `Golfin.Tournaments.Tests`, all fakes injected (fixed clock, i
 ---
 
 ## 8. Decisions for Cesar
-- **D1 — resolveDelay source.** `TournamentDefinition` has **no `ResolveDelayMinutes`** (GDD §9 CSV does; T2 §0 already flagged adding it). **Rec:** T2 adds the field, T4 reads `def.ResolveDelayMinutes`; until T2 lands it, T4 uses a const default (5 min). → *confirm T2 adds the field.*
+- **D1 — ✅ RESOLVED.** T2 shipped `ResolveDelayMinutes` on `TournamentDefinition` (all sample CSVs = 30 min). T4 reads `def.ResolveDelayMinutes` directly — no T1 reopen, no fallback const. No action needed.
 - **D2 — "Ending" badge threshold.** When does Open/Playing flip to **Ending**? **Rec:** last 1 hour of the window (or a per-field config column). Tune.
 - **D3 — provisional ranking.** Rank in-progress entries by **score-to-par over completed holes** (rec — authentic live board) vs raw revealed strokes (apples-to-oranges across `Thru`). Final board is always total strokes + §6.
 - **Out of scope (noted):** *cancel → RP refund* — `ITournamentBackend` has **no Cancel method** (8 methods, none); v1 has no un-register UI → deferred. RP `int`↔`long` bridging handled by the `IRewardPointsService` adapter (guarded cast).
