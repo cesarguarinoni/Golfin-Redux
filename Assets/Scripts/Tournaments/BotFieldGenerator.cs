@@ -193,6 +193,24 @@ namespace Golfin.Tournaments
             BotFieldConfig                cfg,
             IReadOnlyList<int>            holePars)
         {
+            return RollField(def, cfg, holePars, out _);
+        }
+
+        /// <summary>
+        /// Internal test seam: pre-roll the full bot field and also expose the sampled target
+        /// bracket for each slot. The sampled target is what <see cref="SampleBracket"/> returned
+        /// for each bot — NOT the picked identity's natural level bracket. Testing this distribution
+        /// (rather than the picked identity level) is the only way to verify D2 (BracketWeights are
+        /// honored), because nearest-bracket fallback makes the identity level differ from the target.
+        /// Made internal so the test assembly can call it via InternalsVisibleTo without exposing it
+        /// to production callers; the public API remains the single-return-value overload.
+        /// </summary>
+        internal IReadOnlyList<BotCard> RollField(
+            TournamentDefinition          def,
+            BotFieldConfig                cfg,
+            IReadOnlyList<int>            holePars,
+            out IReadOnlyList<string>     sampledBrackets)
+        {
             if (def      == null) throw new ArgumentNullException(nameof(def));
             if (cfg      == null) throw new ArgumentNullException(nameof(cfg));
             if (holePars == null) throw new ArgumentNullException(nameof(holePars));
@@ -200,7 +218,8 @@ namespace Golfin.Tournaments
             int H = holePars.Count;
             if (H == 0) throw new ArgumentException("holePars must have at least one entry", nameof(holePars));
 
-            var cards = new List<BotCard>(cfg.BotCount);
+            var cards   = new List<BotCard>(cfg.BotCount);
+            var sampled = new List<string>(cfg.BotCount);
 
             // Build per-bot: bracket draw → identity pick → strokes roll → pace schedule
             // Track used identities to guarantee no duplicates within one field
@@ -220,6 +239,7 @@ namespace Golfin.Tournaments
             {
                 // --- Select target bracket (D2) ---
                 string targetBracket = SampleBracket(cfg.BracketWeights, bracketKeys, bracketRng);
+                sampled.Add(targetBracket); // expose for test seam
 
                 // --- Pick identity (no-repeat, nearest-bracket fallback) ---
                 var identRng = BotSeedFactory.IdentStream(def.Id, i);
@@ -263,6 +283,7 @@ namespace Golfin.Tournaments
                     perHoleCompletionUtc: completions));
             }
 
+            sampledBrackets = sampled;
             return cards;
         }
 
@@ -272,6 +293,13 @@ namespace Golfin.Tournaments
         /// Pure read-time projection of a single bot card at <paramref name="now"/>.
         /// Depends only on (card, now) — no mutable state. (SPEC §7 Projection purity)
         /// </summary>
+        /// <remarks>
+        /// B2 fix (iter-2): the former implementation used <c>else break</c> to short-circuit
+        /// on the strictly-increasing pace invariant. This coupled Project correctness to the
+        /// pace invariant — a non-monotonic schedule would cause under-counting. The fix is to
+        /// always scan all H completions (O(H), H ≤ 18, negligible cost) so Project is correct
+        /// independent of schedule monotonicity.
+        /// </remarks>
         public BotProjection Project(BotCard card, DateTime now)
         {
             if (card == null) throw new ArgumentNullException(nameof(card));
@@ -282,8 +310,8 @@ namespace Golfin.Tournaments
             {
                 if (card.PerHoleCompletionUtc[h] <= now)
                     thru++;
-                else
-                    break; // completions are strictly increasing so short-circuit
+                // No early break — always scan all H so correctness is independent of
+                // pace schedule monotonicity (B2 fix, iter-2).
             }
 
             int revealed = 0;
@@ -463,6 +491,18 @@ namespace Golfin.Tournaments
         /// Roll a strictly-increasing pace schedule across [botStart, endUtc].
         /// Each completion in (startUtc, endUtc]; last clamped to endUtc if jitter overruns.
         /// </summary>
+        /// <remarks>
+        /// B1 fix (iter-2): the former re-enforce-from-end pass could push completions past
+        /// endUtc when totalWindowSeconds &lt; H (adversarial short window). The fix is a two-phase
+        /// approach:
+        /// 1. Compress proportionally if overrun (preserves relative ordering), capping last = endUtc.
+        /// 2. Forward strict-increase pass: each slot must be &gt; predecessor.
+        /// 3. Backward clamp pass: each slot must be ≤ endUtc.
+        /// 4. Forward strict-increase pass again to repair any equality introduced by backward clamp.
+        /// The minimum supported window is H seconds (one second per hole). Below that, some
+        /// completions will share endUtc, which the compress guard catches by falling through to
+        /// the edge-case path where botStart &gt;= endUtc.
+        /// </remarks>
         private static IReadOnlyList<DateTime> RollPaceSchedule(
             Xorshift64  paceRng,
             DateTime    startUtc,
@@ -493,44 +533,52 @@ namespace Golfin.Tournaments
                 completions[h] = botStart.AddSeconds(cumulativeSeconds);
             }
 
-            // Compress if jitter pushed last completion past endUtc
+            // Phase 1: Compress proportionally if jitter pushed last completion past endUtc.
+            // Proportional scaling preserves relative ordering and guarantees last ≤ endUtc.
             double lastSec = (completions[H - 1] - botStart).TotalSeconds;
             if (lastSec > totalWindowSeconds)
             {
                 double scale = totalWindowSeconds / lastSec;
-                // Re-scale all completions proportionally, keeping botStart as origin
-                double running = 0.0;
                 for (int h = 0; h < H; h++)
                 {
                     double rawSec = (completions[h] - botStart).TotalSeconds;
-                    running = rawSec * scale;
-                    completions[h] = botStart.AddSeconds(running);
+                    completions[h] = botStart.AddSeconds(rawSec * scale);
                 }
-                // Ensure last == endUtc exactly (avoid floating-point overshoot)
+                // Pin last exactly to endUtc (avoid float overshoot)
                 completions[H - 1] = endUtc;
             }
 
-            // Guarantee strictly increasing (the scale step preserves ratios but guard anyway)
+            // Phase 2: Forward strict-increase pass.
+            // Ensures each completion is strictly after the previous.
+            // The minimum step is 1 second; if this pushes past endUtc we repair in phase 3.
             for (int h = 1; h < H; h++)
             {
                 if (completions[h] <= completions[h - 1])
                     completions[h] = completions[h - 1].AddSeconds(1.0);
             }
-            // Final pass: clamp to endUtc
-            for (int h = 0; h < H; h++)
+
+            // Phase 3: Backward clamp pass — ensure no completion exceeds endUtc.
+            // Work from last to first so we don't cascade forward.
+            // If the last completion is already > endUtc, clamp it; if that makes it
+            // equal to or before the predecessor we'll fix that in phase 4.
+            for (int h = H - 1; h >= 0; h--)
             {
                 if (completions[h] > endUtc)
                     completions[h] = endUtc;
             }
-            // Strictly-increasing may now be violated at clamp; re-enforce from the end
-            for (int h = H - 2; h >= 0; h--)
+
+            // Phase 4: Forward strict-increase pass again to repair any equality the clamp introduced.
+            // We work forward, accepting that very short windows compress all late holes toward endUtc.
+            for (int h = 1; h < H; h++)
             {
-                if (completions[h] >= completions[h + 1])
-                    completions[h] = completions[h + 1].AddSeconds(-1.0);
-                // If this pushes below botStart, clamp to botStart + 1s * (h+1)
-                DateTime minAllowed = botStart.AddSeconds(h + 1);
-                if (completions[h] < minAllowed)
-                    completions[h] = minAllowed;
+                if (completions[h] <= completions[h - 1])
+                {
+                    // Attempt to push it 1s forward; if that would exceed endUtc, pin to endUtc
+                    // (meaning multiple bots share the same completion time — only possible if the
+                    // window is genuinely too short for H holes at 1s/hole minimum).
+                    DateTime candidate = completions[h - 1].AddSeconds(1.0);
+                    completions[h] = candidate <= endUtc ? candidate : endUtc;
+                }
             }
 
             return completions;

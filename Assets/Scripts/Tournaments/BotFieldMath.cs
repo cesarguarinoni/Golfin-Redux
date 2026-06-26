@@ -5,6 +5,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
+// Allow the test assembly to call internal members (bracket-mix seam, iter-2).
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Golfin.Tournaments.Tests")]
 
 namespace Golfin.Tournaments
 {
