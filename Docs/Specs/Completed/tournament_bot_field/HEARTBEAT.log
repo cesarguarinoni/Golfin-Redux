@@ -1,0 +1,22 @@
+=== iter-1 kickoff baseline ===
+HEAD SHA: f75aa9c58
+DIRTY porcelain:
+ M Docs/Specs/Active/tournament_bot_field/SPEC.md
+ M Docs/Specs/Active/tournament_bot_field/STATUS.md
+=== end baseline ===
+
+2026-06-25T00:00:00 activated — reading SPEC.md and contracts
+2026-06-25T17:42:00 tests-run complete: 47/47 PASS (Golfin.Tournaments.Tests namespace, EditMode)
+2026-06-25T17:48:00 done, awaiting review — READY_FOR_SELF_REVIEW, 47/47 tests green
+
+=== iter-2 kickoff baseline ===
+HEAD SHA: e85c875d1a4d965a79dd4f5c08b9ebfff44e88ce
+DIRTY porcelain:
+ M Assets/Scenes/ShellScene.unity
+ M Docs/Specs/Active/tournament_bot_field/STATUS.md
+?? Docs/Specs/Active/tournament_bot_field/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tournament_bot_field/SELF_REVIEW.md
+=== end baseline ===
+
+2026-06-25T17:18:05Z iter-2 activated — fixing bracket-mix dead invariant + B1/B2/B3
+2026-06-25T17:33:21Z done, awaiting review — 50/50 tests PASS, IMPLEMENTER_REPORT.md written, setting READY_FOR_SELF_REVIEW
