@@ -10,7 +10,7 @@
 ## 0. What T5 is — and the boundary
 Two halves:
 1. **Schema (in `Golfin.Save`):** add `PersistedTournamentEntry` + `PersistedHoleResult` flat DTOs and a `List<PersistedTournamentEntry> tournamentEntries` field to `SaveData`; bump `schemaVersion 2→3`; add the `v2→v3` migrator step (preserve fail-hard-on-newer).
-2. **Store adapter (in `Golfin.Tournaments`):** `SaveBackedTournamentEntryStore : ITournamentEntryStore` (the seam T4 defines) that maps `EntryState`/`HoleResult`/`EntryStatus` ⇄ the persisted DTOs, reads/writes `SaveDataHost.Instance.Data.tournamentEntries`, and calls `MarkDirty()` after each mutation.
+2. **Store adapter (in `Golfin.Tournaments`):** `SaveBackedEntryStore : ITournamentEntryStore` (the seam T4 ships — `Load`/`Save(EntryState)` only) that maps `EntryState`/`HoleResult`/`EntryStatus` ⇄ the persisted DTOs, reads/writes `SaveDataHost.Instance.Data.tournamentEntries`, and calls `MarkDirty()` after each mutation.
 
 **Boundary:** T5 does **not** change tournament *logic* (that's T4) and does **not** drive the round loop (T6). It only persists/restores what T4 produces. The flat-DTO mandate is explicit in `SaveData.cs`: *"Do NOT serialize PlayerCharacterData… directly. Use the flat DTO types… to decouple storage from runtime."* — T5 follows the `PersistedCharacter` precedent exactly.
 
@@ -27,7 +27,7 @@ Two halves:
 | `EntryState` (to persist) | `TournamentId`, `CharacterId`, `PerHole : IReadOnlyList<HoleResult>`, `StartedUtc`, `LastHoleUtc : DateTime?`, `Status : EntryStatus`. |
 | `HoleResult` (to persist) | `HoleId` (string), `Strokes` (int), `TimeSeconds` (float), `CompletedUtc` (DateTime), `RngSeed` (int), `InputLog : IReadOnlyList<ShotCommand>`. **Sealed, ctor-only** → must be mirrored by a flat DTO, not serialized directly. |
 | Tests | `Assets/Scripts/Save/Tests/SaveLayerTests.cs` — extend its patterns. |
-| Seam (from T4) | `ITournamentEntryStore` in `Golfin.Tournaments` — T5 implements it disk-backed. **Asmdef: `Golfin.Tournaments → Golfin.Save`** (one-way). |
+| Seam (from T4, **on disk** `ITournamentEntryStore.cs`) | `EntryState? Load(string)` + `void Save(EntryState)` **ONLY** — no claim methods. T4 ships `InMemoryEntryStore`; **T5 adds `SaveBackedEntryStore`** behind the same seam. **Asmdef: `Golfin.Tournaments → Golfin.Save`** (one-way). |
 
 ---
 
@@ -44,7 +44,7 @@ public class PersistedTournamentEntry
     public string startedUtc = "";               // ISO-8601 (Newtonsoft DateTime ok; string keeps Save dep-free + explicit)
     public string lastHoleUtc = "";              // "" = none (maps to DateTime?)
     public int    status;                        // (int)EntryStatus — enum order frozen
-    public bool   claimed;                       // prize-claim idempotency (see D2)
+    public bool   claimed;                       // provisioned for claim idempotency — wired only per D2 (shipped seam has no claim method)
 }
 
 public class PersistedHoleResult
@@ -79,10 +79,10 @@ if (data.schemaVersion < 3)
 ---
 
 ## 4. Store adapter (in `Golfin.Tournaments`)
-`SaveBackedTournamentEntryStore : ITournamentEntryStore` — the production impl T4 injects (tests still use T4's in-memory fake).
+`SaveBackedEntryStore : ITournamentEntryStore` — the production impl T4 injects (T4 tests + v1 use the shipped `InMemoryEntryStore`). Implements exactly the real seam: `Load` + `Save`.
 - `EntryState? Load(string tid)` → find `tournamentEntries` row by id → map to `EntryState` (rebuild `HoleResult`s with empty `InputLog`; `status = (EntryStatus)row.status`; parse ISO dates; `""` lastHoleUtc → null).
 - `void Save(EntryState e)` → upsert the row (replace by `tournamentId`), map `EntryState`→`PersistedTournamentEntry`, then `SaveDataHost.Instance.MarkDirty()`.
-- **Claim persistence (D2):** seam exposes `bool IsClaimed(string tid)` / `void MarkClaimed(string tid)` → read/set `row.claimed` + `MarkDirty()`. (T4's `ClaimPrize` calls these for once-only grants.)
+- **Claim persistence (D2 — OPEN):** the shipped seam has **no** claim methods, and `EntryState` has no `claimed` field — so claim-once does **not** currently flow through persistence (it lives in T4's memory). The `claimed` column is provisioned in the DTO but only becomes usable if T4 grows the seam (or routes claim state through the entry). **Reconcile after T4 Stage 4 (ClaimPrize) lands — see D2.**
 - All reads/writes go through `SaveDataHost.Instance.Data.tournamentEntries`. No direct disk I/O — `MarkDirty()` owns the debounced atomic write.
 
 ---
@@ -100,14 +100,14 @@ if (data.schemaVersion < 3)
 
 ## 6. Staging
 - **Stage 1** — `Golfin.Save` DTOs (`PersistedTournamentEntry`, `PersistedHoleResult`) + `SaveData.tournamentEntries` + migrator `v2→v3` + migration/fail-hard/round-trip tests *(the risk surface — land + prove first)*.
-- **Stage 2** — `SaveBackedTournamentEntryStore` adapter (map ⇄, upsert, claim, `MarkDirty`) + store round-trip / upsert / claim / debounce / restart tests.
+- **Stage 2** — `SaveBackedEntryStore` adapter (map ⇄, upsert, `MarkDirty`) + store round-trip / upsert / debounce / restart tests. *(claim persistence only if D2 takes option (b).)*
 - *(Wiring into production `LocalTournamentBackend` happens at T6, or as a one-line swap once T4 lands — the seam makes it a constructor change, no logic touched.)*
 
 ---
 
 ## 7. Decisions for Cesar
 - **D1 — persist `inputLog`?** **Rec: no (v1).** Store `rngSeed` only (1 int, cheap, future-proofs server re-sim). `HoleResult.InputLog` *"may be empty (cheap v1 implementation)"* — persisting full shot logs bloats every save before any server exists to verify them. Revisit when the remote backend lands (GDD §8).
-- **D2 — claim-state shape (coordination with T4, in flight).** **Rec:** `bool claimed` on `PersistedTournamentEntry` + `IsClaimed`/`MarkClaimed` on `ITournamentEntryStore`. T4's `ClaimPrize` idempotency needs persisted claim state; the cleanest home is the entry row. → *confirm T4's `ITournamentEntryStore` carries (or T5 extends it with) the two claim methods.*
+- **D2 — claim-state persistence (OPEN; reconcile after T4 Stage 4).** The shipped `ITournamentEntryStore` is `Load`/`Save(EntryState)` **only** — no claim methods — and `EntryState` has no `claimed` field, so **claim-once currently lives in T4's memory and would NOT survive an app restart → a relaunch could double-claim a prize (RP duplication).** Options: **(a)** accept in-memory claim-once for v1 (auto-claim fires once on the result modal; T5 persists the entry only — simplest, zero seam change); **(b)** persist claim state — T4 adds a `claimed` to the persisted entry + a seam getter/setter, T5 stores it (DTO column already provisioned). **Rec:** lock when T4's `ClaimPrize` (Stage 4) lands; if relaunch-double-claim is unacceptable, take (b).
 - **D3 — DateTime as ISO string vs raw `DateTime?`.** Spec uses **ISO strings** (explicit, diff-friendly, keeps `Golfin.Save` obviously primitive). Newtonsoft handles raw `DateTime`/`DateTime?` too — say the word if you'd rather store native types and drop the parse step.
 
 ---
