@@ -1,0 +1,27 @@
+=== TournamentService PlayMode Smoke — 2026-06-26T21:51:23 ===
+
+[TournamentService] Backend ready. Tournaments=6   (Awake log, ShellScene boot)
+
+[SMOKE] === TournamentService Wireup Smoke ===
+[SMOKE] PASS: TournamentService.Instance is non-null.
+[SMOKE] PASS: Backend is non-null.
+[SMOKE] GetTournaments().Count = 6 (expected 6)
+[SMOKE] PASS: GetTournaments().Count == 6.
+[SMOKE] Testing Compose() + Register for Snapshot non-null...
+[SMOKE] Compose() returned 6 tournaments.
+[SMOKE] Calling Register("kasumigaseki_open", bankSlot=0, charId="char_james")...
+[SMOKE] Register returned entry. CharacterId=char_james
+[SMOKE] PASS: Snapshot non-null. CharId=char_james, Level=10, STR=6, CC=7, REC=6, STA=6
+[SMOKE] === ALL SMOKE CHECKS PASSED ===
+
+EditMode tests: 189 PASS / 0 FAIL (Golfin.Tournaments.Tests namespace)
+  New tests added:
+  - RpToIntContractTests (7)          ALL PASS
+  - IRewardPointsServiceContractTests (5) ALL PASS
+  - IItemRewardServiceContractTests (5)   ALL PASS
+  - IHoleParProviderContractTests (5)     ALL PASS
+
+Pre-existing stale-meta error (unrelated):
+  [Error] .meta file Assets/Scenes/Original/Rindo Course/.../Splines.prefab.meta — pre-existing, not introduced by this task.
+
+git diff HEAD -- Assets/Scripts/Physics/ = (empty — Rule 7 clean)

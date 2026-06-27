@@ -1,0 +1,70 @@
+2026-06-27T05:00:00 activated
+=== iter-1 kickoff baseline 2026-06-27T05:00:00 ===
+HEAD: c723b8bfa specs(bootstrap): tournament_backend_bootstrap
+DIRTY:
+ M Assets/Scenes/ShellScene.unity
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+===
+2026-06-27T05:00:30 read spec, confirmed APIs on disk: TimeProviderClock(ITimeProvider), HoleDatabase.GetHole(int index), RewardPointsManager.GetPoints/SpendPoints/EarnPoints/CanAfford, SaveData.itemQuantities, SaveDataHost.MarkDirty, HoleDatabaseLoader.RuntimeDatabase
+2026-06-27T05:01:00 writing 3 adapters: RewardPointsServiceAdapter, ItemRewardServiceAdapter, HoleParProviderAdapter
+2026-06-27T19:57:03 done, awaiting review
+2026-06-26T20:11:47 activated (iter-2 — ARCHITECT_REVIEW_FAIL: test gap / circular test blocker)
+=== iter-2 kickoff baseline 2026-06-26T20:11:47 ===
+HEAD: c723b8bfa6a224fc309012db549762553869c71c
+DIRTY:
+ M Assets/Scenes/ShellScene.unity
+ M Docs/Specs/Active/tournament_backend_bootstrap/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Scripts/Tournaments/Tests/TournamentAdapterTests.cs
+?? Assets/Scripts/Tournaments/Tests/TournamentAdapterTests.cs.meta
+?? Assets/Scripts/TournamentsRuntime/HoleParProviderAdapter.cs
+?? Assets/Scripts/TournamentsRuntime/HoleParProviderAdapter.cs.meta
+?? Assets/Scripts/TournamentsRuntime/ItemRewardServiceAdapter.cs
+?? Assets/Scripts/TournamentsRuntime/ItemRewardServiceAdapter.cs.meta
+?? Assets/Scripts/TournamentsRuntime/RewardPointsServiceAdapter.cs
+?? Assets/Scripts/TournamentsRuntime/RewardPointsServiceAdapter.cs.meta
+?? Assets/Scripts/TournamentsRuntime/Tests.meta
+?? Assets/Scripts/TournamentsRuntime/TournamentService.cs
+?? Assets/Scripts/TournamentsRuntime/TournamentService.cs.meta
+?? Docs/Specs/Active/tournament_backend_bootstrap/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tournament_backend_bootstrap/HEARTBEAT.log
+?? Docs/Specs/Active/tournament_backend_bootstrap/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_backend_bootstrap/REDTEAM_REVIEW.md
+?? Docs/Specs/Active/tournament_backend_bootstrap/SELF_REVIEW.md
+?? Docs/Specs/Active/tournament_backend_bootstrap/screenshots/
+===
+2026-06-26T22:53:00 iter-2: all 21 WireupTests GREEN (2+8+4+7), full suite 718 PASS 0 FAIL
+
+=== iter-2 kickoff baseline 2026-06-26T22:53:10Z ===
+c723b8bfa6a224fc309012db549762553869c71c
+ M Assets/Scenes/ShellScene.unity
+ M Docs/Specs/Active/tournament_backend_bootstrap/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Scripts/Tournaments/Tests/TournamentAdapterTests.cs
+?? Assets/Scripts/Tournaments/Tests/TournamentAdapterTests.cs.meta
+?? Assets/Scripts/TournamentsRuntime/AssemblyInfo.cs
+?? Assets/Scripts/TournamentsRuntime/AssemblyInfo.cs.meta
+?? Assets/Scripts/TournamentsRuntime/HoleParProviderAdapter.cs
+?? Assets/Scripts/TournamentsRuntime/HoleParProviderAdapter.cs.meta
+?? Assets/Scripts/TournamentsRuntime/ItemRewardServiceAdapter.cs
+?? Assets/Scripts/TournamentsRuntime/ItemRewardServiceAdapter.cs.meta
+?? Assets/Scripts/TournamentsRuntime/RewardPointsServiceAdapter.cs
+?? Assets/Scripts/TournamentsRuntime/RewardPointsServiceAdapter.cs.meta
+?? Assets/Scripts/TournamentsRuntime/Tests.meta
+?? Assets/Scripts/TournamentsRuntime/Tests/Golfin.TournamentsRuntime.Tests.asmdef
+?? Assets/Scripts/TournamentsRuntime/Tests/Golfin.TournamentsRuntime.Tests.asmdef.meta
+?? Assets/Scripts/TournamentsRuntime/Tests/TournamentServiceWireupTests.cs
+?? Assets/Scripts/TournamentsRuntime/Tests/TournamentServiceWireupTests.cs.meta
+?? Assets/Scripts/TournamentsRuntime/TournamentService.cs
+?? Assets/Scripts/TournamentsRuntime/TournamentService.cs.meta
+?? Docs/Specs/Active/tournament_backend_bootstrap/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tournament_backend_bootstrap/HEARTBEAT.log
+?? Docs/Specs/Active/tournament_backend_bootstrap/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_backend_bootstrap/REDTEAM_REVIEW.md
+?? Docs/Specs/Active/tournament_backend_bootstrap/SELF_REVIEW.md
+?? Docs/Specs/Active/tournament_backend_bootstrap/screenshots/smoke_log.txt
+===
+2026-06-26T22:55:00 done, awaiting review — 21/21 WireupTests PASS, full suite 718 PASS 0 FAIL
