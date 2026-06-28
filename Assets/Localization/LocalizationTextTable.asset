@@ -625,3 +625,43 @@ MonoBehaviour:
       avoid hitting into them. With a <color=#EEDC9A>pond on the right</color>, aiming
       a touch left is the play.
     japanese: "\u53F3\u30C9\u30C3\u30B0\u30EC\u30C3\u30B0\u306E\u30ED\u30F3\u30B0\u30DB\u30FC\u30EB\u3002\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F\u30BB\u30F3\u30BF\u30FC\u5DE6\u72D9\u3044\u3002\u30BB\u30AB\u30F3\u30C9\u30B7\u30E7\u30C3\u30C8\u306E\u969B\u3001\u524D\u306E\u7D44\u306E\u4F4D\u7F6E\u3092\u78BA\u8A8D\u3057\u3001\u6253\u3061\u8FBC\u307F\u306E\u7121\u3044\u3088\u3046\u6CE8\u610F\u3057\u3066\u4E0B\u3055\u3044\u3002\u53F3\u30B5\u30A4\u30C9\u306B\u6C60\u304C\u3042\u308B\u70BA\u3001\u5DE6\u76EE\u72D9\u3044\u304C\u826F\u3044\u3002"
+  - key: tourn.kasumigaseki
+    english: Kasumigaseki Open
+    japanese: "\u971E\u30F6\u95A2\u30AA\u30FC\u30D7\u30F3"
+  - key: tourn.hirono
+    english: Hirono Invitational
+    japanese: "\u5EE3\u91CE\u30A4\u30F3\u30D3\u30C6\u30FC\u30B7\u30E7\u30CA\u30EB"
+  - key: tourn.lomond
+    english: Lomond Championship
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30C1\u30E3\u30F3\u30D4\u30AA\u30F3\u30B7\u30C3\u30D7"
+  - key: tourn.gotemba
+    english: Gotemba Masters
+    japanese: "\u5FA1\u6BBF\u5834\u30DE\u30B9\u30BF\u30FC\u30BA"
+  - key: tourn.kisarazu
+    english: Kisarazu Cup
+    japanese: "\u6728\u66F4\u6D25\u30AB\u30C3\u30D7"
+  - key: tourn.kawana
+    english: Kawana Fuji Open
+    japanese: "\u5DDD\u5948\u5BCC\u58EB\u30AA\u30FC\u30D7\u30F3"
+  - key: tourn.venue.kasumigaseki
+    english: "Kasumigaseki Country Club \xB7 18 Holes"
+    japanese: "\u971E\u30F6\u95A2\u30AB\u30F3\u30C8\u30EA\u30FC\u5036\u697D\u90E8
+      \xB7 18\u30DB\u30FC\u30EB"
+  - key: tourn.venue.hirono
+    english: "Hirono Golf Club \xB7 18 Holes"
+    japanese: "\u5EE3\u91CE\u30B4\u30EB\u30D5\u5036\u697D\u90E8 \xB7 18\u30DB\u30FC\u30EB"
+  - key: tourn.venue.lomond
+    english: "Lomond Country Club \xB7 18 Holes"
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6
+      \xB7 18\u30DB\u30FC\u30EB"
+  - key: tourn.venue.gotemba
+    english: "Taiheyo Club Gotemba \xB7 18 Holes"
+    japanese: "\u592A\u5E73\u6D0B\u30AF\u30E9\u30D6\u5FA1\u6BBF\u5834 \xB7 18\u30DB\u30FC\u30EB"
+  - key: tourn.venue.kisarazu
+    english: "Kisarazu Higashi CC \xB7 18 Holes"
+    japanese: "\u6728\u66F4\u6D25\u6771\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6
+      \xB7 18\u30DB\u30FC\u30EB"
+  - key: tourn.venue.kawana
+    english: "Kawana Hotel Golf Course \xB7 18 Holes"
+    japanese: "\u5DDD\u5948\u30DB\u30C6\u30EB\u30B4\u30EB\u30D5\u30B3\u30FC\u30B9
+      \xB7 18\u30DB\u30FC\u30EB"

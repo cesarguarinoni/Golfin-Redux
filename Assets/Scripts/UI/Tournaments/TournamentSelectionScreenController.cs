@@ -1,24 +1,24 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
+using Golfin.Tournaments;
 
 namespace GolfinRedux.UI.Tournaments
 {
     /// <summary>
-    /// Stage 0–1 controller for the Tournament Selection screen (T7, Figma 13386:1758).
+    /// Stage 2 controller for the Tournament Selection screen (T7, Figma 13386:1758).
+    /// Binds live data from TournamentService.Instance.Backend (replaces Stage 0-1 static cards).
     ///
-    /// Scaffold only — no backend. Six static showcase cards (one per TournamentSelectionCard.CardState)
-    /// are instantiated from _cardPrefab and populated with literal static data.
-    /// Stage 2 replaces static data with ITournamentBackend.GetTournaments() (blocked on T1→T4).
-    ///
-    /// Navigation:
-    ///   SIGN UP / CONTINUE CTA → TournamentHoleSelection (card tap)
-    ///   LEADERBOARD CTA         → TournamentLeaderboard
-    ///   Filter tabs             → Stage 1 preview filters the static cards by state;
-    ///                             backend-driven filtering (real TournamentState) lands in Stage 2
+    /// iter-2 fixes (CESAR_REJECTION 2026-06-27):
+    ///   - Names + venues resolved via LocalizationManager.Get(def.NameKey) / tourn.venue.*
+    ///   - Sponsors bound from def.SponsorKey ("{SPONSOR} PRESENTS"), not hardcoded
+    ///   - BuildDateLine adds date-range prefix + middot to OPEN/ENDING/UPCOMING
+    ///   - LIVE "Hole {N}" uses max(1, count) so it never shows "Hole 0"
+    ///   - EnteredFinished shows "Round finished · Hole 18 of 18"
     /// </summary>
     public class TournamentSelectionScreenController : MonoBehaviour
     {
@@ -26,7 +26,13 @@ namespace GolfinRedux.UI.Tournaments
         [SerializeField] private ScrollRect _cardsScrollRect;
         [SerializeField] private RectTransform _cardsContent;
         [SerializeField] private TournamentSelectionCard _cardPrefab;
-        [SerializeField] private Sprite[] _courseImages;   // per-card course photos, in StaticCards order
+
+        [Tooltip("Per-tournament course photos, indexed by CSV order (legacy fallback).")]
+        [SerializeField] private Sprite[] _courseImages;
+
+        [Tooltip("Optional: id-keyed course image map. Looked up by def.Id first; " +
+                 "falls back to _courseImages[csv-order] when the id is absent.")]
+        [SerializeField] private TournamentImageEntry[] _courseImageMap;
 
         [Header("Filter Tabs")]
         [SerializeField] private Button _tabAll;
@@ -45,87 +51,25 @@ namespace GolfinRedux.UI.Tournaments
         [SerializeField] private ScreenId _leaderboardTarget   = ScreenId.TournamentLeaderboard;
 
         // ── Colours ───────────────────────────────────────────────────────────
-        private static readonly Color TabActiveColor   = new Color32(0xFF, 0xE4, 0x8B, 255); // #ffe48b gold
-        private static readonly Color TabInactiveColor = new Color32(0xC7, 0xD6, 0xEB, 255); // #c7d6eb grey-blue
+        private static readonly Color TabActiveColor   = new Color32(0xFF, 0xE4, 0x8B, 255);
+        private static readonly Color TabInactiveColor = new Color32(0xC7, 0xD6, 0xEB, 255);
         private static readonly Color UnderlineActive  = new Color32(0xFF, 0xE4, 0x8B, 255);
         private static readonly Color UnderlineHidden  = new Color32(0xFF, 0xFF, 0xFF, 0);
 
         private enum TabId { All, Open, Playing, Closed }
         private TabId _activeTab = TabId.All;
 
-        // Instantiated cards, tracked so the filter tabs can show/hide by state (Stage 1 preview).
         private readonly List<TournamentSelectionCard> _cards = new List<TournamentSelectionCard>();
 
-        // ── Static card data (Stage 0–1, replaced by backend in Stage 2) ─────
-        private struct StaticCardData
+        // ── Course image lookup ────────────────────────────────────────────────
+        [Serializable]
+        public struct TournamentImageEntry
         {
-            public TournamentSelectionCard.CardState State;
-            public string Name;
-            public string ClubLine;
-            public string DateLine;
-            public bool   IsFreeEntry;
-            public int    EntryRp;
-            public int    RewardRp;
-            public string CtaText;
+            public string Id;
+            public Sprite Sprite;
         }
 
-        private static readonly StaticCardData[] StaticCards = new StaticCardData[]
-        {
-            new StaticCardData
-            {
-                State = TournamentSelectionCard.CardState.EnteredActive,
-                Name = "Kasumigaseki Open",
-                ClubLine = "Kasumigaseki CC - 18 Holes",
-                DateLine = "Round in progress — Hole 7 of 18",
-                IsFreeEntry = false, EntryRp = 0, RewardRp = 15000,
-                CtaText = "CONTINUE"
-            },
-            new StaticCardData
-            {
-                State = TournamentSelectionCard.CardState.EnteredFinished,
-                Name = "Hirono Invitational",
-                ClubLine = "Hirono Golf Club - 18 Holes",
-                DateLine = "Round complete",
-                IsFreeEntry = false, EntryRp = 0, RewardRp = 18000,
-                CtaText = "LEADERBOARD"
-            },
-            new StaticCardData
-            {
-                State = TournamentSelectionCard.CardState.Open,
-                Name = "Lomond Championship",
-                ClubLine = "Loch Lomond GC - 18 Holes",
-                DateLine = "Jun 20 — Jun 27",
-                IsFreeEntry = true, EntryRp = 0, RewardRp = 5000,
-                CtaText = "SIGN UP"
-            },
-            new StaticCardData
-            {
-                State = TournamentSelectionCard.CardState.Ending,
-                Name = "Gotemba Masters",
-                ClubLine = "Gotemba GC - 18 Holes",
-                DateLine = "Ends in 3d 04h",
-                IsFreeEntry = false, EntryRp = 500, RewardRp = 12000,
-                CtaText = "SIGN UP"
-            },
-            new StaticCardData
-            {
-                State = TournamentSelectionCard.CardState.Upcoming,
-                Name = "Kisarazu Cup",
-                ClubLine = "Kisarazu CC - 18 Holes",
-                DateLine = "Starts in 8d",
-                IsFreeEntry = true, EntryRp = 0, RewardRp = 8000,
-                CtaText = "UPCOMING"
-            },
-            new StaticCardData
-            {
-                State = TournamentSelectionCard.CardState.Ended,
-                Name = "Kawana Fuji Open",
-                ClubLine = "Kawana Hotel GC - 18 Holes",
-                DateLine = "Ended Jun 13",
-                IsFreeEntry = true, EntryRp = 0, RewardRp = 20000,
-                CtaText = "LEADERBOARD"
-            },
-        };
+        // ── Awake / Enable / Disable ──────────────────────────────────────────
 
         private void Awake()
         {
@@ -159,6 +103,8 @@ namespace GolfinRedux.UI.Tournaments
             SelectTab(_activeTab);
         }
 
+        // ── Live RebuildCards ─────────────────────────────────────────────────
+
         private void RebuildCards()
         {
             ClearCards();
@@ -168,29 +114,72 @@ namespace GolfinRedux.UI.Tournaments
                 Debug.LogError("[TournamentSelectionScreen] _cardPrefab not wired.");
                 return;
             }
-
             if (_cardsContent == null)
             {
                 Debug.LogError("[TournamentSelectionScreen] _cardsContent not wired.");
                 return;
             }
 
-            for (int i = 0; i < StaticCards.Length; i++)
+            if (TournamentService.Instance == null)
             {
-                var data = StaticCards[i];
-                var card = Object.Instantiate(_cardPrefab, _cardsContent);
-                card.BindStatic(
-                    data.State,
-                    data.Name,
-                    data.ClubLine,
-                    data.DateLine,
-                    data.IsFreeEntry,
-                    data.EntryRp,
-                    data.RewardRp,
-                    data.CtaText);
+                Debug.LogWarning("[TournamentSelectionScreen] TournamentService not yet ready; skipping rebuild.");
+                return;
+            }
 
-                if (_courseImages != null && i < _courseImages.Length)
-                    card.SetCourseImage(_courseImages[i]);
+            var backend = TournamentService.Instance.Backend;
+            var liveBk  = backend as LocalTournamentBackend;
+            var defs    = backend.GetTournaments();
+            DateTime now = DateTime.UtcNow;
+
+            for (int i = 0; i < defs.Count; i++)
+            {
+                var def   = defs[i];
+                EntryState entry = backend.GetMyEntry(def.Id);
+                TournamentState state = liveBk != null
+                    ? liveBk.DeriveState(def, now)
+                    : DeriveStateFallback(def, entry, now);
+
+                bool nowPastEnd    = now >= def.EndUtc;
+                EntryStatus entryStatus = entry != null ? entry.Status : EntryStatus.NotEntered;
+                var cardState = MapCardState(state, entryStatus, nowPastEnd);
+                string ctaText = CardCtaText(cardState);
+
+                // ── Field derivations (iter-2) ────────────────────────────────
+                // Name: resolved through LocalizationManager; raw key never shown
+                string name = LocalizationManager.Get(def.NameKey);
+
+                // Venue line: localized via tourn.venue.<clubId>; fallback if missing
+                string venueLocKey = "tourn.venue." + def.ClubId;
+                string clubLine    = LocalizationManager.Get(venueLocKey);
+                if (string.IsNullOrEmpty(clubLine) || clubLine == venueLocKey)
+                    clubLine = def.ClubId + " · " + def.HoleSet.Count + " Holes";
+
+                string dateLine = BuildDateLine(cardState, def, entry, now);
+                bool   isFree   = def.EntryFeeRP == 0;
+                int    entryRp  = (int)def.EntryFeeRP;
+                int    rewardRp = (int)TournamentService.Instance.GetTopPrizeRP(def.Id);
+
+                // Sponsor: "{SPONSOR} PRESENTS" from CSV, not hardcoded "GOLFIN PRESENTS"
+                string sponsorLine = string.IsNullOrEmpty(def.SponsorKey)
+                    ? "GOLFIN PRESENTS"
+                    : def.SponsorKey.ToUpperInvariant() + " PRESENTS";
+
+                var card = UnityEngine.Object.Instantiate(_cardPrefab, _cardsContent);
+                card.BindStatic(
+                    cardState,
+                    name,
+                    clubLine,
+                    dateLine,
+                    isFree,
+                    entryRp,
+                    rewardRp,
+                    ctaText,
+                    def.Id,
+                    sponsorLine);
+
+                Sprite courseSprite = ResolveSprite(def.Id, i);
+                if (courseSprite != null)
+                    card.SetCourseImage(courseSprite);
 
                 card.OnCtaClicked += HandleCtaClicked;
                 _cards.Add(card);
@@ -198,6 +187,148 @@ namespace GolfinRedux.UI.Tournaments
 
             if (_cardsScrollRect != null)
                 _cardsScrollRect.verticalNormalizedPosition = 1f;
+        }
+
+        // ── MapCardState ──────────────────────────────────────────────────────
+        public static TournamentSelectionCard.CardState MapCardState(
+            TournamentState state,
+            EntryStatus entryStatus,
+            bool nowPastEnd)
+        {
+            var mapped = TournamentCardStateMapper.Map(state, entryStatus, nowPastEnd);
+            switch (mapped)
+            {
+                case TournamentCardState.Upcoming:        return TournamentSelectionCard.CardState.Upcoming;
+                case TournamentCardState.EnteredActive:   return TournamentSelectionCard.CardState.EnteredActive;
+                case TournamentCardState.EnteredFinished: return TournamentSelectionCard.CardState.EnteredFinished;
+                case TournamentCardState.Ending:          return TournamentSelectionCard.CardState.Ending;
+                case TournamentCardState.Open:            return TournamentSelectionCard.CardState.Open;
+                case TournamentCardState.Ended:           return TournamentSelectionCard.CardState.Ended;
+                default:                                  return TournamentSelectionCard.CardState.Ended;
+            }
+        }
+
+        private static string CardCtaText(TournamentSelectionCard.CardState cs)
+        {
+            switch (cs)
+            {
+                case TournamentSelectionCard.CardState.Upcoming:        return "UPCOMING";
+                case TournamentSelectionCard.CardState.EnteredActive:   return "CONTINUE";
+                case TournamentSelectionCard.CardState.EnteredFinished: return "LEADERBOARD";
+                case TournamentSelectionCard.CardState.Ending:          return "SIGN UP";
+                case TournamentSelectionCard.CardState.Open:            return "SIGN UP";
+                case TournamentSelectionCard.CardState.Ended:           return "LEADERBOARD";
+                default:                                                return "LEADERBOARD";
+            }
+        }
+
+        /// <summary>
+        /// iter-2: matches CESAR_REJECTION.md per-state table.
+        /// Separator = middot (·). Date range prefix on OPEN/ENDING/UPCOMING.
+        /// LIVE uses "·" and real hole count (never 0).
+        /// </summary>
+        private static string BuildDateLine(
+            TournamentSelectionCard.CardState cardState,
+            TournamentDefinition def,
+            EntryState entry,
+            DateTime now)
+        {
+            // "Jun 24 – Jun 27" (en-dash, no year)
+            string dateRange = def.StartUtc.ToString("MMM d") + " – " + def.EndUtc.ToString("MMM d");
+
+            switch (cardState)
+            {
+                case TournamentSelectionCard.CardState.Upcoming:
+                {
+                    TimeSpan diff = def.StartUtc - now;
+                    string countdown;
+                    if (diff.TotalDays >= 1)
+                        countdown = string.Format("Starts in {0}d", (int)diff.TotalDays);
+                    else
+                        countdown = string.Format("Starts in {0}h {1:D2}m", (int)diff.TotalHours, diff.Minutes);
+                    // "Jul 02 – Jul 05 · Starts in 8d"
+                    return dateRange + " · " + countdown;
+                }
+
+                case TournamentSelectionCard.CardState.EnteredActive:
+                {
+                    // Cesar (iter-3): keep "Round in progress" + time remaining, separated by "-".
+                    // No hole progression on the LIVE card.
+                    TimeSpan diff = def.EndUtc - now;
+                    string countdown;
+                    if (diff.TotalDays >= 1)
+                        countdown = string.Format("Ends in {0}d {1:D2}h", (int)diff.TotalDays, diff.Hours);
+                    else
+                        countdown = string.Format("Ends in {0:D2}h {1:D2}m", (int)diff.TotalHours, diff.Minutes);
+                    // "Round in progress - Ends in 2d 04h"
+                    return "Round in progress - " + countdown;
+                }
+
+                case TournamentSelectionCard.CardState.EnteredFinished:
+                {
+                    // "Round finished · Hole 18 of 18"
+                    int totalHoles = def.HoleSet.Count;
+                    return string.Format("Round finished · Hole {0} of {0}", totalHoles);
+                }
+
+                case TournamentSelectionCard.CardState.Ending:
+                {
+                    TimeSpan diff = def.EndUtc - now;
+                    string countdown;
+                    if (diff.TotalDays >= 1)
+                        countdown = string.Format("Ends in {0}d {1:D2}h", (int)diff.TotalDays, diff.Hours);
+                    else
+                        countdown = string.Format("Ends in {0:D2}h {1:D2}m", (int)diff.TotalHours, diff.Minutes);
+                    // "Jun 21 – Jun 25 · Ends in 06h 40m"
+                    return dateRange + " · " + countdown;
+                }
+
+                case TournamentSelectionCard.CardState.Open:
+                {
+                    TimeSpan diff = def.EndUtc - now;
+                    string countdown;
+                    if (diff.TotalDays >= 1)
+                        countdown = string.Format("Ends in {0}d {1:D2}h", (int)diff.TotalDays, diff.Hours);
+                    else
+                        countdown = string.Format("Ends in {0:D2}h {1:D2}m", (int)diff.TotalHours, diff.Minutes);
+                    // "Jun 24 – Jun 27 · Ends in 3d 04h"
+                    return dateRange + " · " + countdown;
+                }
+
+                case TournamentSelectionCard.CardState.Ended:
+                    return string.Format("Ended {0}", def.EndUtc.ToString("MMM d"));
+
+                default:
+                    return dateRange;
+            }
+        }
+
+        private static TournamentState DeriveStateFallback(
+            TournamentDefinition def,
+            EntryState entry,
+            DateTime now)
+        {
+            if (now < def.StartUtc) return TournamentState.Upcoming;
+            if (now >= def.EndUtc)  return entry != null ? TournamentState.Ended : TournamentState.Closed;
+            bool ending = (def.EndUtc - now).TotalHours <= 1.0;
+            if (ending) return TournamentState.Ending;
+            bool inProgress = entry != null && entry.Status == EntryStatus.InProgress;
+            return inProgress ? TournamentState.Playing : TournamentState.Open;
+        }
+
+        private Sprite ResolveSprite(string tournamentId, int csvIndex)
+        {
+            if (_courseImageMap != null)
+            {
+                foreach (var mapEntry in _courseImageMap)
+                {
+                    if (string.Equals(mapEntry.Id, tournamentId, StringComparison.Ordinal))
+                        return mapEntry.Sprite;
+                }
+            }
+            if (_courseImages != null && csvIndex >= 0 && csvIndex < _courseImages.Length)
+                return _courseImages[csvIndex];
+            return null;
         }
 
         private void ClearCards()
@@ -208,13 +339,23 @@ namespace GolfinRedux.UI.Tournaments
             {
                 var card = child.GetComponent<TournamentSelectionCard>();
                 if (card != null) card.OnCtaClicked -= HandleCtaClicked;
-                Object.Destroy(child.gameObject);
+                UnityEngine.Object.Destroy(child.gameObject);
             }
         }
 
         private void HandleCtaClicked(TournamentSelectionCard card)
         {
             if (card == null) return;
+
+            if (TournamentService.Instance != null)
+            {
+                TournamentService.Instance.SelectedTournamentId = card.TournamentId;
+                Debug.Log(string.Format("[TournamentSelectionScreen] SelectedTournamentId = {0}", card.TournamentId));
+            }
+            else
+            {
+                Debug.LogWarning("[TournamentSelectionScreen] TournamentService.Instance is null; SelectedTournamentId not set.");
+            }
 
             switch (card.State)
             {
@@ -230,11 +371,11 @@ namespace GolfinRedux.UI.Tournaments
                     break;
 
                 case TournamentSelectionCard.CardState.Upcoming:
-                    Debug.Log("[TournamentSelectionScreen] UPCOMING — CTA disabled (Stage 2 will handle Notify).");
+                    Debug.Log("[TournamentSelectionScreen] UPCOMING — CTA disabled.");
                     break;
 
                 default:
-                    Debug.LogWarning($"[TournamentSelectionScreen] Unhandled card state: {card.State}");
+                    Debug.LogWarning(string.Format("[TournamentSelectionScreen] Unhandled card state: {0}", card.State));
                     break;
             }
         }
@@ -247,8 +388,6 @@ namespace GolfinRedux.UI.Tournaments
             if (_cardsScrollRect != null) _cardsScrollRect.verticalNormalizedPosition = 1f;
         }
 
-        // Stage 1 preview: show/hide the static cards by state. Backend-driven filtering
-        // (against real TournamentState) replaces this in Stage 2.
         private void ApplyFilter()
         {
             foreach (var card in _cards)
@@ -262,19 +401,14 @@ namespace GolfinRedux.UI.Tournaments
         {
             switch (tab)
             {
-                case TabId.All:
-                    return true;
-                case TabId.Open:     // joinable now or opening soon
-                    return state == TournamentSelectionCard.CardState.Open
-                        || state == TournamentSelectionCard.CardState.Ending
-                        || state == TournamentSelectionCard.CardState.Upcoming;
-                case TabId.Playing:  // entered (in progress or round finished)
-                    return state == TournamentSelectionCard.CardState.EnteredActive
-                        || state == TournamentSelectionCard.CardState.EnteredFinished;
-                case TabId.Closed:   // finished/ended
-                    return state == TournamentSelectionCard.CardState.Ended;
-                default:
-                    return true;
+                case TabId.All:     return true;
+                case TabId.Open:    return state == TournamentSelectionCard.CardState.Open
+                                        || state == TournamentSelectionCard.CardState.Ending
+                                        || state == TournamentSelectionCard.CardState.Upcoming;
+                case TabId.Playing: return state == TournamentSelectionCard.CardState.EnteredActive
+                                        || state == TournamentSelectionCard.CardState.EnteredFinished;
+                case TabId.Closed:  return state == TournamentSelectionCard.CardState.Ended;
+                default:            return true;
             }
         }
 

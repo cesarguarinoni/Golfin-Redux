@@ -1756,3 +1756,15 @@ To populate the tournament leaderboard "like normal Rankings", the cleanest path
 - For an optional-injection / silently-defaulting seam, the regression test must **fail RED when the wire is removed**. The strongest evidence is to actually break it once and watch the test go red (the red-team did this). A green run alone doesn't prove the assertion has teeth.
 - "Can't reference Assembly-CSharp from a named test asmdef" is NOT a valid excuse to test fakes instead: a **PlayMode** test asmdef (no `overrideReferences` lockout) auto-resolves Assembly-CSharp and can reach the concrete runtime types; `InternalsVisibleTo` exposes `internal` members like `ToInt`.
 - Reviewers must check what a test TARGETS, not just that N tests pass. A smoke `script-execute` log is hand-runnable and stale-able — it is supporting evidence, never the regression gate.
+
+## Lesson AI — UI position fixes: SEE it, don't just measure it; and a LayoutGroup owns the position (tournament_screens_live_bind, 2026-06-28)
+
+Cesar rejected the leaderboard sticky/panel overlap twice while I kept declaring it fixed on a measured "gap" ("not sure if you are blind but the capture shows it clearly"). Three traps caused the misses:
+
+1. **A passing number is not proof — screenshot then ZOOM into the region.** Verification order for any position/spacing/overlap fix is: measure → capture → zoom → only then claim done. Re-verify it survives a fresh Play session.
+2. **A LayoutGroup owns child position.** The Modal had a `VerticalLayoutGroup`, so every `anchoredPosition` edit silently reverted on the next OnEnable/rebuild — the "fix" never showed. Before nudging a RectTransform, inspect the element AND its parents for `VerticalLayoutGroup`/`HorizontalLayoutGroup`/`ContentSizeFitter`/`LayoutElement`. To pin an element out of a layout group: add `LayoutElement.ignoreLayout = true`, then set anchoredPosition. Gotchas: `childControlHeight=false` makes a VLG ignore `LayoutElement.preferredHeight`; `childForceExpandHeight=true` stretches remaining children to fill freed space (so removing one child grows the others).
+3. **Measure the VISUAL element and the right nav anchor.** I measured a logical container (`Bottom97`) not the rendered panel Image, and I cleared the flat `BottomNavBar` top (≈2336) instead of the protruding center `NavTeeButton` (top ≈2258) — which is what actually clipped the sticky.
+
+**Capture to disk** with `CaptureCore.SnapPlayModeSafe` (returns a real path) so the frame can be surfaced to Cesar; MCP `screenshot-game-view` only returns inline and leaves no file to send.
+
+Canonical spacings Cesar wants on these screens: sponsor pill **24px** below the top bar; panel→sticky **24px** gap; sticky must clear the nav tee button (Figma node 13414-5598).

@@ -930,7 +930,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8162250283349808007, guid: c0f78052a09aa42bcb38699f258afd81, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1526689505}
   m_SourcePrefab: {fileID: 100100000, guid: c0f78052a09aa42bcb38699f258afd81, type: 3}
 --- !u!224 &11724960 stripped
 RectTransform:
@@ -66684,7 +66687,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 36}
+  m_AnchoredPosition: {x: 0, y: 80}
   m_SizeDelta: {x: 1074, y: 1908}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1158300303
@@ -81973,6 +81976,10 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 24
       objectReference: {fileID: 0}
+    - target: {fileID: 6726891732979033662, guid: 93756886e6c93413a815700517bd4b54, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -19
+      objectReference: {fileID: 0}
     - target: {fileID: 7098825557533566772, guid: 93756886e6c93413a815700517bd4b54, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -85731,6 +85738,31 @@ MonoBehaviour:
   m_MinWidth: -1
   m_MinHeight: -1
   m_PreferredWidth: 45
+  m_PreferredHeight: -1
+  m_FlexibleWidth: -1
+  m_FlexibleHeight: -1
+  m_LayoutPriority: 1
+--- !u!1 &1526689500 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8162250283349808007, guid: c0f78052a09aa42bcb38699f258afd81, type: 3}
+  m_PrefabInstance: {fileID: 11724959}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1526689505
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1526689500}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 1
+  m_MinWidth: -1
+  m_MinHeight: -1
+  m_PreferredWidth: -1
   m_PreferredHeight: -1
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
@@ -114435,7 +114467,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 537, y: -1003}
-  m_SizeDelta: {x: 1060, y: 1012}
+  m_SizeDelta: {x: 1060, y: 907}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2048799115
 MonoBehaviour:

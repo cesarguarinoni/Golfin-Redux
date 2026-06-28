@@ -5,6 +5,7 @@
 // so the wiring is unit-testable (the MonoBehaviour is a thin shell).
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
+using System.Collections.Generic;
 using Golfin.UI.Rankings;
 using UnityEngine;
 
@@ -37,6 +38,20 @@ namespace Golfin.Tournaments
         /// <summary>The live backend. Available after <c>Awake</c> completes.</summary>
         public ITournamentBackend Backend { get; private set; } = null!;
 
+        // ── Shared navigation handoff (T5 → T6) ───────────────────────────────
+        /// <summary>
+        /// Set by the Selection screen CTA before navigating to the Leaderboard or
+        /// HoleSelection screen. Read by the Leaderboard (and later T6 hole-select).
+        /// Null-guard all consumers.
+        /// </summary>
+        public string? SelectedTournamentId { get; set; }
+
+        // ── Prize table cache (resolved at Compose time; read by GetTopPrizeRP) ─
+        // Cached separately from the backend so the UI runtime layer can call
+        // GetTopPrizeRP without reaching into LocalTournamentBackend internals.
+        private IReadOnlyDictionary<string, PrizeTable> _prizeTables
+            = new Dictionary<string, PrizeTable>();
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         private void Awake()
@@ -50,6 +65,9 @@ namespace Golfin.Tournaments
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
+            var loader = new TournamentCsvLoader();
+            _prizeTables = loader.LoadPrizeTables();
+
             Backend = Compose();
             Debug.Log($"[TournamentService] Backend ready. Tournaments={Backend.GetTournaments().Count}");
         }
@@ -58,6 +76,41 @@ namespace Golfin.Tournaments
         {
             if (Instance == this)
                 Instance = null;
+        }
+
+        // ── Prize accessor (T5 → T6 reuse) ────────────────────────────────────
+
+        /// <summary>
+        /// Returns the top-prize RP for the tournament (rank 1, band covering rank 1).
+        /// Used by the Selection card to display the headline reward.
+        /// Returns 0 if the prize table or rank-1 band is absent.
+        /// </summary>
+        public long GetTopPrizeRP(string tournamentId)
+        {
+            if (string.IsNullOrEmpty(tournamentId)) return 0L;
+
+            // Resolve the prizeTableId from the definition
+            var defs = Backend.GetTournaments();
+            string prizeTableId = string.Empty;
+            foreach (var d in defs)
+            {
+                if (string.Equals(d.Id, tournamentId, System.StringComparison.Ordinal))
+                {
+                    prizeTableId = d.PrizeTableId;
+                    break;
+                }
+            }
+            if (string.IsNullOrEmpty(prizeTableId)) return 0L;
+
+            if (!_prizeTables.TryGetValue(prizeTableId, out var table)) return 0L;
+
+            // Find the band that covers rank 1
+            foreach (var band in table.Bands)
+            {
+                if (band.RankFrom <= 1 && band.RankTo >= 1)
+                    return band.RpReward;
+            }
+            return 0L;
         }
 
         // ── Composition root (static + testable) ──────────────────────────────

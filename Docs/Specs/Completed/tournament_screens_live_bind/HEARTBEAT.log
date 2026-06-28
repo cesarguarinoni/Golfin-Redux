@@ -1,0 +1,8 @@
+2026-06-27T07:00:00 activated — task tournament_screens_live_bind
+
+=== iter-1 kickoff baseline HEAD:5653266b999bb76e15479df92d9418f46748c436 DIRTY: M Docs/Specs/Active/tournament_screens_live_bind/STATUS.md ===
+2026-06-27T07:16:00 compile clean — CS1739 fixed (wrapper param rename pastEnd→nowPastEnd), 12/12 MapCardStateTests PASS, 201/201 Golfin.Tournaments.Tests PASS
+2026-06-27T07:40:00 done, awaiting review — video recorded (1170x2532, 19.6s), captions applied, IMPLEMENTER_REPORT.md written, 12/12 MapCardStateTests PASS, 201/201 total PASS
+
+=== iter-2 kickoff baseline HEAD:5653266b999bb76e15479df92d9418f46748c436 DIRTY: M Docs/Specs/Active/tournament_screens_live_bind/STATUS.md ===
+2026-06-27T09:00:00 iter-2 activated — CESAR_REJECTED, fixing 6 defects: names/venues localization, dates+countdown, sponsors from CSV, selection layout, leaderboard layout, leaderboard header binding

@@ -179,3 +179,15 @@ HOLE_LOMOND_15_DESC,"An <color=#EEDC9A>uphill</color> par-3. The green is hidden
 HOLE_LOMOND_16_DESC,"A short par-4. <color=#EEDC9A>Both sides of the fairway are tight</color>, so a reliable <color=#EEDC9A>tee shot</color> is essential. The area <color=#EEDC9A>behind the green</color> is also tight, so beware.",距離の短いミドルホール。左右ともに狭いので確実なティーショットが必要とされる。グリーン奥も狭いので注意。
 HOLE_LOMOND_17_DESC,"Beware the <color=#EEDC9A>pond right of the tee shot landing area</color>. Aiming just <color=#EEDC9A>left of centre</color> works well. The approach plays <color=#EEDC9A>uphill</color>, so choose your <color=#EEDC9A>club carefully</color>.",ティーショットは右に池があるので注意。センターより左狙いで行くと良い。セカンドからは打ち上げになっている為、クラブ選択を慎重に。
 HOLE_LOMOND_18_DESC,"A par-5 <color=#EEDC9A>dogleg right</color>. Aim the <color=#EEDC9A>tee shot</color> just <color=#EEDC9A>left of fairway centre</color>. Before your <color=#EEDC9A>second shot</color>, check the position of the group ahead to avoid hitting into them. With a <color=#EEDC9A>pond on the right</color>, aiming a touch left is the play.",右ドッグレッグのロングホール。ティーショットはセンター左狙い。セカンドショットの際、前の組の位置を確認し、打ち込みの無いよう注意して下さい。右サイドに池がある為、左目狙いが良い。
+tourn.kasumigaseki,Kasumigaseki Open,霞ヶ関オープン
+tourn.hirono,Hirono Invitational,廣野インビテーショナル
+tourn.lomond,Lomond Championship,ロモンドチャンピオンシップ
+tourn.gotemba,Gotemba Masters,御殿場マスターズ
+tourn.kisarazu,Kisarazu Cup,木更津カップ
+tourn.kawana,Kawana Fuji Open,川奈富士オープン
+tourn.venue.kasumigaseki,Kasumigaseki Country Club · 18 Holes,霞ヶ関カントリー倶楽部 · 18ホール
+tourn.venue.hirono,Hirono Golf Club · 18 Holes,廣野ゴルフ倶楽部 · 18ホール
+tourn.venue.lomond,Lomond Country Club · 18 Holes,ロモンドカントリークラブ · 18ホール
+tourn.venue.gotemba,Taiheyo Club Gotemba · 18 Holes,太平洋クラブ御殿場 · 18ホール
+tourn.venue.kisarazu,Kisarazu Higashi CC · 18 Holes,木更津東カントリークラブ · 18ホール
+tourn.venue.kawana,Kawana Hotel Golf Course · 18 Holes,川奈ホテルゴルフコース · 18ホール
