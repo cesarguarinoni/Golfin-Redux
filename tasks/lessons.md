@@ -1768,3 +1768,9 @@ Cesar rejected the leaderboard sticky/panel overlap twice while I kept declaring
 **Capture to disk** with `CaptureCore.SnapPlayModeSafe` (returns a real path) so the frame can be surfaced to Cesar; MCP `screenshot-game-view` only returns inline and leaves no file to send.
 
 Canonical spacings Cesar wants on these screens: sponsor pill **24px** below the top bar; panel→sticky **24px** gap; sticky must clear the nav tee button (Figma node 13414-5598).
+
+## Lesson AJ — ARCHITECT: positions/spacings/scene-anchors go IN the spec, never "reuse pattern X" (tournament_screens_live_bind, 2026-06-28)
+
+The spec told Code to "reuse the `PopulateBots` widget-bind pattern" for the leaderboard. That conveyed the *data* mapping but NOT the *positions* — the scaffold's numbers were placeholders (68/70/71/82, generic node paths), so Cesar had to hand-feed the real position/spacing numbers across iter3/4. "Reuse the scaffold" is sufficient for a data swap; it is NOT sufficient for layout, because the scaffold's positions may be placeholder.
+
+**Rule (Architect, applies to every UI/scene spec):** if a task's correctness depends on concrete positions — pixel spacings, anchor offsets, which specific node clips/aligns to which — the spec MUST inline those numbers, sourced from Figma (`get_metadata`/`get_design_context`, not a screenshot) or read from the scene, with the exact node paths. Hand the implementer the numbers; do not make them (or Cesar) derive them. A pointer to a scaffold is only valid when the scaffold's values are already canonical, which placeholder scaffolds are not. This matters most for T6 (scene-heavy hole-play loop) — extract anchors up front.
