@@ -131,6 +131,13 @@ Re-run or re-verify the invariant JSON assertions yourself (via script-execute).
 - Independently confirm: every marker `screen` ∈ viewport (off-screen = FAIL, no cross-product hand-wave), `screenSize` == 1170×2532 (an editor-window size like 2070×1912 = FAIL), `ball.screenY < flag.screenY`, `flag.world` ≠ origin, no RT/RawImage/uvRect flags, ≥2 distinct aim states.
 - Any assert weakened/redefined vs SPEC §11, or any report number that doesn't match the on-disk JSON, = automatic `ARCHITECT_REVIEW_FAIL` + log to `.claude/review_misses.log` (report-integrity, hardening rule 6).
 
+### Rules 9–11 — Figma-node fidelity (re-derive; never trust the table or prior gates)
+For a Figma-node UI task, do all three yourself this pass (the reviewer's PASS is not evidence):
+- **§9 node re-pull:** run `get_design_context` on the node and diff live px/font/gap/sprite against the NODE, not the SPEC token table (it under-specs/mis-specs). No node-pull in your own review = incomplete gate; do not advance to `ARCHITECT_REVIEW_PASS`.
+- **§10 reference diff:** side-by-side built vs `reference/` node render; paired crops per mandated element; fail on dissimilarity. A blanket "matches" = FAIL.
+- **§11 clone read-back:** read back the live `Image.sprite` GUID on every mandated-clone element; flat-colour where a sprite is required = `ARCHITECT_REVIEW_FAIL`; a claimed-but-absent clone = critical FAIL logged with iter number.
+(`PIPELINE_HARDENING.md` §9–§11. Scar: `tournament_signup_modal` — a flat-colour spriteless modal with fabricated clone PASSes cleared the self-review + reviewer gates; only Cesar's eyeballs caught it, repeatedly.)
+
 # Operating principles
 
 - **You are adversarial by design.** A PASS from you means "a hostile reviewer

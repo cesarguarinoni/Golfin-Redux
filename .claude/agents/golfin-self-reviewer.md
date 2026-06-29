@@ -130,6 +130,15 @@ If the implementer drove the feature through a synthetic/test-only button (a GO 
 ### Rule 3 — Invariant JSON must exist for world→screen features
 If SPEC has a §11 (or equivalent invariant table), the implementer's report MUST cite `*_invariants.json` and its assertions. If the file is absent or the report contains no invariant JSON citation, that is `SELF_REVIEW_FAIL`. Do not accept "the video looks right" as a substitute for the math gate.
 
+### Rule 9 — Figma node re-pull (verify the implementer pulled it, and pull it yourself)
+For a Figma-node task, the implementer's report MUST show the node was pulled this pass (node id + a value read from the node). If it only cites the SPEC token table, that's `SELF_REVIEW_FAIL`. Pull `get_design_context` yourself and reconcile against the NODE (not the table — it under-specs/mis-specs). (`PIPELINE_HARDENING.md` §9.)
+
+### Rule 10 — Reference-image diff (paired crops)
+Side-by-side the built render vs the `reference/` node render; for each mandated element paste **both crops** and judge dissimilarity. A blanket "matches Figma" with no paired crops = OVERRIDE-FAIL the row. (`PIPELINE_HARDENING.md` §10.)
+
+### Rule 11 — Clone-provenance read-back (GUID + fabrication weight)
+For every mandated-clone element, read back the live `Image.sprite` **GUID** via `script-execute` and confirm it's the real source sprite. A flat-colour fill where a sprite is required = `SELF_REVIEW_FAIL`. A report claiming a clone the live object does not have = critical FAIL per Rule 6 (log with iter number). (`PIPELINE_HARDENING.md` §11; extends the existing Clone-provenance verification in Step-2 above.)
+
 ## Verdict
 
 Write `SELF_REVIEW.md` using the template. Set the verdict to one of:

@@ -213,6 +213,28 @@ CANONICAL_SHOT_RE = re.compile(
 SURFACE_STATES = {"READY_FOR_SELF_REVIEW", "READY_FOR_ARCHITECT_REVIEW"}
 
 
+# PIPELINE_HARDENING §9-11 — a task whose SPEC references a Figma node triggers
+# the node-re-pull / reference-diff / clone-read-back reminders for both the
+# implementer and the reviewers. Detector mirrors enforce_implementer_done.py:
+# the word "figma" plus a <n>:<n>/<n>-<n> node id, or a figma.com/design URL.
+_FIGMA_NODE_RE = re.compile(r"\b\d{2,}[:\-]\d{2,}\b")
+_FIGMA_URL_RE = re.compile(r"figma\.com/(?:design|file)/", re.IGNORECASE)
+
+
+def spec_has_figma_node(task_dir):
+    """True when SPEC.md references a concrete Figma node (triggers §9-11)."""
+    spec = task_dir / "SPEC.md"
+    if not spec.exists():
+        return False
+    try:
+        text = spec.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    if _FIGMA_URL_RE.search(text):
+        return True
+    return ("figma" in text.lower()) and bool(_FIGMA_NODE_RE.search(text))
+
+
 def canonical_shot_rel(task_dir):
     """Return the repo-relative path of the iteration's canonical screenshot,
     pulled from IMPLEMENTER_REPORT.md's `Canonical screenshot:` line. None if
@@ -581,6 +603,18 @@ def main():
                 extra = " (read CESAR_REJECTION.md first)"
                 record_review_miss(task, task_dir)
             next_steps.append(f"  [{task}] STATUS={status} -> {cmd}{extra}")
+            # PIPELINE_HARDENING §9-11: Figma-node tasks must re-pull the node,
+            # diff against the reference render, and read back live sprite GUIDs —
+            # for the implementer AND every reviewer, every pass.
+            if spec_has_figma_node(task_dir):
+                next_steps.append(
+                    f"    -> 🎨 FIGMA-NODE TASK: {next_agent} MUST run get_design_context "
+                    f"on the node this pass (§9 — diff vs NODE, not the SPEC token table), "
+                    f"A/B the built render against {task}/reference/ with paired crops per "
+                    f"element (§10), and read back live Image.sprite GUIDs on mandated-clone "
+                    f"elements (§11 — flat-colour where a sprite is required = FAIL). "
+                    f"PIPELINE_HARDENING.md §9-11."
+                )
             # Cesar's standing rule: surface this iteration's review image in the
             # main chat BEFORE chaining the reviewer, so Cesar can catch issues
             # live. The orchestrator must Read+display it (non-blocking).

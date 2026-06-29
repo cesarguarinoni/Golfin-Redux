@@ -44,3 +44,44 @@
 - **Evidence the reviewer runs** (per net-new prefab/screen that should be a clone): `grep -cE "PrefabInstance|^--- !u!1001" <asset>` must be **> 0** (a clone carries nested prefab-instance blocks; a hand-built one has 0); and the named source GUID must appear in the new asset's YAML.
 - **If the named reuse source doesn't exist or isn't cleanly extractable, STOP and flag the Architect** — do **not** hand-roll a substitute and proceed. (The T7 spec told Code to reuse a "shared gold button" that had no prefab; the correct move was to flag, not rebuild.)
 - This is the UI analogue of the Rule 2 real-entry gate and the Rule 3 invariant gate: provenance is checkable mechanically, so it is a hard stop, not a judgement call.
+
+## 9. Figma node re-pull gate for Figma-referencing tasks
+- **Created:** 2026-06-29, triggered by the `tournament_signup_modal` (T6) postmortem (`Docs/Reports/POSTMORTEM_tournament_signup_modal.md` §3.A3) — the modal was built and reviewed against the SPEC's prose token table + a static reference PNG; nobody ran `get_design_context` on the node, so spec mis-specs (two separators in the node vs one wanted, font divisor ÷1.4 vs ÷1.3, pill style) went unreconciled and Cesar had to dictate the px values by hand.
+- **Applies to:** any task whose SPEC references a Figma NODE (a `figma.com/design` URL or a `<n>:<n>`/`<n>-<n>` node id alongside "figma").
+- **The gate:** at **step 0**, the implementer AND **each reviewer** MUST run `get_design_context` (or `get_metadata` → `get_design_context`) on that node and diff the **live px / font / gap / sprite** values against the **NODE**, not against the SPEC's token table. The SPEC token table is a *reconcile-against-node convenience and never the source of truth*; where node and table disagree, the node wins (or the discrepancy is surfaced to the Architect).
+- **Evidence:** the implementer report's `## Figma fidelity` section (Rule 18) and the reviewer's `ARCHITECT_REVIEW.md` must each show the node was pulled this pass — the node id + at least one value cited as read *from the node* (e.g. "node `13480:2530` gap = 48px → built 48px"). **No node-pull evidence in the report = FAIL.**
+- One `get_design_context` call at the start would have given exact values for the entire modal; this is the single highest-leverage miss in the postmortem.
+
+## 10. Reference-image diff gate (built render vs node render)
+- **Created:** 2026-06-29, triggered by the `tournament_signup_modal` postmortem (§4) — no automated step ever compared the built modal to the reference and failed on dissimilarity, so the first true A/B-against-reference happened only when Cesar looked, every single time.
+- **Applies to:** any Figma-node UI task (same detector as §9 / Rule 18).
+- **The gate:** the reviewer produces a **side-by-side**: the built render (real-flow capture at device res) next to the `reference/` node render, and **fails on dissimilarity**. Per **mandated element** (every row of the §1 reuse table / Rule 18 fidelity table) the reviewer **pastes both crops** (built crop + node crop) into `ARCHITECT_REVIEW.md` rather than asserting "looks like Figma" / "matches". A blanket "matches" with no paired crops = FAIL of that row.
+- This is the visual analogue of §9: §9 checks the numbers came from the node; §10 checks the pixels match the node.
+
+## 11. Clone-provenance read-back (extends §8)
+- **Created:** 2026-06-29, triggered by the `tournament_signup_modal` postmortem (§3.A1/A2, §5.2) — the implementer hand-built the modal from spriteless flat-colour `Image`s and the report marked the clones PASS; §8 caught *missing provenance citations* but nothing verified the cited sprite actually landed on the live object.
+- **Extends §8** (do not re-implement the §8 clone-provenance citation gate / `enforce_implementer_done.py` "Rule 19" — this is the *verification* half).
+- **The gate:** for **every mandated-clone element**, the reviewer **reads back the live `Image.sprite` GUID** on the instantiated object (`script-execute`, or `AssetDatabase.GetAssetPath(img.sprite)` → GUID) and confirms it is the real source sprite. **A flat-colour fill (`Image.sprite == <NONE>`) where a sprite is required = FAIL.**
+- **Fabricated clone provenance** — a report claiming a clone (sprite/prefab) that does not exist on the live object — is a **critical FAIL per §6**, logged to `.claude/review_misses.log` **with the iteration number** (same weight as a fabricated approval quote).
+
+## 12. Unity authoring traps — implementer checklist (C1–C8)
+- **Created:** 2026-06-29, triggered by the `tournament_signup_modal` postmortem (§3.C) — eight Unity-specific traps were each diagnosed one at a time across separate correction cycles instead of being known up front.
+- **Applies to:** all implementer work that scripts scene/prefab/UI edits. Each is a checklist item the implementer self-certifies in `IMPLEMENTER_REPORT.md`; a violation found at review = FAIL.
+  - **C1. Dirty-on-write.** A scripted `image.sprite = x` (or any field set) does **not** serialize unless the object is dirtied. Use `SerializedObject.ApplyModifiedProperties` / `EditorUtility.SetDirty` / `PrefabUtility.RecordPrefabInstancePropertyModifications` / `LoadPrefabContents`+`SaveAsPrefabAsset`. (Symptom otherwise: edits show live but "revert" on reload/play.)
+  - **C2. Modal-root-stays-active invariant.** `ModalController` shows/hides by toggling the child `modalPanel` via `SetActive`; the **root must stay active** or `Show()` can't make content active-in-hierarchy (breaks rendering AND bot/automation that searches for active buttons). Never set a modal root inactive for "clean boot".
+  - **C3. Layout-group vs fixed-size.** Dropping a fixed-size, absolutely-positioned cloned element (e.g. a card pill) into a `VerticalLayoutGroup`/`HorizontalLayoutGroup` with `childControl*=true` stretches it. Pin a `LayoutElement` (min/preferred) or use a non-controlling parent.
+  - **C4. `childForceExpandWidth/Height=true` silently widens gaps** regardless of `spacing`. For a literal Figma gap, force-expand must be **off**.
+  - **C5. Unity `Outline` component ≠ a crisp Npx border.** It renders as offset duplicate copies (heavier/softer). For a 3px panel border, prefer a sprite that carries the border; do not stack an `Outline` on top of a bordered sprite.
+  - **C6. Flat layout vs nested groups.** Per-gap Figma values (e.g. 24px only around a separator) are impossible in one flat layout group with uniform `spacing`; mirror the node's nested group structure.
+  - **C7. Edit-mode Game View does not repaint** on edit-time changes — you **cannot** verify a UI change by screenshot in edit mode. Verify in **play mode** (`feedback_check_play_mode`).
+  - **C8. The app boots through a title/PLAY screen** that manual `ScreenManager.ShowScreen` can't bypass — automated verification must drive the real entry (tap the PLAY button / `BotDriver.NavigateToHome`).
+
+## 13. Fast single-modal render harness
+- **Created:** 2026-06-29, triggered by the `tournament_signup_modal` postmortem (§3.E, §5.6) — every visual check cost a multi-minute round-trip (enter play ~11s → tap PLAY → navigate → open modal → force-activate → screenshot), and edit-mode shortcuts didn't work (C7), so UI-fidelity iteration was punishingly slow.
+- **Requirement:** a lightweight single-screen capture harness — **boot → open one modal/screen → 1170×2532 screenshot**, without driving the full gameplay loop — analogous to the loop bot but scoped to one surface. UI-fidelity tasks use it for round-trips instead of a full loop record.
+- Until it exists, the implementer must still verify in play mode (C7) via the real entry (C8); this rule tracks the missing tooling so fidelity iteration stops being the bottleneck.
+
+## 14. Orchestrator scene-mutation guardrail
+- **Created:** 2026-06-29, triggered by the `tournament_signup_modal` postmortem (§3.D1) — a render-isolation/probe script deactivated `ScreensRoot`, a buggy revert missed it, and the orchestrator **saved** the broken scene, booting the whole app to an empty menu.
+- **The guardrail (orchestrator-side, like CLAUDE.md Rule 12 for commits):** never `scene-save` after a render-isolation / probe / force-activate mutation without first **diffing GameObject active-state against HEAD** (`git show HEAD:<scene>` → compare `m_IsActive` of touched roots, or re-assert the boot-critical containers — `ScreensRoot`, `PersistentUI`, the active screen — are in their committed state). If any boot-critical container's active-state diverges from HEAD unintentionally, restore it before saving.
+- Probe mutations (canvas overrides, force-activations, deactivating screens to isolate a render) are **transient** — they must be reverted, not persisted. Prefer not saving at all after a probe; if a save is required, run the active-state diff first.

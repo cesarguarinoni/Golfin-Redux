@@ -118,6 +118,15 @@ For any task with a §11 invariant table (or equivalent), check that `*_invarian
 - If there is no validator, re-compute by hand from the raw coords: every marker `screen` point MUST be inside `[0,screenSize.w]×[0,screenSize.h]` (off-screen = FAIL — a cross-product/collinearity that ignores viewport is invalid), `screenSize` MUST be device res (1170×2532, not an editor-window size), orientation `ball.screenY < flag.screenY`, flag.world ≠ origin, `hasRenderTexture/hasRawImage/hasUvRectFlip` all false, ≥2 distinct aim states.
 - If the implementer **redefined or weakened any assert** vs the SPEC §11 table (e.g. replaced viewport-containment with a tautology), that is an automatic `ARCHITECT_REVIEW_FAIL` + log to `.claude/review_misses.log`, regardless of the booleans being `true`.
 
+### Rule 9 — Figma node re-pull (you, this pass)
+For a Figma-node task, you MUST run `get_design_context` on the node **yourself this pass** and diff the live px/font/gap/sprite against the NODE — not the SPEC token table (it under-specs/mis-specs). Your `## Figma fidelity` rows must cite at least one value read *from the node* this pass (e.g. "node `13480:2530` gap=48 → built 48"). No node-pull evidence in your review = your gate is incomplete; do not advance to `READY_FOR_REDTEAM`. (`PIPELINE_HARDENING.md` §9.)
+
+### Rule 10 — Reference-image diff (paired crops, fail on dissimilarity)
+Produce a side-by-side: your built render vs the `reference/` node render. For **each mandated element** (every §1 reuse-table / fidelity-table row), paste **both crops** (built + node) into `ARCHITECT_REVIEW.md` and judge dissimilarity. A blanket "matches" / "looks like Figma" with no paired crops = FAIL of that row. (`PIPELINE_HARDENING.md` §10; nothing ever A/B'd `tournament_signup_modal` against the reference until Cesar did, every time.)
+
+### Rule 11 — Clone-provenance read-back (extends §8/Step 2c; GUID + fabrication weight)
+For every mandated-clone element, read back the live `Image.sprite` **GUID** (`AssetDatabase.GetAssetPath(img.sprite)` → GUID via `script-execute`) and confirm it is the real source sprite. A flat-colour fill (`Image.sprite == <NONE>`) where a sprite is required = `ARCHITECT_REVIEW_FAIL`. A report that **claims a clone the live object does not have** is a **critical FAIL per Rule 6** — log to `.claude/review_misses.log` with the iter number. (`PIPELINE_HARDENING.md` §11.)
+
 # Operating principles
 
 - **Respect existing work.** Don't suggest rewrites unless the existing approach is fundamentally broken. Prefer minimal targeted changes.

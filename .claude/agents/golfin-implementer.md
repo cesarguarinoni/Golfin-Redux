@@ -66,6 +66,21 @@ Every claim in `IMPLEMENTER_REPORT.md` must be backed by a **visible tool result
 - Leave `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` untouched unless the SPEC explicitly requires it.
 - Confirm with `git diff HEAD -- Assets/Scripts/Physics/` in your report: must show NO diff.
 
+### Rule 9 — Figma node re-pull at step 0 (Figma-referencing tasks)
+If `SPEC.md` references a Figma NODE (a `figma.com/design` URL or a `<n>:<n>`/`<n>-<n>` node id with "figma"), your **first step** is to run `mcp__figma__get_design_context` on that node and read the **live px / font / gap / sprite** values. Diff against the **NODE**, not the SPEC's token table — the table is a reconcile-against-node convenience and can under-specify or mis-spec (wrong separator count, wrong font divisor, wrong pill style). Where node and table disagree, the node wins (or surface the discrepancy). Your `## Figma fidelity` section MUST show the node was pulled this pass: cite the node id + at least one value read *from the node* (e.g. "node `13480:2530` gap=48px → built 48px"). No node-pull evidence = FAIL. (`PIPELINE_HARDENING.md` §9. Scar: `tournament_signup_modal` was built off prose + a static PNG; Cesar had to dictate px by hand.)
+
+### Rule 12 — Unity authoring traps (C1–C8) — self-certify in the report
+When you script scene/prefab/UI edits, self-certify each of these (a violation found at review = FAIL):
+- **C1 dirty-on-write:** a scripted `image.sprite = x` does NOT serialize unless dirtied — use `SerializedObject.ApplyModifiedProperties` / `EditorUtility.SetDirty` / `LoadPrefabContents`+`SaveAsPrefabAsset`. (Else edits show live but "revert" on reload.)
+- **C2 modal-root-stays-active:** `ModalController` shows/hides by toggling the child `modalPanel`; the **root must stay active**. Never set a modal root inactive for "clean boot" — it breaks `Show()` and any bot searching for active buttons.
+- **C3 layout-group vs fixed-size:** a fixed-size cloned element in a `*LayoutGroup` with `childControl*=true` gets stretched — pin a `LayoutElement` (min/preferred) or use a non-controlling parent.
+- **C4 `childForceExpandWidth/Height=true` widens gaps** regardless of `spacing` — turn it off for a literal Figma gap.
+- **C5 `Outline` component ≠ crisp Npx border** — prefer a sprite that carries the border; don't stack `Outline` on a bordered sprite.
+- **C6 flat layout vs nested groups:** per-gap Figma values (e.g. 24px only around a separator) need the node's nested group structure, not one flat group with uniform spacing.
+- **C7 edit-mode Game View does not repaint** — verify UI changes in **play mode**, never by an edit-mode screenshot.
+- **C8 the app boots through a title/PLAY screen** — automated verification must drive the real entry (tap PLAY / `BotDriver.NavigateToHome`), not bare `ScreenManager.ShowScreen`.
+(`PIPELINE_HARDENING.md` §12. Each trap cost a separate correction cycle on `tournament_signup_modal`.)
+
 ### Iteration shape label (Rule 1 — circuit-breaker)
 In `IMPLEMENTER_REPORT.md`, include a metadata line:
 ```
