@@ -1,0 +1,13 @@
+=== iter-1 kickoff baseline ===
+HEAD: 6420668fb Spec: stamina_model (Stamina Economy Phase 1) + AI_CONTEXT refresh (2026-06-29 23:34 JST)
+DIRTY porcelain:
+?? Docs/Specs/Active/stamina_model/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/stamina_model/HEARTBEAT.log
+?? Docs/Specs/Active/stamina_model/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/stamina_model/SELF_REVIEW.md
+?? Docs/Specs/Active/stamina_model/STATUS.md
+===============================
+2026-06-29T23:40:00 activated — reading SPEC + design docs + CSV loader pattern
+2026-06-29T23:50:00 compile clean — running EditMode tests
+2026-06-29T23:55:00 28/28 tests pass — writing IMPLEMENTER_REPORT
+2026-06-29T23:58:00 done, awaiting review
