@@ -1,0 +1,17 @@
+{
+    "name": "Golfin.Core.Stamina.Tests",
+    "rootNamespace": "Golfin.Core.Stamina.Tests",
+    "references": [
+        "Golfin.Core.Stamina"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

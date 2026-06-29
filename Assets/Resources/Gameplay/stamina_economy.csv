@@ -1,0 +1,13 @@
+key,value,notes
+drain_per_hole,8,Flat Condition points drained at each hole completion (per-hole not per-shot)
+tank_base,60,Base MaxCondition before the Stamina stat is added
+tank_per_stamina_point,6,Added MaxCondition per point of the Stamina stat (tank size)
+regen_base_per_hour,12,Condition points regained per real hour at Recovery stat 0
+regen_per_recovery_point,2,Added Condition points/hour per point of the Recovery stat
+comfort_threshold_pct,0.70,At/above this Condition% the penalty is zero (early holes negligible)
+floor_penalty,0.33,Max stat reduction at empty Condition; effective stat = ~67% of base
+penalty_curve_exp,1.6,Ramp shape between comfort edge and empty (>1 = gentle then steeper)
+degraded_stats,Strength;ClubControl,Stats reduced by low Condition (semicolon-separated)
+meter_high_pct,0.60,At/above this Condition% the roster Stamina meter shows blue
+meter_mid_pct,0.30,Between mid and high the meter shows yellow; below mid shows red
+low_condition_flag_pct,0.25,Below this Condition% the portrait low-stamina icon shows
