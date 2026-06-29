@@ -252,14 +252,16 @@ public static event System.Action? ModalStackEmptied;   // fires on 1→0 transi
 
 ---
 
-## 7. OPEN DECISIONS (Cesar's veto)
+## 7. DECISIONS (Cesar's veto)
 
-- **O-1 — Eligible-screen set.** Spec includes Home + TournamentSelection + TournamentHoleSelection + TournamentLeaderboard. Confirm whether TournamentLeaderboard should be included (it's where last-hole submit currently lands — natural claim-on-arrival) or excluded.
+> **LOCKED 2026-06-29:** O-1 (as specced, incl. TournamentLeaderboard) · claim-only (CLAIM is the sole exit) · O-6 (one-at-a-time, oldest→newest). O-2 / O-3 / O-4 / O-5 defaults stand unless overridden.
+
+- **O-1 — Eligible-screen set. ✅ CONFIRMED** — Home + TournamentSelection + TournamentHoleSelection + TournamentLeaderboard (as specced).
 - **O-2 — Gradient sponsor text.** Node renders "GOLFIN PRESENTS" as gradient-filled text (white→#828fa1 via #d1d6e0@40%). If the live Signup modal uses a flat color for the same element, match Signup (flat #d1d6e0) for consistency; gradient text needs a TMP shader. Default: **match Signup**.
 - **O-3 — Tie rank display.** `result.IsTie` available. Node shows plain "RANK #1". Default v1: plain `RANK #N`, ignore tie marker. Alt: `RANK #N (T)`.
 - **O-4 — Safety-tick interval.** Default 30s. (Covers resolve-while-idle-on-Home. Lower = snappier, higher = cheaper.)
 - **O-5 — Who calls ClaimPrize.** Default: the modal's `OnClaim` calls `ClaimPrize` + notifies the presenter to add the session-claimed id. Alt: presenter owns the claim (modal raises a `Claimed` callback). Default keeps the modal self-contained like Signup.
-- **O-6 — Multiple unclaimed prizes.** Spec presents oldest-EndUtc first, then chains to the next on close. Confirm one-at-a-time is desired (vs. a "you have N prizes" summary).
+- **O-6 — Multiple unclaimed prizes. ✅ CONFIRMED** — present one-at-a-time, oldest-EndUtc first → chain to the next on each close (§5.1/§5.3). No "you have N prizes" summary.
 
 ---
 
