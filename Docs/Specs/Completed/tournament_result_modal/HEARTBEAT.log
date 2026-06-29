@@ -1,0 +1,45 @@
+=== iter-1 kickoff baseline ===
+HEAD SHA: c341d7503a114fd1006b48be42a804fa111dd1a7
+DIRTY porcelain:
+?? Docs/Specs/Active/tournament_result_modal/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tournament_result_modal/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_result_modal/SELF_REVIEW.md
+?? Docs/Specs/Active/tournament_result_modal/STATUS.md
+?? Docs/Specs/Active/tournament_result_modal/reference/
+=== end baseline ===
+
+2026-06-29T09:46:00Z activated
+2026-06-29T09:49:00Z reading SPEC, ModalController, ScreenManager, TournamentSignupModal prefab
+2026-06-29T09:52:00Z Figma node 13498:2067 pulled — confirmed layout matches SPEC §4.3
+2026-06-29T09:53:00Z verifying divisors from live Signup prefab: SponsorText 24px→20, TitleText 42px→32, VenueText 22px→22 (1:1), DateRange 40px→30, RewardText 40px→28, CONFIRM text 66px→50.8
+2026-06-29T09:54:00Z writing C# files: TournamentResultModalController, TournamentResultPresenter, infra edits to ModalController and ScreenManager
+2026-06-29T09:54:29Z Unity Editor is not running (shut down — confirmed by ps/lsof/Editor.log). Cannot verify compile via MCP. Continuing with all file authoring; will start Unity and verify compile + build prefab when available. Prewriting prefab builder script.
+2026-06-29T10:20:00Z Unity launched; compile check passed (no error CS in Editor.log; warnings-only)
+2026-06-29T10:25:00Z TournamentResultModalBuilder.BuildPrefab() executed; all 9 SerializeFields wired (V3CHECK confirms)
+2026-06-29T10:30:00Z ShellScene wired: prefab instantiated, TournamentResultPresenter added, _resultModal assigned; scene saved
+2026-06-29T10:35:00Z Play mode entered; modal shown with test data (RANK #3, 12000 RP); screenshot captured 1170x2532
+2026-06-29T10:38:00Z done, awaiting review
+=== iter-2 kickoff baseline 2026-06-29T10:45:00Z ===
+HEAD: c341d7503a114fd1006b48be42a804fa111dd1a7
+DIRTY: M Assets/Scenes/ShellScene.unity | M Assets/Scripts/UI/Inventory/BagClubModalController.cs | M Assets/Scripts/UI/Inventory/ClubLevelUpModalController.cs | M Assets/Scripts/UI/Inventory/ItemUseModalController.cs | M Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs | M Assets/Scripts/UI/Modals/ModalController.cs | M Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs | M Assets/Scripts/UI/ScreenManager.cs | M Assets/Scripts/UI/Tournaments/TournamentSignupModalController.cs | ?? TournamentResultModal.prefab | ?? TournamentResultModalController.cs | ?? TournamentResultPresenter.cs | ?? TournamentResultModalBuilder.cs
+SELF_REVIEW_FAIL — fixing: (1) real-entry capture, (2) panel width, (3) capture-method citation
+=== end iter-2 baseline ===
+2026-06-29T10:45:00Z iter-2 started — fixing panel width (primary) then real-entry orchestrator path
+2026-06-29T10:29:34Z iter-2 resumed from context-compaction; starting real-entry verification
+2026-06-29T10:43:03Z iter-2 complete — Panel 978x605, RankText Normal, real-entry capture via TournamentResultPresenter, CLAIM exercised on real widget, containment inside=True
+2026-06-29T10:43:19Z done, awaiting review
+=== iter-3 kickoff baseline 2026-06-29T13:05:00Z ===
+HEAD: c341d7503a114fd1006b48be42a804fa111dd1a7
+DIRTY: M Assets/Scenes/ShellScene.unity | M Assets/Scripts/UI/Inventory/BagClubModalController.cs | M Assets/Scripts/UI/Inventory/ClubLevelUpModalController.cs | M Assets/Scripts/UI/Inventory/ItemUseModalController.cs | M Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs | M Assets/Scripts/UI/Modals/ModalController.cs | M Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs | M Assets/Scripts/UI/ScreenManager.cs | M Assets/Scripts/UI/Tournaments/TournamentSignupModalController.cs | ?? TournamentResultModal.prefab | ?? TournamentResultModalController.cs | ?? TournamentResultPresenter.cs | ?? TournamentResultModalBuilder.cs
+CESAR_REJECTED — adding backdrop scrim to TournamentResultModal, wiring ModalController.backdrop field
+=== end baseline ===
+2026-06-29T14:02:00Z iter-3 IMPLEMENTER_REPORT updated — backdrop pixel comparison confirms dimming, all acceptance items PASS, setting READY_FOR_SELF_REVIEW
+2026-06-29T14:02:00Z done, awaiting review
+=== iter-4 kickoff baseline 2026-06-29T11:32:12Z ===
+HEAD: c341d7503a114fd1006b48be42a804fa111dd1a7
+DIRTY: Assets/Scenes/ShellScene.unity Assets/Scripts/UI/Inventory/BagClubModalController.cs Assets/Scripts/UI/Inventory/ClubLevelUpModalController.cs Assets/Scripts/UI/Inventory/ItemUseModalController.cs Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs Assets/Scripts/UI/Modals/ModalController.cs Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs Assets/Scripts/UI/ScreenManager.cs Assets/Scripts/UI/Tournaments/TournamentSignupModalController.cs Assets/Prefabs/UI/Modals/TournamentResultModal.prefab Assets/Prefabs/UI/Modals/TournamentResultModal.prefab.meta Assets/Scripts/Editor/TournamentResultModalBuilder.cs Assets/Scripts/Editor/TournamentResultModalBuilder.cs.meta Assets/Scripts/UI/Tournaments/TournamentResultModalController.cs Assets/Scripts/UI/Tournaments/TournamentResultModalController.cs.meta Assets/Scripts/UI/Tournaments/TournamentResultPresenter.cs Assets/Scripts/UI/Tournaments/TournamentResultPresenter.cs.meta Docs/Specs/Active/tournament_result_modal/ARCHITECT_REVIEW.md Docs/Specs/Active/tournament_result_modal/CESAR_REJECTION.md Docs/Specs/Active/tournament_result_modal/HEARTBEAT.log Docs/Specs/Active/tournament_result_modal/IMPLEMENTER_REPORT.md Docs/Specs/Active/tournament_result_modal/REDTEAM_REVIEW.md Docs/Specs/Active/tournament_result_modal/SELF_REVIEW.md Docs/Specs/Active/tournament_result_modal/STATUS.md Docs/Specs/Active/tournament_result_modal/reference/Prize_modal_13498-2067.png Docs/Specs/Active/tournament_result_modal/screenshots/figma-reference.png Docs/Specs/Active/tournament_result_modal/screenshots/iter2_item_branch_01.png Docs/Specs/Active/tournament_result_modal/screenshots/iter2_real_entry_01.png Docs/Specs/Active/tournament_result_modal/screenshots/iter2_v2_fixed_panel.png Docs/Specs/Active/tournament_result_modal/screenshots/iter3_backdrop_canonical.png Docs/Specs/Active/tournament_result_modal/screenshots/tournament_result_modal_01.png 
+SELF_REVIEW_FAIL — fixing: backdrop Canvas sortingOrder=900 so scrim covers PersistentUI nav bars
+=== end iter-4 baseline ===
+2026-06-29T11:32:12Z iter-4 started — adding Canvas(overrideSorting=true,sortingOrder=900)+GraphicRaycaster to TournamentResultModal root
+2026-06-29T11:44:02Z iter-4 RaycastAll probe: all 4 points BLOCKED=True (DimBackground). Canvas so=900 confirmed working. Copying screenshot, writing report.
+2026-06-29T11:47:56Z IMPLEMENTER_REPORT updated for iter-4, done, awaiting review
