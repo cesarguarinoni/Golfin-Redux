@@ -122,8 +122,10 @@ namespace GolfinRedux.UI.Tournaments
             }
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            // Call base FIRST so the OpenModalCount leak guard fires (S2)
+            base.OnDisable();
             // Safety restore if disabled before Hide() completes
             for (int i = 0; i < _panelsToHide.Count && i < _panelWasActive.Count; i++)
             {

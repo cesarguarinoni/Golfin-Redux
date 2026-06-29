@@ -52,8 +52,10 @@ namespace Golfin.Inventory
                 filterBar.OnFilterChanged += OnFilterChanged;
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            // Call base FIRST so the S2 OpenModalCount leak guard fires.
+            base.OnDisable();
             if (filterBar != null)
                 filterBar.OnFilterChanged -= OnFilterChanged;
         }

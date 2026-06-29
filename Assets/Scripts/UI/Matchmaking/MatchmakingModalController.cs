@@ -158,8 +158,10 @@ namespace Golfin.UI.Matchmaking
             if (homeNextHolePanel != null) homeNextHolePanel.SetActive(_nextHoleWasActive);
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            // Call base FIRST so the S2 OpenModalCount leak guard fires.
+            base.OnDisable();
             // Safety net: if modal is killed without going through Hide(),
             // restore home-screen elements to their prior active-state rather than
             // unconditionally forcing true (which resurrects NextHolePanel).

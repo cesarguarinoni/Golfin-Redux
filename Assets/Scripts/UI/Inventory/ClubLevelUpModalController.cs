@@ -138,8 +138,10 @@ namespace Golfin.Inventory
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            // Call base FIRST so the S2 OpenModalCount leak guard fires.
+            base.OnDisable();
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
         }
 

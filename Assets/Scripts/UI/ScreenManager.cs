@@ -58,6 +58,12 @@ namespace GolfinRedux.UI
         /// <summary>Returns the currently active ScreenId.</summary>
         public ScreenId CurrentScreen => _currentScreen;
 
+        /// <summary>
+        /// Fired at the end of every ApplyScreen call (after SetActive calls and _currentScreen update).
+        /// Used by TournamentResultPresenter to know when an eligible screen is active.
+        /// </summary>
+        public static event System.Action<ScreenId>? ScreenChanged;
+
         private void Awake()
         {
             if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -200,6 +206,10 @@ namespace GolfinRedux.UI
                     Golfin.UI.PersistentUIManager.Instance.HideBars();
                 }
             }
+
+            // S1 — notify TournamentResultPresenter (and any other listeners) that the
+            // active screen has changed. Fired AFTER all SetActive calls and _currentScreen update.
+            ScreenChanged?.Invoke(screenId);
         }
     }
 }
