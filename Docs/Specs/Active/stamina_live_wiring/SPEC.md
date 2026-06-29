@@ -62,7 +62,7 @@ The linear model **violates locked design decision #3** (early holes negligible)
 - **Option C — RECOMMENDED — `StaminaModel` is the single source of truth.** Pre-degrade Strength+ClubControl at the seam via `StaminaModel.EffectiveStat(raw, conditionPct)` (`double` math, runs **outside** the deterministic sim, yields an int), and **neutralize** the resolver's stamina multiplier (`stamina_floor_fraction = 1.0`) so it passes the already-degraded stat through untouched. Honors the comfort curve exactly, keeps the sim deterministic (int input), no double-dip, one model everywhere.
   - *Live-only caveat:* the `double` penalty runs outside the replayable sim. Fine for solo/versus (no re-sim). For tournament anti-cheat re-sim (Phase 3) the same formula must be reproducible server-side — documented, deferred to Phase 3.
 
-> **This spec is written assuming Option C.** If you pick A or B, only §6–§7 change; §3–§5 (boot/tank/drain/regen/persist) are identical.
+> **✅ LOCKED 2026-06-30 (Cesar): Option C.** `StaminaModel` is the single source of truth — pre-degrade Strength+ClubControl at the seam via `StaminaModel.EffectiveStat`, and neutralize the resolver (`stamina_floor_fraction = 1.0`) so degradation lives in exactly one place. §6–§7 are **authoritative as written**; Options A and B are NOT in play (do not implement either).
 
 **D2 — regen accrual model (default: load **and** save boundaries).** The persisted timestamp = "as of when `conditionEnergy` was last authoritative." Accrue regen to *now* both when loading and when persisting, so frequent unrelated saves never silently reset the regen clock and lose offline recovery. (A single shared `AccrueRegen(playerData, nowUtc)` helper.)
 
@@ -70,7 +70,7 @@ The linear model **violates locked design decision #3** (early holes negligible)
 
 **D4 — boot mechanism (default: `[RuntimeInitializeOnLoadMethod(BeforeSceneLoad)]`).** Matches the convention already used in 8 files (e.g., `SfxBus`). No scene edit. Loads config + wires the hole-complete subscription once.
 
-**D5 — does versus (1v1) drain the live pool? (default: YES).** `GameSession.OnHoleComplete` fires for solo **and** versus (tournament uses the separate `OnTournamentHoleComplete`). Both are the live character playing a real hole → both drain. If you want versus exempt, gate on `!GameSession.IsVersus`.
+**D5 — does versus (1v1) drain the live pool? ✅ LOCKED 2026-06-30: YES** (default kept). `GameSession.OnHoleComplete` fires for solo **and** versus (tournament uses the separate `OnTournamentHoleComplete`). Both are the live character playing a real hole → both drain. If you want versus exempt, gate on `!GameSession.IsVersus`.
 
 **D6 — "now" source for regen (default: device `DateTime.UtcNow`, with `NetworkTimeProvider` if already initialized).** Network UTC (from `leaderboard_wiring`) is preferable for anti-clock-cheat but may not be ready at first load; fall back to device UTC. v1 acceptable; harden in a later pass.
 
