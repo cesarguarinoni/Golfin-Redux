@@ -1,0 +1,65 @@
+2026-06-28T08:04:11 activated
+2026-06-28T08:08:30 figma-reference saved, beginning implementation
+=== iter-1 kickoff baseline ===
+HEAD: c7afa9633 docs(tournaments): T6 tournament_round_loop SPEC
+DIRTY: ?? Docs/Specs/Active/tournament_round_loop/HEARTBEAT.log ?? Docs/Specs/Active/tournament_round_loop/STATUS.md ?? Docs/Specs/Active/tournament_round_loop/screenshots/
+=== end baseline ===
+2026-06-28T10:24:00 compile clean — asmdef hop fixed, TournamentRoundContext in Golfin.Gameplay.TournamentContext, all T6 runtime files compile
+2026-06-28T10:32:00 TournamentSignupModal prefab built; wiring ShellScene
+2026-06-28T10:38:00 ShellScene wiring complete: card templates, signupModal, TournamentRoundHandler GO added. Scene saved.
+2026-06-28T08:53:25 session resumed; all tests pass (742 EditMode, 6 PlayMode); proceeding to video deliverable §12.1
+2026-06-28T09:38:51 running EditMode tests
+2026-06-28T11:48:00 writing IMPLEMENTER_REPORT.md; video §12.1 = FAIL (real game loop requires Cesar manual play)
+2026-06-28T12:15:00 IMPLEMENTER_REPORT.md written; 2 FAILs (§12.1 video + locked card labels); setting STATUS to READY_FOR_ARCHITECT_REVIEW
+done, awaiting review
+2026-06-28T12:20:00 coordinator message received: fix locked card labels + drive §12.1 video via reflection-method-call (no Physics/ edits needed)
+2026-06-28T12:26:00 locked card label fix confirmed — RebuildCards fallback to FindFirstObjectByType; 18 holes bind correctly; screenshot captured; 742 EditMode tests pass
+2026-06-28T12:32:00 IMPLEMENTER_REPORT.md updated — FAIL 2 (locked labels) flipped to PASS; FAIL 1 (§12.1 video) remains; STATUS=READY_FOR_ARCHITECT_REVIEW
+2026-06-28T12:32:00 done, awaiting review
+2026-06-28T13:44:47 activated — iter-3 start (video deliverable only)
+=== iter-3 kickoff baseline ===
+HEAD: c7afa9633 docs(tournaments): T6 tournament_round_loop SPEC
+DIRTY: M Assets/Resources/Data/tournaments.csv M Assets/Scenes/ShellScene.unity M Assets/Scripts/Gameplay/Input/Golfin.Gameplay.Input.asmdef M Assets/Scripts/Gameplay/Input/ShotController.cs M Assets/Scripts/Gameplay/Loop/Golfin.Gameplay.Loop.asmdef M Assets/Scripts/Gameplay/Loop/Session/GameSession.cs M Assets/Scripts/Gameplay/Tests/Golfin.Gameplay.Tests.asmdef M Assets/Scripts/Gameplay/Tests/PlayMode/Golfin.Gameplay.PlayMode.Tests.asmdef M Assets/Scripts/Gameplay/Tests/PlayMode/LiveStatProviderHostPlayModeTests.cs M Assets/Scripts/LiveStatProviderHost.cs M Assets/Scripts/Physics/Viewer/HoleCompletionBridge.cs M Assets/Scripts/Tournaments/Tests/TournamentCsvLoaderTests.cs M Assets/Scripts/UI/Tournaments/TournamentHoleSelectionScreenController.cs M Assets/Scripts/UI/Tournaments/TournamentSelectionScreenController.cs ?? Assets/Prefabs/UI/Modals/TournamentSignupModal.prefab ?? Assets/Scripts/Gameplay/TournamentContext/ ?? Assets/Scripts/UI/Tournaments/TournamentRoundHandler.cs ?? Assets/Scripts/UI/Tournaments/TournamentSignupModalController.cs
+=== end baseline ===
+2026-06-28T13:44:47 reading ARCHITECT_REVIEW.md and planning TournamentLoopCaptureHarness
+2026-06-28T13:55:00 wrote TournamentLoopCaptureHarness.cs + asmdef, triggering compile check
+2026-06-28T15:55:00 session resumed after compaction; save state clean (tournamentEntries.Count=0); launching dry run
+2026-06-28T17:45:00 session resumed; identified TournamentTempEntry button (TMP='TOURNAMENTS (TEMP)'); updated harness; launching dry run
+2026-06-28T18:05:00 dry run progressing: bot in hole shooting TOURNAMENT shots
+2026-06-28T14:16:06 fixed harness: click LeaderboardButton after hole 2 (kasumigaseki=18 holes, manual nav needed); cleared save
+2026-06-28T14:21:32 dry run 2 PASSED (LeaderboardButton fix confirmed); cleared save; launching RECORDED run
+2026-06-28T15:07:07Z === iter-3 kickoff baseline === HEAD: c7afa963327256d4c361755121b3704b0ccbb017 DIRTY:
+ M Assets/Resources/Data/tournaments.csv
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Gameplay/Input/Golfin.Gameplay.Input.asmdef
+ M Assets/Scripts/Gameplay/Input/ShotController.cs
+ M Assets/Scripts/Gameplay/Loop/Golfin.Gameplay.Loop.asmdef
+ M Assets/Scripts/Gameplay/Loop/Session/GameSession.cs
+ M Assets/Scripts/Gameplay/Tests/Golfin.Gameplay.Tests.asmdef
+ M Assets/Scripts/Gameplay/Tests/PlayMode/Golfin.Gameplay.PlayMode.Tests.asmdef
+ M Assets/Scripts/Gameplay/Tests/PlayMode/LiveStatProviderHostPlayModeTests.cs
+ M Assets/Scripts/LiveStatProviderHost.cs
+ M Assets/Scripts/Physics/Viewer/HoleCompletionBridge.cs
+ M Assets/Scripts/Tournaments/Tests/TournamentCsvLoaderTests.cs
+ M Assets/Scripts/UI/Tournaments/TournamentHoleSelectionScreenController.cs
+ M Assets/Scripts/UI/Tournaments/TournamentSelectionScreenController.cs
+?? Assets/Prefabs/UI/Modals/TournamentSignupModal.prefab
+?? Assets/Prefabs/UI/Modals/TournamentSignupModal.prefab.meta
+?? Assets/Scripts/Editor/Tournaments.meta
+?? Assets/Scripts/Editor/Tournaments/Golfin.Tournaments.CaptureHarness.Editor.asmdef
+?? Assets/Scripts/Editor/Tournaments/Golfin.Tournaments.CaptureHarness.Editor.asmdef.meta
+?? Assets/Scripts/Editor/Tournaments/TournamentLoopCaptureHarness.cs
+
+2026-06-28T15:07:07Z building captioned video tournament_round_loop.mp4 (86.7s 1170x2532)
+2026-06-28T15:08:13Z done, awaiting review
+2026-06-28T15:20:22Z recorded run launched — full-flow BeginDeferred + timeScale=2x during holes
+2026-06-28T15:47:12Z resuming from context compaction: save.json reset (RP=52200, tournamentEntries=[]), WatchdogSeconds raised 480→1440, Step6 dwell raised 2s→8s
+2026-06-28T15:47:49Z recorded run started, monitoring flow progression
+2026-06-28T15:48:00Z Hole 1 PlayHoleToCup started
+2026-06-28T18:28:00 iter-4 video production complete: 119.7s 1170x2532 74.5MB; all segments confirmed via consecutive frame analysis; captioning done; updating IMPLEMENTER_REPORT.md
+2026-06-28T18:45:00 done, awaiting review
+2026-06-28T19:05:00 iter-5 kickoff — fixing signup modal fidelity: ENTRY pill (label+coin+border), reward coin, date range, separators, panel border + Rule-13 gap
+2026-06-28T19:15:00 restructuring signup modal prefab — adding ENTRY label+coin, reward coin, separator2, fixing border, wiring new fields
+2026-06-28T17:01:26 fixed DateRangeText/VenueText/SponsorText colors, fixed venue duplication
+2026-06-28T17:40:19 fixing panel bg and all colors to correct linear values via LoadPrefabContents
+2026-06-28T17:45:21 coordinator-blocked: flat sprites identified; must wire real sprites to Panel/Border/Separator/EntryRow/Buttons; restarting approach
