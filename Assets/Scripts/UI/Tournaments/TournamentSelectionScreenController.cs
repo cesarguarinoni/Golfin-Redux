@@ -50,6 +50,10 @@ namespace GolfinRedux.UI.Tournaments
         [SerializeField] private ScreenId _holeSelectionTarget = ScreenId.TournamentHoleSelection;
         [SerializeField] private ScreenId _leaderboardTarget   = ScreenId.TournamentLeaderboard;
 
+        [Header("Signup Modal (T6)")]
+        [Tooltip("TournamentSignupModalController on the ShellScene canvas. Opened for Open/Ending CTA.")]
+        [SerializeField] private TournamentSignupModalController _signupModal;
+
         // ── Colours ───────────────────────────────────────────────────────────
         private static readonly Color TabActiveColor   = new Color32(0xFF, 0xE4, 0x8B, 255);
         private static readonly Color TabInactiveColor = new Color32(0xC7, 0xD6, 0xEB, 255);
@@ -359,8 +363,16 @@ namespace GolfinRedux.UI.Tournaments
 
             switch (card.State)
             {
+                // T6: Open/Ending → Signup modal (Register → HoleSelection from within modal).
                 case TournamentSelectionCard.CardState.Open:
                 case TournamentSelectionCard.CardState.Ending:
+                    if (_signupModal != null)
+                        _signupModal.Open(card.TournamentId);
+                    else
+                        ScreenManager.Instance?.ShowScreen(_holeSelectionTarget); // fallback if modal not wired
+                    break;
+
+                // EnteredActive → HoleSelection directly (already registered).
                 case TournamentSelectionCard.CardState.EnteredActive:
                     ScreenManager.Instance?.ShowScreen(_holeSelectionTarget);
                     break;

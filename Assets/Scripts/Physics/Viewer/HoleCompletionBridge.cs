@@ -85,6 +85,37 @@ namespace Golfin.Physics.Viewer
             // Suppress the solo result modal on the versus path entirely.
             if (GameSession.IsVersus) return;
 
+            // T6: tournament hole-outs routed via OnTournamentHoleComplete.
+            // TournamentRoundHandler (Assembly-CSharp, ShellScene) handles RP debit + submit.
+            if (GameSession.IsTournament)
+            {
+                // Guard: only fire once per hole.
+                if (_firedThisHole) return;
+
+                int tStrokes = GameSession.TurnCount;
+                int tPar     = HoleContext.Par;
+                int tCap     = tPar + _strokeCapOverPar;
+
+                bool isHoleOut = result.TerminalState == BallState.InCup;
+                bool isCapped  = result.TerminalState == BallState.AtRest && tStrokes >= tCap;
+
+                if (!isHoleOut && !isCapped) return;
+
+                _firedThisHole = true;
+
+                int tPenalties = 0;
+                foreach (var rec in GameSession.ShotHistory)
+                    tPenalties += rec.PenaltyStrokes;
+
+                int tHoleNumber = GameSession.CurrentHoleNumber > 0
+                    ? GameSession.CurrentHoleNumber
+                    : HoleContext.HoleNumber;
+
+                // Use the static fire method — events cannot be invoked with ?. from outside the declaring class.
+                GameSession.FireTournamentHoleComplete(tHoleNumber, tStrokes + tPenalties);
+                return;
+            }
+
             // Guard: only fire once per hole to prevent double-fire.
             if (_firedThisHole) return;
 

@@ -26,6 +26,28 @@ namespace Golfin.Gameplay.Session
         /// </summary>
         public static bool IsVersus;
 
+        // ── Tournament flag (gates tournament result handling) ────────────────
+        /// <summary>
+        /// True when a tournament hole is active. Set before BeginGameplayLoad on the
+        /// tournament path. Cleared to false in ResetSession().
+        /// HoleCompletionBridge (Golfin.Physics.Viewer) fires OnTournamentHoleComplete
+        /// instead of OnHoleComplete when this is true.
+        /// </summary>
+        public static bool IsTournament;
+
+        /// <summary>
+        /// Active tournament id for the current session. Set alongside IsTournament.
+        /// Cleared to null in ResetSession().
+        /// </summary>
+        public static string? TournamentId;
+
+        /// <summary>
+        /// Fired by HoleCompletionBridge (Golfin.Physics.Viewer) when a tournament hole
+        /// completes. Carries holeNumber (1-indexed) and total stroke count.
+        /// ShellScene-resident TournamentRoundHandler subscribes here to submit HoleResult.
+        /// </summary>
+        public static event System.Action<int, int>? OnTournamentHoleComplete;
+
         // ── Versus safety stroke cap (Phase 2a, CSV-keyed) ───────────────────
         /// <summary>
         /// Strokes above par at which a 1v1 match is forced to draw if neither player has holed.
@@ -71,6 +93,13 @@ namespace Golfin.Gameplay.Session
         public static void MarkMatchComplete(MatchOutcome outcome, int p1Strokes, int p2Strokes)
             => OnMatchComplete?.Invoke(outcome, p1Strokes, p2Strokes);
 
+        /// <summary>
+        /// Fire OnTournamentHoleComplete. Called by HoleCompletionBridge (Golfin.Physics.Viewer)
+        /// at tournament hole completion, so callers outside this class can trigger the event.
+        /// </summary>
+        public static void FireTournamentHoleComplete(int holeNumber, int totalStrokes)
+            => OnTournamentHoleComplete?.Invoke(holeNumber, totalStrokes);
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
         /// <summary>
         /// Per-hole reset: clears history, sets turn back to 1.
@@ -115,6 +144,9 @@ namespace Golfin.Gameplay.Session
             SelectedCharacterId = string.Empty;
             EquippedBagSlot     = 0;
             IsVersus            = false;
+            IsTournament        = false;
+            TournamentId        = null;
+            TournamentRoundContext.EndRound();
             ResetForNewHole();
         }
 

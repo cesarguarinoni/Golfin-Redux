@@ -11,6 +11,8 @@
         "Golfin.Physics.Math",
         "Golfin.Physics.Runtime",
         "Golfin.Gameplay.Loop",
+        "Golfin.Tournaments",
+        "Golfin.Gameplay.TournamentContext",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],

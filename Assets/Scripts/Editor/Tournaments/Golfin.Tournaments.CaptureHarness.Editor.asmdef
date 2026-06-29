@@ -1,13 +1,14 @@
 {
-    "name": "Golfin.Gameplay.Loop",
-    "rootNamespace": "Golfin.Gameplay.Loop",
+    "name": "Golfin.Tournaments.CaptureHarness.Editor",
+    "rootNamespace": "Golfin.Tournaments.CaptureHarness.Editor",
     "references": [
-        "Golfin.Physics.Core",
-        "Golfin.Physics.Math",
-        "Golfin.Gameplay.Input",
-        "Golfin.Gameplay.TournamentContext"
+        "Golfin.Physics.Viewer",
+        "Golfin.Physics.Viewer.BotEditor",
+        "Golfin.Save"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

@@ -37,6 +37,78 @@ public class LiveStatProviderHost : MonoBehaviour
 
     StatBundle? ResolveLive(bool isPutt)
     {
+        // ── TOURNAMENT SEAM (T6) ───────────────────────────────────────────────
+        // When a tournament round is active, use frozen CharacterSnapshot stats
+        // and TournamentRoundContext stamina energy instead of live roster state.
+        // Ball + club are still resolved from live contexts (unchanged from solo path).
+        // Solo path (IsActive=false) is bit-identical to before this seam.
+        if (TournamentRoundContext.IsActive)
+        {
+            var snap = TournamentRoundContext.Snapshot;
+            if (snap == null)
+            {
+                if (_enableDiagLog) Debug.Log("[LiveStatProvider] FALLBACK tournament reason=no-snapshot");
+                // Fall through to normal live path as safety net.
+            }
+            else
+            {
+                var tCharacterStats = new CharacterStats(
+                    strength:    snap.Strength,
+                    clubControl: snap.ClubControl,
+                    recovery:    snap.Recovery,
+                    stamina:     snap.Stamina);
+
+                // ── BALL ──────────────────────────────────────────────────────
+                string ballIdT = BallContext.SelectedBallId;
+                if (string.IsNullOrEmpty(ballIdT))
+                {
+                    if (_enableDiagLog) Debug.Log("[LiveStatProvider] FALLBACK tournament reason=no-ball");
+                    return null;
+                }
+                var ballTemplateT = BallDatabaseCSV.Instance?.GetBall(ballIdT);
+                if (ballTemplateT == null)
+                {
+                    if (_enableDiagLog) Debug.Log($"[LiveStatProvider] FALLBACK tournament reason=ball-lookup-failed ball={ballIdT}");
+                    return null;
+                }
+                var ballStatsT = BuildBallStats(ballTemplateT);
+
+                fp staminaCurrent = fp.FromFloat(TournamentRoundContext.StaminaEnergyRemaining);
+                fp staminaMax     = fp.FromFloat(TournamentRoundContext.StaminaEnergyMax);
+
+                if (isPutt)
+                {
+                    ClubEntry? putterEntryT = null;
+                    foreach (var e in ClubContext.EquippedBag)
+                        if (e.LabClubIndex == 3) { putterEntryT = e; break; }
+                    if (putterEntryT == null)
+                    {
+                        if (_enableDiagLog) Debug.Log("[LiveStatProvider] FALLBACK tournament putt reason=no-putter");
+                        return null;
+                    }
+                    var putterTplT = ClubDatabaseCSV.Instance?.GetClub(putterEntryT.ClubId);
+                    var putterDataT = ClubManager.Instance?.GetClubData(putterEntryT.ClubId);
+                    if (putterTplT == null || putterDataT == null) return null;
+                    var putterStatsT = BuildPutterStats(putterDataT, putterTplT);
+                    if (_enableDiagLog) Debug.Log($"[LiveStatProvider] TOURNAMENT putt snap={snap.CharacterId}");
+                    return new StatBundle(putterStatsT, ballStatsT, tCharacterStats, staminaCurrent, staminaMax);
+                }
+
+                string clubIdT = ClubContext.SelectedClubId;
+                if (string.IsNullOrEmpty(clubIdT))
+                {
+                    if (_enableDiagLog) Debug.Log("[LiveStatProvider] FALLBACK tournament reason=no-club");
+                    return null;
+                }
+                var clubTplT  = ClubDatabaseCSV.Instance?.GetClub(clubIdT);
+                var clubDataT = ClubManager.Instance?.GetClubData(clubIdT);
+                if (clubTplT == null || clubDataT == null) return null;
+                var clubStatsT = BuildClubStats(clubDataT, clubTplT);
+                if (_enableDiagLog) Debug.Log($"[LiveStatProvider] TOURNAMENT swing snap={snap.CharacterId} club={clubIdT}");
+                return new StatBundle(clubStatsT, ballStatsT, tCharacterStats, staminaCurrent, staminaMax);
+            }
+        }
+
         // ── CHARACTER ──────────────────────────────────────────────────────────
         string charId = GameSession.SelectedCharacterId;
         if (string.IsNullOrEmpty(charId))

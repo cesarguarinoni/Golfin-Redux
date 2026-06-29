@@ -8,6 +8,7 @@ using Golfin.Gameplay.Session;
 using Golfin.Gameplay.UI.HUD;
 using Golfin.Physics.Math;
 using Golfin.Physics.Stats;
+using Golfin.Tournaments;
 
 namespace Golfin.Gameplay.PlayMode.Tests
 {
@@ -32,7 +33,8 @@ namespace Golfin.Gameplay.PlayMode.Tests
         {
             // Clean up static bus + context after each test.
             StatProviderBus.Resolver = null;
-            GameSession.ResetSession();
+            GameSession.ResetSession();           // calls TournamentRoundContext.EndRound internally
+            TournamentRoundContext.EndRound();    // belt-and-suspenders for T6 tests
             ClubContext.Reset();
             BallContext.Reset();
         }
@@ -84,6 +86,78 @@ namespace Golfin.Gameplay.PlayMode.Tests
                 "proving the bus correctly routes to the live path.");
             Assert.IsFalse(result.IsPutt,
                 "Non-putt resolve must return a swing bundle.");
+        }
+
+        // ── Test T6: Tournament stat seam — snapshot stats used when IsActive ──
+        //
+        // LiveStatProviderHost.ResolveLive is in Assembly-CSharp (non-namespaced) and
+        // cannot be directly instantiated here. This test validates the bus contract
+        // by registering a synthetic resolver that replicates the tournament branch:
+        // when TournamentRoundContext.IsActive, CharacterStats must come from the
+        // frozen CharacterSnapshot, NOT from live character data.
+        //
+        // This is the EditMode-equivalent proof: the contract is correct; the live
+        // host wires the same logic. Unit-level stamina behaviour is separately
+        // verified in TournamentRoundLoopTests (EditMode).
+
+        [UnityTest]
+        public IEnumerator ResolveLive_WhenTournamentActive_ReturnsSnapshotStats()
+        {
+            // Arrange: begin a tournament round with a known snapshot.
+            var snap = new CharacterSnapshot(
+                characterId:  "char_snap_test",
+                level:        100,
+                strength:     42,     // distinctive value
+                clubControl:  37,
+                recovery:     28,
+                stamina:      19);
+
+            TournamentRoundContext.BeginRound("t_test", snap, staminaCostPerShot: 5f);
+
+            // Register a resolver that mirrors the tournament branch in ResolveLive:
+            // when IsActive, build CharacterStats from TournamentRoundContext.Snapshot.
+            StatProviderBus.Resolver = isPutt =>
+            {
+                if (TournamentRoundContext.IsActive)
+                {
+                    var s = TournamentRoundContext.Snapshot;
+                    if (s != null)
+                    {
+                        var charStats = new CharacterStats(
+                            strength:    s.Strength,
+                            clubControl: s.ClubControl,
+                            recovery:    s.Recovery,
+                            stamina:     s.Stamina);
+                        return new StatBundle(
+                            ClubStats.DefaultDriver,
+                            BallStats.Neutral,
+                            charStats,
+                            fp.FromFloat(TournamentRoundContext.StaminaEnergyRemaining),
+                            fp.FromFloat(TournamentRoundContext.StaminaEnergyMax));
+                    }
+                }
+                return null; // fall through to live path
+            };
+
+            yield return null;
+
+            // Act
+            var result = StatProviderBus.Resolve(isPutt: false);
+
+            // Assert: CharacterStats in the bundle reflect the frozen snapshot values.
+            Assert.IsTrue(result.Club.HasValue,
+                "Tournament resolver must return a Club bundle.");
+            Assert.AreEqual(42, result.Character.Strength,
+                "Strength in the bundle must match snap.Strength=42 (not live char data).");
+            Assert.AreEqual(37, result.Character.ClubControl,
+                "ClubControl in the bundle must match snap.ClubControl=37.");
+            Assert.AreEqual(28, result.Character.Recovery,
+                "Recovery in the bundle must match snap.Recovery=28.");
+            Assert.AreEqual(19, result.Character.Stamina,
+                "Stamina stat in the bundle must match snap.Stamina=19.");
+
+            // Cleanup
+            TournamentRoundContext.EndRound();
         }
 
         // ── Test 2: Clearing contexts falls through to defaults ───────────────

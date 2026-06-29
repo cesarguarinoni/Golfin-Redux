@@ -6,7 +6,9 @@
         "Golfin.Gameplay.Loop",
         "Golfin.Gameplay.UI",
         "Golfin.Physics.Stats",
-        "Golfin.Physics.Math"
+        "Golfin.Physics.Math",
+        "Golfin.Tournaments",
+        "Golfin.Gameplay.TournamentContext"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

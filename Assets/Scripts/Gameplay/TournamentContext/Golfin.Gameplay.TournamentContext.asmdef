@@ -1,11 +1,8 @@
 {
-    "name": "Golfin.Gameplay.Loop",
-    "rootNamespace": "Golfin.Gameplay.Loop",
+    "name": "Golfin.Gameplay.TournamentContext",
+    "rootNamespace": "",
     "references": [
-        "Golfin.Physics.Core",
-        "Golfin.Physics.Math",
-        "Golfin.Gameplay.Input",
-        "Golfin.Gameplay.TournamentContext"
+        "Golfin.Tournaments"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

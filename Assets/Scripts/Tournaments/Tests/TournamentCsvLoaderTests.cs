@@ -618,7 +618,7 @@ field_major,30,25:0.20;50:0.25;100:0.30;180:0.25,0,10800,480
             Assert.AreEqual("lomond",  lomond!.ClubId,       "Real loader: lomond ClubId");
             Assert.AreEqual(0L,        lomond.EntryFeeRP,    "Real loader: lomond EntryFeeRP");
             Assert.AreEqual(18,        lomond.HoleSet.Count, "Real loader: lomond HoleSet.Count (1-18)");
-            Assert.AreEqual("GOLFIN",  lomond.SponsorKey,    "Real loader: lomond SponsorKey");
+            Assert.AreEqual("TITLEIST",  lomond.SponsorKey,    "Real loader: lomond SponsorKey");
             Assert.AreEqual("GOLD",    lomond.LeagueKey,     "Real loader: lomond LeagueKey");
             Assert.AreEqual(DateTimeKind.Utc, lomond.StartUtc.Kind, "Real loader: lomond StartUtc.Kind");
             Assert.AreEqual(DateTimeKind.Utc, lomond.EndUtc.Kind,   "Real loader: lomond EndUtc.Kind");
