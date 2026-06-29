@@ -94,6 +94,29 @@ a per-element fidelity table diffed against the actual Figma node renders.
     acceptable"); it was unenforced, so it is now a structural gate. The
     architect drops the canonical node renders into the task's reference/ folder
     at spec time so the A/B is unavoidable.
+
+Rule 19 is the tournament_round_loop signup-modal scar-tissue rule (Cesar-
+approved 2026-06-28). It is the provenance counterpart of Rule 18: Rule 18 checks
+that the result LOOKS like the design; Rule 19 checks that reused elements WERE
+actually cloned from a real source, not hand-built from scratch.
+
+19. **Clone provenance table.** When SPEC.md declares a reuse / clone-and-modify
+    mandate (e.g. a "§0 REUSE MANDATE", "Author ZERO new panels/buttons", "clone
+    the existing ..."), IMPLEMENTER_REPORT.md must carry a `## Clone provenance`
+    section: a per-element table where EVERY row cites the concrete source the
+    element was cloned/rebound from — a `.prefab` path, an `Assets/...` sprite/
+    material path, or a 32-hex Unity GUID. A row with only prose, or that flags a
+    source as "not found / built from scratch / hand-rolled", is a hard block.
+    Rationale: the signup modal was hand-built from default Unity Images with
+    flat colour fills and ZERO sprites — no source prefab, nothing cloned — while
+    the report falsely marked every "navy panel clone / silver button clone" row
+    PASS (a Rule-6 integrity miss the fidelity gate didn't catch because the flat
+    colours vaguely resembled the design). This is the same failure mode as
+    tournament_selection_screen (memory: feedback_reuse_map_clone_provenance_gate)
+    which "rebuilt from scratch, hand-rolled buttons, passed 3 gates before Cesar
+    stopped it." If a mandated clone source genuinely cannot be located, the
+    implementer must SURFACE it (STATUS=IMPLEMENTER_BLOCKED), never silently
+    rebuild — a Cesar standing rule.
 """
 import json
 import math
@@ -219,6 +242,55 @@ FIGMA_FIDELITY_SECTION = "Figma fidelity"
 FIGMA_NODE_ID_RE = re.compile(r"\b\d{2,}[:\-]\d{2,}\b")
 # A direct Figma design URL — sufficient on its own to mark a Figma-node task.
 FIGMA_URL_RE = re.compile(r"figma\.com/(?:design|file)/", re.IGNORECASE)
+
+# Rule 19 — clone-provenance gate. The tournament_round_loop signup-modal scar
+# (Cesar-approved 2026-06-28): the SPEC §0 REUSE MANDATE said clone the navy
+# panel / gold+silver Main Buttons / separator / RP-coin from HoleCompleteModal,
+# but the implementer hand-built the modal from default Unity Images with flat
+# color fills and ZERO sprites (no source prefab, nothing cloned), then the
+# report falsely marked every "clone" row PASS. This is the SAME failure mode as
+# tournament_selection_screen (memory: feedback_reuse_map_clone_provenance_gate),
+# which "rebuilt from scratch, hand-rolled buttons, passed 3 gates before Cesar
+# stopped it." No gate ever verified the §1 clone-and-modify mandate — they check
+# visual fidelity, not provenance. Rule 19 makes a from-scratch rebuild
+# unable to pass: when SPEC declares a reuse/clone mandate, IMPLEMENTER_REPORT.md
+# must carry a `## Clone provenance` table where every row either cites a concrete
+# source artifact (a `.prefab`, an `Assets/...` asset path, or a 32-hex GUID) OR
+# is flagged as not-found. A not-found element means the implementer must SURFACE
+# it (STATUS=IMPLEMENTER_BLOCKED) — never silently build from scratch — so the
+# presence of a not-found marker on a review transition is itself a hard block.
+CLONE_PROVENANCE_SECTION = "Clone provenance"
+# Phrases in SPEC.md that declare a reuse/clone mandate (Rule 19 detector).
+CLONE_MANDATE_PHRASES = (
+    "reuse mandate",
+    "clone-and-modify",
+    "clone and modify",
+    "author zero new",
+    "clone the existing",
+    "reuse the existing",
+    "clone-and-rebind",
+    "do not rebuild",
+    "don't rebuild",
+    "clone from",
+)
+# A concrete provenance citation in a Clone-provenance row: a .prefab path, an
+# Assets/ asset path (sprite/material/etc.), or a 32-hex Unity GUID.
+CLONE_SOURCE_RE = re.compile(
+    r"(?:[\w./\- ]+\.prefab)"          # a prefab source
+    r"|(?:Assets/[\w./\- ]+\.\w+)"      # an Assets/ asset (sprite/material/png)
+    r"|(?:\b[0-9a-f]{32}\b)",           # a Unity GUID
+    re.IGNORECASE,
+)
+# Markers an implementer uses when a mandated clone source could NOT be located.
+# Their presence on a review-transition is a hard block: the implementer must
+# instead set STATUS=IMPLEMENTER_BLOCKED and surface to Cesar (Cesar standing
+# rule 2026-06-28: "if no elements mentioned are found to clone SURFACE it,
+# don't build from scratch without telling me").
+CLONE_NOT_FOUND_RE = re.compile(
+    r"\b(?:not\s*found|no\s*source|missing\s*source|could\s*not\s*(?:find|locate)|"
+    r"unfound|absent|surfaced?|built\s*from\s*scratch|hand-?rolled|hand-?built)\b",
+    re.IGNORECASE,
+)
 
 
 def read_payload() -> dict:
@@ -1307,6 +1379,93 @@ def validate_figma_fidelity(doc_path: Path, role_label: str) -> list[str]:
     return errors
 
 
+def spec_requires_clone_provenance(spec_path: Path) -> bool:
+    """Rule 19 detector: True when SPEC.md declares a reuse/clone mandate.
+
+    Matches the §0-style "REUSE MANDATE / clone-and-modify / Author ZERO new"
+    language that tournament tasks use. A spec that merely mentions a prefab in
+    passing won't trip it — we require one of the explicit mandate phrases.
+    """
+    if not spec_path.exists():
+        return False
+    text = spec_path.read_text(encoding="utf-8", errors="ignore").lower()
+    return any(phrase in text for phrase in CLONE_MANDATE_PHRASES)
+
+
+def validate_clone_provenance(report_path: Path) -> list[str]:
+    """Rule 19: a reuse-mandate task's IMPLEMENTER_REPORT.md must carry a real
+    `## Clone provenance` table proving each reused element came from a concrete
+    source — NOT a from-scratch rebuild.
+
+    Structural checks (cheap, hard to fake honestly):
+      - the `## Clone provenance` section exists,
+      - it contains a Markdown table with >= 1 data row,
+      - EVERY data row cites a concrete source (a `.prefab`, an `Assets/...`
+        asset path, or a 32-hex GUID) — proving the element was cloned/rebound
+        from a real artifact, not hand-built,
+      - NO row carries a "not found / built from scratch / hand-rolled / surfaced"
+        marker. If a mandated clone source could not be located, the implementer
+        must STOP and set STATUS=IMPLEMENTER_BLOCKED to surface it (Cesar standing
+        rule) — reaching a review state with a not-found element is a hard block.
+    """
+    errors: list[str] = []
+    if not report_path.exists():
+        return errors  # Rule 1 already errored on the missing report.
+    content = report_path.read_text(encoding="utf-8", errors="ignore")
+    section = _section_text(content, CLONE_PROVENANCE_SECTION)
+    if section is None:
+        errors.append(
+            "IMPLEMENTER_REPORT.md has no '## Clone provenance' section. The "
+            "task's SPEC declares a REUSE / clone-and-modify mandate, so every "
+            "reused element (panel, buttons, separator, pill, icon, sprite) must "
+            "be listed in a per-element table citing the SOURCE it was cloned / "
+            "rebound from — a `.prefab` path, an `Assets/...` sprite/material "
+            "path, or the source GUID. (Rule 19: tournament_round_loop's signup "
+            "modal was hand-built from spriteless flat-colour Images while the "
+            "report falsely marked every 'clone' row PASS — same scar as "
+            "tournament_selection_screen.) If a mandated source CANNOT be "
+            "located, do NOT build from scratch: set STATUS=IMPLEMENTER_BLOCKED "
+            "and surface it to Cesar."
+        )
+        return errors
+    rows = parse_table_rows(content, CLONE_PROVENANCE_SECTION)
+    if not rows:
+        errors.append(
+            "IMPLEMENTER_REPORT.md '## Clone provenance' section has no table "
+            "data rows. Add one row per reused element with columns like | "
+            "Element | Cloned from (prefab/asset/GUID) | How verified |. "
+            "(Rule 19.)"
+        )
+        return errors
+    # Per-row: a concrete source citation, and NO not-found marker.
+    for row in rows:
+        row_text = " ".join(c.strip() for c in row if c is not None)
+        if not row_text.strip():
+            continue
+        if CLONE_NOT_FOUND_RE.search(row_text):
+            errors.append(
+                "IMPLEMENTER_REPORT.md '## Clone provenance' row declares a "
+                f"mandated clone source as not-found / built-from-scratch: "
+                f"'{row_text[:120].strip()}'. You may NOT advance to review with "
+                "a from-scratch element. Either locate the real source (the "
+                "panel, both buttons, the separator, the entry pill, and the RP "
+                "icon all already exist in other tournament screens/prefabs — "
+                "clone those) OR set STATUS=IMPLEMENTER_BLOCKED and surface it to "
+                "Cesar. (Rule 19 — Cesar standing rule 2026-06-28.)"
+            )
+            continue
+        if not CLONE_SOURCE_RE.search(row_text):
+            errors.append(
+                "IMPLEMENTER_REPORT.md '## Clone provenance' row cites no "
+                f"concrete source: '{row_text[:120].strip()}'. Each reused "
+                "element must name the artifact it was cloned/rebound from — a "
+                "`.prefab` path, an `Assets/...` asset path, or a 32-hex GUID. A "
+                "row with only prose ('matches the modal family') does not prove "
+                "provenance. (Rule 19.)"
+            )
+    return errors
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Orchestrator.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1560,6 +1719,14 @@ def main() -> int:
     # vibe-match that let 1v1_ingame_ui ship with an explicit border token absent.
     if spec_references_figma_node(spec_path):
         errors.extend(validate_figma_fidelity(report_path, "IMPLEMENTER_REPORT.md"))
+
+    # Rule 19: reuse-mandate UI tasks must carry a per-element Clone provenance
+    # table proving each reused element came from a real source artifact — not a
+    # from-scratch rebuild. Blocks the tournament_round_loop signup-modal scar
+    # (hand-rolled spriteless modal that falsely claimed clone PASS) and forces
+    # the "surface, don't silently rebuild" rule when a source can't be found.
+    if spec_requires_clone_provenance(spec_path):
+        errors.extend(validate_clone_provenance(report_path))
 
     if errors:
         print(

@@ -86,6 +86,10 @@ Rules:
 - **"Matches" / "looks right" is an automatic FAIL of the row.** Cite the measured value.
 - A row marked FAIL = `ARCHITECT_REVIEW_FAIL`. A flagged-but-accepted deviation (e.g. SemiBold-for-Medium when no Medium SDF exists) is PASS* with the deviation noted and surfaced for Cesar.
 
+### Step 2c — Clone-provenance verification (MANDATORY when SPEC declares a REUSE / clone-and-modify mandate) (Rule 19)
+
+If `SPEC.md` declares a reuse mandate (a "§0 REUSE MANDATE", "Author ZERO new panels/buttons", "clone the existing …"), do NOT trust the implementer's `## Clone provenance` prose — VERIFY each reused element's live `Image.sprite` via `script-execute` and confirm it is the real source sprite, NOT `<NONE>` with a flat-colour fill. The `tournament_round_loop` signup modal was hand-built from spriteless flat-colour Images (`Panel sprite=<NONE> color=020916FF`, `Border alpha=0`, buttons `sprite=<NONE>`) while the report marked every "clone" row PASS — a from-scratch rebuild that vaguely resembled the design and slipped the visual gate. ANY mandated-reuse element whose live sprite is `<NONE>` (a recoloured primitive) = `ARCHITECT_REVIEW_FAIL`. The implementer hook already blocks a missing `## Clone provenance` table; you are the backstop that the cited sources are REAL (the sprite actually landed on the GO), not fabricated GUIDs in a table.
+
 ### Step 3 — Verdict
 
 Write your verdict to `Docs/Specs/Active/<task>/ARCHITECT_REVIEW.md` using the template. (Filename retained for historical continuity — the file holds the architectural-review verdict; the agent that writes it is `golfin-reviewer`.) Update `STATUS.md` to one of:

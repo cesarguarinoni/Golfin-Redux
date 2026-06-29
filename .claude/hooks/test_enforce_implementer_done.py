@@ -962,5 +962,99 @@ class TestFigmaFidelity(unittest.TestCase):
         self.assertEqual(eid.validate_figma_fidelity(rp, "IMPLEMENTER_REPORT.md"), [])
 
 
+class TestCloneProvenance(unittest.TestCase):
+    """Rule 19 — reuse-mandate tasks need a per-element Clone provenance table
+    proving each element was cloned from a real source, not built from scratch."""
+
+    REUSE_SPEC = (
+        "# SPEC\n\n## 0. REUSE MANDATE (read first)\n\n"
+        "> Clone-and-modify existing GameObjects. Author ZERO new panels, "
+        "buttons, separators, or sprites.\n"
+    )
+    NO_REUSE_SPEC = "Add a new TournamentRoundContext static class and wire the seam.\n"
+    GOOD_TABLE = (
+        "# Report\n\n## Clone provenance\n\n"
+        "| Element | Cloned from | How verified |\n"
+        "|---|---|---|\n"
+        "| Navy panel | `Assets/Prefabs/UI/Modals/HoleCompleteModal.prefab` Root/Card1 | sprite GUID 064cba0b0bc85154995fa70dd470817b on Panel Image |\n"
+        "| CONFIRM button | gold Main Button, guid d7b1c62bfcb4e844ab498b958b38aede | Image.sprite set, ButtonPressFeedback present |\n"
+        "| Separator | `Assets/Art/LoadingScreen/Divider.png` | sprite assigned |\n"
+    )
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="hook_rule19_")).resolve()
+        self.spec = self.tmp / "SPEC.md"
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    # --- detector ---
+    def test_detect_reuse_mandate(self):
+        self.spec.write_text(self.REUSE_SPEC)
+        self.assertTrue(eid.spec_requires_clone_provenance(self.spec))
+
+    def test_detect_clone_from_phrase(self):
+        self.spec.write_text("Step 0: clone from the existing MatchmakingModal prefab.\n")
+        self.assertTrue(eid.spec_requires_clone_provenance(self.spec))
+
+    def test_no_reuse_mandate_not_flagged(self):
+        self.spec.write_text(self.NO_REUSE_SPEC)
+        self.assertFalse(eid.spec_requires_clone_provenance(self.spec))
+
+    # --- validator ---
+    def test_missing_section_blocks(self):
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text("# Report\n\n## Notes\n\nBuilt the modal, matches the family.\n")
+        errs = eid.validate_clone_provenance(rp)
+        self.assertTrue(any("no '## Clone provenance' section" in e for e in errs), errs)
+
+    def test_section_without_table_blocks(self):
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text("# Report\n\n## Clone provenance\n\nEverything cloned from HoleCompleteModal.\n")
+        errs = eid.validate_clone_provenance(rp)
+        self.assertTrue(any("no table data rows" in e for e in errs), errs)
+
+    def test_prose_only_row_blocks(self):
+        # The exact failure mode: a row claiming a clone with no source artifact.
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text(
+            "# Report\n\n## Clone provenance\n\n"
+            "| Element | Cloned from | How |\n|---|---|---|\n"
+            "| Navy panel | the modal family navy panel | looks right |\n"
+        )
+        errs = eid.validate_clone_provenance(rp)
+        self.assertTrue(any("cites no concrete source" in e for e in errs), errs)
+
+    def test_not_found_marker_hard_blocks(self):
+        # "built from scratch" / "not found" must block and force IMPLEMENTER_BLOCKED.
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text(
+            "# Report\n\n## Clone provenance\n\n"
+            "| Element | Cloned from | How |\n|---|---|---|\n"
+            "| Navy panel | NOT FOUND built from scratch | flat color Image |\n"
+        )
+        errs = eid.validate_clone_provenance(rp)
+        self.assertTrue(any("from-scratch" in e or "not-found" in e for e in errs), errs)
+
+    def test_good_table_passes(self):
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text(self.GOOD_TABLE)
+        self.assertEqual(eid.validate_clone_provenance(rp), [])
+
+    def test_tournament_round_loop_scar_would_block(self):
+        # The actual scar: prose-only "clone" claims with no source artifacts.
+        rp = self.tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text(
+            "# Report\n\n## Clone provenance\n\n"
+            "| Element | Cloned from | Result |\n|---|---|---|\n"
+            "| Panel | navy panel clone | PASS |\n"
+            "| CANCEL | silver button clone | PASS |\n"
+            "| Separator | cloned from HoleCompleteModal | PASS |\n"
+        )
+        errs = eid.validate_clone_provenance(rp)
+        self.assertGreaterEqual(len(errs), 2, errs)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
