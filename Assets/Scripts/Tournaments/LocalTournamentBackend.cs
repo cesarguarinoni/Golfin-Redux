@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Golfin.Core.Stamina;
 
 namespace Golfin.Tournaments
 {
@@ -17,11 +18,27 @@ namespace Golfin.Tournaments
     /// All dependencies are injected by constructor; no singleton lookups inside
     /// this class. Production code composes real adapters; tests inject fakes.
     /// </para>
+    /// <para>
+    /// <b>Clock-trust-free re-sim model (Phase 3, D3=NO — for future server re-sim, GDD §8):</b>
+    /// Tournament condition is drained once per <see cref="SubmitHoleResult"/> call
+    /// (drain = <c>StaminaModel.DrainForHole()</c>, a CSV constant), never regen'd within
+    /// the tournament event. The condition at hole N is therefore fully reproducible from the
+    /// persisted entry timeline (<c>StartedUtc</c>, each <c>HoleResult</c>) plus the frozen
+    /// <c>snapshot.Stamina</c> (tank = <c>MaxCondition(stamina)</c>). A future server re-sim
+    /// never needs to trust client clocks — drain-count alone is sufficient to reconstruct
+    /// the per-hole pool, and thus the per-hole degraded Strength/ClubControl via Option-C.
+    /// </para>
     /// </summary>
     public sealed class LocalTournamentBackend : ITournamentBackend
     {
         // ── "Ending" window threshold (D2) — last 1 hour of the window ─────────
         private static readonly TimeSpan EndingThreshold = TimeSpan.FromHours(1.0);
+
+        // ── Stamina fallback constants (D1-A: used when StaminaModel is not configured) ──
+        // These keep existing StaminaModel-unaware EditMode tests green (SPEC §7 test 8).
+        // Production path always has StaminaModel configured via StaminaRuntimeService at boot.
+        private const float DefaultStaminaMax       = 100f;   // mirrors TournamentRoundContext.DefaultStaminaMax
+        private const float DefaultDrainPerHole     = 5f;     // placeholder flat cost per hole
 
         // ── Constructor-injected deps ────────────────────────────────────────
         private readonly IReadOnlyList<TournamentDefinition>         _definitions;
@@ -133,14 +150,26 @@ namespace Golfin.Tournaments
             // _stats is null only when no provider was injected (legacy/pre-amendment).
             CharacterSnapshot? snapshot = _stats?.SnapshotFor(characterId);
 
+            // Seed the tournament condition pool from the frozen snapshot (Phase 3, D1-A).
+            // Guard with StaminaModel.IsConfigured so StaminaModel-unaware EditMode tests pass.
+            // Null snapshot (legacy pre-amendment) → sentinel -1f (hydrates to full on use, D2).
+            float conditionPool;
+            if (snapshot != null && StaminaModel.IsConfigured)
+                conditionPool = StaminaModel.MaxCondition(snapshot.Stamina);
+            else if (snapshot == null)
+                conditionPool = -1f;   // sentinel: no snapshot → hydrate to full on use
+            else
+                conditionPool = DefaultStaminaMax;   // unconfigured fallback
+
             var entry = new EntryState(
-                tournamentId: id,
-                characterId:  characterId,
-                snapshot:     snapshot,
-                perHole:      new List<HoleResult>(),
-                startedUtc:   _clock.UtcNow,
-                lastHoleUtc:  null,
-                status:       EntryStatus.InProgress);
+                tournamentId:       id,
+                characterId:        characterId,
+                snapshot:           snapshot,
+                perHole:            new List<HoleResult>(),
+                startedUtc:         _clock.UtcNow,
+                lastHoleUtc:        null,
+                status:             EntryStatus.InProgress,
+                conditionRemaining: conditionPool);
 
             _store.Save(entry);
             return entry;
@@ -186,14 +215,36 @@ namespace Golfin.Tournaments
             int holeCount    = def.HoleSet.Count;
             bool finished    = updatedHoles.Count >= holeCount;
 
+            // Drain the tournament condition pool by one hole's worth (Phase 3, D1-A).
+            // Atomic with the hole-result persist: drain happens only when a hole is confirmed.
+            // Guard with StaminaModel.IsConfigured so StaminaModel-unaware EditMode tests pass.
+            // D3 = NO: no regen, drain-only. Pool starts from the current entry value,
+            // treating sentinel -1f as full before draining.
+            float currentCondition = entry.ConditionRemaining;
+            if (currentCondition < 0f && entry.Snapshot != null)
+            {
+                // Sentinel → hydrate to full before draining
+                currentCondition = StaminaModel.IsConfigured
+                    ? StaminaModel.MaxCondition(entry.Snapshot.Stamina)
+                    : DefaultStaminaMax;
+            }
+            else if (currentCondition < 0f)
+            {
+                currentCondition = DefaultStaminaMax;  // no snapshot → fallback full
+            }
+
+            float drain = StaminaModel.IsConfigured ? StaminaModel.DrainForHole() : DefaultDrainPerHole;
+            float nextCondition = Math.Max(0f, currentCondition - drain);
+
             var updated = new EntryState(
-                tournamentId: id,
-                characterId:  entry.CharacterId,
-                snapshot:     entry.Snapshot,         // preserve frozen snapshot across hole submissions
-                perHole:      updatedHoles,
-                startedUtc:   entry.StartedUtc,
-                lastHoleUtc:  now,
-                status:       finished ? EntryStatus.Finished : EntryStatus.InProgress);
+                tournamentId:       id,
+                characterId:        entry.CharacterId,
+                snapshot:           entry.Snapshot,         // preserve frozen snapshot across hole submissions
+                perHole:            updatedHoles,
+                startedUtc:         entry.StartedUtc,
+                lastHoleUtc:        now,
+                status:             finished ? EntryStatus.Finished : EntryStatus.InProgress,
+                conditionRemaining: nextCondition);
 
             _store.Save(updated);
             return updated;

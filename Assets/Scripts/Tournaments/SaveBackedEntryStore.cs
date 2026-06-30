@@ -95,13 +95,14 @@ namespace Golfin.Tournaments
             DateTime startedUtc = DateTime.Parse(row.startedUtc, null, System.Globalization.DateTimeStyles.RoundtripKind);
 
             return new EntryState(
-                tournamentId: row.tournamentId,
-                characterId:  row.characterId,
-                snapshot:     snapshot,
-                perHole:      holeResults,
-                startedUtc:   startedUtc,
-                lastHoleUtc:  lastHoleUtc,
-                status:       (EntryStatus)row.status
+                tournamentId:       row.tournamentId,
+                characterId:        row.characterId,
+                snapshot:           snapshot,
+                perHole:            holeResults,
+                startedUtc:         startedUtc,
+                lastHoleUtc:        lastHoleUtc,
+                status:             (EntryStatus)row.status,
+                conditionRemaining: row.conditionRemaining  // -1f sentinel preserved (D2)
             );
         }
 
@@ -139,13 +140,14 @@ namespace Golfin.Tournaments
 
             var row = new PersistedTournamentEntry
             {
-                tournamentId = entry.TournamentId,
-                characterId  = entry.CharacterId,
-                perHole      = perHole,
-                startedUtc   = entry.StartedUtc.ToString("O"),
-                lastHoleUtc  = entry.LastHoleUtc.HasValue ? entry.LastHoleUtc.Value.ToString("O") : "",
-                status       = (int)entry.Status,
-                snapshot     = snapshot
+                tournamentId       = entry.TournamentId,
+                characterId        = entry.CharacterId,
+                perHole            = perHole,
+                startedUtc         = entry.StartedUtc.ToString("O"),
+                lastHoleUtc        = entry.LastHoleUtc.HasValue ? entry.LastHoleUtc.Value.ToString("O") : "",
+                status             = (int)entry.Status,
+                snapshot           = snapshot,
+                conditionRemaining = entry.ConditionRemaining  // -1f sentinel or real drain value (Phase 3)
                 // claimed field is NOT reset here — preserve existing claimed flag on upsert
             };
 

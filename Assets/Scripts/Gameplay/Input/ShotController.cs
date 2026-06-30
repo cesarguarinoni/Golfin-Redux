@@ -388,9 +388,10 @@ namespace Golfin.Gameplay.Input
                 fadeDrawInputFp,
                 fadeDrawMaxTiltFp);
 
-            // T6: deplete tournament stamina pool (flat 5 RP per shot, carries hole→hole).
-            // Gated on IsActive so solo path is bit-identical when not in a tournament.
-            TournamentRoundContext.DepleteStamina();
+            // Phase 3 (stamina_tournament_wiring, D4): per-shot drain REMOVED.
+            // Tournament pool is drained once per hole in LocalTournamentBackend.SubmitHoleResult,
+            // keeping the pool constant within a hole. The pool is read by the Phase-2
+            // LiveStatProviderHost.ResolveLive seam unchanged — no edit needed there.
 
             State = ShotState.Resolving;
             OnShotResolved?.Invoke(input, ballMods);

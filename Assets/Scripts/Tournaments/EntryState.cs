@@ -57,8 +57,19 @@ namespace Golfin.Tournaments
         public EntryStatus Status { get; }
 
         /// <summary>
-        /// Primary constructor — includes a frozen <see cref="CharacterSnapshot"/>.
-        /// Used by <c>LocalTournamentBackend.Register</c> after the snapshot amendment.
+        /// Remaining stamina condition pool for this tournament entry (Phase 3).
+        /// Sentinel value <c>-1f</c> means "unseeded" — callers treat it as full
+        /// (= MaxCondition(snapshot.Stamina)) on use (Decision D2).
+        /// Drains by DrainForHole() each time a hole result is submitted (backend drain,
+        /// NOT per-shot). Clamped ≥ 0; never regens within the event (D3 = NO).
+        /// Separate from the live/solo pool (PersistedCharacter.conditionEnergy).
+        /// </summary>
+        public float ConditionRemaining { get; }
+
+        /// <summary>
+        /// Primary constructor — includes a frozen <see cref="CharacterSnapshot"/>
+        /// and the persisted stamina condition pool.
+        /// Used by <c>LocalTournamentBackend.Register</c> after the Phase 3 amendment.
         /// </summary>
         public EntryState(
             string tournamentId,
@@ -67,15 +78,17 @@ namespace Golfin.Tournaments
             IReadOnlyList<HoleResult> perHole,
             DateTime startedUtc,
             DateTime? lastHoleUtc,
-            EntryStatus status)
+            EntryStatus status,
+            float conditionRemaining = -1f)
         {
-            TournamentId = tournamentId;
-            CharacterId  = characterId;
-            Snapshot     = snapshot;
-            PerHole      = perHole ?? new List<HoleResult>();
-            StartedUtc   = startedUtc;
-            LastHoleUtc  = lastHoleUtc;
-            Status       = status;
+            TournamentId       = tournamentId;
+            CharacterId        = characterId;
+            Snapshot           = snapshot;
+            PerHole            = perHole ?? new List<HoleResult>();
+            StartedUtc         = startedUtc;
+            LastHoleUtc        = lastHoleUtc;
+            Status             = status;
+            ConditionRemaining = conditionRemaining;
         }
 
         /// <summary>
@@ -89,7 +102,8 @@ namespace Golfin.Tournaments
             DateTime startedUtc,
             DateTime? lastHoleUtc,
             EntryStatus status)
-            : this(tournamentId, characterId, snapshot: null, perHole, startedUtc, lastHoleUtc, status)
+            : this(tournamentId, characterId, snapshot: null, perHole, startedUtc, lastHoleUtc, status,
+                   conditionRemaining: -1f)
         {
         }
     }

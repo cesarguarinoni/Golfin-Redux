@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
+using Golfin.Core.Stamina;
 using Golfin.Gameplay.Session;
 using Golfin.Roster;
 using Golfin.Tournaments;
@@ -279,11 +280,21 @@ namespace GolfinRedux.UI.Tournaments
             GameSession.IsTournament = true;
             GameSession.TournamentId = tournamentId;
 
-            // ── BeginRound: snapshot + stamina pool (§7,§8) ───────────────────
-            // Pass the entry snapshot; stamina carries hole→hole so don't reset here.
-            float staminaCost = 5f; // flat placeholder (D1); CSV column TBD
+            // ── BeginRound: seed pool from the persisted entry (Phase 3) ─────────
+            // D3 = NO regen: remaining seeded straight from entry.ConditionRemaining — no
+            // time-based refill, no LastHoleUtc/Recovery read (clock-trust-free model).
+            // D2: sentinel -1f means "unseeded" → hydrate to full = MaxCondition(snapshot.Stamina).
             if (entry.Snapshot != null)
-                TournamentRoundContext.BeginRound(tournamentId, entry.Snapshot, staminaCost);
+            {
+                float tank      = StaminaModel.IsConfigured
+                                  ? StaminaModel.MaxCondition(entry.Snapshot.Stamina)
+                                  : TournamentRoundContext.DefaultStaminaMax;
+                float remaining = entry.ConditionRemaining < 0f
+                                  ? tank                                    // sentinel = full (D2)
+                                  : Mathf.Min(tank, entry.ConditionRemaining);
+                // D3 = NO: tournament pool does not regen — seed straight from the persisted value.
+                TournamentRoundContext.BeginRound(tournamentId, entry.Snapshot, tank, remaining);
+            }
             else
                 Debug.LogWarning("[TournamentHoleSelection] entry.Snapshot is null; tournament stat seam will fall back to live stats.");
 

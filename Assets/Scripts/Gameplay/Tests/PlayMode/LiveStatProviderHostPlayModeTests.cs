@@ -112,7 +112,8 @@ namespace Golfin.Gameplay.PlayMode.Tests
                 recovery:     28,
                 stamina:      19);
 
-            TournamentRoundContext.BeginRound("t_test", snap, staminaCostPerShot: 5f);
+            // Phase 3: BeginRound takes explicit tankMax + remaining (no staminaCostPerShot).
+            TournamentRoundContext.BeginRound("t_test", snap, tankMax: 100f, remaining: 100f);
 
             // Register a resolver that mirrors the tournament branch in ResolveLive:
             // when IsActive, build CharacterStats from TournamentRoundContext.Snapshot.

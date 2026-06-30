@@ -3,7 +3,8 @@
     "rootNamespace": "Golfin.Tournaments",
     "references": [
         "Golfin.UI.Rankings.Core",
-        "Golfin.Save"
+        "Golfin.Save",
+        "Golfin.Core.Stamina"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

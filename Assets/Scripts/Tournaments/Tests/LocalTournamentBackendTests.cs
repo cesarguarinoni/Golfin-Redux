@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Golfin.Tournaments;
+using Golfin.Core.Stamina;
 
 namespace Golfin.Tournaments.Tests
 {
@@ -1457,6 +1458,294 @@ namespace Golfin.Tournaments.Tests
             Assert.Throws<System.Collections.Generic.KeyNotFoundException>(() =>
                 backend.Register("t1", 0L, "char_unknown"),
                 "Register with an unregistered characterId must throw KeyNotFoundException");
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // TournamentStaminaPhase3Tests — stamina_tournament_wiring (SPEC §7)
+    // EditMode: per-hole drain, sentinel hydration, IsConfigured fallback,
+    // persistence round-trip, D3=NO regen.  All pure in-memory, no Unity deps.
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [TestFixture]
+    public class TournamentStaminaPhase3Tests
+    {
+        // ── Minimal StaminaConfig CSV (drain=5, tank_base=50, tank_per_point=2) ──
+        // tank = 50 + stamina*2 ; drain = 5 per hole
+        private const string StaminaCsv =
+            "key,value\n" +
+            "drain_per_hole,5\n" +
+            "tank_base,50\n" +
+            "tank_per_stamina_point,2\n" +
+            "regen_base_per_hour,0\n" +
+            "regen_per_recovery_point,0\n" +
+            "comfort_threshold_pct,0.5\n" +
+            "floor_penalty,0.5\n" +
+            "penalty_curve_exp,2\n" +
+            "meter_high_pct,0.7\n" +
+            "meter_mid_pct,0.3\n" +
+            "low_condition_flag_pct,0.2\n" +
+            "degraded_stats,Strength;ClubControl\n";
+
+        // ── Helper: backend with a FakeStatsProvider + StaminaModel configured ──
+        private static (LocalTournamentBackend backend, FakeStatsProvider stats) MakeWithStamina(
+            long rpBalance = 10000L)
+        {
+            var d     = Fixture.Def();
+            var clock = new FixedClock(Fixture.StartUtc.AddHours(1));
+            var s     = new InMemoryEntryStore();
+            var rp    = new FakeRewardPointsService(rpBalance);
+            var items = new FakeItemRewardService();
+            var p     = Fixture.DefaultPrize();
+            var statsProvider = new FakeStatsProvider();
+
+            var backend = new LocalTournamentBackend(
+                definitions: new System.Collections.Generic.List<TournamentDefinition> { d },
+                prizeTables: new System.Collections.Generic.Dictionary<string, PrizeTable> { [p.PrizeTableId] = p },
+                botFields:   new System.Collections.Generic.Dictionary<string, BotFieldConfig> { [Fixture.EmptyBotField().BotFieldId] = Fixture.EmptyBotField() },
+                botGen:      Fixture.EmptyBotGen(),
+                clock:       clock,
+                store:       s,
+                rp:          rp,
+                items:       items,
+                pars:        new FakeHoleParProvider(4),
+                stats:       statsProvider);
+
+            return (backend, statsProvider);
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
+            StaminaModel.Configure(StaminaConfig.Parse(StaminaCsv));
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+#if UNITY_EDITOR
+            StaminaModel.ResetForTests();
+#endif
+        }
+
+        // ── §7.1 — Register seeds full condition from MaxCondition ────────────
+        // tank = 50 + 10*2 = 70; conditionRemaining after Register must be 70.
+        [Test]
+        public void Register_SeedsFullCondition_WhenStaminaConfigured()
+        {
+            var (backend, statsProvider) = MakeWithStamina();
+
+            var snap = new CharacterSnapshot("char_a", 50, 20, 20, 20, 10); // stamina=10
+            statsProvider.Register("char_a", snap);
+
+            var entry = backend.Register("t1", 0L, "char_a");
+
+            int expectedTank = StaminaModel.MaxCondition(10); // 50 + 10*2 = 70
+            Assert.AreEqual((float)expectedTank, entry.ConditionRemaining, 0.001f,
+                "Register must seed conditionRemaining = MaxCondition(snapshot.Stamina).");
+        }
+
+        // ── §7.2 — SubmitHoleResult drains condition per hole ─────────────────
+        // Full tank = 70; after 1 hole drain (5) → 65.
+        [Test]
+        public void SubmitHoleResult_DrainsCondition_PerHole()
+        {
+            var (backend, statsProvider) = MakeWithStamina();
+
+            var snap = new CharacterSnapshot("char_a", 50, 20, 20, 20, 10);
+            statsProvider.Register("char_a", snap);
+
+            backend.Register("t1", 0L, "char_a");
+            backend.SubmitHoleResult("t1", Fixture.MakeHole("h1"));
+
+            var entry = backend.GetMyEntry("t1");
+            Assert.IsNotNull(entry, "Entry must still exist after SubmitHoleResult.");
+
+            int tank  = StaminaModel.MaxCondition(10);    // 70
+            float expected = tank - StaminaModel.DrainForHole();  // 70 - 5 = 65
+            Assert.AreEqual(expected, entry!.ConditionRemaining, 0.001f,
+                "ConditionRemaining must decrease by DrainForHole() after SubmitHoleResult.");
+        }
+
+        // ── §7.3 — Drain is clamped at 0 — never goes negative ───────────────
+        // Tank = 70; drain 5 per hole × 16 holes (=80 total drain) > 70 → floors at 0.
+        // Uses HoleSet18 to provide enough unique hole IDs for the drain loop.
+        [Test]
+        public void SubmitHoleResult_DrainClamped_NeverNegative()
+        {
+            // Build with HoleSet18 so we have enough unique hole IDs for all drain steps.
+            var d          = Fixture.Def(holeSet: Fixture.HoleSet18);
+            var clock      = new FixedClock(Fixture.StartUtc.AddHours(1));
+            var s          = new InMemoryEntryStore();
+            var rp         = new FakeRewardPointsService(10000L);
+            var items      = new FakeItemRewardService();
+            var p          = Fixture.DefaultPrize();
+            var statsProvider = new FakeStatsProvider();
+            var backend    = new LocalTournamentBackend(
+                definitions: new List<TournamentDefinition> { d },
+                prizeTables: new Dictionary<string, PrizeTable> { [p.PrizeTableId] = p },
+                botFields:   new Dictionary<string, BotFieldConfig> { [Fixture.EmptyBotField().BotFieldId] = Fixture.EmptyBotField() },
+                botGen:      Fixture.EmptyBotGen(),
+                clock:       clock,
+                store:       s,
+                rp:          rp,
+                items:       items,
+                pars:        new FakeHoleParProvider(4),
+                stats:       statsProvider);
+
+            var snap = new CharacterSnapshot("char_a", 50, 20, 20, 20, 10);
+            statsProvider.Register("char_a", snap);
+
+            backend.Register("t1", 0L, "char_a");
+
+            // Drain with unique hole IDs (backend enforces uniqueness per hole in a tournament).
+            // tank=70, drain=5 per hole → need 14+ holes to exhaust; drainSteps = ceil(70/5)+2 = 16.
+            // HoleSet18 provides 18 unique IDs, so we have room.
+            int tank       = StaminaModel.MaxCondition(10); // 70
+            int drainSteps = (int)Math.Ceiling(tank / StaminaModel.DrainForHole()) + 2;
+            for (int i = 0; i < drainSteps; i++)
+                backend.SubmitHoleResult("t1", Fixture.MakeHole(Fixture.HoleSet18[i]));
+
+            var entry = backend.GetMyEntry("t1");
+            Assert.IsNotNull(entry);
+            Assert.GreaterOrEqual(entry!.ConditionRemaining, 0f,
+                "ConditionRemaining must be >= 0 after exhaustive drain (clamped, never negative).");
+        }
+
+        // ── §7.4 — Sentinel: no snapshot → conditionRemaining stays -1f ───────
+        // When Register is called without a stats provider (no snapshot),
+        // conditionRemaining must be the sentinel -1f.
+        [Test]
+        public void Register_ConditionRemaining_SentinelDefault_WhenNoSnapshot()
+        {
+            // Build a backend WITHOUT a stats provider (snapshot = null path).
+            var (backend, _, _, _, _) = Fixture.Make();
+
+            var entry = backend.Register("t1", 0L, "char_a");
+
+            Assert.AreEqual(-1f, entry.ConditionRemaining, 0.001f,
+                "conditionRemaining must be -1f (sentinel) when no snapshot is available.");
+        }
+
+        // ── §7.5 — IsConfigured fallback: unconfigured → DefaultStaminaMax ────
+        // When StaminaModel is NOT configured but a snapshot IS captured,
+        // conditionRemaining falls back to DefaultStaminaMax (100f).
+        [Test]
+        public void Register_ConditionRemaining_IsConfiguredFallback()
+        {
+#if UNITY_EDITOR
+            // Reset so IsConfigured = false for this test.
+            StaminaModel.ResetForTests();
+#endif
+            try
+            {
+                var (backend, statsProvider) = MakeWithStamina();
+
+                var snap = new CharacterSnapshot("char_a", 50, 20, 20, 20, 10);
+                statsProvider.Register("char_a", snap);
+
+                var entry = backend.Register("t1", 0L, "char_a");
+
+                // Without StaminaModel configured, the backend falls back to DefaultStaminaMax.
+                // LocalTournamentBackend.DefaultStaminaMax = 100f (mirrors TournamentRoundContext).
+                Assert.AreEqual(100f, entry.ConditionRemaining, 0.001f,
+                    "When StaminaModel.IsConfigured=false, conditionRemaining must fall back to DefaultStaminaMax=100.");
+            }
+            finally
+            {
+                // Re-configure for subsequent tests.
+                StaminaModel.Configure(StaminaConfig.Parse(StaminaCsv));
+            }
+        }
+
+        // ── §7.6 — SubmitHoleResult persists conditionRemaining to store ───────
+        [Test]
+        public void SubmitHoleResult_Persists_ConditionRemaining()
+        {
+            var (backend, statsProvider) = MakeWithStamina();
+
+            var snap = new CharacterSnapshot("char_a", 50, 20, 20, 20, 10);
+            statsProvider.Register("char_a", snap);
+
+            backend.Register("t1", 0L, "char_a");
+            backend.SubmitHoleResult("t1", Fixture.MakeHole("h1"));
+
+            var loaded = backend.GetMyEntry("t1");
+            Assert.IsNotNull(loaded);
+
+            float expected = StaminaModel.MaxCondition(10) - StaminaModel.DrainForHole(); // 65
+            Assert.AreEqual(expected, loaded!.ConditionRemaining, 0.001f,
+                "conditionRemaining must survive the Store.Save() inside SubmitHoleResult.");
+        }
+
+        // ── §7.7 — ConditionRemaining survives in-memory round-trip ───────────
+        [Test]
+        public void ConditionRemaining_SurvivesInMemoryRoundTrip()
+        {
+            var (backend, statsProvider) = MakeWithStamina();
+
+            var snap = new CharacterSnapshot("char_a", 50, 20, 20, 20, 10);
+            statsProvider.Register("char_a", snap);
+
+            backend.Register("t1", 0L, "char_a");
+            backend.SubmitHoleResult("t1", Fixture.MakeHole("h1"));
+            backend.SubmitHoleResult("t1", Fixture.MakeHole("h2"));
+
+            var reloaded = backend.GetMyEntry("t1");
+            Assert.IsNotNull(reloaded);
+
+            float expected = StaminaModel.MaxCondition(10) - 2 * StaminaModel.DrainForHole(); // 60
+            Assert.AreEqual(expected, reloaded!.ConditionRemaining, 0.001f,
+                "Two hole drains must both persist through InMemoryEntryStore round-trip.");
+        }
+
+        // ── §7.8 — D3=NO regen: pool is constant between SubmitHoleResults ────
+        // No time-based refill: between two Submit calls with a simulated clock
+        // advance, conditionRemaining must NOT increase.
+        [Test]
+        public void D3_NoRegen_PoolConstantWithinEvent()
+        {
+            var d     = Fixture.Def();
+            var clock = new FixedClock(Fixture.StartUtc.AddHours(1));
+            var s     = new InMemoryEntryStore();
+            var rp    = new FakeRewardPointsService(10000L);
+            var items = new FakeItemRewardService();
+            var p     = Fixture.DefaultPrize();
+            var statsProvider = new FakeStatsProvider();
+
+            var backend = new LocalTournamentBackend(
+                definitions: new System.Collections.Generic.List<TournamentDefinition> { d },
+                prizeTables: new System.Collections.Generic.Dictionary<string, PrizeTable> { [p.PrizeTableId] = p },
+                botFields:   new System.Collections.Generic.Dictionary<string, BotFieldConfig> { [Fixture.EmptyBotField().BotFieldId] = Fixture.EmptyBotField() },
+                botGen:      Fixture.EmptyBotGen(),
+                clock:       clock,
+                store:       s,
+                rp:          rp,
+                items:       items,
+                pars:        new FakeHoleParProvider(4),
+                stats:       statsProvider);
+
+            var snap = new CharacterSnapshot("char_a", 50, 20, 20, 20, 10);
+            statsProvider.Register("char_a", snap);
+
+            backend.Register("t1", 0L, "char_a");
+            backend.SubmitHoleResult("t1", Fixture.MakeHole("h1"));
+
+            float afterHole1 = backend.GetMyEntry("t1")!.ConditionRemaining;
+
+            // Advance clock by 24 hours (simulates overnight recovery window).
+            clock.UtcNow = clock.UtcNow.AddHours(24);
+
+            backend.SubmitHoleResult("t1", Fixture.MakeHole("h2"));
+
+            float afterHole2 = backend.GetMyEntry("t1")!.ConditionRemaining;
+
+            // D3=NO: the pool must decrease (drain only), not increase (no regen).
+            Assert.Less(afterHole2, afterHole1,
+                "D3=NO regen: ConditionRemaining after hole 2 must be LESS than after hole 1 (drain only, no clock-based refill).");
+            float expectedAfterHole2 = afterHole1 - StaminaModel.DrainForHole();
+            Assert.AreEqual(expectedAfterHole2, afterHole2, 0.001f,
+                "ConditionRemaining must equal afterHole1 - DrainPerHole (no regen, clock advance irrelevant).");
         }
     }
 

@@ -1,0 +1,16 @@
+=== stamina_tournament_wiring HEARTBEAT ===
+2026-06-30T15:00:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD SHA: d78297f76
+DIRTY porcelain:
+?? Docs/Specs/Active/stamina_tournament_wiring/HEARTBEAT.log
+?? Docs/Specs/Active/stamina_tournament_wiring/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/stamina_tournament_wiring/STATUS.md
+=== end baseline ===
+
+2026-06-30T15:00:00 reading existing files for context
+2026-06-30T15:05:00 starting changes: EntryState, SaveData, SaveSchemaMigrator, TournamentRoundContext, asmdef
+2026-06-30T06:01:53Z appended TournamentStaminaPhase3Tests (8 tests) to LocalTournamentBackendTests.cs
+2026-06-30T06:12:45 all 799 tests pass (796 pass, 3 skip-deliberate, 0 fail); filling IMPLEMENTER_REPORT.md
+2026-06-30T06:16:52 done, awaiting review — 796 pass 0 fail 3 skip; IMPLEMENTER_REPORT.md written

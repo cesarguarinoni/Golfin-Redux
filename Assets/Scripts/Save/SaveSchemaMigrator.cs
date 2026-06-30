@@ -14,7 +14,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 4;
+        public const int CurrentSchemaVersion = 5;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -64,6 +64,18 @@ namespace Golfin.Save
                 // No action needed beyond bumping the version.
                 data.schemaVersion = 4;
                 Debug.Log("[SaveSchemaMigrator] Migrated v3 → v4 (conditionEnergy + conditionUpdatedUtc added per character, default 0f/empty).");
+            }
+
+            // v4 → v5: add conditionRemaining per tournament entry (Phase 3 stamina).
+            // No data transform needed: new field defaults to -1f (sentinel = "unseeded"),
+            // which callers hydrate to full = MaxCondition(snapshot.Stamina) on use (D2).
+            // The live/solo PersistedCharacter.conditionEnergy (Phase 2) is untouched.
+            if (data.schemaVersion < 5)
+            {
+                // New field defaults correctly via field initializer in PersistedTournamentEntry.
+                // No action needed beyond bumping the version.
+                data.schemaVersion = 5;
+                Debug.Log("[SaveSchemaMigrator] Migrated v4 → v5 (conditionRemaining added per tournament entry, default -1f sentinel).");
             }
 
             // Ensure schemaVersion is current after all migrations

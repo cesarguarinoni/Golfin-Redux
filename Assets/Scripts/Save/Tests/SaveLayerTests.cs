@@ -324,8 +324,8 @@ namespace Golfin.Save.Tests
             // Act: migrate
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
 
-            // Assert: schemaVersion bumped all the way to CurrentSchemaVersion (v4 now) from v2
-            Assert.AreEqual(4, data!.schemaVersion, "schemaVersion must be 4 after full migration from v2 (v2→v3→v4)");
+            // Assert: schemaVersion bumped all the way to CurrentSchemaVersion (v5 now, Phase 3) from v2
+            Assert.AreEqual(5, data!.schemaVersion, "schemaVersion must be 5 after full migration from v2 (v2→v3→v4→v5)");
 
             // Assert: tournamentEntries is present and empty (not null)
             Assert.IsNotNull(data.tournamentEntries, "tournamentEntries must not be null after migration");
@@ -340,32 +340,34 @@ namespace Golfin.Save.Tests
             Assert.AreEqual(19900L, data.dailyPeriodKey);
         }
 
-        // ── T5 Test 2: Fail-hard on v5 (future-version guard; v4 is now current) ──
+        // ── T5 Test 2: Fail-hard on v6 (future-version guard; v5 is now current per Phase 3) ──
+        // Phase 3 (stamina_tournament_wiring) bumped CurrentSchemaVersion from 4→5.
+        // v5 is now legal; v6 is still an unknown future version that must throw.
 
         [Test]
-        public void T5_FailHard_V5Json_ThrowsSaveSchemaVersionException()
+        public void T5_FailHard_V6Json_ThrowsSaveSchemaVersionException()
         {
-            // A save written by a future build (v5) must throw, not silently corrupt.
-            // (v4 is now CurrentSchemaVersion; v5 is still an unknown future version.)
-            const string v5Json = @"{ ""schemaVersion"": 5, ""rewardPoints"": 1 }";
-            var data = JsonConvert.DeserializeObject<SaveData>(v5Json);
+            // A save written by a future build (v6) must throw, not silently corrupt.
+            // (v5 is now CurrentSchemaVersion after Phase 3; v6 is still an unknown future version.)
+            const string v6Json = @"{ ""schemaVersion"": 6, ""rewardPoints"": 1 }";
+            var data = JsonConvert.DeserializeObject<SaveData>(v6Json);
             Assert.IsNotNull(data);
 
             // Expect the Debug.LogError before the throw
             UnityEngine.TestTools.LogAssert.Expect(
                 UnityEngine.LogType.Error,
-                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 5"));
+                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 6"));
 
             Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data!));
         }
 
-        // ── T5 Test 3: CurrentSchemaVersion is 4 ─────────────────────────────
+        // ── T5 Test 3: CurrentSchemaVersion is 5 (bumped by Phase 3 stamina_tournament_wiring) ──
 
         [Test]
-        public void T5_CurrentSchemaVersion_Is4()
+        public void T5_CurrentSchemaVersion_Is5()
         {
-            Assert.AreEqual(4, SaveSchemaMigrator.CurrentSchemaVersion,
-                "CurrentSchemaVersion must be 4 after the v3→v4 bump (Phase 2 stamina condition fields)");
+            Assert.AreEqual(5, SaveSchemaMigrator.CurrentSchemaVersion,
+                "CurrentSchemaVersion must be 5 after the v4→v5 bump (Phase 3 stamina_tournament_wiring conditionRemaining sentinel)");
         }
 
         // ── T5 Test 5: v3 → v4 migration — condition fields default-safe ─────
@@ -399,8 +401,8 @@ namespace Golfin.Save.Tests
             // Act: migrate
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
 
-            // schemaVersion bumped to 4
-            Assert.AreEqual(4, data!.schemaVersion, "schemaVersion must be 4 after v3→v4 migration");
+            // schemaVersion bumped to 5 (Phase 3 added v5 migration block — empty/safe for v3 data)
+            Assert.AreEqual(5, data!.schemaVersion, "schemaVersion must be 5 after v3→v4→v5 migration (Phase 3 CurrentSchemaVersion)");
 
             // All v3 fields still intact
             Assert.AreEqual(7777, data.rewardPoints);

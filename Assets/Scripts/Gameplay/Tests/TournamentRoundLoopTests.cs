@@ -1,14 +1,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // T6 — tournament_round_loop EditMode tests (SPEC §12.2)
+// Updated Phase 3 (stamina_tournament_wiring): per-hole pool model replaces
+// the old per-shot drain. Obsolete per-shot DepleteStamina_* tests rewritten.
 //
 // Test coverage:
-//  1. Stamina depletes per shot
-//  2. Stamina carries hole→hole (BeginRound seeds once; no reset between holes)
+//  1. BeginRound seeds pool from explicit tankMax/remaining (not flat-100 reset)
+//  2. Pool is CONSTANT within a hole (no per-shot drain in production path)
 //  3. Stamina resets on EndRound
-//  4. Stamina gate (IsActive=false) → no depletion on solo path
+//  4. Stamina gate (IsActive=false) → DepleteStamina is no-op (legacy API test)
 //  5. GameSession.IsTournament / TournamentId cleared on ResetSession
 //  6. FireTournamentHoleComplete fires the OnTournamentHoleComplete event
 //  7. GameSession.ResetSession calls TournamentRoundContext.EndRound
+//  8. Pool floored at 0, does not go negative (DepleteStamina overload still safe)
+//  9. Sentinel -1f remaining → seeded from caller (test caller logic)
 //
 // Deliberately no UnityEngine.UI or live-backend calls — pure state logic.
 // Lives in Golfin.Gameplay.Tests (Editor-only asmdef).
@@ -51,50 +55,53 @@ namespace Golfin.Gameplay.Tests
             GameSession.ResetSession();
         }
 
-        // ── Test 1: Stamina depletes per shot ─────────────────────────────────
+        // ── Test 1: BeginRound seeds pool from explicit tankMax / remaining ────
+        // Phase 3: BeginRound takes explicit tankMax + remaining from the entry,
+        // replacing the old flat-100 default reset.
 
         [Test]
-        public void DepleteStamina_ReducesRemainingByOneCostPerCall()
+        public void BeginRound_SeedsPoolFromExplicitParams()
         {
             var snap = MakeSnapshot();
-            TournamentRoundContext.BeginRound("t1", snap, staminaCostPerShot: 10f);
+            float tank      = 80f;
+            float remaining = 55f;
 
-            float before = TournamentRoundContext.StaminaEnergyRemaining;
-            TournamentRoundContext.DepleteStamina();
+            TournamentRoundContext.BeginRound("t1", snap, tank, remaining);
 
-            float after = TournamentRoundContext.StaminaEnergyRemaining;
-            Assert.AreEqual(before - 10f, after, 0.001f,
-                "DepleteStamina must subtract StaminaCostPerShot from StaminaEnergyRemaining.");
+            Assert.AreEqual(tank,      TournamentRoundContext.StaminaEnergyMax,       0.001f,
+                "StaminaEnergyMax must be set to the tankMax argument.");
+            Assert.AreEqual(remaining, TournamentRoundContext.StaminaEnergyRemaining, 0.001f,
+                "StaminaEnergyRemaining must be set to the remaining argument.");
+            Assert.IsTrue(TournamentRoundContext.IsActive,
+                "IsActive must be true after BeginRound.");
+            Assert.AreEqual("t1", TournamentRoundContext.TournamentId,
+                "TournamentId must be set.");
         }
 
-        // ── Test 2: Stamina carries hole→hole (no reset between holes) ────────
+        // ── Test 2: Pool is constant within a hole (no per-shot drain) ───────
+        // Phase 3 (D4): ShotController no longer calls DepleteStamina().
+        // The pool is seeded once at BeginRound and stays constant for the whole hole.
+        // The penalty seam (LiveStatProviderHost.ResolveLive) reads this constant
+        // value throughout the hole — condition steps down once at hole-complete
+        // (backend SubmitHoleResult), not per-shot.
 
         [Test]
-        public void DepleteStamina_CarriesAcrossHoles_WhenBeginRoundNotCalled()
+        public void Pool_IsConstantWithinHole_NoPerShotDrain()
         {
             var snap = MakeSnapshot();
-            TournamentRoundContext.BeginRound("t1", snap, staminaCostPerShot: 5f);
+            float tank      = 100f;
+            float remaining = 70f;
 
-            // Simulate 3 shots on hole 1 → remaining = 85
-            TournamentRoundContext.DepleteStamina();
-            TournamentRoundContext.DepleteStamina();
-            TournamentRoundContext.DepleteStamina();
-            float afterHole1 = TournamentRoundContext.StaminaEnergyRemaining;
-            Assert.AreEqual(85f, afterHole1, 0.001f,
-                "After 3 shots at cost 5, remaining should be 85.");
+            TournamentRoundContext.BeginRound("t1", snap, tank, remaining);
 
-            // Simulate starting hole 2 — for v1 we do NOT call BeginRound again.
-            // Stamina must still carry the depletion.
-            Assert.IsTrue(TournamentRoundContext.IsActive,
-                "IsActive must stay true between holes — EndRound not called yet.");
-            Assert.AreEqual(85f, TournamentRoundContext.StaminaEnergyRemaining, 0.001f,
-                "StaminaEnergyRemaining must NOT reset between holes (only resets on EndRound).");
+            float after = TournamentRoundContext.StaminaEnergyRemaining;
 
-            // 2 more shots on hole 2 → remaining = 75
-            TournamentRoundContext.DepleteStamina();
-            TournamentRoundContext.DepleteStamina();
-            Assert.AreEqual(75f, TournamentRoundContext.StaminaEnergyRemaining, 0.001f,
-                "After 2 more shots, remaining should be 75.");
+            // Simulate several shots (no DepleteStamina calls — production path no longer drains per-shot).
+            // Pool must remain at the seeded value.
+            Assert.AreEqual(remaining, after, 0.001f,
+                "Pool must remain at the seeded value within a hole (no per-shot drain in Phase 3).");
+            Assert.AreEqual(remaining, TournamentRoundContext.StaminaEnergyRemaining, 0.001f,
+                "StaminaEnergyRemaining must be unchanged between BeginRound and EndRound.");
         }
 
         // ── Test 3: Stamina resets on EndRound ───────────────────────────────
@@ -103,14 +110,11 @@ namespace Golfin.Gameplay.Tests
         public void EndRound_ResetsStaminaAndClearsIsActive()
         {
             var snap = MakeSnapshot();
-            TournamentRoundContext.BeginRound("t1", snap, staminaCostPerShot: 10f);
-            TournamentRoundContext.DepleteStamina();
-            TournamentRoundContext.DepleteStamina();
+            TournamentRoundContext.BeginRound("t1", snap, 80f, 55f);
 
             Assert.IsTrue(TournamentRoundContext.IsActive, "Pre: should be active.");
-            Assert.Less(TournamentRoundContext.StaminaEnergyRemaining,
-                        TournamentRoundContext.DefaultStaminaMax,
-                        "Pre: stamina should have been depleted.");
+            Assert.AreEqual(55f, TournamentRoundContext.StaminaEnergyRemaining, 0.001f,
+                "Pre: remaining should be seeded to 55.");
 
             TournamentRoundContext.EndRound();
 
@@ -121,7 +125,9 @@ namespace Golfin.Gameplay.Tests
                 "StaminaEnergyRemaining must reset to DefaultStaminaMax after EndRound.");
         }
 
-        // ── Test 4: Stamina not depleted when IsActive = false (solo path) ────
+        // ── Test 4: DepleteStamina is no-op when IsActive = false (legacy API) ──
+        // DepleteStamina() is retained as dead/legacy API (D4 = keep but not called).
+        // It must still be safe to call (no-op when inactive = solo path unchanged).
 
         [Test]
         public void DepleteStamina_IsNoop_WhenIsActiveFalse()
@@ -192,8 +198,7 @@ namespace Golfin.Gameplay.Tests
         public void ResetSession_CallsEndRound()
         {
             var snap = MakeSnapshot();
-            TournamentRoundContext.BeginRound("t1", snap, staminaCostPerShot: 5f);
-            TournamentRoundContext.DepleteStamina();
+            TournamentRoundContext.BeginRound("t1", snap, 100f, 75f);
 
             Assert.IsTrue(TournamentRoundContext.IsActive, "Pre: must be active.");
 
@@ -204,43 +209,60 @@ namespace Golfin.Gameplay.Tests
                 "ResetSession must call TournamentRoundContext.EndRound, clearing IsActive.");
         }
 
-        // ── Test 8: Stamina floored at 0, does not go negative ────────────────
+        // ── Test 8: Pool floored at 0 via legacy DepleteStamina (safety check) ──
+        // DepleteStamina() is dead in production (D4) but the API must still be safe.
 
         [Test]
         public void DepleteStamina_FlooredAtZero()
         {
             var snap = MakeSnapshot();
-            TournamentRoundContext.BeginRound("t1", snap, staminaCostPerShot: 60f);
+            TournamentRoundContext.BeginRound("t1", snap, 100f, 40f);
 
-            // Two depletions of 60 each — total would be -20, but floored at 0.
-            TournamentRoundContext.DepleteStamina();
-            TournamentRoundContext.DepleteStamina();
+            // Two depletions via legacy API — total would go negative but floors at 0.
+            TournamentRoundContext.DepleteStamina(30f);
+            TournamentRoundContext.DepleteStamina(30f);
 
             Assert.AreEqual(0f, TournamentRoundContext.StaminaEnergyRemaining, 0.001f,
                 "StaminaEnergyRemaining must be floored at 0, never negative.");
         }
 
-        // ── Test 9: BeginRound seeds stamina at max (not carrying prior state) ──
+        // ── Test 9: BeginRound with full pool (sentinel caller logic) ─────────
+        // Verify that when caller passes remaining=tank (sentinel case, full pool),
+        // both values agree and IsActive becomes true.
 
         [Test]
-        public void BeginRound_SeedsStaminaAtMax()
+        public void BeginRound_WithFullPool_BothValuesAgree()
+        {
+            var snap = MakeSnapshot();
+            float tank = 90f;
+
+            // Caller resolved the sentinel (-1f) to full before calling BeginRound.
+            TournamentRoundContext.BeginRound("t2", snap, tank, tank);
+
+            Assert.AreEqual(tank, TournamentRoundContext.StaminaEnergyMax,       0.001f);
+            Assert.AreEqual(tank, TournamentRoundContext.StaminaEnergyRemaining, 0.001f);
+            Assert.IsTrue(TournamentRoundContext.IsActive);
+        }
+
+        // ── Test 10: Pool carries across calls (no spurious reset) ─────────────
+        // BeginRound is called once per hole in the real flow. Verify a second
+        // BeginRound (for a new tournament) correctly seeds the new values rather
+        // than carrying old state.
+
+        [Test]
+        public void BeginRound_SecondCall_SeedsNewValues()
         {
             var snap = MakeSnapshot();
 
-            // First round with some depletion
-            TournamentRoundContext.BeginRound("t1", snap, staminaCostPerShot: 20f);
-            TournamentRoundContext.DepleteStamina();
-            TournamentRoundContext.DepleteStamina();
-            Assert.AreEqual(60f, TournamentRoundContext.StaminaEnergyRemaining, 0.001f,
-                "Pre: 2 shots at cost 20 → 60 remaining.");
+            TournamentRoundContext.BeginRound("t1", snap, 100f, 60f);
+            Assert.AreEqual(60f, TournamentRoundContext.StaminaEnergyRemaining, 0.001f, "First BeginRound.");
 
             TournamentRoundContext.EndRound();
 
-            // New round: stamina MUST restart at max.
-            TournamentRoundContext.BeginRound("t2", snap, staminaCostPerShot: 10f);
-            Assert.AreEqual(TournamentRoundContext.DefaultStaminaMax,
-                            TournamentRoundContext.StaminaEnergyRemaining, 0.001f,
-                "BeginRound must seed StaminaEnergyRemaining at DefaultStaminaMax.");
+            // New tournament with different pool values.
+            TournamentRoundContext.BeginRound("t2", snap, 80f, 30f);
+            Assert.AreEqual(80f, TournamentRoundContext.StaminaEnergyMax,       0.001f, "Second BeginRound tank.");
+            Assert.AreEqual(30f, TournamentRoundContext.StaminaEnergyRemaining, 0.001f, "Second BeginRound remaining.");
         }
     }
 }

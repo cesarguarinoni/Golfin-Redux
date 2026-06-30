@@ -24,6 +24,13 @@ namespace Golfin.Save
         public int    status;                       // (int)EntryStatus — enum order frozen
         public bool   claimed;                      // persisted claim-once flag (D2 = (b))
         public PersistedCharacterSnapshot snapshot  = new PersistedCharacterSnapshot();
+
+        // ── Stamina condition pool (schema v5, Phase 3) ───────────────────────
+        // conditionRemaining: remaining condition points in the tournament pool.
+        // Default -1f = sentinel "unseeded": treated as full = MaxCondition(snapshot.Stamina) on use.
+        // Drains per hole (DrainForHole()); never regens within the event (D3 = NO).
+        // Separate pool from PersistedCharacter.conditionEnergy (live/solo pool, Phase 2).
+        public float conditionRemaining = -1f;
     }
 
     /// <summary>

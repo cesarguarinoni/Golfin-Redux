@@ -4,7 +4,8 @@
     "references": [
         "Golfin.Tournaments",
         "Golfin.UI.Rankings.Core",
-        "Golfin.Save"
+        "Golfin.Save",
+        "Golfin.Core.Stamina"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
