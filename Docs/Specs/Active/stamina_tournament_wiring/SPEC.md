@@ -34,7 +34,7 @@ So degraded Strength+ClubControl **already reach the swing in tournaments today.
 4. `TournamentRoundContext.BeginRound` seeds the runtime pool **from the entry** (tank = `MaxCondition`, remaining = `entry.ConditionRemaining`) — no more flat-100 reset.
 5. **Remove the per-shot drain:** delete the `TournamentRoundContext.DepleteStamina()` call at `ShotController.cs:393`. Drain is now per-hole (backend).
 6. **Persist** `conditionRemaining` on `PersistedTournamentEntry`; map it in `SaveBackedEntryStore`; migrator **v4 → v5**.
-7. **(D3)** offline regen between holes/sessions, accrued at `BeginRound` from the entry's existing `LastHoleUtc` anchor.
+7. **(D3 = NO)** the tournament pool does **not** regen — drain-only within the event. `BeginRound` seeds straight from the persisted `ConditionRemaining` (no time-based refill).
 
 **OUT (later / untouched):**
 - `LiveStatProviderHost` — **do not touch** (the penalty seam is already correct, Phase 2).
@@ -50,14 +50,11 @@ So degraded Strength+ClubControl **already reach the swing in tournaments today.
 - **Option A — RECOMMENDED — backend references `Golfin.Core.Stamina`.** `Register`/`SubmitHoleResult` call `MaxCondition`/`DrainForHole` directly; drain is atomic with the persist. `Golfin.Core.Stamina` is a **true leaf** (`references:[]`), so `Golfin.Tournaments → Golfin.Core.Stamina` is **cycle-free** (same direction Phase 2 used). **No `ITournamentBackend` signature change.** Guard each call with `StaminaModel.IsConfigured` → on false, fall back to the current flat constants (`DefaultStaminaMax` / a flat per-hole default) so the existing StaminaModel-unaware backend EditMode tests still pass unchanged; production (configured at boot via `StaminaRuntimeService`) gets the real economy.
 - **Option B — keep the leaf StaminaModel-free, pass values as params.** `Register(..., float conditionMax)` + `SubmitHoleResult(..., float conditionDrain)`; the Assembly-CSharp callers compute them. Cleaner separation, but an `ITournamentBackend` contract change + every caller must pass them. *Not recommended* — referencing a pure leaf is exactly the intended dependency direction.
 
-> **Spec written assuming Option A.** If you pick B, only the backend signatures + call sites in §4 change; everything else is identical.
+> **✅ LOCKED 2026-06-30: Option A** (backend references the `Golfin.Core.Stamina` leaf; cycle-free; no `ITournamentBackend` change). Option B not in play.
 
 **D2 — legacy / fresh pool value (default: full).** New `conditionRemaining` defaults to **`-1f` (sentinel = "unseeded")** on `PersistedTournamentEntry`. On load, a `-1` (pre-v5 entries, or a just-registered entry before its first persist) is treated as **full** = `MaxCondition(snapshot.Stamina)`. No data transform in the migrator. Safe + backward-compatible.
 
-**D3 — does the tournament pool regen between holes/sessions? (DESIGN CALL — your ruling wanted)**
-- **Default: YES** — honors the locked design "SAME formula in/out of tournament." Accrue `RegenForElapsed(snapshot.Recovery, now − entry.LastHoleUtc)` onto the seeded pool at `BeginRound` (reusing the **existing** `LastHoleUtc` field — no new timestamp persisted; regen is recomputed each load, mirroring Phase 2's load-accrual). Fresh entry (no holes yet) = no regen.
-- **Alternative: NO** — tournament pool only drains within the event (endurance feel), no time dependence. **Stronger anti-cheat:** with no regen, each hole's condition is reproducible from drain-count alone, so a future server re-sim never has to trust client clocks. The tradeoff: diverges from the locked "same formula."
-- *Recommendation:* default **YES** (re-sim is deferred anyway), but if you want tournaments to be the clock-trust-free competitive surface, say **NO** and I'll drop the regen accrual + the `LastHoleUtc` read.
+**D3 — does the tournament pool regen between holes/sessions? ✅ LOCKED 2026-06-30: NO (Cesar).** A tournament is a continuous endurance event — you don't stop mid-round to recover stamina in real life. The pool **only drains** within the event; no time-based refill. This is also the **clock-trust-free** anti-cheat model: each hole's condition is reproducible from drain-count alone, so a future server re-sim never trusts client clocks. (Deliberate, Cesar-approved divergence from the otherwise-shared "same formula" — regen still applies to the live/solo pool, Phase 2.) **Implementation:** `BeginRound` seeds `remaining` straight from `entry.ConditionRemaining` (no regen accrual, no `LastHoleUtc`/`Recovery` read).
 
 **D4 — remove per-shot drain + rewrite its tests (default: YES).** The `ShotController:393` call goes; `TournamentRoundLoopTests` per-shot assertions (`DepleteStamina_*`) are rewritten to the per-hole model. `TournamentRoundContext.DepleteStamina()` itself may stay as dead/test-only API or be deleted — implementer's call, flag in the report.
 
@@ -102,14 +99,11 @@ if (entry.Snapshot != null)
                                                 : TournamentRoundContext.DefaultStaminaMax;
     float remaining = entry.ConditionRemaining < 0f ? tank                       // sentinel = full (D2)
                                                     : Mathf.Min(tank, entry.ConditionRemaining);
-    // (D3 = YES) offline regen since last hole:
-    if (StaminaModel.IsConfigured && entry.LastHoleUtc.HasValue)
-        remaining = Mathf.Min(tank, remaining + StaminaModel.RegenForElapsed(entry.Snapshot.Recovery,
-                                                    DateTime.UtcNow - entry.LastHoleUtc.Value));
+    // D3 = NO: tournament pool does not regen — seed straight from the persisted value.
     TournamentRoundContext.BeginRound(tournamentId, entry.Snapshot, tank, remaining);
 }
 ```
-(If D3 = NO, drop the regen `if` block entirely.) Snapshot uses `Recovery` — already on `CharacterSnapshot`.
+`snapshot.Recovery` is unused this phase (no regen); it stays on the snapshot for future use.
 
 ### 4.4 Remove per-shot drain (`ShotController.cs:393`)
 Delete `TournamentRoundContext.DepleteStamina();` (and the surrounding `if (TournamentRoundContext.IsActive)` guard if it wraps only that call — verify at the line).
@@ -127,7 +121,7 @@ One float added per tournament entry. Backward compatible: pre-v5 entries → `-
 ---
 
 ## 6. Anti-cheat re-sim reproducibility (documentation, no engine built)
-With per-hole deterministic drain (`DrainForHole()` is a CSV constant) and a frozen `snapshot`, the **condition at each hole is reconstructible** from the persisted entry timeline: `StartedUtc`, each `HoleResult.completedUtc`, `snapshot.Stamina` (tank) + `snapshot.Recovery` (regen). The Option-C `EffectiveStat` is pure → the per-hole degraded stats are reproducible. **Caveat (D3-dependent):** if regen = YES, reconstruction needs the inter-hole elapsed times (client timestamps); if regen = NO, condition is reproducible from drain-count alone (no clock trust). Document the chosen model in the backend XML-doc so the future server re-sim (GDD §8) can mirror it. **No replay code in Phase 3.**
+With per-hole deterministic drain (`DrainForHole()` is a CSV constant) and a frozen `snapshot`, the **condition at each hole is reconstructible** from the persisted entry timeline: `StartedUtc`, each `HoleResult.completedUtc`, `snapshot.Stamina` (tank) + `snapshot.Recovery` (regen). The Option-C `EffectiveStat` is pure → the per-hole degraded stats are reproducible. **D3 = NO** → condition is reproducible from drain-count alone (no inter-hole time dependence, no client-clock trust). Document this clock-trust-free model in the backend XML-doc so the future server re-sim (GDD §8) mirrors it. **No replay code in Phase 3.**
 
 ---
 
@@ -138,7 +132,7 @@ With per-hole deterministic drain (`DrainForHole()` is a CSV constant) and a fro
 4. **BeginRound seeds from entry** — given an entry at `ConditionRemaining = X`, `TournamentRoundContext.StaminaEnergyRemaining == X` (or X+regen under D3) and `StaminaEnergyMax == MaxCondition(snapshot.Stamina)` after `BeginRound`; sentinel `-1` → full.
 5. **Persistence round-trip** — Register → Submit (drain) → `_store.Save`/`Load` preserves `ConditionRemaining` within epsilon; pool carries across a simulated relaunch.
 6. **Migration v4 → v5** — a v4 save loads, `schemaVersion == 5`, tournament entries get `conditionRemaining == -1` (→ full on use); fail-hard on v6.
-7. **(D3=YES) regen between holes** — entry with `LastHoleUtc` 2h ago at Recovery 9 seeds `remaining + 60` (clamped to tank) at BeginRound; no `LastHoleUtc` → no regen.
+7. **(D3=NO) no regen between holes** — an entry whose `LastHoleUtc` is hours old seeds `BeginRound` straight from `ConditionRemaining` with **no** time-based refill (assert the pool did not increase).
 8. **IsConfigured fallback** — with StaminaModel **not** configured, Register/Submit use the flat fallback and the legacy backend tests pass unchanged (no throw).
 
 ---
@@ -151,7 +145,7 @@ With per-hole deterministic drain (`DrainForHole()` is a CSV constant) and a fro
 5. Save migrates v4 → v5 cleanly; pre-v5 entries load to full pools.
 6. `Golfin.Tournaments` stays cycle-free after adding the `Golfin.Core.Stamina` leaf reference (D1-A).
 7. Scope clean: no `LiveStatProviderHost` change, no live/solo-pool change (Phase 2), no roster UI (Phase 4).
-8. D3 model (regen YES/NO) implemented as ruled + documented in the backend XML-doc for future re-sim.
+8. Tournament pool does NOT regen (D3=NO); the clock-trust-free model is documented in the backend XML-doc for future re-sim.
 
 ---
 
