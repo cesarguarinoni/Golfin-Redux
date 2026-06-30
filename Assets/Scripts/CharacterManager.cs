@@ -1,7 +1,10 @@
 #nullable enable
 using UnityEngine;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using Golfin.Core.Stamina;
 using Golfin.Save;
 using Golfin.Audio.Events;
 
@@ -99,6 +102,8 @@ namespace Golfin.Roster
             if (SaveDataHost.Instance != null)
             {
                 var saveData = SaveDataHost.Instance.Data;
+                var nowUtc   = DateTime.UtcNow;
+
                 foreach (var persisted in saveData.ownedCharacters)
                 {
                     if (ownedCharacters.TryGetValue(persisted.characterId, out var playerData))
@@ -110,6 +115,56 @@ namespace Golfin.Roster
                         playerData.spentStamina     = persisted.spentStamina;
                         playerData.totalSPEarned    = persisted.totalSPEarned;
                         playerData.isSelected       = persisted.isSelected;
+
+                        // ── Stamina condition hydration (Phase 2, §4.3) ───────────
+                        // Recompute stat values first so currentStamina is current.
+                        // (RefreshStatValues syncs to SaveData — guard against double-sync here
+                        //  by computing inline instead of calling the full method.)
+                        {
+                            var csv = CharacterDatabaseCSV.Instance?.GetCharacter(persisted.characterId);
+                            if (csv != null)
+                            {
+                                var caps = RarityStatCaps.GetStatCaps(csv.rarity);
+                                playerData.currentStrength    = Mathf.Min(csv.baseStrength    + playerData.spentStrength,    caps.strengthCap);
+                                playerData.currentClubControl = Mathf.Min(csv.baseClubControl + playerData.spentClubControl, caps.clubControlCap);
+                                playerData.currentRecovery    = Mathf.Min(csv.baseRecovery    + playerData.spentRecovery,    caps.recoveryCap);
+                                playerData.currentStamina     = Mathf.Min(csv.baseStamina     + playerData.spentStamina,     caps.staminaCap);
+                            }
+                        }
+
+                        // Set real tank size from Stamina stat (§4.2)
+                        if (StaminaModel.IsConfigured)
+                            playerData.maxStaminaEnergy = StaminaModel.MaxCondition(playerData.currentStamina);
+
+                        // Hydrate energy + timestamp (§4.3 hydrate block)
+                        if (string.IsNullOrEmpty(persisted.conditionUpdatedUtc))
+                        {
+                            // Pre-v4 or fresh character: start at full condition
+                            playerData.currentStaminaEnergy = playerData.maxStaminaEnergy;
+                            playerData.conditionUpdatedUtc  = nowUtc;
+                        }
+                        else
+                        {
+                            // Parse persisted timestamp; fall back to fresh on error
+                            try
+                            {
+                                playerData.currentStaminaEnergy = Mathf.Clamp(
+                                    persisted.conditionEnergy, 0f, playerData.maxStaminaEnergy);
+                                playerData.conditionUpdatedUtc = DateTime.Parse(
+                                    persisted.conditionUpdatedUtc,
+                                    CultureInfo.InvariantCulture,
+                                    DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
+                                // Accrue offline regen since last save (D2)
+                                if (StaminaModel.IsConfigured)
+                                    StaminaRuntimeService.AccrueRegen(playerData, nowUtc);
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.LogWarning($"[CharacterManager] Failed to parse conditionUpdatedUtc for {persisted.characterId}: {ex.Message} — treating as fresh.");
+                                playerData.currentStaminaEnergy = playerData.maxStaminaEnergy;
+                                playerData.conditionUpdatedUtc  = nowUtc;
+                            }
+                        }
                     }
                 }
 
@@ -168,6 +223,12 @@ namespace Golfin.Roster
             existing.spentStamina     = playerData.spentStamina;
             existing.totalSPEarned    = playerData.totalSPEarned;
             existing.isSelected       = playerData.isSelected;
+
+            // Persist stamina condition (Phase 2 §4.3 dehydrate)
+            existing.conditionEnergy     = playerData.currentStaminaEnergy;
+            existing.conditionUpdatedUtc = playerData.conditionUpdatedUtc == default
+                ? DateTime.UtcNow.ToString("o")
+                : playerData.conditionUpdatedUtc.ToString("o");
 
             SaveDataHost.Instance.MarkDirty();
         }
@@ -365,7 +426,24 @@ namespace Golfin.Roster
             playerChar.currentRecovery    = Mathf.Min(bRec  + playerChar.spentRecovery,    caps.recoveryCap);
             playerChar.currentStamina     = Mathf.Min(bStam + playerChar.spentStamina,     caps.staminaCap);
 
+            // Recompute tank size from updated Stamina stat (§4.2)
+            // On stat raise, leave currentStaminaEnergy unchanged (can't exceed new max anyway).
+            if (StaminaModel.IsConfigured)
+                playerChar.maxStaminaEnergy = StaminaModel.MaxCondition(playerChar.currentStamina);
+
             // Sync stat changes to SaveData
+            SyncCharacterToSaveData(characterId);
+        }
+
+        /// <summary>
+        /// Accrue offline regen to now, then flush the current condition energy + timestamp
+        /// back to SaveData for the given character. Call after a per-hole drain.
+        /// </summary>
+        public void PersistCondition(string characterId)
+        {
+            if (!ownedCharacters.TryGetValue(characterId, out var playerData)) return;
+            if (StaminaModel.IsConfigured)
+                StaminaRuntimeService.AccrueRegen(playerData, DateTime.UtcNow);
             SyncCharacterToSaveData(characterId);
         }
 

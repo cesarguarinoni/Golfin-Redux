@@ -68,6 +68,15 @@ namespace Golfin.Roster
         public float maxStaminaEnergy = 100f;
 
         /// <summary>
+        /// UTC timestamp of the last authoritative conditionEnergy write.
+        /// Used by AccrueRegen to calculate offline recovery since last save.
+        /// default(DateTime) = never written; treated as "stamp now + full pool".
+        /// [NonSerialized] — persisted as ISO-8601 string in PersistedCharacter.conditionUpdatedUtc.
+        /// </summary>
+        [System.NonSerialized]
+        public DateTime conditionUpdatedUtc = default;
+
+        /// <summary>
         /// Check if stamina energy is below threshold (0.0 to 1.0)
         /// </summary>
         public bool IsStaminaLow(float threshold = 0.25f)

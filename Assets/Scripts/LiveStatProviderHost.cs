@@ -1,5 +1,6 @@
 #nullable enable
 using UnityEngine;
+using Golfin.Core.Stamina;       // StaminaModel
 using Golfin.Gameplay.Defaults;
 using Golfin.Gameplay.Session;   // GameSession
 using Golfin.Gameplay.UI.HUD;    // ClubContext, BallContext, ClubEntry
@@ -52,11 +53,8 @@ public class LiveStatProviderHost : MonoBehaviour
             }
             else
             {
-                var tCharacterStats = new CharacterStats(
-                    strength:    snap.Strength,
-                    clubControl: snap.ClubControl,
-                    recovery:    snap.Recovery,
-                    stamina:     snap.Stamina);
+                float tConditionPct = StaminaModel.ConditionPct(TournamentRoundContext.StaminaEnergyRemaining, snap.Stamina);
+                var tCharacterStats = BuildCharacterStats(snap.Strength, snap.ClubControl, snap.Recovery, snap.Stamina, tConditionPct);
 
                 // ── BALL ──────────────────────────────────────────────────────
                 string ballIdT = BallContext.SelectedBallId;
@@ -124,7 +122,9 @@ public class LiveStatProviderHost : MonoBehaviour
             return null;
         }
 
-        var characterStats = BuildCharacterStats(charData);
+        float conditionPct = StaminaModel.ConditionPct(charData.currentStaminaEnergy, charData.currentStamina);
+        var characterStats = BuildCharacterStats(charData.currentStrength, charData.currentClubControl,
+                                                  charData.currentRecovery, charData.currentStamina, conditionPct);
 
         // ── BALL ───────────────────────────────────────────────────────────────
         string ballId = BallContext.SelectedBallId;
@@ -220,17 +220,31 @@ public class LiveStatProviderHost : MonoBehaviour
 
     // ── Mapping helpers ────────────────────────────────────────────────────────
 
+    // One-time guard so the "StaminaModel not configured" log only fires once per session.
+    static bool _staminaNotConfiguredLogged;
+
     /// <summary>
-    /// Maps PlayerCharacterData (roster level/SP state) → CharacterStats (physics struct).
-    /// Uses current* int stat values which already include SP allocation.
+    /// Maps raw stat ints → CharacterStats, pre-degrading Strength + ClubControl via
+    /// StaminaModel.EffectiveStat (Option C — D1 LOCKED).  Recovery + Stamina stat are
+    /// passed through raw (only the STAT value is passed, not the pool).
+    ///
+    /// If StaminaModel is not yet configured (boot race), returns raw stats and logs once.
     /// </summary>
-    static CharacterStats BuildCharacterStats(PlayerCharacterData data)
+    static CharacterStats BuildCharacterStats(int str, int ctrl, int rec, int sta, float conditionPct)
     {
-        return new CharacterStats(
-            strength:    data.currentStrength,
-            clubControl: data.currentClubControl,
-            recovery:    data.currentRecovery,
-            stamina:     data.currentStamina);
+        if (!StaminaModel.IsConfigured)
+        {
+            if (!_staminaNotConfiguredLogged)
+            {
+                Debug.LogWarning("[LiveStatProvider] StaminaModel not configured — serving raw stats (no condition penalty). Boot order issue?");
+                _staminaNotConfiguredLogged = true;
+            }
+            return new CharacterStats(strength: str, clubControl: ctrl, recovery: rec, stamina: sta);
+        }
+
+        int eStr  = StaminaModel.IsDegraded("Strength")    ? StaminaModel.EffectiveStat(str,  conditionPct) : str;
+        int eCtrl = StaminaModel.IsDegraded("ClubControl") ? StaminaModel.EffectiveStat(ctrl, conditionPct) : ctrl;
+        return new CharacterStats(strength: eStr, clubControl: eCtrl, recovery: rec, stamina: sta);
     }
 
     /// <summary>

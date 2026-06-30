@@ -2,6 +2,7 @@
     "name": "Golfin.Gameplay.Tests",
     "rootNamespace": "Golfin.Gameplay.Tests",
     "references": [
+        "Golfin.Core.Stamina",
         "Golfin.Gameplay.Input",
         "Golfin.Gameplay.Config",
         "Golfin.Gameplay.Defaults",
@@ -13,6 +14,7 @@
         "Golfin.Gameplay.Loop",
         "Golfin.Tournaments",
         "Golfin.Gameplay.TournamentContext",
+        "Golfin.Save",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],
@@ -20,7 +22,7 @@
     "excludePlatforms": [],
     "optionalUnityReferences": ["TestAssemblies"],
     "overrideReferences": true,
-    "precompiledReferences": ["nunit.framework.dll"],
+    "precompiledReferences": ["nunit.framework.dll", "Newtonsoft.Json.dll"],
     "autoReferenced": false,
     "noEngineReferences": false
 }

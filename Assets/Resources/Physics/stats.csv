@@ -12,4 +12,4 @@ char_club_control_per_point,0.0035,aim cone reduction per Character Club Control
 putter_control_per_point,0.0042,off-center forgiveness per Putter Control point
 putter_accuracy_per_point,0.0075,gravity well radius per Putter Accuracy point (assist; informational)
 putter_weight_per_point,0.125,aim cycles per Putter Weight point (UI; informational)
-stamina_floor_fraction,0.20,minimum effective fraction for stamina-modulated stats at 0 stamina
+stamina_floor_fraction,1.0,neutralized by Phase 2 Option C — degradation now applied at LiveStatProviderHost seam via StaminaModel.EffectiveStat; resolver passes already-degraded stat through unchanged

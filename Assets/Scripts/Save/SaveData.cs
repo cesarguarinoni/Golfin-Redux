@@ -124,5 +124,13 @@ namespace Golfin.Save
         public int spentStamina;
         public int totalSPEarned;
         public bool isSelected;
+
+        // ── Stamina condition (schema v4, Phase 2) ────────────────────────────
+        // conditionEnergy: current Condition pool (float). Defaults 0f; empty
+        //   conditionUpdatedUtc causes hydration to treat it as full (fresh/pre-v4).
+        // conditionUpdatedUtc: ISO-8601 UTC string of last authoritative write.
+        //   "" (empty) = never written; matches the tournament-DTO string-date convention.
+        public float  conditionEnergy     = 0f;
+        public string conditionUpdatedUtc = "";
     }
 }
