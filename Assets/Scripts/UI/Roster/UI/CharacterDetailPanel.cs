@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.Core.Stamina;
 
 namespace Golfin.Roster
 {
@@ -11,6 +12,8 @@ namespace Golfin.Roster
     /// when a carousel card is tapped.
     ///
     /// Phase 2b: Pure data binding — does NOT modify hierarchy.
+    /// Phase 4 (stamina_roster_ux): Ghost overlay bars on Strength + ClubControl
+    ///   show stat lost to low Condition. Stamina row becomes a Condition meter.
     /// </summary>
     public class CharacterDetailPanel : MonoBehaviour
     {
@@ -27,12 +30,14 @@ namespace Golfin.Roster
 
         [Header("Stat Bars — Strength")]
         [SerializeField] private TextMeshProUGUI strengthName;     // CharacterStats1 > Name+Bar > StatsName
-        [SerializeField] private Image strengthBar;                // CharacterStats1 > Name+Bar > Bar
+        [SerializeField] private Image strengthBar;                // CharacterStats1 > Name+Bar > BarContainer > Bar  (effective fill)
+        [SerializeField] private Image strengthGhostBar;          // CharacterStats1 > Name+Bar > BarContainer > GhostBar (base fill, behind)
         [SerializeField] private TextMeshProUGUI strengthNumber;   // CharacterStats1 > StatNumber
 
         [Header("Stat Bars — Club Control")]
         [SerializeField] private TextMeshProUGUI clubControlName;
-        [SerializeField] private Image clubControlBar;
+        [SerializeField] private Image clubControlBar;            // effective fill
+        [SerializeField] private Image clubControlGhostBar;       // base fill, behind
         [SerializeField] private TextMeshProUGUI clubControlNumber;
 
         [Header("Stat Bars — Recovery")]
@@ -40,10 +45,15 @@ namespace Golfin.Roster
         [SerializeField] private Image recoveryBar;
         [SerializeField] private TextMeshProUGUI recoveryNumber;
 
-        [Header("Stat Bars — Stamina")]
+        [Header("Stat Bars — Condition Meter (was Stamina)")]
         [SerializeField] private TextMeshProUGUI staminaName;
-        [SerializeField] private Image staminaBar;
+        [SerializeField] private Image staminaBar;               // Condition meter fill — uses LevelUpWhite for tinting
         [SerializeField] private TextMeshProUGUI staminaNumber;
+
+        [Header("Condition Meter Colors")]
+        [SerializeField] private Color meterColorHigh  = new Color(0.34f, 0.57f, 0.90f, 1f);  // #5792E6 (High / blue)
+        [SerializeField] private Color meterColorMid   = new Color(0.90f, 0.72f, 0.28f, 1f);  // #E6B847 (Mid / amber)
+        [SerializeField] private Color meterColorLow   = new Color(0.82f, 0.42f, 0.28f, 1f);  // #D16A47 (Low / red)
 
         [Header("Buttons")]
         [SerializeField] private Button levelUpButton;
@@ -72,7 +82,6 @@ namespace Golfin.Roster
         // Bar colours removed — Image colours are set on the sprites in the Editor
 
         private string currentCharacterId = "";
-        private const float LOW_STAMINA_THRESHOLD = 0.25f;
 
         private void Start()
         {
@@ -185,22 +194,44 @@ namespace Golfin.Roster
             if (maxLevelText != null)
                 maxLevelText.text = $"/{maxLevel}";
 
+            // --- Condition (for ghost bars + meter) ---
+            // Mirror the same call LiveStatProviderHost uses (solo path):
+            // float conditionPct = StaminaModel.ConditionPct(charData.currentStaminaEnergy, charData.currentStamina);
+            float conditionPct = 1f;
+            bool staminaConfigured = StaminaModel.IsConfigured;
+            if (staminaConfigured)
+                conditionPct = StaminaModel.ConditionPct(playerData.currentStaminaEnergy, playerData.currentStamina);
+
             // --- Stats ---
-            UpdateStatBar(strengthName, strengthBar, strengthNumber,
+            int strCap = RarityStatCaps.GetStatCap(rarity, "Strength");
+            int ccCap  = RarityStatCaps.GetStatCap(rarity, "ClubControl");
+            int recCap = RarityStatCaps.GetStatCap(rarity, "Recovery");
+            int stamCap = RarityStatCaps.GetStatCap(rarity, "Stamina");
+
+            // Strength — ghost shows base, solid shows effective
+            int strEffective = (staminaConfigured && StaminaModel.IsDegraded("Strength"))
+                ? StaminaModel.EffectiveStat(playerData.currentStrength, conditionPct)
+                : playerData.currentStrength;
+            UpdateGhostStatBar(strengthName, strengthBar, strengthGhostBar, strengthNumber,
                 LocalizationManager.Get("ROSTER_STRENGTH"),
-                playerData.currentStrength, RarityStatCaps.GetStatCap(rarity, "Strength"));
+                playerData.currentStrength, strEffective, strCap);
 
-            UpdateStatBar(clubControlName, clubControlBar, clubControlNumber,
+            // Club Control — ghost shows base, solid shows effective
+            int ccEffective = (staminaConfigured && StaminaModel.IsDegraded("ClubControl"))
+                ? StaminaModel.EffectiveStat(playerData.currentClubControl, conditionPct)
+                : playerData.currentClubControl;
+            UpdateGhostStatBar(clubControlName, clubControlBar, clubControlGhostBar, clubControlNumber,
                 LocalizationManager.Get("ROSTER_CLUB_CONTROL"),
-                playerData.currentClubControl, RarityStatCaps.GetStatCap(rarity, "ClubControl"));
+                playerData.currentClubControl, ccEffective, ccCap);
 
+            // Recovery — no ghost (not degraded by Condition)
             UpdateStatBar(recoveryName, recoveryBar, recoveryNumber,
                 LocalizationManager.Get("ROSTER_RECOVERY"),
-                playerData.currentRecovery, RarityStatCaps.GetStatCap(rarity, "Recovery"));
+                playerData.currentRecovery, recCap);
 
-            UpdateStatBar(staminaName, staminaBar, staminaNumber,
-                LocalizationManager.Get("ROSTER_STAMINA"),
-                playerData.currentStamina, RarityStatCaps.GetStatCap(rarity, "Stamina"));
+            // Stamina row → Condition meter
+            // Fill = conditionPct (0..1); number stays base stamina stat "currentStamina/cap"
+            UpdateConditionMeter(playerData.currentStamina, stamCap, conditionPct);
 
             // --- Status Icons ---
             if (selectedIcon != null)
@@ -241,6 +272,52 @@ namespace Golfin.Roster
             }
         }
 
+        /// <summary>
+        /// Updates a stat row that participates in ghost-bar rendering.
+        /// The ghost bar shows the BASE (full) stat; the solid bar shows the EFFECTIVE (degraded) stat.
+        /// When not degraded (baseValue == effectiveValue) the ghost is hidden (fillAmount=0).
+        /// </summary>
+        private void UpdateGhostStatBar(
+            TextMeshProUGUI nameField, Image effectiveBar, Image? ghostBar,
+            TextMeshProUGUI numberField,
+            string label, int baseValue, int effectiveValue, int capValue)
+        {
+            if (nameField != null)
+                nameField.text = label;
+
+            // Number shows effective value (D1=A: effective shown in number)
+            if (numberField != null)
+                numberField.text = $"{effectiveValue}/{capValue}";
+
+            float baseFill      = capValue > 0 ? (float)baseValue / capValue : 0f;
+            float effectiveFill = capValue > 0 ? (float)effectiveValue / capValue : 0f;
+
+            bool isDegraded = effectiveValue < baseValue;
+
+            // Effective bar (foreground solid fill)
+            if (effectiveBar != null)
+                effectiveBar.fillAmount = effectiveFill;
+
+            // Ghost bar (background translucent fill showing base)
+            if (ghostBar != null)
+            {
+                if (isDegraded)
+                {
+                    ghostBar.fillAmount = baseFill;
+                    // Ensure ghost is visually behind effective bar (sibling index 0)
+                    ghostBar.gameObject.SetActive(true);
+                }
+                else
+                {
+                    ghostBar.fillAmount = 0f;
+                    ghostBar.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Standard stat bar update (no ghost) for Recovery.
+        /// </summary>
         private void UpdateStatBar(TextMeshProUGUI nameField, Image bar, TextMeshProUGUI numberField,
             string label, int currentValue, int capValue)
         {
@@ -253,6 +330,44 @@ namespace Golfin.Roster
             if (bar != null)
                 bar.fillAmount = capValue > 0 ? (float)currentValue / capValue : 0f;
             // Bar colour left as-is on the Image — set in Editor
+        }
+
+        /// <summary>
+        /// Updates the Condition meter (was Stamina row).
+        /// Fill = conditionPct (0..1); number shows base stamina stat "stat/cap"; color by MeterState.
+        /// </summary>
+        private void UpdateConditionMeter(int staminaStatValue, int staminaStatCap, float conditionPct)
+        {
+            if (staminaName != null)
+                staminaName.text = LocalizationManager.Get("ROSTER_STAMINA");
+
+            // Number = stamina STAT value (not energy) — D1=A: effective value shown
+            if (staminaNumber != null)
+                staminaNumber.text = $"{staminaStatValue}/{staminaStatCap}";
+
+            if (staminaBar != null)
+            {
+                staminaBar.fillAmount = conditionPct;
+                staminaBar.color = ApplyMeterColor(conditionPct);
+            }
+        }
+
+        /// <summary>
+        /// Returns the meter color for the given conditionPct using MeterState thresholds.
+        /// Falls back to meterColorHigh when StaminaModel is not yet configured.
+        /// </summary>
+        private Color ApplyMeterColor(float conditionPct)
+        {
+            if (!StaminaModel.IsConfigured)
+                return meterColorHigh;
+
+            return StaminaModel.MeterState(conditionPct) switch
+            {
+                MeterColorState.High => meterColorHigh,
+                MeterColorState.Mid  => meterColorMid,
+                MeterColorState.Low  => meterColorLow,
+                _                    => meterColorHigh,
+            };
         }
 
         // --- Event Handlers ---
