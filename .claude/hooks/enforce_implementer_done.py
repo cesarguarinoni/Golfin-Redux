@@ -1295,6 +1295,137 @@ def validate_video_deliverable(
     return errors
 
 
+# Rule 20 — slideshow / non-continuous video detection. stamina_roster_live_meter
+# (2026-06-30) failed self-review TWICE on a "video" that was actually an ffmpeg
+# image2 SLIDESHOW stitched from ~5 posed stills (some reflection-set on
+# Image.fillAmount). The lesson "use BotVideoRecorder / Unity Recorder, never
+# hand-stitch" lived only in memory and kept getting skipped — the self-reviewer
+# caught it post-hoc both times, wasting whole review cycles. This converts that
+# advisory lesson into a hard stop: any video deliverable referenced in the report
+# must be a CONTINUOUS recording. We run ffmpeg `mpdecimate` to count distinct
+# (non-duplicate) frames — a real recording keeps hundreds; a slideshow collapses
+# to a handful (the iter-2 fake: 30s → 5 distinct frames). Gracefully skips when
+# ffmpeg is unavailable so the gate never blocks on tooling absence. Scoped to
+# clips >= SLIDESHOW_MIN_DURATION_S so genuinely short clips aren't gated.
+ANY_VIDEO_PATH_RE = re.compile(
+    r"((?:Docs/Specs/(?:Active|Completed)/[\w.\-]+/)?videos/[\w./\-]+\.(?:mp4|mov|webm))",
+    re.IGNORECASE,
+)
+SLIDESHOW_MIN_DURATION_S = 4.0
+SLIDESHOW_MAX_DISTINCT_FRAMES = 8
+
+
+def _resolve_tool(name: str) -> str | None:
+    """Find an ffmpeg/ffprobe executable without importing shutil.
+
+    Tries PATH (bare name) plus the hand-install location used on this machine
+    (~/.local/bin, per the reference_node_install_mac / gh-cli memories) and the
+    usual Homebrew/system dirs. Returns the first that answers `-version`.
+    """
+    candidates = [
+        name,
+        str(Path.home() / ".local" / "bin" / name),
+        f"/opt/homebrew/bin/{name}",
+        f"/usr/local/bin/{name}",
+        f"/usr/bin/{name}",
+    ]
+    for cand in candidates:
+        try:
+            subprocess.run(
+                [cand, "-version"], capture_output=True, timeout=10
+            )
+            return cand
+        except (FileNotFoundError, OSError, subprocess.SubprocessError):
+            continue
+    return None
+
+
+def _video_duration_seconds(video: Path) -> float | None:
+    ffprobe = _resolve_tool("ffprobe")
+    if ffprobe is None:
+        return None
+    try:
+        proc = subprocess.run(
+            [ffprobe, "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=nk=1:nw=1", str(video)],
+            capture_output=True, text=True, timeout=30,
+        )
+        return float(proc.stdout.strip())
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
+def _video_distinct_frames(video: Path) -> int | None:
+    """Count non-duplicate frames via ffmpeg mpdecimate. None on any failure."""
+    ffmpeg = _resolve_tool("ffmpeg")
+    if ffmpeg is None:
+        return None
+    try:
+        proc = subprocess.run(
+            [ffmpeg, "-nostdin", "-i", str(video), "-vf", "mpdecimate",
+             "-fps_mode", "vfr", "-f", "null", "-"],
+            capture_output=True, text=True, timeout=180,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    # ffmpeg writes progress to stderr; the final `frame=  N` after mpdecimate is
+    # the count of frames that survived de-duplication (i.e. distinct frames).
+    matches = re.findall(r"frame=\s*(\d+)", proc.stderr)
+    if not matches:
+        return None
+    return int(matches[-1])
+
+
+def validate_video_continuity(report_path: Path) -> list[str]:
+    """Rule 20: every video deliverable referenced in the report must be a
+    continuous recording, not a slideshow stitched from a few static frames.
+
+    Counts distinct frames with ffmpeg mpdecimate; a clip longer than
+    SLIDESHOW_MIN_DURATION_S that collapses to <= SLIDESHOW_MAX_DISTINCT_FRAMES
+    distinct frames is a fabricated slideshow and blocks the transition. Skips
+    gracefully when ffmpeg is unavailable or the file can't be probed.
+    """
+    errors: list[str] = []
+    if not report_path.exists():
+        return errors
+    content = report_path.read_text(encoding="utf-8", errors="ignore")
+
+    seen: set[str] = set()
+    for rel in ANY_VIDEO_PATH_RE.findall(content):
+        if rel in seen:
+            continue
+        seen.add(rel)
+        resolved = _resolve_video(report_path, rel)
+        if resolved is None:
+            continue  # missing files are Rule 17's concern; don't double-report.
+        try:
+            if resolved.stat().st_size < MIN_VIDEO_BYTES:
+                continue  # too small to probe meaningfully.
+        except OSError:
+            continue
+        duration = _video_duration_seconds(resolved)
+        if duration is None or duration < SLIDESHOW_MIN_DURATION_S:
+            continue  # short / unprobeable clips are not gated.
+        distinct = _video_distinct_frames(resolved)
+        if distinct is None:
+            continue  # ffmpeg unavailable: graceful skip, never block on tooling.
+        if distinct <= SLIDESHOW_MAX_DISTINCT_FRAMES:
+            errors.append(
+                f"Video '{rel}' runs {duration:.0f}s but collapses to only "
+                f"{distinct} distinct frame(s) (ffmpeg mpdecimate) — this is a "
+                f"SLIDESHOW stitched from a few static frames, not a continuous "
+                f"recording. Record the real motion with the Unity Recorder "
+                f"demo-recorder family (TournamentDemoRecorder / RankingsDemoRecorder "
+                f"+ BotVideoRecorder, RecorderController) — it captures every frame, "
+                f"so a slideshow is structurally impossible. Do NOT loop "
+                f"CaptureCore.SnapPlayModeSafe + ffmpeg-stitch stills, and do NOT "
+                f"reflection-pose Image.fillAmount. (Rule 20: stamina_roster_live_"
+                f"meter failed self-review twice on fabricated slideshows, "
+                f"2026-06-30.)"
+            )
+    return errors
+
+
 def spec_references_figma_node(spec_path: Path) -> bool:
     """Rule 18 detector: True when SPEC.md references a concrete Figma NODE.
 
@@ -1713,6 +1844,12 @@ def main() -> int:
     # The standing 'always show me video' rule, now enforced (green_slope_height_
     # bake skipped it on stills at iter-7/8/9/12). Scoped to mesh tasks.
     errors.extend(validate_video_deliverable(report_path, spec_path))
+
+    # Rule 20: any video deliverable referenced in the report must be a continuous
+    # recording, not an ffmpeg slideshow of a few posed stills. Blocks the
+    # stamina_roster_live_meter fabricated-slideshow scar (failed self-review 2x,
+    # 2026-06-30). mpdecimate distinct-frame count; gracefully skips if ffmpeg absent.
+    errors.extend(validate_video_continuity(report_path))
 
     # Rule 18: Figma-node UI tasks must carry a per-element Figma fidelity table
     # in IMPLEMENTER_REPORT.md (the UI counterpart of Rule 16). Blocks the

@@ -1056,5 +1056,62 @@ class TestCloneProvenance(unittest.TestCase):
         self.assertGreaterEqual(len(errs), 2, errs)
 
 
+class TestVideoContinuity(unittest.TestCase):
+    """Rule 20: a video deliverable must be a continuous recording, not a
+    slideshow. Probes are monkeypatched so the test needs no ffmpeg."""
+
+    def _report_with_video(self, tmp: Path, distinct, duration, size_ok=True):
+        vids = tmp / "videos"
+        vids.mkdir(parents=True, exist_ok=True)
+        clip = vids / "demo.mp4"
+        clip.write_bytes(b"\x00" * (eid.MIN_VIDEO_BYTES + 1 if size_ok else 10))
+        rp = tmp / "IMPLEMENTER_REPORT.md"
+        rp.write_text("Canonical video: `videos/demo.mp4`\n")
+        eid._video_distinct_frames = lambda v: distinct
+        eid._video_duration_seconds = lambda v: duration
+        return rp
+
+    def setUp(self):
+        self._orig_df = eid._video_distinct_frames
+        self._orig_dur = eid._video_duration_seconds
+
+    def tearDown(self):
+        eid._video_distinct_frames = self._orig_df
+        eid._video_duration_seconds = self._orig_dur
+
+    def test_slideshow_blocks(self):
+        with tempfile.TemporaryDirectory() as d:
+            rp = self._report_with_video(Path(d), distinct=5, duration=30.0)
+            errs = eid.validate_video_continuity(rp)
+            self.assertEqual(len(errs), 1, errs)
+            self.assertIn("SLIDESHOW", errs[0])
+
+    def test_continuous_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            rp = self._report_with_video(Path(d), distinct=420, duration=14.0)
+            self.assertEqual(eid.validate_video_continuity(rp), [])
+
+    def test_short_clip_not_gated(self):
+        # Below SLIDESHOW_MIN_DURATION_S: skipped even with few distinct frames.
+        with tempfile.TemporaryDirectory() as d:
+            rp = self._report_with_video(Path(d), distinct=3, duration=2.0)
+            self.assertEqual(eid.validate_video_continuity(rp), [])
+
+    def test_ffmpeg_absent_skips_gracefully(self):
+        # Probe returning None (ffmpeg unavailable) must never block.
+        with tempfile.TemporaryDirectory() as d:
+            rp = self._report_with_video(Path(d), distinct=None, duration=30.0)
+            self.assertEqual(eid.validate_video_continuity(rp), [])
+
+    def test_boundary_exactly_max_distinct_blocks(self):
+        with tempfile.TemporaryDirectory() as d:
+            rp = self._report_with_video(
+                Path(d),
+                distinct=eid.SLIDESHOW_MAX_DISTINCT_FRAMES,
+                duration=10.0,
+            )
+            self.assertEqual(len(errs := eid.validate_video_continuity(rp)), 1, errs)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
