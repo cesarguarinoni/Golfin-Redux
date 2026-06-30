@@ -1,0 +1,47 @@
+=== iter-1 kickoff baseline ===
+HEAD: 36dd1d5a0 stamina_live_wiring: lock D1=Option C + D5=YES (Cesar)
+DIRTY: (clean)
+
+2026-06-30T04:30:00 activated — reading SPEC and codebase
+2026-06-30T21:30:00 resumed from context summary — all main implementation files already complete (SaveData, SaveSchemaMigrator, PlayerCharacterData, CharacterManager, LiveStatProviderHost, StaminaRuntimeService, stats.csv, SaveLayerTests)
+2026-06-30T21:42:00 writing StaminaLiveWiringTests.cs — first pass failed (Golfin.Roster non-existent asmdef + private StaminaConfig ctor)
+2026-06-30T21:50:00 fixed asmdef (removed invalid Golfin.Roster ref), rewrote test using reflection for Assembly-CSharp types + StaminaConfig.Parse()
+2026-06-30T21:55:00 all 17 StaminaLiveWiringTests PASS, 240/240 Golfin.Gameplay.Tests PASS, 15/15 Golfin.Save.Tests PASS — done, awaiting review
+
+=== iter-2 kickoff baseline ===
+HEAD: 36dd1d5a0 stamina_live_wiring: lock D1=Option C + D5=YES (Cesar)
+DIRTY:
+ M Assets/Resources/Physics/stats.csv
+ M Assets/Scripts/CharacterManager.cs
+ M Assets/Scripts/Gameplay/Tests/Golfin.Gameplay.Tests.asmdef
+ M Assets/Scripts/LiveStatProviderHost.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/Save/Tests/SaveLayerTests.cs
+ M Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs
+?? Assets/Scripts/Gameplay/Tests/StaminaLiveWiringTests.cs
+?? Assets/Scripts/Gameplay/Tests/StaminaLiveWiringTests.cs.meta
+?? Assets/Scripts/StaminaRuntimeService.cs
+?? Assets/Scripts/StaminaRuntimeService.cs.meta
+2026-06-30T22:15:00 iter-2 activated — fixing D5 versus drain gap: OnMatchComplete seam
+2026-06-30T22:30:00 StaminaRuntimeService.cs updated — DrainForCompletedHole factored; OnMatchComplete subscribed; ResetForTests cleans both events
+2026-06-30T22:45:00 StaminaLiveWiringTests.cs updated — T9A (wire-existence) + T9B (drain-body) added; 790 total / 787 pass / 0 fail / 3 skip
+2026-06-30T22:50:00 done, awaiting review
+
+=== T9B-hardening kickoff baseline ===
+HEAD: 36dd1d5a049b3b288fbe721b1c97eb8df2e94d4d
+DIRTY:
+ M Assets/Resources/Physics/stats.csv
+ M Assets/Scripts/CharacterManager.cs
+ M Assets/Scripts/Gameplay/Tests/Golfin.Gameplay.Tests.asmdef
+ M Assets/Scripts/LiveStatProviderHost.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/Save/Tests/SaveLayerTests.cs
+ M Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs
+?? Assets/Scripts/Gameplay/Tests/StaminaLiveWiringTests.cs
+?? Assets/Scripts/Gameplay/Tests/StaminaLiveWiringTests.cs.meta
+?? Assets/Scripts/StaminaRuntimeService.cs
+?? Assets/Scripts/StaminaRuntimeService.cs.meta
+2026-06-30T23:00:00 T9B-hardening activated — rewriting T9B to drive real DrainForCompletedHole via CharacterManager MonoBehaviour harness in EditMode
+2026-06-30T23:30:00 T9B-hardening done — explicit Awake invoke via reflection; RED/GREEN/GREEN sabotage cycle proven; 242/242 Gameplay.Tests + 15/15 Save.Tests PASS; StaminaRuntimeService.cs diff clean
