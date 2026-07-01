@@ -1,4 +1,6 @@
 #nullable enable
+using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -14,9 +16,35 @@ namespace Golfin.Roster
     /// Phase 2b: Pure data binding — does NOT modify hierarchy.
     /// Phase 4 (stamina_roster_ux): Ghost overlay bars on Strength + ClubControl
     ///   show stat lost to low Condition. Stamina row becomes a Condition meter.
+    /// Phase 5 (stamina_roster_live_meter): Live tick coroutine — read-only
+    ///   projection of Condition recovery; smooth lerp of fills + numbers;
+    ///   demo time-accelerator (editor-only menu).
     /// </summary>
     public class CharacterDetailPanel : MonoBehaviour
     {
+        // ── Demo accelerator (static, code-only, defaults OFF) ────────────────
+        // Toggled by GOLFIN > Stamina > Toggle Live-Meter Demo Accel (editor menu).
+        // When ON: simElapsed advances faster than real-time so the meter is
+        //          visibly climbing on screen. NEVER ships enabled.
+        // When OFF: simElapsed = real elapsed since conditionUpdatedUtc only.
+        public static bool DemoAccelerate = false;
+        public static float DemoHoursPerRealSecond = 0.5f;   // 0.5 h/s ≈ ×1800
+
+        /// <summary>
+        /// Called by StaminaLiveMeterDemoMenu when toggling demo-accel OFF.
+        /// Spec L4: "Toggling OFF resets demoExtra to zero."
+        /// Resets the accumulated virtual-time field on the active panel instance.
+        /// </summary>
+        public static void ResetDemoAccel()
+        {
+            // Find the active panel instance and clear its accumulated virtual hours.
+            // Using FindObjectOfType is acceptable here — this is editor-only,
+            // invoked from a [MenuItem], never at runtime.
+            var panel = UnityEngine.Object.FindObjectOfType<CharacterDetailPanel>();
+            if (panel != null)
+                panel._demoExtraHours = 0f;
+        }
+
         [Header("Portrait")]
         [SerializeField] private Image characterImage;           // LeftPanel > Character
 
@@ -83,6 +111,26 @@ namespace Golfin.Roster
 
         private string currentCharacterId = "";
 
+        // ── Live-tick lerp state (Phase 5) ───────────────────────────────────
+        // Displayed (lerped) values separate from target values so we can
+        // animate smoothly toward target without snapping.
+        private float _displayedPct = 1f;        // current lerped conditionPct shown
+        private float _targetPct    = 1f;         // target from latest projection
+        private float _demoExtraHours = 0f;       // accumulates demo-accel virtual time
+        private Coroutine? _tickCoroutine = null;
+
+        // Lerp speed: fills should reach target within ~0.3 s.
+        // Using MoveTowards with rate 3.5/s gives ~0.3 s (1/3.5 ≈ 0.29 s).
+        private const float LerpRate = 3.5f;
+        // Tick interval: 20 Hz (~15–30 Hz range per spec)
+        private static readonly WaitForSeconds TickInterval = new WaitForSeconds(0.05f);
+
+        // The pure testable projection helper lives in StaminaModel.LiveDisplayEnergy
+        // (Golfin.Core.Stamina assembly) so the EditMode test asmdef can reach it directly.
+        // CharacterDetailPanel delegates to it in ComputeTargetPct below.
+
+        // ─────────────────────────────────────────────────────────────────────
+
         private void Start()
         {
             if (levelUpButton != null) levelUpButton.onClick.AddListener(OnLevelUpClicked);
@@ -106,6 +154,10 @@ namespace Golfin.Roster
                 RewardPointsManager.Instance.OnPointsChanged += OnPointsChanged;
 
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+
+            // Restart tick if a character is already selected (re-enable from background)
+            if (!string.IsNullOrEmpty(currentCharacterId))
+                RestartTick();
         }
 
         private void OnDisable()
@@ -123,6 +175,10 @@ namespace Golfin.Roster
                 RewardPointsManager.Instance.OnPointsChanged -= OnPointsChanged;
 
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+
+            // Stop live tick and reset demo accel residue
+            StopTick();
+            _demoExtraHours = 0f;
         }
 
         private void RefreshLocalizedText()
@@ -135,6 +191,8 @@ namespace Golfin.Roster
         /// Main data binding — populates all UI fields from character data.
         /// Skipped while CompareController is in compare mode (it handles
         /// carousel taps itself in that state).
+        /// On each call the displayed fills SNAP to target (character switch snap, L5).
+        /// The tick then lerps from the new snapped value on subsequent ticks.
         /// </summary>
         private void UpdatePanel(string characterId)
         {
@@ -142,6 +200,7 @@ namespace Golfin.Roster
             // we must not overwrite the left column while it is managed by compare.
             if (compareController != null && compareController.IsCompareMode) return;
 
+            bool charChanged = characterId != currentCharacterId;
             currentCharacterId = characterId;
 
             var playerData = CharacterManager.Instance.GetCharacterData(characterId);
@@ -195,43 +254,30 @@ namespace Golfin.Roster
                 maxLevelText.text = $"/{maxLevel}";
 
             // --- Condition (for ghost bars + meter) ---
-            // Mirror the same call LiveStatProviderHost uses (solo path):
-            // float conditionPct = StaminaModel.ConditionPct(charData.currentStaminaEnergy, charData.currentStamina);
-            float conditionPct = 1f;
+            // Compute the LIVE projected conditionPct using the read-only helper.
+            // On character switch: reset demo-accel FIRST so the snap uses raw condition,
+            // not accumulated virtual hours from the previous character's demo session.
+            if (charChanged)
+                _demoExtraHours = 0f;
+
             bool staminaConfigured = StaminaModel.IsConfigured;
-            if (staminaConfigured)
-                conditionPct = StaminaModel.ConditionPct(playerData.currentStaminaEnergy, playerData.currentStamina);
+            float conditionPct = ComputeTargetPct(playerData, staminaConfigured);
+
+            // On character switch: SNAP displayed to target (L5 — no cross-character tween).
+            // On same-character update (level-up, RP): keep displayed value,
+            // let the tick lerp from current displayed toward new target.
+            if (charChanged)
+                _displayedPct = conditionPct;
+            _targetPct = conditionPct;
 
             // --- Stats ---
-            int strCap = RarityStatCaps.GetStatCap(rarity, "Strength");
-            int ccCap  = RarityStatCaps.GetStatCap(rarity, "ClubControl");
-            int recCap = RarityStatCaps.GetStatCap(rarity, "Recovery");
+            int strCap  = RarityStatCaps.GetStatCap(rarity, "Strength");
+            int ccCap   = RarityStatCaps.GetStatCap(rarity, "ClubControl");
+            int recCap  = RarityStatCaps.GetStatCap(rarity, "Recovery");
             int stamCap = RarityStatCaps.GetStatCap(rarity, "Stamina");
 
-            // Strength — ghost shows base, solid shows effective
-            int strEffective = (staminaConfigured && StaminaModel.IsDegraded("Strength"))
-                ? StaminaModel.EffectiveStat(playerData.currentStrength, conditionPct)
-                : playerData.currentStrength;
-            UpdateGhostStatBar(strengthName, strengthBar, strengthGhostBar, strengthNumber,
-                LocalizationManager.Get("ROSTER_STRENGTH"),
-                playerData.currentStrength, strEffective, strCap);
-
-            // Club Control — ghost shows base, solid shows effective
-            int ccEffective = (staminaConfigured && StaminaModel.IsDegraded("ClubControl"))
-                ? StaminaModel.EffectiveStat(playerData.currentClubControl, conditionPct)
-                : playerData.currentClubControl;
-            UpdateGhostStatBar(clubControlName, clubControlBar, clubControlGhostBar, clubControlNumber,
-                LocalizationManager.Get("ROSTER_CLUB_CONTROL"),
-                playerData.currentClubControl, ccEffective, ccCap);
-
-            // Recovery — no ghost (not degraded by Condition)
-            UpdateStatBar(recoveryName, recoveryBar, recoveryNumber,
-                LocalizationManager.Get("ROSTER_RECOVERY"),
-                playerData.currentRecovery, recCap);
-
-            // Stamina row → Condition meter
-            // Fill = conditionPct (0..1); number stays base stamina stat "currentStamina/cap"
-            UpdateConditionMeter(playerData.currentStamina, stamCap, conditionPct);
+            // Apply displayed pct (snapped on char-switch, lerped on live tick)
+            ApplyLiveStats(playerData, staminaConfigured, _displayedPct, strCap, ccCap, recCap, stamCap);
 
             // --- Status Icons ---
             if (selectedIcon != null)
@@ -270,7 +316,142 @@ namespace Golfin.Roster
                 else
                     bioText.text = "Bio coming soon.";
             }
+
+            // Ensure tick is running (idempotent restart on same char)
+            RestartTick();
         }
+
+        // ── Live projection helpers ───────────────────────────────────────────
+
+        /// <summary>
+        /// Computes the read-only target conditionPct for the current tick frame.
+        /// Reads currentStaminaEnergy + conditionUpdatedUtc — never writes them.
+        /// Delegates projection math to StaminaModel.LiveDisplayEnergy (testable pure helper).
+        /// </summary>
+        private float ComputeTargetPct(PlayerCharacterData pcd, bool staminaConfigured)
+        {
+            if (!staminaConfigured) return 1f;
+
+            bool hasTimestamp = pcd.conditionUpdatedUtc != default(DateTime);
+            TimeSpan realElapsed = hasTimestamp
+                ? DateTime.UtcNow - pcd.conditionUpdatedUtc
+                : TimeSpan.Zero;
+
+            // Add demo-accel virtual hours (accumulated in _demoExtraHours)
+            TimeSpan simElapsed = realElapsed + TimeSpan.FromHours(_demoExtraHours);
+
+            float projected = StaminaModel.LiveDisplayEnergy(
+                pcd.currentStaminaEnergy,
+                pcd.maxStaminaEnergy,
+                pcd.currentRecovery,
+                hasTimestamp,
+                simElapsed);
+
+            return StaminaModel.ConditionPct(projected, pcd.currentStamina);
+        }
+
+        /// <summary>
+        /// Applies the displayed (possibly lerped) conditionPct to all UI elements:
+        /// STR/CC effective fills + numbers + ghost fills + Condition meter fill/colour.
+        /// This is the single apply primitive used by both UpdatePanel and the tick.
+        /// Never touches persistent state.
+        /// </summary>
+        private void ApplyLiveStats(
+            PlayerCharacterData pcd,
+            bool staminaConfigured,
+            float displayPct,
+            int strCap, int ccCap, int recCap, int stamCap)
+        {
+            // Strength — ghost shows base, solid shows effective
+            int strEffective = (staminaConfigured && StaminaModel.IsDegraded("Strength"))
+                ? StaminaModel.EffectiveStat(pcd.currentStrength, displayPct)
+                : pcd.currentStrength;
+            UpdateGhostStatBar(strengthName, strengthBar, strengthGhostBar, strengthNumber,
+                LocalizationManager.Get("ROSTER_STRENGTH"),
+                pcd.currentStrength, strEffective, strCap);
+
+            // Club Control — ghost shows base, solid shows effective
+            int ccEffective = (staminaConfigured && StaminaModel.IsDegraded("ClubControl"))
+                ? StaminaModel.EffectiveStat(pcd.currentClubControl, displayPct)
+                : pcd.currentClubControl;
+            UpdateGhostStatBar(clubControlName, clubControlBar, clubControlGhostBar, clubControlNumber,
+                LocalizationManager.Get("ROSTER_CLUB_CONTROL"),
+                pcd.currentClubControl, ccEffective, ccCap);
+
+            // Recovery — no ghost (not degraded by Condition)
+            UpdateStatBar(recoveryName, recoveryBar, recoveryNumber,
+                LocalizationManager.Get("ROSTER_RECOVERY"),
+                pcd.currentRecovery, recCap);
+
+            // Stamina row → Condition meter
+            // Fill = displayPct (live lerp); number stays base stamina stat "currentStamina/cap"
+            UpdateConditionMeter(pcd.currentStamina, stamCap, displayPct);
+        }
+
+        // ── Live tick coroutine ───────────────────────────────────────────────
+
+        private void RestartTick()
+        {
+            StopTick();
+            if (!string.IsNullOrEmpty(currentCharacterId))
+                _tickCoroutine = StartCoroutine(LiveMeterTick());
+        }
+
+        private void StopTick()
+        {
+            if (_tickCoroutine != null)
+            {
+                StopCoroutine(_tickCoroutine);
+                _tickCoroutine = null;
+            }
+        }
+
+        private IEnumerator LiveMeterTick()
+        {
+            while (true)
+            {
+                yield return TickInterval;
+
+                // Guard: skip if in compare mode (same as UpdatePanel guard)
+                if (compareController != null && compareController.IsCompareMode)
+                    continue;
+
+                if (string.IsNullOrEmpty(currentCharacterId))
+                    continue;
+
+                // Cache the pcd lookup once per tick — no per-tick allocation
+                var pcd = CharacterManager.Instance?.GetCharacterData(currentCharacterId);
+                if (pcd == null)
+                    continue;
+
+                // !IsConfigured → inert (L6)
+                if (!StaminaModel.IsConfigured)
+                    continue;
+
+                // Accumulate demo-accel virtual time (only when ON)
+                if (DemoAccelerate)
+                    _demoExtraHours += Time.unscaledDeltaTime * DemoHoursPerRealSecond;
+
+                // Recompute target from read-only projection (never writes pcd)
+                _targetPct = ComputeTargetPct(pcd, true);
+
+                // Lerp displayed pct toward target (L3)
+                _displayedPct = Mathf.MoveTowards(_displayedPct, _targetPct, LerpRate * Time.unscaledDeltaTime);
+
+                // Get stat caps (cached from rarity — low-cost lookup)
+                var csvData = CharacterDatabaseCSV.Instance?.GetCharacter(currentCharacterId);
+                CharacterRarity rarity = csvData?.rarity ?? CharacterRarity.Common;
+                int strCap  = RarityStatCaps.GetStatCap(rarity, "Strength");
+                int ccCap   = RarityStatCaps.GetStatCap(rarity, "ClubControl");
+                int recCap  = RarityStatCaps.GetStatCap(rarity, "Recovery");
+                int stamCap = RarityStatCaps.GetStatCap(rarity, "Stamina");
+
+                // Apply the lerped displayed pct to all UI elements (fills + numbers + colour)
+                ApplyLiveStats(pcd, true, _displayedPct, strCap, ccCap, recCap, stamCap);
+            }
+        }
+
+        // ── Stat bar apply helpers ────────────────────────────────────────────
 
         /// <summary>
         /// Updates a stat row that participates in ghost-bar rendering.

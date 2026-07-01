@@ -77,6 +77,34 @@ namespace Golfin.Core.Stamina
         }
 
         /// <summary>
+        /// Read-only projection of live Condition energy for display purposes.
+        /// NEVER call AccrueRegen or any persisting method — display only.
+        ///
+        /// When hasTimestamp is false (conditionUpdatedUtc == default) returns
+        /// currentEnergy unchanged (treat as fresh/full, no elapsed time known).
+        ///
+        /// simElapsed should be (DateTime.UtcNow − conditionUpdatedUtc) plus any
+        /// demo-accelerator virtual hours. The result is clamped to maxEnergy.
+        /// </summary>
+        /// <param name="currentEnergy">pcd.currentStaminaEnergy</param>
+        /// <param name="maxEnergy">pcd.maxStaminaEnergy</param>
+        /// <param name="recovery">pcd.currentRecovery</param>
+        /// <param name="hasTimestamp">false when conditionUpdatedUtc == default(DateTime)</param>
+        /// <param name="simElapsed">Total simulated elapsed time (real + demo virtual hours)</param>
+        public static float LiveDisplayEnergy(
+            float currentEnergy,
+            float maxEnergy,
+            int   recovery,
+            bool  hasTimestamp,
+            TimeSpan simElapsed)
+        {
+            EnsureConfigured();
+            if (!hasTimestamp) return currentEnergy;
+            float gain = RegenForElapsed(recovery, simElapsed);
+            return Math.Min(maxEnergy, currentEnergy + gain);
+        }
+
+        /// <summary>
         /// Stat penalty multiplier (0..FloorPenalty) for the given Condition %.
         /// Returns 0 at or above the comfort threshold; FloorPenalty at 0 %.
         /// </summary>
