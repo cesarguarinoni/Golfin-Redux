@@ -105,11 +105,13 @@ Deliverable = the prefab, openable/previewable, that Cesar eyeballs against `132
 `13275:2628`. Provide a real-render still or short editor clip (NOT a hand-stitched slideshow —
 Rule 20).
 
-**Stage 1 — Present in the Shell (after banner).**
-Add a `VersusResultScreen` screen (rule D4) to the Shell; `VersusResultScreenController` binds the
-two players from the live `MatchContext` + roster (reuse Matchmaking's binding). Re-route
-`VersusResultHandler`: instead of auto-unloading home, it lets the banner play, THEN presents this
-screen with the real outcome/players/hole. Bind local + opponent rank from `LeaderboardManager`.
+**Stage 1 — Present as a modal (after banner) + live binding.** (D4 = modal like HoleComplete; D3 = requeue)
+`VersusResultHandler` stops the silent-grant + auto-home. Instead: banner plays → present
+`VersusResultScreen.prefab` as a **modal** (mirror `HoleCompleteModalController`'s ShellScene-resident
+`ModalController` pattern) → `VersusResultScreenController` binds outcome + both players from the live
+`MatchContext` + roster (reuse `MatchmakingModalController`'s portrait/username/level/rank binding;
+local + opponent rank from `LeaderboardManager`) + the played-hole line. NEW MATCH requeues
+`versus_1v1` via matchmaking (D3).
 
 **Stage 2 — CSV-driven multi-reward grant + display + NEW MATCH.** (D1 RESOLVED; needs D3)
 Replace the flat `versus_1v1.rewards=200` grant: define versus rewards as CSV (type,amount) pairs,
@@ -162,11 +164,18 @@ repair/ball, N-slot). Wire `NEW MATCH` (D3).
   `match_rewards.csv`. **Stage 0 still just renders the Figma 3-slot row with placeholder counts.**
 - **D2 — DRAW visual.** No Figma. Proposed default: both columns neutral (no green/red), reward row
   greyed, header/banner reads DRAW. Confirm or provide a node.
-- **D3 — NEW MATCH behavior.** Requeue same mode via the matchmaking flow, re-open the Matchmaking
-  modal, or return to Mode Select? (Current post-match behavior is auto-home.)
-- **D4 — Screen vs modal.** Proposed: a real Shell **screen** (persistent TopBar `RESULTS` + bottom
-  nav, per Figma), integrated like `RankingsScreen`. Alternative: full-screen modal on the
-  persistent canvas. Affects Stage 1 only — Stage 0 builds the panel prefab either way.
+- **D3 — NEW MATCH. ✅ RESOLVED (Cesar 2026-07-01): requeue the SAME mode (`versus_1v1`).** NEW MATCH
+  re-enters the matchmaking flow for versus_1v1 (re-open `MatchmakingModalController` / re-run
+  matchmaking → new opponent → new match), NOT return-home. Wire to the same entry point that started
+  the current match.
+- **D4 — Presentation. ✅ RESOLVED (Cesar 2026-07-01): MODAL, mirror `HoleCompleteModalController`**
+  (Practice's result). That is a `ModalController` subclass, ShellScene-resident, shown via the
+  event-bridge pattern over the post-match background (TopBar + bottom nav visible → matches the Figma
+  chrome). `VersusResultHandler` ALREADY is that ShellScene-resident event bridge (its own docs say it
+  mirrors `HoleCompleteModalController`) — so Stage 1 presents `VersusResultScreen.prefab` as a modal
+  from `VersusResultHandler` (or a thin `VersusResultModalController : ModalController` it hosts), NOT
+  a `ScreenManager` screen. (Prefab/controller keep their Stage-0 "Screen" names — Cesar-approved,
+  cosmetic; presentation is modal.)
 
 ---
 
