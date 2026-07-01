@@ -7,9 +7,11 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
-> **2026-07-01 13:34 JST — nothing queued here; awaiting Cesar's pick.** Stamina Economy **Phases 1–5 are ALL DONE, closed & merged** (verified against git log + live `CharacterDetailPanel.cs`). P4 `stamina_roster_ux` = `87a387761` feat / `dd41af4c9` close; P5 `stamina_roster_live_meter` = `8f11c135c` feat / `6c8b314df` close. Both folders live in `Docs/Specs/Completed/`; `Docs/Specs/Active/` holds **zero** stamina folders. The portrait low-stamina icon now lights up for free once Condition drops.
+> **2026-07-01 — kick off `1v1_result_rewards_display` (Order 347, P2, Tier 3 FULL PIPELINE) — Stage 0 (prefab-only).** Spec commit `b04829f04` → `Docs/Specs/Active/1v1_result_rewards_display/SPEC.md`. Fills the verified gap: `VersusResultHandler` grants the 1v1 win RP **silently** — no result screen exists. Figma: win `13274:877` / lose `13275:2628` (file `5gEAHjl6xAtW8iYY7NMvWd`) — full-screen RESULTS panel, winner/loser portraits + ranks + hole line + 3-item reward row + NEW MATCH. **Cesar requirement: Stage 0 builds `VersusResultScreen.prefab` via an editor builder (mirror `TournamentResultModalBuilder`), reusing `CharacterThumbnailCard` + `MatchMakingModal`'s versus/rank binding, so Cesar can VISUAL-CHECK it before any wiring.** Later stages: present after the WIN/LOSE/DRAW banner, bind reward, wire NEW MATCH. Open decisions D1–D4 in SPEC §5 (reward model / draw / NEW MATCH / screen-vs-modal) — needed before Stage 2, NOT blocking Stage 0.
 >
-> **⚠ Do NOT run `Use the implementer subagent on "stamina_roster_ux"`.** The 13:27 docs commit `b00c90e82` regressed this callout back to a stale "kick off Phase 4" state AFTER P4+P5 had shipped — pasting that kickoff would redo merged, Cesar-accepted work. Notion 516 flipped Queued→Done to match reality.
+> **Kickoff:** `Use the implementer subagent on "1v1_result_rewards_display"`
+>
+> Also new on roadmap: **Order 517 `stamina_boost_shop`** (Shop pillar, P2, Queued) — sequenced after 347; needs a design pass before speccing. Stamina Economy P1–P5 all DONE & merged (verified vs git+live code); do NOT re-run `stamina_roster_ux`.
 
 Surfaced by Cesar's Lesson O playthrough on `loop_v1_2f_putter_p2_in_context`. Pre-existing P1/cup bugs (NOT §2f regressions) but §2f's auto-toggle makes them visible every session.
 
