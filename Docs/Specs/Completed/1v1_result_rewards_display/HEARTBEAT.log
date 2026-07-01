@@ -1,0 +1,35 @@
+=== iter-1 kickoff baseline ===
+HEAD: f77deccee
+DIRTY:  M Packages/manifest.json
+        M Packages/packages-lock.json
+===
+2026-07-01T14:00:00 activated — reading SPEC and pulling Figma nodes 13274:877 (win) / 13275:2628 (lose)
+2026-07-01T07:46:35 rewriting VersusResultScreenBuilder to clone-from-MatchMakingModal pattern (TournamentResultModalBuilder shape)
+2026-07-01T05:56:50 fixed ColumnLabels HLG overlap (childForceExpandWidth=false + fixed-width spacer), re-captured WIN+LOSE at 1170x2532
+2026-07-01T05:58:33 done, awaiting review
+2026-07-01T06:24:38 iter-2: IMPLEMENTER_REPORT.md updated with Rejection follow-up + new canonical screenshot + Figma fidelity PASS fixes; ready for self-review
+2026-07-01T08:30:00 iter-3 activated — diagnosing portrait regression (Mask stencil not rendering in Camera.Render edit-mode)
+2026-07-01T08:40:00 portrait root cause confirmed (Mask stencil = edit-mode Camera.Render bug); switched to play mode + SnapPlayModeSafe; added Portraits LayoutElement pin + InfoArea size expansion in builder
+2026-07-01T08:41:00 WIN + LOSE captured in play mode (2070x1772, portraits visible, rewards dimmed); IMPLEMENTER_REPORT updated; done, awaiting review
+2026-07-01T09:00:00 iter-3b capture-only fix: WIN+LOSE re-captured clean 1170x2532, no editor chrome, correct state-to-filename mapping verified
+2026-07-01T09:01:00 done, awaiting review
+2026-07-01T07:29:20 iter-4 done: all 3 red-team blockers fixed, both captures 1170x2532, report updated, awaiting review
+2026-07-01T07:53:16 iter-5 kickoff: red-team font-size blocker — RESULTS 50f→~30f, NEW MATCH 39f→~50f, verify all text nodes
+2026-07-01T07:58:19 iter-5 kickoff: font fixes applied (FontHeaderSize 50f→30f, FontButtonText 39f→50f, FontVs 39f→34f, HOLE title fontSize added). Running builder.
+2026-07-01T10:06:48 iter-5 done, awaiting review — font-size transposition fixed (RESULTS 30f, NEW MATCH 50f), IMPLEMENTER_REPORT updated, STATUS→READY_FOR_SELF_REVIEW
+2026-07-01T10:49:00 iter-6 done: HoleInfo 30f, USERNAME/RANK Normal, WIN+LOSE captures distinct, prefab verified, awaiting review
+2026-07-01T11:05:00 iter-6 recapture: GrabGameViewRT+flip coroutine, both states 1170x2532 verified by sips, report updated, STATUS READY_FOR_SELF_REVIEW
+2026-07-01T13:10:00 === iter-7 kickoff baseline HEAD=f77deccee DIRTY: M .claude/review_misses.log M Docs/Specs/Active/1v1_result_rewards_display/STATUS.md M Packages/manifest.json M Packages/packages-lock.json ?? VersusResultScreen.prefab ?? VersusResultScreenBuilder.cs ?? VersusResultScreenController.cs ===
+2026-07-01T13:45:00 iter-7 all 8 fixes verified from live prefab + captures 1170x2532 both states, report written, done awaiting review
+2026-07-01T14:00:00 iter-8 kickoff: SELF_REVIEW_FAIL — 3 spacing fixes: padBot 16→48, re-measure sep1→HOLE, report rendered px gaps
+2026-07-01T13:42:00 iter-9 builder fix applied: Portraits HLG expH=False, LE=523; capturing fresh screenshots
+2026-07-01T14:09:00 iter-9c gaps measured via GetWorldCorners: RANK->sep1=56px (PASS), sep1->HoleTitle=8px (PASS)
+2026-07-01T14:10:00 LOSE v2 screenshot confirmed correct (LOSER orange left, WINNER green right); report written; done, awaiting review
+=== iter-10 kickoff baseline ===
+HEAD: f77deccee
+DIRTY: M .claude/agents/golfin-redteam-reviewer.md M .claude/agents/golfin-reviewer.md M .claude/agents/golfin-self-reviewer.md M .claude/review_misses.log M CLAUDE.md M Docs/Specs/Active/1v1_result_rewards_display/STATUS.md M Packages/manifest.json M Packages/packages-lock.json ?? Assets/Prefabs/UI/Matchmaking/VersusResultScreen.prefab ?? Assets/Prefabs/UI/Matchmaking/VersusResultScreen.prefab.meta ?? Assets/Scripts/Editor/VersusResultScreenBuilder.cs ?? Assets/Scripts/Editor/VersusResultScreenBuilder.cs.meta ?? Assets/Scripts/UI/Matchmaking/VersusResultScreenController.cs ?? Assets/Scripts/UI/Matchmaking/VersusResultScreenController.cs.meta
+===
+2026-07-01T14:15:00 iter-10 activated — CESAR_REJECTED: NEW MATCH button 8px above sep (target 24px), 84px below button (target 24px). Fix: insert spacer h=8 before NewMatchButton + set InfoArea h=977. Also fix Clone provenance row 1 label.
+2026-07-01T15:45:00 iter-10 done — gap_above=24px PASS, gap_below=24px PASS, both captures 1170x2532, clone provenance row 1 fixed, report updated, awaiting review
+2026-07-01T16:00:00 iter-11 activated — CESAR_REJECTED: RANK->sep gap ~63px (target 24px). Fix: move top block down by adding top spacer, reduce bottom slack. Figma node 13274:877.
+2026-07-01T16:35:00 done, awaiting review
