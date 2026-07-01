@@ -36,6 +36,10 @@ The versus portrait pair + rank display **already exists**. Do not re-invent it.
 - **`TournamentResultModalBuilder.cs`** — the **exact Stage-0 builder pattern** to mirror:
   `PrefabUtility.LoadPrefabContents` → restructure → `WireField` via `SerializedObject` paths →
   `SaveAsPrefabAsset`, exposed as a re-runnable `[MenuItem]`. Copy this shape.
+- **Reward system (Stage 2): reuse the hole-complete flow, do NOT invent one** — `HoleData.RewardType`
+  / `HoleReward`, `HoleDatabaseLoader`'s (type,amount)-pair CSV parsing, and
+  `HoleCompleteModalController.GrantRewards`'s grant switch (`RewardPointsManager.EarnPoints` /
+  `ItemManager.AddItems("repairkit_common")` / `BallManager.AddBalls`). See D1 (§5).
 - Navy rounded panel bg + gold CTA button sprites: reuse from `TournamentResultModal.prefab` /
   `HoleCard.prefab` / the shared Main Button. Separator sprite guid
   `9e62d8f4ffd01e7468d07912ccba967a` (same one the Tournament builder uses).
@@ -107,8 +111,11 @@ two players from the live `MatchContext` + roster (reuse Matchmaking's binding).
 `VersusResultHandler`: instead of auto-unloading home, it lets the banner play, THEN presents this
 screen with the real outcome/players/hole. Bind local + opponent rank from `LeaderboardManager`.
 
-**Stage 2 — Reward binding + NEW MATCH behavior.** (needs D1 + D3)
-Bind the reward row to the actual granted reward; wire `NEW MATCH`.
+**Stage 2 — CSV-driven multi-reward grant + display + NEW MATCH.** (D1 RESOLVED; needs D3)
+Replace the flat `versus_1v1.rewards=200` grant: define versus rewards as CSV (type,amount) pairs,
+parse to `List<HoleReward>`, grant via the shared `RewardGranter` (extracted from
+`HoleCompleteModalController.GrantRewards`), bind the result-screen reward row to that list (RP/
+repair/ball, N-slot). Wire `NEW MATCH` (D3).
 
 **Stage 3 — Polish.** Win/lose reward brightness states, draw variant (D2), transitions.
 
@@ -137,12 +144,22 @@ Bind the reward row to the actual granted reward; wire `NEW MATCH`.
 
 ## §5 DECISIONS NEEDED (Cesar — before Stage 2; NOT blocking Stage 0)
 
-- **D1 — Reward model.** Figma shows **3 items ×10** (coin / item / ball). Current code grants a
-  **single flat 200 RP** (`ModesDatabaseCSV "versus_1v1".rewards`). Options: (a) keep 200 RP, render
-  only the coin slot, hide the other two; (b) map 200 RP → coin count + define item + ball drops
-  (new reward model + CSV columns); (c) Figma is aspirational — Stage-0 renders all three as
-  placeholder ×10 art, real payout stays 200 RP until a reward-model task. **Stage 0 renders the
-  Figma row faithfully with placeholder counts regardless.**
+- **D1 — Reward model. ✅ RESOLVED (Cesar 2026-07-01):** 1v1 wins pay **multiple rewards — RP + balls
+  + repair kits** (and future types like gacha tickets), and the payout **must come from a CSV, not
+  a flat int**. The flat `versus_1v1.rewards=200` int in `modes.csv` is the outlier to replace.
+  **REUSE the existing hole-complete reward system** (do not invent one): `HoleData.RewardType
+  { Points, RepairKit, Ball }` + `HoleReward` (list), CSV-parsed as **(type,amount) pairs** exactly
+  like `HoleDatabaseLoader` (cols 7–12 play / 13–18 replay; `ParseRewardType(str)` → `AddReward`),
+  granted via the `HoleCompleteModalController.GrantRewards` switch
+  (`RewardPointsManager.EarnPoints` / `ItemManager.AddItems("repairkit_common")` /
+  `BallManager.AddBalls`), and displayed as the same coin/repair/ball row. Figma's 3 slots ARE
+  Points/RepairKit/Ball. **Extensibility:** the reward row + binding must iterate a `List<HoleReward>`
+  (N slots), NOT hardcode 3 fields, so `GachaTicket` (add to `RewardType`) drops in later.
+  **Refactor note:** the grant switch is currently private in `HoleCompleteModalController` — extract
+  a shared `RewardGranter.Grant(List<HoleReward>)` so versus + hole-complete use ONE grant path (DRY;
+  one place to add gacha tickets). Confirm CSV shape with Cesar at Stage 2: per-outcome rows (win pays,
+  lose/draw pay 0 → greyed row) either as new `modes.csv` reward-pair columns or a dedicated
+  `match_rewards.csv`. **Stage 0 still just renders the Figma 3-slot row with placeholder counts.**
 - **D2 — DRAW visual.** No Figma. Proposed default: both columns neutral (no green/red), reward row
   greyed, header/banner reads DRAW. Confirm or provide a node.
 - **D3 — NEW MATCH behavior.** Requeue same mode via the matchmaking flow, re-open the Matchmaking
