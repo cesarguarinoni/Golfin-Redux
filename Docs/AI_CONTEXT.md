@@ -7,7 +7,7 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
-> **2026-06-30 19:05 JST — kick off `stamina_roster_ux` (Stamina Economy Phase 4, Order 516, P1).** SPEC_READY, Tier 3 visual, spec commit `0fcea9be2` → `Docs/Specs/Active/stamina_roster_ux/SPEC.md`. Roster ghost bars (Str+CC effective-vs-base overlay) + Stamina row → Condition meter (blue/amber/red via `StaminaModel.MeterState`, `9/27` stays the stat) + remove vestigial `LOW_STAMINA_THRESHOLD`. Panel mirrors `LiveStatProviderHost`'s exact `StaminaModel.ConditionPct(currentStaminaEnergy, currentStamina)` call → zero display/gameplay drift. Portrait low-stamina icon already dormant-wired — free.
+> **2026-07-01 13:27 JST — kick off `stamina_roster_ux` (Stamina Economy Phase 4, Order 516, P1).** SPEC_READY, Tier 3 visual, spec commit `0fcea9be2` → `Docs/Specs/Active/stamina_roster_ux/SPEC.md`. Roster ghost bars (Str+CC effective-vs-base overlay) + Stamina row → Condition meter (blue/amber/red via `StaminaModel.MeterState`, `9/27` stays the stat) + remove vestigial `LOW_STAMINA_THRESHOLD`. Panel mirrors `LiveStatProviderHost`'s exact `StaminaModel.ConditionPct(currentStaminaEnergy, currentStamina)` call → zero display/gameplay drift. Portrait low-stamina icon already dormant-wired — free.
 >
 > **Kickoff:** `Use the implementer subagent on "stamina_roster_ux"`
 >
