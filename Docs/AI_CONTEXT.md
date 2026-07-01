@@ -7,11 +7,9 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
-> **2026-07-01 13:27 JST — kick off `stamina_roster_ux` (Stamina Economy Phase 4, Order 516, P1).** SPEC_READY, Tier 3 visual, spec commit `0fcea9be2` → `Docs/Specs/Active/stamina_roster_ux/SPEC.md`. Roster ghost bars (Str+CC effective-vs-base overlay) + Stamina row → Condition meter (blue/amber/red via `StaminaModel.MeterState`, `9/27` stays the stat) + remove vestigial `LOW_STAMINA_THRESHOLD`. Panel mirrors `LiveStatProviderHost`'s exact `StaminaModel.ConditionPct(currentStaminaEnergy, currentStamina)` call → zero display/gameplay drift. Portrait low-stamina icon already dormant-wired — free.
+> **2026-07-01 13:34 JST — nothing queued here; awaiting Cesar's pick.** Stamina Economy **Phases 1–5 are ALL DONE, closed & merged** (verified against git log + live `CharacterDetailPanel.cs`). P4 `stamina_roster_ux` = `87a387761` feat / `dd41af4c9` close; P5 `stamina_roster_live_meter` = `8f11c135c` feat / `6c8b314df` close. Both folders live in `Docs/Specs/Completed/`; `Docs/Specs/Active/` holds **zero** stamina folders. The portrait low-stamina icon now lights up for free once Condition drops.
 >
-> **Kickoff:** `Use the implementer subagent on "stamina_roster_ux"`
->
-> Phases 1–3 (model / live wiring / tournament pool) DONE & merged (`3c22b0fa3`); Notion 516 = Queued. Anything below this callout that predates Phase 4 is superseded — trust `Docs/Specs/Active/` + Notion.
+> **⚠ Do NOT run `Use the implementer subagent on "stamina_roster_ux"`.** The 13:27 docs commit `b00c90e82` regressed this callout back to a stale "kick off Phase 4" state AFTER P4+P5 had shipped — pasting that kickoff would redo merged, Cesar-accepted work. Notion 516 flipped Queued→Done to match reality.
 
 Surfaced by Cesar's Lesson O playthrough on `loop_v1_2f_putter_p2_in_context`. Pre-existing P1/cup bugs (NOT §2f regressions) but §2f's auto-toggle makes them visible every session.
 
