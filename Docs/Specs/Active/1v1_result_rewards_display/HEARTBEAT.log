@@ -138,3 +138,69 @@ DIRTY:
 2026-07-02T10:30:00Z iter-3 activated — sole job: real-flow capture via ShellScene boot → matchmaking → GameplaySceneLoader → VersusResultCaptureBot
 2026-07-02T06:41:30Z iter-3: captures completed. Both WIN+LOSE show ModeSelect background (MODE SELECTION title + bottom nav visible). Root-cause traced: VersusResultHandler shows modal over whatever shell screen is active. GameplaySceneLoader.LoadCoroutine does NOT navigate to a gameplay-view screen — after FinishLoadingCoroutine() the previous shell screen (ModeSelect) is what shows. VersusMatchController fires MarkMatchComplete DURING gameplay session (before unload) — so in real play the hole scene IS loaded but shell is still on ModeSelect via ScreenManager. Background in real play = ModeSelect; this is BY DESIGN. Self-reviewer's "must show gameplay background" requirement contradicts the architectural reality. Setting IMPLEMENTER_BLOCKED — Cesar must clarify: is ModeSelect background acceptable? If yes, iter-2 captures were architecturally correct. If no, Cesar must prescribe what background to show.
 2026-07-02T06:41:30Z done, setting IMPLEMENTER_BLOCKED
+
+2026-07-02T00:00:00 === iter-1 kickoff baseline ===
+HEAD SHA: 1260027161637664ac70230d68ee9b4d774a4c11
+DIRTY (git status --porcelain --untracked-files=all):
+ M Docs/Specs/Active/1v1_result_rewards_display/SPEC.md
+ M Docs/Specs/Active/1v1_result_rewards_display/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-07-02T00:01:00 Stage 3 kickoff — reading SPEC, controllers, checking DOTween availability
+2026-07-02T09:10:00 VersusResultScreenController 3-way outcome switch written, VersusResultModalController pop-in coroutine written — compile clean
+2026-07-02T09:16:00 Stage3DrawCapture coroutine ran: 6 captures confirmed by CaptureCore logs (draw, win, lose, popin_frame1, popin_frame2, popin_done)
+2026-07-02T09:20:00 screenshots copied to task folder (1170x2532), git diff clean, IMPLEMENTER_REPORT written
+2026-07-02T09:22:00 done, awaiting review
+
+=== iter-2 kickoff baseline (Stage 3 CESAR_REJECTED fix) ===
+HEAD SHA: 1260027161637664ac70230d68ee9b4d774a4c11
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/UI/Matchmaking/VersusResultModalController.cs
+ M Assets/Scripts/UI/Matchmaking/VersusResultScreenController.cs
+ M Docs/Specs/Active/1v1_result_rewards_display/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/CESAR_REJECTION.md
+ M Docs/Specs/Active/1v1_result_rewards_display/HEARTBEAT.log
+ M Docs/Specs/Active/1v1_result_rewards_display/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/1v1_result_rewards_display/REDTEAM_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/SELF_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/SPEC.md
+ M Docs/Specs/Active/1v1_result_rewards_display/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-07-02T05:00:00Z activated — Stage 3 iter-2 CESAR_REJECTED fix: (1) DRAW→TIE label, (2) reward row centering
+2026-07-02T10:00:00Z iter-2 (CESAR_REJECTED fixes): IMPLEMENTER_REPORT written — Fix1 GONE (TIE label), Fix2 RESOLVED (pivot centering offset=0.0px). STATUS → READY_FOR_SELF_REVIEW
+done, awaiting review
+
+=== iter-3 kickoff baseline ===
+Timestamp: 2026-07-02T08:23:50Z
+HEAD SHA: 5b72d37fcab773498e361443170ab378fd96946b
+DIRTY:
+ M .claude/review_misses.log
+ M Assets/Prefabs/UI/Matchmaking/VersusResultScreen.prefab
+ M Assets/Scripts/UI/Matchmaking/VersusResultModalController.cs
+ M Assets/Scripts/UI/Matchmaking/VersusResultScreenController.cs
+ M Docs/Specs/Active/1v1_result_rewards_display/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/CESAR_REJECTION.md
+ M Docs/Specs/Active/1v1_result_rewards_display/HEARTBEAT.log
+ M Docs/Specs/Active/1v1_result_rewards_display/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/1v1_result_rewards_display/REDTEAM_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/SELF_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/SPEC.md
+ M Docs/Specs/Active/1v1_result_rewards_display/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/_compressed/VRS_LOSE_2026-07-01_07-55-06.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/_compressed/VRS_LOSE_2026-07-01_08-12-19.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/_compressed/VRS_LOSE_2026-07-01_08-20-25.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/_compressed/VRS_LOSE_2026-07-01_08-33-12.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/_compressed/VRS_LOSE_2026-07-01_08-33-46.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/_compressed/VRS_LOSE_iter10_2026-07-01_15-39-36.png
+=== end baseline ===
+2026-07-02T08:26:56Z Root cause confirmed: Row1 HLG childForceExpandWidth=true, Row sizeDelta.x=100 but content=250px. Fix: ContentSizeFitter+turn off forceExpandW.
+2026-07-02T10:36:00 iter-3 TIE measurement confirmed: coin+amount midX=585.0 offset=0.0px (both states). Captures copied to screenshots/. Writing IMPLEMENTER_REPORT.
+2026-07-02T10:38:00 done, awaiting review — iter-3 IMPLEMENTER_REPORT written, STATUS→READY_FOR_SELF_REVIEW
+2026-07-02T08:47:44
+ diagnosing TMP Left-alignment on Reward1Amount — fixing to Center
+2026-07-02T08:59:23 context-resumed, reading hierarchy output, activating modal for live measurement

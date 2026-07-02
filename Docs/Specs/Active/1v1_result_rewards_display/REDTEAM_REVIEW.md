@@ -1,116 +1,133 @@
-# RED-TEAM REVIEW — 1v1_result_rewards_display (Stage 2, iter-3)
+# RED-TEAM REVIEW — 1v1_result_rewards_display (Stage 3, iter-2) — FINAL STAGE
 
 **Reviewer:** golfin-redteam-reviewer (adversarial gate)
-**Timestamp:** 2026-07-02 (JST)
-**Verdict:** **ARCHITECT_REVIEW_PASS**
-**Governing ruling:** `CESAR_RULING.md` (2026-07-02) — Stage 2 accepted on code + Stage-1 proof;
-ModeSelection/shell capture-background objection is WAIVED and was NOT used as grounds for any
-finding here. Attacked the CODE and the reward-row RENDER per the ruling.
+**Timestamp:** 2026-07-02 10:16 CEST
+**Iteration:** Stage 3 iter-2 (`polish:tie-label-and-reward-centering`) — CESAR_REJECTED fix pass
+**Verdict:** **ARCHITECT_REVIEW_FAIL** — CESAR_REJECTED defect #2 (reward icon+amount not centered) is STILL PRESENT.
 
-I tried to break this along all seven attack vectors and came up empty. Every claim below is
-re-derived from source/diff/render I inspected myself, not carried from the reviewer's PASS.
-
----
-
-## Attack 1 — RewardGranter extraction behavior-preserving (Practice-hole regression risk) → HOLDS
-
-Re-derived from `git diff HEAD -- HoleCompleteModalController.cs`. The ENTIRE diff is:
-- REMOVED: only the inner `foreach (var r in pool) { switch(r.type){Points/RepairKit/Ball} }` loop.
-- ADDED: `GolfinRedux.UI.RewardGranter.Grant(pool);`
-
-Everything guarding the grant is UNTOUCHED (verified by line-read, not trust):
-- `GrantRewards` line 241: `if (!_lastSuccess || _rewardsGranted) return;` — double-grant guard PRESENT.
-- line 242: `_rewardsGranted = true;` — one-shot PRESENT.
-- line 247: `var pool = _wasReplay ? hole.replayRewards : hole.rewards;` — replay-pool select PRESENT.
-- Guard fields `_lastSuccess/_wasReplay/_rewardsGranted/_lastSessionData` (lines 52–55) PRESENT.
-- Callers `OnReplay` (278) and `OnPlayNext` (321) still invoke `GrantRewards()`.
-
-`RewardGranter.Grant` switch is a verbatim copy: `Points→EarnPoints`, `RepairKit→AddItems`,
-`Ball→AddBalls`, with default IDs `repairkit_common`/`ball_golfin` matching the old
-`REPAIR_KIT_DEFAULT_ID`/`BALL_DEFAULT_ID` byte-for-byte. Practice hole-complete cannot double-grant
-nor grant the wrong pool. **Regression: NONE.**
-
-## Attack 2 — Versus grant correctness (P1Win-only, no RP leak) → HOLDS
-
-`VersusResultHandler.HandleMatchComplete` (line 88–96): `RewardGranter.Grant(winRewardList)` is
-inside `if (outcome == P1Win)`; the `else` branch grants nothing (log only). Lose/draw = 0 grant.
-Confirmed against the live render: top-bar `R 80,200` is IDENTICAL in the WIN and LOSE captures,
-i.e. the LOSE branch added zero RP. No RP leak.
-
-## Attack 3 — Stage-1 flat EarnPoints fully removed (no double-grant) → HOLDS
-
-`git diff` shows the exact deletion of the Stage-1 `RewardPointsManager.Instance.EarnPoints(reward)`
-block; it is replaced by the single `RewardGranter.Grant` call. `grep -rn "EarnPoints|AddBalls|AddItems"`
-across `Assets/Scripts/UI/Matchmaking/` + `VersusResultHandler.cs` returns ZERO hits — all versus
-grants funnel through one `RewardGranter` call. No flat-plus-granter double-grant possible.
-
-## Attack 4 — LOSE reward row: greyed-but-visible, exactly the win slots → HOLDS
-
-`ShowResult` always calls `BindRewardRows(rewardList)` (the WIN list) regardless of outcome
-(line 171); dimming is `_rewardRowGroup.alpha = localWon ? 1f : 0.5f` (168) PLUS direct child
-tint `SetRewardChildrenColor(...Dim)` (169) so it survives all capture contexts. Children stay
-active. **Render A/B confirms:** WIN = ONE bright gold coin + white `x200`; LOSE = ONE grey/brown
-coin + grey `x200`, clearly present and clearly attenuated — not empty, not 3 placeholder slots.
-The implementer flagged the perceptual match as "unclear"; on my own read the greying is
-unambiguously visible. Legitimate PASS.
-
-## Attack 5 — N-slot hide logic (no index-out-of-range) → HOLDS
-
-`BindRewardRows` iterates a fixed `for (i=0; i<3; i++)`, reads `rewards![i]` ONLY when `i < count`
-(guarded), and `rows[i].SetActive(i < count)`. `count = rewards?.Count ?? 0`. Empty/null list ⇒ all
-3 rows hidden, no throw. 1-item list ⇒ row1 shows, rows 2&3 hidden. A list longer than 3 simply
-fills 3 and ignores the rest — no overflow. `ParseAndAddRewardPair` (bounds-checks col indices,
-skips empty/≤0 amounts) means the empty reward2/3 CSV columns add ZERO spurious slots — exactly
-the one-slot render observed.
-
-## Attack 6 — RANK-join resolves matched opponent, never top entry → HOLDS
-
-`BindRankText` (262–308): opponent loop filters `!e.IsPlayer && e.Rank>0 &&
-e.DisplayName == opponentPlayer.DisplayName` (284), leaves `"—"` if unmatched — no first-non-player
-/ #1 fallback. Live proof in both renders: `You #116` (local) and `THRANDUIL #1` (matched
-opponent) are distinct entries; #1 is the matched opponent's real rank, not a hardcoded top slot.
-
-## Attack 7 — Scene/prefab/ban integrity → HOLDS
-
-Re-ran every ban check myself:
-- `git diff HEAD -- Assets/Scripts/Physics/` → EMPTY (capture scaffolding reverted per ruling).
-- `Scenarios.cs` diff → EMPTY. No `*Gate` scenario.
-- `Assets/Scenes/` diff → EMPTY. `M_Splash*.mat` → not in porcelain.
-- Prefab diff = `+3` lines only: `_rewardRow1/2/3` fileID wiring. ZERO `m_AnchorMin/Max`,
-  `m_SizeDelta`, `m_AnchoredPosition`, `m_LocalPosition`, `m_IsActive` mutations.
-- NotoSansJP atlas dirt reverted (clean in porcelain).
-- Uncommitted assets = exactly the 10 reported Stage-2 files; Packages MCP bump waived.
-- `NewMatchButton` gold pill present in both renders; `ButtonPressFeedback` untouched by prefab diff.
+I re-derived every claim from code + my own pixel measurement, not from the reviewer's PASS.
+The reward-centering fix does NOT center the visible content; it only re-centers the container
+RectTransform. Both the implementer's live `GetWorldCorners` (0.0px) and the reviewer's pixel
+span (-0.5px) measured the wrong thing.
 
 ---
 
-## Prior rejections (CESAR_REJECTION iter-history) replayed
+## BLOCKER — Fix #2 (reward icon + amount not centered) is STILL PRESENT
 
-- **iter-1 "capture over title/splash":** GONE — v6 renders show the modal over course + shell
-  chrome, no PLAY/Create-Account title splash. (Background itself waived for Stage 2.)
-- **iter (self-review) "LOSE reward row EMPTY":** GONE — LOSE render shows one greyed-but-visible
-  coin `x200`; `BindRewardRows` binds the WIN list on all outcomes; alpha+child-tint applied.
-- **RANK `—` synthetic:** GONE — real `#116`/`#1` DisplayName-joined entries.
+Cesar's rejection #2: *"The prize icon + amount is not centered in the reward row … The single
+active slot sits off-center instead of centered under the HOLE line."* This is NOT fixed.
 
-## Three break-attempts, why each failed
+**My independent pixel measurement** (Python/PIL, both full-res 1170×2532 captures). I first
+located the modal panel edges (navy fill scan, rows y=1000/1150): panel x=[99,1070], **panel
+center = 584.5px**. I then measured the horizontal midpoint of every centered element in the
+lower modal by scanning tight Y bands for non-navy content:
 
-1. **Visual:** hunted the reward row for an empty/placeholder LOSE slot or a WIN slot that looked
-   wrong — LOSE is a genuinely dimmed single slot, WIN is a bright single slot; symmetric role
-   swap correct. No seam/mismatch found.
-2. **Geometric/logic:** tried to force an IndexOutOfRange (empty list, >3 list) and a wrong-pool /
-   double grant in hole-complete — both are structurally impossible given the preserved guards and
-   the `i<count` read guard.
-3. **Spec-intent:** checked for RP leak on loss (top-bar identical WIN vs LOSE = no leak) and for a
-   surviving flat EarnPoints double-grant (grep = zero). Intent satisfied, not just the letter.
+| Element | Y band | pixel span x | midpoint | offset vs panel center 584.5 |
+|---|---|---|---|---|
+| "HOLE" gold label | 1425–1470 | 527–643 | **585.0** | +0.5 ✓ centered |
+| "Lomond Country Club - Hole 1" | 1480–1525 | ~220–951 | **584.5** | 0.0 ✓ centered |
+| **coin + "x200" reward** | 1540–1580 | **535–712** | **623.5** | **+39.0 ✗ OFF-CENTER RIGHT** |
+| "NEW MATCH" button | 1650–1720 | 350–819 | **584.5** | 0.0 ✓ centered |
 
-## Report integrity (Rule 6)
+Identical numbers in BOTH `stage3_iter2_win_2026-07-02.png` and `stage3_iter2_tie_2026-07-02.png`
+(coin block x=[535,712], mid=623.5 in both).
 
-No fabrication found. The `80,200` top-bar in the WIN render corroborates the +200 grant claim;
-the identical LOSE top-bar corroborates the zero-grant-on-loss claim. The implementer's `PASS*`
-flags (slot-count deviation, LOSE dim intensity) are honest surfaced caveats, not gamed booleans.
+**Visual proof** (center-line overlay, `scratchpad/win_centerline.png`, `tie_centerline.png`):
+a RED line at panel center 584.5 bisects HOLE, Lomond, and NEW MATCH cleanly, but the coin+"x200"
+cluster sits visibly to its RIGHT — the coin straddles the red line and the "x200" text runs ~39px
+past it. A CYAN line at 623.5 (the coin-block true midpoint) is clearly right of every other element.
+
+**Why the pipeline missed it.** The pivot change `(1,1)→(0.5,0.5)` on `Reward Row1` (a 978px-wide
+RectTransform) re-centered that CONTAINER — so `Row1 world midX = 585` (implementer's live
+`GetWorldCorners`) and the reviewer's "row RectTransform" reads 585. But the visible coin+x200
+CONTENT is laid out off-center INSIDE that 978px row (nested inner layout / content alignment), so
+the RectTransform center ≠ the visible-content center. The reviewer's cited pixel span x=[373,796]
+(→584.5) was contaminated by the much wider "Lomond Country Club - Hole 1" text line and the two
+separator rules that sit in the same broad Y window; a tight Y band isolating only the coin+x200
+row gives mid=623.5, +39px right. Cesar explicitly warned to measure "the active slot's icon+amount
+vs the reward-row container center," not the container's own RectTransform — that step was not done
+correctly by either gate.
+
+**Fix instruction (implementer):** center the VISIBLE coin+amount content, not the container. Use
+the golfin-ui-fidelity measure→root-cause→validate loop:
+1. `GetWorldCorners` on the actual `Icon`+`Amount` child GameObjects (the coin Image and the "x200"
+   TMP), NOT on `Reward Row1`. Confirm their combined bounding-box midX ≠ Rewards container center
+   (it is currently ~623.5 vs ~584.5, i.e. ~+39px in screen px at Match-0 canvas scale).
+2. Root-cause the inner offset: check Row1's own child layout — a nested HorizontalLayoutGroup with a
+   non-center `childAlignment`, a left/right padding asymmetry, the coin/amount slot's own
+   pivot/anchoredPosition, or a `childForceExpandWidth` cell that left-aligns the pair. Fix the real
+   cause so the coin+amount pair centers inside Row1.
+3. Re-verify by the SAME pixel method used here: coin+x200 tight-Y-band midpoint must equal the HOLE /
+   Lomond / NEW MATCH centerline (584.5 ± a few px), in BOTH win and tie captures.
+4. Must still lay out symmetrically for 2–3 active slots (Cesar's forward-safety clause) — do not
+   hardcode a 1-slot x.
+
+---
+
+## Everything else I attacked (and why it held) — recorded but MOOT given the blocker
+
+### Fix #1 — "DRAW" → "TIE" label: GONE (verified)
+`VersusResultScreenController.cs` diff: `private const string DrawLabel = "TIE";` (was `"DRAW"`);
+`DrawColor = #CCCCCC`, `DrawColorHex = "#CCCCCC"`. `grep '"DRAW"'` → only two COMMENTS (lines 90, 373),
+zero DISPLAYED string literals. `GameSession.MatchOutcome.Draw` enum name unchanged (display-only).
+TIE capture: both columns read "TIE" neutral grey, both RANK numbers neutral (no green/orange). PASS.
+- *Cosmetic nit (not fail-worthy):* line 373 comment still says "both columns show 'DRAW'" — stale
+  wording; the rendered text is "TIE". Worth cleaning in the same pass.
+
+### Fix #3 — banner: correctly EXCLUDED
+`git diff HEAD -- Assets/Scripts/Physics/` → empty. Banner lives in commit `5b72d37fc` on HEAD
+(a separate Cesar-authorized Rule-7 exception), so it is not in the uncommitted diff. Correctly
+absent; not flagged.
+
+### TIE reward greying (regression): GONE (verified independently)
+Tie coin+"x200" is visibly muted grey vs WIN's saturated gold (`scratchpad/tie_reward_band.png`
+vs `win_reward_band.png`). Tight-band non-navy pixel COUNT: WIN=3869 bright px vs TIE=2674 in the
+same coin row — dimmer. Code `rewardsBright = localWon` → TIE (isDraw, !localWon) → α=0.5 + RewardChildDim.
+PASS. (Note: the reward is dimmed correctly but STILL off-center — greying ≠ centering.)
+
+### WIN/LOSE regression: labels/ranks OK, coin OFF-CENTER (same defect)
+WIN capture: WINNER green (#50C878), LOSER orange (#C04000), RANK #116 green / #86 orange, bright
+coin. Labels/ranks unchanged — PASS. BUT the WIN coin is ALSO at mid=623.5 (+39px) — the centering
+defect affects WIN too, not just TIE. Covered by the blocker.
+
+### Pop-in (item 5): interrupt-safe, untouched this iter
+`VersusResultModalController.PopInScaleRoutine()` ease-out cubic 0.9→1.0 over 0.2s; both `Hide()`
+and `ShowResult()` re-entry `StopCoroutine` + force `localScale = Vector3.one`; routine ends at
+`Vector3.one`. Diff is the iter-1 pop-in verbatim (Stage 3 never landed — iter-1 was CESAR_REJECTED,
+so this is legitimately uncommitted). Not re-broken. PASS.
+
+### Diff scope + bans (item 6): clean
+`git diff HEAD --stat`: 3 files only — `VersusResultScreen.prefab` (EXACTLY 4 `m_Pivot`
+`(1,1)→(0.5,0.5)` on Rewards + Row1/2/3, zero anchor/size/pos/rotation drift), plus
+`VersusResultScreenController.cs` (TIE label + 3-way switch) and `VersusResultModalController.cs`
+(iter-1 pop-in). `Assets/Scripts/Physics/` empty; `Scenarios.cs` empty; no `M_Splash*.mat`;
+no new `UnityEngine.UI.Button` → ButtonPressFeedback rule not triggered. Packages/ MCP env dirt
+waived. Scope is clean — the prefab change is just mechanically insufficient to fix the defect.
+
+### Report integrity (item 7): a measurement error, not a fabrication
+The reviewer's and implementer's "centered (0.0 / -0.5px)" claims are backed by real tool output
+(a live `GetWorldCorners` on Row1; a PIL span over a contaminated Y window) — the numbers exist,
+they just measure the wrong region (container RectTransform / text-contaminated span) and therefore
+missed a live 39px offset. This is a rubber-stamped review miss, not an invented tool result, so
+NOT logged as CRITICAL fabrication under Rule 6. Logged to `.claude/review_misses.log` as a
+red-team catch (both prior gates passed a still-present Cesar-rejected defect).
+
+---
 
 ## Verdict
 
-All seven vectors held under adversarial scrutiny; code diffs are minimal and behavior-preserving;
-the reward-row render is correct in both states. Advancing to **ARCHITECT_REVIEW_PASS** for Cesar's
-final approval.
+**ARCHITECT_REVIEW_FAIL.** The single most important thing this iteration had to fix — Cesar's
+rejection #2, "the reward icon+amount is not centered" — is objectively STILL PRESENT: the coin+"x200"
+sits +39px right of the panel/HOLE/NEW-MATCH centerline in both the win and tie captures. The pivot
+fix re-centered the 978px Row1 container but not the visible content inside it. Fixes #1 (TIE label)
+and TIE greying are correct, but they cannot carry a task whose headline rejection is unresolved.
+
+Route back to implementer with the fix instruction above (measure the coin+amount child bbox, not
+the row RectTransform).
+
+## Files touched this review
+| Path | Change |
+|---|---|
+| `Docs/Specs/Active/1v1_result_rewards_display/REDTEAM_REVIEW.md` | Rewritten — iter-2 FAIL verdict |
+| `Docs/Specs/Active/1v1_result_rewards_display/STATUS.md` | → `ARCHITECT_REVIEW_FAIL` |
+| `.claude/review_misses.log` | Appended red-team catch (centering defect passed 2 gates) |

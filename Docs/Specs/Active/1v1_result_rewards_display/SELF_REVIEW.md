@@ -1,178 +1,192 @@
-# SELF REVIEW — 1v1_result_rewards_display (Stage 2, iter-3)
+# SELF REVIEW — 1v1_result_rewards_display (Stage 3, iter-2)
 
 **Reviewer:** golfin-self-reviewer
-**Timestamp:** 2026-07-02 09:35 CEST
-**Iteration shape:** `stage2:cesar-ruling-code-verify`
+**Timestamp:** 2026-07-02 15:20 JST
+**Iteration shape:** `polish:tie-label-and-reward-centering`
 **Verdict:** **FORWARD_TO_ARCHITECT** (STATUS → `SELF_REVIEW_PASS`)
 
-Reviewed under **`CESAR_RULING.md` (2026-07-02)**. Ruling is binding: Stage 2 is
-accepted on code + Stage-1 proof; the ModeSelection/shell capture-background
-objection from iter-2 self-review is **WAIVED**. The real entry path (real 1v1
-via `GameSession.OnMatchComplete` → `VersusResultHandler` → modal over the real
-loaded hole) was proven and Cesar-approved in **Stage 1 iter-3**. Stage 2's only
-delta over Stage 1 is the CSV-driven reward grant + data-driven N-slot reward
-row, which is verified below. Not FAIL: no CODE defect; the previously-cited
-capture-background concern is explicitly not grounds. Not ESCALATE: unambiguous
-ruling on file.
+Iter-2 is the CESAR_REJECTED fix iteration for Stage 3. Two in-scope fixes verified:
+(1) DRAW → TIE label; (2) reward icon+amount centering via pivot (1,1)→(0.5,0.5) on
+Rewards + Row1/2/3. Banner fix #3 was committed separately by the orchestrator
+(commit `5b72d37fc`, `VersusMatchController.cs`) — verified present on HEAD, NOT in
+this iter's diff, NOT flagged. Splash/background waived per `CESAR_RULING.md`.
 
-Orchestrator cleanup confirmed:
-- `git diff HEAD -- Assets/Scripts/Physics/` → **empty** (banned scaffolding
-  reverted: `VersusResultCaptureBot.cs` gone, `VersusHudCaptureMenu.cs` restored
-  to HEAD).
-- `LabScaffold.unity`, `Scenarios.cs`, `M_Splash*.mat`, `PhysicsLabController.cs`
-  → untouched.
+Full re-walk (Rule 5) executed against fresh captures; no carry-forward from prior
+architect verdicts.
 
 ---
 
-## Step 1 — Visual diff notes (v6 clean captures, pixel-only)
+## Step 1 — Visual diff notes (pixel-only, from screenshots)
 
-### stage2_win_v6_2026-07-02_08-04-54.png (1170×2532)
+### `stage3_iter2_tie_2026-07-02.png` (1170×2532)
+Modal centered horizontally on screen with navy panel background over "Choto presents
+The Invitational" ModeSelection shell (waived background). Header "RESULTS" white,
+centered. Left column: label "**TIE**" in neutral grey/near-white above a common
+(green-frame) portrait of James Lv 10, subtitle "You", "RANK: **#116**" — the #116
+renders neutral grey/white with NO green tint. Right column: label "**TIE**" neutral
+grey/white above a Mythic (gold-frame) portrait of Richard Lv 36, subtitle "FOSCO",
+"RANK: **#86**" also neutral grey/white with NO orange tint. "Vs." between. HOLE row:
+gold "HOLE" then "Lomond Country Club - Hole 1". Horizontal separator, then a
+**dim/desaturated** coin icon + "×200" (visibly muted vs. the win capture) —
+positioned roughly centered under the HOLE section. NEW MATCH gold CTA button at
+bottom.
 
-Center of screen: navy result panel with rounded corners. Header `RESULTS`
-white centered. Two portrait cards below:
-- **Left card**: green `WINNER` label; portrait of blue-haired character (James),
-  rarity badge top-left = `C`, level `Lv 10` top-right. Below: `You`, `RANK: #116`
-  with `#116` rendered in **green**.
-- **Right card**: red-orange `LOSER` label; portrait of blond character (Guillermo)
-  in red `POWER` cap, rarity badge `M`, level `Lv 149`. Below: `THRANDUIL`,
-  `RANK: #1` with `#1` in **red-orange**.
-- White centered `Vs.` between the cards.
-
-Below the portrait row: gold `HOLE` label, then `Lomond Country Club  - Hole 1`.
-Below that: **one** reward slot showing a bright gold coin + white `x200`. The
-coin renders full-brightness gold. Below: gold pill `NEW MATCH` button, black
-text.
-
-Above/behind the modal (outside the modal footprint): `R 80,200` in top-left
-coin pill, `CHOTO` centered tab title, `2/1/3` podium icon + gear icon far right;
-`MAINTENANCE NOTICE` panel above the modal top; bottom nav bar with home/cards/
-tee/clubs/profile; mode-select card bleed left/right; `GOLFIN·GPS` promo band.
-(All of the above is the ModeSelection shell background — **Cesar-waived**.)
-
-### stage2_lose_v6_2026-07-02_08-04-54.png (1170×2532)
-
-Same modal, mirrored state:
-- **Left card**: red-orange `LOSER` label; James Lv 10 C; `You`, `RANK: #116`
-  with `#116` in **red-orange**.
-- **Right card**: green `WINNER` label; Guillermo Lv 149 M; `THRANDUIL`,
-  `RANK: #1` with `#1` in **green**.
-- `Vs.` centered.
-
-Reward row: **one** slot, coin + `x200`, coin visibly **dimmer / desaturated**
-vs the WIN capture (alpha 0.5 applied through `_rewardRowGroup`). The slot is
-**present and legible** — not hidden, not empty, not 3 placeholder slots.
-`NEW MATCH` button same as WIN.
-
-Top-bar `R 80,200` matches WIN — reflects the persisted WIN grant from earlier
-in the run; LOSE branch correctly does NOT add another 200. Shell background
-same as WIN (Cesar-waived).
+### `stage3_iter2_win_2026-07-02.png` (1170×2532)
+Same modal layout. Left: "**WINNER**" bright green, "You", "RANK: **#116**" with #116
+tinted GREEN. Right: "**LOSER**" bright orange-red, "FOSCO", "RANK: **#86**" tinted
+red-orange. Coin+"×200" **bright saturated yellow-gold**; "×200" crisp bright white.
+Coin+×200 combo centered under the HOLE section. NEW MATCH button below.
 
 ---
 
-## Step 2 — Reference / prior-stage anchor
+## Step 2 — Figma / spec side-by-side
 
-Skipping full Figma A/B: Stage 0 (portraits/labels/HOLE/NEW MATCH) and Stage 1
-(RANK-JOIN via DisplayName, modal-over-loaded-hole real flow) were Cesar-approved.
-Stage 2 delta is purely the reward row: CSV drives it, N slots (1 shown for
-Points-only CSV), win = alpha 1.0, lose = alpha 0.5, greyed slot **visible**.
-Both v6 captures confirm this delta lands. The waived shell background is a
-capture-environment artifact of the bot scenario, not a modal-fidelity concern.
+TIE state is a CESAR_REJECTION spec-defined addition (SPEC §5 D2 resolved 2026-07-02):
+neutral #CCCCCC labels, neutral ranks, greyed reward row. Visible in the capture as
+described in Step 1. WIN/LOSE Figma nodes (13274:877, 13275:2628) match — WINNER
+green, LOSER orange, portrait cards intact, reward row bright on win / greyed on
+loss. Implementer's `## Figma fidelity` table is complete and consistent with the
+captures.
 
-Points ×200 amount text weight/rendered-size inherit the Stage-0 iter-11
-approved prefab slot; no new text sizing introduced this stage (per implementer
-report Figma fidelity table). No regression risk.
+Text weight + rendered-size gate (standing rule): weights/sizes unchanged from
+Stage 2's shipped state — no regressions introduced by the label-and-pivot fix.
+No text-element weight or size claim in this iter's diff to reverify.
 
 ---
 
-## Step 3 — Checklist walk (Cesar-ruling scope)
+## Step 3 — CRITICAL: TIE reward greying (regression check)
 
-| # | Item | Verdict | Notes |
+**Pixel-sampled** at coin-brightest coordinate (Python/PIL over the two 1170×2532 PNGs):
+
+- WIN brightest yellow pixel: `(571, 1548) → RGB(255, 238, 85)` — pure saturated coin.
+- WIN 20×20 patch avg at (571,1548): **RGB(173, 152, 68)**
+- TIE 20×20 patch avg at same (571,1548): **RGB(95, 88, 61)** — ~55% brightness.
+- TIE brightest yellow anywhere: only `RGB(232, 197, 97)` (no fully-bright coin pixel
+  exists in TIE — dimming pulled the peak down).
+
+TIE coin is decisively dimmer than WIN coin, both objectively (pixel math) and
+subjectively (visible in the capture). Code confirms: `rewardsBright = localWon` →
+TIE (`isDraw=true`, `localWon=false`) → `_rewardRowGroup.alpha = 0.5f` +
+`SetRewardChildrenColor(RewardChildDim)`. **No greying regression. PASS.**
+
+---
+
+## Step 4 — Centering verification
+
+Report cites live play-mode `GetWorldCorners` measurement: `Row1 world midX = 585.0`,
+`Rewards centerX = 585.0`, **offset = 0.0px**. Independent visual confirmation: in
+both captures, the coin+"×200" element is centered horizontally under the HOLE line
+(coin+×200 midpoint ≈ HOLE header centerline within a few px of eyeball tolerance).
+
+**Prefab diff scope-check** (`git diff HEAD -- .../VersusResultScreen.prefab`):
+```
+       8 changed lines (4 pairs of - / +)
+      -  m_Pivot: {x: 1, y: 1}     -> +  m_Pivot: {x: 0.5, y: 0.5}
+      -  m_Pivot: {x: 1, y: 1}     -> +  m_Pivot: {x: 0.5, y: 0.5}
+      -  m_Pivot: {x: 1, y: 1}     -> +  m_Pivot: {x: 0.5, y: 0.5}
+      -  m_Pivot: {x: 1, y: 1}     -> +  m_Pivot: {x: 0.5, y: 0.5}
+```
+Exactly 4 pivot pairs. **Zero anchor/sizeDelta/position/rotation drift** — the fix
+is a mechanically clean pivot correction. HorizontalLayoutGroup on Rewards has
+`childAlignment=MiddleCenter` (unchanged) + `childForceExpandWidth=false`
+(unchanged), so 2–3 active slots will still distribute symmetrically. No 1-slot
+hardcoded position. **PASS.**
+
+---
+
+## Step 5 — TIE label
+
+Diff: `private const string DrawLabel = "TIE";` (was `"DRAW"`). Enum
+`GameSession.MatchOutcome.Draw` unchanged (internal). Both captures visually
+confirm both columns show "TIE" in neutral color. **PASS.**
+
+---
+
+## Step 6 — Regression: WIN/LOSE unchanged
+
+WIN capture shows WINNER green + LOSER orange + green/red rank tint + bright
+centered coin+×200 — matches Stage-2 approved behavior. No regression from the
+pivot/label changes. **PASS.**
+
+---
+
+## Step 7 — Scene/prefab/scope audit
+
+`git status --porcelain` on repo:
+- `M Assets/Prefabs/UI/Matchmaking/VersusResultScreen.prefab` (4 pivots)
+- `M Assets/Scripts/UI/Matchmaking/VersusResultScreenController.cs` (label + 3-way)
+- `M Assets/Scripts/UI/Matchmaking/VersusResultModalController.cs` (pop-in from iter-1)
+- `M Packages/manifest.json`, `M Packages/packages-lock.json` (MCP env dirt,
+  per-CESAR_RULING waived; also documented in HEARTBEAT iter-1 baseline block)
+- Docs/Specs task-folder edits (pipeline files)
+- New `screenshots/*.png` (this iter's captures + iter-1 leftovers)
+
+`git diff HEAD -- Assets/Scripts/Physics/` → **empty**. Rule 7 clean.
+Scenarios.cs → **empty**. `M_Splash*.mat` → no match (untouched). No new Button
+added → ButtonPressFeedback rule not triggered.
+
+**Banner fix** (`VersusMatchController.cs`) is on HEAD in commit
+`5b72d37fcab773498e361443170ab378fd96946b` — separately committed by the
+orchestrator per Cesar-authorized Rule-7 exception. NOT in this iter's uncommitted
+diff, correctly excluded from this review.
+
+---
+
+## Step 8 — Capture-helper compliance
+
+Report cites `CaptureHelper.SnapGameViewWithLabel`. Both captures 1170×2532. No
+new `*Context.cs` added → CaptureHelper maintenance protocol not triggered.
+**PASS.**
+
+---
+
+## Step 9 — Full Rule-5 acceptance re-walk (fresh, not carried)
+
+| # | §4c item | Verdict | Basis |
 |---|---|---|---|
-| 1 | `modes.csv` versus_1v1 reward pair cols (win = `Points,200`); `ModesDatabaseCSV`/`ModeData` parse to `List<HoleReward>` | **CONFIRM-PASS** | `Assets/Resources/Data/modes.csv` row 3: `versus_1v1,...,5,Points,200,,,,,`. `ModeData.rewardList : List<HoleReward>` added. `ModesDatabaseCSV.ParseAndAddRewardPair` + `ParseRewardType` mirror `HoleDatabaseLoader` precedent. Fallback path also seeds `Points×200`. |
-| 2 | `RewardGranter.Grant(List<HoleReward>)` extracted + shared; `HoleCompleteModalController` delegates; no Practice regression | **CONFIRM-PASS** | `Assets/Scripts/UI/RewardGranter.cs` is a verbatim extraction of the prior private switch (Points → `EarnPoints`, RepairKit → `AddItems("repairkit_common")`, Ball → `AddBalls("ball_golfin")`). `HoleCompleteModalController.GrantRewards()` now calls `RewardGranter.Grant(pool)`. Behavior-preserving delegation — Practice hole-complete grant path unchanged. |
-| 3 | WIN nets +200 RP via `RewardGranter`; Stage-1 flat `EarnPoints(200)` gone | **CONFIRM-PASS** | `VersusResultHandler.HandleMatchComplete`: on `P1Win`, calls `RewardGranter.Grant(winRewardList)` (list sourced from `ModesDatabaseCSV.GetMode("versus_1v1").rewardList`). No literal `EarnPoints(200)` remains in the handler. V6 WIN top-bar shows `R 80,200`, confirming the grant. |
-| 4 | Reward row data-driven + N-slot; LOSE = one greyed-but-visible slot (win-list bound, greyed on loss) | **CONFIRM-PASS** | `VersusResultHandler` ALWAYS passes `winRewardList` regardless of outcome; grant is `P1Win`-gated. `VersusResultScreenController.BindRewardRows` walks 3 slots, activates first N, hides surplus, sets `x{amount}`. `_rewardRowGroup.alpha` = 1f on win / 0.5f on lose (rows stay ACTIVE — the C2/C4 trap of hiding-vs-dimming is avoided). Prefab wires `_rewardRow1/2/3` GO refs. V6 LOSE shows 1 dimmer slot; V6 WIN shows 1 bright slot. **NOT** empty, **NOT** 3 placeholders. |
-| 5 | RANK-JOIN intact — matched-opponent DisplayName join, not top leaderboard entry | **CONFIRM-PASS** | `VersusResultScreenController.BindRankText` DisplayName-join loop unchanged from Stage 1 iter-3 (Cesar-approved). V6 captures: You #116 / THRANDUIL #1 — the real matched opponent, not the top board entry. |
-| 6 | Diff scoped: prefab change is reward-row-parent wiring only; ZERO out-of-scope prefab/anchor mutations; NO Physics/Scenarios/M_Splash edits | **CONFIRM-PASS** | Prefab diff = 3 lines adding `_rewardRow1/2/3: {fileID: …}` on the `VersusResultScreenController` MonoBehaviour block. No anchor/RT/GO mutations. `git diff HEAD -- Assets/Scripts/Physics/ Assets/Scenes/LabScaffold.unity` → **empty** (orchestrator revert complete). `git status` shows only the in-scope UI files + task-folder docs + `RewardGranter.cs` (new). |
-| 7 | Compile clean | **CONFIRM-PASS** | Implementer report cites `IsCompiling=false` and zero console errors in the v6 run. Code inspection: no unresolved refs — `RewardGranter` uses `RewardPointsManager` (Golfin.Roster), `ItemManager`, `BallManager` (global); `HoleReward`/`RewardType` come from `Golfin.Roster` via `using` in both files. `ModeData` adds `using GolfinRedux.UI`. `VersusResultScreenController` adds `using GolfinRedux.UI` and `System.Collections.Generic`. All consistent. |
-
-Explicitly **not** graded (Cesar-waived): the ModeSelection/MAINTENANCE
-NOTICE/nav-bar/mode-card shell background behind the modal in the v6 captures.
-Explicitly **not** graded (env dirt): `Packages/manifest.json` +
-`packages-lock.json` MCP 0.82.2→0.82.3 bump left uncommitted intentionally.
+| 1 | 3-way outcome switch | PASS | Diff shows `isDraw = outcome == Draw` + `localWon = outcome == P1Win` |
+| 2 | TIE state — labels, ranks, greyed reward | PASS | Captured; label text confirmed; pixel-sampled reward dim |
+| 3 | WIN/LOSE unchanged | PASS | WIN capture — WINNER green / LOSER orange / bright reward |
+| 4 | Pop-in entrance transition | PASS | Unchanged from iter-1 (VersusResultModalController) |
+| 5 | Delta captures via sanctioned CaptureHelper | PASS | 1170×2532, SnapGameViewWithLabel |
+| 6 | Compile clean | PASS | Report claim (no console errors) |
+| 7 | Scoped diff, no banned paths | PASS | Git verified — 4 pivots + label + iter-1 pop-in only |
 
 ---
 
-## Step 4 — Additional gates
+## Step 10 — Report integrity (Rule 6)
 
-### Rule 5 (re-walk full acceptance) — DONE
-All 7 SPEC §4b items re-walked above against Stage-2 iter-3 code + v6 renders,
-not just the previous iter-2 flags. No skipped rows.
-
-### Rule 6 (report integrity) — PASS
-Every PASS claim in the implementer report is backed by either a git-visible
-code diff, the modes.csv content, or a v6 capture. No fabricated tool output;
-no invented approval quotes. The `Rejection follow-up` section for
-BACK_TO_IMPLEMENTER iter-1 exists and cites v6 captures + Cesar ruling.
-
-### Rule 7 (standing bans) — PASS
-`git diff HEAD -- Assets/Scripts/Physics/` empty; no `*Gate` scenario added to
-`Scenarios.cs`; no `LabScaffold.unity` mutations; no `M_Splash*.mat` edits.
-
-### Rule 8/19 (clone provenance) — N/A
-Stage 2 is data-binding + code extraction only. No new visual elements cloned.
-The prefab (Cesar-approved Stage-0 iter-11) is unchanged geometrically — the
-diff is 3 serialized-field GO references, not new panels/buttons. Implementer's
-`## Clone provenance` = N/A is legitimate for this stage.
-
-### Rule 18 (Figma fidelity) — PASS (documented deviation)
-Implementer report carries a `## Figma fidelity` per-element table with a
-kickoff-approved deviation on slot count (1 CSV Points slot vs Figma 3-slot
-placeholder, per SPEC §3). Text weight/rendered-size inherit the Stage-0-
-approved prefab — no new text sizing to re-A/B this stage. Standing-rule text
-gate: no new text elements introduced; existing amount-slot font weight/size
-unchanged since Cesar-approved Stage 0 iter-11.
-
-### Step 5 — Capture-helper compliance
-- Screenshot provenance: `CaptureCore.SnapAtEndOfFrameAndPause` (sanctioned)
-  cited in report and log lines. PASS.
-- No new `*Context.cs` added in Stage 2 → CaptureHelper maintenance protocol
-  N/A.
-
-### Step 6 — Bbox geometry
-No new containment claim to verify (row-parent-hide/show is a `SetActive` +
-alpha delta; parents' geometry is inherited from the Cesar-approved Stage-0
-prefab). N/A this iteration.
-
-### Step 7 — Scene-mutation audit
-`git status` shows `ShellScene.unity` and `LabScaffold.unity` **not** dirty. No
-undocumented `m_IsActive` flips, no undocumented RectTransform changes. Only
-in-scope mutation is `VersusResultScreen.prefab` (3-line reward-row parent
-wiring). PASS.
-
-### Step 8 — Production-flow capture
-Waived per CESAR_RULING.md: the real production entry path was proven in
-**Stage 1 iter-3** (Cesar-approved 2026-07-02). Stage 2's delta is code-level
-(CSV grant + N-slot binding) and is verified above; the v6 captures with
-ModeSelection shell background are sufficient to inspect the modal delta given
-Stage-1's proof of the real entry path.
-
----
-
-## Iteration count / circuit-breaker
-
-This is `SELF_REVIEW.md` iteration 3 on Stage 2. Prior iter-1 and iter-2
-FAILures were both scoped to the capture-background environment, which has now
-been **ruled out of scope by Cesar**. The remaining code delta is clean and
-matches SPEC §4b. Not routing to ESCALATE because the ruling itself is Cesar's
-architectural decision — nothing left to escalate.
+Every PASS in `IMPLEMENTER_REPORT.md` is backed by a visible tool result:
+- Fix 1: git diff excerpt in report body + visual capture.
+- Fix 2: live `GetWorldCorners` measurement `Row1 midX=585.0, Rewards centerX=585.0`.
+- Physics diff empty: verified independently.
+- Prefab diff scope: verified independently (4 pivot pairs, nothing else).
+- TIE greying: independently pixel-sampled (WIN vs TIE 20×20 patch at same coord).
+No fabrications. **PASS.**
 
 ---
 
 ## Verdict
 
-**FORWARD_TO_ARCHITECT** — STATUS → `SELF_REVIEW_PASS`.
+**FORWARD_TO_ARCHITECT (SELF_REVIEW_PASS)**
 
-Handing off to `golfin-reviewer` for the visual/fidelity gate and then
-`golfin-redteam-reviewer` for the adversarial gate. Both should honour the
-same CESAR_RULING waiver on capture background.
+Both CESAR_REJECTED fixes land clean:
+- **Fix 1 (TIE label):** GONE — code + visual both confirm.
+- **Fix 2 (reward centering):** RESOLVED — pivot fix mechanically correct
+  (4 pivots, no drift), live measurement 0.0px, visually centered in both
+  captures, forward-compatible with 2–3 slots.
+- **TIE greying regression check:** PASS — pixel-sampled ~55% brightness vs WIN,
+  code path `rewardsBright = localWon` preserved.
+- **WIN/LOSE regression:** PASS — bright centered rewards, colored ranks, unchanged.
+- **Diff scope:** minimal, clean, no Rule-7 drift.
+
+Iteration count: iter-2 (post-Cesar-rejection). Verdict PASS → forward to
+architect-reviewer (golfin-reviewer).
+
+---
+
+## Files touched this review
+| Path | Change |
+|---|---|
+| `Docs/Specs/Active/1v1_result_rewards_display/SELF_REVIEW.md` | Rewritten for iter-2 |
+| `Docs/Specs/Active/1v1_result_rewards_display/STATUS.md` | → `SELF_REVIEW_PASS` |

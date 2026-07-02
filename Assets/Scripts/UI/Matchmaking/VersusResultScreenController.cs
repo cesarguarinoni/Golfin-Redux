@@ -3,11 +3,13 @@
 // Stage 0: visual-state preview via ShowWin() / ShowLose() (sample data).
 // Stage 1: live binding via ShowResult() from MatchContext + LeaderboardManager.
 // Stage 2: data-driven reward row binding (List<HoleReward>), hide surplus rows.
+// Stage 3: 3-way outcome switch (win/lose/draw); draw = neutral labels + greyed rewards.
 //
 // Central RESULTS panel for 1v1 match end.
-// Two states driven by ShowWin() / ShowLose() (Stage 0) or ShowResult() (Stage 1+):
+// Three states driven by ShowResult() (Stage 1+):
 //   Win  → left column WINNER (green), right LOSER (orange), rewards bright.
 //   Lose → left column LOSER (orange), right WINNER (green), rewards dimmed.
+//   Draw → both columns DRAW (neutral white/grey), both ranks neutral, rewards dimmed.
 //
 // Reward dimming (Camera.Render-visible — edit-mode capture):
 //   _rewardRowGroup.alpha = 0.5  → CanvasGroup alpha (runtime compositing)
@@ -78,11 +80,15 @@ namespace Golfin.UI.Matchmaking
         [SerializeField] private Button _newMatchButton = null!;
 
         // ── Color constants ───────────────────────────────────────────────────
-        private static readonly Color WinnerColor = new Color(0x50 / 255f, 0xC8 / 255f, 0x78 / 255f, 1f); // #50C878 green  (node 13274:877)
-        private static readonly Color LoserColor  = new Color(0xC0 / 255f, 0x40 / 255f, 0x00 / 255f, 1f); // #C04000 burnt orange (node 13275:2358)
+        private static readonly Color WinnerColor  = new Color(0x50 / 255f, 0xC8 / 255f, 0x78 / 255f, 1f); // #50C878 green  (node 13274:877)
+        private static readonly Color LoserColor   = new Color(0xC0 / 255f, 0x40 / 255f, 0x00 / 255f, 1f); // #C04000 burnt orange (node 13275:2358)
+        // Stage 3: neutral grey for DRAW state — neither winner-green nor loser-orange.
+        private static readonly Color DrawColor    = new Color(0xCC / 255f, 0xCC / 255f, 0xCC / 255f, 1f); // #CCCCCC light grey
 
         private const string WinnerLabel = "WINNER";
         private const string LoserLabel  = "LOSER";
+        // Stage 3: TIE label shown on both columns in the tie/draw state. (Golf uses "TIE", not "DRAW".)
+        private const string DrawLabel   = "TIE";
 
         // Reward dim/normal colors for direct child tinting (Camera.Render visible)
         private static readonly Color RewardChildDim    = new Color(1f, 1f, 1f, 0.5f); // half-alpha white = dim
@@ -99,6 +105,8 @@ namespace Golfin.UI.Matchmaking
         private const string SampleReward1       = "x200";
         private const string SampleReward2       = "x04";
         private const string SampleReward3       = "x02";
+        // Stage 3: neutral hex for DRAW rank rich-text color
+        private const string DrawColorHex        = "#CCCCCC";
 
         // ── Hole info formatting constants ────────────────────────────────────
         private static readonly string[] HoleNames = {
@@ -123,12 +131,12 @@ namespace Golfin.UI.Matchmaking
             List<HoleReward>?        rewardList  = null,
             Action?                  onNewMatch  = null)
         {
+            // Stage 3: 3-way outcome switch — win / lose / draw
+            bool isDraw   = outcome == GameSession.MatchOutcome.Draw;
             bool localWon = outcome == GameSession.MatchOutcome.P1Win;
-            // Draw: treat as local lose (left = LOSER, right = LOSER) — placeholder per D2
-            // In Stage 3, DRAW gets its own visual variant.
 
             // ── Outcome labels ────────────────────────────────────────────────
-            SetOutcomeLabelsLive(leftWon: localWon);
+            SetOutcomeLabelsLive(isDraw: isDraw, leftWon: localWon);
 
             // ── Portrait cards ────────────────────────────────────────────────
             // Left = local (P1); right = opponent (P2)
@@ -152,7 +160,7 @@ namespace Golfin.UI.Matchmaking
                                                                        : opponentPlayer.DisplayName;
 
             // ── Rank ──────────────────────────────────────────────────────────
-            BindRankText(localWon, opponentPlayer);
+            BindRankText(isDraw: isDraw, localWon: localWon, opponentPlayer: opponentPlayer);
 
             // ── Hole info ─────────────────────────────────────────────────────
             if (_holeInfoText != null)
@@ -164,9 +172,10 @@ namespace Golfin.UI.Matchmaking
             }
 
             // ── Reward row: Stage 2 data-driven binding ───────────────────────
-            // Win = bright, Lose/Draw = dimmed.
-            if (_rewardRowGroup != null) _rewardRowGroup.alpha = localWon ? 1f : 0.5f;
-            SetRewardChildrenColor(localWon ? RewardChildNormal : RewardChildDim);
+            // Win = bright; Lose and Draw = dimmed (draw pays 0, shows "what you'd have gotten" greyed).
+            bool rewardsBright = localWon; // draw is NOT bright
+            if (_rewardRowGroup != null) _rewardRowGroup.alpha = rewardsBright ? 1f : 0.5f;
+            SetRewardChildrenColor(rewardsBright ? RewardChildNormal : RewardChildDim);
             // Bind reward slots from rewardList (CSV-driven). Surplus rows hidden.
             BindRewardRows(rewardList);
 
@@ -259,7 +268,7 @@ namespace Golfin.UI.Matchmaking
             // at opponent-found time; leave it as-is (no re-bind needed).
         }
 
-        private void BindRankText(bool localWon, MatchContext.Player opponentPlayer)
+        private void BindRankText(bool isDraw, bool localWon, MatchContext.Player opponentPlayer)
         {
             string localRankStr    = "—";
             string opponentRankStr = "—";
@@ -291,9 +300,20 @@ namespace Golfin.UI.Matchmaking
                 }
             }
 
-            // "RANK: " white base, number colored by outcome (green = winner, orange = loser)
-            string localNumColor    = localWon ? WinnerColorHex : LoserColorHex;
-            string opponentNumColor = localWon ? LoserColorHex  : WinnerColorHex;
+            // Stage 3: DRAW = both rank numbers neutral (not green/orange).
+            // Win/Lose: "RANK: " white base, number colored by outcome.
+            string localNumColor;
+            string opponentNumColor;
+            if (isDraw)
+            {
+                localNumColor    = DrawColorHex;
+                opponentNumColor = DrawColorHex;
+            }
+            else
+            {
+                localNumColor    = localWon ? WinnerColorHex : LoserColorHex;
+                opponentNumColor = localWon ? LoserColorHex  : WinnerColorHex;
+            }
 
             if (_leftRankText != null)
             {
@@ -346,17 +366,26 @@ namespace Golfin.UI.Matchmaking
             }
         }
 
-        private void SetOutcomeLabelsLive(bool leftWon)
+        private void SetOutcomeLabelsLive(bool isDraw, bool leftWon)
         {
-            if (_leftOutcomeLabel != null)
+            if (isDraw)
             {
-                _leftOutcomeLabel.text  = leftWon ? WinnerLabel : LoserLabel;
-                _leftOutcomeLabel.color = leftWon ? WinnerColor : LoserColor;
+                // Stage 3: TIE — both columns show "TIE" in neutral color
+                if (_leftOutcomeLabel  != null) { _leftOutcomeLabel.text  = DrawLabel; _leftOutcomeLabel.color  = DrawColor; }
+                if (_rightOutcomeLabel != null) { _rightOutcomeLabel.text = DrawLabel; _rightOutcomeLabel.color = DrawColor; }
             }
-            if (_rightOutcomeLabel != null)
+            else
             {
-                _rightOutcomeLabel.text  = leftWon ? LoserLabel : WinnerLabel;
-                _rightOutcomeLabel.color = leftWon ? LoserColor : WinnerColor;
+                if (_leftOutcomeLabel != null)
+                {
+                    _leftOutcomeLabel.text  = leftWon ? WinnerLabel : LoserLabel;
+                    _leftOutcomeLabel.color = leftWon ? WinnerColor : LoserColor;
+                }
+                if (_rightOutcomeLabel != null)
+                {
+                    _rightOutcomeLabel.text  = leftWon ? LoserLabel : WinnerLabel;
+                    _rightOutcomeLabel.color = leftWon ? LoserColor : WinnerColor;
+                }
             }
         }
 

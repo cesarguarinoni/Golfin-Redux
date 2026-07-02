@@ -141,7 +141,28 @@ parse to `List<HoleReward>`, grant via the shared `RewardGranter` (extracted fro
   `BindOpponentCard`), NOT the first/top non-player leaderboard entry. Regression symptom to guard
   against: every opponent showing the board leader's `#1`.
 
-**Stage 3 — Polish.** Win/lose reward brightness states, draw variant (D2), transitions.
+**Stage 3 — Polish.** Draw variant (D2 RESOLVED) + entrance transition. (Win/lose reward brightness
+already shipped in Stage 2 — win bright / lose greyed; Stage 3 extends the greyed treatment to draw.)
+
+**Kickoff decisions (Cesar 2026-07-02):**
+- **D2 DRAW variant = neutral columns + greyed rewards.** When the match outcome is a DRAW (the
+  `GameSession.MatchOutcome` value that is neither `P1Win` nor `P2Win`), render a distinct third state:
+  - Both column outcome labels read **DRAW** in a NEUTRAL color (not WINNER-green, not LOSER-orange) —
+    e.g. white/grey. No green/orange on either column.
+  - Both RANK numbers neutral (not green/orange).
+  - Reward row **greyed** (draw pays 0, same greyed slot as a loss).
+  - RESULTS header unchanged. Add a real draw branch in `VersusResultScreenController.ShowResult`
+    (currently draw falls through the `localWon=false` lose path — replace with a 3-way outcome switch).
+- **Entrance transition = subtle scale + fade pop-in.** When the modal opens, animate the RESULTS panel
+  from ~0.9→1.0 scale + fade-in, layered over `ModalController`'s existing fade (use DOTween — project
+  standard `DG.Tweening`). Keep it short/subtle (~0.15–0.25s, ease-out). Must not fight or double the
+  ModalController fade; must not leave the panel at 0.9 scale if a tween is interrupted.
+
+**Real-flow proof is already established (Stage 1 iter-3, Cesar-approved) — do NOT re-stage a full
+bot-match capture** (`CESAR_RULING.md` precedent, memory `feedback_multistage_accept_on_code_after_realflow_proven`).
+Scope Stage 3 captures to the DELTA: the DRAW-state render (forced draw outcome) + a couple of pop-in
+frames (or a short clip) for the entrance. Sanctioned `CaptureHelper` only; no title-screen force-show,
+no scene-stack hacks, no `Assets/Scripts/Physics/` scaffolding.
 
 ---
 
@@ -186,6 +207,23 @@ parse to `List<HoleReward>`, grant via the shared `RewardGranter` (extracted fro
 
 ---
 
+## §4c Stage 3 acceptance (the checkable deliverable)
+
+- [ ] `ShowResult` uses a **3-way outcome switch** (win / lose / draw), not `bool localWon`. Draw is
+      detected as `MatchOutcome` ≠ P1Win and ≠ P2Win.
+- [ ] **DRAW state:** both column labels read `DRAW` in a neutral color (no green/orange); both rank
+      numbers neutral; reward row greyed (one greyed RP slot, draw grants 0). WIN and LOSE states
+      unchanged (regression check — still green/orange + bright/greyed as Stage 2 shipped).
+- [ ] **Entrance transition:** RESULTS panel scale+fade pop-in (~0.9→1.0, ~0.15–0.25s ease-out) via
+      DOTween on modal open, layered on ModalController fade; panel ends at scale 1.0 / full alpha even
+      if interrupted (no stuck 0.9 / half-alpha). No double-fade artifact.
+- [ ] Delta captures only (real-flow already proven): DRAW-state still (forced draw) + pop-in
+      frames/short clip; sanctioned `CaptureHelper`. WIN/LOSE stills to prove no regression.
+- [ ] `script-execute` compiles clean; scene/prefab diff scoped (no out-of-scope prefab/anchor
+      mutations; no `Physics/`/`Scenarios.cs`/`M_Splash*.mat` edits); no banned capture scaffolding left.
+
+---
+
 ## §5 DECISIONS NEEDED (Cesar — before Stage 2; NOT blocking Stage 0)
 
 - **D1 — Reward model. ✅ RESOLVED (Cesar 2026-07-01):** 1v1 wins pay **multiple rewards — RP + balls
@@ -204,8 +242,9 @@ parse to `List<HoleReward>`, grant via the shared `RewardGranter` (extracted fro
   one place to add gacha tickets). Confirm CSV shape with Cesar at Stage 2: per-outcome rows (win pays,
   lose/draw pay 0 → greyed row) either as new `modes.csv` reward-pair columns or a dedicated
   `match_rewards.csv`. **Stage 0 still just renders the Figma 3-slot row with placeholder counts.**
-- **D2 — DRAW visual.** No Figma. Proposed default: both columns neutral (no green/red), reward row
-  greyed, header/banner reads DRAW. Confirm or provide a node.
+- **D2 — DRAW visual. ✅ RESOLVED (Cesar 2026-07-02):** neutral columns (both labels read DRAW in a
+  neutral color, no green/orange), neutral rank numbers, reward row greyed (draw pays 0). No Figma node
+  needed. See §3 Stage 3 kickoff block.
 - **D3 — NEW MATCH. ✅ RESOLVED (Cesar 2026-07-01): requeue the SAME mode (`versus_1v1`).** NEW MATCH
   re-enters the matchmaking flow for versus_1v1 (re-open `MatchmakingModalController` / re-run
   matchmaking → new opponent → new match), NOT return-home. Wire to the same entry point that started

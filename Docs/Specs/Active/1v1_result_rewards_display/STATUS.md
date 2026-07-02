@@ -1,35 +1,31 @@
-STAGE_2_DONE
+DONE
 
 # STATUS — 1v1_result_rewards_display (Order 347)
 
-**State:** Stage 2 DONE (Cesar-accepted 2026-07-02) · Stage 3 — pending kickoff.
-Full pipeline cleared: self→reviewer→red-team `ARCHITECT_REVIEW_PASS`, on top of Cesar's
-explicit acceptance-on-code ruling.
+**State:** ✅ **DONE — all 4 stages Cesar-approved 2026-07-02.** Full 1v1 result modal shipped:
+modal presentation (Stage 1), CSV-driven reward grant + N-slot row (Stage 2), draw→TIE variant +
+entrance pop-in + centered reward (Stage 3). Report demo video in `videos/` + `Docs/Reports/Media/`.
+- Fix 1 "DRAW"→"TIE": result-screen label done; banner done separately (commit 5b72d37fc,
+  Cesar-authorized Rule-7 exception).
+- Fix 2 reward centering: TRUE root cause = nested ContentSizeFitter rebuild-order bug (Row CSF sized
+  from the amount's stale 200px before the amount's own CSF hugged it → Row 250px, content left-packed
+  → −17.6px measured against the visible content). Prior iter-2 pivot fix + the killed iter-3 agent's
+  CSF-only change both measured the 978px CONTAINER (read 585 "centered") not the visible coin+amount —
+  which is why red-team correctly FAILed iter-2. FINAL FIX (orchestrator): reward rows
+  `childControlWidth=true` + `childForceExpandWidth=false`; removed the redundant per-amount CSF; amount
+  text center-aligned. **Measured 1-slot offset = 0.0px** on the VISIBLE cluster (icon-left→amount-right
+  midpoint = panel/HOLE/NEW MATCH center = 585); center-line render `screenshots/stage3_center_check.png`
+  confirms the coin+x200 straddles panel center.
+- Fix 1 "DRAW"→"TIE": result-screen label done; banner done separately (commit 5b72d37fc,
+  Cesar-authorized Rule-7 exception).
+- Fix 2 reward centering: TRUE root cause = nested ContentSizeFitter rebuild-order bug (Row CSF sized
+  from the amount's stale 200px before the amount's own CSF hugged it → Row 250px, content left-packed
+  → −17.6px measured against the visible content). Prior iter-2 pivot fix + the killed iter-3 agent's
+  CSF-only change both measured the 978px CONTAINER (read 585 "centered") not the visible coin+amount —
+  which is why red-team correctly FAILed iter-2. FINAL FIX (orchestrator): reward rows
+  `childControlWidth=true` + `childForceExpandWidth=false`; removed the redundant per-amount CSF; amount
+  text center-aligned. **Measured 1-slot offset = 0.0px** on the VISIBLE cluster (icon-left→amount-right
+  midpoint = panel/HOLE/NEW MATCH center = 585); center-line render `screenshots/stage3_center_check.png`
+  confirms the coin+x200 straddles panel center.
 **Priority:** P2
 **Spec:** `Docs/Specs/Active/1v1_result_rewards_display/SPEC.md`
-
-## Latest
-
-Cesar ruled 2026-07-02: Stage 2 accepted on code + Stage-1 proof; the
-ModeSelection/shell capture-background objection is WAIVED (see
-`CESAR_RULING.md`). Self-review PASSed 2026-07-02 09:35; golfin-reviewer
-re-verified all 7 §4b gates independently 2026-07-02 10:15 and PASSes.
-See `ARCHITECT_REVIEW.md` for the per-gate verification. Physics
-scaffolding revert confirmed empty. Prefab diff is a scoped 3-line
-reward-row-parent wiring (no anchor/size mutations). Advancing to
-`golfin-redteam-reviewer` (adversarial gate, sole `ARCHITECT_REVIEW_PASS`
-authority); red-team must honour the same CESAR_RULING waiver on the
-ModeSelection background.
-
-## Stage ledger
-- [x] **Stage 0** — `VersusResultScreen.prefab` built; win/lose; real MMModal clone + portraits.
-      **Approved by Cesar 2026-07-01 after iter-11.**
-- [x] **Stage 1** — present `VersusResultScreen` as a modal after banner + live binding.
-      **Approved by Cesar 2026-07-02** after iter-3.
-- [x] **Stage 2** — CSV reward grant + data-driven N-slot reward row.
-      **Accepted by Cesar 2026-07-02** (accept-on-code + Stage-1 proof ruling; capture-background
-      waived — `CESAR_RULING.md`). Full gate chain PASS (self→reviewer→red-team). Delivered:
-      modes.csv reward-pair columns (win=Points,200), shared `RewardGranter.Grant(List<HoleReward>)`
-      (hole-complete delegates, no regression), win=+200 RP / lose=0, data-driven N-slot reward row
-      (win bright / lose one greyed RP slot). Rank-join fix carried from Stage 1 verified live.
-- [ ] Stage 3 — polish (win/lose reward brightness intensity, draw variant D2, transitions)
