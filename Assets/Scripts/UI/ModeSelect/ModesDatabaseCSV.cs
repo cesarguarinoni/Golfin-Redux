@@ -1,11 +1,15 @@
 using System.Collections.Generic;
 using UnityEngine;
+using GolfinRedux.UI;
 
 namespace GolfinRedux.UI.ModeSelect
 {
     /// <summary>
     /// Singleton that loads modes from Assets/Resources/Data/modes.csv at runtime.
-    /// CSV columns: id, title, tagline, description, entryFee, rewards, locked, target, order
+    /// CSV columns: id, title, tagline, description, entryFee, rewards, locked, target, order,
+    ///              versusStrokeCapOverPar, reward1Type, reward1Amount, reward2Type, reward2Amount,
+    ///              reward3Type, reward3Amount
+    /// The (type,amount) reward pair columns are parsed into ModeData.rewardList (Stage 2).
     /// </summary>
     public class ModesDatabaseCSV : MonoBehaviour
     {
@@ -62,6 +66,13 @@ namespace GolfinRedux.UI.ModeSelect
             int iTarget = System.Array.IndexOf(headers, "target");
             int iOrder = System.Array.IndexOf(headers, "order");
             int iCapOverPar = System.Array.IndexOf(headers, "versusStrokeCapOverPar");
+            // Stage 2 reward-pair columns (up to 3 pairs, matching HoleDatabaseLoader precedent)
+            int iReward1Type   = System.Array.IndexOf(headers, "reward1Type");
+            int iReward1Amount = System.Array.IndexOf(headers, "reward1Amount");
+            int iReward2Type   = System.Array.IndexOf(headers, "reward2Type");
+            int iReward2Amount = System.Array.IndexOf(headers, "reward2Amount");
+            int iReward3Type   = System.Array.IndexOf(headers, "reward3Type");
+            int iReward3Amount = System.Array.IndexOf(headers, "reward3Amount");
 
             for (int i = 1; i < lines.Length; i++)
             {
@@ -84,6 +95,11 @@ namespace GolfinRedux.UI.ModeSelect
                 if (iOrder >= 0 && iOrder < cols.Length)    int.TryParse(cols[iOrder].Trim(), out mode.order);
                 if (iCapOverPar >= 0 && iCapOverPar < cols.Length) int.TryParse(cols[iCapOverPar].Trim(), out mode.versusStrokeCapOverPar);
 
+                // Parse up to 3 reward pairs (Stage 2). Mirror HoleDatabaseLoader.ParseRewardType pattern.
+                ParseAndAddRewardPair(cols, iReward1Type, iReward1Amount, mode);
+                ParseAndAddRewardPair(cols, iReward2Type, iReward2Amount, mode);
+                ParseAndAddRewardPair(cols, iReward3Type, iReward3Amount, mode);
+
                 if (!string.IsNullOrEmpty(mode.id))
                     _modes.Add(mode);
             }
@@ -92,6 +108,46 @@ namespace GolfinRedux.UI.ModeSelect
             _modes.Sort((a, b) => a.order.CompareTo(b.order));
 
             Debug.Log($"[ModesDatabaseCSV] Loaded {_modes.Count} modes");
+        }
+
+        /// <summary>
+        /// Parses one (typeCol, amountCol) reward pair from the CSV columns and appends to mode.rewardList.
+        /// Silently skips if the columns are absent or the values are empty/invalid.
+        /// </summary>
+        private static void ParseAndAddRewardPair(string[] cols, int typeColIdx, int amountColIdx, ModeData mode)
+        {
+            if (typeColIdx < 0 || amountColIdx < 0) return;
+            if (typeColIdx >= cols.Length || amountColIdx >= cols.Length) return;
+
+            string typeStr   = cols[typeColIdx].Trim();
+            string amountStr = cols[amountColIdx].Trim();
+
+            if (string.IsNullOrEmpty(typeStr) || string.IsNullOrEmpty(amountStr)) return;
+            if (!int.TryParse(amountStr, out int amount) || amount <= 0) return;
+
+            RewardType rewardType = ParseRewardType(typeStr);
+            mode.rewardList.Add(new HoleReward(rewardType, amount));
+        }
+
+        /// <summary>
+        /// Parses a reward type string to RewardType enum. Mirrors HoleDatabaseLoader.ParseRewardType.
+        /// </summary>
+        private static RewardType ParseRewardType(string typeStr)
+        {
+            switch (typeStr.ToLower())
+            {
+                case "points":
+                    return RewardType.Points;
+                case "repairkit":
+                case "repair kit":
+                case "repair_kit":
+                    return RewardType.RepairKit;
+                case "ball":
+                    return RewardType.Ball;
+                default:
+                    Debug.LogWarning($"[ModesDatabaseCSV] Unknown reward type: '{typeStr}', defaulting to Points");
+                    return RewardType.Points;
+            }
         }
 
         /// <summary>
@@ -124,7 +180,9 @@ namespace GolfinRedux.UI.ModeSelect
 
         private void AddFallbackModes()
         {
-            _modes.Add(new ModeData { id = "versus_1v1",   title = "Multiplayer",    tagline = "1v1",                               description = "Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.", entryFee = 0, rewards = 200, locked = false, target = "matchmaking_1v1", order = 1 });
+            var versus = new ModeData { id = "versus_1v1",   title = "Multiplayer",    tagline = "1v1",                               description = "Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.", entryFee = 0, rewards = 200, locked = false, target = "matchmaking_1v1", order = 1, versusStrokeCapOverPar = 5 };
+            versus.rewardList.Add(new HoleReward(RewardType.Points, 200));
+            _modes.Add(versus);
             _modes.Add(new ModeData { id = "practice",     title = "PRACTICE",      tagline = "Sharpen your skills.",              description = "Practice on any course.",             entryFee = 100, rewards = 50,  locked = false, target = "hole_select",    order = 2 });
             _modes.Add(new ModeData { id = "driving_range",title = "DRIVING RANGE",  tagline = "Coming Soon.",                      description = "Practice long shots.",                entryFee = 0,   rewards = 0,   locked = true,  target = "none",           order = 3 });
             _modes.Add(new ModeData { id = "missions",     title = "MISSIONS",       tagline = "Coming Soon.",                      description = "Complete challenges for rewards.",     entryFee = 0,   rewards = 200, locked = true,  target = "none",           order = 4 });

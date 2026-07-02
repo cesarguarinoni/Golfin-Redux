@@ -2,9 +2,10 @@
 // VersusResultScreenController
 // Stage 0: visual-state preview via ShowWin() / ShowLose() (sample data).
 // Stage 1: live binding via ShowResult() from MatchContext + LeaderboardManager.
+// Stage 2: data-driven reward row binding (List<HoleReward>), hide surplus rows.
 //
 // Central RESULTS panel for 1v1 match end.
-// Two states driven by ShowWin() / ShowLose() (Stage 0) or ShowResult() (Stage 1):
+// Two states driven by ShowWin() / ShowLose() (Stage 0) or ShowResult() (Stage 1+):
 //   Win  → left column WINNER (green), right LOSER (orange), rewards bright.
 //   Lose → left column LOSER (orange), right WINNER (green), rewards dimmed.
 //
@@ -16,6 +17,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,6 +25,7 @@ using Golfin.Roster;
 using Golfin.Gameplay.Session;
 using Golfin.Gameplay.UI.HUD;
 using Golfin.UI.Rankings;
+using GolfinRedux.UI;
 
 namespace Golfin.UI.Matchmaking
 {
@@ -64,6 +67,11 @@ namespace Golfin.UI.Matchmaking
         [SerializeField] private TextMeshProUGUI _reward1Amount = null!;
         [SerializeField] private TextMeshProUGUI _reward2Amount = null!;
         [SerializeField] private TextMeshProUGUI _reward3Amount = null!;
+        // Stage 2: parent GameObjects for each row so we can hide surplus rows.
+        // Wire to "Reward Row1", "Reward Row2", "Reward Row3" GameObjects in Rewards/.
+        [SerializeField] private GameObject _rewardRow1 = null!;
+        [SerializeField] private GameObject _rewardRow2 = null!;
+        [SerializeField] private GameObject _rewardRow3 = null!;
 
         // ── NEW MATCH button ──────────────────────────────────────────────────
         [Header("Buttons")]
@@ -103,7 +111,8 @@ namespace Golfin.UI.Matchmaking
         // ─────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Stage 1: bind live match data from MatchContext + LeaderboardManager, then display.
+        /// Stage 1+2: bind live match data from MatchContext + LeaderboardManager, then display.
+        /// Stage 2 additionally binds reward rows from the mode's rewardList (CSV-driven).
         /// Left column = local player (P1), right column = opponent (P2).
         /// </summary>
         public void ShowResult(
@@ -111,7 +120,8 @@ namespace Golfin.UI.Matchmaking
             MatchContext.Player      localPlayer,
             MatchContext.Player      opponentPlayer,
             int                      holeNumber,
-            Action?                  onNewMatch = null)
+            List<HoleReward>?        rewardList  = null,
+            Action?                  onNewMatch  = null)
         {
             bool localWon = outcome == GameSession.MatchOutcome.P1Win;
             // Draw: treat as local lose (left = LOSER, right = LOSER) — placeholder per D2
@@ -153,10 +163,12 @@ namespace Golfin.UI.Matchmaking
                 _holeInfoText.text = $"Lomond Country Club  - {holeName}";
             }
 
-            // ── Reward row: placeholder (Stage 2 binds real data) ─────────────
-            // Win = bright, Lose/Draw = dimmed.  Same logic as ShowWin/ShowLose.
+            // ── Reward row: Stage 2 data-driven binding ───────────────────────
+            // Win = bright, Lose/Draw = dimmed.
             if (_rewardRowGroup != null) _rewardRowGroup.alpha = localWon ? 1f : 0.5f;
             SetRewardChildrenColor(localWon ? RewardChildNormal : RewardChildDim);
+            // Bind reward slots from rewardList (CSV-driven). Surplus rows hidden.
+            BindRewardRows(rewardList);
 
             // ── NEW MATCH button ──────────────────────────────────────────────
             if (_newMatchButton != null)
@@ -192,6 +204,34 @@ namespace Golfin.UI.Matchmaking
         }
 
         // ── Private helpers ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Stage 2: bind up to 3 reward slots from a CSV-driven list.
+        /// Each active slot gets its amount text set; surplus row GameObjects are hidden.
+        /// Icon sprites are not changed at runtime — they are baked into the prefab.
+        /// </summary>
+        private void BindRewardRows(List<HoleReward>? rewards)
+        {
+            // Helper arrays to walk the 3 slots without branching
+            var rows    = new[] { _rewardRow1, _rewardRow2, _rewardRow3 };
+            var amounts = new[] { _reward1Amount, _reward2Amount, _reward3Amount };
+
+            int count = rewards?.Count ?? 0;
+            for (int i = 0; i < 3; i++)
+            {
+                bool hasData = i < count;
+                // Show/hide the parent row GO
+                if (rows[i] != null)    rows[i]!.SetActive(hasData);
+                // Bind amount text
+                if (amounts[i] != null && hasData)
+                    amounts[i]!.text = $"x{rewards![i].amount}";
+            }
+
+            if (count > 0)
+                Debug.Log($"[VersusResultScreenController] BindRewardRows: {count} slot(s). Slot1={rewards![0].type}×{rewards[0].amount}");
+            else
+                Debug.Log("[VersusResultScreenController] BindRewardRows: no rewards — all rows hidden.");
+        }
 
         private void BindOpponentCard(MatchContext.Player opponentPlayer)
         {

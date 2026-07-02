@@ -247,24 +247,9 @@ namespace Golfin.UI.Modals.Result
             var pool = _wasReplay ? hole.replayRewards : hole.rewards;
             if (pool == null) return;
 
-            foreach (var r in pool)
-            {
-                switch (r.type)
-                {
-                    case RewardType.Points:
-                        if (RewardPointsManager.Instance != null)
-                            RewardPointsManager.Instance.EarnPoints(r.amount);
-                        break;
-                    case RewardType.RepairKit:
-                        if (ItemManager.Instance != null)
-                            ItemManager.Instance.AddItems(REPAIR_KIT_DEFAULT_ID, r.amount);
-                        break;
-                    case RewardType.Ball:
-                        if (BallManager.Instance != null)
-                            BallManager.Instance.AddBalls(BALL_DEFAULT_ID, r.amount);
-                        break;
-                }
-            }
+            // Delegate to shared RewardGranter (Stage 2 DRY extraction).
+            // No behavior change — the grant switch now lives once in RewardGranter.Grant().
+            GolfinRedux.UI.RewardGranter.Grant(pool);
         }
 
         // ── Progression write ─────────────────────────────────────────────────

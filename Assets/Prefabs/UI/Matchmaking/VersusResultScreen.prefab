@@ -1683,6 +1683,9 @@ MonoBehaviour:
   _reward1Amount: {fileID: 7608531143568193999}
   _reward2Amount: {fileID: 1566057375476562510}
   _reward3Amount: {fileID: 8609666469248717363}
+  _rewardRow1: {fileID: 896274908513951715}
+  _rewardRow2: {fileID: 4226167600426074230}
+  _rewardRow3: {fileID: 7400015615279738786}
   _newMatchButton: {fileID: 3790174376078982207}
 --- !u!1 &3767212016788273587
 GameObject:

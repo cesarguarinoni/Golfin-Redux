@@ -1,8 +1,15 @@
+using System.Collections.Generic;
+using GolfinRedux.UI;
+
 namespace GolfinRedux.UI.ModeSelect
 {
     /// <summary>
     /// Plain DTO for one row in Assets/Resources/Data/modes.csv.
-    /// Columns: id, title, tagline, description, entryFee, rewards, locked, target, order.
+    /// Columns: id, title, tagline, description, entryFee, rewards, locked, target, order,
+    ///          versusStrokeCapOverPar, reward1Type, reward1Amount, reward2Type, reward2Amount,
+    ///          reward3Type, reward3Amount.
+    /// The rewardList field is populated from the reward pair columns (Stage 2).
+    /// The legacy int 'rewards' is retained for backward compatibility (other modes still use it).
     /// </summary>
     public class ModeData
     {
@@ -16,7 +23,7 @@ namespace GolfinRedux.UI.ModeSelect
         public string description = "";
         // entryFee — RP cost to launch; 0 = no fee (renders "NO ENTRY FEE" per SPEC)
         public int entryFee;
-        // rewards — RP reward for completing the mode; shown as coin row
+        // rewards — legacy int kept for backward compat (modes that haven't migrated to pairs yet)
         public int rewards;
         // locked — true for "coming soon" modes (Driving Range, Missions); no progression service
         public bool locked;
@@ -27,5 +34,8 @@ namespace GolfinRedux.UI.ModeSelect
         // versusStrokeCapOverPar — safety cap for 1v1 matches (strokes over par before forced draw).
         // 0 means not applicable (non-versus modes). versus_1v1 = 5 by default (CSV-tunable).
         public int versusStrokeCapOverPar;
+        // rewardList — parsed from (type,amount) reward-pair columns (Stage 2). Empty for modes
+        // that only have the legacy int 'rewards' column. For versus_1v1: Points×200 on WIN.
+        public List<HoleReward> rewardList = new List<HoleReward>();
     }
 }

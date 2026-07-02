@@ -1,139 +1,116 @@
-# RED-TEAM REVIEW — 1v1_result_rewards_display (Stage 1, iter-3)
+# RED-TEAM REVIEW — 1v1_result_rewards_display (Stage 2, iter-3)
 
-**Red-team reviewer:** golfin-redteam-reviewer
-**Timestamp:** 2026-07-02 06:26 CEST
+**Reviewer:** golfin-redteam-reviewer (adversarial gate)
+**Timestamp:** 2026-07-02 (JST)
 **Verdict:** **ARCHITECT_REVIEW_PASS**
-**Iteration shape:** `scene-hygiene:out-of-scope-prefab-drift`
+**Governing ruling:** `CESAR_RULING.md` (2026-07-02) — Stage 2 accepted on code + Stage-1 proof;
+ModeSelection/shell capture-background objection is WAIVED and was NOT used as grounds for any
+finding here. Attacked the CODE and the reward-row RENDER per the ruling.
+
+I tried to break this along all seven attack vectors and came up empty. Every claim below is
+re-derived from source/diff/render I inspected myself, not carried from the reviewer's PASS.
 
 ---
 
-## TL;DR
+## Attack 1 — RewardGranter extraction behavior-preserving (Practice-hole regression risk) → HOLDS
 
-My iter-2 blocker is genuinely dead, measured by me. iter-3 restored ShellScene to
-a surgically clean **226 insertions / 0 deletions** diff (was 5,078 lines / 2,152 dels
-at iter-2 with 265 out-of-scope anchor mutations). Every one of the 18 anchor/pos/size
-hits belongs to either the two new `VersusResultModal` / `VersusResultHandler`
-GameObjects or the prefab-instance override block for THIS task's own
-`VersusResultScreen.prefab` (guid `15774d8cc9178455d93d18d71e5d1721`, resolved from
-`.prefab.meta`). Zero out-of-scope prefab GUIDs touched (all 10 = 0). MatchMakingModal
-appears exactly ONCE, as the required `_matchmakingModal` SerializeField wiring line —
-not a mutation. Functional flow (Attacks 1–4, accepted iter-2) did not regress from the
-surgery. This advances to Cesar.
+Re-derived from `git diff HEAD -- HoleCompleteModalController.cs`. The ENTIRE diff is:
+- REMOVED: only the inner `foreach (var r in pool) { switch(r.type){Points/RepairKit/Ball} }` loop.
+- ADDED: `GolfinRedux.UI.RewardGranter.Grant(pool);`
 
----
+Everything guarding the grant is UNTOUCHED (verified by line-read, not trust):
+- `GrantRewards` line 241: `if (!_lastSuccess || _rewardsGranted) return;` — double-grant guard PRESENT.
+- line 242: `_rewardsGranted = true;` — one-shot PRESENT.
+- line 247: `var pool = _wasReplay ? hole.replayRewards : hole.rewards;` — replay-pool select PRESENT.
+- Guard fields `_lastSuccess/_wasReplay/_rewardsGranted/_lastSessionData` (lines 52–55) PRESENT.
+- Callers `OnReplay` (278) and `OnPlayNext` (321) still invoke `GrantRewards()`.
 
-## Attack the fix — my own measurements
+`RewardGranter.Grant` switch is a verbatim copy: `Points→EarnPoints`, `RepairKit→AddItems`,
+`Ball→AddBalls`, with default IDs `repairkit_common`/`ball_golfin` matching the old
+`REPAIR_KIT_DEFAULT_ID`/`BALL_DEFAULT_ID` byte-for-byte. Practice hole-complete cannot double-grant
+nor grant the wrong pool. **Regression: NONE.**
 
-### 1. Diff volume (blocker was scene bloat)
-```
-$ git diff HEAD --stat -- Assets/Scenes/ShellScene.unity
- Assets/Scenes/ShellScene.unity | 226 +++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 226 insertions(+)
-$ git diff HEAD -- Assets/Scenes/ShellScene.unity | grep -cE "^-[^-]"   # deletions
-0
-$ git diff HEAD -- Assets/Scenes/ShellScene.unity | grep -cE "^\+[^+]"  # insertions
-226
-```
-**226 ins / 0 del** — pure additive, exactly as advertised. iter-2's 2,152 deletions are
-gone. **GONE.**
+## Attack 2 — Versus grant correctness (P1Win-only, no RP leak) → HOLDS
 
-### 2. Every anchor/pos/size hit classified (18 total)
-```
-$ git diff HEAD -- Assets/Scenes/ShellScene.unity | \
-    grep -cE "m_AnchorMin|m_AnchorMax|m_AnchoredPosition|m_SizeDelta|m_LocalPosition"
-18
-```
-I read the FULL 226-line diff. The 18 hits break down as:
-- New `VersusResultModal` RT (fileID 562993541): `m_AnchorMin/Max`, `m_AnchoredPosition`,
-  `m_SizeDelta`, `m_LocalPosition` — own new object.
-- New `VersusResultHandler` Transform (fileID 970830638): `m_LocalPosition` — own new object.
-- 11 `propertyPath: m_Anchor*/m_SizeDelta/m_LocalPosition/m_AnchoredPosition` entries in the
-  PrefabInstance modification block — **every one targets `guid: 15774d8cc9178455d93d18d71e5d1721`**
-  = this task's own `VersusResultScreen.prefab` (confirmed:
-  `Assets/Prefabs/UI/Matchmaking/VersusResultScreen.prefab.meta` → `guid: 15774d8c…`).
+`VersusResultHandler.HandleMatchComplete` (line 88–96): `RewardGranter.Grant(winRewardList)` is
+inside `if (outcome == P1Win)`; the `else` branch grants nothing (log only). Lose/draw = 0 grant.
+Confirmed against the live render: top-bar `R 80,200` is IDENTICAL in the WIN and LOSE captures,
+i.e. the LOSE branch added zero RP. No RP leak.
 
-**Not a single anchor mutation touches an out-of-scope prefab. GONE.**
+## Attack 3 — Stage-1 flat EarnPoints fully removed (no double-grant) → HOLDS
 
-### 3. Out-of-scope prefab GUIDs — all zero
-```
-8bf3740e (RankingsScreen) : 0      2bd69f22 (MatchMakingModal): 0
-08bcfc9e : 0   8041c091 : 0   2bb7999c : 0   9aa7bc30 : 0
-0ec50b3d : 0   93756886 : 0   1ce887a2 : 0   c0f78052 : 0   (Tournament ×8)
-```
-The ONLY guids anywhere in the added diff are:
-`15774d8cc9178455d93d18d71e5d1721` (this task's prefab) + the 3 this-task script guids
-(`908888c8…` VersusResultScreenController, `9951fd44…` VersusResultModalController,
-`9a8472d5…` VersusResultHandler — each resolved to its `.cs.meta` under
-`Assets/Scripts/UI/`). **All in scope.**
+`git diff` shows the exact deletion of the Stage-1 `RewardPointsManager.Instance.EarnPoints(reward)`
+block; it is replaced by the single `RewardGranter.Grant` call. `grep -rn "EarnPoints|AddBalls|AddItems"`
+across `Assets/Scripts/UI/Matchmaking/` + `VersusResultHandler.cs` returns ZERO hits — all versus
+grants funnel through one `RewardGranter` call. No flat-plus-granter double-grant possible.
 
-MMModal instance fileID `4390230621042469647` occurs exactly ONCE in the diff:
-```
-+  _matchmakingModal: {fileID: 4390230621042469647}
-```
-A SerializeField **reference**, not a `propertyPath:` mutation — the integration seam
-SPEC §6 mandates. That fileID is a real pre-existing MMModal MonoBehaviour at HEAD
-(scene line 127433, already referenced by `matchmakingModal1v1` elsewhere). **GONE.**
+## Attack 4 — LOSE reward row: greyed-but-visible, exactly the win slots → HOLDS
 
-### 4. No over-revert / no dropped wiring
-- Deletion-side content lines = 0 → it added the intended delta onto a clean HEAD scene,
-  didn't strip legit HEAD state.
-- All 4 required wirings present:
-  `_screen: {571272056}`, `_matchmakingModal: {4390230621042469647}`,
-  `modalPanel: {571272057}`, `_resultModal: {562993540}`.
-- Both new root GOs `m_IsActive: 1`; VersusResultScreen prefab instance override
-  `propertyPath: m_IsActive → value: 0` (correctly hidden until `ModalController` reveals it).
-- New modal parented to RT `1949345566`, which is the RectTransform component of GO
-  `1949345562` = `m_Name: Canvas` (top-level scene Canvas). Correct parenting.
-- Only two existing-collection mutations, both pure APPENDS (no reorder/remove):
-  `+ - {fileID: 562993541}` → Canvas `m_Children`; `+ - {fileID: 970830638}` → SceneRoots.
+`ShowResult` always calls `BindRewardRows(rewardList)` (the WIN list) regardless of outcome
+(line 171); dimming is `_rewardRowGroup.alpha = localWon ? 1f : 0.5f` (168) PLUS direct child
+tint `SetRewardChildrenColor(...Dim)` (169) so it survives all capture contexts. Children stay
+active. **Render A/B confirms:** WIN = ONE bright gold coin + white `x200`; LOSE = ONE grey/brown
+coin + grey `x200`, clearly present and clearly attenuated — not empty, not 3 placeholder slots.
+The implementer flagged the perceptual match as "unclear"; on my own read the greying is
+unambiguously visible. Legitimate PASS.
 
-### 5. No functional regression from the surgery
-- `VersusResultScreen.prefab` is ABSENT from `git status` → byte-identical to the
-  Cesar-approved Stage-0 output. Fonts/layout unchanged.
-- `VersusResultHandler.cs` still `GameSession.OnMatchComplete += HandleMatchComplete`
-  (line 39, OnEnable) / `-=` (line 48, OnDisable). Flow: real event → `ShowResultAfterBanner`
-  → live `MatchContext.Players[0/1]` + `GameSession.CurrentHoleNumber` → `_resultModal.ShowResult`.
-- `.cs` diffs are exactly the accepted iter-2 flow-swap (drop auto-home, show modal). No
-  synthetic entry, no `LoadSceneAsync("LabScaffold")`, no `*Gate`. Scenarios.cs / Physics /
-  M_Splash*.mat untouched (banned-path grep empty).
+## Attack 5 — N-slot hide logic (no index-out-of-range) → HOLDS
 
-### 6. Report integrity
-Every PASS above is backed by my own tool output pasted here. golfin-reviewer's iter-3
-numbers (226/0, 18 hits, guid census) match mine exactly. No fabrication.
+`BindRewardRows` iterates a fixed `for (i=0; i<3; i++)`, reads `rewards![i]` ONLY when `i < count`
+(guarded), and `rows[i].SetActive(i < count)`. `count = rewards?.Count ?? 0`. Empty/null list ⇒ all
+3 rows hidden, no throw. 1-item list ⇒ row1 shows, rows 2&3 hidden. A list longer than 3 simply
+fills 3 and ignores the rest — no overflow. `ParseAndAddRewardPair` (bounds-checks col indices,
+skips empty/≤0 amounts) means the empty reward2/3 CSV columns add ZERO spurious slots — exactly
+the one-slot render observed.
+
+## Attack 6 — RANK-join resolves matched opponent, never top entry → HOLDS
+
+`BindRankText` (262–308): opponent loop filters `!e.IsPlayer && e.Rank>0 &&
+e.DisplayName == opponentPlayer.DisplayName` (284), leaves `"—"` if unmatched — no first-non-player
+/ #1 fallback. Live proof in both renders: `You #116` (local) and `THRANDUIL #1` (matched
+opponent) are distinct entries; #1 is the matched opponent's real rank, not a hardcoded top slot.
+
+## Attack 7 — Scene/prefab/ban integrity → HOLDS
+
+Re-ran every ban check myself:
+- `git diff HEAD -- Assets/Scripts/Physics/` → EMPTY (capture scaffolding reverted per ruling).
+- `Scenarios.cs` diff → EMPTY. No `*Gate` scenario.
+- `Assets/Scenes/` diff → EMPTY. `M_Splash*.mat` → not in porcelain.
+- Prefab diff = `+3` lines only: `_rewardRow1/2/3` fileID wiring. ZERO `m_AnchorMin/Max`,
+  `m_SizeDelta`, `m_AnchoredPosition`, `m_LocalPosition`, `m_IsActive` mutations.
+- NotoSansJP atlas dirt reverted (clean in porcelain).
+- Uncommitted assets = exactly the 10 reported Stage-2 files; Packages MCP bump waived.
+- `NewMatchButton` gold pill present in both renders; `ButtonPressFeedback` untouched by prefab diff.
 
 ---
 
-## Prior-rejection replay
-- **CESAR_REJECTION #3 (Stage-0, RANK→separator 24px):** resolved at Stage-0 iter-11 in the
-  byte-identical prefab (clean, absent from git status). **GONE / not regressed.**
-- **"Keep intact: scene-safety (Physics/Scenes/MMModal untouched)":** iter-2 regressed this
-  with 265 mutations (MMModal among them). iter-3 restores it — MMModal guid `2bd69f22` = 0
-  hits, MMModal referenced only via the required wiring line. **GONE.**
-- **My own iter-2 blocker (265 out-of-scope anchor mutations across 11 prefabs):** **GONE.**
+## Prior rejections (CESAR_REJECTION iter-history) replayed
 
----
+- **iter-1 "capture over title/splash":** GONE — v6 renders show the modal over course + shell
+  chrome, no PLAY/Create-Account title splash. (Background itself waived for Stage 2.)
+- **iter (self-review) "LOSE reward row EMPTY":** GONE — LOSE render shows one greyed-but-visible
+  coin `x200`; `BindRewardRows` binds the WIN list on all outcomes; alpha+child-tint applied.
+- **RANK `—` synthetic:** GONE — real `#116`/`#1` DisplayName-joined entries.
 
-## Three break-attempts (all failed)
-1. **Removals/reorders hiding in the diff?** 0 deletion lines; only 3 hunks; the two
-   existing-collection changes are appends. No entry removed or reordered. *Failed to break.*
-2. **Wrong parent / orphaned modal?** Parent RT resolves to the real top-level Canvas GO.
-   *Failed to break.*
-3. **Over-revert dropping intended wiring, or a stray out-of-scope hit past the grep?** All 4
-   wirings present; full 226-line read shows every line inside the 3 surgical hunks; every
-   guid in scope. *Failed to break.*
+## Three break-attempts, why each failed
 
----
+1. **Visual:** hunted the reward row for an empty/placeholder LOSE slot or a WIN slot that looked
+   wrong — LOSE is a genuinely dimmed single slot, WIN is a bright single slot; symmetric role
+   swap correct. No seam/mismatch found.
+2. **Geometric/logic:** tried to force an IndexOutOfRange (empty list, >3 list) and a wrong-pool /
+   double grant in hole-complete — both are structurally impossible given the preserved guards and
+   the `i<count` read guard.
+3. **Spec-intent:** checked for RP leak on loss (top-bar identical WIN vs LOSE = no leak) and for a
+   surviving flat EarnPoints double-grant (grep = zero). Intent satisfied, not just the letter.
 
-## Carveouts (noted for close-out, NOT fail conditions)
-`Packages/manifest.json` + `packages-lock.json` (MCP 0.82.2→0.82.3) and
-`.claude/review_misses.log` are environmental dirt. Reward row = Stage-2 placeholder.
-"DIAMOND LEAGE"/"CANCOL" typos live in the reused MMModal (not this task).
+## Report integrity (Rule 6)
 
----
+No fabrication found. The `80,200` top-bar in the WIN render corroborates the +200 grant claim;
+the identical LOSE top-bar corroborates the zero-grant-on-loss claim. The implementer's `PASS*`
+flags (slot-count deviation, LOSE dim intensity) are honest surfaced caveats, not gamed booleans.
 
 ## Verdict
-The iter-2 scene-pollution blocker is genuinely, measurably dead. The scene diff is
-surgically clean (226/0), every mutation in scope, all wiring survived, no functional
-regression. I tried three ways to break it and could not.
 
-**STATUS → `ARCHITECT_REVIEW_PASS`** for Cesar's final approval.
+All seven vectors held under adversarial scrutiny; code diffs are minimal and behavior-preserving;
+the reward-row render is correct in both states. Advancing to **ARCHITECT_REVIEW_PASS** for Cesar's
+final approval.

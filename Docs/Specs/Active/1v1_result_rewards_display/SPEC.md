@@ -113,11 +113,28 @@ Rule 20).
 local + opponent rank from `LeaderboardManager`) + the played-hole line. NEW MATCH requeues
 `versus_1v1` via matchmaking (D3).
 
-**Stage 2 — CSV-driven multi-reward grant + display + NEW MATCH.** (D1 RESOLVED; needs D3)
+**Stage 2 — CSV-driven multi-reward grant + display.** (D1 RESOLVED; D3 already done in Stage 1)
 Replace the flat `versus_1v1.rewards=200` grant: define versus rewards as CSV (type,amount) pairs,
 parse to `List<HoleReward>`, grant via the shared `RewardGranter` (extracted from
-`HoleCompleteModalController.GrantRewards`), bind the result-screen reward row to that list (RP/
-repair/ball, N-slot). Wire `NEW MATCH` (D3).
+`HoleCompleteModalController.GrantRewards`), bind the result-screen reward row to that list (N-slot).
+
+**Kickoff decisions (Cesar 2026-07-02):**
+- **CSV shape = extend `modes.csv` columns** (`Assets/Resources/Data/modes.csv`). Replace the single
+  `rewards` int column on the `versus_1v1` row with (type,amount) reward-pair columns mirroring the
+  `HoleDatabase` precedent (e.g. `reward1Type,reward1Amount,reward2Type,reward2Amount,…`). Update
+  `ModesDatabaseCSV` / `ModeData` to parse those into a `List<HoleReward>` via the same
+  `ParseRewardType` → `AddReward` pattern `HoleDatabaseLoader` uses. NOT a separate `match_rewards.csv`.
+- **Win payout = Points 200 ONLY** (keep today's economy). `versus_1v1` win row = `Points,200`; repair/ball
+  slots empty for now. Lose/draw pay 0 (greyed row). The mockup's ×04 repair / ×02 ball were placeholders
+  — do NOT grant them.
+- **Reward row is data-driven + N-slot:** bind the row by iterating the `List<HoleReward>`; render only
+  the slots present (Points-only ⇒ ONE slot, RP ×200). Do NOT hardcode 3 fields — extra prefab slots
+  hide when the list is shorter, so `RepairKit`/`Ball`/future `GachaTicket` drop in by CSV edit alone.
+- **Grant path is DRY:** extract `RewardGranter.Grant(List<HoleReward>)` from the private
+  `HoleCompleteModalController.GrantRewards` switch (`RewardPointsManager.EarnPoints` /
+  `ItemManager.AddItems("repairkit_common")` / `BallManager.AddBalls`); BOTH hole-complete and
+  `VersusResultHandler` grant through it. `VersusResultHandler`'s Stage-1 silent flat `EarnPoints`
+  is replaced by `RewardGranter.Grant(versusRewardList)`.
 - **RANK-JOIN RE-CHECK (Cesar 2026-07-02, carried from Stage 1 post-approval fix):** the reward
   work touches `VersusResultScreenController`. The reviewer MUST re-verify opponent RANK resolves
   the *actual matched* `MatchContext` opponent via the DisplayName join in `BindRankText` (mirrors
@@ -146,6 +163,26 @@ repair/ball, N-slot). Wire `NEW MATCH` (D3).
       diff, no reward-logic diff.
 - [ ] `script-execute` compiles clean; no new console errors.
 - [ ] Real-render still/clip provided for Cesar's eyeball check (Rule 20 — no slideshow).
+
+---
+
+## §4b Stage 2 acceptance (the checkable deliverable)
+
+- [ ] `modes.csv` `versus_1v1` row uses (type,amount) reward-pair columns (win = `Points,200`,
+      repair/ball empty); `ModesDatabaseCSV`/`ModeData` parse them into a `List<HoleReward>`.
+- [ ] `RewardGranter.Grant(List<HoleReward>)` extracted (shared by hole-complete + versus); the old
+      private switch in `HoleCompleteModalController` now delegates to it (no behavior change to
+      hole-complete — verify a Practice hole still grants correctly).
+- [ ] `VersusResultHandler` grants the versus reward list via `RewardGranter.Grant(...)` — the Stage-1
+      silent flat `EarnPoints(200)` is gone; a WIN still nets +200 RP (verify RP balance delta).
+- [ ] Reward row is **data-driven + N-slot**: with Points-only it shows exactly ONE slot (RP ×200);
+      surplus prefab slots hidden; win = bright, lose/draw = greyed.
+- [ ] **RANK-JOIN RE-CHECK** (carried from Stage 1): opponent RANK still resolves the matched
+      `MatchContext` opponent via DisplayName join in `BindRankText`, not the top leaderboard entry.
+- [ ] Real-flow capture over a real 1v1 match-end (WIN + LOSE), 1170×2532, TopBar + bottom nav visible,
+      showing the data-driven RP reward slot (bright on win, greyed on lose).
+- [ ] `script-execute` compiles clean; hole-complete reward regression not introduced; scene diff scoped
+      (no out-of-scope prefab/anchor mutations — the iter-2 scar).
 
 ---
 

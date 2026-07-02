@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// VersusResultModalController  —  Stage 1
+// VersusResultModalController  —  Stage 1 + Stage 2
 //
 // ShellScene-resident ModalController subclass that presents VersusResultScreen
 // after a 1v1 match ends.  Mirrors HoleCompleteModalController:
@@ -10,10 +10,11 @@
 // D3 NEW MATCH: hides this modal → unloads gameplay → re-opens MatchmakingModalController
 // D4 pattern  : modal is a ModalController subclass, not a ScreenManager screen
 //
-// Reward row stays placeholder until Stage 2 — no reward binding here.
+// Stage 2: receives List<HoleReward> from VersusResultHandler and passes to screen controller.
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Gameplay.Session;
@@ -21,6 +22,7 @@ using Golfin.Gameplay.UI.HUD;
 using Golfin.UI.GameplayTransition;
 using Golfin.UI.Modals;
 using Golfin.UI;
+using GolfinRedux.UI;
 
 namespace Golfin.UI.Matchmaking
 {
@@ -57,16 +59,18 @@ namespace Golfin.UI.Matchmaking
         /// <summary>
         /// Populate the result screen from live MatchContext + LeaderboardManager, then show.
         /// Called by VersusResultHandler after the banner delay.
+        /// Stage 2: rewardList comes from modes.csv via ModesDatabaseCSV.
         /// </summary>
         public void ShowResult(
             GameSession.MatchOutcome outcome,
             MatchContext.Player      localPlayer,
             MatchContext.Player      opponentPlayer,
-            int                      holeNumber)
+            int                      holeNumber,
+            List<HoleReward>?        rewardList = null)
         {
             if (_screen != null)
             {
-                _screen.ShowResult(outcome, localPlayer, opponentPlayer, holeNumber, OnNewMatch);
+                _screen.ShowResult(outcome, localPlayer, opponentPlayer, holeNumber, rewardList, OnNewMatch);
             }
             else
             {

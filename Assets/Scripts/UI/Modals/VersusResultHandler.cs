@@ -1,8 +1,9 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Golfin.Gameplay.Session;
 using Golfin.Gameplay.UI.HUD;
-using Golfin.Roster;
+using GolfinRedux.UI;
 using GolfinRedux.UI.ModeSelect;
 using Golfin.Audio.Events;
 using Golfin.UI.Matchmaking;
@@ -79,32 +80,33 @@ namespace Golfin.UI.Modals
             };
             SfxBus.Play(stingerId);
 
-            // Stage 1: grant RP silently now (Stage 2 will show it in the reward row).
+            // Stage 2: read WIN reward list from modes.csv (DRY via RewardGranter).
+            // Grant rewards on WIN only; lose/draw = 0 rewards granted.
+            // BUT: always pass the WIN reward list to the screen so it can show
+            // the same slot(s) greyed on lose/draw (SPEC §2/§3: "what you would have gotten").
+            List<HoleReward> winRewardList = GetVersusRewardList();
             if (outcome == GameSession.MatchOutcome.P1Win)
             {
-                int reward = GetVersusReward();
-                if (RewardPointsManager.Instance != null)
-                {
-                    RewardPointsManager.Instance.EarnPoints(reward);
-                    Debug.Log($"[VersusResultHandler] P1 WIN — granted {reward} RP (silent, Stage 2 will display).");
-                }
-                else
-                {
-                    Debug.LogWarning("[VersusResultHandler] RewardPointsManager.Instance is null — cannot grant RP.");
-                }
+                RewardGranter.Grant(winRewardList);
+                Debug.Log($"[VersusResultHandler] P1 WIN — granted {winRewardList.Count} reward(s) via RewardGranter.");
             }
             else
             {
-                Debug.Log($"[VersusResultHandler] {outcome} — 0 RP granted.");
+                Debug.Log($"[VersusResultHandler] {outcome} — 0 rewards granted; win list passed for greyed display.");
             }
 
-            // Stage 1: show the result modal after the banner sequence.
+            // Show the result modal after the banner sequence.
             // VersusMatchController already waits 2s before firing MarkMatchComplete;
             // we wait an additional 0.5s so the banner is comfortably visible.
-            StartCoroutine(ShowResultAfterBanner(outcome, p1Strokes, p2Strokes));
+            // Always pass winRewardList — the controller dims the slot(s) on lose/draw.
+            StartCoroutine(ShowResultAfterBanner(outcome, p1Strokes, p2Strokes, winRewardList));
         }
 
-        IEnumerator ShowResultAfterBanner(GameSession.MatchOutcome outcome, int p1Strokes, int p2Strokes)
+        IEnumerator ShowResultAfterBanner(
+            GameSession.MatchOutcome outcome,
+            int                      p1Strokes,
+            int                      p2Strokes,
+            List<HoleReward>         rewardList)
         {
             yield return new WaitForSeconds(0.5f);
 
@@ -126,24 +128,28 @@ namespace Golfin.UI.Modals
             int holeNumber = GameSession.CurrentHoleNumber;
 
             Debug.Log($"[VersusResultHandler] Showing result modal — hole={holeNumber} " +
-                      $"local={localPlayer.DisplayName} opp={opponentPlayer.DisplayName}");
+                      $"local={localPlayer.DisplayName} opp={opponentPlayer.DisplayName} " +
+                      $"rewardSlots={rewardList.Count}");
 
-            _resultModal.ShowResult(outcome, localPlayer, opponentPlayer, holeNumber);
+            // Stage 2: pass rewardList so the screen controller can bind the reward row.
+            _resultModal.ShowResult(outcome, localPlayer, opponentPlayer, holeNumber, rewardList);
         }
 
         /// <summary>
-        /// Read the versus_1v1 reward from ModesDatabaseCSV. Falls back to _fallbackReward
-        /// (200) if the database is unavailable.
+        /// Stage 2: read the versus_1v1 rewardList (List&lt;HoleReward&gt;) from ModesDatabaseCSV.
+        /// Falls back to a single Points×_fallbackReward entry if the database is unavailable.
         /// </summary>
-        int GetVersusReward()
+        List<HoleReward> GetVersusRewardList()
         {
             if (ModesDatabaseCSV.Instance != null)
             {
                 var mode = ModesDatabaseCSV.Instance.GetMode("versus_1v1");
-                if (mode != null && mode.rewards > 0)
-                    return mode.rewards;
+                if (mode != null && mode.rewardList != null && mode.rewardList.Count > 0)
+                    return mode.rewardList;
             }
-            return _fallbackReward;
+            // Fallback: single Points reward matching the hardcoded fallback amount.
+            Debug.LogWarning("[VersusResultHandler] ModesDatabaseCSV unavailable — using fallback rewardList.");
+            return new List<HoleReward> { new HoleReward(RewardType.Points, _fallbackReward) };
         }
     }
 }
