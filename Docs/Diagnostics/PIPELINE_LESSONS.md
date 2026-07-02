@@ -163,6 +163,17 @@ When Cesar signals end-of-day (explicit "done for the day," "closing out," or im
 
 Both steps fire on every day-close. Step 1 without Step 2 is a violation. Step 2 without Step 1 is also a violation.
 
+### Lesson L2 — Kickoff lines are ALWAYS a fenced copy block (every context — HARD RULE)
+
+This generalizes the "kickoff message as a paste block" clause above **beyond day-close**. A **kickoff line** is anything Cesar pastes to fire a fresh chat or subagent (e.g. `Use the implementer subagent on "<task>"`). It MUST be a fenced code block (triple-backtick), on its own line, in EVERY place it appears — no exceptions:
+
+- chat responses (needs a copy affordance on desktop AND mobile),
+- `SPEC.md` — the `## Kickoff` section,
+- `STATUS.md` — the `## Kickoff` section,
+- the day-close handoff block.
+
+NEVER inline backticks for a kickoff line: inline code has no copy button and is not one-tap pastable. Do NOT pattern-match the inline style used for kickoff lines inside `AI_CONTEXT.md` prose — those are historical narrative, not the handoff artifact. This applies whether or not the moment is a day-close. Scar (2026-07-02): the `stamina_boost_shop` handoff shipped the kickoff line inline in SPEC + STATUS + chat because Lesson L above read as day-close-only; Cesar had to flag it twice.
+
 ### Why this matters
 
 - Cesar's workflow depends on chat-to-chat continuity. The kickoff block is how a fresh chat ramps up without re-reading the full prior conversation. Skipping it costs Cesar real time the next day reconstructing context.
