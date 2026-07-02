@@ -118,6 +118,11 @@ Replace the flat `versus_1v1.rewards=200` grant: define versus rewards as CSV (t
 parse to `List<HoleReward>`, grant via the shared `RewardGranter` (extracted from
 `HoleCompleteModalController.GrantRewards`), bind the result-screen reward row to that list (RP/
 repair/ball, N-slot). Wire `NEW MATCH` (D3).
+- **RANK-JOIN RE-CHECK (Cesar 2026-07-02, carried from Stage 1 post-approval fix):** the reward
+  work touches `VersusResultScreenController`. The reviewer MUST re-verify opponent RANK resolves
+  the *actual matched* `MatchContext` opponent via the DisplayName join in `BindRankText` (mirrors
+  `BindOpponentCard`), NOT the first/top non-player leaderboard entry. Regression symptom to guard
+  against: every opponent showing the board leader's `#1`.
 
 **Stage 3 — Polish.** Win/lose reward brightness states, draw variant (D2), transitions.
 

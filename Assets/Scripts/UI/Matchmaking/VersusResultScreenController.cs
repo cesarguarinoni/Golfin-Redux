@@ -1,14 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // VersusResultScreenController
-// Stage 0: Prefab-only visual check.
+// Stage 0: visual-state preview via ShowWin() / ShowLose() (sample data).
+// Stage 1: live binding via ShowResult() from MatchContext + LeaderboardManager.
 //
 // Central RESULTS panel for 1v1 match end.
-// Two states driven by ShowWin() / ShowLose():
-//   Win  → left column WINNER (green), right LOSER (red), rewards bright.
-//   Lose → left column LOSER  (red),  right WINNER (green), rewards dimmed.
-//
-// Stage 0 NOTE: ShowWin() / ShowLose() use baked-in sample data only.
-// Stage 1 will bind from MatchContext + LeaderboardManager.
+// Two states driven by ShowWin() / ShowLose() (Stage 0) or ShowResult() (Stage 1):
+//   Win  → left column WINNER (green), right LOSER (orange), rewards bright.
+//   Lose → left column LOSER (orange), right WINNER (green), rewards dimmed.
 //
 // Reward dimming (Camera.Render-visible — edit-mode capture):
 //   _rewardRowGroup.alpha = 0.5  → CanvasGroup alpha (runtime compositing)
@@ -17,16 +15,21 @@
 //   All set together so dimming is visible in ALL capture contexts.
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Roster;
+using Golfin.Gameplay.Session;
+using Golfin.Gameplay.UI.HUD;
+using Golfin.UI.Rankings;
 
 namespace Golfin.UI.Matchmaking
 {
     /// <summary>
     /// Visual-state driver for VersusResultScreen.prefab.
     /// Stage 0 exposes ShowWin() / ShowLose() for sample-data preview.
+    /// Stage 1 exposes ShowResult() for live-data binding.
     /// </summary>
     public class VersusResultScreenController : MonoBehaviour
     {
@@ -77,7 +80,7 @@ namespace Golfin.UI.Matchmaking
         private static readonly Color RewardChildDim    = new Color(1f, 1f, 1f, 0.5f); // half-alpha white = dim
         private static readonly Color RewardChildNormal = Color.white;                  // full white = normal
 
-        // ── Sample data ───────────────────────────────────────────────────────
+        // ── Sample data (Stage 0 preview) ─────────────────────────────────────
         private const string SampleLeftUsername  = "USERNAME";
         private const string SampleRightUsername = "USERNAME";
         private const string SampleLeftRankNum   = "#142";
@@ -89,6 +92,83 @@ namespace Golfin.UI.Matchmaking
         private const string SampleReward2       = "x04";
         private const string SampleReward3       = "x02";
 
+        // ── Hole info formatting constants ────────────────────────────────────
+        private static readonly string[] HoleNames = {
+            "Hole 1","Hole 2","Hole 3","Hole 4","Hole 5","Hole 6","Hole 7","Hole 8","Hole 9",
+            "Hole 10","Hole 11","Hole 12","Hole 13","Hole 14","Hole 15","Hole 16","Hole 17","Hole 18"
+        };
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Stage 1 — live-data binding
+        // ─────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Stage 1: bind live match data from MatchContext + LeaderboardManager, then display.
+        /// Left column = local player (P1), right column = opponent (P2).
+        /// </summary>
+        public void ShowResult(
+            GameSession.MatchOutcome outcome,
+            MatchContext.Player      localPlayer,
+            MatchContext.Player      opponentPlayer,
+            int                      holeNumber,
+            Action?                  onNewMatch = null)
+        {
+            bool localWon = outcome == GameSession.MatchOutcome.P1Win;
+            // Draw: treat as local lose (left = LOSER, right = LOSER) — placeholder per D2
+            // In Stage 3, DRAW gets its own visual variant.
+
+            // ── Outcome labels ────────────────────────────────────────────────
+            SetOutcomeLabelsLive(leftWon: localWon);
+
+            // ── Portrait cards ────────────────────────────────────────────────
+            // Left = local (P1); right = opponent (P2)
+            if (_leftCard != null && !string.IsNullOrEmpty(CharacterManager.Instance?.GetSelectedCharacterId()))
+            {
+                string localCharId = CharacterManager.Instance!.GetSelectedCharacterId()!;
+                _leftCard.InitializeFromTemplate(localCharId, localPlayer.Level);
+            }
+            // Opponent portrait comes from MatchContext (set at matchmaking time)
+            // We don't have the charId directly from MatchContext.Player — use opponentPlayer.Portrait
+            // as a Sprite if available, else skip. MatchmakingModalController seeds charId into
+            // the card directly; Stage 1 reads back via the card's last-initialized state which
+            // is already set from matchmaking. If re-binding is needed, VersusResultHandler can
+            // pass charId directly. For now we rebind using DisplayName match against LeaderboardManager.
+            BindOpponentCard(opponentPlayer);
+
+            // ── Username ──────────────────────────────────────────────────────
+            if (_leftUsernameText  != null) _leftUsernameText.text  = "You";
+            if (_rightUsernameText != null) _rightUsernameText.text = string.IsNullOrEmpty(opponentPlayer.DisplayName)
+                                                                       ? "OPPONENT"
+                                                                       : opponentPlayer.DisplayName;
+
+            // ── Rank ──────────────────────────────────────────────────────────
+            BindRankText(localWon, opponentPlayer);
+
+            // ── Hole info ─────────────────────────────────────────────────────
+            if (_holeInfoText != null)
+            {
+                string holeName = holeNumber >= 1 && holeNumber <= 18
+                    ? HoleNames[holeNumber - 1]
+                    : $"Hole {holeNumber}";
+                _holeInfoText.text = $"Lomond Country Club  - {holeName}";
+            }
+
+            // ── Reward row: placeholder (Stage 2 binds real data) ─────────────
+            // Win = bright, Lose/Draw = dimmed.  Same logic as ShowWin/ShowLose.
+            if (_rewardRowGroup != null) _rewardRowGroup.alpha = localWon ? 1f : 0.5f;
+            SetRewardChildrenColor(localWon ? RewardChildNormal : RewardChildDim);
+
+            // ── NEW MATCH button ──────────────────────────────────────────────
+            if (_newMatchButton != null)
+            {
+                _newMatchButton.onClick.RemoveAllListeners();
+                if (onNewMatch != null)
+                    _newMatchButton.onClick.AddListener(() => onNewMatch());
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Stage 0 — sample data preview methods (kept for backward compat / editor testing)
         // ─────────────────────────────────────────────────────────────────────
 
         /// <summary>Stage-0 preview: local player won (left = WINNER).</summary>
@@ -109,6 +189,82 @@ namespace Golfin.UI.Matchmaking
             // Reward row: dimmed — both CanvasGroup.alpha (runtime) AND direct child tint (edit-mode Camera.Render)
             if (_rewardRowGroup != null) _rewardRowGroup.alpha = 0.5f;
             SetRewardChildrenColor(RewardChildDim);
+        }
+
+        // ── Private helpers ───────────────────────────────────────────────────
+
+        private void BindOpponentCard(MatchContext.Player opponentPlayer)
+        {
+            if (_rightCard == null) return;
+
+            // Try to bind via LeaderboardManager to find the opponent's character ID
+            if (LeaderboardManager.Instance != null)
+            {
+                var entries = LeaderboardManager.Instance.GetRanking(LeaderboardPeriod.Daily);
+                if (entries != null)
+                {
+                    foreach (var entry in entries)
+                    {
+                        if (!entry.IsPlayer && entry.DisplayName == opponentPlayer.DisplayName
+                            && !string.IsNullOrEmpty(entry.CharacterId))
+                        {
+                            _rightCard.InitializeFromTemplate(entry.CharacterId, entry.Level);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: the right card was initialized by MatchmakingModalController
+            // at opponent-found time; leave it as-is (no re-bind needed).
+        }
+
+        private void BindRankText(bool localWon, MatchContext.Player opponentPlayer)
+        {
+            string localRankStr    = "—";
+            string opponentRankStr = "—";
+
+            if (LeaderboardManager.Instance != null)
+            {
+                var playerEntry = LeaderboardManager.Instance.GetPlayerEntry(LeaderboardPeriod.Daily);
+                if (playerEntry.Rank > 0)
+                    localRankStr = $"#{playerEntry.Rank}";
+
+                // Opponent rank: resolve THIS opponent by DisplayName (mirrors BindOpponentCard),
+                // not just the first non-player entry — otherwise every opponent showed the board
+                // leader's rank regardless of who was matched. Leave "—" if the matched opponent
+                // isn't on the leaderboard rather than displaying a misleading rank.
+                if (!string.IsNullOrEmpty(opponentPlayer.DisplayName))
+                {
+                    var entries = LeaderboardManager.Instance.GetRanking(LeaderboardPeriod.Daily);
+                    if (entries != null)
+                    {
+                        foreach (var e in entries)
+                        {
+                            if (!e.IsPlayer && e.Rank > 0 && e.DisplayName == opponentPlayer.DisplayName)
+                            {
+                                opponentRankStr = $"#{e.Rank}";
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // "RANK: " white base, number colored by outcome (green = winner, orange = loser)
+            string localNumColor    = localWon ? WinnerColorHex : LoserColorHex;
+            string opponentNumColor = localWon ? LoserColorHex  : WinnerColorHex;
+
+            if (_leftRankText != null)
+            {
+                _leftRankText.color = Color.white;
+                _leftRankText.text  = $"RANK: <color={localNumColor}>{localRankStr}</color>";
+            }
+            if (_rightRankText != null)
+            {
+                _rightRankText.color = Color.white;
+                _rightRankText.text  = $"RANK: <color={opponentNumColor}>{opponentRankStr}</color>";
+            }
         }
 
         /// <summary>Tints all reward child Images and TMP labels — visible in Camera.Render edit-mode capture.</summary>
@@ -136,18 +292,31 @@ namespace Golfin.UI.Matchmaking
             }
 
             // Fix #5 (CESAR_REJECTION iter-7): "RANK:" white, only number colored via rich text.
-            // Color split flips with win/lose: winner number = green, loser number = orange.
             string leftNumColor  = leftWon ? WinnerColorHex : LoserColorHex;
             string rightNumColor = leftWon ? LoserColorHex  : WinnerColorHex;
             if (_leftRankText  != null)
             {
-                _leftRankText.color  = Color.white; // base = white, rich text colors the number
+                _leftRankText.color  = Color.white;
                 _leftRankText.text   = $"RANK: <color={leftNumColor}>{SampleLeftRankNum}</color>";
             }
             if (_rightRankText != null)
             {
                 _rightRankText.color = Color.white;
                 _rightRankText.text  = $"RANK: <color={rightNumColor}>{SampleRightRankNum}</color>";
+            }
+        }
+
+        private void SetOutcomeLabelsLive(bool leftWon)
+        {
+            if (_leftOutcomeLabel != null)
+            {
+                _leftOutcomeLabel.text  = leftWon ? WinnerLabel : LoserLabel;
+                _leftOutcomeLabel.color = leftWon ? WinnerColor : LoserColor;
+            }
+            if (_rightOutcomeLabel != null)
+            {
+                _rightOutcomeLabel.text  = leftWon ? LoserLabel : WinnerLabel;
+                _rightOutcomeLabel.color = leftWon ? LoserColor : WinnerColor;
             }
         }
 

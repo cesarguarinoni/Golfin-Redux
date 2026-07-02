@@ -33,3 +33,60 @@ DIRTY: M .claude/agents/golfin-redteam-reviewer.md M .claude/agents/golfin-revie
 2026-07-01T15:45:00 iter-10 done — gap_above=24px PASS, gap_below=24px PASS, both captures 1170x2532, clone provenance row 1 fixed, report updated, awaiting review
 2026-07-01T16:00:00 iter-11 activated — CESAR_REJECTED: RANK->sep gap ~63px (target 24px). Fix: move top block down by adding top spacer, reduce bottom slack. Figma node 13274:877.
 2026-07-01T16:35:00 done, awaiting review
+=== Stage 1 iter-1 kickoff baseline ===
+HEAD: 7de2c191f
+DIRTY:  M Docs/Specs/Active/1v1_result_rewards_display/STATUS.md M Packages/manifest.json M Packages/packages-lock.json
+===
+2026-07-02T00:00:00 Stage 1 kickoff: reading SPEC, VersusResultHandler, HoleCompleteModalController, MatchContext, ShellScene hierarchy
+2026-07-02T01:30:00 done, awaiting review — Stage 1 iter-1: IMPLEMENTER_REPORT.md written, WIN+LOSE screenshots confirmed 1170x2532, STATUS→READY_FOR_SELF_REVIEW
+
+=== iter-2 kickoff baseline 2026-07-01T09:00:00 ===
+HEAD: 7de2c191f2c110a8ba94811ff434b818fe52ff8d
+DIRTY porcelain:
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/Matchmaking/VersusResultScreenController.cs
+ M Assets/Scripts/UI/Modals/VersusResultHandler.cs
+ M Docs/Specs/Active/1v1_result_rewards_display/HEARTBEAT.log
+ M Docs/Specs/Active/1v1_result_rewards_display/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/1v1_result_rewards_display/SELF_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Scripts/UI/Matchmaking/VersusResultModalController.cs
+?? Assets/Scripts/UI/Matchmaking/VersusResultModalController.cs.meta
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/stage1_modal_lose.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/stage1_modal_win.png
+=== end baseline ===
+2026-07-01T19:29:01 stage1 capture bot launched: matchmaking→gameplay→VersusResultHandler flow
+2026-07-01T21:55:00 iter-2 v4 capture bot launched — awaiting completion (ShowBars fix applied)
+2026-07-01T19:54:50Z iter-2 done: real-flow v4 captures confirm TopBar+nav visible, GOTHMOG consistent, D3 re-queue proven. Writing report.
+2026-07-01T19:54:50Z done, awaiting review
+
+=== iter-3 kickoff baseline ===
+2026-07-01T20:19:51Z activated
+HEAD: 7de2c191f2c110a8ba94811ff434b818fe52ff8d
+DIRTY:
+ M .claude/review_misses.log
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/Matchmaking/VersusResultScreenController.cs
+ M Assets/Scripts/UI/Modals/VersusResultHandler.cs
+ M Docs/Specs/Active/1v1_result_rewards_display/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/HEARTBEAT.log
+ M Docs/Specs/Active/1v1_result_rewards_display/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/1v1_result_rewards_display/REDTEAM_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/SELF_REVIEW.md
+ M Docs/Specs/Active/1v1_result_rewards_display/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Scripts/UI/Matchmaking/VersusResultModalController.cs
+?? Assets/Scripts/UI/Matchmaking/VersusResultModalController.cs.meta
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/stage1_lose_v4_2026-07-01_21-49-08.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/stage1_modal_lose.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/stage1_modal_win.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/stage1_newmatch_v4_2026-07-01_21-49-08.png
+?? Docs/Specs/Active/1v1_result_rewards_display/screenshots/stage1_win_v4_2026-07-01_21-49-08.png
+=== end baseline ===
+2026-07-01T20:50:07Z MCP showing null responses for 5+ minutes after ForceSynchronousImport - checking if Unity is still running
+2026-07-01T21:02:17Z YAML editing complete. Diff clean: 248 lines, all additions only (VersusResultModal + VersusResultHandler + PrefabInstance). Waiting for MCP to recover.
+2026-07-01T21:12:59Z IMPLEMENTER_REPORT.md written; git diff confirmed 248 lines clean; zero forbidden-guid matches; MCP still blocked waiting for Unity reload dialog dismiss
+2026-07-02T04:15:45Z iter-3 done — Unity reloaded clean (IsDirty=false, RootCount=24), 226 ins/0 del confirmed, IMPLEMENTER_REPORT finalized, STATUS→READY_FOR_SELF_REVIEW

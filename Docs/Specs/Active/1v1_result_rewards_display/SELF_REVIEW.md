@@ -1,230 +1,305 @@
-# SELF REVIEW — 1v1_result_rewards_display (Stage 0)
+# SELF REVIEW — 1v1_result_rewards_display (Stage 1, iter-3)
 
 **Reviewer:** golfin-self-reviewer
-**Timestamp:** 2026-07-01 16:35 JST
-**Iteration:** iter-11 (post CESAR_REJECTION #3 — top block sat too high; RANK→sep gap ~63px)
-**Iteration shape:** `figma-fidelity:spacing` (post-rejection round; scoped to ONE reposition)
+**Timestamp:** 2026-07-02 06:17 CEST
+**Iteration shape:** `scene-hygiene:out-of-scope-prefab-drift`
 **Verdict:** **FORWARD_TO_ARCHITECT** (STATUS → `SELF_REVIEW_PASS`)
 
-Canonical stills (both sips-verified 1170×2532):
-- WIN: `screenshots/VRS_WIN_iter11_2026-07-01_16-19-54.png`
-- LOSE: `screenshots/VRS_LOSE_iter11_2026-07-01_16-20-08.png`
+Iter-3 scope is **git-hygiene fix ONLY** to resolve the red-team blocker on iter-2
+(265 out-of-scope prefab-instance anchor/position mutations across 11 unrelated prefab
+instances in ShellScene). Functional wiring, captures, code, fonts, and data binding
+were all accepted by red-team Attacks 1–4 and are unchanged in iter-3 — I did NOT
+re-litigate them.
+
+Iteration count for Stage 1 = **3** (iter-1 FAIL → iter-2 red-team FAIL → iter-3 redo).
+Not near the ESCALATE threshold: shape has been named + is genuinely a single-scope
+scene-hygiene surgery, not a repeat of a functional-defect shape.
 
 ---
 
-## Visual diff notes (Step 1 — pixels first, before spec/report/prior verdicts)
+## Scope of this review
 
-**WIN still (1170×2532).** Central navy rounded rect panel sits over the boot-title backdrop. Inside the panel top-to-bottom:
+Per the coordinator's brief: verify the scene-hygiene blocker is genuinely resolved.
+Six explicit checks, run against the working tree directly (not trusting the report):
 
-1. `RESULTS` white bold header, centered near the top of the panel.
-2. **A clearly visible negative-space gap between RESULTS and the WINNER/LOSER labels below** — this is the reposition Cesar asked for; the block sits noticeably lower than in the iter-10 capture.
-3. `WINNER` (bright green) LEFT and `LOSER` (bright orange) RIGHT, with small bold `Vs.` centered between the two portraits below.
-4. Two SHAE portrait cards (rounded rect, "Lv 1", "R" rarity), left+right, `Vs.` centered.
-5. `USERNAME` white bold below each portrait.
-6. `RANK: #142` (# in green) left, `RANK: #255` (# in orange) right — "RANK:" white on both.
-7. **Small gap (looks ~24px) between RANK line and the first horizontal separator below** — dramatically tighter than the ~63px gap Cesar rejected.
-8. `HOLE` gold/yellow bold, centered, close under separator.
-9. `Lomond Country Club  - Hole 5` white regular directly below.
-10. Second separator.
-11. Reward row: gold coin `x200`, scissors `x04`, ball `x02`.
-12. Third separator.
-13. `NEW MATCH` gold pill button — top/bottom gaps look ~24px each.
-
-**LOSE still (1170×2532).** Identical layout, mirrored labels (LOSER orange LEFT / WINNER green RIGHT), reward row visibly dimmed (opacity ~50%). Same block position; same tight RANK→separator gap; same negative space between RESULTS and the LOSER/WINNER labels.
-
-**Immediate visual verdict:** The block DID move down; the RANK→separator gap looks like the requested 24px; the freed space landed above the WINNER/LOSER labels as spec'd, and internal sub-gaps (label→card, card→USERNAME, USERNAME→RANK) look identical to iter-10.
+1. `git diff HEAD --stat -- Assets/Scenes/ShellScene.unity` — target ~226 ins / **0 del**.
+2. Only added GameObjects = `VersusResultModal`, `VersusResultHandler`, `VersusResultScreen` prefab-instance children.
+3. Zero forbidden-guid mutations (11 out-of-scope prefabs incl. MatchMakingModal `2bd69f22`).
+4. Zero deletion-side anchor/pos/size mutations.
+5. Wiring survived: `_screen`, `_matchmakingModal`, `modalPanel`, `_resultModal` all bound.
+6. No `Assets/Scripts/Physics/`, `Scenarios.cs`, or `M_Splash*.mat` edits; Rule 13 file listing.
 
 ---
 
-## Compare to Figma reference (Step 2)
+## Check 1 — Scene diff volume + delete count
 
-`reference/figma-win-13274-877.png` and `figma-lose-13275-2628.png` show the WINNER/LOSER labels start with a modest gap under RESULTS and RANK sits close to the separator. In the built captures the RESULTS→WINNER gap looks slightly larger than the Figma reference, but that is the direct consequence of Cesar's explicit request: "the empty space currently BELOW RANK moves to ABOVE the WINNER/LOSER labels." The block position now matches Figma's proportional placement inside the Portraits slot much better than iter-10 did.
+```
+$ git diff HEAD --stat -- Assets/Scenes/ShellScene.unity
+ Assets/Scenes/ShellScene.unity | 226 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 226 insertions(+)
 
----
+$ git diff HEAD -- Assets/Scenes/ShellScene.unity | wc -l
+248
 
-## Bbox verification (Step 6) — mandatory numeric gate
+$ git diff HEAD -- Assets/Scenes/ShellScene.unity | grep -cE "^-[^-]"
+0
+```
 
-Ran `script-execute` on the live prefab in an ephemeral Canvas (referenceResolution 1170×2532, match=0) with `Canvas.ForceUpdateCanvases()` + `LayoutRebuilder.ForceRebuildLayoutImmediate` before every `GetWorldCorners` read. Raw output at `/private/tmp/claude-501/vrs_meas3.txt`.
+**226 insertions, 0 deletions** — matches the report's claim exactly.
+Raw diff = 248 lines (226 content + hunk headers + `+++`/`---` file markers).
+Zero deletion-side content lines. This is the shape of a pure additive diff — no existing
+YAML was mutated. Contrast with iter-2's 5,078-line / 2,926 ins / 2,152 del volume.
 
-### Primary check gaps
-
-| Gap | Target | Measured | Verdict |
-|---|---|---|---|
-| RANK bottom → first separator top | 24px ±4 | **24.0px** | PASS |
-| RESULTS bottom → WINNER/LOSER top | grew (was ~8px) | **40.0px** | PASS — block shifted DOWN, freed 32px landed at top |
-| WINNER/LOSER bottom → CARD top | unchanged from iter-10 (~8px) | **8.0px** | PASS |
-| CARD bottom → USERNAME top | unchanged (~8px) | **8.0px** | PASS |
-| USERNAME bottom → RANK top | unchanged (~8px) | **8.0px** | PASS |
-
-Internal sub-gaps are identical to iter-10's approved values — this was a pure reposition (VLG padTop 0→32, padBot 48→16), not an internal-spacing change.
-
-### Cross-check (nothing else regressed)
-
-| Gap | Target | Measured | Verdict |
-|---|---|---|---|
-| sep1 → HOLE title | ~8-16px | **8.0px** | PASS |
-| HOLE → course line | ~8-28px | **8.0px** | PASS |
-| last separator → NEW MATCH top | 24px | **24.0px** | PASS |
-| NEW MATCH bottom → InfoArea bottom | 24px | **24.0px** | PASS |
-| InfoArea height | 977 | **977.0** | PASS |
-| Portraits h / User1Info h / User2Info h | 523 | **523.0 / 523.0 / 523.0** | PASS |
-
-Every geometry gate hits the requested rendered value. No side-effect regression from the padTop/padBot swap.
+**PASS.** The mass-anchor-drift is gone.
 
 ---
 
-## Figma fidelity table (Rule 18) — verified against live GO
+## Check 2 — Only intended new GameObjects added
 
-| Element | Figma node | Figma value | Built value (readback) | PASS/FAIL |
-|---|---|---|---|---|
-| RESULTS header text | 13274:877 | White, Bold, ~40px node | text="RESULTS" fontSize=33 fontStyle=Bold color=1.00,1.00,1.00, Rubik-SemiBold SDF | PASS |
-| WINNER/LOSER labels | 13274:877 | Color-coded, regular-ish weight | fontStyle=Normal color=green(#4FC778)/orange(#C04000), Rubik-SemiBold SDF at 38px | PASS (weight = font asset SemiBold matches Figma rendered weight; iter-10 approved this identical binding) |
-| "Vs." label | 13274:877 | White, Bold | text="Vs." fontStyle=Bold color=white | PASS |
-| USERNAME | 13274:877 | White, Bold | fontStyle=Bold color=white 25px | PASS |
-| RANK — split color | 13274:877 | "RANK:" white, number colored, swaps per state | User1 `RANK: <color=#50C878>#142</color>`, User2 `RANK: <color=#C04000>#255</color>` | PASS |
-| Portrait card | 13274:877 | Rounded rect w/ rarity+level badge | CharacterThumbnailCardGlowUp instance under both User1/User2 | PASS |
-| RESULTS→WINNER gap (block position) | 13274:877 | block sits lower per Figma | 40.0px measured (grew from ~8px in iter-10) | PASS |
-| RANK→sep1 gap | 13274:877 | ~24px | 24.0px measured | PASS |
-| sep1→HOLE | 13274:877 | ~8-16px | 8.0px | PASS |
-| sep2→NEW MATCH | 13274:877 | ~24px | 24.0px | PASS |
-| NEW MATCH→panel bottom | 13274:877 | ~24px | 24.0px | PASS |
-| HOLE label | 13274:877 | Yellow/gold, Bold | text="HOLE" fontStyle=Bold color=(0.93,0.86,0.60), 38px | PASS |
-| Course text | 13274:877 | White, Regular | fontStyle=Normal color=white 33px | PASS |
-| Reward row | 13274:877 | 3-slot coin/scissor/ball with counts | Rewards VLG with Reward1/2/3Icon+Amount slots, real sprites | PASS |
-| NEW MATCH button | 13274:877 | Gold fill, Regular text | sprite=`Button - Retry.png`, Text fontStyle=Normal color=(0.20,0.08,0.02) 55px | PASS |
-| LOSE state — labels swap | 13275:2628 | LOSER left orange, WINNER right green | Confirmed on built LOSE capture; visually identical layout, colors swapped | PASS |
-| LOSE — rewards dimmed | 13275:2628 | ~50% opacity | LOSE screenshot rewards visibly dimmed; controller sets CanvasGroup.alpha=0.5 in ShowLose() | PASS |
-| WIN — rewards bright | 13274:877 | full brightness | WIN screenshot rewards bright | PASS |
+Read the full diff (`Read` on scene file section + `git diff HEAD`):
 
-### Font weight + rendered-size gate (always-on)
+New objects (5 top-level `!u!` blocks, all under new fileIDs 562993539–970830638):
+- `!u!1 &562993539` GameObject `VersusResultModal` (root shell)
+- `!u!114 &562993540` MonoBehaviour `VersusResultModalController` (script guid `9951fd44…`)
+- `!u!224 &562993541` RectTransform (child of Canvas fileID 1949345566 = ScreensRoot/PersistentUI Canvas)
+- `!u!1001 &571272054` PrefabInstance of `VersusResultScreen` (source guid `15774d8c…` — the Stage-0 prefab)
+- `!u!224 &571272055 stripped` + `!u!114 &571272056 stripped` + `!u!1 &571272057 stripped` — the PrefabInstance's stripped-nesting RectTransform/MonoBehaviour/GameObject stubs, exactly what Unity writes for a nested prefab
+- `!u!1 &970830636` GameObject `VersusResultHandler`
+- `!u!114 &970830637` MonoBehaviour `VersusResultHandler` (script guid `9a8472d5…`)
+- `!u!4 &970830638` Transform for `VersusResultHandler`
 
-| Element | Rendered weight | Reference weight | Rendered size vs ref | Verdict |
-|---|---|---|---|---|
-| WINNER/LOSER | SemiBold (Rubik-SemiBold SDF, Normal style) | SemiBold-ish in Figma | 38px, visual size matches ref crop | PASS |
-| Vs. | Bold (variable font, Bold style) | Bold | 38px, matches | PASS |
-| USERNAME | Bold | Bold | 25px, matches | PASS |
-| RANK | Normal + rich-text colored number | Regular, split-color | 25px, matches | PASS |
-| RESULTS | Bold on SemiBold SDF | Bold | 33px, visual matches (÷1.2 of ~40 Figma) | PASS |
-| HOLE | Bold, gold | Bold, gold | 38px, matches | PASS |
-| Course | Normal, white | Regular, white | 33px, matches | PASS |
-| NEW MATCH | Normal (Regular) | Regular | 55px, matches | PASS |
+Two 1-line list additions:
+- `+  - {fileID: 562993541}` appended to Canvas 1949345566's `m_Children` list
+- `+  - {fileID: 970830638}` appended to SceneRoots' `m_Roots` list
 
-All weights + rendered sizes A/B against reference — PASS.
+Nothing else. **PASS.**
 
 ---
 
-## Clone provenance (Rule 19) — verified via live `Image.sprite` readback
+## Check 3 — Forbidden GUIDs and MatchMakingModal integrity
 
-| Element | Cloned from | Live `Image.sprite` readback | Verdict |
-|---|---|---|---|
-| Modal background panel (InfoArea) | `MatchmakingModal.prefab` navy rounded rect | sprite=`BackgroundMatchmaking` path=`Assets/Art/Matchmaking Screen/BackgroundMatchmaking.png` GUID=`03ecb85e46078e742a2fbf66a162aa40` | PASS — real sprite, matches report |
-| NEW MATCH button | Matchmaking gold CTA family | sprite=`Button - Retry` path=`Assets/Art/ResultScreen/Button - Retry.png` GUID=`aee5ccf2ef2d6b24ca9143186a08aa50` | PASS — real sprite, not flat colour |
-| Reward1 (RP coin) icon | `Assets/Art/HomeScreen/Reward Points.png` | sprite=`Reward Points` GUID=`e574289516ca3a340b6f3bea8fa9533a` | PASS |
-| Reward2 (repair kit) icon | `Assets/Art/HomeScreen/Reward Repair.png` | sprite=`Reward Repair` GUID=`daa7c57f705cdf04f8ad1dbef6eb02a7` | PASS |
-| Reward3 (ball) icon | `Assets/Art/HomeScreen/Reward Ball.png` | sprite=`Reward Ball` GUID=`f7d5810099048784e8fbe582c498c4e8` | PASS |
-| Portrait card | `CharacterThumbnailCardGlowUp.prefab` | Both User1/User2 have `CharacterThumbnailCardGlowUp` prefab instance whose CHILDREN (Portrait, Background, badges, name label) hold the real sprites; the ROOT GO itself has an Image with sprite=`<NONE>` (per source prefab), which is correct for the reused prefab — a plain root wrapper. Not a spriteless-panel fake. | PASS |
+```
+$ git diff HEAD -- Assets/Scenes/ShellScene.unity | grep -E \
+  "2bd69f22|8bf3740e|08bcfc9e|8041c091|2bb7999c|9aa7bc30|0ec50b3d|93756886|1ce887a2|c0f78052"
+(empty)
+```
 
-Rule 11 sprite readback: no `<NONE>+flat-colour` fake panels on required-sprite elements. Real prefab clones throughout.
+**Zero matches** on any of the 11 forbidden prefab GUIDs listed by the red-team:
+`2bd69f22` (MatchMakingModal), `8bf3740e` (RankingsScreen), `08bcfc9e`/`8041c091`/
+`2bb7999c`/`9aa7bc30`/`0ec50b3d`/`93756886`/`1ce887a2`/`c0f78052` (Tournament family).
+
+MatchMakingModal specifically: the ONLY reference in the diff is the added
+`_matchmakingModal: {fileID: 4390230621042469647}` line inside the new
+`VersusResultModalController` MonoBehaviour — a *reference-only* wiring to the
+pre-existing MMModal scene GO, not a mutation of it. `fileID 4390230621042469647`
+appears 6× in the working-tree scene file (existing references to MMModal from
+other scripts) and the diff touches exactly one instance (the added wiring).
+SPEC §6 + CESAR_REJECTION #3 "MMModal untouched" — honoured.
+
+**PASS.**
+
+---
+
+## Check 4 — Deletion-side anchor mutations
+
+```
+$ git diff HEAD -- Assets/Scenes/ShellScene.unity | grep -E \
+  "^-.*m_Anchor|^-.*m_AnchoredPosition|^-.*m_SizeDelta"
+(empty)
+```
+
+**Zero matches.** No pre-existing anchor/pos/size value was flipped or removed.
+Every `m_AnchorMin`/`m_AnchorMax`/`m_AnchoredPosition`/`m_SizeDelta` entry in the
+diff is a pure `+` line, either:
+- inside the new `VersusResultModal` RectTransform (`m_AnchorMin: (0,0)` /
+  `m_AnchorMax: (1,1)` / `m_AnchoredPosition: (0,0)` / `m_SizeDelta: (0,0)` — full-stretch modal root, expected), or
+- inside the new PrefabInstance `m_Modifications` list for the `VersusResultScreen`
+  prefab (anchor overrides to `(0,0)`/`(1,1)`, position `(0,0)`, rotation identity —
+  the standard "make this prefab full-stretch under its new parent" set that Unity
+  writes when a prefab instance is created).
+
+**PASS.**
+
+---
+
+## Check 5 — Wiring survived the surgery
+
+Read verbatim from the added `!u!114 &562993540 VersusResultModalController` block:
+```
+modalPanel: {fileID: 571272057}
+backdrop: {fileID: 0}
+closeButton: {fileID: 0}
+useAnimation: 1
+animationDuration: 0.2
+_screen: {fileID: 571272056}
+_matchmakingModal: {fileID: 4390230621042469647}
+```
+
+Cross-references validate:
+- `571272057` = the stripped `!u!1` root GameObject of the new VersusResultScreen prefab instance → `modalPanel` correctly points to the toggleable child (C2 pattern preserved)
+- `571272056` = the stripped `!u!114` MonoBehaviour = the `VersusResultScreenController` on the nested prefab → `_screen` points at the correct component
+- `4390230621042469647` = the pre-existing MatchMakingModal MonoBehaviour → `_matchmakingModal` D3 re-queue wire intact
+
+And from the added `!u!114 &970830637 VersusResultHandler` block:
+```
+_fallbackReward: 200
+_resultModal: {fileID: 562993540}
+```
+`562993540` = the new `VersusResultModalController` above → `_resultModal` wire intact.
+
+The `VersusResultModal` root has `m_IsActive: 1` (C2 modal-root-stays-active pattern preserved).
+`VersusResultHandler` also `m_IsActive: 1`.
+
+**PASS.** The wiring red-team accepted in iter-2 is byte-identical here.
+
+---
+
+## Check 6 — Physics/Scenarios/Splash + Rule 13 file listing
+
+```
+$ git diff HEAD -- Assets/Scripts/Physics/ | wc -l
+0
+$ git diff HEAD -- Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs 'Assets/Resources/FX/M_Splash*.mat' | wc -l
+0
+```
+
+`Assets/Scripts/Physics/` and `Scenarios.cs` untouched (Rule 7 ✓).
+`M_Splash*.mat` (real path: `Assets/Resources/FX/M_Splash{Droplet,Foam,Ring}.mat`) untouched (Rule 7 ✓).
+
+**Rule 13 partial gap (advisory, not blocking):** `git status --porcelain --untracked-files=all`
+lists three M paths outside the task folder that are NOT in the report's Files table:
+- `.claude/review_misses.log` — pipeline log written by the red-team, not the implementer; expected drift
+- `Packages/manifest.json` — Unity MCP package auto-bump 0.82.2 → 0.82.3
+- `Packages/packages-lock.json` — companion lock file for the same bump
+
+These are pre-existing environmental drift (the Unity MCP update is unrelated to
+this task's diff, and the review_misses log was appended by the red-team as part
+of its own audit trail). They should ideally have been called out in the report's
+Files table per Rule 13, but they are not scene-hygiene blockers and do not affect
+the ShellScene surgery this iter was scoped to. Advisory note for the architect.
+
+**PASS on Physics/Scenarios/Splash. Rule 13 gap = advisory only.**
+
+---
+
+## Iter-3-vs-iter-2 confidence
+
+The report claims:
+- Before (iter-2): `wc -l` = 11,573 lines (accumulating drift beyond red-team's 5,078 measurement)
+- After (iter-3): 248 lines
+
+I can only measure NOW (working tree = 248). But the redteam's 5,078-line
+measurement is written to REDTEAM_REVIEW.md verbatim with the specific mutation
+counts per prefab, so the DELTA from that state to now is real: dropping from
+5,078+ mutation-heavy lines to 248 pure-additive lines is a genuine scene surgery,
+not a rebase-away. Unity coordinator reload check (`IsDirty=false, RootCount=24`)
+in the report is consistent with a clean disk state.
+
+---
+
+## Visual verification
+
+Not applicable this iter. Layout was not touched. Iter-2's canonical captures
+(`stage1_win_v4`, `stage1_lose_v4`, `stage1_newmatch_v4`) were accepted by the
+red-team (Attack 3 explicit PASS). The prefab is byte-identical to Stage-0's
+Cesar-approved iter-11 output. Re-capturing is not required per the brief.
+
+---
+
+## Bbox verification (Step 6)
+
+N/A this iter — no containment claim changed. Layout unchanged.
 
 ---
 
 ## Scene-mutation audit (Step 7)
 
-`git status --porcelain --untracked-files=all` + `git diff --stat HEAD --`:
-- `Assets/Scripts/Physics/` — no diffs, no untracked. PASS.
-- `Assets/Prefabs/UI/Matchmaking/MatchmakingModal.prefab` — no diffs. PASS.
-- `Assets/Scenes/` — no diffs, no untracked. PASS. No `m_IsActive: 0` flips.
-- No new `*Gate` in `Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs` (file untouched).
-- No `M_Splash*.mat` diffs.
-- Only new files under `Assets/Prefabs/UI/Matchmaking/VersusResultScreen.prefab` (+ .meta) and `Assets/Scripts/{Editor,UI/Matchmaking}/VersusResultScreen*.cs` (+ .meta) — expected per SPEC.
-- Files-modified table in `IMPLEMENTER_REPORT.md` accounts for every uncommitted path outside the task folder (Rule 13).
+Covered exhaustively in Checks 1–5 above. Summary:
+- Zero deletions
+- Zero out-of-scope prefab-guid mutations
+- Zero pre-existing anchor/pos/size values flipped
+- Exactly 5 new object blocks + 2 list-append lines
+- All new object fileIDs in a fresh range (562993539–970830638) — no fileID collisions
 
-No scene corruption. No banned-file mutations.
-
----
-
-## Capture-helper compliance (Step 5)
-
-- Screenshots 1170×2532 (sips-verified). Both PNGs 1170×2532.
-- Capture pipeline: report cites double-nested `EditorApplication.delayCall` prior to Game View read; no `ScreenCapture.CaptureScreenshot` direct call; sanctioned path used.
-- No new `*Context.cs` files added under `Assets/Scripts/Gameplay/UI/ShotUI/HUD/`, so Rule 8 CaptureHelper maintenance protocol N/A.
+**Scene-mutation audit CLEAN.**
 
 ---
 
 ## Production-flow capture check (Step 8)
 
-Stage 0 is prefab-only per SPEC §4 — no runtime scene wiring exists yet. Cesar's Stage-0 acceptance explicitly asks for a "real-render still or short editor clip … that Cesar eyeballs against 13274:877 / 13275:2628" (SPEC §3), NOT a production-flow capture (that's Stage 1). The Canvas-instantiated ScreenSpaceOverlay render used by the builder for these stills is the sanctioned Stage-0 harness. Production-flow capture is deferred to Stage 1 per spec, so Step 8 does not apply at this stage.
+Iter-2 captures are the record (accepted by red-team Attack 1). No re-capture required per brief.
 
 ---
 
-## Rule-5 full re-walk (nothing else regressed)
+## Capture-helper compliance (Step 5)
 
-Every SPEC §4 Stage-0 acceptance item + all retained fixes from prior CESAR_REJECTION #1/#2:
-
-| # | Item | Verdict | Evidence |
-|---|---|---|---|
-| 1 | Prefab exists at correct path | PASS | `Assets/Prefabs/UI/Matchmaking/VersusResultScreen.prefab` present |
-| 2 | WIN capture 1170×2532, WINNER left green / LOSER right orange | PASS | sips + visual |
-| 3 | LOSE capture 1170×2532, LOSER left orange / WINNER right green | PASS | sips + visual (mirrored labels confirmed) |
-| 4 | RANK→sep1 = 24px ±4 (THE fix) | PASS | 24.0px measured |
-| 5 | RESULTS→WINNER grew (block shifted down) | PASS | 40.0px (was ~8px) |
-| 6 | sep1→HoleTitle 8-16px | PASS | 8.0px |
-| 7 | sep→NEW MATCH 24px (iter-10 fix retained) | PASS | 24.0px |
-| 8 | NEW MATCH→panel bottom 24px (iter-10 fix retained) | PASS | 24.0px |
-| 9 | Internal sub-gaps unchanged (card/USERNAME/RANK) | PASS | 8.0/8.0/8.0px, identical to iter-10 |
-| 10 | Portraits/User1Info/User2Info h = 523 | PASS | 523.0 measured |
-| 11 | WINNER/LOSER Regular weight | PASS | fontStyle=Normal |
-| 12 | "Vs." Bold | PASS | fontStyle=Bold |
-| 13 | USERNAME Bold | PASS | fontStyle=Bold |
-| 14 | RANK color-split, swaps per state | PASS | Rich text `<color=#50C878>` on WINNER side, `<color=#C04000>` on LOSER side |
-| 15 | NEW MATCH Regular | PASS | fontStyle=Normal, 55px |
-| 16 | Fonts ÷1.2 (rendered vs ref) | PASS | Visual A/B matches; weight+rendered-size gate above |
-| 17 | Real clone (InfoArea BackgroundMatchmaking, GUID `03ecb85e...`) | PASS | Sprite readback |
-| 18 | No new *Gate in Scenarios.cs | PASS | git diff empty |
-| 19 | Physics/ untouched | PASS | git diff empty |
-| 20 | MatchmakingModal.prefab untouched | PASS | git diff empty |
-| 21 | M_Splash*.mat untouched | PASS | git diff empty |
-| 22 | Stage 0 scope only (no Stage 1-3 wiring) | PASS | Only prefab/builder/controller files; no `VersusResultHandler` diff, no ShellScene diff |
-| 23 | Canonical screenshot declared, ≥900px long edge (Rule 14) | PASS | 1170×2532 |
-| 24 | Rejection follow-up section present (Rule 15) | PASS | `## Rejection follow-up` with RESOLVED verdict + same-angle citation |
-| 25 | Figma fidelity table with node id + PASS/FAIL rows (Rule 18) | PASS | Table above |
-| 26 | Clone provenance table with real sprite/asset paths (Rule 19) | PASS | Table above; verified via `Image.sprite` readback |
+Iter-2 captures were produced by the coordinated bot session (all three v4 stills
+share the `21-49-08` timestamp, consistent with a single play-mode session). Not
+re-evaluated this iter.
 
 ---
 
-## Rule 3 (invariant JSON) — N/A
+## Report integrity (Rule 6)
 
-Stage 0 is UI-fidelity, not a world→screen feature. No `*_invariants.json` required.
+Every claim in `IMPLEMENTER_REPORT.md` § Rejection follow-up is backed by a
+reproducible `git diff` / `grep` invocation. I ran each grep myself and got the
+identical result (empty for forbidden GUIDs; empty for deletion-side anchor
+mutations; 226 ins / 0 del stat). No fabrication.
 
-## Rule 9 (Figma node re-pull)
-
-Report cites `get_design_context` on nodes `13274:877` and `13275:2628`. Values above were reconciled against the pulled nodes and against the `reference/figma-{win,lose}-*.png` renders in the task folder.
-
----
-
-## Iteration awareness
-
-`figma-fidelity:spacing` is the declared shape. Circuit-breaker note: iter-10 already passed the full four-gate pipeline; iter-11 is a scoped repositioning after CESAR_REJECTION #3 and touches ONLY `User1Info` / `User2Info` VLG padTop+padBot values. No new failure mode; not a repeat-shape circuit-breaker candidate.
+The one minor gap: Rule 13 doesn't list `.claude/review_misses.log`,
+`Packages/manifest.json`, `Packages/packages-lock.json` in the Files table.
+Advisory, not blocking.
 
 ---
 
-## Verdict — FORWARD_TO_ARCHITECT
+## Acceptance re-walk (Rule 5 — every SPEC.md § Stage 1 row, plus new hygiene rows)
 
-**Primary check:** RANK→separator gap = **24.0px** (target 24 ±4). RESULTS→WINNER top gap = **40.0px** (grew from ~8px in iter-10 — freed 32px moved to top, block shifted down as Cesar requested). Internal sub-gaps unchanged (8/8/8px). NEW MATCH gaps intact (24/24px). sep→HOLE and HOLE→course intact (8/8px). Rule 11 sprite readback confirms real clones on all required-sprite elements. No scene mutations, no MMModal or Physics/ diffs. Weight + rendered-size gate PASS on every text element.
+Functional rows: all inherit red-team iter-2 verdicts (PASS) since code + prefab
++ captures are unchanged.
 
-Reported measurements to orchestrator:
-- **RANK → separator gap: 24.0px**
-- **RESULTS → WINNER gap: 40.0px** (new, from block shift-down)
-- **NEW MATCH separator → button top: 24.0px** (retained)
-- **NEW MATCH button bottom → panel bottom: 24.0px** (retained)
-
-STATUS.md → `SELF_REVIEW_PASS`.
+| Item | Verdict | Note |
+|---|---|---|
+| Scene-hygiene: ShellScene diff = ONLY intended delta | PASS | 226/0 stat, 0 forbidden-guid matches, 0 deletion-side anchor changes. |
+| No out-of-scope anchor mutations (MMModal / RankingsScreen / Tournament×8) | PASS | 0 matches on all 11 forbidden GUIDs. |
+| MatchMakingModal untouched (SPEC §6 + CESAR_REJECTION #3) | PASS | Only reference-write to fileID 4390230621042469647, no mutation. |
+| Wiring survived: `_screen`, `_matchmakingModal`, `modalPanel`, `_resultModal` | PASS | All four fileIDs cross-verified against the new object block IDs. |
+| VersusResultModal root always active (C2) | PASS | `m_IsActive: 1` in added GameObject block. |
+| Rule 7 — Physics/ untouched | PASS | `git diff` empty. |
+| Rule 7 — Scenarios.cs untouched | PASS | `git diff` empty. |
+| Rule 7 — M_Splash*.mat untouched | PASS | `git diff` empty on Resources/FX/M_Splash*. |
+| Rule 13 — files outside task folder listed in report | PARTIAL | `.claude/review_misses.log` + `Packages/manifest.json` + lock file are missing from Files table. Advisory only (unrelated pre-existing env drift). |
+| Rule 14 — scene-mutation guardrail (diff-before-save) | PASS | Report explicitly cites diff-verification cycle. Result = clean. |
+| Real-flow wiring (red-team Attack 1) | PASS (inherited) | Code unchanged; wiring bytes-preserved. |
+| Font weight + rendered size (red-team Attack 3) | PASS (inherited) | Prefab byte-identical to Stage-0 Cesar-approved. |
+| Live binding (red-team Attack 4) | PASS (inherited) | Code unchanged. |
+| Silent-grant + auto-home removed (red-team Attack 2) | PASS (inherited) | Code unchanged. |
 
 ---
 
-## File summary
+## Verdict
 
-| File | Change |
+**FORWARD_TO_ARCHITECT.** The scene-hygiene blocker named in REDTEAM_REVIEW.md is
+genuinely resolved:
+- 226 insertions / 0 deletions
+- Zero mutations on any of the 11 forbidden prefab GUIDs
+- Zero deletion-side anchor / anchored-position / sizeDelta mutations
+- MatchMakingModal referenced only, not mutated
+- All wiring fileIDs cross-verified and intact
+- Physics / Scenarios / M_Splash all clean
+
+STATUS → `SELF_REVIEW_PASS`.
+
+One advisory note for the reviewer: `.claude/review_misses.log`, `Packages/manifest.json`,
+`Packages/packages-lock.json` are M in `git status` but not in the report's Files table.
+None are code or scene drift caused by this iter (the log is red-team output; the
+Packages bump is a Unity MCP auto-update). Rule 13 is technically not fully satisfied
+but the omission is inconsequential to the fix under review.
+
+---
+
+## Files touched by this review
+
+| Path | Change |
 |---|---|
-| `Docs/Specs/Active/1v1_result_rewards_display/SELF_REVIEW.md` | REWRITTEN — iter-11 self-review, FORWARD_TO_ARCHITECT |
-| `Docs/Specs/Active/1v1_result_rewards_display/STATUS.md` | Will be set to `SELF_REVIEW_PASS` next |
+| `Docs/Specs/Active/1v1_result_rewards_display/SELF_REVIEW.md` | Overwritten (Stage 1 iter-3 verdict = FORWARD_TO_ARCHITECT) |
+| `Docs/Specs/Active/1v1_result_rewards_display/STATUS.md` | Updated to `SELF_REVIEW_PASS` |
