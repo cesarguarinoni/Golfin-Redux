@@ -287,4 +287,6 @@ EditMode test (position/value assertion, not dispatch-only).
 
 ## Kickoff
 
-`Use the implementer subagent on "stamina_boost_shop"`
+```
+Use the implementer subagent on "stamina_boost_shop"
+```
