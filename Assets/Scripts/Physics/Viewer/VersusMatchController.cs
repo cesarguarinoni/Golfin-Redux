@@ -434,7 +434,7 @@ namespace Golfin.Physics.Viewer
             {
                 string text = outcome == GameSession.MatchOutcome.P1Win ? "YOU WIN"
                             : outcome == GameSession.MatchOutcome.P2Win ? "YOU LOSE"
-                            : "DRAW";
+                            : "TIE";
                 _banner.ShowPersistent(text, fromLeft: true);
             }
 
