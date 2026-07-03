@@ -434,6 +434,30 @@ HUD root
 
 ---
 
+## Stamina Boost Shop (Order 517 — ShellScene, `GolfinRedux.UI.Shop`)
+
+First shop. Two `ScreenManager` screens mounted under `ScreensRoot` (ScreenIds `StaminaShopSelection`, `StaminaShopDetail`); persistent top bar + nav shown on both. Entered via the roster **Boost** button (`CharacterDetailPanel.OnBoostClicked` → `StaminaShopSession.SelectedCharacterId` + `ShowScreen(StaminaShopSelection)`). Data from `Assets/Resources/Data/stamina_shops.csv` (10 MIE shops) + `stamina_shop_items.csv` (30 items) via `ShopCatalog`/`ShopModel`/`ShopItemModel`. Background: `Assets/Art/Shop/Background - Shop.png`. Built by reusing existing atoms (navy panels, `S_PillStadium` pills, RP pill, Play/Cancel buttons, SDF fonts), node-exact vs Figma 13156 (selection) / 13330 (detail).
+
+```
+StaminaShopSelectionScreen        (StaminaShopSelectionScreenController)
+├── BOOST STAMINA title + region/prefecture filter pills (StaminaShopRegionPill / StaminaShopPrefecturePill)
+└── CardsPanel  (cloned from Tournament Selection: BackgroundCardsContainer + ScrollRect + Viewport + Scrollbar)
+    └── StaminaShopCard × N     (whole-card tap → OnCardTapped; storefront r32, FEATURED badge,
+                                 category/name/tagline, hours + View-on-Maps, daily-bonus chip [recovery icon],
+                                 derived STA range + navy RP pill, chevron)
+
+StaminaShopDetailScreen           (StaminaShopDetailScreenController)
+├── StaminaShopHeroCard          (cover-fit hero photo, OPEN NOW + FEATURED two-layer pills, category/name/address)
+├── StaminaShopInfoCard          (3 cols: LOCATION / HOURS / SIGNATURE, hairline dividers)
+└── StaminaShopMenuPanel         (MENU header + gold DAILY BONUS chip [recovery icon]; embedded CANCEL button)
+    └── StaminaMenuRow × N       (tier badge HIGH/MED/LIGHT, item image, name/desc, +STA, RP cost, BUY button)
+```
+
+- **Purchase:** `StaminaMenuRow` BUY → `ShopTransaction.TryPurchase` → `RewardPointsManager.SpendPoints` + `StaminaRuntimeService.AddEnergy` (clamps to max, persists); returns `Success` / `InsufficientRp` / `StaminaFull` / `NullCharacter`. BUY disables when stamina is full. Covered by `Golfin.UI.Shop.Tests` (EditMode, reflection into Assembly-CSharp).
+- **Daily-bonus chip** uses `Assets/Art/Shop/Icon - Recovery.png` (recovery-circle), not the lightning icon.
+
+---
+
 ## Key Notes
 
 - **Character stat rows** use `Name+Bar/StatsName`, `Name+Bar/Bar`, `DiffLabel`, `StatNumber`
