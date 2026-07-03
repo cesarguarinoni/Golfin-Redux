@@ -1,6 +1,6 @@
 # Pipeline hardening — Figma→Unity element-reuse loop
 
-**Status:** QUEUED (Cesar directive 2026-07-02 — build AFTER `stamina_boost_shop` ships, using that task as the written-up case study)
+**Status:** DONE — 2026-07-03 (all four durable fixes shipped; moving to Completed). Origin: QUEUED (Cesar directive 2026-07-02 — build AFTER `stamina_boost_shop` ships, using that task as the written-up case study)
 
 ## Problem (root cause, from stamina_boost_shop)
 The pipeline gates *"did you clone the mandated screen?"* (Rule 19) but has **no step and no gate** for *"when there's no whole-screen clone, reuse the individual elements that already exist, and match the exact Figma node."* Every piece with no 1:1 clone source (menu row, detail inner content) fell through that hole: the implementer fabricated flat-fill `Image` boxes, guessed fonts/sizes, and never searched the app for the real reusable element (RP pill lived in Rankings; tier/entry-fee badge in Tournaments). Three strikes, same hole. Cesar caught each on sight.
@@ -32,8 +32,8 @@ Secondary: the reusable palette was rediscovered from scratch (~15 tool calls) e
 - ✅ **Fix #4 (render tool) + detection linters** — `Assets/Editor/UIFidelity/UIFidelityLinter.cs` (render-health + node-spec) and `Docs/Scripts/figma_diff.py` (pixel-diff). Isolated UI render = WorldSpace-canvas + dedicated camera + RenderTexture (SnapGameView returns stale edit-mode frames).
 - ✅ **Fix #3 (hard gate)** — **Rule 21** in `enforce_implementer_done.py` (`validate_ui_lint`): Figma-node tasks must carry a `## UI fidelity lint` section citing `_lint.json`(s) with `fail == 0`; missing/failing = hard block. Functionally tested (no-section / no-ref / missing-file / fail>0 all block; fail==0 passes).
 - ✅ **Fix #2 (loop wired into agents)** — `golfin-implementer` step 6e (run linter, cite JSON), `golfin-reviewer` step 2d + `golfin-redteam-reviewer` §12 (RE-RUN, never trust), IMPLEMENTER_REPORT template `## UI fidelity lint` section, CLAUDE.md Rule 21.
-- ⏳ **Fix #1 (Element Palette catalog `UI_ELEMENT_PALETTE.md`)** — still TODO; the palette is seeded in this spec + memory `reference_ui_fidelity_linter` / `feedback_figma_unity_reuse_elements_not_clone_screens`, not yet a standalone doc.
-- ⏳ **Node-spec auto-parse** — spec JSONs are currently hand-authored from `get_design_context`; a `get_design_context → spec.json` generator would remove that manual step.
+- ✅ **Fix #1 (Element Palette catalog `UI_ELEMENT_PALETTE.md`)** — DONE 2026-07-03 — `Docs/Architecture/UI_ELEMENT_PALETTE.md` written (12 sprites + 4 fonts + badge pattern + clone bases; paths + GUIDs verified vs repo). Consumer WIRED: **Rule 22** (proactive Element Reuse Map) in `golfin-implementer.md` + pointer in CLAUDE.md Rule 21.
+- 📄 **Node-spec auto-parse (SPECCED — follow-up order)** — spec JSONs are currently hand-authored from `get_design_context`; a `get_design_context → spec.json` generator — now SPEC_READY as its own order `figma_node_spec_generator` (`Docs/Specs/Queued/figma_node_spec_generator/`).
 
 ## Case-study reference
 `Docs/Specs/Active|Completed/stamina_boost_shop/` — the menu-row rebuild (iter after the 3 from-scratch strikes) is the worked example: reused RP pill + gold button + two-layer badge, real Figma photo, node-exact geometry, isolated RT A/B render (`Docs/Diagnostics/_capture/menurow_v2.png`).
