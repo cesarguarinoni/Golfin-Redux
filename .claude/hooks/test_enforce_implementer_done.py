@@ -1113,5 +1113,55 @@ class TestVideoContinuity(unittest.TestCase):
             self.assertEqual(len(errs := eid.validate_video_continuity(rp)), 1, errs)
 
 
+class TestBackendExemption(unittest.TestCase):
+    """Rule 5 screenshot gate is skipped for declared backend/no-Unity tasks
+    (spec_is_backend_task) — figma_node_spec_generator (2026-07-03)."""
+
+    def _spec(self, text: str) -> Path:
+        td = Path(tempfile.mkdtemp(prefix="hook_backend_")).resolve()
+        p = td / "SPEC.md"
+        p.write_text(text, encoding="utf-8")
+        return p
+
+    def test_detects_no_unity_scene_prefab(self):
+        self.assertTrue(eid.spec_is_backend_task(self._spec(
+            "Tier 2 — one Python script + unit tests, no Unity/scene/prefab changes.")))
+
+    def test_detects_no_assets_changes(self):
+        self.assertTrue(eid.spec_is_backend_task(self._spec(
+            "## Files\n- No `Assets/` changes. No Unity/scene/prefab edits.")))
+
+    def test_ui_task_reusing_prefabs_not_exempted(self):
+        # "no NEW prefab" / clone language must NOT trip the backend detector.
+        self.assertFalse(eid.spec_is_backend_task(self._spec(
+            "Reuse existing atoms; author no NEW prefab, clone the navy panel.")))
+
+    def test_plain_figma_ui_spec_not_exempted(self):
+        self.assertFalse(eid.spec_is_backend_task(self._spec(
+            "# Spec\nBuild the shop card from Figma node 13156:1232.")))
+
+    def _report_without_screenshot(self) -> Path:
+        td = Path(tempfile.mkdtemp(prefix="hook_backend_rep_")).resolve()
+        p = td / "IMPLEMENTER_REPORT.md"
+        p.write_text(textwrap.dedent("""\
+            # Implementer Report
+
+            ## Acceptance checklist
+
+            | Item | Result | Justification |
+            |---|---|---|
+            | 1. Generator emits valid spec.json | PASS | Round-trips JsonUtility; 12 unit tests green. |
+        """), encoding="utf-8")
+        return p
+
+    def test_require_screenshot_true_blocks_when_missing(self):
+        errs = eid.validate_report(self._report_without_screenshot(), require_screenshot=True)
+        self.assertTrue(any("Screenshot" in e for e in errs), errs)
+
+    def test_require_screenshot_false_allows_missing(self):
+        errs = eid.validate_report(self._report_without_screenshot(), require_screenshot=False)
+        self.assertEqual(errs, [], f"backend task should not require a screenshot; got {errs}")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

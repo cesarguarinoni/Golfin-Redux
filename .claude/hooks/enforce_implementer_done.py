@@ -242,6 +242,19 @@ FIGMA_FIDELITY_SECTION = "Figma fidelity"
 FIGMA_NODE_ID_RE = re.compile(r"\b\d{2,}[:\-]\d{2,}\b")
 # A direct Figma design URL — sufficient on its own to mark a Figma-node task.
 FIGMA_URL_RE = re.compile(r"figma\.com/(?:design|file)/", re.IGNORECASE)
+# Backend / no-Unity task marker (2026-07-03, figma_node_spec_generator). A
+# Tier-2 task that declares it touches NO Unity/scene/prefab — a pure Python
+# tool, data script, editor-less generator — has no Game View to capture, so the
+# Rule 5 screenshot gate and the Figma-reference-png gate do not apply. Detection
+# is DELIBERATELY narrow: it requires an explicit, high-specificity declaration
+# so a UI task that merely reuses existing prefabs ("no NEW prefab") is NOT
+# exempted. Only these exact opt-out phrasings match.
+BACKEND_TASK_RE = re.compile(
+    r"no\s+unity\s*/\s*scene\s*/\s*prefab"          # "no Unity/scene/prefab (changes|edits)"
+    r"|no\s+unity\s*,\s*scene\s*,?\s*(?:or\s+)?prefab"  # "no Unity, scene, or prefab"
+    r"|no\s+`?assets/`?\s+changes",                 # "No `Assets/` changes"
+    re.IGNORECASE,
+)
 
 # Rule 19 — clone-provenance gate. The tournament_round_loop signup-modal scar
 # (Cesar-approved 2026-06-28): the SPEC §0 REUSE MANDATE said clone the navy
@@ -383,8 +396,13 @@ def parse_table_rows(md: str, section_header: str) -> list[list[str]]:
     return rows[1:] if len(rows) >= 2 else []
 
 
-def validate_report(report_path: Path) -> list[str]:
-    """Return list of validation errors. Empty list = valid."""
+def validate_report(report_path: Path, require_screenshot: bool = True) -> list[str]:
+    """Return list of validation errors. Empty list = valid.
+
+    ``require_screenshot`` is False for declared backend/no-Unity tasks (see
+    spec_is_backend_task) — a headless tool has no Game View, so Rule 5's
+    '## Screenshot' + real-PNG requirement is skipped for it.
+    """
     errors = []
     if not report_path.exists():
         errors.append(f"IMPLEMENTER_REPORT.md not found at {report_path}")
@@ -436,43 +454,46 @@ def validate_report(report_path: Path) -> list[str]:
     # "Captured at: `path`" prefix but iter-4 of green_authoring uses
     # "Canonical frame for visual review: `path`" instead; the substantive rule
     # is "section exists AND first path under it points to a real file."
+    # Skipped entirely for declared backend/no-Unity tasks (require_screenshot
+    # False) — a headless Python tool / data script has no Game View to capture.
     ss_path = None
-    section_m = re.search(
-        r"^##\s+Screenshots?\b.*$",
-        content,
-        re.MULTILINE,
-    )
-    if not section_m:
-        errors.append(
-            "IMPLEMENTER_REPORT.md: '## Screenshot' (or 'Screenshots') section "
-            "missing. Add a section that names at least one canonical capture "
-            "as `screenshots/<file>.png`."
+    if require_screenshot:
+        section_m = re.search(
+            r"^##\s+Screenshots?\b.*$",
+            content,
+            re.MULTILINE,
         )
-    else:
-        section_text = content[section_m.end():]
-        next_h = re.search(r"^##\s+\S", section_text, re.MULTILINE)
-        section_text = section_text[: next_h.start()] if next_h else section_text
-        ss_in_section = re.search(r"`(screenshots/[^`]+)`", section_text)
-        if not ss_in_section:
+        if not section_m:
             errors.append(
-                "IMPLEMENTER_REPORT.md: '## Screenshot' section contains no "
-                "backticked `screenshots/<file>` path. Name the canonical frame."
+                "IMPLEMENTER_REPORT.md: '## Screenshot' (or 'Screenshots') section "
+                "missing. Add a section that names at least one canonical capture "
+                "as `screenshots/<file>.png`."
             )
         else:
-            ss_rel = ss_in_section.group(1).strip()
-            candidate = (report_path.parent / ss_rel).resolve()
-            if candidate.exists():
-                ss_path = candidate
+            section_text = content[section_m.end():]
+            next_h = re.search(r"^##\s+\S", section_text, re.MULTILINE)
+            section_text = section_text[: next_h.start()] if next_h else section_text
+            ss_in_section = re.search(r"`(screenshots/[^`]+)`", section_text)
+            if not ss_in_section:
+                errors.append(
+                    "IMPLEMENTER_REPORT.md: '## Screenshot' section contains no "
+                    "backticked `screenshots/<file>` path. Name the canonical frame."
+                )
             else:
-                alt = (REPO_ROOT / ss_rel).resolve()
-                if alt.exists():
-                    ss_path = alt
+                ss_rel = ss_in_section.group(1).strip()
+                candidate = (report_path.parent / ss_rel).resolve()
+                if candidate.exists():
+                    ss_path = candidate
                 else:
-                    errors.append(
-                        f"Screenshot path '{ss_rel}' does not point to an "
-                        f"actual file. Run python "
-                        f".claude/hooks/capture_screenshot.py <task> first."
-                    )
+                    alt = (REPO_ROOT / ss_rel).resolve()
+                    if alt.exists():
+                        ss_path = alt
+                    else:
+                        errors.append(
+                            f"Screenshot path '{ss_rel}' does not point to an "
+                            f"actual file. Run python "
+                            f".claude/hooks/capture_screenshot.py <task> first."
+                        )
 
     # Rule 6: screenshot must be recent.
     if ss_path is not None:
@@ -604,6 +625,22 @@ def spec_requires_figma_reference(spec_path: Path) -> bool:
 def figma_reference_present(task_dir: Path) -> bool:
     """True if screenshots/figma-reference.png exists in the task folder."""
     return (task_dir / "screenshots" / "figma-reference.png").exists()
+
+
+def spec_is_backend_task(spec_path: Path) -> bool:
+    """True when SPEC.md explicitly declares a backend / no-Unity task.
+
+    Such a task (a Python tool, data migration, editor-less generator) produces
+    no Game View, so the Rule 5 screenshot gate and the Figma-reference-png gate
+    are skipped for it. Detection is narrow by design (see BACKEND_TASK_RE): only
+    an explicit "no Unity/scene/prefab" or "No `Assets/` changes" declaration
+    qualifies, so a normal UI task can never accidentally exempt itself out of
+    the screenshot requirement.
+    """
+    if not spec_path.exists():
+        return False
+    text = spec_path.read_text(encoding="utf-8", errors="ignore")
+    return bool(BACKEND_TASK_RE.search(text))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1851,7 +1888,10 @@ def main() -> int:
         return 0
 
     # Rules 1-6 apply to both gating statuses.
-    errors = validate_report(report_path)
+    # Backend/no-Unity tasks (declared "no Unity/scene/prefab" / "No Assets/
+    # changes") have no Game View — skip the screenshot + figma-reference gates.
+    is_backend = spec_is_backend_task(spec_path)
+    errors = validate_report(report_path, require_screenshot=not is_backend)
 
     # Rule 7: only READY_FOR_SELF_REVIEW disallows open FAILs.
     # READY_FOR_ARCHITECT_REVIEW is the legitimate escalation path for tasks
@@ -1888,7 +1928,7 @@ def main() -> int:
     # If the Figma reference itself is ambiguous/broken, the implementer should
     # set STATUS to IMPLEMENTER_BLOCKED (per golfin-implementer.md Step 5a) and
     # surface to Cesar rather than reaching this hook.
-    if spec_requires_figma_reference(spec_path) and not figma_reference_present(task_dir):
+    if not is_backend and spec_requires_figma_reference(spec_path) and not figma_reference_present(task_dir):
         errors.append(
             "SPEC.md § Reference cites a Figma frame but "
             "screenshots/figma-reference.png is missing. Save the Figma frame "
