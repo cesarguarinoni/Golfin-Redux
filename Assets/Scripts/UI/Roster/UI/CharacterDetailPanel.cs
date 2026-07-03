@@ -301,7 +301,7 @@ namespace Golfin.Roster
                 levelUpButton.interactable = !atMax && canAfford;
             }
             if (boostButton != null)
-                boostButton.interactable = false; // until boost system exists
+                boostButton.interactable = true; // Order 517: StaminaShopSelection live
 
             // --- Select Button ---
             UpdateSelectButton(playerData.isSelected);
@@ -617,8 +617,10 @@ namespace Golfin.Roster
 
         private void OnBoostClicked()
         {
-            Debug.Log($"[CharacterDetailPanel] Boost clicked for {currentCharacterId}");
-            // Future: Open Experience Boost modal
+            Debug.Log(string.Format("[CharacterDetailPanel] Boost clicked for {0} — opening StaminaShopSelection", currentCharacterId));
+            // Order 517: set session character id, navigate to Shop Selection
+            GolfinRedux.UI.Shop.StaminaShopSession.SelectedCharacterId = currentCharacterId;
+            GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(GolfinRedux.UI.ScreenId.StaminaShopSelection);
         }
 
         private void OnCompareClicked()

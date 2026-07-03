@@ -19,7 +19,10 @@ namespace GolfinRedux.UI
         TournamentHoleSelection,
         TournamentLeaderboard,
         // T7 — Tournament Selection browse screen (Figma 13386:1758, Stage 0–1)
-        TournamentSelection
+        TournamentSelection,
+        // Order 517 — Stamina Boost Shop (Figma 13156:1178 + 13330:1139)
+        StaminaShopSelection,
+        StaminaShopDetail
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -47,6 +50,9 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _tournamentHoleSelectionScreen;
         [SerializeField] private GameObject _tournamentLeaderboardScreen;
         [SerializeField] private GameObject _tournamentSelectionScreen;
+        // Order 517 — Stamina Boost Shop screens
+        [SerializeField] private GameObject _staminaShopSelectionScreen;
+        [SerializeField] private GameObject _staminaShopDetailScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         [Header("Audio (Order 350)")]
@@ -163,6 +169,12 @@ namespace GolfinRedux.UI
             if (_tournamentSelectionScreen != null)
                 _tournamentSelectionScreen.SetActive(screenId == ScreenId.TournamentSelection);
 
+            // Order 517 — Stamina Boost Shop screens
+            if (_staminaShopSelectionScreen != null)
+                _staminaShopSelectionScreen.SetActive(screenId == ScreenId.StaminaShopSelection);
+            if (_staminaShopDetailScreen != null)
+                _staminaShopDetailScreen.SetActive(screenId == ScreenId.StaminaShopDetail);
+
             // Settings is an overlay (SettingsController), not managed here
 
             // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
@@ -175,7 +187,9 @@ namespace GolfinRedux.UI
                              || screenId == ScreenId.Leaderboard
                              || screenId == ScreenId.TournamentHoleSelection
                              || screenId == ScreenId.TournamentLeaderboard
-                             || screenId == ScreenId.TournamentSelection;
+                             || screenId == ScreenId.TournamentSelection
+                             || screenId == ScreenId.StaminaShopSelection
+                             || screenId == ScreenId.StaminaShopDetail;
             if (AudioManager.Instance != null)
             {
                 if (isMenuScreen && _mainThemeClip != null && !AudioManager.Instance.IsMusicPlaying())
@@ -193,7 +207,9 @@ namespace GolfinRedux.UI
                          || screenId == ScreenId.Leaderboard
                          || screenId == ScreenId.TournamentHoleSelection
                          || screenId == ScreenId.TournamentLeaderboard
-                         || screenId == ScreenId.TournamentSelection;
+                         || screenId == ScreenId.TournamentSelection
+                         || screenId == ScreenId.StaminaShopSelection
+                         || screenId == ScreenId.StaminaShopDetail;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
                 if (showBars)

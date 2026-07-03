@@ -274,6 +274,11 @@ namespace Golfin.UI
                     case GolfinRedux.UI.ScreenId.TournamentSelection:
                         usernameText.text = "TOURNAMENTS";
                         break;
+                    case GolfinRedux.UI.ScreenId.StaminaShopSelection:
+                        usernameText.text = "BOOST STAMINA";
+                        break;
+                    // StaminaShopDetail center text is set dynamically by StaminaShopDetailScreenController
+                    // via SetUsername(shopName) after navigating.
                     default:
                         usernameText.text = string.Empty;
                         break;
@@ -291,6 +296,9 @@ namespace Golfin.UI
                 case GolfinRedux.UI.ScreenId.TournamentHoleSelection: currentScreen = Screen.MainPlay; break;
                 case GolfinRedux.UI.ScreenId.TournamentLeaderboard:   currentScreen = Screen.MainPlay; break;
                 case GolfinRedux.UI.ScreenId.TournamentSelection:     currentScreen = Screen.MainPlay; break;
+                // Order 517 — Shop screens entered from Roster; keep Characters nav tab highlighted
+                case GolfinRedux.UI.ScreenId.StaminaShopSelection:  currentScreen = Screen.Characters; break;
+                case GolfinRedux.UI.ScreenId.StaminaShopDetail:     currentScreen = Screen.Characters; break;
                 default:
                     return; // Logo/Splash/Loading/Leaderboard: bars hidden or no nav highlight.
             }

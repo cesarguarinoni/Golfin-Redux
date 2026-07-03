@@ -117,8 +117,13 @@ namespace Golfin.Roster
             compareRightCompareButton?.onClick.AddListener(OnRightCompareClicked);
             compareRightSelectButton?.onClick.AddListener(OnRightSelectClicked);
             compareLevelUpButton?.onClick.AddListener(OnRightLevelUpClicked);
+            // Order 517: Boost button now opens StaminaShopSelection
             compareBoostButton?.onClick.AddListener(() =>
-                Debug.Log("[CompareController] Boost clicked (right column) — not yet implemented"));
+            {
+                Debug.Log("[CompareController] Boost clicked — opening StaminaShopSelection");
+                GolfinRedux.UI.Shop.StaminaShopSession.SelectedCharacterId = _rightCharacterId ?? string.Empty;
+                GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(GolfinRedux.UI.ScreenId.StaminaShopSelection);
+            });
         }
 
         private void OnEnable()
@@ -324,7 +329,7 @@ namespace Golfin.Roster
                 compareLevelUpButton.interactable = !atMax && canAfford;
             }
             if (compareBoostButton != null)
-                compareBoostButton.interactable = false; // not yet implemented
+                compareBoostButton.interactable = true; // Order 517: StaminaShopSelection live
 
             // Disable Compare button on right panel — already in compare mode
             if (compareRightCompareButton != null)

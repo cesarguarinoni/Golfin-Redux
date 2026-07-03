@@ -139,6 +139,43 @@ public static class StaminaRuntimeService
         pcd.conditionUpdatedUtc  = nowUtc;
     }
 
+    // ─── Order 517: Stamina top-up API ────────────────────────────────────────
+
+    /// <summary>
+    /// Instantly adds <paramref name="amount"/> stamina energy to <paramref name="pcd"/>'s
+    /// live Condition pool, clamped to maxStaminaEnergy.  Stamps conditionUpdatedUtc and
+    /// flushes to SaveData.
+    ///
+    /// LIVE pool ONLY.  Does NOT touch the tournament pool.
+    /// Does NOT modify maxStaminaEnergy.
+    /// </summary>
+    /// <param name="pcd">The character whose Condition pool is topped up.</param>
+    /// <param name="amount">Stamina energy to add (must be &gt; 0).</param>
+    public static void AddEnergy(PlayerCharacterData pcd, float amount)
+    {
+        if (pcd == null)
+        {
+            Debug.LogWarning("[StaminaRuntimeService] AddEnergy: pcd is null.");
+            return;
+        }
+        if (amount <= 0f)
+        {
+            Debug.LogWarning("[StaminaRuntimeService] AddEnergy: amount must be > 0.");
+            return;
+        }
+
+        pcd.currentStaminaEnergy = Mathf.Min(pcd.maxStaminaEnergy,
+                                              pcd.currentStaminaEnergy + amount);
+        pcd.conditionUpdatedUtc  = DateTime.UtcNow;
+
+        // Flush to SaveData.
+        if (!string.IsNullOrEmpty(pcd.characterId))
+            CharacterManager.Instance?.PersistCondition(pcd.characterId);
+
+        Debug.Log(string.Format("[StaminaRuntimeService] AddEnergy: char={0} +{1} -> {2:F1}/{3:F1}",
+            pcd.characterId, amount, pcd.currentStaminaEnergy, pcd.maxStaminaEnergy));
+    }
+
     // ─── Test helpers (UNITY_EDITOR / test assemblies only) ───────────────────
 
 #if UNITY_EDITOR
