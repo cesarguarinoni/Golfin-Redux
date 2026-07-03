@@ -38,6 +38,14 @@ Required when `SPEC.md` references a Figma node (Rule 18 — hook-enforced; dele
 | <e.g. Relocated map> | `<node>` | above Fade/Draw, image-only | <built value> | PASS / FAIL |
 | <...> | `<node>` | <...> | <...> | PASS / FAIL |
 
+## UI fidelity lint
+
+Required when `SPEC.md` references a Figma node (Rule 21 — hook-enforced; delete this section otherwise). Run `Golfin.EditorTools.UIFidelity.UIFidelityLinter.LintPrefab("Assets/…/X.prefab", "reference/nodes/X_spec.json")` (via `mcp__unity__script-execute`) on EVERY new/changed prefab. It writes `Docs/Diagnostics/_capture/<prefab>_lint.json`. Fix every FAIL until `fail == 0`, then cite each JSON below. Render-health catches oval pills / distorted radii / flat-fills with no reference; node-spec catches size/gap/radius/sprite/color/font off the node. Any `fail > 0` or an uncited/missing JSON blocks the transition.
+
+| Prefab | Lint JSON | fail | warn |
+|---|---|---|---|
+| <e.g. StaminaMenuRow.prefab> | `Docs/Diagnostics/_capture/StaminaMenuRow_lint.json` | 0 | <n> |
+
 ## Acceptance checklist (copy from SPEC.md, fill every line)
 
 | Item | Result | Justification |

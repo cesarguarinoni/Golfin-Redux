@@ -292,6 +292,22 @@ CLONE_NOT_FOUND_RE = re.compile(
     re.IGNORECASE,
 )
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Rule 21 — UI fidelity lint gate (stamina_boost_shop, Cesar-approved 2026-07-02).
+# The automated counterpart of Rules 16/18: for Figma-node UI tasks the objective
+# gate is a deterministic lint JSON, not a human reading a render. The
+# `Golfin.EditorTools.UIFidelity.UIFidelityLinter` (Assets/Editor/UIFidelity/)
+# instantiates each built prefab under a temp canvas and emits
+# `Docs/Diagnostics/_capture/<prefab>_lint.json` with a `fail` count covering
+# render-health (9-slice collapse→oval, non-9-slice corner distortion, flat-fill
+# fabrication, Outline-borders) + node-spec (size/gap/radius/sprite/color/font).
+# Every issue Cesar caught by eye on the menu row (oval pill, BUY radius, dark
+# tint, wrong gaps, flat fills) maps to a check here. IMPLEMENTER_REPORT.md must
+# carry a `## UI fidelity lint` section citing lint JSON(s), and each cited JSON
+# must exist with `fail == 0`. Missing/failing lint = hard block.
+UI_LINT_SECTION = "UI fidelity lint"
+UI_LINT_JSON_RE = re.compile(r"[\w./\-]+_lint\.json")
+
 
 def read_payload() -> dict:
     """Claude Code passes hook payload as JSON on stdin."""
@@ -1597,6 +1613,85 @@ def validate_clone_provenance(report_path: Path) -> list[str]:
     return errors
 
 
+def validate_ui_lint(report_path: Path, repo_root: Path) -> list[str]:
+    """Rule 21: a Figma-node UI task's IMPLEMENTER_REPORT.md must carry a
+    `## UI fidelity lint` section citing lint JSON artifact(s), and each cited
+    JSON must exist with `fail == 0`.
+
+    The lint JSON is produced by `UIFidelityLinter.LintPrefab` (run via Unity
+    MCP) — a deterministic render-health + node-spec pass over each built
+    prefab. This is the automated gate that would have caught, with no human
+    looking, the oval pill (9-slice collapse), the distorted BUY radius
+    (non-9-slice stretch), the dark-tinted panel, the wrong 16px gaps, and any
+    flat-fill fabrication. A prose fidelity table (Rule 18) says it LOOKS right;
+    this says the geometry/sprites objectively ARE right.
+
+    Structural checks (hard to fake):
+      - the `## UI fidelity lint` section exists,
+      - it references at least one `*_lint.json`,
+      - every referenced JSON exists (checked at the cited path and under
+        Docs/Diagnostics/_capture/) and parses with `fail == 0`.
+    """
+    errors: list[str] = []
+    if not report_path.exists():
+        return errors  # Rule 1 already errored on the missing report.
+    content = report_path.read_text(encoding="utf-8", errors="ignore")
+    section = _section_text(content, UI_LINT_SECTION)
+    if section is None:
+        errors.append(
+            "IMPLEMENTER_REPORT.md has no '## UI fidelity lint' section. The "
+            "task's SPEC references a Figma node, so every new/changed UI prefab "
+            "must be run through `UIFidelityLinter.LintPrefab(prefab, spec.json)` "
+            "(Assets/Editor/UIFidelity/) and this section must cite each "
+            "resulting `Docs/Diagnostics/_capture/<prefab>_lint.json` with "
+            "fail == 0. (Rule 21: the automated gate for the oval-pill / "
+            "BUY-radius / dark-tint / wrong-gap / flat-fill class of defects "
+            "Cesar had to catch by eye on stamina_boost_shop.)"
+        )
+        return errors
+    refs = UI_LINT_JSON_RE.findall(section)
+    if not refs:
+        errors.append(
+            "IMPLEMENTER_REPORT.md '## UI fidelity lint' section references no "
+            "`*_lint.json` artifact. Cite each prefab's lint JSON produced by "
+            "UIFidelityLinter (e.g. `Docs/Diagnostics/_capture/StaminaMenuRow_"
+            "lint.json`). (Rule 21.)"
+        )
+        return errors
+    for ref in refs:
+        candidates = [
+            repo_root / ref,
+            repo_root / "Docs" / "Diagnostics" / "_capture" / Path(ref).name,
+        ]
+        found = next((c for c in candidates if c.exists()), None)
+        if found is None:
+            errors.append(
+                f"IMPLEMENTER_REPORT.md '## UI fidelity lint' cites lint JSON "
+                f"'{ref}' but it does not exist (looked at the cited path and "
+                f"Docs/Diagnostics/_capture/). Run the linter and commit the "
+                f"artifact. (Rule 21.)"
+            )
+            continue
+        try:
+            data = json.loads(found.read_text(encoding="utf-8", errors="ignore"))
+            fail = int(data.get("fail", -1))
+        except Exception:
+            errors.append(
+                f"IMPLEMENTER_REPORT.md '## UI fidelity lint' cites lint JSON "
+                f"'{ref}' but it is unparseable / has no 'fail' field. Re-run "
+                f"UIFidelityLinter.LintPrefab. (Rule 21.)"
+            )
+            continue
+        if fail != 0:
+            errors.append(
+                f"UI fidelity lint '{found.name}' reports fail={fail} — the "
+                f"prefab has render-health or node-spec violations (see the "
+                f"findings in that JSON). Fix them until fail == 0 before moving "
+                f"to review. (Rule 21.)"
+            )
+    return errors
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Orchestrator.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1856,6 +1951,11 @@ def main() -> int:
     # vibe-match that let 1v1_ingame_ui ship with an explicit border token absent.
     if spec_references_figma_node(spec_path):
         errors.extend(validate_figma_fidelity(report_path, "IMPLEMENTER_REPORT.md"))
+        # Rule 21: the automated counterpart — each built prefab must pass the
+        # UIFidelityLinter (fail == 0), cited in a '## UI fidelity lint' section.
+        # Catches the oval-pill / BUY-radius / dark-tint / flat-fill class of
+        # defects deterministically, so Cesar stops being the visual gate.
+        errors.extend(validate_ui_lint(report_path, REPO_ROOT))
 
     # Rule 19: reuse-mandate UI tasks must carry a per-element Clone provenance
     # table proving each reused element came from a real source artifact — not a
