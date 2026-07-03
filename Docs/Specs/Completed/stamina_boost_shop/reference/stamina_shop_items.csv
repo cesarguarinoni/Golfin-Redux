@@ -1,0 +1,31 @@
+shop_id,item_order,tier,name,desc,stamina,rp_cost,item_img
+kageroh,1,HIGH,影牢 Signature,"House cocktail — gin, plum, smoked oak",60,255,menu_signature-kageroh
+kageroh,2,MEDIUM,山崎 Whisky Flight,"3-glass tasting — Yamazaki, Hibiki, Hakushu",40,200,menu_whisky-flight
+kageroh,3,LIGHT,自家製ジンジャー,"House ginger ale with fresh lime",20,115,menu_ginger-ale
+kamehachi,1,HIGH,味噌焼きうどん定食,"Teppan miso-yaki udon set with rice and miso soup",80,305,menu_kamehachi_high
+kamehachi,2,MEDIUM,焼肉ホルモン,"Sweet-miso grilled beef and offal with cabbage",55,250,menu_kamehachi_medium
+kamehachi,3,LIGHT,豚味噌焼き,"Single teppan portion of miso pork",30,155,menu_kamehachi_light
+komeda,1,HIGH,シロノワール,"Warm Danish topped with soft-serve",30,140,menu_komeda_high
+komeda,2,MEDIUM,カツパン,"Pork cutlet sandwich on thick-cut bread",20,110,menu_komeda_medium
+komeda,3,LIGHT,たっぷりブレンド,"Komeda's signature blended coffee",10,65,menu_komeda_light
+sushiro,1,HIGH,大トロ・うに盛り,"Premium fatty tuna and sea urchin",70,300,menu_sushiro_high
+sushiro,2,MEDIUM,まぐろ・サーモン,"Tuna and salmon nigiri set",45,225,menu_sushiro_medium
+sushiro,3,LIGHT,サーモン一皿,"Two-piece salmon plate",25,145,menu_sushiro_light
+ohsho,1,HIGH,炒飯・餃子セット,"Fried rice, gyoza and soup set",75,285,menu_ohsho_high
+ohsho,2,MEDIUM,天津飯,"Crab omelet over rice in savory sauce",50,225,menu_ohsho_medium
+ohsho,3,LIGHT,餃子,"Six pan-fried pork dumplings",30,155,menu_ohsho_light
+royalhost,1,HIGH,アンガスサーロインステーキ,"Grilled Angus sirloin with vegetables",55,235,menu_royalhost_high
+royalhost,2,MEDIUM,ハンバーグ,"Charcoal hamburg steak with demi-glace",40,200,menu_royalhost_medium
+royalhost,3,LIGHT,黒糖ミルクレープ,"Brown-sugar mille-crêpe with coffee",20,115,menu_royalhost_light
+cocoichi,1,HIGH,ロースカツカレー,"Pork-loin katsu curry, your spice level",60,255,menu_cocoichi_high
+cocoichi,2,MEDIUM,手仕込チキンカレー,"Half-chicken cutlet curry with rice",45,225,menu_cocoichi_medium
+cocoichi,3,LIGHT,ポークカレー,"Classic pork curry",25,145,menu_cocoichi_light
+starbucks,1,HIGH,キャラメルフラペチーノ,"Blended coffee with caramel and cream",35,165,menu_starbucks_high
+starbucks,2,MEDIUM,カフェラテ,"Espresso with steamed milk",25,140,menu_starbucks_medium
+starbucks,3,LIGHT,ドリップコーヒー,"Freshly brewed coffee of the day",15,95,menu_starbucks_light
+yakinikuking,1,HIGH,きんぐカルビ食べ放題,"Kalbi, tan and harami — all-you-can-grill",95,365,menu_yakinikuking_high
+yakinikuking,2,MEDIUM,特上カルビ,"Top-grade marbled short rib",70,315,menu_yakinikuking_medium
+yakinikuking,3,LIGHT,炙りにんにく塩タン,"Seared beef tongue with garlic salt",50,260,menu_yakinikuking_light
+misterdonut,1,HIGH,ポン・デ・リング セット,"Mochi-donut ring with coffee",25,115,menu_misterdonut_high
+misterdonut,2,MEDIUM,オールドファッション,"Crisp classic cake donut",15,85,menu_misterdonut_medium
+misterdonut,3,LIGHT,フレンチクルーラー,"Airy choux-pastry ring",10,65,menu_misterdonut_light

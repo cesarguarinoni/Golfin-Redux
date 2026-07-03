@@ -1,0 +1,64 @@
+=== iter-1 kickoff baseline ===
+HEAD: e471d456f34bc1a835779d07af8a8b88257f433d
+DIRTY:
+ M Docs/Specs/Active/stamina_boost_shop/STATUS.md
+?? Docs/Specs/Active/stamina_boost_shop/reference/frame_detail_13330.png
+?? Docs/Specs/Active/stamina_boost_shop/reference/frame_selection_13156.png
+?? Docs/Specs/Active/stamina_boost_shop/reference/stamina_shop_items.csv
+?? Docs/Specs/Active/stamina_boost_shop/reference/stamina_shops.csv
+=== end baseline ===
+2026-07-02T00:00:00 activated — reading SPEC, setting IMPLEMENTER_WORKING
+2026-07-02T01:00:00 Detail screen (13330:1139) pulled — key tokens extracted. Reading source files.
+2026-07-02T01:05:00 Source files read: StaminaRuntimeService, ScreenManager, TournamentSelectionCard, CharacterDetailPanel. Starting build.
+2026-07-02T16:07:00 Rule9 Figma pulls complete (13156:1178 + 13330:1139); entering play mode for canonical screenshots
+2026-07-02T16:20:00 MCP blocked — Unity showing modal save-scene dialog from SaveCurrentModifiedScenesIfUserWantsTo; need Cesar to click Save
+2026-07-02T16:35:00 CESAR STOP + orchestrator verify: screens built FROM SCRATCH (0 sprites, flat fills), NOT clones of TournamentSelectionScreen. Card reuses correct 5 Tournament sprite GUIDs but scaffold rewritten. Rule 11: 5 buttons / 0 ButtonPressFeedback on selection screen. Cesar directive: FULL RE-CLONE. Re-dispatching implementer with hard fail list.
+=== iter-2 kickoff baseline ===
+HEAD: e471d456f34bc1a835779d07af8a8b88257f433d
+DIRTY:
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/StaminaRuntimeService.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs
+ M Assets/Scripts/UI/Roster/UI/CompareController.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Docs/Specs/Active/stamina_boost_shop/STATUS.md
+?? Assets/Prefabs/UI/Shop/ (4 prefabs from iter-1 - ALL scratch-built, to be deleted+recloned)
+?? Assets/Resources/Data/stamina_shop_items.csv (iter-1, keep)
+?? Assets/Resources/Data/stamina_shops.csv (iter-1, keep)
+?? Assets/Scripts/UI/Shop/ (scripts from iter-1, keep modified)
+=== end baseline ===
+2026-07-02T07:00:00 iter-2 activated — reading SPEC + HEARTBEAT. Cesar FULL RE-CLONE directive. Deleting scratch-built prefabs; will genuinely clone TournamentSelectionScreen.prefab.
+2026-07-02T07:05:00 Figma node 13156:1178 pulled (selection screen) — key tokens confirmed from live node
+2026-07-02T07:10:00 Figma node 13330:1139 pulled (detail screen) — key tokens confirmed. Both Rule 9 nodes done. Starting genuine clone.
+2026-07-02T07:20:00 Prefabs cloned+rewired via PrefabUtility. Checking scene wiring.
+2026-07-02T08:00:00 Resuming — found ScreenManager on ShellSceneRoot (ID 50140944). Missing Prefab placeholders in scene. Destroying old GOs, instantiating genuine clone prefabs.
+2026-07-02T08:30:00 iter-2 complete — 8/8 AddEnergy tests PASS; clone provenance confirmed; multiple UI FAILs (panel height, tab labels, card tap broken, detail screen unbuilt). Writing report + setting READY_FOR_ARCHITECT_REVIEW.
+2026-07-02T08:31:00 done, awaiting review
+=== iter-3 kickoff baseline ===
+HEAD: e471d456f34bc1a835779d07af8a8b88257f433d
+DIRTY:
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/StaminaRuntimeService.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs
+ M Assets/Scripts/UI/Roster/UI/CompareController.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Docs/Specs/Active/stamina_boost_shop/STATUS.md
+?? Assets/Prefabs/UI/Shop/ (4 prefabs from iter-2 genuine clones)
+?? Assets/Resources/Data/stamina_shop_items.csv
+?? Assets/Resources/Data/stamina_shops.csv
+?? Assets/Scripts/UI/Shop/ (scripts from iters 1+2)
+=== end baseline ===
+2026-07-02T09:00:00 iter-3 activated — reading ARCHITECT_ANSWERS, both reference frames. Primary work: panel fill, tab strip, card wiring, detail screen, purchase flow.
+2026-07-02T16:18:53 Phase 2 start — adding header, pref tabs, card rename, wiring
+2026-07-02T19:07:00 BarsArea+RankingsArea anchors fixed (0,0→1,1), TabBar deactivated, scene saved
+2026-07-02T19:40:00 BarsArea fixed (LE.ignoreLayout=true), category label fixed, verification PASS. Taking screenshots.
+
+=== 2026-07-03 autonomous session (Cesar AFK ~2h) ===
+Built + gated (lint 0/0/0 + node pixel-diff) all shop components: StaminaMenuRow, HeroCard,
+InfoCard, MenuPanel(tall+CANCEL), CancelButton, ShopCard, RegionPill, PrefecturePill.
+Assembled StaminaShopDetailScreen + StaminaShopSelectionScreen prefabs (content layer).
+÷1.2 TMP font convention applied consistently. Figma-exported photos + Cesar's ★/📍 icons.
+Scene NOT saved (ShellScene M = pre-existing killed-agent drift, untouched by me).
+DEFERRED to play-mode/Cesar: controller<->prefab reconciliation, data binding, real-flow
+capture, ShellScene drift review. See IMPLEMENTER_REPORT.md Open items. STATUS stays
+IMPLEMENTER_WORKING (not review-ready until play-mode verification).

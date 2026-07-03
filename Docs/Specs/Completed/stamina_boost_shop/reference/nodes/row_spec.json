@@ -1,0 +1,14 @@
+{
+  "_note": "fontSize = Figma px ÷ 1.2 (shop TMP convention). w/h/radius are 1:1 Figma px.",
+  "elements": [
+    { "name": "Thumbnail",      "w": 124, "h": 124, "requireSprite": true, "radius": 22 },
+    { "name": "TierBadge",      "h": 28,  "requireSprite": true, "radius": 14 },
+    { "name": "BuyButton",      "w": 215, "h": 56, "requireSprite": true, "radius": 20 },
+    { "name": "RpPill",         "w": 215, "h": 56, "requireSprite": true },
+    { "name": "ItemNameLabel",  "fontSize": 23.3, "fontWeight": "Bold" },
+    { "name": "ItemDescLabel",  "fontSize": 15 },
+    { "name": "StaLabel",       "fontSize": 18.3 },
+    { "name": "RpCostLabel",    "fontSize": 28 },
+    { "name": "BuyButtonLabel", "fontSize": 32.5 }
+  ]
+}
