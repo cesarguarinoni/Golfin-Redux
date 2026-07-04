@@ -1,0 +1,14 @@
+{
+  "Menu Item: whisky-flight": null,
+  "Button Container": null,
+  "menu_whisky-flight": "Thumbnail",
+  "Tier Badge": "TierBadge",
+  "RP Container": "RpPill",
+  "Main Buttons": "BuyButton",
+  "RP Amount": "RpCostLabel",
+  "MEDIUM BOOST": "TierLabel",
+  "山崎 Whisky Flight": "ItemNameLabel",
+  "3-glass tasting — Yamazaki, Hibiki, Hakushu": "ItemDescLabel",
+  "+40 STA": "StaLabel",
+  "PRIMARY": "BuyButtonLabel"
+}

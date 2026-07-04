@@ -1,0 +1,119 @@
+2026-07-03T10:00:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: caf42fdfef7d3071f0647d86219279ec88a895f1
+DIRTY:
+R  Docs/Specs/Queued/figma_node_spec_generator/SPEC.md -> Docs/Specs/Active/figma_node_spec_generator/SPEC.md
+?? Docs/Specs/Active/figma_node_spec_generator/STATUS.md
+=== end baseline ===
+
+2026-07-03T10:01:00 reading SPEC.md and existing files; pulling Figma node 13330:1178
+2026-07-03T10:15:00 wrote figma_node_to_spec.py and test suite; all 94 tests pass
+2026-07-03T10:30:00 ran regression anchor; generated spec → 0 FAIL vs StaminaMenuRow.prefab
+2026-07-03T22:40:00 done, awaiting review
+
+=== iter-2 kickoff baseline ===
+HEAD: caf42fdfe chore(pipeline): Rule 5 screenshot gate — exempt declared backend/no-Unity tasks
+DIRTY:
+RM Docs/Specs/Queued/figma_node_spec_generator/SPEC.md -> Docs/Specs/Active/figma_node_spec_generator/SPEC.md
+?? Docs/Scripts/figma_node_to_spec.py
+?? Docs/Scripts/tests/
+?? Docs/Specs/Active/figma_node_spec_generator/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/HEARTBEAT.log
+?? Docs/Specs/Active/figma_node_spec_generator/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/figma_node_spec_generator/REDTEAM_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/SELF_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/STATUS.md
+?? Docs/Specs/Active/figma_node_spec_generator/reference/
+=== end baseline ===
+
+2026-07-03T23:30:00 iter-2 activated; reading spec and existing fixtures
+2026-07-03T21:28:47 regression anchor complete: 142 tests PASS, requireSprite decisions match row_spec.json, original spec lint fail=0; img-child bug fixed (radius branch now fires for RpPill SOLID+radius, not IMAGE)
+2026-07-03T21:32:54 report written, 142 tests confirmed PASS, setting READY_FOR_SELF_REVIEW
+2026-07-04T00:00:00 === iter-3 kickoff baseline HEAD=caf42fdfef7d3071f0647d86219279ec88a895f1 DIRTY=RM Docs/Specs/Queued/figma_node_spec_generator/SPEC.md -> Docs/Specs/Active/figma_node_spec_generator/SPEC.md; ?? Docs/Scripts/figma_node_to_spec.py; ?? Docs/Scripts/tests/test_figma_node_to_spec.py; ?? Docs/Specs/Active/figma_node_spec_generator/* ===
+2026-07-04T00:01:00 activated — reading spec and analyzer output for iter-3 surgical fix
+2026-07-04T07:09:00 iter-3 done: 159/159 tests pass, linter fail:0, writing report
+2026-07-04T07:10:49 done, awaiting review
+2026-07-04T08:00:00 iter-4 activated — fixing div-wrapped text font extraction
+
+=== iter-4 kickoff baseline ===
+caf42fdfe chore(pipeline): Rule 5 screenshot gate — exempt declared backend/no-Unity tasks
+DIRTY:
+RM Docs/Specs/Queued/figma_node_spec_generator/SPEC.md -> Docs/Specs/Active/figma_node_spec_generator/SPEC.md
+?? Docs/Scripts/figma_node_to_spec.py
+?? Docs/Scripts/tests/
+?? Docs/Specs/Active/figma_node_spec_generator/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/HEARTBEAT.log
+?? Docs/Specs/Active/figma_node_spec_generator/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/figma_node_spec_generator/REDTEAM_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/SELF_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/STATUS.md
+?? Docs/Specs/Active/figma_node_spec_generator/StaminaMenuRow_emitted_spec_lint.json
+?? Docs/Specs/Active/figma_node_spec_generator/StaminaMenuRow_original_spec_lint.json
+?? Docs/Specs/Active/figma_node_spec_generator/reference/
+=== end baseline ===
+2026-07-04T08:15:00 done, awaiting review — 166/166 tests pass, BuyButtonLabel 32.5/SemiBold, fail:0 lint
+
+=== iter-5 kickoff baseline ===
+HEAD: caf42fdfe chore(pipeline): Rule 5 screenshot gate — exempt declared backend/no-Unity tasks
+DIRTY:
+RM Docs/Specs/Queued/figma_node_spec_generator/SPEC.md -> Docs/Specs/Active/figma_node_spec_generator/SPEC.md
+?? Docs/Scripts/figma_node_to_spec.py
+?? Docs/Scripts/tests/
+?? Docs/Specs/Active/figma_node_spec_generator/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/HEARTBEAT.log
+?? Docs/Specs/Active/figma_node_spec_generator/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/figma_node_spec_generator/REDTEAM_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/SELF_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/STATUS.md
+?? Docs/Specs/Active/figma_node_spec_generator/StaminaMenuRow_emitted_spec_lint.json
+?? Docs/Specs/Active/figma_node_spec_generator/StaminaMenuRow_original_spec_lint.json
+?? Docs/Specs/Active/figma_node_spec_generator/reference/
+=== end baseline ===
+2026-07-04T08:30:00 iter-5 activated — fixing metadata-only shape node requireSprite false-negative
+2026-07-04T09:10:00 iter-5 fix complete: D6 guard in parse_figma_dumps + _decide_require_sprite; 173/173 tests PASS; byte-identical regen confirmed
+2026-07-04T09:15:00 done, awaiting review
+
+=== iter-6 kickoff baseline ===
+HEAD: caf42fdfef7d3071f0647d86219279ec88a895f1
+DIRTY:
+RM Docs/Specs/Queued/figma_node_spec_generator/SPEC.md -> Docs/Specs/Active/figma_node_spec_generator/SPEC.md
+?? Docs/Scripts/figma_node_to_spec.py
+?? Docs/Scripts/tests/test_figma_node_to_spec.py
+?? Docs/Specs/Active/figma_node_spec_generator/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/HEARTBEAT.log
+?? Docs/Specs/Active/figma_node_spec_generator/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/figma_node_spec_generator/REDTEAM_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/SELF_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/STATUS.md
+?? Docs/Specs/Active/figma_node_spec_generator/StaminaMenuRow_emitted_spec_lint.json
+?? Docs/Specs/Active/figma_node_spec_generator/StaminaMenuRow_original_spec_lint.json
+?? Docs/Specs/Active/figma_node_spec_generator/reference/nodes/menu_row_13330-1178_context.jsx
+?? Docs/Specs/Active/figma_node_spec_generator/reference/nodes/menu_row_13330-1178_metadata.xml
+?? Docs/Specs/Active/figma_node_spec_generator/reference/nodes/menu_row_emitted_spec.json
+?? Docs/Specs/Active/figma_node_spec_generator/reference/nodes/selection_card_13156-1232_context.jsx
+?? Docs/Specs/Active/figma_node_spec_generator/reference/nodes/selection_card_13156-1232_metadata.xml
+?? Docs/Specs/Active/figma_node_spec_generator/reference/nodes/stamina_menu_row_name_map.json
+=== end baseline ===
+2026-07-04T06:05:47 iter-6 activated — generalizing D6 guard from 3-type enumeration to exclude-list
+2026-07-04T08:15:00 iter-6 done: 180/180 tests pass (173 existing + 7 new), byte-identical anchor regen, fail:0 lint confirmed; writing report
+2026-07-04T08:20:00 done, awaiting review
+
+=== iter-7 kickoff baseline ===
+HEAD: caf42fdfef7d3071f0647d86219279ec88a895f1
+DIRTY:
+RM Docs/Specs/Queued/figma_node_spec_generator/SPEC.md -> Docs/Specs/Active/figma_node_spec_generator/SPEC.md
+?? Docs/Scripts/figma_node_to_spec.py
+?? Docs/Scripts/tests/test_figma_node_to_spec.py
+?? Docs/Specs/Active/figma_node_spec_generator/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/HEARTBEAT.log
+?? Docs/Specs/Active/figma_node_spec_generator/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/figma_node_spec_generator/REDTEAM_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/SELF_REVIEW.md
+?? Docs/Specs/Active/figma_node_spec_generator/STATUS.md
+?? Docs/Specs/Active/figma_node_spec_generator/StaminaMenuRow_emitted_spec_lint.json
+?? Docs/Specs/Active/figma_node_spec_generator/StaminaMenuRow_original_spec_lint.json
+?? Docs/Specs/Active/figma_node_spec_generator/reference/nodes/
+=== end baseline ===
+2026-07-04T08:30:00 iter-7 activated — narrowing _NON_GRAPHIC_CONTAINER_TYPES exclude-list, adding 3 positive tests
+2026-07-04T08:50:00 done, awaiting review

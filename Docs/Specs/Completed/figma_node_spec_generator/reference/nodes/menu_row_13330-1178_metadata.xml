@@ -1,0 +1,31 @@
+<!-- REAL get_metadata dump — node 13330:1178, file 5gEAHjl6xAtW8iYY7NMvWd. Captured 2026-07-03 by architect (Claude Code) as the Option-B parser ground-truth fixture. Structured geometry: node id, type, name, exact px x/y/w/h, hierarchy. Join to the JSX dump (menu_row_13330-1178_context.jsx) on node id. -->
+<frame id="13330:1178" name="Menu Item: whisky-flight" x="16" y="174" width="994" height="160">
+  <frame id="13330:1179" name="Frame" x="4" y="4" width="1018" height="152" />
+  <frame id="13330:1180" name="menu_whisky-flight" x="20" y="18" width="124" height="124" />
+  <frame id="13330:1181" name="Frame 10" x="168" y="18" width="500" height="130">
+    <text id="13330:1184" name="山崎 Whisky Flight" x="0" y="38" width="248" height="34" />
+    <text id="13330:1185" name="3-glass tasting — Yamazaki, Hibiki, Hakushu" x="0" y="76" width="500" height="24" />
+    <frame id="13330:1186" name="Frame" x="0" y="104" width="124.5" height="26">
+      <frame id="13330:1187" name="Frame 8" x="0" y="1.75" width="27.5" height="22.5" />
+      <text id="13330:1188" name="+40 STA" x="33.5" y="0" width="91" height="26" />
+    </frame>
+    <frame id="13330:1401" name="Tier Badge" x="0" y="0" width="147" height="27">
+      <text id="13330:1402" name="MEDIUM BOOST" x="12" y="4" width="123" height="19" />
+    </frame>
+  </frame>
+  <frame id="13330:1189" name="Frame 9" x="763" y="19" width="215" height="121">
+    <frame id="13330:1190" name="RP Container" x="0" y="0" width="215" height="56">
+      <frame id="13330:1191" name="RP Icon Container" x="8.615385055541992" y="7.3230767250061035" width="41.35384750366211" height="41.35384750366211">
+        <rounded-rectangle id="13330:1192" name="RP Icon" x="0" y="0" width="41.35384750366211" height="41.35384750366211" />
+      </frame>
+      <text id="13330:1193" name="RP Amount" x="49.96923065185547" y="6.030769348144531" width="165.41539001464844" height="47" />
+    </frame>
+    <frame id="13330:1194" name="Main Buttons" x="0" y="65" width="215" height="56">
+      <frame id="13330:1195" name="Button Container" x="0" y="1" width="215" height="54">
+        <vector id="13330:1196" name="Ellipse 2" x="42.0588264465332" y="21.15625" width="130.88912963867188" height="32.849998474121094" />
+        <text id="13330:1197" name="PRIMARY" x="67" y="0" width="81" height="54" />
+        <rounded-rectangle id="13330:1198" name="Sheen" x="0" y="0" width="215" height="27.89999771118164" />
+      </frame>
+    </frame>
+  </frame>
+</frame>

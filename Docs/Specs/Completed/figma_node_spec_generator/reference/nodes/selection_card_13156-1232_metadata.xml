@@ -1,0 +1,31 @@
+<!-- REAL get_metadata dump — node 13156:1232, file 5gEAHjl6xAtW8iYY7NMvWd. Captured 2026-07-03 by implementer (iter-2) as the Option-B second regression fixture. Structured geometry: node id, type, name, exact px x/y/w/h, hierarchy. Join to the JSX dump (selection_card_13156-1232_context.jsx) on node id. -->
+<frame id="13156:1232" name="Card: kageroh" x="48" y="0" width="978" height="360">
+  <frame id="13156:1233" name="Frame" x="6" y="6" width="966" height="348" />
+  <frame id="13156:1234" name="storefront_kageroh" x="30" y="40" width="260" height="280" />
+  <text id="13156:1235" name="COCKTAIL BAR • KAMEYAMA, MIE" x="315" y="42" width="392" height="28" />
+  <text id="13156:1236" name="Bar&amp;Lounge 影牢" x="315" y="76" width="349" height="50" />
+  <text id="13156:1237" name="Late-night cocktails and Japanese whisky" x="315" y="142" width="432" height="26" />
+  <frame id="13156:1238" name="Hours + Map" x="315" y="182" width="366" height="26">
+    <text id="13156:1239" name="18:00 – 02:00" x="0" y="0" width="148" height="26" />
+    <text id="13156:1240" name="—" x="160" y="0" width="17" height="26" />
+    <text id="13156:1241" name="📍" x="189" y="3" width="20" height="20" />
+    <text id="13156:1242" name="View on Maps" x="221" y="0" width="145" height="26" />
+  </frame>
+  <frame id="13156:1243" name="Daily Bonus" x="315" y="222" width="367.25" height="38">
+    <frame id="13156:1244" name="Frame 8" x="14" y="6.625" width="30.25" height="24.75" />
+    <text id="13156:1245" name="Daily Bonus +15% Recovery" x="54.25" y="6" width="297" height="26" />
+  </frame>
+  <line id="13156:1246" name="Separator" x="315" y="285" width="560" height="0" />
+  <text id="13156:1247" name="+20 / +60 STA" x="362.75" y="300" width="223" height="38" />
+  <frame id="13156:1248" name="RP Container" x="600" y="292" width="200" height="52">
+    <frame id="13156:1249" name="RP Icon Container" x="8" y="6.8" width="38.4" height="38.4">
+      <rounded-rectangle id="13156:1250" name="RP Icon" x="0" y="0" width="38.4" height="38.4" />
+    </frame>
+    <text id="13156:1251" name="RP Amount" x="46.4" y="5.6" width="153.6" height="44" />
+  </frame>
+  <text id="13156:1252" name="›" x="900" y="130" width="28" height="95" />
+  <frame id="13156:1253" name="Frame" x="768" y="24" width="180" height="44">
+    <text id="13156:1254" name="★ FEATURED" x="25" y="10" width="130" height="24" />
+  </frame>
+  <frame id="13156:1255" name="Frame 8" x="315" y="306" width="35.75" height="29.25" />
+</frame>

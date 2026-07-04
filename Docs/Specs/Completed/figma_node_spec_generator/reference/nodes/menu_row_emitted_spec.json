@@ -1,0 +1,104 @@
+{
+  "elements": [
+    {
+      "name": "Thumbnail",
+      "w": 124.0,
+      "h": 124.0,
+      "radius": 22.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "ItemNameLabel",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#FFFFFF",
+      "fontSize": 23.3,
+      "fontWeight": "Bold"
+    },
+    {
+      "name": "ItemDescLabel",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#C7D6EB",
+      "fontSize": 15.0,
+      "fontWeight": "Regular"
+    },
+    {
+      "name": "StaLabel",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#73E080",
+      "fontSize": 18.3,
+      "fontWeight": "Bold"
+    },
+    {
+      "name": "TierBadge",
+      "w": 147.0,
+      "h": 27.0,
+      "radius": 14.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "TierLabel",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": 13.3,
+      "fontWeight": "Bold"
+    },
+    {
+      "name": "RpPill",
+      "w": 215.0,
+      "h": 56.0,
+      "radius": 43.077,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "RpCostLabel",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#FFFFFF",
+      "fontSize": 28.0,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "BuyButton",
+      "w": 215.0,
+      "h": 56.0,
+      "radius": 20.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "BuyButtonLabel",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": 32.5,
+      "fontWeight": "SemiBold"
+    }
+  ]
+}
