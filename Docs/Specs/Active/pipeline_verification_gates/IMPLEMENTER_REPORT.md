@@ -207,3 +207,16 @@ The red-team defeated the reframe's one hard signal: `_parse_prefab_gameobject_s
 **Fix:** attribute `m_Sprite` ONLY to a genuine `UnityEngine.UI.Image` component (identified by its `m_Script` guid `fae92b0f6c46b52459d9309c0d1f6d0b`); other MonoBehaviours' serialized Sprite fields are ignored.
 
 **Verified:** suite **118 passed** (+`test_A5h_decoy_component_does_not_mask_null_image`; fixtures updated to real Image guid). E2E through the production `validate_clone_provenance_yaml`: a null-sprite Image + decoy sibling carrying a real `m_Sprite` → **CRITICAL FAIL** (was PASS). The "unfakeable, pure-Python" claim in RESOLUTION.md/§15 is now accurate.
+
+---
+
+## iter-8 (main thread) — correct Image guid + null-wins + real-prefab test (red-team iter-7 fix)
+
+**My iter-7 bug (honest):** I hardcoded `_IMAGE_SCRIPT_GUID = fae92b0f…`, which appears in ZERO project prefabs — I'd "verified" it with a broken shell test (`grep … | head && echo` runs the echo regardless of a match), i.e. I trusted an unverified fact on the anti-fabrication task itself. The parser matched no real Image → returned `{}` for the real card → white boxes PASSED. 118 green proved nothing because every fixture used the phantom guid (a self-consistent bubble).
+
+**Fixes:**
+1. Correct guid `fe87c0e1cc204ed48ad3b37840f39efc` (verified against real prefabs via `m_EditorClassIdentifier: UnityEngine.UI.Image`), PLUS a class-name fallback (`_IMAGE_CLASS_RE`) so a guid change / subclass still matches.
+2. **NULL WINS** (red-team attack V3): a GameObject with a null-sprite Image stays null even if a second Image on the same GO carries a real sprite — the fabrication signature can't be overwritten.
+3. **Real-prefab regression test** `test_A5i_real_prefab_images_resolve_sprites`: parses the actual `GeneralShopCard.prefab` and asserts `CardBorder`/`BadgePill` resolve to real sprite guids — the missing coverage that would have caught the phantom guid (synthetic-only fixtures hid it).
+
+**Verified:** suite **119 passed**. E2E via production `validate_clone_provenance_yaml`: 5 white-box variants (plain / decoy-after / decoy-before / two-Image null+real / real+null) all → **CRITICAL FAIL**; real GeneralShopCard reuse still resolves sprites.

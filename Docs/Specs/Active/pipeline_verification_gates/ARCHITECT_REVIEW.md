@@ -699,3 +699,96 @@ Image's null sprite. Options (any one closes it):
 ## Housekeeping
 - `.claude/review_misses.log` carries the REDTEAM-HOLE entry (2026-07-06) + prior `_log_p1_miss` appends
   fired during my block-path checks. Working tree has no scene/prefab drift from this review.
+
+---
+
+# RED-TEAM REVIEW (iter-7, adversarial gate) — 2026-07-06 11:51 CEST
+
+**Reviewer:** golfin-redteam-reviewer · **STATUS at review:** READY_FOR_REDTEAM · **HEAD:** `c7e17fd93`
+**Verdict:** `ARCHITECT_REVIEW_FAIL` — a genuine fidelity hole. The iter-7 "fix" hardcodes the WRONG
+Image script guid, so the hard null-sprite fabrication signal is **inert against every real project
+prefab**. The exact 610/tournament/stamina white-box (null-sprite Image, source carries a sprite) PASSES.
+
+## What I re-ran myself (not re-read)
+- `python3 -m pytest -q` → **118 passed** (green, as claimed).
+- `pytest -v -k LiveEditorIntegration` → 3 **PASSED, not skipped** (editor reachable at localhost:21573;
+  MATCH / MISMATCH / INSUFFICIENT all discriminate). Live check is sound — but it only ever drives a WARN
+  in the reframed logic, so it is not the hard gate.
+- Built my own adversarial fixtures and drove them through the production `validate_clone_provenance_yaml`
+  (`scratchpad/attack.py`, `attack3.py`, `attack4.py`), plus parsed the REAL `GeneralShopCard.prefab`.
+
+## THE BLOCKER — the hard null-sprite signal is inert against real project prefabs (unfaithful result PASSES)
+
+iter-7's fix (report §iter-7): attribute `m_Sprite` ONLY to a genuine Image, identified by
+`_IMAGE_SCRIPT_GUID = "fae92b0f6c46b52459d9309c0d1f6d0b"`. **That guid is not the Image script guid in
+this project.** Verified facts:
+
+- `grep -rl "guid: fae92b0f6c46b52459d9309c0d1f6d0b" Assets --include=*.prefab` → **0 files**. The
+  hardcoded guid appears **nowhere** in `Assets/` — only in the hooks' own test fixtures.
+- The real `UnityEngine.UI.Image` in this project is guid **`fe87c0e1cc204ed48ad3b37840f39efc`** — proven
+  by `m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image` sitting on that `m_Script` block in
+  `GeneralShopCard.prefab` (line 72–74). It is used by **89 prefabs**.
+- **This is the exact guid the iter-6 red-team told the implementer to use** (ARCHITECT_REVIEW.md line 691:
+  "the Image script guid `fe87c0e1cc204ed48ad3b37840f39efc`"). iter-7 pasted a different, phantom guid.
+
+Consequences, all reproduced against the SHIPPING code:
+
+1. `_parse_prefab_gameobject_sprites(GeneralShopCard.prefab)` → **`{}`** (empty). The parser attributes a
+   sprite to **ZERO** GameObjects on the real card. `BadgePill` → `None`, `CardBorder` → `None`
+   (`attack3.py`), even though `BadgePill` carries a real Image + real sprite `bb07d102…` (line 379/424/433).
+2. **The 610 scar PASSES** (`attack4.py`): a white-box null-sprite `BadgePill` built with the project's
+   REAL Image guid, against a source whose `BadgePill` carries a real sprite →
+   **`PASSED-THROUGH (only WARN)`**: *"P1 WARN (sprite-less, unverifiable lineage)"*. It does **NOT**
+   CRITICAL FAIL. The source is parsed by the same broken parser, so it also reads `None`, and the
+   `built null AND source has sprite` signature can never fire on real prefabs — it collapses into the
+   sprite-less WARN branch. **An unfaithful result passes the hard gate.** That is a hard fidelity hole.
+3. Independently, even with the *correct* guid the masking is only relocated, not removed: two
+   Image-guid `!u!114` blocks on one GO still last-write-wins (`attack.py` V3 → PASSED-THROUGH), so the
+   fix as designed is also structurally incomplete (the null Image must WIN the attribution, not lose it).
+
+Passing tests (A1, A5h, 118 green) prove nothing about production: every fixture uses the phantom
+`fae92b0f…` guid, so the suite validates the parser in a self-consistent bubble that never touches the
+real project guid. iter-7 traded a decoy-line hole for a guaranteed-inert-against-real-prefabs hole.
+
+## Attack results (mandated list)
+1. Suite 118 green; 3 live tests RUN. ✅ (but the live path is only a WARN, not the hard gate.)
+2. iter-6 decoy end-to-end through production → **now CRITICAL FAILs** with the *test* guid (V0). ✅ for
+   the synthetic case — but irrelevant to production because of #3.
+3. New null-sprite masking variants (`attack.py`): V0/V1/V2/V4/V5 → CRITICAL-FIRED (good);
+   **V3 (two Image-guid components, last-write-wins) → PASSED-THROUGH (BYPASS).** And the whole class is
+   moot in production because the guid filter matches nothing real (`attack3`/`attack4`). ❌ HARD FAIL.
+4. Regression: real `BadgePill`/`CardBorder` with real sprites are NOT falsely blocked — but only because
+   they read as `None` → sprite-less WARN, i.e. for the *wrong reason*. Faithful and fabricated both land
+   in the same WARN branch, which is the disease, not a clean bill.
+5. P8 C9/C10 / P2 fail-closed text still present (line 2075) — but P8 render-health flags a null-sprite
+   Image as a **WARN** only, and RESOLUTION.md/§15 explicitly assign the null-sprite HARD signal to P1.
+   The backstop does not rescue this.
+
+## Three break-attempts — could I make an unfaithful result pass? YES.
+- **Visual/fabrication:** null-sprite `BadgePill` with the real project Image guid → PASSES as WARN
+  (`attack4.py`). The core scar. FAIL.
+- **Geometric/parser:** duplicate Image-guid blocks last-write-wins (`attack.py` V3) → PASSES. FAIL.
+- **Spec-intent:** RESOLUTION.md's central promise — "hard-fail only the unfakeable null-sprite
+  signature" — is unmet: that signature never fires on any real project prefab. The reframe's one hard
+  guarantee is inert. FAIL.
+
+## Fix instruction (implementer)
+1. Replace `_IMAGE_SCRIPT_GUID = "fae92b0f6c46b52459d9309c0d1f6d0b"` with the project's real Image guid
+   **`fe87c0e1cc204ed48ad3b37840f39efc`** (verify via `m_EditorClassIdentifier: …UnityEngine.UI.Image`;
+   used by 89 prefabs). Better: accept a block as an Image when its `m_EditorClassIdentifier` ends in
+   `UnityEngine.UI.Image` OR its script guid == that guid — do not depend on a single hardcoded guid that
+   can silently drift and re-inert the check.
+2. Make the **null Image WIN** the attribution: if a GO has ANY genuine Image with a null/blank sprite,
+   the element is null-sprite (fabrication) regardless of a sprite on a sibling / second Image-guid block.
+   A null primary Image renders a white box no matter what a sibling holds.
+3. **Add a REAL-PREFAB regression test** (the missing coverage that let this ship): parse the real
+   `Assets/Prefabs/UI/Shop/GeneralShopCard.prefab` and assert `BadgePill`/`CardBorder` resolve to their
+   real sprite guids (non-empty) — NOT `None`. Any test that only uses a synthetic guid is a bubble.
+4. Add `test_A5i_duplicate_image_block_null_wins` (V3): two Image-guid `!u!114` on one GO, one null →
+   CRITICAL FAIL.
+
+## Housekeeping (iter-7)
+- Logged to `.claude/review_misses.log`: `REDTEAM-HOLE 2026-07-06 pipeline_verification_gates iter-7 —
+  hard null-sprite signal inert (wrong Image guid fae92b0f…; real is fe87c0e1…); 610 white-box PASSES`.
+- Read-only review: no scene/prefab/code mutation. Scratchpad harnesses at
+  `…/scratchpad/attack*.py` (temp, outside repo).

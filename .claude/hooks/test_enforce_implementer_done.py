@@ -1208,7 +1208,7 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             --- !u!114 &300
             MonoBehaviour:
               m_GameObject: {{fileID: 100}}
-              m_Script: {{fileID: 11500000, guid: fae92b0f6c46b52459d9309c0d1f6d0b, type: 3}}
+              m_Script: {{fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}}
               {real_sprite}
         """)
 
@@ -1223,7 +1223,7 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             --- !u!114 &300
             MonoBehaviour:
               m_GameObject: {fileID: 100}
-              m_Script: {fileID: 11500000, guid: fae92b0f6c46b52459d9309c0d1f6d0b, type: 3}
+              m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
               m_Sprite: {fileID: 0, guid: , type: 0}
         """)
 
@@ -1238,7 +1238,7 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             --- !u!114 &300
             MonoBehaviour:
               m_GameObject: {{fileID: 100}}
-              m_Script: {{fileID: 11500000, guid: fae92b0f6c46b52459d9309c0d1f6d0b, type: 3}}
+              m_Script: {{fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}}
               m_Sprite: {{fileID: 21300000, guid: {sprite_guid}, type: 3}}
         """)
 
@@ -1828,7 +1828,7 @@ class TestCloneProvenanceYAML(unittest.TestCase):
         self.assertIn(self._SOURCE_GUID, guids)
         self.assertNotIn("00000000000000000000000000000000", guids)
 
-    _IMAGE_GUID = "fae92b0f6c46b52459d9309c0d1f6d0b"
+    _IMAGE_GUID = "fe87c0e1cc204ed48ad3b37840f39efc"
 
     def test_A5g_parse_prefab_gameobject_sprites_null_vs_real(self):
         """A5g — _parse_prefab_gameobject_sprites returns '' (empty str) for a
@@ -1885,6 +1885,26 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             "(the white-box fabrication signature). Got: "
             f"{sprites.get('WhiteBox')!r}",
         )
+
+    def test_A5i_real_prefab_images_resolve_sprites(self):
+        """A5i (red-team iter-7) — REGRESSION against the REAL project prefab, not a
+        synthetic fixture. A phantom Image m_Script guid made the parser return {}
+        for the shipped card while the synthetic-fixture suite stayed green (a
+        self-consistent bubble). Assert the real GeneralShopCard's Image elements
+        resolve to NON-EMPTY sprite guids — this test would have caught the bug."""
+        repo = Path(eid.__file__).resolve().parents[2]
+        card = repo / "Assets" / "Prefabs" / "UI" / "Shop" / "GeneralShopCard.prefab"
+        if not card.exists():
+            self.skipTest("GeneralShopCard.prefab not present")
+        sprites = eid._parse_prefab_gameobject_sprites(
+            card.read_text(encoding="utf-8", errors="ignore")
+        )
+        for elem in ("CardBorder", "BadgePill"):
+            self.assertTrue(
+                sprites.get(elem),  # non-None and non-empty
+                f"Real prefab element '{elem}' must resolve to a real sprite guid via "
+                f"the parser (phantom-Image-guid regression). Got: {sprites.get(elem)!r}",
+            )
 
 
 class TestValidateUILintLiveRerun(unittest.TestCase):
