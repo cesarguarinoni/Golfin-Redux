@@ -401,8 +401,8 @@ namespace Golfin.Gameplay.Tests
             Assert.IsNotNull(data);
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
 
-            Assert.AreEqual(5, data!.schemaVersion,
-                "Post-migration schemaVersion must be 5 (Phase 3 bumped CurrentSchemaVersion to 5)");
+            Assert.AreEqual(6, data!.schemaVersion,
+                "Post-migration schemaVersion must be 6 (Order 610 Phase A bumped CurrentSchemaVersion to 6)");
             Assert.AreEqual(0f, data.ownedCharacters[0].conditionEnergy, delta: 0.001f,
                 "conditionEnergy defaults to 0f for pre-v4 saves");
             Assert.AreEqual("", data.ownedCharacters[0].conditionUpdatedUtc,
@@ -410,17 +410,17 @@ namespace Golfin.Gameplay.Tests
         }
 
         [Test]
-        public void T6_FailHard_V6_ThrowsSaveSchemaVersionException()
+        public void T6_FailHard_V7_ThrowsSaveSchemaVersionException()
         {
-            // NOTE (Phase 3): v5 is now the CURRENT version — it is legal and must NOT throw.
-            // The fail-hard gate now triggers on v6 (unknown future version).
-            const string v6Json = @"{ ""schemaVersion"": 6, ""rewardPoints"": 1 }";
-            var data = JsonConvert.DeserializeObject<SaveData>(v6Json);
+            // NOTE (Order 610 Phase A): v6 is now the CURRENT version — it is legal and must NOT throw.
+            // The fail-hard gate now triggers on v7 (unknown future version).
+            const string v7Json = @"{ ""schemaVersion"": 7, ""rewardPoints"": 1 }";
+            var data = JsonConvert.DeserializeObject<SaveData>(v7Json);
             Assert.IsNotNull(data);
 
             UnityEngine.TestTools.LogAssert.Expect(
                 UnityEngine.LogType.Error,
-                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 6"));
+                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 7"));
 
             Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data!));
         }

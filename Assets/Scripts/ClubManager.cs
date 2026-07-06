@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Golfin.Inventory;
 using Golfin.Roster;
+using Golfin.Save;
 
 /// <summary>
 /// Singleton — owns all player club data, handles equip/unequip and bag assignment.
@@ -32,6 +33,18 @@ public class ClubManager : MonoBehaviour
     // ── State ─────────────────────────────────────────────────────────────────
 
     private readonly Dictionary<string, PlayerClubData> ownedClubs = new();
+
+    /// <summary>
+    /// Starter bag (fresh save) + the default equip set for grandfathered saves. IDs match Clubs.csv
+    /// (the same set the lab stub uses). Guarantees the A4 bag-safety invariant: one of each required
+    /// club type (Driver / Wood / Iron / Putter).
+    /// </summary>
+    private static readonly string[] DefaultBagIds =
+        { "club_driver_gf", "club_wood_gf", "club_iron7_mireo", "club_putter_golfinx" };
+
+    /// <summary>Required club types a playable bag must contain (A4 bag-safety). ClubType enum names.</summary>
+    private static readonly string[] RequiredBagTypes =
+        { nameof(ClubType.Driver), nameof(ClubType.Wood), nameof(ClubType.Iron), nameof(ClubType.Putter) };
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -62,8 +75,10 @@ public class ClubManager : MonoBehaviour
     };
 
     /// <summary>
-    /// Seeds PlayerClubData for every club in the database.
-    /// Starting level is rarity-based per the new leveling economy.
+    /// Loads owned clubs from the persisted save (Order 610 Phase A). On a save that has never been
+    /// club-seeded, seeds the FULL DB for a grandfathered (existing) player or only the starter set for
+    /// a fresh player, persists once, then hydrates the runtime dict. Ownership is now gated + persisted
+    /// (was: every club auto-owned each session, nothing persisted).
     /// </summary>
     private void InitializeClubs()
     {
@@ -76,43 +91,149 @@ public class ClubManager : MonoBehaviour
 
         ownedClubs.Clear();
 
-        foreach (var template in db.GetAllClubs())
-        {
-            int startingLevel = GetStartingLevel(template.rarity);
-            var playerClub = new PlayerClubData
-            {
-                clubId            = template.clubId,
-                currentLevel      = startingLevel,
-                maxDurability     = template.maxDurability,
-                currentDurability = template.maxDurability,  // start at full durability
-                equippedBagSlot   = 0,
-            };
+        var host = SaveDataHost.Instance;
+        var catalog = BuildCatalog(db);
 
-            // Seed totalSPEarned based on starting level
-            int totalSP = 0;
-            if (CharacterLevelUpDatabase.Instance != null)
+        if (host == null)
+        {
+            // No persistence available (e.g. a lab/test scene without SaveDataHost). Fall back to the
+            // pre-610 behaviour — own the full DB in-memory so the bag is playable — but DO NOT persist.
+            Debug.LogWarning("[ClubManager] SaveDataHost.Instance is null — seeding full DB in-memory (not persisted).");
+            var scratch = new SaveData();
+            ClubOwnershipService.SeedGrandfather(scratch, catalog, DefaultBagIds);
+            HydrateFrom(scratch);
+            Debug.Log($"[ClubManager] Initialized {ownedClubs.Count} clubs in-memory (no SaveDataHost).");
+            return;
+        }
+
+        var save = host.Data;
+
+        if (!save.clubOwnershipSeeded)
+        {
+            if (save.grandfatherClubs)
             {
-                for (int lv = 2; lv <= startingLevel; lv++)
-                    totalSP += CharacterLevelUpDatabase.Instance.GetSPReward(lv);
+                ClubOwnershipService.SeedGrandfather(save, catalog, DefaultBagIds);
+                Debug.Log($"[ClubManager] Grandfather-seeded {save.ownedClubs.Count} clubs (existing player, D-A3).");
             }
-            playerClub.totalSPEarned = totalSP;
-
-            ownedClubs[template.clubId] = playerClub;
+            else
+            {
+                ClubOwnershipService.SeedStarter(save, catalog, DefaultBagIds);
+                Debug.Log($"[ClubManager] Starter-seeded {save.ownedClubs.Count} clubs (fresh save).");
+            }
+            save.clubOwnershipSeeded = true;
+            save.grandfatherClubs    = false;
+            host.MarkDirty();
         }
 
-        // iter-37 (Cesar): equip a default STARTER BAG to slot 1. Every club is seeded above but
-        // UNEQUIPPED (equippedBagSlot=0), so BagManager.GetClubsInBag(1) returned empty / Driver-only
-        // and the in-game club selector showed only the Driver. Equip a representative set so the bag
-        // (and club selection) is populated for real play. IDs match Clubs.csv (same set the lab stub uses);
-        // missing IDs are skipped. No bag persistence yet, so this default applies each session.
-        string[] defaultBag = { "club_driver_gf", "club_wood_gf", "club_iron7_mireo", "club_putter_golfinx" };
-        int equipped = 0;
-        foreach (var id in defaultBag)
+        HydrateFrom(save);
+
+        // A4 bag-safety: never leave the player with an unplayable bag. If the persisted bag is missing a
+        // required type (corrupt/legacy save), re-equip the default bag for any owned required-type club.
+        if (!ClubOwnershipService.HasPlayableBag(save, catalog, RequiredBagTypes))
         {
-            if (ownedClubs.TryGetValue(id, out var pc)) { pc.equippedBagSlot = 1; equipped++; }
+            int fixedUp = 0;
+            foreach (var id in DefaultBagIds)
+                if (ownedClubs.TryGetValue(id, out var pc) && pc.equippedBagSlot == 0) { pc.equippedBagSlot = 1; fixedUp++; }
+            if (fixedUp > 0) { PersistOwnedClubs(); Debug.LogWarning($"[ClubManager] Bag-safety repair: re-equipped {fixedUp} default clubs."); }
         }
 
-        Debug.Log($"[ClubManager] Initialized {ownedClubs.Count} clubs; equipped {equipped} to default bag (slot 1).");
+        Debug.Log($"[ClubManager] Loaded {ownedClubs.Count} owned clubs from save (schema v{save.schemaVersion}).");
+    }
+
+    /// <summary>Builds the pure ClubCatalogSpec list from the club DB for the ownership service.</summary>
+    private List<ClubCatalogSpec> BuildCatalog(ClubDatabaseCSV db)
+    {
+        var list = new List<ClubCatalogSpec>();
+        foreach (var template in db.GetAllClubs())
+            list.Add(BuildSpec(template));
+        return list;
+    }
+
+    /// <summary>One ClubCatalogSpec for a template — starting level + seeded SP resolved here (Assembly-CSharp).</summary>
+    private ClubCatalogSpec BuildSpec(ClubDataRuntime template)
+    {
+        int startingLevel = GetStartingLevel(template.rarity);
+        int totalSP = 0;
+        if (CharacterLevelUpDatabase.Instance != null)
+            for (int lv = 2; lv <= startingLevel; lv++)
+                totalSP += CharacterLevelUpDatabase.Instance.GetSPReward(lv);
+        return new ClubCatalogSpec(template.clubId, startingLevel, template.maxDurability,
+                                   totalSP, template.type.ToString());
+    }
+
+    /// <summary>Hydrate the runtime dict from a save's persisted club list.</summary>
+    private void HydrateFrom(SaveData save)
+    {
+        ownedClubs.Clear();
+        foreach (var pc in save.ownedClubs)
+            ownedClubs[pc.clubId] = ToRuntime(pc);
+    }
+
+    private static PlayerClubData ToRuntime(PersistedClub p) => new PlayerClubData
+    {
+        clubId             = p.clubId,
+        currentLevel       = p.currentLevel,
+        currentDurability  = p.currentDurability,
+        maxDurability      = p.maxDurability,
+        equippedBagSlot    = p.equippedBagSlot,
+        totalSPEarned      = p.totalSPEarned,
+        spentPower         = p.spentPower,
+        spentAccuracy      = p.spentAccuracy,
+        spentLieResistance = p.spentLieResistance,
+        spentDurability    = p.spentDurability,
+    };
+
+    private static PersistedClub ToPersisted(PlayerClubData c) => new PersistedClub
+    {
+        clubId             = c.clubId,
+        currentLevel       = c.currentLevel,
+        currentDurability  = c.currentDurability,
+        maxDurability      = c.maxDurability,
+        equippedBagSlot    = c.equippedBagSlot,
+        totalSPEarned      = c.totalSPEarned,
+        spentPower         = c.spentPower,
+        spentAccuracy      = c.spentAccuracy,
+        spentLieResistance = c.spentLieResistance,
+        spentDurability    = c.spentDurability,
+    };
+
+    /// <summary>Rewrite the persisted club list from the runtime dict + schedule a debounced save.</summary>
+    private void PersistOwnedClubs()
+    {
+        var host = SaveDataHost.Instance;
+        if (host == null) return;
+        host.Data.ownedClubs = ownedClubs.Values.Select(ToPersisted).ToList();
+        host.MarkDirty();
+    }
+
+    // ── Ownership / grant (Order 610 Phase A) ───────────────────────────────────
+
+    /// <summary>True if the player owns this club (membership == ownership; clubs are unique).</summary>
+    public bool IsOwned(string clubId) => ownedClubs.ContainsKey(clubId);
+
+    /// <summary>
+    /// Grants a club to the player (A5). RP is spent by the caller (ShopTransaction) BEFORE this.
+    /// Idempotent: an already-owned club is a no-op (no dup, no stat reset). New clubs land UNEQUIPPED
+    /// (D5 = no auto-equip). Persists + fires OnInventoryChanged on success.
+    /// </summary>
+    public ClubGrantResult GrantClub(string clubId)
+    {
+        if (string.IsNullOrEmpty(clubId)) return ClubGrantResult.Invalid;
+        if (ownedClubs.ContainsKey(clubId)) return ClubGrantResult.AlreadyOwned;
+
+        var template = ClubDatabaseCSV.Instance?.GetClub(clubId);
+        if (template == null)
+        {
+            Debug.LogWarning($"[ClubManager] GrantClub: club '{clubId}' not found in DB.");
+            return ClubGrantResult.Invalid;
+        }
+
+        var spec = BuildSpec(template);
+        ownedClubs[clubId] = ToRuntime(ClubOwnershipService.MakePersisted(spec, 0));
+        PersistOwnedClubs();
+        Debug.Log($"[ClubManager] Granted '{clubId}' (owned={ownedClubs.Count}).");
+        OnInventoryChanged?.Invoke();
+        return ClubGrantResult.Success;
     }
 
     // ── Query API ─────────────────────────────────────────────────────────────
@@ -174,6 +295,7 @@ public class ClubManager : MonoBehaviour
         Debug.Log($"[ClubManager] '{clubId}' " +
                   (bagSlot > 0 ? $"equipped to Bag {bagSlot}." : "unequipped."));
 
+        PersistOwnedClubs();
         OnClubEquipped?.Invoke(clubId);
     }
 
@@ -193,6 +315,7 @@ public class ClubManager : MonoBehaviour
         int maxLevel = GetMaxLevel(clubId);
         club.currentLevel = Mathf.Clamp(newLevel, 1, maxLevel);
         Debug.Log($"[ClubManager] '{clubId}' level set to {club.currentLevel}/{maxLevel}.");
+        PersistOwnedClubs();
     }
 
     /// <summary>
@@ -230,6 +353,7 @@ public class ClubManager : MonoBehaviour
 
         club.currentLevel++;
         Debug.Log($"[ClubManager] '{clubId}' leveled up to {club.currentLevel}/{maxLevel}.");
+        PersistOwnedClubs();
         OnClubLeveledUp?.Invoke(clubId);
     }
 
@@ -251,6 +375,7 @@ public class ClubManager : MonoBehaviour
         club.currentDurability = Mathf.Clamp(newDurability, 0, club.maxDurability);
 
         Debug.Log($"[ClubManager] '{clubId}' repaired: {oldDurability} → {club.currentDurability}/{club.maxDurability}");
+        PersistOwnedClubs();
         OnClubRepaired?.Invoke(clubId);
     }
 

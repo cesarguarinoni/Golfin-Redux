@@ -114,6 +114,47 @@ namespace Golfin.Save
         /// Added empty in the v2→v3 migration; absent in v1/v2 saves defaults to empty list on load.
         /// </summary>
         public List<PersistedTournamentEntry> tournamentEntries = new List<PersistedTournamentEntry>();
+
+        // ── Club ownership (schema v6, Order 610 Phase A) ─────────────────────
+        // Ownership = membership in this list. Written by ClubManager (Assembly-CSharp)
+        // via the pure ClubOwnershipService. Before v6 every club was auto-owned at
+        // runtime and nothing persisted; now clubs are gated, persisted and grantable.
+        /// <summary>All clubs the player owns. Membership == ownership (clubs are unique, no stacking).</summary>
+        public List<PersistedClub> ownedClubs = new List<PersistedClub>();
+
+        /// <summary>
+        /// True once the club-ownership layer has seeded this save (starter set on a fresh save,
+        /// or grandfather-all on a migrated pre-v6 save). Gates the one-time seed so it never re-runs.
+        /// </summary>
+        public bool clubOwnershipSeeded;
+
+        /// <summary>
+        /// Migrator signal (D-A3 = grandfather-all): set true when a pre-v6 save that was never
+        /// club-seeded is migrated, telling ClubManager to seed the FULL current club DB once
+        /// (existing players keep their bag). A brand-new SaveData never runs Migrate(), so it
+        /// stays false → ClubManager seeds only the starter set. Consumed + cleared on first seed.
+        /// </summary>
+        public bool grandfatherClubs;
+    }
+
+    /// <summary>
+    /// Flat DTO for one persisted owned club.
+    /// Mirrors the persisted subset of Golfin.Inventory.PlayerClubData (source of truth =
+    /// Assets/Scripts/UI/Inventory/ClubData.cs); adding UI-only fields to PlayerClubData
+    /// never causes migration pain here. No Golfin.Inventory refs — asmdef stays one-way.
+    /// </summary>
+    public class PersistedClub
+    {
+        public string clubId = "";
+        public int    currentLevel;
+        public int    currentDurability;
+        public int    maxDurability;
+        public int    equippedBagSlot;
+        public int    totalSPEarned;
+        public int    spentPower;
+        public int    spentAccuracy;
+        public int    spentLieResistance;
+        public int    spentDurability;
     }
 
     /// <summary>

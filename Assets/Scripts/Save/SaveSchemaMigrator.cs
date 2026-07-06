@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Golfin.Save
@@ -14,7 +15,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 5;
+        public const int CurrentSchemaVersion = 6;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -76,6 +77,23 @@ namespace Golfin.Save
                 // No action needed beyond bumping the version.
                 data.schemaVersion = 5;
                 Debug.Log("[SaveSchemaMigrator] Migrated v4 → v5 (conditionRemaining added per tournament entry, default -1f sentinel).");
+            }
+
+            // v5 → v6: add club ownership (Order 610 Phase A).
+            // D-A3 = grandfather-all: an existing pre-v6 save that was never club-seeded gets the
+            // grandfatherClubs signal so ClubManager seeds the FULL current club DB once on next load
+            // (nobody loses their bag). A brand-new SaveData() is never passed to Migrate() (SaveDataHost
+            // only migrates loaded files), so it never reaches here → stays unseeded/non-grandfather →
+            // ClubManager seeds only the starter set. clubOwnershipSeeded gates the grandfather so an
+            // already-seeded save (fresh player, launch 2+) is left untouched.
+            if (data.schemaVersion < 6)
+            {
+                data.ownedClubs ??= new List<PersistedClub>();
+                if (!data.clubOwnershipSeeded)
+                    data.grandfatherClubs = true;
+                data.schemaVersion = 6;
+                Debug.Log("[SaveSchemaMigrator] Migrated v5 → v6 (club ownership added; " +
+                          $"grandfatherClubs={data.grandfatherClubs} for unseeded existing save).");
             }
 
             // Ensure schemaVersion is current after all migrations
