@@ -121,9 +121,66 @@ namespace Golfin.EditorTools.UIFidelity
                 f.Add(new Finding("WARN", P(o.transform, root.transform), "outline-border",
                     "Outline component present — does not produce a crisp Npx border (rule C5). Use a two-layer rounded rim."));
 
+            // P8a (Order-611, trap C9): TMP default-sizeDelta (100×100) causes a silent vertical-centre bug.
+            // When a TextMeshProUGUI is auto-sized but its RectTransform still has the default 100×100
+            // sizeDelta, TMP clips the text at 100px and centres it inside that box rather than the visual
+            // container. The text appears correct at small sizes but shifts off-centre at larger containers.
             foreach (var t in root.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                var rt = t.rectTransform;
+                // Only flag if the RectTransform anchors are NOT stretched (anchored = fixed-size slot):
+                // a fully-stretched anchor (min=0,max=1) drives sizeDelta to the parent size, so 100×100
+                // doesn't indicate the default. We flag only when both axes are fixed (anchorMin==anchorMax
+                // on each axis) AND the sizeDelta is still at the Unity default 100×100.
+                bool xFixed = Mathf.Approximately(rt.anchorMin.x, rt.anchorMax.x);
+                bool yFixed = Mathf.Approximately(rt.anchorMin.y, rt.anchorMax.y);
+                if (xFixed && yFixed)
+                {
+                    if (Mathf.Approximately(rt.sizeDelta.x, 100f) && Mathf.Approximately(rt.sizeDelta.y, 100f))
+                        f.Add(new Finding("WARN", P(t.transform, root.transform), "tmp-default-sizedelta",
+                            $"TextMeshProUGUI sizeDelta is the Unity default (100×100) — likely never set after creation. " +
+                            $"TMP will clip/centre text inside a 100px box; set explicit Width+Height or switch to a stretched anchor. (trap C9, P8a)"));
+                }
+
                 if (t.fontSize > 0 && t.fontSize < 10)
                     f.Add(new Finding("INFO", P(t.transform, root.transform), "tiny-text", $"fontSize {t.fontSize:0.#} < 10."));
+            }
+
+            // P8b (Order-611, trap C10): 9-slice cap-kink — sprite border smaller than rounded-cap radius.
+            // When a 9-sliced sprite's border (in pixels, at the current pixelsPerUnitMultiplier) is smaller
+            // than the rounded-corner "cap" radius that the sprite was authored with, the corner arc is
+            // clipped mid-curve, producing a visible kink or flat tangent instead of a smooth arc.
+            // Heuristic: compare the effective border half-size to 1/4 of the smaller rendered axis.
+            // If border < quarter_min, there is very likely not enough corner texture to form a clean arc.
+            foreach (var img in root.GetComponentsInChildren<Image>(true))
+            {
+                var sp = img.sprite;
+                if (sp == null) continue;
+                float ppu2 = Mathf.Max(0.0001f, img.pixelsPerUnitMultiplier);
+                bool sliced9b = img.type == Image.Type.Sliced && sp.border != Vector4.zero;
+                if (!sliced9b) continue;
+
+                // Smallest effective corner border (in rendered px) on each axis.
+                float cornerBorderX = Mathf.Min(sp.border.x, sp.border.z) / ppu2;
+                float cornerBorderY = Mathf.Min(sp.border.y, sp.border.w) / ppu2;
+                var sz2 = img.rectTransform.rect.size;
+                // A plausible cap radius is roughly min(w,h)/4 (Unity UI default rounded-corner convention).
+                float estCapRadius = Mathf.Min(sz2.x, sz2.y) / 4f;
+
+                // Only flag when the rendered element is large enough to be a real rounded shape (>16px
+                // on the short side) — avoid false-positives on tiny dividers.
+                if (sz2.x > 16f && sz2.y > 16f && estCapRadius > 0f)
+                {
+                    if (cornerBorderX < estCapRadius * 0.5f || cornerBorderY < estCapRadius * 0.5f)
+                    {
+                        string path2 = P(img.transform, root.transform);
+                        f.Add(new Finding("WARN", path2, "9slice-cap-kink",
+                            $"9-sliced sprite '{sp.name}' effective corner border " +
+                            $"({cornerBorderX:0.#}px×{cornerBorderY:0.#}px) < ~50% of estimated cap radius ({estCapRadius:0.#}px). " +
+                            $"The corner arc may kink or flatten. Increase sprite border or lower pixelsPerUnitMultiplier ({ppu2:0.##}). (trap C10, P8b)"));
+                    }
+                }
+            }
 
             return f;
         }
