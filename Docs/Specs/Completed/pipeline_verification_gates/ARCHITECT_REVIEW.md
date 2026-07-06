@@ -792,3 +792,54 @@ real project guid. iter-7 traded a decoy-line hole for a guaranteed-inert-agains
   hard null-sprite signal inert (wrong Image guid fae92b0f…; real is fe87c0e1…); 610 white-box PASSES`.
 - Read-only review: no scene/prefab/code mutation. Scratchpad harnesses at
   `…/scratchpad/attack*.py` (temp, outside repo).
+
+---
+
+# RED-TEAM iter-8 — ADVERSARIAL GATE (2026-07-06 12:10 CEST)
+
+> Written by `golfin-redteam-reviewer`. Threat model (per RESOLUTION.md + §15): can an UNFAITHFUL result (null-sprite white box / flat fill / missing atom) pass the hard gate, or is faithful work falsely blocked? Provenance-unprovability is OUT OF SCOPE.
+
+## Verdict: ARCHITECT_REVIEW_PASS
+
+The iter-7 hole (parser returned `{}` for real prefabs → white boxes passed) is genuinely closed against the REAL project, and every dressed-up white-box variant I could construct is caught as CRITICAL FAIL. Faithful work is not falsely blocked.
+
+## 1. Suite — 119 green, target tests actually RUN (not skip)
+- `cd .claude/hooks && python3 -m pytest -q` → **119 passed** (re-run twice, stable).
+- `-v -k "test_A5i or TestLiveEditorIntegration"` → all 4 **PASSED**, 0 skipped:
+  - `test_A5i_real_prefab_images_resolve_sprites` PASSED
+  - `TestLiveEditorIntegration::test_bare_leaf_insufficient` / `test_real_clone_matches` / `test_unrelated_prefab_mismatches` PASSED (Unity editor reachable at localhost:21573; they did not hit the skip-guard).
+
+## 2. iter-7 hole closed against the REAL project (the decisive checks)
+- **Independent guid confirmation:** parsed `GeneralShopCard.prefab` for `m_Script` guids paired with `m_EditorClassIdentifier: UnityEngine.UI.Image` → `{fe87c0e1cc204ed48ad3b37840f39efc}`. The hardcoded `_IMAGE_SCRIPT_GUID` is the REAL Image guid. Phantom `fae92b0f…` appears in **0** prefabs; real guid in **88** prefabs.
+- **Real parser, real prefab:** `eid._parse_prefab_gameobject_sprites(GeneralShopCard.prefab)` → **10 real sprite entries** (not `{}`). `CardBorder -> d162244f…`, `BadgePill -> bb07d102…`. The `{}`-regression is gone.
+- **Real-source E2E fabrication catch:** a null-sprite `BadgePill` white-box (built with the REAL Image guid `fe87c0e1…`, `m_Sprite: {fileID: 0}`), cited in reuse_map against the ACTUAL shipped `GeneralShopCard.prefab` (guid `afa7f939…`, whose real BadgePill carries `bb07d102…`), driven through the production `validate_clone_provenance_yaml` → **CRITICAL FAIL** + logged. This is the exact 610 signature that PASSED at iter-7; it now blocks.
+
+## 3. Null-sprite masking re-attacked with the CORRECT guid in play — all BLOCKED
+Built on-disk fixtures, drove each through production `validate_clone_provenance_yaml` (null white-box cited against a sprite-carrying source):
+- V1 plain null Image → CRITICAL FAIL
+- V2 decoy MonoBehaviour (stray `m_Sprite`) AFTER null Image → CRITICAL FAIL
+- V3 decoy MonoBehaviour BEFORE null Image → CRITICAL FAIL
+- V4 two Image blocks null+real (NULL WINS) → CRITICAL FAIL
+- V5 two Image blocks real+null (NULL WINS) → CRITICAL FAIL
+- V6 class-name-only Image (m_Script guid absent, `m_EditorClassIdentifier: UnityEngine.UI.Image`) null → CRITICAL FAIL
+- A1 non-matching subclass (`MyGame.FancyImage`) null → CRITICAL FAIL (not attributed → element resolves None vs source-has-sprite)
+- A2 GO name trailing whitespace null → CRITICAL FAIL
+- A3 explicit 32-zero-guid `m_Sprite` null → CRITICAL FAIL
+No dressed-up white box passed.
+
+## 4. Regression — faithful work NOT falsely blocked
+- Real sprite present (built `CardBorder` carrying the real sprite, cited against sprite-source) → NOT blocked (WARN only). 
+- Real GeneralShopCard elements resolve their real sprites end-to-end. No false CRITICAL on faithful reuse.
+
+## 5. Backstops hold
+- P2 fail-CLOSED: `test_p2_cached_pass_editor_unreachable_blocks` + stale-detection tests PASS (cited lint JSON never accepted as sole evidence).
+- P8 render-health (C9/C10) lives in the C# `UIFidelityLinter`, outside this Python hook and outside the iter-8 diff — whole-suite green + unchanged.
+
+## Three break-attempts, why each failed
+1. **Visual/signature:** tried 9 white-box variants (decoys both orders, two-Image both orders, class-name-only, subclass, whitespace, zero-guid). NULL-WINS + Image-attribution defeated all — a null Image can no longer be masked by any sibling `m_Sprite`.
+2. **Real-project bypass:** the iter-7 defeat was "parser blind to real prefabs." Re-verified the guid independently from the prefab itself (not the report), parsed the real card (10 sprites), and ran the real-card E2E fabrication catch → blocks. Bubble closed.
+3. **Spec-intent / false-block:** tried to make faithful reuse fail — real-sprite element only WARNs, never CRITICAL. The one "NOT BLOCKED" case (A4) is a reuse_map name absent from the source → correctly a WARN for the reviewer (no faithful source element to compare), consistent with the fidelity reframe; not a fabrication bypass.
+
+## Housekeeping
+- Read-only: no scene/prefab/code mutation. Attack harnesses built in the session scratchpad (outside repo) and deleted.
+- Note (non-blocking): `GeneralShopCard.prefab` is currently untracked (belongs to the separate `general_shop_ui` task). `test_A5i` `skipTest`s if it's ever absent rather than failing — a fixture-availability caveat, not a fidelity hole; the parser fix itself is committed and correct.
