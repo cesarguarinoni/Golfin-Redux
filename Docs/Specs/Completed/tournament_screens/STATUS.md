@@ -1,5 +1,7 @@
 # STATUS — tournament_screens
 
+> **CLOSED / SUPERSEDED — 2026-07-06.** Feature shipped: Stages 0+1 (both screens + nav, Cesar-approved 24-25 Jun) here; Stage 2 live-backend bind shipped under successor spec `tournament_screens_live_bind` (Completed/); upstream Selection = T7 `tournament_selection_screen` (Completed/); temp `TournamentDevEntryButton` removed. The unchecked Stage 2/3 boxes below were completed under those successors (empty-state/JP-loc fold into `localization_audit` 353). This umbrella folder was moved Active -> Completed as housekeeping.
+
 **Task:** Code-proof implementation spec for the two new tournament screens (Tournament Hole Selection + Tournament Leaderboard), delivered to Code in controlled, prefab-first stages.
 
 **Tier:** FULL PIPELINE (new UI architecture + spatial layout + multi-stage).
