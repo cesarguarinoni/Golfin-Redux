@@ -605,3 +605,97 @@ Logged to `.claude/review_misses.log`.
 **All Assets/ forgeries I created were deleted (`AssetDatabase.DeleteAsset` → `deleted=True stillExists=False`);
 git working tree carries no scene/prefab drift (only a `review_misses.log` append from the production
 `_log_p1_miss` firing during the block-path regression checks + my REDTEAM-FAIL summary line — harmless).**
+
+---
+
+# RED-TEAM (iter-6 fidelity reframe) — 2026-07-06 — VERDICT: ARCHITECT_REVIEW_FAIL
+
+Adversarial gate against the **reframed** threat model (fidelity, not provenance). I judged only
+against RESOLUTION.md + PIPELINE_HARDENING §15 + IMPLEMENTER_REPORT §iter-6. I did NOT score
+provenance-unprovability as a defect (out of scope by Cesar's decision). I hunted for an
+**unfaithful result that PASSES the hard gate**, or a **false block of faithful work**. I found the former.
+
+## Setup verified
+- Suite: `cd .claude/hooks && python3 -m pytest -q` → **117 passed**.
+- `TestLiveEditorIntegration` **actually ran (3 passed, not skipped)** against the real editor at
+  `localhost:21573` — real clone→MATCH, unrelated prefab→MISMATCH, bare leaf→INSUFFICIENT. The seam
+  is live, not dead (the iter-3 dead-seam gap is genuinely closed).
+- All my forgery fixtures live in the session scratchpad (outside the repo). **Zero `Assets/` pollution.**
+
+## Threats that PASSED the gate (gate is sound here)
+- **#3 legit reuse does NOT false-block:** production `validate_clone_provenance_yaml` on the REAL
+  `GeneralShopCard.prefab` for `BadgePill`, `CardBorder` (bare leaf), `RewardRpIcon` (real sprites,
+  source `baac145d…`) → **0 CRITICAL FAIL, clean PASS**. `PillFill` → non-blocking WARN (structure
+  differs) — correct. A faithful bare leaf now PASSES (the iter-6 change from iter-5's block). Good.
+- **#1 realistic null-sprite fabrication → CRITICAL FAIL** across all three flat-fill signatures:
+  `m_Sprite:{fileID:0}`, zero-guid sprite, and **no `m_Sprite` field at all** (parse `''` / `''` /
+  `None`) — each → 1 CRITICAL FAIL. The REAL preserved `fixtures/fabricated_610/GeneralShopCard.prefab`
+  (13 flat-fill Images, 1:1 sprite:Image) → CRITICAL FAIL end-to-end.
+- **#5 hard fail is YAML-only / editor-independent:** with the live-editor seam forced to raise/return
+  None, the null-sprite forgery **still CRITICAL-FAILs**. No gate trusts an implementer artifact for a
+  HARD fail; the structure comparison (editor-dependent) is WARN-only and can never upgrade to a block.
+- **#4 visual backstop exists:** P8 `RenderHealth` C9 (`tmp-default-sizedelta`) + C10 (`9slice-cap-kink`)
+  present; the stamina **oval-pill** scar is a hard **FAIL** (`9slice-collapse-x/y`, lines 98/101); P2
+  `validate_ui_lint` re-runs the linter live and is **FAIL-CLOSED** on unreachable editor. Oval/9-slice/
+  radius scars are genuinely covered by P8-via-P2, no coverage gap for those.
+
+## THE HOLE — threat #2: a dressed flat-fill white box PASSES the hard gate (BLOCKER)
+
+RESOLUTION.md and §15 both assert the null-sprite CRITICAL FAIL is **"unfakeable, pure-Python."**
+**It is fakeable.** `_parse_prefab_gameobject_sprites` (enforce_implementer_done.py:2118) attributes a
+sprite to a GameObject by looping ALL `!u!114` blocks and doing **last-write-wins** — it matches ANY
+MonoBehaviour (`_IMAGE_COMPONENT_RE` = `^--- !u!114`), not just genuine `UnityEngine.UI.Image`.
+
+Fixture (renders a **white box** — the literal 610/tournament/stamina flat-fill signature — yet PASSES):
+```yaml
+--- !u!1 &1001
+GameObject: { m_Name: CardBorder }
+--- !u!114 &2001          # the real UI Image → NULL sprite → white box
+MonoBehaviour:
+  m_GameObject: {fileID: 1001}
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Sprite: {fileID: 0}
+--- !u!114 &2002          # non-rendering decoy holding a stray sprite guid
+MonoBehaviour:
+  m_GameObject: {fileID: 1001}
+  m_EditorClassIdentifier: MyGame::SpriteHolder
+  m_Sprite: {fileID: 21300000, guid: d162244f2dd5e8646afef2518d902a8e, type: 3}
+```
+Production gate result, source = real GeneralShopCard `afa7f939…` (CardBorder carries real sprite
+`d162244…`):
+- `_parse_prefab_gameobject_sprites(...)['CardBorder']` → `'d162244f2dd5e8646afef2518d902a8e'` (WRONG —
+  the rendering Image is null).
+- `validate_clone_provenance_yaml(...)` → **0 CRITICAL FAIL → PASS.**
+
+Isolation proof (only the decoy line differs): identical white-box Image →
+`realistic_null` → **BLOCK**; `decoy_null` → **PASS**. The decoy works even with two legitimate
+`UnityEngine.UI.Image` components on the GO, so filtering by component type is NOT sufficient on its own.
+
+**Why this is a blocker, not a documented follow-up:**
+1. It defeats the ONE hard, self-described-"unfakeable" signal the entire reframe rests on. The reframe's
+   central promise ("provenance is unprovable so we hard-fail only the unfakeable null-sprite signature")
+   is broken — that signature is fakeable in ~4 lines of YAML.
+2. It is verbatim my mandated fail condition #2: "a flat-colour Image with no sprite dressed to look cited
+   — must FAIL." It renders a white box; it is unfaithful; it passes.
+3. The visual backstop does NOT save it: P8 render-health flags a null-sprite Image only as a **WARN**
+   (`flat-fill`, line 82), and P2 blocks only on `fail > 0`. The hard `require-sprite` FAIL (line 207)
+   fires only when a `spec.json` with `requireSprite` for that element is shipped — not guaranteed for
+   every reuse task, and not credited by the reframe for this signature (§15 assigns null-sprite to P1).
+4. Design-law §0 spirit is violated: the HARD fail is supposed to read the engine fact "this Image is
+   null." The mis-attribution loses that fact.
+
+## Fix instruction (implementer)
+In `_parse_prefab_gameobject_sprites`, do not let a non-Image / sibling component overwrite a genuine
+Image's null sprite. Options (any one closes it):
+- Attribute the sprite ONLY from blocks whose `m_EditorClassIdentifier` is `UnityEngine.UI.Image` (or the
+  Image script guid `fe87c0e1cc204ed48ad3b37840f39efc`), AND
+- When a GO has ANY genuine Image with a null/blank sprite, treat the element as null-sprite (fabrication
+  signal) **regardless** of a real sprite on a sibling component — a null primary Image renders a white
+  box no matter what a non-rendering sibling holds. I.e. the null Image must WIN, not lose, the last-write.
+- Add a regression test: GO with a null `UnityEngine.UI.Image` + a sibling `!u!114` carrying a stray
+  `m_Sprite` guid → must CRITICAL FAIL. (`test_A1_decoy_sibling_sprite_still_critical_fail`.) There is
+  currently **zero** test coverage for multi-`m_Sprite`-per-GameObject.
+
+## Housekeeping
+- `.claude/review_misses.log` carries the REDTEAM-HOLE entry (2026-07-06) + prior `_log_p1_miss` appends
+  fired during my block-path checks. Working tree has no scene/prefab drift from this review.

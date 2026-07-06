@@ -1208,7 +1208,7 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             --- !u!114 &300
             MonoBehaviour:
               m_GameObject: {{fileID: 100}}
-              m_Script: {{fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39edc, type: 3}}
+              m_Script: {{fileID: 11500000, guid: fae92b0f6c46b52459d9309c0d1f6d0b, type: 3}}
               {real_sprite}
         """)
 
@@ -1223,7 +1223,7 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             --- !u!114 &300
             MonoBehaviour:
               m_GameObject: {fileID: 100}
-              m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39edc, type: 3}
+              m_Script: {fileID: 11500000, guid: fae92b0f6c46b52459d9309c0d1f6d0b, type: 3}
               m_Sprite: {fileID: 0, guid: , type: 0}
         """)
 
@@ -1238,7 +1238,7 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             --- !u!114 &300
             MonoBehaviour:
               m_GameObject: {{fileID: 100}}
-              m_Script: {{fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39edc, type: 3}}
+              m_Script: {{fileID: 11500000, guid: fae92b0f6c46b52459d9309c0d1f6d0b, type: 3}}
               m_Sprite: {{fileID: 21300000, guid: {sprite_guid}, type: 3}}
         """)
 
@@ -1828,9 +1828,12 @@ class TestCloneProvenanceYAML(unittest.TestCase):
         self.assertIn(self._SOURCE_GUID, guids)
         self.assertNotIn("00000000000000000000000000000000", guids)
 
+    _IMAGE_GUID = "fae92b0f6c46b52459d9309c0d1f6d0b"
+
     def test_A5g_parse_prefab_gameobject_sprites_null_vs_real(self):
         """A5g — _parse_prefab_gameobject_sprites returns '' (empty str) for a
-        null/zero sprite and a real guid string for a real sprite."""
+        null/zero sprite and a real guid string for a real sprite. Sprites are
+        read only from genuine Image components (Image m_Script guid)."""
         yaml_text = textwrap.dedent(f"""\
             --- !u!1 &100
             GameObject:
@@ -1838,6 +1841,7 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             --- !u!114 &200
             MonoBehaviour:
               m_GameObject: {{fileID: 100}}
+              m_Script: {{fileID: 11500000, guid: {self._IMAGE_GUID}, type: 3}}
               m_Sprite: {{fileID: 0, guid: , type: 0}}
             --- !u!1 &300
             GameObject:
@@ -1845,11 +1849,42 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             --- !u!114 &400
             MonoBehaviour:
               m_GameObject: {{fileID: 300}}
+              m_Script: {{fileID: 11500000, guid: {self._IMAGE_GUID}, type: 3}}
               m_Sprite: {{fileID: 21300000, guid: {self._SPRITE_GUID}, type: 3}}
         """)
         sprites = eid._parse_prefab_gameobject_sprites(yaml_text)
         self.assertEqual(sprites.get("NullSpriteGO"), "")
         self.assertEqual(sprites.get("RealSpriteGO"), self._SPRITE_GUID)
+
+    def test_A5h_decoy_component_does_not_mask_null_image(self):
+        """A5h (red-team iter-6) — a null-sprite Image (white box) whose GameObject
+        ALSO carries a NON-Image MonoBehaviour with a stray real `m_Sprite` must
+        still read as NULL. The decoy's m_Sprite (last-write-wins across all !u!114)
+        was the white-box bypass; sprites are now attributed only to the genuine
+        Image component (by m_Script guid)."""
+        decoy_guid = "abcdef0123456789abcdef0123456789"  # NOT the Image guid
+        yaml_text = textwrap.dedent(f"""\
+            --- !u!1 &100
+            GameObject:
+              m_Name: WhiteBox
+            --- !u!114 &200
+            MonoBehaviour:
+              m_GameObject: {{fileID: 100}}
+              m_Script: {{fileID: 11500000, guid: {self._IMAGE_GUID}, type: 3}}
+              m_Sprite: {{fileID: 0, guid: , type: 0}}
+            --- !u!114 &201
+            MonoBehaviour:
+              m_GameObject: {{fileID: 100}}
+              m_Script: {{fileID: 11500000, guid: {decoy_guid}, type: 3}}
+              m_Sprite: {{fileID: 21300000, guid: {self._SPRITE_GUID}, type: 3}}
+        """)
+        sprites = eid._parse_prefab_gameobject_sprites(yaml_text)
+        self.assertEqual(
+            sprites.get("WhiteBox"), "",
+            "A decoy component's m_Sprite must NOT mask a null-sprite Image "
+            "(the white-box fabrication signature). Got: "
+            f"{sprites.get('WhiteBox')!r}",
+        )
 
 
 class TestValidateUILintLiveRerun(unittest.TestCase):

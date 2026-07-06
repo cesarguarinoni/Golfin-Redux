@@ -2113,6 +2113,12 @@ _M_SPRITE_ANY_RE = re.compile(
 _GO_NAME_RE = re.compile(r"^\s+m_Name:\s+(.+)$", re.MULTILINE)
 # Link between Image component fileID and its parent GameObject fileID
 _MONO_GO_RE = re.compile(r"m_GameObject:\s*\{fileID:\s*(\d+)", re.IGNORECASE)
+# UnityEngine.UI.Image's built-in m_Script guid. m_Sprite must be attributed ONLY
+# to a genuine Image component — reading m_Sprite from ANY MonoBehaviour block
+# (last-write-wins) let a decoy component's stray `m_Sprite` line mask a null-sprite
+# Image (the white-box fabrication signature). red-team iter-6.
+_IMAGE_SCRIPT_GUID = "fae92b0f6c46b52459d9309c0d1f6d0b"
+_M_SCRIPT_GUID_RE = re.compile(r"m_Script:\s*\{[^}]*guid:\s*([0-9a-f]{32})", re.IGNORECASE)
 
 
 def _parse_prefab_gameobject_sprites(prefab_yaml: str) -> dict[str, str | None]:
@@ -2139,35 +2145,35 @@ def _parse_prefab_gameobject_sprites(prefab_yaml: str) -> dict[str, str | None]:
         if anchor and names:
             fileid_to_name[anchor.group(1)] = names[0].strip()
 
-    # Pass 2: MonoBehaviour blocks — look for m_Sprite + parent GO name.
+    # Pass 2: GENUINE Image (!u!114 with the Image m_Script guid) blocks only —
+    # read m_Sprite + parent GO name. Reading m_Sprite from ANY MonoBehaviour
+    # (last-write-wins) let a decoy component's stray `m_Sprite` line mask a
+    # null-sprite Image (red-team iter-6 white-box bypass). We attribute the
+    # sprite to a GO ONLY from its real Image component; other MonoBehaviours
+    # with a serialized Sprite field are ignored.
     name_to_sprite: dict[str, str | None] = {}
     for block in _IMAGE_COMPONENT_RE.finditer(prefab_yaml):
         block_text = block.group(0)
+        script_m = _M_SCRIPT_GUID_RE.search(block_text)
+        if not script_m or script_m.group(1).lower() != _IMAGE_SCRIPT_GUID:
+            # Not a genuine UnityEngine.UI.Image — its m_Sprite (if any) is a
+            # decoy for provenance purposes; do NOT attribute it to the GO.
+            continue
         go_m = _MONO_GO_RE.search(block_text)
         if not go_m:
             continue
-        parent_fid = go_m.group(1)
-        go_name = fileid_to_name.get(parent_fid)
+        go_name = fileid_to_name.get(go_m.group(1))
         if not go_name:
             continue
 
-        # Check for real sprite GUID first.
+        # Real sprite GUID on the Image?
         sprite_m = _M_SPRITE_RE.search(block_text)
         if sprite_m:
             guid = sprite_m.group(1)
-            # Treat zero guid as empty (no real sprite).
             name_to_sprite[go_name] = "" if all(c == "0" for c in guid) else guid
-            continue
-
-        # Check if m_Sprite is present at all (null / fileID: 0 / empty guid).
-        if _M_SPRITE_ANY_RE.search(block_text):
-            # m_Sprite exists but no non-zero GUID → null sprite.
+        else:
+            # An Image always serializes m_Sprite; present-but-zero or absent → null.
             name_to_sprite[go_name] = ""
-            continue
-
-        # MonoBehaviour without any m_Sprite field — only record if not already set.
-        if go_name not in name_to_sprite:
-            name_to_sprite[go_name] = None
     return name_to_sprite
 
 

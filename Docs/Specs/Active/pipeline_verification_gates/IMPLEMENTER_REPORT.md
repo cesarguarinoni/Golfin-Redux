@@ -197,3 +197,13 @@ After iter-1/3/4/5 + 3 red-teams proved clone provenance is unprovable for CopyA
 **Code:** the no-lineage branch now hard-fails ONLY the null-sprite fabrication signature (pure-Python, unfakeable). Same-real-sprite → sprite-fidelity met → ACCEPT, with the live structural comparison downgraded to a WARN on gross mismatch; MATCH / bare-leaf / unreachable-editor all ACCEPT. Removed the leaf-guard block and the fail-closed-on-unreachable (both were provenance artifacts). A3 re-skin WARN and PrefabInstance-lineage PASS unchanged.
 
 **Verified (live editor):** composite clone → PASS, leaf clone → PASS (was blocked), null-sprite → CRITICAL FAIL (unchanged), structure-mismatch on real-sprite → WARN, editor-unreachable → ACCEPT. Suite **117 passed**; 3 caller-tests updated to the reframed behavior; 3 live integration tests still run.
+
+---
+
+## iter-7 (main thread) — null-sprite check made genuinely unfakeable (red-team iter-6 fix)
+
+The red-team defeated the reframe's one hard signal: `_parse_prefab_gameobject_sprites` read `m_Sprite` via **last-write-wins across ALL `!u!114` blocks**, so a white-box null-sprite Image whose GameObject also carried a decoy MonoBehaviour with a stray `m_Sprite: {guid:…}` read as "has a real sprite" → PASS. The literal 610 white-box, dressed with one decoy line, slipped through.
+
+**Fix:** attribute `m_Sprite` ONLY to a genuine `UnityEngine.UI.Image` component (identified by its `m_Script` guid `fae92b0f6c46b52459d9309c0d1f6d0b`); other MonoBehaviours' serialized Sprite fields are ignored.
+
+**Verified:** suite **118 passed** (+`test_A5h_decoy_component_does_not_mask_null_image`; fixtures updated to real Image guid). E2E through the production `validate_clone_provenance_yaml`: a null-sprite Image + decoy sibling carrying a real `m_Sprite` → **CRITICAL FAIL** (was PASS). The "unfakeable, pure-Python" claim in RESOLUTION.md/§15 is now accurate.
