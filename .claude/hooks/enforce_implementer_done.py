@@ -349,6 +349,16 @@ public static class Script {{
         Transform sourceElem = string.IsNullOrEmpty(elemPath) ? sourceRoot.transform : sourceRoot.transform.Find(elemPath);
         if (builtElem == null) return "STRUCTURE_MISMATCH:built_element_not_found:" + elemPath;
         if (sourceElem == null) return "STRUCTURE_MISMATCH:source_element_not_found:" + elemPath;
+        // Leaf guard (iter-5, red-team): a bare leaf (no children) has a
+        // trivially-replicable skeleton — a from-scratch Image with the source's
+        // pasted sprite guid produces the SAME leaf signature, so a structural
+        // MATCH proves NOTHING about lineage (the leaf guid-paste bypass). A
+        // leaf's provenance is unverifiable from the artifact (a CopyAsset leaf
+        // is byte-identical to a hand-made leaf), so we cannot pass it. The
+        // reuse_map must cite a COMPOSITE ancestor (whose skeleton includes this
+        // leaf transitively) or make the element a PrefabInstance clone.
+        if (builtElem.childCount == 0)
+            return "STRUCTURE_INSUFFICIENT:leaf_no_substructure:" + elemPath;
         string sb = Sig(builtElem, true);
         string ss = Sig(sourceElem, true);
         return (sb == ss) ? "STRUCTURE_MATCH"
@@ -363,6 +373,8 @@ public static class Script {{
     raw = raw.strip()
     if raw.startswith("STRUCTURE_MATCH"):
         return "MATCH"
+    if raw.startswith("STRUCTURE_INSUFFICIENT"):
+        return "INSUFFICIENT"  # bare leaf — unverifiable; caller blocks.
     if raw.startswith("STRUCTURE_MISMATCH"):
         return "MISMATCH"
     # Unparseable (e.g. a compile error surfaced by script-execute) → fail-closed.
@@ -2444,6 +2456,23 @@ def validate_clone_provenance_yaml(
                         f"The sprite GUID matches but the element was not cloned — "
                         f"the GUID was text-copied into a from-scratch fabrication. "
                         f"(Rule 19 / P1 — batchmode engine check)"
+                    )
+                    _log_p1_miss(task_dir, element_path, source_guid, repo_root)
+                elif engine_result == "INSUFFICIENT":
+                    # Bare leaf (no children): skeleton is trivially replicable, so
+                    # a structural MATCH proves nothing about lineage — the leaf
+                    # guid-paste bypass (red-team iter-4). A leaf's provenance is
+                    # unverifiable from the artifact. BLOCK.
+                    errors.append(
+                        f"CRITICAL FAIL (P1 — leaf unverifiable): element "
+                        f"'{element_path}' has no PrefabInstance lineage and no "
+                        f"substructure (it is a bare leaf). A from-scratch Image "
+                        f"carrying the source's pasted sprite GUID produces the "
+                        f"same leaf skeleton, so a structural match cannot prove "
+                        f"it was cloned. Cite a COMPOSITE ancestor in reuse_map.json "
+                        f"(whose skeleton covers this leaf transitively), or make "
+                        f"the element a PrefabInstance (!u!1001) clone. "
+                        f"(Rule 19 / P1 — leaf guard)"
                     )
                     _log_p1_miss(task_dir, element_path, source_guid, repo_root)
                 else:

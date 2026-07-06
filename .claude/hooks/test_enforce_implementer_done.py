@@ -1489,6 +1489,41 @@ class TestCloneProvenanceYAML(unittest.TestCase):
                 f"Real CopyAsset clone must not BLOCK; got: {block}",
             )
 
+    # ── A1-leaf: bare-leaf guid-paste → INSUFFICIENT → BLOCK (iter-5 red-team) ─
+
+    def test_A1_leaf_guid_paste_blocks(self):
+        """iter-5 (red-team iter-4): a from-scratch prefab whose cited element is a
+        BARE LEAF Image carrying the source's pasted sprite guid produces a
+        trivially-replicable leaf skeleton — the live check returns INSUFFICIENT
+        and the caller MUST CRITICAL FAIL. (Structural MATCH on a leaf proves
+        nothing about lineage; this was the surviving iter-1-class bypass.)"""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+            (repo_root / ".claude").mkdir()
+            (repo_root / "Assets" / "Prefabs").mkdir(parents=True)
+            built_prefab = repo_root / "Assets" / "Prefabs" / "BuiltCard.prefab"
+            built_prefab.write_text(self._prefab_scratch_real_sprite(self._SPRITE_GUID), encoding="utf-8")
+            source_prefab = repo_root / "Assets" / "Prefabs" / "Source.prefab"
+            source_prefab.write_text(self._prefab_scratch_real_sprite(self._SPRITE_GUID), encoding="utf-8")
+            (repo_root / "Assets" / "Prefabs" / "Source.prefab.meta").write_text(
+                f"fileFormatVersion: 2\nguid: {self._SOURCE_GUID}\n", encoding="utf-8")
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "test_task"
+            task_dir.mkdir(parents=True)
+            self._make_reuse_map(task_dir, element_path="LeafBorder",
+                                 source_guid=self._SOURCE_GUID,
+                                 built_prefab_path=str(built_prefab),
+                                 key_sprite_guid=self._SPRITE_GUID)
+            original_fn = eid._do_live_editor_structure_check
+            try:
+                eid._do_live_editor_structure_check = lambda *a, **kw: "INSUFFICIENT"
+                errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            finally:
+                eid._do_live_editor_structure_check = original_fn
+            self.assertTrue(
+                any("CRITICAL FAIL" in e and "leaf" in e.lower() for e in errs),
+                f"Bare-leaf guid-paste (INSUFFICIENT) must CRITICAL FAIL. Got: {errs}",
+            )
+
     # ── A2c: editor unreachable → BLOCK (fail-closed) ─────────────────────────
 
     def test_A2_editor_unreachable_blocks_transition(self):
@@ -1989,6 +2024,16 @@ class TestLiveEditorIntegration(unittest.TestCase):
             str(self.SHOP_CARD), self.STAMINA_CARD_GUID, "", self.REPO_ROOT
         )
         self.assertEqual(verdict, "MISMATCH", f"unrelated prefab should MISMATCH; got {verdict!r}")
+
+    def test_bare_leaf_insufficient(self):
+        """A bare-leaf element (CardBorder: Image, no children) returns
+        INSUFFICIENT — its skeleton is trivially replicable so lineage cannot be
+        proven (the leaf guid-paste bypass the red-team found in iter-4). Proven
+        against the real editor, not mocked."""
+        verdict = eid._do_live_editor_structure_check(
+            str(self.SHOP_CARD), self.TOURNAMENT_CARD_GUID, "CardBorder", self.REPO_ROOT
+        )
+        self.assertEqual(verdict, "INSUFFICIENT", f"bare leaf should be INSUFFICIENT; got {verdict!r}")
 
 
 if __name__ == "__main__":

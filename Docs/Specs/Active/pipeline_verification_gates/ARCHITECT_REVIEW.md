@@ -336,3 +336,126 @@ Even if D1 is fixed, `_do_live_editor_structure_check` compares only (a) direct-
 
 Do NOT set STATUS. Handing back to orchestrator for join with the red-team verdict.
 
+
+---
+
+# RED-TEAM REVIEW (iter-4, adversarial gate) — 2026-07-06
+
+**Reviewer:** golfin-redteam-reviewer · **STATUS at review:** READY_FOR_REDTEAM · **HEAD:** `2ea88278b`
+
+**Verdict: `ARCHITECT_REVIEW_FAIL`.** iter-4 genuinely closes iter-3's dead-seam bug and the
+composite-element guid-paste bypass — but the SAME guid-paste attack I FAILed in iter-1 still passes
+for **leaf Image elements**, which the Architect-authored reuse_map commonly cites (8 of 20 leaves in a
+real source prefab are single-Image leaves). The report's stated backstop for this — "P2's
+null-sprite/flat-fill lint" — is factually disproven: I ran the actual linter on a leaf forgery carrying
+a real pasted sprite and got **0 FAIL, 0 WARN**. The order's central deliverable (an un-fakeable clone
+gate, SPEC §0/§5) does not hold for a reachable, common case.
+
+## What I re-ran myself (not re-read), all against the LIVE editor at localhost:21573
+
+Drove the editor with my own independent MCP client (not the test harness): `initialize` → session id →
+`notifications/initialized` → `tools/call script-execute`, parsed `structuredContent.result.value` from
+the SSE. PING round-trip returned `PING_OK`.
+
+- **Suite:** `python3 -m pytest -q` → **115 passed**. ✓
+- **`TestLiveEditorIntegration` (2 tests) ACTUALLY RUN, not skip** (`-rs` shows 2 passed, 0 skipped) —
+  the iter-3 mocked-only gap is closed. `test_real_clone_matches` → MATCH, `test_unrelated_prefab_mismatches`
+  → MISMATCH, both through the real RPC. ✓
+- **iter-3 D1/D2 fixed:** the C# now uses `class Script` + `public static string Main()` returning the
+  verdict; I got real `STRUCTURE_MATCH`/`STRUCTURE_MISMATCH` return values from the live editor. ✓
+- **P2 fail-CLOSED confirmed in code** (`validate_ui_lint`:2055–2064): unreachable/None fresh run → BLOCK.
+  The iter-3 §0 fail-open is gone. ✓ (Stale docstring on `_rerun_ui_lint_via_editor` still says
+  "accept cached JSON" but the caller blocks — cosmetic, not the bug.)
+
+## Prior-rejection replay
+
+| Prior defect (my FAIL) | Verdict now |
+|---|---|
+| **iter-1: guid-paste forgery PASSES** (no-lineage + pasted sprite guid = silent PASS) | **CLOSED for composite elements, PRESENT for leaf elements** (see BLOCKER). |
+| **iter-3 D1: wrong C# class name → seam dead** | **GONE** — real MATCH/MISMATCH round-trips via live editor. |
+| **iter-3 D2: `Debug.Log` output never returned** | **GONE** — verdict is the method return value; I read it live. |
+| **iter-3 D6/P2 fail-open (§0 violation)** | **GONE** — P2 blocks on unreachable editor. |
+
+## E2E reproduced BOTH ways (production `validate_clone_provenance_yaml` + live editor)
+
+- **(a) Real modified clone PASSES:** real in-tree `Assets/Prefabs/UI/Shop/GeneralShopCard.prefab`,
+  `BadgePill` composite (sprite `bb07d102…`) cited from `TournamentSelectionCard` (`baac145d…`),
+  no `!u!1001` lineage → **0 CRITICAL FAIL** (live structural check → MATCH). Legit clones pass. ✓
+- **(b) Composite guid-paste forgery CRITICAL FAILs:** a from-scratch childless `BadgePill` carrying the
+  pasted `bb07d102…` → **CRITICAL FAIL** (structural MISMATCH). The iter-1 bypass is closed for composites. ✓
+- **A1 binding criterion holds:** `fixtures/fabricated_610/GeneralShopCard.prefab` → **CRITICAL FAIL**
+  (null-sprite branch). SPEC §5 A1 satisfied. ✓
+
+## THE BLOCKER — leaf-element guid-paste bypass (A1-class, reachable in normal operation)
+
+The structural check discriminates by an element's subtree skeleton (components + child names,
+root-name-excluded). For a **bare leaf Image** the skeleton is the trivial, universally-replicable
+`[ROOT|CanvasRenderer,Image,RectTransform]` (no children). I built a from-scratch prefab
+(`ForgedLeaf.prefab`, ZERO `!u!1001` lineage) whose `CardBorder` child is a single leaf Image carrying
+the source's **pasted** sprite guid `d162244f…` (copyable text, not a clone), cited from source
+`baac145d…`. Through the production verifier:
+
+```
+direct structural check verdict: MATCH
+validate_clone_provenance_yaml → errors: 0, CRITICAL: 0
+VERDICT: >>> PASSES — LEAF BYPASS SUCCEEDS <<<
+```
+
+**The report's own backstop claim is false.** Report §"Known nuance": *"leaf coverage is backstopped by
+P2's null-sprite/flat-fill lint."* I ran the real linter on the leaf forgery:
+```
+UI FIDELITY LINT: ForgedLeaf.prefab  — 0 FAIL, 0 WARN, 0 INFO —  RESULT: PASS (health)
+```
+P2 only fires on **null/blank** sprites. A leaf forgery carries a **real pasted** sprite — the exact move
+a "built-by-eye-from-the-reference" implementer makes — so P1 (trivial-skeleton MATCH) AND P2 (real
+sprite, 0 lint fail) BOTH pass it. The documented mitigation does not mitigate.
+
+**Why this is reachable, not a synthetic corner:** the `reuse_map.json` is Architect-authored ground
+truth (SPEC §4), and `TEMPLATE_reuse_map.json` explicitly shows `elementPath: "RootGO/ChildGO/LeafGO"`.
+Real reuse maps routinely cite leaf Images — icons, borders, backgrounds, separators, pill fills. In one
+real source prefab (`TournamentSelectionCard`), **8 of 20 leaf elements are single-Image leaves**
+(`CardBorder, CardBackground, Separator, PillFill, PaidRpIcon, RewardRpIcon, …`). `PillFill` is the very
+element class Cesar caught by eye in `stamina_boost_shop`. Any reuse mandate citing one of these is
+defeated by a one-line guid paste — the exact iter-1 attack, surviving for the common leaf case.
+
+This violates SPEC §0 design law ("a fact the engine reports, not a fact the implementer authors"): a
+pasted sprite guid is an implementer-authored fact, and a structural match on a 3-component leaf proves
+nothing about lineage. The order's promise — a gate an A1-class guid-paste forgery cannot defeat — is
+not met for leaf elements.
+
+## Three break-attempts (per protocol)
+
+1. **Composite guid-paste forgery (defeat the verifier):** FAILED to defeat — MISMATCH → CRITICAL FAIL.
+   The composite case is sound.
+2. **Leaf guid-paste forgery (defeat the verifier):** **SUCCEEDED in defeating it** — this is the FAIL.
+   Real pasted sprite → P1 MATCH + P2 0-fail → PASSES with zero lineage.
+3. **Make a legal re-skin FAIL (A3-class):** could NOT — a real different sprite yields WARN, not FAIL.
+   (This constrains the fix: do not hard-fail every no-`!u!1001` element; A3 must still pass.)
+
+## Fix instruction (for the implementer)
+
+The leaf case cannot be made sound by structural comparison alone — a single Image genuinely has an
+ambiguous skeleton. Sprite-guid equality is copyable and can never be *sufficient* lineage proof (SPEC
+§1.1 says so). Options, in order of soundness:
+
+- **Preferred:** for a no-`!u!1001` element (any element, leaf or composite), require an engine-reported
+  lineage fact the hook invokes — a batchmode `PrefabUtility.GetCorrespondingObjectFromSource` /
+  content-fingerprint check — OR mandate that reuse clones be **PrefabInstance** (variant/nested) so
+  `!u!1001` lineage is always present and the sprite-equality branch never arises. This is the same fix
+  the iter-3 red-team named (option 1); iter-4 implemented the structural check instead, which handles
+  composites but leaves leaves open.
+- **Minimum stopgap:** in the no-lineage branch, when `built_sprite_guid == source_sprite_guid` AND the
+  element's structural signature is trivially shallow (e.g. a leaf: 0 children, ≤ standard UI component
+  set), do NOT PASS on structural MATCH alone — emit a CRITICAL FAIL / blocking finding ("leaf element:
+  structure is not a discriminating signal; require PrefabInstance lineage or a batchmode content check").
+  Do NOT touch case B (different real sprite = re-skin WARN); A3 must still pass.
+- **Correct the report:** the "P2 null-sprite lint backstops leaves" claim is false for real-sprite
+  forgeries — remove or fix it so the next author isn't misled.
+- **Add a red-team acceptance test to `TestCloneProvenanceYAML`:** a from-scratch leaf Image (0 `!u!1001`)
+  whose element carries the source's pasted sprite guid MUST block. Its absence is why 115 green missed this.
+
+Logged to `.claude/review_misses.log`.
+
+**All Assets/ forgeries I created were deleted (`AssetDatabase.DeleteAsset` + `rm`); git working tree
+carries no scene/prefab drift (only a `review_misses.log` append from the production `_log_p1_miss`
+firing during the E2E — harmless).**

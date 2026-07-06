@@ -171,3 +171,19 @@ Canonical screenshot: N/A — pure Python/hook change, no Unity scene or UI deli
 - **End-to-end through production `validate_clone_provenance_yaml` + live editor:** real GeneralShopCard clone (BadgePill) → **0 CRITICAL FAIL** (passes); a from-scratch guid-paste forgery (childless BadgePill carrying the source's pasted sprite) → **1 CRITICAL FAIL** (structural mismatch). The guid-paste bypass is closed AND legit modified clones pass.
 
 **Known nuance (documented for reuse_map authors):** the structure check's discrimination scales with the element's substructure — cite **composite** Image elements (or the prefab root), not bare leaf Images, for strong verification; leaf coverage is backstopped by P2's null-sprite/flat-fill lint.
+
+---
+
+## iter-5 (main thread) — leaf guid-paste bypass CLOSED + false backstop corrected
+
+**Red-team (iter-4) caught a real residual hole AND an error of mine.** My iter-4 report claimed "leaf coverage is backstopped by P2's null-sprite/flat-fill lint." **That was FALSE** — the red-team ran the real `UIFidelityLinter` on a leaf forgery carrying a *pasted real sprite* and got 0 FAIL / 0 WARN. P2 only fires on *null* sprites; a pasted real sprite passes. I had verified the COMPOSITE case (BadgePill, which has a child) and wrongly generalized to leaves without testing them.
+
+**Root fact:** a bare leaf's provenance is unverifiable from the artifact — a CopyAsset leaf is byte-identical to a hand-made leaf with the same sprite, so a structural MATCH on a leaf proves nothing about lineage.
+
+**Fix (red-team's sanctioned direction — "block trivially-shallow leaf skeletons"):** `_do_live_editor_structure_check` now returns `INSUFFICIENT` when the cited element has no children (bare leaf); the P1 caller CRITICAL-FAILs it with a message directing the implementer to cite a COMPOSITE ancestor (whose skeleton covers the leaf transitively) or make it a PrefabInstance clone. A3 (legal re-skin → WARN) is untouched.
+
+**Proven (live editor):**
+- Suite **117 passed** (+leaf unit test `test_A1_leaf_guid_paste_blocks`, +live `test_bare_leaf_insufficient`).
+- E2E production `validate_clone_provenance_yaml` via live editor: bare-leaf `CardBorder` citation → **CRITICAL FAIL (P1 — leaf unverifiable)**. Composite clone still PASSes; composite forgery still CRITICAL-FAILs; editor-unreachable still BLOCKs.
+
+**Corrected claim:** there is NO P2 leaf backstop. Leaf provenance is handled by the P1 leaf guard (block unverifiable bare leaves), not by the linter.
