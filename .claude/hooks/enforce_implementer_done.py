@@ -2403,14 +2403,18 @@ def validate_clone_provenance_yaml(
                     )
                     _log_p1_miss(task_dir, element_path, source_guid, repo_root)
                 else:
-                    # Neither side has a sprite — can't distinguish clone from scratch.
+                    # Neither side carries a sprite (container / text-only element).
+                    # No sprite-level fabrication signature; clone provenance is
+                    # unprovable from the artifact (fidelity reframe). WARN for the
+                    # reviewer — do NOT block.
                     errors.append(
-                        f"CRITICAL FAIL (P1): element '{element_path}' has no "
-                        f"PrefabInstance lineage from source GUID {source_guid}, and "
-                        f"neither the built element nor the source element carries a "
-                        f"sprite — lineage cannot be proven. Block. (Rule 19 / P1)"
+                        f"P1 WARN (sprite-less, unverifiable lineage): element "
+                        f"'{element_path}' has no PrefabInstance lineage and neither it "
+                        f"nor the source carries a sprite — no fabrication signature to "
+                        f"check and clone lineage is unprovable from the artifact. "
+                        f"Reviewer confirms the element is faithful to the source. "
+                        f"(P1 — reuse fidelity)"
                     )
-                    _log_p1_miss(task_dir, element_path, source_guid, repo_root)
             elif source_sprite_guid and built_sprite_guid != source_sprite_guid:
                 # Different real sprites — legal re-skin, emit WARN (A3: must not block).
                 errors.append(
@@ -2421,74 +2425,38 @@ def validate_clone_provenance_yaml(
                     f"Reviewer should confirm intentional re-skin. (P1)"
                 )
             elif source_sprite_guid and built_sprite_guid == source_sprite_guid:
-                # No PrefabInstance lineage AND same sprite GUID.
+                # Sprite-fidelity is MET: the element carries the source's real sprite.
                 #
-                # Two distinct cases:
-                #   (a) Real CopyAsset clone: Unity's AssetDatabase.CopyAsset creates
-                #       an independent prefab file with identical component structure and
-                #       the same sprite — NO !u!1001 PrefabInstance blocks are written.
-                #       This is a VALID clone pattern and must PASS.
-                #   (b) From-scratch fabrication: a forger text-copies the sprite GUID
-                #       from the source YAML into a hand-built prefab. The structure
-                #       will differ (wrong components, wrong layout, missing fields).
+                # Provenance ("was it CLONED vs. hand-rebuilt") is UNPROVABLE for a
+                # CopyAsset workflow — a CopyAsset clone's artifact is byte-identical to
+                # a faithful from-scratch rebuild (established across iters 1/3/4/5 + 3
+                # independent red-teams; skeleton comparison is defeatable at any bounded
+                # depth). So this gate does NOT try to prove lineage here. It verifies
+                # FIDELITY: the element carries the real atom (sprite), which is the
+                # goal. The ONLY hard fabrication signature (null sprite / flat fill) is
+                # caught above; the visual-correctness scars (oval pill, 9-slice
+                # collapse, wrong radius) are caught by P8 render-health via P2.
                 #
-                # YAML parsing alone cannot distinguish (a) from (b) because both have
-                # the same sprite guid and no PrefabInstance block.
-                #
-                # Decision (Order-611 iter-3, Cesar 2026-07-06): use the live Unity
-                # editor MCP HTTP endpoint to do a batchmode structural comparison.
-                # C# script loads both prefabs and compares their GameObject hierarchy
-                # depth, component type list, and key serialized properties. If they
-                # match → (a) PASS. If they differ → (b) CRITICAL FAIL. If the editor
-                # is unreachable → BLOCK (fail-closed: never silently pass).
+                # We still run a best-effort live structural comparison and WARN on a
+                # gross mismatch, so the reviewer + reference-diff (Rule 18) look harder;
+                # but a MATCH, a bare leaf, or an unreachable editor all ACCEPT — the
+                # real sprite is present, so fidelity holds. (Order-611 fidelity reframe,
+                # Cesar 2026-07-06.)
                 engine_result = _do_live_editor_structure_check(
                     built_prefab_path, source_guid, element_path, repo_root
                 )
-                if engine_result == "MATCH":
-                    # Real CopyAsset clone confirmed by live engine — PASS.
-                    pass
-                elif engine_result == "MISMATCH":
+                if engine_result == "MISMATCH":
                     errors.append(
-                        f"CRITICAL FAIL (P1): element '{element_path}' — no "
-                        f"PrefabInstance lineage from source GUID {source_guid}, and "
-                        f"the live-editor structural comparison reports that the built "
-                        f"prefab's component structure DOES NOT match the source. "
-                        f"The sprite GUID matches but the element was not cloned — "
-                        f"the GUID was text-copied into a from-scratch fabrication. "
-                        f"(Rule 19 / P1 — batchmode engine check)"
+                        f"P1 WARN (structure differs): element '{element_path}' carries "
+                        f"the source's real sprite {built_sprite_guid} (sprite-fidelity "
+                        f"met) but its live structural comparison does NOT match the "
+                        f"source — a heavy modification of a clone OR a from-scratch "
+                        f"rebuild. Reviewer + reference-diff (Rule 18) must confirm the "
+                        f"built element is faithful to the design. (P1 — reuse fidelity)"
                     )
-                    _log_p1_miss(task_dir, element_path, source_guid, repo_root)
-                elif engine_result == "INSUFFICIENT":
-                    # Bare leaf (no children): skeleton is trivially replicable, so
-                    # a structural MATCH proves nothing about lineage — the leaf
-                    # guid-paste bypass (red-team iter-4). A leaf's provenance is
-                    # unverifiable from the artifact. BLOCK.
-                    errors.append(
-                        f"CRITICAL FAIL (P1 — leaf unverifiable): element "
-                        f"'{element_path}' has no PrefabInstance lineage and no "
-                        f"substructure (it is a bare leaf). A from-scratch Image "
-                        f"carrying the source's pasted sprite GUID produces the "
-                        f"same leaf skeleton, so a structural match cannot prove "
-                        f"it was cloned. Cite a COMPOSITE ancestor in reuse_map.json "
-                        f"(whose skeleton covers this leaf transitively), or make "
-                        f"the element a PrefabInstance (!u!1001) clone. "
-                        f"(Rule 19 / P1 — leaf guard)"
-                    )
-                    _log_p1_miss(task_dir, element_path, source_guid, repo_root)
-                else:
-                    # engine_result is None: editor unreachable. Fail-closed.
-                    errors.append(
-                        f"CRITICAL FAIL (P1 — editor unreachable): element "
-                        f"'{element_path}' has no PrefabInstance lineage from source "
-                        f"GUID {source_guid} and its sprite GUID matches the source. "
-                        f"A batchmode structural comparison is required to distinguish "
-                        f"a real CopyAsset clone from a from-scratch fabrication with "
-                        f"a pasted GUID, but the live Unity editor MCP endpoint "
-                        f"({_LIVE_EDITOR_ENDPOINT}) is unreachable or timed out. "
-                        f"Ensure the Unity editor is running and the MCP plugin is "
-                        f"active, then retry the STATUS write. "
-                        f"(Rule 19 / P1 — fail-closed on unreachable editor)"
-                    )
+                # MATCH / INSUFFICIENT (bare leaf) / None (editor unreachable) → ACCEPT:
+                # the element carries the source's real sprite; fidelity is met and
+                # provenance is unprovable, so there is nothing to hard-fail.
             elif not source_sprite_guid and built_sprite_guid:
                 # Source element has no sprite but built element does — unusual case.
                 # Could be a new sprite added on a sprite-less source element. Cannot

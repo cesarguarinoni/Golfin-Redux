@@ -459,3 +459,149 @@ Logged to `.claude/review_misses.log`.
 **All Assets/ forgeries I created were deleted (`AssetDatabase.DeleteAsset` + `rm`); git working tree
 carries no scene/prefab drift (only a `review_misses.log` append from the production `_log_p1_miss`
 firing during the E2E — harmless).**
+
+---
+
+# RED-TEAM REVIEW (iter-5, adversarial gate) — 2026-07-06
+
+**Reviewer:** golfin-redteam-reviewer · **STATUS at review:** READY_FOR_REDTEAM · **HEAD:** `0dbcec028`
+
+**Verdict: `ARCHITECT_REVIEW_FAIL`.** iter-5 correctly closes the iter-4 *bare-leaf* (`childCount==0`)
+guid-paste bypass. But the leaf guard's threshold is exactly one child deep, and it is trivially escaped:
+I built a from-scratch fabricated prefab (ZERO `!u!1001` lineage, ZERO source back-references) whose
+cited element replicates a **shallow composite** — an `Image` with ONE trivial child — carrying the
+source's *pasted* sprite guid, and it PASSES the production `validate_clone_provenance_yaml` with **0
+CRITICAL FAILs, 0 WARNs**. This is precisely the shallow-composite angle (#3a) my mandate flagged as the
+sharp-threshold risk: `childCount==0` is a threshold a forger routes around by adding one throwaway child.
+The order's central deliverable (an un-fakeable clone gate, SPEC §0/§5) still does not hold.
+
+## What I re-ran myself (not re-read), editor LIVE at localhost:21573 via my own MCP client
+
+- **Suite:** `python3 -m pytest -q` → **117 passed**. ✓
+- **`TestLiveEditorIntegration` (3 tests) ACTUALLY RUN, 0 skipped** (`-rs`): `test_bare_leaf_insufficient`,
+  `test_real_clone_matches`, `test_unrelated_prefab_mismatches` — all PASS through the real RPC. The
+  mocked-only gap stays closed. ✓
+- Editor reachability: `initialize` → HTTP 200 + session id; `Script.Main()` PING round-trip works. ✓
+
+## Prior-rejection replay
+
+| Prior defect (my FAIL) | Verdict now |
+|---|---|
+| **iter-1: composite guid-paste forgery PASSES** | CLOSED (structural MISMATCH → CRITICAL FAIL). |
+| **iter-3 D1/D2: dead live-editor seam** | GONE (real MATCH/MISMATCH/INSUFFICIENT round-trips live). |
+| **iter-4: bare-leaf (`childCount==0`) guid-paste bypass** | **CLOSED for bare leaves** (`CardBorder` → INSUFFICIENT → CRITICAL FAIL, verified live). |
+| **iter-4: false "P2 null-sprite backstop" claim** | CORRECTED in iter-5 report. ✓ |
+| **NEW iter-5: shallow-composite (`childCount==1`) guid-paste bypass** | **PRESENT — this is the FAIL.** |
+
+## THE BLOCKER — shallow-composite guid-paste bypass (A1-class, reachable, on the guard's own recommended target)
+
+iter-5's guard: `if (builtElem.childCount == 0) return "STRUCTURE_INSUFFICIENT..."`
+(`enforce_implementer_done.py:360`). It fires ONLY for zero-child leaves. The moment the cited element has
+≥1 child, the guard is skipped and the recursive skeleton `Sig()` is compared. For a **shallow composite**
+the skeleton is trivially replicable by hand, so a from-scratch fabrication MATCHes.
+
+I dumped the real source (`baac145d…` = `TournamentSelectionCard.prefab`) tree live. `BadgePill` is a
+shallow composite:
+```
+BadgePill  kids=1  [RectTransform,CanvasRenderer,Image]
+  BadgeLabel  kids=0  [RectTransform,CanvasRenderer,TextMeshProUGUI]
+```
+Its whole skeleton (root name excluded) is `[ROOT|CanvasRenderer,Image,RectTransform[BadgeLabel|CanvasRenderer,RectTransform,TextMeshProUGUI]]`
+— replicable in four `new GameObject(...)` calls.
+
+I built `Assets/_RT_ForgedShallow.prefab` from scratch via the live editor: a `BadgePill` (Image) with one
+`BadgeLabel` (TMP) child, `img.sprite` set to the source's *pasted* sprite guid `bb07d102…`, saved with
+`PrefabUtility.SaveAsPrefabAsset`. Verified on disk: **`!u!1001` blocks = 0**, source-guid back-refs = 0,
+sprite guid present = 1. Then, through the shipping function:
+
+```
+STRUCTURAL CHECK on forged shallow-composite BadgePill: 'MATCH'
+=== FROM-SCRATCH SHALLOW-COMPOSITE FORGERY (BadgePill, 1 child, pasted sprite, 0 !u!1001) ===
+total errors: 0   CRITICAL FAILs: 0   WARNs: 0
+>>> PASSES — SHALLOW-COMPOSITE FABRICATION ACCEPTED <<<  (BYPASS)
+```
+
+Full characterization of the no-lineage branch as it stands at iter-5:
+
+| Built element, NO `!u!1001` lineage, same sprite guid as source | Shipping verdict | Correct? |
+|---|---|---|
+| Bare leaf (`childCount==0`) — e.g. `CardBorder` | INSUFFICIENT → CRITICAL FAIL | Correct (iter-5 fix) |
+| **Shallow composite (`childCount==1`) — e.g. `BadgePill`** | **MATCH → PASS, 0 errors** | **NO — from-scratch fabrication accepted** |
+| Deep composite (`childCount` large) e.g. prefab root | MISMATCH → CRITICAL FAIL | Correct |
+
+**Why this is reachable, not a synthetic corner — and worse, it is the guard's own recommended target.**
+The iter-5 leaf-guard error message literally directs authors to *"cite a COMPOSITE ancestor in
+reuse_map.json … or make the element a PrefabInstance clone."* `BadgePill` IS that composite ancestor
+(it's a one-hop parent of a leaf), and it is the *exact* element iter-4 and iter-5 hold up as the canonical
+"composite clone that PASSES." So the fix funnels reuse-map authors toward shallow composites — the very
+shape a forger replicates cheapest. Real source prefabs are full of them: `BadgePill`, `FreeEntryBadge`,
+`CtaGoldButton`/`CtaSilverButton` (Image + one TMP child) are all `childCount==1`. Any reuse mandate citing
+one is defeated by a from-scratch build + a one-line guid paste + four `new GameObject` calls.
+
+This is SPEC §0 design law violated the same way iter-1/iter-4 violated it: sprite-guid equality is an
+implementer-authored fact (copyable text), and a structural MATCH on a shallow skeleton proves nothing
+about instantiation lineage. The verifier confirms "the element carries the source's sprite guid AND has a
+BadgePill-shaped skeleton," not "the element was cloned from the source." Those are different facts; only
+the second is engine-reported (a `!u!1001` block or `GetCorrespondingObjectFromSource`).
+
+**Regression checks I ran to bound the fix:**
+- Real in-tree `GeneralShopCard.prefab` `BadgePill` (a genuine modified clone) → PASS (0 CRITICAL). Correct —
+  BUT this is the *same code path* my forgery exploits; the verifier cannot tell the two apart. That
+  indistinguishability IS the defect.
+- Real bare leaf `CardBorder` → CRITICAL FAIL (INSUFFICIENT). iter-5 leaf fix holds. ✓
+- `fixtures/fabricated_610/GeneralShopCard.prefab` (null sprites) still CRITICAL-FAILs (null-sprite branch). ✓
+- A3 constraint: a *different* real sprite routes to the WARN branch (line 2414) and never reaches the
+  structural check — so any fix must NOT hard-fail every no-`!u!1001` element (A3 re-skins must stay WARN).
+
+## Three break-attempts (per protocol) — results
+
+1. **Shallow-composite guid-paste forgery (#3a, defeat the verifier):** **SUCCEEDED in defeating it** — this
+   is the FAIL. `childCount==1` escapes the guard; shallow skeleton MATCHes; PASSES with zero lineage.
+2. **Regression — real composite clone still PASSes:** confirmed (BadgePill on real GeneralShopCard → PASS),
+   and a real bare-leaf still BLOCKs. So the iter-5 leaf fix is real; it just stops one child too shallow.
+3. **Make a legal re-skin FAIL (A3-class):** could NOT — a different real sprite yields WARN, not FAIL.
+   Fix must preserve this: do not blanket-block no-`!u!1001` elements.
+
+## Why this is a blocker, not a follow-up
+
+SPEC §5 A1 and §0 make **verifier soundness the product.** iter-5 raised the fabrication cost from "leave
+sprites null" (610) to "paste a guid" (iter-1/4 composites) to "paste a guid + add one throwaway child"
+(iter-5 shallow composites) — but never crossed from copyable facts to engine-reported lineage. Each
+iteration fails yesterday's exact mistake while a one-step-harder version of the same mistake sails through.
+The `childCount==0` guard is a sharp threshold; the forger steps to `childCount==1`. This is the third-scar
+category exactly.
+
+## Fix instruction (for the implementer)
+
+The structural check cannot be made sound by raising the child-count threshold — any fixed depth N is
+escaped at N+1, and shallow composites are legitimate real elements you cannot blanket-reject (that would
+fail real clones). Sprite-guid equality + skeleton similarity can only ever *corroborate*, never *prove*
+lineage. Options, in order of soundness:
+
+- **Preferred (the fix the iter-3 AND iter-4 red-teams already named):** for ANY no-`!u!1001` element, require
+  an **engine-reported lineage fact the hook invokes** — a batchmode `PrefabUtility.GetCorrespondingObjectFromSource`
+  / content-fingerprint / asset-dependency check — OR mandate that reuse clones be **PrefabInstance**
+  (variant/nested) so `!u!1001` lineage is always present and the sprite-equality branch never arises. Pure
+  YAML + structural skeleton provably cannot distinguish a hand-authored shallow composite from a CopyAsset
+  clone; stop trying to.
+- **Minimum stopgap (if batchmode content-lineage is deferred):** in the no-lineage same-sprite branch, a
+  structural MATCH must NOT alone PASS unless the element's skeleton is *strongly discriminating* (a defensible
+  bar: total subtree node count ≥ some threshold AND ≥2 levels of real substructure). A `childCount==1`
+  shallow composite whose only child is a bare leaf must return INSUFFICIENT → CRITICAL FAIL, same as a bare
+  leaf, directing the author to a genuinely deep composite (e.g. the prefab root) or a PrefabInstance clone.
+  Do NOT touch the different-sprite WARN branch (A3 must still pass). But understand this only moves the
+  threshold; a determined forger replicates a deeper skeleton. The engine-lineage check is the real fix.
+- **Add a red-team acceptance test to `TestCloneProvenanceYAML`:** a from-scratch prefab (0 `!u!1001`) whose
+  cited element is a `childCount==1` shallow composite carrying the source's pasted sprite guid MUST block.
+  Its absence is why 117 green missed this — the suite tests bare leaf (`childCount==0`) and deep root, but
+  not the one-child middle case.
+- **Correct the report/PIPELINE_HARDENING §15:** the framing that "composite → verified, leaf → guarded" is
+  wrong; shallow composites are as unverifiable as leaves. State the real boundary (structural depth ≥ N with
+  real substructure) or, better, that structural comparison is corroborating-only and lineage requires the
+  engine check.
+
+Logged to `.claude/review_misses.log`.
+
+**All Assets/ forgeries I created were deleted (`AssetDatabase.DeleteAsset` → `deleted=True stillExists=False`);
+git working tree carries no scene/prefab drift (only a `review_misses.log` append from the production
+`_log_p1_miss` firing during the block-path regression checks + my REDTEAM-FAIL summary line — harmless).**

@@ -1359,7 +1359,7 @@ class TestCloneProvenanceYAML(unittest.TestCase):
                 key_sprite_guid=self._SPRITE_GUID,
             )
 
-            # Monkeypatch: live editor reports structure MISMATCH (from-scratch fab).
+            # Monkeypatch: live editor reports structure MISMATCH.
             original_fn = eid._do_live_editor_structure_check
             try:
                 eid._do_live_editor_structure_check = lambda *a, **kw: "MISMATCH"
@@ -1367,17 +1367,21 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             finally:
                 eid._do_live_editor_structure_check = original_fn
 
+            # FIDELITY REFRAME (Cesar 2026-07-06): provenance is unprovable for
+            # CopyAsset, so a structural MISMATCH on an element that carries the
+            # source's REAL sprite is NOT a hard fail — sprite-fidelity is met, and
+            # the mismatch is a WARN for the reviewer + reference-diff (Rule 18). The
+            # only hard fabrication signature is a NULL sprite (see the A1 null test).
             critical = [e for e in errs if "CRITICAL FAIL" in e]
-            self.assertTrue(
-                len(critical) >= 1,
-                f"A1-mutant: from-scratch prefab with pasted source sprite guid MUST "
-                f"produce CRITICAL FAIL when live editor says MISMATCH. Got: {errs}",
+            self.assertEqual(
+                critical, [],
+                f"Reframe: real-sprite element with structure MISMATCH must WARN, not "
+                f"CRITICAL FAIL. Got: {critical}",
             )
-            # Must also log to review_misses.log.
-            log_path = repo_root / ".claude" / "review_misses.log"
-            self.assertTrue(log_path.exists(), "review_misses.log must be created")
-            log_text = log_path.read_text(encoding="utf-8")
-            self.assertIn("P1-CRITICAL-FAIL", log_text)
+            self.assertTrue(
+                any("WARN (structure differs)" in e for e in errs),
+                f"Structure MISMATCH on a real-sprite element must emit a WARN. Got: {errs}",
+            )
 
     # ── A2: true PrefabInstance clone → PASS ──────────────────────────────────
 
@@ -1519,20 +1523,26 @@ class TestCloneProvenanceYAML(unittest.TestCase):
                 errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
             finally:
                 eid._do_live_editor_structure_check = original_fn
-            self.assertTrue(
-                any("CRITICAL FAIL" in e and "leaf" in e.lower() for e in errs),
-                f"Bare-leaf guid-paste (INSUFFICIENT) must CRITICAL FAIL. Got: {errs}",
+            # FIDELITY REFRAME: a bare leaf carrying the source's REAL sprite is
+            # faithful — sprite-fidelity is met. Provenance of a leaf is unprovable,
+            # so we ACCEPT (no hard fail). The prior "leaf guard block" was dropped
+            # because it can't be made sound and it blocked legit leaf reuse.
+            critical = [e for e in errs if "CRITICAL FAIL" in e]
+            self.assertEqual(
+                critical, [],
+                f"Reframe: bare-leaf element with the source's real sprite is faithful "
+                f"and must be ACCEPTED (not blocked). Got: {critical}",
             )
 
     # ── A2c: editor unreachable → BLOCK (fail-closed) ─────────────────────────
 
-    def test_A2_editor_unreachable_blocks_transition(self):
-        """A2c (iter-3, new) — When the element has no PrefabInstance lineage and
-        the same sprite GUID as the source, but the live Unity editor is unreachable
-        (returns None from _do_live_editor_structure_check), the transition must be
-        BLOCKED with a clear error.
-
-        Fail-closed rule: never silently PASS when the editor is unavailable.
+    def test_A2_editor_unreachable_accepts_real_sprite(self):
+        """FIDELITY REFRAME (Cesar 2026-07-06) — When the element carries the source's
+        REAL sprite (sprite-fidelity met) and the live editor is unreachable (the
+        best-effort structure comparison returns None), the P1 gate ACCEPTS. The hard
+        fabrication check (null sprite) is pure-Python and already ran; the structure
+        comparison is only a WARN-level assist, so an unreachable editor does not
+        block. (Provenance is unprovable for CopyAsset; fidelity is the gate.)
         """
         with tempfile.TemporaryDirectory() as root_str:
             repo_root = Path(root_str)
@@ -1572,20 +1582,15 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             finally:
                 eid._do_live_editor_structure_check = original_fn
 
-            # Must produce an error mentioning unreachable / fail-closed.
-            block_errs = [
-                e for e in errs
-                if "unreachable" in e.lower() or "fail-closed" in e.lower()
-            ]
-            self.assertTrue(
-                len(block_errs) >= 1,
-                f"Editor-unreachable case must produce a BLOCK error (fail-closed). "
-                f"Got: {errs}",
-            )
-            # Must NOT silently PASS (i.e. must NOT produce zero errors).
-            self.assertGreater(
-                len(errs), 0,
-                "Editor-unreachable must not silently PASS (zero errors).",
+            # Reframe: real-sprite element + unreachable editor → ACCEPT (no hard
+            # fail). The null-sprite fabrication check already passed in pure Python;
+            # the structure comparison is a best-effort WARN assist only.
+            critical = [e for e in errs if "CRITICAL FAIL" in e]
+            self.assertEqual(
+                critical, [],
+                f"Reframe: real-sprite element must be ACCEPTED when the editor is "
+                f"unreachable (sprite-fidelity met; structure check is best-effort). "
+                f"Got: {critical}",
             )
 
     # ── A3: legal re-skin (real clone, different real sprite) → WARN not FAIL ─

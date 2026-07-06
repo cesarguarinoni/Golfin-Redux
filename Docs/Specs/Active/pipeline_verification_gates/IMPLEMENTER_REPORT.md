@@ -187,3 +187,13 @@ Canonical screenshot: N/A — pure Python/hook change, no Unity scene or UI deli
 - E2E production `validate_clone_provenance_yaml` via live editor: bare-leaf `CardBorder` citation → **CRITICAL FAIL (P1 — leaf unverifiable)**. Composite clone still PASSes; composite forgery still CRITICAL-FAILs; editor-unreachable still BLOCKs.
 
 **Corrected claim:** there is NO P2 leaf backstop. Leaf provenance is handled by the P1 leaf guard (block unverifiable bare leaves), not by the linter.
+
+---
+
+## iter-6 (main thread) — FIDELITY REFRAME (resolves the ESCALATION)
+
+After iter-1/3/4/5 + 3 red-teams proved clone provenance is unprovable for CopyAsset, Cesar chose to reframe P1 from "prove it was cloned" to "verify it is FAITHFUL." See `RESOLUTION.md`.
+
+**Code:** the no-lineage branch now hard-fails ONLY the null-sprite fabrication signature (pure-Python, unfakeable). Same-real-sprite → sprite-fidelity met → ACCEPT, with the live structural comparison downgraded to a WARN on gross mismatch; MATCH / bare-leaf / unreachable-editor all ACCEPT. Removed the leaf-guard block and the fail-closed-on-unreachable (both were provenance artifacts). A3 re-skin WARN and PrefabInstance-lineage PASS unchanged.
+
+**Verified (live editor):** composite clone → PASS, leaf clone → PASS (was blocked), null-sprite → CRITICAL FAIL (unchanged), structure-mismatch on real-sprite → WARN, editor-unreachable → ACCEPT. Suite **117 passed**; 3 caller-tests updated to the reframed behavior; 3 live integration tests still run.
