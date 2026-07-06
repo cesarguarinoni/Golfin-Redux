@@ -10787,7 +10787,7 @@ PrefabInstance:
     - target: {fileID: 259090858572330456, guid: afa7f93918438476eae5712c66071981, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 21300000, guid: 48e7cea5350380b42bceb9a78035d7b7, type: 3}
+      objectReference: {fileID: 21300000, guid: 588ef2bfd5c6a4010ad91f9a15691813, type: 3}
     - target: {fileID: 259090858572330456, guid: afa7f93918438476eae5712c66071981, type: 3}
       propertyPath: m_Color.b
       value: 1
@@ -10878,15 +10878,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4449590584901568122, guid: afa7f93918438476eae5712c66071981, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 164
+      value: 166
       objectReference: {fileID: 0}
     - target: {fileID: 4449590584901568122, guid: afa7f93918438476eae5712c66071981, type: 3}
       propertyPath: m_SizeDelta.y
-      value: -10
+      value: -6
       objectReference: {fileID: 0}
     - target: {fileID: 4449590584901568122, guid: afa7f93918438476eae5712c66071981, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4713966472251732156, guid: afa7f93918438476eae5712c66071981, type: 3}
       propertyPath: m_Pivot.x
@@ -10992,6 +10992,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -92
       objectReference: {fileID: 0}
+    - target: {fileID: 5503979034580828325, guid: afa7f93918438476eae5712c66071981, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 064cba0b0bc85154995fa70dd470817b, type: 3}
     - target: {fileID: 5546718013360863800, guid: afa7f93918438476eae5712c66071981, type: 3}
       propertyPath: m_Type
       value: 1
@@ -11051,6 +11055,7 @@ PrefabInstance:
     - {fileID: 5458051538812435997, guid: afa7f93918438476eae5712c66071981, type: 3}
     - {fileID: 2568159251331569649, guid: afa7f93918438476eae5712c66071981, type: 3}
     - {fileID: 7056772415594222579, guid: afa7f93918438476eae5712c66071981, type: 3}
+    - {fileID: 2608205481967074784, guid: afa7f93918438476eae5712c66071981, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 4713966472251732156, guid: afa7f93918438476eae5712c66071981, type: 3}
       insertIndex: -1
