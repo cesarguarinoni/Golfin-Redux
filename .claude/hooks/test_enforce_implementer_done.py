@@ -1313,6 +1313,62 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             self.assertIn("P1-CRITICAL-FAIL", log_text)
             self.assertIn("test_task", log_text)
 
+    # ── A1-mutant: from-scratch prefab with SOURCE's sprite guid pasted → CRITICAL FAIL ──
+
+    def test_A1_mutant_guid_paste_critical_fail(self):
+        """A1-mutant (red-team bypass, iter-2 fix) — a from-scratch fabrication that
+        carries ZERO !u!1001 PrefabInstance blocks but has the source's m_Sprite guid
+        pasted into the Image component MUST CRITICAL FAIL.
+
+        This is the exact bypass the red-team demonstrated: a guid string is copyable
+        text; matching guids without PrefabInstance lineage is not proof of cloning.
+        SPEC §1.1: 'Deliberately NOT checked: sprite equality as such.'
+        """
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+            (repo_root / ".claude").mkdir()
+            (repo_root / "Assets" / "Prefabs").mkdir(parents=True)
+
+            # Built prefab: FROM SCRATCH — zero PrefabInstance blocks,
+            # but the m_Sprite guid is COPIED from the source (the bypass).
+            built_prefab = repo_root / "Assets" / "Prefabs" / "BuiltCard.prefab"
+            built_prefab.write_text(
+                self._prefab_scratch_real_sprite(self._SPRITE_GUID),  # same guid as source
+                encoding="utf-8",
+            )
+
+            # Source prefab: real clone with the same sprite.
+            source_prefab = repo_root / "Assets" / "Prefabs" / "Source.prefab"
+            source_prefab.write_text(
+                self._prefab_scratch_real_sprite(self._SPRITE_GUID), encoding="utf-8"
+            )
+            (repo_root / "Assets" / "Prefabs" / "Source.prefab.meta").write_text(
+                f"fileFormatVersion: 2\nguid: {self._SOURCE_GUID}\n", encoding="utf-8"
+            )
+
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "test_task"
+            task_dir.mkdir(parents=True)
+            self._make_reuse_map(
+                task_dir,
+                element_path="CardRoot",
+                source_guid=self._SOURCE_GUID,
+                built_prefab_path=str(built_prefab),
+                key_sprite_guid=self._SPRITE_GUID,
+            )
+
+            errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            critical = [e for e in errs if "CRITICAL FAIL" in e]
+            self.assertTrue(
+                len(critical) >= 1,
+                f"A1-mutant: from-scratch prefab with pasted source sprite guid MUST "
+                f"produce CRITICAL FAIL; the guid-paste bypass must be closed. Got: {errs}",
+            )
+            # Must also log to review_misses.log.
+            log_path = repo_root / ".claude" / "review_misses.log"
+            self.assertTrue(log_path.exists(), "review_misses.log must be created")
+            log_text = log_path.read_text(encoding="utf-8")
+            self.assertIn("P1-CRITICAL-FAIL", log_text)
+
     # ── A2: true PrefabInstance clone → PASS ──────────────────────────────────
 
     def test_A2_true_clone_prefab_instance_pass(self):

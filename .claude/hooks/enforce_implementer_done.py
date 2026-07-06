@@ -2056,7 +2056,7 @@ def validate_clone_provenance_yaml(
                     )
                     _log_p1_miss(task_dir, element_path, source_guid, repo_root)
             elif source_sprite_guid and built_sprite_guid != source_sprite_guid:
-                # Different real sprites — legal re-skin, emit WARN.
+                # Different real sprites — legal re-skin, emit WARN (A3: must not block).
                 errors.append(
                     f"P1 WARN (legal re-skin): element '{element_path}' has no "
                     f"PrefabInstance lineage (CopyAsset clone expected), but carries "
@@ -2064,7 +2064,42 @@ def validate_clone_provenance_yaml(
                     f"sprite {source_sprite_guid}. Legal re-skin — not blocking. "
                     f"Reviewer should confirm intentional re-skin. (P1)"
                 )
-            # else: same sprite or source has none — PASS (or keySpriteGuid match).
+            elif source_sprite_guid and built_sprite_guid == source_sprite_guid:
+                # *** THE BYPASS FIX (iter-2, red-team A1-mutant): ***
+                # No PrefabInstance lineage AND guid strings match.
+                # A sprite GUID is copyable text — pasting it from the source YAML
+                # does NOT prove the element was cloned. "Same guid string" only proves
+                # "carries the same sprite guid string", which a from-scratch fabricator
+                # can trivially achieve by text-copying the reference YAML.
+                # SPEC §1.1: "Deliberately NOT checked: sprite equality as such."
+                # Without PrefabInstance lineage, sprite-guid equality is corroborating
+                # at best and MUST NOT be treated as sufficient proof. CRITICAL FAIL.
+                errors.append(
+                    f"CRITICAL FAIL (P1): element '{element_path}' — no "
+                    f"PrefabInstance lineage from source GUID {source_guid}, and its "
+                    f"Image.sprite guid ({built_sprite_guid}) matches the source's "
+                    f"sprite guid. A GUID string is copyable text; matching guids "
+                    f"without !u!1001 PrefabInstance lineage cannot distinguish a real "
+                    f"CopyAsset clone from a from-scratch fabrication with a pasted "
+                    f"guid. Require PrefabInstance (!u!1001) lineage to prove this "
+                    f"element was cloned. (Rule 19 / P1 — A1-mutant bypass fixed)"
+                )
+                _log_p1_miss(task_dir, element_path, source_guid, repo_root)
+            elif not source_sprite_guid and built_sprite_guid:
+                # Source element has no sprite but built element does — unusual case.
+                # Could be a new sprite added on a sprite-less source element. Cannot
+                # distinguish legitimate extension from fabrication without lineage.
+                # Emit WARN (reviewer #2 follow-up): name may be absent from source.
+                errors.append(
+                    f"P1 WARN: element '{element_path}' has no PrefabInstance "
+                    f"lineage from source GUID {source_guid}. The source element "
+                    f"carries no sprite but the built element carries sprite "
+                    f"{built_sprite_guid}. This may indicate the element name is "
+                    f"absent from the source prefab (reuse_map name mismatch) or a "
+                    f"sprite was added to a sprite-less element. Reviewer must confirm "
+                    f"the mapping is intentional. (P1 — follow-up #2)"
+                )
+            # else: both sides have no sprite — already handled above (CRITICAL FAIL).
 
     return errors
 
